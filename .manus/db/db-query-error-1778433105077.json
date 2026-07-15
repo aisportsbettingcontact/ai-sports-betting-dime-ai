@@ -1,8 +1,0 @@
-{
-  "query": "\nSELECT \n  id, awayTeam, homeTeam, gameDate,\n  -- Book RL fields (written by VSiN scraper)\n  awayRunLine, homeRunLine,\n  awayRunLineOdds, homeRunLineOdds,\n  -- Model RL fields (written by mlbModelRunner)\n  awayModelSpread, homeModelSpread,\n  awayModelSpreadOdds, homeModelSpreadOdds,\n  -- Book spread fields (dual-write from VSiN scraper for MLB)\n  awayBookSpread, homeBookSpread,\n  awaySpreadOdds, homeSpreadOdds,\n  -- Edge fields\n  spreadDiff, spreadEdge\nFROM games\nWHERE (awayTeam = 'ATL' AND homeTeam = 'LAD' AND gameDate = '2026-05-10')\n   OR (awayTeam = 'CHC' AND homeTeam = 'TEX' AND gameDate = '2026-05-10')\nORDER BY awayTeam;\n",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute \nSELECT \n  id, awayTeam, homeTeam, gameDate,\n  -- Book RL fields (written by VSiN scraper)\n  awayRunLine, homeRunLine,\n  awayRunLineOdds, homeRunLineOdds,\n  -- Model RL fields (written by mlbModelRunner)\n  awayModelSpread, homeModelSpread,\n  awayModelSpreadOdds, homeModelSpreadOdds,\n  -- Book spread fields (dual-write from VSiN scraper for MLB)\n  awayBookSpread, homeBookSpread,\n  awaySpreadOdds, homeSpreadOdds,\n  -- Edge fields\n  spreadDiff, spreadEdge\nFROM games\nWHERE (awayTeam = 'ATL' AND homeTeam = 'LAD' AND gameDate = '2026-05-10')\n   OR (awayTeam = 'CHC' AND homeTeam = 'TEX' AND gameDate = '2026-05-10')\nORDER BY awayTeam;\n",
-  "returncode": 1,
-  "logs": [
-    "ERROR 1054 (42S22) at line 2: Unknown column 'awaymodelspreadodds' in 'field list'"
-  ]
-}

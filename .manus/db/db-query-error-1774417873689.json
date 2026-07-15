@@ -1,8 +1,0 @@
-{
-  "query": "\nSELECT \n  id, sport, away_team, home_team, game_date,\n  away_book_spread, away_book_spread_odds,\n  home_book_spread, home_book_spread_odds,\n  book_total, book_over_odds, book_under_odds,\n  away_ml, home_ml,\n  away_model_spread, model_away_spread_odds,\n  home_model_spread, model_home_spread_odds,\n  model_total, model_over_odds, model_under_odds,\n  model_away_ml, model_home_ml,\n  published_model\nFROM games\nWHERE id = 2250006\n",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute \nSELECT \n  id, sport, away_team, home_team, game_date,\n  away_book_spread, away_book_spread_odds,\n  home_book_spread, home_book_spread_odds,\n  book_total, book_over_odds, book_under_odds,\n  away_ml, home_ml,\n  away_model_spread, model_away_spread_odds,\n  home_model_spread, model_home_spread_odds,\n  model_total, model_over_odds, model_under_odds,\n  model_away_ml, model_home_ml,\n  published_model\nFROM games\nWHERE id = 2250006\n",
-  "returncode": 1,
-  "logs": [
-    "ERROR 1054 (42S22) at line 2: Unknown column 'away_team' in 'field list'"
-  ]
-}

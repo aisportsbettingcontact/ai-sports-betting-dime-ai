@@ -1,9 +1,0 @@
-{
-  "query": "UPDATE app_users SET tokenVersion = tokenVersion + 1, updatedAt = NOW() WHERE role != 'owner';",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute UPDATE app_users SET tokenVersion = tokenVersion + 1, updatedAt = NOW() WHERE role != 'owner';",
-  "rows": [],
-  "messages": [],
-  "stdout": "",
-  "stderr": "",
-  "execution_time_ms": 278
-}

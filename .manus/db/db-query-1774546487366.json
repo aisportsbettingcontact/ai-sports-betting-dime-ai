@@ -1,9 +1,0 @@
-{
-  "query": "\n-- Jacob Misiorowski (MIL, home, gameId=2250008): consensus line o/u 6.5, best odds o+125 / u-145\nUPDATE mlb_strikeout_props SET\n  bookLine = '6.5',\n  bookOverOdds = '+125',\n  bookUnderOdds = '-145',\n  updatedAt = NOW()\nWHERE gameId = 2250008 AND side = 'home';\n\n-- Matthew Boyd (CHC, home, gameId=2250009): consensus line o/u 5.5, best odds o+113 / u-148\nUPDATE mlb_strikeout_props SET\n  bookLine = '5.5',\n  bookOverOdds = '+113',\n  bookUnderOdds = '-148',\n  updatedAt = NOW()\nWHERE gameId = 2250009 AND side = 'home';\n",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute \n-- Jacob Misiorowski (MIL, home, gameId=2250008): consensus line o/u 6.5, best odds o+125 / u-145\nUPDATE mlb_strikeout_props SET\n  bookLine = '6.5',\n  bookOverOdds = '+125',\n  bookUnderOdds = '-145',\n  updatedAt = NOW()\nWHERE gameId = 2250008 AND side = 'home';\n\n-- Matthew Boyd (CHC, home, gameId=2250009): consensus line o/u 5.5, best odds o+113 / u-148\nUPDATE mlb_strikeout_props SET\n  bookLine = '5.5',\n  bookOverOdds = '+113',\n  bookUnderOdds = '-148',\n  updatedAt = NOW()\nWHERE gameId = 2250009 AND side = 'home';\n",
-  "rows": [],
-  "messages": [],
-  "stdout": "",
-  "stderr": "",
-  "execution_time_ms": 166
-}

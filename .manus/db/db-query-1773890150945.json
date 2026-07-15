@@ -1,9 +1,0 @@
-{
-  "query": "\nUPDATE games\nSET \n  awayModelSpread = NULL,\n  homeModelSpread = NULL,\n  modelTotal = NULL,\n  modelAwayML = NULL,\n  modelHomeML = NULL,\n  modelAwayScore = NULL,\n  modelHomeScore = NULL,\n  modelOverRate = NULL,\n  modelUnderRate = NULL,\n  modelAwayWinPct = NULL,\n  modelHomeWinPct = NULL,\n  modelSpreadClamped = NULL,\n  modelTotalClamped = NULL,\n  modelCoverDirection = NULL,\n  modelRunAt = NULL,\n  modelAwaySpreadOdds = NULL,\n  modelHomeSpreadOdds = NULL,\n  modelOverOdds = NULL,\n  modelUnderOdds = NULL,\n  spreadEdge = NULL,\n  spreadDiff = NULL,\n  totalEdge = NULL,\n  totalDiff = NULL\nWHERE sport = 'NCAAM'\n  AND gameDate = '2026-03-19'\n  AND awayBookSpread IS NOT NULL;\n",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute \nUPDATE games\nSET \n  awayModelSpread = NULL,\n  homeModelSpread = NULL,\n  modelTotal = NULL,\n  modelAwayML = NULL,\n  modelHomeML = NULL,\n  modelAwayScore = NULL,\n  modelHomeScore = NULL,\n  modelOverRate = NULL,\n  modelUnderRate = NULL,\n  modelAwayWinPct = NULL,\n  modelHomeWinPct = NULL,\n  modelSpreadClamped = NULL,\n  modelTotalClamped = NULL,\n  modelCoverDirection = NULL,\n  modelRunAt = NULL,\n  modelAwaySpreadOdds = NULL,\n  modelHomeSpreadOdds = NULL,\n  modelOverOdds = NULL,\n  modelUnderOdds = NULL,\n  spreadEdge = NULL,\n  spreadDiff = NULL,\n  totalEdge = NULL,\n  totalDiff = NULL\nWHERE sport = 'NCAAM'\n  AND gameDate = '2026-03-19'\n  AND awayBookSpread IS NOT NULL;\n",
-  "rows": [],
-  "messages": [],
-  "stdout": "",
-  "stderr": "",
-  "execution_time_ms": 159
-}

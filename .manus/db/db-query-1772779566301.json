@@ -1,9 +1,0 @@
-{
-  "query": "\nDELETE g1\nFROM games g1\nINNER JOIN games g2\n  ON g1.gameDate = g2.gameDate\n  AND g1.awayTeam = g2.awayTeam\n  AND g1.homeTeam = g2.homeTeam\n  AND g1.id < g2.id;\n",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute \nDELETE g1\nFROM games g1\nINNER JOIN games g2\n  ON g1.gameDate = g2.gameDate\n  AND g1.awayTeam = g2.awayTeam\n  AND g1.homeTeam = g2.homeTeam\n  AND g1.id < g2.id;\n",
-  "rows": [],
-  "messages": [],
-  "stdout": "",
-  "stderr": "",
-  "execution_time_ms": 76
-}

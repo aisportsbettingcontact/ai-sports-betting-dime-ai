@@ -1,9 +1,0 @@
-{
-  "query": "\nINSERT INTO app_users (email, username, passwordHash, role, hasAccess, expiryDate, createdAt)\nVALUES (\n  'expiredtest@test.com',\n  'expiredtest',\n  '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj/RK.s5uoHe',\n  'user',\n  1,\n  UNIX_TIMESTAMP(NOW() - INTERVAL 1 HOUR) * 1000,\n  NOW()\n);\n",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute \nINSERT INTO app_users (email, username, passwordHash, role, hasAccess, expiryDate, createdAt)\nVALUES (\n  'expiredtest@test.com',\n  'expiredtest',\n  '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj/RK.s5uoHe',\n  'user',\n  1,\n  UNIX_TIMESTAMP(NOW() - INTERVAL 1 HOUR) * 1000,\n  NOW()\n);\n",
-  "rows": [],
-  "messages": [],
-  "stdout": "",
-  "stderr": "",
-  "execution_time_ms": 81
-}

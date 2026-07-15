@@ -1,8 +1,0 @@
-{
-  "query": "SELECT DISTINCT away_team as slug FROM games WHERE away_team LIKE '%_state' OR away_team LIKE '%_st' UNION SELECT DISTINCT home_team FROM games WHERE home_team LIKE '%_state' OR home_team LIKE '%_st' ORDER BY slug;",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute SELECT DISTINCT away_team as slug FROM games WHERE away_team LIKE '%_state' OR away_team LIKE '%_st' UNION SELECT DISTINCT home_team FROM games WHERE home_team LIKE '%_state' OR home_team LIKE '%_st' ORDER BY slug;",
-  "returncode": 1,
-  "logs": [
-    "ERROR 1054 (42S22) at line 1: Unknown column 'away_team' in 'where clause'"
-  ]
-}

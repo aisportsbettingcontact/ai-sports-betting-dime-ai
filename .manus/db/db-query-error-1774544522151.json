@@ -1,8 +1,0 @@
-{
-  "query": "\nSELECT \n  id,\n  awayTeamAbbrev AS away,\n  homeTeamAbbrev AS home,\n  awayBookSpread AS bookAwayRL,\n  homeBookSpread AS bookHomeRL,\n  awayModelSpread AS mdlAwayRL,\n  homeModelSpread AS mdlHomeRL,\n  awayRunLine,\n  homeRunLine,\n  awayRunLineOdds,\n  homeRunLineOdds,\n  modelAwaySpreadOdds,\n  modelHomeSpreadOdds,\n  modelAwayML,\n  modelHomeML,\n  modelTotal,\n  modelOverOdds,\n  modelUnderOdds,\n  modelAwayScore,\n  modelHomeScore,\n  publishedModel\nFROM games\nWHERE gameDate = '2026-03-26' AND sport = 'MLB'\nORDER BY gameTime ASC;\n",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute \nSELECT \n  id,\n  awayTeamAbbrev AS away,\n  homeTeamAbbrev AS home,\n  awayBookSpread AS bookAwayRL,\n  homeBookSpread AS bookHomeRL,\n  awayModelSpread AS mdlAwayRL,\n  homeModelSpread AS mdlHomeRL,\n  awayRunLine,\n  homeRunLine,\n  awayRunLineOdds,\n  homeRunLineOdds,\n  modelAwaySpreadOdds,\n  modelHomeSpreadOdds,\n  modelAwayML,\n  modelHomeML,\n  modelTotal,\n  modelOverOdds,\n  modelUnderOdds,\n  modelAwayScore,\n  modelHomeScore,\n  publishedModel\nFROM games\nWHERE gameDate = '2026-03-26' AND sport = 'MLB'\nORDER BY gameTime ASC;\n",
-  "returncode": 1,
-  "logs": [
-    "ERROR 1054 (42S22) at line 2: Unknown column 'gameTime' in 'order clause'"
-  ]
-}

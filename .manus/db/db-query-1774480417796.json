@@ -1,9 +1,0 @@
-{
-  "query": "\nDELETE FROM mlb_strikeout_props WHERE gameId = 2250006 AND bookLine IS NULL;\nALTER TABLE mlb_strikeout_props ADD UNIQUE INDEX uq_game_side (gameId, side);\n",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute \nDELETE FROM mlb_strikeout_props WHERE gameId = 2250006 AND bookLine IS NULL;\nALTER TABLE mlb_strikeout_props ADD UNIQUE INDEX uq_game_side (gameId, side);\n",
-  "rows": [],
-  "messages": [],
-  "stdout": "",
-  "stderr": "",
-  "execution_time_ms": 999
-}

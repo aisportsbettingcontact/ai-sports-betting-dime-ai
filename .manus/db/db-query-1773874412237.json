@@ -1,9 +1,0 @@
-{
-  "query": "\n-- WEST region (March 20): arizona, villanova, miami_fl, purdue + BYU/Texas (already published)\n-- MIDWEST region (March 20): texas_tech, alabama, virginia, kentucky, iowa_st + Michigan/Howard (already published)\nUPDATE games SET gameDate = '2026-03-20'\nWHERE id IN (1830095, 1830096, 1830097, 1830098, 1830099, 1830103, 1830104, 1830105, 1830106)\nAND sport = 'NCAAM';\n",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute \n-- WEST region (March 20): arizona, villanova, miami_fl, purdue + BYU/Texas (already published)\n-- MIDWEST region (March 20): texas_tech, alabama, virginia, kentucky, iowa_st + Michigan/Howard (already published)\nUPDATE games SET gameDate = '2026-03-20'\nWHERE id IN (1830095, 1830096, 1830097, 1830098, 1830099, 1830103, 1830104, 1830105, 1830106)\nAND sport = 'NCAAM';\n",
-  "rows": [],
-  "messages": [],
-  "stdout": "",
-  "stderr": "",
-  "execution_time_ms": 93
-}

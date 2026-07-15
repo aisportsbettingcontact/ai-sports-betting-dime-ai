@@ -1,9 +1,0 @@
-{
-  "query": "UPDATE games SET publishedModel = 1 WHERE awayTeam = 'pennsylvania' AND homeTeam = 'illinois' AND gameDate = '2026-03-19';",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute UPDATE games SET publishedModel = 1 WHERE awayTeam = 'pennsylvania' AND homeTeam = 'illinois' AND gameDate = '2026-03-19';",
-  "rows": [],
-  "messages": [],
-  "stdout": "",
-  "stderr": "",
-  "execution_time_ms": 64
-}

@@ -1,9 +1,0 @@
-{
-  "query": "\nUPDATE games\nSET\n  awayModelSpread = NULL,\n  homeModelSpread = NULL,\n  modelTotal = NULL,\n  spreadEdge = NULL,\n  spreadDiff = NULL,\n  totalEdge = NULL,\n  totalDiff = NULL,\n  modelAwayML = NULL,\n  modelHomeML = NULL\nWHERE sport = 'NBA';\n",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute \nUPDATE games\nSET\n  awayModelSpread = NULL,\n  homeModelSpread = NULL,\n  modelTotal = NULL,\n  spreadEdge = NULL,\n  spreadDiff = NULL,\n  totalEdge = NULL,\n  totalDiff = NULL,\n  modelAwayML = NULL,\n  modelHomeML = NULL\nWHERE sport = 'NBA';\n",
-  "rows": [],
-  "messages": [],
-  "stdout": "",
-  "stderr": "",
-  "execution_time_ms": 143
-}

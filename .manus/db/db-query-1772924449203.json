@@ -1,9 +1,0 @@
-{
-  "query": "\nUPDATE nba_teams SET tertiaryColor = '#C4CED4' WHERE name = 'Chicago Bulls';\nUPDATE nba_teams SET tertiaryColor = '#B0B7BC' WHERE name = 'Portland Trail Blazers';\n",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute \nUPDATE nba_teams SET tertiaryColor = '#C4CED4' WHERE name = 'Chicago Bulls';\nUPDATE nba_teams SET tertiaryColor = '#B0B7BC' WHERE name = 'Portland Trail Blazers';\n",
-  "rows": [],
-  "messages": [],
-  "stdout": "",
-  "stderr": "",
-  "execution_time_ms": 74
-}
