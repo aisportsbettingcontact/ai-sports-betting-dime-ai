@@ -1,9 +1,0 @@
-{
-  "query": "\nDELETE FROM games \nWHERE (homeTeam IN ('lemoyne', 'c_conn_st', 'w_georgia', 'michigan_st') \n    OR awayTeam IN ('lemoyne', 'c_conn_st', 'w_georgia', 'michigan_st'));\n",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute \nDELETE FROM games \nWHERE (homeTeam IN ('lemoyne', 'c_conn_st', 'w_georgia', 'michigan_st') \n    OR awayTeam IN ('lemoyne', 'c_conn_st', 'w_georgia', 'michigan_st'));\n",
-  "rows": [],
-  "messages": [],
-  "stdout": "",
-  "stderr": "",
-  "execution_time_ms": 106
-}

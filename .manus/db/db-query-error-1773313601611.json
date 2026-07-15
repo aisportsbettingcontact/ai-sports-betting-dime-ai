@@ -1,8 +1,0 @@
-{
-  "query": "SELECT away_team, home_team, model_away_score, model_home_score, model_away_spread, model_home_spread, model_total, model_away_ml, model_home_ml, model_run_at FROM games WHERE game_date = '2026-03-12' AND model_run_at IS NOT NULL ORDER BY model_run_at DESC LIMIT 10;",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute SELECT away_team, home_team, model_away_score, model_home_score, model_away_spread, model_home_spread, model_total, model_away_ml, model_home_ml, model_run_at FROM games WHERE game_date = '2026-03-12' AND model_run_at IS NOT NULL ORDER BY model_run_at DESC LIMIT 10;",
-  "returncode": 1,
-  "logs": [
-    "ERROR 1054 (42S22) at line 1: Unknown column 'game_date' in 'where clause'"
-  ]
-}

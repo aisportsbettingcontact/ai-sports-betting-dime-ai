@@ -1,8 +1,0 @@
-{
-  "query": "\nSELECT g.id, g.gameDate, g.sport, g.status,\n       g.awayTeamId, g.homeTeamId,\n       at.name AS awayName, at.abbreviation AS awayAbbr, at.slug AS awaySlug,\n       ht.name AS homeName, ht.abbreviation AS homeAbbr, ht.slug AS homeSlug\nFROM games g\nJOIN teams at ON g.awayTeamId = at.id\nJOIN teams ht ON g.homeTeamId = ht.id\nWHERE g.gameDate = '2026-03-08' AND g.sport = 'NBA'\nORDER BY g.startTime ASC;\n",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute \nSELECT g.id, g.gameDate, g.sport, g.status,\n       g.awayTeamId, g.homeTeamId,\n       at.name AS awayName, at.abbreviation AS awayAbbr, at.slug AS awaySlug,\n       ht.name AS homeName, ht.abbreviation AS homeAbbr, ht.slug AS homeSlug\nFROM games g\nJOIN teams at ON g.awayTeamId = at.id\nJOIN teams ht ON g.homeTeamId = ht.id\nWHERE g.gameDate = '2026-03-08' AND g.sport = 'NBA'\nORDER BY g.startTime ASC;\n",
-  "returncode": 1,
-  "logs": [
-    "ERROR 1146 (42S02) at line 2: Table 'mw3ficty7ae3qrm8dx8lua.teams' doesn't exist"
-  ]
-}

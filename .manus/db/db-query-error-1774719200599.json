@@ -1,8 +1,0 @@
-{
-  "query": "SELECT id, awayTeam, homeTeam, gameDate, gameStatus, bookTotal, awayML, homeML, awayBookSpread, homeBookSpread, modelRunAt, publishedToFeed, publishedModel FROM games WHERE gameDate = '2026-03-28' AND sport = 'NHL' ORDER BY startTime ASC;",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute SELECT id, awayTeam, homeTeam, gameDate, gameStatus, bookTotal, awayML, homeML, awayBookSpread, homeBookSpread, modelRunAt, publishedToFeed, publishedModel FROM games WHERE gameDate = '2026-03-28' AND sport = 'NHL' ORDER BY startTime ASC;",
-  "returncode": 1,
-  "logs": [
-    "ERROR 1054 (42S22) at line 1: Unknown column 'startTime' in 'order clause'"
-  ]
-}

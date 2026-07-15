@@ -1,8 +1,0 @@
-{
-  "query": "\nSELECT \n  sport,\n  game_date,\n  published_to_feed,\n  COUNT(*) as count\nFROM games\nWHERE game_date >= DATE_SUB(CURDATE(), INTERVAL 1 DAY)\nGROUP BY sport, game_date, published_to_feed\nORDER BY game_date DESC, sport;\n",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute \nSELECT \n  sport,\n  game_date,\n  published_to_feed,\n  COUNT(*) as count\nFROM games\nWHERE game_date >= DATE_SUB(CURDATE(), INTERVAL 1 DAY)\nGROUP BY sport, game_date, published_to_feed\nORDER BY game_date DESC, sport;\n",
-  "returncode": 1,
-  "logs": [
-    "ERROR 1054 (42S22) at line 2: Unknown column 'game_date' in 'group statement'"
-  ]
-}

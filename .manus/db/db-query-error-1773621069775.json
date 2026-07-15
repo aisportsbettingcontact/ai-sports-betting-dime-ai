@@ -1,8 +1,0 @@
-{
-  "query": "SELECT away_team, home_team, away_goalie, home_goalie, away_goalie_gsax, home_goalie_gsax, away_goalie_shots_faced, home_goalie_shots_faced, away_goalie_gp, home_goalie_gp FROM games WHERE DATE(game_date) = '2026-03-15' ORDER BY game_date;",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute SELECT away_team, home_team, away_goalie, home_goalie, away_goalie_gsax, home_goalie_gsax, away_goalie_shots_faced, home_goalie_shots_faced, away_goalie_gp, home_goalie_gp FROM games WHERE DATE(game_date) = '2026-03-15' ORDER BY game_date;",
-  "returncode": 1,
-  "logs": [
-    "ERROR 1054 (42S22) at line 1: Unknown column 'game_date' in 'order clause'"
-  ]
-}

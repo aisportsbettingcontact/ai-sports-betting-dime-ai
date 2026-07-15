@@ -1,9 +1,0 @@
-{
-  "query": "\nUPDATE games SET\n  awayBookSpread = CASE WHEN awayBookSpread IS NOT NULL AND awayBookSpread NOT LIKE '-%' AND awayBookSpread NOT LIKE '+%' THEN CONCAT('+', awayBookSpread) ELSE awayBookSpread END,\n  homeBookSpread = CASE WHEN homeBookSpread IS NOT NULL AND homeBookSpread NOT LIKE '-%' AND homeBookSpread NOT LIKE '+%' THEN CONCAT('+', homeBookSpread) ELSE homeBookSpread END,\n  openAwaySpread = CASE WHEN openAwaySpread IS NOT NULL AND openAwaySpread NOT LIKE '-%' AND openAwaySpread NOT LIKE '+%' THEN CONCAT('+', openAwaySpread) ELSE openAwaySpread END,\n  openHomeSpread = CASE WHEN openHomeSpread IS NOT NULL AND openHomeSpread NOT LIKE '-%' AND openHomeSpread NOT LIKE '+%' THEN CONCAT('+', openHomeSpread) ELSE openHomeSpread END\nWHERE sport = 'MLB' AND gameDate IN ('2026-03-25', '2026-03-26');\n",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute \nUPDATE games SET\n  awayBookSpread = CASE WHEN awayBookSpread IS NOT NULL AND awayBookSpread NOT LIKE '-%' AND awayBookSpread NOT LIKE '+%' THEN CONCAT('+', awayBookSpread) ELSE awayBookSpread END,\n  homeBookSpread = CASE WHEN homeBookSpread IS NOT NULL AND homeBookSpread NOT LIKE '-%' AND homeBookSpread NOT LIKE '+%' THEN CONCAT('+', homeBookSpread) ELSE homeBookSpread END,\n  openAwaySpread = CASE WHEN openAwaySpread IS NOT NULL AND openAwaySpread NOT LIKE '-%' AND openAwaySpread NOT LIKE '+%' THEN CONCAT('+', openAwaySpread) ELSE openAwaySpread END,\n  openHomeSpread = CASE WHEN openHomeSpread IS NOT NULL AND openHomeSpread NOT LIKE '-%' AND openHomeSpread NOT LIKE '+%' THEN CONCAT('+', openHomeSpread) ELSE openHomeSpread END\nWHERE sport = 'MLB' AND gameDate IN ('2026-03-25', '2026-03-26');\n",
-  "rows": [],
-  "messages": [],
-  "stdout": "",
-  "stderr": "",
-  "execution_time_ms": 63
-}

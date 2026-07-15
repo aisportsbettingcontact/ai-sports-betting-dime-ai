@@ -1,8 +1,0 @@
-{
-  "query": "\nSELECT \n  id,\n  CONCAT(awayTeam, ' @ ', homeTeam) AS matchup,\n  startTimeEst,\n  publishedToFeed,\n  publishedModel,\n  modelAwayScore,\n  modelHomeScore,\n  modelAwaySpread,\n  modelHomeSpread,\n  modelTotal,\n  modelAwayML,\n  modelHomeML\nFROM games\nWHERE sport = 'MLB' AND gameDate = '2026-03-26'\nORDER BY startTimeEst ASC;\n",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute \nSELECT \n  id,\n  CONCAT(awayTeam, ' @ ', homeTeam) AS matchup,\n  startTimeEst,\n  publishedToFeed,\n  publishedModel,\n  modelAwayScore,\n  modelHomeScore,\n  modelAwaySpread,\n  modelHomeSpread,\n  modelTotal,\n  modelAwayML,\n  modelHomeML\nFROM games\nWHERE sport = 'MLB' AND gameDate = '2026-03-26'\nORDER BY startTimeEst ASC;\n",
-  "returncode": 1,
-  "logs": [
-    "ERROR 1054 (42S22) at line 2: Unknown column 'modelawayspread' in 'field list'"
-  ]
-}

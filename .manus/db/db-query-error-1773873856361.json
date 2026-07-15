@@ -1,8 +1,0 @@
-{
-  "query": "SELECT id, awayTeam, homeTeam, gameDate, publishedToFeed,\n       awayBookSpread, homeBookSpread, bookTotal, awayML, homeML,\n       spreadAwayBetsPct, spreadAwayMoneyPct,\n       totalOverBetsPct, mlAwayBetsPct, mlHomeBetsPct\nFROM games \nWHERE sport = 'NCAAM' \n  AND publishedToFeed = 1\nORDER BY gameDate, id;",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute SELECT id, awayTeam, homeTeam, gameDate, publishedToFeed,\n       awayBookSpread, homeBookSpread, bookTotal, awayML, homeML,\n       spreadAwayBetsPct, spreadAwayMoneyPct,\n       totalOverBetsPct, mlAwayBetsPct, mlHomeBetsPct\nFROM games \nWHERE sport = 'NCAAM' \n  AND publishedToFeed = 1\nORDER BY gameDate, id;",
-  "returncode": 1,
-  "logs": [
-    "ERROR 1054 (42S22) at line 1: Unknown column 'mlhomebetspct' in 'field list'"
-  ]
-}

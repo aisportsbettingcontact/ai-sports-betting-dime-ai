@@ -1,9 +1,0 @@
-{
-  "query": "UPDATE games \nSET modelRunAt = NULL \nWHERE sport = 'NHL' \n  AND gameDate = '2026-03-15' \n  AND gameStatus = 'upcoming';",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute UPDATE games \nSET modelRunAt = NULL \nWHERE sport = 'NHL' \n  AND gameDate = '2026-03-15' \n  AND gameStatus = 'upcoming';",
-  "rows": [],
-  "messages": [],
-  "stdout": "",
-  "stderr": "",
-  "execution_time_ms": 76
-}

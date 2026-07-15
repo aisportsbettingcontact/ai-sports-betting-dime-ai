@@ -1,8 +1,0 @@
-{
-  "query": "SELECT DISTINCT away_team, home_team FROM games ORDER BY away_team LIMIT 30;",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute SELECT DISTINCT away_team, home_team FROM games ORDER BY away_team LIMIT 30;",
-  "returncode": 1,
-  "logs": [
-    "ERROR 1054 (42S22) at line 1: Unknown column 'away_team' in 'field list'"
-  ]
-}

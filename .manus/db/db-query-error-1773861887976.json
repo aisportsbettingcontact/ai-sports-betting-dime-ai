@@ -1,8 +1,0 @@
-{
-  "query": "SELECT id, username, email, role, discord_id, discord_username, discord_avatar, discord_connected_at FROM app_users ORDER BY discord_connected_at DESC LIMIT 20;",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute SELECT id, username, email, role, discord_id, discord_username, discord_avatar, discord_connected_at FROM app_users ORDER BY discord_connected_at DESC LIMIT 20;",
-  "returncode": 1,
-  "logs": [
-    "ERROR 1054 (42S22) at line 1: Unknown column 'discord_id' in 'field list'"
-  ]
-}

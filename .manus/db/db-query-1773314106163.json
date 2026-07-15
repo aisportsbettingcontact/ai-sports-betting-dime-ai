@@ -1,9 +1,0 @@
-{
-  "query": "UPDATE games SET\n  awayModelSpread = NULL,\n  homeModelSpread = NULL,\n  modelTotal = NULL,\n  modelAwayML = NULL,\n  modelHomeML = NULL,\n  modelAwayScore = NULL,\n  modelHomeScore = NULL,\n  modelOverRate = NULL,\n  modelUnderRate = NULL,\n  modelAwayWinPct = NULL,\n  modelHomeWinPct = NULL,\n  modelSpreadClamped = NULL,\n  modelTotalClamped = NULL,\n  modelCoverDirection = NULL,\n  modelRunAt = NULL,\n  spreadEdge = NULL,\n  spreadDiff = NULL,\n  totalEdge = NULL,\n  totalDiff = NULL\nWHERE awayModelSpread IS NOT NULL OR modelTotal IS NOT NULL;",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute UPDATE games SET\n  awayModelSpread = NULL,\n  homeModelSpread = NULL,\n  modelTotal = NULL,\n  modelAwayML = NULL,\n  modelHomeML = NULL,\n  modelAwayScore = NULL,\n  modelHomeScore = NULL,\n  modelOverRate = NULL,\n  modelUnderRate = NULL,\n  modelAwayWinPct = NULL,\n  modelHomeWinPct = NULL,\n  modelSpreadClamped = NULL,\n  modelTotalClamped = NULL,\n  modelCoverDirection = NULL,\n  modelRunAt = NULL,\n  spreadEdge = NULL,\n  spreadDiff = NULL,\n  totalEdge = NULL,\n  totalDiff = NULL\nWHERE awayModelSpread IS NOT NULL OR modelTotal IS NOT NULL;",
-  "rows": [],
-  "messages": [],
-  "stdout": "",
-  "stderr": "",
-  "execution_time_ms": 149
-}

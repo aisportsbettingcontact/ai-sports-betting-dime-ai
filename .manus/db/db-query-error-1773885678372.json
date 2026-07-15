@@ -1,8 +1,0 @@
-{
-  "query": "SELECT bracket_game_id, away_team, home_team, bracket_region, game_status, away_score, home_score FROM games WHERE bracket_round = 'FIRST_FOUR' ORDER BY bracket_game_id;",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute SELECT bracket_game_id, away_team, home_team, bracket_region, game_status, away_score, home_score FROM games WHERE bracket_round = 'FIRST_FOUR' ORDER BY bracket_game_id;",
-  "returncode": 1,
-  "logs": [
-    "ERROR 1054 (42S22) at line 1: Unknown column 'bracket_round' in 'where clause'"
-  ]
-}
