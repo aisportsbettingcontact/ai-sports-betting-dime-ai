@@ -1,8 +1,0 @@
-{
-  "query": "\nSELECT \n  id, sport, awayTeam, homeTeam, gameDate,\n  awayBookSpread, awayBookSpreadOdds,\n  homeBookSpread, homeBookSpreadOdds,\n  bookTotal, bookOverOdds, bookUnderOdds,\n  awayML, homeML,\n  awayModelSpread, modelAwaySpreadOdds,\n  homeModelSpread, modelHomeSpreadOdds,\n  modelTotal, modelOverOdds, modelUnderOdds,\n  modelAwayML, modelHomeML,\n  publishedModel\nFROM games\nWHERE id = 2250006\n",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute \nSELECT \n  id, sport, awayTeam, homeTeam, gameDate,\n  awayBookSpread, awayBookSpreadOdds,\n  homeBookSpread, homeBookSpreadOdds,\n  bookTotal, bookOverOdds, bookUnderOdds,\n  awayML, homeML,\n  awayModelSpread, modelAwaySpreadOdds,\n  homeModelSpread, modelHomeSpreadOdds,\n  modelTotal, modelOverOdds, modelUnderOdds,\n  modelAwayML, modelHomeML,\n  publishedModel\nFROM games\nWHERE id = 2250006\n",
-  "returncode": 1,
-  "logs": [
-    "ERROR 1054 (42S22) at line 2: Unknown column 'awaybookspreadodds' in 'field list'"
-  ]
-}

@@ -1,9 +1,0 @@
-{
-  "query": "SELECT id, awayTeam, homeTeam, gameDate, publishedToFeed,\n       CASE WHEN awayBookSpread IS NOT NULL THEN 'YES' ELSE 'NO' END as hasOdds\nFROM games \nWHERE sport = 'NCAAM' \n  AND gameDate IN ('2026-03-20', '2026-03-21')\nORDER BY gameDate, id\nLIMIT 20;",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute SELECT id, awayTeam, homeTeam, gameDate, publishedToFeed,\n       CASE WHEN awayBookSpread IS NOT NULL THEN 'YES' ELSE 'NO' END as hasOdds\nFROM games \nWHERE sport = 'NCAAM' \n  AND gameDate IN ('2026-03-20', '2026-03-21')\nORDER BY gameDate, id\nLIMIT 20;",
-  "rows": [],
-  "messages": [],
-  "stdout": "",
-  "stderr": "",
-  "execution_time_ms": 86
-}

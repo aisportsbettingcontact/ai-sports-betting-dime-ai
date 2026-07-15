@@ -1,8 +1,0 @@
-{
-  "query": "\nSELECT \n  id, awayTeam, homeTeam,\n  modelAwayScore, modelHomeScore,\n  modelTotal, modelAwayPLOdds, modelHomePLOdds,\n  modelAwayML, modelHomeML,\n  modelOverOdds, modelUnderOdds,\n  spreadEdge, totalEdge, mlEdge,\n  publishedModel\nFROM games\nWHERE sport = 'NHL' AND gameDate = '2026-03-25'\nORDER BY id;\n",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute \nSELECT \n  id, awayTeam, homeTeam,\n  modelAwayScore, modelHomeScore,\n  modelTotal, modelAwayPLOdds, modelHomePLOdds,\n  modelAwayML, modelHomeML,\n  modelOverOdds, modelUnderOdds,\n  spreadEdge, totalEdge, mlEdge,\n  publishedModel\nFROM games\nWHERE sport = 'NHL' AND gameDate = '2026-03-25'\nORDER BY id;\n",
-  "returncode": 1,
-  "logs": [
-    "ERROR 1054 (42S22) at line 2: Unknown column 'mledge' in 'field list'"
-  ]
-}

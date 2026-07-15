@@ -1,8 +1,0 @@
-{
-  "query": "SELECT db_slug, abbrev, ncaa_name FROM ncaam_teams WHERE abbrev IS NOT NULL LIMIT 10;",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute SELECT db_slug, abbrev, ncaa_name FROM ncaam_teams WHERE abbrev IS NOT NULL LIMIT 10;",
-  "returncode": 1,
-  "logs": [
-    "ERROR 1054 (42S22) at line 1: Unknown column 'db_slug' in 'field list'"
-  ]
-}

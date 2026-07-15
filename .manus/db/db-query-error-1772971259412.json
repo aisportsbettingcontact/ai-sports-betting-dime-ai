@@ -1,8 +1,0 @@
-{
-  "query": "\nSELECT g.id, g.game_date, g.sport, g.status,\n       g.away_team_id, g.home_team_id,\n       at.name AS awayName, at.abbreviation AS awayAbbr, at.vsin_slug AS awayVsin,\n       ht.name AS homeName, ht.abbreviation AS homeAbbr, ht.vsin_slug AS homeVsin,\n       g.model_away_spread, g.model_home_spread, g.model_total,\n       g.model_away_ml, g.model_home_ml\nFROM games g\nJOIN nba_teams at ON g.away_team_id = at.id\nJOIN nba_teams ht ON g.home_team_id = ht.id\nWHERE g.game_date = '2026-03-08' AND g.sport = 'NBA'\nORDER BY g.start_time ASC;\n",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute \nSELECT g.id, g.game_date, g.sport, g.status,\n       g.away_team_id, g.home_team_id,\n       at.name AS awayName, at.abbreviation AS awayAbbr, at.vsin_slug AS awayVsin,\n       ht.name AS homeName, ht.abbreviation AS homeAbbr, ht.vsin_slug AS homeVsin,\n       g.model_away_spread, g.model_home_spread, g.model_total,\n       g.model_away_ml, g.model_home_ml\nFROM games g\nJOIN nba_teams at ON g.away_team_id = at.id\nJOIN nba_teams ht ON g.home_team_id = ht.id\nWHERE g.game_date = '2026-03-08' AND g.sport = 'NBA'\nORDER BY g.start_time ASC;\n",
-  "returncode": 1,
-  "logs": [
-    "ERROR 1054 (42S22) at line 2: Unknown column 'g.away_team_id' in 'on clause'"
-  ]
-}

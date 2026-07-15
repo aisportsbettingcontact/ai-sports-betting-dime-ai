@@ -1,9 +1,0 @@
-{
-  "query": "-- Fix awayModelSpread/homeModelSpread to match modelAwayPuckLine/modelHomePuckLine\n-- Fix modelTotal to NULL for games where it's clearly wrong (>8.0 for NHL, puck line is set)\nUPDATE games \nSET \n  awayModelSpread = modelAwayPuckLine,\n  homeModelSpread = modelHomePuckLine,\n  modelTotal = NULL\nWHERE sport = 'NHL' \n  AND gameDate = '2026-03-15'\n  AND modelAwayPuckLine IS NOT NULL\n  AND (CAST(modelTotal AS DECIMAL) > 8.0 OR awayModelSpread != modelAwayPuckLine);",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute -- Fix awayModelSpread/homeModelSpread to match modelAwayPuckLine/modelHomePuckLine\n-- Fix modelTotal to NULL for games where it's clearly wrong (>8.0 for NHL, puck line is set)\nUPDATE games \nSET \n  awayModelSpread = modelAwayPuckLine,\n  homeModelSpread = modelHomePuckLine,\n  modelTotal = NULL\nWHERE sport = 'NHL' \n  AND gameDate = '2026-03-15'\n  AND modelAwayPuckLine IS NOT NULL\n  AND (CAST(modelTotal AS DECIMAL) > 8.0 OR awayModelSpread != modelAwayPuckLine);",
-  "rows": [],
-  "messages": [],
-  "stdout": "",
-  "stderr": "",
-  "execution_time_ms": 84
-}

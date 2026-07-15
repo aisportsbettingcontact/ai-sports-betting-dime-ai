@@ -1,9 +1,0 @@
-{
-  "query": "\nINSERT INTO games (fileId, gameDate, startTimeEst, awayTeam, homeTeam, awayBookSpread, homeBookSpread, bookTotal, awayML, homeML, sport, gameType, gameStatus, sortOrder)\nVALUES \n  (0, '2026-03-21', '13:40', 'texas_a_and_m', 'houston', 10.5, -10.5, 141.5, '+350', '-450', 'NCAAM', 'regular_season', 'upcoming', 5010),\n  (0, '2026-03-21', '19:10', 'texas', 'gonzaga', 7.5, -7.5, 151.5, '+225', '-275', 'NCAAM', 'regular_season', 'upcoming', 5020);\n",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute \nINSERT INTO games (fileId, gameDate, startTimeEst, awayTeam, homeTeam, awayBookSpread, homeBookSpread, bookTotal, awayML, homeML, sport, gameType, gameStatus, sortOrder)\nVALUES \n  (0, '2026-03-21', '13:40', 'texas_a_and_m', 'houston', 10.5, -10.5, 141.5, '+350', '-450', 'NCAAM', 'regular_season', 'upcoming', 5010),\n  (0, '2026-03-21', '19:10', 'texas', 'gonzaga', 7.5, -7.5, 151.5, '+225', '-275', 'NCAAM', 'regular_season', 'upcoming', 5020);\n",
-  "rows": [],
-  "messages": [],
-  "stdout": "",
-  "stderr": "",
-  "execution_time_ms": 89
-}

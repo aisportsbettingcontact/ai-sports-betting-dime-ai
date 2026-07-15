@@ -1,8 +1,0 @@
-{
-  "query": "\nSELECT id, away_team, home_team, game_time, \n       book_away_spread, book_home_spread, book_total, book_away_ml, book_home_ml,\n       published_model\nFROM games \nWHERE sport = 'NCAAM' \n  AND game_time >= UNIX_TIMESTAMP('2026-03-22 00:00:00') * 1000\n  AND game_time < UNIX_TIMESTAMP('2026-03-23 12:00:00') * 1000\nORDER BY game_time ASC\nLIMIT 20;\n",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute \nSELECT id, away_team, home_team, game_time, \n       book_away_spread, book_home_spread, book_total, book_away_ml, book_home_ml,\n       published_model\nFROM games \nWHERE sport = 'NCAAM' \n  AND game_time >= UNIX_TIMESTAMP('2026-03-22 00:00:00') * 1000\n  AND game_time < UNIX_TIMESTAMP('2026-03-23 12:00:00') * 1000\nORDER BY game_time ASC\nLIMIT 20;\n",
-  "returncode": 1,
-  "logs": [
-    "ERROR 1054 (42S22) at line 2: Unknown column 'game_time' in 'where clause'"
-  ]
-}

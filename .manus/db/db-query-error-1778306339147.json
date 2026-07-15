@@ -1,8 +1,0 @@
-{
-  "query": "SELECT id, gameDate, awayTeam, homeTeam, market, pickSide, odds, line, customLine, result, awayScore, homeScore, risk, toWin, riskUnits, toWinUnits, pickLabel FROM tracked_bets WHERE gameDate = '2026-05-04' AND market = 'RL' ORDER BY id;",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute SELECT id, gameDate, awayTeam, homeTeam, market, pickSide, odds, line, customLine, result, awayScore, homeScore, risk, toWin, riskUnits, toWinUnits, pickLabel FROM tracked_bets WHERE gameDate = '2026-05-04' AND market = 'RL' ORDER BY id;",
-  "returncode": 1,
-  "logs": [
-    "ERROR 1054 (42S22) at line 1: Unknown column 'picklabel' in 'field list'"
-  ]
-}

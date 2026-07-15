@@ -1,8 +1,0 @@
-{
-  "query": "UPDATE app_users SET token_version = token_version + 1, updated_at = NOW() WHERE role != 'owner';",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute UPDATE app_users SET token_version = token_version + 1, updated_at = NOW() WHERE role != 'owner';",
-  "returncode": 1,
-  "logs": [
-    "ERROR 1054 (42S22) at line 1: Unknown column 'token_version' in 'field list'"
-  ]
-}

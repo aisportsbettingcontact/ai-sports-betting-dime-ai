@@ -1,8 +1,0 @@
-{
-  "query": "SELECT \n  id, awayTeam, homeTeam, awayTeamName, homeTeamName,\n  awayTeamNickname, homeTeamNickname,\n  startTime, status,\n  awaySpread, homeSpread, awaySpreadOdds, homeSpreadOdds,\n  total, overOdds, underOdds,\n  awayML, homeML,\n  modelTotal, awayModelSpread, homeModelSpread,\n  modelAwayML, modelHomeML,\n  modelAwayScore, modelHomeScore,\n  publishedToFeed, publishedModel, modeled,\n  awayKenPomRank, homeKenPomRank,\n  awayAdjOE, homeAdjOE, awayAdjDE, homeAdjDE,\n  awayTempo, homeTempo\nFROM games \nWHERE gameDate = '2026-03-28' AND sport = 'NCAAM'\nORDER BY startTime ASC;",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute SELECT \n  id, awayTeam, homeTeam, awayTeamName, homeTeamName,\n  awayTeamNickname, homeTeamNickname,\n  startTime, status,\n  awaySpread, homeSpread, awaySpreadOdds, homeSpreadOdds,\n  total, overOdds, underOdds,\n  awayML, homeML,\n  modelTotal, awayModelSpread, homeModelSpread,\n  modelAwayML, modelHomeML,\n  modelAwayScore, modelHomeScore,\n  publishedToFeed, publishedModel, modeled,\n  awayKenPomRank, homeKenPomRank,\n  awayAdjOE, homeAdjOE, awayAdjDE, homeAdjDE,\n  awayTempo, homeTempo\nFROM games \nWHERE gameDate = '2026-03-28' AND sport = 'NCAAM'\nORDER BY startTime ASC;",
-  "returncode": 1,
-  "logs": [
-    "ERROR 1054 (42S22) at line 1: Unknown column 'awayteamname' in 'field list'"
-  ]
-}

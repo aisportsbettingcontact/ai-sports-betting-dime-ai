@@ -1,8 +1,0 @@
-{
-  "query": "SELECT abbrev, name, xGF_60, xGA_60, HDCF_60, HDCA_60, SCF_60, SCA_60, CF_60, CA_60 FROM nhlTeams WHERE abbrev IN ('STL', 'WPG', 'ANA', 'MTL', 'TOR', 'MIN', 'FLA', 'SEA', 'NSH', 'EDM', 'SJS', 'OTT') ORDER BY abbrev",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute SELECT abbrev, name, xGF_60, xGA_60, HDCF_60, HDCA_60, SCF_60, SCA_60, CF_60, CA_60 FROM nhlTeams WHERE abbrev IN ('STL', 'WPG', 'ANA', 'MTL', 'TOR', 'MIN', 'FLA', 'SEA', 'NSH', 'EDM', 'SJS', 'OTT') ORDER BY abbrev",
-  "returncode": 1,
-  "logs": [
-    "ERROR 1146 (42S02) at line 1: Table 'mw3ficty7ae3qrm8dx8lua.nhlTeams' doesn't exist"
-  ]
-}

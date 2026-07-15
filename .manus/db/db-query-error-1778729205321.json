@@ -1,8 +1,0 @@
-{
-  "query": "\nSELECT \n  awayTeam, homeTeam,\n  ROUND(modelAwayScore, 3) AS modelAwayScore,\n  ROUND(modelHomeScore, 3) AS modelHomeScore,\n  ROUND(modelAwayScore + modelHomeScore, 3) AS modelCombinedGoals,\n  modelTotal,\n  ROUND(modelOverRate, 2) AS modelOverRate,\n  ROUND(modelUnderRate, 2) AS modelUnderRate,\n  modelOverOdds, modelUnderOdds,\n  modelAwayML, modelHomeML,\n  ROUND(modelAwayWinPct, 2) AS modelAwayWinPct,\n  ROUND(modelHomeWinPct, 2) AS modelHomeWinPct,\n  awayModelSpread, homeModelSpread,\n  modelAwaySpreadOdds, modelHomeSpreadOdds,\n  spreadEdge, totalEdge, mlEdge,\n  FROM_UNIXTIME(modelRunAt/1000) AS modelRunAt\nFROM games\nWHERE gameDate = '2026-05-14' AND sport = 'NHL';\n",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute \nSELECT \n  awayTeam, homeTeam,\n  ROUND(modelAwayScore, 3) AS modelAwayScore,\n  ROUND(modelHomeScore, 3) AS modelHomeScore,\n  ROUND(modelAwayScore + modelHomeScore, 3) AS modelCombinedGoals,\n  modelTotal,\n  ROUND(modelOverRate, 2) AS modelOverRate,\n  ROUND(modelUnderRate, 2) AS modelUnderRate,\n  modelOverOdds, modelUnderOdds,\n  modelAwayML, modelHomeML,\n  ROUND(modelAwayWinPct, 2) AS modelAwayWinPct,\n  ROUND(modelHomeWinPct, 2) AS modelHomeWinPct,\n  awayModelSpread, homeModelSpread,\n  modelAwaySpreadOdds, modelHomeSpreadOdds,\n  spreadEdge, totalEdge, mlEdge,\n  FROM_UNIXTIME(modelRunAt/1000) AS modelRunAt\nFROM games\nWHERE gameDate = '2026-05-14' AND sport = 'NHL';\n",
-  "returncode": 1,
-  "logs": [
-    "ERROR 1054 (42S22) at line 2: Unknown column 'mledge' in 'field list'"
-  ]
-}

@@ -1,8 +1,0 @@
-{
-  "query": "SELECT awayTeam, homeTeam, awayModelSpread, homeModelSpread, modelAwaySpreadOdds, modelHomeSpreadOdds, modelTotal, modelOverOdds, modelUnderOdds FROM games WHERE gameDate = '2026-03-19' AND sport = 'NCAAM' AND publishedModel = 1 ORDER BY gameTime LIMIT 6;",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute SELECT awayTeam, homeTeam, awayModelSpread, homeModelSpread, modelAwaySpreadOdds, modelHomeSpreadOdds, modelTotal, modelOverOdds, modelUnderOdds FROM games WHERE gameDate = '2026-03-19' AND sport = 'NCAAM' AND publishedModel = 1 ORDER BY gameTime LIMIT 6;",
-  "returncode": 1,
-  "logs": [
-    "ERROR 1054 (42S22) at line 1: Unknown column 'gameTime' in 'order clause'"
-  ]
-}

@@ -1,8 +1,0 @@
-{
-  "query": "\nINSERT INTO app_users (email, username, password_hash, role, has_access, expiry_date, created_at)\nVALUES (\n  'expiredtest@test.com',\n  'expiredtest',\n  '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj/RK.s5uoHe',\n  'user',\n  1,\n  UNIX_TIMESTAMP(NOW() - INTERVAL 1 HOUR) * 1000,\n  UNIX_TIMESTAMP() * 1000\n);\n",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute \nINSERT INTO app_users (email, username, password_hash, role, has_access, expiry_date, created_at)\nVALUES (\n  'expiredtest@test.com',\n  'expiredtest',\n  '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj/RK.s5uoHe',\n  'user',\n  1,\n  UNIX_TIMESTAMP(NOW() - INTERVAL 1 HOUR) * 1000,\n  UNIX_TIMESTAMP() * 1000\n);\n",
-  "returncode": 1,
-  "logs": [
-    "ERROR 1054 (42S22) at line 2: Unknown column 'password_hash' in 'field list'"
-  ]
-}

@@ -1,9 +1,0 @@
-{
-  "query": "UPDATE games SET\n  awayModelSpread = -1.5,\n  homeModelSpread = 1.5,\n  modelAwaySpreadOdds = '+206.50',\n  modelHomeSpreadOdds = '-206.50',\n  modelTotal = 7.5,\n  modelOverOdds = '+132.15',\n  modelUnderOdds = '-132.15',\n  modelAwayML = '+107.51',\n  modelHomeML = '-107.51',\n  modelAwayPLOdds = '+206.50',\n  modelHomePLOdds = '-206.50'\nWHERE id = '2250006';",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute UPDATE games SET\n  awayModelSpread = -1.5,\n  homeModelSpread = 1.5,\n  modelAwaySpreadOdds = '+206.50',\n  modelHomeSpreadOdds = '-206.50',\n  modelTotal = 7.5,\n  modelOverOdds = '+132.15',\n  modelUnderOdds = '-132.15',\n  modelAwayML = '+107.51',\n  modelHomeML = '-107.51',\n  modelAwayPLOdds = '+206.50',\n  modelHomePLOdds = '-206.50'\nWHERE id = '2250006';",
-  "rows": [],
-  "messages": [],
-  "stdout": "",
-  "stderr": "",
-  "execution_time_ms": 63
-}

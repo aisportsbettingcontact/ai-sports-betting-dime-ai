@@ -1,8 +1,0 @@
-{
-  "query": "\nSELECT id, awayTeam, homeTeam, \n       awayMoneyLine, homeMoneyLine, total, awaySpread, homeSpread,\n       publishedModel\nFROM games\nWHERE sport = 'MLB' AND gameDate = '2026-03-26'\n  AND homeTeam IN ('NYM', 'MIL', 'CHC')\nORDER BY id;\n",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute \nSELECT id, awayTeam, homeTeam, \n       awayMoneyLine, homeMoneyLine, total, awaySpread, homeSpread,\n       publishedModel\nFROM games\nWHERE sport = 'MLB' AND gameDate = '2026-03-26'\n  AND homeTeam IN ('NYM', 'MIL', 'CHC')\nORDER BY id;\n",
-  "returncode": 1,
-  "logs": [
-    "ERROR 1054 (42S22) at line 2: Unknown column 'awaymoneyline' in 'field list'"
-  ]
-}

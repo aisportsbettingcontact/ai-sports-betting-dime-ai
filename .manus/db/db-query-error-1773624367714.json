@@ -1,8 +1,0 @@
-{
-  "query": "SELECT id, away_team, home_team, away_book_spread, home_book_spread, away_spread_odds, home_spread_odds, away_ml_odds, home_ml_odds, model_away_puck_line, model_home_puck_line FROM games WHERE (away_team = 'STL' OR home_team = 'STL') AND sport = 'nhl' LIMIT 5;",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute SELECT id, away_team, home_team, away_book_spread, home_book_spread, away_spread_odds, home_spread_odds, away_ml_odds, home_ml_odds, model_away_puck_line, model_home_puck_line FROM games WHERE (away_team = 'STL' OR home_team = 'STL') AND sport = 'nhl' LIMIT 5;",
-  "returncode": 1,
-  "logs": [
-    "ERROR 1054 (42S22) at line 1: Unknown column 'away_team' in 'where clause'"
-  ]
-}

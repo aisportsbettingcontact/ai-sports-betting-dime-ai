@@ -1,9 +1,0 @@
-{
-  "query": "\nSELECT DISTINCT awayTeam, homeTeam FROM games \nWHERE awayTeam IN ('Vegas Golden Knights','Columbus Blue Jackets','Toronto Maple Leafs','New York Islanders','New York Rangers')\n   OR homeTeam IN ('Vegas Golden Knights','Columbus Blue Jackets','Toronto Maple Leafs','New York Islanders','New York Rangers')\nLIMIT 20;\n",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute \nSELECT DISTINCT awayTeam, homeTeam FROM games \nWHERE awayTeam IN ('Vegas Golden Knights','Columbus Blue Jackets','Toronto Maple Leafs','New York Islanders','New York Rangers')\n   OR homeTeam IN ('Vegas Golden Knights','Columbus Blue Jackets','Toronto Maple Leafs','New York Islanders','New York Rangers')\nLIMIT 20;\n",
-  "rows": [],
-  "messages": [],
-  "stdout": "",
-  "stderr": "",
-  "execution_time_ms": 121
-}
