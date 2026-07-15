@@ -1,9 +1,0 @@
-{
-  "query": "\nUPDATE games SET startTimeEst = '09:10 AM' WHERE awayTeam = 'miami_fl' AND homeTeam = 'purdue' AND gameDate = '2026-03-22';\nUPDATE games SET startTimeEst = '05:45 PM' WHERE awayTeam = 'ucla' AND homeTeam = 'connecticut' AND gameDate = '2026-03-22';\n",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute \nUPDATE games SET startTimeEst = '09:10 AM' WHERE awayTeam = 'miami_fl' AND homeTeam = 'purdue' AND gameDate = '2026-03-22';\nUPDATE games SET startTimeEst = '05:45 PM' WHERE awayTeam = 'ucla' AND homeTeam = 'connecticut' AND gameDate = '2026-03-22';\n",
-  "rows": [],
-  "messages": [],
-  "stdout": "",
-  "stderr": "",
-  "execution_time_ms": 92
-}

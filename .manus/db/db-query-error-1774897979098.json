@@ -1,8 +1,0 @@
-{
-  "query": "SELECT id, awayTeam, homeTeam, gameDate, awayStartingPitcher, homeStartingPitcher, awayBookSpread, bookTotal, awayML, homeML, modeled, publishedModel, publishedToFeed, modelTotal, awayModelSpread FROM games WHERE sport = 'MLB' AND gameDate = '2026-03-30' ORDER BY id;",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute SELECT id, awayTeam, homeTeam, gameDate, awayStartingPitcher, homeStartingPitcher, awayBookSpread, bookTotal, awayML, homeML, modeled, publishedModel, publishedToFeed, modelTotal, awayModelSpread FROM games WHERE sport = 'MLB' AND gameDate = '2026-03-30' ORDER BY id;",
-  "returncode": 1,
-  "logs": [
-    "ERROR 1054 (42S22) at line 1: Unknown column 'modeled' in 'field list'"
-  ]
-}

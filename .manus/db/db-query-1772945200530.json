@@ -1,9 +1,0 @@
-{
-  "query": "\nUPDATE ncaam_teams SET abbrev = 'PSU' WHERE abbrev = 'PSU2';\nUPDATE ncaam_teams SET abbrev = 'CSU' WHERE abbrev = 'CSU2';\nUPDATE ncaam_teams SET abbrev = 'SDSU' WHERE abbrev = 'SDSU2';\nUPDATE ncaam_teams SET abbrev = 'MER' WHERE abbrev = 'MER2';\nUPDATE ncaam_teams SET abbrev = 'WSU' WHERE abbrev = 'WSU2';\nUPDATE ncaam_teams SET abbrev = 'USD' WHERE abbrev = 'USD2';\nUPDATE ncaam_teams SET abbrev = 'LOYCHI' WHERE abbrev = 'LOYCHI';\n",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute \nUPDATE ncaam_teams SET abbrev = 'PSU' WHERE abbrev = 'PSU2';\nUPDATE ncaam_teams SET abbrev = 'CSU' WHERE abbrev = 'CSU2';\nUPDATE ncaam_teams SET abbrev = 'SDSU' WHERE abbrev = 'SDSU2';\nUPDATE ncaam_teams SET abbrev = 'MER' WHERE abbrev = 'MER2';\nUPDATE ncaam_teams SET abbrev = 'WSU' WHERE abbrev = 'WSU2';\nUPDATE ncaam_teams SET abbrev = 'USD' WHERE abbrev = 'USD2';\nUPDATE ncaam_teams SET abbrev = 'LOYCHI' WHERE abbrev = 'LOYCHI';\n",
-  "rows": [],
-  "messages": [],
-  "stdout": "",
-  "stderr": "",
-  "execution_time_ms": 127
-}

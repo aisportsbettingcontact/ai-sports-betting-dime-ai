@@ -1,8 +1,0 @@
-{
-  "query": "\nSELECT \n  id, awayTeam, homeTeam, gameDate, startTimeEst, status,\n  awayBookSpread, homeBookSpread, awaySpreadOdds, homeSpreadOdds,\n  bookTotal, overOdds, underOdds,\n  awayML, homeML,\n  openAwaySpread, openHomeSpread, openAwaySpreadOdds, openHomeSpreadOdds,\n  openTotal, openAwayML, openHomeML,\n  modelAwayPLOdds, modelHomePLOdds, modelTotal, modelAwayML, modelHomeML,\n  spreadDiff, totalDiff, spreadEdge, totalEdge,\n  isPublished\nFROM games\nWHERE sport = 'NHL' AND gameDate = '2026-03-25'\nORDER BY startTimeEst;\n",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute \nSELECT \n  id, awayTeam, homeTeam, gameDate, startTimeEst, status,\n  awayBookSpread, homeBookSpread, awaySpreadOdds, homeSpreadOdds,\n  bookTotal, overOdds, underOdds,\n  awayML, homeML,\n  openAwaySpread, openHomeSpread, openAwaySpreadOdds, openHomeSpreadOdds,\n  openTotal, openAwayML, openHomeML,\n  modelAwayPLOdds, modelHomePLOdds, modelTotal, modelAwayML, modelHomeML,\n  spreadDiff, totalDiff, spreadEdge, totalEdge,\n  isPublished\nFROM games\nWHERE sport = 'NHL' AND gameDate = '2026-03-25'\nORDER BY startTimeEst;\n",
-  "returncode": 1,
-  "logs": [
-    "ERROR 1054 (42S22) at line 2: Unknown column 'status' in 'field list'"
-  ]
-}

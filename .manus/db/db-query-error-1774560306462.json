@@ -1,8 +1,0 @@
-{
-  "query": "\nSELECT \n  g.id as game_id,\n  g.away_team,\n  g.home_team,\n  g.away_pitcher_id,\n  g.home_pitcher_id,\n  l.team,\n  l.lineup_json\nFROM mlb_games g\nLEFT JOIN mlb_lineups l ON l.game_id = g.id\nWHERE DATE(g.game_date) = '2026-03-26'\nORDER BY g.id, l.team\nLIMIT 50;\n",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute \nSELECT \n  g.id as game_id,\n  g.away_team,\n  g.home_team,\n  g.away_pitcher_id,\n  g.home_pitcher_id,\n  l.team,\n  l.lineup_json\nFROM mlb_games g\nLEFT JOIN mlb_lineups l ON l.game_id = g.id\nWHERE DATE(g.game_date) = '2026-03-26'\nORDER BY g.id, l.team\nLIMIT 50;\n",
-  "returncode": 1,
-  "logs": [
-    "ERROR 1146 (42S02) at line 2: Table 'mw3ficty7ae3qrm8dx8lua.mlb_games' doesn't exist"
-  ]
-}

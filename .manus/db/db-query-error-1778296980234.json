@@ -1,8 +1,0 @@
-{
-  "query": "-- Backfill gameNumber for the HOU@BAL doubleheader bets on 2026-04-30\n-- Bet 60003: anGameId=287818 = G2 (HOU won 11-5, created second = later game)\n-- Bet 60004: anGameId=290399 = G1 (BAL won 10-3, created first = earlier game)\n-- Determine G1 vs G2 by: lower anGameId = earlier game = G1\n-- 287818 < 290399 → bet 60003 (anGameId=287818) = G1, bet 60004 (anGameId=290399) = G2\n-- Wait — need to verify by actual game time. Let's check all DH bets first.\nSELECT id, away_team, home_team, game_date, an_game_id, game_number, result, odds\nFROM tracked_bets\nWHERE game_date = '2026-04-30' AND away_team = 'HOU' AND home_team = 'BAL'\nORDER BY an_game_id ASC;",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute -- Backfill gameNumber for the HOU@BAL doubleheader bets on 2026-04-30\n-- Bet 60003: anGameId=287818 = G2 (HOU won 11-5, created second = later game)\n-- Bet 60004: anGameId=290399 = G1 (BAL won 10-3, created first = earlier game)\n-- Determine G1 vs G2 by: lower anGameId = earlier game = G1\n-- 287818 < 290399 → bet 60003 (anGameId=287818) = G1, bet 60004 (anGameId=290399) = G2\n-- Wait — need to verify by actual game time. Let's check all DH bets first.\nSELECT id, away_team, home_team, game_date, an_game_id, game_number, result, odds\nFROM tracked_bets\nWHERE game_date = '2026-04-30' AND away_team = 'HOU' AND home_team = 'BAL'\nORDER BY an_game_id ASC;",
-  "returncode": 1,
-  "logs": [
-    "ERROR 1054 (42S22) at line 7: Unknown column 'game_date' in 'where clause'"
-  ]
-}

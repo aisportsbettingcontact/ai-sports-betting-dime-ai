@@ -1,8 +1,0 @@
-{
-  "query": "\nSELECT \n  away_team, home_team, game_date,\n  away_book_spread, home_book_spread, book_total,\n  away_spread_odds, home_spread_odds, over_odds, under_odds,\n  away_ml, home_ml,\n  open_away_spread, open_home_spread, open_total,\n  open_over_odds, open_under_odds, open_away_ml, open_home_ml,\n  away_tickets, home_tickets, away_spread_handle, home_spread_handle,\n  away_total_tickets, home_total_tickets\nFROM games\nWHERE game_date = '2026-03-15' AND sport = 'NCAAM'\nORDER BY game_time ASC;\n",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute \nSELECT \n  away_team, home_team, game_date,\n  away_book_spread, home_book_spread, book_total,\n  away_spread_odds, home_spread_odds, over_odds, under_odds,\n  away_ml, home_ml,\n  open_away_spread, open_home_spread, open_total,\n  open_over_odds, open_under_odds, open_away_ml, open_home_ml,\n  away_tickets, home_tickets, away_spread_handle, home_spread_handle,\n  away_total_tickets, home_total_tickets\nFROM games\nWHERE game_date = '2026-03-15' AND sport = 'NCAAM'\nORDER BY game_time ASC;\n",
-  "returncode": 1,
-  "logs": [
-    "ERROR 1054 (42S22) at line 2: Unknown column 'game_time' in 'order clause'"
-  ]
-}

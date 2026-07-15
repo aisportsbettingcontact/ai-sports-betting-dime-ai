@@ -1,9 +1,0 @@
-{
-  "query": "-- Update Iowa @ Illinois: total 139.5 → 138.5\nUPDATE games SET bookTotal = 138.5 WHERE id = 2370007 AND sport = 'NCAAM';\n-- Update Purdue @ Arizona: total 153.5 → 152.5\nUPDATE games SET bookTotal = 152.5 WHERE id = 2370008 AND sport = 'NCAAM';",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute -- Update Iowa @ Illinois: total 139.5 → 138.5\nUPDATE games SET bookTotal = 138.5 WHERE id = 2370007 AND sport = 'NCAAM';\n-- Update Purdue @ Arizona: total 153.5 → 152.5\nUPDATE games SET bookTotal = 152.5 WHERE id = 2370008 AND sport = 'NCAAM';",
-  "rows": [],
-  "messages": [],
-  "stdout": "",
-  "stderr": "",
-  "execution_time_ms": 75
-}

@@ -1,8 +1,0 @@
-{
-  "query": "\nUPDATE games \nSET \n  modelAwayScore = NULL, modelHomeScore = NULL,\n  modelAwaySpread = NULL, modelHomeSpread = NULL,\n  modelTotal = NULL,\n  modelAwayML = NULL, modelHomeML = NULL,\n  modelAwaySpreadOdds = NULL, modelHomeSpreadOdds = NULL,\n  modelOverOdds = NULL, modelUnderOdds = NULL,\n  modelOverPct = NULL, modelUnderPct = NULL,\n  modelAwayWinPct = NULL, modelHomeWinPct = NULL,\n  publishedModel = 0,\n  modelEdges = NULL\nWHERE sport = 'NCAAM'\n  AND gameDate = '2026-03-19';\n\nSELECT COUNT(*) as cleared FROM games \nWHERE sport = 'NCAAM' AND gameDate = '2026-03-19' AND publishedModel = 0;\n",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute \nUPDATE games \nSET \n  modelAwayScore = NULL, modelHomeScore = NULL,\n  modelAwaySpread = NULL, modelHomeSpread = NULL,\n  modelTotal = NULL,\n  modelAwayML = NULL, modelHomeML = NULL,\n  modelAwaySpreadOdds = NULL, modelHomeSpreadOdds = NULL,\n  modelOverOdds = NULL, modelUnderOdds = NULL,\n  modelOverPct = NULL, modelUnderPct = NULL,\n  modelAwayWinPct = NULL, modelHomeWinPct = NULL,\n  publishedModel = 0,\n  modelEdges = NULL\nWHERE sport = 'NCAAM'\n  AND gameDate = '2026-03-19';\n\nSELECT COUNT(*) as cleared FROM games \nWHERE sport = 'NCAAM' AND gameDate = '2026-03-19' AND publishedModel = 0;\n",
-  "returncode": 1,
-  "logs": [
-    "ERROR 1054 (42S22) at line 2: Unknown column 'modelAwaySpread' in 'field list'"
-  ]
-}

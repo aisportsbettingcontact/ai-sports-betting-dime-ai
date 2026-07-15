@@ -1,8 +1,0 @@
-{
-  "query": "SELECT g.id, g.awayTeam, g.homeTeam, g.gameDate, g.sport,\n  bs.spreadAwayTickets, bs.spreadHomeTickets, bs.spreadAwayMoney, bs.spreadHomeMoney,\n  bs.totalOverTickets, bs.totalUnderTickets, bs.mlAwayTickets, bs.mlHomeTickets,\n  bs.updatedAt\nFROM games g\nLEFT JOIN bettingSplits bs ON bs.gameId = g.id\nWHERE g.sport = 'NHL' AND g.gameDate = '2026-03-19'\n  AND g.awayTeam IN ('new_york_islanders','new_york_rangers','montreal_canadiens')\nORDER BY g.awayTeam;",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute SELECT g.id, g.awayTeam, g.homeTeam, g.gameDate, g.sport,\n  bs.spreadAwayTickets, bs.spreadHomeTickets, bs.spreadAwayMoney, bs.spreadHomeMoney,\n  bs.totalOverTickets, bs.totalUnderTickets, bs.mlAwayTickets, bs.mlHomeTickets,\n  bs.updatedAt\nFROM games g\nLEFT JOIN bettingSplits bs ON bs.gameId = g.id\nWHERE g.sport = 'NHL' AND g.gameDate = '2026-03-19'\n  AND g.awayTeam IN ('new_york_islanders','new_york_rangers','montreal_canadiens')\nORDER BY g.awayTeam;",
-  "returncode": 1,
-  "logs": [
-    "ERROR 1146 (42S02) at line 1: Table 'mw3ficty7ae3qrm8dx8lua.bettingSplits' doesn't exist"
-  ]
-}

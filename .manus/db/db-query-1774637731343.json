@@ -1,9 +1,0 @@
-{
-  "query": "\nUPDATE games SET startTimeEst = '19:10' WHERE id = '2430015' AND gameDate = '2026-03-27';\nUPDATE games SET startTimeEst = '19:35' WHERE id = '2130002' AND gameDate = '2026-03-27';\nUPDATE games SET startTimeEst = '21:45' WHERE id = '1890047' AND gameDate = '2026-03-27';\nUPDATE games SET startTimeEst = '21:45' WHERE id = '2130003' AND gameDate = '2026-03-27';\n",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute \nUPDATE games SET startTimeEst = '19:10' WHERE id = '2430015' AND gameDate = '2026-03-27';\nUPDATE games SET startTimeEst = '19:35' WHERE id = '2130002' AND gameDate = '2026-03-27';\nUPDATE games SET startTimeEst = '21:45' WHERE id = '1890047' AND gameDate = '2026-03-27';\nUPDATE games SET startTimeEst = '21:45' WHERE id = '2130003' AND gameDate = '2026-03-27';\n",
-  "rows": [],
-  "messages": [],
-  "stdout": "",
-  "stderr": "",
-  "execution_time_ms": 104
-}

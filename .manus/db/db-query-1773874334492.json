@@ -1,9 +1,0 @@
-{
-  "query": "\nUPDATE games SET gameDate = '2026-03-19'\nWHERE id IN ('1830082', '1830083', '1830084', '1830085', '1830107', '1830109', '1830110', '1830111', '1830112', '1830113')\nAND sport = 'NCAAM';\n",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute \nUPDATE games SET gameDate = '2026-03-19'\nWHERE id IN ('1830082', '1830083', '1830084', '1830085', '1830107', '1830109', '1830110', '1830111', '1830112', '1830113')\nAND sport = 'NCAAM';\n",
-  "rows": [],
-  "messages": [],
-  "stdout": "",
-  "stderr": "",
-  "execution_time_ms": 73
-}

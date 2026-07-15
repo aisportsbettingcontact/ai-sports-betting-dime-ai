@@ -1,8 +1,0 @@
-{
-  "query": "SELECT DISTINCT game_clock FROM games WHERE game_clock IS NOT NULL ORDER BY game_clock LIMIT 60;",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute SELECT DISTINCT game_clock FROM games WHERE game_clock IS NOT NULL ORDER BY game_clock LIMIT 60;",
-  "returncode": 1,
-  "logs": [
-    "ERROR 1054 (42S22) at line 1: Unknown column 'game_clock' in 'where clause'"
-  ]
-}

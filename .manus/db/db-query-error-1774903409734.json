@@ -1,8 +1,0 @@
-{
-  "query": "SELECT id, awayTeam, homeTeam, \n  awaySpreadBets, homeSpreadBets, awaySpreadMoney, homeSpreadMoney,\n  overBets, underBets, overMoney, underMoney,\n  awayMLBets, homeMLBets, awayMLMoney, homeMLMoney,\n  splitsUpdatedAt\nFROM games \nWHERE sport = 'MLB' AND gameDate = '2026-03-30' \nORDER BY id \nLIMIT 5;",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute SELECT id, awayTeam, homeTeam, \n  awaySpreadBets, homeSpreadBets, awaySpreadMoney, homeSpreadMoney,\n  overBets, underBets, overMoney, underMoney,\n  awayMLBets, homeMLBets, awayMLMoney, homeMLMoney,\n  splitsUpdatedAt\nFROM games \nWHERE sport = 'MLB' AND gameDate = '2026-03-30' \nORDER BY id \nLIMIT 5;",
-  "returncode": 1,
-  "logs": [
-    "ERROR 1054 (42S22) at line 1: Unknown column 'awayspreadbets' in 'field list'"
-  ]
-}

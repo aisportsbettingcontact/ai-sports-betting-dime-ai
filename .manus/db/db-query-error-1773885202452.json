@@ -1,8 +1,0 @@
-{
-  "query": "\nSELECT \n  bg.id,\n  bg.bracketRound,\n  bg.bracketRegion,\n  bg.bracketPosition,\n  bg.nextGameId,\n  bg.awayTeamSlug,\n  bg.homeTeamSlug\nFROM bracketGames bg\nWHERE bg.bracketRegion = 'EAST'\nORDER BY bg.bracketRound, bg.bracketPosition\nLIMIT 20;\n",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute \nSELECT \n  bg.id,\n  bg.bracketRound,\n  bg.bracketRegion,\n  bg.bracketPosition,\n  bg.nextGameId,\n  bg.awayTeamSlug,\n  bg.homeTeamSlug\nFROM bracketGames bg\nWHERE bg.bracketRegion = 'EAST'\nORDER BY bg.bracketRound, bg.bracketPosition\nLIMIT 20;\n",
-  "returncode": 1,
-  "logs": [
-    "ERROR 1146 (42S02) at line 2: Table 'mw3ficty7ae3qrm8dx8lua.bracketGames' doesn't exist"
-  ]
-}

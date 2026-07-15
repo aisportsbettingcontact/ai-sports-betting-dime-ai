@@ -1,8 +1,0 @@
-{
-  "query": "\nSELECT \n  id,\n  sport,\n  game_date,\n  away_team,\n  home_team,\n  start_time_est,\n  game_status,\n  away_score,\n  home_score,\n  away_book_spread,\n  home_book_spread,\n  book_total,\n  away_ml,\n  home_ml,\n  spread_away_bets_pct,\n  spread_away_money_pct,\n  total_over_bets_pct,\n  total_over_money_pct,\n  ml_away_bets_pct,\n  ml_away_money_pct,\n  sort_order,\n  published_to_feed,\n  published_model,\n  away_model_spread,\n  home_model_spread,\n  model_total,\n  model_away_ml,\n  created_at,\n  updated_at\nFROM staging_games\nWHERE sport = 'NHL'\nORDER BY game_date, sort_order, start_time_est;\n",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute \nSELECT \n  id,\n  sport,\n  game_date,\n  away_team,\n  home_team,\n  start_time_est,\n  game_status,\n  away_score,\n  home_score,\n  away_book_spread,\n  home_book_spread,\n  book_total,\n  away_ml,\n  home_ml,\n  spread_away_bets_pct,\n  spread_away_money_pct,\n  total_over_bets_pct,\n  total_over_money_pct,\n  ml_away_bets_pct,\n  ml_away_money_pct,\n  sort_order,\n  published_to_feed,\n  published_model,\n  away_model_spread,\n  home_model_spread,\n  model_total,\n  model_away_ml,\n  created_at,\n  updated_at\nFROM staging_games\nWHERE sport = 'NHL'\nORDER BY game_date, sort_order, start_time_est;\n",
-  "returncode": 1,
-  "logs": [
-    "ERROR 1146 (42S02) at line 2: Table 'mw3ficty7ae3qrm8dx8lua.staging_games' doesn't exist"
-  ]
-}

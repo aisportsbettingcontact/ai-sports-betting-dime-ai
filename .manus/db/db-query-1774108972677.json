@@ -1,9 +1,0 @@
-{
-  "query": "\nUPDATE games \nSET publishedModel = 1, publishedToFeed = 1\nWHERE gameDate = '2026-03-21' \n  AND sport = 'NCAAM'\n  AND awayBookSpread IS NOT NULL\n  AND awayModelSpread IS NOT NULL\n  AND modelTotal IS NOT NULL;\n",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute \nUPDATE games \nSET publishedModel = 1, publishedToFeed = 1\nWHERE gameDate = '2026-03-21' \n  AND sport = 'NCAAM'\n  AND awayBookSpread IS NOT NULL\n  AND awayModelSpread IS NOT NULL\n  AND modelTotal IS NOT NULL;\n",
-  "rows": [],
-  "messages": [],
-  "stdout": "",
-  "stderr": "",
-  "execution_time_ms": 65
-}

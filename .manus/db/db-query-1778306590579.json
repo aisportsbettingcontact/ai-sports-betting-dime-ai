@@ -1,9 +1,0 @@
-{
-  "query": "UPDATE tracked_bets SET result='LOSS', line='-1.5' WHERE id=60015;\nUPDATE tracked_bets SET result='LOSS', line='-1.5' WHERE id=30077;",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute UPDATE tracked_bets SET result='LOSS', line='-1.5' WHERE id=60015;\nUPDATE tracked_bets SET result='LOSS', line='-1.5' WHERE id=30077;",
-  "rows": [],
-  "messages": [],
-  "stdout": "",
-  "stderr": "",
-  "execution_time_ms": 279
-}

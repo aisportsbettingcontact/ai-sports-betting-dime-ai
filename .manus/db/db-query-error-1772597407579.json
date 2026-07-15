@@ -1,8 +1,0 @@
-{
-  "query": "SELECT awayTeam, homeTeam, awayLogoUrl, homeLogoUrl FROM games WHERE awayTeam LIKE '%oral%' OR homeTeam LIKE '%oral%' OR awayTeam LIKE '%roberts%' OR homeTeam LIKE '%roberts%';",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute SELECT awayTeam, homeTeam, awayLogoUrl, homeLogoUrl FROM games WHERE awayTeam LIKE '%oral%' OR homeTeam LIKE '%oral%' OR awayTeam LIKE '%roberts%' OR homeTeam LIKE '%roberts%';",
-  "returncode": 1,
-  "logs": [
-    "ERROR 1054 (42S22) at line 1: Unknown column 'awaylogourl' in 'field list'"
-  ]
-}

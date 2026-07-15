@@ -1,8 +1,0 @@
-{
-  "query": "\nSELECT name, primaryColor, secondaryColor, tertiaryColor \nFROM ncaam_teams \nWHERE LOWER(name) LIKE '%high point%';\n\nSELECT COUNT(*) as total_teams, \n  SUM(CASE WHEN primaryColor IS NULL THEN 1 ELSE 0 END) as missing_primary,\n  SUM(CASE WHEN secondaryColor IS NULL THEN 1 ELSE 0 END) as missing_secondary\nFROM ncaam_teams;\n\nSELECT name, primaryColor, secondaryColor, tertiaryColor \nFROM ncaam_teams \nWHERE primaryColor IS NULL OR primaryColor = ''\nORDER BY name\nLIMIT 30;\n",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3AW8r3RRauadYzS.root --database MW3FicTy7ae3qrm8dx8Lua --execute \nSELECT name, primaryColor, secondaryColor, tertiaryColor \nFROM ncaam_teams \nWHERE LOWER(name) LIKE '%high point%';\n\nSELECT COUNT(*) as total_teams, \n  SUM(CASE WHEN primaryColor IS NULL THEN 1 ELSE 0 END) as missing_primary,\n  SUM(CASE WHEN secondaryColor IS NULL THEN 1 ELSE 0 END) as missing_secondary\nFROM ncaam_teams;\n\nSELECT name, primaryColor, secondaryColor, tertiaryColor \nFROM ncaam_teams \nWHERE primaryColor IS NULL OR primaryColor = ''\nORDER BY name\nLIMIT 30;\n",
-  "returncode": 1,
-  "logs": [
-    "ERROR 1054 (42S22) at line 2: Unknown column 'name' in 'where clause'"
-  ]
-}
