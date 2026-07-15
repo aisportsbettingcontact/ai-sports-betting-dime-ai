@@ -1,0 +1,12 @@
+interface:
+  display_name: Architect GitHub Repositories
+  short_description: Audit and safely restructure repositories
+  default_prompt: Use $architect-github-repos to audit this repository and safely
+    implement the structural cleanup I authorize.
+policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas
+  allow_implicit_invocation: true
