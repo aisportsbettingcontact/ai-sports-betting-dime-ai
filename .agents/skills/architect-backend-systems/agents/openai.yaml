@@ -1,0 +1,12 @@
+interface:
+  display_name: Backend Systems Architect
+  short_description: Architect secure, scalable backend systems
+  default_prompt: Use $architect-backend-systems to design and verify the backend
+    architecture for this product.
+policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas
+  allow_implicit_invocation: true
