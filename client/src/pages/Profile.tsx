@@ -11,6 +11,7 @@
  */
 
 import { useEffect, useRef } from "react";
+import { useLocation } from "wouter";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { useAppAuth } from "@/_core/hooks/useAppAuth";
@@ -42,9 +43,10 @@ function derivePlanLabel(user: {
 }
 
 export default function Profile() {
-  const { appUser, loading, refetch } = useAppAuth();
+  const { appUser, loading, isOwner, refetch } = useAppAuth();
   const utils = trpc.useUtils();
   const hasLoggedView = useRef(false);
+  const [, navigate] = useLocation();
 
   // ─── Unauthenticated redirect ──────────────────────────────────────────────
   useEffect(() => {
@@ -103,6 +105,11 @@ export default function Profile() {
       emailOrUsername: appUser.email,
       origin: window.location.origin,
     });
+  };
+
+  const handleOpenUserManagement = () => {
+    profileLog("profile.user_management.click", { userId: appUser?.id });
+    navigate("/admin/users");
   };
 
   // ─── Loading state (stable skeleton, no layout shift) ──────────────────────
@@ -231,6 +238,26 @@ export default function Profile() {
           </button>
         </div>
       </section>
+
+      {/* ------- Administration (owner-only) ------- */}
+      {isOwner && (
+        <section className="pf-section" aria-labelledby="pf-admin">
+          <h2 className="pf-label" id="pf-admin">
+            Administration
+          </h2>
+          <div className="pf-card">
+            <button
+              className="pf-row pf-row--action"
+              onClick={handleOpenUserManagement}
+            >
+              User Management
+              <span className="pf-chev" aria-hidden="true">
+                ›
+              </span>
+            </button>
+          </div>
+        </section>
+      )}
 
       {/* ------- Appearance ------- */}
       <section className="pf-section" aria-labelledby="pf-appearance">

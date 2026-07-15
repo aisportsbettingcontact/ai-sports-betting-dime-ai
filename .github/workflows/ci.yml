@@ -51,91 +51,44 @@ jobs:
       - name: "[INPUT] Checkout repository"
         uses: actions/checkout@v4
 
-      - name: "[STEP] Setup pnpm"
-        uses: pnpm/action-setup@v4
-        # No 'version' key — packageManager in package.json is the single source of truth.
-        # Specifying version here conflicts with the packageManager field and causes
-        # ERR_PNPM_BAD_PM_VERSION in pnpm/action-setup@v4.
-
       - name: "[STEP] Setup Node.js 22"
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: pnpm
 
-      - name: "[STEP] Install dependencies (frozen lockfile)"
-        run: pnpm install --frozen-lockfile
-
-      - name: "[STEP] Run security audit — fail on new HIGH or CRITICAL CVEs"
-        # --audit-level=high: exits non-zero if any HIGH or CRITICAL vulnerability
-        # is found in the dependency tree. MODERATE and LOW are reported but do
-        # not fail the build (they are transitive and often unfixable).
-        #
-        # IGNORED ADVISORIES (9 total) — all confirmed unfixable as of 2026-04-10:
-        #
-        # GHSA-4r6h-8v6p-xvw6  xlsx@0.18.5  Prototype Pollution
-        #   Reason: patched:<0.0.0 — no fix exists upstream. Server-side only.
-        #
-        # GHSA-5pgg-2g8v-p4x9  xlsx@0.18.5  ReDoS
-        #   Reason: patched:<0.0.0 — no fix exists upstream. Server-side only.
-        #
-        # GHSA-379q-355j-w6rj  pnpm self  Lifecycle scripts bypass
-        #   Reason: patched:>=10.26.0 — pnpm/action-setup@v4 misparses sha512 hash
-        #   in packageManager field. Using pnpm@10.33.0 (no hash) as workaround.
-        #   pnpm self-CVE is a dev-tool issue, not a runtime vulnerability.
-        #
-        # GHSA-7vhp-vf5g-r2fw  pnpm self  Lockfile integrity bypass
-        #   Reason: same as above — pnpm self-CVE, dev-tool only.
-        #
-        # GHSA-2phv-j68v-wwqx  pnpm self  Command injection via env var
-        #   Reason: same as above — pnpm self-CVE, dev-tool only.
-        #
-        # GHSA-37ch-88jc-xwx2  path-to-regexp@0.1.12  ReDoS
-        #   Reason: patched:>=0.1.13 does not exist on npm. Requires express v5
-        #   migration. Express v5 breaks @types/express@4 + wildcard routes.
-        #
-        # GHSA-r5fr-rjxr-66jc  lodash@4.17.21  Code injection via _.template
-        #   Reason: patched:>=4.18.0 does not exist on npm (lodash jumped to 5.x
-        #   beta). We do not use _.template anywhere in our codebase.
-        #
-        # GHSA-chqc-8p9q-pq6q  basic-ftp@5.2.0  CRLF injection
-        #   Reason: via puppeteer (dev-only). No newer get-uri available.
-        #
-        # GHSA-6v7q-wjvx-w8wg  basic-ftp@5.2.0  Incomplete CRLF protection
-        #   Reason: same as above — via puppeteer (dev-only).
-        #
-        # [VERIFY] Any NEW HIGH/CRITICAL CVE not in this ignore list will block
-        # the merge. This list must be reviewed and updated quarterly.
+      # `pnpm audit` calls npm's legacy /-/npm/v1/security/audits[/quick]
+      # endpoints, which npm retired 2026-07-15 (410 Gone). The fix landed in
+      # pnpm v11.0, but this repo is intentionally pinned to pnpm@10.33.0 (see
+      # the packageManager field — pnpm/action-setup@v4 misparses a sha512
+      # hash there, GHSA-379q-355j-w6rj) and pnpm v11 silently stops reading
+      # the package.json "pnpm" config block (overrides/patchedDependencies/
+      # onlyBuiltDependencies/auditConfig) — a bigger, separate migration.
+      # `npm audit` was tried as a substitute and abandoned: it can't even
+      # resolve this repo's tree (a transitive dependency ships a Yarn-only
+      # `patch:` devDependency reference npm's parser has never supported).
+      # osv-scanner reads pnpm-lock.yaml directly — no install, no dependency
+      # resolution — so it audits the actual pinned versions and sidesteps
+      # both problems. See osv-scanner.toml for the full rationale and the
+      # ignore-list, and scripts/check-osv-scan.mjs for the severity gate.
+      - name: "[STEP] Install osv-scanner"
         run: |
-          echo "[INPUT] Running pnpm audit at level=high with ignore list..."
-          pnpm audit --audit-level=high \
-            --ignore GHSA-4r6h-8v6p-xvw6 \
-            --ignore GHSA-5pgg-2g8v-p4x9 \
-            --ignore GHSA-379q-355j-w6rj \
-            --ignore GHSA-7vhp-vf5g-r2fw \
-            --ignore GHSA-2phv-j68v-wwqx \
-            --ignore GHSA-37ch-88jc-xwx2 \
-            --ignore GHSA-r5fr-rjxr-66jc \
-            --ignore GHSA-chqc-8p9q-pq6q \
-            --ignore GHSA-6v7q-wjvx-w8wg \
-            2>&1 | tee audit-report.txt
-          EXIT_CODE=${PIPESTATUS[0]}
-          echo "[STATE] Audit exit code: $EXIT_CODE"
-          echo "[STATE] Ignored advisories: 9 (all confirmed unfixable — see comments above)"
-          if [ $EXIT_CODE -ne 0 ]; then
-            echo "[OUTPUT] FAIL — NEW HIGH or CRITICAL vulnerability detected (not in ignore list)"
-            echo "[VERIFY] Review audit-report.txt — add to ignore list only after confirming no fix exists"
-            exit $EXIT_CODE
-          fi
-          echo "[OUTPUT] PASS — No new HIGH or CRITICAL vulnerabilities found"
-          echo "[VERIFY] All non-ignored dependencies clear at audit-level=high"
+          curl -sSL -o /usr/local/bin/osv-scanner "https://github.com/google/osv-scanner/releases/latest/download/osv-scanner_linux_amd64"
+          chmod +x /usr/local/bin/osv-scanner
+          osv-scanner --version
+
+      - name: "[STEP] Run osv-scanner — fail on new HIGH or CRITICAL CVEs"
+        run: |
+          echo "[INPUT] Scanning pnpm-lock.yaml with osv-scanner..."
+          osv-scanner scan source --lockfile=pnpm-lock.yaml --config=osv-scanner.toml \
+            --format=json --output-file=osv-report.json || true
+          node scripts/check-osv-scan.mjs --input=osv-report.json
 
       - name: "[OUTPUT] Upload audit report as artifact"
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: security-audit-report
-          path: audit-report.txt
+          path: osv-report.json
           retention-days: 30
 
   # ─── Stage 2: TypeScript Type Check ──────────────────────────────────────
