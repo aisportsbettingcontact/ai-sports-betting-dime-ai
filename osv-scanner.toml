@@ -1,0 +1,47 @@
+# osv-scanner config — dependency security gate, replacing `pnpm audit`.
+#
+# `pnpm audit` calls npm's legacy /-/npm/v1/security/audits[/quick] endpoints,
+# which npm retired 2026-07-15 (410 Gone). The fix landed in pnpm v11.0, but
+# this repo is intentionally pinned to pnpm@10.33.0 (see package.json's
+# "packageManager" field — pnpm/action-setup@v4 misparses a sha512 hash there,
+# GHSA-379q-355j-w6rj) and pnpm v11 silently stops reading the package.json
+# "pnpm" config block (overrides/patchedDependencies/onlyBuiltDependencies/
+# auditConfig) — a bigger, separate migration. `npm audit` was tried as a
+# substitute and abandoned: it can't even resolve this repo's tree (a
+# transitive dependency, @upsetjs/venn.js@2.0.0, ships a Yarn-only `patch:`
+# devDependency reference that npm's parser has never supported).
+#
+# osv-scanner reads pnpm-lock.yaml directly — no install, no dependency
+# resolution, no package-manager involvement — so it sidesteps both problems
+# and audits the *actual* pinned versions instead of a resolver's guess.
+# See scripts/check-osv-scan.mjs for the HIGH/CRITICAL severity gate this
+# feeds into.
+#
+# Reviewed quarterly. Each entry below is a real, currently-open finding
+# confirmed unfixable (or not applicable to production) as of 2026-07-15 —
+# re-verify against a fresh `osv-scanner scan source -L pnpm-lock.yaml`
+# before removing or renewing any entry.
+
+[[IgnoredVulns]]
+id = "GHSA-4r6h-8v6p-xvw6"
+reason = "xlsx@0.18.5 Prototype Pollution — patched:<0.0.0, no fix exists upstream. Server-side only."
+
+[[IgnoredVulns]]
+id = "GHSA-5pgg-2g8v-p4x9"
+reason = "xlsx@0.18.5 ReDoS — patched:<0.0.0, no fix exists upstream. Server-side only."
+
+[[IgnoredVulns]]
+id = "GHSA-37ch-88jc-xwx2"
+reason = "path-to-regexp@0.1.12 ReDoS — patched:>=0.1.13 does not exist on npm; requires an express v5 migration."
+
+[[IgnoredVulns]]
+id = "GHSA-r5fr-rjxr-66jc"
+reason = "lodash@4.17.21 code injection via _.template — patched:>=4.18.0 does not exist on npm; _.template is unused in this codebase."
+
+[[IgnoredVulns]]
+id = "GHSA-fx2h-pf6j-xcff"
+reason = "vite server.fs.deny bypass — dev-server-only attack surface, not shipped to production. Affects both the top-level vite@^7.1.7 devDependency and a vite@5.x pulled in transitively by vitest; no non-breaking fix available for either."
+
+[[IgnoredVulns]]
+id = "GHSA-5xrq-8626-4rwp"
+reason = "vitest: arbitrary file read/execute when the Vitest UI dev server is listening — dev-tool-only; the UI server is never run in CI or production. Tracked for a future vitest 4.x migration (semver-major)."
