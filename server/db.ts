@@ -661,6 +661,40 @@ export function invalidateAppUserByIdCache(id: number): void {
   _appUserByIdCache.delete(id);
 }
 
+export type AppUserLookupResult =
+  | { status: "found"; user: AppUser }
+  | { status: "not_found" }
+  | { status: "unavailable"; error: unknown };
+
+/**
+ * Read an app user directly from the database and preserve the distinction
+ * between a missing row and an unavailable database. Privileged authorization
+ * must not use getAppUserById(), whose legacy null return intentionally merges
+ * those two states for non-privileged callers.
+ */
+export async function lookupAppUserByIdFresh(id: number): Promise<AppUserLookupResult> {
+  const db = await getDb();
+  if (!db) {
+    return { status: "unavailable", error: new Error("Database not available") };
+  }
+
+  try {
+    const rows = await withCircuitBreaker(async () =>
+      db.select().from(appUsers).where(eq(appUsers.id, id)).limit(1)
+    );
+    const user = rows[0];
+    if (!user) return { status: "not_found" };
+
+    _appUserByIdCache.set(id, {
+      data: user,
+      expiresAt: Date.now() + APP_USER_CACHE_TTL_MS,
+    });
+    return { status: "found", user };
+  } catch (error) {
+    return { status: "unavailable", error };
+  }
+}
+
 export async function getAppUserById(id: number) {
   // Cache hit: skip DB round-trip
   const cached = _appUserByIdCache.get(id);
