@@ -25,6 +25,8 @@ import {
 import {
   G1_GAMEPK,
   G2_GAMEPK,
+  G1_START_UTC,
+  G2_START_UTC,
   SINGLE_GAMEPK,
   controlSingleGame,
   generateSlateCase,
@@ -46,6 +48,7 @@ function applyPlan(
   for (const u of plan.updates) {
     const row = out.find(r => r.id === u.rowId);
     if (!row) throw new Error(`update targets missing row ${u.rowId}`);
+    if (u.set.gameDate !== undefined) row.gameDate = u.set.gameDate;
     if (u.set.startTimeEst !== undefined) row.startTimeEst = u.set.startTimeEst;
     if (u.set.gameNumber !== undefined) row.gameNumber = u.set.gameNumber;
     if (u.set.doubleHeader !== undefined) row.doubleHeader = u.set.doubleHeader;
@@ -396,6 +399,88 @@ describe("robustness", () => {
     expect(utcToEasternTimeString("2026-07-17T23:10:00Z")).toBe("7:10 PM"); // EDT
     expect(utcToEasternTimeString("2026-12-17T23:10:00Z")).toBe("6:10 PM"); // EST
     expect(utcToEasternTimeString("not-a-date")).toBe("TBD");
+  });
+});
+
+// ─── Follow-up hardening (2026-07-17 live production findings) ───────────────
+
+describe("follow-up hardening: live production findings", () => {
+  it("same-pk reschedule relocates the old-date row instead of a blocked insert (the 824766 pattern)", () => {
+    // Live incident: MLB reused the postponed May 9 gamePk for the July 17
+    // makeup. The planner must MOVE the postponed row to the new date, not
+    // plan an insert that collides on games_mlb_gamepk_unique forever.
+    const may9 = postponedMay9Row(); // pk 900100, gameDate 2026-05-09, status postponed
+    const evening = preSeededEveningRowWithPk();
+    const makeupSamePk = raysRedSoxGame1({ gamePk: 900100 }); // provider kept the pk
+    const plan = planMlbScheduleSync([makeupSamePk, raysRedSoxGame2()], [may9, evening]);
+
+    expect(plan.inserts).toHaveLength(0);
+    expect(plan.collisions).toEqual([]);
+    const move = plan.updates.find(u => u.rowId === 5091);
+    expect(move?.set.gameDate).toBe("2026-07-17");
+    // gameNumber is already 1 on the stored row — correctly absent from the
+    // delta set; the intended final number rides on finalGameNumber.
+    expect(move?.set.gameNumber).toBeUndefined();
+    expect(move?.finalGameNumber).toBe(1);
+    expect(move?.set.doubleHeader).toBe("S");
+    // The date move RESOLVES the postponement — this exact transition needed
+    // a manual UPDATE in production on 2026-07-17.
+    expect(move?.set.gameStatus).toBe("upcoming");
+    expect(plan.warnings.some(w => w.includes("moved 2026-05-09 → 2026-07-17"))).toBe(true);
+
+    const after = applyPlan([may9, evening], plan);
+    const jul17 = after.filter(r => r.gameDate === "2026-07-17");
+    expect(jul17).toHaveLength(2);
+    expect(new Set(jul17.map(r => r.mlbGamePk))).toEqual(new Set([900100, G2_GAMEPK]));
+    expect(new Set(jul17.map(r => r.gameNumber))).toEqual(new Set([1, 2]));
+  });
+
+  it("without a date move, postponed→upcoming remains a blocked regression (guard intact)", () => {
+    const db = applyPlan([], planMlbScheduleSync(
+      [raysRedSoxGame1({ detailedState: "Postponed" })], []
+    ));
+    expect(db[0].gameStatus).toBe("postponed");
+    const stale = planMlbScheduleSync([raysRedSoxGame1()], db); // same date, Scheduled snapshot
+    expect(stale.updates.every(u => u.set.gameStatus === undefined)).toBe(true);
+    expect(stale.warnings.some(w => w.includes("status regression blocked"))).toBe(true);
+  });
+
+  it("a partial payload with only one DH sibling cannot renumber or unflag the stamped row", () => {
+    const db = applyPlan([], planMlbScheduleSync([raysRedSoxGame1(), raysRedSoxGame2()], []));
+    // Payload delivers ONLY game 2 (solo group resolves to gameNumber 1 —
+    // which must NOT be applied to the stamped G2 row), with no DH flag.
+    const plan = planMlbScheduleSync(
+      [raysRedSoxGame2({ gameNumber: undefined, doubleHeader: undefined })],
+      db
+    );
+    expect(plan.inserts).toHaveLength(0);
+    expect(plan.collisions).toEqual([]);
+    const g2Update = plan.updates.find(u => u.gamePk === G2_GAMEPK);
+    expect(g2Update?.set.gameNumber).toBeUndefined();
+    expect(g2Update?.set.doubleHeader).toBeUndefined();
+    const after = applyPlan(db, plan);
+    const g2Row = after.find(r => r.mlbGamePk === G2_GAMEPK)!;
+    expect(g2Row.gameNumber).toBe(2);
+    expect(g2Row.doubleHeader).toBe("S");
+  });
+
+  it("gameNumber permutation plans carry finalGameNumber for two-phase apply", () => {
+    // Provider inverts the numbering/times of two stamped rows: the paired
+    // updates are mutually blocking on games_matchup_unique, so the apply
+    // layer parks and re-applies — it needs each row's intended final number.
+    const db = applyPlan([], planMlbScheduleSync([raysRedSoxGame1(), raysRedSoxGame2()], []));
+    const inverted = [
+      raysRedSoxGame1({ startUtc: G2_START_UTC, gameNumber: 2, dayNight: "night" }),
+      raysRedSoxGame2({ startUtc: G1_START_UTC, gameNumber: 1, dayNight: "day" }),
+    ];
+    const plan = planMlbScheduleSync(inverted, db);
+    expect(plan.collisions).toEqual([]);
+    const byPk = new Map(plan.updates.map(u => [u.gamePk, u]));
+    expect(byPk.get(G1_GAMEPK)?.finalGameNumber).toBe(2);
+    expect(byPk.get(G2_GAMEPK)?.finalGameNumber).toBe(1);
+    const after = applyPlan(db, plan);
+    expect(after.find(r => r.mlbGamePk === G1_GAMEPK)?.gameNumber).toBe(2);
+    expect(after.find(r => r.mlbGamePk === G2_GAMEPK)?.gameNumber).toBe(1);
   });
 });
 
