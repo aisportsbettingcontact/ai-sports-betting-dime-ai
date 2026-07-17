@@ -51,8 +51,17 @@
 .summary__item { display: flex; flex-direction: column; gap: 2px; min-inline-size: 0; }
 .summary__item dt { color: var(--text-muted, #6e6e6e); }
 .summary__item dd { margin: 0; }
-.summary__pick { font-size: var(--proj-body); font-weight: 700; }
+/* Spelled-out pick ("Under 7", "Athletics ML") displays uppercase, matching
+   the readout's mono-label register (owner directive 2026-07-17). */
+.summary__pick { font-size: var(--proj-body); font-weight: 700; text-transform: uppercase; }
 .summary__none { color: var(--text-secondary, #a6a6a6); margin: 0; }
+/* Mobile-width cards center the whole insight block above the disclosure
+   (owner directive 2026-07-17); wide cards keep the left-aligned scan line. */
+@container projcard (max-width: 640px) {
+  .summary { justify-content: center; }
+  .summary__readout { justify-content: center; }
+  .summary__item { align-items: center; text-align: center; }
+}
 
 /* ── Markets (supporting; disclosure keeps them from dominating) ──
    Toggle reads "VIEW FULL AI MODEL PROJECTIONS" with a chevron-down to expand;
