@@ -335,7 +335,11 @@ export const appRouter = router({
         // Cache stores full Game objects; stripping happens at the wire layer only.
         const stripped = filtered.map(g => stripSportNullFields(g));
 
-        // Performance: Cache-Control + ETag for public feed (eliminates redundant DB queries)
+        // Performance: Cache-Control + ETag for the public feed. The tRPC
+        // adapter exclusively owns the response lifecycle: ending the Express
+        // response here for If-None-Match would make the adapter write its JSON
+        // envelope after end, crashing the process with ERR_STREAM_WRITE_AFTER_END.
+        // A matching ETag may still be revalidated with a normal 200 response.
         try {
           const etag = createHash('md5')
             .update(JSON.stringify(filtered.map(g => ({ id: g.id, modelRunAt: g.modelRunAt, gameStatus: g.gameStatus }))))
@@ -345,11 +349,6 @@ export const appRouter = router({
           ctx.res.setHeader('ETag', `"${etag}"`);
           ctx.res.setHeader('X-Games-Count', String(stripped.length));
           ctx.res.setHeader('X-Cache-Status', 'MISS'); // overridden by cache layer if HIT
-          const ifNoneMatch = (ctx.req as import('express').Request).headers['if-none-match'];
-          if (ifNoneMatch === `"${etag}"`) {
-            ctx.res.status(304).end();
-            return [] as typeof stripped;
-          }
         } catch {
           // Non-fatal: header setting can fail in some edge cases
         }
@@ -1591,4 +1590,3 @@ export const appRouter = router({
   }),
 });
 export type AppRouter = typeof appRouter;
-
