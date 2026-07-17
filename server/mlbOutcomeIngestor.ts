@@ -517,19 +517,30 @@ export async function ingestMlbOutcomes(
     }
 
     // Fallback match: team abbreviation (normalize SF → SF, etc.)
+    // DOUBLEHEADER GUARD: this fallback is only safe when it is UNAMBIGUOUS —
+    // exactly one team-matching outcome. When the same matchup appears twice
+    // (a doubleheader) the fallback cannot tell G1 from G2, so we refuse to
+    // guess and require mlbGamePk (stamped by syncMlbSchedule) instead of
+    // silently grading both DB rows against the same outcome.
     if (!apiOutcome) {
-      for (const outcome of Array.from(apiOutcomes.values())) {
+      const teamMatches = Array.from(apiOutcomes.values()).filter((outcome) => {
         const awayMatch =
           outcome.awayAbbrev === game.awayTeam ||
           normalizeTeamAbbrev(outcome.awayAbbrev) === normalizeTeamAbbrev(game.awayTeam);
         const homeMatch =
           outcome.homeAbbrev === game.homeTeam ||
           normalizeTeamAbbrev(outcome.homeAbbrev) === normalizeTeamAbbrev(game.homeTeam);
-        if (awayMatch && homeMatch) {
-          apiOutcome = outcome;
-          console.log(`${TAG} [STATE] Matched by team abbreviation: ${outcome.awayAbbrev}@${outcome.homeAbbrev}`);
-          break;
-        }
+        return awayMatch && homeMatch;
+      });
+      if (teamMatches.length === 1) {
+        apiOutcome = teamMatches[0];
+        console.log(`${TAG} [STATE] Matched by team abbreviation: ${apiOutcome.awayAbbrev}@${apiOutcome.homeAbbrev}`);
+      } else if (teamMatches.length > 1) {
+        console.error(
+          `${TAG} [ERROR] AMBIGUOUS team-name fallback for game id=${game.id} ${matchup}: ` +
+          `${teamMatches.length} same-matchup outcomes (doubleheader) and row has no mlbGamePk — ` +
+          `refusing to guess; run syncMlbSchedule to stamp identity, then re-ingest`
+        );
       }
     }
 

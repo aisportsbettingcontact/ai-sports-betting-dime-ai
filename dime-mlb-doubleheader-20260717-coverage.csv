@@ -1,0 +1,10 @@
+boundary,expected,observed_before_fix,observed_after_fix,distinct_ids_before,distinct_ids_after,duplicates,missing_ids_before,missing_ids_after,evidence,result
+provider_response,2,2 (corroborated; live capture BLOCKED),2 (fixture),n/a (BLOCKED),2 synthetic pks,0,none,none,"web corroboration (boston.com/si.com/stubhub) + statsapi-shaped fixtures; network policy denies statsapi/mlb/espn",BLOCKED_LIVE_FIXTURE_PASS
+provider_adapter,2,2,2,2,2,0,none,none,"fetchMlbLiveScores parses all games (no dedup); normalizeRawScheduleGame per-event rejection only; mlbScheduleSync.normalize.test.ts 6/6",PASS
+normalization,2,2,2,2,2,0,none,none,"planMlbScheduleSync preserves N distinct gamePks; mlbEventIdentity.test.ts 30/30 incl. 250-seed invariant",PASS
+persistence_input,2,1,2,1,2,0,G1 makeup gamePk,none,"BEFORE: no code path inserted post-seed MLB games (lane C sweep; mlbScoreRefresh NO_MATCH drop). AFTER: syncMlbSchedule plans insert/adopt per distinct gamePk",PASS_AFTER_FIX
+database_storage,2,1,2,1,2,0,G1 row absent,none,"BEFORE: single pre-seeded 7:10 row; matchup unique key + default gameNumber=1 swallowed second-row upserts. AFTER: gameNumber resolved from provider + games_mlb_gamepk_unique; [DH-DB-1..7] in CI db-tests",PASS_AFTER_FIX_CI_DB
+cache_population,2,1 (inherited),2 (inherited),1,2,0,inherited,none,"_gamesListCache stores whole row arrays keyed sport:date (cannot collapse members - inspection); sync invalidates on write",PASS_BY_INSPECTION
+api_response,2,1 (inherited),2 (inherited),1,2,0,inherited,none,"games.list is a pass-through of DB rows (routers.ts:306-356); no matchup dedup at API layer",PASS_BY_INSPECTION
+client_normalization,2,2-if-served,2,2,2,0,none,none,"lane B: no dedup/matchup maps on games.list->card path; DimeModelFeed.doubleheader.test.ts 4/4",PASS
+rendered_feed,2,1 (only 7:10 PM),2,1,2,0,1:35 PM game,none,"render key = DB id (verified); two rows -> two ProjectionCards; fallback key hardened to per-event",PASS_AFTER_FIX
