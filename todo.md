@@ -2484,12 +2484,12 @@
 
 ## MLB Purge Bug — Full Audit + Fix (Apr 14, 2026 — Session 5)
 - [x] Audit all game delete/purge code paths — cron jobs, tRPC, direct DB calls (RESULT: no purge occurred; dailyPurge.ts is a no-op since 2026-03-25; only 3 delete paths exist: deleteModelFile, deleteGamesByFileId, deleteGameById — all owner-triggered, none automatic)
-- [x] Trace exact purge execution — ROOT CAUSE: check_apr12_model.ts had 2 bugs: (1) gte/lte on string gameDate column returns 0 rows due to Drizzle ORM type coercion; (2) sport='mlb' (lowercase) doesn’t match DB value 'MLB' (uppercase). All 15 Apr 12 games are intact in DB (2,430 total MLB rows: 2026-03-25 → 2026-09-27)
-- [x] Fix: corrected check_apr12_model.ts to use eq() + uppercase 'MLB'; ran MLB model for Apr 12 → 15/15 MODEL_OK (PIT@CHC + HOU@SEA now have full projections); 0 TypeScript errors; 458/458 tests pass
+- [x] Trace exact purge execution — ROOT CAUSE: the historical Apr 12 diagnostic had 2 bugs: (1) gte/lte on string gameDate returned 0 rows due to Drizzle ORM type coercion; (2) sport='mlb' did not match DB value 'MLB'. All 15 Apr 12 games were intact.
+- [x] Fix: corrected the historical diagnostic to use eq() + uppercase 'MLB'; ran the MLB model for Apr 12 → 15/15 MODEL_OK. The one-off diagnostic is retained in Git history.
 
 ## lg: Tab Bar + Script Guards + Apr 13 Audit + Logos/Abbrevs (Apr 14, 2026 — Session 6)
 - [x] Add lg: breakpoint to .feed-tab CSS — index.css @media 1024px: font-size: 17px + padding: 11px 22px (math: 6 MLB tabs=712px ≤ 1024px with 312px spare)
-- [x] DB query guard for all diagnostic scripts — fixed 4 lowercase 'mlb' occurrences in 3 scripts; added check_team_keys.ts audit script (MLB_BY_ABBREV/NHL_BY_DB_SLUG/getNbaTeamByDbSlug all 30/30 hits)
+- [x] DB query guard for all diagnostic scripts — fixed 4 lowercase 'mlb' occurrences and verified all team registries. The one-off audit is retained in Git history.
 - [x] Verify Apr 13 MLB model cycle — 10/10 MODEL_OK; MLBCycle FAILED(6) is for Apr 14 future games without pitchers (normal, not a bug)
 - [x] Audit team logo visibility/readability — all 3 sports 100% hit rate: MLB_BY_ABBREV(30/30), NHL_BY_DB_SLUG(30/30), getNbaTeamByDbSlug(30/30); logos render via official CDN URLs
 - [x] Audit and fix team abbreviations — nbaTeams.ts: added abbrev field to NbaTeam interface + all 30 official NBA abbreviations (BOS/BKN/NYK/PHI/TOR/CHI/CLE/DET/IND/MIL/ATL/CHA/MIA/ORL/WAS/DEN/MIN/OKC/POR/UTA/GSW/LAC/LAL/PHX/SAC/DAL/HOU/MEM/NOP/SAS); GameCard.tsx: makeCityAbbr now uses NHL→NBA→MLB official abbrev (30/30 MLB fixed: NYY/NYM/LAA/LAD/CWS/CHC/STL/KC/TB/SF/SD etc.)
@@ -4036,7 +4036,7 @@
 - [x] Add BATTER_MLB_ID column (col 17) to buildLineupRows — sourced from awayPlayers/homePlayers[].id
 - [x] Update sample-row log to include PITCHER_MLB_ID for audit traceability
 - [x] Run immediate sync — 05-30 and 05-31 tabs updated to 20-col schema (30 rows each, validated)
-- [x] Run validatePitcherIds.ts — 30/30 PASS, 0 FAIL (all IDs correct including Kyle Bradish=680694)
+- [x] Pitcher ID validation — 30/30 PASS, 0 FAIL. The one-off validator is retained in Git history.
 - [x] Batting lineups: MLB API returns confirmed lineups only — will auto-populate on next 10-min cycle once lineups are posted (typically 3-4h before first pitch)
 
 ## Session: 2026-06-02 - MLB RL Mapping, Edge Detection, and Label Fixes
@@ -4424,7 +4424,7 @@
 - [x] Update wc2026MatchOdds 1X2 + O/U for CAN vs MAR (wc26-r16-090) from BetExplorer averages
 - [x] Populate espn_slug, bet_explorer_match_id, bet_explorer_slug for both Jul 4 matches
 - [x] Full NULL audit: 43/43 critical columns populated for BOTH rows — ZERO nulls
-- [x] Log all changes to wc2026modeling.txt and wcfilecleanup.txt
+- [x] Log all changes to transient World Cup audit logs (runtime outputs are not tracked)
 
 ## Mobile Owner Tabs Foundation (Jul 5, 2026)
 - [x] Feature flags (MOBILE_OWNER_TABS_ENABLED, TEST_MODE, PUBLIC_ENABLED, DEBUG_PANEL)
@@ -4514,7 +4514,7 @@
 - [x] All colors remain inline styles (#000000 bg, #39FF14 active, #FFFFFF text)
 - [x] 56/56 mobileOwnerTabs tests passing
 - [x] 0 TypeScript errors
-- [x] Full ui-ux_log.txt written
+- [x] Full UI/UX review log completed; the transient root log was removed after consolidation.
 
 ## Dime AI Chat Integration (Jul 6, 2026)
 - [x] Backend route: POST /api/dime/chat (SSE streaming, Claude Fable 5)
