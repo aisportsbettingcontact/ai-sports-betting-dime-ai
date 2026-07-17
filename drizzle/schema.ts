@@ -324,6 +324,12 @@ export const games = mysqlTable("games", {
   // ─── MLB-specific fields ──────────────────────────────────────────────────
   /** MLB.com gamePk (unique game ID from statsapi.mlb.com) */
   mlbGamePk: int("mlbGamePk"),
+  /** Provider that supplied the canonical event identity (for MLB: `mlb-stats`). */
+  eventProvider: varchar("eventProvider", { length: 32 }),
+  /** Immutable identifier assigned by eventProvider (for MLB: gamePk as a string). */
+  providerEventId: varchar("providerEventId", { length: 64 }),
+  /** `${eventProvider}:${sport}:${providerEventId}`. Never derived from a matchup label. */
+  canonicalEventId: varchar("canonicalEventId", { length: 128 }),
   /** Primary TV broadcaster for the game, e.g. "Netflix", "ESPN", "FOX" */
   broadcaster: varchar("broadcaster", { length: 128 }),
   /** Away team starting pitcher name, e.g. "Gerrit Cole" */
@@ -640,8 +646,10 @@ export const games = mysqlTable("games", {
 
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, (t) => ({
-  /** Prevent duplicate rows for the same matchup on the same date */
-  uniqMatchup: uniqueIndex("games_matchup_unique").on(t.gameDate, t.awayTeam, t.homeTeam, t.gameNumber),
+  /** Matchup lookup only. It is deliberately non-unique: doubleheaders can share it. */
+  idxMatchup: index("games_matchup_idx").on(t.gameDate, t.awayTeam, t.homeTeam, t.gameNumber),
+  /** Canonical provider identity is the only event-level uniqueness constraint. */
+  uniqCanonicalEvent: uniqueIndex("games_canonical_event_unique").on(t.canonicalEventId),
   /**
    * Composite index for the primary feed query pattern:
    *   WHERE sport = ? AND gameDate >= ? AND gameDate <= ? AND gameStatus != 'postponed'
