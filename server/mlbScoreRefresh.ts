@@ -614,7 +614,8 @@ export function matchMlbLiveGamesToDbRows<R extends MatchableDbGame>(
     if (arr) arr.push(g); else byMatchup.set(key, [g]);
   }
 
-  for (const [key, group] of byMatchup) {
+  // Array.from: tsconfig targets ES5 (no downlevelIteration) — direct Map iteration is TS2802
+  for (const [key, group] of Array.from(byMatchup.entries())) {
     const candidates = () => dbGames.filter(
       r => !claimed.has(r.id) && `${r.awayTeam}@${r.homeTeam}` === key
     );

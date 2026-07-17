@@ -198,7 +198,8 @@ export function classifySlate(slate: MlbProviderGame[]): Map<string, Doubleheade
     if (arr) arr.push(g); else byGroup.set(key, [g]);
   }
   const out = new Map<string, DoubleheaderGroup>();
-  for (const [key, group] of byGroup) out.set(key, classifyDoubleheaderGroup(group));
+  // Array.from: tsconfig targets ES5 (no downlevelIteration) — direct Map iteration is TS2802
+  for (const [key, group] of Array.from(byGroup.entries())) out.set(key, classifyDoubleheaderGroup(group));
   return out;
 }
 
@@ -357,11 +358,11 @@ export function planMlbScheduleSync(
     }
     byPk.set(g.gamePk, g); // last delivery wins within one payload
   }
-  const slate = [...byPk.values()].sort(compareProviderGames);
+  const slate = Array.from(byPk.values()).sort(compareProviderGames);
 
   // ── 3. Doubleheader classification + gameNumber resolution ─────────────────
   const groups = classifySlate(slate);
-  for (const grp of groups.values()) warnings.push(...grp.warnings);
+  for (const grp of Array.from(groups.values())) warnings.push(...grp.warnings);
   const resolvedNumber = (g: MlbProviderGame): number => {
     const grp = groups.get(doubleheaderGroupId(g.officialDate, g.awayAbbrev, g.homeAbbrev));
     return grp?.resolvedGameNumbers.get(g.gamePk) ?? g.gameNumber ?? 1;
@@ -548,5 +549,5 @@ export function planMlbScheduleSync(
     });
   }
 
-  return { inserts, updates, rejected, warnings, collisions, counts, groups: [...groups.values()] };
+  return { inserts, updates, rejected, warnings, collisions, counts, groups: Array.from(groups.values()) };
 }

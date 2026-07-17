@@ -227,5 +227,5 @@ export function generateSlateCase(seed: number): GeneratedSlateCase {
     const j = Math.floor(rnd() * (i + 1));
     [slate[i], slate[j]] = [slate[j], slate[i]];
   }
-  return { seed, slate, distinctPks: [...new Set(slate.map(g => g.gamePk))] };
+  return { seed, slate, distinctPks: Array.from(new Set(slate.map(g => g.gamePk))) };
 }
