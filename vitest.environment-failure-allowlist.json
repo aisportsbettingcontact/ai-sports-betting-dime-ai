@@ -445,6 +445,20 @@
         "DATABASE_URL"
       ],
       "note": "real-database doubleheader identity suite (2026-07-17 incident); runs in the db-tests CI job"
+    },
+    {
+      "id": "server/mlbDoubleheader.db.test.ts::MLB doubleheader DB invariants (real database) > [DH-DB-8] two-phase apply survives a gameNumber permutation (swap-deadlock hardening)",
+      "requiredEnv": [
+        "DATABASE_URL"
+      ],
+      "note": "real-database doubleheader identity suite (2026-07-17 incident follow-up hardening); runs in the db-tests CI job"
+    },
+    {
+      "id": "server/mlbDoubleheader.db.test.ts::MLB doubleheader DB invariants (real database) > [DH-DB-9] same-pk reschedule end-to-end: old-date row relocates, no blocked insert (the 824766 pattern)",
+      "requiredEnv": [
+        "DATABASE_URL"
+      ],
+      "note": "real-database doubleheader identity suite (2026-07-17 incident follow-up hardening); runs in the db-tests CI job"
     }
   ],
   "expectedCiSkips": [

@@ -229,6 +229,15 @@ export interface SyncFieldUpdate {
   gameStatus?: "upcoming" | "live" | "final" | "postponed" | "suspended";
   venue?: string;
   rescheduledFrom?: string;
+  /**
+   * Schedule-date move: set when the provider relocated this event (same
+   * gamePk) to a different officialDate. Proven live on 2026-07-17: MLB
+   * reused the postponed May 9 gamePk (824766) for the July 17 makeup, so
+   * the row itself must move dates — identity follows the gamePk, never the
+   * calendar. Without this, the old-date row blocks the "new" event's insert
+   * on games_mlb_gamepk_unique forever (loud, but not self-healing).
+   */
+  gameDate?: string;
 }
 
 export interface PlannedInsert {
@@ -251,6 +260,12 @@ export interface PlannedUpdate {
   /** true when this update claims a legacy row (null mlbGamePk) and stamps identity onto it */
   adoptsLegacyRow: boolean;
   set: SyncFieldUpdate;
+  /**
+   * The row's intended final gameNumber whether or not `set` changes it.
+   * The apply layer's two-phase renumbering parks contested rows on a
+   * temporary negative gameNumber; this is the value that must be restored.
+   */
+  finalGameNumber: number;
   dhConfidence: DoubleheaderConfidence;
 }
 
@@ -478,10 +493,48 @@ export function planMlbScheduleSync(
 
       const set: SyncFieldUpdate = {};
       if (row.startTimeEst !== startTimeEst) set.startTimeEst = startTimeEst;
-      if ((row.gameNumber ?? 1) !== gameNumber) set.gameNumber = gameNumber;
-      if ((row.doubleHeader ?? "N") !== dhFlag) set.doubleHeader = dhFlag;
+      // Schedule-date move (same gamePk, new officialDate): identity follows
+      // the gamePk — relocate the row rather than stranding it on the old
+      // date (which would also block the event's insert on the pk index).
+      if (row.gameDate !== g.officialDate) {
+        set.gameDate = g.officialDate;
+        warnings.push(
+          `gamePk=${g.gamePk} moved ${row.gameDate} → ${g.officialDate} (provider reschedule kept the gamePk) — row id=${row.id} relocated`
+        );
+      }
+      // Lone-sibling guard: a partial payload carrying only ONE game of a
+      // matchup+date must not renumber an already-stamped sibling (a solo
+      // group always resolves to 1, which would collide with the absent
+      // sibling's row on games_matchup_unique). Keep the row's stored number
+      // when the group is solo, the row is already validly numbered, and the
+      // row is not being relocated to a new date.
+      const soloGroup = (grp?.gamePks.length ?? 1) === 1;
+      const keepStoredNumber =
+        soloGroup &&
+        row.gameDate === g.officialDate &&
+        row.gameNumber != null && row.gameNumber >= 1 && row.gameNumber <= 2 &&
+        row.gameNumber !== gameNumber;
+      const effectiveGameNumber = keepStoredNumber ? (row.gameNumber as number) : gameNumber;
+      if ((row.gameNumber ?? 1) !== effectiveGameNumber) set.gameNumber = effectiveGameNumber;
+      // Same partial-payload protection for the DH flag: a solo group with no
+      // provider flag must not downgrade a stored Y/S to N.
+      const effectiveDhFlag =
+        soloGroup && !isValidFlag(g.doubleHeader) && (row.doubleHeader === "S" || row.doubleHeader === "Y")
+          ? row.doubleHeader
+          : dhFlag;
+      if ((row.doubleHeader ?? "N") !== effectiveDhFlag) set.doubleHeader = effectiveDhFlag;
       if (row.mlbGamePk !== g.gamePk) set.mlbGamePk = g.gamePk;
-      if (row.gameStatus !== status && !isStatusRegression(row.gameStatus, status)) {
+      // A schedule-date move resolves a postponement: the 'postponed' state
+      // belonged to the OLD date, and the provider now schedules this same
+      // event (same gamePk) on a new date — postponed→upcoming is the correct
+      // transition there, not a stale-snapshot regression (2026-07-17: the
+      // relocated May 9 row had to become 'upcoming' to re-enter the feed).
+      const dateMoveResolvesPostponement =
+        set.gameDate !== undefined && row.gameStatus === "postponed" && status === "upcoming";
+      if (
+        row.gameStatus !== status &&
+        (!isStatusRegression(row.gameStatus, status) || dateMoveResolvesPostponement)
+      ) {
         set.gameStatus = status;
       } else if (row.gameStatus !== status) {
         warnings.push(
@@ -496,10 +549,13 @@ export function planMlbScheduleSync(
       if (Object.keys(set).length === 0) {
         unchanged++;
       } else {
-        updates.push({ rowId: row.id, gamePk: g.gamePk, adoptsLegacyRow: adopts, set, dhConfidence: confidence });
+        updates.push({
+          rowId: row.id, gamePk: g.gamePk, adoptsLegacyRow: adopts, set,
+          finalGameNumber: effectiveGameNumber, dhConfidence: confidence,
+        });
       }
       // Update storage-key occupancy to reflect the planned gameNumber.
-      storageKeyOwner.set(`${g.officialDate}:${g.awayAbbrev}:${g.homeAbbrev}:${gameNumber}`, g.gamePk);
+      storageKeyOwner.set(`${g.officialDate}:${g.awayAbbrev}:${g.homeAbbrev}:${effectiveGameNumber}`, g.gamePk);
       continue;
     }
 

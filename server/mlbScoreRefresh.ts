@@ -34,8 +34,8 @@
  *   abstractGameState "Preview"  → DB gameStatus "upcoming"
  *   abstractGameState "Live"     → DB gameStatus "live"
  *   abstractGameState "Final"    → DB gameStatus "final"
- *   detailedState "Postponed"    → DB gameStatus "upcoming" (game not played)
- *   detailedState "Suspended"    → DB gameStatus "upcoming"
+ *   detailedState "Postponed"    → DB gameStatus "postponed" (hidden from feed)
+ *   detailedState "Suspended"    → DB gameStatus "suspended" (hidden until resumed; tracker rescans)
  *
  * ─── Game clock string ───────────────────────────────────────────────────────
  *   Live:  "Top 3rd" | "Bot 3rd" | "Mid 3rd" | "End 3rd"
@@ -96,7 +96,7 @@ export interface MlbLiveGame {
    *   "final"      — completed (Final, Game Over, Completed Early)
    *   "postponed"  — game postponed, suspended, or cancelled (hidden from feed)
    */
-  gameStatus: "upcoming" | "live" | "final" | "postponed";
+  gameStatus: "upcoming" | "live" | "final" | "postponed" | "suspended";
   /**
    * Human-readable game clock string for display:
    *   Live:    "Top 3rd" | "Bot 3rd" | "Mid 3rd" | "End 3rd" | "Top 10th (Extra)" etc.
@@ -223,18 +223,23 @@ interface MlbApiScheduleResponse {
  *   abstractGameState="Live"     → "live"       (includes: In Progress, Manager Challenge, Replay Review)
  *   abstractGameState="Final"    → "final"      (includes: Final, Game Over, Completed Early)
  *   detailedState="Postponed"    → "postponed"  (override: game not played today — hidden from feed)
- *   detailedState="Suspended"    → "postponed"  (override: game suspended — hidden from feed)
+ *   detailedState="Suspended"    → "suspended"  (override: distinct from postponed — the tracker's
+ *                                  resume detection scans gameStatus='suspended'; writing 'postponed'
+ *                                  here broke that scan AND ping-ponged against syncMlbSchedule,
+ *                                  which maps Suspended → 'suspended'. Aligned 2026-07-17.)
  *   detailedState="Cancelled"    → "postponed"  (override: treat as not played — hidden from feed)
  */
-function mapMlbStatus(
+export function mapMlbStatus(
   abstractState: string,
   detailedState: string
-): "upcoming" | "live" | "final" | "postponed" {
+): "upcoming" | "live" | "final" | "postponed" | "suspended" {
   // Explicit overrides for special states — these games are NOT played and must be hidden from feed
   const detailedLower = detailedState.toLowerCase();
+  if (detailedLower.includes("suspended")) {
+    return "suspended";
+  }
   if (
     detailedLower.includes("postponed") ||
-    detailedLower.includes("suspended") ||
     detailedLower.includes("cancelled") ||
     detailedLower.includes("canceled")
   ) {
@@ -265,11 +270,11 @@ function mapMlbStatus(
  *   Upcoming          → null
  */
 function buildMlbGameClock(
-  status: "upcoming" | "live" | "final" | "postponed",
+  status: "upcoming" | "live" | "final" | "postponed" | "suspended",
   linescore: MlbApiLinescore | undefined,
   totalInnings: number | null
 ): string | null {
-  if (status === "upcoming" || status === "postponed") return null;
+  if (status === "upcoming" || status === "postponed" || status === "suspended") return null;
 
   if (status === "final") {
     if (totalInnings != null && totalInnings > 9) {
