@@ -51,6 +51,7 @@ export function presentationToProjectionGame(model: SportPresentationModel): Pro
     home: participantToTeam(model.homeParticipant),
     matchupContext: model.contextLine,
     venue: model.venue,
+    startTime: model.startTime,
     markets: model.markets.map(marketToProjection),
   };
 }

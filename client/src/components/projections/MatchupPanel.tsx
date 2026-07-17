@@ -1,55 +1,58 @@
 import { TeamLogoMark } from "./TeamLogoMark";
-import type { ProjectionGame } from "./types";
+import type { ProjectionGame, ProjectionTeam } from "./types";
 
 /**
- * MatchupPanel — a structured CSS-Grid matchup (Law v3 §matchup). Teams, scores,
- * logos, pitchers, venue, and context each occupy their own semantic element, so
- * the compressed "Brewers 5 Gasser vs Skenes 14 Pirates" line can never re-form.
- * Away team + score on the left, event context (stage/venue) in the center, home
- * score + team on the right; pitchers + venue in a secondary row. Scores use
- * tabular-nums.
+ * MatchupPanel — the gamecard's identity block (owner directive 2026-07-17).
+ * Logos flank a centered three-line stack:
  *
- * Single rendering ownership (directive §3): the event TIME/status is owned by
- * ProjectionCard's header (EventHeader) and rendered there exactly once. This
- * panel deliberately does NOT repeat statusLabel — the old center-status span was
- * the source of the duplicated "3:00 PM ET". See ProjectionCard.test.tsx.
+ *   {AWAY ABBR} {AWAY NAME} @ {HOME ABBR} {HOME NAME}   ← "SF Giants @ SEA Mariners"
+ *   {BALLPARK / STAGE CONTEXT}                          ← "T-Mobile Park"
+ *   {TIME OF FIRST PITCH ET}                            ← "10:10 PM ET"
+ *
+ * Pitcher names are no longer rendered anywhere on the card, and the venue is
+ * suppressed when the context line already carries it — each fact renders once.
+ * Countries show their name only (never a raw FIFA code); teams show ABBR NAME.
+ * Scores stay beside the logos for live/final games.
+ *
+ * Single rendering ownership (directive §3): for scheduled games the start time
+ * is owned by THIS panel's third line; ProjectionCard's header renders the
+ * status only for live/final ("LIVE", "FINAL"). See ProjectionCard.test.ts.
  */
+function teamLabel(t: ProjectionTeam): string {
+  if (t.kind === "country" || !t.abbr || t.abbr === t.name) return t.name;
+  return `${t.abbr} ${t.name}`;
+}
+
 export function MatchupPanel({ game }: { game: ProjectionGame }) {
-  const { away, home, matchupContext, awayPitcher, homePitcher, venue } = game;
+  const { away, home, matchupContext, venue, startTime } = game;
   const showScore = away.score != null && home.score != null;
+  // No duplicate ballpark: drop the venue line when the context already has it.
+  const showVenue = !!venue && !(matchupContext ?? "").includes(venue);
 
   return (
     <div className="matchup">
       <div className="matchup__grid">
         <div className="matchup__team matchup__team--away">
           <TeamLogoMark team={away} />
-          <span className="matchup__name ds-truncate" title={away.name}>{away.name}</span>
           {showScore && <span className="matchup__score score-value">{away.score}</span>}
         </div>
 
         <div className="matchup__center">
-          {matchupContext && <span className="matchup__context ds-truncate" title={matchupContext}>{matchupContext}</span>}
+          <span className="matchup__line" title={`${teamLabel(away)} @ ${teamLabel(home)}`}>
+            {teamLabel(away)} <span className="matchup__at" aria-hidden="true">@</span> {teamLabel(home)}
+          </span>
+          {matchupContext && (
+            <span className="matchup__context ds-truncate" title={matchupContext}>{matchupContext}</span>
+          )}
+          {showVenue && <span className="matchup__venue ds-truncate" title={venue}>{venue}</span>}
+          {startTime && <span className="matchup__time">{startTime}</span>}
         </div>
 
         <div className="matchup__team matchup__team--home">
           {showScore && <span className="matchup__score score-value">{home.score}</span>}
-          <span className="matchup__name ds-truncate" title={home.name}>{home.name}</span>
           <TeamLogoMark team={home} />
         </div>
       </div>
-
-      {(awayPitcher || homePitcher || venue) && (
-        <div className="matchup__meta">
-          {(awayPitcher || homePitcher) && (
-            <span className="matchup__pitchers ds-truncate">
-              {awayPitcher && <span>{awayPitcher}</span>}
-              {awayPitcher && homePitcher && <span aria-hidden="true"> vs </span>}
-              {homePitcher && <span>{homePitcher}</span>}
-            </span>
-          )}
-          {venue && <span className="matchup__venue ds-truncate" title={venue}>{venue}</span>}
-        </div>
-      )}
     </div>
   );
 }
