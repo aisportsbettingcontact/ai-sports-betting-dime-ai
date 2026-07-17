@@ -406,30 +406,69 @@ export const appUsersRouter = router({
       const sessionDays = input.stayLoggedIn ? 90 : 1;
       const token = await signAppUserToken(user.id, user.role, user.tokenVersion);
       const cookieOptions = getSessionCookieOptions(ctx.req);
+      // ─── Double-send guard ────────────────────────────────────────────────
+      // ctx.res.clearCookie()/cookie() both call res.setHeader("Set-Cookie", …)
+      // under the hood. If headers were already flushed for this response
+      // (e.g. a prior middleware/timeout already answered, or this handler is
+      // somehow invoked twice), calling setHeader() throws
+      // ERR_HTTP_HEADERS_SENT, which — left uncaught — cascades into
+      // ERR_STREAM_WRITE_AFTER_END and takes the whole process down via the
+      // fatal error handler. Bail out early (and wrap each call defensively)
+      // so a race like this degrades to "no cookie set" instead of a crash.
+      if (ctx.res.headersSent) {
+        console.warn(
+          `[AppAuth] login: headers already sent for userId=${user.id} — skipping cookie writes`
+        );
+        return {
+          success: true,
+          user: {
+            id: user.id,
+            email: user.email,
+            username: user.username,
+            role: user.role,
+            hasAccess: user.hasAccess,
+            expiryDate: user.expiryDate,
+          },
+        };
+      }
       // [LOGIN FIX 2026-07-12] Defensive clear of any legacy Domain-scoped
       // app_session cookie (from before host-only cookies). If one survives,
       // the browser sends BOTH cookies and the old identity can shadow the
       // new login — clearing the domain variant makes account switching stick.
       try {
-        ctx.res.clearCookie(APP_USER_COOKIE, {
-          ...cookieOptions,
-          domain: `.${ctx.req.hostname}`,
-          maxAge: -1,
-        });
+        if (!ctx.res.headersSent) {
+          ctx.res.clearCookie(APP_USER_COOKIE, {
+            ...cookieOptions,
+            domain: `.${ctx.req.hostname}`,
+            maxAge: -1,
+          });
+        }
       } catch {
         /* best-effort — never block login on the legacy clear */
       }
-      if (input.stayLoggedIn) {
-        ctx.res.cookie(APP_USER_COOKIE, token, {
-          ...cookieOptions,
-          maxAge: sessionDays * 24 * 60 * 60 * 1000,
-        });
-      } else {
-        // Session cookie — no maxAge, expires when browser closes
-        ctx.res.cookie(APP_USER_COOKIE, token, {
-          ...cookieOptions,
-          maxAge: undefined,
-        });
+      try {
+        if (!ctx.res.headersSent) {
+          if (input.stayLoggedIn) {
+            ctx.res.cookie(APP_USER_COOKIE, token, {
+              ...cookieOptions,
+              maxAge: sessionDays * 24 * 60 * 60 * 1000,
+            });
+          } else {
+            // Session cookie — no maxAge, expires when browser closes
+            ctx.res.cookie(APP_USER_COOKIE, token, {
+              ...cookieOptions,
+              maxAge: undefined,
+            });
+          }
+        } else {
+          console.warn(
+            `[AppAuth] login: headers sent before session cookie write for userId=${user.id} — skipping`
+          );
+        }
+      } catch (err) {
+        // Never let a header-write failure (e.g. a late headersSent race)
+        // escape as an uncaught exception and crash the process.
+        console.error(`[AppAuth] login: failed to set session cookie for userId=${user.id}`, err);
       }
 
       return {
@@ -479,7 +518,16 @@ export const appUsersRouter = router({
       const payload = await verifyAppUserToken(token);
       if (payload) invalidateCachedAppUser(payload.userId);
     }
-    ctx.res.clearCookie(APP_USER_COOKIE, { ...cookieOptions, maxAge: -1 });
+    // Double-send guard — see login mutation above for the full rationale.
+    if (!ctx.res.headersSent) {
+      try {
+        ctx.res.clearCookie(APP_USER_COOKIE, { ...cookieOptions, maxAge: -1 });
+      } catch (err) {
+        console.error(`[AppAuth] logout: failed to clear session cookie`, err);
+      }
+    } else {
+      console.warn(`[AppAuth] logout: headers already sent — skipping cookie clear`);
+    }
     return { success: true };
   }),
 

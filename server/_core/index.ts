@@ -699,20 +699,60 @@ async function startServer() {
   registerDimeWC2026Route(app);
 
   // tRPC API
+  // ─── Headers-already-sent crash guard ────────────────────────────────────
+  // Root cause of the ERR_HTTP_HEADERS_SENT → ERR_STREAM_WRITE_AFTER_END crash:
+  // the tRPC Express adapter's internal error path tries to call res.json()/
+  // res.end() a second time (e.g. after compression or a prior middleware has
+  // already flushed headers for the same response, or after a request timeout
+  // already answered the client). That throw was uncaught, and the fatal error
+  // handler above tore the whole process down for what is really just a
+  // "someone already answered this request" race — not a real fatal error.
+  //
+  // Fix: never call the tRPC handler's own next(err) path directly into
+  // Express's default error responder without checking res.headersSent first,
+  // and wrap the adapter invocation so any synchronous/async throw from it is
+  // caught here rather than escaping to the uncaughtException handler.
   console.log(`[SERVER_STARTUP] Registering tRPC middleware on /api/trpc`);
-  app.use(
-    "/api/trpc",
-    createExpressMiddleware({
-      router: appRouter,
-      createContext,
-      onError: ({ error, path }) => {
-        // Log server-side errors (not client errors like UNAUTHORIZED/NOT_FOUND)
-        if (error.code === "INTERNAL_SERVER_ERROR") {
-          console.error(`[tRPC ERROR] ${path}:`, error);
+  const trpcMiddleware = createExpressMiddleware({
+    router: appRouter,
+    createContext,
+    onError: ({ error, path }) => {
+      // Log server-side errors (not client errors like UNAUTHORIZED/NOT_FOUND)
+      if (error.code === "INTERNAL_SERVER_ERROR") {
+        console.error(`[tRPC ERROR] ${path}:`, error);
+      }
+    },
+  });
+  app.use("/api/trpc", (req, res, next) => {
+    try {
+      trpcMiddleware(req, res, (err?: unknown) => {
+        if (!err) {
+          next();
+          return;
         }
-      },
-    })
-  );
+        // Guard: only forward to Express's error pipeline if we can still
+        // respond. If headers are already sent, the client already got a
+        // response (or the connection is already closing) — swallow the
+        // error instead of letting Express attempt a second write.
+        if (res.headersSent) {
+          console.error(
+            `[tRPC] Error after headers already sent — response already in flight, skipping double-send`,
+            err
+          );
+          return;
+        }
+        next(err as Error);
+      });
+    } catch (err) {
+      // Catch synchronous throws from the adapter itself so they never reach
+      // the process-level uncaughtException handler.
+      if (res.headersSent) {
+        console.error(`[tRPC] Synchronous error after headers sent — skipping double-send`, err);
+        return;
+      }
+      next(err);
+    }
+  });
 
   // ─── Legacy slug eradication — permanent redirects (308) ────────────────
   // [NAV RECONSTRUCTION 2026-07-11] The pre-Dime navigation slugs (/feed with
