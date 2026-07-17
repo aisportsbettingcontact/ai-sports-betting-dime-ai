@@ -336,10 +336,20 @@ export const games = mysqlTable("games", {
   homePitcherConfirmed: boolean("homePitcherConfirmed").default(false),
   /** Ballpark / venue name, e.g. "Oracle Park" */
   venue: varchar("venue", { length: 128 }),
-  /** Whether this is a doubleheader: 'N'=no, 'Y'=yes game 1, 'S'=yes game 2 */
+  /**
+   * MLB Stats API doubleheader flag: 'N'=no, 'Y'=traditional doubleheader,
+   * 'S'=split (separate-admission) doubleheader. Grouping metadata only —
+   * event identity is mlbGamePk, never this flag.
+   */
   doubleHeader: varchar("doubleHeader", { length: 2 }).default("N"),
   /** Game number within a doubleheader (1 or 2; 1 for non-DH games) */
   gameNumber: tinyint("gameNumber").default(1),
+  /**
+   * Original scheduled date "YYYY-MM-DD" when this game is a rescheduled
+   * makeup (statsapi `rescheduledFrom`), e.g. the 2026-07-17 TB@BOS G1 makeup
+   * carries "2026-05-09". Null for games played on their original date.
+   */
+  rescheduledFrom: varchar("rescheduledFrom", { length: 10 }),
   /** Away team run line (spread), e.g. "-1.5" or "+1.5" */
   awayRunLine: varchar("awayRunLine", { length: 8 }),
   /** Home team run line (spread), e.g. "+1.5" or "-1.5" */
@@ -640,8 +650,27 @@ export const games = mysqlTable("games", {
 
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, (t) => ({
-  /** Prevent duplicate rows for the same matchup on the same date */
+  /**
+   * Prevent duplicate rows for the same matchup on the same date.
+   * NOTE (doubleheader contract): gameNumber is part of this key, so two
+   * same-day games coexist ONLY when their gameNumbers differ. Ingestion must
+   * therefore always resolve gameNumber from provider identity (see
+   * mlbEventIdentity.planMlbScheduleSync) — an insert that leaves the default
+   * gameNumber=1 for a second same-matchup game collides here and is swallowed
+   * by upsert paths (the 2026-07-17 TB@BOS incident class).
+   */
   uniqMatchup: uniqueIndex("games_matchup_unique").on(t.gameDate, t.awayTeam, t.homeTeam, t.gameNumber),
+  /**
+   * Canonical provider identity: at most ONE row per MLB gamePk. Multiple
+   * NULLs are permitted by MySQL/TiDB unique-index semantics (non-MLB sports
+   * and pre-identity legacy rows). This is the database-level guarantee that
+   * two distinct provider events can never merge and one event can never
+   * occupy two rows.
+   * PRE-DEPLOY CHECK (run before db-push; must return 0 rows):
+   *   SELECT mlbGamePk, COUNT(*) c FROM games
+   *    WHERE mlbGamePk IS NOT NULL GROUP BY mlbGamePk HAVING c > 1;
+   */
+  uniqMlbGamePk: uniqueIndex("games_mlb_gamepk_unique").on(t.mlbGamePk),
   /**
    * Composite index for the primary feed query pattern:
    *   WHERE sport = ? AND gameDate >= ? AND gameDate <= ? AND gameStatus != 'postponed'
