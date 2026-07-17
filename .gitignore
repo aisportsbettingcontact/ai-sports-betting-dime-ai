@@ -47,6 +47,7 @@ pids
 *.seed
 *.pid.lock
 *.bak
+*.bak_*
 
 # Coverage directory used by tools like istanbul
 coverage/
@@ -115,6 +116,13 @@ temp/
 # Python bytecode
 __pycache__/
 *.pyc
+
+# Ad-hoc workflow export; canonical workflows live in .github/workflows/
+/github-workflows.zip
+
+# Historical WC audit logs are runtime outputs, not maintained source
+/wc2026modeling.txt
+/wcfilecleanup.txt
 
 # Isolated agent workspaces (superpowers:using-git-worktrees)
 .worktrees/
