@@ -1,0 +1,32 @@
+{
+  "incident": "mlb-doubleheader-20260717",
+  "matchup": "Tampa Bay Rays @ Boston Red Sox",
+  "venue": "Fenway Park",
+  "venue_tz": "America/New_York",
+  "expected_games": 2,
+  "status": "REMEDIATED",
+  "phase": "final-report",
+  "baseline": {
+    "repo": "aisportsbettingcontact/ai-sports-betting-dime-ai",
+    "branch": "claude/mlb-doubleheader-handling-khphfa",
+    "base_commit": "12f5d58a0c024924d0713a8263d1c95a71342417",
+    "base_tree": "5942bf56e7dad32f8918e0cbf1cd374f57c6953e",
+    "node": "v22.22.2",
+    "pkg_mgr": "pnpm@10.33.0",
+    "executed_utc": "2026-07-17 (incident day)"
+  },
+  "first_loss_boundary": "persistence: no runtime path inserted a post-seed MLB game into `games`; the 1:35 PM makeup event never materialized as a row (mlbScoreRefresh dropped it as NO_MATCH every cycle); secondary collapse hazards: matchup-keyed unique index with default gameNumber=1 upsert swallow, single-slot away@home matching maps",
+  "root_cause": "event identity was matchup-derived (gameDate+teams+gameNumber with gameNumber defaulting to 1) and the pipeline had no provider->DB schedule reconciliation, so a second same-matchup event could neither be inserted nor addressed",
+  "fix_commits": ["pending final commit on claude/mlb-doubleheader-handling-khphfa"],
+  "validation": {
+    "new_unit_tests": "47/47 pass (identity 30, matcher 7, normalize 6, client 4)",
+    "generated_invariant": "250 seeded slates + 100 group-uniqueness seeds pass",
+    "db_tests": "7 written; run in CI db-tests isolated MySQL job (BLOCKED locally: no DATABASE_URL/mysqld)",
+    "full_suite": "test:gated:local PASS (1745 passed, 66 env-bound allowlisted failures, 0 unexpected)",
+    "typecheck": "PASS (tsc --noEmit)",
+    "lint": "NOT_APPLICABLE (no root lint script; Prettier only)",
+    "build": "PASS (build:client, build:server, check:bundle 204,635B under ceiling)",
+    "live_provider_verification": "BLOCKED (network policy denies statsapi.mlb.com / mlb.com / espn.com)"
+  },
+  "final_verdict": "FIXED BUT LIVE VERIFICATION BLOCKED"
+}

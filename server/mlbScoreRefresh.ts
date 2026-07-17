@@ -79,6 +79,12 @@ export interface MlbLiveGame {
   awayAbbrev: string;
   /** Home team abbreviation as stored in DB (e.g. "SF") */
   homeAbbrev: string;
+  /** Scheduled start as UTC ISO instant (API `gameDate`) — used for DH-safe fallback matching */
+  startUtc: string;
+  /** Doubleheader flag from the API: "N" | "Y" (traditional) | "S" (split) */
+  doubleHeader: string;
+  /** Game number within the day (1 for singles and G1; 2 for G2 of a doubleheader) */
+  gameNumber: number;
   /** Away team runs (null if game not started) */
   awayRuns: number | null;
   /** Home team runs (null if game not started) */
@@ -171,6 +177,12 @@ interface MlbApiPitcher {
 
 interface MlbApiGame {
   gamePk: number;
+  /** UTC ISO start instant */
+  gameDate?: string;
+  /** "N" | "Y" | "S" — doubleheader designation */
+  doubleHeader?: string;
+  /** 1|2 — game number within a doubleheader day */
+  gameNumber?: number;
   status: {
     abstractGameState: string;
     detailedState: string;
@@ -448,6 +460,9 @@ export async function fetchMlbLiveScores(dateStr: string): Promise<MlbLiveGame[]
       gamePk: g.gamePk,
       awayAbbrev,
       homeAbbrev,
+      startUtc: g.gameDate ?? "",
+      doubleHeader: g.doubleHeader ?? "N",
+      gameNumber: typeof g.gameNumber === "number" && g.gameNumber >= 1 ? g.gameNumber : 1,
       awayRuns,
       homeRuns,
       gameStatus,
@@ -508,12 +523,173 @@ export async function fetchMlbLiveScores(dateStr: string): Promise<MlbLiveGame[]
 
 // ─── DB Refresh ───────────────────────────────────────────────────────────────
 
+/** Minimal DB-row shape the matcher needs (subset of a `games` row). */
+export interface MatchableDbGame {
+  id: number;
+  awayTeam: string;
+  homeTeam: string;
+  mlbGamePk: number | null;
+  gameNumber: number | null;
+  startTimeEst: string;
+}
+
+export interface MlbScoreMatch<R extends MatchableDbGame> {
+  apiGame: MlbLiveGame;
+  dbGame: R | null;
+  matchMethod: "gamePk" | "teams+gameNumber" | "teams+time" | "teams" | "none";
+}
+
+/** Parse "h:mm AM/PM" to minutes-since-midnight ET; null for TBD/unparseable. */
+function estTimeToMinutes(t: string): number | null {
+  const m = /^(\d{1,2}):(\d{2})\s*(AM|PM)$/i.exec(t.trim());
+  if (!m) return null;
+  let h = parseInt(m[1], 10) % 12;
+  if (/pm/i.test(m[3])) h += 12;
+  return h * 60 + parseInt(m[2], 10);
+}
+
+/** Convert a UTC ISO instant to minutes-since-midnight ET; null when invalid. */
+function utcToEstMinutes(utcIso: string): number | null {
+  const d = new Date(utcIso);
+  if (isNaN(d.getTime())) return null;
+  const s = d.toLocaleTimeString("en-US", {
+    timeZone: "America/New_York", hour12: false, hour: "2-digit", minute: "2-digit",
+  });
+  const m = /^(\d{1,2}):(\d{2})/.exec(s);
+  if (!m) return null;
+  return (parseInt(m[1], 10) % 24) * 60 + parseInt(m[2], 10);
+}
+
+/**
+ * DOUBLEHEADER-SAFE matching of API games to DB rows (pure, exported for tests).
+ *
+ * Replaces the pre-incident single-slot `away@home` map, which had exactly one
+ * slot per matchup: for a doubleheader the second DB row overwrote the first
+ * in the map, and both API games matched the same row — cross-contaminating
+ * status/scores between Game 1 and Game 2 (2026-07-17 TB@BOS incident class).
+ *
+ * Strategy, in priority order, with claim semantics (a DB row is matched by at
+ * most ONE API game, and vice versa):
+ *   1. mlbGamePk exact match (canonical identity).
+ *   2. Same matchup + same gameNumber (DH-disambiguated fallback).
+ *   3. Same matchup + closest start time (legacy rows with default gameNumber).
+ *   4. Same matchup when exactly one candidate remains (single games).
+ */
+export function matchMlbLiveGamesToDbRows<R extends MatchableDbGame>(
+  apiGames: MlbLiveGame[],
+  dbGames: R[]
+): { matches: Array<MlbScoreMatch<R>>; warnings: string[] } {
+  const warnings: string[] = [];
+  const claimed = new Set<number>();
+  const results = new Map<number, MlbScoreMatch<R>>(); // gamePk → match
+
+  const byPk = new Map<number, R>();
+  for (const r of dbGames) {
+    if (r.mlbGamePk == null) continue;
+    const pk = Number(r.mlbGamePk);
+    if (byPk.has(pk)) {
+      warnings.push(`DB rows id=${byPk.get(pk)!.id} and id=${r.id} share mlbGamePk=${pk}`);
+      continue;
+    }
+    byPk.set(pk, r);
+  }
+
+  // Pass 1: canonical identity.
+  const unmatched: MlbLiveGame[] = [];
+  for (const g of apiGames) {
+    const row = byPk.get(g.gamePk);
+    if (row && !claimed.has(row.id)) {
+      claimed.add(row.id);
+      results.set(g.gamePk, { apiGame: g, dbGame: row, matchMethod: "gamePk" });
+    } else {
+      unmatched.push(g);
+    }
+  }
+
+  // Passes 2–4 operate per matchup so DH siblings are resolved together.
+  const byMatchup = new Map<string, MlbLiveGame[]>();
+  for (const g of unmatched) {
+    const key = `${g.awayAbbrev}@${g.homeAbbrev}`;
+    const arr = byMatchup.get(key);
+    if (arr) arr.push(g); else byMatchup.set(key, [g]);
+  }
+
+  // Array.from: tsconfig targets ES5 (no downlevelIteration) — direct Map iteration is TS2802
+  for (const [key, group] of Array.from(byMatchup.entries())) {
+    const candidates = () => dbGames.filter(
+      r => !claimed.has(r.id) && `${r.awayTeam}@${r.homeTeam}` === key
+    );
+
+    // Pass 2: gameNumber alignment — ONLY when the DB rows genuinely encode
+    // doubleheader numbering (≥2 rows with pairwise-distinct gameNumbers).
+    // A lone legacy row (or two rows both at the schema default of 1) carries
+    // no numbering signal; trusting it would let Game 1 of a DH claim the
+    // sibling's row before start-time distance can decide (incident class).
+    const initialCandidates = candidates();
+    const numbersAreSignal =
+      initialCandidates.length >= 2 &&
+      new Set(initialCandidates.map(r => r.gameNumber ?? 1)).size === initialCandidates.length;
+    if (numbersAreSignal) {
+      for (const g of group) {
+        const rows = candidates().filter(r => (r.gameNumber ?? 1) === g.gameNumber);
+        if (rows.length === 1) {
+          claimed.add(rows[0].id);
+          results.set(g.gamePk, { apiGame: g, dbGame: rows[0], matchMethod: "teams+gameNumber" });
+        }
+      }
+    }
+
+    // Pass 3: closest start time (greedy over globally sorted distances).
+    const stillUnmatched = group.filter(g => !results.has(g.gamePk));
+    const pairs: Array<{ dist: number; g: MlbLiveGame; row: R }> = [];
+    for (const g of stillUnmatched) {
+      const gMin = utcToEstMinutes(g.startUtc);
+      for (const row of candidates()) {
+        const rMin = estTimeToMinutes(row.startTimeEst);
+        const dist = gMin != null && rMin != null ? Math.abs(gMin - rMin) : 24 * 60;
+        pairs.push({ dist, g, row });
+      }
+    }
+    pairs.sort((a, b) => (a.dist - b.dist) || (a.g.gamePk - b.g.gamePk) || (a.row.id - b.row.id));
+    for (const p of pairs) {
+      if (results.has(p.g.gamePk) || claimed.has(p.row.id)) continue;
+      claimed.add(p.row.id);
+      results.set(p.g.gamePk, {
+        apiGame: p.g,
+        dbGame: p.row,
+        matchMethod: p.dist < 24 * 60 ? "teams+time" : "teams",
+      });
+      if (group.length > 1) {
+        warnings.push(
+          `doubleheader fallback match for ${key} gamePk=${p.g.gamePk} via ${p.dist < 24 * 60 ? "start-time distance" : "last-resort teams"} — stamp mlbGamePk to make this exact`
+        );
+      }
+    }
+  }
+
+  const matches: Array<MlbScoreMatch<R>> = apiGames.map(
+    g => results.get(g.gamePk) ?? { apiGame: g, dbGame: null, matchMethod: "none" as const }
+  );
+
+  // Cardinality invariant: no DB row may serve two API games (claim set makes
+  // this structurally impossible), and every unmatched API game is reported.
+  const missing = matches.filter(m => m.dbGame === null);
+  if (missing.length > 0) {
+    warnings.push(
+      `${missing.length} API game(s) have no DB row: ` +
+      missing.map(m => `gamePk=${m.apiGame.gamePk} ${m.apiGame.awayAbbrev}@${m.apiGame.homeAbbrev} G${m.apiGame.gameNumber}`).join(", ") +
+      ` — schedule sync should have inserted these (doubleheader-loss class)`
+    );
+  }
+  return { matches, warnings };
+}
+
 /**
  * Fetches live MLB scores from the Stats API and updates the DB for today's games.
  *
  * Matching strategy (in priority order):
  *   1. mlbGamePk exact match (most reliable — gamePk is a stable unique ID)
- *   2. awayTeam + homeTeam abbreviation match (fallback for games without gamePk)
+ *   2. awayTeam + homeTeam + gameNumber / closest-start-time (doubleheader-safe fallback)
  *
  * Only updates rows where status or scores have actually changed to minimize
  * unnecessary DB writes.
@@ -556,16 +732,10 @@ export async function refreshMlbScores(dateStr: string): Promise<{
     ` | API returned ${apiGames.length} games`
   );
 
-  // Build lookup maps for fast matching
-  // Primary: mlbGamePk → DB game (requires mlbGamePk column to be populated)
-  const dbByGamePk = new Map<number, (typeof dbGames)[0]>();
-  const dbByTeams = new Map<string, (typeof dbGames)[0]>();
-  for (const dbGame of dbGames) {
-    if (dbGame.mlbGamePk) {
-      dbByGamePk.set(Number(dbGame.mlbGamePk), dbGame);
-    }
-    dbByTeams.set(`${dbGame.awayTeam}@${dbGame.homeTeam}`, dbGame);
-  }
+  // DOUBLEHEADER-SAFE matching (claim-based; a DB row serves at most one API game).
+  // Replaces the single-slot `away@home` map that collapsed doubleheaders.
+  const { matches, warnings: matchWarnings } = matchMlbLiveGamesToDbRows(apiGames, dbGames);
+  for (const w of matchWarnings) console.warn(`${tag} [MATCH] ${w}`);
 
   let updated = 0;
   let unchanged = 0;
@@ -574,22 +744,17 @@ export async function refreshMlbScores(dateStr: string): Promise<{
   /** Tracks game PKs that transitioned to 'final' this cycle for immediate backtest trigger */
   const newlyFinalGamePks: number[] = [];
 
-  for (const apiGame of apiGames) {
+  for (const match of matches) {
+    const apiGame = match.apiGame;
     try {
-      // Match priority: gamePk → team abbreviations
-      let dbGame = dbByGamePk.get(apiGame.gamePk);
-      let matchMethod = "gamePk";
-
-      if (!dbGame) {
-        dbGame = dbByTeams.get(`${apiGame.awayAbbrev}@${apiGame.homeAbbrev}`);
-        matchMethod = "teams";
-      }
+      const dbGame = match.dbGame;
+      const matchMethod = match.matchMethod;
 
       if (!dbGame) {
         console.warn(
-          `${tag} NO_MATCH: gamePk=${apiGame.gamePk} ${apiGame.awayAbbrev}@${apiGame.homeAbbrev}` +
+          `${tag} NO_MATCH: gamePk=${apiGame.gamePk} ${apiGame.awayAbbrev}@${apiGame.homeAbbrev} G${apiGame.gameNumber}` +
           ` | status=${apiGame.gameStatus} | score=${apiGame.awayRuns ?? "?"}-${apiGame.homeRuns ?? "?"}` +
-          ` | DB has: [${dbGames.map((g) => `${g.awayTeam}@${g.homeTeam}`).join(", ")}]`
+          ` | DB has: [${dbGames.map((g) => `${g.awayTeam}@${g.homeTeam}#${g.gameNumber ?? 1}`).join(", ")}]`
         );
         noMatch++;
         continue;
@@ -795,6 +960,15 @@ export async function refreshMlbScores(dateStr: string): Promise<{
     ` | live=${apiGames.filter((g) => g.gameStatus === "live").length}` +
     ` final=${apiGames.filter((g) => g.gameStatus === "final").length}`
   );
+  // Boundary cardinality check: every provider game should have a DB row once
+  // syncMlbSchedule (MLB cycle Step 0.5) has run. A persistent nonzero noMatch
+  // is the doubleheader-loss signature — surface it as an ERROR, not a warning.
+  if (noMatch > 0) {
+    console.error(
+      `${tag} [CARDINALITY] ❌ ${noMatch}/${apiGames.length} provider games have no DB row — ` +
+      `feed is missing events (run syncMlbSchedule / check reconciliation alerts)`
+    );
+  }
   console.log(`${tag} ════════════════════════════════════════════`);
 
   return { updated, unchanged, noMatch, errors, newlyFinalGamePks };

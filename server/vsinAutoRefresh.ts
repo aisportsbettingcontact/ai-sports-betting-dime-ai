@@ -833,6 +833,27 @@ export async function refreshAnApiOdds(
       let updated = 0;
       let skipped = 0;
 
+      // DOUBLEHEADER SAFETY: a DB row may receive odds from at most ONE AN game
+      // per refresh. Without this, both games of an MLB doubleheader matched the
+      // same (first-found) row and the later game's odds overwrote the earlier
+      // game's (2026-07-17 TB@BOS incident class).
+      const claimedGameIds = new Set<number>();
+      /** Minutes-since-midnight ET for an ISO instant (null when unparseable). */
+      const anStartToEstMinutes = (iso: string): number | null => {
+        const d = new Date(iso);
+        if (isNaN(d.getTime())) return null;
+        const s = d.toLocaleTimeString("en-US", { timeZone: "America/New_York", hour12: false, hour: "2-digit", minute: "2-digit" });
+        const m = /^(\d{1,2}):(\d{2})/.exec(s);
+        return m ? (parseInt(m[1], 10) % 24) * 60 + parseInt(m[2], 10) : null;
+      };
+      const estStrToMinutes = (t: string): number | null => {
+        const m = /^(\d{1,2}):(\d{2})\s*(AM|PM)$/i.exec(t.trim());
+        if (!m) return null;
+        let h = parseInt(m[1], 10) % 12;
+        if (/pm/i.test(m[3])) h += 12;
+        return h * 60 + parseInt(m[2], 10);
+      };
+
       for (const anGame of anGames) {
         // Resolve away team dbSlug via AN url_slug
         let awayDbSlug: string | undefined;
@@ -880,15 +901,35 @@ export async function refreshAnApiOdds(
           continue;
         }
 
-        // Try both orderings: AN may list teams as away@home while DB has them reversed
-        const dbGameDirect = existingGames.find(
-          e => e.awayTeam === awayDbSlug && e.homeTeam === homeDbSlug
+        // Try both orderings: AN may list teams as away@home while DB has them reversed.
+        // DOUBLEHEADER-SAFE: consider ALL unclaimed team-matching rows and pick
+        // the one whose start time is closest to this AN game's start time
+        // (identical for single games; disambiguates G1 vs G2 for doubleheaders).
+        const directMatches = existingGames.filter(
+          e => !claimedGameIds.has(e.id) && e.awayTeam === awayDbSlug && e.homeTeam === homeDbSlug
         );
-        const dbGameSwapped = !dbGameDirect ? existingGames.find(
-          e => e.awayTeam === homeDbSlug && e.homeTeam === awayDbSlug
-        ) : undefined;
-        const dbGame = dbGameDirect ?? dbGameSwapped;
-        const teamsSwapped = !!dbGameSwapped && !dbGameDirect;
+        const swappedMatches = directMatches.length === 0 ? existingGames.filter(
+          e => !claimedGameIds.has(e.id) && e.awayTeam === homeDbSlug && e.homeTeam === awayDbSlug
+        ) : [];
+        const pool = directMatches.length > 0 ? directMatches : swappedMatches;
+        let dbGame: (typeof existingGames)[number] | undefined;
+        if (pool.length === 1) {
+          dbGame = pool[0];
+        } else if (pool.length > 1) {
+          const anMin = anStartToEstMinutes(anGame.startTime);
+          dbGame = [...pool].sort((a, b) => {
+            const da = anMin != null && estStrToMinutes(a.startTimeEst) != null ? Math.abs(anMin - estStrToMinutes(a.startTimeEst)!) : 24 * 60;
+            const dbb = anMin != null && estStrToMinutes(b.startTimeEst) != null ? Math.abs(anMin - estStrToMinutes(b.startTimeEst)!) : 24 * 60;
+            return (da - dbb) || (a.id - b.id);
+          })[0];
+          console.log(
+            `[ANApiOdds][${dbSport}] [DH] ${pool.length} candidate rows for ${awayDbSlug}@${homeDbSlug} on ${dateStr} ` +
+            `(anId=${anGame.gameId}, anStart=${anGame.startTime}) — matched id=${dbGame.id} G${dbGame.gameNumber ?? 1} ` +
+            `startTimeEst=${dbGame.startTimeEst} by closest start time`
+          );
+        }
+        if (dbGame) claimedGameIds.add(dbGame.id);
+        const teamsSwapped = !!dbGame && directMatches.length === 0;
 
         if (!dbGame) {
           const msg = `[ANApiOdds][${dbSport}] NO_MATCH: ${awayDbSlug} @ ${homeDbSlug} on ${dateStr} (anId=${anGame.gameId})`;
@@ -1699,6 +1740,27 @@ export async function runMlbCycleOnce(): Promise<void> {
       }
     } catch (err) {
       console.warn("[MLBCycle] PostponedTracker failed (non-fatal):", err);
+    }
+
+    // Step 0.5: Schedule reconciliation (statsapi → games table)
+    // Root-cause repair for the 2026-07-17 doubleheader incident: inserts any
+    // provider game missing from the DB (makeup games, split doubleheaders,
+    // late schedule additions), stamps mlbGamePk/gameNumber/doubleHeader
+    // identity onto legacy rows, and alerts on any cardinality loss.
+    // Idempotent — safe every cycle. Must run BEFORE the score refresh so
+    // newly-materialized rows receive scores in the same cycle.
+    try {
+      const { syncMlbSchedule } = await import("./mlbScheduleSync.js");
+      const syncResult = await syncMlbSchedule({ source: "mlb-cycle" });
+      if (syncResult) {
+        console.log(
+          `[MLBCycle] ScheduleSync ${syncResult.ok ? "✅" : "❌"} runId=${syncResult.runId}: ` +
+          `inserted=${syncResult.inserted} updated=${syncResult.updated} unchanged=${syncResult.unchanged} ` +
+          `dhGroups=${syncResult.doubleheaders.length} missing=${syncResult.reconcile.missingGamePks.length}`
+        );
+      }
+    } catch (err) {
+      console.warn("[MLBCycle] ScheduleSync failed (non-fatal):", err);
     }
 
     // Step 1: Live scores from MLB Stats API

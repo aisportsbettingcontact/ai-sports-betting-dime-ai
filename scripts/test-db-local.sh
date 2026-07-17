@@ -55,7 +55,7 @@ for _ in $(seq 1 30); do [ -S "$SOCKET" ] && break; sleep 1; done
 echo "[db-local] provisioning current schema (push, not migrate: history is not replayable from scratch — see ci.yml db-tests job)"
 DATABASE_URL="$DATABASE_URL" pnpm exec drizzle-kit push --force
 
-echo "[db-local] running the five real-database suites"
+echo "[db-local] running the six real-database suites"
 # --no-file-parallelism: one shared DB + a global-mutation suite
 # (incrementAllTokenVersions) — parallel files invalidate each other's sessions.
 DATABASE_URL="$DATABASE_URL" pnpm exec vitest run --no-file-parallelism \
@@ -63,4 +63,5 @@ DATABASE_URL="$DATABASE_URL" pnpm exec vitest run --no-file-parallelism \
   server/appUsers.register.test.ts \
   server/completeAccountSetup.test.ts \
   server/passwordReset.test.ts \
-  server/tokenVersion.db.test.ts
+  server/tokenVersion.db.test.ts \
+  server/mlbDoubleheader.db.test.ts

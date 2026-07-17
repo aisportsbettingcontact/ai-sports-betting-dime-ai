@@ -396,6 +396,55 @@
         "DATABASE_URL"
       ],
       "note": "real-database suite; see INCIDENTS.md 2026-07-11 (OPEN) and the db-tests CI job"
+    },
+    {
+      "id": "server/mlbDoubleheader.db.test.ts::MLB doubleheader DB invariants (real database) > [DH-DB-1] both doubleheader games coexist as distinct rows",
+      "requiredEnv": [
+        "DATABASE_URL"
+      ],
+      "note": "real-database doubleheader identity suite (2026-07-17 incident); runs in the db-tests CI job"
+    },
+    {
+      "id": "server/mlbDoubleheader.db.test.ts::MLB doubleheader DB invariants (real database) > [DH-DB-2] matchup unique index rejects duplicate (date, teams, gameNumber)",
+      "requiredEnv": [
+        "DATABASE_URL"
+      ],
+      "note": "real-database doubleheader identity suite (2026-07-17 incident); runs in the db-tests CI job"
+    },
+    {
+      "id": "server/mlbDoubleheader.db.test.ts::MLB doubleheader DB invariants (real database) > [DH-DB-3] gamePk unique index rejects duplicate provider identity",
+      "requiredEnv": [
+        "DATABASE_URL"
+      ],
+      "note": "real-database doubleheader identity suite (2026-07-17 incident); runs in the db-tests CI job"
+    },
+    {
+      "id": "server/mlbDoubleheader.db.test.ts::MLB doubleheader DB invariants (real database) > [DH-DB-4] re-ingestion updates only the matching provider event",
+      "requiredEnv": [
+        "DATABASE_URL"
+      ],
+      "note": "real-database doubleheader identity suite (2026-07-17 incident); runs in the db-tests CI job"
+    },
+    {
+      "id": "server/mlbDoubleheader.db.test.ts::MLB doubleheader DB invariants (real database) > [DH-DB-5] concurrent ingestion cannot collapse or duplicate the games",
+      "requiredEnv": [
+        "DATABASE_URL"
+      ],
+      "note": "real-database doubleheader identity suite (2026-07-17 incident); runs in the db-tests CI job"
+    },
+    {
+      "id": "server/mlbDoubleheader.db.test.ts::MLB doubleheader DB invariants (real database) > [DH-DB-6] a stale snapshot cannot regress terminal status",
+      "requiredEnv": [
+        "DATABASE_URL"
+      ],
+      "note": "real-database doubleheader identity suite (2026-07-17 incident); runs in the db-tests CI job"
+    },
+    {
+      "id": "server/mlbDoubleheader.db.test.ts::MLB doubleheader DB invariants (real database) > [DH-DB-7] incident shape end-to-end: legacy 7:10 row adopted by G2, G1 inserted",
+      "requiredEnv": [
+        "DATABASE_URL"
+      ],
+      "note": "real-database doubleheader identity suite (2026-07-17 incident); runs in the db-tests CI job"
     }
   ],
   "expectedCiSkips": [
@@ -445,6 +494,10 @@
     },
     {
       "file": "server/tokenVersion.db.test.ts",
+      "reason": "real-DB suite; runs in the db-tests CI job"
+    },
+    {
+      "file": "server/mlbDoubleheader.db.test.ts",
       "reason": "real-DB suite; runs in the db-tests CI job"
     }
   ]

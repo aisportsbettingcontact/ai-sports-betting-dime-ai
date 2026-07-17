@@ -273,7 +273,7 @@ jobs:
       # parallel workers. Proven by this job's second run on PR #84:
       # register [ER-1] got "Session invalidated" (jwt.tv=1 db.tv=2) instead
       # of CONFLICT while the tokenVersion suite logged "affected 17 users".
-      - name: "[STEP] Run the five real-database suites"
+      - name: "[STEP] Run the six real-database suites"
         run: |
           pnpm exec vitest run --no-file-parallelism \
             server/appUsers.login.test.ts \
@@ -281,6 +281,7 @@ jobs:
             server/completeAccountSetup.test.ts \
             server/passwordReset.test.ts \
             server/tokenVersion.db.test.ts \
+            server/mlbDoubleheader.db.test.ts \
             --reporter=verbose 2>&1 | tee db-test-report.txt
           exit ${PIPESTATUS[0]}
 

@@ -331,7 +331,7 @@ export async function deleteModelFile(id: number) {
  * by the TiDB driver. DB-level sort by sortOrder is done first, then this
  * stable sort applies start-time ordering on top.
  */
-function sortGamesByStartTime<T extends { gameDate: string; startTimeEst: string | null; sortOrder: number | null }>(rows: T[]): T[] {
+function sortGamesByStartTime<T extends { id?: number; gameDate: string; startTimeEst: string | null; sortOrder: number | null }>(rows: T[]): T[] {
   return rows.slice().sort((a, b) => {
     // Primary: gameDate ascending
     if (a.gameDate < b.gameDate) return -1;
@@ -342,7 +342,12 @@ function sortGamesByStartTime<T extends { gameDate: string; startTimeEst: string
     if (timeA < timeB) return -1;
     if (timeA > timeB) return 1;
     // Tertiary: sortOrder ascending (VSiN page order)
-    return (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999);
+    const byOrder = (a.sortOrder ?? 9999) - (b.sortOrder ?? 9999);
+    if (byOrder !== 0) return byOrder;
+    // Quaternary: row id — a stable, deterministic tie-breaker so equal-time
+    // rows (e.g. doubleheader games with TBD times) never reorder between
+    // requests/caches (canonical-identity contract: deterministic sorting).
+    return (a.id ?? 0) - (b.id ?? 0);
   });
 }
 
