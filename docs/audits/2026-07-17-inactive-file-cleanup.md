@@ -1,19 +1,19 @@
 # Repository lifecycle cleanup audit
 
-**Audit date:** 2026-07-17  
+**Audit date:** 2026-07-17
 **Scope:** tracked root files plus executable and audit/report candidates under `scripts/`, `server/`, `server/wc2026/`, and `docs/audits/`.
 
 ## Outcome
 
-This cleanup removes **370 confirmed inactive files** in the current batch:
+This cleanup removes **368 confirmed inactive files** in the current batch:
 
 | Category | Deleted | Evidence |
 |---|---:|---|
-| Root one-off scripts, undiscovered probes, reports, raw outputs, and completed plans | 160 | No package, CI, deployment, runtime, or maintained runbook entry point |
+| Root one-off scripts, undiscovered probes, reports, raw outputs, and completed plans | 158 | No package, CI, deployment, runtime, or maintained runbook entry point |
 | Nested dated audit/backfill/check/fix/run/seed/trigger/validation scripts | 209 | No filename reference from manifests, workflows, runtime code, tests, or another retained executable |
 | Superseded unreferenced audit reports under `docs/audits/` | 1 | No incoming documentation or tooling reference |
 
-The prior cleanup commits removed another **7 generated, duplicate, invalid, or superseded files**. Across the cleanup series, the total is **377 files removed**.
+The prior cleanup commits removed another **7 generated, duplicate, invalid, or superseded files**. Across the cleanup series, the total is **375 files removed**.
 
 ## Safety gates
 
@@ -28,9 +28,9 @@ Every deletion in this batch passed the following repository-local gates:
 
 ## Root result
 
-The root is reduced from 205 extant tracked files to **45 retained files**. The retained set consists of:
+The root is reduced from 205 extant tracked files to **47 retained files**. The retained set consists of:
 
-- **33 active controls:** manifests, lockfiles, build/test/deployment configuration, security configuration, and operating documentation.
+- **35 active controls:** manifests, lockfiles, build/test/deployment configuration, security configuration, and operating documentation.
 - **3 configured or linked tools/documents:** `analyze_bundle.py`, `find_inline.py`, and `dime-ai-sol-iteration.md`.
 - **9 files with incoming references:** `audit_espn_vs_db.mjs`, `audit_espn_vs_db_v2.mjs`, `llm-blueprint`, `llm-blueprint.md`, `prez-ai-skills-directory.md`, `todo.md`, `wc_correct_dk_june19.mjs`, `wc_rescrape_june19.mjs`, and `wc_sim_router.cjs`.
 
