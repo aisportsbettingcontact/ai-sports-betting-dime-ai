@@ -3,7 +3,7 @@
 ## Current State (Block 0 PASS)
 - All P0 counts verified: matches=104|teams=49|venues=16|espn_xg=88|espn_ts=88|espn_ps=2742|espn_matches=90|projections=92|recommendations=264|holdout=258|grades=57
 - null_espn_ids=0|invalid_bets=0|bet=2|no_market=210|market_closed=48|pass=4
-- Code backups: server/dime-chat.route.ts.bak_t4_20260706 ✓, server/wc2026/wc2026Router.ts.bak_t4_20260706 ✓
+- Historical code backups were captured during execution and later removed from the working tree; Git history remains the recovery source.
 
 ## Current Dime Route (server/dime-chat.route.ts, 208 lines)
 - Has auth gate (sdk.authenticateRequest) → 401 if unauthenticated
