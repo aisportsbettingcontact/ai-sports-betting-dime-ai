@@ -1,6 +1,14 @@
 /**
  * Discord Bot — starts a discord.js Client alongside the Express server.
  *
+ * The bot registers NO slash commands. Its only job is to keep a gateway
+ * client connected for the site's Discord integrations:
+ *   - password-reset DM fallback (server/routers/appUsers.ts via getDiscordClient)
+ *   - security alerts and digests (discordSecurityAlert.ts, securityDigest.ts,
+ *     weeklySecurityDigest.ts — channel sends via getDiscordClient)
+ * Membership role grants/revokes go through the Discord REST API directly
+ * (server/discord/discordRoleSync.ts) and do not use this client.
+ *
  * The bot shares the same Node.js process as the Express server so it
  * automatically has access to the database and all server-side helpers.
  *
@@ -23,16 +31,8 @@
  *      with a timestamp, attempt counter, and close code.
  */
 
-import {
-  Client,
-  GatewayIntentBits,
-  Events,
-  type ChatInputCommandInteraction,
-} from "discord.js";
+import { Client, GatewayIntentBits, Events } from "discord.js";
 import { ENV } from "../_core/env";
-import { handleLineupsCommand, handleLineupsAutocomplete } from "./lineupsCommand";
-import { warmUpLineupRenderer, closeLineupRenderer } from "./renderLineupCard";
-import { enrichTeamRegistryFromDb } from "./teamRegistry";
 
 // ─── Singleton guard ──────────────────────────────────────────────────────────
 // Prevents multiple Client instances from being created if startDiscordBot()
@@ -53,26 +53,6 @@ const JITTER_FACTOR          = 0.3;      // ±30% random jitter
 // 4013 = Invalid intents
 // 4014 = Disallowed intents
 const FATAL_CLOSE_CODES = new Set([4004, 4010, 4011, 4013, 4014]);
-
-// ─── Interaction deduplication guard ─────────────────────────────────────────
-// Discord's gateway occasionally delivers the same interaction twice.
-// We track recently-seen interaction IDs for 10 seconds to detect and drop
-// duplicates before they reach the command handler.
-const seenInteractionIds = new Map<string, number>(); // id → timestamp
-const INTERACTION_DEDUP_TTL_MS = 10_000;
-
-function isDuplicateInteraction(id: string): boolean {
-  const now = Date.now();
-  Array.from(seenInteractionIds.entries()).forEach(([k, ts]) => {
-    if (now - ts > INTERACTION_DEDUP_TTL_MS) seenInteractionIds.delete(k);
-  });
-  if (seenInteractionIds.has(id)) {
-    console.warn(`[DiscordBot] [WARN] Duplicate interaction detected and dropped: ${id}`);
-    return true;
-  }
-  seenInteractionIds.set(id, now);
-  return false;
-}
 
 // ─── Backoff calculator ───────────────────────────────────────────────────────
 function calcBackoffMs(attempt: number): number {
@@ -98,58 +78,6 @@ function createAndLoginClient(attempt: number): void {
 
     // Reset reconnect counter on successful login
     reconnectAttempt = 0;
-
-    // Parallel startup tasks
-    warmUpLineupRenderer().catch((err) =>
-      console.error("[DiscordBot] [WARN] Renderer warm-up failed (non-fatal):", err)
-    );
-    enrichTeamRegistryFromDb().catch((err) =>
-      console.error("[DiscordBot] [WARN] Team registry enrichment failed:", err)
-    );
-  });
-
-  // ── Interaction handler ───────────────────────────────────────────────────
-  client.on(Events.InteractionCreate, async (interaction) => {
-    if (interaction.isAutocomplete()) {
-      if (interaction.commandName === "lineups") {
-        await handleLineupsAutocomplete(interaction).catch((err) =>
-          console.error("[LineupsBot] [WARN] Autocomplete error:", err)
-        );
-      }
-      return;
-    }
-
-    if (!interaction.isChatInputCommand()) return;
-
-    const { commandName } = interaction;
-
-    if (isDuplicateInteraction(interaction.id)) {
-      console.warn(`[DiscordBot] [WARN] Dropped duplicate interaction ${interaction.id} for /${commandName}`);
-      return;
-    }
-
-    console.log(
-      `[DiscordBot] [INPUT] /${commandName} from ${interaction.user.id} (${interaction.user.tag}) [id=${interaction.id}]`
-    );
-
-    try {
-      if (commandName === "lineups") {
-        await handleLineupsCommand(interaction as ChatInputCommandInteraction, client);
-      }
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.error(`[DiscordBot] [FAIL] Unhandled error in /${commandName} [id=${interaction.id}]: ${msg}`);
-      try {
-        if (interaction.deferred || interaction.replied) {
-          await interaction.editReply(`❌ Unexpected error: ${msg}`);
-        } else {
-          await interaction.reply({ content: `❌ Unexpected error: ${msg}`, ephemeral: true });
-        }
-      } catch (replyErr) {
-        const replyMsg = replyErr instanceof Error ? replyErr.message : String(replyErr);
-        console.error(`[DiscordBot] [FAIL] Could not send error reply for /${commandName} [id=${interaction.id}]: ${replyMsg}`);
-      }
-    }
   });
 
   // ── Disconnect handler — the critical reconnection safety layer ───────────
@@ -243,8 +171,7 @@ export function startDiscordBot(): void {
 
   // Graceful shutdown on process exit
   const shutdown = async () => {
-    console.log("[DiscordBot] [STEP] Shutting down — closing Playwright browser and Discord client...");
-    await closeLineupRenderer();
+    console.log("[DiscordBot] [STEP] Shutting down — destroying Discord client...");
     botClient?.destroy();
     botClient = null;
   };
