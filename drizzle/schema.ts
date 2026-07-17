@@ -133,7 +133,10 @@ export const appUsers = mysqlTable("app_users", {
    * Cleared (set to NULL) after the user completes account setup.
    */
   pendingStripeSessionId: varchar("pendingStripeSessionId", { length: 128 }),
-});
+}, (table) => ({
+  discordIdUnique: uniqueIndex("app_users_discord_id_unique").on(table.discordId),
+  manualDiscordIdUnique: uniqueIndex("app_users_manual_discord_id_unique").on(table.manualDiscordId),
+}));
 
 export type AppUser = typeof appUsers.$inferSelect;
 export type InsertAppUser = typeof appUsers.$inferInsert;

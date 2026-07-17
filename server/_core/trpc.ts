@@ -179,7 +179,7 @@ if (ALLOWED_ORIGIN_SUFFIXES.length > 0) {
  *   3. In dev mode: Origin matches *.manus.computer pattern → ALLOW
  *   4. Otherwise → DENY
  */
-function isOriginAllowed(origin: string | undefined): boolean {
+export function isOriginAllowed(origin: string | undefined): boolean {
   // No Origin header = server-to-server or same-origin fetch with no CORS.
   // Browsers always send Origin on cross-origin requests; absence means safe.
   if (!origin) return true;
