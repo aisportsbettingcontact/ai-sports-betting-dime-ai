@@ -1,9 +1,9 @@
 /**
  * teamLogoCircle.ts
  *
- * Exact port of the Discord bot's lineup_card.html logo circle logic.
- * Produces the same radial-gradient background for every MLB team logo circle
- * as the /lineups Discord image output.
+ * Logo circle background logic for MLB team logos (originally ported from the
+ * retired Discord lineup card renderer; this is now the canonical copy).
+ * Produces a radial-gradient background for every MLB team logo circle.
  *
  * Algorithm:
  *   1. pickLogoBg — selects the highest-contrast color from primary/secondary/tertiary
@@ -25,7 +25,6 @@ function luminance(hex: string): number {
 
 /**
  * Pick the highest-contrast background color for the logo circle.
- * Mirrors pickLogoBg() in lineup_card.html exactly.
  */
 export function pickLogoBg(
   primary: string,
@@ -54,7 +53,6 @@ export function pickLogoBg(
 
 /**
  * Darken a hex color by subtracting 60 from each RGB channel.
- * Mirrors darkShade() in lineup_card.html exactly.
  */
 export function darkShade(hex: string): string {
   const c = hex.replace("#", "");

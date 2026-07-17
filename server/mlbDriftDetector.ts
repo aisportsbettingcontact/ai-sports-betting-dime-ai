@@ -88,7 +88,7 @@ const RECAL_COOLDOWN_HOURS = 24;
  * never on server/scripts.
  *
  * package.json's build:server step does not yet copy this .py file into dist/ at all
- * (lineup_card.html and the model .py/.mjs files are copied there today), so the exact
+ * (only the model .py/.mjs files are copied there today), so the exact
  * post-build dist/ location isn't knowable from this file alone. Rather than hardcode a
  * single guess, check the known-correct candidate locations in priority order — flat
  * alongside the bundle (matching the existing nhl_model_engine.py copy convention),
