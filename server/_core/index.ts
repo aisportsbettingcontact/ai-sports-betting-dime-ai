@@ -48,8 +48,10 @@ import { registerDimeWC2026Route } from "../dime-wc2026.route";
 import { jwtVerify } from "jose";
 import { parse as parseCookieHeader } from "cookie";
 import { ENV } from "./env";
-import { getAppUserById, invalidateAppUserByIdCache } from "../db";
-import { getCachedAppUser, setCachedAppUser, invalidateCachedAppUser } from "../dbCircuitBreaker";
+import { invalidateAppUserByIdCache, lookupAppUserByIdFresh } from "../db";
+import { getCachedAppUserEntry, setCachedAppUser } from "../dbCircuitBreaker";
+import { resolveOwnerIdentity } from "../ownerAuth";
+import { installFatalErrorHandler } from "./fatalErrorHandler";
 
 // ─── Owner-only app_session auth (Railway-native) ──────────────────────────────
 // The legacy owner debug endpoints authenticated via the Manus SDK request-auth
@@ -83,42 +85,15 @@ async function authenticateOwnerRequest(req: express.Request): Promise<OwnerAuth
     const userId = Number(payload.sub);
     const tv = payload.tv as number | null | undefined;
 
-    // Force a fresh DB read — a stale cache entry could still carry a demoted-from-owner
-    // role. Mirrors ownerProcedure's cache-invalidation-before-read.
+    const fallback = getCachedAppUserEntry(userId);
     invalidateAppUserByIdCache(userId);
-    invalidateCachedAppUser(userId);
-
-    let user = await getAppUserById(userId);
-    const fromCache = !user;
-    if (!user) {
-      // getAppUserById returns null both for "no such user" and "DB unreachable" —
-      // fall back to the in-memory cache (same one ownerProcedure uses) to distinguish
-      // a real DB outage from a genuinely deleted user. If nothing is cached either,
-      // fail closed below.
-      user = getCachedAppUser(userId);
-      if (user) console.log(`[OwnerAuth] DB unavailable — serving userId=${userId} from cache (role=${user?.role})`);
-    } else {
-      setCachedAppUser(user);
-    }
-
-    if (!user) {
-      // Fail closed: user doesn't exist (deleted) OR DB is down with no cache — either
-      // way we cannot verify the caller is a live owner.
-      console.log(`[OwnerAuth] REJECTED — user not found / DB unavailable with no cache userId=${userId}`);
-      return { ok: false, status: 401 };
-    }
-
-    // tokenVersion check — only enforced when we have a fresh DB read (cache entries
-    // may predate a force-logout) and the JWT actually carries a tv claim.
-    if (!fromCache && tv !== null && tv !== undefined && user.tokenVersion !== tv) {
-      console.log(`[OwnerAuth] REJECTED — tokenVersion mismatch: jwt.tv=${tv} db.tv=${user.tokenVersion} userId=${userId}`);
-      return { ok: false, status: 401 };
-    }
-
-    // Role check: DB (or DB-derived cache) row only — the JWT claim is never trusted.
-    if (user.role !== "owner") {
-      console.log(`[OwnerAuth] FORBIDDEN — dbRole=${user.role} jwtRole=${payload.role ?? "?"} userId=${userId} (owner required)`);
-      return { ok: false, status: 403 };
+    const lookup = await lookupAppUserByIdFresh(userId);
+    if (lookup.status === "found") setCachedAppUser(lookup.user);
+    const resolved = resolveOwnerIdentity({ lookup, fallback, tokenVersion: tv });
+    if (!resolved.ok) {
+      console.log(`[OwnerAuth] REJECTED — reason=${resolved.reason} userId=${userId}`);
+      const status = resolved.reason.startsWith("token_version") ? 401 : 403;
+      return { ok: false, status };
     }
     return { ok: true, userId };
   } catch {
@@ -202,10 +177,6 @@ function fireRateLimitEvent(
 // process. Log them instead so the server stays alive and serves requests.
 process.on("unhandledRejection", (reason, promise) => {
   console.error("[CRASH GUARD] Unhandled promise rejection:", reason, "at:", promise);
-});
-
-process.on("uncaughtException", (err) => {
-  console.error("[CRASH GUARD] Uncaught exception — server will continue:", err);
 });
 
 // ─── Rate limiters ────────────────────────────────────────────────────────────
@@ -299,6 +270,7 @@ async function startServer() {
   console.log(`[SERVER_STARTUP] Express app created`);
 
   const server = createServer(app);
+  installFatalErrorHandler({ server });
   console.log(`[SERVER_STARTUP] HTTP server created`);
 
   // ─── Server-level error handlers ─────────────────────────────────────────

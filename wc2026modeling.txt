@@ -2111,7 +2111,7 @@ SECTION 4: BETEXPLORER SCRAPER
 ────────────────────────────────────────────────────────────────────────────────
 
 FILE: server/wc2026/betexplorer_scraper.py | 142K | 3,021 lines
-BACKUP: server/wc2026/wc2026_betexplorer_scraper_v4.py.bak
+RECOVERY: previous revisions are retained in Git history
 
 VERSION: v4.0 — 11-Component Engineering Stack:
   1. ForensicLogger        — Dual-output structured logging
@@ -2214,13 +2214,12 @@ OUTPUT: Feeds wc2026_odds_snapshots (4,384 rows) and wc2026_frozen_book_odds (37
     wc2026LiveWatcher.mjs        84,952     Live match watcher (SSE)
     wc2026RotowireLineupsScraper.ts 8,360   Rotowire lineups scraper
     wc2026_playwright_scraper.py 25,142     Playwright-based scraper
-    wc2026_betexplorer_scraper_v4.py.bak 137,094 BetExplorer scraper (bak)
+    betexplorer_scraper.py        146,056     BetExplorer scraper
     pull_wc2026_backtest_data.mjs (exists)  Backtest data puller
 
   INGESTION & ROUTING:
     wc2026Ingester.ts            31,558     Data ingestion pipeline
     wc2026Router.ts              47,126     API router (feed, projections)
-    wc2026Router.ts.bak_t4_20260706 47,126  Router backup (Tier 4)
     wc2026Heartbeat.ts           12,713     Heartbeat/health check
 
   AUDIT & VALIDATION:
