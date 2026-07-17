@@ -245,6 +245,11 @@ interface CachedUser {
 
 const userCache = new Map<number, CachedUser>();
 
+export interface CachedAppUserEntry {
+  user: AppUser;
+  cachedAt: number;
+}
+
 /** Cache an app user record (called after successful DB read) */
 export function setCachedAppUser(user: AppUser): void {
   userCache.set(user.id, { user, cachedAt: Date.now() });
@@ -252,13 +257,18 @@ export function setCachedAppUser(user: AppUser): void {
 
 /** Get a cached app user by ID. Returns null if not found or expired. */
 export function getCachedAppUser(userId: number): AppUser | null {
+  return getCachedAppUserEntry(userId)?.user ?? null;
+}
+
+/** Return a non-expired cache entry together with its age metadata. */
+export function getCachedAppUserEntry(userId: number): CachedAppUserEntry | null {
   const entry = userCache.get(userId);
   if (!entry) return null;
   if (Date.now() - entry.cachedAt > USER_CACHE_TTL_MS) {
     userCache.delete(userId);
     return null;
   }
-  return entry.user;
+  return { user: entry.user, cachedAt: entry.cachedAt };
 }
 
 /** Invalidate a specific user from cache (call on logout or role change) */
