@@ -44,6 +44,24 @@
 - Verdict strip is separated from market columns by a 1px left border (`--color-border`), right-aligned
 - No favorites gold: star = neutral outline, mint fill only when active (pending final call)
 
+### Owner Directives — 2026-07-17 (mobile-first; all breakpoints)
+
+- **No theme toggle in the feed header.** The Profile tab's Appearance setting
+  (System / Light / Dark) is the single theme control. `?theme=` embeds stay honored.
+- **Gamecard matchup block** (pitcher names are BANNED from gamecards; each fact once):
+  ```
+  {AWAY ABBR} {AWAY NAME} @ {HOME ABBR} {HOME NAME}   ← "SF Giants @ SEA Mariners"
+  {BALLPARK}                                          ← "T-Mobile Park" (never duplicated)
+  {TIME OF FIRST PITCH ET}                            ← "10:10 PM ET"
+  ```
+  Countries render names only (no FIFA codes); WC context line stays "Round · Venue".
+  Scheduled games own the time in this block; the card header shows LIVE/FINAL only.
+- **Markets disclosure:** collapsed by default; toggle reads
+  "VIEW FULL AI MODEL PROJECTIONS" with a Lucide `ChevronDown` to expand and
+  `ChevronUp` (shown via `details[open]`) to collapse.
+- **Market column labels:** `SIDE | BOOK | MODEL` — never "SPORTSBOOK PRICE" /
+  "MODEL FAIR PRICE". Applies to every feed surface: mobile, tablet, desktop.
+
 ---
 
 ## Data Contract (do not violate — see `dime-ai/DIME-FEED-MIGRATION-DRAFT.md` §4)

@@ -22,18 +22,22 @@
 .projection-card__status { font-size: var(--proj-meta); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-secondary, #a6a6a6); }
 .projection-card__status--live { color: #45e0a8; } /* live = signal */
 
-/* ── Matchup ── */
+/* ── Matchup (owner directive 2026-07-17: matchup line · ballpark · first pitch) ── */
 .matchup { grid-area: matchup; display: grid; gap: var(--space-sm); align-content: start; }
-.matchup__grid { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: var(--space-sm) var(--space-md); }
+.matchup__grid { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: var(--space-sm) var(--space-md); }
 .matchup__team { display: flex; align-items: center; gap: var(--space-sm); min-inline-size: 0; }
 .matchup__team--home { justify-content: flex-end; }
-.matchup__name { font-size: var(--proj-team); font-weight: 700; letter-spacing: -0.01em; }
 .matchup__score { font-size: var(--proj-primary); font-weight: 700; font-variant-numeric: tabular-nums; }
 .matchup__center { display: flex; flex-direction: column; align-items: center; gap: 2px; text-align: center; min-inline-size: 0; padding-inline: var(--space-xs); }
-/* Event time/status is owned by .projection-card__status (header) and rendered
-   once — the center carries only stage/venue context (directive §3). */
+/* Line 1 — "SF Giants @ SEA Mariners". The card's identity; wraps, never clips. */
+.matchup__line { font-size: var(--proj-team); font-weight: 700; letter-spacing: -0.01em; text-wrap: balance; }
+.matchup__at { color: var(--text-muted, #6e6e6e); font-weight: 400; }
+/* Line 2 — ballpark / stage context. Line 3 — venue only when context lacks it. */
 .matchup__context { font-size: var(--proj-label); color: var(--text-secondary, #a6a6a6); max-inline-size: 100%; }
-.matchup__meta { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px var(--space-md); font-size: var(--proj-meta); color: var(--text-muted, #6e6e6e); }
+.matchup__venue { font-size: var(--proj-meta); color: var(--text-muted, #6e6e6e); max-inline-size: 100%; }
+/* Last line — first pitch / kickoff ET. Owned here for scheduled games; the
+   header owns LIVE/FINAL status only (directive §3). */
+.matchup__time { font-size: var(--proj-meta); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-secondary, #a6a6a6); font-variant-numeric: tabular-nums; }
 
 /* Team logos: unframed transparent asset in a consistent optical box */
 .team-logo-box { display: inline-grid; place-items: center; inline-size: clamp(2rem, 1.8rem + 0.5vw, 2.75rem); block-size: clamp(2rem, 1.8rem + 0.5vw, 2.75rem); flex: none; }
@@ -50,13 +54,18 @@
 .summary__pick { font-size: var(--proj-body); font-weight: 700; }
 .summary__none { color: var(--text-secondary, #a6a6a6); margin: 0; }
 
-/* ── Markets (supporting; disclosure keeps them from dominating) ── */
+/* ── Markets (supporting; disclosure keeps them from dominating) ──
+   Toggle reads "VIEW FULL AI MODEL PROJECTIONS" with a chevron-down to expand;
+   [open] swaps it for a chevron-up to collapse (owner directive 2026-07-17). */
 .projection-card__markets { grid-area: markets; }
 .projection-card__markets-toggle { display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm); min-block-size: 2.75rem; padding-inline: var(--space-sm); cursor: pointer; color: var(--text-secondary, #a6a6a6); border-radius: 10px; list-style: none; }
 .projection-card__markets-toggle::-webkit-details-marker { display: none; }
 .projection-card__markets-toggle:hover { background: var(--row-hover, #141414); color: var(--foreground, #fff); }
 .projection-card__markets-toggle:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--ring, #45e0a8); }
-.projection-card__markets-count { font-size: var(--proj-meta); color: var(--text-muted, #6e6e6e); }
+.projection-card__markets-chev { inline-size: 1rem; block-size: 1rem; flex: none; }
+.projection-card__markets-chev--collapse { display: none; }
+.projection-card__markets[open] .projection-card__markets-chev--expand { display: none; }
+.projection-card__markets[open] .projection-card__markets-chev--collapse { display: inline-block; }
 /* Intrinsic reflow (directive §2): columns are added/removed by available width,
    never compressed. Each market keeps a readable floor (~22rem); below that the
    grid drops 3→2→1 columns on its own. `min(100%, 22rem)` prevents overflow when

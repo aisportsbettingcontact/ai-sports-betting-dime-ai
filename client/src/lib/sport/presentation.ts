@@ -199,6 +199,12 @@ function venueOf(raw: FeedEventLike): string | undefined {
   return v && v !== raw.meta ? v : undefined;
 }
 
+/** First pitch / kickoff in ET. Finals carry "FINAL" in timeLabel, not a time,
+ *  so a final event has no start time (the matchup block's last line stays off). */
+function startTimeOf(raw: FeedEventLike, status: EventStatus): string | undefined {
+  return status === "final" ? undefined : raw.timeLabel || undefined;
+}
+
 /** Pair each side with the opposite side's book price so no-vig math has both. */
 function sidesFromMarket(m: MarketPresentationModel): MarketSideInput[] {
   const n = m.selections.length;
@@ -261,16 +267,18 @@ function teamMarkets(raw: FeedEventLike): MarketPresentationModel[] {
 function createTeamPresentation(sport: Sport, competition: string): SportAdapter {
   return (raw, ctx) => {
     const markets = teamMarkets(raw);
+    const status = statusOf(raw);
     return {
       eventId: raw.id,
       sport,
       competition: ctx?.competition ?? competition,
-      status: statusOf(raw),
+      status,
       statusLabel: raw.liveLabel || raw.timeLabel,
       awayParticipant: teamParticipant(raw.away, "away"),
       homeParticipant: teamParticipant(raw.home, "home"),
       venue: venueOf(raw),
       contextLine: raw.meta || undefined,
+      startTime: startTimeOf(raw, status),
       markets,
       projection: projectionOf(markets),
     };
@@ -385,16 +393,18 @@ export const createSoccerPresentation: SportAdapter = (raw, ctx) => {
   const homeParticipant = countryParticipant(raw.home, "home");
   const evt = { homeParticipant, awayParticipant };
   const markets = raw.markets.map((m) => soccerMarket(m, awayParticipant, homeParticipant, evt));
+  const status = statusOf(raw);
   return {
     eventId: raw.id,
     sport: "SOCCER",
     competition: ctx?.competition ?? "World Cup",
-    status: statusOf(raw),
+    status,
     statusLabel: raw.liveLabel || raw.timeLabel,
     awayParticipant,
     homeParticipant,
     venue: venueOf(raw),
     contextLine: raw.meta || undefined,
+    startTime: startTimeOf(raw, status),
     markets,
     projection: projectionOf(markets),
   };

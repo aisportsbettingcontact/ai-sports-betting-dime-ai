@@ -18,8 +18,7 @@ const SPEC: FeedSpecLike = {
   timeLabel: "FINAL",
   away: { name: "Brewers", crest: { code: "MIL", url: "/mil.svg", bg: "#12284B" }, score: "5" },
   home: { name: "Pirates", crest: { code: "PIT", url: null, bg: "#111111" }, score: "14" },
-  meta: "Gasser vs Skenes",
-  pitchers: { away: "R. Gasser", home: "P. Skenes" },
+  meta: "PNC Park", // ballpark only — pitcher names are off the cards (2026-07-17)
   venueLine: "PNC Park",
   markets: [
     { title: "Run Line", foot: { label: "NO EDGE", edge: false }, rows: [
@@ -41,9 +40,9 @@ describe("feedSpecToProjectionGame", () => {
     expect(g.status).toBe("final"); // has scores, no live label
     expect(g.away).toMatchObject({ abbr: "MIL", name: "Brewers", logo: "/mil.svg", score: 5 });
     expect(g.home).toMatchObject({ abbr: "PIT", logo: null, color: "#111111", score: 14 });
-    expect(g.matchupContext).toBe("Gasser vs Skenes");
-    expect(g.awayPitcher).toBe("R. Gasser");
+    expect(g.matchupContext).toBe("PNC Park");
     expect(g.venue).toBe("PNC Park");
+    expect(g.startTime).toBeUndefined(); // finals carry "FINAL", not a first-pitch time
   });
 
   it("parses prices to numbers and pairs opposite sides for no-vig", () => {

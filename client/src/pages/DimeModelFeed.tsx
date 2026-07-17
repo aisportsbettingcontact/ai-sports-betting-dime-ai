@@ -74,8 +74,6 @@ interface FeedCardSpec {
   away: TeamSpec;
   home: TeamSpec;
   meta: string;
-  /** Full starting-pitcher names; the mobile header renders surnames only. */
-  pitchers?: { away: string; home: string } | null;
   /** Quiet secondary line under the mobile matchup header (venue / round). */
   venueLine?: string | null;
   markets: MarketColSpec[];
@@ -94,9 +92,6 @@ const fmtAm = (v: number | null | undefined): string =>
   v == null || Number.isNaN(v) ? "—" : v > 0 ? `+${v}` : `${v}`;
 
 const NO_EDGE = { label: "NO EDGE", edge: false } as const;
-
-/** Last token of a name — the mobile matchup header shows pitcher surnames. */
-const lastNameOf = (s: string): string => s.trim().split(/\s+/).pop() ?? s;
 
 /** Simple edge → letter grade tiering (matches the reference verdict strip). */
 function edgeGrade(pp: number): string {
@@ -216,14 +211,6 @@ function TeamRow({ t }: { t: TeamSpec }) {
 function GameRow({ g }: { g: FeedCardSpec }) {
   const v = g.verdict;
   const mode = g.markets.length >= 6 ? "dmf-mk7" : "dmf-mk3";
-  // Mobile-only pitcher duel (surnames, Grotesk 600); full names kept in title.
-  const duel = g.pitchers
-    ? {
-        away: lastNameOf(g.pitchers.away),
-        home: lastNameOf(g.pitchers.home),
-        full: `${g.pitchers.away} vs ${g.pitchers.home}`,
-      }
-    : null;
   return (
     <div className={`dmf-game ${mode}${v.pass ? " dmf-pass" : ""}${g.liveLabel ? " dmf-live" : ""}`}>
       <div className="dmf-gbody">
@@ -240,11 +227,6 @@ function GameRow({ g }: { g: FeedCardSpec }) {
           )}
           <div className="dmf-teams">
             <TeamRow t={g.away} />
-            {duel ? (
-              <div className="dmf-duel" title={duel.full}>
-                {duel.away} vs {duel.home}
-              </div>
-            ) : null}
             <TeamRow t={g.home} />
           </div>
           <div className="dmf-meta">{g.meta}</div>
@@ -450,18 +432,9 @@ export default function DimeModelFeed(props: DimeModelFeedProps) {
               <Link href="/profile" className="dmf-navlink">Profile</Link>
             </nav>
           )}
-          {/* Theme lives in Profile (shared ThemeSetting) when embedded — the
-              shell owns the single theme control (directive §8). Standalone
-              /feed keeps an inline toggle since it has no Profile chrome. */}
-          {!props.embeddedInShell && (
-            <button
-              className="dmf-themebtn"
-              onClick={() => setTheme?.(theme === "dark" ? "light" : "dark")}
-              aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
-            >
-              {theme === "dark" ? "Light" : "Dark"}
-            </button>
-          )}
+          {/* No theme toggle here — the Profile tab's Appearance setting is the
+              single theme control (owner directive 2026-07-17). ?theme= embeds
+              are still honored via the effect above. */}
         </div>
       </div>
 
@@ -693,11 +666,10 @@ function mlbRowToCard(g: MlbRow): FeedCardSpec {
   let best: BestPick | null = null;
   for (const col of [rl, total, ml]) best = trackBest(best, col);
 
-  const pitchers =
-    g.awayStartingPitcher || g.homeStartingPitcher
-      ? `${g.awayStartingPitcher ?? "TBD"} vs ${g.homeStartingPitcher ?? "TBD"}`
-      : null;
-  const meta = [pitchers, g.venue].filter(Boolean).join(" · ") || "MLB";
+  // Ballpark only — pitcher names are off the gamecards (owner directive
+  // 2026-07-17). venueLine matches, so the presentation layer dedupes it and
+  // the card renders the ballpark exactly once.
+  const meta = g.venue || "MLB";
 
   return {
     id: String(g.id ?? `${awayAbbr}-${homeAbbr}`),
@@ -706,10 +678,6 @@ function mlbRowToCard(g: MlbRow): FeedCardSpec {
     away: { name: awayReg?.nickname ?? awayAbbr, crest: awayCrest, score: isLive || isFinal ? (g.awayScore != null ? String(g.awayScore) : null) : null },
     home: { name: homeReg?.nickname ?? homeAbbr, crest: homeCrest, score: isLive || isFinal ? (g.homeScore != null ? String(g.homeScore) : null) : null },
     meta,
-    pitchers:
-      g.awayStartingPitcher || g.homeStartingPitcher
-        ? { away: g.awayStartingPitcher ?? "TBD", home: g.homeStartingPitcher ?? "TBD" }
-        : null,
     venueLine: g.venue || null,
     markets: [rl, total, ml],
     verdict: verdictOf(best),
@@ -985,9 +953,6 @@ const DMF_CSS = `
 .dmf-topsep{width:1px;height:18px;background:var(--dmf-border-hi)}
 .dmf-toptitle{font-size:14px;font-weight:600;color:var(--dmf-t2)}
 .dmf-sync{margin-left:auto;display:flex;align-items:center;gap:10px}
-.dmf-themebtn{font-family:var(--dmf-mono);font-size:10px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--dmf-t3);border:1px solid var(--dmf-border-hi);border-radius:8px;padding:6px 10px;position:relative}
-.dmf-themebtn::after{content:"";position:absolute;inset:-8px}
-.dmf-themebtn:hover{color:var(--dmf-t1);border-color:var(--dmf-border-hover)}
 .dmf-nav{display:flex;align-items:center;gap:4px}
 .dmf-navlink{font-family:var(--dmf-mono);font-size:10px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--dmf-t3);text-decoration:none;padding:6px 8px;border-radius:8px;position:relative;transition:color var(--dmf-t) var(--dmf-ease)}
 .dmf-navlink::after{content:"";position:absolute;inset:-8px -2px}
@@ -1031,7 +996,6 @@ const DMF_CSS = `
 .dmf-tscore{margin-left:auto;font-size:16px;font-weight:700;color:var(--dmf-t2);font-variant-numeric:tabular-nums}
 .dmf-meta{font-family:var(--dmf-mono);font-size:10px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--dmf-t4);margin-top:2px;line-height:1.6}
 /* Mobile-only matchup elements — hidden on desktop (>=768px keeps dmf-meta). */
-.dmf-duel{display:none}
 .dmf-venue{display:none}
 
 .dmf-markets{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;border-left:1px solid var(--dmf-border);min-width:0}
@@ -1170,7 +1134,6 @@ const DMF_CSS = `
   .dmf-root .dmf-teamrow{gap:8px}
   .dmf-root .dmf-tname{font-size:14px;line-height:1.2;min-width:0}
   .dmf-root .dmf-tscore{margin-left:0;font-size:16px}
-  .dmf-root .dmf-duel{display:block;grid-column:2;grid-row:1;max-width:172px;text-align:center;font-family:var(--dmf-sans);font-size:13px;font-weight:600;line-height:1.3;letter-spacing:-.005em;color:var(--dmf-t2);padding:0 2px}
   .dmf-root .dmf-game .dmf-meta{display:none}
   .dmf-root .dmf-venue{display:block;text-align:center;font-size:12px;font-weight:500;letter-spacing:0;color:var(--dmf-t3);line-height:1.4}
 

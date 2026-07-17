@@ -199,7 +199,9 @@ describe("DimeModelFeed — unified shell embedding", () => {
     expect(src).toMatch(/!props\.embeddedInShell && \(\s*<nav className="dmf-nav"/);
     expect(src.match(/<nav className="dmf-nav"/g)).toHaveLength(1);
     expect(src).toMatch(/<div className="dmf-topbar">/);
-    expect(src).toMatch(/<button\s+className="dmf-themebtn"/);
+    // Theme control lives in Profile only (owner directive 2026-07-17) — the
+    // feed header must NOT render its own toggle on any surface.
+    expect(src).not.toMatch(/dmf-themebtn/);
   });
 
   it("has no existing h1, so the shell may inject the sole sr-only focus heading", () => {
