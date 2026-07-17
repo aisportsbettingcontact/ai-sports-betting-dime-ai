@@ -52,6 +52,7 @@ import { invalidateAppUserByIdCache, lookupAppUserByIdFresh } from "../db";
 import { getCachedAppUserEntry, setCachedAppUser } from "../dbCircuitBreaker";
 import { resolveOwnerIdentity } from "../ownerAuth";
 import { installFatalErrorHandler } from "./fatalErrorHandler";
+import { createRequestTimeoutMiddleware } from "./requestTimeout";
 
 // ─── Owner-only app_session auth (Railway-native) ──────────────────────────────
 // The legacy owner debug endpoints authenticated via the Manus SDK request-auth
@@ -328,6 +329,17 @@ async function startServer() {
         );
       }
     });
+    // Response-stream error hardening: a stream 'error' with no listener (e.g.
+    // a write-after-end from a rogue second writer) escalates to
+    // uncaughtException, which fatalErrorHandler turns into process.exit(1) —
+    // killing every in-flight request over one broken response. Log it loudly
+    // instead; the failed response is already unrecoverable. ALWAYS logged
+    // (never sampled) so any recurrence of the 2026-07 incident is visible.
+    res.on("error", (err: NodeJS.ErrnoException) => {
+      console.error(
+        `[RES_STREAM_ERROR] ${req.method} ${req.originalUrl} code=${err.code ?? "?"} message=${err.message}`
+      );
+    });
     next();
   });
 
@@ -598,53 +610,16 @@ async function startServer() {
   });
   app.use("/api/trpc/waitlist.submit", waitlistSubmitLimiter);
 
-  // ─── Request timeout middleware ───────────────────────────────────────────
-  // Kill requests that take > 25s to prevent hanging connections from exhausting
-  // the server's connection pool under load.
-  //
-  // CRITICAL: For tRPC batch requests (/api/trpc/*), return a tRPC-formatted
-  // error envelope (HTTP 200 + error JSON array) so the client can parse it as
-  // a proper TRPCClientError. Returning a raw 503 with {error:".."} causes the
-  // tRPC client to throw a JSON parse error, which the frontend maps to the
-  // generic "Server temporarily unavailable" toast instead of a specific message.
-  app.use((req, res, next) => {
-    const timeout = setTimeout(() => {
-      if (!res.headersSent) {
-        const isTrpc = req.path.startsWith('/api/trpc');
-        console.error(`[TIMEOUT] Request timed out: ${req.method} ${req.path} isTrpc=${isTrpc}`);
-        if (isTrpc) {
-          // tRPC batch envelope: HTTP 200 with error in the result array
-          // The client will receive a TRPCClientError with code INTERNAL_SERVER_ERROR
-          res.status(200).json([{
-            error: {
-              json: {
-                message: 'Request timed out. Please try again in a moment.',
-                code: -32603,
-                data: {
-                  code: 'INTERNAL_SERVER_ERROR',
-                  httpStatus: 503,
-                  path: req.path.replace('/api/trpc/', ''),
-                },
-              },
-            },
-          }]);
-        } else {
-          res.status(503).json({ error: 'Request timeout' });
-        }
-      }
-    }, 60_000);  // 60s: accommodates TiDB cold-start + retryOnce
-    // Worst case with cold-start retry:
-    //   Attempt 1: read(8s) + parallel_check(8s) + bcrypt(0.11s) + write(8s) = 24.11s [transient fail]
-    //   retryOnce delay: 3s
-    //   Attempt 2: read(8s) + parallel_check(8s) + bcrypt(0.11s) + write(8s) = 24.11s [success - TiDB warm]
-    //   Total: 51.22s << 60s timeout
-    // Normal case (TiDB warm): 24.11s << 60s timeout
-    // The keep-alive ping (every 4 min) prevents cold starts in practice;
-    // this 60s timeout is the last-resort safety net for edge cases.
-    res.on('finish', () => clearTimeout(timeout));
-    res.on('close', () => clearTimeout(timeout));
-    next();
-  });
+  // ─── Request timeout middleware (non-tRPC only — single-writer rule) ──────
+  // The previous inline version raced the tRPC adapter for response ownership:
+  // when a /api/trpc request exceeded 60s it wrote its own body, and the
+  // adapter's later setHeader()/end() produced ERR_HTTP_HEADERS_SENT (the
+  // recurring 2026-07 production incident — see INCIDENTS.md 2026-07-17 and
+  // server/_core/requestTimeout.ts for the full mechanism). tRPC requests are
+  // now bounded by the procedure-level timeout in _core/trpc.ts instead, so the
+  // adapter is the only writer on /api/trpc. This middleware still guards
+  // non-tRPC routes (heartbeats, proxies) with a 503.
+  app.use(createRequestTimeoutMiddleware());
 
   // Storage proxy — serves /manus-storage/* paths via signed Forge URLs
   console.log(`[SERVER_STARTUP] Registering storage proxy routes`);

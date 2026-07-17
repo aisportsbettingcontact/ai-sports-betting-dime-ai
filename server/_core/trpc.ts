@@ -391,6 +391,55 @@ const t = initTRPC.context<TrpcContext>().create({
 
 export const router = t.router;
 
+// ─── Procedure timeout (single-writer rule) ──────────────────────────────────
+/**
+ * Bounds every procedure so the tRPC ADAPTER itself writes the timeout error.
+ * The Express layer never writes to /api/trpc responses (see requestTimeout.ts):
+ * the previous express-level timeout raced the adapter for response ownership
+ * and produced ERR_HTTP_HEADERS_SENT on every tRPC request slower than its
+ * deadline (INCIDENTS.md 2026-07-17).
+ *
+ * The message MUST keep the "Request timed out" phrasing — the client maps it
+ * to a friendly toast in client/src/lib/errorUtils.ts [CHECK 6].
+ *
+ * The losing next() promise is intentionally left to settle in the background:
+ * tRPC middlewares resolve to a result object (they do not reject on procedure
+ * errors), so no unhandled rejection can escape, and nothing it does can touch
+ * the response — the adapter has already written the TIMEOUT envelope.
+ */
+export const PROCEDURE_TIMEOUT_MS = 55_000; // under the 60s non-tRPC guard and edge/proxy limits
+
+export async function procedureTimeoutRace<T>(
+  run: () => Promise<T>,
+  timeoutMs: number,
+  path: string,
+): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      run(),
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => {
+          console.error(`[TIMEOUT] tRPC procedure exceeded ${timeoutMs}ms: ${path}`);
+          reject(
+            new TRPCError({
+              code: "TIMEOUT",
+              message: "Request timed out. Please try again in a moment.",
+            }),
+          );
+        }, timeoutMs);
+        timer.unref?.();
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+const procedureTimeout = t.middleware(({ next, path }) =>
+  procedureTimeoutRace(next, PROCEDURE_TIMEOUT_MS, path),
+);
+
 // ─── CSRF Origin check middleware ─────────────────────────────────────────────
 /**
  * Validates the Origin header on all state-mutating HTTP requests (POST/PATCH/PUT/DELETE).
@@ -491,13 +540,14 @@ const requireUser = t.middleware(async ({ ctx, next }) => {
  * CSRF Origin check is applied to all mutations.
  * Queries (GET) are exempt from CSRF check.
  */
-export const publicProcedure = t.procedure.use(csrfOriginCheck);
+export const publicProcedure = t.procedure.use(procedureTimeout).use(csrfOriginCheck);
 
 /**
  * protectedProcedure — Manus OAuth session required.
  * CSRF check applied first, then auth check.
  */
 export const protectedProcedure = t.procedure
+  .use(procedureTimeout)
   .use(csrfOriginCheck)
   .use(requireUser);
 
@@ -505,7 +555,7 @@ export const protectedProcedure = t.procedure
  * adminProcedure — Manus OAuth session + admin role required.
  * CSRF check applied first, then admin auth check.
  */
-export const adminProcedure = t.procedure.use(csrfOriginCheck).use(
+export const adminProcedure = t.procedure.use(procedureTimeout).use(csrfOriginCheck).use(
   t.middleware(async ({ ctx, next }) => {
     if (!ctx.user || ctx.user.role !== "admin") {
       throw new TRPCError({ code: "FORBIDDEN", message: NOT_ADMIN_ERR_MSG });
@@ -554,7 +604,7 @@ const logStripeRequest = t.middleware(async ({ ctx, next, path }) => {
  * stripeProcedure — unauthenticated Stripe operations (e.g. publicCreateCheckoutSession).
  * No CSRF check. No auth check.
  */
-export const stripeProcedure = t.procedure.use(logStripeRequest);
+export const stripeProcedure = t.procedure.use(procedureTimeout).use(logStripeRequest);
 
 /**
  * appUserStripeProcedure — authenticated Stripe operations (e.g. createCheckoutSession,

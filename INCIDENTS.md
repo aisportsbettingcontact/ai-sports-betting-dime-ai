@@ -1,5 +1,69 @@
 # Incidents
 
+## 2026-07-17 — Recurring ERR_HTTP_HEADERS_SENT / restart loop after slow /api/trpc requests
+
+Status: FIX SHIPPED (root-cause mechanism confirmed by local reproduction; one
+runtime evidence item still owed from Railway logs — see "Remaining evidence").
+
+Production symptom (deployments carrying PR #124/#125): `ERR_HTTP_HEADERS_SENT`,
+`ERR_STREAM_WRITE_AFTER_END`, fatal process termination, automatic Railway
+restart; several failures followed `GET /api/trpc/games.list` responses logged
+as 304/200.
+
+Confirmed mechanism (reproduced against the installed @trpc/server 11.11.0 +
+express 4.21.2 + compression 1.8.1 on Node 22, mirroring the production
+middleware order):
+
+1. The 60s request-timeout middleware in `server/_core/index.ts` and the tRPC
+   adapter BOTH owned the response. Any tRPC request slower than 60s (cold
+   TiDB, pool-acquire queueing — `createPool` has `connectionLimit: 20`,
+   `queueLimit: 100` and no acquire timeout) got a body written by the timeout
+   middleware; when the procedure later resolved, the adapter's
+   `writeResponse()` called `res.setHeader()` on the already-sent response →
+   `ERR_HTTP_HEADERS_SENT` (surfaced through tRPC's `internal_exceptionHandler`,
+   which then calls `res.end()` on the ended stream).
+2. The middleware's `isTrpc` check read `req.path` at timer-fire time. Inside
+   the `app.use("/api/trpc", ...)` mount Express strips the mount prefix, so
+   `isTrpc` evaluated FALSE for every in-flight tRPC request — the "tRPC
+   envelope" branch was unreachable and clients received a bare
+   `503 {"error":"Request timeout"}` (the historical "Server temporarily
+   unavailable" toast).
+3. The envelope/503 was written via `res.json()`, which stamps an ETag on a
+   constant error body — conditional-request (304) bait for any client that
+   cached it.
+4. `server/_core/fatalErrorHandler.ts` converts any uncaughtException into
+   `process.exit(1)`; on Node 22, write-after-end on an HTTP ServerResponse is
+   silent, but the same operation on a plain stream.Writable/zlib stream DOES
+   escalate to uncaughtException — the exact writer that produced the fatal
+   `ERR_STREAM_WRITE_AFTER_END` is still being pinned (leading candidates:
+   compressed SSE stream on the Dime chat routes, child-process stdin for the
+   Python model runners).
+
+Fix (single-writer rule), shipped on `claude/ai-sports-betting-dime-ai-vrkdx7`:
+
+- `server/_core/trpc.ts`: procedure-level timeout (`procedureTimeout`, 55s,
+  `TRPCError TIMEOUT`) applied to all four base procedures — the tRPC adapter
+  is now the ONLY writer on `/api/trpc`, and timeouts produce a well-formed
+  408 envelope the client already maps (errorUtils CHECK 6 keys on
+  "Request timed out").
+- `server/_core/requestTimeout.ts` (new): the express-level 60s guard now
+  covers non-tRPC routes only, detects tRPC mount-safely via
+  `req.originalUrl`, and writes its 503 with raw `writeHead`/`end` +
+  `Cache-Control: no-store` — no ETag, no Express freshness/304 machinery.
+- `server/_core/index.ts`: response-stream `error` listener (always logged as
+  `[RES_STREAM_ERROR]`) so a rogue second writer can never escalate to
+  uncaughtException → `exit(1)` again.
+- Regression suite `server/_core/requestTimeout.test.ts` (6 tests) pins the
+  single-writer invariants and reproduces the legacy collision ([SW-4]).
+
+Remaining evidence owed (owner/Railway):
+
+- The `[FATAL] Uncaught exception — shutting down safely <error>` log lines
+  from the crash windows: the attached error object identifies the exact
+  writer behind the fatal `ERR_STREAM_WRITE_AFTER_END`.
+- Confirmation that crash windows correlate with `[TIMEOUT] Request timed out`
+  entries (the >60s precondition).
+
 ## 2026-07-11 — Real-database Vitest suites cannot run locally
 
 Status: OPEN (pre-existing environment/integration failure)
