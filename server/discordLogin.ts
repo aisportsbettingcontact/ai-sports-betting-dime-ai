@@ -58,6 +58,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { getDb, getAppUserById, updateAppUser, updateAppUserLastSignedIn } from "./db";
 import { appUsers } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
+import { syncDiscordRole } from "./discord/discordRoleSync";
 
 const APP_USER_COOKIE = "app_session";
 const DISCORD_API     = "https://discord.com/api/v10";
@@ -570,6 +571,12 @@ export function registerDiscordLoginRoutes(app: Express): void {
       console.log(
         `[DiscordLogin][CALLBACK][DB_OK] requestId=${requestId}` +
         ` userId=${userId} role=${user.role} dbMs=${Date.now() - t3}`
+      );
+
+      // A manual Discord ID promotion is a verified link; synchronize entitlement now.
+      // This is safe to run for existing links too and remains non-blocking.
+      void syncDiscordRole(userId, user.hasAccess).catch((syncErr: unknown) =>
+        console.warn(`[DiscordLogin][CALLBACK][ROLE_SYNC_WARN] requestId=${requestId} userId=${userId}`, syncErr)
       );
 
       // ── Issue session cookie ──────────────────────────────────────────────────

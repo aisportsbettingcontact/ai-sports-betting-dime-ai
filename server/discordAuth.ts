@@ -61,6 +61,9 @@ import { verifyAppUserToken } from "./routers/appUsers";
 import { getAppUserById, updateAppUser, getDb } from "./db";
 import { appUsers, discordOAuthStates } from "../drizzle/schema";
 import { eq, lt } from "drizzle-orm";
+import { syncDiscordRole } from "./discord/discordRoleSync";
+import { isOriginAllowed } from "./_core/trpc";
+import { randomBytes } from "crypto";
 
 const APP_USER_COOKIE = "app_session";
 const DISCORD_API = "https://discord.com/api/v10";
@@ -78,7 +81,7 @@ function getAppCookie(req: Request): string | undefined {
 }
 
 function generateState(): string {
-  return Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+  return randomBytes(32).toString("hex");
 }
 
 /**
@@ -640,6 +643,11 @@ export function registerDiscordAuthRoutes(app: Express) {
         return;
       }
 
+      // Role synchronization is non-blocking; the verified DB link is authoritative.
+      void syncDiscordRole(userId, updatedUser?.hasAccess === true).catch((syncErr: unknown) =>
+        console.warn(`[DiscordAuth][ROLE_SYNC_WARN] requestId=${requestId} userId=${userId}`, syncErr)
+      );
+
       // ── CHECKPOINT 11: SUCCESS ────────────────────────────────────────────
       console.log(
         `[DiscordAuth][CHECKPOINT:11.SUCCESS] /callback — requestId=${requestId}` +
@@ -667,6 +675,12 @@ export function registerDiscordAuthRoutes(app: Express) {
   // CHECKPOINT C: SUCCESS — return {success: true}
   app.post(`${ROUTE_PREFIX}/disconnect`, async (req: Request, res: Response) => {
     const requestId = Math.random().toString(36).slice(2, 8).toUpperCase();
+    const origin = req.get("origin");
+    if (!origin || !isOriginAllowed(origin)) {
+      console.warn(`[DiscordAuth][CHECKPOINT:A.FAIL] /disconnect — requestId=${requestId} rejected origin="${origin ?? "missing"}"`);
+      res.status(403).json({ error: "Invalid request origin" });
+      return;
+    }
     console.log(
       `[DiscordAuth][CHECKPOINT:A] /disconnect — requestId=${requestId}` +
       ` cookie_present=${!!(req.headers.cookie)}`
