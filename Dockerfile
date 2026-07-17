@@ -18,17 +18,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       python3-scipy \
       python3-requests \
       ca-certificates \
-      # Debian Chromium for the Playwright-based scrapers/renderers (server/wc2026/
-      # espnPageScraper.ts and server/discord/renderLineupCard.ts import "playwright"
-      # directly). pnpm's script allowlist only
+      # Debian Chromium for the Playwright-based scraper (server/wc2026/
+      # espnPageScraper.ts imports "playwright" directly). pnpm's script allowlist only
       # covers puppeteer (package.json pnpm.onlyBuiltDependencies), so Playwright's own
       # postinstall browser download never runs here — apt chromium is the smallest
       # reliable substitute: it reuses the shared libs installed below (no second copy
       # of the same dependency closure) and lands at a fixed, version-independent path
-      # (/usr/bin/chromium) that both files' PLAYWRIGHT_CHROMIUM_PATH resolution
+      # (/usr/bin/chromium) that its PLAYWRIGHT_CHROMIUM_PATH resolution
       # can target directly via an explicit `executablePath`, unlike Playwright's own
       # download which nests under a version-numbered ms-playwright/chromium-<rev>/
-      # directory that shifts on every Playwright bump. Both fall back to
+      # directory that shifts on every Playwright bump. It falls back to
       # Playwright's own self-managed browser resolution when this env var is unset
       # and no apt/ms-playwright binary is found on disk, which is what keeps local
       # dev working without it.

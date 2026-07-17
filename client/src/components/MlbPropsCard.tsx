@@ -167,8 +167,7 @@ function StatusPill({ confirmed }: { confirmed: boolean }) {
 }
 
 /**
- * Circular team logo — exact match to Discord /lineups image rendering.
- * Uses pickLogoBg() + darkShade() contrast algorithm (ported from lineup_card.html)
+ * Circular team logo. Uses the pickLogoBg() + darkShade() contrast algorithm
  * to select the highest-contrast background color for maximum logo readability.
  */
 function LogoCircle({ abbrev, size = 48 }: { abbrev: string; size?: number }) {
