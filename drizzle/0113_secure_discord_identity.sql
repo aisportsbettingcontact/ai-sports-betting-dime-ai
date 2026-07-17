@@ -1,0 +1,2 @@
+ALTER TABLE `app_users` ADD CONSTRAINT `app_users_discord_id_unique` UNIQUE(`discordId`);--> statement-breakpoint
+ALTER TABLE `app_users` ADD CONSTRAINT `app_users_manual_discord_id_unique` UNIQUE(`manualDiscordId`);

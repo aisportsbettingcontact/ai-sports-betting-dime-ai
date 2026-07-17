@@ -25,7 +25,8 @@ import { SignJWT, jwtVerify } from "jose";
 import { ENV } from "./_core/env";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { getDb, getAppUserById, updateAppUser, updateAppUserLastSignedIn } from "./db";
-import { discordInviteTokens } from "../drizzle/schema";
+import { appUsers, discordInviteTokens } from "../drizzle/schema";
+import { syncDiscordRole } from "./discord/discordRoleSync";
 import { eq, and, isNull, gt } from "drizzle-orm";
 import { invalidateCachedAppUser } from "./dbCircuitBreaker";
 
@@ -474,6 +475,19 @@ export function registerDiscordInviteRoutes(app: Express): void {
         ` targetUserId=${targetUserId} username=${user.username}`
       );
 
+      // [STEP] Reject a Discord account already linked to another user.
+      const existingLinks = await db
+        .select({ id: appUsers.id })
+        .from(appUsers)
+        .where(eq(appUsers.discordId, discordId))
+        .limit(1);
+      if (existingLinks[0] && existingLinks[0].id !== targetUserId) {
+        clearTimeout(deadlineTimer);
+        console.warn(`[DiscordInvite][CALLBACK][CONFLICT] requestId=${requestId} discordId=${discordId} linkedUserId=${existingLinks[0].id}`);
+        res.redirect(302, `/?discord_error=already_linked`);
+        return;
+      }
+
       // [STEP] Link Discord account to the target user row
       try {
         await updateAppUser(targetUserId, {
@@ -494,6 +508,11 @@ export function registerDiscordInviteRoutes(app: Express): void {
         res.redirect(302, `/?discord_error=db_unavailable`);
         return;
       }
+
+      // Sync the subscriber role after the link has been persisted. Failure is non-blocking.
+      void syncDiscordRole(targetUserId, user.hasAccess).catch((syncErr: unknown) =>
+        console.warn(`[DiscordInvite][CALLBACK][ROLE_SYNC_WARN] requestId=${requestId} userId=${targetUserId}`, syncErr)
+      );
 
       // [STEP] Mark invite token as used (single-use enforcement)
       // Fire-and-forget — do not block the session cookie on this
