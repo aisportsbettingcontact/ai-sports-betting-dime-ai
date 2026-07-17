@@ -303,8 +303,8 @@ export async function detectRescheduledGames(): Promise<{
     const notifContent =
       `${rescheduled.length} postponed MLB game(s) have been rescheduled:\n\n` +
       lines.join("\n") +
-      `\n\nThe new game(s) will be auto-inserted by the schedule sync on their new date. ` +
-      `No manual action required.`;
+      `\n\nThe new game(s) are auto-inserted by syncMlbSchedule (Step 0.5 of the MLB cycle) ` +
+      `once the new date enters the rolling feed window. No manual action required.`;
 
     try {
       await notifyOwner({

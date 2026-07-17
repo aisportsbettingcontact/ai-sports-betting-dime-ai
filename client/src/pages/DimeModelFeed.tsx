@@ -598,8 +598,10 @@ function verdictOf(best: BestPick | null): FeedCardSpec["verdict"] {
 }
 
 // ── MLB adapter (bindings: GameCard.tsx via @shared/mlbTeams registry) ───────
+// Exported for DimeModelFeed.doubleheader.test.ts — the card id is the render
+// key, so its per-EVENT uniqueness (doubleheader safety) is pinned by tests.
 
-function mlbRowToCard(g: MlbRow): FeedCardSpec {
+export function mlbRowToCard(g: MlbRow): FeedCardSpec {
   const awayAbbr = (g.awayTeam ?? "").toUpperCase();
   const homeAbbr = (g.homeTeam ?? "").toUpperCase();
   const awayReg = MLB_BY_ABBREV.get(awayAbbr);
@@ -672,7 +674,15 @@ function mlbRowToCard(g: MlbRow): FeedCardSpec {
   const meta = g.venue || "MLB";
 
   return {
-    id: String(g.id ?? `${awayAbbr}-${homeAbbr}`),
+    // Stable event identity = DB primary key. The fallback must stay unique per
+    // EVENT, not per matchup: two doubleheader games share awayAbbr/homeAbbr on
+    // the same date, so a bare `${away}-${home}` key would collapse them into
+    // one React key and silently drop a card. Include date + start time +
+    // gameNumber so even the id-less fallback cannot merge distinct games.
+    id: String(
+      g.id ??
+      `${awayAbbr}-${homeAbbr}-${g.gameDate ?? ""}-${g.startTimeEst ?? ""}-${(g as { gameNumber?: number | null }).gameNumber ?? 1}`
+    ),
     liveLabel: isLive ? `LIVE${g.gameClock ? ` · ${g.gameClock}` : ""}` : null,
     timeLabel: isFinal ? "FINAL" : formatGameTime(g.startTimeEst),
     away: { name: awayReg?.nickname ?? awayAbbr, crest: awayCrest, score: isLive || isFinal ? (g.awayScore != null ? String(g.awayScore) : null) : null },
