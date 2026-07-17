@@ -191,7 +191,11 @@ Property-style: 250-seed slate invariant + 100-seed group uniqueness
 
 Full existing suite: `pnpm run test:gated:local` → **PASS**
 (1745 passed, 66 env-bound failures all allowlisted, 0 unexpected, 0 skipped).
-Typecheck **PASS**; lint **N/A** (no root lint script — Prettier only);
+Typecheck **PASS** — with one post-push correction: PR #132's first CI run
+failed typecheck (8 ES5-target Map/Set-iteration errors in the new modules;
+the earlier local pass was incremental-cache-tainted). Fixed with the repo's
+`Array.from` idiom and re-verified with a cold cache (ledger event 11).
+Lint **N/A** (no root lint script — Prettier only);
 `build:client` + `build:server` + bundle budget **PASS** (204,635B gzip vs
 215,882B ceiling).
 
@@ -261,12 +265,15 @@ the sync is identifiable (`mlbGamePk IS NOT NULL AND fileId = 0`).
 ## 22. Audit ledger
 
 `dime-mlb-doubleheader-20260717-audit-log.jsonl` — append-only, hash-chained.
-**10 events, 14,600 bytes, file SHA-256
-`e30307b5a93349b67f868f61b0cfc9b0a38e533f18350e84a7f02308b9bd3ca4`.**
-Chain verified intact before commit (events 1–9 terminal record sha
-`9ef23d1e…6f6936f`; event 10 is the terminal reconciliation record). Verify by
-recomputing sha256 over each record minus `current_sha256` (sorted keys,
-ensure_ascii=false) and comparing to the embedded chain.
+**11 events, 16,101 bytes, file SHA-256
+`f2359364d4b7c86220a029f6d54111ab8175bcd9d79a2efc582c096db9c99fd5`.**
+Event 10 is the pre-commit reconciliation record; event 11 (post-push) records
+the PR #132 CI TypeScript failure and its fix — the initial local typecheck
+PASS in event 9 was tainted by the incremental `tsbuildinfo` cache; a
+cold-cache run reproduced CI's 8 errors (TS2802 Map/Set iteration under the
+ES5 default target) which were fixed with the repo's `Array.from` idiom and
+re-verified with a cold cache (exit 0). Verify the chain by recomputing sha256
+over each record minus `current_sha256` (sorted keys, ensure_ascii=false).
 
 ## 23. Final verdict
 

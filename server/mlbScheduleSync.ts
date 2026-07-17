@@ -334,7 +334,7 @@ export async function syncMlbSchedule(opts?: {
   if (inserted > 0 || updated > 0) invalidateGamesCache();
 
   // ── Reconcile: every distinct provider event must now exist in the DB ──────
-  const providerPks = [...new Set(fetched.events.map(e => e.gamePk))];
+  const providerPks = Array.from(new Set(fetched.events.map(e => e.gamePk)));
   let presentPks = new Set<number>();
   if (providerPks.length > 0) {
     const present = await db
