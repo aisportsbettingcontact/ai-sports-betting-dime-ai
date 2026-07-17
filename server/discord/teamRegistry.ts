@@ -78,7 +78,7 @@ export async function enrichTeamRegistryFromDb(): Promise<void> {
   try {
     // NBA
     const db = await getDb();
-    if (!db) { console.warn('[SplitsBot] DB not available for team enrichment'); return; }
+    if (!db) { console.warn('[DiscordBot] DB not available for team enrichment'); return; }
     const nbaRows = await db.select({
       dbSlug: nbaTeams.dbSlug,
       abbrev: nbaTeams.abbrev,
@@ -99,7 +99,7 @@ export async function enrichTeamRegistryFromDb(): Promise<void> {
         if (row.logoUrl) existing.logoUrl = row.logoUrl;
       }
     }
-    console.log(`[SplitsBot] Enriched ${nbaRows.length} NBA teams from DB`);
+    console.log(`[DiscordBot] Enriched ${nbaRows.length} NBA teams from DB`);
 
     // NHL
     const nhlRows = await db.select({
@@ -121,9 +121,9 @@ export async function enrichTeamRegistryFromDb(): Promise<void> {
         if (row.logoUrl) existing.logoUrl = row.logoUrl;
       }
     }
-    console.log(`[SplitsBot] Enriched ${nhlRows.length} NHL teams from DB`);
+    console.log(`[DiscordBot] Enriched ${nhlRows.length} NHL teams from DB`);
   } catch (err) {
-    console.error("[SplitsBot] enrichTeamRegistryFromDb failed:", err);
+    console.error("[DiscordBot] enrichTeamRegistryFromDb failed:", err);
   }
 }
 

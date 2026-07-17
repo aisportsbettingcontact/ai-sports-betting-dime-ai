@@ -1,8 +1,9 @@
 /**
  * renderLineupCard.ts
  *
- * Renders an MLB lineup card to a PNG buffer using the shared Playwright
- * browser singleton from renderSplitsCard.ts.
+ * Renders an MLB lineup card to a PNG buffer with a dedicated Playwright
+ * (headless Chromium) browser singleton, launched once at bot startup via
+ * warmUpLineupRenderer() and closed on shutdown via closeLineupRenderer().
  *
  * The lineup_card.html template is loaded once from disk and cached.
  * Data is injected via window.LINEUP_DATA before the script runs.
@@ -11,11 +12,36 @@
 import * as fs from "fs";
 import * as path from "path";
 import { fileURLToPath } from "url";
-import { warmUpRenderer, closeSplitsRenderer, CHROMIUM_EXECUTABLE_PATH } from "./renderSplitsCard.js";
 import { chromium, type Browser, type Page } from "playwright";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const TEMPLATE_PATH = path.join(__dirname, "lineup_card.html");
+
+// ─── Chromium executable path resolution ──────────────────────────────────────
+// Same convention as server/wc2026/espnPageScraper.ts's CHROMIUM_PATH: prefer
+// PLAYWRIGHT_CHROMIUM_PATH (set in the Dockerfile to the apt-installed
+// /usr/bin/chromium), then fall back through the same candidate list. Every
+// candidate — including the env var — is verified with fs.existsSync before
+// use; if none exist this resolves to `undefined`, which is the signal to omit
+// `executablePath` entirely so Playwright falls back to its own self-managed
+// browser resolution (local dev with `playwright install` already run).
+function resolveChromiumExecutablePath(): string | undefined {
+  const candidates = [
+    process.env.PLAYWRIGHT_CHROMIUM_PATH,
+    "/home/ubuntu/.cache/ms-playwright/chromium-1161/chrome-linux/chrome",
+    "/home/ubuntu/.cache/ms-playwright/chromium-1208/chrome-linux64/chrome",
+    "/home/ubuntu/.cache/ms-playwright/chromium-1169/chrome-linux/chrome",
+    "/usr/bin/chromium",
+    "/usr/bin/chromium-browser",
+    "/usr/bin/google-chrome",
+  ].filter((c): c is string => !!c);
+  for (const c of candidates) {
+    if (fs.existsSync(c)) return c;
+  }
+  return undefined;
+}
+
+const CHROMIUM_EXECUTABLE_PATH: string | undefined = resolveChromiumExecutablePath();
 
 // ─── Template cache ───────────────────────────────────────────────────────────
 let _templateHtml: string | null = null;
@@ -27,10 +53,11 @@ function getTemplateHtml(): string {
   return _templateHtml;
 }
 
-// ─── Shared browser singleton (same as splits renderer) ───────────────────────
-// We reuse the same Chromium process to avoid double memory usage.
-// warmUpRenderer() from renderSplitsCard.ts already launches it at startup.
+// ─── Browser singleton ────────────────────────────────────────────────────────
+// Launched once (warmUpLineupRenderer() at bot startup, or lazily on the first
+// render) and kept alive for the life of the process.
 let _browser: Browser | null = null;
+let _warmUpPromise: Promise<void> | null = null;
 
 // ─── Quality constants ────────────────────────────────────────────────────────
 // DPR=8 means every CSS pixel maps to 8×8 physical pixels.
@@ -46,9 +73,9 @@ async function getBrowser(): Promise<Browser> {
   const t0 = Date.now();
   _browser = await chromium.launch({
     headless: true,
-    // Same resolution as renderSplitsCard.ts's getBrowser(): in the container
-    // this is the apt-installed /usr/bin/chromium (via PLAYWRIGHT_CHROMIUM_PATH);
-    // undefined in local dev, so Playwright resolves its own bundled browser.
+    // In the container this is the apt-installed /usr/bin/chromium (via
+    // PLAYWRIGHT_CHROMIUM_PATH); undefined in local dev, so Playwright
+    // resolves its own bundled browser.
     ...(CHROMIUM_EXECUTABLE_PATH ? { executablePath: CHROMIUM_EXECUTABLE_PATH } : {}),
     args: [
       "--no-sandbox",
@@ -197,5 +224,34 @@ export async function renderLineupCard(data: LineupCardData): Promise<Buffer> {
 }
 
 // Template cache version: v5 (8x DPR, w_360 headshots, larger fonts, ultra-crisp output)
-// Re-export warm-up and close from the shared renderer
-export { warmUpRenderer, closeSplitsRenderer as closeLineupRenderer };
+
+/**
+ * Warm up the renderer: launch Chromium and pre-load the template so the
+ * first /lineups command doesn't pay the cold-start cost.
+ */
+export async function warmUpLineupRenderer(): Promise<void> {
+  if (_warmUpPromise) return _warmUpPromise;
+  _warmUpPromise = (async () => {
+    const t0 = Date.now();
+    console.log("[LineupRenderer] Warming up — launching Chromium and pre-loading template...");
+    try {
+      await getBrowser();
+      getTemplateHtml();
+      console.log(`[LineupRenderer] ✅ Warm-up complete in ${Date.now() - t0}ms`);
+    } catch (err) {
+      console.error("[LineupRenderer] Warm-up failed:", err);
+      _warmUpPromise = null; // allow retry
+    }
+  })();
+  return _warmUpPromise;
+}
+
+/** Call this on bot shutdown to cleanly close the browser. */
+export async function closeLineupRenderer(): Promise<void> {
+  if (_browser) {
+    await _browser.close();
+    _browser = null;
+    _warmUpPromise = null;
+    console.log("[LineupRenderer] Browser closed");
+  }
+}

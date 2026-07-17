@@ -30,9 +30,8 @@ import {
   type ChatInputCommandInteraction,
 } from "discord.js";
 import { ENV } from "../_core/env";
-import { handleSplitsCommand, handleSplitsAutocomplete, closeSplitsRenderer } from "./splitsCommand";
 import { handleLineupsCommand, handleLineupsAutocomplete } from "./lineupsCommand";
-import { warmUpRenderer } from "./renderSplitsCard";
+import { warmUpLineupRenderer, closeLineupRenderer } from "./renderLineupCard";
 import { enrichTeamRegistryFromDb } from "./teamRegistry";
 
 // ─── Singleton guard ──────────────────────────────────────────────────────────
@@ -68,7 +67,7 @@ function isDuplicateInteraction(id: string): boolean {
     if (now - ts > INTERACTION_DEDUP_TTL_MS) seenInteractionIds.delete(k);
   });
   if (seenInteractionIds.has(id)) {
-    console.warn(`[SplitsBot] [WARN] Duplicate interaction detected and dropped: ${id}`);
+    console.warn(`[DiscordBot] [WARN] Duplicate interaction detected and dropped: ${id}`);
     return true;
   }
   seenInteractionIds.set(id, now);
@@ -85,7 +84,7 @@ function calcBackoffMs(attempt: number): number {
 // ─── Core bot factory ─────────────────────────────────────────────────────────
 function createAndLoginClient(attempt: number): void {
   const ts = new Date().toISOString();
-  console.log(`[SplitsBot] [STEP] Creating Client (attempt ${attempt + 1}/${MAX_RECONNECT_ATTEMPTS}) at ${ts}`);
+  console.log(`[DiscordBot] [STEP] Creating Client (attempt ${attempt + 1}/${MAX_RECONNECT_ATTEMPTS}) at ${ts}`);
 
   const client = new Client({
     intents: [GatewayIntentBits.Guilds],
@@ -94,29 +93,25 @@ function createAndLoginClient(attempt: number): void {
   // ── Ready ─────────────────────────────────────────────────────────────────
   client.once(Events.ClientReady, (readyClient) => {
     const readyTs = new Date().toISOString();
-    console.log(`[SplitsBot] [OUTPUT] ✅ Logged in as ${readyClient.user.tag} at ${readyTs}`);
-    console.log(`[SplitsBot] [STATE] Guild: ${ENV.discordGuildId}`);
+    console.log(`[DiscordBot] [OUTPUT] ✅ Logged in as ${readyClient.user.tag} at ${readyTs}`);
+    console.log(`[DiscordBot] [STATE] Guild: ${ENV.discordGuildId}`);
 
     // Reset reconnect counter on successful login
     reconnectAttempt = 0;
 
     // Parallel startup tasks
-    warmUpRenderer().catch((err) =>
-      console.error("[SplitsBot] [WARN] Renderer warm-up failed (non-fatal):", err)
+    warmUpLineupRenderer().catch((err) =>
+      console.error("[DiscordBot] [WARN] Renderer warm-up failed (non-fatal):", err)
     );
     enrichTeamRegistryFromDb().catch((err) =>
-      console.error("[SplitsBot] [WARN] Team registry enrichment failed:", err)
+      console.error("[DiscordBot] [WARN] Team registry enrichment failed:", err)
     );
   });
 
   // ── Interaction handler ───────────────────────────────────────────────────
   client.on(Events.InteractionCreate, async (interaction) => {
     if (interaction.isAutocomplete()) {
-      if (interaction.commandName === "splits") {
-        await handleSplitsAutocomplete(interaction).catch((err) =>
-          console.error("[SplitsBot] [WARN] Autocomplete error:", err)
-        );
-      } else if (interaction.commandName === "lineups") {
+      if (interaction.commandName === "lineups") {
         await handleLineupsAutocomplete(interaction).catch((err) =>
           console.error("[LineupsBot] [WARN] Autocomplete error:", err)
         );
@@ -129,23 +124,21 @@ function createAndLoginClient(attempt: number): void {
     const { commandName } = interaction;
 
     if (isDuplicateInteraction(interaction.id)) {
-      console.warn(`[SplitsBot] [WARN] Dropped duplicate interaction ${interaction.id} for /${commandName}`);
+      console.warn(`[DiscordBot] [WARN] Dropped duplicate interaction ${interaction.id} for /${commandName}`);
       return;
     }
 
     console.log(
-      `[SplitsBot] [INPUT] /${commandName} from ${interaction.user.id} (${interaction.user.tag}) [id=${interaction.id}]`
+      `[DiscordBot] [INPUT] /${commandName} from ${interaction.user.id} (${interaction.user.tag}) [id=${interaction.id}]`
     );
 
     try {
-      if (commandName === "splits") {
-        await handleSplitsCommand(interaction as ChatInputCommandInteraction, client);
-      } else if (commandName === "lineups") {
+      if (commandName === "lineups") {
         await handleLineupsCommand(interaction as ChatInputCommandInteraction, client);
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.error(`[SplitsBot] [FAIL] Unhandled error in /${commandName} [id=${interaction.id}]: ${msg}`);
+      console.error(`[DiscordBot] [FAIL] Unhandled error in /${commandName} [id=${interaction.id}]: ${msg}`);
       try {
         if (interaction.deferred || interaction.replied) {
           await interaction.editReply(`❌ Unexpected error: ${msg}`);
@@ -154,7 +147,7 @@ function createAndLoginClient(attempt: number): void {
         }
       } catch (replyErr) {
         const replyMsg = replyErr instanceof Error ? replyErr.message : String(replyErr);
-        console.error(`[SplitsBot] [FAIL] Could not send error reply for /${commandName} [id=${interaction.id}]: ${replyMsg}`);
+        console.error(`[DiscordBot] [FAIL] Could not send error reply for /${commandName} [id=${interaction.id}]: ${replyMsg}`);
       }
     }
   });
@@ -163,12 +156,12 @@ function createAndLoginClient(attempt: number): void {
   client.on(Events.ShardDisconnect, (closeEvent, shardId) => {
     const code = closeEvent.code;
     const disconnectTs = new Date().toISOString();
-    console.warn(`[SplitsBot] [STATE] Shard ${shardId} disconnected at ${disconnectTs} — close code: ${code}`);
+    console.warn(`[DiscordBot] [STATE] Shard ${shardId} disconnected at ${disconnectTs} — close code: ${code}`);
 
     // Fatal close codes: destroy immediately, do NOT reconnect
     if (FATAL_CLOSE_CODES.has(code)) {
       console.error(
-        `[SplitsBot] [CRITICAL] Close code ${code} is fatal — destroying client. ` +
+        `[DiscordBot] [CRITICAL] Close code ${code} is fatal — destroying client. ` +
         `This usually means the bot token is invalid or revoked. ` +
         `Regenerate the token at discord.com/developers/applications and update DISCORD_BOT_TOKEN.`
       );
@@ -180,18 +173,18 @@ function createAndLoginClient(attempt: number): void {
 
     // Non-fatal: discord.js will handle the reconnect automatically.
     // Log the event so we have a trace.
-    console.log(`[SplitsBot] [STEP] Non-fatal disconnect (code=${code}) — discord.js will reconnect automatically.`);
+    console.log(`[DiscordBot] [STEP] Non-fatal disconnect (code=${code}) — discord.js will reconnect automatically.`);
   });
 
   // ── Error handler ─────────────────────────────────────────────────────────
   client.on(Events.Error, (err) => {
-    console.error("[SplitsBot] [FAIL] Discord client error:", err.message);
+    console.error("[DiscordBot] [FAIL] Discord client error:", err.message);
   });
 
   // ── Login ─────────────────────────────────────────────────────────────────
   client.login(ENV.discordBotToken).catch((err) => {
     const errMsg = err instanceof Error ? err.message : String(err);
-    console.error(`[SplitsBot] [FAIL] Login attempt ${attempt + 1} failed: ${errMsg}`);
+    console.error(`[DiscordBot] [FAIL] Login attempt ${attempt + 1} failed: ${errMsg}`);
 
     // If the error message indicates an invalid token, halt immediately
     if (
@@ -200,7 +193,7 @@ function createAndLoginClient(attempt: number): void {
       errMsg.includes("401")
     ) {
       console.error(
-        `[SplitsBot] [CRITICAL] Token is invalid — halting reconnection. ` +
+        `[DiscordBot] [CRITICAL] Token is invalid — halting reconnection. ` +
         `Regenerate the token at discord.com/developers/applications and update DISCORD_BOT_TOKEN.`
       );
       botStarted = false;
@@ -211,7 +204,7 @@ function createAndLoginClient(attempt: number): void {
     reconnectAttempt++;
     if (reconnectAttempt >= MAX_RECONNECT_ATTEMPTS) {
       console.error(
-        `[SplitsBot] [CRITICAL] Reached max reconnect attempts (${MAX_RECONNECT_ATTEMPTS}). ` +
+        `[DiscordBot] [CRITICAL] Reached max reconnect attempts (${MAX_RECONNECT_ATTEMPTS}). ` +
         `Halting bot. Restart the server to try again.`
       );
       botStarted = false;
@@ -219,7 +212,7 @@ function createAndLoginClient(attempt: number): void {
     }
 
     const delay = calcBackoffMs(reconnectAttempt);
-    console.log(`[SplitsBot] [STEP] Scheduling reconnect attempt ${reconnectAttempt + 1} in ${delay}ms...`);
+    console.log(`[DiscordBot] [STEP] Scheduling reconnect attempt ${reconnectAttempt + 1} in ${delay}ms...`);
     setTimeout(() => createAndLoginClient(reconnectAttempt), delay);
   });
 
@@ -233,25 +226,25 @@ let reconnectAttempt = 0;
 
 export function startDiscordBot(): void {
   if (!ENV.discordBotToken) {
-    console.warn("[SplitsBot] [WARN] DISCORD_BOT_TOKEN not set — bot will not start");
+    console.warn("[DiscordBot] [WARN] DISCORD_BOT_TOKEN not set — bot will not start");
     return;
   }
 
   // Singleton guard: prevent multiple Client instances in the same process
   if (botStarted) {
-    console.warn("[SplitsBot] [WARN] startDiscordBot() called more than once — ignoring duplicate call");
+    console.warn("[DiscordBot] [WARN] startDiscordBot() called more than once — ignoring duplicate call");
     return;
   }
   botStarted = true;
   reconnectAttempt = 0;
 
-  console.log(`[SplitsBot] [STEP] Starting Discord bot at ${new Date().toISOString()}`);
+  console.log(`[DiscordBot] [STEP] Starting Discord bot at ${new Date().toISOString()}`);
   createAndLoginClient(0);
 
   // Graceful shutdown on process exit
   const shutdown = async () => {
-    console.log("[SplitsBot] [STEP] Shutting down — closing Playwright browser and Discord client...");
-    await closeSplitsRenderer();
+    console.log("[DiscordBot] [STEP] Shutting down — closing Playwright browser and Discord client...");
+    await closeLineupRenderer();
     botClient?.destroy();
     botClient = null;
   };
