@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -806,21 +807,21 @@ export default function UserManagement() {
   }
 
   return (
-    <div className="min-h-screen w-full bg-black text-white flex flex-col">
+    <div className="min-h-screen w-full bg-muted/30 text-foreground flex flex-col">
       {/* Header — two-row on mobile, single-row on sm+ */}
-      <div className="sticky top-0 z-40 bg-black backdrop-blur border-b border-white w-full">
+      <div className="sticky top-0 z-40 bg-background/95 backdrop-blur border-b w-full supports-[backdrop-filter]:bg-background/80">
         {/* Row 1: Back + Title */}
         <div className="w-full px-3 sm:px-5 lg:px-8 pt-3 pb-1.5 sm:pb-0 flex items-center gap-2">
           <button type="button" onClick={() => navigate("/feed/model/mlb")}
-            className="flex items-center gap-1.5 text-white hover:text-white transition-colors text-sm flex-shrink-0"
+            className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors text-sm flex-shrink-0"
           >
             <ArrowLeft className="w-4 h-4" />
             <span className="hidden xs:inline">Back</span>
           </button>
           <div className="flex-1" />
           <div className="flex items-center gap-1.5">
-            <Crown className="w-4 h-4 text-white flex-shrink-0" />
-            <span className="text-sm font-semibold tracking-wider text-white whitespace-nowrap">USER MANAGEMENT</span>
+            <Crown className="w-4 h-4 text-primary flex-shrink-0" />
+            <span className="text-sm font-semibold tracking-wider text-foreground whitespace-nowrap">USER MANAGEMENT</span>
           </div>
           <div className="flex-1" />
           {/* Actions — hidden on mobile, shown inline on sm+ */}
@@ -829,7 +830,7 @@ export default function UserManagement() {
               onClick={() => setForceLogoutAllConfirm(true)}
               size="sm"
               variant="outline"
-              className="gap-1.5 border-white text-white hover:bg-black hover:text-white hover:border-white"
+              className="gap-1.5"
               disabled={forceLogoutAllMutation.isPending}
             >
               {forceLogoutAllMutation.isPending ? (
@@ -843,7 +844,7 @@ export default function UserManagement() {
               onClick={() => navigate("/admin/security")}
               size="sm"
               variant="outline"
-              className="gap-1.5 border-white text-white hover:bg-black hover:text-white"
+              className="gap-1.5"
             >
               <ShieldAlert className="w-4 h-4" />
               Security Events
@@ -860,7 +861,7 @@ export default function UserManagement() {
             onClick={() => setForceLogoutAllConfirm(true)}
             size="sm"
             variant="outline"
-            className="flex-1 gap-1.5 border-white text-white hover:bg-black hover:text-white hover:border-white text-xs"
+            className="flex-1 gap-1.5 text-xs"
             disabled={forceLogoutAllMutation.isPending}
           >
             {forceLogoutAllMutation.isPending ? (
@@ -874,7 +875,7 @@ export default function UserManagement() {
             onClick={() => navigate("/admin/security")}
             size="sm"
             variant="outline"
-            className="flex-1 gap-1.5 border-white text-white hover:bg-black hover:text-white text-xs"
+            className="flex-1 gap-1.5 text-xs"
           >
             <ShieldAlert className="w-3.5 h-3.5" />
             Security Events
@@ -888,6 +889,10 @@ export default function UserManagement() {
 
       {/* Stats bar */}
       <div className="flex-1 w-full px-3 sm:px-5 lg:px-8 py-4">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Accounts overview</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Manage access, roles, subscriptions, and connected services.</p>
+        </div>
         {/*
           5 cards: use grid-cols-3 on mobile so layout is 3+2 (no orphan).
           xs:grid-cols-3 ensures the 3-col layout kicks in at 480px.
@@ -901,10 +906,14 @@ export default function UserManagement() {
             { label: "Handicappers", value: rawUsers.filter((u) => u.role === "handicapper").length },
             { label: "Active Access", value: rawUsers.filter((u) => u.hasAccess).length },
           ].map((stat) => (
-            <div key={stat.label} className="bg-black border border-white rounded-lg px-2.5 sm:px-4 py-2.5 sm:py-3 min-w-0">
-              <div className="text-lg sm:text-xl font-bold text-white truncate">{stat.value}</div>
-              <div className="text-xs text-white tracking-wide leading-tight mt-0.5 truncate">{stat.label}</div>
-            </div>
+            <Card key={stat.label} className="min-w-0 gap-2 py-4 shadow-sm">
+              <CardHeader className="px-4 pb-0">
+                <CardTitle className="text-xs font-medium text-muted-foreground truncate">{stat.label}</CardTitle>
+              </CardHeader>
+              <CardContent className="px-4">
+                <div className="text-2xl font-bold tabular-nums truncate">{stat.value}</div>
+              </CardContent>
+            </Card>
           ))}
         </div>
 
@@ -912,20 +921,20 @@ export default function UserManagement() {
         <MetricsPanel />
 
         {/* Search bar */}
-        <div className="mb-4 relative">
-          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <div className="mb-4 relative rounded-xl border bg-card p-3 shadow-sm">
+          <svg className="absolute left-6 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
           </svg>
-          <input
+          <Input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search by username or email…"
-            className="w-full bg-black border border-white rounded-lg pl-9 pr-9 py-2 text-sm text-white placeholder:text-white focus:outline-none focus:border-white transition-colors"
+            className="w-full pl-9 pr-9"
           />
           {searchQuery && (
             <button type="button" onClick={() => setSearchQuery("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-white hover:text-white transition-colors"
+              className="absolute right-6 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -934,8 +943,8 @@ export default function UserManagement() {
 
         {/* Filtered count indicator */}
         {users.length !== rawUsers.length && (
-          <div className="mb-3 flex items-center gap-2 text-xs text-white">
-            <span>Showing <span className="text-white font-semibold">{users.length}</span> of <span className="text-white font-semibold">{rawUsers.length}</span> accounts</span>
+          <div className="mb-3 flex items-center gap-2 text-xs text-muted-foreground">
+            <span>Showing <span className="text-foreground font-semibold">{users.length}</span> of <span className="text-foreground font-semibold">{rawUsers.length}</span> accounts</span>
             <button type="button" onClick={() => {
                 setSearchQuery("");
                 setCols({
@@ -944,7 +953,7 @@ export default function UserManagement() {
                   lastSignIn: defaultColState(),
                 });
               }}
-              className="text-white hover:text-white flex items-center gap-1"
+              className="text-foreground hover:text-primary flex items-center gap-1"
             >
               <X className="w-3 h-3" /> Clear all filters
             </button>
@@ -952,7 +961,7 @@ export default function UserManagement() {
         )}
 
         {/* Table */}
-        <div className="bg-black border border-white rounded-xl overflow-hidden w-full">
+        <div className="bg-black border border-white/20 rounded-xl overflow-hidden w-full shadow-sm">
           <div className="overflow-x-auto w-full">
           <Table>
             <TableHeader>
