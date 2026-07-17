@@ -26,9 +26,11 @@ import { applyMlbScheduleSyncPlan } from "./mlbScheduleSync";
 import { raysRedSoxGame1, raysRedSoxGame2 } from "./mlbDoubleheaderFixtures";
 
 const NS_DATE = "2126-07-17"; // far-future namespace — never real data
+const NS_OLD_DATE = "2126-05-09"; // original date of the relocated makeup (date-move test)
 const PK_G1 = 890101;
 const PK_G2 = 890102;
 const PK_TMP = 890150;
+const PK_MOVED = 890100; // pk that "keeps its identity" across a reschedule (the 824766 pattern)
 
 const g1 = (o: Partial<MlbProviderGame> = {}) =>
   raysRedSoxGame1({ gamePk: PK_G1, officialDate: NS_DATE, startUtc: `${NS_DATE}T17:35:00Z`, rescheduledFrom: "2126-05-09", ...o });
@@ -80,7 +82,8 @@ async function cleanup() {
   const db = await getDb();
   if (!db) return;
   await db.delete(games).where(eq(games.gameDate, NS_DATE));
-  await db.delete(games).where(inArray(games.mlbGamePk, [PK_G1, PK_G2, PK_TMP]));
+  await db.delete(games).where(eq(games.gameDate, NS_OLD_DATE));
+  await db.delete(games).where(inArray(games.mlbGamePk, [PK_G1, PK_G2, PK_TMP, PK_MOVED]));
 }
 
 describe.skipIf(SKIP_DB_IN_CI)("MLB doubleheader DB invariants (real database)", () => {
@@ -189,6 +192,89 @@ describe.skipIf(SKIP_DB_IN_CI)("MLB doubleheader DB invariants (real database)",
     expect(stale.warnings.some(w => w.includes("status regression blocked"))).toBe(true);
     await applyMlbScheduleSyncPlan(db!, stale);
     expect((await loadNsRows(db!)).find(r => r.mlbGamePk === PK_G1)?.gameStatus).toBe("final");
+  });
+
+  it("[DH-DB-8] two-phase apply survives a gameNumber permutation (swap-deadlock hardening)", async () => {
+    const db = await getDb();
+    await db!.delete(games).where(eq(games.gameDate, NS_DATE));
+    // Seed both rows normally…
+    const seed = planMlbScheduleSync([g1(), g2()], await loadNsRows(db!));
+    expect((await applyMlbScheduleSyncPlan(db!, seed)).applyErrors).toEqual([]);
+    // …then the provider inverts numbering AND start times for both pks.
+    const inverted = [
+      g1({ startUtc: `${NS_DATE}T23:10:00Z`, gameNumber: 2, dayNight: "night" }),
+      g2({ startUtc: `${NS_DATE}T17:35:00Z`, gameNumber: 1, dayNight: "day" }),
+    ];
+    const plan = planMlbScheduleSync(inverted, await loadNsRows(db!));
+    expect(plan.collisions).toEqual([]);
+    // Single-pass application would deadlock: each update targets the matchup
+    // key the sibling still occupies. The two-phase park must resolve it.
+    const { applyErrors } = await applyMlbScheduleSyncPlan(db!, plan);
+    expect(applyErrors).toEqual([]);
+    const rows = await loadNsRows(db!);
+    expect(rows).toHaveLength(2);
+    expect(rows.find(r => r.mlbGamePk === PK_G1)?.gameNumber).toBe(2);
+    expect(rows.find(r => r.mlbGamePk === PK_G2)?.gameNumber).toBe(1);
+    expect(rows.every(r => (r.gameNumber ?? 0) > 0)).toBe(true); // no row left parked
+    // Restore the canonical orientation for the following tests.
+    const restore = planMlbScheduleSync([g1(), g2()], await loadNsRows(db!));
+    expect((await applyMlbScheduleSyncPlan(db!, restore)).applyErrors).toEqual([]);
+  });
+
+  it("[DH-DB-9] same-pk reschedule end-to-end: old-date row relocates, no blocked insert (the 824766 pattern)", async () => {
+    const db = await getDb();
+    await db!.delete(games).where(eq(games.gameDate, NS_DATE));
+    await db!.delete(games).where(eq(games.gameDate, NS_OLD_DATE));
+    // The postponed original on its old date, identity already stamped.
+    await db!.insert(games).values({
+      fileId: 0, gameDate: NS_OLD_DATE, startTimeEst: "4:10 PM",
+      awayTeam: "TB", homeTeam: "BOS", sport: "MLB",
+      gameNumber: 1, mlbGamePk: PK_MOVED, gameStatus: "postponed",
+    });
+    // The evening game exists on the new date.
+    const seed = planMlbScheduleSync([g2()], await loadNsRows(db!));
+    expect((await applyMlbScheduleSyncPlan(db!, seed)).applyErrors).toEqual([]);
+
+    // Provider slate: the SAME pk now scheduled on the new date as DH game 1
+    // (mirrors live 2026-07-17: gamePk 824766 moved 2026-05-09 → 2026-07-17).
+    // Rows must be loaded date-unbounded by pk, exactly as syncMlbSchedule does.
+    const windowRows = await loadNsRows(db!);
+    const oldRows = await db!
+      .select({
+        id: games.id, gameDate: games.gameDate, startTimeEst: games.startTimeEst,
+        awayTeam: games.awayTeam, homeTeam: games.homeTeam, sport: games.sport,
+        mlbGamePk: games.mlbGamePk, gameNumber: games.gameNumber,
+        doubleHeader: games.doubleHeader, gameStatus: games.gameStatus,
+        venue: games.venue, rescheduledFrom: games.rescheduledFrom,
+      })
+      .from(games)
+      .where(and(eq(games.sport, "MLB"), eq(games.gameDate, NS_OLD_DATE)));
+    const allRows: DbGameRow[] = [
+      ...windowRows,
+      ...oldRows.map((r: typeof oldRows[number]) => ({ ...r, mlbGamePk: r.mlbGamePk != null ? Number(r.mlbGamePk) : null })),
+    ];
+
+    const plan = planMlbScheduleSync(
+      [g1({ gamePk: PK_MOVED, rescheduledFrom: NS_OLD_DATE }), g2()],
+      allRows
+    );
+    expect(plan.inserts).toHaveLength(0); // relocation, NOT a doomed insert
+    expect(plan.collisions).toEqual([]);
+    const { applyErrors } = await applyMlbScheduleSyncPlan(db!, plan);
+    expect(applyErrors).toEqual([]);
+
+    const after = await loadNsRows(db!);
+    expect(after).toHaveLength(2);
+    const moved = after.find(r => r.mlbGamePk === PK_MOVED)!;
+    expect(moved.gameDate).toBe(NS_DATE);
+    expect(moved.startTimeEst).toBe("1:35 PM");
+    expect(moved.gameNumber).toBe(1);
+    expect(moved.gameStatus).toBe("upcoming"); // date move resolves the postponement
+    expect(moved.rescheduledFrom).toBe(NS_OLD_DATE);
+    const oldDateRows = await db!
+      .select({ id: games.id }).from(games)
+      .where(and(eq(games.sport, "MLB"), eq(games.gameDate, NS_OLD_DATE)));
+    expect(oldDateRows).toHaveLength(0); // nothing stranded on the old date
   });
 
   it("[DH-DB-7] incident shape end-to-end: legacy 7:10 row adopted by G2, G1 inserted", async () => {

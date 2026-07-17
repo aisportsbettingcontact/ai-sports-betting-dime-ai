@@ -430,8 +430,13 @@ export async function listGames(opts?: { sport?: string; gameDate?: string; forc
   // ALWAYS exclude postponed/suspended/cancelled games from the feed — they were never played
   // This covers MLB postponements (e.g. HOU@BAL, SF@PHI on 2026-04-29) that the MLB Stats API
   // returns as valid schedule entries but with detailedState='Postponed'.
+  // 'suspended' needs its own condition since 2026-07-17: the score refresh and
+  // schedule sync now both write the distinct 'suspended' status (previously the
+  // refresh collapsed it into 'postponed', which broke the postponed-tracker's
+  // suspended-resume scan). Suspended games reappear when they resume → 'final'.
   conditions.push(ne(games.gameStatus, 'postponed'));
-  console.log('[DB][listGames] Excluding postponed games from feed');
+  conditions.push(ne(games.gameStatus, 'suspended'));
+  console.log('[DB][listGames] Excluding postponed/suspended games from feed');
 
   // Public feed: show all games that have live VSiN odds (regardless of publishedToFeed)
   // MLB games are seeded from the schedule and may not have odds yet — show them regardless
@@ -1070,7 +1075,7 @@ export async function updateNcaaStartTime(
   data: {
     startTimeEst: string;
     ncaaContestId: string;
-    gameStatus?: 'upcoming' | 'live' | 'final' | 'postponed';
+    gameStatus?: 'upcoming' | 'live' | 'final' | 'postponed' | 'suspended';
     awayScore?: number | null;
     homeScore?: number | null;
     gameClock?: string | null;
