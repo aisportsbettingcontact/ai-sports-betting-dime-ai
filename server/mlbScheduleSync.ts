@@ -214,7 +214,28 @@ export async function applyMlbScheduleSyncPlan(
   let inserted = 0;
   let updated = 0;
 
-  for (const ins of plan.inserts) {
+  // ORDER MATTERS: updates BEFORE inserts. Incident shape: the adopted legacy
+  // row still occupies (gameDate, teams, gameNumber=1) until its update stamps
+  // gameNumber=2 — inserting Game 1 (also gameNumber=1) first would collide on
+  // games_matchup_unique and the makeup game's insert would fail (proven by
+  // [DH-DB-7] in the first CI db-tests run). Updates free the storage keys the
+  // inserts need.
+  for (const upd of plan.updates) {
+    try {
+      await db.update(games).set(upd.set).where(eq(games.id, upd.rowId));
+      updated++;
+      console.log(
+        `${TAG}[STEP] UPDATE id=${upd.rowId} gamePk=${upd.gamePk}${upd.adoptsLegacyRow ? " (adopted legacy row)" : ""} ` +
+        `set=${JSON.stringify(upd.set)}`
+      );
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      applyErrors.push({ gamePk: upd.gamePk, error: msg });
+      console.error(`${TAG}[ERROR] UPDATE failed id=${upd.rowId} gamePk=${upd.gamePk}: ${msg}`);
+    }
+  }
+
+  const insertOnce = async (ins: MlbScheduleSyncPlan["inserts"][number]): Promise<true | string> => {
     try {
       await db.insert(games).values({
         fileId: 0,
@@ -232,30 +253,36 @@ export async function applyMlbScheduleSyncPlan(
         publishedToFeed: false,
         publishedModel: false,
       });
+      return true;
+    } catch (err) {
+      return err instanceof Error ? err.message : String(err);
+    }
+  };
+
+  const retryQueue: Array<MlbScheduleSyncPlan["inserts"][number]> = [];
+  for (const ins of plan.inserts) {
+    const result = await insertOnce(ins);
+    if (result === true) {
       inserted++;
       console.log(
         `${TAG}[STEP] INSERT gamePk=${ins.gamePk} ${ins.awayTeam}@${ins.homeTeam} ${ins.gameDate} ` +
         `G${ins.gameNumber} DH=${ins.doubleHeader} ${ins.startTimeEst} status=${ins.gameStatus} (${ins.dhConfidence})`
       );
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      applyErrors.push({ gamePk: ins.gamePk, error: msg });
-      console.error(`${TAG}[ERROR] INSERT failed gamePk=${ins.gamePk} ${ins.awayTeam}@${ins.homeTeam} G${ins.gameNumber}: ${msg}`);
+    } else {
+      console.warn(`${TAG}[STATE] INSERT deferred gamePk=${ins.gamePk} G${ins.gameNumber} (will retry once): ${result}`);
+      retryQueue.push(ins);
     }
   }
-
-  for (const upd of plan.updates) {
-    try {
-      await db.update(games).set(upd.set).where(eq(games.id, upd.rowId));
-      updated++;
-      console.log(
-        `${TAG}[STEP] UPDATE id=${upd.rowId} gamePk=${upd.gamePk}${upd.adoptsLegacyRow ? " (adopted legacy row)" : ""} ` +
-        `set=${JSON.stringify(upd.set)}`
-      );
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      applyErrors.push({ gamePk: upd.gamePk, error: msg });
-      console.error(`${TAG}[ERROR] UPDATE failed id=${upd.rowId} gamePk=${upd.gamePk}: ${msg}`);
+  // One retry pass after the whole batch: covers transient key occupancy from
+  // interleaved concurrent workers. A second failure is a real collision.
+  for (const ins of retryQueue) {
+    const result = await insertOnce(ins);
+    if (result === true) {
+      inserted++;
+      console.log(`${TAG}[STEP] INSERT (retry) gamePk=${ins.gamePk} ${ins.awayTeam}@${ins.homeTeam} G${ins.gameNumber}`);
+    } else {
+      applyErrors.push({ gamePk: ins.gamePk, error: result });
+      console.error(`${TAG}[ERROR] INSERT failed gamePk=${ins.gamePk} ${ins.awayTeam}@${ins.homeTeam} G${ins.gameNumber}: ${result}`);
     }
   }
 

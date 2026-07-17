@@ -21,7 +21,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { SKIP_DB_IN_CI } from "./_core/ciTestGuard";
 import { getDb } from "./db";
 import { games } from "../drizzle/schema";
-import { planMlbScheduleSync, type DbGameRow } from "./mlbEventIdentity";
+import { planMlbScheduleSync, type DbGameRow, type MlbProviderGame } from "./mlbEventIdentity";
 import { applyMlbScheduleSyncPlan } from "./mlbScheduleSync";
 import { raysRedSoxGame1, raysRedSoxGame2 } from "./mlbDoubleheaderFixtures";
 
@@ -30,8 +30,30 @@ const PK_G1 = 890101;
 const PK_G2 = 890102;
 const PK_TMP = 890150;
 
-const g1 = () => raysRedSoxGame1({ gamePk: PK_G1, officialDate: NS_DATE, startUtc: `${NS_DATE}T17:35:00Z`, rescheduledFrom: "2126-05-09" });
-const g2 = () => raysRedSoxGame2({ gamePk: PK_G2, officialDate: NS_DATE, startUtc: `${NS_DATE}T23:10:00Z` });
+const g1 = (o: Partial<MlbProviderGame> = {}) =>
+  raysRedSoxGame1({ gamePk: PK_G1, officialDate: NS_DATE, startUtc: `${NS_DATE}T17:35:00Z`, rescheduledFrom: "2126-05-09", ...o });
+const g2 = (o: Partial<MlbProviderGame> = {}) =>
+  raysRedSoxGame2({ gamePk: PK_G2, officialDate: NS_DATE, startUtc: `${NS_DATE}T23:10:00Z`, ...o });
+
+/**
+ * Assert a DB write rejects with a duplicate-key violation. drizzle-orm wraps
+ * the mysql2 error as DrizzleQueryError ("Failed query: …") with the real
+ * "Duplicate entry" message on `cause` — so match across both layers.
+ */
+async function expectDuplicateKey(p: Promise<unknown>): Promise<void> {
+  let caught: unknown = null;
+  try {
+    await p;
+  } catch (err) {
+    caught = err;
+  }
+  expect(caught, "expected the write to be rejected").toBeTruthy();
+  const e = caught as Error & { cause?: Error; code?: string };
+  const text = [e.message, e.cause?.message, (e.cause as { code?: string } | undefined)?.code, e.code]
+    .filter(Boolean)
+    .join(" | ");
+  expect(text).toMatch(/Duplicate entry|ER_DUP_ENTRY/i);
+}
 
 async function loadNsRows(db: NonNullable<Awaited<ReturnType<typeof getDb>>>): Promise<DbGameRow[]> {
   const rows = await db
@@ -86,24 +108,24 @@ describe.skipIf(SKIP_DB_IN_CI)("MLB doubleheader DB invariants (real database)",
 
   it("[DH-DB-2] matchup unique index rejects duplicate (date, teams, gameNumber)", async () => {
     const db = await getDb();
-    await expect(
+    await expectDuplicateKey(
       db!.insert(games).values({
         fileId: 0, gameDate: NS_DATE, startTimeEst: "3:00 PM",
         awayTeam: "TB", homeTeam: "BOS", sport: "MLB",
         gameNumber: 1, mlbGamePk: PK_TMP,
       })
-    ).rejects.toThrow(/[Dd]uplicate/);
+    );
   });
 
   it("[DH-DB-3] gamePk unique index rejects duplicate provider identity", async () => {
     const db = await getDb();
-    await expect(
+    await expectDuplicateKey(
       db!.insert(games).values({
         fileId: 0, gameDate: "2126-07-18", startTimeEst: "1:05 PM",
         awayTeam: "TB", homeTeam: "BOS", sport: "MLB",
         gameNumber: 1, mlbGamePk: PK_G1, // PK_G1 already owns a row
       })
-    ).rejects.toThrow(/[Dd]uplicate/);
+    );
   });
 
   it("[DH-DB-4] re-ingestion updates only the matching provider event", async () => {
