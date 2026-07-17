@@ -411,25 +411,29 @@ export const appUsersRouter = router({
       // the browser sends BOTH cookies and the old identity can shadow the
       // new login — clearing the domain variant makes account switching stick.
       try {
-        ctx.res.clearCookie(APP_USER_COOKIE, {
-          ...cookieOptions,
-          domain: `.${ctx.req.hostname}`,
-          maxAge: -1,
-        });
+        if (!ctx.res.headersSent) {
+          ctx.res.clearCookie(APP_USER_COOKIE, {
+            ...cookieOptions,
+            domain: `.${ctx.req.hostname}`,
+            maxAge: -1,
+          });
+        }
       } catch {
         /* best-effort — never block login on the legacy clear */
       }
-      if (input.stayLoggedIn) {
-        ctx.res.cookie(APP_USER_COOKIE, token, {
-          ...cookieOptions,
-          maxAge: sessionDays * 24 * 60 * 60 * 1000,
-        });
-      } else {
-        // Session cookie — no maxAge, expires when browser closes
-        ctx.res.cookie(APP_USER_COOKIE, token, {
-          ...cookieOptions,
-          maxAge: undefined,
-        });
+      if (!ctx.res.headersSent) {
+        if (input.stayLoggedIn) {
+          ctx.res.cookie(APP_USER_COOKIE, token, {
+            ...cookieOptions,
+            maxAge: sessionDays * 24 * 60 * 60 * 1000,
+          });
+        } else {
+          // Session cookie — no maxAge, expires when browser closes
+          ctx.res.cookie(APP_USER_COOKIE, token, {
+            ...cookieOptions,
+            maxAge: undefined,
+          });
+        }
       }
 
       return {
@@ -479,7 +483,9 @@ export const appUsersRouter = router({
       const payload = await verifyAppUserToken(token);
       if (payload) invalidateCachedAppUser(payload.userId);
     }
-    ctx.res.clearCookie(APP_USER_COOKIE, { ...cookieOptions, maxAge: -1 });
+    if (!ctx.res.headersSent) {
+      ctx.res.clearCookie(APP_USER_COOKIE, { ...cookieOptions, maxAge: -1 });
+    }
     return { success: true };
   }),
 
