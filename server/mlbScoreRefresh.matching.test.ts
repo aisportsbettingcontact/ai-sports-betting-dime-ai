@@ -9,6 +9,7 @@
  */
 import { describe, it, expect } from "vitest";
 import {
+  mapMlbStatus,
   matchMlbLiveGamesToDbRows,
   type MatchableDbGame,
   type MlbLiveGame,
@@ -127,6 +128,18 @@ describe("matchMlbLiveGamesToDbRows — doubleheader safety", () => {
     ];
     const { warnings } = matchMlbLiveGamesToDbRows([apiG1()], rows);
     expect(warnings.some(w => w.includes("share mlbGamePk"))).toBe(true);
+  });
+
+  it("status mapping is aligned with the schedule sync — Suspended is DISTINCT from postponed", () => {
+    // Pre-hardening, this returned "postponed", which (a) broke the postponed
+    // tracker's suspended-resume scan (it queries gameStatus='suspended') and
+    // (b) ping-ponged against syncMlbSchedule writing 'suspended' each cycle.
+    expect(mapMlbStatus("Live", "Suspended: Rain")).toBe("suspended");
+    expect(mapMlbStatus("Preview", "Postponed")).toBe("postponed");
+    expect(mapMlbStatus("Final", "Cancelled")).toBe("postponed");
+    expect(mapMlbStatus("Live", "In Progress")).toBe("live");
+    expect(mapMlbStatus("Final", "Final")).toBe("final");
+    expect(mapMlbStatus("Preview", "Scheduled")).toBe("upcoming");
   });
 
   it("API order does not change the assignment (order independence)", () => {

@@ -220,6 +220,14 @@ export async function applyMlbScheduleSyncPlan(
   // games_matchup_unique and the makeup game's insert would fail (proven by
   // [DH-DB-7] in the first CI db-tests run). Updates free the storage keys the
   // inserts need.
+  //
+  // TWO-PHASE RENUMBERING: a gameNumber/gameDate permutation between existing
+  // rows (e.g. provider inverts G1/G2 numbering) makes the pairwise updates
+  // mutually blocking — each targets the matchup key the other still holds,
+  // so single-pass application deadlocks every cycle (audit finding #1).
+  // Failed key-moving updates are parked on a unique NEGATIVE gameNumber
+  // (freeing their keys), then re-applied in full.
+  const deferredUpdates: typeof plan.updates = [];
   for (const upd of plan.updates) {
     try {
       await db.update(games).set(upd.set).where(eq(games.id, upd.rowId));
@@ -230,8 +238,39 @@ export async function applyMlbScheduleSyncPlan(
       );
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      applyErrors.push({ gamePk: upd.gamePk, error: msg });
-      console.error(`${TAG}[ERROR] UPDATE failed id=${upd.rowId} gamePk=${upd.gamePk}: ${msg}`);
+      if (upd.set.gameNumber !== undefined || upd.set.gameDate !== undefined) {
+        console.warn(`${TAG}[STATE] UPDATE deferred id=${upd.rowId} gamePk=${upd.gamePk} (two-phase renumber): ${msg}`);
+        deferredUpdates.push(upd);
+      } else {
+        applyErrors.push({ gamePk: upd.gamePk, error: msg });
+        console.error(`${TAG}[ERROR] UPDATE failed id=${upd.rowId} gamePk=${upd.gamePk}: ${msg}`);
+      }
+    }
+  }
+  if (deferredUpdates.length > 0) {
+    // Phase A: park every deferred row on a unique negative gameNumber so all
+    // contested matchup keys are simultaneously free.
+    let park = -1;
+    for (const upd of deferredUpdates) {
+      try {
+        await db.update(games).set({ gameNumber: park-- }).where(eq(games.id, upd.rowId));
+        console.log(`${TAG}[STEP] PARK id=${upd.rowId} gameNumber=${park + 1} (renumber staging)`);
+      } catch (err) {
+        console.warn(`${TAG}[STATE] PARK failed id=${upd.rowId} (continuing):`, err instanceof Error ? err.message : err);
+      }
+    }
+    // Phase B: re-apply the original updates in full, always restoring the
+    // intended final gameNumber (the park in Phase A overwrote it).
+    for (const upd of deferredUpdates) {
+      try {
+        await db.update(games).set({ ...upd.set, gameNumber: upd.finalGameNumber }).where(eq(games.id, upd.rowId));
+        updated++;
+        console.log(`${TAG}[STEP] UPDATE (two-phase) id=${upd.rowId} gamePk=${upd.gamePk} set=${JSON.stringify(upd.set)}`);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        applyErrors.push({ gamePk: upd.gamePk, error: msg });
+        console.error(`${TAG}[ERROR] UPDATE failed (two-phase) id=${upd.rowId} gamePk=${upd.gamePk}: ${msg}`);
+      }
     }
   }
 
@@ -338,11 +377,45 @@ export async function syncMlbSchedule(opts?: {
     })
     .from(games)
     .where(and(eq(games.sport, "MLB"), gte(games.gameDate, start), lte(games.gameDate, end)));
-  const dbRows: DbGameRow[] = rows.map((r: typeof rows[number]) => ({
-    ...r,
-    mlbGamePk: r.mlbGamePk != null ? Number(r.mlbGamePk) : null,
-  }));
-  console.log(`${TAG}[STATE] db rows in window: ${dbRows.length}`);
+
+  // ── Date-unbounded identity lookup ─────────────────────────────────────────
+  // A provider event's row may live OUTSIDE the window when the provider moved
+  // the game to a new officialDate while KEEPING its gamePk. Proven live on
+  // 2026-07-17: the postponed 2026-05-09 TB@BOS row still owned gamePk 824766
+  // when statsapi rescheduled that same pk to July 17 — a window-only view
+  // planned an INSERT that bounced off games_mlb_gamepk_unique every cycle.
+  // Fetching every row whose pk appears in the provider slate lets the planner
+  // relocate the row (gameDate move) instead.
+  const providerPksInSlate = Array.from(new Set(fetched.events.map(e => e.gamePk)));
+  const pkRows = providerPksInSlate.length > 0
+    ? await db
+        .select({
+          id: games.id,
+          gameDate: games.gameDate,
+          startTimeEst: games.startTimeEst,
+          awayTeam: games.awayTeam,
+          homeTeam: games.homeTeam,
+          sport: games.sport,
+          mlbGamePk: games.mlbGamePk,
+          gameNumber: games.gameNumber,
+          doubleHeader: games.doubleHeader,
+          gameStatus: games.gameStatus,
+          venue: games.venue,
+          rescheduledFrom: games.rescheduledFrom,
+        })
+        .from(games)
+        .where(and(eq(games.sport, "MLB"), inArray(games.mlbGamePk, providerPksInSlate)))
+    : [];
+
+  const seenRowIds = new Set<number>();
+  const dbRows: DbGameRow[] = [];
+  for (const r of [...rows, ...pkRows]) {
+    if (seenRowIds.has(r.id)) continue;
+    seenRowIds.add(r.id);
+    dbRows.push({ ...r, mlbGamePk: r.mlbGamePk != null ? Number(r.mlbGamePk) : null });
+  }
+  const outOfWindow = pkRows.filter((r: typeof pkRows[number]) => r.gameDate < start || r.gameDate > end).length;
+  console.log(`${TAG}[STATE] db rows: ${dbRows.length} (window=${rows.length}, out-of-window pk matches=${outOfWindow})`);
 
   // ── Plan (pure) ────────────────────────────────────────────────────────────
   const plan = planMlbScheduleSync(fetched.events, dbRows);

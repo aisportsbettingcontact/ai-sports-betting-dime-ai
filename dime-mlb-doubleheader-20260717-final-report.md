@@ -265,8 +265,11 @@ the sync is identifiable (`mlbGamePk IS NOT NULL AND fileId = 0`).
 ## 22. Audit ledger
 
 `dime-mlb-doubleheader-20260717-audit-log.jsonl` — append-only, hash-chained.
-**11 events, 16,101 bytes, file SHA-256
-`f2359364d4b7c86220a029f6d54111ab8175bcd9d79a2efc582c096db9c99fd5`.**
+**14 events, 22,806 bytes, file SHA-256
+`6eb4466b3a871231a12d3e60a83648e59da577ec33f7d0a6a668f8354f170bbc`**
+(events 12–14 append the CI DB-suite recovery, the post-merge live
+verification/production remediation, and the follow-up hardening; earlier
+stats in this section's history: 11 events / `f2359364…`).
 Event 10 is the pre-commit reconciliation record; event 11 (post-push) records
 the PR #132 CI TypeScript failure and its fix — the initial local typecheck
 PASS in event 9 was tainted by the incremental `tsbuildinfo` cache; a
@@ -277,11 +280,40 @@ over each record minus `current_sha256` (sorted keys, ensure_ascii=false).
 
 ## 23. Final verdict
 
-**`FIXED BUT LIVE VERIFICATION BLOCKED`** — root cause proven from code with a
-deterministic reproduction; generalized identity repair implemented at every
-responsible layer; 47 pure tests + full repo gates pass locally; 7 DB
-invariants execute in CI's isolated MySQL job; live provider capture and
-production verification are impossible from this environment's network policy
-and are explicitly not claimed. Not `FIXED AND VERIFIED` because the
-completion gates require live/production evidence this environment cannot
-produce.
+**`FIXED AND VERIFIED`** *(upgraded post-merge on 2026-07-17 — see §24; the
+original pre-merge verdict was `FIXED BUT LIVE VERIFICATION BLOCKED` because
+this environment could not reach the provider or production).*
+
+## 24. Post-merge live verification & production remediation (2026-07-17)
+
+Recorded in ledger event 13; primary evidence is GitHub Actions run logs
+(read-only `p0-feed-verify` probes from a runner with real egress) plus
+operator SQL console output.
+
+**Rollout outage (resolved).** Railway auto-deployed the merge (~17:07 UTC)
+before the manual `db-push.yml` migration ran, so the full-schema
+`games.list` select referenced the not-yet-existing `rescheduledFrom` column
+— HTTP 500 on every feed read until ~21:57 UTC. Probes isolated the cause
+(`games.getAvailableDates` 200 vs `games.list` 500; runs 29614900064 /
+29614951158). `db-push.yml` itself failed on pre-existing journal drift
+(run 29615672119: 0112 replay, ER_TABLE_EXISTS_ERROR), so the operator
+applied 0114 manually in the TiDB console (schema `MW3FicTy7ae3qrm8dx8Lua`);
+repair runbook for the drift: `docs/runbooks/2026-07-17-migration-journal-repair.sql`.
+
+**Live confirmation of the incident mechanics.** MLB **reused** the postponed
+May 9 gamePk for the July 17 makeup — the postponed row (id 2250551,
+`mlbGamePk 824766`) owned the identity outside the sync window, blocking the
+insert exactly as the adversarial audit's window-edge finding predicted. The
+operator relocated that row (gameDate → 2026-07-17, 1:35 PM, G1, DH S,
+`rescheduledFrom 2026-05-09`); the follow-up hardening automates this
+(date-unbounded pk lookup + `gameDate` moves in the sync).
+
+**Real provider identities (previously BLOCKED):**
+Game 1 (1:35 PM makeup) = **gamePk 824766**, row id 2250551;
+Game 2 (7:10 PM) = **gamePk 824737**, row id 2251366.
+
+**Final probe (run 29616815076, 22:05 UTC):** HTTP 200,
+`x-games-count: 14` (was 13), `modelRunAt` null on exactly one row — the
+restored Game 1 — with both TB@BOS games serving from
+`https://aisportsbettingmodels.com`. Every pipeline boundary from provider to
+rendered feed is now verified with production data.
