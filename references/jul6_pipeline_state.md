@@ -69,7 +69,7 @@
 - buildGSRows(teamCode, xgAll, tsAll, msAll): Build game-stat rows for a team
 
 ## BetExplorer Scraping
-- Previous scraper: server/wc2026/wc2026_betexplorer_scraper_v4.py.bak (137KB)
+- Previous scraper revision is retained in Git history; the maintained implementation is `server/wc2026/betexplorer_scraper.py`.
 - Source: BetExplorer AJAX API for bet365 odds
 - The v19 engine had hardcoded book odds in BACKTEST_BOOK and JUL5_BOOK objects
 
