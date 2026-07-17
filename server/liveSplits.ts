@@ -12,8 +12,7 @@
  *   3. Best-effort join against the games table for book lines
  *      (awayBookSpread / bookTotal / awayML) — non-fatal if the DB is down
  *   4. Team logos fetched server-side and returned as base64 data URIs
- *      (same pattern as server/discord/renderSplitsCard.ts) so the client
- *      never depends on reaching the MLB CDN directly
+ *      so the client never depends on reaching the MLB CDN directly
  */
 
 import { scrapeVsinMlbBettingSplits, type VsinSplitsGame } from "./vsinBettingSplitsScraper";
@@ -64,7 +63,7 @@ const CACHE_TTL_MS = 5 * 60 * 1000;
 let cache: { at: number; payload: CachePayload } | null = null;
 let inflight: Promise<CachePayload> | null = null;
 
-// ─── Logo cache: URL → base64 data URI (per-process, same as renderSplitsCard) ─
+// ─── Logo cache: URL → base64 data URI (per-process) ──────────────────────────
 const logoCache = new Map<string, string>();
 
 async function fetchLogoAsDataUri(url: string): Promise<string | null> {

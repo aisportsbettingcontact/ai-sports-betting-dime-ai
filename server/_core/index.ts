@@ -822,7 +822,7 @@ async function startServer() {
     startNhlModelSyncScheduler();
     // NHL goalie watcher — checks RotoWire every 10 min for goalie changes, re-runs model on scratch
     startNhlGoalieWatcher();
-    // Discord bot — listens for /splits slash command
+    // Discord bot — listens for /lineups slash command
     startDiscordBot();
     // MLB player sync — nightly at 08:00 UTC, updates active rosters from MLB Stats API
     startMlbPlayerSyncScheduler();
