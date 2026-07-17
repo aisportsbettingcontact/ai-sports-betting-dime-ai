@@ -44,7 +44,7 @@ export function ProjectionCard({
 
       <MatchupPanel game={game} />
 
-      <ProjectionSummary insight={insight} />
+      <ProjectionSummary insight={insight} teams={[game.away, game.home]} />
 
       <details className="projection-card__markets" open={defaultMarketsOpen}>
         <summary className="projection-card__markets-toggle ds-label">

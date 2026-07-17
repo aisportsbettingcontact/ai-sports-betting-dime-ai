@@ -118,6 +118,12 @@ describe("DimeModelFeed — MLB bindings", () => {
     expect(src).toMatch(/refetchInterval: 60 \* 1000/);
     expect(src).toMatch(/placeholderData/);
   });
+
+  it("slate sorts earliest → latest first pitch (owner directive 2026-07-17)", () => {
+    expect(src).toMatch(
+      /\.sort\(\(a, b\) => timeToMinutes\(a\.startTimeEst\) - timeToMinutes\(b\.startTimeEst\)\)/
+    );
+  });
 });
 
 describe("DimeModelFeed — owner rules", () => {

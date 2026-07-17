@@ -62,6 +62,34 @@ function wcFixture(): ProjectionGame {
   };
 }
 
+/** The Giants @ Mariners card from the directive screenshot: U 7 carries a
+ *  real edge (book -112, model -136) so the summary readout renders. */
+function mlbFixture(): ProjectionGame {
+  const team = (abbr: string, name: string): ProjectionGame["away"] =>
+    ({ abbr, name, logo: null, color: "#333333", score: null });
+  return {
+    id: "sf-sea",
+    league: "MLB",
+    status: "scheduled",
+    statusLabel: "10:10 PM ET",
+    away: team("SF", "Giants"),
+    home: team("SEA", "Mariners"),
+    matchupContext: "T-Mobile Park",
+    venue: "T-Mobile Park", // equals context → the venue line must be suppressed
+    startTime: "10:10 PM ET",
+    markets: [
+      {
+        key: "total",
+        label: "Total",
+        sides: [
+          { marketKey: "total", marketLabel: "Total", sideLabel: "O 7", bookPrice: -108, bookOppPrice: -112, modelPrice: 118 },
+          { marketKey: "total", marketLabel: "Total", sideLabel: "U 7", bookPrice: -112, bookOppPrice: -108, modelPrice: -136 },
+        ],
+      },
+    ],
+  };
+}
+
 const render = (game: ProjectionGame): string =>
   renderToStaticMarkup(createElement(ProjectionCard, { game }));
 
@@ -115,35 +143,21 @@ describe("ProjectionCard — matchup block format (owner directive 2026-07-17)",
     expect(countOccurrences(visible, "SoFi Stadium (LA), Inglewood")).toBe(1);
   });
 
-  it("MLB card reads ABBR NAME @ ABBR NAME / ballpark / first pitch — no pitchers", () => {
-    const team = (abbr: string, name: string): ProjectionGame["away"] =>
-      ({ abbr, name, logo: null, color: "#333333", score: null });
-    const game: ProjectionGame = {
-      id: "sf-sea",
-      league: "MLB",
-      status: "scheduled",
-      statusLabel: "10:10 PM ET",
-      away: team("SF", "Giants"),
-      home: team("SEA", "Mariners"),
-      matchupContext: "T-Mobile Park",
-      venue: "T-Mobile Park", // equals context → the venue line must be suppressed
-      startTime: "10:10 PM ET",
-      markets: [
-        {
-          key: "run-line",
-          label: "Run Line",
-          sides: [
-            side("run-line", "Run Line", "SF +1.5"),
-            side("run-line", "Run Line", "SEA -1.5"),
-          ],
-        },
-      ],
-    };
-    const visible = render(game).replace(/ title="[^"]*"/g, "");
-    expect(visible).toContain("SF Giants");
-    expect(visible).toContain("SEA Mariners");
+  it("MLB card reads NAME @ NAME / ballpark / first pitch — no abbrs, no pitchers", () => {
+    const visible = render(mlbFixture()).replace(/ title="[^"]*"/g, "");
+    expect(visible).toContain("Giants");
+    expect(visible).toContain("Mariners");
+    expect(visible).not.toContain("SF Giants"); // names only in the matchup line
     expect(countOccurrences(visible, "T-Mobile Park")).toBe(1);
     expect(countOccurrences(visible, "10:10 PM ET")).toBe(1);
+  });
+
+  it("spells out the MODEL EDGE pick and labels the readout BOOK", () => {
+    // U 7 carries the edge (book -112 vs model -136, the directive screenshot).
+    const html = render(mlbFixture());
+    expect(html).toContain('summary__pick">Under 7<');
+    expect(html).toContain(">Book<");
+    expect(html).not.toContain("Best price");
   });
 
   it("labels market columns BOOK / MODEL and offers the projections disclosure", () => {
