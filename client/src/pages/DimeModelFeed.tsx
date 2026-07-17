@@ -31,7 +31,7 @@ import { ProjectionCard } from "@/components/projections/ProjectionCard";
 import { presentationToProjectionGame } from "@/components/projections/fromPresentation";
 import { sportAdapters } from "@/lib/sport/presentation";
 import { MLB_BY_ABBREV } from "@shared/mlbTeams";
-import { formatGameTime } from "@/lib/gameUtils";
+import { formatGameTime, timeToMinutes } from "@/lib/gameUtils";
 import {
   calculateEdge,
   calculate3WayResult,
@@ -900,7 +900,11 @@ function useFeedCards(
 
   const cards = useMemo<FeedCardSpec[]>(() => {
     if (isWc) return ((wcQuery.data ?? []) as WcMatch[]).map((m) => wcMatchToCard(m, isoDate));
-    return ((mlbQuery.data ?? []) as MlbRow[]).map(mlbRowToCard);
+    // Slate order: earliest → latest first pitch (owner directive 2026-07-17).
+    // timeToMinutes sends TBD times to the bottom of the slate.
+    return [...((mlbQuery.data ?? []) as MlbRow[])]
+      .sort((a, b) => timeToMinutes(a.startTimeEst) - timeToMinutes(b.startTimeEst))
+      .map(mlbRowToCard);
   }, [isWc, wcQuery.data, mlbQuery.data, isoDate]);
 
   const isLoading = isWc ? wcQuery.isLoading : mlbQuery.isLoading;
@@ -1102,16 +1106,23 @@ const DMF_CSS = `
   .dmf-feedhead{gap:10px}
 }
 /* MOBILE (<768px): the bottom tab bar owns navigation (hide dmf-nav; theme
-   toggle stays). Matchup header collapses to one symmetric row —
-   [away logo] Nickname · Surname vs Surname · Nickname [home logo] — with
-   bare transparent logos (no circle chrome) and the venue as a quiet Grotesk
-   line below. Market grids align Book/Model as identical right-aligned
-   tabular columns; row labels drop mono/all-caps for Grotesk 600. Desktop
-   (>=768px) is untouched. */
+   control lives in Profile). Page chrome centers on one axis — the dime
+   wordmark sits in the middle of the topbar and the date nav + sport chips
+   stack centered beneath it (owner directive 2026-07-17). Bare transparent
+   logos (no circle chrome); market grids align Book/Model as identical
+   right-aligned tabular columns; row labels drop mono/all-caps for
+   Grotesk 600. Desktop (>=768px) is untouched. */
 @media (max-width:767px){
   .dmf-root .dmf-nav{display:none}
-  .dmf-root .dmf-topbar{padding-left:16px;padding-right:16px}
+  /* Wordmark centered: dmf-sync is empty on mobile (nav hidden, no theme
+     button) — hide it so its auto margin cannot pull the mark off-center. */
+  .dmf-root .dmf-topbar{padding-left:16px;padding-right:16px;justify-content:center}
+  .dmf-root .dmf-sync{display:none}
   .dmf-root .dmf-scroll{padding-left:16px;padding-right:16px}
+  /* Date + calendar arrows centered; chips follow the same centered axis. */
+  .dmf-root .dmf-feedhead{flex-direction:column;align-items:center;gap:10px}
+  .dmf-root .dmf-datenav{justify-content:center;flex-wrap:wrap}
+  .dmf-root .dmf-sports{margin-left:0;justify-content:center;max-width:100%}
   /* Sport chips are a data filter (not nav): never let flex shrink clip their
      labels; the row scrolls instead. Verdict micro-labels ride the t3 label
      tier so Pick/Edge/Grade clear 4.5:1 on the elevated card ground. */

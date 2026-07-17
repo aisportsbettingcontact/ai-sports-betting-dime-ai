@@ -50,9 +50,9 @@
   (System / Light / Dark) is the single theme control. `?theme=` embeds stay honored.
 - **Gamecard matchup block** (pitcher names are BANNED from gamecards; each fact once):
   ```
-  {AWAY ABBR} {AWAY NAME} @ {HOME ABBR} {HOME NAME}   ← "SF Giants @ SEA Mariners"
-  {BALLPARK}                                          ← "T-Mobile Park" (never duplicated)
-  {TIME OF FIRST PITCH ET}                            ← "10:10 PM ET"
+  {AWAY TEAM NAME} @ {HOME TEAM NAME}   ← "Giants @ Mariners" (names only, no abbrs)
+  {BALLPARK}                            ← "T-Mobile Park" (never duplicated)
+  {TIME OF FIRST PITCH ET}              ← "10:10 PM ET"
   ```
   Countries render names only (no FIFA codes); WC context line stays "Round · Venue".
   Scheduled games own the time in this block; the card header shows LIVE/FINAL only.
@@ -61,6 +61,15 @@
   `ChevronUp` (shown via `details[open]`) to collapse.
 - **Market column labels:** `SIDE | BOOK | MODEL` — never "SPORTSBOOK PRICE" /
   "MODEL FAIR PRICE". Applies to every feed surface: mobile, tablet, desktop.
+- **Summary readout labels:** `MODEL EDGE | BOOK | MODEL` — never "BEST PRICE".
+- **MODEL EDGE values are spelled out:** `U 7` → "UNDER 7", `O 8.5` → "OVER 8.5",
+  a leading team abbr → the team name (`ATH ML` → "ATHLETICS ML"). Market-table
+  side labels keep their compact form; only the readout expands.
+- **Mobile chrome centering (<768px):** dime wordmark centered in the topbar;
+  date nav (‹ date › + slate count) and sport chips stack centered; the summary
+  block centers above the markets disclosure on mobile-width cards.
+- **Slate order:** MLB games list earliest → latest first pitch, top to bottom
+  (`timeToMinutes`; TBD start times sink to the bottom).
 
 ---
 
