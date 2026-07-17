@@ -30,9 +30,7 @@ import {
   type ChatInputCommandInteraction,
 } from "discord.js";
 import { ENV } from "../_core/env";
-import { handleSplitsCommand, handleSplitsAutocomplete, closeSplitsRenderer } from "./splitsCommand";
 import { handleLineupsCommand, handleLineupsAutocomplete } from "./lineupsCommand";
-import { warmUpRenderer } from "./renderSplitsCard";
 import { enrichTeamRegistryFromDb } from "./teamRegistry";
 
 // ─── Singleton guard ──────────────────────────────────────────────────────────
@@ -101,9 +99,6 @@ function createAndLoginClient(attempt: number): void {
     reconnectAttempt = 0;
 
     // Parallel startup tasks
-    warmUpRenderer().catch((err) =>
-      console.error("[SplitsBot] [WARN] Renderer warm-up failed (non-fatal):", err)
-    );
     enrichTeamRegistryFromDb().catch((err) =>
       console.error("[SplitsBot] [WARN] Team registry enrichment failed:", err)
     );
@@ -112,11 +107,7 @@ function createAndLoginClient(attempt: number): void {
   // ── Interaction handler ───────────────────────────────────────────────────
   client.on(Events.InteractionCreate, async (interaction) => {
     if (interaction.isAutocomplete()) {
-      if (interaction.commandName === "splits") {
-        await handleSplitsAutocomplete(interaction).catch((err) =>
-          console.error("[SplitsBot] [WARN] Autocomplete error:", err)
-        );
-      } else if (interaction.commandName === "lineups") {
+      if (interaction.commandName === "lineups") {
         await handleLineupsAutocomplete(interaction).catch((err) =>
           console.error("[LineupsBot] [WARN] Autocomplete error:", err)
         );
@@ -138,9 +129,7 @@ function createAndLoginClient(attempt: number): void {
     );
 
     try {
-      if (commandName === "splits") {
-        await handleSplitsCommand(interaction as ChatInputCommandInteraction, client);
-      } else if (commandName === "lineups") {
+      if (commandName === "lineups") {
         await handleLineupsCommand(interaction as ChatInputCommandInteraction, client);
       }
     } catch (err) {
@@ -250,8 +239,7 @@ export function startDiscordBot(): void {
 
   // Graceful shutdown on process exit
   const shutdown = async () => {
-    console.log("[SplitsBot] [STEP] Shutting down — closing Playwright browser and Discord client...");
-    await closeSplitsRenderer();
+    console.log("[SplitsBot] [STEP] Shutting down — closing Discord client...");
     botClient?.destroy();
     botClient = null;
   };
