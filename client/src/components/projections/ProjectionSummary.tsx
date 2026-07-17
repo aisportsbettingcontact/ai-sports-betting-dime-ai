@@ -27,7 +27,8 @@ export function ProjectionSummary({ insight }: { insight: MarketInsight | null }
             <dd className="odds-value">{fmtPrice(insight.bookPrice)}</dd>
           </div>
           <div className="summary__item">
-            <dt className="ds-label">Model fair price</dt>
+            {/* "Model" not "Model fair price" — owner directive 2026-07-17 */}
+            <dt className="ds-label">Model</dt>
             <dd className="odds-value">{fmtPrice(insight.modelFairPrice)}</dd>
           </div>
         </dl>

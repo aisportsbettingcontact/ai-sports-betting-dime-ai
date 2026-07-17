@@ -58,6 +58,7 @@ function renderedStrings(model: SportPresentationModel): string[] {
     model.awayParticipant.shortName,
     model.contextLine ?? "",
     model.venue ?? "",
+    model.startTime ?? "",
     ...model.markets.flatMap((m) => [m.label, m.resultLabel ?? "", ...m.selections.map((s) => s.label)]),
   ];
 }
@@ -71,6 +72,10 @@ describe("createSoccerPresentation — country identity", () => {
     expect(model.awayParticipant.kind).toBe("country");
     expect(isRawCountryCode(model.awayParticipant.displayName)).toBe(false);
     expect(isRawCountryCode(model.homeParticipant.displayName)).toBe(false);
+  });
+
+  it("carries kickoff time for scheduled events (matchup block's last line)", () => {
+    expect(model.startTime).toBe("3:00 PM ET");
   });
 
   it("binds each participant's flag and name to the same ISO code", () => {
@@ -178,6 +183,7 @@ describe("sportAdapters registry", () => {
     const model = createMlbPresentation(mlb);
     expect(model.sport).toBe("MLB");
     expect(model.status).toBe("final");
+    expect(model.startTime).toBeUndefined(); // finals have no first-pitch line
     expect(model.awayParticipant).toMatchObject({ kind: "team", displayName: "Brewers", shortName: "MIL" });
     expect(model.markets[0].selections[0]).toMatchObject({ label: "MIL", bookPrice: -140, modelPrice: -150 });
   });

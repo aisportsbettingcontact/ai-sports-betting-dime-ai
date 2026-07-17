@@ -4,11 +4,12 @@ import type { ProjectionMarket } from "./types";
 
 /**
  * MarketTable — one market rendered as a semantic <table> (Law v3 §markets):
- * SIDE, Sportsbook price, Model fair price. Explicit column terminology
- * replaces the ambiguous BOOK / MODEL. Numeric cells are tabular-nums. The
- * model column goes mint ONLY on the side that actually carries the edge — a
- * tinted mint cell with the accessible foreground, never small mint text. One
- * existing result row is preserved. No nested frames: the table is flat.
+ * SIDE, BOOK, MODEL. Compact column terminology is the owner directive
+ * (2026-07-17) across mobile, tablet, and desktop feeds. Numeric cells are
+ * tabular-nums. The model column goes mint ONLY on the side that actually
+ * carries the edge — a tinted mint cell with the accessible foreground, never
+ * small mint text. One existing result row is preserved. No nested frames:
+ * the table is flat.
  */
 function fmtPrice(p: number | null | undefined): string {
   if (typeof p !== "number" || !Number.isFinite(p)) return "—";
@@ -33,8 +34,8 @@ export function MarketTable({ market }: { market: ProjectionMarket }) {
       <thead>
         <tr>
           <th scope="col">Side</th>
-          <th scope="col">Sportsbook price</th>
-          <th scope="col">Model fair price</th>
+          <th scope="col">Book</th>
+          <th scope="col">Model</th>
         </tr>
       </thead>
       <tbody>

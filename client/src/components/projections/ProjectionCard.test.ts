@@ -43,6 +43,7 @@ function wcFixture(): ProjectionGame {
     home: country("France", "FRA", "\u{1F1EB}\u{1F1F7}"),
     matchupContext: "Semifinal · SoFi Stadium (LA), Inglewood",
     venue: "SoFi Stadium (LA), Inglewood",
+    startTime: "3:00 PM ET",
     markets: [
       {
         key: "dblchc",
@@ -68,21 +69,23 @@ const countOccurrences = (haystack: string, needle: string): number =>
   haystack.split(needle).length - 1;
 
 describe("ProjectionCard — single rendering ownership (directive §3)", () => {
-  it("renders the event time exactly once per card", () => {
+  it("renders the event time exactly once per card (matchup block owns it)", () => {
     const html = render(wcFixture());
     expect(countOccurrences(html, "3:00 PM ET")).toBe(1);
   });
 
-  it("keeps the time out of the matchup context line", () => {
+  it("header owns LIVE/FINAL status; a final card carries no start time", () => {
     // A FINAL card: the header owns the status; the center owns stage/venue only.
     const game: ProjectionGame = {
       ...wcFixture(),
       status: "final",
       statusLabel: "FINAL",
+      startTime: undefined,
     };
     const html = render(game);
     expect(countOccurrences(html, "FINAL")).toBe(1);
     expect(html).toContain("Semifinal"); // context still renders
+    expect(html).not.toContain("3:00 PM ET");
   });
 
   it("spells out both participants and double-chance labels (§5/§6)", () => {
@@ -94,5 +97,60 @@ describe("ProjectionCard — single rendering ownership (directive §3)", () => 
     // Flags carry the spelled-out country name as their accessible label.
     expect(html).toContain("Spain flag");
     expect(html).toContain("France flag");
+  });
+});
+
+describe("ProjectionCard — matchup block format (owner directive 2026-07-17)", () => {
+  it("renders the matchup line with names (countries never show raw codes)", () => {
+    const html = render(wcFixture());
+    expect(html).toContain("Spain");
+    expect(html).toContain("France");
+    expect(html).not.toMatch(/\bESP\b|\bFRA\b/);
+  });
+
+  it("renders the ballpark exactly once (no duplicate venue line)", () => {
+    // venue is contained in the context line, so the venue line is suppressed.
+    // Strip title="" tooltip attributes — only VISIBLE text counts as a render.
+    const visible = render(wcFixture()).replace(/ title="[^"]*"/g, "");
+    expect(countOccurrences(visible, "SoFi Stadium (LA), Inglewood")).toBe(1);
+  });
+
+  it("MLB card reads ABBR NAME @ ABBR NAME / ballpark / first pitch — no pitchers", () => {
+    const team = (abbr: string, name: string): ProjectionGame["away"] =>
+      ({ abbr, name, logo: null, color: "#333333", score: null });
+    const game: ProjectionGame = {
+      id: "sf-sea",
+      league: "MLB",
+      status: "scheduled",
+      statusLabel: "10:10 PM ET",
+      away: team("SF", "Giants"),
+      home: team("SEA", "Mariners"),
+      matchupContext: "T-Mobile Park",
+      venue: "T-Mobile Park", // equals context → the venue line must be suppressed
+      startTime: "10:10 PM ET",
+      markets: [
+        {
+          key: "run-line",
+          label: "Run Line",
+          sides: [
+            side("run-line", "Run Line", "SF +1.5"),
+            side("run-line", "Run Line", "SEA -1.5"),
+          ],
+        },
+      ],
+    };
+    const visible = render(game).replace(/ title="[^"]*"/g, "");
+    expect(visible).toContain("SF Giants");
+    expect(visible).toContain("SEA Mariners");
+    expect(countOccurrences(visible, "T-Mobile Park")).toBe(1);
+    expect(countOccurrences(visible, "10:10 PM ET")).toBe(1);
+  });
+
+  it("labels market columns BOOK / MODEL and offers the projections disclosure", () => {
+    const html = render(wcFixture());
+    expect(html).toContain(">Book<");
+    expect(html).toContain(">Model<");
+    expect(html).not.toMatch(/Sportsbook price|Model fair price/);
+    expect(html).toContain("View full AI model projections");
   });
 });

@@ -33,9 +33,10 @@ export interface ProjectionGame {
   statusLabel: string; // "FINAL" | "8:40 PM ET" | "POSTPONED"
   away: ProjectionTeam;
   home: ProjectionTeam;
-  matchupContext?: string; // "Gasser vs Skenes"
-  awayPitcher?: string;
-  homePitcher?: string;
+  /** Secondary context under the matchup line — ballpark, "Semifinal · Stadium". */
+  matchupContext?: string;
   venue?: string;
+  /** First pitch / kickoff in ET ("10:10 PM ET"); unset for finals. */
+  startTime?: string;
   markets: ProjectionMarket[];
 }

@@ -22,7 +22,6 @@ export interface FeedSpecLike {
   away: TeamLike;
   home: TeamLike;
   meta: string;
-  pitchers?: { away: string; home: string } | null;
   venueLine?: string | null;
   markets: MarketLike[];
 }
@@ -79,9 +78,9 @@ export function feedSpecToProjectionGame(g: FeedSpecLike, league: string): Proje
     away: team(g.away),
     home: team(g.home),
     matchupContext: g.meta || undefined,
-    awayPitcher: g.pitchers?.away,
-    homePitcher: g.pitchers?.home,
     venue: g.venueLine ?? undefined,
+    // Finals carry "FINAL" in timeLabel, not a first-pitch time.
+    startTime: status === "final" ? undefined : g.timeLabel || undefined,
     markets,
   };
 }
