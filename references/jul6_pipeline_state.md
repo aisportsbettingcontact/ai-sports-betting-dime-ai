@@ -1,7 +1,7 @@
 # July 6 Pipeline State Reference
 
-## Engine Architecture (from v19_jul5_engine.mjs)
-- File: server/wc2026/v19_jul5_engine.mjs (55KB, ~900 lines)
+## Historical engine architecture
+- The v19 July 5 engine used for this snapshot is retained in Git history; maintained production engines are copied explicitly by the build.
 - Model: Dixon-Coles with correlation parameter (rho)
 - Monte Carlo: 500X simulations per variation
 - Variations: 25 parameter sets (V1-V25) with weights: xGW, xGOTW, smW, psW, xAW, spW, possW, convW, rho, pace
@@ -69,7 +69,7 @@
 - buildGSRows(teamCode, xgAll, tsAll, msAll): Build game-stat rows for a team
 
 ## BetExplorer Scraping
-- Previous scraper: server/wc2026/wc2026_betexplorer_scraper_v4.py.bak (137KB)
+- Previous scraper revision is retained in Git history; the maintained implementation is `server/wc2026/betexplorer_scraper.py`.
 - Source: BetExplorer AJAX API for bet365 odds
 - The v19 engine had hardcoded book odds in BACKTEST_BOOK and JUL5_BOOK objects
 
@@ -77,7 +77,7 @@
 1. Need Jul 5 R16 actual results (BRA vs NOR, MEX vs ENG) - scrape from ESPN
 2. Need Jul 5 ESPN data ingested (xG, team stats, player stats, shot map)
 3. Need BetExplorer odds for Jul 6 matches (POR vs ESP, USA vs BEL)
-4. Build v20_jul6_engine.mjs with:
+4. Build the next July 6 engine with:
    - BACKTEST_MATCHES: 16 R32 + Jul 5 R16 results (18 total)
    - PROJECTION_MATCHES: [{fid:'wc26-r16-093', home:'POR', away:'ESP'}, {fid:'wc26-r16-094', home:'USA', away:'BEL'}]
    - Updated BACKTEST_BOOK with Jul 5 book odds

@@ -14,6 +14,7 @@ import {
   createAppUser,
   listAppUsers,
   getAppUserById,
+  lookupAppUserByIdFresh,
   getAppUserByEmail,
   getAppUserByUsername,
   updateAppUser,
@@ -26,7 +27,8 @@ import {
 } from "../db";
 import { getDiscordClient } from "../discord/bot";
 import { notifyOwner } from "../_core/notification";
-import { getCachedAppUser, setCachedAppUser, invalidateCachedAppUser } from "../dbCircuitBreaker";
+import { getCachedAppUser, getCachedAppUserEntry, setCachedAppUser, invalidateCachedAppUser } from "../dbCircuitBreaker";
+import { resolveOwnerIdentity } from "../ownerAuth";
 import { getDb } from "../db";
 import { discordInviteTokens, appUsers as appUsersTable } from "../../drizzle/schema";
 import { eq, and, isNull, gt, or } from "drizzle-orm";
@@ -116,48 +118,22 @@ export const ownerProcedure = publicProcedure.use(async ({ ctx, next }) => {
   // Reason: JWT role is baked at login time. If an admin promotes a user to owner
   // after their last login, the JWT still carries the old role. DB is always current.
   //
-  // CACHE INVALIDATION: Both caches (_appUserByIdCache in db.ts and the dbCircuitBreaker
-  // in-memory cache) have TTLs of 30s-5min. A stale cache entry could carry an old role
-  // (e.g. 'handicapper') even after the DB was updated to 'owner'. We invalidate both
-  // caches here to guarantee a fresh DB read for every ownerProcedure call.
-  // This adds one DB round-trip per owner action (~1-5ms) — acceptable for admin operations.
+  // Snapshot the last-known-good row before the authoritative read. It is eligible
+  // only for a short outage window and only when its tokenVersion still matches.
+  const fallback = getCachedAppUserEntry(payload.userId);
   invalidateAppUserByIdCache(payload.userId);
-  invalidateCachedAppUser(payload.userId);
-  console.log(`[AppAuth] ownerProcedure: cache invalidated for userId=${payload.userId} — forcing fresh DB read`);
-
-  let user = await getAppUserById(payload.userId);
-  const fromCache = !user;
-  if (!user) {
-    user = getCachedAppUser(payload.userId);
-    if (user) console.log(`[AppAuth] ownerProcedure: DB unavailable — serving userId=${payload.userId} from cache (role=${user?.role})`);
-  } else {
-    setCachedAppUser(user);
-  }
-  if (!user || !user.hasAccess) {
-    console.log(`[AppAuth] ownerProcedure: REJECTED — user not found or no access userId=${payload.userId}`);
-    throw new TRPCError({ code: "FORBIDDEN", message: "Access denied" });
-  }
-
-  // ── Role check: DB-authoritative (not JWT claim) ────────────────────────────
-  // Accepts both 'owner' role values. JWT claim is logged for audit but NOT used for the decision.
-  if (user.role !== "owner") {
-    console.log(
-      `[AppAuth] ownerProcedure: REJECTED — DB role=${user.role} jwtRole=${payload.role}` +
-      ` userId=${user.id} username=${user.username} (DB role must be 'owner')`
-    );
+  const lookup = await lookupAppUserByIdFresh(payload.userId);
+  if (lookup.status === "found") setCachedAppUser(lookup.user);
+  const resolved = resolveOwnerIdentity({ lookup, fallback, tokenVersion: payload.tv });
+  if (!resolved.ok) {
+    console.log(`[AppAuth] ownerProcedure: REJECTED — reason=${resolved.reason} userId=${payload.userId}`);
+    if (resolved.reason === "token_version_mismatch" || resolved.reason === "token_version_missing") {
+      throw new TRPCError({ code: "UNAUTHORIZED", message: "Session invalidated. Please log in again." });
+    }
     throw new TRPCError({ code: "FORBIDDEN", message: "Owner access required" });
   }
-  console.log(
-    `[AppAuth] ownerProcedure: GRANTED — userId=${user.id} username=${user.username}` +
-    ` dbRole=${user.role} jwtRole=${payload.role} fromCache=${fromCache}`
-  );
-
-  // ── tokenVersion check: only enforce when DB is available ──────────────────
-  if (!fromCache && payload.tv !== null && payload.tv !== user.tokenVersion) {
-    console.log(`[AppAuth] ownerProcedure: REJECTED — tokenVersion mismatch: jwt.tv=${payload.tv} db.tv=${user.tokenVersion} userId=${user.id}`);
-    throw new TRPCError({ code: "UNAUTHORIZED", message: "Session invalidated. Please log in again." });
-  }
-  return next({ ctx: { ...ctx, appUser: user } });
+  console.log(`[AppAuth] ownerProcedure: GRANTED — userId=${resolved.user.id} source=${resolved.source}`);
+  return next({ ctx: { ...ctx, appUser: resolved.user } });
 });
 
 // Handicapper procedure — grants access to owner, admin, and handicapper roles
