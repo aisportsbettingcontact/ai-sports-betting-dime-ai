@@ -40,9 +40,10 @@ export function ProjectionSummary({
   insight: MarketInsight | null;
   teams?: ProjectionTeam[];
 }) {
+  // Readout above the EdgeIndicator (owner directive 2026-07-18): the
+  // MODEL EDGE / BOOK / MODEL facts lead, the mint edge cell sits beneath.
   return (
     <div className="summary">
-      <EdgeIndicator insight={insight} className="summary__edge" />
       {insight ? (
         <dl className="summary__readout">
           <div className="summary__item">
@@ -63,6 +64,7 @@ export function ProjectionSummary({
       ) : (
         <p className="summary__none ds-body-sm">Every market is efficiently priced. No action.</p>
       )}
+      <EdgeIndicator insight={insight} className="summary__edge" />
     </div>
   );
 }

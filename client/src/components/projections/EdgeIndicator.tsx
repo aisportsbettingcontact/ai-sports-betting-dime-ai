@@ -60,7 +60,6 @@ export function EdgeIndicator({ insight, className }: EdgeIndicatorProps) {
       <Icon size={14} aria-hidden="true" style={{ color: "var(--brand-mint-foreground)" }} />
       <span className="edge-indicator__label">Edge</span>
       <strong className="edge-indicator__value">{edge}</strong>
-      <span className="edge-indicator__rec">{label}</span>
     </div>
   );
 }
