@@ -35,17 +35,25 @@ export function MatchupPanel({ game }: { game: ProjectionGame }) {
           <span className="matchup__line" title={`${away.name} @ ${home.name}`}>
             {away.name} <span className="matchup__at" aria-hidden="true">@</span> {home.name}
           </span>
-          {matchupContext && (
-            <span className="matchup__context ds-truncate" title={matchupContext}>{matchupContext}</span>
-          )}
-          {showVenue && <span className="matchup__venue ds-truncate" title={venue}>{venue}</span>}
-          {startTime && <span className="matchup__time">{startTime}</span>}
         </div>
 
         <div className="matchup__team matchup__team--home">
           {showScore && <span className="matchup__score score-value">{home.score}</span>}
           <TeamLogoMark team={home} />
         </div>
+
+        {/* Context/venue/time span the FULL card width beneath the flag row —
+            2.5x flags (owner directive 2026-07-18) squeeze the center column,
+            and the venue must never truncate. */}
+        {(matchupContext || showVenue || startTime) && (
+          <div className="matchup__below">
+            {matchupContext && (
+              <span className="matchup__context ds-truncate" title={matchupContext}>{matchupContext}</span>
+            )}
+            {showVenue && <span className="matchup__venue ds-truncate" title={venue}>{venue}</span>}
+            {startTime && <span className="matchup__time">{startTime}</span>}
+          </div>
+        )}
       </div>
     </div>
   );

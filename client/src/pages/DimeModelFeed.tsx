@@ -699,13 +699,31 @@ const fifaFlagUrl = (code: string): string =>
 
 /** Round label by PT kickoff-day thresholds (WcFeedInline stage ternary). */
 export function wcRoundLabel(isoDate: string): string {
-  return isoDate >= "2026-07-19" ? "Final"
+  return isoDate >= "2026-07-19" ? "World Cup Final"
     : isoDate >= "2026-07-18" ? "3rd Place Match"
     : isoDate >= "2026-07-14" ? "Semifinal"
     : isoDate >= "2026-07-09" ? "Quarterfinal"
     : isoDate >= "2026-07-04" ? "Round of 16"
     : isoDate >= "2026-06-28" ? "Round of 32"
     : "Group Stage";
+}
+
+/** Owner display map (2026-07-18): stadium → "City, ST". Replaces the DB city
+ *  wholesale ("Miami Gardens" → "Miami, FL"); stadiums not listed keep their
+ *  DB city. Substring match so provider naming variants still hit. */
+const WC_VENUE_CITY_DISPLAY: ReadonlyArray<readonly [pattern: string, city: string]> = [
+  ["hard rock", "Miami, FL"],
+  ["metlife", "East Rutherford, NJ"],
+];
+export function wcDisplayCity(
+  stadium: string | null | undefined,
+  city: string | null | undefined,
+): string | null {
+  const s = (stadium ?? "").toLowerCase();
+  for (const [pattern, display] of WC_VENUE_CITY_DISPLAY) {
+    if (s.includes(pattern)) return display;
+  }
+  return city || null;
 }
 
 function fmtKickoffEt(kickoffUtc: string | Date | null | undefined): string {
@@ -860,7 +878,9 @@ function wcMatchToCard(m: WcMatch, isoDate: string): FeedCardSpec {
   // Round and venue are separate card lines (owner directive 2026-07-18):
   // the context line carries the round only, and the full venue renders on
   // its own line beneath it so the stadium is never truncated.
-  const venueBits = [m.venue?.stadium, m.venue?.city].filter(Boolean).join(" · ");
+  const venueBits = [m.venue?.stadium, wcDisplayCity(m.venue?.stadium, m.venue?.city)]
+    .filter(Boolean)
+    .join(" · ");
   const meta = wcRoundLabel(isoDate);
 
   return {

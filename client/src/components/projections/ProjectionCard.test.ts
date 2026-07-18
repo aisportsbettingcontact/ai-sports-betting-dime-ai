@@ -128,6 +128,22 @@ describe("ProjectionCard — single rendering ownership (directive §3)", () => 
   });
 });
 
+describe("ProjectionCard — no corner league label (owner directive 2026-07-18)", () => {
+  it("renders no league label on any card; scheduled cards render no header", () => {
+    const scheduled = render(wcFixture());
+    expect(scheduled).not.toContain("projection-card__league");
+    expect(scheduled).not.toContain("projection-card__head");
+    expect(render(mlbFixture())).not.toContain("projection-card__league");
+  });
+
+  it("live/final cards keep the status header without a league label", () => {
+    const html = render({ ...wcFixture(), status: "final", statusLabel: "FINAL", startTime: undefined });
+    expect(html).toContain("projection-card__head");
+    expect(html).toContain("FINAL");
+    expect(html).not.toContain("projection-card__league");
+  });
+});
+
 describe("ProjectionCard — matchup block format (owner directive 2026-07-17)", () => {
   it("renders the matchup line with names (countries never show raw codes)", () => {
     const html = render(wcFixture());
