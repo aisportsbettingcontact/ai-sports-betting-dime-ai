@@ -188,26 +188,57 @@ describe("sportAdapters registry", () => {
     );
   });
 
-  it("MLB adapter keeps team codes and does not touch numbers", () => {
-    const mlb: FeedEventLike = {
-      id: "mil-pit",
-      timeLabel: "FINAL",
-      away: { name: "Brewers", crest: { code: "MIL", url: "/mil.svg", bg: "#12284B" }, score: "5" },
-      home: { name: "Pirates", crest: { code: "PIT", url: null, bg: "#111111" }, score: "14" },
-      meta: "Gasser vs Skenes",
-      markets: [
-        { title: "Moneyline", foot: { label: "NO EDGE", edge: false }, rows: [
-          { label: "MIL", book: "-140", model: "-150" },
-          { label: "PIT", book: "+120", model: "+130" },
-        ] },
-      ],
-    };
-    const model = createMlbPresentation(mlb);
+  // Owner directive 2026-07-18: team-sport market tables spell out their side
+  // labels — moneyline rows read "<Team> ML" (the market context travels with
+  // the pick), run line rows spell the team name and keep the line, total rows
+  // spell Over/Under. Prices are never touched.
+  const MLB_EVENT: FeedEventLike = {
+    id: "mil-pit",
+    timeLabel: "FINAL",
+    away: { name: "Brewers", crest: { code: "MIL", url: "/mil.svg", bg: "#12284B" }, score: "5" },
+    home: { name: "Pirates", crest: { code: "PIT", url: null, bg: "#111111" }, score: "14" },
+    meta: "PNC Park",
+    markets: [
+      { title: "Run Line", foot: { label: "MIL +1.5 · +4.8%", edge: true }, rows: [
+        { label: "MIL +1.5", book: "-170", model: "-210" },
+        { label: "PIT -1.5", book: "+140", model: "+210" },
+      ] },
+      { title: "Total", foot: { label: "NO EDGE", edge: false }, rows: [
+        { label: "O 9", book: "-114", model: "-116" },
+        { label: "U 9", book: "-105", model: "+116" },
+      ] },
+      { title: "Moneyline", foot: { label: "MIL ML · +9.1%", edge: true }, rows: [
+        { label: "MIL", book: "-140", model: "-150" },
+        { label: "PIT", book: "+120", model: "+130" },
+      ] },
+    ],
+  };
+
+  it("MLB adapter keeps event identity and does not touch numbers", () => {
+    const model = createMlbPresentation(MLB_EVENT);
     expect(model.sport).toBe("MLB");
     expect(model.status).toBe("final");
     expect(model.startTime).toBeUndefined(); // finals have no first-pitch line
     expect(model.awayParticipant).toMatchObject({ kind: "team", displayName: "Brewers", shortName: "MIL" });
-    expect(model.markets[0].selections[0]).toMatchObject({ label: "MIL", bookPrice: -140, modelPrice: -150 });
+    expect(model.markets[2].selections[0]).toMatchObject({ label: "Brewers ML", bookPrice: -140, modelPrice: -150 });
+  });
+
+  it("spells out team-sport side labels: '<Team> ML', 'Team +1.5', 'Over/Under N' (2026-07-18)", () => {
+    const model = createMlbPresentation(MLB_EVENT);
+    const labels = Object.fromEntries(
+      model.markets.map((m) => [m.key, m.selections.map((s) => s.label)]),
+    );
+    expect(labels["run-line"]).toEqual(["Brewers +1.5", "Pirates -1.5"]);
+    expect(labels["total"]).toEqual(["Over 9", "Under 9"]);
+    expect(labels["moneyline"]).toEqual(["Brewers ML", "Pirates ML"]);
+  });
+
+  it("re-anchors team-sport edge footers on the spelled-out side (2026-07-18)", () => {
+    const model = createMlbPresentation(MLB_EVENT);
+    expect(model.markets[0].resultLabel).toBe("Brewers +1.5 · +4.8%");
+    expect(model.markets[0].resultIsEdge).toBe(true);
+    expect(model.markets[2].resultLabel).toBe("Brewers ML · +9.1%");
+    expect(model.markets[1].resultLabel).toBe("NO EDGE");
   });
 
   it("toPresentation dispatches by sport key", () => {

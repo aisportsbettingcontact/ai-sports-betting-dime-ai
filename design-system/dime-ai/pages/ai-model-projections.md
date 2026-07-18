@@ -63,13 +63,32 @@
   "MODEL FAIR PRICE". Applies to every feed surface: mobile, tablet, desktop.
 - **Summary readout labels:** `MODEL EDGE | BOOK | MODEL` — never "BEST PRICE".
 - **MODEL EDGE values are spelled out:** `U 7` → "UNDER 7", `O 8.5` → "OVER 8.5",
-  a leading team abbr → the team name (`ATH ML` → "ATHLETICS ML"). Market-table
-  side labels keep their compact form; only the readout expands.
+  a leading team abbr → the team name (`ATH ML` → "ATHLETICS ML").
+  *(2026-07-18: the "tables keep compact form" clause is superseded — see below.)*
 - **Mobile chrome centering (<768px):** dime wordmark centered in the topbar;
   date nav (‹ date › + slate count) and sport chips stack centered; the summary
   block centers above the markets disclosure on mobile-width cards.
 - **Slate order:** MLB games list earliest → latest first pitch, top to bottom
   (`timeToMinutes`; TBD start times sink to the bottom).
+
+### Owner Directives — 2026-07-18 (edge labeling + multi-edge carousel)
+
+- **The MODEL EDGE pick always names its market.** A moneyline edge reads
+  "YANKEES ML" — never a bare "YANKEES". Run line edges carry their line
+  ("YANKEES +1.5"), totals their number ("UNDER 9"). Implemented in the
+  team-sport presentation adapter (`client/src/lib/sport/presentation.ts`
+  `teamSideLabel`), mirroring the soccer adapter's "<Country> ML" rule.
+- **Market-table side labels are spelled out** (supersedes the 2026-07-17
+  compact-form clause): run line rows read "Dodgers -1.5" / "Yankees +1.5",
+  total rows read "Over 9" / "Under 9", moneyline rows read "<Team> ML".
+  Edge footers re-anchor on the spelled-out side ("Yankees +1.5 · +4.8%").
+- **Multi-edge carousel:** a game with 2+ real edges cycles them in a
+  swipeable scroll-snap strip (`SummaryCarousel`), one uniform summary
+  readout per slide, ranked largest → smallest edge %. ONLY real edges
+  populate slides — NO_EDGE markets never appear; at most one side per
+  market. Dot + count nav; mint marks the active dot only; 160ms brand
+  curve; `prefers-reduced-motion` collapses smooth scrolling. A game with
+  one edge (or none) keeps the plain single summary.
 
 ---
 
