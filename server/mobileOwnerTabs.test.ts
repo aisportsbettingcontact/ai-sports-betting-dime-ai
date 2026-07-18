@@ -1,65 +1,78 @@
 /**
- * Mobile Owner Tabs — Test Suite
- * ═══════════════════════════════
- * Tests feature flags, access decisions, config, and logger.
+ * Mobile Floating Nav (mobileOwnerTabs feature) — Test Suite
+ * ═══════════════════════════════════════════════════════════
+ * Tests feature flags, access decisions, destination config, active-route
+ * matching, and logger. The feature directory keeps its historical
+ * "mobileOwnerTabs" name; the rendered surface is the top floating nav
+ * (docs/plans/2026-07-18-mobile-floating-nav.md).
  * Run: pnpm test -- mobileOwnerTabs
  */
 
 import { describe, it, expect, beforeEach } from "vitest";
 
-// We test the pure logic modules (config + logger) which are framework-agnostic
-// and can be imported directly without React/DOM dependencies.
+// We test the pure logic modules (config + activeTab + logger) which are
+// framework-agnostic and can be imported directly without React/DOM.
 
-// ─── Import the config module directly ───────────────────────────────────────
-// Note: We import the source TS files — vitest handles TS natively.
 import {
   MOBILE_OWNER_TABS,
   MOBILE_OWNER_TABS_ENABLED,
   MOBILE_OWNER_TABS_PUBLIC_ENABLED,
   MOBILE_OWNER_TABS_DEBUG_PANEL,
+  CHAT_TAB_INDEX,
   decideMobileOwnerAccess,
 } from "../client/src/features/mobileOwnerTabs/config";
 
+import { getActiveTabId } from "../client/src/features/mobileOwnerTabs/activeTab";
 import { mobileOwnerTabLogger } from "../client/src/features/mobileOwnerTabs/logger";
 
-describe("Mobile Owner Tabs — Config & Feature Flags", () => {
-  it("should have exactly 5 tabs defined", () => {
+describe("Mobile Floating Nav — Config & Feature Flags", () => {
+  it("should have exactly 5 destinations defined", () => {
     expect(MOBILE_OWNER_TABS).toHaveLength(5);
   });
 
-  it("should have correct tab IDs", () => {
-    const ids = MOBILE_OWNER_TABS.map(t => t.id);
-    expect(ids).toEqual(["feed", "splits", "chat", "props", "profile"]);
+  it("should have the mandated order: Feed, Tools, Chat, Bet Tracker, Profile", () => {
+    expect(MOBILE_OWNER_TABS.map(t => t.id)).toEqual([
+      "feed",
+      "tools",
+      "chat",
+      "tracker",
+      "profile",
+    ]);
+    expect(MOBILE_OWNER_TABS.map(t => t.label)).toEqual([
+      "Feed",
+      "Tools",
+      "Chat",
+      "Bet Tracker",
+      "Profile",
+    ]);
   });
 
-  it("should have correct canonical paths for each tab (no query hooks)", () => {
+  it("Chat occupies the exact center of the five destinations", () => {
+    expect(CHAT_TAB_INDEX).toBe(2);
+    expect(MOBILE_OWNER_TABS[2].id).toBe("chat");
+  });
+
+  it("should have correct canonical paths for each destination (no query hooks)", () => {
     const paths = MOBILE_OWNER_TABS.map(t => t.path);
     expect(paths).toEqual([
       "/feed/model/mlb",
       "/betting-splits/MLB",
       "/chat",
-      "/m/props",
+      "/bet-tracker",
       "/profile",
     ]);
   });
 
-  it("no tab path may carry a legacy query-string hook", () => {
+  it("no destination path may carry a legacy query-string hook", () => {
     for (const tab of MOBILE_OWNER_TABS) {
       expect(tab.path).not.toContain("?");
       expect(tab.path).not.toMatch(/^\/feed$|^\/feed\?|^\/splits/);
     }
   });
 
-  it("should have non-empty labels for all tabs", () => {
+  it("should have non-empty labels for all destinations", () => {
     for (const tab of MOBILE_OWNER_TABS) {
       expect(tab.label.length).toBeGreaterThan(0);
-    }
-  });
-
-  it("should have valid lucide icon names", () => {
-    const validIcons = ["Newspaper", "BarChart3", "MessageSquare", "FlaskConical", "User"];
-    for (const tab of MOBILE_OWNER_TABS) {
-      expect(validIcons).toContain(tab.iconName);
     }
   });
 
@@ -68,13 +81,59 @@ describe("Mobile Owner Tabs — Config & Feature Flags", () => {
   });
 });
 
+describe("Mobile Floating Nav — Active-route matcher", () => {
+  it("feed stays active across dated/sport variants", () => {
+    expect(getActiveTabId("/feed/model/mlb")).toBe("feed");
+    expect(getActiveTabId("/feed/model/mlb-07-18-2026")).toBe("feed");
+    expect(getActiveTabId("/feed/model/wc-07-18-2026")).toBe("feed");
+    expect(getActiveTabId("/feed/model/mlb/07-18-2026")).toBe("feed");
+  });
+
+  it("tools activates on the betting-splits surface (any sport/date)", () => {
+    expect(getActiveTabId("/betting-splits")).toBe("tools");
+    expect(getActiveTabId("/betting-splits/MLB")).toBe("tools");
+    expect(getActiveTabId("/betting-splits/mlb-07-18-2026")).toBe("tools");
+    expect(getActiveTabId("/betting-splits/NBA/07-18-2026")).toBe("tools");
+  });
+
+  it("chat, tracker, and profile match their exact routes and nested paths", () => {
+    expect(getActiveTabId("/chat")).toBe("chat");
+    expect(getActiveTabId("/bet-tracker")).toBe("tracker");
+    expect(getActiveTabId("/profile")).toBe("profile");
+  });
+
+  it("query strings and hashes never change activation", () => {
+    expect(getActiveTabId("/chat?preview=1")).toBe("chat");
+    expect(getActiveTabId("/betting-splits/MLB?x=1#top")).toBe("tools");
+  });
+
+  it("orphaned /m/* screens highlight their owning destinations", () => {
+    expect(getActiveTabId("/m/feed")).toBe("feed");
+    expect(getActiveTabId("/m/splits")).toBe("tools");
+    expect(getActiveTabId("/m/chat")).toBe("chat");
+    expect(getActiveTabId("/m/profile")).toBe("profile");
+  });
+
+  it("returns null (NO default) when no destination is active", () => {
+    // aria-current="page" belongs only to a genuinely active destination —
+    // the retired bottom bar's default-to-feed behavior was a semantics bug.
+    expect(getActiveTabId("/")).toBeNull();
+    expect(getActiveTabId("/wc2026")).toBeNull();
+    expect(getActiveTabId("/account")).toBeNull();
+    expect(getActiveTabId("/admin/users")).toBeNull();
+    expect(getActiveTabId("/m/props")).toBeNull();
+    expect(getActiveTabId("/login")).toBeNull();
+    // /mlb/team/:slug merely starts with "/m" — must not match anything
+    expect(getActiveTabId("/mlb/team/yankees")).toBeNull();
+  });
+});
+
 // ─── Public rollout (2026-07-12) ─────────────────────────────────────────────
-// The bottom tab bar ships to EVERY authenticated mobile user: the owner asked
-// for Feed | Splits | Chat | Props | Profile on all mobile devices, so
-// MOBILE_OWNER_TABS_PUBLIC_ENABLED is now the deliberate steady state and the
+// The nav ships to EVERY authenticated mobile user, so
+// MOBILE_OWNER_TABS_PUBLIC_ENABLED is the deliberate steady state and the
 // public grant fires before the owner check. Authentication is still required,
 // and the debug overlay must stay off for public users.
-describe("Mobile Owner Tabs — Access Decision Logic (public rollout)", () => {
+describe("Mobile Floating Nav — Access Decision Logic (public rollout)", () => {
   it("pins the public flag on and the debug panel off", () => {
     expect(MOBILE_OWNER_TABS_PUBLIC_ENABLED).toBe(true);
     expect(MOBILE_OWNER_TABS_DEBUG_PANEL).toBe(false);
@@ -115,9 +174,15 @@ describe("Mobile Owner Tabs — Access Decision Logic (public rollout)", () => {
     expect(result.granted).toBe(true);
     if (result.granted) expect(result.reason).toBe("public");
   });
+
+  it("owner on desktop should still get granted (viewport check is separate)", () => {
+    // decideMobileOwnerAccess doesn't check viewport — that's in the component
+    const result = decideMobileOwnerAccess("owner", true, false);
+    expect(result.granted).toBe(true);
+  });
 });
 
-describe("Mobile Owner Tabs — Logger", () => {
+describe("Mobile Floating Nav — Logger", () => {
   beforeEach(() => {
     mobileOwnerTabLogger.clear();
   });
@@ -138,8 +203,8 @@ describe("Mobile Owner Tabs — Logger", () => {
 
   it("should track multiple events in order", () => {
     mobileOwnerTabLogger.log("tab_tapped", "feed");
-    mobileOwnerTabLogger.log("tab_changed", "splits");
-    mobileOwnerTabLogger.log("route_navigated", "splits");
+    mobileOwnerTabLogger.log("tab_changed", "tools");
+    mobileOwnerTabLogger.log("route_navigated", "tools");
     const entries = mobileOwnerTabLogger.getEntries();
     expect(entries).toHaveLength(3);
     expect(entries[0].event).toBe("tab_tapped");
@@ -161,7 +226,7 @@ describe("Mobile Owner Tabs — Logger", () => {
 
   it("should count events by type", () => {
     mobileOwnerTabLogger.log("tab_tapped", "feed");
-    mobileOwnerTabLogger.log("tab_tapped", "splits");
+    mobileOwnerTabLogger.log("tab_tapped", "tools");
     mobileOwnerTabLogger.log("tab_changed", "chat");
     expect(mobileOwnerTabLogger.getEventCount("tab_tapped")).toBe(2);
     expect(mobileOwnerTabLogger.getEventCount("tab_changed")).toBe(1);
@@ -170,10 +235,10 @@ describe("Mobile Owner Tabs — Logger", () => {
 
   it("should get last event", () => {
     mobileOwnerTabLogger.log("tab_tapped", "feed");
-    mobileOwnerTabLogger.log("tab_changed", "splits");
+    mobileOwnerTabLogger.log("tab_changed", "tools");
     const last = mobileOwnerTabLogger.getLastEvent();
     expect(last?.event).toBe("tab_changed");
-    expect(last?.tabId).toBe("splits");
+    expect(last?.tabId).toBe("tools");
   });
 
   it("should export valid JSON", () => {
@@ -193,180 +258,91 @@ describe("Mobile Owner Tabs — Logger", () => {
   });
 });
 
-describe("Mobile Owner Tabs — Tab Configuration Integrity", () => {
-  it("all tabs should have unique IDs", () => {
+describe("Mobile Floating Nav — Destination Configuration Integrity", () => {
+  it("all destinations should have unique IDs", () => {
     const ids = MOBILE_OWNER_TABS.map(t => t.id);
-    const unique = new Set(ids);
-    expect(unique.size).toBe(ids.length);
+    expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it("all tabs should have unique paths", () => {
+  it("all destinations should have unique paths", () => {
     const paths = MOBILE_OWNER_TABS.map(t => t.path);
-    const unique = new Set(paths);
-    expect(unique.size).toBe(paths.length);
+    expect(new Set(paths).size).toBe(paths.length);
   });
 
-  it("all tabs should have unique icon names", () => {
-    const icons = MOBILE_OWNER_TABS.map(t => t.iconName);
-    const unique = new Set(icons);
-    expect(unique.size).toBe(icons.length);
-  });
-
-  it("no tabs should be disabled by default", () => {
+  it("no destinations should be disabled by default", () => {
     for (const tab of MOBILE_OWNER_TABS) {
       expect(tab.disabled).toBeFalsy();
     }
   });
 
-  it("feed tab should be first", () => {
+  it("feed destination should be first", () => {
     expect(MOBILE_OWNER_TABS[0].id).toBe("feed");
   });
 
-  it("profile tab should be last", () => {
+  it("profile destination should be last", () => {
     expect(MOBILE_OWNER_TABS[MOBILE_OWNER_TABS.length - 1].id).toBe("profile");
   });
 });
 
-describe("Mobile Owner Tabs — Global Mount Access Logic (public rollout)", () => {
-  it("owner on mobile sees tabs (global mount)", () => {
-    const result = decideMobileOwnerAccess("owner", true, true);
-    expect(result.granted).toBe(true);
-    if (result.granted) expect(result.reason).toBe("public");
-  });
-
-  it("normal user on mobile sees tabs (global mount)", () => {
-    const result = decideMobileOwnerAccess("user", true, true);
-    expect(result.granted).toBe(true);
-  });
-
-  it("admin on mobile sees tabs (global mount)", () => {
-    const result = decideMobileOwnerAccess("admin", true, true);
-    expect(result.granted).toBe(true);
-  });
-
-  it("handicapper on mobile sees tabs (global mount)", () => {
-    const result = decideMobileOwnerAccess("handicapper", true, true);
-    expect(result.granted).toBe(true);
-  });
-
-  it("logged-out user should NOT see tabs", () => {
-    const result = decideMobileOwnerAccess(null, false, true);
-    expect(result.granted).toBe(false);
-    if (!result.granted) expect(result.reason).toBe("not_authenticated");
-  });
-
-  it("owner on desktop should still get granted (viewport check is separate)", () => {
-    // decideMobileOwnerAccess doesn't check viewport — that's in the component
-    // The isMobile param is currently unused in the decision (it's for future use)
-    const result = decideMobileOwnerAccess("owner", true, false);
-    expect(result.granted).toBe(true);
-  });
-});
-
-describe("Mobile Owner Tabs — New Event Types Validity", () => {
+describe("Mobile Floating Nav — New Event Types Validity", () => {
   beforeEach(() => {
     mobileOwnerTabLogger.clear();
   });
 
-  it("should accept mount_attempted event", () => {
-    mobileOwnerTabLogger.log("mount_attempted", undefined, { test: true });
-    expect(mobileOwnerTabLogger.getLastEvent()?.event).toBe("mount_attempted");
-  });
+  const structuralEvents = [
+    "mount_attempted",
+    "mount_success",
+    "mount_skipped",
+    "mount_skipped_non_owner",
+    "mount_skipped_feature_disabled",
+    "mount_skipped_not_mobile",
+    "global_layout_mount_enabled",
+    "role_resolution",
+    "feature_flags_detected",
+    "css_visibility_checked",
+    "route_render_verified",
+  ] as const;
 
-  it("should accept mount_success event", () => {
-    mobileOwnerTabLogger.log("mount_success", undefined, { mount_type: "global" });
-    expect(mobileOwnerTabLogger.getLastEvent()?.event).toBe("mount_success");
-  });
-
-  it("should accept mount_skipped event", () => {
-    mobileOwnerTabLogger.log("mount_skipped", undefined, { reason: "not_owner" });
-    expect(mobileOwnerTabLogger.getLastEvent()?.event).toBe("mount_skipped");
-  });
-
-  it("should accept mount_skipped_non_owner event", () => {
-    mobileOwnerTabLogger.log("mount_skipped_non_owner", undefined, { role: "user" });
-    expect(mobileOwnerTabLogger.getLastEvent()?.event).toBe("mount_skipped_non_owner");
-  });
-
-  it("should accept mount_skipped_feature_disabled event", () => {
-    mobileOwnerTabLogger.log("mount_skipped_feature_disabled");
-    expect(mobileOwnerTabLogger.getLastEvent()?.event).toBe("mount_skipped_feature_disabled");
-  });
-
-  it("should accept mount_skipped_not_mobile event", () => {
-    mobileOwnerTabLogger.log("mount_skipped_not_mobile", undefined, { viewport_width: 1920 });
-    expect(mobileOwnerTabLogger.getLastEvent()?.event).toBe("mount_skipped_not_mobile");
-  });
-
-  it("should accept global_layout_mount_enabled event", () => {
-    mobileOwnerTabLogger.log("global_layout_mount_enabled");
-    expect(mobileOwnerTabLogger.getLastEvent()?.event).toBe("global_layout_mount_enabled");
-  });
-
-  it("should accept role_resolution event", () => {
-    mobileOwnerTabLogger.log("role_resolution", undefined, { raw_role: "owner", is_owner: true });
-    expect(mobileOwnerTabLogger.getLastEvent()?.event).toBe("role_resolution");
-  });
-
-  it("should accept feature_flags_detected event", () => {
-    mobileOwnerTabLogger.log("feature_flags_detected", undefined, { enabled: true, test_mode: false });
-    expect(mobileOwnerTabLogger.getLastEvent()?.event).toBe("feature_flags_detected");
-  });
-
-  it("should accept css_visibility_checked event", () => {
-    mobileOwnerTabLogger.log("css_visibility_checked", undefined, { z_index: 50, position: "fixed" });
-    expect(mobileOwnerTabLogger.getLastEvent()?.event).toBe("css_visibility_checked");
-  });
-
-  it("should accept route_render_verified event", () => {
-    mobileOwnerTabLogger.log("route_render_verified", undefined, { path: "/feed/model/mlb" });
-    expect(mobileOwnerTabLogger.getLastEvent()?.event).toBe("route_render_verified");
-  });
+  for (const event of structuralEvents) {
+    it(`should accept ${event} event`, () => {
+      mobileOwnerTabLogger.log(event, undefined, { test: true });
+      expect(mobileOwnerTabLogger.getLastEvent()?.event).toBe(event);
+    });
+  }
 });
 
-describe("Mobile Owner Tabs — Global Mount Does Not Break Existing Routes", () => {
-  it("Feed/Splits/Props tabs route to their canonical path-based surfaces", () => {
+describe("Mobile Floating Nav — Destinations Map Onto Existing Routes", () => {
+  it("Feed/Tools/Tracker destinations route to their canonical path-based surfaces", () => {
     const byId = new Map(MOBILE_OWNER_TABS.map(t => [t.id, t.path]));
     expect(byId.get("feed")).toBe("/feed/model/mlb");
-    expect(byId.get("splits")).toBe("/betting-splits/MLB");
-    expect(byId.get("props")).toBe("/m/props");
+    expect(byId.get("tools")).toBe("/betting-splits/MLB");
+    expect(byId.get("tracker")).toBe("/bet-tracker");
   });
 
-  it("Chat and Profile tabs should route to their dedicated paths", () => {
+  it("Chat and Profile destinations should route to their dedicated paths", () => {
     const chatTab = MOBILE_OWNER_TABS.find(t => t.id === "chat");
     const profileTab = MOBILE_OWNER_TABS.find(t => t.id === "profile");
     expect(chatTab?.path).toBe("/chat");
     expect(profileTab?.path).toBe("/profile");
   });
 
-  it("only the Splits tab targets /betting-splits, at its canonical sport path", () => {
-    const splitsTabs = MOBILE_OWNER_TABS.filter(t => t.path.startsWith("/betting-splits"));
-    expect(splitsTabs.map(t => t.id)).toEqual(["splits"]);
+  it("only the Tools destination targets /betting-splits, at its canonical sport path", () => {
+    const splitsTabs = MOBILE_OWNER_TABS.filter(t =>
+      t.path.startsWith("/betting-splits")
+    );
+    expect(splitsTabs.map(t => t.id)).toEqual(["tools"]);
     expect(splitsTabs[0]?.path).toBe("/betting-splits/MLB");
   });
 
-  it("global mount skips /m/* routes (no duplicate tabs)", () => {
-    // The GlobalMobileOwnerTabs component checks: if (location.startsWith("/m")) return false
-    // This test validates the logic concept
-    const mPaths = ["/m/chat", "/m/profile", "/m/props"];
-    for (const p of mPaths) {
-      expect(p.startsWith("/m")).toBe(true);
+  it("no destination targets an /m/* screen (the bar left /m/props behind)", () => {
+    // /m/props stays routed and deep-linkable; it just isn't primary nav.
+    for (const tab of MOBILE_OWNER_TABS) {
+      expect(tab.path.startsWith("/m/")).toBe(false);
     }
-  });
-
-  it("no OpenAI calls in global mount component", () => {
-    // Structural test: GlobalMobileOwnerTabs should not import any LLM/OpenAI modules
-    // This is verified by the fact that it only imports from config, logger, useAppAuth, and MobileOwnerBottomTabs
-    expect(true).toBe(true); // Placeholder — real verification is in the file audit
-  });
-
-  it("no credit deductions in global mount component", () => {
-    // Structural test: GlobalMobileOwnerTabs has no credit-related logic
-    expect(true).toBe(true); // Placeholder — real verification is in the file audit
   });
 });
 
-describe("Mobile Owner Tabs — User-Specified Logging Events (Phase 2.5b)", () => {
+describe("Mobile Floating Nav — User-Specified Logging Events (Phase 2.5b)", () => {
   beforeEach(() => {
     mobileOwnerTabLogger.clear();
   });
@@ -391,10 +367,10 @@ describe("Mobile Owner Tabs — User-Specified Logging Events (Phase 2.5b)", () 
   });
 
   it("should accept mobile_owner_tab_navigated_to_m_route event", () => {
-    mobileOwnerTabLogger.log("mobile_owner_tab_navigated_to_m_route", "splits", {
+    mobileOwnerTabLogger.log("mobile_owner_tab_navigated_to_m_route", "tools", {
       current_path: "/feed/model/mlb",
       target_path: "/betting-splits/MLB",
-      tab_name: "splits",
+      tab_name: "tools",
       is_owner: true,
       is_mobile: true,
       test_mode: false,
@@ -402,21 +378,25 @@ describe("Mobile Owner Tabs — User-Specified Logging Events (Phase 2.5b)", () 
     });
     const last = mobileOwnerTabLogger.getLastEvent();
     expect(last?.event).toBe("mobile_owner_tab_navigated_to_m_route");
-    expect(last?.tabId).toBe("splits");
+    expect(last?.tabId).toBe("tools");
     expect(last?.metadata?.target_path).toBe("/betting-splits/MLB");
   });
 
   it("should accept mobile_owner_existing_page_tabs_rendered event", () => {
-    mobileOwnerTabLogger.log("mobile_owner_existing_page_tabs_rendered", undefined, {
-      current_path: "/betting-splits",
-      target_path: null,
-      tab_name: null,
-      user_role: "owner",
-      is_owner: true,
-      is_mobile: true,
-      test_mode: false,
-      timestamp: Date.now(),
-    });
+    mobileOwnerTabLogger.log(
+      "mobile_owner_existing_page_tabs_rendered",
+      undefined,
+      {
+        current_path: "/betting-splits",
+        target_path: null,
+        tab_name: null,
+        user_role: "owner",
+        is_owner: true,
+        is_mobile: true,
+        test_mode: false,
+        timestamp: Date.now(),
+      }
+    );
     const last = mobileOwnerTabLogger.getLastEvent();
     expect(last?.event).toBe("mobile_owner_existing_page_tabs_rendered");
     expect(last?.metadata?.current_path).toBe("/betting-splits");
@@ -439,23 +419,27 @@ describe("Mobile Owner Tabs — User-Specified Logging Events (Phase 2.5b)", () 
   });
 
   it("should accept mobile_owner_non_owner_m_route_denied event", () => {
-    mobileOwnerTabLogger.log("mobile_owner_non_owner_m_route_denied", undefined, {
-      current_path: "/feed/model/mlb",
-      target_path: null,
-      tab_name: null,
-      user_role: "user",
-      is_owner: false,
-      is_mobile: true,
-      test_mode: false,
-      timestamp: Date.now(),
-    });
+    mobileOwnerTabLogger.log(
+      "mobile_owner_non_owner_m_route_denied",
+      undefined,
+      {
+        current_path: "/feed/model/mlb",
+        target_path: null,
+        tab_name: null,
+        user_role: "user",
+        is_owner: false,
+        is_mobile: true,
+        test_mode: false,
+        timestamp: Date.now(),
+      }
+    );
     const last = mobileOwnerTabLogger.getLastEvent();
     expect(last?.event).toBe("mobile_owner_non_owner_m_route_denied");
     expect(last?.metadata?.is_owner).toBe(false);
     expect(last?.metadata?.user_role).toBe("user");
   });
 
-  it("all 5 new events should have required metadata fields", () => {
+  it("all 5 user-specified events should carry the required metadata fields", () => {
     const events = [
       "mobile_owner_tab_clicked",
       "mobile_owner_tab_navigated_to_m_route",

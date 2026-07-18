@@ -1,18 +1,24 @@
 /**
  * GlobalMobileOwnerTabs
  * ═════════════════════
- * Mounts the MobileOwnerBottomTabs globally on mobile. Public since
+ * Mounts the mobile primary navigation globally on mobile. Public since
  * 2026-07-12 (MOBILE_OWNER_TABS_PUBLIC_ENABLED): every authenticated user
- * gets the bar, not just the owner. This component lives in App.tsx
- * (outside any route) so the bottom nav appears on ALL pages
- * (e.g. /feed/model/mlb-…, /betting-splits/MLB) — not just /m/* routes.
+ * gets the nav, not just the owner. This component lives in App.tsx
+ * (outside any route) so the nav appears on ALL pages.
+ *
+ * [FLOATING NAV 2026-07-18] The fixed bottom tab bar is retired; this now
+ * mounts the top-floating MobileFloatingNav (logo chip + pill menu) and
+ * toggles `body.dime-floating-nav-active`, which reserves top document-flow
+ * space via the measured `--dime-floating-nav-h` variable and offsets page
+ * sticky chrome (docs/plans/2026-07-18-mobile-floating-nav.md). The /m/*
+ * exclusion is gone — those screens lost their own tab shell bar, so the
+ * global nav is their navigation now.
  *
  * Visibility rules:
  * - Only renders if MOBILE_OWNER_TABS_ENABLED === true
  * - Only renders for authenticated users (via useAppAuth; owner-only unless
  *   MOBILE_OWNER_TABS_PUBLIC_ENABLED or TEST_MODE)
  * - Only renders on mobile viewports (max-width: 768px)
- * - Does NOT render on /m/* routes (those have their own shell with tabs)
  *
  * Logging events (user-specified):
  * - mobile_owner_tab_clicked
@@ -28,7 +34,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { useAppAuth } from "@/_core/hooks/useAppAuth";
-import { MobileOwnerBottomTabs } from "./MobileOwnerBottomTabs";
+import { MobileFloatingNav } from "./MobileFloatingNav";
 import {
   MOBILE_OWNER_TABS_ENABLED,
   MOBILE_OWNER_TABS_TEST_MODE,
@@ -37,6 +43,9 @@ import {
 } from "./config";
 import { mobileOwnerTabLogger } from "./logger";
 
+/** Body class that gates all floating-nav clearance/offset CSS. */
+export const FLOATING_NAV_BODY_CLASS = "dime-floating-nav-active";
+
 /** Standard metadata payload for all logs from this component */
 function buildLogMetadata(
   appUser: { id?: number; role?: string } | null,
@@ -44,7 +53,7 @@ function buildLogMetadata(
   isMobile: boolean,
   currentPath: string,
   targetPath?: string,
-  tabName?: string,
+  tabName?: string
 ) {
   return {
     current_path: currentPath,
@@ -70,8 +79,8 @@ export function GlobalMobileOwnerTabs() {
   const [location] = useLocation();
   const [isMobile, setIsMobile] = useState(false);
 
-  // Detect mobile viewport — strictly <768 so it agrees with the CSS
-  // clearance breakpoint (max-width:767px); at exactly 768 neither applies.
+  // Detect mobile viewport — strictly <768 so it agrees with the shell
+  // boundary (DIME_SHELL_MIN_WIDTH_PX); at exactly 768 the shell owns nav.
   useEffect(() => {
     function checkMobile() {
       setIsMobile(window.innerWidth < 768);
@@ -81,7 +90,7 @@ export function GlobalMobileOwnerTabs() {
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
-  // Determine if we should show the tabs
+  // Determine if we should show the nav
   const shouldShow = useMemo(() => {
     // Feature disabled
     if (!MOBILE_OWNER_TABS_ENABLED) return false;
@@ -89,9 +98,6 @@ export function GlobalMobileOwnerTabs() {
     if (loading) return false;
     // Not authenticated
     if (!appUser) return false;
-    // Already on /m/* routes (those have their own tab shell) — segment-exact
-    // so /mlb/team/:slug (which merely starts with "/m") keeps the global tabs
-    if (location === "/m" || location.startsWith("/m/")) return false;
     // [LOGIN FIX 2026-07-12] Never overlay the auth surface — /login is now
     // reachable while authenticated (account switching).
     if (location === "/login") return false;
@@ -106,22 +112,20 @@ export function GlobalMobileOwnerTabs() {
   }, [loading, appUser, isOwner, location, isMobile]);
 
   // ─── Logging: mobile_owner_existing_page_tabs_rendered ───────────────────────
-  // Fires when the global tabs render on an existing (non-/m/*) page for an owner
+  // Fires when the global nav renders on a page for an eligible user
   useEffect(() => {
     if (loading) return;
     if (!shouldShow) return;
-    // Only log when NOT on /m/* (those have their own logging)
-    if (location === "/m" || location.startsWith("/m/")) return;
 
     mobileOwnerTabLogger.log(
       "mobile_owner_existing_page_tabs_rendered",
       undefined,
-      buildLogMetadata(appUser, isOwner, isMobile, location),
+      buildLogMetadata(appUser, isOwner, isMobile, location)
     );
   }, [shouldShow, loading, appUser, isOwner, isMobile, location]);
 
   // ─── Logging: mobile_owner_non_owner_m_route_denied ──────────────────────────
-  // Fires when a non-owner user is on mobile and tabs are NOT shown
+  // Fires when a non-owner user is on mobile and the nav is NOT shown
   useEffect(() => {
     if (loading) return;
     if (!appUser) return;
@@ -133,26 +137,26 @@ export function GlobalMobileOwnerTabs() {
     mobileOwnerTabLogger.log(
       "mobile_owner_non_owner_m_route_denied",
       undefined,
-      buildLogMetadata(appUser, isOwner, isMobile, location),
+      buildLogMetadata(appUser, isOwner, isMobile, location)
     );
   }, [loading, appUser, isOwner, isMobile, location]);
 
-  // Add/remove body class for CSS targeting (e.g. extra bottom padding on feed)
+  // Body class for CSS targeting: reserves real document-flow space above the
+  // content (padding-top: var(--dime-floating-nav-h)) and offsets sticky page
+  // chrome + hides duplicate page-level wordmarks while the floating logo owns
+  // the brand identity ("one Dime identity per page").
   useEffect(() => {
     if (shouldShow) {
-      document.body.classList.add("mobile-owner-tabs-active");
+      document.body.classList.add(FLOATING_NAV_BODY_CLASS);
     } else {
-      document.body.classList.remove("mobile-owner-tabs-active");
+      document.body.classList.remove(FLOATING_NAV_BODY_CLASS);
     }
     return () => {
-      document.body.classList.remove("mobile-owner-tabs-active");
+      document.body.classList.remove(FLOATING_NAV_BODY_CLASS);
     };
   }, [shouldShow]);
 
   if (!shouldShow) return null;
 
-  // Content clearance comes from body.mobile-owner-tabs-active (index.css),
-  // which reserves real document-flow space — the old position:fixed "spacer"
-  // reserved none and let the bar occlude the last row of every page.
-  return <MobileOwnerBottomTabs />;
+  return <MobileFloatingNav />;
 }

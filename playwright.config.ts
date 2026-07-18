@@ -15,6 +15,12 @@ export default defineConfig({
   use: {
     baseURL: "http://localhost:5199",
     trace: "retain-on-failure",
+    // Sandboxed environments (e.g. Claude Code on the web) ship a system
+    // chromium instead of the per-version Playwright download. Point
+    // PW_CHROMIUM_PATH at it to skip `playwright install`; unset = default.
+    launchOptions: process.env.PW_CHROMIUM_PATH
+      ? { executablePath: process.env.PW_CHROMIUM_PATH }
+      : {},
   },
   projects: [
     {

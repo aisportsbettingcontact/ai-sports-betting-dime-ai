@@ -18,13 +18,17 @@ export const MOBILE_OWNER_TABS_PUBLIC_ENABLED = true;
 export const MOBILE_OWNER_TABS_DEBUG_PANEL = false;
 
 // ─── Tab Definitions ─────────────────────────────────────────────────────────
-export type MobileOwnerTabId = "feed" | "splits" | "chat" | "props" | "profile";
+export type MobileOwnerTabId =
+  | "feed"
+  | "tools"
+  | "chat"
+  | "tracker"
+  | "profile";
 
 export interface MobileOwnerTabConfig {
   id: MobileOwnerTabId;
   label: string;
   path: string;
-  iconName: string; // lucide-react icon name
   badge?: number | null;
   disabled?: boolean;
 }
@@ -32,18 +36,34 @@ export interface MobileOwnerTabConfig {
 // [NAV RECONSTRUCTION 2026-07-11] Legacy query-string hooks are eradicated —
 // tabs target the canonical path-based routes only.
 // /feed/model/mlb canonicalizes to today's dated URL inside DimeModelFeed.
+// [FLOATING NAV 2026-07-18] Destination contract for the top floating pill nav
+// (docs/plans/2026-07-18-mobile-floating-nav.md). Order is load-bearing: Chat
+// must occupy the exact center of the five. "Tools" is the Betting Splits +
+// Odds History surface (the only live betting-tools destination — no /tools
+// route exists); "Bet Tracker" replaces the Props tab (the /m/props route and
+// screen stay reachable by URL, just not from the primary bar).
 export const MOBILE_OWNER_TABS: MobileOwnerTabConfig[] = [
-  { id: "feed", label: "Feed", path: "/feed/model/mlb", iconName: "Newspaper" },
-  { id: "splits", label: "Splits", path: "/betting-splits/MLB", iconName: "BarChart3" },
-  { id: "chat", label: "Chat", path: "/chat", iconName: "MessageSquare" },
-  { id: "props", label: "Props", path: "/m/props", iconName: "FlaskConical" },
-  { id: "profile", label: "Profile", path: "/profile", iconName: "User" },
+  { id: "feed", label: "Feed", path: "/feed/model/mlb" },
+  { id: "tools", label: "Tools", path: "/betting-splits/MLB" },
+  { id: "chat", label: "Chat", path: "/chat" },
+  { id: "tracker", label: "Bet Tracker", path: "/bet-tracker" },
+  { id: "profile", label: "Profile", path: "/profile" },
 ];
+
+/** Index of the Chat destination — the visual + mathematical center pill. */
+export const CHAT_TAB_INDEX = MOBILE_OWNER_TABS.findIndex(t => t.id === "chat");
 
 // ─── Access Decision Type ────────────────────────────────────────────────────
 export type MobileOwnerAccessDecision =
   | { granted: true; reason: "owner" | "test_mode" | "public" }
-  | { granted: false; reason: "feature_disabled" | "not_authenticated" | "not_owner" | "not_mobile" };
+  | {
+      granted: false;
+      reason:
+        | "feature_disabled"
+        | "not_authenticated"
+        | "not_owner"
+        | "not_mobile";
+    };
 
 // ─── Access Logic ────────────────────────────────────────────────────────────
 export function decideMobileOwnerAccess(

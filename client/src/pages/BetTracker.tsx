@@ -2617,7 +2617,9 @@ export default function BetTracker({ previewMode = false }: BetTrackerProps) {
     // Eliminates the perceived blank-screen delay during auth check (~200-400ms).
     return (
       <div className="bt-page min-h-screen bg-black text-white">
-        <div className="sticky top-0 z-30 bg-black backdrop-blur border-b border-white">
+        {/* <header> (not div): the floating-nav sticky offset targets
+            header.sticky.top-0, and this skeleton mirrors the real header. */}
+        <header className="sticky top-0 z-30 bg-black backdrop-blur border-b border-white">
           <div className="w-full px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-full bg-black animate-pulse" />
@@ -2627,7 +2629,7 @@ export default function BetTracker({ previewMode = false }: BetTrackerProps) {
               {[1,2,3].map(i => <div key={i} className="h-8 w-16 rounded-full bg-black animate-pulse" />)}
             </div>
           </div>
-        </div>
+        </header>
         <div className="px-4 sm:px-6 lg:px-8 border-b border-white">
           <div className="flex gap-6 h-11 items-end">
             {[1,2,3,4,5].map(i => <div key={i} className="h-4 w-10 rounded bg-black animate-pulse mb-2" />)}

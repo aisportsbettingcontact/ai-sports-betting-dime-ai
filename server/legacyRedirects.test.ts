@@ -20,14 +20,28 @@ const read = (...segs: string[]) =>
 
 const serverSrc = read("_core", "index.ts");
 const appSrc = read("..", "client", "src", "App.tsx");
-const configSrc = read("..", "client", "src", "features", "mobileOwnerTabs", "config.ts");
-const tabsSrc = read("..", "client", "src", "features", "mobileOwnerTabs", "MobileOwnerBottomTabs.tsx");
+const configSrc = read(
+  "..",
+  "client",
+  "src",
+  "features",
+  "mobileOwnerTabs",
+  "config.ts"
+);
+const tabsSrc = read(
+  "..",
+  "client",
+  "src",
+  "features",
+  "mobileOwnerTabs",
+  "MobileFloatingNav.tsx"
+);
 const homeSrc = read("..", "client", "src", "pages", "Home.tsx");
 
 describe("Legacy slug eradication — server 308 layer", () => {
   it("registers the 308 handler for all four legacy slugs", () => {
     expect(serverSrc).toMatch(
-      /app\.get\(\["\/feed", "\/splits", "\/projections", "\/dashboard"\]/,
+      /app\.get\(\["\/feed", "\/splits", "\/projections", "\/dashboard"\]/
     );
     expect(serverSrc).toMatch(/res\.redirect\(308, target\)/);
   });
@@ -38,7 +52,9 @@ describe("Legacy slug eradication — server 308 layer", () => {
   });
 
   it("maps everything else to the dated canonical feed slug", () => {
-    expect(serverSrc).toMatch(/target = `\/feed\/model\/\$\{sport\}-\$\{slugDate\}`/);
+    expect(serverSrc).toMatch(
+      /target = `\/feed\/model\/\$\{sport\}-\$\{slugDate\}`/
+    );
   });
 
   it("uses the 07:00 UTC (00:00 PT) feed rollover for the default date", () => {
@@ -46,7 +62,7 @@ describe("Legacy slug eradication — server 308 layer", () => {
     // an unrelated FEED_CUTOFF_UTC_HOUR = 11 (games-cache pre-warm), so a
     // whole-file match could not catch the redirect being rewired to it.
     const start = serverSrc.indexOf("const feedSlugDate");
-    const end = serverSrc.indexOf("app.get([\"/feed\"", start);
+    const end = serverSrc.indexOf('app.get(["/feed"', start);
     expect(start).toBeGreaterThan(-1);
     const helper = serverSrc.slice(start, end);
     expect(helper).toMatch(/const FEED_CUTOFF_UTC_HOUR = 7;/);
@@ -54,7 +70,9 @@ describe("Legacy slug eradication — server 308 layer", () => {
 
   it("forbids caching of the date-varying 308 and forwards unconsumed query params", () => {
     expect(serverSrc).toMatch(/res\.set\("Cache-Control", "no-store"\)/);
-    expect(serverSrc).toMatch(/key === "tab" \|\| key === "sport" \|\| key === "date"/);
+    expect(serverSrc).toMatch(
+      /key === "tab" \|\| key === "sport" \|\| key === "date"/
+    );
   });
 });
 
@@ -81,8 +99,12 @@ describe("Legacy slug eradication — server-side emitters", () => {
 
   it("Discord login sanitizes returnPath against open redirects", () => {
     expect(discordLoginSrc).toMatch(/function sanitizeReturnPath/);
-    expect(discordLoginSrc).toMatch(/sanitizeReturnPath\(req\.query\.returnPath\)/);
-    expect(discordLoginSrc).toMatch(/sanitizeReturnPath\(payload\.returnPath\)/);
+    expect(discordLoginSrc).toMatch(
+      /sanitizeReturnPath\(req\.query\.returnPath\)/
+    );
+    expect(discordLoginSrc).toMatch(
+      /sanitizeReturnPath\(payload\.returnPath\)/
+    );
   });
 
   it("Discord invite success lands on the canonical feed", () => {
@@ -98,27 +120,33 @@ describe("Legacy slug eradication — client router", () => {
 
   it("legacy slugs are wouter Redirects into the canonical helpers", () => {
     expect(appSrc).toMatch(
-      /path="\/feed">\{\(\) => <Redirect to=\{legacyFeedRedirectTarget\(window\.location\.search\)\} replace \/>/,
+      /path="\/feed">\{\(\) => <Redirect to=\{legacyFeedRedirectTarget\(window\.location\.search\)\} replace \/>/
     );
-    expect(appSrc).toMatch(/path="\/splits">\{\(\) => <Redirect to=\{bettingSplitsPath\("MLB"\)\} replace \/>/);
-    expect(appSrc).toMatch(/path="\/dashboard">\{\(\) => <Redirect to=\{feedModelPath\("MLB"\)\} replace \/>/);
-    expect(appSrc).toMatch(/path="\/projections">\{\(\) => <Redirect to=\{feedModelPath\("MLB"\)\} replace \/>/);
+    expect(appSrc).toMatch(
+      /path="\/splits">\{\(\) => <Redirect to=\{bettingSplitsPath\("MLB"\)\} replace \/>/
+    );
+    expect(appSrc).toMatch(
+      /path="\/dashboard">\{\(\) => <Redirect to=\{feedModelPath\("MLB"\)\} replace \/>/
+    );
+    expect(appSrc).toMatch(
+      /path="\/projections">\{\(\) => <Redirect to=\{feedModelPath\("MLB"\)\} replace \/>/
+    );
   });
 
   it("canonical routes stay registered behind RequireAuth", () => {
     expect(appSrc).toMatch(/path="\/feed\/model\/:sport\/:date"/);
     expect(appSrc).toMatch(/path="\/feed\/model\/:sport"/);
     expect(appSrc).toMatch(
-      /path="\/betting-splits\/:sport\/:date">[\s\S]*?<StandaloneSplitsRoute[\s\S]*?sportSegment=\{p\.sport\}[\s\S]*?dateSegment=\{p\.date\}[\s\S]*?\/>/,
+      /path="\/betting-splits\/:sport\/:date">[\s\S]*?<StandaloneSplitsRoute[\s\S]*?sportSegment=\{p\.sport\}[\s\S]*?dateSegment=\{p\.date\}[\s\S]*?\/>/
     );
     expect(appSrc).toMatch(
-      /path="\/betting-splits\/:sport">[\s\S]*?<StandaloneSplitsRoute sportSegment=\{p\.sport\} \/>/,
+      /path="\/betting-splits\/:sport">[\s\S]*?<StandaloneSplitsRoute sportSegment=\{p\.sport\} \/>/
     );
     // Splits render target: behind RequireAuth, fed by the parsed canonical
     // URL, and carrying explicit date provenance so auto-advance can tell an
     // app default from a deliberate deep link.
     expect(appSrc).toMatch(
-      /<RequireAuth>\s*<BettingSplits[\s\S]*?initialSport=\{parsed\.sport\}[\s\S]*?initialDate=\{parsed\.isoDate\}[\s\S]*?initialDateSource=\{[\s\S]*?\/>\s*<\/RequireAuth>/,
+      /<RequireAuth>\s*<BettingSplits[\s\S]*?initialSport=\{parsed\.sport\}[\s\S]*?initialDate=\{parsed\.isoDate\}[\s\S]*?initialDateSource=\{[\s\S]*?\/>\s*<\/RequireAuth>/
     );
   });
 
@@ -133,22 +161,24 @@ describe("Legacy slug eradication — navigation hooks", () => {
     expect(configSrc).not.toMatch(/\?tab=/);
     expect(configSrc).toMatch(/"\/feed\/model\/mlb"/);
     expect(configSrc).toMatch(/"\/betting-splits\/MLB"/);
-    expect(configSrc).toMatch(/"\/m\/props"/);
+    expect(configSrc).toMatch(/"\/bet-tracker"/);
   });
 
-  it("bottom tabs never fall back to full-page query navigation", () => {
-    expect(tabsSrc).not.toMatch(/window\.location\.href = path/);
+  it("floating nav never falls back to full-page query navigation", () => {
+    expect(tabsSrc).not.toMatch(/window\.location\.href/);
     expect(tabsSrc).not.toMatch(/tab\.path\.includes\("\?"\)/);
+    // Real links: destinations render as wouter <Link> anchors, not buttons.
+    expect(tabsSrc).toMatch(/import \{ Link, useLocation \} from "wouter"/);
   });
 
   it("login returnPath uses the shared viewport-aware default, never /splits", () => {
     expect(homeSrc).toMatch(
-      /import \{ resolvePostLoginPath \} from "\.\/dime-shell\/breakpoints"/,
+      /import \{ resolvePostLoginPath \} from "\.\/dime-shell\/breakpoints"/
     );
     // [2026-07-12] /login no longer force-redirects authenticated visitors
     // (account switching); the shared resolver is still the only path source.
     expect(homeSrc).toMatch(
-      /resolvePostLoginPath\((?:explicitReturnPath|explicit|searchParams\.get\("returnPath"\)|null)\)/,
+      /resolvePostLoginPath\((?:explicitReturnPath|explicit|searchParams\.get\("returnPath"\)|null)\)/
     );
     expect(homeSrc).not.toMatch(/\?\? "\/splits"/);
   });

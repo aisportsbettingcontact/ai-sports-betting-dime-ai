@@ -134,15 +134,15 @@ export function MobileSplits() {
   });
 
   useEffect(() => {
-    mobileOwnerTabLogger.log("mobile_splits_data_fetch_started", "splits", { date: today });
+    mobileOwnerTabLogger.log("mobile_splits_data_fetch_started", "tools", { date: today });
   }, [today]);
 
   useEffect(() => {
     if (!splitsQuery.isLoading) {
       if (splitsQuery.isError) {
-        mobileOwnerTabLogger.log("mobile_splits_data_fetch_failed", "splits", { error: splitsQuery.error?.message });
+        mobileOwnerTabLogger.log("mobile_splits_data_fetch_failed", "tools", { error: splitsQuery.error?.message });
       } else {
-        mobileOwnerTabLogger.log("mobile_splits_data_fetch_completed", "splits", { games: splitsQuery.data?.rows.length ?? 0 });
+        mobileOwnerTabLogger.log("mobile_splits_data_fetch_completed", "tools", { games: splitsQuery.data?.rows.length ?? 0 });
       }
     }
   }, [splitsQuery.isLoading, splitsQuery.isError]);
@@ -223,7 +223,7 @@ export function MobileSplits() {
   const isEmpty = !splitsQuery.isLoading && !splitsQuery.isError && cards.length === 0;
 
   useEffect(() => {
-    if (isEmpty) mobileOwnerTabLogger.log("mobile_splits_empty_state_rendered", "splits", { date: today });
+    if (isEmpty) mobileOwnerTabLogger.log("mobile_splits_empty_state_rendered", "tools", { date: today });
   }, [isEmpty, today]);
 
   return (
