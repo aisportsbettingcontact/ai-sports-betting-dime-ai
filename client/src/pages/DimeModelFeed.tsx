@@ -840,7 +840,11 @@ function wcMatchToCard(m: WcMatch, isoDate: string): FeedCardSpec {
     { label: "NO", book: dk?.bttsNo ?? null, model: mo?.bttsNo ?? null },
   );
 
-  const markets = [toAdv, ml, draw, total, spread, dblChc, btts];
+  // TO ADVANCE only exists as a book market when there IS a next round — the
+  // 3rd-place match and the Final carry no such market (book adv NULL), so the
+  // column is dropped for those cards instead of rendering dashes.
+  const hasAdvMarket = dk?.toAdvanceAway != null || dk?.toAdvanceHome != null;
+  const markets = [...(hasAdvMarket ? [toAdv] : []), ml, draw, total, spread, dblChc, btts];
   let best: BestPick | null = null;
   for (const col of markets) best = trackBest(best, col);
 
