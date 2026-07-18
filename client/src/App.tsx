@@ -52,11 +52,11 @@ const WaitlistAdmin = lazy(() => import("./pages/WaitlistAdmin"));
 const Privacy = lazy(() => import("./pages/Privacy"));
 const Terms = lazy(() => import("./pages/Terms"));
 
-// ── Mobile Owner Tabs (owner-only bottom nav experience) ────────────────────
-const MobileOwnerLayout = lazy(
-  () => import("./features/mobileOwnerTabs/MobileOwnerLayout")
+// ── Mobile /m/* screens (all authenticated users) ───────────────────────────
+const MobileNavLayout = lazy(
+  () => import("./features/mobileNav/MobileNavLayout")
 );
-import { GlobalMobileOwnerTabs } from "./features/mobileOwnerTabs/GlobalMobileOwnerTabs";
+import { GlobalMobileNav } from "./features/mobileNav/GlobalMobileNav";
 import {
   feedModelPath,
   bettingSplitsPath,
@@ -240,9 +240,15 @@ function Router() {
         {/* ── Legacy slug eradication — permanent client-side redirects ─────────
           (server issues 308s for full-page loads; these cover SPA navigations).
           None of these slugs may be emitted by app code — see lib/feedRoutes. */}
-        <Route path="/dashboard">{() => <Redirect to={feedModelPath("MLB")} replace />}</Route>
-        <Route path="/projections">{() => <Redirect to={feedModelPath("MLB")} replace />}</Route>
-        <Route path="/splits">{() => <Redirect to={bettingSplitsPath("MLB")} replace />}</Route>
+        <Route path="/dashboard">
+          {() => <Redirect to={feedModelPath("MLB")} replace />}
+        </Route>
+        <Route path="/projections">
+          {() => <Redirect to={feedModelPath("MLB")} replace />}
+        </Route>
+        <Route path="/splits">
+          {() => <Redirect to={bettingSplitsPath("MLB")} replace />}
+        </Route>
         {/* Legal pages — public, no auth required */}
         <Route path="/privacy" component={Privacy} />
         <Route path="/terms" component={Terms} />
@@ -268,13 +274,32 @@ function Router() {
         {/* ── Protected routes (RequireAuth redirects to /login if not authed) ── */}
         {/* Legacy /feed (+ ?tab=… query hooks) → canonical surfaces. tab=splits
           maps to /betting-splits/MLB; everything else to the dated feed URL. */}
-        <Route path="/feed">{() => <Redirect to={legacyFeedRedirectTarget(window.location.search)} replace />}</Route>
+        <Route path="/feed">
+          {() => (
+            <Redirect
+              to={legacyFeedRedirectTarget(window.location.search)}
+              replace
+            />
+          )}
+        </Route>
         {/* Dime AI Model Projections — the canonical feed surface.
           /feed/model/mlb-07-11-2026 or /feed/model/wc-07-11-2026 (also the
           split form /feed/model/mlb/07-11-2026; bare /feed/model/mlb
           canonicalizes to today's dated URL inside DimeModelFeed). */}
-        <Route path="/feed/model/:sport/:date">{p => <RequireAuth><DimeModelFeed sport={p.sport} date={p.date} /></RequireAuth>}</Route>
-        <Route path="/feed/model/:sport">{p => <RequireAuth><DimeModelFeed sport={p.sport} /></RequireAuth>}</Route>
+        <Route path="/feed/model/:sport/:date">
+          {p => (
+            <RequireAuth>
+              <DimeModelFeed sport={p.sport} date={p.date} />
+            </RequireAuth>
+          )}
+        </Route>
+        <Route path="/feed/model/:sport">
+          {p => (
+            <RequireAuth>
+              <DimeModelFeed sport={p.sport} />
+            </RequireAuth>
+          )}
+        </Route>
         {/* Betting splits — lowercase dated canonical URL; legacy forms replace. */}
         <Route path="/betting-splits/:sport/:date">
           {p => (
@@ -432,13 +457,13 @@ function Router() {
             </RequireAuth>
           )}
         </Route>
-        {/* ── Mobile Owner Tabs (owner-only) ──────────────────────────────────── */}
+        {/* ── Mobile /m/* screens ─────────────────────────────────────────────── */}
         {/* Bare /m needs its own route — wouter's /m/:rest* requires ≥1 segment */}
         <Route path="/m">{() => <Redirect to="/m/feed" replace />}</Route>
         <Route path="/m/:rest*">
           {() => (
             <RequireAuth>
-              <MobileOwnerLayout />
+              <MobileNavLayout />
             </RequireAuth>
           )}
         </Route>
@@ -457,8 +482,8 @@ function App() {
         <TooltipProvider>
           <Toaster />
           <Router />
-          {/* Global mobile owner bottom tabs — appears on ALL pages for owner users on mobile */}
-          <GlobalMobileOwnerTabs />
+          {/* Global mobile nav — appears on ALL pages for authenticated users on mobile */}
+          <GlobalMobileNav />
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>

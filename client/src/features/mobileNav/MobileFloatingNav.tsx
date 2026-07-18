@@ -35,9 +35,9 @@
 
 import { useLayoutEffect, useRef } from "react";
 import { Link, useLocation } from "wouter";
-import { MOBILE_OWNER_TABS, type MobileOwnerTabId } from "./config";
+import { MOBILE_NAV_TABS, type MobileNavTabId } from "./config";
 import { getActiveTabId } from "./activeTab";
-import { mobileOwnerTabLogger } from "./logger";
+import { mobileNavLogger } from "./logger";
 import "./mobileFloatingNav.css";
 
 /** Published on <html>; consumed by body clearance + sticky-chrome offsets. */
@@ -91,9 +91,9 @@ export function MobileFloatingNav() {
 
   // Same logging contract as the retired bottom bar (in-memory logger only —
   // there is no external analytics product; see logger.ts).
-  function handleTap(tabId: MobileOwnerTabId, path: string, isActive: boolean) {
-    mobileOwnerTabLogger.log("tab_tapped", tabId, { from: location, to: path });
-    mobileOwnerTabLogger.log("mobile_owner_tab_clicked", tabId, {
+  function handleTap(tabId: MobileNavTabId, path: string, isActive: boolean) {
+    mobileNavLogger.log("tab_tapped", tabId, { from: location, to: path });
+    mobileNavLogger.log("mobile_nav_tab_clicked", tabId, {
       current_path: location,
       target_path: path,
       tab_name: tabId,
@@ -103,18 +103,18 @@ export function MobileFloatingNav() {
     if (typeof navigator !== "undefined" && "vibrate" in navigator) {
       try {
         navigator.vibrate(10);
-        mobileOwnerTabLogger.log("haptic_triggered", tabId);
+        mobileNavLogger.log("haptic_triggered", tabId);
       } catch {
         // Silent — not all browsers support vibrate
       }
     }
     if (location !== path) {
-      mobileOwnerTabLogger.log("tab_changed", tabId, {
+      mobileNavLogger.log("tab_changed", tabId, {
         from: activeTabId,
         to: tabId,
       });
-      mobileOwnerTabLogger.log("route_navigated", tabId, { path });
-      mobileOwnerTabLogger.log("mobile_owner_tab_navigated_to_m_route", tabId, {
+      mobileNavLogger.log("route_navigated", tabId, { path });
+      mobileNavLogger.log("mobile_nav_tab_navigated", tabId, {
         current_path: location,
         target_path: path,
         tab_name: tabId,
@@ -132,7 +132,7 @@ export function MobileFloatingNav() {
       </div>
       <nav className="mfn-nav" aria-label="Main navigation">
         <div className="mfn-grid">
-          {MOBILE_OWNER_TABS.map(tab => {
+          {MOBILE_NAV_TABS.map(tab => {
             const isActive = activeTabId === tab.id;
             const isChat = tab.id === "chat";
             return (
