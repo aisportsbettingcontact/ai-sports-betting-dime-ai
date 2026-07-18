@@ -144,6 +144,85 @@ describe("ProjectionCard — no corner league label (owner directive 2026-07-18)
   });
 });
 
+/** Dodgers @ Yankees with TWO real edges (the 2026-07-18 directive screenshot):
+ *  Yankees ML +9.1pp (book -105, model -152) outranks Under 9 +7.6pp (book
+ *  -115, model -157); the run line is dead even (no edge). Labels arrive
+ *  pre-spelled from the presentation layer ("Yankees ML", "Under 9"). */
+function multiEdgeFixture(): ProjectionGame {
+  const team = (abbr: string, name: string): ProjectionGame["away"] =>
+    ({ abbr, name, logo: null, color: "#333333", score: null });
+  return {
+    id: "lad-nyy",
+    league: "MLB",
+    status: "scheduled",
+    statusLabel: "7:05 PM ET",
+    away: team("LAD", "Dodgers"),
+    home: team("NYY", "Yankees"),
+    matchupContext: "Yankee Stadium",
+    venue: "Yankee Stadium",
+    startTime: "7:05 PM ET",
+    markets: [
+      {
+        key: "run-line",
+        label: "Run Line",
+        sides: [
+          { marketKey: "run-line", marketLabel: "Run Line", sideLabel: "Dodgers -1.5", bookPrice: 140, bookOppPrice: -170, modelPrice: 140 },
+          { marketKey: "run-line", marketLabel: "Run Line", sideLabel: "Yankees +1.5", bookPrice: -170, bookOppPrice: 140, modelPrice: -170 },
+        ],
+      },
+      {
+        key: "total",
+        label: "Total",
+        sides: [
+          { marketKey: "total", marketLabel: "Total", sideLabel: "Over 9", bookPrice: -105, bookOppPrice: -115, modelPrice: 130 },
+          { marketKey: "total", marketLabel: "Total", sideLabel: "Under 9", bookPrice: -115, bookOppPrice: -105, modelPrice: -157 },
+        ],
+      },
+      {
+        key: "moneyline",
+        label: "Moneyline",
+        sides: [
+          { marketKey: "moneyline", marketLabel: "Moneyline", sideLabel: "Dodgers ML", bookPrice: -115, bookOppPrice: -105, modelPrice: 152 },
+          { marketKey: "moneyline", marketLabel: "Moneyline", sideLabel: "Yankees ML", bookPrice: -105, bookOppPrice: -115, modelPrice: -152 },
+        ],
+      },
+    ],
+  };
+}
+
+describe("ProjectionCard — ranked edge carousel (owner directive 2026-07-18)", () => {
+  it("2+ edges render the swipe strip, strongest first, weakest last", () => {
+    const html = render(multiEdgeFixture());
+    expect(html).toContain("summary-carousel");
+    expect(countOccurrences(html, "summary-carousel__slide")).toBe(2);
+    // Ranked: Yankees ML (+9.1pp) leads, Under 9 (+7.6pp) closes the strip.
+    expect(html.indexOf("Yankees ML")).toBeGreaterThan(-1);
+    expect(html.indexOf("Yankees ML")).toBeLessThan(html.indexOf("Under 9"));
+    expect(html).toContain("Edge 1 of 2");
+  });
+
+  it("no-edge markets never populate a slide (run line stays out)", () => {
+    const html = render(multiEdgeFixture());
+    // Slides are labeled with their pick; the dead-even run line gets none.
+    expect(html).not.toContain("of 2: Dodgers -1.5");
+    expect(html).not.toContain("of 2: Yankees +1.5");
+    // Exact-class match: the "__dots" wrapper contains "__dot" as a substring.
+    expect(countOccurrences(html, 'class="summary-carousel__dot"')).toBe(2);
+  });
+
+  it("a single-edge card keeps the plain summary — no carousel chrome", () => {
+    const html = render(mlbFixture());
+    expect(html).not.toContain("summary-carousel");
+    expect(html).toContain('summary__pick">Under 7<');
+  });
+
+  it("the moneyline edge readout carries the market: 'Yankees ML', never bare 'Yankees'", () => {
+    const html = render(multiEdgeFixture());
+    expect(html).toContain('summary__pick">Yankees ML<');
+    expect(html).not.toContain('summary__pick">Yankees<');
+  });
+});
+
 describe("ProjectionCard — matchup block format (owner directive 2026-07-17)", () => {
   it("renders the matchup line with names (countries never show raw codes)", () => {
     const html = render(wcFixture());

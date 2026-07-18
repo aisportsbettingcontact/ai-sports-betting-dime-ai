@@ -1,8 +1,9 @@
 import { ChevronDown, ChevronUp } from "lucide-react";
-import { primaryInsight } from "@/lib/gameInsight";
+import { rankMarkets, type MarketInsight } from "@/lib/gameInsight";
 import { MatchupPanel } from "./MatchupPanel";
 import { MarketTable } from "./MarketTable";
 import { ProjectionSummary } from "./ProjectionSummary";
+import { SummaryCarousel } from "./SummaryCarousel";
 import type { ProjectionGame } from "./types";
 import "./ProjectionCard.css";
 
@@ -23,6 +24,19 @@ import "./ProjectionCard.css";
  * The card is its own container (`ds-cq`), so the layout REFLOWS by the card's
  * width, not the viewport — structure adapts before type ever shrinks.
  */
+/** Every REAL edge on the game, ranked strongest → weakest by the decision
+ *  engine, at most one side per market (rankMarkets sorts desc, so the first
+ *  side seen for a market is its best). NO_EDGE sides never make the list —
+ *  they must not populate the carousel (owner directive 2026-07-18). */
+export function rankedEdges(game: ProjectionGame): MarketInsight[] {
+  const seen = new Set<string>();
+  return rankMarkets(game.markets.flatMap((m) => m.sides)).filter((m) => {
+    if (m.recommendation === "NO_EDGE" || seen.has(m.marketKey)) return false;
+    seen.add(m.marketKey);
+    return true;
+  });
+}
+
 export function ProjectionCard({
   game,
   defaultMarketsOpen = false,
@@ -30,8 +44,7 @@ export function ProjectionCard({
   game: ProjectionGame;
   defaultMarketsOpen?: boolean;
 }) {
-  const allSides = game.markets.flatMap((m) => m.sides);
-  const insight = primaryInsight(allSides);
+  const edges = rankedEdges(game);
 
   return (
     <article
@@ -48,7 +61,13 @@ export function ProjectionCard({
 
       <MatchupPanel game={game} />
 
-      <ProjectionSummary insight={insight} teams={[game.away, game.home]} />
+      {/* One edge (or none) → the single dominant summary. Two or more →
+          the ranked swipe strip, largest edge first (directive 2026-07-18). */}
+      {edges.length > 1 ? (
+        <SummaryCarousel insights={edges} teams={[game.away, game.home]} />
+      ) : (
+        <ProjectionSummary insight={edges[0] ?? null} teams={[game.away, game.home]} />
+      )}
 
       <details className="projection-card__markets" open={defaultMarketsOpen}>
         <summary className="projection-card__markets-toggle ds-label">
