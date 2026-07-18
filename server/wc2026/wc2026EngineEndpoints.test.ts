@@ -77,9 +77,12 @@ describe("WC2026 owner-triggered engine/audit/backfill endpoints", () => {
     expect(engineSrc).not.toMatch(/beId:'pKVyGJbD'/);
   });
 
-  it("writes per-fid round labels (third_place / final), not a hardcoded round", () => {
+  it("writes per-fid round labels from the schema enum (third_place / finals), not a hardcoded round", () => {
     expect(engineSrc).toMatch(/'wc26-3rd-103': 'third_place'/);
-    expect(engineSrc).toMatch(/'wc26-final-104': 'final'/);
+    // MUST be 'finals' (plural) — the world_cup_round mysqlEnum has no 'final';
+    // the singular was rejected live with "Data truncated" (run 29623270569).
+    expect(engineSrc).toMatch(/'wc26-final-104': 'finals'/);
+    expect(engineSrc).not.toMatch(/'wc26-final-104': 'final'[,\s]/);
     expect(engineSrc).toMatch(/'knockout', ROUND_LABEL\[match\.fid\]/);
   });
 
