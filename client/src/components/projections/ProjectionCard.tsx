@@ -9,11 +9,13 @@ import "./ProjectionCard.css";
 /**
  * ProjectionCard — one game, structured for a 3-second decision (Law v3).
  *
- * Order: league/status → matchup block (matchup line · ballpark · first pitch,
- * owner directive 2026-07-17) → the dominant model insight (summary) → the full
- * market tables behind an explicit disclosure. The header renders the status
- * only for live/final games — a scheduled game's start time is owned by the
- * matchup block's third line (single rendering ownership, directive §3).
+ * Order: status (live/final only) → matchup block (matchup line · ballpark ·
+ * first pitch, owner directive 2026-07-17) → the dominant model insight
+ * (summary) → the full market tables behind an explicit disclosure. There is
+ * no corner league label: the feed's sport chip already names the competition
+ * (owner directive 2026-07-18), so a scheduled card renders no header at all —
+ * its start time is owned by the matchup block's third line (single rendering
+ * ownership, directive §3).
  *
  * The market tables collapse by default behind "View full AI model projections"
  * with a chevron-down affordance to expand and a chevron-up to collapse — the
@@ -32,15 +34,17 @@ export function ProjectionCard({
   const insight = primaryInsight(allSides);
 
   return (
-    <article className="projection-card ds-cq" aria-label={`${game.away.name} at ${game.home.name}`}>
-      <header className="projection-card__head">
-        <span className="projection-card__league ds-label">{game.league}</span>
-        {game.status !== "scheduled" && (
+    <article
+      className={`projection-card ds-cq${game.status === "scheduled" ? " projection-card--scheduled" : ""}`}
+      aria-label={`${game.away.name} at ${game.home.name}`}
+    >
+      {game.status !== "scheduled" && (
+        <header className="projection-card__head">
           <span className={`projection-card__status projection-card__status--${game.status}`}>
             {game.statusLabel}
           </span>
-        )}
-      </header>
+        </header>
+      )}
 
       <MatchupPanel game={game} />
 

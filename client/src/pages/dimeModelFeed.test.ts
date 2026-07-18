@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import fs from "fs";
 import path from "path";
+import { wcDisplayCity, wcRoundLabel } from "./DimeModelFeed";
 
 /**
  * Regression guards for the Dime AI Model Projections surface
@@ -158,6 +159,22 @@ describe("DimeModelFeed — owner rules", () => {
 
   it("round-aware WC stage label (Quarterfinal on Jul 9-13 window)", () => {
     expect(src).toMatch(/isoDate >= "2026-07-09" \? "Quarterfinal"/);
+  });
+});
+
+describe("DimeModelFeed — WC round + venue display (owner directive 2026-07-18)", () => {
+  it("labels Jul 19 'World Cup Final' and Jul 18 '3rd Place Match'", () => {
+    expect(wcRoundLabel("2026-07-19")).toBe("World Cup Final");
+    expect(wcRoundLabel("2026-07-18")).toBe("3rd Place Match");
+    expect(wcRoundLabel("2026-07-14")).toBe("Semifinal");
+  });
+
+  it("maps owner venues to City, ST and keeps the DB city otherwise", () => {
+    expect(wcDisplayCity("Hard Rock Stadium", "Miami Gardens")).toBe("Miami, FL");
+    expect(wcDisplayCity("MetLife Stadium", "East Rutherford")).toBe("East Rutherford, NJ");
+    expect(wcDisplayCity("Estadio Azteca", "Mexico City")).toBe("Mexico City");
+    expect(wcDisplayCity(null, "Dallas")).toBe("Dallas");
+    expect(wcDisplayCity("Hard Rock Stadium (Miami)", "Miami Gardens")).toBe("Miami, FL");
   });
 });
 
