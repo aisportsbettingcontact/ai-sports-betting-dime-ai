@@ -96,6 +96,27 @@ describe("WC2026 owner-triggered engine/audit/backfill endpoints", () => {
     expect(engineSrc).not.toMatch(/to-advance book lines missing/);
   });
 
+  it("carries the scraped bet365 book for both matches (probe run 29622399287) with no market left null", () => {
+    // 3rd-103 (b9l0F3Bj): all six markets clean, AH primary -1.5, OU primary 3.5.
+    expect(engineSrc).toMatch(/bookHomeMl: -118, bookDraw: 300, bookAwayMl: 290/);
+    expect(engineSrc).toMatch(/bookSpread: -1\.5, bookTotal: 3\.5/);
+    expect(engineSrc).toMatch(/bookOver: 110, bookUnder: -137/);
+    expect(engineSrc).toMatch(/bookBttsY: -227, bookBttsN: 163/);
+    expect(engineSrc).toMatch(/bookHomeWD: -400, bookAwayWD: -110, bookNoDraw: -455/);
+    expect(engineSrc).toMatch(/bookHomeSpreadOdds: 210, bookAwaySpreadOdds: -286/);
+    // final-104 (UgbUKPmT): five clean markets + the scraped -0.75 AH line
+    // (primary-rule selection found no passing line; jul15-precedent fallback).
+    expect(engineSrc).toMatch(/bookHomeMl: 125, bookDraw: 200, bookAwayMl: 260/);
+    expect(engineSrc).toMatch(/bookSpread: -0\.75, bookTotal: 2\.5/);
+    expect(engineSrc).toMatch(/bookOver: 120, bookUnder: -149/);
+    expect(engineSrc).toMatch(/bookBttsY: -110, bookBttsN: -110/);
+    expect(engineSrc).toMatch(/bookHomeWD: -345, bookAwayWD: -161, bookNoDraw: -278/);
+    expect(engineSrc).toMatch(/bookHomeSpreadOdds: 168, bookAwaySpreadOdds: -222/);
+    // No BetExplorer market left null after the fill (adv is intentionally null).
+    expect(engineSrc).not.toMatch(/bookHomeMl: null/);
+    expect(engineSrc).not.toMatch(/bookTotal: null/);
+  });
+
   it("grows the backtest with the QF/SF results and their frozen books", () => {
     expect(engineSrc).toMatch(/fid:'wc26-qf-099', home:'NOR', away:'ENG', homeScore:1, awayScore:2/);
     expect(engineSrc).toMatch(/fid:'wc26-sf-101', home:'FRA', away:'ESP', homeScore:0, awayScore:2/);
