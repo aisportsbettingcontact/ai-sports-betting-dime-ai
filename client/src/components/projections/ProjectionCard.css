@@ -10,6 +10,8 @@
   gap: var(--space-md);
   grid-template-areas: "head" "matchup" "summary" "markets";
   padding: var(--space-lg);
+  /* Closed card ends near the disclosure row (owner directive 2026-07-18). */
+  padding-block-end: var(--space-sm);
   background: var(--card, #0a0a0a);
   color: var(--foreground, #ffffff);
   border: 1px solid var(--border, #262626);
@@ -17,14 +19,20 @@
   box-shadow: var(--elev-card);
 }
 
-.projection-card__head { grid-area: head; display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm); }
-.projection-card__league { color: var(--text-secondary, #a6a6a6); }
+/* No corner league label (owner directive 2026-07-18): the sport chip names the
+   competition. Scheduled cards render no header, and the modifier removes the
+   empty "head" row so the card gains no phantom top gap. */
+.projection-card--scheduled { grid-template-areas: "matchup" "summary" "markets"; }
+.projection-card__head { grid-area: head; display: flex; align-items: center; justify-content: flex-end; gap: var(--space-sm); }
 .projection-card__status { font-size: var(--proj-meta); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-secondary, #a6a6a6); }
 .projection-card__status--live { color: #45e0a8; } /* live = signal */
 
 /* ── Matchup (owner directive 2026-07-17: matchup line · ballpark · first pitch) ── */
 .matchup { grid-area: matchup; display: grid; gap: var(--space-sm); align-content: start; }
-.matchup__grid { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: var(--space-sm) var(--space-md); }
+.matchup__grid { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: var(--space-2xs) var(--space-xs); }
+/* Row 2: context · venue · time under the flag row, full card width so the
+   venue never truncates beside 2.5x flags (owner directive 2026-07-18). */
+.matchup__below { grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; gap: 2px; text-align: center; min-inline-size: 0; }
 .matchup__team { display: flex; align-items: center; gap: var(--space-sm); min-inline-size: 0; }
 .matchup__team--home { justify-content: flex-end; }
 .matchup__score { font-size: var(--proj-primary); font-weight: 700; font-variant-numeric: tabular-nums; }
@@ -66,8 +74,11 @@
 /* ── Markets (supporting; disclosure keeps them from dominating) ──
    Toggle reads "VIEW FULL AI MODEL PROJECTIONS" with a chevron-down to expand;
    [open] swaps it for a chevron-up to collapse (owner directive 2026-07-17). */
-.projection-card__markets { grid-area: markets; }
-.projection-card__markets-toggle { display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm); min-block-size: 2.75rem; padding-inline: var(--space-sm); cursor: pointer; color: var(--text-secondary, #a6a6a6); border-radius: 10px; list-style: none; }
+/* Tighter disclosure (owner directive 2026-07-18): the row pulls up toward the
+   summary divider and slims to 2.25rem. Tap target trades height for the full
+   card width; the [open] grid keeps its own top margin so tables never collide. */
+.projection-card__markets { grid-area: markets; margin-block-start: calc(-1 * var(--space-xs)); }
+.projection-card__markets-toggle { display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm); min-block-size: 2.25rem; padding-inline: var(--space-sm); cursor: pointer; color: var(--text-secondary, #a6a6a6); border-radius: 10px; list-style: none; }
 .projection-card__markets-toggle::-webkit-details-marker { display: none; }
 .projection-card__markets-toggle:hover { background: var(--row-hover, #141414); color: var(--foreground, #fff); }
 .projection-card__markets-toggle:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--ring, #45e0a8); }
