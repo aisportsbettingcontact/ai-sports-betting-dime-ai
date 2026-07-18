@@ -1,5 +1,5 @@
 /**
- * MobileEmptyState — Clean, intentional empty state for mobile owner tabs.
+ * MobileEmptyState — Clean, intentional empty state for the mobile screens.
  * Shows a message when no data is available for a given tab.
  * Surfaces and type follow the Dime tokens (design-system/dime-ai/MASTER.md).
  */

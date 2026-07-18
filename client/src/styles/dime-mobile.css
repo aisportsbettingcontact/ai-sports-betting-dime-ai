@@ -641,19 +641,38 @@ html:not(.dark) .bt-page [class*="bg-black/"] {
     border-radius: 8px;
   }
 
-  /* ── Feed (/feed/model/*) ─────────────────────────────────────────────── */
-  /* The bottom tab bar already navigates to Splits/Chat/Profile — hide the
-   * topbar's duplicate links when the bar is present. Non-owners (no bar)
-   * keep them so the feed is never a dead end. */
-  body.mobile-owner-tabs-active .dmf-nav {
+  /* ── Floating nav integration (docs/plans/2026-07-18-mobile-floating-nav.md)
+   * body.dime-floating-nav-active = the top-floating logo + pill nav is
+   * mounted (authed mobile users). It reserves top document-flow space via
+   * --dime-floating-nav-h (index.css) and owns the brand identity — page-level
+   * wordmark chrome hides while it is present ("one Dime identity per page").
+   * Signed-out users (no nav) keep today's page chrome untouched. */
+
+  /* Feed: the mobile topbar's only content is the centered wordmark (nav +
+   * sync are display:none <768px) — hide the whole bar and re-anchor the
+   * sticky feedhead below the floating nav. These selectors out-specify the
+   * component's inline DMF_CSS (.dmf-root .dmf-feedhead). */
+  body.dime-floating-nav-active .dmf-root .dmf-topbar {
     display: none;
   }
-  /* body.mobile-owner-tabs-active reserves 60px + safe-area globally; keep
-   * only local breathing room instead of the pre-unification 130px slab. */
-  body.mobile-owner-tabs-active .dmf-scroll {
+  body.dime-floating-nav-active .dmf-root .dmf-feedhead {
+    top: var(--dime-floating-nav-h, 112px);
+  }
+  /* The floating nav reserves its own space globally; keep only local
+   * breathing room instead of the pre-unification 130px bottom slab. */
+  body.dime-floating-nav-active .dmf-scroll {
     padding-bottom: 24px;
   }
-  /* Notch/status-bar safe area on the sticky feed chrome. */
+
+  /* Splits: the header's row 1 is brand-only — the floating logo replaces it.
+   * (The header's sticky offset comes from the generic header.sticky.top-0
+   * rule in index.css.) */
+  body.dime-floating-nav-active .bs-header .bs-brand-row {
+    display: none;
+  }
+
+  /* Notch/status-bar safe area on the sticky feed chrome (signed-out users —
+   * with the floating nav the topbar is hidden and the nav owns the inset). */
   .dmf-root .dmf-topbar {
     height: calc(46px + env(safe-area-inset-top, 0px));
     padding-top: env(safe-area-inset-top, 0px);

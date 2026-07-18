@@ -1,34 +1,44 @@
 /**
- * MobileBetTracker — Owner-only bet tracking view.
+ * MobileBetTracker — mobile bet tracking view.
  * Connects to betTracker.listWithStats (handicapperProcedure).
  * Shows recent bets, P&L summary, and win rate.
  */
 import { useEffect, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
 import { MobileDataState } from "../components/MobileDataState";
-import { mobileOwnerTabLogger } from "../logger";
-import { Receipt, TrendingUp, TrendingDown, Target, DollarSign } from "lucide-react";
+import { mobileNavLogger } from "../logger";
+import {
+  Receipt,
+  TrendingUp,
+  TrendingDown,
+  Target,
+  DollarSign,
+} from "lucide-react";
 
 export function MobileBetTracker() {
-  const betsQuery = trpc.betTracker.listWithStats.useQuery(
-    undefined,
-    { staleTime: 60_000, retry: 2 }
-  );
+  const betsQuery = trpc.betTracker.listWithStats.useQuery(undefined, {
+    staleTime: 60_000,
+    retry: 2,
+  });
 
   useEffect(() => {
-    mobileOwnerTabLogger.log("mobile_bet_tracker_data_fetch_started", "props");
+    mobileNavLogger.log("mobile_bet_tracker_data_fetch_started", "tracker");
   }, []);
 
   useEffect(() => {
     if (!betsQuery.isLoading) {
       if (betsQuery.isError) {
-        mobileOwnerTabLogger.log("mobile_bet_tracker_data_fetch_failed", "props", {
+        mobileNavLogger.log("mobile_bet_tracker_data_fetch_failed", "tracker", {
           error: betsQuery.error?.message,
         });
       } else {
-        mobileOwnerTabLogger.log("mobile_bet_tracker_data_fetch_completed", "props", {
-          totalBets: (betsQuery.data as any)?.list?.length ?? 0,
-        });
+        mobileNavLogger.log(
+          "mobile_bet_tracker_data_fetch_completed",
+          "tracker",
+          {
+            totalBets: (betsQuery.data as any)?.list?.length ?? 0,
+          }
+        );
       }
     }
   }, [betsQuery.isLoading, betsQuery.isError]);
@@ -36,10 +46,12 @@ export function MobileBetTracker() {
   const data = betsQuery.data as any;
   const bets = data?.list ?? [];
   const stats = data?.stats ?? null;
-  const isEmpty = !betsQuery.isLoading && !betsQuery.isError && bets.length === 0;
+  const isEmpty =
+    !betsQuery.isLoading && !betsQuery.isError && bets.length === 0;
 
   useEffect(() => {
-    if (isEmpty) mobileOwnerTabLogger.log("mobile_bet_tracker_empty_state_rendered", "props");
+    if (isEmpty)
+      mobileNavLogger.log("mobile_bet_tracker_empty_state_rendered", "tracker");
   }, [isEmpty]);
 
   // Compute quick stats
@@ -50,7 +62,11 @@ export function MobileBetTracker() {
       wins: stats.wins ?? 0,
       losses: stats.losses ?? 0,
       pushes: stats.pushes ?? 0,
-      winRate: stats.winPct ?? (stats.wins && stats.totalGraded ? ((stats.wins / stats.totalGraded) * 100).toFixed(1) : "0.0"),
+      winRate:
+        stats.winPct ??
+        (stats.wins && stats.totalGraded
+          ? ((stats.wins / stats.totalGraded) * 100).toFixed(1)
+          : "0.0"),
       netUnits: stats.netUnits ?? 0,
       roi: stats.roi ?? 0,
     };
@@ -80,7 +96,10 @@ export function MobileBetTracker() {
             </h1>
             <p className="dime-mono-label mt-0.5">All tracked wagers</p>
           </div>
-          <Receipt className="w-5 h-5" style={{ color: "var(--dime-text-muted)" }} />
+          <Receipt
+            className="w-5 h-5"
+            style={{ color: "var(--dime-text-muted)" }}
+          />
         </div>
       </header>
 
@@ -101,49 +120,77 @@ export function MobileBetTracker() {
               <div className="grid grid-cols-3 gap-2">
                 <div
                   className="rounded-xl border p-3 text-center"
-                  style={{ background: "var(--dime-surface-card)", borderColor: "var(--dime-border)" }}
+                  style={{
+                    background: "var(--dime-surface-card)",
+                    borderColor: "var(--dime-border)",
+                  }}
                 >
-                  <Target className="w-4 h-4 mx-auto mb-1" style={{ color: "var(--dime-text-muted)" }} />
-                  <p className="text-lg font-bold" style={{ color: "var(--dime-text-primary)" }}>
+                  <Target
+                    className="w-4 h-4 mx-auto mb-1"
+                    style={{ color: "var(--dime-text-muted)" }}
+                  />
+                  <p
+                    className="text-lg font-bold"
+                    style={{ color: "var(--dime-text-primary)" }}
+                  >
                     {quickStats.winRate}%
                   </p>
                   <p className="dime-mono-label">Win Rate</p>
                 </div>
                 <div
                   className="rounded-xl border p-3 text-center"
-                  style={{ background: "var(--dime-surface-card)", borderColor: "var(--dime-border)" }}
+                  style={{
+                    background: "var(--dime-surface-card)",
+                    borderColor: "var(--dime-border)",
+                  }}
                 >
-                  <DollarSign className="w-4 h-4 mx-auto mb-1" style={{ color: "var(--dime-text-muted)" }} />
+                  <DollarSign
+                    className="w-4 h-4 mx-auto mb-1"
+                    style={{ color: "var(--dime-text-muted)" }}
+                  />
                   <p
                     className="text-lg font-bold"
                     style={{
-                      color: Number(quickStats.netUnits) >= 0
-                        ? "var(--dime-mint-text)"
-                        : "var(--dime-text-secondary)",
+                      color:
+                        Number(quickStats.netUnits) >= 0
+                          ? "var(--dime-mint-text)"
+                          : "var(--dime-text-secondary)",
                     }}
                   >
-                    {Number(quickStats.netUnits) >= 0 ? "+" : ""}{Number(quickStats.netUnits).toFixed(1)}u
+                    {Number(quickStats.netUnits) >= 0 ? "+" : ""}
+                    {Number(quickStats.netUnits).toFixed(1)}u
                   </p>
                   <p className="dime-mono-label">Net Units</p>
                 </div>
                 <div
                   className="rounded-xl border p-3 text-center"
-                  style={{ background: "var(--dime-surface-card)", borderColor: "var(--dime-border)" }}
+                  style={{
+                    background: "var(--dime-surface-card)",
+                    borderColor: "var(--dime-border)",
+                  }}
                 >
                   {Number(quickStats.roi) >= 0 ? (
-                    <TrendingUp className="w-4 h-4 mx-auto mb-1" style={{ color: "var(--dime-mint-text)" }} />
+                    <TrendingUp
+                      className="w-4 h-4 mx-auto mb-1"
+                      style={{ color: "var(--dime-mint-text)" }}
+                    />
                   ) : (
-                    <TrendingDown className="w-4 h-4 mx-auto mb-1" style={{ color: "var(--dime-text-muted)" }} />
+                    <TrendingDown
+                      className="w-4 h-4 mx-auto mb-1"
+                      style={{ color: "var(--dime-text-muted)" }}
+                    />
                   )}
                   <p
                     className="text-lg font-bold"
                     style={{
-                      color: Number(quickStats.roi) >= 0
-                        ? "var(--dime-mint-text)"
-                        : "var(--dime-text-secondary)",
+                      color:
+                        Number(quickStats.roi) >= 0
+                          ? "var(--dime-mint-text)"
+                          : "var(--dime-text-secondary)",
                     }}
                   >
-                    {Number(quickStats.roi) >= 0 ? "+" : ""}{Number(quickStats.roi).toFixed(1)}%
+                    {Number(quickStats.roi) >= 0 ? "+" : ""}
+                    {Number(quickStats.roi).toFixed(1)}%
                   </p>
                   <p className="dime-mono-label">ROI</p>
                 </div>
@@ -157,8 +204,12 @@ export function MobileBetTracker() {
                 }}
               >
                 <span>{quickStats.totalBets} total</span>
-                <span style={{ color: "var(--dime-mint-text)" }}>{quickStats.wins}W</span>
-                <span style={{ color: "var(--dime-text-secondary)" }}>{quickStats.losses}L</span>
+                <span style={{ color: "var(--dime-mint-text)" }}>
+                  {quickStats.wins}W
+                </span>
+                <span style={{ color: "var(--dime-text-secondary)" }}>
+                  {quickStats.losses}L
+                </span>
                 <span>{quickStats.pushes}P</span>
               </div>
             </div>
@@ -179,8 +230,12 @@ export function MobileBetTracker() {
                   style={{
                     // Mint marks wins (signal). Losses are grey and the whole
                     // row de-emphasizes to 82% — never red (MASTER.md:48).
-                    background: isWin ? "var(--dime-mint-dim)" : "var(--dime-surface-card)",
-                    borderColor: isWin ? "var(--dime-mint-border)" : "var(--dime-border)",
+                    background: isWin
+                      ? "var(--dime-mint-dim)"
+                      : "var(--dime-surface-card)",
+                    borderColor: isWin
+                      ? "var(--dime-mint-border)"
+                      : "var(--dime-border)",
                     opacity: isLoss ? 0.82 : 1,
                   }}
                 >
@@ -189,7 +244,9 @@ export function MobileBetTracker() {
                       className="text-[12px] font-medium truncate max-w-[60%]"
                       style={{ color: "var(--dime-text-primary)" }}
                     >
-                      {bet.pick || bet.description || `${bet.awayTeam} @ ${bet.homeTeam}`}
+                      {bet.pick ||
+                        bet.description ||
+                        `${bet.awayTeam} @ ${bet.homeTeam}`}
                     </span>
                     <span
                       className="text-[10px] font-bold px-1.5 py-0.5 rounded-lg uppercase"
@@ -201,7 +258,9 @@ export function MobileBetTracker() {
                           : isPush || isPending
                             ? "var(--dime-text-muted)"
                             : "var(--dime-text-secondary)",
-                        background: isWin ? "var(--dime-mint-dim)" : "var(--dime-surface-raised)",
+                        background: isWin
+                          ? "var(--dime-mint-dim)"
+                          : "var(--dime-surface-raised)",
                       }}
                     >
                       {isPending ? "PENDING" : bet.result?.toUpperCase()}
@@ -216,7 +275,8 @@ export function MobileBetTracker() {
                         color: "var(--dime-text-muted)",
                       }}
                     >
-                      {bet.sport} • {bet.market || bet.betType} • {bet.odds > 0 ? `+${bet.odds}` : bet.odds}
+                      {bet.sport} • {bet.market || bet.betType} •{" "}
+                      {bet.odds > 0 ? `+${bet.odds}` : bet.odds}
                     </span>
                     <span
                       className="text-[10px]"

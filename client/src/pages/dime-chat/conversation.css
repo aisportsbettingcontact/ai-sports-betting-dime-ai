@@ -513,11 +513,48 @@ button.dc-sidebar-row {
     color: var(--text-secondary) !important;
   }
 
-  body.mobile-owner-tabs-active .dc-main:not(.dc-main--conv) {
-    padding-bottom: calc(60px + env(safe-area-inset-bottom));
-  }
-  body.mobile-owner-tabs-active .dc-main--conv .dc-composer-zone {
-    padding-bottom: calc(60px + env(safe-area-inset-bottom));
+  /* ── Floating nav integration (<768px; docs/plans/2026-07-18-mobile-floating-nav.md)
+     The chat page is a fixed full-viewport app anchored on --dc-visual-top /
+     --dc-visual-height (visualViewport keyboard tracking) — body padding
+     cannot reach it. Shift the whole fixed page down by the nav's measured
+     height and shrink it to match; every internal offset keeps deriving from
+     the same variables, so keyboard handling is untouched. The nav (z-40)
+     stays below the drawer stack (60-100), and the drawer/scrim intentionally
+     cover it (modal dominance). The floating logo owns the brand identity, so
+     the mobile bar's center wordmark hides and its safe-area padding drops
+     (the nav absorbs the inset). */
+  @media (max-width: 767px) {
+    body.dime-floating-nav-active .dc-page.dc-page--app {
+      inset: calc(var(--dc-visual-top, 0px) + var(--dime-floating-nav-h, 112px))
+        0 auto;
+      height: calc(
+        var(--dc-visual-height, 100dvh) - var(--dime-floating-nav-h, 112px)
+      );
+    }
+    body.dime-floating-nav-active .dc-app {
+      height: calc(
+        var(--dc-visual-height, 100dvh) - var(--dime-floating-nav-h, 112px)
+      );
+    }
+    body.dime-floating-nav-active .dc-mobile-bar {
+      top: calc(var(--dc-visual-top, 0px) + var(--dime-floating-nav-h, 112px));
+      height: 56px;
+      padding-top: 0;
+    }
+    body.dime-floating-nav-active .dc-mobile-bar .dc-mobile-title {
+      visibility: hidden; /* keep the 3-col grid; the floating logo is the mark */
+    }
+    body.dime-floating-nav-active .dc-main {
+      padding-top: calc(56px + 28px);
+    }
+    body.dime-floating-nav-active .dc-scroller {
+      padding-top: calc(56px + 20px);
+    }
+    body.dime-floating-nav-active .dc-edge-capture {
+      top: calc(
+        var(--dc-visual-top, 0px) + var(--dime-floating-nav-h, 112px) + 56px
+      );
+    }
   }
 }
 

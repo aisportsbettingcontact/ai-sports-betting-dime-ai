@@ -492,7 +492,9 @@ export default function WorldCup2026() {
   return (
     <div className="min-h-screen bg-[#000000] text-white">
       {/* ── Sticky header ── */}
-      <div className="sticky top-0 z-40 bg-[#000000] backdrop-blur-sm border-b border-white">
+      {/* <header> (not div): the floating-nav sticky offset targets
+          header.sticky.top-0 (index.css) so this re-anchors below the nav. */}
+      <header className="sticky top-0 z-40 bg-[#000000] backdrop-blur-sm border-b border-white">
         <div className="max-w-2xl mx-auto px-3 sm:px-4">
           {/* Title row */}
           <div className="flex items-center gap-3 pt-3 pb-2">
@@ -537,7 +539,7 @@ export default function WorldCup2026() {
             ))}
           </div>
         </div>
-      </div>
+      </header>
 
       {/* ── Content ── */}
       <div className="max-w-2xl mx-auto px-3 sm:px-4 py-4">

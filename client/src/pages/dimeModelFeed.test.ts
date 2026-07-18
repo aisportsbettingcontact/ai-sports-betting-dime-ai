@@ -194,7 +194,10 @@ describe("DimeModelFeed — routes", () => {
   it("registers both URL forms behind RequireAuth", () => {
     expect(appSrc).toMatch(/path="\/feed\/model\/:sport\/:date"/);
     expect(appSrc).toMatch(/path="\/feed\/model\/:sport"/);
-    expect(appSrc).toMatch(/<RequireAuth><DimeModelFeed/);
+    // whitespace-tolerant: prettier may fold the route JSX across lines
+    expect(appSrc.replace(/\s+/g, " ")).toMatch(
+      /<RequireAuth> ?<DimeModelFeed/
+    );
   });
 
   it("parseFeedModelPath accepts slug and split forms", () => {
