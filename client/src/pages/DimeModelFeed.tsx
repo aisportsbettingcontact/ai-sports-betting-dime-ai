@@ -21,6 +21,7 @@
  *    zero truncation down to 360px (labels stack above values <380px).
  */
 import { useEffect, useMemo, useState } from "react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
 import type { inferRouterOutputs } from "@trpc/server";
@@ -452,12 +453,9 @@ export default function DimeModelFeed(props: DimeModelFeedProps) {
               ›
             </button>
           </div>
-          {/* Combined slate (owner directive 2026-07-18): no sport toggle —
-              the count sums every league on the date; the league labels live
-              on the section headers in the list below. */}
-          <span className="dmf-micro dmf-slatecount">
-            {gamesCount} {gamesCount === 1 ? "game" : "games"}
-          </span>
+          {/* Combined slate (owner directive 2026-07-18): no sport toggle and
+              no slate count — the league headers below own identification;
+              the feedhead's bottom border stays as the divider. */}
         </div>
 
         <div className={`dmf-list${isStale ? " dmf-stale" : ""}`} aria-busy={isStale}>
@@ -475,24 +473,57 @@ export default function DimeModelFeed(props: DimeModelFeedProps) {
           ) : (
             // Combined slate, league-sectioned (owner directive 2026-07-18):
             // World Cup on top, MLB beneath — buildFeedSections owns the order
-            // and drops empty leagues. Each card still routes through its typed
-            // adapter → one shared model → the shared card. Soccer resolves
-            // country names + flags + fully labeled markets here, not in the
-            // component.
+            // and drops empty leagues. Each league is a COLLAPSIBLE container
+            // (native details/summary, open by default): official league logo
+            // + the full spelled-out name across the row, chevron affordance
+            // at the right edge. The WC emblem is theme-keyed (black FIFA
+            // wordmark on light, white on dark — CSS swaps by data-dmf-theme;
+            // both render in the same fixed box). A missing logo file hides
+            // itself and the header stays clean text.
             sections.map((section) => (
-              <section key={section.key} className="dmf-league" aria-label={section.label}>
-                <h2 className="dmf-leaguehead dmf-micro">
-                  {section.label} · {section.cards.length}{" "}
-                  {section.cards.length === 1 ? section.noun : `${section.noun}s`}
-                </h2>
-                {section.cards.map((g) => {
-                  const model =
-                    section.key === "WC"
-                      ? sportAdapters.SOCCER(g, { competition: "World Cup" })
-                      : sportAdapters.MLB(g, { competition: "MLB" });
-                  return <ProjectionCard key={g.id} game={presentationToProjectionGame(model)} />;
-                })}
-              </section>
+              <details key={section.key} className="dmf-league" open>
+                <summary className="dmf-leaguehead">
+                  <span className="dmf-lglogo" aria-hidden="true">
+                    {section.key === "WC" ? (
+                      <>
+                        <img
+                          className="dmf-lglogo-light"
+                          src="/brand/wc26-emblem-on-light.png"
+                          alt=""
+                          loading="lazy"
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                        />
+                        <img
+                          className="dmf-lglogo-dark"
+                          src="/brand/wc26-emblem-on-dark.png"
+                          alt=""
+                          loading="lazy"
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                        />
+                      </>
+                    ) : (
+                      <img
+                        src="/manus-storage/mlb-logo_50fd8568.png"
+                        alt=""
+                        loading="lazy"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                      />
+                    )}
+                  </span>
+                  <span className="dmf-lgname">{section.label}</span>
+                  <ChevronDown className="dmf-lgchev dmf-lgchev--expand" aria-hidden="true" />
+                  <ChevronUp className="dmf-lgchev dmf-lgchev--collapse" aria-hidden="true" />
+                </summary>
+                <div className="dmf-leaguebody">
+                  {section.cards.map((g) => {
+                    const model =
+                      section.key === "WC"
+                        ? sportAdapters.SOCCER(g, { competition: "World Cup" })
+                        : sportAdapters.MLB(g, { competition: "MLB" });
+                    return <ProjectionCard key={g.id} game={presentationToProjectionGame(model)} />;
+                  })}
+                </div>
+              </details>
             ))
           )}
         </div>
@@ -725,6 +756,16 @@ export function wcDisplayCity(
   return city || null;
 }
 
+/** Stadium display name drops a trailing parenthetical (owner directive
+ *  2026-07-18): "MetLife Stadium (NY/NJ)" reads "MetLife Stadium" — the city
+ *  line beside it already carries the location. Display-only: wcDisplayCity
+ *  keeps matching on the RAW stadium string. */
+export function wcDisplayStadium(stadium: string | null | undefined): string | null {
+  if (!stadium) return null;
+  const stripped = stadium.replace(/\s*\([^)]*\)\s*$/, "").trim();
+  return stripped || stadium;
+}
+
 function fmtKickoffEt(kickoffUtc: string | Date | null | undefined): string {
   if (!kickoffUtc) return "TBD";
   const d = typeof kickoffUtc === "string" ? new Date(kickoffUtc) : kickoffUtc;
@@ -929,7 +970,7 @@ function wcMatchToCard(m: WcMatch, isoDate: string): FeedCardSpec {
   // Round and venue are separate card lines (owner directive 2026-07-18):
   // the context line carries the round only, and the full venue renders on
   // its own line beneath it so the stadium is never truncated.
-  const venueBits = [m.venue?.stadium, wcDisplayCity(m.venue?.stadium, m.venue?.city)]
+  const venueBits = [wcDisplayStadium(m.venue?.stadium), wcDisplayCity(m.venue?.stadium, m.venue?.city)]
     .filter(Boolean)
     .join(" · ");
   const meta = wcRoundLabel(isoDate);
@@ -971,9 +1012,9 @@ export function slateStatusRank(card: Pick<FeedCardSpec, "liveLabel" | "timeLabe
 /** One league group in the combined slate. */
 export interface FeedSection {
   key: "WC" | "MLB";
+  /** Full spelled-out league name for the collapsible header (owner directive
+   *  2026-07-18: no game counts in the header — the name owns the width). */
   label: string;
-  /** Count noun — soccer plays "matches", baseball plays "games". */
-  noun: string;
   cards: FeedCardSpec[];
 }
 
@@ -987,8 +1028,8 @@ export function buildFeedSections(
   mlbCards: FeedCardSpec[],
 ): FeedSection[] {
   const sections: FeedSection[] = [];
-  if (wcCards.length > 0) sections.push({ key: "WC", label: "World Cup", noun: "match", cards: wcCards });
-  if (mlbCards.length > 0) sections.push({ key: "MLB", label: "MLB", noun: "game", cards: mlbCards });
+  if (wcCards.length > 0) sections.push({ key: "WC", label: "2026 FIFA World Cup", cards: wcCards });
+  if (mlbCards.length > 0) sections.push({ key: "MLB", label: "Major League Baseball (MLB)", cards: mlbCards });
   return sections;
 }
 
@@ -1104,11 +1145,30 @@ const DMF_CSS = `
 .dmf-list{display:flex;flex-direction:column;gap:12px;padding-top:6px;transition:opacity var(--dmf-t) var(--dmf-ease)}
 .dmf-list.dmf-stale{opacity:.45;pointer-events:none}
 /* League sections (owner directive 2026-07-18): the combined slate groups by
-   league — World Cup on top, MLB beneath. Header = mono micro-label; the
-   second section opens with a hairline rule so the boundary reads at a glance. */
-.dmf-league{display:flex;flex-direction:column;gap:12px}
-.dmf-leaguehead{margin:0;padding:2px 2px 0;font-weight:500}
+   league — World Cup on top, MLB beneath — and each is a COLLAPSIBLE
+   container (native details/summary, open by default). Header row spans the
+   full container width: official league logo (fixed 24px box, so the two WC
+   emblem variants render the same size), the spelled-out league name owning
+   the remaining width, chevron affordance at the right edge. No game counts.
+   The second section opens with a hairline rule. */
+.dmf-league{display:block}
 .dmf-league + .dmf-league{margin-top:10px;padding-top:16px;border-top:1px solid var(--dmf-border)}
+.dmf-leaguehead{display:flex;align-items:center;gap:10px;width:100%;min-height:36px;padding:2px 4px;cursor:pointer;list-style:none;font-family:var(--dmf-mono);font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--dmf-t2);border-radius:10px;transition:color var(--dmf-t) var(--dmf-ease),background var(--dmf-t) var(--dmf-ease)}
+.dmf-leaguehead::-webkit-details-marker{display:none}
+.dmf-leaguehead::marker{content:""}
+.dmf-leaguehead:hover{color:var(--dmf-t1)}
+.dmf-leaguehead:focus-visible{outline:none;box-shadow:0 0 0 3px var(--dmf-ring)}
+.dmf-lglogo{display:inline-grid;place-items:center;width:24px;height:24px;flex:0 0 24px}
+.dmf-lglogo img{max-width:100%;max-height:100%;object-fit:contain}
+/* WC emblem is theme-keyed: black FIFA wordmark on light, white on dark. */
+.dmf-root[data-dmf-theme="light"] .dmf-lglogo-dark{display:none}
+.dmf-root:not([data-dmf-theme="light"]) .dmf-lglogo-light{display:none}
+.dmf-lgname{flex:1;min-width:0;text-align:left}
+.dmf-lgchev{width:16px;height:16px;flex:none;color:var(--dmf-t3)}
+.dmf-lgchev--collapse{display:none}
+.dmf-league[open] .dmf-lgchev--expand{display:none}
+.dmf-league[open] .dmf-lgchev--collapse{display:inline-block}
+.dmf-leaguebody{display:flex;flex-direction:column;gap:12px;margin-top:12px}
 .dmf-game{background:var(--dmf-card);border:1px solid var(--dmf-border);border-radius:16px;display:flex;flex-direction:column;overflow:hidden;container-type:inline-size}/* card-level container: key type below scales by the CARD's width (cqi), not the viewport. Named @container dmf rules still target .dmf-root. */
 .dmf-game.dmf-pass{opacity:.82}
 .dmf-gbody{display:grid;grid-template-columns:250px 1fr 240px;align-items:stretch}
@@ -1250,13 +1310,11 @@ const DMF_CSS = `
   .dmf-root .dmf-wordmark{font-size:42px}
   .dmf-root .dmf-sync{display:none}
   .dmf-root .dmf-scroll{padding-left:16px;padding-right:16px}
-  /* Date picker centered; the slate count wraps to its own line beneath it.
-     League section headers center to match the mobile chrome axis. */
+  /* Date picker centered (no slate count — owner directive 2026-07-18; the
+     collapsible league headers below span full width with logo + chevron). */
   .dmf-root .dmf-feedhead{top:64px;flex-direction:row;flex-wrap:wrap;justify-content:center;align-items:center;gap:10px 12px}
   .dmf-root .dmf-datenav{justify-content:center;flex-wrap:nowrap;gap:8px}
   .dmf-root .dmf-datelbl{font-size:13px}
-  .dmf-root .dmf-slatecount{flex-basis:100%;order:3;text-align:center}
-  .dmf-root .dmf-leaguehead{text-align:center}
   /* Verdict micro-labels ride the t3 label tier so Pick/Edge/Grade clear
      4.5:1 on the elevated card ground. */
   .dmf-root .dmf-vl{color:var(--dmf-t3)}
