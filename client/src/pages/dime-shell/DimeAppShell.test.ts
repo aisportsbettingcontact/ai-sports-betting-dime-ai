@@ -119,8 +119,9 @@ describe("DimeAppShell integration contract", () => {
     expect(shellSource).toMatch(
       /navigate\(resolveRouteHref\(canonical\), \{ replace: true \}\)/
     );
+    // Combined feed (2026-07-18): date nav canonicalizes on the mlb- slug.
     expect(feedSource).toMatch(
-      /navigate\(resolveRouteHref\(feedModelPath\(nextSport, nextIso\)\)\)/
+      /navigate\(resolveRouteHref\(feedModelPath\("MLB", nextIso\)\)\)/
     );
     expect(splitsSource).toMatch(
       /setLocation\(resolveRouteHref\(bettingSplitsPath\(sport, selectedDate\)\)\)/
