@@ -72,6 +72,32 @@
 - **Slate order:** MLB games list earliest → latest first pitch, top to bottom
   (`timeToMinutes`; TBD start times sink to the bottom).
 
+### Owner Directives — 2026-07-18 (WC winner-scope markets)
+
+- **The two remaining WC matches replace MONEYLINE with a match-WINNER
+  market** — graded on whoever wins the match when it settles, regardless of
+  90'+injury time, extra time, or penalties:
+  - `wc26-3rd-103` (FRA home vs ENG away): **"World Cup 3rd Place"** — book
+    France **-215** / England **+170** (owner-provided 2026-07-18).
+  - `wc26-final-104` (ESP home vs ARG away): **"To Win the World Cup"** —
+    book Spain **-150** / Argentina **+130** (owner-provided 2026-07-18).
+- **Model odds for this scope = `model_*_to_advance`** from the v27 engine
+  (`server/wc2026/v27_jul18_engine.mjs` `deriveAllMarkets`): P(win 90') +
+  P(draw) × [ET sub-sim at λ/3 + pens 50.5/49.5 home/away] — for these two
+  matches that is literally "wins the match outright" (engine header). They
+  flow `wc2026_model_projections.to_advance_*_odds` → router
+  `modelOdds.toAdvance*` → the winner column. Edge = 2-way
+  `calculateEdge(book, model)` (model side is fair: pAdvH+pAdvA=1); the mint
+  edge cell, footers, and carousel populate through the standard pipeline.
+- The client map (`WC_WINNER_MARKETS`, DimeModelFeed.tsx) pins the
+  v27-verified orientation; a live-row disagreement falls back to plain ML
+  rather than misassigning the owner book prices.
+- **Scope clarity:** on these two cards the headers of DRAW, SPREAD,
+  DOUBLE CHANCE, and BOTH TEAMS TO SCORE append **"(90 Min)"** (display-only
+  tag; market shapes/labels resolve from the base title). Total keeps its
+  plain header. Picks read "France 3rd Place" / "Spain to Win WC" so the
+  summary readout and carousel always name the market.
+
 ### Owner Directives — 2026-07-18 (combined slate)
 
 - **One collective feed — no sport toggle.** The MLB / World Cup chips are
