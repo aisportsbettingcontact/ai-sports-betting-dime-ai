@@ -1,0 +1,284 @@
+/* MobileFloatingNav — top floating logo chip + pill menu (<768px only).
+ * All colors resolve from the global --dime-* tokens (styles/dime-mobile.css),
+ * so the assembly follows the app theme (html.dark) with no state wiring.
+ * THREE-COLOR-LAW: solid fills only; alpha lives exclusively in box-shadow
+ * (the floating-surface/menu shadow tier). No gradients, no backdrop blur. */
+
+.mfn-wrap {
+  /* Menu shadow — the Law's floating-surface tier (light value; html.dark
+   * overrides below). The Chat pill carries a tighter lift of the same tier. */
+  --mfn-shadow: 0 12px 32px rgba(11, 11, 15, 0.18);
+  --mfn-chat-shadow: 0 4px 14px rgba(11, 11, 15, 0.22);
+
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  /* Below the app modals (AgeModal/LoginModal at z-50) and the chat drawer
+   * stack (60-100); above page sticky headers (≤40, by later DOM order). */
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: calc(env(safe-area-inset-top, 0px) + 8px) 8px 0;
+  pointer-events: none; /* only the chip + menu are interactive */
+}
+
+html.dark .mfn-wrap {
+  --mfn-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
+  --mfn-chat-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+}
+
+/* The JS gate (<768px) already unmounts the nav on tablet/desktop; this is a
+ * belt-and-suspenders guard against a resize race before React re-renders. */
+@media (min-width: 768px) {
+  .mfn-wrap {
+    display: none;
+  }
+}
+
+/* ── Logo chip ───────────────────────────────────────────────────────────── */
+
+.mfn-logo-chip {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 34px;
+  padding: 0 14px;
+  background: var(--dime-surface-raised);
+  border: 1px solid var(--dime-border);
+  border-radius: 17px;
+  box-shadow: var(--mfn-shadow);
+}
+
+/* Brand wordmark (MASTER.md:62): weight 700, tracking −0.05em, mint coin-dot
+ * at 0.2em with the light-mode hairline keyline. */
+.mfn-wordmark {
+  font-family: var(--dime-font-sans);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.05em;
+  line-height: 1;
+  color: var(--dime-text-primary);
+}
+
+.mfn-i {
+  position: relative;
+  display: inline-block;
+}
+
+.mfn-coindot {
+  position: absolute;
+  width: 0.2em;
+  height: 0.2em;
+  border-radius: 50%;
+  background: var(--dime-mint);
+  left: calc(50% + 0.03em);
+  top: 0.05em;
+  transform: translateX(-50%);
+  box-shadow: var(--dime-coin-keyline);
+}
+
+/* ── Pill menu ───────────────────────────────────────────────────────────── */
+
+.mfn-nav {
+  pointer-events: auto;
+  width: min(100%, 448px);
+  background: var(--dime-surface-raised);
+  border: 1px solid var(--dime-border);
+  border-radius: 26px;
+  box-shadow: var(--mfn-shadow);
+  padding: 5px;
+  box-sizing: border-box;
+}
+
+/* Deterministic Chat centering: the four flanking tracks are identical
+ * minmax(0, 1fr) columns, so the auto (Chat) track's center IS the menu's
+ * center no matter how wide "Feed"/"Tools" vs "Bet Tracker"/"Profile"
+ * render — the zero minimum keeps the tracks equal even when a label's
+ * min-content exceeds its share (the label wraps instead of skewing the
+ * center). */
+.mfn-grid {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1fr) minmax(0, 1fr) auto minmax(0, 1fr)
+    minmax(0, 1fr);
+  align-items: center;
+  gap: 2px;
+}
+
+/* ── Destination items ───────────────────────────────────────────────────── */
+
+.mfn-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px; /* WCAG touch-target floor */
+  min-width: 44px;
+  padding: 8px 4px;
+  border-radius: 20px;
+  text-align: center;
+  text-decoration: none;
+  font-family: var(--dime-font-sans);
+  font-size: 12px; /* Grotesk body floor (brand law) */
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: 0.01em;
+  color: var(--dime-text-secondary);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background-color var(--dime-t) var(--dime-ease),
+    color var(--dime-t) var(--dime-ease),
+    transform var(--dime-t) var(--dime-ease),
+    opacity var(--dime-t) var(--dime-ease);
+}
+
+/* Active destination: raised fill + weight + mint dot — never color alone.
+ * aria-current="page" is the single source of active semantics AND styling. */
+.mfn-item[aria-current="page"] {
+  background: var(--dime-row-active);
+  color: var(--dime-text-primary);
+  font-weight: 600;
+}
+
+.mfn-item[aria-current="page"]::after {
+  content: "";
+  position: absolute;
+  bottom: 3px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--dime-mint);
+  /* Brand coin-dot rule: mint dot needs a near-black hairline on light. */
+  box-shadow: var(--dime-coin-keyline);
+}
+
+/* Hover only on hover-capable devices — no stuck hover states on touch. */
+@media (hover: hover) {
+  .mfn-item:not(.mfn-chat):hover {
+    background: var(--dime-row-active);
+    color: var(--dime-text-primary);
+  }
+  .mfn-chat:hover {
+    opacity: 0.85; /* MASTER.md pill hover */
+  }
+}
+
+/* Pressed-state compression (transform-only, Law v3). */
+.mfn-item:active {
+  transform: scale(0.96);
+}
+
+/* Visible keyboard focus: 3px mint ring (brand focus law). */
+.mfn-item:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--dime-ring);
+}
+
+/* ── Chat primary pill ───────────────────────────────────────────────────── */
+
+.mfn-chat {
+  min-height: 48px;
+  padding: 8px 14px;
+  border-radius: 24px;
+  /* Exact brand mint #45E0A8 (token verified) — never darkened per spec;
+   * contrast comes from the near-black ink (~12:1, both themes). */
+  background: var(--dime-mint);
+  color: #000000;
+  font-size: 13px;
+  font-weight: 700;
+  display: inline-flex;
+  gap: 5px;
+  white-space: nowrap;
+  box-shadow: var(--mfn-chat-shadow);
+}
+
+.mfn-chat:active {
+  transform: scale(0.97);
+}
+
+/* Mint-on-mint focus ring would vanish — gap ring keeps it visible. */
+.mfn-chat:focus-visible {
+  box-shadow:
+    0 0 0 2px var(--dime-surface-raised),
+    0 0 0 5px var(--dime-ring);
+}
+
+.mfn-chat-text {
+  line-height: 1;
+}
+
+/* Chat's persistent primary emphasis and route-activation are separate
+ * concepts: when /chat IS the current route, the pill keeps the exact mint
+ * fill and black ink (the generic active rule above must not swap it onto
+ * the raised grey), and the activation dot flips to white — the coin-dot
+ * rule's on-mint form — so the active state stays unambiguous on mint. */
+.mfn-item.mfn-chat[aria-current="page"] {
+  background: var(--dime-mint);
+  color: #000000;
+  font-weight: 700;
+}
+
+.mfn-item.mfn-chat[aria-current="page"]::after {
+  background: #ffffff;
+  box-shadow: none;
+}
+
+/* Inline wordmark inside the mint pill: black ink; the coin-dot flips to
+ * white per the brand rule (mint dot on black · mint+hairline on white ·
+ * WHITE dot on mint). Decorative — the link's aria-label carries the name. */
+.mfn-chat .mfn-wordmark {
+  font-size: 15px;
+  color: #000000;
+}
+
+.mfn-chat .mfn-coindot {
+  background: #ffffff;
+  box-shadow: none;
+}
+
+/* ── Compact tier (≤374px): tighten paddings so the mint pill's content
+ * always fits inside it at the 320px floor. Label size stays at the 12px
+ * Grotesk floor; only chrome spacing compresses. ─────────────────────────── */
+
+@media (max-width: 374px) {
+  .mfn-wrap {
+    padding-left: 6px;
+    padding-right: 6px;
+  }
+  .mfn-nav {
+    padding: 4px;
+  }
+  .mfn-grid {
+    gap: 1px;
+  }
+  .mfn-item {
+    padding: 8px 2px;
+  }
+  .mfn-chat {
+    font-size: 12px;
+    gap: 4px;
+    padding: 8px 10px;
+  }
+  .mfn-chat .mfn-wordmark {
+    font-size: 13px;
+  }
+}
+
+/* ── Reduced motion: no transitions, no compression ──────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .mfn-item {
+    transition: none;
+  }
+  .mfn-item:active,
+  .mfn-chat:active {
+    transform: none;
+  }
+}

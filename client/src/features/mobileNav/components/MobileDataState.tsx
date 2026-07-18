@@ -1,5 +1,5 @@
 /**
- * MobileDataState — Unified data state wrapper for mobile owner tabs.
+ * MobileDataState — Unified data state wrapper for the mobile screens.
  * Handles loading/empty/error states with consistent UX.
  */
 import { MobileLoadingState } from "./MobileLoadingState";
@@ -30,7 +30,9 @@ export function MobileDataState({
   children,
 }: MobileDataStateProps) {
   if (isLoading) return <MobileLoadingState label={loadingLabel} />;
-  if (isError) return <MobileErrorState message={errorMessage} onRetry={onRetry} />;
-  if (isEmpty) return <MobileEmptyState message={emptyMessage} icon={emptyIcon} />;
+  if (isError)
+    return <MobileErrorState message={errorMessage} onRetry={onRetry} />;
+  if (isEmpty)
+    return <MobileEmptyState message={emptyMessage} icon={emptyIcon} />;
   return <>{children}</>;
 }

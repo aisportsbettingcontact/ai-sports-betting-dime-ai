@@ -28,10 +28,16 @@
   width: 100%;
 }
 
-/* The global owner-tabs body class already reserves 60px + the safe-area
-   inset for the bottom bar — don't double-count the inset locally. */
-body.mobile-owner-tabs-active .pf-page {
-  padding-bottom: 24px;
+/* Floating-nav integration (docs/plans/2026-07-18-mobile-floating-nav.md):
+   the floating logo owns the brand identity, so the hero's own wordmark
+   hides and the hero's top padding drops to a local rhythm — the body-level
+   clearance (padding-top: var(--dime-floating-nav-h)) already covers the
+   nav + safe-area inset. Signed-out users (no nav) keep the full hero. */
+body.dime-floating-nav-active .pf-wordmark {
+  display: none;
+}
+body.dime-floating-nav-active .pf-hero {
+  padding-top: 16px;
 }
 
 /* ---------- Identity hero ---------- */

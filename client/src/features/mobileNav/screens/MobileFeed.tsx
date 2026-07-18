@@ -1,5 +1,5 @@
 /**
- * MobileFeed — Owner-only intelligence feed.
+ * MobileFeed — mobile intelligence feed screen.
  * Connects to real platform data:
  *   - games.list (MLB model projections)
  *   - wc2026.matchesByDate (World Cup projections + edges)
@@ -8,7 +8,7 @@
 import { useEffect, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
 import { MobileDataState } from "../components/MobileDataState";
-import { mobileOwnerTabLogger } from "../logger";
+import { mobileNavLogger } from "../logger";
 import { TrendingUp, Globe, Zap, Clock } from "lucide-react";
 
 // ─── Feed Card Component ──────────────────────────────────────────────────────
@@ -56,7 +56,9 @@ function FeedCard({
           </div>
         </div>
         {value && (
-          <span className={`text-sm font-mono font-semibold shrink-0 ${valueColor}`}>
+          <span
+            className={`text-sm font-mono font-semibold shrink-0 ${valueColor}`}
+          >
             {value}
           </span>
         )}
@@ -90,7 +92,7 @@ export function MobileFeed() {
 
   // Log data fetch lifecycle
   useEffect(() => {
-    mobileOwnerTabLogger.log("mobile_feed_data_fetch_started", "feed", {
+    mobileNavLogger.log("mobile_feed_data_fetch_started", "feed", {
       data_source: "games.list + wc2026.matchesByDate",
       date: today,
     });
@@ -99,18 +101,23 @@ export function MobileFeed() {
   useEffect(() => {
     if (!mlbQuery.isLoading && !wcQuery.isLoading) {
       if (mlbQuery.isError && wcQuery.isError) {
-        mobileOwnerTabLogger.log("mobile_feed_data_fetch_failed", "feed", {
+        mobileNavLogger.log("mobile_feed_data_fetch_failed", "feed", {
           mlb_error: mlbQuery.error?.message,
           wc_error: wcQuery.error?.message,
         });
       } else {
-        mobileOwnerTabLogger.log("mobile_feed_data_fetch_completed", "feed", {
+        mobileNavLogger.log("mobile_feed_data_fetch_completed", "feed", {
           mlb_games: (mlbQuery.data as any[])?.length ?? 0,
           wc_matches: (wcQuery.data as any[])?.length ?? 0,
         });
       }
     }
-  }, [mlbQuery.isLoading, wcQuery.isLoading, mlbQuery.isError, wcQuery.isError]);
+  }, [
+    mlbQuery.isLoading,
+    wcQuery.isLoading,
+    mlbQuery.isError,
+    wcQuery.isError,
+  ]);
 
   // Build feed cards from real data
   const feedCards = useMemo(() => {
@@ -139,7 +146,10 @@ export function MobileFeed() {
             subtitle: `R16 • ${match.venue || "TBD"}`,
             sport: "World Cup",
             timestamp: match.kickoffUtc
-              ? new Date(match.kickoffUtc).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+              ? new Date(match.kickoffUtc).toLocaleTimeString([], {
+                  hour: "numeric",
+                  minute: "2-digit",
+                })
               : undefined,
           });
           continue;
@@ -149,12 +159,14 @@ export function MobileFeed() {
         const modelHomeMl = odds.model_home_ml;
         const bookHomeMl = odds.book_home_ml;
         if (modelHomeMl && bookHomeMl) {
-          const modelProb = modelHomeMl < 0
-            ? Math.abs(modelHomeMl) / (Math.abs(modelHomeMl) + 100)
-            : 100 / (modelHomeMl + 100);
-          const bookProb = bookHomeMl < 0
-            ? Math.abs(bookHomeMl) / (Math.abs(bookHomeMl) + 100)
-            : 100 / (bookHomeMl + 100);
+          const modelProb =
+            modelHomeMl < 0
+              ? Math.abs(modelHomeMl) / (Math.abs(modelHomeMl) + 100)
+              : 100 / (modelHomeMl + 100);
+          const bookProb =
+            bookHomeMl < 0
+              ? Math.abs(bookHomeMl) / (Math.abs(bookHomeMl) + 100)
+              : 100 / (bookHomeMl + 100);
           const edge = ((modelProb - bookProb) * 100).toFixed(1);
 
           if (Number(edge) > 5) {
@@ -178,7 +190,10 @@ export function MobileFeed() {
           subtitle: `R16 • ${match.venue || "TBD"}`,
           sport: "World Cup",
           timestamp: match.kickoffUtc
-            ? new Date(match.kickoffUtc).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+            ? new Date(match.kickoffUtc).toLocaleTimeString([], {
+                hour: "numeric",
+                minute: "2-digit",
+              })
             : undefined,
         });
       }
@@ -228,7 +243,9 @@ export function MobileFeed() {
 
   useEffect(() => {
     if (isEmpty) {
-      mobileOwnerTabLogger.log("mobile_feed_empty_state_rendered", "feed", { date: today });
+      mobileNavLogger.log("mobile_feed_empty_state_rendered", "feed", {
+        date: today,
+      });
     }
   }, [isEmpty, today]);
 
@@ -238,7 +255,9 @@ export function MobileFeed() {
       <header className="sticky top-0 z-40 bg-black backdrop-blur-sm border-b border-white px-4 py-3">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-lg font-bold text-white tracking-tight">Intelligence Feed</h1>
+            <h1 className="text-lg font-bold text-white tracking-tight">
+              Intelligence Feed
+            </h1>
             <p className="text-[10px] text-white mt-0.5">
               {today} • Real-time model & market signals
             </p>
@@ -264,7 +283,7 @@ export function MobileFeed() {
           }}
         >
           <div className="flex flex-col gap-3 px-4 py-4">
-            {feedCards.map((card) => (
+            {feedCards.map(card => (
               <FeedCard key={card.id} {...card} />
             ))}
           </div>

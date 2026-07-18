@@ -6,24 +6,51 @@
  * Click behavior: toast "Coming soon in test mode" + log.
  */
 import { useEffect, useState } from "react";
-import { MessageSquare, Zap, TrendingUp, BarChart3, Brain, Sparkles } from "lucide-react";
+import {
+  MessageSquare,
+  Zap,
+  TrendingUp,
+  BarChart3,
+  Brain,
+  Sparkles,
+} from "lucide-react";
 import { toast } from "sonner";
-import { mobileOwnerTabLogger } from "../logger";
+import { mobileNavLogger } from "../logger";
 
 // ─── AI Action Pricing (Blueprint-defined) ──────────────────────────────────
 const AI_ACTIONS = [
   { id: "explain_edge", label: "Explain this edge", credits: 250, icon: Zap },
-  { id: "find_price", label: "Find playable price", credits: 350, icon: TrendingUp },
-  { id: "analyze_movement", label: "Analyze line movement", credits: 400, icon: BarChart3 },
-  { id: "break_down_game", label: "Break down this game", credits: 750, icon: Brain },
-  { id: "summarize_slate", label: "Summarize today's slate", credits: 2500, icon: Sparkles },
+  {
+    id: "find_price",
+    label: "Find playable price",
+    credits: 350,
+    icon: TrendingUp,
+  },
+  {
+    id: "analyze_movement",
+    label: "Analyze line movement",
+    credits: 400,
+    icon: BarChart3,
+  },
+  {
+    id: "break_down_game",
+    label: "Break down this game",
+    credits: 750,
+    icon: Brain,
+  },
+  {
+    id: "summarize_slate",
+    label: "Summarize today's slate",
+    credits: 2500,
+    icon: Sparkles,
+  },
 ] as const;
 
 export function MobileChat() {
-  const [creditState] = useState<"owner_unlimited" | "not_initialized">("owner_unlimited");
+  const [creditState] = useState<"planned" | "not_initialized">("planned");
 
   useEffect(() => {
-    mobileOwnerTabLogger.log("mobile_chat_state_loaded", "chat", {
+    mobileNavLogger.log("mobile_chat_state_loaded", "chat", {
       credit_state: creditState,
       actions_available: AI_ACTIONS.length,
       openai_calls_enabled: false,
@@ -33,7 +60,7 @@ export function MobileChat() {
 
   const handleActionClick = (actionId: string, actionLabel: string) => {
     // Log the click
-    mobileOwnerTabLogger.log("mobile_chat_preview_action_clicked", "chat", {
+    mobileNavLogger.log("mobile_chat_preview_action_clicked", "chat", {
       action_id: actionId,
       action_label: actionLabel,
       blocked: true,
@@ -41,12 +68,15 @@ export function MobileChat() {
     });
 
     // Show toast — no OpenAI call, no credit deduction
-    toast.info(`"${actionLabel}" will be available when Dime Chat is activated.`, {
-      description: "Coming soon in test mode",
-    });
+    toast.info(
+      `"${actionLabel}" will be available when Dime Chat is activated.`,
+      {
+        description: "Coming soon in test mode",
+      }
+    );
 
     // Log the block
-    mobileOwnerTabLogger.log("mobile_chat_preview_action_blocked", "chat", {
+    mobileNavLogger.log("mobile_chat_preview_action_blocked", "chat", {
       action_id: actionId,
       reason: "no_openai_in_phase_2",
     });
@@ -62,8 +92,12 @@ export function MobileChat() {
               <Sparkles className="w-4 h-4 text-white" />
             </div>
             <div>
-              <h1 className="text-lg font-bold text-white tracking-tight">Dime Chat</h1>
-              <p className="text-[10px] text-white">Preview mode. No active calls.</p>
+              <h1 className="text-lg font-bold text-white tracking-tight">
+                Dime Chat
+              </h1>
+              <p className="text-[10px] text-white">
+                Preview mode. No active calls.
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-1.5 bg-black px-2 py-1 rounded">
@@ -76,8 +110,10 @@ export function MobileChat() {
       <div className="mx-4 mt-4 rounded-xl bg-black border border-white p-3">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-[10px] text-white uppercase tracking-wider">Dime Credits</p>
-            {creditState === "owner_unlimited" ? (
+            <p className="text-[10px] text-white uppercase tracking-wider">
+              Dime Credits
+            </p>
+            {creditState === "planned" ? (
               <p className="text-sm text-[#45E0A8] font-semibold mt-0.5">
                 20,000 monthly Dime Credits planned
               </p>
@@ -89,15 +125,18 @@ export function MobileChat() {
           </div>
         </div>
         <p className="text-[10px] text-white mt-2">
-          Credits are consumed per action. Owner accounts receive 20,000 monthly credits.
+          Credits are consumed per action. Accounts receive 20,000 monthly
+          credits.
         </p>
       </div>
 
       {/* Action Pricing List */}
       <div className="flex-1 px-4 mt-5 overflow-y-auto">
-        <p className="text-[10px] text-white uppercase tracking-wider mb-3">Available Actions</p>
+        <p className="text-[10px] text-white uppercase tracking-wider mb-3">
+          Available Actions
+        </p>
         <div className="space-y-2">
-          {AI_ACTIONS.map((action) => {
+          {AI_ACTIONS.map(action => {
             const Icon = action.icon;
             return (
               <button
@@ -109,7 +148,9 @@ export function MobileChat() {
                   <Icon className="w-4 h-4 text-[#45E0A8]" />
                 </div>
                 <div className="flex-1 text-left">
-                  <p className="text-sm font-medium text-white">{action.label}</p>
+                  <p className="text-sm font-medium text-white">
+                    {action.label}
+                  </p>
                 </div>
                 <div className="text-xs text-white font-mono bg-black px-2 py-0.5 rounded">
                   {action.credits.toLocaleString()}
@@ -122,8 +163,8 @@ export function MobileChat() {
         {/* Info Footer */}
         <div className="mt-4 p-3 rounded-lg bg-black border border-white">
           <p className="text-[10px] text-white leading-relaxed">
-            Actions will be activated in a future phase. No OpenAI calls are made in preview mode.
-            No credits are deducted.
+            Actions will be activated in a future phase. No OpenAI calls are
+            made in preview mode. No credits are deducted.
           </p>
         </div>
       </div>

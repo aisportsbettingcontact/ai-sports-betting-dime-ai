@@ -1,54 +1,49 @@
 /**
- * MobileOwnerDebugPanel
+ * MobileNavDebugPanel
  * ═════════════════════
- * Floating debug overlay accessible only to owners.
+ * Floating debug overlay (flag-gated, off in production).
  * Shows event log, session info, feature flags, and performance metrics.
  * Toggle with triple-tap on the bottom tab bar area.
  */
 
 import { useEffect, useState } from "react";
 import { X, Bug, Download, Trash2 } from "lucide-react";
-import {
-  MOBILE_OWNER_TABS_ENABLED,
-  MOBILE_OWNER_TABS_TEST_MODE,
-  MOBILE_OWNER_TABS_PUBLIC_ENABLED,
-  MOBILE_OWNER_TABS_DEBUG_PANEL,
-} from "./config";
-import { mobileOwnerTabLogger } from "./logger";
+import { MOBILE_NAV_ENABLED, MOBILE_NAV_DEBUG_PANEL } from "./config";
+import { mobileNavLogger } from "./logger";
 
-export function MobileOwnerDebugPanel() {
+export function MobileNavDebugPanel() {
   const [isOpen, setIsOpen] = useState(false);
-  const [entries, setEntries] = useState(mobileOwnerTabLogger.getEntries());
+  const [entries, setEntries] = useState(mobileNavLogger.getEntries());
 
   // Refresh entries when panel opens
   useEffect(() => {
     if (isOpen) {
-      setEntries(mobileOwnerTabLogger.getEntries());
-      mobileOwnerTabLogger.log("debug_panel_opened");
+      setEntries(mobileNavLogger.getEntries());
+      mobileNavLogger.log("debug_panel_opened");
       const interval = setInterval(() => {
-        setEntries(mobileOwnerTabLogger.getEntries());
+        setEntries(mobileNavLogger.getEntries());
       }, 1000);
       return () => clearInterval(interval);
     } else {
-      mobileOwnerTabLogger.log("debug_panel_closed");
+      mobileNavLogger.log("debug_panel_closed");
     }
   }, [isOpen]);
 
-  if (!MOBILE_OWNER_TABS_DEBUG_PANEL) return null;
+  if (!MOBILE_NAV_DEBUG_PANEL) return null;
 
   function handleExport() {
-    const json = mobileOwnerTabLogger.exportJSON();
+    const json = mobileNavLogger.exportJSON();
     const blob = new Blob([json], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `mobile-owner-tabs-log-${Date.now()}.json`;
+    a.download = `mobile-nav-log-${Date.now()}.json`;
     a.click();
     URL.revokeObjectURL(url);
   }
 
   function handleClear() {
-    mobileOwnerTabLogger.clear();
+    mobileNavLogger.clear();
     setEntries([]);
   }
 
@@ -74,7 +69,10 @@ export function MobileOwnerDebugPanel() {
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-white">
             <div className="flex items-center gap-2">
-              <Bug className="w-4 h-4" style={{ color: "var(--dime-mint-text)" }} />
+              <Bug
+                className="w-4 h-4"
+                style={{ color: "var(--dime-mint-text)" }}
+              />
               <span className="text-sm font-bold text-white">Debug Panel</span>
               <span className="text-[10px] text-white">
                 {entries.length} events
@@ -87,7 +85,10 @@ export function MobileOwnerDebugPanel() {
               <button onClick={handleClear} className="p-1.5 rounded bg-black">
                 <Trash2 className="w-3.5 h-3.5 text-white" />
               </button>
-              <button onClick={() => setIsOpen(false)} className="p-1.5 rounded bg-black">
+              <button
+                onClick={() => setIsOpen(false)}
+                className="p-1.5 rounded bg-black"
+              >
                 <X className="w-3.5 h-3.5 text-white" />
               </button>
             </div>
@@ -99,10 +100,8 @@ export function MobileOwnerDebugPanel() {
               Feature Flags
             </div>
             <div className="flex flex-wrap gap-1.5">
-              <FlagBadge label="ENABLED" active={MOBILE_OWNER_TABS_ENABLED} />
-              <FlagBadge label="TEST_MODE" active={MOBILE_OWNER_TABS_TEST_MODE} />
-              <FlagBadge label="PUBLIC" active={MOBILE_OWNER_TABS_PUBLIC_ENABLED} />
-              <FlagBadge label="DEBUG" active={MOBILE_OWNER_TABS_DEBUG_PANEL} />
+              <FlagBadge label="ENABLED" active={MOBILE_NAV_ENABLED} />
+              <FlagBadge label="DEBUG" active={MOBILE_NAV_DEBUG_PANEL} />
             </div>
           </div>
 
@@ -112,7 +111,8 @@ export function MobileOwnerDebugPanel() {
               Session
             </div>
             <div className="text-[10px] text-white font-mono">
-              ID: {mobileOwnerTabLogger.getSessionId()} | Duration: {(mobileOwnerTabLogger.getSessionDuration() / 1000).toFixed(1)}s
+              ID: {mobileNavLogger.getSessionId()} | Duration:{" "}
+              {(mobileNavLogger.getSessionDuration() / 1000).toFixed(1)}s
             </div>
           </div>
 
@@ -122,26 +122,33 @@ export function MobileOwnerDebugPanel() {
               Event Log (newest first)
             </div>
             <div className="space-y-0.5">
-              {[...entries].reverse().slice(0, 100).map((entry, i) => (
-                <div key={i} className="flex items-start gap-2 py-0.5">
-                  <span className="text-[9px] text-white font-mono shrink-0 w-16">
-                    {new Date(entry.timestamp).toLocaleTimeString("en-US", { hour12: false })}
-                  </span>
-                  <span className={`text-[9px] font-mono shrink-0 w-6 ${
-                    entry.tabId ? "text-[#45E0A8]" : "text-white"
-                  }`}>
-                    {entry.tabId ? entry.tabId.slice(0, 4) : "sys"}
-                  </span>
-                  <span className="text-[9px] text-white font-mono">
-                    {entry.event}
-                  </span>
-                  {entry.metadata && (
-                    <span className="text-[9px] text-white font-mono truncate">
-                      {JSON.stringify(entry.metadata)}
+              {[...entries]
+                .reverse()
+                .slice(0, 100)
+                .map((entry, i) => (
+                  <div key={i} className="flex items-start gap-2 py-0.5">
+                    <span className="text-[9px] text-white font-mono shrink-0 w-16">
+                      {new Date(entry.timestamp).toLocaleTimeString("en-US", {
+                        hour12: false,
+                      })}
                     </span>
-                  )}
-                </div>
-              ))}
+                    <span
+                      className={`text-[9px] font-mono shrink-0 w-6 ${
+                        entry.tabId ? "text-[#45E0A8]" : "text-white"
+                      }`}
+                    >
+                      {entry.tabId ? entry.tabId.slice(0, 4) : "sys"}
+                    </span>
+                    <span className="text-[9px] text-white font-mono">
+                      {entry.event}
+                    </span>
+                    {entry.metadata && (
+                      <span className="text-[9px] text-white font-mono truncate">
+                        {JSON.stringify(entry.metadata)}
+                      </span>
+                    )}
+                  </div>
+                ))}
             </div>
           </div>
         </div>
