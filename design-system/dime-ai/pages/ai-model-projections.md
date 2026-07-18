@@ -66,10 +66,27 @@
   a leading team abbr → the team name (`ATH ML` → "ATHLETICS ML").
   *(2026-07-18: the "tables keep compact form" clause is superseded — see below.)*
 - **Mobile chrome centering (<768px):** dime wordmark centered in the topbar;
-  date nav (‹ date › + slate count) and sport chips stack centered; the summary
-  block centers above the markets disclosure on mobile-width cards.
+  date nav (‹ date › + slate count) stacks centered *(sport chips removed
+  2026-07-18 — see combined slate below)*; the summary block centers above
+  the markets disclosure on mobile-width cards.
 - **Slate order:** MLB games list earliest → latest first pitch, top to bottom
   (`timeToMinutes`; TBD start times sink to the bottom).
+
+### Owner Directives — 2026-07-18 (combined slate)
+
+- **One collective feed — no sport toggle.** The MLB / World Cup chips are
+  removed; both leagues load for the selected date and render in ONE list,
+  grouped by league: **World Cup on top, MLB beneath** (CBS-scores-style
+  league grouping — ONLY the grouping/order is mirrored, no other CBS
+  element). Rationale: two WC matches remain, then MLB carries the feed
+  until NCAAF/NFL return.
+- League section header = mono micro-label with count ("WORLD CUP · 2
+  MATCHES", "MLB · 14 GAMES"); a league with no games that date renders no
+  section (no empty WC header after the final). The feedhead slate count
+  sums every league. Within a section the existing slate order holds
+  (first pitch asc; LIVE > upcoming > FINAL tiers).
+- Date nav canonicalizes on the `mlb-` slug (one URL per date); legacy
+  `wc-` deep links still parse and render the same combined slate.
 
 ### Owner Directives — 2026-07-18 (edge labeling + multi-edge carousel)
 
