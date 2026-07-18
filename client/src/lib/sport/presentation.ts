@@ -79,8 +79,12 @@ export interface MarketPresentationModel {
   /** Sport-appropriate market name — never forced into MLB terminology. */
   label: string;
   selections: MarketSelectionModel[];
-  /** A preserved result/verdict line (e.g. "NO EDGE"), shown verbatim. */
+  /** The market's footer line: "NO EDGE", or the winning side + edge
+   *  ("Spain ML · +3.1%") — edges live in the footer (owner directive
+   *  2026-07-18), never inline beside the model price. */
   resultLabel?: string;
+  /** True when resultLabel carries a real edge (mint footer styling). */
+  resultIsEdge?: boolean;
 }
 
 /** The existing projection/decision output, unchanged — just carried along. */
@@ -115,7 +119,8 @@ export function assertNever(x: never): never {
 }
 
 /**
- * Full double-chance label from the event's participants — "Spain Win or Draw".
+ * Full double-chance label from the event's participants — "Spain Win/Draw"
+ * (owner directive 2026-07-18: "Win/Draw", not "Win or Draw").
  * HOME_OR_DRAW ALWAYS resolves to the home participant, AWAY_OR_DRAW to the away
  * participant, regardless of the order sides arrive in from a provider.
  */
@@ -125,9 +130,9 @@ export function formatDoubleChanceSelection(
 ): string {
   switch (selection) {
     case "HOME_OR_DRAW":
-      return `${event.homeParticipant.displayName} Win or Draw`;
+      return `${event.homeParticipant.displayName} Win/Draw`;
     case "AWAY_OR_DRAW":
-      return `${event.awayParticipant.displayName} Win or Draw`;
+      return `${event.awayParticipant.displayName} Win/Draw`;
     case "DRAW":
       return "Draw";
     default:
@@ -205,6 +210,37 @@ function startTimeOf(raw: FeedEventLike, status: EventStatus): string | undefine
   return status === "final" ? undefined : raw.timeLabel || undefined;
 }
 
+/** Spelled-out market titles (owner directive 2026-07-18): no abbreviated
+ *  headers above the market tables. Unlisted titles pass through verbatim. */
+const MARKET_DISPLAY_LABELS: Record<string, string> = {
+  "ml": "Moneyline",
+  "to adv": "To Advance",
+  "dbl chc": "Double Chance",
+  "btts": "Both Teams to Score",
+};
+function marketDisplayLabel(title: string): string {
+  return MARKET_DISPLAY_LABELS[title.trim().toLowerCase()] ?? title;
+}
+
+/** Footer line for a market (owner directive 2026-07-18: edges live in the
+ *  footer). An edge foot arrives as "<row label> [suffix] · +x.x%" built from
+ *  raw row labels; re-anchor it on the RELABELED selection so no code survives
+ *  ("ESP ML · +3.1%" → "Spain ML · +3.1%"). */
+function footOf(
+  m: FeedMarketLike,
+  selections: MarketSelectionModel[],
+): { resultLabel?: string; resultIsEdge?: boolean } {
+  const label = m.foot.label?.trim();
+  if (!label) return {};
+  if (!m.foot.edge) return { resultLabel: label, resultIsEdge: false };
+  const idx = m.rows.findIndex((r) => label.startsWith(r.label.trim()));
+  const tail = /·\s*\+[\d.]+%\s*$/.exec(label)?.[0];
+  if (idx >= 0 && tail && selections[idx]) {
+    return { resultLabel: `${selections[idx].label} ${tail}`, resultIsEdge: true };
+  }
+  return { resultLabel: label, resultIsEdge: true };
+}
+
 /** Pair each side with the opposite side's book price so no-vig math has both. */
 function sidesFromMarket(m: MarketPresentationModel): MarketSideInput[] {
   const n = m.selections.length;
@@ -260,7 +296,7 @@ function teamMarkets(raw: FeedEventLike): MarketPresentationModel[] {
       bookPrice: parseAmerican(row.book),
       modelPrice: parseAmerican(row.model),
     }));
-    return { key, label: m.title, selections, resultLabel: m.foot.edge ? undefined : m.foot.label };
+    return { key, label: marketDisplayLabel(m.title), selections, ...footOf(m, selections) };
   });
 }
 
@@ -369,12 +405,17 @@ function soccerMarket(
       ];
       break;
     case "btts":
-      selections = [
-        sel(0, "yes", "Both teams to score — Yes"),
-        sel(1, "no", "Both teams to score — No"),
-      ];
+      // Rows read YES / NO; the spelled-out market title carries the meaning
+      // ("Both Teams to Score", owner directive 2026-07-18).
+      selections = [sel(0, "yes", "YES"), sel(1, "no", "NO")];
       break;
     case "ml":
+      // Flag + "<Country> ML" per row (owner directive 2026-07-18).
+      selections = m.rows.map((row, i) => {
+        const participant = i === 0 ? away : home;
+        return sel(i, i === 0 ? "away" : "home", `${participant.displayName} ML`, participant);
+      });
+      break;
     case "to adv":
     case "spread":
     default:
@@ -385,7 +426,7 @@ function soccerMarket(
       });
       break;
   }
-  return { key, label: m.title, selections, resultLabel: m.foot.edge ? undefined : m.foot.label };
+  return { key, label: marketDisplayLabel(m.title), selections, ...footOf(m, selections) };
 }
 
 export const createSoccerPresentation: SportAdapter = (raw, ctx) => {

@@ -49,8 +49,8 @@ function wcFixture(): ProjectionGame {
         key: "dblchc",
         label: "Dbl Chc",
         sides: [
-          side("dblchc", "Dbl Chc", "France Win or Draw"),
-          side("dblchc", "Dbl Chc", "Spain Win or Draw"),
+          side("dblchc", "Dbl Chc", "France Win/Draw"),
+          side("dblchc", "Dbl Chc", "Spain Win/Draw"),
         ],
       },
       {
@@ -120,8 +120,8 @@ describe("ProjectionCard — single rendering ownership (directive §3)", () => 
     const html = render(wcFixture());
     expect(html).toContain("Spain");
     expect(html).toContain("France");
-    expect(html).toContain("Spain Win or Draw");
-    expect(html).toContain("France Win or Draw");
+    expect(html).toContain("Spain Win/Draw");
+    expect(html).toContain("France Win/Draw");
     // Flags carry the spelled-out country name as their accessible label.
     expect(html).toContain("Spain flag");
     expect(html).toContain("France flag");
