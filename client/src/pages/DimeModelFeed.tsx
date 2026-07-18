@@ -374,11 +374,14 @@ export default function DimeModelFeed(props: DimeModelFeedProps) {
   }, []);
 
   // ADAPTER WIRING (exact bindings from GameCard / WcFeedInline) is attached
-  // below in useFeedCards — see mlbRowsToCards / wcMatchesToCards.
-  const { cards, isLoading, isStale, gamesCount } = useFeedCards(sport, isoDate);
+  // below in useFeedCards — see mlbRowToCard / wcMatchToCard. The feed is
+  // combined (owner directive 2026-07-18): both leagues load for the date.
+  const { sections, isLoading, isStale, gamesCount } = useFeedCards(isoDate);
 
-  const go = (nextSport: "MLB" | "WC", nextIso: string) =>
-    navigate(resolveRouteHref(feedModelPath(nextSport, nextIso)));
+  // Date nav canonicalizes on the mlb- slug: the combined feed has one URL per
+  // date. Legacy wc- deep links still parse and render the same combined slate.
+  const go = (nextIso: string) =>
+    navigate(resolveRouteHref(feedModelPath("MLB", nextIso)));
 
   if (needsDateCanonicalize) {
     // One-frame redirect to the dated URL; queries stay disabled (isoDate="").
@@ -441,60 +444,56 @@ export default function DimeModelFeed(props: DimeModelFeedProps) {
       <div className="dmf-scroll">
         <div className="dmf-feedhead">
           <div className="dmf-datenav">
-            <button className="dmf-sq" aria-label="Previous day" onClick={() => go(sport, shiftIso(isoDate, -1))}>
+            <button className="dmf-sq" aria-label="Previous day" onClick={() => go(shiftIso(isoDate, -1))}>
               ‹
             </button>
             <div className="dmf-datelbl">{prettyDate(isoDate)}</div>
-            <button className="dmf-sq" aria-label="Next day" onClick={() => go(sport, shiftIso(isoDate, 1))}>
+            <button className="dmf-sq" aria-label="Next day" onClick={() => go(shiftIso(isoDate, 1))}>
               ›
             </button>
           </div>
+          {/* Combined slate (owner directive 2026-07-18): no sport toggle —
+              the count sums every league on the date; the league labels live
+              on the section headers in the list below. */}
           <span className="dmf-micro dmf-slatecount">
-            {sport === "WC" ? "World Cup" : "MLB"} · {gamesCount} {gamesCount === 1 ? "game" : "games"}
+            {gamesCount} {gamesCount === 1 ? "game" : "games"}
           </span>
-          <div className="dmf-sports" role="tablist" aria-label="Sport">
-            <button
-              role="tab"
-              aria-selected={sport === "MLB"}
-              className={`dmf-chip${sport === "MLB" ? " dmf-active" : ""}`}
-              onClick={() => go("MLB", isoDate)}
-            >
-              MLB
-            </button>
-            <button
-              role="tab"
-              aria-selected={sport === "WC"}
-              className={`dmf-chip${sport === "WC" ? " dmf-active" : ""}`}
-              onClick={() => go("WC", isoDate)}
-            >
-              World Cup
-            </button>
-          </div>
         </div>
 
         <div className={`dmf-list${isStale ? " dmf-stale" : ""}`} aria-busy={isStale}>
-          {isLoading && cards.length === 0 ? (
+          {isLoading && gamesCount === 0 ? (
             <>
               <SkeletonRow />
               <SkeletonRow />
               <SkeletonRow />
             </>
-          ) : cards.length === 0 ? (
+          ) : gamesCount === 0 ? (
             <div className="dmf-empty">
               <span className="dmf-micro">No games for this date</span>
               <p>Try the date arrows above.</p>
             </div>
           ) : (
-            cards.map((g) => {
-              // Route every sport through its typed adapter → one shared model →
-              // the shared card. Soccer resolves country names + flags + fully
-              // labeled markets ("Spain Win or Draw") here, not in the component.
-              const model =
-                sport === "WC"
-                  ? sportAdapters.SOCCER(g, { competition: "World Cup" })
-                  : sportAdapters.MLB(g, { competition: "MLB" });
-              return <ProjectionCard key={g.id} game={presentationToProjectionGame(model)} />;
-            })
+            // Combined slate, league-sectioned (owner directive 2026-07-18):
+            // World Cup on top, MLB beneath — buildFeedSections owns the order
+            // and drops empty leagues. Each card still routes through its typed
+            // adapter → one shared model → the shared card. Soccer resolves
+            // country names + flags + fully labeled markets here, not in the
+            // component.
+            sections.map((section) => (
+              <section key={section.key} className="dmf-league" aria-label={section.label}>
+                <h2 className="dmf-leaguehead dmf-micro">
+                  {section.label} · {section.cards.length}{" "}
+                  {section.cards.length === 1 ? section.noun : `${section.noun}s`}
+                </h2>
+                {section.cards.map((g) => {
+                  const model =
+                    section.key === "WC"
+                      ? sportAdapters.SOCCER(g, { competition: "World Cup" })
+                      : sportAdapters.MLB(g, { competition: "MLB" });
+                  return <ProjectionCard key={g.id} game={presentationToProjectionGame(model)} />;
+                })}
+              </section>
+            ))
           )}
         </div>
       </div>
@@ -917,15 +916,39 @@ export function slateStatusRank(card: Pick<FeedCardSpec, "liveLabel" | "timeLabe
 // ── Query orchestration (contracts: exact {sport, gameDate}; 60s poll;
 //    placeholderData keeps the previous slate while the next date loads) ─────
 
+/** One league group in the combined slate. */
+export interface FeedSection {
+  key: "WC" | "MLB";
+  label: string;
+  /** Count noun — soccer plays "matches", baseball plays "games". */
+  noun: string;
+  cards: FeedCardSpec[];
+}
+
+/** Combined slate (owner directive 2026-07-18): ONE collective feed for the
+ *  date — World Cup section on top, MLB beneath it (CBS-scores league grouping;
+ *  only the grouping/order is mirrored, nothing else). A league renders only
+ *  when it has games that date, so post-final WC dates are pure MLB with no
+ *  empty header. Within a section the existing slate order holds. */
+export function buildFeedSections(
+  wcCards: FeedCardSpec[],
+  mlbCards: FeedCardSpec[],
+): FeedSection[] {
+  const sections: FeedSection[] = [];
+  if (wcCards.length > 0) sections.push({ key: "WC", label: "World Cup", noun: "match", cards: wcCards });
+  if (mlbCards.length > 0) sections.push({ key: "MLB", label: "MLB", noun: "game", cards: mlbCards });
+  return sections;
+}
+
 function useFeedCards(
-  sport: "MLB" | "WC",
   isoDate: string,
-): { cards: FeedCardSpec[]; isLoading: boolean; isStale: boolean; gamesCount: number } {
-  const isWc = sport === "WC";
+): { sections: FeedSection[]; isLoading: boolean; isStale: boolean; gamesCount: number } {
+  // Both leagues load together — the combined feed has no sport toggle
+  // (owner directive 2026-07-18), so neither query is gated on a tab.
   const mlbQuery = trpc.games.list.useQuery(
     { sport: "MLB", gameDate: isoDate },
     {
-      enabled: !isWc && !!isoDate,
+      enabled: !!isoDate,
       refetchOnWindowFocus: false,
       refetchInterval: 60 * 1000,
       staleTime: 60 * 1000,
@@ -935,7 +958,7 @@ function useFeedCards(
   const wcQuery = trpc.wc2026.matchesByDate.useQuery(
     { date: isoDate },
     {
-      enabled: isWc && !!isoDate,
+      enabled: !!isoDate,
       refetchOnWindowFocus: false,
       refetchInterval: 60 * 1000,
       staleTime: 60 * 1000,
@@ -943,27 +966,31 @@ function useFeedCards(
     },
   );
 
-  const cards = useMemo<FeedCardSpec[]>(() => {
-    // Slate order: earliest → latest first pitch (owner directive 2026-07-17).
-    // timeToMinutes sends TBD times to the bottom of the slate.
-    const list = isWc
-      ? ((wcQuery.data ?? []) as WcMatch[]).map((m) => wcMatchToCard(m, isoDate))
-      : [...((mlbQuery.data ?? []) as MlbRow[])]
-          .sort((a, b) => timeToMinutes(a.startTimeEst) - timeToMinutes(b.startTimeEst))
-          .map(mlbRowToCard);
-    // LIVE above upcoming above FINAL (owner directive 2026-07-18); the stable
-    // sort keeps the time order within each tier.
-    return list.sort((a, b) => slateStatusRank(a) - slateStatusRank(b));
-  }, [isWc, wcQuery.data, mlbQuery.data, isoDate]);
+  const sections = useMemo<FeedSection[]>(() => {
+    // Slate order per league: earliest → latest first pitch (owner directive
+    // 2026-07-17; timeToMinutes sends TBD times to the bottom), then LIVE
+    // above upcoming above FINAL (2026-07-18) — the stable sort keeps the
+    // time order within each tier. Tiers apply WITHIN a league section; the
+    // WC-above-MLB section order is absolute.
+    const wcCards = ((wcQuery.data ?? []) as WcMatch[])
+      .map((m) => wcMatchToCard(m, isoDate))
+      .sort((a, b) => slateStatusRank(a) - slateStatusRank(b));
+    const mlbCards = [...((mlbQuery.data ?? []) as MlbRow[])]
+      .sort((a, b) => timeToMinutes(a.startTimeEst) - timeToMinutes(b.startTimeEst))
+      .map(mlbRowToCard)
+      .sort((a, b) => slateStatusRank(a) - slateStatusRank(b));
+    return buildFeedSections(wcCards, mlbCards);
+  }, [wcQuery.data, mlbQuery.data, isoDate]);
 
-  const isLoading = isWc ? wcQuery.isLoading : mlbQuery.isLoading;
+  const isLoading = wcQuery.isLoading || mlbQuery.isLoading;
   // Stale = paging dates while placeholderData keeps the previous slate
   // mounted — the UI dims so the old cards are never mistaken for the new
   // date's numbers (this is a betting surface; wrong-slate reads cost money).
-  const isStale = isWc
-    ? wcQuery.isPlaceholderData && wcQuery.isFetching
-    : mlbQuery.isPlaceholderData && mlbQuery.isFetching;
-  return { cards, isLoading, isStale, gamesCount: cards.length };
+  const isStale =
+    (wcQuery.isPlaceholderData && wcQuery.isFetching) ||
+    (mlbQuery.isPlaceholderData && mlbQuery.isFetching);
+  const gamesCount = sections.reduce((n, s) => n + s.cards.length, 0);
+  return { sections, isLoading, isStale, gamesCount };
 }
 
 // ─── Scoped stylesheet — MASTER.md tokens verbatim, v4 reference layout ──────
@@ -1022,14 +1049,14 @@ const DMF_CSS = `
 .dmf-sq:hover{border-color:var(--dmf-border-hover);color:var(--dmf-t1)}
 .dmf-sq:active{background:var(--dmf-card-hi)}
 .dmf-datelbl{font-size:15px;font-weight:700;letter-spacing:-.005em;white-space:nowrap}
-.dmf-sports{margin-left:auto;display:flex;gap:8px}
-.dmf-chip{padding:8px 16px;border-radius:18px;font-size:13px;font-weight:600;color:var(--dmf-t3);white-space:nowrap;position:relative;transition:color var(--dmf-t) var(--dmf-ease),background var(--dmf-t) var(--dmf-ease)}
-.dmf-chip::after{content:"";position:absolute;inset:-6px}
-.dmf-chip:hover{color:var(--dmf-t1)}
-.dmf-chip.dmf-active{background:var(--dmf-card-hi);color:var(--dmf-t1);box-shadow:inset 0 0 0 1px var(--dmf-border-hi)}
-
 .dmf-list{display:flex;flex-direction:column;gap:12px;padding-top:6px;transition:opacity var(--dmf-t) var(--dmf-ease)}
 .dmf-list.dmf-stale{opacity:.45;pointer-events:none}
+/* League sections (owner directive 2026-07-18): the combined slate groups by
+   league — World Cup on top, MLB beneath. Header = mono micro-label; the
+   second section opens with a hairline rule so the boundary reads at a glance. */
+.dmf-league{display:flex;flex-direction:column;gap:12px}
+.dmf-leaguehead{margin:0;padding:2px 2px 0;font-weight:500}
+.dmf-league + .dmf-league{margin-top:10px;padding-top:16px;border-top:1px solid var(--dmf-border)}
 .dmf-game{background:var(--dmf-card);border:1px solid var(--dmf-border);border-radius:16px;display:flex;flex-direction:column;overflow:hidden;container-type:inline-size}/* card-level container: key type below scales by the CARD's width (cqi), not the viewport. Named @container dmf rules still target .dmf-root. */
 .dmf-game.dmf-pass{opacity:.82}
 .dmf-gbody{display:grid;grid-template-columns:250px 1fr 240px;align-items:stretch}
@@ -1155,11 +1182,12 @@ const DMF_CSS = `
 }
 /* MOBILE (<768px): the bottom tab bar owns navigation (hide dmf-nav; theme
    control lives in Profile). Page chrome centers on one axis — the dime
-   wordmark sits in the middle of the topbar and the date nav + sport chips
-   stack centered beneath it (owner directive 2026-07-17). Bare transparent
-   logos (no circle chrome); market grids align Book/Model as identical
-   right-aligned tabular columns; row labels drop mono/all-caps for
-   Grotesk 600. Desktop (>=768px) is untouched. */
+   wordmark sits in the middle of the topbar and the date nav stacks centered
+   beneath it (owner directive 2026-07-17; the sport chips are gone — the
+   feed is combined per 2026-07-18). Bare transparent logos (no circle
+   chrome); market grids align Book/Model as identical right-aligned tabular
+   columns; row labels drop mono/all-caps for Grotesk 600. Desktop (>=768px)
+   is untouched. */
 @media (max-width:767px){
   .dmf-root .dmf-nav{display:none}
   /* Wordmark centered: dmf-sync is empty on mobile (nav hidden, no theme
@@ -1170,19 +1198,15 @@ const DMF_CSS = `
   .dmf-root .dmf-wordmark{font-size:42px}
   .dmf-root .dmf-sync{display:none}
   .dmf-root .dmf-scroll{padding-left:16px;padding-right:16px}
-  /* Date picker + sport chips share ONE centered row (owner directive
-     2026-07-18); the slate count wraps to its own line beneath them. */
+  /* Date picker centered; the slate count wraps to its own line beneath it.
+     League section headers center to match the mobile chrome axis. */
   .dmf-root .dmf-feedhead{top:64px;flex-direction:row;flex-wrap:wrap;justify-content:center;align-items:center;gap:10px 12px}
   .dmf-root .dmf-datenav{justify-content:center;flex-wrap:nowrap;gap:8px}
   .dmf-root .dmf-datelbl{font-size:13px}
-  .dmf-root .dmf-sports{margin-left:0;justify-content:center;max-width:100%}
-  .dmf-root .dmf-chip{padding:8px 12px;font-size:13px}
   .dmf-root .dmf-slatecount{flex-basis:100%;order:3;text-align:center}
-  /* Sport chips are a data filter (not nav): never let flex shrink clip their
-     labels; the row scrolls instead. Verdict micro-labels ride the t3 label
-     tier so Pick/Edge/Grade clear 4.5:1 on the elevated card ground. */
-  .dmf-root .dmf-sports{overflow-x:auto;-webkit-overflow-scrolling:touch}
-  .dmf-root .dmf-chip{flex:0 0 auto}
+  .dmf-root .dmf-leaguehead{text-align:center}
+  /* Verdict micro-labels ride the t3 label tier so Pick/Edge/Grade clear
+     4.5:1 on the elevated card ground. */
   .dmf-root .dmf-vl{color:var(--dmf-t3)}
 
   /* Bare logos: no circle background/border/clip. The monogram fallback
