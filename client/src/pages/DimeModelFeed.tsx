@@ -448,10 +448,10 @@ export default function DimeModelFeed(props: DimeModelFeedProps) {
             <button className="dmf-sq" aria-label="Next day" onClick={() => go(sport, shiftIso(isoDate, 1))}>
               ›
             </button>
-            <span className="dmf-micro dmf-slatecount">
-              {sport === "WC" ? "World Cup" : "MLB"} · {gamesCount} {gamesCount === 1 ? "game" : "games"}
-            </span>
           </div>
+          <span className="dmf-micro dmf-slatecount">
+            {sport === "WC" ? "World Cup" : "MLB"} · {gamesCount} {gamesCount === 1 ? "game" : "games"}
+          </span>
           <div className="dmf-sports" role="tablist" aria-label="Sport">
             <button
               role="tab"
@@ -497,8 +497,6 @@ export default function DimeModelFeed(props: DimeModelFeedProps) {
             })
           )}
         </div>
-
-        <div className="dmf-rg dmf-micro">21+ · Gambling problem? Call 1-800-GAMBLER</div>
       </div>
     </div>
   );
@@ -702,7 +700,7 @@ const fifaFlagUrl = (code: string): string =>
 /** Round label by PT kickoff-day thresholds (WcFeedInline stage ternary). */
 export function wcRoundLabel(isoDate: string): string {
   return isoDate >= "2026-07-19" ? "Final"
-    : isoDate >= "2026-07-18" ? "Third-Place Play-Off"
+    : isoDate >= "2026-07-18" ? "3rd Place Match"
     : isoDate >= "2026-07-14" ? "Semifinal"
     : isoDate >= "2026-07-09" ? "Quarterfinal"
     : isoDate >= "2026-07-04" ? "Round of 16"
@@ -859,8 +857,11 @@ function wcMatchToCard(m: WcMatch, isoDate: string): FeedCardSpec {
   const isFinal = status === "FT" || status === "FT_PEN";
   const showScores = !!liveLabel || isFinal;
 
-  const venueBits = [m.venue?.stadium, m.venue?.city].filter(Boolean).join(", ");
-  const meta = [wcRoundLabel(isoDate), venueBits].filter(Boolean).join(" · ");
+  // Round and venue are separate card lines (owner directive 2026-07-18):
+  // the context line carries the round only, and the full venue renders on
+  // its own line beneath it so the stadium is never truncated.
+  const venueBits = [m.venue?.stadium, m.venue?.city].filter(Boolean).join(" · ");
+  const meta = wcRoundLabel(isoDate);
 
   return {
     id: m.matchId,
@@ -877,7 +878,7 @@ function wcMatchToCard(m: WcMatch, isoDate: string): FeedCardSpec {
       score: showScores && m.homeScore != null ? String(m.homeScore) : null,
     },
     meta,
-    venueLine: meta || null,
+    venueLine: venueBits || null,
     markets,
     verdict: verdictOf(best),
   };
@@ -1052,7 +1053,6 @@ const DMF_CSS = `
 .dmf-empty,.dmf-invalid{padding:60px 0;text-align:center;color:var(--dmf-t3)}
 .dmf-empty p,.dmf-invalid p{margin-top:8px;font-size:14px}
 .dmf-skel{background:color-mix(in srgb, var(--dmf-t1) 8%, transparent);border-radius:6px}
-.dmf-rg{padding:28px 0 8px;text-align:center}
 
 /* mk7 (WC): matchup header, 4-col market grid, verdict strip */
 .dmf-game.dmf-mk7 .dmf-gbody{grid-template-columns:1fr}
@@ -1129,14 +1129,21 @@ const DMF_CSS = `
 @media (max-width:767px){
   .dmf-root .dmf-nav{display:none}
   /* Wordmark centered: dmf-sync is empty on mobile (nav hidden, no theme
-     button) — hide it so its auto margin cannot pull the mark off-center. */
-  .dmf-root .dmf-topbar{padding-left:16px;padding-right:16px;justify-content:center}
+     button) — hide it so its auto margin cannot pull the mark off-center.
+     2x wordmark (owner directive 2026-07-18): the topbar grows to hold it
+     and the sticky feedhead offset below tracks the new height. */
+  .dmf-root .dmf-topbar{padding-left:16px;padding-right:16px;justify-content:center;height:64px}
+  .dmf-root .dmf-wordmark{font-size:42px}
   .dmf-root .dmf-sync{display:none}
   .dmf-root .dmf-scroll{padding-left:16px;padding-right:16px}
-  /* Date + calendar arrows centered; chips follow the same centered axis. */
-  .dmf-root .dmf-feedhead{flex-direction:column;align-items:center;gap:10px}
-  .dmf-root .dmf-datenav{justify-content:center;flex-wrap:wrap}
+  /* Date picker + sport chips share ONE centered row (owner directive
+     2026-07-18); the slate count wraps to its own line beneath them. */
+  .dmf-root .dmf-feedhead{top:64px;flex-direction:row;flex-wrap:wrap;justify-content:center;align-items:center;gap:10px 12px}
+  .dmf-root .dmf-datenav{justify-content:center;flex-wrap:nowrap;gap:8px}
+  .dmf-root .dmf-datelbl{font-size:13px}
   .dmf-root .dmf-sports{margin-left:0;justify-content:center;max-width:100%}
+  .dmf-root .dmf-chip{padding:8px 12px;font-size:13px}
+  .dmf-root .dmf-slatecount{flex-basis:100%;order:3;text-align:center}
   /* Sport chips are a data filter (not nav): never let flex shrink clip their
      labels; the row scrolls instead. Verdict micro-labels ride the t3 label
      tier so Pick/Edge/Grade clear 4.5:1 on the elevated card ground. */

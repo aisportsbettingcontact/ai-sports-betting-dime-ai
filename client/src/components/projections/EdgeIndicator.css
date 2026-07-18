@@ -33,15 +33,6 @@
   letter-spacing: -0.01em;
 }
 
-.edge-indicator__rec {
-  margin-inline-start: auto;
-  padding-inline-start: 10px;
-  font-size: var(--proj-meta);
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
 /* NO_EDGE: quiet, flat, NON-mint — mint stays signal-only. */
 .edge-indicator--none {
   display: inline-flex;
