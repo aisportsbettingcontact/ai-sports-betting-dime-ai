@@ -140,12 +140,23 @@ describe("WC2026 owner-triggered engine/audit/backfill endpoints", () => {
     expect(engineSrc).toMatch(/UPDATE wc2026_matches SET venue_id = \? WHERE match_id = \?/);
   });
 
-  it("has an orientation guard that hard-fails when the book favorite disagrees with the model favorite", () => {
+  it("orientation guard: hard-fails on internal ML/DC book inconsistency, WARNs (not fails) on genuine model-market divergence", () => {
     expect(engineSrc).toMatch(/ORIENTATION GUARD/);
     expect(engineSrc).toMatch(/const bookFav = book\.bookHomeMl <= book\.bookAwayMl/);
-    expect(engineSrc).toMatch(/const modelFav = markets\.mlHome <= markets\.mlAway/);
-    expect(engineSrc).toMatch(/bookFav !== modelFav && gap > 0\.08/);
-    expect(engineSrc).toMatch(/likely home\/away flip; refusing to write/);
+    expect(engineSrc).toMatch(/const dcFav = book\.bookHomeWD <= book\.bookAwayWD/);
+    expect(engineSrc).toMatch(/book INTERNALLY inconsistent/);
+    expect(engineSrc).toMatch(/MODEL DIVERGES FROM MARKET/);
+    // The v26 model-vs-book hard-fail heuristic must be gone — a legitimate
+    // model disagreement (Final: model favors ARG, book favors ESP) is an
+    // output, not an error.
+    expect(engineSrc).not.toMatch(/bookFav !== modelFav && gap > 0\.08/);
+    expect(engineSrc).not.toMatch(/likely home\/away flip; refusing to write/);
+  });
+
+  it("computes model totals at the BOOK's primary O/U line (not hardcoded 2.5)", () => {
+    expect(engineSrc).toMatch(/deriveAllMarkets\(joint, lambdaH, lambdaA, spreadLine, totalLine = 2\.5\)/);
+    expect(engineSrc).toMatch(/if \(h\+a>totalLine\) pOver\+=p/);
+    expect(engineSrc).toMatch(/deriveAllMarkets\(joint, lH\.lambda, lA\.lambda, spreadLine, book\.bookTotal\)/);
   });
 
   it("asserts the live wc2026_matches orientation before writing", () => {
