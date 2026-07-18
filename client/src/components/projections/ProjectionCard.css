@@ -71,6 +71,28 @@
   .summary__item { align-items: center; text-align: center; }
 }
 
+/* ── Summary carousel (owner directive 2026-07-18) ──
+   A game with 2+ real edges cycles them in a ranked swipe strip: native
+   scroll-snap slides (momentum + interruptible by design), each slide the
+   exact .summary readout, strongest edge first. Dot + count nav below; mint
+   marks the ACTIVE dot only (position = active-state signal). */
+.summary-carousel { grid-area: summary; display: grid; gap: var(--space-2xs); min-inline-size: 0; }
+.summary-carousel__track { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; overscroll-behavior-x: contain; scrollbar-width: none; border-radius: 8px; }
+.summary-carousel__track::-webkit-scrollbar { display: none; }
+.summary-carousel__track:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--ring, rgba(69, 224, 168, 0.36)); }
+.summary-carousel__slide { flex: 0 0 100%; min-inline-size: 100%; scroll-snap-align: start; scroll-snap-stop: always; }
+/* Slides carry the standard .summary (its own border-block keeps the divider
+   rhythm identical to the single-edge card — uniform format across slides). */
+.summary-carousel__nav { display: flex; align-items: center; justify-content: center; gap: var(--space-sm); }
+.summary-carousel__count { color: var(--text-muted, #6e6e6e); font-variant-numeric: tabular-nums; }
+.summary-carousel__dots { display: flex; align-items: center; }
+/* Dot buttons: 24px hit area around a 6px dot; grey = inactive, mint = active. */
+.summary-carousel__dot { display: grid; place-items: center; inline-size: 1.5rem; block-size: 1.5rem; padding: 0; background: transparent; border: 0; cursor: pointer; }
+.summary-carousel__dot::after { content: ""; inline-size: 6px; block-size: 6px; border-radius: 50%; background: var(--text-muted, #6e6e6e); opacity: 0.45; transition: background 160ms cubic-bezier(0.16, 1, 0.3, 1), opacity 160ms cubic-bezier(0.16, 1, 0.3, 1); }
+.summary-carousel__dot:hover::after { opacity: 0.8; }
+.summary-carousel__dot:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--ring, rgba(69, 224, 168, 0.36)); border-radius: 50%; }
+.summary-carousel__dot[aria-current="true"]::after { background: #45e0a8; opacity: 1; }
+
 /* ── Markets (supporting; disclosure keeps them from dominating) ──
    Toggle reads "VIEW FULL AI MODEL PROJECTIONS" with a chevron-down to expand;
    [open] swaps it for a chevron-up to collapse (owner directive 2026-07-17). */
@@ -128,4 +150,6 @@
 
 @media (prefers-reduced-motion: reduce) {
   .projection-card, .projection-card__markets-toggle { transition: none; }
+  .summary-carousel__dot::after { transition: none; }
+  .summary-carousel__track { scroll-behavior: auto; }
 }
