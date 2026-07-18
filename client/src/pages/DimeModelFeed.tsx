@@ -904,6 +904,16 @@ function wcMatchToCard(m: WcMatch, isoDate: string): FeedCardSpec {
   };
 }
 
+/** Slate status tier (owner directive 2026-07-18): LIVE games always sit
+ *  above upcoming games, and settled/final games sink to the bottom.
+ *  Within a tier the existing order holds — Array.sort is stable, so MLB
+ *  keeps earliest-first-pitch order and WC keeps the server's match order.
+ *  timeLabel prefix covers both "FINAL" and "FINAL (PENS)". */
+export function slateStatusRank(card: Pick<FeedCardSpec, "liveLabel" | "timeLabel">): number {
+  if (card.liveLabel) return 0;
+  return card.timeLabel.startsWith("FINAL") ? 2 : 1;
+}
+
 // ── Query orchestration (contracts: exact {sport, gameDate}; 60s poll;
 //    placeholderData keeps the previous slate while the next date loads) ─────
 
@@ -934,12 +944,16 @@ function useFeedCards(
   );
 
   const cards = useMemo<FeedCardSpec[]>(() => {
-    if (isWc) return ((wcQuery.data ?? []) as WcMatch[]).map((m) => wcMatchToCard(m, isoDate));
     // Slate order: earliest → latest first pitch (owner directive 2026-07-17).
     // timeToMinutes sends TBD times to the bottom of the slate.
-    return [...((mlbQuery.data ?? []) as MlbRow[])]
-      .sort((a, b) => timeToMinutes(a.startTimeEst) - timeToMinutes(b.startTimeEst))
-      .map(mlbRowToCard);
+    const list = isWc
+      ? ((wcQuery.data ?? []) as WcMatch[]).map((m) => wcMatchToCard(m, isoDate))
+      : [...((mlbQuery.data ?? []) as MlbRow[])]
+          .sort((a, b) => timeToMinutes(a.startTimeEst) - timeToMinutes(b.startTimeEst))
+          .map(mlbRowToCard);
+    // LIVE above upcoming above FINAL (owner directive 2026-07-18); the stable
+    // sort keeps the time order within each tier.
+    return list.sort((a, b) => slateStatusRank(a) - slateStatusRank(b));
   }, [isWc, wcQuery.data, mlbQuery.data, isoDate]);
 
   const isLoading = isWc ? wcQuery.isLoading : mlbQuery.isLoading;
