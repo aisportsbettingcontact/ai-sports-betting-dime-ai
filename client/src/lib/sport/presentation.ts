@@ -286,13 +286,46 @@ function teamRoleFor(idx: number, label: string): SelectionRole {
   return idx === 0 ? "away" : "home";
 }
 
-function teamMarkets(raw: FeedEventLike): MarketPresentationModel[] {
+/** Replace a leading team-code token ("NYY +1.5") with the participant's name
+ *  ("Yankees +1.5"). Labels that don't lead with a known code pass through. */
+function teamDeCode(label: string, away: Participant, home: Participant): string {
+  const first = label.trim().split(/\s+/)[0];
+  if (first && first === away.id) return label.replace(first, away.displayName);
+  if (first && first === home.id) return label.replace(first, home.displayName);
+  return label;
+}
+
+/** Spelled-out side labels for team-sport market tables (owner directive
+ *  2026-07-18, mirrors the soccer adapter): moneyline rows read "<Team> ML" —
+ *  the market context travels with the pick into the summary readout and edge
+ *  carousel ("Yankees ML", never a bare "Yankees") — run/puck-line and spread
+ *  rows spell the team name and keep their line ("Yankees +1.5"), and total
+ *  rows spell Over/Under ("Under 9"). Unrecognized labels pass through. */
+function teamSideLabel(title: string, rawLabel: string, away: Participant, home: Participant): string {
+  const t = title.trim().toLowerCase();
+  const label = rawLabel.trim();
+  if (t === "ml" || t === "moneyline") {
+    const named = teamDeCode(label, away, home);
+    return /\bML$/i.test(named) ? named : `${named} ML`;
+  }
+  if (t === "total") {
+    const head = label.split(/\s+/)[0]?.toUpperCase();
+    const tail = numTail(label);
+    if (head === "O" || head === "OVER") return tail ? `Over ${tail}` : "Over";
+    if (head === "U" || head === "UNDER") return tail ? `Under ${tail}` : "Under";
+    return label;
+  }
+  if (/^(run ?line|puck ?line|spread)$/.test(t)) return teamDeCode(label, away, home);
+  return rawLabel;
+}
+
+function teamMarkets(raw: FeedEventLike, away: Participant, home: Participant): MarketPresentationModel[] {
   return raw.markets.map((m) => {
     const key = m.title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
     const selections: MarketSelectionModel[] = m.rows.map((row, i) => ({
       id: `${key}-${i}`,
       role: teamRoleFor(i, row.label),
-      label: row.label,
+      label: teamSideLabel(m.title, row.label, away, home),
       bookPrice: parseAmerican(row.book),
       modelPrice: parseAmerican(row.model),
     }));
@@ -302,7 +335,9 @@ function teamMarkets(raw: FeedEventLike): MarketPresentationModel[] {
 
 function createTeamPresentation(sport: Sport, competition: string): SportAdapter {
   return (raw, ctx) => {
-    const markets = teamMarkets(raw);
+    const awayParticipant = teamParticipant(raw.away, "away");
+    const homeParticipant = teamParticipant(raw.home, "home");
+    const markets = teamMarkets(raw, awayParticipant, homeParticipant);
     const status = statusOf(raw);
     return {
       eventId: raw.id,
@@ -310,8 +345,8 @@ function createTeamPresentation(sport: Sport, competition: string): SportAdapter
       competition: ctx?.competition ?? competition,
       status,
       statusLabel: raw.liveLabel || raw.timeLabel,
-      awayParticipant: teamParticipant(raw.away, "away"),
-      homeParticipant: teamParticipant(raw.home, "home"),
+      awayParticipant,
+      homeParticipant,
       venue: venueOf(raw),
       contextLine: raw.meta || undefined,
       startTime: startTimeOf(raw, status),

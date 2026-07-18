@@ -11,8 +11,9 @@ import type { ProjectionTeam } from "./types";
  *
  * Owner directive 2026-07-17: the MODEL EDGE value is spelled out — "U 7"
  * reads "Under 7", "ATH ML" reads "Athletics ML" (CSS uppercases the display).
- * The raw side labels in the market tables are untouched; only this readout
- * expands them.
+ * Since 2026-07-18 the presentation adapter pre-spells team-sport labels
+ * ("Yankees ML", "Under 9"), so spellOutPick is the safety net for any label
+ * that still arrives compact.
  */
 function fmtPrice(p: number): string {
   return p > 0 ? `+${p}` : `${p}`;
