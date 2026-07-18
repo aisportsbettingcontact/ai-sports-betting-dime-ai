@@ -81,6 +81,13 @@ jobs:
             echo "wc_noDraw=$(grep -o '\"noDraw\":-\?[0-9]' "$body" | wc -l)"
             echo "wc_dkOdds_objs=$(grep -o '\"dkOdds\":{' "$body" | wc -l)"
             echo "wc_modelOdds_objs=$(grep -o '\"modelOdds\":{' "$body" | wc -l)"
+            # WC winner-scope verification (owner directive 2026-07-18): the
+            # model winner odds (model_*_to_advance → modelOdds.toAdvance*) are
+            # public display data already served to every visitor — extract
+            # matchId → home/away team ids → book+model toAdvance and 3-way ML
+            # per match so the winner-market binding can be verified end-to-end
+            # from CI (the sandboxed agent container has no egress to prod).
+            echo "wc_winner_scope=$(jq -c '(.[0].result.data.json // []) | if type=="array" then map({id:.matchId, home:.homeTeamId, away:.awayTeamId, bookAdvH:(.dkOdds.toAdvanceHome // null), bookAdvA:(.dkOdds.toAdvanceAway // null), modelAdvH:(.modelOdds.toAdvanceHome // null), modelAdvA:(.modelOdds.toAdvanceAway // null), modelH:(.modelOdds.home // null), modelD:(.modelOdds.draw // null), modelA:(.modelOdds.away // null)}) else "not-a-match-array" end' "$body" 2>/dev/null || echo 'jq-parse-failed')"
             echo "wc_venueIds=$(grep -o '\"venueId\":\"[a-z0-9-]*\"' "$body" | sort | uniq -c | tr '\n' ' ')"
             # First 500 bytes for shape sanity (public data only):
             echo "head: $(head -c 500 "$body" | tr '\n' ' ')"
