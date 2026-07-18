@@ -299,10 +299,14 @@ describe("DimeModelFeed — combined slate (owner directive 2026-07-18)", () => 
     expect(src).toMatch(/\/brand\/wc26-emblem-on-light\.png/);
     expect(src).toMatch(/\/brand\/wc26-emblem-on-dark\.png/);
     expect(src).toMatch(/\/manus-storage\/mlb-logo_50fd8568\.png/);
-    // CSS swaps variants by theme; both render inside the fixed 24px box.
+    // CSS swaps variants by theme; both render inside the fixed 30px box
+    // (1.25x scale, owner directive 2026-07-18).
     expect(src).toMatch(/data-dmf-theme="light"\] \.dmf-lglogo-dark\{display:none\}/);
     expect(src).toMatch(/:not\(\[data-dmf-theme="light"\]\) \.dmf-lglogo-light\{display:none\}/);
-    expect(src).toMatch(/\.dmf-lglogo\{[^}]*width:24px;height:24px/);
+    expect(src).toMatch(/\.dmf-lglogo\{[^}]*width:30px;height:30px/);
+    // Header cluster centers within the page; chevron holds the right edge.
+    expect(src).toMatch(/\.dmf-leaguehead\{[^}]*justify-content:center/);
+    expect(src).toMatch(/\.dmf-lgchev\{position:absolute;right:8px/);
   });
 
   it("stadium display drops a trailing parenthetical (2026-07-18)", () => {
