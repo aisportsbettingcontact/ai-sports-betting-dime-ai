@@ -93,17 +93,31 @@
 .projection-card__markets-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); gap: clamp(0.75rem, 0.5rem + 0.7vw, 1.25rem); margin-top: var(--space-sm); }
 
 /* Market table — flat, scannable; depth via the card, not per-table frames */
-.market-table { inline-size: 100%; table-layout: fixed; border-collapse: separate; border-spacing: 0; background: var(--surface-raised, #141414); border: 1px solid var(--border, #262626); border-radius: 12px; overflow: hidden; }
-.market-table__caption { caption-side: top; text-align: start; padding: var(--space-xs) var(--space-sm) var(--space-2xs); color: var(--text-secondary, #a6a6a6); }
-.market-table th, .market-table td { min-block-size: 2.75rem; padding: 0.5rem 0.625rem; font-size: var(--proj-body); vertical-align: middle; }
-.market-table thead th { font-size: var(--proj-meta); font-weight: 600; letter-spacing: 0.03em; text-transform: uppercase; color: var(--text-muted, #6e6e6e); text-align: start; border-block-end: 1px solid var(--border, #262626); }
-.market-table th:not(:first-child), .market-table td:not(:first-child) { text-align: end; }
-.market-table__side { font-weight: 600; }
+/* Auto layout (not fixed): the SIDE column's 48% is a hint that stretches for
+   long labels ("France Win/Draw"), so nowrap sides never overlap the values. */
+.market-table { inline-size: 100%; border-collapse: separate; border-spacing: 0; background: var(--surface-raised, #141414); border: 1px solid var(--border, #262626); border-radius: 12px; overflow: hidden; }
+/* Market title centered above its table; every value column left-aligned; the
+   side cell never wraps ("England +1.5" stays one line) — owner directive
+   2026-07-18. Fixed layout: the first header cell sets the side column width. */
+.market-table__caption { caption-side: top; text-align: center; padding: var(--space-xs) var(--space-sm) var(--space-2xs); color: var(--text-secondary, #a6a6a6); }
+.market-table th, .market-table td { min-block-size: 2.75rem; padding: 0.5rem 0.625rem; font-size: var(--proj-body); vertical-align: middle; text-align: start; }
+.market-table thead th { font-size: var(--proj-meta); font-weight: 600; letter-spacing: 0.03em; text-transform: uppercase; color: var(--text-muted, #6e6e6e); border-block-end: 1px solid var(--border, #262626); }
+.market-table thead th:first-child { inline-size: 48%; }
+.market-table__side { font-weight: 600; white-space: nowrap; }
+.market-table td.odds-value { white-space: nowrap; }
+/* Narrow cards (≤350px card width): slimmer cell padding so the widest nowrap
+   row ("France Win/Draw" + values) still fits without horizontal overflow. */
+@container projcard (max-width: 350px) {
+  .market-table th, .market-table td { padding-inline: 0.375rem; }
+  .market-table__flag { margin-inline-end: 0.25rem; }
+}
+.market-table__flag { font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif; margin-inline-end: 0.375rem; }
 .market-table tbody td, .market-table tbody th { font-variant-numeric: tabular-nums; }
 .market-table tbody tr + tr th, .market-table tbody tr + tr td { border-block-start: 1px solid var(--border, #262626); }
 .market-table__model--signal { color: var(--brand-mint-foreground); background: var(--brand-mint-surface); box-shadow: inset 3px 0 0 #45e0a8; font-weight: 700; }
-.market-table__edge { font-size: var(--proj-meta); font-weight: 700; }
 .market-table__result { text-align: center !important; color: var(--text-muted, #6e6e6e); border-block-start: 1px solid var(--border, #262626); }
+/* Edge footers (owner directive 2026-07-18): mint CELL, accessible foreground. */
+.market-table__result--edge { color: var(--brand-mint-foreground); background: var(--brand-mint-surface); }
 
 /* Design note: the market grid reflows via intrinsic `auto-fit` (above) rather
    than fixed container-query breakpoints — the grid itself decides how many
