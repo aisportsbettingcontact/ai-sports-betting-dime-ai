@@ -89,19 +89,41 @@ describe("createSoccerPresentation — country identity", () => {
 
   it("expands ML / spread codes to full country names", () => {
     const ml = model.markets.find((m) => m.key === "ml")!;
-    expect(ml.selections.map((s) => s.label)).toEqual(["Spain", "France"]);
+    // "<Country> ML" per row with the participant's flag (owner directive 2026-07-18)
+    expect(ml.selections.map((s) => s.label)).toEqual(["Spain ML", "France ML"]);
+    expect(ml.selections[0].flag).toBe(model.awayParticipant.flag);
+    expect(ml.selections[1].flag).toBe(model.homeParticipant.flag);
     const spread = model.markets.find((m) => m.key === "spread")!;
     expect(spread.selections[0].label).toBe("Spain -0.5");
     expect(spread.selections[1].label).toBe("France +0.5");
+    expect(spread.selections[0].flag).toBe(model.awayParticipant.flag);
   });
 
   it("renders Total / BTTS / Draw with human labels", () => {
     expect(model.markets.find((m) => m.key === "total")!.selections.map((s) => s.label))
       .toEqual(["Over 2.5", "Under 2.5"]);
+    // YES/NO rows under the spelled-out title (owner directive 2026-07-18)
     expect(model.markets.find((m) => m.key === "btts")!.selections.map((s) => s.label))
-      .toEqual(["Both teams to score — Yes", "Both teams to score — No"]);
+      .toEqual(["YES", "NO"]);
     expect(model.markets.find((m) => m.key === "draw")!.selections.map((s) => s.label))
       .toEqual(["Draw", "No Draw"]);
+  });
+
+  it("spells out market titles (owner directive 2026-07-18)", () => {
+    const labels = Object.fromEntries(model.markets.map((m) => [m.key, m.label]));
+    expect(labels["ml"]).toBe("Moneyline");
+    expect(labels["dbl-chc"]).toBe("Double Chance");
+    expect(labels["btts"]).toBe("Both Teams to Score");
+    expect(labels["total"]).toBe("Total");
+  });
+
+  it("puts edges in the footer, re-anchored on relabeled sides (2026-07-18)", () => {
+    const ml = model.markets.find((m) => m.key === "ml")!;
+    expect(ml.resultLabel).toBe("Spain ML · +3.1%");
+    expect(ml.resultIsEdge).toBe(true);
+    const draw = model.markets.find((m) => m.key === "draw")!;
+    expect(draw.resultLabel).toBe("NO EDGE");
+    expect(draw.resultIsEdge).toBe(false);
   });
 
   it("NO raw abbreviation reaches ANY rendered string", () => {
@@ -122,18 +144,18 @@ describe("formatDoubleChanceSelection — resolved via participant identity", ()
   const model = createSoccerPresentation(WC_EVENT);
 
   it("HOME_OR_DRAW always resolves to the home participant", () => {
-    expect(formatDoubleChanceSelection("HOME_OR_DRAW", model)).toBe("France Win or Draw");
+    expect(formatDoubleChanceSelection("HOME_OR_DRAW", model)).toBe("France Win/Draw");
     const dbl = model.markets.find((m) => m.key === "dbl-chc")!;
     // row 0 (HOME WD) → home participant, France; carries France's flag
-    expect(dbl.selections[0].label).toBe("France Win or Draw");
+    expect(dbl.selections[0].label).toBe("France Win/Draw");
     expect(dbl.selections[0].participantId).toBe(model.homeParticipant.id);
     expect(dbl.selections[0].flag).toBe(model.homeParticipant.flag);
   });
 
   it("AWAY_OR_DRAW always resolves to the away participant", () => {
-    expect(formatDoubleChanceSelection("AWAY_OR_DRAW", model)).toBe("Spain Win or Draw");
+    expect(formatDoubleChanceSelection("AWAY_OR_DRAW", model)).toBe("Spain Win/Draw");
     const dbl = model.markets.find((m) => m.key === "dbl-chc")!;
-    expect(dbl.selections[1].label).toBe("Spain Win or Draw");
+    expect(dbl.selections[1].label).toBe("Spain Win/Draw");
     expect(dbl.selections[1].participantId).toBe(model.awayParticipant.id);
     expect(dbl.selections[1].flag).toBe(model.awayParticipant.flag);
   });
@@ -149,11 +171,11 @@ describe("formatDoubleChanceSelection — resolved via participant identity", ()
       home: WC_EVENT.away,
     });
     // now home = Spain, away = France
-    expect(formatDoubleChanceSelection("HOME_OR_DRAW", swapped)).toBe("Spain Win or Draw");
-    expect(formatDoubleChanceSelection("AWAY_OR_DRAW", swapped)).toBe("France Win or Draw");
+    expect(formatDoubleChanceSelection("HOME_OR_DRAW", swapped)).toBe("Spain Win/Draw");
+    expect(formatDoubleChanceSelection("AWAY_OR_DRAW", swapped)).toBe("France Win/Draw");
     const dbl = swapped.markets.find((m) => m.key === "dbl-chc")!;
-    expect(dbl.selections[0].label).toBe("Spain Win or Draw"); // HOME WD → Spain now
-    expect(dbl.selections[1].label).toBe("France Win or Draw"); // AWAY WD → France now
+    expect(dbl.selections[0].label).toBe("Spain Win/Draw"); // HOME WD → Spain now
+    expect(dbl.selections[1].label).toBe("France Win/Draw"); // AWAY WD → France now
     // flags follow identity too
     expect(dbl.selections[0].flag).toBe(swapped.homeParticipant.flag);
   });

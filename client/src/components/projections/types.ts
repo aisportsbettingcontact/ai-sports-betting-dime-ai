@@ -17,13 +17,21 @@ export interface ProjectionTeam {
 
 export type GameStatus = "scheduled" | "live" | "final" | "postponed";
 
+/** One rendered market side: the decision-engine input plus display extras. */
+export interface ProjectionMarketSide extends MarketSideInput {
+  /** Country flag emoji for participant-bound sides (soccer); null otherwise. */
+  flag?: string | null;
+}
+
 /** One market (run line / total / moneyline) with its two sides. */
 export interface ProjectionMarket {
   key: string; // "runline" | "total" | "moneyline"
   label: string; // "Run line" | "Total" | "Moneyline"
-  sides: MarketSideInput[]; // exactly the shape the decision engine consumes
-  /** the existing result/verdict row text, preserved verbatim */
+  sides: ProjectionMarketSide[]; // decision-engine shape + display extras
+  /** footer line: "NO EDGE" or the winning side + edge ("Spain ML · +3.1%") */
   resultLabel?: string;
+  /** true when resultLabel carries a real edge (mint footer styling) */
+  resultIsEdge?: boolean;
 }
 
 export interface ProjectionGame {
