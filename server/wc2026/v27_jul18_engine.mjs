@@ -112,7 +112,10 @@ function buildJointMatrix(lambdaH, lambdaA, rho) {
   return joint;
 }
 
-function deriveAllMarkets(joint, lambdaH, lambdaA, spreadLine) {
+function deriveAllMarkets(joint, lambdaH, lambdaA, spreadLine, totalLine = 2.5) {
+  // totalLine: the BOOK's primary O/U line (v27 fix — earlier engines hardcoded
+  // 2.5 inside the loop, which mispriced the model total whenever the book's
+  // primary line differed, e.g. the 3rd-place match's 3.5).
   const MAX_G = 9;
   let pH=0, pD=0, pA=0, pOver=0, pUnder=0, pBTTS=0;
   let pHomeSpread=0, pAwaySpread=0;
@@ -135,7 +138,7 @@ function deriveAllMarkets(joint, lambdaH, lambdaA, spreadLine) {
       pAdvH += p*(etH + etD*0.505);
       pAdvA += p*(etA + etD*0.495);
     }
-    if (h+a>2.5) pOver+=p; else pUnder+=p;
+    if (h+a>totalLine) pOver+=p; else pUnder+=p;
     if (h>0&&a>0) pBTTS+=p;
     const margin = h - a;
     if (Math.abs(spreadLine) % 1 !== 0) {
@@ -612,7 +615,7 @@ async function main() {
         const book = BACKTEST_BOOK[match.fid];
         const spreadLine = book ? book.bookSpread : 1.5;
         const joint = buildJointMatrix(lH.lambda, lA.lambda, v.rho);
-        const markets = deriveAllMarkets(joint, lH.lambda, lA.lambda, spreadLine);
+        const markets = deriveAllMarkets(joint, lH.lambda, lA.lambda, spreadLine, book ? book.bookTotal : 2.5);
         results.push({ match, lambdaH:lH.lambda, lambdaA:lA.lambda, markets, joint });
       } catch(e) { skipCount++; }
     }
@@ -684,7 +687,7 @@ async function main() {
       const book = BACKTEST_BOOK[match.fid];
       const spreadLine = book ? book.bookSpread : 1.5;
       const joint = buildJointMatrix(lH.lambda, lA.lambda, recalParams.rho);
-      const markets = deriveAllMarkets(joint, lH.lambda, lA.lambda, spreadLine);
+      const markets = deriveAllMarkets(joint, lH.lambda, lA.lambda, spreadLine, book ? book.bookTotal : 2.5);
       recalResults.push({ match, lambdaH:lH.lambda, lambdaA:lA.lambda, markets, joint });
     } catch(e) {}
   }
@@ -780,25 +783,44 @@ async function main() {
 
     const spreadLine = book.bookSpread;
     const joint = buildJointMatrix(lH.lambda, lA.lambda, finalVariation.rho);
-    const markets = deriveAllMarkets(joint, lH.lambda, lA.lambda, spreadLine);
+    const markets = deriveAllMarkets(joint, lH.lambda, lA.lambda, spreadLine, book.bookTotal);
 
     // ── ORIENTATION GUARD (home/away flip tripwire) ──────────────────────────
-    // The whole pipeline binds odds POSITIONALLY (bookHomeMl vs bookAwayMl), and
-    // the book block is hand-typed — the exact failure mode that made England
-    // (the favorite) show underdog prices. A home/away flip reliably surfaces as
-    // the BOOK favorite disagreeing with the MODEL favorite. Hard-fail on a real
-    // disagreement (>8pp implied-prob gap) so a flipped book can never be written.
+    // The whole pipeline binds odds POSITIONALLY (bookHomeMl vs bookAwayMl) and
+    // the book block is hand-pasted, so flips must be caught. v27 change: the
+    // v26 heuristic (hard-fail when the BOOK favorite disagrees with the MODEL
+    // favorite) cannot distinguish a flipped book from a LEGITIMATE model-vs-
+    // market disagreement — exactly what happened on the Final dry-run (book
+    // favors ESP +125/+260, model rates ARG's sample slightly stronger). Since
+    // orientation is already independently proven here (live wc2026_matches
+    // assertion above + machine-scraped slug-verified probe book), v27 instead:
+    //   1. HARD-FAILS on internal book inconsistency — the ML favorite side
+    //      must agree with the Double-Chance favorite side within the SAME
+    //      pasted book (catches single-market transcription flips, which the
+    //      old heuristic could not see when the model happened to agree).
+    //   2. WARNs loudly on model-vs-book favorite disagreement (legitimate
+    //      model divergence is an output, not an error).
     {
       const amToProb = (a) => a == null ? null : (a < 0 ? (-a) / (-a + 100) : 100 / (a + 100));
       const bph = amToProb(book.bookHomeMl), bpa = amToProb(book.bookAwayMl);
-      if (bph != null && bpa != null && markets.mlHome != null && markets.mlAway != null) {
+      if (bph != null && bpa != null) {
         const bookFav = book.bookHomeMl <= book.bookAwayMl ? 'home' : 'away';
-        const modelFav = markets.mlHome <= markets.mlAway ? 'home' : 'away';
-        const gap = Math.abs(bph - bpa);
-        if (bookFav !== modelFav && gap > 0.08) {
-          hardFail(`${match.fid}: BOOK favors ${bookFav} (H=${book.bookHomeMl}/A=${book.bookAwayMl}) but MODEL favors ${modelFav} (H=${markets.mlHome}/A=${markets.mlAway}), gap=${(gap*100).toFixed(1)}pp — likely home/away flip; refusing to write`);
+        if (book.bookHomeWD != null && book.bookAwayWD != null) {
+          const dcFav = book.bookHomeWD <= book.bookAwayWD ? 'home' : 'away';
+          if (bookFav !== dcFav) {
+            hardFail(`${match.fid}: book INTERNALLY inconsistent — ML favors ${bookFav} (H=${book.bookHomeMl}/A=${book.bookAwayMl}) but DC favors ${dcFav} (1X=${book.bookHomeWD}/X2=${book.bookAwayWD}) — transcription flip in one market; refusing to write`);
+          }
+          log('PASS', `${match.fid}: book internally consistent (ML and DC both favor ${bookFav})`);
         }
-        log('PASS', `${match.fid}: book/model favorite agree (${bookFav}), gap=${(gap*100).toFixed(1)}pp`);
+        if (markets.mlHome != null && markets.mlAway != null) {
+          const modelFav = markets.mlHome <= markets.mlAway ? 'home' : 'away';
+          const gap = Math.abs(bph - bpa);
+          if (bookFav !== modelFav) {
+            log('WARN', `${match.fid}: MODEL DIVERGES FROM MARKET — book favors ${bookFav} (H=${book.bookHomeMl}/A=${book.bookAwayMl}), model favors ${modelFav} (H=${markets.mlHome}/A=${markets.mlAway}), gap=${(gap*100).toFixed(1)}pp. Orientation independently verified (live DB assert + probe slug); writing model's genuine disagreement.`);
+          } else {
+            log('PASS', `${match.fid}: book/model favorite agree (${bookFav}), gap=${(gap*100).toFixed(1)}pp`);
+          }
+        }
       }
     }
 
@@ -811,7 +833,7 @@ async function main() {
     log('MARKET', `──── SPREAD (${spreadLine}) ────`);
     log('MARKET', `  MODEL: H=${ml(markets.mlHomeSpread)}(${pct(markets.pHomeSpread)}) A=${ml(markets.mlAwaySpread)}(${pct(markets.pAwaySpread)})`);
     log('MARKET', `  BOOK:  H=${ml(book.bookHomeSpreadOdds)} A=${ml(book.bookAwaySpreadOdds)}`);
-    log('MARKET', `──── TOTAL (O/U 2.5) ────`);
+    log('MARKET', `──── TOTAL (O/U ${book.bookTotal}) ────`);
     log('MARKET', `  MODEL: O=${ml(markets.mlOver)}(${pct(markets.pOver)}) U=${ml(markets.mlUnder)}(${pct(markets.pUnder)})`);
     log('MARKET', `  BOOK:  O=${ml(book.bookOver)} U=${ml(book.bookUnder)}`);
     log('MARKET', `──── BTTS ────`);
