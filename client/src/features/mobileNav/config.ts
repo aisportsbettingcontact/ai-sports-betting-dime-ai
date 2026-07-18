@@ -1,32 +1,22 @@
 /**
- * Mobile Owner Tabs — Feature Flags & Configuration
- * ═══════════════════════════════════════════════════
- * Mobile bottom tab navigation for ALL authenticated users (<768px).
- * ("Owner" in the module name is historical — the bar launched owner-only
- * and went public 2026-07-12 via MOBILE_OWNER_TABS_PUBLIC_ENABLED.)
- * All flags are compile-time constants for tree-shaking.
+ * Mobile Nav — Feature Flags & Configuration
+ * ═══════════════════════════════════════════
+ * Mobile primary navigation for ALL authenticated users (<768px).
+ * There are no role-gated tabs: every destination is default and
+ * project-wide. All flags are compile-time constants for tree-shaking.
  */
 
 // ─── Feature Flags ───────────────────────────────────────────────────────────
-export const MOBILE_OWNER_TABS_ENABLED = true;
-export const MOBILE_OWNER_TABS_TEST_MODE = false; // Superseded by PUBLIC_ENABLED (kept for rollback)
-// All authenticated mobile users see the tabs. Authentication is still
-// required — decideMobileOwnerAccess checks isAuthenticated before this flag.
-export const MOBILE_OWNER_TABS_PUBLIC_ENABLED = true;
-// Debug overlay must stay off now that the tabs are public — it renders for
-// everyone who can reach /m/* (MobileOwnerDebugPanel gates on this flag only).
-export const MOBILE_OWNER_TABS_DEBUG_PANEL = false;
+export const MOBILE_NAV_ENABLED = true;
+// Debug overlay stays off in production — it renders for everyone who can
+// reach /m/* (MobileNavDebugPanel gates on this flag only).
+export const MOBILE_NAV_DEBUG_PANEL = false;
 
 // ─── Tab Definitions ─────────────────────────────────────────────────────────
-export type MobileOwnerTabId =
-  | "feed"
-  | "tools"
-  | "chat"
-  | "tracker"
-  | "profile";
+export type MobileNavTabId = "feed" | "tools" | "chat" | "tracker" | "profile";
 
-export interface MobileOwnerTabConfig {
-  id: MobileOwnerTabId;
+export interface MobileNavTabConfig {
+  id: MobileNavTabId;
   label: string;
   path: string;
   badge?: number | null;
@@ -42,7 +32,7 @@ export interface MobileOwnerTabConfig {
 // Odds History surface (the only live betting-tools destination — no /tools
 // route exists); "Bet Tracker" replaces the Props tab (the /m/props route and
 // screen stay reachable by URL, just not from the primary bar).
-export const MOBILE_OWNER_TABS: MobileOwnerTabConfig[] = [
+export const MOBILE_NAV_TABS: MobileNavTabConfig[] = [
   { id: "feed", label: "Feed", path: "/feed/model/mlb" },
   { id: "tools", label: "Tools", path: "/betting-splits/MLB" },
   { id: "chat", label: "Chat", path: "/chat" },
@@ -51,46 +41,31 @@ export const MOBILE_OWNER_TABS: MobileOwnerTabConfig[] = [
 ];
 
 /** Index of the Chat destination — the visual + mathematical center pill. */
-export const CHAT_TAB_INDEX = MOBILE_OWNER_TABS.findIndex(t => t.id === "chat");
+export const CHAT_TAB_INDEX = MOBILE_NAV_TABS.findIndex(t => t.id === "chat");
 
 // ─── Access Decision Type ────────────────────────────────────────────────────
-export type MobileOwnerAccessDecision =
-  | { granted: true; reason: "owner" | "test_mode" | "public" }
-  | {
-      granted: false;
-      reason:
-        | "feature_disabled"
-        | "not_authenticated"
-        | "not_owner"
-        | "not_mobile";
-    };
+export type MobileNavAccessDecision =
+  | { granted: true; reason: "authenticated" }
+  | { granted: false; reason: "feature_disabled" | "not_authenticated" };
 
 // ─── Access Logic ────────────────────────────────────────────────────────────
-export function decideMobileOwnerAccess(
-  userRole: string | null | undefined,
-  isAuthenticated: boolean,
-  isMobile: boolean
-): MobileOwnerAccessDecision {
-  if (!MOBILE_OWNER_TABS_ENABLED) {
+// Authentication is the only requirement: every destination behind the nav is
+// itself auth-guarded (RequireAuth), and unauthenticated visitors belong on
+// the public landing/login surfaces without app chrome. No role checks.
+export function decideMobileNavAccess(
+  isAuthenticated: boolean
+): MobileNavAccessDecision {
+  if (!MOBILE_NAV_ENABLED) {
     return { granted: false, reason: "feature_disabled" };
   }
   if (!isAuthenticated) {
     return { granted: false, reason: "not_authenticated" };
   }
-  if (MOBILE_OWNER_TABS_PUBLIC_ENABLED) {
-    return { granted: true, reason: "public" };
-  }
-  if (MOBILE_OWNER_TABS_TEST_MODE) {
-    return { granted: true, reason: "test_mode" };
-  }
-  if (userRole === "owner") {
-    return { granted: true, reason: "owner" };
-  }
-  return { granted: false, reason: "not_owner" };
+  return { granted: true, reason: "authenticated" };
 }
 
 // ─── Logging Event Types ─────────────────────────────────────────────────────
-export type MobileOwnerTabEvent =
+export type MobileNavEvent =
   | "tabs_rendered"
   | "tab_tapped"
   | "tab_changed"
@@ -114,7 +89,7 @@ export type MobileOwnerTabEvent =
   | "viewport_resized"
   | "safe_area_detected"
   | "theme_applied"
-  // Phase 2: Data connection events
+  // Data connection events (/m/* screens)
   | "mobile_feed_data_fetch_started"
   | "mobile_feed_data_fetch_completed"
   | "mobile_feed_data_fetch_failed"
@@ -132,11 +107,10 @@ export type MobileOwnerTabEvent =
   | "mobile_bet_tracker_empty_state_rendered"
   | "mobile_profile_data_loaded"
   | "mobile_profile_data_failed"
-  // Phase 2.5: Global mount events
+  // Global mount events
   | "mount_attempted"
   | "mount_success"
   | "mount_skipped"
-  | "mount_skipped_non_owner"
   | "mount_skipped_feature_disabled"
   | "mount_skipped_not_mobile"
   | "global_layout_mount_enabled"
@@ -144,20 +118,15 @@ export type MobileOwnerTabEvent =
   | "feature_flags_detected"
   | "css_visibility_checked"
   | "route_render_verified"
-  // Phase 2.5b: User-specified global tab interaction events
-  | "mobile_owner_tab_clicked"
-  | "mobile_owner_tab_navigated_to_m_route"
-  | "mobile_owner_existing_page_tabs_rendered"
-  | "mobile_owner_m_route_rendered"
-  | "mobile_owner_non_owner_m_route_denied"
-  // Phase 2.5c: Visual refinement events
-  | "mobile_owner_tabs_visual_refinement_loaded"
-  | "mobile_owner_tabs_visual_refinement_active_state_verified"
-  | "mobile_owner_tabs_visual_refinement_safe_area_verified";
+  // Global nav interaction events
+  | "mobile_nav_tab_clicked"
+  | "mobile_nav_tab_navigated"
+  | "mobile_nav_rendered"
+  | "mobile_nav_m_route_rendered";
 
-export interface MobileOwnerTabLogEntry {
+export interface MobileNavLogEntry {
   timestamp: number;
-  event: MobileOwnerTabEvent;
-  tabId?: MobileOwnerTabId;
+  event: MobileNavEvent;
+  tabId?: MobileNavTabId;
   metadata?: Record<string, unknown>;
 }

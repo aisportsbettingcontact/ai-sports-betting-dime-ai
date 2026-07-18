@@ -28,8 +28,8 @@ const exists = (...segs: string[]) =>
 
 const navSrc = read("MobileFloatingNav.tsx");
 const navCss = read("mobileFloatingNav.css");
-const globalSrc = read("GlobalMobileOwnerTabs.tsx");
-const shellSrc = read("MobileOwnerTabsShell.tsx");
+const globalSrc = read("GlobalMobileNav.tsx");
+const shellSrc = read("MobileNavShell.tsx");
 const indexCss = read("..", "..", "index.css");
 const dimeMobileCss = read("..", "..", "styles", "dime-mobile.css");
 const conversationCss = read(
@@ -79,7 +79,7 @@ describe("Navigation semantics", () => {
   });
 
   it("visible order Feed→Tools→Chat→Bet Tracker→Profile comes from config (single source)", () => {
-    expect(navSrc).toMatch(/MOBILE_OWNER_TABS\.map\(/);
+    expect(navSrc).toMatch(/MOBILE_NAV_TABS\.map\(/);
   });
 });
 
@@ -204,10 +204,30 @@ describe("Brand law (THREE-COLOR-LAW v2/v3)", () => {
 });
 
 describe("Old navigation retirement", () => {
-  it("MobileOwnerBottomTabs no longer exists and is referenced nowhere", () => {
+  it("the retired bottom tab bar component no longer exists", () => {
     expect(exists("MobileOwnerBottomTabs.tsx")).toBe(false);
-    for (const src of [navSrc, globalSrc, shellSrc, appSrc]) {
-      expect(src).not.toMatch(/MobileOwnerBottomTabs/);
+  });
+
+  it("nav chrome carries no owner-flavored naming — tabs are default for all users", () => {
+    // Regression guard for the 2026-07-18 de-owner directive: the nav
+    // machinery must never grow role-flavored identifiers again. (The /m/*
+    // screens may still DISPLAY an account's role value — that is user data,
+    // not gating.)
+    const chromeFiles = [
+      "MobileFloatingNav.tsx",
+      "GlobalMobileNav.tsx",
+      "MobileNavShell.tsx",
+      "MobileNavLayout.tsx",
+      "MobileNavAuthGate.tsx",
+      "MobileNavDebugPanel.tsx",
+      "config.ts",
+      "logger.ts",
+      "activeTab.ts",
+      "index.ts",
+      "mobileFloatingNav.css",
+    ];
+    for (const file of chromeFiles) {
+      expect(read(file), file).not.toMatch(/owner/i);
     }
   });
 
@@ -229,12 +249,11 @@ describe("Old navigation retirement", () => {
   it("global mount now covers /m/* (the shell lost its own bar) but still skips /login", () => {
     expect(globalSrc).not.toMatch(/location === "\/m"/);
     expect(globalSrc).toMatch(/location === "\/login"/);
-    expect(shellSrc).not.toMatch(/MobileOwnerBottomTabs/);
     expect(shellSrc).toMatch(/paddingTop: "var\(--dime-floating-nav-h, 0px\)"/);
   });
 
   it("App.tsx still mounts the global nav outside the router", () => {
-    expect(appSrc).toMatch(/<GlobalMobileOwnerTabs \/>/);
+    expect(appSrc).toMatch(/<GlobalMobileNav \/>/);
   });
 });
 

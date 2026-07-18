@@ -16,9 +16,9 @@
  *   (The retired bottom bar defaulted to "feed" — that was a semantics bug.)
  */
 
-import type { MobileOwnerTabId } from "./config";
+import type { MobileNavTabId } from "./config";
 
-export function getActiveTabId(location: string): MobileOwnerTabId | null {
+export function getActiveTabId(location: string): MobileNavTabId | null {
   const path = location.split(/[?#]/, 1)[0] || "/";
 
   if (path.startsWith("/feed/model") || path === "/m/feed") return "feed";

@@ -25,7 +25,7 @@ const configSrc = read(
   "client",
   "src",
   "features",
-  "mobileOwnerTabs",
+  "mobileNav",
   "config.ts"
 );
 const tabsSrc = read(
@@ -33,7 +33,7 @@ const tabsSrc = read(
   "client",
   "src",
   "features",
-  "mobileOwnerTabs",
+  "mobileNav",
   "MobileFloatingNav.tsx"
 );
 const homeSrc = read("..", "client", "src", "pages", "Home.tsx");
@@ -119,17 +119,19 @@ describe("Legacy slug eradication — client router", () => {
   });
 
   it("legacy slugs are wouter Redirects into the canonical helpers", () => {
-    expect(appSrc).toMatch(
-      /path="\/feed">\{\(\) => <Redirect to=\{legacyFeedRedirectTarget\(window\.location\.search\)\} replace \/>/
+    // whitespace-tolerant: prettier may fold the route JSX across lines
+    const flat = appSrc.replace(/\s+/g, " ");
+    expect(flat).toMatch(
+      /path="\/feed"> ?\{\(\) => ?\( ?<Redirect to=\{legacyFeedRedirectTarget\(window\.location\.search\)\} replace \/> ?\) ?\}|path="\/feed">\{\(\) => <Redirect to=\{legacyFeedRedirectTarget\(window\.location\.search\)\} replace \/>/
     );
-    expect(appSrc).toMatch(
-      /path="\/splits">\{\(\) => <Redirect to=\{bettingSplitsPath\("MLB"\)\} replace \/>/
+    expect(flat).toMatch(
+      /path="\/splits"> ?\{\(\) => <Redirect to=\{bettingSplitsPath\("MLB"\)\} replace \/>/
     );
-    expect(appSrc).toMatch(
-      /path="\/dashboard">\{\(\) => <Redirect to=\{feedModelPath\("MLB"\)\} replace \/>/
+    expect(flat).toMatch(
+      /path="\/dashboard"> ?\{\(\) => ?\(? ?<Redirect to=\{feedModelPath\("MLB"\)\} replace \/>/
     );
-    expect(appSrc).toMatch(
-      /path="\/projections">\{\(\) => <Redirect to=\{feedModelPath\("MLB"\)\} replace \/>/
+    expect(flat).toMatch(
+      /path="\/projections"> ?\{\(\) => ?\(? ?<Redirect to=\{feedModelPath\("MLB"\)\} replace \/>/
     );
   });
 

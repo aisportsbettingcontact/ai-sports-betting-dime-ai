@@ -44,7 +44,7 @@ Familjen Grotesk only. Motion: 160ms `var(--dime-ease)`, pressed-state compressi
 
 ## Mechanics
 
-- `GlobalMobileOwnerTabs` keeps its gating (authed, <768px, not `/login`) but now also
+- `GlobalMobileNav` keeps its gating (authed, <768px, not `/login`) but now also
   renders on `/m/*`, mounts `MobileFloatingNav`, and toggles body class
   `dime-floating-nav-active` (replaces `mobile-owner-tabs-active`).
 - The nav measures its rendered height (ResizeObserver) and publishes
@@ -60,5 +60,5 @@ Familjen Grotesk only. Motion: 160ms `var(--dime-ease)`, pressed-state compressi
   identity per page"): feed topbar (wordmark-only on mobile) hidden; chat bar, splits
   header, and profile hero wordmarks hidden — all via the body class, so signed-out
   users (no nav) keep today's chrome.
-- `MobileOwnerTabsShell` (/m/\*) drops the bottom bar and pads top by the nav variable.
+- `MobileNavShell` (/m/\*) drops the bottom bar and pads top by the nav variable.
 - `MobileOwnerBottomTabs.tsx` is deleted; all bottom-clearance CSS is retired.

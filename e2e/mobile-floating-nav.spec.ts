@@ -3,7 +3,7 @@
  * ══════════════════════════════════════════════════════════════
  * Runs against the vite dev server (no backend): every /api/trpc call is
  * stubbed at the network layer — appUsers.me returns an authenticated user so
- * RequireAuth + GlobalMobileOwnerTabs activate; every other procedure returns
+ * RequireAuth + GlobalMobileNav activate; every other procedure returns
  * a tRPC error, exercising the pages' real error/empty states. This proves
  * the nav renders and navigates independently of data availability.
  *
@@ -29,7 +29,8 @@ const STUB_USER = {
   id: 1,
   email: "prez@aisportsbettingmodels.com",
   username: "prez",
-  role: "owner",
+  // a plain authenticated user — the nav has no role-gated tabs
+  role: "user",
   hasAccess: true,
   expiryDate: null,
   termsAccepted: true,
@@ -108,13 +109,10 @@ test.describe("structure and semantics", () => {
       await expect(link).toHaveAttribute("href", EXPECTED[i].href);
     }
 
-    // landmark with label; retired bottom bar renders nowhere
+    // exactly one main-navigation landmark — no second/legacy nav bar
     await expect(page.locator('nav[aria-label="Main navigation"]')).toHaveCount(
       1
     );
-    await expect(
-      page.locator('[data-testid="mobile-owner-bottom-tabs"]')
-    ).toHaveCount(0);
 
     // /terms is no destination — nothing may claim aria-current
     await expect(nav(page).locator('[aria-current="page"]')).toHaveCount(0);

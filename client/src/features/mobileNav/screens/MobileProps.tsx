@@ -148,7 +148,9 @@ function PropCard({ card }: { card: KPropCard }) {
       }}
     >
       {/* Headshot + pitcher name + quiet matchup line */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+      <div
+        style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}
+      >
         {(() => {
           const photo = mlbPhoto(card.mlbamId);
           return (
@@ -172,7 +174,10 @@ function PropCard({ card }: { card: KPropCard }) {
                   height={44}
                   loading="lazy"
                   style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                  onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                  onError={e => {
+                    (e.currentTarget as HTMLImageElement).style.display =
+                      "none";
+                  }}
                 />
               ) : (
                 <div
@@ -188,42 +193,54 @@ function PropCard({ card }: { card: KPropCard }) {
                     color: "var(--dime-text-secondary)",
                   }}
                 >
-                  {card.pitcherName.split(/\s+/).map((w) => w[0] ?? "").join("").slice(0, 2).toUpperCase()}
+                  {card.pitcherName
+                    .split(/\s+/)
+                    .map(w => w[0] ?? "")
+                    .join("")
+                    .slice(0, 2)
+                    .toUpperCase()}
                 </div>
               )}
             </div>
           );
         })()}
-        <div style={{ display: "flex", flexDirection: "column", gap: 3, minWidth: 0 }}>
-        <h2
+        <div
           style={{
-            margin: 0,
-            fontFamily: sans,
-            fontSize: 16,
-            fontWeight: 600,
-            letterSpacing: "-0.1px",
-            color: "var(--dime-text-primary)",
-            whiteSpace: "nowrap",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
+            display: "flex",
+            flexDirection: "column",
+            gap: 3,
+            minWidth: 0,
           }}
         >
-          {card.pitcherName}
-        </h2>
-        <p
-          style={{
-            margin: 0,
-            fontFamily: sans,
-            fontSize: 12,
-            fontWeight: 500,
-            color: "var(--dime-text-secondary)",
-            whiteSpace: "nowrap",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-          }}
-        >
-          {card.subline}
-        </p>
+          <h2
+            style={{
+              margin: 0,
+              fontFamily: sans,
+              fontSize: 16,
+              fontWeight: 600,
+              letterSpacing: "-0.1px",
+              color: "var(--dime-text-primary)",
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
+            {card.pitcherName}
+          </h2>
+          <p
+            style={{
+              margin: 0,
+              fontFamily: sans,
+              fontSize: 12,
+              fontWeight: 500,
+              color: "var(--dime-text-secondary)",
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
+            {card.subline}
+          </p>
         </div>
       </div>
 
@@ -239,7 +256,13 @@ function PropCard({ card }: { card: KPropCard }) {
       >
         <StatBlock label="Line">
           <span style={statValue}>
-            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--dime-text-secondary)" }}>
+            <span
+              style={{
+                fontSize: 13,
+                fontWeight: 600,
+                color: "var(--dime-text-secondary)",
+              }}
+            >
               o/u{" "}
             </span>
             {card.line}
@@ -249,7 +272,11 @@ function PropCard({ card }: { card: KPropCard }) {
         <StatBlock label="Book">
           <span style={statValue}>
             {fmtOdds(card.bookOverOdds)}
-            <span style={{ color: "var(--dime-text-secondary)", fontWeight: 600 }}>/</span>
+            <span
+              style={{ color: "var(--dime-text-secondary)", fontWeight: 600 }}
+            >
+              /
+            </span>
             {fmtOdds(card.bookUnderOdds)}
           </span>
         </StatBlock>
@@ -258,7 +285,10 @@ function PropCard({ card }: { card: KPropCard }) {
           <span style={statValue}>{fmtNum(card.kProj, 1)}</span>
         </StatBlock>
 
-        <StatBlock label={card.lean ? `${card.lean} edge` : "Edge"} align="right">
+        <StatBlock
+          label={card.lean ? `${card.lean} edge` : "Edge"}
+          align="right"
+        >
           {card.edgePp != null ? (
             <span
               style={{
@@ -273,7 +303,9 @@ function PropCard({ card }: { card: KPropCard }) {
               <span style={{ fontSize: 11, fontWeight: 600 }}>pp</span>
             </span>
           ) : (
-            <span style={{ ...statValue, color: "var(--dime-text-secondary)" }}>—</span>
+            <span style={{ ...statValue, color: "var(--dime-text-secondary)" }}>
+              —
+            </span>
           )}
         </StatBlock>
       </div>
@@ -309,7 +341,9 @@ function PropCardSkeleton() {
         <div style={bar("52%", 15)} />
         <div style={bar("72%", 11)} />
       </div>
-      <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+      <div
+        style={{ display: "flex", justifyContent: "space-between", gap: 12 }}
+      >
         <div style={bar(56, 17)} />
         <div style={bar(80, 17)} />
         <div style={bar(36, 17)} />
@@ -337,7 +371,7 @@ export function MobileProps() {
   );
 
   const gameIds = useMemo(
-    () => (gamesQuery.data ?? []).filter((g) => g?.id).map((g) => g.id),
+    () => (gamesQuery.data ?? []).filter(g => g?.id).map(g => g.id),
     [gamesQuery.data]
   );
 
@@ -438,7 +472,12 @@ export function MobileProps() {
           <div
             role="status"
             aria-label="Loading props..."
-            style={{ display: "flex", flexDirection: "column", gap: 12, padding: 16 }}
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 12,
+              padding: 16,
+            }}
           >
             <PropCardSkeleton />
             <PropCardSkeleton />
@@ -457,8 +496,15 @@ export function MobileProps() {
               if (gameIds.length > 0) propsQuery.refetch();
             }}
           >
-            <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: 16 }}>
-              {cards.map((card) => (
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 12,
+                padding: 16,
+              }}
+            >
+              {cards.map(card => (
                 <PropCard key={card.key} card={card} />
               ))}
             </div>

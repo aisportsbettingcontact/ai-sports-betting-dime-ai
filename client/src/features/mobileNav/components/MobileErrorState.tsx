@@ -1,5 +1,5 @@
 /**
- * MobileErrorState — Controlled error state for mobile owner tabs.
+ * MobileErrorState — Controlled error state for the mobile screens.
  * States the problem and offers a recovery path. Greys only — MASTER.md
  * reserves red for nothing and mint for signal, and an error is neither.
  */
@@ -21,7 +21,10 @@ export function MobileErrorState({
           borderColor: "var(--dime-border-strong)",
         }}
       >
-        <AlertTriangle className="w-5 h-5" style={{ color: "var(--dime-text-secondary)" }} />
+        <AlertTriangle
+          className="w-5 h-5"
+          style={{ color: "var(--dime-text-secondary)" }}
+        />
       </div>
       <p
         className="text-sm text-center max-w-[240px] leading-relaxed mb-4"
@@ -39,10 +42,10 @@ export function MobileErrorState({
             background: "transparent",
             transition: "background var(--dime-t) var(--dime-ease)",
           }}
-          onMouseEnter={(e) => {
+          onMouseEnter={e => {
             e.currentTarget.style.background = "var(--dime-row-hover)";
           }}
-          onMouseLeave={(e) => {
+          onMouseLeave={e => {
             e.currentTarget.style.background = "transparent";
           }}
         >

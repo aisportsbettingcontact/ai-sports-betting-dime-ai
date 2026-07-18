@@ -1,23 +1,23 @@
 /**
- * MobileOwnerLayout
+ * MobileNavLayout
  * ═════════════════
  * Top-level layout for /m/* routes.
- * Wraps content in MobileOwnerTabsShell (access gate + bottom tabs).
+ * Wraps content in MobileNavShell (access gate + bottom tabs).
  * Internal routing for each tab screen.
  */
 
 import { Route, Switch, Redirect } from "wouter";
-import { MobileOwnerTabsShell } from "./MobileOwnerTabsShell";
-import { MobileOwnerDebugPanel } from "./MobileOwnerDebugPanel";
+import { MobileNavShell } from "./MobileNavShell";
+import { MobileNavDebugPanel } from "./MobileNavDebugPanel";
 import { MobileFeed } from "./screens/MobileFeed";
 import { MobileSplits } from "./screens/MobileSplits";
 import { MobileChat } from "./screens/MobileChat";
 import { MobileProps } from "./screens/MobileProps";
 import { MobileProfile } from "./screens/MobileProfile";
 
-export default function MobileOwnerLayout() {
+export default function MobileNavLayout() {
   return (
-    <MobileOwnerTabsShell>
+    <MobileNavShell>
       <Switch>
         <Route path="/m/feed" component={MobileFeed} />
         <Route path="/m/splits" component={MobileSplits} />
@@ -28,8 +28,8 @@ export default function MobileOwnerLayout() {
         <Route path="/m">{() => <Redirect to="/m/feed" />}</Route>
         <Route>{() => <Redirect to="/m/feed" />}</Route>
       </Switch>
-      {/* Debug panel — owner-only floating overlay */}
-      <MobileOwnerDebugPanel />
-    </MobileOwnerTabsShell>
+      {/* Debug panel — dev-only floating overlay (flag-gated) */}
+      <MobileNavDebugPanel />
+    </MobileNavShell>
   );
 }

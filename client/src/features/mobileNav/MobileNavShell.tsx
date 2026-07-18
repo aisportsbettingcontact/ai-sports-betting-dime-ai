@@ -1,9 +1,9 @@
 /**
- * MobileOwnerTabsShell
+ * MobileNavShell
  * ════════════════════
  * Layout wrapper that provides:
  * - Content area cleared below the global floating nav
- * - Access gate (owner-only)
+ * - Auth gate (authenticated users)
  * - Scroll position preservation per tab
  *
  * [FLOATING NAV 2026-07-18] The shell no longer renders its own bottom tab
@@ -13,14 +13,14 @@
 
 import { type ReactNode, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
-import { MobileOwnerAccessGate } from "./MobileOwnerAccessGate";
-import { mobileOwnerTabLogger } from "./logger";
+import { MobileNavAuthGate } from "./MobileNavAuthGate";
+import { mobileNavLogger } from "./logger";
 
-interface MobileOwnerTabsShellProps {
+interface MobileNavShellProps {
   children: ReactNode;
 }
 
-export function MobileOwnerTabsShell({ children }: MobileOwnerTabsShellProps) {
+export function MobileNavShell({ children }: MobileNavShellProps) {
   const [location] = useLocation();
   const scrollPositions = useRef<Record<string, number>>({});
   const contentRef = useRef<HTMLDivElement>(null);
@@ -34,7 +34,7 @@ export function MobileOwnerTabsShell({ children }: MobileOwnerTabsShellProps) {
     const saved = scrollPositions.current[location];
     if (saved !== undefined) {
       el.scrollTop = saved;
-      mobileOwnerTabLogger.log("scroll_position_restored", undefined, {
+      mobileNavLogger.log("scroll_position_restored", undefined, {
         path: location,
         position: saved,
       });
@@ -46,7 +46,7 @@ export function MobileOwnerTabsShell({ children }: MobileOwnerTabsShellProps) {
       // Save current scroll position before leaving
       if (el) {
         scrollPositions.current[location] = el.scrollTop;
-        mobileOwnerTabLogger.log("scroll_position_saved", undefined, {
+        mobileNavLogger.log("scroll_position_saved", undefined, {
           path: location,
           position: el.scrollTop,
         });
@@ -56,24 +56,22 @@ export function MobileOwnerTabsShell({ children }: MobileOwnerTabsShellProps) {
 
   // Log mount/unmount
   useEffect(() => {
-    mobileOwnerTabLogger.log("shell_mounted", undefined, { path: location });
-    // User-specified event: mobile_owner_m_route_rendered
-    mobileOwnerTabLogger.log("mobile_owner_m_route_rendered", undefined, {
+    mobileNavLogger.log("shell_mounted", undefined, { path: location });
+    // User-specified event: mobile_nav_m_route_rendered
+    mobileNavLogger.log("mobile_nav_m_route_rendered", undefined, {
       current_path: location,
       target_path: location,
       tab_name: location.split("/")[2] ?? null,
-      is_owner: true, // Only owners pass the access gate
       is_mobile: true,
-      test_mode: false,
       timestamp: Date.now(),
     });
     return () => {
-      mobileOwnerTabLogger.log("shell_unmounted");
+      mobileNavLogger.log("shell_unmounted");
     };
   }, []);
 
   return (
-    <MobileOwnerAccessGate>
+    <MobileNavAuthGate>
       <div
         className="fixed inset-0 flex flex-col"
         style={{ background: "var(--dime-bg)" }}
@@ -92,6 +90,6 @@ export function MobileOwnerTabsShell({ children }: MobileOwnerTabsShellProps) {
           {children}
         </div>
       </div>
-    </MobileOwnerAccessGate>
+    </MobileNavAuthGate>
   );
 }

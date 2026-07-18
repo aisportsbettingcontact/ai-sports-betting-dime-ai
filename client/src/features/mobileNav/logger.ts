@@ -1,17 +1,21 @@
 /**
- * Mobile Owner Tabs — Logging System
- * ═══════════════════════════════════
- * Industry-leading event logging with full metadata capture.
+ * Mobile Nav — Logging System
+ * ════════════════════════════
+ * Structured event logging with full metadata capture.
  * All events are buffered in-memory and can be exported via debug panel.
  */
 
-import type { MobileOwnerTabEvent, MobileOwnerTabId, MobileOwnerTabLogEntry } from "./config";
+import type {
+  MobileNavEvent,
+  MobileNavTabId,
+  MobileNavLogEntry,
+} from "./config";
 
 const MAX_LOG_ENTRIES = 500;
-const LOG_PREFIX = "[MobileOwnerTabs]";
+const LOG_PREFIX = "[MobileNav]";
 
-class MobileOwnerTabLogger {
-  private entries: MobileOwnerTabLogEntry[] = [];
+class MobileNavLogger {
+  private entries: MobileNavLogEntry[] = [];
   private sessionId: string;
   private startTime: number;
 
@@ -21,11 +25,15 @@ class MobileOwnerTabLogger {
   }
 
   private generateSessionId(): string {
-    return `mot_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+    return `mnav_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
   }
 
-  log(event: MobileOwnerTabEvent, tabId?: MobileOwnerTabId, metadata?: Record<string, unknown>): void {
-    const entry: MobileOwnerTabLogEntry = {
+  log(
+    event: MobileNavEvent,
+    tabId?: MobileNavTabId,
+    metadata?: Record<string, unknown>
+  ): void {
+    const entry: MobileNavLogEntry = {
       timestamp: Date.now(),
       event,
       tabId,
@@ -44,7 +52,7 @@ class MobileOwnerTabLogger {
     console.log(`${LOG_PREFIX} [${elapsed}s]${tabStr} ${event}${metaStr}`);
   }
 
-  getEntries(): MobileOwnerTabLogEntry[] {
+  getEntries(): MobileNavLogEntry[] {
     return [...this.entries];
   }
 
@@ -56,23 +64,27 @@ class MobileOwnerTabLogger {
     return Date.now() - this.startTime;
   }
 
-  getEventCount(event?: MobileOwnerTabEvent): number {
+  getEventCount(event?: MobileNavEvent): number {
     if (!event) return this.entries.length;
     return this.entries.filter(e => e.event === event).length;
   }
 
-  getLastEvent(): MobileOwnerTabLogEntry | null {
+  getLastEvent(): MobileNavLogEntry | null {
     return this.entries[this.entries.length - 1] ?? null;
   }
 
   exportJSON(): string {
-    return JSON.stringify({
-      sessionId: this.sessionId,
-      startTime: this.startTime,
-      duration: this.getSessionDuration(),
-      totalEvents: this.entries.length,
-      entries: this.entries,
-    }, null, 2);
+    return JSON.stringify(
+      {
+        sessionId: this.sessionId,
+        startTime: this.startTime,
+        duration: this.getSessionDuration(),
+        totalEvents: this.entries.length,
+        entries: this.entries,
+      },
+      null,
+      2
+    );
   }
 
   clear(): void {
@@ -83,4 +95,4 @@ class MobileOwnerTabLogger {
 }
 
 // Singleton instance
-export const mobileOwnerTabLogger = new MobileOwnerTabLogger();
+export const mobileNavLogger = new MobileNavLogger();
