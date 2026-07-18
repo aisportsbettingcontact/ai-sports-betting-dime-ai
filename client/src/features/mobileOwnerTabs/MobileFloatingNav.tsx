@@ -1,0 +1,168 @@
+/**
+ * MobileFloatingNav
+ * ═════════════════
+ * Top-floating mobile primary navigation: the Dime wordmark on a small raised
+ * chip with a fully-rounded pill menu directly below it. Replaces the retired
+ * bottom tab bar (docs/plans/2026-07-18-mobile-floating-nav.md).
+ *
+ * DESIGN SPEC — Dime brand law (dime-ai/THREE-COLOR-LAW.md v2/v3, which
+ * supersedes design-system/dime-ai/MASTER.md where they disagree):
+ * ────────────────────────────────────────────────────────────────
+ * - Solid raised surfaces (`--dime-surface-raised`) + quiet 1px `--dime-border`
+ *   hairline + floating-surface shadow. Alpha lives ONLY inside box-shadow —
+ *   no translucent fills, no backdrop blur (the reference menu's glass surface
+ *   is adapted to the Law's solid tiers).
+ * - Mint `#45E0A8` (`--dime-mint`, verified exact) is reserved for signal:
+ *   here that is the Chat primary pill, the active-destination dot, and the
+ *   wordmark coin-dot. Chat pill ink is #000000 (~12:1 on mint, both themes);
+ *   the coin-dot inside the mint pill flips to white (brand coin-dot rule).
+ * - Familjen Grotesk only. Motion: 160ms var(--dime-ease); pressed-state
+ *   compression is transform-only; everything collapses under
+ *   prefers-reduced-motion (CSS media query — no JS gating needed).
+ *
+ * Geometry contract:
+ * - grid-template-columns: 1fr 1fr auto 1fr 1fr — the Chat pill occupies the
+ *   mathematical center of the menu regardless of neighbor label widths.
+ * - Every destination is a real wouter <Link> (anchor) with min 44×44px
+ *   targets; aria-current="page" only on the genuinely active destination.
+ * - The wrapper measures its own rendered height (ResizeObserver) and
+ *   publishes `--dime-floating-nav-h` on <html>; page clearance derives from
+ *   that variable, never from fixed pixel offsets.
+ *
+ * zIndex 40: below the app modals (AgeModal/LoginModal at z-50) and the chat
+ * drawer stack (60-100), above page sticky headers (≤40 via DOM order).
+ */
+
+import { useLayoutEffect, useRef } from "react";
+import { Link, useLocation } from "wouter";
+import { MOBILE_OWNER_TABS, type MobileOwnerTabId } from "./config";
+import { getActiveTabId } from "./activeTab";
+import { mobileOwnerTabLogger } from "./logger";
+import "./mobileFloatingNav.css";
+
+/** Published on <html>; consumed by body clearance + sticky-chrome offsets. */
+export const NAV_CLEARANCE_VAR = "--dime-floating-nav-h";
+/** Breathing room between the floating assembly and page content. */
+const CLEARANCE_GAP_PX = 8;
+
+/** Brand wordmark: lowercase "dıme", dotless ı (U+0131) + coin-dot. */
+function DimeWordmark({ decorative = false }: { decorative?: boolean }) {
+  return (
+    <span
+      className="mfn-wordmark"
+      {...(decorative ? { "aria-hidden": true } : { "aria-label": "dime" })}
+    >
+      d
+      <span className="mfn-i">
+        ı<span className="mfn-coindot" />
+      </span>
+      me
+    </span>
+  );
+}
+
+export function MobileFloatingNav() {
+  const [location] = useLocation();
+  const wrapRef = useRef<HTMLDivElement | null>(null);
+  const activeTabId = getActiveTabId(location);
+
+  // Reserve document space equal to the rendered assembly height. The wrapper
+  // starts at the viewport top (its padding absorbs the safe-area inset), so
+  // offsetHeight IS the assembly's bottom edge — robust against text scaling,
+  // label wrapping, and safe-area changes.
+  useLayoutEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const root = document.documentElement;
+    const publish = () => {
+      root.style.setProperty(
+        NAV_CLEARANCE_VAR,
+        `${Math.ceil(el.offsetHeight) + CLEARANCE_GAP_PX}px`
+      );
+    };
+    publish();
+    const observer = new ResizeObserver(publish);
+    observer.observe(el);
+    return () => {
+      observer.disconnect();
+      root.style.removeProperty(NAV_CLEARANCE_VAR);
+    };
+  }, []);
+
+  // Same logging contract as the retired bottom bar (in-memory logger only —
+  // there is no external analytics product; see logger.ts).
+  function handleTap(tabId: MobileOwnerTabId, path: string, isActive: boolean) {
+    mobileOwnerTabLogger.log("tab_tapped", tabId, { from: location, to: path });
+    mobileOwnerTabLogger.log("mobile_owner_tab_clicked", tabId, {
+      current_path: location,
+      target_path: path,
+      tab_name: tabId,
+      is_mobile: true,
+      timestamp: Date.now(),
+    });
+    if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+      try {
+        navigator.vibrate(10);
+        mobileOwnerTabLogger.log("haptic_triggered", tabId);
+      } catch {
+        // Silent — not all browsers support vibrate
+      }
+    }
+    if (location !== path) {
+      mobileOwnerTabLogger.log("tab_changed", tabId, {
+        from: activeTabId,
+        to: tabId,
+      });
+      mobileOwnerTabLogger.log("route_navigated", tabId, { path });
+      mobileOwnerTabLogger.log("mobile_owner_tab_navigated_to_m_route", tabId, {
+        current_path: location,
+        target_path: path,
+        tab_name: tabId,
+        is_mobile: true,
+        timestamp: Date.now(),
+      });
+    }
+    void isActive; // replace-vs-push is handled by the Link `replace` prop
+  }
+
+  return (
+    <div className="mfn-wrap" ref={wrapRef} data-testid="mobile-floating-nav">
+      <div className="mfn-logo-chip">
+        <DimeWordmark />
+      </div>
+      <nav className="mfn-nav" aria-label="Main navigation">
+        <div className="mfn-grid">
+          {MOBILE_OWNER_TABS.map(tab => {
+            const isActive = activeTabId === tab.id;
+            const isChat = tab.id === "chat";
+            return (
+              <Link
+                key={tab.id}
+                href={tab.path}
+                // Re-tapping the active destination (e.g. Feed from a dated
+                // URL back to /feed/model/mlb) replaces instead of pushing —
+                // no history pile-up (behavior carried over from the old bar).
+                replace={isActive}
+                className={isChat ? "mfn-item mfn-chat" : "mfn-item"}
+                aria-current={isActive ? "page" : undefined}
+                aria-label={isChat ? "Chat with Dime AI" : undefined}
+                data-testid={`tab-${tab.id}`}
+                data-active={isActive}
+                onClick={() => handleTap(tab.id, tab.path, isActive)}
+              >
+                {isChat ? (
+                  <>
+                    <span className="mfn-chat-text">Chat with</span>
+                    <DimeWordmark decorative />
+                  </>
+                ) : (
+                  tab.label
+                )}
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
+    </div>
+  );
+}

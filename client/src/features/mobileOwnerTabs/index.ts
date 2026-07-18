@@ -26,9 +26,10 @@ export { mobileOwnerTabLogger } from "./logger";
 
 // Components
 export { MobileOwnerAccessGate } from "./MobileOwnerAccessGate";
-export { MobileOwnerBottomTabs } from "./MobileOwnerBottomTabs";
+export { MobileFloatingNav } from "./MobileFloatingNav";
 export { MobileOwnerTabsShell } from "./MobileOwnerTabsShell";
 export { GlobalMobileOwnerTabs } from "./GlobalMobileOwnerTabs";
+export { getActiveTabId } from "./activeTab";
 
 // Screens
 export { MobileFeed } from "./screens/MobileFeed";

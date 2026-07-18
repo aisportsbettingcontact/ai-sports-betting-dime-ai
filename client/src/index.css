@@ -335,18 +335,23 @@ html:not(.dark) {
   padding-bottom: max(env(safe-area-inset-bottom, 0px), 8px);
 }
 
-/* When mobile owner tabs are visible, add extra bottom padding to prevent content being covered */
-.mobile-owner-tabs-active .feed-pb-safe {
-  padding-bottom: calc(68px + env(safe-area-inset-bottom, 0px));
+/* ── Floating mobile nav clearance (docs/plans/2026-07-18-mobile-floating-nav.md)
+   While the top-floating nav is mounted (body.dime-floating-nav-active), it
+   publishes its measured height (+8px breathing room) as --dime-floating-nav-h
+   on <html> via ResizeObserver. Reserve real document-flow space equal to that
+   height so the assembly never occludes page headings/content, and re-anchor
+   viewport-sticky page headers below it. The 112px fallback only covers the
+   single frame before the observer's first publish. */
+body.dime-floating-nav-active {
+  padding-top: var(--dime-floating-nav-h, 112px);
 }
 
-/* Global clearance while the fixed bottom tab bar is mounted: reserve real
-   document-flow space so the 60px bar (+ home indicator) never occludes the
-   last row of ANY page — game cards, the 21+ / 1-800-GAMBLER line, etc.
-   (The old in-component "spacer" was position:fixed and reserved nothing.)
-   60px bar + 8px breathing room (4/8pt rhythm) + home-indicator inset. */
-body.mobile-owner-tabs-active {
-  padding-bottom: calc(68px + env(safe-area-inset-bottom, 0px));
+/* Viewport-sticky page headers (Tailwind `sticky top-0` on <header> — splits,
+   tracker, resources, model-results, account) re-anchor below the floating
+   nav instead of sliding underneath it. Scoped to <header> so stickies inside
+   overflow containers (e.g. table header rows) are untouched. */
+body.dime-floating-nav-active header.sticky.top-0 {
+  top: var(--dime-floating-nav-h, 112px);
 }
 
 /* ── Scrollbar styling ────────────────────────────────────────────────────── */
