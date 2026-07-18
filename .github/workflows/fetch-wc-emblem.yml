@@ -66,22 +66,36 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p client/public/brand/_wc26
-          case "$(file -b --mime-type source_asset)" in
-            image/svg+xml)
-              rsvg-convert -h 600 --keep-aspect-ratio source_asset > client/public/brand/_wc26/original.png ;;
-            image/png)
-              cp source_asset client/public/brand/_wc26/original.png ;;
-            *)
-              echo "::error::unexpected content type: $(file -b --mime-type source_asset)"; exit 1 ;;
-          esac
-          # Dark-mode candidate: flip near-black elements ("26" numerals / FIFA
-          # wordmark) to white — FIFA's own reversed treatment. Gold trophy and
-          # malachite stay untouched; alpha is preserved (RGB channels only).
-          convert client/public/brand/_wc26/original.png -alpha on -channel RGB \
-            -fuzz 30% -fill white -opaque black \
-            client/public/brand/_wc26/whitened.png
-          identify client/public/brand/_wc26/original.png client/public/brand/_wc26/whitened.png
-          sha256sum client/public/brand/_wc26/*.png
+          rm -f client/public/brand/_wc26/whitened.png  # round-1 raster recolor damaged the trophy; superseded
+          [ "$(file -b --mime-type source_asset)" = "image/svg+xml" ] || { echo "::error::need the SVG source for a vector-safe variant"; exit 1; }
+          cp source_asset client/public/brand/_wc26/source.svg
+          rsvg-convert -h 600 --keep-aspect-ratio source_asset > client/public/brand/_wc26/original.png
+          # Dark-mode candidate — VECTOR-ONLY monochrome invert: swap black<->white
+          # in fill/stroke/style declarations of the SVG text (the "26" glyphs and
+          # FIFA wordmark are flat vector paths). The trophy is an embedded raster
+          # (base64 data URI) and is never touched — this reproduces FIFA's own
+          # reversed emblem treatment without altering the artwork.
+          python3 - <<'PY'
+          import re
+          svg = open('source_asset', encoding='utf-8', errors='surrogateescape').read()
+          # Protect embedded raster data URIs from any substitution.
+          blobs = []
+          def stash(m):
+              blobs.append(m.group(0)); return f'@@BLOB{len(blobs)-1}@@'
+          svg2 = re.sub(r'data:image/[^"\')\s]+', stash, svg)
+          def swap(m):
+              v = m.group(0).lower()
+              if v in ('#000', '#000000', 'black', 'rgb(0,0,0)'): return '#ffffff'
+              return '#000000'
+          svg2 = re.sub(r'#000000|#ffffff|#000\b|#fff\b|\bblack\b|\bwhite\b|rgb\(0,\s*0,\s*0\)|rgb\(255,\s*255,\s*255\)', swap, svg2, flags=re.I)
+          for i, b in enumerate(blobs):
+              svg2 = svg2.replace(f'@@BLOB{i}@@', b)
+          open('inverted.svg', 'w', encoding='utf-8', errors='surrogateescape').write(svg2)
+          print('vector invert done; bytes:', len(svg2))
+          PY
+          rsvg-convert -h 600 --keep-aspect-ratio inverted.svg > client/public/brand/_wc26/inverted.png
+          identify client/public/brand/_wc26/original.png client/public/brand/_wc26/inverted.png
+          sha256sum client/public/brand/_wc26/*
           echo "source: $RESOLVED_URL" > client/public/brand/_wc26/SOURCE.txt
 
       - name: Commit candidates to this branch
