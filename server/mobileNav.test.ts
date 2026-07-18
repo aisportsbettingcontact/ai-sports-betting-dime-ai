@@ -41,7 +41,7 @@ describe("Mobile Floating Nav — Config & Feature Flags", () => {
       "Feed",
       "Tools",
       "Chat",
-      "Bet Tracker",
+      "Tracker", // short visible label; full name "Bet Tracker" lives in the aria-label
       "Profile",
     ]);
   });

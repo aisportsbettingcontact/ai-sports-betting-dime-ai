@@ -45,8 +45,10 @@ const STUB_USER = {
   cancelAtPeriodEnd: false,
 };
 
-/** Answer every tRPC batch: me → authenticated user, everything else → error. */
-async function stubApi(page: Page) {
+/** Answer every tRPC batch: me → authenticated user, everything else → error.
+ *  Pass role: "owner" to exercise the owner-gated surfaces (Bet Tracker). */
+async function stubApi(page: Page, opts: { role?: string } = {}) {
+  const user = { ...STUB_USER, role: opts.role ?? STUB_USER.role };
   await page.route("**/api/trpc/**", route => {
     const url = new URL(route.request().url());
     const ops = decodeURIComponent(
@@ -54,7 +56,7 @@ async function stubApi(page: Page) {
     ).split(",");
     const body = ops.map(op =>
       op === "appUsers.me"
-        ? { result: { data: { json: STUB_USER } } }
+        ? { result: { data: { json: user } } }
         : {
             error: {
               json: {
@@ -84,6 +86,8 @@ async function gotoWithNav(page: Page, path: string) {
   await expect(nav(page)).toBeVisible();
 }
 
+// `label` is the accessible name; tracker's visible text is the short
+// "Tracker" while its aria-label keeps the full product name.
 const EXPECTED = [
   { id: "feed", label: "Feed", href: "/feed/model/mlb" },
   { id: "tools", label: "Tools", href: "/betting-splits/MLB" },
@@ -113,6 +117,15 @@ test.describe("structure and semantics", () => {
     await expect(page.locator('nav[aria-label="Main navigation"]')).toHaveCount(
       1
     );
+
+    // tracker pill shows the short label; full name lives in the aria-label
+    await expect(page.getByTestId("tab-tracker")).toHaveText("Tracker");
+
+    // the logo is a brand mark, not a control — nothing focusable/clickable
+    const logoInteractive = await page
+      .locator(".mfn-logo")
+      .evaluate(el => Boolean(el.querySelector("a, button, [tabindex]")));
+    expect(logoInteractive).toBe(false);
 
     // /terms is no destination — nothing may claim aria-current
     await expect(nav(page).locator('[aria-current="page"]')).toHaveCount(0);
@@ -186,6 +199,28 @@ test.describe("geometry across supported widths", () => {
     await page.mouse.wheel(0, 600);
     await page.waitForTimeout(150);
     await expect(nav(page)).toBeVisible(); // stays floating while scrolled
+
+    // the band is solid: scrolled content may never show through or overlap
+    // the assembly — probing gaps beside the logo and between logo and menu
+    // must hit the nav band itself, never underlying page content
+    const bandBox = (await nav(page).boundingBox())!;
+    const probes = [
+      { x: 20, y: bandBox.y + 16 }, // left of the logo
+      { x: 195, y: bandBox.y + bandBox.height - 4 }, // band bottom padding
+    ];
+    for (const p of probes) {
+      const inBand = await page.evaluate(
+        ({ x, y }) =>
+          Boolean(
+            document
+              .elementFromPoint(x, y)
+              ?.closest('[data-testid="mobile-floating-nav"]')
+          ),
+        p
+      );
+      expect(inBand, `probe ${p.x},${p.y} hits the band`).toBe(true);
+    }
+
     await page.screenshot({
       path: `${EVIDENCE_DIR}/scrolled-terms-390-dark.png`,
     });
@@ -360,6 +395,42 @@ test.describe("keyboard and reduced motion", () => {
   });
 });
 
+test.describe("owner-only Bet Tracker", () => {
+  test("non-owner gets the coming-soon gate; owner gets the themed tracker", async ({
+    browser,
+  }) => {
+    // plain user → gate
+    const userCtx = await browser.newContext({
+      viewport: { width: 390, height: 844 },
+    });
+    const userPage = await userCtx.newPage();
+    await stubApi(userPage);
+    await userPage.goto("/bet-tracker");
+    await expect(userPage.getByTestId("bet-tracker-coming-soon")).toBeVisible();
+    await userCtx.close();
+
+    // owner in light theme → real tracker, following the theme tokens
+    const ownerCtx = await browser.newContext({
+      viewport: { width: 390, height: 844 },
+    });
+    const ownerPage = await ownerCtx.newPage();
+    await ownerPage.addInitScript(() =>
+      window.localStorage.setItem("theme", "light")
+    );
+    await stubApi(ownerPage, { role: "owner" });
+    await ownerPage.goto("/bet-tracker");
+    await expect(ownerPage.getByTestId("bet-tracker-coming-soon")).toHaveCount(
+      0
+    );
+    const pageBg = await ownerPage
+      .locator(".bt-page")
+      .first()
+      .evaluate(el => getComputedStyle(el).backgroundColor);
+    expect(pageBg).toBe("rgb(255, 255, 255)"); // light ramp, not hardcoded black
+    await ownerCtx.close();
+  });
+});
+
 test.describe("visual evidence", () => {
   const shots: Array<{
     name: string;
@@ -367,6 +438,7 @@ test.describe("visual evidence", () => {
     height: number;
     theme: "dark" | "light";
     path: string;
+    role?: string;
   }> = [
     {
       name: "320-dark-feed",
@@ -440,6 +512,33 @@ test.describe("visual evidence", () => {
       theme: "light",
       path: "/profile",
     },
+    // Bet Tracker is owner-only: owner sees the tracker in both themes
+    // (token-driven — the page must follow Dark/Light/System)…
+    {
+      name: "tracker-390-dark",
+      width: 390,
+      height: 844,
+      theme: "dark",
+      path: "/bet-tracker",
+      role: "owner",
+    },
+    {
+      name: "tracker-390-light",
+      width: 390,
+      height: 844,
+      theme: "light",
+      path: "/bet-tracker",
+      role: "owner",
+    },
+    // …while a non-owner gets the theme-keyed coming-soon gate.
+    {
+      name: "tracker-gate-390-light",
+      width: 390,
+      height: 844,
+      theme: "light",
+      path: "/bet-tracker",
+      role: "user",
+    },
   ];
 
   for (const shot of shots) {
@@ -451,7 +550,7 @@ test.describe("visual evidence", () => {
       await page.addInitScript(theme => {
         window.localStorage.setItem("theme", theme);
       }, shot.theme);
-      await stubApi(page);
+      await stubApi(page, { role: shot.role });
       await gotoWithNav(page, shot.path);
       // let lazy chunks / error states settle before capturing
       await page.waitForTimeout(700);

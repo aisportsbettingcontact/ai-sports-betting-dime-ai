@@ -21,7 +21,7 @@
    * why this token drifted back to raw mint. Scoped exception (like --loss-red):
    * #0B8557 is the same mint hue darkened to 4.66:1 on white — signal survives,
    * contrast passes. Strict-3 alternative remains #000000 if that direction wins. */
-  --dime-mint-text: #0B8557;
+  --dime-mint-text: #0b8557;
   --dime-mint-keyline: #000000;
   --dime-bg: #ffffff;
   /* Law v2 tonal ramp (light): achromatic greys, mint still the only hue. */
@@ -29,17 +29,17 @@
   --dime-surface-card: #f7f7f7;
   --dime-surface-raised: #efefef;
   --dime-surface-bubble: #f7f7f7;
-  --dime-border: #d9d9d9;          /* quiet default hairline */
-  --dime-border-strong: #000000;   /* rationed keyline — signature only */
+  --dime-border: #d9d9d9; /* quiet default hairline */
+  --dime-border-strong: #000000; /* rationed keyline — signature only */
   --dime-text-primary: #000000;
   --dime-text-body: #000000;
-  --dime-text-secondary: #595959;  /* 7.0:1 on white */
-  --dime-text-muted: #767676;      /* 4.5:1 on white */
+  --dime-text-secondary: #595959; /* 7.0:1 on white */
+  --dime-text-muted: #767676; /* 4.5:1 on white */
   --dime-text-faint: #767676;
   --dime-ring: #45e0a8;
-  --dime-row-hover: #efefef;       /* v2: hover returns */
-  --dime-row-active: #e4e4e4;      /* v2: active fill (mint rail still leads) */
-  --dime-mint-dim: transparent;    /* dim-mint tiles → transparent */
+  --dime-row-hover: #efefef; /* v2: hover returns */
+  --dime-row-active: #e4e4e4; /* v2: active fill (mint rail still leads) */
+  --dime-mint-dim: transparent; /* dim-mint tiles → transparent */
   --dime-mint-border: #45e0a8;
   /* bet-loss red exception (Bet Tracker / calendar) */
   --loss-red: #ff3b3b;
@@ -47,7 +47,8 @@
   /* Single-font mandate: the "mono" token now resolves to Familjen Grotesk so
    * every legacy var(--dime-font-mono) / var(--bt-mono) consumer renders the
    * one brand typeface. IBM Plex Mono is fully retired. */
-  --dime-font-mono: "Familjen Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --dime-font-mono:
+    "Familjen Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
   --dime-ease: cubic-bezier(0.16, 1, 0.3, 1);
   --dime-t: 160ms;
   /* Brand coin-dot rule: mint fills on light get a near-black hairline. */
@@ -60,19 +61,19 @@ html.dark {
   --dime-mint-text: #45e0a8; /* mint text passes on black */
   --dime-bg: #000000;
   --dime-surface-sidebar: #000000;
-  --dime-surface-card: #0a0a0a;    /* surface tier 1 */
-  --dime-surface-raised: #141414;  /* raised tier — menus, active pills */
+  --dime-surface-card: #0a0a0a; /* surface tier 1 */
+  --dime-surface-raised: #141414; /* raised tier — menus, active pills */
   --dime-surface-bubble: #111111;
-  --dime-border: #262626;          /* quiet default hairline */
-  --dime-border-strong: #ffffff;   /* rationed keyline — signature only */
+  --dime-border: #262626; /* quiet default hairline */
+  --dime-border-strong: #ffffff; /* rationed keyline — signature only */
   --dime-text-primary: #ffffff;
   --dime-text-body: #ffffff;
-  --dime-text-secondary: #a6a6a6;  /* 8.6:1 on black */
-  --dime-text-muted: #6e6e6e;      /* 4.1:1 on black */
+  --dime-text-secondary: #a6a6a6; /* 8.6:1 on black */
+  --dime-text-muted: #6e6e6e; /* 4.1:1 on black */
   --dime-text-faint: #6e6e6e;
   --dime-ring: #45e0a8;
-  --dime-row-hover: #141414;       /* v2: hover returns */
-  --dime-row-active: #1f1f1f;      /* v2: active fill (mint rail still leads) */
+  --dime-row-hover: #141414; /* v2: hover returns */
+  --dime-row-active: #1f1f1f; /* v2: active fill (mint rail still leads) */
   --dime-mint-dim: transparent;
   --dime-mint-border: #45e0a8;
   --dime-coin-keyline: none; /* mint dot sits directly on dark surfaces */
@@ -495,6 +496,52 @@ html:not(.dark) .cal-trigger img {
   border-bottom: 1px solid var(--dime-border) !important;
 }
 
+/* THREE-COLOR literals → tokens (2026-07-18): the Law remediation hard-coded
+ * bg-black / text-white / border-white throughout the tracker, which pinned
+ * the page to the dark ramp permanently. Route those literals through the
+ * theme tokens so the tracker follows the Profile Appearance setting
+ * (Dark / Light / System) like every other surface — light mode is a token
+ * swap, never a redesign. text-black is deliberately NOT remapped: it is the
+ * ink on constant-mint fills and must stay black in both themes. */
+.bt-page .bg-black {
+  background-color: var(--dime-bg) !important;
+}
+.bt-page .text-white {
+  color: var(--dime-text-primary) !important;
+}
+.bt-page .border-white {
+  border-color: var(--dime-border-strong) !important;
+}
+.bt-page [class*="hover:border-white"]:hover {
+  border-color: var(--dime-border-strong) !important;
+}
+.bt-page [class*="hover:text-white"]:hover {
+  color: var(--dime-text-primary) !important;
+}
+/* White chips/rails (PUSH accent bar, count badge) invert with the theme;
+ * a paired black ink flips to the page ground so it never disappears. */
+.bt-page .bg-white {
+  background-color: var(--dime-text-primary) !important;
+}
+.bt-page .bg-white.text-black {
+  color: var(--dime-bg) !important;
+}
+
+/* Raw mint TEXT must ride the mint-text token: #45E0A8 passes on black but
+ * is 1.68:1 on white — light resolves to the law's #0B8557. Mint FILLS and
+ * borders stay raw mint in both themes (brand rule). */
+.bt-page [class*="text-[#45E0A8]"] {
+  color: var(--dime-mint-text) !important;
+}
+
+/* Theme-keyed coming-soon wordmark (the SVG assets are single-ground). */
+html.dark .bt-page .bt-wordmark-light {
+  display: none;
+}
+html:not(.dark) .bt-page .bt-wordmark-dark {
+  display: none;
+}
+
 /* Tailwind mass-mapping: the page styles itself with zinc/emerald/green/
  * red/yellow utilities — remap whole families onto the brand tokens. */
 .bt-page [class*="text-emerald-"],
@@ -503,7 +550,9 @@ html:not(.dark) .cal-trigger img {
   color: var(--dime-mint-text) !important;
 }
 .bt-page [class*="text-red-"] {
-  color: var(--loss-red) !important; /* bet-loss red exception (Three-Color Law) */
+  color: var(
+    --loss-red
+  ) !important; /* bet-loss red exception (Three-Color Law) */
 }
 .bt-page [class*="text-yellow-"],
 .bt-page [class*="text-amber-"],

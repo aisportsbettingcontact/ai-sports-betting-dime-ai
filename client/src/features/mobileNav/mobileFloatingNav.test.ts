@@ -65,10 +65,16 @@ describe("Navigation semantics", () => {
     expect(navSrc).toMatch(/getActiveTabId\(location\)/);
   });
 
+  it("Tracker shows the short label but keeps 'Bet Tracker' as its accessible name", () => {
+    expect(navSrc).toMatch(/"Bet Tracker"/);
+    // config carries the visible label
+    const configSrc = read("config.ts");
+    expect(configSrc).toMatch(/label: "Tracker"/);
+  });
+
   it("Chat carries the accessible name 'Chat with Dime AI' with a decorative inline wordmark", () => {
-    expect(navSrc).toMatch(
-      /aria-label=\{isChat \? "Chat with Dime AI" : undefined\}/
-    );
+    expect(navSrc).toMatch(/"Chat with Dime AI"/);
+    expect(navSrc).toMatch(/aria-label=\{\s*isChat/);
     expect(navSrc).toMatch(/<DimeWordmark decorative \/>/);
     // decorative → aria-hidden so screen readers don't read the logo twice
     expect(navSrc).toMatch(/"aria-hidden": true/);
@@ -119,6 +125,21 @@ describe("Geometry and clearance", () => {
   it("sits below modal dialogs in the existing z-index system", () => {
     // Modals (AgeModal/LoginModal/dialogs) render at z-50; nav stays at 40.
     expect(navCss).toMatch(/z-index: 40/);
+  });
+
+  it("the wrapper is a solid page-colored band — content can never show through or overlap", () => {
+    expect(navCss).toMatch(/\.mfn-wrap \{[^}]*background: var\(--dime-bg\)/s);
+    expect(navCss).not.toMatch(/pointer-events: none/);
+  });
+
+  it("the logo is a bare brand mark — no chip fill, border, shadow, or interactivity", () => {
+    const logoBlock = navCss.slice(
+      navCss.indexOf(".mfn-logo {"),
+      navCss.indexOf(".mfn-logo .mfn-wordmark")
+    );
+    expect(logoBlock).not.toMatch(/background|border|box-shadow/);
+    // rendered as a plain div, never a button or link
+    expect(navSrc).toMatch(/<div className="mfn-logo">/);
   });
 });
 
