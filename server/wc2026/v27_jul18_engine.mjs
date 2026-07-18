@@ -294,14 +294,17 @@ const PROJECTION_MATCHES = [
   //   3rd-103: 2026-07-18 21:00 UTC = 14:00 PT Jul 18
   //   final-104: 2026-07-19 19:00 UTC = 12:00 PT Jul 19
   // Both rows are already bucketed on those dates, so the repair is a no-op.
-  //   Venue: NOT repaired here (venueCityLike null) — both rows already carry
-  //   venue 'inglewood' from the bracket sync; left untouched.
+  //   Venue: OWNER-PROVIDED (2026-07-18) — the bracket sync had seeded both on
+  //   'inglewood' (carried from the SF venue). 3rd-103 is at Hard Rock Stadium,
+  //   Miami Gardens FL (cityLike 'Miami' → the same wc2026_venues row v24 used
+  //   for QF-099); final-104 is at MetLife Stadium, East Rutherford NJ
+  //   (cityLike 'Rutherford'). Lookup is by city only — never a hardcoded slug.
   { fid:'wc26-3rd-103', home:'FRA', away:'ENG', espnId:'760516',
     beId:'b9l0F3Bj', beSlug:'france-england', espnSlug:'england-france',
-    homeId:'fra', awayId:'eng', venueCityLike:null, seedDatePT:'2026-07-18' },
+    homeId:'fra', awayId:'eng', venueCityLike:'Miami', seedDatePT:'2026-07-18' },
   { fid:'wc26-final-104', home:'ESP', away:'ARG', espnId:'760517',
     beId:'UgbUKPmT', beSlug:'spain-argentina', espnSlug:'argentina-spain',
-    homeId:'esp', awayId:'arg', venueCityLike:null, seedDatePT:'2026-07-19' },
+    homeId:'esp', awayId:'arg', venueCityLike:'Rutherford', seedDatePT:'2026-07-19' },
 ];
 
 // world_cup_round labels for the Phase-7 wc2026MatchOdds write, keyed by fid
@@ -882,7 +885,7 @@ async function main() {
     `, [match.homeId, match.awayId, match.fid]);
     if (fixRes.affectedRows > 0) log('DB', `wc2026_matches: ${match.fid} team slots tbd/tbd -> ${match.homeId}/${match.awayId} (bracket-confirmed)`);
 
-    // Venue repair is DISABLED for both fixtures (venueCityLike=null): the seeded venue
+    // Venue repair is ENABLED for both fixtures (owner-provided cities): the seeded venue
     // is left untouched rather than repaired to an unverified stadium. Look the
     // correct venue_id up from wc2026_venues BY CITY only when venueCityLike is
     // set (never hardcode a guessed slug); only update when a row matches.
