@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import fs from "fs";
 import path from "path";
-import { WC_WINNER_MARKETS, buildFeedSections, slateStatusRank, wcDisplayCity, wcRoundLabel } from "./DimeModelFeed";
+import { WC_WINNER_MARKETS, buildFeedSections, slateStatusRank, wcDisplayCity, wcDisplayStadium, wcRoundLabel } from "./DimeModelFeed";
 
 /**
  * Regression guards for the Dime AI Model Projections surface
@@ -264,7 +264,9 @@ describe("DimeModelFeed — combined slate (owner directive 2026-07-18)", () => 
   it("sections order is absolute: World Cup on top, MLB beneath", () => {
     const sections = buildFeedSections([card("wc-1"), card("wc-2")], [card("mlb-1")]);
     expect(sections.map((s) => s.key)).toEqual(["WC", "MLB"]);
-    expect(sections[0].label).toBe("World Cup");
+    // Full spelled-out league names own the header width (2026-07-18).
+    expect(sections[0].label).toBe("2026 FIFA World Cup");
+    expect(sections[1].label).toBe("Major League Baseball (MLB)");
     expect(sections[0].cards.map((c) => c.id)).toEqual(["wc-1", "wc-2"]);
     expect(sections[1].cards.map((c) => c.id)).toEqual(["mlb-1"]);
   });
@@ -281,10 +283,36 @@ describe("DimeModelFeed — combined slate (owner directive 2026-07-18)", () => 
     expect(src.match(/enabled: !!isoDate/g)).toHaveLength(2);
   });
 
-  it("league section headers carry the league label and count noun", () => {
-    expect(src).toMatch(/className="dmf-leaguehead dmf-micro"/);
-    expect(src).toMatch(/noun: "match"/); // World Cup counts matches
-    expect(src).toMatch(/noun: "game"/); // MLB counts games
+  it("league sections are collapsible containers with logo + full name, no counts", () => {
+    // Native details/summary, open by default; chevron affordance pair.
+    expect(src).toMatch(/<details key=\{section\.key\} className="dmf-league" open>/);
+    expect(src).toMatch(/<summary className="dmf-leaguehead">/);
+    expect(src).toMatch(/dmf-lgchev--expand/);
+    expect(src).toMatch(/dmf-lgchev--collapse/);
+    // No game counts anywhere in the header or feedhead (2026-07-18).
+    expect(src).not.toMatch(/section\.cards\.length\}\s*\{/);
+    expect(src).not.toMatch(/dmf-slatecount/);
+    expect(src).not.toMatch(/\bnoun\b: "/);
+  });
+
+  it("league logos: theme-keyed WC emblem (same-size box) + bundled MLB mark", () => {
+    expect(src).toMatch(/\/brand\/wc26-emblem-on-light\.png/);
+    expect(src).toMatch(/\/brand\/wc26-emblem-on-dark\.png/);
+    expect(src).toMatch(/\/manus-storage\/mlb-logo_50fd8568\.png/);
+    // CSS swaps variants by theme; both render inside the fixed 24px box.
+    expect(src).toMatch(/data-dmf-theme="light"\] \.dmf-lglogo-dark\{display:none\}/);
+    expect(src).toMatch(/:not\(\[data-dmf-theme="light"\]\) \.dmf-lglogo-light\{display:none\}/);
+    expect(src).toMatch(/\.dmf-lglogo\{[^}]*width:24px;height:24px/);
+  });
+
+  it("stadium display drops a trailing parenthetical (2026-07-18)", () => {
+    expect(wcDisplayStadium("MetLife Stadium (NY/NJ)")).toBe("MetLife Stadium");
+    expect(wcDisplayStadium("Hard Rock Stadium (Miami)")).toBe("Hard Rock Stadium");
+    expect(wcDisplayStadium("Estadio Azteca")).toBe("Estadio Azteca");
+    expect(wcDisplayStadium(null)).toBeNull();
+    expect(wcDisplayStadium("(weird)")).toBe("(weird)"); // never emit an empty name
+    // wcDisplayCity still receives the RAW stadium string for pattern matching.
+    expect(src).toMatch(/\[wcDisplayStadium\(m\.venue\?\.stadium\), wcDisplayCity\(m\.venue\?\.stadium/);
   });
 });
 
