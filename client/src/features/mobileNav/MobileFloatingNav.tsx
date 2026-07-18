@@ -1,9 +1,11 @@
 /**
  * MobileFloatingNav
  * ═════════════════
- * Top-floating mobile primary navigation: the Dime wordmark on a small raised
- * chip with a fully-rounded pill menu directly below it. Replaces the retired
- * bottom tab bar (docs/plans/2026-07-18-mobile-floating-nav.md).
+ * Top-floating mobile primary navigation: the bare Dime wordmark (a brand
+ * mark, not a button) above a fully-rounded pill menu, both on a solid
+ * page-colored band so scrolling content never shows through or overlaps the
+ * chrome. Replaces the retired bottom tab bar
+ * (docs/plans/2026-07-18-mobile-floating-nav.md).
  *
  * DESIGN SPEC — Dime brand law (dime-ai/THREE-COLOR-LAW.md v2/v3, which
  * supersedes design-system/dime-ai/MASTER.md where they disagree):
@@ -127,7 +129,7 @@ export function MobileFloatingNav() {
 
   return (
     <div className="mfn-wrap" ref={wrapRef} data-testid="mobile-floating-nav">
-      <div className="mfn-logo-chip">
+      <div className="mfn-logo">
         <DimeWordmark />
       </div>
       <nav className="mfn-nav" aria-label="Main navigation">
@@ -145,7 +147,16 @@ export function MobileFloatingNav() {
                 replace={isActive}
                 className={isChat ? "mfn-item mfn-chat" : "mfn-item"}
                 aria-current={isActive ? "page" : undefined}
-                aria-label={isChat ? "Chat with Dime AI" : undefined}
+                // Tracker displays the short label but keeps its full product
+                // name for assistive tech ("Bet Tracker" contains the visible
+                // "Tracker" — WCAG 2.5.3 label-in-name holds).
+                aria-label={
+                  isChat
+                    ? "Chat with Dime AI"
+                    : tab.id === "tracker"
+                      ? "Bet Tracker"
+                      : undefined
+                }
                 data-testid={`tab-${tab.id}`}
                 data-active={isActive}
                 onClick={() => handleTap(tab.id, tab.path, isActive)}

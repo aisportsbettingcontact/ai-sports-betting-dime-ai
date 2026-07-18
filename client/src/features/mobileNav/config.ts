@@ -36,7 +36,9 @@ export const MOBILE_NAV_TABS: MobileNavTabConfig[] = [
   { id: "feed", label: "Feed", path: "/feed/model/mlb" },
   { id: "tools", label: "Tools", path: "/betting-splits/MLB" },
   { id: "chat", label: "Chat", path: "/chat" },
-  { id: "tracker", label: "Bet Tracker", path: "/bet-tracker" },
+  // Visible label is the short "Tracker" (product directive 2026-07-18); the
+  // product name stays "Bet Tracker" (aria-label + everywhere off the pill).
+  { id: "tracker", label: "Tracker", path: "/bet-tracker" },
   { id: "profile", label: "Profile", path: "/profile" },
 ];
 

@@ -21,8 +21,13 @@
   flex-direction: column;
   align-items: center;
   gap: 6px;
-  padding: calc(env(safe-area-inset-top, 0px) + 8px) 8px 0;
-  pointer-events: none; /* only the chip + menu are interactive */
+  padding: calc(env(safe-area-inset-top, 0px) + 8px) 8px 8px;
+  /* Solid page-colored band: scrolling content disappears cleanly behind the
+   * assembly instead of showing through the gaps around the logo and menu —
+   * nothing underneath may overlap or clip the floating chrome. Solid fill
+   * (never a translucent scrim) per THREE-COLOR-LAW; because it matches
+   * --dime-bg exactly, the band is invisible at rest. */
+  background: var(--dime-bg);
 }
 
 html.dark .mfn-wrap {
@@ -38,19 +43,19 @@ html.dark .mfn-wrap {
   }
 }
 
-/* ── Logo chip ───────────────────────────────────────────────────────────── */
+/* ── Logo ────────────────────────────────────────────────────────────────── */
 
-.mfn-logo-chip {
-  pointer-events: auto;
+/* The brand mark is a plain wordmark on the band — not a chip, not a button:
+ * no fill, no border, no shadow, not interactive. */
+.mfn-logo {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 34px;
-  padding: 0 14px;
-  background: var(--dime-surface-raised);
-  border: 1px solid var(--dime-border);
-  border-radius: 17px;
-  box-shadow: var(--mfn-shadow);
+  line-height: 1;
+}
+
+.mfn-logo .mfn-wordmark {
+  font-size: 24px;
 }
 
 /* Brand wordmark (MASTER.md:62): weight 700, tracking −0.05em, mint coin-dot
@@ -84,7 +89,6 @@ html.dark .mfn-wrap {
 /* ── Pill menu ───────────────────────────────────────────────────────────── */
 
 .mfn-nav {
-  pointer-events: auto;
   width: min(100%, 448px);
   background: var(--dime-surface-raised);
   border: 1px solid var(--dime-border);
