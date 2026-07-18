@@ -124,7 +124,7 @@ async function handleWc2026Engine(req: Request, res: Response): Promise<void> {
   const dryRun = req.body?.dryRun === true || req.body?.dryRun === "1";
   console.log(`[WC2026HB] [INPUT] /wc2026-engine triggered dryRun=${dryRun} at ${new Date().toISOString()}`);
   try {
-    const result = await spawnMjs("v26_jul15_engine.mjs", { DRY_RUN: dryRun ? "1" : "0" }, 300_000);
+    const result = await spawnMjs("v27_jul18_engine.mjs", { DRY_RUN: dryRun ? "1" : "0" }, 300_000);
     const ok = result.exitCode === 0 && !result.timedOut;
     const tail = result.output.slice(-8000);
     console.log(`[WC2026HB] [OUTPUT] wc2026-engine exit=${result.exitCode} timedOut=${result.timedOut}`);
