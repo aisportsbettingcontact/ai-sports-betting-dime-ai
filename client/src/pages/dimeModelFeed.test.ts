@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import fs from "fs";
 import path from "path";
-import { slateStatusRank, wcDisplayCity, wcRoundLabel } from "./DimeModelFeed";
+import { buildFeedSections, slateStatusRank, wcDisplayCity, wcRoundLabel } from "./DimeModelFeed";
 
 /**
  * Regression guards for the Dime AI Model Projections surface
@@ -131,8 +131,9 @@ describe("DimeModelFeed — MLB bindings", () => {
     expect(slateStatusRank({ liveLabel: null, timeLabel: "7:05 PM ET" })).toBe(1);
     expect(slateStatusRank({ liveLabel: null, timeLabel: "FINAL" })).toBe(2);
     expect(slateStatusRank({ liveLabel: null, timeLabel: "FINAL (PENS)" })).toBe(2);
-    // The tier sort is applied to BOTH sports' card lists.
-    expect(src).toMatch(/list\.sort\(\(a, b\) => slateStatusRank\(a\) - slateStatusRank\(b\)\)/);
+    // The tier sort is applied to BOTH league sections of the combined slate
+    // (per-section — the WC-above-MLB section order is absolute).
+    expect(src.match(/\.sort\(\(a, b\) => slateStatusRank\(a\) - slateStatusRank\(b\)\)/g)).toHaveLength(2);
   });
 });
 
@@ -207,9 +208,42 @@ describe("DimeModelFeed — routes", () => {
 
   it("in-page navigation builds URLs through the canonical feedModelPath helper", () => {
     expect(src).toMatch(/from "@\/lib\/feedRoutes"/);
+    // Combined feed (2026-07-18): date nav canonicalizes on the mlb- slug —
+    // one URL per date; legacy wc- deep links still parse and render.
     expect(src).toMatch(
-      /navigate\(resolveRouteHref\(feedModelPath\(nextSport, nextIso\)\)\)/
+      /navigate\(resolveRouteHref\(feedModelPath\("MLB", nextIso\)\)\)/
     );
+  });
+});
+
+describe("DimeModelFeed — combined slate (owner directive 2026-07-18)", () => {
+  const card = (id: string): Parameters<typeof buildFeedSections>[0][number] =>
+    ({ id, liveLabel: null, timeLabel: "7:05 PM ET" }) as Parameters<typeof buildFeedSections>[0][number];
+
+  it("sections order is absolute: World Cup on top, MLB beneath", () => {
+    const sections = buildFeedSections([card("wc-1"), card("wc-2")], [card("mlb-1")]);
+    expect(sections.map((s) => s.key)).toEqual(["WC", "MLB"]);
+    expect(sections[0].label).toBe("World Cup");
+    expect(sections[0].cards.map((c) => c.id)).toEqual(["wc-1", "wc-2"]);
+    expect(sections[1].cards.map((c) => c.id)).toEqual(["mlb-1"]);
+  });
+
+  it("a league with no games renders no section (no empty WC header post-final)", () => {
+    expect(buildFeedSections([], [card("mlb-1")]).map((s) => s.key)).toEqual(["MLB"]);
+    expect(buildFeedSections([card("wc-1")], []).map((s) => s.key)).toEqual(["WC"]);
+    expect(buildFeedSections([], [])).toEqual([]);
+  });
+
+  it("the sport toggle chips are gone; both league queries always load", () => {
+    expect(src).not.toMatch(/dmf-chip|dmf-sports|role="tablist"/);
+    // Neither query is gated on a sport tab anymore — both enable on the date.
+    expect(src.match(/enabled: !!isoDate/g)).toHaveLength(2);
+  });
+
+  it("league section headers carry the league label and count noun", () => {
+    expect(src).toMatch(/className="dmf-leaguehead dmf-micro"/);
+    expect(src).toMatch(/noun: "match"/); // World Cup counts matches
+    expect(src).toMatch(/noun: "game"/); // MLB counts games
   });
 });
 
