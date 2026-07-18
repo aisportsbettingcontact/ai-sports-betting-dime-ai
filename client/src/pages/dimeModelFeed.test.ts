@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import fs from "fs";
 import path from "path";
-import { wcDisplayCity, wcRoundLabel } from "./DimeModelFeed";
+import { slateStatusRank, wcDisplayCity, wcRoundLabel } from "./DimeModelFeed";
 
 /**
  * Regression guards for the Dime AI Model Projections surface
@@ -124,6 +124,15 @@ describe("DimeModelFeed — MLB bindings", () => {
     expect(src).toMatch(
       /\.sort\(\(a, b\) => timeToMinutes\(a\.startTimeEst\) - timeToMinutes\(b\.startTimeEst\)\)/
     );
+  });
+
+  it("LIVE games rank above upcoming, settled/final sink last (2026-07-18)", () => {
+    expect(slateStatusRank({ liveLabel: "LIVE · BOT 9TH", timeLabel: "9:40 PM ET" })).toBe(0);
+    expect(slateStatusRank({ liveLabel: null, timeLabel: "7:05 PM ET" })).toBe(1);
+    expect(slateStatusRank({ liveLabel: null, timeLabel: "FINAL" })).toBe(2);
+    expect(slateStatusRank({ liveLabel: null, timeLabel: "FINAL (PENS)" })).toBe(2);
+    // The tier sort is applied to BOTH sports' card lists.
+    expect(src).toMatch(/list\.sort\(\(a, b\) => slateStatusRank\(a\) - slateStatusRank\(b\)\)/);
   });
 });
 
