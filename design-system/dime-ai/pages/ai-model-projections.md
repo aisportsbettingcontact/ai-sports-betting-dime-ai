@@ -107,9 +107,11 @@
   element). Rationale: two WC matches remain, then MLB carries the feed
   until NCAAF/NFL return.
 - League sections are **collapsible containers** (native details/summary,
-  open by default; chevron affordance; 36px header row; mobile-first):
-  official league logo in a fixed 24px box + the full spelled-out name
-  across the row — "2026 FIFA WORLD CUP" and "MAJOR LEAGUE BASEBALL (MLB)".
+  open by default; chevron affordance; 44px header row; mobile-first):
+  official league logo in a fixed 30px box + the full spelled-out name at
+  15px (1.25x, clamped on narrow phones), **centered as a cluster within
+  the page** with the chevron pinned to the right edge — "2026 FIFA WORLD
+  CUP" and "MAJOR LEAGUE BASEBALL (MLB)".
   **No game counts** in headers, and the feedhead slate count is removed
   (its divider stays — the feedhead bottom border). The WC emblem is
   theme-keyed: `/brand/wc26-emblem-on-light.png` (black FIFA wordmark) on

@@ -1147,24 +1147,29 @@ const DMF_CSS = `
 /* League sections (owner directive 2026-07-18): the combined slate groups by
    league — World Cup on top, MLB beneath — and each is a COLLAPSIBLE
    container (native details/summary, open by default). Header row spans the
-   full container width: official league logo (fixed 24px box, so the two WC
-   emblem variants render the same size), the spelled-out league name owning
-   the remaining width, chevron affordance at the right edge. No game counts.
-   The second section opens with a hairline rule. */
+   full container width: official league logo (fixed 30px box, so the two WC
+   emblem variants render the same size) + the spelled-out league name,
+   centered as a cluster within the page; chevron affordance at the right
+   edge. No game counts. The second section opens with a hairline rule. */
 .dmf-league{display:block}
 .dmf-league + .dmf-league{margin-top:10px;padding-top:16px;border-top:1px solid var(--dmf-border)}
-.dmf-leaguehead{display:flex;align-items:center;gap:10px;width:100%;min-height:36px;padding:2px 4px;cursor:pointer;list-style:none;font-family:var(--dmf-mono);font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--dmf-t2);border-radius:10px;transition:color var(--dmf-t) var(--dmf-ease),background var(--dmf-t) var(--dmf-ease)}
+/* Header content (logo + spelled-out name) centers within the page at 1.25x
+   scale (owner directive 2026-07-18): 30px logo box, 15px label (clamped so
+   "MAJOR LEAGUE BASEBALL (MLB)" stays one line on 320-375px phones), chevron
+   pinned to the right edge outside the centered cluster. The side padding
+   reserves the chevron's lane so the cluster never overlaps it. */
+.dmf-leaguehead{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;min-height:44px;padding:2px 32px;position:relative;cursor:pointer;list-style:none;font-family:var(--dmf-mono);font-size:clamp(12px,3.9vw,15px);font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--dmf-t2);border-radius:10px;transition:color var(--dmf-t) var(--dmf-ease),background var(--dmf-t) var(--dmf-ease)}
 .dmf-leaguehead::-webkit-details-marker{display:none}
 .dmf-leaguehead::marker{content:""}
 .dmf-leaguehead:hover{color:var(--dmf-t1)}
 .dmf-leaguehead:focus-visible{outline:none;box-shadow:0 0 0 3px var(--dmf-ring)}
-.dmf-lglogo{display:inline-grid;place-items:center;width:24px;height:24px;flex:0 0 24px}
+.dmf-lglogo{display:inline-grid;place-items:center;width:30px;height:30px;flex:0 0 30px}
 .dmf-lglogo img{max-width:100%;max-height:100%;object-fit:contain}
 /* WC emblem is theme-keyed: black FIFA wordmark on light, white on dark. */
 .dmf-root[data-dmf-theme="light"] .dmf-lglogo-dark{display:none}
 .dmf-root:not([data-dmf-theme="light"]) .dmf-lglogo-light{display:none}
-.dmf-lgname{flex:1;min-width:0;text-align:left}
-.dmf-lgchev{width:16px;height:16px;flex:none;color:var(--dmf-t3)}
+.dmf-lgname{flex:0 1 auto;min-width:0;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dmf-lgchev{position:absolute;right:8px;top:50%;transform:translateY(-50%);width:20px;height:20px;color:var(--dmf-t3)}
 .dmf-lgchev--collapse{display:none}
 .dmf-league[open] .dmf-lgchev--expand{display:none}
 .dmf-league[open] .dmf-lgchev--collapse{display:inline-block}
