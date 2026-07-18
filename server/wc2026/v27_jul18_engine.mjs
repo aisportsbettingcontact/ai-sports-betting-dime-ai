@@ -322,26 +322,35 @@ const ROUND_LABEL = {
 // ET+pens sub-simulation — for these matches that is "wins the match outright"
 // (i.e. lifts the trophy / takes bronze).
 //
-// TO FILL from wc-jul18-probe.yml Actions log (JUL18_BOOK_ENGINE_FORMAT block).
-// The projection loop hard-fails while any of the six markets is null
-// (zero-oversight) — this engine CANNOT run until the probe output is pasted.
+// FILLED 2026-07-18 from CI probe wc-jul18-probe.yml run 29622399287 (scraped
+// 00:08–00:09 UTC, bet365 via bid=549 bet365.us fallback).
+//   3rd-103 (b9l0F3Bj): all six markets parsed cleanly, AH primary -1.5,
+//     OU primary 3.5 (bet365's main total for the 3rd-place match).
+//   final-104 (UgbUKPmT): five markets clean (1x2, DC, BTTS, OU primary 2.5).
+//     SPREAD: near coin-flip — the scraper's primary-AH rules (no-pk + odds
+//     ceiling) filtered all four listed lines (-1.75/-0.75/+0.5/+0.75), same
+//     failure mode as the jul15 SF. Resolution (jul15 precedent, disclosed in
+//     the PR): use the REAL scraped -0.75 line from the probe's raw AH rows —
+//     ESP 2.68 (+168) / ARG 1.45 (-222). No synthetic/derived prices.
+// The projection loop still hard-fails if any of the six markets is null.
 const JUL18_BOOK = {
   'wc26-3rd-103': {   // FRA (home) vs ENG (away) — BE event b9l0F3Bj
-    bookHomeMl: null, bookDraw: null, bookAwayMl: null,
-    bookSpread: null, bookTotal: null,
-    bookOver: null, bookUnder: null,
-    bookBttsY: null, bookBttsN: null,
-    bookHomeWD: null, bookAwayWD: null, bookNoDraw: null,
-    bookHomeSpreadOdds: null, bookAwaySpreadOdds: null,
+    bookHomeMl: -118, bookDraw: 300, bookAwayMl: 290,
+    bookSpread: -1.5, bookTotal: 3.5,
+    bookOver: 110, bookUnder: -137,
+    bookBttsY: -227, bookBttsN: 163,
+    bookHomeWD: -400, bookAwayWD: -110, bookNoDraw: -455,
+    bookHomeSpreadOdds: 210, bookAwaySpreadOdds: -286,
     bookHomeAdv: null, bookAwayAdv: null,  // no to-advance market (see above)
   },
   'wc26-final-104': {   // ESP (home) vs ARG (away) — BE event UgbUKPmT
-    bookHomeMl: null, bookDraw: null, bookAwayMl: null,
-    bookSpread: null, bookTotal: null,
-    bookOver: null, bookUnder: null,
-    bookBttsY: null, bookBttsN: null,
-    bookHomeWD: null, bookAwayWD: null, bookNoDraw: null,
-    bookHomeSpreadOdds: null, bookAwaySpreadOdds: null,
+    bookHomeMl: 125, bookDraw: 200, bookAwayMl: 260,
+    // -0.75 = scraped bet365 AH line (see header note); not a primary-rule pick
+    bookSpread: -0.75, bookTotal: 2.5,
+    bookOver: 120, bookUnder: -149,
+    bookBttsY: -110, bookBttsN: -110,
+    bookHomeWD: -345, bookAwayWD: -161, bookNoDraw: -278,
+    bookHomeSpreadOdds: 168, bookAwaySpreadOdds: -222,
     bookHomeAdv: null, bookAwayAdv: null,  // no to-advance market (see above)
   },
 };
