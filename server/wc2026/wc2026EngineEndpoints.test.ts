@@ -136,11 +136,14 @@ describe("WC2026 owner-triggered engine/audit/backfill endpoints", () => {
     expect(engineSrc).toMatch(/markets\.mlHomeWD,\s*markets\.mlAwayWD,\s*markets\.mlNoDraw,\s*\n\s*markets\.spreadLine/);
   });
 
-  it("leaves both venues untouched (venueCityLike null) — no unverified stadium hardcode", () => {
-    expect(engineSrc).toMatch(/venueCityLike:null, seedDatePT:'2026-07-18'/);
-    expect(engineSrc).toMatch(/venueCityLike:null, seedDatePT:'2026-07-19'/);
+  it("repairs both venues from owner-provided cities via wc2026_venues lookup (no hardcoded slugs)", () => {
+    // 3rd-103 = Hard Rock, Miami Gardens FL; final-104 = MetLife, East Rutherford NJ.
+    expect(engineSrc).toMatch(/venueCityLike:'Miami', seedDatePT:'2026-07-18'/);
+    expect(engineSrc).toMatch(/venueCityLike:'Rutherford', seedDatePT:'2026-07-19'/);
     expect(engineSrc).toMatch(/SELECT venue_id, city FROM wc2026_venues WHERE LOWER\(city\) LIKE/);
     expect(engineSrc).toMatch(/UPDATE wc2026_matches SET venue_id = \? WHERE match_id = \?/);
+    // City-lookup only — the venue_id written must come from the venues row.
+    expect(engineSrc).not.toMatch(/venue_id = 'miami-gardens'/);
   });
 
   it("orientation guard: hard-fails on internal ML/DC book inconsistency, WARNs (not fails) on genuine model-market divergence", () => {
