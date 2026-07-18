@@ -3335,7 +3335,7 @@ export function WcFeedInline({
                   single Jun-28 threshold that printed "Round of 32" for every KO
                   round, so quarterfinals wrongly showed "Round of 32"). */}
               {selectedDate >= '2026-07-19' ? 'Knockout Stage · Final'
-                : selectedDate >= '2026-07-18' ? 'Knockout Stage · Third-Place Play-Off'
+                : selectedDate >= '2026-07-18' ? 'Knockout Stage · 3rd Place Match'
                 : selectedDate >= '2026-07-14' ? 'Knockout Stage · Semifinals'
                 : selectedDate >= '2026-07-09' ? 'Knockout Stage · Quarterfinals'
                 : selectedDate >= '2026-07-04' ? 'Knockout Stage · Round of 16'
