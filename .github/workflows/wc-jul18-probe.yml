@@ -1,0 +1,32 @@
+name: WC Jul18 BetExplorer Probe (read-only)
+
+# Read-only recon: scrapes bet365 (via BetExplorer) odds for the last two WC2026
+# matches — wc26-3rd-103 (France home vs England away, BE event b9l0F3Bj, Jul 18)
+# and wc26-final-104 (Spain home vs Argentina away, BE event UgbUKPmT, Jul 19).
+# No DB writes, no secrets — output is the JSON book blob in the Actions log,
+# used to fill the next engine's JUL18_BOOK block. Runs on a CI runner (real
+# egress, unlike the sandboxed agent container).
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wc-jul18-probe
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    name: Probe 3rd-place + Final odds (FRA/ENG, ESP/ARG)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install probe deps
+        run: pip install --quiet requests beautifulsoup4
+      - name: Run BetExplorer probe
+        run: python3 server/wc2026/jul18_betexplorer_probe.py
