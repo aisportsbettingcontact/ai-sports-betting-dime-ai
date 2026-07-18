@@ -306,9 +306,12 @@ const PROJECTION_MATCHES = [
 
 // world_cup_round labels for the Phase-7 wc2026MatchOdds write, keyed by fid
 // (v26 hardcoded 'semifinals'; v27 models two different rounds in one run).
+// Values MUST be members of the wc2026MatchOdds world_cup_round mysqlEnum
+// (drizzle/wc2026.schema.ts:579): ..., 'third_place', 'finals' — note FINALS
+// (plural); 'final' is rejected with "Data truncated" (live-run 29623270569).
 const ROUND_LABEL = {
   'wc26-3rd-103': 'third_place',
-  'wc26-final-104': 'final',
+  'wc26-final-104': 'finals',
 };
 
 // bet365 book odds for the 3rd-place match (FRA home vs ENG away) and the Final
