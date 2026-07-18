@@ -1,0 +1,87 @@
+# One-shot asset fetcher (owner directive 2026-07-18): the sandboxed agent
+# container has no egress to image CDNs and chat attachments never reach the
+# repo, so a CI runner (real egress) resolves the OFFICIAL 2026 FIFA World Cup
+# emblem via the MediaWiki API — no hand-guessed asset URLs — renders it to
+# PNG, derives a white-element variant for dark mode, and commits BOTH as
+# candidates to this branch for visual verification + promotion to the final
+# /brand filenames. Read-only against the outside world; writes only to the
+# branch it runs on. Delete this workflow once the emblem ships.
+name: Fetch WC26 emblem (one-shot)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: fetch-wc-emblem
+  cancel-in-progress: false
+
+jobs:
+  fetch:
+    name: Resolve, render, commit candidates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+
+      - name: Install render tools
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq librsvg2-bin imagemagick jq
+
+      - name: Resolve the emblem via the MediaWiki API
+        run: |
+          set -euo pipefail
+          UA="dime-ai-asset-fetch/1.0 (owner-directed one-shot; contact repo owner)"
+          # 1) The article's lead/infobox image (the official emblem on the
+          #    "2026 FIFA World Cup" article), original resolution.
+          URL=$(curl -sS -A "$UA" "https://en.wikipedia.org/w/api.php?action=query&titles=2026%20FIFA%20World%20Cup&prop=pageimages&piprop=original&format=json" \
+            | jq -r '.query.pages | to_entries[0].value.original.source // empty')
+          echo "pageimage: ${URL:-<none>}"
+          # 2) Fallback: known file-title forms via imageinfo.
+          if [ -z "$URL" ]; then
+            for t in "File:2026 FIFA World Cup emblem.svg" "File:2026 FIFA World Cup logo.svg" "File:2026 FIFA World Cup.svg"; do
+              enc=$(jq -rn --arg s "$t" '$s|@uri')
+              URL=$(curl -sS -A "$UA" "https://en.wikipedia.org/w/api.php?action=query&titles=$enc&prop=imageinfo&iiprop=url&format=json" \
+                | jq -r '.query.pages | to_entries[0].value.imageinfo[0].url // empty')
+              echo "try '$t' -> ${URL:-<none>}"
+              [ -n "$URL" ] && break
+            done
+          fi
+          [ -n "$URL" ] || { echo "::error::could not resolve an emblem URL"; exit 1; }
+          echo "RESOLVED_URL=$URL" >> "$GITHUB_ENV"
+          curl -sS -A "$UA" -o source_asset "$URL"
+          file source_asset
+          ls -la source_asset
+
+      - name: Render + derive variants
+        run: |
+          set -euo pipefail
+          mkdir -p client/public/brand/_wc26
+          case "$(file -b --mime-type source_asset)" in
+            image/svg+xml)
+              rsvg-convert -h 600 --keep-aspect-ratio source_asset > client/public/brand/_wc26/original.png ;;
+            image/png)
+              cp source_asset client/public/brand/_wc26/original.png ;;
+            *)
+              echo "::error::unexpected content type: $(file -b --mime-type source_asset)"; exit 1 ;;
+          esac
+          # Dark-mode candidate: flip near-black elements ("26" numerals / FIFA
+          # wordmark) to white — FIFA's own reversed treatment. Gold trophy and
+          # malachite stay untouched; alpha is preserved (RGB channels only).
+          convert client/public/brand/_wc26/original.png -alpha on -channel RGB \
+            -fuzz 30% -fill white -opaque black \
+            client/public/brand/_wc26/whitened.png
+          identify client/public/brand/_wc26/original.png client/public/brand/_wc26/whitened.png
+          sha256sum client/public/brand/_wc26/*.png
+          echo "source: $RESOLVED_URL" > client/public/brand/_wc26/SOURCE.txt
+
+      - name: Commit candidates to this branch
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add client/public/brand/_wc26
+          git commit -m "WC26 emblem candidates fetched via CI (one-shot; source in _wc26/SOURCE.txt)"
+          git push
