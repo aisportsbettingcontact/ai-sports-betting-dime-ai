@@ -65,11 +65,10 @@ jobs:
       - name: Render + derive variants
         run: |
           set -euo pipefail
-          mkdir -p client/public/brand/_wc26
-          rm -f client/public/brand/_wc26/whitened.png  # round-1 raster recolor damaged the trophy; superseded
+          # Round 3 (final): both variants verified — render straight to the
+          # production filenames at 4x the 30px display box (small files).
           [ "$(file -b --mime-type source_asset)" = "image/svg+xml" ] || { echo "::error::need the SVG source for a vector-safe variant"; exit 1; }
-          cp source_asset client/public/brand/_wc26/source.svg
-          rsvg-convert -h 600 --keep-aspect-ratio source_asset > client/public/brand/_wc26/original.png
+          rsvg-convert -h 120 --keep-aspect-ratio source_asset > client/public/brand/wc26-emblem-on-light.png
           # Dark-mode candidate — VECTOR-ONLY monochrome invert: swap black<->white
           # in fill/stroke/style declarations of the SVG text (the "26" glyphs and
           # FIFA wordmark are flat vector paths). The trophy is an embedded raster
@@ -93,16 +92,15 @@ jobs:
           open('inverted.svg', 'w', encoding='utf-8', errors='surrogateescape').write(svg2)
           print('vector invert done; bytes:', len(svg2))
           PY
-          rsvg-convert -h 600 --keep-aspect-ratio inverted.svg > client/public/brand/_wc26/inverted.png
-          identify client/public/brand/_wc26/original.png client/public/brand/_wc26/inverted.png
-          sha256sum client/public/brand/_wc26/*
-          echo "source: $RESOLVED_URL" > client/public/brand/_wc26/SOURCE.txt
+          rsvg-convert -h 120 --keep-aspect-ratio inverted.svg > client/public/brand/wc26-emblem-on-dark.png
+          identify client/public/brand/wc26-emblem-on-light.png client/public/brand/wc26-emblem-on-dark.png
+          sha256sum client/public/brand/wc26-emblem-on-*.png
 
-      - name: Commit candidates to this branch
+      - name: Commit final emblem assets to this branch
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add client/public/brand/_wc26
-          git commit -m "WC26 emblem candidates fetched via CI (one-shot; source in _wc26/SOURCE.txt)"
+          git add client/public/brand/wc26-emblem-on-light.png client/public/brand/wc26-emblem-on-dark.png
+          git commit -m "WC26 emblem final assets (official emblem via MediaWiki API; vector-inverted dark variant)"
           git push
