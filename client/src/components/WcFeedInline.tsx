@@ -1765,12 +1765,19 @@ function WcDesktopMergedPanel({
     ` | [VERIFY] hasAdvOdds=${dkOdds?.toAdvanceHome != null && dkOdds?.toAdvanceAway != null}`
   );
 
+  // TO ADVANCE only exists as a book market when there IS a next round — the
+  // 3rd-place match and the Final carry no such market (book adv is NULL), so
+  // the whole column is dropped for those matches instead of rendering dashes.
+  const hasAdvMarket = dkOdds?.toAdvanceHome != null || dkOdds?.toAdvanceAway != null;
+
   return (
     <div className="flex items-stretch w-full" style={{ minHeight: '100%', overflowX: 'auto' }}>
 
       {/* ── Col 0: TO ADVANCE — Row 1: AWAY advances (top), Row 2: HOME advances (bottom) ──
            The score panel lists AWAY on top / HOME on bottom, and WcMktCol renders the
-           away* props in the top row. So each row must carry ITS OWN team's value. */}
+           away* props in the top row. So each row must carry ITS OWN team's value.
+           Rendered only when the book actually offers the market (hasAdvMarket). */}
+      {hasAdvMarket && (<>
       <WcMktCol
         title="TO ADV"
         awayLabel={`${awayName} ADV`}
@@ -1785,6 +1792,7 @@ function WcDesktopMergedPanel({
       />
 
       <div style={{ width: 1, background: '#FFFFFF', flexShrink: 0, alignSelf: 'stretch', margin: '8px 0' }} />
+      </>)}
 
       {/* ── Col 1: ML — Row 1: AWAY (top), Row 2: HOME (bottom) — each row = its own team ── */}
       <WcMktCol
@@ -2385,8 +2393,12 @@ function WcMobileOddsPanel({ match }: { match: WcMatchWithOdds }) {
     wide?: boolean;
     cell: React.ReactNode;
   };
+  // TO ADVANCE cell only when the book offers the market — the 3rd-place match
+  // and the Final have no to-advance market (book adv NULL), so the card is
+  // dropped instead of rendering an all-dash cell.
+  const hasAdvMarketMob = dkOdds?.toAdvanceHome != null || dkOdds?.toAdvanceAway != null;
   const cells: CellDef[] = [
-    {
+    ...(hasAdvMarketMob ? [{
       label: 'TO ADVANCE',
       wide: true,
       cell: (
@@ -2400,7 +2412,7 @@ function WcMobileOddsPanel({ match }: { match: WcMatchWithOdds }) {
           size="sm"
         />
       ),
-    },
+    }] : []),
     {
       label: 'MONEYLINE',
       wide: true,

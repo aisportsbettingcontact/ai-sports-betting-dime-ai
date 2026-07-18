@@ -143,8 +143,11 @@ describe("DimeModelFeed — owner rules", () => {
 
   it("RULE 3: every market renders BOTH sides via twoWayCol(top, bottom)", () => {
     expect(src).toMatch(/function twoWayCol\(/);
-    // WC card carries all 7 markets in production order.
-    expect(src).toMatch(/\[toAdv, ml, draw, total, spread, dblChc, btts\]/);
+    // WC card carries the markets in production order; TO ADV is gated on the
+    // book actually offering the market (absent for the 3rd-place match and
+    // the Final, which have no next round).
+    expect(src).toMatch(/hasAdvMarket = dk\?\.toAdvanceAway != null \|\| dk\?\.toAdvanceHome != null/);
+    expect(src).toMatch(/\[\.\.\.\(hasAdvMarket \? \[toAdv\] : \[\]\), ml, draw, total, spread, dblChc, btts\]/);
   });
 
   it("three-color law: mint #45E0A8 only (both themes), no neon/gold/legacy-mint", () => {
