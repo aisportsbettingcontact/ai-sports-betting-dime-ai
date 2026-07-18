@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import fs from "fs";
 import path from "path";
-import { buildFeedSections, slateStatusRank, wcDisplayCity, wcRoundLabel } from "./DimeModelFeed";
+import { WC_WINNER_MARKETS, buildFeedSections, slateStatusRank, wcDisplayCity, wcRoundLabel } from "./DimeModelFeed";
 
 /**
  * Regression guards for the Dime AI Model Projections surface
@@ -158,7 +158,9 @@ describe("DimeModelFeed — owner rules", () => {
     // book actually offering the market (absent for the 3rd-place match and
     // the Final, which have no next round).
     expect(src).toMatch(/hasAdvMarket = dk\?\.toAdvanceAway != null \|\| dk\?\.toAdvanceHome != null/);
-    expect(src).toMatch(/\[\.\.\.\(hasAdvMarket \? \[toAdv\] : \[\]\), ml, draw, total, spread, dblChc, btts\]/);
+    // Winner market takes the ML slot on the two winner-scope cards
+    // (owner directive 2026-07-18); all other WC cards keep the 3-way ML.
+    expect(src).toMatch(/\[\.\.\.\(hasAdvMarket \? \[toAdv\] : \[\]\), winner \?\? ml, draw, total, spread, dblChc, btts\]/);
   });
 
   it("three-color law: mint #45E0A8 only (both themes), no neon/gold/legacy-mint", () => {
@@ -213,6 +215,45 @@ describe("DimeModelFeed — routes", () => {
     expect(src).toMatch(
       /navigate\(resolveRouteHref\(feedModelPath\("MLB", nextIso\)\)\)/
     );
+  });
+});
+
+describe("DimeModelFeed — WC winner-scope markets (owner directive 2026-07-18)", () => {
+  it("owner book prices + verified orientation are pinned for both matches", () => {
+    // Graded on whoever WINS the match when it settles (90'+ET+pens).
+    expect(WC_WINNER_MARKETS["wc26-3rd-103"]).toEqual({
+      title: "World Cup 3rd Place",
+      homeCode: "FRA", awayCode: "ENG",
+      bookHome: -215, bookAway: 170,
+    });
+    expect(WC_WINNER_MARKETS["wc26-final-104"]).toEqual({
+      title: "To Win the World Cup",
+      homeCode: "ESP", awayCode: "ARG",
+      bookHome: -150, bookAway: 130,
+    });
+    expect(Object.keys(WC_WINNER_MARKETS)).toHaveLength(2);
+  });
+
+  it("winner model odds bind to model_*_to_advance (v27 ET+pens winner scope)", () => {
+    // Both the To Adv column and the winner market read mo.toAdvance* — the
+    // winner market is the second binding (away top, home bottom).
+    expect(src.match(/model: mo\?\.toAdvanceAway \?\? null/g)).toHaveLength(2);
+    expect(src.match(/model: mo\?\.toAdvanceHome \?\? null/g)).toHaveLength(2);
+    expect(src).toMatch(/book: winnerSpec\.bookAway, model: mo\?\.toAdvanceAway/);
+    expect(src).toMatch(/book: winnerSpec\.bookHome, model: mo\?\.toAdvanceHome/);
+  });
+
+  it("the winner market replaces ML only under the orientation guard", () => {
+    expect(src).toMatch(/winnerSpec\.homeCode === homeCode && winnerSpec\.awayCode === awayCode/);
+    expect(src).toMatch(/winner \?\? ml, draw, total, spread, dblChc, btts/);
+  });
+
+  it("(90 Min) tags exactly Draw, Spread, Dbl Chc, and BTTS — never Total", () => {
+    expect(src).toMatch(/t90\("Draw"\)/);
+    expect(src).toMatch(/t90\("Spread"\)/);
+    expect(src).toMatch(/t90\("Dbl Chc"\)/);
+    expect(src).toMatch(/t90\("BTTS"\)/);
+    expect(src).toMatch(/twoWayCol\(\s*"Total"/); // Total keeps its plain header
   });
 });
 

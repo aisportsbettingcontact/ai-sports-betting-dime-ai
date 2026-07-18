@@ -734,6 +734,26 @@ function fmtKickoffEt(kickoffUtc: string | Date | null | undefined): string {
   );
 }
 
+/** Owner winner-scope markets (2026-07-18): the two remaining WC matches
+ *  replace their MONEYLINE column with a match-WINNER market — graded on
+ *  whoever wins the match when it settles, regardless of 90'+injury time,
+ *  extra time, or penalties. Book prices are OWNER-PROVIDED (2026-07-18).
+ *  Model prices are the v27 engine's model_*_to_advance (ET+pens
+ *  sub-simulation: P(win 90') + P(draw)×[ET λ/3 + pens 50.5/49.5]) — for
+ *  these two matches that is literally "wins the match outright" (engine
+ *  header, v27_jul18_engine.mjs), i.e. the exact same grading scope. They
+ *  reach the card as mo.toAdvanceHome/Away via wc2026_model_projections.
+ *  homeCode/awayCode pin the v27-verified orientation (FRA home vs ENG away;
+ *  ESP home vs ARG away) — if the live row ever disagreed, the card falls
+ *  back to the plain 3-way ML rather than misassign the owner book prices. */
+export const WC_WINNER_MARKETS: Record<
+  string,
+  { title: string; homeCode: string; awayCode: string; bookHome: number; bookAway: number }
+> = {
+  "wc26-3rd-103": { title: "World Cup 3rd Place", homeCode: "FRA", awayCode: "ENG", bookHome: -215, bookAway: 170 },
+  "wc26-final-104": { title: "To Win the World Cup", homeCode: "ESP", awayCode: "ARG", bookHome: -150, bookAway: 130 },
+};
+
 function wcMatchToCard(m: WcMatch, isoDate: string): FeedCardSpec {
   const awayCode = m.awayTeam?.fifaCode ?? m.awayTeamId.toUpperCase();
   const homeCode = m.homeTeam?.fifaCode ?? m.homeTeamId.toUpperCase();
@@ -741,6 +761,15 @@ function wcMatchToCard(m: WcMatch, isoDate: string): FeedCardSpec {
   const homeCrest: CrestSpec = { url: m.homeTeam?.flagUrl ?? fifaFlagUrl(homeCode), code: homeCode };
   const dk = m.dkOdds;
   const mo = m.modelOdds;
+
+  // Winner-scope override applies ONLY when the live orientation matches the
+  // v27-verified home/away — the owner book prices bind positionally.
+  const winnerSpec = WC_WINNER_MARKETS[m.matchId];
+  const winnerApplies =
+    winnerSpec != null && winnerSpec.homeCode === homeCode && winnerSpec.awayCode === awayCode;
+  // Clarity rule (owner directive 2026-07-18): with the winner market on the
+  // card, the 90-minute-scoped markets say so in their headers.
+  const t90 = (title: string): string => (winnerApplies ? `${title} (90 Min)` : title);
 
   // 3-way calc for ML + DRAW (WcMktCol rule) — also yields the win% annotation.
   const threeWayBook: ThreeWayOdds | null =
@@ -760,6 +789,26 @@ function wcMatchToCard(m: WcMatch, isoDate: string): FeedCardSpec {
     { label: homeCode, crest: homeCrest, book: dk?.toAdvanceHome ?? null, model: mo?.toAdvanceHome ?? null },
     "ADV",
   );
+
+  // WINNER MARKET (owner directive 2026-07-18) — replaces ML on the 3rd-place
+  // match and the Final. Away top / home bottom (card row order). Book = the
+  // owner-provided winner prices; model = mo.toAdvanceHome/Away — the v27
+  // ET+pens winner odds, the exact same "wins the match however it settles"
+  // scope — so calculateEdge(book, model) inside twoWayCol IS the precise
+  // 2-way edge for this market (the model side is fair: pAdvH + pAdvA = 1).
+  const winner = winnerApplies
+    ? twoWayCol(
+        winnerSpec.title,
+        { label: awayCode, crest: awayCrest, book: winnerSpec.bookAway, model: mo?.toAdvanceAway ?? null },
+        { label: homeCode, crest: homeCrest, book: winnerSpec.bookHome, model: mo?.toAdvanceHome ?? null },
+      )
+    : null;
+  if (process.env.NODE_ENV === "development" && winnerSpec && !winnerApplies) {
+    console.warn(
+      `[wcMatchToCard:WINNER] ${m.matchId}: live orientation ${awayCode}@${homeCode} disagrees with ` +
+        `verified ${winnerSpec.awayCode}@${winnerSpec.homeCode} — falling back to plain ML (owner odds NOT applied)`,
+    );
+  }
 
   // ML — away top; edge/sig from the 3-way calc when available.
   const favIsAway = calc3 ? calc3.away.modelFairProb >= calc3.home.modelFairProb : false;
@@ -798,9 +847,10 @@ function wcMatchToCard(m: WcMatch, isoDate: string): FeedCardSpec {
     }
   }
 
-  // DRAW — DRAW top / NO DRAW bottom (owner spec).
+  // DRAW — DRAW top / NO DRAW bottom (owner spec). 90-min scope tagged when
+  // the winner market is on the card.
   const draw = twoWayCol(
-    "Draw",
+    t90("Draw"),
     { label: "DRAW", book: dk?.draw ?? null, model: mo?.draw ?? null },
     { label: "NO DRAW", book: dk?.noDraw ?? null, model: mo?.noDraw ?? null },
   );
@@ -825,7 +875,7 @@ function wcMatchToCard(m: WcMatch, isoDate: string): FeedCardSpec {
   const aLine = dk?.awaySpreadLine;
   const hLine = dk?.homeSpreadLine;
   const spread = twoWayCol(
-    "Spread",
+    t90("Spread"),
     {
       label: aLine != null ? `${awayCode} ${fmtLine(aLine)}` : awayCode,
       crest: awayCrest,
@@ -843,14 +893,14 @@ function wcMatchToCard(m: WcMatch, isoDate: string): FeedCardSpec {
   // DBL CHC — HOME WD top (dkOdds.homeDrawOdds) / AWAY WD bottom (owner spec),
   // each carrying the matching team's flag (Rule 4).
   const dblChc = twoWayCol(
-    "Dbl Chc",
+    t90("Dbl Chc"),
     { label: "HOME WD", crest: homeCrest, book: dk?.homeDrawOdds ?? null, model: mo?.homeDrawOdds ?? null },
     { label: "AWAY WD", crest: awayCrest, book: dk?.awayDrawOdds ?? null, model: mo?.awayDrawOdds ?? null },
   );
 
   // BTTS — YES top / NO bottom.
   const btts = twoWayCol(
-    "BTTS",
+    t90("BTTS"),
     { label: "YES", book: dk?.bttsYes ?? null, model: mo?.bttsYes ?? null },
     { label: "NO", book: dk?.bttsNo ?? null, model: mo?.bttsNo ?? null },
   );
@@ -859,7 +909,9 @@ function wcMatchToCard(m: WcMatch, isoDate: string): FeedCardSpec {
   // 3rd-place match and the Final carry no such market (book adv NULL), so the
   // column is dropped for those cards instead of rendering dashes.
   const hasAdvMarket = dk?.toAdvanceAway != null || dk?.toAdvanceHome != null;
-  const markets = [...(hasAdvMarket ? [toAdv] : []), ml, draw, total, spread, dblChc, btts];
+  // Winner market takes the ML slot on the 3rd-place match and the Final
+  // (owner directive 2026-07-18); every other card keeps the 3-way ML.
+  const markets = [...(hasAdvMarket ? [toAdv] : []), winner ?? ml, draw, total, spread, dblChc, btts];
   let best: BestPick | null = null;
   for (const col of markets) best = trackBest(best, col);
 

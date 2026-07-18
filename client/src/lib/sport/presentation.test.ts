@@ -181,6 +181,90 @@ describe("formatDoubleChanceSelection — resolved via participant identity", ()
   });
 });
 
+describe("WC winner-scope markets + (90 Min) tags (owner directive 2026-07-18)", () => {
+  // The Final as wcMatchToCard emits it: ARG away (top) / ESP home (bottom),
+  // winner market in the ML slot, 90-min tags on Draw/Spread/Dbl Chc/BTTS.
+  const FINAL_EVENT: FeedEventLike = {
+    id: "wc26-final-104",
+    timeLabel: "3:00 PM ET",
+    away: { name: "Argentina", crest: { code: "ARG", url: null, bg: "#75AADB" }, score: null },
+    home: { name: "Spain", crest: { code: "ESP", url: null, bg: "#C60B1E" }, score: null },
+    meta: "World Cup Final",
+    markets: [
+      { title: "To Win the World Cup", foot: { label: "ESP · +4.2%", edge: true }, rows: [
+        { label: "ARG", book: "+130", model: "+155" },
+        { label: "ESP", book: "-150", model: "-182" },
+      ] },
+      { title: "Draw (90 Min)", foot: { label: "NO EDGE", edge: false }, rows: [
+        { label: "DRAW", book: "+200", model: "+205" },
+        { label: "NO DRAW", book: "-278", model: "-270" },
+      ] },
+      { title: "Spread (90 Min)", foot: { label: "NO EDGE", edge: false }, rows: [
+        { label: "ARG +0.75", book: "-222", model: "-210" },
+        { label: "ESP -0.75", book: "+168", model: "+160" },
+      ] },
+      { title: "Dbl Chc (90 Min)", foot: { label: "NO EDGE", edge: false }, rows: [
+        { label: "HOME WD", book: "-345", model: "-350" },
+        { label: "AWAY WD", book: "-161", model: "-155" },
+      ] },
+      { title: "BTTS (90 Min)", foot: { label: "NO EDGE", edge: false }, rows: [
+        { label: "YES", book: "-110", model: "-115" },
+        { label: "NO", book: "-110", model: "-105" },
+      ] },
+    ],
+  };
+  const model = createSoccerPresentation(FINAL_EVENT);
+  const byKey = Object.fromEntries(model.markets.map((mk) => [mk.key, mk]));
+
+  it("winner market picks carry the market: '<Country> to Win WC'", () => {
+    const winner = byKey["to-win-the-world-cup"];
+    expect(winner.label).toBe("To Win the World Cup");
+    expect(winner.selections.map((s) => s.label)).toEqual(["Argentina to Win WC", "Spain to Win WC"]);
+    expect(winner.selections[0]).toMatchObject({ bookPrice: 130, modelPrice: 155 });
+    expect(winner.selections[1]).toMatchObject({ bookPrice: -150, modelPrice: -182 });
+  });
+
+  it("re-anchors the winner edge footer on the spelled-out pick", () => {
+    expect(byKey["to-win-the-world-cup"].resultLabel).toBe("Spain to Win WC · +4.2%");
+    expect(byKey["to-win-the-world-cup"].resultIsEdge).toBe(true);
+  });
+
+  it("'3rd Place' picks for the bronze match", () => {
+    const bronze = createSoccerPresentation({
+      ...FINAL_EVENT,
+      id: "wc26-3rd-103",
+      away: { name: "England", crest: { code: "ENG", url: null }, score: null },
+      home: { name: "France", crest: { code: "FRA", url: null }, score: null },
+      markets: [
+        { title: "World Cup 3rd Place", foot: { label: "FRA · +2.0%", edge: true }, rows: [
+          { label: "ENG", book: "+170", model: "+185" },
+          { label: "FRA", book: "-215", model: "-240" },
+        ] },
+      ],
+    });
+    expect(bronze.markets[0].label).toBe("World Cup 3rd Place");
+    expect(bronze.markets[0].selections.map((s) => s.label)).toEqual(["England 3rd Place", "France 3rd Place"]);
+    expect(bronze.markets[0].resultLabel).toBe("France 3rd Place · +2.0%");
+  });
+
+  it("(90 Min) is display-only: labels carry it, market shapes still resolve", () => {
+    expect(byKey["draw-90-min"].label).toBe("Draw (90 Min)");
+    expect(byKey["spread-90-min"].label).toBe("Spread (90 Min)");
+    expect(byKey["dbl-chc-90-min"].label).toBe("Double Chance (90 Min)");
+    expect(byKey["btts-90-min"].label).toBe("Both Teams to Score (90 Min)");
+    // Shape resolution survived the tag: Dbl Chc still spells Win/Draw sides,
+    // spread still de-codes the leading FIFA token.
+    expect(byKey["dbl-chc-90-min"].selections.map((s) => s.label)).toEqual([
+      "Spain Win/Draw",
+      "Argentina Win/Draw",
+    ]);
+    expect(byKey["spread-90-min"].selections.map((s) => s.label)).toEqual([
+      "Argentina +0.75",
+      "Spain -0.75",
+    ]);
+  });
+});
+
 describe("sportAdapters registry", () => {
   it("covers every sport", () => {
     expect(Object.keys(sportAdapters).sort()).toEqual(

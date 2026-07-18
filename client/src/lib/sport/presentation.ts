@@ -404,8 +404,19 @@ function soccerMarket(
   home: Participant,
   event: Pick<SportPresentationModel, "homeParticipant" | "awayParticipant">,
 ): MarketPresentationModel {
-  const key = m.title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-  const title = m.title.trim().toLowerCase();
+  // Key from the full title (tag included, so tagged and untagged variants
+  // stay distinct); trim edge hyphens left by trailing symbols like ")".
+  const key = m.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  // "(90 Min)" scope tag (owner directive 2026-07-18): when a card carries a
+  // match-WINNER market, its 90-minute-scoped markets say so in their headers.
+  // The tag is display-only — strip it before matching the market shape so
+  // "Dbl Chc (90 Min)" still resolves the Double Chance labels, then re-append
+  // it to the spelled-out display label ("Double Chance (90 Min)").
+  const rawTitle = m.title.trim();
+  const tag90 = /\s*\(90 min\)$/i.test(rawTitle);
+  const baseTitle = tag90 ? rawTitle.replace(/\s*\(90 min\)$/i, "").trim() : rawTitle;
+  const displayLabel = tag90 ? `${marketDisplayLabel(baseTitle)} (90 Min)` : marketDisplayLabel(baseTitle);
+  const title = baseTitle.toLowerCase();
   const price = (row: FeedRowLike) => ({ bookPrice: parseAmerican(row.book), modelPrice: parseAmerican(row.model) });
   const sel = (
     i: number,
@@ -451,6 +462,23 @@ function soccerMarket(
         return sel(i, i === 0 ? "away" : "home", `${participant.displayName} ML`, participant);
       });
       break;
+    // Winner-scope markets (owner directive 2026-07-18): graded on whoever
+    // wins the match when it settles — 90'+injury time, extra time, or pens.
+    // The pick carries its market ("England 3rd Place", "Spain to Win WC"),
+    // matching the "<Country> ML" convention, so the summary readout and edge
+    // carousel always name the market the edge lives in.
+    case "world cup 3rd place":
+      selections = m.rows.map((row, i) => {
+        const participant = i === 0 ? away : home;
+        return sel(i, i === 0 ? "away" : "home", `${participant.displayName} 3rd Place`, participant);
+      });
+      break;
+    case "to win the world cup":
+      selections = m.rows.map((row, i) => {
+        const participant = i === 0 ? away : home;
+        return sel(i, i === 0 ? "away" : "home", `${participant.displayName} to Win WC`, participant);
+      });
+      break;
     case "to adv":
     case "spread":
     default:
@@ -461,7 +489,7 @@ function soccerMarket(
       });
       break;
   }
-  return { key, label: marketDisplayLabel(m.title), selections, ...footOf(m, selections) };
+  return { key, label: displayLabel, selections, ...footOf(m, selections) };
 }
 
 export const createSoccerPresentation: SportAdapter = (raw, ctx) => {
