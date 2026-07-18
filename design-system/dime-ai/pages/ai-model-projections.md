@@ -106,11 +106,22 @@
   league grouping — ONLY the grouping/order is mirrored, no other CBS
   element). Rationale: two WC matches remain, then MLB carries the feed
   until NCAAF/NFL return.
-- League section header = mono micro-label with count ("WORLD CUP · 2
-  MATCHES", "MLB · 14 GAMES"); a league with no games that date renders no
-  section (no empty WC header after the final). The feedhead slate count
-  sums every league. Within a section the existing slate order holds
-  (first pitch asc; LIVE > upcoming > FINAL tiers).
+- League sections are **collapsible containers** (native details/summary,
+  open by default; chevron affordance; 36px header row; mobile-first):
+  official league logo in a fixed 24px box + the full spelled-out name
+  across the row — "2026 FIFA WORLD CUP" and "MAJOR LEAGUE BASEBALL (MLB)".
+  **No game counts** in headers, and the feedhead slate count is removed
+  (its divider stays — the feedhead bottom border). The WC emblem is
+  theme-keyed: `/brand/wc26-emblem-on-light.png` (black FIFA wordmark) on
+  light, `/brand/wc26-emblem-on-dark.png` (white wordmark) on dark, both
+  rendered the same size; MLB uses the bundled
+  `/manus-storage/mlb-logo_50fd8568.png`. A missing logo file hides itself
+  (clean text-only header). A league with no games that date renders no
+  section. Within a section the existing slate order holds (first pitch
+  asc; LIVE > upcoming > FINAL tiers).
+- **WC venue line drops trailing stadium parentheticals** —
+  "MetLife Stadium (NY/NJ)" reads "MetLife Stadium · East Rutherford, NJ"
+  (`wcDisplayStadium`; city matching still uses the raw stadium string).
 - Date nav canonicalizes on the `mlb-` slug (one URL per date); legacy
   `wc-` deep links still parse and render the same combined slate.
 
