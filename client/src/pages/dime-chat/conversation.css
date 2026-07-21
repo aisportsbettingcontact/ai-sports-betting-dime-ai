@@ -730,4 +730,194 @@ button.dc-sidebar-row {
   font-size: 11px;
   color: #45e0a8;
 }
+
+/* ----------------------------------------------------------------------------
+   13. SIDEBAR RAIL + CHAT MANAGEMENT (owner directive 2026-07-21)
+       Desktop-only collapse-to-rail with the TextSearch/PanelLeft* header
+       pair, Lucide nav icons, per-chat "…" menus, an owner-only clear-all,
+       scrollable recents with fade edges, and the enlarged profile row that
+       collapses to just the avatar. 160ms single brand curve throughout.
+   -------------------------------------------------------------------------- */
+
+/* Header icon buttons (search + collapse; also the recents clear-all).
+   A right-aligned row UNDER the wordmark — the 2.5x mark owns the head's
+   width, so overlaying controls beside it would collide. */
+.dc-sidebar-head { position: relative; }
+.dc-sidebar-actions { display: flex; gap: 2px; justify-content: flex-end; padding: 0 2px 10px; }
+.dc-icon-btn {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  cursor: pointer;
+  padding: 0;
+}
+.dc-icon-btn--sm { width: 26px; height: 26px; border-radius: 7px; }
+.theme-dark .dc-icon-btn { color: #ffffff; }
+.theme-light .dc-icon-btn { color: #000000; }
+
+/* Inline chat search (opens from the TextSearch header button). */
+.dc-sidebar-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 8px 12px;
+  padding: 8px 10px;
+  border-radius: 10px;
+}
+.theme-dark .dc-sidebar-search { border: 1px solid #ffffff; color: #ffffff; }
+.theme-light .dc-sidebar-search { border: 1px solid #000000; color: #000000; }
+.dc-sidebar-search:focus-within { box-shadow: 0 0 0 3px rgba(69, 224, 168, 0.36); }
+.dc-sidebar-search-ico { flex-shrink: 0; }
+.dc-sidebar-search-input {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-family: inherit;
+  font-size: 13px;
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+}
+.dc-sidebar-search-input:focus { outline: none; }
+.dc-sidebar-search-input::-webkit-search-cancel-button { -webkit-appearance: none; }
+
+/* Nav rows carry one 18px/1.8-stroke Lucide mark each; the active row tints
+   its mark mint exactly as the frozen `＋` icon did (D/L:27 parity). */
+.dc-nav-ico { flex-shrink: 0; }
+.dc-sidebar-row.is-active .dc-nav-ico,
+.dc-sidebar-row[aria-current="page"] .dc-nav-ico { color: var(--accent); }
+
+/* Recents head: frozen label + the owner-only clear-all eraser. */
+.dc-recents-head { display: flex; align-items: center; justify-content: space-between; padding-right: 6px; }
+.dc-recents-head .dc-recents-label { padding-right: 0; }
+
+/* Recent chat rows: title link + "…" menu. The more-button reserves its slot
+   (opacity reveal only — no layout shift on hover, HIG-stable bounds). */
+.dc-recent-row { position: relative; display: flex; align-items: center; }
+.dc-recent-row .dc-sidebar-row { flex: 1; min-width: 0; }
+.dc-recent-more {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  cursor: pointer;
+  padding: 0;
+  opacity: 0;
+  transition: opacity 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.theme-dark .dc-recent-more { color: #ffffff; }
+.theme-light .dc-recent-more { color: #000000; }
+.dc-recent-row:hover .dc-recent-more,
+.dc-recent-row:focus-within .dc-recent-more,
+.dc-recent-row.is-menu-open .dc-recent-more { opacity: 1; }
+@media (pointer: coarse) {
+  .dc-recent-more { opacity: 1; min-width: 44px; min-height: 44px; }
+}
+.dc-recent-menu {
+  position: absolute;
+  top: calc(100% - 2px);
+  right: 4px;
+  z-index: 30;
+  min-width: 150px;
+  border-radius: 12px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.theme-dark .dc-recent-menu { background: #000000; border: 1px solid #ffffff; }
+.theme-light .dc-recent-menu { background: #ffffff; border: 1px solid #000000; }
+.dc-recent-menu .dc-menu-item { display: flex; align-items: center; gap: 8px; }
+.dc-recent-empty { font-size: 12px; padding: 10px; }
+.theme-dark .dc-recent-empty { color: #ffffff; }
+.theme-light .dc-recent-empty { color: #000000; }
+
+/* Avatar doubles as the account-menu trigger (sole affordance in the rail). */
+.dc-avatar-btn {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+@media (min-width: 1024px) {
+  /* Width animates on the brand curve; labels ellipsize (never wrap) so the
+     shrink reads as one motion, not a reflow. */
+  .dc-sidebar {
+    transition: width 160ms cubic-bezier(0.16, 1, 0.3, 1),
+      padding 160ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .dc-sidebar-text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+  }
+
+  /* Scrollable recents with fade edges (overrides the app-adaptation
+     `overflow: hidden` clip — long histories scroll instead of truncating). */
+  .dc-recent-list {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 10px, #000 calc(100% - 10px), transparent 100%);
+    mask-image: linear-gradient(to bottom, transparent 0, #000 10px, #000 calc(100% - 10px), transparent 100%);
+  }
+  .theme-dark .dc-recent-list { scrollbar-color: rgba(255, 255, 255, 0.25) transparent; }
+  .theme-light .dc-recent-list { scrollbar-color: rgba(0, 0, 0, 0.25) transparent; }
+
+  /* Enlarged profile row (frozen 30px avatar / 12px name -> 48px / 15px). */
+  .dc-profile-row { min-height: 76px; padding: 14px 10px; }
+  .dc-profile-row .dc-avatar { width: 48px; height: 48px; }
+  .dc-profile-name { font-size: 15px; }
+  .dc-profile-tier { font-size: 12px; }
+
+  /* The rail: 68px column of icons; wordmark, labels, search, recents, and
+     the identity text all yield — only the marks and the avatar remain. */
+  .dc-sidebar--rail { width: 68px; padding: 20px 8px; }
+  .dc-sidebar--rail .dc-sidebar-title,
+  .dc-sidebar--rail .dc-sidebar-text,
+  .dc-sidebar--rail .dc-sidebar-search,
+  .dc-sidebar--rail .dc-recents-head,
+  .dc-sidebar--rail .dc-recent-list,
+  .dc-sidebar--rail .dc-recent-star,
+  .dc-sidebar--rail .dc-profile-id,
+  .dc-sidebar--rail .dc-settings-trigger { display: none; }
+  .dc-sidebar--rail .dc-sidebar-head { display: flex; justify-content: center; padding: 0 0 10px; }
+  .dc-sidebar--rail .dc-sidebar-actions {
+    position: static;
+    flex-direction: column-reverse; /* expand control on top */
+    align-items: center;
+    gap: 6px;
+  }
+  .dc-sidebar--rail .dc-sidebar-row { justify-content: center; padding: 10px 0; }
+  .dc-sidebar--rail .dc-profile-row {
+    margin-top: auto;
+    justify-content: center;
+    padding: 12px 0;
+    min-height: 0;
+  }
+  /* Account menu escapes the 68px column: it opens beside the rail. */
+  .dc-sidebar--rail .dc-settings-menu { left: calc(100% + 10px); right: auto; bottom: 4px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dc-sidebar { transition: none; }
+  .dc-recent-more { transition: none; }
+}
 .theme-light .dc-recent-star { color: #000000; }
