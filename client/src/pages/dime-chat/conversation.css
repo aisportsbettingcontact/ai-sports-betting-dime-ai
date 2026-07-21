@@ -32,6 +32,12 @@
 .dc-recent-list { overflow: hidden; } /* app adaptation of D/L:65 `overflow: visible` — the fixed 900px canvas never scrolled; a short viewport must clip, not overlap the profile row */
 .dc-sidebar-spacer { flex: 1; } /* Ph1: with no session chats the RECENT CHATS section hides entirely; this takes over the recent list's flex: 1 slot (D/L:65) so the profile row stays pinned to the sidebar foot */
 
+/* Owner directive 2026-07-21: the profile row is grounded to the sidebar
+   foot in EVERY state — not dependent on .dc-recent-list flex-fill or
+   .dc-sidebar-spacer being present. margin-top:auto on a flex-column child
+   is state-independent; the spacer/flex-fill remain for scroll behavior. */
+.dc-profile-row { margin-top: auto; }
+
 /* ----------------------------------------------------------------------------
    1. MAIN PANE — two states of the SAME element (spec §2, §2.7)
       Home state = the frozen .home-main verbatim (.dc-main, F:97).
