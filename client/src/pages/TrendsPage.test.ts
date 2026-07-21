@@ -34,3 +34,15 @@ describe("gameUtils handles the 12-hour DB form (the 6:40 AM bug)", () => {
     expect(timeToMinutes("11:35 AM")).toBeLessThan(timeToMinutes("1:05 PM"));
   });
 });
+
+describe("Trends page layout: always-open, side-by-side", () => {
+  it("renders both panels non-collapsible and expanded", () => {
+    const collapsibleFalse = src.match(/collapsible=\{false\}/g) ?? [];
+    expect(collapsibleFalse).toHaveLength(2);
+    expect(src).not.toMatch(/defaultCollapsed=\{true\}/);
+  });
+  it("lays each game out as one two-column row", () => {
+    expect(src).toMatch(/data-trends-game-row/);
+    expect(src).toMatch(/gridTemplateColumns: ["']repeat\(2, minmax\(0,1fr\)\)["']/);
+  });
+});
