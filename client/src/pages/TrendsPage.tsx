@@ -134,7 +134,7 @@ export default function TrendsPage() {
     { sport: "MLB" },
     { staleTime: 5 * 60 * 1000, refetchOnWindowFocus: false }
   );
-  const { data: games, isLoading } = trpc.games.list.useQuery(
+  const { data: games, isLoading, isError } = trpc.games.list.useQuery(
     { sport: "MLB", gameDate: selectedDate },
     { refetchOnWindowFocus: false, staleTime: 60 * 1000 }
   );
@@ -143,6 +143,11 @@ export default function TrendsPage() {
     () =>
       [...(games ?? [])]
         .filter((g): g is NonNullable<typeof g> => g != null)
+        .filter(g => {
+          const a = MLB_BY_ABBREV.get(g.awayTeam);
+          const h = MLB_BY_ABBREV.get(g.homeTeam);
+          return Boolean(a?.anSlug && h?.anSlug);
+        })
         .sort(
           (a, b) =>
             timeToMinutes(a.startTimeEst) - timeToMinutes(b.startTimeEst)
@@ -178,6 +183,15 @@ export default function TrendsPage() {
               style={{ color: "#45E0A8" }}
             />
             <p className="text-sm text-muted-foreground">Loading trends…</p>
+          </div>
+        ) : isError ? (
+          <div className="flex flex-col items-center justify-center py-24 px-4 text-center">
+            <p className="text-sm font-semibold text-foreground mb-1">
+              Couldn't load games
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Something went wrong fetching the slate. Try again in a moment.
+            </p>
           </div>
         ) : sortedGames.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 px-4 text-center">
