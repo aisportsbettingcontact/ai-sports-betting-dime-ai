@@ -19,45 +19,8 @@ import RecentSchedulePanel from "@/components/RecentSchedulePanel";
 import SituationalResultsPanel from "@/components/SituationalResultsPanel";
 import { useVisibility } from "@/hooks/useVisibility";
 import { trpc } from "@/lib/trpc";
+import { formatGameTime, timeToMinutes, formatDateHeader } from "@/lib/gameUtils";
 import { MLB_BY_ABBREV } from "@shared/mlbTeams";
-
-/** Same display form the splits surface uses ("7:07 PM ET"). */
-function formatTimeEt(time: string | null | undefined): string {
-  if (!time) return "TBD";
-  const upper = time.trim().toUpperCase();
-  if (upper === "TBD" || upper === "TBA" || upper === "") return "TBD";
-  const [hStr, mStr] = time.split(":");
-  const h = parseInt(hStr ?? "0", 10);
-  const m = parseInt(mStr ?? "0", 10);
-  if (isNaN(h) || isNaN(m)) return "TBD";
-  const suffix = h >= 12 ? "PM" : "AM";
-  const hour12 = h % 12 === 0 ? 12 : h % 12;
-  return `${hour12}:${String(m).padStart(2, "0")} ${suffix} ET`;
-}
-
-function timeToMinutes(time: string | null | undefined): number {
-  if (!time || time.toUpperCase() === "TBD" || time.toUpperCase() === "TBA")
-    return 9999;
-  const [hStr, mStr] = time.split(":");
-  const h = parseInt(hStr ?? "0", 10);
-  const m = parseInt(mStr ?? "0", 10);
-  if (isNaN(h) || isNaN(m)) return 9999;
-  return h * 60 + m;
-}
-
-function formatDateHeader(dateStr: string): string {
-  try {
-    const d = new Date(dateStr + "T00:00:00");
-    return d.toLocaleDateString("en-US", {
-      weekday: "long",
-      month: "long",
-      day: "numeric",
-      year: "numeric",
-    });
-  } catch {
-    return dateStr;
-  }
-}
 
 /** Minimal structural slice of a games.list row this page reads. */
 interface TrendsGameRow {
@@ -90,7 +53,7 @@ function TrendsGameSection({ game }: { game: TrendsGameRow }) {
             letterSpacing: "0.08em",
           }}
         >
-          {formatTimeEt(game.startTimeEst)}
+          {formatGameTime(game.startTimeEst)}
         </span>
       </div>
       <RecentSchedulePanel
