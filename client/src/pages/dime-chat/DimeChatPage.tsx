@@ -62,6 +62,25 @@ import {
   type SidebarUser,
 } from "./sidebarIdentity";
 import { bettingSplitsPath, feedModelPath } from "@/lib/feedRoutes";
+// Sidebar icon vocabulary (owner directive 2026-07-21): distinctive Lucide
+// picks over the generic ChatGPT pair — TextSearch/PanelLeft* for the header
+// controls, one semantic mark per nav destination, Ellipsis/Trash2/Eraser for
+// the recent-chat management surface. One set, one 1.8 stroke.
+import {
+  BrainCircuit,
+  ChartCandlestick,
+  ChartSpline,
+  Ellipsis,
+  Eraser,
+  MessageSquarePlus,
+  NotebookPen,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Target,
+  TextSearch,
+  Trash2,
+  type LucideIcon,
+} from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useAppAuth } from "@/_core/hooks/useAppAuth";
 import type { DimeProductPane } from "../dime-shell/productRoute";
@@ -79,17 +98,19 @@ const NAV_ROWS: Array<{
   label: string;
   pane?: DimeProductPane;
   href: () => string;
+  icon: LucideIcon;
 }> = [
-  { label: "New Chat", pane: "chat", href: () => "/chat" }, // D/L:57
-  { label: "AI Model Projections", pane: "feed", href: () => feedModelPath() }, // D/L:58
+  { label: "New Chat", pane: "chat", href: () => "/chat", icon: MessageSquarePlus }, // D/L:57
+  { label: "AI Model Projections", pane: "feed", href: () => feedModelPath(), icon: BrainCircuit }, // D/L:58
   {
     label: "Betting Splits + Odds History",
     pane: "splits",
     href: () => bettingSplitsPath(),
+    icon: ChartCandlestick,
   }, // D/L:59
-  { label: "Trends", href: () => "#" }, // D/L:60 — no route exists; frozen href="#"
-  { label: "Prop Projections", href: () => "#" }, // D/L:61 — no route exists
-  { label: "Bet Tracker", pane: "tracker", href: () => "/bet-tracker" }, // D/L:62
+  { label: "Trends", href: () => "#", icon: ChartSpline }, // D/L:60 — no route exists; frozen href="#"
+  { label: "Prop Projections", href: () => "#", icon: Target }, // D/L:61 — no route exists
+  { label: "Bet Tracker", pane: "tracker", href: () => "/bet-tracker", icon: NotebookPen }, // D/L:62
 ];
 
 /** Stored-thread summary rendered in the sidebar Recent Chats list. Recents
@@ -220,10 +241,15 @@ function IdentityAvatar({
   );
 }
 
+/** Desktop rail preference survives reloads; the <1024px drawer ignores it. */
+const RAIL_STORAGE_KEY = "dime.sidebar.rail";
+
 function DimeSidebar({
   onNewChat,
   recentChats,
   onOpenChat,
+  onDeleteChat,
+  onClearAllChats,
   activeChatId,
   compact,
   drawerOpen,
@@ -238,6 +264,9 @@ function DimeSidebar({
   onNewChat: () => void;
   recentChats: ThreadSummary[];
   onOpenChat: (threadId: number) => void;
+  onDeleteChat: (threadId: number) => void;
+  /** Owner-only platform sweep; absent for every non-owner session. */
+  onClearAllChats?: () => void;
   activeChatId: number | null;
   compact: boolean;
   drawerOpen: boolean;
@@ -251,6 +280,37 @@ function DimeSidebar({
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
+  // ── Desktop collapse-to-rail + chat search (owner directive 2026-07-21) ──
+  const [railCollapsed, setRailCollapsed] = useState(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      return localStorage.getItem(RAIL_STORAGE_KEY) === "1";
+    } catch {
+      return false;
+    }
+  });
+  const rail = railCollapsed && !compact;
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [rowMenuId, setRowMenuId] = useState<number | null>(null);
+  const rowMenuRef = useRef<HTMLDivElement | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+
+  const setRail = (next: boolean) => {
+    setRailCollapsed(next);
+    if (next) {
+      // Rail hides the search field, recents, and any open floating menus.
+      setSearchOpen(false);
+      setSearchQuery("");
+      setRowMenuId(null);
+      setMenuOpen(false);
+    }
+    try {
+      localStorage.setItem(RAIL_STORAGE_KEY, next ? "1" : "0");
+    } catch {
+      /* no-op */
+    }
+  };
   const [, navigate] = useLocation();
   const logoutMutation = trpc.appUsers.logout.useMutation();
 
@@ -293,10 +353,38 @@ function DimeSidebar({
     };
   }, [menuOpen]);
 
+  // Row "…" menu shares the settings menu's dismissal contract: outside
+  // pointer-down or Escape closes it.
+  useEffect(() => {
+    if (rowMenuId == null) return;
+    const onDown = (e: MouseEvent) => {
+      if (!rowMenuRef.current?.contains(e.target as Node)) setRowMenuId(null);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setRowMenuId(null);
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [rowMenuId]);
+
+  useEffect(() => {
+    if (searchOpen) searchInputRef.current?.focus();
+  }, [searchOpen]);
+
+  // Title filter over the stored threads; empty query passes everything through.
+  const chatQuery = searchQuery.trim().toLowerCase();
+  const visibleChats = chatQuery
+    ? recentChats.filter(rc => rc.title.toLowerCase().includes(chatQuery))
+    : recentChats;
+
   return (
     <aside
       ref={sidebarRef}
-      className={`dc-sidebar${compact ? " dc-drawer" : ""}`}
+      className={`dc-sidebar${compact ? " dc-drawer" : ""}${rail ? " dc-sidebar--rail" : ""}`}
       role={compact && drawerOpen ? "dialog" : undefined}
       aria-modal={compact && drawerOpen ? true : undefined}
       aria-label={compact ? "Dime navigation" : undefined}
@@ -312,7 +400,7 @@ function DimeSidebar({
             me
           </span>
         </div>
-        {compact && (
+        {compact ? (
           <button
             type="button"
             className="dc-drawer-close dc-pressable dc-focusable"
@@ -321,19 +409,85 @@ function DimeSidebar({
           >
             ×
           </button>
+        ) : (
+          // Desktop header controls (owner directive 2026-07-21): chat search
+          // + collapse-to-rail. In the rail these stack under the head; the
+          // search button first re-expands so the field has room to render.
+          <div className="dc-sidebar-actions">
+            <button
+              type="button"
+              className="dc-icon-btn dc-hv2 dc-pressable dc-focusable"
+              aria-label={searchOpen ? "Close chat search" : "Search chats"}
+              aria-expanded={searchOpen}
+              onClick={() => {
+                if (rail) {
+                  setRail(false);
+                  setSearchOpen(true);
+                } else {
+                  setSearchOpen(open => {
+                    if (open) setSearchQuery("");
+                    return !open;
+                  });
+                }
+              }}
+            >
+              <TextSearch size={18} strokeWidth={1.8} aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              className="dc-icon-btn dc-hv2 dc-pressable dc-focusable"
+              aria-label={rail ? "Expand sidebar" : "Collapse sidebar"}
+              aria-expanded={!rail}
+              onClick={() => setRail(!railCollapsed)}
+            >
+              {rail ? (
+                <PanelLeftOpen size={18} strokeWidth={1.8} aria-hidden="true" />
+              ) : (
+                <PanelLeftClose size={18} strokeWidth={1.8} aria-hidden="true" />
+              )}
+            </button>
+          </div>
         )}
       </div>
+      {!compact && !rail && searchOpen && (
+        <div className="dc-sidebar-search">
+          <TextSearch
+            className="dc-sidebar-search-ico"
+            size={14}
+            strokeWidth={1.8}
+            aria-hidden="true"
+          />
+          <input
+            ref={searchInputRef}
+            className="dc-sidebar-search-input"
+            type="search"
+            placeholder="Search chats"
+            aria-label="Search recent chats"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === "Escape") {
+                setSearchOpen(false);
+                setSearchQuery("");
+              }
+            }}
+          />
+        </div>
+      )}
       <nav className="dc-nav-group" aria-label="Primary">
         {NAV_ROWS.map(row => {
           const href = row.href();
           const active = row.pane === activePane;
+          const RowIcon = row.icon;
           return href === "#" ? (
             <button
               key={row.label}
               type="button"
               className="dc-sidebar-row dc-nav-disabled"
               aria-disabled="true"
+              title={rail ? row.label : undefined}
             >
+              <RowIcon className="dc-nav-ico" size={18} strokeWidth={1.8} aria-hidden="true" />
               <span className="dc-sidebar-text">{row.label}</span>
             </button>
           ) : (
@@ -342,6 +496,7 @@ function DimeSidebar({
               href={href}
               className={`dc-sidebar-row${active ? " is-active" : ""}`}
               aria-current={active ? "page" : undefined}
+              title={rail ? row.label : undefined}
               onClick={(event: ReactMouseEvent) => {
                 if (row.pane === "chat") {
                   event.preventDefault();
@@ -354,9 +509,7 @@ function DimeSidebar({
                 onNavigate();
               }}
             >
-              {row.pane === "chat" && (
-                <span className="dc-sidebar-icon">＋</span>
-              )}
+              <RowIcon className="dc-nav-ico" size={18} strokeWidth={1.8} aria-hidden="true" />
               <span className="dc-sidebar-text">{row.label}</span>
             </Link>
           );
@@ -364,28 +517,81 @@ function DimeSidebar({
       </nav>
       {recentChats.length > 0 ? (
         <>
-          <div className="dc-recents-label">Recent Chats</div>
-          <div className="dc-recent-list">
-            {recentChats.map(rc => (
-              <a
-                key={rc.id}
-                href="#"
-                className={`dc-sidebar-row${rc.id === activeChatId ? " is-active" : ""}`}
-                aria-current={rc.id === activeChatId ? "true" : undefined}
-                onClick={event => {
-                  event.preventDefault();
-                  onOpenChat(rc.id);
-                  onNavigate();
-                }}
+          <div className="dc-recents-head">
+            <div className="dc-recents-label">Recent Chats</div>
+            {onClearAllChats && isOwner && (
+              // OWNER-ONLY platform sweep (owner directive 2026-07-21): clears
+              // recent chats for every user, behind its own confirm upstream.
+              <button
+                type="button"
+                className="dc-icon-btn dc-icon-btn--sm dc-hv2 dc-pressable dc-focusable"
+                aria-label="Clear recent chats for all users"
+                title="Clear recent chats for all users"
+                onClick={onClearAllChats}
               >
-                {rc.starred && (
-                  <span className="dc-recent-star" aria-label="Starred">
-                    ★
-                  </span>
+                <Eraser size={14} strokeWidth={1.8} aria-hidden="true" />
+              </button>
+            )}
+          </div>
+          <div className="dc-recent-list">
+            {visibleChats.map(rc => (
+              <div
+                key={rc.id}
+                className={`dc-recent-row${rowMenuId === rc.id ? " is-menu-open" : ""}`}
+                ref={rowMenuId === rc.id ? rowMenuRef : undefined}
+              >
+                <a
+                  href="#"
+                  className={`dc-sidebar-row${rc.id === activeChatId ? " is-active" : ""}`}
+                  aria-current={rc.id === activeChatId ? "true" : undefined}
+                  onClick={event => {
+                    event.preventDefault();
+                    onOpenChat(rc.id);
+                    onNavigate();
+                  }}
+                >
+                  {rc.starred && (
+                    <span className="dc-recent-star" aria-label="Starred">
+                      ★
+                    </span>
+                  )}
+                  <span className="dc-sidebar-text">{rc.title}</span>
+                </a>
+                <button
+                  type="button"
+                  className="dc-recent-more dc-hv2 dc-pressable dc-focusable"
+                  aria-label={`Chat options: ${rc.title}`}
+                  aria-haspopup="menu"
+                  aria-expanded={rowMenuId === rc.id}
+                  onClick={() =>
+                    setRowMenuId(open => (open === rc.id ? null : rc.id))
+                  }
+                >
+                  <Ellipsis size={16} strokeWidth={1.8} aria-hidden="true" />
+                </button>
+                {rowMenuId === rc.id && (
+                  <div className="dc-recent-menu" role="menu">
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className="dc-menu-item dc-menu-item--strong dc-hv2 dc-focusable dc-pressable"
+                      onClick={() => {
+                        setRowMenuId(null);
+                        onDeleteChat(rc.id);
+                      }}
+                    >
+                      <Trash2 size={14} strokeWidth={1.8} aria-hidden="true" />
+                      Delete chat
+                    </button>
+                  </div>
                 )}
-                <span className="dc-sidebar-text">{rc.title}</span>
-              </a>
+              </div>
             ))}
+            {visibleChats.length === 0 && (
+              <div className="dc-recent-empty">
+                No chats match “{searchQuery.trim()}”
+              </div>
+            )}
           </div>
         </>
       ) : (
@@ -396,7 +602,19 @@ function DimeSidebar({
       )}
       {appUser ? (
         <div ref={profileRef} className="dc-sidebar-row dc-profile-row">
-          <IdentityAvatar user={appUser} />
+          {/* The avatar is itself a menu trigger — in the rail it is the whole
+              profile section (owner directive 2026-07-21: collapsed shows only
+              the profile picture), expanded it complements the gear. */}
+          <button
+            type="button"
+            className="dc-avatar-btn dc-pressable dc-focusable"
+            aria-label="Account settings"
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen(open => !open)}
+          >
+            <IdentityAvatar user={appUser} />
+          </button>
           <div className="dc-profile-id">
             <div className="dc-profile-name">
               {displaySidebarName(appUser.username)}
@@ -1665,6 +1883,47 @@ export default function DimeChatPage({
     );
   }, [threadId, softDeleteMut, refreshThreads, newChat]);
 
+  /* --- Sidebar "…" delete (owner directive 2026-07-21): any recent chat,
+         not just the open one; deleting the open thread resets to new chat. --- */
+  const deleteRecentChat = useCallback(
+    (id: number) => {
+      if (
+        !window.confirm(
+          "Delete this chat? It will be removed from your history."
+        )
+      )
+        return;
+      softDeleteMut.mutate(
+        { threadId: id },
+        {
+          onSettled: () => {
+            refreshThreads();
+            if (id === threadId) newChat();
+          },
+        }
+      );
+    },
+    [softDeleteMut, refreshThreads, threadId, newChat]
+  );
+
+  /* --- OWNER-ONLY platform sweep (owner directive 2026-07-21): soft-deletes
+         every user's live threads so Recent Chats clears platform-wide. --- */
+  const clearAllMut = trpc.dimeChats.clearAllForEveryone.useMutation();
+  const clearAllRecentChats = useCallback(() => {
+    if (
+      !window.confirm(
+        "Clear recent chats for ALL users? Every user's chat history disappears from their sidebar."
+      )
+    )
+      return;
+    clearAllMut.mutate(undefined, {
+      onSettled: () => {
+        refreshThreads();
+        newChat();
+      },
+    });
+  }, [clearAllMut, refreshThreads, newChat]);
+
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
     submit(input);
@@ -1814,6 +2073,8 @@ export default function DimeChatPage({
           onNewChat={newChat}
           recentChats={recentChats}
           onOpenChat={openChat}
+          onDeleteChat={deleteRecentChat}
+          onClearAllChats={isOwner ? clearAllRecentChats : undefined}
           activeChatId={threadId}
           compact={compact}
           drawerOpen={drawerOpen}
