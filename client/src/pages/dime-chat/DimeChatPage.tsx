@@ -108,7 +108,7 @@ const NAV_ROWS: Array<{
     href: () => bettingSplitsPath(),
     icon: ChartCandlestick,
   }, // D/L:59
-  { label: "Trends", href: () => "#", icon: ChartSpline }, // D/L:60 — no route exists; frozen href="#"
+  { label: "Trends", pane: "trends", href: () => "/trends", icon: ChartSpline }, // D/L:60 — route live 2026-07-21 (owner directive): hosts Last 5 Games + Trends at ≥768px
   { label: "Prop Projections", href: () => "#", icon: Target }, // D/L:61 — no route exists
   { label: "Bet Tracker", pane: "tracker", href: () => "/bet-tracker", icon: NotebookPen }, // D/L:62
 ];

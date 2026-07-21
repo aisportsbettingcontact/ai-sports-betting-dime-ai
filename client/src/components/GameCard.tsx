@@ -3551,7 +3551,7 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
            NBA/NHL panels are intentionally omitted until their DBs are backfilled.
            Panels are rendered outside overflow:hidden so they can expand freely.
       */}
-      {(mode === 'splits' || mobileTab === 'splits') && isCardVisible && game.sport === 'MLB' && awayMlb?.anSlug && homeMlb?.anSlug && (
+      {((mode === 'splits' && !isMdUp) || mobileTab === 'splits') && isCardVisible && game.sport === 'MLB' && awayMlb?.anSlug && homeMlb?.anSlug && (
         <>
           <RecentSchedulePanel
             sport="MLB"
