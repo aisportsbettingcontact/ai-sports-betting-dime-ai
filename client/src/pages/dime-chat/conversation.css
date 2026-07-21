@@ -22,6 +22,13 @@
 .theme-light .dc-app, .theme-light.dc-page .dc-app { background: #FFFFFF; } /* L:53 */
 
 .dc-sidebar { min-height: 0; } /* R2: no height declaration — exactly like the frozen sidebar (D/L:54), sized by .dc-app's flex align-items stretch; min-height 0 lets the recent list clip in short viewports */
+/* Desktop sidebar brand mark at 2.5x (owner directive 2026-07-21): the frozen
+   20px title (D/L:55) scales to 50px only where the sidebar is persistent
+   (>=1024px) — the <1024px drawer keeps the frozen size. The dime wordmark and
+   its mint coin-dot are em-derived, so both scale together. */
+@media (min-width: 1024px) {
+  .dc-sidebar-title { font-size: 50px; }
+}
 .dc-recent-list { overflow: hidden; } /* app adaptation of D/L:65 `overflow: visible` — the fixed 900px canvas never scrolled; a short viewport must clip, not overlap the profile row */
 .dc-sidebar-spacer { flex: 1; } /* Ph1: with no session chats the RECENT CHATS section hides entirely; this takes over the recent list's flex: 1 slot (D/L:65) so the profile row stays pinned to the sidebar foot */
 

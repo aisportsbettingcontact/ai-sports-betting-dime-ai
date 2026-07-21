@@ -298,10 +298,14 @@ describe("DimeModelFeed — combined slate (owner directive 2026-07-18)", () => 
     expect(src).not.toMatch(/\bnoun\b: "/);
   });
 
-  it("league logos: theme-keyed WC emblem (same-size box) + bundled MLB mark", () => {
+  it("league logos: theme-keyed WC emblem (same-size box) + current MLB mark", () => {
     expect(src).toMatch(/\/brand\/wc26-emblem-on-light\.png/);
     expect(src).toMatch(/\/brand\/wc26-emblem-on-dark\.png/);
-    expect(src).toMatch(/\/manus-storage\/mlb-logo_50fd8568\.png/);
+    // The actual current MLB mark (owner directive 2026-07-21): the official
+    // mlbstatic league SVG (already shipped on splits/tracker), falling back
+    // to the bundled recolored mark before hiding.
+    expect(src).toMatch(/https:\/\/www\.mlbstatic\.com\/team-logos\/league-on-dark\/1\.svg/);
+    expect(src).toMatch(/img\.src = "\/brand\/mlb-logo\.png"/);
     // CSS swaps variants by theme; both render inside the fixed 30px box
     // (1.25x scale, owner directive 2026-07-18).
     expect(src).toMatch(/data-dmf-theme="light"\] \.dmf-lglogo-dark\{display:none\}/);
@@ -310,6 +314,16 @@ describe("DimeModelFeed — combined slate (owner directive 2026-07-18)", () => 
     // Header cluster centers within the page; chevron holds the right edge.
     expect(src).toMatch(/\.dmf-leaguehead\{[^}]*justify-content:center/);
     expect(src).toMatch(/\.dmf-lgchev\{position:absolute;right:8px/);
+  });
+
+  it("desktop emphasis pass (owner directive 2026-07-21)", () => {
+    // 5x centered shell page title tracked by the sticky feedhead offset.
+    expect(src).toMatch(/\.dc-shell-external-scroll \.dmf-topbar\{height:96px;justify-content:center\}/);
+    expect(src).toMatch(/\.dc-shell-external-scroll \.dmf-toptitle\{font-size:min\(70px/);
+    expect(src).toMatch(/\.dc-shell-external-scroll \.dmf-feedhead\{top:96px\}/);
+    // 2x MLB league logo box; games pack 2-across on desktop.
+    expect(src).toMatch(/\.dmf-lglogo--mlb\{width:60px;height:60px/);
+    expect(src).toMatch(/\.dmf-leaguebody\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
   });
 
   it("stadium display drops a trailing parenthetical (2026-07-18)", () => {
