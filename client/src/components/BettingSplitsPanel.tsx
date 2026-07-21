@@ -554,6 +554,9 @@ function MarketBlock({ title, awayLabel, homeLabel, totalValue, ticketsPct, hand
     // Horizontal inset keeps adjacent market columns' labels ≥24px apart
     // across the divider (never a run-on line) while still fitting two
     // "WSH (-106)"-length labels per column in the 1024–1279 shell band.
+    // border-box is load-bearing: frozen-tokens.css forces content-box on all
+    // .dc-page descendants, which made width:100%+padding overflow each market
+    // column (the 2026-07-21 cutoff bug). Guarded by e2e/splits-layout.spec.ts.
     <div className="flex flex-col w-full" data-market-col style={{ gap: 10, padding: "12px clamp(14px, 1.5vw, 20px)", boxSizing: "border-box" }}>
       <div className="flex items-center gap-2">
         <div className="flex-1" style={{ height: 1, background: "var(--dime-border, #ffffff)" }} />

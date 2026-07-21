@@ -318,7 +318,7 @@ function Router() {
         {/* /trends is a shell-owned (≥768px) surface. Below the shell
             boundary there is no Trends pane — the accordions still live on
             the splits cards — so land mobile visitors there. */}
-        <Route path="/trends">{() => <Redirect to={bettingSplitsPath()} />}</Route>
+        <Route path="/trends">{() => <Redirect to={bettingSplitsPath()} replace />}</Route>
         {/* Admin pages */}
         <Route path="/admin/users">
           {() => (

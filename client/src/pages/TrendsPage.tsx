@@ -7,10 +7,12 @@
  * on the splits surface; App.tsx redirects /trends to /betting-splits below
  * the shell boundary.
  *
- * MLB only: the NBA/NHL schedule DBs are not backfilled — the same gate
- * GameCard applied to these panels (game.sport === 'MLB' && anSlug present).
+ * MLB only: the NBA/NHL schedule DBs are not backfilled. The sport filter
+ * lives in the games.list query args (sport: "MLB"); the anSlug mapping gate
+ * — the same one GameCard applies — is enforced both in the page-level
+ * sortedGames memo and again row-level in TrendsGameSection as a safety net.
  */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { CalendarPicker, todayUTC } from "@/components/CalendarPicker";
 import RecentSchedulePanel from "@/components/RecentSchedulePanel";
@@ -125,11 +127,24 @@ function TrendsGameSection({ game }: { game: TrendsGameRow }) {
 
 export default function TrendsPage() {
   const [selectedDate, setSelectedDate] = useState<string>(todayUTC());
+  const userSelectedDateRef = useRef(false);
 
   const { data: serverDateData } = trpc.games.getCurrentDate.useQuery(
     undefined,
     { refetchInterval: 60 * 1000, staleTime: 30 * 1000 }
   );
+
+  // Server-authoritative date sync — mirrors BettingSplits' DateSync fix (see
+  // BettingSplits.tsx:459-487). Without it, a pane left open across the daily
+  // rollover keeps yesterday's todayUTC() and shows an empty slate while the
+  // sibling splits pane advances. Never overrides an explicit user pick.
+  useEffect(() => {
+    if (!serverDateData?.effectiveDate) return;
+    if (userSelectedDateRef.current) return;
+    if (serverDateData.effectiveDate !== selectedDate) {
+      setSelectedDate(serverDateData.effectiveDate);
+    }
+  }, [serverDateData, selectedDate]);
   const { data: availableDatesData } = trpc.games.getAvailableDates.useQuery(
     { sport: "MLB" },
     { staleTime: 5 * 60 * 1000, refetchOnWindowFocus: false }
@@ -161,7 +176,10 @@ export default function TrendsPage() {
         <div className="flex items-center gap-2 px-3 pt-2 pb-1">
           <CalendarPicker
             selectedDate={selectedDate}
-            onSelect={setSelectedDate}
+            onSelect={date => {
+              userSelectedDateRef.current = true;
+              setSelectedDate(date);
+            }}
             availableDates={new Set(availableDatesData?.dates ?? [])}
           />
         </div>
@@ -170,7 +188,7 @@ export default function TrendsPage() {
             className="font-bold tracking-widest uppercase"
             style={{ fontSize: "clamp(11px, 1.2vw, 19px)", color: "#FFFFFF" }}
           >
-            {formatDateHeader(serverDateData?.effectiveDate ?? selectedDate)}
+            {formatDateHeader(selectedDate)}
             {" · MLB TRENDS"}
           </span>
         </div>
