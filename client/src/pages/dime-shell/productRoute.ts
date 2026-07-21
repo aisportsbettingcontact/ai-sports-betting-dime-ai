@@ -1,7 +1,8 @@
-export type DimeProductPane = "chat" | "feed" | "splits" | "tracker";
+export type DimeProductPane = "chat" | "feed" | "splits" | "trends" | "tracker";
 
 export type DimeProductRoute =
   | { pane: "chat" }
+  | { pane: "trends" }
   | { pane: "tracker" }
   | { pane: "feed"; sportSegment: string; dateSegment?: string }
   | { pane: "splits"; sportSegment?: string; dateSegment?: string };
@@ -16,7 +17,7 @@ const decodeSegment = (value: string | undefined): string | undefined => {
 };
 
 /**
- * Classifies only the four authenticated product surfaces owned by the
+ * Classifies only the five authenticated product surfaces owned by the
  * tablet/desktop shell. Validation and canonicalization stay with each
  * surface's existing route parser.
  */
@@ -26,6 +27,7 @@ export function parseDimeProductRoute(
   const pathname = location.split(/[?#]/, 1)[0] || "/";
   if (pathname === "/chat") return { pane: "chat" };
   if (pathname === "/bet-tracker") return { pane: "tracker" };
+  if (pathname === "/trends") return { pane: "trends" };
   if (pathname === "/betting-splits") return { pane: "splits" };
 
   const feed = /^\/feed\/model\/([^/]+)(?:\/([^/]+))?$/.exec(pathname);
