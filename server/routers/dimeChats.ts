@@ -12,7 +12,7 @@
 
 import { z } from "zod";
 import { router } from "../_core/trpc";
-import { appUserProcedure } from "./appUsers";
+import { appUserProcedure, ownerProcedure } from "./appUsers";
 import { TRPCError } from "@trpc/server";
 import { getDb } from "../db";
 import { dimeChatThreads, dimeChatMessages } from "../../drizzle/schema";
@@ -187,4 +187,22 @@ export const dimeChatsRouter = router({
       await db.update(dimeChatThreads).set({ deletedAt: new Date() }).where(eq(dimeChatThreads.id, thread.id));
       return { ok: true };
     }),
+
+  /**
+   * OWNER-ONLY global sweep (owner directive 2026-07-21): soft-delete every
+   * live thread for EVERY user — the sidebar Recent Chats list clears
+   * platform-wide. Same soft-delete contract as softDelete: rows are
+   * retained in the database, only deletedAt is stamped.
+   */
+  clearAllForEveryone: ownerProcedure.mutation(async () => {
+    const db = await requireDb();
+    const result = await db
+      .update(dimeChatThreads)
+      .set({ deletedAt: new Date() })
+      .where(isNull(dimeChatThreads.deletedAt));
+    // mysql2 driver surfaces affectedRows on the raw header (same shape the
+    // create() insertId read relies on); default 0 if a driver swap hides it.
+    const header = result as unknown as { affectedRows?: number; rowsAffected?: number };
+    return { ok: true, cleared: Number(header.affectedRows ?? header.rowsAffected ?? 0) };
+  }),
 });
