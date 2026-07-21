@@ -23,11 +23,13 @@ import "./shell.css";
 const DimeModelFeed = lazy(() => import("../DimeModelFeed"));
 const BettingSplits = lazy(() => import("../BettingSplits"));
 const BetTracker = lazy(() => import("../BetTracker"));
+const TrendsPage = lazy(() => import("../TrendsPage"));
 
 const PANE_HEADINGS: Record<DimeProductPane, string> = {
   chat: "Dime Chat",
   feed: "AI Model Projections",
   splits: "Betting Splits and Odds History",
+  trends: "Trends",
   tracker: "Bet Tracker",
 };
 
@@ -163,6 +165,8 @@ export default function DimeAppShell({
           resolveRouteHref={resolveRouteHref}
         />
       );
+    } else if (renderedRoute.pane === "trends") {
+      paneContent = <TrendsPage />;
     } else if (renderedRoute.pane === "tracker") {
       paneContent = <BetTracker previewMode={previewMode} />;
     }
