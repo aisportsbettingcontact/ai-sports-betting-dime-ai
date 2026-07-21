@@ -116,9 +116,10 @@
   (its divider stays — the feedhead bottom border). The WC emblem is
   theme-keyed: `/brand/wc26-emblem-on-light.png` (black FIFA wordmark) on
   light, `/brand/wc26-emblem-on-dark.png` (white wordmark) on dark, both
-  rendered the same size; MLB uses the bundled
-  `/manus-storage/mlb-logo_50fd8568.png`. A missing logo file hides itself
-  (clean text-only header). A league with no games that date renders no
+  rendered the same size; MLB uses the actual current mark (2026-07-21):
+  the official `https://www.mlbstatic.com/team-logos/league-on-dark/1.svg`
+  with the bundled recolored `/brand/mlb-logo.png` as offline fallback. A
+  missing logo file hides itself (clean text-only header). A league with no games that date renders no
   section. Within a section the existing slate order holds (first pitch
   asc; LIVE > upcoming > FINAL tiers).
 - **WC venue line drops trailing stadium parentheticals** —
@@ -126,6 +127,25 @@
   (`wcDisplayStadium`; city matching still uses the raw stadium string).
 - Date nav canonicalizes on the `mlb-` slug (one URL per date); legacy
   `wc-` deep links still parse and render the same combined slate.
+
+### Owner Directives — 2026-07-21 (desktop emphasis pass)
+
+Desktop (>=1024px) only — tablet/mobile keep their shipped layouts:
+
+- **Shell page title at 5x, centered.** Embedded in the app shell, the
+  topbar's "AI Model Projections" centers and scales 14px -> 70px (cqi-shaved
+  only where the pane is too narrow for one line; never wraps). The topbar
+  grows to a fixed 96px and the sticky feedhead offset tracks it. Standalone
+  /feed keeps its compact wordmark + nav row.
+- **Sidebar dime wordmark at 2.5x** (20px -> 50px) where the sidebar is
+  persistent; the <1024px drawer keeps the frozen 20px.
+- **MLB league logo is the actual current mark at 2x**: official navy/red
+  mlbstatic league SVG in a 60px box (WC emblem keeps 30px); bundled
+  recolored `/brand/mlb-logo.png` (navy `#041E42` / red `#BF0D3E`) as
+  offline fallback.
+- **Games pack 2-across** inside each league section (grid, start-aligned)
+  to cut the single-column whitespace; cards keep their container-driven
+  internal reflow.
 
 ### Owner Directives — 2026-07-18 (edge labeling + multi-edge carousel)
 

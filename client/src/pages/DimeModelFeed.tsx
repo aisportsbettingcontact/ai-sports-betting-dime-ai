@@ -483,7 +483,7 @@ export default function DimeModelFeed(props: DimeModelFeedProps) {
             sections.map((section) => (
               <details key={section.key} className="dmf-league" open>
                 <summary className="dmf-leaguehead">
-                  <span className="dmf-lglogo" aria-hidden="true">
+                  <span className={`dmf-lglogo${section.key === "MLB" ? " dmf-lglogo--mlb" : ""}`} aria-hidden="true">
                     {section.key === "WC" ? (
                       <>
                         <img
@@ -502,11 +502,22 @@ export default function DimeModelFeed(props: DimeModelFeedProps) {
                         />
                       </>
                     ) : (
+                      // The actual current MLB mark (navy/red, owner directive
+                      // 2026-07-21) — the official mlbstatic league SVG already
+                      // shipped on the splits/tracker surfaces, with the bundled
+                      // recolored mark as offline fallback before hiding.
                       <img
-                        src="/manus-storage/mlb-logo_50fd8568.png"
+                        src="https://www.mlbstatic.com/team-logos/league-on-dark/1.svg"
                         alt=""
                         loading="lazy"
-                        onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                        onError={(e) => {
+                          const img = e.target as HTMLImageElement;
+                          if (img.src.endsWith("/brand/mlb-logo.png")) {
+                            img.style.display = "none";
+                          } else {
+                            img.src = "/brand/mlb-logo.png";
+                          }
+                        }}
                       />
                     )}
                   </span>
@@ -1361,6 +1372,26 @@ const DMF_CSS = `
   .dmf-root .dmf-val{font-size:16px;font-weight:700}
   .dmf-root .dmf-mkfoot{font-size:11px;padding:6px}
   .dmf-root .dmf-mkfoot.dmf-none{color:var(--dmf-t3)}
+}
+/* DESKTOP (>=1024px) emphasis pass (owner directive 2026-07-21):
+   1) Inside the app shell the page title centers at 5x scale (14px -> 70px,
+      shaved via cqi only where the pane is too narrow for one line). Scoped
+      by the shell scroll wrapper so the standalone /feed topbar (wordmark +
+      nav links) keeps its compact row. The topbar grows to a fixed 96px and
+      the sticky feedhead offset tracks it; the empty dmf-sync spacer hides so
+      the title truly centers.
+   2) The MLB league-header logo box doubles (30px -> 60px).
+   3) League bodies pack games 2-across (grid) to cut the single-column
+      whitespace; each ProjectionCard is its own container and reflows to the
+      half-width column on its own. align-items:start keeps a card at natural
+      height when its row partner expands. */
+@media (min-width:1024px){
+  .dc-shell-external-scroll .dmf-topbar{height:96px;justify-content:center}
+  .dc-shell-external-scroll .dmf-toptitle{font-size:min(70px,calc((100cqi - 80px)/10.8));line-height:1;letter-spacing:-.02em;white-space:nowrap}
+  .dc-shell-external-scroll .dmf-sync{display:none}
+  .dc-shell-external-scroll .dmf-feedhead{top:96px}
+  .dmf-lglogo--mlb{width:60px;height:60px;flex:0 0 60px}
+  .dmf-leaguebody{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
 }
 @media (prefers-reduced-motion: reduce){
   .dmf-root *{transition:none !important}
