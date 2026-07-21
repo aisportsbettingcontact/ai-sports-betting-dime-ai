@@ -70,7 +70,7 @@
 
 /* Sidebar row system — D/L:21-28. Frozen instances (D/L:57-62, 66-71) all add
    inline `font-size: 13px;` — folded in here (identical on all 12 instances). */
-.sidebar-row, .dc-sidebar-row { position: relative; display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; color: var(--text-secondary); text-decoration: none; cursor: pointer; transition: background 160ms cubic-bezier(0.16,1,0.3,1), color 160ms cubic-bezier(0.16,1,0.3,1), transform 160ms cubic-bezier(0.16,1,0.3,1), box-shadow 160ms cubic-bezier(0.16,1,0.3,1); font-size: 13px; } /* D/L:21 + inline D/L:57-62,66-71 */
+.sidebar-row, .dc-sidebar-row { position: relative; display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; color: var(--text-secondary); text-decoration: none; cursor: pointer; transition: background 160ms cubic-bezier(0.16,1,0.3,1), color 160ms cubic-bezier(0.16,1,0.3,1), transform 160ms cubic-bezier(0.16,1,0.3,1), box-shadow 160ms cubic-bezier(0.16,1,0.3,1); font-size: 22.75px; } /* D/L:21 + inline D/L:57-62,66-71 — owner directive 2026-07-21: text ×1.75 / icons ×1.25 */
 .sidebar-row::before, .dc-sidebar-row::before { content: ""; position: absolute; left: -6px; top: 50%; width: 3px; height: 18px; border-radius: 999px; background: var(--accent); opacity: 0; transform: translateY(-50%) scaleY(0.7); transition: opacity 160ms cubic-bezier(0.16,1,0.3,1), transform 160ms cubic-bezier(0.16,1,0.3,1); } /* D/L:22 */
 .sidebar-row:hover, .dc-sidebar-row:hover { background: var(--row-hover); color: var(--text-primary); } /* D/L:23 — state rule */
 .sidebar-row:focus-visible, .dc-sidebar-row:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--ring); } /* D/L:24 — state rule */
@@ -108,7 +108,7 @@
 
 /* Sidebar text/icon helpers — D/L:40-41 */
 .sidebar-text, .dc-sidebar-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } /* D/L:40 */
-.sidebar-icon, .dc-sidebar-icon { width: 14px; display: inline-flex; justify-content: center; } /* D/L:41 */
+.sidebar-icon, .dc-sidebar-icon { width: 17.5px; display: inline-flex; justify-content: center; } /* D/L:41 — owner directive 2026-07-21: text ×1.75 / icons ×1.25 */
 
 /* Settings (gear) button — D/L:42-44 + inline D/L:94 + svg stroke attr */
 .settings-btn, .dc-settings-btn { border-radius: 8px; transition: transform 160ms cubic-bezier(0.16,1,0.3,1), stroke 160ms; } /* D/L:42 */
@@ -146,7 +146,7 @@
    4. SIDEBAR — inline vocabulary (D/L:54-75)
    -------------------------------------------------------------------------- */
 
-.dc-sidebar { width: 264px; flex-shrink: 0; display: flex; flex-direction: column; padding: 20px 14px; } /* D:54 = L:54 (shared decls) */
+.dc-sidebar { width: 352px; flex-shrink: 0; display: flex; flex-direction: column; padding: 20px 14px; } /* D:54 = L:54 (shared decls) — owner directive 2026-07-21: text ×1.75 / icons ×1.25; width refit — longest label "Betting Splits + Odds History" scrollWidth 270px @ 22.75px + icon 22.5 + gap 10 + row padding 20 + sidebar padding 28 = 350.5, rounded up to next multiple of 8 = 352 */
 .theme-dark .dc-sidebar, .theme-dark.dc-sidebar { background: #000000; border-right: 1px solid #FFFFFF; } /* D:54 */
 .theme-light .dc-sidebar, .theme-light.dc-sidebar { background: #FFFFFF; border-right: 1px solid #000000; } /* L:54 */
 
@@ -156,14 +156,14 @@
 
 .dc-nav-group { display: flex; flex-direction: column; gap: 2px; } /* D:56 = L:56 */
 
-.dc-recents-label { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 22px 10px 8px; } /* D:64 = L:64 (shared decls) */
+.dc-recents-label { font-size: 19.25px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 22px 10px 8px; } /* D:64 = L:64 (shared decls) — owner directive 2026-07-21: text ×1.75 / icons ×1.25 */
 .theme-dark .dc-recents-label { color: #FFFFFF; } /* D:64 */
 .theme-light .dc-recents-label { color: #000000; } /* L:64 */
 
 .dc-recent-list { display: flex; flex-direction: column; gap: 2px; flex: 1; overflow: visible; } /* D:65 = L:65 */
 
 /* Profile row — applied WITH .dc-sidebar-row (frozen: class="profile-row sidebar-row") */
-.profile-row, .dc-profile-row { position: relative; margin-top: 8px; padding: 10px 8px; border-top-left-radius: 0; border-top-right-radius: 0; font-size: 13px; } /* D:73 = L:73 (shared decls) */
+.profile-row, .dc-profile-row { position: relative; margin-top: 8px; padding: 10px 8px; border-top-left-radius: 0; border-top-right-radius: 0; font-size: 22.75px; } /* D:73 = L:73 (shared decls) — owner directive 2026-07-21: text ×1.75 / icons ×1.25 */
 .theme-dark .dc-profile-row, .theme-dark .profile-row { border-top: 1px solid #FFFFFF; } /* D:73 */
 .theme-light .dc-profile-row, .theme-light .profile-row { border-top: 1px solid #000000; } /* L:73 */
 
@@ -171,10 +171,10 @@
 .dc-avatar--menu { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; } /* D:78 = L:78 */
 
 .dc-profile-id { display: flex; flex-direction: column; } /* D:75 = L:75 (wrapper) */
-.dc-profile-name { font-size: 12px; font-weight: 700; letter-spacing: 0.02em; } /* D:75 = L:75 (shared decls) */
+.dc-profile-name { font-size: 21px; font-weight: 700; letter-spacing: 0.02em; } /* D:75 = L:75 (shared decls) — owner directive 2026-07-21: text ×1.75 / icons ×1.25 */
 .theme-dark .dc-profile-name { color: #FFFFFF; } /* D:75 */
 .theme-light .dc-profile-name { color: #000000; } /* L:75 */
-.dc-profile-tier { font-size: 11px; } /* D:75 = L:75 (shared decls) */
+.dc-profile-tier { font-size: 19.25px; } /* D:75 = L:75 (shared decls) — owner directive 2026-07-21: text ×1.75 / icons ×1.25 */
 .theme-dark .dc-profile-tier { color: #FFFFFF; } /* D:75 */
 .theme-light .dc-profile-tier { color: #000000; } /* L:75 */
 

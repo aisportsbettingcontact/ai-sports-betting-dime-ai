@@ -884,8 +884,8 @@ button.dc-sidebar-row {
   /* Enlarged profile row (frozen 30px avatar / 12px name -> 48px / 15px). */
   .dc-profile-row { min-height: 76px; padding: 14px 10px; }
   .dc-profile-row .dc-avatar { width: 48px; height: 48px; }
-  .dc-profile-name { font-size: 15px; }
-  .dc-profile-tier { font-size: 12px; }
+  .dc-profile-name { font-size: 26.25px; } /* owner directive 2026-07-21: text ×1.75 / icons ×1.25 */
+  .dc-profile-tier { font-size: 21px; } /* owner directive 2026-07-21: text ×1.75 / icons ×1.25 */
 
   /* The rail: 68px column of icons; wordmark, labels, search, recents, and
      the identity text all yield — only the marks and the avatar remain. */
