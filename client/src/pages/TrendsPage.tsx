@@ -56,34 +56,52 @@ function TrendsGameSection({ game }: { game: TrendsGameRow }) {
           {formatGameTime(game.startTimeEst)}
         </span>
       </div>
-      <RecentSchedulePanel
-        sport="MLB"
-        enabled={isVisible}
-        awaySlug={awayMlb.anSlug}
-        homeSlug={homeMlb.anSlug}
-        awayAbbr={awayMlb.abbrev}
-        homeAbbr={homeMlb.abbrev}
-        awayName={awayMlb.name}
-        homeName={homeMlb.name}
-        awayLogoUrl={awayMlb.logoUrl}
-        homeLogoUrl={homeMlb.logoUrl}
-        borderColor="hsl(var(--border))"
-        defaultCollapsed={true}
-      />
-      <SituationalResultsPanel
-        sport="MLB"
-        enabled={isVisible}
-        awaySlug={awayMlb.anSlug}
-        homeSlug={homeMlb.anSlug}
-        awayAbbr={awayMlb.abbrev}
-        homeAbbr={homeMlb.abbrev}
-        awayName={awayMlb.name}
-        homeName={homeMlb.name}
-        awayLogoUrl={awayMlb.logoUrl}
-        homeLogoUrl={homeMlb.logoUrl}
-        borderColor="hsl(var(--border))"
-        defaultCollapsed={true}
-      />
+      {/* One row per game: Last 5 Games | Trends, side by side. min-w-0
+          columns so the panels' internal tables shrink instead of forcing
+          horizontal overflow. */}
+      <div
+        data-trends-game-row
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(2, minmax(0,1fr))",
+          alignItems: "start",
+        }}
+      >
+        <div className="min-w-0">
+          <RecentSchedulePanel
+            sport="MLB"
+            enabled={isVisible}
+            awaySlug={awayMlb.anSlug}
+            homeSlug={homeMlb.anSlug}
+            awayAbbr={awayMlb.abbrev}
+            homeAbbr={homeMlb.abbrev}
+            awayName={awayMlb.name}
+            homeName={homeMlb.name}
+            awayLogoUrl={awayMlb.logoUrl}
+            homeLogoUrl={homeMlb.logoUrl}
+            borderColor="hsl(var(--border))"
+            defaultCollapsed={false}
+            collapsible={false}
+          />
+        </div>
+        <div className="min-w-0">
+          <SituationalResultsPanel
+            sport="MLB"
+            enabled={isVisible}
+            awaySlug={awayMlb.anSlug}
+            homeSlug={homeMlb.anSlug}
+            awayAbbr={awayMlb.abbrev}
+            homeAbbr={homeMlb.abbrev}
+            awayName={awayMlb.name}
+            homeName={homeMlb.name}
+            awayLogoUrl={awayMlb.logoUrl}
+            homeLogoUrl={homeMlb.logoUrl}
+            borderColor="hsl(var(--border))"
+            defaultCollapsed={false}
+            collapsible={false}
+          />
+        </div>
+      </div>
     </div>
   );
 }
