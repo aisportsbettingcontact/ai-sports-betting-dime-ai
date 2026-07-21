@@ -28,6 +28,7 @@ const PANE_HEADINGS: Record<DimeProductPane, string> = {
   chat: "Dime Chat",
   feed: "AI Model Projections",
   splits: "Betting Splits and Odds History",
+  trends: "Trends",
   tracker: "Bet Tracker",
 };
 
