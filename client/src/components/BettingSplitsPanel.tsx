@@ -554,7 +554,7 @@ function MarketBlock({ title, awayLabel, homeLabel, totalValue, ticketsPct, hand
     // Horizontal inset keeps adjacent market columns' labels ≥24px apart
     // across the divider (never a run-on line) while still fitting two
     // "WSH (-106)"-length labels per column in the 1024–1279 shell band.
-    <div className="flex flex-col w-full" data-market-col style={{ gap: 10, padding: "12px clamp(12px, 1.4vw, 18px)" }}>
+    <div className="flex flex-col w-full" data-market-col style={{ gap: 10, padding: "12px clamp(14px, 1.5vw, 20px)", boxSizing: "border-box" }}>
       <div className="flex items-center gap-2">
         <div className="flex-1" style={{ height: 1, background: "var(--dime-border, #ffffff)" }} />
         <span className="uppercase tracking-widest font-bold whitespace-nowrap"
@@ -564,7 +564,7 @@ function MarketBlock({ title, awayLabel, homeLabel, totalValue, ticketsPct, hand
       {/* Both label-row branches share one fixed box so the three market
           columns keep a single baseline (TOTAL used to sit 3-4px lower). */}
       {isTotalMarket ? (
-        <div className="flex items-center justify-between" style={{ paddingLeft: 2, paddingRight: 2, minHeight: 'clamp(21px, 1.8vw, 30px)' }}>
+        <div className="flex items-center justify-between" style={{ paddingLeft: 2, paddingRight: 2, gap: 8, minHeight: 'clamp(21px, 1.8vw, 30px)', minWidth: 0 }}>
           <span style={{ fontSize: 'clamp(12px, 1.0vw, 16px)', color: "var(--dime-text-primary, #ffffff)", fontWeight: 700, letterSpacing: "0.06em" }}>OVER</span>
           <span style={{ fontSize: 'clamp(14px, 1.2vw, 20px)', color: "var(--dime-text-primary, #ffffff)", fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{totalValue}</span>
           <span style={{ fontSize: 'clamp(12px, 1.0vw, 16px)', color: "var(--dime-text-primary, #ffffff)", fontWeight: 700, letterSpacing: "0.06em" }}>UNDER</span>
@@ -737,26 +737,37 @@ export function BettingSplitsPanel({
         )}
       </div>}
 
-      {/* ── Tablet + desktop (≥ md): full-size horizontal 3-column layout, no tabs ── */}
-      {/* Always render all 3 columns so the panel fills 100% width with no whitespace */}
-      {isMdUp && <div style={{ display: 'flex', alignItems: 'stretch', width: '100%' }}>
+      {/* ── Tablet + desktop (≥ md): three equal minmax(0,1fr) tracks with the
+           1px dividers as their own grid tracks. A divider that owns a track
+           cannot be painted over by neighboring content, and minmax(0,1fr)
+           makes each column shrinkable so nowrap labels ellipsize instead of
+           pushing the row past the viewport. ── */}
+      {isMdUp && <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'minmax(0,1fr) 1px minmax(0,1fr) 1px minmax(0,1fr)',
+          alignItems: 'stretch',
+          width: '100%',
+          minWidth: 0,
+        }}
+      >
         {/* Spread column — always rendered */}
-        <div className="flex-1 min-w-0">
+        <div className="min-w-0">
           <MarketBlock title="Spread" awayLabel={awaySpreadLabel} homeLabel={homeSpreadLabel}
             ticketsPct={game.spreadAwayBetsPct} handlePct={game.spreadAwayMoneyPct}
             awayColor={awayColor} homeColor={homeColor} />
         </div>
-        <div data-splits-divider style={{ width: 1, background: "#ffffff", flexShrink: 0, alignSelf: "stretch", margin: "8px 0" }} />
+        <div data-splits-divider style={{ background: "#ffffff", margin: "8px 0" }} />
         {/* Total column — always rendered */}
-        <div className="flex-1 min-w-0">
+        <div className="min-w-0">
           <MarketBlock title="Total" awayLabel="" homeLabel=""
             totalValue={isNaN(bookTotal) ? undefined : bookTotal}
             ticketsPct={game.totalOverBetsPct} handlePct={game.totalOverMoneyPct}
             awayColor={awayColor} homeColor={homeColor} />
         </div>
-        <div data-splits-divider style={{ width: 1, background: "#ffffff", flexShrink: 0, alignSelf: "stretch", margin: "8px 0" }} />
+        <div data-splits-divider style={{ background: "#ffffff", margin: "8px 0" }} />
         {/* Moneyline column — always rendered */}
-        <div className="flex-1 min-w-0">
+        <div className="min-w-0">
           <MarketBlock title="Moneyline" awayLabel={awayMlLabel} homeLabel={homeMlLabel}
             ticketsPct={game.mlAwayBetsPct} handlePct={game.mlAwayMoneyPct}
             awayColor={awayColor} homeColor={homeColor} />
