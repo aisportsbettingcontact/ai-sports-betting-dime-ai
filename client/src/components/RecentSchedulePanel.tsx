@@ -90,6 +90,10 @@ export interface RecentSchedulePanelProps {
   borderColor?: string;
   /** When true, the panel starts collapsed. Defaults to false (expanded). */
   defaultCollapsed?: boolean;
+  /** When false, the panel renders permanently expanded with a static
+   *  (non-interactive) header — no chevron, no toggle. Default true keeps
+   *  the existing accordion behavior for the splits surface. */
+  collapsible?: boolean;
   /** IntersectionObserver gate — only fetch data when card is in viewport */
   enabled?: boolean;
 }
@@ -613,12 +617,14 @@ export default function RecentSchedulePanel({
   homeLogoUrl,
   borderColor = "hsl(var(--border))",
   defaultCollapsed = false,
+  collapsible = true,
   enabled = true,
 }: RecentSchedulePanelProps) {
   const [, navigate] = useLocation();
   const [tab, setTab] = useState<TabView>("away");
   // defaultCollapsed=true → starts collapsed; false → starts expanded (legacy default)
-  const [isExpanded, setIsExpanded] = useState(!defaultCollapsed);
+  const [expandedState, setIsExpanded] = useState(!defaultCollapsed);
+  const isExpanded = collapsible ? expandedState : true;
 
   const isDataEnabled = (enabled ?? true) && !!awaySlug && !!homeSlug;
 
@@ -686,23 +692,37 @@ export default function RecentSchedulePanel({
       }}
     >
       {/* ── Collapsible Header ─────────────────────────────────────────────── */}
-      <button type="button" onClick={() => setIsExpanded((v) => !v)}
-        className="w-full flex items-center justify-between px-3 py-2 transition-colors"
-      >
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] font-bold text-white font-mono tracking-widest uppercase">
-            Last 5 Games
-          </span>
+      {collapsible ? (
+        <button type="button" onClick={() => setIsExpanded((v) => !v)}
+          className="w-full flex items-center justify-between px-3 py-2 transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold text-white font-mono tracking-widest uppercase">
+              Last 5 Games
+            </span>
 
+          </div>
+          <div className="flex items-center gap-2">
+            {isFetching && <RefreshCw className="w-3 h-3 text-white animate-spin" />}
+            {isExpanded
+              ? <ChevronUp className="w-3.5 h-3.5 text-white" />
+              : <ChevronDown className="w-3.5 h-3.5 text-white" />
+            }
+          </div>
+        </button>
+      ) : (
+        <div className="w-full flex items-center justify-between px-3 py-2">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-bold text-white font-mono tracking-widest uppercase">
+              Last 5 Games
+            </span>
+
+          </div>
+          <div className="flex items-center gap-2">
+            {isFetching && <RefreshCw className="w-3 h-3 text-white animate-spin" />}
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          {isFetching && <RefreshCw className="w-3 h-3 text-white animate-spin" />}
-          {isExpanded
-            ? <ChevronUp className="w-3.5 h-3.5 text-white" />
-            : <ChevronDown className="w-3.5 h-3.5 text-white" />
-          }
-        </div>
-      </button>
+      )}
 
       {/* ── Collapsible Body ───────────────────────────────────────────────── */}
       {isExpanded && (
