@@ -567,10 +567,16 @@ function MarketBlock({ title, awayLabel, homeLabel, totalValue, ticketsPct, hand
       {/* Both label-row branches share one fixed box so the three market
           columns keep a single baseline (TOTAL used to sit 3-4px lower). */}
       {isTotalMarket ? (
+        // OVER/UNDER need the same min-width:0 + ellipsis safety as the
+        // away/home branch below — at the narrower 1024px column width
+        // (post sidebar-widening, 673922b) these labels no longer fit their
+        // gap-8 flex row at floor font size and were painting across the
+        // divider track. flexShrink:0 on the number keeps "7.5" whole while
+        // the OVER/UNDER text is the one that yields.
         <div className="flex items-center justify-between" style={{ paddingLeft: 2, paddingRight: 2, gap: 8, minHeight: 'clamp(21px, 1.8vw, 30px)', minWidth: 0 }}>
-          <span style={{ fontSize: 'clamp(12px, 1.0vw, 16px)', color: "var(--dime-text-primary, #ffffff)", fontWeight: 700, letterSpacing: "0.06em" }}>OVER</span>
-          <span style={{ fontSize: 'clamp(14px, 1.2vw, 20px)', color: "var(--dime-text-primary, #ffffff)", fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{totalValue}</span>
-          <span style={{ fontSize: 'clamp(12px, 1.0vw, 16px)', color: "var(--dime-text-primary, #ffffff)", fontWeight: 700, letterSpacing: "0.06em" }}>UNDER</span>
+          <span style={{ fontSize: 'clamp(12px, 1.0vw, 16px)', color: "var(--dime-text-primary, #ffffff)", fontWeight: 700, letterSpacing: "0.06em", whiteSpace: 'nowrap', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>OVER</span>
+          <span style={{ fontSize: 'clamp(14px, 1.2vw, 20px)', color: "var(--dime-text-primary, #ffffff)", fontWeight: 700, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', flexShrink: 0 }}>{totalValue}</span>
+          <span style={{ fontSize: 'clamp(12px, 1.0vw, 16px)', color: "var(--dime-text-primary, #ffffff)", fontWeight: 700, letterSpacing: "0.06em", whiteSpace: 'nowrap', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', textAlign: 'right' }}>UNDER</span>
         </div>
       ) : (
         // min-width:0 + ellipsis on both sides: the two labels can never
@@ -746,6 +752,7 @@ export function BettingSplitsPanel({
            makes each column shrinkable so nowrap labels ellipsize instead of
            pushing the row past the viewport. ── */}
       {isMdUp && <div
+        className="bsp-desktop"
         style={{
           display: 'grid',
           gridTemplateColumns: 'minmax(0,1fr) 1px minmax(0,1fr) 1px minmax(0,1fr)',

@@ -77,6 +77,10 @@ export interface SituationalResultsPanelProps {
   borderColor?: string;
   /** When true, the panel starts collapsed. Defaults to false (expanded). */
   defaultCollapsed?: boolean;
+  /** When false, the panel renders permanently expanded with a static
+   *  (non-interactive) header — no chevron, no toggle. Default true keeps
+   *  the existing accordion behavior for the splits surface. */
+  collapsible?: boolean;
   /** IntersectionObserver gate — only fetch data when card is in viewport */
   enabled?: boolean;
 }
@@ -401,10 +405,12 @@ export default function SituationalResultsPanel({
   homeLogoUrl,
   borderColor = "hsl(var(--border))",
   defaultCollapsed = false,
+  collapsible = true,
   enabled = true,
 }: SituationalResultsPanelProps) {
   const [tab, setTab] = useState<SitTab>("ml");
-  const [isExpanded, setIsExpanded] = useState(!defaultCollapsed);
+  const [expandedState, setIsExpanded] = useState(!defaultCollapsed);
+  const isExpanded = collapsible ? expandedState : true;
 
   const sLabel = spreadTabLabel(sport);
 
@@ -428,19 +434,33 @@ export default function SituationalResultsPanel({
       }}
     >
       {/* ── Collapsible Header ─────────────────────────────────────────────── */}
-      <button type="button" onClick={() => setIsExpanded((v) => !v)}
-        className="w-full flex items-center justify-between px-3 py-2 transition-colors"
-      >
-        <span className="text-[10px] font-bold text-white font-mono tracking-widest uppercase">
-          Trends
-        </span>
-        <div className="flex items-center gap-1">
-          {isExpanded
-            ? <ChevronUp className="w-3.5 h-3.5 text-white" />
-            : <ChevronDown className="w-3.5 h-3.5 text-white" />
-          }
+      {collapsible ? (
+        <button type="button" onClick={() => setIsExpanded((v) => !v)}
+          className="w-full box-border flex items-center justify-between px-3 py-2 transition-colors"
+          style={{ boxSizing: "border-box" }}
+        >
+          <span className="text-[10px] font-bold text-white font-mono tracking-widest uppercase">
+            Trends
+          </span>
+          <div className="flex items-center gap-1">
+            {isExpanded
+              ? <ChevronUp className="w-3.5 h-3.5 text-white" />
+              : <ChevronDown className="w-3.5 h-3.5 text-white" />
+            }
+          </div>
+        </button>
+      ) : (
+        <div
+          className="w-full box-border flex items-center justify-between px-3 py-2"
+          style={{ boxSizing: "border-box" }}
+        >
+          <span className="text-[10px] font-bold text-white font-mono tracking-widest uppercase">
+            Trends
+          </span>
+          {/* empty spacer keeps the collapsible header's justify-between geometry */}
+          <div className="flex items-center gap-1" />
         </div>
-      </button>
+      )}
 
       {/* ── Collapsible Body ───────────────────────────────────────────────── */}
       {isExpanded && (
