@@ -54,6 +54,12 @@ purple, no gradients.**
 - Negative / no-edge / PASS states are GREY (`--text-secondary`), never red. De-emphasize whole PASS rows to ~82% opacity.
 - Coin-dot logic (brand): mint dot on black · mint dot + black hairline on white · white dot on mint.
 
+**Destructive-action exception:** `--dime-danger: #E5484D` (owner directive 2026-07-22,
+account-settings cancel flow) — destructive-action CONFIRMS only, e.g. the "Cancel plan"
+button in a cancel-confirm dialog. Never for emphasis, badges, or general error text —
+those stay grey per the negative-state rule above. Mint remains the sole accent; this is a
+single, scoped carve-out, not a second accent color.
+
 ### Typography
 
 - **Heading & Body Font:** Familjen Grotesk (400, 500, 600, 700)

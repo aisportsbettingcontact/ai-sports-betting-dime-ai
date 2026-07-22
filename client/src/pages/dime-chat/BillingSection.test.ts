@@ -142,6 +142,16 @@ describe("cancel flow — verbatim owner copy + the app's one destructive-red ex
     expect(source).toMatch(/utils\.stripe\.getSubscription\.invalidate\(\)/);
   });
 
+  it("invalidatePlan also invalidates appUsers.me, so the sidebar tier badge/expiry line (useAppAuth -> trpc.appUsers.me) never goes stale after Cancel/Renew — same precedent ManageAccount.tsx:92,106 established for these two mutations", () => {
+    const invalidatePlanIdx = source.indexOf("const invalidatePlan = () => {");
+    expect(invalidatePlanIdx).toBeGreaterThan(-1);
+    const bodyEnd = source.indexOf("};", invalidatePlanIdx);
+    const body = source.slice(invalidatePlanIdx, bodyEnd);
+    expect(body).toMatch(/utils\.stripe\.getPlanStatus\.invalidate\(\)/);
+    expect(body).toMatch(/utils\.stripe\.getSubscription\.invalidate\(\)/);
+    expect(body).toMatch(/utils\.appUsers\.me\.invalidate\(\)/);
+  });
+
   it("defines --dime-danger once and uses it on exactly one rule: the cancel-plan confirm button", () => {
     expect(cssSource).toMatch(/--dime-danger:\s*#E5484D/);
     const usages = cssSource.match(/var\(--dime-danger\)/g) ?? [];
@@ -163,6 +173,59 @@ describe("cancel flow — verbatim owner copy + the app's one destructive-red ex
     const ruleMatch = cssSource.match(/\.dc-sm-pill--danger \{[^}]*\}/);
     expect(ruleMatch).not.toBeNull();
     expect(ruleMatch![0]).toContain("var(--dime-danger)");
+  });
+});
+
+describe("cancel confirm — alertdialog focus management (a11y)", () => {
+  it("keeps role=\"alertdialog\" on the confirm panel", () => {
+    const panelIdx = source.indexOf("function CancelConfirm(");
+    expect(panelIdx).toBeGreaterThan(-1);
+    const divIdx = source.indexOf("<div", panelIdx);
+    const roleIdx = source.indexOf('role="alertdialog"', divIdx);
+    expect(roleIdx).toBeGreaterThan(divIdx);
+  });
+
+  it("focuses the neutral 'Keep plan' button on open — the safe default for a destructive prompt", () => {
+    const panelIdx = source.indexOf("function CancelConfirm(");
+    const keepRefDeclIdx = source.indexOf(
+      "const keepButtonRef = useRef<HTMLButtonElement | null>(null);",
+      panelIdx
+    );
+    expect(keepRefDeclIdx).toBeGreaterThan(panelIdx);
+    const effectIdx = source.indexOf("useEffect(() => {", keepRefDeclIdx);
+    expect(effectIdx).toBeGreaterThan(keepRefDeclIdx);
+    const focusCallIdx = source.indexOf("keepButtonRef.current?.focus();", effectIdx);
+    expect(focusCallIdx).toBeGreaterThan(effectIdx);
+    // The ref is actually attached to the "Keep plan" button, not just declared.
+    const keepButtonIdx = source.indexOf(">\n          Keep plan", panelIdx);
+    const keepButtonBlockStart = source.lastIndexOf("<button", keepButtonIdx);
+    const keepButtonBlock = source.slice(keepButtonBlockStart, keepButtonIdx);
+    expect(keepButtonBlock).toContain("ref={keepButtonRef}");
+  });
+
+  it("returns focus to the 'Cancel plan' trigger on close, on both the Keep and Confirm paths (a single effect cleanup covers unmount either way)", () => {
+    const panelIdx = source.indexOf("function CancelConfirm(");
+    const effectIdx = source.indexOf("useEffect(() => {", panelIdx);
+    const cleanupIdx = source.indexOf("return () => {", effectIdx);
+    expect(cleanupIdx).toBeGreaterThan(effectIdx);
+    const cleanupEnd = source.indexOf("};", cleanupIdx);
+    const cleanupBody = source.slice(cleanupIdx, cleanupEnd);
+    expect(cleanupBody).toContain("triggerRef.current?.focus();");
+  });
+
+  it("BillingSection owns the trigger ref and threads it to both PlanCard's Cancel button and CancelConfirm", () => {
+    const cancelTriggerDeclIdx = source.indexOf(
+      "const cancelTriggerRef = useRef<HTMLButtonElement | null>(null);"
+    );
+    expect(cancelTriggerDeclIdx).toBeGreaterThan(-1);
+    expect(source).toMatch(/<PlanCard[\s\S]*?cancelTriggerRef=\{cancelTriggerRef\}[\s\S]*?\/>/);
+    expect(source).toMatch(/<CancelConfirm[\s\S]*?triggerRef=\{cancelTriggerRef\}[\s\S]*?\/>/);
+    // PlanCard attaches it to the actual Cancel trigger button, not just receives it.
+    const planCardIdx = source.indexOf("function PlanCard(");
+    const cancelButtonIdx = source.indexOf(">\n            Cancel\n", planCardIdx);
+    const cancelButtonBlockStart = source.lastIndexOf("<button", cancelButtonIdx);
+    const cancelButtonBlock = source.slice(cancelButtonBlockStart, cancelButtonIdx);
+    expect(cancelButtonBlock).toContain("ref={cancelTriggerRef}");
   });
 });
 
