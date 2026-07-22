@@ -411,6 +411,16 @@ button.dc-sidebar-row {
     min-height: 44px;
   }
 
+  /* Owner directive 2026-07-21 scaled the persistent (≥1024) sidebar ×1.75;
+     the drawer keeps the frozen pre-scale type — at min(82vw, 304px) wide,
+     22.75px rows guarantee truncated labels, and <768px surfaces must not
+     change (plan constraint). Icons keep the ×1.25 size (no truncation risk). */
+  .dc-drawer .dc-sidebar-row { font-size: 13px; }
+  .dc-drawer .dc-recents-label { font-size: 11px; }
+  .dc-drawer .dc-profile-row { font-size: 13px; }
+  .dc-drawer .dc-profile-name { font-size: 12px; }
+  .dc-drawer .dc-profile-tier { font-size: 11px; }
+
   .dc-drawer-scrim {
     display: block;
     position: fixed;
