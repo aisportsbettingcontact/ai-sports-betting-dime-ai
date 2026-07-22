@@ -436,7 +436,8 @@ export default function SituationalResultsPanel({
       {/* ── Collapsible Header ─────────────────────────────────────────────── */}
       {collapsible ? (
         <button type="button" onClick={() => setIsExpanded((v) => !v)}
-          className="w-full flex items-center justify-between px-3 py-2 transition-colors"
+          className="w-full box-border flex items-center justify-between px-3 py-2 transition-colors"
+          style={{ boxSizing: "border-box" }}
         >
           <span className="text-[10px] font-bold text-white font-mono tracking-widest uppercase">
             Trends
@@ -449,7 +450,10 @@ export default function SituationalResultsPanel({
           </div>
         </button>
       ) : (
-        <div className="w-full flex items-center justify-between px-3 py-2">
+        <div
+          className="w-full box-border flex items-center justify-between px-3 py-2"
+          style={{ boxSizing: "border-box" }}
+        >
           <span className="text-[10px] font-bold text-white font-mono tracking-widest uppercase">
             Trends
           </span>
