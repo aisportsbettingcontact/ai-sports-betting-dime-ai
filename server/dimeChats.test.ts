@@ -113,7 +113,16 @@ describe("Dime chat page — owner gate + live identity + ⋯ menu", () => {
     expect(pageSrc).toMatch(/!isLifetimeMember\(appUser\)/);
     expect(pageSrc).toContain('goTo("/checkout")');
     expect(pageSrc).toContain('goTo("/account")');
-    expect(pageSrc).toContain('goTo("/profile")');
+    // goTo("/profile") pinned no remaining call site as of Round 3 Step 1
+    // (owner directive 2026-07-22, account popover v2): the popover's
+    // "Edit Profile" row — the one thing that ever called goTo("/profile")
+    // here — was cut; its content moved to the Settings modal's Account
+    // section (SettingsModal.tsx). client/src/pages/dime-chat/
+    // comingSoonGate.test.ts's sibling assertion was updated for this at the
+    // time (`.not.toMatch(/goTo\("\/profile"\)/)`); this file's own copy of
+    // the same pin was missed then and is corrected here, intent preserved
+    // (Upgrade/Cancel/Log Out — the rows that are still real — stay pinned).
+    expect(pageSrc).not.toContain('goTo("/profile")');
     expect(pageSrc).toContain("await logoutMutation.mutateAsync()");
   });
 
