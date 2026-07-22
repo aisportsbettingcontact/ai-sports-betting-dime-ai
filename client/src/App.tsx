@@ -4,6 +4,7 @@ import { Route, Switch, Redirect, useLocation } from "wouter";
 import { lazy, Suspense, useEffect } from "react";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { RequireAuth } from "./components/RequireAuth";
+import { RequireOwner } from "./components/RequireOwner";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { useAppAuth } from "./_core/hooks/useAppAuth";
 // [PERF/FIX] The landing page is EAGER (not lazy) — it's the first thing unauthenticated
@@ -319,18 +320,28 @@ function Router() {
             boundary there is no Trends pane — the accordions still live on
             the splits cards — so land mobile visitors there. */}
         <Route path="/trends">{() => <Redirect to={bettingSplitsPath()} replace />}</Route>
-        {/* Admin pages */}
+        {/* Admin Dashboard — owner-only (@prez), owner directive 2026-07-22:
+          "No other users or site members should be able to view these
+          pages." RequireOwner is the client-side (cosmetic) half of the
+          lockdown — it never flashes admin content and redirects any
+          non-owner to /chat. The real boundary is server-verified
+          ownerProcedure middleware on every procedure these pages call
+          (see server/routers/appUsers.ts, routers.ts, wc2026Router.ts). */}
         <Route path="/admin/users">
           {() => (
             <RequireAuth>
-              <UserManagement />
+              <RequireOwner>
+                <UserManagement />
+              </RequireOwner>
             </RequireAuth>
           )}
         </Route>
         <Route path="/admin/publish">
           {() => (
             <RequireAuth>
-              <PublishProjections />
+              <RequireOwner>
+                <PublishProjections />
+              </RequireOwner>
             </RequireAuth>
           )}
         </Route>

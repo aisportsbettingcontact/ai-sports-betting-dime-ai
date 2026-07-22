@@ -32,6 +32,7 @@ import { getNbaTeamByDbSlug } from "@shared/nbaTeams";
 import { NHL_BY_DB_SLUG } from "@shared/nhlTeams";
 import { BettingSplitsPanel } from "@/components/BettingSplitsPanel";
 import { OddsHistoryPanel } from "@/components/OddsHistoryPanel";
+import { AdminShell } from "@/pages/admin/AdminShell";
 
 // ─── Helpers (mirrors GameCard exactly) ──────────────────────────────────────
 
@@ -1905,7 +1906,8 @@ export default function PublishProjections() {
   if (!isOwner) return null;
 
   return (
-    <div className="min-h-screen" style={{ background: "#000000" }}>
+    <AdminShell active="publish">
+    <div className="w-full" style={{ background: "var(--background)" }}>
 
       {/* Sticky header — mirrors Dashboard header style */}
       <header className="sticky top-0 z-40 bg-black backdrop-blur-sm border-b border-white">
@@ -2369,6 +2371,7 @@ export default function PublishProjections() {
         )}
       </main>
     </div>
+    </AdminShell>
   );
 }
 
