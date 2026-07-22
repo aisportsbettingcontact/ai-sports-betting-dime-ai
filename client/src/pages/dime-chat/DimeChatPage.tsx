@@ -431,7 +431,7 @@ function DimeSidebar({
                 }
               }}
             >
-              <TextSearch size={18} strokeWidth={1.8} aria-hidden="true" />
+              <TextSearch size={22.5} strokeWidth={1.8} aria-hidden="true" />
             </button>
             <button
               type="button"
@@ -441,9 +441,9 @@ function DimeSidebar({
               onClick={() => setRail(!railCollapsed)}
             >
               {rail ? (
-                <PanelLeftOpen size={18} strokeWidth={1.8} aria-hidden="true" />
+                <PanelLeftOpen size={22.5} strokeWidth={1.8} aria-hidden="true" />
               ) : (
-                <PanelLeftClose size={18} strokeWidth={1.8} aria-hidden="true" />
+                <PanelLeftClose size={22.5} strokeWidth={1.8} aria-hidden="true" />
               )}
             </button>
           </div>
@@ -453,7 +453,7 @@ function DimeSidebar({
         <div className="dc-sidebar-search">
           <TextSearch
             className="dc-sidebar-search-ico"
-            size={14}
+            size={17.5}
             strokeWidth={1.8}
             aria-hidden="true"
           />
@@ -487,7 +487,7 @@ function DimeSidebar({
               aria-disabled="true"
               title={rail ? row.label : undefined}
             >
-              <RowIcon className="dc-nav-ico" size={18} strokeWidth={1.8} aria-hidden="true" />
+              <RowIcon className="dc-nav-ico" size={22.5} strokeWidth={1.8} aria-hidden="true" />
               <span className="dc-sidebar-text">{row.label}</span>
             </button>
           ) : (
@@ -509,7 +509,7 @@ function DimeSidebar({
                 onNavigate();
               }}
             >
-              <RowIcon className="dc-nav-ico" size={18} strokeWidth={1.8} aria-hidden="true" />
+              <RowIcon className="dc-nav-ico" size={22.5} strokeWidth={1.8} aria-hidden="true" />
               <span className="dc-sidebar-text">{row.label}</span>
             </Link>
           );
@@ -529,7 +529,7 @@ function DimeSidebar({
                 title="Clear recent chats for all users"
                 onClick={onClearAllChats}
               >
-                <Eraser size={14} strokeWidth={1.8} aria-hidden="true" />
+                <Eraser size={17.5} strokeWidth={1.8} aria-hidden="true" />
               </button>
             )}
           </div>
@@ -567,7 +567,7 @@ function DimeSidebar({
                     setRowMenuId(open => (open === rc.id ? null : rc.id))
                   }
                 >
-                  <Ellipsis size={16} strokeWidth={1.8} aria-hidden="true" />
+                  <Ellipsis size={20} strokeWidth={1.8} aria-hidden="true" />
                 </button>
                 {rowMenuId === rc.id && (
                   <div className="dc-recent-menu" role="menu">
@@ -580,7 +580,7 @@ function DimeSidebar({
                         onDeleteChat(rc.id);
                       }}
                     >
-                      <Trash2 size={14} strokeWidth={1.8} aria-hidden="true" />
+                      <Trash2 size={17.5} strokeWidth={1.8} aria-hidden="true" />
                       Delete chat
                     </button>
                   </div>
