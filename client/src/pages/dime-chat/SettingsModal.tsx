@@ -6,9 +6,10 @@
  * this centers over the whole app. Left nav: Account (Username · Discord ·
  * Reset Password — the content that used to live behind the popover's now-
  * removed "Edit Profile" / "Discord Connected" rows, see .superpowers/sdd/
- * r3-task-1-report.md for where that logic went), Billing (a Step 4 stub —
- * server/routers/stripe.ts's read-only procedures land in Step 3), and a
- * bottom Log Out row.
+ * r3-task-1-report.md for where that logic went), Billing (Round 3 Step 4 —
+ * the real plan card / history / payment methods / billing info / Upgrade-
+ * Renew-Cancel pane, extracted to BillingSection.tsx and wired to Step 3's
+ * server/routers/stripe.ts read-only procedures), and a bottom Log Out row.
  *
  * Apple-design discipline (.claude/skills/apple-design/SKILL.md):
  *  - This is the app's first real modal (the account popover is a menu,
@@ -48,6 +49,7 @@ import {
   formatHandle,
   type SidebarUser,
 } from "./sidebarIdentity";
+import BillingSection from "./BillingSection";
 
 /** Everything the Account section needs beyond SidebarUser's shape —
  *  appUsers.me already returns `email` alongside every field SidebarUser
@@ -345,32 +347,6 @@ function AccountSection({ appUser }: { appUser: SettingsModalUser }) {
           </span>
           <KeyRound size={16} strokeWidth={1.8} aria-hidden="true" />
         </button>
-      </div>
-    </section>
-  );
-}
-
-function BillingSection({ isOwner }: { isOwner: boolean }) {
-  return (
-    <section className="dc-sm-section" aria-label="Billing">
-      <div className="dc-sm-section-label">Billing</div>
-      {/* TODO(step-4): plan card (Current/Expired plan + governing date),
-          billing history (receipt links), payment methods, billing
-          information, and Upgrade / Renew / Cancel — Cancel opens an
-          inline confirm with the owner's verbatim copy ("If you cancel,
-          you'll keep full access to your plan features until the end of
-          your billing period.") behind a red confirm button (a destructive-
-          only exception to the no-red brand rule, documented in
-          round3-constraints.md). Wires to server/routers/stripe.ts's Step 3
-          read-only procedures (getPlanStatus / getInvoices /
-          getPaymentMethods / getBillingInfo) once they exist — this pane
-          is a placeholder shell only until then. */}
-      <div className="dc-sm-card dc-sm-billing-stub">
-        <p className="dc-sm-billing-stub-text">
-          {isOwner
-            ? "Owner accounts have no billing plan."
-            : "Billing details are coming soon."}
-        </p>
       </div>
     </section>
   );
