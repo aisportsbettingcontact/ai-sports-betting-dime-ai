@@ -457,6 +457,7 @@ export default function SituationalResultsPanel({
           <span className="text-[10px] font-bold text-white font-mono tracking-widest uppercase">
             Trends
           </span>
+          {/* empty spacer keeps the collapsible header's justify-between geometry */}
           <div className="flex items-center gap-1" />
         </div>
       )}

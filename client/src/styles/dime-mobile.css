@@ -324,7 +324,7 @@ html:not(.dark) .cal-panel {
    min-width in the market columns (the 2026-07-22 1024px divider-cross
    regression). These components were written assuming Tailwind/preflight
    border-box semantics. Guarded by e2e/splits-layout.spec.ts.
-   Selector uses .dc-page prefix (specificity 0,2,1) to beat frozen-tokens.css's
+   Selector uses .dc-page prefix (specificity 0,2,0) to beat frozen-tokens.css's
    .dc-page * (0,1,1) regardless of stylesheet load order — dime-mobile.css
    (global, main.tsx) and frozen-tokens.css (lazy, DimeChatPage.tsx chunk)
    have no guaranteed relative order once frozen-tokens.css loads later via
