@@ -94,6 +94,7 @@ import { useAppAuth } from "@/_core/hooks/useAppAuth";
 import type { DimeProductPane } from "../dime-shell/productRoute";
 import type { ThemeMode } from "../../contexts/ThemeContext";
 import prezAvatarUrl from "./assets/prez-avatar.jpg";
+import SettingsModal from "./SettingsModal";
 import "./frozen-tokens.css";
 import "./conversation.css";
 
@@ -1220,6 +1221,11 @@ export default function DimeChatPage({
   // grants the visual surface only, never the tRPC history calls.
   const historyReady = !!appUser && isOwner;
 
+  // Settings modal (Round 3 Step 2, owner directive 2026-07-22): the
+  // popover's Settings row (Step 1's onOpenSettings hook, TODO(step-2))
+  // opens this; it closes itself and returns focus to the sidebar trigger.
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
   const [state, dispatch] = useReducer(chatReducer, initialChatState);
   const [input, setInput] = useState("");
   const [ghost, setGhost] = useState<GhostRects | null>(null);
@@ -2248,6 +2254,7 @@ export default function DimeChatPage({
           onShellNavigate={shell?.onNavigate}
           appUser={appUser}
           isOwner={isOwner}
+          onOpenSettings={() => setSettingsOpen(true)}
         />
 
         {compact && drawerOpen && (
@@ -2523,6 +2530,14 @@ export default function DimeChatPage({
             </div>
           );
         })()}
+
+        <SettingsModal
+          open={settingsOpen}
+          onClose={() => setSettingsOpen(false)}
+          appUser={appUser}
+          isOwner={isOwner}
+          sidebarRef={sidebarRef}
+        />
       </div>
     </div>
   );

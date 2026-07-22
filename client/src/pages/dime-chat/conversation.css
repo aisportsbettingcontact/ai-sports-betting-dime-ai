@@ -1027,4 +1027,229 @@ button.dc-sidebar-row {
   .dc-sidebar { transition: none; }
   .dc-recent-more { transition: none; }
 }
+
+/* ----------------------------------------------------------------------------
+   11. SETTINGS MODAL (Round 3 Step 2, owner directive 2026-07-22) — the
+       centered dialog opened from the account popover's Settings row. A new
+       surface, not part of the frozen D/L chat mockup, so it follows
+       design-system/dime-ai/MASTER.md directly rather than a D/L citation:
+       --shadow-menu depth, the same --row-active "raised, not mint" active
+       treatment the popover's own Theme options already use, and the ONE
+       160ms cubic-bezier(0.16, 1, 0.3, 1) curve for the enter beat
+       (apple-design §14: reduced motion collapses it to an instant frame,
+       never removes the dialog's arrival outright).
+   -------------------------------------------------------------------------- */
+
+.dc-sm-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  box-sizing: border-box;
+} /* apple-design §12: "dim to focus" — a modal task pairs the surface with a scrim */
+.theme-dark .dc-sm-scrim { background: rgba(0, 0, 0, 0.6); }
+.theme-light .dc-sm-scrim { background: rgba(11, 11, 15, 0.4); }
+
+.dc-sm-dialog {
+  display: flex;
+  flex-direction: column;
+  width: min(560px, 100%);
+  max-height: min(640px, 100%);
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: var(--shadow-menu);
+} /* radius scaled up from --radius-menu (14px, MASTER.md) for a larger dialog surface — this is the app's first full modal, not a small popover */
+.theme-dark .dc-sm-dialog { background: #141414; border: 1px solid #262626; }
+.theme-light .dc-sm-dialog { background: #FFFFFF; border: 1px solid #D9D9D9; }
+
+.dc-sm-dialog--enter { animation: dcSettingsModalIn 160ms cubic-bezier(0.16, 1, 0.3, 1); }
+@keyframes dcSettingsModalIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.dc-sm-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 18px 14px;
+  flex-shrink: 0;
+}
+.theme-dark .dc-sm-header { border-bottom: 1px solid #262626; }
+.theme-light .dc-sm-header { border-bottom: 1px solid #D9D9D9; }
+
+.dc-sm-title { margin: 0; font-size: 17px; font-weight: 700; color: var(--text-primary); }
+.dc-sm-subtitle { margin-top: 2px; font-size: 12px; color: var(--text-secondary); }
+
+.dc-sm-close {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.dc-sm-body { display: flex; flex: 1; min-height: 0; }
+
+.dc-sm-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 176px;
+  flex-shrink: 0;
+  padding: 12px;
+}
+.theme-dark .dc-sm-nav { border-right: 1px solid #262626; }
+.theme-light .dc-sm-nav { border-right: 1px solid #D9D9D9; }
+
+/* Rows reuse the sidebar-row shape verbatim (MASTER.md "Sidebar row" spec):
+   same padding/radius/font-size, --row-active for the selected state — not
+   mint, mint stays reserved for signal (edge/pick/live/active-nav/focus). */
+.dc-sm-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background 160ms cubic-bezier(0.16, 1, 0.3, 1), color 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.dc-sm-nav-item.is-active { background: var(--row-active); color: var(--text-primary); font-weight: 600; }
+
+.dc-sm-nav-spacer { flex: 1; }
+
+.dc-sm-nav-logout { margin-top: 6px; padding-top: 15px; }
+.theme-dark .dc-sm-nav-logout { border-top: 1px solid #262626; }
+.theme-light .dc-sm-nav-logout { border-top: 1px solid #D9D9D9; }
+
+.dc-sm-content {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  padding: 18px 20px 20px;
+  /* Keeps the dialog from visibly shrink-wrapping around the thin Billing
+     stub — a real Step 4 pane will naturally fill this; until then the
+     shell holds a stable size instead of resizing on every section click. */
+  min-height: 280px;
+}
+
+.dc-sm-section + .dc-sm-section { margin-top: 20px; }
+
+/* Micro-label spec (MASTER.md): IBM Plex Mono, 10px, uppercase, 0.08em —
+   the same pairing profile.css's .pf-label already uses for this exact
+   "account settings" surface on mobile. */
+.dc-sm-section-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-weight: 500;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  margin: 0 0 8px 2px;
+}
+
+.dc-sm-card { border-radius: 14px; overflow: hidden; }
+.theme-dark .dc-sm-card { background: #0A0A0A; border: 1px solid #262626; }
+.theme-light .dc-sm-card { background: #F7F7F9; border: 1px solid #D9D9D9; }
+
+.dc-sm-field,
+.dc-sm-action-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 56px;
+  padding: 10px 14px;
+  box-sizing: border-box;
+}
+.theme-dark .dc-sm-field + .dc-sm-field,
+.theme-dark .dc-sm-field + .dc-sm-action-row,
+.theme-dark .dc-sm-action-row + .dc-sm-field { border-top: 1px solid #262626; }
+.theme-light .dc-sm-field + .dc-sm-field,
+.theme-light .dc-sm-field + .dc-sm-action-row,
+.theme-light .dc-sm-action-row + .dc-sm-field { border-top: 1px solid #D9D9D9; }
+
+.dc-sm-action-row {
+  border: none;
+  background: none;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  color: var(--text-primary);
+}
+.dc-sm-action-row:disabled { cursor: default; opacity: 0.7; }
+
+.dc-sm-field-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.dc-sm-field-label { font-size: 12px; color: var(--text-secondary); }
+.dc-sm-field-value { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+.dc-sm-field-value--muted { font-weight: 400; color: var(--text-secondary); }
+.dc-sm-field-note { flex-shrink: 0; font-size: 11px; color: var(--text-secondary); opacity: 0.75; }
+
+/* Official Discord branding (solid black, white glyph) — the exact treatment
+   ModelProjections.tsx / ManageAccount.tsx already use for this same
+   connected/not-connected contract; reused verbatim here for consistency. */
+.dc-sm-discord-pill,
+.dc-sm-discord-connect {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #000000;
+  color: #ffffff;
+  text-decoration: none;
+  width: fit-content;
+}
+.dc-sm-discord-pill { cursor: default; }
+.dc-sm-discord-connect { cursor: pointer; }
+
+.dc-sm-billing-stub { padding: 20px 16px; }
+.dc-sm-billing-stub-text { margin: 0; font-size: 13px; color: var(--text-secondary); }
+
+@media (prefers-reduced-motion: reduce) {
+  .dc-sm-dialog--enter { animation: none; }
+}
+
+/* Single-column stack: the nav|content two-column shell collapses into one
+   column — nav becomes a horizontal row on top, content below. Log Out
+   gets flex-basis: 100% so it always wraps onto its own row instead of
+   being squeezed inline next to the section tabs, where its label would
+   clip against .dc-sm-dialog's overflow:hidden edge at narrow widths. */
+@media (max-width: 600px) {
+  .dc-sm-body { flex-direction: column; }
+  .dc-sm-nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    width: 100%;
+    border-right: none;
+    padding: 10px 12px;
+  }
+  .theme-dark .dc-sm-nav { border-bottom: 1px solid #262626; }
+  .theme-light .dc-sm-nav { border-bottom: 1px solid #D9D9D9; }
+  .dc-sm-nav-spacer { display: none; }
+  .dc-sm-nav-logout {
+    flex-basis: 100%;
+    margin-top: 8px;
+    margin-left: 0;
+    padding-top: 8px;
+  }
+  .theme-dark .dc-sm-nav-logout { border-top: 1px solid #262626; }
+  .theme-light .dc-sm-nav-logout { border-top: 1px solid #D9D9D9; }
+  .dc-sm-dialog { max-height: min(88vh, 640px); }
+}
 .theme-light .dc-recent-star { color: #000000; }
