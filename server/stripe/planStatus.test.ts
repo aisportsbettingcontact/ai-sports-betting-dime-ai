@@ -18,6 +18,7 @@ function user(overrides: Partial<PlanStatusUser> = {}): PlanStatusUser {
     stripePlanId: "pro",
     expiryDate: NOW + 30 * 24 * 60 * 60 * 1000, // 30 days from NOW
     cancelAtPeriodEnd: false,
+    hasAccess: true,
     ...overrides,
   };
 }
@@ -112,5 +113,30 @@ describe("derivePlanStatus", () => {
     const soon = Date.now() + 60_000;
     const result = derivePlanStatus(user({ expiryDate: soon }));
     expect(result.state).toBe("active");
+  });
+
+  it("returns expired when hasAccess is revoked even with a future expiry and live planId (would otherwise be active)", () => {
+    const expiry = NOW + 30 * 24 * 60 * 60 * 1000;
+    const result = derivePlanStatus(user({ hasAccess: false, expiryDate: expiry }), NOW);
+    expect(result).toEqual({
+      state: "expired",
+      planId: "pro",
+      planLabel: PLANS.pro.name,
+      governingDate: expiry,
+    });
+  });
+
+  it("returns expired when hasAccess is revoked even with cancelAtPeriodEnd + future expiry (would otherwise be cancel_scheduled)", () => {
+    const expiry = NOW + 15 * 24 * 60 * 60 * 1000;
+    const result = derivePlanStatus(
+      user({ hasAccess: false, cancelAtPeriodEnd: true, expiryDate: expiry }),
+      NOW
+    );
+    expect(result).toEqual({
+      state: "expired",
+      planId: "pro",
+      planLabel: PLANS.pro.name,
+      governingDate: expiry,
+    });
   });
 });
