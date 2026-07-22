@@ -114,11 +114,21 @@ describe("plan card — state-driven branches (owner's literal templates)", () =
     expect(source).toContain("You don't have a plan on file. Subscribe to unlock full access.");
   });
 
-  it("Renew shows for cancel_scheduled/expired; Cancel shows only for active", () => {
-    expect(source).toMatch(
+  it("Renew shows ONLY for cancel_scheduled (the only state reactivateSubscription's own body accepts); expired's CTA is Upgrade, not a Renew that always errors; Cancel shows only for active", () => {
+    // Pre-merge fix (owner directive 2026-07-22): Renew and "Manage in
+    // Stripe" both used to be reachable for expired/revoked users even
+    // though their mutations reject or 403 for that state server-side.
+    // Renew is now gated to the one state reactivateSubscription can
+    // actually reactivate — see the comment above this button in the source.
+    expect(source).toMatch(/status\.state === "cancel_scheduled" && \(/);
+    expect(source).not.toMatch(
       /status\.state === "cancel_scheduled" \|\| status\.state === "expired"/
     );
     expect(source).toMatch(/status\.state === "active" && \(/);
+    // expired still gets Upgrade — the same branch active/none share.
+    expect(source).toMatch(
+      /status\.state === "active" \|\| status\.state === "none" \|\| status\.state === "expired"/
+    );
   });
 });
 

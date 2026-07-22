@@ -1910,7 +1910,7 @@ export default function PublishProjections() {
     <div className="w-full" style={{ background: "var(--background)" }}>
 
       {/* Sticky header — mirrors Dashboard header style */}
-      <header className="sticky top-0 z-40 bg-black backdrop-blur-sm border-b border-white">
+      <header className="sticky top-14 z-40 bg-black backdrop-blur-sm border-b border-white">
         {/* Top row: publish all — back button and "AI SPORTS BETTING |
             PUBLISH PROJECTIONS" brand text removed (now owned by
             AdminShell's back-to-app affordance + wordmark/tab nav) */}

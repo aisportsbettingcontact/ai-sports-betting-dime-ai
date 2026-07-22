@@ -300,9 +300,10 @@ function DimeSidebar({
   onShellNavigate?: (href: string) => void;
   appUser: SidebarUser | null;
   isOwner: boolean;
-  /** TODO(step-2): Settings row opens nothing yet — Step 2 wires the real
-   *  Settings modal (Username · Discord · Reset Password · Billing) and
-   *  passes a real handler here. No-op when omitted. */
+  /** Settings row opens the real Settings modal (Username · Discord ·
+   *  Reset Password · Billing) via this handler — wired in Round 3 Step 2
+   *  (DimeChatPage passes setSettingsOpen(true) at the <DimeSidebar> call
+   *  site below). No-op only when a caller omits the prop entirely. */
   onOpenSettings?: () => void;
 }) {
   const { mode: themeMode, setMode: setThemeMode } = useTheme();
@@ -824,9 +825,8 @@ function DimeSidebar({
                       className="dc-menu-item dc-menu-item--icon dc-hv2 dc-focusable dc-pressable"
                       onClick={() => {
                         setMenuOpen(false);
-                        // TODO(step-2): connect the real Settings modal
-                        // (Username · Discord · Reset Password · Billing).
-                        // No-op until then.
+                        // Opens the real Settings modal (Username · Discord ·
+                        // Reset Password · Billing) — wired in Round 3 Step 2.
                         onOpenSettings?.();
                       }}
                     >

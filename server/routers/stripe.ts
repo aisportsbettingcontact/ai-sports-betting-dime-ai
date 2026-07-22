@@ -578,8 +578,20 @@ export const stripeRouter = router({
    * Creates a Stripe Customer Portal session so the user can manage their
    * subscription (cancel, update payment method, view invoices).
    * Requires the user to have a stripeCustomerId.
+   *
+   * Bound to billingAppUserProcedure, not stripeAppUserProcedure (pre-merge
+   * fix, owner directive 2026-07-22): stripeAppUserProcedure's hasAccess/
+   * expiry gate threw FORBIDDEN before this body ever ran for a lapsed or
+   * revoked subscriber — exactly the caller who most needs the portal, to
+   * fix a card or pull an old invoice. Opening the Stripe-hosted portal is a
+   * legitimate own-data operation for a lapsed customer (Stripe's own
+   * intended model for the portal), so only the access-level gate is
+   * dropped; session validity (cookie + JWT + tokenVersion) is unchanged.
+   * reactivateSubscription stays on stripeAppUserProcedure — its own body's
+   * cancel_scheduled-only guard already covers the one caller who can
+   * reach it.
    */
-  createPortalSession: stripeAppUserProcedure
+  createPortalSession: billingAppUserProcedure
     .input(
       z.object({
         origin: z.string().url(),
