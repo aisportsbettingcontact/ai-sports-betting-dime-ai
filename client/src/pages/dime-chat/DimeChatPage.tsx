@@ -2254,7 +2254,20 @@ export default function DimeChatPage({
           onShellNavigate={shell?.onNavigate}
           appUser={appUser}
           isOwner={isOwner}
-          onOpenSettings={() => setSettingsOpen(true)}
+          onOpenSettings={() => {
+            // [Round-3 hotfix 2026-07-22, live-test A5/A8] Below the 1024px
+            // `compact` breakpoint the drawer <aside> is itself a second
+            // aria-modal dialog (role/aria-modal wiring above) — opening
+            // Settings on top of it used to leave BOTH mounted at once,
+            // each with its own focus trap and Escape listener. Close the
+            // drawer first; restoreFocus=false because the Settings dialog
+            // is about to grab focus itself the instant it mounts, and
+            // running the drawer's own delayed restore-on-settle focus()
+            // after that would race it and steal focus back out of the
+            // just-opened dialog.
+            if (compact && drawerOpen) closeDrawer(false);
+            setSettingsOpen(true);
+          }}
         />
 
         {compact && drawerOpen && (
@@ -2537,6 +2550,7 @@ export default function DimeChatPage({
           appUser={appUser}
           isOwner={isOwner}
           sidebarRef={sidebarRef}
+          mobileMenuRef={menuButtonRef}
         />
       </div>
     </div>

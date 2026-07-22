@@ -67,24 +67,46 @@ interface SettingsModalProps {
    *  and return focus to it on close. Reusing the ref DimeChatPage already
    *  threads to <DimeSidebar> avoids adding a new prop there just for this. */
   sidebarRef?: MutableRefObject<HTMLElement | null>;
+  /** [Round-3 hotfix 2026-07-22, live-test A5/A8] Below the 1024px `compact`
+   *  breakpoint, DimeChatPage now closes the nav drawer the instant Settings
+   *  opens (Fix 1 — no more two simultaneous aria-modal dialogs), which
+   *  leaves BOTH sidebar candidates below sitting inside a now-`inert`,
+   *  off-screen drawer. `.dc-mobile-menu` — the drawer-open hamburger in the
+   *  compact top bar, DimeChatPage's own `menuButtonRef` — lives OUTSIDE the
+   *  drawer and is the real fallback: on-screen and never inert whenever
+   *  Settings can be open at this width. */
+  mobileMenuRef?: MutableRefObject<HTMLElement | null>;
 }
 
 const FOCUSABLE_SELECTOR =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
+/** True only for an element that is genuinely reachable right now: a real
+ *  on-screen box (non-null offsetParent) AND not sitting inside an `inert`
+ *  subtree. offsetParent alone is not enough — the nav drawer is hidden
+ *  off-screen purely via a CSS transform on its `position: fixed` root, and
+ *  a transform never affects the CSSOM offsetParent walk (only `position`
+ *  does, verified live against a minimal repro, not assumed from the spec)
+ *  — so a trigger inside a closed, inert drawer still reports a non-null
+ *  offsetParent. Calling .focus() on it would either silently no-op (inert
+ *  blocks focus) or land off-screen; either way focus effectively strands. */
+function isReachable(el: HTMLElement | null): el is HTMLElement {
+  return !!el && el.offsetParent !== null && !el.closest("[inert]");
+}
+
 /** Two candidate triggers can open this modal: the persistent gear button,
  *  and the avatar button that becomes the ONLY trigger once the desktop
  *  sidebar collapses to its icon-only rail (conversation.css:1007 hides
- *  .dc-settings-trigger there). Whichever is actually on-screen wins —
- *  focusing a display:none element is a silent no-op and would strand
- *  focus at document.body. */
+ *  .dc-settings-trigger there). Whichever is actually reachable wins —
+ *  focusing a display:none (or off-screen/inert, see isReachable) element is
+ *  a silent no-op and would strand focus at document.body. */
 function findReturnFocusTarget(root: HTMLElement | null): HTMLElement | null {
   if (!root) return null;
   const candidates = [
     root.querySelector<HTMLElement>(".dc-settings-trigger"),
     root.querySelector<HTMLElement>(".dc-avatar-btn"),
   ];
-  return candidates.find(el => !!el && el.offsetParent !== null) ?? null;
+  return candidates.find(isReachable) ?? null;
 }
 
 const DISCORD_GLYPH_PATH =
@@ -107,6 +129,7 @@ export default function SettingsModal({
   appUser,
   isOwner,
   sidebarRef,
+  mobileMenuRef,
 }: SettingsModalProps) {
   const [section, setSection] = useState<SettingsSection>("account");
   const dialogRef = useRef<HTMLDivElement | null>(null);
@@ -177,12 +200,21 @@ export default function SettingsModal({
     return () => {
       document.removeEventListener("keydown", onKeyDown);
       document.body.style.overflow = previousOverflow;
+      // [Round-3 hotfix 2026-07-22] Below 1024px, Fix 1 now closes the nav
+      // drawer the instant Settings opens — so on close, both sidebar
+      // candidates above can be sitting inside that now-closed, inert
+      // drawer (see isReachable's comment). Fall back to the drawer-open
+      // control itself (`.dc-mobile-menu`, always reachable at this width)
+      // before finally giving up to whatever had focus before Settings
+      // opened, so focus never strands on document.body.
+      const mobileMenuEl = mobileMenuRef?.current ?? null;
       const trigger =
         findReturnFocusTarget(sidebarRef?.current ?? null) ??
+        (isReachable(mobileMenuEl) ? mobileMenuEl : null) ??
         previouslyFocusedRef.current;
       trigger?.focus?.();
     };
-  }, [open, sidebarRef]);
+  }, [open, sidebarRef, mobileMenuRef]);
 
   if (!open || !appUser) return null;
 
@@ -190,7 +222,15 @@ export default function SettingsModal({
   const expiryLine = formatExpiryLine(appUser.expiryDate);
 
   return (
-    <div className="dc-sm-scrim" onMouseDown={onClose}>
+    // [Round-3 hotfix 2026-07-22, live-test B4] onMouseDown={onClose} used
+    // to unmount this dialog mid-gesture — the cleanup effect's
+    // trigger.focus() fired correctly but lost a race against the browser's
+    // own native mousedown focus reconciliation less than 1ms later, and
+    // focus stranded on document.body. click fires only after the full
+    // mousedown->mouseup gesture completes, so the dialog stays mounted
+    // through the whole gesture and trigger.focus() actually wins. Escape
+    // already closed+returned focus correctly and is untouched.
+    <div className="dc-sm-scrim" onClick={onClose}>
       <div
         ref={dialogRef}
         className="dc-sm-dialog dc-sm-dialog--enter"
@@ -198,7 +238,7 @@ export default function SettingsModal({
         aria-modal="true"
         aria-labelledby="dc-sm-title"
         tabIndex={-1}
-        onMouseDown={event => event.stopPropagation()}
+        onClick={event => event.stopPropagation()}
       >
         <header className="dc-sm-header">
           <div className="dc-sm-header-id">
