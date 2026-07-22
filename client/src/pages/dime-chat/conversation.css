@@ -214,11 +214,102 @@ button.dc-btn-cancel { background: none; font-family: inherit; } /* button-eleme
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* Account popover v2 — Theme drill-in (owner directive 2026-07-22, amends
+   the frozen D/L:89-90 rows this replaces: "Edit Profile" / "Discord
+   Connected" are cut from the popover; their content moves to Settings in
+   Step 2). Same ONE frozen curve as everything else in this file —
+   160ms cubic-bezier(0.16,1,0.3,1), no springs (MASTER.md: one curve, fixed
+   duration everywhere). Two panes sit side by side in a 200%-wide flex row;
+   a plain CSS transition on `transform` — not a keyframe `animation` — is
+   what makes this cleanly interruptible: retargeting the class mid-flight
+   makes the browser redirect from the live interpolated value, exactly the
+   apple-design §3 contract, with zero JS spring machinery. DOM order is
+   [theme pane, root pane]: the resting transform is translateX(-50%)
+   (showing the root pane, second in source order), so entering the Theme
+   pane always moves the slider RIGHTWARD — owner spec verbatim: "slides ...
+   left to right" — and Back retraces the identical path in reverse
+   (apple-design §7 spatial consistency: enter/exit share one path). */
+.dc-menu-viewport {
+  overflow: hidden;
+  transition: height 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.dc-menu-slider {
+  display: flex;
+  align-items: flex-start;
+  width: 200%;
+  transition: transform 160ms cubic-bezier(0.16, 1, 0.3, 1);
+  transform: translateX(-50%);
+}
+.dc-menu-slider--theme { transform: translateX(0%); }
+.dc-menu-pane {
+  width: 50%;
+  flex: 0 0 50%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Theme / Settings / Admin Dashboard rows share the frozen .dc-menu-item
+   paint (D:89,90,92 = L:89,90,92); this only adds the icon+label(+chevron)
+   layout the frozen single-line rows never needed. */
+.dc-menu-item--icon { display: flex; align-items: center; gap: 8px; }
+.dc-menu-item-label { flex: 1; }
+.dc-menu-item-chevron { flex-shrink: 0; opacity: 0.6; }
+.theme-dark .dc-menu-item-chevron { color: #FFFFFF; }
+.theme-light .dc-menu-item-chevron { color: #000000; }
+
+.dc-menu-back {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.theme-dark .dc-menu-back { color: #FFFFFF; }
+.theme-light .dc-menu-back { color: #000000; }
+
+.dc-theme-segment {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  margin: 2px 10px 6px;
+  border-radius: 10px;
+}
+.theme-dark .dc-theme-segment { background: #0A0A0A; }
+.theme-light .dc-theme-segment { background: #F2F2F2; }
+
+.dc-theme-option {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 4px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.theme-dark .dc-theme-option { color: #A6A6A6; }
+.theme-light .dc-theme-option { color: #595959; }
+/* Selected state reuses the sidebar nav's own active-row treatment (raised
+   fill + primary text) rather than mint — mint stays reserved for signal
+   (edge/pick/live/active-nav/focus), and MASTER.md's own tab-pill spec
+   already draws "active" as a raised background, not a hue. */
+.theme-dark .dc-theme-option.is-active { background: #1F1F1F; color: #FFFFFF; }
+.theme-light .dc-theme-option.is-active { background: #E4E4E4; color: #000000; }
+
 @media (prefers-reduced-motion: reduce) {
   .dc-ghost { display: none; }
   .dc-fade-in { animation: none; }
   .dc-composer--flip { transition: none; }
   .dc-settings-menu--enter { animation: none; }
+  .dc-menu-viewport { transition: none; }
+  .dc-menu-slider { transition: none; }
 } /* frozen reduced-motion pattern F:28: final layout in one stable frame (spec §3.3) */
 
 /* ----------------------------------------------------------------------------
