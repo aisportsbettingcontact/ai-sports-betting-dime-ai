@@ -162,20 +162,42 @@ describe("Account section — relocated edit-profile + Discord + reset password"
   });
 });
 
-describe("Billing pane — Step 4 stub", () => {
-  it("carries a clearly-marked TODO(step-4) region, not a real billing UI", () => {
-    expect(modalSource).toMatch(/TODO\(step-4\)/);
-    expect(modalSource).toMatch(/function BillingSection/);
-    // Guardrail against accidentally shipping Step 3/4's scope early — the
-    // TODO comment may (and does) name the future stripe.ts procedures for
-    // Step 4's benefit, but BillingSection's own function body must not
-    // actually CALL any of them yet.
-    const start = modalSource.indexOf("function BillingSection");
-    expect(start).toBeGreaterThan(-1);
-    // BillingSection is the last function in the file — slice to EOF.
-    const billingSectionBody = modalSource.slice(start);
-    expect(billingSectionBody).not.toMatch(/trpc\.stripe\./);
-    expect(billingSectionBody).not.toMatch(/\.useQuery\(|\.useMutation\(/);
+describe("Billing pane — real implementation (Round 3 Step 4)", () => {
+  // Step 2 shipped a placeholder here (a `function BillingSection` defined
+  // inline in this file, with a TODO(step-4) comment and a guardrail
+  // asserting it made zero trpc.stripe.* calls). Step 4 replaces that stub
+  // with the real pane, extracted to its own file (BillingSection.tsx,
+  // >250 lines of JSX — the task's explicit extraction allowance) since the
+  // full plan-card/history/payment-methods/billing-info/cancel-confirm
+  // contract has its own dedicated source-contract suite there
+  // (BillingSection.test.ts). What's left to assert here is intent-
+  // preserving: the stub and its TODO are gone, and SettingsModal.tsx wires
+  // the real component in at the same call site Step 2 documented as the
+  // insertion point (r3-task-2-report.md).
+  it("no longer carries the Step 2 TODO(step-4) stub or an inline BillingSection", () => {
+    expect(modalSource).not.toMatch(/TODO\(step-4\)/);
+    expect(modalSource).not.toMatch(/function BillingSection/);
+  });
+
+  it("imports the extracted BillingSection and mounts it with isOwner", () => {
+    expect(modalSource).toMatch(
+      /import BillingSection from "\.\/BillingSection";/
+    );
+    expect(modalSource).toMatch(/<BillingSection isOwner=\{isOwner\} \/>/);
+  });
+
+  it("Billing only ever mounts while its own tab is active — the same section-switcher ternary that already gates Account, which is also what satisfies 'gate every billing query on modal-open + billing-section-active': BillingSection cannot exist in the tree unless open && section === 'billing'", () => {
+    const contentIdx = modalSource.indexOf('className="dc-sm-content"');
+    expect(contentIdx).toBeGreaterThan(-1);
+    const ternaryIdx = modalSource.indexOf(
+      'section === "account" ? (',
+      contentIdx
+    );
+    expect(ternaryIdx).toBeGreaterThan(contentIdx);
+    const accountIdx = modalSource.indexOf("<AccountSection", ternaryIdx);
+    const billingIdx = modalSource.indexOf("<BillingSection", ternaryIdx);
+    expect(accountIdx).toBeGreaterThan(ternaryIdx);
+    expect(billingIdx).toBeGreaterThan(accountIdx);
   });
 });
 
