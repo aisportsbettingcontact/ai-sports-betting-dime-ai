@@ -53,7 +53,7 @@
  * "negative/no-edge states are grey, never red" rule.
  */
 
-import { useState } from "react";
+import { useEffect, useRef, useState, type MutableRefObject } from "react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
 import { ExternalLink } from "lucide-react";
@@ -113,10 +113,19 @@ export default function BillingSection({ isOwner }: BillingSectionProps) {
   const [, navigate] = useLocation();
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
   const utils = trpc.useUtils();
+  // The "Cancel" trigger PlanCard renders — CancelConfirm returns focus here
+  // on close (either path), matching this modal's own focus-return
+  // convention (SettingsModal.tsx's findReturnFocusTarget/trigger.focus()).
+  const cancelTriggerRef = useRef<HTMLButtonElement | null>(null);
 
   const invalidatePlan = () => {
     utils.stripe.getPlanStatus.invalidate();
     utils.stripe.getSubscription.invalidate();
+    // Sidebar tier badge + expiry line read appUser via useAppAuth ->
+    // trpc.appUsers.me (sidebarIdentity.ts), not the stripe.* queries above —
+    // without this it goes stale after Cancel/Renew. Same precedent
+    // ManageAccount.tsx:92,106 already established for these two mutations.
+    utils.appUsers.me.invalidate();
   };
 
   const portalMutation = trpc.stripe.createPortalSession.useMutation({
@@ -168,6 +177,7 @@ export default function BillingSection({ isOwner }: BillingSectionProps) {
         onRenew={() => reactivateMutation.mutate()}
         renewPending={reactivateMutation.isPending}
         onOpenCancelConfirm={() => setCancelConfirmOpen(true)}
+        cancelTriggerRef={cancelTriggerRef}
       />
 
       {cancelConfirmOpen && (
@@ -175,6 +185,7 @@ export default function BillingSection({ isOwner }: BillingSectionProps) {
           pending={cancelMutation.isPending}
           onConfirm={() => cancelMutation.mutate()}
           onKeep={() => setCancelConfirmOpen(false)}
+          triggerRef={cancelTriggerRef}
         />
       )}
 
@@ -207,11 +218,13 @@ function PlanCard({
   onRenew,
   renewPending,
   onOpenCancelConfirm,
+  cancelTriggerRef,
 }: {
   onUpgrade: () => void;
   onRenew: () => void;
   renewPending: boolean;
   onOpenCancelConfirm: () => void;
+  cancelTriggerRef: MutableRefObject<HTMLButtonElement | null>;
 }) {
   const query = trpc.stripe.getPlanStatus.useQuery();
 
@@ -293,6 +306,7 @@ function PlanCard({
         {status.state === "active" && (
           <button
             type="button"
+            ref={cancelTriggerRef}
             className="dc-sm-pill dc-sm-pill--ghost dc-hv2 dc-focusable dc-pressable"
             onClick={onOpenCancelConfirm}
           >
@@ -312,11 +326,27 @@ function CancelConfirm({
   pending,
   onConfirm,
   onKeep,
+  triggerRef,
 }: {
   pending: boolean;
   onConfirm: () => void;
   onKeep: () => void;
+  triggerRef: MutableRefObject<HTMLButtonElement | null>;
 }) {
+  const keepButtonRef = useRef<HTMLButtonElement | null>(null);
+
+  // role="alertdialog" moves focus nowhere on its own — a11y requires the
+  // caller to. On open: focus the neutral "Keep plan" (safe default for a
+  // destructive prompt, matching SettingsModal.tsx's own dialog-focus
+  // convention). On close (Keep or Cancel — either path unmounts this),
+  // return focus to the "Cancel plan" trigger this panel was opened from.
+  useEffect(() => {
+    keepButtonRef.current?.focus();
+    return () => {
+      triggerRef.current?.focus();
+    };
+  }, [triggerRef]);
+
   return (
     <div
       className="dc-sm-cancel-confirm dc-sm-cancel-confirm--enter"
@@ -327,6 +357,7 @@ function CancelConfirm({
       <div className="dc-sm-cancel-actions">
         <button
           type="button"
+          ref={keepButtonRef}
           className="dc-sm-pill dc-sm-pill--ghost dc-hv2 dc-focusable dc-pressable"
           onClick={onKeep}
         >
