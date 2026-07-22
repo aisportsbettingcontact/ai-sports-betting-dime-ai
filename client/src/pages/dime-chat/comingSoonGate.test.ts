@@ -58,9 +58,11 @@ describe("real identity — no frozen sample renders (Phase 1)", () => {
     expect(chatSource).toMatch(/formatExpiryLine\(appUser\.expiryDate\)/);
   });
 
-  it("expiry and Discord rows hide when the data is absent — no placeholders", () => {
+  // [ROUND 3 STEP 1 — owner directive 2026-07-22] The Discord Connected row
+  // this test used to also pin is cut from the popover entirely (not merely
+  // conditionally hidden) — see "account popover v2" below for that contract.
+  it("expiry row hides when the data is absent — no placeholder", () => {
     expect(chatSource).toMatch(/\{expiryLine && \(/);
-    expect(chatSource).toMatch(/\{appUser\.discordUsername && \(/);
   });
 
   it("avatar policy: prez photo exclusive; Discord avatar when linked; blank silhouette otherwise", () => {
@@ -100,8 +102,11 @@ describe("live settings menu (Phase 1.3)", () => {
     expect(chatSource).toMatch(/onClick=\{onLogout\}/);
   });
 
-  it("navigates Edit Profile / Upgrade / Cancel to real routes", () => {
-    expect(chatSource).toMatch(/goTo\("\/profile"\)/);
+  // [ROUND 3 STEP 1 — owner directive 2026-07-22] "Edit Profile" no longer
+  // navigates from this popover — the row was cut (see "account popover v2"
+  // below); goTo("/profile") has no remaining call site. Upgrade/Cancel are
+  // untouched by the amendment, so those two assertions carry over as-is.
+  it("navigates Upgrade / Cancel to real routes", () => {
     expect(chatSource).toMatch(/goTo\("\/checkout"\)/);
     expect(chatSource).toMatch(/goTo\("\/account"\)/);
   });
@@ -111,6 +116,115 @@ describe("live settings menu (Phase 1.3)", () => {
       /const showPlanCtas = !!appUser && !isOwner && !isLifetimeMember\(appUser\)/
     );
     expect(chatSource).toMatch(/\{showPlanCtas && \(\s*<div className="dc-menu-cta-row">/);
+  });
+});
+
+describe("account popover v2 (Round 3 Step 1, owner directive 2026-07-22)", () => {
+  it("cuts Edit Profile and Discord Connected from the popover — no trace in source", () => {
+    // The rows are gone; goTo("/profile") had exactly two call sites (both of
+    // these rows) and neither survives the amendment. "Discord Connected:"
+    // was the row's exact literal text — its absence is unambiguous, unlike
+    // bare "Edit Profile" which now also appears inside this amendment's own
+    // explanatory comment.
+    expect(chatSource).not.toMatch(/goTo\("\/profile"\)/);
+    expect(chatSource).not.toContain("Discord Connected:");
+    // No <button> anywhere still renders the literal "Edit Profile" label —
+    // scan JSX-only lines (a bare ">Edit Profile<" would appear if a button
+    // opened and closed around the text on adjoining lines; the row's real
+    // shape was multi-line, so match the specific line that held it instead).
+    expect(chatSource).not.toMatch(/^\s*Edit Profile\s*$/m);
+  });
+
+  it("still derives every identity field the removed rows depended on (logic kept, only the menu rows are gone)", () => {
+    // sidebarIdentity + resolveAvatarSrc are untouched — /profile and the
+    // Discord identity plumbing still work, just from Settings in Step 2.
+    expect(chatSource).toMatch(/formatHandle\(appUser\.username\)/);
+    expect(chatSource).toMatch(/resolveAvatarSrc\(user\)/);
+  });
+
+  it("renders the row set in order: Theme, Settings, [Admin Dashboard], divider, Log Out", () => {
+    const viewportIdx = chatSource.indexOf('<div className="dc-menu-viewport"');
+    const themeRowIdx = chatSource.indexOf("<SunMoon", viewportIdx);
+    const settingsRowIdx = chatSource.indexOf("<SettingsIcon", viewportIdx);
+    const adminRowIdx = chatSource.indexOf("<ShieldCheck", viewportIdx);
+    const logOutIdx = chatSource.indexOf(
+      'className="dc-menu-item dc-menu-item--strong',
+      viewportIdx
+    );
+    expect(viewportIdx).toBeGreaterThan(-1);
+    expect(themeRowIdx).toBeGreaterThan(viewportIdx);
+    expect(settingsRowIdx).toBeGreaterThan(themeRowIdx);
+    expect(adminRowIdx).toBeGreaterThan(settingsRowIdx);
+    expect(logOutIdx).toBeGreaterThan(adminRowIdx);
+  });
+
+  it("gates the Admin Dashboard row on the server-verified isOwner prop, not a username check", () => {
+    // The gate reuses the same `isOwner` prop the sidebar already threads
+    // from useAppAuth()'s server-verified role — not isPrezAccount (username).
+    const adminBlockIdx = chatSource.indexOf("{isOwner && (");
+    const adminButtonIdx = chatSource.indexOf("<ShieldCheck", adminBlockIdx);
+    const adminOnClickIdx = chatSource.indexOf(
+      'onClick={() => goTo("/admin/users")}',
+      adminBlockIdx
+    );
+    const adminBlockCloseIdx = chatSource.indexOf(")}", adminButtonIdx);
+    expect(adminBlockIdx).toBeGreaterThan(-1);
+    expect(adminOnClickIdx).toBeGreaterThan(adminBlockIdx);
+    expect(adminOnClickIdx).toBeLessThan(adminButtonIdx);
+    expect(adminButtonIdx).toBeLessThan(adminBlockCloseIdx);
+  });
+
+  it("Theme row drills into a segmented System|Light|Dark radiogroup driven by ThemeContext's mode", () => {
+    expect(chatSource).toMatch(
+      /const \{ mode: themeMode, setMode: setThemeMode \} = useTheme\(\)/
+    );
+    expect(chatSource).toMatch(/onClick=\{\(\) => setMenuView\("theme"\)\}/);
+    expect(chatSource).toMatch(/onClick=\{\(\) => setMenuView\("root"\)\}/);
+    expect(chatSource).toMatch(/role="radiogroup"/);
+    expect(chatSource).toMatch(/role="radio"/);
+    expect(chatSource).toMatch(/aria-checked=\{themeMode === optMode\}/);
+    expect(chatSource).toMatch(/onClick=\{\(\) => setThemeMode\?\.\(optMode\)\}/);
+    expect(chatSource).toMatch(/THEME_MODE_OPTIONS\.map/);
+  });
+
+  it("Theme options are exactly System, Light, Dark in that order", () => {
+    expect(chatSource).toMatch(
+      /const THEME_MODE_OPTIONS: Array<\{[\s\S]{0,120}\}> = \[\s*\{ mode: "system", label: "System", Icon: Monitor \},\s*\{ mode: "light", label: "Light", Icon: Sun \},\s*\{ mode: "dark", label: "Dark", Icon: Moon \},\s*\];/
+    );
+  });
+
+  it("Settings row is wired to the real onOpenSettings callback that opens SettingsModal — not a route, and no longer described as a stale no-op", () => {
+    expect(chatSource).toMatch(/onOpenSettings\?: \(\) => void/);
+    // [PRE-MERGE FIX 2026-07-22] The Step 1 TODO(step-2) marker on this row's
+    // own comments ("opens nothing yet" / "No-op until then") was stale —
+    // the modal has been wired since Step 2. Those two comments now describe
+    // reality; the source still legitimately mentions TODO(step-2) once more
+    // elsewhere (the settingsOpen state comment, a historical cross-reference
+    // to Step 1's hook, not a claim that Settings does nothing).
+    expect(chatSource).not.toMatch(/Settings row opens nothing yet/);
+    expect(chatSource).not.toMatch(/No-op until then/);
+    expect(chatSource).toMatch(/opens the real Settings modal/i);
+    expect(chatSource).toMatch(/onOpenSettings\?\.\(\)/);
+    // It closes the popover but never calls goTo/navigate.
+    const settingsBtnIdx = chatSource.indexOf("<SettingsIcon");
+    const settingsHandlerStart = chatSource.lastIndexOf("onClick={() => {", settingsBtnIdx);
+    const settingsHandlerEnd = chatSource.indexOf("}}", settingsHandlerStart);
+    const settingsHandlerBody = chatSource.slice(settingsHandlerStart, settingsHandlerEnd);
+    expect(settingsHandlerBody).toContain("setMenuOpen(false)");
+    expect(settingsHandlerBody).not.toMatch(/goTo\(/);
+  });
+
+  it("the slide is the ONE frozen 160ms curve via a plain CSS transition, not a keyframe animation", () => {
+    expect(cssSource).toMatch(
+      /\.dc-menu-slider \{[^}]*transition: transform 160ms cubic-bezier\(0\.16, 1, 0\.3, 1\);[^}]*\}/
+    );
+    expect(cssSource).not.toMatch(/@keyframes dcMenuSlide/);
+  });
+
+  it("reduced motion collapses the slide + height sync to an instant swap", () => {
+    expect(cssSource).toMatch(
+      /@media \(prefers-reduced-motion: reduce\) \{[\s\S]*\.dc-menu-viewport \{ transition: none; \}[\s\S]*\.dc-menu-slider \{ transition: none; \}[\s\S]*\}/
+    );
   });
 });
 

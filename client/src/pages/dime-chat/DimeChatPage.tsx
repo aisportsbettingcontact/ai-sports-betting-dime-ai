@@ -70,12 +70,20 @@ import {
   BrainCircuit,
   ChartCandlestick,
   ChartSpline,
+  ChevronLeft,
+  ChevronRight,
   Ellipsis,
   Eraser,
+  Monitor,
+  Moon,
   MessageSquarePlus,
   NotebookPen,
   PanelLeftClose,
   PanelLeftOpen,
+  Settings as SettingsIcon,
+  ShieldCheck,
+  Sun,
+  SunMoon,
   Target,
   TextSearch,
   Trash2,
@@ -84,7 +92,9 @@ import {
 import { trpc } from "@/lib/trpc";
 import { useAppAuth } from "@/_core/hooks/useAppAuth";
 import type { DimeProductPane } from "../dime-shell/productRoute";
+import type { ThemeMode } from "../../contexts/ThemeContext";
 import prezAvatarUrl from "./assets/prez-avatar.jpg";
+import SettingsModal from "./SettingsModal";
 import "./frozen-tokens.css";
 import "./conversation.css";
 
@@ -202,6 +212,18 @@ function PillGlyph() {
 const GEAR_PATH =
   "M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"; // D/L:94
 
+/** Account popover v2 Theme row (owner directive 2026-07-22): the segmented
+ *  System | Light | Dark options, in display order. */
+const THEME_MODE_OPTIONS: Array<{
+  mode: ThemeMode;
+  label: string;
+  Icon: LucideIcon;
+}> = [
+  { mode: "system", label: "System", Icon: Monitor },
+  { mode: "light", label: "Light", Icon: Sun },
+  { mode: "dark", label: "Dark", Icon: Moon },
+];
+
 /* ----------------------------------------------------------------- */
 /* Sidebar — D/L:54-96                                                */
 /* ----------------------------------------------------------------- */
@@ -260,6 +282,7 @@ function DimeSidebar({
   onShellNavigate,
   appUser,
   isOwner,
+  onOpenSettings,
 }: {
   onNewChat: () => void;
   recentChats: ThreadSummary[];
@@ -277,9 +300,25 @@ function DimeSidebar({
   onShellNavigate?: (href: string) => void;
   appUser: SidebarUser | null;
   isOwner: boolean;
+  /** Settings row opens the real Settings modal (Username · Discord ·
+   *  Reset Password · Billing) via this handler — wired in Round 3 Step 2
+   *  (DimeChatPage passes setSettingsOpen(true) at the <DimeSidebar> call
+   *  site below). No-op only when a caller omits the prop entirely. */
+  onOpenSettings?: () => void;
 }) {
+  const { mode: themeMode, setMode: setThemeMode } = useTheme();
   const [menuOpen, setMenuOpen] = useState(false);
+  // Account popover v2 (owner directive 2026-07-22): which pane of the
+  // popover's sliding viewport is showing — the row list, or the Theme
+  // drill-in. Always resets to "root" on close (effect below) so reopening
+  // never surprises the user mid-panel.
+  const [menuView, setMenuView] = useState<"root" | "theme">("root");
   const profileRef = useRef<HTMLDivElement>(null);
+  const menuViewportRef = useRef<HTMLDivElement | null>(null);
+  const menuRootPaneRef = useRef<HTMLDivElement | null>(null);
+  const menuThemePaneRef = useRef<HTMLDivElement | null>(null);
+  const themeRowBtnRef = useRef<HTMLButtonElement | null>(null);
+  const themeBackBtnRef = useRef<HTMLButtonElement | null>(null);
   // ── Desktop collapse-to-rail + chat search (owner directive 2026-07-21) ──
   const [railCollapsed, setRailCollapsed] = useState(() => {
     if (typeof window === "undefined") return false;
@@ -352,6 +391,42 @@ function DimeSidebar({
       document.removeEventListener("keydown", onKey);
     };
   }, [menuOpen]);
+
+  // Account popover v2 (owner directive 2026-07-22): reset to the row list
+  // whenever the popover closes — reopening should never resume mid-Theme.
+  useEffect(() => {
+    if (!menuOpen) setMenuView("root");
+  }, [menuOpen]);
+
+  // Keep the sliding viewport's height in lockstep with whichever pane is
+  // visible, so the Theme drill-in/back never leaves a gap below the shorter
+  // pane or clips the taller one (apple-design §craft: no layout jump). This
+  // is a plain style write — the CSS `transition: height` on
+  // .dc-menu-viewport (conversation.css, prefers-reduced-motion-gated) does
+  // the animating, redirecting cleanly if the user reverses mid-flight. On
+  // first mount there is nothing painted yet to transition from, so it never
+  // animates in from nothing.
+  useLayoutEffect(() => {
+    if (!menuOpen) return;
+    const viewport = menuViewportRef.current;
+    const pane =
+      menuView === "theme" ? menuThemePaneRef.current : menuRootPaneRef.current;
+    if (!viewport || !pane) return;
+    viewport.style.height = `${pane.scrollHeight}px`;
+  }, [menuOpen, menuView, isOwner]);
+
+  // Focus follows the Theme drill-in/back navigation only — never stranded
+  // on a now-offscreen row (apple-design: focus preserved). Deliberately
+  // scoped to menuView *transitions* (not menu open/close) so opening the
+  // popover keeps its existing focus behavior untouched.
+  const prevMenuViewRef = useRef<"root" | "theme">("root");
+  useEffect(() => {
+    if (menuOpen && prevMenuViewRef.current !== menuView) {
+      if (menuView === "theme") themeBackBtnRef.current?.focus();
+      else themeRowBtnRef.current?.focus();
+    }
+    prevMenuViewRef.current = menuView;
+  }, [menuOpen, menuView]);
 
   // Row "…" menu shares the settings menu's dismissal contract: outside
   // pointer-down or Escape closes it.
@@ -664,27 +739,114 @@ function DimeSidebar({
                 </div>
               )}
               <div className="dc-menu-divider" />
-              <button
-                type="button"
-                role="menuitem"
-                className="dc-menu-item dc-hv2 dc-focusable dc-pressable"
-                onClick={() => goTo("/profile")}
-              >
-                Edit Profile
-              </button>
-              {appUser.discordUsername && (
-                <button
-                  type="button"
-                  role="menuitem"
-                  className="dc-menu-item dc-hv2 dc-focusable dc-pressable"
-                  onClick={() => goTo("/profile")}
+              {/* Account popover v2 (owner directive 2026-07-22: amends the
+                  frozen D/L:89-90 rows — "Edit Profile" and "Discord
+                  Connected" are cut from this popover; their content moves
+                  to Settings in Step 2, and the /profile route + identity
+                  helpers they used are untouched). Two panes sit side by
+                  side in a 200%-wide flex row; toggling menuView swaps which
+                  one is in view via one 160ms transform transition. DOM
+                  order is [theme pane, root pane] on purpose: the resting
+                  transform is translateX(-50%), so entering the Theme pane
+                  always moves the slider RIGHTWARD (owner spec: "slides ...
+                  left to right") and Back retraces the identical path in
+                  reverse (apple-design §7 spatial consistency: enter/exit
+                  share one path). */}
+              <div className="dc-menu-viewport" ref={menuViewportRef}>
+                <div
+                  className={`dc-menu-slider${
+                    menuView === "theme" ? " dc-menu-slider--theme" : ""
+                  }`}
                 >
-                  Discord Connected:{" "}
-                  <span className="dc-menu-accent">
-                    {formatHandle(appUser.discordUsername)}
-                  </span>
-                </button>
-              )}
+                  <div
+                    className="dc-menu-pane"
+                    ref={menuThemePaneRef}
+                    aria-hidden={menuView !== "theme"}
+                    inert={menuView !== "theme"}
+                  >
+                    <button
+                      type="button"
+                      ref={themeBackBtnRef}
+                      className="dc-menu-back dc-hv2 dc-focusable dc-pressable"
+                      aria-label="Back to account menu"
+                      onClick={() => setMenuView("root")}
+                    >
+                      <ChevronLeft size={16} strokeWidth={1.8} aria-hidden="true" />
+                      Theme
+                    </button>
+                    <div
+                      className="dc-theme-segment"
+                      role="radiogroup"
+                      aria-label="Theme"
+                    >
+                      {THEME_MODE_OPTIONS.map(({ mode: optMode, label, Icon }) => (
+                        <button
+                          key={optMode}
+                          type="button"
+                          role="radio"
+                          aria-checked={themeMode === optMode}
+                          className={`dc-theme-option dc-hv2 dc-focusable dc-pressable${
+                            themeMode === optMode ? " is-active" : ""
+                          }`}
+                          onClick={() => setThemeMode?.(optMode)}
+                        >
+                          <Icon size={15} strokeWidth={1.8} aria-hidden="true" />
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div
+                    className="dc-menu-pane"
+                    ref={menuRootPaneRef}
+                    aria-hidden={menuView === "theme"}
+                    inert={menuView === "theme"}
+                  >
+                    <button
+                      type="button"
+                      ref={themeRowBtnRef}
+                      role="menuitem"
+                      className="dc-menu-item dc-menu-item--icon dc-hv2 dc-focusable dc-pressable"
+                      aria-haspopup="menu"
+                      onClick={() => setMenuView("theme")}
+                    >
+                      <SunMoon size={16} strokeWidth={1.8} aria-hidden="true" />
+                      <span className="dc-menu-item-label">Theme</span>
+                      <ChevronRight
+                        size={15}
+                        strokeWidth={1.8}
+                        aria-hidden="true"
+                        className="dc-menu-item-chevron"
+                      />
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className="dc-menu-item dc-menu-item--icon dc-hv2 dc-focusable dc-pressable"
+                      onClick={() => {
+                        setMenuOpen(false);
+                        // Opens the real Settings modal (Username · Discord ·
+                        // Reset Password · Billing) — wired in Round 3 Step 2.
+                        onOpenSettings?.();
+                      }}
+                    >
+                      <SettingsIcon size={16} strokeWidth={1.8} aria-hidden="true" />
+                      <span className="dc-menu-item-label">Settings</span>
+                    </button>
+                    {isOwner && (
+                      <button
+                        type="button"
+                        role="menuitem"
+                        className="dc-menu-item dc-menu-item--icon dc-hv2 dc-focusable dc-pressable"
+                        onClick={() => goTo("/admin/users")}
+                      >
+                        <ShieldCheck size={16} strokeWidth={1.8} aria-hidden="true" />
+                        <span className="dc-menu-item-label">Admin Dashboard</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
               <div className="dc-menu-divider" />
               <button
                 type="button"
@@ -1058,6 +1220,11 @@ export default function DimeChatPage({
   // History reads/writes need a real authenticated owner session — previewMode
   // grants the visual surface only, never the tRPC history calls.
   const historyReady = !!appUser && isOwner;
+
+  // Settings modal (Round 3 Step 2, owner directive 2026-07-22): the
+  // popover's Settings row (Step 1's onOpenSettings hook, TODO(step-2))
+  // opens this; it closes itself and returns focus to the sidebar trigger.
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const [state, dispatch] = useReducer(chatReducer, initialChatState);
   const [input, setInput] = useState("");
@@ -2087,6 +2254,7 @@ export default function DimeChatPage({
           onShellNavigate={shell?.onNavigate}
           appUser={appUser}
           isOwner={isOwner}
+          onOpenSettings={() => setSettingsOpen(true)}
         />
 
         {compact && drawerOpen && (
@@ -2362,6 +2530,14 @@ export default function DimeChatPage({
             </div>
           );
         })()}
+
+        <SettingsModal
+          open={settingsOpen}
+          onClose={() => setSettingsOpen(false)}
+          appUser={appUser}
+          isOwner={isOwner}
+          sidebarRef={sidebarRef}
+        />
       </div>
     </div>
   );
