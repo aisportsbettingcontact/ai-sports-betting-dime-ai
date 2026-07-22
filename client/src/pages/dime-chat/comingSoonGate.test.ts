@@ -193,9 +193,17 @@ describe("account popover v2 (Round 3 Step 1, owner directive 2026-07-22)", () =
     );
   });
 
-  it("Settings row is wired to an onOpenSettings callback with a Step 2 TODO — not a route", () => {
+  it("Settings row is wired to the real onOpenSettings callback that opens SettingsModal — not a route, and no longer described as a stale no-op", () => {
     expect(chatSource).toMatch(/onOpenSettings\?: \(\) => void/);
-    expect(chatSource).toMatch(/TODO\(step-2\)/);
+    // [PRE-MERGE FIX 2026-07-22] The Step 1 TODO(step-2) marker on this row's
+    // own comments ("opens nothing yet" / "No-op until then") was stale —
+    // the modal has been wired since Step 2. Those two comments now describe
+    // reality; the source still legitimately mentions TODO(step-2) once more
+    // elsewhere (the settingsOpen state comment, a historical cross-reference
+    // to Step 1's hook, not a claim that Settings does nothing).
+    expect(chatSource).not.toMatch(/Settings row opens nothing yet/);
+    expect(chatSource).not.toMatch(/No-op until then/);
+    expect(chatSource).toMatch(/opens the real Settings modal/i);
     expect(chatSource).toMatch(/onOpenSettings\?\.\(\)/);
     // It closes the popover but never calls goTo/navigate.
     const settingsBtnIdx = chatSource.indexOf("<SettingsIcon");

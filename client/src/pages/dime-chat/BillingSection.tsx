@@ -293,7 +293,15 @@ function PlanCard({
             Upgrade
           </button>
         )}
-        {(status.state === "cancel_scheduled" || status.state === "expired") && (
+        {/* Renew is scoped to cancel_scheduled ONLY (pre-merge fix, owner
+            directive 2026-07-22): reactivateSubscription's own body rejects
+            any other state (an "expired" subscription has already fully
+            ended in Stripe — there is nothing left to un-cancel), so an
+            expired user pressing Renew would always error. Upgrade (the
+            public embedded checkout flow above) is the correct CTA there
+            instead — it starts a fresh subscription rather than reactivating
+            a dead one. */}
+        {status.state === "cancel_scheduled" && (
           <button
             type="button"
             className="dc-sm-pill dc-sm-pill--ghost dc-hv2 dc-focusable dc-pressable"
