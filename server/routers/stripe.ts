@@ -8,6 +8,10 @@
  *   stripe.publicCreateCheckoutSession — creates a Stripe Checkout session (unauthenticated)
  *   stripe.getSubscription             — returns the current user's subscription status
  *   stripe.createPortalSession         — creates a Stripe Customer Portal session
+ *   stripe.getPlanStatus               — own-data plan state (active/cancel_scheduled/expired/none)
+ *   stripe.getInvoices                 — own-data billing history (Stripe API, capped 24)
+ *   stripe.getPaymentMethods           — own-data saved cards (Stripe API)
+ *   stripe.getBillingInfo              — own-data name/email/address (Stripe customer)
  *
  * Flow:
  *   - Unauthenticated user clicks "Click Here" → publicCreateCheckoutSession is called
@@ -20,17 +24,21 @@
 
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
+import { parse as parseCookieHeader } from "cookie";
+import type { Request } from "express";
 import { router, stripeProcedure } from "../_core/trpc";
 import { stripeAppUserProcedure } from "./appUsers";
 import { getStripe } from "../stripe/client";
 import { PLANS, NEW_PLAN_IDS, getPlanByPriceId, computeExpiryMs, type PlanId } from "../stripe/products";
-import { getDb, invalidateAppUserByIdCache, updateAppUser } from "../db";
+import { derivePlanStatus } from "../stripe/planStatus";
+import type { BillingInvoice, BillingPaymentMethod, BillingInfo } from "../stripe/billingTypes";
+import { getDb, getAppUserById, invalidateAppUserByIdCache, updateAppUser } from "../db";
 import { appUsers } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { syncDiscordRoleForUser } from "../discord/discordRoleSync";
-import { invalidateCachedAppUser } from "../dbCircuitBreaker";
-import { signAppUserToken, APP_USER_COOKIE } from "./appUsers";
+import { getCachedAppUser, setCachedAppUser, invalidateCachedAppUser } from "../dbCircuitBreaker";
+import { signAppUserToken, verifyAppUserToken, APP_USER_COOKIE } from "./appUsers";
 import { getSessionCookieOptions } from "../_core/cookies";
 
 const TAG = "[tRPC][stripe]";
@@ -38,6 +46,60 @@ const TAG = "[tRPC][stripe]";
 // ─── Input validation ─────────────────────────────────────────────────────────
 
 const zodPlanId = z.enum(["monthly", "annual", "pro", "sharp", "operator"]);
+
+// ─── Billing-tab auth (read-only, own-data-only) ──────────────────────────────
+
+function getAppSessionToken(req: Request): string | undefined {
+  const cookies = parseCookieHeader(req.headers.cookie ?? "");
+  return cookies[APP_USER_COOKIE];
+}
+
+/**
+ * billingAppUserProcedure
+ *
+ * Authenticated app user WITHOUT the hasAccess/expiry gate that
+ * stripeAppUserProcedure (server/routers/appUsers.ts) applies.
+ *
+ * That gate throws FORBIDDEN before a procedure body ever runs once
+ * hasAccess=false or Date.now() > expiryDate — which is exactly the caller
+ * this billing tab must keep serving: a lapsed subscriber who needs to see
+ * state:"expired" (and their invoice/payment-method/billing-info history) so
+ * they can renew, not a generic error page. Session validity (cookie + JWT +
+ * tokenVersion) is still required; only the access-level check is skipped.
+ *
+ * Same DB-resilient cache fallback as the other app-user middlewares.
+ */
+const billingAppUserProcedure = stripeProcedure.use(async ({ ctx, next }) => {
+  const TAGB = "[AppAuth][billingAppUserProcedure]";
+  const token = getAppSessionToken(ctx.req);
+  if (!token) {
+    console.log(`${TAGB} REJECTED — no app_session cookie`);
+    throw new TRPCError({ code: "UNAUTHORIZED", message: "Not authenticated" });
+  }
+  const payload = await verifyAppUserToken(token);
+  if (!payload) throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid session" });
+
+  let user = await getAppUserById(payload.userId);
+  const fromCache = !user;
+  if (!user) {
+    user = getCachedAppUser(payload.userId);
+    if (user) {
+      console.log(`${TAGB} DB unavailable — serving userId=${payload.userId} from cache`);
+    }
+  } else {
+    setCachedAppUser(user);
+  }
+  if (!user) {
+    console.log(`${TAGB} REJECTED — userId=${payload.userId} not found`);
+    throw new TRPCError({ code: "UNAUTHORIZED", message: "User not found" });
+  }
+  if (!fromCache && payload.tv !== null && payload.tv !== user.tokenVersion) {
+    console.log(`${TAGB} REJECTED — tokenVersion mismatch userId=${user.id}`);
+    throw new TRPCError({ code: "UNAUTHORIZED", message: "Session invalidated. Please log in again." });
+  }
+  // No hasAccess / expiryDate check by design — see doc comment above.
+  return next({ ctx: { ...ctx, appUser: user } });
+});
 
 // ─── Auto-renewal disclosure copy (subscription_data.description) ─────────────
 
@@ -803,5 +865,179 @@ export const stripeRouter = router({
     console.log(`${TAG4} [OUTPUT] subscription reactivated userId=${user.id}`);
     console.log(`${TAG4} [VERIFY] PASS`);
     return { success: true };
+  }),
+
+  // ─── Read-only billing data layer (Round-3 Step 3) ──────────────────────────
+  // Own-data-only: every procedure below reads exclusively from ctx.appUser —
+  // no foreign user id is ever accepted as input. All four resolve to a
+  // graceful empty/none shape (never an error) when the caller has no
+  // stripeCustomerId. Built on billingAppUserProcedure (not
+  // stripeAppUserProcedure) so a lapsed subscriber can still load this tab —
+  // see that middleware's doc comment above for why.
+
+  /**
+   * getPlanStatus
+   *
+   * Derives { state, planId, planLabel, governingDate } via the pure
+   * derivePlanStatus() (server/stripe/planStatus.ts) — reads only the local
+   * DB row already on ctx.appUser, no Stripe API call.
+   */
+  getPlanStatus: billingAppUserProcedure.query(async ({ ctx }) => {
+    const TAGS = `${TAG}[getPlanStatus]`;
+    const user = ctx.appUser;
+    console.log(`${TAGS} [INPUT] userId=${user.id} stripeCustomerId=${user.stripeCustomerId ?? '(none)'} stripePlanId=${user.stripePlanId ?? '(none)'}`);
+
+    const status = derivePlanStatus(user, Date.now());
+
+    console.log(`${TAGS} [OUTPUT] userId=${user.id} state=${status.state} planId=${status.planId ?? '(none)'} governingDate=${status.governingDate ?? '(none)'}`);
+    console.log(`${TAGS} [VERIFY] PASS`);
+    return status;
+  }),
+
+  /**
+   * getInvoices
+   *
+   * Own-data-only invoice history from the Stripe API, newest first, capped
+   * at 24. Empty array (not an error) when the user has no stripeCustomerId.
+   */
+  getInvoices: billingAppUserProcedure.query(async ({ ctx }) => {
+    const TAGI = `${TAG}[getInvoices]`;
+    const user = ctx.appUser;
+    console.log(`${TAGI} [INPUT] userId=${user.id} stripeCustomerId=${user.stripeCustomerId ?? '(none)'}`);
+
+    if (!user.stripeCustomerId) {
+      console.log(`${TAGI} [OUTPUT] userId=${user.id} no stripeCustomerId — returning empty list`);
+      return [] as BillingInvoice[];
+    }
+
+    const stripe = getStripe();
+    let invoices;
+    try {
+      invoices = await stripe.invoices.list({
+        customer: user.stripeCustomerId,
+        limit: 24,
+      });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`${TAGI} [VERIFY] FAIL — Stripe API error: ${msg}`);
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to load billing history. Please try again.',
+      });
+    }
+
+    const result: BillingInvoice[] = invoices.data.map((inv) => ({
+      date: inv.created * 1000,
+      amountCents: inv.amount_paid || inv.amount_due || 0,
+      currency: inv.currency,
+      status: inv.status ?? 'unknown',
+      hostedInvoiceUrl: inv.hosted_invoice_url ?? null,
+    }));
+
+    console.log(`${TAGI} [OUTPUT] userId=${user.id} count=${result.length}`);
+    console.log(`${TAGI} [VERIFY] PASS`);
+    return result;
+  }),
+
+  /**
+   * getPaymentMethods
+   *
+   * Own-data-only saved-card list from the Stripe API. Empty array (not an
+   * error) when the user has no stripeCustomerId. isDefault is resolved
+   * against the customer's invoice_settings.default_payment_method.
+   */
+  getPaymentMethods: billingAppUserProcedure.query(async ({ ctx }) => {
+    const TAGP = `${TAG}[getPaymentMethods]`;
+    const user = ctx.appUser;
+    console.log(`${TAGP} [INPUT] userId=${user.id} stripeCustomerId=${user.stripeCustomerId ?? '(none)'}`);
+
+    if (!user.stripeCustomerId) {
+      console.log(`${TAGP} [OUTPUT] userId=${user.id} no stripeCustomerId — returning empty list`);
+      return [] as BillingPaymentMethod[];
+    }
+
+    const stripe = getStripe();
+    let defaultPaymentMethodId: string | null = null;
+    let methods;
+    try {
+      const [customer, pmList] = await Promise.all([
+        stripe.customers.retrieve(user.stripeCustomerId),
+        stripe.paymentMethods.list({ customer: user.stripeCustomerId, type: 'card' }),
+      ]);
+      methods = pmList;
+      if (!customer.deleted) {
+        const defaultPm = customer.invoice_settings?.default_payment_method;
+        defaultPaymentMethodId = typeof defaultPm === 'string' ? defaultPm : defaultPm?.id ?? null;
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`${TAGP} [VERIFY] FAIL — Stripe API error: ${msg}`);
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to load payment methods. Please try again.',
+      });
+    }
+
+    const result: BillingPaymentMethod[] = methods.data
+      .filter((pm): pm is typeof pm & { card: NonNullable<typeof pm.card> } => !!pm.card)
+      .map((pm) => ({
+        brand: pm.card.brand,
+        last4: pm.card.last4,
+        expMonth: pm.card.exp_month,
+        expYear: pm.card.exp_year,
+        isDefault: pm.id === defaultPaymentMethodId,
+      }));
+
+    console.log(`${TAGP} [OUTPUT] userId=${user.id} count=${result.length}`);
+    console.log(`${TAGP} [VERIFY] PASS`);
+    return result;
+  }),
+
+  /**
+   * getBillingInfo
+   *
+   * Own-data-only name/email/address pulled from the Stripe customer record.
+   * Empty shape (not an error) when the user has no stripeCustomerId or the
+   * Stripe customer was deleted.
+   */
+  getBillingInfo: billingAppUserProcedure.query(async ({ ctx }) => {
+    const TAGB2 = `${TAG}[getBillingInfo]`;
+    const user = ctx.appUser;
+    console.log(`${TAGB2} [INPUT] userId=${user.id} stripeCustomerId=${user.stripeCustomerId ?? '(none)'}`);
+
+    const empty: BillingInfo = { name: null, email: null, address: null };
+
+    if (!user.stripeCustomerId) {
+      console.log(`${TAGB2} [OUTPUT] userId=${user.id} no stripeCustomerId — returning empty shape`);
+      return empty;
+    }
+
+    const stripe = getStripe();
+    let customer;
+    try {
+      customer = await stripe.customers.retrieve(user.stripeCustomerId);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`${TAGB2} [VERIFY] FAIL — Stripe API error: ${msg}`);
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Failed to load billing information. Please try again.',
+      });
+    }
+
+    if (customer.deleted) {
+      console.warn(`${TAGB2} [STATE] customer deleted in Stripe userId=${user.id}`);
+      return empty;
+    }
+
+    const result: BillingInfo = {
+      name: customer.name ?? null,
+      email: customer.email ?? null,
+      address: customer.address ?? null,
+    };
+
+    console.log(`${TAGB2} [OUTPUT] userId=${user.id} hasAddress=${!!result.address}`);
+    console.log(`${TAGB2} [VERIFY] PASS`);
+    return result;
   }),
 });
