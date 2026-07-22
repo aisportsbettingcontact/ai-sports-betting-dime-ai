@@ -1911,32 +1911,10 @@ export default function PublishProjections() {
 
       {/* Sticky header — mirrors Dashboard header style */}
       <header className="sticky top-0 z-40 bg-black backdrop-blur-sm border-b border-white">
-        {/* Top row: back + brand + publish all */}
+        {/* Top row: publish all — back button and "AI SPORTS BETTING |
+            PUBLISH PROJECTIONS" brand text removed (now owned by
+            AdminShell's back-to-app affordance + wordmark/tab nav) */}
         <div className="relative flex items-center px-4 py-2 max-w-5xl mx-auto">
-
-          {/* Back button */}
-          <button type="button" onClick={() => setLocation("/feed/model/mlb")}
-            className="p-1.5 rounded-lg transition-colors mr-2 flex-shrink-0"
-          >
-            <ChevronLeft size={18} style={{ color: "#FFFFFF" }} />
-          </button>
-
-          {/* Centered brand */}
-          <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 pointer-events-none">
-            <span
-              className="font-black text-white whitespace-nowrap"
-              style={{ fontSize: "clamp(13px, 3vw, 20px)", letterSpacing: "0.08em" }}
-            >
-              AI SPORTS BETTING
-            </span>
-            <span className="text-white" style={{ fontSize: "clamp(10px, 2vw, 14px)" }}>|</span>
-            <span
-              className="font-medium whitespace-nowrap"
-              style={{ fontSize: "clamp(11px, 2.4vw, 16px)", letterSpacing: "0.1em", color: "#FFFFFF" }}
-            >
-              PUBLISH PROJECTIONS
-            </span>
-          </div>
 
           {/* Right: Approve All Models + Publish All */}
           <div className="flex-1" />
