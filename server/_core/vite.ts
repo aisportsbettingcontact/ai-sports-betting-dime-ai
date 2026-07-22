@@ -104,15 +104,45 @@ export function serveStatic(app: Express) {
   );
 
   // ── SSR prerender for bots/crawlers (prod) ────────────────────────────────
-  // MUST be mounted BEFORE express.static: static serves index.html for "/"
-  // (index option defaults on), which shadows the bot prerender entirely —
-  // crawlers would index the SPA shell instead of the landing snapshot.
+  // MUST be mounted BEFORE express.static: static's default `index` option
+  // would otherwise auto-serve index.html for "/" (shadowing the bot
+  // prerender entirely — crawlers would index the SPA shell instead of the
+  // landing snapshot). `index: false` below closes that hole too, but keep
+  // the ordering regardless — this middleware must stay first.
   app.use(landingPrerenderMiddleware);
 
   // ── Other static files (favicon, robots.txt, etc.) ───────────────────────────
-  app.use(express.static(distPath));
+  // [FIX 2026-07-22 stale-bfcache incident] `index: false` stops this
+  // middleware from auto-serving index.html for "/" with its own weak
+  // `Cache-Control: public, max-age=0` — that request now falls through to
+  // the no-store catch-all below, same as every other SPA route.
+  //
+  // Root cause: express.static's default `index: 'index.html'` made "/" the
+  // one HTML-serving route in the app that stayed bfcache-eligible (every
+  // other route already got NO_CACHE_HEADERS below). A tab that last loaded
+  // the bare domain root before a deploy, then restored via browser
+  // back/forward or tab/session restore after the deploy shipped, could get
+  // served a frozen pre-deploy page straight from bfcache — old JS, zero
+  // network requests, nothing in server logs. `index: false` only disables
+  // the directory-index auto-serve; a literal "/index.html" request still
+  // matches this middleware by filename, so `setHeaders` guards that path
+  // explicitly too.
+  app.use(
+    express.static(distPath, {
+      index: false,
+      setHeaders: (res: import('http').ServerResponse, filePath: string) => {
+        if (path.basename(filePath) === "index.html") {
+          for (const [key, value] of Object.entries(NO_CACHE_HEADERS)) {
+            res.setHeader(key, value);
+          }
+        }
+      },
+    })
+  );
 
-  // fall through to index.html if the file doesn't exist
+  // fall through to index.html if the file doesn't exist — also the sole
+  // path "/" (and any other unmatched route) now takes, since the static
+  // mount above no longer auto-serves it.
   // [FIX] Apply no-store headers so iOS Safari never serves a stale cached page.
   app.use("*", (_req, res) => {
     res.set({ ...NO_CACHE_HEADERS });

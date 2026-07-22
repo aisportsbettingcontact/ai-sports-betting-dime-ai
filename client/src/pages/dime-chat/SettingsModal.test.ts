@@ -46,18 +46,31 @@ describe("dialog semantics", () => {
   });
 
   it("closes on scrim click but not on a click inside the dialog", () => {
+    // [Round-3 hotfix 2026-07-22, live-test B4] mousedown unmounted the
+    // dialog mid-gesture, so the cleanup's trigger.focus() lost a race
+    // against the browser's own native mousedown focus reconciliation and
+    // focus stranded on document.body. Moving both handlers to click lets
+    // the gesture (mousedown -> mouseup -> click) finish before the dialog
+    // unmounts, so trigger.focus() actually wins. Escape is untouched.
     const scrimIdx = modalSource.indexOf('className="dc-sm-scrim"');
     expect(scrimIdx).toBeGreaterThan(-1);
-    const scrimOnMouseDown = modalSource.indexOf("onMouseDown={onClose}", scrimIdx);
-    expect(scrimOnMouseDown).toBeGreaterThan(scrimIdx);
+    const scrimOnClick = modalSource.indexOf("onClick={onClose}", scrimIdx);
+    expect(scrimOnClick).toBeGreaterThan(scrimIdx);
+    expect(modalSource).not.toMatch(/dc-sm-scrim"\s*onMouseDown/);
 
     const dialogIdx = modalSource.indexOf('className="dc-sm-dialog', scrimIdx);
-    expect(dialogIdx).toBeGreaterThan(scrimOnMouseDown);
+    expect(dialogIdx).toBeGreaterThan(scrimOnClick);
     const stopPropagationIdx = modalSource.indexOf(
       "event.stopPropagation()",
       dialogIdx
     );
     expect(stopPropagationIdx).toBeGreaterThan(dialogIdx);
+    const panelOnClick = modalSource.indexOf(
+      "onClick={event => event.stopPropagation()}",
+      dialogIdx
+    );
+    expect(panelOnClick).toBeGreaterThan(dialogIdx);
+    expect(modalSource).not.toMatch(/onMouseDown=\{event => event\.stopPropagation\(\)\}/);
   });
 
   it("closes on Escape", () => {
@@ -94,6 +107,20 @@ describe("dialog semantics", () => {
     expect(modalSource).toMatch(/\.dc-settings-trigger/);
     expect(modalSource).toMatch(/\.dc-avatar-btn/);
     expect(modalSource).toMatch(/\.focus\(\)/);
+  });
+
+  it("[Round-3 hotfix 2026-07-22, live-test A5/A8] below 1024px a trigger stranded inside the now-closed, inert drawer is not mistaken for reachable — falls back through .dc-mobile-menu instead of stranding focus on body", () => {
+    // The drawer is hidden purely via a CSS transform on a position:fixed
+    // ancestor; transform never changes the CSSOM offsetParent walk (only
+    // `position` does — verified live), so .dc-settings-trigger/.dc-avatar-btn
+    // inside a closed, inert drawer still report a non-null offsetParent.
+    // The real reachability check also has to rule out an inert ancestor,
+    // and DimeChatPage's `.dc-mobile-menu` (the drawer-open control, which
+    // lives outside the drawer) is the real fallback once both sidebar
+    // candidates are ruled unreachable.
+    expect(modalSource).toMatch(/el\.closest\("\[inert\]"\)/);
+    expect(modalSource).toMatch(/mobileMenuRef/);
+    expect(modalSource).toContain(".dc-mobile-menu");
   });
 
   it("only mounts hooks/logic while `open` — returns null otherwise", () => {
@@ -240,12 +267,24 @@ describe("DimeChatPage.tsx — mounts the modal and wires Step 1's hook", () => 
     // TODO(step-2) comment + the no-goTo contract on the popover's own
     // button — untouched here). This step supplies the real handler at the
     // <DimeSidebar> call site.
-    expect(chatSource).toMatch(
-      /onOpenSettings=\{\(\) => setSettingsOpen\(true\)\}/
-    );
+    expect(chatSource).toMatch(/onOpenSettings=\{\(\) => \{/);
+    expect(chatSource).toContain("setSettingsOpen(true)");
     expect(chatSource).toMatch(
       /const \[settingsOpen, setSettingsOpen\] = useState\(false\)/
     );
+  });
+
+  it("[Round-3 hotfix 2026-07-22, live-test A5/A8] opening Settings below 1024px closes the drawer first — no more two simultaneous aria-modal dialogs", () => {
+    const wireIdx = chatSource.indexOf("onOpenSettings={() => {");
+    expect(wireIdx).toBeGreaterThan(-1);
+    const wireEnd = chatSource.indexOf("}}", wireIdx);
+    expect(wireEnd).toBeGreaterThan(wireIdx);
+    const wireBody = chatSource.slice(wireIdx, wireEnd);
+    expect(wireBody).toMatch(/if \(compact && drawerOpen\) closeDrawer\(false\);/);
+    const closeIdx = wireBody.indexOf("closeDrawer(false)");
+    const openIdx = wireBody.indexOf("setSettingsOpen(true)");
+    expect(closeIdx).toBeGreaterThan(-1);
+    expect(openIdx).toBeGreaterThan(closeIdx);
   });
 
   it("still carries Step 1's TODO(step-2) marker on the popover's own Settings row — this step didn't touch that hook's call site", () => {
@@ -263,5 +302,9 @@ describe("DimeChatPage.tsx — mounts the modal and wires Step 1's hook", () => 
     expect(mountProps).toMatch(/appUser=\{appUser\}/);
     expect(mountProps).toMatch(/isOwner=\{isOwner\}/);
     expect(mountProps).toMatch(/sidebarRef=\{sidebarRef\}/);
+    // [Round-3 hotfix 2026-07-22] the drawer-open hamburger is the real
+    // focus-return fallback below 1024px once Fix 1 closes the drawer out
+    // from under both sidebar triggers — see SettingsModal.tsx.
+    expect(mountProps).toMatch(/mobileMenuRef=\{menuButtonRef\}/);
   });
 });
