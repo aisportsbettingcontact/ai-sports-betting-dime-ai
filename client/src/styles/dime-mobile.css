@@ -319,6 +319,22 @@ html:not(.dark) .cal-panel {
   stroke: var(--dime-mint);
 }
 
+/* Splits desktop subtree: restore border-box sizing. frozen-tokens.css forces
+   content-box on all .dc-page descendants, which inflates every padded
+   min-width in the market columns (the 2026-07-22 1024px divider-cross
+   regression). These components were written assuming Tailwind/preflight
+   border-box semantics. Guarded by e2e/splits-layout.spec.ts.
+   Selector uses .dc-page prefix (specificity 0,2,1) to beat frozen-tokens.css's
+   .dc-page * (0,1,1) regardless of stylesheet load order — dime-mobile.css
+   (global, main.tsx) and frozen-tokens.css (lazy, DimeChatPage.tsx chunk)
+   have no guaranteed relative order once frozen-tokens.css loads later via
+   the lazy DimeAppShell/DimeChatPage chunk, so specificity must decide, not
+   cascade order. */
+.dc-page .bsp-desktop,
+.dc-page .bsp-desktop * {
+  box-sizing: border-box;
+}
+
 /* Split bars: one-accent discipline — away side mint, home side raised
  * grey. Side identity comes from the labels, not team paint. */
 .bsp-bar {
