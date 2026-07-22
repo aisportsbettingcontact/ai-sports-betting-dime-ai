@@ -33,7 +33,7 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { formatMutationError } from "@/lib/errorUtils";
 import {
-  ArrowLeft, Plus, Pencil, Trash2, Shield, User, Crown, RefreshCw,
+  Plus, Pencil, Trash2, Shield, User, Crown, RefreshCw,
   Eye, EyeOff, ChevronDown, ArrowUp, ArrowDown, ChevronsUpDown, X, LogOut, ShieldAlert, BarChart2,
 } from "lucide-react";
 
@@ -812,19 +812,9 @@ export default function UserManagement() {
     <div className="w-full bg-muted/30 text-foreground flex flex-col">
       {/* Header — two-row on mobile, single-row on sm+ */}
       <div className="sticky top-0 z-40 bg-background/95 backdrop-blur border-b w-full supports-[backdrop-filter]:bg-background/80">
-        {/* Row 1: Back + Title */}
+        {/* Row 1: Actions — back button and "USER MANAGEMENT" title removed
+            (now owned by AdminShell's back-to-app affordance + tab nav) */}
         <div className="w-full px-3 sm:px-5 lg:px-8 pt-3 pb-1.5 sm:pb-0 flex items-center gap-2">
-          <button type="button" onClick={() => navigate("/feed/model/mlb")}
-            className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors text-sm flex-shrink-0"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span className="hidden xs:inline">Back</span>
-          </button>
-          <div className="flex-1" />
-          <div className="flex items-center gap-1.5">
-            <Crown className="w-4 h-4 text-primary flex-shrink-0" />
-            <span className="text-sm font-semibold tracking-wider text-foreground whitespace-nowrap">USER MANAGEMENT</span>
-          </div>
           <div className="flex-1" />
           {/* Actions — hidden on mobile, shown inline on sm+ */}
           <div className="hidden sm:flex items-center gap-2">
