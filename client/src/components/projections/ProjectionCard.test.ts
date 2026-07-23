@@ -533,3 +533,121 @@ describe("ProjectionCard — aligned summary mini-grid (Round 4 Wave 2, item 5)"
     expect(edgeHtml + passHtml).not.toMatch(/class="[^"]*\bchip\b[^"]*"/i);
   });
 });
+
+/** Round 4 Wave 3 (docs/superpowers/plans/2026-07-23-feed-desktop-polish.md, item 7 +
+ *  the W1-review fold-in minors; law: design-system/dime-ai/pages/ai-model-projections.md).
+ *  Same DOM-only-harness note as W1/W2 above: hover fills and transitions are CSS, verified
+ *  by reading the actual stylesheet source (what the visual smoke's forced :hover screenshot
+ *  proves) rather than by a CSSOM this vitest environment doesn't have. */
+describe("ProjectionCard — expander hover (Round 4 Wave 3, item 7)", () => {
+  it("the toggle gets the shell row-hover fill on the 160ms brand curve, hover-capable + >=768px only", () => {
+    const item7 = cssBlock(cardCss, "Round 4 Wave 3 — item 7", "Intrinsic reflow (directive");
+    expect(item7).toContain("@media (min-width: 768px) and (hover: hover)");
+    expect(item7).toMatch(
+      /\.projection-card__markets-toggle:hover \{ background: var\(--row-hover, #141414\); color: var\(--foreground, #fff\); \}/,
+    );
+  });
+
+  it("the transition (160ms brand curve, same cubic-bezier as MASTER.md's motion law) lives inside the same gate as the hover fill (item 8 audit-fix)", () => {
+    const item7 = cssBlock(cardCss, "Round 4 Wave 3 — item 7", "Intrinsic reflow (directive");
+    expect(item7).toMatch(
+      /\.projection-card__markets-toggle \{\s*\n\s*transition: background 160ms cubic-bezier\(0\.16, 1, 0\.3, 1\), color 160ms cubic-bezier\(0\.16, 1, 0\.3, 1\);/,
+    );
+    // Not present on the unconditional base rule (audit-fix: it was there in
+    // an earlier draft, inert but out of scope below 768px/on touch-only).
+    const baseRule = cardCss.slice(
+      cardCss.indexOf(".projection-card__markets-toggle {"),
+      cardCss.indexOf("}", cardCss.indexOf(".projection-card__markets-toggle {")),
+    );
+    expect(baseRule).not.toContain("transition:");
+  });
+
+  it("cursor:pointer and the label/chevron markup are untouched (law-locked)", () => {
+    // Base rule (all breakpoints, unconditional — a details/summary toggle is
+    // tappable everywhere, not just on hover-capable desktop/tablet).
+    expect(cardCss).toMatch(/\.projection-card__markets-toggle \{[^}]*cursor: pointer;/);
+    expect(render(mlbFixture())).toContain("View full AI model projections");
+    expect(render(mlbFixture())).toContain("projection-card__markets-chev--expand");
+    expect(render(mlbFixture())).toContain("projection-card__markets-chev--collapse");
+  });
+
+  it("no bare unconditional :hover rule remains outside the gated media query (no stuck touch-hover)", () => {
+    const beforeItem7 = cardCss.slice(0, cardCss.indexOf("Round 4 Wave 3 — item 7"));
+    expect(beforeItem7).not.toMatch(/\.projection-card__markets-toggle:hover/);
+  });
+});
+
+describe("ProjectionCard — defensive PASS-mint backstop (Round 4 Wave 3 fold-in, W1 review)", () => {
+  it("neutralizes market-table signal/edge classes and the real edge-indicator variant under .projection-card--pass", () => {
+    const backstop = cssBlock(cardCss, "Fold-in minor (Round 4 Wave 3, from the W1 review", "Item 4 — live indicator");
+    expect(backstop).toContain(".projection-card--pass .market-table__model--signal,");
+    expect(backstop).toContain(".projection-card--pass .market-table__result--edge,");
+    expect(backstop).toContain(".projection-card--pass .edge-indicator {");
+    expect(backstop).toMatch(/color: var\(--text-secondary, #a6a6a6\) !important;/);
+    expect(backstop).toMatch(/background: transparent !important;/);
+  });
+
+  it("is scoped inside the same >=768px block as the rest of items 2-4 (item 8 scoping)", () => {
+    const item234 = cssBlock(cardCss, "Round 4 Wave 1 — desktop/tablet card-anatomy", "Round 4 Wave 2 — item 5");
+    expect(item234).toContain("@media (min-width: 768px) {");
+    expect(item234).toContain(".projection-card--pass .edge-indicator {");
+  });
+
+  it("a genuine PASS card still renders zero mint-signal classes today (backstop is defense-in-depth, not the only guard)", () => {
+    const html = render({
+      id: "oak-tex-backstop",
+      league: "MLB",
+      status: "scheduled",
+      statusLabel: "7:05 PM ET",
+      away: { abbr: "OAK", name: "Athletics", logo: null, color: "#333333", score: null },
+      home: { abbr: "TEX", name: "Rangers", logo: null, color: "#333333", score: null },
+      matchupContext: "Globe Life Field",
+      venue: "Globe Life Field",
+      startTime: "7:05 PM ET",
+      markets: [
+        {
+          key: "moneyline",
+          label: "Moneyline",
+          sides: [
+            { marketKey: "moneyline", marketLabel: "Moneyline", sideLabel: "Athletics ML", bookPrice: -110, bookOppPrice: -110, modelPrice: -110 },
+            { marketKey: "moneyline", marketLabel: "Moneyline", sideLabel: "Rangers ML", bookPrice: -110, bookOppPrice: -110, modelPrice: -110 },
+          ],
+        },
+      ],
+    });
+    expect(html).toContain("projection-card--pass");
+    expect(html).not.toContain("market-table__model--signal");
+    expect(html).not.toContain("market-table__result--edge");
+    expect(html).not.toMatch(/class="edge-indicator summary__edge"/);
+  });
+});
+
+describe("ProjectionCard — .summary__item--message hook (Round 4 Wave 3 fold-in, W1 review)", () => {
+  it("is NOT dead: W2 gave it a real, consumed grid-column rule (resolves the W1-flagged hook)", () => {
+    // The class renders in the PASS-message branch (ProjectionSummary.tsx)...
+    const passHtml = render({
+      id: "oak-tex-message-hook",
+      league: "MLB",
+      status: "scheduled",
+      statusLabel: "7:05 PM ET",
+      away: { abbr: "OAK", name: "Athletics", logo: null, color: "#333333", score: null },
+      home: { abbr: "TEX", name: "Rangers", logo: null, color: "#333333", score: null },
+      matchupContext: "Globe Life Field",
+      venue: "Globe Life Field",
+      startTime: "7:05 PM ET",
+      markets: [
+        {
+          key: "moneyline",
+          label: "Moneyline",
+          sides: [
+            { marketKey: "moneyline", marketLabel: "Moneyline", sideLabel: "Athletics ML", bookPrice: -110, bookOppPrice: -110, modelPrice: -110 },
+            { marketKey: "moneyline", marketLabel: "Moneyline", sideLabel: "Rangers ML", bookPrice: -110, bookOppPrice: -110, modelPrice: -110 },
+          ],
+        },
+      ],
+    });
+    expect(passHtml).toContain('class="summary__item summary__item--message"');
+    // ...and a real CSS rule consumes it (not a no-op class with zero rules).
+    expect(cardCss).toContain(".summary__item--message { grid-column: 1 / span 3; }");
+  });
+});

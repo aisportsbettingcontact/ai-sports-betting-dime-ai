@@ -19,6 +19,7 @@
 - **Column headers:** IBM Plex Mono micro-labels above the card list ("MATCHUP", "RUN LINE · BOOK / MODEL", …)
 - **Sub-tabs:** Projections · Splits · Lineups · K Props · Cheat Sheets · HR Props — 13px/600, active = `--text-primary` + 2px mint underline, inactive = `--text-muted`
 - **Date nav:** ‹ › square buttons (28px, radius 8, 1px border) around "Weekday, Month D" (15px/700) + mono "MLB · N GAMES"
+  — owner directive 2026-07-23: desktop date nav centers under the title band at 17px; 24/32px rhythm to the league header
 - **Sync status:** top-bar right — mono micro-label "SYNCED N MIN AGO" with 6px mint dot
 - **Bottom composer:** "Ask dime about tonight's slate…" — ties the feed back to chat
 
@@ -36,7 +37,7 @@
 ### Color Overrides
 
 - **Live state:** pulsing 7px mint dot + mono "LIVE · TOP 6" in mint (`--mint-on-light` on light theme, with keyline on the dot)
-- **PASS games:** verdict values in `--text-secondary`, grade "—", whole card at `opacity: 0.82`, zero mint anywhere in the card
+- **PASS games:** verdict values in `--text-secondary`, grade "—" *(2026-07-23: the verdict-strip/grade concept is superseded — no letter-grade field exists in the current ProjectionCard architecture; PASS state is enforced via `.projection-card--pass` at `opacity: 0.82` + the "No edge" chip + a defensive zero-mint backstop, see Round 4 items 3/6-8 below)*, whole card at `opacity: 0.82`, zero mint anywhere in the card
 - **Win% annotation** next to model ML: 12px `--text-secondary`
 
 ### Component Overrides

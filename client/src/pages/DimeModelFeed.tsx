@@ -1388,12 +1388,25 @@ const DMF_CSS = `
       design-system/dime-ai/pages/ai-model-projections.md) stretches row-mates
       to equal height; ProjectionCard.css's matching @media(min-width:1024px)
       block turns the surplus height into a centered summary + a
-      bottom-pinned "VIEW FULL AI MODEL PROJECTIONS" expander per card. */
+      bottom-pinned "VIEW FULL AI MODEL PROJECTIONS" expander per card.
+   4) Round 4 Wave 3, item 6 (owner amendment 2026-07-23, annotated on the
+      "Date nav" line in design-system/dime-ai/pages/ai-model-projections.md):
+      the date nav becomes ONE centered header stack directly beneath the
+      96px title band, replacing the old left-aligned leftover from the
+      compact topbar. Fixed rhythm kills the old dead 16px-top/10px-bottom
+      padding: padding-top:24px is exactly the gap from the title band's
+      bottom edge to the date-nav row; padding-bottom:10px + margin-bottom:16px
+      + the pre-existing (untouched — item 6 is shell/desktop-only, <1024 and
+      standalone keep their shipped rhythm) .dmf-list padding-top:6px sum to
+      the 32px gap down to the league header. Date text scales 15px -> 17px.
+      top:96px is unchanged, so the sticky feedhead offset keeps tracking the
+      96px title band exactly as the 07-21 law requires. */
 @media (min-width:1024px){
   .dc-shell-external-scroll .dmf-topbar{height:96px;justify-content:center}
   .dc-shell-external-scroll .dmf-toptitle{font-size:min(70px,calc((100cqi - 80px)/10.8));line-height:1;letter-spacing:-.02em;white-space:nowrap}
   .dc-shell-external-scroll .dmf-sync{display:none}
-  .dc-shell-external-scroll .dmf-feedhead{top:96px}
+  .dc-shell-external-scroll .dmf-feedhead{top:96px;justify-content:center;padding-top:24px;padding-bottom:10px;margin-bottom:16px}
+  .dc-shell-external-scroll .dmf-datelbl{font-size:17px}
   .dmf-lglogo--mlb{width:60px;height:60px;flex:0 0 60px}
   .dmf-leaguebody{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch}
 }

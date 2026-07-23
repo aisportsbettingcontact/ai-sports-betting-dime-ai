@@ -100,6 +100,23 @@
   .projection-card--pass { opacity: 0.82; }
   .projection-card--pass .edge-indicator--none { color: var(--text-secondary, #a6a6a6); }
 
+  /* Fold-in minor (Round 4 Wave 3, from the W1 review — see
+     .superpowers/sdd/progress.md "r4 W1: COMPLETE" / r4-w1-report.md "Item 3"):
+     defensive PASS backstop. Zero mint is already structurally guaranteed —
+     rankedEdges() is empty on a genuine PASS card, so none of these
+     signal/edge classes can ever be emitted on one today (see the comment
+     above) — but this rule neutralizes stray mint anyway if that invariant
+     is ever broken by a future change to gameInsight.ts/edgeUtils.ts.
+     Defense-in-depth, not a substitute for the structural guarantee. */
+  .projection-card--pass .market-table__model--signal,
+  .projection-card--pass .market-table__result--edge,
+  .projection-card--pass .edge-indicator {
+    color: var(--text-secondary, #a6a6a6) !important;
+    background: transparent !important;
+    border-color: var(--border, #262626) !important;
+    box-shadow: none !important;
+  }
+
   /* Item 4 — live indicator: activate the pulsing mint dot (display:none by
      default, see .projection-card__live-dot above) and make the LIVE label
      itself brand-accurate: mono-register micro-label tracking, and
@@ -153,6 +170,12 @@
   .summary__item--edge { grid-column: 1; }
   .summary__item--book { grid-column: 2; }
   .summary__item--model { grid-column: 3; }
+  /* Fold-in minor (W1 review flagged this hook as dead when it was first
+     added in Wave 1 — ProjectionSummary.tsx had no matching CSS rule yet at
+     that point): resolved here in Wave 2 by giving it this real, consumed
+     rule (verified live by ProjectionCard.test.ts's PASS-message-spans-columns
+     assertion) — chosen over removal since the PASS message needs its own
+     span so it never breaks the 4-column track count above. No longer dead. */
   .summary__item--message { grid-column: 1 / span 3; }
   .summary__edge { grid-column: 4; justify-self: start; }
 
@@ -226,8 +249,27 @@
 .projection-card__markets { grid-area: markets; margin-block-start: calc(-1 * var(--space-xs)); }
 .projection-card__markets-toggle { display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm); min-block-size: 2.25rem; padding-inline: var(--space-sm); cursor: pointer; color: var(--text-secondary, #a6a6a6); border-radius: 10px; list-style: none; }
 .projection-card__markets-toggle::-webkit-details-marker { display: none; }
-.projection-card__markets-toggle:hover { background: var(--row-hover, #141414); color: var(--foreground, #fff); }
 .projection-card__markets-toggle:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--ring, #45e0a8); }
+/* ══ Round 4 Wave 3 — item 7: expander hover (page law "Expander hover"; item 8
+   scoping: same tablet+desktop breakpoint as items 2-5, >=768px) ══
+   "VIEW FULL AI MODEL PROJECTIONS" gets the shell's row-hover fill (--row-hover,
+   the same token/value sidebar rows use — design-system/dime-ai/MASTER.md
+   "Row hover") on the 160ms brand curve. Gated on BOTH the >=768px breakpoint
+   (mobile <768 stays byte-untouched, item 8) and `(hover: hover)` (no stuck
+   highlighted row from a touch tap on a hybrid/touch device — same guard as
+   .mfn-item's hover in mobileFloatingNav.css). The transition itself lives
+   inside this same gate (item 8 audit-fix: an earlier draft declared it on
+   the unconditional base rule, which is visually inert below 768px/on
+   touch-only devices but leaves a stray `transition-property` in the
+   computed style there for no reason — moved in here so nothing outside the
+   gate changes at all). Label text and chevron icons are law-locked (owner
+   directive 2026-07-17/18) and untouched — only the fill responds. */
+@media (min-width: 768px) and (hover: hover) {
+  .projection-card__markets-toggle {
+    transition: background 160ms cubic-bezier(0.16, 1, 0.3, 1), color 160ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .projection-card__markets-toggle:hover { background: var(--row-hover, #141414); color: var(--foreground, #fff); }
+}
 .projection-card__markets-chev { inline-size: 1rem; block-size: 1rem; flex: none; }
 .projection-card__markets-chev--collapse { display: none; }
 .projection-card__markets[open] .projection-card__markets-chev--expand { display: none; }
