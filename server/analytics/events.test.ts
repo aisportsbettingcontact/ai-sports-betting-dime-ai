@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { trackInputSchema, sanitizeProps, qualifiesActive, ALL_EVENTS } from "./events";
+import { trackInputSchema, sanitizeProps, qualifiesActive, ALL_EVENTS, ACTION_ALLOWLIST, FEATURE_EVENTS } from "./events";
 
 describe("trackInputSchema", () => {
   const base = { eventId: "evt_abcdefgh", eventName: "chat_response_completed", schemaVersion: 1, occurredAtUtc: 1700000000000 };
@@ -55,6 +55,38 @@ describe("event allowlist (broadened)", () => {
   it("rejects an unknown event name", () => {
     const r = trackInputSchema.safeParse({ eventId: "abc123xyz", eventName: "totally_made_up", schemaVersion: 1, occurredAtUtc: 1 });
     expect(r.success).toBe(false);
+  });
+});
+
+describe("action_performed contract (D3)", () => {
+  const actionBase = { eventId: "act_abcdefgh", schemaVersion: 1, occurredAtUtc: 1700000000000 };
+  it("accepts action_performed with a valid curated action_name", () => {
+    const r = trackInputSchema.safeParse({ ...actionBase, eventName: "action_performed", actionName: "chat_message_sent" });
+    expect(r.success).toBe(true);
+  });
+  it("rejects action_performed with no action_name (refine)", () => {
+    const r = trackInputSchema.safeParse({ ...actionBase, eventName: "action_performed" });
+    expect(r.success).toBe(false);
+  });
+  it("rejects an action_name outside the curated allowlist", () => {
+    const r = trackInputSchema.safeParse({ ...actionBase, eventName: "action_performed", actionName: "delete_everything" });
+    expect(r.success).toBe(false);
+  });
+  it("accepts feature-lifecycle event names", () => {
+    for (const n of FEATURE_EVENTS) {
+      expect(trackInputSchema.safeParse({ ...actionBase, eventName: n }).success).toBe(true);
+      expect(ALL_EVENTS).toContain(n);
+    }
+  });
+  it("includes action_performed in the allowlist but never qualifies it as active", () => {
+    expect(ALL_EVENTS).toContain("action_performed");
+    expect(qualifiesActive("action_performed")).toBe(false);
+    for (const n of FEATURE_EVENTS) expect(qualifiesActive(n)).toBe(false);
+    // Every curated action is a non-active diagnostic carried under action_performed.
+    for (const a of ACTION_ALLOWLIST) expect(qualifiesActive(a)).toBe(false);
+  });
+  it("keeps the curated allowlist at the 17 documented actions", () => {
+    expect(ACTION_ALLOWLIST).toHaveLength(17);
   });
 });
 

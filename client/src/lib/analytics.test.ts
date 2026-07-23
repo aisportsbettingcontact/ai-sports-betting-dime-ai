@@ -36,6 +36,22 @@ describe("buildClientEnvelope", () => {
   });
 });
 
+describe("action_performed envelope (D3)", () => {
+  it("carries eventName action_performed + the curated action_name", () => {
+    const e = buildClientEnvelope("action_performed", { actionName: "chat_message_sent" });
+    expect(e.eventName).toBe("action_performed");
+    expect(e.actionName).toBe("chat_message_sent");
+  });
+  it("still attaches the device block + route to an action event", () => {
+    const e = buildClientEnvelope("action_performed", { actionName: "feed_filtered" });
+    expect(["xs","sm","md","lg","xl"]).toContain(e.viewportClass);
+    expect(typeof e.route).toBe("string");
+  });
+  it("omits actionName when not provided", () => {
+    expect(buildClientEnvelope("screen_viewed")).not.toHaveProperty("actionName");
+  });
+});
+
 const src = fs.readFileSync(path.join(import.meta.dirname, "analytics.ts"), "utf8");
 describe("useAnalytics wiring (source contract)", () => {
   it("posts to the same-origin tRPC analytics.track — never a private host", () => {

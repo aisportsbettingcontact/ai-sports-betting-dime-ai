@@ -55,19 +55,19 @@ class SectionErrorBoundary extends Component<
       return (
         <div style={{
           padding: 24, background: "transparent",
-          border: "1px solid #FFFFFF", borderRadius: 8, margin: "16px 0",
+          border: "1px solid var(--border)", borderRadius: 8, margin: "16px 0",
         }}>
-          <div style={{ color: "#FFFFFF", fontWeight: 700, fontSize: 13, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', letterSpacing: 1, marginBottom: 8 }}>
+          <div style={{ color: "var(--foreground)", fontWeight: 700, fontSize: 13, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', letterSpacing: 1, marginBottom: 8 }}>
             ⚠ SECTION CRASH — {this.props.label}
           </div>
-          <div style={{ color: "#FFFFFF", fontSize: 14, fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif", fontWeight: 700, marginBottom: 12, wordBreak: 'break-all' }}>
+          <div style={{ color: "var(--foreground)", fontSize: 14, fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif", fontWeight: 700, marginBottom: 12, wordBreak: 'break-all' }}>
             {this.state.error?.message ?? 'Unknown error'}
           </div>
-          <pre style={{ color: "#FFFFFF", fontSize: 10, fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif", whiteSpace: 'pre-wrap', wordBreak: 'break-all', maxHeight: 200, overflow: 'auto', marginBottom: 12 }}>
+          <pre style={{ color: "var(--foreground)", fontSize: 10, fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif", whiteSpace: 'pre-wrap', wordBreak: 'break-all', maxHeight: 200, overflow: 'auto', marginBottom: 12 }}>
             {this.state.error?.stack}
           </pre>
           <button type="button" onClick={() => this.setState({ hasError: false, error: null })}
-            style={{ padding: "4px 14px", background: "#000000", border: "1px solid #FFFFFF", borderRadius: 4, color: "#FFFFFF", cursor: "pointer", fontSize: 11, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}
+            style={{ padding: "4px 14px", background: "var(--background)", border: "1px solid var(--border)", borderRadius: 4, color: "var(--foreground)", cursor: "pointer", fontSize: 11, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}
           >
             RETRY
           </button>
@@ -156,28 +156,28 @@ function signedNum(val: number | null | undefined, decimals = 2): string {
 
 // ─── Color helpers ────────────────────────────────────────────────────────────
 function accuracyColor(acc: number | null): string {
-  if (acc === null) return "#FFFFFF";
-  if (acc >= 0.65) return "#45E0A8";
-  if (acc >= 0.55) return "#45E0A8";
-  if (acc >= 0.50) return "#FFFFFF";
-  if (acc >= 0.45) return "#FFFFFF";
-  return "#FFFFFF";
+  if (acc === null) return "var(--foreground)";
+  if (acc >= 0.65) return "var(--primary)";
+  if (acc >= 0.55) return "var(--primary)";
+  if (acc >= 0.50) return "var(--foreground)";
+  if (acc >= 0.45) return "var(--foreground)";
+  return "var(--foreground)";
 }
 function brierColor(b: string | number | null | undefined): string {
   const v = typeof b === "number" ? b : b ? parseFloat(b) : null;
-  if (v === null || v === undefined || isNaN(v as number)) return "#FFFFFF";
-  if ((v as number) <= 0.15) return "#45E0A8";
-  if ((v as number) <= 0.22) return "#FFFFFF";
-  return "#FFFFFF";
+  if (v === null || v === undefined || isNaN(v as number)) return "var(--foreground)";
+  if ((v as number) <= 0.15) return "var(--primary)";
+  if ((v as number) <= 0.22) return "var(--foreground)";
+  return "var(--foreground)";
 }
 function edgeColor(edge: number): string {
-  if (edge >= 5) return "#45E0A8";
-  if (edge >= 3) return "#45E0A8";
-  if (edge >= 1) return "#45E0A8";
-  if (edge <= -5) return "#FFFFFF";
-  if (edge <= -3) return "#FFFFFF";
-  if (edge <= -1) return "#FFFFFF";
-  return "#FFFFFF";
+  if (edge >= 5) return "var(--primary)";
+  if (edge >= 3) return "var(--primary)";
+  if (edge >= 1) return "var(--primary)";
+  if (edge <= -5) return "var(--foreground)";
+  if (edge <= -3) return "var(--foreground)";
+  if (edge <= -1) return "var(--foreground)";
+  return "var(--foreground)";
 }
 function edgeBg(edge: number): string {
   if (edge >= 5) return "transparent";
@@ -208,26 +208,26 @@ function StatGrid({ children, minColWidth = 110 }: { children: React.ReactNode; 
 function StatCard({ label, value, sub, color }: { label: string; value: string; sub?: string; color?: string }) {
   return (
     <div style={{
-      background: "#000000", border: "1px solid #FFFFFF", borderRadius: 10,
+      background: "var(--background)", border: "1px solid var(--border)", borderRadius: 10,
       padding: "10px 12px", display: "flex", flexDirection: "column", gap: 4,
       minWidth: 0, overflow: "hidden",
     }}>
-      <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', lineHeight: 1.2, wordBreak: "break-word" }}>
+      <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: "var(--foreground)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', lineHeight: 1.2, wordBreak: "break-word" }}>
         {label}
       </div>
-      <div style={{ fontSize: 22, fontWeight: 800, color: color ?? "#FFFFFF", lineHeight: 1, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
+      <div style={{ fontSize: 22, fontWeight: 800, color: color ?? "var(--foreground)", lineHeight: 1, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
         {value}
       </div>
-      {sub && <div style={{ fontSize: 10, color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', lineHeight: 1.3 }}>{sub}</div>}
+      {sub && <div style={{ fontSize: 10, color: "var(--foreground)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', lineHeight: 1.3 }}>{sub}</div>}
     </div>
   );
 }
 
 function MiniStatCard({ label, value, color }: { label: string; value: string | number; color?: string }) {
   return (
-    <div style={{ background: "#000000", border: "1px solid #FFFFFF", borderRadius: 6, padding: "8px 12px", minWidth: 0, overflow: "hidden" }}>
-      <div style={{ fontSize: 9, color: "#FFFFFF", letterSpacing: 1, marginBottom: 2, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', lineHeight: 1.2, wordBreak: "break-word" }}>{label}</div>
-      <div style={{ fontSize: 16, fontWeight: 700, color: color ?? "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', lineHeight: 1 }}>{value}</div>
+    <div style={{ background: "var(--background)", border: "1px solid var(--border)", borderRadius: 6, padding: "8px 12px", minWidth: 0, overflow: "hidden" }}>
+      <div style={{ fontSize: 9, color: "var(--foreground)", letterSpacing: 1, marginBottom: 2, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', lineHeight: 1.2, wordBreak: "break-word" }}>{label}</div>
+      <div style={{ fontSize: 16, fontWeight: 700, color: color ?? "var(--foreground)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', lineHeight: 1 }}>{value}</div>
     </div>
   );
 }
@@ -237,8 +237,8 @@ function ResultBadge({ result, correct }: { result: string | null; correct: numb
     return (
       <span style={{
         fontSize: 10, fontWeight: 700, letterSpacing: "1px", padding: "3px 8px",
-        borderRadius: 4, background: "transparent", color: "#FFFFFF",
-        border: "1px solid #FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif',
+        borderRadius: 4, background: "transparent", color: "var(--foreground)",
+        border: "1px solid var(--border)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif',
       }}>
         {result === "NO_LINE" ? "NO LINE" : "PENDING"}
       </span>
@@ -247,8 +247,8 @@ function ResultBadge({ result, correct }: { result: string | null; correct: numb
   const isCorrect = correct === 1;
   const isPush = result === "PUSH";
   const bg = isPush ? "transparent" : isCorrect ? "transparent" : "transparent";
-  const border = isPush ? "#FFFFFF" : isCorrect ? "#45E0A8" : "#FFFFFF";
-  const color = isPush ? "#FFFFFF" : isCorrect ? "#45E0A8" : "#FFFFFF";
+  const border = isPush ? "var(--border)" : isCorrect ? "var(--primary)" : "var(--border)";
+  const color = isPush ? "var(--foreground)" : isCorrect ? "var(--primary)" : "var(--foreground)";
   const icon = isPush ? null : isCorrect ? <CheckCircle2 size={10} style={{ flexShrink: 0 }} /> : <XCircle size={10} style={{ flexShrink: 0 }} />;
   return (
     <span style={{
@@ -266,13 +266,13 @@ function VerdictBadge({ verdict, bestSide, bestEdge, bestMlStr }: {
   verdict: string | null; bestSide: string | null; bestEdge: string | null; bestMlStr: string | null;
 }) {
   if (!verdict || verdict === "PASS") {
-    return <span style={{ fontSize: 10, color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>PASS</span>;
+    return <span style={{ fontSize: 10, color: "var(--foreground)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>PASS</span>;
   }
   const edgePp = bestEdge ? parseFloat(bestEdge) * 100 : null;
   const isOver = bestSide === "OVER";
-  const color = isOver ? "#45E0A8" : "#45E0A8";
+  const color = isOver ? "var(--primary)" : "var(--primary)";
   const bg = isOver ? "transparent" : "transparent";
-  const border = isOver ? "#45E0A8" : "#45E0A8";
+  const border = isOver ? "var(--primary)" : "var(--primary)";
   return (
     <span style={{
       display: "inline-flex", alignItems: "center", gap: 4,
@@ -281,7 +281,7 @@ function VerdictBadge({ verdict, bestSide, bestEdge, bestMlStr }: {
       fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif',
     }}>
       ▶ {bestSide} {bestMlStr ?? ""}
-      {edgePp !== null && <span style={{ color: "#FFFFFF", fontWeight: 500 }}>{edgePp > 0 ? "+" : ""}{edgePp.toFixed(1)}pp</span>}
+      {edgePp !== null && <span style={{ color: "var(--foreground)", fontWeight: 500 }}>{edgePp > 0 ? "+" : ""}{edgePp.toFixed(1)}pp</span>}
     </span>
   );
 }
@@ -290,10 +290,10 @@ function VerdictBadge({ verdict, bestSide, bestEdge, bestMlStr }: {
 function SectionLabel({ children, sub }: { children: React.ReactNode; sub?: string }) {
   return (
     <div style={{ marginBottom: 10 }}>
-      <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "2px", textTransform: "uppercase", color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
+      <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "2px", textTransform: "uppercase", color: "var(--foreground)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
         {children}
       </div>
-      {sub && <div style={{ fontSize: 9, color: "#FFFFFF", marginTop: 2, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>{sub}</div>}
+      {sub && <div style={{ fontSize: 9, color: "var(--foreground)", marginTop: 2, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>{sub}</div>}
     </div>
   );
 }
@@ -314,18 +314,18 @@ function BrierTrendChart({ data, lines, windowSize, onWindowChange }: {
   return (
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-        <span style={{ fontSize: 9, color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', letterSpacing: ".08em", textTransform: "uppercase" }}>Window</span>
+        <span style={{ fontSize: 9, color: "var(--foreground)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', letterSpacing: ".08em", textTransform: "uppercase" }}>Window</span>
         {[10, 20, 30, 50].map(w => (
           <button type="button" key={w} onClick={() => onWindowChange(w)} style={{
             fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 6,
             background: windowSize === w ? "transparent" : "transparent",
-            color: windowSize === w ? "#45E0A8" : "#FFFFFF",
-            border: `1px solid ${windowSize === w ? "#45E0A8" : "#FFFFFF"}`,
+            color: windowSize === w ? "var(--primary)" : "var(--foreground)",
+            border: `1px solid ${windowSize === w ? "var(--primary)" : "var(--border)"}`,
             cursor: "pointer", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif',
           }}>{w}G</button>
         ))}
       </div>
-      <div style={{ background: "#000000", border: "1px solid #FFFFFF", borderRadius: 10, padding: "16px 8px 8px" }}>
+      <div style={{ background: "var(--background)", border: "1px solid var(--border)", borderRadius: 10, padding: "16px 8px 8px" }}>
         <ResponsiveContainer width="100%" height={260}>
           <LineChart data={data} margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
@@ -411,39 +411,39 @@ function EdgeLeaderboardTable({
     <div>
       {/* Filters */}
       <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 10, padding: "8px 0" }}>
-        <Filter size={11} style={{ color: "#FFFFFF" }} />
+        <Filter size={11} style={{ color: "var(--foreground)" }} />
         <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-          <span style={{ fontSize: 10, color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>MIN EDGE</span>
+          <span style={{ fontSize: 10, color: "var(--foreground)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>MIN EDGE</span>
           {[0, 1, 2, 3, 5].map(v => (
             <button type="button" key={v} onClick={() => setMinEdge(v)} style={{
-              background: minEdge === v ? "#45E0A8" : "#000000", border: "1px solid #FFFFFF",
-              borderRadius: 3, cursor: "pointer", color: minEdge === v ? "#000" : "#FFFFFF",
+              background: minEdge === v ? "var(--primary)" : "var(--background)", border: "1px solid var(--border)",
+              borderRadius: 3, cursor: "pointer", color: minEdge === v ? "var(--primary-foreground)" : "var(--foreground)",
               padding: "2px 7px", fontSize: 10, fontWeight: 700, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif',
             }}>{v === 0 ? "ALL" : `≥${v}pp`}</button>
           ))}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-          <span style={{ fontSize: 10, color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>SIDE</span>
+          <span style={{ fontSize: 10, color: "var(--foreground)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>SIDE</span>
           {(["both", "away", "home"] as const).map(s => (
             <button type="button" key={s} onClick={() => setSide(s)} style={{
-              background: side === s ? "#45E0A8" : "#000000", border: "1px solid #FFFFFF",
-              borderRadius: 3, cursor: "pointer", color: side === s ? "#000" : "#FFFFFF",
+              background: side === s ? "var(--primary)" : "var(--background)", border: "1px solid var(--border)",
+              borderRadius: 3, cursor: "pointer", color: side === s ? "var(--primary-foreground)" : "var(--foreground)",
               padding: "2px 7px", fontSize: 10, fontWeight: 700, textTransform: "uppercase",
               fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif',
             }}>{s}</button>
           ))}
         </div>
         <button type="button" onClick={() => setWithOutcome(!withOutcome)} style={{
-          background: withOutcome ? "#45E0A8" : "#000000", border: "1px solid #FFFFFF",
-          borderRadius: 3, cursor: "pointer", color: withOutcome ? "#000" : "#FFFFFF",
+          background: withOutcome ? "var(--primary)" : "var(--background)", border: "1px solid var(--border)",
+          borderRadius: 3, cursor: "pointer", color: withOutcome ? "var(--primary-foreground)" : "var(--foreground)",
           padding: "2px 7px", fontSize: 10, fontWeight: 700, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif',
         }}>WITH OUTCOME ONLY</button>
         <div style={{ display: "flex", alignItems: "center", gap: 5, marginLeft: "auto" }}>
-          <span style={{ fontSize: 10, color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>SORT</span>
+          <span style={{ fontSize: 10, color: "var(--foreground)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>SORT</span>
           {(["edge", "date", "brier"] as const).map(s => (
             <button type="button" key={s} onClick={() => setSortBy(s)} style={{
-              background: sortBy === s ? "#45E0A8" : "#000000", border: "1px solid #FFFFFF",
-              borderRadius: 3, cursor: "pointer", color: sortBy === s ? "#000000" : "#FFFFFF",
+              background: sortBy === s ? "var(--primary)" : "var(--background)", border: "1px solid var(--border)",
+              borderRadius: 3, cursor: "pointer", color: sortBy === s ? "var(--primary-foreground)" : "var(--foreground)",
               padding: "2px 7px", fontSize: 10, fontWeight: 700, textTransform: "uppercase",
               fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif',
             }}>{s}</button>
@@ -455,9 +455,9 @@ function EdgeLeaderboardTable({
       <div style={{ overflowX: "auto" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
           <thead>
-            <tr style={{ borderBottom: "1px solid #FFFFFF", background: "#000000" }}>
+            <tr style={{ borderBottom: "1px solid var(--border)", background: "var(--background)" }}>
               {["DATE", "MATCHUP", "SIDE", "MODEL WIN%", "BOOK IMPLIED%", "EDGE", "ML", "SCORE", "RESULT", "BRIER"].map(h => (
-                <th key={h} style={{ padding: "6px 10px", textAlign: "left", color: "#FFFFFF", fontSize: 9, letterSpacing: 1, fontWeight: 700, whiteSpace: "nowrap" }}>{h}</th>
+                <th key={h} style={{ padding: "6px 10px", textAlign: "left", color: "var(--foreground)", fontSize: 9, letterSpacing: 1, fontWeight: 700, whiteSpace: "nowrap" }}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -474,29 +474,29 @@ function EdgeLeaderboardTable({
               const correct = market === "f5" ? row.f5MlCorrect : row.fgMlCorrect;
               const brier = market === "f5" ? row.brierF5Ml : row.brierFgMl;
               return (
-                <tr key={`${row.id}-${row.side}`} style={{ borderBottom: "1px solid #FFFFFF", background: i % 2 === 0 ? edgeBg(row.edgePct) : "transparent" }}>
-                  <td style={{ padding: "5px 10px", color: "#FFFFFF", whiteSpace: "nowrap" }}>{row.gameDate}</td>
+                <tr key={`${row.id}-${row.side}`} style={{ borderBottom: "1px solid var(--border)", background: i % 2 === 0 ? edgeBg(row.edgePct) : "transparent" }}>
+                  <td style={{ padding: "5px 10px", color: "var(--foreground)", whiteSpace: "nowrap" }}>{row.gameDate}</td>
                   <td style={{ padding: "5px 10px", whiteSpace: "nowrap" }}>
-                    <span style={{ color: "#FFFFFF" }}>{row.awayTeam}</span>
-                    <span style={{ color: "#FFFFFF", margin: "0 4px" }}>@</span>
-                    <span style={{ color: "#FFFFFF" }}>{row.homeTeam}</span>
+                    <span style={{ color: "var(--foreground)" }}>{row.awayTeam}</span>
+                    <span style={{ color: "var(--foreground)", margin: "0 4px" }}>@</span>
+                    <span style={{ color: "var(--foreground)" }}>{row.homeTeam}</span>
                   </td>
                   <td style={{ padding: "5px 10px" }}>
                     <span style={{
                       background: isAway ? "transparent" : "transparent",
-                      color: isAway ? "#FFFFFF" : "#FFFFFF",
+                      color: isAway ? "var(--foreground)" : "var(--foreground)",
                       borderRadius: 3, padding: "1px 5px", fontSize: 9, fontWeight: 700, letterSpacing: 1,
                     }}>{isAway ? "AWAY" : "HOME"}</span>
                   </td>
-                  <td style={{ padding: "5px 10px", color: "#FFFFFF", fontWeight: 700 }}>{row.modelWinPct.toFixed(1)}%</td>
-                  <td style={{ padding: "5px 10px", color: "#FFFFFF" }}>{row.bookImpliedPct.toFixed(1)}%</td>
+                  <td style={{ padding: "5px 10px", color: "var(--foreground)", fontWeight: 700 }}>{row.modelWinPct.toFixed(1)}%</td>
+                  <td style={{ padding: "5px 10px", color: "var(--foreground)" }}>{row.bookImpliedPct.toFixed(1)}%</td>
                   <td style={{ padding: "5px 10px", fontWeight: 700 }}>
                     <span style={{ color: edgeColor(row.edgePct) }}>{row.edgePct > 0 ? "+" : ""}{row.edgePct.toFixed(2)}pp</span>
                   </td>
-                  <td style={{ padding: "5px 10px", color: "#FFFFFF" }}>{ml ?? "—"}</td>
-                  <td style={{ padding: "5px 10px", color: "#FFFFFF" }}>{scoreStr}</td>
+                  <td style={{ padding: "5px 10px", color: "var(--foreground)" }}>{ml ?? "—"}</td>
+                  <td style={{ padding: "5px 10px", color: "var(--foreground)" }}>{scoreStr}</td>
                   <td style={{ padding: "5px 10px" }}>
-                    {result ? (correct === 1 ? <span style={{ color: "#45E0A8", fontWeight: 700 }}>WIN</span> : correct === 0 ? <span style={{ color: "#FFFFFF", fontWeight: 700 }}>LOSS</span> : <span style={{ color: "#FFFFFF" }}>{result}</span>) : <span style={{ color: "#FFFFFF" }}>PENDING</span>}
+                    {result ? (correct === 1 ? <span style={{ color: "var(--primary)", fontWeight: 700 }}>WIN</span> : correct === 0 ? <span style={{ color: "var(--foreground)", fontWeight: 700 }}>LOSS</span> : <span style={{ color: "var(--foreground)" }}>{result}</span>) : <span style={{ color: "var(--foreground)" }}>PENDING</span>}
                   </td>
                   <td style={{ padding: "5px 10px", color: brierColor(brier), fontWeight: 700 }}>
                     {brier != null ? parseFloat(brier).toFixed(4) : "—"}
@@ -509,15 +509,15 @@ function EdgeLeaderboardTable({
       </div>
 
       {/* Footer */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8, paddingTop: 8, borderTop: "1px solid #FFFFFF" }}>
-        <span style={{ fontSize: 10, color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8, paddingTop: 8, borderTop: "1px solid var(--border)" }}>
+        <span style={{ fontSize: 10, color: "var(--foreground)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
           {sorted.length} rows · Edge = Model Win% − No-Vig Book Implied%
         </span>
         <div style={{ display: "flex", gap: 6 }}>
           {[100, 200, 500].map(v => (
             <button type="button" key={v} onClick={() => setLimit(v)} style={{
-              background: limit === v ? "#45E0A8" : "#000000", border: "1px solid #FFFFFF",
-              borderRadius: 3, cursor: "pointer", color: limit === v ? "#000000" : "#FFFFFF",
+              background: limit === v ? "var(--primary)" : "var(--background)", border: "1px solid var(--border)",
+              borderRadius: 3, cursor: "pointer", color: limit === v ? "var(--primary-foreground)" : "var(--foreground)",
               padding: "2px 7px", fontSize: 10, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif',
             }}>TOP {v}</button>
           ))}
@@ -555,22 +555,22 @@ function EdgeScatterPlot({ rows, market }: { rows: EdgeRow[]; market: "f5" | "fg
   }, [scatterData]);
 
   if (scatterData.length === 0) {
-    return <div style={{ textAlign: "center", color: "#FFFFFF", fontSize: 12, padding: 32 }}>No games with outcomes yet. Results will appear after games are ingested.</div>;
+    return <div style={{ textAlign: "center", color: "var(--foreground)", fontSize: 12, padding: 32 }}>No games with outcomes yet. Results will appear after games are ingested.</div>;
   }
 
   return (
     <>
       <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
         {[
-          { label: "GAMES W/ OUTCOME", value: scatterData.length, color: "#FFFFFF" },
-          { label: "WINS", value: scatterData.filter(d => d.y === 1).length, color: "#45E0A8" },
-          { label: "LOSSES", value: scatterData.filter(d => d.y === 0).length, color: "#FFFFFF" },
-          { label: "WIN RATE", value: `${(scatterData.filter(d => d.y === 1).length / scatterData.length * 100).toFixed(1)}%`, color: "#FFFFFF" },
-          { label: "REGRESSION SLOPE", value: regression ? `${regression.slope > 0 ? "+" : ""}${regression.slope.toFixed(4)}` : "—", color: regression && regression.slope > 0 ? "#45E0A8" : "#FFFFFF" },
+          { label: "GAMES W/ OUTCOME", value: scatterData.length, color: "var(--foreground)" },
+          { label: "WINS", value: scatterData.filter(d => d.y === 1).length, color: "var(--primary)" },
+          { label: "LOSSES", value: scatterData.filter(d => d.y === 0).length, color: "var(--foreground)" },
+          { label: "WIN RATE", value: `${(scatterData.filter(d => d.y === 1).length / scatterData.length * 100).toFixed(1)}%`, color: "var(--foreground)" },
+          { label: "REGRESSION SLOPE", value: regression ? `${regression.slope > 0 ? "+" : ""}${regression.slope.toFixed(4)}` : "—", color: regression && regression.slope > 0 ? "var(--primary)" : "var(--foreground)" },
         ].map(card => <MiniStatCard key={card.label} label={card.label} value={card.value} color={card.color} />)}
       </div>
-      <div style={{ background: "#000000", border: "1px solid #FFFFFF", borderRadius: 10, padding: "16px 8px 8px" }}>
-        <div style={{ fontSize: 10, color: "#FFFFFF", letterSpacing: 2, marginBottom: 12, paddingLeft: 8, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
+      <div style={{ background: "var(--background)", border: "1px solid var(--border)", borderRadius: 10, padding: "16px 8px 8px" }}>
+        <div style={{ fontSize: 10, color: "var(--foreground)", letterSpacing: 2, marginBottom: 12, paddingLeft: 8, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
           {market === "f5" ? "F5" : "FG"} ML EDGE (pp) vs OUTCOME — Positive slope = model alpha confirmed
         </div>
         <ResponsiveContainer width="100%" height={320}>
@@ -612,9 +612,9 @@ function EdgeScatterPlot({ rows, market }: { rows: EdgeRow[]; market: "f5" | "fg
           </ScatterChart>
         </ResponsiveContainer>
         <div style={{ display: "flex", gap: 16, justifyContent: "center", marginTop: 8 }}>
-          <span style={{ fontSize: 9, color: "#45E0A8" }}>● WIN</span>
-          <span style={{ fontSize: 9, color: "#FFFFFF" }}>● LOSS</span>
-          <span style={{ fontSize: 9, color: "#FFFFFF" }}>--- REGRESSION TREND</span>
+          <span style={{ fontSize: 9, color: "var(--primary)" }}>● WIN</span>
+          <span style={{ fontSize: 9, color: "var(--foreground)" }}>● LOSS</span>
+          <span style={{ fontSize: 9, color: "var(--foreground)" }}>--- REGRESSION TREND</span>
         </div>
       </div>
     </>
@@ -632,28 +632,28 @@ function BrierHeatmap({ heatmapData, selectedCell, setSelectedCell, drilldownDat
   const cellBg = (v: number | null) =>
     v == null ? "transparent" : v <= 0.15 ? "transparent" : v <= 0.22 ? "transparent" : "transparent";
   const cellColor = (v: number | null) =>
-    v == null ? "#FFFFFF" : v <= 0.15 ? "#45E0A8" : v <= 0.22 ? "#FFFFFF" : "#FFFFFF";
+    v == null ? "var(--foreground)" : v <= 0.15 ? "var(--primary)" : v <= 0.22 ? "var(--foreground)" : "var(--foreground)";
 
   return (
     <div>
       <div style={{ overflowX: "auto" }}>
-        <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "2px", textTransform: "uppercase", color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', marginBottom: 10 }}>
+        <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "2px", textTransform: "uppercase", color: "var(--foreground)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', marginBottom: 10 }}>
           BRIER HEATMAP — {heatmapData.heatmap.length} DATES × 5 MARKETS
-          <span style={{ marginLeft: 8, color: "#45E0A8", fontSize: 8 }}>(avg per date | 🟢 ≤0.15 | 🟡 ≤0.22 | 🔴 &gt;0.22 | — = no data)</span>
+          <span style={{ marginLeft: 8, color: "var(--primary)", fontSize: 8 }}>(avg per date | 🟢 ≤0.15 | 🟡 ≤0.22 | 🔴 &gt;0.22 | — = no data)</span>
         </div>
         <table style={{ borderCollapse: "collapse", fontSize: 11, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', minWidth: 520 }}>
           <thead>
-            <tr style={{ borderBottom: "1px solid #FFFFFF" }}>
+            <tr style={{ borderBottom: "1px solid var(--border)" }}>
               {["DATE", "GAMES", "FG ML", "F5 ML", "NRFI", "FG TOT", "F5 TOT"].map(h => (
-                <th key={h} style={{ padding: "4px 10px", textAlign: h === "DATE" ? "left" : "right", color: "#FFFFFF", fontWeight: 700, letterSpacing: ".08em", fontSize: 9 }}>{h}</th>
+                <th key={h} style={{ padding: "4px 10px", textAlign: h === "DATE" ? "left" : "right", color: "var(--foreground)", fontWeight: 700, letterSpacing: ".08em", fontSize: 9 }}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {[...heatmapData.heatmap].reverse().map(row => (
-              <tr key={row.date} style={{ borderBottom: "1px solid #FFFFFF" }}>
-                <td style={{ padding: "5px 10px", color: "#FFFFFF", fontWeight: 600, whiteSpace: "nowrap" }}>{row.date}</td>
-                <td style={{ padding: "5px 10px", textAlign: "right", color: "#FFFFFF", fontSize: 9 }}>{row.games}</td>
+              <tr key={row.date} style={{ borderBottom: "1px solid var(--border)" }}>
+                <td style={{ padding: "5px 10px", color: "var(--foreground)", fontWeight: 600, whiteSpace: "nowrap" }}>{row.date}</td>
+                <td style={{ padding: "5px 10px", textAlign: "right", color: "var(--foreground)", fontSize: 9 }}>{row.games}</td>
                 {(["avgFgMl", "avgF5Ml", "avgNrfi", "avgFgTotal", "avgF5Total"] as const).map(field => {
                   const v = row[field];
                   const nullCount = row[field.replace("avg", "null") as keyof typeof row] as number;
@@ -663,12 +663,12 @@ function BrierHeatmap({ heatmapData, selectedCell, setSelectedCell, drilldownDat
                     <td key={field} onClick={() => setSelectedCell(isSelected ? null : { date: row.date, market: marketKey })} style={{
                       padding: "5px 10px", textAlign: "right",
                       background: isSelected ? "transparent" : cellBg(v),
-                      color: isSelected ? "#45E0A8" : cellColor(v),
+                      color: isSelected ? "var(--primary)" : cellColor(v),
                       fontWeight: 700, cursor: "pointer",
-                      outline: isSelected ? "1px solid #45E0A8" : "none",
+                      outline: isSelected ? "1px solid var(--primary)" : "none",
                     }}>
-                      {v != null ? v.toFixed(4) : <span style={{ color: "#FFFFFF" }}>—</span>}
-                      {nullCount > 0 && <span style={{ fontSize: 7, color: "#FFFFFF", marginLeft: 3 }}>({nullCount}ø)</span>}
+                      {v != null ? v.toFixed(4) : <span style={{ color: "var(--foreground)" }}>—</span>}
+                      {nullCount > 0 && <span style={{ fontSize: 7, color: "var(--foreground)", marginLeft: 3 }}>({nullCount}ø)</span>}
                     </td>
                   );
                 })}
@@ -680,30 +680,30 @@ function BrierHeatmap({ heatmapData, selectedCell, setSelectedCell, drilldownDat
 
       {/* Drill-down panel */}
       {selectedCell && (
-        <div style={{ marginTop: 16, padding: "16px 20px", background: "transparent", border: "1px solid #45E0A8", borderRadius: 8 }}>
+        <div style={{ marginTop: 16, padding: "16px 20px", background: "transparent", border: "1px solid var(--primary)", borderRadius: 8 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "2px", color: "#45E0A8", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
+            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "2px", color: "var(--primary)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
               DRILL-DOWN — {selectedCell.date} / {selectedCell.market.toUpperCase()}
             </div>
-            <button type="button" onClick={() => setSelectedCell(null)} style={{ background: "none", border: "none", color: "#FFFFFF", cursor: "pointer", fontSize: 14 }}>×</button>
+            <button type="button" onClick={() => setSelectedCell(null)} style={{ background: "none", border: "none", color: "var(--foreground)", cursor: "pointer", fontSize: 14 }}>×</button>
           </div>
           {drilldownLoading ? (
-            <div style={{ fontSize: 11, color: "#FFFFFF", padding: "12px 0" }}>Loading games…</div>
+            <div style={{ fontSize: 11, color: "var(--foreground)", padding: "12px 0" }}>Loading games…</div>
           ) : !drilldownData || drilldownData.games.length === 0 ? (
-            <div style={{ fontSize: 11, color: "#FFFFFF", padding: "8px 0" }}>No games found for this date.</div>
+            <div style={{ fontSize: 11, color: "var(--foreground)", padding: "8px 0" }}>No games found for this date.</div>
           ) : (
             <table style={{ borderCollapse: "collapse", fontSize: 10, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', width: "100%" }}>
               <thead>
-                <tr style={{ borderBottom: "1px solid #FFFFFF" }}>
+                <tr style={{ borderBottom: "1px solid var(--border)" }}>
                   {["MATCHUP", "BRIER", "MODEL AWAY%", "MODEL HOME%", "BOOK ML", "SCORE", "RESULT"].map(h => (
-                    <th key={h} style={{ padding: "4px 8px", textAlign: h === "MATCHUP" ? "left" : "right", color: "#FFFFFF", fontWeight: 700, letterSpacing: ".08em", fontSize: 9 }}>{h}</th>
+                    <th key={h} style={{ padding: "4px 8px", textAlign: h === "MATCHUP" ? "left" : "right", color: "var(--foreground)", fontWeight: 700, letterSpacing: ".08em", fontSize: 9 }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {drilldownData.games.map((g: Record<string, unknown>) => {
                   const brier = g.focusBrier as number | null;
-                  const bc = brier == null ? "#FFFFFF" : brier <= 0.15 ? "#45E0A8" : brier <= 0.22 ? "#FFFFFF" : "#FFFFFF";
+                  const bc = brier == null ? "var(--foreground)" : brier <= 0.15 ? "var(--primary)" : brier <= 0.22 ? "var(--foreground)" : "var(--foreground)";
                   const mktKey = selectedCell.market;
                   const modelAway = (mktKey === "f5Ml" || mktKey === "f5Total") ? g.modelF5AwayWinPct : g.modelAwayWinPct;
                   const modelHome = (mktKey === "f5Ml" || mktKey === "f5Total") ? g.modelF5HomeWinPct : g.modelHomeWinPct;
@@ -714,14 +714,14 @@ function BrierHeatmap({ heatmapData, selectedCell, setSelectedCell, drilldownDat
                   const scoreAway = (mktKey as string).startsWith("f5") ? g.actualF5AwayScore : g.actualAwayScore;
                   const scoreHome = (mktKey as string).startsWith("f5") ? g.actualF5HomeScore : g.actualHomeScore;
                   return (
-                    <tr key={g.id as number} style={{ borderBottom: "1px solid #FFFFFF" }}>
-                      <td style={{ padding: "5px 8px", color: "#FFFFFF", fontWeight: 600, whiteSpace: "nowrap" }}>{g.awayTeam as string} @ {g.homeTeam as string}</td>
-                      <td style={{ padding: "5px 8px", textAlign: "right", color: bc, fontWeight: 700 }}>{brier != null ? brier.toFixed(4) : <span style={{ color: "#FFFFFF" }}>—</span>}</td>
-                      <td style={{ padding: "5px 8px", textAlign: "right", color: "#FFFFFF" }}>{modelAway != null ? (modelAway as number).toFixed(1) + "%" : "—"}</td>
-                      <td style={{ padding: "5px 8px", textAlign: "right", color: "#FFFFFF" }}>{modelHome != null ? (modelHome as number).toFixed(1) + "%" : "—"}</td>
-                      <td style={{ padding: "5px 8px", textAlign: "right", color: "#FFFFFF", fontSize: 9 }}>{bookAway as string ?? "—"} / {bookHome as string ?? "—"}</td>
-                      <td style={{ padding: "5px 8px", textAlign: "right", color: "#FFFFFF" }}>{scoreAway != null && scoreHome != null ? `${scoreAway}–${scoreHome}` : "—"}</td>
-                      <td style={{ padding: "5px 8px", textAlign: "right", fontWeight: 700, color: correct === 1 ? "#45E0A8" : correct === 0 ? "#FFFFFF" : "#FFFFFF" }}>
+                    <tr key={g.id as number} style={{ borderBottom: "1px solid var(--border)" }}>
+                      <td style={{ padding: "5px 8px", color: "var(--foreground)", fontWeight: 600, whiteSpace: "nowrap" }}>{g.awayTeam as string} @ {g.homeTeam as string}</td>
+                      <td style={{ padding: "5px 8px", textAlign: "right", color: bc, fontWeight: 700 }}>{brier != null ? brier.toFixed(4) : <span style={{ color: "var(--foreground)" }}>—</span>}</td>
+                      <td style={{ padding: "5px 8px", textAlign: "right", color: "var(--foreground)" }}>{modelAway != null ? (modelAway as number).toFixed(1) + "%" : "—"}</td>
+                      <td style={{ padding: "5px 8px", textAlign: "right", color: "var(--foreground)" }}>{modelHome != null ? (modelHome as number).toFixed(1) + "%" : "—"}</td>
+                      <td style={{ padding: "5px 8px", textAlign: "right", color: "var(--foreground)", fontSize: 9 }}>{bookAway as string ?? "—"} / {bookHome as string ?? "—"}</td>
+                      <td style={{ padding: "5px 8px", textAlign: "right", color: "var(--foreground)" }}>{scoreAway != null && scoreHome != null ? `${scoreAway}–${scoreHome}` : "—"}</td>
+                      <td style={{ padding: "5px 8px", textAlign: "right", fontWeight: 700, color: correct === 1 ? "var(--primary)" : correct === 0 ? "var(--foreground)" : "var(--foreground)" }}>
                         {correct === 1 ? "✓" : correct === 0 ? "✗" : result as string ?? "—"}
                       </td>
                     </tr>
@@ -742,17 +742,17 @@ function RollingAccuracyPanel({ days, appUser }: { days: number; appUser: { id: 
     { days },
     { enabled: !!appUser, refetchOnWindowFocus: false, staleTime: 5 * 60 * 1000 }
   );
-  if (isLoading) return <div style={{ fontSize: 11, color: "#FFFFFF", padding: "8px 0" }}>Loading rolling accuracy…</div>;
-  if (!data || data.length === 0) return <div style={{ fontSize: 11, color: "#FFFFFF", padding: "8px 0" }}>No backtest data yet.</div>;
+  if (isLoading) return <div style={{ fontSize: 11, color: "var(--foreground)", padding: "8px 0" }}>Loading rolling accuracy…</div>;
+  if (!data || data.length === 0) return <div style={{ fontSize: 11, color: "var(--foreground)", padding: "8px 0" }}>No backtest data yet.</div>;
   return (
     <StatGrid>
       {data.map(row => (
-        <div key={row.market} style={{ background: "#000000", border: "1px solid #FFFFFF", borderRadius: 8, padding: "10px 14px", minWidth: 110 }}>
-          <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: "1px", textTransform: "uppercase", color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', marginBottom: 4 }}>{row.market.replace(/_/g, " ")}</div>
+        <div key={row.market} style={{ background: "var(--background)", border: "1px solid var(--border)", borderRadius: 8, padding: "10px 14px", minWidth: 110 }}>
+          <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: "1px", textTransform: "uppercase", color: "var(--foreground)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', marginBottom: 4 }}>{row.market.replace(/_/g, " ")}</div>
           <div style={{ fontSize: 22, fontWeight: 800, color: accuracyColor(row.accuracy), fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', lineHeight: 1 }}>
             {row.sampleSize > 0 ? `${(row.accuracy * 100).toFixed(1)}%` : "—"}
           </div>
-          <div style={{ fontSize: 9, color: "#FFFFFF", marginTop: 2, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>{row.sampleSize} graded</div>
+          <div style={{ fontSize: 9, color: "var(--foreground)", marginTop: 2, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>{row.sampleSize} graded</div>
         </div>
       ))}
     </StatGrid>
@@ -792,7 +792,7 @@ function HrPropRow({ prop, awayTeam, homeTeam }: { prop: HrPropRow; awayTeam: st
   const isCorrect = prop.modelCorrect === 1;
 
   return (
-    <div style={{ background: "#000000", border: "1px solid #FFFFFF", borderRadius: 10, overflow: "hidden", marginBottom: 8 }}>
+    <div style={{ background: "var(--background)", border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden", marginBottom: 8 }}>
       <div style={{ height: 3, background: primary }} />
       <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px" }}>
         {/* Photo */}
@@ -806,41 +806,41 @@ function HrPropRow({ prop, awayTeam, homeTeam }: { prop: HrPropRow; awayTeam: st
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
             {logo && <img src={logo} alt={team} style={{ width: 18, height: 18, objectFit: "contain" }} />}
-            <span style={{ fontSize: 13, fontWeight: 700, color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>{prop.playerName}</span>
-            <span style={{ fontSize: 10, color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>{team}</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>{prop.playerName}</span>
+            <span style={{ fontSize: 10, color: "var(--foreground)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>{team}</span>
           </div>
-          <div style={{ fontSize: 10, color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>{awayTeam} @ {homeTeam}</div>
+          <div style={{ fontSize: 10, color: "var(--foreground)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>{awayTeam} @ {homeTeam}</div>
         </div>
         {/* Model vs Book */}
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end", minWidth: 0 }}>
           <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 8, color: "#FFFFFF", letterSpacing: 1, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>MODEL P(HR)</div>
-            <div style={{ fontSize: 18, fontWeight: 800, color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
+            <div style={{ fontSize: 8, color: "var(--foreground)", letterSpacing: 1, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>MODEL P(HR)</div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: "var(--foreground)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
               {modelPHr != null ? `${(modelPHr * 100).toFixed(1)}%` : "—"}
             </div>
           </div>
           <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 8, color: "#FFFFFF", letterSpacing: 1, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>BOOK NO-VIG</div>
-            <div style={{ fontSize: 18, fontWeight: 800, color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
+            <div style={{ fontSize: 8, color: "var(--foreground)", letterSpacing: 1, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>BOOK NO-VIG</div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: "var(--foreground)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
               {anNoVig != null ? `${(anNoVig * 100).toFixed(1)}%` : "—"}
             </div>
           </div>
           <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 8, color: "#FFFFFF", letterSpacing: 1, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>EDGE OVER</div>
-            <div style={{ fontSize: 18, fontWeight: 800, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', color: hasEdge ? (edgeOver! > 0 ? "#45E0A8" : "#FFFFFF") : "#FFFFFF" }}>
+            <div style={{ fontSize: 8, color: "var(--foreground)", letterSpacing: 1, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>EDGE OVER</div>
+            <div style={{ fontSize: 18, fontWeight: 800, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', color: hasEdge ? (edgeOver! > 0 ? "var(--primary)" : "var(--foreground)") : "var(--foreground)" }}>
               {edgeOver != null ? `${edgeOver > 0 ? "+" : ""}${(edgeOver * 100).toFixed(1)}pp` : "—"}
             </div>
           </div>
           <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 8, color: "#FFFFFF", letterSpacing: 1, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>FD ODDS</div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
+            <div style={{ fontSize: 8, color: "var(--foreground)", letterSpacing: 1, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>FD ODDS</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: "var(--foreground)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
               {fmtOdds(prop.fdOverOdds)}
             </div>
           </div>
           {/* Result */}
           <div>
             {isPending
-              ? <span style={{ fontSize: 10, color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>PENDING</span>
+              ? <span style={{ fontSize: 10, color: "var(--foreground)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>PENDING</span>
               : <ResultBadge result={prop.backtestResult} correct={prop.modelCorrect} />
             }
           </div>
@@ -890,7 +890,7 @@ function KPropPitcherRow({ prop }: { prop: KPropRow }) {
   const isPending = !prop.backtestResult || prop.backtestResult === "PENDING";
 
   return (
-    <div style={{ background: "#000000", border: "1px solid #FFFFFF", borderRadius: 10, overflow: "hidden", marginBottom: 8 }}>
+    <div style={{ background: "var(--background)", border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden", marginBottom: 8 }}>
       <div style={{ height: 3, background: primary }} />
       <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px" }}>
         {photo
@@ -902,30 +902,30 @@ function KPropPitcherRow({ prop }: { prop: KPropRow }) {
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
             {logo && <img src={logo} alt={pitcherTeam} style={{ width: 18, height: 18, objectFit: "contain" }} />}
-            <span style={{ fontSize: 13, fontWeight: 700, color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>{prop.pitcherName}</span>
-            <span style={{ fontSize: 10, color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>vs {isAway ? prop.homeTeam : prop.awayTeam}</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: "var(--foreground)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>{prop.pitcherName}</span>
+            <span style={{ fontSize: 10, color: "var(--foreground)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>vs {isAway ? prop.homeTeam : prop.awayTeam}</span>
           </div>
-          <div style={{ fontSize: 10, color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>{prop.awayTeam} @ {prop.homeTeam}</div>
+          <div style={{ fontSize: 10, color: "var(--foreground)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>{prop.awayTeam} @ {prop.homeTeam}</div>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <div style={{ textAlign: "center", minWidth: 44 }}>
-            <div style={{ fontSize: 8, color: "#FFFFFF", letterSpacing: 1, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>PROJ Ks</div>
-            <div style={{ fontSize: 22, fontWeight: 800, color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', lineHeight: 1 }}>{kProj != null ? kProj.toFixed(1) : "—"}</div>
+            <div style={{ fontSize: 8, color: "var(--foreground)", letterSpacing: 1, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>PROJ Ks</div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: "var(--foreground)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', lineHeight: 1 }}>{kProj != null ? kProj.toFixed(1) : "—"}</div>
           </div>
           <div style={{ textAlign: "center", minWidth: 52 }}>
-            <div style={{ fontSize: 8, color: "#FFFFFF", letterSpacing: 1, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>BOOK LINE</div>
-            <div style={{ fontSize: 22, fontWeight: 800, color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', lineHeight: 1 }}>{bookLine != null ? bookLine.toFixed(1) : "—"}</div>
+            <div style={{ fontSize: 8, color: "var(--foreground)", letterSpacing: 1, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>BOOK LINE</div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: "var(--foreground)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', lineHeight: 1 }}>{bookLine != null ? bookLine.toFixed(1) : "—"}</div>
           </div>
           {prop.actualKs != null && (
             <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: 8, color: "#FFFFFF", letterSpacing: 1, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>ACTUAL</div>
-              <div style={{ fontSize: 22, fontWeight: 800, color: "#45E0A8", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', lineHeight: 1 }}>{prop.actualKs}</div>
+              <div style={{ fontSize: 8, color: "var(--foreground)", letterSpacing: 1, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>ACTUAL</div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: "var(--primary)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', lineHeight: 1 }}>{prop.actualKs}</div>
             </div>
           )}
           {modelErr != null && (
             <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: 8, color: "#FFFFFF", letterSpacing: 1, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>ERROR</div>
-              <div style={{ fontSize: 18, fontWeight: 700, color: Math.abs(modelErr) <= 0.5 ? "#45E0A8" : Math.abs(modelErr) <= 1.5 ? "#FFFFFF" : "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', lineHeight: 1 }}>{signedNum(modelErr, 1)}</div>
+              <div style={{ fontSize: 8, color: "var(--foreground)", letterSpacing: 1, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>ERROR</div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: Math.abs(modelErr) <= 0.5 ? "var(--primary)" : Math.abs(modelErr) <= 1.5 ? "var(--foreground)" : "var(--foreground)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', lineHeight: 1 }}>{signedNum(modelErr, 1)}</div>
             </div>
           )}
           <div>
@@ -933,7 +933,7 @@ function KPropPitcherRow({ prop }: { prop: KPropRow }) {
           </div>
           <div>
             {isPending
-              ? <span style={{ fontSize: 10, color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>PENDING</span>
+              ? <span style={{ fontSize: 10, color: "var(--foreground)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>PENDING</span>
               : <ResultBadge result={prop.backtestResult} correct={prop.modelCorrect} />
             }
           </div>
@@ -942,15 +942,15 @@ function KPropPitcherRow({ prop }: { prop: KPropRow }) {
       {/* O/U breakdown */}
       {(prop.pOver || prop.pUnder) && (
         <div style={{ display: "flex", gap: 8, padding: "0 14px 10px", marginTop: -4 }}>
-          <div style={{ flex: 1, padding: "6px 10px", borderRadius: 6, background: "transparent", border: "1px solid #FFFFFF", display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "1px", textTransform: "uppercase", color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>OVER {fmtNum(prop.bookLine, 1)}</span>
-            <span style={{ fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: 14, fontWeight: 800, color: "#FFFFFF" }}>{prop.pOver ? fmtPct(parseFloat(prop.pOver)) : "—"}</span>
-            <span style={{ fontSize: 10, color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>{fmtOdds(prop.bookOverOdds)}</span>
+          <div style={{ flex: 1, padding: "6px 10px", borderRadius: 6, background: "transparent", border: "1px solid var(--border)", display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "1px", textTransform: "uppercase", color: "var(--foreground)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>OVER {fmtNum(prop.bookLine, 1)}</span>
+            <span style={{ fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: 14, fontWeight: 800, color: "var(--foreground)" }}>{prop.pOver ? fmtPct(parseFloat(prop.pOver)) : "—"}</span>
+            <span style={{ fontSize: 10, color: "var(--foreground)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>{fmtOdds(prop.bookOverOdds)}</span>
           </div>
-          <div style={{ flex: 1, padding: "6px 10px", borderRadius: 6, background: "transparent", border: "1px solid #FFFFFF", display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "1px", textTransform: "uppercase", color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>UNDER {fmtNum(prop.bookLine, 1)}</span>
-            <span style={{ fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: 14, fontWeight: 800, color: "#FFFFFF" }}>{prop.pUnder ? fmtPct(parseFloat(prop.pUnder)) : "—"}</span>
-            <span style={{ fontSize: 10, color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>{fmtOdds(prop.bookUnderOdds)}</span>
+          <div style={{ flex: 1, padding: "6px 10px", borderRadius: 6, background: "transparent", border: "1px solid var(--border)", display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "1px", textTransform: "uppercase", color: "var(--foreground)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>UNDER {fmtNum(prop.bookLine, 1)}</span>
+            <span style={{ fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: 14, fontWeight: 800, color: "var(--foreground)" }}>{prop.pUnder ? fmtPct(parseFloat(prop.pUnder)) : "—"}</span>
+            <span style={{ fontSize: 10, color: "var(--foreground)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>{fmtOdds(prop.bookUnderOdds)}</span>
           </div>
         </div>
       )}
@@ -1190,8 +1190,8 @@ export default function TheModelResults() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: "#000000" }}>
-        <Loader2 className="animate-spin" style={{ color: "#45E0A8" }} />
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--background)" }}>
+        <Loader2 className="animate-spin" style={{ color: "var(--primary)" }} />
       </div>
     );
   }
@@ -1199,30 +1199,30 @@ export default function TheModelResults() {
 
   // ─── Market tab config ────────────────────────────────────────────────────
   const MARKET_TABS: { id: MarketTab; label: string; color: string }[] = [
-    { id: "fullgame",    label: "FULL GAME",       color: "#45E0A8" },
-    { id: "first5",      label: "FIRST 5 INNINGS", color: "#45E0A8" },
-    { id: "firstinning", label: "1ST INNING",       color: "#45E0A8" },
-    { id: "kprops",      label: "K-PROPS",          color: "#45E0A8" },
-    { id: "hrprops",     label: "HR PROPS",         color: "#45E0A8" },
+    { id: "fullgame",    label: "FULL GAME",       color: "var(--primary)" },
+    { id: "first5",      label: "FIRST 5 INNINGS", color: "var(--primary)" },
+    { id: "firstinning", label: "1ST INNING",       color: "var(--primary)" },
+    { id: "kprops",      label: "K-PROPS",          color: "var(--primary)" },
+    { id: "hrprops",     label: "HR PROPS",         color: "var(--primary)" },
   ];
   const activeTab = MARKET_TABS.find(t => t.id === marketTab)!;
 
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
     <AdminShell active="model-results">
-    <div style={{ background: "#000000" }}>
+    <div style={{ background: "var(--background)" }}>
 
       {/* ── Sticky header ──────────────────────────────────────────────────── */}
       {/* Back button removed — now owned by AdminShell's back-to-app affordance
           + registry-driven tab nav (includes direct links to Publish/Backtest). */}
-      <header className="sticky top-14 z-40 bg-black backdrop-blur-sm border-b border-white">
+      <header className="sticky top-14 z-40 bg-background backdrop-blur-sm border-b border-border">
         <div className="relative flex items-center px-4 py-2 max-w-6xl mx-auto">
           <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 pointer-events-none">
-            <FlaskConical size={16} style={{ color: "#45E0A8" }} />
-            <span className="font-black text-white whitespace-nowrap" style={{ fontSize: "clamp(13px, 3vw, 18px)", letterSpacing: "0.08em" }}>
+            <FlaskConical size={16} style={{ color: "var(--primary)" }} />
+            <span className="font-black text-foreground whitespace-nowrap" style={{ fontSize: "clamp(13px, 3vw, 18px)", letterSpacing: "0.08em" }}>
               THE MODEL RESULTS
             </span>
-            <span className="text-white" style={{ fontSize: "clamp(10px, 2vw, 14px)" }}>|</span>
+            <span className="text-foreground" style={{ fontSize: "clamp(10px, 2vw, 14px)" }}>|</span>
             <span className="font-medium whitespace-nowrap" style={{ fontSize: "clamp(10px, 2vw, 13px)", letterSpacing: "0.1em", color: activeTab.color }}>
               {activeTab.label}
             </span>
@@ -1230,13 +1230,13 @@ export default function TheModelResults() {
           <div className="flex-1" />
           <div className="flex items-center gap-2">
             <Button size="sm" variant="outline" onClick={() => setLocation("/admin/backtest")}
-              className="gap-1.5 text-xs h-8 font-medium border-white text-white">
+              className="gap-1.5 text-xs h-8 font-medium border-border text-foreground">
               <BarChart3 size={12} />
               Backtest
             </Button>
             <Button size="sm" onClick={handleRefresh} disabled={isRefreshing}
               className="gap-1.5 text-xs h-8 font-bold border"
-              style={{ background: "transparent", color: "#45E0A8", borderColor: "#45E0A8" }}>
+              style={{ background: "transparent", color: "var(--primary)", borderColor: "var(--primary)" }}>
               {isRefreshing ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
               Refresh
             </Button>
@@ -1250,8 +1250,8 @@ export default function TheModelResults() {
               className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-colors whitespace-nowrap flex-shrink-0"
               style={{
                 background: "transparent",
-                color: marketTab === tab.id ? tab.color : "#FFFFFF",
-                border: `1px solid ${marketTab === tab.id ? tab.color : "#FFFFFF"}`,
+                color: marketTab === tab.id ? tab.color : "var(--foreground)",
+                border: `1px solid ${marketTab === tab.id ? tab.color : "var(--border)"}`,
                 fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', letterSpacing: "0.08em",
               }}>
               {tab.label}
@@ -1263,14 +1263,14 @@ export default function TheModelResults() {
             <>
               <div style={{ flex: 1 }} />
               <button type="button" onClick={() => setGameDate(d => addDays(d, -1))} className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors flex-shrink-0">
-                <ChevronLeft size={14} style={{ color: "#FFFFFF" }} />
+                <ChevronLeft size={14} style={{ color: "var(--foreground)" }} />
               </button>
-              <span className="text-xs font-bold text-white tracking-wide whitespace-nowrap">{formatDateNav(gameDate)}</span>
+              <span className="text-xs font-bold text-foreground tracking-wide whitespace-nowrap">{formatDateNav(gameDate)}</span>
               {gameDate === todayPst() && (
-                <span className="text-sm font-semibold px-1.5 py-0.5 rounded" style={{ background: "transparent", color: "#45E0A8" }}>TODAY</span>
+                <span className="text-sm font-semibold px-1.5 py-0.5 rounded" style={{ background: "transparent", color: "var(--primary)" }}>TODAY</span>
               )}
               <button type="button" onClick={() => setGameDate(d => addDays(d, 1))} className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors flex-shrink-0">
-                <ChevronRight size={14} style={{ color: "#FFFFFF" }} />
+                <ChevronRight size={14} style={{ color: "var(--foreground)" }} />
               </button>
             </>
           )}
@@ -1284,8 +1284,8 @@ export default function TheModelResults() {
                   className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-colors"
                   style={{
                     background: brierSubTab === st ? "transparent" : "transparent",
-                    color: brierSubTab === st ? "#45E0A8" : "#FFFFFF",
-                    border: `1px solid ${brierSubTab === st ? "#45E0A8" : "#FFFFFF"}`,
+                    color: brierSubTab === st ? "var(--primary)" : "var(--foreground)",
+                    border: `1px solid ${brierSubTab === st ? "var(--primary)" : "var(--border)"}`,
                     fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', letterSpacing: ".08em",
                   }}>
                   {st === "trend" ? <TrendingUp size={10} /> : <BarChart3 size={10} />}
@@ -1299,8 +1299,8 @@ export default function TheModelResults() {
                     <button type="button" key={w} onClick={() => setBrierWindow(w)} style={{
                       fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 5,
                       background: brierWindow === w ? "transparent" : "transparent",
-                      color: brierWindow === w ? "#45E0A8" : "#FFFFFF",
-                      border: `1px solid ${brierWindow === w ? "#45E0A8" : "#FFFFFF"}`,
+                      color: brierWindow === w ? "var(--primary)" : "var(--foreground)",
+                      border: `1px solid ${brierWindow === w ? "var(--primary)" : "var(--border)"}`,
                       cursor: "pointer", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif',
                     }}>{w}G</button>
                   ))}
@@ -1316,11 +1316,11 @@ export default function TheModelResults() {
 
         {/* ── DRIFT BANNER ─────────────────────────────────────────────────── */}
         {driftData && driftData.driftDetected && (
-          <div style={{ marginBottom: 16, padding: "10px 16px", background: "transparent", border: "1px solid #FFFFFF", borderRadius: 8, display: "flex", alignItems: "center", gap: 10 }}>
-            <Activity size={14} style={{ color: "#FFFFFF", flexShrink: 0 }} />
+          <div style={{ marginBottom: 16, padding: "10px 16px", background: "transparent", border: "1px solid var(--border)", borderRadius: 8, display: "flex", alignItems: "center", gap: 10 }}>
+            <Activity size={14} style={{ color: "var(--foreground)", flexShrink: 0 }} />
             <div style={{ flex: 1 }}>
-              <span style={{ fontSize: 11, fontWeight: 700, color: "#FFFFFF", letterSpacing: "1px", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>DRIFT DETECTED</span>
-              <span style={{ fontSize: 10, color: "#FFFFFF", marginLeft: 8, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: "var(--foreground)", letterSpacing: "1px", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>DRIFT DETECTED</span>
+              <span style={{ fontSize: 10, color: "var(--foreground)", marginLeft: 8, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
                 {driftData.message ?? "F5 share deviation exceeds threshold — recalibration recommended"}
               </span>
             </div>
@@ -1357,15 +1357,15 @@ export default function TheModelResults() {
               <div>
                 <SectionLabel>BRIER TREND — FG ML (solid) + FG TOTAL (dashed)</SectionLabel>
                 {brierLoading ? (
-                  <div className="flex items-center justify-center py-8 gap-3"><Loader2 className="w-5 h-5 animate-spin" style={{ color: "#45E0A8" }} /><span className="text-sm text-white">Loading…</span></div>
+                  <div className="flex items-center justify-center py-8 gap-3"><Loader2 className="w-5 h-5 animate-spin" style={{ color: "var(--primary)" }} /><span className="text-sm text-foreground">Loading…</span></div>
                 ) : !brierData || brierData.summary.totalGames === 0 ? (
-                  <div className="text-center py-12 text-white text-sm">No Brier data yet. Run outcome ingestion first.</div>
+                  <div className="text-center py-12 text-foreground text-sm">No Brier data yet. Run outcome ingestion first.</div>
                 ) : (
                   <BrierTrendChart
                     data={brierChartData}
                     lines={[
-                      { key: "rollingFgMl", label: `FG ML (${brierWindow}G)`, color: "#45E0A8" },
-                      { key: "rollingFgTotal", label: `FG Total (${brierWindow}G)`, color: "#45E0A8", dashed: true },
+                      { key: "rollingFgMl", label: `FG ML (${brierWindow}G)`, color: "var(--primary)" },
+                      { key: "rollingFgTotal", label: `FG Total (${brierWindow}G)`, color: "var(--primary)", dashed: true },
                     ]}
                     windowSize={brierWindow}
                     onWindowChange={setBrierWindow}
@@ -1378,9 +1378,9 @@ export default function TheModelResults() {
               <div>
                 <SectionLabel>BRIER HEATMAP — ALL MARKETS × ALL DATES</SectionLabel>
                 {heatmapLoading ? (
-                  <div className="flex items-center justify-center py-8 gap-3"><Loader2 className="w-5 h-5 animate-spin" style={{ color: "#45E0A8" }} /></div>
+                  <div className="flex items-center justify-center py-8 gap-3"><Loader2 className="w-5 h-5 animate-spin" style={{ color: "var(--primary)" }} /></div>
                 ) : !heatmapData ? (
-                  <div className="text-center py-12 text-white text-sm">No heatmap data yet.</div>
+                  <div className="text-center py-12 text-foreground text-sm">No heatmap data yet.</div>
                 ) : (
                   <BrierHeatmap
                     heatmapData={heatmapData}
@@ -1400,8 +1400,8 @@ export default function TheModelResults() {
                 <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
                   {(["table", "scatter"] as const).map(t => (
                     <button type="button" key={t} onClick={() => setFgEdgeTab(t)} style={{
-                      background: fgEdgeTab === t ? "#45E0A8" : "#000000", border: "1px solid #FFFFFF",
-                      borderRadius: 4, cursor: "pointer", color: fgEdgeTab === t ? "#000" : "#FFFFFF",
+                      background: fgEdgeTab === t ? "var(--primary)" : "var(--background)", border: "1px solid var(--border)",
+                      borderRadius: 4, cursor: "pointer", color: fgEdgeTab === t ? "var(--primary-foreground)" : "var(--foreground)",
                       padding: "3px 10px", fontSize: 10, fontWeight: 700,
                       fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', letterSpacing: 1,
                     }}>{t === "table" ? "📋 TABLE" : "📊 SCATTER"}</button>
@@ -1413,17 +1413,17 @@ export default function TheModelResults() {
               {fgEdgeData?.summary && (
                 <StatGrid minColWidth={120}>
                   {[
-                    { label: "TOTAL GAMES", value: fgEdgeData.summary.totalGames, color: "#FFFFFF" },
-                    { label: "POSITIVE EDGE", value: fgEdgeData.summary.positiveEdge, color: "#45E0A8" },
-                    { label: "NEGATIVE EDGE", value: fgEdgeData.summary.negativeEdge, color: "#FFFFFF" },
-                    { label: "AVG +EDGE", value: `+${fgEdgeData.summary.avgPositiveEdge.toFixed(2)}pp`, color: "#45E0A8" },
-                    { label: "WIN RATE (POS EDGE)", value: fgEdgeData.summary.winRateOnPositiveEdge != null ? `${fgEdgeData.summary.winRateOnPositiveEdge}%` : "PENDING", color: "#FFFFFF" },
+                    { label: "TOTAL GAMES", value: fgEdgeData.summary.totalGames, color: "var(--foreground)" },
+                    { label: "POSITIVE EDGE", value: fgEdgeData.summary.positiveEdge, color: "var(--primary)" },
+                    { label: "NEGATIVE EDGE", value: fgEdgeData.summary.negativeEdge, color: "var(--foreground)" },
+                    { label: "AVG +EDGE", value: `+${fgEdgeData.summary.avgPositiveEdge.toFixed(2)}pp`, color: "var(--primary)" },
+                    { label: "WIN RATE (POS EDGE)", value: fgEdgeData.summary.winRateOnPositiveEdge != null ? `${fgEdgeData.summary.winRateOnPositiveEdge}%` : "PENDING", color: "var(--foreground)" },
                   ].map(c => <MiniStatCard key={c.label} label={c.label} value={c.value} color={c.color} />)}
                 </StatGrid>
               )}
 
               {fgEdgeLoading ? (
-                <div className="flex items-center justify-center py-8 gap-3"><Loader2 className="w-5 h-5 animate-spin" style={{ color: "#45E0A8" }} /></div>
+                <div className="flex items-center justify-center py-8 gap-3"><Loader2 className="w-5 h-5 animate-spin" style={{ color: "var(--primary)" }} /></div>
               ) : fgEdgeTab === "table" ? (
                 <EdgeLeaderboardTable
                   rows={fgRows} market="fg"
@@ -1470,15 +1470,15 @@ export default function TheModelResults() {
               <div>
                 <SectionLabel>BRIER TREND — F5 ML (solid) + F5 TOTAL (dashed)</SectionLabel>
                 {brierLoading ? (
-                  <div className="flex items-center justify-center py-8 gap-3"><Loader2 className="w-5 h-5 animate-spin" style={{ color: "#45E0A8" }} /></div>
+                  <div className="flex items-center justify-center py-8 gap-3"><Loader2 className="w-5 h-5 animate-spin" style={{ color: "var(--primary)" }} /></div>
                 ) : !brierData || brierData.summary.totalGames === 0 ? (
-                  <div className="text-center py-12 text-white text-sm">No Brier data yet.</div>
+                  <div className="text-center py-12 text-foreground text-sm">No Brier data yet.</div>
                 ) : (
                   <BrierTrendChart
                     data={brierChartData}
                     lines={[
-                      { key: "rollingF5Ml", label: `F5 ML (${brierWindow}G)`, color: "#45E0A8" },
-                      { key: "rollingF5Total", label: `F5 Total (${brierWindow}G)`, color: "#45E0A8", dashed: true },
+                      { key: "rollingF5Ml", label: `F5 ML (${brierWindow}G)`, color: "var(--primary)" },
+                      { key: "rollingF5Total", label: `F5 Total (${brierWindow}G)`, color: "var(--primary)", dashed: true },
                     ]}
                     windowSize={brierWindow}
                     onWindowChange={setBrierWindow}
@@ -1491,9 +1491,9 @@ export default function TheModelResults() {
               <div>
                 <SectionLabel>BRIER HEATMAP — ALL MARKETS × ALL DATES</SectionLabel>
                 {heatmapLoading ? (
-                  <div className="flex items-center justify-center py-8 gap-3"><Loader2 className="w-5 h-5 animate-spin" style={{ color: "#45E0A8" }} /></div>
+                  <div className="flex items-center justify-center py-8 gap-3"><Loader2 className="w-5 h-5 animate-spin" style={{ color: "var(--primary)" }} /></div>
                 ) : !heatmapData ? (
-                  <div className="text-center py-12 text-white text-sm">No heatmap data yet.</div>
+                  <div className="text-center py-12 text-foreground text-sm">No heatmap data yet.</div>
                 ) : (
                   <BrierHeatmap
                     heatmapData={heatmapData}
@@ -1513,8 +1513,8 @@ export default function TheModelResults() {
                 <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
                   {(["table", "scatter"] as const).map(t => (
                     <button type="button" key={t} onClick={() => setF5EdgeTab(t)} style={{
-                      background: f5EdgeTab === t ? "#45E0A8" : "#000000", border: "1px solid #FFFFFF",
-                      borderRadius: 4, cursor: "pointer", color: f5EdgeTab === t ? "#000" : "#FFFFFF",
+                      background: f5EdgeTab === t ? "var(--primary)" : "var(--background)", border: "1px solid var(--border)",
+                      borderRadius: 4, cursor: "pointer", color: f5EdgeTab === t ? "var(--primary-foreground)" : "var(--foreground)",
                       padding: "3px 10px", fontSize: 10, fontWeight: 700,
                       fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', letterSpacing: 1,
                     }}>{t === "table" ? "📋 TABLE" : "📊 SCATTER"}</button>
@@ -1525,17 +1525,17 @@ export default function TheModelResults() {
               {f5EdgeData?.summary && (
                 <StatGrid minColWidth={120}>
                   {[
-                    { label: "TOTAL GAMES", value: f5EdgeData.summary.totalGames, color: "#FFFFFF" },
-                    { label: "POSITIVE EDGE", value: f5EdgeData.summary.positiveEdge, color: "#45E0A8" },
-                    { label: "NEGATIVE EDGE", value: f5EdgeData.summary.negativeEdge, color: "#FFFFFF" },
-                    { label: "AVG +EDGE", value: `+${f5EdgeData.summary.avgPositiveEdge.toFixed(2)}pp`, color: "#45E0A8" },
-                    { label: "WIN RATE (POS EDGE)", value: f5EdgeData.summary.winRateOnPositiveEdge != null ? `${f5EdgeData.summary.winRateOnPositiveEdge}%` : "PENDING", color: "#FFFFFF" },
+                    { label: "TOTAL GAMES", value: f5EdgeData.summary.totalGames, color: "var(--foreground)" },
+                    { label: "POSITIVE EDGE", value: f5EdgeData.summary.positiveEdge, color: "var(--primary)" },
+                    { label: "NEGATIVE EDGE", value: f5EdgeData.summary.negativeEdge, color: "var(--foreground)" },
+                    { label: "AVG +EDGE", value: `+${f5EdgeData.summary.avgPositiveEdge.toFixed(2)}pp`, color: "var(--primary)" },
+                    { label: "WIN RATE (POS EDGE)", value: f5EdgeData.summary.winRateOnPositiveEdge != null ? `${f5EdgeData.summary.winRateOnPositiveEdge}%` : "PENDING", color: "var(--foreground)" },
                   ].map(c => <MiniStatCard key={c.label} label={c.label} value={c.value} color={c.color} />)}
                 </StatGrid>
               )}
 
               {f5EdgeLoading ? (
-                <div className="flex items-center justify-center py-8 gap-3"><Loader2 className="w-5 h-5 animate-spin" style={{ color: "#45E0A8" }} /></div>
+                <div className="flex items-center justify-center py-8 gap-3"><Loader2 className="w-5 h-5 animate-spin" style={{ color: "var(--primary)" }} /></div>
               ) : f5EdgeTab === "table" ? (
                 <EdgeLeaderboardTable
                   rows={f5Rows} market="f5"
@@ -1581,13 +1581,13 @@ export default function TheModelResults() {
             <div>
               <SectionLabel>NRFI BRIER TREND</SectionLabel>
               {brierLoading ? (
-                <div className="flex items-center justify-center py-8 gap-3"><Loader2 className="w-5 h-5 animate-spin" style={{ color: "#45E0A8" }} /></div>
+                <div className="flex items-center justify-center py-8 gap-3"><Loader2 className="w-5 h-5 animate-spin" style={{ color: "var(--primary)" }} /></div>
               ) : !brierData || brierData.summary.totalGames === 0 ? (
-                <div className="text-center py-12 text-white text-sm">No Brier data yet.</div>
+                <div className="text-center py-12 text-foreground text-sm">No Brier data yet.</div>
               ) : (
                 <BrierTrendChart
                   data={brierChartData}
-                  lines={[{ key: "rollingNrfi", label: `NRFI (${brierWindow}G)`, color: "#45E0A8" }]}
+                  lines={[{ key: "rollingNrfi", label: `NRFI (${brierWindow}G)`, color: "var(--primary)" }]}
                   windowSize={brierWindow}
                   onWindowChange={setBrierWindow}
                 />
@@ -1611,7 +1611,7 @@ export default function TheModelResults() {
             {/* Daily NRFI results from heatmap drill-down */}
             <div>
               <SectionLabel sub={`Date: ${formatDateNav(gameDate)}`}>DAILY NRFI RESULTS</SectionLabel>
-              <div style={{ fontSize: 11, color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', padding: "12px 0" }}>
+              <div style={{ fontSize: 11, color: "var(--foreground)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', padding: "12px 0" }}>
                 Use the Brier Heatmap above to drill into per-game NRFI results by clicking any NRFI cell.
                 Date navigation (arrows above) selects the date for K-Props and HR Props daily views.
               </div>
@@ -1634,8 +1634,8 @@ export default function TheModelResults() {
                   className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-colors"
                   style={{
                     background: kPropsView === v ? "transparent" : "transparent",
-                    color: kPropsView === v ? "#45E0A8" : "#FFFFFF",
-                    border: `1px solid ${kPropsView === v ? "#45E0A8" : "#FFFFFF"}`,
+                    color: kPropsView === v ? "var(--primary)" : "var(--foreground)",
+                    border: `1px solid ${kPropsView === v ? "var(--primary)" : "var(--border)"}`,
                     fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', letterSpacing: "0.08em",
                   }}>
                   {v === "daily" ? <Calendar size={11} /> : <CalendarDays size={11} />}
@@ -1645,17 +1645,17 @@ export default function TheModelResults() {
             </div>
 
             {/* MLB Headshot Backfill Tool */}
-            <div style={{ padding: "10px 14px", background: "transparent", border: "1px solid #FFFFFF", borderRadius: 8, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <div style={{ padding: "10px 14px", background: "transparent", border: "1px solid var(--border)", borderRadius: 8, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', marginBottom: 2 }}>MLB HEADSHOT BACKFILL</div>
-                <div style={{ fontSize: 10, color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
+                <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: "var(--foreground)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', marginBottom: 2 }}>MLB HEADSHOT BACKFILL</div>
+                <div style={{ fontSize: 10, color: "var(--foreground)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
                   {backfillStatus ?? "Resolves MLBAM IDs for all K-Props pitchers missing headshots. Calls MLB Stats API."}
                 </div>
               </div>
               <Button size="sm" variant="outline"
                 disabled={backfillMutation.isPending}
                 onClick={() => { setBackfillStatus(null); backfillMutation.mutate(); }}
-                style={{ borderColor: "#45E0A8", color: "#45E0A8", flexShrink: 0 }}
+                style={{ borderColor: "var(--primary)", color: "var(--primary)", flexShrink: 0 }}
                 className="gap-1.5 text-xs h-7">
                 {backfillMutation.isPending ? <Loader2 size={11} className="animate-spin" /> : <RefreshCw size={11} />}
                 BACKFILL IDs
@@ -1670,9 +1670,9 @@ export default function TheModelResults() {
                   <StatCard label="MODEL ACCURACY" value={fmtPct(kCalibData.metrics.modelAccuracy)} sub={`${kCalibData.metrics.completedProps} completed`} color={accuracyColor(kCalibData.metrics.modelAccuracy)} />
                   <StatCard label="OVER ACCURACY" value={fmtPct(kCalibData.metrics.modelOverAccuracy)} sub={`${kCalibData.metrics.overCount} overs`} color={accuracyColor(kCalibData.metrics.modelOverAccuracy)} />
                   <StatCard label="UNDER ACCURACY" value={fmtPct(kCalibData.metrics.modelUnderAccuracy)} sub={`${kCalibData.metrics.underCount} unders`} color={accuracyColor(kCalibData.metrics.modelUnderAccuracy)} />
-                  <StatCard label="ROLLING MAE" value={fmtNum(kCalibData.metrics.mae, 3)} sub="mean absolute error" color={kCalibData.metrics.mae <= 0.8 ? "#45E0A8" : kCalibData.metrics.mae <= 1.5 ? "#FFFFFF" : "#FFFFFF"} />
-                  <StatCard label="MEAN BIAS" value={signedNum(kCalibData.metrics.meanBias, 3)} sub="avg (actual − proj)" color={Math.abs(kCalibData.metrics.meanBias) <= 0.2 ? "#45E0A8" : Math.abs(kCalibData.metrics.meanBias) <= 0.5 ? "#FFFFFF" : "#FFFFFF"} />
-                  <StatCard label="CALIBRATION FACTOR" value={fmtNum(kCalibData.metrics.calibrationFactor, 4)} sub="multiply proj × factor" color={Math.abs(kCalibData.metrics.calibrationFactor - 1) <= 0.03 ? "#45E0A8" : "#FFFFFF"} />
+                  <StatCard label="ROLLING MAE" value={fmtNum(kCalibData.metrics.mae, 3)} sub="mean absolute error" color={kCalibData.metrics.mae <= 0.8 ? "var(--primary)" : kCalibData.metrics.mae <= 1.5 ? "var(--foreground)" : "var(--foreground)"} />
+                  <StatCard label="MEAN BIAS" value={signedNum(kCalibData.metrics.meanBias, 3)} sub="avg (actual − proj)" color={Math.abs(kCalibData.metrics.meanBias) <= 0.2 ? "var(--primary)" : Math.abs(kCalibData.metrics.meanBias) <= 0.5 ? "var(--foreground)" : "var(--foreground)"} />
+                  <StatCard label="CALIBRATION FACTOR" value={fmtNum(kCalibData.metrics.calibrationFactor, 4)} sub="multiply proj × factor" color={Math.abs(kCalibData.metrics.calibrationFactor - 1) <= 0.03 ? "var(--primary)" : "var(--foreground)"} />
                   <StatCard label="RMSE" value={fmtNum(kCalibData.metrics.rmse, 3)} sub="root mean squared error" />
                 </StatGrid>
               </div>
@@ -1681,9 +1681,9 @@ export default function TheModelResults() {
             {/* Daily view */}
             {kPropsView === "daily" && (
               kDailyLoading ? (
-                <div className="flex items-center justify-center py-12 gap-3"><Loader2 className="w-6 h-6 animate-spin" style={{ color: "#45E0A8" }} /></div>
+                <div className="flex items-center justify-center py-12 gap-3"><Loader2 className="w-6 h-6 animate-spin" style={{ color: "var(--primary)" }} /></div>
               ) : !kDailyData?.results || kDailyData.results.total === 0 ? (
-                <div className="text-center py-12 text-white text-sm">No K-Props data for {formatDateNav(gameDate)}.</div>
+                <div className="text-center py-12 text-foreground text-sm">No K-Props data for {formatDateNav(gameDate)}.</div>
               ) : (
                 <>
                   <div>
@@ -1692,8 +1692,8 @@ export default function TheModelResults() {
                       <StatCard label="ACCURACY" value={kDailyData.results.accuracy != null ? fmtPct(kDailyData.results.accuracy) : "—"} sub={`${kDailyData.results.correct}/${kDailyData.results.completed} correct`} color={accuracyColor(kDailyData.results.accuracy)} />
                       <StatCard label="OVER ACC" value={kDailyData.results.overTotal > 0 ? fmtPct(kDailyData.results.overCorrect / kDailyData.results.overTotal) : "—"} sub={`${kDailyData.results.overCorrect}/${kDailyData.results.overTotal} overs`} color={accuracyColor(kDailyData.results.overTotal > 0 ? kDailyData.results.overCorrect / kDailyData.results.overTotal : null)} />
                       <StatCard label="UNDER ACC" value={kDailyData.results.underTotal > 0 ? fmtPct(kDailyData.results.underCorrect / kDailyData.results.underTotal) : "—"} sub={`${kDailyData.results.underCorrect}/${kDailyData.results.underTotal} unders`} color={accuracyColor(kDailyData.results.underTotal > 0 ? kDailyData.results.underCorrect / kDailyData.results.underTotal : null)} />
-                      <StatCard label="MEAN ERROR" value={kDailyData.results.meanError !== null ? signedNum(kDailyData.results.meanError, 2) : "—"} sub="avg (actual − proj)" color={kDailyData.results.meanError !== null ? Math.abs(kDailyData.results.meanError) <= 0.3 ? "#45E0A8" : Math.abs(kDailyData.results.meanError) <= 0.8 ? "#FFFFFF" : "#FFFFFF" : undefined} />
-                      <StatCard label="MAE" value={kDailyData.results.mae !== null ? fmtNum(kDailyData.results.mae, 2) : "—"} sub="mean absolute error" color={kDailyData.results.mae !== null ? kDailyData.results.mae <= 0.8 ? "#45E0A8" : kDailyData.results.mae <= 1.5 ? "#FFFFFF" : "#FFFFFF" : undefined} />
+                      <StatCard label="MEAN ERROR" value={kDailyData.results.meanError !== null ? signedNum(kDailyData.results.meanError, 2) : "—"} sub="avg (actual − proj)" color={kDailyData.results.meanError !== null ? Math.abs(kDailyData.results.meanError) <= 0.3 ? "var(--primary)" : Math.abs(kDailyData.results.meanError) <= 0.8 ? "var(--foreground)" : "var(--foreground)" : undefined} />
+                      <StatCard label="MAE" value={kDailyData.results.mae !== null ? fmtNum(kDailyData.results.mae, 2) : "—"} sub="mean absolute error" color={kDailyData.results.mae !== null ? kDailyData.results.mae <= 0.8 ? "var(--primary)" : kDailyData.results.mae <= 1.5 ? "var(--foreground)" : "var(--foreground)" : undefined} />
                     </StatGrid>
                   </div>
                   <div>
@@ -1709,9 +1709,9 @@ export default function TheModelResults() {
             {/* Last 7 days view */}
             {kPropsView === "last7" && (
               kLast7Loading ? (
-                <div className="flex items-center justify-center py-12 gap-3"><Loader2 className="w-6 h-6 animate-spin" style={{ color: "#45E0A8" }} /></div>
+                <div className="flex items-center justify-center py-12 gap-3"><Loader2 className="w-6 h-6 animate-spin" style={{ color: "var(--primary)" }} /></div>
               ) : !kLast7Data || kLast7Data.totalProps === 0 ? (
-                <div className="text-center py-12 text-white text-sm">No K-Props data in the last 7 days.</div>
+                <div className="text-center py-12 text-foreground text-sm">No K-Props data in the last 7 days.</div>
               ) : (
                 <div>
                   <SectionLabel sub={`${kLast7Data.totalProps} props across ${kLast7Data.windowDays} days`}>LAST 7 DAYS AGGREGATE</SectionLabel>
@@ -1719,17 +1719,17 @@ export default function TheModelResults() {
                     <StatCard label="OVERALL ACCURACY" value={kLast7Data.accuracy != null ? fmtPct(kLast7Data.accuracy) : "—"} sub={`${kLast7Data.correctProps}/${kLast7Data.completedProps} correct`} color={accuracyColor(kLast7Data.accuracy)} />
                     <StatCard label="OVER ACCURACY" value={kLast7Data.overAccuracy != null ? fmtPct(kLast7Data.overAccuracy) : "—"} sub={`${kLast7Data.overCorrect}/${kLast7Data.overTotal}`} color={accuracyColor(kLast7Data.overAccuracy)} />
                     <StatCard label="UNDER ACCURACY" value={kLast7Data.underAccuracy != null ? fmtPct(kLast7Data.underAccuracy) : "—"} sub={`${kLast7Data.underCorrect}/${kLast7Data.underTotal}`} color={accuracyColor(kLast7Data.underAccuracy)} />
-                    <StatCard label="ROLLING MAE" value={kLast7Data.mae != null ? fmtNum(kLast7Data.mae, 3) : "—"} sub="mean absolute error" color={kLast7Data.mae != null ? kLast7Data.mae <= 0.8 ? "#45E0A8" : kLast7Data.mae <= 1.5 ? "#FFFFFF" : "#FFFFFF" : undefined} />
-                    <StatCard label="MEAN ERROR" value={kLast7Data.meanError != null ? signedNum(kLast7Data.meanError, 3) : "—"} sub="avg (actual − proj)" color={kLast7Data.meanError != null ? Math.abs(kLast7Data.meanError) <= 0.2 ? "#45E0A8" : "#FFFFFF" : undefined} />
+                    <StatCard label="ROLLING MAE" value={kLast7Data.mae != null ? fmtNum(kLast7Data.mae, 3) : "—"} sub="mean absolute error" color={kLast7Data.mae != null ? kLast7Data.mae <= 0.8 ? "var(--primary)" : kLast7Data.mae <= 1.5 ? "var(--foreground)" : "var(--foreground)" : undefined} />
+                    <StatCard label="MEAN ERROR" value={kLast7Data.meanError != null ? signedNum(kLast7Data.meanError, 3) : "—"} sub="avg (actual − proj)" color={kLast7Data.meanError != null ? Math.abs(kLast7Data.meanError) <= 0.2 ? "var(--primary)" : "var(--foreground)" : undefined} />
                   </StatGrid>
                   {/* Per-date breakdown */}
                   {kLast7Data.dailyBreakdown && kLast7Data.dailyBreakdown.map((day: { date: string; correct: number; completed: number; accuracy: number | null; mae: number | null }) => (
-                    <div key={day.date} style={{ marginBottom: 8, padding: "10px 14px", background: "#000000", border: "1px solid #FFFFFF", borderRadius: 8 }}>
+                    <div key={day.date} style={{ marginBottom: 8, padding: "10px 14px", background: "var(--background)", border: "1px solid var(--border)", borderRadius: 8 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                        <span style={{ fontSize: 11, fontWeight: 700, color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>{day.date}</span>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: "var(--foreground)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>{day.date}</span>
                         <span style={{ fontSize: 11, color: accuracyColor(day.accuracy), fontWeight: 700, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>{day.accuracy != null ? fmtPct(day.accuracy) : "—"}</span>
-                        <span style={{ fontSize: 10, color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>{day.correct}/{day.completed} correct</span>
-                        {day.mae != null && <span style={{ fontSize: 10, color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>MAE {fmtNum(day.mae, 2)}</span>}
+                        <span style={{ fontSize: 10, color: "var(--foreground)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>{day.correct}/{day.completed} correct</span>
+                        {day.mae != null && <span style={{ fontSize: 10, color: "var(--foreground)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>MAE {fmtNum(day.mae, 2)}</span>}
                       </div>
                     </div>
                   ))}
@@ -1759,10 +1759,10 @@ export default function TheModelResults() {
 
               {hrPropsLoading ? (
                 <div className="flex items-center justify-center py-12 gap-3">
-                  <Loader2 className="w-6 h-6 animate-spin" style={{ color: "#45E0A8" }} />
+                  <Loader2 className="w-6 h-6 animate-spin" style={{ color: "var(--primary)" }} />
                 </div>
               ) : hrPropsList.length === 0 ? (
-                <div className="text-center py-12 text-white text-sm">
+                <div className="text-center py-12 text-foreground text-sm">
                   No HR Props data for {formatDateNav(gameDate)}.
                   {hrGameIds.length === 0 && " (No games found for this date.)"}
                 </div>
@@ -1780,9 +1780,9 @@ export default function TheModelResults() {
                       return (
                         <>
                           <StatCard label="TOTAL PROPS" value={String(hrPropsList.length)} sub="all players" />
-                          <StatCard label="GRADED" value={String(graded.length)} sub={`${correct} correct`} color="#FFFFFF" />
+                          <StatCard label="GRADED" value={String(graded.length)} sub={`${correct} correct`} color="var(--foreground)" />
                           <StatCard label="ACCURACY" value={acc != null ? fmtPct(acc) : "—"} sub="all graded" color={accuracyColor(acc)} />
-                          <StatCard label="EDGE PLAYS" value={String(withEdge.length)} sub="≥2pp edge" color="#45E0A8" />
+                          <StatCard label="EDGE PLAYS" value={String(withEdge.length)} sub="≥2pp edge" color="var(--primary)" />
                           <StatCard label="EDGE ACCURACY" value={edgeAcc != null ? fmtPct(edgeAcc) : "—"} sub="≥2pp edge graded" color={accuracyColor(edgeAcc)} />
                         </>
                       );
@@ -1797,9 +1797,9 @@ export default function TheModelResults() {
               )}
             </div>
             {/* Re-ingest button */}
-            <div style={{ display: "flex", alignItems: "center", gap: 10, paddingTop: 8, borderTop: "1px solid #FFFFFF" }}>
-              <Target size={12} style={{ color: "#FFFFFF" }} />
-              <span style={{ fontSize: 10, color: "#FFFFFF", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, paddingTop: 8, borderTop: "1px solid var(--border)" }}>
+              <Target size={12} style={{ color: "var(--foreground)" }} />
+              <span style={{ fontSize: 10, color: "var(--foreground)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
                 Re-ingest outcomes for {gameDate} to update HR prop results
               </span>
               <Button size="sm" variant="outline"
@@ -1809,7 +1809,7 @@ export default function TheModelResults() {
                   reingestMutation.mutate({ dateStr: gameDate, force: false });
                 }}
                 className="ml-auto gap-1.5 text-xs h-7"
-                style={{ borderColor: "#45E0A8", color: "#45E0A8" }}>
+                style={{ borderColor: "var(--primary)", color: "var(--primary)" }}>
                 {reingestingDate === gameDate ? <Loader2 size={11} className="animate-spin" /> : <RefreshCw size={11} />}
                 RE-INGEST
               </Button>

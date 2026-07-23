@@ -17,6 +17,14 @@ export interface DeviceSlice {
   deviceType: string;
   users: number;
   valueEvents: number;
+  /** action_performed events on this device (D3). */
+  actions: number;
+}
+
+/** One curated action and how many times it fired (top-N, D3). */
+export interface ActionCount {
+  name: string;
+  count: number;
 }
 
 export interface AnalyticsOverview {
@@ -27,6 +35,12 @@ export interface AnalyticsOverview {
   wau: MetricPoint;
   mau: MetricPoint;
   valueEventsTotal: MetricPoint;
+  /** D3: total action_performed events (all time, non-test). */
+  totalActions: MetricPoint;
+  /** D3: distinct curated action_name values seen (all time, non-test). */
+  uniqueActions: MetricPoint;
+  /** D3: the most-used curated actions, count-desc (≤5). Empty when none. */
+  topActions: ActionCount[];
   lastEventAt: number | null;
   deviceMix: DeviceSlice[];
 }
@@ -49,6 +63,9 @@ export function disabledOverview(reason: string): AnalyticsOverview {
     wau: notMeasured(reason),
     mau: notMeasured(reason),
     valueEventsTotal: notMeasured(reason),
+    totalActions: notMeasured(reason),
+    uniqueActions: notMeasured(reason),
+    topActions: [],
     lastEventAt: null,
     deviceMix: [],
   };
@@ -110,13 +127,35 @@ export async function getAnalyticsOverview(): Promise<AnalyticsOverview> {
     const mixR = await db.execute(sql`
       SELECT COALESCE(device_type, 'unknown') AS device_type,
              COUNT(DISTINCT source_user_id) AS users,
-             SUM(CASE WHEN event_name IN (${nameList}) THEN 1 ELSE 0 END) AS value_events
+             SUM(CASE WHEN event_name IN (${nameList}) THEN 1 ELSE 0 END) AS value_events,
+             SUM(CASE WHEN event_name = 'action_performed' THEN 1 ELSE 0 END) AS actions
       FROM analytics_events WHERE is_test = 0
       GROUP BY COALESCE(device_type, 'unknown')`);
     const deviceMix: DeviceSlice[] = rowsOf(mixR).map((r) => ({
       deviceType: String(r.device_type ?? "unknown"),
       users: Number(r.users ?? 0) || 0,
       valueEvents: Number(r.value_events ?? 0) || 0,
+      actions: Number(r.actions ?? 0) || 0,
+    }));
+
+    // D3 action metrics — action_performed only, non-test.
+    const totalActionsR = await db.execute(sql`
+      SELECT COUNT(*) AS n FROM analytics_events
+      WHERE is_test = 0 AND event_name = 'action_performed'`);
+    const totalActionsN = numAt(totalActionsR);
+
+    const uniqueActionsR = await db.execute(sql`
+      SELECT COUNT(DISTINCT action_name) AS n FROM analytics_events
+      WHERE is_test = 0 AND event_name = 'action_performed' AND action_name IS NOT NULL`);
+    const uniqueActionsN = numAt(uniqueActionsR);
+
+    const topActionsR = await db.execute(sql`
+      SELECT action_name AS name, COUNT(*) AS n FROM analytics_events
+      WHERE is_test = 0 AND event_name = 'action_performed' AND action_name IS NOT NULL
+      GROUP BY action_name ORDER BY n DESC LIMIT 5`);
+    const topActions: ActionCount[] = rowsOf(topActionsR).map((r) => ({
+      name: String(r.name ?? "unknown"),
+      count: Number(r.n ?? 0) || 0,
     }));
 
     // No events at all ⇒ honest not_measured (nothing instrumented yet).
@@ -130,6 +169,9 @@ export async function getAnalyticsOverview(): Promise<AnalyticsOverview> {
       wau: ok(wauN),
       mau: ok(mauN),
       valueEventsTotal: ok(total),
+      totalActions: ok(totalActionsN),
+      uniqueActions: ok(uniqueActionsN),
+      topActions,
       lastEventAt,
       deviceMix,
     };

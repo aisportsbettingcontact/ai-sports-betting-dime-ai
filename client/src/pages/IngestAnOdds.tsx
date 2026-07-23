@@ -226,16 +226,16 @@ export default function IngestAnOdds() {
           <Card
             className={`border-2 ${
               result.errors.length === 0
-                ? "border-[#45E0A8] bg-[#45E0A8]"
-                : "border-white bg-white"
+                ? "border-primary bg-primary"
+                : "border-border bg-card"
             }`}
           >
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-semibold flex items-center gap-2">
                 {result.errors.length === 0 ? (
-                  <CheckCircle2 className="h-4 w-4 text-[#45E0A8]" />
+                  <CheckCircle2 className="h-4 w-4 text-primary-foreground" />
                 ) : (
-                  <AlertCircle className="h-4 w-4 text-white" />
+                  <AlertCircle className="h-4 w-4 text-foreground" />
                 )}
                 Ingestion Result
               </CardTitle>
@@ -244,7 +244,7 @@ export default function IngestAnOdds() {
               <div className="flex gap-4 text-sm">
                 <div className="flex items-center gap-1.5">
                   <span className="text-muted-foreground">Updated:</span>
-                  <Badge className="bg-[#45E0A8] text-[#45E0A8] border-[#45E0A8]">
+                  <Badge className="bg-primary text-primary-foreground border-primary">
                     {result.updated}
                   </Badge>
                 </div>
@@ -253,7 +253,7 @@ export default function IngestAnOdds() {
                   <Badge
                     className={
                       result.skipped > 0
-                        ? "bg-white text-white border-white"
+                        ? "bg-card text-foreground border-border"
                         : "bg-muted text-muted-foreground"
                     }
                   >
@@ -264,12 +264,12 @@ export default function IngestAnOdds() {
 
               {result.errors.length > 0 && (
                 <div className="space-y-1">
-                  <p className="text-xs font-semibold text-white">
+                  <p className="text-xs font-semibold text-foreground">
                     Errors ({result.errors.length}):
                   </p>
                   <div className="bg-muted rounded p-2 space-y-0.5 max-h-48 overflow-y-auto">
                     {result.errors.map((e, i) => (
-                      <p key={i} className="text-xs font-mono text-white">
+                      <p key={i} className="text-xs font-mono text-foreground">
                         {e}
                       </p>
                     ))}
