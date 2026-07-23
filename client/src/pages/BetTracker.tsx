@@ -23,6 +23,7 @@ import { keepPreviousData } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useAppAuth } from "@/_core/hooks/useAppAuth";
+import { useAnalytics } from "@/lib/analytics";
 import {
   Clock,
   TrendingUp,
@@ -2829,6 +2830,8 @@ export default function BetTracker({ previewMode = false }: BetTrackerProps) {
     return !!(input.dateTo && input.dateTo < _today);
   }
 
+  // Value-event emitter (User Activity). Server-gated + fire-and-forget.
+  const track = useAnalytics();
   const createMut = trpc.betTracker.create.useMutation({
     // ── Optimistic create: insert bet into cache immediately before server confirms ──
     onMutate: async newBet => {
@@ -2923,6 +2926,9 @@ export default function BetTracker({ previewMode = false }: BetTrackerProps) {
         );
         return;
       }
+      // Value event: a real tracker entry was saved. Fire-and-forget; inert
+      // until the analytics pipeline is enabled server-side.
+      track("tracker_entry_saved", { featureId: "bet_tracker", outcome: "success" });
       utils.betTracker.listWithStatsPaginated.setInfiniteData(
         paginatedQueryInput,
         old => {
