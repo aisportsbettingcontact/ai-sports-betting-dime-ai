@@ -141,11 +141,15 @@ export function MetricsPanel() {
         // Buckets: <5min | 5-30min | 30-120min | 2-4h
         // Bar height is proportional to the bucket with the most sessions (max = 100%).
         const total = histData?.total ?? 0;
+        // barColor: context buckets use the neutral muted-foreground token (clearly
+        // legible on the bg-card container in both themes) at 70% so the mint
+        // "Active sessions" focal bar still leads. Previously all three context bars
+        // were bg-card on a bg-card container → zero contrast, effectively invisible.
         const buckets: Array<{ label: string; sublabel: string; count: number; color: string; barColor: string }> = [
-          { label: "<5 min",    sublabel: "Quick visits",    count: histData?.under5m  ?? 0, color: "text-foreground",    barColor: "bg-card" },
-          { label: "5-30 min",  sublabel: "Short sessions",  count: histData?.m5to30   ?? 0, color: "text-foreground",  barColor: "bg-card" },
+          { label: "<5 min",    sublabel: "Quick visits",    count: histData?.under5m  ?? 0, color: "text-foreground",    barColor: "bg-muted-foreground/70" },
+          { label: "5-30 min",  sublabel: "Short sessions",  count: histData?.m5to30   ?? 0, color: "text-foreground",  barColor: "bg-muted-foreground/70" },
           { label: "30-120 min",sublabel: "Active sessions", count: histData?.m30to120 ?? 0, color: "text-primary",barColor: "bg-primary" },
-          { label: "2-4 h",     sublabel: "Deep sessions",   count: histData?.h2to4    ?? 0, color: "text-foreground",   barColor: "bg-card" },
+          { label: "2-4 h",     sublabel: "Deep sessions",   count: histData?.h2to4    ?? 0, color: "text-foreground",   barColor: "bg-muted-foreground/70" },
         ];
         const maxCount = Math.max(...buckets.map((b) => b.count), 1); // avoid div/0
 
@@ -173,10 +177,12 @@ export function MetricsPanel() {
                 const pct = total > 0 ? Math.round((b.count / total) * 100) : 0;
                 return (
                   <div key={b.label} className="flex-1 flex flex-col items-center gap-0.5 h-full min-w-0">
-                    {/* Bar container — full height, bar grows from bottom */}
-                    <div className="flex-1 w-full flex items-end">
+                    {/* Bar container doubles as a faint full-height track (bg-muted)
+                        so every bucket reads as a column — even a 0-count one — and
+                        the value fill grows over it from the bottom. */}
+                    <div className="flex-1 w-full flex items-end rounded-t bg-muted/60 overflow-hidden">
                       <div
-                        className={`w-full rounded-t transition-all duration-500 ${b.barColor} opacity-80`}
+                        className={`w-full rounded-t transition-all duration-500 ${b.barColor}`}
                         style={{ height: histLoading ? "0%" : `${Math.max(barPct, barPct > 0 ? 4 : 0)}%` }}
                         title={`${b.label}: ${b.count} sessions (${pct}%)`}
                       />
