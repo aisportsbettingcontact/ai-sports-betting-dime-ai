@@ -1383,15 +1383,19 @@ const DMF_CSS = `
    2) The MLB league-header logo box doubles (30px -> 60px).
    3) League bodies pack games 2-across (grid) to cut the single-column
       whitespace; each ProjectionCard is its own container and reflows to the
-      half-width column on its own. align-items:start keeps a card at natural
-      height when its row partner expands. */
+      half-width column on its own. align-items:stretch (Round 4 Wave 2, item 1
+      — owner amendment 2026-07-23 to "start-aligned", annotated in
+      design-system/dime-ai/pages/ai-model-projections.md) stretches row-mates
+      to equal height; ProjectionCard.css's matching @media(min-width:1024px)
+      block turns the surplus height into a centered summary + a
+      bottom-pinned "VIEW FULL AI MODEL PROJECTIONS" expander per card. */
 @media (min-width:1024px){
   .dc-shell-external-scroll .dmf-topbar{height:96px;justify-content:center}
   .dc-shell-external-scroll .dmf-toptitle{font-size:min(70px,calc((100cqi - 80px)/10.8));line-height:1;letter-spacing:-.02em;white-space:nowrap}
   .dc-shell-external-scroll .dmf-sync{display:none}
   .dc-shell-external-scroll .dmf-feedhead{top:96px}
   .dmf-lglogo--mlb{width:60px;height:60px;flex:0 0 60px}
-  .dmf-leaguebody{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
+  .dmf-leaguebody{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch}
 }
 @media (prefers-reduced-motion: reduce){
   .dmf-root *{transition:none !important}

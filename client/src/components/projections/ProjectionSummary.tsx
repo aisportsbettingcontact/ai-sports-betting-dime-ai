@@ -54,16 +54,21 @@ export function ProjectionSummary({
       <dl className="summary__readout">
         {insight ? (
           <>
-            <div className="summary__item">
+            {/* Round 4 Wave 2 (item 5): the --edge/--book/--model modifiers are the
+                fixed-track hooks for ProjectionCard.css's @media(min-width:768px)
+                mini-grid (MODEL EDGE | BOOK | MODEL | chip) — see .summary__item--*
+                there. Base .summary__item class is unchanged so mobile (<768px,
+                flex layout) stays byte-for-byte visually untouched. */}
+            <div className="summary__item summary__item--edge">
               <dt className="ds-label">Model edge</dt>
               <dd className="summary__pick">{spellOutPick(insight.sideLabel, teams)}</dd>
             </div>
-            <div className="summary__item">
+            <div className="summary__item summary__item--book">
               {/* "Book" not "Best price" — owner directive 2026-07-17 */}
               <dt className="ds-label">Book</dt>
               <dd className="odds-value">{fmtPrice(insight.bookPrice)}</dd>
             </div>
-            <div className="summary__item">
+            <div className="summary__item summary__item--model">
               {/* "Model" not "Model fair price" — owner directive 2026-07-17 */}
               <dt className="ds-label">Model</dt>
               <dd className="odds-value">{fmtPrice(insight.modelFairPrice)}</dd>
