@@ -90,8 +90,15 @@ describe("Admin Dashboard route guard composition", () => {
     expect(authCloseIdx).toBeGreaterThan(ownerCloseIdx);
   });
 
-  it("does not wrap any OTHER /admin/* route in RequireOwner (scope is exactly users + publish for this step)", () => {
-    const otherAdminRoutes = [
+  it("wraps EVERY admin page route in RequireOwner — @prez-only, no other users (owner directive)", () => {
+    // The Admin Dashboard and all its tools are owner-only. Every /admin/*
+    // route that renders a page (not a redirect) must be RequireOwner-gated;
+    // leaving any on RequireAuth-only would let any logged-in user view it.
+    const adminPageRoutes = [
+      "/admin",
+      "/admin/users",
+      "/admin/activity",
+      "/admin/publish",
       "/admin/ingest-an",
       "/admin/model-results",
       "/admin/security",
@@ -101,12 +108,19 @@ describe("Admin Dashboard route guard composition", () => {
       "/admin/waitlist",
       "/admin/claude",
     ];
-    for (const route of otherAdminRoutes) {
+    for (const route of adminPageRoutes) {
       const routeStart = appSource.indexOf(`<Route path="${route}">`);
-      if (routeStart === -1) continue; // redirected route, no block to check
+      expect(routeStart, `route ${route} should exist`).toBeGreaterThan(-1);
       const routeEnd = appSource.indexOf("</Route>", routeStart);
       const routeBlock = appSource.slice(routeStart, routeEnd);
-      expect(routeBlock).not.toContain("<RequireOwner>");
+      expect(routeBlock, `route ${route} must be RequireOwner-gated`).toContain("<RequireOwner>");
     }
+  });
+
+  it("leaves /admin/f5-edge as a redirect (no page to gate)", () => {
+    const routeStart = appSource.indexOf('<Route path="/admin/f5-edge">');
+    const routeEnd = appSource.indexOf("</Route>", routeStart);
+    const routeBlock = appSource.slice(routeStart, routeEnd);
+    expect(routeBlock).toMatch(/Redirect to="\/admin\/model-results"/);
   });
 });

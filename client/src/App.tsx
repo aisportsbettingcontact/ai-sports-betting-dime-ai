@@ -368,14 +368,18 @@ function Router() {
         <Route path="/admin/ingest-an">
           {() => (
             <RequireAuth>
-              <IngestAnOdds />
+              <RequireOwner>
+                <IngestAnOdds />
+              </RequireOwner>
             </RequireAuth>
           )}
         </Route>
         <Route path="/admin/model-results">
           {() => (
             <RequireAuth>
-              <TheModelResults />
+              <RequireOwner>
+                <TheModelResults />
+              </RequireOwner>
             </RequireAuth>
           )}
         </Route>
@@ -385,28 +389,36 @@ function Router() {
         <Route path="/admin/security">
           {() => (
             <RequireAuth>
-              <SecurityEvents />
+              <RequireOwner>
+                <SecurityEvents />
+              </RequireOwner>
             </RequireAuth>
           )}
         </Route>
         <Route path="/admin/model-status">
           {() => (
             <RequireAuth>
-              <AdminModelStatus />
+              <RequireOwner>
+                <AdminModelStatus />
+              </RequireOwner>
             </RequireAuth>
           )}
         </Route>
         <Route path="/admin/postponed-games">
           {() => (
             <RequireAuth>
-              <PostponedGames />
+              <RequireOwner>
+                <PostponedGames />
+              </RequireOwner>
             </RequireAuth>
           )}
         </Route>
         <Route path="/admin/backtest">
           {() => (
             <RequireAuth>
-              <MlbBacktest />
+              <RequireOwner>
+                <MlbBacktest />
+              </RequireOwner>
             </RequireAuth>
           )}
         </Route>
@@ -414,7 +426,9 @@ function Router() {
         <Route path="/admin/waitlist">
           {() => (
             <RequireAuth>
-              <WaitlistAdmin />
+              <RequireOwner>
+                <WaitlistAdmin />
+              </RequireOwner>
             </RequireAuth>
           )}
         </Route>
@@ -460,7 +474,9 @@ function Router() {
         <Route path="/admin/claude">
           {() => (
             <RequireAuth>
-              <ClaudeAssistant />
+              <RequireOwner>
+                <ClaudeAssistant />
+              </RequireOwner>
             </RequireAuth>
           )}
         </Route>
