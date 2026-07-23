@@ -7,7 +7,7 @@ jobs:
   db-push:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # Version comes from package.json's "packageManager" field — specifying
       # it here too makes pnpm/action-setup fail with a version conflict.
