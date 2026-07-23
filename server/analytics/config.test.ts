@@ -5,6 +5,8 @@ import {
   isAnalyticsForwarder,
   getBackendUrl,
   getIngestSecret,
+  isTestUser,
+  secretsMatch,
 } from "./config";
 
 const env = (o: Record<string, string | undefined>) => o as unknown as NodeJS.ProcessEnv;
@@ -41,5 +43,23 @@ describe("config accessors", () => {
     expect(getIngestSecret(env({ ANALYTICS_INGEST_SECRET: "s3cret" }))).toBe("s3cret");
     expect(getIngestSecret(env({ ANALYTICS_INGEST_SECRET: "  " }))).toBeNull();
     expect(getIngestSecret(env({}))).toBeNull();
+  });
+});
+
+describe("secretsMatch (constant-time)", () => {
+  it("accepts equal secrets and rejects wrong / short / missing", () => {
+    expect(secretsMatch("abc123def", "abc123def")).toBe(true);
+    expect(secretsMatch("abc123def", "abc123deg")).toBe(false);
+    expect(secretsMatch("abc", "abc123def")).toBe(false); // different length
+    expect(secretsMatch(undefined, "abc123def")).toBe(false);
+    expect(secretsMatch(null, "abc123def")).toBe(false);
+  });
+});
+
+describe("test-user marking (excluded canary)", () => {
+  it("parses ANALYTICS_TEST_USER_IDS and flags membership", () => {
+    expect(isTestUser(42, env({ ANALYTICS_TEST_USER_IDS: "1, 42 ,99" }))).toBe(true);
+    expect(isTestUser(7, env({ ANALYTICS_TEST_USER_IDS: "1,42,99" }))).toBe(false);
+    expect(isTestUser(1, env({}))).toBe(false);
   });
 });

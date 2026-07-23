@@ -43,6 +43,7 @@ import { betTrackerRouter } from "./routers/betTracker";
 import { dimeChatsRouter } from "./routers/dimeChats";
 import { securityRouter } from "./routers/security";
 import { metricsRouter } from "./routers/metrics";
+import { analyticsRouter } from "./routers/analytics";
 import { mlbScheduleRouter } from "./routers/mlbSchedule";
 import { nbaScheduleRouter } from "./routers/nbaSchedule";
 import { nhlScheduleRouter } from "./routers/nhlSchedule";
@@ -176,6 +177,7 @@ export const appRouter = router({
   dimeChats: dimeChatsRouter,
   security: securityRouter,
   metrics: metricsRouter,
+  analytics: analyticsRouter,
   mlbSchedule: mlbScheduleRouter,
   nbaSchedule: nbaScheduleRouter,
   nhlSchedule: nhlScheduleRouter,
