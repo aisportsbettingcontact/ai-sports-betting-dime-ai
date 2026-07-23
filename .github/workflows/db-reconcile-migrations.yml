@@ -1,0 +1,78 @@
+name: DB Reconcile migrations (baseline)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Repairs the pre-existing drift between the live schema and drizzle's
+# __drizzle_migrations journal, so `db-push.yml` (drizzle-kit migrate) stops
+# colliding on migration 0112 and works again for future schema changes.
+#
+# Migrations 0112–0115 are already live (0112–0114 applied via drizzle-kit push;
+# 0115's DROPs run by the one-shot drop workflow) but were never recorded as
+# applied. scripts/reconcile-migrations.mjs inserts the missing journal rows
+# (hash + created_at, computed by drizzle's own readMigrationFiles) WITHOUT
+# running any migration SQL — pure bookkeeping, never touches app tables.
+#
+# Default mode is dry-run (writes nothing, just lists what it would baseline).
+# apply mode requires typing RECONCILE, then proves the result by running
+# `drizzle-kit migrate` — which must now be a clean no-op instead of colliding.
+# ─────────────────────────────────────────────────────────────────────────────
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'dry-run (list only) or apply (write journal rows)'
+        required: true
+        default: dry-run
+        type: choice
+        options:
+          - dry-run
+          - apply
+      confirm:
+        description: 'For apply mode, type RECONCILE'
+        required: false
+        default: ''
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: db-reconcile-migrations
+  cancel-in-progress: false
+
+jobs:
+  reconcile:
+    name: Baseline __drizzle_migrations
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Guard — apply requires typed confirmation
+        if: ${{ inputs.mode == 'apply' && inputs.confirm != 'RECONCILE' }}
+        run: |
+          echo "::error::apply mode requires the 'confirm' input to be exactly RECONCILE."
+          exit 1
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Reconcile (${{ inputs.mode }})
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          MODE: ${{ inputs.mode }}
+        run: node scripts/reconcile-migrations.mjs
+
+      - name: Verify — drizzle-kit migrate is now a clean no-op
+        if: ${{ inputs.mode == 'apply' }}
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          echo "Running drizzle-kit migrate to confirm the journal is consistent (expect: nothing to apply)…"
+          pnpm exec drizzle-kit migrate
+          echo "drizzle-kit migrate completed without collision."
