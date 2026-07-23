@@ -1,4 +1,4 @@
-// Preconfigured storage helpers for Manus WebDev templates
+// Preconfigured storage helpers (legacy built-in gateway)
 // Uses the Biz-provided storage proxy (Authorization: Bearer <token>)
 
 import { ENV } from './_core/env';
@@ -10,7 +10,7 @@ function getStorageConfig(): StorageConfig {
   const apiKey = ENV.forgeApiKey;
 
   if (!baseUrl || !apiKey) {
-    throw new Error("Storage is unavailable: BUILT_IN_FORGE_* not configured (Manus-only feature)");
+    throw new Error("Storage is unavailable: BUILT_IN_FORGE_* not configured (legacy platform feature)");
   }
 
   return { baseUrl: baseUrl.replace(/\/+$/, ""), apiKey };

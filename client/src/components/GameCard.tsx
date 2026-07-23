@@ -2177,7 +2177,7 @@ interface GameCardProps {
 }
 
 function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggleModel: onToggleModelProp, favoriteGameIds, onToggleFavorite, onFavoriteNotify, isAppAuthed: isAppAuthedProp, mobileTab: mobileTabProp, onMobileTabChange }: GameCardProps) {
-  // Use custom app auth (app_session cookie) — NOT Manus OAuth — to gate the star button.
+  // Use custom app auth (app_session cookie) — NOT the legacy OAuth — to gate the star button.
   // Prefer the prop passed from the parent (avoids 33+ redundant tRPC queries per page load).
   // Fall back to calling useAppAuth() only when no prop is provided (e.g., standalone usage).
   const { appUser: appUserFallback } = useAppAuth();

@@ -25,15 +25,15 @@
  *                       Format: https://aisportsbettingmodels.com (no trailing slash)
  *                       Used by: discordAuth.test.ts, CSRF middleware
  *
- *   VITE_APP_ID       — Manus OAuth application ID
+ *   VITE_APP_ID       — Legacy OAuth application ID (retired platform)
  *                       Format: alphanumeric string
  *                       Used by: OAuth flow tests
  *
- *   OAUTH_SERVER_URL  — Manus OAuth backend base URL
- *                       Format: https://api.manus.im (no trailing slash)
+ *   OAUTH_SERVER_URL  — Legacy OAuth backend base URL (retired platform)
+ *                       Format: https://<oauth-host> (no trailing slash)
  *                       Used by: OAuth flow tests
  *
- *   OWNER_OPEN_ID     — Owner's Manus open ID
+ *   OWNER_OPEN_ID     — Owner's legacy OAuth open ID
  *                       Format: alphanumeric string
  *                       Used by: owner-gated procedure tests
  *
@@ -95,19 +95,19 @@ const REQUIRED_SECRETS: SecretDescriptor[] = [
   },
   {
     key: "VITE_APP_ID",
-    description: "Manus OAuth application ID",
+    description: "Legacy OAuth application ID (retired platform)",
     minLength: 1,
   },
   {
     key: "OAUTH_SERVER_URL",
-    description: "Manus OAuth backend base URL",
+    description: "Legacy OAuth backend base URL (retired platform)",
     minLength: 10,
     format: /^https?:\/\/.+/,
-    formatDescription: "https://api.manus.im",
+    formatDescription: "https://<oauth-host> (no trailing slash)",
   },
   {
     key: "OWNER_OPEN_ID",
-    description: "Owner's Manus open ID",
+    description: "Owner's legacy OAuth open ID",
     minLength: 1,
   },
   {

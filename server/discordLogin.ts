@@ -37,7 +37,7 @@
  *   - Session cookie: httpOnly, sameSite=none (prod) / lax (dev), 90-day JWT.
  *
  * ROUTE PREFIX: /api/auth/discord-login
- *   MUST be under /api/ — the Manus production proxy only forwards /api/* to Express.
+ *   MUST be under /api/ — the legacy production proxy only forwarded /api/* to Express.
  *
  * DISCORD APP SETUP REQUIRED:
  *   - Redirect URI: https://aisportsbettingmodels.com/api/auth/discord-login/callback

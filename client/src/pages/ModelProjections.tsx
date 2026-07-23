@@ -1000,7 +1000,7 @@ export default function ModelProjections() {
           {/* ── Brand: site logo image — replaces BarChart3 icon + text ── */}
           <div className="flex items-center flex-shrink-0 min-w-0">
             <img
-              src="/manus-storage/logo-aisportsbetting_429c188f.jpg"
+              src="/dime-storage/logo-aisportsbetting_429c188f.jpg"
               alt="AI Sports Betting"
               style={{
                 height: "clamp(28px, 7.5vw, 40px)",
@@ -1226,7 +1226,7 @@ export default function ModelProjections() {
         <div ref={searchRef} className="relative px-2 sm:px-3 md:px-4 pt-1 pb-0 md:pt-2 md:pb-1 flex items-center gap-1 sm:gap-2 md:gap-3">
 
           {/* FAVORITES tab — shown when user is authenticated AND has ≥1 active favorite */}
-          {/* NOTE: must use isAppAuthedForFav (Boolean(appUser)) — NOT isAuthenticated (Manus OAuth always null) */}
+          {/* NOTE: must use isAppAuthedForFav (Boolean(appUser)) — NOT isAuthenticated (legacy OAuth always null) */}
           {isAppAuthedForFav && activeFavCount >= 1 && (
             <button type="button" onClick={() => setShowFavoritesTab(v => !v)}
               className="flex items-center gap-1 sm:gap-1.5 md:gap-2 px-1.5 sm:px-2.5 md:px-3 py-1 sm:py-1.5 md:py-2 rounded-full text-sm sm:text-sm md:text-[13px] font-bold tracking-wide transition-all flex-shrink-0"

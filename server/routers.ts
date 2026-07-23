@@ -948,7 +948,7 @@ export const appRouter = router({
 
   // ─── Favorites ──────────────────────────────────────────────────────────────
   // NOTE: Uses appUserProcedure (custom app_session cookie auth), NOT protectedProcedure
-  // (Manus OAuth). Custom-auth users have ctx.user = null, so protectedProcedure would
+  // (legacy OAuth). Custom-auth users have ctx.user = null, so protectedProcedure would
   // always throw UNAUTHORIZED for them.
   favorites: router({
     /** Get all favorited game IDs for the current user. */

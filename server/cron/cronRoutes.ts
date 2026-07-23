@@ -8,9 +8,9 @@
  * burning CPU 24/7 on timers, GitHub Actions fires each endpoint on a schedule
  * and the work runs once, on demand.
  *
- * Auth:   shared secret (CRON_SECRET) — see cronAuth.ts for why the Manus
- *         Heartbeat auth can't be reused off-Manus.
- * Path:   /api/cron/*  (deliberately distinct from the Manus /api/scheduled/*
+ * Auth:   shared secret (CRON_SECRET) — see cronAuth.ts for why the legacy
+ *         heartbeat auth can't be reused off the legacy platform.
+ * Path:   /api/cron/*  (deliberately distinct from the legacy /api/scheduled/*
  *         namespace so the two mechanisms never collide during the migration).
  * Shape:  respond 200 immediately, run work in the background under a run-lock.
  *

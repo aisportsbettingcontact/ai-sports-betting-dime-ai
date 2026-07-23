@@ -79,7 +79,8 @@ DNS on the custom domain points at Railway). Runbook: `references/railway-deploy
 Dockerfile/`railway.json` build everything, with Debian Python for the model runners.
 Railway auto-deploys on push to `main`. Vercel was removed 2026-07-11 (was the planned
 frontend host mid-migration; also disconnect the repo in the Vercel dashboard to stop PR
-deploy statuses). The legacy Manus deployment (manual, `RELEASING.md`) is being retired.
+deploy statuses). The legacy platform deployment has been retired (its runbook was
+removed from the repo 2026-07-23).
 Schema changes always need the manual `db-push.yml` workflow before any code deploy.
 
 ## Repo conventions

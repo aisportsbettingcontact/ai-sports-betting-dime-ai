@@ -25,7 +25,7 @@ export function MobileNavAuthGate({
   fallback = null,
 }: MobileNavAuthGateProps) {
   // Source of truth is the app's own Discord-OAuth-backed session
-  // (appUsers.me), NOT the legacy Manus useAuth() hook — that hook's backend
+  // (appUsers.me), NOT the legacy useAuth() hook — that hook's OAuth backend
   // is gone post-cutover and always resolves isAuthenticated: false, which
   // would hide these screens from everyone. See GlobalMobileNav for the same
   // pattern.

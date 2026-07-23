@@ -90,7 +90,7 @@ import type { SplitsDateSource } from "./pages/dime-shell/splitsDateState";
  *   NEW: return LandingPage immediately → auth resolves → redirect if authenticated
  *   Result: Loading shell dismissed the moment React mounts (0ms after JS executes).
  *
- * [FIX] Uses useAppAuth (Discord JWT) instead of useAuth (Manus OAuth) so that
+ * [FIX] Uses useAppAuth (Discord JWT) instead of useAuth (legacy OAuth) so that
  * Discord-logged-in users are correctly detected and redirected to the feed.
  *
  * [FIX] Reads sessionStorage.pendingCheckout after login to auto-trigger checkout.
