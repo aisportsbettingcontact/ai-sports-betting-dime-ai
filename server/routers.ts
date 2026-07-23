@@ -7,24 +7,16 @@ import {
   zodDbSlug,
   zodFilePath,
   zodPitcherRsId,
-  zodBase64File,
   zodHtmlPaste,
   zodGameIdArray,
   MAX_GAME_IDS_PER_REQUEST,
 } from "./securityMiddleware";
-import { COOKIE_NAME } from "@shared/const";
-import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { wc2026Router } from "./wc2026/wc2026Router";
-import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
+import { publicProcedure, router } from "./_core/trpc";
 import {
-  deleteModelFile,
-  getModelFileById,
   insertGames,
-  insertModelFile,
   listGames,
-  listModelFiles,
-  updateModelFileStatus,
   listStagingGames,
   listStagingGamesRange,
   updateGameProjections,
@@ -35,9 +27,6 @@ import {
   getActiveSports,
   getAvailableDates,
 } from "./db";
-import { storagePut } from "./storage";
-import { parseFileBuffer, detectSportFromFilename, detectDateFromFilename } from "./fileParser";
-import { nanoid } from "nanoid";
 import { appUsersRouter, ownerProcedure, appUserProcedure } from "./routers/appUsers";
 import { betTrackerRouter } from "./routers/betTracker";
 import { dimeChatsRouter } from "./routers/dimeChats";
@@ -183,108 +172,6 @@ export const appRouter = router({
   wc2026: wc2026Router,
   claude: claudeRouter,
   waitlist: waitlistRouter,
-
-  // ─── Auth ──────────────────────────────────────────────────────────────────
-  auth: router({
-    me: publicProcedure.query((opts) => opts.ctx.user),
-    logout: publicProcedure.mutation(({ ctx }) => {
-      const cookieOptions = getSessionCookieOptions(ctx.req);
-      ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
-      return { success: true } as const;
-    }),
-  }),
-
-  // ─── Files ─────────────────────────────────────────────────────────────────
-  files: router({
-    /**
-     * Upload a CSV or XLSX model file to S3 and ingest rows into the games table.
-     */
-    upload: protectedProcedure
-      .input(
-        z.object({
-          filename: z.string().min(1).max(255).regex(/^[\w\-. ]+$/, "Invalid filename"),
-          contentBase64: zodBase64File,
-          sizeBytes: z.number().int().positive().max(2_000_000, "File too large (max 2MB)"),
-          sport: zodSport.optional(),
-        })
-      )
-      .mutation(async ({ ctx, input }) => {
-        const sport = input.sport ?? detectSportFromFilename(input.filename);
-        const gameDate = detectDateFromFilename(input.filename);
-
-        const buffer = Buffer.from(input.contentBase64, "base64");
-        const suffix = nanoid(10);
-        const fileKey = `model-files/${ctx.user.id}/${suffix}-${input.filename}`;
-
-        const mimeType = input.filename.toLowerCase().endsWith(".xlsx")
-          ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-          : "text/csv";
-        const { url: fileUrl } = await storagePut(fileKey, buffer, mimeType);
-
-        await insertModelFile({
-          uploadedBy: ctx.user.id,
-          filename: input.filename,
-          fileKey,
-          fileUrl,
-          mimeType,
-          sizeBytes: input.sizeBytes,
-          sport,
-          gameDate: gameDate ?? undefined,
-          status: "processing",
-          rowsImported: 0,
-        });
-
-        const files = await listModelFiles(ctx.user.id);
-        const fileRecord = files.find((f: { fileKey: string }) => f.fileKey === fileKey);
-        if (!fileRecord) {
-          throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
-            message: "File record not found after insert",
-          });
-        }
-
-        try {
-          const gameRows = parseFileBuffer(buffer, input.filename, fileRecord.id, sport);
-          if (gameRows.length > 0) {
-            await insertGames(gameRows);
-          }
-          await updateModelFileStatus(fileRecord.id, "done", gameRows.length);
-
-          return {
-            success: true,
-            fileId: fileRecord.id,
-            filename: input.filename,
-            sport,
-            rowsImported: gameRows.length,
-            fileUrl,
-          };
-        } catch (err) {
-          await updateModelFileStatus(fileRecord.id, "error", 0);
-          throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
-            message: `File uploaded but parsing failed: ${err instanceof Error ? err.message : String(err)}`,
-          });
-        }
-      }),
-
-    list: protectedProcedure.query(async ({ ctx }) => {
-      return listModelFiles(ctx.user.id);
-    }),
-
-    delete: protectedProcedure
-      .input(z.object({ fileId: z.number().int().positive() }))
-      .mutation(async ({ ctx, input }) => {
-        const file = await getModelFileById(input.fileId);
-        if (!file) {
-          throw new TRPCError({ code: "NOT_FOUND", message: "File not found" });
-        }
-        if (file.uploadedBy !== ctx.user.id) {
-          throw new TRPCError({ code: "FORBIDDEN", message: "Not your file" });
-        }
-        await deleteModelFile(input.fileId);
-        return { success: true };
-      }),
-  }),
 
   // ─── NBA Teams ─────────────────────────────────────────────────────
   nbaTeams: router({
@@ -927,9 +814,7 @@ export const appRouter = router({
   }),
 
   // ─── Favorites ──────────────────────────────────────────────────────────────
-  // NOTE: Uses appUserProcedure (custom app_session cookie auth), NOT protectedProcedure
-  // (legacy OAuth). Custom-auth users have ctx.user = null, so protectedProcedure would
-  // always throw UNAUTHORIZED for them.
+  // Uses appUserProcedure (the real app_session cookie auth).
   favorites: router({
     /** Get all favorited game IDs for the current user. */
     getMyFavorites: appUserProcedure.query(async ({ ctx }) => {
@@ -1441,7 +1326,7 @@ export const appRouter = router({
     /**
      * Get rolling backtest accuracy per market for the last N days.
      */
-    getRollingAccuracy: protectedProcedure
+    getRollingAccuracy: ownerProcedure
       .input(z.object({ days: z.number().int().min(1).max(90).default(30) }))
       .query(async ({ input }) => {
         const { getMultiMarketRollingAccuracy } = await import('./mlbMultiMarketBacktest');
@@ -1451,7 +1336,7 @@ export const appRouter = router({
     /**
      * Get drift log entries (model learning events) for the last N days.
      */
-    getDriftLog: protectedProcedure
+    getDriftLog: ownerProcedure
       .input(z.object({ days: z.number().int().min(1).max(90).default(30) }))
       .query(async ({ input }) => {
         const { getDb }              = await import('./db');
@@ -1494,7 +1379,7 @@ export const appRouter = router({
      * Get full backtest report: per-market stats, ROI curve, calibration, edge distribution.
      * Used by the Backtest UI page.
      */
-    getFullReport: protectedProcedure
+    getFullReport: ownerProcedure
       .input(z.object({
         days:        z.number().int().min(1).max(365).default(60),
         minEdge:     z.number().min(0).max(1).default(0),
@@ -1507,7 +1392,7 @@ export const appRouter = router({
     /**
      * Get per-day accuracy time series for ROI curve chart.
      */
-    getDailyTimeSeries: protectedProcedure
+    getDailyTimeSeries: ownerProcedure
       .input(z.object({
         days:   z.number().int().min(1).max(365).default(60),
         market: z.string().default('all'),
@@ -1519,7 +1404,7 @@ export const appRouter = router({
     /**
      * Get edge-bucket accuracy breakdown (calibration chart data).
      */
-    getEdgeBuckets: protectedProcedure
+    getEdgeBuckets: ownerProcedure
       .input(z.object({
         days:   z.number().int().min(1).max(365).default(60),
         market: z.string().default('all'),
@@ -1531,7 +1416,7 @@ export const appRouter = router({
     /**
      * Get K-Props detailed backtest: MAE, bias, RMSE, per-line accuracy.
      */
-    getKPropsReport: protectedProcedure
+    getKPropsReport: ownerProcedure
       .input(z.object({ days: z.number().int().min(1).max(365).default(60) }))
       .query(async ({ input }) => {
         const { getKPropsBacktestReport } = await import('./mlbFullBacktestEngine');
@@ -1540,7 +1425,7 @@ export const appRouter = router({
     /**
      * Get HR Props detailed backtest: calibration, P(HR) distribution, accuracy by odds tier.
      */
-    getHrPropsReport: protectedProcedure
+    getHrPropsReport: ownerProcedure
       .input(z.object({ days: z.number().int().min(1).max(365).default(60) }))
       .query(async ({ input }) => {
         const { getHrPropsBacktestReport } = await import('./mlbFullBacktestEngine');

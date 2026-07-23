@@ -2,7 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { parse as parseCookieHeader } from "cookie";
-import { protectedProcedure, publicProcedure, router, stripeProcedure } from "../_core/trpc";
+import { publicProcedure, router, stripeProcedure } from "../_core/trpc";
 import { getSessionCookieOptions } from "../_core/cookies";
 import { SignJWT, jwtVerify } from "jose";
 import { ENV } from "../_core/env";

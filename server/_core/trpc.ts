@@ -7,14 +7,16 @@
  *   1. csrfOriginCheck   — validates Origin header on all state-mutating requests
  *                          (POST/PATCH/PUT/DELETE). Blocks cross-site request forgery
  *                          from attacker-controlled pages on other domains.
- *                          On block: fires notifyOwner() alert (rate-limited per IP).
- *   2. requireUser       — validates session cookie, rejects unauthenticated callers.
- *   3. requireAdmin      — validates role === 'admin' (legacy OAuth user).
+ *                          On block: fires notifyOwner() alert (rate-limited per IP,
+ *                          no-op since the legacy notification gateway was retired).
  *
  * Procedure hierarchy:
  *   publicProcedure      — no auth, CSRF check on mutations
- *   protectedProcedure   — legacy OAuth session required
- *   adminProcedure       — legacy OAuth session + admin role required
+ *
+ * Real authentication (app_session cookie) lives in server/routers/appUsers.ts
+ * as appUserProcedure/ownerProcedure, built on top of publicProcedure/stripeProcedure
+ * below. The legacy third-party OAuth chain (protectedProcedure/adminProcedure,
+ * ctx.user) was removed when that platform was retired.
  *
  * CSRF Defense Strategy:
  *   tRPC uses POST for all mutations and GET for queries. The Origin header is
@@ -41,7 +43,6 @@
  *   noise during local testing with misconfigured clients.
  */
 
-import { NOT_ADMIN_ERR_MSG, UNAUTHED_ERR_MSG } from "@shared/const";
 import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import { insertSecurityEvent } from "../db";
@@ -425,23 +426,6 @@ const csrfOriginCheck = t.middleware(async ({ ctx, next, path }) => {
   return next();
 });
 
-// ─── Auth middleware ──────────────────────────────────────────────────────────
-/**
- * Requires a valid legacy OAuth session (ctx.user must be non-null).
- * Used by protectedProcedure and adminProcedure.
- */
-const requireUser = t.middleware(async ({ ctx, next }) => {
-  if (!ctx.user) {
-    throw new TRPCError({ code: "UNAUTHORIZED", message: UNAUTHED_ERR_MSG });
-  }
-  return next({
-    ctx: {
-      ...ctx,
-      user: ctx.user,
-    },
-  });
-});
-
 // ─── Exported procedures ──────────────────────────────────────────────────────
 
 /**
@@ -450,32 +434,6 @@ const requireUser = t.middleware(async ({ ctx, next }) => {
  * Queries (GET) are exempt from CSRF check.
  */
 export const publicProcedure = t.procedure.use(csrfOriginCheck);
-
-/**
- * protectedProcedure — legacy OAuth session required.
- * CSRF check applied first, then auth check.
- */
-export const protectedProcedure = t.procedure
-  .use(csrfOriginCheck)
-  .use(requireUser);
-
-/**
- * adminProcedure — legacy OAuth session + admin role required.
- * CSRF check applied first, then admin auth check.
- */
-export const adminProcedure = t.procedure.use(csrfOriginCheck).use(
-  t.middleware(async ({ ctx, next }) => {
-    if (!ctx.user || ctx.user.role !== "admin") {
-      throw new TRPCError({ code: "FORBIDDEN", message: NOT_ADMIN_ERR_MSG });
-    }
-    return next({
-      ctx: {
-        ...ctx,
-        user: ctx.user,
-      },
-    });
-  }),
-);
 
 /**
  * stripeProcedure — CSRF Origin check EXEMPT.

@@ -34,7 +34,6 @@ import { AgeModal } from "@/components/AgeModal";
 import { inSeasonLeagues, type SplitsLeague } from "@/lib/leagueSeasons";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
-import { useAuth } from "@/_core/hooks/useAuth";
 import { useAppAuth } from "@/_core/hooks/useAppAuth";
 import { getNbaTeamByDbSlug } from "@shared/nbaTeams";
 import { NHL_BY_DB_SLUG } from "@shared/nhlTeams";
@@ -387,7 +386,6 @@ export default function BettingSplitsPage({
     return () => obs.disconnect();
   }, []);
 
-  const { user } = useAuth();
   const {
     appUser,
     isOwner,
@@ -817,7 +815,7 @@ export default function BettingSplitsPage({
             selectedDate={selectedDate}
             onSelect={setSelectedDate}
             availableDates={new Set(allDates)}
-            isAdmin={isOwner || user?.role === "admin"}
+            isAdmin={isOwner || appUser?.role === "admin"}
           />
 
           {/* League pills — only in-season leagues render (leagueSeasons).
