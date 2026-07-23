@@ -1,4 +1,19 @@
 import { and, desc, eq, gte, isNotNull, isNull, lte, ne, or, sql } from "drizzle-orm";
+import {
+  METRIC_DEFINITION_VERSION,
+  REPORTING_TIMEZONE,
+  ACTIVE_USER_DEFINITION_V1,
+  deriveActiveUserPoint,
+  deriveAvgDurationPoint,
+  dbUnavailablePoint,
+  reconcileMembership,
+  ok as okPoint,
+  notMeasured,
+  unknown as unknownPoint,
+  type MetricPoint,
+  type MetricState,
+  type MembershipBreakdown,
+} from "./analytics/metricDefinitions";
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
 import {
@@ -2743,84 +2758,125 @@ export async function closeIdleSessions(): Promise<number> {
  * [OUTPUT] { dau, wau, mau, avgSessionDurationMs }
  */
 export async function getSessionMetrics(): Promise<{
-  dau: number; wau: number; mau: number; avgSessionDurationMs: number;
+  dau: MetricPoint;
+  wau: MetricPoint;
+  mau: MetricPoint;
+  avgSessionDurationMs: MetricPoint;
+  meta: { definitionVersion: string; timezone: string; refreshedAtUtc: number; activeUserDefinition: string };
 }> {
   const tag = "[DB][getSessionMetrics]";
-  const db = await getDb();
-  const fallback = { dau: 0, wau: 0, mau: 0, avgSessionDurationMs: 0 };
-  if (!db) { console.warn(`${tag} DB not available`); return fallback; }
   const now = Date.now();
+  const meta = {
+    definitionVersion: METRIC_DEFINITION_VERSION,
+    timezone: REPORTING_TIMEZONE,
+    refreshedAtUtc: now,
+    activeUserDefinition: ACTIVE_USER_DEFINITION_V1,
+  };
+  const db = await getDb();
+  if (!db) {
+    console.warn(`${tag} DB not available`);
+    const p = dbUnavailablePoint();
+    return { dau: p, wau: p, mau: p, avgSessionDurationMs: p, meta };
+  }
+  // Opportunistically finalize sessions abandoned past the idle cutoff (no cron
+  // in this monolith) so their engaged durations get recorded before we
+  // aggregate. Best-effort: a failure here must never break the read.
+  await closeIdleSessions().catch(() => { /* non-fatal — metrics still compute */ });
   const DAY_MS = 24 * 60 * 60 * 1000;
   const since24h = now - DAY_MS;
   const since7d  = now - 7  * DAY_MS;
   const since30d = now - 30 * DAY_MS;
+  // [STEP] Cap at 4 hours to exclude outlier rows created before the
+  // lastHeartbeat-based duration fix (wall-clock instead of active time).
+  const MAX_REALISTIC_SESSION_MS = 4 * 60 * 60 * 1000;
+  // Eligible-user contract: exclude staff (owner/admin) from engagement metrics.
+  const notStaff = and(ne(appUsersTable.role, "owner"), ne(appUsersTable.role, "admin"));
   try {
-    // DAU
-    const [dauRow] = await db
-      .select({ count: sql<number>`COUNT(DISTINCT ${userSessions.userId})` })
+    // Active user = distinct ELIGIBLE user with a FOREGROUND (heartbeat-bearing)
+    // session whose most-recent heartbeat lands in the rolling window. Windowing
+    // on lastHeartbeat (not startedAt) counts genuine in-window activity, and the
+    // join to app_users drops staff. This is engagement, not login-alone.
+    const activeInWindow = async (since: number): Promise<number> => {
+      const [row] = await db
+        .select({ count: sql<number>`COUNT(DISTINCT ${userSessions.userId})` })
+        .from(userSessions)
+        .innerJoin(appUsersTable, eq(userSessions.userId, appUsersTable.id))
+        .where(and(isNotNull(userSessions.lastHeartbeat), gte(userSessions.lastHeartbeat, since), notStaff));
+      return Number(row?.count ?? 0);
+    };
+    const [dauC, wauC, mauC] = await Promise.all([
+      activeInWindow(since24h),
+      activeInWindow(since7d),
+      activeInWindow(since30d),
+    ]);
+    // Have we EVER recorded an engaged (heartbeat-bearing) non-staff session? If
+    // not, a windowed 0 is "not measured" (nothing instrumented), never a real 0.
+    const [everRow] = await db
+      .select({ count: sql<number>`COUNT(*)` })
       .from(userSessions)
-      .where(gte(userSessions.startedAt, since24h));
-    // WAU
-    const [wauRow] = await db
-      .select({ count: sql<number>`COUNT(DISTINCT ${userSessions.userId})` })
-      .from(userSessions)
-      .where(gte(userSessions.startedAt, since7d));
-    // MAU
-    const [mauRow] = await db
-      .select({ count: sql<number>`COUNT(DISTINCT ${userSessions.userId})` })
-      .from(userSessions)
-      .where(gte(userSessions.startedAt, since30d));
-    // Avg session duration (closed sessions in last 30 days only).
-    // [STEP] Cap at 4 hours (14_400_000 ms) to exclude outlier rows created before
-    // the lastHeartbeat-based duration fix was deployed (sessions closed by force-logout
-    // or idle cleanup that recorded wall-clock time instead of active time).
-    const MAX_REALISTIC_SESSION_MS = 4 * 60 * 60 * 1000; // 4 hours
+      .innerJoin(appUsersTable, eq(userSessions.userId, appUsersTable.id))
+      .where(and(isNotNull(userSessions.lastHeartbeat), notStaff));
+    const totalEngagedEver = Number(everRow?.count ?? 0);
+    // Average engaged duration over valid closed non-staff sessions in last 30d.
     const [avgRow] = await db
-      .select({ avg: sql<number>`AVG(${userSessions.durationMs})` })
+      .select({ avg: sql<number>`AVG(${userSessions.durationMs})`, n: sql<number>`COUNT(*)` })
       .from(userSessions)
+      .innerJoin(appUsersTable, eq(userSessions.userId, appUsersTable.id))
       .where(and(
         isNotNull(userSessions.durationMs),
         gte(userSessions.startedAt, since30d),
         sql`${userSessions.durationMs} <= ${MAX_REALISTIC_SESSION_MS}`,
         sql`${userSessions.durationMs} > 0`,
+        notStaff,
       ));
+    const closedCount = Number(avgRow?.n ?? 0);
+    const avgMs = Number(avgRow?.avg ?? 0);
     const result = {
-      dau: Number(dauRow?.count ?? 0),
-      wau: Number(wauRow?.count ?? 0),
-      mau: Number(mauRow?.count ?? 0),
-      avgSessionDurationMs: Number(avgRow?.avg ?? 0),
+      dau: deriveActiveUserPoint(dauC, totalEngagedEver),
+      wau: deriveActiveUserPoint(wauC, totalEngagedEver),
+      mau: deriveActiveUserPoint(mauC, totalEngagedEver),
+      avgSessionDurationMs: deriveAvgDurationPoint(avgMs, closedCount),
+      meta,
     };
-    console.log(`${tag} [OUTPUT] dau=${result.dau} wau=${result.wau} mau=${result.mau} avgDurMs=${Math.round(result.avgSessionDurationMs)}`);
+    console.log(`${tag} [OUTPUT] dauState=${result.dau.state} dau=${result.dau.value} engagedEver=${totalEngagedEver} closed=${closedCount}`);
     return result;
   } catch (err: unknown) {
     console.error(`${tag} Failed | error=${err instanceof Error ? err.message : String(err)}`);
-    return fallback;
+    const p = unknownPoint("Session metric query failed — see server logs.");
+    return { dau: p, wau: p, mau: p, avgSessionDurationMs: p, meta };
   }
 }
 
 /**
- * Compute member tier counts and Discord connection count.
+ * Compute a RECONCILED membership breakdown (never overlapping totals).
  *
- * TOTAL_PAYING     = users with hasAccess=true AND (expiryDate IS NULL OR expiryDate > now)
- * LIFETIME_MEMBERS = users with hasAccess=true AND expiryDate IS NULL
- * NON_PAYING       = users with hasAccess=false OR (expiryDate IS NOT NULL AND expiryDate <= now)
- * DISCORD_CONNECTED = users with discordId IS NOT NULL
+ * Raw queries: payingActive = hasAccess && (expiry NULL OR expiry>now); this is
+ * a SUPERSET of lifetime (hasAccess && expiry NULL). reconcileMembership() then
+ * splits into mutually-exclusive buckets — lifetime + recurringPaid + noAccess =
+ * totalMembers — plus a cross-cutting discordConnected that is NEVER summed in.
  *
- * [OUTPUT] { totalPaying, lifetimeMembers, nonPaying, discordConnected, totalUsers }
+ * Returns a `state` so the UI can render "Not measured" instead of a fabricated
+ * 0 when the DB is unavailable or the query fails.
+ * [OUTPUT] { totalMembers, lifetime, recurringPaid, noAccess, discordConnected, overlapNote, state, reason, meta }
  */
-export async function getMemberMetrics(): Promise<{
-  totalPaying: number; lifetimeMembers: number; nonPaying: number;
-  discordConnected: number; totalUsers: number;
-}> {
+export async function getMemberMetrics(): Promise<
+  MembershipBreakdown & { state: MetricState; reason: string | null; meta: { definitionVersion: string; timezone: string; refreshedAtUtc: number } }
+> {
   const tag = "[DB][getMemberMetrics]";
-  const db = await getDb();
-  const fallback = { totalPaying: 0, lifetimeMembers: 0, nonPaying: 0, discordConnected: 0, totalUsers: 0 };
-  if (!db) { console.warn(`${tag} DB not available`); return fallback; }
   const now = Date.now();
+  const meta = { definitionVersion: METRIC_DEFINITION_VERSION, timezone: REPORTING_TIMEZONE, refreshedAtUtc: now };
+  const db = await getDb();
+  if (!db) {
+    console.warn(`${tag} DB not available`);
+    const p = dbUnavailablePoint();
+    return { ...reconcileMembership(0, 0, 0, 0), state: p.state, reason: p.reason, meta };
+  }
   try {
     const [totalRow] = await db
       .select({ count: sql<number>`COUNT(*)` })
       .from(appUsersTable);
+    // payingActive ⊇ lifetime (both require hasAccess); reconcileMembership below
+    // splits them into mutually-exclusive buckets so nothing double-counts.
     const [payingRow] = await db
       .select({ count: sql<number>`COUNT(*)` })
       .from(appUsersTable)
@@ -2836,17 +2892,18 @@ export async function getMemberMetrics(): Promise<{
       .select({ count: sql<number>`COUNT(*)` })
       .from(appUsersTable)
       .where(isNotNull(appUsersTable.discordId));
-    const total = Number(totalRow?.count ?? 0);
-    const paying = Number(payingRow?.count ?? 0);
-    const lifetime = Number(lifetimeRow?.count ?? 0);
-    const discord = Number(discordRow?.count ?? 0);
-    const nonPaying = total - paying;
-    const result = { totalPaying: paying, lifetimeMembers: lifetime, nonPaying, discordConnected: discord, totalUsers: total };
-    console.log(`${tag} [OUTPUT] total=${total} paying=${paying} lifetime=${lifetime} nonPaying=${nonPaying} discord=${discord}`);
-    return result;
+    const breakdown = reconcileMembership(
+      Number(totalRow?.count ?? 0),
+      Number(payingRow?.count ?? 0),
+      Number(lifetimeRow?.count ?? 0),
+      Number(discordRow?.count ?? 0),
+    );
+    console.log(`${tag} [OUTPUT] total=${breakdown.totalMembers} lifetime=${breakdown.lifetime} recurring=${breakdown.recurringPaid} noAccess=${breakdown.noAccess} discord=${breakdown.discordConnected}`);
+    return { ...breakdown, state: "ok", reason: null, meta };
   } catch (err: unknown) {
     console.error(`${tag} Failed | error=${err instanceof Error ? err.message : String(err)}`);
-    return fallback;
+    const p = unknownPoint("Member metric query failed — see server logs.");
+    return { ...reconcileMembership(0, 0, 0, 0), state: p.state, reason: p.reason, meta };
   }
 }
 
@@ -2870,11 +2927,17 @@ export async function getDurationHistogram(): Promise<{
   m30to120: number;
   h2to4: number;
   total: number;
+  state: MetricState;
+  reason: string | null;
 }> {
   const tag = "[DB][getDurationHistogram]";
   const db = await getDb();
-  const fallback = { under5m: 0, m5to30: 0, m30to120: 0, h2to4: 0, total: 0 };
-  if (!db) { console.warn(`${tag} DB not available`); return fallback; }
+  const empty = { under5m: 0, m5to30: 0, m30to120: 0, h2to4: 0, total: 0 };
+  if (!db) {
+    console.warn(`${tag} DB not available`);
+    const p = dbUnavailablePoint();
+    return { ...empty, state: p.state, reason: p.reason };
+  }
 
   const now = Date.now();
   const since30d = now - 30 * 24 * 60 * 60 * 1000;
@@ -2885,18 +2948,23 @@ export async function getDurationHistogram(): Promise<{
   const B_120M = 120 * 60 * 1000;   // 120 minutes (2 hours)
   const B_4H   = 240 * 60 * 1000;   // 240 minutes (4 hours) — cap
 
+  // Exclude staff (owner/admin) so the distribution reflects real users only.
+  const notStaff = and(ne(appUsersTable.role, "owner"), ne(appUsersTable.role, "admin"));
+
   try {
-    // Fetch all qualifying session durations in last 30 days.
-    // Using application-level bucketing (vs SQL CASE WHEN) for full portability
-    // across MySQL / TiDB dialects and to keep the query simple and auditable.
+    // Fetch all qualifying non-staff session durations in last 30 days.
+    // Application-level bucketing (vs SQL CASE WHEN) keeps this portable across
+    // MySQL / TiDB dialects and auditable.
     const rows = await db
       .select({ dur: userSessions.durationMs })
       .from(userSessions)
+      .innerJoin(appUsersTable, eq(userSessions.userId, appUsersTable.id))
       .where(and(
         isNotNull(userSessions.durationMs),
         gte(userSessions.startedAt, since30d),
         sql`${userSessions.durationMs} > 0`,
         sql`${userSessions.durationMs} <= ${B_4H}`,
+        notStaff,
       ));
 
     let under5m = 0, m5to30 = 0, m30to120 = 0, h2to4 = 0;
@@ -2910,11 +2978,17 @@ export async function getDurationHistogram(): Promise<{
     }
 
     const total = under5m + m5to30 + m30to120 + h2to4;
-    console.log(`${tag} [OUTPUT] under5m=${under5m} m5to30=${m5to30} m30to120=${m30to120} h2to4=${h2to4} total=${total}`);
-    return { under5m, m5to30, m30to120, h2to4, total };
+    // Zero closed sessions ⇒ not measured (nothing to distribute), never a
+    // fabricated all-zero chart.
+    const point = total > 0
+      ? okPoint(total)
+      : notMeasured("No valid closed foreground sessions in the last 30 days — distribution cannot be measured.");
+    console.log(`${tag} [OUTPUT] under5m=${under5m} m5to30=${m5to30} m30to120=${m30to120} h2to4=${h2to4} total=${total} state=${point.state}`);
+    return { under5m, m5to30, m30to120, h2to4, total, state: point.state, reason: point.reason };
   } catch (err: unknown) {
     console.error(`${tag} Failed | error=${err instanceof Error ? err.message : String(err)}`);
-    return fallback;
+    const p = unknownPoint("Session duration histogram query failed — see server logs.");
+    return { ...empty, state: p.state, reason: p.reason };
   }
 }
 
