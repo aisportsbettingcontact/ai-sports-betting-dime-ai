@@ -90,6 +90,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import { emitEvent } from "@/lib/analyticsBridge";
 import { useAppAuth } from "@/_core/hooks/useAppAuth";
 import type { DimeProductPane } from "../dime-shell/productRoute";
 import type { ThemeMode } from "../../contexts/ThemeContext";
@@ -1273,6 +1274,7 @@ export default function DimeChatPage({
   const externalPaneRef = useRef<HTMLElement | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const activeBatcherRef = useRef<RafDeltaBatcher | null>(null);
+  const chatStartRef = useRef<number | null>(null);
   const flipFromRef = useRef<number | null>(null);
   const flipControlsRef = useRef<StoppableAnimation | null>(null);
   const flipGenerationRef = useRef(0);
@@ -1714,6 +1716,7 @@ export default function DimeChatPage({
           throw new Error(`Request failed (${res.status})`);
         }
 
+        chatStartRef.current = Date.now();
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
         let buffer = "";
@@ -1759,6 +1762,14 @@ export default function DimeChatPage({
                 batcher.flushBeforeTerminal(() =>
                   dispatch({ type: "stream_done", id: assistantId })
                 );
+                emitEvent("chat_response_completed", {
+                  featureId: "dime_chat",
+                  outcome: "success",
+                  ...(chatStartRef.current
+                    ? { props: { latency_ms: Math.max(0, Date.now() - chatStartRef.current) } }
+                    : {}),
+                });
+                chatStartRef.current = null;
               }
             } catch {
               dimeDebug("frame.parse_failure", { raw: line.slice(0, 100) });

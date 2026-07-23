@@ -51,7 +51,7 @@ interface MinimalLockManager {
 
 const INPUT_EVENTS = ["mousemove", "keydown", "pointerdown", "scroll", "touchstart"] as const;
 
-export function useSessionTracking(enabled: boolean): void {
+export function useSessionTracking(enabled: boolean, onSessionOpen?: () => void): void {
   const openMutation = trpc.metrics.openSession.useMutation();
   const heartbeatMutation = trpc.metrics.sessionHeartbeat.useMutation();
   const closeMutation = trpc.metrics.closeSession.useMutation();
@@ -61,9 +61,11 @@ export function useSessionTracking(enabled: boolean): void {
   const openRef = useRef(openMutation.mutate);
   const beatRef = useRef(heartbeatMutation.mutate);
   const closeRef = useRef(closeMutation.mutate);
+  const onOpenRef = useRef(onSessionOpen);
   openRef.current = openMutation.mutate;
   beatRef.current = heartbeatMutation.mutate;
   closeRef.current = closeMutation.mutate;
+  onOpenRef.current = onSessionOpen;
 
   useEffect(() => {
     if (!enabled) return;
@@ -76,7 +78,7 @@ export function useSessionTracking(enabled: boolean): void {
     let lastInput = Date.now();
 
     const markInput = () => { lastInput = Date.now(); };
-    const open = () => { if (!started) { started = true; openRef.current(); } };
+    const open = () => { if (!started) { started = true; openRef.current(); onOpenRef.current?.(); } };
     const close = () => { if (started) { started = false; closeRef.current(); } };
     const beat = () => {
       if (

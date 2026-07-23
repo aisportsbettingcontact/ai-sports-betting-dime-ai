@@ -20,13 +20,14 @@
  *    HOME WD top / AWAY WD bottom, YES/NO) with Book | Model per side;
  *    zero truncation down to 360px (labels stack above values <380px).
  */
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { toast } from "sonner";
 import type { inferRouterOutputs } from "@trpc/server";
 import { keepPreviousData } from "@tanstack/react-query";
 import { trpc, type AppRouter } from "@/lib/trpc";
+import { useAnalytics } from "@/lib/analytics";
 import { useTheme } from "@/contexts/ThemeContext";
 import { ProjectionCard } from "@/components/projections/ProjectionCard";
 import { presentationToProjectionGame } from "@/components/projections/fromPresentation";
@@ -378,6 +379,23 @@ export default function DimeModelFeed(props: DimeModelFeedProps) {
   // below in useFeedCards — see mlbRowToCard / wcMatchToCard. The feed is
   // combined (owner directive 2026-07-18): both leagues load for the date.
   const { sections, isLoading, isStale, gamesCount } = useFeedCards(isoDate);
+
+  // Value event (D1): fires once per (date, gamesCount) the moment a complete,
+  // trustworthy projection set renders — loaded, fresh (not stale), non-empty.
+  // Never fires on a bare/loading/stale feed. No betting signals in the props.
+  const track = useAnalytics();
+  const firedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (isLoading || isStale || gamesCount <= 0) return;
+    const sig = `${isoDate}:${gamesCount}`;
+    if (firedRef.current === sig) return;
+    firedRef.current = sig;
+    track("projection_evaluation_viewed", {
+      featureId: "model_feed",
+      outcome: "success",
+      props: { sport: sport.toLowerCase(), data_freshness_state: "fresh" },
+    });
+  }, [isLoading, isStale, gamesCount, isoDate, track, sport]);
 
   // Date nav canonicalizes on the mlb- slug: the combined feed has one URL per
   // date. Legacy wc- deep links still parse and render the same combined slate.
