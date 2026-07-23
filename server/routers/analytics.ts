@@ -11,15 +11,16 @@
 import { appUserProcedure } from "./appUsers";
 import { router } from "../_core/trpc";
 import { trackInputSchema, sanitizeProps } from "../analytics/events";
-import { getAnalyticsRole, isTestUser } from "../analytics/config";
-import { forwardEvent } from "../analytics/forward";
-import { insertAnalyticsEvent, type StoredEvent } from "../analytics/store";
-
-const TAG = "[tRPC][analytics.track]";
+import { isTestUser } from "../analytics/config";
+import { deriveDeviceFromUA, reconcileDeviceType } from "../analytics/device";
+import { dispatchStoredEvent } from "../analytics/dispatch";
+import type { StoredEvent } from "../analytics/store";
 
 export const analyticsRouter = router({
   track: appUserProcedure.input(trackInputSchema).mutation(async ({ ctx, input }) => {
-    // Server-authoritative fields — client claims never trusted.
+    const ua = ctx.req?.headers?.["user-agent"];
+    const uaDevice = deriveDeviceFromUA(Array.isArray(ua) ? ua[0] : ua);
+    const reconciled = reconcileDeviceType(uaDevice.deviceType, input.pointerType, input.viewportClass);
     const event: StoredEvent = {
       eventId: input.eventId,
       eventName: input.eventName,
@@ -29,30 +30,27 @@ export const analyticsRouter = router({
       sessionId: input.sessionId ?? null,
       tabId: input.tabId ?? null,
       featureId: input.featureId ?? null,
+      route: input.route ?? null,
       surface: input.surface,
       outcome: input.outcome ?? null,
+      deviceType: reconciled.deviceType,
+      osFamily: uaDevice.osFamily,
+      browserFamily: uaDevice.browserFamily,
+      appSurface: input.appSurface ?? null,
+      viewportClass: input.viewportClass ?? null,
+      orientation: input.orientation ?? null,
+      isTouch: input.isTouch ?? null,
+      isStandalone: input.isStandalone ?? null,
+      connectionClass: input.connectionClass ?? null,
       occurredAtUtc: input.occurredAtUtc,
       environment: process.env.NODE_ENV ?? "production",
       appVersion: process.env.RAILWAY_GIT_COMMIT_SHA ?? null,
       isTest: isTestUser(ctx.appUser.id),
-      props: sanitizeProps(input.props),
+      props: reconciled.conflict
+        ? { ...(sanitizeProps(input.props) ?? {}), device_conflict: true }
+        : sanitizeProps(input.props),
     };
-
-    const role = getAnalyticsRole();
-    try {
-      if (role === "forwarder") {
-        const r = await forwardEvent(event);
-        return { ok: true as const, routed: "forwarded" as const, accepted: r.ok };
-      }
-      if (role === "store") {
-        const r = await insertAnalyticsEvent(event);
-        return { ok: true as const, routed: "stored" as const, deduped: r.deduped };
-      }
-      return { ok: true as const, routed: "disabled" as const };
-    } catch (err) {
-      // Suppress — analytics failure must never surface to the product.
-      console.warn(`${TAG} suppressed: ${(err as Error).message}`);
-      return { ok: true as const, routed: "error" as const };
-    }
+    const r = await dispatchStoredEvent(event);
+    return { ok: true as const, routed: r.routed };
   }),
 });
