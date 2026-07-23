@@ -4118,7 +4118,7 @@ export default function BetTracker({ previewMode = false }: BetTrackerProps) {
                         <div className="flex items-center gap-2 mb-1">
                           {activeSport === "MLB" && (
                             <img
-                              src="/manus-storage/mlb-logo_50fd8568.png"
+                              src="/dime-storage/mlb-logo_50fd8568.png"
                               alt="MLB"
                               className="w-7 h-7 object-contain"
                             />

@@ -133,8 +133,8 @@ __pycache__/
 # Audit notes, DB dumps, and run artifacts (non-sensitive but bulky)
 audit-notes/
 
-# Manus runtime scrape/audit logs — never track (14MB of artifacts)
-.manus-logs/
+# Dev-runtime scrape/audit logs — never track
+.scraper-logs/
 
 # SEC-INC-001: secret-bearing debug/audit artifacts — local only, never track
 database_audit.txt
@@ -142,8 +142,6 @@ debug_rg_today-hitters.html
 debug_rg_today-pitchers.html
 schema_alignment_findings.md
 
-# Vercel misrooted-project workaround build output (dime-ai/vercel.json)
-dime-ai/.vercel-output/
 
 # Machine-specific Claude Code preferences (skill overrides etc.) — never share
 .claude/settings.local.json

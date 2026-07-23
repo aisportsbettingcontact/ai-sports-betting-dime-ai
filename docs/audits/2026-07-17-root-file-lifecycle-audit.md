@@ -45,7 +45,7 @@
 - `Dockerfile`
 - `INCIDENTS.md`
 - `OPERATING-RULES.md`
-- `RELEASING.md`
+- `RELEASING.md` (removed 2026-07-23 with the legacy-platform cleanup)
 - `bundle-budget.json`
 - `components.json`
 - `drizzle.config.ts`
@@ -81,7 +81,7 @@ These are excluded by `vitest.config.ts`, which discovers tests only under `serv
 - `test_dime_wc2026_soak_100.mjs`
 - `test_idempotency_block4.mjs`
 - `test_idempotency_fix.mjs`
-- `test_jackmac_pipeline.mts`
+- `test_legacy_pipeline.mts`
 - `test_nhl_pl_audit.ts`
 - `test_p0_baseline_v3.mjs`
 - `test_p0_postsoak.mjs`

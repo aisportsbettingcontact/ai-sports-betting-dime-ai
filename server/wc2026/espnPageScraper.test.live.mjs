@@ -35,7 +35,7 @@ import { fileURLToPath } from "url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const projectRoot = join(__dirname, "../..");
-const logDir = join(projectRoot, ".manus-logs");
+const logDir = join(projectRoot, ".scraper-logs");
 if (!existsSync(logDir)) mkdirSync(logDir, { recursive: true });
 
 // ── ANSI colors ────────────────────────────────────────────────────────────
@@ -498,8 +498,8 @@ console.log(`  ${C.bold}Warnings: ${C.yellow}${warnCount}${C.reset}`);
 console.log(`  ${C.bold}Progress: ${C.green}${bar}${C.reset}`);
 console.log(`  ${C.bold}Duration: ${C.reset}${(elapsed / 1000).toFixed(1)}s`);
 console.log(`  ${C.bold}Failures: ${failCount > 0 ? C.red + failCount + C.reset : C.green + "0" + C.reset}`);
-console.log(`  ${C.bold}Log file: ${C.reset}.manus-logs/espn-page-scraper.log`);
-console.log(`  ${C.bold}Result:   ${C.reset}.manus-logs/espn-page-scraper-result.json`);
+console.log(`  ${C.bold}Log file: ${C.reset}.scraper-logs/espn-page-scraper.log`);
+console.log(`  ${C.bold}Result:   ${C.reset}.scraper-logs/espn-page-scraper-result.json`);
 
 if (result) {
   console.log(`\n  ${C.bold}${C.cyan}── KEY DATA POINTS ──${C.reset}`);

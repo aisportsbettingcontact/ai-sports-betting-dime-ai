@@ -4,7 +4,7 @@
  * Branded transactional email service — Dime AI (mint #45E0A8, ink surfaces).
  * Delivers via Google Workspace SMTP (team@aisportsbettingmodels.com).
  *
- * All emails are fully branded — no Manus logos, no external branding.
+ * All emails are fully branded — no third-party logos, no external branding.
  *
  * ENVIRONMENT VARIABLES REQUIRED:
  *   GMAIL_APP_PASSWORD — App Password for team@aisportsbettingmodels.com

@@ -1,6 +1,6 @@
 # Checkout + Pricing v2 — brainstorm & implementation plan (2026-07-10)
 
-Source of truth: `dime-ai Vercel blueprint v1.1` (uploaded), §4.2 (plans), §4.4 (Stripe
+Source of truth: `dime-ai checkout blueprint v1.1` (uploaded), §4.2 (plans), §4.4 (Stripe
 pattern mapping), §6.3/§9.1 (env price map, SEC-006), §9.5/9.6 (status machine/webhooks),
 §9.9 (pricing-table verdict: custom UI, not the embed), §10 (brand tokens).
 Brand law: `design-system/dime-ai/MASTER.md`. Non-negotiable: Stripe never redirects
@@ -64,8 +64,8 @@ off-domain; checkout is embedded on `/checkout`.
   TIERS restructure), tests where cheap. tsc + build + prerender tests green.
 - **S (Stripe ops, main session):** create products/prices via Stripe MCP (live,
   create-only), set Railway env vars, redeploy.
-- **V (verify, live):** session per tier through Vercel origin (clientSecret-only, no
-  hosted URL), themed form pixels via curl-bridge Playwright, smoke 8/8 both origins.
+- **V (verify, live):** session per tier through the Railway origin (clientSecret-only, no
+  hosted URL), themed form pixels via curl-bridge Playwright, smoke 8/8 on the Railway origin.
 
 ## Acceptance
 
@@ -75,5 +75,5 @@ off-domain; checkout is embedded on `/checkout`.
 3. Landing pricing = blueprint §4.2 tiers; every CTA deep-links `/checkout?plan=<id>`.
 4. New plans purchasable end-to-end up to (not including) payment submission; legacy
    monthly/annual unaffected; webhook resolves all five price IDs to plans.
-5. tsc, build, prerender tests, smoke 8/8 (Railway + Vercel origins after deploy).
+5. tsc, build, prerender tests, smoke 8/8 (Railway origin after deploy).
 6. RG language (21+, 1-800-GAMBLER) on checkout at legible contrast.

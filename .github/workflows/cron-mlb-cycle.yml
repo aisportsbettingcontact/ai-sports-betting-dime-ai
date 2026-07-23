@@ -1,13 +1,13 @@
 # Cron — MLB cycle (lineups / strikeout props / backtest) — GitHub Actions timer
 # replacing the in-process scheduler.
 #
-# ⚠️  DO NOT ENABLE IN THE ACTIONS UI UNTIL THE MANUS HOST IS RETIRED. ⚠️
-# Manus's in-process loop (server/vsinAutoRefresh.ts) still calls runMlbCycleOnce()
+# ⚠️  DO NOT ENABLE IN THE ACTIONS UI UNTIL THE LEGACY HOST IS FULLY DECOMMISSIONED. ⚠️
+# The legacy host's in-process loop (server/vsinAutoRefresh.ts) still calls runMlbCycleOnce()
 # on its own setInterval today. If this workflow is enabled at the same time, both
 # hosts will write mlb_lineups, mlb_strikeout_props, and mlb_game_backtest
 # concurrently — those tables lack unique constraints, so concurrent writes risk
 # duplicate rows, not just a harmless race. Leave this workflow disabled (⋯ →
-# Disable workflow) until Manus is decommissioned, then enable it as part of the
+# Disable workflow) until the legacy host is decommissioned, then enable it as part of the
 # cutover runbook.
 #
 # Fires POST /api/cron/mlb-cycle on the Railway app on a schedule. The endpoint is

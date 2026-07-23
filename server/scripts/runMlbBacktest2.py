@@ -15,7 +15,7 @@ OUTPUTS:
     that env var is unset (required by mlbDriftDetector.ts, which spawns this script and
     always sets MLB_CALIBRATION_PATH explicitly so both sides agree on the location; the
     tempdir fallback only applies when this script is run standalone). Container-safe:
-    no hardcoded /home/ubuntu/* Manus sandbox path, which does not exist on Railway.
+    no hardcoded /home/ubuntu/* legacy sandbox path, which does not exist on Railway.
   - stdout: structured log lines with [INPUT], [STEP], [STATE], [OUTPUT], [VERIFY] tags
 
 JSON OUTPUT FORMAT (required by mlbDriftDetector.ts triggerRecalibration):
@@ -70,7 +70,7 @@ TAG = "[runMlbBacktest2]"
 # TS default (os.tmpdir()) — both respect TMPDIR/TEMP/TMP and fall back to /tmp on
 # POSIX, so they resolve identically inside the same container.
 #
-# NOTE: do NOT hardcode a /home/ubuntu/* path here — that was a Manus sandbox path
+# NOTE: do NOT hardcode a /home/ubuntu/* path here — that was a legacy sandbox path
 # that does not exist on Railway (node:22-bookworm-slim, runs as root in /app, no
 # `ubuntu` user, no /home/ubuntu). That bug caused open(OUTPUT_JSON, "w") to raise
 # FileNotFoundError in production, silently breaking the drift-recalibration feature.

@@ -4,17 +4,16 @@
  * Wraps `query()` from @anthropic-ai/claude-agent-sdk so agentic
  * tasks (multi-step tool use: Read/Grep/Bash/WebSearch…) share the
  * same Anthropic credentials as the rest of the server, including
- * Vercel AI Gateway routing.
+ * Anthropic-compatible gateway routing.
  *
  * The Agent SDK spawns Claude Code as a subprocess, so routing is
  * controlled entirely through environment variables on that child
  * process (built by agentEnv() below):
- *   ANTHROPIC_BASE_URL   — gateway host, e.g. https://ai-gateway.vercel.sh
- *   ANTHROPIC_AUTH_TOKEN — AI Gateway API key (Authorization: Bearer)
+ *   ANTHROPIC_BASE_URL   — gateway host, e.g. an Anthropic-compatible gateway
+ *   ANTHROPIC_AUTH_TOKEN — gateway API key (Authorization: Bearer)
  *   ANTHROPIC_API_KEY    — must be EMPTY when using the gateway token;
  *                          Claude Code checks it first and it would win.
  *
- * Full runbook: references/ai-gateway-setup.md
  */
 import { query, type Options } from "@anthropic-ai/claude-agent-sdk";
 import { resolveAnthropicConfig } from "./anthropicClient";

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # .github/add-secrets.sh
 #
-# One-shot script to add all 7 required GitHub Actions secrets to the
+# One-shot script to add all 6 required GitHub Actions secrets to the
 # aisportsbettingcontact/aisportsbetting repository.
 #
 # PREREQUISITES:
@@ -82,7 +82,7 @@ set_secret() {
   echo ""
 }
 
-# ─── Set all 7 required secrets ──────────────────────────────────────────────
+# ─── Set all 6 required secrets ──────────────────────────────────────────────
 
 set_secret \
   "DATABASE_URL" \
@@ -101,23 +101,18 @@ set_secret \
 
 set_secret \
   "VITE_APP_ID" \
-  "Manus OAuth application ID" \
+  "Legacy OAuth application ID (retired platform)" \
   "alphanumeric-app-id"
 
 set_secret \
   "OAUTH_SERVER_URL" \
-  "Manus OAuth backend base URL" \
-  "https://api.manus.im"
+  "Legacy OAuth backend base URL (retired platform)" \
+  "(legacy, unused)"
 
 set_secret \
   "OWNER_OPEN_ID" \
-  "Owner's Manus open ID" \
+  "Owner's legacy OAuth open ID" \
   "alphanumeric-open-id"
-
-set_secret \
-  "NBA_SHEET_ID" \
-  "Google Sheets ID for NBA model sync (44-char base64url)" \
-  "1MWNh0pM...44chars"
 
 # ─── Verification ─────────────────────────────────────────────────────────────
 echo "══════════════════════════════════════════════════════════════"
@@ -125,7 +120,7 @@ echo "[STEP] Verifying all secrets are now set..."
 echo ""
 
 SECRETS_SET=$(gh secret list --repo "$REPO" 2>/dev/null | awk '{print $1}')
-REQUIRED=("DATABASE_URL" "APP_SESSION_SECRET" "PUBLIC_ORIGIN" "VITE_APP_ID" "OAUTH_SERVER_URL" "OWNER_OPEN_ID" "NBA_SHEET_ID")
+REQUIRED=("DATABASE_URL" "APP_SESSION_SECRET" "PUBLIC_ORIGIN" "VITE_APP_ID" "OAUTH_SERVER_URL" "OWNER_OPEN_ID")
 ALL_PASS=true
 
 for secret in "${REQUIRED[@]}"; do
@@ -139,11 +134,11 @@ done
 
 echo ""
 if [ "$ALL_PASS" = true ]; then
-  echo "[OUTPUT] All 7 required secrets are set."
+  echo "[OUTPUT] All 6 required secrets are set."
   echo "[VERIFY] PASS — push any commit to main to trigger CI and validate with ciSecrets.test.ts"
 else
   echo "[OUTPUT] Some secrets are missing — re-run this script for the missing ones."
-  echo "[VERIFY] FAIL — CI will fail until all 7 secrets are present"
+  echo "[VERIFY] FAIL — CI will fail until all 6 secrets are present"
 fi
 echo "══════════════════════════════════════════════════════════════"
 echo ""

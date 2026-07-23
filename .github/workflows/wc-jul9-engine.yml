@@ -6,7 +6,7 @@
 # model QF-097 -> write wc2026MatchOdds + wc2026_model_projections -> audit.
 #
 # This is the same "run the model as a script against the production tables"
-# path used for the Jul 7 (v22) run — NO deploy, NO Manus involvement. The
+# path used for the Jul 7 (v22) run — NO deploy, NO production-host involvement. The
 # live site serves the new rows because it reads the same tables.
 name: WC Jul9 Engine (v23 FRA vs MAR)
 
@@ -49,7 +49,7 @@ jobs:
           echo "DRY_RUN=${MODE:-1}" >> "$GITHUB_ENV"
           echo "Resolved DRY_RUN=${MODE:-1}"
 
-      # DATABASE_URL (old Manus production cluster) is preferred when the
+      # DATABASE_URL (old legacy-platform production cluster) is preferred when the
       # secret exists; otherwise fall back to the migration TARGET clone —
       # safe for DRY_RUN because no writes happen.
       - name: Run v23 engine

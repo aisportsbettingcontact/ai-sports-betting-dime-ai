@@ -5,9 +5,9 @@
  *
  * WHY THIS EXISTS (systematic-debugging finding):
  *   The legacy /api/scheduled/* endpoints authenticate via sdk.authenticateRequest()
- *   → verifySession() against the Manus OAuth server, and only accept a session whose
- *   openId is prefixed "cron_" (issued exclusively by the Manus Heartbeat platform).
- *   GitHub Actions has NO Manus cron cookie, so it can never satisfy that guard.
+ *   → verifySession() against the legacy OAuth server, and only accept a session whose
+ *   openId is prefixed "cron_" (issued exclusively by the legacy heartbeat platform).
+ *   GitHub Actions has NO legacy cron cookie, so it can never satisfy that guard.
  *   Moving background jobs to "GitHub Actions on a timer" therefore REQUIRES a
  *   host-independent shared-secret guard. That is what verifyCronSecret provides.
  *

@@ -11,7 +11,7 @@
  *   E. Scraper performance metrics
  *   F. Verdict & recommendations
  *
- * Output: terminal + .manus-logs/forensic_audit_quad.txt
+ * Output: terminal + .scraper-logs/forensic_audit_quad.txt
  */
 
 import mysql from "mysql2/promise";
@@ -32,8 +32,8 @@ const MATCH_LABELS = {
   "760486": "South Africa vs Canada",
 };
 
-const LOG_FILE = join(projectRoot, ".manus-logs/forensic_audit_quad.txt");
-mkdirSync(join(projectRoot, ".manus-logs"), { recursive: true });
+const LOG_FILE = join(projectRoot, ".scraper-logs/forensic_audit_quad.txt");
+mkdirSync(join(projectRoot, ".scraper-logs"), { recursive: true });
 
 // ─── Color + Logger ───────────────────────────────────────────────────────────
 const C = {

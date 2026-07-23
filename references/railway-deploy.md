@@ -1,6 +1,6 @@
 # Railway deployment runbook
 
-Target architecture for the migration off Manus. Railway hosts the whole app —
+Target architecture for the migration off the legacy platform. Railway hosts the whole app —
 the Express server serves both the API and the built Vite client:
 
 ```
@@ -15,11 +15,11 @@ The client calls **relative** URLs (`/api/trpc`, `/api/dime/chat`) against the
 same origin, so session cookies are first-party, there are no CORS preflights,
 and SSE streams directly.
 
-> **History:** an earlier plan split hosting across Railway (backend) + Vercel
-> (frontend proxying `/api/*`). Vercel was dropped 2026-07-11 — Railway serves
-> everything — and `vercel.json`, `.vercel-ops/`, and the `vercel-ops` workflow
-> were removed. Disconnect the repo in the Vercel dashboard (Project →
-> Settings → Git) to stop preview deploy statuses on PRs.
+> **History:** an earlier plan split hosting across Railway (backend) and a
+> separate standalone frontend host (proxying `/api/*`). That frontend host was
+> dropped 2026-07-11 — Railway serves everything now — and its build config and
+> ops workflow were removed. The repo was disconnected from that host's
+> dashboard to stop preview deploy statuses on PRs.
 
 ## Repo artifacts
 
@@ -31,17 +31,17 @@ and SSE streams directly.
 | `scripts/smoke-deploy.mjs` | Post-deploy smoke suite (health, SPA shell, asset caching, tRPC mount, dime-chat auth gate) — run against any origin: `node scripts/smoke-deploy.mjs https://<domain>` |
 | `.github/workflows/deploy-smoke.yml` | Runs the smoke suite against the live Railway origin after pushes to `main`, or on demand (workflow_dispatch takes a custom origin) |
 
-**Parallel-track law:** this stack runs separate from and parallel to the Manus
-production. Nothing here deploys Manus (that remains manual via `RELEASING.md`),
-and the Railway track must not depend on Manus at runtime:
-- `/manus-storage/*` images are **vendored** in `client/public/manus-storage/`
-  and served local-first by `server/_core/storageProxy.ts` (Forge signed-URL
-  redirect remains as the fallback, so Manus behavior is unchanged). Smoke
+**Parallel-track law (historical):** this stack ran separate from and parallel
+to the legacy production, which is now retired. The Railway track must not
+depend on the legacy platform at runtime:
+- `/dime-storage/*` images are **vendored** in `client/public/dime-storage/`
+  and served local-first by `server/_core/storageProxy.ts` (the legacy gateway
+  signed-URL redirect remains as the fallback). Smoke
   check 7 guards this on every deploy.
-- Remaining known Manus dependency: the OAuth login flow (`OAUTH_SERVER_URL`
-  etc., unset on Railway). Session cookies are verified locally
-  (`APP_SESSION_SECRET` JWT) and password-reset/Discord flows exist, but
-  end-to-end login on Railway has NOT been verified — test at cutover.
+- Remaining known legacy dependency: the retired OAuth login flow
+  (`OAUTH_SERVER_URL` etc., unset on Railway) — a dead code path; production
+  auth is Discord. Session cookies are verified locally
+  (`APP_SESSION_SECRET` JWT), and password-reset/Discord flows exist.
 
 Dockerfile gotchas learned the hard way (don't regress these):
 - `patches/` + `.npmrc` must be COPY'd **before** `pnpm install` — package.json
@@ -61,8 +61,8 @@ Dockerfile gotchas learned the hard way (don't regress these):
    the app's public origin (the custom domain once DNS points at Railway).
    Everything the server reads — from `.env.example`: `APP_SESSION_SECRET`,
    `DATABASE_URL`, `PUBLIC_ORIGIN`, Stripe, Discord, scraper credentials,
-   `ANTHROPIC_API_KEY` *or* the AI Gateway pair (`ANTHROPIC_BASE_URL` +
-   `ANTHROPIC_AUTH_TOKEN` — see `references/ai-gateway-setup.md`), plus:
+   `ANTHROPIC_API_KEY` *or* the Anthropic-compatible gateway pair
+   (`ANTHROPIC_BASE_URL` + `ANTHROPIC_AUTH_TOKEN`), plus:
    - `ADDITIONAL_ALLOWED_ORIGINS` — the `*.up.railway.app` URL if you'll
      exercise the backend on it directly while the custom domain is primary
    - Do **not** set `PORT` — Railway injects it and the server binds it.
@@ -98,17 +98,18 @@ across replicas. Given that:
 - `DISABLE_BACKGROUND_JOBS=1` **must** be set on any Railway web replica whose
   job is only to serve HTTP traffic. Leaving it unset starts 15+ in-process
   timers (`server/_core/index.ts`) that write the same tables the GitHub Actions
-  crons and the Manus Heartbeat also write.
+  crons and the legacy heartbeat platform also wrote.
 - Exactly **one** process may run background jobs at any given time — whichever
   one has `DISABLE_BACKGROUND_JOBS` unset (or `0`). With `numReplicas: 1` this
   is automatically satisfied as long as the single replica is the one intended
   to run jobs; it stops being true the moment a second replica is added without
   also gating it off.
 - The 8 `.github/workflows/cron-*.yml` GitHub Actions crons that target the
-  Manus-orphaned `/api/scheduled/*` endpoints must stay **disabled** in the
-  Actions UI (⋯ → Disable workflow) until the Manus Heartbeat platform is
-  retired — running both at once double-writes the same tables from two
-  independent triggers, same failure mode as the replica case above.
+  legacy-orphaned `/api/scheduled/*` endpoints must stay **disabled** in the
+  Actions UI (⋯ → Disable workflow) until the legacy heartbeat platform is
+  confirmed fully decommissioned — running both at once double-writes the same
+  tables from two independent triggers, same failure mode as the replica case
+  above.
 
 ### 4. Stripe webhooks
 
@@ -126,7 +127,7 @@ once it points at Railway — same origin either way).
   `ADDITIONAL_ALLOWED_ORIGINS` / `ALLOWED_ORIGIN_SUFFIXES`.
 - **SSE** (`POST /api/dime/chat`): served directly by Express; the route
   disables buffering via `Cache-Control: no-transform`.
-- **Auto-deploy**: unlike Manus, Railway deploys on push to `main` once
+- **Auto-deploy**: unlike the legacy host, Railway deploys on push to `main` once
   connected. Schema changes still require the manual `db-push.yml` workflow
   **before** the code deploy.
 
@@ -137,5 +138,5 @@ once it points at Railway — same origin either way).
    + a mutation, `/chat` SSE stream, Stripe checkout.
 3. Update Stripe webhook + GitHub Actions cron URLs to the Railway origin.
 4. Move DNS for the custom domain to Railway; confirm `PUBLIC_ORIGIN` matches.
-5. Decommission the Manus deployment; `RELEASING.md` (Manus runbook) becomes
-   historical after this point.
+5. Decommission the legacy deployment (done — its runbook has been removed
+   from the repo).

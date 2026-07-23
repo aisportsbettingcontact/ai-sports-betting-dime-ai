@@ -112,7 +112,8 @@ a{color:#45E0A8;text-decoration:underline}
 <ul>
 <li>Stripe &mdash; payment processing</li>
 <li>Anthropic (Claude) &mdash; AI model inference</li>
-<li>Manus Platform &mdash; authentication and hosting</li>
+<li>Railway &mdash; application hosting</li>
+<li>Discord &mdash; account authentication</li>
 </ul>
 
 <h2>7. Your Rights</h2>

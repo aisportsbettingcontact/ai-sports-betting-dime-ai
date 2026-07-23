@@ -18,8 +18,8 @@
  * ║    ERROR   → non-fatal error with full context                              ║
  * ║    FATAL   → scrape-aborting error                                          ║
  * ║                                                                              ║
- * ║  Log file: .manus-logs/espn-scraper.log   (plain text, append-only)        ║
- * ║  Stats file: .manus-logs/espn-scraper-stats.json  (per-run summary)        ║
+ * ║  Log file: .scraper-logs/espn-scraper.log   (plain text, append-only)      ║
+ * ║  Stats file: .scraper-logs/espn-scraper-stats.json  (per-run summary)      ║
  * ╚══════════════════════════════════════════════════════════════════════════════╝
  */
 
@@ -146,7 +146,7 @@ export class EspnLogger {
   // Phase timers
   private phaseStartTimes: Map<string, number> = new Map();
 
-  constructor(gameId: string, logDir: string = ".manus-logs") {
+  constructor(gameId: string, logDir: string = ".scraper-logs") {
     this.gameId = gameId;
     this.runId = this.generateRunId();
     this.startTime = Date.now();

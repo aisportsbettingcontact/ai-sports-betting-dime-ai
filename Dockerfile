@@ -73,13 +73,13 @@ RUN pnpm install --frozen-lockfile
 
 COPY . .
 # Builds the client into dist/public AND bundles the server into dist/index.js.
-# The server also serves the client build as a fallback origin, so the Railway
-# domain works standalone even though Vercel is the primary frontend host.
+# The server also serves the client build, so the Railway domain works
+# standalone — Railway is the only host for both API and frontend.
 RUN pnpm run build
 
 ENV NODE_ENV=production
 # Matches the apt-installed chromium binary above. espnPageScraper.ts's fallback candidate
-# chain otherwise only checks Manus-sandbox ms-playwright cache paths (/home/ubuntu/...)
+# chain otherwise only checks legacy-sandbox ms-playwright cache paths (/home/ubuntu/...)
 # and a bare /usr/bin/chromium guess — setting this explicitly makes the resolution
 # deterministic instead of depending on that fallback ordering.
 ENV PLAYWRIGHT_CHROMIUM_PATH=/usr/bin/chromium

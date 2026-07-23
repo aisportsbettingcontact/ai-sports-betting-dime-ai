@@ -29,9 +29,6 @@ export const ENV = {
   discordPublicKey: process.env.DISCORD_PUBLIC_KEY ?? "",
   discordGuildId: process.env.DISCORD_GUILD_ID ?? "",
   discordRoleAiModelSub: process.env.DISCORD_ROLE_AI_MODEL_SUB ?? "",
-  // Google Sheets IDs — non-secret but kept in env for configurability
-  // Must be set via NBA_SHEET_ID env var — no hardcoded fallback permitted
-  nbaSheetId: process.env.NBA_SHEET_ID ?? "",
   // ─── Stripe ──────────────────────────────────────────────────────────────────
   stripeSecretKey: process.env.STRIPE_SECRET_KEY ?? "",
   stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET ?? "",

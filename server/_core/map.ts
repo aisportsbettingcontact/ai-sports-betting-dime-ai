@@ -1,5 +1,5 @@
 /**
- * Google Maps API Integration for Manus WebDev Templates
+ * Google Maps API Integration (legacy built-in gateway)
  * 
  * Main function: makeRequest<T>(endpoint, params) - Makes authenticated requests to Google Maps APIs
  * All credentials are automatically injected. Array parameters use | as separator.
@@ -23,7 +23,7 @@ function getMapsConfig(): MapsConfig {
   const apiKey = ENV.forgeApiKey;
 
   if (!baseUrl || !apiKey) {
-    throw new Error("Maps is unavailable: BUILT_IN_FORGE_* not configured (Manus-only feature)");
+    throw new Error("Maps is unavailable: BUILT_IN_FORGE_* not configured (legacy platform feature)");
   }
 
   return {

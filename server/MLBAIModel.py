@@ -219,8 +219,8 @@ DB_TO_RETRO = {
     "MIA": "MIA",
 }
 
-# PARK_FACTORS: 2024 Fangraphs empirical values (5-year park factors, 2024 season)
-# Updated 2025-05-10. HR factors updated to 2024 actuals from Fangraphs Park Factor table.
+# PARK_FACTORS: 2024 league empirical values (5-year park factors, 2024 season)
+# Updated 2025-05-10. HR factors updated to 2024 actuals from the 2024 park-factor table.
 # "r" = runs factor, "hr" = HR factor, "h" = hits factor (all normalized to 100 = league avg)
 PARK_FACTORS = {
     "COL": {"r": 115, "hr": 122, "h": 109},  # Coors — highest HR environment in MLB
@@ -400,7 +400,7 @@ EMPIRICAL_PRIORS = {
     "i1_share_2026": 0.1181,  # 2026 I1 share
 }
 
-# RE_MATRIX: 2024 Fangraphs RE24 empirical values (4.38 R/G environment — lowest since 2014)
+# RE_MATRIX: 2024 RE24 matrix empirical values (4.38 R/G environment — lowest since 2014)
 # Updated 2025-05-10. Key: (outs, base_state) bitmask: 1=1B, 2=2B, 4=3B (0=empty, 7=loaded)
 # Previous values were 2015-2019 era (4.50 R/G avg) — now updated to 2024 actuals.
 RE_MATRIX = {
@@ -431,7 +431,7 @@ RE_MATRIX = {
 }
 
 RUN_VALUES = {
-    # 2024 Fangraphs linear weights (4.38 R/G environment)
+    # 2024 linear weights (4.38 R/G environment)
     "K": -0.261,
     "OUT": -0.261,
     "BB": 0.301,

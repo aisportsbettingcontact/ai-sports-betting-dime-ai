@@ -1772,23 +1772,6 @@ export default function PublishProjections() {
     },
   });
 
-  const triggerNbaModelSyncMutation = trpc.games.triggerNbaModelSync.useMutation({
-    onMutate: () => {
-      console.log(`[PublishProjections][NbaModelSync] ► Triggered NBA model sync | date: ${gameDate}`);
-    },
-    onSuccess: (result) => {
-      utils.games.lastNbaModelSync.invalidate();
-      utils.games.listStaging.invalidate();
-      refetch();
-      console.log(`[PublishProjections][NbaModelSync] ✅ Complete — ${result.synced} games synced`);
-      toast.success(`NBA model synced — ${result.synced} games updated`);
-    },
-    onError: (err) => {
-      console.error(`[PublishProjections][NbaModelSync] ❌ Failed:`, err);
-      toast.error("NBA model sync failed");
-    },
-  });
-
   // ── NHL Goalie Watcher ──────────────────────────────────────────────────────
   const { data: lastGoalieCheck, refetch: refetchGoalieCheck } = trpc.nhlModel.getLastGoalieCheck.useQuery(undefined, {
     refetchInterval: selectedSport === "NHL" ? 30_000 : false,
@@ -1827,11 +1810,6 @@ export default function PublishProjections() {
     if (selectedSport !== "MLB") {
       triggerRefreshMutation.mutate({ sport: selectedSport as "NBA" | "NHL" });
     }
-    // NBA also triggers model sync (NBA-specific model pipeline)
-    if (selectedSport === "NBA") {
-      console.log(`[PublishProjections][RefreshNow] Also triggering NBA model sync…`);
-      triggerNbaModelSyncMutation.mutate();
-    }
     // NHL also triggers goalie watcher check
     if (selectedSport === "NHL") {
       console.log(`[PublishProjections][RefreshNow] Also triggering NHL goalie check…`);
@@ -1843,13 +1821,6 @@ export default function PublishProjections() {
   const { data: lastRefresh } = trpc.games.lastRefresh.useQuery(undefined, {
     refetchInterval: 60_000,
     refetchOnWindowFocus: true,
-  });
-
-  // NBA model sync timestamp — polls every 30s to stay fresh
-  const { data: lastNbaModelSync } = trpc.games.lastNbaModelSync.useQuery(undefined, {
-    refetchInterval: 30_000,
-    refetchOnWindowFocus: true,
-    enabled: !!appUser && isOwner,
   });
 
   // Re-fetch game list whenever the server completes a new refresh
@@ -1995,23 +1966,23 @@ export default function PublishProjections() {
 
           {/* Refresh Now button — sport-aware */}
           <button type="button" onClick={handleRefreshNow}
-            disabled={isRefreshing || triggerRefreshMutation.isPending || triggerNbaModelSyncMutation.isPending}
+            disabled={isRefreshing || triggerRefreshMutation.isPending}
             className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-sm font-semibold transition-all flex-shrink-0"
-            style={isRefreshing || triggerRefreshMutation.isPending || triggerNbaModelSyncMutation.isPending
+            style={isRefreshing || triggerRefreshMutation.isPending
               ? { background: "transparent", color: "#45E0A8", border: "1px solid #45E0A8" }
               : { background: "transparent", color: "#45E0A8", border: "1px solid #45E0A8" }
             }
             title={selectedSport === "NBA"
-              ? "Refresh VSiN NBA odds, scores, and NBA model data"
+              ? "Refresh VSiN NBA odds and scores"
               : selectedSport === "NHL"
               ? "Refresh NHL odds, scores, and check for goalie changes"
               : "Refresh odds and scores"}
           >
             <RefreshCw
               size={11}
-              className={isRefreshing || triggerRefreshMutation.isPending || triggerNbaModelSyncMutation.isPending ? "animate-spin" : ""}
+              className={isRefreshing || triggerRefreshMutation.isPending ? "animate-spin" : ""}
             />
-            {isRefreshing || triggerRefreshMutation.isPending || triggerNbaModelSyncMutation.isPending ? "Refreshing…" : "Refresh Now"}
+            {isRefreshing || triggerRefreshMutation.isPending ? "Refreshing…" : "Refresh Now"}
           </button>
         </div>
 
@@ -2166,43 +2137,6 @@ export default function PublishProjections() {
                   : "—"}
               </span>
             </div>
-
-            {/* NBA Model Sync timestamp — only shown when NBA tab is active */}
-            {selectedSport === "NBA" && (
-              <>
-                <div className="col-span-2" style={{ height: 1, background: "#FFFFFF" }} />
-                <div className="col-span-2 flex items-center justify-between">
-                  <div className="flex flex-col gap-0.5">
-                    <span className="uppercase tracking-widest" style={{ color: "#FFFFFF", fontSize: '14px' }}>
-                      NBA Model Last Synced
-                    </span>
-                    <span
-                      className="font-mono"
-                      style={{ color: '#45E0A8', fontSize: '13px' }}
-                    >
-                      {lastNbaModelSync?.syncedAt
-                        ? new Date(lastNbaModelSync.syncedAt).toLocaleTimeString("en-US", {
-                            hour: "2-digit", minute: "2-digit", second: "2-digit",
-                            timeZone: "America/New_York", hour12: true,
-                          }) + " EST"
-                        : "Not yet synced"}
-                    </span>
-                  </div>
-                  {lastNbaModelSync && (
-                    <div className="flex items-center gap-2 text-sm" style={{ color: "#FFFFFF" }}>
-                      <span>
-                        <span className="font-bold" style={{ color: "#45E0A8" }}>{lastNbaModelSync.synced}</span> synced
-                      </span>
-                      {lastNbaModelSync.errors.length > 0 && (
-                        <span>
-                          <span className="font-bold" style={{ color: "#FFFFFF" }}>{lastNbaModelSync.errors.length}</span> errors
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
 
             {/* MLB Refresh Stats — only shown when MLB tab is active */}
             {selectedSport === "MLB" && lastRefresh && (

@@ -347,7 +347,7 @@ body.dime-floating-nav-active {
 }
 
 /* Viewport-sticky page headers (Tailwind `sticky top-0` on <header> — splits,
-   tracker, resources, model-results, account) re-anchor below the floating
+   tracker, model-results, account) re-anchor below the floating
    nav instead of sliding underneath it. Scoped to <header> so stickies inside
    overflow containers (e.g. table header rows) are untouched. */
 body.dime-floating-nav-active header.sticky.top-0 {
