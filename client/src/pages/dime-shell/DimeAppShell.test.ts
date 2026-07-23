@@ -240,4 +240,12 @@ describe("DimeAppShell integration contract", () => {
     expect(cleanup).toMatch(/activeBatcherRef\.current\?\.dispose\(\)/);
     expect(cleanup).toMatch(/drawerAnimationRef\.current\?\.stop\(\)/);
   });
+
+  it("keeps engagement-session tracking OFF the critical path (lazy SessionTracker, not a direct hook import)", () => {
+    // Regression guard for the chat-critical-path bundle budget: the session
+    // hook must be lazy-loaded, never imported straight into the shell chunk.
+    expect(shellSource).toMatch(/lazy\(\(\) => import\("@\/components\/SessionTracker"\)\)/);
+    expect(shellSource).toMatch(/<SessionTracker \/>/);
+    expect(shellSource).not.toMatch(/from "@\/hooks\/useSessionTracking"/);
+  });
 });
