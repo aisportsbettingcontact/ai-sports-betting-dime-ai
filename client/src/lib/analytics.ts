@@ -14,11 +14,14 @@
  */
 import { useCallback } from "react";
 import { trpc } from "@/lib/trpc";
+import { buildClientDeviceContext, type ClientDeviceContext } from "@/lib/deviceContext";
+import { toRoutePattern } from "@/lib/routePattern";
 
 export type QualifyingEventName =
   | "projection_evaluation_viewed"
   | "chat_response_completed"
   | "tracker_entry_saved";
+export type AnalyticsEventName = QualifyingEventName | "session_started" | "screen_viewed";
 
 export interface TrackOptions {
   sessionId?: string | null;
@@ -26,6 +29,7 @@ export interface TrackOptions {
   outcome?: string;
   props?: Record<string, string | number | boolean>;
   occurredAt?: number;
+  route?: string;
 }
 
 /** Collision-resistant idempotency key (crypto.randomUUID when available). */
@@ -52,9 +56,9 @@ export function getTabId(): string {
   return newEventId();
 }
 
-export interface ClientEnvelope {
+export interface ClientEnvelope extends ClientDeviceContext {
   eventId: string;
-  eventName: QualifyingEventName;
+  eventName: AnalyticsEventName;
   schemaVersion: number;
   occurredAtUtc: number;
   tabId: string;
@@ -62,12 +66,16 @@ export interface ClientEnvelope {
   featureId?: string;
   outcome?: string;
   surface: string;
+  route: string;
   props?: Record<string, string | number | boolean>;
 }
 
 /** Pure: build the non-authoritative client envelope (server overrides identity). */
-export function buildClientEnvelope(eventName: QualifyingEventName, opts: TrackOptions = {}): ClientEnvelope {
+export function buildClientEnvelope(eventName: AnalyticsEventName, opts: TrackOptions = {}): ClientEnvelope {
+  const device = buildClientDeviceContext();
+  const pathname = typeof window !== "undefined" ? window.location.pathname : "/";
   return {
+    ...device,
     eventId: newEventId(),
     eventName,
     schemaVersion: 1,
@@ -75,6 +83,7 @@ export function buildClientEnvelope(eventName: QualifyingEventName, opts: TrackO
     tabId: getTabId(),
     sessionId: opts.sessionId ?? null,
     surface: "web",
+    route: opts.route ?? toRoutePattern(pathname),
     ...(opts.featureId ? { featureId: opts.featureId } : {}),
     ...(opts.outcome ? { outcome: opts.outcome } : {}),
     ...(opts.props ? { props: opts.props } : {}),
@@ -85,10 +94,10 @@ export function buildClientEnvelope(eventName: QualifyingEventName, opts: TrackO
  * Returns a stable `track(eventName, opts)` for value events. Fire-and-forget;
  * never throws; server-gated (inert until the pipeline is enabled).
  */
-export function useAnalytics(): (eventName: QualifyingEventName, opts?: TrackOptions) => void {
+export function useAnalytics(): (eventName: AnalyticsEventName, opts?: TrackOptions) => void {
   const mutation = trpc.analytics.track.useMutation({ retry: false, onError: () => { /* swallow — analytics never breaks the product */ } });
   return useCallback(
-    (eventName: QualifyingEventName, opts: TrackOptions = {}) => {
+    (eventName: AnalyticsEventName, opts: TrackOptions = {}) => {
       try {
         mutation.mutate(buildClientEnvelope(eventName, opts));
       } catch {
