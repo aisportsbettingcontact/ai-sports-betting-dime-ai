@@ -16,7 +16,7 @@
 - [x] Add tRPC router: files.upload, files.list, files.delete
 - [x] Add tRPC router: games.list (reads from DB)
 - [x] Build XLSX/CSV parser on server to ingest uploaded files into games table
-- [x] Build Login page (Manus OAuth sign-in)
+- [x] Build Login page (legacy OAuth sign-in)
 - [x] Build Dashboard page (MODEL PROJECTIONS with game cards, sport tabs, date grouping)
 - [x] Build File Manager page (upload CSV/XLSX, list files with status, delete)
 - [x] Wire App.tsx routes: /, /login, /files
@@ -77,7 +77,7 @@
 - [x] Frontend: Owner-only User Management panel (create/edit/delete accounts)
 - [x] Add "User Management" to profile dropdown for owner role only
 - [x] Create @prez owner account (aisportbettingcontact@gmail.com, Tailered101$, lifetime access)
-- [x] Replace Manus OAuth with custom email/password authentication on Login page
+- [x] Replace legacy OAuth with custom email/password authentication on Login page
 - [x] Add auth guards to Dashboard and UserManagement pages
 - [x] Test login flow end-to-end with @prez credentials
 - [x] Test User Management CRUD (create, delete)
@@ -90,7 +90,7 @@
 - [x] Call acceptTerms mutation when user clicks "I Understand & Accept"
 - [x] Add TERMS column to User Management dashboard table showing accepted/pending status
 - [x] Redesign Home page as paywall landing (feature highlights + inline login panel, no redirect)
-- [x] Remove Manus OAuth sign-in button and all Manus branding from public-facing pages
+- [x] Remove legacy OAuth sign-in button and all legacy-platform branding from public-facing pages
 - [x] Add Stay Logged In checkbox to login form (extends session to 90 days vs 1 day)
 - [x] Gate dashboard behind app_session cookie check; redirect unauthenticated users to home
 - [x] Add per-column filter/sort dropdowns to User Management table (sort asc/desc + multi-select filter per column)
@@ -1568,7 +1568,7 @@
 - [x] Wire automatic daily NHL model execution (scheduler every 30min 9AM-9PM PST, auto-approve after each run)
 
 ## UI/Discord Fixes (March 18, 2026)
-- [x] Fix Discord /auth/discord/connect 404 on production — moved all routes to /api/auth/discord/* (Manus proxy only forwards /api/* to Express)
+- [x] Fix Discord /auth/discord/connect 404 on production — moved all routes to /api/auth/discord/* (legacy platform proxy only forwards /api/* to Express)
 - [x] Deep-audit route registration chain: confirmed routes registered before serveStatic catch-all
 - [x] Add granular checkpoint logging at every layer of Discord OAuth flow (CHECKPOINT:1-9, A-C)
 - [x] Verify production build includes Discord routes (confirmed in dist/index.js at line 3184)
@@ -2223,7 +2223,7 @@
 ## Security Hardening Round 2 (Apr 10, 2026)
 - [x] Add GitHub Actions CI workflow: pnpm audit --audit-level=high + tsc --noEmit + vitest run
 - [x] Implement CSRF Origin header check in tRPC middleware (trpc.ts) with structured logging
-- [x] Set NBA_SHEET_ID in production secrets via Manus Secrets panel
+- [x] Set NBA_SHEET_ID in production secrets via the legacy Secrets panel
 - [x] Add startup validation guard in nbaModelSync.ts — fail loudly if NBA_SHEET_ID is missing
 - [x] Add early-return guard in syncNbaModelFromSheet() when CSV_URL is empty
 - [x] Create nbaSheetId.test.ts — validates NBA_SHEET_ID format + live sheet reachability
@@ -3843,18 +3843,18 @@
 
 ## Session: 2026-05-24 - Auth & Checkout Flow Fixes
 
-- [x] Fix: RootRoute uses useAuth (Manus OAuth) instead of useAppAuth (Discord JWT) — logged-in users not redirected to /feed
-- [x] Fix: PricingCTA "Start Monthly" redirects to Manus OAuth instead of Stripe checkout
+- [x] Fix: RootRoute uses useAuth (legacy OAuth) instead of useAppAuth (Discord JWT) — logged-in users not redirected to /feed
+- [x] Fix: PricingCTA "Start Monthly" redirects to legacy OAuth instead of Stripe checkout
 - [x] Fix: Add sessionStorage pendingCheckout flow — unauthenticated click → /login → Discord login → auto-trigger checkout
-- [x] Fix: Remove useAuth from PricingCTA (was causing Manus OAuth redirect on UNAUTHORIZED error)
+- [x] Fix: Remove useAuth from PricingCTA (was causing legacy OAuth redirect on UNAUTHORIZED error)
 - [x] Perf: Add getCachedAppUser fast path to appUsers.me (5-min circuit-breaker cache before DB hit)
-- [x] Perf: Removing unnecessary trpc.auth.me (Manus OAuth) call from RootRoute reduces initial load
+- [x] Perf: Removing unnecessary trpc.auth.me (legacy OAuth) call from RootRoute reduces initial load
 - [x] TypeScript: 0 errors (Vite build clean)
 - [x] Tests: 907/907 passing
 
 ## Session: 2026-05-24 - Auth/Checkout Fixes + Landing Page Rebuild
-- [x] Fix checkout redirect — unauthenticated users redirected to /login with sessionStorage pendingCheckout instead of Manus OAuth
-- [x] Fix logged-in redirect — RootRoute uses useAppAuth (Discord JWT) instead of useAuth (Manus OAuth)
+- [x] Fix checkout redirect — unauthenticated users redirected to /login with sessionStorage pendingCheckout instead of legacy OAuth
+- [x] Fix logged-in redirect — RootRoute uses useAppAuth (Discord JWT) instead of useAuth (legacy OAuth)
 - [x] Fix initial load performance — removed unnecessary trpc.auth.me call from RootRoute, added getCachedAppUser fast path
 - [x] Upload 4 real UI screenshots to CDN (model projections, betting splits, daily lineups, cheat sheets)
 - [x] Rebuild Hero — clean centered headline + CTAs, no fake mock data widget
@@ -4026,7 +4026,7 @@
 - [x] Populate 05-30-2026 LINEUPS (15 games, 30 rows, read-back validated)
 - [x] Populate 05-31-2026 LINEUPS (15 games, 30 rows, read-back validated)
 - [x] Register 10-min Heartbeat cron (task_uid=UrFdDVMKqHH4a6juao2uSu, cron="0 */10 * * * *")
-- [x] Persist task_uid to references/fg-lineups-heartbeat.json
+- [x] Persist task_uid to references/fg-lineups-heartbeat.json (file since removed)
 - [ ] Deploy site so Heartbeat platform can reach /api/scheduled/fg-lineups (user action: click Publish in Management UI)
 
 ## Session: 2026-05-30 - Fangraphs Lineup Schema Upgrade (Pitcher/Batter MLB IDs + Full Lineups)
@@ -4094,7 +4094,7 @@
 - [x] TypeScript: 0 errors
 
 ## Session: 2026-06-11 - Rate Exceeded Login Fix
-- [x] Root cause: Manus platform edge proxy returns plain-text "Rate exceeded." on burst requests; tRPC httpBatchLink tries to JSON.parse it → SyntaxError crash
+- [x] Root cause: legacy platform edge proxy returns plain-text "Rate exceeded." on burst requests; tRPC httpBatchLink tries to JSON.parse it → SyntaxError crash
 - [x] Implement resilientFetch wrapper in main.tsx: intercepts non-JSON responses before tRPC parses them
 - [x] Auto-retry with exponential backoff (1s/2s/4s) for rate-limit responses (up to 3 retries)
 - [x] Synthesize valid tRPC-compatible JSON error response after max retries exhausted
@@ -4171,8 +4171,8 @@
 - [x] WC2026 ESPN ingester: add `onlyFinalMatches` param (default true) — when false, processes both LIVE and FT events
 - [x] WC2026 ESPN ingester: add LIVE score-only upsert branch (no summary fetch, no stats/events/lineups for in-progress)
 - [x] WC2026 heartbeat: add `handleWc2026LiveScores` handler at POST /api/scheduled/wc2026-live-scores
-- [x] WC2026 heartbeat: register `wc2026-live-scores` Manus Heartbeat cron (every 5 min, `0 */5 * * * *`)
-- [x] WC2026 heartbeat: register `wc2026-espn-results` Manus Heartbeat cron (daily 00:30 UTC)
+- [x] WC2026 heartbeat: register `wc2026-live-scores` legacy Heartbeat cron (every 5 min, `0 */5 * * * *`)
+- [x] WC2026 heartbeat: register `wc2026-espn-results` legacy Heartbeat cron (daily 00:30 UTC)
 - [x] WcFeedInline: group letter moved to status row next to kickoff time (e.g. "3:00 PM EDT · Grp A")
 - [x] WcDcMobileCell: wrap 3 rows in centered flex wrapper to match BetCell 2-row vertical centering
 
