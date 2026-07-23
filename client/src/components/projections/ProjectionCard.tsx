@@ -45,15 +45,26 @@ export function ProjectionCard({
   defaultMarketsOpen?: boolean;
 }) {
   const edges = rankedEdges(game);
+  // Whole-card PASS state (Round 4 Wave 1, item 3 / page law "PASS games"):
+  // no market on this game clears the WATCH/BET threshold — the same
+  // rankedEdges() ground truth that already drives the summary's "No edge"
+  // rendering, so this can never disagree with what the card itself shows.
+  const isPass = edges.length === 0;
 
   return (
     <article
-      className={`projection-card ds-cq${game.status === "scheduled" ? " projection-card--scheduled" : ""}`}
+      className={`projection-card ds-cq${game.status === "scheduled" ? " projection-card--scheduled" : ""}${isPass ? " projection-card--pass" : ""}`}
       aria-label={`${game.away.name} at ${game.home.name}`}
     >
       {game.status !== "scheduled" && (
         <header className="projection-card__head">
           <span className={`projection-card__status projection-card__status--${game.status}`}>
+            {/* Live indicator (owner directive / page law "Live state"): pulsing
+                7px mint dot ahead of the mono-styled status text. Desktop/tablet
+                only (Round 4 Wave 1 scoping, item 8) — see ProjectionCard.css. */}
+            {game.status === "live" && (
+              <span className="projection-card__live-dot" aria-hidden="true" />
+            )}
             {game.statusLabel}
           </span>
         </header>

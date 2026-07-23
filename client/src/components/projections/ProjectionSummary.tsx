@@ -43,28 +43,38 @@ export function ProjectionSummary({
 }) {
   // Readout above the EdgeIndicator (owner directive 2026-07-18): the
   // MODEL EDGE / BOOK / MODEL facts lead, the mint edge cell sits beneath.
+  //
+  // Round 4 Wave 1 (item 3, page law "PASS games"): the no-edge case uses the
+  // SAME <dl className="summary__readout"> grid as an edge card — "No edge"
+  // already occupies the chip slot via EdgeIndicator below — instead of a
+  // divergent bare <p>, so a PASS card never breaks the row's shape. The
+  // shipped copy is unchanged, just relocated into the structure's value row.
   return (
     <div className="summary">
-      {insight ? (
-        <dl className="summary__readout">
-          <div className="summary__item">
-            <dt className="ds-label">Model edge</dt>
-            <dd className="summary__pick">{spellOutPick(insight.sideLabel, teams)}</dd>
+      <dl className="summary__readout">
+        {insight ? (
+          <>
+            <div className="summary__item">
+              <dt className="ds-label">Model edge</dt>
+              <dd className="summary__pick">{spellOutPick(insight.sideLabel, teams)}</dd>
+            </div>
+            <div className="summary__item">
+              {/* "Book" not "Best price" — owner directive 2026-07-17 */}
+              <dt className="ds-label">Book</dt>
+              <dd className="odds-value">{fmtPrice(insight.bookPrice)}</dd>
+            </div>
+            <div className="summary__item">
+              {/* "Model" not "Model fair price" — owner directive 2026-07-17 */}
+              <dt className="ds-label">Model</dt>
+              <dd className="odds-value">{fmtPrice(insight.modelFairPrice)}</dd>
+            </div>
+          </>
+        ) : (
+          <div className="summary__item summary__item--message">
+            <dd className="summary__none ds-body-sm">Every market is efficiently priced. No action.</dd>
           </div>
-          <div className="summary__item">
-            {/* "Book" not "Best price" — owner directive 2026-07-17 */}
-            <dt className="ds-label">Book</dt>
-            <dd className="odds-value">{fmtPrice(insight.bookPrice)}</dd>
-          </div>
-          <div className="summary__item">
-            {/* "Model" not "Model fair price" — owner directive 2026-07-17 */}
-            <dt className="ds-label">Model</dt>
-            <dd className="odds-value">{fmtPrice(insight.modelFairPrice)}</dd>
-          </div>
-        </dl>
-      ) : (
-        <p className="summary__none ds-body-sm">Every market is efficiently priced. No action.</p>
-      )}
+        )}
+      </dl>
       <EdgeIndicator insight={insight} className="summary__edge" />
     </div>
   );
