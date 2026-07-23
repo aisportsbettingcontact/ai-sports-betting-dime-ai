@@ -161,9 +161,6 @@ jobs:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
       APP_SESSION_SECRET: ${{ secrets.APP_SESSION_SECRET }}
       PUBLIC_ORIGIN: ${{ secrets.PUBLIC_ORIGIN }}
-      VITE_APP_ID: ${{ secrets.VITE_APP_ID }}
-      OAUTH_SERVER_URL: ${{ secrets.OAUTH_SERVER_URL }}
-      OWNER_OPEN_ID: ${{ secrets.OWNER_OPEN_ID }}
       # Non-secret config values
       NODE_ENV: test
       VSIN_EMAIL: ${{ secrets.VSIN_EMAIL }}

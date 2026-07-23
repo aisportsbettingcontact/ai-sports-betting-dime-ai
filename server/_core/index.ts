@@ -6,7 +6,6 @@ import compression from "compression";
 import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import helmet from "helmet";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
-import { registerOAuthRoutes } from "./oauth";
 import { registerStorageProxy } from "./storageProxy";
 import { registerDiscordAuthRoutes } from "../discordAuth";
 import { registerDiscordLoginRoutes } from "../discordLogin";
@@ -523,9 +522,6 @@ async function startServer() {
   app.use("/api", globalApiLimiter);
 
   // ─── Auth-specific rate limiters ─────────────────────────────────────────
-  // Legacy OAuth callback — 5 attempts per 15 min per IP
-  app.use("/api/oauth", authLimiter);
-
   // Discord OAuth routes — 5 attempts per 15 min per IP
   app.use("/api/discord-auth", authLimiter);
   app.use("/api/auth/discord-invite", authLimiter);
@@ -646,9 +642,6 @@ async function startServer() {
   // Storage proxy — serves /dime-storage/* asset paths (local-first)
   console.log(`[SERVER_STARTUP] Registering storage proxy routes`);
   registerStorageProxy(app);
-  // OAuth callback under /api/oauth/callback
-  console.log(`[SERVER_STARTUP] Registering OAuth routes`);
-  registerOAuthRoutes(app);
   // Discord account linking routes
   console.log(`[SERVER_STARTUP] Registering Discord auth/login/invite routes`);
   registerDiscordAuthRoutes(app);
