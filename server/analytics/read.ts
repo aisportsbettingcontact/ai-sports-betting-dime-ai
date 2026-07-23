@@ -54,11 +54,19 @@ export function disabledOverview(reason: string): AnalyticsOverview {
   };
 }
 
-/** Extract a single scalar column from a mysql2/drizzle result across shapes. */
-function numAt(result: unknown, key = "n"): number {
-  const arr = Array.isArray(result) ? result : (result as { rows?: unknown[] })?.rows;
-  const first = Array.isArray(arr) ? (arr[0] as Record<string, unknown>) : undefined;
-  const v = first?.[key];
+/**
+ * Rows from a drizzle/mysql2 `.execute()` result. mysql2 returns `[rows, fields]`
+ * (this repo's idiom: `(await db.execute(sql`…`))[0]` is the Row[]). Defends
+ * across that tuple shape and a `{ rows }` shape.
+ */
+export function rowsOf(result: unknown): Array<Record<string, unknown>> {
+  const r = Array.isArray(result) ? result[0] : (result as { rows?: unknown[] })?.rows;
+  return Array.isArray(r) ? (r as Array<Record<string, unknown>>) : [];
+}
+
+/** First-row scalar column as a number (mysql2 may return BIGINT/COUNT as string). */
+export function numAt(result: unknown, key = "n"): number {
+  const v = rowsOf(result)[0]?.[key];
   return typeof v === "number" ? v : Number(v ?? 0) || 0;
 }
 
@@ -105,10 +113,7 @@ export async function getAnalyticsOverview(): Promise<AnalyticsOverview> {
              SUM(CASE WHEN event_name IN (${nameList}) THEN 1 ELSE 0 END) AS value_events
       FROM analytics_events WHERE is_test = 0
       GROUP BY COALESCE(device_type, 'unknown')`);
-    const mixRows = (Array.isArray(mixR)
-      ? mixR
-      : (mixR as { rows?: unknown[] })?.rows ?? []) as Array<Record<string, unknown>>;
-    const deviceMix: DeviceSlice[] = mixRows.map((r) => ({
+    const deviceMix: DeviceSlice[] = rowsOf(mixR).map((r) => ({
       deviceType: String(r.device_type ?? "unknown"),
       users: Number(r.users ?? 0) || 0,
       valueEvents: Number(r.value_events ?? 0) || 0,

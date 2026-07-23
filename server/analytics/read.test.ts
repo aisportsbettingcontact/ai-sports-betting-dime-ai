@@ -1,5 +1,26 @@
 import { describe, it, expect } from "vitest";
-import { overviewWindows, disabledOverview } from "./read";
+import { overviewWindows, disabledOverview, rowsOf, numAt } from "./read";
+
+describe("mysql2 result extraction (rowsOf / numAt)", () => {
+  it("reads rows from the mysql2 [rows, fields] tuple, not the tuple itself", () => {
+    const result = [[{ n: 5 }], [{ name: "n" }]]; // [rows, fields]
+    expect(rowsOf(result)).toEqual([{ n: 5 }]);
+    expect(numAt(result)).toBe(5);
+  });
+  it("coerces a BIGINT/COUNT returned as a string", () => {
+    expect(numAt([[{ n: "42" }], []])).toBe(42);
+  });
+  it("is safe on an empty result", () => {
+    expect(rowsOf([[], []])).toEqual([]);
+    expect(numAt([[], []])).toBe(0);
+    expect(numAt(undefined)).toBe(0);
+  });
+  it("maps a multi-row device-mix result", () => {
+    const mix = [[{ device_type: "mobile", users: 3, value_events: 9 }], []];
+    expect(rowsOf(mix)).toHaveLength(1);
+    expect(rowsOf(mix)[0].device_type).toBe("mobile");
+  });
+});
 
 describe("overviewWindows", () => {
   it("computes half-open UTC windows from asOf", () => {
