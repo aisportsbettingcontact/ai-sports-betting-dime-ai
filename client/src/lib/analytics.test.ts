@@ -47,3 +47,18 @@ describe("useAnalytics wiring (source contract)", () => {
     expect(src).toMatch(/catch \{/);
   });
 });
+
+describe("device block on the envelope", () => {
+  it("attaches coarse device signals + a route pattern to every event", () => {
+    const e = buildClientEnvelope("screen_viewed");
+    expect(["xs","sm","md","lg","xl"]).toContain(e.viewportClass);
+    expect(typeof e.isTouch).toBe("boolean");
+    expect(["web-desktop-shell","web-mobile-shell","web-responsive"]).toContain(e.appSurface);
+    expect(typeof e.route).toBe("string");
+    // Never a fingerprint / raw UA.
+    expect(e).not.toHaveProperty("userAgent");
+  });
+  it("still supports the value events", () => {
+    expect(buildClientEnvelope("chat_response_completed").eventName).toBe("chat_response_completed");
+  });
+});
