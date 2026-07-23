@@ -25,14 +25,20 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-function fmtOdds(v: number | null | undefined): string {
+// Numeric DB columns (DECIMAL/odds) can arrive as strings over the wire
+// (mysql2 returns DECIMAL as a string), so coerce defensively before any
+// numeric formatting — a raw string.toFixed() is what crashed this page.
+function fmtOdds(v: number | string | null | undefined): string {
   if (v == null) return "—";
-  return v > 0 ? `+${v}` : `${v}`;
+  const n = typeof v === "number" ? v : Number(v);
+  if (!Number.isFinite(n)) return "—";
+  return n > 0 ? `+${n}` : `${n}`;
 }
 
-function fmtScore(v: number | null | undefined): string {
+function fmtScore(v: number | string | null | undefined): string {
   if (v == null) return "—";
-  return v.toFixed(2);
+  const n = typeof v === "number" ? v : Number(v);
+  return Number.isFinite(n) ? n.toFixed(2) : "—";
 }
 
 function fmtTs(v: Date | string | null | undefined): string {
