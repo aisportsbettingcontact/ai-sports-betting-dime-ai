@@ -73,7 +73,7 @@ LOG_PATH = Path("/home/ubuntu/wc2026oddslog.txt")
 DB_PATH = Path("/home/ubuntu/wc2026_betexplorer_v4.db")
 OUTPUT_JSON = Path("/home/ubuntu/wc2026_betexplorer_odds_v4.json")
 DEBUG_DUMP_DIR = Path("/home/ubuntu/be_debug_dumps_v4")
-# Import-safe: the hardcoded /home/ubuntu home only exists on the legacy Manus
+# Import-safe: the hardcoded /home/ubuntu home only exists on the legacy platform
 # box. On any other host (GitHub CI runner, Railway/Debian, dev container) the
 # parent is absent, so creating it must never crash module import — the dir is
 # only used for optional forensic HTML dumps. Best-effort with parents=True.
@@ -86,7 +86,7 @@ except OSError:
 MYSQL_TABLE = "wc2026MatchOdds"
 # Exact scraper filename — written to insert_method column on every upsert
 SCRAPER_FILENAME = "wc2026_betexplorer_scraper_v4.py"
-# DATABASE_URL parsed at runtime from environment (set by Manus platform)
+# DATABASE_URL parsed at runtime from environment (set by the platform environment)
 import os, urllib.parse as _urlparse
 _DB_URL = os.environ.get("DATABASE_URL", "")
 

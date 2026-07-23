@@ -33,7 +33,7 @@ config({ path: path.resolve(__dirname, '../../.env') });
 // ── CONFIG ────────────────────────────────────────────────────────────────────
 const MATCH_IDS = ['760449', '760487', '760489', '760488', '760486'];
 const TRUTH_ANCHOR = '760487'; // Brazil vs Japan — first match scraped, held as truth
-const LOG_DIR = path.resolve(__dirname, '../../.manus-logs');
+const LOG_DIR = path.resolve(__dirname, '../../.scraper-logs');
 const LOG_FILE = path.join(LOG_DIR, 'forensicAudit500x.txt');
 const REPORT_FILE = path.join(LOG_DIR, 'WC2026_FORENSIC_AUDIT_500X_REPORT.md');
 
@@ -868,7 +868,7 @@ function writeReport() {
     ),
     '',
     '## Log File',
-    `See: \`.manus-logs/forensicAudit500x.txt\``,
+    `See: \`.scraper-logs/forensicAudit500x.txt\``,
   ];
   fs.mkdirSync(LOG_DIR, { recursive: true });
   fs.writeFileSync(REPORT_FILE, lines.join('\n'), 'utf8');

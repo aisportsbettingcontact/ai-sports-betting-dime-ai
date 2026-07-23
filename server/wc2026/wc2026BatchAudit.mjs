@@ -7,7 +7,7 @@
  *   - 7 Round of 32 (Jun 28 – Jul 1)
  *
  * Logs every execution, success, failure, and table validation result
- * to both terminal and /home/ubuntu/ai-sports-betting/.manus-logs/wc2026_batch_audit.log
+ * to both terminal and /home/ubuntu/ai-sports-betting/.scraper-logs/wc2026_batch_audit.log
  *
  * Usage:
  *   node server/wc2026/wc2026BatchAudit.mjs [--dry-run] [--concurrency=N]
@@ -25,7 +25,7 @@ import { fileURLToPath } from "url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const projectRoot = join(__dirname, "../..");
-const LOG_DIR = join(projectRoot, ".manus-logs");
+const LOG_DIR = join(projectRoot, ".scraper-logs");
 const LOG_FILE = join(LOG_DIR, "wc2026_batch_audit.log");
 const TAG = "WC2026_BATCH_AUDIT";
 

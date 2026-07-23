@@ -299,7 +299,7 @@ survives.
 | Fonts | `client/index.html:15` Familjen 400–700 + Plex Mono **400;500** (+ legacy Inter/JetBrains at :20) | keep; normalize prototype mono-600/700 specs to law instead of adding weights |
 | Mobile bottom nav | `features/mobileOwnerTabs/` — five tabs **exactly** feed/splits/chat/props/profile; owner-gated (`config.ts:11 MOBILE_OWNER_TABS_PUBLIC_ENABLED=false`); `MobileOwnerBottomTabs.tsx` hardcodes `#39FF14/#000000` ("PERMANENT" comment — violates both MASTER and prototype) | EXISTS-DIVERGENT |
 | Cards/data | `games.list` feed contracts (inviolable, `design-system/dime-ai/pages/ai-model-projections.md`), MLB props routers, WC2026 schema+route; **no NBA prop data anywhere** | prototype's NBA trio not implementable |
-| Deploy | `Dockerfile`+`railway.json` (backend), `vercel.json` (client build + `/api/*` proxy to Railway), `RELEASING.md` law: merge≠deploy until cutover; schema via `db-push.yml` | ready |
+| Deploy | `Dockerfile`+`railway.json` (backend), `vercel.json` (client build + `/api/*` proxy to Railway), merge≠deploy until cutover (superseded: Railway auto-deploys `main`); schema via `db-push.yml` | ready |
 | Bugs found incidentally | `BettingSplits.tsx:541` active tab links `/splits` → `App.tsx:137` redirects to `/feed` (self-navigating-away tab) | fix in Wave 2 |
 
 ---
@@ -360,7 +360,7 @@ mobile nav retokenized behind flag. Exit: side-by-side screenshot parity vs corr
 390/768/1440 × **dark+light+mint**; `#39FF14` count in touched components = 0.
 
 **W3 — Production data integration (E5 + credits + packs; D2/D8 confirmed).** Prereq:
-**auth unification** — `/api/dime/chat` authenticates via Manus OAuth (`sdk.authenticateRequest`,
+**auth unification** — `/api/dime/chat` authenticates via legacy OAuth (`sdk.authenticateRequest`,
 identity discarded) while the ledger keys on `app_users.id` via `app_session` JWT; the chat
 route must adopt the wc2026 JWT pattern before it can charge (§17-A gap 3). Then: `dimeCredits`
 tRPC router on `appUserProcedure` (balance, activity from ledger); charge `/api/dime/chat`
@@ -392,7 +392,7 @@ passes; Vitest+typecheck green in CI.
 
 **W6 — Cutover (E6, deploy law).** Flip `/dime` shell to primary routes; mobile nav public
 flag on; parallel validation on Railway/Vercel preview; smoke (`deploy-smoke.yml`);
-release flag + rollback = flag revert (Manus remains prod until the platform cutover
+release flag + rollback = flag revert (the legacy host remains prod until the platform cutover
 completes; after cutover, push-to-main auto-deploys both platforms). Exit: production on
 Dime shell; legacy accents gone from user paths.
 
@@ -427,7 +427,7 @@ Issue-ready specifications, one worktree/PR each when the owner gives the go
 | Q4 (W1) | Fence purple shadcn vars + drop legacy Inter/JetBrains load | `index.css:125-156`, `client/index.html:20` | no oklch purple reachable under Dime surfaces; fonts request count −1 |
 | Q5 (W2) | Betting Splits reskin per §10/§11/§17-C: prototype layout (Book+Model columns, model-favored highlight via `edgeUtils`, ROI chips) over VSiN data + `/splits` self-link fix + Money/Handle unification + proportional bars + replicate the 0%/0% guard for Total/ML (only spread is server-guarded) | `BettingSplits.tsx`, `BettingSplitsPanel.tsx`, `GameCard.tsx`, `edgeUtils.ts` (read-only reuse) | bars width:% (97/3 renders 97/3); tab stays on page; `#39FF14`=0 in files; 0/0 markets show "not yet available", never 100% bars |
 | Q6 (W2) | Mobile bottom nav: retokenize `#39FF14/#000000` → tokens; prep public flag | `MobileOwnerBottomTabs.tsx`, `config.ts` | matches prototype semantics (mint active, canvas bg, no dot); flag still off |
-| Q7 (W3) | Chat auth unification: `/api/dime/chat` adopts the `app_session` JWT pattern (identity captured) — prerequisite for any charge | `server/dime-chat.route.ts:92` (replace `sdk.authenticateRequest`), pattern from `dime-wc2026.route.ts:85-109` | chat rejects Manus-only sessions consistently; user_id available to metering |
+| Q7 (W3) | Chat auth unification: `/api/dime/chat` adopts the `app_session` JWT pattern (identity captured) — prerequisite for any charge | `server/dime-chat.route.ts:92` (replace `sdk.authenticateRequest`), pattern from `dime-wc2026.route.ts:85-109` | chat rejects legacy-OAuth-only sessions consistently; user_id available to metering |
 | Q7b (W3) | `dimeCredits` tRPC router (balance + activity on `appUserProcedure`) + charge `/api/dime/chat` per D2a + pre-flush 402 + `INSUFFICIENT_CREDITS` SSE frame + `creditsCharged` on done — fixing the three wc2026 defects (abort fallthrough double-charge per D9, virtual-first-row race via seed row on entitlement grant, unique index on `(request_id, reason)`) | `server/routers.ts`, `server/dime-chat.route.ts`, `drizzle/dime.schema.ts:66` | balance survives reload; concurrent first-request test; abort test charges per D9 policy; replayed request_id cannot double-insert |
 | Q7c (W3) | Plan-credit grant mechanism: schema for monthly allotments (pricing page promises 1,000/3,000/8,000), grant job/webhook hook writing +N ledger rows, wire `dime_user_entitlements` (currently dead: no reader/writer) | `drizzle/dime.schema.ts`, `server/stripeWebhook.ts`, new cron or invoice.paid hook — **schema via `db-push.yml` first** | new subscriber receives plan credits exactly once per cycle; renewal grants on `invoice.paid` |
 | Q8 (W3) | Credit pill + credits sheet (all 7 states server-derived) | `dime-chat/`, shell header | states driven by real balance; a11y labels per prototype |
@@ -512,7 +512,7 @@ unique user_id, status/tier/source/dates; **no quota/unlimited/allotment columns
 runtime readers or writers — the table is dead code today.**
 
 **Chat route (`server/dime-chat.route.ts`):** zero credit code. Auth is
-`sdk.authenticateRequest(req)` (:92) = **Manus OAuth** (`users` table by openId,
+`sdk.authenticateRequest(req)` (:92) = **legacy OAuth** (`users` table by openId,
 `server/_core/sdk.ts:319-339`) — a *different identity domain* than the ledger's
 `app_users.id`, and the result is discarded (user never captured). Charge hook must sit
 between auth and `res.flushHeaders()` (:139-142) for a plain 402; after flush, only SSE

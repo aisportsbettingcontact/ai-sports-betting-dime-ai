@@ -67,7 +67,7 @@ const projectRoot = join(__dirname, "../..");
 
 // ─── CLI arg: gameId ──────────────────────────────────────────────────────────
 const GAME_ID = process.argv[2] ?? "760487";
-const LOG_FILE = join(projectRoot, `.manus-logs/espn_ingest_test_${GAME_ID}.txt`);
+const LOG_FILE = join(projectRoot, `.scraper-logs/espn_ingest_test_${GAME_ID}.txt`);
 const RESULT_FILE = join(tmpdir(), `espn_ingest_result_${GAME_ID}.json`);
 
 // ─── Color helpers ────────────────────────────────────────────────────────────
@@ -612,7 +612,7 @@ if (failures.length > 0) {
 
 // Save log
 try {
-  mkdirSync(join(projectRoot, ".manus-logs"), { recursive: true });
+  mkdirSync(join(projectRoot, ".scraper-logs"), { recursive: true });
   writeFileSync(LOG_FILE, logLines.join("\n") + "\n");
   log(`\n  Log saved to: ${LOG_FILE}`);
 } catch {}

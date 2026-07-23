@@ -4,7 +4,7 @@
  * Heartbeat HTTP handler for the Rotowire lineup sync.
  *
  * Endpoint:  POST /api/scheduled/roto-lineups
- * Auth:      Manus Heartbeat platform token (x-heartbeat-token header)
+ * Auth:      shared secret (CRON_SECRET) via requireCronSecret
  *
  * This handler is ISOLATED from all other sync code.
  * It calls syncRotowireLineupTabs() which:

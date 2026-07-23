@@ -133,8 +133,8 @@ __pycache__/
 # Audit notes, DB dumps, and run artifacts (non-sensitive but bulky)
 audit-notes/
 
-# Manus runtime scrape/audit logs — never track (14MB of artifacts)
-.manus-logs/
+# Dev-runtime scrape/audit logs — never track
+.scraper-logs/
 
 # SEC-INC-001: secret-bearing debug/audit artifacts — local only, never track
 database_audit.txt

@@ -14,7 +14,7 @@
  *   MatchStatus=3, Period=3/4   → ET         (ET 1st/2nd half)
  *   MatchStatus=3, Period=11    → SHOOTOUT   (penalty shootout)
  *
- * AUTHOR: Manus AI — 2026-06-30 v4 (FIFA API rewrite, no HTML scraping)
+ * 2026-06-30 v4 (FIFA API rewrite, no HTML scraping)
  */
 
 import type { Request, Response } from 'express';

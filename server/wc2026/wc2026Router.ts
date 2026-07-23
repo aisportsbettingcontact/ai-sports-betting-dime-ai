@@ -673,7 +673,7 @@ export const wc2026Router = router({
    *
    * Input:
    *   urlOrGameId — ESPN game URL or numeric gameId (e.g. "760487")
-   *   saveHtml    — save raw HTML to .manus-logs/ for debugging (default false)
+   *   saveHtml    — save raw HTML to .scraper-logs/ for debugging (default false)
    */
   espnMatchPage: publicProcedure
     .input(
@@ -690,7 +690,7 @@ export const wc2026Router = router({
       const t0 = Date.now();
       try {
         const data = await scrapeEspnMatchPage(urlOrGameId, {
-          logDir: ".manus-logs",
+          logDir: ".scraper-logs",
           saveHtml,
         });
         const elapsed = Date.now() - t0;

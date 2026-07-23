@@ -42,7 +42,7 @@
  * ║    • Stealth viewport (1280×720, deviceScaleFactor=1)                       ║
  * ║    • Cookie persistence across page loads                                   ║
  * ║                                                                              ║
- * ║  ELITE LOGGER: EspnLogger — dual-channel (terminal + .manus-logs/...)      ║
+ * ║  ELITE LOGGER: EspnLogger — dual-channel (terminal + .scraper-logs/...)    ║
  * ╚══════════════════════════════════════════════════════════════════════════════╝
  */
 
@@ -1667,7 +1667,7 @@ export async function scrapeEspnMatchPage(
   const gameIdMatch = gameIdOrUrl.match(/gameId[=/](\d+)/);
   const gameId = gameIdMatch ? gameIdMatch[1] : gameIdOrUrl.replace(/\D/g, "");
 
-  const logDir = options.logDir ?? ".manus-logs";
+  const logDir = options.logDir ?? ".scraper-logs";
   const log = new EspnLogger(gameId, logDir);
 
   log.input("scrapeEspnMatchPage called", {

@@ -1,6 +1,6 @@
-# Cron — WC2026 bracket sync — GitHub Actions timer for a Manus-orphaned background job.
+# Cron — WC2026 bracket sync — GitHub Actions timer for a legacy-host-orphaned background job.
 #
-# After the Manus Heartbeat is retired, nothing triggers /api/scheduled/wc2026-bracket-sync. This
+# After the legacy heartbeat platform is retired, nothing triggers /api/scheduled/wc2026-bracket-sync. This
 # workflow fires POST /api/scheduled/wc2026-bracket-sync on the Railway app on a schedule. The
 # endpoint is shared-secret authed (CRON_SECRET, re-gated by cronAuth.ts).
 #
@@ -15,7 +15,7 @@
 #
 # IMPORTANT (cutover runbook): this workflow ships ENABLED on the default cron.
 # GitHub Actions cron cannot be shipped disabled, so a workflow_dispatch trigger
-# is provided for manual runs. It MUST NOT run while Manus still writes the same
+# is provided for manual runs. It MUST NOT run while the legacy host still writes the same
 # data — enable/disable it from the Actions UI (⋯ → Disable workflow) at the
 # cutover moment to avoid double-writes.
 #

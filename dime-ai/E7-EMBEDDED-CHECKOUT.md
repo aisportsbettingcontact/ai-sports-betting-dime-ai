@@ -138,7 +138,7 @@ Grotesk/mint inside the widget). We control everything around it, not the inputs
 9. Add `VITE_STRIPE_PUBLISHABLE_KEY` (`pk_…`) — publishable keys are safe in the client bundle;
    the secret stays server-only (`server/stripe/client.ts:23`). Never expose `sk_`/`rk_` or the
    webhook secret client-side; separate test/live values per environment. Set the new var in
-   Manus before deploying (deploy law: merge ≠ deploy, see `RELEASING.md`).
+   production before deploying — Railway auto-deploys `main` (see `references/railway-deploy.md`).
 10. Opportunistic hardening per security.md: replace `STRIPE_SECRET_KEY` with a **restricted
     key** (`rk_`) scoped to Checkout Sessions, Subscriptions, Billing Portal, Customers, and
     webhook verification; remove the hardcoded live price-ID fallbacks at
@@ -168,7 +168,7 @@ Grotesk/mint inside the widget). We control everything around it, not the inputs
 | Embedded form conversion differs from hosted | Both paths live behind `uiMode`; compare Dashboard conversion before deleting hosted |
 | CSP / ad-blockers blocking `js.stripe.com` iframe | Test with common blockers; keep hosted fallback CTA on load failure |
 | `return_url` mistakes strand paying users | Webhook — not the redirect — is the source of truth for entitlement (already true today); `getCheckoutSessionUser` recovers by session id |
-| Env var missing in Manus prod (`VITE_STRIPE_PUBLISHABLE_KEY`) | Build-time assert + RELEASING.md checklist line |
+| Env var missing in production (`VITE_STRIPE_PUBLISHABLE_KEY`) | Build-time assert + deploy checklist line (`references/railway-deploy.md`) |
 | Iframe styling clashes with Dime dark theme | Checkout appearance settings in Dashboard (branding colors/logo); accept limits per §3 trade-off |
 
 **Rollback:** flip clients back to hosted (`uiMode` omitted → redirect behavior identical to

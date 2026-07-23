@@ -87,7 +87,6 @@ claude   # then log in with Option 1 — Claude account with subscription
 - **Tests**: `server/claude.test.ts` mocks `@anthropic-ai/sdk`, so none of this
   affects CI; the credential presence probe is CI-skipped.
 - **Deploys**: the backend env vars live wherever the server runs — Railway
-  service variables once the Railway migration lands
-  (`references/railway-vercel-deploy.md`), Manus until then (`RELEASING.md`).
+  service variables (`references/railway-deploy.md`).
   Gateway routing takes effect only after the vars are set there and the
   backend is redeployed.

@@ -101,17 +101,17 @@ set_secret \
 
 set_secret \
   "VITE_APP_ID" \
-  "Manus OAuth application ID" \
+  "Legacy OAuth application ID (retired platform)" \
   "alphanumeric-app-id"
 
 set_secret \
   "OAUTH_SERVER_URL" \
-  "Manus OAuth backend base URL" \
-  "https://api.manus.im"
+  "Legacy OAuth backend base URL (retired platform)" \
+  "(legacy, unused)"
 
 set_secret \
   "OWNER_OPEN_ID" \
-  "Owner's Manus open ID" \
+  "Owner's legacy OAuth open ID" \
   "alphanumeric-open-id"
 
 set_secret \
