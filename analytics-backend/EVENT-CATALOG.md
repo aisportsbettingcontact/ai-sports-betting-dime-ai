@@ -60,9 +60,14 @@ event is device-blind.
 
 **Device resolution rule (server):** `device_type` is derived from the UA server-side (never
 trusted from the client). The client-reported `viewport_class`/`pointer_type`/`is_touch` are a
-**cross-check**: if UA says desktop but pointer is coarse + viewport `xs`, we record
-`device_type=desktop` and set `props.device_conflict=true` for data-quality review. This is the
-only way to keep **tablet** a real, separable category rather than "big phone / small laptop".
+**cross-check**, applied narrowly: the ONLY case that reclassifies is the well-known
+**iPadOS-as-Mac** signature — `os_family === "macos"` **and** a coarse pointer — which upgrades
+`desktop` to `tablet` (or `mobile` for a phone viewport). Every other desktop-UA-but-touch device
+(Windows touchscreen laptops, ChromeOS convertibles) **stays `desktop`** and is merely flagged
+with `props.device_conflict=true` for data-quality review — never reclassified. This keeps
+**tablet** a real, separable category rather than "big phone / small laptop" without polluting it
+with touch laptops. `route` is likewise re-collapsed to a pattern server-side (never trusting the
+client's value), so ids/tokens/dates cannot leak into the store.
 
 **Every metric in this catalog is sliceable by `device_type` (and by `app_surface`, `os_family`).**
 That is the point of the block: *screen time per page* becomes *screen time per page per device*;

@@ -50,18 +50,30 @@ export function deriveDeviceFromUA(ua: string | undefined | null): UaDevice {
 
 /**
  * Reconcile the UA verdict with client signals. The UA is authoritative EXCEPT
- * the well-known desktop-UA-but-touch case (iPadOS ≥13 reports as Macintosh):
- * a coarse pointer upgrades "desktop" to tablet (or mobile for a phone
- * viewport), and flags the disagreement for data-quality review.
+ * the well-known desktop-UA-but-touch case: iPadOS ≥13 Safari in desktop mode
+ * reports as **Macintosh** (osFamily "macos") yet is a touch tablet. ONLY that
+ * signature — `osFamily === "macos"` + a coarse pointer — upgrades "desktop"
+ * to tablet (or mobile for a phone viewport), flagged for data-quality.
+ *
+ * Deliberately NOT upgraded: Windows touchscreen laptops and ChromeOS
+ * convertibles (osFamily "windows"/"linux") report a coarse pointer but are
+ * genuine desktops — upgrading them would pollute the "tablet" category. Their
+ * disagreement is still flagged via `conflict` for data-quality review without
+ * changing the classification.
  */
 export function reconcileDeviceType(
   uaDevice: DeviceType,
+  osFamily: string,
   clientPointerType?: string | null,
   clientViewportClass?: string | null,
 ): { deviceType: DeviceType; conflict: boolean } {
   if (uaDevice === "desktop" && clientPointerType === "coarse") {
-    const phone = clientViewportClass === "xs" || clientViewportClass === "sm";
-    return { deviceType: phone ? "mobile" : "tablet", conflict: true };
+    // iPadOS-as-Mac: reclassify. Other desktop-UA touch devices: flag only.
+    if (osFamily === "macos") {
+      const phone = clientViewportClass === "xs" || clientViewportClass === "sm";
+      return { deviceType: phone ? "mobile" : "tablet", conflict: true };
+    }
+    return { deviceType: uaDevice, conflict: true };
   }
   return { deviceType: uaDevice, conflict: false };
 }

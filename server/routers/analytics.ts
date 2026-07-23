@@ -13,6 +13,7 @@ import { router } from "../_core/trpc";
 import { trackInputSchema, sanitizeProps } from "../analytics/events";
 import { isTestUser } from "../analytics/config";
 import { deriveDeviceFromUA, reconcileDeviceType } from "../analytics/device";
+import { sanitizeRoutePattern } from "../analytics/routePattern";
 import { dispatchStoredEvent } from "../analytics/dispatch";
 import type { StoredEvent } from "../analytics/store";
 
@@ -20,7 +21,7 @@ export const analyticsRouter = router({
   track: appUserProcedure.input(trackInputSchema).mutation(async ({ ctx, input }) => {
     const ua = ctx.req?.headers?.["user-agent"];
     const uaDevice = deriveDeviceFromUA(Array.isArray(ua) ? ua[0] : ua);
-    const reconciled = reconcileDeviceType(uaDevice.deviceType, input.pointerType, input.viewportClass);
+    const reconciled = reconcileDeviceType(uaDevice.deviceType, uaDevice.osFamily, input.pointerType, input.viewportClass);
     const event: StoredEvent = {
       eventId: input.eventId,
       eventName: input.eventName,
@@ -30,7 +31,7 @@ export const analyticsRouter = router({
       sessionId: input.sessionId ?? null,
       tabId: input.tabId ?? null,
       featureId: input.featureId ?? null,
-      route: input.route ?? null,
+      route: sanitizeRoutePattern(input.route),
       surface: input.surface,
       outcome: input.outcome ?? null,
       deviceType: reconciled.deviceType,

@@ -96,14 +96,18 @@ export function buildClientEnvelope(eventName: AnalyticsEventName, opts: TrackOp
  */
 export function useAnalytics(): (eventName: AnalyticsEventName, opts?: TrackOptions) => void {
   const mutation = trpc.analytics.track.useMutation({ retry: false, onError: () => { /* swallow — analytics never breaks the product */ } });
+  // Depend on the stable `mutate` (not the whole mutation object, which is a new
+  // ref each render) so `track` keeps a stable identity and consumer effects
+  // don't re-run on every render.
+  const mutate = mutation.mutate;
   return useCallback(
     (eventName: AnalyticsEventName, opts: TrackOptions = {}) => {
       try {
-        mutation.mutate(buildClientEnvelope(eventName, opts));
+        mutate(buildClientEnvelope(eventName, opts));
       } catch {
         /* fire-and-forget */
       }
     },
-    [mutation],
+    [mutate],
   );
 }
