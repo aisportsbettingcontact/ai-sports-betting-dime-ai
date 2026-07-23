@@ -49,7 +49,14 @@ export function ProjectionCard({
   // no market on this game clears the WATCH/BET threshold — the same
   // rankedEdges() ground truth that already drives the summary's "No edge"
   // rendering, so this can never disagree with what the card itself shows.
-  const isPass = edges.length === 0;
+  // A LIVE card never takes PASS (final-review I2 precedence ruling,
+  // 2026-07-23, pending owner ratification — annotated in the page law):
+  // live+no-edges is reachable (a mid-game model invalidation nulls every
+  // model price), and dimming an in-progress game while its mint LIVE
+  // signal renders would put the PASS zero-mint law and the live-state law
+  // in direct conflict. Live-ness wins; PASS stays absolute for non-live
+  // cards, so neither law needs a carve-out inside the other.
+  const isPass = game.status !== "live" && edges.length === 0;
 
   return (
     <article

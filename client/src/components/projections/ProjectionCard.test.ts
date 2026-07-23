@@ -492,6 +492,18 @@ describe("ProjectionCard — aligned summary mini-grid (Round 4 Wave 2, item 5)"
     expect(item5).toContain(".summary__edge { grid-column: 4; justify-self: start; }");
   });
 
+  it("the readout grid is shrinkable below its old 376px floor (W4 e2e-caught defect)", () => {
+    // Readable-width track floors (6.5/3.5/3.5/5.5rem) + 3 gaps summed to an
+    // un-shrinkable 376px minimum — wider than a 2-across card at 1024px —
+    // and .summary's unreset automatic minimum made plain cards resolve
+    // tracks on a different width than carousel row-mates (chip
+    // misalignment at 1280). Floors must stay (near-)zero lengths and the
+    // box itself must shrink with the card, like .summary-carousel does.
+    const item5 = cssBlock(cardCss, "Round 4 Wave 2 — item 5", "Round 4 Wave 2 — item 1");
+    expect(item5).toMatch(/grid-template-columns:\s*minmax\(0, 1\.6fr\)\s+minmax\(0, 0\.8fr\)\s+minmax\(0, 0\.8fr\)\s+minmax\(5rem, 1fr\);/);
+    expect(item5).toMatch(/\.summary \{[^}]*min-inline-size: 0;/);
+  });
+
   it("numeric readout cells are tabular (Book/Model values, the edge chip's percentage)", () => {
     const item5 = cssBlock(cardCss, "Round 4 Wave 2 — item 5", "Round 4 Wave 2 — item 1");
     expect(item5).toMatch(/\.summary__item--book \.odds-value,\s*\n\s*\.summary__item--model \.odds-value,\s*\n\s*\.edge-indicator__value\s*\{\s*\n\s*font-variant-numeric:\s*tabular-nums;/);
@@ -579,7 +591,7 @@ describe("ProjectionCard — expander hover (Round 4 Wave 3, item 7)", () => {
 
 describe("ProjectionCard — defensive PASS-mint backstop (Round 4 Wave 3 fold-in, W1 review)", () => {
   it("neutralizes market-table signal/edge classes and the real edge-indicator variant under .projection-card--pass", () => {
-    const backstop = cssBlock(cardCss, "Fold-in minor (Round 4 Wave 3, from the W1 review", "Item 4 — live indicator");
+    const backstop = cssBlock(cardCss, "Defensive PASS backstop (Round 4, from the W1 review", "Item 4 — live indicator");
     expect(backstop).toContain(".projection-card--pass .market-table__model--signal,");
     expect(backstop).toContain(".projection-card--pass .market-table__result--edge,");
     expect(backstop).toContain(".projection-card--pass .edge-indicator {");
@@ -591,7 +603,7 @@ describe("ProjectionCard — defensive PASS-mint backstop (Round 4 Wave 3 fold-i
     // EdgeIndicator.tsx sets the recommendation icon's mint color as an
     // inline style, which the ancestor backstop rule can never reach — the
     // svg needs its own !important declaration.
-    const backstop = cssBlock(cardCss, "Fold-in minor (Round 4 Wave 3, from the W1 review", "Item 4 — live indicator");
+    const backstop = cssBlock(cardCss, "Defensive PASS backstop (Round 4, from the W1 review", "Item 4 — live indicator");
     expect(backstop).toContain(".projection-card--pass .edge-indicator svg {");
     const svgRule = backstop.slice(backstop.indexOf(".projection-card--pass .edge-indicator svg {"));
     expect(svgRule).toMatch(/color: var\(--text-secondary, #a6a6a6\) !important;/);
@@ -629,6 +641,41 @@ describe("ProjectionCard — defensive PASS-mint backstop (Round 4 Wave 3 fold-i
     expect(html).not.toContain("market-table__model--signal");
     expect(html).not.toContain("market-table__result--edge");
     expect(html).not.toMatch(/class="edge-indicator summary__edge"/);
+  });
+
+  it("a LIVE card with zero edges never takes PASS (final-review I2 precedence ruling)", () => {
+    // Reachable state: a mid-game model invalidation nulls every model price
+    // (DimeModelFeed's mlbRowToCard) while the game is live. The precedence
+    // ruling — annotated in ai-model-projections.md "PASS games" — is that
+    // live-ness wins: the mint LIVE signal renders undimmed, and the PASS
+    // zero-mint law simply never applies to a live card.
+    const html = render({
+      id: "lad-nyy-live-noedge",
+      league: "MLB",
+      status: "live",
+      statusLabel: "LIVE · 5th",
+      away: { abbr: "LAD", name: "Dodgers", logo: null, color: "#333333", score: 3 },
+      home: { abbr: "NYY", name: "Yankees", logo: null, color: "#333333", score: 2 },
+      matchupContext: "Yankee Stadium",
+      venue: "Yankee Stadium",
+      startTime: "7:05 PM ET",
+      markets: [
+        {
+          key: "moneyline",
+          label: "Moneyline",
+          sides: [
+            { marketKey: "moneyline", marketLabel: "Moneyline", sideLabel: "Dodgers ML", bookPrice: -110, bookOppPrice: -110, modelPrice: null },
+            { marketKey: "moneyline", marketLabel: "Moneyline", sideLabel: "Yankees ML", bookPrice: -110, bookOppPrice: -110, modelPrice: null },
+          ],
+        },
+      ],
+    });
+    expect(html).not.toContain("projection-card--pass");
+    expect(html).toContain("projection-card__live-dot");
+    expect(html).toContain("LIVE · 5th");
+    // The ruling is recorded in the page law, so a future session can't
+    // silently re-collide the two laws.
+    expect(lawDoc).toContain("a LIVE card never takes the PASS treatment");
   });
 });
 

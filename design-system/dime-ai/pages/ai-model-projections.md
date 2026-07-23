@@ -37,7 +37,8 @@
 ### Color Overrides
 
 - **Live state:** pulsing 7px mint dot + mono "LIVE · TOP 6" in mint (`--mint-on-light` on light theme, with keyline on the dot)
-- **PASS games:** verdict values in `--text-secondary`, grade "—" *(2026-07-23: the verdict-strip/grade concept is superseded — no letter-grade field exists in the current ProjectionCard architecture; PASS state is enforced via `.projection-card--pass` at `opacity: 0.82` + the "No edge" chip + a defensive zero-mint backstop, see Round 4 items 3/6-8 below)*, whole card at `opacity: 0.82`, zero mint anywhere in the card
+- **PASS games:** verdict values in `--text-secondary`, grade "—" *(2026-07-23: the verdict-strip/grade concept is superseded — no letter-grade field exists in the current ProjectionCard architecture; PASS state is enforced via `.projection-card--pass` at `opacity: 0.82` + the "No edge" chip + a defensive zero-mint backstop, per Round 4 items 3 and 8 in `docs/superpowers/plans/2026-07-23-feed-desktop-polish.md`)*, whole card at `opacity: 0.82`, zero mint anywhere in the card
+  — precedence ruling 2026-07-23 (final-review adjudication, pending owner ratification): a LIVE card never takes the PASS treatment. Live+no-edges is reachable (mid-game model invalidation); live-state mint wins and the card stays undimmed, so this zero-mint law and the live-state law above never apply to the same card.
 - **Win% annotation** next to model ML: 12px `--text-secondary`
 
 ### Component Overrides
