@@ -320,7 +320,10 @@ describe("DimeModelFeed — combined slate (owner directive 2026-07-18)", () => 
     // 5x centered shell page title tracked by the sticky feedhead offset.
     expect(src).toMatch(/\.dc-shell-external-scroll \.dmf-topbar\{height:96px;justify-content:center\}/);
     expect(src).toMatch(/\.dc-shell-external-scroll \.dmf-toptitle\{font-size:min\(70px/);
-    expect(src).toMatch(/\.dc-shell-external-scroll \.dmf-feedhead\{top:96px\}/);
+    // top:96px keeps tracking the title band (Round 4 Wave 3, item 6 adds the
+    // header-rhythm properties in the SAME rule — see the dedicated describe
+    // block below for the full 24/32px contract).
+    expect(src).toMatch(/\.dc-shell-external-scroll \.dmf-feedhead\{top:96px;/);
     // 2x MLB league logo box; games pack 2-across on desktop.
     expect(src).toMatch(/\.dmf-lglogo--mlb\{width:60px;height:60px/);
     expect(src).toMatch(/\.dmf-leaguebody\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
@@ -334,6 +337,49 @@ describe("DimeModelFeed — combined slate (owner directive 2026-07-18)", () => 
     expect(wcDisplayStadium("(weird)")).toBe("(weird)"); // never emit an empty name
     // wcDisplayCity still receives the RAW stadium string for pattern matching.
     expect(src).toMatch(/\[wcDisplayStadium\(m\.venue\?\.stadium\), wcDisplayCity\(m\.venue\?\.stadium/);
+  });
+});
+
+/** Round 4 Wave 3, item 6 (docs/superpowers/plans/2026-07-23-feed-desktop-polish.md;
+ *  law: design-system/dime-ai/pages/ai-model-projections.md "Date nav" line, amended
+ *  2026-07-23). Shell/desktop (>=1024px) only — <1024px and the standalone /feed
+ *  topbar (no 96px title band) must stay byte-identical to the shipped surface. */
+describe("DimeModelFeed — header rhythm (Round 4 Wave 3, item 6)", () => {
+  it("shell-desktop date nav centers under the title band with the 24/32px rhythm", () => {
+    // 24px title-band -> date-nav (padding-top); date text scales 15 -> 17px;
+    // the row centers instead of sitting left-aligned under the 5x title.
+    expect(src).toMatch(
+      /\.dc-shell-external-scroll \.dmf-feedhead\{top:96px;justify-content:center;padding-top:24px;padding-bottom:10px;margin-bottom:16px\}/,
+    );
+    expect(src).toMatch(/\.dc-shell-external-scroll \.dmf-datelbl\{font-size:17px\}/);
+  });
+
+  it("the 32px date-nav -> league header gap is padding-bottom + margin-bottom + the pre-existing .dmf-list top padding", () => {
+    // 10 (padding-bottom) + 16 (margin-bottom) + 6 (.dmf-list padding-top,
+    // untouched by item 6) = 32, matching the law's fixed rhythm step.
+    expect(src).toMatch(/padding-bottom:10px;margin-bottom:16px/);
+    expect(src).toMatch(/\.dmf-list\{display:flex;flex-direction:column;gap:12px;padding-top:6px;/);
+  });
+
+  it("is scoped to the shell wrapper inside the single >=1024px block only (item 8 scoping)", () => {
+    const desktopBlockStart = src.indexOf("@media (min-width:1024px){");
+    const desktopBlockEnd = src.indexOf("@media (prefers-reduced-motion: reduce){", desktopBlockStart);
+    expect(desktopBlockStart).toBeGreaterThan(-1);
+    expect(desktopBlockEnd).toBeGreaterThan(desktopBlockStart);
+    const desktopBlock = src.slice(desktopBlockStart, desktopBlockEnd);
+    expect(desktopBlock).toContain(".dc-shell-external-scroll .dmf-feedhead{top:96px;justify-content:center");
+    expect(desktopBlock).toContain(".dc-shell-external-scroll .dmf-datelbl{font-size:17px}");
+    // Not duplicated anywhere else in the stylesheet (standalone /feed and
+    // <1024px keep the shipped compact layout — no rhythm override leaks out).
+    const outside = src.slice(0, desktopBlockStart) + src.slice(desktopBlockEnd);
+    expect(outside).not.toMatch(/dmf-datelbl\{font-size:17px\}/);
+    expect(outside).not.toMatch(/dmf-feedhead\{[^}]*padding-top:24px/);
+  });
+
+  it("<1024px and standalone keep the shipped 15px date label and 16/10px feedhead padding untouched", () => {
+    const base = src.slice(0, src.indexOf("@media (min-width:1024px){"));
+    expect(base).toMatch(/\.dmf-feedhead\{position:sticky;top:46px;z-index:10;padding:16px 0 10px;/);
+    expect(base).toMatch(/\.dmf-datelbl\{font-size:15px;font-weight:700;/);
   });
 });
 
