@@ -23,7 +23,7 @@ import { keepPreviousData } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useAppAuth } from "@/_core/hooks/useAppAuth";
-import { useAnalytics } from "@/lib/analytics";
+import { useAnalytics, useTrackAction } from "@/lib/analytics";
 import {
   Clock,
   TrendingUp,
@@ -2832,6 +2832,7 @@ export default function BetTracker({ previewMode = false }: BetTrackerProps) {
 
   // Value-event emitter (User Activity). Server-gated + fire-and-forget.
   const track = useAnalytics();
+  const trackAction = useTrackAction();
   const createMut = trpc.betTracker.create.useMutation({
     // ── Optimistic create: insert bet into cache immediately before server confirms ──
     onMutate: async newBet => {
@@ -2981,6 +2982,11 @@ export default function BetTracker({ previewMode = false }: BetTrackerProps) {
         );
       }
     },
+    // Action event: a bet was successfully edited. Fire-and-forget, no PII/wager
+    // data; inert until the analytics pipeline is enabled server-side.
+    onSuccess: () => {
+      trackAction("bet_edited", { featureId: "bet_tracker", outcome: "success" });
+    },
     onSettled: () => invalidate(),
   });
   const deleteMut = trpc.betTracker.delete.useMutation({
@@ -3013,6 +3019,11 @@ export default function BetTracker({ previewMode = false }: BetTrackerProps) {
           context.previousData
         );
       }
+    },
+    // Action event: a bet was successfully deleted. Fire-and-forget, no PII/wager
+    // data; inert until the analytics pipeline is enabled server-side.
+    onSuccess: () => {
+      trackAction("bet_deleted", { featureId: "bet_tracker", outcome: "success" });
     },
     onSettled: () => invalidate(),
   });

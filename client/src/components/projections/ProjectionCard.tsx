@@ -40,9 +40,13 @@ export function rankedEdges(game: ProjectionGame): MarketInsight[] {
 export function ProjectionCard({
   game,
   defaultMarketsOpen = false,
+  onOpen,
 }: {
   game: ProjectionGame;
   defaultMarketsOpen?: boolean;
+  /** Fired when the user expands the market tables (analytics; presentational
+   *  component stays pure — the caller owns the emit). Fire-and-forget. */
+  onOpen?: () => void;
 }) {
   const edges = rankedEdges(game);
   // Whole-card PASS state (Round 4 Wave 1, item 3 / page law "PASS games"):
@@ -87,7 +91,15 @@ export function ProjectionCard({
         <ProjectionSummary insight={edges[0] ?? null} teams={[game.away, game.home]} />
       )}
 
-      <details className="projection-card__markets" open={defaultMarketsOpen}>
+      <details
+        className="projection-card__markets"
+        open={defaultMarketsOpen}
+        onToggle={(e) => {
+          // Native toggle fires on user interaction only (not on the initial
+          // `open` attribute), so this counts real expands, not mounts.
+          if (e.currentTarget.open) onOpen?.();
+        }}
+      >
         <summary className="projection-card__markets-toggle ds-label">
           <span>View full AI model projections</span>
           <ChevronDown className="projection-card__markets-chev projection-card__markets-chev--expand" aria-hidden="true" />

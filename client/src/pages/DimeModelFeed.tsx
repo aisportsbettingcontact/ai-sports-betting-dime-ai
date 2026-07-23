@@ -27,7 +27,7 @@ import { toast } from "sonner";
 import type { inferRouterOutputs } from "@trpc/server";
 import { keepPreviousData } from "@tanstack/react-query";
 import { trpc, type AppRouter } from "@/lib/trpc";
-import { useAnalytics } from "@/lib/analytics";
+import { useAnalytics, useTrackAction } from "@/lib/analytics";
 import { useTheme } from "@/contexts/ThemeContext";
 import { ProjectionCard } from "@/components/projections/ProjectionCard";
 import { presentationToProjectionGame } from "@/components/projections/fromPresentation";
@@ -384,6 +384,8 @@ export default function DimeModelFeed(props: DimeModelFeedProps) {
   // trustworthy projection set renders — loaded, fresh (not stale), non-empty.
   // Never fires on a bare/loading/stale feed. No betting signals in the props.
   const track = useAnalytics();
+  // Action emitter (D3): fire-and-forget curated actions on this lazy surface.
+  const trackAction = useTrackAction();
   const firedRef = useRef<string | null>(null);
   useEffect(() => {
     if (isLoading || isStale || gamesCount <= 0) return;
@@ -463,11 +465,25 @@ export default function DimeModelFeed(props: DimeModelFeedProps) {
       <div className="dmf-scroll">
         <div className="dmf-feedhead">
           <div className="dmf-datenav">
-            <button className="dmf-sq" aria-label="Previous day" onClick={() => go(shiftIso(isoDate, -1))}>
+            <button
+              className="dmf-sq"
+              aria-label="Previous day"
+              onClick={() => {
+                trackAction("feed_date_navigated", { props: { direction: "prev" } });
+                go(shiftIso(isoDate, -1));
+              }}
+            >
               ‹
             </button>
             <div className="dmf-datelbl">{prettyDate(isoDate)}</div>
-            <button className="dmf-sq" aria-label="Next day" onClick={() => go(shiftIso(isoDate, 1))}>
+            <button
+              className="dmf-sq"
+              aria-label="Next day"
+              onClick={() => {
+                trackAction("feed_date_navigated", { props: { direction: "next" } });
+                go(shiftIso(isoDate, 1));
+              }}
+            >
               ›
             </button>
           </div>
@@ -549,7 +565,13 @@ export default function DimeModelFeed(props: DimeModelFeedProps) {
                       section.key === "WC"
                         ? sportAdapters.SOCCER(g, { competition: "World Cup" })
                         : sportAdapters.MLB(g, { competition: "MLB" });
-                    return <ProjectionCard key={g.id} game={presentationToProjectionGame(model)} />;
+                    return (
+                      <ProjectionCard
+                        key={g.id}
+                        game={presentationToProjectionGame(model)}
+                        onOpen={() => trackAction("projection_opened", { props: { sport: section.key } })}
+                      />
+                    );
                   })}
                 </div>
               </details>
