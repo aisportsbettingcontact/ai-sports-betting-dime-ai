@@ -23,6 +23,7 @@ import {
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useAppAuth } from "@/_core/hooks/useAppAuth";
+import { AdminShell } from "@/pages/admin/AdminShell";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -1208,14 +1209,14 @@ export default function TheModelResults() {
 
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen" style={{ background: "#000000" }}>
+    <AdminShell active="model-results">
+    <div style={{ background: "#000000" }}>
 
       {/* ── Sticky header ──────────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-40 bg-black backdrop-blur-sm border-b border-white">
+      {/* Back button removed — now owned by AdminShell's back-to-app affordance
+          + registry-driven tab nav (includes direct links to Publish/Backtest). */}
+      <header className="sticky top-14 z-40 bg-black backdrop-blur-sm border-b border-white">
         <div className="relative flex items-center px-4 py-2 max-w-6xl mx-auto">
-          <button type="button" onClick={() => setLocation("/admin/publish")} className="p-1.5 rounded-lg transition-colors mr-2 flex-shrink-0">
-            <ChevronLeft size={18} style={{ color: "#FFFFFF" }} />
-          </button>
           <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 pointer-events-none">
             <FlaskConical size={16} style={{ color: "#45E0A8" }} />
             <span className="font-black text-white whitespace-nowrap" style={{ fontSize: "clamp(13px, 3vw, 18px)", letterSpacing: "0.08em" }}>
@@ -1819,5 +1820,6 @@ export default function TheModelResults() {
 
       </main>
     </div>
+    </AdminShell>
   );
 }

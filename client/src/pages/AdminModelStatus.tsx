@@ -17,6 +17,7 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useAppAuth } from "@/_core/hooks/useAppAuth";
+import { AdminShell } from "@/pages/admin/AdminShell";
 import { trpc } from "@/lib/trpc";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -25,14 +26,20 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-function fmtOdds(v: number | null | undefined): string {
+// Numeric DB columns (DECIMAL/odds) can arrive as strings over the wire
+// (mysql2 returns DECIMAL as a string), so coerce defensively before any
+// numeric formatting — a raw string.toFixed() is what crashed this page.
+function fmtOdds(v: number | string | null | undefined): string {
   if (v == null) return "—";
-  return v > 0 ? `+${v}` : `${v}`;
+  const n = typeof v === "number" ? v : Number(v);
+  if (!Number.isFinite(n)) return "—";
+  return n > 0 ? `+${n}` : `${n}`;
 }
 
-function fmtScore(v: number | null | undefined): string {
+function fmtScore(v: number | string | null | undefined): string {
   if (v == null) return "—";
-  return v.toFixed(2);
+  const n = typeof v === "number" ? v : Number(v);
+  return Number.isFinite(n) ? n.toFixed(2) : "—";
 }
 
 function fmtTs(v: Date | string | null | undefined): string {
@@ -337,7 +344,8 @@ export default function AdminModelStatus() {
   });
 
   return (
-    <div className="min-h-screen bg-black text-white p-6">
+    <AdminShell active="model-status">
+    <div className="bg-black text-white p-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -466,5 +474,6 @@ export default function AdminModelStatus() {
         </TabsContent>
       </Tabs>
     </div>
+    </AdminShell>
   );
 }

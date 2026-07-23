@@ -15,6 +15,7 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useAppAuth } from "@/_core/hooks/useAppAuth";
+import { AdminShell } from "@/pages/admin/AdminShell";
 import { trpc } from "@/lib/trpc";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -234,7 +235,8 @@ export default function PostponedGames() {
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-black text-white p-6">
+    <AdminShell active="postponed">
+    <div className="w-full bg-black text-white p-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -469,5 +471,6 @@ export default function PostponedGames() {
         </div>
       )}
     </div>
+    </AdminShell>
   );
 }
