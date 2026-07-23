@@ -28,16 +28,22 @@ describe("deriveDeviceFromUA", () => {
 });
 
 describe("reconcileDeviceType", () => {
-  it("upgrades a desktop-UA touch device (iPadOS-as-Mac) to tablet", () => {
-    expect(reconcileDeviceType("desktop", "coarse", "md")).toEqual({ deviceType: "tablet", conflict: true });
+  it("upgrades an iPadOS-as-Mac (macos + coarse) desktop to tablet", () => {
+    expect(reconcileDeviceType("desktop", "macos", "coarse", "md")).toEqual({ deviceType: "tablet", conflict: true });
   });
-  it("upgrades a desktop-UA touch device with a phone viewport to mobile", () => {
-    expect(reconcileDeviceType("desktop", "coarse", "xs")).toEqual({ deviceType: "mobile", conflict: true });
+  it("upgrades a macos coarse-pointer device with a phone viewport to mobile", () => {
+    expect(reconcileDeviceType("desktop", "macos", "coarse", "xs")).toEqual({ deviceType: "mobile", conflict: true });
+  });
+  it("keeps a Windows touch laptop as desktop (flags the conflict only)", () => {
+    expect(reconcileDeviceType("desktop", "windows", "coarse", "md")).toEqual({ deviceType: "desktop", conflict: true });
+  });
+  it("keeps a ChromeOS/Linux convertible as desktop (flags the conflict only)", () => {
+    expect(reconcileDeviceType("desktop", "linux", "coarse", "lg")).toEqual({ deviceType: "desktop", conflict: true });
   });
   it("leaves a mouse desktop unchanged", () => {
-    expect(reconcileDeviceType("desktop", "fine", "xl")).toEqual({ deviceType: "desktop", conflict: false });
+    expect(reconcileDeviceType("desktop", "macos", "fine", "xl")).toEqual({ deviceType: "desktop", conflict: false });
   });
   it("trusts the UA for an already-mobile classification", () => {
-    expect(reconcileDeviceType("mobile", "fine", "xl")).toEqual({ deviceType: "mobile", conflict: false });
+    expect(reconcileDeviceType("mobile", "ios", "fine", "xl")).toEqual({ deviceType: "mobile", conflict: false });
   });
 });

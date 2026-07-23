@@ -403,11 +403,12 @@ export const appUsersRouter = router({
 
       // Device-tagged authoritative "last sign in" (server-derived; inert until
       // the analytics pipeline is enabled). Never blocks or breaks login.
+      const loginUa = ctx.req?.headers?.["user-agent"];
       void emitServerEvent({
         eventName: "login",
         userId: user.id,
-        userAgent: ctx.req?.headers?.["user-agent"] as string | undefined,
-        props: { is_returning: true },
+        userAgent: Array.isArray(loginUa) ? loginUa[0] : loginUa,
+        props: { method: "password", is_returning: true },
       });
 
       console.log(`[AppAuth] login: userId=${user.id} username=${user.username} role=${user.role} tv=${user.tokenVersion} stayLoggedIn=${input.stayLoggedIn}`);

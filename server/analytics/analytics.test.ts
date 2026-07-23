@@ -14,4 +14,7 @@ describe("analytics router derives device server-side", () => {
     expect(src).toMatch(/dispatchStoredEvent/);
     expect(src).not.toMatch(/railway\.internal/);
   });
+  it("re-collapses the client route server-side (never stores a raw client route)", () => {
+    expect(src).toMatch(/sanitizeRoutePattern\(input\.route\)/);
+  });
 });
