@@ -32,16 +32,12 @@
 
 import type { ReactNode } from "react";
 import { useLocation } from "wouter";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, LayoutGrid } from "lucide-react";
+import { ADMIN_NAV, type AdminNavKey } from "./adminNav";
 import "./AdminShell.css";
 
-export type AdminTab = "users" | "activity" | "publish";
-
-const TABS: Array<{ key: AdminTab; label: string; short: string; path: string }> = [
-  { key: "users", label: "User Management", short: "Users", path: "/admin/users" },
-  { key: "activity", label: "User Activity", short: "Activity", path: "/admin/activity" },
-  { key: "publish", label: "Publish Projections", short: "Publish", path: "/admin/publish" },
-];
+/** Back-compat alias — `active` now accepts any registry key (or "dashboard"). */
+export type AdminTab = AdminNavKey;
 
 // Canonical "back to the app" destination — matches the target both admin
 // pages already navigate to from their own internal back buttons, so the
@@ -49,10 +45,11 @@ const TABS: Array<{ key: AdminTab; label: string; short: string; path: string }>
 const BACK_TO_APP_PATH = "/feed/model/mlb";
 
 interface AdminShellProps {
-  /** Which tab is current — set by the page mounting the shell, not derived,
-   *  so the contract stays a simple explicit prop (easy to source-test and
-   *  impossible to get out of sync with routing internals). */
-  active: AdminTab;
+  /** Which destination is current — set by the page mounting the shell, not
+   *  derived, so the contract stays a simple explicit prop (easy to source-test
+   *  and impossible to get out of sync with routing internals). "dashboard" is
+   *  the `/admin` hub. */
+  active: AdminNavKey;
   children: ReactNode;
 }
 
@@ -90,15 +87,34 @@ export function AdminShell({ active, children }: AdminShellProps) {
             </span>
           </div>
 
+          {/* Dashboard hub link — the home for all admin tools (/admin). */}
+          <button
+            type="button"
+            onClick={() => {
+              if (active !== "dashboard") navigate("/admin");
+            }}
+            aria-current={active === "dashboard" ? "page" : undefined}
+            className={`admin-shell-back flex flex-shrink-0 items-center gap-1.5 rounded-full px-2 py-1.5 text-sm ${
+              active === "dashboard"
+                ? "text-foreground"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            }`}
+            aria-label="Admin dashboard home"
+          >
+            <LayoutGrid className="h-4 w-4" aria-hidden="true" />
+            <span className="hidden sm:inline">Dashboard</span>
+          </button>
+
           <div className="flex-1" />
 
-          {/* Three-tab nav */}
+          {/* Registry-driven nav — every admin destination, horizontally
+              scrollable so the list scales past the original three tabs. */}
           <nav
             role="tablist"
             aria-label="Admin Dashboard"
-            className="admin-shell-tabs flex items-center gap-0.5 rounded-full bg-muted p-1"
+            className="admin-shell-tabs flex items-center gap-0.5 overflow-x-auto rounded-full bg-muted p-1"
           >
-            {TABS.map((tab) => {
+            {ADMIN_NAV.map((tab) => {
               const isActive = tab.key === active;
               return (
                 <button
@@ -109,7 +125,7 @@ export function AdminShell({ active, children }: AdminShellProps) {
                   onClick={() => {
                     if (!isActive) navigate(tab.path);
                   }}
-                  className={`admin-shell-tab rounded-full px-3 py-1.5 text-xs font-semibold sm:text-sm ${
+                  className={`admin-shell-tab flex-shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold sm:text-sm ${
                     isActive
                       ? "bg-[var(--row-active)] text-foreground"
                       : "text-muted-foreground hover:text-foreground"

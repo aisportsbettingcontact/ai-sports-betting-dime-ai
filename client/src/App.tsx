@@ -26,6 +26,7 @@ const NotFound = lazy(() => import("@/pages/NotFound"));
 const DimeModelFeed = lazy(() => import("./pages/DimeModelFeed"));
 const BettingSplits = lazy(() => import("./pages/BettingSplits"));
 const Home = lazy(() => import("./pages/Home"));
+const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
 const UserManagement = lazy(() => import("./pages/UserManagement"));
 const PublishProjections = lazy(() => import("./pages/PublishProjections"));
 const UserActivity = lazy(() => import("./pages/UserActivity"));
@@ -327,6 +328,16 @@ function Router() {
           non-owner to /chat. The real boundary is server-verified
           ownerProcedure middleware on every procedure these pages call
           (see server/routers/appUsers.ts, routers.ts, wc2026Router.ts). */}
+        <Route path="/admin">
+          {() => (
+            <RequireAuth>
+              <RequireOwner>
+                <AdminDashboard />
+              </RequireOwner>
+            </RequireAuth>
+          )}
+        </Route>
+
         <Route path="/admin/users">
           {() => (
             <RequireAuth>
