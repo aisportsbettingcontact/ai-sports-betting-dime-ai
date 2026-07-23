@@ -17,19 +17,18 @@ import {
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
 import {
-  games, modelFiles, users, nbaTeams, ncaamTeams, nhlTeams, mlbTeams,
+  games, nbaTeams, ncaamTeams, nhlTeams, mlbTeams,
   appUsers as appUsersTable, appUsers,
   oddsHistory, mlbLineups, mlbStrikeoutProps, mlbParkFactors, mlbBullpenStats,
   mlbUmpireModifiers, mlbHrProps, securityEvents,
   userFavoriteGames, userSessions,
-  type Game, type AppUser, type InsertGame, type InsertModelFile, type InsertUser,
+  type Game, type AppUser, type InsertGame,
   type InsertNbaTeam, type InsertNhlTeam, type OddsHistoryRow,
   type MlbLineupRow, type InsertMlbLineup, type MlbStrikeoutPropRow,
   type InsertMlbStrikeoutProp, type MlbParkFactorRow, type MlbBullpenStatsRow,
   type MlbUmpireModifierRow, type MlbHrPropRow, type InsertSecurityEvent, type SecurityEventRow,
   type InsertAppUser, type UserSession, type InsertUserSession,
 } from "../drizzle/schema";
-import { ENV } from './_core/env';
 import { withCircuitBreaker, invalidateCachedAppUser } from './dbCircuitBreaker';
 import { debugLog } from './_core/debugLogger';
 
@@ -157,26 +156,6 @@ export function forceInvalidateGamesCache(): void {
   console.log(`[GamesCache] Force invalidation: cleared ${count} games.list + ${datesCount} availableDates + activeSports`);
 }
 
-// ─── User lookup cache ─────────────────────────────────────────────────────────────────
-//
-// PROBLEM: getUserByOpenId fires on EVERY tRPC request (in createContext).
-// On initial page load, the batch fires 5 procedures simultaneously — each
-// calling getUserByOpenId for the same user. That's 5 identical DB reads.
-//
-// SOLUTION: Cache user rows by openId with a 30s TTL. The first lookup in
-// a batch pays the DB cost; all subsequent lookups in the same batch (and
-// for the next 30 seconds) are served from memory in <1ms.
-//
-// Cache is invalidated on upsertUser so role/email changes propagate immediately.
-
-// User type is already imported from drizzle/schema at the top of this file
-const _userCache = new Map<string, CacheEntry<import('../drizzle/schema').User | null>>();
-const USER_CACHE_TTL_MS = 30_000; // 30 seconds
-
-export function invalidateUserCache(openId: string): void {
-  _userCache.delete(openId);
-}
-
 // Lazily create the drizzle instance with a proper connection pool.
 // Pool settings: 10 connections max, 30s acquire timeout, 10s idle timeout.
 export async function getDb() {
@@ -207,135 +186,6 @@ export async function getDb() {
     }
   }
   return _db;
-}
-
-export async function upsertUser(user: InsertUser): Promise<void> {
-  if (!user.openId) {
-    throw new Error("User openId is required for upsert");
-  }
-
-  const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot upsert user: database not available");
-    return;
-  }
-
-  try {
-    const values: InsertUser = {
-      openId: user.openId,
-    };
-    const updateSet: Record<string, unknown> = {};
-
-    const textFields = ["name", "email", "loginMethod"] as const;
-    type TextField = (typeof textFields)[number];
-
-    const assignNullable = (field: TextField) => {
-      const value = user[field];
-      if (value === undefined) return;
-      const normalized = value ?? null;
-      values[field] = normalized;
-      updateSet[field] = normalized;
-    };
-
-    textFields.forEach(assignNullable);
-
-    if (user.lastSignedIn !== undefined) {
-      values.lastSignedIn = user.lastSignedIn;
-      updateSet.lastSignedIn = user.lastSignedIn;
-    }
-    if (user.role !== undefined) {
-      values.role = user.role;
-      updateSet.role = user.role;
-    } else if (user.openId === ENV.ownerOpenId) {
-      values.role = 'admin';
-      updateSet.role = 'admin';
-    }
-
-    if (!values.lastSignedIn) {
-      values.lastSignedIn = new Date();
-    }
-
-    if (Object.keys(updateSet).length === 0) {
-      updateSet.lastSignedIn = new Date();
-    }
-
-    await db.insert(users).values(values).onDuplicateKeyUpdate({
-      set: updateSet,
-    });
-    // Invalidate user cache so role/email changes propagate immediately
-    invalidateUserCache(user.openId);
-  } catch (error) {
-    console.error("[Database] Failed to upsert user:", error);
-    throw error;
-  }
-}
-
-export async function getUserByOpenId(openId: string) {
-  // ─── Cache lookup: eliminates duplicate DB reads within the same tRPC batch ───
-  const cached = _userCache.get(openId);
-  if (cached && cached.expiresAt > Date.now()) {
-    return cached.data ?? undefined;
-  }
-
-  const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot get user: database not available");
-    return undefined;
-  }
-
-  const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
-  const user = result.length > 0 ? result[0] : null;
-
-  // Cache the result (including null = user not found)
-  _userCache.set(openId, { data: user, expiresAt: Date.now() + USER_CACHE_TTL_MS });
-
-  return user ?? undefined;
-}
-
-// ─── Model Files ─────────────────────────────────────────────────────────────
-
-export async function insertModelFile(file: InsertModelFile) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-  const [result] = await db.insert(modelFiles).values(file);
-  return result;
-}
-
-export async function listModelFiles(userId: number) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-  return db
-    .select()
-    .from(modelFiles)
-    .where(eq(modelFiles.uploadedBy, userId))
-    .orderBy(desc(modelFiles.createdAt));
-}
-
-export async function getModelFileById(id: number) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-  const result = await db.select().from(modelFiles).where(eq(modelFiles.id, id)).limit(1);
-  return result[0] ?? null;
-}
-
-export async function updateModelFileStatus(
-  id: number,
-  status: "pending" | "processing" | "done" | "error",
-  rowsImported?: number
-) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-  await db
-    .update(modelFiles)
-    .set({ status, ...(rowsImported !== undefined ? { rowsImported } : {}) })
-    .where(eq(modelFiles.id, id));
-}
-
-export async function deleteModelFile(id: number) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-  await db.delete(games).where(eq(games.fileId, id));
-  await db.delete(modelFiles).where(eq(modelFiles.id, id));
 }
 
 // ─── Games ───────────────────────────────────────────────────────────────────

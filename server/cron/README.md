@@ -21,9 +21,9 @@ in the background under a single-flight run-lock (no overlapping runs).
 
 ## Why not reuse the legacy `/api/scheduled/*` auth
 
-Those endpoints authenticate via `sdk.authenticateRequest()` → `verifySession()`
-against the **legacy OAuth server**, accepting only a session whose `openId` is
-prefixed `cron_` (issued exclusively by the legacy heartbeat platform). A GitHub
+Those endpoints authenticated against the **retired platform's OAuth server**,
+accepting only a session whose `openId` was prefixed `cron_` (issued exclusively
+by the legacy heartbeat platform, now removed). A GitHub
 Actions runner has no such cookie, so it can never pass that guard. These
 endpoints therefore use a host-independent shared secret instead — see
 `cronAuth.ts`.
