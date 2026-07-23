@@ -1398,7 +1398,10 @@ const DMF_CSS = `
       bottom edge to the date-nav row; padding-bottom:10px + margin-bottom:16px
       + the pre-existing (untouched — item 6 is shell/desktop-only, <1024 and
       standalone keep their shipped rhythm) .dmf-list padding-top:6px sum to
-      the 32px gap down to the league header. Date text scales 15px -> 17px.
+      32px of space down to the league header (the feedhead's pre-existing
+      1px border-bottom divider sits between the padding and the margin, so
+      the edge-to-edge distance is 33px — the border is the divider line, not
+      part of the rhythm). Date text scales 15px -> 17px.
       top:96px is unchanged, so the sticky feedhead offset keeps tracking the
       96px title band exactly as the 07-21 law requires. */
 @media (min-width:1024px){

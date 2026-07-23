@@ -587,6 +587,16 @@ describe("ProjectionCard — defensive PASS-mint backstop (Round 4 Wave 3 fold-i
     expect(backstop).toMatch(/background: transparent !important;/);
   });
 
+  it("covers the edge chip's inline-styled icon (author !important beats inline; review fix)", () => {
+    // EdgeIndicator.tsx sets the recommendation icon's mint color as an
+    // inline style, which the ancestor backstop rule can never reach — the
+    // svg needs its own !important declaration.
+    const backstop = cssBlock(cardCss, "Fold-in minor (Round 4 Wave 3, from the W1 review", "Item 4 — live indicator");
+    expect(backstop).toContain(".projection-card--pass .edge-indicator svg {");
+    const svgRule = backstop.slice(backstop.indexOf(".projection-card--pass .edge-indicator svg {"));
+    expect(svgRule).toMatch(/color: var\(--text-secondary, #a6a6a6\) !important;/);
+  });
+
   it("is scoped inside the same >=768px block as the rest of items 2-4 (item 8 scoping)", () => {
     const item234 = cssBlock(cardCss, "Round 4 Wave 1 — desktop/tablet card-anatomy", "Round 4 Wave 2 — item 5");
     expect(item234).toContain("@media (min-width: 768px) {");
