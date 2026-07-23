@@ -56,3 +56,21 @@ describe("useSessionTracking wiring (source contract)", () => {
     expect(src).toMatch(/localStorage/);
   });
 });
+
+/** Source-contract for the session_started analytics wiring. */
+const hook = fs.readFileSync(path.join(import.meta.dirname, "useSessionTracking.ts"), "utf8");
+const tracker = fs.readFileSync(
+  path.join(import.meta.dirname, "..", "components", "SessionTracker.tsx"),
+  "utf8",
+);
+
+describe("session_started wiring", () => {
+  it("useSessionTracking accepts an onSessionOpen callback fired in open()", () => {
+    expect(hook).toMatch(/onSessionOpen/);
+    expect(hook).toMatch(/onOpenRef\.current\?\.\(\)/);
+  });
+  it("SessionTracker emits session_started via useAnalytics", () => {
+    expect(tracker).toMatch(/useAnalytics/);
+    expect(tracker).toMatch(/session_started/);
+  });
+});
