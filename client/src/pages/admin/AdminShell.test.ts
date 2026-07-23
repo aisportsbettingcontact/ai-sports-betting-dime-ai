@@ -47,10 +47,25 @@ describe("AdminShell — shared admin chrome", () => {
     expect(shellSource).toMatch(/not a security boundary/i);
   });
 
-  it("renders exactly three tabs, User Management before User Activity before Publish Projections", () => {
-    expect(shellSource).toMatch(
-      /const TABS: Array<\{ key: AdminTab; label: string; short: string; path: string \}> = \[\s*\{ key: "users", label: "User Management", short: "Users", path: "\/admin\/users" \},\s*\{ key: "activity", label: "User Activity", short: "Activity", path: "\/admin\/activity" \},\s*\{ key: "publish", label: "Publish Projections", short: "Publish", path: "\/admin\/publish" \},\s*\];/
-    );
+  it("is registry-driven — maps ADMIN_NAV and links the /admin dashboard hub", () => {
+    // The nav is now sourced from the shared ADMIN_NAV registry (adminNav.ts)
+    // rather than a hard-coded 3-tab literal, so every admin tool is reachable.
+    expect(shellSource).toMatch(/import \{ ADMIN_NAV, type AdminNavKey \} from "\.\/adminNav";/);
+    expect(shellSource).toMatch(/ADMIN_NAV\.map\(\(tab\) =>/);
+    // Dashboard hub affordance → /admin.
+    expect(shellSource).toMatch(/navigate\("\/admin"\)/);
+    expect(shellSource).toMatch(/aria-label="Admin dashboard home"/);
+  });
+
+  it("adminNav registry covers all admin routes with real paths", () => {
+    const navSource = fs.readFileSync(path.join(import.meta.dirname, "adminNav.ts"), "utf8");
+    for (const p of [
+      "/admin/users", "/admin/activity", "/admin/waitlist", "/admin/publish",
+      "/admin/model-results", "/admin/backtest", "/admin/model-status", "/admin/f5-edge",
+      "/admin/ingest-an", "/admin/postponed-games", "/admin/security", "/admin/claude",
+    ]) {
+      expect(navSource).toContain(`path: "${p}"`);
+    }
   });
 
   it("renders a back-to-app affordance targeting the canonical feed", () => {
@@ -68,7 +83,7 @@ describe("AdminShell — shared admin chrome", () => {
   });
 
   it("active tab is keyed off the explicit `active` prop, not re-derived from the route", () => {
-    expect(shellSource).toMatch(/active: AdminTab;/);
+    expect(shellSource).toMatch(/active: AdminNavKey;/);
     expect(shellSource).toMatch(/const isActive = tab\.key === active;/);
     expect(shellSource).toMatch(/aria-selected=\{isActive\}/);
   });
