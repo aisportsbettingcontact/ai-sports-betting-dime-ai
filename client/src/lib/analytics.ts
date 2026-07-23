@@ -21,7 +21,36 @@ export type QualifyingEventName =
   | "projection_evaluation_viewed"
   | "chat_response_completed"
   | "tracker_entry_saved";
-export type AnalyticsEventName = QualifyingEventName | "session_started" | "screen_viewed";
+
+/**
+ * Curated action allowlist — MUST mirror ACTION_ALLOWLIST in server/analytics/events.ts.
+ * The server rejects any action_name outside this set, so keep the two in sync.
+ */
+export type ActionName =
+  | "chat_message_sent"
+  | "chat_started"
+  | "chat_starred"
+  | "chat_deleted"
+  | "projection_opened"
+  | "projection_favorited"
+  | "feed_filtered"
+  | "feed_sport_switched"
+  | "feed_date_navigated"
+  | "splits_sorted"
+  | "splits_filtered"
+  | "splits_date_navigated"
+  | "splits_sport_switched"
+  | "bet_edited"
+  | "bet_deleted"
+  | "pane_switched"
+  | "search_performed";
+export type FeatureEventName = "feature_opened" | "feature_completed" | "feature_failed";
+export type AnalyticsEventName =
+  | QualifyingEventName
+  | "session_started"
+  | "screen_viewed"
+  | "action_performed"
+  | FeatureEventName;
 
 export interface TrackOptions {
   sessionId?: string | null;
@@ -30,6 +59,8 @@ export interface TrackOptions {
   props?: Record<string, string | number | boolean>;
   occurredAt?: number;
   route?: string;
+  /** Curated action name — only meaningful for the `action_performed` event. */
+  actionName?: ActionName;
 }
 
 /** Collision-resistant idempotency key (crypto.randomUUID when available). */
@@ -65,6 +96,7 @@ export interface ClientEnvelope extends ClientDeviceContext {
   sessionId?: string | null;
   featureId?: string;
   outcome?: string;
+  actionName?: ActionName;
   surface: string;
   route: string;
   props?: Record<string, string | number | boolean>;
@@ -86,6 +118,7 @@ export function buildClientEnvelope(eventName: AnalyticsEventName, opts: TrackOp
     route: opts.route ?? toRoutePattern(pathname),
     ...(opts.featureId ? { featureId: opts.featureId } : {}),
     ...(opts.outcome ? { outcome: opts.outcome } : {}),
+    ...(opts.actionName ? { actionName: opts.actionName } : {}),
     ...(opts.props ? { props: opts.props } : {}),
   };
 }
@@ -109,5 +142,22 @@ export function useAnalytics(): (eventName: AnalyticsEventName, opts?: TrackOpti
       }
     },
     [mutate],
+  );
+}
+
+/**
+ * Returns a stable `trackAction(actionName, opts)` — a thin wrapper over
+ * `useAnalytics` that emits the curated `action_performed` event. Fire-and-forget;
+ * server-gated (inert until the pipeline is enabled). Use at real user-action
+ * points on LAZY surfaces (feed/splits/tracker); critical-path chat uses the
+ * bridge's `emitAction` instead so this module stays out of the chat chunk.
+ */
+export function useTrackAction(): (actionName: ActionName, opts?: Omit<TrackOptions, "actionName">) => void {
+  const track = useAnalytics();
+  return useCallback(
+    (actionName: ActionName, opts: Omit<TrackOptions, "actionName"> = {}) => {
+      track("action_performed", { ...opts, actionName });
+    },
+    [track],
   );
 }

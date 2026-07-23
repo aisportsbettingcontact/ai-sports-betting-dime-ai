@@ -18,8 +18,42 @@ export type QualifyingEvent = (typeof QUALIFYING_EVENTS)[number];
 export const ENGAGEMENT_EVENTS = ["session_started", "screen_viewed", "login"] as const;
 export type EngagementEvent = (typeof ENGAGEMENT_EVENTS)[number];
 
+/**
+ * Curated action allowlist (D3 / §4 of EVENT-CATALOG). Only these named actions
+ * are accepted on `action_performed`; any other action_name is rejected. Fixed
+ * enum — no free text, no wager amounts, no PII. Diagnostic only (never active).
+ */
+export const ACTION_ALLOWLIST = [
+  "chat_message_sent",
+  "chat_started",
+  "chat_starred",
+  "chat_deleted",
+  "projection_opened",
+  "projection_favorited",
+  "feed_filtered",
+  "feed_sport_switched",
+  "feed_date_navigated",
+  "splits_sorted",
+  "splits_filtered",
+  "splits_date_navigated",
+  "splits_sport_switched",
+  "bet_edited",
+  "bet_deleted",
+  "pane_switched",
+  "search_performed",
+] as const;
+export type ActionName = (typeof ACTION_ALLOWLIST)[number];
+
+/** Feature-lifecycle events (D3) — diagnostic, never qualify a user as active. */
+export const FEATURE_EVENTS = ["feature_opened", "feature_completed", "feature_failed"] as const;
+export type FeatureEvent = (typeof FEATURE_EVENTS)[number];
+
+/** D3 event names: the generic action carrier + the feature lifecycle. Non-qualifying. */
+export const ACTION_EVENTS = ["action_performed", ...FEATURE_EVENTS] as const;
+export type ActionEvent = (typeof ACTION_EVENTS)[number];
+
 /** Every accepted event name. */
-export const ALL_EVENTS = [...QUALIFYING_EVENTS, ...ENGAGEMENT_EVENTS] as const;
+export const ALL_EVENTS = [...QUALIFYING_EVENTS, ...ENGAGEMENT_EVENTS, ...ACTION_EVENTS] as const;
 export type AnalyticsEventName = (typeof ALL_EVENTS)[number];
 
 const QUALIFYING_SET: ReadonlySet<string> = new Set(QUALIFYING_EVENTS);
@@ -41,6 +75,8 @@ export const trackInputSchema = z.object({
   outcome: z.string().max(32).nullish(),
   // Low-cardinality route PATTERN only — never a concrete URL with ids.
   route: z.string().max(96).nullish(),
+  // Curated action name — required (and only meaningful) for `action_performed`.
+  actionName: z.enum(ACTION_ALLOWLIST).nullish(),
   // Coarse client device block (server derives the authoritative device_type).
   viewportClass: z.enum(["xs", "sm", "md", "lg", "xl"]).nullish(),
   orientation: z.enum(["portrait", "landscape"]).nullish(),
@@ -50,7 +86,11 @@ export const trackInputSchema = z.object({
   connectionClass: z.enum(["slow-2g", "2g", "3g", "4g", "unknown"]).nullish(),
   appSurface: z.enum(["web-desktop-shell", "web-mobile-shell", "web-responsive"]).nullish(),
   props: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).nullish(),
-});
+}).refine(
+  // `action_performed` carries no meaning without a curated action_name.
+  (v) => v.eventName !== "action_performed" || v.actionName != null,
+  { message: "actionName is required when eventName is 'action_performed'", path: ["actionName"] },
+);
 export type TrackInput = z.infer<typeof trackInputSchema>;
 
 const MAX_PROPS = 20;
