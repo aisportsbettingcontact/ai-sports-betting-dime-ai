@@ -263,3 +263,116 @@ describe("ProjectionCard — matchup block format (owner directive 2026-07-17)",
     expect(html).toContain("View full AI model projections");
   });
 });
+
+/** Round 4 Wave 1 — card anatomy (docs/superpowers/plans/2026-07-23-feed-desktop-polish.md,
+ *  items 2/3/4; law: design-system/dime-ai/pages/ai-model-projections.md). These pin the
+ *  RENDERED STRUCTURE (class names, DOM order) that the desktop/tablet-scoped CSS in
+ *  ProjectionCard.css hooks — the actual 24px/opacity/mint-on-light/pulse values are CSS,
+ *  verified separately by the visual smoke screenshots, not by this DOM-only harness. */
+describe("ProjectionCard — unified score row (Round 4 Wave 1, item 2)", () => {
+  /** A live/final game: both scores present, so MatchupPanel's showScore branch fires. */
+  function scoredFixture(): ProjectionGame {
+    const team = (abbr: string, name: string, score: number): ProjectionGame["away"] =>
+      ({ abbr, name, logo: null, color: "#333333", score });
+    return {
+      id: "lad-nyy-final",
+      league: "MLB",
+      status: "final",
+      statusLabel: "FINAL",
+      away: team("LAD", "Dodgers", 4),
+      home: team("NYY", "Yankees", 2),
+      matchupContext: "Yankee Stadium",
+      venue: "Yankee Stadium",
+      markets: [],
+    };
+  }
+
+  it("renders away logo/score, the matchup line, and home score/logo on one optical row", () => {
+    const html = render(scoredFixture());
+    // Both scores render via the same tabular-nums score class.
+    expect(html.match(/class="matchup__score score-value"/g)).toHaveLength(2);
+    // DOM order: away score, THEN the "Dodgers @ Yankees" center line, THEN home score —
+    // the exact away-logo·away-score·"Away @ Home"·home-score·home-logo sequence.
+    const awayScoreIdx = html.indexOf(">4<");
+    const centerIdx = html.indexOf("matchup__center");
+    const homeScoreIdx = html.indexOf(">2<");
+    expect(awayScoreIdx).toBeGreaterThan(-1);
+    expect(awayScoreIdx).toBeLessThan(centerIdx);
+    expect(centerIdx).toBeLessThan(homeScoreIdx);
+  });
+
+  it("scheduled games (no score) keep the current layout — no score row at all", () => {
+    const html = render(mlbFixture());
+    expect(html).not.toContain("matchup__score");
+  });
+});
+
+describe("ProjectionCard — PASS-card law (Round 4 Wave 1, item 3)", () => {
+  /** A game with a real market but neither side clears the WATCH threshold —
+   *  a genuine whole-card PASS (edgePP well under 1.5pp both sides). */
+  function passFixture(): ProjectionGame {
+    const team = (abbr: string, name: string): ProjectionGame["away"] =>
+      ({ abbr, name, logo: null, color: "#333333", score: null });
+    return {
+      id: "oak-tex",
+      league: "MLB",
+      status: "scheduled",
+      statusLabel: "7:05 PM ET",
+      away: team("OAK", "Athletics"),
+      home: team("TEX", "Rangers"),
+      matchupContext: "Globe Life Field",
+      venue: "Globe Life Field",
+      startTime: "7:05 PM ET",
+      markets: [
+        {
+          key: "moneyline",
+          label: "Moneyline",
+          sides: [
+            { marketKey: "moneyline", marketLabel: "Moneyline", sideLabel: "Athletics ML", bookPrice: -110, bookOppPrice: -110, modelPrice: -110 },
+            { marketKey: "moneyline", marketLabel: "Moneyline", sideLabel: "Rangers ML", bookPrice: -110, bookOppPrice: -110, modelPrice: -110 },
+          ],
+        },
+      ],
+    };
+  }
+
+  it("carries the projection-card--pass modifier when no market clears the edge threshold", () => {
+    expect(render(passFixture())).toContain("projection-card--pass");
+    expect(render(mlbFixture())).not.toContain("projection-card--pass"); // Under 7 IS a real edge
+  });
+
+  it("uses the SAME structured summary grid as an edge card — no divergent bare <p>", () => {
+    const html = render(passFixture());
+    expect(html).toContain("summary__readout");
+    expect(html).toContain("Every market is efficiently priced. No action.");
+    // The message is now a <dd> inside the grid's value row, never a standalone <p>.
+    expect(html).not.toMatch(/<p class="summary__none/);
+    expect(html).toMatch(/<dd class="summary__none[^"]*">Every market is efficiently priced\. No action\.<\/dd>/);
+  });
+
+  it("renders zero mint signal anywhere on a genuine PASS card", () => {
+    const html = render(passFixture());
+    expect(html).toContain("edge-indicator--none"); // "No edge" occupies the chip slot
+    expect(html).not.toContain('"edge-indicator summary__edge"'); // the signal (mint) variant never appears
+    expect(html).not.toContain("market-table__model--signal");
+    expect(html).not.toContain("market-table__result--edge");
+  });
+});
+
+describe("ProjectionCard — live indicator (Round 4 Wave 1, item 4)", () => {
+  it("a live card renders the pulsing dot beside the status label", () => {
+    const html = render({ ...wcFixture(), status: "live", statusLabel: "LIVE · TOP 5TH", startTime: undefined });
+    expect(html).toContain("projection-card__live-dot");
+    expect(html).toContain("projection-card__status--live");
+    expect(html).toContain("LIVE · TOP 5TH");
+    // The dot precedes the label text inside the same status span.
+    expect(html.indexOf("projection-card__live-dot")).toBeLessThan(html.indexOf("LIVE · TOP 5TH"));
+  });
+
+  it("final and scheduled cards never render the live dot", () => {
+    const final = render({ ...wcFixture(), status: "final", statusLabel: "FINAL", startTime: undefined });
+    expect(final).not.toContain("projection-card__live-dot");
+    const scheduled = render(wcFixture());
+    expect(scheduled).not.toContain("projection-card__live-dot");
+  });
+});

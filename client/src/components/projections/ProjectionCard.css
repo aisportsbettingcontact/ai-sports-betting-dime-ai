@@ -27,6 +27,13 @@
 .projection-card__status { font-size: var(--proj-meta); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-secondary, #a6a6a6); }
 .projection-card__status--live { color: #45e0a8; } /* live = signal */
 
+/* Live indicator dot (Round 4 Wave 1, item 4 / page law "Live state"): pulsing
+   7px mint dot ahead of the LIVE label. `display: none` by default keeps
+   mobile (<768px) pixel-identical — the dot only activates at the tablet+
+   breakpoint below (item 8 scoping: items 2/3/4 apply desktop+tablet only). */
+.projection-card__live-dot { display: none; width: 7px; height: 7px; margin-inline-end: 6px; border-radius: 50%; background: #45e0a8; vertical-align: middle; }
+@keyframes projection-card-live-pulse { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
+
 /* ── Matchup (owner directive 2026-07-17: matchup line · ballpark · first pitch) ── */
 .matchup { grid-area: matchup; display: grid; gap: var(--space-sm); align-content: start; }
 .matchup__grid { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: var(--space-2xs) var(--space-xs); }
@@ -36,6 +43,13 @@
 .matchup__team { display: flex; align-items: center; gap: var(--space-sm); min-inline-size: 0; }
 .matchup__team--home { justify-content: flex-end; }
 .matchup__score { font-size: var(--proj-primary); font-weight: 700; font-variant-numeric: tabular-nums; }
+/* Round 4 Wave 1 item 2: on tablet/desktop the unified score row pins a fixed
+   24px/700 tabular figure (law: "scores 24px/700 tabular") instead of the
+   mobile-first fluid clamp, which only reaches 24px near ~1750px viewport
+   width. Mobile (<768px) keeps the fluid --proj-primary clamp untouched. */
+@media (min-width: 768px) {
+  .matchup__score { font-size: 24px; }
+}
 .matchup__center { display: flex; flex-direction: column; align-items: center; gap: 2px; text-align: center; min-inline-size: 0; padding-inline: var(--space-xs); }
 /* Line 1 — "SF Giants @ SEA Mariners". The card's identity; wraps, never clips. */
 .matchup__line { font-size: var(--proj-team); font-weight: 700; letter-spacing: -0.01em; text-wrap: balance; }
@@ -69,6 +83,41 @@
   .summary { justify-content: center; }
   .summary__readout { justify-content: center; }
   .summary__item { align-items: center; text-align: center; }
+}
+
+/* ══ Round 4 Wave 1 — desktop/tablet card-anatomy enforcement (items 2-4) ══
+   Scoped to the tablet+desktop breakpoint (item 8: items 2/3/4 apply to BOTH
+   tablet 768-1023 and desktop >=1024; mobile <768 stays byte/visually
+   untouched — see the mobile-scoped `display: none` defaults above). */
+@media (min-width: 768px) {
+  /* Item 3 — PASS-card law (page law "PASS games"): whole card opacity 0.82,
+     zero mint. Zero mint is already structurally guaranteed — rankedEdges()
+     is empty on a PASS card, so no market/side ever earns a signal class
+     (market-table__model--signal / --result--edge / edge-indicator, as
+     opposed to edge-indicator--none) — nothing here forces color, the data
+     already can't produce it. Only the "No edge" chip's quiet grey needs
+     bumping from --text-muted to the law's --text-secondary. */
+  .projection-card--pass { opacity: 0.82; }
+  .projection-card--pass .edge-indicator--none { color: var(--text-secondary, #a6a6a6); }
+
+  /* Item 4 — live indicator: activate the pulsing mint dot (display:none by
+     default, see .projection-card__live-dot above) and make the LIVE label
+     itself brand-accurate: mono-register micro-label tracking, and
+     --mint-on-light on light theme (raw mint text fails contrast on white —
+     MASTER.md "Mint TEXT on light surfaces must use --mint-on-light:
+     #0FA36B"). The dot FILL stays raw mint on both themes (mint fills, unlike
+     mint text, may stay #45E0A8) with a 1px near-black hairline keyline on
+     light theme only (brand dot rule) — dark theme dots sit directly on the
+     black surface with no keyline. */
+  .projection-card__live-dot {
+    display: inline-block;
+    animation: projection-card-live-pulse 1.6s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+  }
+  html:not(.dark) .projection-card__live-dot {
+    box-shadow: 0 0 0 1px var(--border-strong, #000000);
+  }
+  .projection-card__status--live { letter-spacing: 0.08em; }
+  html:not(.dark) .projection-card__status--live { color: #0fa36b; }
 }
 
 /* ── Summary carousel (owner directive 2026-07-18) ──
@@ -152,4 +201,6 @@
   .projection-card, .projection-card__markets-toggle { transition: none; }
   .summary-carousel__dot::after { transition: none; }
   .summary-carousel__track { scroll-behavior: auto; }
+  /* Item 4: static dot, no pulse (MASTER.md motion law). */
+  .projection-card__live-dot { animation: none; opacity: 1; }
 }
