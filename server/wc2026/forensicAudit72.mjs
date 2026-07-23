@@ -28,7 +28,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 config({ path: path.resolve(__dirname, '../../.env') });
 
 // ── CONFIG ────────────────────────────────────────────────────────────────────
-const LOG_DIR = path.resolve(__dirname, '../../.manus-logs');
+const LOG_DIR = path.resolve(__dirname, '../../.scraper-logs');
 const LOG_FILE = path.join(LOG_DIR, 'forensicAudit72.txt');
 const REPORT_FILE = path.join(LOG_DIR, 'WC2026_FORENSIC_AUDIT_72_REPORT.md');
 
@@ -633,7 +633,7 @@ function writeReport() {
     '  - Example: 760421 kicks off at 04:00 UTC = 00:00 ET Jun 14 = 21:00 PT Jun 13 → matchGameDate="2026-06-13", matchKickoffEt="00:00"',
     '',
     '## Log File',
-    `See: \`.manus-logs/forensicAudit72.txt\``,
+    `See: \`.scraper-logs/forensicAudit72.txt\``,
   ];
 
   fs.mkdirSync(LOG_DIR, { recursive: true });

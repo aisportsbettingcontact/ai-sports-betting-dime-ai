@@ -79,7 +79,7 @@ RUN pnpm run build
 
 ENV NODE_ENV=production
 # Matches the apt-installed chromium binary above. espnPageScraper.ts's fallback candidate
-# chain otherwise only checks Manus-sandbox ms-playwright cache paths (/home/ubuntu/...)
+# chain otherwise only checks legacy-sandbox ms-playwright cache paths (/home/ubuntu/...)
 # and a bare /usr/bin/chromium guess — setting this explicitly makes the resolution
 # deterministic instead of depending on that fallback ordering.
 ENV PLAYWRIGHT_CHROMIUM_PATH=/usr/bin/chromium

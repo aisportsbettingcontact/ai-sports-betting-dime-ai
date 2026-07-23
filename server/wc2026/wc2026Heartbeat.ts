@@ -435,7 +435,7 @@ async function handleWc2026BracketSync(req: Request, res: Response): Promise<voi
 }
 
 export function registerWc2026Heartbeats(app: Express): void {
-  // Manus Heartbeat requires /api/scheduled/* paths
+  // Legacy heartbeat paths retained — now driven by GitHub Actions cron (CRON_SECRET)
   app.post("/api/scheduled/wc2026-lineups", handleWc2026Lineups);
   app.post("/api/scheduled/wc2026-espn-results", handleWc2026EspnResults);
   app.post("/api/scheduled/wc2026-live-scores", handleWc2026LiveScores);

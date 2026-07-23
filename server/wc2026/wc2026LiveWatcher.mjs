@@ -140,7 +140,7 @@ const DRY_RUN        = process.argv.includes('--dry-run');
 const FORCE_RESCRAPE = process.argv.includes('--force-rescrape');
 
 const PROJECT_DIR    = '/home/ubuntu/ai-sports-betting';
-const LOG_DIR        = `${PROJECT_DIR}/.manus-logs`;
+const LOG_DIR        = `${PROJECT_DIR}/.scraper-logs`;
 const WATCHER_LOG    = `${LOG_DIR}/wc2026LiveWatcher.txt`;
 const TERMINAL_LOG   = `/tmp/wc2026LiveWatcher_500x.txt`;
 const PROGRESS_FILE  = `${LOG_DIR}/wc2026LiveWatcher_progress.json`;

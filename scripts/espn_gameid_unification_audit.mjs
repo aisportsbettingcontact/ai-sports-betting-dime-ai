@@ -53,7 +53,7 @@ function logBox(lines) {
 // FILE DISCOVERY ENGINE
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const EXCLUDE_DIRS = ['node_modules', '.git', 'dist', '.manus-logs', 'terminal_full_output'];
+const EXCLUDE_DIRS = ['node_modules', '.git', 'dist', '.scraper-logs', 'terminal_full_output'];
 const WC2026_PATTERNS = [
   // Column/variable names that store ESPN gameId in WC2026 context
   { pattern: /\bmatchId\b/g, type: 'COLUMN_VAR', desc: 'espn_match_id (ESPN gameId stored as espn_match_id)' },

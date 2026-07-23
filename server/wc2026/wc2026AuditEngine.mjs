@@ -32,7 +32,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 config({ path: path.resolve(__dirname, '../../.env') });
 
 // ── CONFIG ────────────────────────────────────────────────────────────────────
-const LOG_DIR = path.resolve(__dirname, '../../.manus-logs');
+const LOG_DIR = path.resolve(__dirname, '../../.scraper-logs');
 const LOG_FILE = path.join(LOG_DIR, 'forensicAudit78.txt');
 const REPORT_FILE = path.join(LOG_DIR, 'WC2026_FORENSIC_AUDIT_78_REPORT.md');
 const TERMINAL_LOG = `/tmp/forensicAudit78_run.txt`;

@@ -28,10 +28,11 @@ const TAG = "[MlbNightlyTrendsRefreshTest]";
 // ─── Env ─────────────────────────────────────────────────────────────────────
 const DB_URL = process.env.DATABASE_URL;
 const FORGE_API_KEY = process.env.BUILT_IN_FORGE_API_KEY;
-const FORGE_API_URL = process.env.BUILT_IN_FORGE_API_URL || "https://forge.manus.ai";
+const FORGE_API_URL = process.env.BUILT_IN_FORGE_API_URL;
 const OWNER_OPEN_ID = process.env.OWNER_OPEN_ID;
 
 if (!DB_URL) { console.error(`${TAG}[ERROR] DATABASE_URL not set`); process.exit(1); }
+if (!FORGE_API_URL) { console.error(`${TAG}[ERROR] BUILT_IN_FORGE_API_URL not set`); process.exit(1); }
 
 // ─── DB connection ────────────────────────────────────────────────────────────
 const mysql = (await import("/home/ubuntu/ai-sports-betting/node_modules/mysql2/promise.js")).default;

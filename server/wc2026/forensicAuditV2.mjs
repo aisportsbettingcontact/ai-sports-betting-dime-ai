@@ -19,7 +19,7 @@ config({ path: path.resolve(__dirname, '../../.env') });
 // ── CONFIG ────────────────────────────────────────────────────────────────────
 const MATCH_IDS = ['760487', '760489', '760488', '760486'];
 const TRUTH_ANCHOR = '760487';
-const LOG_DIR = path.resolve(__dirname, '../../.manus-logs');
+const LOG_DIR = path.resolve(__dirname, '../../.scraper-logs');
 const LOG_FILE = path.join(LOG_DIR, 'forensicAuditV2.txt');
 const REPORT_FILE = path.join(LOG_DIR, 'WC2026_FORENSIC_AUDIT_V2_REPORT.md');
 

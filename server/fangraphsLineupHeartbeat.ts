@@ -4,7 +4,7 @@
  * Heartbeat HTTP handler for the 10-minute Fangraphs lineup sync.
  *
  * Endpoint:  POST /api/scheduled/fg-lineups
- * Auth:      Manus Heartbeat platform token (x-heartbeat-token header)
+ * Auth:      shared secret (CRON_SECRET) via requireCronSecret
  *
  * This handler is ISOLATED from all RotoGrinders code.
  * It calls syncFangraphsLineupTabs() which:

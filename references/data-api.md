@@ -1,3 +1,3 @@
 ## ☁️ Data API
 
-When you need external data, use the omni_search with search_type = 'api' to see there's any built-in api available in Manus API Hub access. You only have to connect other api if there's no suitable built-in api available.
+The built-in Data API is a legacy-platform feature routed through the `BUILT_IN_FORGE_*` gateway; it is unavailable on Railway unless those variables are configured. Connect your own API when external data is needed.
