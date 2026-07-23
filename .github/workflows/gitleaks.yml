@@ -23,7 +23,7 @@ jobs:
           fetch-depth: 0 # scan every commit in the push/PR, not just HEAD
 
       - name: "[STEP] Run gitleaks — fail on any finding"
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Personal account — no GITLEAKS_LICENSE needed (orgs require one).
