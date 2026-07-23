@@ -25,6 +25,7 @@ import { useLocation } from "wouter";
 import { useAppAuth } from "@/_core/hooks/useAppAuth";
 import { AdminShell } from "@/pages/admin/AdminShell";
 import { MetricsPanel } from "@/pages/admin/MetricsPanel";
+import DeviceActivityPanel from "@/pages/admin/DeviceActivityPanel";
 import { RefreshCw } from "lucide-react";
 
 export default function UserActivity() {
@@ -68,6 +69,10 @@ export default function UserActivity() {
 
           {/* Platform Metrics — moved here from the User Management page */}
           <MetricsPanel />
+
+          {/* Device-aware activity — the D2 read path (dedicated MySQL: Dime AI
+              via the owner-gated overview proxy). Inert/honest until enabled. */}
+          <DeviceActivityPanel />
         </div>
       </div>
     </AdminShell>
