@@ -146,6 +146,7 @@ Desktop (>=1024px) only — tablet/mobile keep their shipped layouts:
 - **Games pack 2-across** inside each league section (grid, start-aligned)
   to cut the single-column whitespace; cards keep their container-driven
   internal reflow.
+  — owner directive 2026-07-23: rows stretch; summary centers; expander pinned
 
 ### Owner Directives — 2026-07-18 (edge labeling + multi-edge carousel)
 

@@ -1,8 +1,34 @@
 import { describe, expect, it } from "vitest";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import fs from "fs";
+import path from "path";
 import { ProjectionCard } from "./ProjectionCard";
 import type { ProjectionGame } from "./types";
+
+/** Round 4 Wave 2 (items 1, 5) source-contract fixtures — CSS/markup are read
+ *  raw so these assertions pin the actual rules the visual smoke screenshots
+ *  verify, without a browser/CSSOM in this vitest environment (same pattern
+ *  as the W1 DOM-only harness note below). */
+const cardCss = fs.readFileSync(path.join(import.meta.dirname, "ProjectionCard.css"), "utf8");
+const edgeIndicatorCss = fs.readFileSync(path.join(import.meta.dirname, "EdgeIndicator.css"), "utf8");
+const summaryCarouselSrc = fs.readFileSync(path.join(import.meta.dirname, "SummaryCarousel.tsx"), "utf8");
+const feedSrc = fs.readFileSync(
+  path.join(import.meta.dirname, "..", "..", "pages", "DimeModelFeed.tsx"),
+  "utf8",
+);
+const lawDoc = fs.readFileSync(
+  path.join(import.meta.dirname, "..", "..", "..", "..", "design-system", "dime-ai", "pages", "ai-model-projections.md"),
+  "utf8",
+);
+
+/** Slice the CSS source between two heading comments (exclusive of the second). */
+function cssBlock(src: string, startMarker: string, endMarker: string): string {
+  const start = src.indexOf(startMarker);
+  const end = src.indexOf(endMarker, start);
+  if (start < 0 || end < 0) throw new Error(`CSS anchors changed: "${startMarker}" / "${endMarker}"`);
+  return src.slice(start, end);
+}
 
 /**
  * Directive §3 — single rendering ownership. The event time is owned by the card
@@ -374,5 +400,136 @@ describe("ProjectionCard — live indicator (Round 4 Wave 1, item 4)", () => {
     expect(final).not.toContain("projection-card__live-dot");
     const scheduled = render(wcFixture());
     expect(scheduled).not.toContain("projection-card__live-dot");
+  });
+});
+
+/** Round 4 Wave 2 (docs/superpowers/plans/2026-07-23-feed-desktop-polish.md, items 1/5;
+ *  law: design-system/dime-ai/pages/ai-model-projections.md). Item 1 (equal-height rows,
+ *  pinned expander) and item 5 (fixed-track summary alignment) are CSS-Grid contracts with
+ *  no new DOM nodes, so — same as W1's note above — the structural proof here is (a) the DOM
+ *  hooks the CSS keys off (class names) and (b) reading the actual CSS/markup source for the
+ *  numeric contract itself; the rendered pixels are verified separately by the visual smoke
+ *  screenshots (equal row heights, pinned expander, aligned columns), not by this harness. */
+describe("ProjectionCard — equal-height rows & pinned expander (Round 4 Wave 2, item 1)", () => {
+  it("the 2-across league grid stretches row-mates (law amendment: start-aligned -> stretch)", () => {
+    // DimeModelFeed.tsx `.dmf-leaguebody`, desktop->=1024 block only.
+    const desktopGridBlock = feedSrc.slice(
+      feedSrc.indexOf("League bodies pack games 2-across"),
+      feedSrc.indexOf("@media (prefers-reduced-motion: reduce){", feedSrc.indexOf("League bodies pack games 2-across")),
+    );
+    expect(desktopGridBlock).toContain("@media (min-width:1024px)");
+    expect(desktopGridBlock).toMatch(/\.dmf-leaguebody\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\);align-items:stretch\}/);
+    expect(desktopGridBlock).not.toMatch(/align-items:start/);
+  });
+
+  it("the law doc records the 2026-07-23 owner amendment on the 'start-aligned' line", () => {
+    const line = lawDoc.slice(lawDoc.indexOf("**Games pack 2-across**"), lawDoc.indexOf("Owner Directives — 2026-07-18 (edge labeling"));
+    expect(line).toContain("start-aligned");
+    expect(line).toContain("— owner directive 2026-07-23: rows stretch; summary centers; expander pinned");
+  });
+
+  it("desktop->=1024px CSS gives the card a flexible summary row so surplus height centers there, expander pinned last", () => {
+    const item1 = cssBlock(cardCss, "Round 4 Wave 2 — item 1", "── Summary carousel");
+    expect(item1).toContain("@media (min-width: 1024px)");
+    // grid-template-areas order is head/matchup/summary/markets (scheduled drops head) —
+    // the row-track list must line up 1:1: fixed, fixed, 1fr (surplus absorber), fixed (pinned last).
+    expect(item1).toMatch(/\.projection-card\s*\{\s*grid-template-rows:\s*auto auto 1fr auto;\s*\}/);
+    expect(item1).toMatch(/\.projection-card--scheduled\s*\{\s*grid-template-rows:\s*auto 1fr auto;\s*\}/);
+    // The carousel variant of the summary area also centers in its surplus row.
+    expect(item1).toMatch(/\.summary-carousel\s*\{\s*align-content:\s*center;\s*\}/);
+  });
+
+  it("item 1's grid-template-rows rule is NOT present outside the >=1024px block (desktop-only, item 8 scoping)", () => {
+    const beforeItem1 = cardCss.slice(0, cardCss.indexOf("Round 4 Wave 2 — item 1"));
+    expect(beforeItem1).not.toMatch(/grid-template-rows:\s*auto auto 1fr auto/);
+  });
+});
+
+describe("ProjectionCard — aligned summary mini-grid (Round 4 Wave 2, item 5)", () => {
+  it("an edge card's readout carries the fixed-track modifier classes (edge/book/model)", () => {
+    const html = render(mlbFixture());
+    expect(html).toContain('class="summary__item summary__item--edge"');
+    expect(html).toContain('class="summary__item summary__item--book"');
+    expect(html).toContain('class="summary__item summary__item--model"');
+  });
+
+  it("a PASS card's message item spans the value columns (W1 structure preserved)", () => {
+    const passHtml = render({
+      ...mlbFixture(),
+      id: "oak-tex-pass",
+      markets: [
+        {
+          key: "moneyline",
+          label: "Moneyline",
+          sides: [
+            { marketKey: "moneyline", marketLabel: "Moneyline", sideLabel: "Athletics ML", bookPrice: -110, bookOppPrice: -110, modelPrice: -110 },
+            { marketKey: "moneyline", marketLabel: "Moneyline", sideLabel: "Rangers ML", bookPrice: -110, bookOppPrice: -110, modelPrice: -110 },
+          ],
+        },
+      ],
+    });
+    expect(passHtml).toContain("projection-card--pass");
+    expect(passHtml).toContain('class="summary__item summary__item--message"');
+    expect(passHtml).not.toContain("summary__item--edge");
+    expect(passHtml).not.toContain("summary__item--book");
+  });
+
+  it("desktop+tablet (>=768px) CSS gives the readout fixed, non-content-sized column tracks", () => {
+    const item5 = cssBlock(cardCss, "Round 4 Wave 2 — item 5", "Round 4 Wave 2 — item 1");
+    expect(item5).toContain("@media (min-width: 768px)");
+    expect(item5).toContain("display: grid");
+    // Every track is a fixed minmax()/fr definition — never `auto`/`max-content`,
+    // which would size the column from that card's own content and break alignment.
+    expect(item5).toMatch(/grid-template-columns:\s*minmax\([^)]+\)\s+minmax\([^)]+\)\s+minmax\([^)]+\)\s+minmax\([^)]+\);/);
+    expect(item5).not.toMatch(/grid-template-columns:[^;]*\bauto\b/);
+    expect(item5).toContain(".summary__readout { display: contents; }");
+    expect(item5).toContain(".summary__item--edge { grid-column: 1; }");
+    expect(item5).toContain(".summary__item--book { grid-column: 2; }");
+    expect(item5).toContain(".summary__item--model { grid-column: 3; }");
+    expect(item5).toContain(".summary__item--message { grid-column: 1 / span 3; }");
+    // The chip (real edge OR the "No edge" quiet variant) always lands in the last track —
+    // PASS cards' "No edge" slot keeps the same alignment a real edge chip would have.
+    expect(item5).toContain(".summary__edge { grid-column: 4; justify-self: start; }");
+  });
+
+  it("numeric readout cells are tabular (Book/Model values, the edge chip's percentage)", () => {
+    const item5 = cssBlock(cardCss, "Round 4 Wave 2 — item 5", "Round 4 Wave 2 — item 1");
+    expect(item5).toMatch(/\.summary__item--book \.odds-value,\s*\n\s*\.summary__item--model \.odds-value,\s*\n\s*\.edge-indicator__value\s*\{\s*\n\s*font-variant-numeric:\s*tabular-nums;/);
+  });
+
+  it("item 5's mini-grid is scoped to >=768px only (mobile stays the W1 flex layout, byte-untouched)", () => {
+    const beforeItem5 = cardCss.slice(0, cardCss.indexOf("Round 4 Wave 2 — item 5"));
+    // The unconditional (mobile-first) `.summary` rule is still the flex layout.
+    expect(beforeItem5).toMatch(/\.summary\s*\{\s*grid-area:\s*summary;\s*display:\s*flex;/);
+  });
+
+  it("ONE canonical edge-chip style: EdgeIndicator is the sole chip implementation, no divergent variant", () => {
+    // The mint chip is styled exactly once (plus its --none quiet counterpart) in EdgeIndicator.css.
+    expect((edgeIndicatorCss.match(/^\.edge-indicator \{/gm) ?? []).length).toBe(1);
+    expect((edgeIndicatorCss.match(/^\.edge-indicator--none \{/gm) ?? []).length).toBe(1);
+    // SummaryCarousel (the multi-edge surface) delegates to ProjectionSummary/EdgeIndicator for
+    // every slide rather than re-implementing its own chip markup.
+    expect(summaryCarouselSrc).not.toMatch(/edge-indicator/);
+    expect(summaryCarouselSrc).toContain("ProjectionSummary");
+    // Rendered output only ever uses the two canonical chip classes — never an alternate
+    // "chip"-named class that would diverge from the shipped mint-outline style.
+    const edgeHtml = render(mlbFixture());
+    const passHtml = render({
+      ...mlbFixture(),
+      id: "oak-tex-pass-2",
+      markets: [
+        {
+          key: "moneyline",
+          label: "Moneyline",
+          sides: [
+            { marketKey: "moneyline", marketLabel: "Moneyline", sideLabel: "Athletics ML", bookPrice: -110, bookOppPrice: -110, modelPrice: -110 },
+            { marketKey: "moneyline", marketLabel: "Moneyline", sideLabel: "Rangers ML", bookPrice: -110, bookOppPrice: -110, modelPrice: -110 },
+          ],
+        },
+      ],
+    });
+    expect(edgeHtml).toMatch(/class="edge-indicator summary__edge"/);
+    expect(passHtml).toMatch(/class="edge-indicator--none summary__edge"/);
+    expect(edgeHtml + passHtml).not.toMatch(/class="[^"]*\bchip\b[^"]*"/i);
   });
 });

@@ -120,6 +120,81 @@
   html:not(.dark) .projection-card__status--live { color: #0fa36b; }
 }
 
+/* ══ Round 4 Wave 2 — item 5: aligned summary mini-grid (desktop + tablet,
+   >=768px; item 8 scoping: item 5 applies to BOTH tablet 768-1023 and
+   desktop, same breakpoint as the Wave 1 block above) ══
+   Page law "Aligned summary mini-grid": MODEL EDGE | BOOK | MODEL | chip get
+   FIXED column tracks so the same fact lines up at the same x-offset on
+   every card at a given viewport width — replacing the mobile-first
+   flex-wrap layout (kept below 768px, byte-untouched) with a 4-column grid.
+   Tracks are proportional (`minmax(..., fr)`), never content-sized
+   (`auto`/`max-content`): every card at the same width resolves the
+   identical pixel widths, which is what makes values align — a literal
+   fixed rem width would either overflow a narrow tablet card or leave dead
+   space on a wide desktop half-card, and either way wouldn't track the
+   card's own container-driven reflow philosophy (see the file-level note).
+   `.summary__readout` (the <dl>, Wave 1) goes `display:contents` so its
+   `.summary__item`s become direct grid children of `.summary` in columns
+   1-3; the PASS "no action" message (ONE item, Wave 1) spans all three so
+   it never breaks the column count. The EdgeIndicator chip — real edge OR
+   the "No edge" quiet variant, ONE canonical component/class-pair
+   (edge-indicator / edge-indicator--none; no divergent chip markup exists
+   anywhere in this card family, audited against MarketTable's separate
+   --signal/--edge cell styles which are a different surface) — always lands
+   in column 4, so a PASS card's "No edge" slot sits in the exact spot a
+   real edge chip would occupy (W1 structure preserved). */
+@media (min-width: 768px) {
+  .summary {
+    display: grid;
+    grid-template-columns: minmax(6.5rem, 1.6fr) minmax(3.5rem, 0.8fr) minmax(3.5rem, 0.8fr) minmax(5.5rem, 1fr);
+    align-items: center;
+  }
+  .summary__readout { display: contents; }
+  .summary__item--edge { grid-column: 1; }
+  .summary__item--book { grid-column: 2; }
+  .summary__item--model { grid-column: 3; }
+  .summary__item--message { grid-column: 1 / span 3; }
+  .summary__edge { grid-column: 4; justify-self: start; }
+
+  /* Numeric cells stay tabular. Book/Model already inherit this from the
+     global `.odds-value` rule (client/src/styles/type-system.css) and the
+     edge value from `.edge-indicator`'s own tabular-nums (EdgeIndicator.css);
+     restated here so the mini-grid's alignment contract doesn't silently
+     depend on an external stylesheet staying unchanged. */
+  .summary__item--book .odds-value,
+  .summary__item--model .odds-value,
+  .edge-indicator__value {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* ══ Round 4 Wave 2 — item 1: equal-height card rows, pinned expander
+   (desktop ONLY, >=1024px — item 8 scoping: item 1, unlike item 5 above,
+   does NOT apply to tablet) ══
+   Owner amendment 2026-07-23 to the 07-21 desktop-emphasis law: "start-aligned"
+   -> "stretch" (annotated in design-system/dime-ai/pages/ai-model-projections.md).
+   The 2-across league grid (`DimeModelFeed.tsx` `.dmf-leaguebody`) now
+   stretches row-mates to equal height instead of natural
+   (`align-items:start` -> `align-items:stretch`); this is the matching
+   per-card structure so the extra height a shorter row-mate receives lands
+   somewhere legible: the summary region becomes a flexible `1fr` row that
+   absorbs 100% of the surplus and vertically centers its own content (the
+   existing `.summary` flex + `align-items:center` above does this for free
+   once given extra height; `.summary-carousel`, a grid, needs an explicit
+   `align-content:center` since grid's default `normal` would stretch its
+   two rows apart instead of centering the block), while the markets
+   disclosure stays `auto`-height and is pushed to the card's bottom edge —
+   "VIEW FULL AI MODEL PROJECTIONS" always lands flush with its row-mate's.
+   A row of naturally-equal cards renders IDENTICALLY: grid track sizing
+   bases the row height on the tallest natural card in the row, so that
+   tallest card's own `1fr` summary row resolves to exactly the space `auto`
+   would have used — nothing forces it taller than its own content. */
+@media (min-width: 1024px) {
+  .projection-card { grid-template-rows: auto auto 1fr auto; }
+  .projection-card--scheduled { grid-template-rows: auto 1fr auto; }
+  .summary-carousel { align-content: center; }
+}
+
 /* ── Summary carousel (owner directive 2026-07-18) ──
    A game with 2+ real edges cycles them in a ranked swipe strip: native
    scroll-snap slides (momentum + interruptible by design), each slide the
