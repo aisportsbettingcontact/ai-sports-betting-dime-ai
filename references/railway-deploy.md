@@ -15,11 +15,11 @@ The client calls **relative** URLs (`/api/trpc`, `/api/dime/chat`) against the
 same origin, so session cookies are first-party, there are no CORS preflights,
 and SSE streams directly.
 
-> **History:** an earlier plan split hosting across Railway (backend) + Vercel
-> (frontend proxying `/api/*`). Vercel was dropped 2026-07-11 — Railway serves
-> everything — and `vercel.json`, `.vercel-ops/`, and the `vercel-ops` workflow
-> were removed. Disconnect the repo in the Vercel dashboard (Project →
-> Settings → Git) to stop preview deploy statuses on PRs.
+> **History:** an earlier plan split hosting across Railway (backend) and a
+> separate standalone frontend host (proxying `/api/*`). That frontend host was
+> dropped 2026-07-11 — Railway serves everything now — and its build config and
+> ops workflow were removed. The repo was disconnected from that host's
+> dashboard to stop preview deploy statuses on PRs.
 
 ## Repo artifacts
 
@@ -61,8 +61,8 @@ Dockerfile gotchas learned the hard way (don't regress these):
    the app's public origin (the custom domain once DNS points at Railway).
    Everything the server reads — from `.env.example`: `APP_SESSION_SECRET`,
    `DATABASE_URL`, `PUBLIC_ORIGIN`, Stripe, Discord, scraper credentials,
-   `ANTHROPIC_API_KEY` *or* the AI Gateway pair (`ANTHROPIC_BASE_URL` +
-   `ANTHROPIC_AUTH_TOKEN` — see `references/ai-gateway-setup.md`), plus:
+   `ANTHROPIC_API_KEY` *or* the Anthropic-compatible gateway pair
+   (`ANTHROPIC_BASE_URL` + `ANTHROPIC_AUTH_TOKEN`), plus:
    - `ADDITIONAL_ALLOWED_ORIGINS` — the `*.up.railway.app` URL if you'll
      exercise the backend on it directly while the custom domain is primary
    - Do **not** set `PORT` — Railway injects it and the server binds it.

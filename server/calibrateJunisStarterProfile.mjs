@@ -17,7 +17,7 @@
  *   Starters throw 85-100 pitches with pacing → velocity/stuff drops ~1-2 mph by 5th inning
  *   Applied as +0.40 ERA adjustment for innings 4-5 (where Junis will likely pitch)
  *
- * Source: Tom Tango "The Book" TTO research, FanGraphs starter/reliever splits 2020-2025
+ * Source: Tom Tango "The Book" TTO research, starter/reliever splits 2020-2025
  */
 import mysql from 'mysql2/promise';
 import * as dotenv from 'dotenv';

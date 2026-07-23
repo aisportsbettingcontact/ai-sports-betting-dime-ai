@@ -64,9 +64,9 @@ Useful CLI: `python3 .claude/skills/ui-ux-pro-max/scripts/search.py "<query>" [-
   feed inside the Dime shell (route `/feed` → "AI Model Projections" tab)
 - Chat page: `client/src/pages/DimeChat.tsx` (`/chat`, SSE via `POST /api/dime/chat`) — keep the
   streaming core when reskinning
-- `references/ai-gateway-setup.md` — routing all Claude traffic (Anthropic SDK via
-  `server/_core/anthropicClient.ts`, Agent SDK via `server/_core/dimeAgent.ts`, Claude Code CLI)
-  through Vercel AI Gateway with `ANTHROPIC_BASE_URL` + `ANTHROPIC_AUTH_TOKEN`
+- Claude traffic routing — the Anthropic SDK (`server/_core/anthropicClient.ts`), Agent SDK
+  (`server/_core/dimeAgent.ts`), and Claude Code CLI all route through an Anthropic-compatible
+  gateway via `ANTHROPIC_BASE_URL` + `ANTHROPIC_AUTH_TOKEN`
 - `ml/dime-1.0/README.md` — Dime 1.0 self-hosted model runbook (QLoRA fine-tune of Llama 3 8B
   Instruct → 4-bit AWQ → private RunPod Serverless vLLM endpoint; Railway stays the control
   plane). Server wiring: `server/_core/dime1*.ts` behind `DIME_CHAT_LLM_PROVIDER` (ships
@@ -77,10 +77,10 @@ Useful CLI: `python3 .claude/skills/ui-ux-pro-max/scripts/search.py "<query>" [-
 **Hosting: Railway serves the whole app** (Express serves API + built Vite client;
 DNS on the custom domain points at Railway). Runbook: `references/railway-deploy.md` —
 Dockerfile/`railway.json` build everything, with Debian Python for the model runners.
-Railway auto-deploys on push to `main`. Vercel was removed 2026-07-11 (was the planned
-frontend host mid-migration; also disconnect the repo in the Vercel dashboard to stop PR
-deploy statuses). The legacy platform deployment has been retired (its runbook was
-removed from the repo 2026-07-23).
+Railway auto-deploys on push to `main`. An earlier standalone frontend host was dropped
+2026-07-11 (it was the planned frontend host mid-migration); the app is Railway-only now.
+The legacy platform deployment has been retired (its runbook was removed from the repo
+2026-07-23).
 Schema changes always need the manual `db-push.yml` workflow before any code deploy.
 
 ## Repo conventions

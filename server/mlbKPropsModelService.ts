@@ -93,7 +93,7 @@ const EMPIRICAL_IP_PER_START = 5.1;   // 2025 MLB starter avg IP/start
 // ─── P4-B: Platoon composition constants (2025 MLB empirical) ─────────────────
 // LHP vs RHH platoon advantage: LHP K% is ~8% higher vs RHH than vs LHH
 // RHP vs LHH platoon advantage: RHP K% is ~5% higher vs LHH than vs RHH
-// Source: 2024-2025 Statcast platoon splits (FanGraphs)
+// Source: 2024-2025 Statcast platoon splits
 const PLATOON_LHP_VS_RHH_BOOST = 1.08;   // LHP gets +8% K-rate vs RHH-heavy lineup
 const PLATOON_LHP_VS_LHH_PENALTY = 0.94; // LHP gets -6% K-rate vs LHH-heavy lineup
 const PLATOON_RHP_VS_LHH_BOOST = 1.05;   // RHP gets +5% K-rate vs LHH-heavy lineup

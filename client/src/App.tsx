@@ -38,7 +38,6 @@ const NhlTeamSchedule = lazy(() => import("./pages/NhlTeamSchedule"));
 const BetTracker = lazy(() => import("@/pages/BetTracker"));
 const AdminModelStatus = lazy(() => import("@/pages/AdminModelStatus"));
 const PostponedGames = lazy(() => import("@/pages/PostponedGames"));
-const Resources = lazy(() => import("@/pages/Resources"));
 const MlbBacktest = lazy(() => import("@/pages/MlbBacktest"));
 const ResetPassword = lazy(() => import("@/pages/ResetPassword"));
 
@@ -435,13 +434,6 @@ function Router() {
           {() => (
             <RequireAuth>
               <BetTracker />
-            </RequireAuth>
-          )}
-        </Route>
-        <Route path="/resources">
-          {() => (
-            <RequireAuth>
-              <Resources />
             </RequireAuth>
           )}
         </Route>

@@ -17,10 +17,6 @@
       "requiredEnv": ["DATABASE_URL"]
     },
     {
-      "id": "server/ciSecrets.test.ts::CI secrets validation > NBA_SHEET_ID is set and matches Google Sheets ID format",
-      "requiredEnv": ["NBA_SHEET_ID"]
-    },
-    {
       "id": "server/ciSecrets.test.ts::CI secrets validation > PUBLIC_ORIGIN is set and has no trailing slash",
       "requiredEnv": ["PUBLIC_ORIGIN"]
     },

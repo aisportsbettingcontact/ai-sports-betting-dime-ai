@@ -1,7 +1,7 @@
 # Dime AI Standalone HTML — Migration Blueprint
 
 > Evidence-based audit + migration plan for `Dime_AI_Standalone.html` → this platform
-> (React + Vite client on **Vercel**, Express + tRPC backend on **Railway**).
+> (React + Vite client on a **standalone frontend host**, Express + tRPC backend on **Railway**).
 > Produced by a multi-agent audit (design-system auditor · repo cartographer · rendering
 > verifier) with every load-bearing claim reproduced by command. Read-only: the artifact
 > was not modified. A separate implementation session can execute this plan without
@@ -299,7 +299,7 @@ survives.
 | Fonts | `client/index.html:15` Familjen 400–700 + Plex Mono **400;500** (+ legacy Inter/JetBrains at :20) | keep; normalize prototype mono-600/700 specs to law instead of adding weights |
 | Mobile bottom nav | `features/mobileOwnerTabs/` — five tabs **exactly** feed/splits/chat/props/profile; owner-gated (`config.ts:11 MOBILE_OWNER_TABS_PUBLIC_ENABLED=false`); `MobileOwnerBottomTabs.tsx` hardcodes `#39FF14/#000000` ("PERMANENT" comment — violates both MASTER and prototype) | EXISTS-DIVERGENT |
 | Cards/data | `games.list` feed contracts (inviolable, `design-system/dime-ai/pages/ai-model-projections.md`), MLB props routers, WC2026 schema+route; **no NBA prop data anywhere** | prototype's NBA trio not implementable |
-| Deploy | `Dockerfile`+`railway.json` (backend), `vercel.json` (client build + `/api/*` proxy to Railway), merge≠deploy until cutover (superseded: Railway auto-deploys `main`); schema via `db-push.yml` | ready |
+| Deploy | `Dockerfile`+`railway.json` (backend), a standalone frontend-host config (client build + `/api/*` proxy to Railway), merge≠deploy until cutover (superseded: Railway auto-deploys `main`); schema via `db-push.yml` | ready |
 | Bugs found incidentally | `BettingSplits.tsx:541` active tab links `/splits` → `App.tsx:137` redirects to `/feed` (self-navigating-away tab) | fix in Wave 2 |
 
 ---
@@ -334,7 +334,7 @@ survives.
 ## 12. Roadmap — waves mapped to the ZERO-TO-ONE epics
 
 Inputs (from repo corpus, not assumption): priorities = launch rebrand (E1/E2 Now);
-committed = E1–E8 + Railway/Vercel cutover; constraints = solo operator, brand law closed,
+committed = E1–E8 + Railway/frontend-host cutover; constraints = solo operator, brand law closed,
 feed contracts inviolable, RG language, merge≠deploy until cutover, schema via `db-push.yml`.
 Horizon = cutover (E6). This prototype **slots into E2/E3/E5/E8 — it does not create a new track.**
 
@@ -391,7 +391,7 @@ language check on all new surfaces. Exit: axe zero critical; keyboard-only walkt
 passes; Vitest+typecheck green in CI.
 
 **W6 — Cutover (E6, deploy law).** Flip `/dime` shell to primary routes; mobile nav public
-flag on; parallel validation on Railway/Vercel preview; smoke (`deploy-smoke.yml`);
+flag on; parallel validation on Railway/frontend-host preview; smoke (`deploy-smoke.yml`);
 release flag + rollback = flag revert (the legacy host remains prod until the platform cutover
 completes; after cutover, push-to-main auto-deploys both platforms). Exit: production on
 Dime shell; legacy accents gone from user paths.
@@ -452,7 +452,7 @@ Issue-ready specifications, one worktree/PR each when the owner gives the go
 - **Interaction:** send→stream→stop→regenerate; Enter vs Shift+Enter; followup chip → send; history search/rename/delete; pill → sheet; cancel/resume membership; theme switch persists.
 - **Data:** credits decrement server-side (parallel-request race test incl. two concurrent FIRST requests); 402 → zero-state UI; abort-mid-stream charge behavior matches D9 policy; pack purchase credits exactly once under simulated Stripe event replay; refund writes clawback; subscription webhook path regression-green after the mode branch lands; splits %s sum to 100 and bar widths equal data; 0%/0% Total/ML markets render "not yet available"; edge/ROI values match `edgeUtils` output (never artifact numbers).
 - **A11y:** keyboard-only full walkthrough; focus trap + Escape + restore on all dialogs; stream announced via live region; contrast script ≥4.5:1 on all text tokens; 200% zoom no clipping; reduced-motion disables all animation.
-- **Deploy:** typecheck (`npx tsc --noEmit`), Vitest (CI secrets), `deploy-smoke.yml` green on Railway+Vercel preview before flag flip; rollback = release-flag revert; schema rollbacks never required by UI waves (additive only).
+- **Deploy:** typecheck (`npx tsc --noEmit`), Vitest (CI secrets), `deploy-smoke.yml` green on Railway+frontend-host preview before flag flip; rollback = release-flag revert; schema rollbacks never required by UI waves (additive only).
 
 ---
 

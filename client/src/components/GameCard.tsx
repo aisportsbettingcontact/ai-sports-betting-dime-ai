@@ -887,7 +887,7 @@ function DesktopMergedPanel({
     : '—';
   // CRITICAL: ALWAYS display the BOOK's total line with model fair odds at that line.
   // The book O/U is the NON-NEGOTIABLE reference for edge detection and display across ALL sports.
-  // modelTotal in DB is now anchored to bookTotal (fixed in mlbModelRunner/nhlModelSync/nbaModelSync)
+  // modelTotal in DB is now anchored to bookTotal (fixed in mlbModelRunner/nhlModelSync)
   // but we enforce it here as a defense-in-depth guard: if bkTotal is available, use it.
   const mdlDisplayTotal = !isNaN(bkTotal) ? bkTotal : mdlTotal;
   // Validation audit: warn in console if model total diverges from book total (should never happen)
@@ -1902,7 +1902,7 @@ function OddsLinesPanel({
   const mdlHomeSpreadStr = mdlHomeSpreadLine;
   // CRITICAL: ALWAYS display the BOOK's total line with model fair odds at that line.
   // The book O/U is the NON-NEGOTIABLE reference for edge detection and display across ALL sports.
-  // modelTotal in DB is now anchored to bookTotal (fixed in mlbModelRunner/nhlModelSync/nbaModelSync)
+  // modelTotal in DB is now anchored to bookTotal (fixed in mlbModelRunner/nhlModelSync)
   // but we enforce it here as a defense-in-depth guard: if bkTotal is available, use it.
   const mdlDisplayTotal = !isNaN(bkTotal) ? bkTotal : mdlTotal;
   // Validation audit: warn in console if model total diverges from book total (should never happen)
