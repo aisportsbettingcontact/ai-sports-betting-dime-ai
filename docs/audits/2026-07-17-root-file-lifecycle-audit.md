@@ -45,7 +45,7 @@
 - `Dockerfile`
 - `INCIDENTS.md`
 - `OPERATING-RULES.md`
-- `RELEASING.md`
+- `RELEASING.md` (removed 2026-07-23 with the legacy-platform cleanup)
 - `bundle-budget.json`
 - `components.json`
 - `drizzle.config.ts`

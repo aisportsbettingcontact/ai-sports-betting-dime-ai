@@ -1987,7 +1987,7 @@ Root level — 17 WC2026 files
 drizzle/ — 11 files (1 schema + 10 migration snapshots)
 client/src/pages/ — 1 file (WorldCup2026.tsx, 20K)
 server/ test files — 3 files (display, mobile layout, date fix)
-.manus-logs/ — 9 files (watcher logs, forensic audit reports)
+.scraper-logs/ — 9 files (watcher logs, forensic audit reports)
 
 ────────────────────────────────────────────────────────────────────────────────
 CLOUD COMPUTER (cloud-pc-5l2bduvb — /home/ubuntu/wc_v12/)
