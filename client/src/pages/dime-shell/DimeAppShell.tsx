@@ -28,6 +28,7 @@ const TrendsPage = lazy(() => import("../TrendsPage"));
 // Background engagement-session tracking, lazy-loaded so it never weighs down
 // chat's critical-path bundle (it is not needed for first paint).
 const SessionTracker = lazy(() => import("@/components/SessionTracker"));
+const ScreenViewTracker = lazy(() => import("@/components/ScreenViewTracker"));
 
 const PANE_HEADINGS: Record<DimeProductPane, string> = {
   chat: "Dime Chat",
@@ -189,6 +190,7 @@ export default function DimeAppShell({
           768px mode switch — preserving its mount (see the note above). */}
       <Suspense fallback={null}>
         <SessionTracker />
+        <ScreenViewTracker />
       </Suspense>
       <DimeChatPage
         previewMode={previewMode}
