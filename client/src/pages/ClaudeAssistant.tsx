@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ReactMarkdown from "react-markdown";
+import { AdminShell } from "@/pages/admin/AdminShell";
 
 interface Message {
   id: string;
@@ -125,7 +126,8 @@ export default function ClaudeAssistant() {
   if (!appUser || !isOwner) return null;
 
   return (
-    <div className="flex flex-col h-screen bg-[#000000] font-['Familjen_Grotesk',sans-serif]">
+    <AdminShell active="claude">
+    <div className="flex flex-col h-[calc(100vh-3.5rem)] bg-[#000000] font-['Familjen_Grotesk',sans-serif]">
       {/* Header */}
       <div className="flex-shrink-0 border-b border-white bg-[#000000] px-4 py-3">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
@@ -250,5 +252,6 @@ export default function ClaudeAssistant() {
         </div>
       </div>
     </div>
+    </AdminShell>
   );
 }

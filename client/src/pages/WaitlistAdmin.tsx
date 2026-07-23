@@ -24,6 +24,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useLocation } from "wouter";
 import { useAppAuth } from "@/_core/hooks/useAppAuth";
+import { AdminShell } from "@/pages/admin/AdminShell";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 
@@ -376,7 +377,10 @@ export default function WaitlistAdmin() {
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-black text-white">
+    <AdminShell active="waitlist">
+      {/* Self-contained dark surface so the page's hardcoded white text stays
+          readable inside the theme-aware AdminShell chrome (token migration TODO). */}
+      <div className="min-h-[calc(100vh-3.5rem)] bg-black text-white">
       {/* Contact modal */}
       {contactEntry && (
         <ContactModal entry={contactEntry} onClose={() => setContactEntry(null)} />
@@ -721,6 +725,7 @@ export default function WaitlistAdmin() {
           </div>
         )}
       </div>
-    </div>
+      </div>
+    </AdminShell>
   );
 }

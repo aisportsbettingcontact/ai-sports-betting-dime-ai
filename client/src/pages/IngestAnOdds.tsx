@@ -15,6 +15,7 @@ import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useAppAuth } from "@/_core/hooks/useAppAuth";
+import { AdminShell } from "@/pages/admin/AdminShell";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -35,7 +36,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, CheckCircle2, AlertCircle, ClipboardPaste, ChevronLeft } from "lucide-react";
+import { Loader2, CheckCircle2, AlertCircle, ClipboardPaste } from "lucide-react";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -100,22 +101,13 @@ export default function IngestAnOdds() {
   const isLoading = ingestMutation.isPending;
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      {/* Header */}
-      <div className="border-b border-border bg-card backdrop-blur-sm sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => navigate("/admin/publish")}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <ChevronLeft className="h-4 w-4 mr-1" />
-            Back
-          </Button>
-          <div className="flex-1">
-            <h1 className="text-lg font-bold tracking-tight">Ingest AN Odds</h1>
-            <p className="text-xs text-muted-foreground">
+    <AdminShell active="ingest">
+      <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
+        {/* Page header */}
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Ingest AN Odds</h1>
+            <p className="mt-1 text-sm text-muted-foreground">
               Action Network — All Markets (Open + DK NJ)
             </p>
           </div>
@@ -123,9 +115,7 @@ export default function IngestAnOdds() {
             Owner Only
           </Badge>
         </div>
-      </div>
 
-      <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
         {/* Instructions */}
         <Card className="border-border bg-card">
           <CardHeader className="pb-3">
@@ -305,6 +295,6 @@ export default function IngestAnOdds() {
           </Card>
         )}
       </div>
-    </div>
+    </AdminShell>
   );
 }

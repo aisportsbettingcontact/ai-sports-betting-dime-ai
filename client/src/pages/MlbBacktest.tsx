@@ -19,6 +19,7 @@ import {
 } from "recharts";
 import { trpc } from "@/lib/trpc";
 import { useAppAuth } from "@/_core/hooks/useAppAuth";
+import { AdminShell } from "@/pages/admin/AdminShell";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -173,7 +174,10 @@ export default function MlbBacktest() {
 
   // ─────────────────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-black text-white p-4 md:p-6 lg:p-8">
+    <AdminShell active="backtest">
+    {/* Self-contained dark surface so the page's hardcoded white text stays
+        readable inside the theme-aware AdminShell chrome (token migration TODO). */}
+    <div className="min-h-[calc(100vh-3.5rem)] bg-black text-white p-4 md:p-6 lg:p-8">
       {/* ── Header ── */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
         <div>
@@ -666,6 +670,7 @@ export default function MlbBacktest() {
         </>
       ) : null}
     </div>
+    </AdminShell>
   );
 }
 
