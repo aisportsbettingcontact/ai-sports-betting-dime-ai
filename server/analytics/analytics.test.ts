@@ -18,3 +18,11 @@ describe("analytics router derives device server-side", () => {
     expect(src).toMatch(/sanitizeRoutePattern\(input\.route\)/);
   });
 });
+
+describe("analytics router exposes an owner-gated overview", () => {
+  it("routes overview by role and never queries TiDB from the web", () => {
+    expect(src).toMatch(/overview:\s*ownerProcedure\.query/);
+    expect(src).toMatch(/forwardOverviewRead/);
+    expect(src).toMatch(/getAnalyticsOverview/);
+  });
+});
