@@ -38,6 +38,7 @@ import { getCircuitStatus, getCacheStats } from "../dbCircuitBreaker";
 import { getDb, listGames, getCacheHealthStats, getAvailableDates, forceInvalidateGamesCache } from "../db";
 import { ensureDebugLogsTable } from "./debugLogger";
 import { registerRgProxyRoute } from "../rotogrinderProxy";
+import { registerAnalyticsIngestRoute } from "../analytics/ingestRoute";
 import { registerStripeWebhookRoute } from "../stripeWebhook";
 import { registerFgLineupsHeartbeat } from "../fangraphsLineupHeartbeat";
 import { registerRotoLineupsHeartbeat } from "../rotowireLineupHeartbeat";
@@ -659,6 +660,11 @@ async function startServer() {
   registerDiscordInviteRoutes(app);
   // Rotogrinders server-side proxy — PAUSED (set ROTOGRINDERS_PAUSED=false in jackMac.ts to re-enable scheduler too)
   // registerRgProxyRoute(app);  // PAUSED
+
+  // User Activity analytics ingestion — private, secret-gated, served ONLY on
+  // the back office (store role); returns 404 on the web instance. Inert until
+  // ANALYTICS_ROLE=store + ANALYTICS_INGEST_SECRET are set. See server/analytics.
+  registerAnalyticsIngestRoute(app);
 
   // ─── Fangraphs lineup Heartbeat ─────────────────────────────────────────
   // POST /api/scheduled/fg-lineups — called every 10 min by Manus Heartbeat
