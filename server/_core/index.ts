@@ -36,6 +36,7 @@ import { getCircuitStatus, getCacheStats } from "../dbCircuitBreaker";
 import { getDb, listGames, getCacheHealthStats, getAvailableDates, forceInvalidateGamesCache } from "../db";
 import { ensureDebugLogsTable } from "./debugLogger";
 import { registerAnalyticsIngestRoute } from "../analytics/ingestRoute";
+import { registerAnalyticsReadRoute } from "../analytics/readRoute";
 import { registerStripeWebhookRoute } from "../stripeWebhook";
 import { registerWc2026Heartbeats } from "../wc2026/wc2026Heartbeat";
 import { registerCronRoutes } from "../cron/cronRoutes";
@@ -658,6 +659,7 @@ async function startServer() {
   // the back office (store role); returns 404 on the web instance. Inert until
   // ANALYTICS_ROLE=store + ANALYTICS_INGEST_SECRET are set. See server/analytics.
   registerAnalyticsIngestRoute(app);
+  registerAnalyticsReadRoute(app);
 
   // ─── WC2026 Heartbeats ───────────────────────────────────────────────────
   // POST /api/scheduled/wc2026-odds    — every 30 min (5 min near kickoff)

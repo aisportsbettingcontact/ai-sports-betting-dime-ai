@@ -8,13 +8,15 @@
  * Client-supplied identity/entitlement is ignored; only the validated envelope
  * (event name allowlist + schema version + bounded props) is accepted.
  */
-import { appUserProcedure } from "./appUsers";
+import { appUserProcedure, ownerProcedure } from "./appUsers";
 import { router } from "../_core/trpc";
 import { trackInputSchema, sanitizeProps } from "../analytics/events";
-import { isTestUser } from "../analytics/config";
+import { isTestUser, getAnalyticsRole } from "../analytics/config";
 import { deriveDeviceFromUA, reconcileDeviceType } from "../analytics/device";
 import { sanitizeRoutePattern } from "../analytics/routePattern";
 import { dispatchStoredEvent } from "../analytics/dispatch";
+import { getAnalyticsOverview, disabledOverview } from "../analytics/read";
+import { forwardOverviewRead } from "../analytics/readForward";
 import type { StoredEvent } from "../analytics/store";
 
 export const analyticsRouter = router({
@@ -53,5 +55,19 @@ export const analyticsRouter = router({
     };
     const r = await dispatchStoredEvent(event);
     return { ok: true as const, routed: r.routed };
+  }),
+
+  // Owner-only device-aware overview. Role-routes: forwarder proxies to the back
+  // office, store queries MySQL: Dime AI, disabled returns honest not_measured.
+  // Never throws — analytics reads must not break the admin page.
+  overview: ownerProcedure.query(async () => {
+    const role = getAnalyticsRole();
+    try {
+      if (role === "forwarder") return await forwardOverviewRead();
+      if (role === "store") return await getAnalyticsOverview();
+      return disabledOverview("analytics pipeline disabled");
+    } catch {
+      return disabledOverview("analytics overview unavailable");
+    }
   }),
 });
