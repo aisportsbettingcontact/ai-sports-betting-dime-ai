@@ -81,7 +81,7 @@ describe("appUsers router — procedures called by UserManagement.tsx", () => {
   });
 });
 
-describe("metrics router — procedures called by UserManagement.tsx", () => {
+describe("metrics router — procedures called by UserActivity.tsx", () => {
   const procedures = [
     "getSessionMetrics",
     "getMemberMetrics",

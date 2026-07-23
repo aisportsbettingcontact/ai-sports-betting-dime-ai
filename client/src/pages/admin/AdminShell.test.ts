@@ -34,6 +34,10 @@ const publishSource = fs.readFileSync(
   path.join(import.meta.dirname, "..", "PublishProjections.tsx"),
   "utf8"
 );
+const userActivitySource = fs.readFileSync(
+  path.join(import.meta.dirname, "..", "UserActivity.tsx"),
+  "utf8"
+);
 
 describe("AdminShell — shared admin chrome", () => {
   it("owns no auth logic — doc comment states RequireOwner + server ownerProcedure are the real boundary", () => {
@@ -43,9 +47,9 @@ describe("AdminShell — shared admin chrome", () => {
     expect(shellSource).toMatch(/not a security boundary/i);
   });
 
-  it("renders exactly two tabs, User Management before Publish Projections", () => {
+  it("renders exactly three tabs, User Management before User Activity before Publish Projections", () => {
     expect(shellSource).toMatch(
-      /const TABS: Array<\{ key: AdminTab; label: string; path: string \}> = \[\s*\{ key: "users", label: "User Management", path: "\/admin\/users" \},\s*\{ key: "publish", label: "Publish Projections", path: "\/admin\/publish" \},\s*\];/
+      /const TABS: Array<\{ key: AdminTab; label: string; short: string; path: string \}> = \[\s*\{ key: "users", label: "User Management", short: "Users", path: "\/admin\/users" \},\s*\{ key: "activity", label: "User Activity", short: "Activity", path: "\/admin\/activity" \},\s*\{ key: "publish", label: "Publish Projections", short: "Publish", path: "\/admin\/publish" \},\s*\];/
     );
   });
 
@@ -150,5 +154,15 @@ describe("PublishProjections renders inside AdminShell", () => {
     expect(publishSource).toMatch(
       /if \(!authLoading && \(!appUser \|\| !isOwner\)\) \{\s*setLocation\("\/feed\/model\/mlb"\);/
     );
+  });
+});
+
+describe("UserActivity renders inside AdminShell", () => {
+  it("imports AdminShell and wraps the authenticated render in it, active=\"activity\"", () => {
+    expect(userActivitySource).toMatch(
+      /import \{ AdminShell \} from "@\/pages\/admin\/AdminShell";/
+    );
+    expect(userActivitySource).toMatch(/<AdminShell active="activity">/);
+    expect(userActivitySource).toMatch(/<\/AdminShell>\s*\n\s*\);\s*\n\}/);
   });
 });
