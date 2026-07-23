@@ -1,0 +1,103 @@
+name: DB Drop legacy tables (one-shot)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# One-shot maintenance: drop the two orphaned tables left by the retired
+# Jack Mac / RotoGrinders integrations — jack_mac_sync_jobs and rg_session_cache.
+#
+# Why this exists instead of db-push.yml: production's drizzle __drizzle_migrations
+# journal is behind the live schema (tables from migration 0112+ were applied via
+# `drizzle-kit push`, not file replay), so `drizzle-kit migrate` collides on an
+# earlier CREATE and never reaches migration 0115's DROPs. This job drops the two
+# tables directly and idempotently (DROP TABLE IF EXISTS), then verifies they are
+# gone — no free-text SQL, fixed statements only, no data selected or printed.
+#
+# Both tables live in the DATABASE_URL cluster (MW3FicTy7ae3qrm8dx8Lua). They hold
+# only sync-job telemetry + a 25-min session-cookie cache — no user data — and no
+# deployed code references them. Safe to run at any time; re-running is a no-op.
+#
+# Manual trigger only. Requires typing DROP into the `confirm` input to run.
+# ─────────────────────────────────────────────────────────────────────────────
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type DROP to confirm dropping jack_mac_sync_jobs + rg_session_cache'
+        required: true
+        default: ''
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: db-drop-legacy-tables
+  cancel-in-progress: false
+
+jobs:
+  drop:
+    name: Drop orphaned legacy tables
+    runs-on: ubuntu-latest
+    steps:
+      - name: Guard — require typed confirmation
+        run: |
+          if [ "${{ inputs.confirm }}" != "DROP" ]; then
+            echo "::error::Refusing to run — set the 'confirm' input to exactly DROP."
+            exit 1
+          fi
+
+      - name: Install MySQL client
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq mysql-client
+
+      - name: Build client config from DATABASE_URL (secret never printed)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          if [ -z "${DATABASE_URL:-}" ]; then echo "::error::DATABASE_URL secret is not set"; exit 1; fi
+          python3 - <<'PY'
+          import os, urllib.parse, stat
+          u = urllib.parse.urlparse(os.environ["DATABASE_URL"])
+          if not u.hostname: raise SystemExit("DATABASE_URL is not a valid mysql:// URL")
+          db = (u.path or "/").lstrip("/")
+          cnf = ("[client]\n"
+                 f"host={u.hostname}\n"
+                 f"port={u.port or 4000}\n"
+                 f"user={urllib.parse.unquote(u.username or '')}\n"
+                 f"password={urllib.parse.unquote(u.password or '')}\n"
+                 "ssl-mode=REQUIRED\n")
+          open("client.cnf","w").write(cnf)
+          os.chmod("client.cnf", stat.S_IRUSR|stat.S_IWUSR)
+          open("dbname.txt","w").write(db)
+          print(f"client.cnf written (password omitted): host={u.hostname} port={u.port or 4000} db={db}")
+          PY
+
+      - name: Drop + verify (fixed statements only)
+        run: |
+          set -uo pipefail
+          DB="$(cat dbname.txt)"
+          M() { mysql --defaults-extra-file=client.cnf -D "$DB" -N -e "$1"; }
+
+          echo "===== BEFORE: do the tables exist? ====="
+          BEFORE_JM=$(M "SHOW TABLES LIKE 'jack_mac_sync_jobs';" | wc -l)
+          BEFORE_RG=$(M "SHOW TABLES LIKE 'rg_session_cache';" | wc -l)
+          echo "jack_mac_sync_jobs present: $BEFORE_JM   rg_session_cache present: $BEFORE_RG"
+
+          echo "===== DROP (idempotent) ====="
+          M "DROP TABLE IF EXISTS jack_mac_sync_jobs;"
+          M "DROP TABLE IF EXISTS rg_session_cache;"
+          echo "drop statements executed"
+
+          echo "===== AFTER: confirm both are gone ====="
+          AFTER_JM=$(M "SHOW TABLES LIKE 'jack_mac_sync_jobs';" | wc -l)
+          AFTER_RG=$(M "SHOW TABLES LIKE 'rg_session_cache';" | wc -l)
+          echo "jack_mac_sync_jobs present: $AFTER_JM   rg_session_cache present: $AFTER_RG"
+
+          if [ "$AFTER_JM" -ne 0 ] || [ "$AFTER_RG" -ne 0 ]; then
+            echo "::error::One or both tables still present after DROP."
+            exit 1
+          fi
+          echo "VERIFIED: both tables dropped."
+
+      - name: Cleanup
+        if: always()
+        run: rm -f client.cnf dbname.txt
