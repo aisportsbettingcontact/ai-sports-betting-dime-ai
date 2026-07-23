@@ -35,7 +35,7 @@ export async function generateImage(
   options: GenerateImageOptions
 ): Promise<GenerateImageResponse> {
   if (!ENV.forgeApiUrl || !ENV.forgeApiKey) {
-    throw new Error("Image generation is unavailable: BUILT_IN_FORGE_* not configured (Manus-only feature)");
+    throw new Error("Image generation is unavailable: BUILT_IN_FORGE_* not configured (legacy platform feature)");
   }
 
   // Build the full URL by appending the service path to the base URL

@@ -16,7 +16,6 @@ import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { startDailyPurgeSchedule } from "../dailyPurge";
 import { startVsinAutoRefresh } from "../vsinAutoRefresh";
-import { startNbaModelSyncScheduler } from "../nbaModelSync";
 import { startNhlModelSyncScheduler } from "../nhlModelSync";
 import { startNhlGoalieWatcher } from "../nhlGoalieWatcher";
 import { startDiscordBot } from "../discord/bot";
@@ -33,15 +32,11 @@ import { prewarmSlateCache } from "../actionNetwork";
 import { startBetAutoGradeScheduler } from "../betAutoGradeScheduler";
 import { startMlbOutcomeAndDriftScheduler } from "../mlbOutcomeAndDriftScheduler";
 import { startMlbModelSyncScheduler } from "../mlbModelRunner";
-// startJackMacScheduler removed — Jack Mac tab purged
 import { getCircuitStatus, getCacheStats } from "../dbCircuitBreaker";
 import { getDb, listGames, getCacheHealthStats, getAvailableDates, forceInvalidateGamesCache } from "../db";
 import { ensureDebugLogsTable } from "./debugLogger";
-import { registerRgProxyRoute } from "../rotogrinderProxy";
 import { registerAnalyticsIngestRoute } from "../analytics/ingestRoute";
 import { registerStripeWebhookRoute } from "../stripeWebhook";
-import { registerFgLineupsHeartbeat } from "../fangraphsLineupHeartbeat";
-import { registerRotoLineupsHeartbeat } from "../rotowireLineupHeartbeat";
 import { registerWc2026Heartbeats } from "../wc2026/wc2026Heartbeat";
 import { registerCronRoutes } from "../cron/cronRoutes";
 import { registerDimeChatRoute } from "../dime-chat.route";
@@ -55,9 +50,9 @@ import { resolveOwnerIdentity } from "../ownerAuth";
 import { installFatalErrorHandler } from "./fatalErrorHandler";
 
 // ─── Owner-only app_session auth (Railway-native) ──────────────────────────────
-// The legacy owner debug endpoints authenticated via the Manus SDK request-auth
-// helper + an OWNER_OPEN_ID comparison against the Manus OAuth server — permanently
-// dead off Manus. This mirrors ownerProcedure() in routers/appUsers.ts: verify the
+// The legacy owner debug endpoints authenticated via the retired platform's SDK
+// request-auth helper + an OWNER_OPEN_ID comparison against its OAuth server —
+// permanently dead now. This mirrors ownerProcedure() in routers/appUsers.ts: verify the
 // app_session JWT with ENV.cookieSecret, require type === "app_user", load the user
 // row (DB-authoritative — NEVER trust payload.role, a JWT is signed at login and a
 // later demotion must take effect immediately), enforce the tokenVersion check, then
@@ -356,7 +351,7 @@ async function startServer() {
   console.log(`[SERVER_STARTUP] Registering compression middleware`);
   app.use(compression({ threshold: 512 }));
 
-  // Trust the first proxy (Manus edge) so req.protocol reflects
+  // Trust the first proxy (Railway edge) so req.protocol reflects
   // the original HTTPS scheme and cookies are set correctly (sameSite+secure).
   // Also required for express-rate-limit to read the real client IP from
   // X-Forwarded-For rather than the proxy IP.
@@ -388,7 +383,7 @@ async function startServer() {
         imgSrc: ["'self'", "data:", "blob:", "https:", "http:"],
         connectSrc: ["'self'", "wss:", "ws:", "https:"],
         frameSrc: [
-          "'self'", // same-origin iframes (Rotogrinders proxy)
+          "'self'", // same-origin iframes
           "https://js.stripe.com",
           "https://*.js.stripe.com",
           "https://checkout.stripe.com", // Embedded Checkout session iframe
@@ -527,7 +522,7 @@ async function startServer() {
   app.use("/api", globalApiLimiter);
 
   // ─── Auth-specific rate limiters ─────────────────────────────────────────
-  // Manus OAuth callback — 5 attempts per 15 min per IP
+  // Legacy OAuth callback — 5 attempts per 15 min per IP
   app.use("/api/oauth", authLimiter);
 
   // Discord OAuth routes — 5 attempts per 15 min per IP
@@ -647,7 +642,7 @@ async function startServer() {
     next();
   });
 
-  // Storage proxy — serves /manus-storage/* paths via signed Forge URLs
+  // Storage proxy — serves /dime-storage/* asset paths (local-first)
   console.log(`[SERVER_STARTUP] Registering storage proxy routes`);
   registerStorageProxy(app);
   // OAuth callback under /api/oauth/callback
@@ -658,26 +653,11 @@ async function startServer() {
   registerDiscordAuthRoutes(app);
   registerDiscordLoginRoutes(app);
   registerDiscordInviteRoutes(app);
-  // Rotogrinders server-side proxy — PAUSED (set ROTOGRINDERS_PAUSED=false in jackMac.ts to re-enable scheduler too)
-  // registerRgProxyRoute(app);  // PAUSED
 
   // User Activity analytics ingestion — private, secret-gated, served ONLY on
   // the back office (store role); returns 404 on the web instance. Inert until
   // ANALYTICS_ROLE=store + ANALYTICS_INGEST_SECRET are set. See server/analytics.
   registerAnalyticsIngestRoute(app);
-
-  // ─── Fangraphs lineup Heartbeat ─────────────────────────────────────────
-  // POST /api/scheduled/fg-lineups — called every 10 min by Manus Heartbeat
-  // Writes today + tomorrow MLB lineup tabs. Zero RotoGrinders code.
-  console.log(`[SERVER_STARTUP] Registering Fangraphs lineup heartbeat route`);
-  registerFgLineupsHeartbeat(app);
-
-  // ─── Rotowire lineup Heartbeat ──────────────────────────────────────────
-  // POST /api/scheduled/roto-lineups — called every 10 min by Manus Heartbeat
-  // Scrapes Rotowire today + tomorrow lineups → writes MM-DD-YYYY LINEUPS tabs.
-  // Schema: BATTING_ORDER (J) | BATTER_NAME (K) | BAT_HAND (L) | POSITION (M)
-  console.log(`[SERVER_STARTUP] Registering Rotowire lineup heartbeat route`);
-  registerRotoLineupsHeartbeat(app);
 
   // ─── WC2026 Heartbeats ───────────────────────────────────────────────────
   // POST /api/scheduled/wc2026-odds    — every 30 min (5 min near kickoff)
@@ -686,7 +666,7 @@ async function startServer() {
   console.log(`[SERVER_STARTUP] Registering WC2026 heartbeat routes`);
   registerWc2026Heartbeats(app);
 
-  // ─── GitHub Actions cron endpoints (off-Manus data freshness) ────────────
+  // ─── GitHub Actions cron endpoints (data freshness) ──────────────────────
   // POST /api/cron/vsin-odds · /api/cron/scores — fired by GitHub Actions on a
   // timer, shared-secret authed (CRON_SECRET). These replace the always-on
   // in-process schedulers gated off via DISABLE_BACKGROUND_JOBS on Railway.
@@ -822,8 +802,6 @@ async function startServer() {
     startDailyPurgeSchedule();
     // Auto-refresh VSiN book odds every 30 minutes (6am–midnight PST)
     startVsinAutoRefresh();
-    // Auto-sync NBA model projections from Google Sheet every 3 hours (9AM–midnight PST)
-    startNbaModelSyncScheduler();
     // NHL model sync — runs every 30 min (9AM–9PM PST), models unmodeled NHL games
     startNhlModelSyncScheduler();
     // NHL goalie watcher — checks RotoWire every 10 min for goalie changes, re-runs model on scratch
@@ -853,13 +831,12 @@ async function startServer() {
     // Catch-all safety net: models any game with pitchers+lines but modelRunAt=null
     // Idempotent: modelRunAt IS NULL guard prevents re-running already-modeled games
     startMlbModelSyncScheduler();
-    // Jack Mac scheduler removed — tab purged
     // Security digest — daily at 08:00 EST (13:00 UTC), sends 24h threat summary via notifyOwner()
     startSecurityDigestScheduler();
     // Weekly security threat trend digest — every Sunday at 08:00 EST, 7-day bar chart + top IPs
     startWeeklySecurityDigestScheduler();
 
-    // ── Startup DB backfills + Fangraphs scrape loop (MOVED inside the guard) ──
+    // ── Startup DB backfills (MOVED inside the guard) ──
     // These write to the DB / scrape an upstream feed on a timer. Previously they
     // ran outside the DISABLE_BACKGROUND_JOBS guard, so every web replica executed
     // them — double-writing the backfills and duplicating the 30-min scrape. They
@@ -881,26 +858,6 @@ async function startServer() {
         .catch((err: unknown) => console.warn('[Startup] [MLBAM_BACKFILL] K-Props startup backfill failed (non-fatal):', err));
     }).catch((err: unknown) => console.warn('[Startup] [MLBAM_BACKFILL] Import failed (non-fatal):', err));
 
-    // ── Lineup cache pre-warm + recurring 30-min Fangraphs scrape loop ─────────
-    // Pre-fetch MLB lineups at startup so the first LINEUPS tab load is instant,
-    // then refresh every 30 minutes. This scrapes an upstream feed on a timer, so
-    // a web-only replica must skip it (the next user request triggers a live fetch).
-    import('../fangraphsScraper').then(({ scrapeFangraphsLineups }) => {
-      // Initial pre-fetch: 3 seconds after startup (avoids blocking the listen callback)
-      setTimeout(() => {
-        scrapeFangraphsLineups()
-          .then(r => console.log(`[Startup] [LINEUP_CACHE] Pre-warmed: today=${r.today.games.length} tomorrow=${r.tomorrow.games.length}`))
-          .catch((err: unknown) => console.warn('[Startup] [LINEUP_CACHE] Pre-fetch failed (non-fatal):', err));
-      }, 3000);
-      // Recurring refresh: every 30 minutes (force-refresh to bypass cache)
-      const lineupRefreshInterval = setInterval(() => {
-        scrapeFangraphsLineups(true)
-          .then(r => console.log(`[Scheduler] [LINEUP_CACHE] Refreshed: today=${r.today.games.length} tomorrow=${r.tomorrow.games.length}`))
-          .catch((err: unknown) => console.warn('[Scheduler] [LINEUP_CACHE] Refresh failed (non-fatal):', err));
-      }, 30 * 60 * 1000);
-      lineupRefreshInterval.unref();
-      console.log('[Startup] [LINEUP_CACHE] Lineup cache pre-warm scheduled (startup + every 30 min)');
-    }).catch((err: unknown) => console.warn('[Startup] [LINEUP_CACHE] Import failed (non-fatal):', err));
     } // ── end recurring background jobs (DISABLE_BACKGROUND_JOBS guard) ──
     // ── DB keep-alive ping ──────────────────────────────────────────────────
     // TiDB Serverless drops idle connections after ~5 minutes. Without a

@@ -1,4 +1,4 @@
-# GitHub Actions cron endpoints (off-Manus data freshness)
+# GitHub Actions cron endpoints (off the legacy platform — data freshness)
 
 Replaces the always-on in-process `setInterval` schedulers (which burn Railway
 credits 24/7) with GitHub-Actions-driven, on-demand runs.
@@ -19,11 +19,11 @@ in the background under a single-flight run-lock (no overlapping runs).
 | `POST /api/cron/scores` | `refreshAllScoresNow()` — live scores | `cron-scores.yml` | every 10 min |
 | `GET  /api/cron/status` | run-lock state for all jobs (observability) | — | — |
 
-## Why not reuse the Manus `/api/scheduled/*` auth
+## Why not reuse the legacy `/api/scheduled/*` auth
 
 Those endpoints authenticate via `sdk.authenticateRequest()` → `verifySession()`
-against the **Manus OAuth server**, accepting only a session whose `openId` is
-prefixed `cron_` (issued exclusively by the Manus Heartbeat platform). A GitHub
+against the **legacy OAuth server**, accepting only a session whose `openId` is
+prefixed `cron_` (issued exclusively by the legacy heartbeat platform). A GitHub
 Actions runner has no such cookie, so it can never pass that guard. These
 endpoints therefore use a host-independent shared secret instead — see
 `cronAuth.ts`.

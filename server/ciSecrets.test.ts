@@ -4,7 +4,7 @@
  * Validates that all required GitHub Actions secrets are correctly injected
  * into the CI test environment. This test is the canary that catches missing
  * or misconfigured secrets before they cause cryptic failures in downstream
- * tests (e.g., database connection errors, auth failures, NBA sync failures).
+ * tests (e.g., database connection errors, auth failures).
  *
  * [INPUT]  Environment variables injected from GitHub repository secrets
  * [STEP]   Validate each required secret: present, non-empty, correct format
@@ -25,21 +25,17 @@
  *                       Format: https://aisportsbettingmodels.com (no trailing slash)
  *                       Used by: discordAuth.test.ts, CSRF middleware
  *
- *   VITE_APP_ID       — Manus OAuth application ID
+ *   VITE_APP_ID       — Legacy OAuth application ID (retired platform)
  *                       Format: alphanumeric string
  *                       Used by: OAuth flow tests
  *
- *   OAUTH_SERVER_URL  — Manus OAuth backend base URL
- *                       Format: https://api.manus.im (no trailing slash)
+ *   OAUTH_SERVER_URL  — Legacy OAuth backend base URL (retired platform)
+ *                       Format: https://<oauth-host> (no trailing slash)
  *                       Used by: OAuth flow tests
  *
- *   OWNER_OPEN_ID     — Owner's Manus open ID
+ *   OWNER_OPEN_ID     — Owner's legacy OAuth open ID
  *                       Format: alphanumeric string
  *                       Used by: owner-gated procedure tests
- *
- *   NBA_SHEET_ID      — Google Sheets ID for NBA model sync
- *                       Format: 44-char alphanumeric string (base64url)
- *                       Used by: nbaModelSync (asserted below)
  *
  * How to add these secrets to GitHub:
  *   1. Go to: https://github.com/<owner>/<repo>/settings/secrets/actions
@@ -95,27 +91,20 @@ const REQUIRED_SECRETS: SecretDescriptor[] = [
   },
   {
     key: "VITE_APP_ID",
-    description: "Manus OAuth application ID",
+    description: "Legacy OAuth application ID (retired platform)",
     minLength: 1,
   },
   {
     key: "OAUTH_SERVER_URL",
-    description: "Manus OAuth backend base URL",
+    description: "Legacy OAuth backend base URL (retired platform)",
     minLength: 10,
     format: /^https?:\/\/.+/,
-    formatDescription: "https://api.manus.im",
+    formatDescription: "https://<oauth-host> (no trailing slash)",
   },
   {
     key: "OWNER_OPEN_ID",
-    description: "Owner's Manus open ID",
+    description: "Owner's legacy OAuth open ID",
     minLength: 1,
-  },
-  {
-    key: "NBA_SHEET_ID",
-    description: "Google Sheets ID for NBA model sync",
-    minLength: 20,
-    format: /^[A-Za-z0-9_\-]+$/,
-    formatDescription: "44-char alphanumeric base64url string",
   },
 ];
 
@@ -133,7 +122,7 @@ function safePreview(value: string): string {
 // ─── Test suite ───────────────────────────────────────────────────────────────
 // Skipped in CI because the repository does not actually configure the secret
 // set this file documents (verified 2026-07-12: 7 Actions secrets exist;
-// DATABASE_URL, PUBLIC_ORIGIN, NBA_SHEET_ID and the OAuth/Discord/VSIN values
+// DATABASE_URL, PUBLIC_ORIGIN and the OAuth/Discord/VSIN values
 // are absent). Until those secrets are provisioned this suite can only
 // validate a real operator environment; once they exist, remove this guard so
 // the suite becomes the CI canary its header describes. The skip is declared
@@ -267,20 +256,5 @@ describe.skipIf(IS_CI)("CI secrets validation", () => {
       "PUBLIC_ORIGIN must start with http:// or https://"
     ).toBe(true);
     console.log("[VERIFY] PASS — PUBLIC_ORIGIN is set and format-valid");
-  });
-
-  it("NBA_SHEET_ID is set and matches Google Sheets ID format", () => {
-    const value = process.env.NBA_SHEET_ID ?? "";
-    console.log(`[INPUT] NBA_SHEET_ID: ${safePreview(value)}`);
-    expect(value.length, "NBA_SHEET_ID is not set").toBeGreaterThan(0);
-    expect(
-      value.length,
-      `NBA_SHEET_ID too short (${value.length} chars, min 20)`
-    ).toBeGreaterThanOrEqual(20);
-    expect(
-      /^[A-Za-z0-9_\-]+$/.test(value),
-      "NBA_SHEET_ID must be alphanumeric (base64url characters only)"
-    ).toBe(true);
-    console.log(`[VERIFY] PASS — NBA_SHEET_ID is set, length=${value.length}`);
   });
 });

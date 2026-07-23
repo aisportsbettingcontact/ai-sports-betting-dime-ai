@@ -11,8 +11,8 @@
  *   1. extractGameId() correctly parses URL and bare ID
  *   2. scrapeEspnScoreboard() returns events for today
  *   3. scrapeEspnMatch() returns full EspnMatchData for gameId 760487
- *   4. Log file is written to .manus-logs/espn-scraper.log
- *   5. Stats file is written to .manus-logs/espn-scraper-stats.json
+ *   4. Log file is written to .scraper-logs/espn-scraper.log
+ *   5. Stats file is written to .scraper-logs/espn-scraper-stats.json
  *   6. All validation gates pass (header, teamStats, keyEvents, rosters)
  */
 

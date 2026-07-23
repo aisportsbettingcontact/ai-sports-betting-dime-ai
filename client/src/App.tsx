@@ -38,7 +38,6 @@ const NhlTeamSchedule = lazy(() => import("./pages/NhlTeamSchedule"));
 const BetTracker = lazy(() => import("@/pages/BetTracker"));
 const AdminModelStatus = lazy(() => import("@/pages/AdminModelStatus"));
 const PostponedGames = lazy(() => import("@/pages/PostponedGames"));
-const Resources = lazy(() => import("@/pages/Resources"));
 const MlbBacktest = lazy(() => import("@/pages/MlbBacktest"));
 const ResetPassword = lazy(() => import("@/pages/ResetPassword"));
 
@@ -90,7 +89,7 @@ import type { SplitsDateSource } from "./pages/dime-shell/splitsDateState";
  *   NEW: return LandingPage immediately → auth resolves → redirect if authenticated
  *   Result: Loading shell dismissed the moment React mounts (0ms after JS executes).
  *
- * [FIX] Uses useAppAuth (Discord JWT) instead of useAuth (Manus OAuth) so that
+ * [FIX] Uses useAppAuth (Discord JWT) instead of useAuth (legacy OAuth) so that
  * Discord-logged-in users are correctly detected and redirected to the feed.
  *
  * [FIX] Reads sessionStorage.pendingCheckout after login to auto-trigger checkout.
@@ -435,13 +434,6 @@ function Router() {
           {() => (
             <RequireAuth>
               <BetTracker />
-            </RequireAuth>
-          )}
-        </Route>
-        <Route path="/resources">
-          {() => (
-            <RequireAuth>
-              <Resources />
             </RequireAuth>
           )}
         </Route>

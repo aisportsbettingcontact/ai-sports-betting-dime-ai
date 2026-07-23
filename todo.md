@@ -16,7 +16,7 @@
 - [x] Add tRPC router: files.upload, files.list, files.delete
 - [x] Add tRPC router: games.list (reads from DB)
 - [x] Build XLSX/CSV parser on server to ingest uploaded files into games table
-- [x] Build Login page (Manus OAuth sign-in)
+- [x] Build Login page (legacy OAuth sign-in)
 - [x] Build Dashboard page (MODEL PROJECTIONS with game cards, sport tabs, date grouping)
 - [x] Build File Manager page (upload CSV/XLSX, list files with status, delete)
 - [x] Wire App.tsx routes: /, /login, /files
@@ -26,17 +26,17 @@
 - [x] Write vitest tests for fileParser (13 tests passing)
 - [x] Re-upload logos with original filenames (no hash suffix)
 - [x] Save checkpoint and deliver
-- [x] Inspect Google Sheets structure and verify public CSV export access
-- [x] Build server-side Google Sheets sync (fetch latest sheet, parse, upsert games)
+- [x] Inspect legacy sheet-sync structure and verify public CSV export access
+- [x] Build server-side legacy sheet sync (fetch latest sheet, parse, upsert games)
 - [x] Add tRPC procedures: sheets.syncLatest (public) and sheets.syncAll (protected)
 - [x] Add auto-sync on dashboard load + manual refresh button with status indicator
-- [x] Save checkpoint with Sheets integration
+- [x] Save checkpoint with legacy sheet-sync integration
 - [x] Remove NFL and NCAAF tabs from dashboard sport selector
 - [x] Verify all 62 NCAAM logos are present in S3 storage
 - [x] Re-upload any missing logos (none missing)
 - [x] Ensure teamLogos.ts has all 62 entries in A-Z order
 - [x] Rebuild GameCard to match reference screenshot (date header, BOOKS/MODEL LINE/MODEL O/U columns, team rows with logo+spread+O/U pills, edge footer)
-- [x] Rewrite GameCard to match reference implementation (edge color scale, consensus column, dark pills, formatTeamName, framer-motion) with Google Sheets data
+- [x] Rewrite GameCard to match reference implementation (edge color scale, consensus column, dark pills, formatTeamName, framer-motion) with legacy sheet-sync data
 - [x] Scrape ESPN NCAAM teams page and build slug→ESPN logo URL map
 - [x] Update GameCard to use ESPN CDN logo URLs instead of local PNGs
 - [x] Add espn_teams table to DB schema (slug, espn_id, display_name, conference, sport)
@@ -67,7 +67,7 @@
 - [x] Show two-line team names in GameCard: school name on top, nickname on bottom
 - [x] Enforce strict single-line per row for school name and nickname (no wrapping, truncate with ellipsis)
 - [x] Widen name column so no school names are ever truncated
-- [x] Update Google Sheets sync to pull from 03-03-2026 tab
+- [x] Update legacy sheet sync to pull from 03-03-2026 tab
 - [x] Fix fileParser to be header-name-driven (handles any column order)
 - [x] Add teamNormalizer to convert display names to snake_case slugs
 - [x] Expand ESPN ID map and team nicknames map to cover all NCAAM teams (200+ teams)
@@ -77,7 +77,7 @@
 - [x] Frontend: Owner-only User Management panel (create/edit/delete accounts)
 - [x] Add "User Management" to profile dropdown for owner role only
 - [x] Create @prez owner account (aisportbettingcontact@gmail.com, Tailered101$, lifetime access)
-- [x] Replace Manus OAuth with custom email/password authentication on Login page
+- [x] Replace legacy OAuth with custom email/password authentication on Login page
 - [x] Add auth guards to Dashboard and UserManagement pages
 - [x] Test login flow end-to-end with @prez credentials
 - [x] Test User Management CRUD (create, delete)
@@ -90,7 +90,7 @@
 - [x] Call acceptTerms mutation when user clicks "I Understand & Accept"
 - [x] Add TERMS column to User Management dashboard table showing accepted/pending status
 - [x] Redesign Home page as paywall landing (feature highlights + inline login panel, no redirect)
-- [x] Remove Manus OAuth sign-in button and all Manus branding from public-facing pages
+- [x] Remove legacy OAuth sign-in button and all legacy-platform branding from public-facing pages
 - [x] Add Stay Logged In checkbox to login form (extends session to 90 days vs 1 day)
 - [x] Gate dashboard behind app_session cookie check; redirect unauthenticated users to home
 - [x] Add per-column filter/sort dropdowns to User Management table (sort asc/desc + multi-select filter per column)
@@ -106,7 +106,7 @@
 - [x] Fix game feed: only show games for today's date (EST), remove previous days' games automatically
 - [x] Fix todayEst() date format mismatch: was MM-DD-YYYY, now YYYY-MM-DD to match DB storage (parseDate output)
 - [x] Add daily 6am EST cron job to delete games older than today (purge previous day's games automatically)
-- [x] Replace all user-facing "Google Sheets" references with "Model Database"
+- [x] Replace all user-facing legacy sheet-sync references with "Model Database"
 - [x] Scrape WagerTalk for 40 March 4 NCAAM games (22 regular season + 18 conference tournament)
 - [x] Add gameType, conference, and publishedToFeed fields to games DB schema
 - [x] Import 40 March 4 games with Consensus odds, blank model projections, and unpublished status
@@ -128,8 +128,8 @@
 - [x] Add UL Lafayette (309), Georgia Southern (290), Lindenwood (2815) ESPN IDs to map
 - [x] Full audit: confirm all 40 March 4 games, lines/totals, and school names/nicknames
 - [x] Delete all March 3rd games from DB permanently
-- [x] Remove Google Sheets sync code (sheetsSync.ts, syncLatest/syncAll procedures, dashboard auto-sync call)
-- [x] Remove Sheets-related UI (sync button, status indicator) from Dashboard
+- [x] Remove legacy sheet-sync code (sheetsSync.ts, syncLatest/syncAll procedures, dashboard auto-sync call)
+- [x] Remove sheet-sync-related UI (sync button, status indicator) from Dashboard
 - [x] Reorder Publish Projections games to match WagerTalk order (by wagerTalkId / sortOrder)
 - [ ] Store VSIN_EMAIL and VSIN_PASSWORD as app secrets
 - [ ] Update vsinScraper to auto-login with stored credentials
@@ -1568,7 +1568,7 @@
 - [x] Wire automatic daily NHL model execution (scheduler every 30min 9AM-9PM PST, auto-approve after each run)
 
 ## UI/Discord Fixes (March 18, 2026)
-- [x] Fix Discord /auth/discord/connect 404 on production — moved all routes to /api/auth/discord/* (Manus proxy only forwards /api/* to Express)
+- [x] Fix Discord /auth/discord/connect 404 on production — moved all routes to /api/auth/discord/* (legacy platform proxy only forwards /api/* to Express)
 - [x] Deep-audit route registration chain: confirmed routes registered before serveStatic catch-all
 - [x] Add granular checkpoint logging at every layer of Discord OAuth flow (CHECKPOINT:1-9, A-C)
 - [x] Verify production build includes Discord routes (confirmed in dist/index.js at line 3184)
@@ -2223,10 +2223,10 @@
 ## Security Hardening Round 2 (Apr 10, 2026)
 - [x] Add GitHub Actions CI workflow: pnpm audit --audit-level=high + tsc --noEmit + vitest run
 - [x] Implement CSRF Origin header check in tRPC middleware (trpc.ts) with structured logging
-- [x] Set NBA_SHEET_ID in production secrets via Manus Secrets panel
-- [x] Add startup validation guard in nbaModelSync.ts — fail loudly if NBA_SHEET_ID is missing
+- [x] Set the sheet-sync ID env var in production secrets via the legacy Secrets panel
+- [x] Add startup validation guard in the NBA model sync (since retired) — fail loudly if its sheet ID env var is missing
 - [x] Add early-return guard in syncNbaModelFromSheet() when CSV_URL is empty
-- [x] Create nbaSheetId.test.ts — validates NBA_SHEET_ID format + live sheet reachability
+- [x] Create legacySheetId.test.ts — validates the sheet-sync ID format + live sheet reachability
 - [x] Fix auth.logout.test.ts mock req to include req.get() for CSRF middleware compatibility
 - [x] TypeScript: 0 errors | Vitest: 430/430 passing (23 test files)
 
@@ -2252,7 +2252,7 @@
 - [x] GitHub Secrets documentation (.github/SECRETS_SETUP.md) with all 7 required + 10 optional secrets
 
 ## Security Hardening Round 4 (2026-04-10)
-- [x] GitHub secrets set via API (7/7 confirmed): DATABASE_URL, JWT_SECRET, PUBLIC_ORIGIN, VITE_APP_ID, OAUTH_SERVER_URL, OWNER_OPEN_ID, NBA_SHEET_ID
+- [x] GitHub secrets set via API (7/7 confirmed): DATABASE_URL, JWT_SECRET, PUBLIC_ORIGIN, VITE_APP_ID, OAUTH_SERVER_URL, OWNER_OPEN_ID, and a legacy sheet-sync secret
 - [x] RATE_LIMIT events wired into all 3 Express rate limiter handlers (global, auth, trpc_auth)
 - [x] In-memory dedup guard on RATE_LIMIT events (1 DB write per IP per 60s, auto-prune at 5000 entries)
 - [x] AUTH_FAIL events wired into login mutation (4 failure paths: user_not_found, account_access_disabled, account_expired, invalid_password)
@@ -3009,8 +3009,8 @@
 
 ## Session: 2026-05-08 — RESOURCES Page Enhancements
 
-- [x] Build RESOURCES page server proxy at /api/rg-proxy (rotogrinderProxy.ts) with cheerio table scraping
-- [x] Fix Rotogrinders login endpoint (POST /sign-in with username/password fields)
+- [x] Build RESOURCES page server proxy at /api/rg-proxy (legacyResourceProxy.ts) with cheerio table scraping
+- [x] Fix the legacy resource-site login endpoint (POST /sign-in with username/password fields)
 - [x] Fix NAME cell parser (span.first() selector)
 - [x] Build Resources.tsx with 4-tab native sortable table UI
 - [x] Gate RESOURCES page to @prez and @lucianobets only (frontend + backend)
@@ -3028,7 +3028,7 @@
 ## Session: 2026-05-08 — RESOURCES Page Deep Fix & Enrichment
 
 - [x] ROOT CAUSE: Today Pitchers 0-row bug — pitchers table uses "PLAYER" column, hitters use "NAME"; parser filtered on row["NAME"] dropping ALL pitcher rows
-- [x] Fix rotogrinderProxy.ts: detect PLAYER vs NAME column, normalize to NAME in output
+- [x] Fix legacyResourceProxy.ts: detect PLAYER vs NAME column, normalize to NAME in output
 - [x] Add PLAYER_ID extraction from /players/slug-{id} href attribute
 - [x] Add MLB_ID resolution via MLB Stats API (statsapi.mlb.com) with 24h in-memory cache
 - [x] Add HEADSHOT_URL field per row (MLB static CDN img.mlbstatic.com)
@@ -3280,31 +3280,31 @@
 - [x] ForgotPasswordModal.tsx: remove name attr, autoComplete="off" on identifier input
 - [x] TypeScript: 0 errors | Tests: 655/655 pass
 
-## Session: 2026-05-15 — JACK MAC Tab
-- [x] useUrlState.ts: add 'jackmac' to FeedMobileTab type and VALID_TABS
-- [x] ModelProjections.tsx: add JACK MAC tab to FEED_TABS (MLB only, whitelist-gated render)
-- [x] ModelProjections.tsx: add JACK MAC view section (inline Resources content, all 4 sub-tabs)
+## Session: 2026-05-15 — LEGACY RESOURCES Tab
+- [x] useUrlState.ts: add the legacy-resources tab to FeedMobileTab type and VALID_TABS
+- [x] ModelProjections.tsx: add the LEGACY RESOURCES tab to FEED_TABS (MLB only, whitelist-gated render)
+- [x] ModelProjections.tsx: add the LEGACY RESOURCES view section (inline Resources content, all 4 sub-tabs)
 - [x] ModelProjections.tsx: remove RESOURCES dropdown entry
-- [x] rotogrinderProxy.ts: add 'sippi' to ALLOWED_USERNAMES
+- [x] legacyResourceProxy.ts: add 'sippi' to ALLOWED_USERNAMES
 - [x] Resources.tsx: add 'sippi' to ALLOWED set (fallback page still accessible)
 - [x] TypeScript: 0 errors | Tests: 655/655 passed
 
-## Session: 2026-05-15 — Google Sheets Sync + JACK MAC UX
-- [ ] Store GOOGLE_SERVICE_ACCOUNT_JSON secret
-- [ ] Install googleapis npm package
-- [ ] Create server/jackMacSheetsSync.ts — sync all 4 RG pages to Google Sheet tabs
-- [ ] Add jackMac.syncToSheets tRPC procedure (whitelist-gated)
-- [ ] Add REFRESH GOOGLE SHEETS button to JackMacView.tsx (#34A853, bold white, Sheets logo)
-- [ ] Reorder JACK MAC tab to leftmost position for @lucianobets only
+## Session: 2026-05-15 — Legacy Sheet Sync + LEGACY RESOURCES UX
+- [ ] Store the sheet-sync service-account secret
+- [ ] Install the sheets client npm package
+- [ ] Create server/legacyResourcesSheetSync.ts — sync all 4 RG pages to legacy sheet tabs
+- [ ] Add legacyResources.syncToSheets tRPC procedure (whitelist-gated)
+- [ ] Add REFRESH SHEET SYNC button to LegacyResourcesView.tsx (#34A853, bold white, sheet logo)
+- [ ] Reorder the LEGACY RESOURCES tab to leftmost position for @lucianobets only
 - [ ] TypeScript: 0 errors | Tests: pass
 
-## Session: 2026-05-15 - Fangraphs Lineup Scraper
+## Session: 2026-05-15 - Legacy Lineup Scraper
 
-- [x] Inspect Fangraphs scores page structure (headless browser, understand React-rendered lineup data)
-- [x] Build fangraphsScraper.ts: scrape lineups for today + tomorrow (PST dates), full logging (MLB Stats API)
-- [x] Integrate into jackMacSheetsSync.ts: append 2 new tabs (Today Lineups, Tomorrow Lineups)
-- [x] Add tRPC procedure: jackMac.getLineups (whitelist-gated)
-- [x] Add Fangraphs Lineups sub-tab to JackMacView.tsx (LINEUPS main tab in JackMacView)
+- [x] Inspect the legacy lineup-source scores page structure (headless browser, understand React-rendered lineup data)
+- [x] Build legacyLineupScraper.ts: scrape lineups for today + tomorrow (PST dates), full logging (MLB Stats API)
+- [x] Integrate into legacyResourcesSheetSync.ts: append 2 new tabs (Today Lineups, Tomorrow Lineups)
+- [x] Add tRPC procedure: legacyResources.getLineups (whitelist-gated)
+- [x] Add the Lineups sub-tab to LegacyResourcesView.tsx (LINEUPS main tab in LegacyResourcesView)
 - [x] Full end-to-end test: 678/678 tests pass, 15 MLB games with 9-player lineups verified
 
 ## Performance Audit Fixes (2026-05-16)
@@ -3641,7 +3641,7 @@
 - [x] TypeScript check: 0 errors
 - [x] Test suite: 723/723 passed
 
-## Session: 2026-05-19 - JACK MAC Fixes + Production Rebuild
+## Session: 2026-05-19 - LEGACY RESOURCES Fixes + Production Rebuild
 
 - [x] Fix normalizeName hyphen bug: replace(/-/g, " ") before stripping non-alpha chars — fixes Hao-Yu Lee → hao yu lee matching Hao Yu Lee in MLB API
 - [x] Add FIRST_NAME_ALIASES map (cameron → cam) for Cameron Schlittler MLB ID resolution
@@ -3659,12 +3659,12 @@
 
 - [x] ROOT CAUSE: Platform proxy kills HTTP requests at ~120s with raw "Service Unavailable" text; tRPC client JSON.parse fails → "Unexpected token 'S'"
 - [x] TIMING ANALYSIS: Sequential for loop 4 tabs × up to 20s = 80s + MLB ID resolution = can exceed 120s
-- [x] FIX 1: Parallelize 4 CSV fetches — replaced sequential for loop with Promise.all in syncJackMacToSheets
+- [x] FIX 1: Parallelize 4 CSV fetches — replaced sequential for loop with Promise.all in syncLegacyResourcesToSheets
 - [x] FIX 2: Background job pattern — syncToSheets returns { jobId } immediately; sync runs async via setImmediate
 - [x] FIX 3: Reduce MLB ID resolution timeout 5s → 3s per attempt
-- [x] Added startSyncJob() and getSyncJob() to jackMacSheetsSync.ts with 30-min TTL eviction
-- [x] Added getSyncStatus tRPC query to jackMac router
-- [x] Updated JackMacView: polling pattern with syncJobId state, 2s refetch interval, completion toast
+- [x] Added startSyncJob() and getSyncJob() to legacyResourcesSheetSync.ts with 30-min TTL eviction
+- [x] Added getSyncStatus tRPC query to legacyResources router
+- [x] Updated LegacyResourcesView: polling pattern with syncJobId state, 2s refetch interval, completion toast
 - [x] TypeScript: 0 errors
 - [x] Tests: 723/723 passed
 - [x] Production dist rebuilt (May 19 19:09)
@@ -3707,38 +3707,38 @@
 - [x] Edges: UNDER 5.5 ELITE EDGE (+19.65pp EV=+35.4%) | CAR -1.5 PLAYABLE EDGE (+3.60pp EV=+4.2%) | CAR ML STRONG EDGE (+7.90pp EV=+7.8%)
 - [x] Tests: 726/726 passed
 
-## Session: 2026-05-21 - Jack Mac Pipeline Fixes
+## Session: 2026-05-21 - Legacy Resources Pipeline Fixes
 
 - [x] Fix resolveMlbId to use DB-first lookup (mlb_players.mlbamId) — eliminates 90s+ load time
 - [x] Reduce MLB Stats API timeout from 3s to 800ms (fail fast for unknown players)
-- [x] Add pre-fetch all 4 RG tabs on mount (parallel) in JackMacView.tsx
-- [x] Add 15-min setInterval auto-refresh in JackMacView.tsx (force-refreshes all 4 tabs)
-- [x] Add server-side 15-min auto-sync scheduler (startJackMacScheduler) in jackMac router
-- [x] Wire startJackMacScheduler into server startup in _core/index.ts
-- [x] Fix Fangraphs lineups date in Google Sheets — add DATE column + title row per tab
+- [x] Add pre-fetch all 4 RG tabs on mount (parallel) in LegacyResourcesView.tsx
+- [x] Add 15-min setInterval auto-refresh in LegacyResourcesView.tsx (force-refreshes all 4 tabs)
+- [x] Add server-side 15-min auto-sync scheduler (startLegacyResourcesScheduler) in legacyResources router
+- [x] Wire startLegacyResourcesScheduler into server startup in _core/index.ts
+- [x] Fix legacy lineup dates in the legacy sheet sync — add DATE column + title row per tab
 - [x] buildLineupSheetRows now accepts dateLabel and writes it to every data row
 - [x] 726/726 tests pass
 
-## Session: 2026-05-21 - Jack Mac Pipeline Overhaul (Phase 2)
+## Session: 2026-05-21 - Legacy Resources Pipeline Overhaul (Phase 2)
 - [x] Fix MLB ID DB lookup: COLLATE utf8mb4_unicode_ci for accent-insensitive LIKE (Ramirez→Ramírez)
-- [x] Add ensureSheetTabExists: auto-create missing Google Sheets tabs before write
+- [x] Add ensureSheetTabExists: auto-create missing legacy sheet tabs before write
 - [x] Wire ensureSheetTabExists for all 6 tabs (4 RG + Today Lineups + Tomorrow Lineups)
 - [x] 726/726 tests passing
 
-## Session: 2026-05-21 - Jack Mac Full Pipeline Overhaul (Phase 3)
-- [x] Create jackMacCore.ts — unified run lock, structured per-run logging, tab contracts, shared cache layer
-- [x] Upgrade jackMacSheetsSync.ts — run lock integration, read-back validation, rollback on failure, no-op prevention
-- [x] Upgrade jackMac router — run lock on syncToSheets, getCacheStatus procedure, getRunHistory procedure, getRunLockState procedure
-- [x] Upgrade JackMacView.tsx — instant shell render from cache, all 8 UI states, locked/refreshing states, run-lock awareness, background polling
-- [x] Add jackMacCore.test.ts — 35 tests: run lock, cache layer, tab contracts, run history, structured logging, run ID generator
-- [x] All 761/761 tests passing (35 new Jack Mac core tests added)
+## Session: 2026-05-21 - Legacy Resources Full Pipeline Overhaul (Phase 3)
+- [x] Create legacyResourcesCore.ts — unified run lock, structured per-run logging, tab contracts, shared cache layer
+- [x] Upgrade legacyResourcesSheetSync.ts — run lock integration, read-back validation, rollback on failure, no-op prevention
+- [x] Upgrade legacyResources router — run lock on syncToSheets, getCacheStatus procedure, getRunHistory procedure, getRunLockState procedure
+- [x] Upgrade LegacyResourcesView.tsx — instant shell render from cache, all 8 UI states, locked/refreshing states, run-lock awareness, background polling
+- [x] Add legacyResourcesCore.test.ts — 35 tests: run lock, cache layer, tab contracts, run history, structured logging, run ID generator
+- [x] All 761/761 tests passing (35 new Legacy Resources core tests added)
 
-## Session: 2026-05-22 - Jack Mac 503 + Sheets Sync Performance Fix
+## Session: 2026-05-22 - Legacy Resources 503 + Sheet Sync Performance Fix
 
 - [x] Root cause investigation: HTTP 503 "Showing cached data — live refresh failed"
-- [x] Root cause investigation: Sheets sync taking too long (timeout at 480s)
+- [x] Root cause investigation: sheet sync taking too long (timeout at 480s)
 - [x] CONFIRMED: Both issues caused by 390 individual DB queries fired in parallel from parseRgCsv()
-- [x] CONFIRMED: Pool exhaustion (20 connections) when live request + Sheets sync run concurrently
+- [x] CONFIRMED: Pool exhaustion (20 connections) when live request + sheet sync run concurrently
 - [x] CONFIRMED: Every player falls through to MLB Stats API (800ms timeout × 390 = 312s minimum)
 - [x] FIX: Replace 390 individual DB queries with 1 batch DB query (all last names in single OR clause)
 - [x] FIX: Add concurrency limiter for MLB API fallback (max 10 concurrent, was unbounded 390)
@@ -3750,12 +3750,12 @@
 - [x] VERIFIED: 0 TypeScript errors
 - [x] VERIFIED: 761/761 tests passing
 
-## Session: 2026-05-22 - Jack Mac "Sync job not found" Fix (DB-backed persistence)
+## Session: 2026-05-22 - Legacy Resources "Sync job not found" Fix (DB-backed persistence)
 - [x] ROOT CAUSE: syncStatusQuery inherited global staleTime:5min from QueryClient — first poll response cached as "fresh", refetchInterval stopped firing
 - [x] ROOT CAUSE (alternative): Production may run multiple Node.js processes; syncToSheets hits Process A (creates job in memory), getSyncStatus poll hits Process B (empty syncJobStore → not_found)
-- [x] FIX: Add staleTime:0, gcTime:0 to syncStatusQuery in JackMacView.tsx — forces React Query to always re-fetch, never cache poll responses
-- [x] FIX: Add jack_mac_sync_jobs table to drizzle/schema.ts (jobId, runId, status, startedAt, completedAt, result, error, triggeredBy)
-- [x] FIX: Run pnpm db:push — jack_mac_sync_jobs table created in DB (migration 0089)
+- [x] FIX: Add staleTime:0, gcTime:0 to syncStatusQuery in LegacyResourcesView.tsx — forces React Query to always re-fetch, never cache poll responses
+- [x] FIX: Add legacy_resources_sync_jobs table to drizzle/schema.ts (jobId, runId, status, startedAt, completedAt, result, error, triggeredBy)
+- [x] FIX: Run pnpm db:push — legacy_resources_sync_jobs table created in DB (migration 0089)
 - [x] FIX: startSyncJob() now calls persistJobToDb() immediately after creating in-memory job (fire-and-forget, never blocks)
 - [x] FIX: Background job calls finalizeJobInDb() on completion/failure to update DB row
 - [x] FIX: getSyncJob() is now async — checks in-memory Map first (fast path), falls back to DB (cross-process safety)
@@ -3765,12 +3765,12 @@
 - [x] VERIFIED: 0 TypeScript errors
 - [x] VERIFIED: 761/761 tests passing
 
-## Session: 2026-05-22 - Jack Mac Sync Live Progress Feed
+## Session: 2026-05-22 - Legacy Resources Sync Live Progress Feed
 - [x] Add SyncProgressEvent[] to SyncJob interface (phase, message, status, elapsedMs, rowCount)
-- [x] Instrument syncJackMacToSheets: emit progress events at each phase start/complete
+- [x] Instrument syncLegacyResourcesToSheets: emit progress events at each phase start/complete
 - [x] Instrument writeRgTab and writeLineupTab: emit per-tab progress events
 - [x] getSyncStatus router returns progress events to frontend on every poll
-- [x] JackMacView.tsx: replace silent spinner with live step-by-step progress feed
+- [x] LegacyResourcesView.tsx: replace silent spinner with live step-by-step progress feed
 - [x] Progress panel shows: phase name, elapsed time, row counts, green/red/pulsing state
 - [x] TypeScript: 0 errors
 - [x] Tests: 761/761 passing
@@ -3825,7 +3825,7 @@
 - [x] TypeScript: 0 errors
 - [x] Tests: 761/761 passing
 
-## Session: 2026-05-22 - Deterministic Google Sheets Formatting
+## Session: 2026-05-22 - Deterministic Legacy Sheet Formatting
 
 - [x] Root cause: writeRgTab and writeLineupTab did ZERO formatting — only values.clear() + values.update(). All formatting was residual from manual edits. New date-named lineup tabs got zero formatting.
 - [x] Add getSheetId() helper: resolves numeric sheetId for a named tab via spreadsheets.get
@@ -3843,18 +3843,18 @@
 
 ## Session: 2026-05-24 - Auth & Checkout Flow Fixes
 
-- [x] Fix: RootRoute uses useAuth (Manus OAuth) instead of useAppAuth (Discord JWT) — logged-in users not redirected to /feed
-- [x] Fix: PricingCTA "Start Monthly" redirects to Manus OAuth instead of Stripe checkout
+- [x] Fix: RootRoute uses useAuth (legacy OAuth) instead of useAppAuth (Discord JWT) — logged-in users not redirected to /feed
+- [x] Fix: PricingCTA "Start Monthly" redirects to legacy OAuth instead of Stripe checkout
 - [x] Fix: Add sessionStorage pendingCheckout flow — unauthenticated click → /login → Discord login → auto-trigger checkout
-- [x] Fix: Remove useAuth from PricingCTA (was causing Manus OAuth redirect on UNAUTHORIZED error)
+- [x] Fix: Remove useAuth from PricingCTA (was causing legacy OAuth redirect on UNAUTHORIZED error)
 - [x] Perf: Add getCachedAppUser fast path to appUsers.me (5-min circuit-breaker cache before DB hit)
-- [x] Perf: Removing unnecessary trpc.auth.me (Manus OAuth) call from RootRoute reduces initial load
+- [x] Perf: Removing unnecessary trpc.auth.me (legacy OAuth) call from RootRoute reduces initial load
 - [x] TypeScript: 0 errors (Vite build clean)
 - [x] Tests: 907/907 passing
 
 ## Session: 2026-05-24 - Auth/Checkout Fixes + Landing Page Rebuild
-- [x] Fix checkout redirect — unauthenticated users redirected to /login with sessionStorage pendingCheckout instead of Manus OAuth
-- [x] Fix logged-in redirect — RootRoute uses useAppAuth (Discord JWT) instead of useAuth (Manus OAuth)
+- [x] Fix checkout redirect — unauthenticated users redirected to /login with sessionStorage pendingCheckout instead of legacy OAuth
+- [x] Fix logged-in redirect — RootRoute uses useAppAuth (Discord JWT) instead of useAuth (legacy OAuth)
 - [x] Fix initial load performance — removed unnecessary trpc.auth.me call from RootRoute, added getCachedAppUser fast path
 - [x] Upload 4 real UI screenshots to CDN (model projections, betting splits, daily lineups, cheat sheets)
 - [x] Rebuild Hero — clean centered headline + CTAs, no fake mock data widget
@@ -4016,20 +4016,20 @@
 - [x] Fixed 5 duplicate style attribute TS errors (merged padding into existing style objects)
 - [x] TypeScript: 0 errors | Tests: 956/956 passing
 
-## Session: 2026-05-30 - Fangraphs Lineup Tab Reactivation
+## Session: 2026-05-30 - Legacy Lineup Tab Reactivation
 
-- [x] Audit fangraphsScraper.ts and jackMacSheetsSync.ts lineup pipeline in full depth
-- [x] Build isolated server/fangraphsLineupSync.ts (zero RotoGrinders code, full safeguards)
-- [x] Build server/fangraphsLineupHeartbeat.ts (POST /api/scheduled/fg-lineups handler with run lock)
+- [x] Audit legacyLineupScraper.ts and legacyResourcesSheetSync.ts lineup pipeline in full depth
+- [x] Build isolated server/legacyLineupSync.ts (zero legacy resource-site code, full safeguards)
+- [x] Build server/legacyLineupHeartbeat.ts (POST /api/scheduled/fg-lineups handler with run lock)
 - [x] Mount /api/scheduled/fg-lineups in server/_core/index.ts before tRPC
 - [x] Delete stale 05-26-2026 LINEUPS and 05-27-2026 LINEUPS tabs (were not present — already absent)
 - [x] Populate 05-30-2026 LINEUPS (15 games, 30 rows, read-back validated)
 - [x] Populate 05-31-2026 LINEUPS (15 games, 30 rows, read-back validated)
 - [x] Register 10-min Heartbeat cron (task_uid=UrFdDVMKqHH4a6juao2uSu, cron="0 */10 * * * *")
-- [x] Persist task_uid to references/fg-lineups-heartbeat.json
+- [x] Persist task_uid to references/fg-lineups-heartbeat.json (file since removed)
 - [ ] Deploy site so Heartbeat platform can reach /api/scheduled/fg-lineups (user action: click Publish in Management UI)
 
-## Session: 2026-05-30 - Fangraphs Lineup Schema Upgrade (Pitcher/Batter MLB IDs + Full Lineups)
+## Session: 2026-05-30 - Legacy Lineup Schema Upgrade (Pitcher/Batter MLB IDs + Full Lineups)
 
 - [x] Audit MLB Stats API response — confirmed probablePitcher.id and lineups[].id field paths
 - [x] Add PITCHER_MLB_ID column (col 7) to buildLineupRows — sourced from probablePitcher.id
@@ -4094,7 +4094,7 @@
 - [x] TypeScript: 0 errors
 
 ## Session: 2026-06-11 - Rate Exceeded Login Fix
-- [x] Root cause: Manus platform edge proxy returns plain-text "Rate exceeded." on burst requests; tRPC httpBatchLink tries to JSON.parse it → SyntaxError crash
+- [x] Root cause: legacy platform edge proxy returns plain-text "Rate exceeded." on burst requests; tRPC httpBatchLink tries to JSON.parse it → SyntaxError crash
 - [x] Implement resilientFetch wrapper in main.tsx: intercepts non-JSON responses before tRPC parses them
 - [x] Auto-retry with exponential backoff (1s/2s/4s) for rate-limit responses (up to 3 retries)
 - [x] Synthesize valid tRPC-compatible JSON error response after max retries exhausted
@@ -4171,8 +4171,8 @@
 - [x] WC2026 ESPN ingester: add `onlyFinalMatches` param (default true) — when false, processes both LIVE and FT events
 - [x] WC2026 ESPN ingester: add LIVE score-only upsert branch (no summary fetch, no stats/events/lineups for in-progress)
 - [x] WC2026 heartbeat: add `handleWc2026LiveScores` handler at POST /api/scheduled/wc2026-live-scores
-- [x] WC2026 heartbeat: register `wc2026-live-scores` Manus Heartbeat cron (every 5 min, `0 */5 * * * *`)
-- [x] WC2026 heartbeat: register `wc2026-espn-results` Manus Heartbeat cron (daily 00:30 UTC)
+- [x] WC2026 heartbeat: register `wc2026-live-scores` legacy Heartbeat cron (every 5 min, `0 */5 * * * *`)
+- [x] WC2026 heartbeat: register `wc2026-espn-results` legacy Heartbeat cron (daily 00:30 UTC)
 - [x] WcFeedInline: group letter moved to status row next to kickoff time (e.g. "3:00 PM EDT · Grp A")
 - [x] WcDcMobileCell: wrap 3 rows in centered flex wrapper to match BetCell 2-row vertical centering
 

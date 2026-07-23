@@ -5,7 +5,7 @@
  * Streams Claude Fable 5 responses via Server-Sent Events (SSE).
  *
  * Env:  ANTHROPIC_API_KEY (direct) — or ANTHROPIC_AUTH_TOKEN +
- *       ANTHROPIC_BASE_URL to route through Vercel AI Gateway
+ *       ANTHROPIC_BASE_URL to route through an Anthropic-compatible gateway
  *       (see references/ai-gateway-setup.md)
  * Deps: @anthropic-ai/sdk (already installed)
  *
@@ -54,7 +54,7 @@ function dimeLog(event: string, requestId: string, data: Record<string, unknown>
 }
 
 // ---------------------------------------------------------------
-// Auth — app_session JWT (Manus OAuth has no Railway-reachable server)
+// Auth — app_session JWT (legacy OAuth has no Railway-reachable server)
 // ---------------------------------------------------------------
 async function authenticateDimeRequest(req: Request): Promise<{ userId: number; role: string } | null> {
   const cookies = parseCookieHeader(req.headers.cookie ?? "");

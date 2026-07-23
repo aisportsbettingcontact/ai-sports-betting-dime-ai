@@ -25,7 +25,7 @@
  * ║    • Parallel fetch with concurrency cap (max 4 simultaneous)              ║
  * ║    • HTTPS enforcement (ESPN internal URLs use http://)                     ║
  * ║                                                                              ║
- * ║  Logging: EspnLogger — dual-channel (terminal + .manus-logs/espn-scraper.log) ║
+ * ║  Logging: EspnLogger — dual-channel (terminal + .scraper-logs/espn-scraper.log) ║
  * ╚══════════════════════════════════════════════════════════════════════════════╝
  */
 

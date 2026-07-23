@@ -4,15 +4,14 @@ import fs from "fs";
 import { ENV } from "./env";
 
 /**
- * /manus-storage/* asset resolution — LOCAL-FIRST, Forge fallback.
+ * /dime-storage/* asset resolution — LOCAL-FIRST, Forge fallback.
  *
- * The five brand/feature images historically lived only in Manus Forge
- * storage, which made the app depend on the Manus platform at runtime
- * (on Railway the proxy 500'd and every logo broke). They are now vendored
- * into client/public/manus-storage/ and served from the local build on ANY
- * host. The Forge proxy remains as a fallback for keys that are not
- * vendored, so the Manus deployment keeps working unchanged — the two
- * tracks stay separate and parallel.
+ * The five brand/feature images historically lived only in the legacy
+ * platform's Forge storage, which made the app depend on that platform at
+ * runtime (on Railway the proxy 500'd and every logo broke). They are now
+ * vendored into client/public/dime-storage/ and served from the local build
+ * on ANY host. The Forge proxy remains as a fallback for keys that are not
+ * vendored.
  *
  * LOGGING:
  *   [StorageProxy][LOCAL]  - served from the vendored build directory
@@ -23,12 +22,12 @@ export function registerStorageProxy(app: Express) {
   // Same resolution as serveStatic() in vite.ts — both files live in server/_core.
   const localDir =
     process.env.NODE_ENV === "development"
-      ? path.resolve(import.meta.dirname, "../..", "dist", "public", "manus-storage")
-      : path.resolve(import.meta.dirname, "public", "manus-storage");
+      ? path.resolve(import.meta.dirname, "../..", "dist", "public", "dime-storage")
+      : path.resolve(import.meta.dirname, "public", "dime-storage");
 
-  app.get("/manus-storage/*", async (req: import("express").Request, res: import("express").Response) => {
-    // Extract the key from the path: /manus-storage/{key}
-    const key = req.path.replace(/^\/manus-storage\//, "");
+  app.get("/dime-storage/*", async (req: import("express").Request, res: import("express").Response) => {
+    // Extract the key from the path: /dime-storage/{key}
+    const key = req.path.replace(/^\/dime-storage\//, "");
     if (!key) {
       res.status(400).send("Missing storage key");
       return;
@@ -44,7 +43,7 @@ export function registerStorageProxy(app: Express) {
       return;
     }
 
-    // ── Forge fallback (Manus-hosted deployments) ────────────────────────────
+    // ── Forge fallback (legacy-hosted deployments) ───────────────────────────
     if (!ENV.forgeApiUrl || !ENV.forgeApiKey) {
       console.warn(`[StorageProxy][MISS] ${key} — not vendored and Forge not configured`);
       res.status(404).send("Asset not found");

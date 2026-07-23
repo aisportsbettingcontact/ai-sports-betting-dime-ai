@@ -88,23 +88,23 @@ shared files; briefs travel as files; `/sp-verify` evidence gates every "done."
 
 ---
 
-## Platform decision (2026-07-08) — stay on Manus through launch
+## Platform decision (2026-07-08) — stay on the legacy host through launch (SUPERSEDED 2026-07-11: migrated to Railway)
 
-**Probe result:** Manus confirmed there is **no publish/deploy API** — the Publish button
+**Probe result:** the legacy vendor confirmed there is **no publish/deploy API** — the Publish button
 is the only deploy mechanism; AGENT crons can pull/checkpoint/notify but not deploy.
 
-**Decision:** Option C — launch on Manus; reduce the human step to one pre-staged Publish
-click (Manus AGENT cron: pull main → build-verify → checkpoint → notify); fold **migration
+**Decision:** Option C — launch on the legacy host; reduce the human step to one pre-staged Publish
+click (the legacy agent cron: pull main → build-verify → checkpoint → notify); fold **migration
 seams** into E2–E5 as ordinary tasks (LLM behind one client wrapper, storage behind an
 adapter, auth behind an interface, no new in-process timers); keep migration as a written
 option, not work.
 
 **Migration triggers (any one converts the option into an epic):**
 1. Release cadence makes the manual click a real tax (>~5 deploys/week sustained)
-2. Any Manus pricing/reliability/policy event threatening the business
+2. Any legacy-vendor pricing/reliability/policy event threatening the business
 3. Forge LLM credit costs meaningfully exceed direct-API pricing at scale
-4. Post-E6 growth work needs infra control Manus can't provide
+4. Post-E6 growth work needs infra control the legacy host couldn't provide
 
-Migration, if triggered, is a 4-organ transplant (Forge LLM, Manus OAuth, manus-storage,
-Heartbeat crons) + edge-proxy assumptions — full spec → plan → staged rollout, auth cutover
+Migration, if triggered, is a 4-organ transplant (Forge LLM, legacy OAuth, legacy file storage,
+heartbeat crons) + edge-proxy assumptions — full spec → plan → staged rollout, auth cutover
 as the riskiest task. Never casually.

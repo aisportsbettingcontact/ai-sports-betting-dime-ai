@@ -26,7 +26,7 @@ export const users = mysqlTable("users", {
    * Use this for relations between tables.
    */
   id: int("id").autoincrement().primaryKey(),
-  /** Manus OAuth identifier (openId) returned from the OAuth callback. Unique per user. */
+  /** Legacy OAuth identifier (openId) returned from the OAuth callback. Unique per user. */
   openId: varchar("openId", { length: 64 }).notNull().unique(),
   name: text("name"),
   email: varchar("email", { length: 320 }),
@@ -2350,61 +2350,6 @@ export const discordInviteTokens = mysqlTable("discord_invite_tokens", {
 }));
 export type DiscordInviteToken = typeof discordInviteTokens.$inferSelect;
 export type InsertDiscordInviteToken = typeof discordInviteTokens.$inferInsert;
-
-// ─── Jack Mac Sync Jobs ────────────────────────────────────────────────────────
-// Persists background sync job state to the database so that getSyncStatus
-// can find the job regardless of which Node.js process handles the poll request.
-// This eliminates the "Sync job not found" error caused by in-memory-only state.
-//
-// Lifecycle:
-//   1. syncToSheets creates a row with status='running'
-//   2. Background job updates the row to status='completed' or 'failed'
-//   3. getSyncStatus reads from DB (with in-memory Map as fast-path cache)
-//   4. Rows older than 24 hours are eligible for cleanup
-export const jackMacSyncJobs = mysqlTable("jack_mac_sync_jobs", {
-  /** UUID job identifier returned to the client */
-  jobId:       varchar("jobId",       { length: 64  }).primaryKey(),
-  /** Structured run ID from jackMacCore.generateRunId() */
-  runId:       varchar("runId",       { length: 64  }).notNull(),
-  /** Job lifecycle status */
-  status:      mysqlEnum("status", ["running", "completed", "failed"]).notNull().default("running"),
-  /** UTC timestamp (ms) when the job was created */
-  startedAt:   bigint("startedAt",    { mode: "number" }).notNull(),
-  /** UTC timestamp (ms) when the job finished (NULL while running) */
-  completedAt: bigint("completedAt",  { mode: "number" }),
-  /** JSON-serialised result payload (tab summaries, row counts, etc.) */
-  result:      text("result"),
-  /** Error message if status='failed' */
-  error:       text("error"),
-  /** Username of the user who triggered the sync */
-  triggeredBy: varchar("triggeredBy", { length: 64  }),
-}, (t) => ({
-  idxStatus:    index("idx_jmsj_status").on(t.status),
-  idxStartedAt: index("idx_jmsj_started_at").on(t.startedAt),
-}));
-export type JackMacSyncJob    = typeof jackMacSyncJobs.$inferSelect;
-export type InsertJackMacSyncJob = typeof jackMacSyncJobs.$inferInsert;
-
-// ─── RG Session Cache ──────────────────────────────────────────────────────────────────────
-// Persists the RotoGrinders session cookie across server restarts and processes.
-// Eliminates the 6-8s login step on repeat syncs (25-min TTL matches RG session).
-//
-// Lifecycle:
-//   1. getRgSessionCookie() checks this table before attempting login
-//   2. If a valid (non-expired) cookie exists, it is returned immediately
-//   3. After a successful login, the new cookie is upserted here
-//   4. Rows older than 30 minutes are eligible for cleanup
-export const rgSessionCache = mysqlTable("rg_session_cache", {
-  /** Fixed primary key — only one active session at a time */
-  id:          int("id").primaryKey().default(1),
-  /** The full cookie string (e.g. "rguid=...; session=...") */
-  cookieStr:   text("cookie_str").notNull(),
-  /** UTC timestamp (ms) when the cookie was fetched */
-  fetchedAt:   bigint("fetched_at", { mode: "number" }).notNull(),
-  /** UTC timestamp (ms) when the cookie expires (fetchedAt + TTL) */
-  expiresAt:   bigint("expires_at", { mode: "number" }).notNull(),
-});
-export type RgSessionCache = typeof rgSessionCache.$inferSelect;
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // WAITLIST

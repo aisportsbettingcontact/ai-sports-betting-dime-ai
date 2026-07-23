@@ -39,8 +39,8 @@ unknowns are implementation-time choices, not discovery.
   find `nav-icons.js` — the lead session had already extracted it and confirmed contents).
 - **Target-platform adaptation:** the original brief assumed Next.js App Router/Supabase.
   The actual repo is supplied and is the source of truth: **React 19 + Vite + wouter SPA
-  (Vercel) · Express + tRPC + Drizzle/MySQL (Railway) · Stripe · Manus prod until
-  cutover**. All "Server Component" guidance is translated to this stack: server-owned
+  (standalone frontend host) · Express + tRPC + Drizzle/MySQL (Railway) · Stripe · legacy prod until
+  cutover (since completed)**. All "Server Component" guidance is translated to this stack: server-owned
   data via tRPC/Express routes; the SPA client renders. Where the two differ, this report
   says so explicitly rather than presenting assumptions as fact.
 
@@ -513,7 +513,7 @@ grants → odds-format pref (D4) → conversations schema (`db-push.yml` first) 
 wiring + edit-name → **W4** interaction: `[EDGE]` v2 cards, history drawer, copy/regenerate,
 saves (D6) → **W5** hardening: focus-trapped primitives, live region, axe + visual CI,
 perf budgets, RG language check → **W6** cutover: flip routes, un-gate mobile nav,
-Railway/Vercel parallel validation, flags + rollback. Entry/exit criteria, risks, and
+Railway/frontend-host parallel validation, flags + rollback. Entry/exit criteria, risks, and
 per-wave rollback: blueprint §12; work items Q1–Q20: blueprint §14. **None executed.**
 
 ## 27. Risk Register
@@ -522,7 +522,7 @@ per-wave rollback: blueprint §12; work items Q1–Q20: blueprint §14. **None e
 |---|---|---|
 | Pack purchase misfulfilled as "monthly" subscription (webhook ignores `session.mode`) | **Critical** | Q19 lands before any pack price exists (sequencing law) |
 | Double-credit on webhook replay (no dedup store) | High | unique event-id store + idempotent insert |
-| Chat charge on wrong identity (Manus vs app_session) | High | Q7 auth unification precedes Q7b |
+| Chat charge on wrong identity (legacy OAuth vs app_session) | High | Q7 auth unification precedes Q7b |
 | Abort double-charge (wc2026 fallthrough) | High | D9 policy decided at build; test enforces |
 | Virtual-100 first-row race | Med | seed grant row on entitlement |
 | `balance_after` chain corruption from out-of-transaction inserts | High | all ledger writes use the `FOR UPDATE` pattern |
@@ -530,7 +530,7 @@ per-wave rollback: blueprint §12; work items Q1–Q20: blueprint §14. **None e
 | VSiN markup change silently nulls splits; no staleness signal | Med | Q20 `splitsUpdatedAt` + SPLITS_HEALTH monitoring |
 | 0%/0% Total/ML false 100% bars in new UI | Med | replicate guard client-side (test) |
 | Feed contract breakage during reskin | High | contracts inviolable; restyle-only rule; existing tests |
-| Schema/deploy ordering (Manus prod until cutover) | Med | `db-push.yml` before dependent code; merge≠deploy law |
+| Schema/deploy ordering (legacy prod until cutover, since completed) | Med | `db-push.yml` before dependent code; merge≠deploy law |
 | Scope creep from prototype's dead controls | Low | ledger classifications are binding |
 
 ## 28. Dependency and Decision Register
@@ -564,12 +564,12 @@ kills all animation. Perf: chat route <250 KB gz; CLS≈0. Compliance: 21+ /
 
 ## 30. Cutover Plan
 
-Preconditions: W1–W5 exit criteria green; Railway backend + Vercel client previews serving
+Preconditions: W1–W5 exit criteria green; Railway backend + standalone frontend-host client previews serving
 the shell; `deploy-smoke.yml` green; 3-theme baselines approved. Steps: (1) flag-gated
 route flip `/chat`,`/betting-splits`,`/profile` to shell versions; (2) un-gate mobile
 bottom nav (`MOBILE_OWNER_TABS_PUBLIC_ENABLED`); (3) 24–48 h parallel validation (legacy
 reachable at fallback routes); (4) retire `/dime` test route + `/m/*`; (5) platform
-cutover per `references/railway-vercel-deploy.md` (until then Manus is prod and
+cutover per `references/railway-deploy.md` (until then the legacy host is prod and
 merge≠deploy); (6) post-cutover: push-to-main auto-deploys both platforms — schema always
 via `db-push.yml` first.
 
@@ -579,8 +579,8 @@ UI waves: release-flag revert (shell routes flip back to legacy pages — kept i
 W6+1). Schema: additive-only migrations (new tables/columns/indexes; no drops until
 post-cutover cleanup) — rollback = ignore. Stripe: pack prices created only after Q19
 merges; misfulfillment rollback = deactivate pack prices + reconcile ledger from
-`dime_request_audit`/Stripe events. Deploy: Vercel instant rollback to previous build;
-Railway redeploy previous image; Manus untouched until cutover. Data: ledger is
+`dime_request_audit`/Stripe events. Deploy: frontend-host instant rollback to previous build;
+Railway redeploy previous image; the legacy host untouched until cutover. Data: ledger is
 append-only — corrections are compensating entries, never edits.
 
 ## 32. Unresolved Questions

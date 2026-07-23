@@ -26,7 +26,7 @@ const AUDIT_START = new Date().toISOString();
 const RUN_ID = `FORENSIC-${Date.now()}`;
 
 // Directories to EXCLUDE from scan
-const EXCLUDE_DIRS = ['node_modules', '.git', 'dist', 'drizzle/meta', 'drizzle/migrations', '.manus-logs'];
+const EXCLUDE_DIRS = ['node_modules', '.git', 'dist', 'drizzle/meta', 'drizzle/migrations', '.scraper-logs'];
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // LOGGING FRAMEWORK (Industry-Leading Structured Output)

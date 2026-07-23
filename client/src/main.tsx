@@ -12,7 +12,7 @@ import "./styles/dime-mobile.css";
 
 // ─── Rate-limit resilient fetch wrapper ──────────────────────────────────────
 //
-// PROBLEM: The Manus platform edge proxy occasionally returns the plain-text
+// PROBLEM: An edge proxy/CDN in front of the app can return the plain-text
 // string "Rate exceeded." (no JSON, Content-Type: text/plain) when the deployed
 // domain receives too many requests in a short window. The tRPC httpBatchLink
 // uses superjson to parse every response body — when it receives plain text it

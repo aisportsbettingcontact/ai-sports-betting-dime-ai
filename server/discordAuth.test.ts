@@ -4,7 +4,7 @@
  * ┌─────────────────────────────────────────────────────────────────────────┐
  * │  CRITICAL INVARIANT: All Discord routes MUST be under /api/ prefix.    │
  * │                                                                         │
- * │  The Manus production proxy only forwards /api/* to Express.           │
+ * │  The legacy production proxy only forwarded /api/* to Express.         │
  * │  Routes outside /api/* hit the static CDN and return SPA index.html   │
  * │  (HTTP 200) instead of the Express handler — a silent 404.            │
  * │                                                                         │
@@ -29,9 +29,9 @@ import { ENV } from "./_core/env";
 // ─── CRITICAL: Route prefix invariant ─────────────────────────────────────────
 // This test exists to prevent the regression where Discord routes were placed
 // at /auth/discord/* instead of /api/auth/discord/* — causing a silent 404 on
-// the Manus production site because the proxy only forwards /api/* to Express.
+// the legacy production site because the proxy only forwarded /api/* to Express.
 describe("Discord route prefix invariant", () => {
-  it("ROUTE_PREFIX must start with /api/ (Manus proxy only routes /api/* to Express)", async () => {
+  it("ROUTE_PREFIX must start with /api/ (legacy proxy only routed /api/* to Express)", async () => {
     // We read the ROUTE_PREFIX constant directly from the source file to ensure
     // it hasn't been changed to a non-/api/ path.
     const fs = await import("fs");

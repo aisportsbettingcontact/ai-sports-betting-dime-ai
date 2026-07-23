@@ -9,12 +9,12 @@
  *                          from attacker-controlled pages on other domains.
  *                          On block: fires notifyOwner() alert (rate-limited per IP).
  *   2. requireUser       — validates session cookie, rejects unauthenticated callers.
- *   3. requireAdmin      — validates role === 'admin' (Manus OAuth user).
+ *   3. requireAdmin      — validates role === 'admin' (legacy OAuth user).
  *
  * Procedure hierarchy:
  *   publicProcedure      — no auth, CSRF check on mutations
- *   protectedProcedure   — Manus OAuth session required
- *   adminProcedure       — Manus OAuth session + admin role required
+ *   protectedProcedure   — legacy OAuth session required
+ *   adminProcedure       — legacy OAuth session + admin role required
  *
  * CSRF Defense Strategy:
  *   tRPC uses POST for all mutations and GET for queries. The Origin header is
@@ -62,19 +62,9 @@ import type { TrpcContext } from "./context";
  *   - PUBLIC_ORIGIN (canonical production domain)
  *   - www.PUBLIC_ORIGIN (www subdomain variant)
  *   - http:// variant of PUBLIC_ORIGIN (handles pre-redirect HTTP access)
- *   - *.manus.space (Manus deployment domains — same app, different hostname)
- *   - *.manus.computer (Manus sandbox preview URLs — dev server)
  *
  * Allowed in development only:
  *   - localhost variants on common ports
- *
- * Design rationale for *.manus.space:
- *   The Manus platform deploys apps on both the custom domain (PUBLIC_ORIGIN)
- *   AND a *.manus.space subdomain (e.g. aisportsbet-mw3ficty.manus.space).
- *   Both hostnames serve the SAME application — blocking *.manus.space would
- *   prevent legitimate users who access the site via the Manus subdomain from
- *   logging in. This is NOT a CSRF risk because *.manus.space is controlled by
- *   Manus (same operator as the app), not an attacker-controlled domain.
  */
 function buildAllowedOrigins(): Set<string> {
   const origins = new Set<string>();
@@ -110,10 +100,10 @@ function buildAllowedOrigins(): Set<string> {
     }
   }
 
-  // Additional exact origins (comma-separated) for the split Railway/Vercel
-  // deployment — e.g. the Vercel production domain when the frontend is hosted
-  // separately from this backend, or the Railway domain itself while testing.
-  //   ADDITIONAL_ALLOWED_ORIGINS=https://myapp.vercel.app,https://myapp.up.railway.app
+  // Additional exact origins (comma-separated) for the Railway deployment —
+  // e.g. the Railway domain itself while testing, or any operator preview
+  // domain that serves the frontend separately from this backend.
+  //   ADDITIONAL_ALLOWED_ORIGINS=https://myapp.up.railway.app
   for (const raw of (process.env.ADDITIONAL_ALLOWED_ORIGINS ?? "").split(",")) {
     const extra = raw.trim().replace(/\/$/, "").toLowerCase();
     if (extra) {
@@ -134,7 +124,6 @@ function buildAllowedOrigins(): Set<string> {
       origins.add(o);
     }
     console.log(`[CSRF] Development mode — localhost origins allowed`);
-    console.log(`[CSRF] Development mode — *.manus.computer preview origins allowed`);
   }
 
   if (origins.size === 0) {
@@ -153,11 +142,11 @@ const ALLOWED_ORIGINS = buildAllowedOrigins();
 
 // Operator-controlled origin SUFFIXES (comma-separated, https-only) for
 // per-deploy preview domains that can't be enumerated in advance — e.g.
-// Vercel previews (`https://<project>-<hash>-<team>.vercel.app`):
-//   ALLOWED_ORIGIN_SUFFIXES=-yourteam.vercel.app
+// operator preview domains (`https://<project>-<hash>-<team>.up.railway.app`):
+//   ALLOWED_ORIGIN_SUFFIXES=-yourteam.up.railway.app
 // ⚠️ CSRF caveat: every origin matching a listed suffix is trusted for
-// mutations. Never list a bare shared-hosting suffix like ".vercel.app" or
-// ".up.railway.app" — anyone can deploy there. Scope suffixes to a segment
+// mutations. Never list a bare shared-hosting suffix like ".up.railway.app" —
+// anyone can deploy there. Scope suffixes to a segment
 // only your team controls (project/team slug).
 const ALLOWED_ORIGIN_SUFFIXES: string[] = (process.env.ALLOWED_ORIGIN_SUFFIXES ?? "")
   .split(",")
@@ -176,8 +165,7 @@ if (ALLOWED_ORIGIN_SUFFIXES.length > 0) {
  * Logic:
  *   1. No Origin header → server-to-server call → ALLOW (no browser involved)
  *   2. Origin in ALLOWED_ORIGINS set → ALLOW
- *   3. In dev mode: Origin matches *.manus.computer pattern → ALLOW
- *   4. Otherwise → DENY
+ *   3. Otherwise → DENY
  */
 export function isOriginAllowed(origin: string | undefined): boolean {
   // No Origin header = server-to-server or same-origin fetch with no CORS.
@@ -189,43 +177,13 @@ export function isOriginAllowed(origin: string | undefined): boolean {
   // [CHECK 1] Static set: PUBLIC_ORIGIN + www variant + http variant + dev localhost
   if (ALLOWED_ORIGINS.has(normalized)) return true;
 
-  // [CHECK 1b] Operator-configured suffixes (Vercel preview deployments etc.)
+  // [CHECK 1b] Operator-configured suffixes (operator preview domains, e.g. *.up.railway.app)
   // https-only; see ALLOWED_ORIGIN_SUFFIXES above for the CSRF scoping rules.
   if (
     normalized.startsWith("https://") &&
     ALLOWED_ORIGIN_SUFFIXES.some((suffix) => normalized.endsWith(suffix))
   ) {
     console.log(`[CSRF] Allowed origin (ALLOWED_ORIGIN_SUFFIXES): ${normalized}`);
-    return true;
-  }
-
-  // [CHECK 2] Manus deployment domains (*.manus.space)
-  // The app is deployed on both the custom domain AND a *.manus.space subdomain.
-  // Both are controlled by the same operator — NOT a CSRF risk.
-  // Pattern: https://<project-slug>.manus.space (exact subdomain format)
-  if (/^https:\/\/[a-z0-9][a-z0-9\-]*\.manus\.space$/.test(normalized)) {
-    console.log(`[CSRF] Allowed origin (*.manus.space deployment domain): ${normalized}`);
-    return true;
-  }
-
-  // [CHECK 3] Manus sandbox preview URLs (*.manus.computer)
-  // Dev server preview URLs use multi-level subdomains:
-  //   - Simple:    https://3000-abc123.manus.computer
-  //   - Multi-level: https://3000-abc123.us2.manus.computer
-  // The old single-level pattern /^https:\/\/[a-z0-9\-]+\.manus\.computer$/ only
-  // matched simple subdomains and BLOCKED multi-level preview URLs (e.g. us2 region),
-  // causing legitimate Stripe checkout mutations to be CSRF-blocked.
-  //
-  // Fix: use hostname.endsWith('.manus.computer') — safe because:
-  //   1. manus.computer is a Manus-controlled domain (same operator)
-  //   2. The attacker domain (e.g. *.run.app) does NOT end with .manus.computer
-  //   3. SameSite=Strict cookies provide defense-in-depth even if this check passes
-  //
-  // [INPUT]  normalized — lowercase origin string
-  // [OUTPUT] true if origin ends with .manus.computer under https://
-  // [VERIFY] Tested: 3000-xxx.us2.manus.computer → ALLOW, xfoomsv4ay.run.app → BLOCK
-  if (normalized.startsWith("https://") && normalized.endsWith(".manus.computer")) {
-    console.log(`[CSRF] Allowed origin (*.manus.computer preview, multi-level): ${normalized}`);
     return true;
   }
 
@@ -469,7 +427,7 @@ const csrfOriginCheck = t.middleware(async ({ ctx, next, path }) => {
 
 // ─── Auth middleware ──────────────────────────────────────────────────────────
 /**
- * Requires a valid Manus OAuth session (ctx.user must be non-null).
+ * Requires a valid legacy OAuth session (ctx.user must be non-null).
  * Used by protectedProcedure and adminProcedure.
  */
 const requireUser = t.middleware(async ({ ctx, next }) => {
@@ -494,7 +452,7 @@ const requireUser = t.middleware(async ({ ctx, next }) => {
 export const publicProcedure = t.procedure.use(csrfOriginCheck);
 
 /**
- * protectedProcedure — Manus OAuth session required.
+ * protectedProcedure — legacy OAuth session required.
  * CSRF check applied first, then auth check.
  */
 export const protectedProcedure = t.procedure
@@ -502,7 +460,7 @@ export const protectedProcedure = t.procedure
   .use(requireUser);
 
 /**
- * adminProcedure — Manus OAuth session + admin role required.
+ * adminProcedure — legacy OAuth session + admin role required.
  * CSRF check applied first, then admin auth check.
  */
 export const adminProcedure = t.procedure.use(csrfOriginCheck).use(

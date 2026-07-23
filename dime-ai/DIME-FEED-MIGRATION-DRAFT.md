@@ -51,7 +51,7 @@ Action Network actionNetworkScraper.ts ────► games (book RL/Total/ML) 
              ├ anKPropsService ────────────► mlb_strikeout_props (book lines)
              └ mlbHrPropsScraper.ts ───────► mlb_hr_props (book lines)
 RotoWire ───── rotowireLineupScraper.ts ───► mlb_lineups
-FanGraphs ──── heartbeat /api/scheduled/fg-lineups ► lineup cache
+Projected ──── heartbeat /api/scheduled/fg-lineups ► lineup cache
                      ▼ (model inputs)
 mlbModelRunner.ts ─► MLBAIModel.py (Monte Carlo) ─► games (model*, edges, F5, NRFI, HR)
 mlbKPropsModelService.ts ──────────────────────────► mlb_strikeout_props (kProj, verdicts)
