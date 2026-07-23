@@ -44,14 +44,14 @@ export function getLastNbaModelSyncResult(): NbaModelSyncResult | null {
 // ─── Startup guard: NBA_SHEET_ID must be set ─────────────────────────────────
 // [INPUT]  ENV.nbaSheetId — sourced from NBA_SHEET_ID environment variable
 // [VERIFY] If missing, all NBA model syncs will be skipped with a critical error.
-//          Set NBA_SHEET_ID in the Manus Secrets panel or GitHub repository secrets.
+//          Set NBA_SHEET_ID in Railway service variables or GitHub repository secrets.
 const SHEET_ID = ENV.nbaSheetId;
 if (!SHEET_ID) {
   console.error(
     "[NBAModelSync] [CRITICAL] NBA_SHEET_ID environment variable is NOT SET. " +
     "The NBA model sync pipeline is DISABLED. " +
     "All syncNbaModelFromSheet() calls will return immediately with an error. " +
-    "Action required: set NBA_SHEET_ID in the Manus Secrets panel."
+    "Action required: set NBA_SHEET_ID in Railway service variables (or GitHub repository secrets)."
   );
 }
 const GID = "567059198";
@@ -177,7 +177,7 @@ export async function syncNbaModelFromSheet(): Promise<{ synced: number; skipped
 
   // [VERIFY] Guard: abort immediately if NBA_SHEET_ID was not set at startup
   if (!CSV_URL) {
-    const msg = "[NBAModelSync] ABORTED — NBA_SHEET_ID env var is not set. Set it in the Manus Secrets panel.";
+    const msg = "[NBAModelSync] ABORTED — NBA_SHEET_ID env var is not set. Set it in Railway service variables (or GitHub repository secrets).";
     console.error(msg);
     result.errors.push(msg);
     return result;

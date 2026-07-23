@@ -55,9 +55,9 @@ import { resolveOwnerIdentity } from "../ownerAuth";
 import { installFatalErrorHandler } from "./fatalErrorHandler";
 
 // ─── Owner-only app_session auth (Railway-native) ──────────────────────────────
-// The legacy owner debug endpoints authenticated via the Manus SDK request-auth
-// helper + an OWNER_OPEN_ID comparison against the Manus OAuth server — permanently
-// dead off Manus. This mirrors ownerProcedure() in routers/appUsers.ts: verify the
+// The legacy owner debug endpoints authenticated via the retired platform's SDK
+// request-auth helper + an OWNER_OPEN_ID comparison against its OAuth server —
+// permanently dead now. This mirrors ownerProcedure() in routers/appUsers.ts: verify the
 // app_session JWT with ENV.cookieSecret, require type === "app_user", load the user
 // row (DB-authoritative — NEVER trust payload.role, a JWT is signed at login and a
 // later demotion must take effect immediately), enforce the tokenVersion check, then
@@ -356,7 +356,7 @@ async function startServer() {
   console.log(`[SERVER_STARTUP] Registering compression middleware`);
   app.use(compression({ threshold: 512 }));
 
-  // Trust the first proxy (Manus edge) so req.protocol reflects
+  // Trust the first proxy (Railway edge) so req.protocol reflects
   // the original HTTPS scheme and cookies are set correctly (sameSite+secure).
   // Also required for express-rate-limit to read the real client IP from
   // X-Forwarded-For rather than the proxy IP.
@@ -527,7 +527,7 @@ async function startServer() {
   app.use("/api", globalApiLimiter);
 
   // ─── Auth-specific rate limiters ─────────────────────────────────────────
-  // Manus OAuth callback — 5 attempts per 15 min per IP
+  // Legacy OAuth callback — 5 attempts per 15 min per IP
   app.use("/api/oauth", authLimiter);
 
   // Discord OAuth routes — 5 attempts per 15 min per IP
@@ -647,7 +647,7 @@ async function startServer() {
     next();
   });
 
-  // Storage proxy — serves /manus-storage/* paths via signed Forge URLs
+  // Storage proxy — serves /dime-storage/* asset paths (local-first)
   console.log(`[SERVER_STARTUP] Registering storage proxy routes`);
   registerStorageProxy(app);
   // OAuth callback under /api/oauth/callback
@@ -667,13 +667,13 @@ async function startServer() {
   registerAnalyticsIngestRoute(app);
 
   // ─── Fangraphs lineup Heartbeat ─────────────────────────────────────────
-  // POST /api/scheduled/fg-lineups — called every 10 min by Manus Heartbeat
+  // POST /api/scheduled/fg-lineups — legacy heartbeat path, now cron-secret authed
   // Writes today + tomorrow MLB lineup tabs. Zero RotoGrinders code.
   console.log(`[SERVER_STARTUP] Registering Fangraphs lineup heartbeat route`);
   registerFgLineupsHeartbeat(app);
 
   // ─── Rotowire lineup Heartbeat ──────────────────────────────────────────
-  // POST /api/scheduled/roto-lineups — called every 10 min by Manus Heartbeat
+  // POST /api/scheduled/roto-lineups — legacy heartbeat path, now cron-secret authed
   // Scrapes Rotowire today + tomorrow lineups → writes MM-DD-YYYY LINEUPS tabs.
   // Schema: BATTING_ORDER (J) | BATTER_NAME (K) | BAT_HAND (L) | POSITION (M)
   console.log(`[SERVER_STARTUP] Registering Rotowire lineup heartbeat route`);
@@ -686,7 +686,7 @@ async function startServer() {
   console.log(`[SERVER_STARTUP] Registering WC2026 heartbeat routes`);
   registerWc2026Heartbeats(app);
 
-  // ─── GitHub Actions cron endpoints (off-Manus data freshness) ────────────
+  // ─── GitHub Actions cron endpoints (data freshness) ──────────────────────
   // POST /api/cron/vsin-odds · /api/cron/scores — fired by GitHub Actions on a
   // timer, shared-secret authed (CRON_SECRET). These replace the always-on
   // in-process schedulers gated off via DISABLE_BACKGROUND_JOBS on Railway.

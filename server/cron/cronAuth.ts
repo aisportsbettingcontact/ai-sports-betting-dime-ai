@@ -5,10 +5,10 @@
  *
  * WHY (systematic-debugging finding — 2026-07-09):
  *   The legacy /api/scheduled/* Heartbeat endpoints authenticate through
- *   sdk.authenticateRequest() → verifySession() against the Manus OAuth server and
+ *   sdk.authenticateRequest() → verifySession() against the legacy OAuth server and
  *   only accept a session whose openId is prefixed "cron_" (issued exclusively by
- *   the Manus platform). GitHub Actions runners have no such cookie, so they can
- *   never pass that guard. As we migrate background jobs off Manus onto
+ *   the legacy platform). GitHub Actions runners have no such cookie, so they can
+ *   never pass that guard. As we migrate background jobs off the legacy platform onto
  *   "GitHub Actions on a timer" hitting the Railway app, we need an auth mechanism
  *   that depends on nothing but a shared secret both sides hold.
  *

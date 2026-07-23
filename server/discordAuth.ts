@@ -4,10 +4,10 @@
  * ┌─────────────────────────────────────────────────────────────────────────┐
  * │  ARCHITECTURE NOTE — WHY ROUTES ARE UNDER /api/*                       │
  * │                                                                         │
- * │  The Manus production deployment uses a two-layer proxy:               │
+ * │  The legacy production deployment uses a two-layer proxy:              │
  * │    Browser → Edge Proxy → Cloud Run (Express)                           │
  * │                                                                         │
- * │  The Manus edge proxy ONLY forwards /api/* requests to Express.        │
+ * │  The legacy edge proxy ONLY forwards /api/* requests to Express.       │
  * │  Everything else is served by the static CDN (returns SPA index.html). │
  * │  Routes outside /api/* never reach Express — they return HTTP 200      │
  * │  with the SPA shell, which looks like a 404 to the user.               │
@@ -68,7 +68,8 @@ import { randomBytes } from "crypto";
 const APP_USER_COOKIE = "app_session";
 const DISCORD_API = "https://discord.com/api/v10";
 
-// ── Route prefix — MUST be under /api/ for Manus production proxy ──────────
+// ── Route prefix — kept under /api/ (legacy proxy constraint; Discord ──────
+// redirect URIs are registered on these paths)
 // See architecture note above. DO NOT change this to /auth/discord/*.
 const ROUTE_PREFIX = "/api/auth/discord";
 

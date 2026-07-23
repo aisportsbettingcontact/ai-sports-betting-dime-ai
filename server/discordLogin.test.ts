@@ -2,7 +2,7 @@
  * discordLogin.test.ts
  *
  * Enforces critical invariants for the Discord-as-primary-login flow:
- *   1. ROUTE_PREFIX must be /api/auth/discord-login (Manus proxy only routes /api/*)
+ *   1. ROUTE_PREFIX must be /api/auth/discord-login (legacy proxy only routed /api/*)
  *   2. /connect and /callback routes are registered
  *   3. Schema has the discord_login_states table
  *   4. ENV has all required Discord keys

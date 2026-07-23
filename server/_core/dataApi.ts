@@ -1,7 +1,7 @@
 /**
  * Quick example (matches curl usage):
  *   await callDataApi("Youtube/search", {
- *     query: { gl: "US", hl: "en", q: "manus" },
+ *     query: { gl: "US", hl: "en", q: "sports" },
  *   })
  */
 import { ENV } from "./env";
@@ -18,7 +18,7 @@ export async function callDataApi(
   options: DataApiCallOptions = {}
 ): Promise<unknown> {
   if (!ENV.forgeApiUrl || !ENV.forgeApiKey) {
-    throw new Error("Data API is unavailable: BUILT_IN_FORGE_* not configured (Manus-only feature)");
+    throw new Error("Data API is unavailable: BUILT_IN_FORGE_* not configured (legacy platform feature)");
   }
 
   // Build the full URL by appending the service path to the base URL

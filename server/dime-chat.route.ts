@@ -54,7 +54,7 @@ function dimeLog(event: string, requestId: string, data: Record<string, unknown>
 }
 
 // ---------------------------------------------------------------
-// Auth — app_session JWT (Manus OAuth has no Railway-reachable server)
+// Auth — app_session JWT (legacy OAuth has no Railway-reachable server)
 // ---------------------------------------------------------------
 async function authenticateDimeRequest(req: Request): Promise<{ userId: number; role: string } | null> {
   const cookies = parseCookieHeader(req.headers.cookie ?? "");

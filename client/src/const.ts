@@ -1,7 +1,7 @@
 export { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 
 // Generate login URL at runtime so redirect URI reflects the current origin.
-// Off the Manus platform VITE_OAUTH_PORTAL_URL/VITE_APP_ID are unset, and
+// On Railway VITE_OAUTH_PORTAL_URL/VITE_APP_ID are unset, and
 // `new URL("undefined/app-auth")` throws. useAuth() evaluates this as a default
 // parameter on every call, so that throw crashes every page calling useAuth.
 export const getLoginUrl = () => {
