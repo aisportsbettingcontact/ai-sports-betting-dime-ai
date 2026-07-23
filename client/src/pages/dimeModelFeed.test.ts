@@ -356,7 +356,9 @@ describe("DimeModelFeed — header rhythm (Round 4 Wave 3, item 6)", () => {
 
   it("the 32px date-nav -> league header gap is padding-bottom + margin-bottom + the pre-existing .dmf-list top padding", () => {
     // 10 (padding-bottom) + 16 (margin-bottom) + 6 (.dmf-list padding-top,
-    // untouched by item 6) = 32, matching the law's fixed rhythm step.
+    // untouched by item 6) = 32px of space, matching the law's fixed rhythm
+    // step; the feedhead's pre-existing 1px divider border sits between the
+    // padding and margin (33px edge-to-edge — divider, not rhythm).
     expect(src).toMatch(/padding-bottom:10px;margin-bottom:16px/);
     expect(src).toMatch(/\.dmf-list\{display:flex;flex-direction:column;gap:12px;padding-top:6px;/);
   });

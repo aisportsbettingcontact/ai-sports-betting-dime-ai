@@ -116,6 +116,13 @@
     border-color: var(--border, #262626) !important;
     box-shadow: none !important;
   }
+  /* The edge chip's recommendation icon sets its mint color as an inline
+     style (EdgeIndicator.tsx) and lucide icons stroke with currentColor, so
+     the ancestor rule above never reaches it — the svg needs its own
+     !important declaration (author !important beats non-important inline). */
+  .projection-card--pass .edge-indicator svg {
+    color: var(--text-secondary, #a6a6a6) !important;
+  }
 
   /* Item 4 — live indicator: activate the pulsing mint dot (display:none by
      default, see .projection-card__live-dot above) and make the LIVE label
@@ -261,8 +268,11 @@
    inside this same gate (item 8 audit-fix: an earlier draft declared it on
    the unconditional base rule, which is visually inert below 768px/on
    touch-only devices but leaves a stray `transition-property` in the
-   computed style there for no reason — moved in here so nothing outside the
-   gate changes at all). Label text and chevron icons are law-locked (owner
+   computed style there for no reason — moved in here). Note: the previously
+   unconditional :hover is re-declared only inside this gate, so a
+   hover-capable pointer at <768px (narrow desktop window) loses the fill it
+   used to get — intended, per item 8's scoping table (item 7 is >=768-only).
+   Label text and chevron icons are law-locked (owner
    directive 2026-07-17/18) and untouched — only the fill responds. */
 @media (min-width: 768px) and (hover: hover) {
   .projection-card__markets-toggle {
