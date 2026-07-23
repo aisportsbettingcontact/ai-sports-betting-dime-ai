@@ -15,7 +15,7 @@
  *   k9   = K  / AB * 27   (strikeouts per 9 innings equivalent)
  *   woba = (0.69*BB + 0.888*1B + 1.271*2B + 1.616*3B + 2.101*HR) / (AB + BB)
  *          Note: 1B = H - 2B - 3B - HR (singles)
- *          wOBA weights from FanGraphs 2026 linear weights
+ *          wOBA weights (2026 linear weights)
  *
  * Execution model:
  *   - Fetches all 30 teams in parallel (concurrency=10)
@@ -67,7 +67,7 @@ const MLB_TEAMS: Array<{ id: number; abbrev: string; name: string }> = [
   { id: 120, abbrev: "WSH", name: "Washington Nationals" },
 ];
 
-// ─── wOBA Weights (FanGraphs 2026 linear weights) ────────────────────────────
+// ─── wOBA Weights (2026 linear weights) ──────────────────────────────────────
 const WOBA_WEIGHTS = {
   bb:  0.690,
   hbp: 0.722,

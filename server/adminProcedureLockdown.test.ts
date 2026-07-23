@@ -108,8 +108,6 @@ describe("games router (routers.ts) — procedures called by PublishProjections.
     "bulkApproveModels",
     "publishAll",
     "deleteGame",
-    "lastNbaModelSync",
-    "triggerNbaModelSync",
     "triggerRefresh",
   ];
 

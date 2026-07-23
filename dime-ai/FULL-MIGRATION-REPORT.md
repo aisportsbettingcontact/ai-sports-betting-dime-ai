@@ -39,7 +39,7 @@ unknowns are implementation-time choices, not discovery.
   find `nav-icons.js` — the lead session had already extracted it and confirmed contents).
 - **Target-platform adaptation:** the original brief assumed Next.js App Router/Supabase.
   The actual repo is supplied and is the source of truth: **React 19 + Vite + wouter SPA
-  (Vercel) · Express + tRPC + Drizzle/MySQL (Railway) · Stripe · legacy prod until
+  (standalone frontend host) · Express + tRPC + Drizzle/MySQL (Railway) · Stripe · legacy prod until
   cutover (since completed)**. All "Server Component" guidance is translated to this stack: server-owned
   data via tRPC/Express routes; the SPA client renders. Where the two differ, this report
   says so explicitly rather than presenting assumptions as fact.
@@ -513,7 +513,7 @@ grants → odds-format pref (D4) → conversations schema (`db-push.yml` first) 
 wiring + edit-name → **W4** interaction: `[EDGE]` v2 cards, history drawer, copy/regenerate,
 saves (D6) → **W5** hardening: focus-trapped primitives, live region, axe + visual CI,
 perf budgets, RG language check → **W6** cutover: flip routes, un-gate mobile nav,
-Railway/Vercel parallel validation, flags + rollback. Entry/exit criteria, risks, and
+Railway/frontend-host parallel validation, flags + rollback. Entry/exit criteria, risks, and
 per-wave rollback: blueprint §12; work items Q1–Q20: blueprint §14. **None executed.**
 
 ## 27. Risk Register
@@ -564,7 +564,7 @@ kills all animation. Perf: chat route <250 KB gz; CLS≈0. Compliance: 21+ /
 
 ## 30. Cutover Plan
 
-Preconditions: W1–W5 exit criteria green; Railway backend + Vercel client previews serving
+Preconditions: W1–W5 exit criteria green; Railway backend + standalone frontend-host client previews serving
 the shell; `deploy-smoke.yml` green; 3-theme baselines approved. Steps: (1) flag-gated
 route flip `/chat`,`/betting-splits`,`/profile` to shell versions; (2) un-gate mobile
 bottom nav (`MOBILE_OWNER_TABS_PUBLIC_ENABLED`); (3) 24–48 h parallel validation (legacy
@@ -579,7 +579,7 @@ UI waves: release-flag revert (shell routes flip back to legacy pages — kept i
 W6+1). Schema: additive-only migrations (new tables/columns/indexes; no drops until
 post-cutover cleanup) — rollback = ignore. Stripe: pack prices created only after Q19
 merges; misfulfillment rollback = deactivate pack prices + reconcile ledger from
-`dime_request_audit`/Stripe events. Deploy: Vercel instant rollback to previous build;
+`dime_request_audit`/Stripe events. Deploy: frontend-host instant rollback to previous build;
 Railway redeploy previous image; the legacy host untouched until cutover. Data: ledger is
 append-only — corrections are compensating entries, never edits.
 

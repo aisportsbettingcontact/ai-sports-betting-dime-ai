@@ -21,13 +21,12 @@ This document lists every secret required by the CI/CD workflows in `.github/wor
 | `VITE_APP_ID` | Legacy OAuth application ID (retired platform) | Alphanumeric string | `ci.yml` (test stage) |
 | `OAUTH_SERVER_URL` | Legacy OAuth backend base URL (retired platform) | (legacy — no longer provisioned) | `ci.yml` (test stage) |
 | `OWNER_OPEN_ID` | Owner's legacy OAuth open ID | Alphanumeric string | `ci.yml` (test stage) |
-| `NBA_SHEET_ID` | Google Sheets ID for NBA model sync | 44-char base64url string | `ci.yml` (test stage) |
 
 ---
 
 ## Validation
 
-The `ciSecrets.test.ts` Vitest test validates all 7 secrets on every CI run.
+The `ciSecrets.test.ts` Vitest test validates all 6 secrets on every CI run.
 
 If a secret is missing or malformed, the test will fail with a specific message like:
 

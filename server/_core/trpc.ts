@@ -100,10 +100,10 @@ function buildAllowedOrigins(): Set<string> {
     }
   }
 
-  // Additional exact origins (comma-separated) for the split Railway/Vercel
-  // deployment — e.g. the Vercel production domain when the frontend is hosted
-  // separately from this backend, or the Railway domain itself while testing.
-  //   ADDITIONAL_ALLOWED_ORIGINS=https://myapp.vercel.app,https://myapp.up.railway.app
+  // Additional exact origins (comma-separated) for the Railway deployment —
+  // e.g. the Railway domain itself while testing, or any operator preview
+  // domain that serves the frontend separately from this backend.
+  //   ADDITIONAL_ALLOWED_ORIGINS=https://myapp.up.railway.app
   for (const raw of (process.env.ADDITIONAL_ALLOWED_ORIGINS ?? "").split(",")) {
     const extra = raw.trim().replace(/\/$/, "").toLowerCase();
     if (extra) {
@@ -142,11 +142,11 @@ const ALLOWED_ORIGINS = buildAllowedOrigins();
 
 // Operator-controlled origin SUFFIXES (comma-separated, https-only) for
 // per-deploy preview domains that can't be enumerated in advance — e.g.
-// Vercel previews (`https://<project>-<hash>-<team>.vercel.app`):
-//   ALLOWED_ORIGIN_SUFFIXES=-yourteam.vercel.app
+// operator preview domains (`https://<project>-<hash>-<team>.up.railway.app`):
+//   ALLOWED_ORIGIN_SUFFIXES=-yourteam.up.railway.app
 // ⚠️ CSRF caveat: every origin matching a listed suffix is trusted for
-// mutations. Never list a bare shared-hosting suffix like ".vercel.app" or
-// ".up.railway.app" — anyone can deploy there. Scope suffixes to a segment
+// mutations. Never list a bare shared-hosting suffix like ".up.railway.app" —
+// anyone can deploy there. Scope suffixes to a segment
 // only your team controls (project/team slug).
 const ALLOWED_ORIGIN_SUFFIXES: string[] = (process.env.ALLOWED_ORIGIN_SUFFIXES ?? "")
   .split(",")
@@ -177,7 +177,7 @@ export function isOriginAllowed(origin: string | undefined): boolean {
   // [CHECK 1] Static set: PUBLIC_ORIGIN + www variant + http variant + dev localhost
   if (ALLOWED_ORIGINS.has(normalized)) return true;
 
-  // [CHECK 1b] Operator-configured suffixes (Vercel preview deployments etc.)
+  // [CHECK 1b] Operator-configured suffixes (operator preview domains, e.g. *.up.railway.app)
   // https-only; see ALLOWED_ORIGIN_SUFFIXES above for the CSRF scoping rules.
   if (
     normalized.startsWith("https://") &&

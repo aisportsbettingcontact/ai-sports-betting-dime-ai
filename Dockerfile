@@ -73,8 +73,8 @@ RUN pnpm install --frozen-lockfile
 
 COPY . .
 # Builds the client into dist/public AND bundles the server into dist/index.js.
-# The server also serves the client build as a fallback origin, so the Railway
-# domain works standalone even though Vercel is the primary frontend host.
+# The server also serves the client build, so the Railway domain works
+# standalone — Railway is the only host for both API and frontend.
 RUN pnpm run build
 
 ENV NODE_ENV=production

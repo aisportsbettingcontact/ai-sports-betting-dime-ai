@@ -262,8 +262,8 @@ function classifyCsrfOrigin(origin: string | null | undefined, path: string): {
     };
   }
 
-  // Vercel / Netlify / other serverless
-  if (o.includes(".vercel.app") || o.includes(".netlify.app")) {
+  // Netlify / other serverless free-hosting platforms
+  if (o.includes(".netlify.app")) {
     return {
       label: "🤖 AUTOMATED PROBE — Serverless Platform",
       classification: "Request originated from a serverless deployment platform. Likely an automated probe or misconfigured integration.",

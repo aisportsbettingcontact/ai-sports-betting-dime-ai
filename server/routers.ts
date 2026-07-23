@@ -47,14 +47,12 @@ import { analyticsRouter } from "./routers/analytics";
 import { mlbScheduleRouter } from "./routers/mlbSchedule";
 import { nbaScheduleRouter } from "./routers/nbaSchedule";
 import { nhlScheduleRouter } from "./routers/nhlSchedule";
-// jackMacRouter removed
 import { stripeRouter } from "./routers/stripe";
 import { claudeRouter } from "./claudeRouter";
 import { waitlistRouter } from "./routers/waitlist";
 import { listNbaTeams, getNbaTeamByDbSlug, getGameTeamColors, deleteGameById, getFavoriteGameIds, getFavoriteGamesWithDates, toggleFavoriteGame, updateAnOdds, listGamesByDate, listOddsHistory, getBracketGames, auditAndAdvanceAllBracketWinners, getMlbLineupsByGameIds, getStrikeoutPropsByGame, getStrikeoutPropsByGames, getMlbGameEnvSignals, getHrPropsByGame, getHrPropsByGames } from "./db";
 import { runStrikeoutModel, type StrikeoutRunnerInput } from "./strikeoutModelRunner";
 import { getLastRefreshResult, runVsinRefreshManual, refreshAllScoresNow } from "./vsinAutoRefresh";
-import { syncNbaModelFromSheet, getLastNbaModelSyncResult } from "./nbaModelSync";
 import { syncNhlModelForToday, getLastNhlSyncResult } from "./nhlModelSync";
 import { runMlbModelForDate, validateMlbModelResults } from "./mlbModelRunner";
 import { checkGoalieChanges, getLastGoalieWatchResult } from "./nhlGoalieWatcher";
@@ -181,7 +179,6 @@ export const appRouter = router({
   mlbSchedule: mlbScheduleRouter,
   nbaSchedule: nbaScheduleRouter,
   nhlSchedule: nhlScheduleRouter,
-  // jackMac router removed
   stripe: stripeRouter,
   wc2026: wc2026Router,
   claude: claudeRouter,
@@ -607,23 +604,6 @@ export const appRouter = router({
         await deleteGameById(input.id);
         return { success: true, deletedId: input.id };
       }),
-
-    /**
-     * Returns the result of the last NBA model sheet sync (null if never run).
-     * Owner-only.
-     */
-    lastNbaModelSync: ownerProcedure.query(() => {
-      return getLastNbaModelSyncResult();
-    }),
-
-    /**
-     * Manually trigger an immediate NBA model sheet sync.
-     * Owner-only.
-     */
-    triggerNbaModelSync: ownerProcedure.mutation(async () => {
-      const result = await syncNbaModelFromSheet();
-      return result;
-    }),
 
     /**
      * Ingest Action Network "All Markets" HTML paste.

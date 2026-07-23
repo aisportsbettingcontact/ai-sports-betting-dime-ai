@@ -1,16 +1,15 @@
 /**
- * Shared Anthropic client factory — direct API or Vercel AI Gateway.
+ * Shared Anthropic client factory — direct API or an Anthropic-compatible gateway.
  *
  * Credential resolution (first match wins):
- *   ANTHROPIC_AUTH_TOKEN → Authorization: Bearer …   (AI Gateway API key)
+ *   ANTHROPIC_AUTH_TOKEN → Authorization: Bearer …   (gateway API key)
  *   ANTHROPIC_API_KEY    → x-api-key: …              (direct Anthropic)
  *
- * ANTHROPIC_BASE_URL overrides the API host (e.g. https://ai-gateway.vercel.sh).
+ * ANTHROPIC_BASE_URL overrides the API host (e.g. an Anthropic-compatible gateway).
  * When unset, the SDK talks to api.anthropic.com directly.
  *
  * Only one credential is ever sent — the API rejects requests that carry
  * both an x-api-key header and an Authorization bearer token.
- * Full runbook: references/ai-gateway-setup.md
  */
 import Anthropic from "@anthropic-ai/sdk";
 

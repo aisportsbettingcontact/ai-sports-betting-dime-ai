@@ -23,7 +23,7 @@ import MlbPropsCard, { type StrikeoutPropRow } from "@/components/MlbPropsCard";
 import MlbF5NrfiCard, { type F5NrfiGame } from "@/components/MlbF5NrfiCard";
 import MlbCheatSheetCard, { type CheatSheetGame, CheatSheetView, type CheatSheetLineup } from "@/components/MlbCheatSheetCard";
 import MlbHrPropsCard, { type HrPropRow } from "@/components/MlbHrPropsCard";
-// Jack Mac tab removed
+// Legacy tab removed
 import { AgeModal } from "@/components/AgeModal";
 import { LoginModal } from "@/components/LoginModal";
 import { toast } from "sonner";
@@ -338,7 +338,7 @@ export default function ModelProjections() {
   // ── Feed-wide mobile tab filter ───────────────────────────────────────────
   // Tabs: MODEL PROJECTIONS (dual) | BETTING SPLITS (splits) | LINEUPS (lineups, MLB only)
   //       K PROPS (props, MLB only) | F5/NRFI (f5nrfi, MLB only) | HR PROPS (hrprops, MLB only)
-  //       Jack Mac tab permanently removed
+  //       Legacy tab permanently removed
   type FeedMobileTab = 'dual' | 'splits' | 'lineups' | 'props' | 'f5nrfi' | 'hrprops';
   // feedMobileTab now comes from URL params (via useUrlState), with localStorage fallback
   const feedMobileTab = urlFeedMobileTab;
@@ -349,10 +349,10 @@ export default function ModelProjections() {
   // Pre-compute the mobileTab prop value once per render so GameCard.memo can bail out.
   // Inline ternaries in JSX create new string references on every render, defeating memo.
   const gameMobileTab = useMemo((): 'dual' | 'splits' => {
-    const nonDualTabs: FeedMobileTab[] = ['lineups', 'props', 'f5nrfi', 'hrprops']; // jackmac removed
+    const nonDualTabs: FeedMobileTab[] = ['lineups', 'props', 'f5nrfi', 'hrprops']; // legacy tab removed
     return nonDualTabs.includes(feedMobileTab) ? 'dual' : (feedMobileTab as 'dual' | 'splits');
   }, [feedMobileTab]);
-  // FEED_TABS is built after appUser is declared (see below — canSeeJackMac depends on appUser)
+  // FEED_TABS is built after appUser is declared (see below — tab visibility depends on appUser)
 
   // ── Favorites tab ──────────────────────────────────────────────────────────
   const [showFavoritesTab, setShowFavoritesTab] = useState(false);
@@ -445,7 +445,7 @@ export default function ModelProjections() {
   const { appUser, isOwner, loading: appAuthLoading, refetch: refetchAppUser } = useAppAuth();
 
   // ── FEED_TABS ─────────────────────────────────────────────────────────────
-  // Jack Mac tab permanently removed.
+  // Legacy tab permanently removed.
   const FEED_TABS: { id: FeedMobileTab; label: string }[] = selectedSport === 'MLB'
     ? [
         { id: 'dual',    label: 'PROJECTIONS' },

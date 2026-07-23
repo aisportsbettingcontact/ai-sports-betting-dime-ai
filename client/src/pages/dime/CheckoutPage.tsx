@@ -11,8 +11,8 @@
  *
  * Publishable-key resolution: build-time VITE_STRIPE_PUBLISHABLE_KEY when
  * present, otherwise fetched at runtime from stripe.publicGetConfig — so the
- * form works on builds that had no env vars (Railway Docker image, Vercel
- * without project env). If no key is available at all, the page shows an
+ * form works on builds that had no env vars (Railway Docker image, or a build
+ * with no env vars). If no key is available at all, the page shows an
  * explicit error with retry — never a redirect.
  *
  * Flow: session created on page-load (the un-awaited clientSecret promise is
