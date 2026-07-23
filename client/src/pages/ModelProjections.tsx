@@ -28,7 +28,6 @@ import { AgeModal } from "@/components/AgeModal";
 import { LoginModal } from "@/components/LoginModal";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
-import { useAuth } from "@/_core/hooks/useAuth";
 import { useAppAuth } from "@/_core/hooks/useAppAuth";
 import { getNbaTeamByDbSlug } from "@shared/nbaTeams";
 import { NHL_BY_DB_SLUG } from "@shared/nhlTeams";
@@ -441,7 +440,6 @@ export default function ModelProjections() {
     },
   });
 
-  const { user, isAuthenticated } = useAuth();
   const { appUser, isOwner, loading: appAuthLoading, refetch: refetchAppUser } = useAppAuth();
 
   // ── FEED_TABS ─────────────────────────────────────────────────────────────
@@ -1206,7 +1204,7 @@ export default function ModelProjections() {
                 </div>
               )}
             </div>
-          ) : !appUser && !user ? (
+          ) : !appUser ? (
             // ── Not logged in: show sign-in icon ──
             <button
               type="button"
@@ -1226,7 +1224,7 @@ export default function ModelProjections() {
         <div ref={searchRef} className="relative px-2 sm:px-3 md:px-4 pt-1 pb-0 md:pt-2 md:pb-1 flex items-center gap-1 sm:gap-2 md:gap-3">
 
           {/* FAVORITES tab — shown when user is authenticated AND has ≥1 active favorite */}
-          {/* NOTE: must use isAppAuthedForFav (Boolean(appUser)) — NOT isAuthenticated (legacy OAuth always null) */}
+          {/* NOTE: uses isAppAuthedForFav (Boolean(appUser)) — the real app_session auth state */}
           {isAppAuthedForFav && activeFavCount >= 1 && (
             <button type="button" onClick={() => setShowFavoritesTab(v => !v)}
               className="flex items-center gap-1 sm:gap-1.5 md:gap-2 px-1.5 sm:px-2.5 md:px-3 py-1 sm:py-1.5 md:py-2 rounded-full text-sm sm:text-sm md:text-[13px] font-bold tracking-wide transition-all flex-shrink-0"
@@ -1258,7 +1256,7 @@ export default function ModelProjections() {
               selectedDate={selectedDate}
               onSelect={setSelectedDate}
               availableDates={new Set(allDates)}
-              isAdmin={isOwner || user?.role === "admin"}
+              isAdmin={isOwner || appUser?.role === "admin"}
             />
           )}
 

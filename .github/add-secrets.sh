@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # .github/add-secrets.sh
 #
-# One-shot script to add all 6 required GitHub Actions secrets to the
+# One-shot script to add all 3 required GitHub Actions secrets to the
 # aisportsbettingcontact/aisportsbetting repository.
 #
 # PREREQUISITES:
@@ -82,7 +82,7 @@ set_secret() {
   echo ""
 }
 
-# ─── Set all 6 required secrets ──────────────────────────────────────────────
+# ─── Set all 3 required secrets ──────────────────────────────────────────────
 
 set_secret \
   "DATABASE_URL" \
@@ -99,28 +99,13 @@ set_secret \
   "Production base URL — no trailing slash" \
   "https://aisportsbettingmodels.com"
 
-set_secret \
-  "VITE_APP_ID" \
-  "Legacy OAuth application ID (retired platform)" \
-  "alphanumeric-app-id"
-
-set_secret \
-  "OAUTH_SERVER_URL" \
-  "Legacy OAuth backend base URL (retired platform)" \
-  "(legacy, unused)"
-
-set_secret \
-  "OWNER_OPEN_ID" \
-  "Owner's legacy OAuth open ID" \
-  "alphanumeric-open-id"
-
 # ─── Verification ─────────────────────────────────────────────────────────────
 echo "══════════════════════════════════════════════════════════════"
 echo "[STEP] Verifying all secrets are now set..."
 echo ""
 
 SECRETS_SET=$(gh secret list --repo "$REPO" 2>/dev/null | awk '{print $1}')
-REQUIRED=("DATABASE_URL" "APP_SESSION_SECRET" "PUBLIC_ORIGIN" "VITE_APP_ID" "OAUTH_SERVER_URL" "OWNER_OPEN_ID")
+REQUIRED=("DATABASE_URL" "APP_SESSION_SECRET" "PUBLIC_ORIGIN")
 ALL_PASS=true
 
 for secret in "${REQUIRED[@]}"; do
@@ -134,11 +119,11 @@ done
 
 echo ""
 if [ "$ALL_PASS" = true ]; then
-  echo "[OUTPUT] All 6 required secrets are set."
+  echo "[OUTPUT] All 3 required secrets are set."
   echo "[VERIFY] PASS — push any commit to main to trigger CI and validate with ciSecrets.test.ts"
 else
   echo "[OUTPUT] Some secrets are missing — re-run this script for the missing ones."
-  echo "[VERIFY] FAIL — CI will fail until all 6 secrets are present"
+  echo "[VERIFY] FAIL — CI will fail until all 3 secrets are present"
 fi
 echo "══════════════════════════════════════════════════════════════"
 echo ""

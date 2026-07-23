@@ -39,7 +39,6 @@ import { useIsMdUp } from "@/hooks/useIsMdUp";
 import { americanToImplied, calculateEdge, calculateRoi, formatRoi, getEdgeColor, getVerdict, EDGE_THRESHOLD_PP } from '@/lib/edgeUtils';
 import { formatGameTime, toNum, spreadSign } from '@/lib/gameUtils';
 import { trpc } from "@/lib/trpc";
-import { useAuth } from "@/_core/hooks/useAuth";
 import { useAppAuth } from "@/_core/hooks/useAppAuth";
 import { BettingSplitsPanel } from "./BettingSplitsPanel";
 import { OddsHistoryPanel } from "./OddsHistoryPanel";
