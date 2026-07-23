@@ -100,9 +100,9 @@
   .projection-card--pass { opacity: 0.82; }
   .projection-card--pass .edge-indicator--none { color: var(--text-secondary, #a6a6a6); }
 
-  /* Fold-in minor (Round 4 Wave 3, from the W1 review — see
-     .superpowers/sdd/progress.md "r4 W1: COMPLETE" / r4-w1-report.md "Item 3"):
-     defensive PASS backstop. Zero mint is already structurally guaranteed —
+  /* Defensive PASS backstop (Round 4, from the W1 review — plan:
+     docs/superpowers/plans/2026-07-23-feed-desktop-polish.md, item 3):
+     zero mint is already structurally guaranteed —
      rankedEdges() is empty on a genuine PASS card, so none of these
      signal/edge classes can ever be emitted on one today (see the comment
      above) — but this rule neutralizes stray mint anyway if that invariant
@@ -170,8 +170,26 @@
 @media (min-width: 768px) {
   .summary {
     display: grid;
-    grid-template-columns: minmax(6.5rem, 1.6fr) minmax(3.5rem, 0.8fr) minmax(3.5rem, 0.8fr) minmax(5.5rem, 1fr);
+    /* Track floors are (near-)zero, NOT the readable-label widths they once
+       were (6.5/3.5/3.5/5.5rem): those floors + 3 column gaps summed to an
+       un-shrinkable 376px intrinsic minimum, and the >=1024 2-across grid
+       beside the 352px sidebar leaves a card only ~246px of content at
+       1024px — the plain .summary (whose automatic minimum, unlike
+       .summary-carousel's min-inline-size:0 below, was never reset) then
+       forced the pane into horizontal overflow at 1024 and resolved its
+       tracks on a different (clamped-at-376px) width than a carousel
+       row-mate at 1280, breaking item 5's cross-card chip alignment by
+       ~13px. Caught by e2e/feed-desktop.spec.ts's boundingBox contracts
+       (W4). With length minimums (never `auto`), track sizes stay a pure
+       function of container width — the alignment guarantee — and
+       min-inline-size:0 keeps this box, like the carousel, sized by the
+       card instead of by its own content. Labels wrap at narrow widths
+       (.summary__item min-inline-size:0); only the chip column keeps a
+       5rem floor so the pill compresses into card padding instead of
+       sprawling leftward through the readout. */
+    grid-template-columns: minmax(0, 1.6fr) minmax(0, 0.8fr) minmax(0, 0.8fr) minmax(5rem, 1fr);
     align-items: center;
+    min-inline-size: 0;
   }
   .summary__readout { display: contents; }
   .summary__item--edge { grid-column: 1; }
