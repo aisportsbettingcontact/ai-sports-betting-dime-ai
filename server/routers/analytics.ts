@@ -33,6 +33,7 @@ export const analyticsRouter = router({
       sessionId: input.sessionId ?? null,
       tabId: input.tabId ?? null,
       featureId: input.featureId ?? null,
+      actionName: input.actionName ?? null,
       route: sanitizeRoutePattern(input.route),
       surface: input.surface,
       outcome: input.outcome ?? null,

@@ -90,7 +90,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
-import { emitEvent } from "@/lib/analyticsBridge";
+import { emitEvent, emitAction } from "@/lib/analyticsBridge";
 import { useAppAuth } from "@/_core/hooks/useAppAuth";
 import type { DimeProductPane } from "../dime-shell/productRoute";
 import type { ThemeMode } from "../../contexts/ThemeContext";
@@ -1833,6 +1833,18 @@ export default function DimeChatPage({
       const trimmed = text.trim();
       if (!trimmed || state.streaming) return;
 
+      // D3 analytics (inert until an island registers the emitter; fire-and-forget).
+      emitAction("chat_message_sent", {
+        props: {
+          len_bucket:
+            trimmed.length < 120
+              ? "short"
+              : trimmed.length < 600
+                ? "medium"
+                : "long",
+        },
+      });
+
       // Remember the outbound text so the settle effect can persist the full
       // user→assistant turn to the dimeChats history once the stream ends.
       pendingUserTextRef.current = trimmed;
@@ -1904,6 +1916,7 @@ export default function DimeChatPage({
   const stop = () => abortRef.current?.abort();
 
   const newChat = useCallback(() => {
+    emitAction("chat_started");
     if (state.messages.length > 0) captureComposerPresentation();
     abortRef.current?.abort();
     activeBatcherRef.current?.dispose();
@@ -2022,6 +2035,7 @@ export default function DimeChatPage({
 
   const toggleStar = useCallback(() => {
     if (threadId == null) return;
+    if (!activeThreadMeta?.starred) emitAction("chat_starred");
     setThreadMenuOpen(false);
     setStarredMut.mutate(
       { threadId, starred: !activeThreadMeta?.starred },
@@ -2049,6 +2063,7 @@ export default function DimeChatPage({
       !window.confirm("Delete this chat? It will be removed from your history.")
     )
       return;
+    emitAction("chat_deleted");
     setThreadMenuOpen(false);
     softDeleteMut.mutate(
       { threadId },
@@ -2071,6 +2086,7 @@ export default function DimeChatPage({
         )
       )
         return;
+      emitAction("chat_deleted");
       softDeleteMut.mutate(
         { threadId: id },
         {

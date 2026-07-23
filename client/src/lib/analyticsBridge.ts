@@ -14,7 +14,7 @@
  * Server-side device derivation still tags every accepted event, so an event
  * that does flow through carries device_type regardless of this client block.
  */
-import type { AnalyticsEventName, TrackOptions } from "./analytics";
+import type { ActionName, AnalyticsEventName, TrackOptions } from "./analytics";
 
 type EmitFn = (eventName: AnalyticsEventName, opts?: TrackOptions) => void;
 
@@ -34,6 +34,18 @@ export function unregisterAnalyticsEmit(fn: EmitFn): void {
 export function emitEvent(eventName: AnalyticsEventName, opts?: TrackOptions): void {
   try {
     emitImpl?.(eventName, opts);
+  } catch {
+    /* analytics must never break the product */
+  }
+}
+
+/**
+ * Emit a curated `action_performed` from critical-path code (chat). Mirrors
+ * `emitEvent`; no-op until an emitter is registered; never throws.
+ */
+export function emitAction(actionName: ActionName, opts?: Omit<TrackOptions, "actionName">): void {
+  try {
+    emitImpl?.("action_performed", { ...opts, actionName });
   } catch {
     /* analytics must never break the product */
   }

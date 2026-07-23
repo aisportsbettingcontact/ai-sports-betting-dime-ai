@@ -69,30 +69,30 @@ function pct(n: number, decimals = 1): string {
 }
 
 function roiColor(roi: number): string {
-  if (roi > 0.05)  return "text-[#45E0A8]";
-  if (roi > 0)     return "text-[#45E0A8]";
-  if (roi > -0.05) return "text-white";
-  return "text-white";
+  if (roi > 0.05)  return "text-primary";
+  if (roi > 0)     return "text-primary";
+  if (roi > -0.05) return "text-foreground";
+  return "text-foreground";
 }
 
 function accColor(acc: number): string {
-  if (acc >= TARGET_ACCURACY)     return "text-[#45E0A8]";
-  if (acc >= BREAKEVEN_ACCURACY)  return "text-white";
-  return "text-white";
+  if (acc >= TARGET_ACCURACY)     return "text-primary";
+  if (acc >= BREAKEVEN_ACCURACY)  return "text-foreground";
+  return "text-foreground";
 }
 
 function accBadge(acc: number, sample: number): ReactElement {
-  if (sample < 5) return <Badge variant="outline" className="text-xs text-white">N/A</Badge>;
-  if (acc >= TARGET_ACCURACY)     return <Badge className="bg-[#45E0A8] text-black border-[#45E0A8] text-xs">✓ {pct(acc)}</Badge>;
-  if (acc >= BREAKEVEN_ACCURACY)  return <Badge className="bg-black text-white border-white text-xs">{pct(acc)}</Badge>;
-  return <Badge className="bg-black text-white border-white text-xs">{pct(acc)}</Badge>;
+  if (sample < 5) return <Badge variant="outline" className="text-xs text-foreground">N/A</Badge>;
+  if (acc >= TARGET_ACCURACY)     return <Badge className="bg-primary text-primary-foreground border-primary text-xs">✓ {pct(acc)}</Badge>;
+  if (acc >= BREAKEVEN_ACCURACY)  return <Badge className="bg-background text-foreground border-border text-xs">{pct(acc)}</Badge>;
+  return <Badge className="bg-background text-foreground border-border text-xs">{pct(acc)}</Badge>;
 }
 
 function StatusIcon({ acc, sample }: { acc: number; sample: number }): ReactElement {
-  if (sample < 5) return <Minus className="w-4 h-4 text-white" />;
-  if (acc >= TARGET_ACCURACY)    return <CheckCircle2 className="w-4 h-4 text-[#45E0A8]" />;
-  if (acc >= BREAKEVEN_ACCURACY) return <AlertTriangle className="w-4 h-4 text-white" />;
-  return <XCircle className="w-4 h-4 text-white" />;
+  if (sample < 5) return <Minus className="w-4 h-4 text-foreground" />;
+  if (acc >= TARGET_ACCURACY)    return <CheckCircle2 className="w-4 h-4 text-primary" />;
+  if (acc >= BREAKEVEN_ACCURACY) return <AlertTriangle className="w-4 h-4 text-foreground" />;
+  return <XCircle className="w-4 h-4 text-foreground" />;
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
@@ -166,36 +166,36 @@ export default function MlbBacktest() {
   };
 
   const SortIcon = ({ col }: { col: typeof sortBy }) => {
-    if (sortBy !== col) return <Minus className="w-3 h-3 text-white inline ml-1" />;
+    if (sortBy !== col) return <Minus className="w-3 h-3 text-foreground inline ml-1" />;
     return sortDir === "desc"
-      ? <ChevronDown className="w-3 h-3 text-white inline ml-1" />
-      : <ChevronUp   className="w-3 h-3 text-white inline ml-1" />;
+      ? <ChevronDown className="w-3 h-3 text-foreground inline ml-1" />
+      : <ChevronUp   className="w-3 h-3 text-foreground inline ml-1" />;
   };
 
   // ─────────────────────────────────────────────────────────────────────────────
   return (
     <AdminShell active="backtest">
-    {/* Self-contained dark surface so the page's hardcoded white text stays
-        readable inside the theme-aware AdminShell chrome (token migration TODO). */}
-    <div className="min-h-[calc(100vh-3.5rem)] bg-black text-white p-4 md:p-6 lg:p-8">
+    {/* Theme-aware surface: uses Dime semantic tokens so it follows light/dark
+        theme inside the AdminShell chrome (migrated off hardcoded black/white/mint). */}
+    <div className="min-h-[calc(100vh-3.5rem)] bg-background text-foreground p-4 md:p-6 lg:p-8">
       {/* ── Header ── */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white flex items-center gap-2">
-            <BarChart2 className="w-7 h-7 text-white" />
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground flex items-center gap-2">
+            <BarChart2 className="w-7 h-7 text-foreground" />
             MLB AI Model Backtest
           </h1>
-          <p className="text-white text-sm mt-1">
+          <p className="text-foreground text-sm mt-1">
             Live 2026 validation · All markets · Target: ≥70% accuracy on filtered picks
           </p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
           {/* Period selector */}
           <Select value={String(days)} onValueChange={v => setDays(Number(v))}>
-            <SelectTrigger className="w-32 bg-black border-white text-white h-9 text-sm">
+            <SelectTrigger className="w-32 bg-background border-border text-foreground h-9 text-sm">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent className="bg-black border-white text-white">
+            <SelectContent className="bg-background border-border text-foreground">
               <SelectItem value="14">Last 14d</SelectItem>
               <SelectItem value="30">Last 30d</SelectItem>
               <SelectItem value="60">Last 60d</SelectItem>
@@ -206,10 +206,10 @@ export default function MlbBacktest() {
           </Select>
           {/* Min edge filter */}
           <Select value={String(minEdge)} onValueChange={v => setMinEdge(Number(v))}>
-            <SelectTrigger className="w-36 bg-black border-white text-white h-9 text-sm">
+            <SelectTrigger className="w-36 bg-background border-border text-foreground h-9 text-sm">
               <SelectValue placeholder="Min Edge" />
             </SelectTrigger>
-            <SelectContent className="bg-black border-white text-white">
+            <SelectContent className="bg-background border-border text-foreground">
               <SelectItem value="0">All Bets</SelectItem>
               <SelectItem value="0.02">Edge ≥ 2%</SelectItem>
               <SelectItem value="0.04">Edge ≥ 4%</SelectItem>
@@ -223,7 +223,7 @@ export default function MlbBacktest() {
             variant="outline"
             size="sm"
             onClick={() => { reportQuery.refetch(); timeSeriesQuery.refetch(); edgeBucketsQuery.refetch(); }}
-            className="bg-black border-white text-white hover:bg-black h-9"
+            className="bg-background border-border text-foreground hover:bg-background h-9"
           >
             <RefreshCw className={`w-4 h-4 ${reportQuery.isFetching ? "animate-spin" : ""}`} />
           </Button>
@@ -233,7 +233,7 @@ export default function MlbBacktest() {
               size="sm"
               onClick={() => runBacktestMutation.mutate({ startDate: "2026-03-26", endDate: new Date().toISOString().slice(0, 10) })}
               disabled={runBacktestMutation.isPending}
-              className="bg-[#45E0A8] hover:bg-[#45E0A8] text-black h-9 text-sm"
+              className="bg-primary hover:bg-primary text-primary-foreground h-9 text-sm"
             >
               {runBacktestMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Activity className="w-4 h-4 mr-2" />}
               Run Full Backtest
@@ -245,10 +245,10 @@ export default function MlbBacktest() {
       {/* ── Summary KPI Cards ── */}
       {reportQuery.isLoading ? (
         <div className="flex items-center justify-center h-32">
-          <Loader2 className="w-8 h-8 animate-spin text-white" />
+          <Loader2 className="w-8 h-8 animate-spin text-foreground" />
         </div>
       ) : reportQuery.error ? (
-        <div className="text-white text-center py-8">Failed to load backtest data. {reportQuery.error.message}</div>
+        <div className="text-foreground text-center py-8">Failed to load backtest data. {reportQuery.error.message}</div>
       ) : report && summary ? (
         <>
           {/* KPI row */}
@@ -278,68 +278,68 @@ export default function MlbBacktest() {
               label="≥70% Markets"
               value={String(summary.marketsAbove70pct)}
               sub={`of ${report.markets.filter(m => m.wins + m.losses >= 5).length} with data`}
-              color={summary.marketsAbove70pct >= 4 ? "text-[#45E0A8]" : "text-white"}
+              color={summary.marketsAbove70pct >= 4 ? "text-primary" : "text-foreground"}
               icon={<CheckCircle2 className="w-4 h-4" />}
             />
             <KpiCard
               label="Best Market"
               value={pct(summary.bestAccuracy)}
               sub={summary.bestMarket}
-              color="text-[#45E0A8]"
+              color="text-primary"
               icon={<TrendingUp className="w-4 h-4" />}
             />
             <KpiCard
               label="Total Games"
               value={String(report.totalGames)}
               sub={`${days}d period`}
-              color="text-white"
+              color="text-foreground"
               icon={<BarChart2 className="w-4 h-4" />}
             />
           </div>
 
           {/* ── Main Tabs ── */}
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="bg-black border border-white mb-4 flex-wrap h-auto gap-1 p-1">
-              <TabsTrigger value="overview"  className="data-[state=active]:bg-[#45E0A8] data-[state=active]:text-black text-white text-xs sm:text-sm">Overview</TabsTrigger>
-              <TabsTrigger value="roi"       className="data-[state=active]:bg-[#45E0A8] data-[state=active]:text-black text-white text-xs sm:text-sm">ROI Curve</TabsTrigger>
-              <TabsTrigger value="calibration" className="data-[state=active]:bg-[#45E0A8] data-[state=active]:text-black text-white text-xs sm:text-sm">Calibration</TabsTrigger>
-              <TabsTrigger value="kprops"    className="data-[state=active]:bg-[#45E0A8] data-[state=active]:text-black text-white text-xs sm:text-sm">K-Props</TabsTrigger>
-              <TabsTrigger value="hrprops"   className="data-[state=active]:bg-[#45E0A8] data-[state=active]:text-black text-white text-xs sm:text-sm">HR Props</TabsTrigger>
+            <TabsList className="bg-background border border-border mb-4 flex-wrap h-auto gap-1 p-1">
+              <TabsTrigger value="overview"  className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-foreground text-xs sm:text-sm">Overview</TabsTrigger>
+              <TabsTrigger value="roi"       className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-foreground text-xs sm:text-sm">ROI Curve</TabsTrigger>
+              <TabsTrigger value="calibration" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-foreground text-xs sm:text-sm">Calibration</TabsTrigger>
+              <TabsTrigger value="kprops"    className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-foreground text-xs sm:text-sm">K-Props</TabsTrigger>
+              <TabsTrigger value="hrprops"   className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-foreground text-xs sm:text-sm">HR Props</TabsTrigger>
             </TabsList>
 
             {/* ── OVERVIEW TAB ── */}
             <TabsContent value="overview">
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-3">
                 <Select value={filterGroup} onValueChange={setFilterGroup}>
-                  <SelectTrigger className="w-44 bg-black border-white text-white h-8 text-xs">
+                  <SelectTrigger className="w-44 bg-background border-border text-foreground h-8 text-xs">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-black border-white text-white">
+                  <SelectContent className="bg-background border-border text-foreground">
                     {MARKET_GROUPS.map(g => <SelectItem key={g} value={g} className="text-xs">{g}</SelectItem>)}
                   </SelectContent>
                 </Select>
-                <span className="text-white text-xs">{sortedMarkets.length} markets</span>
+                <span className="text-foreground text-xs">{sortedMarkets.length} markets</span>
               </div>
 
               {/* Market table */}
-              <div className="overflow-x-auto rounded-xl border border-white">
+              <div className="overflow-x-auto rounded-xl border border-border">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="bg-black border-b border-white">
-                      <th className="text-left px-3 py-2.5 text-white font-medium text-xs w-36">Market</th>
-                      <th className="text-left px-3 py-2.5 text-white font-medium text-xs">Group</th>
-                      <th className="text-center px-3 py-2.5 text-white font-medium text-xs cursor-pointer hover:text-white" onClick={() => handleSort("sample")}>
+                    <tr className="bg-background border-b border-border">
+                      <th className="text-left px-3 py-2.5 text-foreground font-medium text-xs w-36">Market</th>
+                      <th className="text-left px-3 py-2.5 text-foreground font-medium text-xs">Group</th>
+                      <th className="text-center px-3 py-2.5 text-foreground font-medium text-xs cursor-pointer hover:text-foreground" onClick={() => handleSort("sample")}>
                         W / L / P <SortIcon col="sample" />
                       </th>
-                      <th className="text-center px-3 py-2.5 text-white font-medium text-xs cursor-pointer hover:text-white" onClick={() => handleSort("accuracy")}>
+                      <th className="text-center px-3 py-2.5 text-foreground font-medium text-xs cursor-pointer hover:text-foreground" onClick={() => handleSort("accuracy")}>
                         Accuracy <SortIcon col="accuracy" />
                       </th>
-                      <th className="text-center px-3 py-2.5 text-white font-medium text-xs cursor-pointer hover:text-white" onClick={() => handleSort("roi")}>
+                      <th className="text-center px-3 py-2.5 text-foreground font-medium text-xs cursor-pointer hover:text-foreground" onClick={() => handleSort("roi")}>
                         ROI <SortIcon col="roi" />
                       </th>
-                      <th className="text-center px-3 py-2.5 text-white font-medium text-xs">Avg Edge</th>
-                      <th className="text-center px-3 py-2.5 text-white font-medium text-xs">Filtered Acc</th>
-                      <th className="text-center px-3 py-2.5 text-white font-medium text-xs">Status</th>
+                      <th className="text-center px-3 py-2.5 text-foreground font-medium text-xs">Avg Edge</th>
+                      <th className="text-center px-3 py-2.5 text-foreground font-medium text-xs">Filtered Acc</th>
+                      <th className="text-center px-3 py-2.5 text-foreground font-medium text-xs">Status</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -347,19 +347,19 @@ export default function MlbBacktest() {
                       const sample = m.wins + m.losses;
                       const groupColor = GROUP_COLORS[m.group] ?? "#45E0A8";
                       return (
-                        <tr key={m.market} className={`border-b border-white hover:bg-black transition-colors ${i % 2 === 0 ? "bg-black" : "bg-black"}`}>
+                        <tr key={m.market} className={`border-b border-border hover:bg-background transition-colors ${i % 2 === 0 ? "bg-background" : "bg-background"}`}>
                           <td className="px-3 py-2.5">
                             <div className="flex items-center gap-2">
                               <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: groupColor }} />
-                              <span className="font-medium text-white text-xs">{m.label}</span>
+                              <span className="font-medium text-foreground text-xs">{m.label}</span>
                             </div>
                           </td>
-                          <td className="px-3 py-2.5 text-white text-xs">{m.group}</td>
+                          <td className="px-3 py-2.5 text-foreground text-xs">{m.group}</td>
                           <td className="px-3 py-2.5 text-center">
-                            <span className="text-[#45E0A8] font-mono text-xs">{m.wins}</span>
-                            <span className="text-white mx-1">/</span>
-                            <span className="text-white font-mono text-xs">{m.losses}</span>
-                            {m.pushes > 0 && <><span className="text-white mx-1">/</span><span className="text-white font-mono text-xs">{m.pushes}</span></>}
+                            <span className="text-primary font-mono text-xs">{m.wins}</span>
+                            <span className="text-foreground mx-1">/</span>
+                            <span className="text-foreground font-mono text-xs">{m.losses}</span>
+                            {m.pushes > 0 && <><span className="text-foreground mx-1">/</span><span className="text-foreground font-mono text-xs">{m.pushes}</span></>}
                           </td>
                           <td className="px-3 py-2.5 text-center">
                             <span className={`font-mono font-bold text-xs ${accColor(m.accuracy)}`}>
@@ -372,7 +372,7 @@ export default function MlbBacktest() {
                             </span>
                           </td>
                           <td className="px-3 py-2.5 text-center">
-                            <span className="text-white font-mono text-xs">
+                            <span className="text-foreground font-mono text-xs">
                               {m.avgEdge !== 0 ? `+${pct(m.avgEdge, 2)}` : "—"}
                             </span>
                           </td>
@@ -391,8 +391,8 @@ export default function MlbBacktest() {
 
               {/* ── Optimal Thresholds Panel ── */}
               <div className="mt-4 mb-6">
-                <h3 className="text-white font-semibold text-sm mb-3 flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-[#45E0A8]" />
+                <h3 className="text-foreground font-semibold text-sm mb-3 flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-primary" />
                   Markets Hitting ≥70% at Optimal Threshold (2026 Live Data)
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -406,42 +406,42 @@ export default function MlbBacktest() {
                   ].map(t => (
                     <div key={t.market} className={`rounded-lg border p-3 ${
                       t.status === "LIVE"
-                        ? "bg-[#45E0A8] border-[#45E0A8]"
-                        : "bg-black border-white"
+                        ? "bg-primary border-primary"
+                        : "bg-background border-border"
                     }`}>
                       <div className="flex items-center justify-between mb-1">
-                        <span className={`font-bold text-sm ${t.status === "LIVE" ? "text-black" : "text-white"}`}>{t.market}</span>
+                        <span className={`font-bold text-sm ${t.status === "LIVE" ? "text-primary-foreground" : "text-foreground"}`}>{t.market}</span>
                         <Badge className={t.status === "LIVE"
-                          ? "bg-[#45E0A8] text-black border-[#45E0A8] text-xs"
-                          : "bg-black text-white border-white text-xs"
+                          ? "bg-primary text-primary-foreground border-primary text-xs"
+                          : "bg-background text-foreground border-border text-xs"
                         }>
                           {t.status === "LIVE" ? `✓ ${pct(t.acc)}` : `~ ${pct(t.acc)}`}
                         </Badge>
                       </div>
-                      <div className={`text-xs font-mono mb-2 ${t.status === "LIVE" ? "text-black" : "text-white"}`}>{t.threshold}</div>
+                      <div className={`text-xs font-mono mb-2 ${t.status === "LIVE" ? "text-primary-foreground" : "text-foreground"}`}>{t.threshold}</div>
                       <div className="flex items-center gap-3 text-xs">
-                        <span className={`font-bold ${t.status === "LIVE" ? "text-black" : "text-[#45E0A8]"}`}>{t.w}W</span>
-                        <span className={`font-bold ${t.status === "LIVE" ? "text-black" : "text-white"}`}>{t.l}L</span>
-                        <span className={`font-bold ml-auto ${t.status === "LIVE" ? "text-black" : t.roi >= 0 ? "text-[#45E0A8]" : "text-white"}`}>
+                        <span className={`font-bold ${t.status === "LIVE" ? "text-primary-foreground" : "text-primary"}`}>{t.w}W</span>
+                        <span className={`font-bold ${t.status === "LIVE" ? "text-primary-foreground" : "text-foreground"}`}>{t.l}L</span>
+                        <span className={`font-bold ml-auto ${t.status === "LIVE" ? "text-primary-foreground" : t.roi >= 0 ? "text-primary" : "text-foreground"}`}>
                           ROI: {t.roi >= 0 ? "+" : ""}{pct(t.roi)}
                         </span>
                       </div>
                     </div>
                   ))}
                 </div>
-                <div className="mt-3 p-3 rounded-lg bg-black border border-white">
-                  <div className="text-xs text-white font-semibold mb-1">⚠ Calibration In Progress</div>
-                  <div className="text-xs text-white">
-                    <span className="text-white font-medium">K-Props:</span> Bias = −0.52 Ks/start (under-projecting). Calibration factors updated: OVER ×1.05, UNDER ×1.03. Re-run model to validate.
+                <div className="mt-3 p-3 rounded-lg bg-background border border-border">
+                  <div className="text-xs text-foreground font-semibold mb-1">⚠ Calibration In Progress</div>
+                  <div className="text-xs text-foreground">
+                    <span className="text-foreground font-medium">K-Props:</span> Bias = −0.52 Ks/start (under-projecting). Calibration factors updated: OVER ×1.05, UNDER ×1.03. Re-run model to validate.
                     &nbsp;|&nbsp;
-                    <span className="text-white font-medium">HR Props:</span> Over-predicting P(HR) by +3.57pp. HR_CALIBRATION_FACTOR reduced 0.875 → 0.720. Re-run model to validate.
+                    <span className="text-foreground font-medium">HR Props:</span> Over-predicting P(HR) by +3.57pp. HR_CALIBRATION_FACTOR reduced 0.875 → 0.720. Re-run model to validate.
                   </div>
                 </div>
               </div>
 
               {/* Accuracy bar chart */}
               <div className="mt-6">
-                <h3 className="text-white font-semibold text-sm mb-3">Market Accuracy vs Target (70%)</h3>
+                <h3 className="text-foreground font-semibold text-sm mb-3">Market Accuracy vs Target (70%)</h3>
                 <ResponsiveContainer width="100%" height={280}>
                   <BarChart
                     data={sortedMarkets.filter(m => m.wins + m.losses >= 5)}
@@ -484,21 +484,21 @@ export default function MlbBacktest() {
             <TabsContent value="roi">
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-4">
                 <Select value={selectedMarket} onValueChange={v => { setSelectedMarket(v); timeSeriesQuery.refetch(); }}>
-                  <SelectTrigger className="w-44 bg-black border-white text-white h-8 text-xs">
+                  <SelectTrigger className="w-44 bg-background border-border text-foreground h-8 text-xs">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-black border-white text-white">
+                  <SelectContent className="bg-background border-border text-foreground">
                     <SelectItem value="all" className="text-xs">All Markets</SelectItem>
                     {report.markets.map(m => (
                       <SelectItem key={m.market} value={m.market} className="text-xs">{m.label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                <span className="text-white text-xs">Cumulative ROI over time (flat-bet $100/game)</span>
+                <span className="text-foreground text-xs">Cumulative ROI over time (flat-bet $100/game)</span>
               </div>
 
               {timeSeriesQuery.isLoading ? (
-                <div className="flex items-center justify-center h-48"><Loader2 className="w-6 h-6 animate-spin text-white" /></div>
+                <div className="flex items-center justify-center h-48"><Loader2 className="w-6 h-6 animate-spin text-foreground" /></div>
               ) : (
                 <ResponsiveContainer width="100%" height={320}>
                   <LineChart
@@ -529,23 +529,23 @@ export default function MlbBacktest() {
 
               {/* Daily breakdown table */}
               {timeSeriesQuery.data && timeSeriesQuery.data.length > 0 && (
-                <div className="mt-4 overflow-x-auto rounded-xl border border-white max-h-64 overflow-y-auto">
+                <div className="mt-4 overflow-x-auto rounded-xl border border-border max-h-64 overflow-y-auto">
                   <table className="w-full text-xs">
-                    <thead className="sticky top-0 bg-black border-b border-white">
+                    <thead className="sticky top-0 bg-background border-b border-border">
                       <tr>
-                        <th className="text-left px-3 py-2 text-white font-medium">Date</th>
-                        <th className="text-center px-3 py-2 text-white font-medium">W</th>
-                        <th className="text-center px-3 py-2 text-white font-medium">L</th>
-                        <th className="text-center px-3 py-2 text-white font-medium">Daily Acc</th>
-                        <th className="text-center px-3 py-2 text-white font-medium">Cum ROI</th>
+                        <th className="text-left px-3 py-2 text-foreground font-medium">Date</th>
+                        <th className="text-center px-3 py-2 text-foreground font-medium">W</th>
+                        <th className="text-center px-3 py-2 text-foreground font-medium">L</th>
+                        <th className="text-center px-3 py-2 text-foreground font-medium">Daily Acc</th>
+                        <th className="text-center px-3 py-2 text-foreground font-medium">Cum ROI</th>
                       </tr>
                     </thead>
                     <tbody>
                       {[...timeSeriesQuery.data].reverse().map((d, i) => (
-                        <tr key={d.date} className={`border-b border-white ${i % 2 === 0 ? "bg-black" : "bg-black"}`}>
-                          <td className="px-3 py-1.5 text-white font-mono">{d.date}</td>
-                          <td className="px-3 py-1.5 text-center text-[#45E0A8] font-mono">{d.wins}</td>
-                          <td className="px-3 py-1.5 text-center text-white font-mono">{d.losses}</td>
+                        <tr key={d.date} className={`border-b border-border ${i % 2 === 0 ? "bg-background" : "bg-background"}`}>
+                          <td className="px-3 py-1.5 text-foreground font-mono">{d.date}</td>
+                          <td className="px-3 py-1.5 text-center text-primary font-mono">{d.wins}</td>
+                          <td className="px-3 py-1.5 text-center text-foreground font-mono">{d.losses}</td>
                           <td className={`px-3 py-1.5 text-center font-mono ${accColor(d.accuracy)}`}>{pct(d.accuracy)}</td>
                           <td className={`px-3 py-1.5 text-center font-mono ${roiColor(d.cumulativeRoi)}`}>
                             {d.cumulativeRoi >= 0 ? "+" : ""}{pct(d.cumulativeRoi)}
@@ -562,21 +562,21 @@ export default function MlbBacktest() {
             <TabsContent value="calibration">
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-4">
                 <Select value={selectedMarket} onValueChange={v => { setSelectedMarket(v); edgeBucketsQuery.refetch(); }}>
-                  <SelectTrigger className="w-44 bg-black border-white text-white h-8 text-xs">
+                  <SelectTrigger className="w-44 bg-background border-border text-foreground h-8 text-xs">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-black border-white text-white">
+                  <SelectContent className="bg-background border-border text-foreground">
                     <SelectItem value="all" className="text-xs">All Markets</SelectItem>
                     {report.markets.map(m => (
                       <SelectItem key={m.market} value={m.market} className="text-xs">{m.label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                <span className="text-white text-xs">Edge bucket → actual win rate (well-calibrated = monotonically increasing)</span>
+                <span className="text-foreground text-xs">Edge bucket → actual win rate (well-calibrated = monotonically increasing)</span>
               </div>
 
               {edgeBucketsQuery.isLoading ? (
-                <div className="flex items-center justify-center h-48"><Loader2 className="w-6 h-6 animate-spin text-white" /></div>
+                <div className="flex items-center justify-center h-48"><Loader2 className="w-6 h-6 animate-spin text-foreground" /></div>
               ) : (
                 <>
                   <ResponsiveContainer width="100%" height={280}>
@@ -613,29 +613,29 @@ export default function MlbBacktest() {
                   </ResponsiveContainer>
 
                   {/* Edge bucket table */}
-                  <div className="mt-4 overflow-x-auto rounded-xl border border-white">
+                  <div className="mt-4 overflow-x-auto rounded-xl border border-border">
                     <table className="w-full text-xs">
-                      <thead className="bg-black border-b border-white">
+                      <thead className="bg-background border-b border-border">
                         <tr>
-                          <th className="text-left px-3 py-2 text-white font-medium">Edge Bucket</th>
-                          <th className="text-center px-3 py-2 text-white font-medium">Count</th>
-                          <th className="text-center px-3 py-2 text-white font-medium">W / L</th>
-                          <th className="text-center px-3 py-2 text-white font-medium">Win Rate</th>
-                          <th className="text-center px-3 py-2 text-white font-medium">Avg Edge</th>
+                          <th className="text-left px-3 py-2 text-foreground font-medium">Edge Bucket</th>
+                          <th className="text-center px-3 py-2 text-foreground font-medium">Count</th>
+                          <th className="text-center px-3 py-2 text-foreground font-medium">W / L</th>
+                          <th className="text-center px-3 py-2 text-foreground font-medium">Win Rate</th>
+                          <th className="text-center px-3 py-2 text-foreground font-medium">Avg Edge</th>
                         </tr>
                       </thead>
                       <tbody>
                         {(edgeBucketsQuery.data ?? []).map((b, i) => (
-                          <tr key={b.bucket} className={`border-b border-white ${i % 2 === 0 ? "bg-black" : "bg-black"}`}>
-                            <td className="px-3 py-1.5 text-white font-mono">{b.bucket}</td>
-                            <td className="px-3 py-1.5 text-center text-white font-mono">{b.count}</td>
+                          <tr key={b.bucket} className={`border-b border-border ${i % 2 === 0 ? "bg-background" : "bg-background"}`}>
+                            <td className="px-3 py-1.5 text-foreground font-mono">{b.bucket}</td>
+                            <td className="px-3 py-1.5 text-center text-foreground font-mono">{b.count}</td>
                             <td className="px-3 py-1.5 text-center">
-                              <span className="text-[#45E0A8] font-mono">{b.wins}</span>
-                              <span className="text-white mx-1">/</span>
-                              <span className="text-white font-mono">{b.losses}</span>
+                              <span className="text-primary font-mono">{b.wins}</span>
+                              <span className="text-foreground mx-1">/</span>
+                              <span className="text-foreground font-mono">{b.losses}</span>
                             </td>
                             <td className={`px-3 py-1.5 text-center font-mono font-bold ${accColor(b.accuracy)}`}>{pct(b.accuracy)}</td>
-                            <td className="px-3 py-1.5 text-center text-white font-mono">+{pct(b.avgEdge, 2)}</td>
+                            <td className="px-3 py-1.5 text-center text-foreground font-mono">+{pct(b.avgEdge, 2)}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -648,22 +648,22 @@ export default function MlbBacktest() {
             {/* ── K-PROPS TAB ── */}
             <TabsContent value="kprops">
               {kPropsQuery.isLoading ? (
-                <div className="flex items-center justify-center h-48"><Loader2 className="w-6 h-6 animate-spin text-white" /></div>
+                <div className="flex items-center justify-center h-48"><Loader2 className="w-6 h-6 animate-spin text-foreground" /></div>
               ) : kPropsQuery.data ? (
                 <KPropsPanel data={kPropsQuery.data} />
               ) : (
-                <div className="text-white text-center py-8">No K-Props backtest data available.</div>
+                <div className="text-foreground text-center py-8">No K-Props backtest data available.</div>
               )}
             </TabsContent>
 
             {/* ── HR PROPS TAB ── */}
             <TabsContent value="hrprops">
               {hrPropsQuery.isLoading ? (
-                <div className="flex items-center justify-center h-48"><Loader2 className="w-6 h-6 animate-spin text-white" /></div>
+                <div className="flex items-center justify-center h-48"><Loader2 className="w-6 h-6 animate-spin text-foreground" /></div>
               ) : hrPropsQuery.data ? (
                 <HrPropsPanel data={hrPropsQuery.data} />
               ) : (
-                <div className="text-white text-center py-8">No HR Props backtest data available.</div>
+                <div className="text-foreground text-center py-8">No HR Props backtest data available.</div>
               )}
             </TabsContent>
           </Tabs>
@@ -680,14 +680,14 @@ function KpiCard({ label, value, sub, color, icon }: {
   label: string; value: string; sub: string; color: string; icon: ReactElement;
 }) {
   return (
-    <Card className="bg-black border-white">
+    <Card className="bg-background border-border">
       <CardContent className="p-3">
         <div className="flex items-center justify-between mb-1">
-          <span className="text-white text-xs">{label}</span>
-          <span className="text-white">{icon}</span>
+          <span className="text-foreground text-xs">{label}</span>
+          <span className="text-foreground">{icon}</span>
         </div>
         <div className={`text-xl font-bold font-mono ${color}`}>{value}</div>
-        <div className="text-white text-xs mt-0.5">{sub}</div>
+        <div className="text-foreground text-xs mt-0.5">{sub}</div>
       </CardContent>
     </Card>
   );
@@ -707,39 +707,39 @@ function KPropsPanel({ data }: { data: {
     <div className="space-y-5">
       {/* KPI row */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <KpiCard label="Total Predictions" value={String(data.totalPredictions)} sub="K-Props modeled" color="text-white" icon={<Activity className="w-4 h-4" />} />
-        <KpiCard label="MAE" value={data.mae.toFixed(2)} sub="Mean absolute error (Ks)" color={data.mae < 2 ? "text-[#45E0A8]" : "text-white"} icon={<Target className="w-4 h-4" />} />
+        <KpiCard label="Total Predictions" value={String(data.totalPredictions)} sub="K-Props modeled" color="text-foreground" icon={<Activity className="w-4 h-4" />} />
+        <KpiCard label="MAE" value={data.mae.toFixed(2)} sub="Mean absolute error (Ks)" color={data.mae < 2 ? "text-primary" : "text-foreground"} icon={<Target className="w-4 h-4" />} />
         <KpiCard
           label="Bias"
           value={`${data.bias >= 0 ? "+" : ""}${data.bias.toFixed(2)}`}
           sub={data.bias < -0.1 ? "Under-projecting Ks" : data.bias > 0.1 ? "Over-projecting Ks" : "Well-calibrated"}
-          color={Math.abs(data.bias) < 0.2 ? "text-[#45E0A8]" : "text-white"}
+          color={Math.abs(data.bias) < 0.2 ? "text-primary" : "text-foreground"}
           icon={<TrendingUp className="w-4 h-4" />}
         />
-        <KpiCard label="RMSE" value={data.rmse.toFixed(2)} sub="Root mean sq error" color={data.rmse < 2.5 ? "text-[#45E0A8]" : "text-white"} icon={<BarChart2 className="w-4 h-4" />} />
+        <KpiCard label="RMSE" value={data.rmse.toFixed(2)} sub="Root mean sq error" color={data.rmse < 2.5 ? "text-primary" : "text-foreground"} icon={<BarChart2 className="w-4 h-4" />} />
       </div>
 
       {/* Direction accuracy */}
       <div className="grid grid-cols-2 gap-3">
-        <Card className="bg-black border-white">
-          <CardHeader className="pb-2 pt-3 px-4"><CardTitle className="text-sm text-white">OVER Accuracy</CardTitle></CardHeader>
+        <Card className="bg-background border-border">
+          <CardHeader className="pb-2 pt-3 px-4"><CardTitle className="text-sm text-foreground">OVER Accuracy</CardTitle></CardHeader>
           <CardContent className="px-4 pb-3">
             <div className={`text-2xl font-bold font-mono ${accColor(data.overAccuracy)}`}>{pct(data.overAccuracy)}</div>
-            <div className="text-white text-xs mt-1">{data.overWins}W / {data.overLosses}L</div>
+            <div className="text-foreground text-xs mt-1">{data.overWins}W / {data.overLosses}L</div>
           </CardContent>
         </Card>
-        <Card className="bg-black border-white">
-          <CardHeader className="pb-2 pt-3 px-4"><CardTitle className="text-sm text-white">UNDER Accuracy</CardTitle></CardHeader>
+        <Card className="bg-background border-border">
+          <CardHeader className="pb-2 pt-3 px-4"><CardTitle className="text-sm text-foreground">UNDER Accuracy</CardTitle></CardHeader>
           <CardContent className="px-4 pb-3">
             <div className={`text-2xl font-bold font-mono ${accColor(data.underAccuracy)}`}>{pct(data.underAccuracy)}</div>
-            <div className="text-white text-xs mt-1">{data.underWins}W / {data.underLosses}L</div>
+            <div className="text-foreground text-xs mt-1">{data.underWins}W / {data.underLosses}L</div>
           </CardContent>
         </Card>
       </div>
 
       {/* By-line breakdown */}
       <div>
-        <h3 className="text-white font-semibold text-sm mb-3">Accuracy by Book Line</h3>
+        <h3 className="text-foreground font-semibold text-sm mb-3">Accuracy by Book Line</h3>
         <ResponsiveContainer width="100%" height={220}>
           <BarChart data={data.byLine} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
@@ -765,28 +765,28 @@ function KPropsPanel({ data }: { data: {
 
       {/* By-edge-tier */}
       <div>
-        <h3 className="text-white font-semibold text-sm mb-3">Accuracy by Edge Tier</h3>
-        <div className="overflow-x-auto rounded-xl border border-white">
+        <h3 className="text-foreground font-semibold text-sm mb-3">Accuracy by Edge Tier</h3>
+        <div className="overflow-x-auto rounded-xl border border-border">
           <table className="w-full text-xs">
-            <thead className="bg-black border-b border-white">
+            <thead className="bg-background border-b border-border">
               <tr>
-                <th className="text-left px-3 py-2 text-white font-medium">Edge Tier</th>
-                <th className="text-center px-3 py-2 text-white font-medium">W / L</th>
-                <th className="text-center px-3 py-2 text-white font-medium">Win Rate</th>
-                <th className="text-center px-3 py-2 text-white font-medium">Avg Edge</th>
+                <th className="text-left px-3 py-2 text-foreground font-medium">Edge Tier</th>
+                <th className="text-center px-3 py-2 text-foreground font-medium">W / L</th>
+                <th className="text-center px-3 py-2 text-foreground font-medium">Win Rate</th>
+                <th className="text-center px-3 py-2 text-foreground font-medium">Avg Edge</th>
               </tr>
             </thead>
             <tbody>
               {data.byEdgeTier.map((t, i) => (
-                <tr key={t.tier} className={`border-b border-white ${i % 2 === 0 ? "bg-black" : "bg-black"}`}>
-                  <td className="px-3 py-1.5 text-white font-mono">{t.tier}</td>
+                <tr key={t.tier} className={`border-b border-border ${i % 2 === 0 ? "bg-background" : "bg-background"}`}>
+                  <td className="px-3 py-1.5 text-foreground font-mono">{t.tier}</td>
                   <td className="px-3 py-1.5 text-center">
-                    <span className="text-[#45E0A8] font-mono">{t.wins}</span>
-                    <span className="text-white mx-1">/</span>
-                    <span className="text-white font-mono">{t.losses}</span>
+                    <span className="text-primary font-mono">{t.wins}</span>
+                    <span className="text-foreground mx-1">/</span>
+                    <span className="text-foreground font-mono">{t.losses}</span>
                   </td>
                   <td className={`px-3 py-1.5 text-center font-mono font-bold ${accColor(t.accuracy)}`}>{pct(t.accuracy)}</td>
-                  <td className="px-3 py-1.5 text-center text-white font-mono">+{pct(t.avgEdge, 2)}</td>
+                  <td className="px-3 py-1.5 text-center text-foreground font-mono">+{pct(t.avgEdge, 2)}</td>
                 </tr>
               ))}
             </tbody>
@@ -810,45 +810,45 @@ function HrPropsPanel({ data }: { data: {
     <div className="space-y-5">
       {/* KPI row */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <KpiCard label="Total Predictions" value={String(data.totalPredictions)} sub="HR Props modeled" color="text-white" icon={<Activity className="w-4 h-4" />} />
+        <KpiCard label="Total Predictions" value={String(data.totalPredictions)} sub="HR Props modeled" color="text-foreground" icon={<Activity className="w-4 h-4" />} />
         <KpiCard label="OVER Accuracy" value={pct(data.overAccuracy)} sub={`${data.overWins}W / ${data.overLosses}L`} color={accColor(data.overAccuracy)} icon={<Target className="w-4 h-4" />} />
         <KpiCard
           label="Calibration Bias"
           value={`${data.calibrationBias >= 0 ? "+" : ""}${pct(data.calibrationBias, 2)}`}
           sub={data.calibrationBias > 0.02 ? "Over-predicting HR rate" : data.calibrationBias < -0.02 ? "Under-predicting HR rate" : "Well-calibrated"}
-          color={Math.abs(data.calibrationBias) < 0.02 ? "text-[#45E0A8]" : "text-white"}
+          color={Math.abs(data.calibrationBias) < 0.02 ? "text-primary" : "text-foreground"}
           icon={<TrendingUp className="w-4 h-4" />}
         />
         <KpiCard
           label="High-Edge Accuracy"
           value={data.highEdgeCount >= 5 ? pct(data.highEdgeAccuracy) : "N/A"}
           sub={`n=${data.highEdgeCount} (edge≥6%)`}
-          color={data.highEdgeCount >= 5 ? accColor(data.highEdgeAccuracy) : "text-white"}
+          color={data.highEdgeCount >= 5 ? accColor(data.highEdgeAccuracy) : "text-foreground"}
           icon={<CheckCircle2 className="w-4 h-4" />}
         />
       </div>
 
       {/* Model vs actual calibration */}
       <div className="grid grid-cols-2 gap-3">
-        <Card className="bg-black border-white">
-          <CardHeader className="pb-2 pt-3 px-4"><CardTitle className="text-sm text-white">Avg Model P(HR)</CardTitle></CardHeader>
+        <Card className="bg-background border-border">
+          <CardHeader className="pb-2 pt-3 px-4"><CardTitle className="text-sm text-foreground">Avg Model P(HR)</CardTitle></CardHeader>
           <CardContent className="px-4 pb-3">
-            <div className="text-2xl font-bold font-mono text-white">{pct(data.avgModelPHr, 2)}</div>
-            <div className="text-white text-xs mt-1">Mean model probability across all players</div>
+            <div className="text-2xl font-bold font-mono text-foreground">{pct(data.avgModelPHr, 2)}</div>
+            <div className="text-foreground text-xs mt-1">Mean model probability across all players</div>
           </CardContent>
         </Card>
-        <Card className="bg-black border-white">
-          <CardHeader className="pb-2 pt-3 px-4"><CardTitle className="text-sm text-white">Actual HR Rate</CardTitle></CardHeader>
+        <Card className="bg-background border-border">
+          <CardHeader className="pb-2 pt-3 px-4"><CardTitle className="text-sm text-foreground">Actual HR Rate</CardTitle></CardHeader>
           <CardContent className="px-4 pb-3">
-            <div className="text-2xl font-bold font-mono text-[#45E0A8]">{pct(data.avgActualHrRate, 2)}</div>
-            <div className="text-white text-xs mt-1">Actual HR hit rate in sample</div>
+            <div className="text-2xl font-bold font-mono text-primary">{pct(data.avgActualHrRate, 2)}</div>
+            <div className="text-foreground text-xs mt-1">Actual HR hit rate in sample</div>
           </CardContent>
         </Card>
       </div>
 
       {/* By-prob-bucket chart */}
       <div>
-        <h3 className="text-white font-semibold text-sm mb-3">Win Rate by Model P(HR) Bucket</h3>
+        <h3 className="text-foreground font-semibold text-sm mb-3">Win Rate by Model P(HR) Bucket</h3>
         <ResponsiveContainer width="100%" height={220}>
           <BarChart data={data.byProbBucket} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
@@ -871,30 +871,30 @@ function HrPropsPanel({ data }: { data: {
 
       {/* By-odds-tier table */}
       <div>
-        <h3 className="text-white font-semibold text-sm mb-3">Accuracy by Book Odds Tier</h3>
-        <div className="overflow-x-auto rounded-xl border border-white">
+        <h3 className="text-foreground font-semibold text-sm mb-3">Accuracy by Book Odds Tier</h3>
+        <div className="overflow-x-auto rounded-xl border border-border">
           <table className="w-full text-xs">
-            <thead className="bg-black border-b border-white">
+            <thead className="bg-background border-b border-border">
               <tr>
-                <th className="text-left px-3 py-2 text-white font-medium">Odds Tier</th>
-                <th className="text-center px-3 py-2 text-white font-medium">Count</th>
-                <th className="text-center px-3 py-2 text-white font-medium">W / L</th>
-                <th className="text-center px-3 py-2 text-white font-medium">Win Rate</th>
-                <th className="text-center px-3 py-2 text-white font-medium">Avg Odds</th>
+                <th className="text-left px-3 py-2 text-foreground font-medium">Odds Tier</th>
+                <th className="text-center px-3 py-2 text-foreground font-medium">Count</th>
+                <th className="text-center px-3 py-2 text-foreground font-medium">W / L</th>
+                <th className="text-center px-3 py-2 text-foreground font-medium">Win Rate</th>
+                <th className="text-center px-3 py-2 text-foreground font-medium">Avg Odds</th>
               </tr>
             </thead>
             <tbody>
               {data.byOddsTier.map((t, i) => (
-                <tr key={t.tier} className={`border-b border-white ${i % 2 === 0 ? "bg-black" : "bg-black"}`}>
-                  <td className="px-3 py-1.5 text-white font-mono">{t.tier}</td>
-                  <td className="px-3 py-1.5 text-center text-white font-mono">{t.count}</td>
+                <tr key={t.tier} className={`border-b border-border ${i % 2 === 0 ? "bg-background" : "bg-background"}`}>
+                  <td className="px-3 py-1.5 text-foreground font-mono">{t.tier}</td>
+                  <td className="px-3 py-1.5 text-center text-foreground font-mono">{t.count}</td>
                   <td className="px-3 py-1.5 text-center">
-                    <span className="text-[#45E0A8] font-mono">{t.wins}</span>
-                    <span className="text-white mx-1">/</span>
-                    <span className="text-white font-mono">{t.losses}</span>
+                    <span className="text-primary font-mono">{t.wins}</span>
+                    <span className="text-foreground mx-1">/</span>
+                    <span className="text-foreground font-mono">{t.losses}</span>
                   </td>
                   <td className={`px-3 py-1.5 text-center font-mono font-bold ${accColor(t.accuracy)}`}>{pct(t.accuracy)}</td>
-                  <td className="px-3 py-1.5 text-center text-white font-mono">+{t.avgOdds}</td>
+                  <td className="px-3 py-1.5 text-center text-foreground font-mono">+{t.avgOdds}</td>
                 </tr>
               ))}
             </tbody>

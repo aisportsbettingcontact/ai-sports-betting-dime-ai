@@ -49,6 +49,8 @@ export default function DeviceActivityPanel() {
   const notOk = !!data && data.state !== "ok";
   const mix = data?.deviceMix ?? [];
   const maxUsers = Math.max(...mix.map((m) => m.users), 1);
+  const topActions = data?.topActions ?? [];
+  const maxActionCount = Math.max(...topActions.map((a) => a.count), 1);
 
   return (
     <div className="mb-6 space-y-3">
@@ -90,11 +92,71 @@ export default function DeviceActivityPanel() {
         ))}
       </div>
 
-      {/* Device mix — the D2 cut. Renders only when there is measured data. */}
-      {!notOk && mix.length > 0 && (
+      {/* Action volume — the D3 cut. Diagnostic (non-qualifying) counts of the
+          curated action_performed events. Honest states via <Point/>. */}
+      <div className="grid grid-cols-2 gap-2 sm:gap-3">
+        <div className="bg-card border border-border rounded-lg px-2.5 sm:px-4 py-2.5 sm:py-3 min-w-0 overflow-hidden">
+          <div className="text-base sm:text-xl font-bold font-mono truncate">
+            <Point point={data?.totalActions} loading={isLoading} />
+          </div>
+          <div className="text-[10px] sm:text-xs font-semibold tracking-wider text-foreground mt-0.5 leading-tight">
+            TOTAL ACTIONS
+          </div>
+          <div className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 leading-tight">
+            Curated actions · all time
+          </div>
+        </div>
+        <div className="bg-card border border-border rounded-lg px-2.5 sm:px-4 py-2.5 sm:py-3 min-w-0 overflow-hidden">
+          <div className="text-base sm:text-xl font-bold font-mono truncate">
+            <Point point={data?.uniqueActions} loading={isLoading} />
+          </div>
+          <div className="text-[10px] sm:text-xs font-semibold tracking-wider text-foreground mt-0.5 leading-tight">
+            UNIQUE ACTIONS
+          </div>
+          <div className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 leading-tight">
+            Distinct action types
+          </div>
+        </div>
+      </div>
+
+      {/* Top actions — most-used curated actions. Renders only with measured data. */}
+      {!notOk && topActions.length > 0 && (
         <div className="bg-card border border-border rounded-lg px-2.5 sm:px-4 py-2.5 sm:py-3">
           <div className="text-[10px] sm:text-xs font-semibold tracking-wider text-foreground uppercase mb-2">
-            Device Mix · distinct users
+            Top Actions · by volume
+          </div>
+          <div className="space-y-1.5">
+            {topActions.map((a) => (
+              <div key={a.name} className="flex items-center gap-2">
+                <span className="text-[10px] sm:text-xs font-mono w-32 sm:w-40 shrink-0 text-foreground truncate">
+                  {a.name}
+                </span>
+                <div className="flex-1 h-3 rounded bg-muted/60 overflow-hidden">
+                  <div
+                    className="h-full rounded bg-primary transition-all duration-500"
+                    style={{ width: `${Math.max((a.count / maxActionCount) * 100, a.count > 0 ? 4 : 0)}%` }}
+                    title={`${a.name}: ${a.count} actions`}
+                  />
+                </div>
+                <span className="text-[10px] sm:text-xs font-mono w-8 text-right text-foreground">
+                  {a.count}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Device mix — the D2 cut, now with the D3 action column. Measured data only. */}
+      {!notOk && mix.length > 0 && (
+        <div className="bg-card border border-border rounded-lg px-2.5 sm:px-4 py-2.5 sm:py-3">
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-[10px] sm:text-xs font-semibold tracking-wider text-foreground uppercase">
+              Device Mix · distinct users
+            </div>
+            <div className="text-[10px] sm:text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+              users · actions
+            </div>
           </div>
           <div className="space-y-1.5">
             {mix.map((m) => (
@@ -106,11 +168,14 @@ export default function DeviceActivityPanel() {
                   <div
                     className="h-full rounded bg-primary transition-all duration-500"
                     style={{ width: `${Math.max((m.users / maxUsers) * 100, m.users > 0 ? 4 : 0)}%` }}
-                    title={`${m.deviceType}: ${m.users} users, ${m.valueEvents} value events`}
+                    title={`${m.deviceType}: ${m.users} users, ${m.valueEvents} value events, ${m.actions} actions`}
                   />
                 </div>
                 <span className="text-[10px] sm:text-xs font-mono w-8 text-right text-foreground">
                   {m.users}
+                </span>
+                <span className="text-[10px] sm:text-xs font-mono w-10 text-right text-muted-foreground">
+                  {m.actions}
                 </span>
               </div>
             ))}
