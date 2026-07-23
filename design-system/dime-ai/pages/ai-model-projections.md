@@ -19,6 +19,7 @@
 - **Column headers:** IBM Plex Mono micro-labels above the card list ("MATCHUP", "RUN LINE · BOOK / MODEL", …)
 - **Sub-tabs:** Projections · Splits · Lineups · K Props · Cheat Sheets · HR Props — 13px/600, active = `--text-primary` + 2px mint underline, inactive = `--text-muted`
 - **Date nav:** ‹ › square buttons (28px, radius 8, 1px border) around "Weekday, Month D" (15px/700) + mono "MLB · N GAMES"
+  — owner directive 2026-07-23: desktop date nav centers under the title band at 17px; 24/32px rhythm to the league header (32px of space; the pre-existing 1px divider border adds up to 33px edge-to-edge)
 - **Sync status:** top-bar right — mono micro-label "SYNCED N MIN AGO" with 6px mint dot
 - **Bottom composer:** "Ask dime about tonight's slate…" — ties the feed back to chat
 
@@ -36,7 +37,8 @@
 ### Color Overrides
 
 - **Live state:** pulsing 7px mint dot + mono "LIVE · TOP 6" in mint (`--mint-on-light` on light theme, with keyline on the dot)
-- **PASS games:** verdict values in `--text-secondary`, grade "—", whole card at `opacity: 0.82`, zero mint anywhere in the card
+- **PASS games:** verdict values in `--text-secondary`, grade "—" *(2026-07-23: the verdict-strip/grade concept is superseded — no letter-grade field exists in the current ProjectionCard architecture; PASS state is enforced via `.projection-card--pass` at `opacity: 0.82` + the "No edge" chip + a defensive zero-mint backstop, per Round 4 items 3 and 8 in `docs/superpowers/plans/2026-07-23-feed-desktop-polish.md`)*, whole card at `opacity: 0.82`, zero mint anywhere in the card
+  — precedence ruling 2026-07-23 (final-review adjudication, pending owner ratification): a LIVE card never takes the PASS treatment. Live+no-edges is reachable (mid-game model invalidation); live-state mint wins and the card stays undimmed, so this zero-mint law and the live-state law above never apply to the same card.
 - **Win% annotation** next to model ML: 12px `--text-secondary`
 
 ### Component Overrides
@@ -146,6 +148,7 @@ Desktop (>=1024px) only — tablet/mobile keep their shipped layouts:
 - **Games pack 2-across** inside each league section (grid, start-aligned)
   to cut the single-column whitespace; cards keep their container-driven
   internal reflow.
+  — owner directive 2026-07-23: rows stretch; summary centers; expander pinned
 
 ### Owner Directives — 2026-07-18 (edge labeling + multi-edge carousel)
 

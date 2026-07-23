@@ -27,6 +27,13 @@
 .projection-card__status { font-size: var(--proj-meta); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-secondary, #a6a6a6); }
 .projection-card__status--live { color: #45e0a8; } /* live = signal */
 
+/* Live indicator dot (Round 4 Wave 1, item 4 / page law "Live state"): pulsing
+   7px mint dot ahead of the LIVE label. `display: none` by default keeps
+   mobile (<768px) pixel-identical — the dot only activates at the tablet+
+   breakpoint below (item 8 scoping: items 2/3/4 apply desktop+tablet only). */
+.projection-card__live-dot { display: none; width: 7px; height: 7px; margin-inline-end: 6px; border-radius: 50%; background: #45e0a8; vertical-align: middle; }
+@keyframes projection-card-live-pulse { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
+
 /* ── Matchup (owner directive 2026-07-17: matchup line · ballpark · first pitch) ── */
 .matchup { grid-area: matchup; display: grid; gap: var(--space-sm); align-content: start; }
 .matchup__grid { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: var(--space-2xs) var(--space-xs); }
@@ -36,6 +43,13 @@
 .matchup__team { display: flex; align-items: center; gap: var(--space-sm); min-inline-size: 0; }
 .matchup__team--home { justify-content: flex-end; }
 .matchup__score { font-size: var(--proj-primary); font-weight: 700; font-variant-numeric: tabular-nums; }
+/* Round 4 Wave 1 item 2: on tablet/desktop the unified score row pins a fixed
+   24px/700 tabular figure (law: "scores 24px/700 tabular") instead of the
+   mobile-first fluid clamp, which only reaches 24px near ~1750px viewport
+   width. Mobile (<768px) keeps the fluid --proj-primary clamp untouched. */
+@media (min-width: 768px) {
+  .matchup__score { font-size: 24px; }
+}
 .matchup__center { display: flex; flex-direction: column; align-items: center; gap: 2px; text-align: center; min-inline-size: 0; padding-inline: var(--space-xs); }
 /* Line 1 — "SF Giants @ SEA Mariners". The card's identity; wraps, never clips. */
 .matchup__line { font-size: var(--proj-team); font-weight: 700; letter-spacing: -0.01em; text-wrap: balance; }
@@ -71,6 +85,164 @@
   .summary__item { align-items: center; text-align: center; }
 }
 
+/* ══ Round 4 Wave 1 — desktop/tablet card-anatomy enforcement (items 2-4) ══
+   Scoped to the tablet+desktop breakpoint (item 8: items 2/3/4 apply to BOTH
+   tablet 768-1023 and desktop >=1024; mobile <768 stays byte/visually
+   untouched — see the mobile-scoped `display: none` defaults above). */
+@media (min-width: 768px) {
+  /* Item 3 — PASS-card law (page law "PASS games"): whole card opacity 0.82,
+     zero mint. Zero mint is already structurally guaranteed — rankedEdges()
+     is empty on a PASS card, so no market/side ever earns a signal class
+     (market-table__model--signal / --result--edge / edge-indicator, as
+     opposed to edge-indicator--none) — nothing here forces color, the data
+     already can't produce it. Only the "No edge" chip's quiet grey needs
+     bumping from --text-muted to the law's --text-secondary. */
+  .projection-card--pass { opacity: 0.82; }
+  .projection-card--pass .edge-indicator--none { color: var(--text-secondary, #a6a6a6); }
+
+  /* Defensive PASS backstop (Round 4, from the W1 review — plan:
+     docs/superpowers/plans/2026-07-23-feed-desktop-polish.md, item 3):
+     zero mint is already structurally guaranteed —
+     rankedEdges() is empty on a genuine PASS card, so none of these
+     signal/edge classes can ever be emitted on one today (see the comment
+     above) — but this rule neutralizes stray mint anyway if that invariant
+     is ever broken by a future change to gameInsight.ts/edgeUtils.ts.
+     Defense-in-depth, not a substitute for the structural guarantee. */
+  .projection-card--pass .market-table__model--signal,
+  .projection-card--pass .market-table__result--edge,
+  .projection-card--pass .edge-indicator {
+    color: var(--text-secondary, #a6a6a6) !important;
+    background: transparent !important;
+    border-color: var(--border, #262626) !important;
+    box-shadow: none !important;
+  }
+  /* The edge chip's recommendation icon sets its mint color as an inline
+     style (EdgeIndicator.tsx) and lucide icons stroke with currentColor, so
+     the ancestor rule above never reaches it — the svg needs its own
+     !important declaration (author !important beats non-important inline). */
+  .projection-card--pass .edge-indicator svg {
+    color: var(--text-secondary, #a6a6a6) !important;
+  }
+
+  /* Item 4 — live indicator: activate the pulsing mint dot (display:none by
+     default, see .projection-card__live-dot above) and make the LIVE label
+     itself brand-accurate: mono-register micro-label tracking, and
+     --mint-on-light on light theme (raw mint text fails contrast on white —
+     MASTER.md "Mint TEXT on light surfaces must use --mint-on-light:
+     #0FA36B"). The dot FILL stays raw mint on both themes (mint fills, unlike
+     mint text, may stay #45E0A8) with a 1px near-black hairline keyline on
+     light theme only (brand dot rule) — dark theme dots sit directly on the
+     black surface with no keyline. */
+  .projection-card__live-dot {
+    display: inline-block;
+    animation: projection-card-live-pulse 1.6s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+  }
+  html:not(.dark) .projection-card__live-dot {
+    box-shadow: 0 0 0 1px var(--border-strong, #000000);
+  }
+  .projection-card__status--live { letter-spacing: 0.08em; }
+  html:not(.dark) .projection-card__status--live { color: #0fa36b; }
+}
+
+/* ══ Round 4 Wave 2 — item 5: aligned summary mini-grid (desktop + tablet,
+   >=768px; item 8 scoping: item 5 applies to BOTH tablet 768-1023 and
+   desktop, same breakpoint as the Wave 1 block above) ══
+   Page law "Aligned summary mini-grid": MODEL EDGE | BOOK | MODEL | chip get
+   FIXED column tracks so the same fact lines up at the same x-offset on
+   every card at a given viewport width — replacing the mobile-first
+   flex-wrap layout (kept below 768px, byte-untouched) with a 4-column grid.
+   Tracks are proportional (`minmax(..., fr)`), never content-sized
+   (`auto`/`max-content`): every card at the same width resolves the
+   identical pixel widths, which is what makes values align — a literal
+   fixed rem width would either overflow a narrow tablet card or leave dead
+   space on a wide desktop half-card, and either way wouldn't track the
+   card's own container-driven reflow philosophy (see the file-level note).
+   `.summary__readout` (the <dl>, Wave 1) goes `display:contents` so its
+   `.summary__item`s become direct grid children of `.summary` in columns
+   1-3; the PASS "no action" message (ONE item, Wave 1) spans all three so
+   it never breaks the column count. The EdgeIndicator chip — real edge OR
+   the "No edge" quiet variant, ONE canonical component/class-pair
+   (edge-indicator / edge-indicator--none; no divergent chip markup exists
+   anywhere in this card family, audited against MarketTable's separate
+   --signal/--edge cell styles which are a different surface) — always lands
+   in column 4, so a PASS card's "No edge" slot sits in the exact spot a
+   real edge chip would occupy (W1 structure preserved). */
+@media (min-width: 768px) {
+  .summary {
+    display: grid;
+    /* Track floors are (near-)zero, NOT the readable-label widths they once
+       were (6.5/3.5/3.5/5.5rem): those floors + 3 column gaps summed to an
+       un-shrinkable 376px intrinsic minimum, and the >=1024 2-across grid
+       beside the 352px sidebar leaves a card only ~246px of content at
+       1024px — the plain .summary (whose automatic minimum, unlike
+       .summary-carousel's min-inline-size:0 below, was never reset) then
+       forced the pane into horizontal overflow at 1024 and resolved its
+       tracks on a different (clamped-at-376px) width than a carousel
+       row-mate at 1280, breaking item 5's cross-card chip alignment by
+       ~13px. Caught by e2e/feed-desktop.spec.ts's boundingBox contracts
+       (W4). With length minimums (never `auto`), track sizes stay a pure
+       function of container width — the alignment guarantee — and
+       min-inline-size:0 keeps this box, like the carousel, sized by the
+       card instead of by its own content. Labels wrap at narrow widths
+       (.summary__item min-inline-size:0); only the chip column keeps a
+       5rem floor so the pill compresses into card padding instead of
+       sprawling leftward through the readout. */
+    grid-template-columns: minmax(0, 1.6fr) minmax(0, 0.8fr) minmax(0, 0.8fr) minmax(5rem, 1fr);
+    align-items: center;
+    min-inline-size: 0;
+  }
+  .summary__readout { display: contents; }
+  .summary__item--edge { grid-column: 1; }
+  .summary__item--book { grid-column: 2; }
+  .summary__item--model { grid-column: 3; }
+  /* Fold-in minor (W1 review flagged this hook as dead when it was first
+     added in Wave 1 — ProjectionSummary.tsx had no matching CSS rule yet at
+     that point): resolved here in Wave 2 by giving it this real, consumed
+     rule (verified live by ProjectionCard.test.ts's PASS-message-spans-columns
+     assertion) — chosen over removal since the PASS message needs its own
+     span so it never breaks the 4-column track count above. No longer dead. */
+  .summary__item--message { grid-column: 1 / span 3; }
+  .summary__edge { grid-column: 4; justify-self: start; }
+
+  /* Numeric cells stay tabular. Book/Model already inherit this from the
+     global `.odds-value` rule (client/src/styles/type-system.css) and the
+     edge value from `.edge-indicator`'s own tabular-nums (EdgeIndicator.css);
+     restated here so the mini-grid's alignment contract doesn't silently
+     depend on an external stylesheet staying unchanged. */
+  .summary__item--book .odds-value,
+  .summary__item--model .odds-value,
+  .edge-indicator__value {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* ══ Round 4 Wave 2 — item 1: equal-height card rows, pinned expander
+   (desktop ONLY, >=1024px — item 8 scoping: item 1, unlike item 5 above,
+   does NOT apply to tablet) ══
+   Owner amendment 2026-07-23 to the 07-21 desktop-emphasis law: "start-aligned"
+   -> "stretch" (annotated in design-system/dime-ai/pages/ai-model-projections.md).
+   The 2-across league grid (`DimeModelFeed.tsx` `.dmf-leaguebody`) now
+   stretches row-mates to equal height instead of natural
+   (`align-items:start` -> `align-items:stretch`); this is the matching
+   per-card structure so the extra height a shorter row-mate receives lands
+   somewhere legible: the summary region becomes a flexible `1fr` row that
+   absorbs 100% of the surplus and vertically centers its own content (the
+   existing `.summary` flex + `align-items:center` above does this for free
+   once given extra height; `.summary-carousel`, a grid, needs an explicit
+   `align-content:center` since grid's default `normal` would stretch its
+   two rows apart instead of centering the block), while the markets
+   disclosure stays `auto`-height and is pushed to the card's bottom edge —
+   "VIEW FULL AI MODEL PROJECTIONS" always lands flush with its row-mate's.
+   A row of naturally-equal cards renders IDENTICALLY: grid track sizing
+   bases the row height on the tallest natural card in the row, so that
+   tallest card's own `1fr` summary row resolves to exactly the space `auto`
+   would have used — nothing forces it taller than its own content. */
+@media (min-width: 1024px) {
+  .projection-card { grid-template-rows: auto auto 1fr auto; }
+  .projection-card--scheduled { grid-template-rows: auto 1fr auto; }
+  .summary-carousel { align-content: center; }
+}
+
 /* ── Summary carousel (owner directive 2026-07-18) ──
    A game with 2+ real edges cycles them in a ranked swipe strip: native
    scroll-snap slides (momentum + interruptible by design), each slide the
@@ -102,8 +274,30 @@
 .projection-card__markets { grid-area: markets; margin-block-start: calc(-1 * var(--space-xs)); }
 .projection-card__markets-toggle { display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm); min-block-size: 2.25rem; padding-inline: var(--space-sm); cursor: pointer; color: var(--text-secondary, #a6a6a6); border-radius: 10px; list-style: none; }
 .projection-card__markets-toggle::-webkit-details-marker { display: none; }
-.projection-card__markets-toggle:hover { background: var(--row-hover, #141414); color: var(--foreground, #fff); }
 .projection-card__markets-toggle:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--ring, #45e0a8); }
+/* ══ Round 4 Wave 3 — item 7: expander hover (page law "Expander hover"; item 8
+   scoping: same tablet+desktop breakpoint as items 2-5, >=768px) ══
+   "VIEW FULL AI MODEL PROJECTIONS" gets the shell's row-hover fill (--row-hover,
+   the same token/value sidebar rows use — design-system/dime-ai/MASTER.md
+   "Row hover") on the 160ms brand curve. Gated on BOTH the >=768px breakpoint
+   (mobile <768 stays byte-untouched, item 8) and `(hover: hover)` (no stuck
+   highlighted row from a touch tap on a hybrid/touch device — same guard as
+   .mfn-item's hover in mobileFloatingNav.css). The transition itself lives
+   inside this same gate (item 8 audit-fix: an earlier draft declared it on
+   the unconditional base rule, which is visually inert below 768px/on
+   touch-only devices but leaves a stray `transition-property` in the
+   computed style there for no reason — moved in here). Note: the previously
+   unconditional :hover is re-declared only inside this gate, so a
+   hover-capable pointer at <768px (narrow desktop window) loses the fill it
+   used to get — intended, per item 8's scoping table (item 7 is >=768-only).
+   Label text and chevron icons are law-locked (owner
+   directive 2026-07-17/18) and untouched — only the fill responds. */
+@media (min-width: 768px) and (hover: hover) {
+  .projection-card__markets-toggle {
+    transition: background 160ms cubic-bezier(0.16, 1, 0.3, 1), color 160ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .projection-card__markets-toggle:hover { background: var(--row-hover, #141414); color: var(--foreground, #fff); }
+}
 .projection-card__markets-chev { inline-size: 1rem; block-size: 1rem; flex: none; }
 .projection-card__markets-chev--collapse { display: none; }
 .projection-card__markets[open] .projection-card__markets-chev--expand { display: none; }
@@ -152,4 +346,6 @@
   .projection-card, .projection-card__markets-toggle { transition: none; }
   .summary-carousel__dot::after { transition: none; }
   .summary-carousel__track { scroll-behavior: auto; }
+  /* Item 4: static dot, no pulse (MASTER.md motion law). */
+  .projection-card__live-dot { animation: none; opacity: 1; }
 }
