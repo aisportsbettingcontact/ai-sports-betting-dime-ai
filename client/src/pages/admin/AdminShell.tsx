@@ -3,12 +3,12 @@
  *
  * Round 3 Step 5 (owner directive 2026-07-22): "Design all of these pages
  * with world class apple design UI within the Dime AI Brand kit." This is
- * the shared shell both admin surfaces (User Management, Publish
- * Projections) render inside of — it is purely presentational chrome:
+ * the shared shell the three admin surfaces (User Management, User Activity,
+ * Publish Projections) render inside of — it is purely presentational chrome:
  *
  *   - Dime wordmark + an "Admin" context label, so the surface never
  *     reads as a bare, unbranded internal tool.
- *   - A two-tab nav switching between the two admin pages.
+ *   - A three-tab nav switching between the three admin pages.
  *   - A back-to-app affordance returning to the canonical feed.
  *
  * This component owns NO auth logic. Access control lives one layer up —
@@ -35,11 +35,12 @@ import { useLocation } from "wouter";
 import { ArrowLeft } from "lucide-react";
 import "./AdminShell.css";
 
-export type AdminTab = "users" | "publish";
+export type AdminTab = "users" | "activity" | "publish";
 
-const TABS: Array<{ key: AdminTab; label: string; path: string }> = [
-  { key: "users", label: "User Management", path: "/admin/users" },
-  { key: "publish", label: "Publish Projections", path: "/admin/publish" },
+const TABS: Array<{ key: AdminTab; label: string; short: string; path: string }> = [
+  { key: "users", label: "User Management", short: "Users", path: "/admin/users" },
+  { key: "activity", label: "User Activity", short: "Activity", path: "/admin/activity" },
+  { key: "publish", label: "Publish Projections", short: "Publish", path: "/admin/publish" },
 ];
 
 // Canonical "back to the app" destination — matches the target both admin
@@ -91,7 +92,7 @@ export function AdminShell({ active, children }: AdminShellProps) {
 
           <div className="flex-1" />
 
-          {/* Two-tab nav */}
+          {/* Three-tab nav */}
           <nav
             role="tablist"
             aria-label="Admin Dashboard"
@@ -115,7 +116,7 @@ export function AdminShell({ active, children }: AdminShellProps) {
                   }`}
                 >
                   {/* Short label on mobile, full label at sm+ */}
-                  <span className="sm:hidden">{tab.key === "users" ? "Users" : "Publish"}</span>
+                  <span className="sm:hidden">{tab.short}</span>
                   <span className="hidden sm:inline">{tab.label}</span>
                 </button>
               );

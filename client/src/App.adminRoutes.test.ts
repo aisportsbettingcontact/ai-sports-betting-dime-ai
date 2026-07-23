@@ -71,6 +71,25 @@ describe("Admin Dashboard route guard composition", () => {
     expect(authCloseIdx).toBeGreaterThan(ownerCloseIdx);
   });
 
+  it("wraps /admin/activity in RequireAuth > RequireOwner > UserActivity, in that nesting order", () => {
+    const routeStart = appSource.indexOf('<Route path="/admin/activity">');
+    const routeEnd = appSource.indexOf("</Route>", routeStart);
+    expect(routeStart).toBeGreaterThan(-1);
+    const routeBlock = appSource.slice(routeStart, routeEnd);
+
+    const authIdx = routeBlock.indexOf("<RequireAuth>");
+    const ownerIdx = routeBlock.indexOf("<RequireOwner>");
+    const pageIdx = routeBlock.indexOf("<UserActivity />");
+    const ownerCloseIdx = routeBlock.indexOf("</RequireOwner>");
+    const authCloseIdx = routeBlock.indexOf("</RequireAuth>");
+
+    expect(authIdx).toBeGreaterThan(-1);
+    expect(ownerIdx).toBeGreaterThan(authIdx);
+    expect(pageIdx).toBeGreaterThan(ownerIdx);
+    expect(ownerCloseIdx).toBeGreaterThan(pageIdx);
+    expect(authCloseIdx).toBeGreaterThan(ownerCloseIdx);
+  });
+
   it("does not wrap any OTHER /admin/* route in RequireOwner (scope is exactly users + publish for this step)", () => {
     const otherAdminRoutes = [
       "/admin/ingest-an",

@@ -28,6 +28,7 @@ const BettingSplits = lazy(() => import("./pages/BettingSplits"));
 const Home = lazy(() => import("./pages/Home"));
 const UserManagement = lazy(() => import("./pages/UserManagement"));
 const PublishProjections = lazy(() => import("./pages/PublishProjections"));
+const UserActivity = lazy(() => import("./pages/UserActivity"));
 const IngestAnOdds = lazy(() => import("./pages/IngestAnOdds"));
 const TheModelResults = lazy(() => import("./pages/TheModelResults"));
 const SecurityEvents = lazy(() => import("./pages/SecurityEvents"));
@@ -341,6 +342,15 @@ function Router() {
             <RequireAuth>
               <RequireOwner>
                 <PublishProjections />
+              </RequireOwner>
+            </RequireAuth>
+          )}
+        </Route>
+        <Route path="/admin/activity">
+          {() => (
+            <RequireAuth>
+              <RequireOwner>
+                <UserActivity />
               </RequireOwner>
             </RequireAuth>
           )}
