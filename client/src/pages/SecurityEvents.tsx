@@ -16,6 +16,7 @@ import { useState, useMemo, useEffect } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useAppAuth } from "@/_core/hooks/useAppAuth";
+import { AdminShell } from "@/pages/admin/AdminShell";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -42,7 +43,6 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import {
-  ArrowLeft,
   RefreshCw,
   ShieldAlert,
   ShieldOff,
@@ -353,30 +353,19 @@ export default function SecurityEvents() {
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-black text-white">
+    <AdminShell active="security">
+    <div className="bg-black text-white">
       {/* ── Header ── */}
-      <div className="border-b border-white bg-black backdrop-blur-sm sticky top-0 z-10">
+      <div className="border-b border-white bg-black">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-white hover:text-white gap-1.5"
-              onClick={() => navigate("/admin/users")}
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Back
-            </Button>
-            <div className="h-4 w-px bg-white" />
-            <div className="flex items-center gap-2">
-              <ShieldAlert className="w-4 h-4 text-white" />
-              <span className="font-semibold text-sm">Security Events</span>
-              {counts.total > 0 && (
-                <Badge className="bg-transparent text-white border-white text-xs px-1.5 py-0">
-                  {counts.total} in window
-                </Badge>
-              )}
-            </div>
+          <div className="flex items-center gap-2">
+            <ShieldAlert className="w-4 h-4 text-white" />
+            <span className="font-semibold text-sm">Security Events</span>
+            {counts.total > 0 && (
+              <Badge className="bg-transparent text-white border-white text-xs px-1.5 py-0">
+                {counts.total} in window
+              </Badge>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <Button
@@ -634,5 +623,6 @@ export default function SecurityEvents() {
         </DialogContent>
       </Dialog>
     </div>
+    </AdminShell>
   );
 }
