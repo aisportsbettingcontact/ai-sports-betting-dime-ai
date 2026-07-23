@@ -45,4 +45,12 @@ describe("disabledOverview", () => {
     expect(o.lastEventAt).toBeNull();
     expect(o.reason).toMatch(/disabled/);
   });
+  it("carries honest not_measured action metrics (D3) — never fabricated zeros", () => {
+    const o = disabledOverview("analytics pipeline disabled");
+    expect(o.totalActions.state).toBe("not_measured");
+    expect(o.totalActions.value).toBeNull();
+    expect(o.uniqueActions.state).toBe("not_measured");
+    expect(o.uniqueActions.value).toBeNull();
+    expect(o.topActions).toEqual([]);
+  });
 });

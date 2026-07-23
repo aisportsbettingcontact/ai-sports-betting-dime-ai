@@ -10,6 +10,7 @@ import { useLocation } from "wouter";
 import { Loader2, Search, X } from "lucide-react";
 import { CalendarPicker, todayUTC } from "@/components/CalendarPicker";
 import { bettingSplitsPath } from "@/lib/feedRoutes";
+import { useTrackAction } from "@/lib/analytics";
 import {
   resolveSplitsServerDate,
   shouldAutoAdvance,
@@ -331,6 +332,7 @@ export default function BettingSplitsPage({
   resolveRouteHref = identityRouteHref,
 }: BettingSplitsPageProps) {
   const [, setLocation] = useLocation();
+  const trackAction = useTrackAction();
   const [showAgeModal, setShowAgeModal] = useState(false);
   // Sport is seeded from the canonical route (/betting-splits/:sport) and the
   // URL is kept in sync on pill changes so the address bar stays shareable.
@@ -344,17 +346,22 @@ export default function BettingSplitsPage({
   const setSelectedSport = useCallback(
     (sport: "MLB" | "NHL" | "NBA") => {
       setSelectedSportState(sport);
+      // Analytics: fire-and-forget, inert until the pipeline is enabled server-side.
+      trackAction("splits_sport_switched", { props: { sport } });
       setLocation(resolveRouteHref(bettingSplitsPath(sport, selectedDate)));
     },
-    [selectedDate, setLocation, resolveRouteHref]
+    [selectedDate, setLocation, resolveRouteHref, trackAction]
   );
   const setSelectedDate = useCallback(
     (date: string) => {
       userSelectedDateRef.current = true;
       setSelectedDateState(date);
+      // Analytics: fire-and-forget, inert until the pipeline is enabled server-side.
+      // No props — the specific date is not a low-cardinality scalar.
+      trackAction("splits_date_navigated");
       setLocation(resolveRouteHref(bettingSplitsPath(selectedSport, date)));
     },
-    [selectedSport, setLocation, resolveRouteHref]
+    [selectedSport, setLocation, resolveRouteHref, trackAction]
   );
   useEffect(() => {
     setSelectedSportState(initialSport);
@@ -519,6 +526,9 @@ export default function BettingSplitsPage({
   );
 
   const toggleStatus = (status: "upcoming" | "live" | "final") => {
+    // Analytics: fire-and-forget, inert until the pipeline is enabled server-side.
+    // `status` is a fixed 3-value enum — low-cardinality, no PII.
+    trackAction("splits_filtered", { props: { status } });
     setSelectedStatuses(prev => {
       const next = new Set(prev);
       if (next.has(status)) next.delete(status);
