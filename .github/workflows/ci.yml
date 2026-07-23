@@ -59,7 +59,7 @@ jobs:
       # `pnpm audit` calls npm's legacy /-/npm/v1/security/audits[/quick]
       # endpoints, which npm retired 2026-07-15 (410 Gone). The fix landed in
       # pnpm v11.0, but this repo is intentionally pinned to pnpm@10.33.0 (see
-      # the packageManager field — pnpm/action-setup@v4 misparses a sha512
+      # the packageManager field — pnpm/action-setup@v6 misparses a sha512
       # hash there, GHSA-379q-355j-w6rj) and pnpm v11 silently stops reading
       # the package.json "pnpm" config block (overrides/patchedDependencies/
       # onlyBuiltDependencies/auditConfig) — a bigger, separate migration.
@@ -101,7 +101,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: "[STEP] Setup pnpm"
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
         # No 'version' key — packageManager in package.json is the single source of truth.
 
       - name: "[STEP] Setup Node.js 22"
@@ -177,7 +177,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: "[STEP] Setup pnpm"
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
         # No 'version' key — packageManager in package.json is the single source of truth.
 
       - name: "[STEP] Setup Node.js 22"
@@ -241,7 +241,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: "[STEP] Setup pnpm"
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
 
       - name: "[STEP] Setup Node.js 22"
         uses: actions/setup-node@v4
@@ -299,7 +299,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: "[STEP] Setup pnpm"
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
 
       - name: "[STEP] Setup Node.js 22"
         uses: actions/setup-node@v4
