@@ -7,14 +7,16 @@
  * admin "Subscription Plans" dashboard.
  */
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { ownerProcedure } from "./appUsers";
 import { router } from "../_core/trpc";
-import { listAllPlans } from "../stripe/planStore";
+import { listAllPlans, getPlanBySlug, defaultPriceForMode } from "../stripe/planStore";
 import {
   provisionPlan,
   archivePlan,
   updatePlanMeta,
   isProvisioningTestMode,
+  getProvisioningStripe,
 } from "../stripe/planProvisioning";
 import { backfillStaticPlans } from "../stripe/backfillPlans";
 
@@ -76,4 +78,46 @@ export const subscriptionPlansRouter = router({
 
   /** One-shot idempotent import of the 5 legacy static plans into the catalog. */
   backfill: ownerProcedure.mutation(async () => backfillStaticPlans()),
+
+  /**
+   * Owner-only TEST checkout for a sandbox plan (Phase 2.5). Creates a Stripe
+   * TEST-mode hosted Checkout Session (via STRIPE_TEST_SECRET_KEY) for the plan's
+   * test price and returns its URL, so the owner can run the full subscribe flow
+   * with a Stripe test card before publishing live plans. This never touches live
+   * checkout, and being ownerProcedure it is not a public purchase path.
+   */
+  createTestCheckoutSession: ownerProcedure
+    .input(z.object({ slug: z.string().min(1).max(64), origin: z.string().url() }))
+    .mutation(async ({ input }) => {
+      if (!isProvisioningTestMode()) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "Test mode not configured — set STRIPE_TEST_SECRET_KEY on this service.",
+        });
+      }
+      const plan = await getPlanBySlug(input.slug);
+      if (!plan) throw new TRPCError({ code: "NOT_FOUND", message: "Plan not found." });
+      const price = defaultPriceForMode(plan, false);
+      if (!price) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "This plan has no test-mode price — create a sandbox plan to test.",
+        });
+      }
+
+      const stripe = getProvisioningStripe(); // the TEST client (test key is set)
+      const session = await stripe.checkout.sessions.create({
+        mode: "subscription",
+        line_items: [{ price: price.stripePriceId, quantity: 1 }],
+        metadata: { plan_id: plan.slug, dime_test: "1" },
+        subscription_data: { metadata: { plan_id: plan.slug } },
+        success_url: `${input.origin}/admin/plans?test=success`,
+        cancel_url: `${input.origin}/admin/plans?test=cancel`,
+      });
+      if (!session.url) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Stripe did not return a checkout URL." });
+      }
+      console.log(`[tRPC][subscriptionPlans.createTestCheckoutSession] slug=${plan.slug} price=${price.stripePriceId} session=${session.id}`);
+      return { url: session.url };
+    }),
 });
