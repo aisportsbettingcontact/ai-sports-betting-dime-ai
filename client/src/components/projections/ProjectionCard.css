@@ -23,6 +23,19 @@
    competition. Scheduled cards render no header, and the modifier removes the
    empty "head" row so the card gains no phantom top gap. */
 .projection-card--scheduled { grid-template-areas: "matchup" "summary" "markets"; }
+.projection-card--scheduled.projection-card--with-pregame {
+  grid-template-areas: "matchup" "pregame" "summary" "markets";
+}
+/* Pregame detail makes upcoming MLB cards intentionally richer. Once a game
+   leaves scheduled state, its card returns to a shorter, quieter scan target. */
+.projection-card--compact {
+  align-self: start;
+  gap: var(--space-sm);
+  opacity: 0.72;
+}
+/* A settled no-edge card can carry both modifiers. Compact state owns the
+   requested diminished treatment instead of inheriting PASS's 0.82 value. */
+.projection-card--compact.projection-card--pass { opacity: 0.72; }
 .projection-card__head { grid-area: head; display: flex; align-items: center; justify-content: flex-end; gap: var(--space-sm); }
 .projection-card__status { font-size: var(--proj-meta); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-secondary, #a6a6a6); }
 .projection-card__status--live { color: #45e0a8; } /* live = signal */
@@ -65,6 +78,281 @@
 .team-logo-box { display: inline-grid; place-items: center; inline-size: clamp(2rem, 1.8rem + 0.5vw, 2.75rem); block-size: clamp(2rem, 1.8rem + 0.5vw, 2.75rem); flex: none; }
 .team-logo { inline-size: 100%; block-size: 100%; object-fit: contain; background: transparent; border: 0; border-radius: 0; box-shadow: none; }
 .team-logo--mono { display: grid; place-items: center; border-radius: 50%; color: #fff; font-size: var(--proj-label); font-weight: 700; } /* monogram fallback disc (logo exception) */
+
+/* ── Scheduled MLB probable pitchers ─────────────────────────────────────────
+   Three stable tracks keep the LINEUPS button in the exact center while each
+   starter owns equal space. The data query always supplies a pending shape, so
+   a late Rotowire response updates copy/photos without changing the anatomy. */
+.pregame-pitchers {
+  grid-area: pregame;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-xs);
+  min-inline-size: 0;
+  padding: var(--space-sm);
+  background: var(--surface-raised, #101010);
+  border: 1px solid var(--border, #262626);
+  border-radius: 12px;
+}
+.pregame-pitcher {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-inline-size: 0;
+  text-align: center;
+}
+.pregame-pitcher__status {
+  margin-block-end: var(--space-2xs);
+  color: var(--text-secondary, #a6a6a6);
+  font-family: var(--dmf-mono, "IBM Plex Mono", monospace);
+  font-size: 0.55rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+.pregame-pitcher__status--confirmed { color: #45e0a8; }
+html:not(.dark) .pregame-pitcher__status--confirmed { color: #0fa36b; }
+.pregame-pitcher__status--pending { color: var(--text-muted, #6e6e6e); }
+.pregame-pitcher__photo {
+  display: grid;
+  place-items: end center;
+  inline-size: clamp(3rem, 18cqi, 4.5rem);
+  block-size: clamp(3rem, 18cqi, 4.5rem);
+  overflow: hidden;
+  color: var(--text-secondary, #a6a6a6);
+  background: var(--card, #0a0a0a);
+  border: 1px solid var(--border, #262626);
+  border-radius: 50%;
+}
+.pregame-pitcher__photo img {
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: contain;
+}
+.pregame-pitcher__fallback {
+  align-self: center;
+  font-family: var(--dmf-mono, "IBM Plex Mono", monospace);
+  font-size: var(--proj-label);
+  font-weight: 700;
+}
+.pregame-pitcher__name {
+  max-inline-size: 100%;
+  margin-block-start: var(--space-2xs);
+  overflow-wrap: anywhere;
+  color: var(--foreground, #fff);
+  font-size: clamp(0.7rem, 3.7cqi, 0.875rem);
+  line-height: 1.2;
+}
+.pregame-pitcher__stats {
+  max-inline-size: 100%;
+  margin-block-start: 2px;
+  color: var(--text-secondary, #a6a6a6);
+  font-family: var(--dmf-mono, "IBM Plex Mono", monospace);
+  font-size: clamp(0.55rem, 2.7cqi, 0.68rem);
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+.pregame-pitchers__lineups {
+  display: inline-grid;
+  place-items: center;
+  min-inline-size: 4.5rem;
+  min-block-size: 44px;
+  padding-inline: var(--space-xs);
+  cursor: pointer;
+  color: var(--foreground, #fff);
+  background: transparent;
+  border: 1px solid var(--border-strong, #4a4a4a);
+  border-radius: 8px;
+  font-family: var(--dmf-mono, "IBM Plex Mono", monospace);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transition:
+    color 160ms cubic-bezier(0.16, 1, 0.3, 1),
+    background 160ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.pregame-pitchers__lineups:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--ring, rgba(69, 224, 168, 0.36));
+}
+@media (hover: hover) and (pointer: fine) {
+  .pregame-pitchers__lineups:hover {
+    color: #000;
+    background: #45e0a8;
+    border-color: #45e0a8;
+  }
+}
+
+/* The dialog is portalled, so all dimensions are viewport-based rather than
+   projection-card container queries. It stacks both teams on phones and moves
+   them side-by-side when there is enough room for two readable batting orders. */
+.projection-lineups-dialog {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 0;
+  inline-size: min(62rem, calc(100vw - 2rem));
+  max-inline-size: min(62rem, calc(100vw - 2rem)) !important;
+  max-block-size: calc(100dvh - 2rem);
+  padding: 0;
+  overflow: hidden;
+  color: var(--foreground, #fff);
+  background: var(--popover, #0a0a0a);
+  border-color: var(--border-strong, #4a4a4a);
+}
+.projection-lineups-dialog > [data-slot="dialog-close"] {
+  display: grid;
+  place-items: center;
+  inline-size: 44px;
+  block-size: 44px;
+  inset-block-start: 10px;
+  inset-inline-end: 10px;
+}
+.projection-lineups-dialog__header {
+  gap: var(--space-xs);
+  padding: var(--space-lg);
+  padding-inline-end: 4.25rem;
+  text-align: start;
+  border-block-end: 1px solid var(--border, #262626);
+}
+.projection-lineups-dialog__header [data-slot="dialog-title"] {
+  color: var(--foreground, #fff);
+  font-size: clamp(1rem, 2.5vw, 1.35rem);
+}
+.projection-lineups-dialog__header [data-slot="dialog-description"] {
+  color: var(--text-secondary, #a6a6a6);
+}
+.lineups-dialog__teams {
+  display: grid;
+  grid-template-columns: 1fr;
+  min-block-size: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.lineups-dialog__team {
+  min-inline-size: 0;
+  padding: var(--space-md);
+}
+.lineups-dialog__team + .lineups-dialog__team {
+  border-block-start: 1px solid var(--border, #262626);
+}
+.lineups-dialog__team-head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-sm);
+}
+.lineups-dialog__team-head h3 {
+  margin: 0;
+  color: var(--foreground, #fff);
+  font-size: 1rem;
+}
+.lineups-dialog__side,
+.lineups-dialog__starter-label,
+.lineups-dialog__lineup-status {
+  color: var(--text-secondary, #a6a6a6);
+  font-family: var(--dmf-mono, "IBM Plex Mono", monospace);
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.lineups-dialog__lineup-status {
+  grid-column: 1 / -1;
+  justify-self: start;
+  padding: 3px 6px;
+  border: 1px solid var(--border, #262626);
+  border-radius: 999px;
+}
+.lineups-dialog__starter {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-block: var(--space-md);
+  padding: var(--space-sm);
+  background: var(--surface-raised, #101010);
+  border: 1px solid var(--border, #262626);
+  border-radius: 10px;
+}
+.pregame-pitcher__photo--dialog {
+  inline-size: 3.5rem;
+  block-size: 3.5rem;
+  flex: 0 0 3.5rem;
+}
+.lineups-dialog__starter-copy {
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 0;
+  gap: 2px;
+}
+.lineups-dialog__starter-copy strong {
+  overflow-wrap: anywhere;
+  color: var(--foreground, #fff);
+  font-size: 0.875rem;
+}
+.lineups-dialog__starter-copy > span:last-child {
+  color: var(--text-secondary, #a6a6a6);
+  font-size: 0.75rem;
+}
+.lineups-dialog__order {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-block-start: 1px solid var(--border, #262626);
+}
+.lineups-dialog__player {
+  display: grid;
+  grid-template-columns: 1.5rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-xs);
+  min-block-size: 2.5rem;
+  border-block-end: 1px solid var(--border, #262626);
+}
+.lineups-dialog__number {
+  color: var(--text-muted, #6e6e6e);
+  font-family: var(--dmf-mono, "IBM Plex Mono", monospace);
+  font-size: 0.65rem;
+  text-align: center;
+}
+.lineups-dialog__player-name {
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+  color: var(--foreground, #fff);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.lineups-dialog__player-meta {
+  color: var(--text-secondary, #a6a6a6);
+  font-family: var(--dmf-mono, "IBM Plex Mono", monospace);
+  font-size: 0.625rem;
+  text-transform: uppercase;
+}
+.lineups-dialog__pending {
+  margin: var(--space-lg) 0;
+  color: var(--text-secondary, #a6a6a6);
+  font-size: 0.8rem;
+  text-align: center;
+}
+@media (min-width: 768px) {
+  .lineups-dialog__teams { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .lineups-dialog__team { padding: var(--space-lg); }
+  .lineups-dialog__team + .lineups-dialog__team {
+    border-block-start: 0;
+    border-inline-start: 1px solid var(--border, #262626);
+  }
+  .lineups-dialog__team-head {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+  .lineups-dialog__lineup-status {
+    grid-column: auto;
+    justify-self: end;
+  }
+}
 
 /* ── Summary (the dominant insight) ── */
 .summary { grid-area: summary; display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-sm) var(--space-lg); padding-block: var(--space-sm); border-block: 1px solid var(--border, #262626); }
@@ -248,13 +536,13 @@
   }
 }
 
-/* ══ Round 4 Wave 2 — item 1: equal-height card rows, pinned market trigger
+/* ══ Round 4 Wave 2 — item 1: scheduled equal-height rows, pinned market trigger
    (desktop ONLY, >=1024px — item 8 scoping: item 1, unlike item 5 above,
    does NOT apply to tablet) ══
    Owner amendment 2026-07-23 to the 07-21 desktop-emphasis law: "start-aligned"
    -> "stretch" (annotated in design-system/dime-ai/pages/ai-model-projections.md).
    The 3-across desktop league grid (`DimeModelFeed.tsx` `.dmf-leaguebody`)
-   stretches row-mates to equal height instead of natural
+   stretches scheduled row-mates to equal height instead of natural
    (`align-items:start` -> `align-items:stretch`); this is the matching
    per-card structure so the extra height a shorter row-mate receives lands
    somewhere legible: the summary region becomes a flexible `1fr` row that
@@ -266,12 +554,20 @@
    popover trigger stays `auto`-height and is pushed to the card's bottom edge —
    "VIEW FULL AI MODEL PROJECTIONS" always lands flush with its row-mate's.
    A row of naturally-equal cards renders IDENTICALLY: grid track sizing
-   bases the row height on the tallest natural card in the row, so that
-   tallest card's own `1fr` summary row resolves to exactly the space `auto`
-   would have used — nothing forces it taller than its own content. */
+   bases the row height on the tallest natural card in the row. Lifecycle-
+   compact live/final/postponed cards opt out via align-self:start, so that
+   their richer scheduled row-mates do not re-expand them. For scheduled cards,
+   the tallest card's own `1fr` summary row resolves to exactly the space
+   `auto` would have used — nothing forces it taller than its own content. */
 @media (min-width: 1024px) {
   .projection-card { grid-template-rows: auto auto 1fr auto; }
   .projection-card--scheduled { grid-template-rows: auto 1fr auto; }
+  .projection-card--scheduled.projection-card--with-pregame {
+    grid-template-rows: auto auto 1fr auto;
+  }
+  .projection-card--compact {
+    grid-template-rows: auto auto auto auto;
+  }
   .summary-carousel { align-content: center; }
 }
 

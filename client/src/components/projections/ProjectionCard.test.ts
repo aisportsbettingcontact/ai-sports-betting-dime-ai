@@ -169,6 +169,49 @@ function mlbFixture(): ProjectionGame {
   };
 }
 
+function mlbPregameFixture(): ProjectionGame {
+  return {
+    ...mlbFixture(),
+    pregameLineups: {
+      source: "Rotowire",
+      scrapedAt: 1_721_740_000_000,
+      away: {
+        pitcher: {
+          name: "Logan Webb",
+          hand: "R",
+          seasonStats: "7-4 · 3.21 ERA",
+          rotowireId: 14222,
+          mlbamId: 657277,
+          confirmed: true,
+        },
+        confirmed: true,
+        battingOrder: [
+          {
+            battingOrder: 1,
+            position: "CF",
+            name: "Jung Hoo Lee",
+            bats: "L",
+            rotowireId: 18043,
+            mlbamId: 808982,
+          },
+        ],
+      },
+      home: {
+        pitcher: {
+          name: "George Kirby",
+          hand: "R",
+          seasonStats: "8-5 · 3.62 ERA",
+          rotowireId: 15669,
+          mlbamId: 669923,
+          confirmed: false,
+        },
+        confirmed: false,
+        battingOrder: [],
+      },
+    },
+  };
+}
+
 const render = (game: ProjectionGame): string =>
   renderToStaticMarkup(createElement(ProjectionCard, { game }));
 
@@ -548,6 +591,46 @@ describe("ProjectionCard — live indicator (Round 4 Wave 1, item 4)", () => {
     expect(final).not.toContain("projection-card__live-dot");
     const scheduled = render(wcFixture());
     expect(scheduled).not.toContain("projection-card__live-dot");
+  });
+});
+
+describe("ProjectionCard — Rotowire pregame context", () => {
+  it("shows both probable pitchers and the centered LINEUPS trigger on scheduled MLB cards", () => {
+    const html = render(mlbPregameFixture());
+    expect(html).toContain("projection-card--with-pregame");
+    expect(html).toContain('aria-label="Probable pitchers"');
+    expect(html).toContain("Logan Webb");
+    expect(html).toContain("7-4 · 3.21 ERA");
+    expect(html).toContain("George Kirby");
+    expect(html).toContain("8-5 · 3.62 ERA");
+    expect(html).toContain(">Confirmed<");
+    expect(html).toContain(">Expected<");
+    expect(html).toContain(">Lineups<");
+    expect(html).toContain("View lineups for Giants at Mariners");
+  });
+
+  it("never renders stale pregame data after a game becomes live, final, or postponed", () => {
+    for (const status of ["live", "final", "postponed"] as const) {
+      const html = render({
+        ...mlbPregameFixture(),
+        status,
+        statusLabel: status === "live" ? "LIVE · TOP 1ST" : status.toUpperCase(),
+        startTime: undefined,
+      });
+      expect(html).toContain(`projection-card--${status}`);
+      expect(html).toContain("projection-card--compact");
+      expect(html).not.toContain("projection-card--with-pregame");
+      expect(html).not.toContain("Logan Webb");
+      expect(html).not.toContain(">Lineups<");
+    }
+  });
+
+  it("pins compact cards to their natural height and applies the diminished treatment", () => {
+    expect(cardCss).toMatch(/\.projection-card--compact\s*\{[\s\S]*?align-self:\s*start;/);
+    expect(cardCss).toMatch(/\.projection-card--compact\s*\{[\s\S]*?opacity:\s*0\.72;/);
+    expect(cardCss).toMatch(
+      /\.projection-card--scheduled\.projection-card--with-pregame\s*\{[\s\S]*?grid-template-areas:\s*"matchup"\s*"pregame"\s*"summary"\s*"markets";/,
+    );
   });
 });
 

@@ -254,6 +254,96 @@ const SCHEDULED_EDGE_GAME = mlbRow({
   modelOverOdds: 118, modelUnderOdds: -136,
 });
 
+function battingOrder(names: string[]) {
+  const positions = ["CF", "SS", "RF", "1B", "DH", "3B", "LF", "2B", "C"];
+  return JSON.stringify(names.map((name, index) => ({
+    battingOrder: index + 1,
+    position: positions[index],
+    name,
+    bats: index % 3 === 0 ? "L" : "R",
+    rotowireId: 10_000 + index,
+    mlbamId: 600_000 + index,
+  })));
+}
+
+function lineupRow(overrides: Record<string, unknown>) {
+  return {
+    id: 1,
+    gameId: 1,
+    scrapedAt: 1_721_740_000_000,
+    awayPitcherName: null,
+    awayPitcherHand: null,
+    awayPitcherEra: null,
+    awayPitcherRotowireId: null,
+    awayPitcherMlbamId: null,
+    awayPitcherConfirmed: false,
+    homePitcherName: null,
+    homePitcherHand: null,
+    homePitcherEra: null,
+    homePitcherRotowireId: null,
+    homePitcherMlbamId: null,
+    homePitcherConfirmed: false,
+    awayLineup: null,
+    homeLineup: null,
+    awayLineupConfirmed: false,
+    homeLineupConfirmed: false,
+    ...overrides,
+  };
+}
+
+const LINEUPS_BY_GAME_ID = {
+  401: lineupRow({
+    gameId: 401,
+    awayPitcherName: "JP Sears",
+    awayPitcherHand: "L",
+    awayPitcherEra: "7-7 · 4.18 ERA",
+    awayPitcherRotowireId: 14201,
+    awayPitcherMlbamId: 676664,
+    awayPitcherConfirmed: false,
+    homePitcherName: "Jacob deGrom",
+    homePitcherHand: "R",
+    homePitcherEra: "6-2 · 2.71 ERA",
+    homePitcherRotowireId: 10755,
+    homePitcherMlbamId: 594798,
+    homePitcherConfirmed: true,
+    awayLineup: battingOrder([
+      "Lawrence Butler", "Jacob Wilson", "Brent Rooker", "Tyler Soderstrom",
+      "Shea Langeliers", "Zack Gelof", "Max Schuemann", "JJ Bleday", "Nick Allen",
+    ]),
+    homeLineup: battingOrder([
+      "Marcus Semien", "Corey Seager", "Josh Jung", "Adolis García",
+      "Wyatt Langford", "Joc Pederson", "Jonah Heim", "Ezequiel Duran", "Leody Taveras",
+    ]),
+    awayLineupConfirmed: false,
+    homeLineupConfirmed: true,
+  }),
+  403: lineupRow({
+    gameId: 403,
+    awayPitcherName: "Logan Webb",
+    awayPitcherHand: "R",
+    awayPitcherEra: "7-4 · 3.21 ERA",
+    awayPitcherRotowireId: 14222,
+    awayPitcherMlbamId: 657277,
+    awayPitcherConfirmed: true,
+    homePitcherName: "George Kirby",
+    homePitcherHand: "R",
+    homePitcherEra: "8-5 · 3.62 ERA",
+    homePitcherRotowireId: 15669,
+    homePitcherMlbamId: 669923,
+    homePitcherConfirmed: false,
+    awayLineup: battingOrder([
+      "Jung Hoo Lee", "Heliot Ramos", "Matt Chapman", "Rafael Devers",
+      "Willy Adames", "Mike Yastrzemski", "Patrick Bailey", "Casey Schmitt", "Tyler Fitzgerald",
+    ]),
+    homeLineup: battingOrder([
+      "J.P. Crawford", "Julio Rodríguez", "Cal Raleigh", "Randy Arozarena",
+      "Luke Raley", "Jorge Polanco", "Mitch Garver", "Cole Young", "Dominic Canzone",
+    ]),
+    awayLineupConfirmed: true,
+    homeLineupConfirmed: false,
+  }),
+};
+
 const BLANK_PNG = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
   "base64",
@@ -267,6 +357,8 @@ async function stubApi(page: Page) {
       if (op === "appUsers.me") return { result: { data: { json: STUB_USER } } };
       if (op === "games.list")
         return { result: { data: { json: [PASS_GAME, LIVE_EDGE_GAME, SCHEDULED_EDGE_GAME] } } };
+      if (op === "games.mlbLineups")
+        return { result: { data: { json: LINEUPS_BY_GAME_ID } } };
       if (op === "wc2026.matchesByDate") return { result: { data: { json: [] } } };
       return {
         error: {
@@ -286,6 +378,12 @@ async function stubApi(page: Page) {
   await page.route("https://www.mlbstatic.com/**", (route) =>
     route.fulfill({ status: 200, contentType: "image/png", body: BLANK_PNG }),
   );
+  await page.route("https://img.mlbstatic.com/**", (route) =>
+    route.fulfill({ status: 200, contentType: "image/png", body: BLANK_PNG }),
+  );
+  await page.route("https://www.rotowire.com/images/photos/**", (route) =>
+    route.fulfill({ status: 200, contentType: "image/png", body: BLANK_PNG }),
+  );
 }
 
 /** Deterministic dark theme (mode defaults to "system" with nothing in
@@ -297,6 +395,7 @@ async function gotoShellFeed(page: Page, width: number, height = 1400) {
   await page.setViewportSize({ width, height });
   await page.goto(`${baseURL}${SHELL_FEED_PATH}`);
   await page.waitForSelector(".projection-card", { timeout: 20_000 });
+  await page.waitForSelector(".pregame-pitchers", { timeout: 20_000 });
   await page.waitForTimeout(300);
 }
 
@@ -351,7 +450,8 @@ for (const width of DESKTOP_WIDTHS) {
     await expect(passCard).toBeVisible();
     await expect(scheduledCard).toBeVisible();
 
-    // ── Item 1: equal-height row-mates + pinned market trigger (desktop only) ──
+    // ── Item 1: scheduled row-mates stretch; live/final cards opt out and
+    //    retain the requested compact natural height. ──
     await expect(liveCard.locator(".summary-carousel")).toBeVisible();
     await expect(passCard.locator(".summary-carousel")).toHaveCount(0);
     const liveBox = await liveCard.boundingBox();
@@ -381,16 +481,21 @@ for (const width of DESKTOP_WIDTHS) {
     ).toBeGreaterThanOrEqual(passReadout.y + passReadout.height - 1);
 
     expect(
-      Math.abs(liveBox.height - passBox.height),
-      `row-mates (LIVE ${liveBox.height} vs PASS ${passBox.height}) render equal height`,
+      liveBox.height,
+      `compact LIVE (${liveBox.height}) is shorter than scheduled PASS (${passBox.height})`,
+    ).toBeLessThan(passBox.height - 20);
+    expect(
+      Math.abs(passBox.height - scheduledBox.height),
+      "scheduled row-mates still stretch to equal height",
     ).toBeLessThanOrEqual(1);
 
     const liveToggle = await liveCard.locator(".projection-card__markets-toggle").boundingBox();
     const passToggle = await passCard.locator(".projection-card__markets-toggle").boundingBox();
-    if (!liveToggle || !passToggle) throw new Error("markets-toggle bounding boxes missing");
+    const scheduledToggle = await scheduledCard.locator(".projection-card__markets-toggle").boundingBox();
+    if (!liveToggle || !passToggle || !scheduledToggle) throw new Error("markets-toggle bounding boxes missing");
     expect(
-      Math.abs(liveToggle.y + liveToggle.height - (passToggle.y + passToggle.height)),
-      "market-trigger bottom edges align across row-mates",
+      Math.abs(scheduledToggle.y + scheduledToggle.height - (passToggle.y + passToggle.height)),
+      "market-trigger bottom edges align across scheduled row-mates",
     ).toBeLessThanOrEqual(1);
     // Pinned to the card's own bottom edge (padding-block-end: --space-sm =
     // 12px) — not floating mid-card.
@@ -405,6 +510,15 @@ for (const width of DESKTOP_WIDTHS) {
     // ── Item 3: PASS-card law — opacity 0.82 ──
     const passOpacity = await passCard.evaluate((el) => getComputedStyle(el).opacity);
     expect(passOpacity, "PASS card computed opacity").toBe("0.82");
+    const liveOpacity = await liveCard.evaluate((el) => getComputedStyle(el).opacity);
+    expect(liveOpacity, "live card uses the lifecycle-diminished opacity").toBe("0.72");
+
+    // Upcoming-only probable pitchers: both scheduled cards render the stable
+    // Rotowire section; the live card never carries stale pregame data.
+    await expect(liveCard.locator(".pregame-pitchers")).toHaveCount(0);
+    await expect(passCard.getByRole("button", { name: "View lineups for Athletics at Rangers" })).toBeVisible();
+    await expect(scheduledCard.getByText("Logan Webb")).toBeVisible();
+    await expect(scheduledCard.getByText("7-4 · 3.21 ERA")).toBeVisible();
 
     // ── Item 4: live dot visible on the live-game card ──
     const liveDot = liveCard.locator(".projection-card__live-dot");
@@ -727,6 +841,39 @@ for (const width of DESKTOP_WIDTHS) {
       await page.keyboard.press("Escape");
       await expect(popover).toHaveCount(0);
       await page.evaluate(() => document.documentElement.classList.add("dark"));
+
+      // Full Rotowire lineups use a modal (18 rows need more room than the
+      // market popover), preserve focus, and keep both teams visible.
+      const lineupsTrigger = scheduledCard.getByRole("button", {
+        name: "View lineups for Giants at Mariners",
+      });
+      await lineupsTrigger.click();
+      const lineupsDialog = page.getByRole("dialog", {
+        name: "Giants at Mariners lineups",
+      });
+      await expect(lineupsDialog).toBeVisible();
+      await lineupsDialog.evaluate(async element => {
+        await Promise.all(
+          element
+            .getAnimations()
+            .map(animation => animation.finished.catch(() => undefined))
+        );
+      });
+      await expect(lineupsDialog.getByText("Logan Webb")).toBeVisible();
+      await expect(lineupsDialog.getByText("George Kirby")).toBeVisible();
+      await expect(lineupsDialog.getByText("Confirmed lineup")).toBeVisible();
+      await expect(lineupsDialog.getByText("Expected lineup")).toBeVisible();
+      await expect(lineupsDialog.locator(".lineups-dialog__player")).toHaveCount(18);
+      const teamColumns = lineupsDialog.locator(".lineups-dialog__team");
+      const awayColumn = await teamColumns.nth(0).boundingBox();
+      const homeColumn = await teamColumns.nth(1).boundingBox();
+      if (!awayColumn || !homeColumn) throw new Error("lineup team columns missing");
+      expect(homeColumn.x, "desktop lineup teams render side-by-side").toBeGreaterThan(
+        awayColumn.x + awayColumn.width - 2,
+      );
+      await page.keyboard.press("Escape");
+      await expect(lineupsDialog).toHaveCount(0);
+      await expect(lineupsTrigger).toBeFocused();
     }
   });
 }
@@ -739,17 +886,17 @@ test("shell feed tablet 900px: items 2,3,4,5,7 active; items 1,6 inert", async (
   const passCard = cardByAriaLabel(page, "Athletics at Rangers");
   const scheduledCard = cardByAriaLabel(page, "Giants at Mariners");
 
-  // ── Item 1 inert: 2-column tablet rows start-align, so PASS keeps its
-  //    naturally shorter height instead of stretching to LIVE. ──
+  // ── Item 1 inert: 2-column tablet rows start-align. Scheduled PASS now owns
+  //    the richer pitcher section, while LIVE stays compact. ──
   const liveBox = await liveCard.boundingBox();
   const passBox = await passCard.boundingBox();
   const scheduledBox = await scheduledCard.boundingBox();
   if (!liveBox || !passBox || !scheduledBox) throw new Error("card bounding boxes missing");
-  expect(passBox.height, "PASS is NOT stretched to LIVE's height on tablet").toBeLessThan(liveBox.height - 5);
+  expect(passBox.height, "scheduled PASS is taller than compact LIVE on tablet").toBeGreaterThan(liveBox.height + 20);
   expect(passBox.x, "two columns: PASS sits to the right of LIVE").toBeGreaterThan(liveBox.x + liveBox.width);
   expect(Math.abs(passBox.y - liveBox.y), "two columns: PASS and LIVE share the same row").toBeLessThanOrEqual(1);
   expect(Math.abs(scheduledBox.x - liveBox.x), "tablet row 2 returns to column 1").toBeLessThanOrEqual(1);
-  expect(scheduledBox.y, "tablet row 2 sits below row 1").toBeGreaterThan(liveBox.y + liveBox.height);
+  expect(scheduledBox.y, "tablet row 2 sits below the taller row-1 card").toBeGreaterThan(passBox.y + passBox.height);
 
   // ── Item 2 active: 24px matchup score ──
   const scoreFontSize = await liveCard.locator(".matchup__score").first().evaluate((el) => getComputedStyle(el).fontSize);
@@ -758,6 +905,10 @@ test("shell feed tablet 900px: items 2,3,4,5,7 active; items 1,6 inert", async (
   // ── Item 3 active: PASS opacity 0.82 ──
   const passOpacity = await passCard.evaluate((el) => getComputedStyle(el).opacity);
   expect(passOpacity, "PASS card computed opacity at tablet").toBe("0.82");
+  const liveOpacity = await liveCard.evaluate((el) => getComputedStyle(el).opacity);
+  expect(liveOpacity, "LIVE lifecycle opacity at tablet").toBe("0.72");
+  await expect(liveCard.locator(".pregame-pitchers")).toHaveCount(0);
+  await expect(passCard.locator(".pregame-pitchers")).toBeVisible();
 
   // ── Item 4 active: live dot visible ──
   const dotDisplay = await liveCard.locator(".projection-card__live-dot").evaluate((el) => getComputedStyle(el).display);
@@ -799,11 +950,12 @@ test("shell feed mobile 375px: every round-4 rule inert", async ({ page }) => {
   const liveCard = cardByAriaLabel(page, "Dodgers at Yankees");
   const passCard = cardByAriaLabel(page, "Athletics at Rangers");
 
-  // Item 1 inert: PASS visibly shorter than LIVE (not stretched).
+  // Item 1 inert: cards keep natural height; scheduled PASS is richer and
+  // visibly taller than compact LIVE.
   const liveBox = await liveCard.boundingBox();
   const passBox = await passCard.boundingBox();
   if (!liveBox || !passBox) throw new Error("card bounding boxes missing");
-  expect(passBox.height, "PASS is NOT stretched on mobile").toBeLessThan(liveBox.height - 5);
+  expect(passBox.height, "scheduled PASS is taller than compact LIVE on mobile").toBeGreaterThan(liveBox.height + 20);
   expect(Math.abs(passBox.x - liveBox.x), "mobile cards share the single grid column").toBeLessThanOrEqual(1);
   expect(passBox.y, "mobile card 2 sits below card 1").toBeGreaterThan(liveBox.y + liveBox.height);
 
@@ -815,6 +967,8 @@ test("shell feed mobile 375px: every round-4 rule inert", async ({ page }) => {
   // Item 3 inert: no forced opacity.
   const passOpacity = await passCard.evaluate((el) => getComputedStyle(el).opacity);
   expect(passOpacity, "PASS card opacity is NOT forced to 0.82 on mobile").toBe("1");
+  const liveOpacity = await liveCard.evaluate((el) => getComputedStyle(el).opacity);
+  expect(liveOpacity, "compact LIVE opacity applies at every breakpoint").toBe("0.72");
 
   // Item 4 inert: live dot display:none (base rule, unconditional below 768px).
   const dotDisplay = await liveCard.locator(".projection-card__live-dot").evaluate((el) => getComputedStyle(el).display);
@@ -941,6 +1095,49 @@ test("shell feed mobile 375px: every round-4 rule inert", async ({ page }) => {
   await page.keyboard.press("Escape");
   await expect(popover).toHaveCount(0);
   await expect(toggle).toBeFocused();
+
+  const lineupsTrigger = passCard.getByRole("button", {
+    name: "View lineups for Athletics at Rangers",
+  });
+  await lineupsTrigger.click();
+  const lineupsDialog = page.getByRole("dialog", {
+    name: "Athletics at Rangers lineups",
+  });
+  await expect(lineupsDialog).toBeVisible();
+  await lineupsDialog.evaluate(async element => {
+    await Promise.all(
+      element
+        .getAnimations()
+        .map(animation => animation.finished.catch(() => undefined))
+    );
+  });
+  await expect(lineupsDialog.locator(".lineups-dialog__player")).toHaveCount(18);
+  const dialogBox = await lineupsDialog.boundingBox();
+  if (!dialogBox) throw new Error("mobile lineups dialog bounding box missing");
+  expect(dialogBox.x).toBeGreaterThanOrEqual(8);
+  expect(dialogBox.x + dialogBox.width).toBeLessThanOrEqual(375 - 8);
+  expect(dialogBox.y).toBeGreaterThanOrEqual(8);
+  expect(dialogBox.y + dialogBox.height).toBeLessThanOrEqual(667 - 8);
+  const mobileTeamsLayout = await lineupsDialog.locator(".lineups-dialog__teams").evaluate((element) => {
+    const style = getComputedStyle(element);
+    return {
+      columns: style.gridTemplateColumns.split(" ").length,
+      clientHeight: element.clientHeight,
+      scrollHeight: element.scrollHeight,
+      overflowY: style.overflowY,
+    };
+  });
+  expect(mobileTeamsLayout.columns, "mobile lineup teams stack in one column").toBe(1);
+  expect(mobileTeamsLayout.overflowY).toBe("auto");
+  expect(mobileTeamsLayout.scrollHeight).toBeGreaterThan(mobileTeamsLayout.clientHeight);
+  const dialogClose = lineupsDialog.getByRole("button", { name: "Close" });
+  const closeBox = await dialogClose.boundingBox();
+  if (!closeBox) throw new Error("lineups dialog close control missing");
+  expect(closeBox.width).toBeGreaterThanOrEqual(44);
+  expect(closeBox.height).toBeGreaterThanOrEqual(44);
+  await page.keyboard.press("Escape");
+  await expect(lineupsDialog).toHaveCount(0);
+  await expect(lineupsTrigger).toBeFocused();
 
   await page.screenshot({
     path: `${EVIDENCE_DIR}/shell-375.png`,

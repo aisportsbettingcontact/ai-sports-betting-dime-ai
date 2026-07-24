@@ -24,7 +24,7 @@ import { countryIdentity, isRawCountryCode } from "./countries";
 // ─── The sport universe ──────────────────────────────────────────────────────
 
 export type Sport = "MLB" | "NFL" | "NBA" | "NHL" | "NCAAF" | "NCAAM" | "SOCCER";
-export type EventStatus = "scheduled" | "live" | "final";
+export type EventStatus = "scheduled" | "live" | "final" | "postponed";
 export type EventRole = "home" | "away";
 export type ParticipantKind = "team" | "country";
 
@@ -167,6 +167,9 @@ export interface FeedMarketLike {
 }
 export interface FeedEventLike {
   id: string;
+  /** Explicit source status when available; prevents postponed games from
+   *  falling through the score-based inference and appearing scheduled. */
+  status?: EventStatus;
   liveLabel?: string | null;
   timeLabel: string;
   away: FeedTeamLike;
@@ -193,6 +196,7 @@ function parseScore(s: string | null | undefined): number | null {
 }
 
 function statusOf(raw: FeedEventLike): EventStatus {
+  if (raw.status) return raw.status;
   if (raw.liveLabel) return "live";
   if (raw.away.score != null || raw.home.score != null) return "final";
   return "scheduled";
@@ -204,10 +208,10 @@ function venueOf(raw: FeedEventLike): string | undefined {
   return v && v !== raw.meta ? v : undefined;
 }
 
-/** First pitch / kickoff in ET. Finals carry "FINAL" in timeLabel, not a time,
- *  so a final event has no start time (the matchup block's last line stays off). */
+/** First pitch / kickoff in ET. Final and postponed cards carry a status label,
+ *  not a start time, so the matchup block's last line stays off. */
 function startTimeOf(raw: FeedEventLike, status: EventStatus): string | undefined {
-  return status === "final" ? undefined : raw.timeLabel || undefined;
+  return status === "final" || status === "postponed" ? undefined : raw.timeLabel || undefined;
 }
 
 /** Spelled-out market titles (owner directive 2026-07-18): no abbreviated

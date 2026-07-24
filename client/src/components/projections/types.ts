@@ -34,6 +34,45 @@ export interface ProjectionMarket {
   resultIsEdge?: boolean;
 }
 
+/** One Rotowire batting-order entry, normalized before it reaches the card. */
+export interface ProjectionLineupPlayer {
+  battingOrder: number;
+  position: string;
+  name: string;
+  bats: string | null;
+  rotowireId: number | null;
+  mlbamId: number | null;
+}
+
+/** The expected or confirmed starter shown on an upcoming MLB card. */
+export interface ProjectionPitcher {
+  name: string | null;
+  hand: string | null;
+  /** Rotowire's compact season line, e.g. "7-4 · 3.21 ERA". */
+  seasonStats: string | null;
+  rotowireId: number | null;
+  mlbamId: number | null;
+  confirmed: boolean;
+}
+
+export interface ProjectionTeamLineup {
+  pitcher: ProjectionPitcher;
+  battingOrder: ProjectionLineupPlayer[];
+  confirmed: boolean;
+}
+
+/**
+ * Rotowire's pregame read model. It is deliberately optional on ProjectionGame:
+ * only scheduled MLB cards receive it, while live/final and non-MLB cards keep
+ * their existing compact shape.
+ */
+export interface ProjectionPregameLineups {
+  source: "Rotowire";
+  scrapedAt: number | null;
+  away: ProjectionTeamLineup;
+  home: ProjectionTeamLineup;
+}
+
 export interface ProjectionGame {
   id: string;
   league: string; // "MLB"
@@ -46,5 +85,7 @@ export interface ProjectionGame {
   venue?: string;
   /** First pitch / kickoff in ET ("10:10 PM ET"); unset for finals. */
   startTime?: string;
+  /** Scheduled-MLB-only probable pitchers and batting orders from Rotowire. */
+  pregameLineups?: ProjectionPregameLineups;
   markets: ProjectionMarket[];
 }
