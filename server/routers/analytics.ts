@@ -15,9 +15,36 @@ import { isTestUser, getAnalyticsRole } from "../analytics/config";
 import { deriveDeviceFromUA, reconcileDeviceType } from "../analytics/device";
 import { sanitizeRoutePattern } from "../analytics/routePattern";
 import { dispatchStoredEvent } from "../analytics/dispatch";
-import { getAnalyticsOverview, disabledOverview } from "../analytics/read";
+import { getAnalyticsOverview, disabledOverview, type AnalyticsOverview } from "../analytics/read";
 import { forwardOverviewRead } from "../analytics/readForward";
+import { isStaffRole } from "../analytics/metricDefinitions";
+import { getAppUsersByIds } from "../db";
 import type { StoredEvent } from "../analytics/store";
+
+/**
+ * Read-time identity join (owner-only). Enriches pseudonymous per-user rows with
+ * display identity (username / discord / role) from app_users on the WEB instance
+ * — PII is never persisted in the analytics store. Best-effort: any failure just
+ * leaves the rows pseudonymous. Never throws.
+ */
+async function enrichTopUsers(o: AnalyticsOverview): Promise<AnalyticsOverview> {
+  if (!o.topUsers?.length) return o;
+  try {
+    const ids = o.topUsers.map((u) => u.sourceUserId).filter((n) => Number.isFinite(n) && n > 0);
+    const users = await getAppUsersByIds(ids);
+    if (!users.length) return o;
+    const byId = new Map(users.map((u) => [u.id, u]));
+    return {
+      ...o,
+      topUsers: o.topUsers.map((u) => {
+        const m = byId.get(u.sourceUserId);
+        return m ? { ...u, username: m.username, discordUsername: m.discordUsername, role: m.role } : u;
+      }),
+    };
+  } catch {
+    return o;
+  }
+}
 
 export const analyticsRouter = router({
   track: appUserProcedure.input(trackInputSchema).mutation(async ({ ctx, input }) => {
@@ -49,7 +76,8 @@ export const analyticsRouter = router({
       occurredAtUtc: input.occurredAtUtc,
       environment: process.env.NODE_ENV ?? "production",
       appVersion: process.env.RAILWAY_GIT_COMMIT_SHA ?? null,
-      isTest: isTestUser(ctx.appUser.id),
+      // Exclude staff (owner/admin) AND canary test ids from real metrics — write-time.
+      isTest: isTestUser(ctx.appUser.id) || isStaffRole(ctx.appUser.role),
       props: reconciled.conflict
         ? { ...(sanitizeProps(input.props) ?? {}), device_conflict: true }
         : sanitizeProps(input.props),
@@ -64,9 +92,12 @@ export const analyticsRouter = router({
   overview: ownerProcedure.query(async () => {
     const role = getAnalyticsRole();
     try {
-      if (role === "forwarder") return await forwardOverviewRead();
-      if (role === "store") return await getAnalyticsOverview();
-      return disabledOverview("analytics pipeline disabled");
+      let payload: AnalyticsOverview;
+      if (role === "forwarder") payload = await forwardOverviewRead();
+      else if (role === "store") payload = await getAnalyticsOverview();
+      else return disabledOverview("analytics pipeline disabled");
+      // Owner-only read-time identity join (web instance has app_users).
+      return await enrichTopUsers(payload);
     } catch {
       return disabledOverview("analytics overview unavailable");
     }
