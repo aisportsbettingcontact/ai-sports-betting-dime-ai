@@ -244,6 +244,18 @@ async function processWebhookEvent(event: Stripe.Event): Promise<void> {
   const tag = `[Stripe][Webhook][${event.type}][${event.id}]`;
   console.log(`${tag} Processing at ${new Date(event.created * 1000).toISOString()}`);
 
+  // Owner-only TEST-mode events (Phase 2.5): the signature is already verified
+  // (against STRIPE_TEST_WEBHOOK_SECRET). We acknowledge them but NEVER apply
+  // fulfillment to production data — a Stripe test card must not mint a real
+  // subscriber account or grant live access. The grant code path is identical
+  // for live events, so exercising the sandbox flow still validates plumbing
+  // (checkout → price-by-mode → Stripe → webhook delivery → signature) without
+  // this branch mutating the prod users table.
+  if (event.livemode === false) {
+    console.log(`${tag} [STATE] Test-mode event (livemode=false) — verified & acknowledged; production fulfillment intentionally skipped`);
+    return;
+  }
+
   switch (event.type) {
     case "checkout.session.completed": {
       const session = event.data.object as Stripe.Checkout.Session;
@@ -435,10 +447,16 @@ export function registerStripeWebhookRoute(app: Express): void {
     (req: Request, res: Response) => {
       const tag = "[Stripe][Webhook]";
       const sig = req.headers["stripe-signature"] as string | undefined;
-      const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+      // Verify against the live secret first, then the OPTIONAL test secret — so
+      // test-mode events (from the owner-only test checkout, Phase 2.5) also
+      // verify + fulfill. Each is a distinct HMAC secret; trying both never
+      // weakens verification (an event still has to be signed by one of them).
+      const liveSecret = process.env.STRIPE_WEBHOOK_SECRET;
+      const testSecret = process.env.STRIPE_TEST_WEBHOOK_SECRET;
+      const secrets = [liveSecret, testSecret].filter((s): s is string => !!s);
 
-      if (!webhookSecret) {
-        console.error(`${tag} STRIPE_WEBHOOK_SECRET not set`);
+      if (secrets.length === 0) {
+        console.error(`${tag} neither STRIPE_WEBHOOK_SECRET nor STRIPE_TEST_WEBHOOK_SECRET is set`);
         return res.status(400).json({ error: "webhook_secret_not_configured" });
       }
       if (!sig) {
@@ -446,13 +464,19 @@ export function registerStripeWebhookRoute(app: Express): void {
         return res.status(400).json({ error: "missing_signature_header" });
       }
 
-      let event: Stripe.Event;
-      try {
-        event = getStripe().webhooks.constructEvent(req.body, sig, webhookSecret);
-      } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : String(err);
-        console.error(`${tag} Signature verification FAILED: ${msg}`);
-        return res.status(400).json({ error: "signature_verification_failed", detail: msg });
+      let event: Stripe.Event | null = null;
+      let lastErr = "";
+      for (const secret of secrets) {
+        try {
+          event = getStripe().webhooks.constructEvent(req.body, sig, secret);
+          break;
+        } catch (err: unknown) {
+          lastErr = err instanceof Error ? err.message : String(err);
+        }
+      }
+      if (!event) {
+        console.error(`${tag} Signature verification FAILED (tried ${secrets.length} secret(s)): ${lastErr}`);
+        return res.status(400).json({ error: "signature_verification_failed", detail: lastErr });
       }
 
       console.log(`${tag} Signature verified ✓ event_id=${event.id} type=${event.type}`);
