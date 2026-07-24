@@ -73,9 +73,11 @@ describe("Discord route prefix invariant", () => {
   });
 
   it("frontend connect href uses /api/auth/discord/connect", async () => {
+    // The legacy ModelProjections surface was deleted 2026-07-24 (unrouted
+    // dead code); the live account-linking surface is the chat SettingsModal.
     const fs = await import("fs");
     const path = await import("path");
-    const frontendPath = path.resolve(__dirname, "../client/src/pages/ModelProjections.tsx");
+    const frontendPath = path.resolve(__dirname, "../client/src/pages/dime-chat/SettingsModal.tsx");
     const src = fs.readFileSync(frontendPath, "utf-8");
     expect(src).toContain('href="/api/auth/discord/connect"');
     expect(src).not.toContain('href="/auth/discord/connect"');
@@ -85,16 +87,29 @@ describe("Discord route prefix invariant", () => {
     // POLICY: Users cannot disconnect their own Discord account.
     // Once linked, it is permanent from the user's perspective.
     // Only the owner (@prez) can unlink via the User Management admin panel.
-    // This test enforces that no user-facing disconnect call exists in ModelProjections.tsx.
+    // Strengthened 2026-07-24 (legacy surface deleted): NO file under
+    // client/src may carry a user-facing disconnect call.
     const fs = await import("fs");
     const path = await import("path");
-    const frontendPath = path.resolve(__dirname, "../client/src/pages/ModelProjections.tsx");
-    const src = fs.readFileSync(frontendPath, "utf-8");
-    // Must NOT have a user-facing disconnect fetch call
-    expect(src).not.toContain('"/api/auth/discord/disconnect"');
-    expect(src).not.toContain('"/auth/discord/disconnect"');
-    // Must still have the connect link
-    expect(src).toContain('"/api/auth/discord/connect"');
+    const root = path.resolve(__dirname, "../client/src");
+    const offenders: string[] = [];
+    const walk = (dir: string) => {
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) walk(full);
+        else if (/\.(tsx|ts)$/.test(entry.name)) {
+          const src = fs.readFileSync(full, "utf-8");
+          if (src.includes('"/api/auth/discord/disconnect"') || src.includes('"/auth/discord/disconnect"')) {
+            offenders.push(full);
+          }
+        }
+      }
+    };
+    walk(root);
+    expect(offenders).toEqual([]);
+    // The one sanctioned connect link still exists on the live surface
+    const modal = fs.readFileSync(path.resolve(root, "pages/dime-chat/SettingsModal.tsx"), "utf-8");
+    expect(modal).toContain('"/api/auth/discord/connect"');
   });
 });
 
