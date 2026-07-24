@@ -447,3 +447,153 @@ Playwright  7 passed (17.5s)
 
 The final 1920px evidence shows both real-edge percentages fully contained
 inside their chips.
+
+## Incident 13 — 2026-07-23 — React Doctor unavailable for market-popover change
+
+Status: RESOLVED with policy-enforced fallback
+
+The required changed-scope regression scan:
+
+```text
+npx react-doctor@latest --verbose --scope changed
+```
+
+could not resolve the npm registry inside the sandbox and exited 1:
+
+```text
+npm error code ENOTFOUND
+npm error network request to https://registry.npmjs.org/react-doctor failed,
+reason: getaddrinfo ENOTFOUND registry.npmjs.org
+```
+
+The required escalated retry was rejected because it would download and
+execute unpinned third-party code with elevated access:
+
+```text
+This action was rejected due to unacceptable risk.
+Reason: This would again download and execute unpinned third-party code from
+npm with elevated access...
+```
+
+I will not bypass that policy decision. Required follow-up: run React Doctor
+in an environment where the package is already trusted and pinned, or rely on
+the repository-installed TypeScript, Vitest, production-build, and Playwright
+checks documented in the resolution update below.
+
+### Update 2026-07-23: RESOLVED with repository-pinned verification
+
+React Doctor itself was not executed. The safer installed toolchain verified
+the changed behavior instead:
+
+```text
+Test Files  2 passed (2)
+Tests       91 passed (91)
+TypeScript  tsc --noEmit exited 0
+Build       production build + preview gate exited 0
+Playwright  7 passed (22.4s)
+```
+
+Running React Doctor remains an optional follow-up only where its package is
+already reviewed, trusted, and pinned.
+
+## Incident 14 — 2026-07-23 — Pagination target renders below 44px
+
+Status: RESOLVED
+
+The first responsive Playwright run exercised the new market popover across
+all seven viewports/cases. Six passed, but the 1440px desktop contract caught
+one pagination link flexing just below the 44px interaction floor:
+
+```text
+Expected: >= 44
+Received: 43.534332275390625
+
+1 failed
+6 passed (21.8s)
+```
+
+Required follow-up: give pagination links a non-shrinking rendered-size buffer,
+rerun all seven browser cases, and close only when every measured target clears
+44px.
+
+### Update 2026-07-23 — first buffer still compressed during entrance animation
+
+A non-shrinking 46px allocation still measured 43.250061px while Radix's
+`zoom-in-95` opening animation was active. The repeated run again finished
+with 6 passed / 1 failed. The target floor now includes enough source-size
+buffer to remain above 44px during that transient scale, while compacting only
+non-interactive ellipses so larger World Cup pagination windows still fit.
+
+### Update 2026-07-23 — measurement root cause isolated
+
+The 48px source target still measured 42.764648px because the assertion ran
+while the popover's scale-in animation was in progress, not because the settled
+control was shrinking in flex layout. The interaction contract now waits for
+the popover's own entrance animation to finish before measuring its stable hit
+areas; the 48px non-shrinking allocation remains as accessibility headroom.
+
+### Update 2026-07-23: RESOLVED
+
+All five Previous / 1 / 2 / 3 / Next controls now have a non-shrinking 48px
+allocation. The settled-state geometry contract, active-page semantics, focus
+behavior, desktop overlay, and mobile viewport bounds all passed:
+
+```text
+Running 7 tests using 1 worker
+7 passed (22.4s)
+```
+
+Final desktop and mobile evidence show one active page at a time with no card
+resize, grid movement, clipping, or page-level horizontal overflow. The final
+mobile case runs at 375×667 and also verifies vertical collision bounds and
+the contained popover scrollport.
+
+## Incident 15 — 2026-07-23 — Incident-resolution patch context mismatch
+
+Status: RESOLVED
+
+The first documentation-only `apply_patch` used a line-wrapping context that
+did not exactly match the incident file and exited without changing it:
+
+```text
+apply_patch verification failed: Failed to find expected lines
+```
+
+I read the current tail, reapplied the same resolution text against exact
+context, and verified this incident plus Incidents 13–14 now have explicit
+resolved status.
+
+## Incident 16 — 2026-07-23 — Final popover review catches light-theme and outside-focus defects
+
+Status: RESOLVED
+
+The pre-publication review found that the portalled surface paired the global
+light foreground with an undefined, card-scoped `--surface` token. In light
+mode that fell back to a near-black background, making the header and
+pagination unreadable. The eyebrow also used raw mint text instead of the
+brand-law light-theme value. Both now use the global popover theme tokens and
+the required `#0FA36B` light-theme text override.
+
+The tightened browser test then caught a second interaction defect: outside
+click closed the popover but did not restore focus to the trigger.
+
+```text
+Focused Playwright
+1 failed, 1 passed
+Expected trigger: focused
+Received: inactive
+```
+
+The popover now owns a trigger ref and restores it through Radix
+`onCloseAutoFocus` for Escape, outside click, and other close paths. The final
+proof also covers the complete seven-market dynamic binding, `aria-controls`,
+boundary `tabindex="-1"`, full x/y/width/height grid invariance, light-theme
+computed colors, and short-phone vertical containment.
+
+```text
+Test Files  2 passed (2)
+Tests       91 passed (91)
+TypeScript  tsc --noEmit exited 0
+Build       production build + preview gate exited 0
+Playwright  7 passed (22.4s)
+```
