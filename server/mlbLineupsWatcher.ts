@@ -290,12 +290,13 @@ async function updateLineupHashOnly(
  * Run the lineup watcher for a set of scraped games.
  *
  * @param scrapedGames - Array of RotoLineupGame from the scraper (already upserted to DB)
- * @param gameIdMap    - Map from awayAbbrev+homeAbbrev → DB gameId (built by upsertLineupsToDB)
+ * @param gameIdMap    - Exact scraped-game object → DB gameId (built by upsertLineupsToDB)
+ *   Object identity preserves cardinality for same-matchup doubleheaders.
  * @param dateStr      - Date string "YYYY-MM-DD" for model runner scoping
  */
 export async function runLineupWatcher(
   scrapedGames: RotoLineupGame[],
-  gameIdMap: Map<string, number>,
+  gameIdMap: Map<RotoLineupGame, number>,
   dateStr: string,
 ): Promise<LineupWatcherResult> {
   const TAG = `[LineupWatcher][${dateStr}]`;
@@ -319,14 +320,13 @@ export async function runLineupWatcher(
 
   // ── Step 1: Collect all gameIds for this batch ───────────────────────────────
   const gameIds: number[] = [];
-  const gameKeyToId = new Map<string, number>();
+  const gameToId = new Map<RotoLineupGame, number>();
 
   for (const g of scrapedGames) {
-    const key = `${g.awayAbbrev}@${g.homeAbbrev}`;
-    const gameId = gameIdMap.get(key);
+    const gameId = gameIdMap.get(g);
     if (gameId !== undefined) {
       gameIds.push(gameId);
-      gameKeyToId.set(key, gameId);
+      gameToId.set(g, gameId);
     }
   }
 
@@ -361,8 +361,7 @@ export async function runLineupWatcher(
   const pendingPitcherWrites = new Map<number, { away: string; home: string }>();
 
   for (const g of scrapedGames) {
-    const key = `${g.awayAbbrev}@${g.homeAbbrev}`;
-    const gameId = gameKeyToId.get(key);
+    const gameId = gameToId.get(g);
     if (gameId === undefined) continue;
 
     const matchup = `${g.awayAbbrev}@${g.homeAbbrev}`;

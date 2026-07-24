@@ -120,6 +120,20 @@ describe("DimeModelFeed — MLB bindings", () => {
     expect(src).toMatch(/placeholderData/);
   });
 
+  it("batches Rotowire only for numeric upcoming MLB ids and polls every 60s", () => {
+    expect(src).toMatch(/filter\(\(game\) => game\.gameStatus === "upcoming"\)/);
+    expect(src).toMatch(/trpc\.games\.mlbLineups\.useQuery/);
+    expect(src).toMatch(/\{ gameIds: scheduledMlbGameIds \}/);
+    expect(src).toMatch(/scheduledMlbGameIds\.length > 0/);
+    expect(src).toMatch(/\.slice\(0, 50\)/);
+  });
+
+  it("carries explicit status so postponed/suspended games cannot look scheduled", () => {
+    expect(src).toMatch(/g\.gameStatus === "postponed" \|\| g\.gameStatus === "suspended"/);
+    expect(src).toMatch(/status === "scheduled"\s*\?\s*mlbLineupToProjectionPregame/);
+    expect(src).toMatch(/status === "postponed"\s*\?\s*"POSTPONED"/);
+  });
+
   it("slate sorts earliest → latest first pitch (owner directive 2026-07-17)", () => {
     expect(src).toMatch(
       /\.sort\(\(a, b\) => timeToMinutes\(a\.startTimeEst\) - timeToMinutes\(b\.startTimeEst\)\)/
@@ -283,7 +297,8 @@ describe("DimeModelFeed — combined slate (owner directive 2026-07-18)", () => 
   it("the sport toggle chips are gone; both league queries always load", () => {
     expect(src).not.toMatch(/dmf-chip|dmf-sports|role="tablist"/);
     // Neither query is gated on a sport tab anymore — both enable on the date.
-    expect(src.match(/enabled: !!isoDate/g)).toHaveLength(2);
+    // MLB, WC, and the scheduled-only Rotowire enrichment all key off the date.
+    expect(src.match(/enabled: !!isoDate/g)).toHaveLength(3);
   });
 
   it("league sections are collapsible containers with logo + full name, no counts", () => {

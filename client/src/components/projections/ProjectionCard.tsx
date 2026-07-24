@@ -1,5 +1,6 @@
 import { rankMarkets, type MarketInsight } from "@/lib/gameInsight";
 import { MatchupPanel } from "./MatchupPanel";
+import { MlbPregamePanel } from "./MlbPregamePanel";
 import { ProjectionMarketsPopover } from "./ProjectionMarketsPopover";
 import { ProjectionSummary } from "./ProjectionSummary";
 import { SummaryCarousel } from "./SummaryCarousel";
@@ -10,8 +11,9 @@ import "./ProjectionCard.css";
  * ProjectionCard — one game, structured for a 3-second decision (Law v3).
  *
  * Order: status (live/final only) → matchup block (matchup line · ballpark ·
- * first pitch, owner directive 2026-07-17) → the dominant model insight
- * (summary) → the full market tables in an anchored, paginated popover. There is
+ * first pitch, owner directive 2026-07-17) → scheduled-MLB probable pitchers →
+ * the dominant model insight (summary) → the full market tables in an anchored,
+ * paginated popover. There is
  * no corner league label: the feed's sport chip already names the competition
  * (owner directive 2026-07-18), so a scheduled card renders no header at all —
  * its start time is owned by the matchup block's third line (single rendering
@@ -53,17 +55,17 @@ export function ProjectionCard({
   // rankedEdges() ground truth that already drives the summary's "No edge"
   // rendering, so this can never disagree with what the card itself shows.
   // A LIVE card never takes PASS (final-review I2 precedence ruling,
-  // 2026-07-23, pending owner ratification — annotated in the page law):
+  // 2026-07-23 — annotated in the page law):
   // live+no-edges is reachable (a mid-game model invalidation nulls every
-  // model price), and dimming an in-progress game while its mint LIVE
-  // signal renders would put the PASS zero-mint law and the live-state law
-  // in direct conflict. Live-ness wins; PASS stays absolute for non-live
-  // cards, so neither law needs a carve-out inside the other.
+  // model price). Live-ness wins that semantic conflict; lifecycle compaction
+  // may still quiet the whole card independently of PASS.
   const isPass = game.status !== "live" && edges.length === 0;
+  const isCompact = game.status !== "scheduled";
+  const showPregame = game.status === "scheduled" && game.pregameLineups != null;
 
   return (
     <article
-      className={`projection-card ds-cq${game.status === "scheduled" ? " projection-card--scheduled" : ""}${isPass ? " projection-card--pass" : ""}`}
+      className={`projection-card ds-cq projection-card--${game.status}${isCompact ? " projection-card--compact" : ""}${showPregame ? " projection-card--with-pregame" : ""}${isPass ? " projection-card--pass" : ""}`}
       aria-label={`${game.away.name} at ${game.home.name}`}
     >
       {game.status !== "scheduled" && (
@@ -81,6 +83,14 @@ export function ProjectionCard({
       )}
 
       <MatchupPanel game={game} />
+
+      {game.status === "scheduled" && game.pregameLineups && (
+        <MlbPregamePanel
+          away={game.away}
+          home={game.home}
+          lineups={game.pregameLineups}
+        />
+      )}
 
       {/* One edge (or none) → the single dominant summary. Two or more →
           the ranked swipe strip, largest edge first (directive 2026-07-18). */}
