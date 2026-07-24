@@ -34,6 +34,25 @@ export interface RetentionCohort {
   retention: Array<number | null>;
 }
 
+/** One day on the 30-day activity trend (mirror of server DailyPoint). */
+export interface DailyPoint {
+  day: string;
+  activeUsers: number;
+  valueEvents: number;
+}
+
+/** Structural shape of a server MetricPoint (no cross-boundary import). */
+export type PointLike = { state: string; value: number | null; reason: string | null };
+
+/** Data-state labels for a MetricPoint / overview state — never a fabricated 0. */
+export const METRIC_STATE_LABEL: Record<string, string> = {
+  not_measured: "Not measured",
+  incomplete: "Incomplete",
+  stale: "Stale",
+  unknown: "Unknown",
+  error: "Unavailable",
+};
+
 export interface UserProfileRow {
   sourceUserId: number;
   score: number;
