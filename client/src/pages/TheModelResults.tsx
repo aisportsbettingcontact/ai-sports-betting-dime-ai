@@ -1216,7 +1216,7 @@ export default function TheModelResults() {
       {/* Back button removed — now owned by AdminShell's back-to-app affordance
           + registry-driven tab nav (includes direct links to Publish/Backtest). */}
       <header className="sticky top-14 z-40 bg-background backdrop-blur-sm border-b border-border">
-        <div className="relative flex items-center px-4 py-2 max-w-6xl mx-auto">
+        <div className="admin-container relative flex items-center py-2">
           <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 pointer-events-none">
             <FlaskConical size={16} style={{ color: "var(--primary)" }} />
             <span className="font-black text-foreground whitespace-nowrap" style={{ fontSize: "clamp(13px, 3vw, 18px)", letterSpacing: "0.08em" }}>
@@ -1244,7 +1244,7 @@ export default function TheModelResults() {
         </div>
 
         {/* Market tabs */}
-        <div className="px-4 pb-2 max-w-6xl mx-auto flex items-center gap-1.5 overflow-x-auto scrollbar-hide" style={{ WebkitOverflowScrolling: "touch" }}>
+        <div className="admin-container pb-2 flex items-center gap-1.5 overflow-x-auto scrollbar-hide" style={{ WebkitOverflowScrolling: "touch" }}>
           {MARKET_TABS.map(tab => (
             <button type="button" key={tab.id} onClick={() => setMarketTab(tab.id)}
               className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-colors whitespace-nowrap flex-shrink-0"
@@ -1312,7 +1312,7 @@ export default function TheModelResults() {
       </header>
 
       {/* ── Main content ───────────────────────────────────────────────────── */}
-      <main className="max-w-6xl mx-auto px-4 py-4 pb-16">
+      <main className="admin-container py-4 pb-16">
 
         {/* ── DRIFT BANNER ─────────────────────────────────────────────────── */}
         {driftData && driftData.driftDetected && (
