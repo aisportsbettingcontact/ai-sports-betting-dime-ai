@@ -8,20 +8,48 @@
  */
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
+import { sql, and, eq, isNotNull } from "drizzle-orm";
 import { ownerProcedure } from "./appUsers";
 import { router } from "../_core/trpc";
+import { getDb } from "../db";
+import { withCircuitBreaker } from "../dbCircuitBreaker";
+import { appUsers } from "../../drizzle/schema";
 import { listAllPlans, getPlanBySlug, defaultPriceForMode } from "../stripe/planStore";
 import {
   provisionPlan,
   addPriceToPlan,
   removePriceFromPlan,
+  reorderPlanIntervals,
+  setIntervalHidden,
   updateRestockConfig,
   archivePlan,
+  unarchivePlan,
   updatePlanMeta,
   isProvisioningTestMode,
   getProvisioningStripe,
 } from "../stripe/planProvisioning";
 import { backfillStaticPlans } from "../stripe/backfillPlans";
+
+/** Count of subscribers (hasAccess) per plan slug — for the admin plan cards. */
+async function countSubscribersByPlan(): Promise<Record<string, number>> {
+  const db = await getDb();
+  if (!db) return {};
+  try {
+    const rows = (await withCircuitBreaker(async () =>
+      db
+        .select({ plan: appUsers.stripePlanId, n: sql<number>`count(*)` })
+        .from(appUsers)
+        .where(and(eq(appUsers.hasAccess, true), isNotNull(appUsers.stripePlanId)))
+        .groupBy(appUsers.stripePlanId),
+    )) as Array<{ plan: string | null; n: number }>;
+    const out: Record<string, number> = {};
+    for (const r of rows) if (r.plan) out[r.plan] = Number(r.n);
+    return out;
+  } catch (err) {
+    console.warn(`[tRPC][subscriptionPlans] subscriber count failed: ${(err as Error).message}`);
+    return {};
+  }
+}
 
 const intervalEnum = z.enum(["day", "week", "month", "year"]);
 
@@ -43,11 +71,13 @@ const promoSchema = z
 const priceSchema = z.object({
   amountCents: z.number().int().min(50),
   currency: z.string().min(3).max(8).optional(),
-  interval: intervalEnum,
-  intervalCount: z.number().int().min(1).max(365),
+  // Interval is required for recurring plans; omitted for one_time (single payment).
+  interval: intervalEnum.optional(),
+  intervalCount: z.number().int().min(1).max(365).optional(),
   label: z.string().max(80).optional(),
   trialPeriodDays: z.number().int().min(0).max(365).optional(),
   promo: promoSchema.nullable().optional(),
+  hidden: z.boolean().optional(),
 });
 
 const restockSchema = z.object({
@@ -60,7 +90,8 @@ const restockSchema = z.object({
 const newPlanSchema = z.object({
   name: z.string().min(1).max(120),
   description: z.string().max(2000).optional(),
-  // One or more billing intervals (variants); the first is the default price.
+  planType: z.enum(["recurring", "one_time"]).optional(),
+  // One or more intervals (variants); the first visible one is the default price.
   prices: z.array(priceSchema).min(1).max(12),
   maxSubscribers: z.number().int().min(1).nullable().optional(),
   restock: restockSchema.nullable().optional(),
@@ -70,8 +101,11 @@ export const subscriptionPlansRouter = router({
   /** Whether provisioning writes to a Stripe TEST/sandbox account (UI badge). */
   testMode: ownerProcedure.query(async () => ({ testMode: isProvisioningTestMode() })),
 
-  /** All plans (incl. archived) with their prices, for the admin table. */
-  list: ownerProcedure.query(async () => listAllPlans()),
+  /** All plans (incl. archived) with prices + subscriber counts, for the cards. */
+  list: ownerProcedure.query(async () => {
+    const [plans, counts] = await Promise.all([listAllPlans(), countSubscribersByPlan()]);
+    return plans.map((p) => ({ ...p, subscriberCount: counts[p.slug] ?? 0 }));
+  }),
 
   /** Create a plan → provisions a Stripe Product + N recurring Prices, persists them. */
   create: ownerProcedure.input(newPlanSchema).mutation(async ({ input }) => {
@@ -95,6 +129,27 @@ export const subscriptionPlansRouter = router({
     .input(z.object({ priceId: z.number().int().positive() }))
     .mutation(async ({ input }) => {
       await removePriceFromPlan(input.priceId);
+      return { ok: true };
+    }),
+
+  /** Reorder a plan's intervals (drag-to-reorder ⠿). */
+  reorderIntervals: ownerProcedure
+    .input(
+      z.object({
+        planId: z.number().int().positive(),
+        orderedPriceIds: z.array(z.number().int().positive()).min(1).max(24),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      await reorderPlanIntervals(input.planId, input.orderedPriceIds);
+      return { ok: true };
+    }),
+
+  /** Show/hide one interval (eyeball). Hidden intervals are never sold. */
+  setIntervalHidden: ownerProcedure
+    .input(z.object({ priceId: z.number().int().positive(), hidden: z.boolean() }))
+    .mutation(async ({ input }) => {
+      await setIntervalHidden(input.priceId, input.hidden);
       return { ok: true };
     }),
 
@@ -127,6 +182,14 @@ export const subscriptionPlansRouter = router({
     .input(z.object({ planId: z.number().int().positive() }))
     .mutation(async ({ input }) => {
       await archivePlan(input.planId);
+      return { ok: true };
+    }),
+
+  /** Unarchive a plan — reactivates its Stripe Product + marks the row active. */
+  unarchive: ownerProcedure
+    .input(z.object({ planId: z.number().int().positive() }))
+    .mutation(async ({ input }) => {
+      await unarchivePlan(input.planId);
       return { ok: true };
     }),
 

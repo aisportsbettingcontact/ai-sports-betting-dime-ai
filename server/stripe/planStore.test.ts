@@ -27,6 +27,8 @@ const price = (over: Partial<StoredPrice> = {}): StoredPrice => ({
   stripeCouponId: null,
   active: true,
   isDefault: false,
+  hidden: false,
+  sortOrder: 0,
   livemode: true,
   ...over,
 });
@@ -108,6 +110,12 @@ describe("defaultPriceForMode — live checkout must never be handed a test pric
     expect(defaultPriceForMode(plan([liveOther, liveDefault]), true)?.stripePriceId).toBe("price_live_def");
     const inactiveLive = price({ id: 5, stripePriceId: "price_x", livemode: true, active: false, isDefault: true });
     expect(defaultPriceForMode(plan([inactiveLive]), true)).toBeNull();
+  });
+  it("skips hidden intervals — a hidden price is never the checkout default", () => {
+    const hiddenDefault = price({ id: 6, stripePriceId: "price_hidden", livemode: true, isDefault: true, hidden: true });
+    const visible = price({ id: 7, stripePriceId: "price_visible", livemode: true, isDefault: false, hidden: false });
+    expect(defaultPriceForMode(plan([hiddenDefault, visible]), true)?.stripePriceId).toBe("price_visible");
+    expect(defaultPriceForMode(plan([hiddenDefault]), true)).toBeNull();
   });
 });
 

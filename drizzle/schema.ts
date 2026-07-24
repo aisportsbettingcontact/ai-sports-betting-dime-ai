@@ -216,6 +216,11 @@ export const planPrices = mysqlTable("plan_prices", {
   stripePromoCodeId: varchar("stripePromoCodeId", { length: 64 }),
   active: boolean("active").default(true).notNull(),
   isDefault: boolean("isDefault").default(false).notNull(),
+  /** Owner-hidden interval: retained, but not offered at checkout or shown
+   *  publicly (eyeball toggle). Distinct from active=false (archived). */
+  hidden: boolean("hidden").default(false).notNull(),
+  /** Display order among a plan's intervals — drag-to-reorder (⠿ handle). */
+  sortOrder: int("sortOrder").default(0).notNull(),
   /** Stripe mode of this Price — TRUE=live, FALSE=test/sandbox. Mirrors the plan. */
   livemode: boolean("livemode").default(true).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),

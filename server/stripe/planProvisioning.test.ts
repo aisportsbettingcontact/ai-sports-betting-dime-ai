@@ -144,4 +144,24 @@ describe("provisionPlan", () => {
       provisionPlan({ name: "Over Discount", prices: [{ amountCents: 5000, interval: "month", intervalCount: 1, promo: { type: "amount", value: 5000 } }] }),
     ).rejects.toThrow(/less than the price/);
   });
+
+  it("provisions a one_time plan — a non-recurring Stripe price + lifetime accessUntil", async () => {
+    await provisionPlan({
+      name: "Lifetime VIP",
+      planType: "one_time",
+      prices: [{ amountCents: 49900 }],
+      maxSubscribers: 10,
+    });
+    // The Stripe price carries no `recurring` block.
+    const [priceParams] = h.pricesCreate.mock.calls[0] as [Record<string, unknown>];
+    expect(priceParams).not.toHaveProperty("recurring");
+    // The plan row is one_time, capped, and granted a far-future (lifetime) accessUntil.
+    const planRow = h.inserts.find((v) => "slug" in v)!;
+    expect(planRow).toMatchObject({ planType: "one_time", maxSubscribers: 10 });
+    expect(typeof planRow.accessUntil).toBe("number");
+    expect(planRow.accessUntil as number).toBeGreaterThan(4000000000000);
+    // The price row has no interval and default sort/hidden.
+    const priceRow = h.inserts.find((v) => "stripePriceId" in v)!;
+    expect(priceRow).toMatchObject({ interval: null, intervalCount: null, sortOrder: 0, hidden: false, isDefault: true });
+  });
 });
