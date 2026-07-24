@@ -54,10 +54,10 @@ export default function AdminDashboard() {
                           <Icon className="h-4 w-4" aria-hidden="true" />
                         </span>
                         <span className="min-w-0">
-                          <span className="block text-sm font-semibold text-foreground">
+                          <span className="block text-sm font-semibold text-foreground lg:text-base">
                             {item.label}
                           </span>
-                          <span className="mt-0.5 block text-xs leading-snug text-muted-foreground">
+                          <span className="mt-0.5 block text-sm leading-snug text-muted-foreground">
                             {item.description}
                           </span>
                         </span>
