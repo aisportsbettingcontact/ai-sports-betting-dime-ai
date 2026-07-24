@@ -58,9 +58,10 @@
   ```
   Countries render names only (no FIFA codes); WC context line stays "Round · Venue".
   Scheduled games own the time in this block; the card header shows LIVE/FINAL only.
-- **Markets disclosure:** collapsed by default; toggle reads
-  "VIEW FULL AI MODEL PROJECTIONS" with a Lucide `ChevronDown` to expand and
-  `ChevronUp` (shown via `details[open]`) to collapse.
+- **Markets popover** *(amended 2026-07-23)*: closed by default; the card-level
+  trigger reads "VIEW FULL AI MODEL PROJECTIONS" and opens the paginated
+  floating panel defined below. Per-game market details are not a native
+  `details` disclosure.
 - **Market column labels:** `SIDE | BOOK | MODEL` — never "SPORTSBOOK PRICE" /
   "MODEL FAIR PRICE". Applies to every feed surface: mobile, tablet, desktop.
 - **Summary readout labels:** `MODEL EDGE | BOOK | MODEL` — never "BEST PRICE".
@@ -70,7 +71,7 @@
 - **Mobile chrome centering (<768px):** dime wordmark centered in the topbar;
   date nav (‹ date › + slate count) stacks centered *(sport chips removed
   2026-07-18 — see combined slate below)*; the summary block centers above
-  the markets disclosure on mobile-width cards.
+  the markets popover trigger on mobile-width cards.
 - **Slate order:** MLB games list earliest → latest first pitch, top to bottom
   (`timeToMinutes`; TBD start times sink to the bottom).
 
@@ -153,7 +154,26 @@ Desktop (>=1024px) only — tablet/mobile keep their shipped layouts:
   their container-driven internal reflow.
 - Tablet rows stay start-aligned so each card keeps its natural height.
   Desktop rows stretch; each summary centers within surplus height and the
-  "VIEW FULL AI MODEL PROJECTIONS" expander stays pinned to the bottom.
+  "VIEW FULL AI MODEL PROJECTIONS" popover trigger stays pinned to the bottom.
+
+### Owner Directives — 2026-07-23 (paginated market popover)
+
+- **Replace the per-game collapsible market panel with an anchored popover.**
+  Opening projections must never resize the card, stretch a row-mate, or move
+  the feed grid. League sections remain their existing native collapsibles.
+- The popover renders **one market table per page in source order**. MLB pages
+  are Run Line (1), Total (2), and Moneyline (3). Other leagues keep their
+  complete dynamic market count; the pagination window uses ellipses rather
+  than hiding additional markets.
+- Controls include Previous, numbered pages, and Next. The active page carries
+  `aria-current`; boundary controls carry `aria-disabled` and leave the tab
+  order. Every interactive pagination target is at least 44px.
+- The floating surface is collision-aware, viewport-constrained, scrollable
+  when vertical space is limited, and keeps one readable table on mobile. It
+  consumes the global popover surface/foreground tokens in both themes; mint
+  text uses the contrast-safe light-theme value.
+- Escape and outside click close the popover and return focus to its trigger.
+  Reduced motion removes the opening animation.
 
 ### Owner Directives — 2026-07-18 (edge labeling + multi-edge carousel)
 
