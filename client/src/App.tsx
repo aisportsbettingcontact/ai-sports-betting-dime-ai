@@ -94,8 +94,6 @@ import type { SplitsDateSource } from "./pages/dime-shell/splitsDateState";
  * [FIX] Uses useAppAuth (Discord JWT) instead of useAuth (legacy OAuth) so that
  * Discord-logged-in users are correctly detected and redirected to the feed.
  *
- * [FIX] Reads sessionStorage.pendingCheckout after login to auto-trigger checkout.
- * Flow: unauthenticated user clicks pricing → login → auto-checkout.
  *
  * [LOG] All branches log their state to the console for traceability.
  */
@@ -114,16 +112,9 @@ function RootRoute() {
       return;
     }
     if (appUser) {
-      // Handle pending checkout from a pre-login pricing button click.
-      const pendingCheckout = sessionStorage.getItem("pendingCheckout");
-      if (pendingCheckout === "monthly" || pendingCheckout === "annual") {
-        sessionStorage.removeItem("pendingCheckout");
-        console.log(
-          `[RootRoute] [OUTPUT] Authenticated + pendingCheckout=${pendingCheckout} — redirecting to /checkout?plan=${pendingCheckout}`
-        );
-        navigate(`/checkout?plan=${pendingCheckout}`, { replace: true });
-        return;
-      }
+      // (2026-07-24) The old sessionStorage.pendingCheckout auto-checkout
+      // branch is gone: nothing ever wrote the key (audit S3-016) and its
+      // only accepted values were the retired legacy plan ids.
       const target = feedModelPath("MLB");
       console.log(
         `[RootRoute] [OUTPUT] Authenticated userId=${appUser.id} — redirecting to ${target}`

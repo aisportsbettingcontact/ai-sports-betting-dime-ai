@@ -89,6 +89,10 @@ const BRAND_FEATURES = [
 ];
 
 export default function Home() {
+  useEffect(() => {
+    document.title = "Log in — dıme";
+  }, []);
+
   const [, setLocation] = useLocation();
   const { appUser, loading: authLoading } = useAppAuth();
 
