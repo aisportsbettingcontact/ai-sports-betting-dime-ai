@@ -281,11 +281,30 @@ html:not(.dark) {
   ::view-transition-new(*) {
     animation: none !important;
   }
+  /* MASTER.md motion law: pulses and spins are disabled under reduced motion.
+   * Tailwind's animate-* utilities have no built-in guard, and 33 animate-pulse
+   * usages across 10 files ran regardless of the preference (audit
+   * D-PULSE-REDUCE). !important is required here to beat the utility layer;
+   * this media block is the single sanctioned place for it. */
+  .animate-pulse,
+  .animate-spin,
+  .animate-bounce,
+  .animate-ping {
+    animation: none !important;
+  }
 }
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border;
+  }
+  /* Unified focus treatment (audit D-FOCUS-UNIFY): one visible 2px mint ring
+   * on :focus-visible everywhere, replacing the old 1px 50%-alpha outline that
+   * coexisted with two stronger page-local treatments. Keyboard users get the
+   * same signal on every surface; pointer clicks stay ring-free. */
+  :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
   }
   html {
     /* Fluid base type (apple-design: size with the viewport). Scales rem-based
@@ -322,7 +341,12 @@ html:not(.dark) {
     /* No max-width — layout fills full viewport width and scales with screen size */
     width: 100%;
   }
-  .flex {
+  /* Flexbox min-size fix at ZERO specificity (:where) so any explicit
+   * min-h-* / min-w-* utility on the same element wins the cascade.
+   * The previous plain `.flex` selector tied Tailwind's own utilities and,
+   * being later in the layer, silently clobbered min-h-screen on 30 of 41
+   * usages (audit D-FLEX-MINH). */
+  :where(.flex) {
     min-width: 0;
     min-height: 0;
   }

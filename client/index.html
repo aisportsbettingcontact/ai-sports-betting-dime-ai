@@ -28,37 +28,6 @@
     <!-- Single-font mandate: Familjen Grotesk is the only typeface. The legacy
          Inter + JetBrains/IBM Plex Mono loads are retired (all surfaces now
          resolve to Familjen Grotesk via --font-sans/--font-mono). -->
-    <!-- GG Sans: Discord's proprietary font, served from our CDN (sourced from Discord's public assets) -->
-    <style>
-      @font-face {
-        font-family: 'GG Sans';
-        src: url('https://d2xsxph8kpxj0f.cloudfront.net/310519663397752079/MW3FicTy7ae3qrm8dx8Lua/ggsans-normal-400_4f9ee2e1.woff2') format('woff2');
-        font-weight: 400;
-        font-style: normal;
-        font-display: swap;
-      }
-      @font-face {
-        font-family: 'GG Sans';
-        src: url('https://d2xsxph8kpxj0f.cloudfront.net/310519663397752079/MW3FicTy7ae3qrm8dx8Lua/ggsans-normal-500_32c749e5.woff2') format('woff2');
-        font-weight: 500;
-        font-style: normal;
-        font-display: swap;
-      }
-      @font-face {
-        font-family: 'GG Sans';
-        src: url('https://d2xsxph8kpxj0f.cloudfront.net/310519663397752079/MW3FicTy7ae3qrm8dx8Lua/ggsans-normal-600_328a863d.woff2') format('woff2');
-        font-weight: 600;
-        font-style: normal;
-        font-display: swap;
-      }
-      @font-face {
-        font-family: 'GG Sans';
-        src: url('https://d2xsxph8kpxj0f.cloudfront.net/310519663397752079/MW3FicTy7ae3qrm8dx8Lua/ggsans-normal-700_0f62247a.woff2') format('woff2');
-        font-weight: 700;
-        font-style: normal;
-        font-display: swap;
-      }
-    </style>
   </head>
   <body>
     <!-- ═══════════════════════════════════════════════════════════════════
@@ -104,12 +73,6 @@
         width: 160px;
         height: auto;
         margin-bottom: 24px;
-        /* Subtle mint glow halo that pulses — draws attention without distraction */
-        animation: shell-logo-pulse 2.2s ease-in-out infinite;
-      }
-      @keyframes shell-logo-pulse {
-        0%, 100% { filter: none; }
-        50%       { filter: none; }
       }
       /* Progress bar track */
       .html-shell-bar-track {
@@ -120,19 +83,52 @@
         overflow: hidden;
         margin-bottom: 12px;
       }
-      /* Mint left-to-right fill that loops (brand law: #45E0A8, no gradients) */
+      /* Mint left-to-right fill that loops (brand law: #45E0A8, no gradients).
+         The loop only runs when the visitor has not asked for reduced motion;
+         under reduce the bar holds a static mint segment and the label carries
+         the loading message. */
       .html-shell-bar-fill {
         height: 100%;
         width: 45%;
         border-radius: 99px;
         background: #45E0A8;
         box-shadow: none;
-        animation: shell-bar-slide 1.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
       }
-      @keyframes shell-bar-slide {
-        0%   { transform: translateX(-100%); }
-        100% { transform: translateX(400%); }
+      @media (prefers-reduced-motion: no-preference) {
+        .html-shell-bar-fill {
+          animation: shell-bar-slide 1.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes shell-bar-slide {
+          0%   { transform: translateX(-100%); }
+          100% { transform: translateX(400%); }
+        }
       }
+      /* Boot-failure notice (swapped in by the 8s safety timeout when #root is
+         still empty): plain text + a real reload button, no animation. */
+      .html-shell-error-msg {
+        font-family: "Familjen Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-size: 14px;
+        color: #A6A6A6;
+        max-width: 340px;
+        text-align: center;
+        line-height: 1.6;
+        margin-bottom: 20px;
+      }
+      .html-shell-reload-btn {
+        font-family: "Familjen Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-size: 14px;
+        font-weight: 600;
+        min-height: 44px;
+        padding: 0 24px;
+        border-radius: 8px;
+        border: none;
+        background: #45E0A8;
+        color: #000000;
+        cursor: pointer;
+        transition: opacity 160ms cubic-bezier(0.16, 1, 0.3, 1);
+      }
+      .html-shell-reload-btn:hover { opacity: 0.85; }
+      .html-shell-reload-btn:focus-visible { outline: 2px solid #45E0A8; outline-offset: 2px; }
       /* "Loading..." label */
       .html-shell-label {
         font-family: "Familjen Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -331,12 +327,38 @@
         // characterData:true catches text node changes (React text renders)
         obs.observe(root, { childList: true, subtree: true, characterData: true });
 
-        // Safety: force-dismiss after 8s regardless of content state
-        // This prevents the shell from blocking the UI if something goes wrong
+        // Safety net after 8s: if React has rendered, dismiss as usual. If the
+        // app never booted (#root still empty — script failed, chunk unreachable,
+        // API dead), swap the spinner for a visible failure notice with a real
+        // reload button instead of fading to a blank page.
+        function showBootFailure() {
+          obs.disconnect();
+          shell.innerHTML =
+            '<img class="html-shell-logo-img" src="/brand/dime-wordmark-on-dark.svg" alt="dıme" />' +
+            '<p class="html-shell-error-msg">The app could not load. Check your connection and try again.</p>' +
+            '<button type="button" class="html-shell-reload-btn">Reload</button>';
+          var btn = shell.querySelector('.html-shell-reload-btn');
+          if (btn) {
+            btn.addEventListener('click', function () { window.location.reload(); });
+            btn.focus();
+          }
+          // If React recovers late (slow network), hand control back to it.
+          var lateObs = new MutationObserver(function () {
+            if (hasVisibleContent()) {
+              lateObs.disconnect();
+              dismiss();
+            }
+          });
+          lateObs.observe(root, { childList: true, subtree: true, characterData: true });
+        }
         setTimeout(function() {
-          if (!dismissed) {
+          if (dismissed) return;
+          if (hasVisibleContent()) {
             console.warn('[HTML Shell] Force-dismissed after 8s safety timeout');
             dismiss();
+          } else {
+            console.warn('[HTML Shell] App did not boot within 8s — showing failure notice');
+            showBootFailure();
           }
         }, 8000);
       })();
