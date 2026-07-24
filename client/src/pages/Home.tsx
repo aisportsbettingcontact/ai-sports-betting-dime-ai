@@ -294,7 +294,7 @@ export default function Home() {
               disagree.
             </h1>
             <p
-              className="text-[#FFFFFF] mt-4 leading-relaxed"
+              className="text-[color:var(--text-secondary)] mt-4 leading-relaxed"
               style={{ fontSize: "clamp(0.875rem, 1.1vw, 1.05rem)" }}
             >
               Dime AI compares sportsbook prices against projected probability so every
@@ -332,7 +332,7 @@ export default function Home() {
                       {f.title}
                     </p>
                     <p
-                      className="text-[#FFFFFF] mt-0.5 leading-snug"
+                      className="text-[color:var(--text-secondary)] mt-0.5 leading-snug"
                       style={{ fontSize: "clamp(0.75rem, 0.9vw, 0.875rem)" }}
                     >
                       {f.desc}
@@ -346,7 +346,7 @@ export default function Home() {
 
         {/* Bottom: disclaimer — legible grey (contrast law), full RG language */}
         <p
-          className="text-[#FFFFFF] mt-8"
+          className="text-[color:var(--text-secondary)] mt-8"
           style={{ fontSize: "clamp(0.65rem, 0.8vw, 0.75rem)" }}
         >
           No guaranteed outcomes. For informational purposes only. 21+ (or legal betting age in
@@ -375,7 +375,7 @@ export default function Home() {
           </a>
           <div className="text-center">
             <h1 className="text-lg font-bold text-white tracking-tight">dıme</h1>
-            <p className="text-[12px] text-[#FFFFFF] mt-0.5">Log in to your account</p>
+            <p className="text-xs text-[color:var(--text-secondary)] mt-0.5">Log in to your account</p>
           </div>
         </div>
 
@@ -390,7 +390,7 @@ export default function Home() {
             >
               Log in
             </h2>
-            <p className="text-[#FFFFFF] mt-1" style={{ fontSize: "clamp(0.875rem, 1vw, 1rem)" }}>
+            <p className="text-[color:var(--text-secondary)] mt-1" style={{ fontSize: "clamp(0.875rem, 1vw, 1rem)" }}>
               Welcome back. Enter your credentials to continue.
             </p>
           </div>
@@ -400,7 +400,7 @@ export default function Home() {
                 back into the app for users who didn't mean to switch. ── */}
           {!authLoading && appUser && (
             <div
-              className="mb-5 px-4 py-3 rounded-lg text-[12px] text-[#FFFFFF] flex items-center justify-between gap-3"
+              className="mb-5 px-4 py-3 rounded-lg text-xs text-[color:var(--text-secondary)] flex items-center justify-between gap-3"
               style={{ background: "#000000", border: "1px solid #FFFFFF" }}
               data-testid="login-signed-in-banner"
             >
@@ -421,11 +421,11 @@ export default function Home() {
                 mono stamps on neutral surface; red is not in the Dime palette) ── */}
           {discordErrorMsg && (
             <div
-              className="mb-5 px-4 py-3 rounded-lg text-[12px] text-[#FFFFFF] text-center space-y-1.5"
+              className="mb-5 px-4 py-3 rounded-lg text-xs text-[color:var(--text-secondary)] text-center space-y-1.5"
               style={{ background: "#000000", border: "1px solid #FFFFFF" }}
               role="alert"
             >
-              <p className="uppercase tracking-widest text-[10px] text-[#FFFFFF]" style={{ fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif" }}>
+              <p className="uppercase tracking-widest text-[11px] text-[color:var(--text-secondary)]" style={{ fontFamily: "'Familjen Grotesk', system-ui, -apple-system, sans-serif" }}>
                 Log-in error
               </p>
               <p className="text-white">{discordErrorMsg}</p>
@@ -450,7 +450,7 @@ export default function Home() {
               <div className="flex flex-col gap-1.5">
                 <label
                   htmlFor="identifier"
-                  className="text-[12px] font-semibold text-[#FFFFFF]"
+                  className="text-xs font-semibold text-[color:var(--text-secondary)]"
                 >
                   Username or Email
                 </label>
@@ -461,7 +461,7 @@ export default function Home() {
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
                   placeholder="your_username"
-                  className="w-full px-4 py-3 rounded-lg text-sm text-white placeholder-[#FFFFFF] border border-white bg-black focus:outline-none focus:ring-2 focus:ring-[#45E0A8] focus:border-[#45E0A8] transition-colors"
+                  className="w-full px-4 py-3 rounded-lg text-sm text-white placeholder-[color:var(--text-muted)] border border-white bg-black focus:outline-none focus:ring-2 focus:ring-[#45E0A8] focus:border-[#45E0A8] transition-colors"
                   disabled={loginMutation.isPending}
                 />
               </div>
@@ -470,7 +470,7 @@ export default function Home() {
               <div className="flex flex-col gap-1.5">
                 <label
                   htmlFor="password"
-                  className="text-[12px] font-semibold text-[#FFFFFF]"
+                  className="text-xs font-semibold text-[color:var(--text-secondary)]"
                 >
                   Password
                 </label>
@@ -482,13 +482,13 @@ export default function Home() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="w-full px-4 py-3 pr-11 rounded-lg text-sm text-white placeholder-[#FFFFFF] border border-white bg-black focus:outline-none focus:ring-2 focus:ring-[#45E0A8] focus:border-[#45E0A8] transition-colors"
+                    className="w-full px-4 py-3 pr-11 rounded-lg text-sm text-white placeholder-[color:var(--text-muted)] border border-white bg-black focus:outline-none focus:ring-2 focus:ring-[#45E0A8] focus:border-[#45E0A8] transition-colors"
                     disabled={loginMutation.isPending}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPw((v) => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#FFFFFF] hover:text-white transition-colors"
+                    className="absolute right-0 top-1/2 -translate-y-1/2 w-11 h-11 flex items-center justify-center text-[color:var(--text-secondary)] hover:text-white transition-colors"
                     aria-label={showPw ? "Hide password" : "Show password"}
                   >
                     {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -501,7 +501,7 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={() => { setForgotOpen(true); setFormError(null); }}
-                  className="text-[11px] text-[#FFFFFF] hover:text-white underline transition-colors"
+                  className="text-[11px] text-[color:var(--text-secondary)] hover:text-white underline transition-colors px-2 py-3 -my-3 -mx-2 min-h-11 inline-flex items-center"
                 >
                   Forgot password?
                 </button>
@@ -509,7 +509,7 @@ export default function Home() {
 
               {/* Form error — grey stamp, never red (signup.md) */}
               {formError && (
-                <p className="text-[12px] text-[#FFFFFF] text-center -mt-1" role="alert">{formError}</p>
+                <p className="text-xs text-white text-center -mt-1" role="alert">{formError}</p>
               )}
 
               {/* Submit */}
@@ -533,7 +533,7 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={() => { setForgotOpen(false); setForgotSent(false); setForgotIdent(""); }}
-                  className="text-[#FFFFFF] hover:text-white transition-colors"
+                  className="text-[color:var(--text-secondary)] hover:text-white transition-colors min-h-11 min-w-11 inline-flex items-center justify-center -my-2"
                   aria-label="Back to login"
                 >
                   ← Back
@@ -547,16 +547,20 @@ export default function Home() {
                 </div>
               ) : (
                 <>
-                  <p className="text-[12px] text-[#FFFFFF]">
+                  <p className="text-xs text-[color:var(--text-secondary)]">
                     Enter your username or email and we'll send you a password reset link.
                   </p>
+                  <label htmlFor="forgot-identifier" className="sr-only">
+                    Username or email
+                  </label>
                   <input
+                    id="forgot-identifier"
                     type="text"
                     autoComplete="username"
                     value={forgotIdentifier}
                     onChange={(e) => setForgotIdent(e.target.value)}
                     placeholder="Username or email"
-                    className="w-full px-4 py-3 rounded-lg text-sm text-white placeholder-[#FFFFFF] border border-white bg-black focus:outline-none focus:ring-2 focus:ring-[#45E0A8] focus:border-[#45E0A8] transition-colors"
+                    className="w-full px-4 py-3 rounded-lg text-sm text-white placeholder-[color:var(--text-muted)] border border-white bg-black focus:outline-none focus:ring-2 focus:ring-[#45E0A8] focus:border-[#45E0A8] transition-colors"
                     disabled={requestResetMutation.isPending}
                   />
                   <button
@@ -579,9 +583,9 @@ export default function Home() {
           {/* ── Divider ── */}
           {!forgotOpen && (
             <div className="flex items-center gap-3 my-5">
-              <div className="flex-1 h-px bg-white" />
-              <span className="text-[11px] text-[#FFFFFF] font-medium">or</span>
-              <div className="flex-1 h-px bg-white" />
+              <div className="flex-1 h-px bg-[color:var(--border)]" />
+              <span className="text-[11px] text-[color:var(--text-secondary)] font-medium">or</span>
+              <div className="flex-1 h-px bg-[color:var(--border)]" />
             </div>
           )}
 
@@ -608,7 +612,7 @@ export default function Home() {
 
           {/* ── Sign Up link — grey: Sign In keeps the surface's single mint action ── */}
           {!forgotOpen && (
-            <p className="text-center text-[12px] text-[#FFFFFF] mt-5">
+            <p className="text-center text-xs text-[color:var(--text-secondary)] mt-5">
               Don't have an account?{" "}
               <a
                 href="/#pricing"
@@ -620,7 +624,7 @@ export default function Home() {
           )}
 
           {/* ── Disclaimer — legible grey, full RG language ── */}
-          <p className="text-center text-[11px] text-[#FFFFFF] mt-6">
+          <p className="text-center text-[11px] text-[color:var(--text-secondary)] mt-6">
             By logging in you agree to gamble responsibly. For informational purposes only. 21+.
             Gambling problem? Call 1-800-GAMBLER.
           </p>
