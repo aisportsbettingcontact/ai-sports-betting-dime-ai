@@ -39,24 +39,29 @@ function PitcherHeadshot({
   pitcher: ProjectionPitcher;
   className?: string;
 }) {
-  const urls = [
-    pitcher.mlbamId ? mlbHeadshotUrl(pitcher.mlbamId) : null,
-    pitcher.rotowireId ? rotowireHeadshotUrl(pitcher.rotowireId) : null,
-  ].filter((url): url is string => url != null);
-  const [urlIndex, setUrlIndex] = useState(0);
-  const currentUrl = urls[urlIndex];
+  const sources = [
+    pitcher.mlbamId
+      ? { kind: "mlb" as const, url: mlbHeadshotUrl(pitcher.mlbamId) }
+      : null,
+    pitcher.rotowireId
+      ? { kind: "rotowire" as const, url: rotowireHeadshotUrl(pitcher.rotowireId) }
+      : null,
+  ].filter((source): source is NonNullable<typeof source> => source != null);
+  const [sourceIndex, setSourceIndex] = useState(0);
+  const currentSource = sources[sourceIndex];
 
   return (
     <span className={`pregame-pitcher__photo ${className}`.trim()} aria-hidden="true">
-      {currentUrl ? (
+      {currentSource ? (
         <img
-          src={currentUrl}
+          src={currentSource.url}
+          data-headshot-source={currentSource.kind}
           alt=""
           width={80}
           height={80}
           loading="lazy"
           decoding="async"
-          onError={() => setUrlIndex((index) => index + 1)}
+          onError={() => setSourceIndex((index) => index + 1)}
         />
       ) : (
         <span className="pregame-pitcher__fallback">{initials(pitcher.name)}</span>
