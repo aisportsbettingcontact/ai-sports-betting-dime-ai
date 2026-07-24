@@ -2,7 +2,15 @@
   "metric": "chat-critical-path-gzip-bytes",
   "baselineCommit": "b03cea01",
   "baselineBytes": 210762,
-  "allowanceBytes": 5888,
+  "allowanceBytes": 6912,
+  "recalibration3": {
+    "date": "2026-07-24",
+    "allowanceBytesBefore": 5888,
+    "allowanceBytesAfter": 6912,
+    "deltaBytes": 1024,
+    "reason": "Two owner-directed, explicitly-requested additions land diffuse GLOBAL Tailwind utility CSS + one html font-size line on the single index.css (on every route incl. /chat): (1) the fluid base type — `html { font-size: clamp(1rem, 0.8rem + 0.3vw, 1.18rem) }` — so rem-based text scales up on desktop/wide screens (platform readability; flat ≤~1067px so mobile + pinned feed geometry are unchanged); (2) the owner-only Subscription Plans admin page's utility CSS. All admin JS is behind lazy routes and NOT on the chat static-import closure — verified. The measured chat path sat at 216,633B (17B under the old 216,650 ceiling) — too thin to survive the next trivial edit. Allowance raised 1024B to restore a ~1KB safety margin. framer-motion / vendor-motion contribution stays 0 (the gate's actual purpose); any vendor-motion return or further material growth still fails this gate.",
+    "verifiedVendorMotionChunks": 0
+  },
   "recalibration2": {
     "date": "2026-07-24",
     "allowanceBytesBefore": 5120,

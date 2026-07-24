@@ -278,6 +278,14 @@ html:not(.dark) {
     @apply border-border outline-ring/50;
   }
   html {
+    /* Fluid base type (apple-design: size with the viewport). Scales rem-based
+     * text up on larger screens so the UI never reads cramped on desktop/wide,
+     * while staying at the comfortable ~16px browser default at ≤~1067px so
+     * mobile/tablet layouts (and the pinned responsive feed geometry) are
+     * unchanged. rem min/max respect the user's browser font-size (zoom/a11y);
+     * the vw term drives the screen-size response. Fixed-px utilities
+     * (text-[11px] micro-labels, .feed-tab) intentionally stay put. */
+    font-size: clamp(1rem, 0.8rem + 0.3vw, 1.18rem);
     /* Prevent iOS rubber-band overscroll from revealing white/gray background.
      * overscroll-behavior: none on html prevents the bounce from propagating
      * to the document root. Individual scrollable containers still bounce. */
