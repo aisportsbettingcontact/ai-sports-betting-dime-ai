@@ -627,7 +627,7 @@ export default function UserManagement() {
       <div className="sticky top-14 z-40 bg-background/95 backdrop-blur border-b w-full supports-[backdrop-filter]:bg-background/80">
         {/* Row 1: Actions — back button and "USER MANAGEMENT" title removed
             (now owned by AdminShell's back-to-app affordance + tab nav) */}
-        <div className="w-full px-3 sm:px-5 lg:px-8 pt-3 pb-1.5 sm:pb-0 flex items-center gap-2">
+        <div className="admin-container pt-3 pb-1.5 sm:pb-0 flex items-center gap-2">
           <div className="flex-1" />
           {/* Actions — hidden on mobile, shown inline on sm+ */}
           <div className="hidden sm:flex items-center gap-2">
@@ -661,7 +661,7 @@ export default function UserManagement() {
           </div>
         </div>
         {/* Row 2 (mobile only): Action buttons in a full-width row */}
-        <div className="sm:hidden w-full px-3 pb-2.5 flex items-center gap-2">
+        <div className="sm:hidden admin-container pb-2.5 flex items-center gap-2">
           <Button
             onClick={() => setForceLogoutAllConfirm(true)}
             size="sm"
@@ -693,7 +693,7 @@ export default function UserManagement() {
       </div>
 
       {/* Stats bar */}
-      <div className="flex-1 w-full px-3 sm:px-5 lg:px-8 py-4">
+      <div className="flex-1 admin-container py-4">
         <div className="mb-6">
           <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Accounts overview</h1>
           <p className="mt-1 text-sm text-muted-foreground">Manage access, roles, subscriptions, and connected services.</p>
