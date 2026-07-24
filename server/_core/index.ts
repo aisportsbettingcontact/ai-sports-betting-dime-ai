@@ -379,7 +379,11 @@ async function startServer() {
           ...(process.env.NODE_ENV !== "production" ? ["'unsafe-eval'"] : []), // unsafe-eval only in dev (Vite HMR)
         ],
         styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-        fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
+        // d2xsxph8kpxj0f.cloudfront.net serves Discord's "GG Sans" woff2 files.
+        // Owner-approved exception (2026-07-24) so Discord-affiliated controls
+        // can carry Discord's own typeface — see dime-ai/THREE-COLOR-LAW.md
+        // §"Discord platform exception". Scoped to fonts only.
+        fontSrc: ["'self'", "https://fonts.gstatic.com", "https://d2xsxph8kpxj0f.cloudfront.net", "data:"],
         imgSrc: ["'self'", "data:", "blob:", "https:", "http:"],
         connectSrc: ["'self'", "wss:", "ws:", "https:"],
         frameSrc: [
