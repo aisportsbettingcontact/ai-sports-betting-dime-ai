@@ -39,24 +39,39 @@ cloned — every plugin skill silently missing, with no error. The vendored `.cl
 55 `*@pm-skills`, figma, and railway just aren't there (the `/sp-*` and `/pm-*` commands still
 work — they are local files in `.claude/commands/`).
 
-Check before relying on a plugin skill, and repair if the count is short:
+**This is now self-healing.** A `SessionStart` hook (`startup|resume|clear`, timeout 300s) runs
+`.claude/scripts/bootstrap-plugins.sh` on every session start and resume. Warm sessions early-exit
+in ~2s; a cold container rebuilds to 61/61 in ~95s. To check or repair by hand:
 
 ```bash
 claude plugin list | grep -c @        # expect 61
 ./.claude/scripts/bootstrap-plugins.sh
 ```
 
-The script is idempotent (early-exits when the count is already 61, ~2s) and rebuilds a cold
-container in ~2min. `--scope project` is a no-op against the already-declared `enabledPlugins`, so
+`--scope project` is a no-op against the already-declared `enabledPlugins`, so
 `.claude/settings.json` is left untouched. Installed plugins load in the **current** session.
 
-**Vendored marketplaces (`.claude/plugins-vendored/`, 11M).** `pm-skills` (2.6M, all 70 plugin
-payloads — 55 enabled) and `ui-ux-pro-max-skill` (8.5M, the 7 skills it ships; 5.5M of that is
-`ui-styling/canvas-fonts`) are committed to this repo, and `extraKnownMarketplaces` points at them
-with `{"source": "directory", "path": "./.claude/plugins-vendored/<name>"}`. They rehydrate with no
-network. The other four marketplaces are still GitHub-sourced and need connectivity.
+**All six marketplaces are vendored (`.claude/plugins-vendored/`, 18M) — bootstrap is fully
+offline.** `extraKnownMarketplaces` points at them with
+`{"source": "directory", "path": "./.claude/plugins-vendored/<name>"}`; no GitHub source remains.
 
-Two things that are easy to get wrong here:
+| Vendored marketplace | Size | Contents |
+|---|---|---|
+| `pm-skills` | 2.6M | all 70 plugin payloads, 55 enabled |
+| `ui-ux-pro-max-skill` | 8.5M | v2.11.0, the 7 skills it ships (5.5M is `ui-styling/canvas-fonts`) |
+| `dime-vendored` | 4.5M | superpowers, mcp-server-dev, figma |
+| `taste-skill` | 1.9M | taste-skill |
+| `railway-skills` | 672K | railway |
+
+**Why `dime-vendored` exists.** `claude-plugins-official` and `knowledge-work-plugins` are
+*reserved names* — the CLI accepts them only from GitHub `anthropics` sources and rejects a
+directory source outright ("The name '…' is reserved for official Anthropic marketplaces"). So
+superpowers, mcp-server-dev, and figma are rehosted under a non-reserved marketplace name and keyed
+as `<plugin>@dime-vendored` in `enabledPlugins`. Skill IDs are namespaced by *plugin*, not
+marketplace, so `superpowers:brainstorming`, `mcp-server-dev:build-mcp-server`, and `figma:figma-use`
+are unchanged.
+
+Three things that are easy to get wrong here:
 
 - **`claude plugin marketplace remove` rewrites `.claude/settings.json`** — it strips every
   matching `enabledPlugins` entry (56 of them, for these two) and moves the marketplace
@@ -65,6 +80,10 @@ Two things that are easy to get wrong here:
 - **Installs are still cached to `/root/.claude/plugins/cache/`**, which is ephemeral. That cache
   is a derived artifact — the repo is the source of truth, and the cache is rebuilt from
   `.claude/plugins-vendored/` on demand. Do not edit skills in the cache; edit them in the repo.
+- **`bootstrap-plugins.sh` must stay cwd-independent and must never exit 2.** Hooks do not always
+  run from the repo root, so the script resolves its root from `${BASH_SOURCE[0]}`, not `$PWD` or
+  `git rev-parse`. Exit 2 is a *blocking* error for `SessionStart` — a missing arsenal must degrade
+  to a warning, never wedge the session.
 
 Do not flat-vendor pm-skills into `.claude/skills/`: five names (`ansoff-matrix`,
 `customer-journey-map`, `opportunity-solution-tree`, `porters-five-forces`, `swot-analysis`)

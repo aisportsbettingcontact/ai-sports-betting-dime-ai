@@ -1,7 +1,22 @@
 {
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PROJECT_DIR:-.}/.claude/scripts/bootstrap-plugins.sh\"",
+            "timeout": 300,
+            "statusMessage": "Loading skill arsenal…"
+          }
+        ]
+      }
+    ]
+  },
   "enabledPlugins": {
-    "superpowers@claude-plugins-official": true,
-    "mcp-server-dev@claude-plugins-official": true,
+    "superpowers@dime-vendored": true,
+    "mcp-server-dev@dime-vendored": true,
     "jobs-to-be-done@pm-skills": true,
     "acquisition-channel-advisor@pm-skills": true,
     "agent-orchestration-advisor@pm-skills": true,
@@ -57,28 +72,16 @@
     "user-story-splitting@pm-skills": true,
     "vp-cpo-readiness-advisor@pm-skills": true,
     "workshop-facilitation@pm-skills": true,
-    "figma@knowledge-work-plugins": true,
+    "figma@dime-vendored": true,
     "ui-ux-pro-max@ui-ux-pro-max-skill": true,
     "taste-skill@taste-skill": true,
     "railway@railway-skills": true
   },
   "extraKnownMarketplaces": {
-    "claude-plugins-official": {
-      "source": {
-        "source": "github",
-        "repo": "anthropics/claude-plugins-official"
-      }
-    },
     "pm-skills": {
       "source": {
         "source": "directory",
         "path": "./.claude/plugins-vendored/pm-skills"
-      }
-    },
-    "knowledge-work-plugins": {
-      "source": {
-        "source": "github",
-        "repo": "anthropics/knowledge-work-plugins"
       }
     },
     "ui-ux-pro-max-skill": {
@@ -89,14 +92,20 @@
     },
     "taste-skill": {
       "source": {
-        "source": "github",
-        "repo": "leonxlnx/taste-skill"
+        "source": "directory",
+        "path": "./.claude/plugins-vendored/taste-skill"
       }
     },
     "railway-skills": {
       "source": {
-        "source": "github",
-        "repo": "railwayapp/railway-skills"
+        "source": "directory",
+        "path": "./.claude/plugins-vendored/railway-skills"
+      }
+    },
+    "dime-vendored": {
+      "source": {
+        "source": "directory",
+        "path": "./.claude/plugins-vendored/dime-vendored"
       }
     }
   }
