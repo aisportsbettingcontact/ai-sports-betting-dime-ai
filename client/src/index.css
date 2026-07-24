@@ -219,6 +219,16 @@ html:not(.dark) {
   --row-active: #E4E4E4;
 }
 
+/* System is intentionally its own fixed neutral-grey, dark-contrast appearance.
+ * Dark remains pure black and Light remains white. */
+html[data-theme-mode="system"] {
+  --background: #121212;
+  --card: #181818;
+  --popover: #202020;
+  --sidebar: #181818;
+  --surface-raised: #202020;
+}
+
 /* ═══ Law v3 — Dimensional amendment (owner-approved 2026-07-13) ══════════════
    Relaxes Law v2's flat/no-shadow rule for the projections product. NEW: mint
    ACCENT SURFACES (tinted cell + border + high-contrast foreground) and

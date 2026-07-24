@@ -27,6 +27,13 @@ export function formatEdge(edgePP: number): string {
   return `${sign}${Math.abs(edgePP).toFixed(1)}%`;
 }
 
+/** Canonical no-vig ROI, already expressed in percentage points. */
+export function formatRoi(roiPct: number | null): string {
+  if (roiPct == null || !Number.isFinite(roiPct)) return "—";
+  const sign = roiPct >= 0 ? "+" : "−";
+  return `${sign}${Math.abs(roiPct).toFixed(1)}%`;
+}
+
 export interface EdgeIndicatorProps {
   insight: MarketInsight | null;
   className?: string;
@@ -35,14 +42,20 @@ export interface EdgeIndicatorProps {
 export function EdgeIndicator({ insight, className }: EdgeIndicatorProps) {
   // No actionable edge → quiet, flat, non-mint (mint is reserved for signal).
   if (!insight || insight.recommendation === "NO_EDGE") {
+    const roi = insight ? formatRoi(insight.roiPct) : null;
     return (
       <div
         className={`edge-indicator--none${className ? ` ${className}` : ""}`}
         role="group"
-        aria-label="No edge on this game"
+        aria-label={
+          insight
+            ? `No edge: ${insight.sideLabel}, no-vig ROI ${roi}`
+            : "No edge on this game"
+        }
       >
         <Minus size={14} aria-hidden="true" />
         <span>No edge</span>
+        {roi && <strong className="edge-indicator__roi">ROI {roi}</strong>}
       </div>
     );
   }

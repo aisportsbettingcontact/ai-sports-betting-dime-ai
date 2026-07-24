@@ -5,10 +5,11 @@ type Theme = "light" | "dark";
 /**
  * Selected theme mode — "system" added (owner directive 2026-07-22: account
  * popover v2, Round 3 Step 1). Existing consumers only ever cared about the
- * RESOLVED light/dark value (`theme` below); `mode` is the new, separate
- * field that also carries "system" so a segmented System|Light|Dark control
- * can render its own selection state without breaking anything reading
- * `theme` as light|dark.
+ * dark-contrast/light value (`theme` below); `mode` is the new, separate field
+ * that also carries "system" so a segmented System|Light|Dark control can
+ * render its own selection state without breaking anything reading `theme`
+ * as light|dark. System is the product's fixed grey appearance, so it uses
+ * dark-contrast ink regardless of the OS color-scheme preference.
  */
 export type ThemeMode = "system" | Theme;
 
@@ -24,13 +25,15 @@ export const LEGACY_THEME_KEY = "theme";
 export const LEGACY_FEED_THEME_KEY = "dime-feed-theme";
 
 /**
- * Resolves the mode a user actually gets painted, given the live OS reading.
+ * Resolves the mode's contrast treatment. System has its own neutral-grey
+ * palette and therefore always takes dark-contrast ink; it does not borrow
+ * Light's black-on-white rules when the OS preference is light.
  * Pure and DOM-free on purpose — this vitest suite runs under
  * `environment: "node"` (vitest.config.ts), so this is what makes "system
  * resolution" directly unit-testable without a jsdom dependency.
  */
-export function resolveTheme(mode: ThemeMode, systemPrefersDark: boolean): Theme {
-  return mode === "system" ? (systemPrefersDark ? "dark" : "light") : mode;
+export function resolveTheme(mode: ThemeMode): Theme {
+  return mode === "system" ? "dark" : mode;
 }
 
 /**
@@ -58,11 +61,12 @@ export function resolveInitialMode(reads: {
 }
 
 interface ThemeContextType {
-  /** RESOLVED theme — unchanged contract, still light|dark for every
-   *  existing consumer (index.css `.dark` class, page-level theme branches). */
+  /** Contrast theme — still light|dark for every existing consumer
+   *  (index.css `.dark` class, page-level theme branches). System resolves to
+   *  dark contrast while `mode` selects its separate grey surfaces. */
   theme: Theme;
-  /** The user's selection, INCLUDING "system" — drives the new Theme row's
-   *  segmented control. Resolves to `theme` via matchMedia when "system". */
+  /** The user's selection, INCLUDING "system" — drives the Theme row and the
+   *  independent grey System palette. */
   mode: ThemeMode;
   setTheme?: (theme: Theme) => void;
   /** Sets mode directly (including "system"); resolves + persists + animates
@@ -101,13 +105,6 @@ interface ThemeProviderProps {
   switchable?: boolean;
 }
 
-function systemPrefersDarkNow(): boolean {
-  // No window (SSR-ish edge case, not a real path in this SPA today) keeps
-  // the app's historical dark-first default (App.tsx: defaultTheme="dark").
-  if (typeof window === "undefined") return true;
-  return !!window.matchMedia?.("(prefers-color-scheme: dark)").matches;
-}
-
 export function ThemeProvider({
   children,
   defaultTheme = "light",
@@ -128,32 +125,16 @@ export function ThemeProvider({
     }
   });
 
-  // Tracks the live OS preference so "system" mode stays reactive. Kept
-  // mounted regardless of the current mode — cheap, and means switching back
-  // to "system" later is never stale.
-  const [systemPrefersDark, setSystemPrefersDark] = useState<boolean>(
-    systemPrefersDarkNow
-  );
-
-  useEffect(() => {
-    if (!switchable || typeof window === "undefined") return;
-    const mql = window.matchMedia("(prefers-color-scheme: dark)");
-    const onChange = (e: MediaQueryListEvent) => setSystemPrefersDark(e.matches);
-    // addEventListener is standard everywhere this app ships; no legacy
-    // addListener fallback needed.
-    mql.addEventListener("change", onChange);
-    return () => mql.removeEventListener("change", onChange);
-  }, [switchable]);
-
-  const theme: Theme = resolveTheme(mode, systemPrefersDark);
+  const theme: Theme = resolveTheme(mode);
 
   // Keep the <html> class and persistence in sync with state (initial mount,
-  // ?theme= query, external changes, OS-driven "system" updates). User-
+  // ?theme= query and external changes). User-
   // initiated updates below apply the class synchronously inside a view
   // transition so the swap can animate.
   useEffect(() => {
     const root = document.documentElement;
     root.classList.toggle("dark", theme === "dark");
+    root.dataset.themeMode = mode;
 
     if (switchable) {
       try {
@@ -166,16 +147,18 @@ export function ThemeProvider({
 
   // A user-initiated mode change: animate the root crossfade, toggling the
   // class synchronously inside the transition so old/new snapshots are
-  // correct. "system" resolves against the current OS reading immediately.
+  // correct. System always resolves to the dark-contrast grey appearance.
   const updateMode = useCallback(
     (next: ThemeMode) => {
-      const nextResolved: Theme = resolveTheme(next, systemPrefersDark);
+      const nextResolved: Theme = resolveTheme(next);
       runThemeTransition(() => {
-        document.documentElement.classList.toggle("dark", nextResolved === "dark");
+        const root = document.documentElement;
+        root.classList.toggle("dark", nextResolved === "dark");
+        root.dataset.themeMode = next;
         setModeState(next);
       });
     },
-    [systemPrefersDark],
+    [],
   );
 
   // Back-compat surface: existing callers only ever pass light|dark, which
