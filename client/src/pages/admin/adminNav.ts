@@ -24,6 +24,7 @@ import {
   ClipboardList,
   ShieldAlert,
   Bot,
+  CreditCard,
   type LucideIcon,
 } from "lucide-react";
 
@@ -31,6 +32,7 @@ export type AdminNavKey =
   | "dashboard"
   | "users"
   | "activity"
+  | "plans"
   | "publish"
   | "model-results"
   | "backtest"
@@ -44,6 +46,7 @@ export type AdminNavKey =
 
 export type AdminGroup =
   | "People & Access"
+  | "Billing"
   | "Projections & Models"
   | "Data & Ingest"
   | "System";
@@ -65,6 +68,9 @@ export const ADMIN_NAV: AdminNavItem[] = [
   { key: "activity", label: "User Activity", short: "Activity", path: "/admin/activity", group: "People & Access", description: "Engagement, session, and device analytics.", icon: Activity },
   { key: "waitlist", label: "Waitlist", short: "Waitlist", path: "/admin/waitlist", group: "People & Access", description: "Signups and waitlist management.", icon: ClipboardList },
 
+  // Billing
+  { key: "plans", label: "Subscription Plans", short: "Plans", path: "/admin/plans", group: "Billing", description: "Create and manage subscription plans and pricing.", icon: CreditCard },
+
   // Projections & Models
   { key: "publish", label: "Publish Projections", short: "Publish", path: "/admin/publish", group: "Projections & Models", description: "Review and publish model projections.", icon: Send },
   { key: "model-results", label: "Model Results", short: "Results", path: "/admin/model-results", group: "Projections & Models", description: "Rolling model accuracy and results.", icon: TrendingUp },
@@ -84,6 +90,7 @@ export const ADMIN_NAV: AdminNavItem[] = [
 /** Ordered, de-duplicated group list for grid/section rendering. */
 export const ADMIN_GROUPS: AdminGroup[] = [
   "People & Access",
+  "Billing",
   "Projections & Models",
   "Data & Ingest",
   "System",
