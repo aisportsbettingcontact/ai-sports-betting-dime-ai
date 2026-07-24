@@ -1,7 +1,6 @@
-import { ChevronDown, ChevronUp } from "lucide-react";
 import { rankMarkets, type MarketInsight } from "@/lib/gameInsight";
 import { MatchupPanel } from "./MatchupPanel";
-import { MarketTable } from "./MarketTable";
+import { ProjectionMarketsPopover } from "./ProjectionMarketsPopover";
 import { ProjectionSummary } from "./ProjectionSummary";
 import { SummaryCarousel } from "./SummaryCarousel";
 import type { ProjectionGame } from "./types";
@@ -12,15 +11,15 @@ import "./ProjectionCard.css";
  *
  * Order: status (live/final only) → matchup block (matchup line · ballpark ·
  * first pitch, owner directive 2026-07-17) → the dominant model insight
- * (summary) → the full market tables behind an explicit disclosure. There is
+ * (summary) → the full market tables in an anchored, paginated popover. There is
  * no corner league label: the feed's sport chip already names the competition
  * (owner directive 2026-07-18), so a scheduled card renders no header at all —
  * its start time is owned by the matchup block's third line (single rendering
  * ownership, directive §3).
  *
- * The market tables collapse by default behind "View full AI model projections"
- * with a chevron-down affordance to expand and a chevron-up to collapse — the
- * ChevronDown/ChevronUp pair swaps via CSS on the details [open] state.
+ * The market popover is closed by default behind "View full AI model
+ * projections". It renders one market per page, preserving source order
+ * without changing the card's height.
  * The card is its own container (`ds-cq`), so the layout REFLOWS by the card's
  * width, not the viewport — structure adapts before type ever shrinks.
  */
@@ -44,7 +43,7 @@ export function ProjectionCard({
 }: {
   game: ProjectionGame;
   defaultMarketsOpen?: boolean;
-  /** Fired when the user expands the market tables (analytics; presentational
+  /** Fired when the user opens the market popover (analytics; presentational
    *  component stays pure — the caller owns the emit). Fire-and-forget. */
   onOpen?: () => void;
 }) {
@@ -91,26 +90,12 @@ export function ProjectionCard({
         <ProjectionSummary insight={edges[0] ?? null} teams={[game.away, game.home]} />
       )}
 
-      <details
-        className="projection-card__markets"
-        open={defaultMarketsOpen}
-        onToggle={(e) => {
-          // Native toggle fires on user interaction only (not on the initial
-          // `open` attribute), so this counts real expands, not mounts.
-          if (e.currentTarget.open) onOpen?.();
-        }}
-      >
-        <summary className="projection-card__markets-toggle ds-label">
-          <span>View full AI model projections</span>
-          <ChevronDown className="projection-card__markets-chev projection-card__markets-chev--expand" aria-hidden="true" />
-          <ChevronUp className="projection-card__markets-chev projection-card__markets-chev--collapse" aria-hidden="true" />
-        </summary>
-        <div className="projection-card__markets-grid">
-          {game.markets.map((m) => (
-            <MarketTable key={m.key} market={m} />
-          ))}
-        </div>
-      </details>
+      <ProjectionMarketsPopover
+        game={game}
+        isPass={isPass}
+        defaultOpen={defaultMarketsOpen}
+        onOpen={onOpen}
+      />
     </article>
   );
 }
