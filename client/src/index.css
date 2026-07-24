@@ -219,6 +219,45 @@ html:not(.dark) {
   --row-active: #E4E4E4;
 }
 
+/* System is intentionally its own fixed neutral-grey, dark-contrast appearance.
+ * Dark remains pure black and Light remains white. */
+html[data-theme-mode="system"] {
+  --background: #121212;
+  --foreground: #FFFFFF;
+  --card: #181818;
+  --card-foreground: #FFFFFF;
+  --popover: #202020;
+  --popover-foreground: #FFFFFF;
+  --primary: #45E0A8;
+  --primary-foreground: #000000;
+  --secondary: #202020;
+  --secondary-foreground: #FFFFFF;
+  --muted: #202020;
+  --muted-foreground: #B8B8B8;
+  --accent: #45E0A8;
+  --accent-foreground: #000000;
+  --destructive: #FFFFFF;
+  --border: #3A3A3A;
+  --border-strong: #FFFFFF;
+  --input: #3A3A3A;
+  --ring: #45E0A8;
+  --edge-green: #45E0A8;
+  --edge-red: #FFFFFF;
+  --sidebar: #181818;
+  --sidebar-foreground: #FFFFFF;
+  --sidebar-primary: #45E0A8;
+  --sidebar-primary-foreground: #000000;
+  --sidebar-accent: #262626;
+  --sidebar-accent-foreground: #FFFFFF;
+  --sidebar-border: #3A3A3A;
+  --sidebar-ring: #45E0A8;
+  --text-secondary: #B8B8B8;
+  --text-muted: #8E8E8E;
+  --surface-raised: #202020;
+  --row-hover: #262626;
+  --row-active: #303030;
+}
+
 /* ═══ Law v3 — Dimensional amendment (owner-approved 2026-07-13) ══════════════
    Relaxes Law v2's flat/no-shadow rule for the projections product. NEW: mint
    ACCENT SURFACES (tinted cell + border + high-contrast foreground) and
@@ -245,11 +284,21 @@ html:not(.dark) {
   --elev-card: 0 1px 1px rgb(0 0 0 / 0.05), 0 8px 24px rgb(0 0 0 / 0.07), inset 0 1px 0 rgb(255 255 255 / 0.8);
   --elev-lift: 0 2px 4px rgb(0 0 0 / 0.06), 0 14px 34px rgb(0 0 0 / 0.10);
 }
+html[data-theme-mode="system"] {
+  --brand-mint-surface: #102D23;
+  --brand-mint-border: #2F9872;
+  --brand-mint-foreground: #DFF9EF;
+  --elev-1: 0 1px 2px rgb(0 0 0 / 0.45);
+  --elev-2: 0 2px 6px rgb(0 0 0 / 0.45);
+  --elev-card: 0 1px 2px rgb(0 0 0 / 0.5), 0 10px 30px rgb(0 0 0 / 0.42), inset 0 1px 0 rgb(255 255 255 / 0.06);
+  --elev-lift: 0 2px 4px rgb(0 0 0 / 0.5), 0 16px 40px rgb(0 0 0 / 0.48), inset 0 1px 0 rgb(255 255 255 / 0.08);
+}
 /* Modern-CSS upgrade: derive the tint/border from the live mint via color-mix.
    Falls back to the solid hexes above on engines without color-mix. */
 @supports (color: color-mix(in srgb, red, red)) {
   :root { --brand-mint-surface: color-mix(in srgb, #45E0A8 16%, #000000); --brand-mint-border: color-mix(in srgb, #45E0A8 60%, #000000); }
   html:not(.dark) { --brand-mint-surface: color-mix(in srgb, #45E0A8 18%, #FFFFFF); --brand-mint-border: color-mix(in srgb, #45E0A8 68%, #000000); }
+  html[data-theme-mode="system"] { --brand-mint-surface: color-mix(in srgb, #45E0A8 14%, #121212); --brand-mint-border: color-mix(in srgb, #45E0A8 60%, #121212); }
 }
 
 /* ═══ Animated theme transition (View Transitions API) ════════════════════════

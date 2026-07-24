@@ -19,24 +19,20 @@ import {
  * `window`/`document`/`localStorage` — the same reason every other
  * ThemeProvider-adjacent behavior in this repo (and the sibling
  * comingSoonGate.test.ts source-contract tests) is verified this way.
- * The remaining stateful wiring (matchMedia change listener, persistence
- * write, <html>.dark toggle, View Transitions crossfade) is checked as a
+ * The remaining stateful wiring (persistence write, <html>.dark toggle,
+ * View Transitions crossfade) is checked as a
  * source contract below, the same pattern comingSoonGate.test.ts already
  * uses for effect/handler wiring in this codebase.
  */
 
-describe("resolveTheme — system resolution", () => {
-  it("resolves system to dark when the OS prefers dark", () => {
-    expect(resolveTheme("system", true)).toBe("dark");
+describe("resolveTheme — appearance contrast", () => {
+  it("resolves fixed-grey System to dark contrast", () => {
+    expect(resolveTheme("system")).toBe("dark");
   });
 
-  it("resolves system to light when the OS prefers light", () => {
-    expect(resolveTheme("system", false)).toBe("light");
-  });
-
-  it("passes explicit light/dark through untouched, ignoring the OS reading", () => {
-    expect(resolveTheme("light", true)).toBe("light");
-    expect(resolveTheme("dark", false)).toBe("dark");
+  it("passes explicit light/dark through untouched", () => {
+    expect(resolveTheme("light")).toBe("light");
+    expect(resolveTheme("dark")).toBe("dark");
   });
 });
 
@@ -137,16 +133,11 @@ const contextSource = fs.readFileSync(
 );
 
 describe("ThemeProvider wiring — source contract (no jsdom in this suite)", () => {
-  it("reads the OS preference live via a matchMedia change listener", () => {
+  it("keeps System on dark-contrast ink instead of inheriting a light-OS palette", () => {
     expect(contextSource).toMatch(
-      /window\.matchMedia\("\(prefers-color-scheme: dark\)"\)/
+      /return mode === "system" \? "dark" : mode;/
     );
-    expect(contextSource).toMatch(
-      /mql\.addEventListener\("change", onChange\)/
-    );
-    expect(contextSource).toMatch(
-      /mql\.removeEventListener\("change", onChange\)/
-    );
+    expect(contextSource).not.toContain("prefers-color-scheme: dark");
   });
 
   it("persists the mode (not the resolved theme) under MODE_STORAGE_KEY, gated on switchable", () => {
@@ -155,13 +146,16 @@ describe("ThemeProvider wiring — source contract (no jsdom in this suite)", ()
     );
   });
 
+  it("publishes the selected mode on <html> so System can own a grey palette distinct from Dark", () => {
+    expect(contextSource).toMatch(/root\.dataset\.themeMode = mode;/);
+    expect(contextSource).toMatch(/root\.dataset\.themeMode = next;/);
+  });
+
   it("existing consumers keep reading `theme` as light|dark — resolveTheme is the only place \"system\" can leak from", () => {
     expect(contextSource).toMatch(
-      /\/\*\* RESOLVED theme[\s\S]{0,200}theme: Theme;/
+      /interface ThemeContextType \{[\s\S]{0,300}theme: Theme;/
     );
-    expect(contextSource).toMatch(
-      /const theme: Theme = resolveTheme\(mode, systemPrefersDark\);/
-    );
+    expect(contextSource).toMatch(/const theme: Theme = resolveTheme\(mode\);/);
   });
 
   it("exposes mode + setMode separately from the resolved theme + setTheme", () => {
