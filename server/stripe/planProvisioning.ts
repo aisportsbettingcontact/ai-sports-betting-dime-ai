@@ -112,6 +112,84 @@ function validateAmount(amountCents: number): void {
   }
 }
 
+// ─── DB-write diagnostics ────────────────────────────────────────────────────
+
+interface DbErrorInfo {
+  message: string;
+  code?: string;
+  errno?: number;
+  sqlState?: string;
+  sqlMessage?: string;
+  /** True when the DB rejected a column/table the code expects — i.e. the
+   *  deployed schema is ahead of the database (db-push not run). */
+  schemaMismatch: boolean;
+  /** The specific missing column, when the driver names one. */
+  missingColumn?: string;
+}
+
+/**
+ * Pull the articulate, actionable fields out of a mysql2/Drizzle write error.
+ * mysql2 surfaces `code`/`errno`/`sqlMessage`; Drizzle sometimes nests the
+ * driver error under `.cause`. A missing column (ER_BAD_FIELD_ERROR / errno
+ * 1054) or missing table (ER_NO_SUCH_TABLE / 1146) means the schema is out of
+ * date — the single most common provisioning failure, and one a raw "Failed
+ * query" dump hides. Pure + exported so it is unit-tested without a DB.
+ */
+export function describeDbError(err: unknown): DbErrorInfo {
+  const raw = err as { message?: string; code?: string; errno?: number; sqlState?: string; sqlMessage?: string; cause?: unknown };
+  // Prefer the driver-level error (has code/sqlMessage), which Drizzle may nest.
+  const driver =
+    raw && (raw.code || raw.sqlMessage)
+      ? raw
+      : ((raw?.cause as typeof raw) ?? raw ?? {});
+  const message = driver.message ?? raw?.message ?? String(err);
+  const sqlMessage = driver.sqlMessage;
+  const code = driver.code;
+  const errno = driver.errno;
+  const probe = sqlMessage ?? message ?? "";
+  const schemaMismatch =
+    code === "ER_BAD_FIELD_ERROR" ||
+    code === "ER_NO_SUCH_TABLE" ||
+    errno === 1054 ||
+    errno === 1146 ||
+    /Unknown column|doesn't exist|no such table/i.test(probe);
+  const missingColumn = /Unknown column '([^']+)'/i.exec(probe)?.[1];
+  return { message, code, errno, sqlState: driver.sqlState, sqlMessage, schemaMismatch, missingColumn };
+}
+
+/**
+ * Run a single DB write with pinpointed logging. On failure it emits ONE
+ * articulate line naming the step, table, driver code, and sqlMessage — and,
+ * for a schema mismatch, a second line with the exact remedy — then throws a
+ * clean, user-facing message (not the raw SQL) so the admin sees WHY, not a
+ * query dump.
+ */
+async function persist<T>(step: string, table: string, fn: () => Promise<T>): Promise<T> {
+  try {
+    return await fn();
+  } catch (err) {
+    const d = describeDbError(err);
+    if (d.schemaMismatch) {
+      console.error(
+        `${TAG} [DB-FAIL] step=${step} table=${table} SCHEMA-MISMATCH` +
+          `${d.missingColumn ? ` missingColumn="${d.missingColumn}"` : ""}` +
+          ` code=${d.code ?? "?"} errno=${d.errno ?? "?"} sqlMessage="${d.sqlMessage ?? d.message}"`,
+      );
+      console.error(
+        `${TAG} [DB-FAIL] → the deployed schema is AHEAD of the database. Run the "DB Push (apply schema migrations)" workflow, then retry.`,
+      );
+      throw new Error(
+        `Database schema is out of date${d.missingColumn ? ` — column "${d.missingColumn}" is missing from ${table}` : ` — ${table} is missing a required column`}. ` +
+          `Run the db-push workflow, then try again.`,
+      );
+    }
+    console.error(
+      `${TAG} [DB-FAIL] step=${step} table=${table} code=${d.code ?? "?"} errno=${d.errno ?? "?"} sqlState=${d.sqlState ?? "?"} sqlMessage="${d.sqlMessage ?? d.message}"`,
+    );
+    throw err instanceof Error ? err : new Error(String(err));
+  }
+}
+
 export interface PromoInput {
   /** percent → value is 1–100; amount → value is a discount in cents. */
   type: "percent" | "amount";
@@ -266,26 +344,28 @@ async function db_insert_price(
 ): Promise<Array<{ insertId: number }>> {
   const db = await getDb();
   if (!db) throw new Error("database unavailable");
-  return db.insert(planPrices).values({
-    planId,
-    stripePriceId: price.id,
-    label: input.label ?? null,
-    amountCents: input.amountCents,
-    currency,
-    interval,
-    intervalCount,
-    trialPeriodDays: input.trialPeriodDays ?? null,
-    promoType: promo.promoType,
-    promoValue: promo.promoValue,
-    promoCode: promo.promoCode,
-    stripeCouponId: promo.stripeCouponId,
-    stripePromoCodeId: promo.stripePromoCodeId,
-    active: true,
-    isDefault: opts.isDefault,
-    hidden: input.hidden ?? false,
-    sortOrder: opts.sortOrder,
-    livemode: price.livemode,
-  });
+  return persist("insert-price", "plan_prices", () =>
+    db.insert(planPrices).values({
+      planId,
+      stripePriceId: price.id,
+      label: input.label ?? null,
+      amountCents: input.amountCents,
+      currency,
+      interval,
+      intervalCount,
+      trialPeriodDays: input.trialPeriodDays ?? null,
+      promoType: promo.promoType,
+      promoValue: promo.promoValue,
+      promoCode: promo.promoCode,
+      stripeCouponId: promo.stripeCouponId,
+      stripePromoCodeId: promo.stripePromoCodeId,
+      active: true,
+      isDefault: opts.isDefault,
+      hidden: input.hidden ?? false,
+      sortOrder: opts.sortOrder,
+      livemode: price.livemode,
+    }),
+  );
 }
 
 /**
@@ -324,26 +404,30 @@ export async function provisionPlan(
   );
 
   // 2) Plan row first (incl. auto-restock config) so price rows can reference it.
-  const planRes = await withCircuitBreaker(async () =>
-    db.insert(subscriptionPlans).values({
-      slug,
-      name: input.name,
-      description: input.description ?? null,
-      planType: input.planType ?? "recurring",
-      stripeProductId: product.id,
-      active: true,
-      accessUntil: (input.planType ?? "recurring") === "one_time" ? ONE_TIME_ACCESS_UNTIL_MS : null,
-      livemode: product.livemode,
-      maxSubscribers: input.maxSubscribers ?? null,
-      autoRestock: restock?.autoRestock ?? false,
-      availableQuantity: restock?.availableQuantity ?? null,
-      restockThreshold: restock?.restockThreshold ?? null,
-      restockAmount: restock?.restockAmount ?? null,
-      sortOrder: 0,
-    }),
+  console.log(`${TAG} [STEP] Stripe product ready id=${product.id} livemode=${product.livemode} — inserting subscription_plans row slug=${slug}`);
+  const planRes = await persist("insert-plan", "subscription_plans", () =>
+    withCircuitBreaker(async () =>
+      db.insert(subscriptionPlans).values({
+        slug,
+        name: input.name,
+        description: input.description ?? null,
+        planType: input.planType ?? "recurring",
+        stripeProductId: product.id,
+        active: true,
+        accessUntil: (input.planType ?? "recurring") === "one_time" ? ONE_TIME_ACCESS_UNTIL_MS : null,
+        livemode: product.livemode,
+        maxSubscribers: input.maxSubscribers ?? null,
+        autoRestock: restock?.autoRestock ?? false,
+        availableQuantity: restock?.availableQuantity ?? null,
+        restockThreshold: restock?.restockThreshold ?? null,
+        restockAmount: restock?.restockAmount ?? null,
+        sortOrder: 0,
+      }),
+    ),
   );
   const planId = Number(planRes?.[0]?.insertId ?? 0);
   if (!planId) throw new Error("failed to persist subscription_plans row");
+  console.log(`${TAG} [STEP] subscription_plans row inserted id=${planId} — provisioning ${input.prices.length} price(s)`);
 
   // 3) Each interval → a Stripe Price (+ optional promo coupon) + a row. The
   //    first interval is the default price checkout charges by default.
