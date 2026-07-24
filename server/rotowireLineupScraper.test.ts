@@ -251,3 +251,139 @@ describe("Rotowire pitcher metadata integrity", () => {
     expect(payload.homePitcherEra).toBe("5-1 · 2.80 ERA");
   });
 });
+
+describe("Rotowire player identity and lineup status", () => {
+  it("recovers abbreviated pitcher and batter names from slugs and maps status classes end to end", () => {
+    const html = `
+      <div class="lineup is-mlb">
+        <div class="lineup__time">6:45 PM ET</div>
+        <div class="lineup__abbr">TB</div>
+        <div class="lineup__abbr">BOS</div>
+
+        <div class="lineup__list is-visit">
+          <div class="lineup__player-highlight">
+            <a href="/baseball/player/eduardo-rodriguez-12783">E. Rodriguez</a>
+            <span class="lineup__throws">LHP</span>
+            <span class="lineup__player-highlight-stats">8-3 2.62 ERA</span>
+          </div>
+          <li class="lineup__status is-expected">
+            <div class="dot is-medium is-yellow"></div>Expected Lineup
+          </li>
+          <div class="lineup__player">
+            <span class="lineup__pos">RF</span>
+            <a href="/baseball/player/ronald-acuna-jr-14106">R. Acuña Jr.</a>
+            <span class="lineup__bats">R</span>
+          </div>
+          <div class="lineup__player">
+            <span class="lineup__pos">LF</span>
+            <a title="Tyler O'Neill" href="/baseball/player/tyler-oneill-11620">Tyler O'Neill</a>
+            <span class="lineup__bats">R</span>
+          </div>
+        </div>
+
+        <div class="lineup__list is-home">
+          <div class="lineup__player-highlight">
+            <a href="/baseball/player/zack-littell-13788">Z. Littell</a>
+            <span class="lineup__throws">RHP</span>
+            <span class="lineup__player-highlight-stats">7-7 5.34 ERA</span>
+          </div>
+          <li class="lineup__status is-confirmed">
+            <div class="dot is-medium is-green"></div>Confirmed Lineup
+          </li>
+          <div class="lineup__player">
+            <span class="lineup__pos">CF</span>
+            <a href="/baseball/player/lars-nootbaar-14358">L. Nootbaar</a>
+            <span class="lineup__bats">L</span>
+          </div>
+          <div class="lineup__player">
+            <span class="lineup__pos">DH</span>
+            <a href="/baseball/player.php?id=777">F. Fallback</a>
+            <span class="lineup__bats">S</span>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const parsed = parseLineupHtml(html, "today", "[identity-test]");
+    expect(parsed.games).toHaveLength(1);
+    const game = parsed.games[0];
+
+    expect(game.awayPitcher).toMatchObject({
+      name: "Eduardo Rodriguez",
+      rotowireId: 12783,
+      confirmed: false,
+    });
+    expect(game.homePitcher).toMatchObject({
+      name: "Zack Littell",
+      rotowireId: 13788,
+      confirmed: true,
+    });
+    expect(game.awayLineup.map((player) => [player.name, player.rotowireId])).toEqual([
+      ["Ronald Acuña Jr.", 14106],
+      ["Tyler O'Neill", 11620],
+    ]);
+    expect(game.homeLineup.map((player) => [player.name, player.rotowireId])).toEqual([
+      ["Lars Nootbaar", 14358],
+      ["F. Fallback", 777],
+    ]);
+    expect({
+      awayPitcherConfirmed: game.awayPitcher?.confirmed,
+      homePitcherConfirmed: game.homePitcher?.confirmed,
+      awayLineupConfirmed: game.awayLineupConfirmed,
+      homeLineupConfirmed: game.homeLineupConfirmed,
+    }).toEqual({
+      awayPitcherConfirmed: false,
+      homePitcherConfirmed: true,
+      awayLineupConfirmed: false,
+      homeLineupConfirmed: true,
+    });
+
+    const mlbamByName = new Map([
+      ["Eduardo Rodriguez", 593958],
+      ["Zack Littell", 641793],
+      ["Ronald Acuña Jr.", 660670],
+      ["Tyler O'Neill", 641933],
+      ["Lars Nootbaar", 663457],
+    ]);
+    const payload = buildMlbLineupPayload(
+      game,
+      901,
+      123456,
+      (name) => (name ? (mlbamByName.get(name) ?? null) : null),
+    );
+    expect(payload).toMatchObject({
+      awayPitcherName: "Eduardo Rodriguez",
+      awayPitcherRotowireId: 12783,
+      awayPitcherMlbamId: 593958,
+      awayPitcherConfirmed: false,
+      homePitcherName: "Zack Littell",
+      homePitcherMlbamId: 641793,
+      homePitcherConfirmed: true,
+      awayLineupConfirmed: false,
+      homeLineupConfirmed: true,
+    });
+    expect(JSON.parse(payload.awayLineup ?? "[]")[0]).toMatchObject({
+      name: "Ronald Acuña Jr.",
+      mlbamId: 660670,
+    });
+  });
+
+  it("treats the status class as authoritative when nested text is stale", () => {
+    const html = `
+      <div class="lineup is-mlb">
+        <div class="lineup__abbr">TB</div>
+        <div class="lineup__abbr">BOS</div>
+        <div class="lineup__list is-visit">
+          <li class="lineup__status is-expected">Confirmed Lineup</li>
+        </div>
+        <div class="lineup__list is-home">
+          <li class="lineup__status is-confirmed">Expected Lineup</li>
+        </div>
+      </div>
+    `;
+
+    const game = parseLineupHtml(html, "today", "[status-class-test]").games[0];
+    expect(game.awayLineupConfirmed).toBe(false);
+    expect(game.homeLineupConfirmed).toBe(true);
+  });
+});
