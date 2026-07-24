@@ -41,6 +41,11 @@ export const ACTIVE_USER_DEFINITION_V1 =
 /** Staff roles excluded from active-user / engagement metrics. */
 export const STAFF_ROLES = ["owner", "admin"] as const;
 
+/** True when a role is staff (owner/admin) — excluded from real analytics metrics. */
+export function isStaffRole(role: string | null | undefined): boolean {
+  return role != null && (STAFF_ROLES as readonly string[]).includes(role);
+}
+
 /**
  * Data-state vocabulary (owner directive). `0` is reserved for a genuine, valid
  * measurement whose numerator is zero — never a stand-in for missing data.
