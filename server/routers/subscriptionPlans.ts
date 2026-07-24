@@ -13,6 +13,9 @@ import { router } from "../_core/trpc";
 import { listAllPlans, getPlanBySlug, defaultPriceForMode } from "../stripe/planStore";
 import {
   provisionPlan,
+  addPriceToPlan,
+  removePriceFromPlan,
+  updateRestockConfig,
   archivePlan,
   updatePlanMeta,
   isProvisioningTestMode,
@@ -22,18 +25,45 @@ import { backfillStaticPlans } from "../stripe/backfillPlans";
 
 const intervalEnum = z.enum(["day", "week", "month", "year"]);
 
+const promoSchema = z
+  .object({
+    type: z.enum(["percent", "amount"]),
+    value: z.number().int().min(1),
+    code: z
+      .string()
+      .min(2)
+      .max(64)
+      .regex(/^[A-Za-z0-9_-]+$/, "code: letters, numbers, - or _ only")
+      .optional(),
+  })
+  .refine((p) => p.type !== "percent" || p.value <= 100, {
+    message: "percent promo must be 1–100",
+  });
+
+const priceSchema = z.object({
+  amountCents: z.number().int().min(50),
+  currency: z.string().min(3).max(8).optional(),
+  interval: intervalEnum,
+  intervalCount: z.number().int().min(1).max(365),
+  label: z.string().max(80).optional(),
+  trialPeriodDays: z.number().int().min(0).max(365).optional(),
+  promo: promoSchema.nullable().optional(),
+});
+
+const restockSchema = z.object({
+  autoRestock: z.boolean(),
+  availableQuantity: z.number().int().min(0).nullable(),
+  restockThreshold: z.number().int().min(0).nullable(),
+  restockAmount: z.number().int().min(1).nullable(),
+});
+
 const newPlanSchema = z.object({
   name: z.string().min(1).max(120),
   description: z.string().max(2000).optional(),
-  price: z.object({
-    amountCents: z.number().int().min(50),
-    currency: z.string().min(3).max(8).optional(),
-    interval: intervalEnum,
-    intervalCount: z.number().int().min(1).max(365),
-    label: z.string().max(80).optional(),
-    trialPeriodDays: z.number().int().min(0).max(365).optional(),
-  }),
+  // One or more billing intervals (variants); the first is the default price.
+  prices: z.array(priceSchema).min(1).max(12),
   maxSubscribers: z.number().int().min(1).nullable().optional(),
+  restock: restockSchema.nullable().optional(),
 });
 
 export const subscriptionPlansRouter = router({
@@ -43,14 +73,38 @@ export const subscriptionPlansRouter = router({
   /** All plans (incl. archived) with their prices, for the admin table. */
   list: ownerProcedure.query(async () => listAllPlans()),
 
-  /** Create a plan → provisions a Stripe Product + recurring Price, persists them. */
+  /** Create a plan → provisions a Stripe Product + N recurring Prices, persists them. */
   create: ownerProcedure.input(newPlanSchema).mutation(async ({ input }) => {
     const tag = "[tRPC][subscriptionPlans.create]";
-    console.log(`${tag} [INPUT] name="${input.name}" amount=${input.price.amountCents} ${input.price.interval}x${input.price.intervalCount}`);
+    console.log(`${tag} [INPUT] name="${input.name}" intervals=${input.prices.length} restock=${input.restock?.autoRestock ?? false}`);
     const result = await provisionPlan(input);
-    console.log(`${tag} [OUTPUT] slug=${result.slug} product=${result.stripeProductId} price=${result.stripePriceId}`);
+    console.log(`${tag} [OUTPUT] slug=${result.slug} product=${result.stripeProductId} default=${result.stripePriceId}`);
     return result;
   }),
+
+  /** Add one interval (billing variant) to an existing plan. */
+  addInterval: ownerProcedure
+    .input(z.object({ planId: z.number().int().positive(), price: priceSchema }))
+    .mutation(async ({ input }) => {
+      const r = await addPriceToPlan(input.planId, input.price);
+      return { ok: true, priceId: r.priceId };
+    }),
+
+  /** Remove (deactivate) one interval; refuses to remove a plan's last one. */
+  removeInterval: ownerProcedure
+    .input(z.object({ priceId: z.number().int().positive() }))
+    .mutation(async ({ input }) => {
+      await removePriceFromPlan(input.priceId);
+      return { ok: true };
+    }),
+
+  /** Update a plan's auto-restock / limited-quantity FOMO configuration. */
+  updateRestock: ownerProcedure
+    .input(z.object({ planId: z.number().int().positive(), restock: restockSchema }))
+    .mutation(async ({ input }) => {
+      await updateRestockConfig(input.planId, input.restock);
+      return { ok: true };
+    }),
 
   /** Edit plan metadata (name/description/maxSubscribers). Price is immutable. */
   updateMeta: ownerProcedure
