@@ -1,3 +1,4 @@
+import { ArrowRight } from "lucide-react";
 import { EdgeIndicator } from "./EdgeIndicator";
 import type { MarketInsight } from "@/lib/gameInsight";
 import type { ProjectionTeam } from "./types";
@@ -37,9 +38,17 @@ export function spellOutPick(label: string, teams: ProjectionTeam[]): string {
 export function ProjectionSummary({
   insight,
   teams = [],
+  onNextEdge,
+  nextEdgeLabel,
+  nextEdgeTabIndex = 0,
+  nextEdgeButtonRef,
 }: {
   insight: MarketInsight | null;
   teams?: ProjectionTeam[];
+  onNextEdge?: () => void;
+  nextEdgeLabel?: string;
+  nextEdgeTabIndex?: number;
+  nextEdgeButtonRef?: (element: HTMLButtonElement | null) => void;
 }) {
   // Readout above the EdgeIndicator (owner directive 2026-07-18): the
   // MODEL EDGE / BOOK / MODEL facts lead, the mint edge cell sits beneath.
@@ -80,7 +89,21 @@ export function ProjectionSummary({
           </div>
         )}
       </dl>
-      <EdgeIndicator insight={insight} className="summary__edge" />
+      <div className="summary__signal">
+        <EdgeIndicator insight={insight} className="summary__edge" />
+        {onNextEdge && nextEdgeLabel && (
+          <button
+            type="button"
+            className="summary__next"
+            aria-label={nextEdgeLabel}
+            tabIndex={nextEdgeTabIndex}
+            ref={nextEdgeButtonRef}
+            onClick={onNextEdge}
+          >
+            <ArrowRight size={16} strokeWidth={1.8} aria-hidden="true" />
+          </button>
+        )}
+      </div>
     </div>
   );
 }
