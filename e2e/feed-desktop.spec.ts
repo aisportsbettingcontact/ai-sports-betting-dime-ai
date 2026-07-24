@@ -344,10 +344,20 @@ const LINEUPS_BY_GAME_ID = {
   }),
 };
 
-const BLANK_PNG = Buffer.from(
-  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
-  "base64",
-);
+const MLB_LOGO_VIEWBOX: Record<string, readonly [number, number, string]> = {
+  "119": [115, 150, "#005A9C"], // Dodgers
+  "147": [144, 150, "#132448"], // Yankees (dark-contrast regression)
+  "133": [181, 150, "#003831"], // Athletics
+  "140": [132, 150, "#C0111F"], // Rangers
+  "137": [108, 150, "#FD5A1E"], // Giants
+  "136": [94, 150, "#0C2C56"], // Mariners
+};
+
+function deterministicTeamLogo(url: string): string {
+  const id = /\/(\d+)\.svg(?:\?|$)/.exec(url)?.[1] ?? "";
+  const [width, height, fill] = MLB_LOGO_VIEWBOX[id] ?? [150, 150, "#45E0A8"];
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><path fill="${fill}" d="M0 0h${width}v${height}H0z"/></svg>`;
+}
 
 // MLB's removed-background player assets are 180×270 (2:3). Keep that exact
 // intrinsic geometry in-browser so portrait crop tests cannot pass against a
@@ -402,7 +412,11 @@ async function stubApi(page: Page) {
   // matching the established pattern in every sibling spec.
   await page.route("**/api/dime/**", (route) => route.fulfill({ status: 500, body: "stubbed offline (e2e)" }));
   await page.route("https://www.mlbstatic.com/**", (route) =>
-    route.fulfill({ status: 200, contentType: "image/png", body: BLANK_PNG }),
+    route.fulfill({
+      status: 200,
+      contentType: "image/svg+xml",
+      body: deterministicTeamLogo(route.request().url()),
+    }),
   );
   await page.route("https://img.mlbstatic.com/**", (route) =>
     route.fulfill({ status: 200, contentType: "image/svg+xml", body: MLB_PORTRAIT_SVG }),
@@ -412,18 +426,21 @@ async function stubApi(page: Page) {
   );
 }
 
-/** Deterministic dark theme (mode defaults to "system" with nothing in
- *  localStorage — pin prefers-color-scheme so every geometry/color assertion
- *  below is reproducible regardless of the host's OS theme). */
+/** Deterministic explicit mode so System's distinct grey palette does not
+ *  silently inherit a host OS setting during Dark/Light geometry assertions. */
 async function gotoShellFeed(
   page: Page,
   width: number,
   height = 1400,
   colorScheme: "dark" | "light" = "dark",
+  themeMode: "system" | "light" | "dark" = colorScheme,
 ) {
   await stubApi(page);
   await page.emulateMedia({ colorScheme });
   await page.setViewportSize({ width, height });
+  await page.addInitScript((mode) => {
+    localStorage.setItem("dime-theme", mode);
+  }, themeMode);
   await page.goto(`${baseURL}${SHELL_FEED_PATH}`);
   await page.waitForSelector(".projection-card", { timeout: 20_000 });
   await page.waitForSelector(".pregame-pitchers", { timeout: 20_000 });
@@ -482,10 +499,109 @@ for (const width of DESKTOP_WIDTHS) {
     await expect(passCard).toBeVisible();
     await expect(scheduledCard).toBeVisible();
 
+    if (width === 1920) {
+      const rootAppearance = await page.locator(".dmf-root").evaluate((el) => ({
+        background: getComputedStyle(el).backgroundColor,
+        mode: el.getAttribute("data-dmf-mode"),
+      }));
+      expect(rootAppearance.mode).toBe("dark");
+      expect(rootAppearance.background, "explicit Dark keeps the pure-black ground").toBe(
+        "rgb(0, 0, 0)",
+      );
+
+      const logoGeometry = await liveCard.locator(".team-logo-box").evaluateAll((boxes) =>
+        boxes.map((box) => {
+          const image = box.querySelector("img");
+          if (!image) throw new Error("team logo image missing");
+          const wrapperRect = box.getBoundingClientRect();
+          const imageRect = image.getBoundingClientRect();
+          return {
+            wrapperWidth: wrapperRect.width,
+            wrapperHeight: wrapperRect.height,
+            imageWidth: imageRect.width,
+            imageHeight: imageRect.height,
+            centerY: wrapperRect.y + wrapperRect.height / 2,
+            filter: getComputedStyle(image).filter,
+          };
+        }),
+      );
+      expect(logoGeometry).toHaveLength(2);
+      expect(Math.abs(logoGeometry[0].imageHeight - logoGeometry[1].imageHeight)).toBeLessThanOrEqual(0.5);
+      expect(logoGeometry[0].imageWidth).not.toBeCloseTo(logoGeometry[1].imageWidth, 0);
+      for (const logo of logoGeometry) {
+        expect(Math.abs(logo.wrapperWidth - logo.imageWidth), "wrapper hugs visible logo width").toBeLessThanOrEqual(0.5);
+        expect(Math.abs(logo.wrapperHeight - logo.imageHeight), "wrapper hugs visible logo height").toBeLessThanOrEqual(0.5);
+      }
+      expect(Math.abs(logoGeometry[0].centerY - logoGeometry[1].centerY), "team marks share one centerline").toBeLessThanOrEqual(0.5);
+      expect(logoGeometry[1].filter, "Yankees receives an alpha outline on Dark").not.toBe("none");
+
+      const passArrowColor = await passCard
+        .locator(".summary-carousel--no-edge .summary__next")
+        .first()
+        .evaluate((el) => getComputedStyle(el).color);
+      expect(passArrowColor, "No-edge pagination is neutral, never mint").toBe(
+        "rgb(255, 255, 255)",
+      );
+
+      for (const [cardLabel, card] of [
+        ["LIVE", liveCard],
+        ["PASS", passCard],
+        ["SCHEDULED", scheduledCard],
+      ] as const) {
+        const geometry = await card.locator(".summary").first().evaluate((summary) => {
+          const pick = summary.querySelector<HTMLElement>(".summary__pick");
+          const edge = summary.querySelector<HTMLElement>(".summary__item--edge");
+          const book = summary.querySelector<HTMLElement>(".summary__item--book");
+          const model = summary.querySelector<HTMLElement>(".summary__item--model");
+          const signal = summary.querySelector<HTMLElement>(".summary__signal");
+          if (!pick || !edge || !book || !model || !signal) {
+            throw new Error("summary geometry node missing");
+          }
+          const pickStyle = getComputedStyle(pick);
+          const pickRange = document.createRange();
+          pickRange.selectNodeContents(pick);
+          return {
+            display: getComputedStyle(summary).display,
+            whiteSpace: pickStyle.whiteSpace,
+            pickHeight: pick.getBoundingClientRect().height,
+            lineCount: Array.from(pickRange.getClientRects()).filter(
+              (rect) => rect.width > 0 && rect.height > 0,
+            ).length,
+            edge: edge.getBoundingClientRect().toJSON(),
+            book: book.getBoundingClientRect().toJSON(),
+            model: model.getBoundingClientRect().toJSON(),
+            signal: signal.getBoundingClientRect().toJSON(),
+          };
+        });
+        expect(geometry.whiteSpace).toBe("nowrap");
+        expect(geometry.lineCount, "MODEL EDGE stays on one line").toBe(1);
+        const overlaps = (
+          a: { left: number; right: number; top: number; bottom: number },
+          b: { left: number; right: number; top: number; bottom: number },
+        ) =>
+          a.left < b.right &&
+          a.right > b.left &&
+          a.top < b.bottom &&
+          a.bottom > b.top;
+        expect(overlaps(geometry.edge, geometry.book), `${cardLabel} MODEL EDGE does not overlap BOOK`).toBe(false);
+        expect(overlaps(geometry.book, geometry.model), `${cardLabel} BOOK does not overlap MODEL`).toBe(false);
+        expect(
+          overlaps(geometry.model, geometry.signal),
+          `${cardLabel} MODEL does not overlap the signal: ${JSON.stringify(geometry)}`,
+        ).toBe(false);
+        if (geometry.display === "grid") {
+          expect(geometry.edge.right).toBeLessThanOrEqual(geometry.book.left);
+          expect(geometry.book.right).toBeLessThanOrEqual(geometry.model.left);
+          expect(geometry.model.right).toBeLessThanOrEqual(geometry.signal.left);
+        }
+      }
+    }
+
     // ── Item 1: scheduled row-mates stretch; live/final cards opt out and
     //    retain the requested compact natural height. ──
     await expect(liveCard.locator(".summary-carousel")).toBeVisible();
-    await expect(passCard.locator(".summary-carousel")).toHaveCount(0);
+    await expect(passCard.locator(".summary-carousel")).toBeVisible();
+    await expect(passCard.locator(".edge-indicator--none")).toHaveCount(3);
     const liveBox = await liveCard.boundingBox();
     const passBox = await passCard.boundingBox();
     const scheduledBox = await scheduledCard.boundingBox();
@@ -496,8 +612,8 @@ for (const width of DESKTOP_WIDTHS) {
     expect(Math.abs(scheduledBox.y - liveBox.y), "desktop columns 1 and 3 share one row").toBeLessThanOrEqual(1);
 
     // The summary reflows by card width, not viewport width. Narrow desktop
-    // cards stack; cards with >400px of container space use the compact
-    // centered inline rhythm requested for MODEL EDGE / BOOK / MODEL / signal.
+    // cards stack; cards with >400px of usable content-box space use the fluid
+    // full-width inline rhythm.
     const liveSummaryStyle = await liveCard.locator(".summary").first().evaluate((el) => {
       const cs = getComputedStyle(el);
       return {
@@ -516,8 +632,8 @@ for (const width of DESKTOP_WIDTHS) {
       expect(liveSummaryStyle.display, "1920px desktop keeps all summary facts in one strip").toBe("grid");
     }
     if (liveSummaryStyle.display === "flex") {
-      const passReadout = await passCard.locator(".summary__readout").boundingBox();
-      const passEdge = await passCard.locator(".summary__edge").boundingBox();
+      const passReadout = await passCard.locator(".summary__readout").first().boundingBox();
+      const passEdge = await passCard.locator(".summary__edge").first().boundingBox();
       if (!passReadout || !passEdge) throw new Error("compact summary bounding boxes missing");
       expect(
         passEdge.y,
@@ -837,15 +953,15 @@ for (const width of DESKTOP_WIDTHS) {
 
     await page.screenshot({ path: `${EVIDENCE_DIR}/shell-${width}.png`, fullPage: true });
 
-    // ── Item 5: aligned summary mini-grid — same fixed tracks everywhere ──
+    // ── Item 5: aligned summary mini-grid — fluid primary, stable fact tracks ──
     // Placed LAST (after items 1,2,3,4,6,7 above, which all independently
     // verify clean): a real pre-existing defect surfaces here at 1024/1280 —
     // see the block comment below — and this ordering keeps that failure
     // from masking the other six items' otherwise-passing verification.
     //
-    // The inline summary now owns a compact fixed 400px rhythm and reflows
-    // at or below 400px, so neither its readout nor the pill/arrow group can create
-    // horizontal shell overflow.
+    // The inline summary now uses the card's full width and reflows
+    // at or below a 400px content lane, so neither its readout nor the
+    // pill/arrow group can create horizontal shell overflow.
     const shellScrollOverflow = await page
       .locator(".dc-shell-external-scroll")
       .evaluate((el) => el.scrollWidth - el.clientWidth);
@@ -856,7 +972,7 @@ for (const width of DESKTOP_WIDTHS) {
       shellScrollOverflow,
       `shell scroll pane horizontal overflow px (summary widths: ` +
         `LIVE .summary width=${liveOffsets.summaryBox.width} PASS=${passOffsets.summaryBox.width} SCHEDULED=${scheduledOffsets.summaryBox.width}, ` +
-        `inline rhythm reflows at 400px)`,
+        `inline rhythm reflows at 400px content)`,
     ).toBeLessThanOrEqual(1);
     expect(liveOffsets.edgeX, "edge chip present on LIVE").not.toBeNull();
     expect(passOffsets.edgeX, "edge chip present on PASS ('No edge')").not.toBeNull();
@@ -1387,7 +1503,39 @@ test("light theme: the next-edge control keeps a black border and mint arrow", a
   });
   expect(colors.border, "light-theme arrow border is black").toBe("rgb(0, 0, 0)");
   expect(colors.color, "light-theme arrow remains Dime mint").toBe("rgb(69, 224, 168)");
+  const yankeesFilter = await liveCard
+    .locator(".team-logo-box--dark-outline .team-logo")
+    .last()
+    .evaluate((el) => getComputedStyle(el).filter);
+  expect(yankeesFilter, "Light keeps the original Yankees artwork without a white outline").toBe("none");
   await assertNoHorizontalOverflow(page, "shell-900-light");
+});
+
+test("System stays neutral grey with dark-contrast ink even when the OS prefers light", async ({ page }) => {
+  await gotoShellFeed(page, 900, 900, "light", "system");
+  const root = page.locator(".dmf-root");
+  await expect(root).toHaveAttribute("data-dmf-mode", "system");
+  const palette = await root.evaluate((el) => {
+    const cs = getComputedStyle(el);
+    return {
+      page: cs.backgroundColor,
+      card: getComputedStyle(el.querySelector(".projection-card")!).backgroundColor,
+      htmlMode: document.documentElement.dataset.themeMode,
+      htmlDark: document.documentElement.classList.contains("dark"),
+      contrastTheme: el.getAttribute("data-dmf-theme"),
+    };
+  });
+  expect(palette.htmlMode).toBe("system");
+  expect(palette.htmlDark, "System uses dark-contrast ink on its grey ground").toBe(true);
+  expect(palette.contrastTheme).toBe("dark");
+  expect(palette.page, "System page is grey, not black").toBe("rgb(18, 18, 18)");
+  expect(palette.card, "System cards use the raised grey surface").toBe("rgb(24, 24, 24)");
+
+  const yankeesFilter = await cardByAriaLabel(page, "Dodgers at Yankees")
+    .locator(".team-logo-box--dark-outline .team-logo")
+    .last()
+    .evaluate((el) => getComputedStyle(el).filter);
+  expect(yankeesFilter, "System keeps the Yankees mark legible").not.toBe("none");
 });
 
 // ─── Standalone /feed at 1440: item-6 rhythm absent (negative contract) ──────

@@ -4,7 +4,11 @@ import { renderToStaticMarkup } from "react-dom/server";
 import fs from "fs";
 import path from "path";
 import { MarketTable } from "./MarketTable";
-import { ProjectionCard } from "./ProjectionCard";
+import { TeamLogoMark } from "./TeamLogoMark";
+import {
+  ProjectionCard,
+  rankedNoEdgeCandidates,
+} from "./ProjectionCard";
 import {
   marketPaginationItems,
   projectionMarketPage,
@@ -39,6 +43,44 @@ function cssBlock(src: string, startMarker: string, endMarker: string): string {
   if (start < 0 || end < 0) throw new Error(`CSS anchors changed: "${startMarker}" / "${endMarker}"`);
   return src.slice(start, end);
 }
+
+describe("TeamLogoMark — whitespace-free optical sizing and dark contrast", () => {
+  const renderLogo = (abbr: string) =>
+    renderToStaticMarkup(
+      createElement(TeamLogoMark, {
+        team: {
+          abbr,
+          name: abbr,
+          logo: `https://www.mlbstatic.com/team-logos/${abbr}.svg`,
+          color: null,
+        },
+      }),
+    );
+
+  it("preserves official non-square aspect metadata instead of forcing a square image", () => {
+    const yankees = renderLogo("NYY");
+    const reds = renderLogo("CIN");
+    expect(yankees).toContain('width="144" height="150"');
+    expect(reds).toContain('width="213" height="150"');
+    expect(cardCss).toMatch(/\.team-logo-box\s*\{[^}]*inline-size:\s*auto;[^}]*block-size:\s*clamp/);
+    expect(cardCss).toMatch(/\.team-logo\s*\{[^}]*inline-size:\s*auto;[^}]*block-size:\s*100%;/);
+    expect(cardCss).toContain(".team-logo-box--mono { aspect-ratio: 1; }");
+  });
+
+  it("outlines only allowlisted dark marks on System/Dark and never Light", () => {
+    expect(renderLogo("NYY")).toContain("team-logo-box--dark-outline");
+    expect(renderLogo("CHC")).not.toContain("team-logo-box--dark-outline");
+    expect(cardCss).toContain(
+      'html[data-theme-mode="system"] .team-logo-box--dark-outline .team-logo',
+    );
+    expect(cardCss).toContain(
+      'html[data-theme-mode="dark"] .team-logo-box--dark-outline .team-logo',
+    );
+    expect(cardCss).not.toContain(
+      'html[data-theme-mode="light"] .team-logo-box--dark-outline .team-logo',
+    );
+  });
+});
 
 /**
  * Directive §3 — single rendering ownership. The event time is owned by the card
@@ -574,13 +616,16 @@ describe("ProjectionCard — PASS-card law (Round 4 Wave 1, item 3)", () => {
     expect(render(mlbFixture())).not.toContain("projection-card--pass"); // Under 7 IS a real edge
   });
 
-  it("uses the SAME structured summary grid as an edge card — no divergent bare <p>", () => {
+  it("uses the SAME structured summary grid as an edge card and keeps the best candidate visible", () => {
     const html = render(passFixture());
     expect(html).toContain("summary__readout");
-    expect(html).toContain("Every market is efficiently priced. No action.");
-    // The message is now a <dd> inside the grid's value row, never a standalone <p>.
+    expect(html).toContain('summary__pick">Athletics ML<');
+    expect(html).toContain("No edge");
+    expect(html).toContain("ROI +4.8%");
+    // A priced PASS uses the standard MODEL EDGE / BOOK / MODEL facts, never
+    // the unavailable-data sentence or a divergent standalone <p>.
+    expect(html).not.toContain("Every market is efficiently priced. No action.");
     expect(html).not.toMatch(/<p class="summary__none/);
-    expect(html).toMatch(/<dd class="summary__none[^"]*">Every market is efficiently priced\. No action\.<\/dd>/);
   });
 
   it("renders zero mint signal anywhere on a genuine PASS card", () => {
@@ -589,6 +634,72 @@ describe("ProjectionCard — PASS-card law (Round 4 Wave 1, item 3)", () => {
     expect(html).not.toContain('"edge-indicator summary__edge"'); // the signal (mint) variant never appears
     expect(html).not.toContain("market-table__model--signal");
     expect(html).not.toContain("market-table__result--edge");
+  });
+
+  it("ranks one candidate per market by expected ROI, retaining negative ROI and the No edge state", () => {
+    const game: ProjectionGame = {
+      ...passFixture(),
+      markets: [
+        {
+          key: "runline",
+          label: "Run Line",
+          sides: [
+            { marketKey: "runline", marketLabel: "Run Line", sideLabel: "Athletics +1.5", bookPrice: -120, bookOppPrice: -120, modelPrice: 125 },
+            { marketKey: "runline", marketLabel: "Run Line", sideLabel: "Rangers -1.5", bookPrice: -120, bookOppPrice: -120, modelPrice: 130 },
+          ],
+        },
+        {
+          key: "total",
+          label: "Total",
+          sides: [
+            { marketKey: "total", marketLabel: "Total", sideLabel: "Over 8.5", bookPrice: -105, bookOppPrice: -105, modelPrice: 105 },
+            { marketKey: "total", marketLabel: "Total", sideLabel: "Under 8.5", bookPrice: -105, bookOppPrice: -105, modelPrice: 120 },
+          ],
+        },
+        {
+          key: "moneyline",
+          label: "Moneyline",
+          sides: [
+            { marketKey: "moneyline", marketLabel: "Moneyline", sideLabel: "Athletics ML", bookPrice: -110, bookOppPrice: -110, modelPrice: 110 },
+            { marketKey: "moneyline", marketLabel: "Moneyline", sideLabel: "Rangers ML", bookPrice: -110, bookOppPrice: -110, modelPrice: 115 },
+          ],
+        },
+      ],
+    };
+    const ranked = rankedNoEdgeCandidates(game);
+    expect(ranked.map((item) => item.marketKey)).toEqual([
+      "total",
+      "moneyline",
+      "runline",
+    ]);
+    expect(ranked.map((item) => item.sideLabel)).toEqual([
+      "Over 8.5",
+      "Athletics ML",
+      "Athletics +1.5",
+    ]);
+    expect(ranked.every((item) => item.roiPct != null && item.roiPct < 0)).toBe(true);
+    expect(ranked.every((item) => item.recommendation === "NO_EDGE")).toBe(true);
+
+    const html = render(game);
+    expect(countOccurrences(html, "summary-carousel__slide")).toBe(3);
+    expect(countOccurrences(html, ">No edge<")).toBe(3);
+    expect(html.indexOf("Over 8.5")).toBeLessThan(html.indexOf("Athletics ML"));
+    expect(html.indexOf("Athletics ML")).toBeLessThan(html.indexOf("Athletics +1.5"));
+    expect(html).toContain("ROI −2.4%");
+    expect(html).toContain("ROI −4.8%");
+    expect(html).toContain("ROI −11.1%");
+    expect(html).toContain("no-edge market projections, ranked by no-vig ROI");
+    expect(html).toContain("View next projection:");
+    expect(html).toContain("summary-carousel--no-edge");
+    expect(cardCss).toMatch(
+      /\.summary-carousel--no-edge \.summary__next\s*\{[^}]*color:\s*var\(--foreground/,
+    );
+  });
+
+  it("keeps the unavailable-data sentence only when no market side can be scored", () => {
+    const html = render(wcFixture());
+    expect(html).toContain("Every market is efficiently priced. No action.");
+    expect(html).toContain('class="summary__item summary__item--message"');
   });
 });
 
@@ -726,50 +837,41 @@ describe("ProjectionCard — aligned summary mini-grid (Round 4 Wave 2, item 5)"
     expect(html).toContain('class="summary__item summary__item--model"');
   });
 
-  it("a PASS card's message item spans the value columns (W1 structure preserved)", () => {
-    const passHtml = render({
-      ...mlbFixture(),
-      id: "oak-tex-pass",
-      markets: [
-        {
-          key: "moneyline",
-          label: "Moneyline",
-          sides: [
-            { marketKey: "moneyline", marketLabel: "Moneyline", sideLabel: "Athletics ML", bookPrice: -110, bookOppPrice: -110, modelPrice: -110 },
-            { marketKey: "moneyline", marketLabel: "Moneyline", sideLabel: "Rangers ML", bookPrice: -110, bookOppPrice: -110, modelPrice: -110 },
-          ],
-        },
-      ],
-    });
+  it("an unavailable-data card's message item spans the value columns", () => {
+    const passHtml = render(wcFixture());
     expect(passHtml).toContain("projection-card--pass");
     expect(passHtml).toContain('class="summary__item summary__item--message"');
     expect(passHtml).not.toContain("summary__item--edge");
     expect(passHtml).not.toContain("summary__item--book");
   });
 
-  it("desktop+tablet (>=768px) CSS gives the readout fixed, non-content-sized column tracks", () => {
+  it("desktop+tablet (>=768px) CSS gives the primary pick the card's unused width", () => {
     const item5 = cssBlock(cardCss, "Round 4 Wave 2 — item 5", "Round 4 Wave 2 — item 1");
     expect(item5).toContain("@media (min-width: 768px)");
     expect(item5).toContain("display: grid");
-    // Every track is fixed — never `auto`/`max-content`,
-    // which would size the column from that card's own content and break alignment.
-    expect(item5).toContain("grid-template-columns: 112px 48px 48px 168px;");
-    expect(item5).not.toMatch(/grid-template-columns:[^;]*\bauto\b/);
+    expect(item5).toContain(
+      "grid-template-columns: minmax(max-content, 1fr) 48px 48px minmax(168px, max-content);",
+    );
+    expect(item5).toContain("justify-content: stretch;");
+    expect(item5).toContain("inline-size: 100%;");
     expect(item5).toContain(".summary__readout { display: contents; }");
     expect(item5).toContain(".summary__item--edge { grid-column: 1; }");
     expect(item5).toContain(".summary__item--book { grid-column: 2; }");
     expect(item5).toContain(".summary__item--model { grid-column: 3; }");
-    expect(item5).toContain(".summary__item--edge .summary__pick { font-size: var(--proj-label); }");
+    expect(item5).toContain("min-inline-size: max-content;");
+    expect(cardCss).toMatch(/\.summary__pick\s*\{[^}]*white-space:\s*nowrap;/);
     expect(item5).toContain(".summary__item--message { grid-column: 1 / span 3; }");
     // The chip (real edge OR the "No edge" quiet variant) always lands in the last track —
     // PASS cards' "No edge" slot keeps the same alignment a real edge chip would have.
-    expect(item5).toContain(".summary__signal { grid-column: 4; justify-self: start; }");
+    expect(item5).toContain(".summary__signal { grid-column: 4; justify-self: end; }");
   });
 
-  it("the readout uses the compact 400px rhythm and reflows before it can overflow", () => {
+  it("the readout uses a fluid full-width rhythm and reflows before it can overflow", () => {
     const item5 = cssBlock(cardCss, "Round 4 Wave 2 — item 5", "Round 4 Wave 2 — item 1");
-    expect(item5).toContain("grid-template-columns: 112px 48px 48px 168px;");
-    expect(item5).toContain("column-gap: 8px;");
+    expect(item5).toContain(
+      "grid-template-columns: minmax(max-content, 1fr) 48px 48px minmax(168px, max-content);",
+    );
+    expect(item5).toContain("column-gap: clamp(8px, 1.6cqi, 16px);");
     expect(item5).toContain("@container projcard (max-width: 400px)");
     expect(item5).toMatch(/\.summary \{[^}]*min-inline-size: 0;/);
   });
@@ -936,8 +1038,8 @@ describe("ProjectionCard — defensive PASS-mint backstop (Round 4 Wave 3 fold-i
           key: "moneyline",
           label: "Moneyline",
           sides: [
-            { marketKey: "moneyline", marketLabel: "Moneyline", sideLabel: "Athletics ML", bookPrice: -110, bookOppPrice: -110, modelPrice: -110 },
-            { marketKey: "moneyline", marketLabel: "Moneyline", sideLabel: "Rangers ML", bookPrice: -110, bookOppPrice: -110, modelPrice: -110 },
+            { marketKey: "moneyline", marketLabel: "Moneyline", sideLabel: "Athletics ML", bookPrice: -110, bookOppPrice: -110, modelPrice: null },
+            { marketKey: "moneyline", marketLabel: "Moneyline", sideLabel: "Rangers ML", bookPrice: -110, bookOppPrice: -110, modelPrice: null },
           ],
         },
       ],
@@ -1004,8 +1106,8 @@ describe("ProjectionCard — .summary__item--message hook (Round 4 Wave 3 fold-i
           key: "moneyline",
           label: "Moneyline",
           sides: [
-            { marketKey: "moneyline", marketLabel: "Moneyline", sideLabel: "Athletics ML", bookPrice: -110, bookOppPrice: -110, modelPrice: -110 },
-            { marketKey: "moneyline", marketLabel: "Moneyline", sideLabel: "Rangers ML", bookPrice: -110, bookOppPrice: -110, modelPrice: -110 },
+            { marketKey: "moneyline", marketLabel: "Moneyline", sideLabel: "Athletics ML", bookPrice: -110, bookOppPrice: -110, modelPrice: null },
+            { marketKey: "moneyline", marketLabel: "Moneyline", sideLabel: "Rangers ML", bookPrice: -110, bookOppPrice: -110, modelPrice: null },
           ],
         },
       ],

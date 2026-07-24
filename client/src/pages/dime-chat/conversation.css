@@ -1405,3 +1405,18 @@ button.dc-sidebar-row {
   .dc-sm-dialog { max-height: min(88vh, 640px); }
 }
 .theme-light .dc-recent-star { color: #000000; }
+
+/* System is the neutral-grey appearance; explicit Dark retains the frozen
+   pure-black ground. These mode-specific rules intentionally touch the app
+   chrome/surfaces only and leave the frozen interaction anatomy unchanged. */
+.theme-mode-system.dc-page,
+.theme-mode-system .dc-app,
+.theme-mode-system .dc-frame,
+.theme-mode-system .dc-shell-external-layer {
+  background: #121212;
+}
+.theme-mode-system .dc-sidebar,
+.theme-mode-system .dc-mobile-bar {
+  background: #181818;
+  border-color: #3a3a3a;
+}

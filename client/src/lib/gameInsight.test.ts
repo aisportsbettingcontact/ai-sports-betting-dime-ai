@@ -72,6 +72,7 @@ describe("scoreMarketSide — reproduces the directive's worked example", () => 
     expect(over.modelProbPct).toBeCloseTo(52.15, 1);
     expect(over.bookNoVigPct).toBeCloseTo(48.36, 1); // sportsbook margin removed
     expect(over.noVigEdgePP).toBeCloseTo(3.79, 1);
+    expect(over.roiPct).toBeCloseTo(7.84, 1); // canonical no-vig display ROI
   });
   it("returns null for unavailable data (missing price), never a guess", () => {
     expect(scoreMarketSide({ ...TOTAL[0], bookPrice: null })).toBeNull();

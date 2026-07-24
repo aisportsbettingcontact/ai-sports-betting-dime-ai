@@ -79,6 +79,14 @@ html.dark {
   --dime-coin-keyline: none; /* mint dot sits directly on dark surfaces */
 }
 
+html[data-theme-mode="system"] {
+  --dime-bg: #121212;
+  --dime-surface-sidebar: #181818;
+  --dime-surface-card: #181818;
+  --dime-surface-raised: #202020;
+  --dime-surface-bubble: #1c1c1c;
+}
+
 /* MASTER.md micro-label: IBM Plex Mono, 10px, uppercase, 0.08em, muted. */
 .dime-mono-label {
   font-family: var(--dime-font-mono);
