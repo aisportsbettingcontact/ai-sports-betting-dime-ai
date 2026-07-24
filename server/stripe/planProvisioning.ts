@@ -24,6 +24,7 @@ import {
   getPlanBySlug,
   invalidatePlanCache,
   computeNextQuantity,
+  LIFETIME_ACCESS_UNTIL_MS,
   type BillingInterval,
 } from "./planStore";
 
@@ -31,9 +32,6 @@ const TAG = "[Stripe][Provisioning]";
 const API_VERSION = "2026-04-22.dahlia";
 /** Stripe USD minimum chargeable amount (cents). */
 const MIN_AMOUNT_CENTS = 50;
-/** one_time memberships grant access until 2100 — effectively lifetime (a single
- *  payment, no renewals). computeExpiryMsForPrice maps one_time → accessUntil. */
-const ONE_TIME_ACCESS_UNTIL_MS = 4102444800000; // 2100-01-01T00:00:00Z
 
 let _client: Stripe | null = null;
 let _clientKeyTail: string | null = null;
@@ -287,8 +285,12 @@ async function createAndPersistPrice(
 ): Promise<{ priceId: string; rowId: number }> {
   validateAmount(input.amountCents);
   const currency = (input.currency ?? "usd").toLowerCase();
-  const recurring = opts.planType !== "one_time";
-  const interval: BillingInterval | null = recurring ? input.interval ?? "month" : null;
+  // A price is recurring (has a Stripe `recurring` block) ONLY when the plan is a
+  // subscription AND this specific interval carries a cadence. A recurring plan
+  // may include a "Lifetime" interval — the client omits `interval` to signal it —
+  // which is charged as a single one-time payment (mode:"payment" at checkout).
+  const recurring = opts.planType !== "one_time" && input.interval != null;
+  const interval: BillingInterval | null = recurring ? (input.interval as BillingInterval) : null;
   const intervalCount: number | null = recurring ? clampCount(interval as BillingInterval, input.intervalCount ?? 1) : null;
   // sortOrder keeps idempotency keys distinct even for same-amount one-time prices.
   const idemTag = `${slug}-${input.amountCents}-${recurring ? `${interval}${intervalCount}` : "once"}-${opts.sortOrder}`;
@@ -414,7 +416,7 @@ export async function provisionPlan(
         planType: input.planType ?? "recurring",
         stripeProductId: product.id,
         active: true,
-        accessUntil: (input.planType ?? "recurring") === "one_time" ? ONE_TIME_ACCESS_UNTIL_MS : null,
+        accessUntil: (input.planType ?? "recurring") === "one_time" ? LIFETIME_ACCESS_UNTIL_MS : null,
         livemode: product.livemode,
         maxSubscribers: input.maxSubscribers ?? null,
         autoRestock: restock?.autoRestock ?? false,
@@ -672,4 +674,115 @@ export async function updatePlanMeta(
   );
   invalidatePlanCache();
   console.log(`${TAG} updated plan meta ${planId}`);
+}
+
+/**
+ * Duplicate a plan: re-provision a fresh Stripe Product + Prices from an existing
+ * plan's active intervals and persist a brand-new plan (its own new slug/planID and
+ * its own new price IDs) so the copy is fully independent of the original. Promo
+ * discounts are recreated as fresh coupons; a shareable promo CODE is intentionally
+ * dropped on the copy because a Stripe promotion-code string cannot be reused while
+ * the original still holds it.
+ */
+export async function duplicatePlan(
+  planId: number,
+): Promise<{ planId: number; slug: string; stripeProductId: string; stripePriceId: string }> {
+  const db = await getDb();
+  if (!db) throw new Error("database unavailable");
+  const planRows = (await withCircuitBreaker(async () =>
+    db.select().from(subscriptionPlans).where(eq(subscriptionPlans.id, planId)).limit(1),
+  )) as Array<{
+    name: string;
+    description: string | null;
+    planType: "recurring" | "one_time" | "fixed_date";
+    maxSubscribers: number | null;
+    autoRestock: boolean;
+    availableQuantity: number | null;
+    restockThreshold: number | null;
+    restockAmount: number | null;
+  }>;
+  const plan = planRows[0];
+  if (!plan) throw new Error(`plan ${planId} not found`);
+
+  const priceRows = (await withCircuitBreaker(async () =>
+    db.select().from(planPrices).where(eq(planPrices.planId, planId)).limit(1000),
+  )) as Array<{
+    amountCents: number;
+    currency: string;
+    interval: BillingInterval | null;
+    intervalCount: number | null;
+    label: string | null;
+    trialPeriodDays: number | null;
+    promoType: "percent" | "amount" | null;
+    promoValue: number | null;
+    hidden: boolean;
+    active: boolean;
+    sortOrder: number;
+  }>;
+  const active = priceRows.filter((r) => r.active).sort((a, b) => a.sortOrder - b.sortOrder);
+  if (active.length === 0) throw new Error(`plan ${planId} has no active intervals to duplicate`);
+
+  const prices: NewPriceInput[] = active.map((r) => ({
+    amountCents: r.amountCents,
+    currency: r.currency,
+    interval: r.interval ?? undefined,
+    intervalCount: r.intervalCount ?? undefined,
+    label: r.label ?? undefined,
+    trialPeriodDays: r.trialPeriodDays ?? undefined,
+    promo:
+      r.promoType && r.promoValue != null ? { type: r.promoType, value: r.promoValue } : null,
+    hidden: r.hidden,
+  }));
+
+  const restock: RestockInput | null =
+    plan.autoRestock || plan.availableQuantity != null
+      ? {
+          autoRestock: plan.autoRestock,
+          availableQuantity: plan.availableQuantity,
+          restockThreshold: plan.restockThreshold,
+          restockAmount: plan.restockAmount,
+        }
+      : null;
+
+  const result = await provisionPlan({
+    name: `${plan.name} (Copy)`,
+    description: plan.description ?? undefined,
+    // fixed_date isn't created via this admin flow; treat any non-one_time as recurring.
+    planType: plan.planType === "one_time" ? "one_time" : "recurring",
+    prices,
+    maxSubscribers: plan.maxSubscribers,
+    restock,
+  });
+  console.log(`${TAG} duplicated plan ${planId} → ${result.slug} (planId=${result.planId})`);
+  return result;
+}
+
+/**
+ * Permanently delete a plan: remove its plan_prices rows and its subscription_plans
+ * row, and deactivate the Stripe Product (Stripe Products that have Prices cannot be
+ * hard-deleted, so the product is archived). Unlike archivePlan (reversible), this
+ * erases the rows entirely — the plan disappears from the admin table.
+ */
+export async function deletePlan(planId: number): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("database unavailable");
+  const rows = (await withCircuitBreaker(async () =>
+    db.select().from(subscriptionPlans).where(eq(subscriptionPlans.id, planId)).limit(1),
+  )) as Array<{ stripeProductId: string | null }>;
+  const row = rows[0];
+  if (!row) throw new Error(`plan ${planId} not found`);
+
+  if (row.stripeProductId) {
+    try {
+      await getProvisioningStripe().products.update(row.stripeProductId, { active: false });
+    } catch (err) {
+      console.warn(`${TAG} delete: Stripe product deactivate failed — ${(err as Error).message}`);
+    }
+  }
+  await withCircuitBreaker(async () => db.delete(planPrices).where(eq(planPrices.planId, planId)));
+  await withCircuitBreaker(async () =>
+    db.delete(subscriptionPlans).where(eq(subscriptionPlans.id, planId)),
+  );
+  invalidatePlanCache();
+  console.log(`${TAG} deleted plan ${planId} (rows removed, Stripe product archived)`);
 }
