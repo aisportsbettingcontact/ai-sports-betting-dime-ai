@@ -296,7 +296,7 @@ function lineupRow(overrides: Record<string, unknown>) {
 const LINEUPS_BY_GAME_ID = {
   401: lineupRow({
     gameId: 401,
-    awayPitcherName: "JP Sears",
+    awayPitcherName: "Simeon Woods Richardson",
     awayPitcherHand: "L",
     awayPitcherEra: "7-7 · 4.18 ERA",
     awayPitcherRotowireId: 14201,
@@ -487,6 +487,282 @@ async function summaryOffsets(card: Locator) {
     viewportMetrics,
     edgeX: edgeBox ? edgeBox.x - summaryBox.x : null,
   };
+}
+
+async function assertSingleLineFits(text: Locator, label: string) {
+  await expect(text, `${label}: text is visible`).toBeVisible();
+  const geometry = await text.evaluate((element) => {
+    const range = document.createRange();
+    range.selectNodeContents(element);
+    const lineTops = Array.from(range.getClientRects())
+      .filter((rect) => rect.width > 0 && rect.height > 0)
+      .map((rect) => Math.round(rect.top * 10) / 10);
+    return {
+      clientWidth: element.clientWidth,
+      scrollWidth: element.scrollWidth,
+      lineCount: new Set(lineTops).size,
+      whiteSpace: getComputedStyle(element).whiteSpace,
+    };
+  });
+  expect(geometry.whiteSpace, `${label}: explicit one-line contract`).toBe("nowrap");
+  expect(geometry.lineCount, `${label}: rendered text line count`).toBe(1);
+  expect(
+    geometry.scrollWidth - geometry.clientWidth,
+    `${label}: complete text fits without clipping`,
+  ).toBeLessThanOrEqual(1);
+}
+
+async function assertCompactPregameContract(
+  card: Locator,
+  label: string,
+  requiresSingleLine = true,
+) {
+  const names = card.locator(".pregame-pitcher__name");
+  await expect(names, `${label}: both probable pitcher names render`).toHaveCount(2);
+  for (let index = 0; index < 2; index += 1) {
+    const name = names.nth(index);
+    if (requiresSingleLine) {
+      await assertSingleLineFits(name, `${label}: pitcher ${index + 1} name`);
+    } else {
+      await expect(name, `${label}: pitcher ${index + 1} name is visible`).toBeVisible();
+      const containment = await name.evaluate((element) => ({
+        clientWidth: element.clientWidth,
+        scrollWidth: element.scrollWidth,
+        whiteSpace: getComputedStyle(element).whiteSpace,
+      }));
+      expect(
+        containment.scrollWidth - containment.clientWidth,
+        `${label}: pitcher ${index + 1} wraps without horizontal clipping`,
+      ).toBeLessThanOrEqual(1);
+      expect(
+        containment.whiteSpace,
+        `${label}: desktop fallback remains wrappable`,
+      ).not.toBe("nowrap");
+    }
+  }
+
+  const geometry = await card.locator(".pregame-pitchers").evaluate((panel) => {
+    const button = panel.querySelector<HTMLElement>(".pregame-pitchers__lineups");
+    const pitcherNames = Array.from(
+      panel.querySelectorAll<HTMLElement>(".pregame-pitcher__name"),
+    );
+    if (!button || pitcherNames.length !== 2) {
+      throw new Error("compact pregame contract nodes missing");
+    }
+    const box = (element: HTMLElement) => {
+      const rect = element.getBoundingClientRect();
+      return {
+        left: rect.left,
+        right: rect.right,
+        top: rect.top,
+        bottom: rect.bottom,
+        width: rect.width,
+        height: rect.height,
+      };
+    };
+    return {
+      panel: box(panel),
+      button: box(button),
+      names: pitcherNames.map(box),
+      tracks: pitcherNames.map((name) => box(name.closest<HTMLElement>(".pregame-pitcher")!)),
+    };
+  });
+  expect(
+    Math.abs(
+      (geometry.button.left + geometry.button.right) / 2 -
+        (geometry.panel.left + geometry.panel.right) / 2,
+    ),
+    `${label}: LINEUPS remains precisely centered`,
+  ).toBeLessThanOrEqual(1);
+  expect(geometry.button.width, `${label}: LINEUPS target width`).toBeGreaterThanOrEqual(44);
+  expect(geometry.button.height, `${label}: LINEUPS target height`).toBeGreaterThanOrEqual(44);
+  expect(
+    geometry.names[0].right,
+    `${label}: pitcher names remain in separate equal tracks`,
+  ).toBeLessThanOrEqual(geometry.names[1].left);
+  for (const [index, name] of geometry.names.entries()) {
+    const track = geometry.tracks[index];
+    expect(name.left, `${label}: pitcher ${index + 1} name starts inside its track`).toBeGreaterThanOrEqual(
+      track.left - 1,
+    );
+    expect(name.right, `${label}: pitcher ${index + 1} name ends inside its track`).toBeLessThanOrEqual(
+      track.right + 1,
+    );
+  }
+  const overlaps = (
+    a: { left: number; right: number; top: number; bottom: number },
+    b: { left: number; right: number; top: number; bottom: number },
+  ) =>
+    a.left < b.right &&
+    a.right > b.left &&
+    a.top < b.bottom &&
+    a.bottom > b.top;
+  for (const [index, name] of geometry.names.entries()) {
+    expect(
+      overlaps(name, geometry.button),
+      `${label}: pitcher ${index + 1} name never overlaps LINEUPS`,
+    ).toBe(false);
+  }
+}
+
+async function assertCompactSummaryContract(
+  card: Locator,
+  label: string,
+  expectsArrow: boolean,
+) {
+  const summary = card.locator(".summary").first();
+  await expect(summary.locator(".summary__edge"), `${label}: edge/ROI pill is visible`).toBeVisible();
+  const activeArrow = summary.locator('.summary__next[tabindex="0"]');
+  if (expectsArrow) {
+    await expect(activeArrow, `${label}: pagination arrow is visible`).toBeVisible();
+  } else {
+    await expect(activeArrow, `${label}: one-edge summary has no pagination arrow`).toHaveCount(0);
+  }
+  const geometry = await summary.evaluate((summaryElement) => {
+    const query = (selector: string) => {
+      const element = summaryElement.querySelector<HTMLElement>(selector);
+      if (!element) throw new Error(`compact summary node missing: ${selector}`);
+      return element;
+    };
+    const viewport = query(".summary__viewport");
+    const group = query(".summary__group");
+    const parts = [
+      query(".summary__item--edge"),
+      query(".summary__item--book"),
+      query(".summary__item--model"),
+      query(".summary__signal"),
+    ];
+    const pill = query(".summary__edge");
+    const arrow = summaryElement.querySelector<HTMLElement>('.summary__next[tabindex="0"]');
+    const box = (element: HTMLElement) => {
+      const rect = element.getBoundingClientRect();
+      return {
+        left: rect.left,
+        right: rect.right,
+        top: rect.top,
+        bottom: rect.bottom,
+        width: rect.width,
+        height: rect.height,
+      };
+    };
+    const partBoxes = parts.map(box);
+    const centers = partBoxes.map((part) => (part.top + part.bottom) / 2);
+    return {
+      viewport: box(viewport),
+      group: box(group),
+      parts: partBoxes,
+      pill: box(pill),
+      arrow: arrow ? box(arrow) : null,
+      centerSpread: Math.max(...centers) - Math.min(...centers),
+      heightSpread:
+        Math.max(...partBoxes.map((part) => part.height)) -
+        Math.min(...partBoxes.map((part) => part.height)),
+      gaps: partBoxes.slice(1).map((part, index) => part.left - partBoxes[index].right),
+      labelFontSizes: parts
+        .slice(0, 3)
+        .map((part) => getComputedStyle(part.querySelector<HTMLElement>("dt")!).fontSize),
+      clippedParts: parts.filter((part) => part.scrollWidth > part.clientWidth + 1).length,
+      viewportClientWidth: viewport.clientWidth,
+      viewportScrollWidth: viewport.scrollWidth,
+      groupWhiteSpace: getComputedStyle(group).whiteSpace,
+    };
+  });
+
+  expect(geometry.groupWhiteSpace, `${label}: summary is one intrinsic row`).toBe("nowrap");
+  expect(geometry.centerSpread, `${label}: every section shares one centerline`).toBeLessThanOrEqual(1);
+  expect(geometry.heightSpread, `${label}: every section uses the same 44px lane`).toBeLessThanOrEqual(1);
+  expect(geometry.clippedParts, `${label}: no summary section clamps its contents`).toBe(0);
+  expect(new Set(geometry.labelFontSizes).size, `${label}: fact labels scale uniformly`).toBe(1);
+  for (const [index, gap] of geometry.gaps.entries()) {
+    expect(gap, `${label}: section gap ${index + 1} is non-overlapping`).toBeGreaterThanOrEqual(3);
+  }
+  if (geometry.group.width <= geometry.viewport.width + 1) {
+    expect(
+      geometry.viewportScrollWidth - geometry.viewportClientWidth,
+      `${label}: fitting compact summary is initially visible`,
+    ).toBeLessThanOrEqual(1);
+    expect(geometry.group.left, `${label}: group starts inside viewport`).toBeGreaterThanOrEqual(
+      geometry.viewport.left - 1,
+    );
+    expect(geometry.group.right, `${label}: group ends inside viewport`).toBeLessThanOrEqual(
+      geometry.viewport.right + 1,
+    );
+    expect(
+      Math.abs(
+        (geometry.group.left + geometry.group.right) / 2 -
+          (geometry.viewport.left + geometry.viewport.right) / 2,
+      ),
+      `${label}: complete facts + signal group is centered`,
+    ).toBeLessThanOrEqual(1);
+  } else {
+    expect(
+      geometry.viewportScrollWidth,
+      `${label}: exceptional long content stays reachable in the local scrollport`,
+    ).toBeGreaterThanOrEqual(Math.ceil(geometry.group.width) - 1);
+  }
+  if (expectsArrow) {
+    expect(geometry.arrow, `${label}: active pagination arrow exists`).not.toBeNull();
+    expect(geometry.arrow!.width, `${label}: arrow target width`).toBeGreaterThanOrEqual(44);
+    expect(geometry.arrow!.height, `${label}: arrow target height`).toBeGreaterThanOrEqual(44);
+    expect(geometry.arrow!.left, `${label}: arrow starts inside viewport`).toBeGreaterThanOrEqual(
+      geometry.viewport.left - 1,
+    );
+    expect(geometry.arrow!.right, `${label}: arrow ends inside viewport`).toBeLessThanOrEqual(
+      geometry.viewport.right + 1,
+    );
+  } else {
+    expect(geometry.arrow, `${label}: one-edge summary has no pagination arrow`).toBeNull();
+  }
+  return geometry;
+}
+
+function assertUniformCompactSummaryTracks(
+  geometries: Array<Awaited<ReturnType<typeof assertCompactSummaryContract>>>,
+  label: string,
+) {
+  const relativeTracks = geometries.map((geometry) =>
+    geometry.parts.map((part) => ({
+      left: part.left - geometry.group.left,
+      width: part.width,
+    })),
+  );
+  const baseline = relativeTracks[0];
+  for (const [cardIndex, tracks] of relativeTracks.slice(1).entries()) {
+    for (const [trackIndex, track] of tracks.entries()) {
+      expect(
+        Math.abs(track.left - baseline[trackIndex].left),
+        `${label}: card ${cardIndex + 2} track ${trackIndex + 1} starts uniformly`,
+      ).toBeLessThanOrEqual(1);
+      expect(
+        Math.abs(track.width - baseline[trackIndex].width),
+        `${label}: card ${cardIndex + 2} track ${trackIndex + 1} scales uniformly`,
+      ).toBeLessThanOrEqual(1);
+    }
+  }
+}
+
+async function assertCompactTriggerContract(card: Locator, label: string) {
+  const trigger = card.locator(".projection-card__markets-toggle");
+  const triggerText = trigger.locator(":scope > span");
+  await assertSingleLineFits(triggerText, `${label}: projection trigger`);
+  const geometry = await trigger.evaluate((button) => {
+    const text = button.querySelector<HTMLElement>(":scope > span");
+    const icon = button.querySelector<HTMLElement>(".projection-card__markets-icon");
+    if (!text || !icon) throw new Error("projection trigger contract nodes missing");
+    const buttonRect = button.getBoundingClientRect();
+    const textRect = text.getBoundingClientRect();
+    const iconRect = icon.getBoundingClientRect();
+    return {
+      button: { left: buttonRect.left, right: buttonRect.right },
+      text: { left: textRect.left, right: textRect.right },
+      icon: { left: iconRect.left, right: iconRect.right },
+    };
+  });
+  expect(geometry.text.left).toBeGreaterThanOrEqual(geometry.button.left - 1);
+  expect(geometry.text.right, `${label}: trigger label does not overlap icon`).toBeLessThanOrEqual(
+    geometry.icon.left,
+  );
+  expect(geometry.icon.right).toBeLessThanOrEqual(geometry.button.right + 1);
 }
 
 // ─ Shell feed: desktop (1920/1440/1280/1024) + tablet (900) + mobile (375) ──
@@ -742,6 +1018,18 @@ for (const width of DESKTOP_WIDTHS) {
     expect(lineupsStyle.color, "LINEUPS uses black text").toBe("rgb(0, 0, 0)");
     expect(Number(lineupsStyle.fontWeight), "LINEUPS label is bold").toBeGreaterThanOrEqual(700);
     expect(parseFloat(lineupsStyle.minHeight), "LINEUPS target is at least 44px").toBeGreaterThanOrEqual(44);
+    if (width === 1024) {
+      await assertCompactPregameContract(
+        passCard,
+        "1024px desktop PASS pregame",
+        false,
+      );
+      await assertCompactPregameContract(
+        scheduledCard,
+        "1024px desktop SCHEDULED pregame",
+        false,
+      );
+    }
 
     const headshotFrame = scheduledCard.locator(".pregame-pitcher__photo").first();
     const headshot = headshotFrame.locator("img");
@@ -1332,24 +1620,26 @@ test("shell feed tablet 900px: items 2,3,4,5,7 active; items 1,6 inert", async (
   const dotDisplay = await liveCard.locator(".projection-card__live-dot").evaluate((el) => getComputedStyle(el).display);
   expect(dotDisplay, "live dot computed display at tablet").not.toBe("none");
 
-  // ── Centered summary group remains centered independently in each card. ──
-  const liveOffsets = await summaryOffsets(liveCard);
-  const scheduledOffsets = await summaryOffsets(scheduledCard);
-  for (const [label, offsets] of [
-    ["LIVE", liveOffsets],
-    ["SCHEDULED", scheduledOffsets],
-  ] as const) {
-    if (offsets.groupBox.width <= offsets.viewportBox.width + 1) {
-      expect(
-        Math.abs(
-          offsets.groupBox.x +
-            offsets.groupBox.width / 2 -
-            (offsets.viewportBox.x + offsets.viewportBox.width / 2),
-        ),
-        `${label} summary group is centered at tablet width`,
-      ).toBeLessThanOrEqual(1);
-    }
-  }
+  // Compact-theme + content geometry contracts: the exact same 0.2px
+  // keyline survives at tablet size, all summary variants fit as one uniform
+  // row, and long pitcher/trigger labels remain complete on one line.
+  const tabletYankeesFilter = await liveCard
+    .locator(".team-logo-box--dark-outline .team-logo")
+    .last()
+    .evaluate((el) => getComputedStyle(el).filter);
+  expect(tabletYankeesFilter, "Dark tablet keeps the exact 0.2px Yankees keyline").toBe(
+    THIN_LOGO_FILTER,
+  );
+  const tabletSummaryGeometry = [
+    await assertCompactSummaryContract(liveCard, "tablet LIVE summary", true),
+    await assertCompactSummaryContract(passCard, "tablet PASS summary", true),
+    await assertCompactSummaryContract(scheduledCard, "tablet SCHEDULED summary", false),
+  ];
+  assertUniformCompactSummaryTracks(tabletSummaryGeometry, "tablet summaries");
+  await assertCompactPregameContract(passCard, "tablet PASS pregame");
+  await assertCompactPregameContract(scheduledCard, "tablet SCHEDULED pregame");
+  await assertCompactTriggerContract(passCard, "tablet PASS");
+  await assertCompactTriggerContract(scheduledCard, "tablet SCHEDULED");
 
   // ── Item 6 inert: compact chrome, NOT the 96px/17px shell rhythm ──
   const feedhead = page.locator(".dc-shell-external-scroll .dmf-feedhead");
@@ -1379,6 +1669,7 @@ test("shell feed mobile 375px: legacy desktop rules stay inert and the centered 
 
   const liveCard = cardByAriaLabel(page, "Dodgers at Yankees");
   const passCard = cardByAriaLabel(page, "Athletics at Rangers");
+  const scheduledCard = cardByAriaLabel(page, "Giants at Mariners");
 
   // Item 1 inert: cards keep natural height; scheduled PASS is richer and
   // visibly taller than compact LIVE.
@@ -1404,38 +1695,23 @@ test("shell feed mobile 375px: legacy desktop rules stay inert and the centered 
   const dotDisplay = await liveCard.locator(".projection-card__live-dot").evaluate((el) => getComputedStyle(el).display);
   expect(dotDisplay, "live dot is display:none on mobile").toBe("none");
 
-  // Item 5 replacement: the summary remains one intrinsic row. If an
-  // exceptionally narrow card cannot contain it, only its local viewport
-  // scrolls; the page itself remains overflow-free (asserted above).
-  const mobileSummary = await liveCard.locator(".summary").first().evaluate(summary => {
-    const viewport = summary.querySelector<HTMLElement>(".summary__viewport");
-    const group = summary.querySelector<HTMLElement>(".summary__group");
-    const pick = summary.querySelector<HTMLElement>(".summary__item--edge");
-    const book = summary.querySelector<HTMLElement>(".summary__item--book");
-    const model = summary.querySelector<HTMLElement>(".summary__item--model");
-    const signal = summary.querySelector<HTMLElement>(".summary__signal");
-    if (!viewport || !group || !pick || !book || !model || !signal) {
-      throw new Error("mobile summary contract nodes missing");
-    }
-    const centers = [pick, book, model, signal].map(element => {
-      const rect = element.getBoundingClientRect();
-      return rect.top + rect.height / 2;
-    });
-    return {
-      centerSpread: Math.max(...centers) - Math.min(...centers),
-      viewportClientWidth: viewport.clientWidth,
-      viewportScrollWidth: viewport.scrollWidth,
-      groupWidth: group.getBoundingClientRect().width,
-    };
-  });
-  expect(
-    mobileSummary.centerSpread,
-    "summary facts and ROI share one vertically centered row",
-  ).toBeLessThanOrEqual(1);
-  expect(
-    mobileSummary.viewportScrollWidth,
-    "the local summary viewport contains the complete intrinsic group",
-  ).toBeGreaterThanOrEqual(Math.ceil(mobileSummary.groupWidth) - 1);
+  const mobileYankeesFilter = await liveCard
+    .locator(".team-logo-box--dark-outline .team-logo")
+    .last()
+    .evaluate((el) => getComputedStyle(el).filter);
+  expect(mobileYankeesFilter, "Dark mobile keeps the exact 0.2px Yankees keyline").toBe(
+    THIN_LOGO_FILTER,
+  );
+  const mobileSummaryGeometry = [
+    await assertCompactSummaryContract(liveCard, "mobile LIVE summary", true),
+    await assertCompactSummaryContract(passCard, "mobile PASS summary", true),
+    await assertCompactSummaryContract(scheduledCard, "mobile SCHEDULED summary", false),
+  ];
+  assertUniformCompactSummaryTracks(mobileSummaryGeometry, "mobile summaries");
+  await assertCompactPregameContract(passCard, "mobile PASS pregame");
+  await assertCompactPregameContract(scheduledCard, "mobile SCHEDULED pregame");
+  await assertCompactTriggerContract(passCard, "mobile PASS");
+  await assertCompactTriggerContract(scheduledCard, "mobile SCHEDULED");
 
   // "base paddings": card padding is the mobile-first --space-lg/--space-sm
   // pair, unaffected by any round-4 rule (round-4 introduces no card-padding
@@ -1648,6 +1924,30 @@ test("System stays neutral grey with dark-contrast ink even when the OS prefers 
     .last()
     .evaluate((el) => getComputedStyle(el).filter);
   expect(yankeesFilter, "System keeps exactly the same 0.2px Yankees keyline as Dark").toBe(THIN_LOGO_FILTER);
+});
+
+test("System mobile keeps the same exact 0.2px dark-logo keyline", async ({ page }) => {
+  await gotoShellFeed(page, 375, 667, "light", "system");
+  const root = page.locator(".dmf-root");
+  await expect(root).toHaveAttribute("data-dmf-mode", "system");
+  const appearance = await root.evaluate((element) => ({
+    page: getComputedStyle(element).backgroundColor,
+    htmlMode: document.documentElement.dataset.themeMode,
+    htmlDark: document.documentElement.classList.contains("dark"),
+  }));
+  expect(appearance).toEqual({
+    page: "rgb(18, 18, 18)",
+    htmlMode: "system",
+    htmlDark: true,
+  });
+  const yankeesFilter = await cardByAriaLabel(page, "Dodgers at Yankees")
+    .locator(".team-logo-box--dark-outline .team-logo")
+    .last()
+    .evaluate((element) => getComputedStyle(element).filter);
+  expect(yankeesFilter, "System mobile keeps the exact 0.2px keyline").toBe(
+    THIN_LOGO_FILTER,
+  );
+  await assertNoHorizontalOverflow(page, "shell-375-system");
 });
 
 // ─── Standalone /feed at 1440: item-6 rhythm absent (negative contract) ──────

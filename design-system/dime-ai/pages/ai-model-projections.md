@@ -56,6 +56,10 @@
   System owns the fixed neutral-grey, dark-contrast ground (`#121212` page /
   `#181818` card), Dark owns the pure-black ground, and Light owns the white
   ground.
+- **Dark-logo keyline at every breakpoint (2026-07-24).** Allowlisted marks
+  whose artwork disappears into System/Dark receive the same alpha-following
+  `0.2px` white keyline on mobile, tablet, and desktop. Light preserves the
+  original mark with no generated outline.
 - **Gamecard matchup block** (team names only; each fact once):
   ```
   {AWAY TEAM NAME} @ {HOME TEAM NAME}   ← "Giants @ Mariners" (names only, no abbrs)
@@ -68,17 +72,19 @@
   this matchup block, never inside the matchup line itself.
 - **Markets popover** *(amended 2026-07-23)*: closed by default; the card-level
   trigger reads "VIEW FULL AI MODEL PROJECTIONS" and opens the paginated
-  floating panel defined below. Per-game market details are not a native
-  `details` disclosure.
+  floating panel defined below. The complete trigger label stays on one line
+  on mobile and tablet. Per-game market details are not a native `details`
+  disclosure.
 - **Market column labels:** `SIDE | BOOK | MODEL` — never "SPORTSBOOK PRICE" /
   "MODEL FAIR PRICE". Applies to every feed surface: mobile, tablet, desktop.
 - **Summary readout labels:** `MODEL EDGE | BOOK | MODEL` — never "BEST PRICE".
 - **Summary row grouping (2026-07-24):** `MODEL EDGE | BOOK | MODEL | signal`
   travels as one intrinsic-width, centered, single-line group at every
-  breakpoint. Values never wrap, clamp, truncate, or overlap. If localized
-  content is physically wider than the card, overflow is confined to the
-  summary viewport so the complete row remains reachable without widening the
-  card or page.
+  breakpoint. Mobile/tablet facts and signal share the same 44px alignment
+  lane, compact type scale, and deterministic spacing. Values never wrap,
+  clamp, truncate, or overlap. If localized content is physically wider than
+  the card, overflow is confined to the summary viewport so the complete row
+  remains reachable without widening the card or page.
 - **MODEL EDGE values are spelled out:** `U 7` → "UNDER 7", `O 8.5` → "OVER 8.5",
   a leading team abbr → the team name (`ATH ML` → "ATHLETICS ML").
   *(2026-07-18: the "tables keep compact form" clause is superseded — see below.)*
@@ -178,7 +184,10 @@ Desktop (>=1024px) only — tablet/mobile keep their shipped layouts:
   equal probable-pitcher columns with a centered `LINEUPS` button. Each pitcher
   shows a headshot, `First Last`, the Rotowire W–L/ERA display line, and a
   text label of `EXPECTED` or `CONFIRMED`. If Rotowire has not posted the game,
-  preserve the panel shape with `Pitcher TBD` and pending copy.
+  preserve the panel shape with `Pitcher TBD` and pending copy. Pitcher names
+  remain complete and on one line on mobile and tablet; compact cards give the
+  pitchers two equal-width lanes and center the CTA between their photo rows,
+  rather than stealing name width or wrapping/clipping text.
 - Headshots are bottom-centered and inset inside their circular frames so the
   full portrait remains visible. `LINEUPS` is the Dime mint CTA: bold black
   text, 12px radius, inset highlight, hover elevation, and active scale.
