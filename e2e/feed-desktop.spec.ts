@@ -389,9 +389,14 @@ async function stubApi(page: Page) {
 /** Deterministic dark theme (mode defaults to "system" with nothing in
  *  localStorage — pin prefers-color-scheme so every geometry/color assertion
  *  below is reproducible regardless of the host's OS theme). */
-async function gotoShellFeed(page: Page, width: number, height = 1400) {
+async function gotoShellFeed(
+  page: Page,
+  width: number,
+  height = 1400,
+  colorScheme: "dark" | "light" = "dark",
+) {
   await stubApi(page);
-  await page.emulateMedia({ colorScheme: "dark" });
+  await page.emulateMedia({ colorScheme });
   await page.setViewportSize({ width, height });
   await page.goto(`${baseURL}${SHELL_FEED_PATH}`);
   await page.waitForSelector(".projection-card", { timeout: 20_000 });
@@ -421,6 +426,7 @@ async function summaryOffsets(card: Locator) {
   const summaryBox = await summary.boundingBox();
   if (!summaryBox) throw new Error("summary bounding box missing");
   const edgeBox = await summary.locator(".summary__edge").boundingBox();
+  const signalBox = await summary.locator(".summary__signal").boundingBox();
   const bookLocator = summary.locator(".summary__item--book");
   const modelLocator = summary.locator(".summary__item--model");
   const bookBox = (await bookLocator.count()) > 0 ? await bookLocator.boundingBox() : null;
@@ -428,7 +434,7 @@ async function summaryOffsets(card: Locator) {
   return {
     summaryBox,
     edgeX: edgeBox ? edgeBox.x - summaryBox.x : null,
-    edgeCenterX: edgeBox ? edgeBox.x + edgeBox.width / 2 - summaryBox.x : null,
+    signalCenterX: signalBox ? signalBox.x + signalBox.width / 2 - summaryBox.x : null,
     bookX: bookBox ? bookBox.x - summaryBox.x : null,
     modelX: modelBox ? modelBox.x - summaryBox.x : null,
   };
@@ -463,22 +469,35 @@ for (const width of DESKTOP_WIDTHS) {
     expect(Math.abs(passBox.y - liveBox.y), "desktop columns 1 and 2 share one row").toBeLessThanOrEqual(1);
     expect(Math.abs(scheduledBox.y - liveBox.y), "desktop columns 1 and 3 share one row").toBeLessThanOrEqual(1);
 
-    // The summary reflows by card width, not viewport width. Standard
-    // 3-across desktop cards stay compact at every required viewport:
-    // MODEL EDGE full-width, BOOK / MODEL beneath, signal chip last.
+    // The summary reflows by card width, not viewport width. Narrow desktop
+    // cards stack; cards with >400px of container space use the compact
+    // centered inline rhythm requested for MODEL EDGE / BOOK / MODEL / signal.
     const liveSummaryStyle = await liveCard.locator(".summary").first().evaluate((el) => {
       const cs = getComputedStyle(el);
-      return { display: cs.display, flexDirection: cs.flexDirection };
+      return {
+        display: cs.display,
+        flexDirection: cs.flexDirection,
+        width: el.getBoundingClientRect().width,
+      };
     });
-    expect(liveSummaryStyle.display, "three-across desktop card uses compact summary reflow").toBe("flex");
-    expect(liveSummaryStyle.flexDirection).toBe("column");
-    const passReadout = await passCard.locator(".summary__readout").boundingBox();
-    const passEdge = await passCard.locator(".summary__edge").boundingBox();
-    if (!passReadout || !passEdge) throw new Error("compact summary bounding boxes missing");
-    expect(
-      passEdge.y,
-      "compact summary edge chip sits below the fact rows",
-    ).toBeGreaterThanOrEqual(passReadout.y + passReadout.height - 1);
+    if (liveSummaryStyle.width <= 400) {
+      expect(liveSummaryStyle.display, "narrow desktop card uses compact summary reflow").toBe("flex");
+      expect(liveSummaryStyle.flexDirection).toBe("column");
+    } else {
+      expect(liveSummaryStyle.display, "wide desktop card uses the inline summary rhythm").toBe("grid");
+    }
+    if (width === 1920) {
+      expect(liveSummaryStyle.display, "1920px desktop keeps all summary facts in one strip").toBe("grid");
+    }
+    if (liveSummaryStyle.display === "flex") {
+      const passReadout = await passCard.locator(".summary__readout").boundingBox();
+      const passEdge = await passCard.locator(".summary__edge").boundingBox();
+      if (!passReadout || !passEdge) throw new Error("compact summary bounding boxes missing");
+      expect(
+        passEdge.y,
+        "compact summary edge chip sits below the fact rows",
+      ).toBeGreaterThanOrEqual(passReadout.y + passReadout.height - 1);
+    }
 
     expect(
       liveBox.height,
@@ -516,9 +535,124 @@ for (const width of DESKTOP_WIDTHS) {
     // Upcoming-only probable pitchers: both scheduled cards render the stable
     // Rotowire section; the live card never carries stale pregame data.
     await expect(liveCard.locator(".pregame-pitchers")).toHaveCount(0);
-    await expect(passCard.getByRole("button", { name: "View lineups for Athletics at Rangers" })).toBeVisible();
+    const lineupsButton = passCard.getByRole("button", {
+      name: "View lineups for Athletics at Rangers",
+    });
+    await expect(lineupsButton).toBeVisible();
     await expect(scheduledCard.getByText("Logan Webb")).toBeVisible();
     await expect(scheduledCard.getByText("7-4 · 3.21 ERA")).toBeVisible();
+    const lineupsStyle = await lineupsButton.evaluate((el) => {
+      const cs = getComputedStyle(el);
+      return {
+        background: cs.backgroundColor,
+        color: cs.color,
+        fontWeight: cs.fontWeight,
+        minHeight: cs.minHeight,
+      };
+    });
+    expect(lineupsStyle.background, "LINEUPS uses Dime mint").toBe("rgb(69, 224, 168)");
+    expect(lineupsStyle.color, "LINEUPS uses black text").toBe("rgb(0, 0, 0)");
+    expect(Number(lineupsStyle.fontWeight), "LINEUPS label is bold").toBeGreaterThanOrEqual(700);
+    expect(parseFloat(lineupsStyle.minHeight), "LINEUPS target is at least 44px").toBeGreaterThanOrEqual(44);
+
+    const headshotFrame = scheduledCard.locator(".pregame-pitcher__photo").first();
+    const headshot = headshotFrame.locator("img");
+    const headshotFrameBox = await headshotFrame.boundingBox();
+    const headshotBox = await headshot.boundingBox();
+    if (!headshotFrameBox || !headshotBox) throw new Error("pitcher headshot geometry missing");
+    expect(
+      headshotBox.width / headshotFrameBox.width,
+      "pitcher portrait is inset inside its circular frame",
+    ).toBeCloseTo(0.82, 1);
+
+    const matchupCenter = await scheduledCard.locator(".matchup__center").boundingBox();
+    const matchupLogos = scheduledCard.locator(".matchup .team-logo-box");
+    const awayLogo = await matchupLogos.nth(0).boundingBox();
+    const homeLogo = await matchupLogos.nth(1).boundingBox();
+    if (!matchupCenter || !awayLogo || !homeLogo) throw new Error("matchup logo geometry missing");
+    expect(
+      matchupCenter.x - (awayLogo.x + awayLogo.width),
+      "away logo sits beside the away team name",
+    ).toBeGreaterThanOrEqual(0);
+    expect(
+      matchupCenter.x - (awayLogo.x + awayLogo.width),
+      "away logo-to-name gap stays compact",
+    ).toBeLessThanOrEqual(12);
+    expect(
+      homeLogo.x - (matchupCenter.x + matchupCenter.width),
+      "home logo sits beside the home team name",
+    ).toBeGreaterThanOrEqual(0);
+    expect(
+      homeLogo.x - (matchupCenter.x + matchupCenter.width),
+      "home logo-to-name gap stays compact",
+    ).toBeLessThanOrEqual(12);
+
+    const nextEdge = liveCard.locator('.summary__next[tabindex="0"]');
+    await expect(nextEdge).toHaveCount(1);
+    await expect(nextEdge).toHaveAccessibleName(/View next model edge:/);
+    await expect(liveCard.locator(".summary-carousel__nav")).toHaveCount(0);
+    const activeTrack = liveCard.locator(".summary-carousel__track");
+    const initialTrackScroll = await activeTrack.evaluate((el) => el.scrollLeft);
+    expect(initialTrackScroll, "the strongest edge starts flush at carousel page 1").toBeLessThanOrEqual(1);
+    const nextEdgeStyle = await nextEdge.evaluate((el) => {
+      const cs = getComputedStyle(el);
+      return { border: cs.borderColor, color: cs.color, width: cs.width, height: cs.height };
+    });
+    expect(nextEdgeStyle.border, "dark/system arrow border is white").toBe("rgb(255, 255, 255)");
+    expect(nextEdgeStyle.color, "next-edge arrow is mint").toBe("rgb(69, 224, 168)");
+    expect(parseFloat(nextEdgeStyle.width)).toBeGreaterThanOrEqual(44);
+    expect(parseFloat(nextEdgeStyle.height)).toBeGreaterThanOrEqual(44);
+    const activeSummary = liveCard.locator(".summary").first();
+    const activeSummaryBox = await activeSummary.boundingBox();
+    const activeTrackBox = await activeTrack.boundingBox();
+    const activeEdgeBox = await activeSummary.locator(".summary__item--edge").boundingBox();
+    const signalBox = await activeSummary.locator(".summary__signal").boundingBox();
+    const nextEdgeBox = await nextEdge.boundingBox();
+    if (!activeSummaryBox || !activeTrackBox || !activeEdgeBox || !signalBox || !nextEdgeBox) {
+      throw new Error("active edge signal geometry missing");
+    }
+    expect(activeSummaryBox.x, "visible summary starts inside the carousel viewport").toBeGreaterThanOrEqual(
+      activeTrackBox.x - 1,
+    );
+    expect(
+      activeSummaryBox.x + activeSummaryBox.width,
+      "visible summary ends inside the carousel viewport",
+    ).toBeLessThanOrEqual(activeTrackBox.x + activeTrackBox.width + 1);
+    for (const [label, box] of [
+      ["MODEL EDGE readout", activeEdgeBox],
+      ["signal group", signalBox],
+      ["next-edge arrow", nextEdgeBox],
+    ] as const) {
+      expect(
+        box.x,
+        `${label} is not clipped on the carousel viewport's left edge`,
+      ).toBeGreaterThanOrEqual(activeTrackBox.x - 1);
+      expect(
+        box.x + box.width,
+        `${label} is not clipped on the carousel viewport's right edge`,
+      ).toBeLessThanOrEqual(activeTrackBox.x + activeTrackBox.width + 1);
+    }
+    expect(nextEdgeBox.x, "next-edge arrow is not clipped on the summary left").toBeGreaterThanOrEqual(
+      activeSummaryBox.x - 1,
+    );
+    expect(
+      nextEdgeBox.x + nextEdgeBox.width,
+      "next-edge arrow is not clipped on the summary right",
+    ).toBeLessThanOrEqual(activeSummaryBox.x + activeSummaryBox.width + 1);
+    if (width === 1280) {
+      const track = liveCard.locator(".summary-carousel__track");
+      await nextEdge.click();
+      await expect.poll(() =>
+        track.evaluate((el) => Math.round(el.scrollLeft / el.clientWidth)),
+      ).toBe(1);
+      const wrappedEdge = liveCard.locator('.summary__next[tabindex="0"]');
+      await expect(wrappedEdge).toBeFocused();
+      await wrappedEdge.click();
+      await expect.poll(() =>
+        track.evaluate((el) => Math.round(el.scrollLeft / el.clientWidth)),
+      ).toBe(0);
+      await expect(liveCard.locator('.summary__next[tabindex="0"]')).toBeFocused();
+    }
 
     // ── Item 4: live dot visible on the live-game card ──
     const liveDot = liveCard.locator(".projection-card__live-dot");
@@ -591,32 +725,9 @@ for (const width of DESKTOP_WIDTHS) {
     // see the block comment below — and this ordering keeps that failure
     // from masking the other six items' otherwise-passing verification.
     //
-    // DEFECT CAUGHT BY THIS CONTRACT (pre-existing from W2, surfaced on this
-    // spec's first full run, then fixed in-round by the controller before
-    // merge — the fix commit changes the floors described below to
-    // minmax(0,fr) + a 5rem chip floor and adds min-inline-size:0 to
-    // .summary; the description is kept for the record): `.summary`'s grid
-    // (ProjectionCard.css `@media (min-width:768px) .summary{display:grid;
-    // grid-template-columns: minmax(6.5rem,1.6fr) minmax(3.5rem,0.8fr)
-    // minmax(3.5rem,0.8fr) minmax(5.5rem,1fr)}`) has an intrinsic minimum
-    // width of 376px (sum of the minmax "low" bounds + 3 column-gaps
-    // inherited from the base `.summary{gap:var(--space-sm) var(--space-lg)}`
-    // rule) and never resets its own automatic minimum size
-    // (`min-inline-size:0`/`min-width:0`) the way its sibling
-    // `.summary-carousel{min-inline-size:0}` (used for 2+-edge cards) does.
-    // At the persistent-sidebar >=1024px multi-column grid, a card's available
-    // content width drops BELOW 376+2*24(card padding)=424px at 1024px
-    // (~296px cards) and 1280px (~400px cards) — two of the four REQUIRED
-    // desktop widths in this plan — so a PLAIN (non-carousel) card's
-    // `.summary` overflows its own card, its own grid column, and (since
-    // `.dc-shell-external-layer{overflow:hidden}` is the first ancestor that
-    // clips it) is visually cut off at the shell pane's right edge. Real,
-    // reproducible, evidence-backed (see the shell-1024.png/shell-1280.png
-    // screenshots this test captures above, and the shell-scroll overflow
-    // measurement below) — reported here, not patched (W4 may not touch
-    // client/src). The 3-across layout now uses the card-level compact
-    // reflow at every required desktop width; the original fixed row remains
-    // available only when an individual card itself exceeds 520px.
+    // The inline summary now owns a compact fixed 400px rhythm and reflows
+    // at or below 400px, so neither its readout nor the pill/arrow group can create
+    // horizontal shell overflow.
     const shellScrollOverflow = await page
       .locator(".dc-shell-external-scroll")
       .evaluate((el) => el.scrollWidth - el.clientWidth);
@@ -625,22 +736,24 @@ for (const width of DESKTOP_WIDTHS) {
     const scheduledOffsets = await summaryOffsets(scheduledCard);
     expect(
       shellScrollOverflow,
-      `shell scroll pane horizontal overflow px (diagnostic for the .summary min-width defect above; ` +
+      `shell scroll pane horizontal overflow px (summary widths: ` +
         `LIVE .summary width=${liveOffsets.summaryBox.width} PASS=${passOffsets.summaryBox.width} SCHEDULED=${scheduledOffsets.summaryBox.width}, ` +
-        `376px = the un-shrinkable grid minimum)`,
+        `inline rhythm reflows at 400px)`,
     ).toBeLessThanOrEqual(1);
     expect(liveOffsets.edgeX, "edge chip present on LIVE").not.toBeNull();
     expect(passOffsets.edgeX, "edge chip present on PASS ('No edge')").not.toBeNull();
     expect(scheduledOffsets.edgeX, "edge chip present on SCHEDULED").not.toBeNull();
-    for (const [label, offsets] of [
-      ["LIVE", liveOffsets],
-      ["PASS", passOffsets],
-      ["SCHEDULED", scheduledOffsets],
-    ] as const) {
-      expect(
-        Math.abs(offsets.edgeCenterX! - offsets.summaryBox.width / 2),
-        `${label} compact chip is centered beneath its fact rows`,
-      ).toBeLessThanOrEqual(1);
+    if (liveSummaryStyle.display === "flex") {
+      for (const [label, offsets] of [
+        ["LIVE", liveOffsets],
+        ["PASS", passOffsets],
+        ["SCHEDULED", scheduledOffsets],
+      ] as const) {
+        expect(
+          Math.abs(offsets.signalCenterX! - offsets.summaryBox.width / 2),
+          `${label} compact signal group is centered beneath its fact rows`,
+        ).toBeLessThanOrEqual(1);
+      }
     }
     expect(liveOffsets.bookX, "LIVE has a real BOOK column").not.toBeNull();
     expect(scheduledOffsets.bookX, "SCHEDULED has a real BOOK column").not.toBeNull();
@@ -1143,6 +1256,20 @@ test("shell feed mobile 375px: every round-4 rule inert", async ({ page }) => {
     path: `${EVIDENCE_DIR}/shell-375.png`,
     fullPage: true,
   });
+});
+
+test("light theme: the next-edge control keeps a black border and mint arrow", async ({ page }) => {
+  await gotoShellFeed(page, 900, 900, "light");
+  const liveCard = cardByAriaLabel(page, "Dodgers at Yankees");
+  const nextEdge = liveCard.locator('.summary__next[tabindex="0"]');
+  await expect(nextEdge).toBeVisible();
+  const colors = await nextEdge.evaluate((el) => {
+    const cs = getComputedStyle(el);
+    return { border: cs.borderColor, color: cs.color };
+  });
+  expect(colors.border, "light-theme arrow border is black").toBe("rgb(0, 0, 0)");
+  expect(colors.color, "light-theme arrow remains Dime mint").toBe("rgb(69, 224, 168)");
+  await assertNoHorizontalOverflow(page, "shell-900-light");
 });
 
 // ─── Standalone /feed at 1440: item-6 rhythm absent (negative contract) ──────

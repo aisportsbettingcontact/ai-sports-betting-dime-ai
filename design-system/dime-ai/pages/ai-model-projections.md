@@ -170,6 +170,12 @@ Desktop (>=1024px) only — tablet/mobile keep their shipped layouts:
   shows a headshot, `First Last`, the Rotowire W–L/ERA display line, and a
   text label of `EXPECTED` or `CONFIRMED`. If Rotowire has not posted the game,
   preserve the panel shape with `Pitcher TBD` and pending copy.
+- Headshots are bottom-centered and inset inside their circular frames so the
+  full portrait remains visible. `LINEUPS` is the Dime mint CTA: bold black
+  text, 12px radius, inset highlight, hover elevation, and active scale.
+- Matchup side tracks balance around the centered matchup copy; scheduled team
+  logos sit directly beside their corresponding team names instead of at the
+  card edges.
 - Data stays on the existing public `games.mlbLineups({ gameIds })` read path.
   Batch numeric `games.id` values for `gameStatus === "upcoming"` only and poll
   every 60 seconds. Prefer the enriched lineup row; `games.list` starter names
@@ -220,9 +226,12 @@ Desktop (>=1024px) only — tablet/mobile keep their shipped layouts:
   swipeable scroll-snap strip (`SummaryCarousel`), one uniform summary
   readout per slide, ranked largest → smallest edge %. ONLY real edges
   populate slides — NO_EDGE markets never appear; at most one side per
-  market. Dot + count nav; mint marks the active dot only; 160ms brand
-  curve; `prefers-reduced-motion` collapses smooth scrolling. A game with
-  one edge (or none) keeps the plain single summary.
+  market. The visible count/dot row is removed: a 44px `ArrowRight` control
+  sits immediately after the edge pill, advances to the next edge, and wraps
+  to the strongest after the last. Its icon is mint and its border consumes
+  the theme foreground token (white on dark/system, black on light).
+  `prefers-reduced-motion` collapses smooth scrolling. A game with one edge
+  (or none) keeps the plain single summary with no arrow.
 
 ---
 
