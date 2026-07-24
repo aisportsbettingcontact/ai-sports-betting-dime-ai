@@ -38,7 +38,10 @@
 
 - **Live state:** pulsing 7px mint dot + mono "LIVE · TOP 6" in mint (`--mint-on-light` on light theme, with keyline on the dot)
 - **PASS games:** verdict values in `--text-secondary`, grade "—" *(2026-07-23: the verdict-strip/grade concept is superseded — no letter-grade field exists in the current ProjectionCard architecture; PASS state is enforced via `.projection-card--pass` at `opacity: 0.82` + the "No edge" chip + a defensive zero-mint backstop, per Round 4 items 3 and 8 in `docs/superpowers/plans/2026-07-23-feed-desktop-polish.md`)*, whole card at `opacity: 0.82`, zero mint anywhere in the card
-  — precedence ruling 2026-07-23 (final-review adjudication, pending owner ratification): a LIVE card never takes the PASS treatment. Live+no-edges is reachable (mid-game model invalidation); live-state mint wins and the card stays undimmed, so this zero-mint law and the live-state law above never apply to the same card.
+  — a LIVE card never takes the PASS treatment, even when a mid-game model
+  invalidation removes every edge. The newer compact-state rule below still
+  reduces the whole live/final card to `opacity: 0.72`; that is lifecycle
+  hierarchy, not a PASS/no-edge signal.
 - **Win% annotation** next to model ML: 12px `--text-secondary`
 
 ### Component Overrides
@@ -50,7 +53,7 @@
 
 - **No theme toggle in the feed header.** The Profile tab's Appearance setting
   (System / Light / Dark) is the single theme control. `?theme=` embeds stay honored.
-- **Gamecard matchup block** (pitcher names are BANNED from gamecards; each fact once):
+- **Gamecard matchup block** (team names only; each fact once):
   ```
   {AWAY TEAM NAME} @ {HOME TEAM NAME}   ← "Giants @ Mariners" (names only, no abbrs)
   {BALLPARK}                            ← "T-Mobile Park" (never duplicated)
@@ -58,6 +61,8 @@
   ```
   Countries render names only (no FIFA codes); WC context line stays "Round · Venue".
   Scheduled games own the time in this block; the card header shows LIVE/FINAL only.
+  Scheduled MLB probable pitchers render in their dedicated middle panel below
+  this matchup block, never inside the matchup line itself.
 - **Markets popover** *(amended 2026-07-23)*: closed by default; the card-level
   trigger reads "VIEW FULL AI MODEL PROJECTIONS" and opens the paginated
   floating panel defined below. Per-game market details are not a native
@@ -153,8 +158,33 @@ Desktop (>=1024px) only — tablet/mobile keep their shipped layouts:
   2, and desktop (>=1024px) renders 3 inside each league section. Cards keep
   their container-driven internal reflow.
 - Tablet rows stay start-aligned so each card keeps its natural height.
-  Desktop rows stretch; each summary centers within surplus height and the
-  "VIEW FULL AI MODEL PROJECTIONS" popover trigger stays pinned to the bottom.
+  Desktop rows stretch for scheduled cards; each summary centers within surplus height and
+  the "VIEW FULL AI MODEL PROJECTIONS" popover trigger stays pinned to the bottom.
+  Live/final/postponed cards opt out with `align-self: start`, keeping their
+  intentionally compact natural height beside richer upcoming cards.
+
+### Owner Directives — 2026-07-23 (Rotowire probable pitchers + lineups)
+
+- **Upcoming MLB only.** Between the matchup and projection summary, render two
+  equal probable-pitcher columns with a centered `LINEUPS` button. Each pitcher
+  shows a headshot, `First Last`, the Rotowire W–L/ERA display line, and a
+  text label of `EXPECTED` or `CONFIRMED`. If Rotowire has not posted the game,
+  preserve the panel shape with `Pitcher TBD` and pending copy.
+- Data stays on the existing public `games.mlbLineups({ gameIds })` read path.
+  Batch numeric `games.id` values for `gameStatus === "upcoming"` only and poll
+  every 60 seconds. Prefer the enriched lineup row; `games.list` starter names
+  are the no-photo/no-stats fallback. Malformed lineup JSON is ignored at the
+  client boundary, batting order is sorted 1–9, and no more than nine hitters
+  render per team.
+- `LINEUPS` opens a modal dialog, not another small popover: both teams, starter
+  status, starter season line, lineup status, and batting orders render in two
+  columns at tablet/desktop widths and one scrollable stack on mobile. The
+  trigger and close control are at least 44px; Escape/outside click close the
+  dialog and Radix restores focus to the trigger.
+- **Lifecycle compaction.** As soon as a game becomes live, final, postponed, or
+  suspended, remove all pregame pitcher/lineup UI, apply the compact card
+  anatomy, set `align-self: start`, and diminish the card to `opacity: 0.72`.
+  Never keep a stale lineup dialog trigger on a non-scheduled card.
 
 ### Owner Directives — 2026-07-23 (paginated market popover)
 
