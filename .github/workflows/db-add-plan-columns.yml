@@ -118,17 +118,22 @@ jobs:
               AND column_name IN ($COLS)
             ORDER BY table_name, column_name;"
 
+          # Count the 11 REQUIRED feature columns by exact (table, column) pair.
+          # A flat column_name IN (...) over-counts: subscription_plans already
+          # has its own `sortOrder` (Phase 0), which is NOT one of the columns
+          # this workflow adds — so scope each name to its table.
           FOUND=$(mysql --defaults-extra-file=client.cnf -N -e "
             SELECT COUNT(*) FROM information_schema.columns
-            WHERE table_schema = DATABASE()
-              AND table_name IN ('subscription_plans','plan_prices')
-              AND column_name IN ($COLS);")
-          echo "Target columns present: $FOUND / 11"
-          if [ "$FOUND" -ne 11 ]; then
-            echo "::error::Expected 11 target columns, found $FOUND."
+            WHERE table_schema = DATABASE() AND (
+              (table_name='subscription_plans' AND column_name IN ('autoRestock','availableQuantity','restockThreshold','restockAmount'))
+              OR (table_name='plan_prices' AND column_name IN ('promoType','promoValue','promoCode','stripeCouponId','stripePromoCodeId','hidden','sortOrder'))
+            );")
+          echo "Required feature columns present: $FOUND / 11"
+          if [ "$FOUND" -lt 11 ]; then
+            echo "::error::Expected all 11 required feature columns, found $FOUND."
             exit 1
           fi
-          echo "All 11 columns present — plan creation should now succeed."
+          echo "All 11 required columns present — plan creation should now succeed."
 
       - name: Cleanup
         if: always()

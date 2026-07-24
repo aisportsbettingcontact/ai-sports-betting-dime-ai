@@ -268,36 +268,55 @@ async function processWebhookEvent(event: Stripe.Event): Promise<void> {
         console.warn(`${tag} [STATE] payment_status=${session.payment_status} — skipping`); break;
       }
 
-      // Plan + expiry resolution: metadata plan_id first (static OR owner-created
-      // DB plan), else resolve from the purchased price (static env map, then DB
-      // price map), else "monthly" — a $499 purchase can never silently provision
-      // as "monthly" while any resolver still matches.
-      const resolved = await resolvePlanExpiry(session.metadata?.plan_id);
-      let plan = resolved.slug;
-      let expiryMs = resolved.expiryMs;
-      if (!session.metadata?.plan_id) {
-        try {
-          const items = await getStripe().checkout.sessions.listLineItems(session.id, { limit: 1 });
-          const priceId = items.data[0]?.price?.id;
-          const staticMapped = priceId ? getPlanByPriceId(priceId) : null;
-          if (staticMapped) {
-            plan = staticMapped.id;
-            expiryMs = computeExpiryMs(staticMapped.id);
-            console.warn(`${tag} [STATE] plan_id absent — resolved "${plan}" from price=${priceId}`);
-          } else if (priceId) {
-            const dbMapped = await getPriceById(priceId);
-            if (dbMapped) {
-              plan = dbMapped.plan.slug;
-              expiryMs = computeExpiryMsForPrice(dbMapped.price, dbMapped.plan, Date.now()) ?? expiryMs;
-              console.warn(`${tag} [STATE] plan_id absent — resolved DB plan "${plan}" from price=${priceId}`);
+      // Plan + expiry resolution, MOST PRECISE FIRST:
+      //  1) metadata.price_id — the EXACT interval purchased (pinned at checkout).
+      //     This is what lets a "Lifetime" interval grant lifetime access even
+      //     though its plan's DEFAULT interval is recurring, and gives a shared
+      //     per-interval checkout link the entitlement window of that interval.
+      //     Legacy static price ids aren't in the DB price map, so they harmlessly
+      //     fall through to (2).
+      //  2) metadata.plan_id — static plan OR the DB plan's default price.
+      //  3) line items — last-resort reverse map (static env map, then DB price).
+      // A $499 purchase can never silently provision as "monthly" while any
+      // resolver still matches.
+      let plan: string;
+      let expiryMs: number;
+      const purchasedPriceId = session.metadata?.price_id?.trim();
+      const byPurchasedPrice = purchasedPriceId ? await getPriceById(purchasedPriceId) : null;
+      if (byPurchasedPrice) {
+        plan = byPurchasedPrice.plan.slug;
+        expiryMs =
+          computeExpiryMsForPrice(byPurchasedPrice.price, byPurchasedPrice.plan, Date.now()) ??
+          computeExpiryMs("monthly");
+        console.log(`${tag} [STATE] resolved from purchased price_id=${purchasedPriceId} → plan="${plan}" expiry=${new Date(expiryMs).toISOString()}`);
+      } else {
+        const resolved = await resolvePlanExpiry(session.metadata?.plan_id);
+        plan = resolved.slug;
+        expiryMs = resolved.expiryMs;
+        if (!session.metadata?.plan_id) {
+          try {
+            const items = await getStripe().checkout.sessions.listLineItems(session.id, { limit: 1 });
+            const priceId = items.data[0]?.price?.id;
+            const staticMapped = priceId ? getPlanByPriceId(priceId) : null;
+            if (staticMapped) {
+              plan = staticMapped.id;
+              expiryMs = computeExpiryMs(staticMapped.id);
+              console.warn(`${tag} [STATE] plan_id absent — resolved "${plan}" from price=${priceId}`);
+            } else if (priceId) {
+              const dbMapped = await getPriceById(priceId);
+              if (dbMapped) {
+                plan = dbMapped.plan.slug;
+                expiryMs = computeExpiryMsForPrice(dbMapped.price, dbMapped.plan, Date.now()) ?? expiryMs;
+                console.warn(`${tag} [STATE] plan_id absent — resolved DB plan "${plan}" from price=${priceId}`);
+              } else {
+                console.error(`${tag} [VERIFY] FAIL — price ${priceId} not in any plan map; defaulting to "${plan}"`);
+              }
             } else {
-              console.error(`${tag} [VERIFY] FAIL — price ${priceId} not in any plan map; defaulting to "${plan}"`);
+              console.error(`${tag} [VERIFY] FAIL — no price on session; defaulting to "${plan}"`);
             }
-          } else {
-            console.error(`${tag} [VERIFY] FAIL — no price on session; defaulting to "${plan}"`);
+          } catch (err) {
+            console.error(`${tag} [VERIFY] FAIL — could not list line items: ${err instanceof Error ? err.message : String(err)}; defaulting to "${plan}"`);
           }
-        } catch (err) {
-          console.error(`${tag} [VERIFY] FAIL — could not list line items: ${err instanceof Error ? err.message : String(err)}; defaulting to "${plan}"`);
         }
       }
       const stripeCustomerId = typeof session.customer === "string" ? session.customer : (session.customer as Stripe.Customer | null)?.id ?? "";
