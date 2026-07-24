@@ -44,6 +44,10 @@ export interface StoredPrice {
   stripeCouponId: string | null;
   active: boolean;
   isDefault: boolean;
+  /** Owner-hidden: retained but not offered at checkout / shown publicly. */
+  hidden: boolean;
+  /** Display order among the plan's intervals (drag-to-reorder). */
+  sortOrder: number;
   livemode: boolean;
 }
 
@@ -128,6 +132,8 @@ function mapPrice(pr: PlanPrice): StoredPrice {
     stripeCouponId: pr.stripeCouponId,
     active: pr.active,
     isDefault: pr.isDefault,
+    hidden: pr.hidden,
+    sortOrder: pr.sortOrder,
     livemode: pr.livemode,
   };
 }
@@ -163,7 +169,7 @@ async function loadAllPlans(): Promise<StoredPlan[]> {
         discordRoleId: p.discordRoleId ?? null,
         telegramChatId: p.telegramChatId ?? null,
         livemode: p.livemode,
-        prices: byPlan.get(p.id) ?? [],
+        prices: (byPlan.get(p.id) ?? []).sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id),
       }));
     });
   } catch (err) {
@@ -220,7 +226,8 @@ export function defaultPriceOf(plan: StoredPlan): StoredPrice | null {
  * resolves through here with wantLivemode = (the checkout key is live).
  */
 export function defaultPriceForMode(plan: StoredPlan, wantLivemode: boolean): StoredPrice | null {
-  const inMode = plan.prices.filter((pr) => pr.active && pr.livemode === wantLivemode);
+  // Hidden intervals are retained but never offered at checkout.
+  const inMode = plan.prices.filter((pr) => pr.active && !pr.hidden && pr.livemode === wantLivemode);
   return inMode.find((pr) => pr.isDefault) ?? inMode[0] ?? null;
 }
 

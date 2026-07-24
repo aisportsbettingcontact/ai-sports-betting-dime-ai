@@ -16,7 +16,7 @@
  * (Phase 3). Here we create; archivePlan deactivates the Product + row.
  */
 import Stripe from "stripe";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { getDb } from "../db";
 import { withCircuitBreaker } from "../dbCircuitBreaker";
 import { subscriptionPlans, planPrices } from "../../drizzle/schema";
@@ -31,6 +31,9 @@ const TAG = "[Stripe][Provisioning]";
 const API_VERSION = "2026-04-22.dahlia";
 /** Stripe USD minimum chargeable amount (cents). */
 const MIN_AMOUNT_CENTS = 50;
+/** one_time memberships grant access until 2100 — effectively lifetime (a single
+ *  payment, no renewals). computeExpiryMsForPrice maps one_time → accessUntil. */
+const ONE_TIME_ACCESS_UNTIL_MS = 4102444800000; // 2100-01-01T00:00:00Z
 
 let _client: Stripe | null = null;
 let _clientKeyTail: string | null = null;
@@ -160,14 +163,18 @@ async function provisionPromo(
   return { couponId: coupon.id, promoCodeId };
 }
 
+export type PlanType = "recurring" | "one_time";
+
 export interface NewPriceInput {
   amountCents: number;
   currency?: string;
-  interval: BillingInterval;
-  intervalCount: number;
+  /** Required for recurring plans; omitted for one_time (single-payment) plans. */
+  interval?: BillingInterval;
+  intervalCount?: number;
   label?: string;
   trialPeriodDays?: number;
   promo?: PromoInput | null;
+  hidden?: boolean;
 }
 
 export interface RestockInput {
@@ -180,7 +187,9 @@ export interface RestockInput {
 export interface NewPlanInput {
   name: string;
   description?: string;
-  /** One or more billing intervals (variants). The first is the default. */
+  /** "recurring" (default) → subscription prices; "one_time" → single payment. */
+  planType?: PlanType;
+  /** One or more intervals (variants). The first visible one is the default. */
   prices: NewPriceInput[];
   maxSubscribers?: number | null;
   restock?: RestockInput | null;
@@ -196,19 +205,22 @@ async function createAndPersistPrice(
   productId: string,
   slug: string,
   input: NewPriceInput,
-  isDefault: boolean,
+  opts: { isDefault: boolean; sortOrder: number; planType: PlanType },
 ): Promise<{ priceId: string; rowId: number }> {
   validateAmount(input.amountCents);
   const currency = (input.currency ?? "usd").toLowerCase();
-  const intervalCount = clampCount(input.interval, input.intervalCount);
-  const idemTag = `${slug}-${input.amountCents}-${input.interval}${intervalCount}`;
+  const recurring = opts.planType !== "one_time";
+  const interval: BillingInterval | null = recurring ? input.interval ?? "month" : null;
+  const intervalCount: number | null = recurring ? clampCount(interval as BillingInterval, input.intervalCount ?? 1) : null;
+  // sortOrder keeps idempotency keys distinct even for same-amount one-time prices.
+  const idemTag = `${slug}-${input.amountCents}-${recurring ? `${interval}${intervalCount}` : "once"}-${opts.sortOrder}`;
 
   const price = await stripe.prices.create(
     {
       product: productId,
       unit_amount: input.amountCents,
       currency,
-      recurring: { interval: input.interval, interval_count: intervalCount },
+      ...(recurring ? { recurring: { interval: interval as BillingInterval, interval_count: intervalCount as number } } : {}),
       metadata: { dime_plan_slug: slug },
     },
     { idempotencyKey: `plan-price-${idemTag}` },
@@ -224,7 +236,7 @@ async function createAndPersistPrice(
   }
 
   const res = await withCircuitBreaker(async () =>
-    db_insert_price(planId, price, input, currency, intervalCount, isDefault, {
+    db_insert_price(planId, price, input, currency, interval, intervalCount, opts, {
       promoType: input.promo?.type ?? null,
       promoValue: input.promo?.value ?? null,
       promoCode: input.promo?.code ?? null,
@@ -241,8 +253,9 @@ async function db_insert_price(
   price: Stripe.Price,
   input: NewPriceInput,
   currency: string,
-  intervalCount: number,
-  isDefault: boolean,
+  interval: BillingInterval | null,
+  intervalCount: number | null,
+  opts: { isDefault: boolean; sortOrder: number },
   promo: {
     promoType: "percent" | "amount" | null;
     promoValue: number | null;
@@ -259,7 +272,7 @@ async function db_insert_price(
     label: input.label ?? null,
     amountCents: input.amountCents,
     currency,
-    interval: input.interval,
+    interval,
     intervalCount,
     trialPeriodDays: input.trialPeriodDays ?? null,
     promoType: promo.promoType,
@@ -268,7 +281,9 @@ async function db_insert_price(
     stripeCouponId: promo.stripeCouponId,
     stripePromoCodeId: promo.stripePromoCodeId,
     active: true,
-    isDefault,
+    isDefault: opts.isDefault,
+    hidden: input.hidden ?? false,
+    sortOrder: opts.sortOrder,
     livemode: price.livemode,
   });
 }
@@ -314,9 +329,10 @@ export async function provisionPlan(
       slug,
       name: input.name,
       description: input.description ?? null,
-      planType: "recurring",
+      planType: input.planType ?? "recurring",
       stripeProductId: product.id,
       active: true,
+      accessUntil: (input.planType ?? "recurring") === "one_time" ? ONE_TIME_ACCESS_UNTIL_MS : null,
       livemode: product.livemode,
       maxSubscribers: input.maxSubscribers ?? null,
       autoRestock: restock?.autoRestock ?? false,
@@ -331,14 +347,19 @@ export async function provisionPlan(
 
   // 3) Each interval → a Stripe Price (+ optional promo coupon) + a row. The
   //    first interval is the default price checkout charges by default.
+  const planType = input.planType ?? "recurring";
   let defaultPriceId = "";
   for (let i = 0; i < input.prices.length; i++) {
-    const created = await createAndPersistPrice(stripe, planId, product.id, slug, input.prices[i], i === 0);
+    const created = await createAndPersistPrice(stripe, planId, product.id, slug, input.prices[i], {
+      isDefault: i === 0,
+      sortOrder: i,
+      planType,
+    });
     if (i === 0) defaultPriceId = created.priceId;
   }
 
   invalidatePlanCache();
-  console.log(`${TAG} provisioned plan slug=${slug} product=${product.id} intervals=${input.prices.length} default=${defaultPriceId}`);
+  console.log(`${TAG} provisioned plan slug=${slug} type=${planType} product=${product.id} intervals=${input.prices.length} default=${defaultPriceId}`);
   return { planId, slug, stripeProductId: product.id, stripePriceId: defaultPriceId };
 }
 
@@ -348,17 +369,27 @@ export async function addPriceToPlan(
   input: NewPriceInput,
 ): Promise<{ priceId: string; rowId: number }> {
   validateAmount(input.amountCents);
+  if (input.promo) validatePromo(input.promo, input.amountCents);
   const db = await getDb();
   if (!db) throw new Error("database unavailable");
   const rows = (await withCircuitBreaker(async () =>
     db.select().from(subscriptionPlans).where(eq(subscriptionPlans.id, planId)).limit(1),
-  )) as Array<{ slug: string; stripeProductId: string | null }>;
+  )) as Array<{ slug: string; stripeProductId: string | null; planType: PlanType }>;
   const plan = rows[0];
   if (!plan) throw new Error(`plan ${planId} not found`);
   if (!plan.stripeProductId) throw new Error(`plan ${planId} has no Stripe product`);
 
+  const existing = (await withCircuitBreaker(async () =>
+    db.select().from(planPrices).where(eq(planPrices.planId, planId)).limit(1000),
+  )) as Array<{ sortOrder: number }>;
+  const nextSort = existing.reduce((m, r) => Math.max(m, r.sortOrder), -1) + 1;
+
   const stripe = getProvisioningStripe();
-  const created = await createAndPersistPrice(stripe, planId, plan.stripeProductId, plan.slug, input, false);
+  const created = await createAndPersistPrice(stripe, planId, plan.stripeProductId, plan.slug, input, {
+    isDefault: false,
+    sortOrder: nextSort,
+    planType: plan.planType,
+  });
   invalidatePlanCache();
   console.log(`${TAG} added interval to plan ${planId}: price=${created.priceId}`);
   return created;
@@ -403,6 +434,33 @@ export async function removePriceFromPlan(priceId: number): Promise<void> {
   }
   invalidatePlanCache();
   console.log(`${TAG} removed interval price ${priceId} from plan ${target.planId}`);
+}
+
+/** Reorder a plan's intervals — sets sortOrder to match the given id order. */
+export async function reorderPlanIntervals(planId: number, orderedPriceIds: number[]): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("database unavailable");
+  await withCircuitBreaker(async () => {
+    for (let i = 0; i < orderedPriceIds.length; i++) {
+      await db
+        .update(planPrices)
+        .set({ sortOrder: i })
+        .where(and(eq(planPrices.id, orderedPriceIds[i]), eq(planPrices.planId, planId)));
+    }
+  });
+  invalidatePlanCache();
+  console.log(`${TAG} reordered ${orderedPriceIds.length} intervals for plan ${planId}`);
+}
+
+/** Show/hide one interval (eyeball). Hidden intervals are retained but never sold. */
+export async function setIntervalHidden(priceId: number, hidden: boolean): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("database unavailable");
+  await withCircuitBreaker(async () =>
+    db.update(planPrices).set({ hidden }).where(eq(planPrices.id, priceId)),
+  );
+  invalidatePlanCache();
+  console.log(`${TAG} interval ${priceId} hidden=${hidden}`);
 }
 
 /** Update a plan's auto-restock / limited-quantity configuration. */
@@ -470,6 +528,29 @@ export async function archivePlan(planId: number): Promise<void> {
   );
   invalidatePlanCache();
   console.log(`${TAG} archived plan ${planId}`);
+}
+
+/** Unarchive a plan: reactivate its Stripe Product + mark the row active again. */
+export async function unarchivePlan(planId: number): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("database unavailable");
+  const rows = (await withCircuitBreaker(async () =>
+    db.select().from(subscriptionPlans).where(eq(subscriptionPlans.id, planId)).limit(1),
+  )) as Array<{ stripeProductId: string | null }>;
+  const row = rows[0];
+  if (!row) throw new Error(`plan ${planId} not found`);
+  if (row.stripeProductId) {
+    try {
+      await getProvisioningStripe().products.update(row.stripeProductId, { active: true });
+    } catch (err) {
+      console.warn(`${TAG} unarchive: Stripe product reactivate failed — ${(err as Error).message}`);
+    }
+  }
+  await withCircuitBreaker(async () =>
+    db.update(subscriptionPlans).set({ active: true, archivedAt: null }).where(eq(subscriptionPlans.id, planId)),
+  );
+  invalidatePlanCache();
+  console.log(`${TAG} unarchived plan ${planId}`);
 }
 
 /** Edit plan metadata (name/description/maxSubscribers). Amount/interval are immutable — a new price is Phase 3. */
