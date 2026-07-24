@@ -102,7 +102,7 @@ export default function IngestAnOdds() {
 
   return (
     <AdminShell active="ingest">
-      <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
+      <div className="admin-container py-6 space-y-6">
         {/* Page header */}
         <div className="flex items-start justify-between gap-3">
           <div>

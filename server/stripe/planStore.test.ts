@@ -3,6 +3,8 @@ import {
   computeExpiryMsForPrice,
   defaultPriceOf,
   defaultPriceForMode,
+  computeNextQuantity,
+  isSoldOut,
   type StoredPlan,
   type StoredPrice,
 } from "./planStore";
@@ -19,8 +21,14 @@ const price = (over: Partial<StoredPrice> = {}): StoredPrice => ({
   interval: "month",
   intervalCount: 1,
   trialPeriodDays: null,
+  promoType: null,
+  promoValue: null,
+  promoCode: null,
+  stripeCouponId: null,
   active: true,
   isDefault: false,
+  hidden: false,
+  sortOrder: 0,
   livemode: true,
   ...over,
 });
@@ -62,7 +70,8 @@ describe("defaultPriceOf", () => {
   const plan = (prices: StoredPrice[]): StoredPlan => ({
     id: 1, slug: "p", name: "P", description: null, planType: "recurring",
     stripeProductId: null, active: true, accessUntil: null, maxSubscribers: null,
-    discordRoleId: null, telegramChatId: null, prices,
+    autoRestock: false, availableQuantity: null, restockThreshold: null, restockAmount: null,
+    discordRoleId: null, telegramChatId: null, livemode: true, prices,
   });
   it("prefers the active default price", () => {
     const d = price({ id: 2, isDefault: true });
@@ -80,6 +89,7 @@ describe("defaultPriceForMode — live checkout must never be handed a test pric
   const plan = (prices: StoredPrice[]): StoredPlan => ({
     id: 1, slug: "p", name: "P", description: null, planType: "recurring",
     stripeProductId: null, active: true, accessUntil: null, maxSubscribers: null,
+    autoRestock: false, availableQuantity: null, restockThreshold: null, restockAmount: null,
     discordRoleId: null, telegramChatId: null, livemode: true, prices,
   });
   const live = price({ id: 1, stripePriceId: "price_live", livemode: true, isDefault: true });
@@ -100,5 +110,54 @@ describe("defaultPriceForMode — live checkout must never be handed a test pric
     expect(defaultPriceForMode(plan([liveOther, liveDefault]), true)?.stripePriceId).toBe("price_live_def");
     const inactiveLive = price({ id: 5, stripePriceId: "price_x", livemode: true, active: false, isDefault: true });
     expect(defaultPriceForMode(plan([inactiveLive]), true)).toBeNull();
+  });
+  it("skips hidden intervals — a hidden price is never the checkout default", () => {
+    const hiddenDefault = price({ id: 6, stripePriceId: "price_hidden", livemode: true, isDefault: true, hidden: true });
+    const visible = price({ id: 7, stripePriceId: "price_visible", livemode: true, isDefault: false, hidden: false });
+    expect(defaultPriceForMode(plan([hiddenDefault, visible]), true)?.stripePriceId).toBe("price_visible");
+    expect(defaultPriceForMode(plan([hiddenDefault]), true)).toBeNull();
+  });
+});
+
+describe("computeNextQuantity — the auto-restock FOMO loop", () => {
+  const cfg = (over: Partial<Parameters<typeof computeNextQuantity>[0]> = {}) => ({
+    availableQuantity: 5,
+    autoRestock: false,
+    restockThreshold: null,
+    restockAmount: null,
+    ...over,
+  });
+
+  it("returns null when the plan is not limited-quantity", () => {
+    expect(computeNextQuantity(cfg({ availableQuantity: null }))).toBeNull();
+  });
+  it("decrements by one on a normal subscribe", () => {
+    expect(computeNextQuantity(cfg({ availableQuantity: 5 }))).toBe(4);
+  });
+  it("clamps at zero (never negative) with no restock", () => {
+    expect(computeNextQuantity(cfg({ availableQuantity: 0 }))).toBe(0);
+  });
+  it("resets to restockAmount when the result drops BELOW the threshold", () => {
+    // 3 → 2, which is < threshold 2? no (2 is not < 2). 2 stays.
+    expect(computeNextQuantity(cfg({ availableQuantity: 3, autoRestock: true, restockThreshold: 2, restockAmount: 3 }))).toBe(2);
+    // 2 → 1, which IS < 2 → reset to 3.
+    expect(computeNextQuantity(cfg({ availableQuantity: 2, autoRestock: true, restockThreshold: 2, restockAmount: 3 }))).toBe(3);
+  });
+  it("recycles indefinitely — a reset value re-decrements next time", () => {
+    const c = cfg({ availableQuantity: 3, autoRestock: true, restockThreshold: 2, restockAmount: 3 });
+    const a = computeNextQuantity(c)!; // 3 → 2
+    const b = computeNextQuantity({ ...c, availableQuantity: a })!; // 2 → reset 3
+    expect([a, b]).toEqual([2, 3]);
+  });
+  it("ignores restock when autoRestock is off (drains to 0)", () => {
+    expect(computeNextQuantity(cfg({ availableQuantity: 1, autoRestock: false, restockThreshold: 5, restockAmount: 9 }))).toBe(0);
+  });
+});
+
+describe("isSoldOut", () => {
+  it("true only for a limited-quantity plan at 0", () => {
+    expect(isSoldOut({ availableQuantity: 0 })).toBe(true);
+    expect(isSoldOut({ availableQuantity: 1 })).toBe(false);
+    expect(isSoldOut({ availableQuantity: null })).toBe(false); // unlimited never sells out
   });
 });
