@@ -411,21 +411,28 @@ describe("ProjectionCard — live indicator (Round 4 Wave 1, item 4)", () => {
  *  numeric contract itself; the rendered pixels are verified separately by the visual smoke
  *  screenshots (equal row heights, pinned expander, aligned columns), not by this harness. */
 describe("ProjectionCard — equal-height rows & pinned expander (Round 4 Wave 2, item 1)", () => {
-  it("the 2-across league grid stretches row-mates (law amendment: start-aligned -> stretch)", () => {
-    // DimeModelFeed.tsx `.dmf-leaguebody`, desktop->=1024 block only.
-    const desktopGridBlock = feedSrc.slice(
-      feedSrc.indexOf("League bodies pack games 2-across"),
-      feedSrc.indexOf("@media (prefers-reduced-motion: reduce){", feedSrc.indexOf("League bodies pack games 2-across")),
+  it("the responsive league grid is 2-across on tablet and 3-across with stretched row-mates on desktop", () => {
+    const responsiveGridBlock = feedSrc.slice(
+      feedSrc.indexOf("TABLET (768-1023px)"),
+      feedSrc.indexOf("@media (prefers-reduced-motion: reduce){", feedSrc.indexOf("TABLET (768-1023px)")),
     );
-    expect(desktopGridBlock).toContain("@media (min-width:1024px)");
-    expect(desktopGridBlock).toMatch(/\.dmf-leaguebody\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\);align-items:stretch\}/);
-    expect(desktopGridBlock).not.toMatch(/align-items:start/);
+    expect(responsiveGridBlock).toMatch(
+      /@media \(min-width:768px\)\{\s*\.dmf-leaguebody\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)\}/,
+    );
+    expect(responsiveGridBlock).toMatch(
+      /@media \(min-width:1024px\)\{[\s\S]*?\.dmf-leaguebody\{grid-template-columns:repeat\(3,minmax\(0,1fr\)\);align-items:stretch\}/,
+    );
   });
 
-  it("the law doc records the 2026-07-23 owner amendment on the 'start-aligned' line", () => {
-    const line = lawDoc.slice(lawDoc.indexOf("**Games pack 2-across**"), lawDoc.indexOf("Owner Directives — 2026-07-18 (edge labeling"));
-    expect(line).toContain("start-aligned");
-    expect(line).toContain("— owner directive 2026-07-23: rows stretch; summary centers; expander pinned");
+  it("the law doc records the 1/2/3 responsive density contract and desktop stretch behavior", () => {
+    const section = lawDoc.slice(
+      lawDoc.indexOf("Owner Directives — 2026-07-23 (responsive feed density)"),
+      lawDoc.indexOf("Owner Directives — 2026-07-18 (edge labeling"),
+    );
+    expect(section).toContain("mobile (<768px) renders 1");
+    expect(section).toContain("tablet (768–1023px) renders");
+    expect(section).toContain("desktop (>=1024px) renders 3");
+    expect(section).toContain("Desktop rows stretch");
   });
 
   it("desktop->=1024px CSS gives the card a flexible summary row so surplus height centers there, expander pinned last", () => {
@@ -494,7 +501,7 @@ describe("ProjectionCard — aligned summary mini-grid (Round 4 Wave 2, item 5)"
 
   it("the readout grid is shrinkable below its old 376px floor (W4 e2e-caught defect)", () => {
     // Readable-width track floors (6.5/3.5/3.5/5.5rem) + 3 gaps summed to an
-    // un-shrinkable 376px minimum — wider than a 2-across card at 1024px —
+    // un-shrinkable 376px minimum — wider than a multi-column card at 1024px —
     // and .summary's unreset automatic minimum made plain cards resolve
     // tracks on a different width than carousel row-mates (chip
     // misalignment at 1280). Floors must stay (near-)zero lengths and the
@@ -502,6 +509,17 @@ describe("ProjectionCard — aligned summary mini-grid (Round 4 Wave 2, item 5)"
     const item5 = cssBlock(cardCss, "Round 4 Wave 2 — item 5", "Round 4 Wave 2 — item 1");
     expect(item5).toMatch(/grid-template-columns:\s*minmax\(0, 1\.6fr\)\s+minmax\(0, 0\.8fr\)\s+minmax\(0, 0\.8fr\)\s+minmax\(5rem, 1fr\);/);
     expect(item5).toMatch(/\.summary \{[^}]*min-inline-size: 0;/);
+  });
+
+  it("reflows the summary by card width when a 3-across desktop column is narrow", () => {
+    const item5 = cssBlock(cardCss, "Round 4 Wave 2 — item 5", "Round 4 Wave 2 — item 1");
+    expect(item5).toContain("@container projcard (max-width: 520px)");
+    expect(item5).toMatch(
+      /\.summary__readout \{\s*display: grid;\s*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\);/,
+    );
+    expect(item5).toContain(".summary__item--edge { grid-column: 1 / -1; }");
+    expect(item5).toContain(".summary__item--message { grid-column: 1 / -1; }");
+    expect(item5).toContain(".summary__edge { grid-column: auto; align-self: center; justify-self: auto; }");
   });
 
   it("numeric readout cells are tabular (Book/Model values, the edge chip's percentage)", () => {
