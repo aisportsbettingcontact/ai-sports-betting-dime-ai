@@ -172,7 +172,7 @@
     display: grid;
     /* Track floors are (near-)zero, NOT the readable-label widths they once
        were (6.5/3.5/3.5/5.5rem): those floors + 3 column gaps summed to an
-       un-shrinkable 376px intrinsic minimum, and the >=1024 2-across grid
+       un-shrinkable 376px intrinsic minimum, and the >=1024 multi-column grid
        beside the 352px sidebar leaves a card only ~246px of content at
        1024px — the plain .summary (whose automatic minimum, unlike
        .summary-carousel's min-inline-size:0 below, was never reset) then
@@ -216,12 +216,42 @@
   }
 }
 
+/* Three desktop feed columns can make an individual card narrower than a
+   tablet card even though the viewport is wider. Reflow the fixed four-track
+   summary by CARD width: give MODEL EDGE a full row, align BOOK / MODEL
+   beneath it, then center the signal chip last. The viewport gate preserves
+   the shipped mobile summary unchanged. */
+@media (min-width: 768px) {
+  @container projcard (max-width: 520px) {
+    .summary {
+      display: flex;
+      flex-direction: column;
+      flex-wrap: nowrap;
+      align-items: stretch;
+      justify-content: center;
+      gap: var(--space-sm);
+    }
+    .summary__readout {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: var(--space-xs);
+      inline-size: 100%;
+    }
+    .summary__item { align-items: center; text-align: center; }
+    .summary__item--edge { grid-column: 1 / -1; }
+    .summary__item--book,
+    .summary__item--model { grid-column: auto; }
+    .summary__item--message { grid-column: 1 / -1; }
+    .summary__edge { grid-column: auto; align-self: center; justify-self: auto; }
+  }
+}
+
 /* ══ Round 4 Wave 2 — item 1: equal-height card rows, pinned expander
    (desktop ONLY, >=1024px — item 8 scoping: item 1, unlike item 5 above,
    does NOT apply to tablet) ══
    Owner amendment 2026-07-23 to the 07-21 desktop-emphasis law: "start-aligned"
    -> "stretch" (annotated in design-system/dime-ai/pages/ai-model-projections.md).
-   The 2-across league grid (`DimeModelFeed.tsx` `.dmf-leaguebody`) now
+   The 3-across desktop league grid (`DimeModelFeed.tsx` `.dmf-leaguebody`)
    stretches row-mates to equal height instead of natural
    (`align-items:start` -> `align-items:stretch`); this is the matching
    per-card structure so the extra height a shorter row-mate receives lands
