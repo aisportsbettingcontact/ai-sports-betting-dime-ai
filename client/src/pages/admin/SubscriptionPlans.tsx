@@ -20,7 +20,7 @@
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { useLocation } from "wouter";
-import { RefreshCw, CreditCard, Loader2, Plus, Check, DownloadCloud } from "lucide-react";
+import { RefreshCw, CreditCard, Loader2, Plus, Check, DownloadCloud, FlaskConical } from "lucide-react";
 import { toast } from "sonner";
 import { useAppAuth } from "@/_core/hooks/useAppAuth";
 import { trpc } from "@/lib/trpc";
@@ -156,6 +156,23 @@ export default function SubscriptionPlans() {
     onError: (err) => {
       console.error(`[SubscriptionPlans] backfill failed: ${err.message}`);
       toast.error("Import failed", { description: err.message });
+    },
+  });
+
+  // Owner-only TEST checkout (Phase 2.5): opens a Stripe test-mode Checkout
+  // Session for a sandbox plan in a new tab so the owner can run the full
+  // subscribe flow with a test card before publishing live plans.
+  const testCheckoutMutation = trpc.subscriptionPlans.createTestCheckoutSession.useMutation({
+    onSuccess: ({ url }) => {
+      console.log(`[SubscriptionPlans] test checkout ✓ opening ${url}`);
+      window.open(url, "_blank", "noopener,noreferrer");
+      toast.success("Test checkout opened", {
+        description: "Finish it with a Stripe test card in the new tab.",
+      });
+    },
+    onError: (err) => {
+      console.error(`[SubscriptionPlans] test checkout failed: ${err.message}`);
+      toast.error("Test checkout failed", { description: err.message });
     },
   });
 
@@ -584,13 +601,38 @@ export default function SubscriptionPlans() {
                                 </button>
                               </div>
                             ) : (
-                              <button
-                                type="button"
-                                onClick={() => setConfirmArchiveId(plan.id)}
-                                className="cursor-pointer rounded-md border border-border px-2.5 py-1 text-xs font-medium text-foreground transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                              >
-                                Archive
-                              </button>
+                              <div className="inline-flex items-center gap-2">
+                                {/* Sandbox plans get an owner-only TEST checkout. */}
+                                {!plan.livemode && (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      testCheckoutMutation.mutate({
+                                        slug: plan.slug,
+                                        origin: window.location.origin,
+                                      })
+                                    }
+                                    disabled={testCheckoutMutation.isPending}
+                                    className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-primary px-2.5 py-1 text-xs font-medium text-primary transition-colors duration-150 hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50"
+                                    title="Open a Stripe test-mode checkout for this sandbox plan."
+                                  >
+                                    {testCheckoutMutation.isPending &&
+                                    testCheckoutMutation.variables?.slug === plan.slug ? (
+                                      <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
+                                    ) : (
+                                      <FlaskConical className="h-3 w-3" aria-hidden="true" />
+                                    )}
+                                    Test checkout
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => setConfirmArchiveId(plan.id)}
+                                  className="cursor-pointer rounded-md border border-border px-2.5 py-1 text-xs font-medium text-foreground transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                                >
+                                  Archive
+                                </button>
+                              </div>
                             )}
                           </td>
                         </tr>

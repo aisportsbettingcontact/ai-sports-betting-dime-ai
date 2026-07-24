@@ -26,6 +26,8 @@ export interface StoredPrice {
   trialPeriodDays: number | null;
   active: boolean;
   isDefault: boolean;
+  /** false → a Stripe TEST/sandbox price (owner-only test checkout); true → live. */
+  livemode: boolean;
 }
 
 export interface StoredPlan {
@@ -40,6 +42,8 @@ export interface StoredPlan {
   maxSubscribers: number | null;
   discordRoleId: string | null;
   telegramChatId: string | null;
+  /** false → the plan was provisioned in the Stripe sandbox, not the live account. */
+  livemode: boolean;
   prices: StoredPrice[];
 }
 

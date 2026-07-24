@@ -235,6 +235,27 @@ export async function updatePlanMeta(planId:number, patch:{name?:string; descrip
 
 ---
 
+## Phase 2.5 — Owner-only TEST checkout + dual-secret webhook (prove the flow before live)
+
+Goal: let the owner run the full subscribe flow against the Stripe **sandbox** (test key already on the web service) before publishing a single live plan — without opening a public free-access hole and without disturbing live checkout.
+
+### Task 2.5.1: Owner-only test-checkout mutation
+**Files:** `server/routers/subscriptionPlans.ts`.
+- [x] `createTestCheckoutSession` (ownerProcedure) — precondition `isProvisioningTestMode()`, resolves the plan's **test** price via `defaultPriceForMode(plan, false)` (never a live price), creates a `mode:"subscription"` Checkout Session on the **test** provisioning client, returns `session.url`. Metadata `dime_test:"1"`. No `payment_method_types`.
+
+### Task 2.5.2: Dual-secret webhook verification
+**Files:** `server/stripeWebhook.ts`.
+- [x] Verify the `Stripe-Signature` against `STRIPE_WEBHOOK_SECRET` then the optional `STRIPE_TEST_WEBHOOK_SECRET` (each a distinct HMAC secret; trying both never weakens verification). 400 only if none verify.
+- [x] **Test-mode safety guard:** `processWebhookEvent` returns early for `event.livemode === false` — a test card must never mint a real `app_users` row or grant live access. The grant path is identical for live events, so the sandbox run still validates checkout → price-by-mode → Stripe → delivery → signature.
+
+### Task 2.5.3: Admin "Test checkout" button
+**Files:** `client/src/pages/admin/SubscriptionPlans.tsx`, `client/src/pages/admin/planTypes.ts`.
+- [x] Mirror the server's `livemode` field onto the client `StoredPlan`/`StoredPrice`. Render a mint "Test checkout" action (alongside Archive) only for `plan.active && !plan.livemode` (sandbox plans); on success open the returned URL in a new tab.
+
+**Phase 2.5 verification:** `tsc` clean · 44 module tests + 7 new source-contract safety tests green · build + bundle within budget. **Owner setup (one-time):** in the Stripe **sandbox** dashboard create a webhook endpoint pointing at the prod `POST /api/stripe/webhook`, copy its signing secret to `STRIPE_TEST_WEBHOOK_SECRET` on the Railway **web** service. Then: create a sandbox plan → "Test checkout" → pay with test card `4242…` → webhook verifies and is acknowledged (fulfillment intentionally skipped, prod users untouched) → flip to live only after this passes.
+
+---
+
 ## Roadmap — remaining Winible-parity phases (scoped; task-level detail authored at execution time)
 
 Each is additive on the Phase 0–2 foundation and ships independently. Listed with the exact Stripe primitives + files so the next planning increment is mechanical.
