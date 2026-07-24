@@ -37,7 +37,7 @@
 ### Color Overrides
 
 - **Live state:** pulsing 7px mint dot + mono "LIVE · TOP 6" in mint (`--mint-on-light` on light theme, with keyline on the dot)
-- **PASS games:** verdict values in `--text-secondary`, grade "—" *(2026-07-23: the verdict-strip/grade concept is superseded — no letter-grade field exists in the current ProjectionCard architecture; PASS state is enforced via `.projection-card--pass` at `opacity: 0.82` + the "No edge" chip + a defensive zero-mint backstop, per Round 4 items 3 and 8 in `docs/superpowers/plans/2026-07-23-feed-desktop-polish.md`)*, whole card at `opacity: 0.82`, zero mint anywhere in the card
+- **PASS games:** verdict values in `--text-secondary`, grade "—" *(2026-07-23: the verdict-strip/grade concept is superseded — no letter-grade field exists in the current ProjectionCard architecture; PASS state is enforced via `.projection-card--pass` at `opacity: 0.82` + the "No edge" chip + a defensive zero-mint backstop, per Round 4 items 3 and 8 in `docs/superpowers/plans/2026-07-23-feed-desktop-polish.md`)*, whole card at `opacity: 0.82`, zero mint anywhere in the card. When prices are scorable, the summary still presents one best canonical no-vig ROI side per market (`calculateRoi`), ordered highest → lowest (zero/negative values included), while every slide and its navigation remain explicitly neutral **No edge**. The unavailable-data sentence is reserved for games with no scorable side.
   — a LIVE card never takes the PASS treatment, even when a mid-game model
   invalidation removes every edge. The newer compact-state rule below still
   reduces the whole live/final card to `opacity: 0.72`; that is lifecycle
@@ -53,6 +53,9 @@
 
 - **No theme toggle in the feed header.** The Profile tab's Appearance setting
   (System / Light / Dark) is the single theme control. `?theme=` embeds stay honored.
+  System owns the fixed neutral-grey, dark-contrast ground (`#121212` page /
+  `#181818` card), Dark owns the pure-black ground, and Light owns the white
+  ground.
 - **Gamecard matchup block** (team names only; each fact once):
   ```
   {AWAY TEAM NAME} @ {HOME TEAM NAME}   ← "Giants @ Mariners" (names only, no abbrs)
@@ -222,16 +225,20 @@ Desktop (>=1024px) only — tablet/mobile keep their shipped layouts:
   compact-form clause): run line rows read "Dodgers -1.5" / "Yankees +1.5",
   total rows read "Over 9" / "Under 9", moneyline rows read "<Team> ML".
   Edge footers re-anchor on the spelled-out side ("Yankees +1.5 · +4.8%").
-- **Multi-edge carousel:** a game with 2+ real edges cycles them in a
+- **Ranked projection carousel:** a game with 2+ real edges cycles them in a
   swipeable scroll-snap strip (`SummaryCarousel`), one uniform summary
-  readout per slide, ranked largest → smallest edge %. ONLY real edges
-  populate slides — NO_EDGE markets never appear; at most one side per
-  market. The visible count/dot row is removed: a 44px `ArrowRight` control
+  readout per slide, ranked largest → smallest edge %, at most one side per
+  market. If the whole game has no actionable edge, the same strip instead
+  carries the highest canonical no-vig ROI side from each scorable market,
+  ordered best → worst even when every ROI is negative; every neutral slide
+  and its arrow retain the visible **No edge** label and neutral styling. The visible count/dot row
+  is removed: a 44px `ArrowRight` control
   sits immediately after the edge pill, advances to the next edge, and wraps
   to the strongest after the last. Its icon is mint and its border consumes
   the theme foreground token (white on dark/system, black on light).
   `prefers-reduced-motion` collapses smooth scrolling. A game with one edge
-  (or none) keeps the plain single summary with no arrow.
+  or one scorable no-edge candidate keeps the plain single summary with no
+  arrow; a game with no scorable candidate shows the unavailable-data copy.
 
 ---
 

@@ -25,10 +25,8 @@ import "./ProjectionCard.css";
  * The card is its own container (`ds-cq`), so the layout REFLOWS by the card's
  * width, not the viewport — structure adapts before type ever shrinks.
  */
-/** Every REAL edge on the game, ranked strongest → weakest by the decision
- *  engine, at most one side per market (rankMarkets sorts desc, so the first
- *  side seen for a market is its best). NO_EDGE sides never make the list —
- *  they must not populate the carousel (owner directive 2026-07-18). */
+/** Every actionable edge on the game, ranked strongest → weakest by the
+ *  decision engine, at most one side per market. */
 export function rankedEdges(game: ProjectionGame): MarketInsight[] {
   const seen = new Set<string>();
   return rankMarkets(game.markets.flatMap((m) => m.sides)).filter((m) => {
@@ -36,6 +34,33 @@ export function rankedEdges(game: ProjectionGame): MarketInsight[] {
     seen.add(m.marketKey);
     return true;
   });
+}
+
+/**
+ * A no-action game's most useful market context: the highest canonical no-vig
+ * ROI side from each scorable market, ranked best → worst. Zero and negative ROI
+ * remain eligible; the card still labels every item "No edge" because none
+ * cleared WATCH/BET. `roiPct` is the product's canonical no-vig ROI, so this
+ * order is independent of raw probability-edge and posted-price EV order.
+ */
+export function rankedNoEdgeCandidates(game: ProjectionGame): MarketInsight[] {
+  const seen = new Set<string>();
+  return rankMarkets(game.markets.flatMap((m) => m.sides))
+    .filter((insight) => insight.recommendation === "NO_EDGE")
+    .sort((a, b) => {
+      const aRoi = a.roiPct ?? Number.NEGATIVE_INFINITY;
+      const bRoi = b.roiPct ?? Number.NEGATIVE_INFINITY;
+      if (bRoi !== aRoi) return bRoi - aRoi;
+      if (b.edgePP !== a.edgePP) return b.edgePP - a.edgePP;
+      if (b.evUnits !== a.evUnits) return b.evUnits - a.evUnits;
+      const marketOrder = a.marketKey.localeCompare(b.marketKey);
+      return marketOrder || a.sideLabel.localeCompare(b.sideLabel);
+    })
+    .filter((insight) => {
+      if (seen.has(insight.marketKey)) return false;
+      seen.add(insight.marketKey);
+      return true;
+    });
 }
 
 export function ProjectionCard({
@@ -50,10 +75,13 @@ export function ProjectionCard({
   onOpen?: () => void;
 }) {
   const edges = rankedEdges(game);
+  const fallbackCandidates = edges.length === 0 ? rankedNoEdgeCandidates(game) : [];
+  const displayInsights = edges.length > 0 ? edges : fallbackCandidates;
+  const showsNoEdgeRanking = edges.length === 0 && fallbackCandidates.length > 0;
   // Whole-card PASS state (Round 4 Wave 1, item 3 / page law "PASS games"):
-  // no market on this game clears the WATCH/BET threshold — the same
-  // rankedEdges() ground truth that already drives the summary's "No edge"
-  // rendering, so this can never disagree with what the card itself shows.
+  // no market on this game clears the WATCH/BET threshold. The fallback
+  // candidates remain recommendation=NO_EDGE, so their richer readout can
+  // never disagree with this whole-card state.
   // A LIVE card never takes PASS (final-review I2 precedence ruling,
   // 2026-07-23 — annotated in the page law):
   // live+no-edges is reachable (a mid-game model invalidation nulls every
@@ -92,12 +120,20 @@ export function ProjectionCard({
         />
       )}
 
-      {/* One edge (or none) → the single dominant summary. Two or more →
-          the ranked swipe strip, largest edge first (directive 2026-07-18). */}
-      {edges.length > 1 ? (
-        <SummaryCarousel insights={edges} teams={[game.away, game.home]} />
+      {/* Actionable games rank qualifying edges. Pass games use the same stable
+          slot for one best-ROI candidate per market (including negative ROI),
+          while every signal remains explicitly neutral "No edge". */}
+      {displayInsights.length > 1 ? (
+        <SummaryCarousel
+          insights={displayInsights}
+          teams={[game.away, game.home]}
+          variant={showsNoEdgeRanking ? "no-edge" : "edge"}
+        />
       ) : (
-        <ProjectionSummary insight={edges[0] ?? null} teams={[game.away, game.home]} />
+        <ProjectionSummary
+          insight={displayInsights[0] ?? null}
+          teams={[game.away, game.home]}
+        />
       )}
 
       <ProjectionMarketsPopover

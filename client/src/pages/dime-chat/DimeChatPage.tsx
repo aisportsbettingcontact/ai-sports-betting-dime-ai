@@ -1199,9 +1199,10 @@ export default function DimeChatPage({
   shell,
   previewMode = false,
 }: DimeChatPageProps = {}) {
-  const { theme: contextTheme } = useTheme();
+  const { theme: contextTheme, mode: contextThemeMode } = useTheme();
   const theme: Theme =
     themeProp ?? (contextTheme === "light" ? "light" : "dark");
+  const themeMode = themeProp ?? contextThemeMode;
   const reduceMotion = useReducedMotionPreference();
   const { appUser, isOwner, loading: authLoading } = useAppAuth();
 
@@ -2234,8 +2235,9 @@ export default function DimeChatPage({
   return (
     <div
       ref={pageRef}
-      className={`dc-page dc-page--app theme-${theme}${drawerMoving ? " dc-drawer-is-moving" : ""}`}
+      className={`dc-page dc-page--app theme-${theme} theme-mode-${themeMode}${drawerMoving ? " dc-drawer-is-moving" : ""}`}
       data-theme={theme}
+      data-theme-mode={themeMode}
     >
       <div className="dc-app">
         {compact && (
