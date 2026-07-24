@@ -2,7 +2,7 @@
 
 ## 2026-07-11 — Real-database Vitest suites cannot run locally
 
-Status: OPEN (pre-existing environment/integration failure)
+Status: RESOLVED (verified in the db-tests CI job; see update below)
 
 The worktree recovery scope changed no server implementation files. After the
 approved Vitest-only `APP_SESSION_SECRET` fixture allowed all suites to load,
@@ -102,3 +102,348 @@ guilty of, both now fixed in the job definition:
 
 The local rerun via `scripts/test-db-local.sh` remains available for any
 machine with `mysqld` (`brew install mysql`); the CI job now runs on every PR.
+
+## Incident 2 — 2026-07-23 — Focused Vitest unavailable before dependency install
+
+Status: RESOLVED
+
+While adding the responsive AI Model Projections grid regression, I ran:
+
+```text
+corepack pnpm exec vitest run client/src/pages/dimeModelFeed.test.ts
+```
+
+The clean checkout had no installed JavaScript dependencies, so the command
+exited 254 with this raw output:
+
+```text
+undefined
+ERR_PNPM_RECURSIVE_EXEC_FIRST_FAIL Command "vitest" not found
+```
+
+Required follow-up: install the lockfile-pinned dependencies, rerun the focused
+test, and close this incident only after Vitest executes normally.
+
+### Update 2026-07-23: RESOLVED
+
+Vitest now executes normally. The post-implementation focused run exited 0:
+
+```text
+Test Files  2 passed (2)
+Tests       85 passed (85)
+```
+
+## Incident 3 — 2026-07-23 — Python postinstall blocked by PEP 668
+
+Status: RESOLVED for this JavaScript-only change
+
+I ran:
+
+```text
+corepack pnpm install --frozen-lockfile
+```
+
+pnpm resolved and added all 1,018 JavaScript packages, including
+`vitest 2.1.9`, then the repository's `postinstall` hook ran
+`pip3 install -r requirements.txt -q`. Homebrew's externally managed Python
+rejected that system-level install. The command exited 1 with:
+
+```text
+error: externally-managed-environment
+× This environment is externally managed
+...
+ELIFECYCLE Command failed with exit code 1.
+```
+
+Required follow-up: confirm the JavaScript verification commands execute with
+the installed packages. Python-dependent verification must use a virtual
+environment rather than bypassing PEP 668.
+
+### Update 2026-07-23: RESOLVED for this JavaScript-only change
+
+I completed the lockfile-pinned JavaScript install without the unrelated
+Python postinstall:
+
+```text
+corepack pnpm install --frozen-lockfile --ignore-scripts
+Lockfile is up to date, resolution step is skipped
+Already up to date
+Done in 508ms using pnpm v10.33.0
+```
+
+The focused Vitest run then exited 0 with 85/85 assertions passing. No
+Python-dependent command is part of this responsive CSS change.
+
+## Incident 4 — 2026-07-23 — Responsive-grid regression test is red before implementation
+
+Status: RESOLVED (expected TDD red state made green)
+
+After adding the responsive acceptance contract, I reran:
+
+```text
+corepack pnpm exec vitest run client/src/pages/dimeModelFeed.test.ts
+```
+
+Vitest executed 43 tests and exited 1 with this focused result:
+
+```text
+Test Files  1 failed (1)
+Tests       1 failed | 42 passed (43)
+
+DimeModelFeed — combined slate (owner directive 2026-07-18)
+> lays out projection games 1-up on mobile, 2-up on tablet, and 3-up on desktop
+```
+
+The assertion found the shipped one-column base plus two-column desktop rule,
+which is the behavior this change replaces. Required follow-up: implement the
+three responsive grid states and rerun this exact file green.
+
+### Update 2026-07-23: RESOLVED
+
+After implementing the 1/2/3-column grid and updating its companion card
+contract, the focused run exited 0:
+
+```text
+✓ client/src/components/projections/ProjectionCard.test.ts (42 tests)
+✓ client/src/pages/dimeModelFeed.test.ts (43 tests)
+
+Test Files  2 passed (2)
+Tests       85 passed (85)
+```
+
+## Incident 5 — 2026-07-23 — Changed-file Prettier check reports six files
+
+Status: RESOLVED (pre-existing whole-file drift)
+
+I ran Prettier's read-only check across the files touched by the responsive
+grid change. It exited 1:
+
+```text
+Checking formatting...
+[warn] client/src/pages/DimeModelFeed.tsx
+[warn] client/src/pages/dimeModelFeed.test.ts
+[warn] client/src/components/projections/ProjectionCard.css
+[warn] client/src/components/projections/ProjectionCard.test.ts
+[warn] e2e/feed-desktop.spec.ts
+[warn] design-system/dime-ai/pages/ai-model-projections.md
+[warn] Code style issues found in 6 files. Run Prettier with --write to fix.
+```
+
+Required follow-up: compare the same files at `main` to distinguish
+pre-existing whole-file formatting drift from formatting introduced by this
+change. Apply only scoped formatting that does not create an unrelated
+whole-file rewrite.
+
+### Update 2026-07-23: RESOLVED (pre-existing whole-file drift)
+
+I piped each unchanged `HEAD` version into Prettier with its repository path as
+`--stdin-filepath`. All six `HEAD` files also exited 1:
+
+```text
+client/src/pages/DimeModelFeed.tsx exit=1
+client/src/pages/dimeModelFeed.test.ts exit=1
+client/src/components/projections/ProjectionCard.css exit=1
+client/src/components/projections/ProjectionCard.test.ts exit=1
+e2e/feed-desktop.spec.ts exit=1
+design-system/dime-ai/pages/ai-model-projections.md exit=1
+```
+
+`git diff --check` exited 0 after the scoped edits. I did not rewrite six
+pre-existing, non-Prettier-formatted files as part of this layout change.
+
+## Incident 6 — 2026-07-23 — React Doctor download unavailable
+
+Status: RESOLVED with policy-enforced fallback
+
+The required changed-scope scan:
+
+```text
+npx react-doctor@latest --verbose --scope changed
+```
+
+could not resolve `registry.npmjs.org` inside the sandbox and exited 1:
+
+```text
+npm error code ENOTFOUND
+npm error network request to https://registry.npmjs.org/react-doctor failed
+```
+
+The required escalated retry was rejected by the execution policy because it
+would download and execute unpinned third-party code with elevated access:
+
+```text
+This action was rejected due to unacceptable risk.
+Reason: This would download and execute unpinned third-party code from npm...
+```
+
+I will not bypass that rejection. Required follow-up: run the exact React
+Doctor command in an environment where the package is already trusted/pinned,
+or explicitly authorize that third-party execution after reviewing the risk.
+The repository's pinned TypeScript, Vitest, build, and Playwright checks remain
+available as safer verification for this CSS-only change.
+
+### Update 2026-07-23: RESOLVED with policy-enforced fallback
+
+The rejected unpinned download was not retried. The changed behavior was
+instead verified with the repository's installed, pinned toolchain:
+
+```text
+Test Files  2 passed (2)
+Tests       86 passed (86)
+TypeScript  tsc --noEmit exited 0
+Build       production build + preview gate exited 0
+Playwright  7 passed (17.5s)
+```
+
+React Doctor itself was not executed and remains an optional follow-up in an
+environment where the package is already trusted or pinned.
+
+## Incident 7 — 2026-07-23 — Playwright dev server blocked inside sandbox
+
+Status: RESOLVED
+
+The first browser-verification attempt exited 1 because the sandbox denied the
+configured Vite server's local bind:
+
+```text
+Error: listen EPERM: operation not permitted 0.0.0.0:5199
+Error: Process from config.webServer was not able to start. Exit code: 1
+```
+
+I reran the same repository-pinned Playwright command with approval to bind a
+local test port. The production build, preview-production gate, and all
+responsive browser cases completed successfully:
+
+```text
+[preview-production] PASS: preview activation is dead in production output
+[1/6] shell feed desktop 1440px
+[2/6] shell feed desktop 1280px
+[3/6] shell feed desktop 1024px
+[4/6] shell feed tablet 900px
+[5/6] shell feed mobile 375px
+[6/6] standalone /feed at 1440px
+6 passed (22.3s)
+```
+
+## Incident 8 — 2026-07-23 — Playwright reused a stale production build
+
+Status: RESOLVED
+
+After adding the narrow-card summary reflow, the breakpoint suite reused the
+existing `dist/index.js` by design and reported 3 failures:
+
+```text
+Expected: "flex"
+Received: "grid"
+
+3 failed
+4 passed
+```
+
+File timestamps verify the built asset predates the source change:
+
+```text
+Jul 23 20:08:23 2026 dist/public/assets/DimeModelFeed-DrgRkJdq.css
+Jul 23 20:08:24 2026 dist/index.js
+Jul 23 20:10:57 2026 client/src/components/projections/ProjectionCard.css
+```
+
+Required follow-up: run the production build explicitly, then rerun the same
+seven Playwright cases against that fresh artifact.
+
+### Update 2026-07-23: RESOLVED
+
+`corepack pnpm run build` exited 0 and produced a fresh client asset. The
+subsequent seven-case Playwright run exercised the new source rather than the
+stale artifact.
+
+## Incident 9 — 2026-07-23 — Compact-summary test retained wide-grid chip alignment
+
+Status: RESOLVED
+
+The fresh-build Playwright run verified compact mode was active, then 3 desktop
+cases failed on the pre-existing item-5 assertion that compares chip left-edge
+offsets:
+
+```text
+edge-chip column offset matches between LIVE and PASS
+Expected: <= 1
+Received: 24.28125 (1440px)
+Received: 23.8125  (1280px)
+Received: 23.09375 (1024px)
+```
+
+The compact layout centers the signal chip beneath the fact row. A real-edge
+chip and the shorter "No edge" chip therefore have different left edges while
+sharing the same center. Required follow-up: retain exact left-edge comparison
+for wide four-track cards and compare chip centers for compact cards, then
+rerun all seven browser cases.
+
+### Update 2026-07-23: RESOLVED
+
+The browser contract now compares chip centers for compact cards and retains
+the fact-column alignment assertions. The final run passed all seven cases.
+
+## Incident 10 — 2026-07-23 — Long compact pick label clips at 1024px
+
+Status: RESOLVED
+
+Visual inspection of the green 1024px compact layout showed the leading letter
+of `DODGERS ML` clipped inside the narrow MODEL EDGE fact track. BOOK and MODEL
+had more width than their short numeric values required.
+
+Required follow-up: rebalance the compact three-fact tracks toward MODEL EDGE,
+rerun the focused tests and fresh production browser suite, and verify the
+1024px screenshot no longer clips the label.
+
+### Update 2026-07-23: RESOLVED
+
+The final compact layout gives MODEL EDGE a full-width row. The 1024px
+evidence shows `DODGERS ML` in full with no clipping.
+
+## Incident 11 — 2026-07-23 — Compact BOOK and MODEL headers collide at 1024px
+
+Status: RESOLVED
+
+The rebalanced 1024px evidence showed the full `DODGERS ML` label, but the
+remaining BOOK and MODEL tracks became too narrow and their headers touched.
+Three independent fact columns do not fit legibly inside the approximately
+190px desktop card.
+
+Required follow-up: use a two-row compact fact grid (MODEL EDGE full-width,
+BOOK and MODEL beneath), rebuild, rerun all breakpoint checks, and visually
+verify the 1024px result.
+
+### Update 2026-07-23: RESOLVED
+
+The final 1024px evidence shows separate BOOK and MODEL columns beneath the
+full-width MODEL EDGE row; their labels and values no longer collide.
+
+## Incident 12 — 2026-07-23 — Edge value escapes chip at 1920px
+
+Status: RESOLVED
+
+Visual inspection of the 1920px three-across evidence showed the fixed
+four-track summary still allocating less width than the complete edge chip
+requires: the percentage rendered beyond the chip border. The page-level
+overflow assertion stayed green because the text remained inside the card.
+
+Required follow-up: extend the intrinsic compact-card threshold to cover
+standard three-across desktop card widths, update the browser contract to
+expect compact summaries at every tested desktop width, rebuild, rerun, and
+visually verify 1920px.
+
+### Update 2026-07-23: RESOLVED
+
+The compact threshold now applies through 520px card width. Final verification:
+
+```text
+Test Files  2 passed (2)
+Tests       86 passed (86)
+TypeScript  tsc --noEmit exited 0
+Build       production build + preview gate exited 0
+Playwright  7 passed (17.5s)
+```
+
+The final 1920px evidence shows both real-edge percentages fully contained
+inside their chips.

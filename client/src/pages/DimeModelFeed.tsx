@@ -1224,7 +1224,7 @@ const DMF_CSS = `
 .dmf-lgchev--collapse{display:none}
 .dmf-league[open] .dmf-lgchev--expand{display:none}
 .dmf-league[open] .dmf-lgchev--collapse{display:inline-block}
-.dmf-leaguebody{display:flex;flex-direction:column;gap:12px;margin-top:12px}
+.dmf-leaguebody{display:grid;grid-template-columns:minmax(0,1fr);align-items:start;gap:12px;margin-top:12px}
 .dmf-game{background:var(--dmf-card);border:1px solid var(--dmf-border);border-radius:16px;display:flex;flex-direction:column;overflow:hidden;container-type:inline-size}/* card-level container: key type below scales by the CARD's width (cqi), not the viewport. Named @container dmf rules still target .dmf-root. */
 .dmf-game.dmf-pass{opacity:.82}
 .dmf-gbody{display:grid;grid-template-columns:250px 1fr 240px;align-items:stretch}
@@ -1413,7 +1413,13 @@ const DMF_CSS = `
   .dmf-root .dmf-mkfoot{font-size:11px;padding:6px}
   .dmf-root .dmf-mkfoot.dmf-none{color:var(--dmf-t3)}
 }
-/* DESKTOP (>=1024px) emphasis pass (owner directive 2026-07-21):
+/* TABLET (768-1023px): two games per row. Mobile keeps the single-column
+   base rule; desktop promotes the same grid to three columns below. */
+@media (min-width:768px){
+  .dmf-leaguebody{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+/* DESKTOP (>=1024px) emphasis pass (owner directive 2026-07-21,
+   responsive feed density amended 2026-07-23):
    1) Inside the app shell the page title centers at 5x scale (14px -> 70px,
       shaved via cqi only where the pane is too narrow for one line). Scoped
       by the shell scroll wrapper so the standalone /feed topbar (wordmark +
@@ -1421,9 +1427,9 @@ const DMF_CSS = `
       the sticky feedhead offset tracks it; the empty dmf-sync spacer hides so
       the title truly centers.
    2) The MLB league-header logo box doubles (30px -> 60px).
-   3) League bodies pack games 2-across (grid) to cut the single-column
-      whitespace; each ProjectionCard is its own container and reflows to the
-      half-width column on its own. align-items:stretch (Round 4 Wave 2, item 1
+   3) League bodies pack games 3-across (grid) to cut the single-column
+      whitespace; each ProjectionCard is its own container and reflows to its
+      column on its own. align-items:stretch (Round 4 Wave 2, item 1
       — owner amendment 2026-07-23 to "start-aligned", annotated in
       design-system/dime-ai/pages/ai-model-projections.md) stretches row-mates
       to equal height; ProjectionCard.css's matching @media(min-width:1024px)
@@ -1451,7 +1457,7 @@ const DMF_CSS = `
   .dc-shell-external-scroll .dmf-feedhead{top:96px;justify-content:center;padding-top:24px;padding-bottom:10px;margin-bottom:16px}
   .dc-shell-external-scroll .dmf-datelbl{font-size:17px}
   .dmf-lglogo--mlb{width:60px;height:60px;flex:0 0 60px}
-  .dmf-leaguebody{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch}
+  .dmf-leaguebody{grid-template-columns:repeat(3,minmax(0,1fr));align-items:stretch}
 }
 @media (prefers-reduced-motion: reduce){
   .dmf-root *{transition:none !important}

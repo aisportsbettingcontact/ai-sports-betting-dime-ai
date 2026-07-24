@@ -37,16 +37,17 @@
  * then a STABLE re-sort promoting LIVE to rank 0 (slateStatusRank). Start
  * times below (6:05 PM / 7:05 PM / 9:10 PM) make the pre-promotion order
  * [PASS, LIVE, SCHEDULED]; after promotion it's [LIVE, PASS, SCHEDULED] — in
- * the >=1024px 2-across grid that puts LIVE (tall) and PASS (short) in ROW 1
- * together (the pairing item 1 targets) and SCHEDULED alone in row 2 (a
- * distinct grid column — the pairing item 5's cross-card claim targets).
+ * the >=1024px 3-across grid that puts LIVE (tall), PASS (short), and
+ * SCHEDULED in ROW 1 together. LIVE/PASS provide the unequal natural-height
+ * pairing item 1 targets; SCHEDULED provides the distinct third column for
+ * item 5's cross-card alignment claim.
  * Odds inputs for PASS/LIVE/SCHEDULED are carried over verbatim from
  * .superpowers/sdd/r4-w2/_pw/tests/r4w2-smoke.spec.ts's PASS_GAME /
  * TALL_MULTI_EDGE_GAME / SIMPLE_EDGE_GAME (that wave's own gate-verified
  * edge counts), only gameStatus/scores/id/venue/time changed here.
  *
  * ── Contracts (see the plan's W4 section for the full per-width table) ──
- * Shell feed at 1440/1280/1024 (desktop): items 1,2,3,4,5,6,7 all active.
+ * Shell feed at 1920/1440/1280/1024 (desktop): items 1,2,3,4,5,6,7 all active.
  * Shell feed at 900 (tablet): items 2,3,4,5,7 active; 1,6 inert.
  * Shell feed at 375 (mobile): every round-4 rule inert.
  * Standalone /feed at 1440 (matchMedia override — see STANDALONE section):
@@ -328,14 +329,15 @@ async function summaryOffsets(card: Locator) {
   return {
     summaryBox,
     edgeX: edgeBox ? edgeBox.x - summaryBox.x : null,
+    edgeCenterX: edgeBox ? edgeBox.x + edgeBox.width / 2 - summaryBox.x : null,
     bookX: bookBox ? bookBox.x - summaryBox.x : null,
     modelX: modelBox ? modelBox.x - summaryBox.x : null,
   };
 }
 
-// ─── Shell feed: desktop (1440/1280/1024) + tablet (900) + mobile (375) ──────
+// ─ Shell feed: desktop (1920/1440/1280/1024) + tablet (900) + mobile (375) ──
 
-const DESKTOP_WIDTHS = [1440, 1280, 1024] as const;
+const DESKTOP_WIDTHS = [1920, 1440, 1280, 1024] as const;
 
 for (const width of DESKTOP_WIDTHS) {
   test(`shell feed desktop ${width}px: items 1-7 all active`, async ({ page }) => {
@@ -354,7 +356,30 @@ for (const width of DESKTOP_WIDTHS) {
     await expect(passCard.locator(".summary-carousel")).toHaveCount(0);
     const liveBox = await liveCard.boundingBox();
     const passBox = await passCard.boundingBox();
-    if (!liveBox || !passBox) throw new Error("card bounding boxes missing");
+    const scheduledBox = await scheduledCard.boundingBox();
+    if (!liveBox || !passBox || !scheduledBox) throw new Error("card bounding boxes missing");
+    expect(passBox.x, "desktop column 2 sits to the right of column 1").toBeGreaterThan(liveBox.x + liveBox.width);
+    expect(scheduledBox.x, "desktop column 3 sits to the right of column 2").toBeGreaterThan(passBox.x + passBox.width);
+    expect(Math.abs(passBox.y - liveBox.y), "desktop columns 1 and 2 share one row").toBeLessThanOrEqual(1);
+    expect(Math.abs(scheduledBox.y - liveBox.y), "desktop columns 1 and 3 share one row").toBeLessThanOrEqual(1);
+
+    // The summary reflows by card width, not viewport width. Standard
+    // 3-across desktop cards stay compact at every required viewport:
+    // MODEL EDGE full-width, BOOK / MODEL beneath, signal chip last.
+    const liveSummaryStyle = await liveCard.locator(".summary").first().evaluate((el) => {
+      const cs = getComputedStyle(el);
+      return { display: cs.display, flexDirection: cs.flexDirection };
+    });
+    expect(liveSummaryStyle.display, "three-across desktop card uses compact summary reflow").toBe("flex");
+    expect(liveSummaryStyle.flexDirection).toBe("column");
+    const passReadout = await passCard.locator(".summary__readout").boundingBox();
+    const passEdge = await passCard.locator(".summary__edge").boundingBox();
+    if (!passReadout || !passEdge) throw new Error("compact summary bounding boxes missing");
+    expect(
+      passEdge.y,
+      "compact summary edge chip sits below the fact rows",
+    ).toBeGreaterThanOrEqual(passReadout.y + passReadout.height - 1);
+
     expect(
       Math.abs(liveBox.height - passBox.height),
       `row-mates (LIVE ${liveBox.height} vs PASS ${passBox.height}) render equal height`,
@@ -465,9 +490,9 @@ for (const width of DESKTOP_WIDTHS) {
     // rule) and never resets its own automatic minimum size
     // (`min-inline-size:0`/`min-width:0`) the way its sibling
     // `.summary-carousel{min-inline-size:0}` (used for 2+-edge cards) does.
-    // At the persistent-sidebar >=1024px 2-across grid, a card's available
+    // At the persistent-sidebar >=1024px multi-column grid, a card's available
     // content width drops BELOW 376+2*24(card padding)=424px at 1024px
-    // (~296px cards) and 1280px (~400px cards) — two of the three REQUIRED
+    // (~296px cards) and 1280px (~400px cards) — two of the four REQUIRED
     // desktop widths in this plan — so a PLAIN (non-carousel) card's
     // `.summary` overflows its own card, its own grid column, and (since
     // `.dc-shell-external-layer{overflow:hidden}` is the first ancestor that
@@ -475,8 +500,9 @@ for (const width of DESKTOP_WIDTHS) {
     // reproducible, evidence-backed (see the shell-1024.png/shell-1280.png
     // screenshots this test captures above, and the shell-scroll overflow
     // measurement below) — reported here, not patched (W4 may not touch
-    // client/src). At 1440px cards are wide enough (~480px) that this never
-    // triggers, matching the item-5 PASS at that width.
+    // client/src). The 3-across layout now uses the card-level compact
+    // reflow at every required desktop width; the original fixed row remains
+    // available only when an individual card itself exceeds 520px.
     const shellScrollOverflow = await page
       .locator(".dc-shell-external-scroll")
       .evaluate((el) => el.scrollWidth - el.clientWidth);
@@ -492,14 +518,16 @@ for (const width of DESKTOP_WIDTHS) {
     expect(liveOffsets.edgeX, "edge chip present on LIVE").not.toBeNull();
     expect(passOffsets.edgeX, "edge chip present on PASS ('No edge')").not.toBeNull();
     expect(scheduledOffsets.edgeX, "edge chip present on SCHEDULED").not.toBeNull();
-    expect(
-      Math.abs(liveOffsets.edgeX! - passOffsets.edgeX!),
-      "edge-chip column offset matches between LIVE and PASS",
-    ).toBeLessThanOrEqual(1);
-    expect(
-      Math.abs(liveOffsets.edgeX! - scheduledOffsets.edgeX!),
-      "edge-chip column offset matches between LIVE and SCHEDULED",
-    ).toBeLessThanOrEqual(1);
+    for (const [label, offsets] of [
+      ["LIVE", liveOffsets],
+      ["PASS", passOffsets],
+      ["SCHEDULED", scheduledOffsets],
+    ] as const) {
+      expect(
+        Math.abs(offsets.edgeCenterX! - offsets.summaryBox.width / 2),
+        `${label} compact chip is centered beneath its fact rows`,
+      ).toBeLessThanOrEqual(1);
+    }
     expect(liveOffsets.bookX, "LIVE has a real BOOK column").not.toBeNull();
     expect(scheduledOffsets.bookX, "SCHEDULED has a real BOOK column").not.toBeNull();
     expect(
@@ -544,12 +572,17 @@ test("shell feed tablet 900px: items 2,3,4,5,7 active; items 1,6 inert", async (
   const passCard = cardByAriaLabel(page, "Athletics at Rangers");
   const scheduledCard = cardByAriaLabel(page, "Giants at Mariners");
 
-  // ── Item 1 inert: single column, PASS height genuinely differs from LIVE ──
+  // ── Item 1 inert: 2-column tablet rows start-align, so PASS keeps its
+  //    naturally shorter height instead of stretching to LIVE. ──
   const liveBox = await liveCard.boundingBox();
   const passBox = await passCard.boundingBox();
-  if (!liveBox || !passBox) throw new Error("card bounding boxes missing");
+  const scheduledBox = await scheduledCard.boundingBox();
+  if (!liveBox || !passBox || !scheduledBox) throw new Error("card bounding boxes missing");
   expect(passBox.height, "PASS is NOT stretched to LIVE's height on tablet").toBeLessThan(liveBox.height - 5);
-  expect(Math.abs(passBox.x - liveBox.x), "single column: PASS and LIVE share the same x").toBeLessThanOrEqual(1);
+  expect(passBox.x, "two columns: PASS sits to the right of LIVE").toBeGreaterThan(liveBox.x + liveBox.width);
+  expect(Math.abs(passBox.y - liveBox.y), "two columns: PASS and LIVE share the same row").toBeLessThanOrEqual(1);
+  expect(Math.abs(scheduledBox.x - liveBox.x), "tablet row 2 returns to column 1").toBeLessThanOrEqual(1);
+  expect(scheduledBox.y, "tablet row 2 sits below row 1").toBeGreaterThan(liveBox.y + liveBox.height);
 
   // ── Item 2 active: 24px matchup score ──
   const scoreFontSize = await liveCard.locator(".matchup__score").first().evaluate((el) => getComputedStyle(el).fontSize);
@@ -563,8 +596,8 @@ test("shell feed tablet 900px: items 2,3,4,5,7 active; items 1,6 inert", async (
   const dotDisplay = await liveCard.locator(".projection-card__live-dot").evaluate((el) => getComputedStyle(el).display);
   expect(dotDisplay, "live dot computed display at tablet").not.toBe("none");
 
-  // ── Item 5 active: single-column cards land in the SAME grid column, so
-  //    raw x AND the relative-offset both align. ──
+  // ── Item 5 active: LIVE and SCHEDULED occupy the first column in
+  //    consecutive tablet rows, so their relative summary tracks align. ──
   const liveOffsets = await summaryOffsets(liveCard);
   const scheduledOffsets = await summaryOffsets(scheduledCard);
   expect(
@@ -604,6 +637,8 @@ test("shell feed mobile 375px: every round-4 rule inert", async ({ page }) => {
   const passBox = await passCard.boundingBox();
   if (!liveBox || !passBox) throw new Error("card bounding boxes missing");
   expect(passBox.height, "PASS is NOT stretched on mobile").toBeLessThan(liveBox.height - 5);
+  expect(Math.abs(passBox.x - liveBox.x), "mobile cards share the single grid column").toBeLessThanOrEqual(1);
+  expect(passBox.y, "mobile card 2 sits below card 1").toBeGreaterThan(liveBox.y + liveBox.height);
 
   // Item 2 inert: fluid clamp, not the pinned 24px.
   const scoreFontSize = await liveCard.locator(".matchup__score").first().evaluate((el) => getComputedStyle(el).fontSize);

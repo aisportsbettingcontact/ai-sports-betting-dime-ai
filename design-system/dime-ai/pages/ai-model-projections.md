@@ -145,10 +145,15 @@ Desktop (>=1024px) only — tablet/mobile keep their shipped layouts:
   mlbstatic league SVG in a 60px box (WC emblem keeps 30px); bundled
   recolored `/brand/mlb-logo.png` (navy `#041E42` / red `#BF0D3E`) as
   offline fallback.
-- **Games pack 2-across** inside each league section (grid, start-aligned)
-  to cut the single-column whitespace; cards keep their container-driven
-  internal reflow.
-  — owner directive 2026-07-23: rows stretch; summary centers; expander pinned
+
+### Owner Directives — 2026-07-23 (responsive feed density)
+
+- **Games per row:** mobile (<768px) renders 1, tablet (768–1023px) renders
+  2, and desktop (>=1024px) renders 3 inside each league section. Cards keep
+  their container-driven internal reflow.
+- Tablet rows stay start-aligned so each card keeps its natural height.
+  Desktop rows stretch; each summary centers within surplus height and the
+  "VIEW FULL AI MODEL PROJECTIONS" expander stays pinned to the bottom.
 
 ### Owner Directives — 2026-07-18 (edge labeling + multi-edge carousel)
 
