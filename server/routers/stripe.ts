@@ -157,28 +157,55 @@ function dbPlanDescription(plan: StoredPlan, price: StoredPrice): string {
 }
 
 /**
- * Resolve a checkout plan slug → { priceId, description }.
+ * The specific StoredPrice checkout should charge on a DB plan. When an explicit
+ * priceId (a plan_prices row id, e.g. from a shared checkout link the owner copied
+ * for one interval) is given, THAT interval is used — as long as it is active and
+ * matches the checkout key's Stripe mode. A shared link deliberately targets one
+ * interval, so if it can't be honored in the current mode we return null (→ error)
+ * rather than silently charging a different price. With no priceId, the plan's
+ * default price for the mode is used. Returns null when nothing matches.
+ */
+function resolveCheckoutPrice(
+  plan: StoredPlan,
+  priceId: number | undefined,
+  wantLivemode: boolean,
+): StoredPrice | null {
+  if (priceId != null) {
+    return (
+      plan.prices.find((pr) => pr.id === priceId && pr.active && pr.livemode === wantLivemode) ?? null
+    );
+  }
+  return defaultPriceForMode(plan, wantLivemode);
+}
+
+/**
+ * Resolve a checkout plan slug (+ optional interval price id) → { priceId, description }.
  *  1) Legacy static plans (monthly/annual/pro/sharp/operator): the EXACT existing
  *     path — live env price IDs + hardcoded disclosure, byte-for-byte unchanged.
- *  2) Owner-created DB plans: the active default price MATCHING the checkout key's
- *     Stripe mode — live checkout must never be handed a test/sandbox price — plus
- *     a generated disclosure. Throws PRECONDITION_FAILED when the plan is unknown,
- *     inactive, or has no price in the current mode.
+ *     These are single-price plans, so an explicit priceId is ignored.
+ *  2) Owner-created DB plans: the requested interval (or the active default) MATCHING
+ *     the checkout key's Stripe mode — live checkout must never be handed a test/
+ *     sandbox price — plus a generated disclosure. The mode is derived PER-PRICE: a
+ *     price with a cadence is a subscription; a no-interval ("Lifetime") price is a
+ *     one-time payment, even inside an otherwise-recurring plan. Throws
+ *     PRECONDITION_FAILED when the plan is unknown, inactive, sold out, or has no
+ *     matching price in the current mode.
  */
 type CheckoutMode = "subscription" | "payment";
 
 async function resolveCheckoutPlan(
   slug: string,
+  priceId?: number,
 ): Promise<{ priceId: string; description: string; couponId: string | null; mode: CheckoutMode }> {
   if (Object.prototype.hasOwnProperty.call(PLANS, slug)) {
     const planId = slug as PlanId;
-    let priceId: string;
+    let staticPriceId: string;
     try {
-      priceId = PLANS[planId].priceId();
+      staticPriceId = PLANS[planId].priceId();
     } catch {
       throw priceResolutionError(planId);
     }
-    return { priceId, description: subscriptionDescription(planId), couponId: null, mode: "subscription" };
+    return { priceId: staticPriceId, description: subscriptionDescription(planId), couponId: null, mode: "subscription" };
   }
   const plan = await getPlanBySlug(slug);
   if (!plan || !plan.active) {
@@ -188,13 +215,14 @@ async function resolveCheckoutPlan(
   if (isSoldOut(plan)) {
     throw new TRPCError({ code: "PRECONDITION_FAILED", message: "this plan is sold out" });
   }
-  const price = defaultPriceForMode(plan, checkoutKeyIsLive());
+  const price = resolveCheckoutPrice(plan, priceId, checkoutKeyIsLive());
   if (!price) {
-    console.warn(`${TAG}[resolveCheckoutPlan] plan="${slug}" has no active price in ${checkoutKeyIsLive() ? "live" : "test"} mode`);
+    console.warn(`${TAG}[resolveCheckoutPlan] plan="${slug}" priceId=${priceId ?? "(default)"} has no matching active price in ${checkoutKeyIsLive() ? "live" : "test"} mode`);
     throw new TRPCError({ code: "PRECONDITION_FAILED", message: "plan not available" });
   }
-  // one_time plans are a single payment; recurring plans are subscriptions.
-  const mode: CheckoutMode = plan.planType === "one_time" ? "payment" : "subscription";
+  // Mode is per-price: a cadence → subscription; no interval (one-time / "Lifetime")
+  // → a single payment.
+  const mode: CheckoutMode = price.interval ? "subscription" : "payment";
   // A per-interval promo is applied as a Stripe coupon on the session.
   return { priceId: price.stripePriceId, description: dbPlanDescription(plan, price), couponId: price.stripeCouponId, mode };
 }
@@ -205,6 +233,9 @@ async function resolveCheckoutPlan(
 interface BuildSessionParams {
   planId: string;
   origin: string;
+  /** Optional plan_prices row id — selects ONE interval of a multi-interval DB plan
+   *  (from a shared checkout link). Omitted → the plan's default interval. */
+  priceRowId?: number | null;
   /** Stripe Customer ID — pass if user already has one to unify billing history */
   stripeCustomerId?: string | null;
   /** Email to prefill on Stripe Checkout */
@@ -216,16 +247,17 @@ interface BuildSessionParams {
 }
 
 async function buildStripeCheckoutSession(params: BuildSessionParams) {
-  const { planId, origin, stripeCustomerId, prefillEmail, desiredUsername, userId } = params;
+  const { planId, origin, priceRowId, stripeCustomerId, prefillEmail, desiredUsername, userId } = params;
 
-  console.log(`${TAG}[buildStripeCheckoutSession] [INPUT] planId=${planId} origin=${origin} userId=${userId ?? "anon"} prefillEmail=${prefillEmail ?? "(none)"} desiredUsername=${desiredUsername ?? "(none)"} stripeCustomerId=${stripeCustomerId ?? "(none)"}`);
+  console.log(`${TAG}[buildStripeCheckoutSession] [INPUT] planId=${planId} priceRowId=${priceRowId ?? "(default)"} origin=${origin} userId=${userId ?? "anon"} prefillEmail=${prefillEmail ?? "(none)"} desiredUsername=${desiredUsername ?? "(none)"} stripeCustomerId=${stripeCustomerId ?? "(none)"}`);
 
   // ── [STEP 1+2] Resolve price + auto-renewal disclosure ────────────────────
   // Legacy static plans use the exact existing env path; owner-created DB plans
-  // resolve their mode-matched price. Throws a clean PRECONDITION_FAILED if the
-  // plan isn't sellable (unknown / inactive / wrong Stripe mode).
-  const { priceId, description, couponId, mode } = await resolveCheckoutPlan(planId);
-  console.log(`${TAG}[buildStripeCheckoutSession] [STATE] planId=${planId} priceId=${priceId} mode=${mode}${couponId ? ` coupon=${couponId}` : ""}`);
+  // resolve the requested interval's (or default) mode-matched price. Throws a
+  // clean PRECONDITION_FAILED if the plan isn't sellable (unknown / inactive /
+  // wrong Stripe mode).
+  const { priceId: stripePriceId, description, couponId, mode } = await resolveCheckoutPlan(planId, priceRowId ?? undefined);
+  console.log(`${TAG}[buildStripeCheckoutSession] [STATE] planId=${planId} priceId=${stripePriceId} mode=${mode}${couponId ? ` coupon=${couponId}` : ""}`);
   // A per-interval promo is auto-applied as a coupon. Stripe forbids combining
   // `discounts` with `allow_promotion_codes`, so choose one: the baked-in coupon
   // when the interval has a promo, else let the customer enter a code.
@@ -273,14 +305,17 @@ async function buildStripeCheckoutSession(params: BuildSessionParams) {
   try {
     session = await stripe.checkout.sessions.create({
       mode,
-      line_items: [{ price: priceId, quantity: 1 }],
+      line_items: [{ price: stripePriceId, quantity: 1 }],
       ...customerParam,
       // ── Metadata for webhook fulfillment ────────────────────────────────
       // These fields are available in checkout.session.completed webhook.
+      // price_id pins the EXACT interval purchased so the webhook grants that
+      // interval's entitlement window (critical for a "Lifetime" interval).
       client_reference_id: userId != null ? String(userId) : undefined,
       metadata: {
         ...(userId != null ? { user_id: String(userId) } : {}),
         plan_id: planId,
+        price_id: stripePriceId,
         desired_username: desiredUsername ?? "",
       },
       // ── Custom fields — collected on Stripe Checkout page ───────────────
@@ -345,12 +380,12 @@ async function buildStripeCheckoutSession(params: BuildSessionParams) {
 // (sessions.update metadata) before confirm.
 
 async function buildEmbeddedCheckoutSession(params: BuildSessionParams) {
-  const { planId, origin, stripeCustomerId, prefillEmail, desiredUsername, userId } = params;
+  const { planId, origin, priceRowId, stripeCustomerId, prefillEmail, desiredUsername, userId } = params;
 
-  console.log(`${TAG}[buildEmbeddedCheckoutSession] [INPUT] planId=${planId} origin=${origin} userId=${userId ?? "anon"}`);
+  console.log(`${TAG}[buildEmbeddedCheckoutSession] [INPUT] planId=${planId} priceRowId=${priceRowId ?? "(default)"} origin=${origin} userId=${userId ?? "anon"}`);
 
-  const { priceId, description, couponId, mode } = await resolveCheckoutPlan(planId);
-  console.log(`${TAG}[buildEmbeddedCheckoutSession] [STATE] planId=${planId} priceId=${priceId} mode=${mode}${couponId ? ` coupon=${couponId}` : ""}`);
+  const { priceId: stripePriceId, description, couponId, mode } = await resolveCheckoutPlan(planId, priceRowId ?? undefined);
+  console.log(`${TAG}[buildEmbeddedCheckoutSession] [STATE] planId=${planId} priceId=${stripePriceId} mode=${mode}${couponId ? ` coupon=${couponId}` : ""}`);
   // See buildStripeCheckoutSession: baked-in coupon XOR customer-entered code.
   const discountParam: Stripe.Checkout.SessionCreateParams = couponId
     ? { discounts: [{ coupon: couponId }] }
@@ -379,12 +414,13 @@ async function buildEmbeddedCheckoutSession(params: BuildSessionParams) {
       // (stripe-node v22 JSDoc: custom ≡ elements).
       ui_mode: "elements",
       mode,
-      line_items: [{ price: priceId, quantity: 1 }],
+      line_items: [{ price: stripePriceId, quantity: 1 }],
       ...customerParam,
       client_reference_id: userId != null ? String(userId) : undefined,
       metadata: {
         ...(userId != null ? { user_id: String(userId) } : {}),
         plan_id: planId,
+        price_id: stripePriceId,
         desired_username: desiredUsername ?? "",
       },
       ...subscriptionOnly,
@@ -458,14 +494,49 @@ export const stripeRouter = router({
     .input(
       z.object({
         planId: zodPlanId,
+        /** Optional plan_prices row id — selects one interval of a multi-interval
+         *  DB plan (from a shared checkout link). Omitted → the default interval. */
+        priceId: z.number().int().positive().optional(),
         /** Frontend must pass window.location.origin for correct return URL */
         origin: z.string().url(),
       })
     )
     .mutation(async ({ input }) => {
-      const { planId, origin } = input;
-      console.log(`${TAG}[publicCreateEmbeddedCheckoutSession] [INPUT] planId=${planId} origin=${origin} userId=anon`);
-      return buildEmbeddedCheckoutSession({ planId, origin });
+      const { planId, priceId, origin } = input;
+      console.log(`${TAG}[publicCreateEmbeddedCheckoutSession] [INPUT] planId=${planId} priceId=${priceId ?? "(default)"} origin=${origin} userId=anon`);
+      return buildEmbeddedCheckoutSession({ planId, origin, priceRowId: priceId });
+    }),
+
+  /**
+   * publicGetCheckoutPlan
+   *
+   * Public, display-only lookup for an owner-created DB plan (and, optionally, a
+   * specific interval by plan_prices row id). Powers the /checkout summary rail
+   * for DB plans and shared checkout links. Returns display-safe fields only — no
+   * Stripe IDs — and null for legacy static plans (the page keeps its own hardcoded
+   * copy for those) or any plan/interval that isn't sellable in the current mode.
+   */
+  publicGetCheckoutPlan: stripeProcedure
+    .input(z.object({ slug: zodPlanId, priceId: z.number().int().positive().optional() }))
+    .query(async ({ input }) => {
+      const plan = await getPlanBySlug(input.slug);
+      if (!plan || !plan.active) return null;
+      const price = resolveCheckoutPrice(plan, input.priceId, checkoutKeyIsLive());
+      if (!price) return null;
+      return {
+        slug: plan.slug,
+        name: plan.name,
+        description: plan.description,
+        amountCents: price.amountCents,
+        currency: price.currency,
+        interval: price.interval,
+        intervalCount: price.intervalCount,
+        /** false → one-time / "Lifetime" (single payment); true → subscription. */
+        recurring: price.interval != null,
+        trialPeriodDays: price.trialPeriodDays,
+        label: price.label,
+        soldOut: isSoldOut(plan),
+      };
     }),
 
   /**
