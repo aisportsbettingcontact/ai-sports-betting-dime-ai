@@ -10,7 +10,7 @@
   gap: var(--space-md);
   grid-template-areas: "head" "matchup" "summary" "markets";
   padding: var(--space-lg);
-  /* Closed card ends near the disclosure row (owner directive 2026-07-18). */
+  /* Card ends near the popover trigger row (owner directive 2026-07-18). */
   padding-block-end: var(--space-sm);
   background: var(--card, #0a0a0a);
   color: var(--foreground, #ffffff);
@@ -77,7 +77,7 @@
    the readout's mono-label register (owner directive 2026-07-17). */
 .summary__pick { font-size: var(--proj-body); font-weight: 700; text-transform: uppercase; }
 .summary__none { color: var(--text-secondary, #a6a6a6); margin: 0; }
-/* Mobile-width cards center the whole insight block above the disclosure
+/* Mobile-width cards center the whole insight block above the popover trigger
    (owner directive 2026-07-17); wide cards keep the left-aligned scan line. */
 @container projcard (max-width: 640px) {
   .summary { justify-content: center; }
@@ -110,6 +110,8 @@
      Defense-in-depth, not a substitute for the structural guarantee. */
   .projection-card--pass .market-table__model--signal,
   .projection-card--pass .market-table__result--edge,
+  .projection-card__markets-popover--pass .market-table__model--signal,
+  .projection-card__markets-popover--pass .market-table__result--edge,
   .projection-card--pass .edge-indicator {
     color: var(--text-secondary, #a6a6a6) !important;
     background: transparent !important;
@@ -246,7 +248,7 @@
   }
 }
 
-/* ══ Round 4 Wave 2 — item 1: equal-height card rows, pinned expander
+/* ══ Round 4 Wave 2 — item 1: equal-height card rows, pinned market trigger
    (desktop ONLY, >=1024px — item 8 scoping: item 1, unlike item 5 above,
    does NOT apply to tablet) ══
    Owner amendment 2026-07-23 to the 07-21 desktop-emphasis law: "start-aligned"
@@ -261,7 +263,7 @@
    once given extra height; `.summary-carousel`, a grid, needs an explicit
    `align-content:center` since grid's default `normal` would stretch its
    two rows apart instead of centering the block), while the markets
-   disclosure stays `auto`-height and is pushed to the card's bottom edge —
+   popover trigger stays `auto`-height and is pushed to the card's bottom edge —
    "VIEW FULL AI MODEL PROJECTIONS" always lands flush with its row-mate's.
    A row of naturally-equal cards renders IDENTICALLY: grid track sizing
    bases the row height on the tallest natural card in the row, so that
@@ -295,17 +297,50 @@
 .summary-carousel__dot:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--ring, rgba(69, 224, 168, 0.36)); border-radius: 50%; }
 .summary-carousel__dot[aria-current="true"]::after { background: #45e0a8; opacity: 1; }
 
-/* ── Markets (supporting; disclosure keeps them from dominating) ──
-   Toggle reads "VIEW FULL AI MODEL PROJECTIONS" with a chevron-down to expand;
-   [open] swaps it for a chevron-up to collapse (owner directive 2026-07-17). */
-/* Tighter disclosure (owner directive 2026-07-18): the row pulls up toward the
-   summary divider and slims to 2.25rem. Tap target trades height for the full
-   card width; the [open] grid keeps its own top margin so tables never collide. */
-.projection-card__markets { grid-area: markets; margin-block-start: calc(-1 * var(--space-xs)); }
-.projection-card__markets-toggle { display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm); min-block-size: 2.25rem; padding-inline: var(--space-sm); cursor: pointer; color: var(--text-secondary, #a6a6a6); border-radius: 10px; list-style: none; }
-.projection-card__markets-toggle::-webkit-details-marker { display: none; }
-.projection-card__markets-toggle:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--ring, #45e0a8); }
-/* ══ Round 4 Wave 3 — item 7: expander hover (page law "Expander hover"; item 8
+/* ── Markets popover (owner directive 2026-07-23) ──
+   The full-width trigger stays pinned to the card's bottom, but market tables
+   now render in a portalled Radix popover so opening details never stretches a
+   game card or its grid row. One source-ordered market is visible per page. */
+.projection-card__markets {
+  grid-area: markets;
+  min-inline-size: 0;
+  margin-block-start: calc(-1 * var(--space-xs));
+}
+.projection-card__markets-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  inline-size: 100%;
+  min-block-size: 2.25rem;
+  padding: 0 var(--space-sm);
+  cursor: pointer;
+  color: var(--text-secondary, #a6a6a6);
+  background: transparent;
+  border: 0;
+  border-radius: 10px;
+  font: inherit;
+  text-align: start;
+}
+.projection-card__markets-toggle:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--ring, #45e0a8);
+}
+.projection-card__markets-toggle[data-state="open"] {
+  color: var(--foreground, #fff);
+  background: var(--row-hover, #141414);
+}
+.projection-card__markets-icon {
+  inline-size: 1rem;
+  block-size: 1rem;
+  flex: none;
+  color: currentColor;
+}
+.projection-card__markets-toggle[data-state="open"] .projection-card__markets-icon {
+  color: #45e0a8;
+}
+
+/* ══ Round 4 Wave 3 — item 7: market-trigger hover (page law "Expander hover"; item 8
    scoping: same tablet+desktop breakpoint as items 2-5, >=768px) ══
    "VIEW FULL AI MODEL PROJECTIONS" gets the shell's row-hover fill (--row-hover,
    the same token/value sidebar rows use — design-system/dime-ai/MASTER.md
@@ -320,23 +355,109 @@
    unconditional :hover is re-declared only inside this gate, so a
    hover-capable pointer at <768px (narrow desktop window) loses the fill it
    used to get — intended, per item 8's scoping table (item 7 is >=768-only).
-   Label text and chevron icons are law-locked (owner
-   directive 2026-07-17/18) and untouched — only the fill responds. */
+   Label text and the projections-panel icon stay fixed — only the fill
+   responds. */
 @media (min-width: 768px) and (hover: hover) {
   .projection-card__markets-toggle {
     transition: background 160ms cubic-bezier(0.16, 1, 0.3, 1), color 160ms cubic-bezier(0.16, 1, 0.3, 1);
   }
   .projection-card__markets-toggle:hover { background: var(--row-hover, #141414); color: var(--foreground, #fff); }
 }
-.projection-card__markets-chev { inline-size: 1rem; block-size: 1rem; flex: none; }
-.projection-card__markets-chev--collapse { display: none; }
-.projection-card__markets[open] .projection-card__markets-chev--expand { display: none; }
-.projection-card__markets[open] .projection-card__markets-chev--collapse { display: inline-block; }
-/* Intrinsic reflow (directive §2): columns are added/removed by available width,
-   never compressed. Each market keeps a readable floor (~22rem); below that the
-   grid drops 3→2→1 columns on its own. `min(100%, 22rem)` prevents overflow when
-   the card is narrower than the floor. */
-.projection-card__markets-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); gap: clamp(0.75rem, 0.5rem + 0.7vw, 1.25rem); margin-top: var(--space-sm); }
+
+/* The portal is outside `.projection-card`, so it owns its responsive width,
+   query container, scrolling, and surface instead of relying on card ancestry. */
+.projection-card__markets-popover {
+  container: marketpopover / inline-size;
+  inline-size: min(26rem, calc(100vw - 1rem));
+  max-block-size: min(34rem, var(--radix-popover-content-available-height));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--space-md);
+  color: var(--popover-foreground, #fff);
+  background: var(--popover, #141414);
+  border-color: var(--border, #262626);
+  border-radius: 14px;
+  box-shadow: var(--elev-popover, 0 18px 48px rgba(0, 0, 0, 0.48));
+}
+.projection-card__markets-popover-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-md);
+  padding: 0 var(--space-xs) var(--space-sm);
+  border-block-end: 1px solid var(--border, #262626);
+}
+.projection-card__markets-eyebrow {
+  margin: 0;
+  color: #45e0a8;
+}
+html:not(.dark) .projection-card__markets-eyebrow {
+  color: #0fa36b;
+}
+.projection-card__markets-matchup {
+  margin: var(--space-2xs) 0 0;
+  color: var(--foreground, #fff);
+  font-size: var(--proj-body);
+  font-weight: 700;
+}
+.projection-card__markets-count {
+  flex: none;
+  margin: 0;
+  color: var(--text-secondary, #a6a6a6);
+  font-variant-numeric: tabular-nums;
+}
+.projection-card__market-page {
+  min-block-size: 10.5rem;
+  padding-block-start: var(--space-sm);
+}
+.projection-card__market-pagination {
+  margin-block-start: var(--space-sm);
+  padding-block-start: var(--space-sm);
+  border-block-start: 1px solid var(--border, #262626);
+}
+.projection-card__market-pagination [data-slot="pagination-content"] {
+  gap: 0;
+}
+.projection-card__market-pagination [data-slot="pagination-link"] {
+  flex: 0 0 3rem;
+  inline-size: 3rem;
+  min-inline-size: 3rem;
+  block-size: 3rem;
+  padding: 0;
+  color: var(--text-secondary, #a6a6a6);
+  background: transparent;
+  border-color: transparent;
+  border-radius: 9px;
+  font-size: var(--proj-body);
+  font-variant-numeric: tabular-nums;
+}
+.projection-card__market-pagination [data-slot="pagination-link"]:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--ring, #45e0a8);
+}
+.projection-card__market-pagination [data-slot="pagination-link"][data-active="true"] {
+  color: var(--brand-mint-foreground, #9ff5d4);
+  background: var(--brand-mint-surface, rgba(69, 224, 168, 0.12));
+  border-color: #45e0a8;
+}
+.projection-card__market-pagination [data-slot="pagination-link"][aria-disabled="true"] {
+  pointer-events: none;
+  opacity: 0.35;
+}
+.projection-card__market-page-step span {
+  display: none;
+}
+.projection-card__market-page-ellipsis {
+  inline-size: 1rem;
+  block-size: 2.75rem;
+  color: var(--text-muted, #6e6e6e);
+}
+@media (hover: hover) {
+  .projection-card__market-pagination [data-slot="pagination-link"]:not([aria-disabled="true"]):hover {
+    color: var(--foreground, #fff);
+    background: var(--row-hover, #141414);
+  }
+}
 
 /* Market table — flat, scannable; depth via the card, not per-table frames */
 /* Auto layout (not fixed): the SIDE column's 48% is a hint that stretches for
@@ -351,9 +472,9 @@
 .market-table thead th:first-child { inline-size: 48%; }
 .market-table__side { font-weight: 600; white-space: nowrap; }
 .market-table td.odds-value { white-space: nowrap; }
-/* Narrow cards (≤350px card width): slimmer cell padding so the widest nowrap
+/* Narrow popovers (≤350px): slimmer cell padding so the widest nowrap
    row ("France Win/Draw" + values) still fits without horizontal overflow. */
-@container projcard (max-width: 350px) {
+@container marketpopover (max-width: 350px) {
   .market-table th, .market-table td { padding-inline: 0.375rem; }
   .market-table__flag { margin-inline-end: 0.25rem; }
 }
@@ -365,15 +486,9 @@
 /* Edge footers (owner directive 2026-07-18): mint CELL, accessible foreground. */
 .market-table__result--edge { color: var(--brand-mint-foreground); background: var(--brand-mint-surface); }
 
-/* Design note: the market grid reflows via intrinsic `auto-fit` (above) rather
-   than fixed container-query breakpoints — the grid itself decides how many
-   readable columns fit, so type never shrinks to preserve a column count.
-   Insight-first (matchup + dominant summary on top, market grid reflowing 3→2→1
-   below) is a stronger 3-second hierarchy than cramming matchup|markets|summary
-   into one row — so the card stacks and only the market grid reflows by width. */
-
 @media (prefers-reduced-motion: reduce) {
   .projection-card, .projection-card__markets-toggle { transition: none; }
+  .projection-card__markets-popover { animation: none !important; transition: none !important; }
   .summary-carousel__dot::after { transition: none; }
   .summary-carousel__track { scroll-behavior: auto; }
   /* Item 4: static dot, no pulse (MASTER.md motion law). */
