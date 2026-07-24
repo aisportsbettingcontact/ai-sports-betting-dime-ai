@@ -32,6 +32,10 @@ export interface StoredPrice {
   stripeCouponId: string | null;
   active: boolean;
   isDefault: boolean;
+  /** Owner-hidden interval (eyeball) — retained, not offered at checkout. */
+  hidden: boolean;
+  /** Display order among the plan's intervals (drag-to-reorder). */
+  sortOrder: number;
   /** false → a Stripe TEST/sandbox price (owner-only test checkout); true → live. */
   livemode: boolean;
 }
@@ -56,6 +60,8 @@ export interface StoredPlan {
   /** false → the plan was provisioned in the Stripe sandbox, not the live account. */
   livemode: boolean;
   prices: StoredPrice[];
+  /** Count of subscribers with access on this plan (shown on the plan card). */
+  subscriberCount: number;
 }
 
 /** A single billing-cadence choice: a human label → Stripe interval mapping. */
