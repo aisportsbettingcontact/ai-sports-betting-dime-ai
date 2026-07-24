@@ -45,3 +45,7 @@ reason = "vite server.fs.deny bypass — dev-server-only attack surface, not shi
 [[IgnoredVulns]]
 id = "GHSA-5xrq-8626-4rwp"
 reason = "vitest: arbitrary file read/execute when the Vitest UI dev server is listening — dev-tool-only; the UI server is never run in CI or production. Tracked for a future vitest 4.x migration (semver-major)."
+
+[[IgnoredVulns]]
+id = "GHSA-mh99-v99m-4gvg"
+reason = """brace-expansion ReDoS (HIGH) — no fix is reachable, confirmed by CI probe on 2026-07-24 (run 30130970103). Version matrix, all measured rather than assumed: 1.1.16 (newest 1.x ever published) is FLAGGED; 2.1.2 is FLAGGED by the same scanner on the probe branch; 5.x carries the fix but exports an object {EXPANSION_MAX, EXPANSION_MAX_LENGTH, expand} instead of the bare callable that minimatch@3.1.5 requires, so it throws "expand is not a function" and breaks minimatch -> glob@7 -> rimraf@3 -> puppeteer-extra-plugin-user-data-dir. Every working version is vulnerable; the fixed version breaks the chain. NOT ON ANY REQUEST PATH: reached only via rimraf's temp-directory cleanup inside puppeteer-extra-plugin-stealth, on paths the app generates itself — no user input reaches the brace expander, and the plugin has zero direct imports anywhere in server/ or client/. REVISIT WHEN: puppeteer-extra-plugin-stealth ships a release built on glob@10+/rimraf@4+, which admits brace-expansion@5 cleanly; then drop this entry and the package.json override ceiling."""
