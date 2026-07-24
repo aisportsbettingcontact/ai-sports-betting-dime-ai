@@ -85,8 +85,15 @@ describe("action_performed contract (D3)", () => {
     // Every curated action is a non-active diagnostic carried under action_performed.
     for (const a of ACTION_ALLOWLIST) expect(qualifiesActive(a)).toBe(false);
   });
-  it("keeps the curated allowlist at the 17 documented actions", () => {
-    expect(ACTION_ALLOWLIST).toHaveLength(17);
+  it("keeps the curated allowlist at the documented actions (17 + 2 P0 profiling)", () => {
+    expect(ACTION_ALLOWLIST).toHaveLength(19);
+    expect(ACTION_ALLOWLIST).toContain("results_viewed");
+    expect(ACTION_ALLOWLIST).toContain("referral_landed");
+  });
+  it("accepts the P0 profiling action names on action_performed", () => {
+    const base = { eventId: "act_abcdefgh", schemaVersion: 1, occurredAtUtc: 1700000000000, eventName: "action_performed" as const };
+    expect(trackInputSchema.safeParse({ ...base, actionName: "results_viewed" }).success).toBe(true);
+    expect(trackInputSchema.safeParse({ ...base, actionName: "referral_landed" }).success).toBe(true);
   });
 });
 

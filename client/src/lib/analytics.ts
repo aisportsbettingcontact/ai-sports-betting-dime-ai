@@ -43,7 +43,9 @@ export type ActionName =
   | "bet_edited"
   | "bet_deleted"
   | "pane_switched"
-  | "search_performed";
+  | "search_performed"
+  | "results_viewed"
+  | "referral_landed";
 export type FeatureEventName = "feature_opened" | "feature_completed" | "feature_failed";
 export type AnalyticsEventName =
   | QualifyingEventName

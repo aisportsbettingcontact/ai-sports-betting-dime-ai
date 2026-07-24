@@ -53,4 +53,7 @@ describe("disabledOverview", () => {
     expect(o.uniqueActions.value).toBeNull();
     expect(o.topActions).toEqual([]);
   });
+  it("carries an empty topUsers list when not measured (P0)", () => {
+    expect(disabledOverview("analytics pipeline disabled").topUsers).toEqual([]);
+  });
 });

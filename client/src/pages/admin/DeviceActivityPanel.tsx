@@ -22,6 +22,29 @@ const STATE_LABEL: Record<string, string> = {
   error: "Unavailable",
 };
 
+const TIER_LABEL: Record<string, string> = {
+  power: "Power",
+  core: "Core",
+  casual: "Casual",
+  at_risk: "At-Risk",
+  dormant: "Dormant",
+};
+const TIER_CLASS: Record<string, string> = {
+  power: "text-primary",
+  core: "text-primary",
+  casual: "text-foreground",
+  at_risk: "text-muted-foreground",
+  dormant: "text-muted-foreground",
+};
+/** Compact relative age from a ms timestamp. */
+function fmtAgo(ts: number): string {
+  if (!ts) return "—";
+  const s = Math.max(0, Date.now() - ts) / 1000;
+  if (s < 3600) return `${Math.floor(s / 60)}m`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h`;
+  return `${Math.floor(s / 86400)}d`;
+}
+
 function Point({ point, loading }: { point: PointLike | undefined; loading: boolean }) {
   if (loading || !point) return <span className="text-muted-foreground">—</span>;
   if (point.state === "ok" && point.value !== null) {
@@ -51,6 +74,7 @@ export default function DeviceActivityPanel() {
   const maxUsers = Math.max(...mix.map((m) => m.users), 1);
   const topActions = data?.topActions ?? [];
   const maxActionCount = Math.max(...topActions.map((a) => a.count), 1);
+  const topUsers = data?.topUsers ?? [];
 
   return (
     <div className="mb-6 space-y-3">
@@ -176,6 +200,44 @@ export default function DeviceActivityPanel() {
                 </span>
                 <span className="text-[10px] sm:text-xs font-mono w-10 text-right text-muted-foreground">
                   {m.actions}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Power Users — P0 profiling. Ranked by power score; identity joined at
+          read time (owner-only). Renders only with measured data. */}
+      {!notOk && topUsers.length > 0 && (
+        <div className="bg-card border border-border rounded-lg px-2.5 sm:px-4 py-2.5 sm:py-3">
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-[10px] sm:text-xs font-semibold tracking-wider text-foreground uppercase">
+              Power Users · by score
+            </div>
+            <div className="text-[10px] sm:text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+              tier · score · seen
+            </div>
+          </div>
+          <div className="space-y-1">
+            {topUsers.slice(0, 10).map((u, i) => (
+              <div key={u.sourceUserId} className="flex items-center gap-2 sm:gap-2.5 py-0.5">
+                <span className="text-[10px] sm:text-xs font-mono w-4 text-right text-muted-foreground shrink-0">
+                  {i + 1}
+                </span>
+                <span className="text-[11px] sm:text-xs font-mono truncate flex-1 min-w-0 text-foreground">
+                  {u.discordUsername || u.username || `user #${u.sourceUserId}`}
+                </span>
+                <span
+                  className={`text-[9px] sm:text-[10px] font-mono uppercase tracking-wide px-1.5 py-0.5 rounded border border-border shrink-0 ${TIER_CLASS[u.tier] ?? "text-muted-foreground"}`}
+                >
+                  {TIER_LABEL[u.tier] ?? u.tier}
+                </span>
+                <span className="text-[11px] sm:text-xs font-mono font-bold w-7 text-right text-primary shrink-0">
+                  {u.score}
+                </span>
+                <span className="text-[10px] sm:text-xs font-mono w-10 text-right text-muted-foreground shrink-0">
+                  {fmtAgo(u.lastActive)}
                 </span>
               </div>
             ))}

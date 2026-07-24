@@ -41,6 +41,9 @@ export const ACTION_ALLOWLIST = [
   "bet_deleted",
   "pane_switched",
   "search_performed",
+  // D3.1 (profiling P0): model-trust + referral signals.
+  "results_viewed",
+  "referral_landed",
 ] as const;
 export type ActionName = (typeof ACTION_ALLOWLIST)[number];
 
