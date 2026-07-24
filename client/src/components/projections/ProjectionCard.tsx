@@ -39,9 +39,9 @@ export function rankedEdges(game: ProjectionGame): MarketInsight[] {
 /**
  * A no-action game's most useful market context: the highest canonical no-vig
  * ROI side from each scorable market, ranked best → worst. Zero and negative ROI
- * remain eligible; the card still labels every item "No edge" because none
- * cleared WATCH/BET. `roiPct` is the product's canonical no-vig ROI, so this
- * order is independent of raw probability-edge and posted-price EV order.
+ * remain eligible; each item stays visually neutral because none cleared
+ * WATCH/BET. `roiPct` is the product's canonical no-vig ROI, so this order is
+ * independent of raw probability-edge and posted-price EV order.
  */
 export function rankedNoEdgeCandidates(game: ProjectionGame): MarketInsight[] {
   const seen = new Set<string>();
@@ -122,7 +122,7 @@ export function ProjectionCard({
 
       {/* Actionable games rank qualifying edges. Pass games use the same stable
           slot for one best-ROI candidate per market (including negative ROI),
-          while every signal remains explicitly neutral "No edge". */}
+          while every ROI-only badge remains explicitly neutral. */}
       {displayInsights.length > 1 ? (
         <SummaryCarousel
           insights={displayInsights}

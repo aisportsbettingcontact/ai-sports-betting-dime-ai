@@ -15,7 +15,7 @@ export function clampActiveEdgeIndex(active: number, count: number): number {
  * MODEL + the mint edge cell); slides arrive pre-ranked strongest → weakest,
  * so the first visible edge is always the strongest. No-action games instead
  * show one best canonical no-vig ROI side per market, ranked highest → lowest,
- * with the neutral "No edge" chip retained on every slide.
+ * with a neutral ROI-only badge on every slide.
  *
  * Mechanics per brand law: native scroll-snap (momentum swipe on touch,
  * trackpad/scroll on desktop, interruptible by design) plus one compact,
@@ -65,7 +65,7 @@ export function SummaryCarousel({
       aria-roledescription="carousel"
       aria-label={
         isNoEdgeRanking
-          ? `${insights.length} no-edge market projections, ranked by no-vig ROI`
+          ? `${insights.length} non-actionable market projections, ranked by no-vig ROI`
           : `${insights.length} model edges, ranked strongest first`
       }
     >
@@ -88,7 +88,7 @@ export function SummaryCarousel({
             aria-roledescription="slide"
             aria-label={
               isNoEdgeRanking
-                ? `Projection ${i + 1} of ${insights.length}: ${ins.sideLabel}; no edge`
+                ? `Projection ${i + 1} of ${insights.length}: ${ins.sideLabel}; no actionable edge`
                 : `Edge ${i + 1} of ${insights.length}: ${ins.sideLabel}`
             }
           >

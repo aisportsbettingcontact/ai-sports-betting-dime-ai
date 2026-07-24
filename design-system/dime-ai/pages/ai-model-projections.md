@@ -37,7 +37,7 @@
 ### Color Overrides
 
 - **Live state:** pulsing 7px mint dot + mono "LIVE · TOP 6" in mint (`--mint-on-light` on light theme, with keyline on the dot)
-- **PASS games:** verdict values in `--text-secondary`, grade "—" *(2026-07-23: the verdict-strip/grade concept is superseded — no letter-grade field exists in the current ProjectionCard architecture; PASS state is enforced via `.projection-card--pass` at `opacity: 0.82` + the "No edge" chip + a defensive zero-mint backstop, per Round 4 items 3 and 8 in `docs/superpowers/plans/2026-07-23-feed-desktop-polish.md`)*, whole card at `opacity: 0.82`, zero mint anywhere in the card. When prices are scorable, the summary still presents one best canonical no-vig ROI side per market (`calculateRoi`), ordered highest → lowest (zero/negative values included), while every slide and its navigation remain explicitly neutral **No edge**. The unavailable-data sentence is reserved for games with no scorable side.
+- **PASS games:** verdict values in `--text-secondary`, grade "—" *(2026-07-23: the verdict-strip/grade concept is superseded — no letter-grade field exists in the current ProjectionCard architecture; PASS state is enforced via `.projection-card--pass` at `opacity: 0.82` + an ROI-only neutral badge + a defensive zero-mint backstop, per Round 4 items 3 and 8 in `docs/superpowers/plans/2026-07-23-feed-desktop-polish.md`)*, whole card at `opacity: 0.82`, zero mint anywhere in the card. When prices are scorable, the summary still presents one best canonical no-vig ROI side per market (`calculateRoi`), ordered highest → lowest (zero/negative values included). Each slide shows only `ROI ±x.x%` in compact grey styling; its accessible name still announces that the projection is not actionable. The unavailable-data sentence is reserved for games with no scorable side.
   — a LIVE card never takes the PASS treatment, even when a mid-game model
   invalidation removes every edge. The newer compact-state rule below still
   reduces the whole live/final card to `opacity: 0.72`; that is lifecycle
@@ -73,6 +73,12 @@
 - **Market column labels:** `SIDE | BOOK | MODEL` — never "SPORTSBOOK PRICE" /
   "MODEL FAIR PRICE". Applies to every feed surface: mobile, tablet, desktop.
 - **Summary readout labels:** `MODEL EDGE | BOOK | MODEL` — never "BEST PRICE".
+- **Summary row grouping (2026-07-24):** `MODEL EDGE | BOOK | MODEL | signal`
+  travels as one intrinsic-width, centered, single-line group at every
+  breakpoint. Values never wrap, clamp, truncate, or overlap. If localized
+  content is physically wider than the card, overflow is confined to the
+  summary viewport so the complete row remains reachable without widening the
+  card or page.
 - **MODEL EDGE values are spelled out:** `U 7` → "UNDER 7", `O 8.5` → "OVER 8.5",
   a leading team abbr → the team name (`ATH ML` → "ATHLETICS ML").
   *(2026-07-18: the "tables keep compact form" clause is superseded — see below.)*
@@ -231,7 +237,8 @@ Desktop (>=1024px) only — tablet/mobile keep their shipped layouts:
   market. If the whole game has no actionable edge, the same strip instead
   carries the highest canonical no-vig ROI side from each scorable market,
   ordered best → worst even when every ROI is negative; every neutral slide
-  and its arrow retain the visible **No edge** label and neutral styling. The visible count/dot row
+  renders only a compact grey `ROI ±x.x%` badge while the accessible name
+  retains the non-actionable status; its arrow remains neutral. The visible count/dot row
   is removed: a 44px `ArrowRight` control
   sits immediately after the edge pill, advances to the next edge, and wraps
   to the strongest after the last. Its icon is mint and its border consumes
