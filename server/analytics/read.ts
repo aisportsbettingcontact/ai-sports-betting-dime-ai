@@ -86,6 +86,17 @@ export interface RetentionCohort {
   retention: Array<number | null>; // index 0 = W0 (100), 1 = W1, …
 }
 
+/**
+ * One day on the 30-day activity trend. Continuous + zero-filled so the chart
+ * reads as a real timeline: a zero-day is a MEASURED zero (pipeline is on that
+ * day), not a fabricated one, so it is honest to draw it.
+ */
+export interface DailyPoint {
+  day: string; // ISO date (UTC), YYYY-MM-DD
+  activeUsers: number; // distinct source_user_id active that day
+  valueEvents: number; // qualifying value events that day
+}
+
 /** Cap on per-user rows returned to the leaderboard/profiler. */
 export const TOP_USERS_LIMIT = 25;
 /** Safety cap on the per-user aggregate scan (small base; guards a runaway). */
@@ -119,6 +130,8 @@ export interface AnalyticsOverview {
   featureScorecard: FeatureScore[];
   /** P2: weekly retention cohorts. */
   retention: RetentionCohort[];
+  /** 30-day daily activity trend (continuous, zero-filled). Empty when disabled. */
+  dailyActivity: DailyPoint[];
   lastEventAt: number | null;
   deviceMix: DeviceSlice[];
 }
@@ -149,6 +162,7 @@ export function disabledOverview(reason: string): AnalyticsOverview {
     funnel: [],
     featureScorecard: [],
     retention: [],
+    dailyActivity: [],
     lastEventAt: null,
     deviceMix: [],
   };
@@ -412,6 +426,32 @@ export async function getAnalyticsOverview(): Promise<AnalyticsOverview> {
         return { cohortWeek: new Date(cw * WEEK).toISOString().slice(0, 10), size: uids.length, retention: row };
       });
 
+    // Daily activity trend (30-day window) — continuous + zero-filled so the
+    // chart reads as a real timeline. A zero-day is a MEASURED zero (pipeline is
+    // on), never a fabricated one.
+    const dailyR = await db.execute(sql`
+      SELECT FLOOR(occurred_at_utc / ${DAY}) AS day_idx,
+             COUNT(DISTINCT source_user_id) AS users,
+             SUM(CASE WHEN event_name IN (${nameList}) THEN 1 ELSE 0 END) AS value_events
+      FROM analytics_events
+      WHERE is_test = 0 AND occurred_at_utc >= ${monthFrom} AND occurred_at_utc < ${asOf}
+      GROUP BY FLOOR(occurred_at_utc / ${DAY})`);
+    const byDay = new Map<number, { users: number; valueEvents: number }>();
+    for (const r of rowsOf(dailyR)) {
+      byDay.set(toNum(r.day_idx), { users: toNum(r.users), valueEvents: toNum(r.value_events) });
+    }
+    const startDayIdx = Math.floor(monthFrom / DAY);
+    const endDayIdx = Math.floor((asOf - 1) / DAY);
+    const dailyActivity: DailyPoint[] = [];
+    for (let d = startDayIdx; d <= endDayIdx; d++) {
+      const hit = byDay.get(d);
+      dailyActivity.push({
+        day: new Date(d * DAY).toISOString().slice(0, 10),
+        activeUsers: hit?.users ?? 0,
+        valueEvents: hit?.valueEvents ?? 0,
+      });
+    }
+
     // No events at all ⇒ honest not_measured (nothing instrumented yet).
     if (lastEventAt === null && total === 0) return disabledOverview(NO_DATA);
 
@@ -431,6 +471,7 @@ export async function getAnalyticsOverview(): Promise<AnalyticsOverview> {
       funnel,
       featureScorecard,
       retention,
+      dailyActivity,
       lastEventAt,
       deviceMix,
     };
