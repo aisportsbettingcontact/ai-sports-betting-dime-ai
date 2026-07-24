@@ -6,10 +6,10 @@
  * server/stripe/products.ts. Checkout and the webhook resolve plans/prices
  * through here instead of code/env.
  *
- * `computeExpiryMsForPrice` is pure and preserves the legacy expiry windows
- * (month ≈ 31d, year ≈ 366d buffers from products.ts) so entitlement behaviour
- * is unchanged after the migration. Reads are cached in-process (60s TTL) and
- * invalidated by the provisioning service on any write.
+ * `computeExpiryMsForPrice` is pure. It uses EXACT interval windows (owner-
+ * specified 2026-07-24: 1d=24h, 1w=7d, 1mo=30d, 1yr=365d); a no-interval price
+ * ("Lifetime" / one-time) grants far-future lifetime access. Reads are cached
+ * in-process (60s TTL) and invalidated by the provisioning service on any write.
  */
 import { getDb } from "../db";
 import { withCircuitBreaker } from "../dbCircuitBreaker";
@@ -74,34 +74,47 @@ export interface StoredPlan {
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-/** Approx interval length in ms — preserves the legacy month≈31d / year≈366d buffers. */
+/** A one-time / lifetime purchase grants access until 2100 — effectively forever. */
+export const LIFETIME_ACCESS_UNTIL_MS = 4102444800000; // 2100-01-01T00:00:00Z
+
+/**
+ * Exact interval length in ms (owner-specified 2026-07-24): 1 day = 24h,
+ * 1 week = 7 days, 1 month = 30 days, 1 year = 365 days. No calendar/leap
+ * buffers — a plan's access window is precisely intervalCount × this.
+ */
 function intervalMs(interval: BillingInterval): number {
   switch (interval) {
     case "day":
-      return DAY_MS;
+      return DAY_MS; // 24 hours
     case "week":
-      return 7 * DAY_MS;
+      return 7 * DAY_MS; // 7 days
     case "month":
-      return 31 * DAY_MS; // legacy buffer (products.ts computeExpiryMs)
+      return 30 * DAY_MS; // 30 days
     case "year":
-      return 366 * DAY_MS; // legacy leap-year buffer
+      return 365 * DAY_MS; // 365 days
   }
 }
 
 /**
  * Access-expiry timestamp (UTC ms) a price grants on its plan, measured from
- * `fromMs`. `null` means no time-box (lifetime) — matching app_users.expiryDate
- * NULL. recurring → fromMs + interval×count; fixed_date/one_time → plan.accessUntil.
+ * `fromMs`.
+ *   - recurring price (has an interval)  → fromMs + interval×count (exact days).
+ *   - one-time / "Lifetime" price (no interval) → far-future (lifetime); a
+ *     fixed_date plan overrides with its accessUntil.
+ *   - fixed_date plan → plan.accessUntil.
  */
 export function computeExpiryMsForPrice(
   price: Pick<StoredPrice, "interval" | "intervalCount">,
   plan: Pick<StoredPlan, "planType" | "accessUntil">,
   fromMs: number,
 ): number | null {
-  if (plan.planType === "fixed_date" || plan.planType === "one_time") {
+  if (plan.planType === "fixed_date") {
     return plan.accessUntil ?? null;
   }
-  if (!price.interval) return null;
+  // No recurring interval → a single payment grants lifetime access.
+  if (!price.interval) {
+    return plan.accessUntil ?? LIFETIME_ACCESS_UNTIL_MS;
+  }
   const count = price.intervalCount && price.intervalCount > 0 ? price.intervalCount : 1;
   return fromMs + intervalMs(price.interval) * count;
 }
