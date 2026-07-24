@@ -1197,9 +1197,12 @@ button.dc-sidebar-row {
 .dc-sm-field-value--muted { font-weight: 400; color: var(--text-secondary); }
 .dc-sm-field-note { flex-shrink: 0; font-size: 11px; color: var(--text-secondary); opacity: 0.75; }
 
-/* Official Discord branding (solid black, white glyph) — the exact treatment
-   ModelProjections.tsx / ManageAccount.tsx already use for this same
-   connected/not-connected contract; reused verbatim here for consistency. */
+/* Official Discord branding. Discord platform exception (owner-approved
+   2026-07-24): controls that represent Discord carry Discord's current
+   blurple (#5865F2 via --discord-blurple; white on it = 4.61:1, AA small)
+   and Discord's GG Sans. Mint stays Dime's only accent — these tokens are
+   platform attribution and must not appear on any non-Discord surface.
+   Rules: dime-ai/THREE-COLOR-LAW.md §"Discord platform exception". */
 .dc-sm-discord-pill,
 .dc-sm-discord-connect {
   display: inline-flex;
@@ -1207,13 +1210,15 @@ button.dc-sidebar-row {
   gap: 6px;
   padding: 5px 10px;
   border-radius: 999px;
+  font-family: var(--font-discord);
   font-size: 12px;
   font-weight: 600;
-  background: #000000;
-  color: #ffffff;
+  background: var(--discord-blurple);
+  color: var(--discord-on-blurple);
   text-decoration: none;
   width: fit-content;
 }
+.dc-sm-discord-connect:hover { background: var(--discord-blurple-hover); }
 .dc-sm-discord-pill { cursor: default; }
 .dc-sm-discord-connect { cursor: pointer; }
 

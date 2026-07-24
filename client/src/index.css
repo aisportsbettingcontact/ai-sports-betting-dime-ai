@@ -161,6 +161,21 @@
   /* Scoped exception: bet-loss indicators (Bet Tracker / calendar) keep red. */
   --loss-red: #FF3B3B;
 
+  /* ── Discord platform exception (owner-approved 2026-07-24) ───────────────
+   * Discord's own brand colour + typeface, permitted ONLY on controls that
+   * represent Discord itself (the "Continue with Discord" login button and
+   * the "Connect Discord" settings row). This is platform attribution, not a
+   * second accent — mint remains the only Dime accent. Never use these tokens
+   * for emphasis, edges, links, or any non-Discord surface.
+   * #5865F2 is Discord's CURRENT blurple (their 2021 rebrand). White on it
+   * measures 4.61:1 — AA for small text. The pre-2021 #7289DA and the
+   * #738ADB in the deleted legacy code both fail AA (3.33 / 3.29) and are
+   * banned. Rules: dime-ai/THREE-COLOR-LAW.md §"Discord platform exception". */
+  --discord-blurple: #5865F2;
+  --discord-blurple-hover: #4752C4;   /* Discord's own pressed/hover step */
+  --discord-on-blurple: #FFFFFF;
+  --font-discord: 'GG Sans', 'Familjen Grotesk', system-ui, -apple-system, sans-serif;
+
   /* Sidebar */
   --sidebar: #000000;
   --sidebar-foreground: #FFFFFF;

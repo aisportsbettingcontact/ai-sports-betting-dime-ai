@@ -599,9 +599,15 @@ export default function Home() {
               href={loginUrl}
               onClick={handleDiscordClick}
               aria-disabled={isDiscordRedirecting}
-              className="flex items-center justify-center gap-2.5 w-full px-5 py-3.5 rounded-lg font-bold text-sm text-white transition-opacity hover:opacity-85"
+              className="flex items-center justify-center gap-2.5 w-full px-5 py-3.5 rounded-lg font-bold text-sm transition-opacity hover:opacity-85"
+              /* Discord platform exception (owner-approved 2026-07-24): this
+                 control represents Discord, so it carries Discord's blurple and
+                 GG Sans. See dime-ai/THREE-COLOR-LAW.md. */
               style={{
-                backgroundColor: "#000000", border: "1px solid #FFFFFF",
+                backgroundColor: "var(--discord-blurple)",
+                color: "var(--discord-on-blurple)",
+                fontFamily: "var(--font-discord)",
+                border: "1px solid var(--discord-blurple)",
                 opacity: isDiscordRedirecting ? 0.75 : 1,
                 pointerEvents: isDiscordRedirecting ? "none" : "auto",
               }}
