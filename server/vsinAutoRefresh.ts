@@ -1820,10 +1820,19 @@ export async function runMlbCycleOnce(): Promise<void> {
     // only for games where the lineup changed since the last model run.
     let todayLineupGames: import("./rotowireLineupScraper").RotoLineupGame[] = [];
     let tomorrowLineupGames: import("./rotowireLineupScraper").RotoLineupGame[] = [];
-    let todayGameIdMap = new Map<string, number>();
-    let tomorrowGameIdMap = new Map<string, number>();
+    let todayGameIdMap = new Map<import("./rotowireLineupScraper").RotoLineupGame, number>();
+    let tomorrowGameIdMap = new Map<import("./rotowireLineupScraper").RotoLineupGame, number>();
+    let rotowireTodayStr = "";
+    let rotowireTomorrowStr = "";
     try {
-      const { scrapeRotowireLineupsBoth, upsertLineupsToDB } = await import("./rotowireLineupScraper");
+      const {
+        rotowireDateInEastern,
+        scrapeRotowireLineupsBoth,
+        upsertLineupsToDB,
+      } = await import("./rotowireLineupScraper");
+      const rotowireNow = new Date();
+      rotowireTodayStr = rotowireDateInEastern(rotowireNow);
+      rotowireTomorrowStr = rotowireDateInEastern(rotowireNow, 1);
       const lineupResult = await scrapeRotowireLineupsBoth();
       const totalParsed = lineupResult.today.cardsParsed + lineupResult.tomorrow.cardsParsed;
       const totalErrors = lineupResult.today.parseErrors + lineupResult.tomorrow.parseErrors;
@@ -1837,10 +1846,10 @@ export async function runMlbCycleOnce(): Promise<void> {
       const logRotowireGames = (gamesArr: import('./rotowireLineupScraper').RotoLineupGame[], scope: string) => {
         for (const g of gamesArr) {
           const awayP = g.awayPitcher
-            ? `${g.awayPitcher.name} (${g.awayPitcher.hand})${g.awayPitcher.confirmed ? ' [CONFIRMED]' : ' [EXPECTED]'}`
+            ? `${g.awayPitcher.name} (${g.awayPitcher.hand ?? '?'})${g.awayPitcher.confirmed ? ' [CONFIRMED]' : ' [EXPECTED]'}`
             : 'TBD';
           const homeP = g.homePitcher
-            ? `${g.homePitcher.name} (${g.homePitcher.hand})${g.homePitcher.confirmed ? ' [CONFIRMED]' : ' [EXPECTED]'}`
+            ? `${g.homePitcher.name} (${g.homePitcher.hand ?? '?'})${g.homePitcher.confirmed ? ' [CONFIRMED]' : ' [EXPECTED]'}`
             : 'TBD';
           const awayLO = g.awayLineupConfirmed ? 'CONFIRMED' : (g.awayLineup.length > 0 ? 'EXPECTED' : 'NONE');
           const homeLO = g.homeLineupConfirmed ? 'CONFIRMED' : (g.homeLineup.length > 0 ? 'EXPECTED' : 'NONE');
@@ -1854,20 +1863,25 @@ export async function runMlbCycleOnce(): Promise<void> {
       logRotowireGames(lineupResult.today.games, 'TODAY');
       logRotowireGames(lineupResult.tomorrow.games, 'TOMORROW');
       // Upsert today games (separate from tomorrow for watcher scoping)
-      // Pass targetDate=todayStr to restrict DB lookup to today's games only,
-      // preventing tomorrow's scrape from overwriting today's lineup records
-      // when the same team matchup appears on consecutive days (e.g. series games).
+      // Rotowire defines today/tomorrow in Eastern Time. These scopes may be a
+      // calendar day ahead of the cycle's Pacific date after 9 PM PT.
       if (lineupResult.today.games.length > 0) {
-        const upsertToday = await upsertLineupsToDB(lineupResult.today.games, todayStr);
+        const upsertToday = await upsertLineupsToDB(
+          lineupResult.today.games,
+          rotowireTodayStr,
+        );
         todayGameIdMap = upsertToday.gameIdMap;
         todayLineupGames = lineupResult.today.games;
         console.log(
           `[MLBCycle] Lineup DB upsert (today): saved=${upsertToday.saved} skipped=${upsertToday.skipped} errors=${upsertToday.errors}`
         );
       }
-      // Upsert tomorrow games — pass targetDate=mlbTomorrowStr to restrict DB lookup
+      // Upsert tomorrow's Eastern-date scope separately.
       if (lineupResult.tomorrow.games.length > 0) {
-        const upsertTomorrow = await upsertLineupsToDB(lineupResult.tomorrow.games, mlbTomorrowStr);
+        const upsertTomorrow = await upsertLineupsToDB(
+          lineupResult.tomorrow.games,
+          rotowireTomorrowStr,
+        );
         tomorrowGameIdMap = upsertTomorrow.gameIdMap;
         tomorrowLineupGames = lineupResult.tomorrow.games;
         console.log(
@@ -1888,7 +1902,11 @@ export async function runMlbCycleOnce(): Promise<void> {
       const { runLineupWatcher } = await import("./mlbLineupsWatcher");
       // Run watcher for today
       if (todayLineupGames.length > 0) {
-        const watcherToday = await runLineupWatcher(todayLineupGames, todayGameIdMap, todayStr);
+        const watcherToday = await runLineupWatcher(
+          todayLineupGames,
+          todayGameIdMap,
+          rotowireTodayStr,
+        );
         console.log(
           `[MLBCycle] LineupWatcher (today): ` +
           `total=${watcherToday.total} ` +
@@ -1902,7 +1920,11 @@ export async function runMlbCycleOnce(): Promise<void> {
       }
       // Run watcher for tomorrow
       if (tomorrowLineupGames.length > 0) {
-        const watcherTomorrow = await runLineupWatcher(tomorrowLineupGames, tomorrowGameIdMap, mlbTomorrowStr);
+        const watcherTomorrow = await runLineupWatcher(
+          tomorrowLineupGames,
+          tomorrowGameIdMap,
+          rotowireTomorrowStr,
+        );
         console.log(
           `[MLBCycle] LineupWatcher (tomorrow): ` +
           `total=${watcherTomorrow.total} ` +
