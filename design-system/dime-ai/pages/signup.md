@@ -27,8 +27,10 @@
 - One single mono-labeled ledger column: `min(440px, 100% − 32px)`, `--surface-card` on
   `#0B0B0F`, hairline-ruled rows (1px `--color-border`).
 - Rows, in order: `PLAN` / `PAYMENT` / `HANDLE` / `EMAIL` / `PASSWORD` / `TERMS` / `STATUS` —
-  IBM Plex Mono micro-labels (10–11px, 0.08em, uppercase) left, dotted leaders, values right.
-- Familjen Grotesk 700 values over IBM Plex Mono micro-labels; no other typefaces.
+  micro-labels (10–11px, 0.08em, uppercase) left, dotted leaders, values right.
+  *(2026-07-24 note: micro-labels render in Familjen Grotesk — the single-font
+  mandate in `client/src/index.css:7-12` retired IBM Plex Mono.)*
+- Familjen Grotesk 700 values over Familjen Grotesk micro-labels; no other typefaces.
 - Dense grid: 12px row padding, 1px rules.
 
 ### Motion Overrides

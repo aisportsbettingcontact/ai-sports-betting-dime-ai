@@ -4,10 +4,22 @@
  * Compliance vocab: "intelligence software" not "picks/guaranteed"; "matches" for soccer.
  */
 
+import { useEffect } from "react";
+
 export default function Terms() {
+  useEffect(() => {
+    document.title = "Terms of Service — dıme";
+  }, []);
+
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <div className="max-w-3xl mx-auto px-4 py-12">
+      {/* Escape hatch: these documents were dead ends (audit D-DOCS-ESCAPE) */}
+      <header className="max-w-3xl mx-auto px-4 pt-6">
+        <a href="/" className="font-bold tracking-tight text-foreground no-underline" aria-label="Back to dime home">
+          dıme
+        </a>
+      </header>
+      <main className="max-w-3xl mx-auto px-4 py-12">
         <h1 className="text-3xl font-bold mb-2">Terms of Service</h1>
         <p className="text-muted-foreground mb-8">
           Last updated: July 7, 2026
@@ -181,7 +193,7 @@ export default function Terms() {
             </p>
           </div>
         </section>
-      </div>
+      </main>
     </div>
   );
 }

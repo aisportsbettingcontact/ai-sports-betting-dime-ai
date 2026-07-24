@@ -40,7 +40,7 @@ function isBot(ua: string): boolean {
 // ─── Legal page builders (served to ALL user agents) ───────────────────────
 
 function buildPrivacyHtml(): string {
-  const title = "Privacy Policy | AI Sports Betting Models";
+  const title = "Privacy Policy — dıme";
   const canonical = "https://aisportsbettingmodels.com/privacy";
   return `<!DOCTYPE html>
 <html lang="en">
@@ -64,12 +64,16 @@ p{margin-bottom:12px;font-size:14px;color:#FFFFFF}
 ul{padding-left:24px;margin-bottom:12px}
 li{font-size:14px;color:#FFFFFF;margin-bottom:6px}
 a{color:#45E0A8;text-decoration:underline}
-.updated{color:#FFFFFF;font-size:13px;margin-bottom:32px}
-.footer{margin-top:48px;padding-top:24px;border-top:1px solid #FFFFFF;text-align:center;color:#FFFFFF;font-size:12px}
+a:focus-visible,.site-header a:focus-visible{outline:2px solid #45E0A8;outline-offset:2px}
+.updated{color:#A6A6A6;font-size:13px;margin-bottom:32px}
+.footer{margin-top:48px;padding-top:24px;border-top:1px solid #262626;text-align:center;color:#A6A6A6;font-size:12px}
+.site-header{max-width:720px;margin:0 auto 24px}
+.site-header a{color:#FFFFFF;text-decoration:none;font-weight:700;letter-spacing:-0.05em;font-size:22px}
 </style>
 </head>
 <body>
-<div class="container">
+<header class="site-header"><a href="/" aria-label="Back to dime home">dıme</a></header>
+<main class="container">
 <h1>Privacy Policy</h1>
 <p class="updated">Last updated: July 7, 2026</p>
 
@@ -131,13 +135,13 @@ a{color:#45E0A8;text-decoration:underline}
 <p>For privacy-related inquiries, contact us at the email associated with your account or through the platform's support channels.</p>
 
 <div class="footer">&copy; ${new Date().getFullYear()} AI Sports Betting Models. All rights reserved.</div>
-</div>
+</main>
 </body>
 </html>`;
 }
 
 function buildTermsHtml(): string {
-  const title = "Terms of Service | AI Sports Betting Models";
+  const title = "Terms of Service — dıme";
   const canonical = "https://aisportsbettingmodels.com/terms";
   return `<!DOCTYPE html>
 <html lang="en">
@@ -161,13 +165,17 @@ p{margin-bottom:12px;font-size:14px;color:#FFFFFF}
 ul{padding-left:24px;margin-bottom:12px}
 li{font-size:14px;color:#FFFFFF;margin-bottom:6px}
 a{color:#45E0A8;text-decoration:underline}
-.updated{color:#FFFFFF;font-size:13px;margin-bottom:32px}
+a:focus-visible,.site-header a:focus-visible{outline:2px solid #45E0A8;outline-offset:2px}
+.updated{color:#A6A6A6;font-size:13px;margin-bottom:32px}
 .caps{text-transform:uppercase;font-size:13px}
-.footer{margin-top:48px;padding-top:24px;border-top:1px solid #FFFFFF;text-align:center;color:#FFFFFF;font-size:12px}
+.footer{margin-top:48px;padding-top:24px;border-top:1px solid #262626;text-align:center;color:#A6A6A6;font-size:12px}
+.site-header{max-width:720px;margin:0 auto 24px}
+.site-header a{color:#FFFFFF;text-decoration:none;font-weight:700;letter-spacing:-0.05em;font-size:22px}
 </style>
 </head>
 <body>
-<div class="container">
+<header class="site-header"><a href="/" aria-label="Back to dime home">dıme</a></header>
+<main class="container">
 <h1>Terms of Service</h1>
 <p class="updated">Last updated: July 7, 2026</p>
 
@@ -227,7 +235,7 @@ a{color:#45E0A8;text-decoration:underline}
 <p>For questions about these Terms, contact us through the Platform's support channels or at the email associated with your account.</p>
 
 <div class="footer">&copy; ${new Date().getFullYear()} AI Sports Betting Models. All rights reserved.</div>
-</div>
+</main>
 </body>
 </html>`;
 }
@@ -313,7 +321,7 @@ td b{color:var(--text);font-weight:700}
   <h1>See where price and probability <em>disagree</em>.</h1>
   <p class="sub">Dime AI compares sportsbook prices against projected probability, movement, volatility, matchup context, and risk flags so every market resolves to Pass, Monitor, or Edge Detected.</p>
   <a href="/checkout?plan=pro" class="cta">Get Access</a>
-  <p class="micro">Analytical software. No guaranteed outcomes. Built for disciplined market evaluation.</p>
+  <p class="micro">Analytical software for disciplined market evaluation. No guaranteed outcomes.</p>
 </section>
 <section class="section" id="console">
   <div class="mono">Demo &mdash; sample markets</div>

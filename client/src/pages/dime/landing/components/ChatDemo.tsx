@@ -27,7 +27,7 @@ export default function ChatDemo() {
           <SectionHead
             eyebrow="Dime Chat"
             headline={{ before: "Interrogate the number, ", em: "not the narrative", after: "." }}
-            sub="Every answer traces back to a table the model wrote. Pick a question — the responses below are real product tone on sample markets."
+            sub="Every answer traces back to a table the model wrote. Pick a question: the responses below are real product tone on sample markets."
           />
 
           <div className="chat-grid" style={{ marginTop: "clamp(28px, 4vw, 44px)" }}>
