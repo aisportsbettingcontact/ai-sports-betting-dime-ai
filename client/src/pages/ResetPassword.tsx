@@ -115,7 +115,7 @@ export default function ResetPassword() {
             This password reset link is invalid or malformed. Please request a new one.
           </p>
           <Button
-            onClick={() => navigate("/")}
+            onClick={() => navigate("/login")}
             className="bg-[#45E0A8] text-black"
           >
             Back to log in
@@ -278,7 +278,7 @@ export default function ResetPassword() {
 
           <button
             type="button"
-            onClick={() => navigate("/")}
+            onClick={() => navigate("/login")}
             className="text-white text-xs text-center transition-colors"
           >
             Back to log in
