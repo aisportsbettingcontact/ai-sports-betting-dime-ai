@@ -8,7 +8,7 @@ import type { ProjectionTeam } from "./types";
  * the single strongest opportunity from primaryInsight(): the EdgeIndicator plus
  * the readout — MODEL EDGE / BOOK / MODEL, each on its own labeled element.
  * Every value is derived by the decision engine, never styled in. When there's
- * no edge, it states that plainly.
+ * no actionable edge, the visual badge shows only its neutral no-vig ROI.
  *
  * Owner directive 2026-07-17: the MODEL EDGE value is spelled out — "U 7"
  * reads "Under 7", "ATH ML" reads "Athletics ML" (CSS uppercases the display).
@@ -53,56 +53,61 @@ export function ProjectionSummary({
   // Readout above the EdgeIndicator (owner directive 2026-07-18): the
   // MODEL EDGE / BOOK / MODEL facts lead, the mint edge cell sits beneath.
   //
-  // Round 4 Wave 1 (item 3, page law "PASS games"): the no-edge case uses the
-  // SAME <dl className="summary__readout"> grid as an edge card — "No edge"
-  // already occupies the chip slot via EdgeIndicator below — instead of a
-  // divergent bare <p>, so a PASS card never breaks the row's shape. The
-  // shipped copy is unchanged, just relocated into the structure's value row.
+  // A scored no-edge case uses the SAME readout structure as an edge card,
+  // with an ROI-only neutral badge in the signal slot. A genuinely unscorable
+  // game gets the unavailable-data sentence and no empty signal badge.
   return (
-    <div className="summary">
-      <dl className="summary__readout">
-        {insight ? (
-          <>
-            {/* Round 4 Wave 2 (item 5): the --edge/--book/--model modifiers are the
-                fixed-track hooks for ProjectionCard.css's @media(min-width:768px)
-                mini-grid (MODEL EDGE | BOOK | MODEL | chip) — see .summary__item--*
-                there. Base .summary__item class is unchanged so mobile (<768px,
-                flex layout) stays byte-for-byte visually untouched. */}
-            <div className="summary__item summary__item--edge">
-              <dt className="ds-label">Model edge</dt>
-              <dd className="summary__pick">{spellOutPick(insight.sideLabel, teams)}</dd>
+    <div className={`summary ${insight ? "summary--priced" : "summary--empty"}`}>
+      <div
+        className="summary__viewport"
+        role="region"
+        aria-label="Model projection summary"
+        tabIndex={nextEdgeTabIndex ?? 0}
+      >
+        <div className="summary__group">
+          <dl className="summary__readout">
+            {insight ? (
+              <>
+                <div className="summary__item summary__item--edge">
+                  <dt className="ds-label">Model edge</dt>
+                  <dd className="summary__pick">{spellOutPick(insight.sideLabel, teams)}</dd>
+                </div>
+                <div className="summary__item summary__item--book">
+                  {/* "Book" not "Best price" — owner directive 2026-07-17 */}
+                  <dt className="ds-label">Book</dt>
+                  <dd className="odds-value">{fmtPrice(insight.bookPrice)}</dd>
+                </div>
+                <div className="summary__item summary__item--model">
+                  {/* "Model" not "Model fair price" — owner directive 2026-07-17 */}
+                  <dt className="ds-label">Model</dt>
+                  <dd className="odds-value">{fmtPrice(insight.modelFairPrice)}</dd>
+                </div>
+              </>
+            ) : (
+              <div className="summary__item summary__item--message">
+                <dt className="sr-only">Projection status</dt>
+                <dd className="summary__none ds-body-sm">Every market is efficiently priced. No action.</dd>
+              </div>
+            )}
+          </dl>
+          {insight && (
+            <div className="summary__signal">
+              <EdgeIndicator insight={insight} className="summary__edge" />
+              {onNextEdge && nextEdgeLabel && (
+                <button
+                  type="button"
+                  className="summary__next"
+                  aria-label={nextEdgeLabel}
+                  tabIndex={nextEdgeTabIndex}
+                  ref={nextEdgeButtonRef}
+                  onClick={onNextEdge}
+                >
+                  <ArrowRight size={16} strokeWidth={1.8} aria-hidden="true" />
+                </button>
+              )}
             </div>
-            <div className="summary__item summary__item--book">
-              {/* "Book" not "Best price" — owner directive 2026-07-17 */}
-              <dt className="ds-label">Book</dt>
-              <dd className="odds-value">{fmtPrice(insight.bookPrice)}</dd>
-            </div>
-            <div className="summary__item summary__item--model">
-              {/* "Model" not "Model fair price" — owner directive 2026-07-17 */}
-              <dt className="ds-label">Model</dt>
-              <dd className="odds-value">{fmtPrice(insight.modelFairPrice)}</dd>
-            </div>
-          </>
-        ) : (
-          <div className="summary__item summary__item--message">
-            <dd className="summary__none ds-body-sm">Every market is efficiently priced. No action.</dd>
-          </div>
-        )}
-      </dl>
-      <div className="summary__signal">
-        <EdgeIndicator insight={insight} className="summary__edge" />
-        {onNextEdge && nextEdgeLabel && (
-          <button
-            type="button"
-            className="summary__next"
-            aria-label={nextEdgeLabel}
-            tabIndex={nextEdgeTabIndex}
-            ref={nextEdgeButtonRef}
-            onClick={onNextEdge}
-          >
-            <ArrowRight size={16} strokeWidth={1.8} aria-hidden="true" />
-          </button>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
