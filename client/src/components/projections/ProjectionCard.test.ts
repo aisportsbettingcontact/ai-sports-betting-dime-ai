@@ -623,11 +623,18 @@ describe("ProjectionCard — Rotowire pregame context", () => {
     expect(html).toContain(">Expected<");
     expect(html).toContain(">Lineups<");
     expect(html).toContain("View lineups for Giants at Mariners");
+    expect(html).toContain('data-headshot-source="mlb"');
   });
 
-  it("insets headshots and renders LINEUPS as the mint, black, 44px CTA", () => {
+  it("precisely top-centers headshots and renders LINEUPS as the mint, black, 44px CTA", () => {
     expect(cardCss).toMatch(
-      /\.pregame-pitcher__photo img\s*\{[^}]*object-position:\s*center bottom;[^}]*transform:\s*scale\(0\.82\);[^}]*transform-origin:\s*center bottom;/,
+      /\.pregame-pitcher__photo\s*\{[^}]*place-items:\s*start center;/,
+    );
+    expect(cardCss).toMatch(
+      /\.pregame-pitcher__photo img\[data-headshot-source="mlb"\]\s*\{[^}]*object-fit:\s*contain;[^}]*object-position:\s*center top;[^}]*transform:\s*scale\(0\.82\);[^}]*transform-origin:\s*center top;/,
+    );
+    expect(cardCss).toMatch(
+      /\.pregame-pitcher__photo img\[data-headshot-source="rotowire"\]\s*\{[^}]*object-fit:\s*cover;[^}]*object-position:\s*center;[^}]*transform:\s*scale\(0\.9\);[^}]*transform-origin:\s*center;/,
     );
     expect(cardCss).toMatch(
       /\.pregame-pitchers__lineups\s*\{[^}]*min-block-size:\s*44px;[^}]*color:\s*#000;[^}]*background:\s*#45e0a8;[^}]*border-radius:\s*12px;/,

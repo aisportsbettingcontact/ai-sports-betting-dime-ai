@@ -195,9 +195,151 @@ function extractRotowireId(href: string | undefined): number | null {
   const oldFmt = href.match(/[?&]id=(\d+)/i);
   if (oldFmt) return parseInt(oldFmt[1], 10);
   // New format: /baseball/player/name-NNNNN  (last segment ends with -digits)
-  const newFmt = href.match(/-(\d+)\s*$/);
+  const newFmt = href.split(/[?#]/, 1)[0].match(/-(\d+)\s*$/);
   if (newFmt) return parseInt(newFmt[1], 10);
   return null;
+}
+
+const GENERATIONAL_SUFFIXES: Record<string, string> = {
+  ii: "II",
+  iii: "III",
+  iv: "IV",
+  jr: "Jr.",
+  sr: "Sr.",
+};
+
+const NAME_PARTICLES = new Set([
+  "da",
+  "de",
+  "del",
+  "della",
+  "di",
+  "dos",
+  "du",
+  "la",
+  "le",
+  "van",
+  "von",
+]);
+
+const NAME_INITIALISMS = new Set(["aj", "cj", "dj", "jd", "jj", "jp", "jt", "pj", "tj"]);
+
+function normalizeNameForComparison(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]/gi, "")
+    .toLowerCase();
+}
+
+function formatSlugNamePart(part: string, index: number): string {
+  const lower = part.toLocaleLowerCase("en-US");
+  const suffix = GENERATIONAL_SUFFIXES[lower];
+  if (suffix) return suffix;
+  if (NAME_INITIALISMS.has(lower)) {
+    return `${lower.toUpperCase().split("").join(".")}.`;
+  }
+  if (index > 0 && NAME_PARTICLES.has(lower)) return lower;
+
+  const capitalized = lower.replace(
+    /(^|['’])([a-z])/g,
+    (_match, boundary: string, letter: string) => `${boundary}${letter.toLocaleUpperCase("en-US")}`,
+  );
+  if (lower.startsWith("mc") && lower.length > 3) {
+    return `Mc${capitalized.charAt(2).toLocaleUpperCase("en-US")}${capitalized.slice(3)}`;
+  }
+  return capitalized;
+}
+
+/**
+ * Recover the canonical player name embedded in current Rotowire URLs.
+ *
+ * When the page shortens a name to "E. Rodriguez", retain the visible surname
+ * (including punctuation/accents) and recover only the omitted given name from
+ * `/baseball/player/eduardo-rodriguez-12783`.
+ */
+function playerNameFromSlug(href: string | undefined, abbreviatedName = ""): string | null {
+  if (!href) return null;
+
+  const path = href.split(/[?#]/, 1)[0];
+  const encodedSegment = path.split("/").filter(Boolean).at(-1);
+  if (!encodedSegment) return null;
+
+  let segment: string;
+  try {
+    segment = decodeURIComponent(encodedSegment);
+  } catch {
+    segment = encodedSegment;
+  }
+
+  const slugMatch = segment.match(/^(.+)-\d+$/);
+  if (!slugMatch) return null;
+  const parts = slugMatch[1].split("-").filter(Boolean);
+  if (parts.length === 0) return null;
+
+  const abbreviatedMatch = abbreviatedName.match(/^[A-Za-zÀ-ÖØ-öø-ÿ]\.\s+(.+)$/);
+  if (abbreviatedMatch && parts.length > 1) {
+    const visibleSurname = abbreviatedMatch[1].trim();
+    const normalizedSurname = normalizeNameForComparison(visibleSurname);
+
+    for (let surnameStart = 1; surnameStart < parts.length; surnameStart += 1) {
+      const slugSurname = normalizeNameForComparison(parts.slice(surnameStart).join(""));
+      if (slugSurname !== normalizedSurname) continue;
+
+      const givenName = parts
+        .slice(0, surnameStart)
+        .map((part, index) => formatSlugNamePart(part, index))
+        .join(" ");
+      return `${givenName} ${visibleSurname}`.trim();
+    }
+  }
+
+  return parts.map((part, index) => formatSlugNamePart(part, index)).join(" ");
+}
+
+function hasAbbreviatedGivenName(value: string): boolean {
+  return /^[A-Za-zÀ-ÖØ-öø-ÿ]\.\s+\S/.test(value.trim());
+}
+
+/** Resolve one player link consistently for pitchers and all nine batters. */
+function resolveRotowirePlayerName(
+  href: string | undefined,
+  title: string | undefined,
+  visibleText: string,
+): string {
+  const visible = visibleText.replace(/\s+/g, " ").trim();
+  const titled = (title ?? "").replace(/\s+/g, " ").trim();
+
+  // Rotowire's visible link is frequently abbreviated even when other markup
+  // is absent or stale. For this exact form the URL slug is authoritative.
+  if (hasAbbreviatedGivenName(visible)) {
+    return (
+      playerNameFromSlug(href, visible)
+      ?? (hasAbbreviatedGivenName(titled) ? visible : titled || visible)
+    );
+  }
+
+  if (titled && !hasAbbreviatedGivenName(titled)) return titled;
+  if (visible) return visible;
+  return playerNameFromSlug(href) ?? titled;
+}
+
+type RotowireLineupStatus = "confirmed" | "expected" | "unknown";
+
+/**
+ * RotoWire exposes the state as a class on the status row. The class wins over
+ * decorative/nested text; normalized text remains a compatibility fallback.
+ */
+function parseColumnLineupStatus($col: cheerio.Cheerio<any>): RotowireLineupStatus {
+  const $status = $col.find(".lineup__status").first();
+  if (!$status.length) return "unknown";
+  if ($status.hasClass("is-confirmed")) return "confirmed";
+  if ($status.hasClass("is-expected")) return "expected";
+
+  const text = $status.text().replace(/\s+/g, " ").trim();
+  if (/^confirmed(?:\s+lineup)?$/i.test(text)) return "confirmed";
+  if (/^expected(?:\s+lineup)?$/i.test(text)) return "expected";
+  return "unknown";
 }
 
 /** Normalize pitcher hand from Rotowire text like "RHP", "LHP", "R", "L" */
@@ -579,17 +721,18 @@ export function parseLineupHtml(
         side: "away" | "home"
       ): { pitcher: RotoStartingPitcher | null; lineup: RotoLineupPlayer[]; lineupConfirmed: boolean } => {
         const colTag = `${cardTag}[${side}]`;
+        const lineupStatus = parseColumnLineupStatus($col);
+        const lineupConfirmed = lineupStatus === "confirmed";
 
         // ── Pitcher ────────────────────────────────────────────────────────
         let pitcher: RotoStartingPitcher | null = null;
         const $highlight = $col.find(".lineup__player-highlight").first();
 
         if ($highlight.length) {
-          const $link = $highlight.find("a").first();
-          // Prefer the `title` attribute for the full name (e.g. "Max Fried");
-          // fall back to visible text which may be abbreviated (e.g. "M. Fried")
-          const pitcherName = ($link.attr("title") || $link.text()).trim();
-          const rotowireId = extractRotowireId($link.attr("href"));
+          const $link = $highlight.find('a[href*="/baseball/player"]').first();
+          const href = $link.attr("href");
+          const pitcherName = resolveRotowirePlayerName(href, $link.attr("title"), $link.text());
+          const rotowireId = extractRotowireId(href);
 
           // Hand: from .lineup__throws span ("RHP" / "LHP")
           const throwsRaw = $highlight.find(".lineup__throws").text().trim();
@@ -607,15 +750,11 @@ export function parseLineupHtml(
             ? eraRaw.replace(/^(\d+-\d+)\s+([.\d]+\s*ERA)$/, "$1 · $2")
             : null;
 
-          // Confirmed: check .lineup__status text in the column
-          const statusText = $col.find(".lineup__status").first().text().trim();
-          const confirmed = /confirmed/i.test(statusText);
-
           if (pitcherName) {
-            pitcher = { name: pitcherName, hand, era, rotowireId, confirmed };
+            pitcher = { name: pitcherName, hand, era, rotowireId, confirmed: lineupConfirmed };
             console.log(
               `${colTag} Pitcher: "${pitcherName}" (${hand ? `${hand}HP` : "hand unknown"}) | era="${era}" | ` +
-              `rotowireId=${rotowireId ?? "null"} | confirmed=${confirmed}`
+              `rotowireId=${rotowireId ?? "null"} | status=${lineupStatus}`
             );
           } else {
             console.warn(`${colTag} Pitcher highlight found but name is empty (TBD)`);
@@ -626,8 +765,6 @@ export function parseLineupHtml(
 
         // ── Batting lineup ────────────────────────────────────────────────
         const lineup: RotoLineupPlayer[] = [];
-        const statusText = $col.find(".lineup__status").first().text().trim();
-        const lineupConfirmed = /confirmed/i.test(statusText);
 
         $col.find(".lineup__player").each((i: number, playerEl: any) => {
           const battingOrder = i + 1;
@@ -635,11 +772,10 @@ export function parseLineupHtml(
 
           const $p = $(playerEl);
           const position = $p.find(".lineup__pos").text().trim() || "?";
-          const $nameLink = $p.find("a").first();
-          // Prefer the `title` attribute for the full name (e.g. "Rafael Devers");
-          // fall back to visible text which may be abbreviated (e.g. "R. Devers")
-          const name = ($nameLink.attr("title") || $nameLink.text()).trim();
-          const rotowireId = extractRotowireId($nameLink.attr("href"));
+          const $nameLink = $p.find('a[href*="/baseball/player"]').first();
+          const href = $nameLink.attr("href");
+          const name = resolveRotowirePlayerName(href, $nameLink.attr("title"), $nameLink.text());
+          const rotowireId = extractRotowireId(href);
           const bats = $p.find(".lineup__bats").text().trim() || "?";
 
           if (!name) {

@@ -298,7 +298,7 @@ const LINEUPS_BY_GAME_ID = {
     awayPitcherHand: "L",
     awayPitcherEra: "7-7 · 4.18 ERA",
     awayPitcherRotowireId: 14201,
-    awayPitcherMlbamId: 676664,
+    awayPitcherMlbamId: null,
     awayPitcherConfirmed: false,
     homePitcherName: "Jacob deGrom",
     homePitcherHand: "R",
@@ -349,6 +349,32 @@ const BLANK_PNG = Buffer.from(
   "base64",
 );
 
+// MLB's removed-background player assets are 180×270 (2:3). Keep that exact
+// intrinsic geometry in-browser so portrait crop tests cannot pass against a
+// meaningless 1×1 pixel while still remaining deterministic/offline.
+const MLB_PORTRAIT_SVG = `
+  <svg xmlns="http://www.w3.org/2000/svg" width="180" height="270" viewBox="0 0 180 270">
+    <path fill="#173a31" d="M8 270c4-61 29-91 82-91s78 30 82 91z"/>
+    <ellipse cx="90" cy="137" rx="48" ry="63" fill="#d49a78"/>
+    <path fill="#101820" d="M37 91c3-48 26-72 53-72s50 24 53 72c-31-14-75-14-106 0z"/>
+    <path fill="#45e0a8" d="M25 92c22-17 108-17 130 0-35 10-95 10-130 0z"/>
+    <circle cx="72" cy="132" r="5" fill="#171717"/>
+    <circle cx="108" cy="132" r="5" fill="#171717"/>
+    <path fill="none" stroke="#6f382d" stroke-width="4" stroke-linecap="round" d="M75 161q15 12 30 0"/>
+  </svg>
+`;
+
+const ROTOWIRE_PORTRAIT_SVG = `
+  <svg xmlns="http://www.w3.org/2000/svg" width="250" height="250" viewBox="0 0 250 250">
+    <rect width="250" height="250" fill="#101820"/>
+    <path fill="#173a31" d="M18 250c8-61 41-83 107-83s99 22 107 83z"/>
+    <ellipse cx="125" cy="120" rx="58" ry="75" fill="#d49a78"/>
+    <path fill="#45e0a8" d="M53 64c24-34 120-34 144 0-34 16-110 16-144 0z"/>
+    <circle cx="103" cy="113" r="6" fill="#171717"/>
+    <circle cx="147" cy="113" r="6" fill="#171717"/>
+  </svg>
+`;
+
 async function stubApi(page: Page) {
   await page.route("**/api/trpc/**", (route) => {
     const url = new URL(route.request().url());
@@ -379,10 +405,10 @@ async function stubApi(page: Page) {
     route.fulfill({ status: 200, contentType: "image/png", body: BLANK_PNG }),
   );
   await page.route("https://img.mlbstatic.com/**", (route) =>
-    route.fulfill({ status: 200, contentType: "image/png", body: BLANK_PNG }),
+    route.fulfill({ status: 200, contentType: "image/svg+xml", body: MLB_PORTRAIT_SVG }),
   );
   await page.route("https://www.rotowire.com/images/photos/**", (route) =>
-    route.fulfill({ status: 200, contentType: "image/png", body: BLANK_PNG }),
+    route.fulfill({ status: 200, contentType: "image/svg+xml", body: ROTOWIRE_PORTRAIT_SVG }),
   );
 }
 
@@ -557,13 +583,105 @@ for (const width of DESKTOP_WIDTHS) {
 
     const headshotFrame = scheduledCard.locator(".pregame-pitcher__photo").first();
     const headshot = headshotFrame.locator("img");
+    await expect.poll(
+      () => headshot.evaluate((image) => image.naturalWidth),
+      { message: "deterministic 2:3 pitcher portrait loads" },
+    ).toBe(180);
     const headshotFrameBox = await headshotFrame.boundingBox();
     const headshotBox = await headshot.boundingBox();
     if (!headshotFrameBox || !headshotBox) throw new Error("pitcher headshot geometry missing");
+    const headshotGeometry = await headshot.evaluate((image) => {
+      const style = getComputedStyle(image);
+      const frame = image.parentElement;
+      return {
+        frameBorderTop: frame ? parseFloat(getComputedStyle(frame).borderTopWidth) : 0,
+        naturalWidth: image.naturalWidth,
+        naturalHeight: image.naturalHeight,
+        objectFit: style.objectFit,
+        objectPosition: style.objectPosition,
+        transform: style.transform,
+        untransformedWidth: parseFloat(style.width),
+      };
+    });
+    expect(headshotGeometry).toMatchObject({
+      naturalWidth: 180,
+      naturalHeight: 270,
+      objectFit: "contain",
+      objectPosition: "50% 0%",
+      transform: "matrix(0.82, 0, 0, 0.82, 0, 0)",
+    });
     expect(
-      headshotBox.width / headshotFrameBox.width,
-      "pitcher portrait is inset inside its circular frame",
-    ).toBeCloseTo(0.82, 1);
+      headshotBox.width / headshotGeometry.untransformedWidth,
+      "pitcher portrait uses the calibrated 82% scale",
+    ).toBeCloseTo(0.82, 2);
+    expect(
+      headshotBox.height / headshotBox.width,
+      "pitcher portrait preserves MLB's native 2:3 aspect ratio",
+    ).toBeCloseTo(1.5, 2);
+    expect(
+      Math.abs(
+        headshotBox.x
+        + headshotBox.width / 2
+        - (headshotFrameBox.x + headshotFrameBox.width / 2),
+      ),
+      "pitcher portrait is horizontally centered to subpixel precision",
+    ).toBeLessThanOrEqual(0.5);
+    expect(
+      Math.abs(
+        headshotBox.y - (headshotFrameBox.y + headshotGeometry.frameBorderTop),
+      ),
+      "pitcher portrait starts at the frame's inner top instead of the bottom",
+    ).toBeLessThanOrEqual(0.5);
+
+    const rotowireFrame = passCard.locator(".pregame-pitcher__photo").first();
+    const rotowireHeadshot = rotowireFrame.locator('img[data-headshot-source="rotowire"]');
+    await expect.poll(
+      () => rotowireHeadshot.evaluate((image) => image.naturalWidth),
+      { message: "deterministic square RotoWire portrait loads" },
+    ).toBe(250);
+    const rotowireFrameBox = await rotowireFrame.boundingBox();
+    const rotowireHeadshotBox = await rotowireHeadshot.boundingBox();
+    if (!rotowireFrameBox || !rotowireHeadshotBox) {
+      throw new Error("RotoWire fallback geometry missing");
+    }
+    const rotowireGeometry = await rotowireHeadshot.evaluate((image) => {
+      const style = getComputedStyle(image);
+      return {
+        naturalWidth: image.naturalWidth,
+        naturalHeight: image.naturalHeight,
+        objectFit: style.objectFit,
+        objectPosition: style.objectPosition,
+        transform: style.transform,
+        untransformedWidth: parseFloat(style.width),
+      };
+    });
+    expect(rotowireGeometry).toMatchObject({
+      naturalWidth: 250,
+      naturalHeight: 250,
+      objectFit: "cover",
+      objectPosition: "50% 50%",
+      transform: "matrix(0.9, 0, 0, 0.9, 0, 0)",
+    });
+    expect(
+      rotowireHeadshotBox.width / rotowireGeometry.untransformedWidth,
+      "square RotoWire fallback uses its source-specific 90% scale",
+    ).toBeCloseTo(0.9, 2);
+    expect(
+      Math.abs(
+        rotowireHeadshotBox.x
+        + rotowireHeadshotBox.width / 2
+        - (rotowireFrameBox.x + rotowireFrameBox.width / 2),
+      ),
+      "square RotoWire fallback is horizontally centered",
+    ).toBeLessThanOrEqual(0.5);
+    expect(
+      Math.abs(
+        rotowireHeadshotBox.y
+        + rotowireHeadshotBox.height / 2
+        - (rotowireFrameBox.y + rotowireFrameBox.height / 2),
+      ),
+      "square RotoWire fallback is vertically centered",
+    ).toBeLessThanOrEqual(0.5);
 
     const matchupCenter = await scheduledCard.locator(".matchup__center").boundingBox();
     const matchupLogos = scheduledCard.locator(".matchup .team-logo-box");
