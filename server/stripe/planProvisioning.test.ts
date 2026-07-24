@@ -8,7 +8,7 @@ const h = vi.hoisted(() => {
   const couponsCreate = vi.fn(async (_p: unknown) => ({ id: "coupon_TEST123" }));
   const promotionCodesCreate = vi.fn(async (_p: unknown) => ({ id: "promo_TEST123" }));
   const inserts: Array<Record<string, unknown>> = [];
-  return { productsCreate, productsUpdate, pricesCreate, couponsCreate, promotionCodesCreate, inserts };
+  return { productsCreate, productsUpdate, pricesCreate, couponsCreate, promotionCodesCreate, inserts, insertError: null as null | Error };
 });
 
 vi.mock("stripe", () => ({
@@ -24,6 +24,7 @@ vi.mock("../db", () => ({
     insert: () => ({
       values: (vals: Record<string, unknown>) => {
         h.inserts.push(vals);
+        if (h.insertError) return Promise.reject(h.insertError);
         return Promise.resolve([{ insertId: h.inserts.length }]);
       },
     }),
@@ -37,11 +38,12 @@ vi.mock("./planStore", async (importOriginal) => {
   return { ...actual, getPlanBySlug: vi.fn(async () => null), invalidatePlanCache: vi.fn() };
 });
 
-import { provisionPlan, slugify, isProvisioningTestMode } from "./planProvisioning";
+import { provisionPlan, slugify, isProvisioningTestMode, describeDbError } from "./planProvisioning";
 
 beforeEach(() => {
   vi.clearAllMocks();
   h.inserts.length = 0;
+  h.insertError = null;
   process.env.STRIPE_TEST_SECRET_KEY = "rk_test_fake_key_for_unit_tests_only";
 });
 
@@ -163,5 +165,43 @@ describe("provisionPlan", () => {
     // The price row has no interval and default sort/hidden.
     const priceRow = h.inserts.find((v) => "stripePriceId" in v)!;
     expect(priceRow).toMatchObject({ interval: null, intervalCount: null, sortOrder: 0, hidden: false, isDefault: true });
+  });
+
+  it("surfaces a clear 'schema out of date' message (not raw SQL) when a column is missing", async () => {
+    // Simulate exactly the production failure: the DB rejects the insert because
+    // the deployed schema is ahead of the DB (db-push not run).
+    h.insertError = Object.assign(new Error("Failed query: insert into `subscription_plans` ..."), {
+      code: "ER_BAD_FIELD_ERROR",
+      errno: 1054,
+      sqlMessage: "Unknown column 'autoRestock' in 'field list'",
+    });
+    await expect(
+      provisionPlan({ name: "Dime AI Pro", prices: [{ amountCents: 999, interval: "week", intervalCount: 1 }] }),
+    ).rejects.toThrow(/schema is out of date.*autoRestock/i);
+  });
+});
+
+describe("describeDbError", () => {
+  it("flags a missing column (ER_BAD_FIELD_ERROR / 1054) and names it", () => {
+    const d = describeDbError({ code: "ER_BAD_FIELD_ERROR", errno: 1054, sqlMessage: "Unknown column 'autoRestock' in 'field list'", message: "wrapped" });
+    expect(d.schemaMismatch).toBe(true);
+    expect(d.missingColumn).toBe("autoRestock");
+    expect(d.code).toBe("ER_BAD_FIELD_ERROR");
+  });
+  it("unwraps a driver error nested under .cause (Drizzle)", () => {
+    const d = describeDbError({
+      message: "Failed query: insert into subscription_plans ...",
+      cause: { code: "ER_BAD_FIELD_ERROR", errno: 1054, sqlMessage: "Unknown column 'restockAmount' in 'field list'" },
+    });
+    expect(d.schemaMismatch).toBe(true);
+    expect(d.missingColumn).toBe("restockAmount");
+  });
+  it("flags a missing table (ER_NO_SUCH_TABLE / 1146)", () => {
+    expect(describeDbError({ errno: 1146, sqlMessage: "Table 'db.subscription_plans' doesn't exist" }).schemaMismatch).toBe(true);
+  });
+  it("does NOT flag an unrelated error (duplicate key) as a schema mismatch", () => {
+    const d = describeDbError({ code: "ER_DUP_ENTRY", errno: 1062, sqlMessage: "Duplicate entry 'x' for key 'slug'" });
+    expect(d.schemaMismatch).toBe(false);
+    expect(d.missingColumn).toBeUndefined();
   });
 });
