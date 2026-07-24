@@ -357,7 +357,7 @@ export default function SecurityEvents() {
     <div className="bg-background text-foreground">
       {/* ── Header ── */}
       <div className="border-b border-border bg-background">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
+        <div className="admin-container py-3 flex items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <ShieldAlert className="w-4 h-4 text-foreground" />
             <span className="font-semibold text-sm">Security Events</span>
@@ -394,7 +394,7 @@ export default function SecurityEvents() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+      <div className="admin-container py-6 space-y-6">
         {/* ── Summary Cards ── */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <SummaryCard
