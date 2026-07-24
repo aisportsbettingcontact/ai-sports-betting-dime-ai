@@ -324,9 +324,20 @@ describe("DimeModelFeed — combined slate (owner directive 2026-07-18)", () => 
     // header-rhythm properties in the SAME rule — see the dedicated describe
     // block below for the full 24/32px contract).
     expect(src).toMatch(/\.dc-shell-external-scroll \.dmf-feedhead\{top:96px;/);
-    // 2x MLB league logo box; games pack 2-across on desktop.
+    // 2x MLB league logo box; responsive game columns are covered below.
     expect(src).toMatch(/\.dmf-lglogo--mlb\{width:60px;height:60px/);
-    expect(src).toMatch(/\.dmf-leaguebody\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+  });
+
+  it("lays out projection games 1-up on mobile, 2-up on tablet, and 3-up on desktop", () => {
+    expect(src).toMatch(
+      /\.dmf-leaguebody\{display:grid;grid-template-columns:minmax\(0,1fr\);align-items:start;gap:12px;margin-top:12px\}/,
+    );
+    expect(src).toMatch(
+      /@media \(min-width:768px\)\{\s*\.dmf-leaguebody\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)\}/,
+    );
+    expect(src).toMatch(
+      /@media \(min-width:1024px\)\{[\s\S]*?\.dmf-leaguebody\{grid-template-columns:repeat\(3,minmax\(0,1fr\)\);align-items:stretch\}/,
+    );
   });
 
   it("stadium display drops a trailing parenthetical (2026-07-18)", () => {
