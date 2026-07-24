@@ -1,14 +1,18 @@
 /**
  * read.ts — device-aware admin overview from the DEDICATED MySQL: Dime AI.
  * Store-role only (guard()); never touches TiDB. Read failures degrade to an
- * honest not_measured payload — never throws to the product. Aggregates only
- * (counts / distinct users / device buckets) — no per-user rows, no PII.
+ * honest not_measured payload — never throws to the product.
+ *
+ * Aggregates plus PSEUDONYMOUS per-user profiling rows (source_user_id + derived
+ * scores) — still NO PII in this store. Display identity (username/discord/role)
+ * is joined at READ time on the web instance, never persisted here.
  */
 import { sql } from "drizzle-orm";
 import { getDb } from "../db";
 import { isAnalyticsStore } from "./config";
 import { QUALIFYING_EVENTS } from "./events";
 import { ok, notMeasured, type MetricPoint } from "./metricDefinitions";
+import { computePowerScore } from "./powerScore";
 
 const TAG = "[analytics][read]";
 const DAY = 24 * 60 * 60 * 1000;
@@ -27,6 +31,29 @@ export interface ActionCount {
   count: number;
 }
 
+/**
+ * One user's profiling row (P0). Pseudonymous from the store (identity fields
+ * null); the web read-time join fills username/discordUsername/role for the
+ * owner-only view. Ranked by power score.
+ */
+export interface UserProfileRow {
+  sourceUserId: number;
+  score: number;
+  tier: string;
+  valueEvents: number;
+  actionEvents: number;
+  activeDays: number;
+  distinctSurfaces: number;
+  sessions: number;
+  lastActive: number;
+  username: string | null;
+  discordUsername: string | null;
+  role: string | null;
+}
+
+/** Cap on per-user rows returned to the leaderboard/profiler. */
+export const TOP_USERS_LIMIT = 25;
+
 export interface AnalyticsOverview {
   state: "ok" | "not_measured" | "error";
   reason: string | null;
@@ -41,6 +68,9 @@ export interface AnalyticsOverview {
   uniqueActions: MetricPoint;
   /** D3: the most-used curated actions, count-desc (≤5). Empty when none. */
   topActions: ActionCount[];
+  /** P0: per-user profiling rows, ranked by power score (≤ TOP_USERS_LIMIT).
+   *  Pseudonymous from the store; identity joined at read time on the web. */
+  topUsers: UserProfileRow[];
   lastEventAt: number | null;
   deviceMix: DeviceSlice[];
 }
@@ -66,6 +96,7 @@ export function disabledOverview(reason: string): AnalyticsOverview {
     totalActions: notMeasured(reason),
     uniqueActions: notMeasured(reason),
     topActions: [],
+    topUsers: [],
     lastEventAt: null,
     deviceMix: [],
   };
@@ -158,6 +189,60 @@ export async function getAnalyticsOverview(): Promise<AnalyticsOverview> {
       count: Number(r.n ?? 0) || 0,
     }));
 
+    // P0 per-user profiling rows (30-day window, non-test). Surface derived from
+    // route + action_name + event_name. Pseudonymous — identity joined on the web.
+    const usersR = await db.execute(sql`
+      SELECT source_user_id AS uid,
+             COUNT(DISTINCT FLOOR(occurred_at_utc / 86400000)) AS active_days,
+             COUNT(DISTINCT session_id) AS sessions,
+             MAX(occurred_at_utc) AS last_active,
+             SUM(CASE WHEN event_name IN (${nameList}) THEN 1 ELSE 0 END) AS value_events,
+             SUM(CASE WHEN event_name = 'action_performed' THEN 1 ELSE 0 END) AS action_events,
+             COUNT(DISTINCT CASE
+               WHEN route LIKE '/feed%' OR action_name LIKE 'feed_%' OR action_name LIKE 'projection_%' THEN 'feed'
+               WHEN route LIKE '/chat%' OR action_name LIKE 'chat_%' THEN 'chat'
+               WHEN route LIKE '/splits%' OR action_name LIKE 'splits_%' THEN 'splits'
+               WHEN route LIKE '/tracker%' OR action_name LIKE 'bet_%' OR event_name = 'tracker_entry_saved' THEN 'tracker'
+               ELSE NULL END) AS surfaces
+      FROM analytics_events
+      WHERE is_test = 0 AND occurred_at_utc >= ${monthFrom}
+      GROUP BY source_user_id
+      ORDER BY value_events DESC, action_events DESC
+      LIMIT ${TOP_USERS_LIMIT}`);
+    const topUsers: UserProfileRow[] = rowsOf(usersR)
+      .map((r) => {
+        const lastActive = Number(r.last_active ?? 0) || 0;
+        const daysSinceLastActive = Math.max(0, Math.floor((asOf - lastActive) / DAY));
+        const activeDays = Number(r.active_days ?? 0) || 0;
+        const sessions = Number(r.sessions ?? 0) || 0;
+        const valueEvents = Number(r.value_events ?? 0) || 0;
+        const actionEvents = Number(r.action_events ?? 0) || 0;
+        const distinctSurfaces = Number(r.surfaces ?? 0) || 0;
+        const { score, tier } = computePowerScore({
+          daysSinceLastActive,
+          activeDays,
+          distinctSurfaces,
+          valueEvents,
+          actionEvents,
+          sessions,
+        });
+        return {
+          sourceUserId: Number(r.uid ?? 0) || 0,
+          score,
+          tier,
+          valueEvents,
+          actionEvents,
+          activeDays,
+          distinctSurfaces,
+          sessions,
+          lastActive,
+          username: null,
+          discordUsername: null,
+          role: null,
+        };
+      })
+      .sort((a, b) => b.score - a.score);
+
     // No events at all ⇒ honest not_measured (nothing instrumented yet).
     if (lastEventAt === null && total === 0) return disabledOverview(NO_DATA);
 
@@ -172,6 +257,7 @@ export async function getAnalyticsOverview(): Promise<AnalyticsOverview> {
       totalActions: ok(totalActionsN),
       uniqueActions: ok(uniqueActionsN),
       topActions,
+      topUsers,
       lastEventAt,
       deviceMix,
     };

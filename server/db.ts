@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, isNotNull, isNull, lte, ne, or, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNotNull, isNull, lte, ne, or, sql } from "drizzle-orm";
 import {
   METRIC_DEFINITION_VERSION,
   REPORTING_TIMEZONE,
@@ -588,6 +588,35 @@ export async function getAppUserById(id: number) {
     return result;
   } catch {
     return null;
+  }
+}
+
+/**
+ * Batch identity lookup for the analytics profiling read-time join (owner-only).
+ * Returns ONLY display fields (no email/password) for the given app-user ids.
+ * Runs on the web instance (TiDB = app_users); never throws — a failure just
+ * leaves the analytics rows pseudonymous.
+ */
+export async function getAppUsersByIds(
+  ids: number[],
+): Promise<Array<{ id: number; username: string; discordUsername: string | null; role: string }>> {
+  if (!ids.length) return [];
+  const db = await getDb();
+  if (!db) return [];
+  try {
+    return await withCircuitBreaker(async () =>
+      db
+        .select({
+          id: appUsers.id,
+          username: appUsers.username,
+          discordUsername: appUsers.discordUsername,
+          role: appUsers.role,
+        })
+        .from(appUsers)
+        .where(inArray(appUsers.id, ids)),
+    );
+  } catch {
+    return [];
   }
 }
 
