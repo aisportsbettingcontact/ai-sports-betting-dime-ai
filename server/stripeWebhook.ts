@@ -29,6 +29,7 @@ import {
 } from "./db";
 import { PLANS, getPlanByPriceId, computeExpiryMs, normalizePlanId } from "./stripe/products";
 import { getPlanBySlug, getPriceById, computeExpiryMsForPrice, defaultPriceOf } from "./stripe/planStore";
+import { applyPurchaseToPlanQuantity } from "./stripe/planProvisioning";
 import { syncDiscordRoleForUser } from "./discord/discordRoleSync";
 import { invalidateCachedAppUser } from "./dbCircuitBreaker";
 import bcrypt from "bcryptjs";
@@ -349,6 +350,15 @@ async function processWebhookEvent(event: Stripe.Event): Promise<void> {
         } else {
           console.error(`${tag} [VERIFY] FAIL — new user creation returned null sessionId=${session.id}`);
         }
+      }
+      // Limited-quantity FOMO: one confirmed subscribe decrements the plan's
+      // available spots (and triggers an auto-restock reset when configured).
+      // Best-effort — a counter hiccup must never fail fulfillment. Renewals
+      // (invoice.paid) intentionally do NOT decrement; only new checkouts do.
+      try {
+        await applyPurchaseToPlanQuantity(plan);
+      } catch (err) {
+        console.warn(`${tag} [STATE] quantity update failed (non-fatal): ${err instanceof Error ? err.message : String(err)}`);
       }
       console.log(`${tag} [VERIFY] PASS`);
       break;

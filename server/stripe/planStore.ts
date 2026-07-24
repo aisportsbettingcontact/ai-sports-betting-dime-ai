@@ -25,6 +25,8 @@ const TAG = "[Stripe][PlanStore]";
 export type PlanType = "recurring" | "one_time" | "fixed_date";
 export type BillingInterval = "day" | "week" | "month" | "year";
 
+export type PromoType = "percent" | "amount";
+
 export interface StoredPrice {
   id: number;
   stripePriceId: string;
@@ -34,6 +36,12 @@ export interface StoredPrice {
   interval: BillingInterval | null;
   intervalCount: number | null;
   trialPeriodDays: number | null;
+  /** Per-interval promo. null = none. percent → 1–100; amount → cents off. */
+  promoType: PromoType | null;
+  promoValue: number | null;
+  promoCode: string | null;
+  /** Stripe coupon applied at checkout for this price (null when no promo). */
+  stripeCouponId: string | null;
   active: boolean;
   isDefault: boolean;
   livemode: boolean;
@@ -49,6 +57,11 @@ export interface StoredPlan {
   active: boolean;
   accessUntil: number | null;
   maxSubscribers: number | null;
+  /** Auto-restock FOMO loop — see schema. availableQuantity null = unlimited. */
+  autoRestock: boolean;
+  availableQuantity: number | null;
+  restockThreshold: number | null;
+  restockAmount: number | null;
   discordRoleId: string | null;
   telegramChatId: string | null;
   livemode: boolean;
@@ -109,6 +122,10 @@ function mapPrice(pr: PlanPrice): StoredPrice {
     interval: pr.interval,
     intervalCount: pr.intervalCount,
     trialPeriodDays: pr.trialPeriodDays,
+    promoType: pr.promoType,
+    promoValue: pr.promoValue,
+    promoCode: pr.promoCode,
+    stripeCouponId: pr.stripeCouponId,
     active: pr.active,
     isDefault: pr.isDefault,
     livemode: pr.livemode,
@@ -139,6 +156,10 @@ async function loadAllPlans(): Promise<StoredPlan[]> {
         active: p.active,
         accessUntil: p.accessUntil ?? null,
         maxSubscribers: p.maxSubscribers ?? null,
+        autoRestock: p.autoRestock,
+        availableQuantity: p.availableQuantity ?? null,
+        restockThreshold: p.restockThreshold ?? null,
+        restockAmount: p.restockAmount ?? null,
         discordRoleId: p.discordRoleId ?? null,
         telegramChatId: p.telegramChatId ?? null,
         livemode: p.livemode,
@@ -201,4 +222,35 @@ export function defaultPriceOf(plan: StoredPlan): StoredPrice | null {
 export function defaultPriceForMode(plan: StoredPlan, wantLivemode: boolean): StoredPrice | null {
   const inMode = plan.prices.filter((pr) => pr.active && pr.livemode === wantLivemode);
   return inMode.find((pr) => pr.isDefault) ?? inMode[0] ?? null;
+}
+
+type RestockConfig = Pick<
+  StoredPlan,
+  "availableQuantity" | "autoRestock" | "restockThreshold" | "restockAmount"
+>;
+
+/**
+ * The availableQuantity a limited-quantity plan should hold AFTER one more
+ * subscribe. Decrements by one; when autoRestock is on and the result drops
+ * BELOW restockThreshold, it resets to restockAmount instead — the endless
+ * FOMO loop. Returns null when the plan is not limited-quantity (no counter).
+ * Pure, so the loop is unit-tested without a DB.
+ */
+export function computeNextQuantity(plan: RestockConfig): number | null {
+  if (plan.availableQuantity == null) return null;
+  const next = plan.availableQuantity - 1;
+  if (
+    plan.autoRestock &&
+    plan.restockThreshold != null &&
+    plan.restockAmount != null &&
+    next < plan.restockThreshold
+  ) {
+    return plan.restockAmount;
+  }
+  return Math.max(0, next);
+}
+
+/** A limited-quantity plan with no spots left — checkout must refuse it. */
+export function isSoldOut(plan: Pick<StoredPlan, "availableQuantity">): boolean {
+  return plan.availableQuantity != null && plan.availableQuantity <= 0;
 }

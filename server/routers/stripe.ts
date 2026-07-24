@@ -28,9 +28,10 @@ import { parse as parseCookieHeader } from "cookie";
 import type { Request } from "express";
 import { router, stripeProcedure } from "../_core/trpc";
 import { stripeAppUserProcedure } from "./appUsers";
+import type Stripe from "stripe";
 import { getStripe } from "../stripe/client";
 import { PLANS, NEW_PLAN_IDS, getPlanByPriceId, computeExpiryMs, type PlanId } from "../stripe/products";
-import { getPlanBySlug, defaultPriceForMode, type StoredPlan, type StoredPrice } from "../stripe/planStore";
+import { getPlanBySlug, defaultPriceForMode, isSoldOut, type StoredPlan, type StoredPrice } from "../stripe/planStore";
 import { derivePlanStatus } from "../stripe/planStatus";
 import type { BillingInvoice, BillingPaymentMethod, BillingInfo } from "../stripe/billingTypes";
 import { getDb, getAppUserById, invalidateAppUserByIdCache, updateAppUser } from "../db";
@@ -164,7 +165,9 @@ function dbPlanDescription(plan: StoredPlan, price: StoredPrice): string {
  *     a generated disclosure. Throws PRECONDITION_FAILED when the plan is unknown,
  *     inactive, or has no price in the current mode.
  */
-async function resolveCheckoutPlan(slug: string): Promise<{ priceId: string; description: string }> {
+async function resolveCheckoutPlan(
+  slug: string,
+): Promise<{ priceId: string; description: string; couponId: string | null }> {
   if (Object.prototype.hasOwnProperty.call(PLANS, slug)) {
     const planId = slug as PlanId;
     let priceId: string;
@@ -173,18 +176,23 @@ async function resolveCheckoutPlan(slug: string): Promise<{ priceId: string; des
     } catch {
       throw priceResolutionError(planId);
     }
-    return { priceId, description: subscriptionDescription(planId) };
+    return { priceId, description: subscriptionDescription(planId), couponId: null };
   }
   const plan = await getPlanBySlug(slug);
   if (!plan || !plan.active) {
     throw new TRPCError({ code: "PRECONDITION_FAILED", message: "plan not available" });
+  }
+  // Limited-quantity FOMO: a plan with no spots left cannot be purchased.
+  if (isSoldOut(plan)) {
+    throw new TRPCError({ code: "PRECONDITION_FAILED", message: "this plan is sold out" });
   }
   const price = defaultPriceForMode(plan, checkoutKeyIsLive());
   if (!price) {
     console.warn(`${TAG}[resolveCheckoutPlan] plan="${slug}" has no active price in ${checkoutKeyIsLive() ? "live" : "test"} mode`);
     throw new TRPCError({ code: "PRECONDITION_FAILED", message: "plan not available" });
   }
-  return { priceId: price.stripePriceId, description: dbPlanDescription(plan, price) };
+  // A per-interval promo is applied as a Stripe coupon on the session.
+  return { priceId: price.stripePriceId, description: dbPlanDescription(plan, price), couponId: price.stripeCouponId };
 }
 
 // ─── Shared checkout session builder ─────────────────────────────────────────
@@ -212,8 +220,14 @@ async function buildStripeCheckoutSession(params: BuildSessionParams) {
   // Legacy static plans use the exact existing env path; owner-created DB plans
   // resolve their mode-matched price. Throws a clean PRECONDITION_FAILED if the
   // plan isn't sellable (unknown / inactive / wrong Stripe mode).
-  const { priceId, description } = await resolveCheckoutPlan(planId);
-  console.log(`${TAG}[buildStripeCheckoutSession] [STATE] planId=${planId} priceId=${priceId}`);
+  const { priceId, description, couponId } = await resolveCheckoutPlan(planId);
+  console.log(`${TAG}[buildStripeCheckoutSession] [STATE] planId=${planId} priceId=${priceId}${couponId ? ` coupon=${couponId}` : ""}`);
+  // A per-interval promo is auto-applied as a coupon. Stripe forbids combining
+  // `discounts` with `allow_promotion_codes`, so choose one: the baked-in coupon
+  // when the interval has a promo, else let the customer enter a code.
+  const discountParam: Stripe.Checkout.SessionCreateParams = couponId
+    ? { discounts: [{ coupon: couponId }] }
+    : { allow_promotion_codes: true };
 
   // ── [STEP 3] Build success and cancel URLs ─────────────────────────────────
   const successUrl = `${origin}/subscribe/success?session_id={CHECKOUT_SESSION_ID}&plan=${planId}`;
@@ -285,7 +299,7 @@ async function buildStripeCheckoutSession(params: BuildSessionParams) {
         },
       },
       // ── UX ───────────────────────────────────────────────────────────────
-      allow_promotion_codes: true,
+      ...discountParam,
       success_url: successUrl,
       cancel_url: cancelUrl,
       billing_address_collection: "auto",
@@ -332,8 +346,12 @@ async function buildEmbeddedCheckoutSession(params: BuildSessionParams) {
 
   console.log(`${TAG}[buildEmbeddedCheckoutSession] [INPUT] planId=${planId} origin=${origin} userId=${userId ?? "anon"}`);
 
-  const { priceId, description } = await resolveCheckoutPlan(planId);
-  console.log(`${TAG}[buildEmbeddedCheckoutSession] [STATE] planId=${planId} priceId=${priceId}`);
+  const { priceId, description, couponId } = await resolveCheckoutPlan(planId);
+  console.log(`${TAG}[buildEmbeddedCheckoutSession] [STATE] planId=${planId} priceId=${priceId}${couponId ? ` coupon=${couponId}` : ""}`);
+  // See buildStripeCheckoutSession: baked-in coupon XOR customer-entered code.
+  const discountParam: Stripe.Checkout.SessionCreateParams = couponId
+    ? { discounts: [{ coupon: couponId }] }
+    : { allow_promotion_codes: true };
 
   let customerParam: { customer: string } | { customer_email: string } | Record<string, never> = {};
   if (stripeCustomerId) customerParam = { customer: stripeCustomerId };
@@ -363,7 +381,7 @@ async function buildEmbeddedCheckoutSession(params: BuildSessionParams) {
           plan_id: planId,
         },
       },
-      allow_promotion_codes: true,
+      ...discountParam,
       // Elements mode uses return_url (required for redirect-based payment
       // methods); the session_id lands on the same success page as always.
       return_url: `${origin}/subscribe/success?session_id={CHECKOUT_SESSION_ID}&plan=${planId}`,
