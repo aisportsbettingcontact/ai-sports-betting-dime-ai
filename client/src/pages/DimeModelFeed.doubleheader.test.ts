@@ -94,3 +94,58 @@ describe("MLB doubleheader client rendering identity", () => {
     expect(sorted[1].startTimeEst).toBe("7:10 PM");
   });
 });
+
+describe("MLB Rotowire pregame binding", () => {
+  it("uses the lineup row for enriched starters and games.list as a pending fallback", () => {
+    const enriched = mlbRowToCard(
+      row({
+        id: 7201,
+        awayStartingPitcher: "Fallback Away",
+        homeStartingPitcher: "Fallback Home",
+        awayPitcherConfirmed: false,
+        homePitcherConfirmed: false,
+      }),
+      {
+        scrapedAt: 1_721_740_000_000,
+        awayPitcherName: "Shane Baz",
+        awayPitcherEra: "8-3 · 2.91 ERA",
+        awayPitcherConfirmed: true,
+        homePitcherName: "Garrett Crochet",
+        homePitcherEra: "10-4 · 2.67 ERA",
+        homePitcherConfirmed: false,
+      },
+    );
+    expect(enriched.sourceGameId).toBe(7201);
+    expect(enriched.status).toBe("scheduled");
+    expect(enriched.pregameLineups?.away.pitcher.name).toBe("Shane Baz");
+    expect(enriched.pregameLineups?.away.pitcher.confirmed).toBe(true);
+    expect(enriched.pregameLineups?.home.pitcher.seasonStats).toBe("10-4 · 2.67 ERA");
+
+    const fallback = mlbRowToCard(row({
+      id: 7202,
+      awayStartingPitcher: "Ryan Pepiot",
+      homeStartingPitcher: "Brayan Bello",
+      awayPitcherConfirmed: false,
+      homePitcherConfirmed: true,
+    }));
+    expect(fallback.pregameLineups?.away.pitcher.name).toBe("Ryan Pepiot");
+    expect(fallback.pregameLineups?.home.pitcher.name).toBe("Brayan Bello");
+    expect(fallback.pregameLineups?.home.pitcher.confirmed).toBe(true);
+  });
+
+  it("never attaches pregame data to live, final, postponed, or suspended games", () => {
+    for (const [rawStatus, expectedStatus] of [
+      ["live", "live"],
+      ["final", "final"],
+      ["postponed", "postponed"],
+      ["suspended", "postponed"],
+    ] as const) {
+      const card = mlbRowToCard(
+        row({ gameStatus: rawStatus, awayScore: rawStatus === "final" ? 2 : null }),
+        { awayPitcherName: "Must Not Render" },
+      );
+      expect(card.status).toBe(expectedStatus);
+      expect(card.pregameLineups).toBeUndefined();
+    }
+  });
+});
