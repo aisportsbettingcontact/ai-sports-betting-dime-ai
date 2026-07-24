@@ -92,7 +92,7 @@ export default function MarketConsole() {
           <div className="rail-foot">
             <div className="credit-meter">
               <span className="mono num">{CHAT_SIDE.creditsLabel} · {creditsUsed}/{CHAT_SIDE.creditsTotal}</span>
-              <span className="bar"><b style={{ width: `${(creditsUsed / CHAT_SIDE.creditsTotal) * 100}%` }} /></span>
+              <span className="bar"><b style={{ transform: `scaleX(${creditsUsed / CHAT_SIDE.creditsTotal})` }} /></span>
             </div>
           </div>
         </div>
@@ -100,7 +100,7 @@ export default function MarketConsole() {
         {/* Main: intelligence card */}
         <div className="console-main">
           <div className="scan-rail">
-            <span className="track"><b style={{ width: `${progressPct}%` }} /></span>
+            <span className="track"><b style={{ transform: `scaleX(${progressPct / 100})` }} /></span>
             <span className="mono step" role="status" aria-live="polite">
               {done ? "Scan complete · market classified" : CONSOLE_SCAN_STEPS[scanStep]}
             </span>
@@ -136,12 +136,12 @@ export default function MarketConsole() {
           <div className="prob-compare">
             <div className="prob-row">
               <span className="mono">Implied probability</span>
-              <span className="track"><b style={{ width: done ? `${market.impliedProb}%` : "0%" }} /></span>
+              <span className="track"><b style={{ transform: done ? `scaleX(${market.impliedProb / 100})` : "scaleX(0)" }} /></span>
               <span className="val num">{market.impliedProb}%</span>
             </div>
             <div className="prob-row prob-row--model">
               <span className="mono">Dime projection</span>
-              <span className="track"><b style={{ width: done ? `${market.dimeProjection}%` : "0%" }} /></span>
+              <span className="track"><b style={{ transform: done ? `scaleX(${market.dimeProjection / 100})` : "scaleX(0)" }} /></span>
               <span className="val num">{market.dimeProjection}%</span>
             </div>
           </div>
