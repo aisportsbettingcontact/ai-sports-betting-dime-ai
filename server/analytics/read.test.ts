@@ -56,4 +56,12 @@ describe("disabledOverview", () => {
   it("carries an empty topUsers list when not measured (P0)", () => {
     expect(disabledOverview("analytics pipeline disabled").topUsers).toEqual([]);
   });
+  it("carries empty profiling + trend arrays when not measured (P1/P2 + trend)", () => {
+    const o = disabledOverview("analytics pipeline disabled");
+    expect(o.segments).toEqual([]);
+    expect(o.funnel).toEqual([]);
+    expect(o.featureScorecard).toEqual([]);
+    expect(o.retention).toEqual([]);
+    expect(o.dailyActivity).toEqual([]);
+  });
 });

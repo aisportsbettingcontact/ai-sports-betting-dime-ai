@@ -9,11 +9,34 @@
  * users yet." when measured but empty — never a fabricated leaderboard.
  *
  * Design: Dime brand law — semantic tokens only, font-mono numerals, one-accent
- * mint on the score/bar focal marks, 160ms color transitions, no gradients or
- * heavy shadows. Mirrors DeviceActivityPanel's mini-leaderboard treatment, fuller.
+ * mint on the histogram bars / score / under-bar focal marks, hairline grid, no
+ * gradients or heavy shadows. The distribution is a recharts BarChart so it reads
+ * as one system with the rest of the cockpit (chartTheme + shadcn ChartContainer).
  */
 import { trpc } from "@/lib/trpc";
-import { RefreshCw } from "lucide-react";
+import {
+  BarChart,
+  Bar,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  LabelList,
+} from "recharts";
+import SectionHeader from "@/pages/admin/SectionHeader";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
+import {
+  GRID_COLOR,
+  AXIS_TICK,
+  SIGNAL_SERIES,
+  mintAlpha,
+  mintConfig,
+  chartAnim,
+  usePrefersReducedMotion,
+} from "@/pages/admin/chartTheme";
 import {
   type UserProfileRow,
   TIER_LABEL,
@@ -27,29 +50,34 @@ import {
 const MAX_ROWS = 25;
 
 /** Five score buckets, low → high. Upper bound inclusive. */
-const BUCKETS: Array<{ label: string; lo: number; hi: number }> = [
-  { label: "0–19", lo: 0, hi: 19 },
-  { label: "20–39", lo: 20, hi: 39 },
-  { label: "40–59", lo: 40, hi: 59 },
-  { label: "60–79", lo: 60, hi: 79 },
-  { label: "80–100", lo: 80, hi: 100 },
-];
+const BUCKET_LABELS = ["0–19", "20–39", "40–59", "60–79", "80–100"] as const;
 
-function bucketize(rows: UserProfileRow[]): number[] {
+/** One histogram datum: a bucket label and how many users fall in it. */
+interface ScoreBucket {
+  bucket: string;
+  count: number;
+}
+
+/** Bucketize scores into the five ranges, reshaped for recharts ({bucket,count}[]). */
+function bucketize(rows: UserProfileRow[]): ScoreBucket[] {
   const counts = [0, 0, 0, 0, 0];
   for (const r of rows) {
     const s = r.score;
     const i = s >= 80 ? 4 : s >= 60 ? 3 : s >= 40 ? 2 : s >= 20 ? 1 : 0;
     counts[i] += 1;
   }
-  return counts;
+  return BUCKET_LABELS.map((label, i) => ({ bucket: label, count: counts[i] }));
 }
+
+/** One-series mint config for the distribution histogram tooltip. */
+const HISTOGRAM_CONFIG = mintConfig("count", "Users");
 
 export default function PowerUsersPanel({
   onSelect,
 }: {
   onSelect?: (u: UserProfileRow) => void;
 }) {
+  const reduced = usePrefersReducedMotion();
   const { data, isLoading } = trpc.analytics.overview.useQuery(undefined, {
     refetchInterval: 60_000,
   });
@@ -57,18 +85,15 @@ export default function PowerUsersPanel({
   const notOk = !!data && data.state !== "ok";
   const topUsers = (data?.topUsers ?? []) as UserProfileRow[];
   const rows = topUsers.slice(0, MAX_ROWS);
-  const bucketCounts = bucketize(topUsers);
-  const maxBucket = Math.max(...bucketCounts, 1);
+  const buckets = bucketize(topUsers);
 
   return (
     <div className="bg-card border border-border rounded-lg px-2.5 sm:px-4 py-2.5 sm:py-3 space-y-3">
-      {/* Header */}
-      <div className="flex items-center justify-between gap-2">
-        <div className="text-[10px] sm:text-xs font-semibold tracking-wider text-foreground uppercase font-mono">
-          Power Users · by score
-        </div>
-        {isLoading && <RefreshCw className="w-3 h-3 text-foreground animate-spin shrink-0" />}
-      </div>
+      <SectionHeader
+        title="Power Users · by score"
+        meta={`${topUsers.length} ranked`}
+        loading={isLoading}
+      />
 
       {/* Not measured — honest state with the exact reason. */}
       {notOk ? (
@@ -88,33 +113,27 @@ export default function PowerUsersPanel({
         )
       ) : (
         <>
-          {/* 1) Score-distribution histogram — five mint bars scaled to the max bucket. */}
+          {/* 1) Score-distribution histogram — five mint bars (single accent). */}
           <div>
-            <div className="text-[9px] sm:text-[10px] font-mono uppercase tracking-wider text-muted-foreground mb-1.5">
+            <ChartContainer config={HISTOGRAM_CONFIG} className="h-[150px] w-full">
+              <BarChart data={buckets}>
+                <CartesianGrid vertical={false} stroke={GRID_COLOR} strokeOpacity={0.5} />
+                <XAxis
+                  dataKey="bucket"
+                  tick={AXIS_TICK}
+                  tickLine={false}
+                  axisLine={false}
+                  stroke={GRID_COLOR}
+                />
+                <YAxis hide allowDecimals={false} />
+                <ChartTooltip content={<ChartTooltipContent />} cursor={{ fill: mintAlpha(0.06) }} />
+                <Bar dataKey="count" fill={SIGNAL_SERIES} radius={[3, 3, 0, 0]} {...chartAnim(reduced)}>
+                  <LabelList dataKey="count" position="top" className="fill-foreground" fontSize={10} />
+                </Bar>
+              </BarChart>
+            </ChartContainer>
+            <div className="text-[9px] sm:text-[10px] font-mono uppercase tracking-wider text-muted-foreground mt-1">
               Score distribution · {topUsers.length} users
-            </div>
-            <div className="flex items-end gap-1.5 sm:gap-2 h-16">
-              {BUCKETS.map((b, i) => {
-                const count = bucketCounts[i];
-                const pct = (count / maxBucket) * 100;
-                return (
-                  <div key={b.label} className="flex-1 flex flex-col items-center justify-end h-full gap-1">
-                    <span className="text-[9px] sm:text-[10px] font-mono text-foreground leading-none">
-                      {count}
-                    </span>
-                    <div className="w-full flex-1 flex items-end">
-                      <div
-                        className="w-full bg-primary rounded-sm transition-all duration-150"
-                        style={{ height: `${count > 0 ? Math.max(pct, 6) : 2}%`, minHeight: count > 0 ? 3 : 1 }}
-                        title={`${b.label}: ${count} users`}
-                      />
-                    </div>
-                    <span className="text-[9px] font-mono text-muted-foreground leading-none whitespace-nowrap">
-                      {b.label}
-                    </span>
-                  </div>
-                );
-              })}
             </div>
           </div>
 
@@ -143,7 +162,7 @@ export default function PowerUsersPanel({
                     className="w-full flex items-center gap-2 sm:gap-3 px-1.5 py-1.5 text-left border-b border-border/60 last:border-b-0 cursor-pointer transition-colors duration-150 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset"
                   >
                     {/* rank */}
-                    <span className="w-5 text-right shrink-0 text-[10px] sm:text-xs font-mono text-muted-foreground">
+                    <span className="w-5 text-right shrink-0 text-[10px] sm:text-xs font-mono tabular-nums text-muted-foreground">
                       {i + 1}
                     </span>
 
@@ -170,7 +189,7 @@ export default function PowerUsersPanel({
 
                     {/* score + thin mint under-bar */}
                     <span className="w-14 text-right shrink-0">
-                      <span className="block text-[11px] sm:text-xs font-mono font-bold text-primary leading-tight">
+                      <span className="block text-[11px] sm:text-xs font-mono font-bold tabular-nums text-primary leading-tight">
                         {u.score}
                       </span>
                       <span className="block mt-0.5 h-0.5 bg-muted/60 rounded-full overflow-hidden">
@@ -182,17 +201,17 @@ export default function PowerUsersPanel({
                     </span>
 
                     {/* value events */}
-                    <span className="w-12 text-right shrink-0 text-[10px] sm:text-xs font-mono text-foreground">
+                    <span className="w-12 text-right shrink-0 text-[10px] sm:text-xs font-mono tabular-nums text-foreground">
                       {u.valueEvents}
                     </span>
 
                     {/* active days */}
-                    <span className="w-10 text-right shrink-0 text-[10px] sm:text-xs font-mono text-foreground">
+                    <span className="w-10 text-right shrink-0 text-[10px] sm:text-xs font-mono tabular-nums text-foreground">
                       {u.activeDays}
                     </span>
 
                     {/* last seen */}
-                    <span className="w-12 text-right shrink-0 text-[10px] sm:text-xs font-mono text-muted-foreground">
+                    <span className="w-12 text-right shrink-0 text-[10px] sm:text-xs font-mono tabular-nums text-muted-foreground">
                       {fmtAgo(u.lastActive)}
                     </span>
                   </button>
