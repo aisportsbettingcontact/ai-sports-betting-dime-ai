@@ -41,6 +41,7 @@ import {
   AXIS_TICK,
   CARD_BG,
   GRID_COLOR,
+  LABEL_FONT,
   SIGNAL_SERIES,
   chartAnim,
   mintAlpha,
@@ -67,7 +68,7 @@ const ACTIONS_CONFIG = {
 
 /** Shared micro-label styling for each read's heading. */
 const MICRO =
-  "text-[10px] sm:text-xs font-mono font-semibold uppercase tracking-wider text-muted-foreground";
+  "text-[11px] font-mono font-semibold uppercase tracking-wider text-muted-foreground";
 
 export default function DeviceActivityPanel() {
   const { data, isLoading } = trpc.analytics.overview.useQuery(undefined, {
@@ -90,23 +91,23 @@ export default function DeviceActivityPanel() {
 
       {notOk ? (
         /* Honest state — never a fabricated composition. Exact server reason. */
-        <div className="bg-card border border-border rounded-lg px-4 py-3 text-center">
+        <div className="bg-card border border-border rounded-xl px-4 sm:px-6 py-4 sm:py-5 text-center">
           <div className="text-sm font-semibold text-muted-foreground">
             {STATE_LABEL[data!.state] ?? "Not measured"}
           </div>
-          <div className="text-[10px] sm:text-xs text-muted-foreground mt-1 max-w-md mx-auto leading-snug">
+          <div className="text-xs sm:text-sm text-muted-foreground mt-1 max-w-md mx-auto leading-relaxed">
             {data!.reason ??
               "The engagement-composition pipeline has produced no data yet."}
           </div>
         </div>
       ) : bothEmpty ? (
-        <div className="bg-card border border-border rounded-lg px-4 py-6 text-center">
-          <div className="text-[10px] sm:text-xs text-muted-foreground">
+        <div className="bg-card border border-border rounded-xl px-4 sm:px-6 py-4 sm:py-5 text-center">
+          <div className="text-xs sm:text-sm text-muted-foreground">
             No composition data yet.
           </div>
         </div>
       ) : (
-        <div className="bg-card border border-border rounded-lg px-2.5 sm:px-4 py-2.5 sm:py-3">
+        <div className="bg-card border border-border rounded-xl px-4 sm:px-6 py-4 sm:py-5">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {/* WHERE — device-mix donut (single-hue mint ramp, distinct users). */}
             <div className="min-w-0">
@@ -116,15 +117,15 @@ export default function DeviceActivityPanel() {
                   <div className="relative">
                     <ChartContainer
                       config={DEVICE_CONFIG}
-                      className="h-[220px] w-full"
+                      className="h-[240px] sm:h-[280px] w-full"
                     >
                       <PieChart>
                         <Pie
                           data={mix}
                           dataKey="users"
                           nameKey="deviceType"
-                          innerRadius={52}
-                          outerRadius={78}
+                          innerRadius={70}
+                          outerRadius={104}
                           paddingAngle={1}
                           stroke={CARD_BG}
                           strokeWidth={2}
@@ -139,12 +140,15 @@ export default function DeviceActivityPanel() {
                         />
                       </PieChart>
                     </ChartContainer>
-                    {/* Center overlay — total distinct users. */}
+                    {/* Center overlay — total distinct users (default sans). */}
                     <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-                      <span className="text-xl font-bold font-mono tabular-nums text-foreground leading-none">
+                      <span
+                        className="text-3xl sm:text-4xl font-bold tabular-nums text-foreground leading-none"
+                        style={{ letterSpacing: "-0.02em" }}
+                      >
                         {totalUsers.toLocaleString()}
                       </span>
-                      <span className="mt-1 text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+                      <span className="mt-1.5 text-[11px] font-mono uppercase tracking-[0.14em] text-muted-foreground">
                         Users
                       </span>
                     </div>
@@ -155,7 +159,7 @@ export default function DeviceActivityPanel() {
                     {mix.map((m, i) => (
                       <li
                         key={m.deviceType}
-                        className="flex items-center gap-2 text-[10px] sm:text-xs"
+                        className="flex items-center gap-2 text-sm"
                       >
                         <span
                           className="h-2 w-2 shrink-0 rounded-[2px]"
@@ -176,7 +180,7 @@ export default function DeviceActivityPanel() {
                 </>
               ) : (
                 !isLoading && (
-                  <div className="py-8 text-center text-[10px] sm:text-xs text-muted-foreground">
+                  <div className="py-8 text-center text-xs sm:text-sm text-muted-foreground">
                     No device mix yet.
                   </div>
                 )
@@ -189,7 +193,7 @@ export default function DeviceActivityPanel() {
               {topActions.length > 0 ? (
                 <ChartContainer
                   config={ACTIONS_CONFIG}
-                  className="h-[220px] w-full"
+                  className="h-[240px] sm:h-[260px] w-full"
                 >
                   <BarChart
                     data={topActions}
@@ -200,7 +204,7 @@ export default function DeviceActivityPanel() {
                     <YAxis
                       type="category"
                       dataKey="name"
-                      width={120}
+                      width={130}
                       tick={AXIS_TICK}
                       tickLine={false}
                       axisLine={false}
@@ -219,7 +223,7 @@ export default function DeviceActivityPanel() {
                       <LabelList
                         dataKey="count"
                         position="right"
-                        fontSize={10}
+                        fontSize={LABEL_FONT}
                         className="fill-foreground"
                       />
                     </Bar>
@@ -227,7 +231,7 @@ export default function DeviceActivityPanel() {
                 </ChartContainer>
               ) : (
                 !isLoading && (
-                  <div className="py-8 text-center text-[10px] sm:text-xs text-muted-foreground">
+                  <div className="py-8 text-center text-xs sm:text-sm text-muted-foreground">
                     No top actions yet.
                   </div>
                 )
