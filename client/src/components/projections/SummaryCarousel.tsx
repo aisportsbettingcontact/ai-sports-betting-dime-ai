@@ -3,6 +3,10 @@ import type { MarketInsight } from "@/lib/gameInsight";
 import { ProjectionSummary } from "./ProjectionSummary";
 import type { ProjectionTeam } from "./types";
 
+export function clampActiveEdgeIndex(active: number, count: number): number {
+  return Math.max(0, Math.min(active, Math.max(0, count - 1)));
+}
+
 /**
  * SummaryCarousel — a game with MORE THAN ONE model edge cycles them in a
  * swipeable, ranked strip (owner directive 2026-07-18). One slide per edge in
@@ -13,10 +17,10 @@ import type { ProjectionTeam } from "./types";
  * filters to real edges before rendering this.
  *
  * Mechanics per brand law: native scroll-snap (momentum swipe on touch,
- * trackpad/scroll on desktop, interruptible by design), dot + count
- * navigation with real <button> elements, mint reserved for the active dot
- * (position = active-state signal), 160ms brand curve, and
- * prefers-reduced-motion collapses smooth scrolling to an instant jump.
+ * trackpad/scroll on desktop, interruptible by design) plus one compact,
+ * accessible next-edge arrow immediately after the edge pill. The last
+ * edge wraps to the strongest edge. Prefers-reduced-motion collapses smooth
+ * scrolling to an instant jump.
  */
 export function SummaryCarousel({
   insights,
@@ -26,22 +30,28 @@ export function SummaryCarousel({
   teams?: ProjectionTeam[];
 }) {
   const trackRef = useRef<HTMLDivElement | null>(null);
+  const nextButtonRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const [active, setActive] = useState(0);
+  const activeIndex = clampActiveEdgeIndex(active, insights.length);
 
   const onScroll = () => {
     const el = trackRef.current;
     if (!el || el.clientWidth === 0) return;
     const i = Math.round(el.scrollLeft / el.clientWidth);
-    setActive(Math.max(0, Math.min(insights.length - 1, i)));
+    setActive(clampActiveEdgeIndex(i, insights.length));
   };
 
-  const goTo = (i: number) => {
+  const goTo = (i: number, moveFocus = false) => {
     const el = trackRef.current;
     if (!el) return;
     const reduce =
       typeof window !== "undefined" &&
       window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    setActive(i);
     el.scrollTo({ left: i * el.clientWidth, behavior: reduce ? "auto" : "smooth" });
+    if (moveFocus) {
+      requestAnimationFrame(() => nextButtonRefs.current[i]?.focus({ preventScroll: true }));
+    }
   };
 
   return (
@@ -66,26 +76,20 @@ export function SummaryCarousel({
             aria-roledescription="slide"
             aria-label={`Edge ${i + 1} of ${insights.length}: ${ins.sideLabel}`}
           >
-            <ProjectionSummary insight={ins} teams={teams} />
+            <ProjectionSummary
+              insight={ins}
+              teams={teams}
+              onNextEdge={() => goTo((i + 1) % insights.length, true)}
+              nextEdgeLabel={`View next model edge: ${
+                insights[(i + 1) % insights.length]?.sideLabel
+              } (${(i + 1) % insights.length + 1} of ${insights.length})`}
+              nextEdgeTabIndex={i === activeIndex ? 0 : -1}
+              nextEdgeButtonRef={(element) => {
+                nextButtonRefs.current[i] = element;
+              }}
+            />
           </div>
         ))}
-      </div>
-      <div className="summary-carousel__nav">
-        <span className="summary-carousel__count ds-label" aria-live="polite">
-          Edge {active + 1} of {insights.length}
-        </span>
-        <div className="summary-carousel__dots">
-          {insights.map((ins, i) => (
-            <button
-              key={`${ins.marketKey}-${ins.sideLabel}`}
-              type="button"
-              className="summary-carousel__dot"
-              aria-label={`Go to edge ${i + 1}: ${ins.sideLabel}`}
-              aria-current={i === active ? "true" : undefined}
-              onClick={() => goTo(i)}
-            />
-          ))}
-        </div>
       </div>
     </section>
   );
