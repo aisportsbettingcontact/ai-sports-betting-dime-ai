@@ -9,6 +9,7 @@ import {
   marketPaginationItems,
   projectionMarketPage,
 } from "./ProjectionMarketsPopover";
+import { clampActiveEdgeIndex } from "./SummaryCarousel";
 import type { ProjectionGame } from "./types";
 
 /** Round 4 Wave 2 (items 1, 5) source-contract fixtures — CSS/markup are read
@@ -321,6 +322,12 @@ function multiEdgeFixture(): ProjectionGame {
 }
 
 describe("ProjectionCard — ranked edge carousel (owner directive 2026-07-18)", () => {
+  it("keeps one arrow keyboard-reachable when a live edge list shrinks", () => {
+    expect(clampActiveEdgeIndex(2, 3)).toBe(2);
+    expect(clampActiveEdgeIndex(2, 2)).toBe(1);
+    expect(clampActiveEdgeIndex(2, 0)).toBe(0);
+  });
+
   it("2+ edges render the swipe strip, strongest first, weakest last", () => {
     const html = render(multiEdgeFixture());
     expect(html).toContain("summary-carousel");
@@ -328,21 +335,25 @@ describe("ProjectionCard — ranked edge carousel (owner directive 2026-07-18)",
     // Ranked: Yankees ML (+9.1pp) leads, Under 9 (+7.6pp) closes the strip.
     expect(html.indexOf("Yankees ML")).toBeGreaterThan(-1);
     expect(html.indexOf("Yankees ML")).toBeLessThan(html.indexOf("Under 9"));
-    expect(html).toContain("Edge 1 of 2");
+    expect(countOccurrences(html, 'class="summary__next"')).toBe(2);
+    expect(html).toContain("lucide-arrow-right");
+    expect(html).toContain("View next model edge: Under 9 (2 of 2)");
   });
 
-  it("no-edge markets never populate a slide (run line stays out)", () => {
+  it("no-edge markets stay out and the old visible count/dot chrome is gone", () => {
     const html = render(multiEdgeFixture());
     // Slides are labeled with their pick; the dead-even run line gets none.
     expect(html).not.toContain("of 2: Dodgers -1.5");
     expect(html).not.toContain("of 2: Yankees +1.5");
-    // Exact-class match: the "__dots" wrapper contains "__dot" as a substring.
-    expect(countOccurrences(html, 'class="summary-carousel__dot"')).toBe(2);
+    expect(html).not.toContain("summary-carousel__nav");
+    expect(html).not.toContain("summary-carousel__count");
+    expect(html).not.toContain("summary-carousel__dot");
   });
 
-  it("a single-edge card keeps the plain summary — no carousel chrome", () => {
+  it("a single-edge card keeps the plain summary with no carousel arrow", () => {
     const html = render(mlbFixture());
     expect(html).not.toContain("summary-carousel");
+    expect(html).not.toContain("summary__next");
     expect(html).toContain('summary__pick">Under 7<');
   });
 
@@ -521,6 +532,11 @@ describe("ProjectionCard — unified score row (Round 4 Wave 1, item 2)", () => 
   it("scheduled games (no score) keep the current layout — no score row at all", () => {
     const html = render(mlbFixture());
     expect(html).not.toContain("matchup__score");
+    expect(cardCss).toMatch(
+      /\.matchup__grid\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\) auto minmax\(0, 1fr\);/,
+    );
+    expect(cardCss).toContain(".matchup__team--away { justify-content: flex-end; }");
+    expect(cardCss).toContain(".matchup__team--home { justify-content: flex-start; }");
   });
 });
 
@@ -607,6 +623,18 @@ describe("ProjectionCard — Rotowire pregame context", () => {
     expect(html).toContain(">Expected<");
     expect(html).toContain(">Lineups<");
     expect(html).toContain("View lineups for Giants at Mariners");
+  });
+
+  it("insets headshots and renders LINEUPS as the mint, black, 44px CTA", () => {
+    expect(cardCss).toMatch(
+      /\.pregame-pitcher__photo img\s*\{[^}]*object-position:\s*center bottom;[^}]*transform:\s*scale\(0\.82\);[^}]*transform-origin:\s*center bottom;/,
+    );
+    expect(cardCss).toMatch(
+      /\.pregame-pitchers__lineups\s*\{[^}]*min-block-size:\s*44px;[^}]*color:\s*#000;[^}]*background:\s*#45e0a8;[^}]*border-radius:\s*12px;/,
+    );
+    expect(cardCss).toMatch(
+      /\.pregame-pitchers__lineups:active\s*\{\s*transform:\s*scale\(0\.98\);\s*\}/,
+    );
   });
 
   it("never renders stale pregame data after a game becomes live, final, or postponed", () => {
@@ -716,41 +744,59 @@ describe("ProjectionCard — aligned summary mini-grid (Round 4 Wave 2, item 5)"
     const item5 = cssBlock(cardCss, "Round 4 Wave 2 — item 5", "Round 4 Wave 2 — item 1");
     expect(item5).toContain("@media (min-width: 768px)");
     expect(item5).toContain("display: grid");
-    // Every track is a fixed minmax()/fr definition — never `auto`/`max-content`,
+    // Every track is fixed — never `auto`/`max-content`,
     // which would size the column from that card's own content and break alignment.
-    expect(item5).toMatch(/grid-template-columns:\s*minmax\([^)]+\)\s+minmax\([^)]+\)\s+minmax\([^)]+\)\s+minmax\([^)]+\);/);
+    expect(item5).toContain("grid-template-columns: 112px 48px 48px 168px;");
     expect(item5).not.toMatch(/grid-template-columns:[^;]*\bauto\b/);
     expect(item5).toContain(".summary__readout { display: contents; }");
     expect(item5).toContain(".summary__item--edge { grid-column: 1; }");
     expect(item5).toContain(".summary__item--book { grid-column: 2; }");
     expect(item5).toContain(".summary__item--model { grid-column: 3; }");
+    expect(item5).toContain(".summary__item--edge .summary__pick { font-size: var(--proj-label); }");
     expect(item5).toContain(".summary__item--message { grid-column: 1 / span 3; }");
     // The chip (real edge OR the "No edge" quiet variant) always lands in the last track —
     // PASS cards' "No edge" slot keeps the same alignment a real edge chip would have.
-    expect(item5).toContain(".summary__edge { grid-column: 4; justify-self: start; }");
+    expect(item5).toContain(".summary__signal { grid-column: 4; justify-self: start; }");
   });
 
-  it("the readout grid is shrinkable below its old 376px floor (W4 e2e-caught defect)", () => {
-    // Readable-width track floors (6.5/3.5/3.5/5.5rem) + 3 gaps summed to an
-    // un-shrinkable 376px minimum — wider than a multi-column card at 1024px —
-    // and .summary's unreset automatic minimum made plain cards resolve
-    // tracks on a different width than carousel row-mates (chip
-    // misalignment at 1280). Floors must stay (near-)zero lengths and the
-    // box itself must shrink with the card, like .summary-carousel does.
+  it("the readout uses the compact 400px rhythm and reflows before it can overflow", () => {
     const item5 = cssBlock(cardCss, "Round 4 Wave 2 — item 5", "Round 4 Wave 2 — item 1");
-    expect(item5).toMatch(/grid-template-columns:\s*minmax\(0, 1\.6fr\)\s+minmax\(0, 0\.8fr\)\s+minmax\(0, 0\.8fr\)\s+minmax\(5rem, 1fr\);/);
+    expect(item5).toContain("grid-template-columns: 112px 48px 48px 168px;");
+    expect(item5).toContain("column-gap: 8px;");
+    expect(item5).toContain("@container projcard (max-width: 400px)");
     expect(item5).toMatch(/\.summary \{[^}]*min-inline-size: 0;/);
   });
 
   it("reflows the summary by card width when a 3-across desktop column is narrow", () => {
     const item5 = cssBlock(cardCss, "Round 4 Wave 2 — item 5", "Round 4 Wave 2 — item 1");
-    expect(item5).toContain("@container projcard (max-width: 520px)");
+    expect(item5).toContain("@container projcard (max-width: 400px)");
     expect(item5).toMatch(
       /\.summary__readout \{\s*display: grid;\s*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\);/,
     );
     expect(item5).toContain(".summary__item--edge { grid-column: 1 / -1; }");
+    expect(item5).toContain(".summary__item--edge .summary__pick { font-size: var(--proj-body); }");
     expect(item5).toContain(".summary__item--message { grid-column: 1 / -1; }");
-    expect(item5).toContain(".summary__edge { grid-column: auto; align-self: center; justify-self: auto; }");
+    expect(item5).toContain(".summary__signal { grid-column: auto; align-self: center; justify-self: auto; }");
+  });
+
+  it("the multi-edge next control is mint with a theme foreground border and 44px target", () => {
+    expect(cardCss).toMatch(
+      /\.summary__next\s*\{[^}]*inline-size:\s*44px;[^}]*block-size:\s*44px;[^}]*color:\s*#45e0a8;[^}]*border:\s*1px solid var\(--foreground, #fff\);/,
+    );
+  });
+
+  it("compacts the pill, never the 44px arrow, on the narrowest desktop cards", () => {
+    const narrowSignal = cardCss.slice(
+      cardCss.indexOf("On the narrowest three-across desktop cards"),
+      cardCss.indexOf("── Markets popover"),
+    );
+    expect(narrowSignal).toContain("@container projcard (max-width: 280px)");
+    expect(narrowSignal).toContain(".projection-card .summary__signal { gap: 4px; max-inline-size: 100%; }");
+    expect(narrowSignal).toMatch(
+      /\.projection-card \.summary__signal \.edge-indicator\s*\{[^}]*padding:\s*0\.25rem 0\.375rem;/,
+    );
+    expect(narrowSignal).not.toContain(".summary__next {");
+    expect(cardCss).toMatch(/\.summary-carousel__slide\s*\{[^}]*overflow:\s*hidden;/);
   });
 
   it("numeric readout cells are tabular (Book/Model values, the edge chip's percentage)", () => {
