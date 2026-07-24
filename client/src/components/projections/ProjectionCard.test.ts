@@ -79,6 +79,13 @@ describe("TeamLogoMark — whitespace-free optical sizing and dark contrast", ()
     expect(cardCss).not.toContain(
       'html[data-theme-mode="light"] .team-logo-box--dark-outline .team-logo',
     );
+    const outlineRule = cardCss.slice(
+      cardCss.indexOf('html[data-theme-mode="system"] .team-logo-box--dark-outline'),
+      cardCss.indexOf(".team-logo-box--mono"),
+    );
+    expect(countOccurrences(outlineRule, "drop-shadow(")).toBe(1);
+    expect(outlineRule).toContain("drop-shadow(0 0 0.2px rgba(255, 255, 255, 0.92))");
+    expect(outlineRule).not.toMatch(/drop-shadow\([^)]*1px/);
   });
 });
 
@@ -620,8 +627,9 @@ describe("ProjectionCard — PASS-card law (Round 4 Wave 1, item 3)", () => {
     const html = render(passFixture());
     expect(html).toContain("summary__readout");
     expect(html).toContain('summary__pick">Athletics ML<');
-    expect(html).toContain("No edge");
     expect(html).toContain("ROI +4.8%");
+    expect(html).not.toContain(">No edge<");
+    expect(html).toContain('aria-label="No actionable edge: Athletics ML; no-vig ROI +4.8%"');
     // A priced PASS uses the standard MODEL EDGE / BOOK / MODEL facts, never
     // the unavailable-data sentence or a divergent standalone <p>.
     expect(html).not.toContain("Every market is efficiently priced. No action.");
@@ -630,13 +638,14 @@ describe("ProjectionCard — PASS-card law (Round 4 Wave 1, item 3)", () => {
 
   it("renders zero mint signal anywhere on a genuine PASS card", () => {
     const html = render(passFixture());
-    expect(html).toContain("edge-indicator--none"); // "No edge" occupies the chip slot
+    expect(html).toContain("edge-indicator--none"); // ROI-only neutral badge occupies the signal slot
+    expect(html).not.toContain("lucide-minus");
     expect(html).not.toContain('"edge-indicator summary__edge"'); // the signal (mint) variant never appears
     expect(html).not.toContain("market-table__model--signal");
     expect(html).not.toContain("market-table__result--edge");
   });
 
-  it("ranks one candidate per market by expected ROI, retaining negative ROI and the No edge state", () => {
+  it("ranks one candidate per market by expected ROI, retaining negative ROI and neutral non-actionable semantics", () => {
     const game: ProjectionGame = {
       ...passFixture(),
       markets: [
@@ -682,13 +691,15 @@ describe("ProjectionCard — PASS-card law (Round 4 Wave 1, item 3)", () => {
 
     const html = render(game);
     expect(countOccurrences(html, "summary-carousel__slide")).toBe(3);
-    expect(countOccurrences(html, ">No edge<")).toBe(3);
+    expect(countOccurrences(html, ">No edge<")).toBe(0);
+    expect(countOccurrences(html, "edge-indicator--none")).toBe(3);
+    expect(countOccurrences(html, "No actionable edge:")).toBe(3);
     expect(html.indexOf("Over 8.5")).toBeLessThan(html.indexOf("Athletics ML"));
     expect(html.indexOf("Athletics ML")).toBeLessThan(html.indexOf("Athletics +1.5"));
     expect(html).toContain("ROI −2.4%");
     expect(html).toContain("ROI −4.8%");
     expect(html).toContain("ROI −11.1%");
-    expect(html).toContain("no-edge market projections, ranked by no-vig ROI");
+    expect(html).toContain("non-actionable market projections, ranked by no-vig ROI");
     expect(html).toContain("View next projection:");
     expect(html).toContain("summary-carousel--no-edge");
     expect(cardCss).toMatch(
@@ -700,6 +711,8 @@ describe("ProjectionCard — PASS-card law (Round 4 Wave 1, item 3)", () => {
     const html = render(wcFixture());
     expect(html).toContain("Every market is efficiently priced. No action.");
     expect(html).toContain('class="summary__item summary__item--message"');
+    expect(html).not.toContain("edge-indicator--none");
+    expect(html).not.toContain("summary__signal");
   });
 });
 
@@ -829,7 +842,7 @@ describe("ProjectionCard — equal-height rows & pinned market trigger (Round 4 
   });
 });
 
-describe("ProjectionCard — aligned summary mini-grid (Round 4 Wave 2, item 5)", () => {
+describe("ProjectionCard — centered single-row summary group", () => {
   it("an edge card's readout carries the fixed-track modifier classes (edge/book/model)", () => {
     const html = render(mlbFixture());
     expect(html).toContain('class="summary__item summary__item--edge"');
@@ -845,47 +858,53 @@ describe("ProjectionCard — aligned summary mini-grid (Round 4 Wave 2, item 5)"
     expect(passHtml).not.toContain("summary__item--book");
   });
 
-  it("desktop+tablet (>=768px) CSS gives the primary pick the card's unused width", () => {
-    const item5 = cssBlock(cardCss, "Round 4 Wave 2 — item 5", "Round 4 Wave 2 — item 1");
-    expect(item5).toContain("@media (min-width: 768px)");
-    expect(item5).toContain("display: grid");
-    expect(item5).toContain(
-      "grid-template-columns: minmax(max-content, 1fr) 48px 48px minmax(168px, max-content);",
+  it("centers the readout and signal together as one intrinsic-width group", () => {
+    const centered = cssBlock(cardCss, "Centered summary group", "Round 4 Wave 2 — item 1");
+    expect(render(mlbFixture())).toContain("summary__viewport");
+    expect(render(mlbFixture())).toContain("summary__group");
+    expect(cardCss).toMatch(
+      /\.summary__group\s*\{[^}]*display:\s*grid;[^}]*grid-template-columns:\s*max-content max-content;[^}]*inline-size:\s*max-content;/,
     );
-    expect(item5).toContain("justify-content: stretch;");
-    expect(item5).toContain("inline-size: 100%;");
-    expect(item5).toContain(".summary__readout { display: contents; }");
-    expect(item5).toContain(".summary__item--edge { grid-column: 1; }");
-    expect(item5).toContain(".summary__item--book { grid-column: 2; }");
-    expect(item5).toContain(".summary__item--model { grid-column: 3; }");
-    expect(item5).toContain("min-inline-size: max-content;");
+    expect(cardCss).toMatch(
+      /\.summary__readout\s*\{[^}]*display:\s*grid;[^}]*grid-template-columns:\s*max-content minmax\(48px, max-content\) minmax\(48px, max-content\);/,
+    );
+    expect(cardCss).toMatch(
+      /\.summary__viewport\s*\{[^}]*display:\s*grid;[^}]*justify-content:\s*safe center;[^}]*justify-items:\s*safe center;/,
+    );
+    expect(cardCss).toContain(".summary__item--edge { grid-column: 1; }");
+    expect(cardCss).toContain(".summary__item--book { grid-column: 2; }");
+    expect(cardCss).toContain(".summary__item--model { grid-column: 3; }");
+    expect(cardCss).not.toContain(".summary__readout { display: contents; }");
+    expect(centered).not.toContain("minmax(max-content, 1fr)");
     expect(cardCss).toMatch(/\.summary__pick\s*\{[^}]*white-space:\s*nowrap;/);
-    expect(item5).toContain(".summary__item--message { grid-column: 1 / span 3; }");
-    // The chip (real edge OR the "No edge" quiet variant) always lands in the last track —
-    // PASS cards' "No edge" slot keeps the same alignment a real edge chip would have.
-    expect(item5).toContain(".summary__signal { grid-column: 4; justify-self: end; }");
+    expect(cardCss).toContain(".summary__item--message { grid-column: 1 / -1; justify-self: center; }");
   });
 
-  it("the readout uses a fluid full-width rhythm and reflows before it can overflow", () => {
-    const item5 = cssBlock(cardCss, "Round 4 Wave 2 — item 5", "Round 4 Wave 2 — item 1");
-    expect(item5).toContain(
-      "grid-template-columns: minmax(max-content, 1fr) 48px 48px minmax(168px, max-content);",
+  it("never wraps or clamps facts and confines impossible-width overflow locally", () => {
+    expect(cardCss).toMatch(
+      /\.summary__viewport\s*\{[^}]*inline-size:\s*100%;[^}]*min-inline-size:\s*0;[^}]*overflow-x:\s*auto;/,
     );
-    expect(item5).toContain("column-gap: clamp(8px, 1.6cqi, 16px);");
-    expect(item5).toContain("@container projcard (max-width: 400px)");
-    expect(item5).toMatch(/\.summary \{[^}]*min-inline-size: 0;/);
+    expect(render(mlbFixture())).toContain('role="region"');
+    expect(render(mlbFixture())).toContain('aria-label="Model projection summary"');
+    expect(render(mlbFixture())).toContain('tabindex="0"');
+    expect(cardCss).toMatch(
+      /\.summary__group\s*\{[^}]*min-inline-size:\s*max-content;[^}]*white-space:\s*nowrap;/,
+    );
+    expect(cardCss).toMatch(
+      /\.summary__signal\s*\{[^}]*flex-wrap:\s*nowrap;[^}]*min-inline-size:\s*max-content;/,
+    );
+    expect(cardCss).toMatch(/\.summary__item\s*\{[^}]*min-inline-size:\s*max-content;/);
   });
 
-  it("reflows the summary by card width when a 3-across desktop column is narrow", () => {
-    const item5 = cssBlock(cardCss, "Round 4 Wave 2 — item 5", "Round 4 Wave 2 — item 1");
-    expect(item5).toContain("@container projcard (max-width: 400px)");
-    expect(item5).toMatch(
-      /\.summary__readout \{\s*display: grid;\s*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\);/,
+  it("tight cards reduce spacing and type without changing the single-row structure", () => {
+    const centered = cssBlock(cardCss, "Centered summary group", "Round 4 Wave 2 — item 1");
+    expect(centered).toContain("@container projcard (max-width: 520px)");
+    expect(centered).toMatch(/\.summary__group,\s*\n\s*\.summary__readout\s*\{\s*column-gap:\s*4px;/);
+    expect(centered).toMatch(
+      /\.summary__readout\s*\{\s*grid-template-columns:\s*max-content minmax\(40px, max-content\) minmax\(40px, max-content\);/,
     );
-    expect(item5).toContain(".summary__item--edge { grid-column: 1 / -1; }");
-    expect(item5).toContain(".summary__item--edge .summary__pick { font-size: var(--proj-body); }");
-    expect(item5).toContain(".summary__item--message { grid-column: 1 / -1; }");
-    expect(item5).toContain(".summary__signal { grid-column: auto; align-self: center; justify-self: auto; }");
+    expect(centered).not.toContain("flex-direction: column");
+    expect(centered).not.toContain("grid-template-columns: repeat(2");
   });
 
   it("the multi-edge next control is mint with a theme foreground border and 44px target", () => {
@@ -902,21 +921,15 @@ describe("ProjectionCard — aligned summary mini-grid (Round 4 Wave 2, item 5)"
     expect(narrowSignal).toContain("@container projcard (max-width: 280px)");
     expect(narrowSignal).toContain(".projection-card .summary__signal { gap: 4px; max-inline-size: 100%; }");
     expect(narrowSignal).toMatch(
-      /\.projection-card \.summary__signal \.edge-indicator\s*\{[^}]*padding:\s*0\.25rem 0\.375rem;/,
+      /\.projection-card \.summary__signal \.edge-indicator\s*\{[^}]*padding:\s*0\.25rem;/,
     );
     expect(narrowSignal).not.toContain(".summary__next {");
     expect(cardCss).toMatch(/\.summary-carousel__slide\s*\{[^}]*overflow:\s*hidden;/);
   });
 
   it("numeric readout cells are tabular (Book/Model values, the edge chip's percentage)", () => {
-    const item5 = cssBlock(cardCss, "Round 4 Wave 2 — item 5", "Round 4 Wave 2 — item 1");
-    expect(item5).toMatch(/\.summary__item--book \.odds-value,\s*\n\s*\.summary__item--model \.odds-value,\s*\n\s*\.edge-indicator__value\s*\{\s*\n\s*font-variant-numeric:\s*tabular-nums;/);
-  });
-
-  it("item 5's mini-grid is scoped to >=768px only (mobile stays the W1 flex layout, byte-untouched)", () => {
-    const beforeItem5 = cardCss.slice(0, cardCss.indexOf("Round 4 Wave 2 — item 5"));
-    // The unconditional (mobile-first) `.summary` rule is still the flex layout.
-    expect(beforeItem5).toMatch(/\.summary\s*\{\s*grid-area:\s*summary;\s*display:\s*flex;/);
+    const centered = cssBlock(cardCss, "Centered summary group", "Round 4 Wave 2 — item 1");
+    expect(centered).toMatch(/\.summary__item--book \.odds-value,\s*\n\s*\.summary__item--model \.odds-value,\s*\n\s*\.edge-indicator__value\s*\{\s*\n\s*font-variant-numeric:\s*tabular-nums;/);
   });
 
   it("ONE canonical edge-chip style: EdgeIndicator is the sole chip implementation, no divergent variant", () => {
@@ -1017,7 +1030,7 @@ describe("ProjectionCard — defensive PASS-mint backstop (Round 4 Wave 3 fold-i
   });
 
   it("is scoped inside the same >=768px block as the rest of items 2-4 (item 8 scoping)", () => {
-    const item234 = cssBlock(cardCss, "Round 4 Wave 1 — desktop/tablet card-anatomy", "Round 4 Wave 2 — item 5");
+    const item234 = cssBlock(cardCss, "Round 4 Wave 1 — desktop/tablet card-anatomy", "Centered summary group");
     expect(item234).toContain("@media (min-width: 768px) {");
     expect(item234).toContain(".projection-card--pass .edge-indicator {");
   });
@@ -1088,8 +1101,8 @@ describe("ProjectionCard — defensive PASS-mint backstop (Round 4 Wave 3 fold-i
   });
 });
 
-describe("ProjectionCard — .summary__item--message hook (Round 4 Wave 3 fold-in, W1 review)", () => {
-  it("is NOT dead: W2 gave it a real, consumed grid-column rule (resolves the W1-flagged hook)", () => {
+describe("ProjectionCard — .summary__item--message hook", () => {
+  it("is consumed by the centered readout grid", () => {
     // The class renders in the PASS-message branch (ProjectionSummary.tsx)...
     const passHtml = render({
       id: "oak-tex-message-hook",
@@ -1114,6 +1127,6 @@ describe("ProjectionCard — .summary__item--message hook (Round 4 Wave 3 fold-i
     });
     expect(passHtml).toContain('class="summary__item summary__item--message"');
     // ...and a real CSS rule consumes it (not a no-op class with zero rules).
-    expect(cardCss).toContain(".summary__item--message { grid-column: 1 / span 3; }");
+    expect(cardCss).toContain(".summary__item--message { grid-column: 1 / -1; justify-self: center; }");
   });
 });

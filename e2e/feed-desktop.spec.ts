@@ -40,7 +40,7 @@
  * the >=1024px 3-across grid that puts LIVE (tall), PASS (short), and
  * SCHEDULED in ROW 1 together. LIVE/PASS provide the unequal natural-height
  * pairing item 1 targets; SCHEDULED provides the distinct third column for
- * item 5's cross-card alignment claim.
+ * item 5's centered, non-overlapping summary-row claim.
  * Odds inputs for PASS/LIVE/SCHEDULED are carried over verbatim from
  * .superpowers/sdd/r4-w2/_pw/tests/r4w2-smoke.spec.ts's PASS_GAME /
  * TALL_MULTI_EDGE_GAME / SIMPLE_EDGE_GAME (that wave's own gate-verified
@@ -49,7 +49,8 @@
  * ── Contracts (see the plan's W4 section for the full per-width table) ──
  * Shell feed at 1920/1440/1280/1024 (desktop): items 1,2,3,4,5,6,7 all active.
  * Shell feed at 900 (tablet): items 2,3,4,5,7 active; 1,6 inert.
- * Shell feed at 375 (mobile): every round-4 rule inert.
+ * Shell feed at 375 (mobile): legacy round-4 desktop rules stay inert while
+ * the centered single-line summary retains its local overflow safety.
  * Standalone /feed at 1440 (matchMedia override — see STANDALONE section):
  * item 6 rhythm absent even though the raw viewport clears min-width:1024px,
  * proving the CSS truly requires the `.dc-shell-external-scroll` ancestor
@@ -78,6 +79,7 @@ const EVIDENCE_DIR = path.join(REPO_ROOT, "docs/evidence/2026-07-23-feed-desktop
 const PREFERRED_PORT = 5301;
 const SESSION_SECRET = "testsecret";
 const GAME_DATE = "2026-07-23";
+const THIN_LOGO_FILTER = "drop-shadow(rgba(255, 255, 255, 0.92) 0px 0px 0.2px)";
 const DATE_SLUG = "mlb-07-23-2026";
 const SHELL_FEED_PATH = `/feed/model/${DATE_SLUG}`;
 
@@ -468,18 +470,22 @@ async function summaryOffsets(card: Locator) {
   const summary = card.locator(".summary").first();
   const summaryBox = await summary.boundingBox();
   if (!summaryBox) throw new Error("summary bounding box missing");
+  const viewport = summary.locator(".summary__viewport");
+  const group = summary.locator(".summary__group");
+  const viewportBox = await viewport.boundingBox();
+  const groupBox = await group.boundingBox();
+  if (!viewportBox || !groupBox) throw new Error("summary group bounding box missing");
   const edgeBox = await summary.locator(".summary__edge").boundingBox();
-  const signalBox = await summary.locator(".summary__signal").boundingBox();
-  const bookLocator = summary.locator(".summary__item--book");
-  const modelLocator = summary.locator(".summary__item--model");
-  const bookBox = (await bookLocator.count()) > 0 ? await bookLocator.boundingBox() : null;
-  const modelBox = (await modelLocator.count()) > 0 ? await modelLocator.boundingBox() : null;
+  const viewportMetrics = await viewport.evaluate((el) => ({
+    clientWidth: el.clientWidth,
+    scrollWidth: el.scrollWidth,
+  }));
   return {
     summaryBox,
+    viewportBox,
+    groupBox,
+    viewportMetrics,
     edgeX: edgeBox ? edgeBox.x - summaryBox.x : null,
-    signalCenterX: signalBox ? signalBox.x + signalBox.width / 2 - summaryBox.x : null,
-    bookX: bookBox ? bookBox.x - summaryBox.x : null,
-    modelX: modelBox ? modelBox.x - summaryBox.x : null,
   };
 }
 
@@ -533,7 +539,11 @@ for (const width of DESKTOP_WIDTHS) {
         expect(Math.abs(logo.wrapperHeight - logo.imageHeight), "wrapper hugs visible logo height").toBeLessThanOrEqual(0.5);
       }
       expect(Math.abs(logoGeometry[0].centerY - logoGeometry[1].centerY), "team marks share one centerline").toBeLessThanOrEqual(0.5);
-      expect(logoGeometry[1].filter, "Yankees receives an alpha outline on Dark").not.toBe("none");
+      expect(logoGeometry[1].filter, "Yankees receives only the 0.2px alpha keyline on Dark").toBe(THIN_LOGO_FILTER);
+      const unaffectedLogoFilters = await scheduledCard
+        .locator(".team-logo")
+        .evaluateAll((logos) => logos.map((logo) => getComputedStyle(logo).filter));
+      expect(unaffectedLogoFilters, "bright Giants/Mariners marks keep their original artwork").toEqual(["none", "none"]);
 
       const passArrowColor = await passCard
         .locator(".summary-carousel--no-edge .summary__next")
@@ -554,14 +564,16 @@ for (const width of DESKTOP_WIDTHS) {
           const book = summary.querySelector<HTMLElement>(".summary__item--book");
           const model = summary.querySelector<HTMLElement>(".summary__item--model");
           const signal = summary.querySelector<HTMLElement>(".summary__signal");
-          if (!pick || !edge || !book || !model || !signal) {
+          const viewport = summary.querySelector<HTMLElement>(".summary__viewport");
+          const group = summary.querySelector<HTMLElement>(".summary__group");
+          if (!pick || !edge || !book || !model || !signal || !viewport || !group) {
             throw new Error("summary geometry node missing");
           }
           const pickStyle = getComputedStyle(pick);
           const pickRange = document.createRange();
           pickRange.selectNodeContents(pick);
           return {
-            display: getComputedStyle(summary).display,
+            groupDisplay: getComputedStyle(group).display,
             whiteSpace: pickStyle.whiteSpace,
             pickHeight: pick.getBoundingClientRect().height,
             lineCount: Array.from(pickRange.getClientRects()).filter(
@@ -571,10 +583,18 @@ for (const width of DESKTOP_WIDTHS) {
             book: book.getBoundingClientRect().toJSON(),
             model: model.getBoundingClientRect().toJSON(),
             signal: signal.getBoundingClientRect().toJSON(),
+            viewport: viewport.getBoundingClientRect().toJSON(),
+            group: group.getBoundingClientRect().toJSON(),
+            viewportClientWidth: viewport.clientWidth,
+            viewportScrollWidth: viewport.scrollWidth,
+            clippedFacts: [pick, book, model, signal].filter(
+              (el) => el.scrollWidth > el.clientWidth + 1,
+            ).length,
           };
         });
         expect(geometry.whiteSpace).toBe("nowrap");
         expect(geometry.lineCount, "MODEL EDGE stays on one line").toBe(1);
+        expect(geometry.clippedFacts, `${cardLabel} facts are never clamped`).toBe(0);
         const overlaps = (
           a: { left: number; right: number; top: number; bottom: number },
           b: { left: number; right: number; top: number; bottom: number },
@@ -589,11 +609,31 @@ for (const width of DESKTOP_WIDTHS) {
           overlaps(geometry.model, geometry.signal),
           `${cardLabel} MODEL does not overlap the signal: ${JSON.stringify(geometry)}`,
         ).toBe(false);
-        if (geometry.display === "grid") {
-          expect(geometry.edge.right).toBeLessThanOrEqual(geometry.book.left);
-          expect(geometry.book.right).toBeLessThanOrEqual(geometry.model.left);
-          expect(geometry.model.right).toBeLessThanOrEqual(geometry.signal.left);
-        }
+        expect(geometry.groupDisplay).toBe("grid");
+        expect(geometry.edge.right).toBeLessThanOrEqual(geometry.book.left);
+        expect(geometry.book.right).toBeLessThanOrEqual(geometry.model.left);
+        expect(geometry.model.right).toBeLessThanOrEqual(geometry.signal.left);
+        expect(
+          Math.abs(
+            geometry.group.left +
+              geometry.group.width / 2 -
+              (geometry.viewport.left + geometry.viewport.width / 2),
+          ),
+          `${cardLabel} summary facts and signal are centered as one group: ${JSON.stringify({
+            viewport: geometry.viewport,
+            group: geometry.group,
+            edge: geometry.edge,
+            book: geometry.book,
+            model: geometry.model,
+            signal: geometry.signal,
+            clientWidth: geometry.viewportClientWidth,
+            scrollWidth: geometry.viewportScrollWidth,
+          })}`,
+        ).toBeLessThanOrEqual(1);
+        expect(
+          geometry.viewportScrollWidth - geometry.viewportClientWidth,
+          `${cardLabel} 1920px summary group fits without local overflow`,
+        ).toBeLessThanOrEqual(1);
       }
     }
 
@@ -602,6 +642,22 @@ for (const width of DESKTOP_WIDTHS) {
     await expect(liveCard.locator(".summary-carousel")).toBeVisible();
     await expect(passCard.locator(".summary-carousel")).toBeVisible();
     await expect(passCard.locator(".edge-indicator--none")).toHaveCount(3);
+    if (width === 1920) {
+      const passRoiBadge = passCard.locator(".edge-indicator--none").first();
+      await expect(passRoiBadge).toHaveText(/^ROI [+\u2212]\d+\.\d%$/);
+      await expect(passRoiBadge).not.toContainText("No edge");
+      await expect(passRoiBadge).toHaveAccessibleName(
+        /No actionable edge: .*; no-vig ROI [+\u2212]\d+\.\d%/,
+      );
+      await expect(passRoiBadge.locator("svg")).toHaveCount(0);
+      const passRoiStyle = await passRoiBadge.evaluate((el) => {
+        const cs = getComputedStyle(el);
+        return { color: cs.color, background: cs.backgroundColor, shadow: cs.boxShadow };
+      });
+      expect(passRoiStyle.color, "non-actionable ROI stays neutral grey").toBe("rgb(166, 166, 166)");
+      expect(passRoiStyle.background).toBe("rgba(0, 0, 0, 0)");
+      expect(passRoiStyle.shadow).toBe("none");
+    }
     const liveBox = await liveCard.boundingBox();
     const passBox = await passCard.boundingBox();
     const scheduledBox = await scheduledCard.boundingBox();
@@ -611,34 +667,24 @@ for (const width of DESKTOP_WIDTHS) {
     expect(Math.abs(passBox.y - liveBox.y), "desktop columns 1 and 2 share one row").toBeLessThanOrEqual(1);
     expect(Math.abs(scheduledBox.y - liveBox.y), "desktop columns 1 and 3 share one row").toBeLessThanOrEqual(1);
 
-    // The summary reflows by card width, not viewport width. Narrow desktop
-    // cards stack; cards with >400px of usable content-box space use the fluid
-    // full-width inline rhythm.
+    // The full fact + signal group stays on one row. If a narrow card cannot
+    // physically contain that intrinsic width, only its local viewport scrolls.
     const liveSummaryStyle = await liveCard.locator(".summary").first().evaluate((el) => {
-      const cs = getComputedStyle(el);
+      const viewport = el.querySelector<HTMLElement>(".summary__viewport");
+      const group = el.querySelector<HTMLElement>(".summary__group");
+      if (!viewport || !group) throw new Error("summary viewport/group missing");
       return {
-        display: cs.display,
-        flexDirection: cs.flexDirection,
         width: el.getBoundingClientRect().width,
+        viewportWidth: viewport.clientWidth,
+        viewportScrollWidth: viewport.scrollWidth,
+        groupWidth: group.getBoundingClientRect().width,
       };
     });
-    if (liveSummaryStyle.width <= 400) {
-      expect(liveSummaryStyle.display, "narrow desktop card uses compact summary reflow").toBe("flex");
-      expect(liveSummaryStyle.flexDirection).toBe("column");
-    } else {
-      expect(liveSummaryStyle.display, "wide desktop card uses the inline summary rhythm").toBe("grid");
-    }
     if (width === 1920) {
-      expect(liveSummaryStyle.display, "1920px desktop keeps all summary facts in one strip").toBe("grid");
-    }
-    if (liveSummaryStyle.display === "flex") {
-      const passReadout = await passCard.locator(".summary__readout").first().boundingBox();
-      const passEdge = await passCard.locator(".summary__edge").first().boundingBox();
-      if (!passReadout || !passEdge) throw new Error("compact summary bounding boxes missing");
       expect(
-        passEdge.y,
-        "compact summary edge chip sits below the fact rows",
-      ).toBeGreaterThanOrEqual(passReadout.y + passReadout.height - 1);
+        liveSummaryStyle.viewportScrollWidth - liveSummaryStyle.viewportWidth,
+        "1920px desktop keeps all summary facts in one centered strip without local scroll",
+      ).toBeLessThanOrEqual(1);
     }
 
     expect(
@@ -837,12 +883,21 @@ for (const width of DESKTOP_WIDTHS) {
     expect(parseFloat(nextEdgeStyle.width)).toBeGreaterThanOrEqual(44);
     expect(parseFloat(nextEdgeStyle.height)).toBeGreaterThanOrEqual(44);
     const activeSummary = liveCard.locator(".summary").first();
+    const activeViewport = activeSummary.locator(".summary__viewport");
     const activeSummaryBox = await activeSummary.boundingBox();
+    const activeViewportBox = await activeViewport.boundingBox();
     const activeTrackBox = await activeTrack.boundingBox();
     const activeEdgeBox = await activeSummary.locator(".summary__item--edge").boundingBox();
     const signalBox = await activeSummary.locator(".summary__signal").boundingBox();
     const nextEdgeBox = await nextEdge.boundingBox();
-    if (!activeSummaryBox || !activeTrackBox || !activeEdgeBox || !signalBox || !nextEdgeBox) {
+    if (
+      !activeSummaryBox ||
+      !activeViewportBox ||
+      !activeTrackBox ||
+      !activeEdgeBox ||
+      !signalBox ||
+      !nextEdgeBox
+    ) {
       throw new Error("active edge signal geometry missing");
     }
     expect(activeSummaryBox.x, "visible summary starts inside the carousel viewport").toBeGreaterThanOrEqual(
@@ -852,27 +907,53 @@ for (const width of DESKTOP_WIDTHS) {
       activeSummaryBox.x + activeSummaryBox.width,
       "visible summary ends inside the carousel viewport",
     ).toBeLessThanOrEqual(activeTrackBox.x + activeTrackBox.width + 1);
-    for (const [label, box] of [
-      ["MODEL EDGE readout", activeEdgeBox],
-      ["signal group", signalBox],
-      ["next-edge arrow", nextEdgeBox],
-    ] as const) {
-      expect(
-        box.x,
-        `${label} is not clipped on the carousel viewport's left edge`,
-      ).toBeGreaterThanOrEqual(activeTrackBox.x - 1);
-      expect(
-        box.x + box.width,
-        `${label} is not clipped on the carousel viewport's right edge`,
-      ).toBeLessThanOrEqual(activeTrackBox.x + activeTrackBox.width + 1);
-    }
-    expect(nextEdgeBox.x, "next-edge arrow is not clipped on the summary left").toBeGreaterThanOrEqual(
-      activeSummaryBox.x - 1,
+    expect(activeViewportBox.x).toBeGreaterThanOrEqual(activeTrackBox.x - 1);
+    expect(activeViewportBox.x + activeViewportBox.width).toBeLessThanOrEqual(
+      activeTrackBox.x + activeTrackBox.width + 1,
+    );
+    const localOverflow = await activeViewport.evaluate(
+      el => el.scrollWidth - el.clientWidth,
     );
     expect(
-      nextEdgeBox.x + nextEdgeBox.width,
-      "next-edge arrow is not clipped on the summary right",
-    ).toBeLessThanOrEqual(activeSummaryBox.x + activeSummaryBox.width + 1);
+      activeEdgeBox.x,
+      "MODEL EDGE starts inside the local summary viewport",
+    ).toBeGreaterThanOrEqual(activeViewportBox.x - 1);
+    if (localOverflow <= 1) {
+      for (const [label, box] of [
+        ["signal group", signalBox],
+        ["next-edge arrow", nextEdgeBox],
+      ] as const) {
+        expect(
+          box.x + box.width,
+          `${label} fits when the centered summary has no local overflow`,
+        ).toBeLessThanOrEqual(activeViewportBox.x + activeViewportBox.width + 1);
+      }
+    } else {
+      await activeViewport.evaluate(el => {
+        el.scrollLeft = el.scrollWidth;
+      });
+      const scrolledSignalBox = await activeSummary.locator(".summary__signal").boundingBox();
+      const scrolledArrowBox = await nextEdge.boundingBox();
+      if (!scrolledSignalBox || !scrolledArrowBox) {
+        throw new Error("scrolled edge signal geometry missing");
+      }
+      for (const [label, box] of [
+        ["signal group", scrolledSignalBox],
+        ["next-edge arrow", scrolledArrowBox],
+      ] as const) {
+        expect(
+          box.x,
+          `${label} is reachable from the keyboard-focusable local viewport`,
+        ).toBeGreaterThanOrEqual(activeViewportBox.x - 1);
+        expect(
+          box.x + box.width,
+          `${label} is fully visible at the local viewport's scroll end`,
+        ).toBeLessThanOrEqual(activeViewportBox.x + activeViewportBox.width + 1);
+      }
+      await activeViewport.evaluate(el => {
+        el.scrollLeft = 0;
+      });
+    }
     if (width === 1280) {
       const track = liveCard.locator(".summary-carousel__track");
       await nextEdge.click();
@@ -953,15 +1034,8 @@ for (const width of DESKTOP_WIDTHS) {
 
     await page.screenshot({ path: `${EVIDENCE_DIR}/shell-${width}.png`, fullPage: true });
 
-    // ── Item 5: aligned summary mini-grid — fluid primary, stable fact tracks ──
-    // Placed LAST (after items 1,2,3,4,6,7 above, which all independently
-    // verify clean): a real pre-existing defect surfaces here at 1024/1280 —
-    // see the block comment below — and this ordering keeps that failure
-    // from masking the other six items' otherwise-passing verification.
-    //
-    // The inline summary now uses the card's full width and reflows
-    // at or below a 400px content lane, so neither its readout nor the
-    // pill/arrow group can create horizontal shell overflow.
+    // ── Centered summary group: all facts + signal travel as one intrinsic,
+    // single-line unit. Impossible widths are contained by the local viewport. ──
     const shellScrollOverflow = await page
       .locator(".dc-shell-external-scroll")
       .evaluate((el) => el.scrollWidth - el.clientWidth);
@@ -972,33 +1046,30 @@ for (const width of DESKTOP_WIDTHS) {
       shellScrollOverflow,
       `shell scroll pane horizontal overflow px (summary widths: ` +
         `LIVE .summary width=${liveOffsets.summaryBox.width} PASS=${passOffsets.summaryBox.width} SCHEDULED=${scheduledOffsets.summaryBox.width}, ` +
-        `inline rhythm reflows at 400px content)`,
+        `intrinsic groups remain locally contained)`,
     ).toBeLessThanOrEqual(1);
     expect(liveOffsets.edgeX, "edge chip present on LIVE").not.toBeNull();
-    expect(passOffsets.edgeX, "edge chip present on PASS ('No edge')").not.toBeNull();
+    expect(passOffsets.edgeX, "ROI badge present on PASS").not.toBeNull();
     expect(scheduledOffsets.edgeX, "edge chip present on SCHEDULED").not.toBeNull();
-    if (liveSummaryStyle.display === "flex") {
-      for (const [label, offsets] of [
-        ["LIVE", liveOffsets],
-        ["PASS", passOffsets],
-        ["SCHEDULED", scheduledOffsets],
-      ] as const) {
+    for (const [label, offsets] of [
+      ["LIVE", liveOffsets],
+      ["PASS", passOffsets],
+      ["SCHEDULED", scheduledOffsets],
+    ] as const) {
+      if (offsets.groupBox.width <= offsets.viewportBox.width + 1) {
         expect(
-          Math.abs(offsets.signalCenterX! - offsets.summaryBox.width / 2),
-          `${label} compact signal group is centered beneath its fact rows`,
+          Math.abs(
+            offsets.groupBox.x +
+              offsets.groupBox.width / 2 -
+              (offsets.viewportBox.x + offsets.viewportBox.width / 2),
+          ),
+          `${label} facts and signal are centered together`,
         ).toBeLessThanOrEqual(1);
       }
+      expect(offsets.viewportMetrics.scrollWidth).toBeGreaterThanOrEqual(
+        Math.ceil(offsets.groupBox.width) - 1,
+      );
     }
-    expect(liveOffsets.bookX, "LIVE has a real BOOK column").not.toBeNull();
-    expect(scheduledOffsets.bookX, "SCHEDULED has a real BOOK column").not.toBeNull();
-    expect(
-      Math.abs(liveOffsets.bookX! - scheduledOffsets.bookX!),
-      "BOOK column offset matches between two different real-edge cards",
-    ).toBeLessThanOrEqual(1);
-    expect(
-      Math.abs(liveOffsets.modelX! - scheduledOffsets.modelX!),
-      "MODEL column offset matches between two different real-edge cards",
-    ).toBeLessThanOrEqual(1);
 
     // ── Paginated market popover: one table at a time, all three MLB
     // markets reachable, portalled overlay never changes card/grid geometry,
@@ -1261,14 +1332,24 @@ test("shell feed tablet 900px: items 2,3,4,5,7 active; items 1,6 inert", async (
   const dotDisplay = await liveCard.locator(".projection-card__live-dot").evaluate((el) => getComputedStyle(el).display);
   expect(dotDisplay, "live dot computed display at tablet").not.toBe("none");
 
-  // ── Item 5 active: LIVE and SCHEDULED occupy the first column in
-  //    consecutive tablet rows, so their relative summary tracks align. ──
+  // ── Centered summary group remains centered independently in each card. ──
   const liveOffsets = await summaryOffsets(liveCard);
   const scheduledOffsets = await summaryOffsets(scheduledCard);
-  expect(
-    Math.abs(liveOffsets.bookX! - scheduledOffsets.bookX!),
-    "BOOK column offset matches across cards at tablet width",
-  ).toBeLessThanOrEqual(1);
+  for (const [label, offsets] of [
+    ["LIVE", liveOffsets],
+    ["SCHEDULED", scheduledOffsets],
+  ] as const) {
+    if (offsets.groupBox.width <= offsets.viewportBox.width + 1) {
+      expect(
+        Math.abs(
+          offsets.groupBox.x +
+            offsets.groupBox.width / 2 -
+            (offsets.viewportBox.x + offsets.viewportBox.width / 2),
+        ),
+        `${label} summary group is centered at tablet width`,
+      ).toBeLessThanOrEqual(1);
+    }
+  }
 
   // ── Item 6 inert: compact chrome, NOT the 96px/17px shell rhythm ──
   const feedhead = page.locator(".dc-shell-external-scroll .dmf-feedhead");
@@ -1290,7 +1371,9 @@ test("shell feed tablet 900px: items 2,3,4,5,7 active; items 1,6 inert", async (
   await page.screenshot({ path: `${EVIDENCE_DIR}/shell-900.png`, fullPage: true });
 });
 
-test("shell feed mobile 375px: every round-4 rule inert", async ({ page }) => {
+test("shell feed mobile 375px: legacy desktop rules stay inert and the centered summary stays safe", async ({
+  page,
+}) => {
   await gotoShellFeed(page, 375, 667);
   await assertNoHorizontalOverflow(page, "shell-375");
 
@@ -1321,9 +1404,38 @@ test("shell feed mobile 375px: every round-4 rule inert", async ({ page }) => {
   const dotDisplay = await liveCard.locator(".projection-card__live-dot").evaluate((el) => getComputedStyle(el).display);
   expect(dotDisplay, "live dot is display:none on mobile").toBe("none");
 
-  // Item 5 inert: flex summary, not the 4-column grid.
-  const summaryDisplay = await page.locator(".summary").first().evaluate((el) => getComputedStyle(el).display);
-  expect(summaryDisplay, "summary stays flex below 768px").toBe("flex");
+  // Item 5 replacement: the summary remains one intrinsic row. If an
+  // exceptionally narrow card cannot contain it, only its local viewport
+  // scrolls; the page itself remains overflow-free (asserted above).
+  const mobileSummary = await liveCard.locator(".summary").first().evaluate(summary => {
+    const viewport = summary.querySelector<HTMLElement>(".summary__viewport");
+    const group = summary.querySelector<HTMLElement>(".summary__group");
+    const pick = summary.querySelector<HTMLElement>(".summary__item--edge");
+    const book = summary.querySelector<HTMLElement>(".summary__item--book");
+    const model = summary.querySelector<HTMLElement>(".summary__item--model");
+    const signal = summary.querySelector<HTMLElement>(".summary__signal");
+    if (!viewport || !group || !pick || !book || !model || !signal) {
+      throw new Error("mobile summary contract nodes missing");
+    }
+    const centers = [pick, book, model, signal].map(element => {
+      const rect = element.getBoundingClientRect();
+      return rect.top + rect.height / 2;
+    });
+    return {
+      centerSpread: Math.max(...centers) - Math.min(...centers),
+      viewportClientWidth: viewport.clientWidth,
+      viewportScrollWidth: viewport.scrollWidth,
+      groupWidth: group.getBoundingClientRect().width,
+    };
+  });
+  expect(
+    mobileSummary.centerSpread,
+    "summary facts and ROI share one vertically centered row",
+  ).toBeLessThanOrEqual(1);
+  expect(
+    mobileSummary.viewportScrollWidth,
+    "the local summary viewport contains the complete intrinsic group",
+  ).toBeGreaterThanOrEqual(Math.ceil(mobileSummary.groupWidth) - 1);
 
   // "base paddings": card padding is the mobile-first --space-lg/--space-sm
   // pair, unaffected by any round-4 rule (round-4 introduces no card-padding
@@ -1535,7 +1647,7 @@ test("System stays neutral grey with dark-contrast ink even when the OS prefers 
     .locator(".team-logo-box--dark-outline .team-logo")
     .last()
     .evaluate((el) => getComputedStyle(el).filter);
-  expect(yankeesFilter, "System keeps the Yankees mark legible").not.toBe("none");
+  expect(yankeesFilter, "System keeps exactly the same 0.2px Yankees keyline as Dark").toBe(THIN_LOGO_FILTER);
 });
 
 // ─── Standalone /feed at 1440: item-6 rhythm absent (negative contract) ──────

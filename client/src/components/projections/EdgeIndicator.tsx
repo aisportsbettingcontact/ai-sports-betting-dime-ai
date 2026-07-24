@@ -1,4 +1,4 @@
-import { TrendingUp, Eye, Minus } from "lucide-react";
+import { TrendingUp, Eye } from "lucide-react";
 import type { MarketInsight, Recommendation } from "@/lib/gameInsight";
 import "./EdgeIndicator.css";
 
@@ -40,22 +40,21 @@ export interface EdgeIndicatorProps {
 }
 
 export function EdgeIndicator({ insight, className }: EdgeIndicatorProps) {
-  // No actionable edge → quiet, flat, non-mint (mint is reserved for signal).
-  if (!insight || insight.recommendation === "NO_EDGE") {
-    const roi = insight ? formatRoi(insight.roiPct) : null;
+  // With no scorable market there is no ROI to visualize; the summary's
+  // unavailable-data sentence already explains that state.
+  if (!insight) return null;
+
+  // No actionable edge → ROI only, quiet, flat, and neutral. The accessible
+  // name retains the status without repeating "No edge" in the visual badge.
+  if (insight.recommendation === "NO_EDGE") {
+    const roi = formatRoi(insight.roiPct);
     return (
       <div
         className={`edge-indicator--none${className ? ` ${className}` : ""}`}
         role="group"
-        aria-label={
-          insight
-            ? `No edge: ${insight.sideLabel}, no-vig ROI ${roi}`
-            : "No edge on this game"
-        }
+        aria-label={`No actionable edge: ${insight.sideLabel}; no-vig ROI ${roi}`}
       >
-        <Minus size={14} aria-hidden="true" />
-        <span>No edge</span>
-        {roi && <strong className="edge-indicator__roi">ROI {roi}</strong>}
+        <strong className="edge-indicator__roi">ROI {roi}</strong>
       </div>
     );
   }
