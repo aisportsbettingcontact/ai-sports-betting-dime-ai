@@ -8,7 +8,7 @@ AI Sports Betting platform (React + tRPC + Drizzle/MySQL + Express) undergoing a
 | Layer | Location | Contents |
 |---|---|---|
 | Design intelligence | `.claude/skills/` (uipro) | ui-ux-pro-max (searchable styles/palettes/fonts/stacks + dials), design-system, design, ui-styling, brand, banner-design, slides |
-| Design intelligence (upstream plugin) | plugin `ui-ux-pro-max@ui-ux-pro-max-skill` | nextlevelbuilder/ui-ux-pro-max-skill marketplace — upstream ui-ux-pro-max, tracks upstream releases alongside the vendored `.claude/skills/` copy |
+| Design intelligence (upstream plugin) | plugin `ui-ux-pro-max@ui-ux-pro-max-skill`, vendored at `.claude/plugins-vendored/ui-ux-pro-max-skill/` (v2.11.0) | Upstream nextlevelbuilder build, newer than the `.claude/skills/` copy (84 styles / 192 palettes / 74 font pairings vs 67 / 161 / 57). Ships 7 skills: ui-ux-pro-max, design, design-system, ui-styling, brand, banner-design, slides — namespaced `ui-ux-pro-max:<skill>`, so they coexist with the vendored flat copies |
 | Design taste | `.agents/skills/frontend-design/` | Anthropic official — distinctive, non-templated visual direction |
 | Writing quality | `.claude/skills/stop-slop/` | hardikpandya/stop-slop — strips AI writing tells from prose (filler phrases, formulaic structures, passive voice); use when drafting/editing copy or docs |
 | Design taste (Emil Kowalski) | `.claude/skills/` (emilkowalski/skill) | emil-design-eng (UI polish philosophy), apple-design (Apple-style motion/materials for web), animation-vocabulary (name-that-motion glossary), review-animations |
@@ -20,7 +20,7 @@ AI Sports Betting platform (React + tRPC + Drizzle/MySQL + Express) undergoing a
 | Payments | `.agents/skills/stripe-best-practices/` | Stripe official — API selection, billing, webhooks, key security |
 | Engineering process | plugin `superpowers@claude-plugins-official` | 14 skills: brainstorming, writing/executing-plans, TDD, systematic-debugging, verification-before-completion, code review (both directions), subagent/parallel dispatch, worktrees, branch finishing, writing-skills |
 | MCP development | plugin `mcp-server-dev@claude-plugins-official` | Designing and building MCP servers that work well with Claude: deployment models (remote HTTP, MCPB, local), tool design patterns, auth, interactive MCP apps |
-| Product management | plugins `*@pm-skills` (55 skills) | Full deanpeters/Product-Manager-Skills catalog: discovery, JTBD, user stories/splitting/mapping, PRD, prioritization, roadmap, positioning, personas, journey maps, OST, POL probes, stakeholders, SaaS finance/growth metrics, TAM/SAM/SOM, workshops, exec-track advisors |
+| Product management | plugins `*@pm-skills` (55 enabled of 70 vendored), vendored at `.claude/plugins-vendored/pm-skills/` | Full deanpeters/Product-Manager-Skills catalog: discovery, JTBD, user stories/splitting/mapping, PRD, prioritization, roadmap, positioning, personas, journey maps, OST, POL probes, stakeholders, SaaS finance/growth metrics, TAM/SAM/SOM, workshops, exec-track advisors |
 | Advertising | `.agents/skills/` (12, realkimbarrett/advertising-skills) | Direct response: avatar/offer extraction, Schwartz awareness mapping, headline-matrix, mechanism-builder, objection-crusher, ad-angle-multiplier (creative testing), scroll-stopping-creative, conversion-path-builder, performance-diagnosis, generic-language-killer, full-funnel-campaign-orchestrator |
 | Architecture | `.agents/skills/` (2) | architect-backend-systems (system boundaries, APIs, data/identity/queues, reliability, migrations, threat models), architect-github-repos (repo-wide structure audits, dead/duplicated file classification, structural cleanup). Both carry `agents/` + `references/` subdirs; skip for isolated bug fixes and pure UI work |
 | Repo-specific verification | `.claude/skills/` (2) | livelab (drive/verify this app in live browser sessions via `livelab_*` MCP tools — console/network errors, responsive layouts, smoke checks), intended-vs-implemented (audit the gap between documented intent and actual code) |
@@ -43,15 +43,33 @@ Check before relying on a plugin skill, and repair if the count is short:
 
 ```bash
 claude plugin list | grep -c @        # expect 61
-for r in anthropics/claude-plugins-official deanpeters/Product-Manager-Skills \
-         anthropics/knowledge-work-plugins nextlevelbuilder/ui-ux-pro-max-skill \
-         leonxlnx/taste-skill railwayapp/railway-skills; do claude plugin marketplace add "$r"; done
-python3 -c "import json;print('\n'.join(json.load(open('.claude/settings.json'))['enabledPlugins']))" \
-  | xargs -I{} claude plugin install {} --scope project
+./.claude/scripts/bootstrap-plugins.sh
 ```
 
-`--scope project` is idempotent against the already-declared `enabledPlugins`, so this leaves
-`.claude/settings.json` unchanged. Newly installed plugins load on the **next** session.
+The script is idempotent (early-exits when the count is already 61, ~2s) and rebuilds a cold
+container in ~2min. `--scope project` is a no-op against the already-declared `enabledPlugins`, so
+`.claude/settings.json` is left untouched. Installed plugins load in the **current** session.
+
+**Vendored marketplaces (`.claude/plugins-vendored/`, 11M).** `pm-skills` (2.6M, all 70 plugin
+payloads — 55 enabled) and `ui-ux-pro-max-skill` (8.5M, the 7 skills it ships; 5.5M of that is
+`ui-styling/canvas-fonts`) are committed to this repo, and `extraKnownMarketplaces` points at them
+with `{"source": "directory", "path": "./.claude/plugins-vendored/<name>"}`. They rehydrate with no
+network. The other four marketplaces are still GitHub-sourced and need connectivity.
+
+Two things that are easy to get wrong here:
+
+- **`claude plugin marketplace remove` rewrites `.claude/settings.json`** — it strips every
+  matching `enabledPlugins` entry (56 of them, for these two) and moves the marketplace
+  declaration into *user* settings as an absolute path. Check `git diff .claude/settings.json`
+  after any marketplace surgery; `git checkout .claude/settings.json` restores it.
+- **Installs are still cached to `/root/.claude/plugins/cache/`**, which is ephemeral. That cache
+  is a derived artifact — the repo is the source of truth, and the cache is rebuilt from
+  `.claude/plugins-vendored/` on demand. Do not edit skills in the cache; edit them in the repo.
+
+Do not flat-vendor pm-skills into `.claude/skills/`: five names (`ansoff-matrix`,
+`customer-journey-map`, `opportunity-solution-tree`, `porters-five-forces`, `swot-analysis`)
+collide with the phuryn skills already there. The marketplace layout keeps them namespaced as
+`<skill>@pm-skills`.
 
 ## Custom commands (`.claude/commands/`)
 
