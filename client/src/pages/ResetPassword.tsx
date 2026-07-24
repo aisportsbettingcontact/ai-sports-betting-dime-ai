@@ -69,7 +69,7 @@ export default function ResetPassword() {
       setSuccess(true);
       console.log("[ResetPassword] Password reset successful | uid=%s", uid);
       toast.success("Password updated. Log in with your new password.");
-      setTimeout(() => navigate("/"), 2500);
+      setTimeout(() => navigate("/login"), 2500);
     },
     onError: (err) => {
       console.error("[ResetPassword] Reset error:", err.message);
@@ -83,10 +83,12 @@ export default function ResetPassword() {
 
     if (password.length < 8) {
       setValidationError("Password must be at least 8 characters.");
+      document.getElementById("rp-password")?.focus();
       return;
     }
     if (password !== confirmPassword) {
       setValidationError("Passwords do not match.");
+      document.getElementById("rp-confirm")?.focus();
       return;
     }
 
@@ -190,8 +192,10 @@ export default function ResetPassword() {
                 onKeyDown={handleKeyDown}
                 onInvalid={suppressInvalid}
                 disabled={resetPassword.isPending}
+                aria-invalid={Boolean(validationError || serverError) || undefined}
+                aria-describedby={validationError || serverError ? "rp-error" : undefined}
                 style={showPassword ? { WebkitTextSecurity: "none" } as React.CSSProperties : undefined}
-                className="bg-black border-white text-white placeholder:text-white focus:border-[#45E0A8] pr-10"
+                className="bg-black border-white text-white placeholder:text-[color:var(--text-muted)] focus:border-[#45E0A8] pr-10"
               />
               <button
                 type="button"
@@ -229,7 +233,7 @@ export default function ResetPassword() {
                 onInvalid={suppressInvalid}
                 disabled={resetPassword.isPending}
                 style={showConfirm ? { WebkitTextSecurity: "none" } as React.CSSProperties : undefined}
-                className="bg-black border-white text-white placeholder:text-white focus:border-[#45E0A8] pr-10"
+                className="bg-black border-white text-white placeholder:text-[color:var(--text-muted)] focus:border-[#45E0A8] pr-10"
               />
               <button
                 type="button"
@@ -245,8 +249,12 @@ export default function ResetPassword() {
 
           {/* Validation / Server error */}
           {(validationError || serverError) && (
-            <div className="flex items-start gap-2 text-white text-sm bg-black border border-white rounded-lg px-3 py-2">
-              <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+            <div
+              id="rp-error"
+              role="alert"
+              className="flex items-start gap-2 text-white text-sm bg-black border border-white rounded-lg px-3 py-2"
+            >
+              <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" aria-hidden="true" />
               <span>{validationError ?? serverError}</span>
             </div>
           )}

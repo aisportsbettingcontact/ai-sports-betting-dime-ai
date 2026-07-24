@@ -39,6 +39,8 @@
  */
 
 import { useEffect, useRef, useState } from "react";
+import { useLocation } from "wouter";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAppAuth } from "@/_core/hooks/useAppAuth";
 import { trpc } from "@/lib/trpc";
 import { todayUTC } from "@/components/CalendarPicker";
@@ -91,6 +93,8 @@ function useFeedPrefetch(authenticated: boolean) {
 
 export function RequireAuth({ children }: RequireAuthProps) {
   const { appUser, loading } = useAppAuth();
+  const [, navigate] = useLocation();
+  const queryClient = useQueryClient();
 
   // Safety timeout: if auth check takes > 10s, treat as unauthenticated
   const [timedOut, setTimedOut] = useState(false);
@@ -131,8 +135,14 @@ export function RequireAuth({ children }: RequireAuthProps) {
       : `/login?returnPath=${encodeURIComponent(returnPath)}`;
 
     console.log(`[RequireAuth] Unauthenticated — redirecting to ${loginUrl} (timedOut=${timedOut} minWaitDone=${minWaitDone})`);
-    window.location.href = loginUrl;
-  }, [appUser, loading, timedOut, minWaitDone]);
+    // Client-side navigation instead of a full document reload (audit
+    // D-REQAUTH: the reload produced shell → reload → second shell, with one
+    // observed 15s hang). The reload's documented purpose was clearing stale
+    // React Query auth state — queryClient.clear() achieves that without
+    // tearing down the document.
+    queryClient.clear();
+    navigate(loginUrl, { replace: true });
+  }, [appUser, loading, timedOut, minWaitDone, navigate, queryClient]);
 
   // [PERF] No inline loading state — return null so the HTML shell covers the auth wait.
   // The HTML shell (index.html) is visible until React renders real content into #root.
