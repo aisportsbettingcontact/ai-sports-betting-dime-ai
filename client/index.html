@@ -27,8 +27,18 @@
     />
     <!-- Single-font mandate: Familjen Grotesk is the only typeface. The legacy
          Inter + JetBrains/IBM Plex Mono loads are retired (all surfaces now
-         resolve to Familjen Grotesk via --font-sans/--font-mono). -->
-    <!-- GG Sans: Discord's proprietary font, served from our CDN (sourced from Discord's public assets) -->
+         resolve to Familjen Grotesk via --font-sans/--font-mono).
+
+         ONE SCOPED EXCEPTION (owner-approved 2026-07-24):
+         Discord's "GG Sans" below is loaded for Discord-affiliated controls
+         only — the "Continue with Discord" login button and the "Connect
+         Discord" row in chat settings. Everything else stays Familjen Grotesk.
+         Rules: dime-ai/THREE-COLOR-LAW.md §"Discord platform exception".
+         font-display: swap means a slow or unreachable CDN degrades to the
+         brand face rather than blocking text. The host is allowlisted in the
+         CSP fontSrc directive (server/_core/index.ts) — without that entry the
+         browser refuses these fetches and logs 4 errors per page view. -->
+    <link rel="preconnect" href="https://d2xsxph8kpxj0f.cloudfront.net" crossorigin />
     <style>
       @font-face {
         font-family: 'GG Sans';

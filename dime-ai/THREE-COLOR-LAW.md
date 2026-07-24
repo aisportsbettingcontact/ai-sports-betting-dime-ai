@@ -47,7 +47,79 @@ single-hue system: mint + its tint/border/foreground + white/black + greys.
 ### Unchanged from v2/v1
 Purple, gold, neon, gradients, and any chromatic second accent remain banned.
 Mint is still reserved for signal (edge/pick/live/active). Team/league/country
-logos and the scoped `--loss-red` keep their exceptions.
+logos, the scoped `--loss-red`, and the Discord platform exception below keep
+their exceptions.
+
+---
+
+## Discord platform exception (owner-approved 2026-07-24)
+
+Controls that **represent Discord itself** carry Discord's own brand colour and
+typeface. This is platform attribution — the same principle that lets team and
+country crests keep their real colours — **not** a second Dime accent. Mint
+remains the only Dime accent.
+
+### Where it applies (exhaustive — do not extend without a new owner directive)
+
+| Surface | Control |
+|---|---|
+| `client/src/pages/Home.tsx` | the "Continue with Discord" login button |
+| `client/src/pages/dime-chat/conversation.css` | `.dc-sm-discord-connect` / `.dc-sm-discord-pill` in chat settings |
+
+Nowhere else. Not for emphasis, links, badges, headings, borders, hovers, or any
+surface that merely *mentions* Discord.
+
+### Tokens (`client/src/index.css`)
+
+| Token | Value | Use |
+|---|---|---|
+| `--discord-blurple` | `#5865F2` | button fill on the two controls above |
+| `--discord-blurple-hover` | `#4752C4` | hover/pressed step (Discord's own) |
+| `--discord-on-blurple` | `#FFFFFF` | text/glyph on blurple |
+| `--font-discord` | `'GG Sans', 'Familjen Grotesk', system-ui, …` | text inside those controls only |
+
+Consume the tokens. Never retype the hex.
+
+### The colour value is not negotiable
+
+`#5865F2` is Discord's blurple since their 2021 rebrand, **and** it is the only
+candidate that clears accessibility. Measured contrast of white text on each:
+
+| Hex | Contrast | Verdict |
+|---|---|---|
+| `#5865F2` (current) | **4.61:1** | passes AA for small text |
+| `#7289DA` (pre-2021 Discord) | 3.33:1 | **banned** — fails AA small text |
+| `#738ADB` (named in the deleted legacy code) | 3.29:1 | **banned** — fails AA small text |
+
+### Typeface rules
+
+- GG Sans is loaded in `client/index.html` with `font-display: swap`, so a slow
+  or unreachable CDN degrades to Familjen Grotesk instead of blocking text.
+- The font host `d2xsxph8kpxj0f.cloudfront.net` is allowlisted in the CSP
+  `fontSrc` directive (`server/_core/index.ts`). Removing that entry silently
+  reverts these controls to the fallback face.
+- GG Sans must never be applied outside the two controls above. The
+  single-font mandate (`client/src/index.css`) still governs the rest of the
+  product.
+
+### Known risks (accepted by the owner, recorded here deliberately)
+
+1. **Licensing.** GG Sans is Discord's proprietary, commissioned typeface.
+   Discord publishes logo/button assets for "Log in with Discord" flows; they do
+   not license the font for third-party sites. Use here rests on the owner's
+   directive of 2026-07-24.
+2. **Third-party hosting.** The woff2 files sit on a Discord-controlled CDN.
+   If Discord moves, renames, or blocks them, the controls fall back to Familjen
+   Grotesk with no other breakage. **Hardening option, not yet taken:** download
+   the four woff2 files into `client/public/fonts/` and serve them from the app's
+   own origin — that removes the external dependency and makes the CSP entry
+   unnecessary.
+3. **Unverified at authoring time.** The audit container's egress proxy blocks
+   that CDN (HTTP 403 on CONNECT), so the font could not be observed rendering.
+   Colour, tokens, CSP header, and fallback behaviour were verified; **the glyphs
+   themselves have not been seen in a browser.** Confirm on the first real
+   deploy: the two controls should render in GG Sans with zero CSP errors in the
+   console.
 
 Token layer: `client/src/index.css` (`--brand-mint-*`, `--elev-*`).
 
