@@ -1434,7 +1434,7 @@ const DMF_CSS = `
       design-system/dime-ai/pages/ai-model-projections.md) stretches row-mates
       to equal height; ProjectionCard.css's matching @media(min-width:1024px)
       block turns the surplus height into a centered summary + a
-      bottom-pinned "VIEW FULL AI MODEL PROJECTIONS" expander per card.
+      bottom-pinned "VIEW FULL AI MODEL PROJECTIONS" popover trigger per card.
    4) Round 4 Wave 3, item 6 (owner amendment 2026-07-23, annotated on the
       "Date nav" line in design-system/dime-ai/pages/ai-model-projections.md):
       the date nav becomes ONE centered header stack directly beneath the
