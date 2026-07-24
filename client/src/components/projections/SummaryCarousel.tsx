@@ -8,13 +8,14 @@ export function clampActiveEdgeIndex(active: number, count: number): number {
 }
 
 /**
- * SummaryCarousel — a game with MORE THAN ONE model edge cycles them in a
- * swipeable, ranked strip (owner directive 2026-07-18). One slide per edge in
+ * SummaryCarousel — a game with more than one ranked projection cycles them
+ * in a swipeable strip (owner directive 2026-07-18). Actionable games show one
+ * slide per edge in
  * the exact ProjectionSummary format (uniform readout: MODEL EDGE / BOOK /
  * MODEL + the mint edge cell); slides arrive pre-ranked strongest → weakest,
- * so the first visible edge is always the largest % and the strip ends on the
- * smallest. Markets without an edge NEVER populate a slide — the caller
- * filters to real edges before rendering this.
+ * so the first visible edge is always the strongest. No-action games instead
+ * show one best canonical no-vig ROI side per market, ranked highest → lowest,
+ * with the neutral "No edge" chip retained on every slide.
  *
  * Mechanics per brand law: native scroll-snap (momentum swipe on touch,
  * trackpad/scroll on desktop, interruptible by design) plus one compact,
@@ -25,14 +26,17 @@ export function clampActiveEdgeIndex(active: number, count: number): number {
 export function SummaryCarousel({
   insights,
   teams = [],
+  variant = "edge",
 }: {
   insights: MarketInsight[];
   teams?: ProjectionTeam[];
+  variant?: "edge" | "no-edge";
 }) {
   const trackRef = useRef<HTMLDivElement | null>(null);
   const nextButtonRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const [active, setActive] = useState(0);
   const activeIndex = clampActiveEdgeIndex(active, insights.length);
+  const isNoEdgeRanking = variant === "no-edge";
 
   const onScroll = () => {
     const el = trackRef.current;
@@ -56,17 +60,25 @@ export function SummaryCarousel({
 
   return (
     <section
-      className="summary-carousel"
+      className={`summary-carousel summary-carousel--${variant}`}
       role="group"
       aria-roledescription="carousel"
-      aria-label={`${insights.length} model edges, ranked strongest first`}
+      aria-label={
+        isNoEdgeRanking
+          ? `${insights.length} no-edge market projections, ranked by no-vig ROI`
+          : `${insights.length} model edges, ranked strongest first`
+      }
     >
       <div
         className="summary-carousel__track"
         ref={trackRef}
         onScroll={onScroll}
         tabIndex={0}
-        aria-label="Swipe through this game's model edges"
+        aria-label={
+          isNoEdgeRanking
+            ? "Swipe through this game's highest no-vig ROI market projections"
+            : "Swipe through this game's model edges"
+        }
       >
         {insights.map((ins, i) => (
           <div
@@ -74,15 +86,21 @@ export function SummaryCarousel({
             className="summary-carousel__slide"
             role="group"
             aria-roledescription="slide"
-            aria-label={`Edge ${i + 1} of ${insights.length}: ${ins.sideLabel}`}
+            aria-label={
+              isNoEdgeRanking
+                ? `Projection ${i + 1} of ${insights.length}: ${ins.sideLabel}; no edge`
+                : `Edge ${i + 1} of ${insights.length}: ${ins.sideLabel}`
+            }
           >
             <ProjectionSummary
               insight={ins}
               teams={teams}
               onNextEdge={() => goTo((i + 1) % insights.length, true)}
-              nextEdgeLabel={`View next model edge: ${
-                insights[(i + 1) % insights.length]?.sideLabel
-              } (${(i + 1) % insights.length + 1} of ${insights.length})`}
+              nextEdgeLabel={`View next ${
+                isNoEdgeRanking ? "projection" : "model edge"
+              }: ${insights[(i + 1) % insights.length]?.sideLabel} (${
+                (i + 1) % insights.length + 1
+              } of ${insights.length})`}
               nextEdgeTabIndex={i === activeIndex ? 0 : -1}
               nextEdgeButtonRef={(element) => {
                 nextButtonRefs.current[i] = element;

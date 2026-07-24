@@ -351,7 +351,7 @@ export default function DimeModelFeed(props: DimeModelFeedProps) {
   const parsed = parseFeedModelPath(props.sport, props.date);
   // Theme is app-global (ThemeContext) so the choice follows the user across
   // every tab and the bottom tab bar. ?theme= is still honored for embeds.
-  const { theme, setTheme } = useTheme();
+  const { theme, mode, setTheme } = useTheme();
   useEffect(() => {
     try {
       const q = new URLSearchParams(window.location.search).get("theme");
@@ -421,7 +421,7 @@ export default function DimeModelFeed(props: DimeModelFeedProps) {
   if (needsDateCanonicalize) {
     // One-frame redirect to the dated URL; queries stay disabled (isoDate="").
     return (
-      <div className="dmf-root" data-dmf-theme={theme}>
+      <div className="dmf-root" data-dmf-theme={theme} data-dmf-mode={mode}>
         <style>{DMF_CSS}</style>
       </div>
     );
@@ -429,7 +429,7 @@ export default function DimeModelFeed(props: DimeModelFeedProps) {
 
   if (!parsed) {
     return (
-      <div className="dmf-root" data-dmf-theme="dark">
+      <div className="dmf-root" data-dmf-theme="dark" data-dmf-mode="dark">
         <style>{DMF_CSS}</style>
         <div className="dmf-invalid">
           <span className="dmf-micro">Invalid feed URL</span>
@@ -443,7 +443,7 @@ export default function DimeModelFeed(props: DimeModelFeedProps) {
   }
 
   return (
-    <div className="dmf-root" data-dmf-theme={theme}>
+    <div className="dmf-root" data-dmf-theme={theme} data-dmf-mode={mode}>
       <style>{DMF_CSS}</style>
 
       <div className="dmf-topbar">
@@ -1240,6 +1240,25 @@ const DMF_CSS = `
   --dmf-t1:#000000; --dmf-t2:#000000; --dmf-t3:#000000; --dmf-t4:#000000;
   --dmf-mint:#45E0A8; --dmf-mint-dim:transparent; --dmf-ring:#45E0A8;
   --dmf-shadow-input:none;
+}
+.dmf-root[data-dmf-mode="system"]{
+  /* System is a distinct neutral-grey appearance. Explicit Dark remains the
+     pure-black palette above; explicit Light remains white. */
+  --dmf-page:#121212; --dmf-sidebar:#181818; --dmf-card:#181818; --dmf-card-hi:#202020;
+  --dmf-border:#3A3A3A; --dmf-border-hi:#5A5A5A; --dmf-border-hover:#FFFFFF;
+  --dmf-t1:#FFFFFF; --dmf-t2:#E8E8E8; --dmf-t3:#B8B8B8; --dmf-t4:#969696;
+  --dmf-mint:#45E0A8; --dmf-mint-dim:transparent; --dmf-ring:#45E0A8;
+  --dmf-shadow-input:none;
+  --background:#121212; --foreground:#FFFFFF;
+  --card:#181818; --card-foreground:#FFFFFF;
+  --popover:#202020; --popover-foreground:#FFFFFF;
+  --secondary:#202020; --secondary-foreground:#FFFFFF;
+  --muted:#202020; --muted-foreground:#B8B8B8;
+  --border:#3A3A3A; --border-strong:#FFFFFF; --input:#3A3A3A;
+  --text-secondary:#B8B8B8; --text-muted:#8E8E8E;
+  --surface-raised:#202020; --row-hover:#262626; --row-active:#303030;
+  --brand-mint-surface:#102D23; --brand-mint-border:#2F9872;
+  --brand-mint-foreground:#DFF9EF;
 }
 .dmf-root *{box-sizing:border-box}
 .dmf-root :where(button){font:inherit;color:inherit;background:none;border:0;cursor:pointer;touch-action:manipulation}

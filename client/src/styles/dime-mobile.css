@@ -79,6 +79,28 @@ html.dark {
   --dime-coin-keyline: none; /* mint dot sits directly on dark surfaces */
 }
 
+html[data-theme-mode="system"] {
+  --dime-mint-text: #45e0a8;
+  --dime-bg: #121212;
+  --dime-surface-sidebar: #181818;
+  --dime-surface-card: #181818;
+  --dime-surface-raised: #202020;
+  --dime-surface-bubble: #1c1c1c;
+  --dime-border: #3a3a3a;
+  --dime-border-strong: #ffffff;
+  --dime-text-primary: #ffffff;
+  --dime-text-body: #ffffff;
+  --dime-text-secondary: #b8b8b8;
+  --dime-text-muted: #8e8e8e;
+  --dime-text-faint: #8e8e8e;
+  --dime-ring: #45e0a8;
+  --dime-row-hover: #262626;
+  --dime-row-active: #303030;
+  --dime-mint-dim: transparent;
+  --dime-mint-border: #45e0a8;
+  --dime-coin-keyline: none;
+}
+
 /* MASTER.md micro-label: IBM Plex Mono, 10px, uppercase, 0.08em, muted. */
 .dime-mono-label {
   font-family: var(--dime-font-mono);
