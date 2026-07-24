@@ -98,9 +98,11 @@ export const appUsers = mysqlTable("app_users", {
    */
   stripeSubscriptionId: varchar("stripeSubscriptionId", { length: 64 }),
   /**
-   * Subscription plan: 'monthly' | 'annual'. NULL = no active subscription.
+   * Subscription plan slug (FK-by-value to subscription_plans.slug). NULL = no
+   * active subscription. Widened 16→64 to hold owner-created plan slugs; the
+   * legacy values ('monthly'|'annual'|'pro'|'sharp'|'operator') still fit.
    */
-  stripePlanId: varchar("stripePlanId", { length: 16 }),
+  stripePlanId: varchar("stripePlanId", { length: 64 }),
   /**
    * TRUE when the Stripe subscription is set to cancel at period end (user clicked Cancel).
    * FALSE/NULL = subscription is active and will auto-renew.
@@ -137,6 +139,71 @@ export const appUsers = mysqlTable("app_users", {
   discordIdUnique: uniqueIndex("app_users_discord_id_unique").on(table.discordId),
   manualDiscordIdUnique: uniqueIndex("app_users_manual_discord_id_unique").on(table.manualDiscordId),
 }));
+
+// ─── Subscription plan catalog (owner-managed, Stripe-backed) ────────────────
+/**
+ * subscription_plans — the DB-backed replacement for the static PLANS record in
+ * server/stripe/products.ts. Each row maps to a Stripe Product; its prices live
+ * in plan_prices. `slug` is the stable entitlement key written to
+ * app_users.stripePlanId and to Stripe session metadata (plan_id).
+ */
+export const subscriptionPlans = mysqlTable("subscription_plans", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Stable, unique entitlement key (kebab/short). Matches app_users.stripePlanId. */
+  slug: varchar("slug", { length: 64 }).notNull().unique(),
+  name: varchar("name", { length: 120 }).notNull(),
+  description: text("description"),
+  planType: mysqlEnum("planType", ["recurring", "one_time", "fixed_date"]).default("recurring").notNull(),
+  /** Stripe Product ID (prod_xxx). NULL until provisioned / for legacy backfill. */
+  stripeProductId: varchar("stripeProductId", { length: 64 }),
+  active: boolean("active").default(true).notNull(),
+  /** UTC ms when archived; NULL = live. */
+  archivedAt: bigint("archivedAt", { mode: "number" }),
+  /** fixed_date plans: access is granted until this UTC ms (phase 4). */
+  accessUntil: bigint("accessUntil", { mode: "number" }),
+  /** Limited-quantity cap on active subscribers; NULL = unlimited (phase 4). */
+  maxSubscribers: int("maxSubscribers"),
+  /** Per-plan Discord role to grant (phase 5). */
+  discordRoleId: varchar("discordRoleId", { length: 32 }),
+  /** Per-plan Telegram chat/channel to grant (phase 5). */
+  telegramChatId: varchar("telegramChatId", { length: 64 }),
+  sortOrder: int("sortOrder").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  slugIdx: index("subscription_plans_slug_idx").on(table.slug),
+}));
+
+/**
+ * plan_prices — one row per Stripe Price. Multiple rows per plan support billing
+ * variants (e.g. monthly + annual). Editing an amount/interval archives the old
+ * row (active=false) and inserts a new one, mirroring Stripe price immutability.
+ */
+export const planPrices = mysqlTable("plan_prices", {
+  id: int("id").autoincrement().primaryKey(),
+  /** subscription_plans.id (joined in app; no DB-level FK, matching this repo). */
+  planId: int("planId").notNull(),
+  /** Stripe Price ID (price_xxx). */
+  stripePriceId: varchar("stripePriceId", { length: 64 }).notNull(),
+  label: varchar("label", { length: 80 }),
+  amountCents: int("amountCents").notNull(),
+  currency: varchar("currency", { length: 8 }).default("usd").notNull(),
+  /** Recurring cadence; NULL for one-time prices. DB column `billingInterval`. */
+  interval: mysqlEnum("billingInterval", ["day", "week", "month", "year"]),
+  intervalCount: int("intervalCount"),
+  trialPeriodDays: int("trialPeriodDays"),
+  active: boolean("active").default(true).notNull(),
+  isDefault: boolean("isDefault").default(false).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({
+  planIdIdx: index("plan_prices_plan_id_idx").on(table.planId),
+  stripePriceIdIdx: index("plan_prices_stripe_price_id_idx").on(table.stripePriceId),
+}));
+
+export type SubscriptionPlan = typeof subscriptionPlans.$inferSelect;
+export type InsertSubscriptionPlan = typeof subscriptionPlans.$inferInsert;
+export type PlanPrice = typeof planPrices.$inferSelect;
+export type InsertPlanPrice = typeof planPrices.$inferInsert;
 
 export type AppUser = typeof appUsers.$inferSelect;
 export type InsertAppUser = typeof appUsers.$inferInsert;
