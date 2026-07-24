@@ -34,7 +34,7 @@ import {
 
 // Windowed to the last 8 weeks: retention index 0 = W0 … 7 = W7.
 const WEEKS = [0, 1, 2, 3, 4, 5, 6, 7];
-const GRID_COLS = "9rem repeat(8, minmax(0, 1fr))";
+const GRID_COLS = "11rem repeat(8, minmax(0, 1fr))";
 
 /** One-series mint config so the curve tooltip reads "Retention". */
 const CURVE_CONFIG = mintConfig("retention", "Retention");
@@ -50,19 +50,19 @@ function Cell({ value }: { value: number | null }) {
   const { style, darkText, measured } = heatStyle(value);
   if (!measured || value == null) {
     return (
-      <div className="flex h-9 items-center justify-center rounded border border-border/60 bg-card">
-        <span className="font-mono text-xs text-muted-foreground">—</span>
+      <div className="flex h-11 items-center justify-center rounded border border-border/60 bg-card">
+        <span className="font-mono text-sm text-muted-foreground">—</span>
       </div>
     );
   }
   return (
     <div
-      className="flex h-9 items-center justify-center rounded border border-border/60 transition-all duration-150 hover:ring-1 hover:ring-primary/40"
+      className="flex h-11 items-center justify-center rounded border border-border/60 transition-all duration-150 hover:ring-1 hover:ring-primary/40"
       style={style}
       title={`${value.toFixed(1)}% retained`}
     >
       <span
-        className={`font-mono text-xs tabular-nums ${darkText ? "" : "text-foreground"}`}
+        className={`font-mono text-sm tabular-nums ${darkText ? "" : "text-foreground"}`}
         style={darkText ? { color: "#04150E" } : undefined}
       >
         {Math.round(value)}
@@ -110,77 +110,76 @@ export default function RetentionPanel() {
       <SectionHeader title="Retention · weekly cohorts" loading={isLoading} />
 
       {notOk ? (
-        <div className="bg-card border border-border rounded-lg px-4 py-3 text-center">
+        <div className="bg-card border border-border rounded-xl px-4 sm:px-6 py-4 sm:py-5 text-center">
           <div className="text-sm font-semibold text-muted-foreground">Not measured</div>
-          <div className="text-[10px] sm:text-xs text-muted-foreground mt-1 max-w-md mx-auto leading-snug">
+          <div className="text-xs sm:text-sm text-muted-foreground mt-1 max-w-md mx-auto leading-relaxed">
             {data!.reason ?? "The retention pipeline has produced no cohorts yet."}
           </div>
         </div>
       ) : cohorts.length === 0 ? (
-        <div className="bg-card border border-border rounded-lg px-2.5 sm:px-4 py-2.5 sm:py-3">
-          <div className="text-[10px] sm:text-xs text-muted-foreground py-6 text-center">
+        <div className="bg-card border border-border rounded-xl px-4 sm:px-6 py-4 sm:py-5">
+          <div className="text-xs sm:text-sm text-muted-foreground py-6 text-center">
             No cohorts yet.
           </div>
         </div>
       ) : (
         <>
-          {/* Decay curve — average retention across all cohorts, W0…Wn. */}
-          <div className="bg-card border border-border rounded-lg px-2.5 sm:px-4 py-2.5 sm:py-3">
-            {measuredWeeks >= 2 ? (
-              <>
-                <ChartContainer config={CURVE_CONFIG} className="h-[180px] w-full">
-                  <LineChart data={curve} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
-                    <CartesianGrid vertical={false} stroke={GRID_COLOR} strokeOpacity={0.5} />
-                    <XAxis
-                      dataKey="week"
-                      tick={AXIS_TICK}
-                      tickLine={false}
-                      axisLine={false}
-                      stroke={GRID_COLOR}
-                    />
-                    <YAxis
-                      domain={[0, 100]}
-                      width={30}
-                      tick={AXIS_TICK}
-                      tickLine={false}
-                      axisLine={false}
-                      tickFormatter={(v: number) => `${v}%`}
-                    />
-                    <ChartTooltip content={<ChartTooltipContent />} cursor={{ stroke: GRID_COLOR }} />
-                    <Line
-                      dataKey="retention"
-                      type="monotone"
-                      stroke={SIGNAL_SERIES}
-                      strokeWidth={2}
-                      dot={{ r: 3, fill: SIGNAL_SERIES }}
-                      {...chartAnim(reduced)}
-                    />
-                  </LineChart>
-                </ChartContainer>
-                <p className="mt-3 text-[10px] sm:text-xs text-muted-foreground leading-snug">
-                  Average weekly retention across all cohorts (size-weighted). W0 = each cohort's
-                  first active week.
-                </p>
-              </>
-            ) : (
-              <div className="text-[10px] sm:text-xs text-muted-foreground py-6 text-center">
-                Not enough measured weeks yet to plot a retention curve.
-              </div>
-            )}
-          </div>
+          {measuredWeeks >= 2 ? (
+            /* Decay curve — average retention across all cohorts, W0…Wn. */
+            <div className="bg-card border border-border rounded-xl px-4 sm:px-6 py-4 sm:py-5">
+              <ChartContainer config={CURVE_CONFIG} className="h-[240px] sm:h-[280px] w-full">
+                <LineChart data={curve} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+                  <CartesianGrid vertical={false} stroke={GRID_COLOR} strokeOpacity={0.5} />
+                  <XAxis
+                    dataKey="week"
+                    tick={AXIS_TICK}
+                    tickLine={false}
+                    axisLine={false}
+                    stroke={GRID_COLOR}
+                  />
+                  <YAxis
+                    domain={[0, 100]}
+                    width={30}
+                    tick={AXIS_TICK}
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(v: number) => `${v}%`}
+                  />
+                  <ChartTooltip content={<ChartTooltipContent />} cursor={{ stroke: GRID_COLOR }} />
+                  <Line
+                    dataKey="retention"
+                    type="monotone"
+                    stroke={SIGNAL_SERIES}
+                    strokeWidth={2}
+                    dot={{ r: 3, fill: SIGNAL_SERIES }}
+                    {...chartAnim(reduced)}
+                  />
+                </LineChart>
+              </ChartContainer>
+              <p className="mt-3 text-xs sm:text-sm text-muted-foreground leading-relaxed">
+                Average weekly retention across all cohorts (size-weighted). W0 = each cohort's
+                first active week.
+              </p>
+            </div>
+          ) : (
+            /* Curve can't plot with <2 measured weeks — a slim note replaces the empty card. */
+            <p className="text-xs sm:text-sm text-muted-foreground py-2">
+              Retention curve needs ≥2 measured weeks — showing the cohort grid.
+            </p>
+          )}
 
           {/* Per-cohort heatmap. */}
-          <div className="bg-card border border-border rounded-lg px-2.5 sm:px-4 py-2.5 sm:py-3">
+          <div className="bg-card border border-border rounded-xl px-4 sm:px-6 py-4 sm:py-5">
             {/* Own horizontal scroller — the page body must never scroll sideways. */}
             <div className="overflow-x-auto">
-              <div className="space-y-1" style={{ minWidth: 640 }}>
+              <div className="space-y-1" style={{ minWidth: 720 }}>
                 {/* Header row: blank gutter, then W0…W7. */}
                 <div className="grid gap-1 items-end" style={{ gridTemplateColumns: GRID_COLS }}>
                   <div className="sticky left-0 z-10 bg-card" />
                   {WEEKS.map((w) => (
                     <div
                       key={w}
-                      className="text-center text-[10px] font-mono uppercase tracking-wider text-muted-foreground pb-1"
+                      className="text-center text-[11px] font-mono uppercase tracking-wider text-muted-foreground pb-1"
                     >
                       W{w}
                     </div>
@@ -197,11 +196,11 @@ export default function RetentionPanel() {
                       style={{ gridTemplateColumns: GRID_COLS }}
                     >
                       <div className="sticky left-0 z-10 bg-card pr-2 min-w-0">
-                        <div className="text-[11px] sm:text-xs font-mono text-foreground truncate">
+                        <div className="text-sm font-mono text-foreground truncate">
                           {c.cohortWeek}
                           {lowN && <span className="text-muted-foreground"> · low n</span>}
                         </div>
-                        <div className="text-[10px] font-mono text-muted-foreground leading-tight">
+                        <div className="text-xs font-mono text-muted-foreground leading-tight">
                           n={c.size}
                         </div>
                       </div>
@@ -214,7 +213,7 @@ export default function RetentionPanel() {
               </div>
             </div>
 
-            <p className="mt-3 text-[10px] sm:text-xs text-muted-foreground leading-snug">
+            <p className="mt-3 text-xs sm:text-sm text-muted-foreground leading-relaxed">
               W0 = each cohort's first active week; retention = % of that cohort active in later
               weeks (windowed to the last 8 weeks). Blank cells (—) are future or unreachable
               weeks, not zero.

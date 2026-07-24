@@ -9,9 +9,10 @@
  * users yet." when measured but empty — never a fabricated leaderboard.
  *
  * Design: Dime brand law — semantic tokens only, font-mono numerals, one-accent
- * mint on the histogram bars / score / under-bar focal marks, hairline grid, no
- * gradients or heavy shadows. The distribution is a recharts BarChart so it reads
- * as one system with the rest of the cockpit (chartTheme + shadcn ChartContainer).
+ * mint on the histogram bars / focal score number / score progress bars, hairline
+ * grid, no gradients or heavy shadows. The distribution is a recharts BarChart so
+ * it reads as one system with the rest of the cockpit (chartTheme + shadcn
+ * ChartContainer).
  */
 import { trpc } from "@/lib/trpc";
 import {
@@ -31,6 +32,7 @@ import {
 import {
   GRID_COLOR,
   AXIS_TICK,
+  LABEL_FONT,
   SIGNAL_SERIES,
   mintAlpha,
   mintConfig,
@@ -88,7 +90,7 @@ export default function PowerUsersPanel({
   const buckets = bucketize(topUsers);
 
   return (
-    <div className="bg-card border border-border rounded-lg px-2.5 sm:px-4 py-2.5 sm:py-3 space-y-3">
+    <div className="bg-card border border-border rounded-xl px-4 sm:px-6 py-4 sm:py-5 space-y-4">
       <SectionHeader
         title="Power Users · by score"
         meta={`${topUsers.length} ranked`}
@@ -99,14 +101,14 @@ export default function PowerUsersPanel({
       {notOk ? (
         <div className="border border-border rounded-md px-4 py-6 text-center">
           <div className="text-sm font-semibold text-muted-foreground">Not measured</div>
-          <div className="text-[10px] sm:text-xs text-muted-foreground mt-1 max-w-md mx-auto leading-snug">
+          <div className="text-xs sm:text-sm text-muted-foreground mt-1 max-w-md mx-auto leading-snug">
             {data!.reason ?? "The profiling pipeline has produced no data yet."}
           </div>
         </div>
       ) : topUsers.length === 0 ? (
         !isLoading && (
           <div className="border border-border rounded-md px-4 py-6 text-center">
-            <div className="text-[10px] sm:text-xs text-muted-foreground">
+            <div className="text-xs sm:text-sm text-muted-foreground">
               No qualifying users yet.
             </div>
           </div>
@@ -115,8 +117,8 @@ export default function PowerUsersPanel({
         <>
           {/* 1) Score-distribution histogram — five mint bars (single accent). */}
           <div>
-            <ChartContainer config={HISTOGRAM_CONFIG} className="h-[150px] w-full">
-              <BarChart data={buckets}>
+            <ChartContainer config={HISTOGRAM_CONFIG} className="h-[240px] sm:h-[260px] w-full">
+              <BarChart data={buckets} margin={{ top: 16, right: 8, bottom: 4, left: 8 }}>
                 <CartesianGrid vertical={false} stroke={GRID_COLOR} strokeOpacity={0.5} />
                 <XAxis
                   dataKey="bucket"
@@ -127,29 +129,29 @@ export default function PowerUsersPanel({
                 />
                 <YAxis hide allowDecimals={false} />
                 <ChartTooltip content={<ChartTooltipContent />} cursor={{ fill: mintAlpha(0.06) }} />
-                <Bar dataKey="count" fill={SIGNAL_SERIES} radius={[3, 3, 0, 0]} {...chartAnim(reduced)}>
-                  <LabelList dataKey="count" position="top" className="fill-foreground" fontSize={10} />
+                <Bar dataKey="count" fill={SIGNAL_SERIES} radius={[4, 4, 0, 0]} {...chartAnim(reduced)}>
+                  <LabelList dataKey="count" position="top" className="fill-foreground" fontSize={LABEL_FONT} />
                 </Bar>
               </BarChart>
             </ChartContainer>
-            <div className="text-[9px] sm:text-[10px] font-mono uppercase tracking-wider text-muted-foreground mt-1">
+            <div className="text-xs sm:text-sm font-mono uppercase tracking-wider text-muted-foreground mt-2">
               Score distribution · {topUsers.length} users
             </div>
           </div>
 
           {/* 2) Leaderboard table — one row per user, capped. Own horizontal scroll. */}
-          <div className="overflow-x-auto -mx-2.5 sm:-mx-4 px-2.5 sm:px-4">
-            <div style={{ minWidth: 560 }}>
+          <div className="overflow-x-auto -mx-4 sm:-mx-6 px-4 sm:px-6">
+            <div style={{ minWidth: 640 }}>
               {/* Column header */}
-              <div className="flex items-center gap-2 sm:gap-3 px-1.5 pb-1.5 border-b border-border text-[9px] font-mono uppercase tracking-wider text-muted-foreground">
-                <span className="w-5 text-right shrink-0">#</span>
+              <div className="flex items-center gap-3 sm:gap-4 px-2 pb-2 border-b border-border text-[11px] font-mono uppercase tracking-wider text-muted-foreground">
+                <span className="w-6 text-right shrink-0">#</span>
                 <span className="flex-1 min-w-0">User</span>
-                <span className="w-24 shrink-0">Segment</span>
-                <span className="w-14 shrink-0">Tier</span>
-                <span className="w-14 text-right shrink-0">Score</span>
-                <span className="w-12 text-right shrink-0">Value</span>
-                <span className="w-10 text-right shrink-0">Days</span>
-                <span className="w-12 text-right shrink-0">Seen</span>
+                <span className="w-28 shrink-0">Segment</span>
+                <span className="w-16 shrink-0">Tier</span>
+                <span className="w-20 text-right shrink-0">Score</span>
+                <span className="w-16 text-right shrink-0">Value</span>
+                <span className="w-14 text-right shrink-0">Days</span>
+                <span className="w-16 text-right shrink-0">Seen</span>
               </div>
 
               {/* Rows */}
@@ -159,59 +161,59 @@ export default function PowerUsersPanel({
                     key={u.sourceUserId}
                     type="button"
                     onClick={() => onSelect?.(u)}
-                    className="w-full flex items-center gap-2 sm:gap-3 px-1.5 py-1.5 text-left border-b border-border/60 last:border-b-0 cursor-pointer transition-colors duration-150 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset"
+                    className="w-full flex items-center gap-3 sm:gap-4 px-2 py-2.5 text-left border-b border-border/60 last:border-b-0 cursor-pointer transition-colors duration-150 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset"
                   >
                     {/* rank */}
-                    <span className="w-5 text-right shrink-0 text-[10px] sm:text-xs font-mono tabular-nums text-muted-foreground">
+                    <span className="w-6 text-right shrink-0 text-sm font-mono tabular-nums text-muted-foreground">
                       {i + 1}
                     </span>
 
                     {/* display name */}
-                    <span className="flex-1 min-w-0 truncate text-[11px] sm:text-xs font-mono text-foreground">
+                    <span className="flex-1 min-w-0 truncate text-sm font-mono text-foreground">
                       {displayName(u)}
                     </span>
 
                     {/* segment chip */}
-                    <span className="w-24 shrink-0">
-                      <span className="inline-block max-w-full truncate align-middle text-[9px] font-mono uppercase px-1.5 py-0.5 rounded border border-border text-muted-foreground">
+                    <span className="w-28 shrink-0">
+                      <span className="inline-block max-w-full truncate align-middle text-[11px] font-mono uppercase px-1.5 py-0.5 rounded border border-border text-muted-foreground">
                         {SEGMENT_LABEL[u.segment] ?? u.segment}
                       </span>
                     </span>
 
                     {/* tier chip */}
-                    <span className="w-14 shrink-0">
+                    <span className="w-16 shrink-0">
                       <span
-                        className={`inline-block text-[9px] font-mono uppercase tracking-wide px-1.5 py-0.5 rounded border border-border ${TIER_CLASS[u.tier] ?? "text-muted-foreground"}`}
+                        className={`inline-block text-[11px] font-mono uppercase tracking-wide px-1.5 py-0.5 rounded border border-border ${TIER_CLASS[u.tier] ?? "text-muted-foreground"}`}
                       >
                         {TIER_LABEL[u.tier] ?? u.tier}
                       </span>
                     </span>
 
-                    {/* score + thin mint under-bar */}
-                    <span className="w-14 text-right shrink-0">
-                      <span className="block text-[11px] sm:text-xs font-mono font-bold tabular-nums text-primary leading-tight">
+                    {/* score — bold mint focal number + slim progress bar */}
+                    <span className="w-20 shrink-0 flex flex-col items-end gap-1">
+                      <span className="text-base sm:text-lg font-bold tabular-nums text-primary leading-none">
                         {u.score}
                       </span>
-                      <span className="block mt-0.5 h-0.5 bg-muted/60 rounded-full overflow-hidden">
+                      <span className="block w-16 h-1.5 rounded-full bg-muted/60 overflow-hidden">
                         <span
-                          className="block h-0.5 bg-primary rounded-full transition-all duration-150"
+                          className="block h-1.5 bg-primary rounded-full transition-all duration-150"
                           style={{ width: `${Math.max(0, Math.min(100, u.score))}%` }}
                         />
                       </span>
                     </span>
 
                     {/* value events */}
-                    <span className="w-12 text-right shrink-0 text-[10px] sm:text-xs font-mono tabular-nums text-foreground">
+                    <span className="w-16 text-right shrink-0 text-sm font-mono tabular-nums text-foreground">
                       {u.valueEvents}
                     </span>
 
                     {/* active days */}
-                    <span className="w-10 text-right shrink-0 text-[10px] sm:text-xs font-mono tabular-nums text-foreground">
+                    <span className="w-14 text-right shrink-0 text-sm font-mono tabular-nums text-foreground">
                       {u.activeDays}
                     </span>
 
                     {/* last seen */}
-                    <span className="w-12 text-right shrink-0 text-[10px] sm:text-xs font-mono tabular-nums text-muted-foreground">
+                    <span className="w-16 text-right shrink-0 text-sm font-mono tabular-nums text-muted-foreground">
                       {fmtAgo(u.lastActive)}
                     </span>
                   </button>
@@ -221,7 +223,7 @@ export default function PowerUsersPanel({
           </div>
 
           {/* Provenance caption — staff excluded upstream, identity joined at read time. */}
-          <div className="text-[9px] sm:text-[10px] font-mono text-muted-foreground">
+          <div className="text-xs sm:text-sm font-mono text-muted-foreground">
             Staff excluded; identity joined at read time.
           </div>
         </>

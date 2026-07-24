@@ -74,7 +74,7 @@ export default function SegmentsPanel() {
 
   return (
     <div className="mb-6">
-      <div className="bg-card border border-border rounded-lg px-2.5 sm:px-4 py-2.5 sm:py-3">
+      <div className="bg-card border border-border rounded-xl px-4 sm:px-6 py-4 sm:py-5">
         <SectionHeader
           title="Segments · distinct users"
           meta={measured ? `${totalUsers.toLocaleString()} users` : undefined}
@@ -87,7 +87,7 @@ export default function SegmentsPanel() {
             <div className="text-sm font-semibold text-muted-foreground">
               {METRIC_STATE_LABEL[data!.state] ?? "Not measured"}
             </div>
-            <div className="text-[10px] sm:text-xs text-muted-foreground mt-1 max-w-md mx-auto leading-snug">
+            <div className="text-xs sm:text-sm text-muted-foreground mt-1 max-w-md mx-auto leading-relaxed">
               {data!.reason ??
                 "The segmentation pipeline has produced no data yet."}
             </div>
@@ -97,14 +97,17 @@ export default function SegmentsPanel() {
             {/* 1 — DONUT: single-hue mint ramp, total overlaid at the hole. */}
             {nonZeroSegments.length > 0 ? (
               <div className="relative">
-                <ChartContainer config={chartConfig} className="h-[240px] w-full">
+                <ChartContainer
+                  config={chartConfig}
+                  className="h-[240px] sm:h-[280px] w-full"
+                >
                   <PieChart>
                     <Pie
                       data={nonZeroSegments}
                       dataKey="users"
                       nameKey="label"
-                      innerRadius={58}
-                      outerRadius={84}
+                      innerRadius={70}
+                      outerRadius={104}
                       paddingAngle={1}
                       stroke={CARD_BG}
                       strokeWidth={2}
@@ -117,56 +120,62 @@ export default function SegmentsPanel() {
                     <ChartTooltip content={<ChartTooltipContent nameKey="label" />} />
                   </PieChart>
                 </ChartContainer>
-                {/* Center overlay — tabular total + mono micro-label. */}
+                {/* Center overlay — tabular total (default sans) + mono micro-label. */}
                 <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-2xl sm:text-3xl font-bold font-mono tabular-nums text-foreground leading-none">
+                  <span
+                    className="text-3xl sm:text-4xl font-bold tabular-nums text-foreground leading-none"
+                    style={{ letterSpacing: "-0.02em" }}
+                  >
                     {totalUsers.toLocaleString()}
                   </span>
-                  <span className="mt-1.5 text-[10px] font-mono uppercase tracking-[0.16em] text-muted-foreground">
+                  <span className="mt-1.5 text-[11px] font-mono uppercase tracking-[0.14em] text-muted-foreground">
                     Users
                   </span>
                 </div>
               </div>
             ) : (
-              <div className="h-[240px] w-full flex items-center justify-center">
-                <span className="text-xs font-mono text-muted-foreground">
+              <div className="h-[240px] sm:h-[280px] w-full flex items-center justify-center">
+                <span className="text-sm font-mono text-muted-foreground">
                   No segmented users yet.
                 </span>
               </div>
             )}
 
             {/* 2 — RANKED LIST: all 7 (zeros honest), share of total. */}
-            <div className="flex flex-col justify-center gap-1.5 w-full min-w-0">
+            <div className="flex flex-col justify-center gap-1 w-full min-w-0">
               {labeled.map((s) => {
                 const share =
                   totalUsers > 0 ? Math.round((s.users / totalUsers) * 100) : 0;
                 const width =
                   s.users > 0 ? Math.max((s.users / maxUsers) * 100, 4) : 0;
                 return (
-                  <div key={s.key} className="flex items-center gap-2 min-w-0">
+                  <div
+                    key={s.key}
+                    className="flex items-center gap-2.5 min-w-0 py-1"
+                  >
                     <span
-                      className="text-[10px] sm:text-xs font-mono w-28 sm:w-36 shrink-0 text-foreground truncate"
+                      className="text-sm font-mono w-28 sm:w-36 shrink-0 text-foreground truncate"
                       title={s.label}
                     >
                       {s.label}
                     </span>
-                    <div className="flex-1 h-3 rounded bg-muted/60 overflow-hidden min-w-0">
+                    <div className="flex-1 h-3.5 rounded bg-muted/60 overflow-hidden min-w-0">
                       <div
                         className={`h-full rounded bg-primary ${barMotion}`}
                         style={{ width: `${width}%` }}
                         title={`${s.label}: ${s.users} users (${share}%)`}
                       />
                     </div>
-                    <span className="text-[10px] sm:text-xs font-mono w-8 text-right text-foreground shrink-0 tabular-nums">
+                    <span className="text-sm font-mono w-10 text-right text-foreground shrink-0 tabular-nums">
                       {s.users}
                     </span>
-                    <span className="text-[10px] sm:text-xs font-mono w-10 text-right text-muted-foreground shrink-0 tabular-nums">
+                    <span className="text-sm font-mono w-12 text-right text-muted-foreground shrink-0 tabular-nums">
                       {share}%
                     </span>
                   </div>
                 );
               })}
-              <p className="mt-1.5 text-[10px] sm:text-xs text-muted-foreground leading-snug">
+              <p className="mt-2 text-xs sm:text-sm text-muted-foreground leading-relaxed">
                 Share is % of all segmented users, strongest first.
               </p>
             </div>

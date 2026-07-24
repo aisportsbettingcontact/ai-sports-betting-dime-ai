@@ -12,8 +12,8 @@
  * Design: Dime brand law — semantic tokens only, mint is the ONLY accent (active
  * users), value events are neutral grey (never a second color), grids/axes are
  * hairline, mono uppercase micro-labels only, 320ms motion gated on reduced
- * motion (chartAnim). The chart owns its horizontal scroll region; the page body
- * never scrolls sideways.
+ * motion (chartAnim). The AreaChart fills the full card width via its responsive
+ * container; the page body never scrolls sideways.
  */
 import { useMemo } from "react";
 import {
@@ -73,75 +73,70 @@ export default function ActivityTrendPanel() {
       <SectionHeader title="Activity · last 30 days" meta={meta} loading={isLoading} />
 
       {notOk ? (
-        <div className="bg-card border border-border rounded-lg px-4 py-3 text-center">
+        <div className="bg-card border border-border rounded-xl px-4 sm:px-6 py-4 sm:py-5 text-center">
           <div className="text-sm font-semibold text-muted-foreground">Not measured</div>
-          <div className="text-[10px] sm:text-xs text-muted-foreground mt-1 max-w-md mx-auto leading-snug">
+          <div className="text-xs sm:text-sm text-muted-foreground mt-1 max-w-md mx-auto leading-relaxed">
             {data!.reason ?? "The activity pipeline has produced no measured days yet."}
           </div>
         </div>
       ) : (
-        <div className="bg-card border border-border rounded-lg px-2.5 sm:px-4 py-2.5 sm:py-3">
+        <div className="bg-card border border-border rounded-xl px-4 sm:px-6 py-4 sm:py-5">
           {daily.length === 0 ? (
             !isLoading && (
-              <div className="text-[10px] sm:text-xs text-muted-foreground py-6 text-center">
+              <div className="text-xs sm:text-sm text-muted-foreground py-6 text-center">
                 No activity yet.
               </div>
             )
           ) : (
             <>
-              {/* Own horizontal scroller — the page body must never scroll sideways. */}
-              <div className="overflow-x-auto">
-                <div style={{ minWidth: 480 }}>
-                  <ChartContainer config={CHART_CONFIG} className="h-[240px] w-full">
-                    <AreaChart data={daily} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
-                      <CartesianGrid vertical={false} stroke={GRID_COLOR} strokeOpacity={0.5} />
-                      <XAxis
-                        dataKey="day"
-                        tickFormatter={fmtDayTick}
-                        tick={AXIS_TICK}
-                        tickLine={false}
-                        axisLine={false}
-                        minTickGap={24}
-                        stroke={GRID_COLOR}
-                      />
-                      <YAxis
-                        width={28}
-                        tick={AXIS_TICK}
-                        tickLine={false}
-                        axisLine={false}
-                        allowDecimals={false}
-                        stroke={GRID_COLOR}
-                      />
-                      <Area
-                        dataKey="activeUsers"
-                        type="monotone"
-                        stroke={SIGNAL_SERIES}
-                        strokeWidth={2}
-                        fill={mintAlpha(0.14)}
-                        {...chartAnim(reduced)}
-                      />
-                      <Area
-                        dataKey="valueEvents"
-                        type="monotone"
-                        stroke={MUTED_SERIES}
-                        strokeWidth={1.5}
-                        fill="transparent"
-                        dot={false}
-                        {...chartAnim(reduced)}
-                      />
-                      <ChartTooltip
-                        content={
-                          <ChartTooltipContent labelFormatter={(l) => fmtDayTick(String(l))} />
-                        }
-                        cursor={{ stroke: GRID_COLOR }}
-                      />
-                      <ChartLegend content={<ChartLegendContent />} />
-                    </AreaChart>
-                  </ChartContainer>
-                </div>
-              </div>
+              <ChartContainer config={CHART_CONFIG} className="h-[300px] sm:h-[340px] w-full">
+                <AreaChart data={daily} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+                  <CartesianGrid vertical={false} stroke={GRID_COLOR} strokeOpacity={0.5} />
+                  <XAxis
+                    dataKey="day"
+                    tickFormatter={fmtDayTick}
+                    tick={AXIS_TICK}
+                    tickLine={false}
+                    axisLine={false}
+                    minTickGap={24}
+                    stroke={GRID_COLOR}
+                  />
+                  <YAxis
+                    width={28}
+                    tick={AXIS_TICK}
+                    tickLine={false}
+                    axisLine={false}
+                    allowDecimals={false}
+                    stroke={GRID_COLOR}
+                  />
+                  <Area
+                    dataKey="activeUsers"
+                    type="monotone"
+                    stroke={SIGNAL_SERIES}
+                    strokeWidth={2}
+                    fill={mintAlpha(0.14)}
+                    {...chartAnim(reduced)}
+                  />
+                  <Area
+                    dataKey="valueEvents"
+                    type="monotone"
+                    stroke={MUTED_SERIES}
+                    strokeWidth={1.5}
+                    fill="transparent"
+                    dot={false}
+                    {...chartAnim(reduced)}
+                  />
+                  <ChartTooltip
+                    content={
+                      <ChartTooltipContent labelFormatter={(l) => fmtDayTick(String(l))} />
+                    }
+                    cursor={{ stroke: GRID_COLOR }}
+                  />
+                  <ChartLegend content={<ChartLegendContent className="text-sm" />} />
+                </AreaChart>
+              </ChartContainer>
 
-              <p className="mt-3 text-[10px] sm:text-xs text-muted-foreground leading-snug">
+              <p className="mt-3 text-xs sm:text-sm text-muted-foreground leading-relaxed">
                 Active users (mint) = distinct users with a value event that day; value events
                 (grey) = qualifying events. Zero-days are measured zeros — the pipeline was on.
               </p>
