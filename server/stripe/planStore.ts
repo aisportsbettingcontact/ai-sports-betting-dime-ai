@@ -36,6 +36,7 @@ export interface StoredPrice {
   trialPeriodDays: number | null;
   active: boolean;
   isDefault: boolean;
+  livemode: boolean;
 }
 
 export interface StoredPlan {
@@ -50,6 +51,7 @@ export interface StoredPlan {
   maxSubscribers: number | null;
   discordRoleId: string | null;
   telegramChatId: string | null;
+  livemode: boolean;
   prices: StoredPrice[];
 }
 
@@ -109,6 +111,7 @@ function mapPrice(pr: PlanPrice): StoredPrice {
     trialPeriodDays: pr.trialPeriodDays,
     active: pr.active,
     isDefault: pr.isDefault,
+    livemode: pr.livemode,
   };
 }
 
@@ -138,6 +141,7 @@ async function loadAllPlans(): Promise<StoredPlan[]> {
         maxSubscribers: p.maxSubscribers ?? null,
         discordRoleId: p.discordRoleId ?? null,
         telegramChatId: p.telegramChatId ?? null,
+        livemode: p.livemode,
         prices: byPlan.get(p.id) ?? [],
       }));
     });
@@ -187,4 +191,14 @@ export function defaultPriceOf(plan: StoredPlan): StoredPrice | null {
     plan.prices.find((pr) => pr.active) ??
     null
   );
+}
+
+/**
+ * Default active price MATCHING the given Stripe mode. Live checkout (live key)
+ * must never be handed a test/sandbox price — Stripe rejects it — so checkout
+ * resolves through here with wantLivemode = (the checkout key is live).
+ */
+export function defaultPriceForMode(plan: StoredPlan, wantLivemode: boolean): StoredPrice | null {
+  const inMode = plan.prices.filter((pr) => pr.active && pr.livemode === wantLivemode);
+  return inMode.find((pr) => pr.isDefault) ?? inMode[0] ?? null;
 }

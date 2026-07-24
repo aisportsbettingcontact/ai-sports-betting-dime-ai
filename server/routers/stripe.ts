@@ -30,6 +30,7 @@ import { router, stripeProcedure } from "../_core/trpc";
 import { stripeAppUserProcedure } from "./appUsers";
 import { getStripe } from "../stripe/client";
 import { PLANS, NEW_PLAN_IDS, getPlanByPriceId, computeExpiryMs, type PlanId } from "../stripe/products";
+import { getPlanBySlug, defaultPriceForMode, type StoredPlan, type StoredPrice } from "../stripe/planStore";
 import { derivePlanStatus } from "../stripe/planStatus";
 import type { BillingInvoice, BillingPaymentMethod, BillingInfo } from "../stripe/billingTypes";
 import { getDb, getAppUserById, invalidateAppUserByIdCache, updateAppUser } from "../db";
@@ -45,7 +46,9 @@ const TAG = "[tRPC][stripe]";
 
 // ─── Input validation ─────────────────────────────────────────────────────────
 
-const zodPlanId = z.enum(["monthly", "annual", "pro", "sharp", "operator"]);
+// Accept any plan slug — legacy static plans + owner-created DB plans. Validity
+// is enforced at resolution time (resolveCheckoutPlan throws for unknown slugs).
+const zodPlanId = z.string().min(1).max(64);
 
 // ─── Billing-tab auth (read-only, own-data-only) ──────────────────────────────
 
@@ -136,11 +139,59 @@ function priceResolutionError(planId: PlanId): TRPCError {
   });
 }
 
+/** True when checkout (STRIPE_SECRET_KEY) runs against a LIVE Stripe account. */
+function checkoutKeyIsLive(): boolean {
+  return !(process.env.STRIPE_SECRET_KEY ?? "").includes("_test_");
+}
+
+/** Auto-renewal disclosure generated for a DB (owner-created) plan. */
+function dbPlanDescription(plan: StoredPlan, price: StoredPrice): string {
+  const amount = `$${(price.amountCents / 100).toFixed(2)}`;
+  const per = price.interval
+    ? price.intervalCount && price.intervalCount > 1
+      ? `${price.intervalCount} ${price.interval}s`
+      : price.interval
+    : "one-time";
+  return `${plan.name} — ${amount} / ${per}. Auto-renews until cancelled. Cancel anytime before renewal.`;
+}
+
+/**
+ * Resolve a checkout plan slug → { priceId, description }.
+ *  1) Legacy static plans (monthly/annual/pro/sharp/operator): the EXACT existing
+ *     path — live env price IDs + hardcoded disclosure, byte-for-byte unchanged.
+ *  2) Owner-created DB plans: the active default price MATCHING the checkout key's
+ *     Stripe mode — live checkout must never be handed a test/sandbox price — plus
+ *     a generated disclosure. Throws PRECONDITION_FAILED when the plan is unknown,
+ *     inactive, or has no price in the current mode.
+ */
+async function resolveCheckoutPlan(slug: string): Promise<{ priceId: string; description: string }> {
+  if (Object.prototype.hasOwnProperty.call(PLANS, slug)) {
+    const planId = slug as PlanId;
+    let priceId: string;
+    try {
+      priceId = PLANS[planId].priceId();
+    } catch {
+      throw priceResolutionError(planId);
+    }
+    return { priceId, description: subscriptionDescription(planId) };
+  }
+  const plan = await getPlanBySlug(slug);
+  if (!plan || !plan.active) {
+    throw new TRPCError({ code: "PRECONDITION_FAILED", message: "plan not available" });
+  }
+  const price = defaultPriceForMode(plan, checkoutKeyIsLive());
+  if (!price) {
+    console.warn(`${TAG}[resolveCheckoutPlan] plan="${slug}" has no active price in ${checkoutKeyIsLive() ? "live" : "test"} mode`);
+    throw new TRPCError({ code: "PRECONDITION_FAILED", message: "plan not available" });
+  }
+  return { priceId: price.stripePriceId, description: dbPlanDescription(plan, price) };
+}
+
 // ─── Shared checkout session builder ─────────────────────────────────────────
 // Used by both authenticated and unauthenticated procedures to avoid duplication.
 
 interface BuildSessionParams {
-  planId: PlanId;
+  planId: string;
   origin: string;
   /** Stripe Customer ID — pass if user already has one to unify billing history */
   stripeCustomerId?: string | null;
@@ -157,24 +208,12 @@ async function buildStripeCheckoutSession(params: BuildSessionParams) {
 
   console.log(`${TAG}[buildStripeCheckoutSession] [INPUT] planId=${planId} origin=${origin} userId=${userId ?? "anon"} prefillEmail=${prefillEmail ?? "(none)"} desiredUsername=${desiredUsername ?? "(none)"} stripeCustomerId=${stripeCustomerId ?? "(none)"}`);
 
-  // ── [STEP 1] Resolve plan definition ──────────────────────────────────────
-  const plan = PLANS[planId];
-  if (!plan) {
-    console.error(`${TAG}[buildStripeCheckoutSession] [VERIFY] FAIL — unknown planId=${planId}`);
-    throw new TRPCError({ code: "BAD_REQUEST", message: `Unknown plan: ${planId}` });
-  }
-
-  // ── [STEP 2] Resolve Stripe Price ID ──────────────────────────────────────
-  let priceId: string;
-  try {
-    priceId = plan.priceId();
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error(`${TAG}[buildStripeCheckoutSession] [VERIFY] FAIL — priceId resolution error: ${msg}`);
-    throw priceResolutionError(planId);
-  }
-
-  console.log(`${TAG}[buildStripeCheckoutSession] [STATE] plan=${plan.name} priceId=${priceId} amount=${plan.priceDisplay}`);
+  // ── [STEP 1+2] Resolve price + auto-renewal disclosure ────────────────────
+  // Legacy static plans use the exact existing env path; owner-created DB plans
+  // resolve their mode-matched price. Throws a clean PRECONDITION_FAILED if the
+  // plan isn't sellable (unknown / inactive / wrong Stripe mode).
+  const { priceId, description } = await resolveCheckoutPlan(planId);
+  console.log(`${TAG}[buildStripeCheckoutSession] [STATE] planId=${planId} priceId=${priceId}`);
 
   // ── [STEP 3] Build success and cancel URLs ─────────────────────────────────
   const successUrl = `${origin}/subscribe/success?session_id={CHECKOUT_SESSION_ID}&plan=${planId}`;
@@ -239,7 +278,7 @@ async function buildStripeCheckoutSession(params: BuildSessionParams) {
       // description is shown on the Stripe Checkout page and in Stripe-generated
       // customer emails, providing explicit auto-renewal disclosure.
       subscription_data: {
-        description: subscriptionDescription(planId),
+        description,
         metadata: {
           ...(userId != null ? { user_id: String(userId) } : {}),
           plan_id: planId,
@@ -293,20 +332,8 @@ async function buildEmbeddedCheckoutSession(params: BuildSessionParams) {
 
   console.log(`${TAG}[buildEmbeddedCheckoutSession] [INPUT] planId=${planId} origin=${origin} userId=${userId ?? "anon"}`);
 
-  const plan = PLANS[planId];
-  if (!plan) {
-    console.error(`${TAG}[buildEmbeddedCheckoutSession] [VERIFY] FAIL — unknown planId=${planId}`);
-    throw new TRPCError({ code: "BAD_REQUEST", message: `Unknown plan: ${planId}` });
-  }
-
-  let priceId: string;
-  try {
-    priceId = plan.priceId();
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error(`${TAG}[buildEmbeddedCheckoutSession] [VERIFY] FAIL — priceId resolution error: ${msg}`);
-    throw priceResolutionError(planId);
-  }
+  const { priceId, description } = await resolveCheckoutPlan(planId);
+  console.log(`${TAG}[buildEmbeddedCheckoutSession] [STATE] planId=${planId} priceId=${priceId}`);
 
   let customerParam: { customer: string } | { customer_email: string } | Record<string, never> = {};
   if (stripeCustomerId) customerParam = { customer: stripeCustomerId };
@@ -330,7 +357,7 @@ async function buildEmbeddedCheckoutSession(params: BuildSessionParams) {
         desired_username: desiredUsername ?? "",
       },
       subscription_data: {
-        description: subscriptionDescription(planId),
+        description,
         metadata: {
           ...(userId != null ? { user_id: String(userId) } : {}),
           plan_id: planId,

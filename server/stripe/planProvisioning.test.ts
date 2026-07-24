@@ -2,9 +2,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // Shared spies (hoisted so the vi.mock factories can close over them).
 const h = vi.hoisted(() => {
-  const productsCreate = vi.fn(async (_p: unknown) => ({ id: "prod_TEST123" }));
+  const productsCreate = vi.fn(async (_p: unknown) => ({ id: "prod_TEST123", livemode: false }));
   const productsUpdate = vi.fn(async () => ({}));
-  const pricesCreate = vi.fn(async (_p: unknown) => ({ id: "price_TEST123" }));
+  const pricesCreate = vi.fn(async (_p: unknown) => ({ id: "price_TEST123", livemode: false }));
   const inserts: Array<Record<string, unknown>> = [];
   return { productsCreate, productsUpdate, pricesCreate, inserts };
 });
@@ -88,8 +88,8 @@ describe("provisionPlan", () => {
     // Persisted a plan row + a default price row.
     const planRow = h.inserts.find((v) => "slug" in v);
     const priceRow = h.inserts.find((v) => "stripePriceId" in v);
-    expect(planRow).toMatchObject({ slug: "pro-weekly", stripeProductId: "prod_TEST123", planType: "recurring" });
-    expect(priceRow).toMatchObject({ stripePriceId: "price_TEST123", isDefault: true, active: true, amountCents: 999 });
+    expect(planRow).toMatchObject({ slug: "pro-weekly", stripeProductId: "prod_TEST123", planType: "recurring", livemode: false });
+    expect(priceRow).toMatchObject({ stripePriceId: "price_TEST123", isDefault: true, active: true, amountCents: 999, livemode: false });
   });
 
   it("rejects an amount below the Stripe minimum (50c)", async () => {

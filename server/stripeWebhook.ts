@@ -27,7 +27,8 @@ import {
   getAppUserByStripeCustomerId,
   invalidateAppUserByIdCache,
 } from "./db";
-import { getPlanByPriceId, computeExpiryMs, normalizePlanId } from "./stripe/products";
+import { PLANS, getPlanByPriceId, computeExpiryMs, normalizePlanId } from "./stripe/products";
+import { getPlanBySlug, getPriceById, computeExpiryMsForPrice, defaultPriceOf } from "./stripe/planStore";
 import { syncDiscordRoleForUser } from "./discord/discordRoleSync";
 import { invalidateCachedAppUser } from "./dbCircuitBreaker";
 import bcrypt from "bcryptjs";
@@ -213,6 +214,32 @@ async function createPendingUserFromCheckout(params: {
 }
 
 // ─── Webhook event processor ──────────────────────────────────────────────────
+/**
+ * Resolve a plan slug → { slug, expiryMs } for fulfillment.
+ *  - Legacy static plans (monthly/annual/pro/sharp/operator): the EXACT existing
+ *    behaviour — normalizePlanId + computeExpiryMs buffers, unchanged.
+ *  - Owner-created DB plans: keep the real slug (never coerced to "monthly") and
+ *    derive expiry from the plan's default price.
+ *  - Unknown: legacy default ("monthly").
+ */
+async function resolvePlanExpiry(rawSlug: string | null | undefined): Promise<{ slug: string; expiryMs: number }> {
+  const s = rawSlug?.trim();
+  if (s && Object.prototype.hasOwnProperty.call(PLANS, s)) {
+    const slug = normalizePlanId(s);
+    return { slug, expiryMs: computeExpiryMs(slug) };
+  }
+  if (s) {
+    const plan = await getPlanBySlug(s);
+    if (plan) {
+      const price = defaultPriceOf(plan);
+      const exp = price ? computeExpiryMsForPrice(price, plan, Date.now()) : null;
+      return { slug: plan.slug, expiryMs: exp ?? computeExpiryMs("monthly") };
+    }
+  }
+  const slug = normalizePlanId(s);
+  return { slug, expiryMs: computeExpiryMs(slug) };
+}
+
 async function processWebhookEvent(event: Stripe.Event): Promise<void> {
   const tag = `[Stripe][Webhook][${event.type}][${event.id}]`;
   console.log(`${tag} Processing at ${new Date(event.created * 1000).toISOString()}`);
@@ -228,25 +255,36 @@ async function processWebhookEvent(event: Stripe.Event): Promise<void> {
         console.warn(`${tag} [STATE] payment_status=${session.payment_status} — skipping`); break;
       }
 
-      // Plan resolution: metadata plan_id first, else price→plan map (env-driven
-      // for all five plans: monthly/annual + pro/sharp/operator), else "monthly".
-      let plan = normalizePlanId(session.metadata?.plan_id);
+      // Plan + expiry resolution: metadata plan_id first (static OR owner-created
+      // DB plan), else resolve from the purchased price (static env map, then DB
+      // price map), else "monthly" — a $499 purchase can never silently provision
+      // as "monthly" while any resolver still matches.
+      const resolved = await resolvePlanExpiry(session.metadata?.plan_id);
+      let plan = resolved.slug;
+      let expiryMs = resolved.expiryMs;
       if (!session.metadata?.plan_id) {
-        // Sessions our server creates always carry plan_id metadata; anything
-        // else (Payment Link, dashboard-created) must resolve from its price so
-        // a $499 purchase can never silently provision as "monthly".
         try {
           const items = await getStripe().checkout.sessions.listLineItems(session.id, { limit: 1 });
           const priceId = items.data[0]?.price?.id;
-          const mapped = priceId ? getPlanByPriceId(priceId) : null;
-          if (mapped) {
-            plan = mapped.id;
-            console.warn(`${tag} [STATE] plan_id metadata absent — resolved plan="${plan}" from price=${priceId}`);
+          const staticMapped = priceId ? getPlanByPriceId(priceId) : null;
+          if (staticMapped) {
+            plan = staticMapped.id;
+            expiryMs = computeExpiryMs(staticMapped.id);
+            console.warn(`${tag} [STATE] plan_id absent — resolved "${plan}" from price=${priceId}`);
+          } else if (priceId) {
+            const dbMapped = await getPriceById(priceId);
+            if (dbMapped) {
+              plan = dbMapped.plan.slug;
+              expiryMs = computeExpiryMsForPrice(dbMapped.price, dbMapped.plan, Date.now()) ?? expiryMs;
+              console.warn(`${tag} [STATE] plan_id absent — resolved DB plan "${plan}" from price=${priceId}`);
+            } else {
+              console.error(`${tag} [VERIFY] FAIL — price ${priceId} not in any plan map; defaulting to "${plan}"`);
+            }
           } else {
-            console.error(`${tag} [VERIFY] FAIL — plan_id metadata absent and price ${priceId ?? "(none)"} not in plan map; defaulting to "${plan}"`);
+            console.error(`${tag} [VERIFY] FAIL — no price on session; defaulting to "${plan}"`);
           }
         } catch (err) {
-          console.error(`${tag} [VERIFY] FAIL — could not list line items for plan resolution: ${err instanceof Error ? err.message : String(err)}; defaulting to "${plan}"`);
+          console.error(`${tag} [VERIFY] FAIL — could not list line items: ${err instanceof Error ? err.message : String(err)}; defaulting to "${plan}"`);
         }
       }
       const stripeCustomerId = typeof session.customer === "string" ? session.customer : (session.customer as Stripe.Customer | null)?.id ?? "";
@@ -254,7 +292,6 @@ async function processWebhookEvent(event: Stripe.Event): Promise<void> {
 
       if (!stripeCustomerId) { console.error(`${tag} [VERIFY] FAIL — no stripeCustomerId`); break; }
 
-      const expiryMs = computeExpiryMs(plan);
       const userIdStr = session.client_reference_id ?? session.metadata?.user_id;
 
       if (userIdStr) {
@@ -323,9 +360,8 @@ async function processWebhookEvent(event: Stripe.Event): Promise<void> {
       const subUserId = parseInt(subUserIdStr, 10);
       if (isNaN(subUserId)) { console.error(`${tag} [VERIFY] FAIL — invalid user_id in sub metadata`); break; }
 
-      const subPlan = normalizePlanId(sub.metadata?.plan_id);
+      const { slug: subPlan, expiryMs: subExpiryMs } = await resolvePlanExpiry(sub.metadata?.plan_id);
       const subCustomerId = typeof sub.customer === "string" ? sub.customer : (sub.customer as Stripe.Customer).id;
-      const subExpiryMs = computeExpiryMs(subPlan);
 
       await grantUserAccess({ userId: subUserId, stripeCustomerId: subCustomerId, stripeSubscriptionId: sub.id, planId: subPlan, expiryMs: subExpiryMs });
       console.log(`${tag} [OUTPUT] Subscription ${action} processed userId=${subUserId}`);
@@ -350,8 +386,7 @@ async function processWebhookEvent(event: Stripe.Event): Promise<void> {
       if (invoiceCustomerId && invoice.billing_reason === "subscription_cycle") {
         const existingUser = await getAppUserByStripeCustomerId(invoiceCustomerId);
         if (existingUser) {
-          const renewPlan = normalizePlanId(existingUser.stripePlanId);
-          const renewExpiry = computeExpiryMs(renewPlan);
+          const { slug: renewPlan, expiryMs: renewExpiry } = await resolvePlanExpiry(existingUser.stripePlanId);
           const invoiceSubId = (() => {
             const s = (invoice as unknown as { parent?: { subscription_details?: { subscription?: string | Stripe.Subscription } } }).parent?.subscription_details?.subscription;
             return typeof s === "string" ? s : (s as Stripe.Subscription | undefined)?.id ?? existingUser.stripeSubscriptionId ?? "";
