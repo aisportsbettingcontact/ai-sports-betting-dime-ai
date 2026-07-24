@@ -20,6 +20,8 @@ import { useLocation } from "wouter";
 import { useAppAuth } from "@/_core/hooks/useAppAuth";
 import { AdminShell } from "@/pages/admin/AdminShell";
 import { MetricsPanel } from "@/pages/admin/MetricsPanel";
+import OverviewHeaderPanel from "@/pages/admin/OverviewHeaderPanel";
+import ActivityTrendPanel from "@/pages/admin/ActivityTrendPanel";
 import DeviceActivityPanel from "@/pages/admin/DeviceActivityPanel";
 import SegmentsPanel from "@/pages/admin/SegmentsPanel";
 import PowerUsersPanel from "@/pages/admin/PowerUsersPanel";
@@ -99,8 +101,10 @@ export default function UserActivity() {
           {/* Active panel */}
           {tab === "overview" && (
             <>
-              <MetricsPanel />
+              <OverviewHeaderPanel />
+              <ActivityTrendPanel />
               <DeviceActivityPanel />
+              <MetricsPanel />
             </>
           )}
           {tab === "segments" && <SegmentsPanel />}
