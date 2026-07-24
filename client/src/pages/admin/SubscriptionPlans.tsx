@@ -250,7 +250,7 @@ export default function SubscriptionPlans() {
   return (
     <AdminShell active="plans">
       <div className="w-full bg-muted/30 text-foreground">
-        <div className="w-full max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-10 py-6 sm:py-8">
+        <div className="admin-container py-6 sm:py-8">
           {/* ── Header ─────────────────────────────────────────────────────── */}
           <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
@@ -303,7 +303,11 @@ export default function SubscriptionPlans() {
               <h2 className="text-lg font-semibold tracking-tight">Create a plan</h2>
             </div>
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {/* Fields tile across the fluid container: 1 col on phones, 2 at
+                sm, 4 at xl so the row fills wide screens instead of stretching
+                two fields to absurd widths. Ordered so each breakpoint's rows
+                stay full (name/price/interval/trial, then full-width blocks). */}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
               {/* Name */}
               <div className="flex flex-col gap-1.5">
                 <label htmlFor="plan-name" className={labelClass}>
@@ -335,21 +339,6 @@ export default function SubscriptionPlans() {
                 />
               </div>
 
-              {/* Description — full width */}
-              <div className="flex flex-col gap-1.5 sm:col-span-2">
-                <label htmlFor="plan-description" className={labelClass}>
-                  Description <span className="normal-case tracking-normal">(optional)</span>
-                </label>
-                <textarea
-                  id="plan-description"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  rows={2}
-                  placeholder="What subscribers get with this plan."
-                  className={`${inputClass} resize-y`}
-                />
-              </div>
-
               {/* Interval */}
               <div className="flex flex-col gap-1.5">
                 <label htmlFor="plan-interval" className={labelClass}>
@@ -378,8 +367,23 @@ export default function SubscriptionPlans() {
                 />
               </div>
 
+              {/* Description — full width */}
+              <div className="flex flex-col gap-1.5 sm:col-span-2 xl:col-span-4">
+                <label htmlFor="plan-description" className={labelClass}>
+                  Description <span className="normal-case tracking-normal">(optional)</span>
+                </label>
+                <textarea
+                  id="plan-description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  rows={2}
+                  placeholder="What subscribers get with this plan."
+                  className={`${inputClass} resize-y`}
+                />
+              </div>
+
               {/* Max subscribers — full width on its own row */}
-              <div className="flex flex-col gap-1.5 sm:col-span-2">
+              <div className="flex flex-col gap-1.5 sm:col-span-2 xl:col-span-4">
                 <label htmlFor="plan-maxsubs" className={labelClass}>
                   Max subscribers{" "}
                   <span className="normal-case tracking-normal">(blank = unlimited)</span>
