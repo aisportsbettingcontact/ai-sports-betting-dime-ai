@@ -167,6 +167,9 @@ export const subscriptionPlans = mysqlTable("subscription_plans", {
   discordRoleId: varchar("discordRoleId", { length: 32 }),
   /** Per-plan Telegram chat/channel to grant (phase 5). */
   telegramChatId: varchar("telegramChatId", { length: 64 }),
+  /** Stripe mode this plan was provisioned in — TRUE=live, FALSE=test/sandbox.
+   *  Live checkout only offers livemode plans (a test price fails in live mode). */
+  livemode: boolean("livemode").default(true).notNull(),
   sortOrder: int("sortOrder").default(0).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
@@ -194,6 +197,8 @@ export const planPrices = mysqlTable("plan_prices", {
   trialPeriodDays: int("trialPeriodDays"),
   active: boolean("active").default(true).notNull(),
   isDefault: boolean("isDefault").default(false).notNull(),
+  /** Stripe mode of this Price — TRUE=live, FALSE=test/sandbox. Mirrors the plan. */
+  livemode: boolean("livemode").default(true).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, (table) => ({
   planIdIdx: index("plan_prices_plan_id_idx").on(table.planId),

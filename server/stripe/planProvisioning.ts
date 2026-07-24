@@ -164,6 +164,7 @@ export async function provisionPlan(
       planType: "recurring",
       stripeProductId: product.id,
       active: true,
+      livemode: product.livemode,
       maxSubscribers: input.maxSubscribers ?? null,
       sortOrder: 0,
     }),
@@ -183,6 +184,7 @@ export async function provisionPlan(
       trialPeriodDays: input.price.trialPeriodDays ?? null,
       active: true,
       isDefault: true,
+      livemode: price.livemode,
     }),
   );
 

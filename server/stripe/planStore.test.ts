@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { computeExpiryMsForPrice, defaultPriceOf, type StoredPlan, type StoredPrice } from "./planStore";
+import {
+  computeExpiryMsForPrice,
+  defaultPriceOf,
+  defaultPriceForMode,
+  type StoredPlan,
+  type StoredPrice,
+} from "./planStore";
 
 const BASE = 1_000_000_000_000;
 const DAY = 24 * 60 * 60 * 1000;
@@ -15,6 +21,7 @@ const price = (over: Partial<StoredPrice> = {}): StoredPrice => ({
   trialPeriodDays: null,
   active: true,
   isDefault: false,
+  livemode: true,
   ...over,
 });
 
@@ -66,5 +73,32 @@ describe("defaultPriceOf", () => {
   });
   it("skips inactive prices and returns null when none active", () => {
     expect(defaultPriceOf(plan([price({ id: 5, active: false, isDefault: true })]))).toBeNull();
+  });
+});
+
+describe("defaultPriceForMode — live checkout must never be handed a test price", () => {
+  const plan = (prices: StoredPrice[]): StoredPlan => ({
+    id: 1, slug: "p", name: "P", description: null, planType: "recurring",
+    stripeProductId: null, active: true, accessUntil: null, maxSubscribers: null,
+    discordRoleId: null, telegramChatId: null, livemode: true, prices,
+  });
+  const live = price({ id: 1, stripePriceId: "price_live", livemode: true, isDefault: true });
+  const test = price({ id: 2, stripePriceId: "price_test", livemode: false, isDefault: true });
+
+  it("returns the mode-matched price (live for wantLive, test otherwise)", () => {
+    const p = plan([live, test]);
+    expect(defaultPriceForMode(p, true)?.stripePriceId).toBe("price_live");
+    expect(defaultPriceForMode(p, false)?.stripePriceId).toBe("price_test");
+  });
+  it("returns null when no active price matches the mode — the safety guard", () => {
+    expect(defaultPriceForMode(plan([test]), true)).toBeNull(); // only a sandbox price → live checkout gets nothing
+    expect(defaultPriceForMode(plan([live]), false)).toBeNull();
+  });
+  it("prefers the default within the mode and skips inactive", () => {
+    const liveDefault = price({ id: 3, stripePriceId: "price_live_def", livemode: true, isDefault: true });
+    const liveOther = price({ id: 4, stripePriceId: "price_live_other", livemode: true, isDefault: false });
+    expect(defaultPriceForMode(plan([liveOther, liveDefault]), true)?.stripePriceId).toBe("price_live_def");
+    const inactiveLive = price({ id: 5, stripePriceId: "price_x", livemode: true, active: false, isDefault: true });
+    expect(defaultPriceForMode(plan([inactiveLive]), true)).toBeNull();
   });
 });
