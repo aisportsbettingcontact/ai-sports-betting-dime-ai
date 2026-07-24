@@ -14,6 +14,7 @@
 
 export type BillingInterval = "day" | "week" | "month" | "year";
 export type PlanType = "recurring" | "one_time" | "fixed_date";
+export type PromoType = "percent" | "amount";
 
 export interface StoredPrice {
   id: number;
@@ -24,8 +25,17 @@ export interface StoredPrice {
   interval: BillingInterval | null;
   intervalCount: number | null;
   trialPeriodDays: number | null;
+  /** Per-interval promo. null = none. percent → 1–100; amount → cents off. */
+  promoType: PromoType | null;
+  promoValue: number | null;
+  promoCode: string | null;
+  stripeCouponId: string | null;
   active: boolean;
   isDefault: boolean;
+  /** Owner-hidden interval (eyeball) — retained, not offered at checkout. */
+  hidden: boolean;
+  /** Display order among the plan's intervals (drag-to-reorder). */
+  sortOrder: number;
   /** false → a Stripe TEST/sandbox price (owner-only test checkout); true → live. */
   livemode: boolean;
 }
@@ -40,11 +50,18 @@ export interface StoredPlan {
   active: boolean;
   accessUntil: number | null;
   maxSubscribers: number | null;
+  /** Auto-restock FOMO loop. availableQuantity null = unlimited (feature off). */
+  autoRestock: boolean;
+  availableQuantity: number | null;
+  restockThreshold: number | null;
+  restockAmount: number | null;
   discordRoleId: string | null;
   telegramChatId: string | null;
   /** false → the plan was provisioned in the Stripe sandbox, not the live account. */
   livemode: boolean;
   prices: StoredPrice[];
+  /** Count of subscribers with access on this plan (shown on the plan card). */
+  subscriberCount: number;
 }
 
 /** A single billing-cadence choice: a human label → Stripe interval mapping. */

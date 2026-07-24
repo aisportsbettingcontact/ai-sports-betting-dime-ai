@@ -72,7 +72,7 @@ export default function UserActivity() {
   return (
     <AdminShell active="activity">
       <div className="w-full bg-muted/30 text-foreground flex flex-col">
-        <div className="flex-1 w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10 py-6 sm:py-8">
+        <div className="flex-1 admin-container py-6 sm:py-8">
           {/* Page header */}
           <div className="mb-6">
             <h1 className="text-3xl font-bold tracking-tight sm:text-4xl" style={{ letterSpacing: "-0.02em" }}>

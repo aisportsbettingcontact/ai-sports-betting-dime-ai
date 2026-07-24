@@ -386,7 +386,7 @@ export default function WaitlistAdmin() {
         <ContactModal entry={contactEntry} onClose={() => setContactEntry(null)} />
       )}
 
-      <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-8">
+      <div className="admin-container py-8 flex flex-col gap-8">
 
         {/* ── Page header ─────────────────────────────────────────────────── */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">

@@ -28,9 +28,10 @@ import { parse as parseCookieHeader } from "cookie";
 import type { Request } from "express";
 import { router, stripeProcedure } from "../_core/trpc";
 import { stripeAppUserProcedure } from "./appUsers";
+import type Stripe from "stripe";
 import { getStripe } from "../stripe/client";
 import { PLANS, NEW_PLAN_IDS, getPlanByPriceId, computeExpiryMs, type PlanId } from "../stripe/products";
-import { getPlanBySlug, defaultPriceForMode, type StoredPlan, type StoredPrice } from "../stripe/planStore";
+import { getPlanBySlug, defaultPriceForMode, isSoldOut, type StoredPlan, type StoredPrice } from "../stripe/planStore";
 import { derivePlanStatus } from "../stripe/planStatus";
 import type { BillingInvoice, BillingPaymentMethod, BillingInfo } from "../stripe/billingTypes";
 import { getDb, getAppUserById, invalidateAppUserByIdCache, updateAppUser } from "../db";
@@ -164,7 +165,11 @@ function dbPlanDescription(plan: StoredPlan, price: StoredPrice): string {
  *     a generated disclosure. Throws PRECONDITION_FAILED when the plan is unknown,
  *     inactive, or has no price in the current mode.
  */
-async function resolveCheckoutPlan(slug: string): Promise<{ priceId: string; description: string }> {
+type CheckoutMode = "subscription" | "payment";
+
+async function resolveCheckoutPlan(
+  slug: string,
+): Promise<{ priceId: string; description: string; couponId: string | null; mode: CheckoutMode }> {
   if (Object.prototype.hasOwnProperty.call(PLANS, slug)) {
     const planId = slug as PlanId;
     let priceId: string;
@@ -173,18 +178,25 @@ async function resolveCheckoutPlan(slug: string): Promise<{ priceId: string; des
     } catch {
       throw priceResolutionError(planId);
     }
-    return { priceId, description: subscriptionDescription(planId) };
+    return { priceId, description: subscriptionDescription(planId), couponId: null, mode: "subscription" };
   }
   const plan = await getPlanBySlug(slug);
   if (!plan || !plan.active) {
     throw new TRPCError({ code: "PRECONDITION_FAILED", message: "plan not available" });
+  }
+  // Limited-quantity FOMO: a plan with no spots left cannot be purchased.
+  if (isSoldOut(plan)) {
+    throw new TRPCError({ code: "PRECONDITION_FAILED", message: "this plan is sold out" });
   }
   const price = defaultPriceForMode(plan, checkoutKeyIsLive());
   if (!price) {
     console.warn(`${TAG}[resolveCheckoutPlan] plan="${slug}" has no active price in ${checkoutKeyIsLive() ? "live" : "test"} mode`);
     throw new TRPCError({ code: "PRECONDITION_FAILED", message: "plan not available" });
   }
-  return { priceId: price.stripePriceId, description: dbPlanDescription(plan, price) };
+  // one_time plans are a single payment; recurring plans are subscriptions.
+  const mode: CheckoutMode = plan.planType === "one_time" ? "payment" : "subscription";
+  // A per-interval promo is applied as a Stripe coupon on the session.
+  return { priceId: price.stripePriceId, description: dbPlanDescription(plan, price), couponId: price.stripeCouponId, mode };
 }
 
 // ─── Shared checkout session builder ─────────────────────────────────────────
@@ -212,8 +224,26 @@ async function buildStripeCheckoutSession(params: BuildSessionParams) {
   // Legacy static plans use the exact existing env path; owner-created DB plans
   // resolve their mode-matched price. Throws a clean PRECONDITION_FAILED if the
   // plan isn't sellable (unknown / inactive / wrong Stripe mode).
-  const { priceId, description } = await resolveCheckoutPlan(planId);
-  console.log(`${TAG}[buildStripeCheckoutSession] [STATE] planId=${planId} priceId=${priceId}`);
+  const { priceId, description, couponId, mode } = await resolveCheckoutPlan(planId);
+  console.log(`${TAG}[buildStripeCheckoutSession] [STATE] planId=${planId} priceId=${priceId} mode=${mode}${couponId ? ` coupon=${couponId}` : ""}`);
+  // A per-interval promo is auto-applied as a coupon. Stripe forbids combining
+  // `discounts` with `allow_promotion_codes`, so choose one: the baked-in coupon
+  // when the interval has a promo, else let the customer enter a code.
+  const discountParam: Stripe.Checkout.SessionCreateParams = couponId
+    ? { discounts: [{ coupon: couponId }] }
+    : { allow_promotion_codes: true };
+  // Subscription-only params apply solely to recurring plans; a one_time
+  // (single-payment) plan uses mode:"payment" and omits subscription_data.
+  const subscriptionOnly: Stripe.Checkout.SessionCreateParams =
+    mode === "subscription"
+      ? {
+          payment_method_collection: "if_required",
+          subscription_data: {
+            description,
+            metadata: { ...(userId != null ? { user_id: String(userId) } : {}), plan_id: planId },
+          },
+        }
+      : {};
 
   // ── [STEP 3] Build success and cancel URLs ─────────────────────────────────
   const successUrl = `${origin}/subscribe/success?session_id={CHECKOUT_SESSION_ID}&plan=${planId}`;
@@ -242,14 +272,9 @@ async function buildStripeCheckoutSession(params: BuildSessionParams) {
   let session;
   try {
     session = await stripe.checkout.sessions.create({
-      mode: "subscription",
+      mode,
       line_items: [{ price: priceId, quantity: 1 }],
       ...customerParam,
-      // ── Payment methods ──────────────────────────────────────────────────
-      // automatic_payment_methods lets Stripe show all eligible methods
-      // (cards, Apple Pay, Google Pay, Affirm, Afterpay, Klarna, Link)
-      // based on the customer's location and cart value.
-      payment_method_collection: "if_required",
       // ── Metadata for webhook fulfillment ────────────────────────────────
       // These fields are available in checkout.session.completed webhook.
       client_reference_id: userId != null ? String(userId) : undefined,
@@ -259,7 +284,6 @@ async function buildStripeCheckoutSession(params: BuildSessionParams) {
         desired_username: desiredUsername ?? "",
       },
       // ── Custom fields — collected on Stripe Checkout page ───────────────
-      // Stripe renders these as form fields above the payment section.
       // "Desired Username" is required and prefilled if already known.
       custom_fields: [
         {
@@ -274,18 +298,11 @@ async function buildStripeCheckoutSession(params: BuildSessionParams) {
           optional: false,
         },
       ],
-      // ── Subscription data ────────────────────────────────────────────────
-      // description is shown on the Stripe Checkout page and in Stripe-generated
-      // customer emails, providing explicit auto-renewal disclosure.
-      subscription_data: {
-        description,
-        metadata: {
-          ...(userId != null ? { user_id: String(userId) } : {}),
-          plan_id: planId,
-        },
-      },
-      // ── UX ───────────────────────────────────────────────────────────────
-      allow_promotion_codes: true,
+      // Subscription-only params (payment_method_collection + subscription_data
+      // with the auto-renewal disclosure) are folded in for recurring plans;
+      // one_time plans use mode:"payment" and omit them.
+      ...subscriptionOnly,
+      ...discountParam,
       success_url: successUrl,
       cancel_url: cancelUrl,
       billing_address_collection: "auto",
@@ -332,8 +349,23 @@ async function buildEmbeddedCheckoutSession(params: BuildSessionParams) {
 
   console.log(`${TAG}[buildEmbeddedCheckoutSession] [INPUT] planId=${planId} origin=${origin} userId=${userId ?? "anon"}`);
 
-  const { priceId, description } = await resolveCheckoutPlan(planId);
-  console.log(`${TAG}[buildEmbeddedCheckoutSession] [STATE] planId=${planId} priceId=${priceId}`);
+  const { priceId, description, couponId, mode } = await resolveCheckoutPlan(planId);
+  console.log(`${TAG}[buildEmbeddedCheckoutSession] [STATE] planId=${planId} priceId=${priceId} mode=${mode}${couponId ? ` coupon=${couponId}` : ""}`);
+  // See buildStripeCheckoutSession: baked-in coupon XOR customer-entered code.
+  const discountParam: Stripe.Checkout.SessionCreateParams = couponId
+    ? { discounts: [{ coupon: couponId }] }
+    : { allow_promotion_codes: true };
+  // Subscription-only params — omitted for one_time (mode:"payment") plans.
+  const subscriptionOnly: Stripe.Checkout.SessionCreateParams =
+    mode === "subscription"
+      ? {
+          payment_method_collection: "if_required",
+          subscription_data: {
+            description,
+            metadata: { ...(userId != null ? { user_id: String(userId) } : {}), plan_id: planId },
+          },
+        }
+      : {};
 
   let customerParam: { customer: string } | { customer_email: string } | Record<string, never> = {};
   if (stripeCustomerId) customerParam = { customer: stripeCustomerId };
@@ -346,24 +378,17 @@ async function buildEmbeddedCheckoutSession(params: BuildSessionParams) {
       // "elements" = the custom ui_mode consumed by initCheckoutElementsSdk
       // (stripe-node v22 JSDoc: custom ≡ elements).
       ui_mode: "elements",
-      mode: "subscription",
+      mode,
       line_items: [{ price: priceId, quantity: 1 }],
       ...customerParam,
-      payment_method_collection: "if_required",
       client_reference_id: userId != null ? String(userId) : undefined,
       metadata: {
         ...(userId != null ? { user_id: String(userId) } : {}),
         plan_id: planId,
         desired_username: desiredUsername ?? "",
       },
-      subscription_data: {
-        description,
-        metadata: {
-          ...(userId != null ? { user_id: String(userId) } : {}),
-          plan_id: planId,
-        },
-      },
-      allow_promotion_codes: true,
+      ...subscriptionOnly,
+      ...discountParam,
       // Elements mode uses return_url (required for redirect-based payment
       // methods); the session_id lands on the same success page as always.
       return_url: `${origin}/subscribe/success?session_id={CHECKOUT_SESSION_ID}&plan=${planId}`,

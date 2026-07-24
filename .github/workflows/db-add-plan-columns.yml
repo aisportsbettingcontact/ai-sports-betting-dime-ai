@@ -1,0 +1,135 @@
+name: DB Add plan columns (one-shot)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# One-shot repair for the subscription-plan feature columns.
+#
+# WHY THIS EXISTS: `db-push.yml` (drizzle-kit generate && migrate) cannot add
+# these columns. `generate` diffs the schema against drizzle's META SNAPSHOTS,
+# and those snapshots never captured `plan_prices` / `subscription_plans` (the
+# tables were created via `drizzle-kit push`, which writes no migration/meta
+# entry). So `generate` emits a full `CREATE TABLE plan_prices` and `migrate`
+# collides with ER_TABLE_EXISTS_ERROR (the table already exists). Reconciling the
+# journal does not help — the problem is the snapshots, not the journal.
+#
+# This workflow adds exactly the columns the deployed code needs, directly, with
+# a FIXED (not free-text) set of idempotent `ALTER TABLE ... ADD COLUMN IF NOT
+# EXISTS` statements. TiDB supports IF NOT EXISTS, so it is safe to re-run and
+# adds only what is missing. It NEVER drops or alters an existing column and
+# NEVER touches row data. Same safety posture as the read-only db-query.yml:
+# no user-supplied SQL, so it is not an injection surface.
+# ─────────────────────────────────────────────────────────────────────────────
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type ADD to apply'
+        required: true
+        default: ''
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: db-add-plan-columns
+  cancel-in-progress: false
+
+jobs:
+  add-columns:
+    name: Add subscription_plans / plan_prices columns
+    runs-on: ubuntu-latest
+    steps:
+      - name: Guard — require typed confirmation
+        if: ${{ inputs.confirm != 'ADD' }}
+        run: |
+          echo "::error::Type ADD in the confirm input to apply."
+          exit 1
+
+      - name: Install MySQL client
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq mysql-client
+
+      - name: Build client config from DATABASE_URL (secret never printed)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          python3 - <<'PY'
+          import os, urllib.parse, stat
+          u = urllib.parse.urlparse(os.environ["DATABASE_URL"])
+          if not u.hostname:
+              raise SystemExit("DATABASE_URL is not a valid mysql:// URL")
+          db = (u.path or "/").lstrip("/")
+          if not db:
+              raise SystemExit("DATABASE_URL has no database name in its path")
+          cnf = (
+              "[client]\n"
+              f"host={u.hostname}\n"
+              f"port={u.port or 4000}\n"
+              f"user={urllib.parse.unquote(u.username or '')}\n"
+              f"password={urllib.parse.unquote(u.password or '')}\n"
+              f"database={db}\n"
+              # TiDB Serverless mandates TLS.
+              "ssl-mode=REQUIRED\n"
+          )
+          with open("client.cnf", "w") as f:
+              f.write(cnf)
+          os.chmod("client.cnf", stat.S_IRUSR | stat.S_IWUSR)  # 600
+          print(f"client.cnf written: host={u.hostname} port={u.port or 4000} db={db} (password omitted)")
+          PY
+
+      - name: Apply additive column migrations (idempotent)
+        run: |
+          set -euo pipefail
+          COLS="'autoRestock','availableQuantity','restockThreshold','restockAmount','promoType','promoValue','promoCode','stripeCouponId','stripePromoCodeId','hidden','sortOrder'"
+
+          echo "===== BEFORE: which of the 11 target columns already exist ====="
+          mysql --defaults-extra-file=client.cnf -t -e "
+            SELECT table_name, column_name FROM information_schema.columns
+            WHERE table_schema = DATABASE()
+              AND table_name IN ('subscription_plans','plan_prices')
+              AND column_name IN ($COLS)
+            ORDER BY table_name, column_name;"
+
+          echo "===== APPLY: subscription_plans (auto-restock FOMO columns) ====="
+          mysql --defaults-extra-file=client.cnf -e "
+            ALTER TABLE subscription_plans
+              ADD COLUMN IF NOT EXISTS autoRestock boolean NOT NULL DEFAULT false,
+              ADD COLUMN IF NOT EXISTS availableQuantity int NULL,
+              ADD COLUMN IF NOT EXISTS restockThreshold int NULL,
+              ADD COLUMN IF NOT EXISTS restockAmount int NULL;"
+
+          echo "===== APPLY: plan_prices (promo + hidden/sortOrder columns) ====="
+          mysql --defaults-extra-file=client.cnf -e "
+            ALTER TABLE plan_prices
+              ADD COLUMN IF NOT EXISTS promoType enum('percent','amount') NULL,
+              ADD COLUMN IF NOT EXISTS promoValue int NULL,
+              ADD COLUMN IF NOT EXISTS promoCode varchar(64) NULL,
+              ADD COLUMN IF NOT EXISTS stripeCouponId varchar(64) NULL,
+              ADD COLUMN IF NOT EXISTS stripePromoCodeId varchar(64) NULL,
+              ADD COLUMN IF NOT EXISTS hidden boolean NOT NULL DEFAULT false,
+              ADD COLUMN IF NOT EXISTS sortOrder int NOT NULL DEFAULT 0;"
+
+          echo "===== AFTER: all 11 columns should now be present ====="
+          mysql --defaults-extra-file=client.cnf -t -e "
+            SELECT table_name, column_name, column_type, is_nullable, column_default
+            FROM information_schema.columns
+            WHERE table_schema = DATABASE()
+              AND table_name IN ('subscription_plans','plan_prices')
+              AND column_name IN ($COLS)
+            ORDER BY table_name, column_name;"
+
+          FOUND=$(mysql --defaults-extra-file=client.cnf -N -e "
+            SELECT COUNT(*) FROM information_schema.columns
+            WHERE table_schema = DATABASE()
+              AND table_name IN ('subscription_plans','plan_prices')
+              AND column_name IN ($COLS);")
+          echo "Target columns present: $FOUND / 11"
+          if [ "$FOUND" -ne 11 ]; then
+            echo "::error::Expected 11 target columns, found $FOUND."
+            exit 1
+          fi
+          echo "All 11 columns present — plan creation should now succeed."
+
+      - name: Cleanup
+        if: always()
+        run: rm -f client.cnf

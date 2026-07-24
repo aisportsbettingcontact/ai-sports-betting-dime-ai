@@ -163,6 +163,15 @@ export const subscriptionPlans = mysqlTable("subscription_plans", {
   accessUntil: bigint("accessUntil", { mode: "number" }),
   /** Limited-quantity cap on active subscribers; NULL = unlimited (phase 4). */
   maxSubscribers: int("maxSubscribers"),
+  /** Auto-restock FOMO loop (phase 3). `availableQuantity` is the live
+   *  "spots left" counter shown publicly; it decrements on each subscribe and,
+   *  when `autoRestock` is on and it drops below `restockThreshold`, resets to
+   *  `restockAmount` — an endless scarcity loop. NULL availableQuantity = the
+   *  limited-quantity feature is off for this plan (unlimited). */
+  autoRestock: boolean("autoRestock").default(false).notNull(),
+  availableQuantity: int("availableQuantity"),
+  restockThreshold: int("restockThreshold"),
+  restockAmount: int("restockAmount"),
   /** Per-plan Discord role to grant (phase 5). */
   discordRoleId: varchar("discordRoleId", { length: 32 }),
   /** Per-plan Telegram chat/channel to grant (phase 5). */
@@ -195,8 +204,23 @@ export const planPrices = mysqlTable("plan_prices", {
   interval: mysqlEnum("billingInterval", ["day", "week", "month", "year"]),
   intervalCount: int("intervalCount"),
   trialPeriodDays: int("trialPeriodDays"),
+  /** Per-interval promo (phase 3). `promoType` NULL = no promo. `percent` →
+   *  `promoValue` is 1–100; `amount` → `promoValue` is a discount in cents. A
+   *  Stripe coupon (duration=forever) is provisioned per promo and applied at
+   *  checkout for THIS price; `promoCode`, if set, is also registered as a
+   *  shareable Stripe promotion code. */
+  promoType: mysqlEnum("promoType", ["percent", "amount"]),
+  promoValue: int("promoValue"),
+  promoCode: varchar("promoCode", { length: 64 }),
+  stripeCouponId: varchar("stripeCouponId", { length: 64 }),
+  stripePromoCodeId: varchar("stripePromoCodeId", { length: 64 }),
   active: boolean("active").default(true).notNull(),
   isDefault: boolean("isDefault").default(false).notNull(),
+  /** Owner-hidden interval: retained, but not offered at checkout or shown
+   *  publicly (eyeball toggle). Distinct from active=false (archived). */
+  hidden: boolean("hidden").default(false).notNull(),
+  /** Display order among a plan's intervals — drag-to-reorder (⠿ handle). */
+  sortOrder: int("sortOrder").default(0).notNull(),
   /** Stripe mode of this Price — TRUE=live, FALSE=test/sandbox. Mirrors the plan. */
   livemode: boolean("livemode").default(true).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),

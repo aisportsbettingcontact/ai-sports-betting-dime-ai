@@ -12,6 +12,25 @@
  * feedback: the color/background change itself still communicates state).
  */
 
+/**
+ * .admin-container — the ONE fluid width standard for every admin surface.
+ *
+ * Root cause of the "too much whitespace" report: the shell header and each
+ * page hardcoded `max-w-[1400px] mx-auto`, so a 1920px display wasted ~520px
+ * (27%) of horizontal space and a 2560px ultrawide wasted ~45%. This replaces
+ * that fixed cap with a fluid container: it fills the viewport up to an
+ * ultrawide ceiling, with gutters that scale WITH the viewport (16px on
+ * phones → ~72px on large desktops) so content reaches toward the edges
+ * without ever touching them. Every admin page uses this one class so widths
+ * can never drift apart again — change the scale here, in one place.
+ */
+.admin-container {
+  width: 100%;
+  max-width: 2560px;
+  margin-inline: auto;
+  padding-inline: clamp(1rem, 3.5vw, 4.5rem);
+}
+
 .admin-shell-back,
 .admin-shell-tab {
   transition:
