@@ -1,6 +1,13 @@
 /**
- * /checkout?plan=pro|sharp|operator|monthly|annual — in-domain, Dime-branded
- * Stripe checkout.
+ * /checkout?plan=<slug>[&price=<id>] — in-domain, Dime-branded Stripe checkout.
+ *
+ * `plan` is either one of the five legacy ids (pro|sharp|operator|monthly|annual,
+ * which keep their curated PLAN_COPY) or an owner-created DB plan slug, whose
+ * display copy is fetched from stripe.publicGetCheckoutPlan. The optional `price`
+ * selects one interval of a multi-interval DB plan (a plan_prices row id, from a
+ * checkout link the owner copied for a specific interval — including "Lifetime",
+ * which checks out as a one-time payment). The Stripe elements flow is identical
+ * regardless of plan source.
  *
  * ONLY path: Checkout Sessions ui_mode:"elements" consumed by
  * stripe.initCheckoutElementsSdk + a Payment Element themed with the
@@ -50,7 +57,8 @@ interface PlanCopy {
   heading: string;
   price: string;
   period: string;
-  perDay: string;
+  /** "Works out to" per-day line — omitted (empty) for owner-created DB plans. */
+  perDay?: string;
   /** v2 ladder rail rows — legacy plans keep their existing compact rail. */
   modelAccess?: string;
   credits?: string;
@@ -58,6 +66,24 @@ interface PlanCopy {
   payLabel: string;
   renewal: string;
   chargeCadence: "monthly" | "annually";
+  /** false → a one-time ("Lifetime") purchase — no renewal, no cancellation row.
+   *  undefined/true → recurring (all legacy plans). */
+  recurring?: boolean;
+}
+
+/** Public display shape returned by stripe.publicGetCheckoutPlan (DB plans). */
+interface DbCheckoutPlan {
+  slug: string;
+  name: string;
+  description: string | null;
+  amountCents: number;
+  currency: string;
+  interval: "day" | "week" | "month" | "year" | null;
+  intervalCount: number | null;
+  recurring: boolean;
+  trialPeriodDays: number | null;
+  label: string | null;
+  soldOut: boolean;
 }
 
 const PLAN_COPY: Record<PlanId, PlanCopy> = {
@@ -142,12 +168,99 @@ const PLAN_COPY: Record<PlanId, PlanCopy> = {
 
 const PUBLISHABLE_KEY = (import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY as string | undefined) ?? "";
 
-function parsePlan(search: string): PlanId {
-  const plan = new URLSearchParams(search).get("plan");
-  if (plan === "pro" || plan === "sharp" || plan === "operator" || plan === "annual" || plan === "monthly") {
-    return plan;
+/** The five hardcoded legacy plans keep their curated PLAN_COPY. */
+function isLegacyPlan(slug: string): slug is PlanId {
+  return slug === "pro" || slug === "sharp" || slug === "operator" || slug === "monthly" || slug === "annual";
+}
+
+/**
+ * The plan slug from ?plan= — a legacy id OR an owner-created DB plan slug. Only
+ * safe slug characters are accepted; anything else falls back to the legacy
+ * "monthly" default (so a garbage query never reaches the server).
+ */
+function parsePlanSlug(search: string): string {
+  const plan = new URLSearchParams(search).get("plan")?.trim();
+  return plan && /^[a-z0-9-]{1,64}$/i.test(plan) ? plan : "monthly";
+}
+
+/** The optional ?price= — a plan_prices row id selecting one interval of a DB plan. */
+function parsePriceId(search: string): number | undefined {
+  const raw = new URLSearchParams(search).get("price");
+  if (!raw) return undefined;
+  const n = parseInt(raw, 10);
+  return Number.isInteger(n) && n > 0 ? n : undefined;
+}
+
+function formatMoney(cents: number, currency: string): string {
+  try {
+    return new Intl.NumberFormat("en-US", { style: "currency", currency: currency.toUpperCase() }).format(cents / 100);
+  } catch {
+    return `$${(cents / 100).toFixed(2)}`;
   }
-  return "monthly"; // legacy default for unknown/missing values
+}
+
+/** Human cadence phrase for a recurring DB interval (e.g. "monthly", "every 2 weeks"). */
+function cadencePhrase(interval: DbCheckoutPlan["interval"], count: number | null): string {
+  const n = count && count > 1 ? count : 1;
+  if (n === 1) {
+    if (interval === "day") return "daily";
+    if (interval === "week") return "weekly";
+    if (interval === "month") return "monthly";
+    if (interval === "year") return "annually";
+  }
+  return `every ${n} ${interval}${n > 1 ? "s" : ""}`;
+}
+
+/** Build the checkout display copy for an owner-created DB plan/interval. */
+function buildDbCopy(d: DbCheckoutPlan): PlanCopy {
+  const priceStr = formatMoney(d.amountCents, d.currency);
+  if (!d.recurring) {
+    return {
+      name: d.name,
+      heading: `Activate ${d.name}`,
+      price: priceStr,
+      period: "one-time",
+      payLabel: `Get lifetime access — ${priceStr}`,
+      renewal: "One-time payment — lifetime access. No renewals.",
+      chargeCadence: "monthly",
+      recurring: false,
+    };
+  }
+  const n = d.intervalCount && d.intervalCount > 1 ? `${d.intervalCount} ` : "";
+  const unit = d.interval ?? "month";
+  const period = `/ ${n}${unit}${d.intervalCount && d.intervalCount > 1 ? "s" : ""}`;
+  const phrase = cadencePhrase(d.interval, d.intervalCount);
+  return {
+    name: d.name,
+    heading: `Activate ${d.name}`,
+    price: priceStr,
+    period,
+    payLabel: `Subscribe — ${priceStr}`,
+    renewal: `Auto-renews ${phrase} at ${priceStr} until cancelled. Cancel anytime before renewal.`,
+    chargeCadence: d.interval === "year" ? "annually" : "monthly",
+    recurring: true,
+  };
+}
+
+/** Placeholder shown in the rail while the DB plan's display info loads. */
+const LOADING_COPY: PlanCopy = {
+  name: "Loading…",
+  heading: "Activate your plan",
+  price: "—",
+  period: "",
+  payLabel: "Continue to payment",
+  renewal: "",
+  chargeCadence: "monthly",
+  recurring: true,
+};
+
+/** Renewal/authorization legal line under the pay button — recurring vs one-time. */
+function buildLegalLine(copy: PlanCopy): string {
+  if (copy.recurring === false) {
+    return "Charged once today — lifetime access, no renewals. Secure processing by Stripe — card details never touch our servers.";
+  }
+  const cadence = copy.chargeCadence === "annually" ? "annually" : "monthly";
+  return `Charged today, then ${cadence} until you cancel. Secure processing by Stripe — card details never touch our servers.`;
 }
 
 // ─── Stripe Appearance API — Dime token mapping (design spec §B, verbatim) ────
@@ -234,8 +347,20 @@ type Phase = "active" | "processing" | "success" | "expired" | "error";
 
 export default function CheckoutPage() {
   const [, navigate] = useLocation();
-  const plan = parsePlan(typeof window !== "undefined" ? window.location.search : "");
-  const copy = PLAN_COPY[plan];
+  const search = typeof window !== "undefined" ? window.location.search : "";
+  const plan = parsePlanSlug(search);
+  const priceId = parsePriceId(search);
+  const legacyCopy = isLegacyPlan(plan) ? PLAN_COPY[plan] : null;
+
+  // Owner-created DB plans fetch their display copy (name / price / cadence) from
+  // the public endpoint; the five legacy plans keep their curated PLAN_COPY. The
+  // Stripe checkout flow below is identical either way — only the rail copy and
+  // the {planId, priceId} passed to the session mutation differ.
+  const dbPlanQuery = trpc.stripe.publicGetCheckoutPlan.useQuery(
+    { slug: plan, ...(priceId ? { priceId } : {}) },
+    { enabled: !legacyCopy, staleTime: 60_000, retry: false },
+  );
+  const copy: PlanCopy = legacyCopy ?? (dbPlanQuery.data ? buildDbCopy(dbPlanQuery.data) : LOADING_COPY);
 
   const [phase, setPhase] = useState<Phase>("active");
   const [peReady, setPeReady] = useState(false);
@@ -291,7 +416,7 @@ export default function CheckoutPage() {
       // Session created NOW; the un-awaited clientSecret promise goes straight
       // into initCheckoutElementsSdk (synchronous, not awaited) for the fastest mount.
       const clientSecretPromise = embedded
-        .mutateAsync({ planId: plan, origin: window.location.origin })
+        .mutateAsync({ planId: plan, ...(priceId ? { priceId } : {}), origin: window.location.origin })
         .then((session) => {
           sessionIdRef.current = session.sessionId;
           console.log(`[Checkout] [STEP] elements session created session_id=${session.sessionId}`);
@@ -354,7 +479,7 @@ export default function CheckoutPage() {
       console.error(`[Checkout] [VERIFY] FAIL — ${err instanceof Error ? err.message : err}`);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [plan]);
+  }, [plan, priceId]);
 
   useEffect(() => {
     if (startedRef.current) return;
@@ -466,7 +591,7 @@ export default function CheckoutPage() {
 
   const processing = phase === "processing";
   const canPay = phase === "active" && peReady && actionsReady;
-  const legalLine = `Charged today, then ${copy.chargeCadence === "annually" ? "annually" : "monthly"} until you cancel. Secure processing by Stripe — card details never touch our servers.`;
+  const legalLine = buildLegalLine(copy);
 
   const backLink = (
     <Link
@@ -503,11 +628,13 @@ export default function CheckoutPage() {
               <span className="lead" aria-hidden="true" />
               <b className="num">{copy.price} {copy.period}</b>
             </div>
-            <div className="rowline">
-              <span>Works out to</span>
-              <span className="lead" aria-hidden="true" />
-              <b className="num">{copy.perDay}</b>
-            </div>
+            {copy.perDay && (
+              <div className="rowline">
+                <span>Works out to</span>
+                <span className="lead" aria-hidden="true" />
+                <b className="num">{copy.perDay}</b>
+              </div>
+            )}
             {copy.modelAccess && (
               <div className="rowline rowline--detail">
                 <span>Model access</span>
@@ -522,11 +649,13 @@ export default function CheckoutPage() {
                 <b className="num">{copy.credits}</b>
               </div>
             )}
-            <div className="rowline rowline--detail">
-              <span>Cancellation</span>
-              <span className="lead" aria-hidden="true" />
-              <b>Anytime, 2 clicks</b>
-            </div>
+            {copy.recurring !== false && (
+              <div className="rowline rowline--detail">
+                <span>Cancellation</span>
+                <span className="lead" aria-hidden="true" />
+                <b>Anytime, 2 clicks</b>
+              </div>
+            )}
             {copy.features && (
               <ul className="checkout-features">
                 {copy.features.map((f) => (
@@ -541,7 +670,7 @@ export default function CheckoutPage() {
           <div className="cs-legal">
             <span className="fine">{copy.renewal}</span>
             <span className="fine">
-              By subscribing you agree to the <Link href="/terms" style={{ color: "var(--text-secondary)" }}>Terms</Link> and{" "}
+              By continuing you agree to the <Link href="/terms" style={{ color: "var(--text-secondary)" }}>Terms</Link> and{" "}
               <Link href="/privacy" style={{ color: "var(--text-secondary)" }}>Privacy Policy</Link>.
             </span>
             <span className="fine">

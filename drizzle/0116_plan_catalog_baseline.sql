@@ -1,0 +1,53 @@
+CREATE TABLE IF NOT EXISTS `plan_prices` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`planId` int NOT NULL,
+	`stripePriceId` varchar(64) NOT NULL,
+	`label` varchar(80),
+	`amountCents` int NOT NULL,
+	`currency` varchar(8) NOT NULL DEFAULT 'usd',
+	`billingInterval` enum('day','week','month','year'),
+	`intervalCount` int,
+	`trialPeriodDays` int,
+	`promoType` enum('percent','amount'),
+	`promoValue` int,
+	`promoCode` varchar(64),
+	`stripeCouponId` varchar(64),
+	`stripePromoCodeId` varchar(64),
+	`active` boolean NOT NULL DEFAULT true,
+	`isDefault` boolean NOT NULL DEFAULT false,
+	`hidden` boolean NOT NULL DEFAULT false,
+	`sortOrder` int NOT NULL DEFAULT 0,
+	`livemode` boolean NOT NULL DEFAULT true,
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	CONSTRAINT `plan_prices_id` PRIMARY KEY(`id`),
+	KEY `plan_prices_plan_id_idx` (`planId`),
+	KEY `plan_prices_stripe_price_id_idx` (`stripePriceId`)
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS `subscription_plans` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`slug` varchar(64) NOT NULL,
+	`name` varchar(120) NOT NULL,
+	`description` text,
+	`planType` enum('recurring','one_time','fixed_date') NOT NULL DEFAULT 'recurring',
+	`stripeProductId` varchar(64),
+	`active` boolean NOT NULL DEFAULT true,
+	`archivedAt` bigint,
+	`accessUntil` bigint,
+	`maxSubscribers` int,
+	`autoRestock` boolean NOT NULL DEFAULT false,
+	`availableQuantity` int,
+	`restockThreshold` int,
+	`restockAmount` int,
+	`discordRoleId` varchar(32),
+	`telegramChatId` varchar(64),
+	`livemode` boolean NOT NULL DEFAULT true,
+	`sortOrder` int NOT NULL DEFAULT 0,
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `subscription_plans_id` PRIMARY KEY(`id`),
+	CONSTRAINT `subscription_plans_slug_unique` UNIQUE(`slug`),
+	KEY `subscription_plans_slug_idx` (`slug`)
+);
+--> statement-breakpoint
+ALTER TABLE `app_users` MODIFY COLUMN `stripePlanId` varchar(64);

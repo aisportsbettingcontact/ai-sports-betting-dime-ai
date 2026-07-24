@@ -25,6 +25,8 @@ import {
   archivePlan,
   unarchivePlan,
   updatePlanMeta,
+  duplicatePlan,
+  deletePlan,
   isProvisioningTestMode,
   getProvisioningStripe,
 } from "../stripe/planProvisioning";
@@ -193,6 +195,22 @@ export const subscriptionPlansRouter = router({
       return { ok: true };
     }),
 
+  /** Duplicate a plan — new Stripe Product + Prices, a fresh independent copy. */
+  duplicate: ownerProcedure
+    .input(z.object({ planId: z.number().int().positive() }))
+    .mutation(async ({ input }) => {
+      const result = await duplicatePlan(input.planId);
+      return { ok: true, ...result };
+    }),
+
+  /** Permanently delete a plan — removes its rows and archives the Stripe Product. */
+  delete: ownerProcedure
+    .input(z.object({ planId: z.number().int().positive() }))
+    .mutation(async ({ input }) => {
+      await deletePlan(input.planId);
+      return { ok: true };
+    }),
+
   /** One-shot idempotent import of the 5 legacy static plans into the catalog. */
   backfill: ownerProcedure.mutation(async () => backfillStaticPlans()),
 
@@ -223,11 +241,14 @@ export const subscriptionPlansRouter = router({
       }
 
       const stripe = getProvisioningStripe(); // the TEST client (test key is set)
+      // A price with no cadence (one-time / "Lifetime") checks out as a single
+      // payment; a recurring price as a subscription.
+      const isRecurring = price.interval != null;
       const session = await stripe.checkout.sessions.create({
-        mode: "subscription",
+        mode: isRecurring ? "subscription" : "payment",
         line_items: [{ price: price.stripePriceId, quantity: 1 }],
-        metadata: { plan_id: plan.slug, dime_test: "1" },
-        subscription_data: { metadata: { plan_id: plan.slug } },
+        metadata: { plan_id: plan.slug, price_id: price.stripePriceId, dime_test: "1" },
+        ...(isRecurring ? { subscription_data: { metadata: { plan_id: plan.slug } } } : {}),
         success_url: `${input.origin}/admin/plans?test=success`,
         cancel_url: `${input.origin}/admin/plans?test=cancel`,
       });

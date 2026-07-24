@@ -5,6 +5,7 @@ import {
   defaultPriceForMode,
   computeNextQuantity,
   isSoldOut,
+  LIFETIME_ACCESS_UNTIL_MS,
   type StoredPlan,
   type StoredPrice,
 } from "./planStore";
@@ -33,36 +34,38 @@ const price = (over: Partial<StoredPrice> = {}): StoredPrice => ({
   ...over,
 });
 
-describe("computeExpiryMsForPrice — recurring (legacy-buffer parity)", () => {
-  it("month × 1 → +31 days (matches products.ts computeExpiryMs)", () => {
-    expect(computeExpiryMsForPrice(price({ interval: "month", intervalCount: 1 }), { planType: "recurring", accessUntil: null }, BASE)).toBe(BASE + 31 * DAY);
+describe("computeExpiryMsForPrice — recurring (exact durations, owner-specified 2026-07-24)", () => {
+  it("month × 1 → +30 days (exact, no calendar buffer)", () => {
+    expect(computeExpiryMsForPrice(price({ interval: "month", intervalCount: 1 }), { planType: "recurring", accessUntil: null }, BASE)).toBe(BASE + 30 * DAY);
   });
-  it("year × 1 → +366 days (leap buffer)", () => {
-    expect(computeExpiryMsForPrice(price({ interval: "year", intervalCount: 1 }), { planType: "recurring", accessUntil: null }, BASE)).toBe(BASE + 366 * DAY);
+  it("year × 1 → +365 days (exact, no leap buffer)", () => {
+    expect(computeExpiryMsForPrice(price({ interval: "year", intervalCount: 1 }), { planType: "recurring", accessUntil: null }, BASE)).toBe(BASE + 365 * DAY);
   });
-  it("day × 14 → +14 days", () => {
+  it("day × 14 → +14 days (1 day = exactly 24h)", () => {
     expect(computeExpiryMsForPrice(price({ interval: "day", intervalCount: 14 }), { planType: "recurring", accessUntil: null }, BASE)).toBe(BASE + 14 * DAY);
   });
-  it("week × 2 → +14 days", () => {
+  it("week × 2 → +14 days (1 week = exactly 7 days)", () => {
     expect(computeExpiryMsForPrice(price({ interval: "week", intervalCount: 2 }), { planType: "recurring", accessUntil: null }, BASE)).toBe(BASE + 14 * DAY);
   });
   it("null/zero intervalCount is treated as 1", () => {
-    expect(computeExpiryMsForPrice(price({ interval: "month", intervalCount: null }), { planType: "recurring", accessUntil: null }, BASE)).toBe(BASE + 31 * DAY);
-    expect(computeExpiryMsForPrice(price({ interval: "month", intervalCount: 0 }), { planType: "recurring", accessUntil: null }, BASE)).toBe(BASE + 31 * DAY);
+    expect(computeExpiryMsForPrice(price({ interval: "month", intervalCount: null }), { planType: "recurring", accessUntil: null }, BASE)).toBe(BASE + 30 * DAY);
+    expect(computeExpiryMsForPrice(price({ interval: "month", intervalCount: 0 }), { planType: "recurring", accessUntil: null }, BASE)).toBe(BASE + 30 * DAY);
   });
-  it("recurring with no interval → null (lifetime, defensive)", () => {
-    expect(computeExpiryMsForPrice(price({ interval: null }), { planType: "recurring", accessUntil: null }, BASE)).toBeNull();
+  it("recurring with no interval (Lifetime) → far-future lifetime access", () => {
+    expect(computeExpiryMsForPrice(price({ interval: null }), { planType: "recurring", accessUntil: null }, BASE)).toBe(LIFETIME_ACCESS_UNTIL_MS);
   });
 });
 
-describe("computeExpiryMsForPrice — fixed_date / one_time", () => {
+describe("computeExpiryMsForPrice — fixed_date / one_time / lifetime", () => {
   it("fixed_date → the plan's accessUntil, ignoring interval", () => {
     const until = BASE + 90 * DAY;
     expect(computeExpiryMsForPrice(price({ interval: "month", intervalCount: 1 }), { planType: "fixed_date", accessUntil: until }, BASE)).toBe(until);
   });
-  it("one_time with accessUntil → that timestamp; without → null (lifetime)", () => {
+  it("a no-interval (one-time / Lifetime) price → the plan's accessUntil, else far-future lifetime", () => {
+    // one_time plans persist a far-future accessUntil, so that timestamp wins.
     expect(computeExpiryMsForPrice(price({ interval: null }), { planType: "one_time", accessUntil: BASE + DAY }, BASE)).toBe(BASE + DAY);
-    expect(computeExpiryMsForPrice(price({ interval: null }), { planType: "one_time", accessUntil: null }, BASE)).toBeNull();
+    // A recurring plan's "Lifetime" interval carries no plan accessUntil → far-future.
+    expect(computeExpiryMsForPrice(price({ interval: null }), { planType: "one_time", accessUntil: null }, BASE)).toBe(LIFETIME_ACCESS_UNTIL_MS);
   });
 });
 
