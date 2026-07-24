@@ -30,6 +30,18 @@ regexes = [
   '''^password$''',                            # the literal docs placeholder mysql://user:password@host
   '''^pass$''',                                # same placeholder, short form mysql://user:pass@host
   '''^abc123def456$''',                        # dummy Discord invite code in discordInvite.test.ts
+
+  # Fixtures inside the vendored plugin marketplaces (.claude/plugins-vendored/,
+  # third-party skill docs that Claude Code reads; never imported by the app).
+  # Each entry is a FULLY ANCHORED literal, so it suppresses exactly one known
+  # string and cannot mask a real credential. Deliberately NOT a path allowlist:
+  # every gitleaks rule stays active across the whole vendored tree.
+  '''^kL9xQn2VwM8pYrTb4ZcHjF$''',   # synthetic Figma fileKey, figma-power docs
+  '''^pR8mNv5KqXzGwY2JtCfL4D$''',   # synthetic Figma fileKey, figma-power docs
+  '''^8yJDMeWDyBz71EnMOSuUiw$''',   # example Figma fileKey, code-connect docs
+  '''^collection/primitives$''',    # Figma variable-collection path (var named DSB_KEY)
+  '''^primitive/blue/500$''',       # Figma design-token path, token-creation docs
+  '''^dGhlIHNhbXBsZSBub25jZQ==$''', # RFC 6455 s4.2.2 published example ("the sample nonce")
 ]
 
 # NOTE deliberately absent:
