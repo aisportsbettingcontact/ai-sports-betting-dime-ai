@@ -597,3 +597,73 @@ TypeScript  tsc --noEmit exited 0
 Build       production build + preview gate exited 0
 Playwright  7 passed (22.4s)
 ```
+
+## Incident 17 — 2026-07-23 — React Doctor unavailable in the restricted environment
+
+Status: RESOLVED with repository-pinned verification
+
+The required React Doctor command could not reach the npm registry from the
+sandbox:
+
+```text
+getaddrinfo ENOTFOUND registry.npmjs.org
+```
+
+The request to rerun the unpinned third-party package with elevated network
+access was rejected, so React Doctor itself was not executed. The safer,
+repository-installed toolchain verified the probable-pitcher and lineup-dialog
+changes instead:
+
+```text
+TypeScript  tsc --noEmit exited 0
+Client      45 files / 571 tests passed
+Build       production build + preview gate exited 0
+Playwright  7 responsive browser cases passed
+```
+
+The full repository suite additionally reached 2,214 passing tests; its 64
+failures were confined to pre-existing integrations that require unavailable
+database, provider, CI-secret, or public-origin configuration. No changed
+client test failed. React Doctor remains an optional follow-up where its
+package is already reviewed, trusted, and pinned.
+
+## Incident 18 — 2026-07-23 — Pregame UI exposes existing scraper identity defects
+
+Status: RESOLVED
+
+The pre-publication review found that the existing RotoWire persistence path
+selected the first same-team database row and handed the watcher a map keyed
+only by matchup. Same-day doubleheaders could therefore overwrite one lineup
+row or send both cards to the same model event. The parser also represented
+missing pitcher metadata as real-looking `0-0 · 0.00 ERA` and right-handed
+values.
+
+A second review found two related ambiguity paths: the cycle used Pacific
+calendar dates for RotoWire's Eastern-time today/tomorrow pages, and
+time-fallback matching could silently break ties or accept implausibly distant
+rows.
+
+The scraper now:
+
+- queries the complete exact-date MLB slate using Eastern calendar scopes;
+- claims each database event at most once;
+- uses distinct chronological game-number alignment for complete slates;
+- accepts partial time matches only when uniquely supportable and within two
+  hours;
+- skips duplicate-time, equal-distance, far-distance, and multi-card TBD
+  ambiguity instead of guessing;
+- hands the watcher an exact scraped-object-to-game-ID map;
+- keeps different-day and doubleheader cards distinct; and
+- persists omitted ERA/W-L and throwing hand as null.
+
+Repository-pinned verification after the final tightening:
+
+```text
+TypeScript  tsc --noEmit exited 0
+Focused     6 files / 92 tests passed
+Scraper     14 tests passed
+Build       production client + preview gate + server build exited 0
+Diff        git diff --check exited 0
+```
+
+An independent re-review found no remaining matcher or date-scope blockers.

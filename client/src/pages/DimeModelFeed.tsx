@@ -31,6 +31,14 @@ import { useAnalytics, useTrackAction } from "@/lib/analytics";
 import { useTheme } from "@/contexts/ThemeContext";
 import { ProjectionCard } from "@/components/projections/ProjectionCard";
 import { presentationToProjectionGame } from "@/components/projections/fromPresentation";
+import {
+  mlbLineupToProjectionPregame,
+  type MlbLineupLike,
+} from "@/components/projections/fromMlbLineup";
+import type {
+  GameStatus,
+  ProjectionPregameLineups,
+} from "@/components/projections/types";
 import { sportAdapters } from "@/lib/sport/presentation";
 import { MLB_BY_ABBREV } from "@shared/mlbTeams";
 import { formatGameTime, timeToMinutes } from "@/lib/gameUtils";
@@ -71,6 +79,10 @@ interface TeamSpec {
 }
 interface FeedCardSpec {
   id: string;
+  /** Explicit status prevents postponed/suspended games from looking scheduled. */
+  status: GameStatus;
+  /** Numeric DB identity for batched source-specific reads. */
+  sourceGameId?: number;
   liveLabel?: string | null;
   timeLabel: string;
   away: TeamSpec;
@@ -78,6 +90,8 @@ interface FeedCardSpec {
   meta: string;
   /** Quiet secondary line under the mobile matchup header (venue / round). */
   venueLine?: string | null;
+  /** Scheduled MLB only; ignored by the sport-generic market adapter. */
+  pregameLineups?: ProjectionPregameLineups;
   markets: MarketColSpec[];
   verdict: {
     pick: string;
@@ -565,10 +579,17 @@ export default function DimeModelFeed(props: DimeModelFeedProps) {
                       section.key === "WC"
                         ? sportAdapters.SOCCER(g, { competition: "World Cup" })
                         : sportAdapters.MLB(g, { competition: "MLB" });
+                    const projectionGame = presentationToProjectionGame(model);
                     return (
                       <ProjectionCard
                         key={g.id}
-                        game={presentationToProjectionGame(model)}
+                        game={{
+                          ...projectionGame,
+                          pregameLineups:
+                            projectionGame.status === "scheduled"
+                              ? g.pregameLineups
+                              : undefined,
+                        }}
                         onOpen={() => trackAction("projection_opened", { props: { sport: section.key } })}
                       />
                     );
@@ -680,7 +701,10 @@ function verdictOf(best: BestPick | null): FeedCardSpec["verdict"] {
 // Exported for DimeModelFeed.doubleheader.test.ts — the card id is the render
 // key, so its per-EVENT uniqueness (doubleheader safety) is pinned by tests.
 
-export function mlbRowToCard(g: MlbRow): FeedCardSpec {
+export function mlbRowToCard(
+  g: MlbRow,
+  lineup?: MlbLineupLike | null,
+): FeedCardSpec {
   const awayAbbr = (g.awayTeam ?? "").toUpperCase();
   const homeAbbr = (g.homeTeam ?? "").toUpperCase();
   const awayReg = MLB_BY_ABBREV.get(awayAbbr);
@@ -688,8 +712,16 @@ export function mlbRowToCard(g: MlbRow): FeedCardSpec {
   const awayCrest: CrestSpec = { url: awayReg?.logoUrl, code: awayAbbr.slice(0, 3), bg: awayReg?.primaryColor };
   const homeCrest: CrestSpec = { url: homeReg?.logoUrl, code: homeAbbr.slice(0, 3), bg: homeReg?.primaryColor };
 
-  const isLive = g.gameStatus === "live";
-  const isFinal = g.gameStatus === "final";
+  const status: GameStatus =
+    g.gameStatus === "live"
+      ? "live"
+      : g.gameStatus === "final"
+        ? "final"
+        : g.gameStatus === "postponed" || g.gameStatus === "suspended"
+          ? "postponed"
+          : "scheduled";
+  const isLive = status === "live";
+  const isFinal = status === "final";
   // Model freshness gate — modelRunAt null ⇒ model invalidated (GameCard rule).
   const hasModel = g.modelRunAt != null;
   const M = <T,>(v: T | null): T | null => (hasModel ? v : null);
@@ -747,10 +779,22 @@ export function mlbRowToCard(g: MlbRow): FeedCardSpec {
   let best: BestPick | null = null;
   for (const col of [rl, total, ml]) best = trackBest(best, col);
 
-  // Ballpark only — pitcher names are off the gamecards (owner directive
-  // 2026-07-17). venueLine matches, so the presentation layer dedupes it and
-  // the card renders the ballpark exactly once.
+  // Ballpark only in the matchup context. Scheduled probable pitchers now own a
+  // dedicated middle panel, so they still never pollute or duplicate this line.
   const meta = g.venue || "MLB";
+
+  const pregameLineups =
+    status === "scheduled"
+      ? mlbLineupToProjectionPregame({
+          ...lineup,
+          awayPitcherName: lineup?.awayPitcherName ?? g.awayStartingPitcher,
+          awayPitcherConfirmed:
+            lineup?.awayPitcherConfirmed ?? g.awayPitcherConfirmed,
+          homePitcherName: lineup?.homePitcherName ?? g.homeStartingPitcher,
+          homePitcherConfirmed:
+            lineup?.homePitcherConfirmed ?? g.homePitcherConfirmed,
+        })
+      : undefined;
 
   return {
     // Stable event identity = DB primary key. The fallback must stay unique per
@@ -762,12 +806,20 @@ export function mlbRowToCard(g: MlbRow): FeedCardSpec {
       g.id ??
       `${awayAbbr}-${homeAbbr}-${g.gameDate ?? ""}-${g.startTimeEst ?? ""}-${(g as { gameNumber?: number | null }).gameNumber ?? 1}`
     ),
+    status,
+    sourceGameId: Number.isInteger(g.id) ? g.id : undefined,
     liveLabel: isLive ? `LIVE${g.gameClock ? ` · ${g.gameClock}` : ""}` : null,
-    timeLabel: isFinal ? "FINAL" : formatGameTime(g.startTimeEst),
+    timeLabel:
+      status === "postponed"
+        ? "POSTPONED"
+        : isFinal
+          ? "FINAL"
+          : formatGameTime(g.startTimeEst),
     away: { name: awayReg?.nickname ?? awayAbbr, crest: awayCrest, score: isLive || isFinal ? (g.awayScore != null ? String(g.awayScore) : null) : null },
     home: { name: homeReg?.nickname ?? homeAbbr, crest: homeCrest, score: isLive || isFinal ? (g.homeScore != null ? String(g.homeScore) : null) : null },
     meta,
     venueLine: g.venue || null,
+    pregameLineups,
     markets: [rl, total, ml],
     verdict: verdictOf(best),
   };
@@ -1028,6 +1080,7 @@ function wcMatchToCard(m: WcMatch, isoDate: string): FeedCardSpec {
 
   return {
     id: m.matchId,
+    status: liveLabel ? "live" : isFinal ? "final" : "scheduled",
     liveLabel,
     timeLabel: isFinal ? (status === "FT_PEN" ? "FINAL (PENS)" : "FINAL") : fmtKickoffEt(m.kickoffUtc),
     away: {
@@ -1109,6 +1162,30 @@ function useFeedCards(
       placeholderData: keepPreviousData,
     },
   );
+  const scheduledMlbGameIds = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          ((mlbQuery.data ?? []) as MlbRow[])
+            .filter((game) => game.gameStatus === "upcoming")
+            .map((game) => game.id)
+            .filter((gameId): gameId is number => Number.isInteger(gameId) && gameId > 0),
+        ),
+      )
+        .sort((a, b) => a - b)
+        .slice(0, 50),
+    [mlbQuery.data],
+  );
+  const mlbLineupsQuery = trpc.games.mlbLineups.useQuery(
+    { gameIds: scheduledMlbGameIds },
+    {
+      enabled: !!isoDate && scheduledMlbGameIds.length > 0,
+      refetchOnWindowFocus: false,
+      refetchInterval: 60 * 1000,
+      staleTime: 60 * 1000,
+      retry: false,
+    },
+  );
 
   const sections = useMemo<FeedSection[]>(() => {
     // Slate order per league: earliest → latest first pitch (owner directive
@@ -1119,12 +1196,13 @@ function useFeedCards(
     const wcCards = ((wcQuery.data ?? []) as WcMatch[])
       .map((m) => wcMatchToCard(m, isoDate))
       .sort((a, b) => slateStatusRank(a) - slateStatusRank(b));
+    const lineupByGameId = (mlbLineupsQuery.data ?? {}) as Record<number, MlbLineupLike>;
     const mlbCards = [...((mlbQuery.data ?? []) as MlbRow[])]
       .sort((a, b) => timeToMinutes(a.startTimeEst) - timeToMinutes(b.startTimeEst))
-      .map(mlbRowToCard)
+      .map((game) => mlbRowToCard(game, lineupByGameId[game.id]))
       .sort((a, b) => slateStatusRank(a) - slateStatusRank(b));
     return buildFeedSections(wcCards, mlbCards);
-  }, [wcQuery.data, mlbQuery.data, isoDate]);
+  }, [wcQuery.data, mlbQuery.data, mlbLineupsQuery.data, isoDate]);
 
   const isLoading = wcQuery.isLoading || mlbQuery.isLoading;
   // Stale = paging dates while placeholderData keeps the previous slate
@@ -1433,8 +1511,9 @@ const DMF_CSS = `
       — owner amendment 2026-07-23 to "start-aligned", annotated in
       design-system/dime-ai/pages/ai-model-projections.md) stretches row-mates
       to equal height; ProjectionCard.css's matching @media(min-width:1024px)
-      block turns the surplus height into a centered summary + a
-      bottom-pinned "VIEW FULL AI MODEL PROJECTIONS" popover trigger per card.
+      block turns surplus scheduled-card height into a centered summary + a
+      bottom-pinned "VIEW FULL AI MODEL PROJECTIONS" popover trigger. Compact
+      live/final/postponed cards opt out with align-self:start.
    4) Round 4 Wave 3, item 6 (owner amendment 2026-07-23, annotated on the
       "Date nav" line in design-system/dime-ai/pages/ai-model-projections.md):
       the date nav becomes ONE centered header stack directly beneath the
