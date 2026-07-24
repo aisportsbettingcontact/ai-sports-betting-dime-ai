@@ -61,8 +61,18 @@ export function fmtDayTick(iso: string): string {
   return `${MONTHS[Number(m[2]) - 1] ?? ""} ${Number(m[3])}`;
 }
 
-/** Recharts CartesianAxis tick styling — mono micro-label, hairline axis. */
-export const AXIS_TICK = { fontSize: 10, fill: AXIS_COLOR } as const;
+/** Recharts CartesianAxis tick styling — readable 12px, hairline axis. */
+export const AXIS_TICK = { fontSize: 12, fill: AXIS_COLOR } as const;
+
+/** Shared recharts data-label font size (LabelList) — legible, not cramped. */
+export const LABEL_FONT = 12;
+
+/**
+ * Chart heights (px) as a shared scale so every card reads at the same rhythm.
+ * hero = the page's lead chart; primary = a tab's main chart; compact = a
+ * secondary/supporting chart. Kept generous so nothing feels clamped.
+ */
+export const CHART_H = { hero: 340, primary: 300, compact: 260 } as const;
 
 /**
  * Respects `prefers-reduced-motion`. Local (not the chat hook) so the lazy

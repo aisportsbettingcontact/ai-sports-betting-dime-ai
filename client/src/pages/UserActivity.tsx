@@ -21,6 +21,7 @@ import { useAppAuth } from "@/_core/hooks/useAppAuth";
 import { AdminShell } from "@/pages/admin/AdminShell";
 import { MetricsPanel } from "@/pages/admin/MetricsPanel";
 import OverviewHeaderPanel from "@/pages/admin/OverviewHeaderPanel";
+import IdealCustomerPanel from "@/pages/admin/IdealCustomerPanel";
 import ActivityTrendPanel from "@/pages/admin/ActivityTrendPanel";
 import DeviceActivityPanel from "@/pages/admin/DeviceActivityPanel";
 import SegmentsPanel from "@/pages/admin/SegmentsPanel";
@@ -71,26 +72,29 @@ export default function UserActivity() {
   return (
     <AdminShell active="activity">
       <div className="w-full bg-muted/30 text-foreground flex flex-col">
-        <div className="flex-1 w-full px-3 sm:px-5 lg:px-8 py-4">
+        <div className="flex-1 w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10 py-6 sm:py-8">
           {/* Page header */}
-          <div className="mb-4">
-            <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">User Activity</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Customer profiling — segments, power users, feature strength, journeys, and retention.
+          <div className="mb-6">
+            <h1 className="text-3xl font-bold tracking-tight sm:text-4xl" style={{ letterSpacing: "-0.02em" }}>
+              User Activity
+            </h1>
+            <p className="mt-2 text-sm sm:text-base text-muted-foreground max-w-2xl leading-relaxed">
+              Customer profiling infrastructure — who's active, who your power users are, which
+              features earn their time, where they fall off, and whether they come back.
             </p>
           </div>
 
           {/* Tab bar — mono labels, one-accent mint active state, 160ms motion. */}
-          <div className="flex flex-wrap gap-0.5 border-b border-border mb-5 overflow-x-auto">
+          <div className="flex flex-wrap gap-1 border-b border-border mb-6 sm:mb-8 overflow-x-auto">
             {TABS.map((t) => (
               <button
                 key={t.key}
                 onClick={() => setTab(t.key)}
                 aria-current={tab === t.key ? "page" : undefined}
-                className={`font-mono text-[11px] sm:text-xs whitespace-nowrap px-3 py-2 -mb-px border-b-2 transition-colors duration-150 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary ${
+                className={`font-mono text-xs sm:text-sm whitespace-nowrap px-3.5 sm:px-4 py-2.5 -mb-px border-b-2 transition-colors duration-150 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary rounded-t ${
                   tab === t.key
                     ? "text-primary border-primary"
-                    : "text-muted-foreground border-transparent hover:text-foreground"
+                    : "text-muted-foreground border-transparent hover:text-foreground hover:bg-muted/40"
                 }`}
               >
                 {t.label}
@@ -102,6 +106,7 @@ export default function UserActivity() {
           {tab === "overview" && (
             <>
               <OverviewHeaderPanel />
+              <IdealCustomerPanel />
               <ActivityTrendPanel />
               <DeviceActivityPanel />
               <MetricsPanel />

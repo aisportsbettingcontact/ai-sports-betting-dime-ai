@@ -35,7 +35,7 @@ function Sparkline({ data }: { data: number[] }) {
   const last = pts[pts.length - 1];
   const area = `${line} L${last[0].toFixed(1)},${h - pad} L${first[0].toFixed(1)},${h - pad} Z`;
   return (
-    <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="mt-2 h-6 w-full" aria-hidden="true">
+    <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="mt-2 h-8 w-full" aria-hidden="true">
       <path d={area} fill={mintAlpha(0.12)} />
       <path d={line} fill="none" stroke={MINT} strokeWidth={1.5} vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" />
     </svg>
@@ -86,18 +86,18 @@ export default function StatTile({
 
   return (
     <div
-      className={`bg-card border rounded-lg px-3 sm:px-4 py-3 min-w-0 overflow-hidden transition-colors duration-150 ${
+      className={`bg-card border rounded-xl px-4 sm:px-6 py-4 sm:py-5 min-w-0 overflow-hidden transition-colors duration-150 ${
         highlight ? "border-primary" : "border-border"
       }`}
     >
       {/* micro-label — mono, uppercase, wide tracking (apple: positive tracking at small sizes) */}
-      <div className="text-[10px] font-mono uppercase tracking-[0.12em] text-muted-foreground leading-none">
+      <div className="text-[11px] font-mono uppercase tracking-[0.12em] text-muted-foreground leading-none">
         {label}
       </div>
 
       {/* value — Familjen Grotesk 700, tabular, tight tracking as it grows */}
       <div
-        className={`mt-1.5 text-2xl sm:text-3xl font-bold tabular-nums truncate leading-none ${
+        className={`mt-2 text-3xl sm:text-4xl font-bold tabular-nums truncate leading-none ${
           highlight ? "text-primary" : "text-foreground"
         }`}
         style={{ letterSpacing: "-0.02em" }}
@@ -105,9 +105,9 @@ export default function StatTile({
         {renderValue()}
       </div>
 
-      <div className="mt-1.5 flex items-center gap-2 min-w-0">
+      <div className="mt-2 flex items-center gap-2 min-w-0">
         {sublabel && (
-          <div className="text-[11px] text-muted-foreground leading-tight truncate min-w-0">{sublabel}</div>
+          <div className="text-xs sm:text-sm text-muted-foreground leading-relaxed truncate min-w-0">{sublabel}</div>
         )}
         {delta && (
           <span className={`ml-auto shrink-0 text-[11px] font-mono tabular-nums ${deltaClass}`}>

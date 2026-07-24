@@ -56,7 +56,7 @@ export default function OverviewHeaderPanel() {
   return (
     <div className="mb-6 space-y-3">
       <SectionHeader title="Platform pulse" meta="last 24h · 7d · 30d" loading={isLoading} />
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
         <StatTile
           label="Daily active"
           sublabel="≥1 value event · 24h"
