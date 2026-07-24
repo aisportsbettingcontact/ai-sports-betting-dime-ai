@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { AlertCircle, Home } from "lucide-react";
@@ -6,18 +7,22 @@ import { useLocation } from "wouter";
 export default function NotFound() {
   const [, setLocation] = useLocation();
 
+  useEffect(() => {
+    document.title = "Page not found — dıme";
+  }, []);
+
   const handleGoHome = () => {
     setLocation("/");
   };
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-black">
-      <Card className="w-full max-w-lg mx-4 shadow-lg border-0 bg-black backdrop-blur-sm">
+      <Card className="w-full max-w-lg mx-4 shadow-lg border-0 bg-black">
         <CardContent className="pt-8 pb-8 text-center">
           <div className="flex justify-center mb-6">
             <div className="relative">
-              <div className="absolute inset-0 bg-white rounded-full animate-pulse" />
-              <AlertCircle className="relative h-16 w-16 text-white" />
+              <div className="absolute inset-0 rounded-full animate-pulse" style={{ background: "var(--brand-mint-surface)" }} />
+              <AlertCircle className="relative h-16 w-16" style={{ color: "var(--primary)" }} aria-hidden="true" />
             </div>
           </div>
 
@@ -37,7 +42,7 @@ export default function NotFound() {
           >
             <Button
               onClick={handleGoHome}
-              className="bg-[#45E0A8] text-black px-6 py-2.5 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg"
+              className="bg-[#45E0A8] text-black px-6 py-2.5 rounded-lg hover:opacity-85 transition-opacity"
             >
               <Home className="w-4 h-4 mr-2" />
               Go home

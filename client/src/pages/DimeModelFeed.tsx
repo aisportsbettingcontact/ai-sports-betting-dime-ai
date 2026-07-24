@@ -392,7 +392,7 @@ export default function DimeModelFeed(props: DimeModelFeedProps) {
   // ADAPTER WIRING (exact bindings from GameCard / WcFeedInline) is attached
   // below in useFeedCards — see mlbRowToCard / wcMatchToCard. The feed is
   // combined (owner directive 2026-07-18): both leagues load for the date.
-  const { sections, isLoading, isStale, gamesCount } = useFeedCards(isoDate);
+  const { sections, isLoading, isStale, gamesCount, isError, retry } = useFeedCards(isoDate);
 
   // Value event (D1): fires once per (date, gamesCount) the moment a complete,
   // trustworthy projection set renders — loaded, fresh (not stale), non-empty.
@@ -513,6 +513,14 @@ export default function DimeModelFeed(props: DimeModelFeedProps) {
               <SkeletonRow />
               <SkeletonRow />
             </>
+          ) : gamesCount === 0 && isError ? (
+            <div className="dmf-empty" role="alert">
+              <span className="dmf-micro">Projections unavailable</span>
+              <p>The slate could not be loaded. Check your connection and try again.</p>
+              <button type="button" className="dmf-retry" onClick={retry}>
+                Retry
+              </button>
+            </div>
           ) : gamesCount === 0 ? (
             <div className="dmf-empty">
               <span className="dmf-micro">No games for this date</span>
@@ -1139,7 +1147,7 @@ export function buildFeedSections(
 
 function useFeedCards(
   isoDate: string,
-): { sections: FeedSection[]; isLoading: boolean; isStale: boolean; gamesCount: number } {
+): { sections: FeedSection[]; isLoading: boolean; isStale: boolean; gamesCount: number; isError: boolean; retry: () => void } {
   // Both leagues load together — the combined feed has no sport toggle
   // (owner directive 2026-07-18), so neither query is gated on a tab.
   const mlbQuery = trpc.games.list.useQuery(
@@ -1212,7 +1220,15 @@ function useFeedCards(
     (wcQuery.isPlaceholderData && wcQuery.isFetching) ||
     (mlbQuery.isPlaceholderData && mlbQuery.isFetching);
   const gamesCount = sections.reduce((n, s) => n + s.cards.length, 0);
-  return { sections, isLoading, isStale, gamesCount };
+  // Outage surface (audit D-FEED-ERROR / page law "query errors must be
+  // surfaced"): with no data to show and every league query failed, the feed
+  // must say so instead of claiming an empty slate.
+  const isError = mlbQuery.isError && wcQuery.isError;
+  const retry = () => {
+    void mlbQuery.refetch();
+    void wcQuery.refetch();
+  };
+  return { sections, isLoading, isStale, gamesCount, isError, retry };
 }
 
 // ─── Scoped stylesheet — MASTER.md tokens verbatim, v4 reference layout ──────
@@ -1377,6 +1393,8 @@ const DMF_CSS = `
 .dmf-grade{display:inline-grid;place-items:center;min-width:32px;height:26px;padding:0 8px;border-radius:8px;font-size:15px;font-weight:700;background:var(--dmf-card-hi);box-shadow:inset 0 0 0 1px var(--dmf-border-hi);color:var(--dmf-t1)}
 
 .dmf-empty,.dmf-invalid{padding:60px 0;text-align:center;color:var(--dmf-t3)}
+.dmf-retry{margin-top:16px;min-height:44px;padding:0 22px;border-radius:22px;border:1px solid var(--dmf-border);background:transparent;color:var(--dmf-t1);font:600 13px var(--dmf-sans);cursor:pointer;transition:border-color 160ms var(--dmf-ease)}
+.dmf-retry:hover{border-color:var(--dmf-border-hover)}
 .dmf-empty p,.dmf-invalid p{margin-top:8px;font-size:14px}
 .dmf-skel{background:color-mix(in srgb, var(--dmf-t1) 8%, transparent);border-radius:6px}
 
