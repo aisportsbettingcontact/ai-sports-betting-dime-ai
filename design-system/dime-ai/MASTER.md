@@ -60,6 +60,14 @@ button in a cancel-confirm dialog. Never for emphasis, badges, or general error 
 those stay grey per the negative-state rule above. Mint remains the sole accent; this is a
 single, scoped carve-out, not a second accent color.
 
+**Discord platform exception:** `--discord-blurple: #5865F2` + `--font-discord`
+(GG Sans) — owner directive 2026-07-24. Applies to exactly two controls that *represent
+Discord itself*: the "Continue with Discord" login button and the "Connect Discord" row in
+chat settings. Platform attribution, like team/country crest colors — not a second Dime
+accent. White on `#5865F2` measures 4.61:1 (AA small text); the pre-2021 `#7289DA` and the
+legacy `#738ADB` fail AA and are banned. Full rules, token table, and accepted risks:
+`dime-ai/THREE-COLOR-LAW.md` §"Discord platform exception".
+
 ### Typography
 
 > **SUPERSEDED (2026-07-24 audit note):** the single-font mandate in

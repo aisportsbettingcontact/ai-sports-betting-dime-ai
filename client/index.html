@@ -27,7 +27,47 @@
     />
     <!-- Single-font mandate: Familjen Grotesk is the only typeface. The legacy
          Inter + JetBrains/IBM Plex Mono loads are retired (all surfaces now
-         resolve to Familjen Grotesk via --font-sans/--font-mono). -->
+         resolve to Familjen Grotesk via --font-sans/--font-mono).
+
+         ONE SCOPED EXCEPTION (owner-approved 2026-07-24):
+         Discord's "GG Sans" is loaded for Discord-affiliated controls only —
+         the "Continue with Discord" login button and the "Connect Discord"
+         row in chat settings. Everything else stays Familjen Grotesk. Rules:
+         dime-ai/THREE-COLOR-LAW.md §"Discord platform exception".
+         font-display: swap means a slow or unreachable CDN degrades to the
+         brand face rather than blocking text. The host is allowlisted in the
+         CSP fontSrc directive (server/_core/index.ts). -->
+    <link rel="preconnect" href="https://d2xsxph8kpxj0f.cloudfront.net" crossorigin />
+    <style>
+      @font-face {
+        font-family: 'GG Sans';
+        src: url('https://d2xsxph8kpxj0f.cloudfront.net/310519663397752079/MW3FicTy7ae3qrm8dx8Lua/ggsans-normal-400_4f9ee2e1.woff2') format('woff2');
+        font-weight: 400;
+        font-style: normal;
+        font-display: swap;
+      }
+      @font-face {
+        font-family: 'GG Sans';
+        src: url('https://d2xsxph8kpxj0f.cloudfront.net/310519663397752079/MW3FicTy7ae3qrm8dx8Lua/ggsans-normal-500_32c749e5.woff2') format('woff2');
+        font-weight: 500;
+        font-style: normal;
+        font-display: swap;
+      }
+      @font-face {
+        font-family: 'GG Sans';
+        src: url('https://d2xsxph8kpxj0f.cloudfront.net/310519663397752079/MW3FicTy7ae3qrm8dx8Lua/ggsans-normal-600_328a863d.woff2') format('woff2');
+        font-weight: 600;
+        font-style: normal;
+        font-display: swap;
+      }
+      @font-face {
+        font-family: 'GG Sans';
+        src: url('https://d2xsxph8kpxj0f.cloudfront.net/310519663397752079/MW3FicTy7ae3qrm8dx8Lua/ggsans-normal-700_0f62247a.woff2') format('woff2');
+        font-weight: 700;
+        font-style: normal;
+        font-display: swap;
+      }
+    </style>
   </head>
   <body>
     <!-- ═══════════════════════════════════════════════════════════════════
