@@ -175,12 +175,14 @@ function isLegacyPlan(slug: string): slug is PlanId {
 
 /**
  * The plan slug from ?plan= — a legacy id OR an owner-created DB plan slug. Only
- * safe slug characters are accepted; anything else falls back to the legacy
- * "monthly" default (so a garbage query never reaches the server).
+ * safe slug characters are accepted; anything else falls back to "pro" — the
+ * plan the whole site sells at $99 (audit D-CHECKOUT-99: the old "monthly"
+ * fallback quoted the retired $99.99 plan to anyone who reached /checkout
+ * without a query param). Links that explicitly name "monthly" still get it.
  */
 function parsePlanSlug(search: string): string {
   const plan = new URLSearchParams(search).get("plan")?.trim();
-  return plan && /^[a-z0-9-]{1,64}$/i.test(plan) ? plan : "monthly";
+  return plan && /^[a-z0-9-]{1,64}$/i.test(plan) ? plan : "pro";
 }
 
 /** The optional ?price= — a plan_prices row id selecting one interval of a DB plan. */
@@ -482,6 +484,10 @@ export default function CheckoutPage() {
   }, [plan, priceId]);
 
   useEffect(() => {
+    document.title = "Checkout — dıme";
+  }, []);
+
+  useEffect(() => {
     if (startedRef.current) return;
     startedRef.current = true;
     void start();
@@ -685,6 +691,7 @@ export default function CheckoutPage() {
         <div className="checkout-right">
           {phase === "error" ? (
             <div className="checkout-status" role="alert">
+              <h1 className="checkout-heading">Checkout unavailable</h1>
               <span>Checkout couldn't start: {errorMsg}</span>
               <button
                 type="button"
