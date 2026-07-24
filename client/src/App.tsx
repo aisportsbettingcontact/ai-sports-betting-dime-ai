@@ -30,6 +30,7 @@ const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
 const UserManagement = lazy(() => import("./pages/UserManagement"));
 const PublishProjections = lazy(() => import("./pages/PublishProjections"));
 const UserActivity = lazy(() => import("./pages/UserActivity"));
+const SubscriptionPlans = lazy(() => import("./pages/admin/SubscriptionPlans"));
 const IngestAnOdds = lazy(() => import("./pages/IngestAnOdds"));
 const TheModelResults = lazy(() => import("./pages/TheModelResults"));
 const SecurityEvents = lazy(() => import("./pages/SecurityEvents"));
@@ -361,6 +362,15 @@ function Router() {
             <RequireAuth>
               <RequireOwner>
                 <UserActivity />
+              </RequireOwner>
+            </RequireAuth>
+          )}
+        </Route>
+        <Route path="/admin/plans">
+          {() => (
+            <RequireAuth>
+              <RequireOwner>
+                <SubscriptionPlans />
               </RequireOwner>
             </RequireAuth>
           )}
