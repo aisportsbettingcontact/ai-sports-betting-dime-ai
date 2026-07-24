@@ -16,16 +16,42 @@ AI Sports Betting platform (React + tRPC + Drizzle/MySQL + Express) undergoing a
 | Design taste (leonxlnx, pinned b177427) | `.claude/skills/` (13 skills, leonxlnx/taste-skill, MIT) + plugin `taste-skill@taste-skill` | Anti-slop frontend: taste-skill (v2 default, brief-inference + VARIANCE/MOTION/DENSITY dials), taste-skill-v1, redesign-skill (audit-first upgrades), soft-skill (expensive/agency look), minimalist-skill (Notion/Linear editorial), brutalist-skill (Swiss/terminal), gpt-tasteskill (GSAP motion), output-skill (anti-truncation), stitch-skill (Google Stitch DESIGN.md), image-to-code-skill, imagegen-frontend-web/-mobile, brandkit (image-gen only). Plugin tracks upstream alongside the vendored copies |
 | Code review | `.claude/skills/code-review-excellence/` | wshobson/agents (pinned d7cf7dc) — review methodology: severity triage, security/perf/maintainability checklists, feedback phrasing |
 | Product management (phuryn) | `.claude/skills/` (68 skills, phuryn/pm-skills) | Strategy (canvases, five-forces, pricing), discovery (assumptions, experiments, interviews, OST), execution (PRD, OKRs, sprints, retros), GTM (ICP, battlecards, growth loops), market research, analytics (SQL, A/B, cohorts), toolkit (NDA, privacy policy). Overlaps deanpeters plugins — prefer `/pm-*` commands for the deanpeters chain |
-| Upload bundles | `.claude/skill-zips/` | 17 claude.ai-ready skill zips (one skill per zip; `phuryn-pm-skills-all.zip` = 68 inner zips) for Settings → Skills → Add |
+| Upload bundles | `.claude/skill-zips/` | 31 claude.ai-ready zips — 30 one-skill zips plus `phuryn-pm-skills-all.zip` (68 inner zips) for Settings → Skills → Add |
 | Payments | `.agents/skills/stripe-best-practices/` | Stripe official — API selection, billing, webhooks, key security |
 | Engineering process | plugin `superpowers@claude-plugins-official` | 14 skills: brainstorming, writing/executing-plans, TDD, systematic-debugging, verification-before-completion, code review (both directions), subagent/parallel dispatch, worktrees, branch finishing, writing-skills |
 | MCP development | plugin `mcp-server-dev@claude-plugins-official` | Designing and building MCP servers that work well with Claude: deployment models (remote HTTP, MCPB, local), tool design patterns, auth, interactive MCP apps |
 | Product management | plugins `*@pm-skills` (55 skills) | Full deanpeters/Product-Manager-Skills catalog: discovery, JTBD, user stories/splitting/mapping, PRD, prioritization, roadmap, positioning, personas, journey maps, OST, POL probes, stakeholders, SaaS finance/growth metrics, TAM/SAM/SOM, workshops, exec-track advisors |
 | Advertising | `.agents/skills/` (12, realkimbarrett/advertising-skills) | Direct response: avatar/offer extraction, Schwartz awareness mapping, headline-matrix, mechanism-builder, objection-crusher, ad-angle-multiplier (creative testing), scroll-stopping-creative, conversion-path-builder, performance-diagnosis, generic-language-killer, full-funnel-campaign-orchestrator |
+| Architecture | `.agents/skills/` (2) | architect-backend-systems (system boundaries, APIs, data/identity/queues, reliability, migrations, threat models), architect-github-repos (repo-wide structure audits, dead/duplicated file classification, structural cleanup). Both carry `agents/` + `references/` subdirs; skip for isolated bug fixes and pure UI work |
+| Repo-specific verification | `.claude/skills/` (2) | livelab (drive/verify this app in live browser sessions via `livelab_*` MCP tools — console/network errors, responsive layouts, smoke checks), intended-vs-implemented (audit the gap between documented intent and actual code) |
+| Design handoff | plugin `figma@knowledge-work-plugins` | figma/mcp-server-guide (pinned 07316dd) — read design files, components, and tokens; translate Figma designs into code |
+| Deployment | plugin `railway@railway-skills` | railwayapp/railway-skills — `use-railway` skill + hosted MCP server for services, environments, deployments, logs, and troubleshooting. Pair with `references/railway-deploy.md` (deploy law below) |
 
-Plugin config lives in `.claude/settings.json` (`extraKnownMarketplaces` + `enabledPlugins`) —
-everything auto-installs on session start in any environment. `skills-lock.json` pins the
-npx-installed sources. `.agents/skills/` is the universal directory (17 agent platforms).
+Plugin config lives in `.claude/settings.json` (`extraKnownMarketplaces` + `enabledPlugins`, 61
+plugins across 6 marketplaces). `skills-lock.json` pins the npx-installed sources.
+`.agents/skills/` is the universal directory (17 agent platforms).
+
+**Plugin bootstrap is not guaranteed (IMPORTANT).** `settings.json` declares the plugins; it does
+not install them. Remote/cloud sessions have started with an empty
+`~/.claude/plugins/installed_plugins.json` and only the `claude-plugins-official` marketplace
+cloned — every plugin skill silently missing, with no error. The vendored `.claude/skills/` and
+`.agents/skills/` trees always load, so the loss is easy to miss: superpowers, mcp-server-dev, the
+55 `*@pm-skills`, figma, and railway just aren't there (the `/sp-*` and `/pm-*` commands still
+work — they are local files in `.claude/commands/`).
+
+Check before relying on a plugin skill, and repair if the count is short:
+
+```bash
+claude plugin list | grep -c @        # expect 61
+for r in anthropics/claude-plugins-official deanpeters/Product-Manager-Skills \
+         anthropics/knowledge-work-plugins nextlevelbuilder/ui-ux-pro-max-skill \
+         leonxlnx/taste-skill railwayapp/railway-skills; do claude plugin marketplace add "$r"; done
+python3 -c "import json;print('\n'.join(json.load(open('.claude/settings.json'))['enabledPlugins']))" \
+  | xargs -I{} claude plugin install {} --scope project
+```
+
+`--scope project` is idempotent against the already-declared `enabledPlugins`, so this leaves
+`.claude/settings.json` unchanged. Newly installed plugins load on the **next** session.
 
 ## Custom commands (`.claude/commands/`)
 
