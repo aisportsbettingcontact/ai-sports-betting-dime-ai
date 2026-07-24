@@ -71,8 +71,8 @@
     },
     "pm-skills": {
       "source": {
-        "source": "github",
-        "repo": "deanpeters/Product-Manager-Skills"
+        "source": "directory",
+        "path": "./.claude/plugins-vendored/pm-skills"
       }
     },
     "knowledge-work-plugins": {
@@ -83,8 +83,8 @@
     },
     "ui-ux-pro-max-skill": {
       "source": {
-        "source": "github",
-        "repo": "nextlevelbuilder/ui-ux-pro-max-skill"
+        "source": "directory",
+        "path": "./.claude/plugins-vendored/ui-ux-pro-max-skill"
       }
     },
     "taste-skill": {
