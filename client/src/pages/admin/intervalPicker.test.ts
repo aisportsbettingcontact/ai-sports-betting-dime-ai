@@ -42,6 +42,10 @@ describe("INTERVAL_OPTIONS", () => {
     expect(optionFor("Annual")).toEqual({ label: "Annual", interval: "year", intervalCount: 1 });
   });
 
+  it("maps Lifetime → { lifetime, 1 } (one-time, no cadence)", () => {
+    expect(optionFor("Lifetime")).toEqual({ label: "Lifetime", interval: "lifetime", intervalCount: 1 });
+  });
+
   it("includes 'Monthly' as the default cadence", () => {
     expect(INTERVAL_OPTIONS.some((o) => o.label === "Monthly")).toBe(true);
   });

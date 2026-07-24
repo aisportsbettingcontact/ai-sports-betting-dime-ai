@@ -41,6 +41,9 @@ import {
   Sparkles,
   Archive,
   ArchiveRestore,
+  Paperclip,
+  Copy,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAppAuth } from "@/_core/hooks/useAppAuth";
@@ -48,7 +51,7 @@ import { trpc } from "@/lib/trpc";
 import { AdminShell } from "@/pages/admin/AdminShell";
 import { IntervalPicker } from "@/pages/admin/IntervalPicker";
 import { DEFAULT_INTERVAL } from "@/pages/admin/planTypes";
-import type { StoredPlan, StoredPrice, IntervalValue, PromoType } from "@/pages/admin/planTypes";
+import type { StoredPlan, StoredPrice, IntervalValue, PromoType, BillingInterval } from "@/pages/admin/planTypes";
 
 type PlanWithCount = StoredPlan & { subscriberCount: number };
 
@@ -82,7 +85,8 @@ function blankInterval(): IntervalDraft {
 
 interface PricePayload {
   amountCents: number;
-  interval?: IntervalValue["interval"];
+  /** Absent → a one-time (single-payment) price, i.e. the "Lifetime" cadence. */
+  interval?: BillingInterval;
   intervalCount?: number;
   trialPeriodDays?: number;
   promo?: { type: PromoType; value: number; code?: string };
@@ -96,7 +100,10 @@ function buildPricePayload(iv: IntervalDraft, label: string, recurring: boolean)
 
   const payload: PricePayload = { amountCents };
 
-  if (recurring) {
+  // "Lifetime" is a one-time interval — even inside a recurring plan it carries no
+  // cadence and no trial; omitting `interval` makes the server mint a one-time
+  // Stripe price (mode:"payment" at checkout).
+  if (recurring && iv.interval.interval !== "lifetime") {
     payload.interval = iv.interval.interval;
     payload.intervalCount = iv.interval.intervalCount;
     if (iv.trialDays.trim()) {
@@ -222,6 +229,8 @@ function IntervalFields({
   onChange: (patch: Partial<IntervalDraft>) => void;
   oneTime?: boolean;
 }) {
+  // A "Lifetime" cadence is a single payment — no free-trial field applies.
+  const lifetime = value.interval.interval === "lifetime";
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <div className="flex flex-col gap-1.5">
@@ -242,19 +251,21 @@ function IntervalFields({
             <label className={labelClass}>Billing interval</label>
             <IntervalPicker value={value.interval} onChange={(interval) => onChange({ interval })} />
           </div>
-          <div className="flex flex-col gap-1.5">
-            <label className={labelClass}>
-              Free trial days <span className="normal-case tracking-normal">(optional)</span>
-            </label>
-            <input
-              type="number"
-              min={0}
-              value={value.trialDays}
-              onChange={(e) => onChange({ trialDays: e.target.value })}
-              placeholder="0"
-              className={`${inputClass} font-mono`}
-            />
-          </div>
+          {!lifetime && (
+            <div className="flex flex-col gap-1.5">
+              <label className={labelClass}>
+                Free trial days <span className="normal-case tracking-normal">(optional)</span>
+              </label>
+              <input
+                type="number"
+                min={0}
+                value={value.trialDays}
+                onChange={(e) => onChange({ trialDays: e.target.value })}
+                placeholder="0"
+                className={`${inputClass} font-mono`}
+              />
+            </div>
+          )}
         </>
       )}
 
@@ -640,11 +651,14 @@ function PlanCard({ plan }: { plan: PlanWithCount }) {
   const [addError, setAddError] = useState<string | null>(null);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [confirmArchive, setConfirmArchive] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const oneTime = plan.planType === "one_time";
 
   const archive = trpc.subscriptionPlans.archive.useMutation({ onSuccess: () => { invalidate(); setConfirmArchive(false); toast.success("Plan archived"); }, onError: (e) => toast.error("Archive failed", { description: e.message }) });
   const unarchive = trpc.subscriptionPlans.unarchive.useMutation({ onSuccess: () => { invalidate(); toast.success("Plan restored"); }, onError: (e) => toast.error("Restore failed", { description: e.message }) });
+  const duplicate = trpc.subscriptionPlans.duplicate.useMutation({ onSuccess: (r) => { invalidate(); toast.success("Plan duplicated", { description: r.slug }); }, onError: (e) => toast.error("Duplicate failed", { description: e.message }) });
+  const del = trpc.subscriptionPlans.delete.useMutation({ onSuccess: () => { invalidate(); setConfirmDelete(false); toast.success("Plan deleted"); }, onError: (e) => toast.error("Delete failed", { description: e.message }) });
   const addInterval = trpc.subscriptionPlans.addInterval.useMutation({ onSuccess: () => { invalidate(); setAdding(false); setDraft(blankInterval()); toast.success("Interval added"); }, onError: (e) => toast.error("Add failed", { description: e.message }) });
   const removeInterval = trpc.subscriptionPlans.removeInterval.useMutation({ onSuccess: invalidate, onError: (e) => toast.error("Remove failed", { description: e.message }) });
   const setHidden = trpc.subscriptionPlans.setIntervalHidden.useMutation({ onSuccess: invalidate, onError: (e) => toast.error("Update failed", { description: e.message }) });
@@ -653,6 +667,18 @@ function PlanCard({ plan }: { plan: PlanWithCount }) {
     onSuccess: ({ url }) => { window.open(url, "_blank", "noopener,noreferrer"); toast.success("Test checkout opened"); },
     onError: (e) => toast.error("Test checkout failed", { description: e.message }),
   });
+
+  /** Copy a public per-interval checkout link to send to a prospective customer. */
+  function copyCheckoutLink(price: StoredPrice) {
+    const url = `${window.location.origin}/checkout?plan=${encodeURIComponent(plan.slug)}&price=${price.id}`;
+    const done = () => toast.success("Checkout link copied", { description: url });
+    const fail = () => toast.error("Could not copy link", { description: url });
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(url).then(done, fail);
+    } else {
+      fail();
+    }
+  }
 
   function submitAdd() {
     setAddError(null);
@@ -767,6 +793,15 @@ function PlanCard({ plan }: { plan: PlanWithCount }) {
                 <div className="flex flex-shrink-0 items-center gap-0.5">
                   <button
                     type="button"
+                    onClick={() => copyCheckoutLink(price)}
+                    title="Copy a checkout link for this option to send to a customer"
+                    aria-label="Copy checkout link"
+                    className="cursor-pointer rounded-md p-1.5 text-muted-foreground transition-colors duration-150 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  >
+                    <Paperclip className="h-4 w-4" aria-hidden="true" />
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => setHidden.mutate({ priceId: price.id, hidden: !price.hidden })}
                     title={price.hidden ? "Hidden — click to show" : "Visible — click to hide"}
                     className="cursor-pointer rounded-md p-1.5 text-muted-foreground transition-colors duration-150 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
@@ -856,6 +891,37 @@ function PlanCard({ plan }: { plan: PlanWithCount }) {
           <button type="button" onClick={() => unarchive.mutate({ planId: plan.id })} disabled={unarchive.isPending} className={chipBtn}>
             {unarchive.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : <ArchiveRestore className="h-3.5 w-3.5" aria-hidden="true" />}
             Unarchive
+          </button>
+        )}
+
+        {/* Duplicate — provisions an independent copy (new plan/price IDs). */}
+        <button type="button" onClick={() => duplicate.mutate({ planId: plan.id })} disabled={duplicate.isPending} className={chipBtn}>
+          {duplicate.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : <Copy className="h-3.5 w-3.5" aria-hidden="true" />}
+          Duplicate
+        </button>
+
+        {/* Delete — permanently removes the plan (confirm first). */}
+        {confirmDelete ? (
+          <span className="inline-flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">Delete permanently?</span>
+            <button type="button" onClick={() => setConfirmDelete(false)} className={chipBtn}>
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => del.mutate({ planId: plan.id })}
+              disabled={del.isPending}
+              style={{ backgroundColor: "var(--dime-danger, #E5484D)" }}
+              className="inline-flex cursor-pointer items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-semibold text-white transition-opacity duration-150 hover:opacity-85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50"
+            >
+              {del.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />}
+              Delete
+            </button>
+          </span>
+        ) : (
+          <button type="button" onClick={() => setConfirmDelete(true)} title="Permanently delete this plan" className={chipBtn}>
+            <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+            Delete
           </button>
         )}
       </div>

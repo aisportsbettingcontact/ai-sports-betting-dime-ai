@@ -16,6 +16,19 @@ export type BillingInterval = "day" | "week" | "month" | "year";
 export type PlanType = "recurring" | "one_time" | "fixed_date";
 export type PromoType = "percent" | "amount";
 
+/**
+ * A cadence choice in the Create/Add-interval form. Extends the Stripe billing
+ * intervals with the sentinel "lifetime" — a one-time (single-payment) interval:
+ * it carries NO Stripe `recurring` block and checks out as mode:"payment", granting
+ * lifetime access. buildPricePayload maps "lifetime" → a payload with no `interval`.
+ */
+export type IntervalChoice = BillingInterval | "lifetime";
+
+/** True when a cadence choice is the one-time "Lifetime" option. */
+export function isLifetime(interval: IntervalChoice): boolean {
+  return interval === "lifetime";
+}
+
 export interface StoredPrice {
   id: number;
   stripePriceId: string;
@@ -67,13 +80,13 @@ export interface StoredPlan {
 /** A single billing-cadence choice: a human label → Stripe interval mapping. */
 export interface IntervalOption {
   label: string;
-  interval: BillingInterval;
+  interval: IntervalChoice;
   intervalCount: number;
 }
 
 /** The value the IntervalPicker owns and emits — the Stripe cadence pair. */
 export interface IntervalValue {
-  interval: BillingInterval;
+  interval: IntervalChoice;
   intervalCount: number;
 }
 
@@ -96,6 +109,8 @@ export const INTERVAL_OPTIONS: IntervalOption[] = [
   { label: "Quarterly", interval: "month", intervalCount: 3 },
   { label: "Semi-annual", interval: "month", intervalCount: 6 },
   { label: "Annual", interval: "year", intervalCount: 1 },
+  // One-time: no cadence, no renewal — a single payment that grants lifetime access.
+  { label: "Lifetime", interval: "lifetime", intervalCount: 1 },
 ];
 
 /** The picker's default cadence — Monthly ({month, 1}). */
