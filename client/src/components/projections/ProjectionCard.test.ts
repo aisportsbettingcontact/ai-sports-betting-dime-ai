@@ -3,7 +3,12 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import fs from "fs";
 import path from "path";
+import { MarketTable } from "./MarketTable";
 import { ProjectionCard } from "./ProjectionCard";
+import {
+  marketPaginationItems,
+  projectionMarketPage,
+} from "./ProjectionMarketsPopover";
 import type { ProjectionGame } from "./types";
 
 /** Round 4 Wave 2 (items 1, 5) source-contract fixtures — CSS/markup are read
@@ -13,6 +18,10 @@ import type { ProjectionGame } from "./types";
 const cardCss = fs.readFileSync(path.join(import.meta.dirname, "ProjectionCard.css"), "utf8");
 const edgeIndicatorCss = fs.readFileSync(path.join(import.meta.dirname, "EdgeIndicator.css"), "utf8");
 const summaryCarouselSrc = fs.readFileSync(path.join(import.meta.dirname, "SummaryCarousel.tsx"), "utf8");
+const marketPopoverSrc = fs.readFileSync(
+  path.join(import.meta.dirname, "ProjectionMarketsPopover.tsx"),
+  "utf8",
+);
 const feedSrc = fs.readFileSync(
   path.join(import.meta.dirname, "..", "..", "pages", "DimeModelFeed.tsx"),
   "utf8",
@@ -105,11 +114,55 @@ function mlbFixture(): ProjectionGame {
     startTime: "10:10 PM ET",
     markets: [
       {
+        key: "runline",
+        label: "Run Line",
+        sides: [
+          {
+            marketKey: "runline",
+            marketLabel: "Run Line",
+            sideLabel: "Giants +1.5",
+            bookPrice: null,
+            bookOppPrice: null,
+            modelPrice: null,
+          },
+          {
+            marketKey: "runline",
+            marketLabel: "Run Line",
+            sideLabel: "Mariners -1.5",
+            bookPrice: null,
+            bookOppPrice: null,
+            modelPrice: null,
+          },
+        ],
+      },
+      {
         key: "total",
         label: "Total",
         sides: [
           { marketKey: "total", marketLabel: "Total", sideLabel: "O 7", bookPrice: -108, bookOppPrice: -112, modelPrice: 118 },
           { marketKey: "total", marketLabel: "Total", sideLabel: "U 7", bookPrice: -112, bookOppPrice: -108, modelPrice: -136 },
+        ],
+      },
+      {
+        key: "moneyline",
+        label: "Moneyline",
+        sides: [
+          {
+            marketKey: "moneyline",
+            marketLabel: "Moneyline",
+            sideLabel: "Giants ML",
+            bookPrice: null,
+            bookOppPrice: null,
+            modelPrice: null,
+          },
+          {
+            marketKey: "moneyline",
+            marketLabel: "Moneyline",
+            sideLabel: "Mariners ML",
+            bookPrice: null,
+            bookOppPrice: null,
+            modelPrice: null,
+          },
         ],
       },
     ],
@@ -118,6 +171,13 @@ function mlbFixture(): ProjectionGame {
 
 const render = (game: ProjectionGame): string =>
   renderToStaticMarkup(createElement(ProjectionCard, { game }));
+
+const renderMarket = (game: ProjectionGame, marketIndex = 0): string => {
+  const market = game.markets[marketIndex];
+  if (!market)
+    throw new Error(`Missing market fixture at index ${marketIndex}`);
+  return renderToStaticMarkup(createElement(MarketTable, { market }));
+};
 
 const countOccurrences = (haystack: string, needle: string): number =>
   haystack.split(needle).length - 1;
@@ -142,12 +202,13 @@ describe("ProjectionCard — single rendering ownership (directive §3)", () => 
     expect(html).not.toContain("3:00 PM ET");
   });
 
-  it("spells out both participants and double-chance labels (§5/§6)", () => {
+  it("spells out both participants and the paged market labels (§5/§6)", () => {
     const html = render(wcFixture());
+    const marketHtml = renderMarket(wcFixture());
     expect(html).toContain("Spain");
     expect(html).toContain("France");
-    expect(html).toContain("Spain Win/Draw");
-    expect(html).toContain("France Win/Draw");
+    expect(marketHtml).toContain("Spain Win/Draw");
+    expect(marketHtml).toContain("France Win/Draw");
     // Flags carry the spelled-out country name as their accessible label.
     expect(html).toContain("Spain flag");
     expect(html).toContain("France flag");
@@ -281,12 +342,99 @@ describe("ProjectionCard — matchup block format (owner directive 2026-07-17)",
     expect(html).not.toContain("Best price");
   });
 
-  it("labels market columns BOOK / MODEL and offers the projections disclosure", () => {
+  it("labels market columns BOOK / MODEL and offers the projections popover", () => {
     const html = render(wcFixture());
-    expect(html).toContain(">Book<");
-    expect(html).toContain(">Model<");
-    expect(html).not.toMatch(/Sportsbook price|Model fair price/);
+    const marketHtml = renderMarket(wcFixture());
+    expect(marketHtml).toContain(">Book<");
+    expect(marketHtml).toContain(">Model<");
+    expect(marketHtml).not.toMatch(/Sportsbook price|Model fair price/);
     expect(html).toContain("View full AI model projections");
+    expect(html).toContain('aria-haspopup="dialog"');
+    expect(html).not.toContain("<details");
+  });
+});
+
+describe("ProjectionCard — paginated market popover", () => {
+  it("shows all three MLB market pages in source order", () => {
+    expect(mlbFixture().markets.map(market => market.label)).toEqual([
+      "Run Line",
+      "Total",
+      "Moneyline",
+    ]);
+    expect(marketPaginationItems(0, 3)).toEqual([0, 1, 2]);
+    expect(marketPaginationItems(1, 3)).toEqual([0, 1, 2]);
+    expect(marketPaginationItems(2, 3)).toEqual([0, 1, 2]);
+  });
+
+  it("keeps larger World Cup slates reachable with a compact ellipsis window", () => {
+    const baseMarket = wcFixture().markets[0];
+    const markets = Array.from({ length: 7 }, (_, index) => ({
+      ...baseMarket,
+      key: `market-${index + 1}`,
+      label: `Market ${index + 1}`,
+    }));
+
+    for (let page = 0; page < markets.length; page += 1) {
+      expect(projectionMarketPage(markets, page)).toEqual({
+        activePage: page,
+        activeMarket: markets[page],
+      });
+    }
+    expect(
+      Array.from(
+        new Set(
+          markets.flatMap((_, page) =>
+            marketPaginationItems(page, markets.length).filter(
+              (item): item is number => typeof item === "number"
+            )
+          )
+        )
+      ).sort((a, b) => a - b)
+    ).toEqual([0, 1, 2, 3, 4, 5, 6]);
+
+    expect(marketPaginationItems(0, 7)).toEqual([0, 1, 2, "ellipsis-end", 6]);
+    expect(marketPaginationItems(3, 7)).toEqual([
+      0,
+      "ellipsis-start",
+      3,
+      "ellipsis-end",
+      6,
+    ]);
+    expect(marketPaginationItems(6, 7)).toEqual([0, "ellipsis-start", 4, 5, 6]);
+  });
+
+  it("binds the actual popover to the complete dynamic market list", () => {
+    expect(marketPopoverSrc).toContain(
+      "projectionMarketPage(\n    game.markets,\n    requestedPage"
+    );
+    expect(marketPopoverSrc).toContain(
+      "marketPaginationItems(activePage, marketCount)"
+    );
+    expect(marketPopoverSrc).toContain("<MarketTable market={activeMarket} />");
+    expect(marketPopoverSrc).not.toMatch(/markets\.(?:slice|splice)\(/);
+  });
+
+  it("uses theme-safe portal tokens and remains scroll-contained", () => {
+    const popoverCss = cssBlock(
+      cardCss,
+      "The portal is outside",
+      "Market table — flat"
+    );
+    expect(popoverCss).toContain("background: var(--popover, #141414);");
+    expect(popoverCss).toContain("color: var(--popover-foreground, #fff);");
+    expect(popoverCss).toContain(
+      "max-block-size: min(34rem, var(--radix-popover-content-available-height));"
+    );
+    expect(popoverCss).toContain("overflow-y: auto;");
+    expect(popoverCss).toMatch(
+      /html:not\(\.dark\) \.projection-card__markets-eyebrow \{\s*color: #0fa36b;/
+    );
+  });
+
+  it("renders no empty popover trigger when a game has no markets", () => {
+    const html = render({ ...mlbFixture(), markets: [] });
+    expect(html).not.toContain("projection-card__markets-toggle");
+    expect(marketPaginationItems(0, 0)).toEqual([]);
   });
 });
 
@@ -405,12 +553,12 @@ describe("ProjectionCard — live indicator (Round 4 Wave 1, item 4)", () => {
 
 /** Round 4 Wave 2 (docs/superpowers/plans/2026-07-23-feed-desktop-polish.md, items 1/5;
  *  law: design-system/dime-ai/pages/ai-model-projections.md). Item 1 (equal-height rows,
- *  pinned expander) and item 5 (fixed-track summary alignment) are CSS-Grid contracts with
+ *  pinned market trigger) and item 5 (fixed-track summary alignment) are CSS-Grid contracts with
  *  no new DOM nodes, so — same as W1's note above — the structural proof here is (a) the DOM
  *  hooks the CSS keys off (class names) and (b) reading the actual CSS/markup source for the
  *  numeric contract itself; the rendered pixels are verified separately by the visual smoke
- *  screenshots (equal row heights, pinned expander, aligned columns), not by this harness. */
-describe("ProjectionCard — equal-height rows & pinned expander (Round 4 Wave 2, item 1)", () => {
+ *  screenshots (equal row heights, pinned trigger, aligned columns), not by this harness. */
+describe("ProjectionCard — equal-height rows & pinned market trigger (Round 4 Wave 2, item 1)", () => {
   it("the responsive league grid is 2-across on tablet and 3-across with stretched row-mates on desktop", () => {
     const responsiveGridBlock = feedSrc.slice(
       feedSrc.indexOf("TABLET (768-1023px)"),
@@ -435,7 +583,7 @@ describe("ProjectionCard — equal-height rows & pinned expander (Round 4 Wave 2
     expect(section).toContain("Desktop rows stretch");
   });
 
-  it("desktop->=1024px CSS gives the card a flexible summary row so surplus height centers there, expander pinned last", () => {
+  it("desktop->=1024px CSS gives the card a flexible summary row so surplus height centers there, trigger pinned last", () => {
     const item1 = cssBlock(cardCss, "Round 4 Wave 2 — item 1", "── Summary carousel");
     expect(item1).toContain("@media (min-width: 1024px)");
     // grid-template-areas order is head/matchup/summary/markets (scheduled drops head) —
@@ -569,9 +717,9 @@ describe("ProjectionCard — aligned summary mini-grid (Round 4 Wave 2, item 5)"
  *  Same DOM-only-harness note as W1/W2 above: hover fills and transitions are CSS, verified
  *  by reading the actual stylesheet source (what the visual smoke's forced :hover screenshot
  *  proves) rather than by a CSSOM this vitest environment doesn't have. */
-describe("ProjectionCard — expander hover (Round 4 Wave 3, item 7)", () => {
+describe("ProjectionCard — market-trigger hover (Round 4 Wave 3, item 7)", () => {
   it("the toggle gets the shell row-hover fill on the 160ms brand curve, hover-capable + >=768px only", () => {
-    const item7 = cssBlock(cardCss, "Round 4 Wave 3 — item 7", "Intrinsic reflow (directive");
+    const item7 = cssBlock(cardCss, "Round 4 Wave 3 — item 7", "The portal is outside");
     expect(item7).toContain("@media (min-width: 768px) and (hover: hover)");
     expect(item7).toMatch(
       /\.projection-card__markets-toggle:hover \{ background: var\(--row-hover, #141414\); color: var\(--foreground, #fff\); \}/,
@@ -579,7 +727,7 @@ describe("ProjectionCard — expander hover (Round 4 Wave 3, item 7)", () => {
   });
 
   it("the transition (160ms brand curve, same cubic-bezier as MASTER.md's motion law) lives inside the same gate as the hover fill (item 8 audit-fix)", () => {
-    const item7 = cssBlock(cardCss, "Round 4 Wave 3 — item 7", "Intrinsic reflow (directive");
+    const item7 = cssBlock(cardCss, "Round 4 Wave 3 — item 7", "The portal is outside");
     expect(item7).toMatch(
       /\.projection-card__markets-toggle \{\s*\n\s*transition: background 160ms cubic-bezier\(0\.16, 1, 0\.3, 1\), color 160ms cubic-bezier\(0\.16, 1, 0\.3, 1\);/,
     );
@@ -592,13 +740,14 @@ describe("ProjectionCard — expander hover (Round 4 Wave 3, item 7)", () => {
     expect(baseRule).not.toContain("transition:");
   });
 
-  it("cursor:pointer and the label/chevron markup are untouched (law-locked)", () => {
-    // Base rule (all breakpoints, unconditional — a details/summary toggle is
-    // tappable everywhere, not just on hover-capable desktop/tablet).
+  it("cursor:pointer and the label/panel-icon markup stay tappable at every breakpoint", () => {
+    // Base rule is unconditional: the popover button is tappable everywhere,
+    // not just on hover-capable desktop/tablet.
     expect(cardCss).toMatch(/\.projection-card__markets-toggle \{[^}]*cursor: pointer;/);
     expect(render(mlbFixture())).toContain("View full AI model projections");
-    expect(render(mlbFixture())).toContain("projection-card__markets-chev--expand");
-    expect(render(mlbFixture())).toContain("projection-card__markets-chev--collapse");
+    expect(render(mlbFixture())).toContain("projection-card__markets-icon");
+    expect(render(mlbFixture())).not.toContain("projection-card__markets-chev");
+    expect(render(mlbFixture())).not.toContain("<summary");
   });
 
   it("no bare unconditional :hover rule remains outside the gated media query (no stuck touch-hover)", () => {
@@ -612,6 +761,8 @@ describe("ProjectionCard — defensive PASS-mint backstop (Round 4 Wave 3 fold-i
     const backstop = cssBlock(cardCss, "Defensive PASS backstop (Round 4, from the W1 review", "Item 4 — live indicator");
     expect(backstop).toContain(".projection-card--pass .market-table__model--signal,");
     expect(backstop).toContain(".projection-card--pass .market-table__result--edge,");
+    expect(backstop).toContain(".projection-card__markets-popover--pass .market-table__model--signal,");
+    expect(backstop).toContain(".projection-card__markets-popover--pass .market-table__result--edge,");
     expect(backstop).toContain(".projection-card--pass .edge-indicator {");
     expect(backstop).toMatch(/color: var\(--text-secondary, #a6a6a6\) !important;/);
     expect(backstop).toMatch(/background: transparent !important;/);
@@ -634,7 +785,7 @@ describe("ProjectionCard — defensive PASS-mint backstop (Round 4 Wave 3 fold-i
   });
 
   it("a genuine PASS card still renders zero mint-signal classes today (backstop is defense-in-depth, not the only guard)", () => {
-    const html = render({
+    const game: ProjectionGame = {
       id: "oak-tex-backstop",
       league: "MLB",
       status: "scheduled",
@@ -654,10 +805,12 @@ describe("ProjectionCard — defensive PASS-mint backstop (Round 4 Wave 3 fold-i
           ],
         },
       ],
-    });
+    };
+    const html = render(game);
+    const marketHtml = renderMarket(game);
     expect(html).toContain("projection-card--pass");
-    expect(html).not.toContain("market-table__model--signal");
-    expect(html).not.toContain("market-table__result--edge");
+    expect(marketHtml).not.toContain("market-table__model--signal");
+    expect(marketHtml).not.toContain("market-table__result--edge");
     expect(html).not.toMatch(/class="edge-indicator summary__edge"/);
   });
 

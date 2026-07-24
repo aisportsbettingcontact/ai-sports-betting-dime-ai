@@ -351,7 +351,7 @@ for (const width of DESKTOP_WIDTHS) {
     await expect(passCard).toBeVisible();
     await expect(scheduledCard).toBeVisible();
 
-    // ── Item 1: equal-height row-mates + pinned expander (desktop only) ──
+    // ── Item 1: equal-height row-mates + pinned market trigger (desktop only) ──
     await expect(liveCard.locator(".summary-carousel")).toBeVisible();
     await expect(passCard.locator(".summary-carousel")).toHaveCount(0);
     const liveBox = await liveCard.boundingBox();
@@ -390,12 +390,12 @@ for (const width of DESKTOP_WIDTHS) {
     if (!liveToggle || !passToggle) throw new Error("markets-toggle bounding boxes missing");
     expect(
       Math.abs(liveToggle.y + liveToggle.height - (passToggle.y + passToggle.height)),
-      "expander bottom edges align across row-mates",
+      "market-trigger bottom edges align across row-mates",
     ).toBeLessThanOrEqual(1);
     // Pinned to the card's own bottom edge (padding-block-end: --space-sm =
     // 12px) — not floating mid-card.
     const passGap = passBox.y + passBox.height - (passToggle.y + passToggle.height);
-    expect(passGap, `PASS expander bottom sits ~12px above its own card bottom (measured ${passGap})`).toBeGreaterThanOrEqual(6);
+    expect(passGap, `PASS market trigger sits ~12px above its own card bottom (measured ${passGap})`).toBeGreaterThanOrEqual(6);
     expect(passGap).toBeLessThanOrEqual(20);
 
     // ── Item 2: unified 24px/700 matchup score (LIVE card has scores) ──
@@ -457,7 +457,7 @@ for (const width of DESKTOP_WIDTHS) {
     expect(gap, `date-nav-to-league-header rhythm gap (measured ${gap}, law = 33px edge-to-edge)`).toBeGreaterThanOrEqual(31);
     expect(gap).toBeLessThanOrEqual(35);
 
-    // ── Item 7: expander hover — shell row-hover fill on the 160ms curve ──
+    // ── Item 7: market-trigger hover — shell row-hover fill on the 160ms curve ──
     const toggle = passCard.locator(".projection-card__markets-toggle");
     const bgBefore = await toggle.evaluate((el) => getComputedStyle(el).backgroundColor);
     const duration = await toggle.evaluate((el) => getComputedStyle(el).transitionDuration);
@@ -539,27 +539,194 @@ for (const width of DESKTOP_WIDTHS) {
       "MODEL column offset matches between two different real-edge cards",
     ).toBeLessThanOrEqual(1);
 
-    // ── Item 1, OPEN-disclosure state (final-review I1): opening one
-    // row-mate's "VIEW FULL AI MODEL PROJECTIONS" stretches the closed
-    // neighbor to match (that IS the owner-approved stretch law) — the
-    // closed card's summary row absorbs the surplus. Captured as owner
-    // evidence at 1440 only; the geometry assertion just pins that stretch
-    // stays in force (equal heights) rather than judging the aesthetics —
-    // that call is the owner's, via the open-1440.png evidence. ──
+    // ── Paginated market popover: one table at a time, all three MLB
+    // markets reachable, portalled overlay never changes card/grid geometry,
+    // and Escape closes then restores focus to the trigger. Captured at the
+    // representative 1440px desktop width. ──
     if (width === 1440) {
       const liveToggle = liveCard.locator(".projection-card__markets-toggle");
+      const beforeUrl = page.url();
+      const closedLive = await liveCard.boundingBox();
+      const closedPass = await passCard.boundingBox();
+      if (!closedLive || !closedPass)
+        throw new Error("closed card bounding boxes missing");
+
+      await expect(liveToggle).toHaveAttribute("aria-expanded", "false");
       await liveToggle.click();
-      await page.waitForTimeout(200);
+      await expect(liveToggle).toHaveAttribute("aria-expanded", "true");
+
+      const popover = page.getByRole("dialog", {
+        name: "Dodgers at Yankees model projections",
+      });
+      await expect(popover).toBeVisible();
+      await popover.evaluate(async element => {
+        await Promise.all(
+          element
+            .getAnimations()
+            .map(animation => animation.finished.catch(() => undefined))
+        );
+      });
+      await expect(popover.locator(".market-table")).toHaveCount(1);
+      await expect(popover.locator(".market-table__caption")).toHaveText(
+        "Run Line"
+      );
+
       const openLive = await liveCard.boundingBox();
-      const stretchedPass = await passCard.boundingBox();
-      if (!openLive || !stretchedPass) throw new Error("open-state bounding boxes missing");
+      const openPass = await passCard.boundingBox();
+      const popoverBox = await popover.boundingBox();
+      if (!openLive || !openPass || !popoverBox)
+        throw new Error("popover/card bounding boxes missing");
+      for (const dimension of ["x", "y", "width", "height"] as const) {
+        expect(
+          Math.abs(openLive[dimension] - closedLive[dimension]),
+          `opening the portalled popover does not change its card ${dimension}`
+        ).toBeLessThanOrEqual(1);
+        expect(
+          Math.abs(openPass[dimension] - closedPass[dimension]),
+          `opening a neighbor's popover does not change its row-mate ${dimension}`
+        ).toBeLessThanOrEqual(1);
+      }
       expect(
-        Math.abs(openLive.height - stretchedPass.height),
-        "row-mates stay equal-height with one disclosure open (stretch law holds)",
-      ).toBeLessThanOrEqual(2);
-      await page.screenshot({ path: `${EVIDENCE_DIR}/open-1440.png`, fullPage: true });
-      await liveToggle.click();
+        popoverBox.x,
+        "popover respects the left viewport gutter"
+      ).toBeGreaterThanOrEqual(8);
+      expect(
+        popoverBox.x + popoverBox.width,
+        "popover respects the right viewport gutter"
+      ).toBeLessThanOrEqual(width - 8);
+
+      const pagination = popover.getByRole("navigation", {
+        name: "Model projection market pages for Dodgers at Yankees",
+      });
+      const previous = pagination.getByRole("link", {
+        name: "Go to previous page",
+      });
+      const next = pagination.getByRole("link", { name: "Go to next page" });
+      const runLinePage = pagination.getByRole("link", {
+        name: "Show Run Line projections, page 1 of 3",
+      });
+      const marketRegion = popover.getByRole("region", {
+        name: "Run Line model projections",
+      });
+      const marketRegionId = await marketRegion.getAttribute("id");
+      expect(
+        marketRegionId,
+        "market region exposes a pagination target id"
+      ).toBeTruthy();
+      await expect(previous).toHaveAttribute("aria-disabled", "true");
+      await expect(previous).toHaveAttribute("tabindex", "-1");
+      await expect(previous).toHaveAttribute("aria-controls", marketRegionId!);
+      await expect(runLinePage).toHaveAttribute("aria-current", "page");
+      await expect(runLinePage).toHaveAttribute(
+        "aria-controls",
+        marketRegionId!
+      );
+
+      for (const control of [
+        previous,
+        runLinePage,
+        pagination.getByRole("link", {
+          name: "Show Total projections, page 2 of 3",
+        }),
+        pagination.getByRole("link", {
+          name: "Show Moneyline projections, page 3 of 3",
+        }),
+        next,
+      ]) {
+        const controlBox = await control.boundingBox();
+        if (!controlBox)
+          throw new Error("pagination control bounding box missing");
+        expect(
+          controlBox.width,
+          "pagination control has a >=44px hit target"
+        ).toBeGreaterThanOrEqual(44);
+        expect(
+          controlBox.height,
+          "pagination control has a >=44px hit target"
+        ).toBeGreaterThanOrEqual(44);
+      }
+
+      await next.click();
+      await expect(popover.locator(".market-table__caption")).toHaveText(
+        "Total"
+      );
+      await expect(popover.locator(".market-table")).toHaveCount(1);
+      await expect(
+        pagination.getByRole("link", {
+          name: "Show Total projections, page 2 of 3",
+        })
+      ).toHaveAttribute("aria-current", "page");
+
+      const moneylinePage = pagination.getByRole("link", {
+        name: "Show Moneyline projections, page 3 of 3",
+      });
+      await moneylinePage.click();
+      await expect(popover.locator(".market-table__caption")).toHaveText(
+        "Moneyline"
+      );
+      await expect(moneylinePage).toBeFocused();
+      await expect(next).toHaveAttribute("aria-disabled", "true");
+      await expect(next).toHaveAttribute("tabindex", "-1");
+      expect(page.url(), "pagination does not mutate the feed URL").toBe(
+        beforeUrl
+      );
+
+      await previous.click();
+      await expect(popover.locator(".market-table__caption")).toHaveText(
+        "Total"
+      );
+      await expect(
+        pagination.getByRole("link", {
+          name: "Show Total projections, page 2 of 3",
+        })
+      ).toHaveAttribute("aria-current", "page");
+      await expect(runLinePage).not.toHaveAttribute("aria-current", "page");
       await page.waitForTimeout(200);
+      await page.screenshot({
+        path: `${EVIDENCE_DIR}/popover-1440.png`,
+        fullPage: true,
+      });
+
+      await page.keyboard.press("Escape");
+      await expect(popover).toHaveCount(0);
+      await expect(liveToggle).toHaveAttribute("aria-expanded", "false");
+      await expect(liveToggle).toBeFocused();
+
+      // Pointer interaction outside the floating layer closes it as well.
+      await liveToggle.click();
+      await expect(popover).toBeVisible();
+      await page.locator(".dmf-toptitle").click();
+      await expect(popover).toHaveCount(0);
+      await expect(liveToggle).toHaveAttribute("aria-expanded", "false");
+      await expect(liveToggle).toBeFocused();
+
+      // The portalled surface consumes the global light-theme tokens rather
+      // than a card-scoped dark fallback; mint text uses its contrast-safe
+      // light-theme value.
+      await page.evaluate(() =>
+        document.documentElement.classList.remove("dark")
+      );
+      await liveToggle.click();
+      await expect(popover).toBeVisible();
+      const lightThemeColors = await popover.evaluate(element => {
+        const popoverStyle = getComputedStyle(element);
+        const eyebrowStyle = getComputedStyle(
+          element.querySelector(".projection-card__markets-eyebrow")!
+        );
+        return {
+          background: popoverStyle.backgroundColor,
+          foreground: popoverStyle.color,
+          eyebrow: eyebrowStyle.color,
+        };
+      });
+      expect(lightThemeColors).toEqual({
+        background: "rgb(255, 255, 255)",
+        foreground: "rgb(0, 0, 0)",
+        eyebrow: "rgb(15, 163, 107)",
+      });
+      await page.keyboard.press("Escape");
+      await expect(popover).toHaveCount(0);
+      await page.evaluate(() => document.documentElement.classList.add("dark"));
     }
   });
 }
@@ -626,7 +793,7 @@ test("shell feed tablet 900px: items 2,3,4,5,7 active; items 1,6 inert", async (
 });
 
 test("shell feed mobile 375px: every round-4 rule inert", async ({ page }) => {
-  await gotoShellFeed(page, 375, 1600);
+  await gotoShellFeed(page, 375, 667);
   await assertNoHorizontalOverflow(page, "shell-375");
 
   const liveCard = cardByAriaLabel(page, "Dodgers at Yankees");
@@ -676,7 +843,109 @@ test("shell feed mobile 375px: every round-4 rule inert", async ({ page }) => {
   const duration = await toggle.evaluate((el) => getComputedStyle(el).transitionDuration);
   expect(duration, "no visible transition duration on the toggle below 768px").not.toContain("0.16s");
 
-  await page.screenshot({ path: `${EVIDENCE_DIR}/shell-375.png`, fullPage: true });
+  // The popover remains viewport-contained and paginates all three MLB
+  // markets without resizing the mobile card or changing the feed URL.
+  const beforeUrl = page.url();
+  await toggle.click();
+  const popover = page.getByRole("dialog", {
+    name: "Athletics at Rangers model projections",
+  });
+  await expect(popover).toBeVisible();
+  await popover.evaluate(async element => {
+    await Promise.all(
+      element
+        .getAnimations()
+        .map(animation => animation.finished.catch(() => undefined))
+    );
+  });
+  await expect(popover.locator(".market-table")).toHaveCount(1);
+  await expect(popover.locator(".market-table__caption")).toHaveText(
+    "Run Line"
+  );
+  const popoverBox = await popover.boundingBox();
+  const openPassBox = await passCard.boundingBox();
+  if (!popoverBox || !openPassBox)
+    throw new Error("mobile popover/card bounding boxes missing");
+  expect(
+    popoverBox.x,
+    "mobile popover respects the left gutter"
+  ).toBeGreaterThanOrEqual(8);
+  expect(
+    popoverBox.x + popoverBox.width,
+    "mobile popover respects the right gutter"
+  ).toBeLessThanOrEqual(375 - 8);
+  expect(
+    popoverBox.y,
+    "short mobile popover respects the top gutter"
+  ).toBeGreaterThanOrEqual(8);
+  expect(
+    popoverBox.y + popoverBox.height,
+    "short mobile popover respects the bottom gutter"
+  ).toBeLessThanOrEqual(667 - 8);
+  const verticalContainment = await popover.evaluate(element => {
+    const style = getComputedStyle(element);
+    return {
+      clientHeight: element.clientHeight,
+      scrollHeight: element.scrollHeight,
+      overflowY: style.overflowY,
+    };
+  });
+  expect(verticalContainment.overflowY).toBe("auto");
+  expect(
+    verticalContainment.clientHeight,
+    "short mobile popover stays within the collision-safe viewport height"
+  ).toBeLessThanOrEqual(667 - 16);
+  expect(
+    verticalContainment.scrollHeight,
+    "limited-height content remains contained by the popover scrollport"
+  ).toBeGreaterThanOrEqual(verticalContainment.clientHeight);
+  expect(
+    Math.abs(openPassBox.height - passBox.height),
+    "mobile popover does not resize its card"
+  ).toBeLessThanOrEqual(1);
+
+  const pagination = popover.getByRole("navigation", {
+    name: "Model projection market pages for Athletics at Rangers",
+  });
+  const moneylinePage = pagination.getByRole("link", {
+    name: "Show Moneyline projections, page 3 of 3",
+  });
+  await moneylinePage.click();
+  await expect(popover.locator(".market-table__caption")).toHaveText(
+    "Moneyline"
+  );
+  await expect(moneylinePage).toBeFocused();
+  await expect(moneylinePage).toHaveAttribute("aria-current", "page");
+  await expect(
+    pagination.getByRole("link", {
+      name: "Show Run Line projections, page 1 of 3",
+    })
+  ).not.toHaveAttribute("aria-current", "page");
+  await expect(popover.locator(".market-table")).toHaveCount(1);
+  await expect(
+    pagination.getByRole("link", { name: "Go to next page" })
+  ).toHaveAttribute("aria-disabled", "true");
+  await expect(
+    pagination.getByRole("link", { name: "Go to next page" })
+  ).toHaveAttribute("tabindex", "-1");
+  expect(page.url(), "mobile pagination does not mutate the feed URL").toBe(
+    beforeUrl
+  );
+  await assertNoHorizontalOverflow(page, "shell-375-popover");
+  await page.waitForTimeout(200);
+  await page.screenshot({
+    path: `${EVIDENCE_DIR}/popover-375.png`,
+    fullPage: true,
+  });
+
+  await page.keyboard.press("Escape");
+  await expect(popover).toHaveCount(0);
+  await expect(toggle).toBeFocused();
+
+  await page.screenshot({
+    path: `${EVIDENCE_DIR}/shell-375.png`,
+    fullPage: true,
+  });
 });
 
 // ─── Standalone /feed at 1440: item-6 rhythm absent (negative contract) ──────
