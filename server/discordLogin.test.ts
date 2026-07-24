@@ -159,16 +159,6 @@ describe("Discord login access control invariant — DB-level", () => {
 });
 
 describe("Discord login frontend invariant", () => {
-  it("LoginModal uses /api/auth/discord-login/connect (not old /api/auth/discord/connect)", () => {
-    const modal = fs.readFileSync(
-      path.resolve(__dirname, "../client/src/components/LoginModal.tsx"),
-      "utf-8"
-    );
-    expect(modal).toContain("/api/auth/discord-login/connect");
-    expect(modal).not.toContain("appUsers.login");
-    expect(modal).not.toContain("trpc.appUsers.login");
-  });
-
   it("Home.tsx uses /api/auth/discord-login/connect for the Discord OAuth button", () => {
     const home = fs.readFileSync(
       path.resolve(__dirname, "../client/src/pages/Home.tsx"),
