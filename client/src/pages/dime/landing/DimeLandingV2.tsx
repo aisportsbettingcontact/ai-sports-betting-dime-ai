@@ -40,6 +40,21 @@ export default function DimeLandingV2() {
     };
   }, []);
 
+  // Cross-page fragment navigation (audit D-PRICING-HASH): wouter does not
+  // scroll to #fragments, so /#pricing from login/checkout/404 landed at the
+  // top of the page. Scroll after first paint; honor reduced motion.
+  useEffect(() => {
+    const id = window.location.hash.slice(1);
+    if (!id) return;
+    const raf = requestAnimationFrame(() => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      el.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+    });
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
   return (
     <div className="dlv2">
       <Nav />
