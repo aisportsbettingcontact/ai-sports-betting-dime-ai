@@ -103,7 +103,9 @@
 /* A crisp alpha-following keyline, not a rectangular image border. System is
    the grey surface and Dark the black surface; Light keeps the original mark. */
 html[data-theme-mode="system"] .team-logo-box--dark-outline .team-logo,
-html[data-theme-mode="dark"] .team-logo-box--dark-outline .team-logo {
+html[data-theme-mode="dark"] .team-logo-box--dark-outline .team-logo,
+html:not([data-theme-mode]) .dmf-root[data-dmf-mode="system"] .team-logo-box--dark-outline .team-logo,
+html:not([data-theme-mode]) .dmf-root[data-dmf-mode="dark"] .team-logo-box--dark-outline .team-logo {
   filter: drop-shadow(0 0 0.2px rgba(255, 255, 255, 0.92));
 }
 .team-logo-box--mono { aspect-ratio: 1; }
@@ -244,30 +246,67 @@ html:not(.dark) .pregame-pitcher__status--confirmed { color: #0fa36b; }
   }
 }
 
+/* Compact cards keep both complete pitcher names on one line. The outer
+   pitcher tracks stay equal while only the inter-track spacing, CTA footprint,
+   and responsive name type contract together. */
+@media (max-width: 1023.98px) {
+  @container projcard (max-width: 520px) {
+    .pregame-pitchers {
+      position: relative;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0;
+      padding-inline: var(--space-xs);
+    }
+    .pregame-pitcher--away { grid-column: 1; }
+    .pregame-pitcher--home { grid-column: 2; }
+    .pregame-pitcher__name {
+      overflow-wrap: normal;
+      font-size: clamp(0.5625rem, 2.8cqi, 0.75rem);
+      white-space: nowrap;
+    }
+    .projection-card .pregame-pitchers__lineups {
+      position: absolute;
+      z-index: 1;
+      inset-block-start: 50%;
+      inset-inline-start: 50%;
+      min-inline-size: 4rem;
+      padding-inline: 0.5rem;
+      font-size: 0.625rem;
+      letter-spacing: 0.04em;
+      transform: translate(-50%, -50%);
+    }
+    .projection-card .pregame-pitchers__lineups:active {
+      transform: translate(-50%, -50%) scale(0.98);
+    }
+  }
+}
+
 /* At the 1024px three-across boundary, the persistent app rail leaves each
    card deliberately narrow. Preserve the centered three-track anatomy while
    reducing only its optical footprint; all interactive targets stay 44px. */
-@container projcard (max-width: 280px) {
-  .pregame-pitchers {
-    grid-template-columns: minmax(0, 1fr) 3rem minmax(0, 1fr);
-    gap: 2px;
-    padding: var(--space-xs) 4px;
-  }
-  .pregame-pitcher__photo {
-    inline-size: 2.25rem;
-    block-size: 2.25rem;
-  }
-  .pregame-pitcher__status {
-    font-size: 0.48rem;
-    letter-spacing: 0.04em;
-  }
-  .pregame-pitcher__name { font-size: 0.625rem; }
-  .pregame-pitcher__stats { font-size: 0.5rem; }
-  .projection-card .pregame-pitchers__lineups {
-    min-inline-size: 44px;
-    padding-inline: 4px;
-    font-size: 0.5rem;
-    letter-spacing: 0.02em;
+@media (min-width: 1024px) {
+  @container projcard (max-width: 280px) {
+    .pregame-pitchers {
+      grid-template-columns: minmax(0, 1fr) 3rem minmax(0, 1fr);
+      gap: 2px;
+      padding: var(--space-xs) 4px;
+    }
+    .pregame-pitcher__photo {
+      inline-size: 2.25rem;
+      block-size: 2.25rem;
+    }
+    .pregame-pitcher__status {
+      font-size: 0.48rem;
+      letter-spacing: 0.04em;
+    }
+    .pregame-pitcher__name { font-size: 0.625rem; }
+    .pregame-pitcher__stats { font-size: 0.5rem; }
+    .projection-card .pregame-pitchers__lineups {
+      min-inline-size: 44px;
+      padding-inline: 4px;
+      font-size: 0.5rem;
+      letter-spacing: 0.02em;
+    }
   }
 }
 
@@ -446,7 +485,7 @@ html:not(.dark) .pregame-pitcher__status--confirmed { color: #0fa36b; }
 .summary__group { display: grid; grid-template-columns: max-content max-content; align-items: center; column-gap: clamp(8px, 1.6cqi, 16px); inline-size: max-content; min-inline-size: max-content; white-space: nowrap; }
 .summary--empty .summary__group { grid-template-columns: max-content; column-gap: 0; }
 .summary__edge { flex: none; }
-.summary__signal { display: inline-flex; flex: none; flex-wrap: nowrap; align-items: center; gap: var(--space-xs); min-inline-size: max-content; }
+.summary__signal { display: inline-flex; flex: none; flex-wrap: nowrap; align-items: center; justify-content: center; gap: var(--space-xs); min-inline-size: max-content; min-block-size: 44px; }
 .projection-card .summary__next {
   display: inline-grid;
   place-items: center;
@@ -479,8 +518,8 @@ html:not(.dark) .pregame-pitcher__status--confirmed { color: #0fa36b; }
 .summary-carousel--no-edge .summary__next:focus-visible {
   box-shadow: 0 0 0 3px var(--foreground, #fff);
 }
-.summary__readout { display: grid; grid-template-columns: max-content minmax(48px, max-content) minmax(48px, max-content); align-items: center; column-gap: clamp(8px, 1.6cqi, 16px); margin: 0; }
-.summary__item { display: flex; flex-direction: column; gap: 2px; min-inline-size: max-content; }
+.summary__readout { display: grid; grid-template-columns: max-content minmax(48px, max-content) minmax(48px, max-content); align-items: center; min-block-size: 44px; column-gap: clamp(8px, 1.6cqi, 16px); margin: 0; }
+.summary__item { display: flex; flex-direction: column; justify-content: center; gap: 2px; min-inline-size: max-content; min-block-size: 44px; }
 .summary__item--edge { grid-column: 1; }
 .summary__item--book { grid-column: 2; }
 .summary__item--model { grid-column: 3; }
@@ -579,8 +618,18 @@ html:not(.dark) .pregame-pitcher__status--confirmed { color: #0fa36b; }
   .summary__readout {
     grid-template-columns: max-content minmax(40px, max-content) minmax(40px, max-content);
   }
+  .summary__item dt {
+    font-size: 0.625rem;
+    line-height: 1;
+    letter-spacing: 0.04em;
+  }
+  .summary__item dd { line-height: 1.2; }
+  .summary__item--book .odds-value,
+  .summary__item--model .odds-value {
+    font-size: 0.875rem;
+  }
   .summary__item--edge .summary__pick {
-    font-size: clamp(0.625rem, 3.2cqi, var(--proj-body));
+    font-size: 0.625rem;
   }
   .summary__signal { gap: 4px; }
   .summary__signal .edge-indicator {
@@ -594,10 +643,22 @@ html:not(.dark) .pregame-pitcher__status--confirmed { color: #0fa36b; }
   .summary__signal .edge-indicator__label { font-size: 0.5rem; }
   .summary__signal .edge-indicator__value { font-size: 0.75rem; }
   .summary__signal .edge-indicator--none {
-    padding-inline: 0.375rem;
+    padding-inline: 0.25rem;
     font-size: 0.5625rem;
   }
-  .summary__signal .edge-indicator__roi { font-size: 0.75rem; }
+  .summary__signal .edge-indicator__roi { font-size: 0.6875rem; }
+}
+
+/* Mobile/tablet cards use identical fact and signal lanes across real-edge,
+   ROI-only, and single-edge variants. Longer localized picks may expand the
+   first lane and use the existing local summary scrollport. */
+@media (max-width: 1023.98px) {
+  @container projcard (max-width: 520px) {
+    .summary__readout {
+      grid-template-columns: minmax(4.625rem, max-content) 2.125rem 2.125rem;
+    }
+    .summary__signal { min-inline-size: 8.125rem; }
+  }
 }
 
 /* ══ Round 4 Wave 2 — item 1: scheduled equal-height rows, pinned market trigger
@@ -708,6 +769,9 @@ html:not(.dark) .pregame-pitcher__status--confirmed { color: #0fa36b; }
   font: inherit;
   text-align: start;
 }
+.projection-card__markets-toggle > span {
+  min-inline-size: 0;
+}
 .projection-card__markets-toggle:focus-visible {
   outline: none;
   box-shadow: 0 0 0 3px var(--ring, #45e0a8);
@@ -724,6 +788,20 @@ html:not(.dark) .pregame-pitcher__status--confirmed { color: #0fa36b; }
 }
 .projection-card__markets-toggle[data-state="open"] .projection-card__markets-icon {
   color: #45e0a8;
+}
+@media (max-width: 1023.98px) {
+  @container projcard (max-width: 520px) {
+    .projection-card__markets-toggle {
+      gap: 4px;
+      padding-inline: 4px;
+    }
+    .projection-card__markets-toggle > span {
+      font-size: 0.625rem;
+      line-height: 1.2;
+      letter-spacing: 0.05em;
+      white-space: nowrap;
+    }
+  }
 }
 
 /* ══ Round 4 Wave 3 — item 7: market-trigger hover (page law "Expander hover"; item 8

@@ -76,8 +76,17 @@ describe("TeamLogoMark — whitespace-free optical sizing and dark contrast", ()
     expect(cardCss).toContain(
       'html[data-theme-mode="dark"] .team-logo-box--dark-outline .team-logo',
     );
+    expect(cardCss).toContain(
+      'html:not([data-theme-mode]) .dmf-root[data-dmf-mode="system"] .team-logo-box--dark-outline .team-logo',
+    );
+    expect(cardCss).toContain(
+      'html:not([data-theme-mode]) .dmf-root[data-dmf-mode="dark"] .team-logo-box--dark-outline .team-logo',
+    );
     expect(cardCss).not.toContain(
       'html[data-theme-mode="light"] .team-logo-box--dark-outline .team-logo',
+    );
+    expect(cardCss).not.toContain(
+      '.dmf-root[data-dmf-mode="light"] .team-logo-box--dark-outline .team-logo',
     );
     const outlineRule = cardCss.slice(
       cardCss.indexOf('html[data-theme-mode="system"] .team-logo-box--dark-outline'),
@@ -768,6 +777,39 @@ describe("ProjectionCard — Rotowire pregame context", () => {
     );
   });
 
+  it("keeps complete pitcher names on one line in equal mobile/tablet tracks", () => {
+    expect(cardCss).toMatch(
+      /\.pregame-pitcher__name\s*\{[^}]*overflow-wrap:\s*anywhere;/,
+    );
+    const compactPregame = cardCss.slice(
+      cardCss.indexOf("Compact cards keep both complete pitcher names"),
+      cardCss.indexOf("At the 1024px three-across boundary"),
+    );
+    expect(compactPregame).toContain("@media (max-width: 1023.98px)");
+    expect(compactPregame).toContain("@container projcard (max-width: 520px)");
+    expect(compactPregame).toMatch(
+      /\.pregame-pitchers\s*\{[^}]*position:\s*relative;[^}]*grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\);/,
+    );
+    expect(compactPregame).toMatch(
+      /\.pregame-pitcher__name\s*\{[^}]*overflow-wrap:\s*normal;[^}]*white-space:\s*nowrap;/,
+    );
+    expect(compactPregame).toMatch(
+      /\.pregame-pitchers__lineups\s*\{[^}]*position:\s*absolute;[^}]*min-inline-size:\s*4rem;/,
+    );
+  });
+
+  it("preserves the wrapping three-track fallback for 1024px desktop cards", () => {
+    const desktopPregame = cardCss.slice(
+      cardCss.indexOf("At the 1024px three-across boundary"),
+      cardCss.indexOf("The dialog is portalled"),
+    );
+    expect(desktopPregame).toContain("@media (min-width: 1024px)");
+    expect(desktopPregame).toMatch(
+      /\.pregame-pitchers\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\) 3rem minmax\(0, 1fr\);[^}]*gap:\s*2px;/,
+    );
+    expect(desktopPregame).not.toContain("white-space: nowrap");
+  });
+
   it("never renders stale pregame data after a game becomes live, final, or postponed", () => {
     for (const status of ["live", "final", "postponed"] as const) {
       const html = render({
@@ -907,6 +949,27 @@ describe("ProjectionCard — centered single-row summary group", () => {
     expect(centered).not.toContain("grid-template-columns: repeat(2");
   });
 
+  it("gives compact facts and signal the same 44px alignment lane", () => {
+    expect(cardCss).toMatch(
+      /\.summary__signal\s*\{[^}]*justify-content:\s*center;[^}]*min-block-size:\s*44px;/,
+    );
+    expect(cardCss).toMatch(
+      /\.summary__readout\s*\{[^}]*align-items:\s*center;[^}]*min-block-size:\s*44px;/,
+    );
+    expect(cardCss).toMatch(
+      /\.summary__item\s*\{[^}]*justify-content:\s*center;[^}]*min-block-size:\s*44px;/,
+    );
+  });
+
+  it("gives mobile/tablet cards stable horizontal fact and signal lanes", () => {
+    const centered = cssBlock(cardCss, "Centered summary group", "Round 4 Wave 2 — item 1");
+    expect(centered).toContain("@media (max-width: 1023.98px)");
+    expect(centered).toMatch(
+      /\.summary__readout\s*\{\s*grid-template-columns:\s*minmax\(4\.625rem, max-content\) 2\.125rem 2\.125rem;/,
+    );
+    expect(centered).toMatch(/\.summary__signal\s*\{\s*min-inline-size:\s*8\.125rem;/);
+  });
+
   it("the multi-edge next control is mint with a theme foreground border and 44px target", () => {
     expect(cardCss).toMatch(
       /\.summary__next\s*\{[^}]*inline-size:\s*44px;[^}]*block-size:\s*44px;[^}]*color:\s*#45e0a8;[^}]*border:\s*1px solid var\(--foreground, #fff\);/,
@@ -999,6 +1062,21 @@ describe("ProjectionCard — market-trigger hover (Round 4 Wave 3, item 7)", () 
     expect(render(mlbFixture())).toContain("projection-card__markets-icon");
     expect(render(mlbFixture())).not.toContain("projection-card__markets-chev");
     expect(render(mlbFixture())).not.toContain("<summary");
+  });
+
+  it("keeps the complete trigger label on one line and reduces only compact-card spacing/type", () => {
+    const compactToggle = cardCss.slice(
+      cardCss.indexOf(".projection-card__markets-toggle[data-state=\"open\"] .projection-card__markets-icon"),
+      cardCss.indexOf("Round 4 Wave 3 — item 7"),
+    );
+    expect(compactToggle).toContain("@media (max-width: 1023.98px)");
+    expect(compactToggle).toContain("@container projcard (max-width: 520px)");
+    expect(compactToggle).toMatch(
+      /\.projection-card__markets-toggle\s*\{[^}]*gap:\s*4px;[^}]*padding-inline:\s*4px;/,
+    );
+    expect(compactToggle).toMatch(
+      /\.projection-card__markets-toggle > span\s*\{[^}]*font-size:\s*0\.625rem;[^}]*white-space:\s*nowrap;/,
+    );
   });
 
   it("no bare unconditional :hover rule remains outside the gated media query (no stuck touch-hover)", () => {
