@@ -76,10 +76,51 @@
    header owns LIVE/FINAL status only (directive §3). */
 .matchup__time { font-size: var(--proj-meta); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-secondary, #a6a6a6); font-variant-numeric: tabular-nums; }
 
-/* Team logos: unframed transparent asset in a consistent optical box */
-.team-logo-box { display: inline-grid; place-items: center; inline-size: clamp(2rem, 1.8rem + 0.5vw, 2.75rem); block-size: clamp(2rem, 1.8rem + 0.5vw, 2.75rem); flex: none; }
-.team-logo { inline-size: 100%; block-size: 100%; object-fit: contain; background: transparent; border: 0; border-radius: 0; box-shadow: none; }
-.team-logo--mono { display: grid; place-items: center; border-radius: 50%; color: #fff; font-size: var(--proj-label); font-weight: 700; } /* monogram fallback disc (logo exception) */
+/* Team logos: the official MLB SVG viewBoxes are already tightly cropped.
+   A shared HEIGHT plus each asset's real aspect ratio removes the square-box
+   letterboxing that made wide/tall logos look inconsistently sized. */
+.team-logo-box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: auto;
+  block-size: clamp(2rem, 1.8rem + 0.5vw, 2.5rem);
+  flex: none;
+  line-height: 0;
+  vertical-align: middle;
+}
+.team-logo {
+  display: block;
+  inline-size: auto;
+  block-size: 100%;
+  max-inline-size: none;
+  object-fit: contain;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+/* A crisp alpha-following keyline, not a rectangular image border. System is
+   the grey surface and Dark the black surface; Light keeps the original mark. */
+html[data-theme-mode="system"] .team-logo-box--dark-outline .team-logo,
+html[data-theme-mode="dark"] .team-logo-box--dark-outline .team-logo {
+  filter:
+    drop-shadow(1px 0 0 rgba(255, 255, 255, 0.92))
+    drop-shadow(-1px 0 0 rgba(255, 255, 255, 0.92))
+    drop-shadow(0 1px 0 rgba(255, 255, 255, 0.92))
+    drop-shadow(0 -1px 0 rgba(255, 255, 255, 0.92));
+}
+.team-logo-box--mono { aspect-ratio: 1; }
+.team-logo--mono {
+  display: grid;
+  inline-size: 100%;
+  aspect-ratio: 1;
+  place-items: center;
+  border-radius: 50%;
+  color: #fff;
+  font-size: var(--proj-label);
+  font-weight: 700;
+} /* monogram fallback disc (logo exception) */
 
 /* ── Scheduled MLB probable pitchers ─────────────────────────────────────────
    Three stable tracks keep the LINEUPS button in the exact center while each
@@ -428,13 +469,27 @@ html:not(.dark) .pregame-pitcher__status--confirmed { color: #0fa36b; }
   box-shadow: 0 0 0 3px var(--ring, rgba(69, 224, 168, 0.36));
 }
 .projection-card .summary__next:active { transform: scale(0.98); }
+/* A ranked no-edge strip remains entirely neutral: the arrow is navigation,
+   not a model signal. Real-edge arrows retain the mint treatment above. */
+.summary-carousel--no-edge .summary__next {
+  color: var(--foreground, #fff);
+  box-shadow: none;
+}
+.summary-carousel--no-edge .summary__next:focus-visible {
+  box-shadow: 0 0 0 3px var(--foreground, #fff);
+}
 .summary__readout { display: flex; flex-wrap: wrap; gap: var(--space-sm); margin: 0; }
 .summary__item { display: flex; flex-direction: column; gap: 2px; min-inline-size: 0; }
 .summary__item dt { color: var(--text-muted, #6e6e6e); }
 .summary__item dd { margin: 0; }
 /* Spelled-out pick ("Under 7", "Athletics ML") displays uppercase, matching
    the readout's mono-label register (owner directive 2026-07-17). */
-.summary__pick { font-size: var(--proj-body); font-weight: 700; text-transform: uppercase; }
+.summary__pick {
+  font-size: var(--proj-body);
+  font-weight: 700;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
 .summary__none { color: var(--text-secondary, #a6a6a6); margin: 0; }
 /* Mobile-width cards center the whole insight block above the popover trigger
    (owner directive 2026-07-17); wide cards keep the left-aligned scan line. */
@@ -509,13 +564,11 @@ html:not(.dark) .pregame-pitcher__status--confirmed { color: #0fa36b; }
    >=768px; item 8 scoping: item 5 applies to BOTH tablet 768-1023 and
    desktop, same breakpoint as the Wave 1 block above) ══
    Page law "Aligned summary mini-grid": MODEL EDGE | BOOK | MODEL | chip get
-   FIXED column tracks so the same fact lines up at the same x-offset on
-   every card at a given viewport width — replacing the mobile-first
-   flex-wrap layout (kept below 768px, byte-untouched) with a 4-column grid.
-   Tracks use one compact fixed rhythm rather than distributing the full card
-   width: MODEL EDGE, BOOK, MODEL, and the pill/arrow group stay visually
-   together. Every card above the compact container breakpoint resolves the
-   same offsets; narrower cards use the stacked reflow immediately below.
+   stable column tracks so the facts line up while the MODEL EDGE track absorbs
+   the card's available width — replacing the mobile-first flex-wrap layout
+   (kept below 768px) with a 4-column grid. BOOK, MODEL and the signal use their
+   intrinsic widths; the primary pick expands instead of wrapping or clamping.
+   Narrower cards use the stacked reflow immediately below.
    `.summary__readout` (the <dl>, Wave 1) goes `display:contents` so its
    `.summary__item`s become direct grid children of `.summary` in columns
    1-3; the PASS "no action" message (ONE item, Wave 1) spans all three so
@@ -529,21 +582,23 @@ html:not(.dark) .pregame-pitcher__status--confirmed { color: #0fa36b; }
 @media (min-width: 768px) {
   .summary {
     display: grid;
-    /* 400px total including three fixed 8px gaps. Pixel tracks are
-       intentional here: the shell fluidly scales the root font above 16px,
-       so rem tracks would silently grow past the carousel viewport. The
-       container reflow owns cards at or below this exact width. */
-    grid-template-columns: 112px 48px 48px 168px;
-    justify-content: center;
-    column-gap: 8px;
+    grid-template-columns: minmax(max-content, 1fr) 48px 48px minmax(168px, max-content);
+    justify-content: stretch;
+    column-gap: clamp(8px, 1.6cqi, 16px);
     align-items: center;
+    inline-size: 100%;
     min-inline-size: 0;
   }
   .summary__readout { display: contents; }
   .summary__item--edge { grid-column: 1; }
   .summary__item--book { grid-column: 2; }
   .summary__item--model { grid-column: 3; }
-  .summary__item--edge .summary__pick { font-size: var(--proj-label); }
+  .summary__item--edge {
+    min-inline-size: max-content;
+  }
+  .summary__item--edge .summary__pick {
+    font-size: clamp(0.625rem, 2.6cqi, var(--proj-label));
+  }
   /* Fold-in minor (W1 review flagged this hook as dead when it was first
      added in Wave 1 — ProjectionSummary.tsx had no matching CSS rule yet at
      that point): resolved here in Wave 2 by giving it this real, consumed
@@ -551,7 +606,7 @@ html:not(.dark) .pregame-pitcher__status--confirmed { color: #0fa36b; }
      assertion) — chosen over removal since the PASS message needs its own
      span so it never breaks the 4-column track count above. No longer dead. */
   .summary__item--message { grid-column: 1 / span 3; }
-  .summary__signal { grid-column: 4; justify-self: start; }
+  .summary__signal { grid-column: 4; justify-self: end; }
   .summary__signal .edge-indicator {
     gap: 4px;
     padding-inline: 0.375rem;
@@ -562,6 +617,16 @@ html:not(.dark) .pregame-pitcher__status--confirmed { color: #0fa36b; }
   }
   .summary__signal .edge-indicator__label { font-size: 0.5625rem; }
   .summary__signal .edge-indicator__value { font-size: 0.8125rem; }
+  .summary__signal .edge-indicator--none {
+    gap: 4px;
+    padding-inline: 0.375rem;
+    font-size: 0.5625rem;
+  }
+  .summary__signal .edge-indicator--none > svg {
+    inline-size: 12px;
+    block-size: 12px;
+  }
+  .summary__signal .edge-indicator__roi { font-size: 0.75rem; }
 
   /* Numeric cells stay tabular. Book/Model already inherit this from the
      global `.odds-value` rule (client/src/styles/type-system.css) and the
@@ -581,6 +646,8 @@ html:not(.dark) .pregame-pitcher__status--confirmed { color: #0fa36b; }
    beneath it, then center the signal chip last. The viewport gate preserves
    the shipped mobile summary unchanged. */
 @media (min-width: 768px) {
+  /* Size-container queries use the container's content box, so this is the
+     actual usable summary lane after the card's padding—not its border box. */
   @container projcard (max-width: 400px) {
     .summary {
       display: flex;

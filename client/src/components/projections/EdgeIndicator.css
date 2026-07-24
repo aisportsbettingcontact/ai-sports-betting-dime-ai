@@ -46,4 +46,10 @@
   border: 1px solid var(--border, #262626);
   font-size: var(--proj-label);
   font-weight: 600;
+  white-space: nowrap;
+}
+
+.edge-indicator__roi {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
 }

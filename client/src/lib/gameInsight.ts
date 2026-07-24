@@ -30,7 +30,12 @@
  * removed" comparison the card shows — they are supporting detail, not the label.
  */
 
-import { americanToImplied, americanToDecimal, removeVig } from "./edgeUtils";
+import {
+  americanToImplied,
+  americanToDecimal,
+  calculateRoi,
+  removeVig,
+} from "./edgeUtils";
 
 export type Recommendation = "BET" | "WATCH" | "NO_EDGE";
 
@@ -105,6 +110,12 @@ export interface MarketInsight {
   noVigEdgePP: number | null;
   /** expected value per unit staked at the book price */
   evUnits: number;
+  /**
+   * Canonical display ROI, in percentage points. This compares model
+   * probability with the book's no-vig probability (calculateRoi), so it is
+   * deliberately distinct from posted-price `evUnits`.
+   */
+  roiPct: number | null;
   recommendation: Recommendation;
 }
 
@@ -133,6 +144,7 @@ export function scoreMarketSide(
   // No-vig fair book price for this side (needs the opposite side's price).
   let bookNoVigPct: number | null = null;
   let noVigEdgePP: number | null = null;
+  let roiPct: number | null = null;
   const oppPrice = toNum(side.bookOppPrice);
   if (!isNaN(oppPrice)) {
     const fair = removeVig(String(bookPrice), String(oppPrice));
@@ -140,6 +152,8 @@ export function scoreMarketSide(
       bookNoVigPct = fair[0]; // removeVig returns [thisSide, oppSide] for the args passed
       noVigEdgePP = modelProb * 100 - bookNoVigPct;
     }
+    const canonicalRoi = calculateRoi(modelPrice, bookPrice, oppPrice);
+    if (Number.isFinite(canonicalRoi)) roiPct = canonicalRoi;
   }
 
   return {
@@ -154,6 +168,7 @@ export function scoreMarketSide(
     edgePP,
     noVigEdgePP,
     evUnits: expectedValue(modelProb, bookPrice),
+    roiPct,
     recommendation: classifyEdge(edgePP, thresholds),
   };
 }
