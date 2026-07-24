@@ -1885,7 +1885,7 @@ export default function PublishProjections() {
         {/* Top row: publish all — back button and "AI SPORTS BETTING |
             PUBLISH PROJECTIONS" brand text removed (now owned by
             AdminShell's back-to-app affordance + wordmark/tab nav) */}
-        <div className="relative flex items-center px-4 py-2 max-w-5xl mx-auto">
+        <div className="admin-container relative flex items-center py-2">
 
           {/* Right: Approve All Models + Publish All */}
           <div className="flex-1" />
@@ -1934,7 +1934,7 @@ export default function PublishProjections() {
         </div>
 
         {/* Date navigation row */}
-        <div className="px-4 pb-1.5 max-w-5xl mx-auto flex items-center gap-2">
+        <div className="admin-container pb-1.5 flex items-center gap-2">
           {/* Prev day */}
           <button type="button" onClick={() => setGameDate(d => addDays(d, -1))}
             className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors flex-shrink-0"
@@ -1987,7 +1987,7 @@ export default function PublishProjections() {
         </div>
 
         {/* Sport filter toggle — MLB primary (leftmost) */}
-        <div className="px-4 pb-1 max-w-5xl mx-auto flex items-center gap-2">
+        <div className="admin-container pb-1 flex items-center gap-2">
 
           {/* MLB button — primary sport, leftmost */}
           <button type="button" onClick={() => setSelectedSport("MLB")}
@@ -2056,7 +2056,7 @@ export default function PublishProjections() {
 
 
         {/* Stats bar — slate completeness + refresh timestamps */}
-        <div className="px-4 pb-3 max-w-5xl mx-auto">
+        <div className="admin-container pb-3">
           <div
             className="rounded-lg px-4 py-2.5 grid gap-x-4 gap-y-1.5"
             style={{
@@ -2242,7 +2242,7 @@ export default function PublishProjections() {
       </header>
 
       {/* Game cards — same max-width and padding as Dashboard */}
-      <main className="max-w-5xl mx-auto px-4 pb-8 pt-3 space-y-3">
+      <main className="admin-container pb-8 pt-3 space-y-3">
         {selectedSport === "WC2026" ? (
           <WcMatchOddsPanel
             rows={wcRows}
