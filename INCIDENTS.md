@@ -965,3 +965,36 @@ trailing whitespace
 The affected text files were normalized mechanically to a single final newline
 and no trailing spaces, then explicitly restaged. No content or generated
 evidence JSON was changed.
+
+## Incident 36 — 2026-07-25 — sandboxed GitHub authentication probe was inconclusive
+
+Status: RESOLVED
+
+The first GitHub pre-push probe ran without network access. `gh auth status`
+reported the stored session as invalid and the following API request could not
+connect:
+
+```text
+Failed to log in to github.com
+error connecting to api.github.com
+```
+
+No credential value was read and no remote mutation occurred. The exact
+authentication check was rerun with approved network access and confirmed the
+active account and required repository/workflow scopes. A read-only pull
+request query then confirmed that PR #200 did not exist and #199 remained the
+latest repository pull request.
+
+## Incident 37 — 2026-07-25 — GitHub incident patch used wrapped context
+
+Status: RESOLVED
+
+The first attempt to add Incident 36 assumed a line wrap that differed from the
+current file, so the patch tool rejected the complete multi-file patch:
+
+```text
+apply_patch verification failed: Failed to find expected lines
+```
+
+No partial edit was retained. I read the exact tail and reapplied the incident
+and publication-confirmation updates against current context.

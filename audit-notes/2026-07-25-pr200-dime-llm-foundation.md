@@ -6,8 +6,8 @@
 - Base: `470e3fad9477c37228a912e5fce1db5ab328d62f`
 - Branch: `agent/restore-dime-1-0-llama31-foundation`
 - Base state: `ml/dime-1.0/` absent; worktree clean
-- Implementation commit: recorded in the draft PR after the commit is created
-  because a Git commit cannot contain its own final SHA
+- Validated implementation commit:
+  `92cf9f86481e089eefa7460563ab95697e1967b9`
 - Draft PR: recorded after GitHub creates it
 
 The work was performed in a clean isolated worktree created directly from the
@@ -163,6 +163,8 @@ and adapter licenses before any external release.
 
 Because a public feature branch is publication, no push is authorized until
 the owner gives the explicit publication confirmation required by this task.
+That exact confirmation was received in the task thread on 2026-07-25 before
+the first push. `LICENSE` and `NOTICE` remain unchanged.
 
 ## Rehearsal evidence selection
 
