@@ -24,7 +24,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { eq, and, inArray, sql } from "drizzle-orm";
 import { getDb } from "./db";
-import { games, mlbPitcherStats, mlbPitcherRolling5, mlbTeamBattingSplits, mlbParkFactors, mlbBullpenStats, mlbUmpireModifiers, mlbLineups, mlbPlayers } from "../drizzle/schema";
+import { games, mlbPitcherStats, mlbPitcherRolling5, mlbTeamBattingSplits, mlbParkFactors, mlbBullpenStats, mlbUmpireModifiers, mlbLineups, mlbPlayers, mlbCalibrationConstants } from "../drizzle/schema";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
@@ -1233,7 +1233,43 @@ export function buildLineupOrder(
   return result;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// M-207: live calibration constants (closes the write-only-constants gap)
+// Reads mlb_calibration_constants.currentValue by paramName with a short
+// in-memory cache; a missing row or failed read falls back to the shipped
+// default so the engine never blocks on the constants store.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const CALIBRATION_CACHE_TTL_MS = 5 * 60 * 1000;
+const calibrationCache = new Map<string, { value: number; readAt: number }>();
+
+async function loadCalibrationConstant(paramName: string, fallback: number): Promise<number> {
+  const cached = calibrationCache.get(paramName);
+  if (cached && Date.now() - cached.readAt < CALIBRATION_CACHE_TTL_MS) return cached.value;
+  let value = fallback;
+  try {
+    const db = await getDb();
+    const rows = await db
+      .select({ currentValue: mlbCalibrationConstants.currentValue })
+      .from(mlbCalibrationConstants)
+      .where(eq(mlbCalibrationConstants.paramName, paramName))
+      .limit(1);
+    const dbValue = rows.length > 0 ? Number(rows[0].currentValue) : NaN;
+    if (Number.isFinite(dbValue)) value = dbValue;
+  } catch (err) {
+    console.warn(`[MLBModelRunner] [WARN] calibration read failed for ${paramName}, using fallback ${fallback}: ${err instanceof Error ? err.message : String(err)}`);
+  }
+  calibrationCache.set(paramName, { value, readAt: Date.now() });
+  return value;
+}
+
 async function runPythonEngine(inputs: EngineInput[]): Promise<MlbModelResult[]> {
+  // M-202/M-207: walk-forward-fittable constants injected into the engine env.
+  // Defaults preserve current behavior when the constants rows are absent.
+  const [fgMlHomeEdge, leagueEnvMult] = await Promise.all([
+    loadCalibrationConstant("fg_ml_home_edge", 0.03),
+    loadCalibrationConstant("league_env_mult", 1.0),
+  ]);
   return new Promise((resolve, reject) => {
     const proc = spawn(PYTHON, ["-c", `
 import sys, json, os
@@ -1316,6 +1352,10 @@ print(json.dumps(results))
           if (v !== undefined && k !== 'PYTHONHOME') env[k] = v;
         }
         env['PYTHONDONTWRITEBYTECODE'] = '1';
+        // M-202/M-207: engine calibration overrides. An operator-set env var
+        // (inherited from process.env above) wins over the DB constant.
+        if (env['DIME_FG_ML_HOME_EDGE'] === undefined) env['DIME_FG_ML_HOME_EDGE'] = String(fgMlHomeEdge);
+        if (env['DIME_LEAGUE_ENV_MULT'] === undefined) env['DIME_LEAGUE_ENV_MULT'] = String(leagueEnvMult);
         return env;
       })(),
       cwd: __dirname,

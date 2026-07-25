@@ -7,8 +7,10 @@
  * COMPUTATION MODEL (v3 — P2-B/P2-C fixes):
  * ─────────────────────────────────────────────────────────────────────────────
  *   P2-B: Park factor now uses HR-specific hrFactor instead of overall run
- *         factor (parkFactor3yr). hrFactor is backfilled from Python PARK_FACTORS
- *         "hr" key. Falls back to parkFactor3yr if hrFactor is null.
+ *         factor (parkFactor3yr). Source unified with the team-level model:
+ *         mlb_park_factors.hrFactor is the single live source; neutral 1.0
+ *         when null (parkFactor3yr is a run factor, not an HR factor — it is
+ *         no longer used as a fallback).
  *
  *   P2-C: wOBA double-count fixed.
  *     OLD: base_rate = (hr9/27) * woba_scale * pitcher_adj * park_adj
@@ -19,7 +21,7 @@
  *          Statcast data is available (woba_adj replaces woba_scale).
  *     Recalibrated HR_CALIBRATION_FACTOR: 0.325 → 0.875
  *
- *   Step 1: Base team HR rate per PA (P2-C: no woba_scale)
+ *   Step 1: Base team HR rate per AB (P2-C: no woba_scale; M-212: per-AB basis)
  *     base_rate = (team_hr9 / 27) * pitcher_adj * park_adj
  *
  *   Step 2: Statcast individual power adjustment (if player has Statcast data)
@@ -31,9 +33,12 @@
  *     Fallback (no Statcast): woba_adj = woba / LEAGUE_WOBA [clamped 0.30–3.00]
  *
  *   Step 3: Poisson P(≥1 HR)
- *     lambda = base_rate * statcast_adj * PA_PER_GAME * HR_CALIBRATION_FACTOR
+ *     lambda = base_rate * statcast_adj * AB_PER_GAME * hr_calibration_factor
  *     p_hr   = 1 - exp(-lambda)
  *     [clamped to 4%–45%]
+ *     M-212: hr9/27 is a per-AB rate, so lambda scales by expected AB faced
+ *     (not PA). M-207: hr_calibration_factor is read live from
+ *     mlb_calibration_constants (fallback: hardcoded P6 value).
  *
  * [INPUT]  gameDate: string (YYYY-MM-DD)
  * [OUTPUT] HrPropsModelResult
@@ -50,6 +55,7 @@ import {
   mlbParkFactors,
   mlbLineups,
   mlbPlayers,
+  mlbCalibrationConstants,
   games,
 } from "../drizzle/schema";
 import { eq, and, inArray, isNotNull } from "drizzle-orm";
@@ -64,6 +70,11 @@ const LEAGUE_ISO      = 0.168;   // League ISO (SLG - AVG)
 const LEAGUE_BARREL   = 8.3;     // League barrel rate (%)
 const LEAGUE_HARDHIT  = 37.5;    // League hard-hit rate (%)
 const PLAYER_PA_PER_GAME = 4.22; // Average PA per batter per game
+// M-212: hr9 here is HR per 27 AB, so hr9/27 is a rate per AB. Expected HR must
+// be rate_per_ab * expected AB faced — multiplying by PA (4.22) inflated lambda
+// ~10-13%. League AB/PA ≈ 0.885 (walks/HBP/sacrifices are PA but not AB).
+const AB_PER_PA          = 0.885;
+const PLAYER_AB_PER_GAME = PLAYER_PA_PER_GAME * AB_PER_PA; // ≈3.73 expected AB faced per game
 // EDGE_THRESHOLD: minimum edge (modelPHr - anNoVig) to emit OVER verdict.
 // P6 recalibration (2026-05-11, n=2438): EDGE_THRESHOLD unchanged at 0.060.
 // Primary gate remains edge-based; MIN_ABSOLUTE_P_HR updated for new factor scale.
@@ -94,8 +105,31 @@ const MAX_STATCAST_ADJ = 3.00;
 //                 old_pHr = 1-exp(-0.0649) = 6.3%  [under-estimated due to heavy calib]
 //                 new_pHr = 1-exp(-0.1748) = 16.0%  [closer to actual ~9-12% HR rate]
 //      Note: HR_CALIBRATION_FACTOR will be re-tuned after 200+ game sample in 2026.
-const HR_CALIBRATION_FACTOR = 0.5317;  // P6 recalibrated: 2026 backtest (n=2438) showed avg P(HR)=13.66% vs actual=10.09% (+3.57pp bias)
-                                       // Factor reduced 0.72→0.5317 (×0.738) to correct systematic over-prediction
+// M-207: the live value is read from mlb_calibration_constants
+// (paramName='hr_calibration_factor') once per modeling cycle; this constant is
+// the fallback when the row is missing or unreadable.
+// NOTE: this factor was fitted against the old per-PA lambda basis and now
+// absorbs the ~10-13% inflation removed by the M-212 AB-basis fix — it must be
+// re-fitted by walk-forward (Phase 5) before the fix changes live output scale.
+const HR_CALIBRATION_FACTOR_FALLBACK = 0.5317;  // P6 recalibrated: 2026 backtest (n=2438) showed avg P(HR)=13.66% vs actual=10.09% (+3.57pp bias)
+                                                // Factor reduced 0.72→0.5317 (×0.738) to correct systematic over-prediction
+
+// ─── M-207: Per-cycle read of the live HR calibration factor ─────────────────
+type Db = NonNullable<Awaited<ReturnType<typeof getDb>>>;
+async function loadHrCalibrationFactor(db: Db): Promise<number> {
+  try {
+    const rows = await db
+      .select({ currentValue: mlbCalibrationConstants.currentValue })
+      .from(mlbCalibrationConstants)
+      .where(eq(mlbCalibrationConstants.paramName, "hr_calibration_factor"))
+      .limit(1);
+    const value = rows.length > 0 ? Number(rows[0].currentValue) : NaN;
+    if (Number.isFinite(value) && value > 0) return value;
+  } catch (err) {
+    console.warn(`${TAG} [WARN] hr_calibration_factor read failed, using fallback: ${err instanceof Error ? err.message : String(err)}`);
+  }
+  return HR_CALIBRATION_FACTOR_FALLBACK;
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 export interface HrPropsModelResult {
@@ -138,16 +172,18 @@ function computePlayerPHr(
   teamBatting: TeamBattingContext,
   pitcher: PitcherContext,
   park: ParkContext,
-  statcast: StatcastContext | null
+  statcast: StatcastContext | null,
+  hrCalibrationFactor: number
 ): number {
-  // ── Step 1: Base team HR rate per PA ─────────────────────────────────────────
+  // ── Step 1: Base team HR rate per AB ─────────────────────────────────────────
   // P2-C: woba_scale REMOVED from base_rate to fix double-counting.
   // wOBA already incorporates HR contribution; multiplying by woba_scale
   // on top of hr9 (which already reflects HR production) double-counts HR.
-  const hr_rate_per_pa = teamBatting.hr9 / 27.0;
+  // M-212: hr9 is HR per 27 AB, so hr9/27 is a rate per AB (not per PA).
+  const hr_rate_per_ab = teamBatting.hr9 / 27.0;
   const pitcher_adj    = Math.sqrt(pitcher.hr9 / LEAGUE_HR9);  // sqrt-dampened
   const park_adj       = park.hrFactor;  // P2-B: HR-specific park factor
-  const base_rate      = hr_rate_per_pa * pitcher_adj * park_adj;
+  const base_rate      = hr_rate_per_ab * pitcher_adj * park_adj;
 
   // ── Step 2: Power adjustment (Statcast individual or team wOBA fallback) ──────
   // P2-C: woba is used ONLY here as a fallback when no individual Statcast data.
@@ -167,8 +203,10 @@ function computePlayerPHr(
   }
 
   // ── Step 3: Poisson P(≥1 HR) ─────────────────────────────────────────────────
-  const lambdaRaw = base_rate * statcast_adj * PLAYER_PA_PER_GAME;
-  const lambda    = lambdaRaw * HR_CALIBRATION_FACTOR;
+  // M-212: expected HR = rate_per_ab * expected AB faced. Calibration factor
+  // application unchanged; its value must be re-fitted post-fix (Phase 5).
+  const lambdaRaw = base_rate * statcast_adj * PLAYER_AB_PER_GAME;
+  const lambda    = lambdaRaw * hrCalibrationFactor;
   const p_hr      = 1 - Math.exp(-lambda);
 
   return Math.max(MIN_P_HR, Math.min(MAX_P_HR, p_hr));
@@ -188,6 +226,10 @@ export async function resolveAndModelHrProps(gameDate: string): Promise<HrPropsM
 
   const db = await getDb();
   if (!db) throw new Error("Database not available");
+
+  // M-207: fetch once per cycle — every row in this run uses the same factor.
+  const hrCalibrationFactor = await loadHrCalibrationFactor(db);
+  console.log(`${TAG} [STATE] hr_calibration_factor=${hrCalibrationFactor} (fallback=${HR_CALIBRATION_FACTOR_FALLBACK})`);
 
   let resolved = 0, alreadyHad = 0, unresolved = 0, modeled = 0, edges = 0, errors = 0;
 
@@ -290,21 +332,18 @@ export async function resolveAndModelHrProps(gameDate: string): Promise<HrPropsM
 
   // 4c: Park factors — P2-B: Use HR-specific park factor (hrFactor) instead of overall run factor
   // hrFactor is the park's HR-specific adjustment (e.g., Coors=1.19, Petco=0.96)
-  // parkFactor3yr is the overall run factor (includes singles, doubles, etc.)
-  // Using hrFactor gives a more precise HR probability adjustment per park.
+  // Source unified with the team-level model: mlb_park_factors.hrFactor is the
+  // single live source. parkFactor3yr is an overall run factor (singles,
+  // doubles, etc.) — not a valid HR proxy, so null hrFactor means neutral 1.0.
   const parkFactors = await db.select({
-    teamAbbrev:    mlbParkFactors.teamAbbrev,
-    parkFactor3yr: mlbParkFactors.parkFactor3yr,  // fallback
-    hrFactor:      mlbParkFactors.hrFactor,         // HR-specific (P2-B)
+    teamAbbrev: mlbParkFactors.teamAbbrev,
+    hrFactor:   mlbParkFactors.hrFactor,  // HR-specific (P2-B)
   }).from(mlbParkFactors);
   const parkMap = new Map<string, ParkContext>();
-  for (const p of parkFactors as Array<{ teamAbbrev: string; parkFactor3yr: number | null; hrFactor: number | null }>) {
-    // Priority: hrFactor (HR-specific) > parkFactor3yr (overall run) > 1.0 (neutral)
-    const hrAdj = p.hrFactor ?? p.parkFactor3yr ?? null;
-    if (hrAdj != null) {
-      parkMap.set(p.teamAbbrev, { hrFactor: Number(hrAdj) });
-      console.log(`${TAG} [P2-B] Park ${p.teamAbbrev}: hrFactor=${Number(hrAdj).toFixed(4)} (source=${p.hrFactor != null ? 'hr_specific' : 'run_factor_fallback'})`);
-    }
+  for (const p of parkFactors as Array<{ teamAbbrev: string; hrFactor: number | null }>) {
+    const hrAdj = p.hrFactor != null ? Number(p.hrFactor) : 1.0;
+    parkMap.set(p.teamAbbrev, { hrFactor: hrAdj });
+    console.log(`${TAG} [P2-B] Park ${p.teamAbbrev}: hrFactor=${hrAdj.toFixed(4)} (source=${p.hrFactor != null ? 'hr_specific' : 'neutral_null'})`);
   }
   console.log(`${TAG} [STATE] Park factors: ${parkMap.size} parks (P2-B: HR-specific)`);
 
@@ -408,7 +447,7 @@ export async function resolveAndModelHrProps(gameDate: string): Promise<HrPropsM
       }
 
       // Compute P(HR) with P2-B/P2-C enhancements
-      const modelPHr = computePlayerPHr(batting, pitcher, park, statcast);
+      const modelPHr = computePlayerPHr(batting, pitcher, park, statcast, hrCalibrationFactor);
       const modelOverOdds = probToAmericanOdds(modelPHr);
 
       // Edge and EV

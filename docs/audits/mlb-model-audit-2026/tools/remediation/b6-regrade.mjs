@@ -171,16 +171,35 @@ for (const p of hrProps) {
 console.log(`HR props regrade: ${hrUpdates.length} rows planned`);
 
 if (EXECUTE) {
+  // Row-by-row updates are ~20x too slow against serverless TiDB. Batch rows sharing the same
+  // column signature into one CASE-per-column UPDATE, 300 rows per statement, one transaction
+  // per table.
   async function applyChunked(table, updates) {
+    const groups = new Map();
+    for (const u of updates) {
+      const sig = Object.keys(u.set).sort().join(',');
+      if (!groups.has(sig)) groups.set(sig, []);
+      groups.get(sig).push(u);
+    }
     await conn.beginTransaction();
     try {
-      for (const u of updates) {
-        const cols = Object.keys(u.set).map((c) => `\`${c}\`=?`).join(', ');
-        await conn.query(`UPDATE \`${table}\` SET ${cols} WHERE id=?`, [...Object.values(u.set), u.id]);
+      for (const [sig, rows] of groups) {
+        const cols = sig.split(',');
+        for (let i = 0; i < rows.length; i += 300) {
+          const chunk = rows.slice(i, i + 300);
+          const ids = chunk.map((r) => r.id);
+          const setSql = cols
+            .map((c) => `\`${c}\` = CASE id ${chunk.map(() => 'WHEN ? THEN ?').join(' ')} ELSE \`${c}\` END`)
+            .join(', ');
+          const params = [];
+          for (const c of cols) for (const r of chunk) params.push(r.id, r.set[c] === undefined ? null : r.set[c]);
+          params.push(...ids);
+          await conn.query(`UPDATE \`${table}\` SET ${setSql} WHERE id IN (${ids.map(() => '?').join(',')})`, params);
+        }
       }
       await conn.commit();
     } catch (e) { await conn.rollback(); throw e; }
-    console.log(`applied ${updates.length} updates to ${table}`);
+    console.log(`applied ${updates.length} updates to ${table} (${groups.size} signatures)`);
   }
   await applyChunked('games', gUpdates);
   await applyChunked('mlb_strikeout_props', kUpdates);

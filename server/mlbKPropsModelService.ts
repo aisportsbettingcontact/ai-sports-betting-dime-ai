@@ -15,8 +15,8 @@
  *     [clamped to 0.70–1.40]
  *
  *   Step 3: Opponent K-rate adjustment (vs pitcher hand)
- *     opp_k9 = team_batting_splits.k9 (vs pitcher hand)
- *     opp_adj = opp_k9 / LEAGUE_OPP_K9
+ *     opp_k9 = team_batting_splits.k9 (vs pitcher hand; K/AB*27 basis)
+ *     opp_adj = opp_k9 / league_mean_team_k9(hand)   [same basis, centers on 1.0]
  *     [clamped to 0.70–1.40]
  *
  *   Step 4: Expected innings pitched
@@ -27,7 +27,9 @@
  *     lambda = pitcher_k9 * xfip_adj * opp_adj * ip_expected / 9
  *
  *   Step 6: P(Ks > bookLine) using Poisson CDF
- *     p_over = 1 - Poisson_CDF(floor(bookLine), lambda)
+ *     p_over  = P(K > bookLine) = 1 - Poisson_CDF(floor(bookLine), lambda)
+ *     p_under = P(K < bookLine) — on integer lines the push mass (K == line)
+ *     is excluded from both sides
  *     [clamped to 3%–85%]
  *
  *   Step 7: Edge and EV
@@ -56,13 +58,17 @@ import {
 } from "../drizzle/schema";
 import { eq, and, inArray } from "drizzle-orm";
 import { getMlbamIdMap, normalizeMlbamName } from "./mlbamIdCache";
+import { getLeagueMeanTeamK9ByHand, getKCalibrationFactors } from "./kPropsDbHelpers";
 
 const TAG = "[KPropsModel]";
 
 // ─── League-average constants (2025 MLB) ─────────────────────────────────────
 const LEAGUE_K9       = 8.5;    // League-average K/9 for starters
 const LEAGUE_XFIP     = 4.10;   // League-average xFIP
-const LEAGUE_OPP_K9   = 8.2;    // League-average team K/9 vs RHP (baseline)
+// M-204: the old LEAGUE_OPP_K9=8.2 divisor was a true-K/9 constant, but
+// mlb_team_batting_splits.k9 is on a K/AB*27 basis (league mean ~6.8) — the
+// mismatch shrank every projection ~0.83x. The divisor is now the measured
+// same-basis league mean per hand (getLeagueMeanTeamK9ByHand, once per cycle).
 const EDGE_THRESHOLD  = 0.040;  // Minimum edge to emit UNDER verdict
 // ─── Direction-split edge thresholds (empirical, 288-game backtest 2026) ──────
 // OVER at line>=6.5 has 33.3% win rate — model over-projects for elite pitchers.
@@ -85,10 +91,14 @@ const MAX_IP          = 7.0;
 // P5 recalibration: 2026 backtest (n=693) showed Bias=-0.521 Ks/start (model UNDER-projects).
 // MAE=2.023, RMSE=2.570. Negative bias means lambdaRaw is too low → increase factors.
 // Old OVER=0.800, UNDER=0.739. Correction: +0.521/5.1 ≈ +0.102 proportionally.
-const K_CALIBRATION_FACTOR_OVER  = 0.870;  // P5: 0.800 → 0.870 (+0.070) to correct -0.52 under-projection
-const K_CALIBRATION_FACTOR_UNDER = 0.810;  // P5: 0.739 → 0.810 (+0.071) to correct -0.52 under-projection
-// Legacy alias (used in kProj display)
-const K_CALIBRATION_FACTOR = K_CALIBRATION_FACTOR_UNDER;
+// M-207: these are now FALLBACK defaults — live values are read once per cycle
+// from mlb_calibration_constants ('k_calibration_factor_over'/'_under') via
+// getKCalibrationFactors, so the recalibration pipeline can update them without
+// a deploy. WARNING: both defaults were fitted while the M-204 opp_adj unit bug
+// shrank lambda ~17% — they MUST be re-fitted by walk-forward before the fixed
+// model ships (Phase 5 writes the re-fitted values to mlb_calibration_constants).
+const K_CALIBRATION_FACTOR_OVER_DEFAULT  = 0.870;  // P5: 0.800 → 0.870 (+0.070) to correct -0.52 under-projection
+const K_CALIBRATION_FACTOR_UNDER_DEFAULT = 0.810;  // P5: 0.739 → 0.810 (+0.071) to correct -0.52 under-projection
 const EMPIRICAL_IP_PER_START = 5.1;   // 2025 MLB starter avg IP/start
 // ─── P4-B: Platoon composition constants (2025 MLB empirical) ─────────────────
 // LHP vs RHH platoon advantage: LHP K% is ~8% higher vs RHH than vs LHH
@@ -134,12 +144,26 @@ function poissonCdf(k: number, lambda: number): number {
 }
 
 /**
- * P(X > threshold) for a Poisson distribution.
- * For half-lines (e.g. 4.5), threshold = floor(4.5) = 4, so P(X > 4) = P(X >= 5)
+ * P(X > bookLine) for a Poisson distribution.
+ * Half-lines (e.g. 4.5): threshold = floor(4.5) = 4, so P(X > 4) = P(X >= 5).
+ * Integer lines (e.g. 5.0): threshold = 5, so P(X > 5) — the push mass
+ * (X == line) is already excluded.
  */
 function poissonPOver(bookLine: number, lambda: number): number {
   const threshold = Math.floor(bookLine); // e.g. 4.5 → 4, 5.0 → 5
   return 1 - poissonCdf(threshold, lambda);
+}
+
+/**
+ * P(X < bookLine) for a Poisson distribution.
+ * Half-lines (e.g. 4.5): P(X <= 4) = CDF(4) — no push possible.
+ * Integer lines (e.g. 5.0): X == line is a push, so pUnder = P(X < 5) = CDF(4).
+ * Using 1 - poissonPOver here would bucket the push mass into UNDER,
+ * overstating it on integer lines.
+ */
+function poissonPUnder(bookLine: number, lambda: number): number {
+  const threshold = Number.isInteger(bookLine) ? bookLine - 1 : Math.floor(bookLine);
+  return poissonCdf(threshold, lambda); // poissonCdf(-1, λ) = 0 for a 0.0 line
 }
 
 /**
@@ -261,6 +285,15 @@ export async function modelKPropsForDate(gameDate: string): Promise<KPropsModelR
   console.log(`${TAG} [INPUT] date=${gameDate} model=v1-poisson`);
   const db = await getDb();
   if (!db) throw new Error("Database not available");
+
+  // Per-cycle model inputs (fetched once, reused for every pitcher this run):
+  // M-204: same-basis league mean of team k9 per hand for the opp adjustment.
+  // M-207: live direction-split calibration factors (fallback = hardcoded defaults).
+  const leagueMeanTeamK9 = await getLeagueMeanTeamK9ByHand();
+  const kCalib = await getKCalibrationFactors(
+    K_CALIBRATION_FACTOR_OVER_DEFAULT,
+    K_CALIBRATION_FACTOR_UNDER_DEFAULT,
+  );
 
   let modeled = 0, edges = 0, errors = 0, skipped = 0;
 
@@ -427,11 +460,14 @@ export async function modelKPropsForDate(gameDate: string): Promise<KPropsModelR
         xfipAdj = clamp(LEAGUE_XFIP / xfip, MIN_XFIP_ADJ, MAX_XFIP_ADJ);
       }
 
-      // ── Opponent K-rate adjustment ─────────────────────────────────────
-      // Use opponent team's K/9 vs this pitcher's hand
+      // ── Opponent K-rate adjustment (M-204) ─────────────────────────────
+      // Opponent team's k9 vs this pitcher's hand, divided by the league mean
+      // on the same K/AB*27 basis so opp_adj centers on 1.0. Missing team
+      // split falls back to the league mean itself (opp_adj = 1.0).
       const oppK9Key = `${oppTeam}:${throwsHand}`;
-      const oppK9 = battingSplitsByTeamHand.get(oppK9Key) ?? LEAGUE_OPP_K9;
-      const oppAdj = clamp(oppK9 / LEAGUE_OPP_K9, MIN_OPP_ADJ, MAX_OPP_ADJ);
+      const leagueMeanK9 = leagueMeanTeamK9[throwsHand === "L" ? "L" : "R"];
+      const oppK9 = battingSplitsByTeamHand.get(oppK9Key) ?? leagueMeanK9;
+      const oppAdj = clamp(oppK9 / leagueMeanK9, MIN_OPP_ADJ, MAX_OPP_ADJ);
 
       // ── P2-A: Expected innings pitched (4-tier priority fallback) ─────────────────────────────────────────────────────
       // Priority 1: ipMean3yr (3yr empirical mean IP/start — most stable, backtest-calibrated)
@@ -460,18 +496,19 @@ export async function modelKPropsForDate(gameDate: string): Promise<KPropsModelR
       const platoonTag = `[KProps][P4-B][${row.pitcherName}]`;
       const platoonAdj = computePlatoonAdj(oppLineupJson, throwsHand, oppLineupConfirmed, platoonTag);
       // ── Poisson lambda (direction-split calibration) ─────────────────────
-      // OVER uses stronger factor (0.800) to correct high-line over-projection.
-      // UNDER uses standard factor (0.739) calibrated from full-sample backtest.
+      // M-207: factors come from mlb_calibration_constants when present,
+      // otherwise the hardcoded defaults (see K_CALIBRATION_FACTOR_*_DEFAULT).
       // P4-B: platoonAdj multiplied into lambdaRaw (adjusts K-rate for lineup hand composition)
       const lambdaRaw = pitcherK9 * xfipAdj * oppAdj * platoonAdj * (ipExpected / 9);
-      const lambdaOver  = lambdaRaw * K_CALIBRATION_FACTOR_OVER;  // for OVER probability
-      const lambdaUnder = lambdaRaw * K_CALIBRATION_FACTOR_UNDER; // for UNDER probability
+      const lambdaOver  = lambdaRaw * kCalib.over;  // for OVER probability
+      const lambdaUnder = lambdaRaw * kCalib.under; // for UNDER probability
       // Use lambdaUnder as the display lambda (kProj) since UNDER is the primary signal
       const lambda = lambdaUnder;
 
-      // ── P(Ks > bookLine) ───────────────────────────────────────────────
+      // ── P(Ks > bookLine) / P(Ks < bookLine) ────────────────────────────
+      // On integer lines the push mass (K == line) is excluded from both sides.
       const pOver  = clamp(poissonPOver(bookLine, lambdaOver),  MIN_P_OVER, MAX_P_OVER);
-      const pUnder = clamp(1 - poissonPOver(bookLine, lambdaUnder), MIN_P_OVER, MAX_P_OVER);
+      const pUnder = clamp(poissonPUnder(bookLine, lambdaUnder), MIN_P_OVER, MAX_P_OVER);
 
       // ── Model odds ────────────────────────────────────────────────────
       const modelOverOdds  = probToAmericanOdds(pOver);
@@ -540,7 +577,7 @@ export async function modelKPropsForDate(gameDate: string): Promise<KPropsModelR
         `${TAG} [STATE] ${row.pitcherName} (${row.side}@${oppTeam}) | ${statsTag} | ` +
         `xfipAdj=${xfipAdj.toFixed(3)} oppAdj=${oppAdj.toFixed(3)} platoonAdj=${platoonAdj.toFixed(4)} ` +
         `ip=${ipExpected.toFixed(1)} lambdaRaw=${lambdaRaw.toFixed(3)} lambda=${lambda.toFixed(3)} ` +
-        `(calib=${K_CALIBRATION_FACTOR}) | pOver=${pOver.toFixed(4)} anNoVig=${anNoVig.toFixed(4)} ` +
+        `(calibO=${kCalib.over.toFixed(3)}/U=${kCalib.under.toFixed(3)}) | pOver=${pOver.toFixed(4)} anNoVig=${anNoVig.toFixed(4)} ` +
         `edge=${edgeStr} ev=${evStr} | verdict=${verdict}`
       );
     } catch (err: unknown) {

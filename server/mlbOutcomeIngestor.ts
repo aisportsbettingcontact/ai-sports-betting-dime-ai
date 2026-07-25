@@ -18,12 +18,28 @@
  *     brierF5Ml     — (p_f5_home_win - outcome_f5_home_win)^2 for F5 ML market
  *     outcomeIngestedAt — UTC ms timestamp of ingestion
  *
+ *   Model-pick grading fields (games table, M-101 forward path):
+ *     fgMlResult/fgMlCorrect, fgRlResult/fgRlCorrect, fgTotalResult/fgTotalCorrect,
+ *     f5MlResult/f5MlCorrect, f5RlResult/f5RlCorrect, f5TotalResult/f5TotalCorrect,
+ *     nrfiBacktestResult/nrfiCorrect — grade the MODEL'S PICK (the pre-audit
+ *     columns graded a fixed away-side bet and were abandoned; audit M-101),
+ *     plus fgBacktestRunAt/f5BacktestRunAt/nrfiBacktestRunAt stamps.
+ *
  * BRIER SCORE FORMULA:
  *   BS = (p - o)^2
  *   where p = model probability [0,1], o = binary outcome (0 or 1)
  *   Range: [0, 1]. Lower = better calibration.
  *   Perfect calibration: BS = 0. Worst: BS = 1.
  *   Null if required inputs (model prob or actual score) are unavailable.
+ *
+ * PROBABILITY STORAGE SCALES (audit M-203):
+ *   The games model columns are stored on TWO scales:
+ *     0-100 percent — modelOverRate, modelAwayWinPct, modelHomeWinPct,
+ *                     modelF5AwayWinPct, modelF5HomeWinPct
+ *     0-1 unit      — modelPNrfi, modelF5OverRate (mlbModelRunner writes the
+ *                     raw probabilities unscaled for these two)
+ *   brierScore() takes an already-normalized [0,1] probability; every call
+ *   site normalizes explicitly via probFromPct / probFromUnit.
  *
  * PUSH HANDLING:
  *   If actualFgTotal == bookTotal (push), brierFgTotal = null (no outcome to score).
@@ -95,7 +111,7 @@ interface MlbApiGame {
 }
 
 /** Parsed outcome data from the MLB Stats API for a single game */
-interface GameOutcome {
+export interface GameOutcome {
   gamePk: number;
   awayAbbrev: string;
   homeAbbrev: string;
@@ -146,20 +162,46 @@ export interface OutcomeIngestSummary {
 
 // ─── Brier Score Computation ──────────────────────────────────────────────────
 
+/** Parses a numeric DB value (decimal string, varchar line) to number, or null. */
+function parseNumOrNull(value: string | number | null | undefined): number | null {
+  if (value === null || value === undefined) return null;
+  const n = parseFloat(String(value));
+  return isNaN(n) ? null : n;
+}
+
+/**
+ * Normalizes a model column stored on the 0-100 percent scale (modelOverRate,
+ * modelAwayWinPct, modelHomeWinPct, modelF5AwayWinPct, modelF5HomeWinPct) to
+ * a [0,1] probability.
+ */
+export function probFromPct(value: string | number | null | undefined): number | null {
+  const n = parseNumOrNull(value);
+  return n !== null ? n / 100 : null;
+}
+
+/**
+ * Reads a model column already stored on the 0-1 unit scale (modelPNrfi,
+ * modelF5OverRate — mlbModelRunner writes these unscaled). Dividing these by
+ * 100 was the M-203 garbage-Brier bug.
+ */
+export function probFromUnit(value: string | number | null | undefined): number | null {
+  return parseNumOrNull(value);
+}
+
 /**
  * Computes a single Brier score: (p - o)^2
  *
- * @param modelProbPct  Model probability in [0, 100] (e.g. 54.3 = 54.3%)
- * @param outcome       Binary outcome: 1 = event occurred, 0 = did not occur
+ * @param p        Model probability already normalized to [0, 1]. Callers must
+ *                 normalize explicitly (probFromPct / probFromUnit) — the games
+ *                 model columns are stored on two different scales (see header).
+ * @param outcome  Binary outcome: 1 = event occurred, 0 = did not occur
  * @returns Brier score in [0, 1], or null if inputs are invalid
  */
-function brierScore(
-  modelProbPct: string | number | null | undefined,
+export function brierScore(
+  p: number | null,
   outcome: 0 | 1 | null,
 ): number | null {
-  if (modelProbPct === null || modelProbPct === undefined) return null;
-  if (outcome === null) return null;
-  const p = parseFloat(String(modelProbPct)) / 100;
+  if (p === null || outcome === null) return null;
   if (isNaN(p) || p < 0 || p > 1) return null;
   const bs = Math.pow(p - outcome, 2);
   // Round to 6 decimal places (matches precision: 7, scale: 6 in schema)
@@ -173,7 +215,7 @@ function brierScore(
  * @param outcome     Parsed outcome from MLB Stats API
  * @returns Object with all 5 Brier scores (null if inputs unavailable)
  */
-function computeBrierScores(
+export function computeBrierScores(
   game: {
     bookTotal: string | null | undefined;
     modelOverRate: string | null | undefined;
@@ -199,9 +241,9 @@ function computeBrierScores(
   const bookTotalNum = game.bookTotal ? parseFloat(String(game.bookTotal)) : null;
   if (fgTotal !== null && bookTotalNum !== null && bookTotalNum > 0) {
     if (fgTotal !== bookTotalNum) {
-      // Not a push — compute Brier
+      // Not a push — compute Brier. modelOverRate is stored 0-100.
       const outcomeOver: 0 | 1 = fgTotal > bookTotalNum ? 1 : 0;
-      brierFgTotal = brierScore(game.modelOverRate, outcomeOver);
+      brierFgTotal = brierScore(probFromPct(game.modelOverRate), outcomeOver);
     }
     // Push → brierFgTotal stays null
   }
@@ -214,8 +256,9 @@ function computeBrierScores(
   const bookF5TotalNum = game.f5Total ? parseFloat(String(game.f5Total)) : null;
   if (f5TotalActual !== null && bookF5TotalNum !== null && bookF5TotalNum > 0) {
     if (f5TotalActual !== bookF5TotalNum) {
+      // modelF5OverRate is stored 0-1 (NOT 0-100 — M-203)
       const outcomeF5Over: 0 | 1 = f5TotalActual > bookF5TotalNum ? 1 : 0;
-      brierF5Total = brierScore(game.modelF5OverRate, outcomeF5Over);
+      brierF5Total = brierScore(probFromUnit(game.modelF5OverRate), outcomeF5Over);
     }
     // Push → brierF5Total stays null
   }
@@ -223,16 +266,17 @@ function computeBrierScores(
   // ── NRFI ──────────────────────────────────────────────────────────────────
   let brierNrfi: number | null = null;
   if (outcome.nrfiBinary !== null) {
-    brierNrfi = brierScore(game.modelPNrfi, outcome.nrfiBinary as 0 | 1);
+    // modelPNrfi is stored 0-1 (NOT 0-100 — M-203)
+    brierNrfi = brierScore(probFromUnit(game.modelPNrfi), outcome.nrfiBinary as 0 | 1);
   }
 
   // ── FG ML ─────────────────────────────────────────────────────────────────
   let brierFgMl: number | null = null;
   if (outcome.awayFgRuns !== null && outcome.homeFgRuns !== null) {
     if (outcome.awayFgRuns !== outcome.homeFgRuns) {
-      // No tie in MLB (extra innings always produce a winner)
+      // No tie in MLB (extra innings always produce a winner). modelHomeWinPct is stored 0-100.
       const outcomeHomeWin: 0 | 1 = outcome.homeFgRuns > outcome.awayFgRuns ? 1 : 0;
-      brierFgMl = brierScore(game.modelHomeWinPct, outcomeHomeWin);
+      brierFgMl = brierScore(probFromPct(game.modelHomeWinPct), outcomeHomeWin);
     }
     // Tie (shouldn't happen in MLB but guard anyway) → brierFgMl stays null
   }
@@ -241,13 +285,215 @@ function computeBrierScores(
   let brierF5Ml: number | null = null;
   if (outcome.awayF5Runs !== null && outcome.homeF5Runs !== null) {
     if (outcome.awayF5Runs !== outcome.homeF5Runs) {
+      // modelF5HomeWinPct is stored 0-100
       const outcomeF5HomeWin: 0 | 1 = outcome.homeF5Runs > outcome.awayF5Runs ? 1 : 0;
-      brierF5Ml = brierScore(game.modelF5HomeWinPct, outcomeF5HomeWin);
+      brierF5Ml = brierScore(probFromPct(game.modelF5HomeWinPct), outcomeF5HomeWin);
     }
     // F5 tie (common) → brierF5Ml stays null
   }
 
   return { brierFgTotal, brierF5Total, brierNrfi, brierFgMl, brierF5Ml };
+}
+
+// ─── Model-Pick Grading (M-101 forward path) ─────────────────────────────────
+//
+// The games grading columns historically graded a fixed AWAY-SIDE bet and were
+// abandoned (audit M-101: 104/104 stored f5MlCorrect followed "away won F5").
+// The functions below grade the MODEL'S PICK instead: WIN means the side the
+// model favored won/covered. All functions are pure — outcomes come from the
+// already-fetched MLB Stats API linescore; nothing here reads or writes the DB.
+
+export interface PickGrade {
+  result: "WIN" | "LOSS" | "PUSH" | null;
+  correct: 0 | 1 | null;
+}
+
+export interface TotalGrade {
+  result: "OVER" | "UNDER" | "PUSH" | null;
+  correct: 0 | 1 | null;
+}
+
+/**
+ * Grades a moneyline pick: pick = away when P(away win) > 0.5, home otherwise.
+ * Result is from the pick's perspective (WIN = the picked side won).
+ * Tie (possible in F5) → PUSH with correct = null.
+ */
+export function gradeMoneylinePick(
+  pAwayWin: number | null,
+  actualAwayScore: number | null,
+  actualHomeScore: number | null,
+): PickGrade {
+  if (pAwayWin === null || isNaN(pAwayWin)) return { result: null, correct: null };
+  if (actualAwayScore === null || actualHomeScore === null) return { result: null, correct: null };
+  if (actualAwayScore === actualHomeScore) return { result: "PUSH", correct: null };
+  const pickedAway = pAwayWin > 0.5;
+  const awayWon = actualAwayScore > actualHomeScore;
+  const won = pickedAway === awayWon;
+  return { result: won ? "WIN" : "LOSS", correct: won ? 1 : 0 };
+}
+
+/**
+ * Grades a run-line pick. awayRunLine is the away side's spread (e.g. +1.5):
+ * away covers when actualAwayMargin + awayRunLine > 0. The model's pick is the
+ * side its own projected margin covers (away when modelAwayMargin + awayRunLine > 0).
+ * Exact actual cover → PUSH with correct = null. A model margin landing exactly
+ * on the line gives no pick → both null.
+ */
+export function gradeRunLinePick(
+  modelAwayMargin: number | null,
+  awayRunLine: number | null,
+  actualAwayMargin: number | null,
+): PickGrade {
+  if (modelAwayMargin === null || awayRunLine === null || actualAwayMargin === null) {
+    return { result: null, correct: null };
+  }
+  if (isNaN(modelAwayMargin) || isNaN(awayRunLine) || isNaN(actualAwayMargin)) {
+    return { result: null, correct: null };
+  }
+  const actualCover = actualAwayMargin + awayRunLine;
+  if (actualCover === 0) return { result: "PUSH", correct: null };
+  const modelCover = modelAwayMargin + awayRunLine;
+  if (modelCover === 0) return { result: null, correct: null };
+  const pickedAway = modelCover > 0;
+  const awayCovered = actualCover > 0;
+  const won = pickedAway === awayCovered;
+  return { result: won ? "WIN" : "LOSS", correct: won ? 1 : 0 };
+}
+
+/**
+ * Grades a total pick. result records the actual market side (OVER/UNDER/PUSH —
+ * the schema's documented value domain for the *TotalResult columns); correct
+ * grades the model's pick (over when pOver > 0.5, under otherwise) against it.
+ * Push → correct = null.
+ */
+export function gradeTotalPick(
+  pOver: number | null,
+  bookTotal: number | null,
+  actualTotal: number | null,
+): TotalGrade {
+  if (bookTotal === null || actualTotal === null || isNaN(bookTotal) || isNaN(actualTotal)) {
+    return { result: null, correct: null };
+  }
+  if (bookTotal <= 0) return { result: null, correct: null }; // 0 = no line (same guard as briers)
+  if (actualTotal === bookTotal) return { result: "PUSH", correct: null };
+  const wentOver = actualTotal > bookTotal;
+  const result: TotalGrade["result"] = wentOver ? "OVER" : "UNDER";
+  if (pOver === null || isNaN(pOver)) return { result, correct: null };
+  const pickedOver = pOver > 0.5;
+  const won = pickedOver === wentOver;
+  return { result, correct: won ? 1 : 0 };
+}
+
+/**
+ * Grades the NRFI pick: pick = NRFI when P(NRFI) > 0.5, YRFI otherwise.
+ * actualNrfiBinary: 1 = no run in inning 1. NRFI has no push.
+ */
+export function gradeNrfiPick(
+  pNrfi: number | null,
+  actualNrfiBinary: number | null,
+): PickGrade {
+  if (pNrfi === null || isNaN(pNrfi) || actualNrfiBinary === null) {
+    return { result: null, correct: null };
+  }
+  const pickedNrfi = pNrfi > 0.5;
+  const wasNrfi = actualNrfiBinary === 1;
+  const won = pickedNrfi === wasNrfi;
+  return { result: won ? "WIN" : "LOSS", correct: won ? 1 : 0 };
+}
+
+/** All model-pick grading columns for one game, ready for the games UPDATE. */
+export interface ModelPickGrades {
+  fgMlResult: PickGrade["result"];
+  fgMlCorrect: PickGrade["correct"];
+  fgRlResult: PickGrade["result"];
+  fgRlCorrect: PickGrade["correct"];
+  fgTotalResult: TotalGrade["result"];
+  fgTotalCorrect: TotalGrade["correct"];
+  f5MlResult: PickGrade["result"];
+  f5MlCorrect: PickGrade["correct"];
+  f5RlResult: PickGrade["result"];
+  f5RlCorrect: PickGrade["correct"];
+  f5TotalResult: TotalGrade["result"];
+  f5TotalCorrect: TotalGrade["correct"];
+  nrfiBacktestResult: PickGrade["result"];
+  nrfiCorrect: PickGrade["correct"];
+}
+
+/**
+ * Computes all model-pick grades for a game from its DB model columns and the
+ * MLB Stats API outcome. Normalization per column matches the storage scales
+ * documented in the header (M-203).
+ */
+export function computeModelPickGrades(
+  game: {
+    modelAwayWinPct: string | null | undefined;   // 0-100
+    modelAwayScore: string | null | undefined;
+    modelHomeScore: string | null | undefined;
+    awayRunLine: string | null | undefined;       // away spread, e.g. "+1.5"
+    modelOverRate: string | null | undefined;     // 0-100
+    bookTotal: string | null | undefined;
+    modelF5AwayWinPct: string | null | undefined; // 0-100
+    modelF5AwayScore: string | null | undefined;
+    modelF5HomeScore: string | null | undefined;
+    f5AwayRunLine: string | null | undefined;     // away F5 spread
+    modelF5OverRate: string | null | undefined;   // 0-1 (NOT 0-100)
+    f5Total: string | null | undefined;
+    modelPNrfi: string | null | undefined;        // 0-1 (NOT 0-100)
+  },
+  outcome: GameOutcome,
+): ModelPickGrades {
+  // ── FG ────────────────────────────────────────────────────────────────────
+  const fgMl = gradeMoneylinePick(
+    probFromPct(game.modelAwayWinPct), outcome.awayFgRuns, outcome.homeFgRuns,
+  );
+  const modelAwayScore = parseNumOrNull(game.modelAwayScore);
+  const modelHomeScore = parseNumOrNull(game.modelHomeScore);
+  const modelFgMargin = modelAwayScore !== null && modelHomeScore !== null
+    ? modelAwayScore - modelHomeScore
+    : null;
+  const actualFgMargin = outcome.awayFgRuns !== null && outcome.homeFgRuns !== null
+    ? outcome.awayFgRuns - outcome.homeFgRuns
+    : null;
+  const fgRl = gradeRunLinePick(modelFgMargin, parseNumOrNull(game.awayRunLine), actualFgMargin);
+  const actualFgTotal = outcome.awayFgRuns !== null && outcome.homeFgRuns !== null
+    ? outcome.awayFgRuns + outcome.homeFgRuns
+    : null;
+  const fgTot = gradeTotalPick(
+    probFromPct(game.modelOverRate), parseNumOrNull(game.bookTotal), actualFgTotal,
+  );
+
+  // ── F5 ────────────────────────────────────────────────────────────────────
+  const f5Ml = gradeMoneylinePick(
+    probFromPct(game.modelF5AwayWinPct), outcome.awayF5Runs, outcome.homeF5Runs,
+  );
+  const modelF5Away = parseNumOrNull(game.modelF5AwayScore);
+  const modelF5Home = parseNumOrNull(game.modelF5HomeScore);
+  const modelF5Margin = modelF5Away !== null && modelF5Home !== null
+    ? modelF5Away - modelF5Home
+    : null;
+  const actualF5Margin = outcome.awayF5Runs !== null && outcome.homeF5Runs !== null
+    ? outcome.awayF5Runs - outcome.homeF5Runs
+    : null;
+  const f5Rl = gradeRunLinePick(modelF5Margin, parseNumOrNull(game.f5AwayRunLine), actualF5Margin);
+  const actualF5Total = outcome.awayF5Runs !== null && outcome.homeF5Runs !== null
+    ? outcome.awayF5Runs + outcome.homeF5Runs
+    : null;
+  const f5Tot = gradeTotalPick(
+    probFromUnit(game.modelF5OverRate), parseNumOrNull(game.f5Total), actualF5Total,
+  );
+
+  // ── NRFI ──────────────────────────────────────────────────────────────────
+  const nrfi = gradeNrfiPick(probFromUnit(game.modelPNrfi), outcome.nrfiBinary);
+
+  return {
+    fgMlResult: fgMl.result, fgMlCorrect: fgMl.correct,
+    fgRlResult: fgRl.result, fgRlCorrect: fgRl.correct,
+    fgTotalResult: fgTot.result, fgTotalCorrect: fgTot.correct,
+    f5MlResult: f5Ml.result, f5MlCorrect: f5Ml.correct,
+    f5RlResult: f5Rl.result, f5RlCorrect: f5Rl.correct,
+    f5TotalResult: f5Tot.result, f5TotalCorrect: f5Tot.correct,
+    nrfiBacktestResult: nrfi.result, nrfiCorrect: nrfi.correct,
+  };
 }
 
 // ─── MLB Stats API Fetch ──────────────────────────────────────────────────────
@@ -395,6 +641,15 @@ export async function ingestMlbOutcomes(
       modelPNrfi: games.modelPNrfi,
       modelHomeWinPct: games.modelHomeWinPct,
       modelF5HomeWinPct: games.modelF5HomeWinPct,
+      // Model picks + lines for model-pick grading (M-101)
+      modelAwayWinPct: games.modelAwayWinPct,
+      modelF5AwayWinPct: games.modelF5AwayWinPct,
+      modelAwayScore: games.modelAwayScore,
+      modelHomeScore: games.modelHomeScore,
+      modelF5AwayScore: games.modelF5AwayScore,
+      modelF5HomeScore: games.modelF5HomeScore,
+      awayRunLine: games.awayRunLine,
+      f5AwayRunLine: games.f5AwayRunLine,
       // Existing actual scores (may already be set by mlbScoreRefresh)
       actualAwayScore: games.actualAwayScore,
       actualHomeScore: games.actualHomeScore,
@@ -603,6 +858,20 @@ export async function ingestMlbOutcomes(
       ` F5ML=${briers.brierF5Ml ?? "null"}`
     );
 
+    // ── Compute model-pick grades (M-101 forward path) ────────────────────
+    const grades = computeModelPickGrades(game, apiOutcome);
+
+    console.log(
+      `${TAG} [STATE] Model-pick grades:` +
+      ` fgMl=${grades.fgMlResult ?? "null"}` +
+      ` fgRl=${grades.fgRlResult ?? "null"}` +
+      ` fgTotal=${grades.fgTotalResult ?? "null"}` +
+      ` f5Ml=${grades.f5MlResult ?? "null"}` +
+      ` f5Rl=${grades.f5RlResult ?? "null"}` +
+      ` f5Total=${grades.f5TotalResult ?? "null"}` +
+      ` nrfi=${grades.nrfiBacktestResult ?? "null"}`
+    );
+
     // ── Write to DB ───────────────────────────────────────────────────────
     try {
       const now = Date.now();
@@ -617,6 +886,26 @@ export async function ingestMlbOutcomes(
           brierNrfi: briers.brierNrfi !== null ? String(briers.brierNrfi) : undefined,
           brierFgMl: briers.brierFgMl !== null ? String(briers.brierFgMl) : undefined,
           brierF5Ml: briers.brierF5Ml !== null ? String(briers.brierF5Ml) : undefined,
+          // Model-pick grades (M-101): written as a complete set — nulls
+          // included — so a fresh backtestRunAt stamp never sits over stale
+          // away-side-era grades. Grading columns only; never projections.
+          fgMlResult: grades.fgMlResult,
+          fgMlCorrect: grades.fgMlCorrect,
+          fgRlResult: grades.fgRlResult,
+          fgRlCorrect: grades.fgRlCorrect,
+          fgTotalResult: grades.fgTotalResult,
+          fgTotalCorrect: grades.fgTotalCorrect,
+          fgBacktestRunAt: now,
+          f5MlResult: grades.f5MlResult,
+          f5MlCorrect: grades.f5MlCorrect,
+          f5RlResult: grades.f5RlResult,
+          f5RlCorrect: grades.f5RlCorrect,
+          f5TotalResult: grades.f5TotalResult,
+          f5TotalCorrect: grades.f5TotalCorrect,
+          f5BacktestRunAt: now,
+          nrfiBacktestResult: grades.nrfiBacktestResult,
+          nrfiCorrect: grades.nrfiCorrect,
+          nrfiBacktestRunAt: now,
           outcomeIngestedAt: now,
         })
         .where(eq(games.id, game.id));

@@ -47,7 +47,7 @@
  *   We match by mlbGamePk (primary) or by awayTeam+homeTeam abbreviation (fallback).
  */
 
-import { eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { games } from "../drizzle/schema";
 import { MLB_BY_ABBREV, MLB_BY_ID } from "../shared/mlbTeams";
 import { getDb, listGamesByDate, updateNcaaStartTime, updateBookOdds, getMlbLineupsByGameIds } from "./db";
@@ -131,6 +131,16 @@ export interface MlbLiveGame {
    * null for live/upcoming games or when innings data is unavailable.
    */
   nrfiResult: "NRFI" | "YRFI" | null;
+  /** StatsAPI gameType code — "R" = regular season (spring "S", postseason "F"/"D"/"L"/"W", etc.) */
+  gameType: string | null;
+  /** UTC first-pitch timestamp (ISO) from the schedule — source for startTimeEst on inserts */
+  startTimeUtc: string | null;
+  /** Doubleheader flag from StatsAPI: "N" = single game, "Y" = traditional DH, "S" = split DH */
+  doubleHeader: string;
+  /** Game number within a doubleheader (1 or 2; 1 for single games) */
+  gameNumber: number;
+  /** Ballpark name, e.g. "Oracle Park" */
+  venueName: string | null;
 }
 
 // ─── Raw API types ────────────────────────────────────────────────────────────
@@ -171,6 +181,17 @@ interface MlbApiPitcher {
 
 interface MlbApiGame {
   gamePk: number;
+  /** "R" = regular season */
+  gameType?: string;
+  /** UTC first-pitch timestamp, e.g. "2026-07-25T23:05:00Z" */
+  gameDate?: string;
+  /** Official game date YYYY-MM-DD (stable across postponement same-pk makeups) */
+  officialDate?: string;
+  /** "N" | "Y" | "S" */
+  doubleHeader?: string;
+  /** 1 or 2 */
+  gameNumber?: number;
+  venue?: { id?: number; name?: string };
   status: {
     abstractGameState: string;
     detailedState: string;
@@ -301,6 +322,20 @@ function normalizeAbbrev(apiAbbrev: string): string {
     OAK: "ATH",  // Athletics: relocated to Sacramento, we use ATH
   };
   return MAP[apiAbbrev] ?? apiAbbrev;
+}
+
+/** Format a UTC ISO timestamp as an ET clock string matching startTimeEst, e.g. "7:05 PM". */
+function utcToEstTime(utcIso: string): string {
+  try {
+    return new Date(utcIso).toLocaleTimeString("en-US", {
+      timeZone: "America/New_York",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+  } catch {
+    return "TBD";
+  }
 }
 
 // ─── Main fetcher ─────────────────────────────────────────────────────────────
@@ -462,6 +497,11 @@ export async function fetchMlbLiveScores(dateStr: string): Promise<MlbLiveGame[]
       awayF5Runs,
       homeF5Runs,
       nrfiResult,
+      gameType: g.gameType ?? null,
+      startTimeUtc: g.gameDate ?? null,
+      doubleHeader: g.doubleHeader ?? "N",
+      gameNumber: g.gameNumber ?? 1,
+      venueName: g.venue?.name ?? null,
     };
 
     results.push(game);
@@ -527,6 +567,10 @@ export async function refreshMlbScores(dateStr: string): Promise<{
   updated: number;
   unchanged: number;
   noMatch: number;
+  /** Missing games rows created from the StatsAPI schedule (M-209/D-001) */
+  created: number;
+  /** Postponement-makeup rows moved to their official date */
+  rescheduled: number;
   errors: string[];
   /** Game PKs that transitioned to 'final' status in this cycle — triggers immediate backtest */
   newlyFinalGamePks: number[];
@@ -541,12 +585,12 @@ export async function refreshMlbScores(dateStr: string): Promise<{
   } catch (err) {
     const msg = `${tag} ❌ API fetch failed: ${err instanceof Error ? err.message : String(err)}`;
     console.error(msg);
-    return { updated: 0, unchanged: 0, noMatch: 0, errors: [msg], newlyFinalGamePks: [] };
+    return { updated: 0, unchanged: 0, noMatch: 0, created: 0, rescheduled: 0, errors: [msg], newlyFinalGamePks: [] };
   }
 
   if (apiGames.length === 0) {
     console.log(`${tag} No MLB games from API — nothing to update`);
-    return { updated: 0, unchanged: 0, noMatch: 0, errors: [], newlyFinalGamePks: [] };
+    return { updated: 0, unchanged: 0, noMatch: 0, created: 0, rescheduled: 0, errors: [], newlyFinalGamePks: [] };
   }
 
   // Fetch all MLB games for this date from our DB
@@ -558,40 +602,55 @@ export async function refreshMlbScores(dateStr: string): Promise<{
 
   // Build lookup maps for fast matching
   // Primary: mlbGamePk → DB game (requires mlbGamePk column to be populated)
+  // Teams fallback is keyed with gameNumber so doubleheader G1/G2 rows never
+  // collapse onto one map entry (D-001: G2 data overwriting the G1 row).
   const dbByGamePk = new Map<number, (typeof dbGames)[0]>();
   const dbByTeams = new Map<string, (typeof dbGames)[0]>();
   for (const dbGame of dbGames) {
     if (dbGame.mlbGamePk) {
       dbByGamePk.set(Number(dbGame.mlbGamePk), dbGame);
     }
-    dbByTeams.set(`${dbGame.awayTeam}@${dbGame.homeTeam}`, dbGame);
+    dbByTeams.set(`${dbGame.awayTeam}@${dbGame.homeTeam}#${dbGame.gameNumber ?? 1}`, dbGame);
   }
 
   let updated = 0;
   let unchanged = 0;
   let noMatch = 0;
+  let created = 0;
+  let rescheduled = 0;
   const errors: string[] = [];
   /** Tracks game PKs that transitioned to 'final' this cycle for immediate backtest trigger */
   const newlyFinalGamePks: number[] = [];
 
   for (const apiGame of apiGames) {
     try {
-      // Match priority: gamePk → team abbreviations
+      // Match priority: gamePk → team abbreviations (+ gameNumber)
       let dbGame = dbByGamePk.get(apiGame.gamePk);
       let matchMethod = "gamePk";
 
       if (!dbGame) {
-        dbGame = dbByTeams.get(`${apiGame.awayAbbrev}@${apiGame.homeAbbrev}`);
-        matchMethod = "teams";
+        const byTeams = dbByTeams.get(
+          `${apiGame.awayAbbrev}@${apiGame.homeAbbrev}#${apiGame.gameNumber}`
+        );
+        // A row already claimed by a DIFFERENT gamePk must not absorb this API
+        // game's data (D-001) — fall through to reconcile instead.
+        if (byTeams && (!byTeams.mlbGamePk || Number(byTeams.mlbGamePk) === apiGame.gamePk)) {
+          dbGame = byTeams;
+          matchMethod = "teams";
+        }
       }
 
       if (!dbGame) {
         console.warn(
           `${tag} NO_MATCH: gamePk=${apiGame.gamePk} ${apiGame.awayAbbrev}@${apiGame.homeAbbrev}` +
+          ` g${apiGame.gameNumber}` +
           ` | status=${apiGame.gameStatus} | score=${apiGame.awayRuns ?? "?"}-${apiGame.homeRuns ?? "?"}` +
           ` | DB has: [${dbGames.map((g) => `${g.awayTeam}@${g.homeTeam}`).join(", ")}]`
         );
-        noMatch++;
+        const action = await reconcileUnmatchedApiGame(apiGame, dateStr, tag);
+        if (action === "created") created++;
+        else if (action === "rescheduled") rescheduled++;
+        else noMatch++;
         continue;
       }
 
@@ -791,11 +850,165 @@ export async function refreshMlbScores(dateStr: string): Promise<{
 
   console.log(
     `${tag} ✅ DONE — updated=${updated} unchanged=${unchanged}` +
-    ` noMatch=${noMatch} errors=${errors.length}` +
+    ` noMatch=${noMatch} created=${created} rescheduled=${rescheduled} errors=${errors.length}` +
     ` | live=${apiGames.filter((g) => g.gameStatus === "live").length}` +
     ` final=${apiGames.filter((g) => g.gameStatus === "final").length}`
   );
   console.log(`${tag} ════════════════════════════════════════════`);
 
-  return { updated, unchanged, noMatch, errors, newlyFinalGamePks };
+  return { updated, unchanged, noMatch, created, rescheduled, errors, newlyFinalGamePks };
+}
+
+// ─── Missing-game reconciliation (M-209/D-001) ────────────────────────────────
+
+/**
+ * Handles a StatsAPI schedule game with no matching games row for the day.
+ *
+ * Two cases:
+ *   1. The gamePk exists on a games row with a DIFFERENT gameDate and the
+ *      StatsAPI status is final — a postponement makeup (makeups keep their
+ *      pk): move that row to the official date, syncing gameNumber and
+ *      doubleHeader, and record the old date in rescheduledFrom.
+ *   2. The gamePk exists on no row — the daily seeder never created this game
+ *      (e.g. doubleheader game 2): insert a staging row (fileId=0,
+ *      unpublished). Regular season ("R") only.
+ *
+ * Both paths are guarded against the games_matchup_unique
+ * (gameDate,awayTeam,homeTeam,gameNumber) and games_mlb_gamepk_unique keys:
+ * a conflicting row means warn + skip, and the insert additionally catches
+ * duplicate-key races.
+ */
+async function reconcileUnmatchedApiGame(
+  apiGame: MlbLiveGame,
+  dateStr: string,
+  tag: string
+): Promise<"created" | "rescheduled" | "skipped"> {
+  const db = await getDb();
+  if (!db) {
+    console.warn(`${tag} RECONCILE_SKIP gamePk=${apiGame.gamePk}: database unavailable`);
+    return "skipped";
+  }
+
+  const label = `gamePk=${apiGame.gamePk} ${apiGame.awayAbbrev}@${apiGame.homeAbbrev} g${apiGame.gameNumber}`;
+
+  // Global pk lookup — the day-scoped maps above can't see rows on other dates.
+  const [existing] = await db
+    .select()
+    .from(games)
+    .where(and(eq(games.mlbGamePk, apiGame.gamePk), eq(games.sport, "MLB")))
+    .limit(1);
+
+  if (existing) {
+    if (existing.gameDate === dateStr) {
+      // Same date but unmatched — e.g. its matchup slot was claimed by another
+      // row in the teams map. Leave it alone rather than double-write.
+      console.warn(`${tag} RECONCILE_SKIP ${label}: row id=${existing.id} already on ${dateStr}`);
+      return "skipped";
+    }
+    if (apiGame.gameStatus !== "final") {
+      console.log(
+        `${tag} RECONCILE_WAIT ${label}: row id=${existing.id} sits on ${existing.gameDate},` +
+        ` API status=${apiGame.gameStatus} — makeup rows move only once final`
+      );
+      return "skipped";
+    }
+    // games_matchup_unique guard: the official date must not already hold this slot.
+    const [conflict] = await db
+      .select({ id: games.id })
+      .from(games)
+      .where(
+        and(
+          eq(games.gameDate, dateStr),
+          eq(games.awayTeam, apiGame.awayAbbrev),
+          eq(games.homeTeam, apiGame.homeAbbrev),
+          eq(games.gameNumber, apiGame.gameNumber)
+        )
+      )
+      .limit(1);
+    if (conflict) {
+      console.warn(
+        `${tag} RECONCILE_CONFLICT ${label}: cannot move row id=${existing.id}` +
+        ` ${existing.gameDate}→${dateStr} — row id=${conflict.id} already holds that matchup slot`
+      );
+      return "skipped";
+    }
+    // games.rescheduledFrom exists in the production DB but is not declared in
+    // drizzle/schema.ts, so the move goes through raw SQL.
+    await db.execute(sql`
+      UPDATE games
+         SET gameDate = ${dateStr},
+             gameNumber = ${apiGame.gameNumber},
+             doubleHeader = ${apiGame.doubleHeader},
+             rescheduledFrom = ${existing.gameDate}
+       WHERE id = ${existing.id}
+    `);
+    console.log(
+      `${tag} 📅 RESCHEDULED ${label}: row id=${existing.id} moved ${existing.gameDate}→${dateStr}` +
+      ` | rescheduledFrom=${existing.gameDate} dh=${apiGame.doubleHeader}`
+    );
+    return "rescheduled";
+  }
+
+  // No row anywhere for this pk → create one (regular season only).
+  if (apiGame.gameType !== "R") {
+    console.log(
+      `${tag} RECONCILE_SKIP ${label}: gameType=${apiGame.gameType ?? "?"} — only regular-season rows are created`
+    );
+    return "skipped";
+  }
+
+  // games_matchup_unique guard: a seeded row without a pk (or with a stale pk)
+  // may already occupy the slot — do not insert a duplicate matchup.
+  const [slotTaken] = await db
+    .select({ id: games.id, mlbGamePk: games.mlbGamePk })
+    .from(games)
+    .where(
+      and(
+        eq(games.gameDate, dateStr),
+        eq(games.awayTeam, apiGame.awayAbbrev),
+        eq(games.homeTeam, apiGame.homeAbbrev),
+        eq(games.gameNumber, apiGame.gameNumber)
+      )
+    )
+    .limit(1);
+  if (slotTaken) {
+    console.warn(
+      `${tag} RECONCILE_CONFLICT ${label}: matchup slot on ${dateStr} already held by` +
+      ` row id=${slotTaken.id} (mlbGamePk=${slotTaken.mlbGamePk ?? "null"}) — not inserting`
+    );
+    return "skipped";
+  }
+
+  try {
+    await db.insert(games).values({
+      fileId: 0,
+      gameDate: dateStr,
+      startTimeEst: apiGame.startTimeUtc ? utcToEstTime(apiGame.startTimeUtc) : "TBD",
+      awayTeam: apiGame.awayAbbrev,
+      homeTeam: apiGame.homeAbbrev,
+      sport: "MLB",
+      gameType: "regular_season",
+      gameStatus: apiGame.gameStatus,
+      doubleHeader: apiGame.doubleHeader,
+      gameNumber: apiGame.gameNumber,
+      venue: apiGame.venueName,
+      publishedToFeed: false,
+      publishedModel: false,
+      sortOrder: 9999,
+      mlbGamePk: apiGame.gamePk,
+    });
+    console.log(
+      `${tag} ➕ CREATED ${label}: staging row inserted for ${dateStr}` +
+      ` | status=${apiGame.gameStatus} start=${apiGame.startTimeUtc ?? "?"}` +
+      ` venue=${apiGame.venueName ?? "?"} dh=${apiGame.doubleHeader}`
+    );
+    return "created";
+  } catch (err) {
+    // Duplicate-key race on games_matchup_unique / games_mlb_gamepk_unique —
+    // another writer created the row between the guard checks and this insert.
+    console.warn(
+      `${tag} RECONCILE_INSERT_FAIL ${label}: ${err instanceof Error ? err.message : String(err)}`
+    );
+    return "skipped";
+  }
 }

@@ -23,7 +23,12 @@
  */
 
 import { getDb } from "./db";
-import { mlbStrikeoutProps, games } from "../drizzle/schema";
+import {
+  mlbStrikeoutProps,
+  games,
+  mlbTeamBattingSplits,
+  mlbCalibrationConstants,
+} from "../drizzle/schema";
 import { eq, and, inArray } from "drizzle-orm";
 import type { ANKPropsResult, ANKPropLine } from "./anKPropsService";
 
@@ -459,4 +464,102 @@ export async function upsertKPropsForDate(
   const gameDate = `${anDateStr.slice(0, 4)}-${anDateStr.slice(4, 6)}-${anDateStr.slice(6, 8)}`;
   const anResult = await fetchANKProps(anDateStr);
   return upsertKPropsFromAN(anResult, gameDate);
+}
+
+// ── Model-cycle helpers (each called once per modelKPropsForDate cycle; the
+//    caller holds the result in locals for the duration of the run) ──────────
+
+/**
+ * Fallback league mean for mlb_team_batting_splits.k9 (K/AB*27 basis) used
+ * when the splits query fails. Measured league mean is ~6.69-6.87.
+ */
+export const LEAGUE_MEAN_TEAM_K9_FALLBACK = 6.78;
+
+/**
+ * League mean of mlb_team_batting_splits.k9 per pitcher hand (AVG over the
+ * 30 team rows for that hand).
+ *
+ * M-204: team k9 in this table is on a K/AB*27 basis (league mean ~6.8), NOT
+ * true K/9 (~8.2). The opponent adjustment must divide opp_k9 by this
+ * same-basis mean so opp_adj centers on 1.0 — dividing by a true-K/9 constant
+ * structurally shrank every projection ~0.83x.
+ */
+export async function getLeagueMeanTeamK9ByHand(): Promise<Record<"L" | "R", number>> {
+  const TAG = "[KPropsDB]";
+  try {
+    const db = await getDb();
+    const rows = await db
+      .select({
+        hand: mlbTeamBattingSplits.hand,
+        k9: mlbTeamBattingSplits.k9,
+      })
+      .from(mlbTeamBattingSplits);
+
+    const acc: Record<string, { sum: number; n: number }> = {};
+    for (const row of rows as Array<{ hand: string; k9: number | null }>) {
+      if (row.k9 === null) continue;
+      const hand = row.hand.toUpperCase();
+      acc[hand] = acc[hand] ?? { sum: 0, n: 0 };
+      acc[hand].sum += row.k9;
+      acc[hand].n += 1;
+    }
+    const mean = (hand: "L" | "R"): number =>
+      acc[hand] && acc[hand].n > 0 ? acc[hand].sum / acc[hand].n : LEAGUE_MEAN_TEAM_K9_FALLBACK;
+    const result = { L: mean("L"), R: mean("R") };
+    console.log(
+      `${TAG}[STATE] League mean team k9 (K/AB*27 basis): L=${result.L.toFixed(3)} (n=${acc.L?.n ?? 0}) R=${result.R.toFixed(3)} (n=${acc.R?.n ?? 0})`
+    );
+    return result;
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(
+      `${TAG}[ERROR] getLeagueMeanTeamK9ByHand failed — fallback ${LEAGUE_MEAN_TEAM_K9_FALLBACK}: ${msg}`
+    );
+    return { L: LEAGUE_MEAN_TEAM_K9_FALLBACK, R: LEAGUE_MEAN_TEAM_K9_FALLBACK };
+  }
+}
+
+/**
+ * Direction-split K calibration factors from mlb_calibration_constants
+ * (paramNames 'k_calibration_factor_over' / 'k_calibration_factor_under').
+ *
+ * M-207: falls back to the caller-supplied hardcoded defaults when the rows
+ * are absent or the query fails, so behavior is unchanged until Phase 5
+ * walk-forward writes the re-fitted values.
+ */
+export async function getKCalibrationFactors(
+  fallbackOver: number,
+  fallbackUnder: number
+): Promise<{ over: number; under: number }> {
+  const TAG = "[KPropsDB]";
+  const PARAM_OVER = "k_calibration_factor_over";
+  const PARAM_UNDER = "k_calibration_factor_under";
+  try {
+    const db = await getDb();
+    const rows = await db
+      .select({
+        paramName: mlbCalibrationConstants.paramName,
+        currentValue: mlbCalibrationConstants.currentValue,
+      })
+      .from(mlbCalibrationConstants)
+      .where(inArray(mlbCalibrationConstants.paramName, [PARAM_OVER, PARAM_UNDER]));
+
+    const byName = new Map<string, number>();
+    for (const row of rows as Array<{ paramName: string; currentValue: string }>) {
+      const val = parseFloat(row.currentValue);
+      if (!isNaN(val) && val > 0) byName.set(row.paramName, val);
+    }
+    const over = byName.get(PARAM_OVER) ?? fallbackOver;
+    const under = byName.get(PARAM_UNDER) ?? fallbackUnder;
+    console.log(
+      `${TAG}[STATE] K calibration factors: over=${over} (${byName.has(PARAM_OVER) ? "db" : "fallback"}) under=${under} (${byName.has(PARAM_UNDER) ? "db" : "fallback"})`
+    );
+    return { over, under };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(
+      `${TAG}[ERROR] getKCalibrationFactors failed — fallbacks over=${fallbackOver} under=${fallbackUnder}: ${msg}`
+    );
+    return { over: fallbackOver, under: fallbackUnder };
+  }
 }
