@@ -646,12 +646,17 @@ class AsOfFeatureStore:
                 "WHERE l.gameDate < %s AND l.gameDate >= %s", (cutoff_date, season_start))
         return self._memoized(("substrate", cutoff_date), load)
 
+    K_SUBSTRATE_PRIOR_OUTS = 540  # ≈20 starter-games of league-rate pseudo-outs
+
     def _team_k_substrate(self, cutoff_date):
         """As-of batting-K factors from the starter-K substrate.
 
         For each team: Ks recorded by OPPOSING starters against the team's
-        batters, per 27 opposing-starter outs, before the cutoff. Returned as
-        {team: rate}, plus the league mean rate. Factor = team/league.
+        batters, per 27 opposing-starter outs, before the cutoff. Team rates
+        are shrunk toward the as-of league rate with K_SUBSTRATE_PRIOR_OUTS
+        pseudo-outs so opening-week factors stay ~1.0 (prior-dominated) and
+        converge to the team's real identity as the season accumulates.
+        Returns ({team: shrunk_rate}, league_rate); factor = team/league.
         """
         def load():
             acc = {}
@@ -664,10 +669,16 @@ class AsOfFeatureStore:
                 # home team bats vs AWAY starter
                 if r["awayStarterKs"] is not None and r["awayStarterOuts"]:
                     a = acc.setdefault(r["homeTeam"], [0, 0])
-                    a[0] += r["awayStarterKs"]
                     a[1] += r["awayStarterOuts"]
-            rates = {t: 27.0 * k / outs for t, (k, outs) in acc.items() if outs > 0}
-            league = (sum(rates.values()) / len(rates)) if rates else None
+                    a[0] += r["awayStarterKs"]
+            total_k = sum(k for k, _ in acc.values())
+            total_outs = sum(o for _, o in acc.values())
+            if total_outs <= 0:
+                return {}, None
+            league = 27.0 * total_k / total_outs
+            prior = self.K_SUBSTRATE_PRIOR_OUTS
+            rates = {t: 27.0 * (k + league / 27.0 * prior) / (outs + prior)
+                     for t, (k, outs) in acc.items() if outs > 0}
             return rates, league
         return self._memoized(("ksub", cutoff_date), load)
 
