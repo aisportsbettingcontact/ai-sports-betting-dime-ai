@@ -18,5 +18,7 @@ describe("etKickoffToUtc", () => {
     expect(etKickoffToUtc("2026-10-03", "Time TBA")).toBeNull();
     expect(etKickoffToUtc("2026-10-03", "3:30-8:00pm")).toBeNull();
     expect(etKickoffToUtc("2026-10-03", "")).toBeNull();
+    expect(etKickoffToUtc("2026-10-03", "25:99pm")).toBeNull();
+    expect(etKickoffToUtc("2026-10-03", "0:30pm")).toBeNull();
   });
 });

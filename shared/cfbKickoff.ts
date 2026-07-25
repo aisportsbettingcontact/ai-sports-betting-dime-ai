@@ -2,9 +2,12 @@
 function parseEtTime(timeEt: string): number | null {
   const m = /^(\d{1,2}):(\d{2})(am|pm)$/i.exec(timeEt.trim());
   if (!m) return null;
-  let h = Number(m[1]) % 12;
+  const h12 = Number(m[1]);
+  const min = Number(m[2]);
+  if (h12 < 1 || h12 > 12 || min > 59) return null;
+  let h = h12 % 12;
   if (m[3].toLowerCase() === "pm") h += 12;
-  return h * 60 + Number(m[2]);
+  return h * 60 + min;
 }
 
 /** Offset (minutes east of UTC, negative for US) of America/New_York at a given UTC instant. */
