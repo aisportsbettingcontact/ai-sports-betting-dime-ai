@@ -1047,7 +1047,7 @@ creating tables in that database.
 
 ## Incident 40 — 2026-07-25 — Perf harness never measured anything (host helper in browser callback)
 
-Status: RESOLVED (fix in `codex/fix-perf-harness-control`; trust pending observation period)
+Status: RESOLVED IN CODE (trust pending post-deploy observation period)
 
 Every retained run of `.github/workflows/perf-harness.yml` since the harness was
 introduced (2026-07-09, first retained run 2026-07-10) failed identically with
@@ -1069,3 +1069,16 @@ baseline have never yet gated anything. The repaired harness must complete
 3–5 successful, comparable scheduled runs on the standard CI runner before its
 budgets/regression guard are treated as a trusted deployment control. Budgets
 were not changed in the fix.
+
+Corrective follow-up (2026-07-25): the post-merge review of PR #201 confirmed
+that the execution crash was fixed, but found three remaining control defects:
+LCP was queried through `performance.getEntriesByType`, which cannot return
+`largest-contentful-paint` and therefore made the LCP gate falsely pass at
+zero; the two real-browser tests were skipped in required CI; and
+`update_baseline` rewrote a file only inside an ephemeral Actions checkout.
+The follow-up uses a buffered `PerformanceObserver`, fails closed when LCP is
+unsupported or missing, installs Chromium in the required Vitest job, executes
+the focused browser suite in the live workflow, and emits a reviewable baseline
+candidate artifact without write access to the repository. No run before that
+follow-up is deployed counts toward the 3–5-run observation requirement; the
+counter remains 0.

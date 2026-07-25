@@ -25,12 +25,41 @@ export interface CollectedMetrics {
   transferBytes: number;
 }
 
-export function collectBrowserMetricsInPage(): CollectedMetrics {
+export async function collectBrowserMetricsInPage(): Promise<CollectedMetrics> {
+  if (
+    typeof PerformanceObserver === "undefined" ||
+    !PerformanceObserver.supportedEntryTypes.includes("largest-contentful-paint")
+  ) {
+    throw new Error("PERF_LCP_UNSUPPORTED: largest-contentful-paint is unavailable");
+  }
+
+  let lcpMs = 0;
+  await new Promise<void>((resolve) => {
+    const observer = new PerformanceObserver((list) => {
+      for (const entry of list.getEntries()) {
+        lcpMs = Math.max(1, Math.round(entry.startTime));
+      }
+    });
+    observer.observe({ type: "largest-contentful-paint", buffered: true });
+
+    // Buffered entries are delivered asynchronously. Drain anything still
+    // queued before disconnecting so a late callback cannot become a false 0.
+    setTimeout(() => {
+      for (const entry of observer.takeRecords()) {
+        lcpMs = Math.max(1, Math.round(entry.startTime));
+      }
+      observer.disconnect();
+      resolve();
+    }, 250);
+  });
+
+  if (!Number.isFinite(lcpMs) || lcpMs <= 0) {
+    throw new Error("PERF_LCP_MISSING: no valid largest-contentful-paint candidate");
+  }
+
   const nav = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined;
   const paints = performance.getEntriesByType("paint");
   const fcp = paints.find((p) => p.name === "first-contentful-paint");
-  const lcpEntries = performance.getEntriesByType("largest-contentful-paint");
-  const lcp = lcpEntries.length ? lcpEntries[lcpEntries.length - 1] : undefined;
   const resources = performance.getEntriesByType("resource") as PerformanceResourceTiming[];
   const resourceBytes = resources.reduce((sum, r) => sum + (r.transferSize || 0), 0);
   const navBytes = nav?.transferSize || 0;
@@ -40,7 +69,7 @@ export function collectBrowserMetricsInPage(): CollectedMetrics {
     domContentLoaded: Math.round(nav?.domContentLoadedEventEnd ?? 0),
     loadMs: Math.round(nav?.loadEventEnd ?? 0),
     fcpMs: Math.round(fcp?.startTime ?? 0),
-    lcpMs: Math.round(lcp?.startTime ?? 0),
+    lcpMs,
     transferBytes: navBytes + resourceBytes,
   };
 }

@@ -8,7 +8,7 @@
  *
  * Usage:
  *   PERF_TARGET_URL=https://your-app.up.railway.app npx tsx perf/harness.ts
- *   ... npx tsx perf/harness.ts --update-baseline   # reseed baseline from this run
+ *   ... npx tsx perf/harness.ts --update-baseline   # write a reviewable candidate artifact
  *
  * Metrics per route (lower is better):
  *   ttfbMs            responseStart − requestStart (server + network)
@@ -34,6 +34,7 @@ import { evaluatePerfRun, type PerfSample, type PerfBudget } from "./regression"
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const BASELINE_PATH = path.join(HERE, "baseline.json");
 const RESULTS_PATH = path.join(HERE, "..", "perf-results.json");
+const BASELINE_CANDIDATE_PATH = path.join(HERE, "..", "perf-baseline-candidate.json");
 
 /** Routes to measure. Keep small — each adds ~a few s of CI wall-clock. */
 const ROUTES = ["/", "/landingpage-v2", "/checkout?plan=monthly"];
@@ -116,8 +117,11 @@ async function main(): Promise<void> {
     const nextBaseline: Record<string, Record<string, number>> = {};
     for (const s of samples) nextBaseline[s.route] = s.metrics;
     const updated: PerfBudget = { ...config, baseline: nextBaseline };
-    writeFileSync(BASELINE_PATH, JSON.stringify(updated, null, 2) + "\n");
-    log(`[OUTPUT] baseline reseeded from this run → ${BASELINE_PATH}`);
+    writeFileSync(BASELINE_CANDIDATE_PATH, JSON.stringify(updated, null, 2) + "\n");
+    log(
+      `[OUTPUT] baseline candidate generated → ${BASELINE_CANDIDATE_PATH} ` +
+      `(committed baseline unchanged)`
+    );
     return;
   }
 

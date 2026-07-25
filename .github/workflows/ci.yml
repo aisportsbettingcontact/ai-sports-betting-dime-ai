@@ -189,6 +189,9 @@ jobs:
       - name: "[STEP] Install dependencies (frozen lockfile)"
         run: pnpm install --frozen-lockfile
 
+      - name: "[STEP] Install Chromium for perf smoke tests"
+        run: pnpm exec playwright install --with-deps chromium
+
       - name: "[STEP] Run gated Vitest suite — zero failures, no undeclared skips"
         # scripts/check-environment-failures.mjs consumes the JSON reporter
         # output. CI profile: any failure fails; any skip not declared in
