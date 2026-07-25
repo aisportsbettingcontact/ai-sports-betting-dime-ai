@@ -1,0 +1,109 @@
+schema_version: dime-curriculum-v1
+status: proposed
+parent_model:
+  id: meta-llama/Llama-3.1-8B
+  revision: d04e592bb4f6aa9cfee91e2e20afa771667e1d4b
+
+dataset:
+  version: dime-sft-foundation-v1
+  target_records: 2400
+  splits:
+    train: 2160
+    validation: 240
+  research_alpha_below_records: 1600
+
+task_families:
+  conversation_epistemics:
+    train: 216
+    validation: 24
+  tool_selection_arguments:
+    train: 324
+    validation: 36
+  tool_grounding_failures:
+    train: 324
+    validation: 36
+  market_math:
+    train: 216
+    validation: 24
+  odds_movement_splits:
+    train: 270
+    validation: 30
+  matchup_trends_projections:
+    train: 216
+    validation: 24
+  bet_tracker_coaching:
+    train: 216
+    validation: 24
+  simulation_analysis:
+    train: 162
+    validation: 18
+  safety_privacy_security:
+    train: 216
+    validation: 24
+
+interaction_modes:
+  successful_tool_assisted: 1200
+  degraded_tool_assisted: 420
+  direct_no_tool: 480
+  clarification_abstention_protective: 300
+
+cross_cutting_minimums:
+  multi_turn_records: 720
+  multi_tool_records: 480
+  adversarial_or_contradictory_records: 360
+  sport_neutral_records_when_traffic_unknown: 720
+
+distribution_caps:
+  league_fraction: 0.25
+  market_type_fraction: 0.30
+  provider_fraction: 0.20
+
+tool_single_call_minimums:
+  get_game_context: 40
+  get_current_odds: 40
+  get_odds_history: 40
+  get_market_splits: 40
+  calculate_market_math: 40
+  get_bet_tracker_summary: 40
+  run_simulation: 40
+
+required_curriculum_labels:
+  - skill_ids
+  - difficulty
+  - interaction_mode
+  - scenario_cluster_id
+  - evidence_status
+  - policy_action
+  - risk_tier
+
+admission:
+  schema_valid: true
+  exact_tool_validation: true
+  numeric_traceability: true
+  historical_cutoff_audit: true
+  provenance_and_rights_complete: true
+  privacy_and_consent_complete: true
+  direct_identifier_scan: true
+  exact_and_semantic_dedup: true
+  grouped_partition_audit: true
+  evaluation_contamination_audit: true
+  approved_only: true
+  critical_two_reviewer_minimum: true
+  immutable_manifest_before_training: true
+
+stages:
+  - name: foundation_screen_authored
+    target: 48
+    gpu_required: false
+  - name: overfit_diagnostic
+    target: 32
+    gpu_required: true
+  - name: foundation_tranche
+    target: 600
+    gpu_required: false
+  - name: complete_foundation_sft
+    target: 2400
+    gpu_required: false
+  - name: one_epoch_candidate
+    target: 2160
+    gpu_required: true

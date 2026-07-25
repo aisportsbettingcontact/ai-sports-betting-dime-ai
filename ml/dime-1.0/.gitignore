@@ -1,0 +1,62 @@
+.DS_Store
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+coverage.xml
+.venv/
+venv/
+*.egg-info/
+
+# Local model and experiment output. Reviewed, sanitized evidence belongs in
+# evidence/ and is deliberately separate from these generated paths.
+artifacts/
+outputs/
+output/
+runs/
+checkpoints/
+merged/
+quantized/
+wandb/
+tensorboard/
+lightning_logs/
+
+# Local caches.
+.cache/
+.huggingface/
+hf-cache/
+transformers-cache/
+datasets-cache/
+
+# Raw, private, hidden, or otherwise non-public data.
+data/raw/
+data/private/
+data/hidden/
+data/locked/
+data/provider/
+*.incomplete
+
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Model weights, optimizer state, and export formats.
+*.safetensors
+*.bin
+*.pt
+*.pth
+*.ckpt
+*.gguf
+*.onnx
+
+# Packaging bundles are never source artifacts in this public repository.
+*.zip
+*.tar
+*.tar.gz
+*.tgz

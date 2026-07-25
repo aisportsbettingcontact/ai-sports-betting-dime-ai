@@ -1,0 +1,65 @@
+# TEMPLATE ONLY. Do not run until the dataset, split, and release gates are approved.
+run:
+  name: REPLACE_ME
+  mode: full
+  seed: 1729
+
+model:
+  id: meta-llama/Llama-3.1-8B
+  revision: d04e592bb4f6aa9cfee91e2e20afa771667e1d4b
+  trust_remote_code: false
+  attention_implementation: sdpa
+  chat_template: prompts/llama3_dime_chat_template_v1.jinja
+  tool_catalog: tools/tools.v1.json
+
+data:
+  train: data/sft/train.APPROVED.jsonl
+  validation: data/sft/validation.APPROVED.jsonl
+  manifest: configs/dataset_manifest_APPROVED.json
+  curriculum: configs/curriculum_v1.yaml
+  max_length: 4096
+  minimum_assistant_tokens: 32
+  reject_overlength: true
+
+quantization:
+  load_in_4bit: true
+  quant_type: nf4
+  compute_dtype: bfloat16
+  use_double_quant: true
+
+lora:
+  rank: 16
+  alpha: 32
+  dropout: 0.05
+  bias: none
+  target_modules:
+    - q_proj
+    - k_proj
+    - v_proj
+    - o_proj
+    - gate_proj
+    - up_proj
+    - down_proj
+
+training:
+  output_dir: artifacts/checkpoints/REPLACE_ME
+  final_adapter_dir: artifacts/adapters/REPLACE_ME
+  max_steps: -1
+  epochs: 1
+  per_device_train_batch_size: 1
+  per_device_eval_batch_size: 1
+  gradient_accumulation_steps: 16
+  learning_rate: 0.0002
+  weight_decay: 0.0
+  warmup_fraction: 0.03
+  scheduler: cosine
+  logging_steps: 5
+  eval_steps: 50
+  save_steps: 50
+  save_total_limit: 3
+  max_grad_norm: 1.0
+  optimizer: paged_adamw_8bit
+  gradient_checkpointing: true
+  bf16: true
+  tf32: true
+  report_to: tensorboard

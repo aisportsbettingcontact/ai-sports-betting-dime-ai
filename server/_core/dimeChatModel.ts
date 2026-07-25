@@ -25,17 +25,15 @@ export const DIME_CHAT_CONTEXT_TOKEN_BUDGET = 36_000;
  *               turn. All Claude routing/wiring below the switch stays intact
  *               per product direction — nothing is removed.
  * "anthropic" — restores the original Claude streaming path unchanged.
- * "dime1"    — routes generation to Dime 1.0, the self-hosted QLoRA
- *               fine-tune of Llama 3 8B Instruct (artifact Llama-3-Dime-1.0),
- *               served 4-bit by vLLM behind a private RunPod Serverless
- *               endpoint. Railway remains the control plane: auth,
- *               entitlement, rate limits, retrieval grounding, prompt
- *               construction, and post-generation validation stay in this
- *               codebase; only token generation leaves the box. Wiring:
- *               server/_core/dime1Client.ts + dime1ChatHandler.ts;
- *               training/serving runbook: ml/dime-1.0/README.md. Flip to
- *               "dime1" only after the checkpoint is deployed on RunPod
- *               and the eval gates in the runbook pass.
+ * "dime1"    — reserved future integration for the governed Dime 1.0
+ *               post-training foundation based on the pinned Llama 3.1 8B
+ *               Base model. The client and handler remain inactive scaffolds.
+ *               No production checkpoint, serving artifact, or endpoint is
+ *               approved. Canonical development and promotion gates:
+ *               ml/dime-1.0/README.md and
+ *               ml/dime-1.0/docs/RELEASE_GATES.md. Activation requires a
+ *               separate owner-authorized promotion PR after every gate
+ *               passes.
  *
  * This is a deliberate hardcoded constant, not an env var: unfreezing must be
  * an explicit code change. Scope is the Dime Chat interface only

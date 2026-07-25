@@ -1,0 +1,303 @@
+[
+  {
+    "type": "function",
+    "function": {
+      "name": "get_game_context",
+      "description": "Return authorized schedule, team, roster, injury, result, or live game-state facts for one event.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "event_id": {"type": "string"},
+          "fields": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "enum": [
+                "schedule",
+                "teams",
+                "rosters",
+                "injuries",
+                "result",
+                "live_state"
+              ]
+            }
+          }
+        },
+        "required": ["event_id"],
+        "additionalProperties": false
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "get_current_odds",
+      "description": "Return licensed, timestamped current odds for one event and market.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "event_id": {"type": "string"},
+          "market": {"type": "string"},
+          "mode": {"enum": ["pregame", "live"]}
+        },
+        "required": ["event_id", "market"],
+        "additionalProperties": false
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "get_odds_history",
+      "description": "Return timestamped line and price snapshots for one event and market.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "event_id": {"type": "string"},
+          "market": {"type": "string"},
+          "from_utc": {"type": "string"},
+          "to_utc": {"type": "string"}
+        },
+        "required": ["event_id", "market"],
+        "additionalProperties": false
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "get_market_splits",
+      "description": "Return provider-scoped ticket and handle splits with scope and timestamp.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "event_id": {"type": "string"},
+          "market": {"type": "string"},
+          "provider_scope": {
+            "enum": ["entitled_default", "consensus_entitled"]
+          }
+        },
+        "required": ["event_id", "market"],
+        "additionalProperties": false
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "calculate_market_math",
+      "description": "Perform deterministic odds, hold, no-vig, EV, settlement, ROI, or CLV calculations.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "operation": {
+            "enum": [
+              "implied_probability",
+              "remove_vig",
+              "market_hold",
+              "expected_value",
+              "settled_profit",
+              "roi",
+              "probability_clv"
+            ]
+          },
+          "inputs": {"type": "object"}
+        },
+        "required": ["operation", "inputs"],
+        "additionalProperties": false,
+        "oneOf": [
+          {
+            "properties": {
+              "operation": {"const": "implied_probability"},
+              "inputs": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["american_odds"],
+                "properties": {
+                  "american_odds": {
+                    "type": "integer",
+                    "anyOf": [
+                      {"maximum": -100},
+                      {"minimum": 100}
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          {
+            "properties": {
+              "operation": {"enum": ["remove_vig", "market_hold"]},
+              "inputs": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["american_odds"],
+                "properties": {
+                  "american_odds": {
+                    "type": "object",
+                    "minProperties": 2,
+                    "additionalProperties": {
+                      "type": "integer",
+                      "anyOf": [
+                        {"maximum": -100},
+                        {"minimum": 100}
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "properties": {
+              "operation": {"const": "expected_value"},
+              "inputs": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["american_odds", "probability"],
+                "properties": {
+                  "american_odds": {
+                    "type": "integer",
+                    "anyOf": [
+                      {"maximum": -100},
+                      {"minimum": 100}
+                    ]
+                  },
+                  "probability": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  }
+                }
+              }
+            }
+          },
+          {
+            "properties": {
+              "operation": {"const": "settled_profit"},
+              "inputs": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["stake", "american_odds", "result"],
+                "properties": {
+                  "stake": {"type": "number", "minimum": 0},
+                  "american_odds": {
+                    "type": "integer",
+                    "anyOf": [
+                      {"maximum": -100},
+                      {"minimum": 100}
+                    ]
+                  },
+                  "result": {"enum": ["win", "loss", "push", "void"]}
+                }
+              }
+            }
+          },
+          {
+            "properties": {
+              "operation": {"const": "roi"},
+              "inputs": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["profits", "stakes"],
+                "properties": {
+                  "profits": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {"type": "number"}
+                  },
+                  "stakes": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {"type": "number", "minimum": 0}
+                  }
+                }
+              }
+            }
+          },
+          {
+            "properties": {
+              "operation": {"const": "probability_clv"},
+              "inputs": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "backed_selection",
+                  "event_id",
+                  "market",
+                  "period",
+                  "entry_market_odds",
+                  "closing_market_odds"
+                ],
+                "properties": {
+                  "backed_selection": {"type": "string"},
+                  "event_id": {"type": "string"},
+                  "market": {"type": "string"},
+                  "period": {"type": "string"},
+                  "entry_market_odds": {
+                    "type": "object",
+                    "minProperties": 2,
+                    "additionalProperties": {"type": "integer"}
+                  },
+                  "closing_market_odds": {
+                    "type": "object",
+                    "minProperties": 2,
+                    "additionalProperties": {"type": "integer"}
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "get_bet_tracker_summary",
+      "description": "Return a minimum-necessary aggregate of the authenticated user's authorized Bet Tracker history.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "user_scope": {"const": "self"},
+          "filters": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "sport": {"type": "string"},
+              "league": {"type": "string"},
+              "market_type": {
+                "enum": ["moneyline", "spread", "total", "prop", "other"]
+              },
+              "bet_timing": {"enum": ["pregame", "live"]},
+              "from_utc": {"type": "string"},
+              "to_utc": {"type": "string"}
+            }
+          },
+          "as_of_utc": {"type": "string"}
+        },
+        "required": ["user_scope", "as_of_utc"],
+        "additionalProperties": false
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "run_simulation",
+      "description": "Run a versioned simulation with frozen inputs and return a distribution summary.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "event_id": {"type": "string"},
+          "simulation_model_version": {"type": "string"},
+          "draws": {"type": "integer", "minimum": 1000, "maximum": 1000000},
+          "seed": {"type": "integer"}
+        },
+        "required": ["event_id", "simulation_model_version", "draws", "seed"],
+        "additionalProperties": false
+      }
+    }
+  }
+]

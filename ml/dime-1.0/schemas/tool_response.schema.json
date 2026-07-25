@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Dime Tool Response Envelope",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "status",
+    "as_of_utc",
+    "source_ids",
+    "data",
+    "quality_flags",
+    "warnings"
+  ],
+  "properties": {
+    "status": {
+      "enum": [
+        "ok",
+        "partial",
+        "not_found",
+        "stale",
+        "unauthorized",
+        "blocked_by_policy",
+        "error"
+      ]
+    },
+    "as_of_utc": {"type": "string", "format": "date-time"},
+    "source_ids": {"type": "array", "items": {"type": "string"}},
+    "data": {"type": "object"},
+    "quality_flags": {"type": "array", "items": {"type": "string"}},
+    "warnings": {"type": "array", "items": {"type": "string"}}
+  }
+}

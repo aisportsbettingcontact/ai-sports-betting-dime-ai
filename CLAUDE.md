@@ -130,10 +130,12 @@ Useful CLI: `python3 .claude/skills/ui-ux-pro-max/scripts/search.py "<query>" [-
 - Claude traffic routing — the Anthropic SDK (`server/_core/anthropicClient.ts`), Agent SDK
   (`server/_core/dimeAgent.ts`), and Claude Code CLI all route through an Anthropic-compatible
   gateway via `ANTHROPIC_BASE_URL` + `ANTHROPIC_AUTH_TOKEN`
-- `ml/dime-1.0/README.md` — Dime 1.0 self-hosted model runbook (QLoRA fine-tune of Llama 3 8B
-  Instruct → 4-bit AWQ → private RunPod Serverless vLLM endpoint; Railway stays the control
-  plane). Server wiring: `server/_core/dime1*.ts` behind `DIME_CHAT_LLM_PROVIDER` (ships
-  `"frozen"`; flip to `"dime1"` only after the runbook's eval gates pass)
+- `ml/dime-1.0/README.md` — canonical governed Dime 1.0 development foundation: QLoRA/SFT
+  post-training and evaluation from pinned `meta-llama/Llama-3.1-8B` Base. It owns reviewed
+  prompts, schemas, synthetic public fixtures, CPU validation, and release gates; it does not
+  contain a production-trained checkpoint or active endpoint. Server wiring remains a frozen
+  future scaffold in `server/_core/dime1*.ts`. `DIME_CHAT_LLM_PROVIDER` must stay `"frozen"`
+  until a separate owner-authorized promotion PR satisfies `ml/dime-1.0/docs/RELEASE_GATES.md`.
 
 ## Deploy law (IMPORTANT)
 
