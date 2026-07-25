@@ -116,7 +116,7 @@ p_hr   = clamp(1 - exp(-lambda), 0.04, 0.45)
 Verdict logic (VERIFIED — :415-429): `edgeOver = modelPHr − anNoVigOverPct` (4 dp);
 `evOver = (edgeOver / (1 − modelPHr)) * 100` (2 dp); verdict `OVER` only if
 `edgeOver ≥ 0.060 AND modelPHr ≥ 0.18`, else `PASS`. **UNDER is never emitted** (VERIFIED — no
-code path sets it; :418 initializes "PASS", only "OVER" assigned at :426).
+code path sets it; :418 initializes "PASS", only "OVER" assigned at :425).
 
 Note the evOver formula does not match either the schema's documented formula ("edge * (1/book_p −
 1) * 100" — drizzle/schema.ts:1487) or the standard EV-at-odds definition `(p−q)/q`; it divides by
@@ -173,7 +173,7 @@ exp_hr        = mean(hr_counts)                           # :1203-1204
 | lineup hr_pct source | batting_hr9 / 38.0, × woba_scale, clip [0.01, 0.07] | :2262-2266, 2275, 2284 |
 | LEAGUE_HR_PCT | 0.0309 | :117 |
 | park_hr_factor | PARK_FACTORS[retro]["hr"]/100 (COL 1.22 … OAK/MIA 0.91) | :225-260, 2166-2168 |
-| Output scaling | ×100, 2 dp before returning to TS | :2977-2981 |
+| Output scaling | ×100, 2 dp for the three probabilities only (:2977-2979); exp_home_hr/exp_away_hr pass through unscaled (:2980-2981) | :2977-2981 |
 
 Properties worth flagging (all VERIFIED from the code above unless noted):
 - **No opposing-pitcher input** — the per-PA Log5 machinery (PAOutcomeModel, :589-605) does blend
@@ -214,10 +214,11 @@ skipped (propsSkipped), leaving actualHr NULL forever in the live path (VERIFIED
 
 `runMlbModelForDate` writes `modelAwayHrPct/modelHomeHrPct/modelBothHrPct` (0-100 strings, 2 dp;
 Python pre-multiplies by 100) and `modelAwayExpHr/modelHomeExpHr` in the big per-game UPDATE
-(VERIFIED — mlbModelRunner.ts:2521-2525, `.where(eq(games.id, r.db_id))` :2560). Games already
-modeled (`modelRunAt` not null) are skipped unless forceRerun, so team HR numbers are computed
-once when the game first becomes modelable, not continuously refreshed (VERIFIED —
-mlbModelRunner.ts:1589-1594).
+(VERIFIED — mlbModelRunner.ts:2521-2525, `.where(eq(games.id, r.db_id))` :2560). Skip guard
+(corrected): a game is skipped unless forceRerun **only when `modelRunAt` was stamped on the same
+calendar date as the run date**; a stamp from a different date is treated as stale and the game is
+re-modeled (VERIFIED — mlbModelRunner.ts:1594-1601). Net effect: team HR numbers are computed once
+per game date, not continuously refreshed.
 
 ---
 
@@ -242,8 +243,10 @@ mlbModelRunner.ts:1589-1594).
 
 - `client/src/pages/ModelProjections.tsx` — public feed, MLB "hrprops" tab fetches
   `hrProps.getByGames` (refetch 10 min) and renders `MlbHrPropsCard` per game (VERIFIED —
-  :701-717, :1721). Card shows bookLine, consensus odds, modelPHr, modelOverOdds, edge, EV,
-  verdict (VERIFIED — MlbHrPropsCard.tsx:22-47, 164).
+  :701-717, :1721). Card shows bookLine, consensus over odds, modelPHr, modelOverOdds, edge
+  (columns LINE/CONS/MDL%/MDL$/EDGE — MlbHrPropsCard.tsx:229, row cells :155-175) with
+  verdict-driven mint highlight and OVER-edge counts (:107, :190, :254). **`evOver` is in the row
+  type (:36) but never rendered** — the card has no EV cell (VERIFIED).
 - `client/src/pages/TheModelResults.tsx` — owner-only results page, "hrprops" market tab:
   games.list for the date → hrProps.getByGames; `HrPropRow` renders MODEL P(HR), BOOK NO-VIG,
   EDGE, and an "FD ODDS" cell bound to `fdOverOdds` — which is never populated, so it always
@@ -266,7 +269,7 @@ Entry point: `server/_core/index.ts:846` calls `startVsinAutoRefresh()`; `:877` 
 | HR props scrape + model EV | MLB cycle "Step 8" | every cycle, **only after 12:00 UTC** (`isAfter7amEst`) | vsinAutoRefresh.ts:2022-2063; gate fn :120-129 (VERIFIED) |
 | HR grading (`fetchAndStoreActualHrResults`) | MLB cycle, inside the **K-Props pipeline try block** | every cycle (no time gate); if the K-Props AN fetch/upsert throws before it, the outer catch skips HR grading that cycle | vsinAutoRefresh.ts:1886-1947 (VERIFIED — HR call at :1936-1944 is inside the try opened at :1886) |
 | Multi-market backtest (incl. HR_PROP market) | MLB cycle, only when ≥1 game transitions to FINAL | event-driven | vsinAutoRefresh.ts:1952-1994 (VERIFIED) |
-| Team HR columns (`runMlbModelForDate`) | `startMlbModelSyncScheduler` (today+tomorrow) + MLBCycle fallback run | every 5 min, idempotent via `modelRunAt IS NULL` guard | mlbModelRunner.ts:2673, 2799, 1589-1594; vsinAutoRefresh.ts:1860-1884 (VERIFIED) |
+| Team HR columns (`runMlbModelForDate`) | `startMlbModelSyncScheduler` (today+tomorrow) + MLBCycle fallback run | every 5 min, idempotent via same-calendar-date `modelRunAt` guard ("IS NULL" is only the docstring's phrasing — mlbModelRunner.ts:2666; the real check is :1594-1601) | mlbModelRunner.ts:2673, 2799, 1594-1601; vsinAutoRefresh.ts:1859-1884 (VERIFIED) |
 | Input seeders | pitcher stats 24 h; team batting splits 24 h; park factors 7 d (no hrFactor); Statcast **never** (manual script only) | see citations | vsinAutoRefresh.ts:2116-2129, 2160-2174, 2176-2190; populateStatcastISO.mjs (no scheduler ref, VERIFIED grep) |
 
 Doc drift: `mlbHrPropsBacktestService.ts:7` says "Called by MLBCycle every 10 minutes"; the actual
@@ -322,7 +325,7 @@ cycle is 5 minutes (VERIFIED — vsinAutoRefresh.ts:1361).
 | P2 | recalibrateHrProps.mjs hard-codes `currentFactor = 0.720` while live factor is 0.5317 — re-running the committed recalibration tool would compute a wrong factor | recalibrateHrProps.mjs:107; mlbHrPropsModelService.ts:97 |
 | P2 | `evOver` formula `edge/(1−modelPHr)·100` matches neither the schema's documented formula nor standard EV at book odds | mlbHrPropsModelService.ts:422; drizzle/schema.ts:1487 |
 | P2 | hr9 is per-27-**AB** (`HR/AB*27`) but consumed as a per-PA rate and multiplied by 4.22 PA/game → structural ~10-13% lambda inflation silently absorbed into the calibration factor | seedTeamBattingSplits.ts:13, 100; mlbHrPropsModelService.ts:147, 170 |
-| P2 | Multi-market HR evaluation mixes odds columns: over from `consensusOverOdds`, under from never-written `fdUnderOdds` → no-vig/edge/ev always null in mlb_game_backtest HR rows | mlbMultiMarketBacktest.ts:732-736; grep: no fdUnderOdds writer |
+| P2 | Multi-market HR evaluation mixes odds columns: over from `consensusOverOdds` (:732), under from never-written `fdUnderOdds` (:733) → no-vig and edge always null (:765); EV is still computed from consensus over odds alone (calcEV :170-174, call :766), so ev is non-null whenever over odds parse | mlbMultiMarketBacktest.ts:732-733, 765-766; grep: no fdUnderOdds writer |
 | P2 | HR grading is nested inside the K-Props try block — an AN K-props failure skips HR actualHr updates for that cycle | vsinAutoRefresh.ts:1886 (try opens), :1936-1944 (HR call), :1945-1947 (catch) |
 | P2 | Recalibration threshold/ROI analysis prices HR props at −110 (`wins*(100/110)`) though they pay +250..+900 → threshold choice (0.18) optimized on a wrong objective | recalibrateHrProps.mjs:165-166; runFullHistoricalBacktest.mjs:59-64 |
 | P3 | Owner UI "FD ODDS" cell bound to dead `fdOverOdds` column — always renders "—" | TheModelResults.tsx:768, 834-836; schema.ts:1472 |
@@ -332,3 +335,97 @@ cycle is 5 minutes (VERIFIED — vsinAutoRefresh.ts:1361).
 | P3 | Live grading has exact-normalized-name matching only (skips unmatched → actualHr NULL forever); backfill script has a partial-match fallback — inconsistent grading | mlbHrPropsBacktestService.ts:183-189; backfillHrProps.mjs:199-209 |
 | P3 | Doc/comment drift: schema says modelPHr "from MLBAIModel.py" (actual writer is TS service); backtest header says 10-min cycle (actual 5); scraper `inserted` counts updates | drizzle/schema.ts:1481; mlbHrPropsBacktestService.ts:7 vs vsinAutoRefresh.ts:1361; mlbHrPropsScraper.ts:252 |
 | P3 | Unmapped AN team_id → playerTeam "?" silently classified side='home' | ActionNetworkHRPropsAPI.py:310-311; mlbHrPropsScraper.ts:230 |
+
+---
+
+## Verification
+
+Adversarial verification pass, 2026-07-25, by a second agent. Every load-bearing claim was
+re-checked against the code at the cited location this session (read, not trusted). Method: full
+reads of mlbHrPropsScraper.ts, mlbHrPropsModelService.ts, mlbHrPropsBacktestService.ts,
+ActionNetworkHRPropsAPI.py, backfillHrFactor.mjs, recalibrateHrProps.mjs; targeted reads of
+MLBAIModel.py (§60-124, 218-267, 585-610, 875-890, 1180-1214, 2160-2204, 2255-2294, 2775-2830,
+2965-2989), mlbModelRunner.ts, vsinAutoRefresh.ts, mlbFullBacktestEngine.ts, mlbMultiMarketBacktest.ts,
+mlbDriftDetector.ts, routers.ts, db.ts, drizzle/schema.ts, census/schema-columns.tsv, the backfill/audit
+scripts, and the four client files; plus independent repo-wide greps for `fdOverOdds|fdUnderOdds`
+writers, `mlb_hr_props.modelRunAt` writers, `weather_hr_adj` consumers, `populateStatcastISO`
+callers, and client `HrPct|ExpHr|BothHr` readers — all of which reproduced the dossier's grep claims.
+
+**Tally: 121 claims checked → 115 confirmed, 6 corrected (fixed inline above), 0 unbacked.**
+
+### Corrections applied inline
+
+1. **§A verdict logic** — "OVER" is assigned at mlbHrPropsModelService.ts:425, not :426
+   (one-line citation drift; :426 is the `edges++` counter). CONFIRMED otherwise.
+2. **§B parameter table, output scaling** — the ×100/2-dp scaling applies only to
+   `p_home_hr_any`/`p_away_hr_any`/`p_both_hr` (MLBAIModel.py:2977-2979); `exp_home_hr`/`exp_away_hr`
+   are returned unscaled (:2980-2981). The original row implied all five outputs were scaled.
+3. **§Team markets write path, skip guard** — the guard is not "skip if `modelRunAt` not null":
+   mlbModelRunner.ts:1594-1601 skips only when `modelRunAt` was stamped on the **same calendar
+   date** as the run date; a different-date stamp logs `[STALE-MODEL]` and re-models. The
+   original text (and the module docstring at :2666 it echoed) matched the comment, not the code —
+   an instance of the comment-vs-code trap this audit hunts.
+4. **§Scheduling table, same row** — same correction; "idempotent via `modelRunAt IS NULL` guard"
+   was the docstring's phrasing (:2666), not the implemented check (:1594-1601).
+5. **§Exposure, ModelProjections card** — `MlbHrPropsCard` never renders EV. Column headers are
+   `["", "PLAYER", "LINE", "CONS", "MDL%", "MDL$", "EDGE"]` (MlbHrPropsCard.tsx:229) and the row
+   renders headshot/name/line/consensus/modelPHr/modelOverOdds/edge only (:155-175); `evOver`
+   exists in the `HrPropRow` type (:36) but no cell reads it. Original claimed the card shows EV.
+6. **Finding candidates, P2 odds-mixing** — "no-vig/edge/ev always null" was one-third wrong:
+   `ev = calcEV(modelProb, bookOverOdds)` (mlbMultiMarketBacktest.ts:766) uses only the over odds
+   (calcEV :170-174), so ev is **non-null** whenever `consensusOverOdds` parses. No-vig (:734-735
+   requires both sides) and edge (:765, needs nvOver) are indeed always null. Finding severity
+   unchanged; mechanism corrected.
+
+### Spot-check results on the highest-risk claims (all CONFIRMED)
+
+- **fdOverOdds/fdUnderOdds have no writer** — independent grep found exactly the readers the
+  dossier lists (recalibrateHrProps.mjs:42, runFullHistoricalBacktest.mjs:489,
+  mlbMultiMarketBacktest.ts:733, TheModelResults.tsx:768-769 + render :836, schema :1472-1474,
+  migration 0051:35-36). CONFIRMED.
+- **`mlb_hr_props.modelRunAt` single writer** — cross-referencing every file touching
+  mlbHrProps/mlb_hr_props against `modelRunAt` mentions confirms backfillHrPropsApr789.mjs:113 is
+  the only writer; mlbFullBacktestEngine.ts:663/:670 reads it. The live model-service update
+  (:433-435) sets only modelPHr/modelOverOdds/edgeOver/evOver/verdict. P1 finding CONFIRMED.
+- **All player-model constants** (LEAGUE_* :61-65, PA 4.22 :66, EDGE_THRESHOLD 0.060 :70,
+  MIN_ABSOLUTE_P_HR 0.18 :77, clamps :78-81, factor 0.5317 :97) — read from code, not comments.
+  CONFIRMED, including the hardHitPct-only → wOBA-fallback gate at :400 vs :155.
+- **Park-factor fork values** — backfillHrFactor.mjs:23-34 vs MLBAIModel.py:225-260 compared
+  pairwise: COL 119/122, CIN 108/112, NYA 108/109, SEA 94/93, OAK 93/91 all CONFIRMED;
+  seedParkFactors.ts has zero `hrFactor` references (grep), so the no-refresh claim holds.
+- **Recalibration forensics** — script template :206 reproduces the live comment at
+  mlbHrPropsModelService.ts:97-98 verbatim for n=2438/13.66%/10.09%/0.72→0.5317(×0.738); drift
+  template :229 reproduces mlbDriftDetector.ts:218 (0.10090238, n=2438, ±0.005 CI). The
+  currentFactor=0.720 hard-code (:107), −110 ROI (:165), and vacuous `r.anNoVig` filter (:147 vs
+  SELECT :42-43) all CONFIRMED. The "n=10,039 rerun never landed" remains INFERRED — also
+  consistent with the header (:4-8) having been edited ahead of a rerun that never executed;
+  either way the live values trace to the n=2438 execution.
+- **Scheduling** — index.ts:846/:877 entry points, MLB_INTERVAL_MS :1361, 12:00 UTC gate :120-129
+  and :2026, HR grading inside the K-Props try (:1886 open, :1936-1944 call, catch :1945-1947),
+  FINAL-transition multi-market trigger :1952-1994, seeder intervals (:2116-2129 24 h,
+  :2162-2174 24 h, :2178-2190 7 d). All CONFIRMED.
+- **Multi-market HR can never grade** — CONFIDENCE_THRESHOLD 0.65 (:48) vs conf check
+  `modelProb >= CONFIDENCE_THRESHOLD` (:767) vs MAX_P_HR 0.45 (service :79): CONFIRMED —
+  every graded-eligible row falls to NO_ACTION.
+- **Census columns** — schema-columns.tsv rows 261-285 show exactly the 25 `mlb_hr_props` columns;
+  no battingOrder/lineupConfirmed/position/anEventId. CONFIRMED.
+- **Dead paths** — `weather_hr_adj` sole occurrence is its definition (MLBAIModel.py:2198);
+  `populateStatcastISO.mjs` has zero references outside itself; no client reads
+  `modelAwayHrPct|modelHomeHrPct|modelBothHrPct|modelAwayExpHr|modelHomeExpHr`
+  (grep `HrPct|ExpHr|BothHr` over client/src returns nothing). All CONFIRMED.
+
+### Additional observation (not in original dossier)
+
+- `server/mlbWalkForwardValidator.ts:24` imports `mlbHrProps` but never uses it (single
+  occurrence); its "hr_prop" market (:471) reads from `mlb_game_backtest`, and its only callers
+  are a vitest file (mlbBacktestAudit.test.ts:76) and a type-only import
+  (mlbPublicationGate.ts:37) — not a live competing implementation for `mlb_hr_props`
+  (VERIFIED). Whether the walk-forward validator ever runs in production is UNKNOWN (no
+  scheduler/route invokes it — census question).
+
+### Citation-drift notes (immaterial, left as-is)
+
+- MLBAIModel.py n_sims clamp spans :881-883 (dossier: 880-882); Python lineup cross-reference
+  spans :317-335 (dossier: 316-335); backfillHrProps.mjs partial-match fallback spans :200-208
+  (dossier: 199-209); runApr11.mjs HR steps span :66-78 (dossier: 67-75). Each cited range still
+  contains the claimed behavior.

@@ -34,3 +34,33 @@ appended after verification).
 
 Not confirmed (logged to prevent re-litigation): F5 RL 47.7% (CI reaches 51%), FG-total tail
 buckets (n small), June F5-total bias −1.5 (outage-contaminated sample). Retest post-backfill.
+
+## M-2xx — Phase 0 dossier findings (curated; full candidate lists in phase0/*.md)
+
+Verification status per section: `fullgame` and `hrprops` were adversarially verified by
+independent agents (74 claims: 69 confirmed/5 corrected/0 unbacked; 121: 115/6/0). The other six
+sections are tracer-output with **supervisor spot-verification of the load-bearing claims marked
+SV below**; their full verification is queued (verifier agents hit the session usage limit —
+P-005). Unmarked claims from those sections are single-agent traced, not yet independently
+verified.
+
+| ID | Sev | Section | Finding | Status |
+|---|---|---|---|---|
+| M-201 | P1 | fullgame✓/exposure | `publishedModel`/`publishedToFeed` set true unconditionally on every write (`mlbModelRunner.ts:2548`); the 70%-accuracy publication gate (`mlbPublicationGate.ts`) is dead code; public reads never check the flags — owner retraction impossible; post-write validation is log-only | OPEN |
+| M-202 | P1 | fullgame✓ | +3pp `FG_ML_HOME_EDGE` post-hoc home shim (`MLBAIModel.py:1609-1627`) contaminates published win%, ML odds, and the RL clamp chain; repo's own audit blames it for RL home bias; backtest compensates with an 18% away-RL threshold instead of a source fix | OPEN |
+| M-203 | P1 SV | nrfi/gradecal | `brierScore` divides by 100 unconditionally (`mlbOutcomeIngestor.ts:162`) while fed 0–1 `modelPNrfi` (line 226) and `modelF5OverRate` (line 218) — all stored `brierNrfi`/`brierF5Total` values are garbage (p≈0.005); owner Brier-trend chart wrong for those markets | OPEN |
+| M-204 | **P0** SV | kprops | Root cause of C-002: λ is book-line-anchored (`ip_expected = bookLine/pitcher_k9*9`, service header) so kProj ≈ bookLine × xfip_adj × opp_adj × 0.87; `opp_adj = team_k9/8.2` where team k9 is on a K/AB×27 scale (measured league mean 6.69–6.87 vs divisor 8.2 ⇒ opp_adj ≈ 0.83) ⇒ kProj structurally ≈ 0.72×bookLine. Deterministically reproduces the observed −0.99 K bias and 87% UNDER lean | OPEN |
+| M-205 | P1 SV | f5 | F5 RL cover probabilities exclude ties (`MLBAIModel.py:1309-1310`: away +0.5 cover counted only on outright away win) — away side understated by the ~15% tie mass; explains F5 RL 47.7% pick accuracy | OPEN |
+| M-206 | P1 | f5 | F5 total priced at synthetic line (FG book total × 0.555 snapped), then graded/displayed against the real book `f5Total`; model never re-runs when F5 book lines land | OPEN |
+| M-207 | P1 SV | gradecal | `mlb_calibration_constants` is write-only: live code hardcodes K factors 0.870/0.810 (`mlbKPropsModelService.ts:88-89`, verified) while DB holds 0.776 (written 2026-05-11 by an out-of-repo process, read by nothing); fg_ml_home_edge and nrfi_rate similarly drifted | OPEN |
+| M-208 | P1 | ingestion | Outcome ingestion, closing-line capture, drift, and schedule refresh exist only as in-process schedulers; runbook prescribes `DISABLE_BACKGROUND_JOBS=1` on web replicas with exactly one job-runner replica; no cron/CI fallback. INFERRED prime suspect for the May 5–7 and June collapses (D-002/006/007). Railway-side env verification was permission-denied this session; local shell does not set the flag | OPEN |
+| M-209 | P1 | ingestion | No live code path creates daily MLB `games` rows or populates `mlbGamePk` — the seeder was external (retired Manus workflow); explains D-001 (missed DH game 2s) and makes game creation an operational cliff | OPEN |
+| M-210 | P1 | ingestion | Closing-line capture requires the 5-min in-process tick, fires only while status='inprogress', book 68 strictly, no backfill — explains the 65% capture rate (D-008) | OPEN |
+| M-211 | P1 | hrprops✓ | HR props structurally ungradable in the multi-market backtest (0.65 confidence gate vs `modelPHr` ≤ ~0.22) and the HR backtest report filters on a `modelRunAt` the live pipeline never writes | OPEN |
+| M-212 | P2 | hrprops✓ | `hr9` (per 27 AB) consumed as per-PA rate ×4.22 (~10-13% λ inflation absorbed into the calibration factor); Statcast inputs refreshed only by an unscheduled one-off script — both feed C-003 | OPEN |
+| M-213 | P1 | kprops | AN K-prop fetch keys dates by server-local clock vs the pipeline's PT dates — evening cycles can attach tomorrow's lines to today's games; no pre-game freeze (lines/probs keep updating in-game). Explains the 108 stored side-label contradictions (M-103) | OPEN |
+| M-214 | P2 | gradecal | K grading credits/blames the substitute starter's Ks when the listed pitcher is scratched (books void) — contaminates stored `actualKs`-based grades and, transitively, this audit's K ledger for scratched rows | OPEN |
+| M-215 | P2 | exposure | All MLB model numbers exposed via unauthenticated public tRPC endpoints; paywall is client-side only | OPEN |
+| M-216 | P2 | ingestion | Odds-refresh path mutates model outputs (mirrors `modelTotal` to book, rewrites model spreads, clears `modelRunAt`) — a concrete mechanism behind P-001 provenance destruction | OPEN |
+| M-217 | P2 | nrfi/gradecal | 0–1 probabilities stored in `decimal(5,2)` (`modelPNrfi`, `mlb_game_backtest.modelProb`) — 1%-granularity truncation degrades all downstream edge/calibration math | OPEN |
+| P-005 | P2 | process | 6 of 8 dossier verifier agents failed on session usage limits; their sections carry tracer-only status until the verification pass is re-run (Rule 6 applied: no verification claimed where none ran) | OPEN |

@@ -2,9 +2,16 @@
 
 Purpose: from this document (plus the section files it indexes), an engineer who has never seen
 this codebase must be able to re-derive every MLB number Dime publishes. Every claim in the
-section files carries file:line evidence and a VERIFIED/INFERRED/UNKNOWN classification; each
-section was written by a tracer agent and then adversarially verified by an independent agent
-(corrections applied inline, verification appendix per file).
+section files carries file:line evidence and a VERIFIED/INFERRED/UNKNOWN classification. Each
+section was written by a tracer agent; adversarial verification status varies per section (see
+table below — 6 verifier agents failed on session usage limits, finding P-005; supervisor
+spot-verified the load-bearing claims of the affected sections, marked SV in FINDINGS.md).
+
+| Section | Verification |
+|---|---|
+| fullgame | agent-verified (74 claims: 69 confirmed, 5 corrected inline, 0 unbacked) |
+| hrprops | agent-verified (121 claims: 115 confirmed, 6 corrected inline, 0 unbacked) |
+| f5, nrfi, kprops, ingestion, gradecal, exposure | tracer-only + supervisor spot-checks (M-203/204/205/207 verified directly); full verification pass queued |
 
 ## Section index (phase0/)
 | Section | File | Scope |
