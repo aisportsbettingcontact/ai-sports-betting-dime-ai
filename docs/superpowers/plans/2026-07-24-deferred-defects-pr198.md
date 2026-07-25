@@ -59,7 +59,7 @@ docker run -d --name dime-test-mysql -e MYSQL_ALLOW_EMPTY_PASSWORD=1 \
 mysqladmin ping -h 127.0.0.1 -P 3306 -u root --wait=60 --silent   # retry once if init-restart drops it
 cd .claude/worktrees/pr198 && pnpm install --frozen-lockfile
 DATABASE_URL=mysql://root@127.0.0.1:3306/dime_test pnpm exec drizzle-kit push --force
-mysql -h 127.0.0.1 -P 3306 -u root -e "ALTER USER 'root'@'%' IDENTIFIED BY 'test'; FLUSH PRIVILEGES;"
+mysql -h 127.0.0.1 -P 3306 -u root -e "ALTER USER 'root'@'%' IDENTIFIED BY '$LOCAL_DB_PASSWORD'; FLUSH PRIVILEGES;"
 ```
 Expected: `[✓] Changes applied`, then `SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='dime_test'` ≈ 73.
 
@@ -72,7 +72,7 @@ Record both; the next steps use whatever these actually say (do not guess names)
 - [ ] **Step 1.3: Start the server with injected service env, DB overridden**
 
 ```bash
-railway run env DATABASE_URL=mysql://root:test@127.0.0.1:3306/dime_test \
+railway run env DATABASE_URL=mysql://root:$LOCAL_DB_PASSWORD@127.0.0.1:3306/dime_test \
   DISABLE_BACKGROUND_JOBS=1 NODE_ENV=development <dev script from 1.2>
 ```
 Preflight probe (same env-injection, before the server): node one-liner printing
@@ -83,7 +83,7 @@ Expected: server listening; `curl localhost:<PORT>/health` → 200.
 
 Register via the app's own register endpoint (agent-browser drives the `/signup` form — same
 path production users take; the appUsers.register tests prove it works on this DB). Then:
-`mysql -h 127.0.0.1 -P 3306 -u root -ptest dime_test -e "UPDATE appUsers SET <admin column from 1.2>=1 WHERE email='dev-admin@example.test';"`
+`mysql -h 127.0.0.1 -P 3306 -u root -p$LOCAL_DB_PASSWORD dime_test -e "UPDATE appUsers SET <admin column from 1.2>=1 WHERE email='dev-admin@example.test';"`
 Expected: login succeeds for both; admin routes render for the admin session, redirect for the normal one.
 
 - [ ] **Step 1.5: Seed minimal `games` rows for today**
@@ -273,7 +273,7 @@ pnpm test:gated:local                                   # expect env-gate PASS; 
                                                         # entry updates ONLY if Task 3 realignment
                                                         # renamed test ids — justify each in the PR
 # DB suites, CI parity (container from Task 1):
-DATABASE_URL=mysql://root:test@127.0.0.1:3306/dime_test DB_TESTS=1 NODE_ENV=test \
+DATABASE_URL=mysql://root:$LOCAL_DB_PASSWORD@127.0.0.1:3306/dime_test DB_TESTS=1 NODE_ENV=test \
   pnpm exec vitest run --no-file-parallelism server/appUsers.login.test.ts \
   server/appUsers.register.test.ts server/completeAccountSetup.test.ts \
   server/passwordReset.test.ts server/tokenVersion.db.test.ts server/mlbDoubleheader.db.test.ts
