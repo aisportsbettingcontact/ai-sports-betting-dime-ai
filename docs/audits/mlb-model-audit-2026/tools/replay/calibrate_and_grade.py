@@ -163,36 +163,81 @@ def fmt(v, nd=4):
 
 # --------------------------------------------------------------------------- DB
 
+class SafeConn:
+    """Auto-reconnecting pymysql wrapper: TiDB serverless drops idle/long-lived
+    connections (observed OperationalError 2013 / InterfaceError mid-run), so every
+    cursor acquisition pings first and callers retry once after reconnect. Safe here
+    because every write in this tool is an idempotent upsert."""
+
+    def __init__(self):
+        self._conn = self._open()
+
+    @staticmethod
+    def _open():
+        url = os.environ.get("DATABASE_URL")
+        if not url:
+            raise SystemExit("DATABASE_URL not set")
+        sp = urlsplit(url)
+        return pymysql.connect(
+            host=sp.hostname,
+            port=sp.port or 3306,
+            user=unquote(sp.username or ""),
+            password=unquote(sp.password or ""),
+            database=sp.path.lstrip("/"),
+            ssl={"ssl": True},
+            charset="utf8mb4",
+            autocommit=True,
+        )
+
+    def reconnect(self):
+        try:
+            self._conn.close()
+        except Exception:
+            pass
+        self._conn = self._open()
+
+    def cursor(self, *a, **k):
+        try:
+            self._conn.ping(reconnect=True)
+        except Exception:
+            self.reconnect()
+        return self._conn.cursor(*a, **k)
+
+
 def connect_db():
-    url = os.environ.get("DATABASE_URL")
-    if not url:
-        raise SystemExit("DATABASE_URL not set")
-    sp = urlsplit(url)
-    return pymysql.connect(
-        host=sp.hostname,
-        port=sp.port or 3306,
-        user=unquote(sp.username or ""),
-        password=unquote(sp.password or ""),
-        database=sp.path.lstrip("/"),
-        ssl={"ssl": True},
-        charset="utf8mb4",
-        autocommit=True,
-    )
+    return SafeConn()
+
+
+_RETRYABLE = (pymysql.err.OperationalError, pymysql.err.InterfaceError)
 
 
 def qall(conn, sql, params=None):
-    with conn.cursor(pymysql.cursors.DictCursor) as cur:
-        cur.execute(sql, params or ())
-        return cur.fetchall()
+    for attempt in (1, 2):
+        try:
+            with conn.cursor(pymysql.cursors.DictCursor) as cur:
+                cur.execute(sql, params or ())
+                return cur.fetchall()
+        except _RETRYABLE:
+            if attempt == 2:
+                raise
+            conn.reconnect()
 
 
 def executemany(conn, sql, rows, batch=500):
     if not rows:
         return 0
     n = 0
-    with conn.cursor() as cur:
-        for i in range(0, len(rows), batch):
-            n += cur.executemany(sql, rows[i:i + batch])
+    for i in range(0, len(rows), batch):
+        chunk = rows[i:i + batch]
+        for attempt in (1, 2):
+            try:
+                with conn.cursor() as cur:
+                    n += cur.executemany(sql, chunk)
+                break
+            except _RETRYABLE:
+                if attempt == 2:
+                    raise
+                conn.reconnect()
     return n
 
 
