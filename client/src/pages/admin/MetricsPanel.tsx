@@ -227,7 +227,7 @@ export function MetricsPanel() {
                         so every bucket reads as a column; the value fill grows over it. */}
                     <div className="flex-1 w-full flex items-end rounded-t bg-muted overflow-hidden">
                       <div
-                        className={`w-full rounded-t transition-all duration-500 ${b.barColor}`}
+                        className={`w-full rounded-t transition-all duration-[160ms] ease-[cubic-bezier(0.16,1,0.3,1)] ${b.barColor}`}
                         style={{ height: histLoading ? "0%" : `${Math.max(barPct, barPct > 0 ? 4 : 0)}%` }}
                         title={`${b.label}: ${b.count} sessions (${pct}%)`}
                       />

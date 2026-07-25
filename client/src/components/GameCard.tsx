@@ -557,7 +557,7 @@ function MergedSplitBar({
                 paddingLeft: 'clamp(4px,0.4vw,8px)',
                 paddingRight: 'clamp(4px,0.4vw,8px)',
                 borderRadius: '9999px 0 0 9999px',
-              }} className="transition-all duration-700">
+              }} className="transition-all duration-[160ms] ease-[cubic-bezier(0.16,1,0.3,1)]">
                 <span style={{ ...segLabel, textAlign: 'left' }}>{away} %</span>
               </div>
             )}
@@ -579,7 +579,7 @@ function MergedSplitBar({
                 paddingLeft: 'clamp(4px,0.4vw,8px)',
                 paddingRight: 'clamp(4px,0.4vw,8px)',
                 borderRadius: '0 9999px 9999px 0',
-              }} className="transition-all duration-700">
+              }} className="transition-all duration-[160ms] ease-[cubic-bezier(0.16,1,0.3,1)]">
                 <span style={{ ...segLabel, textAlign: 'right' }}>{home} %</span>
               </div>
             )}
@@ -2950,7 +2950,7 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
         {/* Right: score pushed to far right */}
         {(isLive || isFinal) && hasScores && (
           <span
-            className="tabular-nums flex-shrink-0 transition-colors duration-300"
+            className="tabular-nums flex-shrink-0 transition-colors duration-[160ms] ease-[cubic-bezier(0.16,1,0.3,1)]"
             style={{
               /* [LAYOUT FIX] Score font:
                  Mobile MLB: clamp(13px,3.8vw,19px) — 13px min ensures 13+ px margin at all mobile viewports
@@ -3029,7 +3029,7 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
         {/* Right: score pushed to far right */}
         {(isLive || isFinal) && hasScores && (
           <span
-            className="tabular-nums flex-shrink-0 transition-colors duration-300"
+            className="tabular-nums flex-shrink-0 transition-colors duration-[160ms] ease-[cubic-bezier(0.16,1,0.3,1)]"
             style={{
               /* [LAYOUT FIX] Home score: same font fix as away score */
               fontSize: isNba
