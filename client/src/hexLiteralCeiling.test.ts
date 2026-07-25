@@ -61,7 +61,23 @@ describe("hex-literal ceiling ratchet (X-HEX-EPIDEMIC)", () => {
   walk(ROOT, counts);
 
   if (process.env.REGENERATE_HEX_CEILINGS === "1") {
-    it("regenerates hexLiteralCeilings.json from current counts", () => {
+    it("regenerates hexLiteralCeilings.json (ratchet-down only — raises are rejected)", () => {
+      // Regeneration enforces the same invariant as enforcement: no file may
+      // come out with a HIGHER ceiling than it went in with, and no new file
+      // may acquire an allowance. Without this, running the documented regen
+      // command with a freshly added literal would silently launder it into
+      // the fixture and normal CI would pass — the exact bypass this guard
+      // exists to prevent.
+      const prev: Record<string, number> = fs.existsSync(FIXTURE)
+        ? JSON.parse(fs.readFileSync(FIXTURE, "utf8"))
+        : {};
+      const raised = Object.entries(counts)
+        .filter(([file, n]) => n > (prev[file] ?? 0))
+        .map(
+          ([file, n]) =>
+            `${file}: ${n} > previous ceiling ${prev[file] ?? 0} — remove the new raw hex first (use law tokens); raising a ceiling requires an owner-approved law exception, not regeneration`,
+        );
+      expect(raised).toEqual([]);
       const sorted = Object.fromEntries(
         Object.entries(counts).sort(([a], [b]) => a.localeCompare(b)),
       );
