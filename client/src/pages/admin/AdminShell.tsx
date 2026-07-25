@@ -58,7 +58,7 @@ export function AdminShell({ active, children }: AdminShellProps) {
 
   return (
     <div className="admin-shell min-h-screen bg-background text-foreground">
-      <header className="admin-shell-header sticky top-0 z-50 border-b border-border bg-background/90 backdrop-blur-md supports-[backdrop-filter]:bg-background/70">
+      <header className="admin-shell-header sticky top-0 z-50 border-b border-border bg-background">
         <div className="admin-container flex h-14 items-center gap-3 sm:gap-4">
           {/* Back to app */}
           <button

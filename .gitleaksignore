@@ -16,3 +16,11 @@ e7fa6482d67f5e97bc383e8ba22448ed0b1a8f9d:audit-notes/SEC-006-corrections-1-2-add
 # junk). The test now builds the token at runtime so the literal is gone from
 # the working tree; this fingerprint covers the immutable history.
 501f9645ba9ac39acf53cb74699bc1a9158fcd00:livelab/packages/protocol/test/protocol.unit.test.ts:jwt:133
+
+# Local ephemeral test-database DSN in the PR #198 plan document (commit e0a4e44).
+# Not a credential: password "test", loopback host 127.0.0.1, throwaway dime_test
+# schema created and dropped by the Task 1 runtime harness. Nothing reachable, and
+# nothing that exists outside a developer's own machine. The working-tree copy is
+# sanitized; these fingerprints cover the immutable history.
+e0a4e44c405385fe78aa9ca8971e592eb45eee4b:docs/superpowers/plans/2026-07-24-deferred-defects-pr198.md:connection-string-password:75
+e0a4e44c405385fe78aa9ca8971e592eb45eee4b:docs/superpowers/plans/2026-07-24-deferred-defects-pr198.md:connection-string-password:243

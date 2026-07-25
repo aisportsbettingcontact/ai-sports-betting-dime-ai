@@ -115,7 +115,7 @@ export default function JourneyFunnelPanel() {
                   </div>
 
                   {/* Centered mint bar — narrows down the funnel (taper metaphor). */}
-                  <div className="h-9 sm:h-10 rounded-lg bg-muted/40 overflow-hidden flex justify-center">
+                  <div className="h-9 sm:h-10 rounded-lg bg-muted overflow-hidden flex justify-center">
                     <div
                       className={`h-full rounded-lg ${barTransition}`}
                       style={{ width: `${pct}%`, background: ramp[i] }}

@@ -161,7 +161,7 @@ export default function PowerUsersPanel({
                     key={u.sourceUserId}
                     type="button"
                     onClick={() => onSelect?.(u)}
-                    className="w-full flex items-center gap-3 sm:gap-4 px-2 py-2.5 text-left border-b border-border/60 last:border-b-0 cursor-pointer transition-colors duration-150 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset"
+                    className="w-full flex items-center gap-3 sm:gap-4 px-2 py-2.5 text-left border-b border-border last:border-b-0 cursor-pointer transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset"
                   >
                     {/* rank */}
                     <span className="w-6 text-right shrink-0 text-sm font-mono tabular-nums text-muted-foreground">
@@ -194,7 +194,7 @@ export default function PowerUsersPanel({
                       <span className="text-base sm:text-lg font-bold tabular-nums text-primary leading-none">
                         {u.score}
                       </span>
-                      <span className="block w-16 h-1.5 rounded-full bg-muted/60 overflow-hidden">
+                      <span className="block w-16 h-1.5 rounded-full bg-muted overflow-hidden">
                         <span
                           className="block h-1.5 bg-primary rounded-full transition-all duration-150"
                           style={{ width: `${Math.max(0, Math.min(100, u.score))}%` }}

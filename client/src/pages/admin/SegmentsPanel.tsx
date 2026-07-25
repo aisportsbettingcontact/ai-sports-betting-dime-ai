@@ -159,7 +159,7 @@ export default function SegmentsPanel() {
                     >
                       {s.label}
                     </span>
-                    <div className="flex-1 h-3.5 rounded bg-muted/60 overflow-hidden min-w-0">
+                    <div className="flex-1 h-3.5 rounded bg-muted overflow-hidden min-w-0">
                       <div
                         className={`h-full rounded bg-primary ${barMotion}`}
                         style={{ width: `${width}%` }}

@@ -288,7 +288,7 @@ function VerdictSide({ diff, label, isStrong, logoUrl, teamSlug, teamName, compa
           <TeamLogo slug={teamSlug ?? ""} name={teamName ?? ""} logoUrl={logoUrl} size={16} />
         )}
         <span className="font-bold leading-none whitespace-nowrap uppercase tracking-wide text-[11px]" style={{ color: "hsl(var(--foreground))" }}>
-          {showArrow && <span className="mr-0.5 text-[9px]" style={{ color }}>▲</span>}
+          {showArrow && <span className="mr-0.5 text-[10px]" style={{ color }}>▲</span>}
           {displayLabel}
         </span>
         {roi !== null ? (
@@ -557,7 +557,7 @@ function MergedSplitBar({
                 paddingLeft: 'clamp(4px,0.4vw,8px)',
                 paddingRight: 'clamp(4px,0.4vw,8px)',
                 borderRadius: '9999px 0 0 9999px',
-              }} className="transition-all duration-700">
+              }} className="transition-all duration-[160ms] ease-[cubic-bezier(0.16,1,0.3,1)]">
                 <span style={{ ...segLabel, textAlign: 'left' }}>{away} %</span>
               </div>
             )}
@@ -579,7 +579,7 @@ function MergedSplitBar({
                 paddingLeft: 'clamp(4px,0.4vw,8px)',
                 paddingRight: 'clamp(4px,0.4vw,8px)',
                 borderRadius: '0 9999px 9999px 0',
-              }} className="transition-all duration-700">
+              }} className="transition-all duration-[160ms] ease-[cubic-bezier(0.16,1,0.3,1)]">
                 <span style={{ ...segLabel, textAlign: 'right' }}>{home} %</span>
               </div>
             )}
@@ -2683,15 +2683,15 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
         {isLive ? (
           <>
             {game.gameClock && (
-              <span className="text-[9px] tabular-nums" style={{ color: "hsl(var(--muted-foreground))" }}>{game.gameClock}</span>
+              <span className="text-[10px] tabular-nums" style={{ color: "hsl(var(--muted-foreground))" }}>{game.gameClock}</span>
             )}
-            <span className="gc-live flex items-center gap-0.5 text-[8px] font-black tracking-widest uppercase flex-shrink-0" style={{ color: "#45E0A8" }}>
+            <span className="gc-live flex items-center gap-0.5 text-[10px] font-black tracking-widest uppercase flex-shrink-0" style={{ color: "#45E0A8" }}>
               <span className="w-1 h-1 rounded-full animate-pulse inline-block" style={{ background: "#45E0A8" }} />
               LIVE
             </span>
           </>
         ) : isFinal ? (
-          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold tracking-wide" style={{ background: "#000000", color: "hsl(var(--muted-foreground))" }}>FINAL</span>
+          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wide" style={{ background: "#000000", color: "hsl(var(--muted-foreground))" }}>FINAL</span>
         ) : (
           <span className="text-[10px] font-bold" style={{ color: "hsl(var(--muted-foreground))" }}>{time}</span>
         )}
@@ -2950,7 +2950,7 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
         {/* Right: score pushed to far right */}
         {(isLive || isFinal) && hasScores && (
           <span
-            className="tabular-nums flex-shrink-0 transition-colors duration-300"
+            className="tabular-nums flex-shrink-0 transition-colors duration-[160ms] ease-[cubic-bezier(0.16,1,0.3,1)]"
             style={{
               /* [LAYOUT FIX] Score font:
                  Mobile MLB: clamp(13px,3.8vw,19px) — 13px min ensures 13+ px margin at all mobile viewports
@@ -3029,7 +3029,7 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
         {/* Right: score pushed to far right */}
         {(isLive || isFinal) && hasScores && (
           <span
-            className="tabular-nums flex-shrink-0 transition-colors duration-300"
+            className="tabular-nums flex-shrink-0 transition-colors duration-[160ms] ease-[cubic-bezier(0.16,1,0.3,1)]"
             style={{
               /* [LAYOUT FIX] Home score: same font fix as away score */
               fontSize: isNba

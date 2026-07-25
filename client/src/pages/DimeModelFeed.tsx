@@ -1257,25 +1257,12 @@ const DMF_CSS = `
   --dmf-mint:#45E0A8; --dmf-mint-dim:transparent; --dmf-ring:#45E0A8;
   --dmf-shadow-input:none;
 }
-.dmf-root[data-dmf-mode="system"]{
-  /* System is a distinct neutral-grey appearance. Explicit Dark remains the
-     pure-black palette above; explicit Light remains white. */
-  --dmf-page:#121212; --dmf-sidebar:#181818; --dmf-card:#181818; --dmf-card-hi:#202020;
-  --dmf-border:#3A3A3A; --dmf-border-hi:#5A5A5A; --dmf-border-hover:#FFFFFF;
-  --dmf-t1:#FFFFFF; --dmf-t2:#E8E8E8; --dmf-t3:#B8B8B8; --dmf-t4:#969696;
-  --dmf-mint:#45E0A8; --dmf-mint-dim:transparent; --dmf-ring:#45E0A8;
-  --dmf-shadow-input:none;
-  --background:#121212; --foreground:#FFFFFF;
-  --card:#181818; --card-foreground:#FFFFFF;
-  --popover:#202020; --popover-foreground:#FFFFFF;
-  --secondary:#202020; --secondary-foreground:#FFFFFF;
-  --muted:#202020; --muted-foreground:#B8B8B8;
-  --border:#3A3A3A; --border-strong:#FFFFFF; --input:#3A3A3A;
-  --text-secondary:#B8B8B8; --text-muted:#8E8E8E;
-  --surface-raised:#202020; --row-hover:#262626; --row-active:#303030;
-  --brand-mint-surface:#102D23; --brand-mint-border:#2F9872;
-  --brand-mint-foreground:#DFF9EF;
-}
+/* SUPERSEDED (2026-07-24, PR #198, D-BG-SEAM — owner-approved): the feed
+   carried its own [data-dmf-mode="system"] neutral-grey palette (dmf + shadcn
+   token sets; exact values in git history) — the fourth System-palette site,
+   found by the residual sweep after automated review flagged the chat one.
+   System follows Dark everywhere: mode="system" now falls through to the
+   pure-black dmf palette above. Do not reintroduce. */
 .dmf-root *{box-sizing:border-box}
 .dmf-root :where(button){font:inherit;color:inherit;background:none;border:0;cursor:pointer;touch-action:manipulation}
 .dmf-root :where(a){touch-action:manipulation}

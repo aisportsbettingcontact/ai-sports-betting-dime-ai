@@ -272,7 +272,7 @@ function SummaryBar({
       )}
       <div className="flex-1 max-w-[200px] h-2 bg-background rounded-full overflow-hidden">
         <div
-          className="h-full bg-primary rounded-full transition-all duration-500"
+          className="h-full bg-primary rounded-full transition-all duration-[160ms] ease-[cubic-bezier(0.16,1,0.3,1)]"
           style={{ width: `${pct}%` }}
         />
       </div>

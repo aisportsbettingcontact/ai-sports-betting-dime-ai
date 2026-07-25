@@ -938,10 +938,10 @@ def generate_html(
 ):
 
     a_city, a_name, a_col1, a_col2 = TEAM_NAMES.get(
-        away_team, (away_team, "", "#003087", "#C4CED4")
+        away_team, (away_team, "", "#55555E", "#A6A6A6")
     )
     h_city, h_name, h_col1, h_col2 = TEAM_NAMES.get(
-        home_team, (home_team, "", "#FD5A1E", "#27251F")
+        home_team, (home_team, "", "#55555E", "#A6A6A6")
     )
 
     try:
@@ -955,11 +955,11 @@ def generate_html(
 
     def _prop_edge_color(p: float) -> str:
         if p >= 0.60:
-            return "#39FF14"
+            return "#45E0A8"
         if p >= 0.55:
-            return "#B060FF"
+            return "#2FB584"
         if p <= 0.40:
-            return "#FF2D55"
+            return "#A6A6A6"
         return "#EDF2F7"
 
     # Edge colors
@@ -998,7 +998,7 @@ def generate_html(
   :root {{
     --a-col:{a_col1}; --a-l:{a_col2};
     --h-col:{h_col1}; --h-l:{h_col2};
-    --neon-over:#39FF14; --neon-under:#FF2D55; --neon-k:#B060FF;
+    --neon-over:#45E0A8; --neon-under:#A6A6A6; --neon-k:#45E0A8;
     --bg:#06090D; --bg2:#090E14; --bg3:#0C1219; --bg4:#101820;
     --border:#182433; --border2:#1E3048;
     --text:#EDF2F7; --muted:#3A5A7A; --muted2:#1E3048;
@@ -1066,10 +1066,10 @@ def generate_html(
   table.dist td{{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;text-align:center;padding:4px 2px;border:1px solid var(--border);color:#3A5A7A;background:var(--bg3);}}
   table.dist td.cat{{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);background:var(--bg4);text-align:left;padding-left:6px;}}
   table.dist td.avg{{background:var(--bg4);color:var(--neon-k);}}
-  .hk1{{background:rgba(176,96,255,.06)!important;color:#7030C0!important;}}
-  .hk2{{background:rgba(176,96,255,.14)!important;color:#9050E0!important;}}
-  .hk3{{background:rgba(176,96,255,.24)!important;color:var(--neon-k)!important;}}
-  .hk4{{background:rgba(176,96,255,.36)!important;color:var(--neon-k)!important;border-color:rgba(176,96,255,.35)!important;}}
+  .hk1{{background:rgba(69,224,168,.06)!important;color:#2FB584!important;}}
+  .hk2{{background:rgba(69,224,168,.14)!important;color:#45E0A8!important;}}
+  .hk3{{background:rgba(69,224,168,.24)!important;color:var(--neon-k)!important;}}
+  .hk4{{background:rgba(69,224,168,.36)!important;color:var(--neon-k)!important;border-color:rgba(69,224,168,.35)!important;}}
 
   /* ── SIGNAL BREAKDOWN ── */
   .signal-section{{padding:12px 16px;border-bottom:1px solid var(--border);}}
@@ -1107,7 +1107,7 @@ def generate_html(
   .pitcher-chart-lbl{{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;}}
 
   /* ── CELL CLASSES ── */
-  .cell-k{{background:rgba(176,96,255,.1)!important;color:var(--neon-k)!important;}}
+  .cell-k{{background:rgba(69,224,168,.1)!important;color:var(--neon-k)!important;}}
   .cell-hi{{background:rgba(57,255,20,.08)!important;color:var(--neon-over)!important;}}
   .cell-warn{{background:rgba(255,45,85,.07)!important;color:#FF6080!important;}}
 

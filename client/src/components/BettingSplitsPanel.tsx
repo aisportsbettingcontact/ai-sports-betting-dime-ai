@@ -262,7 +262,7 @@ function LabeledBar({ awayPct, homePct, awayColor, homeColor, awayLineLabel, hom
       >
         {/* Away segment — label flush LEFT (only when NOT full-bar) */}
         {away > 0 && !isAwayFull && !isHomeFull && (
-          <div style={awaySegStyle} className="bsp-seg bsp-seg--away transition-all duration-700">
+          <div style={awaySegStyle} className="bsp-seg bsp-seg--away transition-all duration-[160ms] ease-[cubic-bezier(0.16,1,0.3,1)]">
             <span style={MOBILE_AWAY_LABEL_STYLE}>{away}%</span>
           </div>
         )}
@@ -272,28 +272,28 @@ function LabeledBar({ awayPct, homePct, awayColor, homeColor, awayLineLabel, hom
         )}
         {/* Home segment — label flush RIGHT (only when NOT full-bar) */}
         {home > 0 && !isHomeFull && !isAwayFull && (
-          <div style={homeSegStyle} className="bsp-seg bsp-seg--home transition-all duration-700">
+          <div style={homeSegStyle} className="bsp-seg bsp-seg--home transition-all duration-[160ms] ease-[cubic-bezier(0.16,1,0.3,1)]">
             <span style={MOBILE_HOME_LABEL_STYLE}>{home}%</span>
           </div>
         )}
         {/* 100% full-bar cases — label centered — EXCLUSIVE: only one can render */}
         {isAwayFull && !isHomeFull && (
-          <div style={{ flex: 1, background: awayColor, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 4 }} className="bsp-seg bsp-seg--away transition-all duration-700">
+          <div style={{ flex: 1, background: awayColor, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 4 }} className="bsp-seg bsp-seg--away transition-all duration-[160ms] ease-[cubic-bezier(0.16,1,0.3,1)]">
             <span style={MOBILE_FULL_LABEL_STYLE}>100%</span>
           </div>
         )}
         {isHomeFull && !isAwayFull && (
-          <div style={{ flex: 1, background: homeColor, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 4 }} className="bsp-seg bsp-seg--home transition-all duration-700">
+          <div style={{ flex: 1, background: homeColor, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 4 }} className="bsp-seg bsp-seg--home transition-all duration-[160ms] ease-[cubic-bezier(0.16,1,0.3,1)]">
             <span style={MOBILE_FULL_LABEL_STYLE}>100%</span>
           </div>
         )}
         {/* Both-full fallback: split 50/50 with both labels (data anomaly guard) */}
         {isAwayFull && isHomeFull && (
           <>
-            <div style={{ flex: 1, background: awayColor, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '4px 0 0 4px' }} className="bsp-seg bsp-seg--away transition-all duration-700">
+            <div style={{ flex: 1, background: awayColor, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '4px 0 0 4px' }} className="bsp-seg bsp-seg--away transition-all duration-[160ms] ease-[cubic-bezier(0.16,1,0.3,1)]">
               <span style={MOBILE_FULL_LABEL_STYLE}>100%</span>
             </div>
-            <div style={{ flex: 1, background: homeColor, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '0 4px 4px 0' }} className="bsp-seg bsp-seg--home transition-all duration-700">
+            <div style={{ flex: 1, background: homeColor, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '0 4px 4px 0' }} className="bsp-seg bsp-seg--home transition-all duration-[160ms] ease-[cubic-bezier(0.16,1,0.3,1)]">
               <span style={MOBILE_FULL_LABEL_STYLE}>100%</span>
             </div>
           </>
@@ -472,7 +472,7 @@ function SplitBar({ label, awayPct, homePct, awayColor, homeColor }: SplitBarPro
           >
             {/* Away segment — label flush LEFT (only when NOT full-bar) */}
             {away > 0 && !isAwayFull && !isHomeFull && (
-              <div style={awaySegStyle} className="bsp-seg bsp-seg--away transition-all duration-700">
+              <div style={awaySegStyle} className="bsp-seg bsp-seg--away transition-all duration-[160ms] ease-[cubic-bezier(0.16,1,0.3,1)]">
                 <span style={DESKTOP_AWAY_LABEL_STYLE}>{away}%</span>
               </div>
             )}
@@ -482,28 +482,28 @@ function SplitBar({ label, awayPct, homePct, awayColor, homeColor }: SplitBarPro
             )}
             {/* Home segment — label flush RIGHT (only when NOT full-bar) */}
             {home > 0 && !isHomeFull && !isAwayFull && (
-              <div style={homeSegStyle} className="bsp-seg bsp-seg--home transition-all duration-700">
+              <div style={homeSegStyle} className="bsp-seg bsp-seg--home transition-all duration-[160ms] ease-[cubic-bezier(0.16,1,0.3,1)]">
                 <span style={DESKTOP_HOME_LABEL_STYLE}>{home}%</span>
               </div>
             )}
             {/* 100% full-bar cases — label centered — EXCLUSIVE: only one can render */}
             {isAwayFull && !isHomeFull && (
-              <div style={{ flex: 1, background: awayColor, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '9999px' }} className="bsp-seg bsp-seg--away transition-all duration-700">
+              <div style={{ flex: 1, background: awayColor, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '9999px' }} className="bsp-seg bsp-seg--away transition-all duration-[160ms] ease-[cubic-bezier(0.16,1,0.3,1)]">
                 <span style={DESKTOP_FULL_LABEL_STYLE}>100%</span>
               </div>
             )}
             {isHomeFull && !isAwayFull && (
-              <div style={{ flex: 1, background: homeColor, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '9999px' }} className="bsp-seg bsp-seg--home transition-all duration-700">
+              <div style={{ flex: 1, background: homeColor, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '9999px' }} className="bsp-seg bsp-seg--home transition-all duration-[160ms] ease-[cubic-bezier(0.16,1,0.3,1)]">
                 <span style={DESKTOP_FULL_LABEL_STYLE}>100%</span>
               </div>
             )}
             {/* Both-full fallback: split 50/50 with both labels (data anomaly guard) */}
             {isAwayFull && isHomeFull && (
               <>
-                <div style={{ flex: 1, background: awayColor, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '9999px 0 0 9999px' }} className="bsp-seg bsp-seg--away transition-all duration-700">
+                <div style={{ flex: 1, background: awayColor, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '9999px 0 0 9999px' }} className="bsp-seg bsp-seg--away transition-all duration-[160ms] ease-[cubic-bezier(0.16,1,0.3,1)]">
                   <span style={DESKTOP_FULL_LABEL_STYLE}>100%</span>
                 </div>
-                <div style={{ flex: 1, background: homeColor, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '0 9999px 9999px 0' }} className="bsp-seg bsp-seg--home transition-all duration-700">
+                <div style={{ flex: 1, background: homeColor, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '0 9999px 9999px 0' }} className="bsp-seg bsp-seg--home transition-all duration-[160ms] ease-[cubic-bezier(0.16,1,0.3,1)]">
                   <span style={DESKTOP_FULL_LABEL_STYLE}>100%</span>
                 </div>
               </>

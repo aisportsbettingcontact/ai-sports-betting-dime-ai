@@ -234,15 +234,25 @@ html:not(.dark) {
   --row-active: #E4E4E4;
 }
 
-/* System is intentionally its own fixed neutral-grey, dark-contrast appearance.
- * Dark remains pure black and Light remains white. */
-html[data-theme-mode="system"] {
-  --background: #121212;
-  --card: #181818;
-  --popover: #202020;
-  --sidebar: #181818;
-  --surface-raised: #202020;
-}
+/* Z-INDEX LADDER (documented 2026-07-24, PR #198 X-ZINDEX census — no
+ * collisions found, values recorded so future layers slot in knowingly):
+ *   0–50    page chrome (Tailwind z-10/20/30/40; z-50 = sticky headers, chat
+ *           drawer stack in conversation.css runs 60–100)
+ *   99–100  full-screen overlays (mobile-nav debug panel, plan-editor modal,
+ *           BetTracker banner)
+ *   200     top app modals (chat modal in conversation.css, UserManagement
+ *           confirm) — mutually exclusive by route, never stacked
+ *   toasts  sonner library default (≫200) — always above everything
+ * New layers: chrome ≤50, overlays 100, modals 200. Do not mint new values
+ * above 200; toasts must stay on the library default. */
+
+/* SUPERSEDED (2026-07-24, PR #198, D-BG-SEAM — owner-approved): System
+ * previously carried its own fixed neutral-grey appearance (18/24/32-level
+ * grey canvas/card/raised tiers — exact values in git history). That third
+ * identity produced a canvas seam against Law-v2 pure-black surfaces, so
+ * System now follows Dark exactly (pure-black canvas, tiers from :root).
+ * Light remains white. No html[data-theme-mode="system"] overrides remain —
+ * do not reintroduce a distinct System palette without a law amendment. */
 
 /* ═══ Law v3 — Dimensional amendment (owner-approved 2026-07-13) ══════════════
    Relaxes Law v2's flat/no-shadow rule for the projections product. NEW: mint
