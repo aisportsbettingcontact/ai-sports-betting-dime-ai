@@ -30,7 +30,7 @@
   "features/mobileNav/screens/MobileProps.tsx": 1,
   "features/mobileNav/screens/MobileSplits.tsx": 12,
   "hooks/useEdgeCalculation.ts": 7,
-  "index.css": 102,
+  "index.css": 99,
   "lib/edgeUtils.ts": 7,
   "lib/sport/presentation.test.ts": 6,
   "lib/teamLogoCircle.ts": 2,
