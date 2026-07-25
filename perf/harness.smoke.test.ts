@@ -4,19 +4,17 @@
  * (`ReferenceError: __name is not defined`) before a single metric was
  * collected.
  *
- * [VERIFY] 1) the page.evaluate payload serializes to standalone browser-safe
- *             JS under the same tsx/esbuild transform CI uses — no host-only
- *             esbuild helper (`__name(...)`) may appear in the serialized body;
- *          2) a full harness run through the exact CI entrypoint
- *             (`tsx perf/harness.ts`) collects real metrics against a local
- *             page and exits 0;
- *          3) a harness run that cannot measure still exits nonzero — repair
- *             must not convert failures into false successes.
+ * [VERIFY] 1) the page.evaluate payload remains standalone under CI's actual
+ *             tsx transform, with buffered PerformanceObserver LCP collection;
+ *          2) the exact harness entrypoint collects positive LCP metrics;
+ *          3) unsupported or missing LCP fails instead of becoming a false 0;
+ *          4) baseline mode writes a reviewable candidate without mutating the
+ *             committed baseline;
+ *          5) route collection failures still exit nonzero.
  *
- * Tests 2–3 need the Playwright chromium binary. The CI vitest job does not
- * install browsers (only perf-harness.yml does), so they skip there — declared
- * in vitest.environment-failure-allowlist.json expectedCiSkips. Run locally
- * with: pnpm exec playwright install chromium
+ * The required Vitest CI job and perf-harness workflow both install Chromium,
+ * so every test below executes in GitHub. Local prerequisite:
+ * pnpm exec playwright install chromium
  */
 
 import { execFile } from "child_process";
@@ -28,6 +26,7 @@ import { fileURLToPath, pathToFileURL } from "url";
 import { promisify } from "util";
 import { chromium } from "playwright";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { collectBrowserMetricsInPage } from "./browserMetrics";
 
 const execFileAsync = promisify(execFile);
 
@@ -35,7 +34,9 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.join(HERE, "..");
 const TSX_BIN = path.join(REPO_ROOT, "node_modules", ".bin", "tsx");
 const HARNESS = path.join(HERE, "harness.ts");
+const BASELINE_PATH = path.join(HERE, "baseline.json");
 const RESULTS_PATH = path.join(REPO_ROOT, "perf-results.json");
+const BASELINE_CANDIDATE_PATH = path.join(REPO_ROOT, "perf-baseline-candidate.json");
 
 let chromiumAvailable = false;
 try {
@@ -67,6 +68,9 @@ describe("perf harness browser evaluation", () => {
         expect(stdout).not.toMatch(/__[a-zA-Z]+\s*\(/);
         // Sanity: it is still the real metrics collector.
         expect(stdout).toContain('performance.getEntriesByType("navigation")');
+        expect(stdout).toContain("PerformanceObserver");
+        expect(stdout).toContain("largest-contentful-paint");
+        expect(stdout).toMatch(/buffered\s*:\s*true/);
         expect(stdout).toContain("transferBytes");
       } finally {
         rmSync(dir, { recursive: true, force: true });
@@ -91,7 +95,8 @@ describe.skipIf(!chromiumAvailable)(
         }
         res.writeHead(200, { "content-type": "text/html" });
         res.end(
-          "<!doctype html><html><head><title>perf probe</title></head>" +
+          "<!doctype html><html><head><title>perf probe</title>" +
+            "<style>h1{font:700 48px sans-serif}</style></head>" +
             "<body><h1>perf harness smoke fixture</h1></body></html>"
         );
       });
@@ -104,6 +109,7 @@ describe.skipIf(!chromiumAvailable)(
     afterAll(async () => {
       await new Promise<void>((resolve) => server.close(() => resolve()));
       if (existsSync(RESULTS_PATH)) unlinkSync(RESULTS_PATH);
+      if (existsSync(BASELINE_CANDIDATE_PATH)) unlinkSync(BASELINE_CANDIDATE_PATH);
     });
 
     it(
@@ -126,10 +132,82 @@ describe.skipIf(!chromiumAvailable)(
           expect(typeof sample.metrics.ttfbMs).toBe("number");
           // A real navigation always produces a positive DCL timestamp.
           expect(sample.metrics.domContentLoaded).toBeGreaterThan(0);
+          // The fixture has an obvious contentful heading. Reporting zero
+          // would silently bypass the LCP budget instead of measuring it.
+          expect(sample.metrics.lcpMs).toBeGreaterThan(0);
         }
       },
       120_000
     );
+
+    it("fails clearly when the browser does not support LCP observation", async () => {
+      const browser = await chromium.launch({ args: ["--no-sandbox"] });
+      const page = await browser.newPage();
+      try {
+        await page.addInitScript({
+          content:
+            'Object.defineProperty(PerformanceObserver, "supportedEntryTypes", { value: [] });',
+        });
+        await page.goto("data:text/html,<h1>unsupported LCP fixture</h1>");
+        await expect(
+          page.evaluate(collectBrowserMetricsInPage)
+        ).rejects.toThrow("PERF_LCP_UNSUPPORTED");
+      } finally {
+        await browser.close();
+      }
+    }, 30_000);
+
+    it("fails clearly when a page produces no LCP candidate", async () => {
+      const browser = await chromium.launch({ args: ["--no-sandbox"] });
+      const page = await browser.newPage();
+      try {
+        await page.goto("about:blank");
+        await expect(
+          page.evaluate(collectBrowserMetricsInPage)
+        ).rejects.toThrow("PERF_LCP_MISSING");
+      } finally {
+        await browser.close();
+      }
+    }, 30_000);
+
+    it("writes a reviewable baseline candidate without modifying the committed baseline", async () => {
+      const originalBaseline = readFileSync(BASELINE_PATH, "utf8");
+      if (existsSync(BASELINE_CANDIDATE_PATH))
+        unlinkSync(BASELINE_CANDIDATE_PATH);
+      try {
+        const { stdout } = await execFileAsync(
+          TSX_BIN,
+          [HARNESS, "--update-baseline"],
+          {
+            cwd: REPO_ROOT,
+            env: { ...process.env, PERF_TARGET_URL: base },
+          }
+        );
+
+        expect(readFileSync(BASELINE_PATH, "utf8")).toBe(originalBaseline);
+        expect(existsSync(BASELINE_CANDIDATE_PATH)).toBe(true);
+        expect(stdout).toContain("[OUTPUT] baseline candidate generated");
+
+        const candidate = JSON.parse(
+          readFileSync(BASELINE_CANDIDATE_PATH, "utf8")
+        ) as {
+          baseline: Record<string, Record<string, number>>;
+        };
+        expect(Object.keys(candidate.baseline).sort()).toEqual([
+          "/",
+          "/checkout?plan=monthly",
+          "/landingpage-v2",
+        ]);
+        for (const metrics of Object.values(candidate.baseline)) {
+          expect(metrics.lcpMs).toBeGreaterThan(0);
+        }
+      } finally {
+        writeFileSync(BASELINE_PATH, originalBaseline);
+        if (existsSync(BASELINE_CANDIDATE_PATH))
+          unlinkSync(BASELINE_CANDIDATE_PATH);
+        if (existsSync(RESULTS_PATH)) unlinkSync(RESULTS_PATH);
+      }
+    }, 120_000);
 
     it(
       "still exits nonzero when a route cannot be measured",
