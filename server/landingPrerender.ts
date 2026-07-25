@@ -245,7 +245,7 @@ a:focus-visible,.site-header a:focus-visible{outline:2px solid #45E0A8;outline-o
 // CONTENT PARITY: this is a static snapshot of Dime landing v2
 // (client/src/pages/dime/landing/ — copy source: landing-content.ts).
 // Brand law: design-system/dime-ai/MASTER.md — mint #45E0A8 only, grey PASS
-// states, Familjen Grotesk / IBM Plex Mono stacks, no gradients, no #39FF14.
+// states, Familjen Grotesk (single-font mandate — Plex Mono retired), no gradients, no #39FF14.
 // Guarded by server/landingPrerender.test.ts — update both together.
 
 function buildLandingHtml(): string {
