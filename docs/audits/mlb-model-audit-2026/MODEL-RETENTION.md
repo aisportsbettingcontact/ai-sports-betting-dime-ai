@@ -1,0 +1,54 @@
+# Model Retention Dossier — Dime AI MLB Engine (as of 2026-07-25, branch local/audit-mlb-model-2026)
+
+Purpose: from this document (plus the section files it indexes), an engineer who has never seen
+this codebase must be able to re-derive every MLB number Dime publishes. Every claim in the
+section files carries file:line evidence and a VERIFIED/INFERRED/UNKNOWN classification; each
+section was written by a tracer agent and then adversarially verified by an independent agent
+(corrections applied inline, verification appendix per file).
+
+## Section index (phase0/)
+| Section | File | Scope |
+|---|---|---|
+| Full Game ML/RL/Total | `phase0/fullgame.md` | Monte Carlo core (`server/MLBAIModel.py`), orchestration + write path (`server/mlbModelRunner.ts`) |
+| First 5 Innings | `phase0/f5.md` | F5 simulation, push handling, F5 odds capture |
+| NRFI/YRFI | `phase0/nrfi.md` | first-inning model, combined signal, filter gate |
+| Strikeout props | `phase0/kprops.md` | `server/StrikeoutModel.py`, K distribution, umpire/handedness adjustments |
+| HR props | `phase0/hrprops.md` | `server/mlbHrPropsModelService.ts`, statcast inputs, recalibration history |
+| Ingestion & scheduling | `phase0/ingestion.md` | schedule/actuals/odds/lineups jobs, cron map, closing-line capture |
+| Grading/backtest/drift | `phase0/gradecal.md` | both grading paths, quarantine rules, drift → learning loop |
+| API & frontend exposure | `phase0/exposure.md` | publication gates, what subscribers see |
+
+## Market taxonomy (discovered from schema + code, not assumed)
+Game-level (in `games`, one row per game): FG moneyline, FG run line, FG total; F5 moneyline,
+F5 run line, F5 total; NRFI/YRFI; team-HR trio (`modelAwayHrPct`/`modelHomeHrPct`/
+`modelBothHrPct` + expected HR counts — launched 2026-06-01). Player-level: pitcher strikeout
+props (`mlb_strikeout_props`, over/under vs book line), batter HR props (`mlb_hr_props`,
+yes/no vs 0.5). Bet-grading ledger: `mlb_game_backtest`, one row per game × market-side
+(10 game-market sides + `hr_prop` slate rows). No other MLB market surfaces exist in schema or
+routers as of this audit.
+
+## Schema map
+`census/schema-columns.tsv` — all 610 column definitions for the 17 `mlb_*` tables plus
+`games`, `odds_history`, `tracked_bets` (VERIFIED from information_schema). Key linkage:
+- `mlb_schedule_history.anGameId` (Action Network id) = schedule source of truth; joins to
+  `games` only by (gameDate, awayAbbr/awayTeam, homeAbbr/homeTeam, doubleheader sequence).
+- `games.mlbGamePk` (MLB StatsAPI id, unique) = actuals-ingestion key.
+- Props tables key on `games.id` (`gameId`) + `mlbamId` for players.
+- Probability scale inconsistency (P-003): `modelAwayWinPct`, `modelOverRate`,
+  `modelF5AwayWinPct`, `modelF5AwayRLCoverPct` are 0–100; `modelPNrfi`, `modelF5OverRate`,
+  `modelPHr`, `pOver`/`pUnder` are 0–1.
+
+## Config inventory (live values)
+`census/calibration-constants.tsv` — all 54 `mlb_calibration_constants` rows (paramName,
+currentValue, baseline, CI bounds, updateSource, lastUpdated) as of 2026-07-25. Drift state:
+`census/drift-state.tsv` (a single market row — coverage gap vs the 10+ modeled markets).
+Learning history: `census/learning-log.tsv` (144 recalibration events with before/after
+accuracy/MAE). The gradecal section maps each constant to its consuming code path and flags
+orphans.
+
+## Provenance caveat (P-001)
+`modelRunAt` on `games` and props rows is overwritten by re-runs (values up to 11 days after
+first pitch; props average +8.9h). `createdAt` proves pregame row creation, but per-column
+pregame provenance is unprovable from the database. Treat every "projection" in this dossier as
+"projection as currently stored"; the leakage-quarantine in `mlb_game_backtest` is the only
+enforcement point.
