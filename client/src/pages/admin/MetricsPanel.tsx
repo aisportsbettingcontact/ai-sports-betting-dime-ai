@@ -225,7 +225,7 @@ export function MetricsPanel() {
                   <div key={b.label} className="flex-1 flex flex-col items-center gap-0.5 h-full min-w-0">
                     {/* Bar container doubles as a faint full-height track (bg-muted)
                         so every bucket reads as a column; the value fill grows over it. */}
-                    <div className="flex-1 w-full flex items-end rounded-t bg-muted/60 overflow-hidden">
+                    <div className="flex-1 w-full flex items-end rounded-t bg-muted overflow-hidden">
                       <div
                         className={`w-full rounded-t transition-all duration-500 ${b.barColor}`}
                         style={{ height: histLoading ? "0%" : `${Math.max(barPct, barPct > 0 ? 4 : 0)}%` }}

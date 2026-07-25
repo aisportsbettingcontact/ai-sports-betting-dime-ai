@@ -20,7 +20,7 @@ export default function AdminDashboard() {
 
   return (
     <AdminShell active="dashboard">
-      <div className="w-full bg-muted/30 text-foreground">
+      <div className="w-full bg-background text-foreground">
         <div className="admin-container py-4 sm:py-6">
           {/* Page header — mirrors the other admin surfaces' treatment */}
           <div className="mb-6">

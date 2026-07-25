@@ -150,7 +150,7 @@ export default function UserProfileDrawer({ user, onClose }: Props) {
       <div
         aria-hidden="true"
         onClick={onClose}
-        className={`absolute inset-0 bg-background/70 ${scrimMotion} ${
+        className={`absolute inset-0 bg-background ${scrimMotion} ${
           shown ? "opacity-100" : "opacity-0"
         }`}
       />
@@ -244,7 +244,7 @@ export default function UserProfileDrawer({ user, onClose }: Props) {
                 <span
                   key={i}
                   className={`h-1.5 flex-1 rounded-full ${
-                    i < filledSurfaces ? "bg-primary" : "bg-muted/60"
+                    i < filledSurfaces ? "bg-primary" : "bg-muted"
                   }`}
                 />
               ))}

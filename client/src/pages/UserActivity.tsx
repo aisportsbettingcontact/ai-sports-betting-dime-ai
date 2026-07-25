@@ -71,7 +71,7 @@ export default function UserActivity() {
 
   return (
     <AdminShell active="activity">
-      <div className="w-full bg-muted/30 text-foreground flex flex-col">
+      <div className="w-full bg-background text-foreground flex flex-col">
         <div className="flex-1 admin-container py-6 sm:py-8">
           {/* Page header */}
           <div className="mb-6">
@@ -94,7 +94,7 @@ export default function UserActivity() {
                 className={`font-mono text-xs sm:text-sm whitespace-nowrap px-3.5 sm:px-4 py-2.5 -mb-px border-b-2 transition-colors duration-150 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary rounded-t ${
                   tab === t.key
                     ? "text-primary border-primary"
-                    : "text-muted-foreground border-transparent hover:text-foreground hover:bg-muted/40"
+                    : "text-muted-foreground border-transparent hover:text-foreground hover:bg-muted"
                 }`}
               >
                 {t.label}

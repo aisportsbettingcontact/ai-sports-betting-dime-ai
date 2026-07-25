@@ -622,9 +622,9 @@ export default function UserManagement() {
 
   return (
     <AdminShell active="users">
-    <div className="w-full bg-muted/30 text-foreground flex flex-col">
+    <div className="w-full bg-background text-foreground flex flex-col">
       {/* Header — two-row on mobile, single-row on sm+ */}
-      <div className="sticky top-14 z-40 bg-background/95 backdrop-blur border-b w-full supports-[backdrop-filter]:bg-background/80">
+      <div className="sticky top-14 z-40 bg-background border-b w-full">
         {/* Row 1: Actions — back button and "USER MANAGEMENT" title removed
             (now owned by AdminShell's back-to-app affordance + tab nav) */}
         <div className="admin-container pt-3 pb-1.5 sm:pb-0 flex items-center gap-2">
@@ -763,7 +763,7 @@ export default function UserManagement() {
         )}
 
         {/* Table */}
-        <div className="bg-card border border-border/20 rounded-xl overflow-hidden w-full shadow-sm">
+        <div className="bg-card border border-border rounded-xl overflow-hidden w-full shadow-sm">
           <div className="overflow-x-auto w-full">
           <Table>
             <TableHeader>

@@ -188,7 +188,7 @@ function Modal({ title, icon, onClose, children }: { title: string; icon: ReactN
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-black/60 p-4 backdrop-blur-sm sm:p-6"
+      className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-background p-4 sm:p-6"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
@@ -442,7 +442,7 @@ function CreatePlanModal({ onClose }: { onClose: () => void }) {
                 setDragIndex(null);
               }}
               onDragEnd={() => setDragIndex(null)}
-              className={`rounded-lg border border-border bg-background/40 p-3 sm:p-4 ${iv.hidden ? "opacity-60" : ""} ${
+              className={`rounded-lg border border-border bg-card p-3 sm:p-4 ${iv.hidden ? "opacity-60" : ""} ${
                 dragIndex === i ? "ring-2 ring-primary" : ""
               }`}
             >
@@ -478,7 +478,7 @@ function CreatePlanModal({ onClose }: { onClose: () => void }) {
         </div>
 
         {/* Limited quantity / FOMO */}
-        <div className="rounded-lg border border-border bg-background/40 p-3 sm:p-4">
+        <div className="rounded-lg border border-border bg-card p-3 sm:p-4">
           <label className="flex cursor-pointer items-center gap-2.5">
             <input type="checkbox" checked={limitedQty} onChange={(e) => setLimitedQty(e.target.checked)} className="h-4 w-4 accent-[var(--primary)]" />
             <span className="flex items-center gap-1.5 text-sm font-medium text-foreground">
@@ -758,7 +758,7 @@ function PlanCard({ plan }: { plan: PlanWithCount }) {
               onDragOver={(e: DragEvent) => e.preventDefault()}
               onDrop={(e: DragEvent) => { e.preventDefault(); dropAt(i); }}
               onDragEnd={() => setDragIndex(null)}
-              className={`flex items-center justify-between gap-2 rounded-lg border border-border bg-background/50 px-3 py-2.5 ${
+              className={`flex items-center justify-between gap-2 rounded-lg border border-border bg-card px-3 py-2.5 ${
                 price.hidden ? "opacity-50" : ""
               } ${dragIndex === i ? "ring-2 ring-primary" : ""}`}
             >
@@ -824,7 +824,7 @@ function PlanCard({ plan }: { plan: PlanWithCount }) {
         </div>
 
         {adding && (
-          <div className="mt-3 rounded-lg border border-border bg-background/40 p-3">
+          <div className="mt-3 rounded-lg border border-border bg-card p-3">
             <IntervalFields value={draft} onChange={(p) => setDraft((d) => ({ ...d, ...p }))} oneTime={oneTime} />
             {addError && (
               <p className="mt-3 text-sm text-muted-foreground" role="alert">
@@ -964,7 +964,7 @@ export default function SubscriptionPlans() {
 
   return (
     <AdminShell active="plans">
-      <div className="w-full bg-muted/30 text-foreground">
+      <div className="w-full bg-background text-foreground">
         <div className="admin-container py-6 sm:py-8">
           {/* Header */}
           <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">

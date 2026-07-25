@@ -50,14 +50,14 @@ function Cell({ value }: { value: number | null }) {
   const { style, darkText, measured } = heatStyle(value);
   if (!measured || value == null) {
     return (
-      <div className="flex h-11 items-center justify-center rounded border border-border/60 bg-card">
+      <div className="flex h-11 items-center justify-center rounded border border-border bg-card">
         <span className="font-mono text-sm text-muted-foreground">—</span>
       </div>
     );
   }
   return (
     <div
-      className="flex h-11 items-center justify-center rounded border border-border/60 transition-all duration-150 hover:ring-1 hover:ring-primary/40"
+      className="flex h-11 items-center justify-center rounded border border-border transition-all duration-150 hover:ring-1 hover:ring-primary/40"
       style={style}
       title={`${value.toFixed(1)}% retained`}
     >

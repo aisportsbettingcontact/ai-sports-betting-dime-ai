@@ -188,7 +188,7 @@ export default function FeatureScorecardPanel() {
                       style={{ maxWidth: 460, aspectRatio: "1 / 1" }}
                     >
                       {/* Plot field — everything shares these coordinates. */}
-                      <div className="absolute inset-8 border border-border rounded-md bg-background/40">
+                      <div className="absolute inset-8 border border-border rounded-md bg-card">
                         {/* Threshold lines at the exact verdict cutoffs. */}
                         <div
                           className="absolute top-0 bottom-0 border-l border-dashed border-border"
@@ -262,7 +262,7 @@ export default function FeatureScorecardPanel() {
                       <span className="w-16 sm:w-20 shrink-0 text-sm font-semibold text-foreground truncate">
                         {SURFACE_LABEL[row.surface] ?? row.surface}
                       </span>
-                      <div className="flex-1 h-2.5 rounded-full bg-muted/60 overflow-hidden min-w-0">
+                      <div className="flex-1 h-2.5 rounded-full bg-muted overflow-hidden min-w-0">
                         <div
                           className="h-full rounded-full bg-primary transition-all duration-150"
                           style={{ width: `${width}%` }}

@@ -95,7 +95,7 @@ function ContactModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background"
       style={{ backdropFilter: "blur(4px)" }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >

@@ -33,7 +33,7 @@ const avg = (xs: number[]): number => (xs.length ? xs.reduce((a, b) => a + b, 0)
 /** One derived ICP trait, rendered as a compact stat block. */
 function Trait({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
-    <div className="bg-background/60 border border-border rounded-lg px-3.5 py-3 min-w-0">
+    <div className="bg-card border border-border rounded-lg px-3.5 py-3 min-w-0">
       <div className="text-[11px] font-mono uppercase tracking-[0.12em] text-muted-foreground leading-none">
         {label}
       </div>
@@ -153,7 +153,7 @@ export default function IdealCustomerPanel() {
             {/* Activation lever — the biggest leak + engaged share. */}
             <div className="flex flex-col sm:flex-row gap-3">
               {leak && leak.pct > 0 && (
-                <div className="flex-1 bg-background/60 border border-border rounded-lg px-3.5 py-3 min-w-0">
+                <div className="flex-1 bg-card border border-border rounded-lg px-3.5 py-3 min-w-0">
                   <div className="text-[11px] font-mono uppercase tracking-[0.12em] text-muted-foreground">
                     Biggest activation leak
                   </div>
@@ -164,7 +164,7 @@ export default function IdealCustomerPanel() {
                   </div>
                 </div>
               )}
-              <div className="flex-1 bg-background/60 border border-border rounded-lg px-3.5 py-3 min-w-0">
+              <div className="flex-1 bg-card border border-border rounded-lg px-3.5 py-3 min-w-0">
                 <div className="text-[11px] font-mono uppercase tracking-[0.12em] text-muted-foreground">
                   Engaged share
                 </div>
