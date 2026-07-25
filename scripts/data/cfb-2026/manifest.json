@@ -1,0 +1,9 @@
+{
+  "generated": "2026-07-25",
+  "source": "fbschedules.com admin-ajax schedule endpoint + ESPN site/core APIs (teams, standings, rosters) — verified corpus, multi-agent audit 2026-07-25 (strict-verify PASS, 56/56 checks)",
+  "counts": {
+    "teams": 138,
+    "games": 902,
+    "players": 14933
+  }
+}
