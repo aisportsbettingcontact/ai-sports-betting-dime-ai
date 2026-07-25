@@ -111,6 +111,17 @@ across replicas. Given that:
   tables from two independent triggers, same failure mode as the replica case
   above.
 
+**Verified state (2026-07-25, INCIDENTS.md #38 — CLOSED):**
+`ai-sports-betting-dime-ai` is the **sole** scheduled-job and MLB-data writer.
+`ai-sports-betting-backend` runs web-only with `DISABLE_BACKGROUND_JOBS=1` set
+(verified via Railway logs: web-only startup line, zero scheduler starts, three
+clean scheduled MLB cycles afterwards, both `/health` endpoints green).
+Re-enabling backend schedulers requires an explicit architecture and
+data-ownership review first. Backend decommissioning is deferred pending route
+ownership and traffic analysis. Known residual: one `ER_NO_SUCH_TABLE` per
+backend boot from a startup call outside the scheduler guard — non-recurring,
+tracked as INCIDENTS.md #39; do not suppress it by creating tables.
+
 ### 4. Stripe webhooks
 
 Point the webhook endpoint at the Railway domain

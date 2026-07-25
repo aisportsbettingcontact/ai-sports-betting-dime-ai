@@ -998,3 +998,74 @@ apply_patch verification failed: Failed to find expected lines
 
 No partial edit was retained. I read the exact tail and reapplied the incident
 and publication-confirmation updates against current context.
+
+## Incident 38 — 2026-07-25 — Two Railway services started the same schedulers (single-writer violation)
+
+Status: CLOSED — VERIFIED
+
+Both Railway services (`ai-sports-betting-dime-ai` and `ai-sports-betting-backend`)
+auto-deploy `main` and both started the full in-process scheduler set, including
+the MLB model runner — a violation of the single-writer rule in
+`references/railway-deploy.md`. Actual data exposure was limited: the backend's
+`DATABASE_URL` resolves to a schema without the app tables, so its jobs failed
+with `ER_NO_SUCH_TABLE` on every cycle (constant log noise, no writes), and the
+MLB runner's writes are keyed `UPDATE … WHERE games.id = ?` (no inserts), so
+even a true dual-writer could not have produced duplicate rows.
+
+Remediation (2026-07-25, operator-approved): `DISABLE_BACKGROUND_JOBS=1` was set
+on `ai-sports-betting-backend` only; Railway redeployed the same commit
+(SUCCESS ≈ 17:21:25 UTC). Verified via read-only Railway deployment/log
+inspection:
+
+- backend logged `DISABLE_BACKGROUND_JOBS set — web-only mode: recurring
+  background jobs skipped`; zero scheduler or MLB runner starts since;
+- recurring `ER_NO_SUCH_TABLE` noise stopped (see Incident 39 for the
+  once-per-boot residual);
+- both `/health` endpoints stayed green (db circuit CLOSED, 0 consecutive
+  failures) through the verification window;
+- three scheduled MLB cycles completed after the change (≈ 17:22, 17:27,
+  17:32 UTC); the 17:32 cycle wrote one game with zero errors and passed the
+  post-write validation gate.
+
+Standing state: **`ai-sports-betting-dime-ai` is the sole scheduled-job and
+MLB-data writer.** `ai-sports-betting-backend` is web-only. Re-enabling backend
+schedulers requires an explicit architecture and data-ownership review, not
+just unsetting the variable. Decommissioning the backend is deliberately
+deferred until its route ownership and real traffic are evaluated.
+
+## Incident 39 — 2026-07-25 — Once-per-boot ER_NO_SUCH_TABLE on backend startup
+
+Status: OPEN (low priority)
+
+With schedulers disabled, `ai-sports-betting-backend` still emits exactly one
+`ER_NO_SUCH_TABLE` error during startup — from a startup-time DB call that runs
+outside the `DISABLE_BACKGROUND_JOBS` guard in `server/_core/index.ts` (e.g.
+table-ensure/startup probes), against the backend's app-table-less database.
+It is non-recurring, does not indicate a second writer, and does not affect the
+sole-writer service. Cleanup is a deferred audit item; do not "fix" it by
+creating tables in that database.
+
+## Incident 40 — 2026-07-25 — Perf harness never measured anything (host helper in browser callback)
+
+Status: RESOLVED (fix in `codex/fix-perf-harness-control`; trust pending observation period)
+
+Every retained run of `.github/workflows/perf-harness.yml` since the harness was
+introduced (2026-07-09, first retained run 2026-07-10) failed identically with
+`page.evaluate: ReferenceError: __name is not defined` before collecting a
+single metric. Root cause: the harness runs under `tsx`, whose esbuild transform
+(keepNames) rewrote the name-inferred helper inside the `page.evaluate` callback
+(`const round = (n) => …`) into a host-only `__name()` wrapper; Playwright
+serializes the callback with `Function.toString()` and evals it in the page,
+where `__name` does not exist. Reproduced locally byte-for-byte via the exact CI
+command before the fix; after extracting the callback to
+`perf/browserMetrics.ts` (serialization-safe, no name-inferred inner function
+expressions) the same command collected metrics on all three routes and passed
+all 18 gates.
+
+Consequences recorded: the historical run history is invalid as performance
+evidence; no application performance regression is demonstrated by those
+failures (the app answered `/health` throughout); budgets and the regression
+baseline have never yet gated anything. The repaired harness must complete
+3–5 successful, comparable scheduled runs on the standard CI runner before its
+budgets/regression guard are treated as a trusted deployment control. Budgets
+were not changed in the fix.
