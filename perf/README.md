@@ -1,7 +1,29 @@
 # CI perf harness
 
 Guards the deployed app's **load time and page weight** with real-browser
-measurements + enforced budgets, so a slow deploy can't merge unnoticed.
+measurements + enforced budgets, so a slow deploy is caught.
+
+## Trust status (2026-07-25)
+
+Every retained scheduled run from 2026-07-10 to 2026-07-25 crashed before
+collecting any metric (`ReferenceError: __name is not defined` — the tsx/esbuild
+`keepNames` helper leaking into the Playwright-serialized `page.evaluate`
+callback; INCIDENTS.md #40). That history is **invalid as performance
+evidence**: it demonstrates no application regression, and budgets + the
+regression baseline have never actually gated a deploy.
+
+The fixed harness must complete an observation period of **3–5 successful,
+comparable scheduled runs** (same runner class, same routes, same config)
+before its budgets/regression guard are treated as a trusted deployment
+control, and before `--update-baseline` is used to seed the regression
+baseline from a known-good run. Budget values were not changed by the fix.
+
+Code that runs inside the page lives in `perf/browserMetrics.ts` and must stay
+standalone browser-safe JS (no name-inferred inner function expressions, no
+module-scope references) — `perf/harness.smoke.test.ts` enforces this through
+the same tsx transform CI uses. Known metric quirk: headless Chromium often
+reports no buffered LCP entry, so `lcpMs` can legitimately read 0; watch it
+during the observation period before trusting LCP comparisons.
 
 ## What it measures
 

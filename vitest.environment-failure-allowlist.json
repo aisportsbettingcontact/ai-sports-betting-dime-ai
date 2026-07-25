@@ -360,6 +360,10 @@
     {
       "file": "server/mlbDoubleheader.db.test.ts",
       "reason": "real-DB suite; runs in the db-tests CI job"
+    },
+    {
+      "file": "perf/harness.smoke.test.ts",
+      "reason": "real-browser harness smoke (spawns Playwright chromium); the CI vitest job installs no Playwright browsers — only perf-harness.yml does. The tsx-serialization guard in the same file has no browser dependency and still runs in CI."
     }
   ]
 }

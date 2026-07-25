@@ -4,7 +4,7 @@
  * Loads a set of routes on the LIVE deployed app with a real headless Chromium,
  * measures load-time + weight metrics, and enforces perf budgets + a regression
  * guard against a committed baseline (perf/baseline.json). Fails (exit 1) on any
- * violation so a slow deploy can't merge silently.
+ * violation so a slow deploy is caught (daily run — not a merge-blocking check).
  *
  * Usage:
  *   PERF_TARGET_URL=https://your-app.up.railway.app npx tsx perf/harness.ts
@@ -28,6 +28,7 @@ import { readFileSync, writeFileSync } from "fs";
 import { fileURLToPath } from "url";
 import path from "path";
 import { chromium, type Browser } from "playwright";
+import { collectBrowserMetricsInPage } from "./browserMetrics";
 import { evaluatePerfRun, type PerfSample, type PerfBudget } from "./regression";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -36,15 +37,6 @@ const RESULTS_PATH = path.join(HERE, "..", "perf-results.json");
 
 /** Routes to measure. Keep small — each adds ~a few s of CI wall-clock. */
 const ROUTES = ["/", "/landingpage-v2", "/checkout?plan=monthly"];
-
-interface CollectedMetrics {
-  ttfbMs: number;
-  domContentLoaded: number;
-  loadMs: number;
-  fcpMs: number;
-  lcpMs: number;
-  transferBytes: number;
-}
 
 function log(line: string): void {
   console.log(line);
@@ -60,26 +52,8 @@ async function collectRoute(browser: Browser, base: string, route: string): Prom
     // Give LCP a moment to settle after load, then read buffered entries.
     await page.waitForTimeout(1500);
 
-    const metrics = await page.evaluate<CollectedMetrics>(() => {
-      const nav = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined;
-      const paints = performance.getEntriesByType("paint");
-      const fcp = paints.find((p) => p.name === "first-contentful-paint");
-      const lcpEntries = performance.getEntriesByType("largest-contentful-paint");
-      const lcp = lcpEntries.length ? lcpEntries[lcpEntries.length - 1] : undefined;
-      const resources = performance.getEntriesByType("resource") as PerformanceResourceTiming[];
-      const resourceBytes = resources.reduce((sum, r) => sum + (r.transferSize || 0), 0);
-      const navBytes = nav?.transferSize || 0;
-
-      const round = (n: number | undefined) => (typeof n === "number" ? Math.round(n) : 0);
-      return {
-        ttfbMs: round(nav ? nav.responseStart - nav.requestStart : 0),
-        domContentLoaded: round(nav?.domContentLoadedEventEnd),
-        loadMs: round(nav?.loadEventEnd),
-        fcpMs: round(fcp?.startTime),
-        lcpMs: round(lcp?.startTime),
-        transferBytes: navBytes + resourceBytes,
-      };
-    });
+    // Serialized into the page — must stay browser-safe; see perf/browserMetrics.ts.
+    const metrics = await page.evaluate(collectBrowserMetricsInPage);
 
     log(
       `[OUTPUT] ${route} ttfb=${metrics.ttfbMs}ms dcl=${metrics.domContentLoaded}ms ` +
