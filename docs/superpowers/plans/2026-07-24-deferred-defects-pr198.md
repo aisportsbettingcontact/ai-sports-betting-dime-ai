@@ -111,11 +111,11 @@ Each suspect gets the same treatment: probe → verdict → (fix + re-probe) or 
 entry. Verdicts and probe outputs are recorded for the Phase 5 report. Commit per suspect only
 when code changed.
 
-- [ ] **2.1 X-STALE-RESIZE (expect REJECT):** both resize listeners already clean up
-  (`GlobalMobileNav.tsx:44-45`, `DimeChatPage.tsx:1403-1406`). Probe: authed chat + mobile-nav
-  surfaces, resize 320→1440→320, assert no duplicated handlers (count via
-  `getEventListeners`-equivalent probe: attach marker, resize, check single fire) and no stale
-  layout. If clean → REJECTED_WITH_EVIDENCE (cleanup lines cited + probe output).
+- [ ] **2.1 X-STALE-RESIZE:** the static reading (cleanup present at `GlobalMobileNav.tsx:44-45`,
+  `DimeChatPage.tsx:1403-1406`) is an input, not a verdict — adjudicate on the runtime evidence
+  gathered here. Probe: authed chat + mobile-nav surfaces, resize 320→1440→320, assert no
+  duplicated handlers (attach marker, resize, check single fire) and no stale layout. Verdict
+  follows the probe output, whichever way it lands.
 - [ ] **2.2 X-LOSSRED-D:** `loss-red` appears only in `index.css` + `dime-mobile.css`. Probe the
   authed feed for rendered loss-red usage; law says negative = grey with scoped exception.
   Verdict: if usage is inside the documented scoped exception → REJECT; if it leaks to
@@ -172,6 +172,24 @@ Expected: tsc exit 0; env-gate PASS with the same 64-entry allowlist arithmetic 
 
 - [ ] **Step 3.4: Commit** — `refactor: delete dead WcFeedInline (461 hex, X-HEX carve-out) + realign orientation contract test`
 
+- [ ] **Step 3.5: Hex-literal ceiling ratchet test (owner-endorsed scope addition)**
+
+Create `client/src/hexLiteralCeiling.test.ts`, modeled on the repo-walking invariant test #195
+introduced (locate it by `grep -rln "readdir\|walk\|glob" client/src --include="*.test.ts"` and
+match its traversal idiom). The test IS the canonical metric definition:
+
+- Pattern: `/#[0-9a-fA-F]{3,8}\b/g` (inclusive: shorthand + alpha forms count)
+- File set: every `*.ts`, `*.tsx`, `*.css` under `client/src`, **test files included**
+- Exemptions: the owner-approved Discord values `#5865F2` and `#4752C4` are not counted
+- Fixture: a checked-in `hexLiteralCeilings.json` recording each file's post-Task-3 count;
+  the test fails if any file EXCEEDS its recorded ceiling, and instructs (in its failure
+  message) to lower ceilings — never raise them — when literals are removed
+- This is a ratchet, not the migration: it freezes the ≈1,200-literal remainder so
+  X-HEX-EPIDEMIC can burn down in normal-sized PRs
+
+Run: `pnpm exec vitest run client/src/hexLiteralCeiling.test.ts` → green; temporarily add one
+hex to any file → red (prove the tripwire), revert, green, commit.
+
 ### Task 4: Approved fixes
 
 **Files:**
@@ -181,19 +199,25 @@ Expected: tsc exit 0; env-gate PASS with the same 64-entry allowlist arithmetic 
   the 160ms brand curve, matching the idiom #197 used on landing — check
   `git log -p --follow client/src/pages/dime/landing/landing-v2.css` for the established form)
 - Modify: `server/StrikeoutModel.py` (X-PY-CARDGEN chrome only: lines 958, 960, 1001, 1069-1070 +
-  any further found by the gate grep; **never** 161-191; locate the true fallback-color lines by
-  `grep -n "fallback\|default.*#\|get(" server/StrikeoutModel.py` first — the previously cited
-  895/898 are stale)
+  any further found by the gate grep; **never** 161-191. The unknown-team `.get()` fallbacks at
+  941/944 (verified: `#003087`/`#C4CED4` Yankees, `#FD5A1E`/`#27251F` Giants) convert to neutral
+  law greys — owner-delegated call: an unknown team must not wear a specific franchise's colors,
+  and must never become mint)
 - Modify: `server/landingPrerender.ts` (X-PRERENDER-V1: align the `#262626` tonal tiers to law
   values; fix the stale "IBM Plex Mono" comment at ~line 248; keep the copy-parity tests green —
   `server/landingPrerender.test.ts` guards this file)
-- Modify: `client/src/index.css` (D-BG-SEAM: system-default canvas `#121212` → Law v2 `#000000`;
-  locate exact declaration by `grep -n "121212" client/src/index.css` and confirm it is the
-  System-theme default, then unify; X-ZINDEX: add the documented z-scale comment where collisions
-  were found)
-- Modify: only files already touched above (bounded X-PX: within those files, convert arbitrary
-  `[Npx]` that violate law floors — sub-11px text, <44px targets — to law values; everything else
-  stays deferred)
+- Modify: `client/src/index.css` (D-BG-SEAM: system-default canvas `#121212` → `#000000` —
+  **first re-read `dime-ai/THREE-COLOR-LAW.md` and confirm `#000000` is the current Law-version
+  dark canvas before setting anything**; locate the declaration by
+  `grep -n "121212" client/src/index.css` and confirm it is the System-theme default, then unify.
+  Probe all three themes including light — this is the one #198 change that touches every surface
+  at once. X-ZINDEX: add the documented z-scale comment where collisions were found)
+- Modify (bounded X-PX — **this list is the scope, locked before editing begins; no additions
+  without a plan amendment commit**): `client/src/components/GameCard.tsx`,
+  `client/src/components/BettingSplitsPanel.tsx`, `client/src/components/ui/sheet.tsx`,
+  `client/src/pages/AdminModelStatus.tsx`, `client/src/pages/admin/MetricsPanel.tsx`,
+  `client/src/index.css` — within these six files only, convert arbitrary `[Npx]` that violate
+  law floors (sub-11px text, <44px targets) to law values; everything else stays deferred
 
 Each fix follows: grep/locate → change → `tsc --noEmit` → runtime re-probe on the Phase 1 stack →
 commit with the defect ID in the message. Per-fix verification:
@@ -228,7 +252,16 @@ commit with the defect ID in the message. Per-fix verification:
 
 - [ ] **5.1:** Write the report with exact numerators/denominators (surfaces inspected, suspects
   confirmed/rejected, hex count before/after, duration-* count before/after). No unlabeled claims.
-- [ ] **5.2:** Commit docs.
+  **Hex-count methodology is written next to every number**: pattern `#[0-9a-fA-F]{3,8}\b`,
+  file set `client/src/**/*.{ts,tsx,css}` including tests, Discord exemptions listed — i.e. the
+  exact definition the ratchet test executes, so every figure is reproducible by one command.
+- [ ] **5.2:** The verdict line stays **`INCOMPLETE`** regardless of #198's outcome:
+  X-HEX-EPIDEMIC remains the open HIGH defect (carve-out ≠ closure), and the real-hardware,
+  input-method, safe-area, full-Cartesian, and orientation gates remain unexecuted or physically
+  blocked. Cross-engine: if WebKit runs on this macOS host (Task 6), the engines gate may
+  honestly move — state exactly which engines and versions executed; otherwise it stays FAIL
+  (blocked).
+- [ ] **5.3:** Commit docs.
 
 ### Task 6: /sp-verify + PR #198
 
@@ -253,6 +286,10 @@ preview gate PASS; bundle ≤ ceiling (WcFeedInline deletion should not move the
 path — confirm, don't assume); osv 0 HIGH/CRITICAL.
 
 - [ ] **6.2:** Integer width sweep re-run (320–1440) on `/` + 404 + authed `/feed` — 0 overflow >1px.
+- [ ] **6.2b:** WebKit attempt: `pnpm exec playwright install webkit` (local host, macOS). If it
+  runs, probe `/`, `/login`, authed `/feed` at 1440×900 + 390×844 — record engine + version in
+  the report and move the cross-engine gate only on that evidence. If unavailable, record
+  BLOCKED unchanged.
 - [ ] **6.3:** Teardown: `docker rm -f dime-test-mysql`; kill the dev server.
 - [ ] **6.4:** Push branch, open PR #198 with the #197 body structure (purpose, evidence,
   tests with exact counts, bundle, DB=none, security, a11y, deploy/rollback = revert to
