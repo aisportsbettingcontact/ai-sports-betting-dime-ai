@@ -35,6 +35,11 @@ Scheduling is mid-migration between three mechanisms: (a) legacy Manus Heartbeat
 workflows curling `POST /api/cron/*` and `/api/scheduled/*` (server/cron/cronRoutes.ts). **Several MLB-critical jobs
 exist only in mechanism (b)** — schedule-history refresh, closing-line capture, outcome ingestion/drift, nightly
 trends — and have no GitHub Actions equivalent (VERIFIED: workflow directory listing, see § Scheduling).
+[FIXED in Phase 4 — commit 6bce4e36 added CRON_SECRET-authed endpoints `POST /api/cron/mlb-outcomes`,
+`/api/cron/mlb-closing-capture`, `/api/cron/mlb-backtest` (M-208, cronRoutes.ts:236–242), so outcome
+ingestion (+ drift, which runs inside it), closing-line capture, and backtest enrollment are now HTTP-triggerable;
+schedule-history refresh, nightly trends, player sync, and the daily seeders remain in-process-only, and no
+.github/workflows file calls the new endpoints yet.]
 
 ---
 
@@ -69,11 +74,15 @@ trends — and have no GitHub Actions equivalent (VERIFIED: workflow directory l
   (already-locked skip :1282–1288). If DK NJ odds are absent at first pitch, the game is skipped (`noOdds`) and will
   be retried each 5-min tick while still in-progress; once final it can never lock (INFERRED: filter at :1241 excludes
   complete games, and nothing else writes `dkClosing*` — grep found `captureClosingLines` called only from
-  mlbScheduleHistoryScheduler.ts:265).
+  mlbScheduleHistoryScheduler.ts:265). [FIXED in Phase 4 — `captureClosingLines()` is now also callable via
+  `POST /api/cron/mlb-closing-capture` (cronRoutes.ts:104, :239); the inprogress-only window and strict-book-68
+  behavior are unchanged.]
 - **DB column note**: census TSV shows `mlb_schedule_history.game_type varchar(20)` — this column does **not** exist
   in drizzle/schema.ts:1805–1895 and is written by no TypeScript code. Only `scripts/mlbBacktestGrader.py:978`
   (`WHERE sh.game_type IN ('regular_season','postseason')`) and `scripts/debug_an_dh.py:53` reference it (VERIFIED
   repo-wide grep). Whoever populates it is UNKNOWN (likely a manual migration/patch — census question).
+  [Verifier note: the census TSV shows a DB-level default `'regular_season'` on this column, so new rows are
+  auto-populated with the default; only non-default values (e.g. `'postseason'`) require an out-of-band writer.]
 
 ### 2. Action Network v2 scoreboard → `games` odds (`refreshAnApiOdds`)
 
@@ -98,8 +107,8 @@ trends — and have no GitHub Actions equivalent (VERIFIED: workflow directory l
   - `updateBookOdds` mirrors `modelTotal = bookTotal` whenever bookTotal changes (db.ts:901–907) — the published
     "model total line" is by construction the book line.
   - `updateAnOdds` contains a LAYER3 ML-direction guard that **clears `modelRunAt` and corrects
-    `awayModelSpread/homeModelSpread`** when the model spread contradicts the new ML (db.ts:1490–1543, log text
-    :1500–1503), then vsinAutoRefresh fires an immediate targeted model re-run
+    `awayModelSpread/homeModelSpread`** when the model spread contradicts the new ML (db.ts:1454–1543;
+    `modelRunAt` cleared at :1485, log text :1498–1503 — range corrected by verifier), then vsinAutoRefresh fires an immediate targeted model re-run
     (`runMlbModelForDate(date, { targetGameIds:[id], forceRerun:true })`, vsinAutoRefresh.ts:1127–1149). A secondary
     "RL SIGN SYNC" self-heal flips stored model spread signs to match the book sign (db.ts:1509–1539). **Odds
     ingestion can therefore rewrite model output columns.**
@@ -154,6 +163,11 @@ trends — and have no GitHub Actions equivalent (VERIFIED: workflow directory l
 - **Derived**: `actualFgTotal = away+home final runs`; `actualF5Total = sum innings 1–5`
   (requires ≥5 innings, :303–311); `actualNrfiBinary = 1 if inning-1 both zero else 0` (:313–319).
 - **Brier** (formula and push rules — see parameters table): 5 scores written per game (:606–622).
+  [FIXED in Phase 4 — M-203: the pre-fix `brierScore()` divided every model probability by 100, but
+  `modelPNrfi`/`modelF5OverRate` are stored on a 0–1 scale (only `modelOverRate`/`modelHomeWinPct`/
+  `modelF5HomeWinPct` are 0–100), producing garbage NRFI/F5-total Briers; post-fix code normalizes per-column.
+  Phase 4 also adds model-pick grading writes (M-101 forward path): `fgMl/fgRl/fgTotal/f5Ml/f5Rl/f5Total`
+  Result/Correct + `nrfiBacktestResult/nrfiCorrect` now grade the model's actual pick.]
 - **Write**: single UPDATE per game on `games.id`: `actualFgTotal, actualF5Total, actualNrfiBinary, brierFgTotal,
   brierF5Total, brierNrfi, brierFgMl, brierF5Ml, outcomeIngestedAt=now` (:609–622) + read-back verify (:626–649).
   Note fields computed as null are passed as `undefined` (:612–619) — a forced re-ingest cannot null-out a previously
@@ -205,25 +219,38 @@ trends — and have no GitHub Actions equivalent (VERIFIED: workflow directory l
   only** (:296–317). The claim "the new game(s) will be auto-inserted by the normal mlbScheduleHistoryScheduler"
   (:14–15, :306) refers to `mlb_schedule_history`, **not** `games` — nothing inserts the rescheduled game into
   `games` (see Finding F6). `games.rescheduledFrom` (census TSV) is written by **nothing** in the repo (VERIFIED
-  repo-wide grep: only the census TSV mentions it).
+  repo-wide grep: only the census TSV mentions it). [FIXED in Phase 4 — M-209/D-001: `reconcileUnmatchedApiGame`
+  (mlbScoreRefresh.ts:881) now moves a rescheduled row to its official StatsAPI date once final and stamps
+  `rescheduledFrom` via raw SQL (the column is still absent from drizzle/schema.ts), or inserts a staging
+  `games` row (fileId=0, with `mlbGamePk`) for regular-season API games with no DB row.]
 - **Suspended resume** (`detectResumedSuspendedGames`, :341–494): for DB rows with `gameStatus='suspended'`, polls
   per-gamePk linescore/boxscore/schedule; when Final, writes `gameStatus='final', awayScore, homeScore,
   gameClock='Final'` (:439–447) + notify. But no automated path ever writes `'suspended'` (see Finding F4).
 - **Doubleheaders**: `games` has `doubleHeader varchar(2) default 'N'` and `gameNumber tinyint default 1`
   (drizzle/schema.ts:337–339), and `gameNumber` participates in the matchup unique key (:641). No live ingestion code
-  reads or writes `doubleHeader/gameNumber` (VERIFIED grep — only the field-strip list routers.ts:106). All team-pair
+  reads or writes `doubleHeader/gameNumber` (VERIFIED grep — only the field-strip list routers.ts:106).
+  [FIXED in Phase 4 — the M-209/D-001 reconciliation in mlbScoreRefresh.ts now writes `gameNumber`/`doubleHeader`
+  on inserted/moved rows, uses `gameNumber` in its matchup-slot guard, and the teams-map fallback match (:637)
+  refuses a team-pair match whose stored `mlbGamePk` conflicts with the API game, so DH-G2 data no longer
+  silently lands on the G1 row in the score path.] All team-pair
   fallback matches (`mlbScoreRefresh.ts:567,584`, `rotowireLineupScraper.ts:722–734`, `mlbPostponedTracker.ts:232`,
   `mlbOutcomeIngestor.ts:520–534`) collapse DH twin bills onto whichever row matches first; only the
   `mlbGamePk`-primary matches are DH-safe.
 
 ### 9. Game-universe creation (who inserts `games` rows?)
 
-- `insertGames()` (db.ts:349–356, upsert on the matchup unique key) is called from exactly three places (VERIFIED
-  grep): the owner **model-file upload** (`files.upload` tRPC, routers.ts:203–268 → `parseFileBuffer`; fileParser.ts
-  detects MLB from filename at :294 and does **not** parse any gamePk — grep for `gamePk` in fileParser.ts is empty),
-  NBA/NHL schedule-only inserts (vsinAutoRefresh.ts:389, 556), and the All-Star seed (mlbAllStarGameSync.ts:181).
+- `insertGames()` (db.ts:349–356, upsert on the matchup unique key) is called from exactly three call sites (VERIFIED
+  grep): the owner **model-file upload** (`files.upload` tRPC, routers.ts:203–268, call at :250 → `parseFileBuffer`;
+  fileParser.ts detects MLB from filename at :294 and does **not** parse any gamePk — grep for `gamePk` in
+  fileParser.ts is empty) and NBA/NHL schedule-only inserts (vsinAutoRefresh.ts:389, 556). The All-Star seed also
+  creates a `games` row but via a **direct `db.insert(games)`** at mlbAllStarGameSync.ts:181, not through
+  `insertGames()` (corrected by verifier).
 - **No live code path creates the daily MLB slate or populates `games.mlbGamePk`** — `updateBookOdds` *accepts*
   `mlbGamePk` (db.ts:892, 931) but no caller passes it (VERIFIED grep of all `updateBookOdds` call sites).
+  [FIXED in Phase 4 — partially: M-209/D-001 `reconcileUnmatchedApiGame` (mlbScoreRefresh.ts:881) now inserts
+  staging `games` rows (fileId=0, `mlbGamePk` set from the StatsAPI schedule) for unmatched regular-season API
+  games during every score refresh; the identity of the primary seeder that creates full rows with odds/venue/
+  broadcaster remains UNKNOWN (Q1 still open).]
   Historical seeding was done by patch scripts (`scripts/seedHistoricalMlb.py` — 2024/2025 finals with gamePk,
   Manus-era `/home/ubuntu` paths). How today's rows with `mlbGamePk`, `venue`, `broadcaster`, `startTimeEst` get
   created is **UNKNOWN** — the strongest hypothesis is the retired Manus-side workflow or an owner sheet/CSV flow not
@@ -243,7 +270,7 @@ determine every ingested number. All values read from code this session (VERIFIE
 | Sched-history odds fallback chain | [68, 15, 21, 30], first with `ml_away` non-null | mlbScheduleHistoryService.ts:79,339–346 |
 | Closing-line book | 68 only, **no fallback** | mlbScheduleHistoryService.ts:1292 |
 | AN fetch timeout | 15,000 ms | mlbScheduleHistoryService.ts:248,1230 |
-| Season floor (2026 panels) | `2026-03-25` | mlbScheduleHistoryService.ts:70; mlbNightlyTrendsRefresh.ts:42 |
+| Season floor (2026 panels) | `2026-03-25` | mlbScheduleHistoryService.ts:70; mlbNightlyTrendsRefresh.ts:41 |
 | H2H lookback floor | `2023-03-30` | mlbScheduleHistoryService.ts:71 |
 | Season boundaries table | 2023: 03-30→11-01; 2024: 03-20→10-30; 2025: 03-18→11-01; 2026: 03-25→null | mlbScheduleHistoryScheduler.ts:40–45 |
 | Sched-history upsert batch size | 50 | mlbScheduleHistoryService.ts:489 |
@@ -257,7 +284,7 @@ determine every ingested number. All values read from code this session (VERIFIE
 | Fav/dog classification | ML < 0 = favorite; null/NaN ML excluded from both pools | mlbScheduleHistoryService.ts:1050–1056 |
 | Situational stats game cap | limit 162 | mlbScheduleHistoryService.ts:994 |
 | Last-N panel size | 5 | mlbScheduleHistoryService.ts:773,894–897 |
-| Brier formula | `(p/100 − o)²`, p∈[0,100] validated to [0,1], 6-dp round | mlbOutcomeIngestor.ts:156–167 |
+| Brier formula | `(p/100 − o)²`, p∈[0,100] validated to [0,1], 6-dp round [FIXED in Phase 4 — M-203: `modelPNrfi`/`modelF5OverRate` are stored 0–1, so the blanket /100 produced garbage NRFI/F5-total Briers; now per-column scale handling] | mlbOutcomeIngestor.ts:156–167 (pre-fix) |
 | Brier push rule (FG/F5 total) | actual == book line ⇒ null (no score) | mlbOutcomeIngestor.ts:200–221 |
 | Brier ML tie rule | FG/F5 away==home ⇒ null (F5 ties common) | mlbOutcomeIngestor.ts:229–248 |
 | F5 actual rule | sum linescore innings 1–5; requires ≥5 innings | mlbOutcomeIngestor.ts:303–311; mlbScoreRefresh.ts:414–421 |
@@ -278,7 +305,7 @@ determine every ingested number. All values read from code this session (VERIFIE
 | DK-vs-open atomic switch | DK only if all 3 markets complete, else Open for all 9 fields; `oddsSource ∈ {dk, open}` | vsinAutoRefresh.ts:941–982 |
 | LAYER2 ML guard | RL forced to ±1.5 matching ML sign; RL odds swapped when flipped | vsinAutoRefresh.ts:1024–1057 |
 | modelTotal mirror | `modelTotal = bookTotal` on every bookTotal write | server/db.ts:901–907 |
-| LAYER3 guard (odds path → model cols) | clears `modelRunAt`, corrects model spreads, triggers `forceRerun` targeted model run | db.ts:1490–1543; vsinAutoRefresh.ts:1122–1149 |
+| LAYER3 guard (odds path → model cols) | clears `modelRunAt`, corrects model spreads, triggers `forceRerun` targeted model run | db.ts:1454–1543 (clear at :1485, log :1498–1503); vsinAutoRefresh.ts:1122–1149 |
 | odds_history read cap | 200 rows, newest first | db.ts:1654–1668 |
 | AN v2 book ids (games odds) | 15,30,68,69,71,75,79 (Open=30, DK NJ=68, FD NJ=69) | actionNetworkScraper.ts:233–249 |
 | BetTracker slate book ids | "15,30,123" (separate path) | actionNetwork.ts:52,55 |
@@ -295,7 +322,7 @@ determine every ingested number. All values read from code this session (VERIFIE
 | GH cron cadences | mlb-cycle `*/5`; scores `*/10`; vsin-odds `*/15`; fg-lineups `*/10`; roto-lineups `*/10`; mlb-asg `4,19,34,49 * * * *` | .github/workflows/cron-*.yml, mlb-asg.yml (schedule blocks) |
 | Cron auth | `CRON_SECRET` Bearer / `x-cron-secret`, fail-closed 503, timing-safe compare | server/cron/cronAuth.ts:15–60 |
 | Cron overlap protection | in-memory single-flight `CronJobRunner` per job, per process | server/cron/cronRunner.ts:43–131 |
-| Replica law | `numReplicas: 1`; `DISABLE_BACKGROUND_JOBS=1` required on web-only replicas; no unique keys on odds_history/games/mlb_lineups | references/railway-deploy.md:85–111 |
+| Replica law | `numReplicas: 1`; `DISABLE_BACKGROUND_JOBS=1` required on web-only replicas; no unique keys on odds_history/games/mlb_lineups (runbook wording; verifier note: stale for `games` — census shows `mlbGamePk` UNI and drizzle/schema.ts:641 has `games_matchup_unique`; accurate for odds_history/mlb_lineups) | references/railway-deploy.md:85–111 |
 
 ---
 
@@ -317,7 +344,7 @@ This section produces no projections; its writes feed the projection pipeline. E
 | `odds_history` (full row incl. `lineSource`, splits) | `insertOddsHistory` | none (append-only, no unique key) | after every per-game odds update |
 | `odds_history.lineSource` (historical NULLs) | `backfillOddsHistoryLineSource` | rows where NULL | once at startup (guarded) |
 | `games.f5AwayRunLine, f5HomeRunLine, f5AwayRunLineOdds, f5HomeRunLineOdds, f5Total, f5OverOdds, f5UnderOdds, f5AwayML, f5HomeML, nrfiOverOdds, yrfiUnderOdds` | `scrapeAndStoreF5Nrfi` | `games.id` | every cycle after 7 AM EST |
-| `games.actualFgTotal, actualF5Total, actualNrfiBinary, brierFgTotal, brierF5Total, brierNrfi, brierFgMl, brierF5Ml, outcomeIngestedAt` | `ingestMlbOutcomes` | `games.id` (mlbGamePk → abbrev fallback) | nightly 00:30 PST (scheduler) or owner tRPC |
+| `games.actualFgTotal, actualF5Total, actualNrfiBinary, brierFgTotal, brierF5Total, brierNrfi, brierFgMl, brierF5Ml, outcomeIngestedAt` (post-Phase 4 also model-pick grading cols `fgMl/fgRl/fgTotal/f5Ml/f5Rl/f5Total{Result,Correct}`, `nrfiBacktestResult/nrfiCorrect`) | `ingestMlbOutcomes` | `games.id` (mlbGamePk → abbrev fallback) | nightly 00:30 PST (scheduler), owner tRPC, or (post-Phase 4) `POST /api/cron/mlb-outcomes` |
 | `games.gameStatus='final', awayScore, homeScore, gameClock` | `detectResumedSuspendedGames` | `games.id` | cycle Step 0 (requires manually-set 'suspended') |
 | `mlb_lineups.*` (all columns) | `upsertLineupsToDB` → `upsertMlbLineup` | `gameId` (team-pair + exact-date match, limit 1) | every mlb-cycle |
 | `mlb_lineups.lineupHash, lineupVersion, lineupModeledAt, lineupModeledVersion` | watcher `markLineupModeled` / `updateLineupHashOnly` | `gameId` | on first/changed lineup |
@@ -337,7 +364,8 @@ This section produces no projections; its writes feed the projection pipeline. E
   `getBrierTrend` (:443), `getBrierHeatmap` (:602), `getBrierDrilldown` (:991),
   `getF5EdgeLeaderboard` (:697, no-vig edge = model% − de-vigged implied%), `getFgEdgeLeaderboard` (:868).
 - **games router** (server/routers.ts): `games.listPostponed` (:569), `games.markGameStatus` (:581 — the only writer
-  of `'suspended'`), `games.liveSplits` (:560, public VSiN splits), `oddsHistory.listForGame` (:1134, cap 200).
+  of `'suspended'`), `games.liveSplits` (:560, public VSiN splits), `oddsHistory.listForGame` (:1139, cap 200 —
+  line corrected by verifier from :1134).
 
 **HTTP cron/heartbeat endpoints** (CRON_SECRET): `POST /api/cron/vsin-odds | /api/cron/scores |
 /api/cron/mlb-cycle | /api/cron/mlb-asg`, `GET /api/cron/status` (cronRoutes.ts:80–118);
@@ -384,7 +412,11 @@ MLB-relevant registrations (all VERIFIED at cited lines):
 
 **Critical asymmetry (VERIFIED by comparing the two lists):** `mlb_schedule_history` refresh, closing-line capture,
 outcome ingestion + Brier + drift, nightly TRENDS validation, player sync, and the daily stat seeders have **no
-GitHub Actions workflow** — they exist only inside the `DISABLE_BACKGROUND_JOBS` guard. references/railway-deploy.md:98–101
+GitHub Actions workflow** — they exist only inside the `DISABLE_BACKGROUND_JOBS` guard.
+[FIXED in Phase 4 — partially (M-208): `POST /api/cron/mlb-outcomes` (default: last 2 days PT, includes the drift
+check), `POST /api/cron/mlb-closing-capture`, and `POST /api/cron/mlb-backtest` now exist in cronRoutes.ts:236–242;
+no workflow file in .github/workflows calls them yet, and schedule-history refresh, nightly TRENDS, player sync,
+and the seeders remain in-process-only.] references/railway-deploy.md:98–101
 mandates `DISABLE_BACKGROUND_JOBS=1` on web-only replicas and :102–106 says exactly one process may run jobs.
 cronRoutes.ts:7–9 says the in-process schedulers are "gated off on Railway via DISABLE_BACKGROUND_JOBS to cut credit
 burn". Whether the single Railway replica currently runs with the flag set (jobs dead) or unset (jobs alive) is
@@ -407,7 +439,7 @@ services/schedulers above):
 | `scripts/backfill_2026.mjs` | Re-ingested all 2026 `mlb_schedule_history` rows (Mar 26→run date) applying the corrected `away_team_id/home_team_id` home/away assignment | Fix itself is live (mlbScheduleHistoryService.ts:277–314); script was the historical data heal |
 | `scripts/seedHistoricalMlb.py` | Inserted 2024+2025 final MLB games into `games` (gamePk, finals, F5, NRFI; fileId=0, all odds NULL) from a Manus-host JSON; also patched 2026 actualF5/NRFI | Data persists; script Manus-era (`/home/ubuntu` input path), not runnable as-is |
 | `server/mlbHistoricalBackfill.mjs` | Backfilled `actualAwayScore/actualHomeScore/actualF5*/nrfiActualResult` for 2026-04-06→04-19 + triggered multi-market backtests | Superseded by mlbScoreRefresh final-write + outcome ingestor |
-| `server/mlbJune19Phase1/FullPipeline/FixAndRerun.mjs` | June 19 2026 slate audit/repair: cross-referenced hardcoded gamePk list vs DB, verified odds/model/publish state (no INSERTs found in FullPipeline — grep) | No |
+| `server/mlbJune19Phase1.mjs`, `server/mlbJune19FullPipeline.mjs`, `server/mlbJune19FixAndRerun.mjs` (path corrected by verifier — these are flat files, not a `mlbJune19Phase1/FullPipeline/` directory) | June 19 2026 slate audit/repair: cross-referenced hardcoded gamePk (e.g. 823124) vs DB, verified odds/model/publish state (no game INSERTs — grep) | No |
 | `server/mlb_pipeline_audit.mjs`, `mlb_publish_audit.mjs`, `mlb_state_audit.mjs` | Read-only pipeline/publish/state audits with corrected column names | No (diagnostics) |
 | `scripts/audit_dh_full.py`, `scripts/debug_an_dh.py` | Doubleheader audits; debug_an_dh reads `mlb_schedule_history.game_type` | No; evidence `game_type` was populated out-of-band |
 | `scripts/mlbBacktestGrader.py` | Grades vs `mlb_schedule_history` filtering `game_type IN ('regular_season','postseason')` | UNKNOWN caller — if run today, depends on the orphaned `game_type` column |
@@ -415,7 +447,9 @@ services/schedulers above):
 
 Schema drift evidence: DB columns `games.rescheduledFrom` and `mlb_schedule_history.game_type` exist in the census
 TSV but not in drizzle/schema.ts and have no TS writer (VERIFIED repo-wide grep) — both are orphans of out-of-band
-migrations/patches.
+migrations/patches. [FIXED in Phase 4 — `games.rescheduledFrom` now has a TS writer (raw SQL in
+mlbScoreRefresh.ts `reconcileUnmatchedApiGame`), though it remains undeclared in drizzle/schema.ts;
+`game_type` still has no TS writer but carries a DB default `'regular_season'` per the census TSV.]
 
 ---
 
@@ -424,7 +458,8 @@ migrations/patches.
 1. **Q1 — Who creates the daily MLB `games` rows and sets `mlbGamePk`?** No live repo code inserts the daily slate
    or writes `mlbGamePk` (evidence § Data inputs #9). Census: check `games` rows for recent dates — `fileId` value,
    `createdAt` clustering, and whether `mlbGamePk`/`venue`/`broadcaster` are populated → identifies the seeder
-   (owner file upload vs external/Manus job).
+   (owner file upload vs external/Manus job). [FIXED in Phase 4 — partially: M-209 reconciliation now creates
+   missing rows with `mlbGamePk` from the StatsAPI schedule; the primary seeder question stands.]
 2. **Q2 — Is `DISABLE_BACKGROUND_JOBS` set on the Railway replica?** Decides whether schedule-history refresh,
    closing-line capture, outcome ingestion/Brier/drift, and nightly trends run at all. Census: max
    `games.outcomeIngestedAt`, max `mlb_schedule_history.lastRefreshedAt`, count of non-null `closingLineLockedAt`
@@ -433,7 +468,9 @@ migrations/patches.
    fg/roto-lineups ship enabled-by-default; mlb-asg should be disabled post 2026-07-14. Not determinable from repo.
 4. **Q4 — Is the Manus Heartbeat still firing** `/api/scheduled/*` in parallel (double-write window per
    railway-deploy.md:107–111)?
-5. **Q5 — What populated `mlb_schedule_history.game_type`** and is it maintained for new rows (grader depends on it)?
+5. **Q5 — What populated `mlb_schedule_history.game_type`** and is it maintained for new rows (grader depends on
+   it)? [Verifier refinement: the census TSV shows a DB default `'regular_season'`, so new rows self-populate with
+   the default; only non-default values need an out-of-band writer.]
 6. **Q6 — AN v2 vs v1 health**: v1 used for schedule history because "v2 returns HTTP 400"
    (mlbScheduleHistoryService.ts:12) while the live odds path uses v2 (actionNetworkScraper.ts:287) — which is true
    today?
@@ -449,18 +486,142 @@ migrations/patches.
 
 | ID | Sev | Title | Evidence |
 |---|---|---|---|
-| F1 | **P0** | Closing lines, outcome ingestion, Brier scores, drift detection, and schedule-history refresh have **no production trigger** if `DISABLE_BACKGROUND_JOBS=1` is set (as the deploy runbook prescribes for web replicas) — they exist only as in-process schedulers with no GH Actions equivalent | server/_core/index.ts:840–926 (guard + registrations); .github/workflows listing (no workflow for these jobs); references/railway-deploy.md:98–106; cronRoutes.ts:7–9. Ops state UNKNOWN → P0 if flag set, else downgrade |
+| F1 | **P0** | Closing lines, outcome ingestion, Brier scores, drift detection, and schedule-history refresh have **no production trigger** if `DISABLE_BACKGROUND_JOBS=1` is set (as the deploy runbook prescribes for web replicas) — they exist only as in-process schedulers with no GH Actions equivalent [FIXED in Phase 4 — partially: M-208 added `POST /api/cron/mlb-outcomes` (incl. drift), `/mlb-closing-capture`, `/mlb-backtest` (cronRoutes.ts:236–242); schedule-history refresh + nightly trends still have no HTTP trigger, and no workflow file calls the new endpoints yet] | server/_core/index.ts:840–926 (guard + registrations); .github/workflows listing (no workflow for these jobs); references/railway-deploy.md:98–106; cronRoutes.ts:7–9. Ops state UNKNOWN → P0 if flag set, else downgrade |
 | F2 | **P1** | `mlb_schedule_history` "DK NJ pre-game" odds are silently rewritten on every refresh from a book fallback chain (68→15→21→30, Pinnacle included) after DK NJ drops off completed games (~2 days); derived ATS/O/U results are re-derived vs the replaced line — historical trends/records are not guaranteed to be DK pre-game lines | mlbScheduleHistoryService.ts:74–79 ("same DraftKings line family" claim), 333–351 (fallback), 497–516 (upsert overwrites dk* + result cols); 60-day startup backfill re-touches 2 months of rows (mlbScheduleHistoryScheduler.ts:160) |
-| F3 | **P1** | Closing-line capture is best-effort and lossy: requires the 5-min in-process tick (F1), only fires while status is "inprogress", and requires book 68 strictly (no fallback) — games that go final between ticks or lack DK NJ at first pitch never lock; no backfill path exists for `dkClosing*` | mlbScheduleHistoryService.ts:1241–1243, 1292–1298; sole caller mlbScheduleHistoryScheduler.ts:255–280 |
+| F3 | **P1** | Closing-line capture is best-effort and lossy: requires the 5-min in-process tick (F1), only fires while status is "inprogress", and requires book 68 strictly (no fallback) — games that go final between ticks or lack DK NJ at first pitch never lock; no backfill path exists for `dkClosing*` [FIXED in Phase 4 — partially: the trigger gap is addressed by `POST /api/cron/mlb-closing-capture` (cronRoutes.ts:239); the inprogress-only window, strict book 68, and no-backfill behavior are unchanged] | mlbScheduleHistoryService.ts:1241–1243, 1292–1298; sole in-process caller mlbScheduleHistoryScheduler.ts:255–280; post-fix also cronRoutes.ts:104 |
 | F4 | **P2** | Suspended-game resume detection is dead code in the automated path: `mapMlbStatus` collapses Suspended→`postponed`, and `detectResumedSuspendedGames` only scans `gameStatus='suspended'`, which is written solely by the owner-manual `games.markGameStatus` mutation | mlbScoreRefresh.ts:222–230; mlbPostponedTracker.ts:363; routers.ts:581–598 (only 'suspended' writer, VERIFIED grep) |
-| F5 | **P2** | Doubleheader ambiguity: all team-pair fallback matches (`.limit(1)` lineup match, `away@home` maps in score refresh/outcome ingestor/postponed tracker) collapse DH twin bills onto one row; `doubleHeader`/`gameNumber` columns are read/written by no live code, so G2 lineups/scores rely entirely on `mlbGamePk` being populated (whose writer is itself unknown — Q1) | rotowireLineupScraper.ts:720–734; mlbScoreRefresh.ts:567,584; mlbOutcomeIngestor.ts:520–534; mlbPostponedTracker.ts:232; routers.ts:106 (only doubleHeader ref); drizzle/schema.ts:337–341,641 |
-| F6 | **P2** | Postponement handling is notify-only: rescheduled games are detected but nothing updates the old `games` row or inserts the new game/gamePk into `games` (the "auto-inserted" claim refers to `mlb_schedule_history`); `games.rescheduledFrom` exists in DB but is written by nothing | mlbPostponedTracker.ts:14–15, 296–317; repo-wide grep for `rescheduledFrom` (census TSV only) |
+| F5 | **P2** | Doubleheader ambiguity: all team-pair fallback matches (`.limit(1)` lineup match, `away@home` maps in score refresh/outcome ingestor/postponed tracker) collapse DH twin bills onto one row; `doubleHeader`/`gameNumber` columns are read/written by no live code, so G2 lineups/scores rely entirely on `mlbGamePk` being populated (whose writer is itself unknown — Q1) [FIXED in Phase 4 — partially: the score-refresh path now guards the teams-map match against a conflicting stored `mlbGamePk` (mlbScoreRefresh.ts:637) and the M-209 reconciliation writes `gameNumber`/`doubleHeader` and inserts missing rows with `mlbGamePk`; the Rotowire `.limit(1)` lineup match and the postponed-tracker team-pair map are unchanged] | rotowireLineupScraper.ts:720–734; mlbScoreRefresh.ts:567,584 (pre-fix); mlbOutcomeIngestor.ts:520–534; mlbPostponedTracker.ts:232; routers.ts:106 (only doubleHeader ref); drizzle/schema.ts:337–341,641 |
+| F6 | **P2** | Postponement handling is notify-only: rescheduled games are detected but nothing updates the old `games` row or inserts the new game/gamePk into `games` (the "auto-inserted" claim refers to `mlb_schedule_history`); `games.rescheduledFrom` exists in DB but is written by nothing [FIXED in Phase 4 — M-209/D-001: `reconcileUnmatchedApiGame` moves the old row to the official new date once the makeup game is final (stamping `rescheduledFrom`, `gameNumber`, `doubleHeader` via raw SQL) or inserts a staging row with `mlbGamePk`; the tracker itself remains notify-only] | mlbPostponedTracker.ts:14–15, 296–317; pre-fix repo-wide grep for `rescheduledFrom` (census TSV only); post-fix mlbScoreRefresh.ts:881–1011 |
 | F7 | **P2** | Acknowledged double-write architecture with no DB-level protection: `odds_history`, `mlb_lineups` (and `games` matchup dupes pre-unique-key) rely on in-memory, per-process locks while three trigger mechanisms (Manus Heartbeat, in-process intervals, GH Actions) coexist mid-migration; MLB odds are also written by two overlapping jobs (mlb-cycle */5 and vsin-odds */15) | references/railway-deploy.md:85–111; cron-mlb-cycle.yml header warning; cronRunner.ts:43–47 (in-memory); vsinAutoRefresh.ts:1309–1324 + 1734–1753 |
 | F8 | **P2** | Odds-ingestion path mutates model outputs: LAYER3/RL-SIGN-SYNC inside `updateAnOdds` rewrites `awayModelSpread`/`homeModelSpread` and clears `modelRunAt` based on book ML direction, and `modelTotal` is hard-mirrored to `bookTotal` — "model" columns are partially book-derived, which any calibration audit must account for | db.ts:901–907, 1490–1543; vsinAutoRefresh.ts:1122–1149 |
 | F9 | **P3** | Fixed UTC−5 "EST" (no DST) in schedule/nightly schedulers vs true America/New_York in the ingest services: all gating windows (6 AM refresh start, 10 AM–2 AM closing window, 2:59 AM trends) shift one hour during EDT, and the computed "today/yesterday" flips an hour early | mlbScheduleHistoryScheduler.ts:58–80 (comment "DST is not applied"); mlbNightlyTrendsRefresh.ts:60 vs mlbScheduleHistoryService.ts:172–182 |
 | F10 | **P3** | odds_history snapshots store pre-LAYER2 run-line values, so a snapshot's RL sign/odds can contradict what was simultaneously written to `games` when the ML-guard fired — CLV analyses reading odds_history inherit the scraper artifact | vsinAutoRefresh.ts:1170–1183 vs 1090–1109 |
-| F11 | **P3** | Nightly outcome trigger is minute-exact (`hour===0 && minute===30` on a 60 s tick): a restart or event-loop stall spanning 00:30 PST skips the whole night; recovery only via next night, `skippedAlreadyIngested` idempotency masks the gap for the missed date until the owner manually triggers | mlbOutcomeAndDriftScheduler.ts:231–244, 264–274 |
+| F11 | **P3** | Nightly outcome trigger is minute-exact (`hour===0 && minute===30` on a 60 s tick): a restart or event-loop stall spanning 00:30 PST skips the whole night; recovery only via next night, `skippedAlreadyIngested` idempotency masks the gap for the missed date until the owner manually triggers [FIXED in Phase 4 — partially: `POST /api/cron/mlb-outcomes` defaults to the last 2 days PT, so a scheduled curl self-heals a missed night; the in-process minute-exact trigger is unchanged and no workflow calls the endpoint yet] | mlbOutcomeAndDriftScheduler.ts:231–244, 264–274 |
 
 ---
 
 *End of ingestion & scheduling dossier.*
+
+---
+
+## Verification (re-run)
+
+Adversarial re-verification session: 2026-07-25. Method: every load-bearing claim (parameter values, file:line
+cites, write paths, schedules/triggers, caller inventories) re-checked against the working tree for files unchanged
+since the dossier commit (723dad62), and against `git show 723dad62:server/<file>` for the three cited files that
+Phase 4 (commit 6bce4e36, "phase 4 root-cause fixes") later modified: `server/mlbScoreRefresh.ts`,
+`server/mlbOutcomeIngestor.ts`, `server/cron/cronRoutes.ts`. No DB queries were run.
+
+**Tally: 112 claims checked | 106 confirmed | 6 corrected | 0 unbacked.**
+
+### Confirmed (highlights — all cites exact unless noted)
+
+- **mlbScheduleHistoryService.ts**: AN v1 URL :65/:238; headers :80–85; timeout 15 s :248/:1230; fallback chain
+  `[68,15,21,30]` :79/:339–346 (book 21 = Pinnacle comment :77; "~2 days"/"same DraftKings line family" :76–78);
+  home/away via `away_team_id/home_team_id` :277–314 (Apr 10 PHI@ARI comment :281); complete-gated derivations
+  :391–403 with rules :203–210/:215–225 and `homeRunLineCovered = !awayRunLineCovered` :396–397; upsert batch 50
+  :489; overwrite set :497–516 exactly as listed, `dkClosing*` excluded; `captureClosingLines` :1208–1364 —
+  inprogress filter :1241–1243, already-locked skip :1282–1288, strict book 68 :1292, 9-column write + lock
+  :1321–1336; `utcToEstDate` true America/New_York :172–182; 400 ms delays :583/:630; Last-N default 5 :773;
+  situational cap 162 :994; fav/dog null-ML exclusion :1050–1056; v2-returns-400 comment :12.
+- **mlbScheduleHistoryScheduler.ts**: season boundaries :40–45; 60-day startup backfill :160; 4-h refresh, first
+  6 AM, skip hours 0–5 :217–243; closing capture 5-min, window `h>=10 || h<2` :249–280 (caller :265); fixed UTC−5
+  offsets :61/:69/:77 with "DST is not applied" comment :60.
+- **actionNetworkScraper.ts**: `BOOK_IDS "15,30,68,69,71,75,79"` :233; DK 68 :239; FD 69 :244; Open 30 :249;
+  `fetchActionNetworkOdds` :276; v2 URL :287. **actionNetwork.ts**: BetTracker `"15,30,123"` :52.
+- **vsinAutoRefresh.ts**: `INTERVAL_MS` 5 min :26; `RANGE_DAYS_AHEAD=6` :29; both-orderings match :884–891; odds
+  freeze at live/final :907–917; atomic DK-vs-open all-9 switch + `oddsSource` :941–982; LAYER2 guard + odds swap
+  :1011–1057; MLB dual-write :1058–1063; `updateAnOdds` call :1090–1120 (open* :1111–1119); LAYER3 immediate
+  targeted re-run `forceRerun:true` :1122–1149; odds_history snapshot stores pre-LAYER2 `rAwaySpread.value` etc.
+  :1170–1183 (F10 confirmed by comparing with :1094–1100); splits 0/0 guard :1157–1192; VSiN `refreshMlb`
+  :593–795 (inserted always 0 :595, scrape :607, maps :638–687, 100−x flip :722–733, RL 0/0 guard :742–752,
+  write set :753–765); `runVsinRefresh` MLB odds today+tomorrow :1309–1324; `runMlbCycleOnce` odds today+tomorrow
+  :1734–1753; Step 0 postponed/suspended tracker :1678–1683; newly-final backtest triggers :1928–1994; F5/NRFI +
+  HR-props 7 AM EST (12 UTC) gates :1996–2031; scores 15 s :1360; MLB cycle 5 min :1361/:2096–2101; seeders
+  24 h / 7 d :2103–2207; `runVsinRefreshManual` :1493; `datePst` usage :1446/:1670 (Q8 stands).
+- **db.ts**: `insertGames` :349; `updateBookOdds` accepts `mlbGamePk` :892/:931 with no caller passing it
+  (pre-fix); `modelTotal = bookTotal` mirror :901–907 (and again in `updateAnOdds` :1406–1411); RL SIGN SYNC
+  secondary :1509–1539; `insertOddsHistory` :1557–1648 with the exact column set listed; read cap 200 :1654–1668;
+  `backfillOddsHistoryLineSource` :1692.
+- **mlbScoreRefresh.ts (pre-fix @723dad62)**: URL + hydrate :57–64/:315–320; status map with
+  postponed/suspended/cancelled→`postponed` override :217–241 (F4 cite :222–230 exact); AZ→ARI, OAK→ATH :298–304;
+  F5 sum innings 1–5, final ≥5 innings :414–426; NRFI :436–445; gamePk-primary/team-pair-fallback match :561–585;
+  newly-final detection :600–607; `updateNcaaStartTime` write :651–658; final actuals write :664–686 + read-back
+  :687–730; Rotowire pitcher-override guard :736–779.
+- **mlbOutcomeIngestor.ts (pre-fix @723dad62)**: URL :263–265; final definition :288–290; F5 :303–311; NRFI
+  :313–319; Brier `(p/100−o)²` 6-dp :156–167; FG/F5 total push→null :200–221; ML tie→null :229–248; eligibility
+  :404–411; skip-ingested :488–506; match :509–534; write :609–622 with null-as-`undefined` semantics :612–619 +
+  verify :626–649; drift call :700 ("need 20+" :710); F5-ML coverage audit :719–737; notifyOwner :739–782;
+  abbrev map :838–857 (all seven pairs exact).
+- **mlbOutcomeAndDriftScheduler.ts**: comment constants :12–15; monthly recal 1st 03:00 PST :213–228; nightly
+  `hour===0 && minute===30` → yesterday PST :231–244; 60 s tick `.unref()` :270–274.
+- **rotowireLineupScraper.ts**: URLs :141–143; `upsertLineupsToDB` :647; exact-date window vs 7-day fallback
+  :664–671; mlbamId lookup :679–708; team-pair `.limit(1)` match :722–734.
+- **mlbLineupsWatcher.ts**: CASE A–D rules :7–59; stop guard :24–28/:53–59; hash spec :30–43 + SHA-256
+  implementation :127–174 (sorted by battingOrder, stable fields only); modelability gate :45–51/:210–239 (+ :454–463);
+  bookkeeping :245–285; `runLineupWatcher` :296.
+- **mlbPostponedTracker.ts**: rescheduled detection :161–328 (load :181–196; tomorrow→+14 fetch :211–223;
+  team-pair map :232; notify-only :296–317, "auto-inserted" text :306); resumed-suspended :341–494 (scan
+  `'suspended'` :363; final write :439–447). `markGameStatus` (routers.ts:581) confirmed the only `'suspended'`
+  writer (post-fix `mapMlbStatus` still collapses Suspended→postponed — F4 stands).
+- **mlbF5NrfiScraper.ts**: FD NJ book 69 :5–12/:118–226 (:126).
+- **mlbNightlyTrendsRefresh.ts**: 2:59 AM EST :7/:473/:482; fixed UTC−5 helper :58–62; 400 ms delay :357.
+- **Routers**: all 16 mlbSchedule procedure line numbers exact (:63/:103/:137/:169/:202/:240/:289/:346/:381/
+  :409/:443/:572/:602/:697/:868/:991); backfill max 60 :243; de-vig edge :693–737; `files.upload` :203 (insert
+  :250); field-strip :106; `liveSplits` :560 public; `listPostponed` :569.
+- **Cron plumbing**: cronAuth fail-closed 503 + timingSafeEqual + Bearer/x-cron-secret :15–60; CronJobRunner
+  in-memory single-flight :43–131; pre-fix cronRoutes endpoints/comment (:7–9 wording, registrations within
+  :80–118). Workflow crons: mlb-cycle `*/5` (+ "DO NOT ENABLE" header :4), scores `*/10`, vsin-odds `*/15`,
+  fg/roto-lineups `*/10`, mlb-asg `4,19,34,49` (+ disable-after-2026-07-14 note :12) — all exact.
+- **index.ts guard block** :840–926: registrations at :846/:856/:858/:861/:873/:877; startup one-offs :891/:898/
+  :910–925 (FG cache +3 s then 30 min); player sync 08:00 UTC (mlbPlayerSync.ts).
+- **references/railway-deploy.md** :85–111 (numReplicas 1 :94, DISABLE_BACKGROUND_JOBS :98–101, one-process rule
+  :102–106, Manus double-write :107–111); census TSV: `games.mlbGamePk int UNI`, `games.rescheduledFrom
+  varchar(10)`, `mlb_schedule_history.game_type varchar(20)` (default `regular_season`), odds_history PRI id only;
+  `game_type` absent from drizzle/schema.ts; grader :978 and debug_an_dh :53 refs exact.
+- **Patch scripts**: backfill_2026.mjs (Mar 26→run, corrected team-id logic), seedHistoricalMlb.py (2024/2025,
+  fileId=0, `/home/ubuntu` input), mlbHistoricalBackfill.mjs (2026-04-06→04-19 + backtests), pipeline/publish/
+  state audits and audit_dh_full.py all exist as described. UI consumers: all eight cited client files exist and
+  consume the cited endpoints (ModelResults.tsx and TheModelResults.tsx both present).
+- **Sheets**: spreadsheet id `1lUlFy--SwMHrMKxRiJmvkFePbdBO4PDJvrw0OKDY3Hw` in both sync files; heartbeat routes
+  fangraphsLineupHeartbeat.ts:37 and rotowireLineupHeartbeat.ts:56 exact; fangraphsLineupSync sources the MLB
+  Stats API (header :4) despite the name.
+- `mlb_schedule_history` consumer inventory re-verified by identifier grep: only the service query functions, the
+  scheduler, mlbNightlyTrendsRefresh, and the mlbSchedule router (via the service) touch the table — the model
+  runner does not (mlbPostponedTracker mentions it in a comment only).
+
+### Corrected (applied inline above)
+
+| # | Claim as written | Correction |
+|---|---|---|
+| C1 | "`insertGames()` … called from exactly three places … and the All-Star seed (mlbAllStarGameSync.ts:181)" | The ASG seed inserts a `games` row via **direct `db.insert(games)`** at :181, not via `insertGames()`. `insertGames()` has exactly three call sites: routers.ts:250, vsinAutoRefresh.ts:389, :556. Substantive creator inventory unchanged. |
+| C2 | Replica-law parameter row: "no unique keys on odds_history/games/mlb_lineups" | Stale runbook wording for `games`: census shows `games.mlbGamePk` UNI and drizzle/schema.ts:641 declares `games_matchup_unique` (the dossier's own Overview states both). Accurate for odds_history/mlb_lineups. |
+| C3 | Patch-history path `server/mlbJune19Phase1/FullPipeline/FixAndRerun.mjs` | No such directory. Actual flat files: `server/mlbJune19Phase1.mjs`, `server/mlbJune19FullPipeline.mjs`, `server/mlbJune19FixAndRerun.mjs` (hardcoded gamePk 823124; no game INSERTs — claim substance confirmed). |
+| C4 | LAYER3 guard cite "db.ts:1490–1543, log text :1500–1503" | Guard block is db.ts:1454–1543; `modelRunAt` cleared at :1485; log text :1498–1503. Behavior exactly as described. |
+| C5 | `oddsHistory.listForGame` at routers.ts:1134 | Actual line :1139 (cap 200 confirmed in db.ts:1654–1668). |
+| C6 | Season floor cite mlbNightlyTrendsRefresh.ts:42 | Actual line :41. |
+
+### Phase 4 fix annotations (claims true pre-fix, changed by commit 6bce4e36)
+
+- **M-208 cron triggers** (`cronRoutes.ts` +162): `POST /api/cron/mlb-outcomes` (default last 2 days PT, includes
+  drift via `ingestMlbOutcomes`), `/api/cron/mlb-closing-capture`, `/api/cron/mlb-backtest` (registrations
+  :236–242). Partially resolves F1/F3/F11 and the § Scheduling asymmetry; **no workflow file calls them yet**, and
+  schedule-history refresh, nightly trends, player sync, and seeders are still in-process-only.
+- **M-209/D-001 missing-game reconciliation** (`mlbScoreRefresh.ts` +233): `reconcileUnmatchedApiGame` (:881)
+  inserts staging `games` rows (fileId=0, `mlbGamePk` set) for unmatched regular-season StatsAPI games, moves
+  rescheduled rows to their official date once final, and writes `rescheduledFrom` (raw SQL), `gameNumber`,
+  `doubleHeader`; teams-map fallback now refuses gamePk-conflicting matches (:637). Resolves F6; partially
+  resolves F5, Q1, and the "`rescheduledFrom` written by nothing" / "no live writer of doubleHeader/gameNumber"
+  claims.
+- **M-203 Brier scales + M-101 model-pick grading** (`mlbOutcomeIngestor.ts` +321): pre-fix `brierScore()` divided
+  all probabilities by 100 although `modelPNrfi`/`modelF5OverRate` are stored 0–1 (garbage NRFI/F5-total Briers);
+  now per-column scale handling. Ingestor also writes model-pick grading columns
+  (`fgMl/fgRl/fgTotal/f5Ml/f5Rl/f5Total{Result,Correct}`, `nrfiBacktestResult/nrfiCorrect`).
+
+### Unbacked claims
+
+None found. Claims the dossier marked INFERRED/UNKNOWN were checked for consistency with code and left as
+classified; the "book 68 disappears after ~2 days" and "same DraftKings line family" statements are correctly
+attributed to comments, not asserted as fact.
+
+*End of verification re-run.*

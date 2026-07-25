@@ -68,8 +68,9 @@ contains no umpire reference (**VERIFIED**).
   `pitcherName, bookLine, bookOverOdds, bookUnderOdds, anNoVigOverPct, anPlayerId` only, model
   fields preserved (L223-235); else INSERT with model fields NULL (L249-260). **No game-status
   freeze** — unlike `refreshAnApiOdds` which skips live/final games
-  (`server/vsinAutoRefresh.ts:1655-1656`), K-prop book lines keep being overwritten after first
-  pitch. **VERIFIED**.
+  (`server/vsinAutoRefresh.ts:1655-1656` comment; skip implemented at `vsinAutoRefresh.ts:910`),
+  K-prop book lines keep being overwritten after first
+  pitch. **VERIFIED** (still true post-Phase 4 — no status check added to the upsert).
 - Timing: every MLB cycle (5 min, see Scheduling). The fetch date is
   `formatANDate(new Date())` (`server/vsinAutoRefresh.ts:1891`), which formats using the **server's
   local timezone** (`server/anKPropsService.ts:306-311`), while the rest of the pipeline keys on
@@ -109,7 +110,10 @@ contains no umpire reference (**VERIFIED**).
 - Seeded by `seedTeamBattingSplits` every 24 h (`server/vsinAutoRefresh.ts:2161-2175`) from MLB
   Stats API team `statSplits` sitCodes `vl`/`vr`; **`k9 = K/AB × 27`**
   (`server/seedTeamBattingSplits.ts:100-102,118`) — a per-27-at-bats rate, *not* per-9-innings.
-  See Finding K-2. **VERIFIED**.
+  See Finding K-2. **VERIFIED**. [FIXED in Phase 4 — the model no longer divides this by the
+  true-K/9 constant 8.2; the divisor is now the measured per-hand league mean of the same
+  K/AB×27 basis, `getLeagueMeanTeamK9ByHand()` in `kPropsDbHelpers.ts` (M-204). The seeder's
+  basis itself is unchanged.]
 
 ### 5. Lineups (platoon composition) — `mlb_lineups`
 
@@ -150,7 +154,9 @@ Pipeline per pitcher-row (all **VERIFIED** at the cited lines):
    fallback `LEAGUE_K9 = 8.5` (L413-422).
 3. **xFIP adj**: `clamp(4.10 / xfip, 0.70, 1.40)`, 1.0 if xfip missing (L425-428).
 4. **Opponent adj**: `clamp(oppK9(vs hand) / 8.2, 0.70, 1.40)`; league default 8.2 when team
-   split missing (L431-434).
+   split missing (L431-434). [FIXED in Phase 4 — divisor and missing-split default are now the
+   per-hand league mean of `mlb_team_batting_splits.k9` computed once per cycle
+   (`getLeagueMeanTeamK9ByHand`, fallback 6.78); `LEAGUE_OPP_K9 = 8.2` was removed (M-204).]
 5. **Expected IP** (P2-A 4-tier): `ipMean3yr` → season `ip/gamesStarted` → `rolling5.ip5` →
    5.1; result clamped [3.0, 7.0] (L441-447).
 6. **Platoon adj** (P4-B): from confirmed opposing lineup bats composition; switch hitters count
@@ -163,7 +169,9 @@ Pipeline per pitcher-row (all **VERIFIED** at the cited lines):
    `pOver = clamp(1 − PoissonCDF(floor(bookLine), lambdaOver), 0.03, 0.85)` and
    `pUnder = clamp(1 − [1 − PoissonCDF(floor(bookLine), lambdaUnder)], 0.03, 0.85)` (L473-474;
    `poissonPOver` L140-143 uses `floor(bookLine)` — for a half line 4.5 this is P(X≥5); for an
-   **integer** line 6.0 the push outcome X=6 lands inside pUnder — Finding K-6).
+   **integer** line 6.0 the push outcome X=6 lands inside pUnder — Finding K-6). [FIXED in
+   Phase 4 — new `poissonPUnder` computes `CDF(line−1)` on integer lines so the push mass is
+   excluded from both sides.]
 9. **Model odds**: probability → American (L148-152, 477-478).
 10. **Edges**: `edgeOver = pOver − anNoVigOverPct`; `edgeUnder = pUnder − (1 − anNoVigOverPct)`
     (L481-482) — i.e. model prob minus AN consensus no-vig prob, both 4dp.
@@ -179,7 +187,7 @@ Pipeline per pitcher-row (all **VERIFIED** at the cited lines):
 |---|---|---|
 | `LEAGUE_K9` (fallback pitcher K/9) | 8.5 | mlbKPropsModelService.ts:63 |
 | `LEAGUE_XFIP` | 4.10 | :64 |
-| `LEAGUE_OPP_K9` (opp baseline) | 8.2 | :65 |
+| `LEAGUE_OPP_K9` (opp baseline) | 8.2 [FIXED in Phase 4 — constant removed; replaced by per-hand DB league mean, same K/AB×27 basis as the splits table] | :65 |
 | `EDGE_THRESHOLD` (declared, **unused**) | 0.040 | :66 (no reader — verdict uses :71-72) |
 | `EDGE_THRESHOLD_OVER` | 0.150 | :71 |
 | `EDGE_THRESHOLD_UNDER` | 0.040 | :72 |
@@ -188,9 +196,9 @@ Pipeline per pitcher-row (all **VERIFIED** at the cited lines):
 | `MIN/MAX_XFIP_ADJ` | 0.70 / 1.40 | :76-77 |
 | `MIN/MAX_OPP_ADJ` | 0.70 / 1.40 | :78-79 |
 | `MIN_IP` / `MAX_IP` | 3.0 / 7.0 | :80-81 |
-| `K_CALIBRATION_FACTOR_OVER` | 0.870 (was 0.800) | :88 |
-| `K_CALIBRATION_FACTOR_UNDER` | 0.810 (was 0.739) | :89 |
-| `K_CALIBRATION_FACTOR` (alias, display) | = UNDER = 0.810 | :91 |
+| `K_CALIBRATION_FACTOR_OVER` | 0.870 (was 0.800) [FIXED in Phase 4 — renamed `*_OVER_DEFAULT`, now a fallback; live value read per cycle from `mlb_calibration_constants.k_calibration_factor_over` (M-207)] | :88 |
+| `K_CALIBRATION_FACTOR_UNDER` | 0.810 (was 0.739) [FIXED in Phase 4 — renamed `*_UNDER_DEFAULT`, fallback for DB row `k_calibration_factor_under`] | :89 |
+| `K_CALIBRATION_FACTOR` (alias, display) | = UNDER = 0.810 [FIXED in Phase 4 — alias removed] | :91 |
 | `EMPIRICAL_IP_PER_START` | 5.1 | :92 |
 | Season/rolling blend | 0.70 / 0.30 | :415 |
 | `PLATOON_LHP_VS_RHH_BOOST` | 1.08 | :97 |
@@ -213,7 +221,11 @@ n=693, bias −0.521 K/start → factors +0.070/+0.071. Separately, the **DB** c
 `k_calibration_factor = 0.776` (previous 0.739, source `LIVE_2026_N693_BIAS_CORRECTED`,
 2026-05-11 — `docs/audits/mlb-model-audit-2026/census/calibration-constants.tsv`), which **no live
 code reads** (only seeded at default 1.0 by `server/mlbDriftDetector.ts:217`; grep found no other
-reader/writer). Code (0.870/0.810) and DB (0.776) disagree — Finding K-5.
+reader/writer). Code (0.870/0.810) and DB (0.776) disagree — Finding K-5. [FIXED in Phase 4
+(partial) — `modelKPropsForDate` now reads `k_calibration_factor_over`/`k_calibration_factor_under`
+from `mlb_calibration_constants` each cycle via `getKCalibrationFactors`, with 0.870/0.810 as
+fallbacks (M-207); the legacy `k_calibration_factor = 0.776` row is a *different* paramName and
+remains read by nothing.]
 
 ### B. LEGACY Python "Variant D" model (`server/StrikeoutModel.py`)
 
@@ -284,7 +296,7 @@ that mean and Monte-Carlos 100,000 draws for percentiles/probabilities.
 | batter adj clip | [0.03, 0.65] | :667 |
 | inning display scale clip | [0.90, 1.10] | :802 |
 | EK clip after OLS | [0.1, 20.0] | :823 |
-| MC sims / seed | 100,000 / default_rng(42) | :587, 594-595, 1345 |
+| MC sims / seed | 100,000 / default_rng(42) | :586, 593-594, 1345 *(cites corrected by verifier: n_sims default at :586, in-method seed at :593-594)* |
 | Python verdict thresholds | EDGE ≥ +0.03 / FADE ≤ −0.03 | :1476-1480 |
 | Runner timeout / interpreter | 120 s / `python3` | strikeoutModelRunner.ts:30-32 |
 
@@ -370,8 +382,12 @@ Frontend:
   workflow is currently enabled, and whether Railway has `DISABLE_BACKGROUND_JOBS` set (i.e.
   which host(s) actually execute the cycle), is **UNKNOWN** — census question.
 - Per-final-game: `runMultiMarketBacktest` (fired on FINAL transitions,
-  vsinAutoRefresh.ts:1952-1969) re-runs `runKPropsBacktest` for that date
-  (mlbMultiMarketBacktest.ts:1024-1029). **VERIFIED**.
+  vsinAutoRefresh.ts:1952-1970) does **NOT** re-run `runKPropsBacktest` — the live call passes
+  `runKProps=false` (vsinAutoRefresh.ts:1970), so the K-props delegation at
+  mlbMultiMarketBacktest.ts:1025-1029 is skipped, consistent with the write-path table above.
+  K-props grading on FINAL relies solely on the per-cycle `runKPropsBacktest(today)` at
+  vsinAutoRefresh.ts:1934. **VERIFIED** *(corrected by verifier — the original text claimed the
+  opposite and contradicted both the code and this dossier's own write-path table)*.
 - Seeder cadence: pitcher stats / rolling-5 / batting splits every 24 h; umpires and park factors
   every 7 d; all fire on startup (vsinAutoRefresh.ts:2103-2210). **VERIFIED**.
 - The LineupWatcher (vsinAutoRefresh.ts:1819-1857) triggers `runMlbModelForDate`
@@ -456,20 +472,110 @@ Dead code (**VERIFIED** — no callers found):
 | ID | Sev | Title | Evidence |
 |---|---|---|---|
 | K-1 | P1 | AN K-props fetch uses server-local date while pipeline keys PT date — evening slate can ingest tomorrow's lines onto today's live games (no game-status freeze in the K-props upsert) | anKPropsService.ts:306-311 (`formatANDate` local getters) vs vsinAutoRefresh.ts:132-142 (`datePst` America/Los_Angeles), call sites vsinAutoRefresh.ts:1891+1901; kPropsDbHelpers.ts:182-235 (team-only match, updates live rows). INFERRED — requires TZ=UTC host (open question 2) |
-| K-2 | P2 | Opponent-K unit mismatch: `mlb_team_batting_splits.k9` is K/AB×27 (~6.5-7 league) but divided by `LEAGUE_OPP_K9 = 8.2` (true K/9 scale) → oppAdj systematically ~0.80-0.85, silently absorbed into the empirically-fitted calibration factors; any fix to either side silently mis-calibrates the model | seedTeamBattingSplits.ts:100-102,118 vs mlbKPropsModelService.ts:65,432-434. VERIFIED formulas; average-magnitude estimate INFERRED |
+| K-2 | P2 | Opponent-K unit mismatch: `mlb_team_batting_splits.k9` is K/AB×27 (~6.5-7 league) but divided by `LEAGUE_OPP_K9 = 8.2` (true K/9 scale) → oppAdj systematically ~0.80-0.85, silently absorbed into the empirically-fitted calibration factors; any fix to either side silently mis-calibrates the model. [FIXED in Phase 4 — divisor replaced by per-hand same-basis league mean (`getLeagueMeanTeamK9ByHand`), oppAdj now centers on 1.0 (M-204); the phase-4 code itself warns the 0.870/0.810 calibration defaults were fitted under the old bug and must be re-fitted before ship] | seedTeamBattingSplits.ts:100-102,118 vs mlbKPropsModelService.ts:65,432-434 (pre-fix). VERIFIED formulas; average-magnitude estimate INFERRED |
 | K-3 | P2 | IP fallback tier 3 uses `rolling5.ip5`, which is the **sum** of the last 5 starts' IP (~25-30), as a per-start IP — always clamps to MAX_IP=7.0, inflating lambda for pitchers lacking season stats | seedPitcherRolling5.ts:111-122 (sum) vs mlbKPropsModelService.ts:441-447 (used as per-start, clamp :81). VERIFIED |
 | K-4 | P2 | Owner K-props backtest report counts `backtestResult === "WIN"/"LOSS"`, values never written for K-props (writer emits OVER/UNDER/PUSH) — win rates and edge-tier stats structurally zero | mlbFullBacktestEngine.ts:585-598 vs kPropsBacktestService.ts:218-225,406; exposed at routers.ts:1553-1557, consumed by MlbBacktest.tsx. VERIFIED |
-| K-5 | P2 | Dual, divergent calibration sources: code hardcodes 0.870/0.810 while DB `k_calibration_factor` = 0.776 (updated 2026-05-11 by an out-of-repo process) is read by nothing — no single source of truth for the market's central calibration | mlbKPropsModelService.ts:88-91; census/calibration-constants.tsv (`k_calibration_factor` row); only repo toucher mlbDriftDetector.ts:217 (seeds 1.0). VERIFIED code; DB writer UNKNOWN |
-| K-6 | P3 | Integer book lines: `poissonPOver` thresholds at `floor(bookLine)`, so for whole-number lines the push outcome (X = line) is counted inside pUnder — overstates UNDER probability/edge exactly where AN modal lines land on integers | mlbKPropsModelService.ts:140-143,473-474,481-482. VERIFIED |
+| K-5 | P2 | Dual, divergent calibration sources: code hardcodes 0.870/0.810 while DB `k_calibration_factor` = 0.776 (updated 2026-05-11 by an out-of-repo process) is read by nothing — no single source of truth for the market's central calibration. [FIXED in Phase 4 (partial) — model now reads new DB rows `k_calibration_factor_over`/`_under` per cycle with the hardcoded values demoted to fallbacks (M-207); the orphaned legacy `k_calibration_factor` = 0.776 row is still read by nothing] | mlbKPropsModelService.ts:88-91 (pre-fix); census/calibration-constants.tsv (`k_calibration_factor` row); only repo toucher mlbDriftDetector.ts:217 (seeds 1.0). VERIFIED code; DB writer UNKNOWN |
+| K-6 | P3 | Integer book lines: `poissonPOver` thresholds at `floor(bookLine)`, so for whole-number lines the push outcome (X = line) is counted inside pUnder — overstates UNDER probability/edge exactly where AN modal lines land on integers. [FIXED in Phase 4 — `pUnder` now uses new `poissonPUnder` (`CDF(line−1)` on integer lines), excluding the push mass from both sides] | mlbKPropsModelService.ts:140-143,473-474,481-482 (pre-fix). VERIFIED |
 | K-7 | P3 | Verdict vocabulary split: Python writes EDGE/FADE/NEUTRAL, TS writes OVER/UNDER/PASS; UI highlight requires `verdict === "EDGE"` so it never activates on live data | StrikeoutModel.py:1476-1480 vs mlbKPropsModelService.ts:487-509; MlbPropsCard.tsx:284-286,431. VERIFIED |
 | K-8 | P3 | Backtest "model accuracy" grades `kProj ≥ bookLine` (the UNDER-calibrated mean), not the published verdict/edge rules — reported accuracy does not measure the betting signal users see | kPropsBacktestService.ts:227-232,387-394 vs verdict rules mlbKPropsModelService.ts:487-509 (kProj = lambdaUnder :470,512). VERIFIED |
 | K-9 | P3 | No pre-game line freeze for K-props: book line, odds, and no-vig prob keep updating during live games (AN live lines included in consensus), and the model unconditionally re-scores every 5 min — pre-game published edges are overwritten | kPropsDbHelpers.ts:223-235 (no status check), anKPropsService.ts:199-202 (is_live aggregated), vsinAutoRefresh.ts:1908-1915. VERIFIED |
 | K-10 | P3 | Umpire K modifier exists (`mlb_umpire_modifiers.kModifier`, weekly-seeded) but is never applied to any K-props model — intended-vs-implemented gap given it was scoped to this market | seedUmpireModifiers.ts:222; consumed only in mlbModelRunner.ts:413-521,1825-1826; absent from mlbKPropsModelService.ts (full read) and StrikeoutModel.py (grep). VERIFIED |
 | K-11 | P3 | Python model path (only writer of distribution/percentile columns) is effectively dead: owner-only tRPC, needs local Retrosheet/Statcast files, fixed IP=5.2804 for all pitchers (runner never passes --projected-ip), lineups auto-guessed from the plays file; if ever run, the 5-min TS cycle overwrites its kProj/verdict within minutes, leaving mixed-provenance rows | strikeoutModelRunner.ts:103-115; StrikeoutModel.py:1279,1310-1328; routers.ts:1229-1252; overwrite at mlbKPropsModelService.ts:515-531. VERIFIED wiring; prod usage UNKNOWN |
 | K-12 | P3 | K-props are invisible on the canonical user feed: DimeModelFeed renders no K-props; the pages that do (ModelProjections/ModelResults) are unrouted dead code; remaining surfaces are owner-only (`/m/props`, `/admin/model-results`) despite the public getByGame(s) API | DimeModelFeed.tsx (zero matches), App.tsx:244,276-277,315-320,437-441; MobileOwnerLayout.tsx:25; routers.ts:1154-1178. VERIFIED |
-| K-13 | P3 | Stale/contradictory documentation of the live formula: file header still documents v1 `ip_expected = bookLine/pitcher_k9*9` and a single 0.040 edge threshold; `EDGE_THRESHOLD` constant is dead; kPropsBacktestService header says "every 10 minutes" (cycle is 5) | mlbKPropsModelService.ts:22-36,66 vs :441-447,71-73; kPropsBacktestService.ts:18 vs vsinAutoRefresh.ts:1361. VERIFIED |
+| K-13 | P3 | Stale/contradictory documentation of the live formula: file header still documents v1 `ip_expected = bookLine/pitcher_k9*9` and a single 0.040 edge threshold; `EDGE_THRESHOLD` constant is dead; kPropsBacktestService header says "every 10 minutes" (cycle is 5). [Partially FIXED in Phase 4 — header steps 3 and 6 were rewritten for the opp-adj and push fixes, but the step-4 v1 IP formula (now :23), the single-threshold step-7 text, the dead `EDGE_THRESHOLD` constant (now :72), and the "10 minutes" backtest header all remain stale at HEAD] | mlbKPropsModelService.ts:22-36,66 vs :441-447,71-73 (pre-fix); kPropsBacktestService.ts:18 vs vsinAutoRefresh.ts:1361. VERIFIED |
 | K-14 | P3 | All stats joins are by normalized full name (AN name ↔ MLB API name), with silent league-average fallback (K9=8.5, xfipAdj=1.0, hand='R') on any miss — mismatch rate unknown and unmonitored beyond a log line | mlbKPropsModelService.ts:404-410,432-434; mlbamIdCache.ts:39-47. VERIFIED mechanism; miss rate UNKNOWN |
 
 ---
 
-*Prepared for the Phase-0 census. Line numbers refer to the working tree at commit c9b5b903.*
+*Prepared for the Phase-0 census. Line numbers refer to the working tree at commit c9b5b903
+(verifier note: server/client/drizzle files are byte-identical from c9b5b903 through 1ccf0fa5, so
+all cites also hold at the immediate pre-fix commit; the Phase-4 fix commit 6bce4e36 shifted line
+numbers in `mlbKPropsModelService.ts` (~+6 in the constants block, verdict chain now ~:530-546)
+and appended ~100 lines of model-cycle helpers to `kPropsDbHelpers.ts` — pre-fix cites do not map
+1:1 onto HEAD for those two files).*
+
+---
+
+## Verification (re-run)
+
+Adversarial re-verification, 2026-07-25. Baselines pinned by SHA: **pre-fix = c9b5b903** (the
+dossier's stated reference; `git diff c9b5b903 1ccf0fa5 -- server/ client/ drizzle/ .github/
+scripts/` is empty, so every cite was checked against `git show c9b5b903:<file>`), **post-fix =
+6bce4e36** ("phase 4 root-cause fixes"). Method: every load-bearing parameter value, file:line
+cite, write path, and schedule/trigger was re-read from source; git history claims re-run via
+`git show <sha>`; no DB queries executed.
+
+**Tally: 96 claims checked — 93 confirmed, 3 corrected, 0 unbacked.**
+
+### Corrected
+
+1. **Scheduling § "Per-final-game" bullet (material).** Original text claimed the
+   FINAL-transition `runMultiMarketBacktest` "re-runs `runKPropsBacktest` for that date". The
+   live call is `runMultiMarketBacktest(g.id, false)` (vsinAutoRefresh.ts:1970), and the K-props
+   delegation is gated `if (runKProps && game.gameDate)` (mlbMultiMarketBacktest.ts:1025) — so it
+   is **skipped** on the live path, exactly as the dossier's own write-path table (correctly)
+   stated. The bullet contradicted the table; fixed inline.
+2. **Python parameter table, MC sims/seed cites.** `n_sims: int = 100_000` is at
+   StrikeoutModel.py:586 (not :587); the in-method `default_rng(42)` fallback is at :593-594
+   (not :594-595). Values were correct; cites tightened inline. (Explicit `n_sims=100_000` call
+   sites at :1354/:1368 additionally confirm the 100k claim.)
+3. **Odds-freeze contrast cite.** `vsinAutoRefresh.ts:1655-1656` is the doc comment; the actual
+   live/final skip in `refreshAnApiOdds` is at `vsinAutoRefresh.ts:910`
+   (`gameStatus === "live" || "final"`). Behavior claim was correct; implementation line added
+   so the claim no longer rests on a comment.
+
+### Confirmed (highlights of what was independently re-derived, not merely re-read)
+
+- **Both parameter tables are exact.** All 24 TS-model constants (mlbKPropsModelService.ts:63-103
+  pre-fix) and all Python Variant-D constants (StrikeoutModel.py:71-157) match value-for-value and
+  line-for-line, including the oddball ones (NEGBIN_R=22.20 :108, STARTER_IP_MEAN=5.2804 :109,
+  CAL_ALPHA/BETA 1.0305/0.3314 :116-117, additive blend −2.834/+3.342/+0.500 ×0.040 :763-770).
+- **Two-implementation split and write-set partition**: TS path writes exactly the 12 columns at
+  :515-531; the Python-path-only rich columns (kLine/kPer9/kMedian/kP5/kP95/signalBreakdown/
+  matchupRows/distribution/inningBreakdown) have a single writer, `upsertStrikeoutProp`
+  (db.ts:2146, `VALUES(kLine)` at :2162), reached only via owner tRPC `runModel`
+  (routers.ts:1229-1252). No scheduler invokes the Python path; `--projected-ip` is never passed
+  (grep over strikeoutModelRunner.ts: zero hits) so IP is fixed at 5.2804 as claimed.
+- **Verdict chain semantics** (OVER-filtered falls to PASS, not UNDER — `else if` at pre-fix
+  :516-540 region, cited :487-509 ✓) and **backtest grading** (`kProj >= bookLine` at :227-232,
+  OVER/UNDER/PUSH at :218-225, modelCorrect null on PUSH :389-394, side-indexed scratched-starter
+  fallback :347-379) re-read verbatim.
+- **K-4 vocabulary mismatch is real and remains at HEAD**: `getKPropsBacktestReport` counts
+  `"WIN"/"LOSS"` (mlbFullBacktestEngine.ts:583-598), values only the HR-props writer emits
+  (mlbHrPropsBacktestService.ts:200); kPropsBacktestService and mlbFullBacktestEngine are
+  byte-identical c9b5b903→HEAD, so Phase 4's "model-pick grading" fixes (mlbOutcomeIngestor/
+  mlbScoreRefresh) did **not** touch K-props grading. Findings K-1, K-3, K-4, K-7, K-8, K-9,
+  K-10, K-11, K-12, K-14 are all unaffected by Phase 4 and stand as written.
+- **Patch history**: all five commits re-shown. e336b59f adds `K_CALIBRATION_FACTOR = 0.739`;
+  46d1dbed adds EDGE_THRESHOLD_OVER/UNDER + MAX_OVER_LINE under the "TiDB Outage Resilience"
+  message (under-description confirmed); f25c16c0 adds P2-A/P4-B; 30275454 adds 0.870/0.810 +
+  mlbFullBacktestEngine + 6 tRPC procedures; fcc00912 adds mlbamIdCache. TSV row 42 confirms
+  `k_calibration_factor 0.776 / prev 0.739 / n=693 / LIVE_2026_N693_BIAS_CORRECTED / 2026-05-11`,
+  and repo-wide grep at c9b5b903 confirms mlbDriftDetector.ts:217 is its only toucher.
+- **Exposure/dead-code claims**: ModelProjections.tsx / ModelResults.tsx have zero importers;
+  DimeModelFeed.tsx has zero K-props references; MlbPropsCard highlight requires
+  `verdict === "EDGE"` (:285-286) while the badge checks `!== "PASS"` (:431); routes at
+  App.tsx:244/276-277/315-320/437-441 and MobileOwnerLayout.tsx:25 all as cited (MobileProps
+  lives at `features/mobileOwnerTabs/screens/MobileProps.tsx`, query at :344).
+- **Cron/schedule claims**: immediate fire + 5-min `setInterval` (:2096-2101, MLB_INTERVAL_MS
+  :1361), K-props steps today-only (:1885-1934), seeder cadences 24h/24h/24h/7d (:2116-2207),
+  cronRoutes.ts:49/83, workflow cron `*/5` at yml:36 with the do-not-enable header at yml:4-11.
+  One nuance worth the census's attention: the pre-fix cronRoutes.ts:45-48 comment asserts
+  DISABLE_BACKGROUND_JOBS *is* set on Railway ("that interval never runs, so this endpoint is
+  the only trigger") — evidence toward open question 1, though a comment is not proof.
+
+### Phase-4 fix annotations applied
+
+Phase 4 (6bce4e36) changed, of the files this dossier cites, only `mlbKPropsModelService.ts` and
+`kPropsDbHelpers.ts` (plus cronRoutes/mlbModelRunner/grading files outside the K-props claims).
+Inline `[FIXED in Phase 4 — …]` annotations were added for: K-2 (M-204 opp-adj same-basis
+divisor), K-5 (M-207 DB-read calibration factors, partial — legacy 0.776 row still orphaned),
+K-6 (poissonPUnder push exclusion), K-13 (partial header rewrite), plus the corresponding
+mechanics steps 4/8, the parameter-table rows (LEAGUE_OPP_K9 removed; calibration constants
+renamed `*_DEFAULT` and demoted to fallbacks), and the calibration-provenance paragraph. The
+K-2 annotation carries forward the phase-4 code's own warning that the 0.870/0.810 defaults were
+fitted under the unit bug and require walk-forward re-fitting before the fixed model ships.
+
+*Verifier: adversarial re-run against SHAs c9b5b903 (pre-fix) / 6bce4e36 (post-fix); working tree
+HEAD during verification was b0578e60 (docs-only on top of 6bce4e36).*

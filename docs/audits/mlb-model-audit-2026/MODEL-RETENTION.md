@@ -11,7 +11,14 @@ spot-verified the load-bearing claims of the affected sections, marked SV in FIN
 |---|---|
 | fullgame | agent-verified (74 claims: 69 confirmed, 5 corrected inline, 0 unbacked) |
 | hrprops | agent-verified (121 claims: 115 confirmed, 6 corrected inline, 0 unbacked) |
-| f5, nrfi, kprops, ingestion, gradecal, exposure | tracer-only + supervisor spot-checks (M-203/204/205/207 verified directly); full verification pass queued |
+| f5 | agent-verified re-run (113 claims: 109 confirmed, 4 corrected, 0 unbacked) |
+| nrfi | agent-verified re-run (82: 78/4/0) |
+| kprops | agent-verified re-run (96: 93/3/0) |
+| ingestion | agent-verified re-run (112: 106/6/0) |
+| gradecal | agent-verified re-run (120: 114/6/0) |
+| exposure | agent-verified re-run (79: 76/3/0) |
+
+All eight sections are now adversarially verified; sections also carry `[FIXED in Phase 4]` annotations distinguishing pre-fix findings from the repaired code. |
 
 ## Section index (phase0/)
 | Section | File | Scope |

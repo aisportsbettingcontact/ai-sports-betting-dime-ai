@@ -633,7 +633,7 @@ def build_month_params(data, p1_games, p1_props, months, nrfi_wf):
     params = {}
     all_months = sorted(set(list(by_month.keys()) + list(months)))
     for m in all_months:
-        train_months = [mm for mm in by_month if mm < m and (mm not in SEED_MONTHS or True)]
+        train_months = [mm for mm in by_month if mm < m]
         if m in SEED_MONTHS:
             params[m] = {
                 "month": m, "seed": True, "fitted_on_months": [],
