@@ -234,6 +234,18 @@ html:not(.dark) {
   --row-active: #E4E4E4;
 }
 
+/* Z-INDEX LADDER (documented 2026-07-24, PR #198 X-ZINDEX census — no
+ * collisions found, values recorded so future layers slot in knowingly):
+ *   0–50    page chrome (Tailwind z-10/20/30/40; z-50 = sticky headers, chat
+ *           drawer stack in conversation.css runs 60–100)
+ *   99–100  full-screen overlays (mobile-nav debug panel, plan-editor modal,
+ *           BetTracker banner)
+ *   200     top app modals (chat modal in conversation.css, UserManagement
+ *           confirm) — mutually exclusive by route, never stacked
+ *   toasts  sonner library default (≫200) — always above everything
+ * New layers: chrome ≤50, overlays 100, modals 200. Do not mint new values
+ * above 200; toasts must stay on the library default. */
+
 /* SUPERSEDED (2026-07-24, PR #198, D-BG-SEAM — owner-approved): System
  * previously carried its own fixed neutral-grey appearance (#121212 canvas,
  * #181818 cards, #202020 raised). That third identity produced a canvas

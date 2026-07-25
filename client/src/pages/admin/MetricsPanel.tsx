@@ -235,10 +235,10 @@ export function MetricsPanel() {
                     <div className={`text-[10px] sm:text-xs font-bold font-mono ${b.color} leading-none`}>
                       {histLoading ? "—" : b.count}
                     </div>
-                    <div className="text-[9px] sm:text-[10px] text-foreground leading-none text-center truncate w-full">
+                    <div className="text-[10px] text-foreground leading-none text-center truncate w-full">
                       {b.label}
                     </div>
-                    <div className="text-[9px] sm:text-[10px] text-muted-foreground leading-none">
+                    <div className="text-[10px] text-muted-foreground leading-none">
                       {histLoading ? "" : `${pct}%`}
                     </div>
                   </div>

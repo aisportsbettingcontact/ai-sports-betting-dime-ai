@@ -288,7 +288,7 @@ function VerdictSide({ diff, label, isStrong, logoUrl, teamSlug, teamName, compa
           <TeamLogo slug={teamSlug ?? ""} name={teamName ?? ""} logoUrl={logoUrl} size={16} />
         )}
         <span className="font-bold leading-none whitespace-nowrap uppercase tracking-wide text-[11px]" style={{ color: "hsl(var(--foreground))" }}>
-          {showArrow && <span className="mr-0.5 text-[9px]" style={{ color }}>▲</span>}
+          {showArrow && <span className="mr-0.5 text-[10px]" style={{ color }}>▲</span>}
           {displayLabel}
         </span>
         {roi !== null ? (
@@ -2683,15 +2683,15 @@ function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggle
         {isLive ? (
           <>
             {game.gameClock && (
-              <span className="text-[9px] tabular-nums" style={{ color: "hsl(var(--muted-foreground))" }}>{game.gameClock}</span>
+              <span className="text-[10px] tabular-nums" style={{ color: "hsl(var(--muted-foreground))" }}>{game.gameClock}</span>
             )}
-            <span className="gc-live flex items-center gap-0.5 text-[8px] font-black tracking-widest uppercase flex-shrink-0" style={{ color: "#45E0A8" }}>
+            <span className="gc-live flex items-center gap-0.5 text-[10px] font-black tracking-widest uppercase flex-shrink-0" style={{ color: "#45E0A8" }}>
               <span className="w-1 h-1 rounded-full animate-pulse inline-block" style={{ background: "#45E0A8" }} />
               LIVE
             </span>
           </>
         ) : isFinal ? (
-          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold tracking-wide" style={{ background: "#000000", color: "hsl(var(--muted-foreground))" }}>FINAL</span>
+          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wide" style={{ background: "#000000", color: "hsl(var(--muted-foreground))" }}>FINAL</span>
         ) : (
           <span className="text-[10px] font-bold" style={{ color: "hsl(var(--muted-foreground))" }}>{time}</span>
         )}
