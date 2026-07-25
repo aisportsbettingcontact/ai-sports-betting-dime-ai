@@ -1,0 +1,91 @@
+{
+  "cross_cutting_counts": {
+    "adversarial_or_contradictory_records": 0,
+    "multi_tool_records": 0,
+    "multi_turn_records": 0,
+    "sport_neutral_records_when_traffic_unknown": 0
+  },
+  "curriculum_version": "dime-curriculum-v1",
+  "interaction_mode_counts": {},
+  "issues": [
+    "train has 8 records; expected 2160",
+    "train has unknown task families: ['market_analysis', 'privacy_security', 'responsible_gaming', 'simulation']",
+    "train.conversation_epistemics is 0; expected 216",
+    "train.tool_selection_arguments is 0; expected 324",
+    "train.tool_grounding_failures is 0; expected 324",
+    "train.market_math is 2; expected 216",
+    "train.odds_movement_splits is 0; expected 270",
+    "train.matchup_trends_projections is 0; expected 216",
+    "train.bet_tracker_coaching is 2; expected 216",
+    "train.simulation_analysis is 0; expected 162",
+    "train.safety_privacy_security is 0; expected 216",
+    "validation has 4 records; expected 240",
+    "validation has unknown task families: ['current_odds', 'live_analysis', 'responsible_gaming']",
+    "validation.conversation_epistemics is 0; expected 24",
+    "validation.tool_selection_arguments is 0; expected 36",
+    "validation.tool_grounding_failures is 0; expected 36",
+    "validation.market_math is 1; expected 24",
+    "validation.odds_movement_splits is 0; expected 30",
+    "validation.matchup_trends_projections is 0; expected 24",
+    "validation.bet_tracker_coaching is 0; expected 24",
+    "validation.simulation_analysis is 0; expected 18",
+    "validation.safety_privacy_security is 0; expected 24",
+    "12 records lack required curriculum labels",
+    "interaction_mode.successful_tool_assisted is 0; expected 1200",
+    "interaction_mode.degraded_tool_assisted is 0; expected 420",
+    "interaction_mode.direct_no_tool is 0; expected 480",
+    "interaction_mode.clarification_abstention_protective is 0; expected 300",
+    "single-tool get_game_context is 0; minimum 40",
+    "single-tool get_current_odds is 0; minimum 40",
+    "single-tool get_odds_history is 0; minimum 40",
+    "single-tool get_market_splits is 0; minimum 40",
+    "single-tool calculate_market_math is 0; minimum 40",
+    "single-tool get_bet_tracker_summary is 0; minimum 40",
+    "single-tool run_simulation is 0; minimum 40",
+    "multi_turn_records is 0; minimum 720",
+    "multi_tool_records is 0; minimum 480",
+    "adversarial_or_contradictory_records is 0; minimum 360",
+    "sport_neutral_records_when_traffic_unknown is 0; minimum 720"
+  ],
+  "missing_curriculum_label_count": 12,
+  "missing_curriculum_label_examples": [
+    "sft_math_novig_001",
+    "sft_math_ev_002",
+    "sft_market_splits_003",
+    "sft_coach_small_sample_004",
+    "sft_coach_process_005",
+    "sft_simulation_006",
+    "sft_safety_chasing_007",
+    "sft_privacy_cross_user_008",
+    "sft_val_stale_live_101",
+    "sft_val_no_current_data_102",
+    "sft_val_underage_103",
+    "sft_val_math_clv_104"
+  ],
+  "partition_leakage": [],
+  "pass": false,
+  "records": {
+    "total": 12,
+    "train": 8,
+    "validation": 4
+  },
+  "scenario_leakage": [],
+  "schema_version": "dime-curriculum-audit-v1",
+  "single_tool_counts": {},
+  "task_counts": {
+    "train": {
+      "bet_tracker_coaching": 2,
+      "market_analysis": 1,
+      "market_math": 2,
+      "privacy_security": 1,
+      "responsible_gaming": 1,
+      "simulation": 1
+    },
+    "validation": {
+      "current_odds": 1,
+      "live_analysis": 1,
+      "market_math": 1,
+      "responsible_gaming": 1
+    }
+  }
+}

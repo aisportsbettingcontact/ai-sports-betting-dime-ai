@@ -1,11 +1,11 @@
 /**
  * Dime 1.0 client — OpenAI-compatible chat completions over HTTPS.
  * ---------------------------------------------------------------
- * v1 architecture: Railway is the control plane (auth, entitlement, rate
- * limits, retrieval, prompt construction, deterministic math, response
- * validation, logging). The GPU execution plane is a private RunPod
- * Serverless endpoint running vLLM with the 4-bit Dime 1.0 checkpoint.
- * Runbook: ml/dime-1.0/README.md
+ * Reserved future integration scaffold. The provider is frozen and no
+ * production checkpoint, endpoint, or execution plane is approved. A later
+ * promotion must satisfy ml/dime-1.0/README.md and
+ * ml/dime-1.0/docs/RELEASE_GATES.md without changing the control-plane
+ * responsibilities in this application.
  *
  * Endpoint resolution (first match wins):
  *   DIME_MODEL_BASE_URL     → full OpenAI-compatible base URL including /v1
@@ -16,10 +16,8 @@
  *   DIME_MODEL_API_SECRET → private load-balancing endpoint secret
  *   RUNPOD_API_KEY        → RunPod account API key (serverless vLLM worker)
  *
- * Served model name: DIME_MODEL_VERSION (e.g. "dime-1.0-v1.0.0"), falling
- * back to "dime-1.0". Must match the endpoint's served model name so a
- * version mismatch fails loudly instead of silently answering from the
- * wrong checkpoint.
+ * The resolution behavior below is retained for a future owner-authorized
+ * integration. It is unreachable while DIME_CHAT_LLM_PROVIDER is "frozen".
  */
 
 import { DIME1_DEFAULT_SERVED_MODEL } from "./dime1Model";

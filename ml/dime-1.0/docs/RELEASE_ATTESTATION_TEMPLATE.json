@@ -1,0 +1,24 @@
+{
+  "schema_version": "dime-release-attestation-v1",
+  "public_release_approved": false,
+  "repo_id": "taileredsports/Llama-3-Dime-1.0",
+  "approver": null,
+  "approved_at_utc": null,
+  "adapter_model_sha256": null,
+  "training_manifest_sha256": null,
+  "model_card_sha256": null,
+  "evaluation_report_sha256": null,
+  "chat_template_sha256": null,
+  "approvals": {
+    "base_model_license_reviewed": false,
+    "adapter_license_reviewed": false,
+    "code_license_reviewed": false,
+    "dataset_rights_reviewed": false,
+    "evaluation_rights_reviewed": false,
+    "feed_rights_reviewed": false,
+    "privacy_reviewed": false,
+    "responsible_gaming_reviewed": false,
+    "security_reviewed": false
+  },
+  "notes": "Bind this approval to the exact hashes only after all reviews pass."
+}

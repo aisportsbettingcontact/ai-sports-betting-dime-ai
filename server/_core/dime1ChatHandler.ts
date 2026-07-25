@@ -1,5 +1,5 @@
 /**
- * Dime 1.0 chat handler — the "dime1" branch of POST /api/dime/chat.
+ * Dime 1.0 chat handler — frozen future "dime1" integration scaffold.
  * ---------------------------------------------------------------
  * Lives in its own module (not inline in dime-chat.route.ts) so the route
  * keeps a single context/stream call site for the provider-freeze contract
@@ -10,8 +10,9 @@
  *   - the same SSE contract the client already parses (meta → delta → done)
  *   - the same post-generation gates: validateDimeResponseText +
  *     containsProhibitedBettingCertainty, with whole-answer withholding
- * Only the generation call differs: a private RunPod vLLM endpoint serving
- * the 4-bit Dime 1.0 checkpoint instead of the Claude API.
+ * No production model or endpoint is approved. This handler is unreachable
+ * while DIME_CHAT_LLM_PROVIDER is "frozen"; a later owner-authorized promotion
+ * must prove the canonical release gates before activating it.
  */
 
 import type { Request, Response } from "express";

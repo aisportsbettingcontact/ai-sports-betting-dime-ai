@@ -1,0 +1,11 @@
+{
+  "chat_template_sha256": "2407ed345ce3013e1e1279d46ea7e4e6e78a9a0696ac226a2f24f697b9504087",
+  "config_sha256": "be2a7cfcbfacec09a4b215bff356a4f3fff16c0c96e442f05c0f1a0d57cc104b",
+  "parent_model_id": "meta-llama/Llama-3.1-8B",
+  "parent_model_revision": "d04e592bb4f6aa9cfee91e2e20afa771667e1d4b",
+  "requirements_lock_sha256": "42aacd1366922702d8643334af0f89da74d26c306f03279ee69467ea27123dc6",
+  "runtime_contract_sha256": "87df0f32b43e77228eb1b5f910d190c2d8531b9078b1daf88f0dbe475104af97",
+  "tool_catalog_sha256": "e964e7e4a9dfd2229f320a337618a53a815b50ac570c86fc5e2a341317fd6569",
+  "train_data_sha256": "98a07c4ae1ec87a1647177b7404db909d1db7032d9e9234e15ea74f848c3d033",
+  "validation_data_sha256": "56a9e8d038ae0639dd590704ab59129bcb64bd74381165d8decc8e074f2c5c66"
+}

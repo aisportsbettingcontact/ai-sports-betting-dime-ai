@@ -667,3 +667,334 @@ Diff        git diff --check exited 0
 ```
 
 An independent re-review found no remaining matcher or date-scope blockers.
+
+## Incident 19 — 2026-07-25 — Initial Dime foundation patch context mismatch
+
+Status: RESOLVED
+
+I attempted the first Dime foundation adaptation patch with a cache-variable
+context that did not match the imported `scripts/bootstrap_env.sh`. The patch
+tool rejected the complete patch before changing any file:
+
+```text
+apply_patch verification failed: Failed to find expected lines
+```
+
+I read the imported script, confirmed its existing variable is
+`PIP_CACHE_DIR`, and reapplied the intended changes against the exact current
+text. No partial edit from the rejected patch was retained.
+
+## Incident 20 — 2026-07-25 — Imported research-title patch context mismatch
+
+Status: RESOLVED
+
+I coupled several documentation adaptations to an assumed research-document
+title. The imported title differed, so the patch tool rejected the complete
+patch before changing any file:
+
+```text
+apply_patch verification failed: Failed to find expected lines
+```
+
+I read both exact headings, split the documentation changes into verified
+patches, and applied the historical-authority notices against their actual
+titles. No partial edit from the rejected patch was retained.
+
+## Incident 21 — 2026-07-25 — PR #199 removed the governed Dime runbook
+
+Status: OPEN
+
+[PR #199](https://github.com/aisportsbettingcontact/ai-sports-betting-dime-ai/pull/199)
+merged a deletion-only Dime ML state: `ml/dime-1.0/README.md` was absent while
+`CLAUDE.md`, `server/_core/dimeChatModel.ts`, and
+`server/dime1ProviderWiring.test.ts` still pointed to it as an operational
+runbook or evaluation gate. Runtime profile comments also described the
+obsolete Llama 3 8B Instruct, merged/AWQ, and deployed RunPod assumptions.
+
+The PR description did not document those dangling references, and the
+[P2 review finding](https://github.com/aisportsbettingcontact/ai-sports-betting-dime-ai/pull/199#discussion_r3650369828)
+remains unresolved. The remediation must remain open until the replacement
+foundation is merged to `main` and verified. The draft remediation PR link
+will be added after GitHub creates it; creating a draft alone does not resolve
+the old finding.
+
+## Incident 22 — 2026-07-25 — uv default cache is outside the workspace sandbox
+
+Status: RESOLVED
+
+The first deterministic lock regeneration could not initialize uv's default
+user cache because that location is outside the writable workspace:
+
+```text
+Failed to initialize cache
+Operation not permitted
+```
+
+No project file was changed by the failed command. The same repository-pinned
+operation was rerun with `UV_CACHE_DIR` set to a task-scoped directory under
+`/private/tmp`, which is writable in the isolated environment. That restricted
+run then reached the expected network boundary while resolving PyPI:
+
+```text
+Failed to fetch: https://pypi.org/simple/pyyaml/
+failed to lookup address information
+```
+
+The exact `uv lock` command was approved for network access and then resolved
+15 packages successfully, adding the pinned pytest and Ruff development
+dependency graph to `uv.lock`.
+
+## Incident 23 — 2026-07-25 — sibling worktree virtualenv required scoped approval
+
+Status: RESOLVED
+
+`uv lock --check` passed, but the initial frozen synchronization could not
+create `.venv` because the requested isolated sibling worktree is outside the
+command sandbox's default writable root:
+
+```text
+failed to create directory ml/dime-1.0/.venv
+Operation not permitted
+```
+
+The task-scoped `uv sync --frozen --dev` command was approved for the sibling
+worktree. It created only the ignored local environment and installed the 13
+locked CPU development packages; no model or tokenizer was downloaded.
+
+## Incident 24 — 2026-07-25 — new repository contract test failed Ruff import layout
+
+Status: RESOLVED
+
+The first Ruff pass found one formatting-only import-layout error in the new
+static repository contract test:
+
+```text
+I001 Import block is un-sorted or un-formatted
+tests/test_repository_contract.py
+```
+
+Ruff's read-only diff showed that the cause was one extra blank line between
+the standard-library imports and module constants. That line was removed and
+the complete Ruff gate was rerun.
+
+## Incident 25 — 2026-07-25 — static prompt contract exposed missing abstention label
+
+Status: RESOLVED
+
+The first complete CPU pytest run reported 54 passing tests and one failure:
+
+```text
+FAILED tests/test_repository_contract.py::test_static_prompt_template_and_tool_invariants
+AssertionError: assert 'NO DATA' in prompt
+```
+
+The versioned training prompt already required narrowing or abstaining when
+evidence is unavailable, but it did not pin the runtime's deterministic
+`NO DATA` label. The prompt now requires that exact label, names the missing
+evidence, and preserves abstention. The full suite was rerun after the change.
+
+## Incident 26 — 2026-07-25 — combined prompt/incident patch targeted the wrong file
+
+Status: RESOLVED
+
+The first attempt to record Incident 25 combined two file edits but omitted the
+second file header, so the patch tool searched the prompt for an
+`INCIDENTS.md` heading and rejected the complete patch:
+
+```text
+apply_patch verification failed: Failed to find expected lines
+```
+
+No partial change was retained. The prompt and incident updates were then
+applied with explicit file targets.
+
+## Incident 27 — 2026-07-25 — public-data gate rejected synthetic tracker fixtures
+
+Status: RESOLVED
+
+The first standalone data-validation run rejected two public sample records:
+
+```text
+DataValidationError: data/sft/train.sample.jsonl:
+public sample cannot contain user data
+```
+
+Both records use wholly synthetic Bet Tracker values and synthetic source
+identifiers; they contain no real user history or identifier. Their imported
+metadata nevertheless classified them as containing user data. The public
+fixtures were corrected to `contains_user_data: false`, with no consent basis
+or user partition hash, so the metadata now matches their synthetic-only
+contents. The public-data gate and full test suite were rerun.
+
+## Incident 28 — 2026-07-25 — root postinstall rejected Homebrew system Python
+
+Status: RESOLVED
+
+The required `corepack pnpm install --frozen-lockfile` installed all 1,018
+locked Node packages, then the repository's existing `postinstall` hook tried
+to run `pip3 install -r requirements.txt` against Homebrew's protected Python:
+
+```text
+error: externally-managed-environment
+ELIFECYCLE Command failed with exit code 1
+```
+
+No system package was changed. A task-only Python virtual environment was
+created under `/private/tmp` and placed first on `PATH`; the exact frozen pnpm
+install was then rerun so the unchanged hook installed only into that isolated
+environment.
+
+## Incident 29 — 2026-07-25 — isolated postinstall PATH omitted Corepack
+
+Status: RESOLVED
+
+The first isolated postinstall rerun used a minimal `PATH` that included the
+temporary Python environment but omitted the host's `/usr/local/bin` Corepack
+location:
+
+```text
+zsh: command not found: corepack
+```
+
+The command stopped before package work began. I resolved the executable
+locations with `command -v`, added `/usr/local/bin` to the scoped `PATH`, and
+reran the same frozen install.
+
+## Incident 30 — 2026-07-25 — root Python requirements lack Python 3.14 wheels
+
+Status: RESOLVED
+
+The task-only environment inherited the host's Python 3.14. The repository's
+pinned SciPy 1.13.1 has no compatible Python 3.14 wheel, so pip attempted a
+source build and stopped because no Fortran compiler is installed:
+
+```text
+scipy 1.13.1
+ERROR: Unknown compiler(s): gfortran, flang, ifort
+metadata-generation-failed
+```
+
+This did not indicate a PR change or alter the system interpreter. The host
+also provides Python 3.11, which matches the repository's Railway runtime and
+has wheels for the pinned requirements. I recreated the task-only environment
+with Python 3.11 and reran the unchanged frozen install.
+
+## Incident 31 — 2026-07-25 — local gated suite inherited host DB and CI configuration
+
+Status: RESOLVED
+
+The first full `test:gated:local` run inherited external host configuration and
+reported:
+
+```text
+Test Files  2 failed | 156 passed (158)
+Tests       3 failed | 2326 passed (2329)
+environmentBound=3
+```
+
+One real-database registration assertion observed an externally invalidated
+session instead of its fixture's expected conflict. Two CI-secret validation
+assertions rejected the inherited session-secret length. The local environment
+gate correctly refused to classify that mixed run as passing and also reported
+one stale provider allowlist entry because another inherited provider setting
+made its test pass.
+
+No value was inspected or copied. The local-profile suite was rerun with
+external database, CI-secret, and model-provider variables explicitly removed
+from its process environment, allowing the repository's declared local
+environment policy to govern unavailable integrations.
+
+## Incident 32 — 2026-07-25 — final secret-scan shell pattern was malformed
+
+Status: RESOLVED
+
+One read-only final scan combined shell quoting and a regular expression
+containing quote characters incorrectly:
+
+```text
+zsh: unmatched quote
+```
+
+The scan did not execute and changed no file. I split the patterns into simpler
+read-only searches and reran the complete staged-content review.
+
+## Incident 33 — 2026-07-25 — workflow parse used the system Python environment
+
+Status: RESOLVED
+
+The first read-only workflow parse called the host Python, which does not have
+the project YAML library:
+
+```text
+ModuleNotFoundError: No module named 'yaml'
+```
+
+The workflow was then parsed with the synchronized Dime CPU development
+environment, where the pinned YAML dependency is part of the validated lock.
+
+## Incident 34 — 2026-07-25 — optional Prettier probe found baseline style drift
+
+Status: RESOLVED with scoped verification
+
+An extra, non-required Prettier check reported style warnings in the six
+modified existing TypeScript files. The new workflow itself passed:
+
+```text
+Code style issues found in 6 files
+```
+
+Those files already contain repository-wide formatting drift, and formatting
+entire runtime modules would create unrelated changes outside this remediation.
+No bulk rewrite was applied. The narrow changes instead passed `tsc --noEmit`,
+all 45 focused Dime tests, the full local environment gate, the production
+build, and `git diff --check`.
+
+## Incident 35 — 2026-07-25 — staged check found imported whitespace defects
+
+Status: RESOLVED
+
+The first staged `git diff --check` found five imported files with an extra
+blank line at EOF and three research-document lines with Markdown hard-break
+spaces:
+
+```text
+new blank line at EOF
+trailing whitespace
+```
+
+The affected text files were normalized mechanically to a single final newline
+and no trailing spaces, then explicitly restaged. No content or generated
+evidence JSON was changed.
+
+## Incident 36 — 2026-07-25 — sandboxed GitHub authentication probe was inconclusive
+
+Status: RESOLVED
+
+The first GitHub pre-push probe ran without network access. `gh auth status`
+reported the stored session as invalid and the following API request could not
+connect:
+
+```text
+Failed to log in to github.com
+error connecting to api.github.com
+```
+
+No credential value was read and no remote mutation occurred. The exact
+authentication check was rerun with approved network access and confirmed the
+active account and required repository/workflow scopes. A read-only pull
+request query then confirmed that PR #200 did not exist and #199 remained the
+latest repository pull request.
+
+## Incident 37 — 2026-07-25 — GitHub incident patch used wrapped context
+
+Status: RESOLVED
+
+The first attempt to add Incident 36 assumed a line wrap that differed from the
+current file, so the patch tool rejected the complete multi-file patch:
+
+```text
+apply_patch verification failed: Failed to find expected lines
+```
+
+No partial edit was retained. I read the exact tail and reapplied the incident
+and publication-confirmation updates against current context.

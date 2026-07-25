@@ -1,11 +1,11 @@
 /**
- * Dime 1.0 — v1 model profile.
+ * Dime 1.0 — frozen future runtime profile.
  * ---------------------------------------------------------------
- * Dime 1.0 is the product alias for Llama-3-Dime-1.0: a QLoRA fine-tune of
- * meta-llama/Meta-Llama-3-8B-Instruct, quantized to 4-bit (AWQ) and served
- * by vLLM behind a private RunPod Serverless endpoint. The Meta Llama 3
- * license requires derivative model artifact names to begin with "Llama 3",
- * hence the artifact/product name split.
+ * Dime 1.0 is the product alias for the intended Llama-3-Dime-1.0 artifact.
+ * The governed development foundation uses the exact pinned
+ * meta-llama/Llama-3.1-8B Base revision below for future QLoRA/SFT
+ * post-training and evaluation. No production checkpoint, merged model,
+ * quantized serving artifact, endpoint, or provider activation is approved.
  *
  * v1 role (deliberately narrow):
  *   1. Sports-betting-only analysis and explanation
@@ -14,18 +14,20 @@
  *   4. Routing, extraction, classification, tagging, and summarization
  *   5. Strict refusal to invent missing data
  *
- * The same policy is trained into the checkpoint (ml/dime-1.0/data/) AND
- * restated here at inference time — prompt policy alone is not trusted.
- * Post-generation validation (dimeVerdict/dimeSafety) still gates every
- * response regardless of what the model says.
+ * The canonical training behavior contract is
+ * ml/dime-1.0/prompts/dime_system_v1.md. This runtime prompt is a frozen
+ * scaffold and is not claimed to be byte-identical. A later promotion PR must
+ * reconcile and hash the approved prompts before activation. Post-generation
+ * validation (dimeVerdict/dimeSafety) remains mandatory.
  */
 
 export const DIME1_PRODUCT_PROFILE = "Dime 1.0";
 export const DIME1_PROFILE_VERSION = "1.0.0";
-export const DIME1_BASE_MODEL = "meta-llama/Meta-Llama-3-8B-Instruct";
+export const DIME1_BASE_MODEL = "meta-llama/Llama-3.1-8B";
+export const DIME1_BASE_MODEL_REVISION = "d04e592bb4f6aa9cfee91e2e20afa771667e1d4b";
 /** Meta Llama 3 license naming clause: derivative names start with "Llama 3". */
 export const DIME1_ARTIFACT_NAME = "Llama-3-Dime-1.0";
-/** Must match vLLM's --served-model-name (or SERVED_MODEL_NAME on RunPod). */
+/** Reserved future served-model alias; no endpoint is approved or active. */
 export const DIME1_DEFAULT_SERVED_MODEL = "dime-1.0";
 
 /** Low temperature: analysis and utility work, not creative writing. */

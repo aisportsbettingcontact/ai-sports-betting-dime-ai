@@ -8,6 +8,9 @@ dist
 .scraper-logs/
 # Personal reference material — never ship to production bundles (CLAUDE.md)
 dime-ai/design-bundle/uploads
+# Governed LLM development sources, fixtures, and evidence are never part of
+# the Railway production image.
+ml/dime-1.0/
 # Local tooling / scratch
 .claude
 .agents

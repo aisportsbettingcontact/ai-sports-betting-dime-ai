@@ -1,0 +1,93 @@
+name: Dime LLM Validation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "ml/dime-1.0/**"
+      - "server/_core/dime1*.ts"
+      - "server/_core/dimeChatModel.ts"
+      - "server/dime-chat.route.ts"
+      - "server/dime1ProviderWiring.test.ts"
+      - "CLAUDE.md"
+      - ".dockerignore"
+      - ".github/workflows/dime-llm-validation.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "ml/dime-1.0/**"
+      - "server/_core/dime1*.ts"
+      - "server/_core/dimeChatModel.ts"
+      - "server/dime-chat.route.ts"
+      - "server/dime1ProviderWiring.test.ts"
+      - "CLAUDE.md"
+      - ".dockerignore"
+      - ".github/workflows/dime-llm-validation.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dime-llm-validation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Dime LLM Validation
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ml/dime-1.0
+    env:
+      HF_HUB_OFFLINE: "1"
+      TRANSFORMERS_OFFLINE: "1"
+      HF_DATASETS_OFFLINE: "1"
+      DATASETS_OFFLINE: "1"
+    steps:
+      - name: "[INPUT] Checkout repository"
+        uses: actions/checkout@v4
+
+      - name: "[STEP] Setup Python 3.12"
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: "[STEP] Setup pinned uv"
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.11.32"
+          enable-cache: true
+          cache-dependency-glob: "ml/dime-1.0/uv.lock"
+
+      - name: "[STEP] Synchronize frozen CPU dependencies"
+        run: |
+          uv lock --check
+          uv sync --frozen --dev
+          uv pip check
+
+      - name: "[STEP] Lint, compile, and test"
+        run: |
+          uv run ruff check .
+          uv run python -m compileall -q src scripts
+          uv run pytest -q
+
+      - name: "[STEP] Validate public data and contracts"
+        run: uv run python scripts/validate_data.py
+
+      - name: "[STEP] Reproduce deterministic starter audits"
+        run: |
+          audit_dir="$(mktemp -d)"
+          trap 'rm -rf "${audit_dir}"' EXIT
+          uv run python scripts/audit_curriculum.py \
+            --report "${audit_dir}/curriculum-audit.json"
+          uv run python scripts/audit_evaluation_program.py \
+            --report "${audit_dir}/evaluation-program-audit.json"
+          cmp "${audit_dir}/curriculum-audit.json" \
+            evidence/audits/starter-v1.1.0/curriculum-audit.json
+          cmp "${audit_dir}/evaluation-program-audit.json" \
+            evidence/audits/starter-v1.1.0/evaluation-program-audit.json
+
+      - name: "[OUTPUT] Confirm CPU-only non-release validation"
+        run: |
+          echo "PASS: source, schemas, fixtures, prompts, tools, and audits validated."
+          echo "NOT EXECUTED: model/tokenizer download, GPU tests, training, publishing, or serving."

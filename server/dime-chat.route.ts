@@ -191,14 +191,11 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
     return;
   }
 
-  // --- DIME 1.0 PROVIDER (v1): self-hosted Llama-3-based Dime 1.0 served
-  // 4-bit by vLLM from a private RunPod Serverless endpoint. Railway stays
-  // the control plane — auth, entitlement, rate limits, and the distress
-  // screen already ran above; retrieval grounding, prompt construction, and
-  // post-generation validation run inside the handler. Only generation
-  // leaves the box. This branch sits ABOVE the frozen guard and delegates
-  // to a separate module so the freeze contract tests keep pinning the
-  // frozen branch as the single barrier in front of the Claude path. ---
+  // --- DIME 1.0 PROVIDER (future scaffold): no production checkpoint,
+  // endpoint, or provider activation is approved. This branch remains above
+  // the frozen guard only to preserve the existing integration contract.
+  // Activation requires a separate owner-authorized promotion PR after the
+  // canonical ml/dime-1.0 release gates pass. ---
   if (DIME_CHAT_LLM_PROVIDER === "dime1") {
     await handleDime1ChatRequest({ req, res, requestId, startTime, messages, requestClass, responseBudget });
     return;

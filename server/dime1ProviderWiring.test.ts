@@ -2,22 +2,28 @@ import { describe, expect, it } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
 import { DIME_CHAT_LLM_PROVIDER, type DimeChatLlmProvider } from "./_core/dimeChatModel";
+import {
+  DIME1_BASE_MODEL,
+  DIME1_BASE_MODEL_REVISION,
+} from "./_core/dime1Model";
 
 /**
- * Dime 1.0 provider wiring — contract tests (2026-07-12).
+ * Dime 1.0 provider wiring — frozen integration contract.
  *
- * v1 architecture: Railway is the control plane; the GPU execution plane is
- * a private RunPod Serverless endpoint serving the 4-bit Dime 1.0 checkpoint
- * via vLLM. These tests pin:
+ * The Dime 1.0 client, handler, and route branch remain reserved future
+ * scaffolding. No production checkpoint, merged or quantized artifact,
+ * endpoint, or provider activation is approved. These tests pin:
  *   1. "dime1" is a registered provider, but the shipped default remains
- *      "frozen" until the checkpoint is deployed and the eval gates in
- *      ml/dime-1.0/README.md pass;
- *   2. the route branch sits ABOVE the frozen guard and delegates to the
+ *      "frozen";
+ *   2. the governed foundation identity and revision are exact, and the
+ *      canonical runbook and release gates exist;
+ *   3. the route branch sits ABOVE the frozen guard and delegates to the
  *      handler module, so the provider-freeze contract tests keep pinning
  *      the frozen branch as the single barrier before the Claude path;
- *   3. the Dime 1.0 path keeps control-plane parity: grounding, SSE contract,
+ *   4. the Dime 1.0 path keeps control-plane parity: grounding, SSE contract,
  *      and post-generation validation identical to the Claude path;
- *   4. the execution plane is isolated — no Anthropic SDK/client imports.
+ *   5. the reserved execution path is isolated — no Anthropic SDK/client
+ *      imports.
  */
 
 const routeSrc = fs.readFileSync(path.join(import.meta.dirname, "dime-chat.route.ts"), "utf8");
@@ -26,6 +32,7 @@ const handlerSrc = fs.readFileSync(
   "utf8",
 );
 const clientSrc = fs.readFileSync(path.join(import.meta.dirname, "_core", "dime1Client.ts"), "utf8");
+const repositoryRoot = path.resolve(import.meta.dirname, "..");
 
 describe("provider registry", () => {
   it('accepts "dime1" as a provider value', () => {
@@ -33,8 +40,24 @@ describe("provider registry", () => {
     expect(dime1).toBe("dime1");
   });
 
-  it("ships frozen until the Dime 1.0 checkpoint is deployed and eval gates pass", () => {
+  it("ships frozen while the Dime 1.0 foundation remains non-release work", () => {
     expect(DIME_CHAT_LLM_PROVIDER).toBe("frozen");
+  });
+
+  it("pins the exact Llama 3.1 Base foundation identity", () => {
+    expect(DIME1_BASE_MODEL).toBe("meta-llama/Llama-3.1-8B");
+    expect(DIME1_BASE_MODEL_REVISION).toBe(
+      "d04e592bb4f6aa9cfee91e2e20afa771667e1d4b",
+    );
+  });
+
+  it("tracks the canonical runbook and release gates", () => {
+    expect(fs.existsSync(path.join(repositoryRoot, "ml", "dime-1.0", "README.md"))).toBe(true);
+    expect(
+      fs.existsSync(
+        path.join(repositoryRoot, "ml", "dime-1.0", "docs", "RELEASE_GATES.md"),
+      ),
+    ).toBe(true);
   });
 });
 
@@ -89,7 +112,7 @@ describe("dime1 handler — control-plane parity with the Claude path", () => {
   });
 });
 
-describe("dime1 execution plane is isolated from Claude wiring", () => {
+describe("reserved dime1 execution path is isolated from Claude wiring", () => {
   it("client and handler never import the Anthropic SDK or client factory", () => {
     for (const src of [handlerSrc, clientSrc]) {
       expect(src).not.toMatch(/@anthropic-ai\/sdk|anthropicClient|ANTHROPIC_/);
