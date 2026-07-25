@@ -111,3 +111,12 @@ Feed: outage renders "Projections unavailable" + Retry instead of the false empt
 Chat CSS: IBM Plex Mono stacks → Familjen per the single-font mandate. Docs: MASTER.md
 supersession notes + NEW evidence-derived viewport support contract (320–1920 / 500–1000+ /
 DPR 1–3; WebKit/Firefox unverified).
+
+## Addendum (2026-07-24, PR #198)
+
+The deferred-defect follow-up ran with the runtime this audit lacked (ephemeral DB, real auth,
+and WebKit). Six suspects adjudicated (5 rejected with evidence, X-ADMIN-ALPHA confirmed and
+fixed), WcFeedInline carve-out executed, D-BG-SEAM/X-PY-CARDGEN closed per owner approval, and
+the surfaces-runtime-inspected gate moved 25/51 → 50/51. Hex metric superseded by the ratchet
+test's canonical definition (1,795 frozen). Full evidence, exact numerators, and the unchanged
+`INCOMPLETE` verdict: `2026-07-24-deferred-defects-pr198-report.md`.
