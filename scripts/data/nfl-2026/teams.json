@@ -1,0 +1,290 @@
+[
+  {
+    "espnId": 2,
+    "displayName": "Buffalo Bills",
+    "abbreviation": "BUF",
+    "conference": "AFC",
+    "division": "AFC East",
+    "venueId": 11938,
+    "rosterCount": 92
+  },
+  {
+    "espnId": 15,
+    "displayName": "Miami Dolphins",
+    "abbreviation": "MIA",
+    "conference": "AFC",
+    "division": "AFC East",
+    "venueId": 3948,
+    "rosterCount": 92
+  },
+  {
+    "espnId": 17,
+    "displayName": "New England Patriots",
+    "abbreviation": "NE",
+    "conference": "AFC",
+    "division": "AFC East",
+    "venueId": 3738,
+    "rosterCount": 95
+  },
+  {
+    "espnId": 20,
+    "displayName": "New York Jets",
+    "abbreviation": "NYJ",
+    "conference": "AFC",
+    "division": "AFC East",
+    "venueId": 3839,
+    "rosterCount": 92
+  },
+  {
+    "espnId": 33,
+    "displayName": "Baltimore Ravens",
+    "abbreviation": "BAL",
+    "conference": "AFC",
+    "division": "AFC North",
+    "venueId": 3814,
+    "rosterCount": 91
+  },
+  {
+    "espnId": 4,
+    "displayName": "Cincinnati Bengals",
+    "abbreviation": "CIN",
+    "conference": "AFC",
+    "division": "AFC North",
+    "venueId": 3874,
+    "rosterCount": 90
+  },
+  {
+    "espnId": 5,
+    "displayName": "Cleveland Browns",
+    "abbreviation": "CLE",
+    "conference": "AFC",
+    "division": "AFC North",
+    "venueId": 3679,
+    "rosterCount": 92
+  },
+  {
+    "espnId": 23,
+    "displayName": "Pittsburgh Steelers",
+    "abbreviation": "PIT",
+    "conference": "AFC",
+    "division": "AFC North",
+    "venueId": 3752,
+    "rosterCount": 92
+  },
+  {
+    "espnId": 34,
+    "displayName": "Houston Texans",
+    "abbreviation": "HOU",
+    "conference": "AFC",
+    "division": "AFC South",
+    "venueId": 3891,
+    "rosterCount": 90
+  },
+  {
+    "espnId": 11,
+    "displayName": "Indianapolis Colts",
+    "abbreviation": "IND",
+    "conference": "AFC",
+    "division": "AFC South",
+    "venueId": 3812,
+    "rosterCount": 90
+  },
+  {
+    "espnId": 30,
+    "displayName": "Jacksonville Jaguars",
+    "abbreviation": "JAX",
+    "conference": "AFC",
+    "division": "AFC South",
+    "venueId": 3712,
+    "rosterCount": 91
+  },
+  {
+    "espnId": 10,
+    "displayName": "Tennessee Titans",
+    "abbreviation": "TEN",
+    "conference": "AFC",
+    "division": "AFC South",
+    "venueId": 3810,
+    "rosterCount": 91
+  },
+  {
+    "espnId": 7,
+    "displayName": "Denver Broncos",
+    "abbreviation": "DEN",
+    "conference": "AFC",
+    "division": "AFC West",
+    "venueId": 3937,
+    "rosterCount": 91
+  },
+  {
+    "espnId": 12,
+    "displayName": "Kansas City Chiefs",
+    "abbreviation": "KC",
+    "conference": "AFC",
+    "division": "AFC West",
+    "venueId": 3622,
+    "rosterCount": 91
+  },
+  {
+    "espnId": 13,
+    "displayName": "Las Vegas Raiders",
+    "abbreviation": "LV",
+    "conference": "AFC",
+    "division": "AFC West",
+    "venueId": 6501,
+    "rosterCount": 93
+  },
+  {
+    "espnId": 24,
+    "displayName": "Los Angeles Chargers",
+    "abbreviation": "LAC",
+    "conference": "AFC",
+    "division": "AFC West",
+    "venueId": 7065,
+    "rosterCount": 91
+  },
+  {
+    "espnId": 6,
+    "displayName": "Dallas Cowboys",
+    "abbreviation": "DAL",
+    "conference": "NFC",
+    "division": "NFC East",
+    "venueId": 3687,
+    "rosterCount": 92
+  },
+  {
+    "espnId": 19,
+    "displayName": "New York Giants",
+    "abbreviation": "NYG",
+    "conference": "NFC",
+    "division": "NFC East",
+    "venueId": 3839,
+    "rosterCount": 94
+  },
+  {
+    "espnId": 21,
+    "displayName": "Philadelphia Eagles",
+    "abbreviation": "PHI",
+    "conference": "NFC",
+    "division": "NFC East",
+    "venueId": 3806,
+    "rosterCount": 92
+  },
+  {
+    "espnId": 28,
+    "displayName": "Washington Commanders",
+    "abbreviation": "WSH",
+    "conference": "NFC",
+    "division": "NFC East",
+    "venueId": 3719,
+    "rosterCount": 92
+  },
+  {
+    "espnId": 3,
+    "displayName": "Chicago Bears",
+    "abbreviation": "CHI",
+    "conference": "NFC",
+    "division": "NFC North",
+    "venueId": 3933,
+    "rosterCount": 91
+  },
+  {
+    "espnId": 8,
+    "displayName": "Detroit Lions",
+    "abbreviation": "DET",
+    "conference": "NFC",
+    "division": "NFC North",
+    "venueId": 3727,
+    "rosterCount": 92
+  },
+  {
+    "espnId": 9,
+    "displayName": "Green Bay Packers",
+    "abbreviation": "GB",
+    "conference": "NFC",
+    "division": "NFC North",
+    "venueId": 3798,
+    "rosterCount": 91
+  },
+  {
+    "espnId": 16,
+    "displayName": "Minnesota Vikings",
+    "abbreviation": "MIN",
+    "conference": "NFC",
+    "division": "NFC North",
+    "venueId": 5239,
+    "rosterCount": 91
+  },
+  {
+    "espnId": 1,
+    "displayName": "Atlanta Falcons",
+    "abbreviation": "ATL",
+    "conference": "NFC",
+    "division": "NFC South",
+    "venueId": 5348,
+    "rosterCount": 92
+  },
+  {
+    "espnId": 29,
+    "displayName": "Carolina Panthers",
+    "abbreviation": "CAR",
+    "conference": "NFC",
+    "division": "NFC South",
+    "venueId": 3628,
+    "rosterCount": 92
+  },
+  {
+    "espnId": 18,
+    "displayName": "New Orleans Saints",
+    "abbreviation": "NO",
+    "conference": "NFC",
+    "division": "NFC South",
+    "venueId": 3493,
+    "rosterCount": 92
+  },
+  {
+    "espnId": 27,
+    "displayName": "Tampa Bay Buccaneers",
+    "abbreviation": "TB",
+    "conference": "NFC",
+    "division": "NFC South",
+    "venueId": 3886,
+    "rosterCount": 91
+  },
+  {
+    "espnId": 22,
+    "displayName": "Arizona Cardinals",
+    "abbreviation": "ARI",
+    "conference": "NFC",
+    "division": "NFC West",
+    "venueId": 3970,
+    "rosterCount": 92
+  },
+  {
+    "espnId": 14,
+    "displayName": "Los Angeles Rams",
+    "abbreviation": "LAR",
+    "conference": "NFC",
+    "division": "NFC West",
+    "venueId": 7065,
+    "rosterCount": 86
+  },
+  {
+    "espnId": 25,
+    "displayName": "San Francisco 49ers",
+    "abbreviation": "SF",
+    "conference": "NFC",
+    "division": "NFC West",
+    "venueId": 4738,
+    "rosterCount": 94
+  },
+  {
+    "espnId": 26,
+    "displayName": "Seattle Seahawks",
+    "abbreviation": "SEA",
+    "conference": "NFC",
+    "division": "NFC West",
+    "venueId": 3673,
+    "rosterCount": 91
+  }
+]
