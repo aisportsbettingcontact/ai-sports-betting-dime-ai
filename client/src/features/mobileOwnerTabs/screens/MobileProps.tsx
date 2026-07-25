@@ -18,6 +18,7 @@ import { trpc } from "@/lib/trpc";
 import { MLB_BY_ABBREV } from "@shared/mlbTeams";
 import { MobileDataState } from "../components/MobileDataState";
 import { Target } from "lucide-react";
+import { useMlbMarketGates } from "@/hooks/useMlbMarketGates";
 
 // ─── Formatting helpers (mirror MlbPropsCard.tsx semantics) ──────────────────
 
@@ -351,7 +352,13 @@ export function MobileProps() {
     }
   );
 
+  // M-201 publication gate: when publish_k_props is false the K-props market
+  // section renders nothing (existing empty state). Defaults true — no change
+  // until the audit's Phase 7 writes a BACKTEST-ONLY verdict.
+  const kPropsPublished = useMlbMarketGates().publish_k_props;
+
   const cards = useMemo<KPropCard[]>(() => {
+    if (!kPropsPublished) return [];
     const games = gamesQuery.data;
     const propsByGame = propsQuery.data?.propsByGame;
     if (!games || !propsByGame) return [];
@@ -391,7 +398,7 @@ export function MobileProps() {
       }
     }
     return out;
-  }, [gamesQuery.data, propsQuery.data]);
+  }, [gamesQuery.data, propsQuery.data, kPropsPublished]);
 
   const isLoading =
     dateQuery.isLoading ||

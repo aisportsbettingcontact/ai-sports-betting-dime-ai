@@ -34,6 +34,7 @@ import { getNbaTeamByDbSlug } from "@shared/nbaTeams";
 import { NHL_BY_DB_SLUG } from "@shared/nhlTeams";
 import { MLB_BY_ABBREV } from "@shared/mlbTeams";
 import { useMobileDebug, logMobileEvent } from "@/hooks/useMobileDebug";
+import { useMlbMarketGates } from "@/hooks/useMlbMarketGates";
 import { formatGameTime, timeToMinutes, formatDateHeader, formatDateShort } from '@/lib/gameUtils';
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -444,6 +445,18 @@ export default function ModelProjections() {
   const { user, isAuthenticated } = useAuth();
   const { appUser, isOwner, loading: appAuthLoading, refetch: refetchAppUser } = useAppAuth();
 
+  // M-201 publication gates — per-market PUBLISH / BACKTEST-ONLY verdicts.
+  // All flags default true (fail-open), so tabs/sections only disappear once
+  // the audit's Phase 7 writes a BACKTEST-ONLY verdict for that market.
+  const mlbMarketGates = useMlbMarketGates();
+  const kPropsPublished = mlbMarketGates.publish_k_props;
+  const hrPropsPublished = mlbMarketGates.publish_hr_props;
+  const cheatSheetsPublished =
+    mlbMarketGates.publish_f5_ml ||
+    mlbMarketGates.publish_f5_rl ||
+    mlbMarketGates.publish_f5_total ||
+    mlbMarketGates.publish_nrfi_yrfi;
+
   // ── FEED_TABS ─────────────────────────────────────────────────────────────
   // Jack Mac tab permanently removed.
   const FEED_TABS: { id: FeedMobileTab; label: string }[] = selectedSport === 'MLB'
@@ -451,9 +464,9 @@ export default function ModelProjections() {
         { id: 'dual',    label: 'PROJECTIONS' },
         { id: 'splits',  label: 'SPLITS' },
         { id: 'lineups', label: 'LINEUPS' },
-        { id: 'props',   label: 'K PROPS' },
-        { id: 'f5nrfi',  label: 'CHEAT SHEETS' },
-        { id: 'hrprops', label: 'HR PROPS' },
+        ...(kPropsPublished ? [{ id: 'props' as const, label: 'K PROPS' }] : []),
+        ...(cheatSheetsPublished ? [{ id: 'f5nrfi' as const, label: 'CHEAT SHEETS' }] : []),
+        ...(hrPropsPublished ? [{ id: 'hrprops' as const, label: 'HR PROPS' }] : []),
       ]
     : [
         { id: 'dual',   label: 'MODEL PROJECTIONS' },
@@ -1644,8 +1657,8 @@ export default function ModelProjections() {
                     ))}
                   </div>
                 )
-              ) : feedMobileTab === 'props' && selectedSport === 'MLB' ? (
-                /* ── K PROPS VIEW ── */
+              ) : feedMobileTab === 'props' && selectedSport === 'MLB' && kPropsPublished ? (
+                /* ── K PROPS VIEW (M-201: hidden when publish_k_props is false) ── */
                 // [FIX 2026-06-24] Same date-transition guard as LINEUPS VIEW above.
                 (gamesLoading || (gamesFetching && sortedDates.length === 0)) ? (
                   <GameCardSkeleton count={4} />
@@ -1675,8 +1688,8 @@ export default function ModelProjections() {
                     ))}
                   </div>
                 )
-              ) : feedMobileTab === 'f5nrfi' && selectedSport === 'MLB' ? (
-                /* ── F5 / NRFI VIEW ── */
+              ) : feedMobileTab === 'f5nrfi' && selectedSport === 'MLB' && cheatSheetsPublished ? (
+                /* ── F5 / NRFI VIEW (M-201: hidden when all F5 + NRFI gates are false) ── */
                 // [FIX 2026-06-24] Same date-transition guard as LINEUPS VIEW above.
                 (gamesLoading || (gamesFetching && sortedDates.length === 0)) ? (
                   <GameCardSkeleton count={4} />
@@ -1700,8 +1713,8 @@ export default function ModelProjections() {
                     ))}
                   </div>
                 )
-              ) : feedMobileTab === 'hrprops' && selectedSport === 'MLB' ? (
-                /* ── HR PROPS VIEW ── */
+              ) : feedMobileTab === 'hrprops' && selectedSport === 'MLB' && hrPropsPublished ? (
+                /* ── HR PROPS VIEW (M-201: hidden when publish_hr_props is false) ── */
                 // [FIX 2026-06-24] Same date-transition guard as LINEUPS VIEW above.
                 (gamesLoading || (gamesFetching && sortedDates.length === 0)) ? (
                   <GameCardSkeleton count={4} />

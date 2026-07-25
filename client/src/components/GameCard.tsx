@@ -19,7 +19,7 @@
  *   └─────────────────────────────────────────────────────────────────────┘
  */
 
-import React, { useState, useRef, useEffect, useCallback, memo } from "react";
+import React, { useState, useRef, useEffect, useCallback, useMemo, memo } from "react";
 // LazyMotion + m keeps the card compatible with the Dime shell's strict
 // LazyMotion boundary (a full `motion` component inside it throws in dev and
 // defeats motion tree-shaking). The local provider covers standalone routes.
@@ -36,6 +36,7 @@ import { getGameTeamColorsClient } from "@shared/teamColors";
 import { useVisibility } from "@/hooks/useVisibility";
 import { useIsDesktop } from "@/hooks/useIsDesktop";
 import { useIsMdUp } from "@/hooks/useIsMdUp";
+import { useMlbMarketGates, applyMlbMarketGates } from "@/hooks/useMlbMarketGates";
 import { americanToImplied, calculateEdge, calculateRoi, formatRoi, getEdgeColor, getVerdict, EDGE_THRESHOLD_PP } from '@/lib/edgeUtils';
 import { formatGameTime, toNum, spreadSign } from '@/lib/gameUtils';
 import { trpc } from "@/lib/trpc";
@@ -2176,7 +2177,16 @@ interface GameCardProps {
   onMobileTabChange?: (tab: 'dual' | 'splits') => void;
 }
 
-function GameCardInner({ game, mode = "full", showModel: showModelProp, onToggleModel: onToggleModelProp, favoriteGameIds, onToggleFavorite, onFavoriteNotify, isAppAuthed: isAppAuthedProp, mobileTab: mobileTabProp, onMobileTabChange }: GameCardProps) {
+function GameCardInner({ game: rawGame, mode = "full", showModel: showModelProp, onToggleModel: onToggleModelProp, favoriteGameIds, onToggleFavorite, onFavoriteNotify, isAppAuthed: isAppAuthedProp, mobileTab: mobileTabProp, onMobileTabChange }: GameCardProps) {
+  // M-201 publication gate: null the model output of any MLB market the audit
+  // marked BACKTEST-ONLY, so gated model numbers never render (same visual path
+  // as modelRunAt=null). All gates default true — no change until Phase 7 writes
+  // verdicts. Non-MLB games pass through reference-equal.
+  const mlbMarketGates = useMlbMarketGates();
+  const game = useMemo(
+    () => applyMlbMarketGates(rawGame, mlbMarketGates),
+    [rawGame, mlbMarketGates]
+  );
   // Use custom app auth (app_session cookie) — NOT Manus OAuth — to gate the star button.
   // Prefer the prop passed from the parent (avoids 33+ redundant tRPC queries per page load).
   // Fall back to calling useAppAuth() only when no prop is provided (e.g., standalone usage).

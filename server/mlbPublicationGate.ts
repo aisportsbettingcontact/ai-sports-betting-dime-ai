@@ -35,6 +35,9 @@ import {
 } from "./mlbBacktestAuditCore";
 import type { CalibrationAuditResult } from "./mlbCalibrationAudit";
 import type { WalkForwardResult } from "./mlbWalkForwardValidator";
+import { getDb } from "./db";
+import { mlbCalibrationConstants } from "../drizzle/schema";
+import { inArray } from "drizzle-orm";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -419,4 +422,81 @@ export function extractUnresolvedBlockers(
   }
 
   return blockers;
+}
+
+// ─── M-201: Live Per-Market Publication Gates ─────────────────────────────────
+//
+// Mechanical enforcement point for the audit's Phase 7 per-market
+// PUBLISH / BACKTEST-ONLY verdicts. Phase 7 writes one row per market to
+// mlb_calibration_constants (paramName = publish_*, currentValue 1 = publish,
+// 0 = backtest-only). The public feed reads this map via the games.mlbMarketGates
+// tRPC query and hides gated market sections.
+//
+// FAIL-OPEN CONTRACT: a missing row (or an unreadable table) defaults to TRUE,
+// so behavior is unchanged until Phase 7 actually writes verdicts.
+
+/** paramNames in mlb_calibration_constants that carry Phase 7 verdicts. */
+export const MLB_MARKET_GATE_PARAMS = [
+  "publish_fg_ml",
+  "publish_fg_rl",
+  "publish_fg_total",
+  "publish_f5_ml",
+  "publish_f5_rl",
+  "publish_f5_total",
+  "publish_nrfi_yrfi",
+  "publish_k_props",
+  "publish_hr_props",
+] as const;
+
+export type MlbMarketGateParam = (typeof MLB_MARKET_GATE_PARAMS)[number];
+
+const MARKET_GATE_CACHE_TTL_MS = 5 * 60 * 1000;
+let marketGateCache: { value: Record<string, boolean>; loadedAt: number } | null = null;
+
+/** Test hook — clears the 5-minute gate cache. */
+export function _resetMlbMarketGateCache(): void {
+  marketGateCache = null;
+}
+
+/**
+ * Load the per-market publication gates from mlb_calibration_constants.
+ * currentValue >= 1 → true (publish); < 1 → false (backtest-only);
+ * missing row or query failure → true (fail-open, current behavior).
+ * Successful loads are cached for 5 minutes.
+ */
+export async function loadMlbMarketGates(): Promise<Record<string, boolean>> {
+  const now = Date.now();
+  if (marketGateCache && now - marketGateCache.loadedAt < MARKET_GATE_CACHE_TTL_MS) {
+    return marketGateCache.value;
+  }
+
+  const gates: Record<string, boolean> = {};
+  for (const param of MLB_MARKET_GATE_PARAMS) gates[param] = true;
+
+  try {
+    const db = await getDb();
+    const rows = await db
+      .select({
+        paramName: mlbCalibrationConstants.paramName,
+        currentValue: mlbCalibrationConstants.currentValue,
+      })
+      .from(mlbCalibrationConstants)
+      .where(inArray(mlbCalibrationConstants.paramName, [...MLB_MARKET_GATE_PARAMS]));
+
+    for (const row of rows as Array<{ paramName: string; currentValue: string }>) {
+      const value = Number(row.currentValue);
+      // Unparseable value → fail-open (keep the default true).
+      if (Number.isFinite(value)) gates[row.paramName] = value >= 1;
+    }
+
+    marketGateCache = { value: gates, loadedAt: now };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(
+      `[MLB_PUBLICATION_GATE][MARKET_GATES] load failed — failing open (all markets publish): ${msg}`
+    );
+    // Do not cache failures — retry on the next call.
+  }
+
+  return gates;
 }

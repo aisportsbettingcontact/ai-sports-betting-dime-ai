@@ -31,6 +31,7 @@
 
 import { useMemo } from "react";
 import { MLB_BY_ABBREV } from "@shared/mlbTeams";
+import { useMlbMarketGates, applyMlbMarketGates } from "@/hooks/useMlbMarketGates";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -1943,8 +1944,36 @@ export interface CheatSheetViewProps {
 export function CheatSheetView({ games, lineupsMap, dateLabel }: CheatSheetViewProps) {
   const [activeTab, setActiveTab] = useState<'nrfi' | 'f5'>('nrfi');
 
-  const modeledGames = games.filter(g => g.modelPNrfi != null || g.modelF5AwayScore != null);
-  if (modeledGames.length === 0) return null;
+  // M-201 publication gates: hide a whole view when its market(s) are
+  // BACKTEST-ONLY, and null gated model fields on the rows that do render.
+  // All gates default true — no change until Phase 7 writes verdicts.
+  const marketGates = useMlbMarketGates();
+  const nrfiPublished = marketGates.publish_nrfi_yrfi;
+  const f5Published =
+    marketGates.publish_f5_ml || marketGates.publish_f5_rl || marketGates.publish_f5_total;
+  const visibleTabs = useMemo(() => {
+    const tabs: Array<'nrfi' | 'f5'> = [];
+    if (nrfiPublished) tabs.push('nrfi');
+    if (f5Published) tabs.push('f5');
+    return tabs;
+  }, [nrfiPublished, f5Published]);
+  const effectiveTab: 'nrfi' | 'f5' | null = visibleTabs.includes(activeTab)
+    ? activeTab
+    : (visibleTabs[0] ?? null);
+  const gatedGames = useMemo(
+    () => games.map(g => applyMlbMarketGates(g, marketGates)),
+    [games, marketGates]
+  );
+
+  // "Modeled" = any still-published model output present (post-gating, a game
+  // whose only model numbers belong to gated markets drops out naturally).
+  const modeledGames = gatedGames.filter(g =>
+    g.modelPNrfi != null ||
+    g.modelF5AwayScore != null ||
+    g.modelF5AwayWinPct != null ||
+    g.modelF5AwayRLCoverPct != null
+  );
+  if (modeledGames.length === 0 || effectiveTab == null) return null;
 
   return (
     <div style={{ fontFamily: "'Familjen Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", marginBottom: 24 }}>
@@ -1957,15 +1986,15 @@ export function CheatSheetView({ games, lineupsMap, dateLabel }: CheatSheetViewP
         )}
         {/* Tab switcher */}
         <div style={{ display: 'flex', background: '#000000', border: '1px solid #FFFFFF', borderRadius: 6, padding: 3, gap: 2 }}>
-          {(['nrfi', 'f5'] as const).map(tab => (
+          {visibleTabs.map(tab => (
             <button type="button" key={tab}
               onClick={() => setActiveTab(tab)}
               style={{
                 fontSize: 11, fontWeight: 500, letterSpacing: '.07em', textTransform: 'uppercase' as const,
                 padding: '5px 16px', borderRadius: 4, cursor: 'pointer', transition: 'all .15s',
-                border: activeTab === tab ? '1px solid #45E0A8' : '1px solid transparent',
-                background: activeTab === tab ? 'transparent' : 'transparent',
-                color: activeTab === tab ? '#45E0A8' : '#FFFFFF',
+                border: effectiveTab === tab ? '1px solid #45E0A8' : '1px solid transparent',
+                background: effectiveTab === tab ? 'transparent' : 'transparent',
+                color: effectiveTab === tab ? '#45E0A8' : '#FFFFFF',
               }}
             >
               {tab === 'nrfi' ? 'NRFI / YRFI' : 'First 5'}
@@ -1973,7 +2002,7 @@ export function CheatSheetView({ games, lineupsMap, dateLabel }: CheatSheetViewP
           ))}
         </div>
         {/* Legend */}
-        {activeTab === 'nrfi' ? (
+        {effectiveTab === 'nrfi' ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             {[{ color: '#45E0A8', label: 'NRFI' }, { color: '#FFFFFF', label: 'YRFI' }, { color: '#FFFFFF', label: 'Skip' }].map(({ color, label }) => (
               <span key={label} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, fontWeight: 500, letterSpacing: '.06em', textTransform: 'uppercase' as const, color: '#FFFFFF' }}>
@@ -1992,8 +2021,8 @@ export function CheatSheetView({ games, lineupsMap, dateLabel }: CheatSheetViewP
         )}
       </div>
 
-      {/* ── NRFI TABLE ── */}
-      {activeTab === 'nrfi' && (
+      {/* ── NRFI TABLE (M-201: hidden when publish_nrfi_yrfi is false) ── */}
+      {effectiveTab === 'nrfi' && (
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
             <thead>
@@ -2014,8 +2043,8 @@ export function CheatSheetView({ games, lineupsMap, dateLabel }: CheatSheetViewP
         </div>
       )}
 
-      {/* ── F5 CARDS ── */}
-      {activeTab === 'f5' && (
+      {/* ── F5 CARDS (M-201: hidden when all F5 gates are false) ── */}
+      {effectiveTab === 'f5' && (
         <div>
           {modeledGames.map(game => (
             <F5GameCardV3 key={game.id} game={game} lineup={lineupsMap?.get(game.id)} />

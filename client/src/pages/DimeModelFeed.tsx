@@ -39,6 +39,7 @@ import {
   type ThreeWayOdds,
 } from "@/lib/edgeUtils";
 import { feedModelPath, bettingSplitsPath, toFeedSlugDate } from "@/lib/feedRoutes";
+import { useMlbMarketGates, applyMlbMarketGates } from "@/hooks/useMlbMarketGates";
 
 // ─── Normalized card model (adapters below map tRPC rows into this) ─────────
 
@@ -930,10 +931,17 @@ function useFeedCards(
     },
   );
 
+  // M-201 publication gate: null gated MLB model output before the adapter so
+  // BACKTEST-ONLY markets render the existing "model absent" state ("—", no
+  // edge, no verdict). All gates default true — no change until Phase 7.
+  const mlbMarketGates = useMlbMarketGates();
+
   const cards = useMemo<FeedCardSpec[]>(() => {
     if (isWc) return ((wcQuery.data ?? []) as WcMatch[]).map((m) => wcMatchToCard(m, isoDate));
-    return ((mlbQuery.data ?? []) as MlbRow[]).map(mlbRowToCard);
-  }, [isWc, wcQuery.data, mlbQuery.data, isoDate]);
+    return ((mlbQuery.data ?? []) as MlbRow[]).map((g) =>
+      mlbRowToCard(applyMlbMarketGates(g, mlbMarketGates))
+    );
+  }, [isWc, wcQuery.data, mlbQuery.data, isoDate, mlbMarketGates]);
 
   const isLoading = isWc ? wcQuery.isLoading : mlbQuery.isLoading;
   // Stale = paging dates while placeholderData keeps the previous slate

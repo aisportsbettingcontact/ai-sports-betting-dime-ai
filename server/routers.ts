@@ -56,6 +56,7 @@ import { getLastRefreshResult, runVsinRefreshManual, refreshAllScoresNow } from 
 import { syncNbaModelFromSheet, getLastNbaModelSyncResult } from "./nbaModelSync";
 import { syncNhlModelForToday, getLastNhlSyncResult } from "./nhlModelSync";
 import { runMlbModelForDate, validateMlbModelResults } from "./mlbModelRunner";
+import { loadMlbMarketGates } from "./mlbPublicationGate";
 import { checkGoalieChanges, getLastGoalieWatchResult } from "./nhlGoalieWatcher";
 import { MARCH_MADNESS_DB_SLUGS } from "@shared/marchMadnessTeams";
 import { parseAnAllMarketsHtml, type AnSport } from "./anHtmlParser";
@@ -427,6 +428,18 @@ export const appRouter = router({
       ].join('-');
       // [tRPC][games.getCurrentDate] — hot path log silenced (fires every 5min per user)
       return { effectiveDate, utcHour: nowUtc.getUTCHours(), isBeforeCutoff };
+    }),
+
+    /**
+     * M-201: Per-market MLB publication gates.
+     * Reads publish_* rows from mlb_calibration_constants (written by the
+     * audit's Phase 7 PUBLISH / BACKTEST-ONLY verdicts). A missing row fails
+     * open to true, so behavior is unchanged until verdicts land.
+     * PUBLIC — the client uses this map to hide gated market sections.
+     * Server-side cached 5 minutes (see loadMlbMarketGates).
+     */
+    mlbMarketGates: publicProcedure.query(async () => {
+      return loadMlbMarketGates();
     }),
 
     /**
