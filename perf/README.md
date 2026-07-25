@@ -15,15 +15,18 @@ regression baseline have never actually gated a deploy.
 The fixed harness must complete an observation period of **3–5 successful,
 comparable scheduled runs** (same runner class, same routes, same config)
 before its budgets/regression guard are treated as a trusted deployment
-control, and before `--update-baseline` is used to seed the regression
-baseline from a known-good run. Budget values were not changed by the fix.
+control, and before a candidate baseline is generated from a known-good run.
+The observation count remains zero until the buffered-LCP and browser-CI
+follow-up is deployed. Budget values were not changed by either fix.
 
 Code that runs inside the page lives in `perf/browserMetrics.ts` and must stay
 standalone browser-safe JS (no name-inferred inner function expressions, no
 module-scope references) — `perf/harness.smoke.test.ts` enforces this through
-the same tsx transform CI uses. Known metric quirk: headless Chromium often
-reports no buffered LCP entry, so `lcpMs` can legitimately read 0; watch it
-during the observation period before trusting LCP comparisons.
+the same tsx transform CI uses. LCP is collected with a buffered
+`PerformanceObserver`; an unsupported observer or missing LCP candidate is a
+harness failure, never a valid `lcpMs: 0`. The required Vitest job installs
+Chromium, so its real-browser smoke and failure-path tests cannot be skipped in
+CI.
 
 ## What it measures
 
@@ -57,16 +60,24 @@ route) is still budget-checked.
 
 ```bash
 PERF_TARGET_URL=https://your-app.up.railway.app npx tsx perf/harness.ts
-# reseed the committed baseline from a known-good run:
+# generate a reviewable candidate without changing the committed baseline:
 PERF_TARGET_URL=... npx tsx perf/harness.ts --update-baseline
 ```
 
 CI: `.github/workflows/perf-harness.yml` (daily + manual). Needs the
-`RAILWAY_APP_URL` repo secret. The manual run exposes `update_baseline` to reseed.
+`RAILWAY_APP_URL` repo secret. The manual run exposes `update_baseline` to
+generate an artifact containing `perf-baseline-candidate.json` and the matching
+raw `perf-results.json`.
 
 ## Seeding the baseline (one-time)
 
 `baseline.json` ships with generous budgets and an empty `baseline: {}` (so the
-first run only enforces budgets). Once the app is stably deployed, run the
-workflow with `update_baseline: true` (or `--update-baseline` locally) and commit
-the result to turn on the regression guard.
+first run only enforces budgets). After 3–5 valid observation runs:
+
+1. Manually run the workflow with `update_baseline: true`.
+2. Download the uniquely named baseline-candidate artifact.
+3. Compare `perf-baseline-candidate.json` with its bundled raw results.
+4. Promote the reviewed candidate by replacing `perf/baseline.json` in a normal
+   pull request.
+
+The workflow retains `contents: read`; it never commits directly to `main`.
