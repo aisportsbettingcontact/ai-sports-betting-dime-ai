@@ -1,0 +1,13 @@
+gameId,matchup,field,class,stored,derived,actualAway,actualHome,bookTotal,awayRunLine,modelAwayWinPct,modelOverRate,modelAwayScore,modelHomeScore,rlBoundary
+2250006,NYY@SF 2026-03-25,fgTotal,stored-null-derivable,,PUSH,7,0,7,,,,,,
+2250033,CWS@MIL 2026-03-28,fgRl,stored-not-derivable,WIN,,1,6,8,1.5,38.36,60.56,4.25,5.75,true
+2250033,CWS@MIL 2026-03-28,fgRlCorrect,value-mismatch,1,,1,6,8,1.5,38.36,60.56,4.25,5.75,
+2250109,LAD@WSH 2026-04-04,fgRl,stored-not-derivable,LOSS,,10,5,9.5,-1.5,61.8,44.43,5.53,4.03,true
+2250109,LAD@WSH 2026-04-04,fgRlCorrect,value-mismatch,0,,10,5,9.5,-1.5,61.8,44.43,5.53,4.03,
+2250331,PIT@TEX 2026-04-21,fgTotal,stored-null-derivable,,UNDER,1,5,8,-1.5,,,,,
+2250332,SD@COL 2026-04-21,fgTotal,stored-null-derivable,,UNDER,1,0,11,-1.5,,,,,
+2252625,CWS@ARI 2026-04-21,fgRl,stored-not-derivable,LOSS,,11,5,9,1.5,38.91,50.76,4.44,5.94,true
+2252625,CWS@ARI 2026-04-21,fgRlCorrect,value-mismatch,0,,11,5,9,1.5,38.91,50.76,4.44,5.94,
+2250374,BOS@BAL 2026-04-25,fgTotal,stored-null-derivable,,OVER,17,1,7,-1.5,,,,,
+2250468,ATL@COL 2026-05-02,fgTotal,stored-null-derivable,,OVER,9,1,9.5,-1.5,,,,,
+2250494,NYM@COL 2026-05-04,fgTotal,stored-null-derivable,,UNDER,4,2,10.5,-1.5,,,,,

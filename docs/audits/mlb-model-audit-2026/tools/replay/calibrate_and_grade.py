@@ -17,6 +17,15 @@ Pipeline
   report  - emit calibration/before-after.md (live vs replay-p1 vs replay-p2 per market x month)
   all     - fit + pass2 + grade + report
 
+Refit granularity (--refit, default monthly):
+  monthly - the behavior documented above (params per month, pass-2 suffix -p2).
+  daily   - per-slate walk-forward: each gameDate D is fitted with the same estimators
+            strictly on p1 rows with gameDate < D (same-day games excluded); slates
+            before 200 FINAL training games have accumulated get the seed params
+            (factors 1.0, seed sds, NRFI prior-only). Params are keyed by DATE, pass-2
+            rows carry modelVersion suffix -p2d, and each row's calibMeta embeds that
+            date's params ("date" + "fitted_through"). fit prints every 10th slate.
+
 Walk-forward rules (REPLAY-PROTOCOL.md):
   - months: Mar+Apr jointly seeded (env mult 1.0, T 1.0, K/HR factors 1.0, NRFI prior-only,
     total sd seed 4.5 / F5 2.9); each later month m is fitted ONLY on months < m.
@@ -196,12 +205,24 @@ class SafeConn:
             pass
         self._conn = self._open()
 
+    def close(self):
+        try:
+            self._conn.close()
+        except Exception:
+            pass
+
     def cursor(self, *a, **k):
         try:
             self._conn.ping(reconnect=True)
         except Exception:
             self.reconnect()
         return self._conn.cursor(*a, **k)
+
+    def close(self):
+        try:
+            self._conn.close()
+        except Exception:
+            pass
 
 
 def connect_db():
@@ -665,6 +686,92 @@ class NrfiWalkForward:
         return sigmoid(max(-30, min(30, z)))
 
 
+def _fit_on(train, kprops, hrprops, data, nrfi_wf, live_k, hr_actual_idx):
+    """Fit calibration params on a training window of p1 game rows (all strictly earlier
+    than the period being calibrated). Returns the fitted dict WITHOUT the period key
+    ("month"/"date") so monthly and daily callers can prepend their own."""
+    train_ids = {r["gameId"] for r in train}
+
+    # league env mult + residual sds
+    proj_sum = act_sum = 0.0
+    resid, f5_resid = [], []
+    fg_pairs, f5_pairs = [], []
+    nrfi_train = []
+    for r in train:
+        gid = r["gameId"]
+        if not data.is_final(gid):
+            continue
+        a_away, a_home = data.actual_scores(gid)
+        if a_away is not None and num(r["projTotal"]) is not None:
+            proj_sum += num(r["projTotal"])
+            act_sum += a_away + a_home
+            resid.append(num(r["projTotal"]) - (a_away + a_home))
+        f5a, f5h = data.actual_f5(gid)
+        if f5a is not None and num(r["projF5Total"]) is not None:
+            f5_resid.append(num(r["projF5Total"]) - (f5a + f5h))
+        if a_away is not None and num(r["pAwayMl"]) is not None:
+            fg_pairs.append((num(r["pAwayMl"]), 1 if a_away > a_home else 0))
+        if f5a is not None and num(r["pF5AwayMl"]) is not None and f5a != f5h:
+            f5_pairs.append((num(r["pF5AwayMl"]), 1 if f5a > f5h else 0))
+        y_n = data.actual_nrfi(gid)
+        if y_n is not None:
+            nrfi_train.append((gid, y_n))
+
+    env_mult = (act_sum / proj_sum) if proj_sum > 0 else 1.0
+    t_fg, n_fg = fit_temperature(fg_pairs)
+    t_f5, n_f5 = fit_temperature(f5_pairs)
+    total_sd = float(np.std(resid, ddof=1)) if len(resid) >= 30 else SEED_TOTAL_SD
+    f5_sd = float(np.std(f5_resid, ddof=1)) if len(f5_resid) >= 30 else SEED_F5_TOTAL_SD
+
+    # K factor (ratio of means) on train prop rows
+    k_proj_sum = k_act_sum = 0.0
+    n_k = 0
+    for p in kprops:
+        if p["gameId"] not in train_ids or num(p["projValue"]) is None:
+            continue
+        a = data.actual_starter_ks(p["gameId"], p["side"], p["mlbamId"], live_k)
+        if a is None:
+            continue
+        k_proj_sum += num(p["projValue"]); k_act_sum += a; n_k += 1
+    k_factor = (k_act_sum / k_proj_sum) if k_proj_sum > 0 else 1.0
+
+    # HR factor on train prop rows
+    p_sum = y_sum = 0.0
+    n_hr = 0
+    for p in hrprops:
+        if p["gameId"] not in train_ids or num(p["pOver"]) is None:
+            continue
+        y = data.actual_hr(p["gameId"], p["mlbamId"], p["playerName"], hr_actual_idx)
+        if y is None:
+            continue
+        p_sum += num(p["pOver"]); y_sum += y; n_hr += 1
+    hr_factor = (y_sum / n_hr) / (p_sum / n_hr) if n_hr > 0 and p_sum > 0 else 1.0
+
+    nrfi_model = nrfi_wf.fit(nrfi_train, data)
+    nrfi_meta = ({"mode": "logistic", "n_train": nrfi_model["n_train"],
+                  "feature_keys": nrfi_model["keys"],
+                  "beta": [round(b, 6) for b in nrfi_model["beta"]]}
+                 if nrfi_model else
+                 {"mode": "prior_only_passthrough",
+                  "reason": nrfi_wf.error or "insufficient training features"})
+
+    return {
+        "seed": False,
+        "n_train_games": len(train), "n_train_final": len(fg_pairs),
+        "league_env_mult": round(env_mult, 5),
+        "T_fg": round(t_fg, 4), "T_f5": round(t_f5, 4),
+        "n_T_fg": n_fg, "n_T_f5": n_f5,
+        "k_factor": round(k_factor, 5), "n_k_train": n_k,
+        "hr_factor": round(hr_factor, 5), "n_hr_train": n_hr,
+        "total_sd": round(total_sd, 4), "f5_total_sd": round(f5_sd, 4),
+        "k_method": "ratio_of_means",
+        "total_recenter": "pOver2=Phi(Phi^-1(pOver1)+(projTotal2-projTotal1)/sd)",
+        "rl_passthrough": True,
+        "nrfi": nrfi_meta,
+        "_nrfi_model": nrfi_model,  # not serialized into calibMeta
+    }
+
+
 def build_month_params(data, p1_games, p1_props, months, nrfi_wf):
     """Fit walk-forward calibration params per month. p1 rows are the raw fixed-model
     outputs; every month m>seed is fitted strictly on months < m."""
@@ -674,6 +781,7 @@ def build_month_params(data, p1_games, p1_props, months, nrfi_wf):
     kprops = [p for p in p1_props if p["propType"] == "K"]
     hrprops = [p for p in p1_props if p["propType"] == "HR"]
     live_k = {(r["gameId"], r["mlbamId"]): r for r in data.load_live_kprops()}
+    hr_actual_idx = build_hr_actual_index(data)
 
     params = {}
     all_months = sorted(set(list(by_month.keys()) + list(months)))
@@ -693,87 +801,53 @@ def build_month_params(data, p1_games, p1_props, months, nrfi_wf):
             continue
 
         train = [r for mm in train_months for r in by_month[mm]]
-        train_ids = {r["gameId"] for r in train}
+        entry = {"month": m, "seed": False, "fitted_on_months": sorted(train_months)}
+        entry.update(_fit_on(train, kprops, hrprops, data, nrfi_wf, live_k,
+                             hr_actual_idx))
+        params[m] = entry
+    return params
 
-        # league env mult + residual sds
-        proj_sum = act_sum = 0.0
-        resid, f5_resid = [], []
-        fg_pairs, f5_pairs = [], []
-        nrfi_train = []
-        for r in train:
-            gid = r["gameId"]
-            if not data.is_final(gid):
-                continue
-            a_away, a_home = data.actual_scores(gid)
-            if a_away is not None and num(r["projTotal"]) is not None:
-                proj_sum += num(r["projTotal"])
-                act_sum += a_away + a_home
-                resid.append(num(r["projTotal"]) - (a_away + a_home))
-            f5a, f5h = data.actual_f5(gid)
-            if f5a is not None and num(r["projF5Total"]) is not None:
-                f5_resid.append(num(r["projF5Total"]) - (f5a + f5h))
-            if a_away is not None and num(r["pAwayMl"]) is not None:
-                fg_pairs.append((num(r["pAwayMl"]), 1 if a_away > a_home else 0))
-            if f5a is not None and num(r["pF5AwayMl"]) is not None and f5a != f5h:
-                f5_pairs.append((num(r["pF5AwayMl"]), 1 if f5a > f5h else 0))
-            y_n = data.actual_nrfi(gid)
-            if y_n is not None:
-                nrfi_train.append((gid, y_n))
 
-        env_mult = (act_sum / proj_sum) if proj_sum > 0 else 1.0
-        t_fg, n_fg = fit_temperature(fg_pairs)
-        t_f5, n_f5 = fit_temperature(f5_pairs)
-        total_sd = float(np.std(resid, ddof=1)) if len(resid) >= 30 else SEED_TOTAL_SD
-        f5_sd = float(np.std(f5_resid, ddof=1)) if len(f5_resid) >= 30 else SEED_F5_TOTAL_SD
+def build_daily_params(data, p1_games, p1_props, nrfi_wf, min_train_final=200):
+    """Fit walk-forward calibration params per slate (gameDate). Each date D is fitted
+    strictly on p1 rows with gameDate < D (same-day games excluded); dates before
+    min_train_final FINAL training games have accumulated get seed params. Returns a
+    dict keyed by the DATE string."""
+    by_date = defaultdict(list)
+    for r in p1_games:
+        by_date[str(r["gameDate"])].append(r)
+    kprops = [p for p in p1_props if p["propType"] == "K"]
+    hrprops = [p for p in p1_props if p["propType"] == "HR"]
+    live_k = {(r["gameId"], r["mlbamId"]): r for r in data.load_live_kprops()}
+    hr_actual_idx = build_hr_actual_index(data)
 
-        # K factor (ratio of means) on train prop rows
-        k_proj_sum = k_act_sum = 0.0
-        n_k = 0
-        for p in kprops:
-            if p["gameId"] not in train_ids or num(p["projValue"]) is None:
-                continue
-            a = data.actual_starter_ks(p["gameId"], p["side"], p["mlbamId"], live_k)
-            if a is None:
-                continue
-            k_proj_sum += num(p["projValue"]); k_act_sum += a; n_k += 1
-        k_factor = (k_act_sum / k_proj_sum) if k_proj_sum > 0 else 1.0
-
-        # HR factor on train prop rows
-        hr_actual_by_key = build_hr_actual_index(data)
-        p_sum = y_sum = 0.0
-        n_hr = 0
-        for p in hrprops:
-            if p["gameId"] not in train_ids or num(p["pOver"]) is None:
-                continue
-            y = data.actual_hr(p["gameId"], p["mlbamId"], p["playerName"], hr_actual_by_key)
-            if y is None:
-                continue
-            p_sum += num(p["pOver"]); y_sum += y; n_hr += 1
-        hr_factor = (y_sum / n_hr) / (p_sum / n_hr) if n_hr > 0 and p_sum > 0 else 1.0
-
-        nrfi_model = nrfi_wf.fit(nrfi_train, data)
-        nrfi_meta = ({"mode": "logistic", "n_train": nrfi_model["n_train"],
-                      "feature_keys": nrfi_model["keys"],
-                      "beta": [round(b, 6) for b in nrfi_model["beta"]]}
-                     if nrfi_model else
-                     {"mode": "prior_only_passthrough",
-                      "reason": nrfi_wf.error or "insufficient training features"})
-
-        params[m] = {
-            "month": m, "seed": False, "fitted_on_months": sorted(train_months),
-            "n_train_games": len(train), "n_train_final": len(fg_pairs),
-            "league_env_mult": round(env_mult, 5),
-            "T_fg": round(t_fg, 4), "T_f5": round(t_f5, 4),
-            "n_T_fg": n_fg, "n_T_f5": n_f5,
-            "k_factor": round(k_factor, 5), "n_k_train": n_k,
-            "hr_factor": round(hr_factor, 5), "n_hr_train": n_hr,
-            "total_sd": round(total_sd, 4), "f5_total_sd": round(f5_sd, 4),
-            "k_method": "ratio_of_means",
-            "total_recenter": "pOver2=Phi(Phi^-1(pOver1)+(projTotal2-projTotal1)/sd)",
-            "rl_passthrough": True,
-            "nrfi": nrfi_meta,
-            "_nrfi_model": nrfi_model,  # not serialized into calibMeta
-        }
+    params = {}
+    train = []           # grows one slate at a time; never contains same-day rows
+    n_train_final = 0    # running count of final games in train
+    prev_date = None
+    for d in sorted(by_date):
+        if n_train_final < min_train_final:
+            params[d] = {
+                "date": d, "seed": True,
+                "n_train_games": len(train), "n_train_final": n_train_final,
+                "league_env_mult": 1.0, "T_fg": 1.0, "T_f5": 1.0,
+                "k_factor": 1.0, "hr_factor": 1.0,
+                "total_sd": SEED_TOTAL_SD, "f5_total_sd": SEED_F5_TOTAL_SD,
+                "k_method": "ratio_of_means",
+                "total_recenter": "pOver2=Phi(Phi^-1(pOver1)+(projTotal2-projTotal1)/sd)",
+                "rl_passthrough": True,
+                "nrfi": {"mode": "prior_only_passthrough"},
+            }
+        else:
+            entry = {"date": d, "fitted_through": prev_date}
+            entry.update(_fit_on(train, kprops, hrprops, data, nrfi_wf, live_k,
+                                 hr_actual_idx))
+            params[d] = entry
+        for r in by_date[d]:
+            train.append(r)
+            if data.is_final(r["gameId"]):
+                n_train_final += 1
+        prev_date = d
     return params
 
 
@@ -826,7 +900,10 @@ def poisson_over_prob(mu, line):
     return float(1.0 - poisson.cdf(math.floor(line), mu))
 
 
-def write_pass2(conn, data, p1_games, p1_props, params, nrfi_wf, p2_version, months=None):
+def write_pass2(conn, data, p1_games, p1_props, params, nrfi_wf, p2_version, months=None,
+                game_ids=None, key_fn=None):
+    if key_fn is None:  # monthly refit: params keyed by month
+        key_fn = lambda r: month_of(r["gameDate"])  # noqa: E731
     game_sql = """
         INSERT INTO mlb_replay_projections
           (gameId, gameDate, provenance, modelVersion, asOfCutoffMs,
@@ -850,10 +927,11 @@ def write_pass2(conn, data, p1_games, p1_props, params, nrfi_wf, p2_version, mon
 
     game_rows, prop_rows = [], []
     for r in p1_games:
-        m = month_of(r["gameDate"])
-        if months and m not in months:
+        if months and month_of(r["gameDate"]) not in months:
             continue
-        cp = params.get(m)
+        if game_ids and r["gameId"] not in game_ids:
+            continue
+        cp = params.get(key_fn(r))
         if cp is None:
             continue
         mult, sd, f5sd = cp["league_env_mult"], cp["total_sd"], cp["f5_total_sd"]
@@ -886,10 +964,11 @@ def write_pass2(conn, data, p1_games, p1_props, params, nrfi_wf, p2_version, mon
         ))
 
     for p in p1_props:
-        m = month_of(p["gameDate"])
-        if months and m not in months:
+        if months and month_of(p["gameDate"]) not in months:
             continue
-        cp = params.get(m)
+        if game_ids and p["gameId"] not in game_ids:
+            continue
+        cp = params.get(key_fn(p))
         if cp is None:
             continue
         if p["propType"] == "K":
@@ -1368,6 +1447,10 @@ def main():
     ap.add_argument("--game-ids", help="comma list of games.id to grade (smoke scoping)")
     ap.add_argument("--replay-games-only", action="store_true",
                     help="grade live source only for games that have replay pass-1 rows")
+    ap.add_argument("--refit", choices=["monthly", "daily"], default="monthly",
+                    help="calibration refit granularity: monthly (default, per-month "
+                         "params, pass-2 suffix -p2) or daily (per-slate walk-forward, "
+                         "params keyed by gameDate, pass-2 suffix -p2d)")
     ap.add_argument("--sources", default="live,replay",
                     help="grade: which sources (live,replay)")
     ap.add_argument("--cache-dir", default=DEFAULT_CACHE_DIR)
@@ -1380,8 +1463,9 @@ def main():
     conn = connect_db()
     data = DataStore(conn, args.cache_dir)
     p1v = detect_p1_version(conn, args.p1_version)
-    p2v = p1v[:-3] + "-p2" if p1v.endswith("-p1") else p1v + "-p2"
-    print(f"[main] pass-1 version {p1v} -> pass-2 version {p2v}")
+    p2_suffix = "-p2d" if args.refit == "daily" else "-p2"
+    p2v = p1v[:-3] + p2_suffix if p1v.endswith("-p1") else p1v + p2_suffix
+    print(f"[main] pass-1 version {p1v} -> pass-2 version {p2v} (refit={args.refit})")
 
     p1_games = data.load_p1_games(p1v)
     p1_props = data.load_p1_props(p1v)
@@ -1396,15 +1480,33 @@ def main():
 
     params = None
     if args.command in ("fit", "pass2", "all"):
-        params = build_month_params(data, p1_games, p1_props, all_months, nrfi_wf)
-        for m in sorted(params):
-            show = {k: v for k, v in params[m].items()
-                    if not k.startswith("_") and k != "nrfi"}
-            show["nrfi_mode"] = (params[m].get("nrfi") or {}).get("mode")
-            print(f"[fit] {m}: {json.dumps(show)}")
+        if args.refit == "daily":
+            params = build_daily_params(data, p1_games, p1_props, nrfi_wf)
+            dates = sorted(params)
+            n_seed = sum(1 for d in dates if params[d].get("seed"))
+            for i, d in enumerate(dates):
+                if i % 10 != 0 and i != len(dates) - 1:
+                    continue  # print every 10th date + the last (all params still
+                              # embedded per-row in calibMeta by pass2)
+                show = {k: v for k, v in params[d].items()
+                        if not k.startswith("_") and k != "nrfi"}
+                show["nrfi_mode"] = (params[d].get("nrfi") or {}).get("mode")
+                print(f"[fit] {d}: {json.dumps(show)}")
+            print(f"[fit] daily walk-forward: {len(dates)} slates "
+                  f"({n_seed} seeded, {len(dates) - n_seed} fitted)")
+        else:
+            params = build_month_params(data, p1_games, p1_props, all_months, nrfi_wf)
+            for m in sorted(params):
+                show = {k: v for k, v in params[m].items()
+                        if not k.startswith("_") and k != "nrfi"}
+                show["nrfi_mode"] = (params[m].get("nrfi") or {}).get("mode")
+                print(f"[fit] {m}: {json.dumps(show)}")
 
     if args.command in ("pass2", "all"):
-        write_pass2(conn, data, p1_games, p1_props, params, nrfi_wf, p2v, months)
+        key_fn = ((lambda r: str(r["gameDate"])) if args.refit == "daily"
+                  else (lambda r: month_of(r["gameDate"])))
+        write_pass2(conn, data, p1_games, p1_props, params, nrfi_wf, p2v, months,
+                    game_ids=game_ids, key_fn=key_fn)
 
     if args.command in ("grade", "all"):
         replay_ids = {r["gameId"] for r in p1_games}

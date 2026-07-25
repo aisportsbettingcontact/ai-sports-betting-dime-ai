@@ -1,0 +1,2 @@
+/private/tmp/claude-501/-Users-danielwalker-src-ai-sports-betting-dime-ai/e0e70461-6362-478c-8dcf-7469967be44b/scratchpad/audit-worktree/docs/audits/mlb-model-audit-2026/tools/replay/calibrate_and_grade.py:210: DeprecationWarning: The 'reconnect' argument is deprecated. Create a new connection if you want to reconnect.
+  self._conn.ping(reconnect=True)
