@@ -79,13 +79,11 @@ html.dark {
   --dime-coin-keyline: none; /* mint dot sits directly on dark surfaces */
 }
 
-html[data-theme-mode="system"] {
-  --dime-bg: #121212;
-  --dime-surface-sidebar: #181818;
-  --dime-surface-card: #181818;
-  --dime-surface-raised: #202020;
-  --dime-surface-bubble: #1c1c1c;
-}
+/* SUPERSEDED (2026-07-24, PR #198, D-BG-SEAM — owner-approved): the mobile
+ * remap layer carried its own System-mode grey tier block (the twin of the
+ * removed index.css one; exact values in git history). System follows Dark
+ * everywhere now — WebKit probe caught this residual re-pinning the grey
+ * canvas at <=767px after the index.css fix. Do not reintroduce. */
 
 /* MASTER.md micro-label: IBM Plex Mono, 10px, uppercase, 0.08em, muted. */
 .dime-mono-label {
