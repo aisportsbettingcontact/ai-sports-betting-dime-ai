@@ -8,7 +8,10 @@
 - Base state: `ml/dime-1.0/` absent; worktree clean
 - Validated implementation commit:
   `92cf9f86481e089eefa7460563ab95697e1967b9`
-- Draft PR: recorded after GitHub creates it
+- First published branch tip:
+  `f696856e2af25466ec6ba10d4a412e9bb9738965`
+- Draft PR:
+  `https://github.com/aisportsbettingcontact/ai-sports-betting-dime-ai/pull/200`
 
 The work was performed in a clean isolated worktree created directly from the
 base above. No unrelated audit-worktree file was copied, staged, or modified.

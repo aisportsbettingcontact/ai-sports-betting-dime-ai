@@ -714,9 +714,9 @@ obsolete Llama 3 8B Instruct, merged/AWQ, and deployed RunPod assumptions.
 The PR description did not document those dangling references, and the
 [P2 review finding](https://github.com/aisportsbettingcontact/ai-sports-betting-dime-ai/pull/199#discussion_r3650369828)
 remains unresolved. The remediation must remain open until the replacement
-foundation is merged to `main` and verified. The draft remediation PR link
-will be added after GitHub creates it; creating a draft alone does not resolve
-the old finding.
+foundation is merged to `main` and verified. The replacement is now tracked in
+draft [PR #200](https://github.com/aisportsbettingcontact/ai-sports-betting-dime-ai/pull/200);
+creating a draft alone does not resolve the old finding.
 
 ## Incident 22 — 2026-07-25 — uv default cache is outside the workspace sandbox
 
@@ -998,3 +998,55 @@ apply_patch verification failed: Failed to find expected lines
 
 No partial edit was retained. I read the exact tail and reapplied the incident
 and publication-confirmation updates against current context.
+
+## Incident 38 — 2026-07-25 — branch-linked PR appeared outside the draft creation call
+
+Status: RESOLVED
+
+The elevated pre-push API query confirmed that PR #200 did not yet exist.
+After the branch push, the GitHub connector's explicit draft-creation request
+returned:
+
+```text
+422 Validation Failed: A pull request already exists for
+aisportsbettingcontact:agent/restore-dime-1-0-llama31-foundation.
+```
+
+A branch-linked PR had appeared in the intervening interval with a generated
+title, an untouched template body, and non-draft state. No second pull request
+was created. The existing PR #200 was immediately converted to draft and its
+title and body were updated to the reviewed remediation metadata.
+
+## Incident 39 — 2026-07-25 — PR-link documentation patch used stale context
+
+Status: RESOLVED
+
+The first attempt to add the PR #200 link and Incident 38 assumed stale line
+wrapping in Incident 21, so the patch tool rejected the complete patch:
+
+```text
+apply_patch verification failed: Failed to find expected lines
+```
+
+No partial edit was retained. The exact current context was read before this
+replacement patch was applied.
+
+## Incident 40 — 2026-07-25 — audit-note inspection used a stale path
+
+Status: RESOLVED
+
+A read-only inspection command referenced an earlier proposed audit-note path
+under `docs/repo-audit/` instead of the tracked `audit-notes/` path. `sed`
+reported that the file did not exist, and the combined command exited with
+status 1. No file changed. The tracked note was located with `git ls-files` and
+read from its actual path before editing.
+
+## Incident 41 — 2026-07-25 — tracked audit note triggered an ignore warning
+
+Status: RESOLVED
+
+The first explicit staging command returned status 1 after Git warned that the
+tracked audit note lives below an ignored `audit-notes/` directory. A direct
+index inspection confirmed that both intended tracked edits had nevertheless
+been staged and no other path was added. The incident log was restaged after
+recording this result, and the staged diff was revalidated before commit.
