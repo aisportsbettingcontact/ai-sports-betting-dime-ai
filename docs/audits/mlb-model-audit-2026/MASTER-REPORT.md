@@ -179,6 +179,16 @@ carries its batch evidence in remediation-log.md; RECOMMENDED ONLY items are lis
 | 6 | CLV wherever closing lines exist; coverage map + sourcing proposal | 7,632 fg rows with CLV (4,504 DK closing, 3,128 labeled proxy); clv-coverage.csv; §7 proposal |
 | 7 | Provenance integrity: no live_pregame projection modified; snapshots + logged counts for every write batch | remediation-log.md (B1–B9, all snapshot-backed); replay confined to mlb_replay_* tables; provenance column separates series |
 
+**Fresh-context verification (2026-07-25 22:4x UTC): 8/8 headline claims MATCH**, several
+exactly (21,142/40,302×3 grade rows; CLV 7,632; quarantined 4,760 all with reasons; K hit
+0.5920; FG-total live bias −0.5400; K live bias −1.0058), plus 3 random games verified
+end-to-end schedule = games = StatsAPI. Verifier anomaly notes (recorded, none contradicting
+a claim): the All-Star exhibition carries live projections and HR-prop rows (it is exempt from
+coverage accounting, and is the sole K-coverage absence); replay fg-market grades cover 1,545
+of 1,555 projection games (10 games lack book lines to grade against — EX-NO-LINE); the
+fg_total p2d headline bias (−0.026) includes pushes (−0.056 excluding, both within tolerance);
+a handful of K-prop rows sit just outside the 3/25–7/24 window.
+
 Verification notes stated plainly: the 10-agent test fleet and parts of the 25-agent granular
 fleet were cut short by session limits (P-008) — fullgame/F5 groups verified fully (hundreds of
 claims, zero unbacked), K/HR granular reports are thinner and covered by the deep-dive instead;
