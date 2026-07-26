@@ -218,12 +218,6 @@ class SafeConn:
             self.reconnect()
         return self._conn.cursor(*a, **k)
 
-    def close(self):
-        try:
-            self._conn.close()
-        except Exception:
-            pass
-
 
 def connect_db():
     return SafeConn()
@@ -604,26 +598,32 @@ def irls_logistic(X, y, ridge=1e-3, max_iter=50, tol=1e-8):
 
 
 def nrfi_feature_vector(feats):
-    """Deterministic numeric vector from AsOfFeatureStore.nrfi_features output.
-    Sorted-key order; hands mapped L->1/R->0; id-ish keys excluded. Returns (keys, vec)."""
-    keys, vec = [], []
-    for k in sorted(feats.keys()):
-        v = feats[k]
-        lk = k.lower()
-        if lk.endswith("id") or lk in ("gameid", "gamepk"):
+    """Numeric feature DICT from AsOfFeatureStore.nrfi_features output (hands mapped
+    L->1/R->0; id-ish keys excluded). Dict form lets fit/predict use a canonical union
+    keyspace with 0.0 fill — per-game key sets are data-dependent, and requiring exact
+    key equality made predict() silently fail for ~100% of games (audit finding)."""
+    def _excluded(name):
+        ln = name.lower()
+        return ln.endswith("id") or ln.endswith("ids") or ln in ("gameid", "gamepk") \
+            or "mlbam" in ln or "cutoff" in ln or ln.endswith("ms")
+
+    out = {}
+    for k, v in feats.items():
+        if _excluded(k):
             continue
         if isinstance(v, bool):
-            keys.append(k); vec.append(1.0 if v else 0.0)
+            out[k] = 1.0 if v else 0.0
         elif isinstance(v, (int, float)) and not isinstance(v, bool):
-            keys.append(k); vec.append(float(v))
+            out[k] = float(v)
         elif isinstance(v, str) and v.upper() in ("L", "R", "S"):
-            keys.append(k); vec.append(1.0 if v.upper() == "L" else 0.0)
+            out[k] = 1.0 if v.upper() == "L" else 0.0
         elif isinstance(v, dict):
-            for k2 in sorted(v.keys()):
-                v2 = v[k2]
+            for k2, v2 in v.items():
+                if _excluded(k2) or _excluded(f"{k}.{k2}"):
+                    continue
                 if isinstance(v2, (int, float)) and not isinstance(v2, bool):
-                    keys.append(f"{k}.{k2}"); vec.append(float(v2))
-    return keys, vec
+                    out[f"{k}.{k2}"] = float(v2)
+    return out
 
 
 class NrfiWalkForward:
@@ -657,19 +657,16 @@ class NrfiWalkForward:
         """train_games: [(gameId, y)] -> model dict or None."""
         if self.store is None:
             return None
-        X, y, keys = [], [], None
+        feat_dicts, y = [], []
         for gid, label in train_games:
             fv = self.features(gid)
             if fv is None:
                 continue
-            k, v = fv
-            if keys is None:
-                keys = k
-            if k != keys:
-                continue  # inconsistent feature sets - skip defensively
-            X.append(v); y.append(label)
-        if keys is None or len(y) < 50:
+            feat_dicts.append(fv); y.append(label)
+        if len(y) < 50:
             return None
+        keys = sorted(set().union(*[set(d.keys()) for d in feat_dicts]))
+        X = [[d.get(k, 0.0) for k in keys] for d in feat_dicts]
         beta, mu, sd = irls_logistic(np.array(X), np.array(y))
         return {"keys": keys, "beta": beta.tolist(), "mu": mu.tolist(), "sd": sd.tolist(),
                 "n_train": len(y)}
@@ -678,12 +675,12 @@ class NrfiWalkForward:
         fv = self.features(game_id)
         if fv is None or model is None:
             return None
-        keys, vec = fv
-        if keys != model["keys"]:
-            return None
+        vec = [fv.get(k, 0.0) for k in model["keys"]]
         xs = (np.array(vec) - np.array(model["mu"])) / np.array(model["sd"])
         z = model["beta"][0] + float(np.dot(np.array(model["beta"][1:]), xs))
-        return sigmoid(max(-30, min(30, z)))
+        # clamp: a first-inning-scoreless probability outside [0.10, 0.90] is not a
+        # credible output of this feature set; saturation indicates feature outliers
+        return min(0.90, max(0.10, sigmoid(max(-30, min(30, z)))))
 
 
 def _fit_on(train, kprops, hrprops, data, nrfi_wf, live_k, hr_actual_idx):

@@ -57,7 +57,11 @@ for (const g of sample) {
   try {
     const res = await fetch(url);
     const j = await res.json();
-    api = j?.dates?.[0]?.games?.[0] ?? null;
+    // suspended/resumed games return one entry per date; take the entry that
+    // actually carries final scores (the resumption date), else the last one
+    const entries = (j?.dates ?? []).flatMap((d) => d.games ?? []);
+    api = entries.find((g) => g?.teams?.away?.score !== undefined && g?.teams?.away?.score !== null)
+      ?? entries[entries.length - 1] ?? null;
   } catch { /* network fail -> note */ }
   const rows = gameRows(g[idx.game_id]);
   const mlRow = rows.find((p) => p[idx.sub_market] === 'ML');

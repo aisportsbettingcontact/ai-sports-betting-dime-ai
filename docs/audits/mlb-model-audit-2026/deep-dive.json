@@ -1,5 +1,5 @@
 {
- "generated": "2026-07-25T20:53:36.130Z",
+ "generated": "2026-07-26T00:07:09.806Z",
  "markets": {
   "fg_ml": {
    "series": {
@@ -89,6 +89,35 @@
        "obs": 0.6099
       }
      ]
+    },
+    "p2d": {
+     "overall": {
+      "n": 1545,
+      "graded": 1545,
+      "hit": 0.554,
+      "hit_ci": 0.0248,
+      "brier": 0.2468,
+      "pick_clv": -0.0002,
+      "pick_clv_ci": 0.0002,
+      "n_clv": 1532
+     },
+     "reliability": [
+      {
+       "n": 125,
+       "p": 0.3753,
+       "obs": 0.392
+      },
+      {
+       "n": 1193,
+       "p": 0.4543,
+       "obs": 0.4619
+      },
+      {
+       "n": 225,
+       "p": 0.5213,
+       "obs": 0.6089
+      }
+     ]
     }
    },
    "slices": {
@@ -157,7 +186,7 @@
       "brier": 0.24769
      }
     },
-    "p2": {
+    "p2d": {
      "mo_2026-03": {
       "n": 76,
       "graded": 76,
@@ -170,109 +199,61 @@
       "graded": 389,
       "hit": 0.545,
       "hit_ci": 0.0496,
-      "brier": 0.25127
+      "brier": 0.25012
      },
      "mo_2026-05": {
       "n": 416,
       "graded": 416,
       "hit": 0.5625,
       "hit_ci": 0.0477,
-      "brier": 0.24558
+      "brier": 0.24549
      },
      "mo_2026-06": {
       "n": 392,
       "graded": 392,
       "hit": 0.5612,
       "hit_ci": 0.0492,
-      "brier": 0.24587
+      "brier": 0.24611
      },
      "mo_2026-07": {
       "n": 272,
       "graded": 272,
       "hit": 0.5404,
       "hit_ci": 0.0593,
-      "brier": 0.24626
+      "brier": 0.24636
      },
      "home_fav": {
       "n": 865,
       "graded": 865,
       "hit": 0.5699,
       "hit_ci": 0.033,
-      "brier": 0.24456
+      "brier": 0.24428
      },
      "away_fav": {
       "n": 668,
       "graded": 668,
       "hit": 0.5344,
       "hit_ci": 0.0379,
-      "brier": 0.25009
+      "brier": 0.24988
      },
      "day": {
       "n": 563,
       "graded": 563,
       "hit": 0.5666,
       "hit_ci": 0.041,
-      "brier": 0.247
+      "brier": 0.24611
      },
      "night": {
       "n": 982,
       "graded": 982,
       "hit": 0.5468,
       "hit_ci": 0.0312,
-      "brier": 0.24706
+      "brier": 0.24719
      }
     }
    },
    "exemplars": {
     "worst20": [
-     {
-      "gameId": 2250339,
-      "date": "2026-04-22",
-      "refId": 0,
-      "pick": "HOME",
-      "prob": "0.25150",
-      "proj": null,
-      "line": "+105",
-      "actual": "AWAY",
-      "brier": "0.560252",
-      "err": null
-     },
-     {
-      "gameId": 2250328,
-      "date": "2026-04-21",
-      "refId": 0,
-      "pick": "HOME",
-      "prob": "0.28080",
-      "proj": null,
-      "line": "+135",
-      "actual": "AWAY",
-      "brier": "0.517249",
-      "err": null
-     },
-     {
-      "gameId": 2250390,
-      "date": "2026-04-26",
-      "refId": 0,
-      "pick": "HOME",
-      "prob": "0.28490",
-      "proj": null,
-      "line": "+139",
-      "actual": "AWAY",
-      "brier": "0.511368",
-      "err": null
-     },
-     {
-      "gameId": 2250441,
-      "date": "2026-04-30",
-      "refId": 0,
-      "pick": "HOME",
-      "prob": "0.28610",
-      "proj": null,
-      "line": "+159",
-      "actual": "AWAY",
-      "brier": "0.509653",
-      "err": null
-     },
      {
       "gameId": 2250183,
       "date": "2026-04-10",
@@ -298,18 +279,6 @@
       "err": null
      },
      {
-      "gameId": 2250411,
-      "date": "2026-04-28",
-      "refId": 0,
-      "pick": "HOME",
-      "prob": "0.31520",
-      "proj": null,
-      "line": "+133",
-      "actual": "AWAY",
-      "brier": "0.468951",
-      "err": null
-     },
-     {
       "gameId": 2250124,
       "date": "2026-04-05",
       "refId": 0,
@@ -319,18 +288,6 @@
       "line": "+251",
       "actual": "AWAY",
       "brier": "0.465397",
-      "err": null
-     },
-     {
-      "gameId": 2250308,
-      "date": "2026-04-19",
-      "refId": 0,
-      "pick": "HOME",
-      "prob": "0.31910",
-      "proj": null,
-      "line": "+135",
-      "actual": "AWAY",
-      "brier": "0.463625",
       "err": null
      },
      {
@@ -346,54 +303,6 @@
       "err": null
      },
      {
-      "gameId": 2250438,
-      "date": "2026-04-30",
-      "refId": 0,
-      "pick": "HOME",
-      "prob": "0.32560",
-      "proj": null,
-      "line": "+189",
-      "actual": "AWAY",
-      "brier": "0.454815",
-      "err": null
-     },
-     {
-      "gameId": 2250263,
-      "date": "2026-04-16",
-      "refId": 0,
-      "pick": "HOME",
-      "prob": "0.32720",
-      "proj": null,
-      "line": "+244",
-      "actual": "AWAY",
-      "brier": "0.452660",
-      "err": null
-     },
-     {
-      "gameId": 2250227,
-      "date": "2026-04-13",
-      "refId": 0,
-      "pick": "HOME",
-      "prob": "0.32940",
-      "proj": null,
-      "line": "+124",
-      "actual": "AWAY",
-      "brier": "0.449704",
-      "err": null
-     },
-     {
-      "gameId": 2250421,
-      "date": "2026-04-28",
-      "refId": 0,
-      "pick": "HOME",
-      "prob": "0.33200",
-      "proj": null,
-      "line": "+224",
-      "actual": "AWAY",
-      "brier": "0.446224",
-      "err": null
-     },
-     {
       "gameId": 2252367,
       "date": "2026-04-02",
       "refId": 0,
@@ -403,30 +312,6 @@
       "line": "-112",
       "actual": "AWAY",
       "brier": "0.445289",
-      "err": null
-     },
-     {
-      "gameId": 2250427,
-      "date": "2026-04-29",
-      "refId": 0,
-      "pick": "HOME",
-      "prob": "0.33510",
-      "proj": null,
-      "line": "+194",
-      "actual": "AWAY",
-      "brier": "0.442092",
-      "err": null
-     },
-     {
-      "gameId": 2250349,
-      "date": "2026-04-22",
-      "refId": 0,
-      "pick": "AWAY",
-      "prob": "0.66460",
-      "proj": null,
-      "line": "-207",
-      "actual": "HOME",
-      "brier": "0.441693",
       "err": null
      },
      {
@@ -442,27 +327,171 @@
       "err": null
      },
      {
-      "gameId": 2250361,
-      "date": "2026-04-24",
+      "gameId": 2250155,
+      "date": "2026-04-07",
       "refId": 0,
       "pick": "HOME",
-      "prob": "0.33740",
+      "prob": "0.34750",
       "proj": null,
-      "line": "+169",
+      "line": "-147",
       "actual": "AWAY",
-      "brier": "0.439039",
+      "brier": "0.425756",
       "err": null
      },
      {
-      "gameId": 2250317,
-      "date": "2026-04-20",
+      "gameId": 2250190,
+      "date": "2026-04-10",
       "refId": 0,
       "pick": "HOME",
-      "prob": "0.34730",
+      "prob": "0.34950",
       "proj": null,
-      "line": "-115",
+      "line": "+169",
       "actual": "AWAY",
-      "brier": "0.426017",
+      "brier": "0.423150",
+      "err": null
+     },
+     {
+      "gameId": 2250172,
+      "date": "2026-04-08",
+      "refId": 0,
+      "pick": "HOME",
+      "prob": "0.35630",
+      "proj": null,
+      "line": "-109",
+      "actual": "AWAY",
+      "brier": "0.414350",
+      "err": null
+     },
+     {
+      "gameId": 2250012,
+      "date": "2026-03-26",
+      "refId": 0,
+      "pick": "HOME",
+      "prob": "0.35920",
+      "proj": null,
+      "line": "+149",
+      "actual": "AWAY",
+      "brier": "0.410625",
+      "err": null
+     },
+     {
+      "gameId": 2250069,
+      "date": "2026-03-31",
+      "refId": 0,
+      "pick": "HOME",
+      "prob": "0.35960",
+      "proj": null,
+      "line": "+135",
+      "actual": "AWAY",
+      "brier": "0.410112",
+      "err": null
+     },
+     {
+      "gameId": 2250113,
+      "date": "2026-04-04",
+      "refId": 0,
+      "pick": "HOME",
+      "prob": "0.36180",
+      "proj": null,
+      "line": "-102",
+      "actual": "AWAY",
+      "brier": "0.407299",
+      "err": null
+     },
+     {
+      "gameId": 2250090,
+      "date": "2026-04-01",
+      "refId": 0,
+      "pick": "HOME",
+      "prob": "0.36620",
+      "proj": null,
+      "line": "+224",
+      "actual": "AWAY",
+      "brier": "0.401702",
+      "err": null
+     },
+     {
+      "gameId": 2250048,
+      "date": "2026-03-29",
+      "refId": 0,
+      "pick": "HOME",
+      "prob": "0.36650",
+      "proj": null,
+      "line": "+197",
+      "actual": "AWAY",
+      "brier": "0.401322",
+      "err": null
+     },
+     {
+      "gameId": 2251079,
+      "date": "2026-06-20",
+      "refId": 0,
+      "pick": "HOME",
+      "prob": "0.36922",
+      "proj": null,
+      "line": "+224",
+      "actual": "AWAY",
+      "brier": "0.397883",
+      "err": null
+     },
+     {
+      "gameId": 2250123,
+      "date": "2026-04-05",
+      "refId": 0,
+      "pick": "HOME",
+      "prob": "0.37210",
+      "proj": null,
+      "line": "+135",
+      "actual": "AWAY",
+      "brier": "0.394258",
+      "err": null
+     },
+     {
+      "gameId": 2250179,
+      "date": "2026-04-09",
+      "refId": 0,
+      "pick": "HOME",
+      "prob": "0.37260",
+      "proj": null,
+      "line": "+149",
+      "actual": "AWAY",
+      "brier": "0.393631",
+      "err": null
+     },
+     {
+      "gameId": 2250009,
+      "date": "2026-03-26",
+      "refId": 0,
+      "pick": "HOME",
+      "prob": "0.37270",
+      "proj": null,
+      "line": "+169",
+      "actual": "AWAY",
+      "brier": "0.393505",
+      "err": null
+     },
+     {
+      "gameId": 2250616,
+      "date": "2026-05-14",
+      "refId": 0,
+      "pick": "HOME",
+      "prob": "0.37509",
+      "proj": null,
+      "line": "+102",
+      "actual": "AWAY",
+      "brier": "0.390513",
+      "err": null
+     },
+     {
+      "gameId": 2250473,
+      "date": "2026-05-03",
+      "refId": 0,
+      "pick": "HOME",
+      "prob": "0.37636",
+      "proj": null,
+      "line": "+153",
+      "actual": "AWAY",
+      "brier": "0.388927",
       "err": null
      }
     ]
@@ -540,6 +569,49 @@
       "bias_ci": 0.2294,
       "mae": 3.5646,
       "rmse": 4.6139,
+      "pick_clv": -0.0051,
+      "pick_clv_ci": 0.0028,
+      "n_clv": 1530
+     },
+     "reliability": [
+      {
+       "n": 53,
+       "p": 0.2831,
+       "obs": 0.283
+      },
+      {
+       "n": 447,
+       "p": 0.3542,
+       "obs": 0.396
+      },
+      {
+       "n": 285,
+       "p": 0.4442,
+       "obs": 0.5088
+      },
+      {
+       "n": 516,
+       "p": 0.5567,
+       "obs": 0.5872
+      },
+      {
+       "n": 241,
+       "p": 0.6275,
+       "obs": 0.6307
+      }
+     ]
+    },
+    "p2d": {
+     "overall": {
+      "n": 1545,
+      "graded": 1545,
+      "hit": 0.5851,
+      "hit_ci": 0.0246,
+      "brier": 0.24169,
+      "bias": -0.3804,
+      "bias_ci": 0.2294,
+      "mae": 3.5649,
+      "rmse": 4.6143,
       "pick_clv": -0.0051,
       "pick_clv_ci": 0.0028,
       "n_clv": 1530
@@ -666,7 +738,7 @@
       "rmse": 4.5599
      }
     },
-    "p2": {
+    "p2d": {
      "mo_2026-03": {
       "n": 76,
       "graded": 76,
@@ -684,10 +756,10 @@
       "hit": 0.5656,
       "hit_ci": 0.0493,
       "brier": 0.24828,
-      "bias": -0.3414,
-      "bias_ci": 0.4352,
-      "mae": 3.4999,
-      "rmse": 4.3873
+      "bias": -0.352,
+      "bias_ci": 0.4354,
+      "mae": 3.5002,
+      "rmse": 4.3896
      },
      "mo_2026-05": {
       "n": 416,
@@ -695,10 +767,10 @@
       "hit": 0.6034,
       "hit_ci": 0.0471,
       "brier": 0.23456,
-      "bias": -0.3493,
+      "bias": -0.3416,
       "bias_ci": 0.4433,
-      "mae": 3.5965,
-      "rmse": 4.6209
+      "mae": 3.5972,
+      "rmse": 4.6202
      },
      "mo_2026-06": {
       "n": 392,
@@ -706,10 +778,10 @@
       "hit": 0.6071,
       "hit_ci": 0.0484,
       "brier": 0.23821,
-      "bias": -0.4858,
+      "bias": -0.4888,
       "bias_ci": 0.4516,
-      "mae": 3.464,
-      "rmse": 4.5817
+      "mae": 3.4638,
+      "rmse": 4.5819
      },
      "mo_2026-07": {
       "n": 272,
@@ -717,10 +789,10 @@
       "hit": 0.5588,
       "hit_ci": 0.0591,
       "brier": 0.24596,
-      "bias": -0.3806,
+      "bias": -0.3819,
       "bias_ci": 0.6017,
-      "mae": 3.8214,
-      "rmse": 5.0682
+      "mae": 3.8213,
+      "rmse": 5.0681
      },
      "home_fav": {
       "n": 865,
@@ -728,10 +800,10 @@
       "hit": 0.6012,
       "hit_ci": 0.0327,
       "brier": 0.23943,
-      "bias": -0.12,
+      "bias": -0.1229,
       "bias_ci": 0.3117,
-      "mae": 3.6218,
-      "rmse": 4.6756
+      "mae": 3.6223,
+      "rmse": 4.6761
      },
      "away_fav": {
       "n": 668,
@@ -739,10 +811,10 @@
       "hit": 0.5689,
       "hit_ci": 0.0376,
       "brier": 0.24376,
-      "bias": -0.6817,
+      "bias": -0.6818,
       "bias_ci": 0.3397,
-      "mae": 3.4831,
-      "rmse": 4.5274
+      "mae": 3.4829,
+      "rmse": 4.5276
      },
      "day": {
       "n": 563,
@@ -750,10 +822,10 @@
       "hit": 0.5808,
       "hit_ci": 0.0408,
       "brier": 0.24435,
-      "bias": -0.2285,
-      "bias_ci": 0.3875,
-      "mae": 3.6011,
-      "rmse": 4.6927
+      "bias": -0.2297,
+      "bias_ci": 0.3876,
+      "mae": 3.6021,
+      "rmse": 4.6941
      },
      "night": {
       "n": 982,
@@ -761,10 +833,10 @@
       "hit": 0.5876,
       "hit_ci": 0.0308,
       "brier": 0.24017,
-      "bias": -0.4649,
+      "bias": -0.4668,
       "bias_ci": 0.2844,
-      "mae": 3.5437,
-      "rmse": 4.5681
+      "mae": 3.5435,
+      "rmse": 4.5679
      }
     }
    },
@@ -776,11 +848,11 @@
       "refId": 0,
       "pick": "HOME",
       "prob": "0.19000",
-      "proj": "-2.7000",
+      "proj": "-2.8090",
       "line": "-1.5",
       "actual": "AWAY",
       "brier": "0.656100",
-      "err": "-4.700"
+      "err": "-4.809"
      },
      {
       "gameId": 2250155,
@@ -800,11 +872,11 @@
       "refId": 0,
       "pick": "HOME",
       "prob": "0.26020",
-      "proj": "-0.9450",
+      "proj": "-0.9540",
       "line": "-1.5",
       "actual": "AWAY",
       "brier": "0.547304",
-      "err": "-4.945"
+      "err": "-4.954"
      },
      {
       "gameId": 2250700,
@@ -812,11 +884,11 @@
       "refId": 0,
       "pick": "HOME",
       "prob": "0.26480",
-      "proj": "-1.2660",
+      "proj": "-1.2360",
       "line": "-1.5",
       "actual": "AWAY",
       "brier": "0.540519",
-      "err": "-8.266"
+      "err": "-8.236"
      },
      {
       "gameId": 2251332,
@@ -824,11 +896,11 @@
       "refId": 0,
       "pick": "HOME",
       "prob": "0.26570",
-      "proj": "-1.7040",
+      "proj": "-1.7140",
       "line": "-1.5",
       "actual": "AWAY",
       "brier": "0.539196",
-      "err": "-3.704"
+      "err": "-3.714"
      },
      {
       "gameId": 2250317,
@@ -836,11 +908,11 @@
       "refId": 0,
       "pick": "HOME",
       "prob": "0.26720",
-      "proj": "-1.3900",
+      "proj": "-1.4330",
       "line": "-1.5",
       "actual": "AWAY",
       "brier": "0.536996",
-      "err": "-3.390"
+      "err": "-3.433"
      },
      {
       "gameId": 2250172,
@@ -860,11 +932,11 @@
       "refId": 0,
       "pick": "HOME",
       "prob": "0.26910",
-      "proj": "-1.0870",
+      "proj": "-1.0910",
       "line": "-1.5",
       "actual": "AWAY",
       "brier": "0.534215",
-      "err": "-3.087"
+      "err": "-3.091"
      },
      {
       "gameId": 2252367,
@@ -896,11 +968,11 @@
       "refId": 0,
       "pick": "HOME",
       "prob": "0.28430",
-      "proj": "-1.4800",
+      "proj": "-1.5320",
       "line": "-1.5",
       "actual": "AWAY",
       "brier": "0.512226",
-      "err": "-4.480"
+      "err": "-4.532"
      },
      {
       "gameId": 2250192,
@@ -920,11 +992,11 @@
       "refId": 0,
       "pick": "HOME",
       "prob": "0.28580",
-      "proj": "-1.9290",
+      "proj": "-1.9490",
       "line": "-1.5",
       "actual": "AWAY",
       "brier": "0.510082",
-      "err": "-7.929"
+      "err": "-7.949"
      },
      {
       "gameId": 2251195,
@@ -932,11 +1004,11 @@
       "refId": 0,
       "pick": "HOME",
       "prob": "0.28970",
-      "proj": "-1.4420",
+      "proj": "-1.4540",
       "line": "-1.5",
       "actual": "AWAY",
       "brier": "0.504526",
-      "err": "-6.442"
+      "err": "-6.454"
      },
      {
       "gameId": 2250436,
@@ -944,11 +1016,11 @@
       "refId": 0,
       "pick": "HOME",
       "prob": "0.29230",
-      "proj": "-0.8600",
+      "proj": "-0.8970",
       "line": "-1.5",
       "actual": "AWAY",
       "brier": "0.500839",
-      "err": "-3.860"
+      "err": "-3.897"
      },
      {
       "gameId": 2250035,
@@ -968,11 +1040,11 @@
       "refId": 0,
       "pick": "HOME",
       "prob": "0.29800",
-      "proj": "-1.1600",
+      "proj": "-1.2080",
       "line": "-1.5",
       "actual": "AWAY",
       "brier": "0.492804",
-      "err": "-6.160"
+      "err": "-6.208"
      },
      {
       "gameId": 2250493,
@@ -980,11 +1052,11 @@
       "refId": 0,
       "pick": "HOME",
       "prob": "0.30180",
-      "proj": "-0.7530",
+      "proj": "-0.7480",
       "line": "-1.5",
       "actual": "AWAY",
       "brier": "0.487483",
-      "err": "-5.753"
+      "err": "-5.748"
      },
      {
       "gameId": 2250532,
@@ -992,11 +1064,11 @@
       "refId": 0,
       "pick": "HOME",
       "prob": "0.30260",
-      "proj": "-0.9830",
+      "proj": "-0.9710",
       "line": "-1.5",
       "actual": "AWAY",
       "brier": "0.486367",
-      "err": "-4.983"
+      "err": "-4.971"
      },
      {
       "gameId": 2250655,
@@ -1004,11 +1076,11 @@
       "refId": 0,
       "pick": "HOME",
       "prob": "0.30280",
-      "proj": "-0.8780",
+      "proj": "-0.8540",
       "line": "-1.5",
       "actual": "AWAY",
       "brier": "0.486088",
-      "err": "-8.878"
+      "err": "-8.854"
      }
     ]
    }
@@ -1131,6 +1203,44 @@
        "n": 88,
        "p": 0.6295,
        "obs": 0.5341
+      }
+     ]
+    },
+    "p2d": {
+     "overall": {
+      "n": 1545,
+      "graded": 1483,
+      "hit": 0.5502,
+      "hit_ci": 0.0253,
+      "brier": 0.24832,
+      "bias": -0.0258,
+      "bias_ci": 0.222,
+      "mae": 3.531,
+      "rmse": 4.4503,
+      "pick_clv": -0.0001,
+      "pick_clv_ci": 0.0004,
+      "n_clv": 744
+     },
+     "reliability": [
+      {
+       "n": 144,
+       "p": 0.3676,
+       "obs": 0.4375
+      },
+      {
+       "n": 694,
+       "p": 0.4555,
+       "obs": 0.4597
+      },
+      {
+       "n": 546,
+       "p": 0.5392,
+       "obs": 0.5531
+      },
+      {
+       "n": 77,
+       "p": 0.632,
+       "obs": 0.5844
       }
      ]
     }
@@ -1270,7 +1380,7 @@
       "rmse": 5.0536
      }
     },
-    "p2": {
+    "p2d": {
      "mo_2026-03": {
       "n": 76,
       "graded": 73,
@@ -1285,211 +1395,211 @@
      "mo_2026-04": {
       "n": 389,
       "graded": 370,
-      "hit": 0.5027,
+      "hit": 0.4973,
       "hit_ci": 0.051,
-      "brier": 0.2557,
-      "bias": -0.4456,
-      "bias_ci": 0.4435,
-      "mae": 3.54,
-      "rmse": 4.4794
+      "brier": 0.25434,
+      "bias": -0.2248,
+      "bias_ci": 0.4441,
+      "mae": 3.5641,
+      "rmse": 4.4685
      },
      "mo_2026-05": {
       "n": 416,
       "graded": 398,
-      "hit": 0.5704,
-      "hit_ci": 0.0487,
-      "brier": 0.2468,
-      "bias": 0.5555,
-      "bias_ci": 0.4069,
-      "mae": 3.4621,
-      "rmse": 4.2654
+      "hit": 0.5829,
+      "hit_ci": 0.0485,
+      "brier": 0.24697,
+      "bias": 0.352,
+      "bias_ci": 0.4075,
+      "mae": 3.4258,
+      "rmse": 4.2503
      },
      "mo_2026-06": {
       "n": 392,
       "graded": 376,
       "hit": 0.5691,
       "hit_ci": 0.0501,
-      "brier": 0.24373,
-      "bias": -0.3021,
-      "bias_ci": 0.4414,
-      "mae": 3.3654,
-      "rmse": 4.463
+      "brier": 0.24353,
+      "bias": -0.2225,
+      "bias_ci": 0.4417,
+      "mae": 3.376,
+      "rmse": 4.4613
      },
      "mo_2026-07": {
       "n": 272,
       "graded": 266,
-      "hit": 0.5451,
+      "hit": 0.5376,
       "hit_ci": 0.06,
-      "brier": 0.24984,
-      "bias": -0.0357,
-      "bias_ci": 0.5594,
-      "mae": 3.8182,
-      "rmse": 4.6985
+      "brier": 0.25003,
+      "bias": -0.0053,
+      "bias_ci": 0.5596,
+      "mae": 3.8236,
+      "rmse": 4.6999
      },
      "home_fav": {
       "n": 865,
       "graded": 824,
-      "hit": 0.5413,
+      "hit": 0.5425,
       "hit_ci": 0.034,
-      "brier": 0.24984,
-      "bias": -0.241,
-      "bias_ci": 0.2927,
-      "mae": 3.4655,
-      "rmse": 4.3957
+      "brier": 0.24931,
+      "bias": -0.2054,
+      "bias_ci": 0.2923,
+      "mae": 3.4664,
+      "rmse": 4.389
      },
      "away_fav": {
       "n": 668,
       "graded": 647,
       "hit": 0.5595,
       "hit_ci": 0.0383,
-      "brier": 0.24763,
-      "bias": 0.1896,
-      "bias_ci": 0.3455,
-      "mae": 3.632,
-      "rmse": 4.5565
+      "brier": 0.24755,
+      "bias": 0.2063,
+      "bias_ci": 0.3449,
+      "mae": 3.6304,
+      "rmse": 4.5494
      },
      "day": {
       "n": 563,
       "graded": 539,
-      "hit": 0.5343,
+      "hit": 0.5325,
       "hit_ci": 0.0422,
-      "brier": 0.2496,
-      "bias": -0.1129,
-      "bias_ci": 0.3681,
-      "mae": 3.5246,
-      "rmse": 4.4542
+      "brier": 0.24865,
+      "bias": -0.0879,
+      "bias_ci": 0.3675,
+      "mae": 3.5219,
+      "rmse": 4.4462
      },
      "night": {
       "n": 982,
       "graded": 944,
-      "hit": 0.5583,
+      "hit": 0.5604,
       "hit_ci": 0.0317,
-      "brier": 0.24808,
-      "bias": -0.0173,
-      "bias_ci": 0.279,
-      "mae": 3.5346,
-      "rmse": 4.4588
+      "brier": 0.24813,
+      "bias": 0.0098,
+      "bias_ci": 0.2786,
+      "mae": 3.5362,
+      "rmse": 4.4526
      },
      "line_low": {
       "n": 397,
       "graded": 384,
-      "hit": 0.5469,
-      "hit_ci": 0.0499,
-      "brier": 0.25067,
-      "bias": 0.0063,
-      "bias_ci": 0.415,
-      "mae": 3.3287,
-      "rmse": 4.2136
+      "hit": 0.5651,
+      "hit_ci": 0.0496,
+      "brier": 0.25062,
+      "bias": 0.0099,
+      "bias_ci": 0.4142,
+      "mae": 3.3256,
+      "rmse": 4.2053
      },
      "line_mid": {
       "n": 860,
       "graded": 820,
-      "hit": 0.5463,
+      "hit": 0.5439,
       "hit_ci": 0.0341,
-      "brier": 0.2478,
-      "bias": -0.0608,
-      "bias_ci": 0.2945,
-      "mae": 3.5281,
-      "rmse": 4.4037
+      "brier": 0.24732,
+      "bias": -0.0239,
+      "bias_ci": 0.2942,
+      "mae": 3.5317,
+      "rmse": 4.3988
      },
      "line_high": {
       "n": 276,
       "graded": 267,
-      "hit": 0.5618,
-      "hit_ci": 0.0596,
-      "brier": 0.24959,
-      "bias": -0.1162,
-      "bias_ci": 0.5889,
-      "mae": 3.8703,
-      "rmse": 4.9841
+      "hit": 0.5468,
+      "hit_ci": 0.0598,
+      "brier": 0.24926,
+      "bias": -0.0843,
+      "bias_ci": 0.5878,
+      "mae": 3.8623,
+      "rmse": 4.9735
      }
     }
    },
    "exemplars": {
     "worst20": [
      {
-      "gameId": 2250685,
-      "date": "2026-05-19",
-      "refId": 0,
-      "pick": "OVER",
-      "prob": "0.63527",
-      "proj": "12.5690",
-      "line": "10.0",
-      "actual": "10.0",
-      "brier": null,
-      "err": "2.569"
-     },
-     {
-      "gameId": 2250738,
-      "date": "2026-05-24",
-      "refId": 0,
-      "pick": "OVER",
-      "prob": "0.64933",
-      "proj": "10.5190",
-      "line": "8.0",
-      "actual": "8.0",
-      "brier": null,
-      "err": "2.519"
-     },
-     {
-      "gameId": 2250822,
-      "date": "2026-05-30",
-      "refId": 0,
-      "pick": "OVER",
-      "prob": "0.60800",
-      "proj": "13.2380",
-      "line": "11.0",
-      "actual": "11.0",
-      "brier": null,
-      "err": "2.238"
-     },
-     {
       "gameId": 2250442,
       "date": "2026-04-30",
       "refId": 0,
       "pick": "OVER",
-      "prob": "0.58220",
-      "proj": "10.8100",
+      "prob": "0.62246",
+      "proj": "11.2780",
       "line": "9.0",
       "actual": "9.0",
       "brier": null,
-      "err": "1.810"
+      "err": "2.278"
      },
      {
-      "gameId": 2250818,
-      "date": "2026-05-30",
+      "gameId": 2250685,
+      "date": "2026-05-19",
       "refId": 0,
       "pick": "OVER",
-      "prob": "0.60633",
-      "proj": "8.7940",
-      "line": "7.0",
-      "actual": "7.0",
+      "prob": "0.61059",
+      "proj": "12.2740",
+      "line": "10.0",
+      "actual": "10.0",
       "brier": null,
-      "err": "1.794"
+      "err": "2.274"
      },
      {
       "gameId": 2250350,
       "date": "2026-04-23",
       "refId": 0,
       "pick": "OVER",
-      "prob": "0.58010",
-      "proj": "10.7600",
+      "prob": "0.61543",
+      "proj": "11.1710",
       "line": "9.0",
       "actual": "9.0",
       "brier": null,
-      "err": "1.760"
+      "err": "2.171"
      },
      {
-      "gameId": 2250593,
-      "date": "2026-05-12",
+      "gameId": 2250738,
+      "date": "2026-05-24",
       "refId": 0,
       "pick": "OVER",
-      "prob": "0.57789",
-      "proj": "11.7010",
-      "line": "10.0",
-      "actual": "10.0",
+      "prob": "0.61822",
+      "proj": "10.1480",
+      "line": "8.0",
+      "actual": "8.0",
       "brier": null,
-      "err": "1.701"
+      "err": "2.148"
+     },
+     {
+      "gameId": 2250414,
+      "date": "2026-04-28",
+      "refId": 0,
+      "pick": "OVER",
+      "prob": "0.60005",
+      "proj": "9.8580",
+      "line": "8.0",
+      "actual": "8.0",
+      "brier": null,
+      "err": "1.858"
+     },
+     {
+      "gameId": 2250822,
+      "date": "2026-05-30",
+      "refId": 0,
+      "pick": "OVER",
+      "prob": "0.56942",
+      "proj": "12.7920",
+      "line": "11.0",
+      "actual": "11.0",
+      "brier": null,
+      "err": "1.792"
+     },
+     {
+      "gameId": 2251094,
+      "date": "2026-06-21",
+      "refId": 0,
+      "pick": "OVER",
+      "prob": "0.58091",
+      "proj": "9.6340",
+      "line": "8.0",
+      "actual": "8.0",
+      "brier": null,
+      "err": "1.634"
      },
      {
       "gameId": 2250132,
@@ -1504,100 +1614,88 @@
       "err": "1.570"
      },
      {
-      "gameId": 2250789,
-      "date": "2026-05-27",
+      "gameId": 2250818,
+      "date": "2026-05-30",
       "refId": 0,
       "pick": "OVER",
-      "prob": "0.58444",
-      "proj": "8.5430",
+      "prob": "0.58077",
+      "proj": "8.4970",
       "line": "7.0",
       "actual": "7.0",
       "brier": null,
-      "err": "1.543"
-     },
-     {
-      "gameId": 2250713,
-      "date": "2026-05-22",
-      "refId": 0,
-      "pick": "OVER",
-      "prob": "0.57366",
-      "proj": "9.5150",
-      "line": "8.0",
-      "actual": "8.0",
-      "brier": null,
-      "err": "1.515"
-     },
-     {
-      "gameId": 2251094,
-      "date": "2026-06-21",
-      "refId": 0,
-      "pick": "OVER",
-      "prob": "0.56951",
-      "proj": "9.5050",
-      "line": "8.0",
-      "actual": "8.0",
-      "brier": null,
-      "err": "1.505"
+      "err": "1.497"
      },
      {
       "gameId": 2250847,
       "date": "2026-06-02",
       "refId": 0,
       "pick": "OVER",
-      "prob": "0.56623",
-      "proj": "9.4340",
+      "prob": "0.56868",
+      "proj": "9.4620",
       "line": "8.0",
       "actual": "8.0",
       "brier": null,
-      "err": "1.434"
+      "err": "1.462"
      },
      {
-      "gameId": 2250414,
-      "date": "2026-04-28",
+      "gameId": 2250387,
+      "date": "2026-04-26",
       "refId": 0,
       "pick": "OVER",
-      "prob": "0.55680",
-      "proj": "9.3600",
+      "prob": "0.56847",
+      "proj": "9.4610",
       "line": "8.0",
       "actual": "8.0",
       "brier": null,
-      "err": "1.360"
+      "err": "1.461"
+     },
+     {
+      "gameId": 2250593,
+      "date": "2026-05-12",
+      "refId": 0,
+      "pick": "OVER",
+      "prob": "0.55536",
+      "proj": "11.4400",
+      "line": "10.0",
+      "actual": "10.0",
+      "brier": null,
+      "err": "1.440"
      },
      {
       "gameId": 2250195,
       "date": "2026-04-11",
       "refId": 0,
       "pick": "OVER",
-      "prob": "0.56530",
-      "proj": "8.3300",
+      "prob": "0.56700",
+      "proj": "8.3490",
       "line": "7.0",
       "actual": "7.0",
       "brier": null,
-      "err": "1.330"
+      "err": "1.349"
      },
      {
       "gameId": 2250886,
       "date": "2026-06-05",
       "refId": 0,
       "pick": "OVER",
-      "prob": "0.55154",
-      "proj": "9.2510",
+      "prob": "0.55522",
+      "proj": "9.2930",
       "line": "8.0",
       "actual": "8.0",
       "brier": null,
-      "err": "1.251"
+      "err": "1.293"
      },
      {
-      "gameId": 2250792,
-      "date": "2026-05-28",
+      "gameId": 2250789,
+      "date": "2026-05-27",
       "refId": 0,
       "pick": "OVER",
-      "prob": "0.55093",
-      "proj": "9.2430",
-      "line": "8.0",
-      "actual": "8.0",
+      "prob": "0.55901",
+      "proj": "8.2520",
+      "line": "7.0",
+      "actual": "7.0",
       "brier": null,
-      "err": "1.243"
+      "err": "1.252"
      },
      {
       "gameId": 2252434,
@@ -1612,40 +1710,52 @@
       "err": "1.240"
      },
      {
-      "gameId": 2250499,
-      "date": "2026-05-05",
+      "gameId": 2250713,
+      "date": "2026-05-22",
       "refId": 0,
       "pick": "OVER",
-      "prob": "0.55556",
-      "proj": "8.2080",
-      "line": "7.0",
-      "actual": "7.0",
+      "prob": "0.54877",
+      "proj": "9.2310",
+      "line": "8.0",
+      "actual": "8.0",
       "brier": null,
-      "err": "1.208"
+      "err": "1.231"
+     },
+     {
+      "gameId": 2251024,
+      "date": "2026-06-16",
+      "refId": 0,
+      "pick": "OVER",
+      "prob": "0.54016",
+      "proj": "10.1580",
+      "line": "9.0",
+      "actual": "9.0",
+      "brier": null,
+      "err": "1.158"
      },
      {
       "gameId": 2250463,
       "date": "2026-05-02",
       "refId": 0,
       "pick": "UNDER",
-      "prob": "0.34519",
-      "proj": "7.8630",
+      "prob": "0.34552",
+      "proj": "7.8640",
       "line": "9.0",
       "actual": "9.0",
       "brier": null,
-      "err": "-1.137"
+      "err": "-1.136"
      },
      {
-      "gameId": 2250956,
-      "date": "2026-06-10",
+      "gameId": 2250499,
+      "date": "2026-05-05",
       "refId": 0,
-      "pick": "UNDER",
-      "prob": "0.35744",
-      "proj": "8.8860",
-      "line": "10.0",
-      "actual": "10.0",
+      "pick": "OVER",
+      "prob": "0.54888",
+      "proj": "8.1310",
+      "line": "7.0",
+      "actual": "7.0",
       "brier": null,
-      "err": "-1.114"
+      "err": "1.131"
      }
     ]
    }
@@ -1729,6 +1839,32 @@
        "obs": 0.5897
       }
      ]
+    },
+    "p2d": {
+     "overall": {
+      "n": 1545,
+      "graded": 1305,
+      "hit": 0.541,
+      "hit_ci": 0.027,
+      "brier": 0.24721
+     },
+     "reliability": [
+      {
+       "n": 105,
+       "p": 0.3765,
+       "obs": 0.381
+      },
+      {
+       "n": 1121,
+       "p": 0.4508,
+       "obs": 0.4692
+      },
+      {
+       "n": 78,
+       "p": 0.5141,
+       "obs": 0.5897
+      }
+     ]
     }
    },
    "slices": {
@@ -1797,7 +1933,7 @@
       "brier": 0.24961
      }
     },
-    "p2": {
+    "p2d": {
      "mo_2026-03": {
       "n": 76,
       "graded": 62,
@@ -1810,73 +1946,61 @@
       "graded": 327,
       "hit": 0.5505,
       "hit_ci": 0.054,
-      "brier": 0.24561
+      "brier": 0.24686
      },
      "mo_2026-05": {
       "n": 416,
       "graded": 358,
       "hit": 0.5447,
       "hit_ci": 0.0517,
-      "brier": 0.24714
+      "brier": 0.24763
      },
      "mo_2026-06": {
       "n": 392,
       "graded": 327,
       "hit": 0.5321,
       "hit_ci": 0.0542,
-      "brier": 0.24776
+      "brier": 0.2479
      },
      "mo_2026-07": {
       "n": 272,
       "graded": 231,
       "hit": 0.5411,
       "hit_ci": 0.0644,
-      "brier": 0.24509
+      "brier": 0.24516
      },
      "home_fav": {
       "n": 865,
       "graded": 736,
       "hit": 0.5476,
       "hit_ci": 0.036,
-      "brier": 0.24457
+      "brier": 0.24535
      },
      "away_fav": {
       "n": 668,
       "graded": 559,
       "hit": 0.5367,
       "hit_ci": 0.0414,
-      "brier": 0.24936
+      "brier": 0.24948
      },
      "day": {
       "n": 563,
       "graded": 469,
       "hit": 0.5437,
       "hit_ci": 0.0451,
-      "brier": 0.24475
+      "brier": 0.24603
      },
      "night": {
       "n": 982,
       "graded": 836,
       "hit": 0.5395,
       "hit_ci": 0.0338,
-      "brier": 0.24781
+      "brier": 0.24787
      }
     }
    },
    "exemplars": {
     "worst20": [
-     {
-      "gameId": 2250322,
-      "date": "2026-04-21",
-      "refId": 0,
-      "pick": "HOME",
-      "prob": "0.26210",
-      "proj": null,
-      "line": null,
-      "actual": "AWAY",
-      "brier": "0.544496",
-      "err": null
-     },
      {
       "gameId": 2250154,
       "date": "2026-04-07",
@@ -1887,18 +2011,6 @@
       "line": "+172",
       "actual": "AWAY",
       "brier": "0.520707",
-      "err": null
-     },
-     {
-      "gameId": 2250407,
-      "date": "2026-04-27",
-      "refId": 0,
-      "pick": "HOME",
-      "prob": "0.29350",
-      "proj": null,
-      "line": null,
-      "actual": "AWAY",
-      "brier": "0.499142",
       "err": null
      },
      {
@@ -1926,18 +2038,6 @@
       "err": null
      },
      {
-      "gameId": 2250308,
-      "date": "2026-04-19",
-      "refId": 0,
-      "pick": "HOME",
-      "prob": "0.32460",
-      "proj": null,
-      "line": "+124",
-      "actual": "AWAY",
-      "brier": "0.456165",
-      "err": null
-     },
-     {
       "gameId": 2250137,
       "date": "2026-04-06",
       "refId": 0,
@@ -1947,54 +2047,6 @@
       "line": "+118",
       "actual": "AWAY",
       "brier": "0.451450",
-      "err": null
-     },
-     {
-      "gameId": 2250411,
-      "date": "2026-04-28",
-      "refId": 0,
-      "pick": "HOME",
-      "prob": "0.32820",
-      "proj": null,
-      "line": "+150",
-      "actual": "AWAY",
-      "brier": "0.451315",
-      "err": null
-     },
-     {
-      "gameId": 2250438,
-      "date": "2026-04-30",
-      "refId": 0,
-      "pick": "HOME",
-      "prob": "0.32880",
-      "proj": null,
-      "line": "+220",
-      "actual": "AWAY",
-      "brier": "0.450509",
-      "err": null
-     },
-     {
-      "gameId": 2250421,
-      "date": "2026-04-28",
-      "refId": 0,
-      "pick": "HOME",
-      "prob": "0.32900",
-      "proj": null,
-      "line": "+215",
-      "actual": "AWAY",
-      "brier": "0.450241",
-      "err": null
-     },
-     {
-      "gameId": 2250427,
-      "date": "2026-04-29",
-      "refId": 0,
-      "pick": "HOME",
-      "prob": "0.32950",
-      "proj": null,
-      "line": null,
-      "actual": "AWAY",
-      "brier": "0.449570",
       "err": null
      },
      {
@@ -2022,18 +2074,6 @@
       "err": null
      },
      {
-      "gameId": 2250227,
-      "date": "2026-04-13",
-      "refId": 0,
-      "pick": "HOME",
-      "prob": "0.34060",
-      "proj": null,
-      "line": "+144",
-      "actual": "AWAY",
-      "brier": "0.434808",
-      "err": null
-     },
-     {
       "gameId": 2250155,
       "date": "2026-04-07",
       "refId": 0,
@@ -2043,18 +2083,6 @@
       "line": "-152",
       "actual": "AWAY",
       "brier": "0.433096",
-      "err": null
-     },
-     {
-      "gameId": 2250237,
-      "date": "2026-04-14",
-      "refId": 0,
-      "pick": "HOME",
-      "prob": "0.34980",
-      "proj": null,
-      "line": "+118",
-      "actual": "AWAY",
-      "brier": "0.422760",
       "err": null
      },
      {
@@ -2103,6 +2131,114 @@
       "line": "+215",
       "actual": "AWAY",
       "brier": "0.409856",
+      "err": null
+     },
+     {
+      "gameId": 2250179,
+      "date": "2026-04-09",
+      "refId": 0,
+      "pick": "HOME",
+      "prob": "0.36090",
+      "proj": null,
+      "line": "+140",
+      "actual": "AWAY",
+      "brier": "0.408449",
+      "err": null
+     },
+     {
+      "gameId": 2250407,
+      "date": "2026-04-27",
+      "refId": 0,
+      "pick": "HOME",
+      "prob": "0.36113",
+      "proj": null,
+      "line": null,
+      "actual": "AWAY",
+      "brier": "0.408155",
+      "err": null
+     },
+     {
+      "gameId": 2250322,
+      "date": "2026-04-21",
+      "refId": 0,
+      "pick": "HOME",
+      "prob": "0.36169",
+      "proj": null,
+      "line": null,
+      "actual": "AWAY",
+      "brier": "0.407440",
+      "err": null
+     },
+     {
+      "gameId": 2250113,
+      "date": "2026-04-04",
+      "refId": 0,
+      "pick": "HOME",
+      "prob": "0.36300",
+      "proj": null,
+      "line": "-118",
+      "actual": "AWAY",
+      "brier": "0.405769",
+      "err": null
+     },
+     {
+      "gameId": 2250069,
+      "date": "2026-03-31",
+      "refId": 0,
+      "pick": "HOME",
+      "prob": "0.36550",
+      "proj": null,
+      "line": "+116",
+      "actual": "AWAY",
+      "brier": "0.402590",
+      "err": null
+     },
+     {
+      "gameId": 2250115,
+      "date": "2026-04-04",
+      "refId": 0,
+      "pick": "HOME",
+      "prob": "0.36930",
+      "proj": null,
+      "line": "+148",
+      "actual": "AWAY",
+      "brier": "0.397782",
+      "err": null
+     },
+     {
+      "gameId": 2250123,
+      "date": "2026-04-05",
+      "refId": 0,
+      "pick": "HOME",
+      "prob": "0.36950",
+      "proj": null,
+      "line": "+158",
+      "actual": "AWAY",
+      "brier": "0.397530",
+      "err": null
+     },
+     {
+      "gameId": 2250048,
+      "date": "2026-03-29",
+      "refId": 0,
+      "pick": "HOME",
+      "prob": "0.36960",
+      "proj": null,
+      "line": "+182",
+      "actual": "AWAY",
+      "brier": "0.397404",
+      "err": null
+     },
+     {
+      "gameId": 2250112,
+      "date": "2026-04-04",
+      "refId": 0,
+      "pick": "HOME",
+      "prob": "0.37250",
+      "proj": null,
+      "line": "+134",
+      "actual": "AWAY",
+      "brier": "0.393756",
       "err": null
      }
     ]
@@ -2192,6 +2328,32 @@
        "obs": 0.4982
       }
      ]
+    },
+    "p2d": {
+     "overall": {
+      "n": 838,
+      "graded": 838,
+      "hit": 0.5036,
+      "hit_ci": 0.0339,
+      "brier": 0.25783
+     },
+     "reliability": [
+      {
+       "n": 51,
+       "p": 0.4793,
+       "obs": 0.4902
+      },
+      {
+       "n": 499,
+       "p": 0.5588,
+       "obs": 0.507
+      },
+      {
+       "n": 285,
+       "p": 0.6303,
+       "obs": 0.4982
+      }
+     ]
     }
    },
    "slices": {
@@ -2253,7 +2415,7 @@
       "brier": 0.25591
      }
     },
-    "p2": {
+    "p2d": {
      "mo_2026-03": {
       "n": 67,
       "graded": 67,
@@ -2648,6 +2810,36 @@
        "obs": 0.5024
       }
      ]
+    },
+    "p2d": {
+     "overall": {
+      "n": 839,
+      "graded": 839,
+      "hit": 0.5113,
+      "hit_ci": 0.0338,
+      "brier": 0.25168,
+      "bias": -0.1401,
+      "bias_ci": 0.2119,
+      "mae": 2.4881,
+      "rmse": 3.1322
+     },
+     "reliability": [
+      {
+       "n": 139,
+       "p": 0.3684,
+       "obs": 0.4676
+      },
+      {
+       "n": 480,
+       "p": 0.4501,
+       "obs": 0.5
+      },
+      {
+       "n": 196,
+       "p": 0.5327,
+       "obs": 0.5153
+      }
+     ]
     }
    },
    "slices": {
@@ -2774,7 +2966,7 @@
       "rmse": 3.4445
      }
     },
-    "p2": {
+    "p2d": {
      "mo_2026-03": {
       "n": 68,
       "graded": 68,
@@ -2789,112 +2981,112 @@
      "mo_2026-04": {
       "n": 315,
       "graded": 315,
-      "hit": 0.4921,
+      "hit": 0.5079,
       "hit_ci": 0.0553,
-      "brier": 0.25672,
-      "bias": -0.3399,
-      "bias_ci": 0.3409,
-      "mae": 2.4554,
-      "rmse": 3.1011
+      "brier": 0.25537,
+      "bias": -0.2407,
+      "bias_ci": 0.3415,
+      "mae": 2.46,
+      "rmse": 3.0964
      },
      "mo_2026-05": {
       "n": 277,
       "graded": 277,
-      "hit": 0.5451,
-      "hit_ci": 0.0587,
-      "brier": 0.24678,
-      "bias": -0.008,
-      "bias_ci": 0.3756,
-      "mae": 2.5142,
-      "rmse": 3.1833
+      "hit": 0.5379,
+      "hit_ci": 0.0588,
+      "brier": 0.24742,
+      "bias": -0.1215,
+      "bias_ci": 0.3758,
+      "mae": 2.5023,
+      "rmse": 3.1877
      },
      "mo_2026-07": {
       "n": 155,
       "graded": 155,
       "hit": 0.5226,
       "hit_ci": 0.0789,
-      "brier": 0.24758,
-      "bias": 0.2167,
-      "bias_ci": 0.4794,
-      "mae": 2.4337,
-      "rmse": 3.0428
+      "brier": 0.24775,
+      "bias": 0.2316,
+      "bias_ci": 0.4795,
+      "mae": 2.4381,
+      "rmse": 3.0448
      },
      "home_fav": {
       "n": 489,
       "graded": 489,
-      "hit": 0.4785,
-      "hit_ci": 0.0443,
-      "brier": 0.25547,
-      "bias": -0.3167,
-      "bias_ci": 0.2811,
-      "mae": 2.5225,
-      "rmse": 3.184
+      "hit": 0.4908,
+      "hit_ci": 0.0444,
+      "brier": 0.25461,
+      "bias": -0.3081,
+      "bias_ci": 0.2813,
+      "mae": 2.5211,
+      "rmse": 3.185
      },
      "away_fav": {
       "n": 350,
       "graded": 350,
-      "hit": 0.5486,
-      "hit_ci": 0.0522,
-      "brier": 0.24703,
-      "bias": 0.1,
-      "bias_ci": 0.3207,
-      "mae": 2.4435,
-      "rmse": 3.0583
+      "hit": 0.54,
+      "hit_ci": 0.0523,
+      "brier": 0.24758,
+      "bias": 0.0947,
+      "bias_ci": 0.3206,
+      "mae": 2.4421,
+      "rmse": 3.057
      },
      "day": {
       "n": 337,
       "graded": 337,
-      "hit": 0.4807,
-      "hit_ci": 0.0534,
-      "brier": 0.25382,
-      "bias": -0.0725,
-      "bias_ci": 0.3376,
-      "mae": 2.5239,
-      "rmse": 3.1582
+      "hit": 0.4955,
+      "hit_ci": 0.0535,
+      "brier": 0.25309,
+      "bias": -0.0732,
+      "bias_ci": 0.3374,
+      "mae": 2.5215,
+      "rmse": 3.1561
      },
      "night": {
       "n": 502,
       "graded": 502,
-      "hit": 0.5259,
+      "hit": 0.5219,
       "hit_ci": 0.0437,
-      "brier": 0.25069,
-      "bias": -0.1901,
-      "bias_ci": 0.2722,
-      "mae": 2.4665,
-      "rmse": 3.1146
+      "brier": 0.25072,
+      "bias": -0.185,
+      "bias_ci": 0.2724,
+      "mae": 2.4658,
+      "rmse": 3.116
      },
      "line_low": {
       "n": 198,
       "graded": 198,
-      "hit": 0.4596,
+      "hit": 0.4646,
       "hit_ci": 0.0696,
-      "brier": 0.25457,
-      "bias": 0.5544,
-      "bias_ci": 0.4153,
-      "mae": 2.4469,
-      "rmse": 3.025
+      "brier": 0.25341,
+      "bias": 0.5449,
+      "bias_ci": 0.4149,
+      "mae": 2.4406,
+      "rmse": 3.0206
      },
      "line_mid": {
       "n": 499,
       "graded": 499,
-      "hit": 0.5251,
-      "hit_ci": 0.0439,
-      "brier": 0.25083,
-      "bias": -0.1847,
-      "bias_ci": 0.2716,
-      "mae": 2.4812,
-      "rmse": 3.0978
+      "hit": 0.5291,
+      "hit_ci": 0.0438,
+      "brier": 0.25096,
+      "bias": -0.1758,
+      "bias_ci": 0.272,
+      "mae": 2.4855,
+      "rmse": 3.1014
      },
      "line_high": {
       "n": 142,
       "graded": 142,
       "hit": 0.5141,
       "hit_ci": 0.0825,
-      "brier": 0.25222,
-      "bias": -0.968,
-      "bias_ci": 0.5361,
-      "mae": 2.5783,
-      "rmse": 3.3888
+      "brier": 0.25176,
+      "bias": -0.9697,
+      "bias_ci": 0.5349,
+      "mae": 2.5637,
+      "rmse": 3.3826
      }
     }
    },
@@ -2905,48 +3097,36 @@
       "date": "2026-04-12",
       "refId": 0,
       "pick": "UNDER",
-      "prob": "0.20860",
-      "proj": "4.3410",
+      "prob": "0.21182",
+      "proj": "4.3770",
       "line": "6.5",
       "actual": "9.0",
-      "brier": "0.626314",
-      "err": "-4.659"
+      "brier": "0.621228",
+      "err": "-4.623"
      },
      {
       "gameId": 2251422,
       "date": "2026-07-22",
       "refId": 0,
       "pick": "UNDER",
-      "prob": "0.27607",
-      "proj": "4.1760",
+      "prob": "0.27714",
+      "proj": "4.1880",
       "line": "5.5",
       "actual": "8.0",
-      "brier": "0.524075",
-      "err": "-3.824"
+      "brier": "0.522527",
+      "err": "-3.812"
      },
      {
-      "gameId": 2250262,
-      "date": "2026-04-16",
+      "gameId": 2250670,
+      "date": "2026-05-18",
       "refId": 0,
       "pick": "UNDER",
-      "prob": "0.28330",
-      "proj": "3.4030",
-      "line": "4.5",
-      "actual": "7.0",
-      "brier": "0.513659",
-      "err": "-3.597"
-     },
-     {
-      "gameId": 2250257,
-      "date": "2026-04-15",
-      "refId": 0,
-      "pick": "UNDER",
-      "prob": "0.28600",
-      "proj": "3.4270",
-      "line": "4.5",
-      "actual": "6.0",
-      "brier": "0.509796",
-      "err": "-2.573"
+      "prob": "0.28768",
+      "proj": "4.6450",
+      "line": "5.5",
+      "actual": "11.0",
+      "brier": "0.507400",
+      "err": "-6.355"
      },
      {
       "gameId": 2250193,
@@ -2961,100 +3141,100 @@
       "err": "-4.548"
      },
      {
-      "gameId": 2250233,
-      "date": "2026-04-14",
+      "gameId": 2250262,
+      "date": "2026-04-16",
       "refId": 0,
       "pick": "UNDER",
-      "prob": "0.29150",
-      "proj": "4.2890",
-      "line": "5.5",
-      "actual": "9.0",
-      "brier": "0.501972",
-      "err": "-4.711"
+      "prob": "0.29739",
+      "proj": "3.5350",
+      "line": "4.5",
+      "actual": "7.0",
+      "brier": "0.493661",
+      "err": "-3.465"
+     },
+     {
+      "gameId": 2250257,
+      "date": "2026-04-15",
+      "refId": 0,
+      "pick": "UNDER",
+      "prob": "0.30049",
+      "proj": "3.5630",
+      "line": "4.5",
+      "actual": "6.0",
+      "brier": "0.489314",
+      "err": "-2.437"
      },
      {
       "gameId": 2251412,
       "date": "2026-07-20",
       "refId": 0,
       "pick": "UNDER",
-      "prob": "0.30023",
-      "proj": "5.2010",
+      "prob": "0.30113",
+      "proj": "5.2120",
       "line": "6.5",
       "actual": "7.0",
-      "brier": "0.489678",
-      "err": "-1.799"
-     },
-     {
-      "gameId": 2250670,
-      "date": "2026-05-18",
-      "refId": 0,
-      "pick": "UNDER",
-      "prob": "0.30222",
-      "proj": "4.7740",
-      "line": "5.5",
-      "actual": "11.0",
-      "brier": "0.486897",
-      "err": "-6.226"
+      "brier": "0.488419",
+      "err": "-1.788"
      },
      {
       "gameId": 2250215,
       "date": "2026-04-12",
       "refId": 0,
       "pick": "UNDER",
-      "prob": "0.30460",
-      "proj": "4.3960",
+      "prob": "0.30857",
+      "proj": "4.4320",
       "line": "4.5",
       "actual": "9.0",
-      "brier": "0.483581",
-      "err": "-4.604"
-     },
-     {
-      "gameId": 2250252,
-      "date": "2026-04-15",
-      "refId": 0,
-      "pick": "UNDER",
-      "prob": "0.31130",
-      "proj": "4.8520",
-      "line": "6.5",
-      "actual": "7.0",
-      "brier": "0.474308",
-      "err": "-2.148"
-     },
-     {
-      "gameId": 2250389,
-      "date": "2026-04-26",
-      "refId": 0,
-      "pick": "UNDER",
-      "prob": "0.31210",
-      "proj": "4.0090",
-      "line": "4.5",
-      "actual": "5.0",
-      "brier": "0.473206",
-      "err": "-0.991"
+      "brier": "0.478075",
+      "err": "-4.568"
      },
      {
       "gameId": 2250230,
       "date": "2026-04-13",
       "refId": 0,
       "pick": "OVER",
-      "prob": "0.67680",
-      "proj": "6.7090",
+      "prob": "0.69106",
+      "proj": "6.8370",
       "line": "4.5",
       "actual": "4.0",
-      "brier": "0.458058",
-      "err": "2.709"
+      "brier": "0.477564",
+      "err": "2.837"
+     },
+     {
+      "gameId": 2250233,
+      "date": "2026-04-14",
+      "refId": 0,
+      "pick": "UNDER",
+      "prob": "0.31129",
+      "proj": "4.4750",
+      "line": "5.5",
+      "actual": "9.0",
+      "brier": "0.474321",
+      "err": "-4.525"
      },
      {
       "gameId": 2250217,
       "date": "2026-04-12",
       "refId": 0,
       "pick": "UNDER",
-      "prob": "0.32420",
-      "proj": "4.0970",
+      "prob": "0.32800",
+      "proj": "4.1310",
       "line": "4.5",
       "actual": "8.0",
-      "brier": "0.456706",
-      "err": "-3.903"
+      "brier": "0.451584",
+      "err": "-3.869"
+     },
+     {
+      "gameId": 2250597,
+      "date": "2026-05-13",
+      "refId": 0,
+      "pick": "UNDER",
+      "prob": "0.32862",
+      "proj": "4.5830",
+      "line": "4.5",
+      "actual": "12.0",
+      "brier": "0.450751",
+      "err": "-7.417"
      },
      {
       "gameId": 2250124,
@@ -3069,16 +3249,40 @@
       "err": "-2.242"
      },
      {
+      "gameId": 2250252,
+      "date": "2026-04-15",
+      "refId": 0,
+      "pick": "UNDER",
+      "prob": "0.33267",
+      "proj": "5.0450",
+      "line": "6.5",
+      "actual": "7.0",
+      "brier": "0.445329",
+      "err": "-1.955"
+     },
+     {
+      "gameId": 2250389,
+      "date": "2026-04-26",
+      "refId": 0,
+      "pick": "UNDER",
+      "prob": "0.33699",
+      "proj": "4.2240",
+      "line": "4.5",
+      "actual": "5.0",
+      "brier": "0.439582",
+      "err": "-0.776"
+     },
+     {
       "gameId": 2251383,
       "date": "2026-07-18",
       "refId": 0,
       "pick": "UNDER",
-      "prob": "0.33652",
-      "proj": "4.6640",
+      "prob": "0.33752",
+      "proj": "4.6750",
       "line": "5.5",
       "actual": "8.0",
-      "brier": "0.440206",
-      "err": "-3.336"
+      "brier": "0.438880",
+      "err": "-3.325"
      },
      {
       "gameId": 2250065,
@@ -3093,52 +3297,40 @@
       "err": "-2.781"
      },
      {
-      "gameId": 2250393,
-      "date": "2026-04-26",
+      "gameId": 2250765,
+      "date": "2026-05-26",
       "refId": 0,
       "pick": "UNDER",
-      "prob": "0.34140",
-      "proj": "4.6940",
-      "line": "5.5",
-      "actual": "7.0",
-      "brier": "0.433754",
-      "err": "-2.306"
-     },
-     {
-      "gameId": 2250597,
-      "date": "2026-05-13",
-      "refId": 0,
-      "pick": "UNDER",
-      "prob": "0.34162",
-      "proj": "4.6930",
+      "prob": "0.34420",
+      "proj": "4.2510",
       "line": "4.5",
-      "actual": "12.0",
-      "brier": "0.433464",
-      "err": "-7.307"
-     },
-     {
-      "gameId": 2250310,
-      "date": "2026-04-19",
-      "refId": 0,
-      "pick": "UNDER",
-      "prob": "0.34210",
-      "proj": "3.3600",
-      "line": "3.5",
-      "actual": "5.0",
-      "brier": "0.432832",
-      "err": "-1.640"
+      "actual": "9.0",
+      "brier": "0.430074",
+      "err": "-4.749"
      },
      {
       "gameId": 2251436,
       "date": "2026-07-22",
       "refId": 0,
       "pick": "UNDER",
-      "prob": "0.35330",
-      "proj": "3.9220",
+      "prob": "0.35442",
+      "proj": "3.9330",
       "line": "4.5",
       "actual": "5.0",
-      "brier": "0.418221",
-      "err": "-1.078"
+      "brier": "0.416774",
+      "err": "-1.067"
+     },
+     {
+      "gameId": 2251444,
+      "date": "2026-07-22",
+      "refId": 0,
+      "pick": "UNDER",
+      "prob": "0.35505",
+      "proj": "3.9380",
+      "line": "4.5",
+      "actual": "5.0",
+      "brier": "0.415961",
+      "err": "-1.062"
      }
     ]
    }
@@ -3232,6 +3424,47 @@
        "obs": 0.5357
       }
      ]
+    },
+    "p2d": {
+     "overall": {
+      "n": 1545,
+      "graded": 1545,
+      "hit": 0.5314,
+      "hit_ci": 0.0249,
+      "brier": 0.25987
+     },
+     "reliability": [
+      {
+       "n": 39,
+       "p": 0.1391,
+       "obs": 0.4359
+      },
+      {
+       "n": 125,
+       "p": 0.258,
+       "obs": 0.432
+      },
+      {
+       "n": 316,
+       "p": 0.3565,
+       "obs": 0.4589
+      },
+      {
+       "n": 493,
+       "p": 0.4521,
+       "obs": 0.4828
+      },
+      {
+       "n": 447,
+       "p": 0.5414,
+       "obs": 0.5503
+      },
+      {
+       "n": 102,
+       "p": 0.6346,
+       "obs": 0.4608
+      }
+     ]
     }
    },
    "slices": {
@@ -3300,7 +3533,7 @@
       "brier": 0.25154
      }
     },
-    "p2": {
+    "p2d": {
      "mo_2026-03": {
       "n": 76,
       "graded": 76,
@@ -3311,301 +3544,301 @@
      "mo_2026-04": {
       "n": 389,
       "graded": 389,
-      "hit": 0.5527,
-      "hit_ci": 0.0495,
-      "brier": 0.24813
+      "hit": 0.5398,
+      "hit_ci": 0.0496,
+      "brier": 0.26929
      },
      "mo_2026-05": {
       "n": 416,
       "graded": 416,
       "hit": 0.5024,
       "hit_ci": 0.0481,
-      "brier": 0.25332
+      "brier": 0.26403
      },
      "mo_2026-06": {
       "n": 392,
       "graded": 392,
-      "hit": 0.5587,
-      "hit_ci": 0.0492,
-      "brier": 0.24513
+      "hit": 0.5663,
+      "hit_ci": 0.0491,
+      "brier": 0.24995
      },
      "mo_2026-07": {
       "n": 272,
       "graded": 272,
-      "hit": 0.5184,
+      "hit": 0.511,
       "hit_ci": 0.0595,
-      "brier": 0.24621
+      "brier": 0.25706
      },
      "home_fav": {
       "n": 865,
       "graded": 865,
-      "hit": 0.5237,
+      "hit": 0.5272,
       "hit_ci": 0.0333,
-      "brier": 0.25023
+      "brier": 0.25678
      },
      "away_fav": {
       "n": 668,
       "graded": 668,
-      "hit": 0.5449,
+      "hit": 0.5359,
       "hit_ci": 0.0378,
-      "brier": 0.24628
+      "brier": 0.26451
      },
      "day": {
       "n": 563,
       "graded": 563,
-      "hit": 0.5417,
-      "hit_ci": 0.0412,
-      "brier": 0.24776
+      "hit": 0.5293,
+      "hit_ci": 0.0413,
+      "brier": 0.26275
      },
      "night": {
       "n": 982,
       "graded": 982,
-      "hit": 0.5295,
+      "hit": 0.5326,
       "hit_ci": 0.0312,
-      "brier": 0.24896
+      "brier": 0.25821
      }
     }
    },
    "exemplars": {
     "worst20": [
      {
-      "gameId": 2250307,
-      "date": "2026-04-19",
+      "gameId": 2250198,
+      "date": "2026-04-11",
       "refId": 0,
-      "pick": "YRFI",
-      "prob": "0.29190",
+      "pick": "NRFI",
+      "prob": "0.90000",
       "proj": null,
-      "line": "+134",
-      "actual": "NRFI",
-      "brier": "0.501406",
+      "line": "-108",
+      "actual": "YRFI",
+      "brier": "0.810000",
       "err": null
      },
      {
-      "gameId": 2251090,
-      "date": "2026-06-21",
+      "gameId": 2250200,
+      "date": "2026-04-11",
       "refId": 0,
-      "pick": "YRFI",
-      "prob": "0.31690",
+      "pick": "NRFI",
+      "prob": "0.90000",
       "proj": null,
-      "line": null,
-      "actual": "NRFI",
-      "brier": "0.466626",
+      "line": "-111",
+      "actual": "YRFI",
+      "brier": "0.810000",
       "err": null
      },
      {
-      "gameId": 2250808,
-      "date": "2026-05-29",
+      "gameId": 2250203,
+      "date": "2026-04-11",
       "refId": 0,
       "pick": "YRFI",
-      "prob": "0.33410",
+      "prob": "0.10000",
       "proj": null,
-      "line": null,
+      "line": "-154",
       "actual": "NRFI",
-      "brier": "0.443423",
+      "brier": "0.810000",
       "err": null
      },
      {
-      "gameId": 2250159,
-      "date": "2026-04-07",
+      "gameId": 2250273,
+      "date": "2026-04-17",
       "refId": 0,
       "pick": "YRFI",
-      "prob": "0.34600",
+      "prob": "0.10000",
       "proj": null,
-      "line": "+116",
+      "line": "-148",
       "actual": "NRFI",
-      "brier": "0.427716",
+      "brier": "0.810000",
       "err": null
      },
      {
-      "gameId": 2250321,
+      "gameId": 2250318,
       "date": "2026-04-20",
       "refId": 0,
-      "pick": "NRFI",
-      "prob": "0.65330",
+      "pick": "YRFI",
+      "prob": "0.10000",
       "proj": null,
-      "line": "-120",
-      "actual": "YRFI",
-      "brier": "0.426801",
+      "line": "-130",
+      "actual": "NRFI",
+      "brier": "0.810000",
       "err": null
      },
      {
-      "gameId": 2250958,
-      "date": "2026-06-10",
+      "gameId": 2250355,
+      "date": "2026-04-23",
       "refId": 0,
       "pick": "YRFI",
-      "prob": "0.35300",
+      "prob": "0.10000",
       "proj": null,
       "line": null,
       "actual": "NRFI",
-      "brier": "0.418609",
+      "brier": "0.810000",
       "err": null
      },
      {
-      "gameId": 2250310,
-      "date": "2026-04-19",
-      "refId": 0,
-      "pick": "NRFI",
-      "prob": "0.64210",
-      "proj": null,
-      "line": "-162",
-      "actual": "YRFI",
-      "brier": "0.412292",
-      "err": null
-     },
-     {
-      "gameId": 2250213,
-      "date": "2026-04-12",
-      "refId": 0,
-      "pick": "NRFI",
-      "prob": "0.63960",
-      "proj": null,
-      "line": "-194",
-      "actual": "YRFI",
-      "brier": "0.409088",
-      "err": null
-     },
-     {
-      "gameId": 2251194,
-      "date": "2026-06-29",
-      "refId": 0,
-      "pick": "YRFI",
-      "prob": "0.36050",
-      "proj": null,
-      "line": null,
-      "actual": "NRFI",
-      "brier": "0.408960",
-      "err": null
-     },
-     {
-      "gameId": 2251064,
-      "date": "2026-06-19",
-      "refId": 0,
-      "pick": "YRFI",
-      "prob": "0.36080",
-      "proj": null,
-      "line": null,
-      "actual": "NRFI",
-      "brier": "0.408577",
-      "err": null
-     },
-     {
-      "gameId": 2250266,
+      "gameId": 2250265,
       "date": "2026-04-16",
       "refId": 0,
       "pick": "YRFI",
-      "prob": "0.36380",
+      "prob": "0.10122",
       "proj": null,
-      "line": "-118",
+      "line": "-122",
       "actual": "NRFI",
-      "brier": "0.404750",
+      "brier": "0.807805",
       "err": null
      },
      {
-      "gameId": 2250193,
-      "date": "2026-04-10",
-      "refId": 0,
-      "pick": "NRFI",
-      "prob": "0.63380",
-      "proj": null,
-      "line": "-132",
-      "actual": "YRFI",
-      "brier": "0.401702",
-      "err": null
-     },
-     {
-      "gameId": 2252971,
-      "date": "2026-05-17",
+      "gameId": 2250309,
+      "date": "2026-04-19",
       "refId": 0,
       "pick": "YRFI",
-      "prob": "0.36630",
+      "prob": "0.10156",
       "proj": null,
-      "line": "+104",
+      "line": "-111",
       "actual": "NRFI",
-      "brier": "0.401576",
+      "brier": "0.807194",
       "err": null
      },
      {
-      "gameId": 2250146,
-      "date": "2026-04-06",
+      "gameId": 2250313,
+      "date": "2026-04-20",
       "refId": 0,
       "pick": "NRFI",
-      "prob": "0.62960",
-      "proj": null,
-      "line": "-150",
-      "actual": "YRFI",
-      "brier": "0.396396",
-      "err": null
-     },
-     {
-      "gameId": 2250131,
-      "date": "2026-04-05",
-      "refId": 0,
-      "pick": "YRFI",
-      "prob": "0.37500",
-      "proj": null,
-      "line": "+122",
-      "actual": "NRFI",
-      "brier": "0.390625",
-      "err": null
-     },
-     {
-      "gameId": 2251402,
-      "date": "2026-07-19",
-      "refId": 0,
-      "pick": "NRFI",
-      "prob": "0.62320",
-      "proj": null,
-      "line": "-140",
-      "actual": "YRFI",
-      "brier": "0.388378",
-      "err": null
-     },
-     {
-      "gameId": 2250540,
-      "date": "2026-05-08",
-      "refId": 0,
-      "pick": "NRFI",
-      "prob": "0.62290",
-      "proj": null,
-      "line": "-142",
-      "actual": "YRFI",
-      "brier": "0.388004",
-      "err": null
-     },
-     {
-      "gameId": 2250964,
-      "date": "2026-06-11",
-      "refId": 0,
-      "pick": "YRFI",
-      "prob": "0.37740",
-      "proj": null,
-      "line": null,
-      "actual": "NRFI",
-      "brier": "0.387631",
-      "err": null
-     },
-     {
-      "gameId": 2250158,
-      "date": "2026-04-07",
-      "refId": 0,
-      "pick": "NRFI",
-      "prob": "0.62250",
+      "prob": "0.89506",
       "proj": null,
       "line": "-146",
       "actual": "YRFI",
-      "brier": "0.387506",
+      "brier": "0.801132",
       "err": null
      },
      {
-      "gameId": 2250564,
-      "date": "2026-05-10",
+      "gameId": 2250485,
+      "date": "2026-05-03",
+      "refId": 0,
+      "pick": "YRFI",
+      "prob": "0.11588",
+      "proj": null,
+      "line": "-138",
+      "actual": "NRFI",
+      "brier": "0.781668",
+      "err": null
+     },
+     {
+      "gameId": 2250263,
+      "date": "2026-04-16",
       "refId": 0,
       "pick": "NRFI",
-      "prob": "0.62200",
+      "prob": "0.86920",
       "proj": null,
-      "line": "-122",
+      "line": "+108",
       "actual": "YRFI",
-      "brier": "0.386884",
+      "brier": "0.755509",
+      "err": null
+     },
+     {
+      "gameId": 2250415,
+      "date": "2026-04-28",
+      "refId": 0,
+      "pick": "YRFI",
+      "prob": "0.13287",
+      "proj": null,
+      "line": "-104",
+      "actual": "NRFI",
+      "brier": "0.751914",
+      "err": null
+     },
+     {
+      "gameId": 2250423,
+      "date": "2026-04-29",
+      "refId": 0,
+      "pick": "YRFI",
+      "prob": "0.14689",
+      "proj": null,
+      "line": null,
+      "actual": "NRFI",
+      "brier": "0.727797",
+      "err": null
+     },
+     {
+      "gameId": 2250365,
+      "date": "2026-04-24",
+      "refId": 0,
+      "pick": "YRFI",
+      "prob": "0.14796",
+      "proj": null,
+      "line": "-106",
+      "actual": "NRFI",
+      "brier": "0.725972",
+      "err": null
+     },
+     {
+      "gameId": 2252493,
+      "date": "2026-04-12",
+      "refId": 0,
+      "pick": "YRFI",
+      "prob": "0.15480",
+      "proj": null,
+      "line": "-120",
+      "actual": "NRFI",
+      "brier": "0.714363",
+      "err": null
+     },
+     {
+      "gameId": 2250805,
+      "date": "2026-05-29",
+      "refId": 0,
+      "pick": "YRFI",
+      "prob": "0.16318",
+      "proj": null,
+      "line": null,
+      "actual": "NRFI",
+      "brier": "0.700268",
+      "err": null
+     },
+     {
+      "gameId": 2250299,
+      "date": "2026-04-19",
+      "refId": 0,
+      "pick": "YRFI",
+      "prob": "0.16380",
+      "proj": null,
+      "line": "-132",
+      "actual": "NRFI",
+      "brier": "0.699230",
+      "err": null
+     },
+     {
+      "gameId": 2250484,
+      "date": "2026-05-03",
+      "refId": 0,
+      "pick": "YRFI",
+      "prob": "0.16489",
+      "proj": null,
+      "line": "-125",
+      "actual": "NRFI",
+      "brier": "0.697409",
+      "err": null
+     },
+     {
+      "gameId": 2250304,
+      "date": "2026-04-19",
+      "refId": 0,
+      "pick": "YRFI",
+      "prob": "0.17912",
+      "proj": null,
+      "line": "-104",
+      "actual": "NRFI",
+      "brier": "0.673844",
+      "err": null
+     },
+     {
+      "gameId": 2250520,
+      "date": "2026-05-06",
+      "refId": 0,
+      "pick": "YRFI",
+      "prob": "0.18871",
+      "proj": null,
+      "line": null,
+      "actual": "NRFI",
+      "brier": "0.658191",
       "err": null
      }
     ]
@@ -3797,6 +4030,71 @@
        "obs": 0.1321
       }
      ]
+    },
+    "p2d": {
+     "overall": {
+      "n": 3090,
+      "graded": 2522,
+      "hit": 0.592,
+      "hit_ci": 0.0192,
+      "brier": 0.26318,
+      "bias": -0.0241,
+      "bias_ci": 0.0944,
+      "mae": 2.092,
+      "rmse": 2.6763
+     },
+     "reliability": [
+      {
+       "n": 302,
+       "p": 0.05,
+       "obs": 0.2914
+      },
+      {
+       "n": 341,
+       "p": 0.1519,
+       "obs": 0.3812
+      },
+      {
+       "n": 325,
+       "p": 0.2508,
+       "obs": 0.3846
+      },
+      {
+       "n": 290,
+       "p": 0.3493,
+       "obs": 0.5034
+      },
+      {
+       "n": 284,
+       "p": 0.4479,
+       "obs": 0.5211
+      },
+      {
+       "n": 231,
+       "p": 0.5504,
+       "obs": 0.5238
+      },
+      {
+       "n": 236,
+       "p": 0.6507,
+       "obs": 0.5847
+      },
+      {
+       "n": 205,
+       "p": 0.7507,
+       "obs": 0.5902
+      },
+      {
+       "n": 175,
+       "p": 0.8497,
+       "obs": 0.3714
+      },
+      {
+       "n": 133,
+       "p": 0.9403,
+       "obs": 0.2481
+      }
+     ]
     }
    },
    "slices": {
@@ -3967,7 +4265,7 @@
       "rmse": 2.8075
      }
     },
-    "p2": {
+    "p2d": {
      "mo_2026-03": {
       "n": 152,
       "graded": 106,
@@ -3982,156 +4280,156 @@
      "mo_2026-04": {
       "n": 778,
       "graded": 541,
-      "hit": 0.5139,
-      "hit_ci": 0.0422,
-      "brier": 0.30593,
-      "bias": 0.8752,
-      "bias_ci": 0.2167,
-      "mae": 2.4717,
-      "rmse": 3.2032
+      "hit": 0.5194,
+      "hit_ci": 0.0421,
+      "brier": 0.30363,
+      "bias": 0.2569,
+      "bias_ci": 0.2073,
+      "mae": 2.2926,
+      "rmse": 2.9599
      },
      "mo_2026-05": {
       "n": 832,
       "graded": 677,
-      "hit": 0.6307,
+      "hit": 0.6278,
       "hit_ci": 0.0364,
-      "brier": 0.24286,
-      "bias": -0.1817,
-      "bias_ci": 0.1732,
-      "mae": 2.0008,
-      "rmse": 2.5543
+      "brier": 0.24261,
+      "bias": -0.1397,
+      "bias_ci": 0.1737,
+      "mae": 2.0049,
+      "rmse": 2.5586
      },
      "mo_2026-06": {
       "n": 784,
       "graded": 703,
-      "hit": 0.6188,
+      "hit": 0.6216,
       "hit_ci": 0.0359,
-      "brier": 0.25304,
-      "bias": -0.2626,
-      "bias_ci": 0.1749,
-      "mae": 1.9875,
-      "rmse": 2.5109
+      "brier": 0.25278,
+      "bias": -0.2435,
+      "bias_ci": 0.175,
+      "mae": 1.9863,
+      "rmse": 2.5101
      },
      "mo_2026-07": {
       "n": 544,
       "graded": 495,
       "hit": 0.6141,
       "hit_ci": 0.0429,
-      "brier": 0.25439,
-      "bias": -0.1957,
-      "bias_ci": 0.2177,
-      "mae": 2.026,
-      "rmse": 2.5953
+      "brier": 0.25423,
+      "bias": -0.1839,
+      "bias_ci": 0.2178,
+      "mae": 2.027,
+      "rmse": 2.5962
      },
      "home_fav": {
       "n": 1730,
       "graded": 1433,
       "hit": 0.589,
       "hit_ci": 0.0255,
-      "brier": 0.26553,
-      "bias": 0.0781,
-      "bias_ci": 0.1302,
-      "mae": 2.1397,
-      "rmse": 2.7632
+      "brier": 0.26588,
+      "bias": -0.0776,
+      "bias_ci": 0.1264,
+      "mae": 2.0918,
+      "rmse": 2.6833
      },
      "away_fav": {
       "n": 1336,
       "graded": 1089,
-      "hit": 0.5932,
+      "hit": 0.596,
       "hit_ci": 0.0292,
-      "brier": 0.26162,
-      "bias": 0.1581,
-      "bias_ci": 0.1455,
-      "mae": 2.1278,
-      "rmse": 2.7172
+      "brier": 0.25964,
+      "bias": 0.0417,
+      "bias_ci": 0.1428,
+      "mae": 2.088,
+      "rmse": 2.662
      },
      "day": {
       "n": 1126,
       "graded": 939,
-      "hit": 0.5932,
+      "hit": 0.5942,
       "hit_ci": 0.0314,
-      "brier": 0.2557,
-      "bias": 0.1879,
-      "bias_ci": 0.1564,
-      "mae": 2.0903,
-      "rmse": 2.6823
+      "brier": 0.25637,
+      "bias": 0.042,
+      "bias_ci": 0.1531,
+      "mae": 2.0493,
+      "rmse": 2.62
      },
      "night": {
       "n": 1964,
       "graded": 1583,
-      "hit": 0.5894,
+      "hit": 0.5907,
       "hit_ci": 0.0242,
-      "brier": 0.26867,
-      "bias": 0.0706,
-      "bias_ci": 0.123,
-      "mae": 2.1623,
-      "rmse": 2.7802
+      "brier": 0.26722,
+      "bias": -0.0621,
+      "bias_ci": 0.1198,
+      "mae": 2.1164,
+      "rmse": 2.7081
      },
      "hand_L": {
       "n": 875,
       "graded": 680,
-      "hit": 0.5868,
+      "hit": 0.5926,
       "hit_ci": 0.037,
-      "brier": 0.26827,
-      "bias": 0.3125,
-      "bias_ci": 0.1867,
-      "mae": 2.2059,
-      "rmse": 2.8336
+      "brier": 0.26776,
+      "bias": 0.1754,
+      "bias_ci": 0.1828,
+      "mae": 2.1638,
+      "rmse": 2.7629
      },
      "hand_R": {
       "n": 2120,
       "graded": 1794,
-      "hit": 0.5881,
+      "hit": 0.5875,
       "hit_ci": 0.0228,
-      "brier": 0.2636,
-      "bias": 0.0116,
-      "bias_ci": 0.1157,
-      "mae": 2.1184,
-      "rmse": 2.717
+      "brier": 0.2629,
+      "bias": -0.1312,
+      "bias_ci": 0.1126,
+      "mae": 2.0727,
+      "rmse": 2.6473
      },
      "line_le5": {
       "n": 1447,
       "graded": 1446,
-      "hit": 0.5864,
+      "hit": 0.583,
       "hit_ci": 0.0254,
-      "brier": 0.26851,
-      "bias": -0.2122,
-      "bias_ci": 0.1283,
-      "mae": 1.9653,
-      "rmse": 2.4974
+      "brier": 0.27116,
+      "bias": -0.3071,
+      "bias_ci": 0.127,
+      "mae": 1.9525,
+      "rmse": 2.4824
      },
      "line_gt5": {
       "n": 1076,
       "graded": 1076,
-      "hit": 0.5967,
-      "hit_ci": 0.0293,
-      "brier": 0.25757,
-      "bias": 0.132,
-      "bias_ci": 0.169,
-      "mae": 2.2089,
-      "rmse": 2.8301
+      "hit": 0.6041,
+      "hit_ci": 0.0292,
+      "brier": 0.25246,
+      "bias": -0.016,
+      "bias_ci": 0.1633,
+      "mae": 2.143,
+      "rmse": 2.7316
      },
      "pick_OVER": {
-      "n": 1042,
-      "graded": 1041,
-      "hit": 0.5927,
-      "hit_ci": 0.0299,
-      "brier": 0.26522,
-      "bias": 1.2318,
-      "bias_ci": 0.1623,
-      "mae": 2.3398,
-      "rmse": 2.9417
+      "n": 981,
+      "graded": 980,
+      "hit": 0.6,
+      "hit_ci": 0.0307,
+      "brier": 0.25871,
+      "bias": 1.0972,
+      "bias_ci": 0.1624,
+      "mae": 2.2469,
+      "rmse": 2.8158
      },
      "pick_UNDER": {
-      "n": 1481,
-      "graded": 1481,
-      "hit": 0.5895,
-      "hit_ci": 0.0251,
-      "brier": 0.26288,
-      "bias": -0.9781,
-      "bias_ci": 0.1124,
-      "mae": 1.8788,
-      "rmse": 2.4135
+      "n": 1542,
+      "graded": 1542,
+      "hit": 0.5869,
+      "hit_ci": 0.0246,
+      "brier": 0.26603,
+      "bias": -0.9973,
+      "bias_ci": 0.1111,
+      "mae": 1.8981,
+      "rmse": 2.4383
      }
     }
    },
@@ -4140,55 +4438,19 @@
      {
       "gameId": 2252570,
       "date": "2026-04-17",
-      "refId": 40448,
+      "refId": 71548,
       "pick": null,
       "prob": null,
-      "proj": "13.1769",
+      "proj": "10.9128",
       "line": null,
       "actual": "0",
       "brier": null,
-      "err": "13.177"
-     },
-     {
-      "gameId": 2250391,
-      "date": "2026-04-26",
-      "refId": 42729,
-      "pick": null,
-      "prob": null,
-      "proj": "14.1733",
-      "line": null,
-      "actual": "2",
-      "brier": null,
-      "err": "12.173"
-     },
-     {
-      "gameId": 2250228,
-      "date": "2026-04-13",
-      "refId": 39268,
-      "pick": null,
-      "prob": null,
-      "proj": "10.4138",
-      "line": null,
-      "actual": "0",
-      "brier": null,
-      "err": "10.414"
-     },
-     {
-      "gameId": 2250330,
-      "date": "2026-04-21",
-      "refId": 41429,
-      "pick": null,
-      "prob": null,
-      "proj": "11.0281",
-      "line": null,
-      "actual": "1",
-      "brier": null,
-      "err": "10.028"
+      "err": "10.913"
      },
      {
       "gameId": 2250155,
       "date": "2026-04-07",
-      "refId": 37689,
+      "refId": 68789,
       "pick": null,
       "prob": null,
       "proj": "15.0259",
@@ -4198,9 +4460,21 @@
       "err": "10.026"
      },
      {
+      "gameId": 2250391,
+      "date": "2026-04-26",
+      "refId": 73829,
+      "pick": null,
+      "prob": null,
+      "proj": "11.8842",
+      "line": null,
+      "actual": "2",
+      "brier": null,
+      "err": "9.884"
+     },
+     {
       "gameId": 2250141,
       "date": "2026-04-06",
-      "refId": 37408,
+      "refId": 68508,
       "pick": null,
       "prob": null,
       "proj": "11.8244",
@@ -4212,31 +4486,31 @@
      {
       "gameId": 2251358,
       "date": "2026-07-12",
-      "refId": 63288,
+      "refId": 94388,
       "pick": null,
       "prob": null,
-      "proj": "9.8902",
+      "proj": "9.9146",
       "line": null,
       "actual": "1",
       "brier": null,
-      "err": "8.890"
+      "err": "8.915"
      },
      {
-      "gameId": 2250437,
-      "date": "2026-04-30",
-      "refId": 43668,
+      "gameId": 2250228,
+      "date": "2026-04-13",
+      "refId": 70368,
       "pick": null,
       "prob": null,
-      "proj": "11.5358",
+      "proj": "8.7083",
       "line": null,
-      "actual": "3",
+      "actual": "0",
       "brier": null,
-      "err": "8.536"
+      "err": "8.708"
      },
      {
       "gameId": 2250167,
       "date": "2026-04-08",
-      "refId": 37948,
+      "refId": 69048,
       "pick": null,
       "prob": null,
       "proj": "10.4903",
@@ -4246,21 +4520,33 @@
       "err": "8.490"
      },
      {
-      "gameId": 2250493,
-      "date": "2026-05-04",
-      "refId": 44909,
+      "gameId": 2250330,
+      "date": "2026-04-21",
+      "refId": 72529,
       "pick": null,
       "prob": null,
-      "proj": "9.1073",
+      "proj": "9.2463",
       "line": null,
       "actual": "1",
       "brier": null,
-      "err": "8.107"
+      "err": "8.246"
+     },
+     {
+      "gameId": 2250493,
+      "date": "2026-05-04",
+      "refId": 76009,
+      "pick": null,
+      "prob": null,
+      "proj": "9.1590",
+      "line": null,
+      "actual": "1",
+      "brier": null,
+      "err": "8.159"
      },
      {
       "gameId": 2250190,
       "date": "2026-04-10",
-      "refId": 38449,
+      "refId": 69549,
       "pick": null,
       "prob": null,
       "proj": "12.0906",
@@ -4270,21 +4556,21 @@
       "err": "8.091"
      },
      {
-      "gameId": 2250265,
-      "date": "2026-04-16",
-      "refId": 40069,
+      "gameId": 2250218,
+      "date": "2026-04-12",
+      "refId": 70149,
       "pick": null,
       "prob": null,
-      "proj": "7.9358",
+      "proj": "2.2541",
       "line": null,
-      "actual": "0",
+      "actual": "10",
       "brier": null,
-      "err": "7.936"
+      "err": "-7.746"
      },
      {
       "gameId": 2250059,
       "date": "2026-03-30",
-      "refId": 35629,
+      "refId": 66729,
       "pick": null,
       "prob": null,
       "proj": "8.6325",
@@ -4296,19 +4582,19 @@
      {
       "gameId": 2250624,
       "date": "2026-05-15",
-      "refId": 47669,
+      "refId": 78769,
       "pick": null,
       "prob": null,
-      "proj": "9.5030",
+      "proj": "9.5807",
       "line": null,
       "actual": "2",
       "brier": null,
-      "err": "7.503"
+      "err": "7.581"
      },
      {
       "gameId": 2250118,
       "date": "2026-04-04",
-      "refId": 36889,
+      "refId": 67989,
       "pick": null,
       "prob": null,
       "proj": "7.3939",
@@ -4318,57 +4604,21 @@
       "err": "7.394"
      },
      {
-      "gameId": 2250218,
-      "date": "2026-04-12",
-      "refId": 39049,
-      "pick": null,
-      "prob": null,
-      "proj": "2.6969",
-      "line": null,
-      "actual": "10",
-      "brier": null,
-      "err": "-7.303"
-     },
-     {
-      "gameId": 2250330,
-      "date": "2026-04-21",
-      "refId": 41428,
-      "pick": null,
-      "prob": null,
-      "proj": "10.2204",
-      "line": null,
-      "actual": "3",
-      "brier": null,
-      "err": "7.220"
-     },
-     {
       "gameId": 2250519,
       "date": "2026-05-06",
-      "refId": 45409,
+      "refId": 76509,
       "pick": null,
       "prob": null,
-      "proj": "2.7924",
+      "proj": "2.7956",
       "line": null,
       "actual": "10",
       "brier": null,
-      "err": "-7.208"
-     },
-     {
-      "gameId": 2250249,
-      "date": "2026-04-15",
-      "refId": 39729,
-      "pick": null,
-      "prob": null,
-      "proj": "8.1684",
-      "line": null,
-      "actual": "1",
-      "brier": null,
-      "err": "7.168"
+      "err": "-7.204"
      },
      {
       "gameId": 2250052,
       "date": "2026-03-30",
-      "refId": 35488,
+      "refId": 66588,
       "pick": null,
       "prob": null,
       "proj": "10.1482",
@@ -4376,6 +4626,54 @@
       "actual": "3",
       "brier": null,
       "err": "7.148"
+     },
+     {
+      "gameId": 2250631,
+      "date": "2026-05-15",
+      "refId": 78908,
+      "pick": null,
+      "prob": null,
+      "proj": "9.1181",
+      "line": null,
+      "actual": "2",
+      "brier": null,
+      "err": "7.118"
+     },
+     {
+      "gameId": 2251117,
+      "date": "2026-06-23",
+      "refId": 89188,
+      "pick": null,
+      "prob": null,
+      "proj": "3.9395",
+      "line": null,
+      "actual": "11",
+      "brier": null,
+      "err": "-7.061"
+     },
+     {
+      "gameId": 2251266,
+      "date": "2026-07-05",
+      "refId": 92388,
+      "pick": null,
+      "prob": null,
+      "proj": "2.2468",
+      "line": null,
+      "actual": "9",
+      "brier": null,
+      "err": "-6.753"
+     },
+     {
+      "gameId": 2250437,
+      "date": "2026-04-30",
+      "refId": 74768,
+      "pick": null,
+      "prob": null,
+      "proj": "9.7212",
+      "line": null,
+      "actual": "3",
+      "brier": null,
+      "err": "6.721"
      }
     ]
    }
@@ -4463,6 +4761,35 @@
        "n": 164,
        "p": 0.3299,
        "obs": 0.2256
+      }
+     ]
+    },
+    "p2d": {
+     "overall": {
+      "n": 27810,
+      "graded": 0,
+      "brier": 0.09685
+     },
+     "reliability": [
+      {
+       "n": 14297,
+       "p": 0.0641,
+       "obs": 0.0832
+      },
+      {
+       "n": 11714,
+       "p": 0.1376,
+       "obs": 0.1275
+      },
+      {
+       "n": 1645,
+       "p": 0.2331,
+       "obs": 0.2043
+      },
+      {
+       "n": 145,
+       "p": 0.3277,
+       "obs": 0.2
       }
      ]
     }
@@ -4554,7 +4881,7 @@
       "brier": 0.10203
      }
     },
-    "p2": {
+    "p2d": {
      "mo_2026-03": {
       "n": 1368,
       "graded": 0,
@@ -4563,300 +4890,300 @@
      "mo_2026-04": {
       "n": 7002,
       "graded": 0,
-      "brier": 0.0924
+      "brier": 0.09243
      },
      "mo_2026-05": {
       "n": 7488,
       "graded": 0,
-      "brier": 0.09041
+      "brier": 0.09038
      },
      "mo_2026-06": {
       "n": 7056,
       "graded": 0,
-      "brier": 0.10419
+      "brier": 0.10418
      },
      "mo_2026-07": {
       "n": 4896,
       "graded": 0,
-      "brier": 0.1032
+      "brier": 0.10322
      },
      "home_fav": {
       "n": 15570,
       "graded": 0,
-      "brier": 0.09849
+      "brier": 0.09851
      },
      "away_fav": {
       "n": 12024,
       "graded": 0,
-      "brier": 0.09471
+      "brier": 0.09468
      },
      "day": {
       "n": 10134,
       "graded": 0,
-      "brier": 0.09534
+      "brier": 0.09531
      },
      "night": {
       "n": 17676,
       "graded": 0,
-      "brier": 0.09772
+      "brier": 0.09774
      },
      "park_hr_low": {
       "n": 9270,
       "graded": 0,
-      "brier": 0.09342
+      "brier": 0.09345
      },
      "park_hr_mid": {
       "n": 9270,
       "graded": 0,
-      "brier": 0.09469
+      "brier": 0.0947
      },
      "park_hr_high": {
       "n": 9270,
       "graded": 0,
-      "brier": 0.10245
+      "brier": 0.10241
      }
     }
    },
    "exemplars": {
     "worst20": [
      {
-      "gameId": 2250858,
-      "date": "2026-06-02",
-      "refId": 52656,
+      "gameId": 2250197,
+      "date": "2026-04-11",
+      "refId": 69720,
       "pick": null,
-      "prob": "0.03843",
+      "prob": "0.03326",
       "proj": "0.0000",
       "line": "0.5",
       "actual": "HR",
-      "brier": "0.924617",
+      "brier": "0.934586",
       "err": null
      },
      {
-      "gameId": 2250860,
-      "date": "2026-06-02",
-      "refId": 52706,
+      "gameId": 2250197,
+      "date": "2026-04-11",
+      "refId": 69722,
       "pick": null,
-      "prob": "0.03843",
-      "proj": "0.0090",
-      "line": "0.5",
-      "actual": "HR",
-      "brier": "0.924617",
-      "err": null
-     },
-     {
-      "gameId": 2250862,
-      "date": "2026-06-03",
-      "refId": 52758,
-      "pick": null,
-      "prob": "0.03843",
-      "proj": "0.0356",
-      "line": "0.5",
-      "actual": "HR",
-      "brier": "0.924617",
-      "err": null
-     },
-     {
-      "gameId": 2250862,
-      "date": "2026-06-03",
-      "refId": 52765,
-      "pick": null,
-      "prob": "0.03843",
+      "prob": "0.03326",
       "proj": "0.0000",
       "line": "0.5",
       "actual": "HR",
-      "brier": "0.924617",
+      "brier": "0.934586",
       "err": null
      },
      {
-      "gameId": 2250867,
-      "date": "2026-06-03",
-      "refId": 52851,
+      "gameId": 2250199,
+      "date": "2026-04-11",
+      "refId": 69753,
       "pick": null,
-      "prob": "0.03843",
+      "prob": "0.03326",
       "proj": "0.0000",
       "line": "0.5",
       "actual": "HR",
-      "brier": "0.924617",
+      "brier": "0.934586",
       "err": null
      },
      {
-      "gameId": 2250867,
-      "date": "2026-06-03",
-      "refId": 52853,
+      "gameId": 2250199,
+      "date": "2026-04-11",
+      "refId": 69757,
       "pick": null,
-      "prob": "0.03843",
+      "prob": "0.03326",
       "proj": "0.0000",
       "line": "0.5",
       "actual": "HR",
-      "brier": "0.924617",
+      "brier": "0.934586",
       "err": null
      },
      {
-      "gameId": 2250867,
-      "date": "2026-06-03",
-      "refId": 52854,
+      "gameId": 2250203,
+      "date": "2026-04-11",
+      "refId": 69839,
       "pick": null,
-      "prob": "0.03843",
+      "prob": "0.03326",
       "proj": "0.0000",
       "line": "0.5",
       "actual": "HR",
-      "brier": "0.924617",
+      "brier": "0.934586",
       "err": null
      },
      {
-      "gameId": 2250873,
-      "date": "2026-06-03",
-      "refId": 52973,
+      "gameId": 2250203,
+      "date": "2026-04-11",
+      "refId": 69847,
       "pick": null,
-      "prob": "0.03843",
-      "proj": "0.0154",
+      "prob": "0.03326",
+      "proj": "0.0000",
       "line": "0.5",
       "actual": "HR",
-      "brier": "0.924617",
+      "brier": "0.934586",
       "err": null
      },
      {
-      "gameId": 2250874,
-      "date": "2026-06-03",
-      "refId": 52991,
+      "gameId": 2250208,
+      "date": "2026-04-11",
+      "refId": 69940,
       "pick": null,
-      "prob": "0.03843",
+      "prob": "0.03326",
+      "proj": "0.0000",
+      "line": "0.5",
+      "actual": "HR",
+      "brier": "0.934586",
+      "err": null
+     },
+     {
+      "gameId": 2250208,
+      "date": "2026-04-11",
+      "refId": 69941,
+      "pick": null,
+      "prob": "0.03326",
+      "proj": "0.0000",
+      "line": "0.5",
+      "actual": "HR",
+      "brier": "0.934586",
+      "err": null
+     },
+     {
+      "gameId": 2250209,
+      "date": "2026-04-12",
+      "refId": 69982,
+      "pick": null,
+      "prob": "0.03392",
+      "proj": "0.0000",
+      "line": "0.5",
+      "actual": "HR",
+      "brier": "0.933311",
+      "err": null
+     },
+     {
+      "gameId": 2250213,
+      "date": "2026-04-12",
+      "refId": 70059,
+      "pick": null,
+      "prob": "0.03392",
+      "proj": "0.0000",
+      "line": "0.5",
+      "actual": "HR",
+      "brier": "0.933311",
+      "err": null
+     },
+     {
+      "gameId": 2250213,
+      "date": "2026-04-12",
+      "refId": 70063,
+      "pick": null,
+      "prob": "0.03392",
+      "proj": "0.0000",
+      "line": "0.5",
+      "actual": "HR",
+      "brier": "0.933311",
+      "err": null
+     },
+     {
+      "gameId": 2250213,
+      "date": "2026-04-12",
+      "refId": 70064,
+      "pick": null,
+      "prob": "0.03392",
+      "proj": "0.0000",
+      "line": "0.5",
+      "actual": "HR",
+      "brier": "0.933311",
+      "err": null
+     },
+     {
+      "gameId": 2250215,
+      "date": "2026-04-12",
+      "refId": 70095,
+      "pick": null,
+      "prob": "0.03392",
+      "proj": "0.0000",
+      "line": "0.5",
+      "actual": "HR",
+      "brier": "0.933311",
+      "err": null
+     },
+     {
+      "gameId": 2250217,
+      "date": "2026-04-12",
+      "refId": 70133,
+      "pick": null,
+      "prob": "0.03392",
+      "proj": "0.0000",
+      "line": "0.5",
+      "actual": "HR",
+      "brier": "0.933311",
+      "err": null
+     },
+     {
+      "gameId": 2250219,
+      "date": "2026-04-12",
+      "refId": 70185,
+      "pick": null,
+      "prob": "0.03392",
+      "proj": "0.0294",
+      "line": "0.5",
+      "actual": "HR",
+      "brier": "0.933311",
+      "err": null
+     },
+     {
+      "gameId": 2250224,
+      "date": "2026-04-13",
+      "refId": 70294,
+      "pick": null,
+      "prob": "0.03473",
       "proj": "0.0255",
       "line": "0.5",
       "actual": "HR",
-      "brier": "0.924617",
+      "brier": "0.931746",
       "err": null
      },
      {
-      "gameId": 2250879,
-      "date": "2026-06-04",
-      "refId": 53120,
+      "gameId": 2250224,
+      "date": "2026-04-13",
+      "refId": 70300,
       "pick": null,
-      "prob": "0.03843",
-      "proj": "0.0384",
-      "line": "0.5",
-      "actual": "HR",
-      "brier": "0.924617",
-      "err": null
-     },
-     {
-      "gameId": 2250887,
-      "date": "2026-06-05",
-      "refId": 53292,
-      "pick": null,
-      "prob": "0.03843",
+      "prob": "0.03473",
       "proj": "0.0000",
       "line": "0.5",
       "actual": "HR",
-      "brier": "0.924617",
+      "brier": "0.931746",
       "err": null
      },
      {
-      "gameId": 2250887,
-      "date": "2026-06-05",
-      "refId": 53295,
+      "gameId": 2250224,
+      "date": "2026-04-13",
+      "refId": 70304,
       "pick": null,
-      "prob": "0.03843",
+      "prob": "0.03473",
       "proj": "0.0000",
       "line": "0.5",
       "actual": "HR",
-      "brier": "0.924617",
+      "brier": "0.931746",
       "err": null
      },
      {
-      "gameId": 2250895,
-      "date": "2026-06-05",
-      "refId": 53458,
+      "gameId": 2250226,
+      "date": "2026-04-13",
+      "refId": 70346,
       "pick": null,
-      "prob": "0.03843",
-      "proj": "0.0292",
+      "prob": "0.03473",
+      "proj": "0.0276",
       "line": "0.5",
       "actual": "HR",
-      "brier": "0.924617",
+      "brier": "0.931746",
       "err": null
      },
      {
-      "gameId": 2250898,
-      "date": "2026-06-06",
-      "refId": 53539,
+      "gameId": 2250230,
+      "date": "2026-04-13",
+      "refId": 70413,
       "pick": null,
-      "prob": "0.03843",
-      "proj": "0.0295",
+      "prob": "0.03473",
+      "proj": "0.0000",
       "line": "0.5",
       "actual": "HR",
-      "brier": "0.924617",
-      "err": null
-     },
-     {
-      "gameId": 2250903,
-      "date": "2026-06-06",
-      "refId": 53644,
-      "pick": null,
-      "prob": "0.03843",
-      "proj": "0.0335",
-      "line": "0.5",
-      "actual": "HR",
-      "brier": "0.924617",
-      "err": null
-     },
-     {
-      "gameId": 2250905,
-      "date": "2026-06-06",
-      "refId": 53684,
-      "pick": null,
-      "prob": "0.03843",
-      "proj": "0.0221",
-      "line": "0.5",
-      "actual": "HR",
-      "brier": "0.924617",
-      "err": null
-     },
-     {
-      "gameId": 2250910,
-      "date": "2026-06-06",
-      "refId": 53767,
-      "pick": null,
-      "prob": "0.03843",
-      "proj": "0.0300",
-      "line": "0.5",
-      "actual": "HR",
-      "brier": "0.924617",
-      "err": null
-     },
-     {
-      "gameId": 2250923,
-      "date": "2026-06-07",
-      "refId": 54047,
-      "pick": null,
-      "prob": "0.03843",
-      "proj": "0.0358",
-      "line": "0.5",
-      "actual": "HR",
-      "brier": "0.924617",
-      "err": null
-     },
-     {
-      "gameId": 2250928,
-      "date": "2026-06-08",
-      "refId": 54163,
-      "pick": null,
-      "prob": "0.03843",
-      "proj": "0.0318",
-      "line": "0.5",
-      "actual": "HR",
-      "brier": "0.924617",
-      "err": null
-     },
-     {
-      "gameId": 2250947,
-      "date": "2026-06-10",
-      "refId": 54556,
-      "pick": null,
-      "prob": "0.03843",
-      "proj": "0.0383",
-      "line": "0.5",
-      "actual": "HR",
-      "brier": "0.924617",
+      "brier": "0.931746",
       "err": null
      }
     ]
@@ -4867,123 +5194,228 @@
   {
    "name": "Mason Montgomery",
    "n": 5,
-   "bias": 4.686,
-   "mae": 4.686
+   "bias": 4.211,
+   "mae": 4.211
   },
   {
    "name": "Braydon Fisher",
    "n": 7,
-   "bias": 3.5801,
-   "mae": 3.8696
+   "bias": 3.2737,
+   "mae": 3.5529
   },
   {
    "name": "Bryan Hudson",
    "n": 6,
-   "bias": 3.2093,
-   "mae": 3.2093
-  },
-  {
-   "name": "Garrett Crochet",
-   "n": 6,
-   "bias": 2.7937,
-   "mae": 3.7727
+   "bias": 2.8943,
+   "mae": 2.8943
   },
   {
    "name": "Huascar Brazobán",
    "n": 6,
-   "bias": 2.2665,
-   "mae": 2.2665
+   "bias": 2.2822,
+   "mae": 2.2822
   },
   {
    "name": "Troy Melton",
    "n": 9,
-   "bias": -2.2251,
-   "mae": 3.0718
+   "bias": -2.2067,
+   "mae": 3.078
   },
   {
-   "name": "Cristopher Sánchez",
-   "n": 21,
-   "bias": 2.1892,
-   "mae": 2.7532
-  },
-  {
-   "name": "Max Fried",
-   "n": 11,
-   "bias": 2.1169,
-   "mae": 2.6622
-  },
-  {
-   "name": "Tyler Glasnow",
-   "n": 7,
-   "bias": 2.0107,
-   "mae": 2.4164
+   "name": "Garrett Crochet",
+   "n": 6,
+   "bias": 2.1778,
+   "mae": 3.8198
   },
   {
    "name": "Hunter Brown",
    "n": 8,
-   "bias": 1.9445,
-   "mae": 2.1818
+   "bias": 1.9674,
+   "mae": 2.2044
   },
   {
-   "name": "Michael Soroka",
-   "n": 15,
-   "bias": 1.8507,
-   "mae": 2.8134
-  },
-  {
-   "name": "Robert Gasser",
-   "n": 10,
-   "bias": -1.8189,
-   "mae": 2.0909
+   "name": "Cristopher Sánchez",
+   "n": 21,
+   "bias": 1.9025,
+   "mae": 2.4463
   },
   {
    "name": "Roki Sasaki",
    "n": 18,
-   "bias": -1.8175,
-   "mae": 2.5477
+   "bias": -1.8868,
+   "mae": 2.5582
   },
   {
-   "name": "Carmen Mlodzinski",
-   "n": 9,
-   "bias": 1.7123,
-   "mae": 2.6517
+   "name": "Robert Gasser",
+   "n": 10,
+   "bias": -1.8043,
+   "mae": 2.0785
   },
   {
-   "name": "Tatsuya Imai",
-   "n": 14,
-   "bias": -1.6921,
-   "mae": 3.449
+   "name": "Max Fried",
+   "n": 11,
+   "bias": 1.7135,
+   "mae": 2.6163
   },
   {
    "name": "Matthew Liberatore",
    "n": 20,
-   "bias": -1.6689,
-   "mae": 2.4639
+   "bias": -1.7114,
+   "mae": 2.4775
   },
   {
    "name": "Brandon Sproat",
    "n": 16,
-   "bias": -1.6277,
-   "mae": 2.2744
+   "bias": -1.6965,
+   "mae": 2.3461
+  },
+  {
+   "name": "Tatsuya Imai",
+   "n": 14,
+   "bias": -1.6781,
+   "mae": 3.4419
+  },
+  {
+   "name": "Jameson Taillon",
+   "n": 14,
+   "bias": -1.6595,
+   "mae": 2.0068
   },
   {
    "name": "Trey Gibson",
    "n": 7,
-   "bias": -1.591,
-   "mae": 3.3664
+   "bias": -1.5694,
+   "mae": 3.3671
+  },
+  {
+   "name": "Michael Soroka",
+   "n": 15,
+   "bias": 1.5463,
+   "mae": 2.5042
   },
   {
    "name": "Gerrit Cole",
    "n": 11,
-   "bias": -1.558,
-   "mae": 2.7573
+   "bias": -1.5339,
+   "mae": 2.7461
   },
   {
-   "name": "Kris Bubic",
-   "n": 9,
-   "bias": 1.5293,
-   "mae": 3.0051
+   "name": "Brady Singer",
+   "n": 20,
+   "bias": -1.5126,
+   "mae": 2.1717
+  },
+  {
+   "name": "Reynaldo López",
+   "n": 10,
+   "bias": -1.4977,
+   "mae": 2.4551
   }
  ],
- "nrfi_beta_by_month": {}
+ "nrfi_beta_by_month": {
+  "2026-04": [
+   0.063442,
+   0.208034,
+   -0.078222,
+   0.077337,
+   -0.273851,
+   -2.330589,
+   -0.049128,
+   0.214624,
+   0.041682,
+   0.008537,
+   0.006858,
+   2.716936,
+   0.078759,
+   -0.032474,
+   0.319899,
+   0.337741,
+   -0.872452,
+   0.006858,
+   -0.031211,
+   -0.048247,
+   0.130026,
+   -0.049128,
+   0.178726,
+   -0.197474
+  ],
+  "2026-05": [
+   -0.024532,
+   0.222291,
+   -0.018629,
+   0.108525,
+   -0.240672,
+   0.924597,
+   -0.053135,
+   0.09784,
+   -0.044177,
+   -0.062028,
+   0.021255,
+   -1.857918,
+   -0.165217,
+   0.014697,
+   0.146575,
+   0.343901,
+   0.582717,
+   0.021255,
+   0.07557,
+   -0.106908,
+   0.091613,
+   -0.053135,
+   0.114429,
+   -0.111214
+  ],
+  "2026-06": [
+   -0.046812,
+   0.425733,
+   -0.047244,
+   0.099584,
+   -0.365456,
+   -0.587748,
+   -0.021479,
+   0.036209,
+   -0.046206,
+   -0.049279,
+   0.016701,
+   1.242615,
+   0.195151,
+   -0.034072,
+   0.150289,
+   -0.179188,
+   -0.849564,
+   0.016701,
+   0.099494,
+   0.036818,
+   0.009848,
+   -0.021479,
+   0.109144,
+   -0.149534
+  ],
+  "2026-07": [
+   -0.049579,
+   0.287739,
+   -0.022976,
+   0.08937,
+   -0.214215,
+   -1.482582,
+   -0.001605,
+   0.022462,
+   -0.074364,
+   -0.034852,
+   0.009377,
+   1.500457,
+   0.128567,
+   -0.043999,
+   0.147034,
+   -0.03276,
+   -0.279357,
+   0.009377,
+   0.097813,
+   0.045129,
+   -0.006609,
+   -0.001605,
+   0.109274,
+   -0.16628
+  ]
+ }
 }

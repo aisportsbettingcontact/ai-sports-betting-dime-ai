@@ -1,0 +1,62 @@
+{
+ "population_props_total": 2885,
+ "finals_in_scope": 1556,
+ "linescore_substrate_rows": 1555,
+ "class_counts": {
+  "final_in_scope": 2837,
+  "game_not_final": 46,
+  "final_out_of_scope": 2
+ },
+ "grade_status_counts": {
+  "MATCH": 2694,
+  "ORPHAN_STORED_GRADE": 6,
+  "NOT_GRADEABLE": 183,
+  "MISMATCH": 2
+ },
+ "graded_universe_n": 2696,
+ "grade_mismatches": 2,
+ "orphan_stored_grades": 6,
+ "substrate_status_counts": {
+  "SIDE_MATCH_KS_EQUAL": 2524,
+  "SIDE_MISMATCH(scratch)": 309,
+  "no_linescore": 48,
+  "SIDE_MATCH_KS_DIFFER": 4
+ },
+ "substrate_mismatches": 4,
+ "scratch_exemptions_total": 56,
+ "scratch_exemptions_unmatched": 0,
+ "postponed_exempt_gameids": [
+  2250429,
+  2250432
+ ],
+ "ledger_live_rows": 2686,
+ "ledger_live_mismatch_rows": 4,
+ "ledger_graded_props_missing_from_ledger": [
+  60069,
+  60070,
+  990003,
+  990006,
+  1470202,
+  1470213,
+  1740002,
+  1740004,
+  2310001,
+  2310002
+ ],
+ "ledger_live_rows_not_in_graded_universe": [],
+ "ledger_replay_rows_by_version": {
+  "wf-19288f01-p1": 3090,
+  "wf-19288f01-p2": 3090
+ },
+ "ledger_replay_anomaly_rows": 1158,
+ "derived_result_dist": {
+  "OVER": 1277,
+  "UNDER": 1417,
+  "PUSH": 2
+ },
+ "derived_correct_dist": {
+  "1": 1419,
+  "0": 1275,
+  "None": 2
+ }
+}

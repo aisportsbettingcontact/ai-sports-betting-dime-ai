@@ -1,0 +1,3 @@
+type,game_id,date,teams,detail
+STR_VS_BIN,2250738,2026-05-24,DET@BAL,nrfiActualResult=YRFI vs actualNrfiBinary=1 (linescore inn1=0+0)
+STR_VS_BIN,2251290,2026-07-07,MIL@STL,nrfiActualResult=YRFI vs actualNrfiBinary=1 (linescore inn1=0+0)
