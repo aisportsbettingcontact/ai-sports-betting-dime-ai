@@ -1,0 +1,9 @@
+{
+  "schema_version": "dime-decoding-v1",
+  "purpose": "deterministic-release-evaluation",
+  "do_sample": false,
+  "temperature": 0,
+  "top_p": 1,
+  "max_new_tokens": 512,
+  "seed": 1729
+}

@@ -1,72 +1,398 @@
-# Platform ownership contract
+# Dime 1.0 platform ownership contract
 
-This contract defines where each Dime 1.0 asset is allowed to live. A branch or
-draft pull request in this repository is already public.
+This contract defines which platform owns every material Dime 1.0 asset, how
+an asset moves between platforms, and which boundaries must never be crossed.
+It is release authority for the active project at `ml/dime-1.0/`.
+
+The present state is foundation-only. Nothing in this document authorizes full
+training, locked evaluation, model publication, serving, or provider
+activation. The machine-readable contract currently sets
+`authorization.adapter_publication` to `false`; publication remains blocked
+until a focused, owner-approved pull request changes and binds that state to an
+exact release candidate.
+
+Authorization is never a reusable global switch. Full training additionally
+requires `authorization.training_candidate` to match the exact experiment,
+prior clean source commit, config hash, foundation dataset-manifest hash,
+foundation checksum-manifest hash, preflight run-manifest hash,
+foundation/development revisions, and locked opaque reference. A separate
+authorization commit may change only the canonical platform contract across
+the entire repository. Publication additionally requires
+`authorization.release_candidate` to match the exact candidate artifact
+hashes, evaluation-summary hash, training-contract hash, canonical
+bundle-payload hash, locked-suite manifest hash and expected-case count, and
+immutable comparison-control kind/repository/revision/hash, comparison-report
+hash, quality-slice-report hash, and destination parent commit. A prior
+`promoted_adapter.approved_release_revision` must remain the champion and serve
+as both comparison control and destination parent; only an inaugural release
+may use the pinned Meta base control while that field is `null`.
+
+## Non-negotiable invariants
+
+1. GitHub `main` is the reviewed source for code and governance.
+2. Approved private datasets are frozen in separate Hugging Face dataset
+   repositories and loaded by full 40-character commit SHA.
+3. Locked evaluations are isolated from training, development, and serving.
+4. The production model repository contains promoted PEFT adapter releases
+   only; Meta base weights and full merged models are prohibited.
+5. Training compute receives read-only Hugging Face access. A training
+   environment can never publish a release.
+6. RunPod is replaceable compute and working storage, not the only permanent
+   location for an important asset.
+7. Application user data remains in authorized application data systems and is
+   not training data by default.
+8. Serving may load only an explicitly approved adapter commit and must never
+   load `main`, `latest`, or a movable tag.
+9. A training authorization cannot approve itself: source commit `S` owns all
+   governed inputs, authorization commit `A` changes only the platform
+   contract across the repository, and training verifies `S` is an ancestor of
+   clean `A`.
+10. Locked-evaluation authorization binds an approved suite reference,
+    manifest SHA-256, expected case count, and isolated evaluator run ID;
+    case-level content never crosses into the release bundle.
+11. A new candidate reaches locked evaluation only through the reviewed,
+    one-way, content-addressed handoff. It is not uploaded to the production
+    model repository before it passes locked evaluation and release review.
+
+## End-to-end boundary
+
+```text
+GitHub reviewed source S ─────────────┐
+GitHub authorization commit A ───────┤ exact two-commit chain
+HF foundation dataset ───────────────┤ exact HF commit
+HF development evaluation ──────────┤ exact HF commit
+Meta Llama base ─────────────────────┤ exact HF commit
+                                     ▼
+                         RunPod training workspace
+                         read-only training token
+                                     │
+                      candidate adapter + run evidence
+                                     ▼
+                 one-way candidate transfer control
+                                     │ exact candidate hashes
+                                     ▼
+HF locked evaluation ───────► isolated evaluator
+                                     │
+                          sanitized aggregate only
+                                     ▼
+                         GitHub review and release gates
+                                     │
+                       separate release-publisher token
+                                     ▼
+                    HF promoted-adapter repository
+                                     │ first approved candidate HF commit
+                                     ▼
+                              serving platform
+
+Locked content never reaches training, development, release, or serving.
+The evaluator input never mounts the shared training volume or cache.
+```
 
 ## GitHub: canonical reviewed source
 
+Repository:
+`aisportsbettingcontact/ai-sports-betting-dime-ai`
+
+Canonical project path:
+`ml/dime-1.0/`
+
 GitHub `main` permanently owns:
 
-- source code;
+- source code and deterministic validation logic;
 - versioned prompts, chat templates, and tool contracts;
-- dataset and evaluation schemas;
-- synthetic or redistribution-cleared public training fixtures;
-- public development evaluation cases;
-- configurations, documentation, tests, and CPU-safe validation workflows;
-- dataset manifests and SHA-256 hashes;
+- dataset, evaluation, manifest, and tool-response schemas;
+- synthetic or redistribution-cleared public fixtures;
+- public development-evaluation examples;
+- training, evaluation, and runtime configurations;
+- documentation, architecture, runbooks, and release gates;
+- tests and CPU-safe validation workflows;
+- approved dataset manifests and SHA-256 hashes that are safe to publish;
 - experiment configurations and sanitized run fingerprints;
-- sanitized evaluation reports and score summaries;
-- model-card templates and release-gate definitions.
+- sanitized aggregate reports, score summaries, and infrastructure evidence;
+- model-card and release-attestation templates; and
+- pull-request review history and promotion decisions.
 
-Branches and pull requests contain draft work. Only reviewed, rights-cleared
-material may merge into `main`. Private data must never be committed, even
-temporarily.
+Branches and pull requests are public draft work. Private data must never be
+committed, even temporarily. Only reviewed, rights-cleared material may merge
+into `main`.
 
-## Private Hugging Face model repository
+GitHub must not contain:
 
-The intended model repository is
-`taileredsports/Llama-3-Dime-1.0`. It owns approved model artifacts:
+- Hugging Face, RunPod, GitHub, provider, database, or serving credentials;
+- private foundation records or licensed data without redistribution rights;
+- raw user betting histories, chats, account data, or private retrieval
+  context;
+- locked cases, answers, private rubrics, or case-level locked results;
+- model or adapter weights;
+- optimizer state, checkpoints, caches, or virtual environments; or
+- raw Pod, volume, endpoint, or infrastructure identifiers in public evidence.
 
-- LoRA or QLoRA adapter weights;
-- checkpoints;
-- merged or quantized model weights;
-- tokenizer artifacts or additions;
-- release-specific model cards and artifact metadata; and
-- deployment bundles.
+## Hugging Face: approved foundation training data
 
-This project does not upload or publish any model artifact by itself. Training
-must use a write-scoped credential; future serving must use a separate
-read-scoped credential. Neither credential belongs in GitHub.
+Private dataset repository:
+`taileredsports/dime-foundation-sft`
 
-## Private Hugging Face dataset repository
+This repository owns only approved, frozen foundation SFT releases. A release
+is expected to contain a root Dataset Card plus a versioned directory such as:
 
-A separate private dataset repository will own private or proprietary approved
-training data, licensed provider-derived data, hidden and locked evaluations,
-private fixtures, and non-public dataset versions. Its name has not been
-selected. This repository must not invent or create it.
+```text
+README.md
+foundation-v1/
+├── train.jsonl
+├── validation.jsonl
+├── dataset_manifest.json
+├── dataset_card.md
+└── checksums.json
+```
 
-## RunPod
+Draft and unreviewed records remain in a reviewed GitHub pull-request workflow
+only when they are safe for public review. Private drafts remain in an
+authorized private review system; they do not go on RunPod as the sole copy.
 
-RunPod is disposable compute only:
+Training loads an approved release with `dime-training-read-v1` and its exact
+Hugging Face commit SHA. The training environment cannot write to this
+repository.
 
-- a temporary GPU environment;
-- caches and a training workspace;
-- generated checkpoints awaiting authorized transfer; and
-- temporary logs.
+## Hugging Face: development evaluation
 
-RunPod is never the permanent source of truth. A GPU session begins from a
-clone or synchronized checkout of this GitHub repository and then enters
-`ml/dime-1.0/`.
+Private dataset repository:
+`taileredsports/dime-eval-development`
 
-## Application user data
+This repository owns visible development and validation cases, public-to-the-
+team rubrics, expected tool behavior, numeric tolerances, evaluation manifests,
+and checksums. Its contents may guide model development, so its scores cannot
+substitute for the locked release gate.
 
-Bet Tracker histories, chat histories, user identifiers, raw account data, and
-private conversations remain in the application’s authorized data systems.
-They are not training data by default.
+The training environment may read an approved development-evaluation revision
+by full commit SHA. It cannot modify the repository.
 
-They must not enter GitHub or model training until consent, rights, deletion,
-retention, de-identification, partitioning, and privacy controls are formally
-approved.
+## Hugging Face: locked evaluation
+
+Restricted private dataset repository:
+`taileredsports/dime-eval-locked`
+
+This repository owns hidden release cases, private scoring material, expected
+tool behavior, numeric tolerances, integrity manifests, and checksums. Raw
+locked content may be accessed only by an isolated evaluator using
+`dime-locked-evaluator-read-v1`. Publication uses the separate
+`dime-locked-publisher-v1` credential.
+
+The following credentials are denied access:
+
+- `dime-training-read-v1`;
+- `dime-serving-read-v1`; and
+- `dime-release-publisher-v1`.
+
+Locked content must not enter the training network volume, a developer
+notebook, a model-development cache, GitHub, the adapter repository, serving,
+or a general release workspace. Only approved, non-reconstructable aggregate
+evidence may leave the evaluator.
+
+The locked evaluator receives a new, unpromoted candidate through the
+[candidate handoff](CANDIDATE_EVALUATION_HANDOFF.md), not through the
+production adapter repository. Its access to the promoted repository exists
+only to load the current champion comparison control.
+
+## Hugging Face: promoted adapter releases
+
+Private model repository:
+`taileredsports/Llama-3-Dime-1.0`
+
+The default revision owns only serving-approved, adapter-only releases for:
+
+```text
+base model: meta-llama/Llama-3.1-8B
+revision:   d04e592bb4f6aa9cfee91e2e20afa771667e1d4b
+```
+
+An approved release includes the PEFT adapter, its configuration, a root Model
+Card, exact training and evaluation provenance, release attestation,
+checksums, and only the tokenizer/chat/generation artifacts required by the
+allowlisted release contract.
+
+The exact local payload is:
+
+```text
+README.md
+LICENSE
+NOTICE
+adapter_model.safetensors
+adapter_config.json
+training_manifest.json
+evaluation_summary.json
+release_attestation.json
+checksums.sha256
+chat_template.jinja
+generation_config.json
+tokenizer.json                 # optional override set
+tokenizer_config.json          # optional override set
+special_tokens_map.json        # optional override set
+added_tokens.json              # optional; requires override set
+```
+
+Tokenizer overrides are omitted when the pinned base tokenizer is unchanged.
+If an override is required, all three core tokenizer files travel together;
+`added_tokens.json` is permitted only with that complete set.
+
+The root `.gitattributes` is permitted only as Hugging Face-managed remote
+metadata. It is not local release payload and is excluded from the payload
+checksum manifest. The published remote inventory must contain exactly that
+metadata file plus the approved payload, with no stale artifact from an
+earlier commit.
+
+The repository must not contain:
+
+- Meta base-model weight shards;
+- merged or quantized full-model weights;
+- `model.safetensors`, `model-*-of-*.safetensors`, or
+  `pytorch_model*.bin`;
+- training checkpoints, optimizer state, scheduler state, or trainer logs;
+- rehearsal adapters on the default revision;
+- raw foundation, development, or locked datasets;
+- raw user data; or
+- a workspace, cache, virtual environment, or deployment bundle.
+
+The existing rehearsal adapter is classified:
+
+`REHEARSAL — NOT APPROVED FOR SERVING`
+
+It remains in governed archive/evidence storage and must not be uploaded to the
+production root. Publication, when separately authorized, uses
+`dime-release-publisher-v1`. Serving uses `dime-serving-read-v1` and loads only
+the approved full commit SHA.
+
+Publication records the destination's full expected parent commit, enforces it
+as a concurrency guard, captures the full commit returned by Hugging Face,
+verifies the exact remote inventory and hashes at that revision with a
+read-only credential, and preserves a publication receipt. No tag or serving
+promotion may precede that receipt.
+
+For that single post-upload verification, `dime-serving-read-v1` is injected
+as a separate transient verifier token because it can read the adapter
+repository but cannot write or read any Dime dataset. It is removed after the
+receipt is written and is never installed in training.
+
+## RunPod: temporary compute and active workspace
+
+RunPod owns no irreplaceable source artifact. It provides:
+
+- GPU compute;
+- the rebuildable environment at `/opt/dime-venv`;
+- a persistent network volume mounted at `/workspace`;
+- pinned source and dataset working copies;
+- active experiment checkpoints, adapters, logs, and reports;
+- Hugging Face and package caches; and
+- recovery checkpoints retained for an active run.
+
+The governed layout is:
+
+```text
+/workspace/
+├── repos/
+│   └── ai-sports-betting-dime-ai/
+├── datasets/
+│   ├── foundation-sft/
+│   │   └── <full-hf-commit-sha>/
+│   └── eval-development/
+│       └── <full-hf-commit-sha>/
+├── runs/
+│   └── <experiment-id>/
+│       ├── checkpoints/
+│       ├── adapters/
+│       │   └── final/          # trainer-created atomic artifact
+│       ├── logs/
+│       ├── reports/
+│       └── run_manifest.json
+├── archive/
+└── .cache/
+    ├── huggingface/
+    └── pip/
+```
+
+Every run records an exact Git commit, exact Hugging Face dataset commits,
+exact Meta base revision, unique experiment ID, configuration hashes, prompt
+and schema versions, tool contract, decoding settings, runtime identity, and
+output hashes.
+
+The training template receives only `dime-training-read-v1`. Publisher and
+locked-evaluator credentials are prohibited. After a run, approved small
+evidence moves to GitHub, an approved adapter moves through the separate
+publisher workflow, necessary recovery checkpoints are retained, and GPU
+compute is stopped. The network volume remains persistent and must not be
+deleted as part of normal Pod cleanup.
+
+See [RunPod workspace and runbook](RUNPOD_WORKSPACE_RUNBOOK.md).
+
+## Restricted evaluator compute
+
+Locked evaluation executes outside the training workspace with a separate
+cache, filesystem, credential, and run identity. It loads:
+
+- the unpromoted candidate from a fresh, read-only evaluator input whose exact
+  three-file inventory, byte lengths, and SHA-256 values match the approved
+  one-way transfer authorization and receiver receipt;
+- the Meta base model by the pinned revision;
+- the locked dataset by full Hugging Face commit SHA;
+- the evaluator implementation by full Git commit SHA; and
+- the current promoted adapter by full Hugging Face commit SHA only when a
+  champion exists and is the approved comparison control.
+
+It exports only `dime-release-evaluation-summary-v1`: approved aggregate
+counts, opaque evaluator/locked-suite references, and hashes binding the exact
+candidate and restricted evidence. Raw cases, answers, thresholds, rubrics,
+case IDs, and case-level traces remain restricted.
+
+No production Hugging Face commit exists for the candidate at this stage.
+Publication happens only after the locked aggregate, human review, release
+authorization, and all other gates pass. The full handoff, receipt,
+closed-world inventory, cleanup, and failure rules are defined in
+[Candidate-to-locked-evaluator handoff](CANDIDATE_EVALUATION_HANDOFF.md).
+
+## Application data systems
+
+Bet Tracker histories, chat histories, user identifiers, raw account data,
+private conversations, consent state, and deletion state remain in the
+application's authorized databases and object stores.
+
+They are not training data by default. They must not enter GitHub, Hugging
+Face, RunPod training, model weights, or evaluation suites until purpose,
+consent, rights, retention, deletion, de-identification, tenant isolation,
+partitioning, and privacy controls are formally approved.
+
+Runtime personalization should use authorized, user-scoped retrieval rather
+than silently placing private history into model weights.
+
+## Serving platform
+
+Serving owns the approved runtime image, endpoint configuration, operational
+monitoring, and a local copy or cache of one approved adapter revision. It uses
+`dime-serving-read-v1`, which can read only the promoted-adapter repository and
+the gated Meta base model.
+
+Serving cannot read foundation, development, or locked datasets. It cannot
+write to Hugging Face. It must verify the release attestation and artifact
+hashes before accepting a revision.
+
+The application provider remains `frozen` until a separate owner-authorized
+promotion pull request proves every release gate and explicitly changes the
+provider constant.
+
+## Asset transfer and approval matrix
+
+| Transfer | Required identity | Approval | Destination |
+|---|---|---|---|
+| GitHub source to RunPod | Full Git commit SHA | Reviewed `main` commit | Pinned full checkout |
+| Foundation data to RunPod | Full HF commit SHA | Approved dataset release | Revision-specific directory |
+| Development eval to RunPod | Full HF commit SHA | Approved eval release | Revision-specific directory |
+| Candidate outputs to review | Experiment ID and hashes | Experiment review | Sanitized GitHub evidence |
+| Locked data to evaluator | Full HF commit SHA | Locked-suite approval | Isolated evaluator only |
+| Candidate to locked evaluator | Transfer ID, experiment ID, and exact three-file hashes | Human-reviewed one-way transfer authorization | Fresh isolated, read-only evaluator input |
+| Locked aggregate to release review | Evaluator run ID, candidate hashes, and restricted-evidence hashes | Locked-evaluation approval | Sanitized release evidence only |
+| Candidate adapter to model repo | Full source/data/model provenance and hashes | Release attestation | Adapter-only HF commit |
+| Adapter to serving | Full approved HF commit SHA | Serving approval | Pinned runtime revision |
+
+Tags may aid discovery, but they are never the authoritative identity. Tags
+must not be moved or reused after approval.
 
 ## Prompt and runtime authority
 
@@ -78,5 +404,16 @@ approved.
 
 The runtime and training prompts are not asserted to be identical. A later,
 owner-authorized promotion pull request must reconcile and hash the approved
-runtime prompt against the canonical training prompt before provider
-activation.
+runtime prompt against the canonical training prompt before activation.
+
+## Change control
+
+Changing a repository ID, credential boundary, workspace root, base-model
+revision, release file contract, or platform owner requires:
+
+1. a focused pull request;
+2. an explicit migration and rollback plan;
+3. updated contract tests and documentation;
+4. verification that no secret or protected data crossed the old boundary;
+5. revalidation of affected fine-grained token permissions; and
+6. owner approval before any external mutation.

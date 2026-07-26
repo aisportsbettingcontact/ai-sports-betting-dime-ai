@@ -50,6 +50,14 @@ The approved manifest must conform to
 without that complete v3 contract. The v2 schema remains tracked for historical
 compatibility; it is not sufficient for new public publication.
 
-Private or proprietary approved data belongs in a separate private Hugging Face
-dataset repository. Its repository name has not been selected and is not
-invented here.
+Approved private foundation training data belongs only in
+`taileredsports/dime-foundation-sft`. Visible private development evaluations
+belong only in `taileredsports/dime-eval-development`. Locked and hidden
+release evaluations belong only in `taileredsports/dime-eval-locked`, which is
+inaccessible to the training credential and must never be copied into this
+public repository or a training workspace.
+
+Every training or evaluation run must pin the applicable Hugging Face dataset
+by its full 40-character commit SHA. A branch or tag is a readable alias, not
+release authority. See
+[`docs/HUGGING_FACE_REGISTRY.md`](../docs/HUGGING_FACE_REGISTRY.md).
