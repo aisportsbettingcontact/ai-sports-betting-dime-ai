@@ -8,7 +8,9 @@ version = "0.1.1"
 description = "Controlled training and evaluation foundation for Dime AI"
 requires-python = ">=3.12"
 dependencies = [
+  "huggingface_hub==1.24.0",
   "jsonschema==4.26.0",
+  "numpy==2.3.2",
   "PyYAML==6.0.3",
 ]
 

@@ -37,7 +37,7 @@ Every governed dataset release must record:
 - curriculum skill, interaction, difficulty, risk, and scenario-cluster labels;
 - reviewer and approval date;
 - deduplication, contamination, and quality checks;
-- SHA-256 hashes of the final split files.
+- SHA-256 hashes of the final split files;
 - visibility and publication classification;
 - train and validation record counts;
 - provider-derived and user-data declarations;
@@ -60,13 +60,24 @@ train, and validation hashes and record counts. It must attest rights, consent,
 privacy, partition-leakage, future-data, semantic-deduplication, and
 evaluation-contamination review.
 
+Full training additionally binds the SHA-256 of the approved v3
+`dataset_manifest.json` and the SHA-256 of `checksums.json` into the
+candidate-specific platform authorization. The trainer validates both schemas,
+recomputes both hashes, verifies every referenced split, and rejects v2
+manifests. An approved Hugging Face revision or local file path by itself is
+not sufficient authorization.
+
 The historical v2 schema remains tracked without semantic changes. It is not
 sufficient for new public publication. `scripts/validate_data.py` rejects
 non-sample public JSONL unless the exact approved train/validation paths are
 bound to a valid v3 `approved-public` manifest.
 
-Private, proprietary, provider-derived, locked, and hidden data belongs in the
-future private dataset repository, not this public repository.
+Approved private foundation data belongs in
+`taileredsports/dime-foundation-sft`; visible private development evaluations
+belong in `taileredsports/dime-eval-development`; and locked or hidden
+release-gate material belongs in the separately restricted
+`taileredsports/dime-eval-locked`. None belongs in this public repository. The
+training credential is denied access to the locked repository.
 
 ## Retention and deletion
 

@@ -1,6 +1,7 @@
 # Dime AI Adapter — MODEL CARD TEMPLATE
 
-> Complete every field and remove every `TODO` before a reviewed public release.
+> Complete every field and remove every `TODO` before a reviewed private
+> registry release.
 
 Built with Llama. End-user outputs from this system must be disclosed as
 AI-generated.

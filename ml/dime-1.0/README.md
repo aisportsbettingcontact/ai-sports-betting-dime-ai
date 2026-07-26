@@ -15,7 +15,10 @@ checkpoint.
 | Parent revision | `d04e592bb4f6aa9cfee91e2e20afa771667e1d4b` |
 | Model type | Llama 3.1 8B Base, not Instruct |
 | Development method | QLoRA/SFT post-training and evaluation |
-| Intended private model repository | `taileredsports/Llama-3-Dime-1.0` |
+| Approved-training dataset repository | `taileredsports/dime-foundation-sft` |
+| Development-evaluation repository | `taileredsports/dime-eval-development` |
+| Locked-evaluation repository | `taileredsports/dime-eval-locked` |
+| Promoted-adapter repository | `taileredsports/Llama-3-Dime-1.0` |
 | Initial verified GPU | RTX 4090 24 GB |
 | Training quantization | NF4 4-bit with double quantization |
 | Compute dtype | BF16 |
@@ -37,6 +40,12 @@ authorize a model call, deployment, or production change.
 - No production vLLM endpoint exists.
 - No provider activation is approved.
 
+The four private Hugging Face repositories currently contain governance cards
+only. No approved foundation dataset, development-evaluation release,
+locked-evaluation release, or serving-approved adapter has been published.
+Their current card commits are registry evidence, not training, evaluation, or
+serving revisions.
+
 The small 2026-07-25 rehearsal proved only that selected infrastructure
 mechanics execute. It used 8 training and 4 validation records, scored 3 of 10
 expected evaluation cases, passed zero cases, retained critical failures, and
@@ -45,17 +54,25 @@ set `release_gate_pass` to `false`.
 ## Ownership
 
 GitHub `main` is the canonical reviewed source for code, prompts, templates,
-tool contracts, schemas, synthetic public fixtures, public development
-evaluations, configurations, tests, documentation, sanitized evidence, and
-release gates. Branches and draft pull requests are public draft work.
+tool contracts, schemas, synthetic public fixtures, configurations, tests,
+documentation, sanitized evidence, and release gates. Branches and pull
+requests are review-visible draft work.
 
-Approved weights and release-specific model artifacts belong in the intended
-private Hugging Face model repository. Private training data and hidden
-evaluations belong in a separate private dataset repository whose name has not
-been selected. RunPod is disposable compute, never a source of truth.
+Approved data and model artifacts are separated across four private Hugging
+Face repositories. The model repository is adapter-only: it must never receive
+Meta base weights, merged full-model weights, quantized full-model weights, or
+training checkpoints. RunPod provides temporary compute and a persistent
+working volume, but it is never the only authoritative location for an
+important artifact. Locked evaluations must never enter the training
+environment.
 
-See [Platform ownership](docs/PLATFORM_OWNERSHIP.md) and
-[Public data boundary](data/README.md).
+See:
+
+- [Platform ownership](docs/PLATFORM_OWNERSHIP.md)
+- [Hugging Face registry](docs/HUGGING_FACE_REGISTRY.md)
+- [RunPod workspace and runbook](docs/RUNPOD_WORKSPACE_RUNBOOK.md)
+- [Candidate-to-locked-evaluator handoff](docs/CANDIDATE_EVALUATION_HANDOFF.md)
+- [Public data boundary](data/README.md)
 
 ## Repository map
 
@@ -86,6 +103,7 @@ dependency contract. From this directory:
 uv sync --frozen --dev
 uv lock --check
 uv run ruff check .
+uv run ruff format --check .
 uv run pytest -q
 ```
 
@@ -138,9 +156,12 @@ source /opt/dime-venv/bin/activate
 `DIME_PROJECT_DIR` remains an optional explicit override for controlled
 environments.
 
-Training requires a write-scoped Hugging Face secret supplied by the compute
-platform. Future serving must use a separate read-scoped secret. Never paste,
-print, read back, copy, or commit either credential.
+Training uses the fine-grained, read-only `dime-training-read-v1` Hugging Face
+credential supplied through the compute platform. It can read the approved
+foundation dataset, development evaluations, promoted-adapter repository, and
+gated Meta base model; it cannot read locked evaluations and cannot publish.
+Publishing and serving use separate least-privilege credentials. Never paste,
+print, read back, copy, or commit any credential.
 
 The following validations are Hugging-Face- or GPU-gated and are intentionally
 excluded from public CPU CI:
@@ -185,15 +206,52 @@ The sample audits are intentionally non-passing against production quotas.
 Strict full-training commands must fail closed when governed metadata or quota
 evidence is missing.
 
+The tracked full-run file is a template, not an authorization. The current
+platform contract sets `authorization.full_training` to `false`, so the
+training entrypoint rejects it even if every placeholder is filled. A later
+candidate-specific authorization pull request must move the platform to
+`training_authorized` and populate `authorization.training_candidate` with
+the exact experiment, prior clean source commit, config hash, foundation
+dataset-manifest and checksum-manifest hashes, preflight run-manifest hash,
+dataset revisions, and locked opaque reference.
+
+Authorization uses two reviewed commits to avoid a circular hash:
+
+1. source commit `S` contains all executable code, schemas, templates, and the
+   completed training config;
+2. the preflight `run_manifest.json` is built from `S` and the approved
+   immutable inputs in the isolated experiment directory;
+3. authorization commit `A` follows `S`, binds that manifest's hash, and
+   changes only `ml/dime-1.0/configs/platform_contract.json` across the entire
+   repository;
+4. training runs from a clean checkout of `A`, verifies that `S` is its
+   ancestor, and verifies every candidate field and content hash.
+
+Training output is always labeled
+`completed_unreviewed`; only a separate human review may advance that exact
+candidate to `approved_for_release_review`.
+
+Publication has a second candidate-bound gate:
+`authorization.release_candidate` must match the exact training-contract,
+adapter, config, manifest, sanitized evaluation-summary, canonical bundle
+payload, locked-suite manifest and expected-case count, immutable comparison
+control kind/repository/revision/artifact, paired comparison report, quality
+slice report, and destination parent hashes. A later release must retain and
+beat or tie the current promoted champion; only the inaugural release may use
+the pinned Meta base control. The publisher loads only the canonical contract
+from a clean reviewed Git checkout; no caller-supplied contract can override
+it.
+
 ## Model publishing
 
 No upload is performed by this project automatically. A later,
 owner-authorized release must satisfy the license checklist, model-card,
-evaluation, attestation, and artifact-hash gates before publishing only
-allowlisted model artifacts to the intended private model repository.
+evaluation, attestation, and artifact-hash gates before the separate
+`dime-release-publisher-v1` credential publishes an allowlisted adapter release
+to `taileredsports/Llama-3-Dime-1.0`.
 
-Training and publishing credentials must remain write-scoped and separate from
-future serving credentials. The publisher must never create a repository,
+Training remains read-only. Publishing and serving remain separate from
+training and from each other. The publisher must never create a repository,
 change visibility, or upload a whole workspace.
 
 ## Future serving and promotion
@@ -211,12 +269,17 @@ application policy controls, and explicitly change the provider constant.
 ## Required reading
 
 - [Platform ownership](docs/PLATFORM_OWNERSHIP.md)
+- [Hugging Face registry](docs/HUGGING_FACE_REGISTRY.md)
+- [RunPod workspace and runbook](docs/RUNPOD_WORKSPACE_RUNBOOK.md)
+- [Machine-readable platform contract](configs/platform_contract.json)
 - [Data governance](docs/DATA_GOVERNANCE.md)
 - [System architecture](docs/DIME_V1_SYSTEM_ARCHITECTURE.md)
 - [Curriculum and evaluation](docs/DIME_V1_CURRICULUM_AND_EVALUATION.md)
 - [Release gates](docs/RELEASE_GATES.md)
 - [Training roadmap](docs/TRAINING_ROADMAP.md)
 - [Llama license checklist](docs/LLAMA_LICENSE_CHECKLIST.md)
+- [Sanitized evidence index](evidence/README.md)
+- [Infrastructure setup evidence](evidence/infrastructure/2026-07-26/README.md)
 - [Rehearsal evidence](evidence/rehearsals/2026-07-25/README.md)
 
 The included `LICENSE` and `NOTICE` remain unchanged. The parent weights remain
