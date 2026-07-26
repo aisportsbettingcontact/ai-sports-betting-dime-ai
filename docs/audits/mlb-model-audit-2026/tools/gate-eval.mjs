@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // Phase 7 publication-gate evaluator. Walk-forward evidence ONLY:
-// mlb_replay_grades, source='walkforward_replay', modelVersion '%-p2', months May-July 2026
-// (March-April are calibration seed months and are excluded from gate evidence).
+// mlb_replay_grades, source='walkforward_replay', modelVersion '%-p2d' (the per-slate
+// daily-calibrated headline series), months May-July 2026 (March-April are calibration
+// seed months and are excluded from gate evidence).
 // Per-market criteria (a) beat stated baseline with 95% CI excluding zero, (b) Brier skill >= 0
 // vs baseline + monotone-ish reliability, (c) signed bias inside the stated band.
 // Verdicts are RECOMMENDATIONS; rows written to mlb_calibration_constants (publish_* 1/0) have
@@ -31,8 +32,10 @@ const rows = await q(
   `SELECT rg.market, rg.gameId, rg.pick, rg.prob, rg.projValue, rg.line, rg.actual, rg.result, rg.correct, rg.brier, rg.signedError,
           g.awayML, g.homeML, g.f5AwayML, g.f5HomeML
    FROM mlb_replay_grades rg JOIN games g ON g.id = rg.gameId
-   WHERE rg.source='walkforward_replay' AND rg.modelVersion LIKE '%-p2'
-     AND rg.gameDate >= ? AND rg.gameDate <= ? AND rg.result IS NOT NULL AND rg.result <> 'PUSH'`,
+   WHERE rg.source='walkforward_replay' AND rg.modelVersion LIKE '%-p2d'
+     AND rg.gameDate >= ? AND rg.gameDate <= ?
+     AND (rg.result IS NULL OR rg.result <> 'PUSH')
+     AND (rg.result IS NOT NULL OR rg.brier IS NOT NULL)`,
   [EVAL_START, EVAL_END]);
 
 const byMarket = new Map();
@@ -88,10 +91,22 @@ for (const [market, rs] of [...byMarket.entries()].sort()) {
       skillOk = mean(diffs) >= 0;
     } else g.reasons.push(`prob rows ${briers.length} < ${minN}`);
   } else if (market === 'fg_rl' || market === 'f5_rl') {
+    // P-007: the +1.5 dog covers ~59% structurally — a naive always-better-side strategy
+    // is the honest baseline, not a coin flip. Compute both naive side strategies' hit
+    // rates on the SAME rows (using actual as the covering side) and take the max.
     if (correct.length >= minN) {
-      g.stats.baseline = 'coin flip 50%';
-      baselineOk = mean(correct) - ci95(correct) > 0.5;
-      skillOk = mean(correct) >= 0.5;
+      const decided = rs.filter((r) => (r.actual === 'AWAY' || r.actual === 'HOME') && r.line !== null);
+      const awayRate = mean(decided.map((r) => (r.actual === 'AWAY' ? 1 : 0)));
+      // always-dog: dog side per game from the away line sign (+1.5 = away is the dog)
+      const dogHits = decided.map((r) => {
+        const awayLine = Number(String(r.line).split('/')[0].replace('+', ''));
+        const dogSide = awayLine > 0 ? 'AWAY' : 'HOME';
+        return r.actual === dogSide ? 1 : 0;
+      });
+      const naive = Math.max(awayRate, 1 - awayRate, mean(dogHits), 1 - mean(dogHits));
+      g.stats.baseline = `best naive strategy ${(naive * 100).toFixed(1)}% (always-dog ${(mean(dogHits) * 100).toFixed(1)}%)`;
+      baselineOk = mean(correct) - ci95(correct) > naive;
+      skillOk = mean(correct) >= naive;
     } else g.reasons.push(`graded ${correct.length} < ${minN}`);
   }
   if (!baselineOk) g.reasons.push('does not beat baseline with CI excluding zero');

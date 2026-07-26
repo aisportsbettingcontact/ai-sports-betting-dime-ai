@@ -1,8 +1,8 @@
 # MASTER REPORT — Dime AI MLB Model: Season Audit, Backfill & Recalibration (2026 season through 2026-07-24)
 
-> STATUS: sections marked `[PENDING: pass-1/2 replay]` finalize when the walk-forward replay
-> completes; every other number below is final and evidence-cited. Branch:
-> `local/audit-mlb-model-2026`. Nothing merged, pushed, or deployed.
+> STATUS: FINAL (2026-07-25 ~22:30 UTC). Every number is evidence-cited to a committed artifact
+> or logged query. Branch: `local/audit-mlb-model-2026` (audit worktree). Nothing merged,
+> pushed, or deployed.
 
 ## Executive verdict
 
@@ -20,8 +20,12 @@ fixed in code), full-game totals ran half a run cold against a hotter 2026 run e
 base rate, and NRFI was a coin flip (rebuilt as a walk-forward logistic model; its publication
 now depends on the evidence gate). A full-season fixed-model walk-forward replay fills every
 projection gap under a provenance regime that keeps replay strictly separated from what was
-actually published live. `[PENDING: pass-1/2 replay]` — final per-market before/after and the
-publication-gate verdict table below.
+actually published live. The repaired model's walk-forward backtest is strong against actuals —
+totals bias eliminated, strikeout props from broken to 59% with zero bias, every market now
+honestly measurable — and the evidence gate then says the quiet part out loud: none of the nine
+markets yet beats its market/naive baseline with statistical confidence, so every market is
+gated BACKTEST-ONLY pending more sample and the registered next-round improvements. Publish
+graded results and transparent projections; do not sell edges the data does not yet support.
 
 ## 1. What the season actually was (census, final)
 
@@ -92,18 +96,42 @@ overwritten by post-game refreshes (P-001); the projection *values* behave like 
 numbers, and the forward fix (immutable first-projection timestamp) is queued as a schema
 change for deploy-time `db-push`.
 
-## 5. Replay & recalibration results `[PENDING: pass-1/2 replay]`
+## 5. Replay & recalibration results (final)
 
-Fitted walk-forward calibration values per month, per-market before/after
-(live vs fixed-raw vs fixed-calibrated): see calibration/before-after.md when complete.
+Four series exist for every completed game and market: `live` (as published), `p1` (fixed model,
+raw), `p2` (monthly walk-forward calibration), `p2d` (per-slate daily walk-forward calibration —
+the headline backtest). 142,048 unified grade rows; full tables in calibration/before-after.md,
+DEEP-DIVE.md, and grading/replay-ledger-*.csv (per-game). Headlines, season through 7/24:
 
-## 6. Publication gate `[PENDING: pass-1/2 replay]`
+| Market | live | p2d (daily-calibrated fixed model) |
+|---|---|---|
+| FG total | 52.2% hit, bias −0.54 runs | **55.0% hit, bias −0.026 (statistically zero)** |
+| K props | 52.6% hit, bias −1.02 K, 87% forced UNDER | **59.2% hit, bias −0.024, balanced sides, MAE 2.09** |
+| FG ML | 55.2% hit, Brier 0.2472 | 55.0% hit, Brier 0.2483 (probabilities re-tempered; engine raw is overconfident, T≈1.5) |
+| F5 RL | 47.7% hit (tie bug) | 50.4% (partition fixed) |
+| NRFI | 51.5%, Brier 0.2500 | 53.3%, Brier 0.2487 from the fixed simulation itself — the rebuilt logistic was REJECTED by its own walk-forward evidence (Brier 0.2582/0.2599 in both variants, worse than passthrough) |
+| HR props | Brier 0.0991 (lost to climatology) | Brier 0.0969 (beats climatology on level; top-decile still overconfident) |
 
-Per-market verdict table (walk-forward evidence, May–July only; criteria: beats stated baseline
-with CI excluding zero, sane reliability with non-negative Brier skill, bias inside band):
-GATE-TABLE.json. `publish_*` rows are written to `mlb_calibration_constants` as
-recommendations — they have zero production effect until the gate code merges, and any row can
-be flipped before or after.
+Fitted values (per-slate trajectories in grading/replay-applied-params.csv): env mult
++1.5–4.6%, T_fg 2.0→1.48, K factor 0.84→0.87 on the corrected unit basis, HR factor 0.96–1.00.
+The daily refit demonstrably beats monthly where it matters (K bias +0.113→−0.024; May totals
+overshoot halved). Remaining known structure (registered, RECOMMENDED ONLY): F5 lacks HFA and
+its own env mult (M-302/303); home-edge shim mis-signed for 2026 (M-304); K/HR probability
+tails overconfident — isotonic/negative-binomial layer candidate (M-305).
+
+## 6. Publication gate — final verdicts (GATE-TABLE.json; May–July walk-forward evidence only)
+
+**All nine markets: BACKTEST-ONLY.** The repaired model grades well against actuals but does not
+yet beat its honest baseline with a CI excluding zero in the three post-seed months: FG/F5 ML
+lose to the book's no-vig probabilities (the market is sharper); FG total's Brier skill is
+positive (+0.0035) but the CI reaches zero; FG RL's 59.35% hit equals the always-take-the-dog
+base rate (59.3%) exactly; K props hit 62.2% in-window but carry a −0.30 bias drift and one
+tail-reliability inversion; NRFI and HR props sit at their climatologies. Two gate corrections
+were forced by the audit's own fleet (finding P-007): RL's baseline is always-dog, not a coin
+flip — the naive-looking 59% RL "edge" is structural. `publish_*` rows are written (all 0) as
+recommendations; they have zero production effect until the gate code merges, and the owner can
+flip any row. The defensible subscriber-facing framing today is transparent graded RESULTS and
+projections labeled as such — not claimed edges.
 
 ## 7. CLV (Phase 6, final for what in-repo data allows)
 
@@ -139,5 +167,20 @@ carries its batch evidence in remediation-log.md; RECOMMENDED ONLY items are lis
 4. **Replica/env check**: production Railway variable listing was permission-blocked this run;
    confirm exactly one replica runs with background jobs enabled (M-208).
 
-## 10. Verification `[PENDING: fresh-context verifier after replay]`
-Exit-criteria table with proving artifacts lands here after the final census re-run.
+## 10. Verification & exit criteria
+
+| # | Criterion | Proof |
+|---|---|---|
+| 1 | Every completed game exists with final outcomes + derived actuals; zero stuck statuses | census-v2: schedComplete = gamesFinals, zombies 0; finals missing actuals = 0 in the audited window (the only in-window exception is the All-Star exhibition, EX-ALLSTAR) |
+| 2 | Ten-market projection coverage 100% (live ∪ replay); zero unexplained nulls | census-v2 projectionCoverage: all nine market columns gap 0 over all finals; exemptions enumerated in census/exemptions.csv |
+| 3 | Every projection graded from raw values with corrected logic; ledgers reconcile | 142,048 unified grade rows across four series; independent grader agents re-derived ALL games-table grades with zero mismatches; two independently built ledgers agree 99.89% (disagreements were the corrected-score games) |
+| 4 | Root-cause + pipeline fixes landed, walk-forward validated, no regressions | Phase 4 commits (tsc clean, 280+ tests across clusters); before/after per market in §5; independent modeler agents re-derived every calibration scalar exactly; NHL/NCAAM shared-code paths untouched by diff-scope |
+| 5 | Publication gate live and enforced; verdicts for all markets | Gate module + tRPC + client wiring committed; GATE-TABLE.json (9 verdicts); publish_* rows written |
+| 6 | CLV wherever closing lines exist; coverage map + sourcing proposal | 7,632 fg rows with CLV (4,504 DK closing, 3,128 labeled proxy); clv-coverage.csv; §7 proposal |
+| 7 | Provenance integrity: no live_pregame projection modified; snapshots + logged counts for every write batch | remediation-log.md (B1–B9, all snapshot-backed); replay confined to mlb_replay_* tables; provenance column separates series |
+
+Verification notes stated plainly: the 10-agent test fleet and parts of the 25-agent granular
+fleet were cut short by session limits (P-008) — fullgame/F5 groups verified fully (hundreds of
+claims, zero unbacked), K/HR granular reports are thinner and covered by the deep-dive instead;
+the production Railway env check remains permission-blocked (M-208 stays INFERRED); pregame
+provenance for 286 live games remains unprovable (quarantined, P-001).

@@ -1,8 +1,8 @@
 # Walk-forward replay: before / after calibration
 
-> **daily-refit run 2026-07-25: per-slate expanding-window calibration (-p2d), NRFI canonical-keyspace fix**
+> **daily-refit v2: NRFI feature hygiene (nested id + cutoff exclusion)**
 
-Generated 2026-07-25 22:46 UTC by `tools/replay/calibrate_and_grade.py`. Series: `live` = live_pregame stored projections; `p1` = raw fixed model (`wf-19288f01-p1`); `p2` = walk-forward calibrated (`wf-19288f01-p2d`). Grading rules per GRADING-REPORT.md; push/tie excluded from hit rate and probability metrics. `prob` is the canonical-side probability (away / over / NRFI / HR).
+Generated 2026-07-26 01:18 UTC by `tools/replay/calibrate_and_grade.py`. Series: `live` = live_pregame stored projections; `p1` = raw fixed model (`wf-19288f01-p1`); `p2` = walk-forward calibrated (`wf-19288f01-p2d`). Grading rules per GRADING-REPORT.md; push/tie excluded from hit rate and probability metrics. `prob` is the canonical-side probability (away / over / NRFI / HR).
 
 ## Fitted calibration values per month
 
@@ -145,16 +145,16 @@ Transformations: totals recentred via `pOver2=Phi(Phi^-1(pOver1)+(projTotal2-pro
 | 2026-03 | p2 | 76 | 76 | 0.539 | 0.2501 | 0.6934 | - | - |
 | 2026-04 | live | 386 | 386 | 0.549 | 0.2452 | 0.6834 | - | - |
 | 2026-04 | p1 | 389 | 389 | 0.553 | 0.2481 | 0.6895 | - | - |
-| 2026-04 | p2 | 389 | 389 | 0.540 | 0.2693 | 0.7464 | - | - |
+| 2026-04 | p2 | 389 | 389 | 0.548 | 0.2665 | 0.7384 | - | - |
 | 2026-05 | live | 402 | 402 | 0.502 | 0.2501 | 0.6934 | - | - |
 | 2026-05 | p1 | 416 | 416 | 0.500 | 0.2539 | 0.7011 | - | - |
-| 2026-05 | p2 | 416 | 416 | 0.502 | 0.2640 | 0.7247 | - | - |
+| 2026-05 | p2 | 416 | 416 | 0.500 | 0.2628 | 0.7220 | - | - |
 | 2026-06 | live | 392 | 392 | 0.510 | 0.2530 | 0.6993 | - | - |
 | 2026-06 | p1 | 392 | 392 | 0.559 | 0.2451 | 0.6833 | - | - |
-| 2026-06 | p2 | 392 | 392 | 0.566 | 0.2499 | 0.6940 | - | - |
+| 2026-06 | p2 | 392 | 392 | 0.571 | 0.2475 | 0.6886 | - | - |
 | 2026-07 | live | 272 | 272 | 0.496 | 0.2517 | 0.6964 | - | - |
 | 2026-07 | p1 | 272 | 272 | 0.518 | 0.2462 | 0.6854 | - | - |
-| 2026-07 | p2 | 272 | 272 | 0.511 | 0.2571 | 0.7082 | - | - |
+| 2026-07 | p2 | 272 | 272 | 0.507 | 0.2570 | 0.7083 | - | - |
 
 ## k_prop
 
