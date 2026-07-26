@@ -8,15 +8,15 @@
 # Required repo secret:
 #   RAILWAY_APP_URL — public app URL, no trailing slash.
 #
-# Manual + scheduled. workflow_dispatch exposes `update_baseline` to reseed the
-# committed baseline from a known-good run (artifact is uploaded either way).
+# Manual + scheduled. workflow_dispatch exposes `update_baseline` to generate a
+# reviewable candidate artifact; the committed baseline changes only through PR.
 name: Perf harness
 
 on:
   workflow_dispatch:
     inputs:
       update_baseline:
-        description: "Reseed perf/baseline.json from this run instead of gating"
+        description: "Generate a reviewable baseline candidate instead of gating"
         required: false
         default: "false"
         type: choice
@@ -64,6 +64,9 @@ jobs:
       - name: "[STEP] Install Chromium for Playwright"
         run: pnpm exec playwright install --with-deps chromium
 
+      - name: "[VERIFY] Run focused real-browser harness tests"
+        run: pnpm exec vitest run perf/harness.smoke.test.ts --reporter=verbose
+
       - name: "[STEP] Run perf harness"
         env:
           PERF_TARGET_URL: ${{ secrets.RAILWAY_APP_URL }}
@@ -82,3 +85,14 @@ jobs:
           name: perf-results
           path: perf-results.json
           if-no-files-found: ignore
+
+      - name: "[OUTPUT] Upload reviewable baseline candidate"
+        if: ${{ success() && github.event_name == 'workflow_dispatch' && github.event.inputs.update_baseline == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf-baseline-candidate-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            perf-baseline-candidate.json
+            perf-results.json
+          if-no-files-found: error
+          retention-days: 30
