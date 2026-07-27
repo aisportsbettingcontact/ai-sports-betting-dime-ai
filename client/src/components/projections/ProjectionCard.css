@@ -61,7 +61,12 @@ html:not(.dark) .projection-card--compact {
 
 /* ── Matchup (owner directive 2026-07-17: matchup line · ballpark · first pitch) ── */
 .matchup { grid-area: matchup; display: grid; gap: var(--space-sm); align-content: start; }
-.matchup__grid { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: var(--space-2xs) var(--space-xs); }
+/* FEED-CL01a (base tier): logo side tracks size to their content (auto) and
+   the text center flexes/wraps (minmax(0,1fr)) at EVERY card width — the old
+   flexible-sides/auto-center split let a long matchup line starve the side
+   cells and push crests past them in the 281-360px band (the 3-col grid's
+   narrow edge), the same geometry the verified ≤280px tier flip fixed. */
+.matchup__grid { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--space-2xs) var(--space-xs); }
 /* Row 2: context · venue · time under the flag row, full card width so the
    venue never truncates beside 2.5x flags (owner directive 2026-07-18). */
 .matchup__below { grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; gap: 2px; text-align: center; min-inline-size: 0; }
@@ -301,6 +306,19 @@ html:not(.dark) .pregame-pitcher__status--confirmed { color: #0fa36b; }
     .projection-card .pregame-pitchers__lineups:active {
       transform: translate(-50%, -50%) scale(0.98);
     }
+  }
+  /* Narrowest cards (~<=310px, e.g. a 320px viewport): the centered overlay
+     chip and two nowrap names can no longer share the row — the chip drops
+     into normal flow below the pitchers so no name is ever occluded. */
+  @container projcard (max-width: 310px) {
+    .projection-card .pregame-pitchers__lineups {
+      position: static;
+      grid-column: 1 / -1;
+      justify-self: center;
+      margin-block-start: var(--space-2xs);
+      transform: none;
+    }
+    .projection-card .pregame-pitchers__lineups:active { transform: scale(0.98); }
   }
 }
 
@@ -592,6 +610,12 @@ html:not(.dark) .pregame-pitcher__status--confirmed { color: #0fa36b; }
      opposed to edge-indicator--none) — nothing here forces color, the data
      already can't produce it. The ROI-only badge remains quiet grey. */
   .projection-card--pass { opacity: 0.82; }
+  /* FEED-CONTRAST: same composited-contrast correction as --compact (top of
+     file) — 0.82 dims light-theme #595959 labels to ~4.5:1 borderline on
+     white. Scoped >=768 alongside the dim itself so undimmed mobile PASS
+     cards keep the stock tokens. */
+  .projection-card--pass { --text-secondary: #C9C9C9; --text-muted: #B4B4B4; }
+  html:not(.dark) .projection-card--pass { --text-secondary: #2E2E2E; --text-muted: #3B3B3B; }
   .projection-card--pass .edge-indicator--none { color: var(--text-secondary, #a6a6a6); }
 
   /* Defensive PASS backstop (Round 4, from the W1 review — plan:

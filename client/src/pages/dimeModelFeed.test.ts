@@ -440,10 +440,11 @@ describe("DimeModelFeed — unified shell embedding", () => {
     expect(src).not.toMatch(/dmf-themebtn/);
   });
 
-  it("renders its own h1 only standalone — embedded, the shell injects the sole sr-only focus heading", () => {
-    // A11Y-NO-H1: standalone the page title is the h1; embedded it demotes to
-    // a span so the shell's sr-only pane heading stays the page's only h1.
-    expect(src).toMatch(/const TitleTag = props\.embeddedInShell \? "span" : "h1";/);
-    expect(src).toMatch(/<TitleTag className="dmf-toptitle">AI Model Projections<\/TitleTag>/);
+  it("renders its own sr-only h1 only standalone — embedded, the shell injects the sole sr-only focus heading", () => {
+    // A11Y-NO-H1: standalone the page owns an sr-only h1 inside <main> (the
+    // topbar title span is display:none'd by the mobile floating nav, so it
+    // can't be the heading); embedded, the shell pane's sr-only h1 is sole.
+    expect(src).toMatch(/\{!props\.embeddedInShell && <h1 className="sr-only">AI Model Projections<\/h1>\}/);
+    expect(src).toMatch(/<span className="dmf-toptitle">AI Model Projections<\/span>/);
   });
 });

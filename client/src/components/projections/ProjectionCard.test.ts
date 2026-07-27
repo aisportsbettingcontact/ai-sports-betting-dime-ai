@@ -591,7 +591,7 @@ describe("ProjectionCard — unified score row (Round 4 Wave 1, item 2)", () => 
     const html = render(mlbFixture());
     expect(html).not.toContain("matchup__score");
     expect(cardCss).toMatch(
-      /\.matchup__grid\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\) auto minmax\(0, 1fr\);/,
+      /\.matchup__grid\s*\{[^}]*grid-template-columns:\s*auto minmax\(0, 1fr\) auto;/,
     );
     expect(cardCss).toContain(".matchup__team--away { justify-content: flex-end; }");
     expect(cardCss).toContain(".matchup__team--home { justify-content: flex-start; }");

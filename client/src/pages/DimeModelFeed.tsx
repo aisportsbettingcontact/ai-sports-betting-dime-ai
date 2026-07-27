@@ -418,13 +418,6 @@ export default function DimeModelFeed(props: DimeModelFeedProps) {
   const go = (nextIso: string) =>
     navigate(resolveRouteHref(feedModelPath("MLB", nextIso)));
 
-  // Landmark/heading ownership (A11Y-NO-MAIN / A11Y-NO-H1): every host mode
-  // renders the scroll region as the page's <main> — the shell's external
-  // pane is a <section>, so pages own their landmark (BettingSplits/TrendsPage
-  // pattern). The h1 is standalone-only: embedded, the shell already exposes
-  // an sr-only pane h1 and a second one would duplicate it.
-  const TitleTag = props.embeddedInShell ? "span" : "h1";
-
   if (needsDateCanonicalize) {
     // One-frame redirect to the dated URL; queries stay disabled (isoDate="").
     return (
@@ -466,7 +459,7 @@ export default function DimeModelFeed(props: DimeModelFeedProps) {
             <span className="dmf-topsep" />
           </>
         )}
-        <TitleTag className="dmf-toptitle">AI Model Projections</TitleTag>
+        <span className="dmf-toptitle">AI Model Projections</span>
         <div className="dmf-sync">
           {/* Outbound nav — the canonical feed must never be a dead end
               (tablet/desktop have no bottom tab bar; non-owners never do) */}
@@ -483,7 +476,15 @@ export default function DimeModelFeed(props: DimeModelFeedProps) {
         </div>
       </div>
 
+      {/* Landmark/heading ownership (A11Y-NO-MAIN / A11Y-NO-H1): every host
+          mode renders the scroll region as the page's <main> — the shell's
+          external pane is a <section>, so pages own their landmark
+          (BettingSplits/TrendsPage pattern). The h1 is sr-only and
+          standalone-only: the topbar title span is display:none'd by the
+          mobile floating nav, and embedded the shell already exposes an
+          sr-only pane h1. */}
       <main className="dmf-scroll">
+        {!props.embeddedInShell && <h1 className="sr-only">AI Model Projections</h1>}
         <div className="dmf-feedhead">
           <div className="dmf-datenav">
             <button
