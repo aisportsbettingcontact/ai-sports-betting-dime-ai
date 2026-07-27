@@ -27,6 +27,23 @@ def test_is_valid_feed_file(tmpdir="/tmp/mlb_crawl_test"):
     assert is_valid_feed_file(wrong_pk, 222) is False
     assert is_valid_feed_file(os.path.join(tmpdir, "missing.json"), 3) is False
 
+def test_verify_feed():
+    from verify_feeds import verify_feed
+    expected = {"gamePk": 823433, "awayScore": 4, "homeScore": 11}
+    feed = {
+        "gamePk": 823433,
+        "gameData": {"status": {"codedGameState": "F"}},
+        "liveData": {
+            "plays": {"allPlays": [{}] * 81},
+            "linescore": {"scheduledInnings": 9,
+                          "innings": [{}] * 9,
+                          "teams": {"away": {"runs": 4}, "home": {"runs": 11}}},
+        },
+    }
+    assert verify_feed(feed, expected) == []
+    feed["liveData"]["linescore"]["teams"]["home"]["runs"] = 10
+    assert any("score" in c for c in verify_feed(feed, expected))
+
 if __name__ == "__main__":
     for name, fn in sorted({k: v for k, v in globals().items() if k.startswith("test_")}.items()):
         fn(); print(f"PASS {name}")
