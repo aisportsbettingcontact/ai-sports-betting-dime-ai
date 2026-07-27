@@ -44,6 +44,22 @@ def test_verify_feed():
     feed["liveData"]["linescore"]["teams"]["home"]["runs"] = 10
     assert any("score" in c for c in verify_feed(feed, expected))
 
+
+
+def test_build_dataset_dedup_rank():
+    from build_games_dataset import rank, game_row, COLS
+    assert rank("F") == rank("O") == 3 and rank("S") == 1 and rank("X") == 2
+    g = {"gamePk": 1, "officialDate": "2026-04-01", "gameDate": "2026-04-01T17:00:00Z",
+         "gameType": "D", "seriesDescription": "Division Series", "doubleHeader": "N",
+         "gameNumber": 1, "status": {"detailedState": "Final", "codedGameState": "F"},
+         "teams": {"away": {"team": {"name": "A", "id": 1}, "score": 2},
+                    "home": {"team": {"name": "B", "id": 2}, "score": 3}},
+         "venue": {"name": "V"}, "decisions": {"winner": {"fullName": "W"}},
+         "linescore": {"innings": [{}] * 9}}
+    row = game_row(g, 2026)
+    assert set(row) == set(COLS)
+    assert row["seriesDescription"] == "Division Series" and row["innings"] == 9
+
 if __name__ == "__main__":
     for name, fn in sorted({k: v for k, v in globals().items() if k.startswith("test_")}.items()):
         fn(); print(f"PASS {name}")
