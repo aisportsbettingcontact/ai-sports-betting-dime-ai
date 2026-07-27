@@ -33,6 +33,17 @@
   align-self: start;
   gap: var(--space-sm);
   opacity: 0.72;
+  /* FEED-CONTRAST: 0.72 opacity composites --text-secondary down to ~2.5-3.9:1
+     against the card surface. The dim treatment stays (owner directive) but
+     the text tokens are pre-brightened inside dimmed cards so the COMPOSITED
+     foreground still clears WCAG-AA 4.5:1 (#C9C9C9 x 0.72 over #0a0a0a ≈
+     #949494 ≈ 6.4:1). Light-theme counterpart below darkens instead. */
+  --text-secondary: #C9C9C9;
+  --text-muted: #B4B4B4;
+}
+html:not(.dark) .projection-card--compact {
+  --text-secondary: #2E2E2E;
+  --text-muted: #3B3B3B;
 }
 /* A settled no-edge card can carry both modifiers. Compact state owns the
    requested diminished treatment instead of inheriting PASS's 0.82 value. */
@@ -74,7 +85,10 @@
 .matchup__at { color: var(--text-secondary, #a6a6a6); font-weight: 400; }
 /* Line 2 — ballpark / stage context. Line 3 — venue only when context lacks it. */
 .matchup__context { font-size: var(--proj-label); color: var(--text-secondary, #a6a6a6); max-inline-size: 100%; }
-.matchup__venue { font-size: var(--proj-meta); color: var(--text-muted, #6e6e6e); max-inline-size: 100%; }
+/* FEED-CONTRAST sweep: --text-muted (4.1:1 dark) fails WCAG-AA 4.5:1 at every
+   sub-18px size it was used at in this card; all textual uses below move to
+   --text-secondary (8.6:1 dark / 7.0:1 light). Borders keep their tokens. */
+.matchup__venue { font-size: var(--proj-meta); color: var(--text-secondary, #a6a6a6); max-inline-size: 100%; }
 /* Last line — first pitch / kickoff ET. Owned here for scheduled games; the
    header owns LIVE/FINAL status only (directive §3). */
 .matchup__time { font-size: var(--proj-meta); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-secondary, #a6a6a6); font-variant-numeric: tabular-nums; }
@@ -163,7 +177,7 @@ html:not([data-theme-mode]) .dmf-root[data-dmf-mode="dark"] .team-logo-box--dark
 }
 .pregame-pitcher__status--confirmed { color: #45e0a8; }
 html:not(.dark) .pregame-pitcher__status--confirmed { color: #0fa36b; }
-.pregame-pitcher__status--pending { color: var(--text-muted, #6e6e6e); }
+.pregame-pitcher__status--pending { color: var(--text-secondary, #a6a6a6); }
 .pregame-pitcher__photo {
   display: grid;
   place-items: start center;
@@ -462,7 +476,7 @@ html:not(.dark) .pregame-pitcher__status--confirmed { color: #0fa36b; }
   border-block-end: 1px solid var(--border, #262626);
 }
 .lineups-dialog__number {
-  color: var(--text-muted, #6e6e6e);
+  color: var(--text-secondary, #a6a6a6);
   font-family: var(--dmf-mono, "IBM Plex Mono", monospace);
   font-size: 0.65rem;
   text-align: center;
@@ -507,8 +521,13 @@ html:not(.dark) .pregame-pitcher__status--confirmed { color: #0fa36b; }
 .summary__viewport { display: grid; justify-content: safe center; justify-items: safe center; inline-size: 100%; min-inline-size: 0; overflow-x: auto; overscroll-behavior-inline: contain; scrollbar-width: none; }
 .summary__viewport::-webkit-scrollbar { display: none; }
 .summary__viewport:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--ring, rgba(69, 224, 168, 0.36)); border-radius: 8px; }
-.summary__group { display: grid; grid-template-columns: max-content max-content; align-items: center; column-gap: clamp(8px, 1.6cqi, 16px); inline-size: max-content; min-inline-size: max-content; white-space: nowrap; }
-.summary--empty .summary__group { grid-template-columns: max-content; column-gap: 0; }
+/* FEED-EDGE-ROW-CLIP: the group used to be a rigid max-content two-track grid
+   (readout | signal) that the scrollport clipped at the card edge with its
+   scrollbar hidden — overflow with no affordance. Wrapping flex keeps the
+   one-line layout whenever it fits and drops the signal onto a second centered
+   line when it doesn't, so no fact is ever clipped; the scrollport stays as
+   the final escape valve for content that can't shrink. */
+.summary__group { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; column-gap: clamp(8px, 1.6cqi, 16px); row-gap: var(--space-2xs); inline-size: auto; min-inline-size: 0; max-inline-size: 100%; }
 .summary__edge { flex: none; }
 .summary__signal { display: inline-flex; flex: none; flex-wrap: nowrap; align-items: center; justify-content: center; gap: var(--space-xs); min-inline-size: max-content; min-block-size: 44px; }
 .projection-card .summary__next {
@@ -944,7 +963,7 @@ html:not(.dark) .projection-card__markets-eyebrow {
 .projection-card__market-page-ellipsis {
   inline-size: 1rem;
   block-size: 2.75rem;
-  color: var(--text-muted, #6e6e6e);
+  color: var(--text-secondary, #a6a6a6);
 }
 @media (hover: hover) {
   .projection-card__market-pagination [data-slot="pagination-link"]:not([aria-disabled="true"]):hover {
@@ -962,7 +981,7 @@ html:not(.dark) .projection-card__markets-eyebrow {
    2026-07-18. Fixed layout: the first header cell sets the side column width. */
 .market-table__caption { caption-side: top; text-align: center; padding: var(--space-xs) var(--space-sm) var(--space-2xs); color: var(--text-secondary, #a6a6a6); }
 .market-table th, .market-table td { min-block-size: 2.75rem; padding: 0.5rem 0.625rem; font-size: var(--proj-body); vertical-align: middle; text-align: start; }
-.market-table thead th { font-size: var(--proj-meta); font-weight: 600; letter-spacing: 0.03em; text-transform: uppercase; color: var(--text-muted, #6e6e6e); border-block-end: 1px solid var(--border, #262626); }
+.market-table thead th { font-size: var(--proj-meta); font-weight: 600; letter-spacing: 0.03em; text-transform: uppercase; color: var(--text-secondary, #a6a6a6); border-block-end: 1px solid var(--border, #262626); }
 .market-table thead th:first-child { inline-size: 48%; }
 .market-table__side { font-weight: 600; white-space: nowrap; }
 .market-table td.odds-value { white-space: nowrap; }
@@ -976,7 +995,7 @@ html:not(.dark) .projection-card__markets-eyebrow {
 .market-table tbody td, .market-table tbody th { font-variant-numeric: tabular-nums; }
 .market-table tbody tr + tr th, .market-table tbody tr + tr td { border-block-start: 1px solid var(--border, #262626); }
 .market-table__model--signal { color: var(--brand-mint-foreground); background: var(--brand-mint-surface); box-shadow: inset 3px 0 0 #45e0a8; font-weight: 700; }
-.market-table__result { text-align: center !important; color: var(--text-muted, #6e6e6e); border-block-start: 1px solid var(--border, #262626); }
+.market-table__result { text-align: center !important; color: var(--text-secondary, #a6a6a6); border-block-start: 1px solid var(--border, #262626); }
 /* Edge footers (owner directive 2026-07-18): mint CELL, accessible foreground. */
 .market-table__result--edge { color: var(--brand-mint-foreground); background: var(--brand-mint-surface); }
 

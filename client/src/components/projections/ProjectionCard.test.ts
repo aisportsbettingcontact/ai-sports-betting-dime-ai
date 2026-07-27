@@ -843,7 +843,7 @@ describe("ProjectionCard — Rotowire pregame context", () => {
  *  numeric contract itself; the rendered pixels are verified separately by the visual smoke
  *  screenshots (equal row heights, pinned trigger, aligned columns), not by this harness. */
 describe("ProjectionCard — equal-height rows & pinned market trigger (Round 4 Wave 2, item 1)", () => {
-  it("the responsive league grid is 2-across on tablet and 3-across with stretched row-mates on desktop", () => {
+  it("the responsive league grid is 2-across on tablet and 3-across with stretched row-mates only where the league body affords >=940px", () => {
     const responsiveGridBlock = feedSrc.slice(
       feedSrc.indexOf("TABLET (768-1023px)"),
       feedSrc.indexOf("@media (prefers-reduced-motion: reduce){", feedSrc.indexOf("TABLET (768-1023px)")),
@@ -851,8 +851,15 @@ describe("ProjectionCard — equal-height rows & pinned market trigger (Round 4 
     expect(responsiveGridBlock).toMatch(
       /@media \(min-width:768px\)\{\s*\.dmf-leaguebody\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)\}/,
     );
+    // FEED-CL01a regression guard: 3-across must key off the league body's own
+    // width (container query), never the window — a viewport media query here
+    // recreates the ~194px-card crest-overhang band inside the app shell.
     expect(responsiveGridBlock).toMatch(
-      /@media \(min-width:1024px\)\{[\s\S]*?\.dmf-leaguebody\{grid-template-columns:repeat\(3,minmax\(0,1fr\)\);align-items:stretch\}/,
+      /@container dmf-league \(min-width:940px\)\{\s*\.dmf-leaguebody\{grid-template-columns:repeat\(3,minmax\(0,1fr\)\);align-items:stretch\}/,
+    );
+    expect(feedSrc).toContain(".dmf-league{display:block;container:dmf-league/inline-size}");
+    expect(responsiveGridBlock).not.toMatch(
+      /@media[^{]*\{[^@]*\.dmf-leaguebody\{grid-template-columns:repeat\(3/,
     );
   });
 
@@ -905,7 +912,7 @@ describe("ProjectionCard — centered single-row summary group", () => {
     expect(render(mlbFixture())).toContain("summary__viewport");
     expect(render(mlbFixture())).toContain("summary__group");
     expect(cardCss).toMatch(
-      /\.summary__group\s*\{[^}]*display:\s*grid;[^}]*grid-template-columns:\s*max-content max-content;[^}]*inline-size:\s*max-content;/,
+      /\.summary__group\s*\{[^}]*display:\s*flex;[^}]*flex-wrap:\s*wrap;[^}]*justify-content:\s*center;/,
     );
     expect(cardCss).toMatch(
       /\.summary__readout\s*\{[^}]*display:\s*grid;[^}]*grid-template-columns:\s*max-content minmax\(48px, max-content\) minmax\(48px, max-content\);/,
@@ -922,15 +929,18 @@ describe("ProjectionCard — centered single-row summary group", () => {
     expect(cardCss).toContain(".summary__item--message { grid-column: 1 / -1; justify-self: center; }");
   });
 
-  it("never wraps or clamps facts and confines impossible-width overflow locally", () => {
+  it("never clamps facts: the signal lane wraps before anything clips, overflow stays local", () => {
     expect(cardCss).toMatch(
       /\.summary__viewport\s*\{[^}]*inline-size:\s*100%;[^}]*min-inline-size:\s*0;[^}]*overflow-x:\s*auto;/,
     );
     expect(render(mlbFixture())).toContain('role="region"');
     expect(render(mlbFixture())).toContain('aria-label="Model projection summary"');
     expect(render(mlbFixture())).toContain('tabindex="0"');
+    // FEED-EDGE-ROW-CLIP regression guard: the group must be allowed to wrap
+    // and must never exceed the card (max-inline-size caps it); a rigid
+    // max-content group re-clips the edge row behind a hidden scrollbar.
     expect(cardCss).toMatch(
-      /\.summary__group\s*\{[^}]*min-inline-size:\s*max-content;[^}]*white-space:\s*nowrap;/,
+      /\.summary__group\s*\{[^}]*flex-wrap:\s*wrap;[^}]*max-inline-size:\s*100%;/,
     );
     expect(cardCss).toMatch(
       /\.summary__signal\s*\{[^}]*flex-wrap:\s*nowrap;[^}]*min-inline-size:\s*max-content;/,

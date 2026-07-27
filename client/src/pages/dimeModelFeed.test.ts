@@ -350,8 +350,11 @@ describe("DimeModelFeed — combined slate (owner directive 2026-07-18)", () => 
     expect(src).toMatch(
       /@media \(min-width:768px\)\{\s*\.dmf-leaguebody\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)\}/,
     );
+    // FEED-CL01a: 3-up keys off the league body's own width (container query),
+    // never the window — a viewport media query recreates the ~194px-card
+    // crest-overhang band inside the app shell.
     expect(src).toMatch(
-      /@media \(min-width:1024px\)\{[\s\S]*?\.dmf-leaguebody\{grid-template-columns:repeat\(3,minmax\(0,1fr\)\);align-items:stretch\}/,
+      /@container dmf-league \(min-width:940px\)\{\s*\.dmf-leaguebody\{grid-template-columns:repeat\(3,minmax\(0,1fr\)\);align-items:stretch\}/,
     );
   });
 
@@ -437,8 +440,10 @@ describe("DimeModelFeed — unified shell embedding", () => {
     expect(src).not.toMatch(/dmf-themebtn/);
   });
 
-  it("has no existing h1, so the shell may inject the sole sr-only focus heading", () => {
-    expect(src).not.toMatch(/<h1\b/);
-    expect(src).toMatch(/<span className="dmf-toptitle">AI Model Projections<\/span>/);
+  it("renders its own h1 only standalone — embedded, the shell injects the sole sr-only focus heading", () => {
+    // A11Y-NO-H1: standalone the page title is the h1; embedded it demotes to
+    // a span so the shell's sr-only pane heading stays the page's only h1.
+    expect(src).toMatch(/const TitleTag = props\.embeddedInShell \? "span" : "h1";/);
+    expect(src).toMatch(/<TitleTag className="dmf-toptitle">AI Model Projections<\/TitleTag>/);
   });
 });
