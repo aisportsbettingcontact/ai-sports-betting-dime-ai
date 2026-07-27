@@ -168,12 +168,13 @@ export default function DimeAppShell({
           initialDate={state.isoDate}
           initialDateSource={parsed?.isoDate ? "url-explicit" : "app-default"}
           resolveRouteHref={resolveRouteHref}
+          embeddedInShell
         />
       );
     } else if (renderedRoute.pane === "trends") {
       paneContent = <TrendsPage />;
     } else if (renderedRoute.pane === "tracker") {
-      paneContent = <BetTracker previewMode={previewMode} />;
+      paneContent = <BetTracker previewMode={previewMode} embeddedInShell />;
     }
   }
 

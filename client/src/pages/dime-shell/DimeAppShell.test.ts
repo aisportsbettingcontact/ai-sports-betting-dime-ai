@@ -202,12 +202,14 @@ describe("DimeAppShell integration contract", () => {
     );
   });
 
-  it("embeds feed with chrome suppression and tracker wholesale", () => {
+  it("embeds feed with chrome suppression and tracker/splits heading demotion", () => {
     expect(shellSource).toMatch(/<DimeModelFeed[\s\S]*embeddedInShell/);
+    // A11Y-NO-H1: embedded pages demote their own h1 (the shell pane's
+    // sr-only heading is the page's sole h1), so the shell must say so.
     expect(shellSource).toMatch(
-      /paneContent = <BetTracker previewMode=\{previewMode\} \/>/
+      /paneContent = <BetTracker previewMode=\{previewMode\} embeddedInShell \/>/
     );
-    expect(shellSource).not.toMatch(/<BetTracker[^>]+embeddedInShell/);
+    expect(shellSource).toMatch(/<BettingSplits[\s\S]*?embeddedInShell/);
   });
 
   it("renders tracker chrome in preview without granting protected query access", () => {
