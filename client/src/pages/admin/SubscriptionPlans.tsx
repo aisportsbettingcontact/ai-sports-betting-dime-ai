@@ -21,7 +21,7 @@
  * signal, destructive-red only on remove/archive. Fills the screen via the shared
  * fluid `.admin-container`.
  */
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { DragEvent, FormEvent, ReactNode } from "react";
 import { useLocation } from "wouter";
 import {
@@ -52,6 +52,7 @@ import { AdminShell } from "@/pages/admin/AdminShell";
 import { IntervalPicker } from "@/pages/admin/IntervalPicker";
 import { DEFAULT_INTERVAL } from "@/pages/admin/planTypes";
 import type { StoredPlan, StoredPrice, IntervalValue, PromoType, BillingInterval } from "@/pages/admin/planTypes";
+import { useDialogFocus } from "@/hooks/useDialogFocus";
 
 type PlanWithCount = StoredPlan & { subscriberCount: number };
 
@@ -186,8 +187,15 @@ function Modal({ title, icon, onClose, children }: { title: string; icon: ReactN
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
+  // Mounted == open: trap Tab inside and return focus to the opener on close
+  // (A11Y-FOCUS-RETURN). Escape handling stays with the listener above.
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+  useDialogFocus(true, onClose, dialogRef);
+
   return (
     <div
+      ref={dialogRef}
+      tabIndex={-1}
       className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-background p-4 sm:p-6"
       onClick={onClose}
       role="dialog"

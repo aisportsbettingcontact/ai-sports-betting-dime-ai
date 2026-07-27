@@ -22,6 +22,7 @@ import {
   displayName,
   fmtAgo,
 } from "@/pages/admin/profilingTypes";
+import { useDialogFocus } from "@/hooks/useDialogFocus";
 
 interface Props {
   user: UserProfileRow | null;
@@ -68,6 +69,10 @@ function initials(u: UserProfileRow): string {
 export default function UserProfileDrawer({ user, onClose }: Props) {
   const reduceMotion = usePrefersReducedMotion();
   const open = user !== null;
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+  // Trap Tab while open and return focus to the row control that opened the
+  // drawer (A11Y-FOCUS-RETURN). Esc close already exists below — not doubled.
+  useDialogFocus(open, onClose, dialogRef);
 
   // Keep the overlay mounted through the slide-out and keep rendering the last
   // profile while it animates away, so closing never flashes an empty drawer.
@@ -157,6 +162,8 @@ export default function UserProfileDrawer({ user, onClose }: Props) {
 
       {/* Drawer panel — slides in from the right. */}
       <div
+        ref={dialogRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-label={`Profile — ${displayName(u)}`}

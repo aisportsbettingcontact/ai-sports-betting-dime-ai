@@ -339,7 +339,7 @@ export default function NbaTeamSchedule() {
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-4 py-6">
+      <main className="max-w-5xl mx-auto px-4 py-6">
         {/* ── Season Summary ─────────────────────────────────────────────────── */}
         <div className="grid grid-cols-3 gap-3 mb-6">
           <div className="bg-card border border-white rounded-lg p-3 text-center">
@@ -391,7 +391,7 @@ export default function NbaTeamSchedule() {
               <span className="text-xs text-white font-mono uppercase tracking-widest">
                 Full Schedule — {games.length} games
               </span>
-              <Badge variant="outline" className="text-[8px] font-mono text-white border-white">
+              <Badge variant="outline" className="text-[10px] font-mono text-white border-white">
                 DK NJ · AN API
               </Badge>
             </div>
@@ -422,7 +422,7 @@ export default function NbaTeamSchedule() {
             </div>
           </div>
         )}
-      </div>
+      </main>
     </div>
   );
 }

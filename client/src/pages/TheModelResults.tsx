@@ -212,7 +212,7 @@ function StatCard({ label, value, sub, color }: { label: string; value: string; 
       padding: "10px 12px", display: "flex", flexDirection: "column", gap: 4,
       minWidth: 0, overflow: "hidden",
     }}>
-      <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: "var(--foreground)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', lineHeight: 1.2, wordBreak: "break-word" }}>
+      <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: "var(--foreground)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', lineHeight: 1.2, wordBreak: "break-word" }}>
         {label}
       </div>
       <div style={{ fontSize: 22, fontWeight: 800, color: color ?? "var(--foreground)", lineHeight: 1, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
@@ -226,7 +226,7 @@ function StatCard({ label, value, sub, color }: { label: string; value: string; 
 function MiniStatCard({ label, value, color }: { label: string; value: string | number; color?: string }) {
   return (
     <div style={{ background: "var(--background)", border: "1px solid var(--border)", borderRadius: 6, padding: "8px 12px", minWidth: 0, overflow: "hidden" }}>
-      <div style={{ fontSize: 9, color: "var(--foreground)", letterSpacing: 1, marginBottom: 2, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', lineHeight: 1.2, wordBreak: "break-word" }}>{label}</div>
+      <div style={{ fontSize: 10, color: "var(--foreground)", letterSpacing: 1, marginBottom: 2, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', lineHeight: 1.2, wordBreak: "break-word" }}>{label}</div>
       <div style={{ fontSize: 16, fontWeight: 700, color: color ?? "var(--foreground)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', lineHeight: 1 }}>{value}</div>
     </div>
   );
@@ -290,10 +290,10 @@ function VerdictBadge({ verdict, bestSide, bestEdge, bestMlStr }: {
 function SectionLabel({ children, sub }: { children: React.ReactNode; sub?: string }) {
   return (
     <div style={{ marginBottom: 10 }}>
-      <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "2px", textTransform: "uppercase", color: "var(--foreground)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
+      <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "2px", textTransform: "uppercase", color: "var(--foreground)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
         {children}
       </div>
-      {sub && <div style={{ fontSize: 9, color: "var(--foreground)", marginTop: 2, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>{sub}</div>}
+      {sub && <div style={{ fontSize: 10, color: "var(--foreground)", marginTop: 2, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>{sub}</div>}
     </div>
   );
 }
@@ -314,7 +314,7 @@ function BrierTrendChart({ data, lines, windowSize, onWindowChange }: {
   return (
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-        <span style={{ fontSize: 9, color: "var(--foreground)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', letterSpacing: ".08em", textTransform: "uppercase" }}>Window</span>
+        <span style={{ fontSize: 10, color: "var(--foreground)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', letterSpacing: ".08em", textTransform: "uppercase" }}>Window</span>
         {[10, 20, 30, 50].map(w => (
           <button type="button" key={w} onClick={() => onWindowChange(w)} style={{
             fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 6,
@@ -329,14 +329,14 @@ function BrierTrendChart({ data, lines, windowSize, onWindowChange }: {
         <ResponsiveContainer width="100%" height={260}>
           <LineChart data={data} margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
-            <XAxis dataKey="gameIndex" tick={{ fill: "#FFFFFF", fontSize: 9 }} tickLine={false} />
-            <YAxis domain={[0, 0.35]} tick={{ fill: "#FFFFFF", fontSize: 9 }} tickLine={false} width={36} />
+            <XAxis dataKey="gameIndex" tick={{ fill: "#FFFFFF", fontSize: 10 }} tickLine={false} />
+            <YAxis domain={[0, 0.35]} tick={{ fill: "#FFFFFF", fontSize: 10 }} tickLine={false} width={36} />
             <Tooltip
               contentStyle={{ background: "#000000", border: "1px solid #FFFFFF", borderRadius: 6, fontSize: 10 }}
               labelStyle={{ color: "#FFFFFF" }}
             />
-            <Legend wrapperStyle={{ fontSize: 9, color: "#FFFFFF" }} />
-            <ReferenceLine y={0.25} stroke="#FFFFFF" strokeDasharray="4 4" label={{ value: "random", position: "insideTopRight", fill: "#FFFFFF", fontSize: 8 }} />
+            <Legend wrapperStyle={{ fontSize: 10, color: "#FFFFFF" }} />
+            <ReferenceLine y={0.25} stroke="#FFFFFF" strokeDasharray="4 4" label={{ value: "random", position: "insideTopRight", fill: "#FFFFFF", fontSize: 10 }} />
             <ReferenceLine y={0.22} stroke="#FFFFFF" strokeDasharray="2 2" />
             <ReferenceLine y={0.15} stroke="#45E0A8" strokeDasharray="2 2" />
             {lines.map(l => (
@@ -457,7 +457,7 @@ function EdgeLeaderboardTable({
           <thead>
             <tr style={{ borderBottom: "1px solid var(--border)", background: "var(--background)" }}>
               {["DATE", "MATCHUP", "SIDE", "MODEL WIN%", "BOOK IMPLIED%", "EDGE", "ML", "SCORE", "RESULT", "BRIER"].map(h => (
-                <th key={h} style={{ padding: "6px 10px", textAlign: "left", color: "var(--foreground)", fontSize: 9, letterSpacing: 1, fontWeight: 700, whiteSpace: "nowrap" }}>{h}</th>
+                <th key={h} style={{ padding: "6px 10px", textAlign: "left", color: "var(--foreground)", fontSize: 10, letterSpacing: 1, fontWeight: 700, whiteSpace: "nowrap" }}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -485,7 +485,7 @@ function EdgeLeaderboardTable({
                     <span style={{
                       background: isAway ? "transparent" : "transparent",
                       color: isAway ? "var(--foreground)" : "var(--foreground)",
-                      borderRadius: 3, padding: "1px 5px", fontSize: 9, fontWeight: 700, letterSpacing: 1,
+                      borderRadius: 3, padding: "1px 5px", fontSize: 10, fontWeight: 700, letterSpacing: 1,
                     }}>{isAway ? "AWAY" : "HOME"}</span>
                   </td>
                   <td style={{ padding: "5px 10px", color: "var(--foreground)", fontWeight: 700 }}>{row.modelWinPct.toFixed(1)}%</td>
@@ -576,12 +576,12 @@ function EdgeScatterPlot({ rows, market }: { rows: EdgeRow[]; market: "f5" | "fg
         <ResponsiveContainer width="100%" height={320}>
           <ScatterChart margin={{ top: 10, right: 20, bottom: 30, left: 20 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
-            <XAxis type="number" dataKey="x" domain={["auto", "auto"]} tick={{ fill: "#FFFFFF", fontSize: 9 }} tickLine={false}>
-              <Label value="Edge (pp)" position="insideBottom" offset={-10} fill="#FFFFFF" fontSize={9} />
+            <XAxis type="number" dataKey="x" domain={["auto", "auto"]} tick={{ fill: "#FFFFFF", fontSize: 10 }} tickLine={false}>
+              <Label value="Edge (pp)" position="insideBottom" offset={-10} fill="#FFFFFF" fontSize={10} />
             </XAxis>
             <YAxis type="number" dataKey="y" domain={[-0.1, 1.1]} ticks={[0, 1]}
               tickFormatter={(v) => v === 1 ? "WIN" : v === 0 ? "LOSS" : ""}
-              tick={{ fill: "#FFFFFF", fontSize: 9 }} tickLine={false} width={40} />
+              tick={{ fill: "#FFFFFF", fontSize: 10 }} tickLine={false} width={40} />
             <Tooltip cursor={{ strokeDasharray: "3 3", stroke: "#FFFFFF" }}
               content={({ payload }) => {
                 if (!payload?.length) return null;
@@ -606,15 +606,15 @@ function EdgeScatterPlot({ rows, market }: { rows: EdgeRow[]; market: "f5" | "fg
                 ]}
                 stroke={regression.slope > 0 ? "#45E0A8" : "#FFFFFF"}
                 strokeWidth={2} strokeDasharray="6 3"
-                label={{ value: `slope: ${regression.slope > 0 ? "+" : ""}${regression.slope.toFixed(4)}`, position: "insideTopRight", fill: regression.slope > 0 ? "#45E0A8" : "#FFFFFF", fontSize: 9 }}
+                label={{ value: `slope: ${regression.slope > 0 ? "+" : ""}${regression.slope.toFixed(4)}`, position: "insideTopRight", fill: regression.slope > 0 ? "#45E0A8" : "#FFFFFF", fontSize: 10 }}
               />
             )}
           </ScatterChart>
         </ResponsiveContainer>
         <div style={{ display: "flex", gap: 16, justifyContent: "center", marginTop: 8 }}>
-          <span style={{ fontSize: 9, color: "var(--primary)" }}>● WIN</span>
-          <span style={{ fontSize: 9, color: "var(--foreground)" }}>● LOSS</span>
-          <span style={{ fontSize: 9, color: "var(--foreground)" }}>--- REGRESSION TREND</span>
+          <span style={{ fontSize: 10, color: "var(--primary)" }}>● WIN</span>
+          <span style={{ fontSize: 10, color: "var(--foreground)" }}>● LOSS</span>
+          <span style={{ fontSize: 10, color: "var(--foreground)" }}>--- REGRESSION TREND</span>
         </div>
       </div>
     </>
@@ -637,15 +637,15 @@ function BrierHeatmap({ heatmapData, selectedCell, setSelectedCell, drilldownDat
   return (
     <div>
       <div style={{ overflowX: "auto" }}>
-        <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "2px", textTransform: "uppercase", color: "var(--foreground)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', marginBottom: 10 }}>
+        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "2px", textTransform: "uppercase", color: "var(--foreground)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', marginBottom: 10 }}>
           BRIER HEATMAP — {heatmapData.heatmap.length} DATES × 5 MARKETS
-          <span style={{ marginLeft: 8, color: "var(--primary)", fontSize: 8 }}>(avg per date | 🟢 ≤0.15 | 🟡 ≤0.22 | 🔴 &gt;0.22 | — = no data)</span>
+          <span style={{ marginLeft: 8, color: "var(--primary)", fontSize: 10 }}>(avg per date | 🟢 ≤0.15 | 🟡 ≤0.22 | 🔴 &gt;0.22 | — = no data)</span>
         </div>
         <table style={{ borderCollapse: "collapse", fontSize: 11, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', minWidth: 520 }}>
           <thead>
             <tr style={{ borderBottom: "1px solid var(--border)" }}>
               {["DATE", "GAMES", "FG ML", "F5 ML", "NRFI", "FG TOT", "F5 TOT"].map(h => (
-                <th key={h} style={{ padding: "4px 10px", textAlign: h === "DATE" ? "left" : "right", color: "var(--foreground)", fontWeight: 700, letterSpacing: ".08em", fontSize: 9 }}>{h}</th>
+                <th key={h} style={{ padding: "4px 10px", textAlign: h === "DATE" ? "left" : "right", color: "var(--foreground)", fontWeight: 700, letterSpacing: ".08em", fontSize: 10 }}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -653,7 +653,7 @@ function BrierHeatmap({ heatmapData, selectedCell, setSelectedCell, drilldownDat
             {[...heatmapData.heatmap].reverse().map(row => (
               <tr key={row.date} style={{ borderBottom: "1px solid var(--border)" }}>
                 <td style={{ padding: "5px 10px", color: "var(--foreground)", fontWeight: 600, whiteSpace: "nowrap" }}>{row.date}</td>
-                <td style={{ padding: "5px 10px", textAlign: "right", color: "var(--foreground)", fontSize: 9 }}>{row.games}</td>
+                <td style={{ padding: "5px 10px", textAlign: "right", color: "var(--foreground)", fontSize: 10 }}>{row.games}</td>
                 {(["avgFgMl", "avgF5Ml", "avgNrfi", "avgFgTotal", "avgF5Total"] as const).map(field => {
                   const v = row[field];
                   const nullCount = row[field.replace("avg", "null") as keyof typeof row] as number;
@@ -668,7 +668,7 @@ function BrierHeatmap({ heatmapData, selectedCell, setSelectedCell, drilldownDat
                       outline: isSelected ? "1px solid var(--primary)" : "none",
                     }}>
                       {v != null ? v.toFixed(4) : <span style={{ color: "var(--foreground)" }}>—</span>}
-                      {nullCount > 0 && <span style={{ fontSize: 7, color: "var(--foreground)", marginLeft: 3 }}>({nullCount}ø)</span>}
+                      {nullCount > 0 && <span style={{ fontSize: 10, color: "var(--foreground)", marginLeft: 3 }}>({nullCount}ø)</span>}
                     </td>
                   );
                 })}
@@ -696,7 +696,7 @@ function BrierHeatmap({ heatmapData, selectedCell, setSelectedCell, drilldownDat
               <thead>
                 <tr style={{ borderBottom: "1px solid var(--border)" }}>
                   {["MATCHUP", "BRIER", "MODEL AWAY%", "MODEL HOME%", "BOOK ML", "SCORE", "RESULT"].map(h => (
-                    <th key={h} style={{ padding: "4px 8px", textAlign: h === "MATCHUP" ? "left" : "right", color: "var(--foreground)", fontWeight: 700, letterSpacing: ".08em", fontSize: 9 }}>{h}</th>
+                    <th key={h} style={{ padding: "4px 8px", textAlign: h === "MATCHUP" ? "left" : "right", color: "var(--foreground)", fontWeight: 700, letterSpacing: ".08em", fontSize: 10 }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -719,7 +719,7 @@ function BrierHeatmap({ heatmapData, selectedCell, setSelectedCell, drilldownDat
                       <td style={{ padding: "5px 8px", textAlign: "right", color: bc, fontWeight: 700 }}>{brier != null ? brier.toFixed(4) : <span style={{ color: "var(--foreground)" }}>—</span>}</td>
                       <td style={{ padding: "5px 8px", textAlign: "right", color: "var(--foreground)" }}>{modelAway != null ? (modelAway as number).toFixed(1) + "%" : "—"}</td>
                       <td style={{ padding: "5px 8px", textAlign: "right", color: "var(--foreground)" }}>{modelHome != null ? (modelHome as number).toFixed(1) + "%" : "—"}</td>
-                      <td style={{ padding: "5px 8px", textAlign: "right", color: "var(--foreground)", fontSize: 9 }}>{bookAway as string ?? "—"} / {bookHome as string ?? "—"}</td>
+                      <td style={{ padding: "5px 8px", textAlign: "right", color: "var(--foreground)", fontSize: 10 }}>{bookAway as string ?? "—"} / {bookHome as string ?? "—"}</td>
                       <td style={{ padding: "5px 8px", textAlign: "right", color: "var(--foreground)" }}>{scoreAway != null && scoreHome != null ? `${scoreAway}–${scoreHome}` : "—"}</td>
                       <td style={{ padding: "5px 8px", textAlign: "right", fontWeight: 700, color: correct === 1 ? "var(--primary)" : correct === 0 ? "var(--foreground)" : "var(--foreground)" }}>
                         {correct === 1 ? "✓" : correct === 0 ? "✗" : result as string ?? "—"}
@@ -748,11 +748,11 @@ function RollingAccuracyPanel({ days, appUser }: { days: number; appUser: { id: 
     <StatGrid>
       {data.map(row => (
         <div key={row.market} style={{ background: "var(--background)", border: "1px solid var(--border)", borderRadius: 8, padding: "10px 14px", minWidth: 110 }}>
-          <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: "1px", textTransform: "uppercase", color: "var(--foreground)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', marginBottom: 4 }}>{row.market.replace(/_/g, " ")}</div>
+          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "1px", textTransform: "uppercase", color: "var(--foreground)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', marginBottom: 4 }}>{row.market.replace(/_/g, " ")}</div>
           <div style={{ fontSize: 22, fontWeight: 800, color: accuracyColor(row.accuracy), fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', lineHeight: 1 }}>
             {row.sampleSize > 0 ? `${(row.accuracy * 100).toFixed(1)}%` : "—"}
           </div>
-          <div style={{ fontSize: 9, color: "var(--foreground)", marginTop: 2, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>{row.sampleSize} graded</div>
+          <div style={{ fontSize: 10, color: "var(--foreground)", marginTop: 2, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>{row.sampleSize} graded</div>
         </div>
       ))}
     </StatGrid>
@@ -814,25 +814,25 @@ function HrPropRow({ prop, awayTeam, homeTeam }: { prop: HrPropRow; awayTeam: st
         {/* Model vs Book */}
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end", minWidth: 0 }}>
           <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 8, color: "var(--foreground)", letterSpacing: 1, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>MODEL P(HR)</div>
+            <div style={{ fontSize: 10, color: "var(--foreground)", letterSpacing: 1, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>MODEL P(HR)</div>
             <div style={{ fontSize: 18, fontWeight: 800, color: "var(--foreground)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
               {modelPHr != null ? `${(modelPHr * 100).toFixed(1)}%` : "—"}
             </div>
           </div>
           <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 8, color: "var(--foreground)", letterSpacing: 1, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>BOOK NO-VIG</div>
+            <div style={{ fontSize: 10, color: "var(--foreground)", letterSpacing: 1, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>BOOK NO-VIG</div>
             <div style={{ fontSize: 18, fontWeight: 800, color: "var(--foreground)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
               {anNoVig != null ? `${(anNoVig * 100).toFixed(1)}%` : "—"}
             </div>
           </div>
           <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 8, color: "var(--foreground)", letterSpacing: 1, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>EDGE OVER</div>
+            <div style={{ fontSize: 10, color: "var(--foreground)", letterSpacing: 1, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>EDGE OVER</div>
             <div style={{ fontSize: 18, fontWeight: 800, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', color: hasEdge ? (edgeOver! > 0 ? "var(--primary)" : "var(--foreground)") : "var(--foreground)" }}>
               {edgeOver != null ? `${edgeOver > 0 ? "+" : ""}${(edgeOver * 100).toFixed(1)}pp` : "—"}
             </div>
           </div>
           <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 8, color: "var(--foreground)", letterSpacing: 1, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>FD ODDS</div>
+            <div style={{ fontSize: 10, color: "var(--foreground)", letterSpacing: 1, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>FD ODDS</div>
             <div style={{ fontSize: 14, fontWeight: 700, color: "var(--foreground)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
               {fmtOdds(prop.fdOverOdds)}
             </div>
@@ -909,22 +909,22 @@ function KPropPitcherRow({ prop }: { prop: KPropRow }) {
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <div style={{ textAlign: "center", minWidth: 44 }}>
-            <div style={{ fontSize: 8, color: "var(--foreground)", letterSpacing: 1, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>PROJ Ks</div>
+            <div style={{ fontSize: 10, color: "var(--foreground)", letterSpacing: 1, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>PROJ Ks</div>
             <div style={{ fontSize: 22, fontWeight: 800, color: "var(--foreground)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', lineHeight: 1 }}>{kProj != null ? kProj.toFixed(1) : "—"}</div>
           </div>
           <div style={{ textAlign: "center", minWidth: 52 }}>
-            <div style={{ fontSize: 8, color: "var(--foreground)", letterSpacing: 1, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>BOOK LINE</div>
+            <div style={{ fontSize: 10, color: "var(--foreground)", letterSpacing: 1, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>BOOK LINE</div>
             <div style={{ fontSize: 22, fontWeight: 800, color: "var(--foreground)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', lineHeight: 1 }}>{bookLine != null ? bookLine.toFixed(1) : "—"}</div>
           </div>
           {prop.actualKs != null && (
             <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: 8, color: "var(--foreground)", letterSpacing: 1, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>ACTUAL</div>
+              <div style={{ fontSize: 10, color: "var(--foreground)", letterSpacing: 1, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>ACTUAL</div>
               <div style={{ fontSize: 22, fontWeight: 800, color: "var(--primary)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', lineHeight: 1 }}>{prop.actualKs}</div>
             </div>
           )}
           {modelErr != null && (
             <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: 8, color: "var(--foreground)", letterSpacing: 1, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>ERROR</div>
+              <div style={{ fontSize: 10, color: "var(--foreground)", letterSpacing: 1, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>ERROR</div>
               <div style={{ fontSize: 18, fontWeight: 700, color: Math.abs(modelErr) <= 0.5 ? "var(--primary)" : Math.abs(modelErr) <= 1.5 ? "var(--foreground)" : "var(--foreground)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', lineHeight: 1 }}>{signedNum(modelErr, 1)}</div>
             </div>
           )}
@@ -943,12 +943,12 @@ function KPropPitcherRow({ prop }: { prop: KPropRow }) {
       {(prop.pOver || prop.pUnder) && (
         <div style={{ display: "flex", gap: 8, padding: "0 14px 10px", marginTop: -4 }}>
           <div style={{ flex: 1, padding: "6px 10px", borderRadius: 6, background: "transparent", border: "1px solid var(--border)", display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "1px", textTransform: "uppercase", color: "var(--foreground)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>OVER {fmtNum(prop.bookLine, 1)}</span>
+            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "1px", textTransform: "uppercase", color: "var(--foreground)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>OVER {fmtNum(prop.bookLine, 1)}</span>
             <span style={{ fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: 14, fontWeight: 800, color: "var(--foreground)" }}>{prop.pOver ? fmtPct(parseFloat(prop.pOver)) : "—"}</span>
             <span style={{ fontSize: 10, color: "var(--foreground)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>{fmtOdds(prop.bookOverOdds)}</span>
           </div>
           <div style={{ flex: 1, padding: "6px 10px", borderRadius: 6, background: "transparent", border: "1px solid var(--border)", display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "1px", textTransform: "uppercase", color: "var(--foreground)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>UNDER {fmtNum(prop.bookLine, 1)}</span>
+            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "1px", textTransform: "uppercase", color: "var(--foreground)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>UNDER {fmtNum(prop.bookLine, 1)}</span>
             <span style={{ fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', fontSize: 14, fontWeight: 800, color: "var(--foreground)" }}>{prop.pUnder ? fmtPct(parseFloat(prop.pUnder)) : "—"}</span>
             <span style={{ fontSize: 10, color: "var(--foreground)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>{fmtOdds(prop.bookUnderOdds)}</span>
           </div>
@@ -1244,7 +1244,10 @@ export default function TheModelResults() {
         </div>
 
         {/* Market tabs */}
-        <div className="admin-container pb-2 flex items-center gap-1.5 overflow-x-auto scrollbar-hide" style={{ WebkitOverflowScrolling: "touch" }}>
+        {/* pt-2 gives the date steppers' after:-inset-2 hit area its top 8px —
+            the scrollport clips pseudo-elements, so without headroom the
+            effective target is 36px, not 44 (EFF-TARGET-ADMIN). */}
+        <div className="admin-container pt-2 pb-2 flex items-center gap-1.5 overflow-x-auto scrollbar-hide" style={{ WebkitOverflowScrolling: "touch" }}>
           {MARKET_TABS.map(tab => (
             <button type="button" key={tab.id} onClick={() => setMarketTab(tab.id)}
               className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-colors whitespace-nowrap flex-shrink-0"
@@ -1262,15 +1265,15 @@ export default function TheModelResults() {
           {(marketTab === "kprops" || marketTab === "hrprops" || marketTab === "firstinning") && (
             <>
               <div style={{ flex: 1 }} />
-              <button type="button" onClick={() => setGameDate(d => addDays(d, -1))} className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors flex-shrink-0">
-                <ChevronLeft size={14} style={{ color: "var(--foreground)" }} />
+              <button type="button" onClick={() => setGameDate(d => addDays(d, -1))} aria-label="Previous day" className="relative after:absolute after:-inset-2 w-7 h-7 rounded-lg flex items-center justify-center transition-colors flex-shrink-0">
+                <ChevronLeft size={14} style={{ color: "var(--foreground)" }} aria-hidden="true" />
               </button>
               <span className="text-xs font-bold text-foreground tracking-wide whitespace-nowrap">{formatDateNav(gameDate)}</span>
               {gameDate === todayPst() && (
                 <span className="text-sm font-semibold px-1.5 py-0.5 rounded" style={{ background: "transparent", color: "var(--primary)" }}>TODAY</span>
               )}
-              <button type="button" onClick={() => setGameDate(d => addDays(d, 1))} className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors flex-shrink-0">
-                <ChevronRight size={14} style={{ color: "var(--foreground)" }} />
+              <button type="button" onClick={() => setGameDate(d => addDays(d, 1))} aria-label="Next day" className="relative after:absolute after:-inset-2 w-7 h-7 rounded-lg flex items-center justify-center transition-colors flex-shrink-0">
+                <ChevronRight size={14} style={{ color: "var(--foreground)" }} aria-hidden="true" />
               </button>
             </>
           )}
@@ -1311,8 +1314,11 @@ export default function TheModelResults() {
         </div>
       </header>
 
-      {/* ── Main content ───────────────────────────────────────────────────── */}
-      <main className="admin-container py-4 pb-16">
+      {/* ── Main content ─────────────────────────────────────────────────────
+          Rendered as a <div>, not <main>: AdminShell already provides the one
+          <main> landmark (admin-shell-content), and a page-level second <main>
+          duplicated the landmark on /admin/model-results. */}
+      <div className="admin-container py-4 pb-16">
 
         {/* ── DRIFT BANNER ─────────────────────────────────────────────────── */}
         {driftData && driftData.driftDetected && (
@@ -1647,7 +1653,7 @@ export default function TheModelResults() {
             {/* MLB Headshot Backfill Tool */}
             <div style={{ padding: "10px 14px", background: "transparent", border: "1px solid var(--border)", borderRadius: 8, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: "var(--foreground)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', marginBottom: 2 }}>MLB HEADSHOT BACKFILL</div>
+                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", color: "var(--foreground)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', marginBottom: 2 }}>MLB HEADSHOT BACKFILL</div>
                 <div style={{ fontSize: 10, color: "var(--foreground)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif' }}>
                   {backfillStatus ?? "Resolves MLBAM IDs for all K-Props pitchers missing headshots. Calls MLB Stats API."}
                 </div>
@@ -1818,7 +1824,7 @@ export default function TheModelResults() {
           </SectionErrorBoundary>
         )}
 
-      </main>
+      </div>
     </div>
     </AdminShell>
   );

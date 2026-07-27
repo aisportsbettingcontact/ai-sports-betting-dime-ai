@@ -139,7 +139,7 @@ function Badge({ label, variant }: { label: string; variant: BadgeVariant }) {
       className={cn(
         "inline-flex items-center justify-center rounded border font-mono font-bold",
         "tracking-wide whitespace-nowrap",
-        "text-[8px] sm:text-xs px-[3px] sm:px-1 py-[1px]",
+        "text-[10px] sm:text-xs px-[3px] sm:px-1 py-[1px]",
         BADGE_CLS[variant]
       )}
     >
@@ -224,7 +224,7 @@ function ScheduleRow({
 
   // ── Cell classes ───────────────────────────────────────────────────────────
   const cell = "px-[2px] sm:px-1 py-1.5 align-middle";
-  const mono = "font-mono text-[8px] sm:text-xs";
+  const mono = "font-mono text-[10px] sm:text-xs";
   const dash = <span className={cn(mono, "text-white")}>—</span>;
 
   return (
@@ -239,7 +239,7 @@ function ScheduleRow({
       <td className={cn(cell, "text-center")}>
         <span className={cn(
           "inline-block rounded font-mono font-bold whitespace-nowrap",
-          "text-[7px] sm:text-[8px] px-[2px] sm:px-1 py-[1px]",
+          "text-[10px] px-[2px] sm:px-1 py-[1px]",
           locStyle
         )}>
           {location}
@@ -364,7 +364,7 @@ function StatsSummary({
 
       {/* RECORD */}
       <div className="flex-1 flex flex-col items-center justify-center bg-black rounded-xl px-3 py-2.5 sm:py-3 min-w-0">
-        <span className="text-[8px] sm:text-xs text-white font-mono tracking-widest mb-1">
+        <span className="text-[10px] sm:text-xs text-white font-mono tracking-widest mb-1">
           RECORD
         </span>
         <span className="font-mono text-sm sm:text-base font-bold text-white leading-none">
@@ -374,7 +374,7 @@ function StatsSummary({
 
       {/* RL COVER */}
       <div className="flex-1 flex flex-col items-center justify-center bg-black rounded-xl px-3 py-2.5 sm:py-3 min-w-0">
-        <span className="text-[8px] sm:text-xs text-white font-mono tracking-widest mb-1">
+        <span className="text-[10px] sm:text-xs text-white font-mono tracking-widest mb-1">
           RL COVER
         </span>
         <span className="font-mono text-sm sm:text-base font-bold text-white leading-none">
@@ -384,7 +384,7 @@ function StatsSummary({
 
       {/* O/U */}
       <div className="flex-1 flex flex-col items-center justify-center bg-black rounded-xl px-3 py-2.5 sm:py-3 min-w-0">
-        <span className="text-[8px] sm:text-xs text-white font-mono tracking-widest mb-1">
+        <span className="text-[10px] sm:text-xs text-white font-mono tracking-widest mb-1">
           O/U
         </span>
         <span className="font-mono text-sm sm:text-base font-bold text-white leading-none">
@@ -410,7 +410,7 @@ function ScheduleTable({
   isUpcoming: boolean;
 }) {
   const th = cn(
-    "px-[2px] sm:px-1 py-1.5 text-[7px] sm:text-[8px] font-bold",
+    "px-[2px] sm:px-1 py-1.5 text-[10px] font-bold",
     "text-white font-mono tracking-widest text-center whitespace-nowrap align-middle"
   );
 
@@ -586,7 +586,7 @@ export default function MlbTeamSchedule() {
             <h1 className="text-sm sm:text-sm font-bold text-white font-mono tracking-wide truncate leading-tight">
               {teamInfo?.name ?? teamSlug.replace(/-/g, " ").toUpperCase()}
             </h1>
-            <p className="text-[8px] sm:text-sm text-white font-mono leading-tight">
+            <p className="text-[10px] sm:text-sm text-white font-mono leading-tight">
               2026 MLB SCHEDULE
             </p>
           </div>
@@ -594,7 +594,7 @@ export default function MlbTeamSchedule() {
           <div className="flex items-center gap-1 flex-shrink-0">
             {/* Stale indicator — shown when data > 5 min old and page has live/upcoming games */}
             {isStale && !isFetching && upcomingGames.length > 0 && (
-              <span className="text-[7px] font-mono text-white bg-black border border-white rounded px-1 py-0.5">
+              <span className="text-[10px] font-mono text-white bg-black border border-white rounded px-1 py-0.5">
                 STALE
               </span>
             )}
@@ -614,8 +614,8 @@ export default function MlbTeamSchedule() {
         </div>
       </div>
 
-      {/* ── Body ───────────────────────────────────────────────────────────── */}
-      <div className="w-full px-2 sm:px-4 py-3 sm:py-5">
+      {/* ── Body ── the page's single main landmark (A11Y-NO-MAIN) ─────────── */}
+      <main className="w-full px-2 sm:px-4 py-3 sm:py-5">
 
         {/* Loading */}
         {isLoading && (
@@ -705,7 +705,7 @@ export default function MlbTeamSchedule() {
           </div>
         )}
 
-      </div>
+      </main>
     </div>
   );
 }

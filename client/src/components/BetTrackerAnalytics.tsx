@@ -710,7 +710,7 @@ function BreakdownPanelInner({
                   {/* Rank badge */}
                   {rank !== undefined && rank <= 3 && (
                     <span style={{
-                      fontSize: "9px",
+                      fontSize: "10px",
                       fontFamily: T.mono,
                       color: rank === 1 ? T.green : rank === 2 ? "var(--bt-grade-b, #FFFFFF)" : T.textMuted,
                       fontWeight: 700,
@@ -732,7 +732,7 @@ function BreakdownPanelInner({
                   {/* Kelly grade badge */}
                   {kg && kg.grade !== "—" && (
                     <span style={{
-                      fontSize: "9px",
+                      fontSize: "10px",
                       fontFamily: T.mono,
                       fontWeight: 700,
                       color: kg.color,
@@ -875,7 +875,7 @@ function MonthBarChart({ entries, showDollar }: { entries: BreakdownEntry[]; sho
               {/* Trend arrow */}
               {trendUp !== null && (
                 <span style={{
-                  fontSize: "9px",
+                  fontSize: "10px",
                   color: trendUp ? T.green : T.red,
                   fontFamily: T.mono,
                   position: "absolute",
@@ -906,7 +906,7 @@ function MonthBarChart({ entries, showDollar }: { entries: BreakdownEntry[]; sho
               <span style={{
                 position: "absolute",
                 bottom: "0",
-                fontSize: "9px",
+                fontSize: "10px",
                 fontFamily: T.mono,
                 color: T.dim,
                 letterSpacing: "0.5px",
@@ -1041,7 +1041,7 @@ function BreakdownGridInner({
           { label: "ROI",      value: roiStr,                            color: stats.roi >= 0 ? T.green : T.red },
         ].map(item => (
           <div key={item.label} style={{ textAlign: "center" }}>
-            <div style={{ fontSize: "8px", color: T.dim, letterSpacing: "1.5px", fontFamily: T.mono, marginBottom: "3px" }}>{item.label}</div>
+            <div style={{ fontSize: "10px", color: T.dim, letterSpacing: "1.5px", fontFamily: T.mono, marginBottom: "3px" }}>{item.label}</div>
             <div style={{ fontSize: "13px", fontWeight: 700, fontFamily: T.mono, color: item.color }}>{item.value}</div>
           </div>
         ))}

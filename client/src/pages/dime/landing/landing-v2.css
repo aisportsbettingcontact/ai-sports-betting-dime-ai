@@ -323,7 +323,7 @@
 .dlv2 .tier-features li { display: flex; gap: 9px; font-size: 13.5px; color: var(--text-body); align-items: baseline; }
 .dlv2 .tier-features li svg { flex: 0 0 auto; transform: translateY(1px); }
 .dlv2 .credits-note { margin-top: 18px; border: 1px dashed var(--border); border-radius: 14px; padding: 18px 20px; display: flex; gap: 16px; align-items: baseline; }
-.dlv2 .credits-note h4 { margin: 0; font-family: 'Familjen Grotesk', system-ui, -apple-system, sans-serif; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-secondary); white-space: nowrap; }
+.dlv2 .credits-note h3 { margin: 0; font-family: 'Familjen Grotesk', system-ui, -apple-system, sans-serif; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-secondary); white-space: nowrap; }
 .dlv2 .credits-note p { margin: 0; font-size: 13.5px; color: var(--text-tertiary); }
 .dlv2 .pricing-proof { max-width: 640px; margin: 32px auto 8px; text-align: center; color: var(--text-secondary); }
 .dlv2 .pricing-legal { text-align: center; display: block; }
