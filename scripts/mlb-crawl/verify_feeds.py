@@ -26,12 +26,15 @@ def verify_feed(feed, expected):
     if away != expected["awayScore"] or home != expected["homeScore"]:
         fails.append(f"score mismatch feed {away}-{home} vs dataset {expected['awayScore']}-{expected['homeScore']}")
     plays = feed.get("liveData", {}).get("plays", {}).get("allPlays", [])
-    if len(plays) < 40:
+    detailed = feed.get("gameData", {}).get("status", {}).get("detailedState", "")
+    shortened = state == "O" or detailed.startswith("Completed Early")
+    min_plays = 25 if shortened else 40      # rain-shortened 5-inning games run ~35 PAs
+    if len(plays) < min_plays:
         fails.append(f"allPlays too small: {len(plays)}")
     innings = ls.get("innings", [])
     if len(innings) < 5:
         fails.append(f"innings too small: {len(innings)}")
-    if state == "F" and ls.get("scheduledInnings", 9) == 9 and len(innings) < 9:
+    if state == "F" and not shortened and ls.get("scheduledInnings", 9) == 9 and len(innings) < 9:
         fails.append(f"innings {len(innings)} < 9 for full final")
     return fails
 

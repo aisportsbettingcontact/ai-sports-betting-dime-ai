@@ -43,6 +43,12 @@ def test_verify_feed():
     assert verify_feed(feed, expected) == []
     feed["liveData"]["linescore"]["teams"]["home"]["runs"] = 10
     assert any("score" in c for c in verify_feed(feed, expected))
+    feed["liveData"]["linescore"]["teams"]["home"]["runs"] = 11
+    feed["gameData"]["status"]["codedGameState"] = "F"
+    feed["gameData"]["status"]["detailedState"] = "Completed Early: Rain"
+    feed["liveData"]["plays"]["allPlays"] = [{}] * 37
+    feed["liveData"]["linescore"]["innings"] = [{}] * 5
+    assert verify_feed(feed, expected) == [], "5-inning Completed Early game must pass"
 
 
 
