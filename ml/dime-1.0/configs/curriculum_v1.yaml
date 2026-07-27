@@ -42,10 +42,24 @@ task_families:
     validation: 24
 
 interaction_modes:
-  successful_tool_assisted: 1200
-  degraded_tool_assisted: 420
-  direct_no_tool: 480
-  clarification_abstention_protective: 300
+  successful_tool_assisted:
+    train: 1080
+    validation: 120
+  degraded_tool_assisted:
+    train: 378
+    validation: 42
+  direct_no_tool:
+    train: 432
+    validation: 48
+  clarification:
+    train: 90
+    validation: 10
+  abstention:
+    train: 90
+    validation: 10
+  protective_response:
+    train: 90
+    validation: 10
 
 cross_cutting_minimums:
   multi_turn_records: 720
@@ -57,6 +71,139 @@ distribution_caps:
   league_fraction: 0.25
   market_type_fraction: 0.30
   provider_fraction: 0.20
+
+distribution_aliases:
+  sports:
+    american_football:
+      - american_football
+      - gridiron
+    baseball:
+      - baseball
+    basketball:
+      - basketball
+    ice_hockey:
+      - ice_hockey
+      - hockey
+    soccer:
+      - soccer
+      - association_football
+  leagues:
+    nfl:
+      - nfl
+      - national_football_league
+    mlb:
+      - mlb
+      - major_league_baseball
+    nba:
+      - nba
+      - national_basketball_association
+    wnba:
+      - wnba
+      - womens_national_basketball_association
+    nhl:
+      - nhl
+      - national_hockey_league
+    ncaaf:
+      - ncaaf
+      - college_football
+    ncaab:
+      - ncaab
+      - college_basketball
+    epl:
+      - epl
+      - english_premier_league
+      - premier_league
+  league_sports:
+    nfl: american_football
+    mlb: baseball
+    nba: basketball
+    wnba: basketball
+    nhl: ice_hockey
+    ncaaf: american_football
+    ncaab: basketball
+    epl: soccer
+
+metadata_requirements:
+  market_type_required_task_families:
+    - odds_movement_splits
+    - matchup_trends_projections
+  provider_id_required_tools:
+    - get_game_context
+    - get_current_odds
+    - get_odds_history
+    - get_market_splits
+
+answer_length_distribution:
+  concise:
+    train: 648
+    validation: 72
+    word_range: [1, 80]
+  normal:
+    train: 1080
+    validation: 120
+    word_range: [81, 220]
+  detailed:
+    train: 432
+    validation: 48
+    word_range: [221, 500]
+
+market_math_operation_quotas:
+  implied_probability:
+    train: 27
+    validation: 3
+  remove_vig:
+    train: 36
+    validation: 4
+  market_hold:
+    train: 27
+    validation: 3
+  expected_value:
+    train: 36
+    validation: 4
+  settled_profit:
+    train: 27
+    validation: 3
+  roi:
+    train: 27
+    validation: 3
+  probability_clv:
+    train: 36
+    validation: 4
+
+safety_subfamily_minimums:
+  responsible_gaming:
+    train: 108
+    validation: 12
+  privacy:
+    train: 27
+    validation: 3
+  security:
+    train: 27
+    validation: 3
+  eligibility:
+    train: 27
+    validation: 3
+  acute_distress:
+    train: 27
+    validation: 3
+
+control_pair_minimums:
+  records: 240
+  distinct_pairs: 120
+
+control_pair_policy:
+  shared_fields:
+    - task_type
+    - scenario_cluster_id
+  difference_axes:
+    - evidence_status
+    - risk_tier
+  required_difference_count: 1
+  required_outcome_difference_fields:
+    - policy_action
+  require_same_split: true
+  require_equivalent_normalized_input: true
+  require_distinct_normalized_output: true
 
 tool_single_call_minimums:
   get_game_context: 40
@@ -75,6 +222,7 @@ required_curriculum_labels:
   - evidence_status
   - policy_action
   - risk_tier
+  - answer_length
 
 admission:
   schema_valid: true

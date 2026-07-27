@@ -12,6 +12,7 @@
       "content": "REPLACE_ME"
     }
   ],
+  "numeric_assertions": [],
   "curriculum": {
     "skill_ids": [
       "conversation.evidence_interpretation"

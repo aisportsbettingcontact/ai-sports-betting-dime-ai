@@ -16,12 +16,35 @@
   weights merely because it is available to the product.
 - Every training item needs a stable ID, timestamp, provenance, rights basis,
   privacy state, partition keys, and human review status.
+- Reviewer status and roles come only from the Git-controlled trusted reviewer
+  registry. A review ledger may reference stable reviewer IDs; it cannot create
+  identities, activate reviewers, or grant roles.
 - Public accessibility is not a training, caching, display, or redistribution
   license.
 - Raw Bet Tracker exports, chats, private retrieval context, hidden
   evaluations, provider exports, and licensed odds/splits data without public
   redistribution rights never enter GitHub.
 - Hashing raw personal identifiers is not de-identification.
+
+## Current Foundation v1 state
+
+`configs/curriculum_v1.yaml` remains `proposed`. No Foundation v1 dataset has
+been approved, frozen for release, published to Hugging Face, or authorized for
+training. The candidate, review, audit, approval, and freeze contracts are
+governance infrastructure only; they do not change the `foundation_only`
+platform state, serving, or provider activation.
+
+GitHub holds only the public contracts, templates, synthetic fixtures, tests,
+and sanitized evidence. The actual private candidate records, source registry,
+review ledger, external reports, and approval record remain outside GitHub in
+an authorized private review system. RunPod is a rebuildable processor and may
+not be their sole authoritative location.
+
+The trusted authority at `configs/foundation_reviewer_registry.json` is also
+still `proposed` and contains no reviewer entries. It therefore grants no
+review, external-audit, specialist, or dataset-approval authority. Review
+ledgers contain rubric-bound decisions and stable reviewer IDs only; they
+cannot define status or roles.
 
 ## Required dataset lineage
 
@@ -35,9 +58,10 @@ Every governed dataset release must record:
 - deidentification method and direct-identifier scan result;
 - event, source, and hashed-user partition keys;
 - curriculum skill, interaction, difficulty, risk, and scenario-cluster labels;
-- reviewer and approval date;
+- reviewer IDs, approval date, trusted reviewer-registry version, and the
+  SHA-256 of the exact Git-controlled registry bytes;
 - deduplication, contamination, and quality checks;
-- SHA-256 hashes of the final split files.
+- SHA-256 hashes of the final split files;
 - visibility and publication classification;
 - train and validation record counts;
 - provider-derived and user-data declarations;
@@ -47,6 +71,15 @@ Every governed dataset release must record:
 
 Unknown provenance, license, or required consent is a build failure.
 
+The local admission scanner uses explicit, deterministic patterns for known
+credential and direct-identifier forms, including common API-key prefixes and
+assignments, private-key PEM blocks, and credential-bearing URIs. It is a
+fail-closed first pass for recognized forms, not an exhaustive generic-entropy
+secret scanner. Foundation approval additionally requires the independent
+`privacy_and_identifiers` audit over the exact candidate bytes; that external
+privacy/secret review and its authorized reviewer cannot be replaced by a
+passing local pattern scan.
+
 ## Splitting
 
 Split by event, source snapshot, conversation, scenario cluster, and user—not
@@ -55,18 +88,88 @@ scenario, conversation, or user's records may cross train, validation, locked,
 or hidden partitions. Historical evaluations must enforce
 `available_at <= as_of_utc`.
 
-The v3 dataset manifest must bind the curriculum, tool catalog, chat template,
-train, and validation hashes and record counts. It must attest rights, consent,
-privacy, partition-leakage, future-data, semantic-deduplication, and
-evaluation-contamination review.
+The v3 dataset manifest remains the contract for any newly approved public
+train/validation files committed to GitHub. It binds the curriculum, tool
+catalog, chat template, split hashes and counts, rights, consent, privacy,
+partition leakage, future data, semantic deduplication, and evaluation
+contamination.
+
+The private Foundation v1 release uses
+`schemas/dataset_manifest.v4.schema.json`, not the public v3 contract. Its
+version directory has an exact closed-world inventory:
+
+```text
+train.jsonl
+validation.jsonl
+dataset_manifest.json
+dataset_card.md
+checksums.json
+```
+
+The v4 manifest binds the split bytes and the independently reviewed
+Foundation evidence: `system_prompt_sha256`,
+`foundation_build_config_sha256`, `source_registry_sha256`,
+`source_artifacts_sha256`, `review_ledger_sha256`, `candidate_audit_sha256`,
+`approval_record_sha256`, and report hashes for
+`semantic_deduplication`, `privacy_and_identifiers`, `rights`,
+`development_evaluation_contamination`,
+`locked_evaluation_contamination`, and `numeric_traceability`. It also binds
+the development-evaluation repository and full commit, its manifest and
+identity hashes, plus the approved locked-evaluation reference.
+
+The Foundation audit and freeze path binds that exact
+`reviewer_registry_sha256` through the candidate audit, every external audit,
+the Foundation approval, and the v4 manifest. All ledger and report reviewer
+IDs must resolve to active entries with the required roles in that same
+registry revision. The proposed registry deliberately cannot satisfy this
+gate.
+
+Future full training must bind the SHA-256 of that exact v4
+`dataset_manifest.json`, the SHA-256 of `checksums.json`, and the same complete
+`foundation_evidence_hashes` mapping into
+`authorization.training_candidate`, including the independently reviewed
+`reviewer_registry_sha256`. The authorization must also pin the foundation and
+development datasets by full 40-character Hugging Face commit SHA and bind the
+approved locked-evaluation full revision or structured opaque reference. The
+trainer must recompute the snapshot, registry, and evidence bindings and fail
+closed on any mismatch. A local path, tag, branch, dataset revision, manifest
+hash, or passing audit by itself is not sufficient authorization.
 
 The historical v2 schema remains tracked without semantic changes. It is not
 sufficient for new public publication. `scripts/validate_data.py` rejects
 non-sample public JSONL unless the exact approved train/validation paths are
 bound to a valid v3 `approved-public` manifest.
 
-Private, proprietary, provider-derived, locked, and hidden data belongs in the
-future private dataset repository, not this public repository.
+Approved private foundation data belongs in
+`taileredsports/dime-foundation-sft`; visible private development evaluations
+belong in `taileredsports/dime-eval-development`; and locked or hidden
+release-gate material belongs in the separately restricted
+`taileredsports/dime-eval-locked`. None belongs in this public repository. The
+training credential is denied access to the locked repository.
+
+Foundation audit and freeze must remotely prove the visible development
+evaluation with identity schema
+`dime-foundation-development-eval-identity-v2`, an explicit nonempty
+`HF_TOKEN`, and the exact private
+`taileredsports/dime-eval-development` 40-character commit. The identity binds
+`evaluation_manifest.json` and a strictly sorted exhaustive inventory of every
+recursive `cases/**/*.jsonl` path, hash, and record count. The verifier
+enumerates that live revision, downloads every bound file, and requires local
+and remote byte equality. A local subset, tag, branch, cached evidence,
+unavailable remote, or privacy/inventory/hash/count mismatch fails closed; no
+local fallback is permitted.
+
+Every numeric token in every Foundation assistant message, regardless of task
+type, must be enclosed by a reviewed `numeric_assertion` whose `source_path`
+resolves to a numeric leaf in a linked successful (`status: "ok"`) tool
+result. Literal constants and user, metadata, failed-tool, stale-tool, or
+unlinked sources are not admissible. When the source tool is
+`calculate_market_math`, the complete returned key inventory and values are
+also independently recomputed from the call arguments before the assertion
+and displayed value are checked within the configured unit tolerance.
+
+The complete candidate-to-freeze process is defined in
+[Foundation v1 dataset workflow](FOUNDATION_V1_DATASET_WORKFLOW.md).
 
 ## Retention and deletion
 

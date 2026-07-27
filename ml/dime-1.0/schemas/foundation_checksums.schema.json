@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dime.internal/schemas/foundation_checksums.schema.json",
+  "title": "Dime foundation dataset snapshot checksums",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "files"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "dime-foundation-checksums-v1"
+    },
+    "files": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "train.jsonl",
+        "validation.jsonl",
+        "dataset_manifest.json",
+        "dataset_card.md"
+      ],
+      "properties": {
+        "train.jsonl": {
+          "$ref": "#/$defs/sha256"
+        },
+        "validation.jsonl": {
+          "$ref": "#/$defs/sha256"
+        },
+        "dataset_manifest.json": {
+          "$ref": "#/$defs/sha256"
+        },
+        "dataset_card.md": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  }
+}

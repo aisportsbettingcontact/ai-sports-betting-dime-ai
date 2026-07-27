@@ -1,0 +1,120 @@
+{
+  "schema_version": "dime-infrastructure-setup-evidence-v1",
+  "captured_at_utc": "2026-07-26T05:57:53Z",
+  "classification": "sanitized_non_release_evidence",
+  "release_authority": false,
+  "authorization": {
+    "full_training": false,
+    "locked_evaluation": false,
+    "adapter_publication": false,
+    "serving": false,
+    "provider_activation": false
+  },
+  "github": {
+    "repository": "aisportsbettingcontact/ai-sports-betting-dime-ai",
+    "commit": "0d2c8ce0a9de028367e4fb788278e913c7d72d8b",
+    "project_path": "ml/dime-1.0",
+    "checkout": "full_detached",
+    "worktree_clean": true
+  },
+  "base_model": {
+    "repo_id": "meta-llama/Llama-3.1-8B",
+    "revision": "d04e592bb4f6aa9cfee91e2e20afa771667e1d4b"
+  },
+  "hugging_face": {
+    "repositories": {
+      "foundation_sft": {
+        "repo_id": "taileredsports/dime-foundation-sft",
+        "observed_governance_head": "af9a45fb7835df01585c859c628e1dbc9e372356",
+        "state": "governance_scaffold_only",
+        "approved_release": false
+      },
+      "development_eval": {
+        "repo_id": "taileredsports/dime-eval-development",
+        "observed_governance_head": "5b75491b4fc3d3b22e270510f7cba767d01ec363",
+        "state": "governance_scaffold_only",
+        "approved_release": false
+      },
+      "locked_eval": {
+        "repo_id": "taileredsports/dime-eval-locked",
+        "observed_governance_head": "4ad747fd76d3f54b54ef7d3b5ebc36ccbe7fd8d1",
+        "state": "governance_scaffold_only",
+        "approved_release": false
+      },
+      "promoted_adapter": {
+        "repo_id": "taileredsports/Llama-3-Dime-1.0",
+        "observed_governance_head": "298c735fa2b32e3f63b19a1b18c4f4f901933e3e",
+        "state": "governance_scaffold_only",
+        "approved_release": false
+      }
+    },
+    "training_credential_role": "dime-training-read-v1",
+    "training_can_read_locked_eval": false,
+    "training_can_publish": false,
+    "credential_values_recorded": false
+  },
+  "runpod": {
+    "template_name": "dime-llama31-8b-training-v1",
+    "container_image": "runpod/pytorch:1.0.2-cu1281-torch280-ubuntu2404",
+    "gpu": "NVIDIA GeForce RTX 4090",
+    "gpu_vram_mib": 24564,
+    "network_volume_size_gb": 100,
+    "workspace_root": "/workspace",
+    "persistent_volume_mounted": true,
+    "repository_checkout": "/workspace/repos/ai-sports-betting-dime-ai",
+    "foundation_dataset_root": "/workspace/datasets/foundation-sft",
+    "development_eval_root": "/workspace/datasets/eval-development",
+    "runs_root": "/workspace/runs",
+    "archive_root": "/workspace/archive",
+    "hugging_face_cache": "/workspace/.cache/huggingface",
+    "pip_cache": "/workspace/.cache/pip",
+    "disposable_venv": "/opt/dime-venv",
+    "locked_evaluation_present": false,
+    "raw_infrastructure_identifiers_recorded": false
+  },
+  "runtime": {
+    "python": "3.12.3",
+    "pytorch": "2.8.0+cu128",
+    "torch_cuda": "12.8",
+    "transformers": "5.14.1",
+    "datasets": "5.0.0",
+    "accelerate": "1.14.0",
+    "peft": "0.19.1",
+    "trl": "1.8.0",
+    "bitsandbytes": "0.49.2"
+  },
+  "validation": {
+    "runtime_verification": "passed",
+    "ruff": "passed",
+    "compile": "passed",
+    "pytest": {
+      "passed": 55,
+      "failed": 0
+    },
+    "data_validation": "passed",
+    "curriculum_audit_reproduction": "passed",
+    "evaluation_program_audit_reproduction": "passed",
+    "template_contract": "passed",
+    "base_model_smoke_test": {
+      "status": "passed",
+      "forward_pass_shape": [
+        1,
+        8,
+        128256
+      ],
+      "gpu_memory_allocated_gb": 5.72
+    },
+    "locked_eval_access_denial": "passed"
+  },
+  "rehearsal": {
+    "status": "REHEARSAL — NOT APPROVED FOR SERVING",
+    "adapter_sha256": "3502412f7a691ddb6bb5a29b42c5c50b3770dd1ceb26d9e0074ddb2d03b4ddd7",
+    "evidence_archive_sha256": "91f65b86bf78668e6d46c4300ffd240840492ca853927df1a313823d9f2b66de",
+    "release_gate_pass": false,
+    "uploaded_to_production_model_repository": false
+  },
+  "private_setup_manifest": {
+    "included_in_public_evidence": false,
+    "sha256": "817b01617475ded4cfcce9a67b7847c82e387b6a8c9717ff4d1c3c29517fa2bf"
+  }
+}

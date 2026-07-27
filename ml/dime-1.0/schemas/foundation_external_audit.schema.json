@@ -1,0 +1,236 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dime.internal/schemas/foundation_external_audit.schema.json",
+  "title": "Dime Foundation v1 External Audit Report",
+  "type": "object",
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "audit_type": {"const": "semantic_deduplication"}
+        },
+        "required": ["audit_type"]
+      },
+      "then": {
+        "properties": {
+          "scope_reference": {"$ref": "#/$defs/sha256"},
+          "tool_id": {"const": "dime-semantic-audit"},
+          "tool_version": {"const": "1.0.0"}
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "audit_type": {"const": "privacy_and_identifiers"}
+        },
+        "required": ["audit_type"]
+      },
+      "then": {
+        "properties": {
+          "scope_reference": {
+            "type": "string",
+            "minLength": 1
+          },
+          "tool_id": {"const": "dime-privacy-audit"},
+          "tool_version": {"const": "1.0.0"}
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "audit_type": {"const": "rights"}
+        },
+        "required": ["audit_type"]
+      },
+      "then": {
+        "properties": {
+          "scope_reference": {"$ref": "#/$defs/sha256"},
+          "tool_id": {"const": "dime-rights-audit"},
+          "tool_version": {"const": "1.0.0"}
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "audit_type": {"const": "development_evaluation_contamination"}
+        },
+        "required": ["audit_type"]
+      },
+      "then": {
+        "properties": {
+          "scope_reference": {"$ref": "#/$defs/fullRevision"},
+          "tool_id": {"const": "dime-development-contamination-audit"},
+          "tool_version": {"const": "1.0.0"}
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "audit_type": {"const": "locked_evaluation_contamination"}
+        },
+        "required": ["audit_type"]
+      },
+      "then": {
+        "properties": {
+          "scope_reference": {"$ref": "#/$defs/lockedReference"},
+          "tool_id": {"const": "dime-locked-contamination-audit"},
+          "tool_version": {"const": "1.0.0"},
+          "summary": {
+            "const": "Restricted locked-evaluation audit passed; no case-level content disclosed."
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "audit_type": {"const": "numeric_traceability"}
+        },
+        "required": ["audit_type"]
+      },
+      "then": {
+        "properties": {
+          "scope_reference": {"$ref": "#/$defs/sha256"},
+          "tool_id": {"const": "dime-numeric-audit"},
+          "tool_version": {"const": "1.0.0"}
+        }
+      }
+    }
+  ],
+  "required": [
+    "schema_version",
+    "audit_type",
+    "dataset_version",
+    "train_sha256",
+    "validation_sha256",
+    "candidate_audit_sha256",
+    "scope_reference",
+    "inputs",
+    "passed",
+    "tool_id",
+    "tool_version",
+    "completed_at_utc",
+    "reviewer_ids",
+    "summary"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "dime-foundation-external-audit-v1"
+    },
+    "audit_type": {
+      "enum": [
+        "semantic_deduplication",
+        "privacy_and_identifiers",
+        "rights",
+        "development_evaluation_contamination",
+        "locked_evaluation_contamination",
+        "numeric_traceability"
+      ]
+    },
+    "dataset_version": {
+      "const": "dime-sft-foundation-v1"
+    },
+    "train_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "validation_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "candidate_audit_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "scope_reference": {
+      "type": "string",
+      "minLength": 1
+    },
+    "inputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_registry_sha256",
+        "source_artifacts_sha256",
+        "review_ledger_sha256",
+        "reviewer_registry_sha256",
+        "development_evaluation_sha256",
+        "development_eval_manifest_sha256",
+        "development_eval_identity_sha256",
+        "curriculum_config_sha256",
+        "tool_catalog_sha256",
+        "system_prompt_sha256",
+        "direct_identifier_scan_version",
+        "locked_evaluation_reference"
+      ],
+      "properties": {
+        "source_registry_sha256": {"$ref": "#/$defs/sha256"},
+        "source_artifacts_sha256": {"$ref": "#/$defs/sha256"},
+        "review_ledger_sha256": {"$ref": "#/$defs/sha256"},
+        "reviewer_registry_sha256": {"$ref": "#/$defs/sha256"},
+        "development_evaluation_sha256": {"$ref": "#/$defs/sha256"},
+        "development_eval_manifest_sha256": {"$ref": "#/$defs/sha256"},
+        "development_eval_identity_sha256": {"$ref": "#/$defs/sha256"},
+        "curriculum_config_sha256": {"$ref": "#/$defs/sha256"},
+        "tool_catalog_sha256": {"$ref": "#/$defs/sha256"},
+        "system_prompt_sha256": {"$ref": "#/$defs/sha256"},
+        "direct_identifier_scan_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "locked_evaluation_reference": {
+          "type": "string",
+          "pattern": "^(?:[0-9a-f]{40}|locked-eval-(?:approval|suite|revision):[a-z0-9][a-z0-9._-]{3,95})$"
+        }
+      }
+    },
+    "passed": {
+      "const": true
+    },
+    "tool_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "tool_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "completed_at_utc": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "reviewer_ids": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1000
+    }
+  },
+  "$defs": {
+    "fullRevision": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "lockedReference": {
+      "type": "string",
+      "pattern": "^(?:[0-9a-f]{40}|locked-eval-(?:approval|suite|revision):[a-z0-9][a-z0-9._-]{3,95})$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  }
+}

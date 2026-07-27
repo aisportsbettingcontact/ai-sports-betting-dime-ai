@@ -68,6 +68,38 @@ def attach_tool_catalog(
     return result
 
 
+def attach_canonical_system(
+    messages: Iterable[dict[str, Any]],
+    system_prompt: str,
+    tools: list[dict[str, Any]],
+    catalog_version: str = "dime-tools-v1",
+) -> list[dict[str, Any]]:
+    """Prepend the governed system prompt and catalog to a production conversation."""
+
+    result = deepcopy(list(messages))
+    if not system_prompt.strip():
+        raise ChatFormatError("Canonical system prompt must not be empty.")
+    if any(message.get("role") == "system" for message in result):
+        raise ChatFormatError(
+            "Production records cannot supply system messages; "
+            "the canonical system prompt is injected by the trainer."
+        )
+    catalog = _compact_json(tools)
+    catalog_block = (
+        f"\n\nAvailable read-only tools ({catalog_version}). "
+        "Use only these schemas; never invent a tool or field.\n"
+        f"<tools>{catalog}</tools>"
+    )
+    result.insert(
+        0,
+        {
+            "role": "system",
+            "content": system_prompt + catalog_block,
+        },
+    )
+    return result
+
+
 def _template_assistant_only(
     tokenizer: Any,
     messages: list[dict[str, Any]],

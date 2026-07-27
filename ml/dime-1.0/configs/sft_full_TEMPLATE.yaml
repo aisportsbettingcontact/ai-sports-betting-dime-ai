@@ -1,7 +1,11 @@
 # TEMPLATE ONLY. Do not run until the dataset, split, and release gates are approved.
 run:
-  name: REPLACE_ME
+  name: replace-with-unique-experiment-id
+  experiment_id: replace-with-unique-experiment-id
+  manifest: /workspace/runs/replace-with-unique-experiment-id/run_manifest.json
   mode: full
+  authorization_status: authorized_for_full_training
+  release_review_status: not_started
   seed: 1729
 
 model:
@@ -12,10 +16,35 @@ model:
   chat_template: prompts/llama3_dime_chat_template_v1.jinja
   tool_catalog: tools/tools.v1.json
 
+provenance:
+  source:
+    github_repository: aisportsbettingcontact/ai-sports-betting-dime-ai
+  datasets:
+    foundation_sft:
+      repo_id: taileredsports/dime-foundation-sft
+      revision: REPLACE_WITH_EXACT_40_CHARACTER_FOUNDATION_SHA
+    development_eval:
+      repo_id: taileredsports/dime-eval-development
+      revision: REPLACE_WITH_EXACT_40_CHARACTER_DEVELOPMENT_EVAL_SHA
+    locked_eval:
+      repo_id: taileredsports/dime-eval-locked
+      revision_or_opaque_reference: REPLACE_WITH_LOCKED_REVISION_OR_OPAQUE_REFERENCE
+  files:
+    system_prompt: prompts/dime_system_v1.md
+    chat_template: prompts/llama3_dime_chat_template_v1.jinja
+    tool_catalog: tools/tools.v1.json
+    dataset_schema: schemas/sft_record.schema.json
+    evaluation_schema: schemas/eval_case.schema.json
+    decoding_config: configs/decoding_v1.json
+    run_manifest_schema: schemas/run_manifest.schema.json
+    foundation_checksums_schema: schemas/foundation_checksums.schema.json
+
 data:
-  train: data/sft/train.APPROVED.jsonl
-  validation: data/sft/validation.APPROVED.jsonl
-  manifest: configs/dataset_manifest_APPROVED.json
+  train: /workspace/datasets/foundation-sft/REPLACE_WITH_EXACT_40_CHARACTER_FOUNDATION_SHA/foundation-v1/train.jsonl
+  validation: /workspace/datasets/foundation-sft/REPLACE_WITH_EXACT_40_CHARACTER_FOUNDATION_SHA/foundation-v1/validation.jsonl
+  manifest: /workspace/datasets/foundation-sft/REPLACE_WITH_EXACT_40_CHARACTER_FOUNDATION_SHA/foundation-v1/dataset_manifest.json
+  checksums: /workspace/datasets/foundation-sft/REPLACE_WITH_EXACT_40_CHARACTER_FOUNDATION_SHA/foundation-v1/checksums.json
+  dataset_card: /workspace/datasets/foundation-sft/REPLACE_WITH_EXACT_40_CHARACTER_FOUNDATION_SHA/foundation-v1/dataset_card.md
   curriculum: configs/curriculum_v1.yaml
   max_length: 4096
   minimum_assistant_tokens: 32
@@ -42,8 +71,8 @@ lora:
     - down_proj
 
 training:
-  output_dir: artifacts/checkpoints/REPLACE_ME
-  final_adapter_dir: artifacts/adapters/REPLACE_ME
+  output_dir: /workspace/runs/replace-with-unique-experiment-id/checkpoints
+  final_adapter_dir: /workspace/runs/replace-with-unique-experiment-id/adapters/final
   max_steps: -1
   epochs: 1
   per_device_train_batch_size: 1

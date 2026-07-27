@@ -1,15 +1,69 @@
 {
   "schema_version": "dime-release-attestation-v1",
-  "public_release_approved": false,
+  "release_review_status": "draft",
+  "private_registry_publication_approved": false,
+  "approved_for_serving": false,
   "repo_id": "taileredsports/Llama-3-Dime-1.0",
+  "repo_type": "model",
+  "expected_parent_commit": null,
+  "source": {
+    "github_repository": "aisportsbettingcontact/ai-sports-betting-dime-ai",
+    "github_commit": null,
+    "training_authorization_github_commit": null,
+    "authorization_github_commit": null,
+    "platform_contract_sha256": null
+  },
+  "datasets": {
+    "foundation_sft": {
+      "repo_id": "taileredsports/dime-foundation-sft",
+      "revision": null,
+      "dataset_manifest_sha256": null,
+      "checksums_sha256": null
+    },
+    "development_eval": {
+      "repo_id": "taileredsports/dime-eval-development",
+      "revision": null
+    },
+    "locked_eval": {
+      "repo_id": "taileredsports/dime-eval-locked",
+      "revision_or_opaque_reference": null
+    }
+  },
+  "base_model": {
+    "repo_id": "meta-llama/Llama-3.1-8B",
+    "revision": "d04e592bb4f6aa9cfee91e2e20afa771667e1d4b"
+  },
+  "experiment_id": null,
+  "evaluator_run_id": null,
   "approver": null,
   "approved_at_utc": null,
+  "provenance_hashes": {
+    "config_sha256": null,
+    "system_prompt_sha256": null,
+    "chat_template_sha256": null,
+    "tool_catalog_sha256": null,
+    "dataset_schema_sha256": null,
+    "evaluation_schema_sha256": null,
+    "decoding_config_sha256": null,
+    "runtime_contract_sha256": null,
+    "run_manifest_schema_sha256": null,
+    "foundation_checksums_schema_sha256": null,
+    "foundation_dataset_manifest_sha256": null,
+    "foundation_checksums_sha256": null,
+    "run_manifest_sha256": null
+  },
+  "bundle_payload_sha256": null,
   "adapter_model_sha256": null,
+  "adapter_config_sha256": null,
   "training_manifest_sha256": null,
   "model_card_sha256": null,
   "evaluation_report_sha256": null,
-  "chat_template_sha256": null,
   "approvals": {
+    "platform_publication_authorized": false,
+    "provenance_reviewed": false,
+    "release_contract_reviewed": false,
+    "evaluation_complete": false,
+    "locked_evaluation_reviewed": false,
     "base_model_license_reviewed": false,
     "adapter_license_reviewed": false,
     "code_license_reviewed": false,
@@ -18,7 +72,8 @@
     "feed_rights_reviewed": false,
     "privacy_reviewed": false,
     "responsible_gaming_reviewed": false,
-    "security_reviewed": false
+    "security_reviewed": false,
+    "serving_reviewed": false
   },
-  "notes": "Bind this approval to the exact hashes only after all reviews pass."
+  "notes": "Template only. Set release_review_status to approved_for_release_review and private_registry_publication_approved to true only for the existing private Hugging Face repository; this field never authorizes public visibility. Fill every identity, SHA, hash, approval, approver, and UTC timestamp only after all release gates pass. source.github_commit is training source S; source.training_authorization_github_commit is training authorization A; source.authorization_github_commit is the later, distinct clean release-authorization commit R containing the candidate-bound canonical platform contract. The attestation cannot include its own hash or the resulting Hugging Face commit SHA; both and post-upload verification belong in the separate publication receipt."
 }

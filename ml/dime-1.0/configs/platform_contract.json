@@ -1,0 +1,195 @@
+{
+  "schema_version": "dime-platform-contract-v1",
+  "status": "foundation_only",
+  "lifecycle": {
+    "allowed_statuses": [
+      "foundation_only",
+      "training_authorized",
+      "evaluation_authorized",
+      "release_authorized",
+      "serving_authorized"
+    ],
+    "repository_states": [
+      "governance_scaffold_only",
+      "release_authorized",
+      "approved_release"
+    ]
+  },
+  "authorization": {
+    "full_training": false,
+    "locked_evaluation": false,
+    "adapter_publication": false,
+    "serving": false,
+    "provider_activation": false,
+    "training_candidate": null,
+    "release_candidate": null
+  },
+  "github": {
+    "repository": "aisportsbettingcontact/ai-sports-betting-dime-ai",
+    "project_path": "ml/dime-1.0"
+  },
+  "base_model": {
+    "repo_type": "model",
+    "repo_id": "meta-llama/Llama-3.1-8B",
+    "revision": "d04e592bb4f6aa9cfee91e2e20afa771667e1d4b"
+  },
+  "hugging_face": {
+    "repositories": {
+      "foundation_sft": {
+        "repo_type": "dataset",
+        "repo_id": "taileredsports/dime-foundation-sft",
+        "current_governance_head": "af9a45fb7835df01585c859c628e1dbc9e372356",
+        "current_state": "governance_scaffold_only",
+        "approved_release_revision": null
+      },
+      "development_eval": {
+        "repo_type": "dataset",
+        "repo_id": "taileredsports/dime-eval-development",
+        "current_governance_head": "5b75491b4fc3d3b22e270510f7cba767d01ec363",
+        "current_state": "governance_scaffold_only",
+        "approved_release_revision": null
+      },
+      "locked_eval": {
+        "repo_type": "dataset",
+        "repo_id": "taileredsports/dime-eval-locked",
+        "current_governance_head": "4ad747fd76d3f54b54ef7d3b5ebc36ccbe7fd8d1",
+        "current_state": "governance_scaffold_only",
+        "approved_release_revision": null
+      },
+      "promoted_adapter": {
+        "repo_type": "model",
+        "repo_id": "taileredsports/Llama-3-Dime-1.0",
+        "current_governance_head": "298c735fa2b32e3f63b19a1b18c4f4f901933e3e",
+        "current_state": "governance_scaffold_only",
+        "approved_release_revision": null
+      }
+    },
+    "credentials": {
+      "dime-training-read-v1": {
+        "read": [
+          "foundation_sft",
+          "development_eval",
+          "promoted_adapter"
+        ],
+        "write": [],
+        "gated_public_read": true
+      },
+      "dime-serving-read-v1": {
+        "read": [
+          "promoted_adapter"
+        ],
+        "write": [],
+        "gated_public_read": true
+      },
+      "dime-release-publisher-v1": {
+        "read": [
+          "foundation_sft",
+          "development_eval",
+          "promoted_adapter"
+        ],
+        "write": [
+          "foundation_sft",
+          "development_eval",
+          "promoted_adapter"
+        ],
+        "gated_public_read": false
+      },
+      "dime-locked-evaluator-read-v1": {
+        "read": [
+          "locked_eval",
+          "promoted_adapter"
+        ],
+        "write": [],
+        "gated_public_read": true
+      },
+      "dime-locked-publisher-v1": {
+        "read": [
+          "locked_eval"
+        ],
+        "write": [
+          "locked_eval"
+        ],
+        "gated_public_read": false
+      }
+    },
+    "adapter_publication": {
+      "publisher_credential": "dime-release-publisher-v1",
+      "post_upload_verifier_credential": "dime-serving-read-v1",
+      "separate_token_values_required": true,
+      "verification_revision": "returned_full_commit_sha"
+    }
+  },
+  "runpod": {
+    "template_name": "dime-llama31-8b-training-v1",
+    "container_image": "runpod/pytorch:1.0.2-cu1281-torch280-ubuntu2404",
+    "minimum_gpu": "NVIDIA GeForce RTX 4090 24GB",
+    "persistent_root": "/workspace",
+    "repository_checkout": "/workspace/repos/ai-sports-betting-dime-ai",
+    "foundation_dataset_root": "/workspace/datasets/foundation-sft",
+    "development_eval_root": "/workspace/datasets/eval-development",
+    "runs_root": "/workspace/runs",
+    "archive_root": "/workspace/archive",
+    "hugging_face_cache": "/workspace/.cache/huggingface",
+    "pip_cache": "/workspace/.cache/pip",
+    "disposable_venv": "/opt/dime-venv",
+    "required_run_entries": [
+      "checkpoints",
+      "adapters",
+      "logs",
+      "reports",
+      "run_manifest.json"
+    ],
+    "credential": "dime-training-read-v1",
+    "prohibited_credentials": [
+      "dime-serving-read-v1",
+      "dime-release-publisher-v1",
+      "dime-locked-evaluator-read-v1",
+      "dime-locked-publisher-v1"
+    ],
+    "locked_evaluation_path": null
+  },
+  "release_identity": {
+    "authoritative_revision": "full_40_character_commit_sha",
+    "tags_are": "human_readable_aliases_only",
+    "movable_revisions_prohibited": [
+      "main",
+      "latest"
+    ]
+  },
+  "model_repository": {
+    "policy": "promoted_peft_adapter_releases_only",
+    "rehearsal_status": "REHEARSAL — NOT APPROVED FOR SERVING",
+    "required_files": [
+      "LICENSE",
+      "NOTICE",
+      "README.md",
+      "adapter_config.json",
+      "adapter_model.safetensors",
+      "chat_template.jinja",
+      "checksums.sha256",
+      "evaluation_summary.json",
+      "generation_config.json",
+      "release_attestation.json",
+      "training_manifest.json"
+    ],
+    "optional_files": [
+      "added_tokens.json",
+      "special_tokens_map.json",
+      "tokenizer.json",
+      "tokenizer_config.json"
+    ],
+    "remote_metadata_files": [
+      ".gitattributes"
+    ],
+    "prohibited_artifacts": [
+      "meta_base_model_weights",
+      "merged_full_model_weights",
+      "quantized_full_model_weights",
+      "training_checkpoints",
+      "optimizer_or_scheduler_state",
+      "raw_training_or_evaluation_data",
+      "whole_workspaces",
+      "deployment_bundles"
+    ]
+  }
+}
