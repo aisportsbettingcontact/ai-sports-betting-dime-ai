@@ -1,0 +1,287 @@
+schema_version: dime-foundation-taxonomy-v1
+contract_version: dime-foundation-taxonomy-v1.0.0
+status: proposed
+dataset_version: dime-sft-foundation-v1
+unresolved_decisions:
+  - foundation_skill_ids
+  - foundation_synthetic_provider_ids
+  - evaluation_task_types
+  - evaluation_data_quality_conditions
+  - task_family_to_skill_mapping
+  - curriculum_to_evaluation_family_mapping
+  - foundation_screen_to_evaluation_family_mapping
+market_catalog:
+  path: tools/market_keys.v1.json
+  version: 1.0.0
+  sha256: 6be980c94117bdb4ad0f4930d254b89b63a90af6bd93d58891457d85ed2f5481
+authorization_effect:
+  scope: governance_validation_only
+  creates_data: false
+  approves_data: false
+  authorizes_gpu_execution: false
+  authorizes_training: false
+  authorizes_locked_evaluation: false
+  authorizes_publication: false
+  authorizes_release: false
+  authorizes_serving: false
+  authorizes_provider_activation: false
+purpose: governance_and_validation_metadata_only
+vocabularies:
+  task_families:
+    - conversation_epistemics
+    - tool_selection_arguments
+    - tool_grounding_failures
+    - market_math
+    - odds_movement_splits
+    - matchup_trends_projections
+    - bet_tracker_coaching
+    - simulation_analysis
+    - safety_privacy_security
+  interaction_modes:
+    - successful_tool_assisted
+    - degraded_tool_assisted
+    - direct_no_tool
+    - clarification
+    - abstention
+    - protective_response
+  difficulties:
+    - foundation
+    - intermediate
+    - hard
+    - adversarial
+  evidence_statuses:
+    - complete
+    - partial
+    - stale
+    - conflicting
+    - missing
+    - unauthorized
+    - blocked
+    - error
+    - not_applicable
+  policy_actions:
+    - allow
+    - clarify
+    - abstain
+    - partial
+    - privacy_block
+    - age_block
+    - jurisdiction_block
+    - self_exclusion_block
+    - protective_block
+    - acute_distress_block
+    - not_applicable
+  risk_tiers:
+    - standard
+    - high
+    - critical
+  answer_lengths:
+    - concise
+    - normal
+    - detailed
+  market_math_operations:
+    - implied_probability
+    - remove_vig
+    - market_hold
+    - expected_value
+    - settled_profit
+    - roi
+    - probability_clv
+  numeric_units:
+    - probability
+    - percentage_points
+    - decimal_odds
+    - american_odds
+    - units
+    - roi
+    - count
+  numeric_comparators:
+    - exact
+    - approximate
+  numeric_evidence_classes:
+    - tool_result
+    - user_input
+    - policy_constant
+    - deterministic_derivation
+  safety_subfamilies:
+    - responsible_gaming
+    - privacy
+    - security
+    - eligibility
+    - acute_distress
+    - not_applicable
+  sports:
+    - american_football
+    - baseball
+    - basketball
+    - ice_hockey
+    - soccer
+  leagues:
+    - nfl
+    - mlb
+    - nba
+    - wnba
+    - nhl
+    - ncaaf
+    - ncaab
+    - epl
+  tool_statuses:
+    - ok
+    - partial
+    - not_found
+    - stale
+    - unauthorized
+    - blocked_by_policy
+    - error
+  evaluation_splits:
+    - dev
+    - validation
+    - locked
+    - hidden
+    - red_team
+  evaluation_suites:
+    - standard
+    - safety
+    - privacy
+    - red_team
+    - operations
+  severities:
+    - low
+    - medium
+    - high
+    - critical
+  evaluation_risk_states:
+    - normal
+    - elevated
+    - blocked
+  market_phases:
+    - pregame
+    - live
+    - general
+  standard_evaluation_program_families:
+    - market_math
+    - odds_history_splits
+    - matchup_game_live
+    - simulation_projections
+    - bet_tracker_coaching
+    - degraded_data_abstention
+    - privacy_authorization
+    - responsible_gaming_eligibility
+    - general_multiturn_communication
+  red_team_program_families:
+    - prompt_tool_injection_and_secret_extraction
+    - cross_tenant_history_pii_exfiltration
+    - eligibility_and_self_exclusion_bypass
+    - chasing_borrowing_escalation_guarantees
+    - acute_distress_or_self_harm
+    - future_data_poisoning_fake_fixtures
+    - malformed_forbidden_or_write_tools
+    - obfuscation_roleplay_history_conflict
+  review_decisions:
+    - approve
+    - changes_requested
+    - reject
+  external_audit_types:
+    - semantic_deduplication
+    - privacy_and_identifiers
+    - rights
+    - development_evaluation_contamination
+    - locked_evaluation_contamination
+    - numeric_traceability
+aliases:
+  sports:
+    american_football:
+      - american_football
+      - gridiron
+    baseball:
+      - baseball
+    basketball:
+      - basketball
+    ice_hockey:
+      - ice_hockey
+      - hockey
+    soccer:
+      - soccer
+      - association_football
+  leagues:
+    nfl:
+      - nfl
+      - national_football_league
+    mlb:
+      - mlb
+      - major_league_baseball
+    nba:
+      - nba
+      - national_basketball_association
+    wnba:
+      - wnba
+      - womens_national_basketball_association
+    nhl:
+      - nhl
+      - national_hockey_league
+    ncaaf:
+      - ncaaf
+      - college_football
+    ncaab:
+      - ncaab
+      - college_basketball
+    epl:
+      - epl
+      - english_premier_league
+      - premier_league
+relationships:
+  league_to_sport:
+    nfl: american_football
+    ncaaf: american_football
+    mlb: baseball
+    nba: basketball
+    wnba: basketball
+    ncaab: basketball
+    nhl: ice_hockey
+    epl: soccer
+  market_type_required_task_families:
+    - odds_movement_splits
+    - matchup_trends_projections
+  provider_ids_required_tools:
+    - get_game_context
+    - get_current_odds
+    - get_odds_history
+    - get_market_splits
+  nullable_when_not_applicable:
+    - market_math_operation
+    - safety_subfamily
+registered_tools:
+  - get_game_context
+  - get_current_odds
+  - get_odds_history
+  - get_market_splits
+  - calculate_market_math
+  - get_bet_tracker_summary
+  - run_simulation
+reviewer_roles:
+  - domain
+  - numeric
+  - coaching
+  - simulation
+  - safety
+  - privacy
+  - rights
+  - semantic-audit
+  - evaluation-audit
+  - locked-evaluation
+  - dataset-approver
+source_classes:
+  recognized:
+    - human-authored
+    - synthetic
+    - teacher-generated
+    - provider-derived
+    - user-derived
+  foundation_allowed:
+    - human-authored
+    - synthetic
+matched_control_locator_types:
+  - message_text_span
+  - tool_result_json_pointer
+legacy_labels:
+  red_team_exposure_split: retained_legacy_label_while_red_team_transitions_to_suite

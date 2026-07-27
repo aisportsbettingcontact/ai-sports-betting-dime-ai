@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dime.local/schemas/tool_responses/get_bet_tracker_summary.data.schema.json",
+  "title": "get_bet_tracker_summary data v1",
+  "oneOf": [
+    {"type": "object", "additionalProperties": false, "maxProperties": 0},
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "subject_scope",
+        "filters",
+        "coverage",
+        "bet_count",
+        "aggregates",
+        "sample_size_disclosure"
+      ],
+      "properties": {
+        "subject_scope": {"const": "self"},
+        "filters": {
+          "type": "object",
+          "additionalProperties": false,
+          "maxProperties": 6,
+          "properties": {
+            "sport": {"type": "string", "maxLength": 64},
+            "league": {"type": "string", "maxLength": 32},
+            "market_type": {"enum": ["moneyline", "spread", "total"]},
+            "bet_timing": {"enum": ["pregame", "live"]},
+            "from_utc": {"$ref": "#/$defs/utcTimestamp"},
+            "to_utc": {"$ref": "#/$defs/utcTimestamp"}
+          }
+        },
+        "coverage": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["from_utc", "to_utc"],
+          "properties": {
+            "from_utc": {"oneOf": [{"$ref": "#/$defs/utcTimestamp"}, {"type": "null"}]},
+            "to_utc": {"oneOf": [{"$ref": "#/$defs/utcTimestamp"}, {"type": "null"}]}
+          }
+        },
+        "bet_count": {"type": "integer", "minimum": 1, "maximum": 100000000},
+        "aggregates": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "stake_units",
+            "profit_units",
+            "roi",
+            "mean_probability_clv",
+            "max_drawdown_units"
+          ],
+          "properties": {
+            "stake_units": {"$ref": "#/$defs/decimal"},
+            "profit_units": {"$ref": "#/$defs/decimal"},
+            "roi": {"$ref": "#/$defs/decimal"},
+            "mean_probability_clv": {"oneOf": [{"$ref": "#/$defs/decimal"}, {"type": "null"}]},
+            "max_drawdown_units": {"oneOf": [{"$ref": "#/$defs/decimal"}, {"type": "null"}]}
+          }
+        },
+        "sample_size_disclosure": {"type": "string", "minLength": 1, "maxLength": 256}
+      }
+    }
+  ],
+  "$defs": {
+    "decimal": {"type": "string", "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$"},
+    "utcTimestamp": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"}
+  }
+}

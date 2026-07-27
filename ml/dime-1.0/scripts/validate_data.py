@@ -16,6 +16,7 @@ from dime_ai.data_validation import (
     validate_sft_record,
     validate_unique_ids,
 )
+from dime_ai.foundation_contracts import load_foundation_contracts
 
 
 def parse_args() -> argparse.Namespace:
@@ -25,7 +26,13 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> None:
-    project = parse_args().project_dir.resolve()
+    supplied_project = parse_args().project_dir
+    foundation_contracts = load_foundation_contracts(project_root=supplied_project)
+    project = supplied_project.absolute().resolve(strict=True)
+    print(f"Foundation contracts: {len(foundation_contracts.contracts)}")
+    print(f"Foundation contract bundle SHA-256: {foundation_contracts.bundle_sha256}")
+    print("FOUNDATION CONTRACTS VALIDATED")
+
     train_path = project / "data/sft/train.sample.jsonl"
     validation_path = project / "data/sft/validation.sample.jsonl"
     eval_paths = sorted((project / "data/eval").glob("*.jsonl"))

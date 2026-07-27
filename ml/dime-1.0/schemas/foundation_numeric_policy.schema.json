@@ -1,0 +1,278 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dime.local/schemas/foundation_numeric_policy.schema.json",
+  "title": "Dime Foundation Numeric Policy v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "contract_version",
+    "status",
+    "dataset_version",
+    "unresolved_decisions",
+    "authorization_effect",
+    "purpose",
+    "invariants",
+    "evidence_classes",
+    "tolerances",
+    "market_math",
+    "presentation"
+  ],
+  "properties": {
+    "schema_version": {"const": "dime-foundation-numeric-policy-v1"},
+    "contract_version": {"const": "dime-foundation-numeric-policy-v1.0.0"},
+    "status": {"const": "proposed"},
+    "dataset_version": {"const": "dime-sft-foundation-v1"},
+    "unresolved_decisions": {"type": "array", "maxItems": 0},
+    "authorization_effect": {"$ref": "#/$defs/authorizationEffect"},
+    "purpose": {"const": "governance_and_validation_metadata_only"},
+    "invariants": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "bind_all_assistant_numeric_tokens",
+        "allow_unbound_literals",
+        "allow_ambiguous_bindings",
+        "require_reviewed_assertions",
+        "require_exact_assistant_message_index",
+        "require_exact_claim_span"
+      ],
+      "properties": {
+        "bind_all_assistant_numeric_tokens": {"const": true},
+        "allow_unbound_literals": {"const": false},
+        "allow_ambiguous_bindings": {"const": false},
+        "require_reviewed_assertions": {"const": true},
+        "require_exact_assistant_message_index": {"const": true},
+        "require_exact_claim_span": {"const": true}
+      }
+    },
+    "evidence_classes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tool_result",
+        "user_input",
+        "policy_constant",
+        "deterministic_derivation"
+      ],
+      "properties": {
+        "tool_result": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "implementation_status",
+            "linked_assistant_tool_call_required",
+            "exactly_one_matching_tool_result_required",
+            "verified_status",
+            "exact_numeric_leaf_path_required",
+            "source_ids_required_for_source_dependent_tools",
+            "rejected_statuses"
+          ],
+          "properties": {
+            "implementation_status": {"const": "implemented"},
+            "linked_assistant_tool_call_required": {"const": true},
+            "exactly_one_matching_tool_result_required": {"const": true},
+            "verified_status": {"const": "ok"},
+            "exact_numeric_leaf_path_required": {"const": true},
+            "source_ids_required_for_source_dependent_tools": {"const": true},
+            "rejected_statuses": {
+              "const": [
+                "partial",
+                "stale",
+                "unauthorized",
+                "blocked_by_policy",
+                "not_found",
+                "error"
+              ]
+            }
+          }
+        },
+        "user_input": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "implementation_status",
+            "exact_user_message_index_required",
+            "exact_text_span_required",
+            "recorded_displayed_value_required",
+            "user_supplied_label_required",
+            "independent_verification_claim_allowed"
+          ],
+          "properties": {
+            "implementation_status": {"const": "proposed"},
+            "exact_user_message_index_required": {"const": true},
+            "exact_text_span_required": {"const": true},
+            "recorded_displayed_value_required": {"const": true},
+            "user_supplied_label_required": {"const": true},
+            "independent_verification_claim_allowed": {"const": false}
+          }
+        },
+        "policy_constant": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "implementation_status",
+            "versioned_public_policy_source_id_required",
+            "exact_source_sha256_required",
+            "exact_json_pointer_required",
+            "value_and_unit_required",
+            "effective_start_required",
+            "effective_end_or_open_ended_required",
+            "effective_at_record_as_of_required"
+          ],
+          "properties": {
+            "implementation_status": {"const": "proposed"},
+            "versioned_public_policy_source_id_required": {"const": true},
+            "exact_source_sha256_required": {"const": true},
+            "exact_json_pointer_required": {"const": true},
+            "value_and_unit_required": {"const": true},
+            "effective_start_required": {"const": true},
+            "effective_end_or_open_ended_required": {"const": true},
+            "effective_at_record_as_of_required": {"const": true}
+          }
+        },
+        "deterministic_derivation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "implementation_status",
+            "registered_operation_required",
+            "exact_bound_input_assertions_required",
+            "declared_output_unit_required",
+            "independent_recomputation_required",
+            "arbitrary_or_unnamed_calculation_allowed"
+          ],
+          "properties": {
+            "implementation_status": {"const": "proposed"},
+            "registered_operation_required": {"const": true},
+            "exact_bound_input_assertions_required": {"const": true},
+            "declared_output_unit_required": {"const": true},
+            "independent_recomputation_required": {"const": true},
+            "arbitrary_or_unnamed_calculation_allowed": {"const": false}
+          }
+        }
+      }
+    },
+    "tolerances": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "probability",
+        "percentage_points",
+        "decimal_odds",
+        "american_odds",
+        "units",
+        "roi",
+        "count"
+      ],
+      "properties": {
+        "probability": {"const": 0.000000001},
+        "percentage_points": {"const": 0.000001},
+        "decimal_odds": {"const": 0.000000001},
+        "american_odds": {"const": 0},
+        "units": {"const": 0.000001},
+        "roi": {"const": 0.000000001},
+        "count": {"const": 0}
+      }
+    },
+    "market_math": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "operations",
+        "independent_recomputation_required",
+        "decimal_precision",
+        "internal_presentation_rounding_allowed",
+        "non_finite_values_allowed",
+        "boolean_values_are_numbers",
+        "american_odds_valid_ranges",
+        "decimal_odds_exclusive_minimum",
+        "roi_arrays_nonempty",
+        "roi_arrays_equal_length",
+        "aggregate_roi_positive_stake_required",
+        "clv_matching_selections_required",
+        "clv_backed_selection_required",
+        "recomputation_tolerance"
+      ],
+      "properties": {
+        "operations": {
+          "const": [
+            "implied_probability",
+            "remove_vig",
+            "market_hold",
+            "expected_value",
+            "settled_profit",
+            "roi",
+            "probability_clv"
+          ]
+        },
+        "independent_recomputation_required": {"const": true},
+        "decimal_precision": {"const": 80},
+        "internal_presentation_rounding_allowed": {"const": false},
+        "non_finite_values_allowed": {"const": false},
+        "boolean_values_are_numbers": {"const": false},
+        "american_odds_valid_ranges": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["maximum_negative", "minimum_positive", "integers_only"],
+          "properties": {
+            "maximum_negative": {"const": -100},
+            "minimum_positive": {"const": 100},
+            "integers_only": {"const": true}
+          }
+        },
+        "decimal_odds_exclusive_minimum": {"const": 1},
+        "roi_arrays_nonempty": {"const": true},
+        "roi_arrays_equal_length": {"const": true},
+        "aggregate_roi_positive_stake_required": {"const": true},
+        "clv_matching_selections_required": {"const": true},
+        "clv_backed_selection_required": {"const": true},
+        "recomputation_tolerance": {"const": 0.000000001}
+      }
+    },
+    "presentation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "global_precision_defined",
+        "global_rounding_mode_defined",
+        "record_or_application_specific"
+      ],
+      "properties": {
+        "global_precision_defined": {"const": false},
+        "global_rounding_mode_defined": {"const": false},
+        "record_or_application_specific": {"const": true}
+      }
+    }
+  },
+  "$defs": {
+    "authorizationEffect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scope",
+        "creates_data",
+        "approves_data",
+        "authorizes_gpu_execution",
+        "authorizes_training",
+        "authorizes_locked_evaluation",
+        "authorizes_publication",
+        "authorizes_release",
+        "authorizes_serving",
+        "authorizes_provider_activation"
+      ],
+      "properties": {
+        "scope": {"const": "governance_validation_only"},
+        "creates_data": {"const": false},
+        "approves_data": {"const": false},
+        "authorizes_gpu_execution": {"const": false},
+        "authorizes_training": {"const": false},
+        "authorizes_locked_evaluation": {"const": false},
+        "authorizes_publication": {"const": false},
+        "authorizes_release": {"const": false},
+        "authorizes_serving": {"const": false},
+        "authorizes_provider_activation": {"const": false}
+      }
+    }
+  }
+}

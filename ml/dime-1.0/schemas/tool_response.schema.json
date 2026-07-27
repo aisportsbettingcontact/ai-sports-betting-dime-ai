@@ -1,17 +1,39 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "Dime Tool Response Envelope",
+  "$id": "https://dime.local/schemas/tool_response.schema.json",
+  "title": "Dime Tool Response Envelope v1",
   "type": "object",
   "additionalProperties": false,
   "required": [
+    "schema_version",
+    "tool_name",
+    "tool_version",
+    "tool_call_id",
     "status",
     "as_of_utc",
+    "valid_until_utc",
     "source_ids",
+    "source_scope",
     "data",
     "quality_flags",
-    "warnings"
+    "warnings",
+    "trace_id"
   ],
   "properties": {
+    "schema_version": {"const": "dime-tool-response-v1"},
+    "tool_name": {
+      "enum": [
+        "get_game_context",
+        "get_current_odds",
+        "get_odds_history",
+        "get_market_splits",
+        "calculate_market_math",
+        "get_bet_tracker_summary",
+        "run_simulation"
+      ]
+    },
+    "tool_version": {"const": "1.0.0"},
+    "tool_call_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"},
     "status": {
       "enum": [
         "ok",
@@ -23,10 +45,171 @@
         "error"
       ]
     },
-    "as_of_utc": {"type": "string", "format": "date-time"},
-    "source_ids": {"type": "array", "items": {"type": "string"}},
-    "data": {"type": "object"},
-    "quality_flags": {"type": "array", "items": {"type": "string"}},
-    "warnings": {"type": "array", "items": {"type": "string"}}
+    "as_of_utc": {"$ref": "#/$defs/utcTimestamp"},
+    "valid_until_utc": {
+      "oneOf": [{"$ref": "#/$defs/utcTimestamp"}, {"type": "null"}]
+    },
+    "source_ids": {
+      "type": "array",
+      "maxItems": 64,
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1, "maxLength": 128}
+    },
+    "source_scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scope_type", "provider_universe", "coverage"],
+      "properties": {
+        "scope_type": {
+          "enum": ["deterministic", "provider_scoped", "authorized_private_aggregate"]
+        },
+        "provider_universe": {
+          "type": "array",
+          "maxItems": 32,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1, "maxLength": 64}
+        },
+        "coverage": {"type": "string", "minLength": 1, "maxLength": 256}
+      }
+    },
+    "data": {"type": "object", "maxProperties": 32},
+    "quality_flags": {
+      "type": "array",
+      "maxItems": 32,
+      "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^[a-z][a-z0-9_]{0,63}$"}
+    },
+    "warnings": {
+      "type": "array",
+      "maxItems": 16,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "current_quote_unavailable",
+          "stale_pregame_quote"
+        ]
+      }
+    },
+    "trace_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"status": {"const": "ok"}}},
+      "then": {"properties": {"data": {"minProperties": 1}}}
+    },
+    {
+      "if": {"properties": {"status": {"const": "partial"}}},
+      "then": {
+        "properties": {
+          "data": {"minProperties": 1},
+          "quality_flags": {"contains": {"const": "partial"}}
+        }
+      }
+    },
+    {
+      "if": {"properties": {"status": {"const": "stale"}}},
+      "then": {
+        "properties": {
+          "data": {"minProperties": 1},
+          "valid_until_utc": {"$ref": "#/$defs/utcTimestamp"},
+          "quality_flags": {"contains": {"const": "stale"}}
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "enum": ["not_found", "unauthorized", "blocked_by_policy", "error"]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "data": {"maxProperties": 0},
+          "valid_until_utc": {"type": "null"}
+        }
+      }
+    },
+    {
+      "if": {
+        "required": ["tool_name"],
+        "properties": {
+          "tool_name": {"not": {"const": "get_current_odds"}}
+        }
+      },
+      "then": {
+        "properties": {
+          "warnings": {"maxItems": 0}
+        }
+      }
+    },
+    {
+      "if": {
+        "required": ["tool_name", "status"],
+        "properties": {
+          "tool_name": {"const": "get_current_odds"},
+          "status": {
+            "enum": ["ok", "unauthorized", "blocked_by_policy", "error"]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "warnings": {"maxItems": 0}
+        }
+      }
+    },
+    {
+      "if": {
+        "required": ["tool_name", "status"],
+        "properties": {
+          "tool_name": {"const": "get_current_odds"},
+          "status": {"const": "not_found"}
+        }
+      },
+      "then": {
+        "properties": {
+          "warnings": {"const": ["current_quote_unavailable"]}
+        }
+      }
+    },
+    {
+      "if": {
+        "required": ["tool_name", "status"],
+        "properties": {
+          "tool_name": {"const": "get_current_odds"},
+          "status": {"const": "stale"}
+        }
+      },
+      "then": {
+        "properties": {
+          "warnings": {"const": ["stale_pregame_quote"]}
+        }
+      }
+    },
+    {
+      "if": {
+        "required": ["tool_name", "status"],
+        "properties": {
+          "tool_name": {"const": "get_current_odds"},
+          "status": {"const": "partial"}
+        }
+      },
+      "then": {
+        "properties": {
+          "warnings": {
+            "maxItems": 1,
+            "items": {"const": "stale_pregame_quote"}
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "utcTimestamp": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    }
   }
 }

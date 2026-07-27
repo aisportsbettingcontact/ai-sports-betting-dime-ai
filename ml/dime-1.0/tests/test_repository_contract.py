@@ -1,8 +1,14 @@
 import hashlib
 import json
 import re
+import subprocess
+import sys
 from pathlib import Path, PurePosixPath
 
+import yaml
+from jsonschema import Draft202012Validator
+
+from dime_ai.foundation_contracts import load_foundation_contracts
 from dime_ai.release_contract import (
     OPTIONAL_FILES,
     REMOTE_METADATA_FILES,
@@ -51,6 +57,19 @@ ACCESS_MATRIX = {
         "write": ["locked_eval"],
         "gated_public_read": False,
     },
+}
+
+FOUNDATION_CONTRACT_PATHS = {
+    "configs/foundation_taxonomy_v1.yaml",
+    "configs/foundation_stage_profiles_v1.yaml",
+    "configs/foundation_numeric_policy_v1.yaml",
+    "configs/foundation_separation_of_duties_v1.yaml",
+    "schemas/foundation_taxonomy.schema.json",
+    "schemas/foundation_stage_profiles.schema.json",
+    "schemas/foundation_numeric_policy.schema.json",
+    "schemas/foundation_separation_of_duties.schema.json",
+    "schemas/foundation_build.schema.json",
+    "src/dime_ai/foundation_contracts.py",
 }
 
 
@@ -333,3 +352,124 @@ def test_sanitized_infrastructure_evidence_is_integral_and_non_release() -> None
     recorded_digest, recorded_name = checksum_line.split(maxsplit=1)
     assert recorded_name == "setup-summary.json"
     assert recorded_digest == hashlib.sha256(summary_path.read_bytes()).hexdigest()
+
+
+def test_foundation_contract_bundle_inventory_registry_and_authorization_are_exact() -> None:
+    assert all((PROJECT / path).is_file() for path in FOUNDATION_CONTRACT_PATHS)
+    build = yaml.safe_load(
+        (PROJECT / "configs/foundation_v1_build.yaml").read_text(encoding="utf-8")
+    )
+    assert build["schema_version"] == "dime-foundation-build-v2"
+    assert build["contract_registry"] == {
+        "schema_version": "dime-foundation-contract-registry-v1",
+        "contracts": {
+            "taxonomy": {
+                "config_path": "configs/foundation_taxonomy_v1.yaml",
+                "schema_path": "schemas/foundation_taxonomy.schema.json",
+                "schema_version": "dime-foundation-taxonomy-v1",
+            },
+            "stage_profiles": {
+                "config_path": "configs/foundation_stage_profiles_v1.yaml",
+                "schema_path": "schemas/foundation_stage_profiles.schema.json",
+                "schema_version": "dime-foundation-stage-profiles-v1",
+            },
+            "numeric_policy": {
+                "config_path": "configs/foundation_numeric_policy_v1.yaml",
+                "schema_path": "schemas/foundation_numeric_policy.schema.json",
+                "schema_version": "dime-foundation-numeric-policy-v1",
+            },
+            "separation_of_duties": {
+                "config_path": "configs/foundation_separation_of_duties_v1.yaml",
+                "schema_path": "schemas/foundation_separation_of_duties.schema.json",
+                "schema_version": "dime-foundation-separation-of-duties-v1",
+            },
+        },
+    }
+
+    bundle = load_foundation_contracts()
+    assert len(bundle.contracts) == 4
+    for contract in bundle.contracts.values():
+        assert contract.document["status"] == "proposed"
+        assert contract.document["authorization_effect"]["scope"] == ("governance_validation_only")
+        assert not any(
+            value
+            for key, value in contract.document["authorization_effect"].items()
+            if key != "scope"
+        )
+
+
+def test_foundation_contract_schemas_are_draft_2020_12_and_local_only() -> None:
+    schema_paths = [
+        PROJECT / "schemas/foundation_build.schema.json",
+        PROJECT / "schemas/foundation_taxonomy.schema.json",
+        PROJECT / "schemas/foundation_stage_profiles.schema.json",
+        PROJECT / "schemas/foundation_numeric_policy.schema.json",
+        PROJECT / "schemas/foundation_separation_of_duties.schema.json",
+    ]
+    for path in schema_paths:
+        schema = json.loads(path.read_text(encoding="utf-8"))
+        assert schema["$schema"] == "https://json-schema.org/draft/2020-12/schema"
+        Draft202012Validator.check_schema(schema)
+        for value in walk_json_values(schema):
+            if isinstance(value, str) and value.startswith(("#", "http://", "https://")):
+                if value.startswith("#"):
+                    continue
+                assert value in {
+                    "https://json-schema.org/draft/2020-12/schema",
+                    schema.get("$id"),
+                }
+
+
+def test_platform_remains_foundation_only_and_operationally_blocked() -> None:
+    platform = load_platform_contract()
+    assert platform["status"] == "foundation_only"
+    assert platform["authorization"] == {
+        "full_training": False,
+        "locked_evaluation": False,
+        "adapter_publication": False,
+        "serving": False,
+        "provider_activation": False,
+        "training_candidate": None,
+        "release_candidate": None,
+    }
+
+
+def test_public_validation_loads_foundation_bundle_before_success() -> None:
+    result = subprocess.run(
+        [sys.executable, "scripts/validate_data.py"],
+        cwd=PROJECT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    lines = result.stdout.splitlines()
+    assert lines[0] == "Foundation contracts: 4"
+    assert re.fullmatch(
+        r"Foundation contract bundle SHA-256: [0-9a-f]{64}",
+        lines[1],
+    )
+    assert lines[2] == "FOUNDATION CONTRACTS VALIDATED"
+    assert lines[-1] == "DATA VALIDATION PASSED"
+
+
+def test_public_validation_rejects_symlinked_project_dir(tmp_path: Path) -> None:
+    project_alias = tmp_path / "project-alias"
+    project_alias.symlink_to(PROJECT, target_is_directory=True)
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "scripts/validate_data.py",
+            "--project-dir",
+            str(project_alias),
+        ],
+        cwd=PROJECT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    output = result.stdout + result.stderr
+    assert result.returncode != 0
+    assert "project_root: symlink paths are not allowed" in output
+    assert str(project_alias) not in output
+    assert "DATA VALIDATION PASSED" not in output

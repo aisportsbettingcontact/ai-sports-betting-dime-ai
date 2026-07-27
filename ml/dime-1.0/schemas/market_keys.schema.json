@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dime.local/schemas/market_keys.schema.json",
+  "title": "Dime canonical market-key catalog v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "catalog_version",
+    "status",
+    "authorization_effect",
+    "identity_fields",
+    "normalization",
+    "markets",
+    "deferred_market_families"
+  ],
+  "properties": {
+    "schema_version": {"const": "dime-market-key-catalog-v1"},
+    "catalog_version": {"const": "1.0.0"},
+    "status": {"const": "proposed"},
+    "authorization_effect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "authorizes_training",
+        "authorizes_locked_evaluation",
+        "authorizes_publication",
+        "authorizes_serving",
+        "authorizes_provider_activation"
+      ],
+      "properties": {
+        "authorizes_training": {"const": false},
+        "authorizes_locked_evaluation": {"const": false},
+        "authorizes_publication": {"const": false},
+        "authorizes_serving": {"const": false},
+        "authorizes_provider_activation": {"const": false}
+      }
+    },
+    "identity_fields": {
+      "const": ["market_type", "period"]
+    },
+    "normalization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["governed_storage", "input_aliases"],
+      "properties": {
+        "governed_storage": {"const": "canonical_only"},
+        "input_aliases": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["ml", "money_line", "point_spread", "game_total", "over_under"],
+          "properties": {
+            "ml": {"const": "moneyline"},
+            "money_line": {"const": "moneyline"},
+            "point_spread": {"const": "spread"},
+            "game_total": {"const": "total"},
+            "over_under": {"const": "total"}
+          }
+        }
+      }
+    },
+    "markets": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "market_type",
+          "period",
+          "selection_structure",
+          "applicable_sports",
+          "deprecated"
+        ],
+        "properties": {
+          "market_type": {"enum": ["moneyline", "spread", "total"]},
+          "period": {"const": "full_game"},
+          "selection_structure": {
+            "enum": ["two_or_three_way_result", "two_sided_handicap", "over_under"]
+          },
+          "applicable_sports": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 5,
+            "uniqueItems": true,
+            "items": {
+              "enum": [
+                "american_football",
+                "baseball",
+                "basketball",
+                "ice_hockey",
+                "soccer"
+              ]
+            }
+          },
+          "deprecated": {"const": false}
+        }
+      }
+    },
+    "deferred_market_families": {
+      "const": ["player_prop", "team_prop", "period_market", "derivative", "exotic"]
+    }
+  }
+}

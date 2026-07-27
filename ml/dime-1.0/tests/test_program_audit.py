@@ -570,6 +570,17 @@ def test_curriculum_interaction_status_requires_one_result_per_call() -> None:
     assert "one all-ok result per tool call" in report["interaction_coherence_failure_examples"][0]
 
 
+def test_curriculum_rejects_canonical_looking_unknown_market_type() -> None:
+    train, validation, config = valid_program()
+    train[0]["metadata"]["market_type"] = "synthetic_unknown_market"
+
+    report = audit_curriculum(train, validation, config)
+
+    assert report["pass"] is False
+    assert report["metadata_coherence_failure_count"] == 1
+    assert "canonical market catalog" in report["metadata_coherence_failure_examples"][0]
+
+
 def test_evaluation_program_audit_passes_exact_small_bank() -> None:
     case = {
         "case_id": "eval-1",

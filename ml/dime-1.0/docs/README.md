@@ -12,6 +12,7 @@ public draft work. See [Platform ownership](PLATFORM_OWNERSHIP.md).
 - [Hugging Face registry](HUGGING_FACE_REGISTRY.md)
 - [RunPod workspace and runbook](RUNPOD_WORKSPACE_RUNBOOK.md)
 - [Foundation v1 candidate-to-freeze workflow](FOUNDATION_V1_DATASET_WORKFLOW.md)
+- [Tool and canonical market contracts](TOOL_AND_MARKET_CONTRACTS.md)
 - [Candidate-to-locked-evaluator handoff](CANDIDATE_EVALUATION_HANDOFF.md)
 - [Sanitized evidence index](../evidence/README.md)
 
@@ -30,6 +31,7 @@ The following documents stay beside the code because they govern the active
 training project and release process:
 
 - [System architecture](DIME_V1_SYSTEM_ARCHITECTURE.md)
+- [Tool and canonical market contracts](TOOL_AND_MARKET_CONTRACTS.md)
 - [Curriculum and evaluation](DIME_V1_CURRICULUM_AND_EVALUATION.md)
 - [Dime answer rubric v1](DIME_ANSWER_RUBRIC_V1.md)
 - [Data governance](DATA_GOVERNANCE.md)
