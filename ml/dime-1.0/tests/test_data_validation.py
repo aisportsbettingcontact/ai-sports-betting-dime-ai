@@ -1,3 +1,4 @@
+import json
 from copy import deepcopy
 
 import pytest
@@ -37,6 +38,24 @@ def sft_record() -> dict:
             "rubric_version": "dime-answer-v1",
         },
     }
+
+
+def tool_result(
+    source_ids: list[str],
+    *,
+    status: str = "ok",
+    data: dict | None = None,
+) -> str:
+    return json.dumps(
+        {
+            "status": status,
+            "as_of_utc": "2026-07-25T12:00:00Z",
+            "source_ids": source_ids,
+            "data": data or {},
+            "quality_flags": [],
+            "warnings": [],
+        }
+    )
 
 
 def eval_case() -> dict:
@@ -89,12 +108,127 @@ def test_user_data_requires_deidentification_and_consent() -> None:
 def test_secret_and_direct_identifier_detection() -> None:
     secret = sft_record()
     secret["messages"][0]["content"] = "hf_" + "synthetic" + "testvalue1234567890"
-    with pytest.raises(DataValidationError, match="token"):
+    with pytest.raises(DataValidationError, match="credential"):
         validate_sft_record(secret)
     email = sft_record()
     email["messages"][0]["content"] = "person" + "@" + "example.test"
     with pytest.raises(DataValidationError, match="identifier"):
         validate_sft_record(email)
+
+
+@pytest.mark.parametrize(
+    "credential",
+    [
+        pytest.param("sk-" + "A" * 32, id="openai-legacy"),
+        pytest.param("sk-" + "proj-" + "B_" * 20, id="openai-project"),
+        pytest.param("sk-" + "svcacct-" + "C-" * 20, id="openai-service-account"),
+        pytest.param("sk-" + "ant-api03-" + "D" * 32, id="anthropic"),
+        pytest.param("AI" + "za" + "E" * 35, id="google"),
+        pytest.param("rpa_" + "R" * 32, id="runpod-prefixed"),
+        pytest.param("RUNPOD_" + "API_KEY=" + "r" * 32, id="runpod-assignment"),
+        pytest.param("THE_ODDS_" + "API_KEY=" + "a1" * 16, id="odds-provider-assignment"),
+        pytest.param("sk_" + "live_" + "F" * 24, id="stripe-live-secret"),
+        pytest.param("sk_" + "test_" + "G" * 24, id="stripe-test-secret"),
+        pytest.param("rk_" + "live_" + "H" * 24, id="stripe-live-restricted"),
+        pytest.param(
+            "-----BEGIN " + "PRIVATE KEY-----\n" + "I" * 64 + "\n-----END PRIVATE KEY-----",
+            id="private-key-pem",
+        ),
+        pytest.param(
+            "postgresql://" + "candidate:synthetic-password@db.example.test/sports",
+            id="credential-bearing-uri",
+        ),
+    ],
+)
+def test_named_credential_patterns_are_rejected(credential: str) -> None:
+    record = sft_record()
+    record["messages"][0]["content"] = f"Leaked value: {credential}"
+
+    with pytest.raises(DataValidationError, match="credential"):
+        validate_sft_record(record)
+
+
+def test_credential_bearing_uri_in_tool_result_text_is_rejected() -> None:
+    record = sft_record()
+    credential_uri = "https://" + "worker:synthetic-password@api.example.test/v1"
+    record["messages"] = [
+        {"role": "user", "content": "Check the current game context."},
+        {
+            "role": "assistant",
+            "content": "",
+            "tool_calls": [
+                {
+                    "id": "call-1",
+                    "type": "function",
+                    "function": {
+                        "name": "get_game_context",
+                        "arguments": {"event_id": "event-1"},
+                    },
+                }
+            ],
+        },
+        {
+            "role": "tool",
+            "name": "get_game_context",
+            "tool_call_id": "call-1",
+            "content": tool_result(
+                ["source_1"],
+                data={"upstream_uri": credential_uri},
+            ),
+        },
+        {"role": "assistant", "content": "Answer."},
+    ]
+
+    with pytest.raises(DataValidationError, match="credential-bearing URI"):
+        validate_sft_record(record)
+
+
+@pytest.mark.parametrize(
+    "benign_text",
+    [
+        pytest.param(
+            "The sk-110 note is ordinary sportsbook shorthand, not a credential.",
+            id="sports-sk-number",
+        ),
+        pytest.param(
+            "Words such as sk-score, sk-prop, and skater are too short to be keys.",
+            id="short-sk-words",
+        ),
+        pytest.param(
+            "Public schedule: https://sports.example.test/league/week-1",
+            id="ordinary-https-url",
+        ),
+        pytest.param(
+            "Database docs use postgresql://db.example.test/sports without userinfo.",
+            id="uri-without-credentials",
+        ),
+        pytest.param(
+            "RUNPOD_API_KEY=your_api_key_here is an explicit placeholder.",
+            id="runpod-placeholder",
+        ),
+        pytest.param(
+            "RunPod documents placeholders such as rpa_YOUR_API_KEY.",
+            id="runpod-prefixed-placeholder",
+        ),
+        pytest.param(
+            "ODDS_API_KEY=replace_me is an explicit placeholder.",
+            id="odds-placeholder",
+        ),
+        pytest.param(
+            "Stripe publishable example: " + "pk_" + "test_" + "J" * 24,
+            id="stripe-publishable-key",
+        ),
+        pytest.param(
+            "-----BEGIN " + "PUBLIC KEY----- is not a private-key block.",
+            id="public-key-pem",
+        ),
+    ],
+)
+def test_credential_scanner_allows_high_signal_near_misses(benign_text: str) -> None:
+    record = sft_record()
+    record["messages"][0]["content"] = benign_text
+
+    validate_sft_record(record)
 
 
 def test_future_data_and_tool_overlap_fail() -> None:
@@ -113,7 +247,10 @@ def test_unique_ids_and_partition_keys() -> None:
     second = deepcopy(first)
     with pytest.raises(DataValidationError, match="Duplicate"):
         validate_unique_ids([first, second], "example_id")
-    assert partition_keys(first) == {"source_1", "event_1"}
+    assert partition_keys(first) == {
+        "source:source_1",
+        "event_partition_key:event_1",
+    }
 
 
 def test_schema_enums_and_utc_are_strict() -> None:
@@ -170,6 +307,274 @@ def test_malformed_tool_call_and_linkage_fail() -> None:
         validate_sft_record(unlinked)
 
 
+def test_valid_multi_call_iterative_and_multi_turn_sequence() -> None:
+    record = sft_record()
+    record["messages"] = [
+        {"role": "system", "content": "Use tools carefully."},
+        {"role": "user", "content": "Analyze the event."},
+        {
+            "role": "assistant",
+            "content": "",
+            "tool_calls": [
+                {
+                    "id": "call-context",
+                    "type": "function",
+                    "function": {
+                        "name": "get_game_context",
+                        "arguments": {"event_id": "event-1"},
+                    },
+                },
+                {
+                    "id": "call-odds",
+                    "type": "function",
+                    "function": {
+                        "name": "get_current_odds",
+                        "arguments": {"event_id": "event-1", "market": "spread"},
+                    },
+                },
+            ],
+        },
+        {
+            "role": "tool",
+            "name": "get_current_odds",
+            "tool_call_id": "call-odds",
+            "content": tool_result(["source_1"]),
+        },
+        {
+            "role": "tool",
+            "name": "get_game_context",
+            "tool_call_id": "call-context",
+            "content": tool_result(["source_1"]),
+        },
+        {
+            "role": "assistant",
+            "content": "I need the history too.",
+            "tool_calls": [
+                {
+                    "id": "call-history",
+                    "type": "function",
+                    "function": {
+                        "name": "get_odds_history",
+                        "arguments": {"event_id": "event-1", "market": "spread"},
+                    },
+                }
+            ],
+        },
+        {
+            "role": "tool",
+            "name": "get_odds_history",
+            "tool_call_id": "call-history",
+            "content": tool_result(["source_1"]),
+        },
+        {"role": "assistant", "content": "Here is the grounded analysis."},
+        {"role": "user", "content": "Summarize it."},
+        {"role": "assistant", "content": "Concise grounded summary."},
+    ]
+
+    validate_sft_record(record)
+
+
+@pytest.mark.parametrize(
+    "messages",
+    [
+        [
+            {"role": "assistant", "content": "Answer before a question."},
+            {"role": "user", "content": "Question arrives later."},
+        ],
+        [
+            {"role": "user", "content": "Question."},
+            {"role": "assistant", "content": "Answer."},
+            {"role": "user", "content": "Unanswered follow-up."},
+        ],
+        [
+            {"role": "user", "content": "Question."},
+            {"role": "assistant", "content": "First answer."},
+            {"role": "assistant", "content": "Second answer without a user turn."},
+        ],
+        [
+            {"role": "user", "content": "Question."},
+            {
+                "role": "assistant",
+                "content": "",
+                "tool_calls": [
+                    {
+                        "id": "call-1",
+                        "type": "function",
+                        "function": {
+                            "name": "get_game_context",
+                            "arguments": {"event_id": "event-1"},
+                        },
+                    }
+                ],
+            },
+            {"role": "user", "content": "Interrupt the pending call."},
+            {
+                "role": "tool",
+                "name": "get_game_context",
+                "tool_call_id": "call-1",
+                "content": tool_result(["source_1"]),
+            },
+            {"role": "assistant", "content": "Answer."},
+        ],
+        [
+            {"role": "user", "content": "Question."},
+            {
+                "role": "assistant",
+                "content": "",
+                "tool_calls": [
+                    {
+                        "id": "call-1",
+                        "type": "function",
+                        "function": {
+                            "name": "get_game_context",
+                            "arguments": {"event_id": "event-1"},
+                        },
+                    }
+                ],
+            },
+            {
+                "role": "tool",
+                "name": "get_game_context",
+                "tool_call_id": "call-1",
+                "content": tool_result(["source_1"]),
+            },
+        ],
+    ],
+)
+def test_invalid_message_sequences_are_rejected(messages: list[dict]) -> None:
+    record = sft_record()
+    record["messages"] = messages
+
+    with pytest.raises(DataValidationError, match="conversation|message|tool"):
+        validate_sft_record(record)
+
+
+def test_tool_result_sources_must_be_declared_in_record_metadata() -> None:
+    record = sft_record()
+    call = {
+        "id": "call-1",
+        "type": "function",
+        "function": {
+            "name": "get_game_context",
+            "arguments": {"event_id": "event-1"},
+        },
+    }
+    record["messages"] = [
+        {"role": "user", "content": "Question."},
+        {"role": "assistant", "content": "", "tool_calls": [call]},
+        {
+            "role": "tool",
+            "name": "get_game_context",
+            "tool_call_id": "call-1",
+            "content": tool_result(["hidden-source"]),
+        },
+        {"role": "assistant", "content": "Answer."},
+    ]
+
+    with pytest.raises(DataValidationError, match="undeclared source IDs"):
+        validate_sft_record(record)
+
+
+def test_successful_data_tool_requires_nonempty_source_ids() -> None:
+    record = sft_record()
+    record["messages"] = [
+        {"role": "user", "content": "Question."},
+        {
+            "role": "assistant",
+            "content": "",
+            "tool_calls": [
+                {
+                    "id": "call-1",
+                    "type": "function",
+                    "function": {
+                        "name": "get_game_context",
+                        "arguments": {"event_id": "event-1"},
+                    },
+                }
+            ],
+        },
+        {
+            "role": "tool",
+            "name": "get_game_context",
+            "tool_call_id": "call-1",
+            "content": tool_result([]),
+        },
+        {"role": "assistant", "content": "Answer."},
+    ]
+
+    with pytest.raises(DataValidationError, match="requires source IDs"):
+        validate_sft_record(record)
+
+
+def test_calculate_market_math_may_use_a_source_less_result() -> None:
+    record = sft_record()
+    record["messages"] = [
+        {"role": "user", "content": "What is the implied probability at -110?"},
+        {
+            "role": "assistant",
+            "content": "",
+            "tool_calls": [
+                {
+                    "id": "call-1",
+                    "type": "function",
+                    "function": {
+                        "name": "calculate_market_math",
+                        "arguments": {
+                            "operation": "implied_probability",
+                            "inputs": {"american_odds": -110},
+                        },
+                    },
+                }
+            ],
+        },
+        {
+            "role": "tool",
+            "name": "calculate_market_math",
+            "tool_call_id": "call-1",
+            "content": tool_result([], data={"implied_probability": 0.5238095238}),
+        },
+        {"role": "assistant", "content": "The implied probability is about 52.38%."},
+    ]
+
+    validate_sft_record(record)
+
+
+def test_partition_keys_include_tool_result_sources_defensively() -> None:
+    record = sft_record()
+    record["messages"] = [
+        {"role": "user", "content": "Question."},
+        {"role": "assistant", "content": "Answer."},
+        {
+            "role": "tool",
+            "name": "get_game_context",
+            "tool_call_id": "unvalidated-call",
+            "content": tool_result(["tool-result-source"]),
+        },
+    ]
+
+    assert partition_keys(record) == {
+        "source:source_1",
+        "source:tool-result-source",
+        "event_partition_key:event_1",
+    }
+
+
+def test_curriculum_schema_requires_answer_length() -> None:
+    record = sft_record()
+    record["curriculum"] = {
+        "skill_ids": ["market_math.expected_value"],
+        "difficulty": "hard",
+        "interaction_mode": "direct_no_tool",
+        "scenario_cluster_id": "scenario-1",
+        "evidence_status": "not_applicable",
+        "policy_action": "allow",
+        "risk_tier": "standard",
+    }
+
+    with pytest.raises(DataValidationError, match="answer_length"):
+        validate_sft_record(record)
+
+
 def test_production_records_require_lineage_and_reviewers() -> None:
     with pytest.raises(DataValidationError, match="reviewer"):
         validate_sft_record(sft_record(), production=True)
@@ -177,17 +582,23 @@ def test_production_records_require_lineage_and_reviewers() -> None:
 
 def test_production_records_require_curriculum_and_double_review_critical() -> None:
     record = sft_record()
+    record["dataset_version"] = "dime-sft-foundation-v1"
     record["metadata"].update(
         {
-            "rights_basis": "synthetic-owned",
+            "available_at_utc": "2026-07-25T12:00:00Z",
+            "author_id": "author-001",
+            "conversation_partition_key": "test",
+            "rights_basis": "rights-synthetic-owned",
             "source_owner": "dime",
+            "source_snapshot_partition_key": "snapshot-001",
             "generation_method": "human-authored",
             "direct_identifier_scan_version": "scan-v1",
+            "provider_ids": [],
         }
     )
     record["quality"].update(
         {
-            "reviewer_ids": ["reviewer-a"],
+            "reviewer_ids": ["domain-reviewer-001"],
             "reviewed_at_utc": "2026-07-25T12:00:00Z",
         }
     )
@@ -199,10 +610,11 @@ def test_production_records_require_curriculum_and_double_review_critical() -> N
         "evidence_status": "complete",
         "policy_action": "allow",
         "risk_tier": "critical",
+        "answer_length": "concise",
     }
     with pytest.raises(DataValidationError, match="two reviewers"):
         validate_sft_record(record, production=True)
-    record["quality"]["reviewer_ids"].append("reviewer-b")
+    record["quality"]["reviewer_ids"].append("numeric-reviewer-001")
     validate_sft_record(record, production=True)
 
 

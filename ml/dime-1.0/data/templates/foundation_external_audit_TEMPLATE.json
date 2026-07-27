@@ -1,0 +1,31 @@
+{
+  "schema_version": "dime-foundation-external-audit-v1",
+  "audit_type": "REPLACE_WITH_ONE_OF_THE_SIX_AUDIT_TYPES",
+  "dataset_version": "dime-sft-foundation-v1",
+  "train_sha256": "REPLACE_WITH_64_CHARACTER_SHA256",
+  "validation_sha256": "REPLACE_WITH_64_CHARACTER_SHA256",
+  "candidate_audit_sha256": "REPLACE_WITH_64_CHARACTER_SHA256",
+  "scope_reference": "REPLACE_PER_FOUNDATION_WORKFLOW_AUDIT_SCOPE_TABLE",
+  "inputs": {
+    "source_registry_sha256": "REPLACE_WITH_64_CHARACTER_SHA256",
+    "source_artifacts_sha256": "REPLACE_WITH_64_CHARACTER_SHA256",
+    "review_ledger_sha256": "REPLACE_WITH_64_CHARACTER_SHA256",
+    "reviewer_registry_sha256": "REPLACE_WITH_64_CHARACTER_SHA256",
+    "development_evaluation_sha256": "REPLACE_WITH_64_CHARACTER_SHA256",
+    "development_eval_manifest_sha256": "REPLACE_WITH_64_CHARACTER_SHA256",
+    "development_eval_identity_sha256": "REPLACE_WITH_64_CHARACTER_SHA256",
+    "curriculum_config_sha256": "REPLACE_WITH_64_CHARACTER_SHA256",
+    "tool_catalog_sha256": "REPLACE_WITH_64_CHARACTER_SHA256",
+    "system_prompt_sha256": "REPLACE_WITH_64_CHARACTER_SHA256",
+    "direct_identifier_scan_version": "REPLACE_WITH_SCANNER_VERSION",
+    "locked_evaluation_reference": "locked-eval-approval:REPLACE_WITH_OPAQUE_REFERENCE"
+  },
+  "passed": true,
+  "tool_id": "REPLACE_WITH_AUDIT_TOOL_ID",
+  "tool_version": "REPLACE_WITH_AUDIT_TOOL_VERSION",
+  "completed_at_utc": "REPLACE_WITH_NORMALIZED_UTC_TIMESTAMP",
+  "reviewer_ids": [
+    "REPLACE_WITH_REVIEWER_ID"
+  ],
+  "summary": "No case-level, source-level, personal, or locked evaluation content belongs in this report."
+}

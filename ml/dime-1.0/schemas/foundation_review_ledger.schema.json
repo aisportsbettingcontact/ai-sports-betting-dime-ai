@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dime.internal/schemas/foundation_review_ledger.schema.json",
+  "title": "Dime Foundation v1 Review Ledger",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "dataset_version",
+    "rubric",
+    "decisions"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "dime-foundation-review-ledger-v1"
+    },
+    "dataset_version": {
+      "const": "dime-sft-foundation-v1"
+    },
+    "rubric": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rubric_id", "sha256"],
+      "properties": {
+        "rubric_id": {
+          "const": "dime-answer-v1"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "decisions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/decision"
+      }
+    }
+  },
+  "$defs": {
+    "decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "example_id",
+        "record_sha256",
+        "reviewer_id",
+        "decision",
+        "reviewed_at_utc",
+        "rubric_sha256",
+        "content_quality_passed",
+        "grounding_passed",
+        "numeric_trace_passed",
+        "policy_behavior_passed",
+        "privacy_passed",
+        "rights_passed",
+        "findings"
+      ],
+      "properties": {
+        "example_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "record_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "reviewer_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "decision": {
+          "enum": ["approve", "reject", "changes_requested"]
+        },
+        "reviewed_at_utc": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "rubric_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "content_quality_passed": {
+          "type": "boolean"
+        },
+        "grounding_passed": {
+          "type": "boolean"
+        },
+        "numeric_trace_passed": {
+          "type": "boolean"
+        },
+        "policy_behavior_passed": {
+          "type": "boolean"
+        },
+        "privacy_passed": {
+          "type": "boolean"
+        },
+        "rights_passed": {
+          "type": "boolean"
+        },
+        "findings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

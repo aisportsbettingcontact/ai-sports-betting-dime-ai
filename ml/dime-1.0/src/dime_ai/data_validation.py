@@ -14,13 +14,76 @@ from typing import Any
 from jsonschema import Draft202012Validator
 from jsonschema.exceptions import ValidationError
 
-SECRET_PATTERN = re.compile(r"\bhf_[A-Za-z0-9]{12,}\b")
+HUGGING_FACE_TOKEN_PATTERN = re.compile(r"\bhf_[A-Za-z0-9]{12,}\b")
+GITHUB_TOKEN_PATTERN = re.compile(r"\bgh(?:p|o|u|s|r)_[A-Za-z0-9]{20,}\b")
+AWS_ACCESS_KEY_PATTERN = re.compile(r"\b(?:AKIA|ASIA)[A-Z0-9]{16}\b")
+BEARER_TOKEN_PATTERN = re.compile(r"\bBearer\s+[A-Za-z0-9._~+/=-]{16,}\b", re.IGNORECASE)
+OPENAI_API_KEY_PATTERN = re.compile(
+    r"(?<![A-Za-z0-9])sk-(?:"
+    r"(?:proj|svcacct|admin)-[A-Za-z0-9_-]{20,}"
+    r"|[A-Za-z0-9]{20,}"
+    r")(?![A-Za-z0-9_-])"
+)
+ANTHROPIC_API_KEY_PATTERN = re.compile(
+    r"(?<![A-Za-z0-9])sk-ant-(?:api\d{2}-)?[A-Za-z0-9_-]{20,}"
+    r"(?![A-Za-z0-9_-])"
+)
+GOOGLE_API_KEY_PATTERN = re.compile(r"(?<![A-Za-z0-9_-])AIza[0-9A-Za-z_-]{35}(?![A-Za-z0-9_-])")
+RUNPOD_API_KEY_PATTERN = re.compile(r"(?<![A-Za-z0-9_-])rpa_[A-Za-z0-9_-]{20,}(?![A-Za-z0-9_-])")
+RUNPOD_API_KEY_ASSIGNMENT_PATTERN = re.compile(
+    r"\bRUNPOD_API_KEY\s*(?:=|:)\s*[\"']?"
+    r"(?!your_api_key|replace_me|example|<)[A-Za-z0-9][A-Za-z0-9._-]{19,}",
+    re.IGNORECASE,
+)
+ODDS_API_KEY_ASSIGNMENT_PATTERN = re.compile(
+    r"\b(?:THE_ODDS_API_KEY|ODDS_API_KEY)\s*(?:=|:)\s*[\"']?"
+    r"(?!your_api_key|replace_me|example|<)[A-Fa-f0-9]{24,64}",
+    re.IGNORECASE,
+)
+STRIPE_SECRET_KEY_PATTERN = re.compile(
+    r"(?<![A-Za-z0-9])(?:sk|rk)_(?:live|test)_[A-Za-z0-9]{16,}"
+    r"(?![A-Za-z0-9])"
+)
+PRIVATE_KEY_PEM_PATTERN = re.compile(
+    r"-----BEGIN (?:RSA |EC |DSA |OPENSSH |ENCRYPTED )?PRIVATE KEY-----"
+)
+CREDENTIAL_URI_PATTERN = re.compile(
+    r"\b[A-Za-z][A-Za-z0-9+.-]*://"
+    r"[^/\s:@]+:[^/\s@]+@"
+    r"(?:\[[0-9A-Fa-f:.]+\]|[A-Za-z0-9.-]+)"
+    r"(?::\d{1,5})?(?=[/\s?#]|$)"
+)
+CREDENTIAL_PATTERNS = (
+    ("Hugging Face token", HUGGING_FACE_TOKEN_PATTERN),
+    ("GitHub token", GITHUB_TOKEN_PATTERN),
+    ("AWS access key", AWS_ACCESS_KEY_PATTERN),
+    ("bearer token", BEARER_TOKEN_PATTERN),
+    ("OpenAI API key", OPENAI_API_KEY_PATTERN),
+    ("Anthropic API key", ANTHROPIC_API_KEY_PATTERN),
+    ("Google API key", GOOGLE_API_KEY_PATTERN),
+    ("RunPod API key", RUNPOD_API_KEY_PATTERN),
+    ("RunPod API-key assignment", RUNPOD_API_KEY_ASSIGNMENT_PATTERN),
+    ("odds-provider API-key assignment", ODDS_API_KEY_ASSIGNMENT_PATTERN),
+    ("Stripe secret or restricted key", STRIPE_SECRET_KEY_PATTERN),
+    ("private-key PEM block", PRIVATE_KEY_PEM_PATTERN),
+    ("credential-bearing URI", CREDENTIAL_URI_PATTERN),
+)
 EMAIL_PATTERN = re.compile(r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b", re.IGNORECASE)
 PHONE_PATTERN = re.compile(r"(?<!\d)(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]\d{3}[-.\s]\d{4}(?!\d)")
+INTERNATIONAL_PHONE_PATTERN = re.compile(r"(?<!\w)\+\d(?:[\s().-]*\d){7,14}(?!\d)")
+IPV4_PATTERN = re.compile(
+    r"\b(?:25[0-5]|2[0-4]\d|1?\d?\d)"
+    r"(?:\.(?:25[0-5]|2[0-4]\d|1?\d?\d)){3}\b"
+)
 DISALLOWED_KEYS = {
+    "account_id",
     "email",
+    "date_of_birth",
+    "device_id",
+    "dob",
     "phone",
     "phone_number",
+    "ip_address",
     "address",
     "street_address",
     "full_name",
@@ -100,20 +163,52 @@ def _validate_tool_arguments(
 def read_jsonl(path: str | Path) -> list[dict[str, Any]]:
     records: list[dict[str, Any]] = []
     source = Path(path)
-    with source.open(encoding="utf-8") as handle:
-        for line_number, line in enumerate(handle, 1):
-            if not line.strip():
-                continue
-            try:
-                record = json.loads(line)
-            except json.JSONDecodeError as exc:
-                raise DataValidationError(f"{source}:{line_number}: invalid JSON: {exc}") from exc
-            if not isinstance(record, dict):
-                raise DataValidationError(f"{source}:{line_number}: each line must be an object")
-            records.append(record)
+    if source.is_symlink() or not source.is_file():
+        raise DataValidationError(f"{source}: expected a regular non-symlink file")
+    try:
+        with source.open(encoding="utf-8") as handle:
+            for line_number, line in enumerate(handle, 1):
+                if not line.strip():
+                    continue
+                try:
+                    record = strict_json_loads(line, f"{source}:{line_number}")
+                except (json.JSONDecodeError, DataValidationError) as exc:
+                    if isinstance(exc, DataValidationError):
+                        raise
+                    raise DataValidationError(
+                        f"{source}:{line_number}: invalid JSON: {exc}"
+                    ) from exc
+                if not isinstance(record, dict):
+                    raise DataValidationError(
+                        f"{source}:{line_number}: each line must be an object"
+                    )
+                records.append(record)
+    except UnicodeDecodeError as exc:
+        raise DataValidationError(f"{source}: invalid UTF-8") from exc
     if not records:
         raise DataValidationError(f"{source}: file has no records")
     return records
+
+
+def strict_json_loads(value: str, label: str = "JSON") -> Any:
+    """Parse standards-compliant JSON and reject duplicate object keys."""
+
+    def object_pairs(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        for key, item in pairs:
+            if key in result:
+                raise DataValidationError(f"{label}: duplicate JSON key {key!r}")
+            result[key] = item
+        return result
+
+    def reject_constant(constant: str) -> None:
+        raise DataValidationError(f"{label}: nonfinite JSON number {constant!r}")
+
+    return json.loads(
+        value,
+        object_pairs_hook=object_pairs,
+        parse_constant=reject_constant,
+    )
 
 
 def _walk(value: Any, path: str = "$") -> Iterable[tuple[str, Any]]:
@@ -132,9 +227,20 @@ def _validate_no_sensitive_material(record: dict[str, Any], record_id: str) -> N
         if key in DISALLOWED_KEYS:
             raise DataValidationError(f"{record_id}: disallowed sensitive field at {path}")
         if isinstance(value, str):
-            if SECRET_PATTERN.search(value):
-                raise DataValidationError(f"{record_id}: possible Hugging Face token at {path}")
-            if EMAIL_PATTERN.search(value) or PHONE_PATTERN.search(value):
+            for credential_name, pattern in CREDENTIAL_PATTERNS:
+                if pattern.search(value):
+                    raise DataValidationError(
+                        f"{record_id}: possible {credential_name} credential at {path}"
+                    )
+            if any(
+                pattern.search(value)
+                for pattern in (
+                    EMAIL_PATTERN,
+                    PHONE_PATTERN,
+                    INTERNATIONAL_PHONE_PATTERN,
+                    IPV4_PATTERN,
+                )
+            ):
                 raise DataValidationError(f"{record_id}: possible direct identifier at {path}")
 
 
@@ -166,11 +272,18 @@ def _collect_timestamps(value: Any, record_id: str, path: str = "$") -> list[dat
     return timestamps
 
 
-def _validate_tool_linkage(messages: list[dict[str, Any]], record_id: str) -> list[dict[str, Any]]:
+def _validate_tool_linkage(
+    messages: list[dict[str, Any]],
+    record_id: str,
+) -> list[tuple[str, str, dict[str, Any]]]:
     calls: dict[str, str] = {}
     results: set[str] = set()
-    parsed_results: list[dict[str, Any]] = []
+    parsed_results: list[tuple[str, str, dict[str, Any]]] = []
     for index, message in enumerate(messages):
+        if message.get("tool_calls") and message.get("role") != "assistant":
+            raise DataValidationError(
+                f"{record_id}: only assistant messages may contain tool calls"
+            )
         for call in message.get("tool_calls", []):
             call_id = call["id"]
             if call_id in calls:
@@ -194,22 +307,97 @@ def _validate_tool_linkage(messages: list[dict[str, Any]], record_id: str) -> li
             raise DataValidationError(f"{record_id}: duplicate result for tool call {call_id}")
         results.add(call_id)
         try:
-            parsed = json.loads(message["content"])
-        except json.JSONDecodeError as exc:
+            parsed = strict_json_loads(
+                message["content"],
+                f"{record_id}.tool_result.{call_id}",
+            )
+        except (json.JSONDecodeError, DataValidationError) as exc:
+            if isinstance(exc, DataValidationError):
+                raise
             raise DataValidationError(
                 f"{record_id}: tool result {call_id} content must be valid JSON"
             ) from exc
         if not isinstance(parsed, dict):
             raise DataValidationError(f"{record_id}: tool result {call_id} must be an object")
         _validate_against_schema(parsed, "tool_response.schema.json", record_id)
-        parsed_results.append(parsed)
+        parsed_results.append((call_id, str(name), parsed))
     missing = set(calls) - results
     if missing:
         raise DataValidationError(f"{record_id}: tool calls missing results: {sorted(missing)}")
     return parsed_results
 
 
-def validate_sft_record(record: dict[str, Any], production: bool = False) -> None:
+def _validate_message_sequence(
+    messages: list[dict[str, Any]],
+    record_id: str,
+) -> None:
+    """Require a causal user/assistant/tool sequence with a final assistant outcome."""
+
+    first_conversation_index = 1 if messages[0].get("role") == "system" else 0
+    if messages[first_conversation_index].get("role") != "user":
+        raise DataValidationError(f"{record_id}: conversation must begin with a user message")
+
+    state = "expect_user"
+    pending_tool_calls: set[str] = set()
+    for index, message in enumerate(messages[first_conversation_index:], first_conversation_index):
+        role = message.get("role")
+        if state == "expect_user":
+            if role != "user":
+                raise DataValidationError(f"{record_id}: message {index} must be a user message")
+            state = "expect_assistant"
+            continue
+
+        if state == "expect_assistant":
+            if role != "assistant":
+                raise DataValidationError(
+                    f"{record_id}: message {index} must be an assistant response"
+                )
+            calls = message.get("tool_calls", [])
+            if calls:
+                pending_tool_calls = {call["id"] for call in calls}
+                state = "expect_tool"
+            else:
+                if not message.get("content", "").strip():
+                    raise DataValidationError(
+                        f"{record_id}: assistant outcome at message {index} is empty"
+                    )
+                state = "expect_user_or_end"
+            continue
+
+        if state == "expect_tool":
+            if role != "tool":
+                raise DataValidationError(
+                    f"{record_id}: message {index} must resolve pending tool calls"
+                )
+            call_id = message.get("tool_call_id")
+            if call_id not in pending_tool_calls:
+                raise DataValidationError(
+                    f"{record_id}: tool result {call_id!r} is not pending at message {index}"
+                )
+            pending_tool_calls.remove(call_id)
+            if not pending_tool_calls:
+                state = "expect_assistant"
+            continue
+
+        if state == "expect_user_or_end":
+            if role != "user":
+                raise DataValidationError(
+                    f"{record_id}: message {index} must begin the next user turn"
+                )
+            state = "expect_assistant"
+
+    if state != "expect_user_or_end":
+        raise DataValidationError(
+            f"{record_id}: conversation must end with a non-empty assistant outcome"
+        )
+
+
+def validate_sft_record(
+    record: dict[str, Any],
+    production: bool = False,
+    *,
+    require_approved: bool = True,
+) -> None:
     record_id = record.get("example_id")
     if not isinstance(record_id, str) or not record_id:
         raise DataValidationError("SFT record requires a non-empty example_id")
@@ -225,6 +413,7 @@ def validate_sft_record(record: dict[str, Any], production: bool = False) -> Non
     if not isinstance(messages, list) or len(messages) < 2:
         raise DataValidationError(f"{record_id}: messages must contain at least two items")
     assistant_count = 0
+    system_positions: list[int] = []
     for index, message in enumerate(messages):
         if not isinstance(message, dict):
             raise DataValidationError(f"{record_id}: message {index} must be an object")
@@ -232,10 +421,22 @@ def validate_sft_record(record: dict[str, Any], production: bool = False) -> Non
             raise DataValidationError(f"{record_id}: message {index} has an invalid role")
         if not isinstance(message.get("content"), str):
             raise DataValidationError(f"{record_id}: message {index} content must be a string")
+        if message.get("role") == "system":
+            system_positions.append(index)
         assistant_count += message.get("role") == "assistant"
     if assistant_count == 0:
         raise DataValidationError(f"{record_id}: at least one assistant message is required")
+    if system_positions and system_positions != [0]:
+        raise DataValidationError(
+            f"{record_id}: a system message is allowed only once and only as the first message"
+        )
+    if production and system_positions:
+        raise DataValidationError(
+            f"{record_id}: production records cannot supply a system message; "
+            "the trainer injects the canonical prompt"
+        )
     tool_results = _validate_tool_linkage(messages, record_id)
+    _validate_message_sequence(messages, record_id)
 
     metadata = record["metadata"]
     if not isinstance(metadata, dict):
@@ -250,23 +451,56 @@ def validate_sft_record(record: dict[str, Any], production: bool = False) -> Non
     if not isinstance(metadata["source_ids"], list):
         raise DataValidationError(f"{record_id}: metadata.source_ids must be an array")
     if metadata["contains_user_data"]:
-        if privacy_state not in {"synthetic", "deidentified"}:
-            raise DataValidationError(f"{record_id}: user data must be synthetic or deidentified")
+        if privacy_state != "deidentified":
+            raise DataValidationError(f"{record_id}: actual user data must be deidentified")
         if not metadata.get("consent_basis"):
             raise DataValidationError(f"{record_id}: user-data record requires consent_basis")
+    available_at = metadata.get("available_at_utc")
+    if available_at is not None:
+        available = _validate_timestamp(available_at, "metadata.available_at_utc", record_id)
+        if available > as_of:
+            raise DataValidationError(f"{record_id}: source was unavailable at as_of_utc")
+    metadata_source_ids = set(metadata["source_ids"])
     derived_timestamps = []
-    for result in tool_results:
+    for call_id, tool_name, result in tool_results:
+        result_source_ids = set(result["source_ids"])
+        undeclared_source_ids = sorted(result_source_ids - metadata_source_ids)
+        if undeclared_source_ids:
+            raise DataValidationError(
+                f"{record_id}: tool result {call_id} cites undeclared source IDs: "
+                f"{undeclared_source_ids}"
+            )
+        if (
+            result["status"] == "ok"
+            and tool_name != "calculate_market_math"
+            and not result_source_ids
+        ):
+            raise DataValidationError(
+                f"{record_id}: successful {tool_name} result {call_id} "
+                "requires source IDs declared in metadata"
+            )
         derived_timestamps.extend(_collect_timestamps(result, record_id, "$.tool_result"))
     if derived_timestamps and max(derived_timestamps) > as_of:
         raise DataValidationError(f"{record_id}: future-data leakage in tool results")
 
     quality = record["quality"]
-    if not isinstance(quality, dict) or quality.get("review_status") != "approved":
+    if not isinstance(quality, dict):
+        raise DataValidationError(f"{record_id}: quality must be an object")
+    if (require_approved or production) and quality.get("review_status") != "approved":
         raise DataValidationError(f"{record_id}: only approved records may enter training")
     if production:
         reviewer_ids = quality.get("reviewer_ids")
         if not reviewer_ids:
             raise DataValidationError(f"{record_id}: production record requires reviewer IDs")
+        if len(reviewer_ids) != len(set(reviewer_ids)) or any(
+            not isinstance(value, str) or not value.strip() for value in reviewer_ids
+        ):
+            raise DataValidationError(
+                f"{record_id}: production reviewer IDs must be unique and non-empty"
+            )
+        placeholder_reviewers = {"reviewer-a", "reviewer-b", "replace_me", "unknown"}
+        if any(value.strip().lower() in placeholder_reviewers for value in reviewer_ids):
+            raise DataValidationError(f"{record_id}: production reviewer IDs contain placeholders")
         reviewed_at_utc = quality.get("reviewed_at_utc")
         if not reviewed_at_utc:
             raise DataValidationError(f"{record_id}: production record requires reviewed_at_utc")
@@ -274,19 +508,82 @@ def validate_sft_record(record: dict[str, Any], production: bool = False) -> Non
         curriculum = record.get("curriculum")
         if not isinstance(curriculum, dict):
             raise DataValidationError(f"{record_id}: production record requires curriculum labels")
-        if curriculum.get("risk_tier") == "critical" and len(set(reviewer_ids)) < 2:
+        required_labels = {
+            "answer_length",
+            "difficulty",
+            "evidence_status",
+            "interaction_mode",
+            "policy_action",
+            "risk_tier",
+            "scenario_cluster_id",
+            "skill_ids",
+        }
+        missing_labels = sorted(required_labels - curriculum.keys())
+        if missing_labels:
             raise DataValidationError(
-                f"{record_id}: critical production record requires two reviewers"
+                f"{record_id}: missing production curriculum labels: {missing_labels}"
+            )
+        elevated_tasks = {
+            "market_math",
+            "bet_tracker_coaching",
+            "simulation_analysis",
+            "safety_privacy_security",
+        }
+        elevated_actions = {
+            "privacy_block",
+            "age_block",
+            "jurisdiction_block",
+            "self_exclusion_block",
+            "protective_block",
+            "acute_distress_block",
+        }
+        minimum_reviewers = (
+            2
+            if (
+                curriculum.get("risk_tier") in {"high", "critical"}
+                or record.get("task_type") in elevated_tasks
+                or curriculum.get("policy_action") in elevated_actions
+                or metadata["contains_user_data"]
+            )
+            else 1
+        )
+        if len(set(reviewer_ids)) < minimum_reviewers:
+            raise DataValidationError(
+                f"{record_id}: elevated production record requires two reviewers"
             )
         required_lineage = {
+            "author_id",
+            "available_at_utc",
+            "conversation_partition_key",
             "rights_basis",
             "source_owner",
+            "source_snapshot_partition_key",
             "generation_method",
             "direct_identifier_scan_version",
         }
         missing_lineage = sorted(field for field in required_lineage if not metadata.get(field))
         if missing_lineage:
             raise DataValidationError(f"{record_id}: missing production lineage: {missing_lineage}")
+        if not metadata["source_ids"]:
+            raise DataValidationError(f"{record_id}: production record requires source IDs")
+        if metadata.get("author_id") in reviewer_ids:
+            raise DataValidationError(f"{record_id}: record author cannot approve the record")
+        if metadata.get("provider_ids") is None:
+            raise DataValidationError(f"{record_id}: production record requires provider_ids")
+        if record.get("dataset_version") != "dime-sft-foundation-v1":
+            raise DataValidationError(
+                f"{record_id}: production record has the wrong dataset_version"
+            )
+        generation_method = metadata.get("generation_method")
+        teacher = metadata.get("teacher_provenance")
+        if generation_method == "teacher-generated" and not isinstance(teacher, dict):
+            raise DataValidationError(
+                f"{record_id}: teacher-generated record requires teacher_provenance"
+            )
+        if generation_method != "teacher-generated" and teacher is not None:
+            raise DataValidationError(
+                f"{record_id}: teacher_provenance is allowed only for teacher-generated records"
+            )
         if metadata["contains_user_data"]:
             user_requirements = {
                 "deidentification_method",
@@ -302,6 +599,12 @@ def validate_sft_record(record: dict[str, Any], production: bool = False) -> Non
                 )
 
 
+def validate_sft_candidate(record: dict[str, Any]) -> None:
+    """Validate a non-trainable candidate without treating its embedded status as approval."""
+
+    validate_sft_record(record, production=False, require_approved=False)
+
+
 def validate_dataset_manifest(
     manifest: dict[str, Any],
     train_sha256: str,
@@ -313,12 +616,14 @@ def validate_dataset_manifest(
     validation_record_count: int | None = None,
     *,
     require_public_publication: bool = False,
+    v4_evidence_hashes: dict[str, str] | None = None,
 ) -> None:
     record_id = str(manifest.get("dataset_version", "dataset-manifest"))
     schema_version = manifest.get("schema_version")
     schema_name = {
         "dime-dataset-manifest-v2": "dataset_manifest.schema.json",
         "dime-dataset-manifest-v3": "dataset_manifest.v3.schema.json",
+        "dime-dataset-manifest-v4": "dataset_manifest.v4.schema.json",
     }.get(schema_version)
     if schema_name is None:
         raise DataValidationError(f"{record_id}: unsupported dataset manifest schema")
@@ -343,7 +648,7 @@ def validate_dataset_manifest(
     if incomplete:
         raise DataValidationError(f"{record_id}: manifest approvals incomplete: {incomplete}")
 
-    if schema_version == "dime-dataset-manifest-v3":
+    if schema_version in {"dime-dataset-manifest-v3", "dime-dataset-manifest-v4"}:
         if manifest["approval_status"] != "approved":
             raise DataValidationError(f"{record_id}: approval_status must be approved")
         placeholder_reviewers = {"reviewer-a", "reviewer-b", "replace_me", "unknown"}
@@ -370,6 +675,39 @@ def validate_dataset_manifest(
                 raise DataValidationError(
                     f"{record_id}: provider-derived data is not publishable in this repository"
                 )
+        if schema_version == "dime-dataset-manifest-v4":
+            if manifest["visibility"] != "private":
+                raise DataValidationError(f"{record_id}: foundation v4 must remain private")
+            if manifest["publication_classification"] != "private-only":
+                raise DataValidationError(
+                    f"{record_id}: foundation v4 must use private-only classification"
+                )
+            if manifest["contains_user_data"] or manifest["contains_provider_derived_data"]:
+                raise DataValidationError(
+                    f"{record_id}: Foundation v1 excludes user and provider-derived data"
+                )
+            if v4_evidence_hashes is None:
+                raise DataValidationError(
+                    f"{record_id}: v4 manifest requires externally verified evidence hashes"
+                )
+            evidence_fields = {
+                "system_prompt_sha256",
+                "foundation_build_config_sha256",
+                "source_registry_sha256",
+                "source_artifacts_sha256",
+                "review_ledger_sha256",
+                "reviewer_registry_sha256",
+                "candidate_audit_sha256",
+                "approval_record_sha256",
+            }
+            missing_evidence = sorted(evidence_fields - v4_evidence_hashes.keys())
+            if missing_evidence:
+                raise DataValidationError(
+                    f"{record_id}: missing v4 evidence hashes: {missing_evidence}"
+                )
+            for field in sorted(evidence_fields):
+                if manifest[field] != v4_evidence_hashes[field]:
+                    raise DataValidationError(f"{record_id}: {field} mismatch")
 
     if manifest["train_sha256"] != train_sha256:
         raise DataValidationError(f"{record_id}: train dataset hash mismatch")
@@ -555,12 +893,38 @@ def validate_unique_ids(records: Iterable[dict[str, Any]], field: str) -> None:
 
 
 def partition_keys(record: dict[str, Any]) -> set[str]:
-    """Return keys that must not cross SFT train/validation boundaries."""
+    """Return namespaced groups that must not cross SFT split boundaries."""
 
     metadata = record.get("metadata", {})
-    keys = set(metadata.get("source_ids", []))
-    for field in ("event_partition_key", "user_partition_hash"):
+    keys = {f"source:{value}" for value in metadata.get("source_ids", []) if value}
+    for message in record.get("messages", []):
+        if message.get("role") != "tool":
+            continue
+        try:
+            result = strict_json_loads(
+                message.get("content", ""),
+                "partition tool result",
+            )
+        except (json.JSONDecodeError, DataValidationError):
+            continue
+        if not isinstance(result, dict):
+            continue
+        result_source_ids = result.get("source_ids", [])
+        if not isinstance(result_source_ids, list):
+            continue
+        keys.update(
+            f"source:{value}" for value in result_source_ids if isinstance(value, str) and value
+        )
+    for field in (
+        "event_partition_key",
+        "source_snapshot_partition_key",
+        "conversation_partition_key",
+        "user_partition_hash",
+    ):
         value = metadata.get(field)
         if value:
-            keys.add(str(value))
+            keys.add(f"{field}:{value}")
+    scenario = record.get("curriculum", {}).get("scenario_cluster_id")
+    if scenario:
+        keys.add(f"scenario_cluster_id:{scenario}")
     return keys

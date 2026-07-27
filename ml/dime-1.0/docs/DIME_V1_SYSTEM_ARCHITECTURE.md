@@ -271,7 +271,9 @@ Before display:
 
 - current lines, splits, injuries, results, simulations, and coaching metrics
   must trace to a tool result and source ID;
-- computed values must trace to the math or simulation service;
+- every assistant numeric token must trace to a linked successful tool result,
+  and deterministic market-math outputs must also be recomputed from their
+  recorded tool arguments;
 - event, market, period, selection, and timestamp identities must agree;
 - freshness policy must pass;
 - split scope and unavailable sample size must be disclosed;

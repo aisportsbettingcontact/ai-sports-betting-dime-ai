@@ -1,0 +1,151 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dime.internal/schemas/foundation_candidate_audit.schema.json",
+  "title": "Dime Foundation v1 Candidate Audit",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "dataset_version",
+    "generated_at_utc",
+    "audit_tool",
+    "pass",
+    "inputs",
+    "records",
+    "gates",
+    "curriculum",
+    "issues"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "dime-foundation-candidate-audit-v1"
+    },
+    "dataset_version": {
+      "const": "dime-sft-foundation-v1"
+    },
+    "generated_at_utc": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "audit_tool": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "version"],
+      "properties": {
+        "id": {"const": "dime-foundation-auditor"},
+        "version": {"type": "string", "minLength": 1}
+      }
+    },
+    "pass": {
+      "type": "boolean"
+    },
+    "inputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "train_sha256",
+        "validation_sha256",
+        "source_registry_sha256",
+        "source_artifacts_sha256",
+        "review_ledger_sha256",
+        "reviewer_registry_sha256",
+        "development_evaluation_sha256",
+        "development_eval_manifest_sha256",
+        "development_eval_identity_sha256",
+        "direct_identifier_scan_version",
+        "curriculum_config_sha256",
+        "foundation_build_config_sha256",
+        "rubric_sha256",
+        "system_prompt_sha256",
+        "chat_template_sha256",
+        "tool_catalog_sha256"
+      ],
+      "properties": {
+        "train_sha256": {"$ref": "#/$defs/sha256"},
+        "validation_sha256": {"$ref": "#/$defs/sha256"},
+        "source_registry_sha256": {"$ref": "#/$defs/sha256"},
+        "source_artifacts_sha256": {"$ref": "#/$defs/sha256"},
+        "review_ledger_sha256": {"$ref": "#/$defs/sha256"},
+        "reviewer_registry_sha256": {"$ref": "#/$defs/sha256"},
+        "development_evaluation_sha256": {"$ref": "#/$defs/sha256"},
+        "development_eval_manifest_sha256": {"$ref": "#/$defs/sha256"},
+        "development_eval_identity_sha256": {"$ref": "#/$defs/sha256"},
+        "direct_identifier_scan_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "curriculum_config_sha256": {"$ref": "#/$defs/sha256"},
+        "foundation_build_config_sha256": {"$ref": "#/$defs/sha256"},
+        "rubric_sha256": {"$ref": "#/$defs/sha256"},
+        "system_prompt_sha256": {"$ref": "#/$defs/sha256"},
+        "chat_template_sha256": {"$ref": "#/$defs/sha256"},
+        "tool_catalog_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "records": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["train", "validation", "total", "record_index_sha256"],
+      "properties": {
+        "train": {"type": "integer", "minimum": 0},
+        "validation": {"type": "integer", "minimum": 0},
+        "total": {"type": "integer", "minimum": 0},
+        "record_index_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "gates": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "record_contracts",
+        "unique_ids",
+        "identifier_scanner_consistency",
+        "development_evaluation_remote_provenance",
+        "development_evaluation_contracts",
+        "development_evaluation_identity",
+        "reviewer_authority",
+        "source_registry",
+        "review_ledger",
+        "numeric_traceability",
+        "exact_deduplication",
+        "semantic_duplicate_screen",
+        "development_contamination_screen",
+        "grouped_partitions",
+        "curriculum"
+      ],
+      "properties": {
+        "record_contracts": {"type": "boolean"},
+        "unique_ids": {"type": "boolean"},
+        "identifier_scanner_consistency": {"type": "boolean"},
+        "development_evaluation_remote_provenance": {"type": "boolean"},
+        "development_evaluation_contracts": {"type": "boolean"},
+        "development_evaluation_identity": {"type": "boolean"},
+        "reviewer_authority": {"type": "boolean"},
+        "source_registry": {"type": "boolean"},
+        "review_ledger": {"type": "boolean"},
+        "numeric_traceability": {"type": "boolean"},
+        "exact_deduplication": {"type": "boolean"},
+        "semantic_duplicate_screen": {"type": "boolean"},
+        "development_contamination_screen": {"type": "boolean"},
+        "grouped_partitions": {"type": "boolean"},
+        "curriculum": {"type": "boolean"}
+      }
+    },
+    "curriculum": {
+      "type": "object"
+    },
+    "issues": {
+      "type": "array",
+      "items": {"type": "string"}
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  }
+}

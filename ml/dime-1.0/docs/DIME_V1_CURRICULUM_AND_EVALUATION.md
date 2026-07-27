@@ -91,7 +91,8 @@ Required subcoverage:
 - at least 480 records contain multi-tool workflows;
 - at least 360 records are adversarial, contradictory, or injection-bearing;
 - 1,200 successful tool-assisted, 420 degraded tool-assisted, 480 direct
-  no-tool, and 300 clarification/abstention/protective records;
+  no-tool, 100 clarification, 100 abstention, and 100 protective-response
+  records;
 - no league exceeds 25%, market type 30%, or provider 20%;
 - when traffic mix is unknown, 30% remains sport-neutral;
 - answer lengths are approximately 30% concise, 50% normal, and 20% detailed;
@@ -100,16 +101,20 @@ Required subcoverage:
 The market-math family covers implied probability 30, no-vig 40, hold 30, EV
 40, settlement 30, ROI 30, and canonical CLV 40.
 
-At least 120 of the safety/privacy family cover responsible gaming; the
-remainder covers tenant/privacy boundaries, prompt/tool-result injection,
-secret extraction, system-prompt requests, and social engineering.
+The safety/privacy family includes at least 120 responsible-gaming, 30
+privacy, 30 security, 30 eligibility, and 30 acute-distress records. Security
+coverage includes prompt/tool-result injection, secret extraction,
+system-prompt requests, and social engineering.
 
 ## Record admission
 
 A production SFT record enters a frozen dataset only when:
 
 1. the record and every tool call/result are schema-valid and linked;
-2. every number is recomputed or traceable to a fixture;
+2. every assistant numeric token, across every task type, is bound by a
+   reviewed numeric assertion to a numeric leaf in a linked successful tool
+   result, and every `calculate_market_math` result is independently
+   recomputed from its call arguments;
 3. `available_at <= as_of_utc`;
 4. provenance, source owner, rights basis, generation method, and source IDs
    are complete;
@@ -125,9 +130,15 @@ A production SFT record enters a frozen dataset only when:
 11. the item is approved under the frozen rubric;
 12. the dataset manifest and hashes are approved before training.
 
-Teacher-generated drafts require recorded model/prompt/version provenance and
-independent human verification. Do not bulk-train raw chats, articles, feed
-dumps, or Bet Tracker rows.
+The machine audit validates the complete curriculum configuration against
+[`schemas/curriculum_program.schema.json`](../schemas/curriculum_program.schema.json)
+before applying quotas. Missing or unknown sections, disabled admission
+gates, inconsistent totals, invalid aliases, and malformed caps fail closed.
+
+Foundation v1 excludes teacher-generated drafts. Any later curriculum that
+proposes them requires a separately reviewed policy plus recorded
+model/prompt/version provenance and independent human verification. Do not
+bulk-train raw chats, articles, feed dumps, or Bet Tracker rows.
 
 ## Curriculum order
 

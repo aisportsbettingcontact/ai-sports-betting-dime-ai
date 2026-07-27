@@ -1,12 +1,92 @@
 {
+  "answer_length_counts": {
+    "train": {},
+    "validation": {}
+  },
+  "answer_length_failure_count": 0,
+  "answer_length_failure_examples": [],
+  "candidate_status": "does_not_meet_curriculum_contract",
+  "config_validation": {
+    "pass": true,
+    "schema": "curriculum_program.schema.json"
+  },
+  "control_pair_counts": {
+    "difference_axes": {},
+    "invalid_pairs": [],
+    "labeled_distinct_pairs": 0,
+    "labeled_records": 0,
+    "normalized_input_sha256": {},
+    "valid_distinct_pairs": 0,
+    "valid_records": 0
+  },
+  "control_pair_failure_examples": [],
   "cross_cutting_counts": {
     "adversarial_or_contradictory_records": 0,
-    "multi_tool_records": 0,
+    "multi_tool_records": 1,
     "multi_turn_records": 0,
-    "sport_neutral_records_when_traffic_unknown": 0
+    "sport_neutral_records_when_traffic_unknown": 6
   },
+  "curriculum_structure_failure_count": 108,
+  "curriculum_structure_failure_examples": [
+    "sft_math_novig_001: curriculum must be an object",
+    "sft_math_novig_001: skill_ids must be unique canonical identifiers",
+    "sft_math_novig_001: invalid difficulty None",
+    "sft_math_novig_001: invalid interaction_mode None",
+    "sft_math_novig_001: scenario_cluster_id must be canonical",
+    "sft_math_novig_001: invalid evidence_status None",
+    "sft_math_novig_001: invalid policy_action None",
+    "sft_math_novig_001: invalid risk_tier None",
+    "sft_math_novig_001: invalid answer_length None",
+    "sft_math_ev_002: curriculum must be an object",
+    "sft_math_ev_002: skill_ids must be unique canonical identifiers",
+    "sft_math_ev_002: invalid difficulty None",
+    "sft_math_ev_002: invalid interaction_mode None",
+    "sft_math_ev_002: scenario_cluster_id must be canonical",
+    "sft_math_ev_002: invalid evidence_status None",
+    "sft_math_ev_002: invalid policy_action None",
+    "sft_math_ev_002: invalid risk_tier None",
+    "sft_math_ev_002: invalid answer_length None",
+    "sft_market_splits_003: curriculum must be an object",
+    "sft_market_splits_003: skill_ids must be unique canonical identifiers"
+  ],
   "curriculum_version": "dime-curriculum-v1",
+  "distribution_aliasing_failure_count": 0,
+  "distribution_aliasing_failure_examples": [],
+  "distribution_counts": {
+    "by_split": {
+      "train": {
+        "league": {
+          "synthetic": 2
+        },
+        "market_type": {},
+        "provider": {}
+      },
+      "validation": {
+        "league": {
+          "synthetic": 2
+        },
+        "market_type": {},
+        "provider": {}
+      }
+    },
+    "league": {
+      "synthetic": 4
+    },
+    "market_type": {},
+    "provider": {}
+  },
+  "distribution_violations": [
+    "aggregate.league_fraction:synthetic=0.333333>0.250000",
+    "validation.league_fraction:synthetic=0.500000>0.250000"
+  ],
+  "duplicate_record_ids": [],
+  "interaction_coherence_failure_count": 0,
+  "interaction_coherence_failure_examples": [],
   "interaction_mode_counts": {},
+  "interaction_mode_counts_by_split": {
+    "train": {},
+    "validation": {}
+  },
   "issues": [
     "train has 8 records; expected 2160",
     "train has unknown task families: ['market_analysis', 'privacy_security', 'responsible_gaming', 'simulation']",
@@ -31,21 +111,95 @@
     "validation.simulation_analysis is 0; expected 18",
     "validation.safety_privacy_security is 0; expected 24",
     "12 records lack required curriculum labels",
-    "interaction_mode.successful_tool_assisted is 0; expected 1200",
-    "interaction_mode.degraded_tool_assisted is 0; expected 420",
-    "interaction_mode.direct_no_tool is 0; expected 480",
-    "interaction_mode.clarification_abstention_protective is 0; expected 300",
+    "108 curriculum structure violations",
+    "3 market-math records are not traceable",
+    "17 records have incomplete market metadata",
+    "interaction_mode.train.successful_tool_assisted is 0; expected 1080",
+    "interaction_mode.validation.successful_tool_assisted is 0; expected 120",
+    "interaction_mode.train.degraded_tool_assisted is 0; expected 378",
+    "interaction_mode.validation.degraded_tool_assisted is 0; expected 42",
+    "interaction_mode.train.direct_no_tool is 0; expected 432",
+    "interaction_mode.validation.direct_no_tool is 0; expected 48",
+    "interaction_mode.train.clarification is 0; expected 90",
+    "interaction_mode.validation.clarification is 0; expected 10",
+    "interaction_mode.train.abstention is 0; expected 90",
+    "interaction_mode.validation.abstention is 0; expected 10",
+    "interaction_mode.train.protective_response is 0; expected 90",
+    "interaction_mode.validation.protective_response is 0; expected 10",
     "single-tool get_game_context is 0; minimum 40",
-    "single-tool get_current_odds is 0; minimum 40",
+    "single-tool get_current_odds is 2; minimum 40",
     "single-tool get_odds_history is 0; minimum 40",
     "single-tool get_market_splits is 0; minimum 40",
-    "single-tool calculate_market_math is 0; minimum 40",
-    "single-tool get_bet_tracker_summary is 0; minimum 40",
-    "single-tool run_simulation is 0; minimum 40",
+    "single-tool calculate_market_math is 3; minimum 40",
+    "single-tool get_bet_tracker_summary is 2; minimum 40",
+    "single-tool run_simulation is 1; minimum 40",
+    "answer_length.train.concise is 0; expected 648",
+    "answer_length.validation.concise is 0; expected 72",
+    "answer_length.train.normal is 0; expected 1080",
+    "answer_length.validation.normal is 0; expected 120",
+    "answer_length.train.detailed is 0; expected 432",
+    "answer_length.validation.detailed is 0; expected 48",
+    "market_math_operation.train.implied_probability is 0; expected 27",
+    "market_math_operation.validation.implied_probability is 0; expected 3",
+    "market_math_operation.train.remove_vig is 0; expected 36",
+    "market_math_operation.validation.remove_vig is 0; expected 4",
+    "market_math_operation.train.market_hold is 0; expected 27",
+    "market_math_operation.validation.market_hold is 0; expected 3",
+    "market_math_operation.train.expected_value is 0; expected 36",
+    "market_math_operation.validation.expected_value is 0; expected 4",
+    "market_math_operation.train.settled_profit is 0; expected 27",
+    "market_math_operation.validation.settled_profit is 0; expected 3",
+    "market_math_operation.train.roi is 0; expected 27",
+    "market_math_operation.validation.roi is 0; expected 3",
+    "market_math_operation.train.probability_clv is 0; expected 36",
+    "market_math_operation.validation.probability_clv is 0; expected 4",
+    "safety_subfamily.train.responsible_gaming is 0; minimum 108",
+    "safety_subfamily.validation.responsible_gaming is 0; minimum 12",
+    "safety_subfamily.train.privacy is 0; minimum 27",
+    "safety_subfamily.validation.privacy is 0; minimum 3",
+    "safety_subfamily.train.security is 0; minimum 27",
+    "safety_subfamily.validation.security is 0; minimum 3",
+    "safety_subfamily.train.eligibility is 0; minimum 27",
+    "safety_subfamily.validation.eligibility is 0; minimum 3",
+    "safety_subfamily.train.acute_distress is 0; minimum 27",
+    "safety_subfamily.validation.acute_distress is 0; minimum 3",
     "multi_turn_records is 0; minimum 720",
-    "multi_tool_records is 0; minimum 480",
+    "multi_tool_records is 1; minimum 480",
     "adversarial_or_contradictory_records is 0; minimum 360",
-    "sport_neutral_records_when_traffic_unknown is 0; minimum 720"
+    "sport_neutral_records_when_traffic_unknown is 6; minimum 720",
+    "distribution caps exceeded: ['aggregate.league_fraction:synthetic=0.333333>0.250000', 'validation.league_fraction:synthetic=0.500000>0.250000']",
+    "valid control-pair records are 0; minimum 240",
+    "valid distinct control pairs are 0; minimum 120"
+  ],
+  "market_math_failure_count": 3,
+  "market_math_failure_examples": [
+    "sft_math_novig_001: market_math requires a configured market_math_operation",
+    "sft_math_ev_002: market_math requires a configured market_math_operation",
+    "sft_val_math_clv_104: market_math requires a configured market_math_operation"
+  ],
+  "market_math_operation_counts": {
+    "train": {},
+    "validation": {}
+  },
+  "metadata_coherence_failure_count": 17,
+  "metadata_coherence_failure_examples": [
+    "sft_math_novig_001: provider_ids must be an array",
+    "sft_math_ev_002: provider_ids must be an array",
+    "sft_market_splits_003: provider_ids must be an array",
+    "sft_market_splits_003: provider-dependent tools ['get_market_splits', 'get_odds_history'] require provider_ids",
+    "sft_coach_small_sample_004: sport and league must both be canonical strings or both null",
+    "sft_coach_small_sample_004: provider_ids must be an array",
+    "sft_coach_process_005: sport and league must both be canonical strings or both null",
+    "sft_coach_process_005: provider_ids must be an array",
+    "sft_simulation_006: provider_ids must be an array",
+    "sft_safety_chasing_007: provider_ids must be an array",
+    "sft_privacy_cross_user_008: provider_ids must be an array",
+    "sft_val_stale_live_101: provider_ids must be an array",
+    "sft_val_stale_live_101: provider-dependent tools ['get_current_odds'] require provider_ids",
+    "sft_val_no_current_data_102: provider_ids must be an array",
+    "sft_val_no_current_data_102: provider-dependent tools ['get_current_odds'] require provider_ids",
+    "sft_val_underage_103: provider_ids must be an array",
+    "sft_val_math_clv_104: provider_ids must be an array"
   ],
   "missing_curriculum_label_count": 12,
   "missing_curriculum_label_examples": [
@@ -64,14 +218,30 @@
   ],
   "partition_leakage": [],
   "pass": false,
+  "program_status": "proposed",
+  "record_id_failure_count": 0,
+  "record_id_failure_examples": [],
   "records": {
     "total": 12,
     "train": 8,
     "validation": 4
   },
+  "safety_label_failure_count": 0,
+  "safety_label_failure_examples": [],
+  "safety_subfamily_counts": {
+    "train": {},
+    "validation": {}
+  },
   "scenario_leakage": [],
-  "schema_version": "dime-curriculum-audit-v1",
-  "single_tool_counts": {},
+  "schema_version": "dime-curriculum-audit-v2",
+  "single_tool_counts": {
+    "calculate_market_math": 3,
+    "get_bet_tracker_summary": 2,
+    "get_current_odds": 2,
+    "run_simulation": 1
+  },
+  "sport_league_failure_count": 0,
+  "sport_league_failure_examples": [],
   "task_counts": {
     "train": {
       "bet_tracker_coaching": 2,

@@ -25,6 +25,49 @@
       "type": "array",
       "items": {"type": "object"}
     },
+    "numeric_assertions": {
+      "type": "array",
+      "description": "One reviewed claim binding for every numeric token in every assistant message. Each source_path must resolve to a numeric leaf in a linked status=ok tool result; calculate_market_math results are also independently recomputed.",
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "source_path",
+          "value",
+          "unit",
+          "comparator",
+          "tolerance",
+          "assistant_message_index",
+          "claim_text",
+          "formatted_value"
+        ],
+        "properties": {
+          "source_path": {
+            "type": "string",
+            "description": "Path in the form tool:<call-id>:data.<numeric-leaf>; literal, user-message, metadata, and failed-tool sources are not admissible.",
+            "minLength": 1
+          },
+          "value": {"type": "number"},
+          "unit": {
+            "enum": [
+              "probability",
+              "percentage_points",
+              "decimal_odds",
+              "american_odds",
+              "units",
+              "roi",
+              "count"
+            ]
+          },
+          "comparator": {"enum": ["exact", "approximate"]},
+          "tolerance": {"type": "number", "minimum": 0},
+          "assistant_message_index": {"type": "integer", "minimum": 0},
+          "claim_text": {"type": "string", "minLength": 1},
+          "formatted_value": {"type": "string", "minLength": 1}
+        }
+      }
+    },
     "curriculum": {
       "type": "object",
       "additionalProperties": false,
@@ -35,7 +78,8 @@
         "scenario_cluster_id",
         "evidence_status",
         "policy_action",
-        "risk_tier"
+        "risk_tier",
+        "answer_length"
       ],
       "properties": {
         "skill_ids": {
@@ -86,7 +130,34 @@
             "not_applicable"
           ]
         },
-        "risk_tier": {"enum": ["standard", "high", "critical"]}
+        "risk_tier": {"enum": ["standard", "high", "critical"]},
+        "answer_length": {"enum": ["concise", "normal", "detailed"]},
+        "control_pair_id": {"type": ["string", "null"], "minLength": 1},
+        "market_math_operation": {
+          "type": ["string", "null"],
+          "enum": [
+            "implied_probability",
+            "remove_vig",
+            "market_hold",
+            "expected_value",
+            "settled_profit",
+            "roi",
+            "probability_clv",
+            null
+          ]
+        },
+        "safety_subfamily": {
+          "type": ["string", "null"],
+          "enum": [
+            "responsible_gaming",
+            "privacy",
+            "security",
+            "eligibility",
+            "acute_distress",
+            "not_applicable",
+            null
+          ]
+        }
       }
     },
     "metadata": {
@@ -99,9 +170,16 @@
         "source_ids"
       ],
       "properties": {
-        "sport": {"type": ["string", "null"]},
-        "league": {"type": ["string", "null"]},
+        "sport": {"type": ["string", "null"], "minLength": 1},
+        "league": {"type": ["string", "null"], "minLength": 1},
+        "market_type": {"type": ["string", "null"], "minLength": 1},
+        "provider_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        },
         "as_of_utc": {"type": "string", "format": "date-time"},
+        "available_at_utc": {"type": ["string", "null"], "format": "date-time"},
         "synthetic_or_deidentified": {
           "enum": ["synthetic", "deidentified", "none"]
         },
@@ -112,11 +190,40 @@
           "items": {"type": "string"}
         },
         "event_partition_key": {"type": ["string", "null"]},
+        "source_snapshot_partition_key": {"type": ["string", "null"]},
+        "conversation_partition_key": {"type": ["string", "null"]},
         "user_partition_hash": {"type": ["string", "null"]},
         "rights_basis": {"type": ["string", "null"]},
         "source_owner": {"type": ["string", "null"]},
+        "author_id": {"type": ["string", "null"]},
         "deidentification_method": {"type": ["string", "null"]},
         "generation_method": {"type": ["string", "null"]},
+        "teacher_provenance": {
+          "oneOf": [
+            {"type": "null"},
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "model_id",
+                "model_revision",
+                "prompt_sha256",
+                "generated_at_utc",
+                "seed"
+              ],
+              "properties": {
+                "model_id": {"type": "string", "minLength": 1},
+                "model_revision": {"type": "string", "minLength": 1},
+                "prompt_sha256": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                },
+                "generated_at_utc": {"type": "string", "format": "date-time"},
+                "seed": {"type": "integer"}
+              }
+            }
+          ]
+        },
         "deletion_policy_id": {"type": ["string", "null"]},
         "direct_identifier_scan_version": {"type": ["string", "null"]}
       }
@@ -129,6 +236,7 @@
         "review_status": {"enum": ["draft", "approved", "rejected"]},
         "reviewer_ids": {
           "type": "array",
+          "uniqueItems": true,
           "items": {"type": "string"}
         },
         "reviewed_at_utc": {"type": ["string", "null"], "format": "date-time"},
@@ -153,8 +261,8 @@
       "properties": {
         "role": {"enum": ["system", "user", "assistant", "tool"]},
         "content": {"type": "string"},
-        "name": {"type": "string"},
-        "tool_call_id": {"type": "string"},
+        "name": {"type": "string", "minLength": 1},
+        "tool_call_id": {"type": "string", "minLength": 1},
         "tool_calls": {
           "type": "array",
           "items": {
@@ -162,7 +270,7 @@
             "additionalProperties": false,
             "required": ["id", "type", "function"],
             "properties": {
-              "id": {"type": "string"},
+              "id": {"type": "string", "minLength": 1},
               "type": {"const": "function"},
               "function": {
                 "type": "object",

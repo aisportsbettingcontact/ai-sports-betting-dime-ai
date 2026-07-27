@@ -1,0 +1,128 @@
+schema_version: dime-foundation-build-v1
+dataset_version: dime-sft-foundation-v1
+release_directory: foundation-v1
+release_inventory:
+  - train.jsonl
+  - validation.jsonl
+  - dataset_manifest.json
+  - dataset_card.md
+  - checksums.json
+
+source_policy:
+  allowed_source_classes:
+    - human-authored
+    - synthetic
+  contains_user_data: false
+  contains_provider_derived_data: false
+  teacher_generated_allowed: false
+  unknown_sources_allowed: false
+  expired_rights_allowed: false
+
+record_policy:
+  canonical_system_prompt_in_records: false
+  canonical_system_prompt_injected_by_trainer: true
+  dataset_version: dime-sft-foundation-v1
+  required_group_keys:
+    - source_snapshot_partition_key
+    - conversation_partition_key
+    - scenario_cluster_id
+  require_nonempty_source_ids: true
+  require_numeric_assertions_for_all_assistant_numeric_tokens: true
+  require_successful_tool_result_evidence_for_numeric_assertions: true
+  recompute_calculate_market_math_results: true
+  exact_duplicate_normalization: dime-normalized-messages-v1
+  semantic_shingle_size: 5
+  semantic_similarity_threshold: 0.92
+  development_prompt_similarity_threshold: 0.80
+  numeric_tolerance_maximums:
+    probability: 0.000000001
+    percentage_points: 0.000001
+    decimal_odds: 0.000000001
+    american_odds: 0
+    units: 0.000001
+    roi: 0.000000001
+    count: 0
+
+development_evaluation_policy:
+  identity_schema_version: dime-foundation-development-eval-identity-v2
+  repo_type: dataset
+  repo_id: taileredsports/dime-eval-development
+  private_repository_required: true
+  exact_40_character_commit_required: true
+  manifest_path: evaluation_manifest.json
+  case_root: cases
+  exhaustive_recursive_jsonl_inventory_required: true
+  explicit_hf_token_required: true
+  local_remote_byte_equality_required: true
+  local_fallback_allowed: false
+
+review_policy:
+  rubric_id: dime-answer-v1
+  rubric_path: docs/DIME_ANSWER_RUBRIC_V1.md
+  standard_reviewer_minimum: 1
+  elevated_reviewer_minimum: 2
+  elevated_task_families:
+    - market_math
+    - bet_tracker_coaching
+    - simulation_analysis
+    - safety_privacy_security
+  elevated_policy_actions:
+    - privacy_block
+    - age_block
+    - jurisdiction_block
+    - self_exclusion_block
+    - protective_block
+    - acute_distress_block
+  author_may_review_own_record: false
+  required_specialist_roles:
+    market_math: numeric
+    bet_tracker_coaching: coaching
+    simulation_analysis: simulation
+    safety_privacy_security: safety
+
+external_audit_policy:
+  semantic_deduplication:
+    tool_id: dime-semantic-audit
+    tool_version: 1.0.0
+  privacy_and_identifiers:
+    tool_id: dime-privacy-audit
+    tool_version: 1.0.0
+  rights:
+    tool_id: dime-rights-audit
+    tool_version: 1.0.0
+  development_evaluation_contamination:
+    tool_id: dime-development-contamination-audit
+    tool_version: 1.0.0
+  locked_evaluation_contamination:
+    tool_id: dime-locked-contamination-audit
+    tool_version: 1.0.0
+  numeric_traceability:
+    tool_id: dime-numeric-audit
+    tool_version: 1.0.0
+
+evidence_freshness_policy:
+  candidate_audit_max_age_hours: 24
+  external_audit_max_age_hours: 72
+  approval_max_age_hours: 24
+  maximum_release_validity_days: 30
+
+freeze_policy:
+  manifest_schema_version: dime-dataset-manifest-v4
+  private_visibility_required: true
+  exact_inventory_required: true
+  atomic_new_directory_only: true
+  external_audit_reports:
+    - semantic_deduplication
+    - privacy_and_identifiers
+    - rights
+    - development_evaluation_contamination
+    - locked_evaluation_contamination
+    - numeric_traceability
+  dataset_card_required_sections:
+    - "# Dime Foundation SFT"
+    - "## Intended use"
+    - "## Source classes and rights"
+    - "## Privacy and consent"
+    - "## Splits and counts"
+    - "## Known limitations"
+    - "## Retirement and deletion"
