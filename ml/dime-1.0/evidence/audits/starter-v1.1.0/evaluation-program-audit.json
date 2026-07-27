@@ -1,4 +1,6 @@
 {
+  "case_id_failure_count": 0,
+  "case_id_failure_examples": [],
   "cross_cutting_counts": {
     "four_or_more_turns": 0,
     "future_data_traps": 0,

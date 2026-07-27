@@ -1,5 +1,14 @@
 # Dime AI Iterative Training Roadmap
 
+## Current authorization state
+
+This roadmap is sequencing, not execution authority.
+`configs/curriculum_v1.yaml` remains `proposed`; no approved Foundation v1
+dataset, approved development release, approved locked release, production
+adapter, training authorization, or serving change exists. The Foundation
+candidate, review, audit, approval, and freeze tools establish the next
+governance layer only. They do not publish to Hugging Face or start training.
+
 ## Phase 0 — Freeze the control
 
 Goal: establish what the exact untuned Base model can and cannot do.
@@ -31,8 +40,55 @@ count. Include:
 - uncertainty and abstention;
 - privacy and responsible-gaming boundaries.
 
-Overfit 32 representative examples as a diagnostic before the full stage. The goal is to
-prove the formatter, labels, optimizer, save/resume, and adapter reload work.
+Foundation v1 advances in this order:
+
+1. author Dime-owned human gold examples and fully synthetic fixtures in the
+   authorized private candidate workspace;
+2. bind every record to its source registry entry, canonical hash, rubric, and
+   independent reviewer decisions;
+3. run deterministic candidate audit plus independently reviewed semantic,
+   privacy, rights, development-contamination, locked-contamination, and
+   numeric-traceability audits;
+4. obtain two dataset approvals that bind the exact split and evidence hashes;
+5. freeze a new closed-world snapshot containing exactly `train.jsonl`,
+   `validation.jsonl`, `dataset_manifest.json`, `dataset_card.md`, and
+   `checksums.json`; and
+6. only through a separate owner-authorized workflow, publish and independently
+   verify the private release, recording its returned full 40-character
+   Hugging Face commit SHA.
+
+Candidate audit and freeze require an explicit `HF_TOKEN` and remotely verify
+the private development suite at its exact 40-character commit using identity
+schema `dime-foundation-development-eval-identity-v2`. The gate enumerates the
+complete recursive `cases/**/*.jsonl` inventory and compares every manifest
+and case byte with the local inputs; it has no local fallback. Numeric
+admission likewise applies to all task families: every assistant numeric token
+must bind to a successful tool-result numeric leaf, while market-math outputs
+are additionally recomputed from the tool arguments.
+
+See [Foundation v1 dataset workflow](FOUNDATION_V1_DATASET_WORKFLOW.md).
+
+After the Foundation release and development/locked references exist, a
+separate training-authorization pull request must bind the exact source and
+experiment, v4 manifest and checksums hashes, complete independently reviewed
+`foundation_evidence_hashes`, full Foundation and development-evaluation
+commit SHAs, approved locked-evaluation full revision or structured opaque
+reference, training configuration, and preflight run manifest. Nothing runs
+while the platform remains `foundation_only`.
+
+The full-training preflight verifies that the runtime credential identifies
+itself as the named fine-grained `dime-training-read-v1` token, proves its
+required reads and locked-evaluation denial, and rejects scaffold or
+unapproved dataset states. It downloads the exact private Foundation revision,
+requires the closed five-file `foundation-v1/` inventory, and byte-compares
+that release with every local training input. Git authorization is also
+rechecked against the contract currently published on `origin/main` at each
+training execution fence, so a revoked or superseded ancestor cannot be
+replayed.
+
+Only after those gates pass should the team overfit 32 representative examples
+as a diagnostic before the full stage. The goal is to prove the formatter,
+labels, optimizer, save/resume, and adapter reload work.
 
 ## Phase 2 — Dime domain SFT
 

@@ -11,13 +11,26 @@ activation. The machine-readable contract currently sets
 until a focused, owner-approved pull request changes and binds that state to an
 exact release candidate.
 
+The Foundation v1 curriculum remains `proposed`. The tracked candidate,
+review, audit, approval, and freeze layer has not produced an approved
+Foundation dataset and does not change any Hugging Face repository, training
+authorization, serving configuration, or provider state.
+
+The trusted reviewer registry is also `proposed` and empty. It grants no
+reviewer or approver authority. Reviewer-backed transitions remain blocked
+until a reviewed registry is activated. The audit, freeze, and training paths
+bind its exact SHA-256 through every evidence layer.
+
 Authorization is never a reusable global switch. Full training additionally
 requires `authorization.training_candidate` to match the exact experiment,
 prior clean source commit, config hash, foundation dataset-manifest hash,
-foundation checksum-manifest hash, preflight run-manifest hash,
-foundation/development revisions, and locked opaque reference. A separate
-authorization commit may change only the canonical platform contract across
-the entire repository. Publication additionally requires
+foundation checksum-manifest hash, complete independently reviewed
+`foundation_evidence_hashes` including the trusted reviewer-registry SHA-256,
+preflight run-manifest hash, full 40-character foundation and development
+revisions, and the approved locked-evaluation full revision or structured
+opaque reference. A separate authorization commit may change only the
+canonical platform contract across the entire repository.
+Publication additionally requires
 `authorization.release_candidate` to match the exact candidate artifact
 hashes, evaluation-summary hash, training-contract hash, canonical
 bundle-payload hash, locked-suite manifest hash and expected-case count, and
@@ -53,6 +66,13 @@ may use the pinned Meta base control while that field is `null`.
 11. A new candidate reaches locked evaluation only through the reviewed,
     one-way, content-addressed handoff. It is not uploaded to the production
     model repository before it passes locked evaluation and release review.
+12. Foundation candidate records, source and review evidence, raw audit
+    reports, and approval material remain in an authorized private review
+    system until freeze; GitHub holds only public-safe contracts and sanitized
+    evidence.
+13. The Git-controlled trusted reviewer registry is the sole authority for
+    reviewer status and roles. Ledgers and reports reference its stable IDs;
+    they cannot create identities, activate reviewers, or grant roles.
 
 ## End-to-end boundary
 
@@ -104,6 +124,7 @@ GitHub `main` permanently owns:
 - synthetic or redistribution-cleared public fixtures;
 - public development-evaluation examples;
 - training, evaluation, and runtime configurations;
+- the versioned trusted reviewer registry and its closed schema;
 - documentation, architecture, runbooks, and release gates;
 - tests and CPU-safe validation workflows;
 - approved dataset manifests and SHA-256 hashes that are safe to publish;
@@ -115,6 +136,13 @@ GitHub `main` permanently owns:
 Branches and pull requests are public draft work. Private data must never be
 committed, even temporarily. Only reviewed, rights-cleared material may merge
 into `main`.
+
+`configs/foundation_reviewer_registry.json` is the sole reviewer authority.
+Every change requires review and a new registry version. Its exact bytes are
+hashed as `reviewer_registry_sha256`. The current `proposed` registry is empty,
+so it cannot authorize a decision, audit, approval, dataset, or training run.
+A ledger may reference only a stable registry ID. Any ledger-carried status or
+role is non-authoritative and cannot override the registry.
 
 GitHub must not contain:
 
@@ -133,7 +161,7 @@ Private dataset repository:
 `taileredsports/dime-foundation-sft`
 
 This repository owns only approved, frozen foundation SFT releases. A release
-is expected to contain a root Dataset Card plus a versioned directory such as:
+contains a root Dataset Card plus this exact version-directory inventory:
 
 ```text
 README.md
@@ -145,13 +173,35 @@ foundation-v1/
 └── checksums.json
 ```
 
+The five files under `foundation-v1/` are a closed-world inventory. Candidate
+shards, source registries, review ledgers, raw audit reports, approval records,
+temporary files, and unknown files do not enter that directory. The root
+`README.md` is repository metadata and does not become a sixth file inside the
+version directory.
+
+The v4 manifest binds the canonical system prompt, Foundation build config,
+source registry, aggregate source-artifact bytes, review ledger, candidate
+audit, approval record, and the six independently reviewed external audit
+report hashes: semantic deduplication, privacy and identifiers, rights,
+development-evaluation contamination, locked-evaluation contamination, and
+numeric traceability. It also binds the development-evaluation repository and
+full revision, its manifest and identity hashes, plus the approved
+locked-evaluation reference. The candidate audit, every external audit,
+approval, v4 manifest, and training evidence bind the same
+`reviewer_registry_sha256`; the implementation enforces those bindings.
+
 Draft and unreviewed records remain in a reviewed GitHub pull-request workflow
 only when they are safe for public review. Private drafts remain in an
 authorized private review system; they do not go on RunPod as the sole copy.
 
 Training loads an approved release with `dime-training-read-v1` and its exact
-Hugging Face commit SHA. The training environment cannot write to this
-repository.
+Hugging Face commit SHA. A later candidate-specific authorization must also
+bind the exact v4 manifest and checksums hashes, the complete
+`foundation_evidence_hashes` mapping, the development-evaluation full commit,
+and the locked-evaluation full revision or structured opaque reference. The
+training environment cannot write to this repository.
+
+See [Foundation v1 dataset workflow](FOUNDATION_V1_DATASET_WORKFLOW.md).
 
 ## Hugging Face: development evaluation
 
@@ -164,7 +214,16 @@ and checksums. Its contents may guide model development, so its scores cannot
 substitute for the locked release gate.
 
 The training environment may read an approved development-evaluation revision
-by full commit SHA. It cannot modify the repository.
+by full commit SHA. Foundation candidate audit and freeze require an explicit
+`HF_TOKEN` and identity schema
+`dime-foundation-development-eval-identity-v2`. At that exact revision, they
+prove the repository is private, enumerate the complete recursive
+`cases/**/*.jsonl` inventory, require root `README.md` and
+`evaluation_manifest.json`, and byte-compare the manifest and every case with
+the identity-bound local working copy. A partial inventory or unavailable,
+moving, public, mismatched, or unauthenticated remote fails closed; local-only
+evidence is never a fallback. The training environment cannot modify the
+repository.
 
 ## Hugging Face: locked evaluation
 
@@ -312,7 +371,16 @@ The governed layout is:
 Every run records an exact Git commit, exact Hugging Face dataset commits,
 exact Meta base revision, unique experiment ID, configuration hashes, prompt
 and schema versions, tool contract, decoding settings, runtime identity, and
-output hashes.
+output hashes. A future full-training run also records the Foundation v4
+manifest and checksums hashes, the independently reviewed Foundation evidence
+hash mapping, the development-evaluation full commit, and the approved
+locked-evaluation reference.
+
+For Foundation data admission, every numeric token in every assistant message
+must resolve through a reviewed assertion to a numeric leaf in a successful
+tool result. `calculate_market_math` outputs additionally require independent
+recomputation from the recorded arguments. This applies across task families,
+not only to records labeled `market_math`.
 
 The training template receives only `dime-training-read-v1`. Publisher and
 locked-evaluator credentials are prohibited. After a run, approved small
@@ -382,6 +450,9 @@ provider constant.
 | Transfer | Required identity | Approval | Destination |
 |---|---|---|---|
 | GitHub source to RunPod | Full Git commit SHA | Reviewed `main` commit | Pinned full checkout |
+| Private Foundation candidates to review | Record hashes, source registry, rubric hash, stable reviewer IDs, and trusted reviewer-registry SHA-256 | Active registry roles plus independent record review | Authorized private review system |
+| Approved Foundation inputs to freeze | Split, evidence, and trusted reviewer-registry SHA-256 values | Machine audit, external reports, and two registry-authorized dataset approvers | New exact five-file snapshot |
+| Frozen Foundation snapshot to HF | Exact five-file hashes and expected parent | Separate owner-authorized publication | Private dataset commit with returned full SHA |
 | Foundation data to RunPod | Full HF commit SHA | Approved dataset release | Revision-specific directory |
 | Development eval to RunPod | Full HF commit SHA | Approved eval release | Revision-specific directory |
 | Candidate outputs to review | Experiment ID and hashes | Experiment review | Sanitized GitHub evidence |

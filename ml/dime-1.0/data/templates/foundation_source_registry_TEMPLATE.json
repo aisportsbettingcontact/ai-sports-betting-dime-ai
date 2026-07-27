@@ -1,0 +1,29 @@
+{
+  "schema_version": "dime-foundation-source-registry-v1",
+  "dataset_version": "dime-sft-foundation-v1",
+  "generated_at_utc": "REPLACE_WITH_NORMALIZED_UTC_TIMESTAMP",
+  "sources": [
+    {
+      "source_id": "REPLACE_WITH_STABLE_SOURCE_ID",
+      "source_class": "human-authored",
+      "source_owner": "REPLACE_WITH_SOURCE_OWNER",
+      "snapshot_id": "REPLACE_WITH_IMMUTABLE_SNAPSHOT_ID",
+      "snapshot_sha256": "REPLACE_WITH_64_CHARACTER_SHA256",
+      "snapshot_file": "sources/REPLACE_WITH_IMMUTABLE_SOURCE_FILENAME.json",
+      "snapshot_at_utc": "REPLACE_WITH_NORMALIZED_UTC_TIMESTAMP",
+      "available_at_utc": "REPLACE_WITH_NORMALIZED_UTC_TIMESTAMP",
+      "rights_record_id": "REPLACE_WITH_RIGHTS_RECORD_ID",
+      "ml_training_permitted": true,
+      "derivative_use_permitted": true,
+      "public_redistribution_permitted": false,
+      "contains_user_data": false,
+      "contains_provider_derived_data": false,
+      "restrictions": "Private Dime Foundation v1 training use only.",
+      "expires_at_utc": null,
+      "reviewer_ids": [
+        "REPLACE_WITH_RIGHTS_REVIEWER_ID"
+      ],
+      "reviewed_at_utc": "REPLACE_WITH_NORMALIZED_UTC_TIMESTAMP"
+    }
+  ]
+}

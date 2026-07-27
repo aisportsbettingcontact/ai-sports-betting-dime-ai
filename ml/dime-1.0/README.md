@@ -46,6 +46,11 @@ locked-evaluation release, or serving-approved adapter has been published.
 Their current card commits are registry evidence, not training, evaluation, or
 serving revisions.
 
+`configs/curriculum_v1.yaml` remains a proposed curriculum. The tracked
+Foundation v1 candidate, review, audit, and freeze contracts make a future
+dataset reviewable; they do not create an approved dataset, publish anything
+to Hugging Face, authorize training, change serving, or activate the provider.
+
 The small 2026-07-25 rehearsal proved only that selected infrastructure
 mechanics execute. It used 8 training and 4 validation records, scored 3 of 10
 expected evaluation cases, passed zero cases, retained critical failures, and
@@ -70,6 +75,7 @@ See:
 
 - [Platform ownership](docs/PLATFORM_OWNERSHIP.md)
 - [Hugging Face registry](docs/HUGGING_FACE_REGISTRY.md)
+- [Foundation v1 dataset workflow](docs/FOUNDATION_V1_DATASET_WORKFLOW.md)
 - [RunPod workspace and runbook](docs/RUNPOD_WORKSPACE_RUNBOOK.md)
 - [Candidate-to-locked-evaluator handoff](docs/CANDIDATE_EVALUATION_HANDOFF.md)
 - [Public data boundary](data/README.md)
@@ -79,7 +85,7 @@ See:
 ```text
 ml/dime-1.0/
 ├── configs/                 # Runtime identity and guarded training configs
-├── data/                    # Synthetic public samples and record templates
+├── data/                    # Synthetic public samples and private-workflow templates
 ├── docs/                    # Governance, plans, research, and release gates
 ├── evidence/                # Reviewed sanitized audits and rehearsal evidence
 ├── prompts/                 # Versioned training prompt and chat template
@@ -163,6 +169,18 @@ gated Meta base model; it cannot read locked evaluations and cannot publish.
 Publishing and serving use separate least-privilege credentials. Never paste,
 print, read back, copy, or commit any credential.
 
+The Foundation candidate auditor and freezer are CPU-safe, but their
+development-evaluation provenance gate is an authenticated remote operation.
+Both require an explicit nonempty `HF_TOKEN` and identity schema
+`dime-foundation-development-eval-identity-v2`. The verifier resolves
+`taileredsports/dime-eval-development` at the identity's exact lowercase
+40-character commit SHA, proves the repository is private, requires its root
+`README.md` and `evaluation_manifest.json`, enumerates the complete recursive
+`cases/**/*.jsonl` inventory, and byte-compares every declared manifest and
+case file with the local working copy. A missing token, inaccessible remote,
+moving alias, public repository, partial inventory, hash/count mismatch, or
+byte mismatch fails closed. There is no local-only or cached-evidence fallback.
+
 The following validations are Hugging-Face- or GPU-gated and are intentionally
 excluded from public CPU CI:
 
@@ -198,8 +216,12 @@ No full run is authorized until:
 2. train, validation, locked, hidden, and adversarial partitions are governed;
 3. partition, future-data, semantic-deduplication, and contamination audits
    pass;
-4. deterministic tool, math, policy, and safety contracts pass;
-5. the dataset hashes and record counts match an approved v3 manifest; and
+4. deterministic tool, math, policy, and safety contracts pass, including
+   successful tool-result evidence for every assistant numeric token across
+   every task family and independent recomputation of market-math results;
+5. the private Foundation snapshot has the exact five-file inventory, all
+   hashes and record counts match an approved v4 manifest, and its independent
+   review and audit evidence is bound into authorization; and
 6. the release gates in [RELEASE_GATES.md](docs/RELEASE_GATES.md) are adopted.
 
 The sample audits are intentionally non-passing against production quotas.
@@ -213,7 +235,21 @@ candidate-specific authorization pull request must move the platform to
 `training_authorized` and populate `authorization.training_candidate` with
 the exact experiment, prior clean source commit, config hash, foundation
 dataset-manifest and checksum-manifest hashes, preflight run-manifest hash,
-dataset revisions, and locked opaque reference.
+full 40-character foundation and development-evaluation revisions, and the
+approved locked-evaluation full revision or structured opaque reference.
+It must also include `foundation_evidence_hashes`, matching the approved v4
+manifest exactly:
+
+- the system-prompt, Foundation build-config, source-registry, exact
+  source-artifact aggregate, review-ledger, candidate-audit, and
+  approval-record SHA-256 values; and
+- the independently reviewed semantic-deduplication,
+  privacy-and-identifiers, rights, development-evaluation-contamination,
+  locked-evaluation-contamination, and numeric-traceability report SHA-256
+  values.
+
+A dataset revision, manifest hash, or passing local audit alone is not
+training authorization.
 
 Authorization uses two reviewed commits to avoid a circular hash:
 
@@ -273,6 +309,8 @@ application policy controls, and explicitly change the provider constant.
 - [RunPod workspace and runbook](docs/RUNPOD_WORKSPACE_RUNBOOK.md)
 - [Machine-readable platform contract](configs/platform_contract.json)
 - [Data governance](docs/DATA_GOVERNANCE.md)
+- [Foundation v1 dataset workflow](docs/FOUNDATION_V1_DATASET_WORKFLOW.md)
+- [Dime answer rubric v1](docs/DIME_ANSWER_RUBRIC_V1.md)
 - [System architecture](docs/DIME_V1_SYSTEM_ARCHITECTURE.md)
 - [Curriculum and evaluation](docs/DIME_V1_CURRICULUM_AND_EVALUATION.md)
 - [Release gates](docs/RELEASE_GATES.md)

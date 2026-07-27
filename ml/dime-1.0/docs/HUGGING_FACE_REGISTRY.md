@@ -29,6 +29,12 @@ These SHAs identify the verified governance-card state. They are not approved
 training, evaluation, or serving revisions and must not be substituted for a
 future release SHA.
 
+The Foundation v1 curriculum remains `proposed`. The repository now defines a
+candidate, independent-review, audit, approval, and freeze layer, but no
+approved Foundation snapshot exists. Those local contracts do not upload,
+tag, or otherwise mutate Hugging Face and do not authorize training or
+serving.
+
 The upstream dependency is:
 
 ```text
@@ -60,10 +66,32 @@ foundation-v1/
 
 The root `README.md` is the rendered Dataset Card. A version-specific
 `dataset_card.md` supplements the root card; it does not replace it.
+The five files under `foundation-v1/` are the exact, closed-world release
+inventory; no source registry, review ledger, raw audit report, approval
+record, candidate shard, cache, or unknown file is published in that
+directory.
 
 Before publication, the release must pass provenance, rights, privacy, consent,
 de-identification, partition, future-data, semantic-deduplication,
 contamination, schema, and checksum review.
+
+Its v4 manifest binds the exact source-registry, aggregate source-artifact,
+review-ledger, candidate-audit, approval-record, canonical-system-prompt, and
+Foundation build-config SHA-256 values; the six independently reviewed
+external audit report hashes; the development-evaluation repository, full
+revision, manifest hash, and identity hash; and the approved locked-evaluation
+reference. Actual private candidate and evidence artifacts remain outside
+public GitHub in an authorized private review system. RunPod must never be
+their sole copy.
+
+Future training authorization must repeat those independently reviewed values
+under `authorization.training_candidate.foundation_evidence_hashes`, pin the
+Foundation and development-evaluation releases by their returned full
+40-character commit SHAs, and bind the approved locked-evaluation full
+revision or structured opaque reference. The registry commit alone is not
+training authority.
+
+See [Foundation v1 dataset workflow](FOUNDATION_V1_DATASET_WORKFLOW.md).
 
 ### Development evaluation
 
@@ -81,6 +109,24 @@ It may include:
 
 Because developers can see this material, it may guide iteration but cannot
 serve as the locked release gate.
+
+Foundation candidate audit and freeze accept this repository only through
+identity schema `dime-foundation-development-eval-identity-v2`. The identity
+must name repository type `dataset`, exact repository
+`taileredsports/dime-eval-development`, and an exact lowercase 40-character
+commit SHA. It binds `evaluation_manifest.json` plus the strictly path-sorted,
+exhaustive inventory of every remote path below `cases/` ending in `.jsonl`,
+with per-file hashes and record counts, an aggregate canonical-inventory hash,
+and the total case count.
+
+Verification requires an explicit nonempty `HF_TOKEN`. The verifier resolves
+the declared commit, proves the repository is private, enumerates the live
+inventory, requires root `README.md` and `evaluation_manifest.json`, downloads
+the manifest and all declared case files, validates their hashes and records,
+and requires byte equality with the local working copy. Authentication,
+transport, privacy, revision, inventory, hash, count, schema, or byte failure
+stops the workflow. It never substitutes local files, prior evidence, a branch,
+or a tag for the remote proof.
 
 ### Locked evaluation
 
@@ -215,6 +261,13 @@ A broad account token is not a substitute for these credentials in automation.
 Owner OAuth access is administrative and must not be embedded in a Pod,
 serving process, workflow, or script.
 
+Before a full run, the training client calls the Hub identity endpoint with
+the explicit runtime token and requires access-token name
+`dime-training-read-v1` with role `fineGrained`. It then behaviorally proves
+the required Foundation, development, and pinned base-model reads plus locked
+evaluation denial. The name/role check and effective-access matrix are both
+required; neither alone authorizes training.
+
 ## Credential placement
 
 | Environment | Permitted credential | Explicitly prohibited |
@@ -262,16 +315,29 @@ An approved revision is never silently overwritten.
 
 ### Foundation or development release
 
-1. Review the proposed data, manifest, Dataset Card, and checksums.
-2. Verify schema, provenance, rights, privacy, consent, partition, deduplication,
-   future-data, and contamination gates.
-3. Confirm the destination repository and private visibility.
-4. Publish with `dime-release-publisher-v1` from a dedicated release workspace.
-5. Capture the resulting full Hugging Face commit SHA.
-6. Download and verify the release by that exact SHA using a read-only
-   credential.
-7. Add a human-readable tag without moving an existing tag.
-8. Record the SHA, counts, hashes, and approval in GitHub.
+1. Confirm the curriculum and release remain proposals until explicit human
+   approval; a successful audit or freeze is not approval.
+2. Review the proposed data, manifest, Dataset Card, and checksums. For
+   Foundation v1, require the exact five-file version-directory inventory.
+3. Verify schema, provenance, rights, privacy, consent, partition,
+   deduplication, future-data, and contamination gates. For Foundation v1,
+   verify every v4 evidence hash against the independently reviewed source,
+   review, audit, approval, development-evaluation, and locked-evaluation
+   references.
+4. Confirm the destination repository and private visibility.
+5. Publish with `dime-release-publisher-v1` from a dedicated release workspace.
+6. Capture the returned full 40-character Hugging Face commit SHA.
+7. Download and verify the exact inventory and bytes by that SHA using a
+   read-only credential.
+8. Add a human-readable tag without moving an existing tag.
+9. Record the full SHA, counts, hashes, review decision, and durable
+   publication receipt in GitHub without copying private records or raw
+   private audit material.
+
+The candidate audit and freeze utilities stop before step 5. Publication is a
+separate owner-authorized external mutation. Until that mutation succeeds and
+its returned SHA is independently verified, the registry continues to show no
+approved Foundation release.
 
 ### Locked release
 
