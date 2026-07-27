@@ -18,7 +18,15 @@
  *   - HANDICAPPER: sees only their own bets
  */
 
-import { useState, useEffect, useMemo, useCallback, useRef, memo } from "react";
+import {
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  useRef,
+  useId,
+  memo,
+} from "react";
 import { keepPreviousData } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
@@ -443,9 +451,10 @@ function BreakdownsSidebar({
   stats: StatsData;
   unitSize: number;
 }) {
-  // Default: expanded on desktop (lg+), collapsed on mobile/tablet
+  // Default: expanded where the two-column split applies (xl+), collapsed
+  // while stacked (mobile/tablet/narrow shell pane)
   const [expanded, setExpanded] = useState(() => {
-    if (typeof window !== "undefined") return window.innerWidth >= 1024;
+    if (typeof window !== "undefined") return window.innerWidth >= 1280;
     return true;
   });
   const showDollar = unitSize > 0;
@@ -456,7 +465,7 @@ function BreakdownsSidebar({
       <button
         type="button"
         onClick={() => setExpanded(v => !v)}
-        className="w-full flex items-center justify-between gap-2 px-4 py-3 border-b border-white transition-colors lg:cursor-default"
+        className="w-full flex items-center justify-between gap-2 px-4 py-3 border-b border-white transition-colors xl:cursor-default"
         aria-expanded={expanded}
         aria-label="Toggle Breakdowns panel"
       >
@@ -471,20 +480,20 @@ function BreakdownsSidebar({
             </span>
           )}
         </div>
-        {/* Chevron — hidden on desktop since it’s always expanded */}
+        {/* Chevron — hidden on xl+ since it’s always expanded there */}
         <ChevronDown
           size={14}
-          className={`text-white transition-transform lg:hidden ${
+          className={`text-white transition-transform xl:hidden ${
             expanded ? "rotate-180" : ""
           }`}
         />
       </button>
 
-      {/* Content — collapsible on mobile/tablet, always shown on desktop */}
+      {/* Content — collapsible while stacked, always shown on xl+ */}
       <div
         className={`transition-all duration-200 ${
           expanded ? "block" : "hidden"
-        } lg:block`}
+        } xl:block`}
       >
         <div className="p-4 space-y-3">
           <BreakdownGrid stats={stats} vertical showDollar={showDollar} />
@@ -537,13 +546,18 @@ function SelectField({
   placeholder?: string;
   disabled?: boolean;
 }) {
+  const id = useId();
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-sm tracking-widest text-white uppercase font-medium">
+      <label
+        htmlFor={id}
+        className="text-sm tracking-widest text-white uppercase font-medium"
+      >
         {label}
       </label>
       <div className="relative">
         <select
+          id={id}
           value={value}
           onChange={e => onChange(e.target.value)}
           disabled={disabled}
@@ -2041,17 +2055,21 @@ function LogsTab({
       {reviewId !== null && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black backdrop-blur-sm">
           <div className="bg-black border border-white rounded-2xl p-6 w-full max-w-sm space-y-4">
-            <h3 className="font-bold text-sm tracking-wider">
+            <h2 className="font-bold text-sm tracking-wider">
               {reviewAction === "APPROVE"
                 ? "✅ Approve Request"
                 : "❌ Deny Request"}
-            </h3>
+            </h2>
             <p className="text-white text-xs">Request #{reviewId}</p>
             <div className="flex flex-col gap-1">
-              <label className="text-sm tracking-widest text-white uppercase font-medium">
+              <label
+                htmlFor="bt-review-note"
+                className="text-sm tracking-widest text-white uppercase font-medium"
+              >
                 Note (optional)
               </label>
               <textarea
+                id="bt-review-note"
                 value={reviewNote}
                 onChange={e => setReviewNote(e.target.value)}
                 rows={2}
@@ -2248,9 +2266,11 @@ function VerifiedBetsDrawer({
 export interface BetTrackerProps {
   /** Local shell preview: render chrome without impersonating server authorization. */
   previewMode?: boolean;
+  /** Shell pane already exposes an sr-only h1; standalone this page owns it. */
+  embeddedInShell?: boolean;
 }
 
-export default function BetTracker({ previewMode = false }: BetTrackerProps) {
+export default function BetTracker({ previewMode = false, embeddedInShell = false }: BetTrackerProps) {
   const [, navigate] = useLocation();
   const { appUser, loading: authLoading } = useAppAuth();
 
@@ -2625,23 +2645,66 @@ export default function BetTracker({ previewMode = false }: BetTrackerProps) {
     return Array.from(dates).sort();
   }, [enrichedBets]);
 
-  // Historical MLB linescores never change — staleTime:Infinity prevents refetching graded dates
-  // Only today's dates need live polling (refetchInterval:60s)
-  const hasLiveMlbDates = useMemo(
-    () => mlbDates.some(d => d >= today),
-    [mlbDates, today]
-  );
-  const linescoreQuery = trpc.betTracker.getLinescores.useQuery(
-    { sport: "MLB", dates: mlbDates },
-    {
-      enabled: canLoadProtectedData && mlbDates.length > 0,
-      staleTime: hasLiveMlbDates ? 30_000 : Infinity,
-      gcTime: hasLiveMlbDates ? 5 * 60_000 : 30 * 60_000,
-      refetchInterval: hasLiveMlbDates ? 60_000 : false,
-      refetchOnWindowFocus: false,
-      retry: 1,
+  // The server's getLinescores input schema caps `dates` at 14 per request —
+  // one unbounded request 400s ("too_big maximum 14") once a tracker spans
+  // >14 distinct MLB dates, losing ALL linescores. Batch into ≤14-date chunks
+  // and merge the per-chunk maps so every date is fetched regardless of count.
+  const mlbDateChunks = useMemo(() => {
+    const chunks: string[][] = [];
+    for (let i = 0; i < mlbDates.length; i += 14) {
+      chunks.push(mlbDates.slice(i, i + 14));
     }
+    return chunks;
+  }, [mlbDates]);
+
+  const linescoreQueries = trpc.useQueries(t =>
+    mlbDateChunks.map(dates => {
+      // Historical MLB linescores never change — staleTime:Infinity prevents
+      // refetching graded dates. Only chunks containing today's (or later)
+      // dates need live polling (refetchInterval:60s).
+      const hasLiveDates = dates.some(d => d >= today);
+      return t.betTracker.getLinescores(
+        { sport: "MLB", dates },
+        {
+          enabled: canLoadProtectedData,
+          staleTime: hasLiveDates ? 30_000 : Infinity,
+          gcTime: hasLiveDates ? 5 * 60_000 : 30 * 60_000,
+          refetchInterval: hasLiveDates ? 60_000 : false,
+          refetchOnWindowFocus: false,
+          retry: 1,
+        }
+      );
+    })
   );
+
+  // Merge chunk results into one gamePk-keyed map. Memoized on dataUpdatedAt
+  // (not the result array, which gets a fresh identity every render) so the
+  // merged object identity is stable — the linescore maps below depend on it.
+  const linescoreDataKey = linescoreQueries.map(q => q.dataUpdatedAt).join(",");
+  const linescoreData = useMemo(() => {
+    if (!linescoreQueries.some(q => q.data)) return undefined;
+    const merged: NonNullable<(typeof linescoreQueries)[number]["data"]> = {};
+    for (const q of linescoreQueries) Object.assign(merged, q.data ?? {});
+    return merged;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [linescoreDataKey]);
+
+  // Compatibility alias so all downstream code works unchanged (same pattern
+  // as listQuery/statsQuery above)
+  const linescoreQuery = {
+    data: linescoreData,
+    isLoading: linescoreQueries.some(q => q.isLoading),
+    isFetching: linescoreQueries.some(q => q.isFetching),
+    isError: linescoreQueries.some(q => q.isError),
+  };
+  // Not memoized: an errored chunk doesn't bump dataUpdatedAt, so any dep key
+  // would capture stale isError flags. Plain closure always sees the current
+  // results.
+  const retryLinescores = () => {
+    for (const q of linescoreQueries) {
+      if (q.isError) q.refetch();
+    }
+  };
 
   const linescoreByTeams = useMemo(() => {
     // linescoreByTeams — keyed by "gameDate:away:home" (non-DH fallback only)
@@ -3800,9 +3863,17 @@ export default function BetTracker({ previewMode = false }: BetTrackerProps) {
               <ChevronLeft size={18} />
             </button>
             <TrendingUp size={18} className="bt-trend text-[#45E0A8]" />
-            <span className="bt-title font-bold tracking-wider text-sm sm:text-base whitespace-nowrap">
-              BET TRACKER
-            </span>
+            {/* Embedded, the shell pane's sr-only h1 already announces this
+                page — a second h1 here would duplicate it (A11Y-NO-H1). */}
+            {embeddedInShell ? (
+              <span className="bt-title font-bold tracking-wider text-sm sm:text-base whitespace-nowrap">
+                BET TRACKER
+              </span>
+            ) : (
+              <h1 className="bt-title font-bold tracking-wider text-sm sm:text-base whitespace-nowrap">
+                BET TRACKER
+              </h1>
+            )}
           </div>
 
           <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
@@ -3833,6 +3904,7 @@ export default function BetTracker({ previewMode = false }: BetTrackerProps) {
                   type="number"
                   value={unitSize}
                   onChange={e => setUnitSize(parseFloat(e.target.value) || 100)}
+                  aria-label="Unit size in dollars (1u=$)"
                   className="w-12 sm:w-16 bg-black border border-white rounded px-1.5 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-[#45E0A8]"
                   min={1}
                 />
@@ -3891,6 +3963,13 @@ export default function BetTracker({ previewMode = false }: BetTrackerProps) {
           </div>
         </div>
       </header>
+
+      {/* Everything below the banner header is page content. The shell wraps
+          this pane in a <section> (its <main> is the aria-hidden chat layer),
+          and standalone <768px has no landmark at all — so this <main> is the
+          page's single exposed main landmark at every width (same pattern as
+          TrendsPage/BettingSplits). */}
+      <main>
 
       {/* ── Stats bar ──────────────────────────────────────────────────────── */}
       <div className="bg-black border-b border-white">
@@ -4317,9 +4396,15 @@ export default function BetTracker({ previewMode = false }: BetTrackerProps) {
 
       {/* ── Main content ───────────────────────────────────────────────────── */}
       <div className="w-full px-4 sm:px-6 lg:px-8 py-4">
-        <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-4 xl:gap-6 items-start">
+        {/* Two columns only from xl: at ≥1024 the persistent 352px shell
+            sidebar leaves too little pane for a side-by-side split (lg: keys
+            on VIEWPORT width, not pane width). minmax(0,…) tracks + min-w-0
+            children keep both columns shrinkable so the bet list can never
+            push past the pane edge and clip; 340px floors the bet list at its
+            proven single-column mobile width. */}
+        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,2fr)_minmax(340px,1fr)] gap-4 xl:gap-6 items-start">
           {/* ── Left Column: Add Bet Form + Breakdowns ───────────────────── */}
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-4 min-w-0">
             {/* ── Add Bet Form ──────────────────────────────────────────────── */}
             <div className="bg-black border border-white rounded-2xl h-fit">
               {/* Header — always visible; tap to collapse/expand on mobile */}
@@ -4332,30 +4417,34 @@ export default function BetTracker({ previewMode = false }: BetTrackerProps) {
                       `[BetTracker][INPUT] addBet toggled: ${!addBetOpen}`
                     );
                 }}
-                className="w-full flex items-center gap-2 px-5 pt-5 pb-4 border-b border-white lg:cursor-default"
+                className="w-full flex items-center gap-2 px-5 pt-5 pb-4 border-b border-white xl:cursor-default"
               >
                 <Plus size={15} className="text-[#45E0A8] shrink-0" />
                 <h2 className="font-bold text-sm tracking-wider flex-1 text-left">
                   ADD BET
                 </h2>
-                {/* Chevron: only visible on mobile/tablet (hidden on lg+) */}
+                {/* Chevron: only visible while stacked (hidden on xl+) */}
                 <ChevronDown
                   size={16}
-                  className={`text-white transition-transform duration-200 lg:hidden ${addBetOpen ? "rotate-180" : ""}`}
+                  className={`text-white transition-transform duration-200 xl:hidden ${addBetOpen ? "rotate-180" : ""}`}
                 />
               </button>
-              {/* Body — always visible on lg+; toggle on mobile */}
+              {/* Body — always visible on xl+; toggle while stacked */}
               <div
                 className={`p-5 space-y-4 ${
                   addBetOpen ? "block" : "hidden"
-                } lg:block`}
+                } xl:block`}
               >
                 {/* DATE */}
                 <div className="flex flex-col gap-1">
-                  <label className="text-sm tracking-widest text-white uppercase font-medium">
+                  <label
+                    htmlFor="bt-form-date"
+                    className="text-sm tracking-widest text-white uppercase font-medium"
+                  >
                     Date
                   </label>
                   <input
+                    id="bt-form-date"
                     type="date"
                     value={formDate}
                     onChange={e => {
@@ -4506,12 +4595,16 @@ export default function BetTracker({ previewMode = false }: BetTrackerProps) {
                   formTimeframe !== "NRFI" &&
                   formTimeframe !== "YRFI" && (
                     <div className="flex flex-col gap-1">
-                      <label className="text-sm tracking-widest text-white uppercase font-medium">
+                      <label
+                        htmlFor="bt-form-custom-line"
+                        className="text-sm tracking-widest text-white uppercase font-medium"
+                      >
                         {formMarket === "TOTAL"
                           ? "Total Line (e.g. 8, 8.5)"
                           : "Run Line (e.g. -1.5, +1.5)"}
                       </label>
                       <input
+                        id="bt-form-custom-line"
                         type="number"
                         value={formCustomLine}
                         onChange={e => setFormCustomLine(e.target.value)}
@@ -4525,10 +4618,14 @@ export default function BetTracker({ previewMode = false }: BetTrackerProps) {
                 {/* ODDS + RISK + TO WIN */}
                 <div className="grid grid-cols-3 gap-3">
                   <div className="flex flex-col gap-1">
-                    <label className="text-sm tracking-widest text-white uppercase font-medium">
+                    <label
+                      htmlFor="bt-form-odds"
+                      className="text-sm tracking-widest text-white uppercase font-medium"
+                    >
                       Odds
                     </label>
                     <input
+                      id="bt-form-odds"
                       type="number"
                       value={formOdds}
                       onChange={e => setFormOdds(e.target.value)}
@@ -4537,10 +4634,14 @@ export default function BetTracker({ previewMode = false }: BetTrackerProps) {
                     />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <label className="text-sm tracking-widest text-white uppercase font-medium">
+                    <label
+                      htmlFor="bt-form-risk"
+                      className="text-sm tracking-widest text-white uppercase font-medium"
+                    >
                       {riskLabel}
                     </label>
                     <input
+                      id="bt-form-risk"
                       type="number"
                       value={formRisk}
                       onChange={e => setFormRisk(e.target.value)}
@@ -4551,7 +4652,10 @@ export default function BetTracker({ previewMode = false }: BetTrackerProps) {
                     />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <label className="text-sm tracking-widest text-white uppercase font-medium">
+                    <label
+                      htmlFor="bt-form-to-win"
+                      className="text-sm tracking-widest text-white uppercase font-medium"
+                    >
                       {toWinLabel}
                       {formToWinManual && (
                         <button
@@ -4568,6 +4672,7 @@ export default function BetTracker({ previewMode = false }: BetTrackerProps) {
                       )}
                     </label>
                     <input
+                      id="bt-form-to-win"
                       type="number"
                       value={formToWin}
                       onChange={e => {
@@ -4607,10 +4712,14 @@ export default function BetTracker({ previewMode = false }: BetTrackerProps) {
 
                 {/* NOTES */}
                 <div className="flex flex-col gap-1">
-                  <label className="text-sm tracking-widest text-white uppercase font-medium">
+                  <label
+                    htmlFor="bt-form-notes"
+                    className="text-sm tracking-widest text-white uppercase font-medium"
+                  >
                     Notes (optional)
                   </label>
                   <textarea
+                    id="bt-form-notes"
                     value={formNotes}
                     onChange={e => setFormNotes(e.target.value)}
                     placeholder="Model edge, reasoning, context…"
@@ -4657,7 +4766,7 @@ export default function BetTracker({ previewMode = false }: BetTrackerProps) {
           </div>
           {/* end left column */}
           {/* ── Right Panel: Tabs (BETS | LOGS) ──────────────────────────── */}
-          <div className="space-y-4">
+          <div className="space-y-4 min-w-0">
             {/* Tab bar */}
             <div className="flex items-center gap-1 border-b border-white pb-0">
               <button
@@ -4693,11 +4802,15 @@ export default function BetTracker({ previewMode = false }: BetTrackerProps) {
                 {/* Filter bar */}
                 <div className="flex items-center gap-3 flex-wrap">
                   <div className="flex flex-col gap-1">
-                    <label className="text-sm tracking-widest text-white uppercase font-medium">
+                    <label
+                      htmlFor="bt-filter-result"
+                      className="text-sm tracking-widest text-white uppercase font-medium"
+                    >
                       Result
                     </label>
                     <div className="relative">
                       <select
+                        id="bt-filter-result"
                         value={filterResult}
                         onChange={e =>
                           setFilterResult(e.target.value as Result | "")
@@ -4723,14 +4836,37 @@ export default function BetTracker({ previewMode = false }: BetTrackerProps) {
                     </span>
                     {(linescoreQuery.isFetching || autoGradeMut.isPending) && (
                       <div
-                        className="w-3 h-3 border border-[#45E0A8] border-t-transparent rounded-full animate-spin"
-                        title={
-                          autoGradeMut.isPending
-                            ? "Auto-grading…"
-                            : "Refreshing linescores…"
-                        }
-                      />
+                        className="flex items-center gap-1.5 text-xs text-white"
+                        role="status"
+                      >
+                        <div className="w-3 h-3 border border-[#45E0A8] border-t-transparent rounded-full animate-spin" />
+                        {autoGradeMut.isPending
+                          ? "Auto-grading…"
+                          : "Loading scores…"}
+                      </div>
                     )}
+                    {!linescoreQuery.isFetching &&
+                      !autoGradeMut.isPending &&
+                      linescoreQuery.isError && (
+                        <button
+                          type="button"
+                          onClick={retryLinescores}
+                          className="flex items-center gap-1 text-xs font-bold text-[#FF3B3B] transition-colors"
+                        >
+                          <AlertCircle size={12} />
+                          Scores unavailable — Retry
+                        </button>
+                      )}
+                    {!linescoreQuery.isFetching &&
+                      !autoGradeMut.isPending &&
+                      !linescoreQuery.isError &&
+                      mlbDates.length > 0 &&
+                      linescoreData !== undefined &&
+                      Object.keys(linescoreData).length === 0 && (
+                        <span className="text-xs text-white">
+                          No linescores available
+                        </span>
+                      )}
                   </div>
                 </div>
 
@@ -4957,14 +5093,15 @@ export default function BetTracker({ previewMode = false }: BetTrackerProps) {
           </div>
         </div>
       </div>
+      </main>
 
       {/* ── Edit modal ──────────────────────────────────────────────────────── */}
       {editBet && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black backdrop-blur-sm">
           <div className="bg-black border border-white rounded-2xl p-6 w-full max-w-sm space-y-4">
-            <h3 className="font-bold text-sm tracking-wider">
+            <h2 className="font-bold text-sm tracking-wider">
               {editIsRequest ? "📋 REQUEST EDIT" : "EDIT BET"}
-            </h3>
+            </h2>
             {editIsRequest && (
               <div className="flex items-start gap-2 bg-transparent border border-white rounded-lg px-3 py-2.5">
                 <Lock size={12} className="text-white shrink-0 mt-0.5" />
@@ -4984,10 +5121,14 @@ export default function BetTracker({ previewMode = false }: BetTrackerProps) {
               options={RESULTS.map(r => ({ value: r, label: r }))}
             />
             <div className="flex flex-col gap-1">
-              <label className="text-sm tracking-widest text-white uppercase font-medium">
+              <label
+                htmlFor="bt-edit-notes"
+                className="text-sm tracking-widest text-white uppercase font-medium"
+              >
                 Notes
               </label>
               <textarea
+                id="bt-edit-notes"
                 value={editNotes}
                 onChange={e => setEditNotes(e.target.value)}
                 rows={3}
@@ -4996,10 +5137,14 @@ export default function BetTracker({ previewMode = false }: BetTrackerProps) {
             </div>
             {editIsRequest && (
               <div className="flex flex-col gap-1">
-                <label className="text-sm tracking-widest text-white uppercase font-medium">
+                <label
+                  htmlFor="bt-edit-reason"
+                  className="text-sm tracking-widest text-white uppercase font-medium"
+                >
                   Reason for Request
                 </label>
                 <textarea
+                  id="bt-edit-reason"
                   value={editRequestReason}
                   onChange={e => setEditRequestReason(e.target.value)}
                   rows={2}
@@ -5096,9 +5241,9 @@ export default function BetTracker({ previewMode = false }: BetTrackerProps) {
       {deleteId !== null && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black backdrop-blur-sm">
           <div className="bg-black border border-white rounded-2xl p-6 w-full max-w-sm space-y-4">
-            <h3 className="font-bold text-sm tracking-wider text-white">
+            <h2 className="font-bold text-sm tracking-wider text-white">
               {deleteIsRequest ? "📋 REQUEST DELETION" : "DELETE BET"}
-            </h3>
+            </h2>
             {deleteIsRequest ? (
               <>
                 <div className="flex items-start gap-2 bg-transparent border border-white rounded-lg px-3 py-2.5">
@@ -5109,10 +5254,14 @@ export default function BetTracker({ previewMode = false }: BetTrackerProps) {
                   </p>
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="text-sm tracking-widest text-white uppercase font-medium">
+                  <label
+                    htmlFor="bt-delete-reason"
+                    className="text-sm tracking-widest text-white uppercase font-medium"
+                  >
                     Reason for Request
                   </label>
                   <textarea
+                    id="bt-delete-reason"
                     value={deleteRequestReason}
                     onChange={e => setDeleteRequestReason(e.target.value)}
                     rows={2}
