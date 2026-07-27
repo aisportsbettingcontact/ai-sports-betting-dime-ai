@@ -12,6 +12,21 @@ def test_split_shards():
     flat = [g["gamePk"] for s in shards for g in s]
     assert flat == sorted(flat), "shards must stay date-ordered"
 
+def test_is_valid_feed_file(tmpdir="/tmp/mlb_crawl_test"):
+    import json, os
+    from crawl_feeds import is_valid_feed_file
+    os.makedirs(tmpdir, exist_ok=True)
+    good = os.path.join(tmpdir, "823433.json")
+    json.dump({"gamePk": 823433, "liveData": {}}, open(good, "w"))
+    bad_json = os.path.join(tmpdir, "111.json")
+    open(bad_json, "w").write("{truncated")
+    wrong_pk = os.path.join(tmpdir, "222.json")
+    json.dump({"gamePk": 999}, open(wrong_pk, "w"))
+    assert is_valid_feed_file(good, 823433) is True
+    assert is_valid_feed_file(bad_json, 111) is False
+    assert is_valid_feed_file(wrong_pk, 222) is False
+    assert is_valid_feed_file(os.path.join(tmpdir, "missing.json"), 3) is False
+
 if __name__ == "__main__":
     for name, fn in sorted({k: v for k, v in globals().items() if k.startswith("test_")}.items()):
         fn(); print(f"PASS {name}")
