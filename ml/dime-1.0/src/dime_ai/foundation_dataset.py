@@ -516,10 +516,96 @@ def trusted_reviewer_index(registry: dict[str, Any]) -> dict[str, dict[str, Any]
             raise FoundationDatasetError(
                 "trusted reviewer registry contains a placeholder identity"
             )
+        _reviewer_authority_period(
+            reviewer,
+            label=f"trusted reviewer {reviewer_id}",
+        )
         reviewers[reviewer_id] = reviewer
     if not reviewers:
         raise FoundationDatasetError("active reviewer registry cannot be empty")
     return reviewers
+
+
+def _reviewer_authority_period(
+    reviewer: dict[str, Any],
+    *,
+    label: str,
+) -> tuple[datetime, datetime | None]:
+    start = _parse_utc(reviewer.get("effective_start"), f"{label}.effective_start")
+    raw_end = reviewer.get("effective_end_or_open_ended")
+    end = None if raw_end is None else _parse_utc(raw_end, f"{label}.effective_end_or_open_ended")
+    if end is not None and end <= start:
+        raise FoundationDatasetError(
+            f"{label}: effective authority end must be later than its start"
+        )
+    return start, end
+
+
+def _require_reviewer_authority(
+    reviewer_index: dict[str, dict[str, Any]],
+    reviewer_id: str,
+    *,
+    event_at: datetime,
+    label: str,
+    required_role: str | None = None,
+) -> dict[str, Any]:
+    reviewer = reviewer_index.get(reviewer_id)
+    if reviewer is None or not reviewer["active"]:
+        if required_role is None:
+            raise FoundationDatasetError(f"inactive or unknown reviewer: {reviewer_id}")
+        raise FoundationDatasetError(f"{label}: reviewer lacks active {required_role} role")
+    if required_role is not None and required_role not in reviewer["roles"]:
+        raise FoundationDatasetError(f"{label}: reviewer lacks active {required_role} role")
+    start, end = _reviewer_authority_period(
+        reviewer,
+        label=f"{label} reviewer {reviewer_id}",
+    )
+    if event_at < start or (end is not None and event_at >= end):
+        raise FoundationDatasetError(
+            f"{label}: reviewer {reviewer_id} is outside their authority period"
+        )
+    return reviewer
+
+
+def _require_independent_reviewer_groups(
+    reviewer_ids: set[str],
+    reviewer_index: dict[str, dict[str, Any]],
+    *,
+    minimum: int,
+    label: str,
+) -> None:
+    groups = {reviewer_index[reviewer_id]["independence_group_id"] for reviewer_id in reviewer_ids}
+    if len(groups) < minimum:
+        raise FoundationDatasetError(
+            f"{label}: requires at least {minimum} distinct reviewer independence groups"
+        )
+
+
+def _validate_dataset_approver_authority(
+    approver_ids: list[str],
+    reviewer_index: dict[str, dict[str, Any]],
+    *,
+    approval_time: datetime,
+    candidate_author_ids: set[str],
+) -> None:
+    approver_set = set(approver_ids)
+    for approver_id in approver_ids:
+        _require_reviewer_authority(
+            reviewer_index,
+            approver_id,
+            event_at=approval_time,
+            label="dataset approval",
+            required_role="dataset-approver",
+        )
+    _require_independent_reviewer_groups(
+        approver_set,
+        reviewer_index,
+        minimum=2,
+        label="dataset approval",
+    )
+    overlapping_authors = sorted(approver_set & candidate_author_ids)
+    if overlapping_authors:
+        raise FoundationDatasetError("dataset approval cannot be granted by a candidate author")
 
 
 def _load_shards(paths: list[Path], label: str) -> list[dict[str, Any]]:
@@ -1197,8 +1283,6 @@ def validate_review_ledger(
     decision_keys: set[tuple[str, str]] = set()
     for decision in ledger["decisions"]:
         reviewer_id = decision["reviewer_id"]
-        if reviewer_id not in reviewer_index or not reviewer_index[reviewer_id]["active"]:
-            raise FoundationDatasetError(f"inactive or unknown reviewer: {reviewer_id}")
         reviewed_at = _parse_utc(
             decision["reviewed_at_utc"],
             f"{decision['example_id']}.reviewed_at_utc",
@@ -1207,6 +1291,12 @@ def validate_review_ledger(
             raise FoundationDatasetError(
                 f"{decision['example_id']}: review decision is after the audit cutoff"
             )
+        _require_reviewer_authority(
+            reviewer_index,
+            reviewer_id,
+            event_at=reviewed_at,
+            label=f"{decision['example_id']} review",
+        )
         key = (decision["record_sha256"], reviewer_id)
         if key in decision_keys:
             raise FoundationDatasetError(
@@ -1264,6 +1354,12 @@ def validate_review_ledger(
             raise FoundationDatasetError(
                 f"{record_id}: requires at least {minimum} independent approvals"
             )
+        _require_independent_reviewer_groups(
+            approval_ids,
+            reviewer_index,
+            minimum=minimum,
+            label=record_id,
+        )
         if record["metadata"]["author_id"] in approval_ids:
             raise FoundationDatasetError(f"{record_id}: author cannot review their own record")
         embedded = set(record["quality"]["reviewer_ids"])
@@ -1712,12 +1808,18 @@ def audit_foundation_candidates(
                 "source registry must contain exactly the sources used by this candidate"
             )
         for source in source_registry["sources"]:
+            reviewed_at = _parse_utc(
+                source["reviewed_at_utc"],
+                f"{source['source_id']}.reviewed_at_utc",
+            )
             for reviewer_id in source["reviewer_ids"]:
-                reviewer = reviewer_index.get(reviewer_id)
-                if reviewer is None or not reviewer["active"] or "rights" not in reviewer["roles"]:
-                    raise FoundationDatasetError(
-                        f"{source['source_id']}: source reviewer lacks active rights role"
-                    )
+                _require_reviewer_authority(
+                    reviewer_index,
+                    reviewer_id,
+                    event_at=reviewed_at,
+                    label=f"{source['source_id']} source",
+                    required_role="rights",
+                )
 
     gate("source_registry", source_gate)
     gate(
@@ -1931,16 +2033,22 @@ def _load_external_audits(
         if report["scope_reference"] != expected_scope:
             raise FoundationDatasetError(f"{filename}: audit scope reference mismatch")
         required_role = EXTERNAL_AUDIT_REVIEWER_ROLES[audit_type]
+        completed_at = _parse_utc(
+            report["completed_at_utc"],
+            f"{filename}.completed_at_utc",
+        )
         for reviewer_id in report["reviewer_ids"]:
             if not _valid_identity(reviewer_id):
                 raise FoundationDatasetError(
                     f"{filename}: audit reviewer contains a placeholder identity"
                 )
-            reviewer = reviewer_index.get(reviewer_id)
-            if reviewer is None or not reviewer["active"] or required_role not in reviewer["roles"]:
-                raise FoundationDatasetError(
-                    f"{filename}: reviewer lacks active {required_role} role"
-                )
+            _require_reviewer_authority(
+                reviewer_index,
+                reviewer_id,
+                event_at=completed_at,
+                label=filename,
+                required_role=required_role,
+            )
         reports[audit_type] = report
         hashes[audit_type] = (
             _captured_sha256(captured_inputs, path, audit_type)
@@ -2578,16 +2686,18 @@ def _freeze_audited_snapshot(
             maximum_age=timedelta(hours=int(freshness["external_audit_max_age_hours"])),
             now=now,
         )
-    for approver_id in approval["approver_ids"]:
-        reviewer = reviewer_index.get(approver_id)
-        if (
-            reviewer is None
-            or not reviewer["active"]
-            or "dataset-approver" not in reviewer["roles"]
-        ):
-            raise FoundationDatasetError(
-                f"dataset approver is unknown, inactive, or unauthorized: {approver_id}"
-            )
+    _validate_dataset_approver_authority(
+        approval["approver_ids"],
+        reviewer_index,
+        approval_time=approval_time,
+        candidate_author_ids={
+            str(record["metadata"]["author_id"])
+            for record in [
+                *audit_result.train_records,
+                *audit_result.validation_records,
+            ]
+        },
+    )
     prerequisite_times = [
         _parse_utc(saved_audit["generated_at_utc"], "candidate_audit.generated_at_utc"),
         *[

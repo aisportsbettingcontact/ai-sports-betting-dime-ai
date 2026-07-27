@@ -564,6 +564,9 @@ def _review_fixture() -> tuple[
             "reviewer_id": "domain-reviewer-001",
             "roles": ["domain"],
             "active": True,
+            "independence_group_id": "dime-independence-group-domain-001",
+            "effective_start": "2025-01-01T00:00:00Z",
+            "effective_end_or_open_ended": None,
         }
     }
     return record, ledger, reviewer_index, config, rubric_sha
@@ -656,6 +659,126 @@ def test_review_ledger_rejects_decision_after_audit_cutoff() -> None:
         )
 
 
+def test_review_ledger_rejects_decision_before_reviewer_authority_start() -> None:
+    record, ledger, reviewer_index, config, rubric_sha = _review_fixture()
+    reviewer_index["domain-reviewer-001"]["effective_start"] = "2026-01-04T00:00:00Z"
+
+    with pytest.raises(FoundationDatasetError, match="outside.*authority period"):
+        validate_review_ledger(
+            [record],
+            ledger,
+            reviewer_index,
+            config,
+            rubric_sha,
+            effective_at=CUTOFF,
+        )
+
+
+def test_review_ledger_treats_authority_end_as_exclusive() -> None:
+    record, ledger, reviewer_index, config, rubric_sha = _review_fixture()
+    reviewer_index["domain-reviewer-001"]["effective_end_or_open_ended"] = "2026-01-03T00:00:00Z"
+
+    with pytest.raises(FoundationDatasetError, match="outside.*authority period"):
+        validate_review_ledger(
+            [record],
+            ledger,
+            reviewer_index,
+            config,
+            rubric_sha,
+            effective_at=CUTOFF,
+        )
+
+
+def test_elevated_review_requires_distinct_independence_groups() -> None:
+    record, ledger, reviewer_index, config, rubric_sha = _review_fixture()
+    record["curriculum"]["risk_tier"] = "high"
+    record["quality"]["reviewer_ids"] = ["domain-reviewer-001", "domain-reviewer-002"]
+    record_hash = canonical_record_sha256(record)
+    ledger["decisions"][0]["record_sha256"] = record_hash
+    second = deepcopy(ledger["decisions"][0])
+    second["reviewer_id"] = "domain-reviewer-002"
+    ledger["decisions"].append(second)
+    reviewer_index["domain-reviewer-002"] = {
+        "reviewer_id": "domain-reviewer-002",
+        "roles": ["domain"],
+        "active": True,
+        "independence_group_id": "dime-independence-group-domain-001",
+        "effective_start": "2026-01-01T00:00:00Z",
+        "effective_end_or_open_ended": None,
+    }
+
+    with pytest.raises(FoundationDatasetError, match="independence groups"):
+        validate_review_ledger(
+            [record],
+            ledger,
+            reviewer_index,
+            config,
+            rubric_sha,
+            effective_at=CUTOFF,
+        )
+
+
+def test_trusted_reviewer_registry_rejects_nonpositive_authority_period() -> None:
+    reviewer = {
+        "reviewer_id": "dime-reviewer-domain-001",
+        "roles": ["domain"],
+        "active": True,
+        "independence_group_id": "dime-independence-group-domain-001",
+        "effective_start": "2026-01-03T00:00:00Z",
+        "effective_end_or_open_ended": "2026-01-03T00:00:00Z",
+    }
+    registry = {
+        "schema_version": "dime-foundation-reviewer-registry-v2",
+        "registry_version": "dime-foundation-reviewers-v0.2.0",
+        "status": "active",
+        "reviewers": [reviewer],
+    }
+
+    with pytest.raises(FoundationDatasetError, match="end must be later"):
+        foundation_dataset.trusted_reviewer_index(registry)
+
+
+def test_dataset_approval_requires_distinct_groups_and_non_author_approvers() -> None:
+    reviewers = {
+        "dime-reviewer-approver-001": {
+            "reviewer_id": "dime-reviewer-approver-001",
+            "roles": ["dataset-approver"],
+            "active": True,
+            "independence_group_id": "dime-independence-group-approver-001",
+            "effective_start": "2026-01-01T00:00:00Z",
+            "effective_end_or_open_ended": None,
+        },
+        "dime-reviewer-approver-002": {
+            "reviewer_id": "dime-reviewer-approver-002",
+            "roles": ["dataset-approver"],
+            "active": True,
+            "independence_group_id": "dime-independence-group-approver-001",
+            "effective_start": "2026-01-01T00:00:00Z",
+            "effective_end_or_open_ended": None,
+        },
+    }
+    approver_ids = list(reviewers)
+
+    with pytest.raises(FoundationDatasetError, match="independence groups"):
+        foundation_dataset._validate_dataset_approver_authority(
+            approver_ids,
+            reviewers,
+            approval_time=datetime(2026, 1, 4, tzinfo=UTC),
+            candidate_author_ids=set(),
+        )
+
+    reviewers["dime-reviewer-approver-002"]["independence_group_id"] = (
+        "dime-independence-group-approver-002"
+    )
+    with pytest.raises(FoundationDatasetError, match="candidate author"):
+        foundation_dataset._validate_dataset_approver_authority(
+            approver_ids,
+            reviewers,
+            approval_time=datetime(2026, 1, 4, tzinfo=UTC),
+            candidate_author_ids={"dime-reviewer-approver-001"},
+        )
+
+
 def _external_audit_fixture(
     tmp_path: Path,
 ) -> tuple[Path, dict[str, Any], dict[str, Any], dict[str, dict[str, Any]]]:
@@ -705,6 +828,9 @@ def _external_audit_fixture(
             "reviewer_id": reviewer_id,
             "roles": [role],
             "active": True,
+            "independence_group_id": f"dime-independence-group-audit-{index:02d}",
+            "effective_start": "2026-01-01T00:00:00Z",
+            "effective_end_or_open_ended": None,
         }
         summary = (
             "Restricted locked-evaluation audit passed; no case-level content disclosed."
@@ -772,6 +898,15 @@ def test_external_audits_bind_all_expected_inputs(tmp_path: Path) -> None:
         lambda report: report["inputs"].update({"source_artifacts_sha256": HASH_B}),
     )
     with pytest.raises(FoundationDatasetError, match="input evidence mismatch"):
+        _load_valid_external_audits(directory, inputs, config, reviewers)
+
+
+def test_external_audit_reviewer_must_be_authorized_at_completion(tmp_path: Path) -> None:
+    directory, inputs, config, reviewers = _external_audit_fixture(tmp_path)
+    reviewer = reviewers["audit-reviewer-01"]
+    reviewer["effective_start"] = "2026-01-05T00:00:00Z"
+
+    with pytest.raises(FoundationDatasetError, match="outside.*authority period"):
         _load_valid_external_audits(directory, inputs, config, reviewers)
 
 
@@ -1234,12 +1369,18 @@ def test_private_freezer_atomically_writes_exact_five_file_snapshot(
 
     record = {
         "example_id": "fixture-001",
-        "metadata": {"direct_identifier_scan_version": "scan-v1"},
+        "metadata": {
+            "author_id": "author-fixture-001",
+            "direct_identifier_scan_version": "scan-v1",
+        },
     }
     train_bytes = foundation_dataset.canonical_jsonl_bytes([record])
     validation_record = {
         "example_id": "fixture-002",
-        "metadata": {"direct_identifier_scan_version": "scan-v1"},
+        "metadata": {
+            "author_id": "author-fixture-002",
+            "direct_identifier_scan_version": "scan-v1",
+        },
     }
     validation_bytes = foundation_dataset.canonical_jsonl_bytes([validation_record])
     train_path.write_bytes(train_bytes)
@@ -1306,11 +1447,17 @@ def test_private_freezer_atomically_writes_exact_five_file_snapshot(
             "reviewer_id": "dataset-approver-001",
             "roles": ["dataset-approver"],
             "active": True,
+            "independence_group_id": "dime-independence-group-approver-001",
+            "effective_start": "2026-01-01T00:00:00Z",
+            "effective_end_or_open_ended": None,
         },
         {
             "reviewer_id": "dataset-approver-002",
             "roles": ["dataset-approver"],
             "active": True,
+            "independence_group_id": "dime-independence-group-approver-002",
+            "effective_start": "2026-01-01T00:00:00Z",
+            "effective_end_or_open_ended": None,
         },
     ]
     review_ledger = {"decisions": []}

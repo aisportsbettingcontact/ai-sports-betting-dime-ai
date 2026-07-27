@@ -40,11 +40,14 @@ review ledger, external reports, and approval record remain outside GitHub in
 an authorized private review system. RunPod is a rebuildable processor and may
 not be their sole authoritative location.
 
-The trusted authority at `configs/foundation_reviewer_registry.json` is also
-still `proposed` and contains no reviewer entries. It therefore grants no
-review, external-audit, specialist, or dataset-approval authority. Review
+The trusted authority at `configs/foundation_reviewer_registry.json` uses the
+v2 reviewer shape but is still `proposed` and contains no reviewer entries. It
+therefore grants no review, external-audit, specialist, or dataset-approval
+authority. Every future entry must carry an opaque independence group and a
+canonical UTC authority period. Quorums count distinct groups, and each
+decision timestamp must fall inside the half-open authority period. Review
 ledgers contain rubric-bound decisions and stable reviewer IDs only; they
-cannot define status or roles.
+cannot define status, roles, groups, or authority dates.
 
 ## Required dataset lineage
 

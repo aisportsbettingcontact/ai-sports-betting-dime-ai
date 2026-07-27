@@ -24,7 +24,7 @@
   ],
   "properties": {
     "schema_version": {"const": "dime-foundation-separation-of-duties-v1"},
-    "contract_version": {"const": "dime-foundation-separation-of-duties-v1.0.0"},
+    "contract_version": {"const": "dime-foundation-separation-of-duties-v1.1.0"},
     "status": {"const": "proposed"},
     "dataset_version": {"const": "dime-sft-foundation-v1"},
     "unresolved_decisions": {"type": "array", "maxItems": 0},
@@ -210,11 +210,11 @@
     "registry_migration": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["required", "status", "required_future_fields"],
+      "required": ["required", "status", "implemented_fields"],
       "properties": {
-        "required": {"const": true},
-        "status": {"const": "proposed"},
-        "required_future_fields": {
+        "required": {"const": false},
+        "status": {"const": "representation_and_runtime_ready"},
+        "implemented_fields": {
           "const": [
             "independence_group_id",
             "effective_start",

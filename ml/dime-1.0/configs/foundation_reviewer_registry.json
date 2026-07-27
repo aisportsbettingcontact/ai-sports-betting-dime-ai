@@ -1,6 +1,6 @@
 {
-  "schema_version": "dime-foundation-reviewer-registry-v1",
-  "registry_version": "dime-foundation-reviewers-v0.1.0",
+  "schema_version": "dime-foundation-reviewer-registry-v2",
+  "registry_version": "dime-foundation-reviewers-v0.2.0",
   "status": "proposed",
   "reviewers": []
 }
