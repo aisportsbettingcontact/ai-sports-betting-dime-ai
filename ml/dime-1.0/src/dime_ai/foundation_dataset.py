@@ -32,6 +32,7 @@ from dime_ai.data_validation import (
     validate_sft_record,
     validate_unique_ids,
 )
+from dime_ai.foundation_contracts import _safe_schema_error_message
 from dime_ai.hf_provenance import (
     DevelopmentEvalProvenanceError,
     DevelopmentEvalRemote,
@@ -138,12 +139,13 @@ def _validator(schema_name: str) -> Draft202012Validator:
 def _validate_schema(value: dict[str, Any], schema_name: str, label: str) -> None:
     errors = sorted(
         _validator(schema_name).iter_errors(value),
-        key=lambda error: list(error.absolute_path),
+        key=lambda error: (
+            tuple(str(item) for item in error.absolute_schema_path),
+            str(error.validator),
+        ),
     )
     if errors:
-        error = errors[0]
-        path = ".".join(str(item) for item in error.absolute_path) or "$"
-        raise FoundationDatasetError(f"{label}: schema violation at {path}: {error.message}")
+        raise FoundationDatasetError(_safe_schema_error_message(errors[0], label=label))
 
 
 def _regular_file(path: str | Path, label: str) -> Path:
@@ -1049,7 +1051,12 @@ def validate_numeric_traceability(
             continue
         expected, units = _expected_market_math(call)
         expected_values = _flatten_decimal_values(expected)
-        result_values = _flatten_decimal_values(result["data"])
+        output = result["data"].get("output")
+        if not isinstance(output, dict):
+            raise FoundationDatasetError(
+                f"{record_id}: market-math result requires operation-specific output"
+            )
+        result_values = _flatten_decimal_values(output)
         if set(result_values) != set(expected_values):
             expected_paths = sorted(".".join(path) for path in expected_values)
             actual_paths = sorted(".".join(path) for path in result_values)
@@ -1067,7 +1074,7 @@ def validate_numeric_traceability(
                 raise FoundationDatasetError(
                     f"{record_id}: market-math result mismatch at data.{dotted}"
                 )
-            assertion_path = f"tool:{call_id}:data.{dotted}"
+            assertion_path = f"tool:{call_id}:data.output.{dotted}"
             traceable_assertions[assertion_path] = (expected_value, units[dotted])
             required_assertion_paths.add(assertion_path)
 
@@ -1166,8 +1173,7 @@ def validate_numeric_traceability(
         for token in NUMERIC_TOKEN_PATTERN.finditer(message["content"]):
             if not any(start <= token.start() and token.end() <= end for start, end in ranges):
                 raise FoundationDatasetError(
-                    f"{record_id}: assistant numeric token {token.group(0)!r} "
-                    "is outside every reviewed numeric claim"
+                    f"{record_id}: assistant numeric token is outside every reviewed numeric claim"
                 )
 
 

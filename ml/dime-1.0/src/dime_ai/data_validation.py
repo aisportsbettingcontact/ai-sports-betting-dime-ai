@@ -12,7 +12,16 @@ from pathlib import Path
 from typing import Any
 
 from jsonschema import Draft202012Validator
-from jsonschema.exceptions import ValidationError
+
+from dime_ai.foundation_contracts import (
+    FoundationContractError,
+    _safe_schema_error_message,
+)
+from dime_ai.tool_contracts import (
+    load_tool_contracts,
+    validate_tool_arguments,
+    validate_tool_response,
+)
 
 HUGGING_FACE_TOKEN_PATTERN = re.compile(r"\bhf_[A-Za-z0-9]{12,}\b")
 GITHUB_TOKEN_PATTERN = re.compile(r"\bgh(?:p|o|u|s|r)_[A-Za-z0-9]{20,}\b")
@@ -126,17 +135,23 @@ def _schema_validator(schema_name: str) -> Draft202012Validator:
 def _validate_against_schema(record: dict[str, Any], schema_name: str, record_id: str) -> None:
     errors = sorted(
         _schema_validator(schema_name).iter_errors(record),
-        key=lambda error: list(error.absolute_path),
+        key=lambda error: (
+            tuple(str(item) for item in error.absolute_schema_path),
+            str(error.validator),
+        ),
     )
     if errors:
-        error: ValidationError = errors[0]
-        path = ".".join(str(item) for item in error.absolute_path) or "$"
-        raise DataValidationError(f"{record_id}: schema violation at {path}: {error.message}")
+        raise DataValidationError(
+            _safe_schema_error_message(
+                errors[0],
+                label=f"{schema_name} record",
+            )
+        )
 
 
 @lru_cache(maxsize=1)
 def _tool_validators() -> dict[str, Draft202012Validator]:
-    catalog = json.loads(TOOL_CATALOG_PATH.read_text())
+    catalog = json.loads(load_tool_contracts().raw_bytes["tools/tools.v1.json"])
     return {
         item["function"]["name"]: Draft202012Validator(item["function"]["parameters"])
         for item in catalog
@@ -150,14 +165,25 @@ def _validate_tool_arguments(
 ) -> None:
     validator = _tool_validators().get(name)
     if validator is None:
-        raise DataValidationError(f"{record_id}: unknown tool {name!r}")
-    errors = sorted(validator.iter_errors(arguments), key=lambda error: list(error.path))
+        raise DataValidationError(f"{record_id}: unknown tool name")
+    errors = sorted(
+        validator.iter_errors(arguments),
+        key=lambda error: (
+            tuple(str(item) for item in error.absolute_schema_path),
+            str(error.validator),
+        ),
+    )
     if errors:
-        error = errors[0]
-        path = ".".join(str(item) for item in error.path) or "$"
         raise DataValidationError(
-            f"{record_id}: invalid arguments for {name} at {path}: {error.message}"
+            _safe_schema_error_message(
+                errors[0],
+                label=f"{name} request",
+            )
         )
+    try:
+        validate_tool_arguments(name, arguments)
+    except FoundationContractError as exc:
+        raise DataValidationError(f"{record_id}: {exc}") from exc
 
 
 def read_jsonl(path: str | Path) -> list[dict[str, Any]]:
@@ -197,12 +223,12 @@ def strict_json_loads(value: str, label: str = "JSON") -> Any:
         result: dict[str, Any] = {}
         for key, item in pairs:
             if key in result:
-                raise DataValidationError(f"{label}: duplicate JSON key {key!r}")
+                raise DataValidationError(f"{label}: duplicate JSON key")
             result[key] = item
         return result
 
     def reject_constant(constant: str) -> None:
-        raise DataValidationError(f"{label}: nonfinite JSON number {constant!r}")
+        raise DataValidationError(f"{label}: nonfinite JSON number")
 
     return json.loads(
         value,
@@ -276,7 +302,7 @@ def _validate_tool_linkage(
     messages: list[dict[str, Any]],
     record_id: str,
 ) -> list[tuple[str, str, dict[str, Any]]]:
-    calls: dict[str, str] = {}
+    calls: dict[str, tuple[str, dict[str, Any]]] = {}
     results: set[str] = set()
     parsed_results: list[tuple[str, str, dict[str, Any]]] = []
     for index, message in enumerate(messages):
@@ -290,18 +316,19 @@ def _validate_tool_linkage(
                 raise DataValidationError(f"{record_id}: duplicate tool call ID {call_id}")
             name = call["function"]["name"]
             _validate_tool_arguments(name, call["function"]["arguments"], record_id)
-            calls[call_id] = name
+            calls[call_id] = (name, call["function"]["arguments"])
         if message.get("role") != "tool":
             continue
         call_id = message.get("tool_call_id")
         name = message.get("name")
         if call_id not in calls:
             raise DataValidationError(
-                f"{record_id}: tool message {index} references unknown call {call_id!r}"
+                f"{record_id}: tool message {index} references an unknown call"
             )
-        if calls[call_id] != name:
+        call_name, call_arguments = calls[call_id]
+        if call_name != name:
             raise DataValidationError(
-                f"{record_id}: tool result name {name!r} does not match call {calls[call_id]!r}"
+                f"{record_id}: tool result name does not match originating call"
             )
         if call_id in results:
             raise DataValidationError(f"{record_id}: duplicate result for tool call {call_id}")
@@ -319,7 +346,15 @@ def _validate_tool_linkage(
             ) from exc
         if not isinstance(parsed, dict):
             raise DataValidationError(f"{record_id}: tool result {call_id} must be an object")
-        _validate_against_schema(parsed, "tool_response.schema.json", record_id)
+        try:
+            validate_tool_response(
+                parsed,
+                expected_tool_name=str(name),
+                expected_call_id=str(call_id),
+                expected_arguments=call_arguments,
+            )
+        except FoundationContractError as exc:
+            raise DataValidationError(f"{record_id}: {exc}") from exc
         parsed_results.append((call_id, str(name), parsed))
     missing = set(calls) - results
     if missing:
@@ -372,7 +407,7 @@ def _validate_message_sequence(
             call_id = message.get("tool_call_id")
             if call_id not in pending_tool_calls:
                 raise DataValidationError(
-                    f"{record_id}: tool result {call_id!r} is not pending at message {index}"
+                    f"{record_id}: tool result is not pending at message {index}"
                 )
             pending_tool_calls.remove(call_id)
             if not pending_tool_calls:
@@ -840,6 +875,15 @@ def validate_eval_case(record: dict[str, Any], production: bool = False) -> None
             "tool_response.schema.json",
             f"{record_id}.tool_fixtures[{index}]",
         )
+        try:
+            validate_tool_response(
+                fixture["returns"],
+                expected_tool_name=fixture["tool"],
+                expected_call_id=fixture["tool_call_id"],
+                expected_arguments=fixture["arguments"],
+            )
+        except FoundationContractError as exc:
+            raise DataValidationError(f"{record_id}.tool_fixtures[{index}]: {exc}") from exc
     fixture_timestamps = _collect_timestamps(
         record.get("tool_fixtures", []),
         record_id,

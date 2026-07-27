@@ -120,8 +120,12 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["tool", "arguments", "returns"],
+        "required": ["tool_call_id", "tool", "arguments", "returns"],
         "properties": {
+          "tool_call_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$"
+          },
           "tool": {"type": "string"},
           "arguments": {"type": "object"},
           "returns": {"type": "object"}

@@ -65,6 +65,20 @@ def _sha256(value: bytes) -> str:
     return hashlib.sha256(value).hexdigest()
 
 
+def test_foundation_schema_errors_do_not_reflect_untrusted_content() -> None:
+    marker = "UNTRUSTED_FOUNDATION_SCHEMA_MARKER"
+    with pytest.raises(FoundationDatasetError) as captured:
+        foundation_dataset._validate_schema(
+            {"schema_version": marker},
+            "foundation_candidate_audit.schema.json",
+            "foundation candidate audit",
+        )
+    message = str(captured.value)
+    assert marker not in message
+    assert "foundation candidate audit" in message
+    assert "validation" in message
+
+
 def _write_json(path: Path, value: dict[str, Any]) -> None:
     path.write_text(
         json.dumps(value, ensure_ascii=False, separators=(",", ":"), sort_keys=True),
@@ -293,7 +307,12 @@ def _numeric_record() -> dict[str, Any]:
                 "content": json.dumps(
                     {
                         "status": "ok",
-                        "data": {"implied_probability": formatted},
+                        "data": {
+                            "operation": "implied_probability",
+                            "formula_version": "dime-market-math-v1",
+                            "normalized_inputs": {"american_odds": -110},
+                            "output": {"implied_probability": formatted},
+                        },
                     },
                     separators=(",", ":"),
                 ),
@@ -302,7 +321,7 @@ def _numeric_record() -> dict[str, Any]:
         ],
         "numeric_assertions": [
             {
-                "source_path": "tool:call-1:data.implied_probability",
+                "source_path": "tool:call-1:data.output.implied_probability",
                 "value": formatted,
                 "unit": "probability",
                 "comparator": "exact",
@@ -322,7 +341,7 @@ def test_numeric_traceability_accepts_recomputed_and_bound_claim() -> None:
 def test_numeric_traceability_rejects_extra_tool_result_keys() -> None:
     record = _numeric_record()
     result = json.loads(record["messages"][2]["content"])
-    result["data"]["unreviewed_metric"] = "1"
+    result["data"]["output"]["unreviewed_metric"] = "1"
     record["messages"][2]["content"] = json.dumps(result)
 
     with pytest.raises(FoundationDatasetError, match="key inventory mismatch"):
@@ -332,7 +351,7 @@ def test_numeric_traceability_rejects_extra_tool_result_keys() -> None:
 def test_numeric_traceability_rejects_unsupported_assertions() -> None:
     record = _numeric_record()
     extra = deepcopy(record["numeric_assertions"][0])
-    extra["source_path"] = "tool:call-1:data.unreviewed_metric"
+    extra["source_path"] = "tool:call-1:data.output.unreviewed_metric"
     record["numeric_assertions"].append(extra)
 
     with pytest.raises(FoundationDatasetError, match="unsupported paths"):
@@ -364,7 +383,7 @@ def test_numeric_assertion_covers_only_its_formatted_numeric_token() -> None:
 
     with pytest.raises(
         FoundationDatasetError,
-        match=r"numeric token '2'.*outside every reviewed numeric claim",
+        match=r"numeric token is outside every reviewed numeric claim",
     ):
         validate_numeric_traceability(record, _numeric_config())
 

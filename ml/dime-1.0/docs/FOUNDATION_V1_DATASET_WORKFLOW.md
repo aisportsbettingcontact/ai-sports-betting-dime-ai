@@ -411,6 +411,24 @@ without the reviewed evidence mapping are insufficient.
 
 ## Stop conditions
 
+Candidate validation loads the complete
+[tool and canonical market contract bundle](TOOL_AND_MARKET_CONTRACTS.md).
+Each tool call must use the exact request schema and canonical market key, and
+each linked result must pass both the common envelope and its tool-specific
+data schema. The Foundation build contract binds the aggregate bundle
+SHA-256 across all 13 governed files, including both governing schemas,
+preventing later evidence from retaining one request-catalog hash while
+silently changing response or market contracts. Validation retains original
+call arguments and binds every nonempty result to them. It also executes
+registry scope/freshness classes, selection-keyed split totals and disclosure,
+Decimal numeric domains, internal timestamp consistency, and recursive
+server-owned argument exclusion. Item-level odds sources must be declared by
+their envelope, returned temporal coverage must stay inside explicit request
+filters, known split samples must be positive, warnings are bound to exact
+tool/status/quote semantics, successful deterministic math is independently
+recomputed for SFT and development-evaluation records, and schema failures
+expose only governed schema paths and static categories.
+
 Stop before freeze when:
 
 - the 2,160/240 grouped split or any curriculum quota is incomplete;

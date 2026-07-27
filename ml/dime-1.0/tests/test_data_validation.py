@@ -43,17 +43,61 @@ def sft_record() -> dict:
 def tool_result(
     source_ids: list[str],
     *,
+    tool_name: str = "get_game_context",
+    call_id: str = "call-1",
     status: str = "ok",
     data: dict | None = None,
 ) -> str:
+    if data is None:
+        data = {
+            "event_ref": "event-1",
+            "requested_fields": [
+                "schedule",
+                "teams",
+                "rosters",
+                "injuries",
+                "result",
+                "live_state",
+            ],
+            "facts": {"period": "Q1"},
+            "missing_fields": ["schedule", "teams", "rosters", "injuries", "result"],
+        }
+    if tool_name == "calculate_market_math":
+        data = {
+            "operation": "implied_probability",
+            "formula_version": "dime-market-math-v1",
+            "normalized_inputs": {"american_odds": -110},
+            "output": {key: str(value) for key, value in data.items()},
+        }
     return json.dumps(
         {
+            "schema_version": "dime-tool-response-v1",
+            "tool_name": tool_name,
+            "tool_version": "1.0.0",
+            "tool_call_id": call_id,
             "status": status,
             "as_of_utc": "2026-07-25T12:00:00Z",
+            "valid_until_utc": (
+                None
+                if tool_name == "calculate_market_math"
+                else "2026-07-25T12:00:00Z"
+                if status in {"ok", "partial", "stale"}
+                else None
+            ),
             "source_ids": source_ids,
-            "data": data or {},
+            "source_scope": {
+                "scope_type": (
+                    "deterministic" if tool_name == "calculate_market_math" else "provider_scoped"
+                ),
+                "provider_universe": (
+                    [] if tool_name == "calculate_market_math" else ["synthetic-provider"]
+                ),
+                "coverage": "synthetic test",
+            },
+            "data": data,
             "quality_flags": [],
             "warnings": [],
+            "trace_id": f"trace-{call_id}",
         }
     )
 
@@ -95,6 +139,30 @@ def eval_case() -> dict:
 def test_valid_records() -> None:
     validate_sft_record(sft_record())
     validate_eval_case(eval_case())
+
+
+@pytest.mark.parametrize(
+    ("mutation", "marker"),
+    [
+        (
+            lambda record, marker: record["messages"][0].update(role=marker),
+            "UNTRUSTED_DATASET_ENUM_MARKER",
+        ),
+        (
+            lambda record, marker: record.update({marker: "value"}),
+            "UNTRUSTED_DATASET_PROPERTY_MARKER",
+        ),
+    ],
+)
+def test_dataset_schema_errors_do_not_reflect_untrusted_content(mutation, marker: str) -> None:
+    record = sft_record()
+    mutation(record, marker)
+    with pytest.raises(DataValidationError) as captured:
+        validate_sft_record(record)
+    message = str(captured.value)
+    assert marker not in message
+    assert "schema violation" in message
+    assert "validation" in message
 
 
 def test_user_data_requires_deidentification_and_consent() -> None:
@@ -268,21 +336,23 @@ def test_nested_fixture_future_time_fails() -> None:
     record = eval_case()
     record["tool_fixtures"] = [
         {
+            "tool_call_id": "fixture-future",
             "tool": "calculate_market_math",
             "arguments": {
-                "operation": "remove_vig",
-                "inputs": {"american_odds": {"a": -110, "b": -110}},
+                "operation": "implied_probability",
+                "inputs": {"american_odds": -110},
             },
-            "returns": {
-                "status": "ok",
-                "as_of_utc": "2099-01-01T00:00:00Z",
-                "source_ids": ["future"],
-                "data": {},
-                "quality_flags": [],
-                "warnings": [],
-            },
+            "returns": json.loads(
+                tool_result(
+                    ["future"],
+                    tool_name="calculate_market_math",
+                    call_id="fixture-future",
+                    data={"implied_probability": 0.5238095238},
+                )
+            ),
         }
     ]
+    record["tool_fixtures"][0]["returns"]["as_of_utc"] = "2099-01-01T00:00:00Z"
     with pytest.raises(DataValidationError, match="future-data"):
         validate_eval_case(record)
 
@@ -329,7 +399,13 @@ def test_valid_multi_call_iterative_and_multi_turn_sequence() -> None:
                     "type": "function",
                     "function": {
                         "name": "get_current_odds",
-                        "arguments": {"event_id": "event-1", "market": "spread"},
+                        "arguments": {
+                            "event_id": "event-1",
+                            "market_key": {
+                                "market_type": "spread",
+                                "period": "full_game",
+                            },
+                        },
                     },
                 },
             ],
@@ -338,13 +414,33 @@ def test_valid_multi_call_iterative_and_multi_turn_sequence() -> None:
             "role": "tool",
             "name": "get_current_odds",
             "tool_call_id": "call-odds",
-            "content": tool_result(["source_1"]),
+            "content": tool_result(
+                ["source_1"],
+                tool_name="get_current_odds",
+                call_id="call-odds",
+                data={
+                    "event_ref": "event-1",
+                    "market_key": {"market_type": "spread", "period": "full_game"},
+                    "market_phase": "pregame",
+                    "provider_scope": "synthetic",
+                    "quotes": [
+                        {
+                            "selection": "home",
+                            "line": "-2.5",
+                            "price_american": -110,
+                            "observed_at_utc": "2026-07-25T12:00:00Z",
+                            "quote_status": "current",
+                            "source_id": "source_1",
+                        }
+                    ],
+                },
+            ),
         },
         {
             "role": "tool",
             "name": "get_game_context",
             "tool_call_id": "call-context",
-            "content": tool_result(["source_1"]),
+            "content": tool_result(["source_1"], call_id="call-context"),
         },
         {
             "role": "assistant",
@@ -355,7 +451,13 @@ def test_valid_multi_call_iterative_and_multi_turn_sequence() -> None:
                     "type": "function",
                     "function": {
                         "name": "get_odds_history",
-                        "arguments": {"event_id": "event-1", "market": "spread"},
+                        "arguments": {
+                            "event_id": "event-1",
+                            "market_key": {
+                                "market_type": "spread",
+                                "period": "full_game",
+                            },
+                        },
                     },
                 }
             ],
@@ -364,7 +466,23 @@ def test_valid_multi_call_iterative_and_multi_turn_sequence() -> None:
             "role": "tool",
             "name": "get_odds_history",
             "tool_call_id": "call-history",
-            "content": tool_result(["source_1"]),
+            "content": tool_result(
+                ["source_1"],
+                tool_name="get_odds_history",
+                call_id="call-history",
+                data={
+                    "event_ref": "event-1",
+                    "market_key": {"market_type": "spread", "period": "full_game"},
+                    "requested_from_utc": None,
+                    "requested_to_utc": None,
+                    "returned_from_utc": None,
+                    "returned_to_utc": None,
+                    "snapshots": [],
+                    "next_cursor": None,
+                    "truncated": False,
+                    "gap_flags": [],
+                },
+            ),
         },
         {"role": "assistant", "content": "Here is the grounded analysis."},
         {"role": "user", "content": "Summarize it."},
@@ -531,7 +649,11 @@ def test_calculate_market_math_may_use_a_source_less_result() -> None:
             "role": "tool",
             "name": "calculate_market_math",
             "tool_call_id": "call-1",
-            "content": tool_result([], data={"implied_probability": 0.5238095238}),
+            "content": tool_result(
+                [],
+                tool_name="calculate_market_math",
+                data={"implied_probability": 0.5238095238},
+            ),
         },
         {"role": "assistant", "content": "The implied probability is about 52.38%."},
     ]
@@ -571,7 +693,7 @@ def test_curriculum_schema_requires_answer_length() -> None:
         "risk_tier": "standard",
     }
 
-    with pytest.raises(DataValidationError, match="answer_length"):
+    with pytest.raises(DataValidationError, match="required"):
         validate_sft_record(record)
 
 

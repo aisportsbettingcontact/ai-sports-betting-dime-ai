@@ -1,0 +1,71 @@
+{
+  "schema_version": "dime-market-key-catalog-v1",
+  "catalog_version": "1.0.0",
+  "status": "proposed",
+  "authorization_effect": {
+    "authorizes_training": false,
+    "authorizes_locked_evaluation": false,
+    "authorizes_publication": false,
+    "authorizes_serving": false,
+    "authorizes_provider_activation": false
+  },
+  "identity_fields": ["market_type", "period"],
+  "normalization": {
+    "governed_storage": "canonical_only",
+    "input_aliases": {
+      "ml": "moneyline",
+      "money_line": "moneyline",
+      "point_spread": "spread",
+      "game_total": "total",
+      "over_under": "total"
+    }
+  },
+  "markets": [
+    {
+      "market_type": "moneyline",
+      "period": "full_game",
+      "selection_structure": "two_or_three_way_result",
+      "applicable_sports": [
+        "american_football",
+        "baseball",
+        "basketball",
+        "ice_hockey",
+        "soccer"
+      ],
+      "deprecated": false
+    },
+    {
+      "market_type": "spread",
+      "period": "full_game",
+      "selection_structure": "two_sided_handicap",
+      "applicable_sports": [
+        "american_football",
+        "baseball",
+        "basketball",
+        "ice_hockey",
+        "soccer"
+      ],
+      "deprecated": false
+    },
+    {
+      "market_type": "total",
+      "period": "full_game",
+      "selection_structure": "over_under",
+      "applicable_sports": [
+        "american_football",
+        "baseball",
+        "basketball",
+        "ice_hockey",
+        "soccer"
+      ],
+      "deprecated": false
+    }
+  ],
+  "deferred_market_families": [
+    "player_prop",
+    "team_prop",
+    "period_market",
+    "derivative",
+    "exotic"
+  ]
+}

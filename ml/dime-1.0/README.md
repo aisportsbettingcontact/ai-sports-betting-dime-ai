@@ -63,6 +63,11 @@ tool contracts, schemas, synthetic public fixtures, configurations, tests,
 documentation, sanitized evidence, and release gates. Branches and pull
 requests are review-visible draft work.
 
+The tool-contract identity covers the request and market catalogs, both
+governing schemas, the response registry and envelope, and all seven data
+schemas. Stored nonempty results are validated against their originating call
+arguments plus executable scope, freshness, numeric, and temporal rules.
+
 Approved data and model artifacts are separated across four private Hugging
 Face repositories. The model repository is adapter-only: it must never receive
 Meta base weights, merged full-model weights, quantized full-model weights, or
@@ -73,6 +78,7 @@ environment.
 
 See:
 
+- [Tool and canonical market contracts](docs/TOOL_AND_MARKET_CONTRACTS.md)
 - [Platform ownership](docs/PLATFORM_OWNERSHIP.md)
 - [Hugging Face registry](docs/HUGGING_FACE_REGISTRY.md)
 - [Foundation v1 dataset workflow](docs/FOUNDATION_V1_DATASET_WORKFLOW.md)

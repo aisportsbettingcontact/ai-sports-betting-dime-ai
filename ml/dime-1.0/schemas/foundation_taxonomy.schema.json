@@ -1,0 +1,232 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dime.local/schemas/foundation_taxonomy.schema.json",
+  "title": "Dime Foundation Taxonomy v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "contract_version",
+    "status",
+    "dataset_version",
+    "unresolved_decisions",
+    "market_catalog",
+    "authorization_effect",
+    "purpose",
+    "vocabularies",
+    "aliases",
+    "relationships",
+    "registered_tools",
+    "reviewer_roles",
+    "source_classes",
+    "matched_control_locator_types",
+    "legacy_labels"
+  ],
+  "properties": {
+    "schema_version": {"const": "dime-foundation-taxonomy-v1"},
+    "contract_version": {"const": "dime-foundation-taxonomy-v1.0.0"},
+    "status": {"const": "proposed"},
+    "dataset_version": {"const": "dime-sft-foundation-v1"},
+    "unresolved_decisions": {
+      "type": "array",
+      "minItems": 7,
+      "maxItems": 7,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/canonicalIdentifier"}
+    },
+    "market_catalog": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "version", "sha256"],
+      "properties": {
+        "path": {"const": "tools/market_keys.v1.json"},
+        "version": {"const": "1.0.0"},
+        "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+      }
+    },
+    "authorization_effect": {"$ref": "#/$defs/authorizationEffect"},
+    "purpose": {"const": "governance_and_validation_metadata_only"},
+    "vocabularies": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "task_families",
+        "interaction_modes",
+        "difficulties",
+        "evidence_statuses",
+        "policy_actions",
+        "risk_tiers",
+        "answer_lengths",
+        "market_math_operations",
+        "numeric_units",
+        "numeric_comparators",
+        "numeric_evidence_classes",
+        "safety_subfamilies",
+        "sports",
+        "leagues",
+        "tool_statuses",
+        "evaluation_splits",
+        "evaluation_suites",
+        "severities",
+        "evaluation_risk_states",
+        "market_phases",
+        "standard_evaluation_program_families",
+        "red_team_program_families",
+        "review_decisions",
+        "external_audit_types"
+      ],
+      "properties": {
+        "task_families": {"$ref": "#/$defs/identifierList"},
+        "interaction_modes": {"$ref": "#/$defs/identifierList"},
+        "difficulties": {"$ref": "#/$defs/identifierList"},
+        "evidence_statuses": {"$ref": "#/$defs/identifierList"},
+        "policy_actions": {"$ref": "#/$defs/identifierList"},
+        "risk_tiers": {"$ref": "#/$defs/identifierList"},
+        "answer_lengths": {"$ref": "#/$defs/identifierList"},
+        "market_math_operations": {"$ref": "#/$defs/identifierList"},
+        "numeric_units": {"$ref": "#/$defs/identifierList"},
+        "numeric_comparators": {"$ref": "#/$defs/identifierList"},
+        "numeric_evidence_classes": {"$ref": "#/$defs/identifierList"},
+        "safety_subfamilies": {"$ref": "#/$defs/identifierList"},
+        "sports": {"$ref": "#/$defs/identifierList"},
+        "leagues": {"$ref": "#/$defs/identifierList"},
+        "tool_statuses": {"$ref": "#/$defs/identifierList"},
+        "evaluation_splits": {"$ref": "#/$defs/identifierList"},
+        "evaluation_suites": {"$ref": "#/$defs/identifierList"},
+        "severities": {"$ref": "#/$defs/identifierList"},
+        "evaluation_risk_states": {"$ref": "#/$defs/identifierList"},
+        "market_phases": {"$ref": "#/$defs/identifierList"},
+        "standard_evaluation_program_families": {"$ref": "#/$defs/identifierList"},
+        "red_team_program_families": {"$ref": "#/$defs/identifierList"},
+        "review_decisions": {"$ref": "#/$defs/identifierList"},
+        "external_audit_types": {"$ref": "#/$defs/identifierList"}
+      }
+    },
+    "aliases": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sports", "leagues"],
+      "properties": {
+        "sports": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["american_football", "baseball", "basketball", "ice_hockey", "soccer"],
+          "properties": {
+            "american_football": {"$ref": "#/$defs/identifierList"},
+            "baseball": {"$ref": "#/$defs/identifierList"},
+            "basketball": {"$ref": "#/$defs/identifierList"},
+            "ice_hockey": {"$ref": "#/$defs/identifierList"},
+            "soccer": {"$ref": "#/$defs/identifierList"}
+          }
+        },
+        "leagues": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["nfl", "mlb", "nba", "wnba", "nhl", "ncaaf", "ncaab", "epl"],
+          "properties": {
+            "nfl": {"$ref": "#/$defs/identifierList"},
+            "mlb": {"$ref": "#/$defs/identifierList"},
+            "nba": {"$ref": "#/$defs/identifierList"},
+            "wnba": {"$ref": "#/$defs/identifierList"},
+            "nhl": {"$ref": "#/$defs/identifierList"},
+            "ncaaf": {"$ref": "#/$defs/identifierList"},
+            "ncaab": {"$ref": "#/$defs/identifierList"},
+            "epl": {"$ref": "#/$defs/identifierList"}
+          }
+        }
+      }
+    },
+    "relationships": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "league_to_sport",
+        "market_type_required_task_families",
+        "provider_ids_required_tools",
+        "nullable_when_not_applicable"
+      ],
+      "properties": {
+        "league_to_sport": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["nfl", "ncaaf", "mlb", "nba", "wnba", "ncaab", "nhl", "epl"],
+          "properties": {
+            "nfl": {"$ref": "#/$defs/canonicalIdentifier"},
+            "ncaaf": {"$ref": "#/$defs/canonicalIdentifier"},
+            "mlb": {"$ref": "#/$defs/canonicalIdentifier"},
+            "nba": {"$ref": "#/$defs/canonicalIdentifier"},
+            "wnba": {"$ref": "#/$defs/canonicalIdentifier"},
+            "ncaab": {"$ref": "#/$defs/canonicalIdentifier"},
+            "nhl": {"$ref": "#/$defs/canonicalIdentifier"},
+            "epl": {"$ref": "#/$defs/canonicalIdentifier"}
+          }
+        },
+        "market_type_required_task_families": {"$ref": "#/$defs/identifierList"},
+        "provider_ids_required_tools": {"$ref": "#/$defs/identifierList"},
+        "nullable_when_not_applicable": {"$ref": "#/$defs/identifierList"}
+      }
+    },
+    "registered_tools": {"$ref": "#/$defs/identifierList"},
+    "reviewer_roles": {"$ref": "#/$defs/identifierList"},
+    "source_classes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["recognized", "foundation_allowed"],
+      "properties": {
+        "recognized": {"$ref": "#/$defs/identifierList"},
+        "foundation_allowed": {"$ref": "#/$defs/identifierList"}
+      }
+    },
+    "matched_control_locator_types": {"$ref": "#/$defs/identifierList"},
+    "legacy_labels": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["red_team_exposure_split"],
+      "properties": {
+        "red_team_exposure_split": {
+          "const": "retained_legacy_label_while_red_team_transitions_to_suite"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "canonicalIdentifier": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(?:[_-][a-z0-9]+)*$"
+    },
+    "identifierList": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/canonicalIdentifier"}
+    },
+    "authorizationEffect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scope",
+        "creates_data",
+        "approves_data",
+        "authorizes_gpu_execution",
+        "authorizes_training",
+        "authorizes_locked_evaluation",
+        "authorizes_publication",
+        "authorizes_release",
+        "authorizes_serving",
+        "authorizes_provider_activation"
+      ],
+      "properties": {
+        "scope": {"const": "governance_validation_only"},
+        "creates_data": {"const": false},
+        "approves_data": {"const": false},
+        "authorizes_gpu_execution": {"const": false},
+        "authorizes_training": {"const": false},
+        "authorizes_locked_evaluation": {"const": false},
+        "authorizes_publication": {"const": false},
+        "authorizes_release": {"const": false},
+        "authorizes_serving": {"const": false},
+        "authorizes_provider_activation": {"const": false}
+      }
+    }
+  }
+}
