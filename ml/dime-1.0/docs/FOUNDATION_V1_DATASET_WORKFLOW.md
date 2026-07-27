@@ -50,10 +50,18 @@ hashable authority. Every authority change requires a reviewed pull request
 and a new `registry_version`; IDs are stable opaque identifiers and must not be
 reassigned to another person.
 
-The current registry is `proposed` and has no reviewer entries. A proposed or
-retired registry cannot contain an active reviewer, so the current file grants
-no review, audit, or approval authority and cannot authorize a dataset,
-training run, release, or serving change.
+Every reviewer entry must also define an opaque `independence_group_id` and a
+half-open authority period: `effective_start` is inclusive and
+`effective_end_or_open_ended` is exclusive, or `null` for open-ended authority.
+Quorums count distinct independence groups, not aliases or reviewer IDs.
+Review, source-rights, external-audit, and dataset-approval timestamps must
+fall inside the referenced reviewer's authority period.
+
+The current v2 registry is `proposed` and has no reviewer entries. A proposed
+or retired registry cannot contain an active reviewer, so the current file
+grants no review, audit, or approval authority and cannot authorize a dataset,
+training run, release, or serving change. The v2 shape and runtime checks make
+future authority representable and enforceable; they do not activate a roster.
 
 Review ledgers, external reports, and approval records may only reference a
 stable `reviewer_id` that resolves to an active entry and the required role in
@@ -62,11 +70,13 @@ one, or grant a role. The review ledger contains rubric-bound decisions; it
 does not contain reviewer status or role definitions.
 
 The candidate auditor and freezer require an `active` registry, resolve ledger,
-external-audit, and approval IDs from it, and enforce each required role. The
-SHA-256 of the exact registry file is bound as `reviewer_registry_sha256` in
-the candidate audit and every external audit, the Foundation approval, the v4
-dataset manifest, and the candidate-specific training evidence. All five
-evidence layers must bind the same digest.
+source-rights, external-audit, and approval IDs from it, and enforce each
+required role, authority period, and independence-group quorum. Dataset
+approvers must also be distinct from candidate authors. The SHA-256 of the
+exact registry file—therefore also its embedded `registry_version`—is bound as
+`reviewer_registry_sha256` in the candidate audit and every external audit,
+the Foundation approval, the v4 dataset manifest, and the candidate-specific
+training evidence. All five evidence layers must bind the same digest.
 
 ## Record lifecycle
 

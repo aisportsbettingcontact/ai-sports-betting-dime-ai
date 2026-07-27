@@ -141,8 +141,12 @@ into `main`.
 Every change requires review and a new registry version. Its exact bytes are
 hashed as `reviewer_registry_sha256`. The current `proposed` registry is empty,
 so it cannot authorize a decision, audit, approval, dataset, or training run.
-A ledger may reference only a stable registry ID. Any ledger-carried status or
-role is non-authoritative and cannot override the registry.
+A future v2 reviewer entry must define its opaque independence group and
+half-open effective period. Runtime validation counts distinct groups and
+requires record reviews, source-rights reviews, external audits, and dataset
+approvals to occur during the referenced reviewer's authority. A ledger may
+reference only a stable registry ID. Any ledger-carried status, role, group, or
+authority date is non-authoritative and cannot override the registry.
 
 GitHub must not contain:
 

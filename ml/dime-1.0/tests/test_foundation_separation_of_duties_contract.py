@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 import yaml
+from jsonschema import Draft202012Validator, FormatChecker
 
 PROJECT = Path(__file__).resolve().parents[1]
 LOADER_PATH = PROJECT / "src/dime_ai/foundation_contracts.py"
@@ -31,6 +32,25 @@ def mutate_separation(project: Path, mutator) -> None:
     document = yaml.safe_load(path.read_text(encoding="utf-8"))
     mutator(document)
     path.write_text(yaml.safe_dump(document, sort_keys=False), encoding="utf-8")
+
+
+def reviewer_registry_validator() -> Draft202012Validator:
+    schema = json.loads(
+        (PROJECT / "schemas/foundation_reviewer_registry.schema.json").read_text(encoding="utf-8")
+    )
+    Draft202012Validator.check_schema(schema)
+    return Draft202012Validator(schema, format_checker=FormatChecker())
+
+
+def valid_reviewer() -> dict:
+    return {
+        "reviewer_id": "dime-reviewer-domain-001",
+        "active": True,
+        "roles": ["domain"],
+        "independence_group_id": "dime-independence-group-domain-001",
+        "effective_start": "2026-01-01T00:00:00Z",
+        "effective_end_or_open_ended": None,
+    }
 
 
 def test_record_review_and_dataset_approval_require_independent_humans() -> None:
@@ -82,6 +102,8 @@ def test_reviewer_registry_remains_proposed_empty_and_contract_has_no_roster() -
     assert document["reviewer_authority"]["registry_path"] == (
         "configs/foundation_reviewer_registry.json"
     )
+    assert registry["schema_version"] == "dime-foundation-reviewer-registry-v2"
+    assert registry["registry_version"] == "dime-foundation-reviewers-v0.2.0"
     assert registry["status"] == "proposed"
     assert registry["reviewers"] == []
     assert "reviewers" not in document
@@ -91,6 +113,61 @@ def test_reviewer_registry_remains_proposed_empty_and_contract_has_no_roster() -
     assert not any(
         value for key, value in document["authorization_effect"].items() if key != "scope"
     )
+
+
+def test_reviewer_registry_v2_represents_group_and_open_ended_authority() -> None:
+    registry = {
+        "schema_version": "dime-foundation-reviewer-registry-v2",
+        "registry_version": "dime-foundation-reviewers-v0.2.0",
+        "status": "active",
+        "reviewers": [valid_reviewer()],
+    }
+    assert list(reviewer_registry_validator().iter_errors(registry)) == []
+
+
+@pytest.mark.parametrize(
+    "missing",
+    [
+        "independence_group_id",
+        "effective_start",
+        "effective_end_or_open_ended",
+    ],
+)
+def test_reviewer_registry_requires_complete_authority_metadata(missing: str) -> None:
+    reviewer = valid_reviewer()
+    reviewer.pop(missing)
+    registry = {
+        "schema_version": "dime-foundation-reviewer-registry-v2",
+        "registry_version": "dime-foundation-reviewers-v0.2.0",
+        "status": "active",
+        "reviewers": [reviewer],
+    }
+    errors = list(reviewer_registry_validator().iter_errors(registry))
+    assert errors
+    assert any(missing in error.message for error in errors)
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("independence_group_id", "dime-independence-group-example"),
+        ("effective_start", "2026-01-01T00:00:00+00:00"),
+        ("effective_end_or_open_ended", "2026-02-01T00:00:00+00:00"),
+    ],
+)
+def test_reviewer_registry_rejects_placeholder_groups_and_noncanonical_utc(
+    field: str,
+    value: str,
+) -> None:
+    reviewer = valid_reviewer()
+    reviewer[field] = value
+    registry = {
+        "schema_version": "dime-foundation-reviewer-registry-v2",
+        "registry_version": "dime-foundation-reviewers-v0.2.0",
+        "status": "active",
+        "reviewers": [reviewer],
+    }
+    assert list(reviewer_registry_validator().iter_errors(registry))
 
 
 @pytest.mark.parametrize(
@@ -150,14 +227,14 @@ def test_separation_mutations_fail_closed(
         contract_api.load_foundation_contracts(project_root=project_copy)
 
 
-def test_effective_authority_requires_future_registry_migration_without_activation() -> None:
+def test_effective_authority_contract_is_ready_without_activation() -> None:
     document = api().load_foundation_contract("separation_of_duties").document
     assert document["effective_authority"]["registry_sha256_binding_required"] is True
     assert document["effective_authority"]["authority_period_required"] is True
     assert document["registry_migration"] == {
-        "required": True,
-        "status": "proposed",
-        "required_future_fields": (
+        "required": False,
+        "status": "representation_and_runtime_ready",
+        "implemented_fields": (
             "independence_group_id",
             "effective_start",
             "effective_end_or_open_ended",

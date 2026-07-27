@@ -12,7 +12,7 @@
   ],
   "properties": {
     "schema_version": {
-      "const": "dime-foundation-reviewer-registry-v1"
+      "const": "dime-foundation-reviewer-registry-v2"
     },
     "registry_version": {
       "type": "string",
@@ -112,7 +112,10 @@
       "required": [
         "reviewer_id",
         "active",
-        "roles"
+        "roles",
+        "independence_group_id",
+        "effective_start",
+        "effective_end_or_open_ended"
       ],
       "properties": {
         "reviewer_id": {
@@ -145,6 +148,33 @@
               "dataset-approver"
             ]
           }
+        },
+        "independence_group_id": {
+          "type": "string",
+          "pattern": "^dime-independence-group-[a-z0-9][a-z0-9._-]{3,63}$",
+          "description": "Stable opaque independence boundary. Multiple reviewer IDs in one group count once and the identifier must never be reassigned.",
+          "not": {
+            "pattern": "(?:replace|placeholder|example|sample|test|tbd|todo|unknown|anonymous|group[-_.]?[ab])"
+          }
+        },
+        "effective_start": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?Z$",
+          "description": "Inclusive start of reviewer authority as a canonical UTC timestamp ending in Z."
+        },
+        "effective_end_or_open_ended": {
+          "description": "Exclusive end of reviewer authority as a canonical UTC timestamp ending in Z; null means open-ended.",
+          "oneOf": [
+            {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?Z$"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       }
     }
