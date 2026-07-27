@@ -1,14 +1,28 @@
-"""Resumable, rate-limited crawler for MLB v1.1 live feeds. One process per shard.
+"""Resumable, rate-limited crawler for MLB v1.1 live feeds.
 
-Usage: python3 crawl_feeds.py --shard shards/shard-1.json [--delay 1.0] [--limit N]
+Two modes:
+  --shard shards/shard-1.json     crawl an explicit game list into feeds-2026/
+  --season 2014                   crawl all finals from games-2014.json into feeds-2014/
+
+Usage: python3 crawl_feeds.py (--shard FILE | --season YYYY) [--delay 1.0] [--limit N]
 """
 import argparse, json, os, sys, time, urllib.request, urllib.error
 
 REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-OUT_DIR = os.path.join(REPO, "docs", "mlb-stats-api", "data", "feeds-2026")
+DATA_DIR = os.path.join(REPO, "docs", "mlb-stats-api", "data")
 URL = "https://statsapi.mlb.com/api/v1.1/game/{pk}/feed/live"
 RETRIES = 3
 BACKOFF = [2, 4, 8]
+FINAL_STATES = {"F", "O"}
+
+def ensure_out_dir(path):
+    """Create the feed dir with a self-gitignore so data can never be committed."""
+    os.makedirs(path, exist_ok=True)
+    gi = os.path.join(path, ".gitignore")
+    if not os.path.exists(gi):
+        with open(gi, "w") as f:
+            f.write("*\n!.gitignore\n")
+    return path
 
 def is_valid_feed_file(path, gamePk):
     try:
@@ -23,17 +37,15 @@ def fetch_feed(gamePk, timeout=30):
     with urllib.request.urlopen(req, timeout=timeout) as r:
         return r.read()
 
-def crawl(shard_path, delay, limit=None):
-    shard_name = os.path.splitext(os.path.basename(shard_path))[0]
-    games = json.load(open(shard_path))
+def crawl(games, out_dir, manifest_name, delay, limit=None, label="crawl"):
     if limit:
         games = games[:limit]
-    os.makedirs(OUT_DIR, exist_ok=True)
-    manifest = open(os.path.join(OUT_DIR, f"manifest-{shard_name}.jsonl"), "a")
+    ensure_out_dir(out_dir)
+    manifest = open(os.path.join(out_dir, manifest_name), "a")
     ok = skipped = failed = 0
     for i, g in enumerate(games):
         pk = g["gamePk"]
-        final_path = os.path.join(OUT_DIR, f"{pk}.json")
+        final_path = os.path.join(out_dir, f"{pk}.json")
         if is_valid_feed_file(final_path, pk):
             skipped += 1
             manifest.write(json.dumps({"gamePk": pk, "status": "skipped"}) + "\n")
@@ -70,16 +82,30 @@ def crawl(shard_path, delay, limit=None):
         manifest.write(json.dumps(row) + "\n")
         manifest.flush()
         if (i + 1) % 25 == 0 or i + 1 == len(games):
-            print(f"[{shard_name}] {i+1}/{len(games)} ok={ok} skipped={skipped} failed={failed}", flush=True)
+            print(f"[{label}] {i+1}/{len(games)} ok={ok} skipped={skipped} failed={failed}", flush=True)
         time.sleep(delay)
     manifest.close()
-    print(f"[{shard_name}] DONE ok={ok} skipped={skipped} failed={failed}")
+    print(f"[{label}] DONE ok={ok} skipped={skipped} failed={failed}")
     return failed
+
+def season_finals(season):
+    games = json.load(open(os.path.join(DATA_DIR, f"games-{season}.json")))
+    return [g for g in games if g["codedState"] in FINAL_STATES]
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("--shard", required=True)
+    mode = ap.add_mutually_exclusive_group(required=True)
+    mode.add_argument("--shard")
+    mode.add_argument("--season", type=int)
     ap.add_argument("--delay", type=float, default=1.0)
     ap.add_argument("--limit", type=int, default=None)
     a = ap.parse_args()
-    sys.exit(1 if crawl(a.shard, a.delay, a.limit) else 0)
+    if a.shard:
+        name = os.path.splitext(os.path.basename(a.shard))[0]
+        failed = crawl(json.load(open(a.shard)), os.path.join(DATA_DIR, "feeds-2026"),
+                       f"manifest-{name}.jsonl", a.delay, a.limit, label=name)
+    else:
+        failed = crawl(season_finals(a.season), os.path.join(DATA_DIR, f"feeds-{a.season}"),
+                       f"manifest-season-{a.season}.jsonl", a.delay, a.limit,
+                       label=f"season-{a.season}")
+    sys.exit(1 if failed else 0)

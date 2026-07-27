@@ -60,6 +60,23 @@ def test_build_dataset_dedup_rank():
     assert set(row) == set(COLS)
     assert row["seriesDescription"] == "Division Series" and row["innings"] == 9
 
+
+
+def test_ensure_out_dir_gitignore(tmpdir="/tmp/mlb_crawl_test_dir"):
+    import os, shutil
+    from crawl_feeds import ensure_out_dir
+    shutil.rmtree(tmpdir, ignore_errors=True)
+    ensure_out_dir(tmpdir)
+    gi = os.path.join(tmpdir, ".gitignore")
+    assert open(gi).read() == "*\n!.gitignore\n"
+    ensure_out_dir(tmpdir)  # idempotent
+
+def test_verify_data_paths():
+    from verify_feeds import data_paths
+    ds, fd = data_paths(2014)
+    assert ds.endswith("data/games-2014.json") and fd.endswith("data/feeds-2014")
+
+
 if __name__ == "__main__":
     for name, fn in sorted({k: v for k, v in globals().items() if k.startswith("test_")}.items()):
         fn(); print(f"PASS {name}")

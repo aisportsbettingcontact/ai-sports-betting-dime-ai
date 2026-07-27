@@ -1,10 +1,16 @@
-"""Verify 100% coverage + accuracy of crawled 2026 feeds against games-2026.json."""
-import json, os, sys
+"""Verify 100% coverage + accuracy of crawled feeds against a season's games-YYYY.json.
+
+Usage: python3 verify_feeds.py [--season 2026]
+"""
+import argparse, json, os, sys
 
 REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-DATASET = os.path.join(REPO, "docs", "mlb-stats-api", "data", "games-2026.json")
-FEED_DIR = os.path.join(REPO, "docs", "mlb-stats-api", "data", "feeds-2026")
 FINAL_STATES = {"F", "O"}
+
+def data_paths(season):
+    data = os.path.join(REPO, "docs", "mlb-stats-api", "data")
+    return (os.path.join(data, f"games-{season}.json"),
+            os.path.join(data, f"feeds-{season}"))
 
 def verify_feed(feed, expected):
     fails = []
@@ -30,6 +36,10 @@ def verify_feed(feed, expected):
     return fails
 
 def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--season", type=int, default=2026)
+    a = ap.parse_args()
+    DATASET, FEED_DIR = data_paths(a.season)
     games = json.load(open(DATASET))
     finals = {g["gamePk"]: g for g in games if g["codedState"] in FINAL_STATES}
     failures, present, valid = [], 0, 0
