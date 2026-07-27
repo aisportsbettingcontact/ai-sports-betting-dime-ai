@@ -49,6 +49,9 @@ def test_verify_feed():
     feed["liveData"]["plays"]["allPlays"] = [{}] * 37
     feed["liveData"]["linescore"]["innings"] = [{}] * 5
     assert verify_feed(feed, expected) == [], "5-inning Completed Early game must pass"
+    feed["gameData"]["status"]["detailedState"] = "Final: Tied"
+    assert any("score" not in c for c in verify_feed(feed, expected)) or verify_feed(feed, expected), "sanity"
+    assert verify_feed(feed, dict(expected, isTie=True)) == [], "tie game called early must pass"
 
 
 

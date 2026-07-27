@@ -27,7 +27,8 @@ def verify_feed(feed, expected):
         fails.append(f"score mismatch feed {away}-{home} vs dataset {expected['awayScore']}-{expected['homeScore']}")
     plays = feed.get("liveData", {}).get("plays", {}).get("allPlays", [])
     detailed = feed.get("gameData", {}).get("status", {}).get("detailedState", "")
-    shortened = state == "O" or detailed.startswith("Completed Early")
+    shortened = (state == "O" or detailed.startswith("Completed Early")
+                 or bool(expected.get("isTie")))   # ties only occur in called-early games
     min_plays = 25 if shortened else 40      # rain-shortened 5-inning games run ~35 PAs
     if len(plays) < min_plays:
         fails.append(f"allPlays too small: {len(plays)}")
