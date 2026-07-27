@@ -33,17 +33,14 @@
   align-self: start;
   gap: var(--space-sm);
   opacity: 0.72;
-  /* FEED-CONTRAST: 0.72 opacity composites --text-secondary down to ~2.5-3.9:1
-     against the card surface. The dim treatment stays (owner directive) but
-     the text tokens are pre-brightened inside dimmed cards so the COMPOSITED
-     foreground still clears WCAG-AA 4.5:1 (#C9C9C9 x 0.72 over #0a0a0a ≈
-     #949494 ≈ 6.4:1). Light-theme counterpart below darkens instead. */
-  --text-secondary: #C9C9C9;
-  --text-muted: #B4B4B4;
-}
-html:not(.dark) .projection-card--compact {
-  --text-secondary: #2E2E2E;
-  --text-muted: #3B3B3B;
+  /* FEED-CONTRAST: 0.72 opacity composites the stock secondary/muted tokens
+     below WCAG-AA 4.5:1. The dim treatment stays (owner directive); inside
+     dimmed cards the label tokens remap to the law's --foreground ink, which
+     the card-level opacity then dims back down — composited contrast measures
+     ~10:1 dark / ~9:1 light, and the token switches with the theme on its
+     own (no per-theme override needed). */
+  --text-secondary: var(--foreground);
+  --text-muted: var(--foreground);
 }
 /* A settled no-edge card can carry both modifiers. Compact state owns the
    requested diminished treatment instead of inheriting PASS's 0.82 value. */
@@ -611,11 +608,10 @@ html:not(.dark) .pregame-pitcher__status--confirmed { color: #0fa36b; }
      already can't produce it. The ROI-only badge remains quiet grey. */
   .projection-card--pass { opacity: 0.82; }
   /* FEED-CONTRAST: same composited-contrast correction as --compact (top of
-     file) — 0.82 dims light-theme #595959 labels to ~4.5:1 borderline on
-     white. Scoped >=768 alongside the dim itself so undimmed mobile PASS
-     cards keep the stock tokens. */
-  .projection-card--pass { --text-secondary: #C9C9C9; --text-muted: #B4B4B4; }
-  html:not(.dark) .projection-card--pass { --text-secondary: #2E2E2E; --text-muted: #3B3B3B; }
+     file) — the 0.82 dim leaves light-theme labels ~4.5:1 borderline.
+     Scoped >=768 alongside the dim itself so undimmed mobile PASS cards
+     keep the stock tokens. */
+  .projection-card--pass { --text-secondary: var(--foreground); --text-muted: var(--foreground); }
   .projection-card--pass .edge-indicator--none { color: var(--text-secondary, #a6a6a6); }
 
   /* Defensive PASS backstop (Round 4, from the W1 review — plan:

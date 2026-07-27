@@ -4851,7 +4851,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                         <button
                           type="button"
                           onClick={retryLinescores}
-                          className="flex items-center gap-1 text-xs font-bold text-[#FF3B3B] transition-colors"
+                          className="flex items-center gap-1 text-xs font-bold text-[var(--loss-red)] transition-colors"
                         >
                           <AlertCircle size={12} />
                           Scores unavailable — Retry
