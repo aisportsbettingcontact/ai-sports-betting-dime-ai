@@ -860,7 +860,7 @@ export default function UserManagement() {
                               <span className="text-[10px] text-foreground">Stripe</span>
                             )}
                             {user.pendingSetup && (
-                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold tracking-wider bg-card text-foreground border border-border">
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wider bg-card text-foreground border border-border">
                                 ⏳ PENDING SETUP
                               </span>
                             )}

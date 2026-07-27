@@ -1289,7 +1289,7 @@ const DMF_CSS = `
 .dmf-feedhead{position:sticky;top:46px;z-index:10;padding:16px 0 10px;background:var(--dmf-page);border-bottom:1px solid var(--dmf-border);margin-bottom:10px;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
 .dmf-datenav{display:flex;align-items:center;gap:12px}
 .dmf-sq{width:28px;height:28px;border-radius:8px;border:1px solid var(--dmf-border-hi);color:var(--dmf-t2);display:grid;place-items:center;position:relative;transition:border-color var(--dmf-t) var(--dmf-ease),color var(--dmf-t) var(--dmf-ease)}
-.dmf-sq::after{content:"";position:absolute;inset:-8px}
+.dmf-sq::after{content:"";position:absolute;inset:-9px}/* CL-04 (closure): 28px + 2x9px = 46px effective hit-area, clears the 44px target-size floor with margin (was inset:-8px, borderline 44) */
 .dmf-sq:hover{border-color:var(--dmf-border-hover);color:var(--dmf-t1)}
 .dmf-sq:active{background:var(--dmf-card-hi)}
 .dmf-datelbl{font-size:15px;font-weight:700;letter-spacing:-.005em;white-space:nowrap}

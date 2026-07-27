@@ -68,7 +68,10 @@
 .matchup__center { display: flex; flex-direction: column; align-items: center; gap: 2px; text-align: center; min-inline-size: 0; }
 /* Line 1 — "SF Giants @ SEA Mariners". The card's identity; wraps, never clips. */
 .matchup__line { font-size: var(--proj-team); font-weight: 700; letter-spacing: -0.01em; text-wrap: balance; }
-.matchup__at { color: var(--text-muted, #6e6e6e); font-weight: 400; }
+/* CL-05a (closure audit): --text-muted (3.88:1) fails 4.5:1 at 20px/400; the "@"
+   separator must stay legible. --text-secondary (8.6:1 dark / 7.0:1 light) keeps it
+   subordinate to the team names while meeting contrast. */
+.matchup__at { color: var(--text-secondary, #a6a6a6); font-weight: 400; }
 /* Line 2 — ballpark / stage context. Line 3 — venue only when context lacks it. */
 .matchup__context { font-size: var(--proj-label); color: var(--text-secondary, #a6a6a6); max-inline-size: 100%; }
 .matchup__venue { font-size: var(--proj-meta); color: var(--text-muted, #6e6e6e); max-inline-size: 100%; }
@@ -92,6 +95,11 @@
 .team-logo {
   display: block;
   inline-size: auto;
+  /* Height-driven sizing (definite box height → natural aspect width) keeps crests VISIBLE and
+     undistorted. CL-01 overhang at the 3-col band is fixed structurally by the matchup grid flip
+     in the ≤280px tier (auto side tracks size to the logo), NOT by a width cap: an earlier
+     `max-inline-size:100%` on this replaced element inside the shrink-to-fit box collapsed every
+     crest to 0px (caught by independent verification). Keep the original height-driven sizing. */
   block-size: 100%;
   max-inline-size: none;
   object-fit: contain;
@@ -147,7 +155,7 @@ html:not([data-theme-mode]) .dmf-root[data-dmf-mode="dark"] .team-logo-box--dark
   margin-block-end: var(--space-2xs);
   color: var(--text-secondary, #a6a6a6);
   font-family: var(--dmf-mono, "IBM Plex Mono", monospace);
-  font-size: 0.55rem;
+  font-size: 0.625rem; /* CL-17 (closure): was 0.55rem/8.8px, below the 10px micro-label floor (MASTER.md READABILITY MANDATE); matches the CL-03 edge-label floor */
   font-weight: 600;
   letter-spacing: 0.08em;
   line-height: 1;
@@ -206,7 +214,7 @@ html:not(.dark) .pregame-pitcher__status--confirmed { color: #0fa36b; }
   margin-block-start: 2px;
   color: var(--text-secondary, #a6a6a6);
   font-family: var(--dmf-mono, "IBM Plex Mono", monospace);
-  font-size: clamp(0.55rem, 2.7cqi, 0.68rem);
+  font-size: clamp(0.625rem, 2.7cqi, 0.68rem); /* CL-17 (closure): clamp min was 0.55rem/8.8px — resolves below the 10px floor in the ~281-370px band; floored at 0.625rem */
   line-height: 1.3;
   overflow-wrap: anywhere;
 }
@@ -229,9 +237,10 @@ html:not(.dark) .pregame-pitcher__status--confirmed { color: #0fa36b; }
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+  /* R2-03 (reviewer): motion law is a single 160ms curve; was 300ms. */
   transition:
-    box-shadow 300ms cubic-bezier(0.16, 1, 0.3, 1),
-    transform 300ms cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow 160ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 160ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 .projection-card .pregame-pitchers__lineups:focus-visible {
   outline: none;
@@ -261,7 +270,7 @@ html:not(.dark) .pregame-pitcher__status--confirmed { color: #0fa36b; }
     .pregame-pitcher--home { grid-column: 2; }
     .pregame-pitcher__name {
       overflow-wrap: normal;
-      font-size: clamp(0.5625rem, 2.8cqi, 0.75rem);
+      font-size: clamp(0.625rem, 2.8cqi, 0.75rem); /* CL-08 (closure): clamp min was 0.5625rem/9px, below the 10px floor */
       white-space: nowrap;
     }
     .projection-card .pregame-pitchers__lineups {
@@ -286,6 +295,16 @@ html:not(.dark) .pregame-pitcher__status--confirmed { color: #0fa36b; }
    reducing only its optical footprint; all interactive targets stay 44px. */
 @media (min-width: 1024px) {
   @container projcard (max-width: 280px) {
+    /* CL-01 (closure): at the narrowest 3-col card (~194px) the matchup grid's `auto`
+       center track took the full text max-content (~122px) and starved the side logo
+       columns to ~2.7px, so crests overhung the team names. Flip it: logo sides size to
+       content (`auto`), the text center becomes flexible (`minmax(0,1fr)`) and wraps.
+       Verified against real production data (Chromium+WebKit): logo overhang 30→0 in-band. */
+    .matchup__grid {
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      gap: var(--space-2xs) 4px;
+    }
+    .team-logo-box { block-size: clamp(1.5rem, 1.4rem + 0.4vw, 1.75rem); }
     .pregame-pitchers {
       grid-template-columns: minmax(0, 1fr) 3rem minmax(0, 1fr);
       gap: 2px;
@@ -294,17 +313,23 @@ html:not(.dark) .pregame-pitcher__status--confirmed { color: #0fa36b; }
     .pregame-pitcher__photo {
       inline-size: 2.25rem;
       block-size: 2.25rem;
+      margin-block-end: 4px; /* CL-01: clear the headshot from the name below (boundary overlap) */
     }
     .pregame-pitcher__status {
-      font-size: 0.48rem;
+      font-size: 0.625rem; /* CL-17: 10px floor holds even in the 280px tier (was 0.48rem/7.68px) */
       letter-spacing: 0.04em;
     }
-    .pregame-pitcher__name { font-size: 0.625rem; }
-    .pregame-pitcher__stats { font-size: 0.5rem; }
+    .pregame-pitcher__name { font-size: 0.625rem; margin-block-start: 2px; }
+    .pregame-pitcher__stats { font-size: 0.625rem; } /* CL-17: was 0.5rem/8px */
+    /* CL-01 (closure): let the dense odds readout shrink instead of holding rigid
+       max-content columns that pack past the card edge. `overflow-x:auto` on the viewport
+       remains the escape valve; shrinkable columns reduce in-band overlap. */
+    .summary__group { grid-template-columns: minmax(0, max-content) minmax(0, max-content); }
+    .summary__readout { grid-template-columns: minmax(0, max-content) minmax(40px, max-content) minmax(40px, max-content); }
     .projection-card .pregame-pitchers__lineups {
       min-inline-size: 44px;
       padding-inline: 4px;
-      font-size: 0.5rem;
+      font-size: 0.625rem; /* CL-08: was 0.5rem/8px, below the 10px floor */
       letter-spacing: 0.02em;
     }
   }
@@ -524,7 +549,7 @@ html:not(.dark) .pregame-pitcher__status--confirmed { color: #0fa36b; }
 .summary__item--book { grid-column: 2; }
 .summary__item--model { grid-column: 3; }
 .summary__item--message { grid-column: 1 / -1; justify-self: center; }
-.summary__item dt { color: var(--text-muted, #6e6e6e); }
+.summary__item dt { color: var(--text-secondary, #a6a6a6); } /* CL-05b (closure): the --text-muted token = 4.12:1 fails WCAG-AA 4.5:1 at label size; --text-secondary = 8.6:1 passes (sibling of the CL-05a matchup__at fix). Token names, not raw hex, keep the X-HEX ratchet green. */
 .summary__item dd { margin: 0; }
 /* Spelled-out pick ("Under 7", "Athletics ML") displays uppercase, matching
    the readout's mono-label register (owner directive 2026-07-17). */
@@ -640,11 +665,13 @@ html:not(.dark) .pregame-pitcher__status--confirmed { color: #0fa36b; }
     inline-size: 10px;
     block-size: 10px;
   }
-  .summary__signal .edge-indicator__label { font-size: 0.5rem; }
+  /* CL-03 (closure audit): 0.5rem computed 8.6px, below the 10px micro-label floor
+     (MASTER.md READABILITY MANDATE). 0.625rem clears the floor at every root size. */
+  .summary__signal .edge-indicator__label { font-size: 0.625rem; }
   .summary__signal .edge-indicator__value { font-size: 0.75rem; }
   .summary__signal .edge-indicator--none {
     padding-inline: 0.25rem;
-    font-size: 0.5625rem;
+    font-size: 0.625rem; /* CL-08: was 0.5625rem/9px, below the 10px floor */
   }
   .summary__signal .edge-indicator__roi { font-size: 0.6875rem; }
 }
@@ -736,7 +763,10 @@ html:not(.dark) .pregame-pitcher__status--confirmed { color: #0fa36b; }
     block-size: 10px;
   }
   .projection-card .summary__signal .edge-indicator__label {
-    font-size: 0.5rem;
+    /* CL-03 completion (reviewer R2-01): the 280px tier — the narrowest 3-col
+       cards, exactly the CL-01 band — also violated the 10px floor at 0.5rem.
+       Raised to 0.625rem to match the 520px tier. */
+    font-size: 0.625rem;
     letter-spacing: 0.03em;
   }
   .projection-card .summary__signal .edge-indicator__value {
@@ -759,7 +789,7 @@ html:not(.dark) .pregame-pitcher__status--confirmed { color: #0fa36b; }
   justify-content: space-between;
   gap: var(--space-sm);
   inline-size: 100%;
-  min-block-size: 2.25rem;
+  min-block-size: 2.75rem; /* CL-04 (closure): was 2.25rem/36px; 2.75rem = 44px meets the internal target-size floor */
   padding: 0 var(--space-sm);
   cursor: pointer;
   color: var(--text-secondary, #a6a6a6);

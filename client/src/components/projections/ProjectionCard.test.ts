@@ -1208,3 +1208,37 @@ describe("ProjectionCard — .summary__item--message hook", () => {
     expect(cardCss).toContain(".summary__item--message { grid-column: 1 / -1; justify-self: center; }");
   });
 });
+
+// Regression guards for the closure audit's own fixes. These lock the exact classes that
+// regressed during the audit (two overclaims shipped before independent verification caught them):
+// the CL-01 matchup grid flip and — critically — the logo collapse cap, plus the 10px type floor.
+// Comments are stripped so historical values cited in comment prose can't satisfy a live-value check.
+describe("closure regression guards — lock the audited fixes (CL-01/03/08/17)", () => {
+  const liveCss = cardCss.replace(/\/\*[\s\S]*?\*\//g, "");
+
+  it("CL-01: keeps the ≤280px matchup grid flip (auto | minmax(0,1fr) | auto) that ends 3-col logo starvation", () => {
+    expect(liveCss).toMatch(
+      /@container projcard \(max-width: 280px\)[\s\S]*?\.matchup__grid\s*\{[^}]*grid-template-columns:\s*auto minmax\(0, 1fr\) auto;/,
+    );
+  });
+
+  it("CL-01: .team-logo keeps `max-inline-size: none` — guards the width cap that collapsed crests to 0px (shipped twice)", () => {
+    expect(liveCss).toMatch(/\.team-logo\s*\{[^}]*max-inline-size:\s*none;/);
+    // a percentage max-inline-size on the crest inside its shrink-to-fit box resolves to 0 → invisible logos. Must never return.
+    expect(liveCss).not.toMatch(/\.team-logo\s*\{[^}]*max-inline-size:\s*100%/);
+  });
+
+  it("CL-03: .edge-indicator__label meets the 10px micro-label floor in every container tier", () => {
+    const sizes = [...liveCss.matchAll(/\.edge-indicator__label\s*\{\s*font-size:\s*([\d.]+)rem/g)].map((m) => parseFloat(m[1]));
+    expect(sizes.length).toBeGreaterThanOrEqual(2);
+    for (const s of sizes) expect(s).toBeGreaterThanOrEqual(0.625);
+  });
+
+  it("CL-08/CL-17: no live font-size (bare, clamp minimum, or px) resolves below the 0.625rem / 10px floor", () => {
+    const remBare = [...liveCss.matchAll(/font-size:\s*([\d.]+)rem/g)].map((m) => parseFloat(m[1]));
+    const remClampMin = [...liveCss.matchAll(/font-size:\s*clamp\(\s*([\d.]+)rem/g)].map((m) => parseFloat(m[1]));
+    for (const r of [...remBare, ...remClampMin]) expect(r).toBeGreaterThanOrEqual(0.625);
+    const pxSizes = [...liveCss.matchAll(/font-size:\s*([\d.]+)px/g)].map((m) => parseFloat(m[1]));
+    for (const p of pxSizes) expect(p).toBeGreaterThanOrEqual(10);
+  });
+});
