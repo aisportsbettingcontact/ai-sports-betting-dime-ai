@@ -1662,6 +1662,9 @@ export const betTrackerRouter = router({
   getLinescores: handicapperProcedure
     .input(z.object({
       sport:  z.literal("MLB"),
+      // max(14) bounds the per-request MLB API fan-out (Promise.all below).
+      // Clients spanning more dates MUST batch into ≤14-date chunks and merge
+      // (see BetTracker.tsx mlbDateChunks) — an oversized array 400s.
       dates:  z.array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)).min(1).max(14),
     }))
     .query(async ({ input }) => {

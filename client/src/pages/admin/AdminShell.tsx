@@ -108,11 +108,18 @@ export function AdminShell({ active, children }: AdminShellProps) {
           <div className="flex-1" />
 
           {/* Registry-driven nav — every admin destination, horizontally
-              scrollable so the list scales past the original three tabs. */}
+              scrollable so the list scales past the original three tabs.
+              min-w-0 is load-bearing: without it the nav (a flex item) keeps
+              flexbox's min-width:auto and never shrinks below its full 13-tab
+              content width, so overflow-x-auto never engages — the row itself
+              overflows and the trailing tabs clip off-viewport, unreachable by
+              pointer at tablet/narrow-desktop widths. With it, the nav shrinks
+              to the available space and scrolls internally (the app-wide 6px
+              styled scrollbar in index.css is the visible affordance). */}
           <nav
             role="tablist"
             aria-label="Admin Dashboard"
-            className="admin-shell-tabs flex items-center gap-0.5 overflow-x-auto rounded-full bg-muted p-1"
+            className="admin-shell-tabs flex min-w-0 items-center gap-0.5 overflow-x-auto rounded-full bg-muted p-1"
           >
             {ADMIN_NAV.map((tab) => {
               const isActive = tab.key === active;

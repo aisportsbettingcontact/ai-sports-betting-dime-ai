@@ -860,7 +860,7 @@ export default function UserManagement() {
                               <span className="text-[10px] text-foreground">Stripe</span>
                             )}
                             {user.pendingSetup && (
-                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold tracking-wider bg-card text-foreground border border-border">
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wider bg-card text-foreground border border-border">
                                 ⏳ PENDING SETUP
                               </span>
                             )}
@@ -929,7 +929,7 @@ export default function UserManagement() {
                         <span className="text-foreground font-medium">@{user.discordUsername}</span>
                       ) : editingDiscordId === user.id ? (
                         /* ── Inline Discord ID input ──────────────────────────── */
-                        <div className="flex items-center gap-1 min-w-0">
+                        <div className="flex items-center gap-[18px] min-w-0">
                           <input
                             type="text"
                             autoFocus
@@ -947,7 +947,8 @@ export default function UserManagement() {
                             type="button"
                             onClick={() => submitDiscordId(user.id)}
                             disabled={setManualDiscordIdMutation.isPending}
-                            className="p-1 rounded bg-card hover:bg-muted text-foreground transition-colors disabled:opacity-50"
+                            aria-label="Save Discord ID"
+                            className="relative after:absolute after:-inset-[9px] p-2 rounded bg-card hover:bg-muted text-foreground transition-colors disabled:opacity-50"
                             title="Save Discord ID"
                           >
                             {setManualDiscordIdMutation.isPending
@@ -958,7 +959,8 @@ export default function UserManagement() {
                           <button
                             type="button"
                             onClick={cancelEditDiscordId}
-                            className="p-1 rounded hover:bg-muted text-foreground hover:text-foreground transition-colors"
+                            aria-label="Cancel Discord ID edit"
+                            className="relative after:absolute after:-inset-[9px] p-2 rounded hover:bg-muted text-foreground hover:text-foreground transition-colors"
                             title="Cancel"
                           >
                             <X className="w-2.5 h-2.5" />
@@ -969,7 +971,8 @@ export default function UserManagement() {
                         <button
                           type="button"
                           onClick={() => startEditDiscordId(user)}
-                          className="group flex items-center gap-1 text-foreground hover:text-foreground transition-colors"
+                          aria-label={`Connect Discord ID for ${user.username}`}
+                          className="group relative after:absolute after:left-1/2 after:top-1/2 after:h-11 after:w-11 after:-translate-x-1/2 after:-translate-y-1/2 flex items-center gap-1 text-foreground hover:text-foreground transition-colors"
                           title="Click to connect Discord ID"
                         >
                           <span className="text-foreground group-hover:text-foreground">—</span>
@@ -977,15 +980,23 @@ export default function UserManagement() {
                         </button>
                       )}
                     </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
+                    <TableCell className="text-right py-[9px]">
+                      <div className="flex items-center justify-end gap-[18px]">
+                        {/* Icon-only row actions: each 26px visual button carries
+                          * a 44×44 hit target (after:-inset-[9px], the sidebar.tsx
+                          * after:-inset idiom). The 18px gap makes the pitch
+                          * exactly 44, so adjacent hit regions tile without
+                          * overlapping; the cell's 9px block padding keeps the
+                          * row pitch >=44 so regions never overlap across rows. */}
                         <button type="button" onClick={() => openEdit(user)}
-                          className="p-1.5 rounded hover:bg-muted text-foreground hover:text-foreground transition-colors"
+                          aria-label={`Edit user ${user.username}`}
+                          className="relative after:absolute after:-inset-[9px] p-1.5 rounded hover:bg-muted text-foreground hover:text-foreground transition-colors"
                         >
                           <Pencil className="w-3.5 h-3.5" />
                         </button>
                         <button type="button" onClick={() => forceLogoutUserMutation.mutate({ id: user.id })}
-                          className="p-1.5 rounded hover:bg-muted text-foreground hover:text-foreground transition-colors"
+                          aria-label={`Force logout ${user.username}`}
+                          className="relative after:absolute after:-inset-[9px] p-1.5 rounded hover:bg-muted text-foreground hover:text-foreground transition-colors"
                           disabled={user.id === appUser?.id || forceLogoutUserMutation.isPending}
                           title="Force logout this user"
                         >
@@ -1002,7 +1013,8 @@ export default function UserManagement() {
                                 disconnectDiscordMutation.mutate({ id: user.id });
                               }
                             }}
-                            className="p-1.5 rounded hover:bg-muted text-foreground hover:text-foreground transition-colors"
+                            aria-label={`Unlink Discord for ${user.username}`}
+                            className="relative after:absolute after:-inset-[9px] p-1.5 rounded hover:bg-muted text-foreground hover:text-foreground transition-colors"
                             disabled={disconnectDiscordMutation.isPending}
                             title={`Unlink Discord @${user.discordUsername ?? user.discordId}`}
                           >
@@ -1021,7 +1033,8 @@ export default function UserManagement() {
                               syncDiscordRoleMutation.mutate({ userId: user.id });
                             }}
                             disabled={syncDiscordRoleMutation.isPending}
-                            className="p-1.5 rounded hover:bg-muted text-foreground hover:text-primary transition-colors disabled:opacity-50"
+                            aria-label={`Sync Discord role for ${user.username}`}
+                            className="relative after:absolute after:-inset-[9px] p-1.5 rounded hover:bg-muted text-foreground hover:text-primary transition-colors disabled:opacity-50"
                             title="Sync Discord role (grant if hasAccess=true, revoke if false)"
                           >
                             <RefreshCw className={`w-3.5 h-3.5 ${syncDiscordRoleMutation.isPending ? 'animate-spin' : ''}`} />
@@ -1033,14 +1046,16 @@ export default function UserManagement() {
                             href={`https://dashboard.stripe.com/customers/${user.stripeCustomerId}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="p-1.5 rounded hover:bg-muted text-foreground hover:text-foreground transition-colors"
+                            aria-label={`View ${user.username} in Stripe Dashboard`}
+                            className="relative after:absolute after:-inset-[9px] p-1.5 rounded hover:bg-muted text-foreground hover:text-foreground transition-colors"
                             title="View customer in Stripe Dashboard"
                           >
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                           </a>
                         )}
                         <button type="button" onClick={() => setDeleteConfirm(user)}
-                          className="p-1.5 rounded hover:bg-muted text-foreground hover:text-foreground transition-colors"
+                          aria-label={`Delete user ${user.username}`}
+                          className="relative after:absolute after:-inset-[9px] p-1.5 rounded hover:bg-muted text-foreground hover:text-foreground transition-colors"
                           disabled={user.id === appUser?.id}
                         >
                           <Trash2 className="w-3.5 h-3.5" />

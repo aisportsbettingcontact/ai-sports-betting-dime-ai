@@ -476,7 +476,15 @@ export default function DimeModelFeed(props: DimeModelFeedProps) {
         </div>
       </div>
 
-      <div className="dmf-scroll">
+      {/* Landmark/heading ownership (A11Y-NO-MAIN / A11Y-NO-H1): every host
+          mode renders the scroll region as the page's <main> — the shell's
+          external pane is a <section>, so pages own their landmark
+          (BettingSplits/TrendsPage pattern). The h1 is sr-only and
+          standalone-only: the topbar title span is display:none'd by the
+          mobile floating nav, and embedded the shell already exposes an
+          sr-only pane h1. */}
+      <main className="dmf-scroll">
+        {!props.embeddedInShell && <h1 className="sr-only">AI Model Projections</h1>}
         <div className="dmf-feedhead">
           <div className="dmf-datenav">
             <button
@@ -607,7 +615,7 @@ export default function DimeModelFeed(props: DimeModelFeedProps) {
             ))
           )}
         </div>
-      </div>
+      </main>
     </div>
   );
 }
@@ -1275,7 +1283,7 @@ const DMF_CSS = `
 .dmf-coindot{position:absolute;width:.2em;height:.2em;border-radius:50%;background:#45E0A8;left:calc(50% + .03em);top:.02em;transform:translateX(-50%)}
 .dmf-root[data-dmf-theme="light"] .dmf-coindot{box-shadow:0 0 0 1px #000000}
 .dmf-topsep{width:1px;height:18px;background:var(--dmf-border-hi)}
-.dmf-toptitle{font-size:14px;font-weight:600;color:var(--dmf-t2)}
+.dmf-toptitle{margin:0;font-size:14px;font-weight:600;color:var(--dmf-t2)}
 .dmf-sync{margin-left:auto;display:flex;align-items:center;gap:10px}
 .dmf-nav{display:flex;align-items:center;gap:4px}
 .dmf-navlink{font-family:var(--dmf-mono);font-size:10px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--dmf-t3);text-decoration:none;padding:6px 8px;border-radius:8px;position:relative;transition:color var(--dmf-t) var(--dmf-ease)}
@@ -1289,7 +1297,7 @@ const DMF_CSS = `
 .dmf-feedhead{position:sticky;top:46px;z-index:10;padding:16px 0 10px;background:var(--dmf-page);border-bottom:1px solid var(--dmf-border);margin-bottom:10px;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
 .dmf-datenav{display:flex;align-items:center;gap:12px}
 .dmf-sq{width:28px;height:28px;border-radius:8px;border:1px solid var(--dmf-border-hi);color:var(--dmf-t2);display:grid;place-items:center;position:relative;transition:border-color var(--dmf-t) var(--dmf-ease),color var(--dmf-t) var(--dmf-ease)}
-.dmf-sq::after{content:"";position:absolute;inset:-8px}
+.dmf-sq::after{content:"";position:absolute;inset:-9px}/* CL-04 (closure): 28px + 2x9px = 46px effective hit-area, clears the 44px target-size floor with margin (was inset:-8px, borderline 44) */
 .dmf-sq:hover{border-color:var(--dmf-border-hover);color:var(--dmf-t1)}
 .dmf-sq:active{background:var(--dmf-card-hi)}
 .dmf-datelbl{font-size:15px;font-weight:700;letter-spacing:-.005em;white-space:nowrap}
@@ -1302,7 +1310,7 @@ const DMF_CSS = `
    emblem variants render the same size) + the spelled-out league name,
    centered as a cluster within the page; chevron affordance at the right
    edge. No game counts. The second section opens with a hairline rule. */
-.dmf-league{display:block}
+.dmf-league{display:block;container:dmf-league/inline-size}
 .dmf-league + .dmf-league{margin-top:10px;padding-top:16px;border-top:1px solid var(--dmf-border)}
 /* Header content (logo + spelled-out name) centers within the page at 1.25x
    scale (owner directive 2026-07-18): 30px logo box, 15px label (clamped so
@@ -1520,6 +1528,16 @@ const DMF_CSS = `
 @media (min-width:768px){
   .dmf-leaguebody{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
+/* Desktop 3-across is CONTENT-aware (FEED-CL01a root cause): promoted from the
+   league body's own width, never the window's. Inside the app shell the
+   sidebar eats ~250px of a 1024-1550px window, so the old min-width:1024px
+   media rule packed three ~194px cards — the crest-overhang band. 940px of
+   container width guarantees every card >=~305px usable width; standalone
+   /feed still flips at ~1024px viewport (940 + 2x40px .dmf-scroll padding),
+   so the shipped standalone rhythm is unchanged. */
+@container dmf-league (min-width:940px){
+  .dmf-leaguebody{grid-template-columns:repeat(3,minmax(0,1fr));align-items:stretch}
+}
 /* DESKTOP (>=1024px) emphasis pass (owner directive 2026-07-21,
    responsive feed density amended 2026-07-23):
    1) Inside the app shell the page title centers at 5x scale (14px -> 70px,
@@ -1560,7 +1578,6 @@ const DMF_CSS = `
   .dc-shell-external-scroll .dmf-feedhead{top:96px;justify-content:center;padding-top:24px;padding-bottom:10px;margin-bottom:16px}
   .dc-shell-external-scroll .dmf-datelbl{font-size:17px}
   .dmf-lglogo--mlb{width:60px;height:60px;flex:0 0 60px}
-  .dmf-leaguebody{grid-template-columns:repeat(3,minmax(0,1fr));align-items:stretch}
 }
 @media (prefers-reduced-motion: reduce){
   .dmf-root *{transition:none !important}

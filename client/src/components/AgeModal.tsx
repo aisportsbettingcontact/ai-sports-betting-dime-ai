@@ -1,8 +1,10 @@
 // AgeModal - Age & Responsibility Notice modal
 // Design: AI Sports Betting dark theme - centered modal with warning icon
 
+import { useRef } from "react";
 import { AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useDialogFocus } from "@/hooks/useDialogFocus";
 
 interface AgeModalProps {
   onAccept: () => void;
@@ -10,17 +12,29 @@ interface AgeModalProps {
 }
 
 export function AgeModal({ onAccept, onClose }: AgeModalProps) {
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+  // Mounted == open: trap focus while shown, Esc closes, and focus returns
+  // to the triggering control on unmount (A11Y-FOCUS-RETURN).
+  useDialogFocus(true, onClose, dialogRef, { handleEscape: true });
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black backdrop-blur-sm" onClick={onClose} />
-      
+
       {/* Modal */}
-      <div className="relative z-10 w-full max-w-sm mx-4 bg-card border border-border rounded-xl shadow-2xl p-6">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="age-modal-title"
+        tabIndex={-1}
+        className="relative z-10 w-full max-w-sm mx-4 bg-card border border-border rounded-xl shadow-2xl p-6"
+      >
         {/* Header */}
         <div className="flex items-center gap-2 mb-4">
-          <AlertTriangle className="w-5 h-5 text-white flex-shrink-0" />
-          <h2 className="text-base font-bold text-foreground">Age & responsibility notice</h2>
+          <AlertTriangle className="w-5 h-5 text-foreground flex-shrink-0" aria-hidden="true" />
+          <h2 id="age-modal-title" className="text-base font-bold text-foreground">Age & responsibility notice</h2>
         </div>
 
         {/* Body */}

@@ -115,7 +115,7 @@ export default function Profile() {
   // ─── Loading state (stable skeleton, no layout shift) ──────────────────────
   if (loading) {
     return (
-      <div className="pf-page">
+      <main className="pf-page">
         <header className="pf-hero">
           <div
             className="pf-skeleton pf-skeleton--circle"
@@ -146,7 +146,7 @@ export default function Profile() {
             style={{ width: "100%", height: 104, borderRadius: 14 }}
           />
         </section>
-      </div>
+      </main>
     );
   }
 
@@ -154,7 +154,7 @@ export default function Profile() {
   if (!appUser) {
     profileLog("profile.load.error", { errorClass: "Unauthenticated" });
     return (
-      <div className="pf-page">
+      <main className="pf-page">
         <div className="pf-error">
           <p className="pf-error-text">
             Unable to load your profile. Please log in again.
@@ -166,7 +166,7 @@ export default function Profile() {
             Log in
           </button>
         </div>
-      </div>
+      </main>
     );
   }
 
@@ -178,7 +178,7 @@ export default function Profile() {
     : `@${appUser.username}`;
 
   return (
-    <div className="pf-page">
+    <main className="pf-page">
       {/* ------- Identity ------- */}
       <header className="pf-hero">
         <span className="pf-wordmark" aria-label="dime">
@@ -288,6 +288,6 @@ export default function Profile() {
           Help is available: 1-800-GAMBLER
         </p>
       </footer>
-    </div>
+    </main>
   );
 }
