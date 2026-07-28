@@ -75,6 +75,14 @@ describe("dimeChats router — security contract", () => {
     expect(schemaSrc).toContain('mysqlTable(\n  "dime_chat_messages"');
     expect(schemaSrc).toMatch(/deletedAt: timestamp\("deletedAt"\)/);
   });
+
+  it("creates the thread and first settled turn atomically with a typed id", () => {
+    expect(routerSrc).toContain("db.transaction(");
+    expect(routerSrc).toContain(".$returningId()");
+    expect(routerSrc).not.toContain(
+      "inserted as unknown as { insertId: number }"
+    );
+  });
 });
 
 describe("Dime chat page — owner gate + live identity + ⋯ menu", () => {
@@ -137,6 +145,7 @@ describe("Dime chat page — owner gate + live identity + ⋯ menu", () => {
   it("turns persist to history after the stream settles", () => {
     expect(pageSrc).toContain("createThreadMut.mutate(");
     expect(pageSrc).toContain("appendMut.mutate(");
+    expect(pageSrc).toContain("firstAssistantMessage: assistantText");
     expect(pageSrc).toMatch(/utils\.dimeChats\.list\.invalidate\(\)/);
     expect(pageSrc).toMatch(/utils\.dimeChats\.get\.fetch\(\{ threadId: id \}\)/);
   });

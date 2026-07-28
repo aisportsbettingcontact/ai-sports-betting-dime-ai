@@ -1952,17 +1952,14 @@ export default function DimeChatPage({
     if (threadId == null) {
       if (!userText) return;
       createThreadMut.mutate(
-        { firstMessage: userText },
+        {
+          firstMessage: userText,
+          firstAssistantMessage: assistantText,
+        },
         {
           onSuccess: ({ threadId: newId }) => {
             setThreadId(newId);
-            appendMut.mutate(
-              {
-                threadId: newId,
-                messages: [{ role: "assistant", content: assistantText }],
-              },
-              { onSettled: refreshList }
-            );
+            refreshList();
           },
         }
       );
