@@ -175,7 +175,7 @@ async function checkManifestCounts(pool: mysql.Pool, seasons: number[]): Promise
     perSeason[season] = seasonDetail;
   }
 
-  record(2, "manifest vs DB counts (plays/pitches/boxscores/officials)", anyManifest ? ok : true, {
+  record(2, "manifest vs DB counts (plays/pitches/boxscores/officials)", ok, {
     perSeason,
     note: anyManifest ? undefined : "no season manifests found — nothing to check",
   });
