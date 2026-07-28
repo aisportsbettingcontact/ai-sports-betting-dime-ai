@@ -42,6 +42,14 @@ regexes = [
   '''^collection/primitives$''',    # Figma variable-collection path (var named DSB_KEY)
   '''^primitive/blue/500$''',       # Figma design-token path, token-creation docs
   '''^dGhlIHNhbXBsZSBub25jZQ==$''', # RFC 6455 s4.2.2 published example ("the sample nonce")
+
+  # Public, immutable Hugging Face model revisions used by the Foundation
+  # reviewer runtime. These are Git commit SHAs, not credentials.
+  '''^9216db5781bf21249d130ec9da846c4624c16137$''', # Qwen/Qwen3-32B revision
+  '''^95a6d26c4bfb886c58daf9d3f7332c857cb27b43$''', # Mistral-Small-3.2-24B-Instruct revision
+
+  # Public AWS KMS KeySpec enum used by the signer infrastructure contract.
+  '''^ECC_NIST_EDWARDS25519$''',
 ]
 
 # NOTE deliberately absent:
