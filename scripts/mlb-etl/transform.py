@@ -37,6 +37,27 @@ def ensure_out_dir(path):
         open(gi, "w").write("*\n!.gitignore\n")
 
 
+# Schema decimal ranges: values beyond these are physically-impossible telemetry
+# glitches (2 known cases in 14.5M pitches, both break_length, 2021). Policy:
+# out-of-range -> None (raw value stays in the immutable corpus feeds).
+PITCH_RANGE_LIMITS = {
+    "start_speed": 999.99, "end_speed": 999.99, "extension": 999.99,
+    "plate_time": 99.999, "px": 999.999, "pz": 999.999,
+    "sz_top": 99.999, "sz_bot": 99.999,
+    "break_angle": 9999.99, "break_length": 9999.99,
+    "break_vertical": 9999.99, "break_horizontal": 9999.99,
+    "launch_speed": 999.99, "launch_angle": 999.99, "type_confidence": 99.99,
+    "hit_coord_x": 99999.99, "hit_coord_y": 99999.99,
+}
+
+def clamp_pitch_ranges(row):
+    for col, lim in PITCH_RANGE_LIMITS.items():
+        v = row.get(col)
+        if v is not None and abs(v) > lim:
+            print(f"[transform] WARN out-of-range {col}={v} play_id={row.get('play_id')} -> NULL")
+            row[col] = None
+    return row
+
 def iso_to_sql_utc(s):
     """'2026-07-26T23:20:00Z' / with fractional seconds -> 'YYYY-MM-DD HH:MM:SS' UTC, or None."""
     if not s:
@@ -273,7 +294,7 @@ def extract_pitches(feed, season):
             breaks = pd.get("breaks", {}) or {}
             hit = e.get("hitData", {}) or {}
             hit_coords = hit.get("coordinates", {}) or {}
-            rows.append({
+            rows.append(clamp_pitch_ranges({
                 "play_id": e["playId"],
                 "game_pk": game_pk,
                 "season": season,
@@ -310,7 +331,7 @@ def extract_pitches(feed, season):
                 "trajectory": hit.get("trajectory"),
                 "hit_coord_x": hit_coords.get("coordX"),
                 "hit_coord_y": hit_coords.get("coordY"),
-            })
+            }))
     return rows
 
 

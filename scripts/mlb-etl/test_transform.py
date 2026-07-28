@@ -227,6 +227,16 @@ def test_runners_json_shape():
     assert set(r.keys()) == {"id", "start", "end", "out", "rbi", "earned"}
 
 
+
+
+def test_pitch_range_guard():
+    from transform import clamp_pitch_ranges
+    row = {"play_id": "x", "break_length": 115696.8, "start_speed": 93.5, "px": None}
+    out = clamp_pitch_ranges(dict(row))
+    assert out["break_length"] is None, "impossible break_length must become NULL"
+    assert out["start_speed"] == 93.5 and out["px"] is None
+
+
 if __name__ == "__main__":
     for name, fn in sorted({k: v for k, v in globals().items() if k.startswith("test_")}.items()):
         fn(); print(f"PASS {name}")
