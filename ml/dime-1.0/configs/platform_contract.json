@@ -241,6 +241,20 @@
       "verification_revision": "returned_full_commit_sha"
     }
   },
+  "reviewer_runtime": {
+    "schema_path": "schemas/foundation_reviewer_runtime.schema.json",
+    "config_path": "configs/foundation_reviewer_runtime_v1.json",
+    "status": "planned_unprovisioned",
+    "reviewer_count": 2,
+    "candidate_registry_version": "dime-foundation-reviewers-v0.5.2",
+    "runpod_endpoint_state": "not_created",
+    "aws_resource_state": "not_created",
+    "aws_region": "us-west-2",
+    "aws_control_plane_template": "infrastructure/aws/reviewer-signers/template.yaml",
+    "credentials_provisioned": false,
+    "gpu_execution_authorized": false,
+    "activation_authorized": false
+  },
   "runpod": {
     "template_name": "dime-llama31-8b-training-v1",
     "container_image": "runpod/pytorch:1.0.2-cu1281-torch280-ubuntu2404",

@@ -25,6 +25,28 @@ The provisioning tool:
 
 It never creates, imports, reads, prints, or persists a private signing key.
 
+## Selected deployment foundation
+
+The repository now also contains a non-authorizing deployment foundation for
+the two reviewer identities:
+
+- `configs/foundation_reviewer_runtime_v1.json` pins the two independent
+  reviewer model stacks and the content-addressed RunPod worker image;
+- `scripts/prepare_reviewer_runtime.py` prepares sanitized, deterministic
+  private-endpoint plans without calling RunPod;
+- `infrastructure/aws/reviewer-signers/template.yaml` defines two isolated
+  workload functions, two purpose-bound signers, and two non-exportable
+  Ed25519 KMS keys; and
+- `scripts/export_aws_kms_ed25519_public_key.py` converts an owner-retrieved
+  public SPKI document into the raw public form required by this provisioning
+  contract without contacting AWS.
+
+The tracked state remains `planned_unprovisioned`. These files do not claim
+that AWS resources or RunPod endpoints exist, do not authorize GPU use, and do
+not activate either reviewer. Follow
+[Foundation AI reviewer runtime](FOUNDATION_AI_REVIEWER_RUNTIME.md) for the
+controlled deployment, evidence, and rollback sequence.
+
 ## Where each artifact belongs
 
 The public repository contains only this schema, tool, template, tests, and
@@ -34,6 +56,8 @@ separate, non-exportable Ed25519 KMS/HSM signing identities.
 
 ```text
 GitHub ml/dime-1.0/
+  configs/foundation_reviewer_runtime_v1.json
+  infrastructure/aws/reviewer-signers/
   schemas/foundation_ai_reviewer_provisioning_input.schema.json
   scripts/prepare_ai_reviewer_profiles.py
   data/templates/foundation_ai_reviewer_provisioning_input_TEMPLATE.json

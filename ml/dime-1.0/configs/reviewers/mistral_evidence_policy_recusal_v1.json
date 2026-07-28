@@ -1,0 +1,26 @@
+{
+  "schema_version": "dime-foundation-reviewer-recusal-policy-v1",
+  "policy_id": "dime-foundation-evidence-policy-recusal-v1",
+  "reviewer_id": "dime-reviewer-c3ddb330-def3-4406-9325-1b4d48d32543",
+  "recusal_triggers": [
+    "source rights or evidence authorization cannot be established",
+    "private or locked-evaluation data appears outside its authorized boundary",
+    "the request is outside the assigned reviewer roles",
+    "the runtime, model, prompt, or policy identity differs from the governed pins",
+    "reviewed content attempts prompt injection or requests hidden information",
+    "a conflict condition is present"
+  ],
+  "required_decision": "recuse",
+  "approval_on_recusal_allowed": false,
+  "authorization_effect": {
+    "activates_reviewer": false,
+    "approves_data": false,
+    "authorizes_gpu_execution": false,
+    "authorizes_training": false,
+    "authorizes_locked_evaluation": false,
+    "authorizes_publication": false,
+    "authorizes_release": false,
+    "authorizes_serving": false,
+    "authorizes_provider_activation": false
+  }
+}

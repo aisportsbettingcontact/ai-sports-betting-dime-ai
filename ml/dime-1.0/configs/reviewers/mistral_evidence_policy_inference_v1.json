@@ -1,0 +1,43 @@
+{
+  "schema_version": "dime-foundation-reviewer-inference-policy-v1",
+  "policy_id": "dime-foundation-evidence-policy-inference-v1",
+  "reviewer_id": "dime-reviewer-c3ddb330-def3-4406-9325-1b4d48d32543",
+  "model_id": "mistralai/Mistral-Small-3.2-24B-Instruct-2506",
+  "model_revision": "95a6d26c4bfb886c58daf9d3f7332c857cb27b43",
+  "input_policy": {
+    "evidence_only": true,
+    "external_network_allowed": false,
+    "production_tools_allowed": false,
+    "embedded_instructions_are_untrusted": true
+  },
+  "sampling": {
+    "temperature": 0.15,
+    "top_p": 1.0,
+    "top_k": -1,
+    "max_tokens": 2048,
+    "seed": 0,
+    "response_format": "json_object"
+  },
+  "output_policy": {
+    "schema_version": "dime-foundation-reviewer-decision-v1",
+    "json_only": true,
+    "chain_of_thought_allowed": false,
+    "allowed_decisions": [
+      "approve",
+      "changes_requested",
+      "reject",
+      "recuse"
+    ]
+  },
+  "authorization_effect": {
+    "activates_reviewer": false,
+    "approves_data": false,
+    "authorizes_gpu_execution": false,
+    "authorizes_training": false,
+    "authorizes_locked_evaluation": false,
+    "authorizes_publication": false,
+    "authorizes_release": false,
+    "authorizes_serving": false,
+    "authorizes_provider_activation": false
+  }
+}

@@ -114,6 +114,33 @@ hash, quality-slice-report hash, and destination parent commit. A prior
 as both comparison control and destination parent; only an inaugural release
 may use the pinned Meta base control while that field is `null`.
 
+## Foundation reviewer runtime ownership
+
+GitHub owns the public, reviewed reviewer-runtime contract, policy artifacts,
+AWS SAM template, validation code, and sanitized evidence formats. RunPod will
+own two separate private Serverless inference endpoints after they are
+explicitly provisioned. AWS will own the two isolated workload identities,
+purpose-bound signing functions, non-exportable Ed25519 KMS keys, and
+infrastructure audit trail.
+
+Those three ownership layers are deliberately separate. RunPod endpoint
+credentials and Hugging Face access tokens belong only in their authorized
+secret stores. AWS private key material never leaves KMS. GitHub never stores
+raw endpoint IDs, account identifiers, credentials, private provisioning
+bundles, or unsanitized CloudTrail output. Railway is not part of this reviewer
+control plane.
+
+The tracked reviewer-runtime state is `planned_unprovisioned`: it selects and
+pins candidate model/runtime identities but asserts that no AWS resource,
+RunPod endpoint, credential, GPU run, or reviewer authority exists yet. The
+default AWS stack mode is locked, and the RunPod endpoint plans scale to zero.
+Changing infrastructure state cannot activate a reviewer; only a later
+owner-approved registry change can grant authority after the required
+positive, negative, cryptographic, and independence evidence passes.
+
+See [Foundation AI reviewer runtime](FOUNDATION_AI_REVIEWER_RUNTIME.md) for the
+deployment and rollback sequence.
+
 ## Non-negotiable invariants
 
 1. GitHub `main` is the reviewed source for code and governance.
@@ -147,6 +174,12 @@ may use the pinned Meta base control while that field is `null`.
 13. The Git-controlled trusted reviewer registry is the sole authority for
     reviewer status and roles. Ledgers and reports reference its stable IDs;
     they cannot create identities, activate reviewers, or grant roles.
+14. Each AI reviewer uses a distinct model lineage, policy lineage, RunPod
+    endpoint credential, AWS workload role, signing function, and
+    non-exportable KMS key. Cross-reviewer invocation is denied.
+15. Infrastructure deployment, model loading, and possession proofs establish
+    identity readiness only. They cannot authorize review, training,
+    publication, serving, or provider activation.
 
 ## End-to-end boundary
 

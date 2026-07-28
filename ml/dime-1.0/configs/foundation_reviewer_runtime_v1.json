@@ -1,0 +1,205 @@
+{
+  "schema_version": "dime-foundation-reviewer-runtime-v1",
+  "status": "planned_unprovisioned",
+  "activation_authorized": false,
+  "runtime": {
+    "provider": "runpod_serverless",
+    "endpoint_type": "queue",
+    "worker_source": {
+      "repository": "runpod-workers/worker-vllm",
+      "release": "v2.22.5",
+      "source_revision": "9e1c4831366e828cad978ced046b1e2e56664e19"
+    },
+    "container": {
+      "repository": "docker.io/runpod/worker-v1-vllm",
+      "release": "v2.22.5",
+      "oci_index_digest": "sha256:c7ca85687e77359708a984dc8fa62254494c432430a0ac89f7f7f516ac52faed",
+      "linux_amd64_digest": "sha256:d8bc05a0b87d5a07a2112c7919b1995a5908651d46b9b43d8dd367fa4b2724f1",
+      "deploy_ref": "docker.io/runpod/worker-v1-vllm:v2.22.5@sha256:d8bc05a0b87d5a07a2112c7919b1995a5908651d46b9b43d8dd367fa4b2724f1",
+      "runtime_version": "d8bc05a0b87d5a07a2112c7919b1995a5908651d46b9b43d8dd367fa4b2724f1",
+      "platform": "linux/amd64",
+      "vllm_version": "0.20.2",
+      "cuda_version": "13.0.2"
+    },
+    "security": {
+      "secrets_in_repository_allowed": false,
+      "network_calls_during_planning_allowed": false,
+      "custom_handler": false,
+      "model_weights_baked_in": false
+    }
+  },
+  "reviewers": [
+    {
+      "reviewer_id": "dime-reviewer-d55729f9-9153-4534-95bd-6bf097416980",
+      "profile_id": "dime-agent-profile-85ef4149-03e2-49ae-b8a4-2767e8627404",
+      "independence_group_id": "dime-independence-group-7e33b5f6-5167-4a16-b3a3-ec7d27140b1d",
+      "status": "planned_unprovisioned",
+      "active": false,
+      "model_provider": "hugging_face",
+      "model_id": "Qwen/Qwen3-32B",
+      "model_revision": "9216db5781bf21249d130ec9da846c4624c16137",
+      "runtime_version": "d8bc05a0b87d5a07a2112c7919b1995a5908651d46b9b43d8dd367fa4b2724f1",
+      "model_lineage_id": "qwen-qwen3-32b",
+      "policy_lineage_id": "dime-foundation-quantitative-review-v1",
+      "roles": [
+        "domain",
+        "numeric",
+        "simulation",
+        "semantic-audit",
+        "dataset-approver"
+      ],
+      "policy_paths": {
+        "system_instruction": "prompts/reviewers/qwen3_quantitative_system_v1.md",
+        "tool_contract": "tools/tools.v1.json",
+        "inference_policy": "configs/reviewers/qwen3_quantitative_inference_v1.json",
+        "conflict_policy": "configs/reviewers/qwen3_quantitative_conflict_v1.json",
+        "recusal_policy": "configs/reviewers/qwen3_quantitative_recusal_v1.json"
+      },
+      "policy_sha256": {
+        "system_instruction": "af4a75c59199a4c7848ee0d45b23ddb406cf27bad2634d76093032375fdf4113",
+        "tool_contract": "56f3c39fd730f9d923efcf837433825d76de4c4acb51d668095d1eb68db4cca5",
+        "inference_policy": "4aae03905567899dad73cf6b73191a24159f3e18268c53bb3fe916fb0c04aa54",
+        "conflict_policy": "e466ef8347240ade304151c8036db0776d02b5026190874cfaadd9da08ea3858",
+        "recusal_policy": "815c8e939051ec3cb4edc18b25bad2887620b84dbf6479ae997050075324240c"
+      },
+      "endpoint": {
+        "endpoint_id": null,
+        "workload_identity_id": null,
+        "minimum_vram_gb": 80,
+        "workers_min": 0,
+        "workers_max": 1,
+        "gpu_candidates": [
+          "NVIDIA A100 80GB",
+          "NVIDIA H100 80GB",
+          "NVIDIA H100 NVL 94GB",
+          "NVIDIA RTX PRO 6000 96GB",
+          "NVIDIA B200 180GB"
+        ],
+        "environment": {
+          "MODEL_NAME": "Qwen/Qwen3-32B",
+          "MODEL_REVISION": "9216db5781bf21249d130ec9da846c4624c16137",
+          "TOKENIZER_REVISION": "9216db5781bf21249d130ec9da846c4624c16137",
+          "DTYPE": "bfloat16",
+          "MAX_MODEL_LEN": "16384",
+          "TENSOR_PARALLEL_SIZE": "1",
+          "GPU_MEMORY_UTILIZATION": "0.90",
+          "MAX_CONCURRENCY": "1",
+          "MAX_NUM_SEQS": "1",
+          "SEED": "0",
+          "ENABLE_LOG_REQUESTS": "false",
+          "TRUST_REMOTE_CODE": "false",
+          "REASONING_PARSER": "qwen3",
+          "OPENAI_SERVED_MODEL_NAME_OVERRIDE": "dime-foundation-quantitative-reviewer-v1"
+        },
+        "secret_environment": []
+      },
+      "request_policy": {
+        "temperature": 0.6,
+        "top_p": 0.95,
+        "top_k": 20,
+        "max_tokens": 2048,
+        "seed": 0,
+        "response_format": "json_object"
+      },
+      "authorization_effect": {
+        "activates_reviewer": false,
+        "approves_data": false,
+        "authorizes_gpu_execution": false,
+        "authorizes_training": false,
+        "authorizes_locked_evaluation": false,
+        "authorizes_publication": false,
+        "authorizes_release": false,
+        "authorizes_serving": false,
+        "authorizes_provider_activation": false
+      }
+    },
+    {
+      "reviewer_id": "dime-reviewer-c3ddb330-def3-4406-9325-1b4d48d32543",
+      "profile_id": "dime-agent-profile-1a0eb37e-2be7-40c7-bae5-d2e71a2889b1",
+      "independence_group_id": "dime-independence-group-0734717e-69c8-4cc4-a1b6-bbb33f404be5",
+      "status": "planned_unprovisioned",
+      "active": false,
+      "model_provider": "hugging_face",
+      "model_id": "mistralai/Mistral-Small-3.2-24B-Instruct-2506",
+      "model_revision": "95a6d26c4bfb886c58daf9d3f7332c857cb27b43",
+      "runtime_version": "d8bc05a0b87d5a07a2112c7919b1995a5908651d46b9b43d8dd367fa4b2724f1",
+      "model_lineage_id": "mistral-small-3.2-24b-instruct",
+      "policy_lineage_id": "dime-foundation-evidence-policy-review-v1",
+      "roles": [
+        "coaching",
+        "safety",
+        "privacy",
+        "rights",
+        "evaluation-audit",
+        "locked-evaluation",
+        "dataset-approver"
+      ],
+      "policy_paths": {
+        "system_instruction": "prompts/reviewers/mistral_evidence_policy_system_v1.md",
+        "tool_contract": "tools/tools.v1.json",
+        "inference_policy": "configs/reviewers/mistral_evidence_policy_inference_v1.json",
+        "conflict_policy": "configs/reviewers/mistral_evidence_policy_conflict_v1.json",
+        "recusal_policy": "configs/reviewers/mistral_evidence_policy_recusal_v1.json"
+      },
+      "policy_sha256": {
+        "system_instruction": "c25e1e2cb35d498bae1bffa025755eafe35b00f9e59c3830da5de2e150d1c32d",
+        "tool_contract": "56f3c39fd730f9d923efcf837433825d76de4c4acb51d668095d1eb68db4cca5",
+        "inference_policy": "05dd9b48c76e39b019347837dd4bfda73b87ecea468010acc8ab43fbd2c7740b",
+        "conflict_policy": "8ae1a614838e2df02afa1b7b272ac33cd76365fff2117a71b283a9caa6a99c0c",
+        "recusal_policy": "c321d07b312ab2b835a315f23d902bc2c671a99ac0020a1be54d82cb0e320f64"
+      },
+      "endpoint": {
+        "endpoint_id": null,
+        "workload_identity_id": null,
+        "minimum_vram_gb": 80,
+        "workers_min": 0,
+        "workers_max": 1,
+        "gpu_candidates": [
+          "NVIDIA A100 80GB",
+          "NVIDIA H100 80GB",
+          "NVIDIA H100 NVL 94GB",
+          "NVIDIA RTX PRO 6000 96GB",
+          "NVIDIA B200 180GB"
+        ],
+        "environment": {
+          "MODEL_NAME": "mistralai/Mistral-Small-3.2-24B-Instruct-2506",
+          "MODEL_REVISION": "95a6d26c4bfb886c58daf9d3f7332c857cb27b43",
+          "TOKENIZER_REVISION": "95a6d26c4bfb886c58daf9d3f7332c857cb27b43",
+          "DTYPE": "bfloat16",
+          "MAX_MODEL_LEN": "32768",
+          "TENSOR_PARALLEL_SIZE": "1",
+          "GPU_MEMORY_UTILIZATION": "0.90",
+          "MAX_CONCURRENCY": "1",
+          "MAX_NUM_SEQS": "1",
+          "SEED": "0",
+          "ENABLE_LOG_REQUESTS": "false",
+          "TRUST_REMOTE_CODE": "false",
+          "TOKENIZER_MODE": "mistral",
+          "CONFIG_FORMAT": "mistral",
+          "LOAD_FORMAT": "mistral",
+          "OPENAI_SERVED_MODEL_NAME_OVERRIDE": "dime-foundation-evidence-policy-reviewer-v1"
+        },
+        "secret_environment": []
+      },
+      "request_policy": {
+        "temperature": 0.15,
+        "top_p": 1.0,
+        "top_k": -1,
+        "max_tokens": 2048,
+        "seed": 0,
+        "response_format": "json_object"
+      },
+      "authorization_effect": {
+        "activates_reviewer": false,
+        "approves_data": false,
+        "authorizes_gpu_execution": false,
+        "authorizes_training": false,
+        "authorizes_locked_evaluation": false,
+        "authorizes_publication": false,
+        "authorizes_release": false,
+        "authorizes_serving": false,
+        "authorizes_provider_activation": false
+      }
+    }
+  ]
+}

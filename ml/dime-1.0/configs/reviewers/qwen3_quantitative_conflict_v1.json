@@ -1,0 +1,25 @@
+{
+  "schema_version": "dime-foundation-reviewer-conflict-policy-v1",
+  "policy_id": "dime-foundation-quantitative-conflict-v1",
+  "reviewer_id": "dime-reviewer-d55729f9-9153-4534-95bd-6bf097416980",
+  "conflict_conditions": [
+    "the reviewer generated or materially revised the candidate record",
+    "the candidate uses the same model lineage as the reviewer",
+    "the candidate uses the same policy lineage as the reviewer",
+    "the reviewer cannot establish an independent evidence path",
+    "the request asks the reviewer to evaluate its own prior decision"
+  ],
+  "required_action": "recuse",
+  "override_allowed": false,
+  "authorization_effect": {
+    "activates_reviewer": false,
+    "approves_data": false,
+    "authorizes_gpu_execution": false,
+    "authorizes_training": false,
+    "authorizes_locked_evaluation": false,
+    "authorizes_publication": false,
+    "authorizes_release": false,
+    "authorizes_serving": false,
+    "authorizes_provider_activation": false
+  }
+}
