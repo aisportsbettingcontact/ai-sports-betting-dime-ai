@@ -851,14 +851,11 @@ Resources:
       IsLogging: true
       IsMultiRegionTrail: true
       AdvancedEventSelectors:
-        - Name: KmsSigningManagementEvents
+        - Name: AllManagementEvents
           FieldSelectors:
             - Field: eventCategory
               Equals:
                 - Management
-            - Field: eventSource
-              Equals:
-                - kms.amazonaws.com
         - Name: ReviewerLambdaInvocationDataEvents
           FieldSelectors:
             - Field: eventCategory
