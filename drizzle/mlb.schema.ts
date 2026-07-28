@@ -250,7 +250,9 @@ export const mlbBoxscoreBatting = mysqlTable(
     sacFlies: int("sac_flies").notNull(),
   },
   (t) => [
-    primaryKey({ columns: [t.gamePk, t.mlbamId] }),
+    // (game_pk, mlbam_id, team_id): a player can appear for BOTH teams in one
+    // game — 2024 gamePk 746942 (suspended game, player traded mid-suspension)
+    primaryKey({ columns: [t.gamePk, t.mlbamId, t.teamId] }),
     index("idx_mlb_boxscore_batting_mlbam_id").on(t.mlbamId),
   ],
 );
@@ -277,7 +279,7 @@ export const mlbBoxscorePitching = mysqlTable(
     hold: boolean("hold"),
   },
   (t) => [
-    primaryKey({ columns: [t.gamePk, t.mlbamId] }),
+    primaryKey({ columns: [t.gamePk, t.mlbamId, t.teamId] }),
     index("idx_mlb_boxscore_pitching_mlbam_id").on(t.mlbamId),
   ],
 );
