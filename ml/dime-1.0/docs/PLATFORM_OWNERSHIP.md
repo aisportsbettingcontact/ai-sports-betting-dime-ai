@@ -30,11 +30,12 @@ The repository owner has selected the private Hugging Face dataset repository
 workbench. The machine-readable decision is
 `configs/platform_contract.json.foundation_v1_owner_decision`.
 
-This is a storage and governance decision, not an external-state claim. The
-workbench remains `selected_pending_provisioning`, and private-data admission
-is false until the repository exists, private visibility is verified, the
-fine-grained access boundary passes live positive and negative checks, and the
-reviewer identity/receipt control below is operational.
+The workbench now exists privately at full Hugging Face commit
+`ace82f0ccef7313b39f66ecbd46cfb3784999dcd` with the exact root inventory
+`.gitattributes` and `README.md`. Its state is
+`provisioned_access_verification_pending`. Private-data admission remains false
+until the fine-grained access boundary passes live positive and negative
+checks and the reviewer identity/receipt control below is operational.
 
 The workbench is authoritative only for private candidate records, source
 artifacts and registry, review ledger, raw external audits, and the Foundation
@@ -90,7 +91,10 @@ the exact public keys and immutable profiles, validate isolated workload
 identities, and explicitly set that authorization before
 `ai_agent_activation_authorized` can become true.
 
-This owner decision does not create the repository, provision credentials,
+The owner decision itself did not create the repository. A later interactive
+administrative bootstrap created the private repository and its governance
+card; that completed external action is recorded separately and grants no
+additional authority. The decision still does not provision credentials,
 admit private data, activate reviewers, approve a record or dataset, authorize
 GPU execution or training, publish a release, change serving, or activate the
 provider.
@@ -130,13 +134,15 @@ raw endpoint IDs, account identifiers, credentials, private provisioning
 bundles, or unsanitized CloudTrail output. Railway is not part of this reviewer
 control plane.
 
-The tracked reviewer-runtime state is `planned_unprovisioned`: it selects and
-pins candidate model/runtime identities but asserts that no AWS resource,
-RunPod endpoint, credential, GPU run, or reviewer authority exists yet. The
-default AWS stack mode is locked, and the RunPod endpoint plans scale to zero.
-Changing infrastructure state cannot activate a reviewer; only a later
-owner-approved registry change can grant authority after the required
-positive, negative, cryptographic, and independence evidence passes.
+The pinned reviewer-runtime configuration remains `planned_unprovisioned`
+because no RunPod reviewer endpoint or live model runtime exists. The separate
+AWS signing control plane is deployed in `us-west-2` as
+`dime-foundation-reviewer-signers`, but remains in `LOCKED`: reviewer profile
+hashes are unpopulated, signing is unavailable, and no reviewer authority or
+GPU execution exists. Changing infrastructure state cannot activate a
+reviewer; only a later owner-approved registry change can grant authority
+after the required positive, negative, cryptographic, and independence
+evidence passes.
 
 See [Foundation AI reviewer runtime](FOUNDATION_AI_REVIEWER_RUNTIME.md) for the
 deployment and rollback sequence.

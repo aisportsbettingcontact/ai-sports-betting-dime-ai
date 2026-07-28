@@ -15,6 +15,7 @@ checkpoint.
 | Parent revision | `d04e592bb4f6aa9cfee91e2e20afa771667e1d4b` |
 | Model type | Llama 3.1 8B Base, not Instruct |
 | Development method | QLoRA/SFT post-training and evaluation |
+| Private candidate workbench | `taileredsports/dime-foundation-workbench` |
 | Approved-training dataset repository | `taileredsports/dime-foundation-sft` |
 | Development-evaluation repository | `taileredsports/dime-eval-development` |
 | Locked-evaluation repository | `taileredsports/dime-eval-locked` |
@@ -40,23 +41,29 @@ authorize a model call, deployment, or production change.
 - No production vLLM endpoint exists.
 - No provider activation is approved.
 
-The four private Hugging Face repositories currently contain governance cards
-only. No approved foundation dataset, development-evaluation release,
-locked-evaluation release, or serving-approved adapter has been published.
-Their current card commits are registry evidence, not training, evaluation, or
-serving revisions.
+The four private Hugging Face release repositories currently contain
+governance cards only. No approved foundation dataset, development-evaluation
+release, locked-evaluation release, or serving-approved adapter has been
+published. Their current card commits are registry evidence, not training,
+evaluation, or serving revisions. The separate private Foundation candidate
+workbench now exists at governance commit
+`ace82f0ccef7313b39f66ecbd46cfb3784999dcd`; it contains only
+`.gitattributes` and `README.md`. Candidate-data admission remains blocked
+until its least-privilege credential and identity controls pass live
+verification.
 
 `configs/curriculum_v1.yaml` remains a proposed curriculum. The tracked
 Foundation v1 candidate, review, audit, and freeze contracts make a future
 dataset reviewable; they do not create an approved dataset, publish anything
 to Hugging Face, authorize training, change serving, or activate the provider.
 
-The two Foundation AI reviewer runtimes and their AWS signing control plane
-are likewise candidate infrastructure. Their configurations pin the selected
-models and worker image, and the stack is designed to default to a locked
-state if an owner later authorizes deployment. No endpoint, workload identity,
-KMS key, reviewer authority, or GPU execution is claimed by this repository
-state.
+The AWS signing control plane for the two Foundation AI reviewer runtimes is
+deployed in `us-west-2` as stack `dime-foundation-reviewer-signers` and remains
+in fail-closed `LOCKED` mode. Its reviewer profile hashes are unpopulated and
+signing is unavailable. No RunPod reviewer endpoint, active reviewer
+authority, or reviewer GPU execution is authorized by this repository state.
+The sanitized external-state observation is recorded in
+`evidence/foundation/production_entry_state_2026-07-28.json`.
 
 The small 2026-07-25 rehearsal proved only that selected infrastructure
 mechanics execute. It used 8 training and 4 validation records, scored 3 of 10

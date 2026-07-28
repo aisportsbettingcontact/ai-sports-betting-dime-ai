@@ -36,7 +36,18 @@
       "repo_type": "dataset",
       "repo_id": "taileredsports/dime-foundation-workbench",
       "visibility": "private",
-      "lifecycle_state": "selected_pending_provisioning",
+      "lifecycle_state": "provisioned_access_verification_pending",
+      "repository_provisioning": {
+        "provisioned": true,
+        "private_visibility_verified": true,
+        "current_governance_head": "ace82f0ccef7313b39f66ecbd46cfb3784999dcd",
+        "root_inventory": [
+          ".gitattributes",
+          "README.md"
+        ],
+        "credential_provisioning_complete": false,
+        "live_access_verification_complete": false
+      },
       "private_data_admission_authorized": false,
       "authoritative_for": [
         "candidate_records",
@@ -244,12 +255,17 @@
   "reviewer_runtime": {
     "schema_path": "schemas/foundation_reviewer_runtime.schema.json",
     "config_path": "configs/foundation_reviewer_runtime_v1.json",
-    "status": "planned_unprovisioned",
+    "status": "aws_control_plane_deployed_locked",
     "reviewer_count": 2,
     "candidate_registry_version": "dime-foundation-reviewers-v0.5.2",
     "runpod_endpoint_state": "not_created",
-    "aws_resource_state": "not_created",
+    "aws_resource_state": "create_complete_locked",
     "aws_region": "us-west-2",
+    "aws_stack_name": "dime-foundation-reviewer-signers",
+    "aws_stack_mode": "LOCKED",
+    "aws_resource_count": 31,
+    "reviewer_profile_hashes_populated": false,
+    "signing_available": false,
     "aws_control_plane_template": "infrastructure/aws/reviewer-signers/template.yaml",
     "credentials_provisioned": false,
     "gpu_execution_authorized": false,
