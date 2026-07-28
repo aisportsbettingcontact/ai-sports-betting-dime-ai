@@ -37,6 +37,9 @@ data/hidden/
 data/locked/
 data/provider/
 *.incomplete
+provisioning-bundle/
+candidate-reviewer-registry.json
+*.challenge.bin
 
 .env
 .env.*

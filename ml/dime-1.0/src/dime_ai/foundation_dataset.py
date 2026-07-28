@@ -631,6 +631,7 @@ def trusted_reviewer_index(
     reviewers: dict[str, dict[str, Any]] = {}
     agent_profile_ids: set[str] = set()
     receipt_issuer_key_ids: set[str] = set()
+    workload_identity_ids: set[str] = set()
     verifier = registry.get("receipt_verifier")
     supported_verifier = {
         "receipt_schema_version": RECEIPT_SCHEMA_VERSION,
@@ -677,6 +678,11 @@ def trusted_reviewer_index(
                 )
             if key_id is not None:
                 receipt_issuer_key_ids.add(key_id)
+            workload_identity_id = profile.get("workload_identity_id")
+            if workload_identity_id is not None and (workload_identity_id in workload_identity_ids):
+                raise FoundationDatasetError("duplicate trusted AI-agent workload identity")
+            if workload_identity_id is not None:
+                workload_identity_ids.add(workload_identity_id)
             if reviewer["active"] and not verifier["activation_authorized"]:
                 raise FoundationDatasetError(
                     "AI-agent reviewer activation is not authorized by the reviewer registry"
@@ -825,6 +831,13 @@ def _reviewer_lineage_keys(reviewer: dict[str, Any]) -> tuple[str, str]:
     if not isinstance(profile, dict):
         key = f"ai_agent:{reviewer['reviewer_id']}"
         return key, key
+    explicit_model_lineage = profile.get("model_lineage_id")
+    explicit_policy_lineage = profile.get("policy_lineage_id")
+    if isinstance(explicit_model_lineage, str) and isinstance(explicit_policy_lineage, str):
+        return (
+            f"ai_model_lineage:{explicit_model_lineage}",
+            f"ai_policy_lineage:{explicit_policy_lineage}",
+        )
     model_lineage = {
         field: profile.get(field)
         for field in (

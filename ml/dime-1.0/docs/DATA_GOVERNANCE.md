@@ -41,16 +41,19 @@ an authorized private review system. RunPod is a rebuildable processor and may
 not be their sole authoritative location.
 
 The trusted authority at `configs/foundation_reviewer_registry.json` uses the
-v3 reviewer shape and is still `proposed`. It contains two inactive,
+current v4 AI-receipt reviewer shape and is still `proposed`. It contains two inactive,
 owner-confirmed AI-agent reviewer assignments in distinct independence groups,
 with proposed roles covering the required specialist, audit, and dataset-
 approval duties. It therefore grants no review, external-audit, specialist, or
 dataset-approval authority. Every entry carries an opaque independence group,
 a canonical UTC authority period, and an agent profile. An active agent profile
-must pin the provider, exact model and revision, runtime, system instructions,
-tool contract, inference policy, and receipt-issuer key. Null profile fields
-are allowed only while the assignment remains inactive. Quorums count distinct
-groups, and materially correlated model or policy lineages count as one group.
+must pin the provider, exact model and revision, runtime, explicit model and
+policy lineages, workload identity, system instructions, tool contract,
+inference, conflict and recusal policies, revocation state, and receipt-issuer
+key. Null profile fields are allowed only while the assignment remains
+inactive and configuration-pending. A provisioned profile is still inactive.
+Quorums count distinct groups, and materially correlated model or policy
+lineages count as one group.
 
 The owner has selected `taileredsports/dime-foundation-workbench` as the future
 private candidate workbench, pending provisioning and live access
@@ -70,6 +73,11 @@ still not proof of a decision. Activation requires a later owner-controlled
 change that provisions exact public verification keys and immutable agent
 profiles, validates workload identity isolation, and explicitly authorizes the
 independent activation boundary.
+
+The public-only provisioning workflow is defined in
+[Foundation AI reviewer provisioning](FOUNDATION_AI_REVIEWER_PROVISIONING.md).
+It can prepare a signed, fully pinned candidate profile without creating or
+exposing private keys and without changing any activation gate.
 
 Foundation v1 substantive prose is human-authored. Fully synthetic scenarios
 and fixtures remain allowed, but `synthetic` cannot relabel AI-authored answers.

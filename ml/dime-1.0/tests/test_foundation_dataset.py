@@ -581,11 +581,17 @@ def _active_agent_profile(suffix: str) -> dict[str, Any]:
         "status": "active",
         "model_provider": "provider-001",
         "model_id": "model-001",
-        "model_revision": "model-snapshot-2026-07-27",
-        "runtime_version": "review-runtime-1.0.0",
+        "model_revision": "a" * 40,
+        "runtime_version": "b" * 64,
+        "model_lineage_id": f"dime-model-lineage-{suffix}",
+        "policy_lineage_id": f"dime-policy-lineage-{suffix}",
+        "workload_identity_id": f"dime-workload-identity-{suffix}",
         "system_instruction_sha256": "1" * 64,
         "tool_contract_sha256": "2" * 64,
         "inference_policy_sha256": "3" * 64,
+        "conflict_policy_sha256": "4" * 64,
+        "recusal_policy_sha256": "5" * 64,
+        "revocation_status": "clear",
         "receipt_issuer_key_id": f"key-{public_key_sha256}",
         "receipt_verification_key": {
             "algorithm": "ed25519",
@@ -927,7 +933,8 @@ def test_ai_agents_with_the_same_model_lineage_count_as_one_group() -> None:
             "model_provider": first_profile["model_provider"],
             "model_id": first_profile["model_id"],
             "model_revision": first_profile["model_revision"],
-            "runtime_version": "review-runtime-2.0.0",
+            "model_lineage_id": first_profile["model_lineage_id"],
+            "runtime_version": "c" * 64,
             "system_instruction_sha256": "4" * 64,
             "tool_contract_sha256": "5" * 64,
             "inference_policy_sha256": "6" * 64,
@@ -976,8 +983,9 @@ def test_ai_agents_with_the_same_policy_lineage_count_as_one_group() -> None:
         {
             "model_provider": "provider-002",
             "model_id": "model-002",
-            "model_revision": "model-snapshot-2026-07-28",
-            "runtime_version": "review-runtime-2.0.0",
+            "model_revision": "d" * 40,
+            "runtime_version": "c" * 64,
+            "policy_lineage_id": first_profile["policy_lineage_id"],
         }
     )
     reviewers = {
