@@ -6,7 +6,6 @@ import os
 import shutil
 import subprocess
 import sys
-import time
 from dataclasses import replace
 from pathlib import Path
 
@@ -180,12 +179,14 @@ def test_registered_fifo_fails_closed_without_blocking(project_copy: Path) -> No
             sys.executable,
             "-c",
             (
-                "import sys\n"
+                "import sys, time\n"
                 "from dime_ai.foundation_contracts import "
                 "FoundationContractError, load_foundation_contracts\n"
+                "started = time.monotonic()\n"
                 "try:\n"
                 "    load_foundation_contracts(project_root=sys.argv[1])\n"
                 "except FoundationContractError as exc:\n"
+                "    print(f'VALIDATION_SECONDS: {time.monotonic() - started:.6f}')\n"
                 "    print(f'FOUNDATION_ERROR: {exc}')\n"
                 "    raise SystemExit(7)\n"
                 "raise SystemExit(0)\n"
@@ -197,17 +198,22 @@ def test_registered_fifo_fails_closed_without_blocking(project_copy: Path) -> No
         stderr=subprocess.PIPE,
         text=True,
     )
-    started = time.monotonic()
     try:
-        stdout, stderr = child.communicate(timeout=2.0)
+        stdout, stderr = child.communicate(timeout=10.0)
     except subprocess.TimeoutExpired:
         child.kill()
         child.communicate()
         pytest.fail("governed FIFO validation exceeded the outer timeout")
-    elapsed = time.monotonic() - started
     output = stdout + stderr
+    validation_seconds = float(
+        next(
+            line.removeprefix("VALIDATION_SECONDS: ")
+            for line in output.splitlines()
+            if line.startswith("VALIDATION_SECONDS: ")
+        )
+    )
 
-    assert elapsed < 2.0
+    assert validation_seconds < 2.0
     assert child.returncode == 7
     assert "FOUNDATION_ERROR:" in output
     assert "expected a regular file" in output

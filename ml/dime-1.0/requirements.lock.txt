@@ -9,7 +9,9 @@ annotated-doc==0.0.4
 annotated-types==0.8.0
 attrs==26.1.0
 bitsandbytes==0.49.2
+cffi==2.1.0
 click==8.4.2
+cryptography==49.0.0
 datasets==5.0.0
 dill==0.4.1
 evaluate==0.4.6
@@ -33,6 +35,7 @@ pluggy==1.6.0
 propcache==0.5.2
 protobuf==7.35.1
 pyarrow==25.0.0
+pycparser==3.0
 pydantic==2.13.4
 pydantic_core==2.46.4
 PyYAML==6.0.3

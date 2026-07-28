@@ -23,6 +23,7 @@
       "reviewer_ids": [
         "REPLACE_WITH_RIGHTS_REVIEWER_ID"
       ],
+      "agent_decision_receipts": {},
       "reviewed_at_utc": "REPLACE_WITH_NORMALIZED_UTC_TIMESTAMP"
     }
   ]

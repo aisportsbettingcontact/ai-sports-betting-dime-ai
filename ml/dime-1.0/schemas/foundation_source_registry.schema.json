@@ -128,6 +128,18 @@
             "minLength": 1
           }
         },
+        "agent_decision_receipts": {
+          "type": "object",
+          "description": "Exact reviewer_id-to-receipt-digest map for every AI-agent rights reviewer and no human reviewers.",
+          "propertyNames": {
+            "type": "string",
+            "minLength": 1
+          },
+          "additionalProperties": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        },
         "reviewed_at_utc": {
           "type": "string",
           "format": "date-time"

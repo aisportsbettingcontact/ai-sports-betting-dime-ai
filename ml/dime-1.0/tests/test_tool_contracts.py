@@ -563,12 +563,14 @@ def test_registered_fifo_fails_without_blocking(project_copy: Path) -> None:
     fifo.unlink()
     os.mkfifo(fifo)
     code = (
-        "import sys\n"
+        "import sys, time\n"
         "from dime_ai.foundation_contracts import FoundationContractError\n"
         "from dime_ai.tool_contracts import load_tool_contracts\n"
+        "started = time.monotonic()\n"
         "try:\n"
         f"    load_tool_contracts(project_root={str(project_copy)!r})\n"
         "except FoundationContractError as exc:\n"
+        "    print(f'VALIDATION_SECONDS: {time.monotonic() - started:.6f}', file=sys.stderr)\n"
         "    print(f'FoundationContractError: {exc}', file=sys.stderr)\n"
         "    raise SystemExit(7)\n"
     )
@@ -576,9 +578,17 @@ def test_registered_fifo_fails_without_blocking(project_copy: Path) -> None:
         [sys.executable, "-c", code],
         capture_output=True,
         text=True,
-        timeout=2,
+        timeout=10,
         check=False,
     )
+    validation_seconds = float(
+        next(
+            line.removeprefix("VALIDATION_SECONDS: ")
+            for line in completed.stderr.splitlines()
+            if line.startswith("VALIDATION_SECONDS: ")
+        )
+    )
+    assert validation_seconds < 2
     assert completed.returncode != 0
     assert "expected a regular file" in completed.stderr
     assert str(project_copy) not in completed.stderr

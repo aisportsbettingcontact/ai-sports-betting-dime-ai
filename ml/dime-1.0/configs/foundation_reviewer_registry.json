@@ -1,7 +1,16 @@
 {
-  "schema_version": "dime-foundation-reviewer-registry-v3",
-  "registry_version": "dime-foundation-reviewers-v0.4.0",
+  "schema_version": "dime-foundation-reviewer-registry-v4",
+  "registry_version": "dime-foundation-reviewers-v0.5.0",
   "status": "proposed",
+  "receipt_verifier": {
+    "receipt_schema_version": "dime-agent-decision-receipt-v1",
+    "receipt_schema_path": "schemas/foundation_agent_decision_receipt.schema.json",
+    "verifier_id": "dime-ed25519-decision-receipt-verifier",
+    "verifier_version": "1.0.0",
+    "canonicalization": "dime-canonical-json-v1",
+    "signature_algorithm": "ed25519",
+    "activation_authorized": false
+  },
   "reviewers": [
     {
       "reviewer_id": "dime-reviewer-d55729f9-9153-4534-95bd-6bf097416980",
@@ -17,7 +26,8 @@
         "system_instruction_sha256": null,
         "tool_contract_sha256": null,
         "inference_policy_sha256": null,
-        "receipt_issuer_key_id": null
+        "receipt_issuer_key_id": null,
+        "receipt_verification_key": null
       },
       "roles": [
         "domain",
@@ -44,7 +54,8 @@
         "system_instruction_sha256": null,
         "tool_contract_sha256": null,
         "inference_policy_sha256": null,
-        "receipt_issuer_key_id": null
+        "receipt_issuer_key_id": null,
+        "receipt_verification_key": null
       },
       "roles": [
         "coaching",

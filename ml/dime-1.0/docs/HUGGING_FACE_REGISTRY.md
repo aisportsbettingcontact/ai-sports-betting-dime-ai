@@ -294,9 +294,13 @@ become active.
 
 AI agents are approved as an official reviewer principal type, but the two
 proposed assignments remain inactive. The machine-readable contract records
-`agent_receipt_verifier_status: not_implemented`; runtime validation rejects
-active AI-agent reviewers until a later focused change implements
-cryptographic receipt-signature verification.
+`agent_receipt_verifier_status:
+implemented_fail_closed_activation_blocked`. Cryptographic Ed25519 receipt
+verification is implemented across source-rights decisions, record reviews,
+external audits, and dataset approval, but runtime still rejects active
+AI-agent reviewers unless a separate owner-controlled activation gate is
+approved. See
+[`FOUNDATION_AI_DECISION_RECEIPTS.md`](FOUNDATION_AI_DECISION_RECEIPTS.md).
 
 Before a full run, the training client calls the Hub identity endpoint with
 the explicit runtime token and requires access-token name

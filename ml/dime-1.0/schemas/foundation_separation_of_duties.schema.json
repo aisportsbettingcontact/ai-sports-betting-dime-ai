@@ -24,7 +24,7 @@
   ],
   "properties": {
     "schema_version": {"const": "dime-foundation-separation-of-duties-v1"},
-    "contract_version": {"const": "dime-foundation-separation-of-duties-v1.2.0"},
+    "contract_version": {"const": "dime-foundation-separation-of-duties-v1.3.0"},
     "status": {"const": "proposed"},
     "dataset_version": {"const": "dime-sft-foundation-v1"},
     "unresolved_decisions": {"type": "array", "maxItems": 0},
@@ -229,7 +229,9 @@
       "required": ["required", "status", "implemented_fields"],
       "properties": {
         "required": {"const": false},
-        "status": {"const": "agent_principal_and_receipt_model_ready"},
+        "status": {
+          "const": "cryptographic_receipt_verifier_implemented_activation_blocked"
+        },
         "implemented_fields": {
           "const": [
             "principal_type",
@@ -237,7 +239,9 @@
             "independence_group_id",
             "effective_start",
             "effective_end_or_open_ended",
-            "decision_receipt_sha256"
+            "decision_receipt_sha256",
+            "receipt_verification_key",
+            "signed_decision_receipt"
           ]
         }
       }

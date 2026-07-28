@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import hashlib
 import importlib.util
 import inspect
@@ -573,6 +574,8 @@ def _review_fixture() -> tuple[
 
 
 def _active_agent_profile(suffix: str) -> dict[str, Any]:
+    public_key = hashlib.sha256(f"public-key:{suffix}".encode()).digest()
+    public_key_sha256 = hashlib.sha256(public_key).hexdigest()
     return {
         "profile_id": f"dime-agent-profile-{suffix}",
         "status": "active",
@@ -583,7 +586,16 @@ def _active_agent_profile(suffix: str) -> dict[str, Any]:
         "system_instruction_sha256": "1" * 64,
         "tool_contract_sha256": "2" * 64,
         "inference_policy_sha256": "3" * 64,
-        "receipt_issuer_key_id": f"key-{hashlib.sha256(suffix.encode()).hexdigest()[:32]}",
+        "receipt_issuer_key_id": f"key-{public_key_sha256}",
+        "receipt_verification_key": {
+            "algorithm": "ed25519",
+            "encoding": "raw-base64",
+            "public_key_base64": base64.b64encode(public_key).decode("ascii"),
+            "public_key_sha256": public_key_sha256,
+            "status": "active",
+            "valid_from_utc": "2026-01-01T00:00:00Z",
+            "valid_until_or_open_ended": None,
+        },
     }
 
 
@@ -625,14 +637,15 @@ def test_ai_agent_review_requires_identity_bound_receipt_digest() -> None:
         )
 
     ledger["decisions"][0]["agent_decision_receipt_sha256"] = "d" * 64
-    validate_review_ledger(
-        [record],
-        ledger,
-        reviewer_index,
-        config,
-        rubric_sha,
-        effective_at=CUTOFF,
-    )
+    with pytest.raises(FoundationDatasetError, match="cryptographic.*context"):
+        validate_review_ledger(
+            [record],
+            ledger,
+            reviewer_index,
+            config,
+            rubric_sha,
+            effective_at=CUTOFF,
+        )
 
 
 def test_review_ledger_rejects_unknown_record_decision() -> None:
@@ -791,13 +804,22 @@ def test_trusted_reviewer_registry_blocks_agent_activation_until_receipts_are_ve
         "effective_end_or_open_ended": None,
     }
     registry = {
-        "schema_version": "dime-foundation-reviewer-registry-v3",
-        "registry_version": "dime-foundation-reviewers-v0.4.0",
+        "schema_version": "dime-foundation-reviewer-registry-v4",
+        "registry_version": "dime-foundation-reviewers-v0.5.0",
         "status": "active",
+        "receipt_verifier": {
+            "receipt_schema_version": "dime-agent-decision-receipt-v1",
+            "receipt_schema_path": "schemas/foundation_agent_decision_receipt.schema.json",
+            "verifier_id": "dime-ed25519-decision-receipt-verifier",
+            "verifier_version": "1.0.0",
+            "canonicalization": "dime-canonical-json-v1",
+            "signature_algorithm": "ed25519",
+            "activation_authorized": True,
+        },
         "reviewers": [reviewer],
     }
 
-    with pytest.raises(FoundationDatasetError, match="cryptographic.*verifier"):
+    with pytest.raises(FoundationDatasetError, match="owner-controlled.*blocked"):
         foundation_dataset.trusted_reviewer_index(registry)
 
 
@@ -884,16 +906,17 @@ def test_ai_agent_dataset_approvers_require_exact_receipt_map() -> None:
             },
         )
 
-    foundation_dataset._validate_dataset_approver_authority(
-        approver_ids,
-        reviewers,
-        approval_time=datetime(2026, 1, 4, tzinfo=UTC),
-        candidate_author_ids=set(),
-        agent_decision_receipts={
-            "dime-reviewer-approver-001": "1" * 64,
-            "dime-reviewer-approver-002": "2" * 64,
-        },
-    )
+    with pytest.raises(FoundationDatasetError, match="cryptographic.*context"):
+        foundation_dataset._validate_dataset_approver_authority(
+            approver_ids,
+            reviewers,
+            approval_time=datetime(2026, 1, 4, tzinfo=UTC),
+            candidate_author_ids=set(),
+            agent_decision_receipts={
+                "dime-reviewer-approver-001": "1" * 64,
+                "dime-reviewer-approver-002": "2" * 64,
+            },
+        )
 
 
 def test_ai_agents_with_the_same_model_lineage_count_as_one_group() -> None:
@@ -1137,7 +1160,8 @@ def test_ai_agent_external_auditor_requires_exact_receipt_map(tmp_path: Path) ->
         "semantic_deduplication",
         lambda report: report.update({"agent_decision_receipts": {reviewer_id: "4" * 64}}),
     )
-    _load_valid_external_audits(directory, inputs, config, reviewers)
+    with pytest.raises(FoundationDatasetError, match="cryptographic.*context"):
+        _load_valid_external_audits(directory, inputs, config, reviewers)
 
 
 def test_external_audits_bind_tool_identity_and_version(tmp_path: Path) -> None:
@@ -1691,7 +1715,11 @@ def test_private_freezer_atomically_writes_exact_five_file_snapshot(
         },
     ]
     review_ledger = {"decisions": []}
-    reviewer_registry = {"status": "approved", "reviewers": reviewers}
+    reviewer_registry = {
+        "registry_version": "fixture-v1",
+        "status": "approved",
+        "reviewers": reviewers,
+    }
     development_identity = VerifiedDevelopmentEvaluation(
         repo_id="taileredsports/dime-eval-development",
         revision=REVISION,
@@ -2222,7 +2250,11 @@ def _candidate_audit_integration_kwargs(
         "candidate audit": {"generated_at_utc": "2026-07-25T12:00:00Z"},
         "source registry": {"sources": []},
         "review ledger": {"decisions": []},
-        "foundation reviewer registry": {"status": "approved", "reviewers": []},
+        "foundation reviewer registry": {
+            "registry_version": "fixture-v1",
+            "status": "approved",
+            "reviewers": [],
+        },
     }
     monkeypatch.setattr(
         foundation_dataset,
