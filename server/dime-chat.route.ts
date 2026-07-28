@@ -21,8 +21,15 @@ import { parse as parseCookieHeader } from "cookie";
 import { jwtVerify } from "jose";
 import { ENV } from "./_core/env";
 import { getAppUserById } from "./db";
-import { canAccessDimeModel, DIME_MODEL_ACCESS_MESSAGE } from "./dimeModelAccess";
-import { createAnthropicClient, hasAnthropicCredentials } from "./_core/anthropicClient";
+import {
+  canAccessDimeModel,
+  DIME_MODEL_ACCESS_MESSAGE,
+} from "./dimeModelAccess";
+import { canAccessDimeResearchAlpha } from "./dimeModelAccess";
+import {
+  createAnthropicClient,
+  hasAnthropicCredentials,
+} from "./_core/anthropicClient";
 import {
   DIME_CHAT_FROZEN_NOTICE,
   DIME_CHAT_LLM_PROVIDER,
@@ -35,8 +42,12 @@ import {
 } from "./_core/dimeChatModel";
 import { getDimeChatContext } from "./_core/dimeChatContext";
 import { handleDime1ChatRequest } from "./_core/dime1ChatHandler";
+import { resolveDimeResearchAlphaGate } from "./_core/dimeResearchAlpha";
 import { validateDimeResponseText } from "./_core/dimeVerdict";
-import { assessDimeResponsibleGamblingSafety, containsProhibitedBettingCertainty } from "./_core/dimeSafety";
+import {
+  assessDimeResponsibleGamblingSafety,
+  containsProhibitedBettingCertainty,
+} from "./_core/dimeSafety";
 import {
   checkDimeChatRateLimit,
   DIME_CHAT_RATE_LIMIT_WINDOW_MS,
@@ -45,7 +56,11 @@ import {
 // ---------------------------------------------------------------
 // Structured logging
 // ---------------------------------------------------------------
-function dimeLog(event: string, requestId: string, data: Record<string, unknown> = {}) {
+function dimeLog(
+  event: string,
+  requestId: string,
+  data: Record<string, unknown> = {}
+) {
   const timestamp = new Date().toISOString();
   console.log(
     `[Dime] [${timestamp}] [${requestId}] ${event}`,
@@ -56,7 +71,9 @@ function dimeLog(event: string, requestId: string, data: Record<string, unknown>
 // ---------------------------------------------------------------
 // Auth — app_session JWT (legacy OAuth has no Railway-reachable server)
 // ---------------------------------------------------------------
-async function authenticateDimeRequest(req: Request): Promise<{ userId: number; role: string } | null> {
+async function authenticateDimeRequest(
+  req: Request
+): Promise<{ userId: number; role: string } | null> {
   const cookies = parseCookieHeader(req.headers.cookie ?? "");
   const token = cookies["app_session"];
   if (!token) return null;
@@ -71,7 +88,9 @@ async function authenticateDimeRequest(req: Request): Promise<{ userId: number; 
     if (tv !== null && tv !== undefined) {
       const user = await getAppUserById(userId);
       if (user && user.tokenVersion !== tv) {
-        console.log(`[DimeAuth] REJECTED — tokenVersion mismatch: jwt.tv=${tv} db.tv=${user.tokenVersion} userId=${userId}`);
+        console.log(
+          `[DimeAuth] REJECTED — tokenVersion mismatch: jwt.tv=${tv} db.tv=${user.tokenVersion} userId=${userId}`
+        );
         return null;
       }
     }
@@ -94,6 +113,13 @@ async function checkDimeChatEntitlement(userId: number): Promise<boolean> {
   return canAccessDimeModel(user);
 }
 
+async function checkDimeResearchAlphaEntitlement(
+  userId: number
+): Promise<boolean> {
+  const user = await getAppUserById(userId);
+  return canAccessDimeResearchAlpha(user);
+}
+
 const dimeChatRouter = Router();
 
 dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
@@ -112,19 +138,25 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
     return;
   }
 
+  const researchAlphaGate = resolveDimeResearchAlphaGate();
+
   // --- SEC-CRIT: Entitlement gate — reject every non-owner request before any
   // Claude call or SSE stream (owner-only policy, dimeModelAccess.ts). Runs
   // BEFORE the provider-freeze branch so non-owners get a 403, never the
   // frozen-notice stream. Checked per-request against the DB, closing the
   // hasAccess-revocation bypass (stripeWebhook.ts revokes without bumping
   // tokenVersion) and the stale-JWT-role bypass. ---
-  const entitled = await checkDimeChatEntitlement(authedUser.userId);
+  const entitled = researchAlphaGate.active
+    ? await checkDimeResearchAlphaEntitlement(authedUser.userId)
+    : await checkDimeChatEntitlement(authedUser.userId);
   if (!entitled) {
     dimeLog("dime.chat.entitlement_rejected", requestId, {
       errorClass: "AuthorizationError",
       statusCode: 403,
       userId: authedUser.userId,
-      detail: "Owner-only access — non-owner rejected",
+      detail: researchAlphaGate.active
+        ? "Research Alpha access — non-owner/non-admin rejected"
+        : "Owner-only access — non-owner rejected",
     });
     res.status(403).json({ error: DIME_MODEL_ACCESS_MESSAGE });
     return;
@@ -139,8 +171,13 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
       userId: authedUser.userId,
       detail: "Chat rate limit exceeded",
     });
-    res.setHeader("Retry-After", Math.ceil(DIME_CHAT_RATE_LIMIT_WINDOW_MS / 1000).toString());
-    res.status(429).json({ error: "You're sending messages too quickly. Please wait a moment." });
+    res.setHeader(
+      "Retry-After",
+      Math.ceil(DIME_CHAT_RATE_LIMIT_WINDOW_MS / 1000).toString()
+    );
+    res.status(429).json({
+      error: "You're sending messages too quickly. Please wait a moment.",
+    });
     return;
   }
 
@@ -171,7 +208,8 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
     profileVersion: DIME_CHAT_PROFILE_METADATA.profileVersion,
     blueprintHash: DIME_CHAT_PROFILE_METADATA.blueprintHash,
     promptSource: DIME_CHAT_PROFILE_METADATA.promptSource,
-    lastMessageLength: messages.length > 0 ? messages[messages.length - 1].content.length : 0,
+    lastMessageLength:
+      messages.length > 0 ? messages[messages.length - 1].content.length : 0,
   });
 
   if (messages.length === 0 || messages[messages.length - 1].role !== "user") {
@@ -184,10 +222,41 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
     return;
   }
 
-  const safety = assessDimeResponsibleGamblingSafety(messages.at(-1)?.content ?? "unknown");
+  const safety = assessDimeResponsibleGamblingSafety(
+    messages.at(-1)?.content ?? "unknown"
+  );
   if (safety.risk === "distress") {
-    dimeLog("dime.chat.safety_intervention", requestId, { reason: safety.reason });
-    res.status(200).json({ message: `I can’t help you chase losses or size another bet from distress. ${safety.resourceText} If you want, I can help you step back and review bankroll limits without recommending a wager.` });
+    dimeLog("dime.chat.safety_intervention", requestId, {
+      reason: safety.reason,
+    });
+    res.status(200).json({
+      message: `I can’t help you chase losses or size another bet from distress. ${safety.resourceText} If you want, I can help you step back and review bankroll limits without recommending a wager.`,
+    });
+    return;
+  }
+
+  // --- DIME RESEARCH ALPHA: temporary official Llama Instruct control.
+  // This lane is independent of the governed Dime 1.0 provider, which stays
+  // hardcoded frozen. The fail-closed gate requires two off switches, an
+  // explicit non-production acknowledgement, a private credentialed endpoint,
+  // and the exact pinned control-model identity. ---
+  if (researchAlphaGate.active) {
+    dimeLog("dime.chat.research_alpha.start", requestId, {
+      deploymentTier: researchAlphaGate.deploymentTier,
+      model: researchAlphaGate.model,
+      revision: researchAlphaGate.revision,
+      endpointSource: researchAlphaGate.endpointSource,
+    });
+    await handleDime1ChatRequest({
+      req,
+      res,
+      requestId,
+      startTime,
+      messages,
+      requestClass,
+      responseBudget,
+      deploymentTier: "research-alpha",
+    });
     return;
   }
 
@@ -197,7 +266,15 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
   // Activation requires a separate owner-authorized promotion PR after the
   // canonical ml/dime-1.0 release gates pass. ---
   if (DIME_CHAT_LLM_PROVIDER === "dime1") {
-    await handleDime1ChatRequest({ req, res, requestId, startTime, messages, requestClass, responseBudget });
+    await handleDime1ChatRequest({
+      req,
+      res,
+      requestId,
+      startTime,
+      messages,
+      requestClass,
+      responseBudget,
+    });
     return;
   }
 
@@ -245,7 +322,7 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
           role: "assistant",
           content:
             "Understood. I will ground Dime Chat answers in this platform context and clearly say when a requested market is missing.",
-        },
+        }
       );
     }
 
@@ -315,11 +392,11 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
         system: DIME_CHAT_SYSTEM_PROMPT,
         messages,
       },
-      { signal: abort.signal },
+      { signal: abort.signal }
     );
 
     let output = "";
-    stream.on("text", (delta) => {
+    stream.on("text", delta => {
       output += delta;
     });
 
@@ -331,7 +408,8 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
       stopReason: final.stop_reason,
       outputCharCount: output.length,
       latencyMs: Date.now() - startTime,
-      verificationStatus: validation.ok && !certaintyViolation ? "passed" : "blocked",
+      verificationStatus:
+        validation.ok && !certaintyViolation ? "passed" : "blocked",
       validationErrors: validation.errors,
       certaintyViolation,
       usage: final.usage,
@@ -356,7 +434,9 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
         : "Dime hit a connection problem.";
 
       dimeLog("dime.chat.error", requestId, {
-        errorClass: isApiError ? "APIError" : (err as Error)?.constructor?.name ?? "Unknown",
+        errorClass: isApiError
+          ? "APIError"
+          : ((err as Error)?.constructor?.name ?? "Unknown"),
         statusCode: isApiError ? err.status : undefined,
         latencyMs: Date.now() - startTime,
       });

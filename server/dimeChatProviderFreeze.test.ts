@@ -45,9 +45,13 @@ describe("provider switch — frozen state", () => {
 });
 
 describe("POST /api/dime/chat — freeze short-circuits before Anthropic", () => {
-  const freezeIdx = routeSrc.indexOf('if (DIME_CHAT_LLM_PROVIDER !== "anthropic")');
+  const freezeIdx = routeSrc.indexOf(
+    'if (DIME_CHAT_LLM_PROVIDER !== "anthropic")'
+  );
   const contextIdx = routeSrc.indexOf("getDimeChatContext()");
-  const clientIdx = routeSrc.indexOf("const anthropic = createAnthropicClient()");
+  const clientIdx = routeSrc.indexOf(
+    "const anthropic = createAnthropicClient()"
+  );
   const streamIdx = routeSrc.indexOf("anthropic.messages.stream");
 
   it("the frozen branch exists and precedes context building and every Anthropic call", () => {
@@ -59,11 +63,15 @@ describe("POST /api/dime/chat — freeze short-circuits before Anthropic", () =>
 
   it("the frozen branch streams the hardcoded notice and terminates the response", () => {
     const branch = routeSrc.slice(freezeIdx, contextIdx);
-    expect(branch).toContain('sendFrozen({ type: "meta", dataFreshness: "none" })');
+    expect(branch).toContain(
+      'sendFrozen({ type: "meta", dataFreshness: "none" })'
+    );
     expect(branch).toContain(
       'sendFrozen({ type: "delta", text: DIME_CHAT_FROZEN_NOTICE })'
     );
-    expect(branch).toContain('sendFrozen({ type: "done", stopReason: "end_turn" })');
+    expect(branch).toContain(
+      'sendFrozen({ type: "done", stopReason: "end_turn" })'
+    );
     expect(branch).toMatch(/res\.end\(\);\s*return;/);
     // No Anthropic call sites inside the frozen branch itself (the guard's
     // "anthropic" string literal is the provider name, not a call).
@@ -82,7 +90,7 @@ describe("POST /api/dime/chat — freeze short-circuits before Anthropic", () =>
 describe("Claude wiring is preserved, not removed", () => {
   it("the full Anthropic streaming path is still present in the route", () => {
     expect(routeSrc).toMatch(
-      /import \{ createAnthropicClient, hasAnthropicCredentials \} from "\.\/_core\/anthropicClient"/
+      /import \{[\s\S]*?createAnthropicClient,[\s\S]*?hasAnthropicCredentials,[\s\S]*?\} from "\.\/_core\/anthropicClient"/
     );
     expect(routeSrc).toContain("const anthropic = createAnthropicClient()");
     expect(routeSrc).toContain("anthropic.messages.stream");
