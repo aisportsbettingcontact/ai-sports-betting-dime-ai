@@ -263,12 +263,14 @@ serving process, workflow, or script.
 
 ## Foundation candidate workbench decision
 
-The owner-selected candidate workbench is the future private dataset
-repository `taileredsports/dime-foundation-workbench`. It is intentionally not
-part of the approved-release repository matrix yet: its lifecycle state is
-`selected_pending_provisioning`, and repository creation, credential
-provisioning, live access verification, and private-data admission remain
-false.
+The owner-selected candidate workbench is the private dataset repository
+`taileredsports/dime-foundation-workbench`. It is intentionally not part of
+the approved-release repository matrix. The repository exists privately at
+full governance commit
+`ace82f0ccef7313b39f66ecbd46cfb3784999dcd` and contains only
+`.gitattributes` and `README.md`. Its lifecycle state is
+`provisioned_access_verification_pending`: credential provisioning, live
+access verification, and private-data admission remain false.
 
 The planned workbench-only service identities are:
 

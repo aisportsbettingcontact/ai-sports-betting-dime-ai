@@ -1,0 +1,41 @@
+{
+  "schema_version": "dime-foundation-production-entry-state-v1",
+  "observed_date": "2026-07-28",
+  "source_git_commit": "2af9a9315384160f2495b8e586b0459ba00a1b58",
+  "workbench": {
+    "provider": "hugging_face",
+    "repo_type": "dataset",
+    "repo_id": "taileredsports/dime-foundation-workbench",
+    "private": true,
+    "current_governance_head": "ace82f0ccef7313b39f66ecbd46cfb3784999dcd",
+    "root_inventory": [
+      ".gitattributes",
+      "README.md"
+    ],
+    "candidate_data_present": false,
+    "credential_provisioning_complete": false,
+    "live_access_verification_complete": false,
+    "private_data_admission_authorized": false
+  },
+  "reviewer_signer_control_plane": {
+    "provider": "aws",
+    "region": "us-west-2",
+    "stack_name": "dime-foundation-reviewer-signers",
+    "stack_status": "CREATE_COMPLETE",
+    "stack_mode": "LOCKED",
+    "resource_count": 31,
+    "reviewer_profile_hashes_populated": false,
+    "signing_available": false,
+    "reviewer_activation_authorized": false
+  },
+  "authorization": {
+    "private_data_admission": false,
+    "reviewer_activation": false,
+    "gpu_execution": false,
+    "full_training": false,
+    "locked_evaluation": false,
+    "adapter_publication": false,
+    "serving": false,
+    "provider_activation": false
+  }
+}

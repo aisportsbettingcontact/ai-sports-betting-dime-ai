@@ -40,12 +40,15 @@ never be the sole location of a candidate, review ledger, audit report, or
 frozen snapshot.
 
 The owner-selected private candidate workbench is
-`taileredsports/dime-foundation-workbench`. Its state is
-`selected_pending_provisioning`; it may not receive private data until private
-visibility, least-privilege access, credential denial, individual human
-identity, registered agent workload identity, and immutable review-receipt
-controls have been implemented and verified. The workbench stores pre-freeze candidate and review material only.
-It is not the approved Foundation release and cannot authorize training.
+`taileredsports/dime-foundation-workbench`. It now exists privately at
+governance commit `ace82f0ccef7313b39f66ecbd46cfb3784999dcd` with only
+`.gitattributes` and a root governance `README.md`. Its state is
+`provisioned_access_verification_pending`; it may not receive private data
+until least-privilege access, credential denial, individual human identity,
+registered agent workload identity, and immutable review-receipt controls
+have been implemented and verified. The workbench stores pre-freeze candidate
+and review material only. It is not the approved Foundation release and
+cannot authorize training.
 
 Foundation v1 admits substantive human-authored gold examples and fully
 synthetic scenarios or fixtures only. Substantive AI drafting, retained

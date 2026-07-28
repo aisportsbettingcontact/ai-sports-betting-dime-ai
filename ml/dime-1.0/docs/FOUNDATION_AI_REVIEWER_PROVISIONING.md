@@ -41,9 +41,11 @@ the two reviewer identities:
   public SPKI document into the raw public form required by this provisioning
   contract without contacting AWS.
 
-The tracked state remains `planned_unprovisioned`. These files do not claim
-that AWS resources or RunPod endpoints exist, do not authorize GPU use, and do
-not activate either reviewer. Follow
+The pinned RunPod reviewer-runtime configuration remains
+`planned_unprovisioned`. The AWS signing control plane has been created in
+`us-west-2` and remains in fail-closed `LOCKED` mode with unpopulated reviewer
+profile hashes and no available signing path. No RunPod reviewer endpoint
+exists, GPU use remains unauthorized, and neither reviewer is active. Follow
 [Foundation AI reviewer runtime](FOUNDATION_AI_REVIEWER_RUNTIME.md) for the
 controlled deployment, evidence, and rollback sequence.
 

@@ -67,7 +67,15 @@ FOUNDATION_OWNER_DECISION = {
         "repo_type": "dataset",
         "repo_id": "taileredsports/dime-foundation-workbench",
         "visibility": "private",
-        "lifecycle_state": "selected_pending_provisioning",
+        "lifecycle_state": "provisioned_access_verification_pending",
+        "repository_provisioning": {
+            "provisioned": True,
+            "private_visibility_verified": True,
+            "current_governance_head": "ace82f0ccef7313b39f66ecbd46cfb3784999dcd",
+            "root_inventory": [".gitattributes", "README.md"],
+            "credential_provisioning_complete": False,
+            "live_access_verification_complete": False,
+        },
         "private_data_admission_authorized": False,
         "authoritative_for": [
             "candidate_records",
@@ -372,17 +380,57 @@ def test_foundation_v1_owner_decision_is_exact_and_non_authorizing() -> None:
     assert decision["reviewer_authority"]["activation_authorized"] is False
 
 
-def test_reviewer_runtime_is_planned_and_non_authorizing() -> None:
+def test_foundation_production_entry_evidence_matches_locked_platform_state() -> None:
+    contract = load_platform_contract()
+    evidence = json.loads(
+        (PROJECT / "evidence/foundation/production_entry_state_2026-07-28.json").read_text(
+            encoding="utf-8"
+        )
+    )
+
+    workbench = contract["foundation_v1_owner_decision"]["workbench"]
+    assert evidence["source_git_commit"] == "2af9a9315384160f2495b8e586b0459ba00a1b58"
+    assert evidence["workbench"]["repo_id"] == workbench["repo_id"]
+    assert evidence["workbench"]["private"] is True
+    assert (
+        evidence["workbench"]["current_governance_head"]
+        == workbench["repository_provisioning"]["current_governance_head"]
+    )
+    assert (
+        evidence["workbench"]["root_inventory"]
+        == workbench["repository_provisioning"]["root_inventory"]
+    )
+    assert evidence["workbench"]["candidate_data_present"] is False
+    assert evidence["workbench"]["private_data_admission_authorized"] is False
+
+    reviewer_runtime = contract["reviewer_runtime"]
+    signer = evidence["reviewer_signer_control_plane"]
+    assert signer["region"] == reviewer_runtime["aws_region"]
+    assert signer["stack_name"] == reviewer_runtime["aws_stack_name"]
+    assert signer["stack_mode"] == reviewer_runtime["aws_stack_mode"]
+    assert signer["resource_count"] == reviewer_runtime["aws_resource_count"]
+    assert signer["reviewer_profile_hashes_populated"] is False
+    assert signer["signing_available"] is False
+    assert signer["reviewer_activation_authorized"] is False
+    assert not any(evidence["authorization"].values())
+
+
+def test_reviewer_runtime_is_deployed_locked_and_non_authorizing() -> None:
     contract = load_platform_contract()
     assert contract["reviewer_runtime"] == {
         "schema_path": "schemas/foundation_reviewer_runtime.schema.json",
         "config_path": "configs/foundation_reviewer_runtime_v1.json",
-        "status": "planned_unprovisioned",
+        "status": "aws_control_plane_deployed_locked",
         "reviewer_count": 2,
         "candidate_registry_version": "dime-foundation-reviewers-v0.5.2",
         "runpod_endpoint_state": "not_created",
-        "aws_resource_state": "not_created",
+        "aws_resource_state": "create_complete_locked",
         "aws_region": "us-west-2",
+        "aws_stack_name": "dime-foundation-reviewer-signers",
+        "aws_stack_mode": "LOCKED",
+        "aws_resource_count": 31,
+        "reviewer_profile_hashes_populated": False,
+        "signing_available": False,
         "aws_control_plane_template": "infrastructure/aws/reviewer-signers/template.yaml",
         "credentials_provisioned": False,
         "gpu_execution_authorized": False,
