@@ -158,7 +158,8 @@ async function checkManifestCounts(pool: mysql.Pool, seasons: number[]): Promise
   for (const season of seasons) {
     const manifest = loadSeasonManifest(season);
     if (!manifest) {
-      perSeason[season] = { skipped: "skipped" } as any;
+      perSeason[season] = { manifest_missing: "manifest missing" } as any;
+      ok = false;
       continue;
     }
     anyManifest = true;
@@ -307,7 +308,7 @@ async function checkEraSamples(pool: mysql.Pool, seasons: number[], rng: () => n
   const seasonDenormMismatches: { season: number; playId: string; gameSeason: number }[] = [];
   let denormChecked = 0;
   for (const season of seasons) {
-    const [pkRows] = await pool.query(`SELECT play_id FROM mlb_pitches WHERE season = ? LIMIT 5000`, [season]);
+    const [pkRows] = await pool.query(`SELECT play_id FROM mlb_pitches WHERE season = ? ORDER BY play_id LIMIT 5000`, [season]);
     const playIds = (pkRows as any[]).map((r) => r.play_id as string);
     if (playIds.length === 0) continue;
     const picked = sample(playIds, 25, rng);
@@ -347,7 +348,7 @@ async function checkEraSamples(pool: mysql.Pool, seasons: number[], rng: () => n
     // Not a hard failure by itself (a pre-2008 pitch could legitimately have some tracking data
     // in rare backfilled cases) — but zero-fill (value === 0 where legacy systems used to
     // zero-fill) is the specific defect this check guards against; NULL is fine, 0 is not.
-    const zeroFilled = trackingCols.filter((c) => row[c] === 0 || row[c] === "0" || row[c] === "0.00");
+    const zeroFilled = trackingCols.filter((c) => row[c] !== null && Number(row[c]) === 0);
     if (zeroFilled.length > 0) {
       nullPreservationFindings.push({ playId: row.play_id, nonNullTrackingCols: zeroFilled });
     }
