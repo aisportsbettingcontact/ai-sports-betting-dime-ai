@@ -1940,6 +1940,8 @@ export const mlbScheduleHistory = mysqlTable("mlb_schedule_history", {
   startTimeUtc: varchar("startTimeUtc", { length: 32 }).notNull(),
   /** Game status: 'scheduled' | 'inprogress' | 'complete' */
   gameStatus: varchar("gameStatus", { length: 16 }).notNull().default("scheduled"),
+  /** MLB Stats API gamePk — canonical join key to the mlb_games table; null until backfilled */
+  gamePk: int("gamePk"),
   // ─── Away Team ──────────────────────────────────────────────────────────────
   /** Away team Action Network URL slug, e.g. "arizona-diamondbacks" */
   awaySlug: varchar("awaySlug", { length: 128 }).notNull(),
@@ -2020,6 +2022,7 @@ export const mlbScheduleHistory = mysqlTable("mlb_schedule_history", {
   idxAwaySlug:   index("idx_msh_away_slug").on(t.awaySlug),
   idxHomeSlug:   index("idx_msh_home_slug").on(t.homeSlug),
   idxGameStatus: index("idx_msh_game_status").on(t.gameStatus),
+  idxGamePk:     index("idx_msh_game_pk").on(t.gamePk),
 }));
 export type MlbScheduleHistoryRow = typeof mlbScheduleHistory.$inferSelect;
 export type InsertMlbScheduleHistory = typeof mlbScheduleHistory.$inferInsert;
