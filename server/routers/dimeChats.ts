@@ -49,6 +49,62 @@ async function getOwnedThread(db: Awaited<ReturnType<typeof requireDb>>, threadI
 
 const messageContent = z.string().min(1).max(DIME_CHAT_MAX_MESSAGE_CHARS);
 
+/**
+ * Atomically create a thread and its first settled turn.
+ *
+ * Drizzle's mysql2 adapter returns insert metadata as a tuple. `$returningId`
+ * provides the typed auto-increment id without depending on that driver shape.
+ * Keeping both writes in one transaction prevents empty thread shells when a
+ * message insert fails.
+ */
+export async function createDimeChatThread(
+  db: Awaited<ReturnType<typeof requireDb>>,
+  userId: number,
+  firstMessage: string,
+  firstAssistantMessage?: string,
+) {
+  const title = deriveThreadTitle(firstMessage);
+
+  return db.transaction(async (tx: Awaited<ReturnType<typeof requireDb>>) => {
+    const [inserted] = await tx
+      .insert(dimeChatThreads)
+      .values({ userId, title })
+      .$returningId();
+    const threadId = Number(inserted?.id);
+    if (!Number.isFinite(threadId) || threadId <= 0) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Failed to create chat.",
+      });
+    }
+
+    const messages: Array<{
+      threadId: number;
+      seq: number;
+      role: "user" | "assistant";
+      content: string;
+    }> = [
+      {
+        threadId,
+        seq: 1,
+        role: "user",
+        content: firstMessage.slice(0, DIME_CHAT_MAX_MESSAGE_CHARS),
+      },
+    ];
+    if (firstAssistantMessage) {
+      messages.push({
+        threadId,
+        seq: 2,
+        role: "assistant",
+        content: firstAssistantMessage.slice(0, DIME_CHAT_MAX_MESSAGE_CHARS),
+      });
+    }
+    await tx.insert(dimeChatMessages).values(messages);
+
+    return { threadId, title };
+  });
+}
+
 export const dimeChatsRouter = router({
   /** Own threads, starred first then most-recent; archived hidden by default. */
   list: appUserProcedure
@@ -98,24 +154,20 @@ export const dimeChatsRouter = router({
 
   /** Start a thread from the first user message. Returns the new thread id. */
   create: appUserProcedure
-    .input(z.object({ firstMessage: messageContent }))
+    .input(
+      z.object({
+        firstMessage: messageContent,
+        firstAssistantMessage: messageContent.optional(),
+      }),
+    )
     .mutation(async ({ ctx, input }) => {
       const db = await requireDb();
-      const title = deriveThreadTitle(input.firstMessage);
-      const inserted = await db
-        .insert(dimeChatThreads)
-        .values({ userId: ctx.appUser.id, title });
-      const threadId = Number((inserted as unknown as { insertId: number }).insertId);
-      if (!Number.isFinite(threadId) || threadId <= 0) {
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to create chat." });
-      }
-      await db.insert(dimeChatMessages).values({
-        threadId,
-        seq: 1,
-        role: "user",
-        content: input.firstMessage.slice(0, DIME_CHAT_MAX_MESSAGE_CHARS),
-      });
-      return { threadId, title };
+      return createDimeChatThread(
+        db,
+        ctx.appUser.id,
+        input.firstMessage,
+        input.firstAssistantMessage,
+      );
     }),
 
   /**
@@ -200,8 +252,8 @@ export const dimeChatsRouter = router({
       .update(dimeChatThreads)
       .set({ deletedAt: new Date() })
       .where(isNull(dimeChatThreads.deletedAt));
-    // mysql2 driver surfaces affectedRows on the raw header (same shape the
-    // create() insertId read relies on); default 0 if a driver swap hides it.
+    // mysql2 driver surfaces affectedRows on the raw header; default 0 if a
+    // driver swap hides it.
     const header = result as unknown as { affectedRows?: number; rowsAffected?: number };
     return { ok: true, cleared: Number(header.affectedRows ?? header.rowsAffected ?? 0) };
   }),
