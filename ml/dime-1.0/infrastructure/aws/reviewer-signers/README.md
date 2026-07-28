@@ -35,8 +35,10 @@ owner-controlled invocation
   published Lambda version.
 - No function URL, API Gateway, IAM user, access key, static credential, model
   credential, secret, or public bucket exists.
-- CloudTrail records the Lambda invocation chain and KMS management calls in a
-  private, versioned, retained S3 bucket.
+- CloudTrail records all account management events plus the bounded Lambda
+  invocation chain in a private, versioned, retained S3 bucket. This includes
+  changes to IAM, Lambda, CloudFormation, CloudTrail, KMS, and the signer
+  stack itself.
 
 ## Controlled modes
 
@@ -65,17 +67,43 @@ uv run pytest -q \
   tests/test_export_aws_kms_ed25519_public_key.py
 ```
 
-Before creating any AWS change set, run an exact recorded AWS SAM CLI version:
+The required AWS SAM CLI version is pinned in
+[`SAM_CLI_VERSION`](./SAM_CLI_VERSION). The current pin is `1.164.0`, matching
+the official
+[AWS SAM CLI v1.164.0 release](https://github.com/aws/aws-sam-cli/releases/tag/v1.164.0).
+Do not proceed with a different version.
+
+Before creating any AWS change set, run this exact preflight from
+`ml/dime-1.0/`. Keep the same dedicated shell session through change-set
+review and execution; every block enables fail-closed shell behavior:
 
 ```bash
+set -euo pipefail
+
+EXPECTED_SAM_VERSION="$(
+  tr -d '\n' \
+    < infrastructure/aws/reviewer-signers/SAM_CLI_VERSION
+)"
+test "$(sam --version)" = "SAM CLI, version ${EXPECTED_SAM_VERSION}"
+
 sam validate --lint \
+  --region us-west-2 \
   --template-file infrastructure/aws/reviewer-signers/template.yaml
+
+BUILD_DIR="$(mktemp -d)"
 sam build \
+  --build-dir "${BUILD_DIR}" \
   --template-file infrastructure/aws/reviewer-signers/template.yaml
+
+sha256sum \
+  infrastructure/aws/reviewer-signers/template.yaml \
+  "${BUILD_DIR}/template.yaml"
 ```
 
-Do not place AWS credentials in pull-request CI. Static repository validation
-does not authorize a deployment.
+Record the SAM version, both template hashes, command exit codes, and private
+build-directory location in the private run manifest. Do not place AWS
+credentials in pull-request CI. Static repository validation does not
+authorize a deployment.
 
 ## Owner-controlled deployment procedure
 
@@ -94,6 +122,147 @@ account, Region, stack ID, and change-set ID in the private run manifest.
 
 The stack outputs two workload-role ARNs. Those exact ARNs are the
 `workload_identity_id` values for the private provisioning input.
+
+### Locked change-set creation and review
+
+Use short-lived credentials for the owner-approved deployment identity. Never
+use the AWS root identity or static access keys. Set the private artifact bucket
+and a unique change-set name, then package the already validated build:
+
+```bash
+set -euo pipefail
+
+export AWS_REGION=us-west-2
+export DIME_SIGNER_STACK_NAME=dime-foundation-reviewer-signers
+export DIME_SIGNER_CHANGE_SET_NAME="locked-$(date -u +%Y%m%dT%H%M%SZ)"
+test -n "${DIME_SAM_ARTIFACT_BUCKET:?set the private SAM artifact bucket}"
+
+PACKAGED_TEMPLATE="$(mktemp)"
+sam package \
+  --template-file "${BUILD_DIR}/template.yaml" \
+  --s3-bucket "${DIME_SAM_ARTIFACT_BUCKET}" \
+  --s3-prefix "dime-foundation-reviewer-signers" \
+  --output-template-file "${PACKAGED_TEMPLATE}" \
+  --region "${AWS_REGION}"
+
+sha256sum "${PACKAGED_TEMPLATE}"
+
+DIME_SIGNER_CHANGE_SET_ARN="$(
+  aws cloudformation create-change-set \
+    --stack-name "${DIME_SIGNER_STACK_NAME}" \
+    --change-set-name "${DIME_SIGNER_CHANGE_SET_NAME}" \
+    --change-set-type CREATE \
+    --description "Create the default-locked Dime Foundation reviewer signer control plane" \
+    --template-body "file://${PACKAGED_TEMPLATE}" \
+    --capabilities CAPABILITY_NAMED_IAM \
+    --parameters \
+      ParameterKey=StackMode,ParameterValue=LOCKED \
+      ParameterKey=ReviewerAExpectedChallengeSha256,ParameterValue=0000000000000000000000000000000000000000000000000000000000000000 \
+      ParameterKey=ReviewerBExpectedChallengeSha256,ParameterValue=0000000000000000000000000000000000000000000000000000000000000000 \
+    --region "${AWS_REGION}" \
+    --query Id \
+    --output text
+)"
+test -n "${DIME_SIGNER_CHANGE_SET_ARN}"
+test "${DIME_SIGNER_CHANGE_SET_ARN}" != "None"
+
+aws cloudformation wait change-set-create-complete \
+  --change-set-name "${DIME_SIGNER_CHANGE_SET_ARN}" \
+  --region "${AWS_REGION}"
+
+aws cloudformation describe-change-set \
+  --change-set-name "${DIME_SIGNER_CHANGE_SET_ARN}" \
+  --region "${AWS_REGION}" \
+  > "/absolute/private/path/${DIME_SIGNER_CHANGE_SET_NAME}.json"
+```
+
+Review the packaged-template hash and the complete `Changes` list. Confirm that
+the change set contains only the reviewer signer control-plane resources,
+creates the trail with `AllManagementEvents`, acknowledges
+`CAPABILITY_NAMED_IAM`, leaves `StackMode=LOCKED`, and does not add public
+endpoints, static credentials, IAM users, or model access. Record the exact
+`DIME_SIGNER_CHANGE_SET_ARN` and review decision in the private run manifest.
+
+Creating a change set does not authorize execution. Execute it only after the
+owner separately approves that exact reviewed change-set ID:
+
+```bash
+set -euo pipefail
+
+aws cloudformation execute-change-set \
+  --change-set-name "${DIME_SIGNER_CHANGE_SET_ARN}" \
+  --region "${AWS_REGION}"
+
+aws cloudformation wait stack-create-complete \
+  --stack-name "${DIME_SIGNER_STACK_NAME}" \
+  --region "${AWS_REGION}"
+
+test "$(
+  aws cloudformation describe-stacks \
+    --stack-name "${DIME_SIGNER_STACK_NAME}" \
+    --region "${AWS_REGION}" \
+    --query 'Stacks[0].StackStatus' \
+    --output text
+)" = "CREATE_COMPLETE"
+
+test "$(
+  aws cloudformation describe-stacks \
+    --stack-name "${DIME_SIGNER_STACK_NAME}" \
+    --region "${AWS_REGION}" \
+    --query 'Stacks[0].Outputs[?OutputKey==`StackMode`].OutputValue | [0]' \
+    --output text
+)" = "LOCKED"
+
+aws cloudformation describe-stacks \
+  --stack-name "${DIME_SIGNER_STACK_NAME}" \
+  --region "${AWS_REGION}" \
+  > "/absolute/private/path/${DIME_SIGNER_STACK_NAME}-outputs.json"
+
+for output_key in ReviewerAKmsKeyId ReviewerBKmsKeyId; do
+  key_id="$(
+    aws cloudformation describe-stacks \
+      --stack-name "${DIME_SIGNER_STACK_NAME}" \
+      --region "${AWS_REGION}" \
+      --query "Stacks[0].Outputs[?OutputKey=='${output_key}'].OutputValue | [0]" \
+      --output text
+  )"
+  test "$(
+    aws kms describe-key \
+      --key-id "${key_id}" \
+      --region "${AWS_REGION}" \
+      --query 'KeyMetadata.Enabled' \
+      --output text
+  )" = "False"
+done
+
+for output_key in \
+  ReviewerAWorkloadAliasArn \
+  ReviewerBWorkloadAliasArn \
+  ReviewerASignerAliasArn \
+  ReviewerBSignerAliasArn
+do
+  alias_arn="$(
+    aws cloudformation describe-stacks \
+      --stack-name "${DIME_SIGNER_STACK_NAME}" \
+      --region "${AWS_REGION}" \
+      --query "Stacks[0].Outputs[?OutputKey=='${output_key}'].OutputValue | [0]" \
+      --output text
+  )"
+  function_arn="${alias_arn%:*}"
+  test "$(
+    aws lambda get-function-concurrency \
+      --function-name "${function_arn}" \
+      --region "${AWS_REGION}" \
+      --query 'ReservedConcurrentExecutions' \
+      --output text
+  )" = "0"
+done
+```
+
+For later stack changes, repeat the complete preflight and use
+`--change-set-type UPDATE`, wait with `stack-update-complete`, and require
+`UPDATE_COMPLETE`. Never reuse an earlier packaged template or change-set
+review.
 
 ### 2. Retrieve public keys
 

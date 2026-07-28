@@ -405,9 +405,40 @@ def _validate_audit(resources: dict[str, Any]) -> None:
         and properties.get("EnableLogFileValidation") is True,
         "CloudTrail must remain enabled, multi-Region, and integrity validated",
     )
-    serialized_selectors = json.dumps(properties.get("AdvancedEventSelectors"), sort_keys=True)
+    selectors = properties.get("AdvancedEventSelectors")
+    _require(isinstance(selectors, list), "CloudTrail advanced selectors are missing")
+    _require(
+        len(selectors) == 2 and all(isinstance(selector, dict) for selector in selectors),
+        "CloudTrail must contain exactly two object selectors",
+    )
+    selector_names = [selector.get("Name") for selector in selectors]
+    _require(
+        all(isinstance(name, str) for name in selector_names)
+        and len(set(selector_names)) == len(selector_names),
+        "CloudTrail selectors must have unique governed names",
+    )
+    selectors_by_name = {selector["Name"]: selector for selector in selectors}
+    _require(
+        set(selectors_by_name) == {"AllManagementEvents", "ReviewerLambdaInvocationDataEvents"},
+        "CloudTrail must contain exactly the management and reviewer invocation selectors",
+    )
+    _require(
+        selectors_by_name["AllManagementEvents"]
+        == {
+            "Name": "AllManagementEvents",
+            "FieldSelectors": [
+                {
+                    "Field": "eventCategory",
+                    "Equals": ["Management"],
+                }
+            ],
+        },
+        "CloudTrail must record all management events without source restrictions",
+    )
+    serialized_selectors = json.dumps(
+        selectors_by_name["ReviewerLambdaInvocationDataEvents"], sort_keys=True
+    )
     for required in (
-        "kms.amazonaws.com",
         "AWS::Lambda::Function",
         "ReviewerAWorkloadFunction",
         "ReviewerBWorkloadFunction",

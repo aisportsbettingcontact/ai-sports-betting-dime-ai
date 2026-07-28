@@ -12,6 +12,9 @@ import yaml
 PROJECT = Path(__file__).resolve().parents[1]
 VALIDATOR_PATH = PROJECT / "scripts/validate_reviewer_signer_iac.py"
 TEMPLATE_PATH = PROJECT / "infrastructure/aws/reviewer-signers/template.yaml"
+SIGNER_INFRASTRUCTURE_PATH = PROJECT / "infrastructure/aws/reviewer-signers"
+SAM_VERSION_PATH = SIGNER_INFRASTRUCTURE_PATH / "SAM_CLI_VERSION"
+RUNBOOK_PATH = SIGNER_INFRASTRUCTURE_PATH / "README.md"
 
 
 def _load() -> ModuleType:
@@ -62,6 +65,30 @@ def test_reviewer_signer_stack_passes_complete_static_contract() -> None:
         lambda template: template["Resources"].update(
             PublicApi={"Type": "AWS::Serverless::Api", "Properties": {}}
         ),
+        lambda template: template["Resources"]["ReviewerSignerAuditTrail"]["Properties"][
+            "AdvancedEventSelectors"
+        ][0]["FieldSelectors"].append({"Field": "eventSource", "Equals": ["kms.amazonaws.com"]}),
+        lambda template: template["Resources"]["ReviewerSignerAuditTrail"]["Properties"][
+            "AdvancedEventSelectors"
+        ].append(
+            {
+                "FieldSelectors": [
+                    {
+                        "Field": "eventCategory",
+                        "Equals": ["Data"],
+                    }
+                ]
+            }
+        ),
+        lambda template: template["Resources"]["ReviewerSignerAuditTrail"]["Properties"][
+            "AdvancedEventSelectors"
+        ].append(
+            copy.deepcopy(
+                template["Resources"]["ReviewerSignerAuditTrail"]["Properties"][
+                    "AdvancedEventSelectors"
+                ][0]
+            )
+        ),
     ],
 )
 def test_security_broadening_fails_closed(tmp_path: Path, mutation: Any) -> None:
@@ -93,3 +120,30 @@ def test_stable_reviewer_ids_are_bound_to_both_function_pairs() -> None:
             "dime-agent-profile-1a0eb37e-2be7-40c7-bae5-d2e71a2889b1",
         ),
     }
+
+
+def test_audit_trail_records_all_management_events_without_source_filtering() -> None:
+    selectors = _template()["Resources"]["ReviewerSignerAuditTrail"]["Properties"][
+        "AdvancedEventSelectors"
+    ]
+
+    assert selectors[0] == {
+        "Name": "AllManagementEvents",
+        "FieldSelectors": [
+            {
+                "Field": "eventCategory",
+                "Equals": ["Management"],
+            }
+        ],
+    }
+
+
+def test_sam_cli_version_pin_matches_the_owner_runbook() -> None:
+    version_file = SAM_VERSION_PATH.read_text(encoding="utf-8")
+    assert version_file == "1.164.0\n"
+
+    version = version_file.strip()
+    runbook = RUNBOOK_PATH.read_text(encoding="utf-8")
+
+    assert f"`{version}`" in runbook
+    assert f"https://github.com/aws/aws-sam-cli/releases/tag/v{version}" in runbook
