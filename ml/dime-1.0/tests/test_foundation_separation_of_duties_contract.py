@@ -112,7 +112,7 @@ def test_reviewer_registry_has_two_inactive_proposals_and_grants_no_authority() 
         "configs/foundation_reviewer_registry.json"
     )
     assert registry["schema_version"] == "dime-foundation-reviewer-registry-v4"
-    assert registry["registry_version"] == "dime-foundation-reviewers-v0.5.0"
+    assert registry["registry_version"] == "dime-foundation-reviewers-v0.5.1"
     assert registry["status"] == "proposed"
     assert registry["receipt_verifier"]["activation_authorized"] is False
     assert len(registry["reviewers"]) == 2
@@ -120,6 +120,13 @@ def test_reviewer_registry_has_two_inactive_proposals_and_grants_no_authority() 
     assert all(reviewer["principal_type"] == "ai_agent" for reviewer in registry["reviewers"])
     assert all(
         reviewer["agent_profile"]["status"] == "configuration_pending"
+        for reviewer in registry["reviewers"]
+    )
+    assert all(
+        reviewer["agent_profile"]["workload_identity_id"] is None
+        and reviewer["agent_profile"]["model_lineage_id"] is None
+        and reviewer["agent_profile"]["policy_lineage_id"] is None
+        and reviewer["agent_profile"]["revocation_status"] == "configuration_pending"
         for reviewer in registry["reviewers"]
     )
     assert len({reviewer["reviewer_id"] for reviewer in registry["reviewers"]}) == len(
@@ -165,11 +172,17 @@ def test_active_ai_agent_requires_fully_pinned_profile() -> None:
         "status": "active",
         "model_provider": "provider-001",
         "model_id": "model-001",
-        "model_revision": "model-snapshot-2026-07-27",
-        "runtime_version": "review-runtime-1.0.0",
+        "model_revision": "a" * 40,
+        "runtime_version": "b" * 64,
+        "model_lineage_id": "dime-model-lineage-domain-001",
+        "policy_lineage_id": "dime-policy-lineage-domain-001",
+        "workload_identity_id": "dime-workload-identity-domain-001",
         "system_instruction_sha256": "1" * 64,
         "tool_contract_sha256": "2" * 64,
         "inference_policy_sha256": "3" * 64,
+        "conflict_policy_sha256": "4" * 64,
+        "recusal_policy_sha256": "5" * 64,
+        "revocation_status": "clear",
         "receipt_issuer_key_id": f"key-{public_key_sha256}",
         "receipt_verification_key": {
             "algorithm": "ed25519",
@@ -203,11 +216,19 @@ def test_active_ai_agent_requires_fully_pinned_profile() -> None:
     assert list(reviewer_registry_validator().iter_errors(registry))
     reviewer["agent_profile"]["model_revision"] = "prod"
     assert list(reviewer_registry_validator().iter_errors(registry))
-    reviewer["agent_profile"]["model_revision"] = "model-snapshot-2026-07-27"
+    reviewer["agent_profile"]["model_revision"] = "a" * 40
     reviewer["agent_profile"]["runtime_version"] = "release"
     assert list(reviewer_registry_validator().iter_errors(registry))
-    reviewer["agent_profile"]["runtime_version"] = "review-runtime-1.0.0"
+    reviewer["agent_profile"]["runtime_version"] = "b" * 64
     reviewer["agent_profile"]["receipt_issuer_key_id"] = "active-key"
+    assert list(reviewer_registry_validator().iter_errors(registry))
+    reviewer["agent_profile"]["receipt_issuer_key_id"] = f"key-{public_key_sha256}"
+    reviewer["agent_profile"]["status"] = "provisioned"
+    reviewer["active"] = False
+    registry["status"] = "proposed"
+    registry["receipt_verifier"]["activation_authorized"] = False
+    assert list(reviewer_registry_validator().iter_errors(registry)) == []
+    reviewer["active"] = True
     assert list(reviewer_registry_validator().iter_errors(registry))
 
 

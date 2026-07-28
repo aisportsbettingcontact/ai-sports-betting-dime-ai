@@ -81,10 +81,11 @@ retired registry cannot contain an active reviewer, so the current file cannot
 authorize a dataset, training run, release, or serving change.
 
 Registry activation requires every AI-agent profile to pin the exact model
-provider, model ID and immutable revision, runtime version, system-instruction
-hash, tool-contract hash, inference-policy hash, receipt-issuer key, approved
-roles, independence group, effective period, conflicts/recusals, and revocation
-state. Materially correlated model or policy lineages count as one
+provider, model ID and immutable revision, runtime version, explicit model and
+policy lineages, workload identity, system-instruction hash, tool-contract
+hash, inference-policy hash, conflict-policy hash, recusal-policy hash,
+receipt-issuer key, approved roles, independence group, effective period, and
+revocation state. Materially correlated model or policy lineages count as one
 independence group. Every governed AI-agent decision must carry the SHA-256 of
 an immutable identity-bound receipt. Shared service credentials cannot
 establish reviewer identity or sign a decision. No placeholder reviewer or
@@ -97,6 +98,11 @@ AI-agent source-rights review, record review, external audit, and dataset
 approval. It still rejects every active AI-agent entry unless a separate,
 owner-controlled activation boundary is explicitly authorized. Receipt
 verification capability is not activation authority.
+
+The candidate-only workflow in
+[Foundation AI reviewer provisioning](FOUNDATION_AI_REVIEWER_PROVISIONING.md)
+computes these hashes, validates signer possession, and rejects shared or
+correlated identities while leaving the registry and reviewers inactive.
 
 The auditor and freezer accept an optional private `--agent-receipt-dir`.
 Human-only candidates do not need it. A candidate referencing any AI-agent

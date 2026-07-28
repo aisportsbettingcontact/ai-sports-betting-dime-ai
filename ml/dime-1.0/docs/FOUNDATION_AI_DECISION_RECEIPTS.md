@@ -11,6 +11,8 @@ still `proposed`, its two agent profiles remain `configuration_pending`, no
 public keys or model revisions have been assigned, and both the registry and
 independent owner-controlled activation gates remain false. Training,
 publication, serving, and provider activation remain unauthorized.
+The public-only provisioning tool can prepare signed candidate profiles, but
+the current governed profiles have not received those owner-controlled inputs.
 
 ## Receipt and key contract
 
@@ -121,3 +123,6 @@ runtime, instruction, tool, policy, workload-identity, and public-key
 identities; prove positive and negative signing tests; set the registry
 activation flag; and satisfy an independent owner-controlled activation gate.
 This verifier implementation alone cannot self-grant reviewer authority.
+Use [Foundation AI reviewer provisioning](FOUNDATION_AI_REVIEWER_PROVISIONING.md)
+to prepare and verify those public inputs without importing a private key or
+activating either reviewer.

@@ -301,6 +301,36 @@
               }
             }
           }
+        },
+        {
+          "if": {
+            "properties": {
+              "agent_profile": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "const": "provisioned"
+                  }
+                },
+                "required": [
+                  "status"
+                ]
+              }
+            },
+            "required": [
+              "agent_profile"
+            ]
+          },
+          "then": {
+            "properties": {
+              "active": {
+                "const": false
+              },
+              "agent_profile": {
+                "$ref": "#/$defs/provisionedAgentProfile"
+              }
+            }
+          }
         }
       ]
     },
@@ -331,6 +361,7 @@
         "status": {
           "enum": [
             "configuration_pending",
+            "provisioned",
             "active",
             "retired"
           ]
@@ -347,6 +378,15 @@
         "runtime_version": {
           "$ref": "#/$defs/pinnedIdentityOrNull"
         },
+        "model_lineage_id": {
+          "$ref": "#/$defs/pinnedIdentityOrNull"
+        },
+        "policy_lineage_id": {
+          "$ref": "#/$defs/pinnedIdentityOrNull"
+        },
+        "workload_identity_id": {
+          "$ref": "#/$defs/pinnedIdentityOrNull"
+        },
         "system_instruction_sha256": {
           "$ref": "#/$defs/sha256OrNull"
         },
@@ -356,6 +396,20 @@
         "inference_policy_sha256": {
           "$ref": "#/$defs/sha256OrNull"
         },
+        "conflict_policy_sha256": {
+          "$ref": "#/$defs/sha256OrNull"
+        },
+        "recusal_policy_sha256": {
+          "$ref": "#/$defs/sha256OrNull"
+        },
+        "revocation_status": {
+          "enum": [
+            "configuration_pending",
+            "clear",
+            "revoked",
+            "retired"
+          ]
+        },
         "receipt_issuer_key_id": {
           "$ref": "#/$defs/pinnedIdentityOrNull"
         },
@@ -364,16 +418,21 @@
         }
       }
     },
-    "activeAgentProfile": {
+    "fullyPinnedAgentProfile": {
       "allOf": [
         {
           "$ref": "#/$defs/agentProfile"
         },
         {
+          "required": [
+            "model_lineage_id",
+            "policy_lineage_id",
+            "workload_identity_id",
+            "conflict_policy_sha256",
+            "recusal_policy_sha256",
+            "revocation_status"
+          ],
           "properties": {
-            "status": {
-              "const": "active"
-            },
             "model_provider": {
               "$ref": "#/$defs/pinnedIdentity"
             },
@@ -386,6 +445,15 @@
             "runtime_version": {
               "$ref": "#/$defs/immutableRevision"
             },
+            "model_lineage_id": {
+              "$ref": "#/$defs/pinnedIdentity"
+            },
+            "policy_lineage_id": {
+              "$ref": "#/$defs/pinnedIdentity"
+            },
+            "workload_identity_id": {
+              "$ref": "#/$defs/pinnedIdentity"
+            },
             "system_instruction_sha256": {
               "$ref": "#/$defs/sha256"
             },
@@ -395,11 +463,48 @@
             "inference_policy_sha256": {
               "$ref": "#/$defs/sha256"
             },
+            "conflict_policy_sha256": {
+              "$ref": "#/$defs/sha256"
+            },
+            "recusal_policy_sha256": {
+              "$ref": "#/$defs/sha256"
+            },
+            "revocation_status": {
+              "const": "clear"
+            },
             "receipt_issuer_key_id": {
               "$ref": "#/$defs/immutableKeyId"
             },
             "receipt_verification_key": {
               "$ref": "#/$defs/activeReceiptVerificationKey"
+            }
+          }
+        }
+      ]
+    },
+    "activeAgentProfile": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/fullyPinnedAgentProfile"
+        },
+        {
+          "properties": {
+            "status": {
+              "const": "active"
+            }
+          }
+        }
+      ]
+    },
+    "provisionedAgentProfile": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/fullyPinnedAgentProfile"
+        },
+        {
+          "properties": {
+            "status": {
+              "const": "provisioned"
             }
           }
         }
@@ -424,20 +529,9 @@
       ]
     },
     "immutableRevision": {
-      "oneOf": [
-        {
-          "type": "string",
-          "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$"
-        },
-        {
-          "type": "string",
-          "pattern": "^[a-z0-9][a-z0-9._/-]{1,127}[-@:](?:20\\d{2}-\\d{2}-\\d{2}|v?\\d+\\.\\d+\\.\\d+(?:[-+][a-z0-9.-]+)?)$"
-        },
-        {
-          "type": "string",
-          "pattern": "^v?\\d+\\.\\d+\\.\\d+(?:[-+][a-z0-9.-]+)?$"
-        }
-      ]
+      "type": "string",
+      "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64})$",
+      "description": "A full content-addressed commit or artifact digest. Tags, aliases, dates, and semantic versions are prohibited."
     },
     "immutableKeyId": {
       "type": "string",

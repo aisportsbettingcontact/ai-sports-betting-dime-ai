@@ -73,6 +73,13 @@ approval must carry an immutable identity-bound receipt digest. A shared
 service token is never evidence that a particular principal made a decision.
 No placeholder identity or movable model alias may be used.
 
+The repository now provides a candidate-only provisioning tool that hashes the
+exact reviewer policies, verifies public-key possession, and rejects shared
+keys, workload identities, model lineages, policy lineages, or materially
+correlated stacks. It writes only an inactive candidate outside Git and never
+handles private signing keys. The governed profiles remain
+`configuration_pending`.
+
 This owner decision approves AI agents as an official reviewer principal type
 and designates the two inactive assignments as the proposed official roster.
 It does not activate them. The runtime now implements fail-closed Ed25519

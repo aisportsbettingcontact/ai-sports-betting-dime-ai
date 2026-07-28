@@ -117,6 +117,11 @@
       "agent_receipt_canonicalization": "dime-canonical-json-v1",
       "agent_receipt_signature_algorithm": "ed25519",
       "private_receipt_store_required_for_ai": true,
+      "agent_profile_provisioning_status": "tooling_ready_public_inputs_pending",
+      "agent_profile_provisioning_schema_path": "schemas/foundation_ai_reviewer_provisioning_input.schema.json",
+      "agent_profile_provisioning_script_path": "scripts/prepare_ai_reviewer_profiles.py",
+      "agent_profile_provisioning_candidate_only": true,
+      "agent_profile_provisioning_private_keys_allowed": false,
       "allowed_principal_types": [
         "human",
         "ai_agent"

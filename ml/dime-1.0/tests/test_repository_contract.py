@@ -133,6 +133,13 @@ FOUNDATION_OWNER_DECISION = {
         "agent_receipt_canonicalization": "dime-canonical-json-v1",
         "agent_receipt_signature_algorithm": "ed25519",
         "private_receipt_store_required_for_ai": True,
+        "agent_profile_provisioning_status": "tooling_ready_public_inputs_pending",
+        "agent_profile_provisioning_schema_path": (
+            "schemas/foundation_ai_reviewer_provisioning_input.schema.json"
+        ),
+        "agent_profile_provisioning_script_path": "scripts/prepare_ai_reviewer_profiles.py",
+        "agent_profile_provisioning_candidate_only": True,
+        "agent_profile_provisioning_private_keys_allowed": False,
         "allowed_principal_types": ["human", "ai_agent"],
         "private_identity_mapping_required_for_humans": True,
         "immutable_agent_profile_binding_required": True,
@@ -534,6 +541,7 @@ def test_foundation_contract_schemas_are_draft_2020_12_and_local_only() -> None:
         PROJECT / "schemas/foundation_stage_profiles.schema.json",
         PROJECT / "schemas/foundation_numeric_policy.schema.json",
         PROJECT / "schemas/foundation_separation_of_duties.schema.json",
+        PROJECT / "schemas/foundation_ai_reviewer_provisioning_input.schema.json",
     ]
     for path in schema_paths:
         schema = json.loads(path.read_text(encoding="utf-8"))
