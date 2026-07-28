@@ -51,6 +51,13 @@ Foundation v1 candidate, review, audit, and freeze contracts make a future
 dataset reviewable; they do not create an approved dataset, publish anything
 to Hugging Face, authorize training, change serving, or activate the provider.
 
+The two Foundation AI reviewer runtimes and their AWS signing control plane
+are likewise candidate infrastructure. Their configurations pin the selected
+models and worker image, and the stack is designed to default to a locked
+state if an owner later authorizes deployment. No endpoint, workload identity,
+KMS key, reviewer authority, or GPU execution is claimed by this repository
+state.
+
 The small 2026-07-25 rehearsal proved only that selected infrastructure
 mechanics execute. It used 8 training and 4 validation records, scored 3 of 10
 expected evaluation cases, passed zero cases, retained critical failures, and
@@ -84,6 +91,7 @@ See:
 - [Foundation v1 dataset workflow](docs/FOUNDATION_V1_DATASET_WORKFLOW.md)
 - [Foundation AI-agent decision receipts](docs/FOUNDATION_AI_DECISION_RECEIPTS.md)
 - [Foundation AI reviewer provisioning](docs/FOUNDATION_AI_REVIEWER_PROVISIONING.md)
+- [Foundation AI reviewer runtime](docs/FOUNDATION_AI_REVIEWER_RUNTIME.md)
 - [RunPod workspace and runbook](docs/RUNPOD_WORKSPACE_RUNBOOK.md)
 - [Candidate-to-locked-evaluator handoff](docs/CANDIDATE_EVALUATION_HANDOFF.md)
 - [Public data boundary](data/README.md)
@@ -96,6 +104,7 @@ ml/dime-1.0/
 ├── data/                    # Synthetic public samples and private-workflow templates
 ├── docs/                    # Governance, plans, research, and release gates
 ├── evidence/                # Reviewed sanitized audits and rehearsal evidence
+├── infrastructure/          # Non-authorizing, deployable cloud control planes
 ├── prompts/                 # Versioned training prompt and chat template
 ├── schemas/                 # Dataset, evaluation, and tool contracts
 ├── scripts/                 # CPU validation plus explicitly gated GPU utilities
@@ -135,8 +144,10 @@ uv sync --frozen --dev
 uv lock --check
 uv run ruff check .
 uv run pytest -q
-uv run python -m compileall -q src scripts
+uv run python -m compileall -q src scripts infrastructure
 uv run python scripts/validate_data.py
+uv run python scripts/prepare_reviewer_runtime.py --check
+uv run python scripts/validate_reviewer_signer_iac.py
 
 audit_dir="$(mktemp -d)"
 uv run python scripts/audit_curriculum.py \

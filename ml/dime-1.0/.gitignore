@@ -48,6 +48,18 @@ candidate-reviewer-registry.json
 *.key
 *.p12
 *.pfx
+*.der
+*.cer
+*.crt
+
+# Local AWS SAM and CloudFormation deployment output. The reviewed source
+# template is tracked; packaged templates, stack output, and local deployment
+# configuration are not.
+.aws-sam/
+samconfig.toml
+packaged-template.yaml
+cloudformation-change-set*.json
+cloudformation-stack-output*.json
 
 # Model weights, optimizer state, and export formats.
 *.safetensors

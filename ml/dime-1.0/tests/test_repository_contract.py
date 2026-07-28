@@ -372,6 +372,29 @@ def test_foundation_v1_owner_decision_is_exact_and_non_authorizing() -> None:
     assert decision["reviewer_authority"]["activation_authorized"] is False
 
 
+def test_reviewer_runtime_is_planned_and_non_authorizing() -> None:
+    contract = load_platform_contract()
+    assert contract["reviewer_runtime"] == {
+        "schema_path": "schemas/foundation_reviewer_runtime.schema.json",
+        "config_path": "configs/foundation_reviewer_runtime_v1.json",
+        "status": "planned_unprovisioned",
+        "reviewer_count": 2,
+        "candidate_registry_version": "dime-foundation-reviewers-v0.5.2",
+        "runpod_endpoint_state": "not_created",
+        "aws_resource_state": "not_created",
+        "aws_region": "us-west-2",
+        "aws_control_plane_template": "infrastructure/aws/reviewer-signers/template.yaml",
+        "credentials_provisioned": False,
+        "gpu_execution_authorized": False,
+        "activation_authorized": False,
+    }
+    assert (PROJECT / contract["reviewer_runtime"]["schema_path"]).is_file()
+    assert (PROJECT / contract["reviewer_runtime"]["config_path"]).is_file()
+    assert (PROJECT / contract["reviewer_runtime"]["aws_control_plane_template"]).is_file()
+    assert contract["status"] == "foundation_only"
+    assert not any(contract["authorization"].values())
+
+
 def test_runpod_workspace_and_credential_boundaries_are_exact() -> None:
     runpod = load_platform_contract()["runpod"]
     assert runpod["template_name"] == "dime-llama31-8b-training-v1"
