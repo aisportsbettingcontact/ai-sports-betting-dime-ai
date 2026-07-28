@@ -73,7 +73,7 @@ Quorums count distinct independence groups, not aliases or reviewer IDs.
 Review, source-rights, external-audit, and dataset-approval timestamps must
 fall inside the referenced reviewer's authority period.
 
-The current v3 registry is `proposed` and contains two inactive AI-agent
+The current v4 registry is `proposed` and contains two inactive AI-agent
 reviewer assignments in distinct independence groups. Their proposed roles
 collectively cover every elevated specialist, external audit, and
 dataset-approval duty, but neither entry grants authority. A proposed or
@@ -92,10 +92,18 @@ movable model alias may satisfy this gate.
 
 AI agents are an owner-approved official reviewer principal type, and the two
 checked-in assignments are the proposed official roster. They remain inactive.
-The current runtime deliberately rejects active AI-agent entries because the
-cryptographic receipt verifier is not yet implemented. Receipt SHA-256 fields
-are content references, not signature verification and not activation
-authority.
+The runtime now verifies identity-bound Ed25519 decision receipts for every
+AI-agent source-rights review, record review, external audit, and dataset
+approval. It still rejects every active AI-agent entry unless a separate,
+owner-controlled activation boundary is explicitly authorized. Receipt
+verification capability is not activation authority.
+
+The auditor and freezer accept an optional private `--agent-receipt-dir`.
+Human-only candidates do not need it. A candidate referencing any AI-agent
+decision must supply the exact flat, content-addressed receipt inventory; the
+freezer rejects missing, extra, duplicated, noncanonical, unsigned, or
+misbound receipts. Private signing keys are prohibited from the repository,
+receipt store, and release artifacts.
 
 Review ledgers, external reports, and approval records may only reference a
 stable `reviewer_id` that resolves to an active entry and the required role in

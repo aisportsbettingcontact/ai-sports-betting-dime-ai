@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import base64
+import hashlib
 import importlib
 import json
 import re
@@ -109,9 +111,10 @@ def test_reviewer_registry_has_two_inactive_proposals_and_grants_no_authority() 
     assert document["reviewer_authority"]["registry_path"] == (
         "configs/foundation_reviewer_registry.json"
     )
-    assert registry["schema_version"] == "dime-foundation-reviewer-registry-v3"
-    assert registry["registry_version"] == "dime-foundation-reviewers-v0.4.0"
+    assert registry["schema_version"] == "dime-foundation-reviewer-registry-v4"
+    assert registry["registry_version"] == "dime-foundation-reviewers-v0.5.0"
     assert registry["status"] == "proposed"
+    assert registry["receipt_verifier"]["activation_authorized"] is False
     assert len(registry["reviewers"]) == 2
     assert all(reviewer["active"] is False for reviewer in registry["reviewers"])
     assert all(reviewer["principal_type"] == "ai_agent" for reviewer in registry["reviewers"])
@@ -153,6 +156,8 @@ def test_reviewer_registry_v3_represents_human_authority() -> None:
 
 
 def test_active_ai_agent_requires_fully_pinned_profile() -> None:
+    public_key = b"\x04" * 32
+    public_key_sha256 = hashlib.sha256(public_key).hexdigest()
     reviewer = valid_reviewer()
     reviewer["principal_type"] = "ai_agent"
     reviewer["agent_profile"] = {
@@ -165,12 +170,30 @@ def test_active_ai_agent_requires_fully_pinned_profile() -> None:
         "system_instruction_sha256": "1" * 64,
         "tool_contract_sha256": "2" * 64,
         "inference_policy_sha256": "3" * 64,
-        "receipt_issuer_key_id": f"key-{'4' * 32}",
+        "receipt_issuer_key_id": f"key-{public_key_sha256}",
+        "receipt_verification_key": {
+            "algorithm": "ed25519",
+            "encoding": "raw-base64",
+            "public_key_base64": base64.b64encode(public_key).decode("ascii"),
+            "public_key_sha256": public_key_sha256,
+            "status": "active",
+            "valid_from_utc": "2026-01-01T00:00:00Z",
+            "valid_until_or_open_ended": None,
+        },
     }
     registry = {
-        "schema_version": "dime-foundation-reviewer-registry-v3",
-        "registry_version": "dime-foundation-reviewers-v0.4.0",
+        "schema_version": "dime-foundation-reviewer-registry-v4",
+        "registry_version": "dime-foundation-reviewers-v0.5.0",
         "status": "active",
+        "receipt_verifier": {
+            "receipt_schema_version": "dime-agent-decision-receipt-v1",
+            "receipt_schema_path": "schemas/foundation_agent_decision_receipt.schema.json",
+            "verifier_id": "dime-ed25519-decision-receipt-verifier",
+            "verifier_version": "1.0.0",
+            "canonicalization": "dime-canonical-json-v1",
+            "signature_algorithm": "ed25519",
+            "activation_authorized": True,
+        },
         "reviewers": [reviewer],
     }
     assert list(reviewer_registry_validator().iter_errors(registry)) == []
@@ -296,7 +319,7 @@ def test_effective_authority_contract_is_ready_without_activation() -> None:
     assert document["effective_authority"]["authority_period_required"] is True
     assert document["registry_migration"] == {
         "required": False,
-        "status": "agent_principal_and_receipt_model_ready",
+        "status": "cryptographic_receipt_verifier_implemented_activation_blocked",
         "implemented_fields": (
             "principal_type",
             "agent_profile",
@@ -304,5 +327,7 @@ def test_effective_authority_contract_is_ready_without_activation() -> None:
             "effective_start",
             "effective_end_or_open_ended",
             "decision_receipt_sha256",
+            "receipt_verification_key",
+            "signed_decision_receipt",
         ),
     }

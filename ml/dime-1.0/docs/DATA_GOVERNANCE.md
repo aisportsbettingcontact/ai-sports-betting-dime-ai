@@ -64,10 +64,12 @@ SHA-256 of its identity-bound decision receipt.
 
 The owner has approved AI agents as an official reviewer principal type and
 the two assignments above are the proposed official roster. They are not yet
-active: the cryptographic receipt verifier is not implemented, so runtime
-validation rejects every active AI-agent entry. Activation requires a later
-focused change that implements and validates signature verification; a
-64-character digest by itself is not proof of a decision.
+active. The runtime now implements fail-closed Ed25519 signature verification
+for identity-bound decision receipts, and a 64-character digest by itself is
+still not proof of a decision. Activation requires a later owner-controlled
+change that provisions exact public verification keys and immutable agent
+profiles, validates workload identity isolation, and explicitly authorizes the
+independent activation boundary.
 
 Foundation v1 substantive prose is human-authored. Fully synthetic scenarios
 and fixtures remain allowed, but `synthetic` cannot relabel AI-authored answers.

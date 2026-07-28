@@ -82,6 +82,7 @@ See:
 - [Platform ownership](docs/PLATFORM_OWNERSHIP.md)
 - [Hugging Face registry](docs/HUGGING_FACE_REGISTRY.md)
 - [Foundation v1 dataset workflow](docs/FOUNDATION_V1_DATASET_WORKFLOW.md)
+- [Foundation AI-agent decision receipts](docs/FOUNDATION_AI_DECISION_RECEIPTS.md)
 - [RunPod workspace and runbook](docs/RUNPOD_WORKSPACE_RUNBOOK.md)
 - [Candidate-to-locked-evaluator handoff](docs/CANDIDATE_EVALUATION_HANDOFF.md)
 - [Public data boundary](data/README.md)

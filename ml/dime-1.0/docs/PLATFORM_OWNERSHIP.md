@@ -60,7 +60,7 @@ that workbench and cannot establish reviewer identity or sign a decision.
 Training, serving, release-publisher, locked-evaluator, and locked-publisher
 credentials are all denied access.
 
-Reviewer activation remains deliberately blocked. The proposed v3 registry now
+Reviewer activation remains deliberately blocked. The proposed v4 registry now
 contains two inactive opaque AI-agent reviewer IDs in distinct independence
 groups. One proposed assignment covers domain, numeric, simulation,
 semantic-audit, and dataset-approver duties; the other covers coaching, safety,
@@ -75,9 +75,12 @@ No placeholder identity or movable model alias may be used.
 
 This owner decision approves AI agents as an official reviewer principal type
 and designates the two inactive assignments as the proposed official roster.
-It does not activate them. The cryptographic receipt verifier is not
-implemented, so the runtime rejects every active AI-agent registry entry. A
-later focused change must implement signature verification before
+It does not activate them. The runtime now implements fail-closed Ed25519
+signature verification for identity-bound decision receipts, but deliberately
+rejects active AI-agent registry entries unless an independent owner-controlled
+activation boundary is also authorized. A later focused change must provision
+the exact public keys and immutable profiles, validate isolated workload
+identities, and explicitly set that authorization before
 `ai_agent_activation_authorized` can become true.
 
 This owner decision does not create the repository, provision credentials,
@@ -205,7 +208,7 @@ into `main`.
 Every change requires review and a new registry version. Its exact bytes are
 hashed as `reviewer_registry_sha256`. The current `proposed` registry contains
 two inactive AI-agent assignments, so it cannot authorize a decision, audit,
-approval, dataset, or training run. Every v3 reviewer entry defines its
+approval, dataset, or training run. Every v4 reviewer entry defines its
 principal type, opaque independence group, and half-open effective period; AI
 entries additionally carry an immutable activation profile. Runtime validation counts
 distinct groups and requires record reviews, source-rights reviews, external

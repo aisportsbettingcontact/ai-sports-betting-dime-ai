@@ -12,7 +12,10 @@
   ],
   "properties": {
     "schema_version": {
-      "const": "dime-foundation-reviewer-registry-v3"
+      "enum": [
+        "dime-foundation-reviewer-registry-v3",
+        "dime-foundation-reviewer-registry-v4"
+      ]
     },
     "registry_version": {
       "type": "string",
@@ -27,6 +30,9 @@
       ],
       "default": "proposed"
     },
+    "receipt_verifier": {
+      "$ref": "#/$defs/receiptVerifier"
+    },
     "reviewers": {
       "type": "array",
       "uniqueItems": true,
@@ -37,6 +43,66 @@
     }
   },
   "allOf": [
+    {
+      "if": {
+        "properties": {
+          "schema_version": {
+            "const": "dime-foundation-reviewer-registry-v4"
+          }
+        },
+        "required": [
+          "schema_version"
+        ]
+      },
+      "then": {
+        "required": [
+          "receipt_verifier"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "reviewers": {
+            "contains": {
+              "type": "object",
+              "properties": {
+                "principal_type": {
+                  "const": "ai_agent"
+                },
+                "active": {
+                  "const": true
+                }
+              },
+              "required": [
+                "principal_type",
+                "active"
+              ]
+            }
+          }
+        },
+        "required": [
+          "reviewers"
+        ]
+      },
+      "then": {
+        "required": [
+          "receipt_verifier"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "dime-foundation-reviewer-registry-v4"
+          },
+          "receipt_verifier": {
+            "properties": {
+              "activation_authorized": {
+                "const": true
+              }
+            }
+          }
+        }
+      }
+    },
     {
       "if": {
         "properties": {
@@ -251,7 +317,8 @@
         "system_instruction_sha256",
         "tool_contract_sha256",
         "inference_policy_sha256",
-        "receipt_issuer_key_id"
+        "receipt_issuer_key_id",
+        "receipt_verification_key"
       ],
       "properties": {
         "profile_id": {
@@ -291,6 +358,9 @@
         },
         "receipt_issuer_key_id": {
           "$ref": "#/$defs/pinnedIdentityOrNull"
+        },
+        "receipt_verification_key": {
+          "$ref": "#/$defs/receiptVerificationKeyOrNull"
         }
       }
     },
@@ -327,6 +397,9 @@
             },
             "receipt_issuer_key_id": {
               "$ref": "#/$defs/immutableKeyId"
+            },
+            "receipt_verification_key": {
+              "$ref": "#/$defs/activeReceiptVerificationKey"
             }
           }
         }
@@ -368,7 +441,7 @@
     },
     "immutableKeyId": {
       "type": "string",
-      "pattern": "^key-[0-9a-f]{32,64}$"
+      "pattern": "^key-[0-9a-f]{64}$"
     },
     "sha256": {
       "type": "string",
@@ -381,6 +454,118 @@
         },
         {
           "type": "null"
+        }
+      ]
+    },
+    "receiptVerifier": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "receipt_schema_version",
+        "receipt_schema_path",
+        "verifier_id",
+        "verifier_version",
+        "canonicalization",
+        "signature_algorithm",
+        "activation_authorized"
+      ],
+      "properties": {
+        "receipt_schema_version": {
+          "const": "dime-agent-decision-receipt-v1"
+        },
+        "receipt_schema_path": {
+          "const": "schemas/foundation_agent_decision_receipt.schema.json"
+        },
+        "verifier_id": {
+          "const": "dime-ed25519-decision-receipt-verifier"
+        },
+        "verifier_version": {
+          "const": "1.0.0"
+        },
+        "canonicalization": {
+          "const": "dime-canonical-json-v1"
+        },
+        "signature_algorithm": {
+          "const": "ed25519"
+        },
+        "activation_authorized": {
+          "type": "boolean"
+        }
+      }
+    },
+    "receiptVerificationKeyOrNull": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/receiptVerificationKey"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "receiptVerificationKey": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "algorithm",
+        "encoding",
+        "public_key_base64",
+        "public_key_sha256",
+        "status",
+        "valid_from_utc",
+        "valid_until_or_open_ended"
+      ],
+      "properties": {
+        "algorithm": {
+          "const": "ed25519"
+        },
+        "encoding": {
+          "const": "raw-base64"
+        },
+        "public_key_base64": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9+/]{43}=$"
+        },
+        "public_key_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "status": {
+          "enum": [
+            "active",
+            "revoked",
+            "retired"
+          ]
+        },
+        "valid_from_utc": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?Z$"
+        },
+        "valid_until_or_open_ended": {
+          "oneOf": [
+            {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?Z$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "activeReceiptVerificationKey": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/receiptVerificationKey"
+        },
+        {
+          "properties": {
+            "status": {
+              "const": "active"
+            }
+          }
         }
       ]
     }

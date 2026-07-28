@@ -110,7 +110,13 @@
       "roster_status": "proposed_inactive_ai_agent_assignments",
       "activation_authorized": false,
       "ai_agent_activation_authorized": false,
-      "agent_receipt_verifier_status": "not_implemented",
+      "agent_receipt_verifier_status": "implemented_fail_closed_activation_blocked",
+      "agent_receipt_schema_path": "schemas/foundation_agent_decision_receipt.schema.json",
+      "agent_receipt_verifier_id": "dime-ed25519-decision-receipt-verifier",
+      "agent_receipt_verifier_version": "1.0.0",
+      "agent_receipt_canonicalization": "dime-canonical-json-v1",
+      "agent_receipt_signature_algorithm": "ed25519",
+      "private_receipt_store_required_for_ai": true,
       "allowed_principal_types": [
         "human",
         "ai_agent"
