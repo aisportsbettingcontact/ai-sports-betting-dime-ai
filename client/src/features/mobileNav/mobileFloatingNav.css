@@ -170,7 +170,9 @@ html.dark .mfn-wrap {
 }
 
 html.dark .mfn-item[aria-current="page"]:not(.mfn-chat)::after {
-  box-shadow: 0 0 0 1px #000000;
+  /* Same near-black hairline the coin-dot rule uses on light grounds —
+   * the token (not raw hex) keeps the X-HEX-EPIDEMIC ratchet at its ceiling. */
+  box-shadow: 0 0 0 1px var(--dime-mint-keyline);
 }
 
 /* Hover only on hover-capable devices — no stuck hover states on touch. The
