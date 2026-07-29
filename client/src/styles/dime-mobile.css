@@ -713,8 +713,13 @@ html:not(.dark) .bt-float {
   body.dime-floating-nav-active .dmf-root .dmf-topbar {
     display: none;
   }
+  /* Pin flush to the nav band: --dime-floating-nav-h includes the nav's 8px
+   * CLEARANCE_GAP_PX (MobileFloatingNav.tsx) — subtracting it here closes the
+   * transparent slit where scrolling league headers used to peek through
+   * between the nav chrome and the sticky feed menu bar (owner directive
+   * 2026-07-29). */
   body.dime-floating-nav-active .dmf-root .dmf-feedhead {
-    top: var(--dime-floating-nav-h, 112px);
+    top: calc(var(--dime-floating-nav-h, 112px) - 8px);
   }
   /* The floating nav reserves its own space globally; keep only local
    * breathing room instead of the pre-unification 130px bottom slab. */
