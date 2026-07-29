@@ -791,7 +791,7 @@ button.dc-sidebar-row {
      rail on top of its row fill — identifiable at a glance, mint stays the
      single accent (THREE-COLOR-LAW). */
   .dc-drawer .dc-recent-list .dc-sidebar-row.is-active {
-    box-shadow: inset 3px 0 0 #45e0a8;
+    box-shadow: inset 3px 0 0 var(--accent);
   }
   /* Graceful expand: while the spring slides the panel in (drawerMotion.ts),
      its content cascades — one 160ms brand beat per group, small x-offset,
@@ -836,19 +836,20 @@ button.dc-sidebar-row {
   .dc-user-capsule {
     border-radius: 20px 20px 6px 20px;
     padding: 10px 16px;
+    /* Inverse-ground bubble via the app token pair (X-HEX-EPIDEMIC: no raw
+       hex) — --dime-text-primary/--dime-bg IS the inverse in both themes:
+       white bubble/black ink on dark, black bubble/white ink on light. The
+       html.dark-keyed dime tokens track the same ThemeContext as theme-*. */
+    background: var(--dime-text-primary);
+    color: var(--dime-bg);
+    border: 0;
   }
   .theme-dark .dc-user-capsule {
-    background: #ffffff;
-    color: #000000;
-    border: 0;
     box-shadow:
       0 6px 16px rgba(0, 0, 0, 0.55),
       inset 0 1px 0 rgba(255, 255, 255, 0.6);
   }
   .theme-light .dc-user-capsule {
-    background: #000000;
-    color: #ffffff;
-    border: 0;
     box-shadow:
       0 6px 16px rgba(0, 0, 0, 0.24),
       inset 0 1px 0 rgba(255, 255, 255, 0.16);
@@ -858,8 +859,10 @@ button.dc-sidebar-row {
   }
   .dc-turn--assistant .dc-prose {
     max-width: 85%;
-    background: #45e0a8;
-    color: #000000;
+    /* Mint bubble both themes; --mint-on-light is the law's contrast ink
+       (near-black) — exactly the readable ink on the mint ground. */
+    background: var(--accent);
+    color: var(--mint-on-light);
     border-radius: 20px 20px 20px 6px;
     padding: 10px 16px;
     line-height: 1.5;
@@ -878,7 +881,7 @@ button.dc-sidebar-row {
      underline carries the affordance (never color alone). */
   .dc-turn--assistant .dc-prose a,
   .theme-light .dc-turn--assistant .dc-prose a {
-    color: #000000;
+    color: var(--mint-on-light);
     text-decoration: underline;
   }
 }
