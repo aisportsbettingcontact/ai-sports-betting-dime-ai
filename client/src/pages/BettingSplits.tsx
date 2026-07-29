@@ -16,6 +16,9 @@ import {
   shouldAutoAdvance,
   type SplitsDateSource,
 } from "./dime-shell/splitsDateState";
+// Splits-surface interaction styles ride this chunk (NOT the chat critical
+// path — see the bundle budget note in splits-interactions.css).
+import "@/styles/splits-interactions.css";
 
 // CDN icon URLs
 const CDN_NBA =
