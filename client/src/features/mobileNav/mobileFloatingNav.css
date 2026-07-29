@@ -252,9 +252,11 @@ html.dark .mfn-item[aria-current="page"]:not(.mfn-chat)::after {
   font-weight: 700;
 }
 
+/* No activation dot on the active chat pill (directive 2026-07-29 r2): the
+ * pill's content already flips to the credits readout — the dot under it
+ * read as clutter, and mint-fill + content-swap carry the active state. */
 .mfn-item.mfn-chat[aria-current="page"]::after {
-  background: #ffffff;
-  box-shadow: none;
+  display: none;
 }
 
 /* Inline wordmark inside the mint pill: black ink; the coin-dot flips to
