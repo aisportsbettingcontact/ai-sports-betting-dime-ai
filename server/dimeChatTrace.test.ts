@@ -110,15 +110,34 @@ describe("Dime Conversation Trace v1 request contract", () => {
       generationId: randomUUID(),
       clientAssistantMessageId: randomUUID(),
       attempt: 1,
+      identity: {
+        observabilityRevision: "dime-trace-observability-v1" as const,
+        requestId: randomUUID(),
+        applicationVersion: "1.0.0",
+        gitCommit: "47e338fb",
+        environment: "test",
+        modelProvider: "frozen",
+        baseModel: "no-provider",
+        modelRevision: "no-provider",
+        adapterRevision: null,
+        promptRevision: "1.0.0",
+        route: "platform" as const,
+        routePolicyRevision: "a".repeat(64),
+        controlPlaneRevision: "dime-composite-engineering-control-v1",
+        traceSchemaRevision: "trace-v1-phase1-2026-07-29" as const,
+      },
     };
     expect(dimeChatTraceMeta(trace, 102)).toEqual({
       version: 1,
+      observabilityRevision: "dime-trace-observability-v1",
+      traceSchemaRevision: "trace-v1-phase1-2026-07-29",
       requestId: trace.requestId,
       chatSessionId: trace.chatSessionId,
       threadId: 42,
       turnId: trace.turnId,
       userMessageId: 101,
       generationId: trace.generationId,
+      productRoute: "platform",
       assistantMessageId: 102,
     });
   });
@@ -156,6 +175,7 @@ describe("Dime Conversation Trace v1 request contract", () => {
   it("accepts only canonical bounded routing and context metadata", () => {
     const metadata = {
       answerMode: "matchup" as const,
+      productRoute: "matchup" as const,
       routingVersion: "runtime-answer-routing-v1",
       dateSource: "explicit" as const,
       requestedDate: "2026-07-28",
@@ -174,6 +194,7 @@ describe("Dime Conversation Trace v1 request contract", () => {
   it("rejects non-canonical routing labels and raw query-shaped metadata", () => {
     for (const metadata of [
       { answerMode: "game" },
+      { productRoute: "current_games" },
       { routingVersion: "" },
       { routingVersion: "runtime answer routing v1" },
       { routingVersion: `v${"1".repeat(64)}` },
@@ -312,6 +333,19 @@ describe("Dime Conversation Trace v1 persistence contract", () => {
     }
     expect(traceSource).not.toContain("teamAliases: input.teamAliases");
     expect(traceSource).not.toContain("prompt: input.prompt");
+  });
+
+  it("adds Phase 1 observability through backward-compatible event metadata", () => {
+    expect(traceSource).toContain("identity: input.identity");
+    expect(traceSource).toContain("observability,");
+    expect(traceSource).toContain("phase1: {");
+    expect(traceSource).toContain(
+      "refuses to finalize without explicit context/tool observability"
+    );
+    expect(schemaSource).toContain(
+      "/** Sanitized JSON only; never credentials, cookies, or raw prompt text. */"
+    );
+    expect(migrationSource).not.toContain("phase1");
   });
 
   it("marks replay metadata as trace-owned instead of claiming the current prompt identity", () => {

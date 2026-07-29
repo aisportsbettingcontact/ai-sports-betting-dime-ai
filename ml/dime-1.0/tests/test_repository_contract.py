@@ -288,10 +288,18 @@ def test_static_prompt_template_and_tool_invariants() -> None:
         assert function["parameters"]["additionalProperties"] is False
 
 
-def test_training_tree_is_excluded_from_production_image() -> None:
+def test_training_tree_is_excluded_except_for_pricing_registry() -> None:
     dockerignore = (REPOSITORY / ".dockerignore").read_text(encoding="utf-8").splitlines()
     dockerfile = (REPOSITORY / "Dockerfile").read_text(encoding="utf-8")
-    assert "ml/dime-1.0/" in dockerignore
+    assert "ml/dime-1.0/*" in dockerignore
+    assert "!ml/dime-1.0/configs" in dockerignore
+    assert "ml/dime-1.0/configs/*" in dockerignore
+    assert "!ml/dime-1.0/configs/dime_observability_pricing_v1.json" in dockerignore
+    assert [
+        pattern
+        for pattern in dockerignore
+        if pattern.startswith("!ml/dime-1.0/") and pattern != "!ml/dime-1.0/configs"
+    ] == ["!ml/dime-1.0/configs/dime_observability_pricing_v1.json"]
     assert "ml/dime-1.0" not in dockerfile
 
 

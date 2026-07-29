@@ -682,6 +682,31 @@ export const games = mysqlTable("games", {
    */
   oddsSource: mysqlEnum("oddsSource", ["open", "dk"]),
 
+  // ─── Evidence Provenance Lifecycle (Phase 1 observability) ────────────────
+  /**
+   * Provider-authored observation time for the current dynamic market record.
+   * Null means no authoritative provider timestamp was persisted. Never
+   * substitute retrieval time, request time, or modelRunAt.
+   */
+  providerObservedAt: timestamp("provider_observed_at", { fsp: 3 }),
+  /**
+   * Provider/source last-update time when it is distinct from the observation
+   * time. Null means the source did not supply an authoritative update time.
+   */
+  sourceUpdatedAt: timestamp("source_updated_at", { fsp: 3 }),
+  /** Time the ingestion boundary received the provider record. */
+  ingestionReceivedAt: timestamp("ingestion_received_at", { fsp: 3 }),
+  /** Time the record completed deterministic normalization. */
+  ingestionNormalizedAt: timestamp("ingestion_normalized_at", { fsp: 3 }),
+  /** Time the normalized record was durably persisted. */
+  ingestionPersistedAt: timestamp("ingestion_persisted_at", { fsp: 3 }),
+  /** Immutable revision of the ingestion pipeline that produced the row. */
+  ingestionPipelineRevision: varchar("ingestion_pipeline_revision", {
+    length: 160,
+  }),
+  /** Stable identifier for the ingestion run that produced the row. */
+  ingestionRunId: varchar("ingestion_run_id", { length: 160 }),
+
   // ─── Outcome Ingestion + Brier Scores (populated by mlbOutcomeIngestor after game final) ──
   /**
    * Actual full-game total runs (awayFinalScore + homeFinalScore).

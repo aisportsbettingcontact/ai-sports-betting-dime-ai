@@ -1286,3 +1286,172 @@ was not raised.
 The corrected production build measures 218,373 gzip bytes, 69 bytes below the
 existing ceiling. TypeScript, the full production client/server build, preview
 verification, 255 focused chat/Trace tests, and `git diff --check` all pass.
+
+## Incident 55 — 2026-07-29 — Prettier batch included a Python test
+
+Status: RESOLVED
+
+I included
+`ml/dime-1.0/tests/test_engineering_control_contract.py` in a Prettier command
+that was intended for JavaScript, JSON, YAML, and Markdown files. Prettier
+formatted the supported files, then exited 2 before the chained tests ran:
+
+```text
+[error] No parser could be inferred for file ".../test_engineering_control_contract.py".
+```
+
+The Python file was not modified by Prettier. Required follow-up: validate it
+with Ruff, run the focused JavaScript and Python tests, and close this incident
+only after those commands execute successfully.
+
+### Update 2026-07-29: RESOLVED
+
+I reran the Python file through its correct formatter and linter, then ran the
+focused runtime and contract suites:
+
+```text
+All checks passed!
+1 file already formatted
+
+Test Files  4 passed (4)
+Tests       111 passed (111)
+
+4 passed in 0.28s
+```
+
+## Incident 56 — 2026-07-29 — Product-route metadata invalidated the frozen routing benchmark hash
+
+Status: RESOLVED
+
+The full Dime Python suite executed 769 tests and reported one failure:
+
+```text
+FAILED ml/dime-1.0/tests/test_runtime_answer_routing_benchmark.py::
+test_local_report_is_bound_to_the_frozen_fixture
+
+1 failed, 768 passed in 46.96s
+```
+
+The benchmark report still bound the prior SHA-256 of
+`server/_core/dimeAnswerRouting.ts`. This change intentionally adds the
+additive `productRoute` classification to that runtime module, so the frozen
+evidence must be regenerated and reviewed rather than having its hash edited
+by hand.
+
+Required follow-up: inspect the repository benchmark reproduction command,
+regenerate the report from the unchanged fixture through the current runtime,
+verify semantic results, checksums, and focused tests, then close only when the
+full Python suite passes.
+
+### Update 2026-07-29: RESOLVED
+
+The documented generator changed only the runtime-module hash in the report;
+all 19 frozen cases and every recorded metric remained unchanged and passing.
+I updated the report checksum, ran generator check mode, ran the focused
+JavaScript and Python evidence tests, and then reran the full Dime Python suite:
+
+```text
+Runtime Answer Routing v1 evidence matches .../local-baseline.json
+Test Files  1 passed (1)
+Tests       1 passed (1)
+7 passed in 0.09s
+769 passed in 48.72s
+```
+
+## Incident 57 — 2026-07-29 — TSX benchmark generator could not create its sandbox IPC socket
+
+Status: RESOLVED
+
+The documented routing-benchmark regeneration command failed before loading
+project code because TSX could not create its local IPC socket:
+
+```text
+Error: listen EPERM: operation not permitted
+.../T/tsx-501/59928.pipe
+code: 'EPERM'
+```
+
+No benchmark artifact changed. Required follow-up: rerun the same repository
+generator with narrowly scoped sandbox escalation, then continue Incident 56
+verification.
+
+### Update 2026-07-29: RESOLVED
+
+The approved rerun executed the same documented generator and wrote the
+deterministic report. The check-mode rerun and companion tests then passed:
+
+```text
+Runtime Answer Routing v1 evidence matches .../local-baseline.json
+Test Files  1 passed (1)
+Tests       1 passed (1)
+7 passed in 0.09s
+```
+
+## Incident 58 — 2026-07-29 — Authorization-label cleanup patch used pre-format context
+
+Status: RESOLVED
+
+I attempted to rename the training-strategy result from
+`trainingAuthorized` to the narrower `trainingEligibleForAuthorization`.
+`apply_patch` rejected the edit because Prettier had changed the exact line
+wrapping used as patch context:
+
+```text
+apply_patch verification failed: Failed to find expected lines
+```
+
+No file changed. Required follow-up: inspect the formatted declarations and
+return block, apply the scoped rename, then rerun the focused runtime suite.
+
+### Update 2026-07-29: RESOLVED
+
+The scoped rename now distinguishes eligibility from actual training
+authorization. The focused control-plane suite passed 10/10 tests and the
+repository TypeScript check exited 0.
+
+## Incident 59 — 2026-07-29 — Product-route evidence generator IPC denied in sandbox
+
+Status: RESOLVED
+
+The new product-route benchmark generator failed before loading repository
+code because TSX could not create its local IPC socket:
+
+```text
+Error: listen EPERM: operation not permitted
+.../T/tsx-501/63937.pipe
+code: 'EPERM'
+```
+
+No evidence artifact existed or changed during the failed attempt.
+
+### Update 2026-07-29: RESOLVED
+
+The same repository generator was rerun with narrowly scoped approval and
+wrote the deterministic local product-route baseline. Its check mode and
+contract tests are part of the Phase 1 verification matrix.
+
+## Incident 60 — 2026-07-29 — New Python benchmark test required Ruff formatting
+
+Status: RESOLVED
+
+The focused Ruff lint check passed, but `ruff format --check` correctly
+reported that the new product-route benchmark contract test needed mechanical
+line wrapping. No runtime or evidence artifact was affected.
+
+### Update 2026-07-29: RESOLVED
+
+Ruff formatted the single test file. Lint, format check, and all four focused
+Python benchmark tests then passed.
+
+## Incident 61 — 2026-07-29 — Checksum verification used the wrong working directory
+
+Status: RESOLVED
+
+The first `shasum --check` invocation ran from the repository root even though
+the manifest paths are relative to the manifest directory. All three entries
+therefore reported `No such file or directory`; no digest mismatch occurred.
+
+### Update 2026-07-29: RESOLVED
+
+The same manifest was verified from its owning evidence directory. The frozen
+fixture, local report, and JSON Schema all returned `OK`.

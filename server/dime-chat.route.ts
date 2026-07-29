@@ -92,6 +92,17 @@ import {
   type ActiveDimeChatTrace,
   type DimeChatTraceProviderMetadata,
 } from "./dimeChatTrace";
+import {
+  DIME_ENGINEERING_CONTROL_VERSION,
+  getDimeEngineeringControlSummary,
+} from "./_core/dimeEngineeringControl";
+import {
+  assembleDimeContextObservability,
+  dimeContextToolTrace,
+  dimeNoDynamicContextObservability,
+  requireDimeTraceIdentity,
+  type DimeTraceContextObservability,
+} from "./_core/dimeTraceObservability";
 
 const VALIDATION_BLOCKED_RESPONSE =
   "I can’t verify that betting verdict against grounded Dime data, so I’m blocking it rather than risking a fabricated edge. Please provide the event, market, current line/odds, sportsbook, timestamp, and model projection/version so I can evaluate it safely.";
@@ -343,9 +354,11 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
 
   const requestClass = classifyDimeChatRequest(messages);
   const responseBudget = selectDimeChatResponseBudget(requestClass);
+  const classificationStartedAt = Date.now();
   const answerRoute = planDimeAnswerRoute(
     messages[messages.length - 1].content
   );
+  const classificationLatencyMs = Date.now() - classificationStartedAt;
   const requestProviderMetadata = traceProviderMetadata(
     researchAlphaGate,
     responseBudget,
@@ -357,7 +370,9 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
     requestClass,
     responseBudget,
     answerMode: answerRoute.mode,
+    productRoute: answerRoute.productRoute,
     answerRoutingVersion: answerRoute.version,
+    classificationLatencyMs,
     requestedDate: answerRoute.requestedDate,
     dateSource: answerRoute.dateSource,
     league: answerRoute.league,
@@ -397,6 +412,20 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
           requestClass,
           responseBudget,
           provider: requestProviderMetadata,
+          identity: requireDimeTraceIdentity({
+            requestId,
+            modelProvider: requestProviderMetadata.provider,
+            baseModel: requestProviderMetadata.requestedModel,
+            modelRevision:
+              requestProviderMetadata.baseRevision ??
+              requestProviderMetadata.requestedModel,
+            adapterRevision: requestProviderMetadata.adapterRevision ?? null,
+            promptRevision: requestProviderMetadata.profileVersion,
+            route: answerRoute.productRoute,
+            routePolicyRevision:
+              getDimeEngineeringControlSummary().routePolicySha256,
+            controlPlaneRevision: DIME_ENGINEERING_CONTROL_VERSION,
+          }),
         });
         if (traceResult.kind === "conflict") {
           res.status(409).json({ error: traceResult.reason });
@@ -490,6 +519,7 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
           freshness: "none",
           rowCount: 0,
           answerMode: answerRoute.mode,
+          productRoute: answerRoute.productRoute,
           routingVersion: answerRoute.version,
           dateSource: answerRoute.dateSource,
           requestedDate: answerRoute.requestedDate,
@@ -499,6 +529,9 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
           retrievalCandidateCount: 0,
           retrievalLatencyMs: 0,
           confidence: 1,
+          observability: dimeNoDynamicContextObservability(
+            classificationLatencyMs
+          ),
         });
         const finalized = await finalizeDimeChatTrace(activeTrace, {
           rawOutput: servedOutput,
@@ -507,9 +540,11 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
           finishReason: "safety_intervention",
           actualModel: "responsible-gambling-policy-v1",
           answerMode: answerRoute.mode,
+          productRoute: answerRoute.productRoute,
           routingVersion: answerRoute.version,
           completenessStatus: "not_applicable",
           groundingStatus: "none",
+          zeroCostRuntime: true,
           latencyMs: Date.now() - startTime,
         });
         assistantMessageId = finalized.assistantMessageId;
@@ -540,6 +575,7 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
       type: "meta",
       dataFreshness: "none",
       answerMode: answerRoute.mode,
+      productRoute: answerRoute.productRoute,
       answerRoutingVersion: answerRoute.version,
       eventResolution: "not_applicable",
       groundingStatus: "none",
@@ -577,6 +613,7 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
       requestId,
       startTime,
       answerRoute,
+      classificationLatencyMs,
       trace: activeTrace,
       log: dimeLog,
       meta: {
@@ -637,6 +674,7 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
       requestClass,
       responseBudget,
       answerRoute,
+      classificationLatencyMs,
       systemPrompt:
         requestProviderMetadata.systemPrompt ??
         DIME_RESEARCH_ALPHA_SYSTEM_PROMPT,
@@ -661,6 +699,7 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
       requestClass,
       responseBudget,
       answerRoute,
+      classificationLatencyMs,
       systemPrompt: requestProviderMetadata.systemPrompt ?? DIME1_SYSTEM_PROMPT,
       trace: activeTrace,
     });
@@ -683,6 +722,7 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
           freshness: "none",
           rowCount: 0,
           answerMode: answerRoute.mode,
+          productRoute: answerRoute.productRoute,
           routingVersion: answerRoute.version,
           dateSource: answerRoute.dateSource,
           requestedDate: answerRoute.requestedDate,
@@ -692,6 +732,9 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
           retrievalCandidateCount: 0,
           retrievalLatencyMs: 0,
           confidence: 1,
+          observability: dimeNoDynamicContextObservability(
+            classificationLatencyMs
+          ),
         });
         const finalized = await finalizeDimeChatTrace(activeTrace, {
           rawOutput: DIME_CHAT_FROZEN_NOTICE,
@@ -700,9 +743,11 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
           finishReason: "provider_frozen",
           actualModel: "no-provider",
           answerMode: answerRoute.mode,
+          productRoute: answerRoute.productRoute,
           routingVersion: answerRoute.version,
           completenessStatus: "not_applicable",
           groundingStatus: "none",
+          zeroCostRuntime: true,
           latencyMs: Date.now() - startTime,
         });
         assistantMessageId = finalized.assistantMessageId;
@@ -737,6 +782,7 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
       type: "meta",
       dataFreshness: "none",
       answerMode: answerRoute.mode,
+      productRoute: answerRoute.productRoute,
       answerRoutingVersion: answerRoute.version,
       eventResolution: "not_applicable",
       groundingStatus: "none",
@@ -771,6 +817,9 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
   let contextRowCount = 0;
   let contextEventIds: number[] = [];
   let contextLookupErrorClass: string | undefined;
+  let contextObservability: DimeTraceContextObservability =
+    dimeNoDynamicContextObservability(classificationLatencyMs);
+  const contextToolStartedAt = new Date();
   const userNumericValues = collectDimeNumericValues(
     messages
       .filter(message => message.role === "user")
@@ -798,6 +847,10 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
     contextSnapshot = context.context;
     contextRowCount = context.rowCount;
     contextEventIds = context.eventIds;
+    contextObservability = assembleDimeContextObservability({
+      classificationMs: classificationLatencyMs,
+      ...context.observability,
+    });
     answerEvidence = {
       route: context.route,
       resolution: context.resolution,
@@ -827,6 +880,7 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
       rowCount: context.rowCount,
       eventIds: context.eventIds,
       answerMode: context.route.mode,
+      productRoute: context.route.productRoute,
       eventResolution: context.resolution.kind,
       groundingStatus: context.grounding,
       retrievalCandidateCount: context.retrievalCandidateCount,
@@ -836,6 +890,25 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
     dataFreshness = "none";
     contextLookupErrorClass =
       (contextErr as Error)?.constructor?.name ?? "Unknown";
+    const contextToolCompletedAt = new Date();
+    contextObservability = {
+      ...dimeNoDynamicContextObservability(
+        classificationLatencyMs,
+        contextToolCompletedAt
+      ),
+      toolCall: dimeContextToolTrace({
+        status: "failed",
+        normalizedArguments: {
+          route: answerRoute.productRoute,
+          league: answerRoute.league ?? null,
+          requestedDate: answerRoute.requestedDate ?? null,
+          retrievalCap: answerRoute.retrievalCap,
+        },
+        startedAt: contextToolStartedAt,
+        completedAt: contextToolCompletedAt,
+        validationResult: "not_run",
+      }),
+    };
     dimeLog("dime.chat.context_error", requestId, {
       errorClass: contextLookupErrorClass,
       detail: (contextErr as Error)?.message ?? "Context lookup failed",
@@ -851,6 +924,7 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
         context: contextSnapshot,
         lookupErrorClass: contextLookupErrorClass,
         answerMode: answerEvidence.route.mode,
+        productRoute: answerEvidence.route.productRoute,
         routingVersion: answerEvidence.route.version,
         dateSource: answerEvidence.route.dateSource,
         requestedDate: answerEvidence.route.requestedDate,
@@ -860,6 +934,7 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
         retrievalCandidateCount: answerEvidence.retrievalCandidateCount,
         retrievalLatencyMs: answerEvidence.retrievalLatencyMs,
         confidence: answerEvidence.resolution.confidence,
+        observability: contextObservability,
       });
     } catch (traceError) {
       await failDimeChatTrace(activeTrace, {
@@ -898,6 +973,7 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
     requestClass,
     responseBudget,
     answerMode: answerRoute.mode,
+    productRoute: answerRoute.productRoute,
     answerRoutingVersion: answerRoute.version,
     eventResolution: answerEvidence.resolution.kind,
     groundingStatus: answerEvidence.grounding,
@@ -925,6 +1001,7 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
     requestClass,
     responseBudget,
     answerMode: answerRoute.mode,
+    productRoute: answerRoute.productRoute,
     answerRoutingVersion: answerRoute.version,
     eventResolution: answerEvidence.resolution.kind,
     groundingStatus: answerEvidence.grounding,
@@ -934,6 +1011,7 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
 
   let traceFinalized = false;
   try {
+    const modelStartedAt = Date.now();
     const stream = anthropic.messages.stream(
       {
         model: DIME_CHAT_MODEL,
@@ -945,11 +1023,14 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
     );
 
     let output = "";
+    let firstTokenAt: number | undefined;
     stream.on("text", delta => {
+      firstTokenAt ??= Date.now();
       output += delta;
     });
 
     const final = await stream.finalMessage();
+    const modelCompletedAt = Date.now();
     if (aborted || res.destroyed) {
       if (activeTrace) {
         await failDimeChatTrace(activeTrace, {
@@ -961,6 +1042,7 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
       }
       return;
     }
+    const validationStartedAt = Date.now();
     const validation = validateDimeResponseText(output);
     const certaintyViolation = containsProhibitedBettingCertainty(output);
     const completeness = validateDimeResponseCompleteness(
@@ -980,6 +1062,7 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
       validation.ok && !certaintyViolation && completeness.safeFallback
         ? "runtime_answer_fallback"
         : "validation_blocked";
+    const validationMs = Date.now() - validationStartedAt;
 
     dimeLog("dime.chat.stream.done", requestId, {
       stopReason: final.stop_reason,
@@ -1007,6 +1090,7 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
           validationErrors: combinedValidationErrors,
           certaintyViolation,
           answerMode: answerRoute.mode,
+          productRoute: answerRoute.productRoute,
           routingVersion: answerRoute.version,
           completenessStatus: completeness.status,
           groundingStatus: answerEvidence.grounding,
@@ -1015,6 +1099,12 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
             completionTokens: final.usage.output_tokens,
             totalTokens: final.usage.input_tokens + final.usage.output_tokens,
           },
+          modelTimeToFirstTokenMs:
+            firstTokenAt === undefined
+              ? undefined
+              : firstTokenAt - modelStartedAt,
+          modelCompletionMs: modelCompletedAt - modelStartedAt,
+          validationMs,
           latencyMs: Date.now() - startTime,
         });
         assistantMessageId = finalized.assistantMessageId;
@@ -1058,6 +1148,7 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
         validationErrors: combinedValidationErrors,
         certaintyViolation,
         answerMode: answerRoute.mode,
+        productRoute: answerRoute.productRoute,
         routingVersion: answerRoute.version,
         completenessStatus: completeness.status,
         groundingStatus: answerEvidence.grounding,
@@ -1066,6 +1157,12 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
           completionTokens: final.usage.output_tokens,
           totalTokens: final.usage.input_tokens + final.usage.output_tokens,
         },
+        modelTimeToFirstTokenMs:
+          firstTokenAt === undefined
+            ? undefined
+            : firstTokenAt - modelStartedAt,
+        modelCompletionMs: modelCompletedAt - modelStartedAt,
+        validationMs,
         latencyMs: Date.now() - startTime,
       });
       assistantMessageId = finalized.assistantMessageId;
