@@ -118,10 +118,13 @@ async function checkGamesCount(pool: mysql.Pool, seasons: number[]): Promise<voi
 
   const [totalRows] = await pool.query("SELECT COUNT(*) n FROM mlb_games");
   const dbGrandTotal = Number((totalRows as any)[0].n);
-  const grandTotalOk = dbGrandTotal === EXPECTED_GRAND_TOTAL && datasetGrandTotal === EXPECTED_GRAND_TOTAL;
+  // The DB grows nightly with new finals, so the anchor is the dataset itself,
+  // not a fixed constant. EXPECTED_GRAND_TOTAL remains a floor (initial load).
+  const grandTotalOk =
+    dbGrandTotal === datasetGrandTotal && dbGrandTotal >= EXPECTED_GRAND_TOTAL;
   if (!grandTotalOk) ok = false;
 
-  record(1, "mlb_games count per season == dataset finals; grand total == 49414", ok, {
+  record(1, "mlb_games count per season == dataset finals; grand total == dataset", ok, {
     perSeason,
     datasetGrandTotal,
     dbGrandTotal,
