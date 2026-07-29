@@ -164,8 +164,11 @@ describe("Brand law (THREE-COLOR-LAW v2/v3)", () => {
     expect(navCss).toMatch(
       /\.mfn-item\.mfn-chat\[aria-current="page"\] \{[^}]*background: var\(--dime-mint\)/s
     );
+    // 2026-07-29 r2: the active chat pill swaps its content for the credits
+    // readout, so the activation dot is removed there — mint fill + content
+    // swap carry the state, no dot beneath the credits.
     expect(navCss).toMatch(
-      /\.mfn-item\.mfn-chat\[aria-current="page"\]::after \{[^}]*background: #ffffff/s
+      /\.mfn-item\.mfn-chat\[aria-current="page"\]::after \{[^}]*display: none/s
     );
   });
 

@@ -173,11 +173,6 @@ type DimeChatTraceTools = typeof import("./chatTrace");
 
 const loadDimeChatTrace = () => import("./chatTrace");
 
-/** Placeholder credits balance (owner directive 2026-07-29): the phone chat
- *  header band and the floating nav's active chat pill surface this value
- *  until the real credits system lands. One constant so both read the same. */
-const CREDITS_PLACEHOLDER = "3,000";
-
 const prefersReducedMotion = () =>
   typeof window !== "undefined" &&
   !!window.matchMedia?.(REDUCED_MOTION_QUERY).matches;
@@ -2490,15 +2485,12 @@ export default function DimeChatPage({
                 "Menu"
               )}
             </button>
-            {/* Phones (owner directive 2026-07-29): the bar's center is the
-                credits header band — messages scroll UNDER it (the bar is a
-                solid fixed band). Placeholder value until credits ship.
-                Tablet keeps the wordmark title. */}
-            {phone ? (
-              <span className="dc-mobile-credits" aria-label="Credits balance">
-                {CREDITS_PLACEHOLDER} credits
-              </span>
-            ) : (
+            {/* Phones (owner directive 2026-07-29 r2): the floating nav's
+                active chat pill is the ONE credits display — repeating it
+                here read as a duplicate, so the bar center stays empty and
+                the bar collapses to the toggle's own footprint. Tablet keeps
+                the wordmark title. */}
+            {!phone && (
               <span className="dc-mobile-title">
                 <span className="dime-wordmark" aria-label="dime">
                   d

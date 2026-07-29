@@ -758,10 +758,89 @@ button.dc-sidebar-row {
     opacity: 0.55;
     padding-bottom: max(8px, env(safe-area-inset-bottom));
   }
-  /* With the footer collapsed to one dim line, the composer hugs the bottom
-     of the conversation viewport. */
+  /* ── Floating composer (owner directive 2026-07-29 r2) ───────────────────
+     In conversation the pill leaves document flow entirely: it floats over
+     the chat ground almost at the bottom edge, with just the one-line
+     disclaimer beneath it. The scroller runs the full height behind it; a
+     mask-image gradient makes turns SLOWLY VANISH as they flow under the
+     pill (and the bottom padding lets the last turn scroll fully clear of
+     the fade). Pure compositing — no scroll listeners, and the effect is
+     continuous with scroll position, so reduced-motion needs no fork. */
+  .dc-main--conv {
+    position: relative;
+  }
   .dc-main--conv .dc-composer-zone {
-    padding-bottom: 8px;
+    position: absolute;
+    left: 16px;
+    right: 16px;
+    bottom: 34px;
+    width: auto;
+    padding: 0;
+    z-index: 5;
+  }
+  .dc-main--conv .dc-scroller {
+    padding-bottom: 176px;
+    -webkit-mask-image: linear-gradient(
+      to bottom,
+      black calc(100% - 170px),
+      transparent calc(100% - 70px)
+    );
+    mask-image: linear-gradient(
+      to bottom,
+      black calc(100% - 170px),
+      transparent calc(100% - 70px)
+    );
+  }
+
+  /* ── Composer theme swap (owner directive 2026-07-29 r2) ─────────────────
+     Phones run each theme's OPPOSITE composer kit: dark shows the light-kit
+     pill (white ground, black send disc, mint chevron + white plus-rect);
+     light shows the dark-kit pill (black ground, white send disc, black
+     chevron + mint plus-rect). Each pill keeps its designed button pairing
+     verbatim — only which theme wears which flips. The dime token pair is
+     the inverse in both themes, so the shared decls collapse to one rule;
+     only the glyph inks need theme scopes. A floating-surface shadow lifts
+     the pill off the chat ground. */
+  /* Theme-scoped to tie the frozen kit's 0-2-0 specificity — this file
+     imports after frozen-tokens.css, so the tie resolves here. */
+  .theme-dark .dc-composer,
+  .theme-light .dc-composer {
+    background: var(--dime-text-primary);
+    border: 1px solid var(--dime-bg);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.38);
+  }
+  .theme-dark .dc-composer:focus-within,
+  .theme-light .dc-composer:focus-within {
+    box-shadow:
+      0 0 0 3px var(--ring),
+      0 10px 28px rgba(0, 0, 0, 0.38);
+  }
+  .theme-dark .dc-composer-plus,
+  .theme-light .dc-composer-plus,
+  .theme-dark .dc-composer-input,
+  .theme-light .dc-composer-input {
+    color: var(--dime-bg);
+  }
+  .theme-dark .dc-composer-input::placeholder,
+  .theme-light .dc-composer-input::placeholder {
+    color: var(--dime-bg);
+  }
+  .theme-dark .dc-send,
+  .theme-light .dc-send {
+    background: var(--dime-bg);
+    border: 0.5px solid var(--dime-text-primary);
+  }
+  .theme-dark .dc-send-chevron {
+    stroke: var(--accent);
+  }
+  .theme-light .dc-send-chevron {
+    stroke: var(--text-primary);
+  }
+  .theme-dark .dc-send-rect {
+    fill: var(--text-primary);
+  }
+  .theme-light .dc-send-rect {
+    fill: var(--accent);
   }
 
   /* ── Phone drawer pass (owner directive 2026-07-29) ──────────────────────
@@ -809,18 +888,25 @@ button.dc-sidebar-row {
     animation-delay: 80ms;
   }
 
-  /* ── Credits header band (owner directive 2026-07-29) ────────────────────
-     The fixed mobile bar's center is the credits placeholder; the bar's
-     solid ground is what conversation turns slide underneath. */
-  .dc-mobile-credits {
-    min-width: 0;
-    text-align: center;
-    white-space: nowrap;
-    font-size: 13px;
-    font-weight: 600;
-    letter-spacing: 0.02em;
-    font-variant-numeric: tabular-nums;
-    color: var(--text-primary);
+  /* ── Toggle bar sizing (owner directive 2026-07-29 r2) ───────────────────
+     With the credits living solely in the floating nav pill, the bar holds
+     only the chat-history toggle — the band collapses to the button's own
+     footprint (0.9x: 44 -> 40px, icon 22.5 -> 20px), nudged up toward the
+     nav so the chrome reads as one cluster. */
+  body.dime-floating-nav-active .dc-mobile-bar {
+    height: 40px;
+  }
+  body.dime-floating-nav-active .dc-scroller {
+    padding-top: calc(40px + 12px);
+  }
+  .dc-mobile-menu {
+    min-width: 40px;
+    min-height: 40px;
+    margin-top: -6px;
+  }
+  .dc-mobile-menu svg {
+    width: 20px;
+    height: 20px;
   }
 
   /* ── iMessage-register bubbles (owner directive 2026-07-29) ──────────────
