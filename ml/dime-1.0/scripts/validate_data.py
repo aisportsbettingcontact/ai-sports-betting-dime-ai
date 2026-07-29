@@ -17,6 +17,7 @@ from dime_ai.data_validation import (
     validate_unique_ids,
 )
 from dime_ai.foundation_contracts import load_foundation_contracts
+from dime_ai.platform_knowledge import load_platform_knowledge
 
 
 def parse_args() -> argparse.Namespace:
@@ -32,6 +33,15 @@ def main() -> None:
     print(f"Foundation contracts: {len(foundation_contracts.contracts)}")
     print(f"Foundation contract bundle SHA-256: {foundation_contracts.bundle_sha256}")
     print("FOUNDATION CONTRACTS VALIDATED")
+
+    platform_knowledge = load_platform_knowledge(project_root=supplied_project)
+    print(
+        "Platform knowledge: "
+        f"{platform_knowledge.document['knowledge_version']} / "
+        f"{len(platform_knowledge.document['features'])} features"
+    )
+    print(f"Platform knowledge SHA-256: {platform_knowledge.sha256}")
+    print("PLATFORM KNOWLEDGE VALIDATED")
 
     train_path = project / "data/sft/train.sample.jsonl"
     validation_path = project / "data/sft/validation.sample.jsonl"

@@ -45,13 +45,19 @@ import { handleDime1ChatRequest } from "./_core/dime1ChatHandler";
 import {
   DIME1_BASE_MODEL_REVISION,
   DIME1_CHAT_TEMPERATURE,
+  DIME1_PROMPT_SOURCE,
   DIME1_PRODUCT_PROFILE,
   DIME1_PROFILE_VERSION,
   DIME1_SYSTEM_PROMPT,
+  DIME_RESEARCH_ALPHA_PROMPT_SOURCE,
   DIME_RESEARCH_ALPHA_PRODUCT_PROFILE,
   DIME_RESEARCH_ALPHA_PROFILE_VERSION,
   DIME_RESEARCH_ALPHA_SYSTEM_PROMPT,
 } from "./_core/dime1Model";
+import {
+  DIME_PLATFORM_KNOWLEDGE_SHA256,
+  DIME_PLATFORM_KNOWLEDGE_VERSION,
+} from "./_core/dimePlatformKnowledge";
 import { resolveDimeResearchAlphaGate } from "./_core/dimeResearchAlpha";
 import { validateDimeResponseText } from "./_core/dimeVerdict";
 import {
@@ -111,8 +117,10 @@ function traceProviderMetadata(
       baseRevision: researchAlphaGate.revision,
       productProfile: DIME_RESEARCH_ALPHA_PRODUCT_PROFILE,
       profileVersion: DIME_RESEARCH_ALPHA_PROFILE_VERSION,
-      promptSource: "research-alpha-control",
+      promptSource: DIME_RESEARCH_ALPHA_PROMPT_SOURCE,
       systemPrompt: DIME_RESEARCH_ALPHA_SYSTEM_PROMPT,
+      platformKnowledgeVersion: DIME_PLATFORM_KNOWLEDGE_VERSION,
+      platformKnowledgeSha256: DIME_PLATFORM_KNOWLEDGE_SHA256,
       maxTokens: responseBudget,
       temperature: DIME1_CHAT_TEMPERATURE,
     };
@@ -130,8 +138,10 @@ function traceProviderMetadata(
         process.env.DIME_MODEL_ADAPTER_REVISION?.trim() || undefined,
       productProfile: DIME1_PRODUCT_PROFILE,
       profileVersion: DIME1_PROFILE_VERSION,
-      promptSource: "dime1-v1",
+      promptSource: DIME1_PROMPT_SOURCE,
       systemPrompt: DIME1_SYSTEM_PROMPT,
+      platformKnowledgeVersion: DIME_PLATFORM_KNOWLEDGE_VERSION,
+      platformKnowledgeSha256: DIME_PLATFORM_KNOWLEDGE_SHA256,
       maxTokens: responseBudget,
       temperature: DIME1_CHAT_TEMPERATURE,
     };
@@ -147,6 +157,8 @@ function traceProviderMetadata(
       promptSource: DIME_CHAT_PROFILE_METADATA.promptSource,
       systemPrompt: DIME_CHAT_SYSTEM_PROMPT,
       blueprintHash: DIME_CHAT_PROFILE_METADATA.blueprintHash,
+      platformKnowledgeVersion: DIME_PLATFORM_KNOWLEDGE_VERSION,
+      platformKnowledgeSha256: DIME_PLATFORM_KNOWLEDGE_SHA256,
       maxTokens: responseBudget,
     };
   }
@@ -158,6 +170,8 @@ function traceProviderMetadata(
     profileVersion: DIME_CHAT_PROFILE_METADATA.profileVersion,
     promptSource: "provider-frozen",
     blueprintHash: DIME_CHAT_PROFILE_METADATA.blueprintHash,
+    platformKnowledgeVersion: DIME_PLATFORM_KNOWLEDGE_VERSION,
+    platformKnowledgeSha256: DIME_PLATFORM_KNOWLEDGE_SHA256,
     maxTokens: responseBudget,
   };
 }
@@ -292,15 +306,21 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
   const messages = sanitizeDimeChatHistory(req.body?.messages);
   const requestClass = classifyDimeChatRequest(messages);
   const responseBudget = selectDimeChatResponseBudget(requestClass);
+  const requestProviderMetadata = traceProviderMetadata(
+    researchAlphaGate,
+    responseBudget
+  );
 
   dimeLog("dime.chat.request", requestId, {
     messageCount: messages.length,
     requestClass,
     responseBudget,
-    dimeProfile: DIME_CHAT_PROFILE_METADATA.productProfile,
-    profileVersion: DIME_CHAT_PROFILE_METADATA.profileVersion,
-    blueprintHash: DIME_CHAT_PROFILE_METADATA.blueprintHash,
-    promptSource: DIME_CHAT_PROFILE_METADATA.promptSource,
+    dimeProfile: requestProviderMetadata.productProfile,
+    profileVersion: requestProviderMetadata.profileVersion,
+    blueprintHash: requestProviderMetadata.blueprintHash,
+    promptSource: requestProviderMetadata.promptSource,
+    platformKnowledgeVersion: requestProviderMetadata.platformKnowledgeVersion,
+    platformKnowledgeSha256: requestProviderMetadata.platformKnowledgeSha256,
     lastMessageLength:
       messages.length > 0 ? messages[messages.length - 1].content.length : 0,
   });
@@ -339,7 +359,7 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
           history: messages,
           requestClass,
           responseBudget,
-          provider: traceProviderMetadata(researchAlphaGate, responseBudget),
+          provider: requestProviderMetadata,
         });
         if (traceResult.kind === "conflict") {
           res.status(409).json({ error: traceResult.reason });
@@ -369,6 +389,7 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
             type: "meta",
             dataFreshness: traceResult.dataFreshness,
             replayed: true,
+            evidenceIdentity: "trace_lookup",
             trace: dimeChatTraceMeta(traceResult.trace),
           });
           sendReplay({
@@ -646,17 +667,22 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
     return;
   }
 
-  let dataFreshness: "live" | "none" = "none";
+  let dataFreshness: "live" | "delayed" | "none" = "none";
   let contextSnapshot: string | undefined;
   let contextRowCount = 0;
+  let contextEventIds: number[] = [];
   let contextLookupErrorClass: string | undefined;
   const providerMessages = [...messages];
 
   try {
-    const context = await getDimeChatContext();
+    const context = await getDimeChatContext(
+      new Date(),
+      messages.at(-1)?.content ?? ""
+    );
     dataFreshness = context.freshness;
     contextSnapshot = context.context;
     contextRowCount = context.rowCount;
+    contextEventIds = context.eventIds;
 
     if (context.context) {
       providerMessages.unshift(
@@ -672,6 +698,7 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
     dimeLog("dime.chat.context", requestId, {
       dataFreshness,
       rowCount: context.rowCount,
+      eventIds: context.eventIds,
     });
   } catch (contextErr) {
     dataFreshness = "none";
@@ -688,6 +715,7 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
       await recordDimeChatTraceContext(activeTrace, {
         freshness: dataFreshness,
         rowCount: contextRowCount,
+        eventIds: contextEventIds,
         context: contextSnapshot,
         lookupErrorClass: contextLookupErrorClass,
       });
@@ -723,6 +751,8 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
     profileVersion: DIME_CHAT_PROFILE_METADATA.profileVersion,
     promptSource: DIME_CHAT_PROFILE_METADATA.promptSource,
     blueprintHash: DIME_CHAT_PROFILE_METADATA.blueprintHash,
+    platformKnowledgeVersion: DIME_PLATFORM_KNOWLEDGE_VERSION,
+    platformKnowledgeSha256: DIME_PLATFORM_KNOWLEDGE_SHA256,
     requestClass,
     responseBudget,
     ...(activeTrace ? { trace: dimeChatTraceMeta(activeTrace) } : {}),

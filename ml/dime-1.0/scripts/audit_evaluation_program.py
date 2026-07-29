@@ -28,6 +28,7 @@ def parse_args() -> argparse.Namespace:
         default=[
             Path("data/eval/dev.sample.jsonl"),
             Path("data/eval/safety_red_team.sample.jsonl"),
+            Path("data/eval/platform_grounding_v1.sample.jsonl"),
         ],
     )
     parser.add_argument(

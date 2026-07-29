@@ -5,9 +5,13 @@ on:
     branches: [main]
     paths:
       - "ml/dime-1.0/**"
+      - "shared/dime/**"
       - "server/_core/dime1*.ts"
+      - "server/_core/dimeChatContext*.ts"
       - "server/_core/dimeChatModel.ts"
+      - "server/_core/dimePlatformKnowledge*.ts"
       - "server/dime-chat.route.ts"
+      - "server/dimeChatTrace.ts"
       - "server/dime1ProviderWiring.test.ts"
       - "CLAUDE.md"
       - ".dockerignore"
@@ -16,9 +20,13 @@ on:
     branches: [main]
     paths:
       - "ml/dime-1.0/**"
+      - "shared/dime/**"
       - "server/_core/dime1*.ts"
+      - "server/_core/dimeChatContext*.ts"
       - "server/_core/dimeChatModel.ts"
+      - "server/_core/dimePlatformKnowledge*.ts"
       - "server/dime-chat.route.ts"
+      - "server/dimeChatTrace.ts"
       - "server/dime1ProviderWiring.test.ts"
       - "CLAUDE.md"
       - ".dockerignore"
@@ -87,9 +95,9 @@ jobs:
           uv run python scripts/audit_evaluation_program.py \
             --report "${audit_dir}/evaluation-program-audit.json"
           cmp "${audit_dir}/curriculum-audit.json" \
-            evidence/audits/starter-v1.1.0/curriculum-audit.json
+            evidence/audits/starter-v1.2.0/curriculum-audit.json
           cmp "${audit_dir}/evaluation-program-audit.json" \
-            evidence/audits/starter-v1.1.0/evaluation-program-audit.json
+            evidence/audits/starter-v1.2.0/evaluation-program-audit.json
 
       - name: "[OUTPUT] Confirm CPU-only non-release validation"
         run: |

@@ -19,13 +19,19 @@ import type { Request, Response } from "express";
 import type { DimeChatMessage, DimeChatRequestClass } from "./dimeChatModel";
 import {
   DIME1_CHAT_TEMPERATURE,
+  DIME1_PROMPT_SOURCE,
   DIME1_PRODUCT_PROFILE,
   DIME1_PROFILE_VERSION,
   DIME1_SYSTEM_PROMPT,
+  DIME_RESEARCH_ALPHA_PROMPT_SOURCE,
   DIME_RESEARCH_ALPHA_PRODUCT_PROFILE,
   DIME_RESEARCH_ALPHA_PROFILE_VERSION,
   DIME_RESEARCH_ALPHA_SYSTEM_PROMPT,
 } from "./dime1Model";
+import {
+  DIME_PLATFORM_KNOWLEDGE_SHA256,
+  DIME_PLATFORM_KNOWLEDGE_VERSION,
+} from "./dimePlatformKnowledge";
 import {
   Dime1ApiError,
   dime1ChatComplete,
@@ -120,17 +126,22 @@ export async function handleDime1ChatRequest(
     return;
   }
 
-  let dataFreshness: "live" | "none" = "none";
+  let dataFreshness: "live" | "delayed" | "none" = "none";
   let contextSnapshot: string | undefined;
   let contextRowCount = 0;
+  let contextEventIds: number[] = [];
   let contextLookupErrorClass: string | undefined;
   const providerMessages = [...messages];
 
   try {
-    const context = await getDimeChatContext();
+    const context = await getDimeChatContext(
+      new Date(),
+      messages.at(-1)?.content ?? ""
+    );
     dataFreshness = context.freshness;
     contextSnapshot = context.context;
     contextRowCount = context.rowCount;
+    contextEventIds = context.eventIds;
 
     if (context.context) {
       providerMessages.unshift(
@@ -146,6 +157,7 @@ export async function handleDime1ChatRequest(
     dime1Log("dime.chat.dime1.context", requestId, {
       dataFreshness,
       rowCount: context.rowCount,
+      eventIds: context.eventIds,
       deploymentTier,
     });
   } catch (contextErr) {
@@ -164,6 +176,7 @@ export async function handleDime1ChatRequest(
       await recordDimeChatTraceContext(trace, {
         freshness: dataFreshness,
         rowCount: contextRowCount,
+        eventIds: contextEventIds,
         context: contextSnapshot,
         lookupErrorClass: contextLookupErrorClass,
       });
@@ -209,7 +222,11 @@ export async function handleDime1ChatRequest(
     profileVersion: isResearchAlpha
       ? DIME_RESEARCH_ALPHA_PROFILE_VERSION
       : DIME1_PROFILE_VERSION,
-    promptSource: isResearchAlpha ? "research-alpha-control" : "dime1-v1",
+    promptSource: isResearchAlpha
+      ? DIME_RESEARCH_ALPHA_PROMPT_SOURCE
+      : DIME1_PROMPT_SOURCE,
+    platformKnowledgeVersion: DIME_PLATFORM_KNOWLEDGE_VERSION,
+    platformKnowledgeSha256: DIME_PLATFORM_KNOWLEDGE_SHA256,
     provider: isResearchAlpha ? "dime1-research-alpha" : "dime1",
     deploymentTier,
     model: config.model,
@@ -238,6 +255,8 @@ export async function handleDime1ChatRequest(
     historyLength: providerMessages.length,
     requestClass,
     responseBudget,
+    platformKnowledgeVersion: DIME_PLATFORM_KNOWLEDGE_VERSION,
+    platformKnowledgeSha256: DIME_PLATFORM_KNOWLEDGE_SHA256,
     deploymentTier,
   });
 
