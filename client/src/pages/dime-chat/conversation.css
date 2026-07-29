@@ -763,6 +763,138 @@ button.dc-sidebar-row {
   .dc-main--conv .dc-composer-zone {
     padding-bottom: 8px;
   }
+
+  /* ── Phone drawer pass (owner directive 2026-07-29) ──────────────────────
+     The floating nav paints above the drawer (root stacking context vs the
+     fixed page's), so the drawer's own head/rows shift below the nav band —
+     nothing hides behind the pill chrome and the PanelLeftClose collapse
+     control stays visible and tappable. */
+  body.dime-floating-nav-active .dc-sidebar.dc-drawer {
+    padding-top: calc(var(--dime-floating-nav-h, 112px) + 10px);
+  }
+  /* NEW CHAT leads the panel at 1.5x the former recents-label size (11px ->
+     16.5px), icon + uppercase; RECENT CHATS steps up 1.25x (11px -> 13.75px). */
+  .dc-drawer .dc-nav-group .dc-sidebar-row {
+    font-size: 16.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .dc-drawer .dc-nav-group .dc-nav-ico {
+    width: 26px;
+    height: 26px;
+  }
+  .dc-drawer .dc-recents-label {
+    font-size: 13.75px;
+  }
+  /* Active-chat undertone: the current thread carries a solid mint inset
+     rail on top of its row fill — identifiable at a glance, mint stays the
+     single accent (THREE-COLOR-LAW). */
+  .dc-drawer .dc-recent-list .dc-sidebar-row.is-active {
+    box-shadow: inset 3px 0 0 var(--accent);
+  }
+  /* Graceful expand: while the spring slides the panel in (drawerMotion.ts),
+     its content cascades — one 160ms brand beat per group, small x-offset,
+     40ms stagger. aria-hidden is present only while closed, so removing it
+     on open (re)runs the animation. */
+  .dc-drawer:not([aria-hidden]) .dc-nav-group,
+  .dc-drawer:not([aria-hidden]) .dc-recents-head,
+  .dc-drawer:not([aria-hidden]) .dc-recent-list {
+    animation: dcDrawerCascade 160ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .dc-drawer:not([aria-hidden]) .dc-recents-head {
+    animation-delay: 40ms;
+  }
+  .dc-drawer:not([aria-hidden]) .dc-recent-list {
+    animation-delay: 80ms;
+  }
+
+  /* ── Credits header band (owner directive 2026-07-29) ────────────────────
+     The fixed mobile bar's center is the credits placeholder; the bar's
+     solid ground is what conversation turns slide underneath. */
+  .dc-mobile-credits {
+    min-width: 0;
+    text-align: center;
+    white-space: nowrap;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-primary);
+  }
+
+  /* ── iMessage-register bubbles (owner directive 2026-07-29) ──────────────
+     User turns: inverse-ground bubble — light bubble/black ink on dark,
+     dark bubble/white ink on light — anchored right with a bottom-right
+     tail. Dime turns: mint bubble/black ink on BOTH themes, anchored left
+     with a bottom-left tail. Depth comes from a real drop shadow beneath
+     plus a 1px inner highlight (alpha lives only in box-shadow). Edge-stat
+     blocks and footnotes keep their own card/plain registers. */
+  .dc-thread {
+    row-gap: 16px;
+  }
+  .dc-user-capsule {
+    border-radius: 20px 20px 6px 20px;
+    padding: 10px 16px;
+    /* Inverse-ground bubble via the app token pair (X-HEX-EPIDEMIC: no raw
+       hex) — --dime-text-primary/--dime-bg IS the inverse in both themes:
+       white bubble/black ink on dark, black bubble/white ink on light. The
+       html.dark-keyed dime tokens track the same ThemeContext as theme-*. */
+    background: var(--dime-text-primary);
+    color: var(--dime-bg);
+    border: 0;
+  }
+  .theme-dark .dc-user-capsule {
+    box-shadow:
+      0 6px 16px rgba(0, 0, 0, 0.55),
+      inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  }
+  .theme-light .dc-user-capsule {
+    box-shadow:
+      0 6px 16px rgba(0, 0, 0, 0.24),
+      inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  }
+  .dc-turn--assistant {
+    align-items: flex-start;
+  }
+  .dc-turn--assistant .dc-prose {
+    max-width: 85%;
+    /* Mint bubble both themes; --mint-on-light is the law's contrast ink
+       (near-black) — exactly the readable ink on the mint ground. */
+    background: var(--accent);
+    color: var(--mint-on-light);
+    border-radius: 20px 20px 20px 6px;
+    padding: 10px 16px;
+    line-height: 1.5;
+  }
+  .theme-dark .dc-turn--assistant .dc-prose {
+    box-shadow:
+      0 6px 16px rgba(0, 0, 0, 0.55),
+      inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  }
+  .theme-light .dc-turn--assistant .dc-prose {
+    box-shadow:
+      0 6px 16px rgba(0, 0, 0, 0.24),
+      inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  }
+  /* Links inside the mint bubble: mint-on-mint would vanish — black ink,
+     underline carries the affordance (never color alone). */
+  .dc-turn--assistant .dc-prose a,
+  .theme-light .dc-turn--assistant .dc-prose a {
+    color: var(--mint-on-light);
+    text-decoration: underline;
+  }
+}
+
+@keyframes dcDrawerCascade {
+  from {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 @media (max-width: 430px) {
@@ -788,6 +920,12 @@ button.dc-sidebar-row {
   }
   .dc-jump.dc-pressable:active {
     transform: translateX(-50%);
+  }
+  /* Drawer content cascade collapses with the rest of the motion system. */
+  .dc-drawer:not([aria-hidden]) .dc-nav-group,
+  .dc-drawer:not([aria-hidden]) .dc-recents-head,
+  .dc-drawer:not([aria-hidden]) .dc-recent-list {
+    animation: none;
   }
 }
 
