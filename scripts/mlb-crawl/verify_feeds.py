@@ -1,10 +1,16 @@
-"""Verify 100% coverage + accuracy of crawled 2026 feeds against games-2026.json."""
-import json, os, sys
+"""Verify 100% coverage + accuracy of crawled feeds against a season's games-YYYY.json.
+
+Usage: python3 verify_feeds.py [--season 2026]
+"""
+import argparse, json, os, sys
 
 REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-DATASET = os.path.join(REPO, "docs", "mlb-stats-api", "data", "games-2026.json")
-FEED_DIR = os.path.join(REPO, "docs", "mlb-stats-api", "data", "feeds-2026")
 FINAL_STATES = {"F", "O"}
+
+def data_paths(season):
+    data = os.path.join(REPO, "docs", "mlb-stats-api", "data")
+    return (os.path.join(data, f"games-{season}.json"),
+            os.path.join(data, f"feeds-{season}"))
 
 def verify_feed(feed, expected):
     fails = []
@@ -20,16 +26,24 @@ def verify_feed(feed, expected):
     if away != expected["awayScore"] or home != expected["homeScore"]:
         fails.append(f"score mismatch feed {away}-{home} vs dataset {expected['awayScore']}-{expected['homeScore']}")
     plays = feed.get("liveData", {}).get("plays", {}).get("allPlays", [])
-    if len(plays) < 40:
+    detailed = feed.get("gameData", {}).get("status", {}).get("detailedState", "")
+    shortened = (state == "O" or detailed.startswith("Completed Early")
+                 or bool(expected.get("isTie")))   # ties only occur in called-early games
+    min_plays = 25 if shortened else 40      # rain-shortened 5-inning games run ~35 PAs
+    if len(plays) < min_plays:
         fails.append(f"allPlays too small: {len(plays)}")
     innings = ls.get("innings", [])
     if len(innings) < 5:
         fails.append(f"innings too small: {len(innings)}")
-    if state == "F" and ls.get("scheduledInnings", 9) == 9 and len(innings) < 9:
+    if state == "F" and not shortened and ls.get("scheduledInnings", 9) == 9 and len(innings) < 9:
         fails.append(f"innings {len(innings)} < 9 for full final")
     return fails
 
 def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--season", type=int, default=2026)
+    a = ap.parse_args()
+    DATASET, FEED_DIR = data_paths(a.season)
     games = json.load(open(DATASET))
     finals = {g["gamePk"]: g for g in games if g["codedState"] in FINAL_STATES}
     failures, present, valid = [], 0, 0

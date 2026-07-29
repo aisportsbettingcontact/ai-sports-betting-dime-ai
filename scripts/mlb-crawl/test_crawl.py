@@ -43,6 +43,48 @@ def test_verify_feed():
     assert verify_feed(feed, expected) == []
     feed["liveData"]["linescore"]["teams"]["home"]["runs"] = 10
     assert any("score" in c for c in verify_feed(feed, expected))
+    feed["liveData"]["linescore"]["teams"]["home"]["runs"] = 11
+    feed["gameData"]["status"]["codedGameState"] = "F"
+    feed["gameData"]["status"]["detailedState"] = "Completed Early: Rain"
+    feed["liveData"]["plays"]["allPlays"] = [{}] * 37
+    feed["liveData"]["linescore"]["innings"] = [{}] * 5
+    assert verify_feed(feed, expected) == [], "5-inning Completed Early game must pass"
+    feed["gameData"]["status"]["detailedState"] = "Final: Tied"
+    assert any("score" not in c for c in verify_feed(feed, expected)) or verify_feed(feed, expected), "sanity"
+    assert verify_feed(feed, dict(expected, isTie=True)) == [], "tie game called early must pass"
+
+
+
+def test_build_dataset_dedup_rank():
+    from build_games_dataset import rank, game_row, COLS
+    assert rank("F") == rank("O") == 3 and rank("S") == 1 and rank("X") == 2
+    g = {"gamePk": 1, "officialDate": "2026-04-01", "gameDate": "2026-04-01T17:00:00Z",
+         "gameType": "D", "seriesDescription": "Division Series", "doubleHeader": "N",
+         "gameNumber": 1, "status": {"detailedState": "Final", "codedGameState": "F"},
+         "teams": {"away": {"team": {"name": "A", "id": 1}, "score": 2},
+                    "home": {"team": {"name": "B", "id": 2}, "score": 3}},
+         "venue": {"name": "V"}, "decisions": {"winner": {"fullName": "W"}},
+         "linescore": {"innings": [{}] * 9}}
+    row = game_row(g, 2026)
+    assert set(row) == set(COLS)
+    assert row["seriesDescription"] == "Division Series" and row["innings"] == 9
+
+
+
+def test_ensure_out_dir_gitignore(tmpdir="/tmp/mlb_crawl_test_dir"):
+    import os, shutil
+    from crawl_feeds import ensure_out_dir
+    shutil.rmtree(tmpdir, ignore_errors=True)
+    ensure_out_dir(tmpdir)
+    gi = os.path.join(tmpdir, ".gitignore")
+    assert open(gi).read() == "*\n!.gitignore\n"
+    ensure_out_dir(tmpdir)  # idempotent
+
+def test_verify_data_paths():
+    from verify_feeds import data_paths
+    ds, fd = data_paths(2014)
+    assert ds.endswith("data/games-2014.json") and fd.endswith("data/feeds-2014")
+
 
 if __name__ == "__main__":
     for name, fn in sorted({k: v for k, v in globals().items() if k.startswith("test_")}.items()):
