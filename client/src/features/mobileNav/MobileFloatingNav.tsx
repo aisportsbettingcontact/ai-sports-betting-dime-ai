@@ -162,10 +162,18 @@ export function MobileFloatingNav() {
                 onClick={() => handleTap(tab.id, tab.path, isActive)}
               >
                 {isChat ? (
-                  <>
-                    <span className="mfn-chat-text">Chat with</span>
-                    <DimeWordmark decorative />
-                  </>
+                  isActive ? (
+                    // On the chat page itself the pill flips to the credits
+                    // balance (directive 2026-07-29) — placeholder until the
+                    // credits system ships. Black ink on the mint pill, same
+                    // as the "Chat with dime" state it replaces.
+                    <span className="mfn-chat-credits">3,000 credits</span>
+                  ) : (
+                    <>
+                      <span className="mfn-chat-text">Chat with</span>
+                      <DimeWordmark decorative />
+                    </>
+                  )
                 ) : (
                   tab.label
                 )}
