@@ -7,23 +7,35 @@ const src = fs.readFileSync(
   "utf8"
 );
 
-describe("splits-surface accordion gating (moved to Trends tab at ≥768px)", () => {
+const Q = `["']`; // quote-style tolerant (prettier may rewrite quotes)
+
+describe("splits-surface accordion gating (Last 5 + Trends live on the Trends tab)", () => {
   it("imports the shared shell-boundary hook", () => {
     expect(src).toMatch(
-      /import \{ useIsMdUp \} from ["']@\/hooks\/useIsMdUp["']/
+      new RegExp(`import \\{ useIsMdUp \\} from ${Q}@/hooks/useIsMdUp${Q}`)
     );
   });
 
-  it("renders Last 5 Games + Trends only below the shell boundary in splits mode", () => {
-    // The gate: (mode === 'splits' && !isMdUp) || mobileTab === 'splits'
+  it("never renders Last 5 Games + Trends on the Betting Splits surface (any width)", () => {
+    // The gate: mode === 'full' && !isMdUp && mobileTab === 'splits'
+    // — splits mode is excluded entirely; the persisted mobileTab state can
+    // never leak the panels onto desktop feeds either.
     expect(src).toMatch(
-      /\(\(mode === 'splits' && !isMdUp\) \|\| mobileTab === 'splits'\)[\s\S]{0,160}game\.sport === 'MLB'/
+      new RegExp(
+        `mode === ${Q}full${Q} &&\\s*!isMdUp &&\\s*mobileTab === ${Q}splits${Q}[\\s\\S]{0,300}game\\.sport === ${Q}MLB${Q}`
+      )
+    );
+    // No `mode === 'splits' &&` clause may gate the panels back in.
+    expect(src).not.toMatch(
+      new RegExp(`mode === ${Q}splits${Q} &&[\\s\\S]{0,400}<RecentSchedulePanel`)
     );
   });
 
   it("keeps ODDS & SPLITS HISTORY on the splits surface at every width", () => {
     expect(src).toMatch(
-      /\(mode === 'splits' \|\| mobileTab === 'splits'\) && isCardVisible && game\.id != null/
+      new RegExp(
+        `\\(mode === ${Q}splits${Q} \\|\\|\\s*\\(mode === ${Q}full${Q} && !isMdUp && mobileTab === ${Q}splits${Q}\\)\\) &&\\s*isCardVisible &&\\s*game\\.id != null`
+      )
     );
   });
 });

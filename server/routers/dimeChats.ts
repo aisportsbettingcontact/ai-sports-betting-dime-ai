@@ -23,7 +23,10 @@ const TITLE_MAX = 80;
 const LIST_LIMIT = 100;
 
 /** Collapse whitespace and truncate to TITLE_MAX chars with an ellipsis. */
-export function deriveThreadTitle(text: string, max: number = TITLE_MAX): string {
+export function deriveThreadTitle(
+  text: string,
+  max: number = TITLE_MAX
+): string {
   const collapsed = text.replace(/\s+/g, " ").trim();
   if (collapsed.length <= max) return collapsed;
   return `${collapsed.slice(0, max - 1).trimEnd()}…`;
@@ -31,19 +34,34 @@ export function deriveThreadTitle(text: string, max: number = TITLE_MAX): string
 
 async function requireDb() {
   const db = await getDb();
-  if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable." });
+  if (!db)
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Database unavailable.",
+    });
   return db;
 }
 
 /** Load a live (non-deleted) thread owned by userId, or throw NOT_FOUND. */
-async function getOwnedThread(db: Awaited<ReturnType<typeof requireDb>>, threadId: number, userId: number) {
+async function getOwnedThread(
+  db: Awaited<ReturnType<typeof requireDb>>,
+  threadId: number,
+  userId: number
+) {
   const rows = await db
     .select()
     .from(dimeChatThreads)
-    .where(and(eq(dimeChatThreads.id, threadId), eq(dimeChatThreads.userId, userId), isNull(dimeChatThreads.deletedAt)))
+    .where(
+      and(
+        eq(dimeChatThreads.id, threadId),
+        eq(dimeChatThreads.userId, userId),
+        isNull(dimeChatThreads.deletedAt)
+      )
+    )
     .limit(1);
   const thread = rows[0];
-  if (!thread) throw new TRPCError({ code: "NOT_FOUND", message: "Chat not found." });
+  if (!thread)
+    throw new TRPCError({ code: "NOT_FOUND", message: "Chat not found." });
   return thread;
 }
 
@@ -61,7 +79,7 @@ export async function createDimeChatThread(
   db: Awaited<ReturnType<typeof requireDb>>,
   userId: number,
   firstMessage: string,
-  firstAssistantMessage?: string,
+  firstAssistantMessage?: string
 ) {
   const title = deriveThreadTitle(firstMessage);
 
@@ -111,8 +129,12 @@ export const dimeChatsRouter = router({
     .input(z.object({ includeArchived: z.boolean().default(false) }).optional())
     .query(async ({ ctx, input }) => {
       const db = await requireDb();
-      const conditions = [eq(dimeChatThreads.userId, ctx.appUser.id), isNull(dimeChatThreads.deletedAt)];
-      if (!input?.includeArchived) conditions.push(eq(dimeChatThreads.archived, false));
+      const conditions = [
+        eq(dimeChatThreads.userId, ctx.appUser.id),
+        isNull(dimeChatThreads.deletedAt),
+      ];
+      if (!input?.includeArchived)
+        conditions.push(eq(dimeChatThreads.archived, false));
       const rows = await db
         .select({
           id: dimeChatThreads.id,
@@ -158,7 +180,7 @@ export const dimeChatsRouter = router({
       z.object({
         firstMessage: messageContent,
         firstAssistantMessage: messageContent.optional(),
-      }),
+      })
     )
     .mutation(async ({ ctx, input }) => {
       const db = await requireDb();
@@ -166,7 +188,7 @@ export const dimeChatsRouter = router({
         db,
         ctx.appUser.id,
         input.firstMessage,
-        input.firstAssistantMessage,
+        input.firstAssistantMessage
       );
     }),
 
@@ -179,51 +201,86 @@ export const dimeChatsRouter = router({
       z.object({
         threadId: z.number().int().positive(),
         messages: z
-          .array(z.object({ role: z.enum(["user", "assistant"]), content: messageContent }))
+          .array(
+            z.object({
+              role: z.enum(["user", "assistant"]),
+              content: messageContent,
+            })
+          )
           .min(1)
           .max(2),
-      }),
+      })
     )
     .mutation(async ({ ctx, input }) => {
       const db = await requireDb();
-      const thread = await getOwnedThread(db, input.threadId, ctx.appUser.id);
-      const [{ maxSeq }] = await db
-        .select({ maxSeq: sql<number>`COALESCE(MAX(${dimeChatMessages.seq}), 0)` })
-        .from(dimeChatMessages)
-        .where(eq(dimeChatMessages.threadId, thread.id));
-      let seq = Number(maxSeq);
-      await db.insert(dimeChatMessages).values(
-        input.messages.map((m) => ({
-          threadId: thread.id,
-          seq: ++seq,
-          role: m.role,
-          content: m.content.slice(0, DIME_CHAT_MAX_MESSAGE_CHARS),
-        })),
+      return db.transaction(
+        async (tx: Awaited<ReturnType<typeof requireDb>>) => {
+          // Serialize legacy compatibility writes with Trace v1 writes. The
+          // unique (threadId, seq) constraint remains the final invariant.
+          await tx.execute(sql`
+            SELECT id
+              FROM ${dimeChatThreads}
+             WHERE ${dimeChatThreads.id} = ${input.threadId}
+               AND ${dimeChatThreads.userId} = ${ctx.appUser.id}
+               AND ${dimeChatThreads.deletedAt} IS NULL
+             FOR UPDATE
+          `);
+          const thread = await getOwnedThread(
+            tx,
+            input.threadId,
+            ctx.appUser.id
+          );
+          const [{ maxSeq }] = await tx
+            .select({
+              maxSeq: sql<number>`COALESCE(MAX(${dimeChatMessages.seq}), 0)`,
+            })
+            .from(dimeChatMessages)
+            .where(eq(dimeChatMessages.threadId, thread.id));
+          let seq = Number(maxSeq);
+          await tx.insert(dimeChatMessages).values(
+            input.messages.map(m => ({
+              threadId: thread.id,
+              seq: ++seq,
+              role: m.role,
+              content: m.content.slice(0, DIME_CHAT_MAX_MESSAGE_CHARS),
+            }))
+          );
+          await tx
+            .update(dimeChatThreads)
+            .set({ updatedAt: new Date() })
+            .where(eq(dimeChatThreads.id, thread.id));
+          return { ok: true, lastSeq: seq };
+        }
       );
-      await db
-        .update(dimeChatThreads)
-        .set({ updatedAt: new Date() })
-        .where(eq(dimeChatThreads.id, thread.id));
-      return { ok: true, lastSeq: seq };
     }),
 
   /** Star/unstar an owned thread. */
   setStarred: appUserProcedure
-    .input(z.object({ threadId: z.number().int().positive(), starred: z.boolean() }))
+    .input(
+      z.object({ threadId: z.number().int().positive(), starred: z.boolean() })
+    )
     .mutation(async ({ ctx, input }) => {
       const db = await requireDb();
       const thread = await getOwnedThread(db, input.threadId, ctx.appUser.id);
-      await db.update(dimeChatThreads).set({ starred: input.starred }).where(eq(dimeChatThreads.id, thread.id));
+      await db
+        .update(dimeChatThreads)
+        .set({ starred: input.starred })
+        .where(eq(dimeChatThreads.id, thread.id));
       return { ok: true };
     }),
 
   /** Archive/unarchive an owned thread (hidden from the default list). */
   setArchived: appUserProcedure
-    .input(z.object({ threadId: z.number().int().positive(), archived: z.boolean() }))
+    .input(
+      z.object({ threadId: z.number().int().positive(), archived: z.boolean() })
+    )
     .mutation(async ({ ctx, input }) => {
       const db = await requireDb();
       const thread = await getOwnedThread(db, input.threadId, ctx.appUser.id);
-      await db.update(dimeChatThreads).set({ archived: input.archived }).where(eq(dimeChatThreads.id, thread.id));
+      await db
+        .update(dimeChatThreads)
+        .set({ archived: input.archived })
+        .where(eq(dimeChatThreads.id, thread.id));
       return { ok: true };
     }),
 
@@ -236,7 +293,10 @@ export const dimeChatsRouter = router({
     .mutation(async ({ ctx, input }) => {
       const db = await requireDb();
       const thread = await getOwnedThread(db, input.threadId, ctx.appUser.id);
-      await db.update(dimeChatThreads).set({ deletedAt: new Date() }).where(eq(dimeChatThreads.id, thread.id));
+      await db
+        .update(dimeChatThreads)
+        .set({ deletedAt: new Date() })
+        .where(eq(dimeChatThreads.id, thread.id));
       return { ok: true };
     }),
 
@@ -254,7 +314,13 @@ export const dimeChatsRouter = router({
       .where(isNull(dimeChatThreads.deletedAt));
     // mysql2 driver surfaces affectedRows on the raw header; default 0 if a
     // driver swap hides it.
-    const header = result as unknown as { affectedRows?: number; rowsAffected?: number };
-    return { ok: true, cleared: Number(header.affectedRows ?? header.rowsAffected ?? 0) };
+    const header = result as unknown as {
+      affectedRows?: number;
+      rowsAffected?: number;
+    };
+    return {
+      ok: true,
+      cleared: Number(header.affectedRows ?? header.rowsAffected ?? 0),
+    };
   }),
 });

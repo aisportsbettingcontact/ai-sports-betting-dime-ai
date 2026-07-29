@@ -9,21 +9,21 @@ checkpoint.
 
 ## Frozen foundation
 
-| Contract | Value |
-|---|---|
-| Parent model | `meta-llama/Llama-3.1-8B` |
-| Parent revision | `d04e592bb4f6aa9cfee91e2e20afa771667e1d4b` |
-| Model type | Llama 3.1 8B Base, not Instruct |
-| Development method | QLoRA/SFT post-training and evaluation |
-| Private candidate workbench | `taileredsports/dime-foundation-workbench` |
-| Approved-training dataset repository | `taileredsports/dime-foundation-sft` |
-| Development-evaluation repository | `taileredsports/dime-eval-development` |
-| Locked-evaluation repository | `taileredsports/dime-eval-locked` |
-| Promoted-adapter repository | `taileredsports/Llama-3-Dime-1.0` |
-| Initial verified GPU | RTX 4090 24 GB |
-| Training quantization | NF4 4-bit with double quantization |
-| Compute dtype | BF16 |
-| Artifact name | `Llama-3-Dime-1.0` |
+| Contract                             | Value                                      |
+| ------------------------------------ | ------------------------------------------ |
+| Parent model                         | `meta-llama/Llama-3.1-8B`                  |
+| Parent revision                      | `d04e592bb4f6aa9cfee91e2e20afa771667e1d4b` |
+| Model type                           | Llama 3.1 8B Base, not Instruct            |
+| Development method                   | QLoRA/SFT post-training and evaluation     |
+| Private candidate workbench          | `taileredsports/dime-foundation-workbench` |
+| Approved-training dataset repository | `taileredsports/dime-foundation-sft`       |
+| Development-evaluation repository    | `taileredsports/dime-eval-development`     |
+| Locked-evaluation repository         | `taileredsports/dime-eval-locked`          |
+| Promoted-adapter repository          | `taileredsports/Llama-3-Dime-1.0`          |
+| Initial verified GPU                 | RTX 4090 24 GB                             |
+| Training quantization                | NF4 4-bit with double quantization         |
+| Compute dtype                        | BF16                                       |
+| Artifact name                        | `Llama-3-Dime-1.0`                         |
 
 A Base checkpoint does not provide the instruction following, chat behavior,
 tool grammar, grounded answers, abstention, or safety required by Dime. Those
@@ -76,6 +76,11 @@ GitHub `main` is the canonical reviewed source for code, prompts, templates,
 tool contracts, schemas, synthetic public fixtures, configurations, tests,
 documentation, sanitized evidence, and release gates. Branches and pull
 requests are review-visible draft work.
+
+The production-safe product-capability catalog is canonical at
+`shared/dime/platform_knowledge_v1.json` so Railway includes the same bytes
+that model-development evaluation loads. Its deterministic SHA-256 is written
+into runtime prompts and Trace events.
 
 The tool-contract identity covers the request and market catalogs, both
 governing schemas, the response registry and envelope, and all seven data
@@ -153,6 +158,7 @@ uv run ruff check .
 uv run pytest -q
 uv run python -m compileall -q src scripts infrastructure
 uv run python scripts/validate_data.py
+uv run python scripts/audit_platform_knowledge.py
 uv run python scripts/prepare_reviewer_runtime.py --check
 uv run python scripts/validate_reviewer_signer_iac.py
 
@@ -162,9 +168,9 @@ uv run python scripts/audit_curriculum.py \
 uv run python scripts/audit_evaluation_program.py \
   --report "${audit_dir}/evaluation-program-audit.json"
 cmp "${audit_dir}/curriculum-audit.json" \
-  evidence/audits/starter-v1.1.0/curriculum-audit.json
+  evidence/audits/starter-v1.2.0/curriculum-audit.json
 cmp "${audit_dir}/evaluation-program-audit.json" \
-  evidence/audits/starter-v1.1.0/evaluation-program-audit.json
+  evidence/audits/starter-v1.2.0/evaluation-program-audit.json
 uv pip check
 ```
 
@@ -337,6 +343,7 @@ application policy controls, and explicitly change the provider constant.
 - [Data governance](docs/DATA_GOVERNANCE.md)
 - [Foundation v1 dataset workflow](docs/FOUNDATION_V1_DATASET_WORKFLOW.md)
 - [Dime answer rubric v1](docs/DIME_ANSWER_RUBRIC_V1.md)
+- [Sol-target capability benchmark](docs/DIME_SOL_TARGET_CAPABILITY_BENCHMARK_V1.md)
 - [System architecture](docs/DIME_V1_SYSTEM_ARCHITECTURE.md)
 - [Curriculum and evaluation](docs/DIME_V1_CURRICULUM_AND_EVALUATION.md)
 - [Release gates](docs/RELEASE_GATES.md)

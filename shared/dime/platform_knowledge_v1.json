@@ -1,0 +1,138 @@
+{
+  "schema_version": "dime-platform-knowledge-v1",
+  "knowledge_version": "1.0.0",
+  "status": "active",
+  "as_of_utc": "2026-07-28T00:00:00Z",
+  "scope": "public_product_capabilities",
+  "features": [
+    {
+      "id": "dime_chat",
+      "name": "Dime AI Chat",
+      "route": "/chat",
+      "availability": "live",
+      "access_scope": "owner",
+      "description": "A conversational sports-market analysis and platform-help surface.",
+      "provides": [
+        "Sports-betting explanations and analysis grounded in the current conversation and server-supplied Dime evidence.",
+        "Current-thread follow-up context within a bounded recent-message window.",
+        "Saved chat threads for the authenticated account."
+      ],
+      "limitations": [
+        "Dime cannot place, submit, or settle a wager and cannot move money or change account settings.",
+        "Dime must not claim a current line, projection, split, injury, result, or user-specific fact unless that evidence is supplied.",
+        "Dime Chat does not currently receive the user's Bet Tracker history or aggregates."
+      ],
+      "evidence_paths": [
+        "client/src/App.tsx",
+        "client/src/pages/dime-chat/DimeChatPage.tsx",
+        "server/dime-chat.route.ts",
+        "server/routers/dimeChats.ts"
+      ]
+    },
+    {
+      "id": "model_projections",
+      "name": "AI Model Projections",
+      "route": "/feed/model/:sport",
+      "availability": "live",
+      "access_scope": "authenticated",
+      "description": "The Dime feed for owner-published game projections and model outputs.",
+      "provides": [
+        "Published matchup projections and model-derived market values when available for the selected sport and date.",
+        "Game-level market and model information presented by the feed."
+      ],
+      "limitations": [
+        "Coverage depends on the selected sport, date, published games, available market data, and completed model runs.",
+        "A displayed projection is a model estimate, not a guarantee or a placed wager."
+      ],
+      "evidence_paths": [
+        "client/src/App.tsx",
+        "client/src/pages/DimeModelFeed.tsx",
+        "drizzle/schema.ts"
+      ]
+    },
+    {
+      "id": "betting_splits_odds_history",
+      "name": "Betting Splits and Odds History",
+      "route": "/betting-splits/:sport",
+      "availability": "live",
+      "access_scope": "authenticated",
+      "description": "A sport-and-date view of available betting percentages and opening/current market prices.",
+      "provides": [
+        "Provider-scoped bet and money percentages for supported markets when available.",
+        "Opening and current spread, total, moneyline, and price history when available."
+      ],
+      "limitations": [
+        "Splits describe the participating provider sample, not the entire betting market.",
+        "A difference between bet percentage and money percentage does not prove who caused a line move.",
+        "Off-season, unopened, missing, or stale markets can have no usable splits or history."
+      ],
+      "evidence_paths": [
+        "client/src/App.tsx",
+        "client/src/pages/BettingSplits.tsx",
+        "client/src/components/OddsHistoryPanel.tsx",
+        "drizzle/schema.ts"
+      ]
+    },
+    {
+      "id": "trends",
+      "name": "Trends",
+      "route": "/trends",
+      "availability": "live",
+      "access_scope": "authenticated",
+      "description": "A desktop Dime shell view of supported trend information; mobile routes to Betting Splits.",
+      "provides": [
+        "Available recent-form and trend views supported by the current product data."
+      ],
+      "limitations": [
+        "Trend availability depends on the sport, date, and underlying sample.",
+        "A trend is descriptive evidence, not proof of a future outcome or a durable betting edge."
+      ],
+      "evidence_paths": [
+        "client/src/App.tsx",
+        "client/src/pages/TrendsPage.tsx",
+        "client/src/pages/dime-shell/DimeAppShell.tsx"
+      ]
+    },
+    {
+      "id": "bet_tracker",
+      "name": "Bet Tracker",
+      "route": "/bet-tracker",
+      "availability": "live",
+      "access_scope": "owner",
+      "description": "A private account surface for recording, grading, and reviewing the authorized user's wagers.",
+      "provides": [
+        "Tracked wager entry, results, bankroll and unit views, and performance analytics for the authorized account.",
+        "Automatic grading when supported result data is available."
+      ],
+      "limitations": [
+        "Bet Tracker access is currently owner-only.",
+        "Dime Chat cannot review or coach from Bet Tracker history until a separate authorized user-scoped aggregate connection is implemented.",
+        "Dime must not imply that it can see a user's tracked bets merely because the feature exists."
+      ],
+      "evidence_paths": [
+        "client/src/App.tsx",
+        "client/src/pages/BetTracker.tsx",
+        "server/routers/betTracker.ts"
+      ]
+    },
+    {
+      "id": "prop_projections",
+      "name": "Prop Projections",
+      "route": null,
+      "availability": "not_available",
+      "access_scope": "none",
+      "description": "A labeled navigation concept that does not currently have a live product route.",
+      "provides": [],
+      "limitations": [
+        "Dime must not tell a user that a standalone Prop Projections page is currently available."
+      ],
+      "evidence_paths": ["client/src/pages/dime-chat/DimeChatPage.tsx"]
+    }
+  ],
+  "global_rules": [
+    "Answer platform questions only from this catalog and the authenticated request context.",
+    "Do not infer a user's plan, role, subscription, account state, tracked bets, or permissions when that state was not supplied.",
+    "If a requested feature is absent from this catalog, say it is not verified as available and direct the user to the visible product navigation or account support.",
+    "Keep platform facts separate from live game evidence, model estimates, and betting recommendations."
+  ]
+}

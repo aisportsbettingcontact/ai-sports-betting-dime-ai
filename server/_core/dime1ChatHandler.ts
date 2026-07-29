@@ -19,13 +19,19 @@ import type { Request, Response } from "express";
 import type { DimeChatMessage, DimeChatRequestClass } from "./dimeChatModel";
 import {
   DIME1_CHAT_TEMPERATURE,
+  DIME1_PROMPT_SOURCE,
   DIME1_PRODUCT_PROFILE,
   DIME1_PROFILE_VERSION,
   DIME1_SYSTEM_PROMPT,
+  DIME_RESEARCH_ALPHA_PROMPT_SOURCE,
   DIME_RESEARCH_ALPHA_PRODUCT_PROFILE,
   DIME_RESEARCH_ALPHA_PROFILE_VERSION,
   DIME_RESEARCH_ALPHA_SYSTEM_PROMPT,
 } from "./dime1Model";
+import {
+  DIME_PLATFORM_KNOWLEDGE_SHA256,
+  DIME_PLATFORM_KNOWLEDGE_VERSION,
+} from "./dimePlatformKnowledge";
 import {
   Dime1ApiError,
   dime1ChatComplete,
@@ -34,6 +40,19 @@ import {
 import { getDimeChatContext } from "./dimeChatContext";
 import { validateDimeResponseText } from "./dimeVerdict";
 import { containsProhibitedBettingCertainty } from "./dimeSafety";
+import {
+  DIME_CHAT_TRACE_HEADER,
+  appendDimeChatTraceEvent,
+  type ActiveDimeChatTrace,
+  dimeChatTraceMeta,
+  failDimeChatTrace,
+  finalizeDimeChatTrace,
+  recordDimeChatTraceContext,
+  sendDimeChatTraceJsonError,
+} from "../dimeChatTrace";
+
+const VALIDATION_BLOCKED_RESPONSE =
+  "I can’t verify that betting verdict against grounded Dime data, so I’m blocking it rather than risking a fabricated edge. Please provide the event, market, current line/odds, sportsbook, timestamp, and model projection/version so I can evaluate it safely.";
 
 function dime1Log(
   event: string,
@@ -56,13 +75,13 @@ export interface Dime1ChatRequestArgs {
   requestClass: DimeChatRequestClass;
   responseBudget: number;
   deploymentTier?: "production" | "research-alpha";
+  trace?: ActiveDimeChatTrace;
 }
 
 export async function handleDime1ChatRequest(
   args: Dime1ChatRequestArgs
 ): Promise<void> {
   const {
-    req,
     res,
     requestId,
     startTime,
@@ -70,6 +89,7 @@ export async function handleDime1ChatRequest(
     requestClass,
     responseBudget,
     deploymentTier = "production",
+    trace,
   } = args;
   const isResearchAlpha = deploymentTier === "research-alpha";
 
@@ -77,27 +97,54 @@ export async function handleDime1ChatRequest(
   // fails as a clean HTTP 500 instead of a broken stream.
   const config = resolveDime1Config();
   if (!config) {
+    if (trace) {
+      await failDimeChatTrace(trace, {
+        status: "failed",
+        errorClass: "ConfigurationError",
+        errorCode: "dime1_not_configured",
+        latencyMs: Date.now() - startTime,
+      }).catch(traceError => {
+        dime1Log("dime.chat.trace.failure_record_error", requestId, {
+          errorClass: (traceError as Error)?.constructor?.name ?? "Unknown",
+          deploymentTier,
+        });
+      });
+    }
     dime1Log("dime.chat.dime1.error", requestId, {
       errorClass: "ConfigurationError",
       statusCode: 500,
       detail: "Dime 1.0 endpoint not configured",
       deploymentTier,
     });
-    res.status(500).json({
-      error:
-        "Dime 1.0 is not configured. Set RUNPOD_ENDPOINT_ID (+ DIME_MODEL_API_SECRET or RUNPOD_API_KEY), or DIME_MODEL_BASE_URL for a custom endpoint.",
-    });
+    const error =
+      "Dime 1.0 is not configured. Set RUNPOD_ENDPOINT_ID (+ DIME_MODEL_API_SECRET or RUNPOD_API_KEY), or DIME_MODEL_BASE_URL for a custom endpoint.";
+    if (trace) {
+      sendDimeChatTraceJsonError(res, 500, error, trace);
+    } else {
+      res.status(500).json({ error });
+    }
     return;
   }
 
-  let dataFreshness: "live" | "none" = "none";
+  let dataFreshness: "live" | "delayed" | "none" = "none";
+  let contextSnapshot: string | undefined;
+  let contextRowCount = 0;
+  let contextEventIds: number[] = [];
+  let contextLookupErrorClass: string | undefined;
+  const providerMessages = [...messages];
 
   try {
-    const context = await getDimeChatContext();
+    const context = await getDimeChatContext(
+      new Date(),
+      messages.at(-1)?.content ?? ""
+    );
     dataFreshness = context.freshness;
+    contextSnapshot = context.context;
+    contextRowCount = context.rowCount;
+    contextEventIds = context.eventIds;
 
     if (context.context) {
-      messages.unshift(
+      providerMessages.unshift(
         { role: "user", content: context.context },
         {
           role: "assistant",
@@ -110,20 +157,56 @@ export async function handleDime1ChatRequest(
     dime1Log("dime.chat.dime1.context", requestId, {
       dataFreshness,
       rowCount: context.rowCount,
+      eventIds: context.eventIds,
       deploymentTier,
     });
   } catch (contextErr) {
     dataFreshness = "none";
+    contextLookupErrorClass =
+      (contextErr as Error)?.constructor?.name ?? "Unknown";
     dime1Log("dime.chat.dime1.context_error", requestId, {
-      errorClass: (contextErr as Error)?.constructor?.name ?? "Unknown",
+      errorClass: contextLookupErrorClass,
       detail: (contextErr as Error)?.message ?? "Context lookup failed",
       deploymentTier,
     });
   }
 
+  if (trace) {
+    try {
+      await recordDimeChatTraceContext(trace, {
+        freshness: dataFreshness,
+        rowCount: contextRowCount,
+        eventIds: contextEventIds,
+        context: contextSnapshot,
+        lookupErrorClass: contextLookupErrorClass,
+      });
+    } catch (traceError) {
+      await failDimeChatTrace(trace, {
+        status: "failed",
+        errorClass: "TraceContextPersistenceError",
+        errorCode: "trace_context_write_failed",
+        latencyMs: Date.now() - startTime,
+      }).catch(() => undefined);
+      dime1Log("dime.chat.trace.context_error", requestId, {
+        errorClass: (traceError as Error)?.constructor?.name ?? "Unknown",
+        deploymentTier,
+      });
+      sendDimeChatTraceJsonError(
+        res,
+        503,
+        "Dime could not securely record this generation. No model call was made.",
+        trace
+      );
+      return;
+    }
+  }
+
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache, no-transform");
   res.setHeader("Connection", "keep-alive");
+  if (trace) {
+    res.setHeader(DIME_CHAT_TRACE_HEADER, "1");
+  }
   res.flushHeaders?.();
 
   const send = (payload: Record<string, unknown>) => {
@@ -139,18 +222,23 @@ export async function handleDime1ChatRequest(
     profileVersion: isResearchAlpha
       ? DIME_RESEARCH_ALPHA_PROFILE_VERSION
       : DIME1_PROFILE_VERSION,
-    promptSource: isResearchAlpha ? "research-alpha-control" : "dime1-v1",
+    promptSource: isResearchAlpha
+      ? DIME_RESEARCH_ALPHA_PROMPT_SOURCE
+      : DIME1_PROMPT_SOURCE,
+    platformKnowledgeVersion: DIME_PLATFORM_KNOWLEDGE_VERSION,
+    platformKnowledgeSha256: DIME_PLATFORM_KNOWLEDGE_SHA256,
     provider: isResearchAlpha ? "dime1-research-alpha" : "dime1",
     deploymentTier,
     model: config.model,
     requestClass,
     responseBudget,
+    ...(trace ? { trace: dimeChatTraceMeta(trace) } : {}),
   });
 
   const abort = new AbortController();
   let aborted = false;
 
-  req.on("close", () => {
+  res.once("close", () => {
     if (!res.writableEnded) {
       aborted = true;
       abort.abort();
@@ -164,22 +252,36 @@ export async function handleDime1ChatRequest(
   dime1Log("dime.chat.dime1.generate.start", requestId, {
     model: config.model,
     endpointSource: config.source,
-    historyLength: messages.length,
+    historyLength: providerMessages.length,
     requestClass,
     responseBudget,
+    platformKnowledgeVersion: DIME_PLATFORM_KNOWLEDGE_VERSION,
+    platformKnowledgeSha256: DIME_PLATFORM_KNOWLEDGE_SHA256,
     deploymentTier,
   });
 
+  let traceFinalized = false;
   try {
     const result = await dime1ChatComplete({
       system: isResearchAlpha
         ? DIME_RESEARCH_ALPHA_SYSTEM_PROMPT
         : DIME1_SYSTEM_PROMPT,
-      messages,
+      messages: providerMessages,
       maxTokens: responseBudget,
       temperature: DIME1_CHAT_TEMPERATURE,
       signal: abort.signal,
     });
+    if (aborted || res.destroyed) {
+      if (trace) {
+        await failDimeChatTrace(trace, {
+          status: "aborted",
+          errorClass: "ClientDisconnected",
+          errorCode: "client_disconnected_before_finalize",
+          latencyMs: Date.now() - startTime,
+        });
+      }
+      return;
+    }
 
     const validation = validateDimeResponseText(result.content);
     const certaintyViolation = containsProhibitedBettingCertainty(
@@ -199,17 +301,101 @@ export async function handleDime1ChatRequest(
     });
 
     if (!validation.ok || certaintyViolation) {
+      let assistantMessageId: number | undefined;
+      if (trace) {
+        const finalized = await finalizeDimeChatTrace(trace, {
+          rawOutput: result.content,
+          servedOutput: VALIDATION_BLOCKED_RESPONSE,
+          status: "blocked",
+          finishReason: "validation_blocked",
+          actualModel: result.model,
+          validationErrors: validation.errors,
+          certaintyViolation,
+          usage: result.usage,
+          latencyMs: Date.now() - startTime,
+        });
+        assistantMessageId = finalized.assistantMessageId;
+        traceFinalized = true;
+      }
       send({
         type: "delta",
-        text: "I can’t verify that betting verdict against grounded Dime data, so I’m blocking it rather than risking a fabricated edge. Please provide the event, market, current line/odds, sportsbook, timestamp, and model projection/version so I can evaluate it safely.",
+        text: VALIDATION_BLOCKED_RESPONSE,
       });
-      send({ type: "done", stopReason: "validation_blocked" });
+      send({
+        type: "done",
+        stopReason: "validation_blocked",
+        ...(trace
+          ? { trace: dimeChatTraceMeta(trace, assistantMessageId) }
+          : {}),
+      });
+      if (trace) {
+        await appendDimeChatTraceEvent(trace, "response_dispatched", {
+          transport: "sse",
+          delivery: "unknown",
+        }).catch(traceError => {
+          dime1Log("dime.chat.trace.dispatch_event_error", requestId, {
+            errorClass: (traceError as Error)?.constructor?.name ?? "Unknown",
+            deploymentTier,
+          });
+        });
+      }
       return;
     }
 
+    let assistantMessageId: number | undefined;
+    if (trace) {
+      const finalized = await finalizeDimeChatTrace(trace, {
+        rawOutput: result.content,
+        servedOutput: result.content,
+        status: "completed",
+        finishReason: result.finishReason,
+        actualModel: result.model,
+        validationErrors: validation.errors,
+        certaintyViolation,
+        usage: result.usage,
+        latencyMs: Date.now() - startTime,
+      });
+      assistantMessageId = finalized.assistantMessageId;
+      traceFinalized = true;
+    }
     send({ type: "delta", text: result.content });
-    send({ type: "done", stopReason: result.finishReason ?? "end_turn" });
+    send({
+      type: "done",
+      stopReason: result.finishReason ?? "end_turn",
+      ...(trace ? { trace: dimeChatTraceMeta(trace, assistantMessageId) } : {}),
+    });
+    if (trace) {
+      await appendDimeChatTraceEvent(trace, "response_dispatched", {
+        transport: "sse",
+        delivery: "unknown",
+      }).catch(traceError => {
+        dime1Log("dime.chat.trace.dispatch_event_error", requestId, {
+          errorClass: (traceError as Error)?.constructor?.name ?? "Unknown",
+          deploymentTier,
+        });
+      });
+    }
   } catch (err: unknown) {
+    if (trace && !traceFinalized) {
+      await failDimeChatTrace(trace, {
+        status: aborted ? "aborted" : "failed",
+        errorClass:
+          (err as Error)?.constructor?.name ??
+          (aborted ? "AbortError" : "Unknown"),
+        errorCode:
+          err instanceof Dime1ApiError
+            ? `http_${err.status}`
+            : aborted
+              ? "client_disconnected"
+              : "generation_failed",
+        latencyMs: Date.now() - startTime,
+      }).catch(traceError => {
+        dime1Log("dime.chat.trace.failure_record_error", requestId, {
+          errorClass: (traceError as Error)?.constructor?.name ?? "Unknown",
+          deploymentTier,
+        });
+      });
+    }
     if (!aborted) {
       const isApiError = err instanceof Dime1ApiError;
       const message = isApiError
@@ -225,7 +411,11 @@ export async function handleDime1ChatRequest(
         deploymentTier,
       });
 
-      send({ type: "error", message });
+      send({
+        type: "error",
+        message,
+        ...(trace ? { trace: dimeChatTraceMeta(trace) } : {}),
+      });
     }
   } finally {
     res.end();

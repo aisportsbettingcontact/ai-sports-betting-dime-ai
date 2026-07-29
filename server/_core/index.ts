@@ -32,7 +32,13 @@ import { startBetAutoGradeScheduler } from "../betAutoGradeScheduler";
 import { startMlbOutcomeAndDriftScheduler } from "../mlbOutcomeAndDriftScheduler";
 import { startMlbModelSyncScheduler } from "../mlbModelRunner";
 import { getCircuitStatus, getCacheStats } from "../dbCircuitBreaker";
-import { getDb, listGames, getCacheHealthStats, getAvailableDates, forceInvalidateGamesCache } from "../db";
+import {
+  getDb,
+  listGames,
+  getCacheHealthStats,
+  getAvailableDates,
+  forceInvalidateGamesCache,
+} from "../db";
 import { ensureDebugLogsTable } from "./debugLogger";
 import { registerAnalyticsIngestRoute } from "../analytics/ingestRoute";
 import { registerAnalyticsReadRoute } from "../analytics/readRoute";
@@ -40,6 +46,7 @@ import { registerStripeWebhookRoute } from "../stripeWebhook";
 import { registerWc2026Heartbeats } from "../wc2026/wc2026Heartbeat";
 import { registerCronRoutes } from "../cron/cronRoutes";
 import { registerDimeChatRoute } from "../dime-chat.route";
+import { startDimeChatTraceRetentionScheduler } from "../dimeChatTrace";
 import { registerDimeWC2026Route } from "../dime-wc2026.route";
 import { jwtVerify } from "jose";
 import { parse as parseCookieHeader } from "cookie";
@@ -69,7 +76,9 @@ type OwnerAuthResult =
   | { ok: true; userId: number }
   | { ok: false; status: 401 | 403 };
 
-async function authenticateOwnerRequest(req: express.Request): Promise<OwnerAuthResult> {
+async function authenticateOwnerRequest(
+  req: express.Request
+): Promise<OwnerAuthResult> {
   const cookies = parseCookieHeader(req.headers.cookie ?? "");
   const token = cookies["app_session"];
   if (!token) return { ok: false, status: 401 };
@@ -85,9 +94,15 @@ async function authenticateOwnerRequest(req: express.Request): Promise<OwnerAuth
     invalidateAppUserByIdCache(userId);
     const lookup = await lookupAppUserByIdFresh(userId);
     if (lookup.status === "found") setCachedAppUser(lookup.user);
-    const resolved = resolveOwnerIdentity({ lookup, fallback, tokenVersion: tv });
+    const resolved = resolveOwnerIdentity({
+      lookup,
+      fallback,
+      tokenVersion: tv,
+    });
     if (!resolved.ok) {
-      console.log(`[OwnerAuth] REJECTED — reason=${resolved.reason} userId=${userId}`);
+      console.log(
+        `[OwnerAuth] REJECTED — reason=${resolved.reason} userId=${userId}`
+      );
       const status = resolved.reason.startsWith("token_version") ? 401 : 403;
       return { ok: false, status };
     }
@@ -117,8 +132,13 @@ function fireRateLimitEvent(
   ip: string,
   path: string,
   method: string,
-  limitType: "global" | "auth" | "trpc_auth" | "stripe_checkout" | "waitlist_submit",
-  ua: string | null,
+  limitType:
+    | "global"
+    | "auth"
+    | "trpc_auth"
+    | "stripe_checkout"
+    | "waitlist_submit",
+  ua: string | null
 ) {
   const now = Date.now();
   const dedupKey = `${ip}:${path}:${limitType}`;
@@ -135,8 +155,8 @@ function fireRateLimitEvent(
   const tag = `[RateLimit][${limitType.toUpperCase()}]`;
   console.warn(
     `${tag} BLOCKED | IP=${ip} path=${path} method=${method}` +
-    ` ua="${ua?.substring(0, 60) ?? "none"}"` +
-    (now - lastSent < RATE_LIMIT_DEDUP_MS ? " [DB_DEDUP_SKIP]" : "")
+      ` ua="${ua?.substring(0, 60) ?? "none"}"` +
+      (now - lastSent < RATE_LIMIT_DEDUP_MS ? " [DB_DEDUP_SKIP]" : "")
   );
 
   if (now - lastSent < RATE_LIMIT_DEDUP_MS) return; // deduplicated
@@ -151,7 +171,7 @@ function fireRateLimitEvent(
     userAgent: ua,
     context: limitType,
     occurredAt: now,
-  }).catch((err) =>
+  }).catch(err =>
     console.error(`${tag} DB insert failed: ${(err as Error).message}`)
   );
   // [STEP] Post structured embed to 🗒️-𝗦𝗘𝗖𝗨𝗥𝗜𝗧𝗬-𝗘𝗩𝗘𝗡𝗧𝗦 Discord channel (async, non-blocking)
@@ -163,7 +183,7 @@ function fireRateLimitEvent(
     userAgent: ua,
     context: limitType,
     occurredAt: now,
-  }).catch((err) =>
+  }).catch(err =>
     console.error(`${tag} Discord alert failed: ${(err as Error).message}`)
   );
 }
@@ -172,22 +192,31 @@ function fireRateLimitEvent(
 // Prevent unhandled promise rejections and uncaught exceptions from killing the
 // process. Log them instead so the server stays alive and serves requests.
 process.on("unhandledRejection", (reason, promise) => {
-  console.error("[CRASH GUARD] Unhandled promise rejection:", reason, "at:", promise);
+  console.error(
+    "[CRASH GUARD] Unhandled promise rejection:",
+    reason,
+    "at:",
+    promise
+  );
 });
 
 // ─── Rate limiters ────────────────────────────────────────────────────────────
 // Global limiter: 200 requests per minute per IP across all API routes.
 // Generous enough for legitimate use; blocks automated scraping/flooding.
 const globalApiLimiter = rateLimit({
-  windowMs: 60 * 1000,          // 1 minute window
-  max: 200,                      // max 200 requests per window per IP
-  standardHeaders: "draft-7",    // Return rate limit info in RateLimit-* headers
+  windowMs: 60 * 1000, // 1 minute window
+  max: 200, // max 200 requests per window per IP
+  standardHeaders: "draft-7", // Return rate limit info in RateLimit-* headers
   legacyHeaders: false,
   message: { error: "Too many requests. Please slow down." },
-  skip: (req) => req.path === "/health", // never throttle health probes
+  skip: req => req.path === "/health", // never throttle health probes
   handler: (req, res, _next, options) => {
-    const ip = (req.headers["x-forwarded-for"] as string | undefined)
-      ?.split(",")[0].trim() ?? req.ip ?? "unknown";
+    const ip =
+      (req.headers["x-forwarded-for"] as string | undefined)
+        ?.split(",")[0]
+        .trim() ??
+      req.ip ??
+      "unknown";
     const ua = (req.headers["user-agent"] as string | undefined) ?? null;
     fireRateLimitEvent(ip, req.path, req.method, "global", ua);
     res.status(options.statusCode).json(options.message);
@@ -197,14 +226,21 @@ const globalApiLimiter = rateLimit({
 // Auth limiter: max 5 login/auth attempts per 15 minutes per IP.
 // Prevents brute-force credential stuffing on login and OAuth routes.
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,     // 15-minute window
-  max: 5,                        // max 5 attempts per window per IP
+  windowMs: 15 * 60 * 1000, // 15-minute window
+  max: 5, // max 5 attempts per window per IP
   standardHeaders: "draft-7",
   legacyHeaders: false,
-  message: { error: "Too many authentication attempts. Please wait 15 minutes before trying again." },
+  message: {
+    error:
+      "Too many authentication attempts. Please wait 15 minutes before trying again.",
+  },
   handler: (req, res, _next, options) => {
-    const ip = (req.headers["x-forwarded-for"] as string | undefined)
-      ?.split(",")[0].trim() ?? req.ip ?? "unknown";
+    const ip =
+      (req.headers["x-forwarded-for"] as string | undefined)
+        ?.split(",")[0]
+        .trim() ??
+      req.ip ??
+      "unknown";
     const ua = (req.headers["user-agent"] as string | undefined) ?? null;
     fireRateLimitEvent(ip, req.path, req.method, "auth", ua);
     res.status(options.statusCode).json(options.message);
@@ -219,7 +255,7 @@ const trpcAuthLimiter = rateLimit({
   standardHeaders: "draft-7",
   legacyHeaders: false,
   message: { error: "Too many login attempts. Please wait 15 minutes." },
-  keyGenerator: (req) => {
+  keyGenerator: req => {
     // Key by IP + procedure path for precise per-procedure limiting.
     // MUST use ipKeyGenerator helper to normalize IPv6 addresses — express-rate-limit v8
     // throws ERR_ERL_KEY_GEN_IPV6 (fatal ValidationError) if req.ip is used directly.
@@ -227,8 +263,12 @@ const trpcAuthLimiter = rateLimit({
     return `${ipKeyGenerator(req.ip ?? "")}:${path}`;
   },
   handler: (req, res, _next, options) => {
-    const ip = (req.headers["x-forwarded-for"] as string | undefined)
-      ?.split(",")[0].trim() ?? req.ip ?? "unknown";
+    const ip =
+      (req.headers["x-forwarded-for"] as string | undefined)
+        ?.split(",")[0]
+        .trim() ??
+      req.ip ??
+      "unknown";
     const ua = (req.headers["user-agent"] as string | undefined) ?? null;
     fireRateLimitEvent(ip, req.path, req.method, "trpc_auth", ua);
     res.status(options.statusCode).json(options.message);
@@ -246,7 +286,9 @@ function isPortAvailable(port: number): Promise<boolean> {
 }
 
 async function findAvailablePort(startPort: number = 3000): Promise<number> {
-  console.log(`[PORT_CHECK] Scanning for available port starting at ${startPort}`);
+  console.log(
+    `[PORT_CHECK] Scanning for available port starting at ${startPort}`
+  );
   for (let port = startPort; port < startPort + 20; port++) {
     console.log(`[PORT_CHECK] Testing port ${port}...`);
     const available = await isPortAvailable(port);
@@ -260,7 +302,9 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 }
 
 async function startServer() {
-  console.log(`[SERVER_STARTUP] startServer() invoked — NODE_ENV=${process.env.NODE_ENV} PORT_ENV=${process.env.PORT ?? "(unset)"} pid=${process.pid}`);
+  console.log(
+    `[SERVER_STARTUP] startServer() invoked — NODE_ENV=${process.env.NODE_ENV} PORT_ENV=${process.env.PORT ?? "(unset)"} pid=${process.pid}`
+  );
 
   const app = express();
   console.log(`[SERVER_STARTUP] Express app created`);
@@ -273,14 +317,21 @@ async function startServer() {
   // Catch binding errors (EADDRINUSE, EACCES) and connection-level errors
   // that would otherwise surface silently or crash the process.
   server.on("error", (err: NodeJS.ErrnoException) => {
-    console.error(`[ERROR] HTTP server error event: code=${err.code} message=${err.message}`, err);
+    console.error(
+      `[ERROR] HTTP server error event: code=${err.code} message=${err.message}`,
+      err
+    );
   });
   server.on("clientError", (err: NodeJS.ErrnoException, socket) => {
-    console.error(`[ERROR] HTTP client error: code=${err.code} message=${err.message}`);
+    console.error(
+      `[ERROR] HTTP client error: code=${err.code} message=${err.message}`
+    );
     socket.end("HTTP/1.1 400 Bad Request\r\n\r\n");
   });
-  server.on("connection", (socket) => {
-    console.log(`[SERVER_STARTUP] New TCP connection from ${socket.remoteAddress}:${socket.remotePort}`);
+  server.on("connection", socket => {
+    console.log(
+      `[SERVER_STARTUP] New TCP connection from ${socket.remoteAddress}:${socket.remotePort}`
+    );
   });
 
   // ─── Top-level request logger ────────────────────────────────────────────
@@ -291,12 +342,16 @@ async function startServer() {
   // Railway's 500 logs/sec rate limit. Errors (5xx) and slow requests
   // (>1000ms) are ALWAYS logged regardless of the sample decision so that
   // production visibility into problems is fully preserved.
-  console.log(`[SERVER_STARTUP] Registering top-level request logging middleware`);
+  console.log(
+    `[SERVER_STARTUP] Registering top-level request logging middleware`
+  );
   app.use((req, res, next) => {
     const start = Date.now();
     const ts = new Date().toISOString();
     const ip =
-      (req.headers["x-forwarded-for"] as string | undefined)?.split(",")[0].trim() ??
+      (req.headers["x-forwarded-for"] as string | undefined)
+        ?.split(",")[0]
+        .trim() ??
       req.socket?.remoteAddress ??
       "unknown";
     // Decide at request-time whether this request falls in the 10% sample.
@@ -306,10 +361,10 @@ async function startServer() {
     if (sampled) {
       console.log(
         `[HTTP_REQUEST] → ${req.method} ${req.originalUrl} | ts=${ts} ip=${ip}` +
-        ` host=${req.headers["host"] ?? "-"}` +
-        ` x-forwarded-for=${req.headers["x-forwarded-for"] ?? "-"}` +
-        ` x-forwarded-proto=${req.headers["x-forwarded-proto"] ?? "-"}` +
-        ` user-agent=${(req.headers["user-agent"] ?? "-").substring(0, 80)}`
+          ` host=${req.headers["host"] ?? "-"}` +
+          ` x-forwarded-for=${req.headers["x-forwarded-for"] ?? "-"}` +
+          ` x-forwarded-proto=${req.headers["x-forwarded-proto"] ?? "-"}` +
+          ` user-agent=${(req.headers["user-agent"] ?? "-").substring(0, 80)}`
       );
     }
     res.on("finish", () => {
@@ -319,8 +374,8 @@ async function startServer() {
       if (sampled || isError || isSlow) {
         console.log(
           `[HTTP_REQUEST] ← ${req.method} ${req.originalUrl} | status=${res.statusCode} duration=${ms}ms ip=${ip}` +
-          (isError ? " [ERROR]" : "") +
-          (isSlow ? " [SLOW]" : "")
+            (isError ? " [ERROR]" : "") +
+            (isSlow ? " [SLOW]" : "")
         );
       }
     });
@@ -338,7 +393,9 @@ async function startServer() {
     if (host.startsWith("www.")) {
       const canonical = host.slice(4); // strip "www."
       const redirectUrl = `${req.protocol}://${canonical}${req.originalUrl}`;
-      console.log(`[www→canonical] 308 redirect: ${host}${req.originalUrl} → ${redirectUrl}`);
+      console.log(
+        `[www→canonical] 308 redirect: ${host}${req.originalUrl} → ${redirectUrl}`
+      );
       return res.redirect(308, redirectUrl);
     }
     next();
@@ -355,50 +412,64 @@ async function startServer() {
   // the original HTTPS scheme and cookies are set correctly (sameSite+secure).
   // Also required for express-rate-limit to read the real client IP from
   // X-Forwarded-For rather than the proxy IP.
-  app.set('trust proxy', 1);
+  app.set("trust proxy", 1);
 
   // ─── Security headers (helmet) ────────────────────────────────────────────
   // Sets X-Content-Type-Options, X-Frame-Options, X-XSS-Protection,
   // Strict-Transport-Security, Referrer-Policy, and a Content-Security-Policy
   // that allows our own origin + CDN assets. Vite HMR websocket is allowed in dev.
-  console.log(`[SERVER_STARTUP] Registering helmet security headers middleware`);
-  app.use(helmet({
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        // Stripe Embedded Checkout (/checkout, MUST stay on-domain — owner
-        // directive): Stripe.js loads from js.stripe.com and mounts an iframe.
-        // Without these CSP allowances the browser blocks the script and the
-        // page shows "Failed to load Stripe.js" (observed live 2026-07-10).
-        // Per https://docs.stripe.com/security/guide#content-security-policy
-        scriptSrc: [
-          "'self'",
-          "'unsafe-inline'",
-          "https://js.stripe.com",
-          "https://*.js.stripe.com",
-          ...(process.env.NODE_ENV !== "production" ? ["'unsafe-eval'"] : []), // unsafe-eval only in dev (Vite HMR)
-        ],
-        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-        // d2xsxph8kpxj0f.cloudfront.net serves Discord's "GG Sans" woff2 files.
-        // Owner-approved exception (2026-07-24) so Discord-affiliated controls
-        // can carry Discord's own typeface — see dime-ai/THREE-COLOR-LAW.md
-        // §"Discord platform exception". Scoped to fonts only.
-        fontSrc: ["'self'", "https://fonts.gstatic.com", "https://d2xsxph8kpxj0f.cloudfront.net", "data:"],
-        imgSrc: ["'self'", "data:", "blob:", "https:", "http:"],
-        connectSrc: ["'self'", "wss:", "ws:", "https:"],
-        frameSrc: [
-          "'self'", // same-origin iframes
-          "https://js.stripe.com",
-          "https://*.js.stripe.com",
-          "https://checkout.stripe.com", // Embedded Checkout session iframe
-          "https://hooks.stripe.com",    // 3DS / bank-redirect auth frames
-        ],
-        objectSrc: ["'none'"],
-        upgradeInsecureRequests: process.env.NODE_ENV === "production" ? [] : null,
+  console.log(
+    `[SERVER_STARTUP] Registering helmet security headers middleware`
+  );
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          // Stripe Embedded Checkout (/checkout, MUST stay on-domain — owner
+          // directive): Stripe.js loads from js.stripe.com and mounts an iframe.
+          // Without these CSP allowances the browser blocks the script and the
+          // page shows "Failed to load Stripe.js" (observed live 2026-07-10).
+          // Per https://docs.stripe.com/security/guide#content-security-policy
+          scriptSrc: [
+            "'self'",
+            "'unsafe-inline'",
+            "https://js.stripe.com",
+            "https://*.js.stripe.com",
+            ...(process.env.NODE_ENV !== "production" ? ["'unsafe-eval'"] : []), // unsafe-eval only in dev (Vite HMR)
+          ],
+          styleSrc: [
+            "'self'",
+            "'unsafe-inline'",
+            "https://fonts.googleapis.com",
+          ],
+          // d2xsxph8kpxj0f.cloudfront.net serves Discord's "GG Sans" woff2 files.
+          // Owner-approved exception (2026-07-24) so Discord-affiliated controls
+          // can carry Discord's own typeface — see dime-ai/THREE-COLOR-LAW.md
+          // §"Discord platform exception". Scoped to fonts only.
+          fontSrc: [
+            "'self'",
+            "https://fonts.gstatic.com",
+            "https://d2xsxph8kpxj0f.cloudfront.net",
+            "data:",
+          ],
+          imgSrc: ["'self'", "data:", "blob:", "https:", "http:"],
+          connectSrc: ["'self'", "wss:", "ws:", "https:"],
+          frameSrc: [
+            "'self'", // same-origin iframes
+            "https://js.stripe.com",
+            "https://*.js.stripe.com",
+            "https://checkout.stripe.com", // Embedded Checkout session iframe
+            "https://hooks.stripe.com", // 3DS / bank-redirect auth frames
+          ],
+          objectSrc: ["'none'"],
+          upgradeInsecureRequests:
+            process.env.NODE_ENV === "production" ? [] : null,
+        },
       },
-    },
-    crossOriginEmbedderPolicy: false, // Allow embedding external resources (logos, CDN)
-  }));
+      crossOriginEmbedderPolicy: false, // Allow embedding external resources (logos, CDN)
+    })
+  );
 
   // ─── Stripe webhook — MUST be registered BEFORE express.json() ────────────
   // Uses express.raw() to preserve the raw buffer for HMAC-SHA256 signature
@@ -421,16 +492,23 @@ async function startServer() {
   console.log(`[SERVER_STARTUP] Registering /health endpoint`);
   app.get("/health", (req, res) => {
     const circuit = getCircuitStatus();
-    const dbOk = circuit.state === 'CLOSED';
+    const dbOk = circuit.state === "CLOSED";
     const ip =
-      (req.headers["x-forwarded-for"] as string | undefined)?.split(",")[0].trim() ??
+      (req.headers["x-forwarded-for"] as string | undefined)
+        ?.split(",")[0]
+        .trim() ??
       req.socket?.remoteAddress ??
       "unknown";
-    console.log(`[HEALTH_CHECK] GET /health | ip=${ip} db.state=${circuit.state} dbOk=${dbOk}`);
+    console.log(
+      `[HEALTH_CHECK] GET /health | ip=${ip} db.state=${circuit.state} dbOk=${dbOk}`
+    );
     res.status(dbOk ? 200 : 503).json({
-      status: dbOk ? 'ok' : 'degraded',
+      status: dbOk ? "ok" : "degraded",
       ts: Date.now(),
-      db: { state: circuit.state, consecutiveFailures: circuit.consecutiveFailures },
+      db: {
+        state: circuit.state,
+        consecutiveFailures: circuit.consecutiveFailures,
+      },
     });
   });
 
@@ -439,7 +517,9 @@ async function startServer() {
   app.get("/api/db-status", globalApiLimiter, async (req, res) => {
     const auth = await authenticateOwnerRequest(req);
     if (!auth.ok) {
-      return res.status(auth.status).json({ error: auth.status === 401 ? "unauthorized" : "owner-only" });
+      return res
+        .status(auth.status)
+        .json({ error: auth.status === 401 ? "unauthorized" : "owner-only" });
     }
     const circuit = getCircuitStatus();
     const cache = getCacheStats();
@@ -454,7 +534,9 @@ async function startServer() {
   app.get("/api/perf", globalApiLimiter, async (req, res) => {
     const auth = await authenticateOwnerRequest(req);
     if (!auth.ok) {
-      return res.status(auth.status).json({ error: auth.status === 401 ? "unauthorized" : "owner-only" });
+      return res
+        .status(auth.status)
+        .json({ error: auth.status === 401 ? "unauthorized" : "owner-only" });
     }
     const cacheHealth = getCacheHealthStats();
     const circuit = getCircuitStatus();
@@ -469,7 +551,10 @@ async function startServer() {
         rssMB: (mem.rss / 1024 / 1024).toFixed(1),
       },
       cache: cacheHealth,
-      db: { state: circuit.state, consecutiveFailures: circuit.consecutiveFailures },
+      db: {
+        state: circuit.state,
+        consecutiveFailures: circuit.consecutiveFailures,
+      },
     });
   });
 
@@ -480,22 +565,35 @@ async function startServer() {
   app.get("/api/debug-logs", globalApiLimiter, async (req, res) => {
     const auth = await authenticateOwnerRequest(req);
     if (!auth.ok) {
-      return res.status(auth.status).json({ error: auth.status === 401 ? "unauthorized" : "owner-only" });
+      return res
+        .status(auth.status)
+        .json({ error: auth.status === 401 ? "unauthorized" : "owner-only" });
     }
 
     const db = await getDb();
     if (!db) return res.status(503).json({ error: "db-unavailable" });
 
     try {
-      const source = typeof req.query.source === "string" ? req.query.source : null;
-      const level  = typeof req.query.level  === "string" ? req.query.level  : null;
-      const limit  = Math.min(parseInt(String(req.query.limit ?? "200"), 10) || 200, 1000);
+      const source =
+        typeof req.query.source === "string" ? req.query.source : null;
+      const level =
+        typeof req.query.level === "string" ? req.query.level : null;
+      const limit = Math.min(
+        parseInt(String(req.query.limit ?? "200"), 10) || 200,
+        1000
+      );
 
       // Build WHERE clause dynamically
       let whereClause = "WHERE 1=1";
       const params: (string | number)[] = [];
-      if (source) { whereClause += " AND source = ?"; params.push(source); }
-      if (level)  { whereClause += " AND level = ?";  params.push(level); }
+      if (source) {
+        whereClause += " AND source = ?";
+        params.push(source);
+      }
+      if (level) {
+        whereClause += " AND level = ?";
+        params.push(level);
+      }
       params.push(limit);
 
       const [rows] = await db.execute(
@@ -512,8 +610,15 @@ async function startServer() {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       // Table may not exist yet — return helpful error
-      if (msg.includes("doesn't exist") || msg.includes("Table") || msg.includes("ER_NO_SUCH_TABLE")) {
-        return res.status(404).json({ error: "debug_logs table not found — restart server to auto-create it" });
+      if (
+        msg.includes("doesn't exist") ||
+        msg.includes("Table") ||
+        msg.includes("ER_NO_SUCH_TABLE")
+      ) {
+        return res.status(404).json({
+          error:
+            "debug_logs table not found — restart server to auto-create it",
+        });
       }
       console.error("[DebugLogs] Query failed:", err);
       res.status(500).json({ error: "query-failed", message: msg });
@@ -550,27 +655,45 @@ async function startServer() {
     max: 10,
     standardHeaders: "draft-7",
     legacyHeaders: false,
-    message: { error: "Too many checkout requests. Please wait 15 minutes before trying again." },
-    keyGenerator: (req) => {
+    message: {
+      error:
+        "Too many checkout requests. Please wait 15 minutes before trying again.",
+    },
+    keyGenerator: req => {
       const path = req.path.replace(/^\//, "");
       return `${ipKeyGenerator(req.ip ?? "")}:${path}`;
     },
     handler: (req, res, _next, options) => {
-      const ip = (req.headers["x-forwarded-for"] as string | undefined)
-        ?.split(",")[0].trim() ?? req.ip ?? "unknown";
+      const ip =
+        (req.headers["x-forwarded-for"] as string | undefined)
+          ?.split(",")[0]
+          .trim() ??
+        req.ip ??
+        "unknown";
       const ua = (req.headers["user-agent"] as string | undefined) ?? null;
-      console.warn(`[STRIPE_CHECKOUT_RATE_LIMIT] IP=${ip} path=${req.path} ua=${ua ?? "none"}`);
+      console.warn(
+        `[STRIPE_CHECKOUT_RATE_LIMIT] IP=${ip} path=${req.path} ua=${ua ?? "none"}`
+      );
       fireRateLimitEvent(ip, req.path, req.method, "stripe_checkout", ua);
       res.status(options.statusCode).json(options.message);
     },
   });
   // Apply to both direct and batch tRPC calls
-  app.use("/api/trpc/stripe.publicCreateCheckoutSession", stripeCheckoutLimiter);
+  app.use(
+    "/api/trpc/stripe.publicCreateCheckoutSession",
+    stripeCheckoutLimiter
+  );
   // Embedded (in-domain) checkout variant — same abuse surface, same limiter
-  app.use("/api/trpc/stripe.publicCreateEmbeddedCheckoutSession", stripeCheckoutLimiter);
+  app.use(
+    "/api/trpc/stripe.publicCreateEmbeddedCheckoutSession",
+    stripeCheckoutLimiter
+  );
   // Identity attach (elements-mode username metadata) — public + hits Stripe API,
   // same limiter class (per-path buckets via keyGenerator).
-  app.use("/api/trpc/stripe.publicAttachCheckoutIdentity", stripeCheckoutLimiter);
+  app.use(
+    "/api/trpc/stripe.publicAttachCheckoutIdentity",
+    stripeCheckoutLimiter
+  );
 
   // ─── Waitlist submit rate limiter (DB-006 remediation) ────────────────────
   // Public form endpoint — 5 submissions per 15 minutes per IP.
@@ -580,15 +703,24 @@ async function startServer() {
     max: 5,
     standardHeaders: "draft-7",
     legacyHeaders: false,
-    message: { error: "Too many waitlist submissions. Please wait 15 minutes before trying again." },
-    keyGenerator: (req) => {
+    message: {
+      error:
+        "Too many waitlist submissions. Please wait 15 minutes before trying again.",
+    },
+    keyGenerator: req => {
       return `waitlist:${ipKeyGenerator(req.ip ?? "")}`;
     },
     handler: (req, res, _next, options) => {
-      const ip = (req.headers["x-forwarded-for"] as string | undefined)
-        ?.split(",")[0].trim() ?? req.ip ?? "unknown";
+      const ip =
+        (req.headers["x-forwarded-for"] as string | undefined)
+          ?.split(",")[0]
+          .trim() ??
+        req.ip ??
+        "unknown";
       const ua = (req.headers["user-agent"] as string | undefined) ?? null;
-      console.warn(`[WAITLIST_RATE_LIMIT] IP=${ip} path=${req.path} ua=${ua ?? "none"}`);
+      console.warn(
+        `[WAITLIST_RATE_LIMIT] IP=${ip} path=${req.path} ua=${ua ?? "none"}`
+      );
       fireRateLimitEvent(ip, req.path, req.method, "waitlist_submit", ua);
       res.status(options.statusCode).json(options.message);
     },
@@ -607,29 +739,33 @@ async function startServer() {
   app.use((req, res, next) => {
     const timeout = setTimeout(() => {
       if (!res.headersSent) {
-        const isTrpc = req.path.startsWith('/api/trpc');
-        console.error(`[TIMEOUT] Request timed out: ${req.method} ${req.path} isTrpc=${isTrpc}`);
+        const isTrpc = req.path.startsWith("/api/trpc");
+        console.error(
+          `[TIMEOUT] Request timed out: ${req.method} ${req.path} isTrpc=${isTrpc}`
+        );
         if (isTrpc) {
           // tRPC batch envelope: HTTP 200 with error in the result array
           // The client will receive a TRPCClientError with code INTERNAL_SERVER_ERROR
-          res.status(200).json([{
-            error: {
-              json: {
-                message: 'Request timed out. Please try again in a moment.',
-                code: -32603,
-                data: {
-                  code: 'INTERNAL_SERVER_ERROR',
-                  httpStatus: 503,
-                  path: req.path.replace('/api/trpc/', ''),
+          res.status(200).json([
+            {
+              error: {
+                json: {
+                  message: "Request timed out. Please try again in a moment.",
+                  code: -32603,
+                  data: {
+                    code: "INTERNAL_SERVER_ERROR",
+                    httpStatus: 503,
+                    path: req.path.replace("/api/trpc/", ""),
+                  },
                 },
               },
             },
-          }]);
+          ]);
         } else {
-          res.status(503).json({ error: 'Request timeout' });
+          res.status(503).json({ error: "Request timeout" });
         }
       }
-    }, 60_000);  // 60s: accommodates TiDB cold-start + retryOnce
+    }, 60_000); // 60s: accommodates TiDB cold-start + retryOnce
     // Worst case with cold-start retry:
     //   Attempt 1: read(8s) + parallel_check(8s) + bcrypt(0.11s) + write(8s) = 24.11s [transient fail]
     //   retryOnce delay: 3s
@@ -638,8 +774,8 @@ async function startServer() {
     // Normal case (TiDB warm): 24.11s << 60s timeout
     // The keep-alive ping (every 4 min) prevents cold starts in practice;
     // this 60s timeout is the last-resort safety net for edge cases.
-    res.on('finish', () => clearTimeout(timeout));
-    res.on('close', () => clearTimeout(timeout));
+    res.on("finish", () => clearTimeout(timeout));
+    res.on("close", () => clearTimeout(timeout));
     next();
   });
 
@@ -716,24 +852,32 @@ async function startServer() {
     // redirect lands on the same slate DimeModelFeed defaults to.
     const FEED_CUTOFF_UTC_HOUR = 7;
     const now = new Date();
-    const ms = now.getUTCHours() < FEED_CUTOFF_UTC_HOUR
-      ? now.getTime() - 24 * 60 * 60 * 1000
-      : now.getTime();
+    const ms =
+      now.getUTCHours() < FEED_CUTOFF_UTC_HOUR
+        ? now.getTime() - 24 * 60 * 60 * 1000
+        : now.getTime();
     const d = new Date(ms);
     const mo = String(d.getUTCMonth() + 1).padStart(2, "0");
     const da = String(d.getUTCDate()).padStart(2, "0");
     return `${mo}-${da}-${d.getUTCFullYear()}`;
   };
-  console.log(`[SERVER_STARTUP] Registering legacy slug 308 redirects (/feed, /splits, /projections, /dashboard)`);
+  console.log(
+    `[SERVER_STARTUP] Registering legacy slug 308 redirects (/feed, /splits, /projections, /dashboard)`
+  );
   const firstQueryValue = (v: unknown): string =>
-    typeof v === "string" ? v : Array.isArray(v) && typeof v[0] === "string" ? v[0] : "";
+    typeof v === "string"
+      ? v
+      : Array.isArray(v) && typeof v[0] === "string"
+        ? v[0]
+        : "";
   app.get(["/feed", "/splits", "/projections", "/dashboard"], (req, res) => {
     const tab = firstQueryValue(req.query.tab);
     let target: string;
     if (req.path === "/splits" || tab === "splits") {
       target = "/betting-splits/MLB";
     } else {
-      const sport = firstQueryValue(req.query.sport).toUpperCase() === "WC" ? "wc" : "mlb";
+      const sport =
+        firstQueryValue(req.query.sport).toUpperCase() === "WC" ? "wc" : "mlb";
       const legacyDate = firstQueryValue(req.query.date);
       const slugDate = /^\d{4}-\d{2}-\d{2}$/.test(legacyDate)
         ? `${legacyDate.slice(5, 7)}-${legacyDate.slice(8, 10)}-${legacyDate.slice(0, 4)}`
@@ -754,7 +898,9 @@ async function startServer() {
     // The /feed target varies with the 07:00 UTC rollover — a cached 308
     // would pin repeat visitors to a stale date, so forbid caching.
     res.set("Cache-Control", "no-store");
-    console.log(`[legacy→canonical] 308 redirect: ${req.originalUrl} → ${target}`);
+    console.log(
+      `[legacy→canonical] 308 redirect: ${req.originalUrl} → ${target}`
+    );
     res.redirect(308, target);
   });
 
@@ -764,16 +910,22 @@ async function startServer() {
     await setupVite(app, server);
     console.log(`[SERVER_STARTUP] Vite dev middleware ready`);
   } else {
-    console.log(`[SERVER_STARTUP] Registering static file serving (production)`);
+    console.log(
+      `[SERVER_STARTUP] Registering static file serving (production)`
+    );
     serveStatic(app);
   }
 
   const preferredPort = parseInt(process.env.PORT || "3000");
-  console.log(`[SERVER_STARTUP] Preferred port from env: ${preferredPort} (PORT="${process.env.PORT ?? "(unset)"}")`);
+  console.log(
+    `[SERVER_STARTUP] Preferred port from env: ${preferredPort} (PORT="${process.env.PORT ?? "(unset)"}")`
+  );
   const port = await findAvailablePort(preferredPort);
 
   if (port !== preferredPort) {
-    console.log(`[SERVER_STARTUP] Port ${preferredPort} is busy, using port ${port} instead`);
+    console.log(
+      `[SERVER_STARTUP] Port ${preferredPort} is busy, using port ${port} instead`
+    );
   }
 
   // Registered via server.once("listening") — NOT as a listen() callback — so it
@@ -781,10 +933,17 @@ async function startServer() {
   // would double-start every scheduler below).
   const onListening = () => {
     const addr = server.address();
-    console.log(`[SERVER_STARTUP] ✓ Server listening — bound=${JSON.stringify(addr)} url=http://localhost:${port}/`);
+    console.log(
+      `[SERVER_STARTUP] ✓ Server listening — bound=${JSON.stringify(addr)} url=http://localhost:${port}/`
+    );
     console.log(`Server running on http://localhost:${port}/`);
     // Ensure debug_logs table exists — idempotent, non-fatal
-    ensureDebugLogsTable().catch((err: unknown) => console.warn('[Startup] [DebugLogger] Table creation failed (non-fatal):', err));
+    ensureDebugLogsTable().catch((err: unknown) =>
+      console.warn(
+        "[Startup] [DebugLogger] Table creation failed (non-fatal):",
+        err
+      )
+    );
     // ── Recurring background jobs (metered-host credit control) ──────────────
     // Every job below is an in-process 24/7 loop (VSiN scrapers, model runs,
     // schedule-history refreshes, bet auto-grading, security digests). On a
@@ -795,68 +954,105 @@ async function startServer() {
     // flag is removed or the jobs are moved to a dedicated worker service.
     // Unset (the default) preserves current behavior — every job runs.
     if (isBackgroundJobsDisabled()) {
-      console.log('[SCHEDULERS] DISABLE_BACKGROUND_JOBS set — web-only mode: recurring background jobs skipped');
+      console.log(
+        "[SCHEDULERS] DISABLE_BACKGROUND_JOBS set — web-only mode: recurring background jobs skipped"
+      );
     } else {
-    // Start daily 6am EST game purge (removes previous day's games)
-    startDailyPurgeSchedule();
-    // Auto-refresh VSiN book odds every 30 minutes (6am–midnight PST)
-    startVsinAutoRefresh();
-    // NHL model sync — runs every 30 min (9AM–9PM PST), models unmodeled NHL games
-    startNhlModelSyncScheduler();
-    // NHL goalie watcher — checks RotoWire every 10 min for goalie changes, re-runs model on scratch
-    startNhlGoalieWatcher();
-    // Discord bot — gateway client for role sync, password-reset DMs, security alerts
-    startDiscordBot();
-    // MLB player sync — nightly at 08:00 UTC, updates active rosters from MLB Stats API
-    startMlbPlayerSyncScheduler();
-    // MLB schedule history — startup 7-day backfill + refresh every 4h (6AM–midnight EST)
-    startMlbScheduleHistoryScheduler();
-    // MLB TRENDS nightly refresh — fires at 2:59 AM EST (11:59 PM PST) every night
-    // Re-ingests yesterday + today, runs 30-team cross-validation, notifies owner
-    startMlbNightlyTrendsScheduler();
-    // NBA schedule history — startup 7-day backfill + refresh every 4h (6AM–midnight EST)
-    startNbaScheduleHistoryScheduler();
-    // NHL schedule history — startup 7-day backfill + refresh every 4h (6AM–midnight EST)
-    startNhlScheduleHistoryScheduler();
-    // Pre-warm Action Network slate cache for today — eliminates cold-start latency on first BetTracker load
-    prewarmSlateCache().catch(err => console.error("[AN][PREWARM] Failed:", err));
-    // Automated bet grading — 15-min polling during game hours + nightly 11:30 PM EST sweep
-    startBetAutoGradeScheduler();
-    // MLB outcome ingestion + f5_share drift detection + auto-recalibration
-    // Nightly at 12:30 AM PST: ingest final game outcomes → compute Brier scores → check f5_share drift
-    // Monthly on 1st at 3:00 AM PST: full recalibration regardless of drift
-    startMlbOutcomeAndDriftScheduler();
-    // MLB model sync — standalone 5-min heartbeat for today+tomorrow, 24/7, no time gates
-    // Catch-all safety net: models any game with pitchers+lines but modelRunAt=null
-    // Idempotent: modelRunAt IS NULL guard prevents re-running already-modeled games
-    startMlbModelSyncScheduler();
-    // Security digest — daily at 08:00 EST (13:00 UTC), sends 24h threat summary via notifyOwner()
-    startSecurityDigestScheduler();
-    // Weekly security threat trend digest — every Sunday at 08:00 EST, 7-day bar chart + top IPs
-    startWeeklySecurityDigestScheduler();
+      // Start daily 6am EST game purge (removes previous day's games)
+      startDailyPurgeSchedule();
+      // Auto-refresh VSiN book odds every 30 minutes (6am–midnight PST)
+      startVsinAutoRefresh();
+      // NHL model sync — runs every 30 min (9AM–9PM PST), models unmodeled NHL games
+      startNhlModelSyncScheduler();
+      // NHL goalie watcher — checks RotoWire every 10 min for goalie changes, re-runs model on scratch
+      startNhlGoalieWatcher();
+      // Discord bot — gateway client for role sync, password-reset DMs, security alerts
+      startDiscordBot();
+      // MLB player sync — nightly at 08:00 UTC, updates active rosters from MLB Stats API
+      startMlbPlayerSyncScheduler();
+      // MLB schedule history — startup 7-day backfill + refresh every 4h (6AM–midnight EST)
+      startMlbScheduleHistoryScheduler();
+      // MLB TRENDS nightly refresh — fires at 2:59 AM EST (11:59 PM PST) every night
+      // Re-ingests yesterday + today, runs 30-team cross-validation, notifies owner
+      startMlbNightlyTrendsScheduler();
+      // NBA schedule history — startup 7-day backfill + refresh every 4h (6AM–midnight EST)
+      startNbaScheduleHistoryScheduler();
+      // NHL schedule history — startup 7-day backfill + refresh every 4h (6AM–midnight EST)
+      startNhlScheduleHistoryScheduler();
+      // Pre-warm Action Network slate cache for today — eliminates cold-start latency on first BetTracker load
+      prewarmSlateCache().catch(err =>
+        console.error("[AN][PREWARM] Failed:", err)
+      );
+      // Automated bet grading — 15-min polling during game hours + nightly 11:30 PM EST sweep
+      startBetAutoGradeScheduler();
+      // MLB outcome ingestion + f5_share drift detection + auto-recalibration
+      // Nightly at 12:30 AM PST: ingest final game outcomes → compute Brier scores → check f5_share drift
+      // Monthly on 1st at 3:00 AM PST: full recalibration regardless of drift
+      startMlbOutcomeAndDriftScheduler();
+      // MLB model sync — standalone 5-min heartbeat for today+tomorrow, 24/7, no time gates
+      // Catch-all safety net: models any game with pitchers+lines but modelRunAt=null
+      // Idempotent: modelRunAt IS NULL guard prevents re-running already-modeled games
+      startMlbModelSyncScheduler();
+      // Security digest — daily at 08:00 EST (13:00 UTC), sends 24h threat summary via notifyOwner()
+      startSecurityDigestScheduler();
+      // Dime Trace v1 — daily purge of restricted raw/context payloads after
+      // their 90-day deadline. User-visible chat history is not removed here.
+      startDimeChatTraceRetentionScheduler();
+      // Weekly security threat trend digest — every Sunday at 08:00 EST, 7-day bar chart + top IPs
+      startWeeklySecurityDigestScheduler();
 
-    // ── Startup DB backfills (MOVED inside the guard) ──
-    // These write to the DB / scrape an upstream feed on a timer. Previously they
-    // ran outside the DISABLE_BACKGROUND_JOBS guard, so every web replica executed
-    // them — double-writing the backfills and duplicating the 30-min scrape. They
-    // are background jobs and belong behind the kill switch.
-    // OddsHistory lineSource backfill — sets lineSource on historical rows where it is NULL
-    // Uses game.oddsSource as ground truth. Runs once at startup, no-ops if all rows already set.
-    import('../db').then(({ backfillOddsHistoryLineSource }) => {
-      backfillOddsHistoryLineSource()
-        .catch((err: unknown) => console.warn('[Startup] [OddsHistory][BACKFILL] lineSource backfill failed (non-fatal):', err));
-    }).catch((err: unknown) => console.warn('[Startup] [OddsHistory][BACKFILL] Import failed (non-fatal):', err));
+      // ── Startup DB backfills (MOVED inside the guard) ──
+      // These write to the DB / scrape an upstream feed on a timer. Previously they
+      // ran outside the DISABLE_BACKGROUND_JOBS guard, so every web replica executed
+      // them — double-writing the backfills and duplicating the 30-min scrape. They
+      // are background jobs and belong behind the kill switch.
+      // OddsHistory lineSource backfill — sets lineSource on historical rows where it is NULL
+      // Uses game.oddsSource as ground truth. Runs once at startup, no-ops if all rows already set.
+      import("../db")
+        .then(({ backfillOddsHistoryLineSource }) => {
+          backfillOddsHistoryLineSource().catch((err: unknown) =>
+            console.warn(
+              "[Startup] [OddsHistory][BACKFILL] lineSource backfill failed (non-fatal):",
+              err
+            )
+          );
+        })
+        .catch((err: unknown) =>
+          console.warn(
+            "[Startup] [OddsHistory][BACKFILL] Import failed (non-fatal):",
+            err
+          )
+        );
 
-    // K-Props MLBAM ID startup backfill — resolves all historical rows missing pitcher headshot IDs
-    // Runs once on server start, non-fatal, no-ops if all rows already resolved
-    import('../mlbKPropsModelService').then(({ backfillAllKPropsMlbamIds }) => {
-      backfillAllKPropsMlbamIds()
-        .then((r: { resolved: number; alreadyHad: number; unresolved: number; errors: number }) =>
-          console.log(`[Startup] [MLBAM_BACKFILL] K-Props: resolved=${r.resolved} alreadyHad=${r.alreadyHad} unresolved=${r.unresolved} errors=${r.errors}`)
-        )
-        .catch((err: unknown) => console.warn('[Startup] [MLBAM_BACKFILL] K-Props startup backfill failed (non-fatal):', err));
-    }).catch((err: unknown) => console.warn('[Startup] [MLBAM_BACKFILL] Import failed (non-fatal):', err));
-
+      // K-Props MLBAM ID startup backfill — resolves all historical rows missing pitcher headshot IDs
+      // Runs once on server start, non-fatal, no-ops if all rows already resolved
+      import("../mlbKPropsModelService")
+        .then(({ backfillAllKPropsMlbamIds }) => {
+          backfillAllKPropsMlbamIds()
+            .then(
+              (r: {
+                resolved: number;
+                alreadyHad: number;
+                unresolved: number;
+                errors: number;
+              }) =>
+                console.log(
+                  `[Startup] [MLBAM_BACKFILL] K-Props: resolved=${r.resolved} alreadyHad=${r.alreadyHad} unresolved=${r.unresolved} errors=${r.errors}`
+                )
+            )
+            .catch((err: unknown) =>
+              console.warn(
+                "[Startup] [MLBAM_BACKFILL] K-Props startup backfill failed (non-fatal):",
+                err
+              )
+            );
+        })
+        .catch((err: unknown) =>
+          console.warn(
+            "[Startup] [MLBAM_BACKFILL] Import failed (non-fatal):",
+            err
+          )
+        );
     } // ── end recurring background jobs (DISABLE_BACKGROUND_JOBS guard) ──
     // ── DB keep-alive ping ──────────────────────────────────────────────────
     // TiDB Serverless drops idle connections after ~5 minutes. Without a
@@ -870,9 +1066,13 @@ async function startServer() {
     // latency for all UserManagement mutations.
     const runDbKeepAlive = () => {
       getDb()
-        .then((db) => db!.execute('SELECT 1 AS keepalive'))
-        .then(() => console.log('[DB_KEEPALIVE] TiDB connection pool kept warm ✓'))
-        .catch((err: unknown) => console.warn('[DB_KEEPALIVE] Ping failed (non-fatal):', err));
+        .then(db => db!.execute("SELECT 1 AS keepalive"))
+        .then(() =>
+          console.log("[DB_KEEPALIVE] TiDB connection pool kept warm ✓")
+        )
+        .catch((err: unknown) =>
+          console.warn("[DB_KEEPALIVE] Ping failed (non-fatal):", err)
+        );
     };
     // Initial warm-up: 500ms after startup
     setTimeout(runDbKeepAlive, 500);
@@ -880,7 +1080,9 @@ async function startServer() {
     // unref() prevents this interval from keeping the process alive during tests
     const keepAliveInterval = setInterval(runDbKeepAlive, 4 * 60 * 1000);
     keepAliveInterval.unref();
-    console.log('[DB_KEEPALIVE] Recurring TiDB keep-alive scheduled (every 4 min)');
+    console.log(
+      "[DB_KEEPALIVE] Recurring TiDB keep-alive scheduled (every 4 min)"
+    );
 
     // ── Games list cache pre-warm ─────────────────────────────────────────────
     // Pre-warm the games.list cache for all active sports at startup.
@@ -901,25 +1103,62 @@ async function startServer() {
       const effectiveDate = new Date(effectiveMs);
       const todayStr = [
         effectiveDate.getUTCFullYear(),
-        String(effectiveDate.getUTCMonth() + 1).padStart(2, '0'),
-        String(effectiveDate.getUTCDate()).padStart(2, '0'),
-      ].join('-');
+        String(effectiveDate.getUTCMonth() + 1).padStart(2, "0"),
+        String(effectiveDate.getUTCDate()).padStart(2, "0"),
+      ].join("-");
       // Also pre-warm yesterday and tomorrow to cover the 11:00 UTC boundary window.
-      const yesterdayStr = new Date(effectiveMs - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-      const tomorrowStr = new Date(effectiveMs + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-      console.log(`[Startup] [GAMES_CACHE] Effective date=${todayStr} (utcHour=${nowUtc.getUTCHours()}, beforeCutoff=${isBeforeCutoff}) — pre-warming MLB:${yesterdayStr}, MLB:${todayStr}, MLB:${tomorrowStr}`);
+      const yesterdayStr = new Date(effectiveMs - 24 * 60 * 60 * 1000)
+        .toISOString()
+        .slice(0, 10);
+      const tomorrowStr = new Date(effectiveMs + 24 * 60 * 60 * 1000)
+        .toISOString()
+        .slice(0, 10);
+      console.log(
+        `[Startup] [GAMES_CACHE] Effective date=${todayStr} (utcHour=${nowUtc.getUTCHours()}, beforeCutoff=${isBeforeCutoff}) — pre-warming MLB:${yesterdayStr}, MLB:${todayStr}, MLB:${tomorrowStr}`
+      );
       Promise.all([
         // MLB: pre-warm today + yesterday + tomorrow (covers the 11:00 UTC boundary window)
-        listGames({ sport: 'MLB', gameDate: todayStr }).then(r => console.log(`[Startup] [GAMES_CACHE] MLB:${todayStr} pre-warmed: ${r.length} games`)),
-        listGames({ sport: 'MLB', gameDate: yesterdayStr }).then(r => console.log(`[Startup] [GAMES_CACHE] MLB:${yesterdayStr} pre-warmed: ${r.length} games`)),
-        listGames({ sport: 'MLB', gameDate: tomorrowStr }).then(r => console.log(`[Startup] [GAMES_CACHE] MLB:${tomorrowStr} pre-warmed: ${r.length} games`)),
+        listGames({ sport: "MLB", gameDate: todayStr }).then(r =>
+          console.log(
+            `[Startup] [GAMES_CACHE] MLB:${todayStr} pre-warmed: ${r.length} games`
+          )
+        ),
+        listGames({ sport: "MLB", gameDate: yesterdayStr }).then(r =>
+          console.log(
+            `[Startup] [GAMES_CACHE] MLB:${yesterdayStr} pre-warmed: ${r.length} games`
+          )
+        ),
+        listGames({ sport: "MLB", gameDate: tomorrowStr }).then(r =>
+          console.log(
+            `[Startup] [GAMES_CACHE] MLB:${tomorrowStr} pre-warmed: ${r.length} games`
+          )
+        ),
         // Non-MLB: no gameDate filter (VSiN-driven, small dataset, rolling window is correct)
-        listGames({ sport: 'NHL' }).then(r => console.log(`[Startup] [GAMES_CACHE] NHL pre-warmed: ${r.length} games`)),
-        listGames({ sport: 'NBA' }).then(r => console.log(`[Startup] [GAMES_CACHE] NBA pre-warmed: ${r.length} games`)),
-        listGames({ sport: 'NCAAM' }).then(r => console.log(`[Startup] [GAMES_CACHE] NCAAM pre-warmed: ${r.length} games`)),
-      ]).catch((err: unknown) => console.warn('[Startup] [GAMES_CACHE] Pre-warm failed (non-fatal):', err));
+        listGames({ sport: "NHL" }).then(r =>
+          console.log(
+            `[Startup] [GAMES_CACHE] NHL pre-warmed: ${r.length} games`
+          )
+        ),
+        listGames({ sport: "NBA" }).then(r =>
+          console.log(
+            `[Startup] [GAMES_CACHE] NBA pre-warmed: ${r.length} games`
+          )
+        ),
+        listGames({ sport: "NCAAM" }).then(r =>
+          console.log(
+            `[Startup] [GAMES_CACHE] NCAAM pre-warmed: ${r.length} games`
+          )
+        ),
+      ]).catch((err: unknown) =>
+        console.warn(
+          "[Startup] [GAMES_CACHE] Pre-warm failed (non-fatal):",
+          err
+        )
+      );
     }, 1000); // 1s after startup — before lineup pre-warm, after DB keep-alive
-    console.log('[Startup] [GAMES_CACHE] Games list cache pre-warm scheduled (1s after startup)');
+    console.log(
+      "[Startup] [GAMES_CACHE] Games list cache pre-warm scheduled (1s after startup)"
+    );
 
     // ── 11:00 UTC boundary cache invalidation ─────────────────────────────────
     // The feed rolls over to the new day's slate at 11:00 UTC. The games cache
@@ -934,38 +1173,81 @@ async function startServer() {
       let nextCutoffMs: number;
       if (nowUtc.getUTCHours() < CUTOFF_HOUR) {
         // Before cutoff today — fire at 11:00 UTC today (+5s buffer)
-        nextCutoffMs = Date.UTC(
-          nowUtc.getUTCFullYear(), nowUtc.getUTCMonth(), nowUtc.getUTCDate(),
-          CUTOFF_HOUR, 0, 5
-        ) - nowMs;
+        nextCutoffMs =
+          Date.UTC(
+            nowUtc.getUTCFullYear(),
+            nowUtc.getUTCMonth(),
+            nowUtc.getUTCDate(),
+            CUTOFF_HOUR,
+            0,
+            5
+          ) - nowMs;
       } else {
         // After cutoff today — fire at 11:00 UTC tomorrow (+5s buffer)
         const tomorrow = new Date(nowMs + 24 * 60 * 60 * 1000);
-        nextCutoffMs = Date.UTC(
-          tomorrow.getUTCFullYear(), tomorrow.getUTCMonth(), tomorrow.getUTCDate(),
-          CUTOFF_HOUR, 0, 5
-        ) - nowMs;
+        nextCutoffMs =
+          Date.UTC(
+            tomorrow.getUTCFullYear(),
+            tomorrow.getUTCMonth(),
+            tomorrow.getUTCDate(),
+            CUTOFF_HOUR,
+            0,
+            5
+          ) - nowMs;
       }
       const nextCutoffDate = new Date(nowMs + nextCutoffMs).toISOString();
-      console.log(`[Startup] [CUTOFF_INVALIDATION] Next 11:00 UTC boundary invalidation scheduled in ${Math.round(nextCutoffMs / 60000)}min (at ${nextCutoffDate})`);
+      console.log(
+        `[Startup] [CUTOFF_INVALIDATION] Next 11:00 UTC boundary invalidation scheduled in ${Math.round(nextCutoffMs / 60000)}min (at ${nextCutoffDate})`
+      );
       const cutoffTimer = setTimeout(() => {
-        console.log('[Scheduler] [CUTOFF_INVALIDATION] 11:00 UTC boundary reached — force-invalidating all caches');
+        console.log(
+          "[Scheduler] [CUTOFF_INVALIDATION] 11:00 UTC boundary reached — force-invalidating all caches"
+        );
         forceInvalidateGamesCache();
         // Re-warm the cache immediately after invalidation with the new effective date
         const newNowMs = Date.now();
         const newNowUtc = new Date(newNowMs);
         const newIsBeforeCutoff = newNowUtc.getUTCHours() < CUTOFF_HOUR;
-        const newEffectiveMs = newIsBeforeCutoff ? newNowMs - 24 * 60 * 60 * 1000 : newNowMs;
+        const newEffectiveMs = newIsBeforeCutoff
+          ? newNowMs - 24 * 60 * 60 * 1000
+          : newNowMs;
         const newTodayStr = new Date(newEffectiveMs).toISOString().slice(0, 10);
-        const newYesterdayStr = new Date(newEffectiveMs - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-        const newTomorrowStr = new Date(newEffectiveMs + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-        console.log(`[Scheduler] [CUTOFF_INVALIDATION] Re-warming cache for effectiveDate=${newTodayStr}`);
+        const newYesterdayStr = new Date(newEffectiveMs - 24 * 60 * 60 * 1000)
+          .toISOString()
+          .slice(0, 10);
+        const newTomorrowStr = new Date(newEffectiveMs + 24 * 60 * 60 * 1000)
+          .toISOString()
+          .slice(0, 10);
+        console.log(
+          `[Scheduler] [CUTOFF_INVALIDATION] Re-warming cache for effectiveDate=${newTodayStr}`
+        );
         Promise.all([
-          listGames({ sport: 'MLB', gameDate: newTodayStr }).then(r => console.log(`[Scheduler] [CUTOFF_INVALIDATION] MLB:${newTodayStr} re-warmed: ${r.length} games`)),
-          listGames({ sport: 'MLB', gameDate: newYesterdayStr }).then(r => console.log(`[Scheduler] [CUTOFF_INVALIDATION] MLB:${newYesterdayStr} re-warmed: ${r.length} games`)),
-          listGames({ sport: 'MLB', gameDate: newTomorrowStr }).then(r => console.log(`[Scheduler] [CUTOFF_INVALIDATION] MLB:${newTomorrowStr} re-warmed: ${r.length} games`)),
-          getAvailableDates('MLB').then(r => console.log(`[Scheduler] [CUTOFF_INVALIDATION] MLB availableDates re-warmed: ${r.length} dates`)),
-        ]).catch((err: unknown) => console.warn('[Scheduler] [CUTOFF_INVALIDATION] Re-warm failed (non-fatal):', err));
+          listGames({ sport: "MLB", gameDate: newTodayStr }).then(r =>
+            console.log(
+              `[Scheduler] [CUTOFF_INVALIDATION] MLB:${newTodayStr} re-warmed: ${r.length} games`
+            )
+          ),
+          listGames({ sport: "MLB", gameDate: newYesterdayStr }).then(r =>
+            console.log(
+              `[Scheduler] [CUTOFF_INVALIDATION] MLB:${newYesterdayStr} re-warmed: ${r.length} games`
+            )
+          ),
+          listGames({ sport: "MLB", gameDate: newTomorrowStr }).then(r =>
+            console.log(
+              `[Scheduler] [CUTOFF_INVALIDATION] MLB:${newTomorrowStr} re-warmed: ${r.length} games`
+            )
+          ),
+          getAvailableDates("MLB").then(r =>
+            console.log(
+              `[Scheduler] [CUTOFF_INVALIDATION] MLB availableDates re-warmed: ${r.length} dates`
+            )
+          ),
+        ]).catch((err: unknown) =>
+          console.warn(
+            "[Scheduler] [CUTOFF_INVALIDATION] Re-warm failed (non-fatal):",
+            err
+          )
+        );
         // Schedule the next day's boundary invalidation
         scheduleNextCutoffInvalidation();
       }, nextCutoffMs);
@@ -981,7 +1263,9 @@ async function startServer() {
   // timeout") before it ever reached Express. Fail fast on a bind error so the
   // platform restarts the container instead of leaving a zombie that serves nothing.
   const onBindError = (err: NodeJS.ErrnoException) => {
-    console.error(`[SERVER_STARTUP] ✗ Could not bind port ${port} (${err.code ?? "?"}) — exiting so the platform restarts`);
+    console.error(
+      `[SERVER_STARTUP] ✗ Could not bind port ${port} (${err.code ?? "?"}) — exiting so the platform restarts`
+    );
     process.exit(1);
   };
   server.once("error", onBindError);
@@ -989,7 +1273,9 @@ async function startServer() {
     server.removeListener("error", onBindError);
     onListening();
   });
-  console.log(`[SERVER_STARTUP] Calling server.listen(${port}) — host omitted for dual-stack bind with IPv4 fallback ...`);
+  console.log(
+    `[SERVER_STARTUP] Calling server.listen(${port}) — host omitted for dual-stack bind with IPv4 fallback ...`
+  );
   server.listen(port);
 }
 

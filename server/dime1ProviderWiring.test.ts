@@ -73,10 +73,18 @@ describe("provider registry", () => {
 });
 
 describe("POST /api/dime/chat — dime1 branch wiring", () => {
-  const alphaIdx = routeSrc.indexOf("if (researchAlphaGate.active)");
-  const dime1Idx = routeSrc.indexOf('if (DIME_CHAT_LLM_PROVIDER === "dime1")');
+  const routeStart = routeSrc.indexOf('dimeChatRouter.post("/chat"');
+  const alphaIdx = routeSrc.indexOf(
+    "if (researchAlphaGate.active)",
+    routeStart
+  );
+  const dime1Idx = routeSrc.indexOf(
+    'if (DIME_CHAT_LLM_PROVIDER === "dime1")',
+    alphaIdx
+  );
   const freezeIdx = routeSrc.indexOf(
-    'if (DIME_CHAT_LLM_PROVIDER !== "anthropic")'
+    'if (DIME_CHAT_LLM_PROVIDER !== "anthropic")',
+    dime1Idx
   );
 
   it("exists and sits above the frozen guard", () => {
@@ -115,7 +123,8 @@ describe("POST /api/dime/chat — dime1 branch wiring", () => {
 
 describe("dime1 handler — control-plane parity with the Claude path", () => {
   it("grounds from the platform context builder with the same ack framing", () => {
-    expect(handlerSrc).toContain("getDimeChatContext()");
+    expect(handlerSrc).toContain("getDimeChatContext(");
+    expect(handlerSrc).toContain("messages.at(-1)?.content");
     expect(handlerSrc).toContain(
       "ground Dime answers in this platform context"
     );
@@ -124,9 +133,8 @@ describe("dime1 handler — control-plane parity with the Claude path", () => {
   it("applies the same post-generation validation gates and withholds blocked answers", () => {
     expect(handlerSrc).toContain("validateDimeResponseText(");
     expect(handlerSrc).toContain("containsProhibitedBettingCertainty(");
-    expect(handlerSrc).toContain(
-      'send({ type: "done", stopReason: "validation_blocked" })'
-    );
+    expect(handlerSrc).toContain('stopReason: "validation_blocked"');
+    expect(handlerSrc).toContain('type: "done"');
   });
 
   it("streams the meta → delta → done SSE contract the client already parses", () => {
