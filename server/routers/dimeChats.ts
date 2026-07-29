@@ -18,19 +18,18 @@ import { getDb } from "../db";
 import { dimeChatThreads, dimeChatMessages } from "../../drizzle/schema";
 import { eq, and, desc, asc, isNull, sql } from "drizzle-orm";
 import { DIME_CHAT_MAX_MESSAGE_CHARS } from "../_core/dimeChatModel";
+import {
+  deriveThreadTitle,
+  sanitizeThreadTitle,
+  TITLE_MAX,
+} from "../dimeChatTitle";
 
-const TITLE_MAX = 80;
 const LIST_LIMIT = 100;
 
-/** Collapse whitespace and truncate to TITLE_MAX chars with an ellipsis. */
-export function deriveThreadTitle(
-  text: string,
-  max: number = TITLE_MAX
-): string {
-  const collapsed = text.replace(/\s+/g, " ").trim();
-  if (collapsed.length <= max) return collapsed;
-  return `${collapsed.slice(0, max - 1).trimEnd()}…`;
-}
+/** New-thread titles come from the deterministic topic-detection engine
+ *  (owner directive 2026-07-29 r3) — see server/dimeChatTitle.ts. Re-exported
+ *  here because callers and tests import it from the router module. */
+export { deriveThreadTitle };
 
 async function requireDb() {
   const db = await getDb();
@@ -252,6 +251,28 @@ export const dimeChatsRouter = router({
           return { ok: true, lastSeq: seq };
         }
       );
+    }),
+
+  /** Rename an owned thread. The user's chosen title is kept verbatim
+   *  (whitespace-collapsed + truncated) — the topic engine only ever names
+   *  NEW threads, never overrides an explicit rename. */
+  rename: appUserProcedure
+    .input(
+      z.object({
+        threadId: z.number().int().positive(),
+        title: z.string().min(1).max(TITLE_MAX * 2),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const db = await requireDb();
+      const thread = await getOwnedThread(db, input.threadId, ctx.appUser.id);
+      const title = sanitizeThreadTitle(input.title);
+      if (!title) throw new TRPCError({ code: "BAD_REQUEST", message: "Title required." });
+      await db
+        .update(dimeChatThreads)
+        .set({ title, updatedAt: new Date() })
+        .where(eq(dimeChatThreads.id, thread.id));
+      return { ok: true, title };
     }),
 
   /** Star/unstar an owned thread. */

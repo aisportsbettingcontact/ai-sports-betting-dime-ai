@@ -232,6 +232,15 @@ html.dark .mfn-item[aria-current="page"]:not(.mfn-chat)::after {
   line-height: 1;
 }
 
+/* Credits readout replacing "Chat with dime" while /chat is the active page
+ * (directive 2026-07-29). Inherits the pill's black ink and 700 weight;
+ * tabular numerals so the value doesn't wobble when it later goes live. */
+.mfn-chat-credits {
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 /* Chat's persistent primary emphasis and route-activation are separate
  * concepts: when /chat IS the current route, the pill keeps the exact mint
  * fill and black ink (the generic active rule above must not swap it onto
@@ -243,9 +252,11 @@ html.dark .mfn-item[aria-current="page"]:not(.mfn-chat)::after {
   font-weight: 700;
 }
 
+/* No activation dot on the active chat pill (directive 2026-07-29 r2): the
+ * pill's content already flips to the credits readout — the dot under it
+ * read as clutter, and mint-fill + content-swap carry the active state. */
 .mfn-item.mfn-chat[aria-current="page"]::after {
-  background: #ffffff;
-  box-shadow: none;
+  display: none;
 }
 
 /* Inline wordmark inside the mint pill: black ink; the coin-dot flips to

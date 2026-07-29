@@ -1335,6 +1335,10 @@ export default function DimeChatPage({
   const [threadId, setThreadId] = useState<number | null>(null);
   const [threadMenuOpen, setThreadMenuOpen] = useState(false);
   const threadMenuRef = useRef<HTMLDivElement | null>(null);
+  // Rename drill-in inside the phone kebab menu (owner directive 2026-07-29
+  // r3): non-null while the inline input is showing, prefilled with the
+  // current title. Always cleared when the menu closes.
+  const [renameDraft, setRenameDraft] = useState<string | null>(null);
   const pendingUserTextRef = useRef<string | null>(null);
   const prevStreamingRef = useRef(false);
   const clientSessionIdRef = useRef<string | null>(null);
@@ -1343,6 +1347,7 @@ export default function DimeChatPage({
   const lastServerTraceRef = useRef<DimeChatClientTraceState | null>(null);
   const createThreadMut = trpc.dimeChats.create.useMutation();
   const appendMut = trpc.dimeChats.appendMessages.useMutation();
+  const renameMut = trpc.dimeChats.rename.useMutation();
   const setStarredMut = trpc.dimeChats.setStarred.useMutation();
   const setArchivedMut = trpc.dimeChats.setArchived.useMutation();
   const softDeleteMut = trpc.dimeChats.softDelete.useMutation();
@@ -2238,6 +2243,7 @@ export default function DimeChatPage({
 
   /* --- "⋯" chat settings: Star / Archive / Delete for the open thread. --- */
   useEffect(() => {
+    if (!threadMenuOpen) setRenameDraft(null);
     if (!threadMenuOpen) return;
     const onDown = (e: MouseEvent) => {
       if (!threadMenuRef.current?.contains(e.target as Node))
@@ -2258,6 +2264,17 @@ export default function DimeChatPage({
     () => void utils.dimeChats.list.invalidate(),
     [utils]
   );
+
+  /** Commit the phone-menu rename: sanitized server-side; empty input is a
+   *  no-op cancel. The stored title is the user's — the topic engine never
+   *  overrides an explicit rename. */
+  const commitRename = useCallback(() => {
+    const title = (renameDraft ?? "").replace(/\s+/g, " ").trim();
+    setThreadMenuOpen(false);
+    setRenameDraft(null);
+    if (threadId == null || title === "") return;
+    renameMut.mutate({ threadId, title }, { onSettled: refreshThreads });
+  }, [renameDraft, threadId, renameMut, refreshThreads]);
 
   const toggleStar = useCallback(() => {
     if (threadId == null) return;
@@ -2485,16 +2502,117 @@ export default function DimeChatPage({
                 "Menu"
               )}
             </button>
-            <span className="dc-mobile-title">
-              <span className="dime-wordmark" aria-label="dime">
-                d
-                <span className="dime-wordmark-i">
-                  ı<span className="dime-coindot" />
+            {/* Phones (owner directive 2026-07-29 r2): the floating nav's
+                active chat pill is the ONE credits display — repeating it
+                here read as a duplicate, so the bar center stays empty and
+                the bar collapses to the toggle's own footprint. Tablet keeps
+                the wordmark title. */}
+            {!phone && (
+              <span className="dc-mobile-title">
+                <span className="dime-wordmark" aria-label="dime">
+                  d
+                  <span className="dime-wordmark-i">
+                    ı<span className="dime-coindot" />
+                  </span>
+                  me
                 </span>
-                me
               </span>
-            </span>
-            <span className="dc-mobile-balance" aria-hidden="true" />
+            )}
+            {/* Phone kebab (owner directive 2026-07-29 r3): chat options at
+                the bar's right edge, opposite the history toggle — New chat,
+                Star, Archive, and an inline Rename drill-in. Reuses the
+                threadMenu state/outside-click wiring (the desktop kebab and
+                this one never render together). */}
+            {phone && chatAccess === "granted" && conversation ? (
+              <div className="dc-mobile-kebab-wrap" ref={threadMenuRef}>
+                <button
+                  type="button"
+                  className="dc-mobile-kebab dc-focusable dc-pressable"
+                  aria-label="Chat options"
+                  aria-haspopup="menu"
+                  aria-expanded={threadMenuOpen}
+                  onClick={() => setThreadMenuOpen(open => !open)}
+                >
+                  <Ellipsis size={20} strokeWidth={1.8} aria-hidden="true" />
+                </button>
+                {threadMenuOpen && (
+                  <div className="dc-thread-menu" role="menu">
+                    {renameDraft != null ? (
+                      <form
+                        className="dc-rename-form"
+                        onSubmit={e => {
+                          e.preventDefault();
+                          commitRename();
+                        }}
+                      >
+                        <input
+                          className="dc-rename-input"
+                          value={renameDraft}
+                          onChange={e => setRenameDraft(e.target.value)}
+                          onKeyDown={e => {
+                            if (e.key === "Escape") setRenameDraft(null);
+                          }}
+                          aria-label="New chat name"
+                          maxLength={80}
+                          autoFocus
+                        />
+                        <button
+                          type="submit"
+                          className="dc-thread-menu-item dc-focusable dc-pressable"
+                        >
+                          Save
+                        </button>
+                      </form>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className="dc-thread-menu-item dc-focusable dc-pressable"
+                          onClick={() => {
+                            setThreadMenuOpen(false);
+                            newChat();
+                          }}
+                        >
+                          New chat
+                        </button>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className="dc-thread-menu-item dc-focusable dc-pressable"
+                          disabled={threadId == null}
+                          onClick={toggleStar}
+                        >
+                          {activeThreadMeta?.starred ? "Unstar" : "Star"}
+                        </button>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className="dc-thread-menu-item dc-focusable dc-pressable"
+                          disabled={threadId == null}
+                          onClick={archiveThread}
+                        >
+                          Archive
+                        </button>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className="dc-thread-menu-item dc-focusable dc-pressable"
+                          disabled={threadId == null}
+                          onClick={() =>
+                            setRenameDraft(activeThreadMeta?.title ?? "")
+                          }
+                        >
+                          Rename
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <span className="dc-mobile-balance" aria-hidden="true" />
+            )}
           </div>
         )}
 

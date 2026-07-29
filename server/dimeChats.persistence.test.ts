@@ -96,16 +96,20 @@ describe("Dime Chat conversation persistence", () => {
       firstAssistantMessage
     );
 
+    // 2026-07-29 r3: the stored title comes from the topic-detection engine
+    // (deriveThreadTitle), not the raw message — here the fallback path:
+    // trailing period dropped, word-boundary truncation to the 48-char band.
+    const derivedTitle = "Break down the market movement for tonight's…";
     expect(result).toEqual({
       threadId: 41,
-      title: firstMessage,
+      title: derivedTitle,
     });
     expect(fake.transactionCalls).toBe(1);
     expect(fake.committedThreads).toEqual([
       {
         id: 41,
         userId: 17,
-        title: firstMessage,
+        title: derivedTitle,
       },
     ]);
     expect(fake.committedMessages).toEqual([
