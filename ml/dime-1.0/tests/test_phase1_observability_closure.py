@@ -26,12 +26,9 @@ RESEARCH_ALPHA_PROPOSAL_PATH = (
     PROJECT
     / "evidence/infrastructure/2026-07-29/research_alpha_kill_switch_hardening_proposal.json"
 )
-INFRASTRUCTURE_CHECKSUM_PATH = (
-    PROJECT / "evidence/infrastructure/2026-07-29/SHA256SUMS"
-)
+INFRASTRUCTURE_CHECKSUM_PATH = PROJECT / "evidence/infrastructure/2026-07-29/SHA256SUMS"
 MIGRATION_VERIFICATION_PATH = (
-    PROJECT
-    / "evidence/manifests/phase1-observability-closure-v1/migration-local-verification.json"
+    PROJECT / "evidence/manifests/phase1-observability-closure-v1/migration-local-verification.json"
 )
 
 
@@ -141,9 +138,7 @@ def test_research_alpha_hardening_is_separate_and_non_authorizing() -> None:
 
 def test_migration_verification_is_local_and_non_authorizing() -> None:
     verification = _load(MIGRATION_VERIFICATION_PATH)
-    result_statuses = {
-        result["check"]: result["status"] for result in verification["results"]
-    }
+    result_statuses = {result["check"]: result["status"] for result in verification["results"]}
     assert result_statuses == {
         "migration_0122_first_application": "pass",
         "migration_0122_second_application": "pass",
