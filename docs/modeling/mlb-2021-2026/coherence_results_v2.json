@@ -1,0 +1,29 @@
+{
+ "A": {
+  "coherence": {
+   "max_two_way_dev": 0.0,
+   "max_f5_trio_dev": 2.220446049250313e-16,
+   "cdf_monotone": true,
+   "rl_le_ml": 1.0
+  },
+  "n": 26731
+ },
+ "B": {
+  "coherence": {
+   "max_two_way_dev": 0.0,
+   "max_f5_trio_dev": 2.220446049250313e-16,
+   "cdf_monotone": true,
+   "rl_le_ml": 1.0
+  },
+  "n": 26731
+ },
+ "C": {
+  "coherence": {
+   "max_two_way_dev": 0.0,
+   "max_f5_trio_dev": 2.220446049250313e-16,
+   "cdf_monotone": true,
+   "rl_le_ml": 1.0
+  },
+  "n": 26731
+ }
+}

@@ -1,5 +1,17 @@
 # MLB Warehouse-Constrained Modeling — Final Report (2021–2026)
 
+> **SUPERSEDED FOR SELECTION — PRESERVED AS HISTORY.** The seven verdicts below were
+> issued under the P5 discriminative-ladder evaluation and are superseded by
+> `MODEL-VERDICTS-V2.csv` / `FINAL-REPORT-400K-ADDENDUM.md` (400,000-trajectory joint
+> simulation engine, corrected pure-predictive objective).
+>
+> **ERRATUM (ledger event 39):** the metric columns in the table below are not
+> reproducible from this run's own prediction artifacts
+> (`predictions/predictions_<market>.jsonl`). Artifact-verified prior-run values (used
+> as baselines in the v2 evaluation): fg_ml 0.6903, fg_rl 0.6508, f5_ml 0.7002,
+> f5_rl 0.6871, nrfi 0.7043 (pooled log loss); fg_total CRPS 2.4900, f5_total CRPS
+> 1.8303 (fold means). The verdict letters and qualitative findings stand as issued.
+
 ## Seven-market verdict table
 
 | Market | Verdict | Scored n | Final logloss/CRPS | vs baseline (mean ΔLL / ΔCRPS) | Calibration | Notes |
