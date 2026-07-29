@@ -724,6 +724,45 @@ button.dc-sidebar-row {
   .dc-composer-input {
     min-height: 44px;
   }
+
+  /* ── Phone chat chrome (owner directive 2026-07-29) ──────────────────────
+     The "Menu" word is replaced by the PanelLeftOpen chat-history toggle, so
+     the bar sheds its full-width hairline — a lone icon over the page ground
+     needs no band divider. The icon centers in the former text button. */
+  .theme-dark .dc-mobile-bar,
+  .theme-light .dc-mobile-bar {
+    border-bottom: 0;
+  }
+  .dc-mobile-menu {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  /* The drawer close swaps × for the matched PanelLeftClose glyph on phones —
+     same centering treatment. */
+  .dc-drawer-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Responsible-gaming line (owner directive 2026-07-29): ONE line, smaller
+     and dimmer — deliberate exception to the 11px floor above for this legal
+     micro-copy; the copy itself never changes (marketing-surface law). The
+     clamp keeps all 72 characters on a single line down to 320px. */
+  .dc-chat-footer {
+    white-space: nowrap;
+    overflow: hidden;
+    font-size: clamp(8px, 2.45vw, 9.5px);
+    line-height: 1;
+    opacity: 0.55;
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
+  }
+  /* With the footer collapsed to one dim line, the composer hugs the bottom
+     of the conversation viewport. */
+  .dc-main--conv .dc-composer-zone {
+    padding-bottom: 8px;
+  }
 }
 
 @media (max-width: 430px) {

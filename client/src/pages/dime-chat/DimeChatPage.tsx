@@ -296,6 +296,7 @@ function DimeSidebar({
   onClearAllChats,
   activeChatId,
   compact,
+  phone,
   drawerOpen,
   sidebarRef,
   onClose,
@@ -314,6 +315,11 @@ function DimeSidebar({
   onClearAllChats?: () => void;
   activeChatId: number | null;
   compact: boolean;
+  /** <768px (owner directive 2026-07-29): the drawer is a pure CHAT-HISTORY
+   *  panel — New Chat + Recent Chats only. The app-nav rows, profile row, and
+   *  owner eraser are tablet/desktop elements (the floating pill nav owns
+   *  primary navigation on phones). */
+  phone: boolean;
   drawerOpen: boolean;
   sidebarRef: MutableRefObject<HTMLElement | null>;
   onClose: () => void;
@@ -484,7 +490,7 @@ function DimeSidebar({
       className={`dc-sidebar${compact ? " dc-drawer" : ""}${rail ? " dc-sidebar--rail" : ""}`}
       role={compact && drawerOpen ? "dialog" : undefined}
       aria-modal={compact && drawerOpen ? true : undefined}
-      aria-label={compact ? "Dime navigation" : undefined}
+      aria-label={compact ? (phone ? "Chat history" : "Dime navigation") : undefined}
       aria-hidden={compact && !drawerOpen ? true : undefined}
     >
       <div className="dc-sidebar-head">
@@ -501,10 +507,17 @@ function DimeSidebar({
           <button
             type="button"
             className="dc-drawer-close dc-pressable dc-focusable"
-            aria-label="Close navigation"
+            aria-label={phone ? "Collapse chat history" : "Close navigation"}
             onClick={onClose}
           >
-            ×
+            {/* Phones pair with the PanelLeftOpen trigger in the mobile bar
+                (owner directive 2026-07-29) — the matched collapse glyph reads
+                as the same control; tablet keeps the frozen ×. */}
+            {phone ? (
+              <PanelLeftClose size={22.5} strokeWidth={1.8} aria-hidden="true" />
+            ) : (
+              "×"
+            )}
           </button>
         ) : (
           // Desktop header controls (owner directive 2026-07-21): chat search
@@ -579,8 +592,12 @@ function DimeSidebar({
           />
         </div>
       )}
-      <nav className="dc-nav-group" aria-label="Primary">
-        {NAV_ROWS.map(row => {
+      <nav className="dc-nav-group" aria-label={phone ? "Chat" : "Primary"}>
+        {/* Phones (owner directive 2026-07-29): New Chat only — the floating
+            pill nav owns every other destination, so repeating them here would
+            put two primary navs on one screen. Tablet/desktop keep the full
+            row set. */}
+        {(phone ? NAV_ROWS.filter(row => row.pane === "chat") : NAV_ROWS).map(row => {
           const href = row.href();
           const active = row.pane === activePane;
           const RowIcon = row.icon;
@@ -634,9 +651,11 @@ function DimeSidebar({
         <>
           <div className="dc-recents-head">
             <div className="dc-recents-label">Recent Chats</div>
-            {onClearAllChats && isOwner && (
+            {onClearAllChats && isOwner && !phone && (
               // OWNER-ONLY platform sweep (owner directive 2026-07-21): clears
               // recent chats for every user, behind its own confirm upstream.
+              // Tablet/desktop only — 2026-07-29 removed it from the phone
+              // drawer (chat-history panel carries no destructive sweeps).
               <button
                 type="button"
                 className="dc-icon-btn dc-icon-btn--sm dc-hv2 dc-pressable dc-focusable"
@@ -719,7 +738,10 @@ function DimeSidebar({
         // list's flex: 1 slot (D/L:65) so the profile row stays pinned.
         <div className="dc-sidebar-spacer" />
       )}
-      {appUser ? (
+      {/* Phones (owner directive 2026-07-29): no profile section — account
+          management lives behind the floating nav's Profile destination; the
+          drawer stays a pure chat-history panel. */}
+      {phone ? null : appUser ? (
         <div ref={profileRef} className="dc-sidebar-row dc-profile-row">
           {/* The avatar is itself a menu trigger — in the rail it is the whole
               profile section (owner directive 2026-07-21: collapsed shows only
@@ -1330,6 +1352,15 @@ export default function DimeChatPage({
       typeof window !== "undefined" &&
       !!window.matchMedia?.("(max-width: 1023px)").matches
   );
+  // <768px (owner directive 2026-07-29): phones swap the "Menu" trigger for
+  // the PanelLeft* chat-history toggle, slim the drawer to New Chat + Recent
+  // Chats, and drop the thread kebab. Tablet (768-1023) keeps the shipped
+  // compact chrome.
+  const [phone, setPhone] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      !!window.matchMedia?.("(max-width: 767px)").matches
+  );
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerMoving, setDrawerMoving] = useState(false);
 
@@ -1448,6 +1479,14 @@ export default function DimeChatPage({
     const mq = window.matchMedia?.("(max-width: 1023px)");
     if (!mq) return;
     const onChange = (e: MediaQueryListEvent) => setCompact(e.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+
+  useEffect(() => {
+    const mq = window.matchMedia?.("(max-width: 767px)");
+    if (!mq) return;
+    const onChange = (e: MediaQueryListEvent) => setPhone(e.matches);
     mq.addEventListener("change", onChange);
     return () => mq.removeEventListener("change", onChange);
   }, []);
@@ -2434,9 +2473,17 @@ export default function DimeChatPage({
               className="dc-mobile-menu dc-focusable dc-pressable"
               aria-haspopup="dialog"
               aria-expanded={drawerOpen}
+              aria-label={phone ? "Expand chat history" : undefined}
               onClick={openDrawer}
             >
-              Menu
+              {/* Phones (owner directive 2026-07-29): the "Menu" word goes —
+                  the PanelLeftOpen glyph is the chat-history toggle, matching
+                  the PanelLeftClose inside the drawer. Tablet keeps "Menu". */}
+              {phone ? (
+                <PanelLeftOpen size={22.5} strokeWidth={1.8} aria-hidden="true" />
+              ) : (
+                "Menu"
+              )}
             </button>
             <span className="dc-mobile-title">
               <span className="dime-wordmark" aria-label="dime">
@@ -2459,6 +2506,7 @@ export default function DimeChatPage({
           onClearAllChats={isOwner ? clearAllRecentChats : undefined}
           activeChatId={threadId}
           compact={compact}
+          phone={phone}
           drawerOpen={drawerOpen}
           sidebarRef={sidebarRef}
           onClose={() => closeDrawer(true)}
@@ -2578,7 +2626,10 @@ export default function DimeChatPage({
                   </div>
                 </div>
               )}
-              {chatAccess === "granted" && conversation && threadId != null && (
+              {/* Thread kebab is tablet/desktop chrome (owner directive
+                  2026-07-29): phones drop it — per-chat Delete stays reachable
+                  through the drawer's recent-row Ellipsis menu. */}
+              {chatAccess === "granted" && conversation && threadId != null && !phone && (
                 <div className="dc-thread-actions" ref={threadMenuRef}>
                   <button
                     type="button"
