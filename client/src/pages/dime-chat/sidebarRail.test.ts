@@ -114,7 +114,9 @@ describe("recent chats — management", () => {
   it("clear-all is owner-gated end to end", () => {
     // Client: prop passed only for owners; button renders only with the prop.
     expect(chatSource).toMatch(/onClearAllChats=\{isOwner \? clearAllRecentChats : undefined\}/);
-    expect(chatSource).toMatch(/\{onClearAllChats && isOwner && \(/);
+    // 2026-07-29: the owner sweep is additionally phone-gated — the phone
+    // drawer is a chat-history panel with no destructive platform controls.
+    expect(chatSource).toMatch(/\{onClearAllChats && isOwner && !phone && \(/);
     // Server: ownerProcedure sweep that only stamps deletedAt on live rows.
     expect(routerSource).toMatch(/clearAllForEveryone: ownerProcedure\.mutation/);
     expect(routerSource).toMatch(
