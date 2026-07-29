@@ -1,0 +1,33 @@
+team_id	name	abbrev	league	division	active	first_season	last_season	vsin_slug	an_slug	an_team_id	br_abbrev	mlb_code	an_logo_slug	db_slug
+159	American League All-Stars	AL	AL	\N	1	\N	\N	\N	\N	\N	\N	\N	\N	\N
+145	Chicago White Sox	CWS	AL	AL Central	1	\N	\N	\N	\N	\N	\N	\N	\N	\N
+114	Cleveland Guardians	CLE	AL	AL Central	1	\N	\N	\N	\N	\N	\N	\N	\N	\N
+116	Detroit Tigers	DET	AL	AL Central	1	\N	\N	\N	\N	\N	\N	\N	\N	\N
+118	Kansas City Royals	KC	AL	AL Central	1	\N	\N	\N	\N	\N	\N	\N	\N	\N
+142	Minnesota Twins	MIN	AL	AL Central	1	\N	\N	\N	\N	\N	\N	\N	\N	\N
+110	Baltimore Orioles	BAL	AL	AL East	1	\N	\N	\N	\N	\N	\N	\N	\N	\N
+111	Boston Red Sox	BOS	AL	AL East	1	\N	\N	\N	\N	\N	\N	\N	\N	\N
+147	New York Yankees	NYY	AL	AL East	1	\N	\N	\N	\N	\N	\N	\N	\N	\N
+139	Tampa Bay Rays	TB	AL	AL East	1	\N	\N	\N	\N	\N	\N	\N	\N	\N
+141	Toronto Blue Jays	TOR	AL	AL East	1	\N	\N	\N	\N	\N	\N	\N	\N	\N
+133	Athletics	ATH	AL	AL West	1	\N	\N	\N	\N	\N	\N	\N	\N	\N
+117	Houston Astros	HOU	AL	AL West	1	\N	\N	\N	\N	\N	\N	\N	\N	\N
+108	Los Angeles Angels	LAA	AL	AL West	1	\N	\N	\N	\N	\N	\N	\N	\N	\N
+136	Seattle Mariners	SEA	AL	AL West	1	\N	\N	\N	\N	\N	\N	\N	\N	\N
+140	Texas Rangers	TEX	AL	AL West	1	\N	\N	\N	\N	\N	\N	\N	\N	\N
+160	National League All-Stars	NL	NL	\N	1	\N	\N	\N	\N	\N	\N	\N	\N	\N
+112	Chicago Cubs	CHC	NL	NL Central	1	\N	\N	\N	\N	\N	\N	\N	\N	\N
+113	Cincinnati Reds	CIN	NL	NL Central	1	\N	\N	\N	\N	\N	\N	\N	\N	\N
+158	Milwaukee Brewers	MIL	NL	NL Central	1	\N	\N	\N	\N	\N	\N	\N	\N	\N
+134	Pittsburgh Pirates	PIT	NL	NL Central	1	\N	\N	\N	\N	\N	\N	\N	\N	\N
+138	St. Louis Cardinals	STL	NL	NL Central	1	\N	\N	\N	\N	\N	\N	\N	\N	\N
+144	Atlanta Braves	ATL	NL	NL East	1	\N	\N	\N	\N	\N	\N	\N	\N	\N
+146	Miami Marlins	MIA	NL	NL East	1	\N	\N	\N	\N	\N	\N	\N	\N	\N
+121	New York Mets	NYM	NL	NL East	1	\N	\N	\N	\N	\N	\N	\N	\N	\N
+143	Philadelphia Phillies	PHI	NL	NL East	1	\N	\N	\N	\N	\N	\N	\N	\N	\N
+120	Washington Nationals	WSH	NL	NL East	1	\N	\N	\N	\N	\N	\N	\N	\N	\N
+109	Arizona Diamondbacks	AZ	NL	NL West	1	\N	\N	\N	\N	\N	\N	\N	\N	\N
+115	Colorado Rockies	COL	NL	NL West	1	\N	\N	\N	\N	\N	\N	\N	\N	\N
+119	Los Angeles Dodgers	LAD	NL	NL West	1	\N	\N	\N	\N	\N	\N	\N	\N	\N
+135	San Diego Padres	SD	NL	NL West	1	\N	\N	\N	\N	\N	\N	\N	\N	\N
+137	San Francisco Giants	SF	NL	NL West	1	\N	\N	\N	\N	\N	\N	\N	\N	\N

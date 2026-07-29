@@ -1,0 +1,4 @@
+loaded_at_utc,games,seasons,interpretation
+2026-07-28 20:43:49,45350,"2006-2020 + 2022-2025",bulk backfill (single transform.py run stamped all 20 seasons; 2021 later re-stamped by repair upsert)
+2026-07-28 22:40:21,2467,2021,2021 re-transform + re-upsert after break_length physical-impossibility fix (commit 1c455b9f)
+2026-07-29 01:59:20,1602,2026,initial 2026 season load after dataset refresh to 1602 finals (commit fcb85ddd; delta crawl finished 01:31 UTC)
