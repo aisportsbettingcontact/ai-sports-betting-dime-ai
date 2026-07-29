@@ -172,7 +172,8 @@ function emptyContextResult(
         ? "catalog_only"
         : route.mode === "educational"
           ? "none"
-          : resolution.kind === "nearby" || resolution.kind === "ambiguous"
+          : (resolution.kind === "nearby" || resolution.kind === "ambiguous") &&
+              resolution.selected.length > 0
             ? "identity_only"
             : "none",
     retrievalCandidateCount: 0,

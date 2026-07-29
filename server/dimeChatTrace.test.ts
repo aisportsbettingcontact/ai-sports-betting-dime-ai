@@ -28,6 +28,10 @@ const routeSource = fs.readFileSync(
   path.join(import.meta.dirname, "dime-chat.route.ts"),
   "utf8"
 );
+const deterministicMathHandlerSource = fs.readFileSync(
+  path.join(import.meta.dirname, "_core", "dimeDeterministicMathHandler.ts"),
+  "utf8"
+);
 const traceSource = fs.readFileSync(
   path.join(import.meta.dirname, "dimeChatTrace.ts"),
   "utf8"
@@ -254,6 +258,25 @@ describe("Dime Conversation Trace v1 persistence contract", () => {
     expect(routeSource.indexOf("await finalizeDimeChatTrace(")).toBeLessThan(
       routeSource.lastIndexOf('send({ type: "delta", text: output })')
     );
+  });
+
+  it("serves deterministic math before any provider configuration or execution", () => {
+    const deterministicIdx = routeSource.indexOf(
+      "await handleDimeDeterministicMathResponse({"
+    );
+    expect(deterministicIdx).toBeGreaterThan(-1);
+    expect(deterministicIdx).toBeLessThan(
+      routeSource.indexOf(
+        'DIME_CHAT_LLM_PROVIDER === "anthropic" && !hasAnthropicCredentials()'
+      )
+    );
+    expect(deterministicIdx).toBeLessThan(
+      routeSource.indexOf("await handleDime1ChatRequest({")
+    );
+    expect(deterministicIdx).toBeLessThan(
+      routeSource.indexOf("createAnthropicClient()")
+    );
+    expect(deterministicMathHandlerSource).toContain("providerCallMade: false");
   });
 
   it("persists prompt knowledge identity and selected event IDs in Trace events", () => {

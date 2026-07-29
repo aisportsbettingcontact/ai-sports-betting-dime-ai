@@ -36,6 +36,7 @@ import {
   resolveDime1Config,
 } from "./dime1Client";
 import { getDimeChatContext } from "./dimeChatContext";
+import { handleDimeDeterministicMathResponse } from "./dimeDeterministicMathHandler";
 import {
   collectDimeNumericValues,
   type DimeAnswerEvidence,
@@ -101,6 +102,31 @@ export async function handleDime1ChatRequest(
     trace,
   } = args;
   const isResearchAlpha = deploymentTier === "research-alpha";
+
+  if (
+    await handleDimeDeterministicMathResponse({
+      res,
+      requestId,
+      startTime,
+      answerRoute,
+      trace,
+      log: dime1Log,
+      meta: {
+        dimeProfile: isResearchAlpha
+          ? DIME_RESEARCH_ALPHA_PRODUCT_PROFILE
+          : DIME1_PRODUCT_PROFILE,
+        profileVersion: isResearchAlpha
+          ? DIME_RESEARCH_ALPHA_PROFILE_VERSION
+          : DIME1_PROFILE_VERSION,
+        promptSource: isResearchAlpha
+          ? DIME_RESEARCH_ALPHA_PROMPT_SOURCE
+          : DIME1_PROMPT_SOURCE,
+        deploymentTier,
+      },
+    })
+  ) {
+    return;
+  }
 
   // Config check before any SSE header flush so a misconfigured endpoint
   // fails as a clean HTTP 500 instead of a broken stream.

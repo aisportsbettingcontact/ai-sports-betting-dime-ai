@@ -11,6 +11,11 @@ import {
   expectedValue,
   probabilityToAmericanOdds,
 } from "./dimeVerdict";
+import {
+  hasDimeEducationalMathIntent,
+  resolveDimeEducationalMath,
+  type DimeEducationalMathResult,
+} from "./dimeEducationalMath";
 
 export const DIME_ANSWER_ROUTING_VERSION = "runtime-answer-routing-v1";
 export const DIME_PLATFORM_TIME_ZONE = "America/New_York";
@@ -140,6 +145,7 @@ export interface DimeAnswerRoute {
   teamCandidates: DimeTeamReference[];
   retrievalCap: number;
   retrievalBypassed: boolean;
+  deterministicMath?: DimeEducationalMathResult;
   hasMatchupDelimiter: boolean;
   normalizedQuery: string;
 }
@@ -663,12 +669,54 @@ function inferLeagueFromTeams(
   return ranked[0][0];
 }
 
+interface MatchupSideInference {
+  hasTeamSides: boolean;
+  league?: DimeLeague;
+}
+
+function mostSpecificTeamMatches(queryPart: string): DimeTeamReference[] {
+  const candidates = matchDimeTeamAliases(queryPart);
+  const specificity = candidates.map(candidate =>
+    Math.max(...candidate.matchedAliases.map(alias => alias.length))
+  );
+  const maximum = Math.max(...specificity, 0);
+  return candidates.filter((_, index) => specificity[index] === maximum);
+}
+
+function inferLeagueFromMatchupSides(query: string): MatchupSideInference {
+  for (const delimiter of Array.from(
+    query.matchAll(/\b(?:vs|versus|at)\b|@/gi)
+  )) {
+    const index = delimiter.index;
+    if (index === undefined) continue;
+    const left = mostSpecificTeamMatches(query.slice(0, index));
+    const right = mostSpecificTeamMatches(
+      query.slice(index + delimiter[0].length)
+    );
+    if (left.length === 0 || right.length === 0) continue;
+    const rightLeagues = new Set(right.map(candidate => candidate.league));
+    const sharedLeagues = unique(
+      left
+        .map(candidate => candidate.league)
+        .filter(league => rightLeagues.has(league))
+    );
+    return {
+      hasTeamSides: true,
+      ...(sharedLeagues.length === 1 ? { league: sharedLeagues[0] } : {}),
+    };
+  }
+  return { hasTeamSides: false };
+}
+
 function classifyDimeAnswerMode(
   query: string,
   teams: DimeTeamReference[],
   leagueCandidates: DimeLeague[]
 ): DimeAnswerMode {
   const normalized = normalizeDimeSearchText(query);
+  if (hasDimeEducationalMathIntent(query)) {
+    return "educational";
+  }
   const slate =
     /\b(slate|board|all games|rank(?: the)? games|best games|scan)\b/.test(
       normalized
@@ -728,13 +776,18 @@ export function planDimeAnswerRoute(
     : undefined;
   const explicitLeagues = parseDimeLeagueAliases(query);
   const unfilteredTeams = unsupportedLeague ? [] : matchDimeTeamAliases(query);
-  const inferredLeague = inferLeagueFromTeams(unfilteredTeams);
-  const league =
+  const matchupSideInference = inferLeagueFromMatchupSides(query);
+  const inferredLeague = matchupSideInference.hasTeamSides
+    ? matchupSideInference.league
+    : inferLeagueFromTeams(unfilteredTeams);
+  const provisionalLeague =
     explicitLeagues.length === 1 ? explicitLeagues[0] : inferredLeague;
-  const teamCandidates = league
-    ? unfilteredTeams.filter(candidate => candidate.league === league)
+  const provisionalTeams = provisionalLeague
+    ? unfilteredTeams.filter(
+        candidate => candidate.league === provisionalLeague
+      )
     : unfilteredTeams;
-  const leagueCandidates = unique([
+  const provisionalLeagueCandidates = unique([
     ...explicitLeagues,
     ...unfilteredTeams.map(candidate => candidate.league),
   ]).sort();
@@ -744,11 +797,25 @@ export function planDimeAnswerRoute(
     if (/\b(?:game|g)\s*2\b|\bsecond game\b/.test(normalizedQuery)) return 2;
     return undefined;
   })();
-  const mode = classifyDimeAnswerMode(query, teamCandidates, leagueCandidates);
+  const mode = classifyDimeAnswerMode(
+    query,
+    provisionalTeams,
+    provisionalLeagueCandidates
+  );
+  const deterministicMath =
+    enabled && mode === "educational"
+      ? resolveDimeEducationalMath(query)
+      : undefined;
+  const league = deterministicMath ? undefined : provisionalLeague;
+  const teamCandidates = deterministicMath ? [] : provisionalTeams;
+  const leagueCandidates = deterministicMath ? [] : provisionalLeagueCandidates;
   const retrievalCap = enabled
     ? DIME_RETRIEVAL_CAPS[mode]
     : ROUTING_DISABLED_RETRIEVAL_CAP;
-
+  const unresolvedTeamLeagueConflict =
+    mode === "matchup" &&
+    !league &&
+    new Set(teamCandidates.map(candidate => candidate.league)).size > 1;
   return {
     version: DIME_ANSWER_ROUTING_VERSION,
     enabled,
@@ -764,10 +831,22 @@ export function planDimeAnswerRoute(
     teamCandidates,
     retrievalCap,
     retrievalBypassed:
-      enabled && (retrievalCap === 0 || Boolean(unsupportedLeague)),
+      enabled &&
+      (retrievalCap === 0 ||
+        Boolean(unsupportedLeague) ||
+        unresolvedTeamLeagueConflict),
+    ...(deterministicMath ? { deterministicMath } : {}),
     hasMatchupDelimiter: /\b(?:vs|versus|at)\b|@/.test(normalizedQuery),
     normalizedQuery,
   };
+}
+
+function hasUnresolvedTeamLeagueConflict(route: DimeAnswerRoute): boolean {
+  return (
+    route.mode === "matchup" &&
+    !route.league &&
+    new Set(route.teamCandidates.map(candidate => candidate.league)).size > 1
+  );
 }
 
 function eventIdentity(row: DimeResolvableGame): DimeEventIdentity {
@@ -881,6 +960,18 @@ export function resolveDimeEvent<T extends DimeResolvableGame>(
         candidateEventIds: [],
         confidence: 0,
         reason: `unsupported_league_${route.unsupportedLeague.toLowerCase()}`,
+      },
+    };
+  }
+  if (hasUnresolvedTeamLeagueConflict(route)) {
+    return {
+      selectedRows: [],
+      resolution: {
+        kind: "ambiguous",
+        selected: [],
+        candidateEventIds: [],
+        confidence: 0,
+        reason: "unresolved_team_league_conflict",
       },
     };
   }
@@ -1352,6 +1443,9 @@ function resolutionFallback(evidence: DimeAnswerEvidence): string | undefined {
     return `DATE CHECK: I did not find ${eventLabel(candidate)} on ${route.requestedDate ?? "the requested date"}. I found that matchup on ${candidate.gameDate} in delayed Dime evidence. Confirm that you want ${candidate.gameDate} before I analyze it; the exact market observation timestamp is unavailable.`;
   }
   if (resolution.kind === "ambiguous") {
+    if (resolution.reason === "unresolved_team_league_conflict") {
+      return "AMBIGUOUS MATCH: the requested team names map to more than one league. Confirm one league and exactly two full team names before I retrieve or use any event, market, or model numbers.";
+    }
     const candidates =
       resolution.selected.length > 0
         ? resolution.selected
@@ -1415,6 +1509,19 @@ export function validateDimeResponseCompleteness(
     }
     return { status: "passed", errorCodes: [] };
   }
+  if (
+    evidence.route.mode === "educational" &&
+    evidence.route.deterministicMath
+  ) {
+    if (output.trim() !== evidence.route.deterministicMath.answer.trim()) {
+      return {
+        status: "failed",
+        errorCodes: ["deterministic_math_required"],
+        safeFallback: evidence.route.deterministicMath.answer,
+      };
+    }
+    return { status: "passed", errorCodes: [] };
+  }
 
   const { resolution } = evidence;
   if (evidence.route.mode === "matchup") {
@@ -1434,6 +1541,12 @@ export function validateDimeResponseCompleteness(
     } else if (resolution.kind === "ambiguous") {
       if (!containsPhrase(normalized, "ambiguous match"))
         errors.push("missing_ambiguous_match_notice");
+      if (
+        resolution.reason === "unresolved_team_league_conflict" &&
+        output.trim() !== resolutionFallback(evidence)?.trim()
+      ) {
+        errors.push("team_league_conflict_requires_deterministic_fallback");
+      }
     } else if (resolution.kind === "missing") {
       if (!containsPhrase(normalized, "no data"))
         errors.push("missing_no_data_notice");

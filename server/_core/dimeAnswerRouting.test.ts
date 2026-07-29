@@ -263,6 +263,113 @@ describe("Dime Answer Routing v1 team and league identity", () => {
     ]);
   });
 
+  it("fails closed when team aliases span unresolved leagues", () => {
+    const route = planDimeAnswerRoute(
+      "Yankees vs Lakers game on July 29, 2026",
+      ET_LATE_JULY_28,
+      {}
+    );
+    const resolved = resolveDimeEvent([], route);
+    const result = validateDimeResponseCompleteness(
+      evidence(route, []),
+      "I found the game."
+    );
+
+    expect(route).toMatchObject({
+      mode: "matchup",
+      retrievalBypassed: true,
+    });
+    expect(route.league).toBeUndefined();
+    expect(resolved.resolution).toMatchObject({
+      kind: "ambiguous",
+      reason: "unresolved_team_league_conflict",
+      selected: [],
+      candidateEventIds: [],
+      confidence: 0,
+    });
+    expect(result.status).toBe("failed");
+    expect(result.safeFallback).toContain("AMBIGUOUS MATCH:");
+    expect(result.safeFallback).toContain("exactly two full team names");
+    expect(result.safeFallback).not.toContain("Mercyhurst");
+    const disguised = validateDimeResponseCompleteness(
+      evidence(route, []),
+      "AMBIGUOUS MATCH: New York Yankees vs Los Angeles Lakers vs Mercyhurst. Confirm the game."
+    );
+    expect(disguised.status).toBe("failed");
+    expect(disguised.errorCodes).toContain(
+      "team_league_conflict_requires_deterministic_fallback"
+    );
+    expect(disguised.safeFallback).not.toContain("Mercyhurst");
+  });
+
+  it.each([
+    ["Yankees vs Red Sox in MLB", "MLB"],
+    ["New York Yankees vs Detroit Tigers", "MLB"],
+    ["San Francisco Giants vs St. Louis Cardinals", "MLB"],
+    ["Los Angeles Lakers vs Boston Celtics in NBA", "NBA"],
+    ["Mercyhurst vs Le Moyne in NCAAM", "NCAAM"],
+  ] as const)("preserves valid same-league routing for %s", (query, league) => {
+    const route = planDimeAnswerRoute(query, ET_LATE_JULY_28, {});
+    expect(route.league).toBe(league);
+    expect(route.retrievalBypassed).toBe(false);
+    expect(new Set(route.teamCandidates.map(team => team.league))).toEqual(
+      new Set([league])
+    );
+  });
+
+  it("prioritizes explicit American-odds math over a team-name collision", () => {
+    const route = planDimeAnswerRoute(
+      "What is the implied probability of American odds -150?",
+      ET_LATE_JULY_28,
+      {}
+    );
+
+    expect(route.mode).toBe("educational");
+    expect(route.league).toBeUndefined();
+    expect(route.teamCandidates).toEqual([]);
+    expect(route.retrievalBypassed).toBe(true);
+    expect(route.deterministicMath?.answer).toContain("60.00%");
+  });
+
+  it("keeps a shared team nickname inside a fully specified math request", () => {
+    const route = planDimeAnswerRoute(
+      "I bet the Lakers at -110. If my win probability is 55%, what is EV per $100 risked?",
+      ET_LATE_JULY_28,
+      {}
+    );
+
+    expect(route.mode).toBe("educational");
+    expect(route.league).toBeUndefined();
+    expect(route.teamCandidates).toEqual([]);
+    expect(route.deterministicMath?.answer).toContain("+$5.00");
+  });
+
+  it("prioritizes explicit EV calculation over matchup retrieval", () => {
+    const route = planDimeAnswerRoute(
+      "For Lakers vs Celtics, at -110 with 55%, what is EV per $100 risked?",
+      ET_LATE_JULY_28,
+      {}
+    );
+
+    expect(route.mode).toBe("educational");
+    expect(route.league).toBeUndefined();
+    expect(route.teamCandidates).toEqual([]);
+    expect(route.retrievalBypassed).toBe(true);
+    expect(route.deterministicMath?.answer).toContain("+$5.00");
+  });
+
+  it("leaves concept-only EV questions to the educational model lane", () => {
+    const route = planDimeAnswerRoute(
+      "What is expected value in sports betting?",
+      ET_LATE_JULY_28,
+      {}
+    );
+
+    expect(route.mode).toBe("educational");
+    expect(route.retrievalBypassed).toBe(true);
+    expect(route.deterministicMath).toBeUndefined();
+  });
+
   it("parses league aliases without substring collisions", () => {
     expect(parseDimeLeagueAliases("MLB baseball tonight")).toEqual(["MLB"]);
     expect(parseDimeLeagueAliases("college basketball tomorrow")).toEqual([
@@ -887,5 +994,34 @@ describe("Dime Answer Routing v1 matchup completeness", () => {
     expect(result.safeFallback).toContain("NO DATA:");
     expect(result.safeFallback).toContain("will not invent");
     expect(result.safeFallback).not.toContain("-180");
+  });
+});
+
+describe("Dime Answer Routing v1 educational math completeness", () => {
+  it("requires the operation- and unit-specific deterministic answer", () => {
+    const route = planDimeAnswerRoute(
+      "At -110 with a 55% win probability, what is EV per $100 risked?",
+      ET_LATE_JULY_28,
+      {}
+    );
+    const routeEvidence = evidence(route, []);
+    const incorrect = validateDimeResponseCompleteness(
+      routeEvidence,
+      "The EV is +$2.62 per $100 risked."
+    );
+
+    expect(route.mode).toBe("educational");
+    expect(incorrect).toMatchObject({
+      status: "failed",
+      errorCodes: ["deterministic_math_required"],
+    });
+    expect(incorrect.safeFallback).toContain("+$5.00");
+    expect(incorrect.safeFallback).not.toContain("+$2.62");
+    expect(
+      validateDimeResponseCompleteness(
+        routeEvidence,
+        route.deterministicMath?.answer ?? ""
+      )
+    ).toEqual({ status: "passed", errorCodes: [] });
   });
 });

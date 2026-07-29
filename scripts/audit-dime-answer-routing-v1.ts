@@ -105,6 +105,10 @@ const RUNTIME_MODULE = resolve(
   REPOSITORY_ROOT,
   "server/_core/dimeAnswerRouting.ts"
 );
+const EDUCATIONAL_MATH_MODULE = resolve(
+  REPOSITORY_ROOT,
+  "server/_core/dimeEducationalMath.ts"
+);
 
 function sha256(value: string | Buffer): string {
   return createHash("sha256").update(value).digest("hex");
@@ -320,6 +324,10 @@ export function buildRuntimeAnswerRoutingAudit(
       fixture_sha256: sha256(fixtureBytes),
       runtime_module_path: relativePath(RUNTIME_MODULE),
       runtime_module_sha256: sha256(readFileSync(RUNTIME_MODULE)),
+      educational_math_module_path: relativePath(EDUCATIONAL_MATH_MODULE),
+      educational_math_module_sha256: sha256(
+        readFileSync(EDUCATIONAL_MATH_MODULE)
+      ),
     },
     summary: {
       case_count: caseResults.length,

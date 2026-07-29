@@ -1,6 +1,6 @@
 {
   "schema_version": "dime-runtime-answer-routing-audit-v1",
-  "benchmark_version": "runtime-answer-routing-v1.0.0",
+  "benchmark_version": "runtime-answer-routing-v1.1.0",
   "runtime_contract_version": "runtime-answer-routing-v1",
   "evidence_class": "deterministic_local_contract",
   "synthetic_data_only": true,
@@ -10,46 +10,48 @@
   },
   "sources": {
     "fixture_path": "ml/dime-1.0/data/eval/runtime_answer_routing_v1.benchmark.json",
-    "fixture_sha256": "ab4c8beea514cc423ee64b57e93b2a78078749a73d6225e5e400975f70aae84f",
+    "fixture_sha256": "e7c54e314107ca680767253e3d3cd8b33cc2d90ef02863c6a91dcd7560981167",
     "runtime_module_path": "server/_core/dimeAnswerRouting.ts",
-    "runtime_module_sha256": "126445f41ddae0d68ef5ca127508e7e07cf6e0c19a9cfc6572deac7d7a22639d"
+    "runtime_module_sha256": "720b32ace298a89009516776c1fd44e39aa64a2b4f6221d6967875e61ee267bd",
+    "educational_math_module_path": "server/_core/dimeEducationalMath.ts",
+    "educational_math_module_sha256": "2435d97f650fabebe8a43fd4023a75128b09de5912f449c79ba534c1d555cd9d"
   },
   "summary": {
-    "case_count": 14,
-    "passing_cases": 14,
+    "case_count": 19,
+    "passing_cases": 19,
     "failing_cases": 0,
     "deterministic_local_baseline_pass": true,
     "production_promotion_authorized": false
   },
   "local_metrics": {
     "route_exact_match": {
-      "numerator": 14,
-      "denominator": 14,
+      "numerator": 19,
+      "denominator": 19,
       "rate": 1
     },
     "grounding_resolution_exact_match": {
-      "numerator": 14,
-      "denominator": 14,
+      "numerator": 19,
+      "denominator": 19,
       "rate": 1
     },
     "completeness_guard_expectation_match": {
-      "numerator": 14,
-      "denominator": 14,
+      "numerator": 19,
+      "denominator": 19,
       "rate": 1
     },
     "retrieval_cap_compliance": {
-      "numerator": 14,
-      "denominator": 14,
+      "numerator": 19,
+      "denominator": 19,
       "rate": 1
     },
     "retrieval_bypass_compliance": {
-      "numerator": 14,
-      "denominator": 14,
+      "numerator": 19,
+      "denominator": 19,
       "rate": 1
     },
     "full_case_contract_accuracy": {
-      "numerator": 14,
-      "denominator": 14,
+      "numerator": 19,
+      "denominator": 19,
       "rate": 1
     }
   },
@@ -143,7 +145,7 @@
       "selected_event_ids": [],
       "selected_event_count": 0,
       "retrieval_cap": 0,
-      "completeness_status": "not_applicable"
+      "completeness_status": "passed"
     },
     {
       "case_id": "route_alias_boundary_004",
@@ -269,6 +271,61 @@
       "selected_event_count": 12,
       "retrieval_cap": 12,
       "completeness_status": "disabled"
+    },
+    {
+      "case_id": "route_educational_math_wrong_probability_015",
+      "pass": true,
+      "mode": "educational",
+      "date_source": "none",
+      "resolution_kind": "not_applicable",
+      "selected_event_ids": [],
+      "selected_event_count": 0,
+      "retrieval_cap": 0,
+      "completeness_status": "failed"
+    },
+    {
+      "case_id": "route_educational_math_wrong_ev_016",
+      "pass": true,
+      "mode": "educational",
+      "date_source": "none",
+      "resolution_kind": "not_applicable",
+      "selected_event_ids": [],
+      "selected_event_count": 0,
+      "retrieval_cap": 0,
+      "completeness_status": "failed"
+    },
+    {
+      "case_id": "route_educational_math_negative_odds_017",
+      "pass": true,
+      "mode": "educational",
+      "date_source": "none",
+      "resolution_kind": "not_applicable",
+      "selected_event_ids": [],
+      "selected_event_count": 0,
+      "retrieval_cap": 0,
+      "completeness_status": "passed"
+    },
+    {
+      "case_id": "route_educational_math_positive_ev_018",
+      "pass": true,
+      "mode": "educational",
+      "date_source": "none",
+      "resolution_kind": "not_applicable",
+      "selected_event_ids": [],
+      "selected_event_count": 0,
+      "retrieval_cap": 0,
+      "completeness_status": "passed"
+    },
+    {
+      "case_id": "route_cross_league_conflict_019",
+      "pass": true,
+      "mode": "matchup",
+      "date_source": "none",
+      "resolution_kind": "ambiguous",
+      "selected_event_ids": [],
+      "selected_event_count": 0,
+      "retrieval_cap": 2,
+      "completeness_status": "passed"
     }
   ],
   "failures": []

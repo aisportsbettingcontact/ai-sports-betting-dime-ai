@@ -31,15 +31,20 @@ The generator calls only these stable pure APIs:
 - `resolveDimeEvent`; and
 - `validateDimeResponseCompleteness`.
 
-It does not connect to Railway, RunPod, Hugging Face, a provider endpoint, or
-any production database.
+Those APIs bind the frozen report to the deterministic educational-math
+resolver used by the route. The generator does not connect to Railway, RunPod,
+Hugging Face, a provider endpoint, or any production database.
 
 ## Frozen coverage
 
-The 14 synthetic cases cover:
+The 19 synthetic cases cover:
 
 - broad and feature-specific platform questions;
-- direct betting education;
+- direct betting education, including canonical American-odds implied
+  probability and expected value;
+- rejection of incorrect probability math and dollar-EV/unit conflation;
+- a cross-league matchup conflict that bypasses retrieval and requires
+  clarification without inventing a third team;
 - team-alias word boundaries;
 - ISO, numeric, and relative dates using a frozen
   `America/New_York` clock;

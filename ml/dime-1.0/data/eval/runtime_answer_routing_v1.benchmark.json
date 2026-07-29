@@ -1,6 +1,6 @@
 {
   "schema_version": "dime-runtime-answer-routing-benchmark-v1",
-  "benchmark_version": "runtime-answer-routing-v1.0.0",
+  "benchmark_version": "runtime-answer-routing-v1.1.0",
   "runtime_contract_version": "runtime-answer-routing-v1",
   "synthetic_data_only": true,
   "frozen_clock": {
@@ -240,7 +240,7 @@
       "grounding": "none",
       "response_fixture": {
         "kind": "literal",
-        "text": "A hypothetical +150 price implies a 40% probability before vig."
+        "text": "At American odds +150, the implied break-even probability is 40.00%.\n\nCalculation: 100 ÷ (150 + 100) = 0.4000 = 40.00%.\n\nThis is the mathematical break-even point before other costs, not a guarantee of the outcome."
       },
       "expected": {
         "mode": "educational",
@@ -252,7 +252,7 @@
         "retrieval_bypassed": true,
         "resolution_kind": "not_applicable",
         "selected_event_ids": [],
-        "completeness_status": "not_applicable"
+        "completeness_status": "passed"
       }
     },
     {
@@ -536,6 +536,131 @@
           201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212
         ],
         "completeness_status": "disabled"
+      }
+    },
+    {
+      "case_id": "route_educational_math_wrong_probability_015",
+      "objective": "The completeness gate rejects incorrect model arithmetic for American-odds implied probability.",
+      "prompt": "What is the implied probability at -150?",
+      "routing_enabled": true,
+      "input_event_ids": [],
+      "freshness": "none",
+      "grounding": "none",
+      "response_fixture": {
+        "kind": "literal",
+        "text": "At -150, the implied probability is 87.07%."
+      },
+      "expected": {
+        "mode": "educational",
+        "platform_scope": "not_applicable",
+        "league": null,
+        "requested_date": null,
+        "date_source": "none",
+        "retrieval_cap": 0,
+        "retrieval_bypassed": true,
+        "resolution_kind": "not_applicable",
+        "selected_event_ids": [],
+        "completeness_status": "failed"
+      }
+    },
+    {
+      "case_id": "route_educational_math_wrong_ev_016",
+      "objective": "The completeness gate rejects a probability edge mislabeled as dollar expected value.",
+      "prompt": "At -110 with a 55% win probability, what is EV per $100 risked?",
+      "routing_enabled": true,
+      "input_event_ids": [],
+      "freshness": "none",
+      "grounding": "none",
+      "response_fixture": {
+        "kind": "literal",
+        "text": "The expected value is +$2.62 per $100 risked."
+      },
+      "expected": {
+        "mode": "educational",
+        "platform_scope": "not_applicable",
+        "league": null,
+        "requested_date": null,
+        "date_source": "none",
+        "retrieval_cap": 0,
+        "retrieval_bypassed": true,
+        "resolution_kind": "not_applicable",
+        "selected_event_ids": [],
+        "completeness_status": "failed"
+      }
+    },
+    {
+      "case_id": "route_educational_math_negative_odds_017",
+      "objective": "The frozen contract pins the canonical implied probability for negative American odds.",
+      "prompt": "What is the implied probability at -150?",
+      "routing_enabled": true,
+      "input_event_ids": [],
+      "freshness": "none",
+      "grounding": "none",
+      "response_fixture": {
+        "kind": "literal",
+        "text": "At American odds -150, the implied break-even probability is 60.00%.\n\nCalculation: 150 ÷ (150 + 100) = 0.6000 = 60.00%.\n\nThis is the mathematical break-even point before other costs, not a guarantee of the outcome."
+      },
+      "expected": {
+        "mode": "educational",
+        "platform_scope": "not_applicable",
+        "league": null,
+        "requested_date": null,
+        "date_source": "none",
+        "retrieval_cap": 0,
+        "retrieval_bypassed": true,
+        "resolution_kind": "not_applicable",
+        "selected_event_ids": [],
+        "completeness_status": "passed"
+      }
+    },
+    {
+      "case_id": "route_educational_math_positive_ev_018",
+      "objective": "The frozen contract pins dollar expected value, ROI, break-even probability, and probability-edge units.",
+      "prompt": "At -110 with a 55% win probability, what is EV per $100 risked?",
+      "routing_enabled": true,
+      "input_event_ids": [],
+      "freshness": "none",
+      "grounding": "none",
+      "response_fixture": {
+        "kind": "literal",
+        "text": "At -110 with a 55.00% estimated win probability and $100.00 risked:\n\n- Win profit: $90.91\n- Loss if the wager loses: -$100.00\n- Expected value: (55.00% × $90.91) − (45.00% × $100.00) = +$5.00\n- Expected ROI: +5.00%\n- Break-even probability: 52.38%\n- Probability edge: +2.62 percentage points\n\nThe expected value is +$5.00 per $100.00 risked. The probability-edge figure is not dollar EV. This is a mathematical estimate, not a guarantee."
+      },
+      "expected": {
+        "mode": "educational",
+        "platform_scope": "not_applicable",
+        "league": null,
+        "requested_date": null,
+        "date_source": "none",
+        "retrieval_cap": 0,
+        "retrieval_bypassed": true,
+        "resolution_kind": "not_applicable",
+        "selected_event_ids": [],
+        "completeness_status": "passed"
+      }
+    },
+    {
+      "case_id": "route_cross_league_conflict_019",
+      "objective": "Two fully specified teams from different leagues fail closed without retrieving or inventing a third team.",
+      "prompt": "New York Yankees vs Los Angeles Lakers",
+      "routing_enabled": true,
+      "input_event_ids": [],
+      "freshness": "none",
+      "grounding": "none",
+      "response_fixture": {
+        "kind": "literal",
+        "text": "AMBIGUOUS MATCH: the requested team names map to more than one league. Confirm one league and exactly two full team names before I retrieve or use any event, market, or model numbers."
+      },
+      "expected": {
+        "mode": "matchup",
+        "platform_scope": "not_applicable",
+        "league": null,
+        "requested_date": null,
+        "date_source": "none",
+        "retrieval_cap": 2,
+        "retrieval_bypassed": true,
+        "resolution_kind": "ambiguous",
+        "selected_event_ids": [],
+        "completeness_status": "passed"
       }
     }
   ]
