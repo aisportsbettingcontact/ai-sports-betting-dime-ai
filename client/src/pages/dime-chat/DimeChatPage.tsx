@@ -45,6 +45,16 @@ import {
 } from "./drawerMotion";
 import { createRafDeltaBatcher, type RafDeltaBatcher } from "./streamBatcher";
 import {
+  DIME_CHAT_TRACE_HEADER,
+  createDimeChatTraceRequest,
+  createDimeTraceId,
+  getOrCreateDimeChatSessionId,
+  isDimeChatTraceResponse,
+  parseDimeChatServerTrace,
+  type DimeChatServerTrace,
+  type DimeChatTraceRequest,
+} from "./chatTrace";
+import {
   REDUCED_MOTION_QUERY,
   useReducedMotionPreference,
 } from "./useReducedMotionPreference";
@@ -111,8 +121,18 @@ const NAV_ROWS: Array<{
   href: () => string;
   icon: LucideIcon;
 }> = [
-  { label: "New Chat", pane: "chat", href: () => "/chat", icon: MessageSquarePlus }, // D/L:57
-  { label: "AI Model Projections", pane: "feed", href: () => feedModelPath(), icon: BrainCircuit }, // D/L:58
+  {
+    label: "New Chat",
+    pane: "chat",
+    href: () => "/chat",
+    icon: MessageSquarePlus,
+  }, // D/L:57
+  {
+    label: "AI Model Projections",
+    pane: "feed",
+    href: () => feedModelPath(),
+    icon: BrainCircuit,
+  }, // D/L:58
   {
     label: "Betting Splits + Odds History",
     pane: "splits",
@@ -121,7 +141,12 @@ const NAV_ROWS: Array<{
   }, // D/L:59
   { label: "Trends", pane: "trends", href: () => "/trends", icon: ChartSpline }, // D/L:60 — route live 2026-07-21 (owner directive): hosts Last 5 Games + Trends at ≥768px
   { label: "Prop Projections", href: () => "#", icon: Target }, // D/L:61 — no route exists
-  { label: "Bet Tracker", pane: "tracker", href: () => "/bet-tracker", icon: NotebookPen }, // D/L:62
+  {
+    label: "Bet Tracker",
+    pane: "tracker",
+    href: () => "/bet-tracker",
+    icon: NotebookPen,
+  }, // D/L:62
 ];
 
 /** Stored-thread summary rendered in the sidebar Recent Chats list. Recents
@@ -150,7 +175,14 @@ const ERROR_COPY =
 const DISCLAIMER =
   "Model estimates, not guarantees. 21+ · Gambling problem? 1-800-GAMBLER."; // spec §4
 
-const uid = () => Math.random().toString(36).slice(2, 10);
+const uid = createDimeTraceId;
+
+interface ActiveClientTrace {
+  assistantId: string;
+  request: DimeChatTraceRequest;
+  serverOwned: boolean;
+  serverTrace: DimeChatServerTrace | null;
+}
 
 const prefersReducedMotion = () =>
   typeof window !== "undefined" &&
@@ -517,9 +549,17 @@ function DimeSidebar({
               onClick={() => setRail(!railCollapsed)}
             >
               {rail ? (
-                <PanelLeftOpen size={22.5} strokeWidth={1.8} aria-hidden="true" />
+                <PanelLeftOpen
+                  size={22.5}
+                  strokeWidth={1.8}
+                  aria-hidden="true"
+                />
               ) : (
-                <PanelLeftClose size={22.5} strokeWidth={1.8} aria-hidden="true" />
+                <PanelLeftClose
+                  size={22.5}
+                  strokeWidth={1.8}
+                  aria-hidden="true"
+                />
               )}
             </button>
           </div>
@@ -563,7 +603,12 @@ function DimeSidebar({
               aria-disabled="true"
               title={rail ? row.label : undefined}
             >
-              <RowIcon className="dc-nav-ico" size={22.5} strokeWidth={1.8} aria-hidden="true" />
+              <RowIcon
+                className="dc-nav-ico"
+                size={22.5}
+                strokeWidth={1.8}
+                aria-hidden="true"
+              />
               <span className="dc-sidebar-text">{row.label}</span>
             </button>
           ) : (
@@ -585,7 +630,12 @@ function DimeSidebar({
                 onNavigate();
               }}
             >
-              <RowIcon className="dc-nav-ico" size={22.5} strokeWidth={1.8} aria-hidden="true" />
+              <RowIcon
+                className="dc-nav-ico"
+                size={22.5}
+                strokeWidth={1.8}
+                aria-hidden="true"
+              />
               <span className="dc-sidebar-text">{row.label}</span>
             </Link>
           );
@@ -656,7 +706,11 @@ function DimeSidebar({
                         onDeleteChat(rc.id);
                       }}
                     >
-                      <Trash2 size={17.5} strokeWidth={1.8} aria-hidden="true" />
+                      <Trash2
+                        size={17.5}
+                        strokeWidth={1.8}
+                        aria-hidden="true"
+                      />
                       Delete chat
                     </button>
                   </div>
@@ -772,7 +826,11 @@ function DimeSidebar({
                       aria-label="Back to account menu"
                       onClick={() => setMenuView("root")}
                     >
-                      <ChevronLeft size={16} strokeWidth={1.8} aria-hidden="true" />
+                      <ChevronLeft
+                        size={16}
+                        strokeWidth={1.8}
+                        aria-hidden="true"
+                      />
                       Theme
                     </button>
                     <div
@@ -780,21 +838,27 @@ function DimeSidebar({
                       role="radiogroup"
                       aria-label="Theme"
                     >
-                      {THEME_MODE_OPTIONS.map(({ mode: optMode, label, Icon }) => (
-                        <button
-                          key={optMode}
-                          type="button"
-                          role="radio"
-                          aria-checked={themeMode === optMode}
-                          className={`dc-theme-option dc-hv2 dc-focusable dc-pressable${
-                            themeMode === optMode ? " is-active" : ""
-                          }`}
-                          onClick={() => setThemeMode?.(optMode)}
-                        >
-                          <Icon size={15} strokeWidth={1.8} aria-hidden="true" />
-                          {label}
-                        </button>
-                      ))}
+                      {THEME_MODE_OPTIONS.map(
+                        ({ mode: optMode, label, Icon }) => (
+                          <button
+                            key={optMode}
+                            type="button"
+                            role="radio"
+                            aria-checked={themeMode === optMode}
+                            className={`dc-theme-option dc-hv2 dc-focusable dc-pressable${
+                              themeMode === optMode ? " is-active" : ""
+                            }`}
+                            onClick={() => setThemeMode?.(optMode)}
+                          >
+                            <Icon
+                              size={15}
+                              strokeWidth={1.8}
+                              aria-hidden="true"
+                            />
+                            {label}
+                          </button>
+                        )
+                      )}
                     </div>
                   </div>
                   <div
@@ -831,7 +895,11 @@ function DimeSidebar({
                         onOpenSettings?.();
                       }}
                     >
-                      <SettingsIcon size={16} strokeWidth={1.8} aria-hidden="true" />
+                      <SettingsIcon
+                        size={16}
+                        strokeWidth={1.8}
+                        aria-hidden="true"
+                      />
                       <span className="dc-menu-item-label">Settings</span>
                     </button>
                     {isOwner && (
@@ -841,8 +909,14 @@ function DimeSidebar({
                         className="dc-menu-item dc-menu-item--icon dc-hv2 dc-focusable dc-pressable"
                         onClick={() => goTo("/admin/users")}
                       >
-                        <ShieldCheck size={16} strokeWidth={1.8} aria-hidden="true" />
-                        <span className="dc-menu-item-label">Admin Dashboard</span>
+                        <ShieldCheck
+                          size={16}
+                          strokeWidth={1.8}
+                          aria-hidden="true"
+                        />
+                        <span className="dc-menu-item-label">
+                          Admin Dashboard
+                        </span>
                       </button>
                     )}
                   </div>
@@ -1252,6 +1326,12 @@ export default function DimeChatPage({
   const threadMenuRef = useRef<HTMLDivElement | null>(null);
   const pendingUserTextRef = useRef<string | null>(null);
   const prevStreamingRef = useRef(false);
+  const clientSessionIdRef = useRef<string | null>(null);
+  if (clientSessionIdRef.current === null) {
+    clientSessionIdRef.current = getOrCreateDimeChatSessionId();
+  }
+  const activeClientTraceRef = useRef<ActiveClientTrace | null>(null);
+  const lastServerTraceRef = useRef<ActiveClientTrace | null>(null);
   const createThreadMut = trpc.dimeChats.create.useMutation();
   const appendMut = trpc.dimeChats.appendMessages.useMutation();
   const setStarredMut = trpc.dimeChats.setStarred.useMutation();
@@ -1690,7 +1770,8 @@ export default function DimeChatPage({
   const runStream = useCallback(
     async (
       history: Array<{ role: "user" | "assistant"; content: string }>,
-      assistantId: string
+      assistantId: string,
+      traceRequest: DimeChatTraceRequest
     ) => {
       const controller = new AbortController();
       abortRef.current = controller;
@@ -1705,16 +1786,60 @@ export default function DimeChatPage({
       activeBatcherRef.current = batcher;
       dimeDebug("stream.open", { historyLength: history.length });
 
+      const bindServerTrace = (value: unknown) => {
+        const serverTrace = parseDimeChatServerTrace(value);
+        const active = activeClientTraceRef.current;
+        if (
+          !serverTrace ||
+          active?.assistantId !== assistantId ||
+          active.request.idempotencyKey !== traceRequest.idempotencyKey
+        ) {
+          return null;
+        }
+        active.serverOwned = true;
+        active.serverTrace = serverTrace;
+        lastServerTraceRef.current = active;
+        setThreadId(serverTrace.threadId);
+        return serverTrace;
+      };
+
       try {
         const res = await fetch("/api/dime/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           signal: controller.signal,
-          body: JSON.stringify({ messages: history }),
+          body: JSON.stringify({
+            messages: history,
+            trace: traceRequest,
+          }),
         });
 
-        if (!res.ok || !res.body) {
-          throw new Error(`Request failed (${res.status})`);
+        const active = activeClientTraceRef.current;
+        if (
+          isDimeChatTraceResponse(res.headers.get(DIME_CHAT_TRACE_HEADER)) &&
+          active?.assistantId === assistantId &&
+          active.request.idempotencyKey === traceRequest.idempotencyKey
+        ) {
+          // The server has already persisted this turn. Even if a later frame
+          // is malformed or the connection breaks, never run the legacy
+          // browser writer and duplicate the canonical Railway record.
+          active.serverOwned = true;
+        }
+
+        if (!res.ok) {
+          const payload = (await res.json().catch(() => null)) as {
+            error?: unknown;
+            trace?: unknown;
+          } | null;
+          bindServerTrace(payload?.trace);
+          throw new Error(
+            typeof payload?.error === "string"
+              ? payload.error
+              : `Request failed (${res.status})`
+          );
+        }
+        if (!res.body) {
+          throw new Error("The Dime response stream was unavailable.");
         }
 
         chatStartRef.current = Date.now();
@@ -1739,17 +1864,23 @@ export default function DimeChatPage({
               frameCount++;
               if (event.type === "delta" && typeof event.text === "string") {
                 batcher.push(event.text);
-              } else if (
-                event.type === "meta" &&
-                (event.dataFreshness === "live" ||
+              } else if (event.type === "meta") {
+                if (
+                  event.dataFreshness === "live" ||
                   event.dataFreshness === "delayed" ||
-                  event.dataFreshness === "none")
-              ) {
-                dispatch({ type: "meta", dataFreshness: event.dataFreshness });
+                  event.dataFreshness === "none"
+                ) {
+                  dispatch({
+                    type: "meta",
+                    dataFreshness: event.dataFreshness,
+                  });
+                }
+                bindServerTrace(event.trace);
               } else if (
                 event.type === "error" &&
                 typeof event.message === "string"
               ) {
+                bindServerTrace(event.trace);
                 settled = true;
                 batcher.flushBeforeTerminal(() =>
                   dispatch({
@@ -1759,6 +1890,7 @@ export default function DimeChatPage({
                   })
                 );
               } else if (event.type === "done") {
+                bindServerTrace(event.trace);
                 settled = true;
                 batcher.flushBeforeTerminal(() =>
                   dispatch({ type: "stream_done", id: assistantId })
@@ -1767,7 +1899,14 @@ export default function DimeChatPage({
                   featureId: "dime_chat",
                   outcome: "success",
                   ...(chatStartRef.current
-                    ? { props: { latency_ms: Math.max(0, Date.now() - chatStartRef.current) } }
+                    ? {
+                        props: {
+                          latency_ms: Math.max(
+                            0,
+                            Date.now() - chatStartRef.current
+                          ),
+                        },
+                      }
                     : {}),
                 });
                 chatStartRef.current = null;
@@ -1882,18 +2021,32 @@ export default function DimeChatPage({
 
       const userId = uid();
       const assistantId = uid();
+      const traceRequest = createDimeChatTraceRequest({
+        threadId,
+        clientSessionId:
+          clientSessionIdRef.current ?? getOrCreateDimeChatSessionId(),
+        clientUserMessageId: userId,
+        clientAssistantMessageId: assistantId,
+      });
+      activeClientTraceRef.current = {
+        assistantId,
+        request: traceRequest,
+        serverOwned: false,
+        serverTrace: null,
+      };
       const history = [
         ...state.messages.map(({ role, content }) => ({ role, content })),
         { role: "user" as const, content: trimmed },
       ];
       dispatch({ type: "append_user", id: userId, text: trimmed });
       dispatch({ type: "open_assistant", id: assistantId });
-      void runStream(history, assistantId);
+      void runStream(history, assistantId, traceRequest);
     },
     [
       chatAccess,
       state.streaming,
       state.messages,
+      threadId,
       runStream,
       reduceMotion,
       captureComposerPresentation,
@@ -1907,12 +2060,55 @@ export default function DimeChatPage({
     const last = state.messages[state.messages.length - 1];
     if (last.role !== "user") return;
     const assistantId = uid();
+    const activeFailed =
+      activeClientTraceRef.current?.request.clientUserMessageId === last.id
+        ? activeClientTraceRef.current
+        : null;
+    const settledFailed =
+      lastServerTraceRef.current?.request.clientUserMessageId === last.id
+        ? lastServerTraceRef.current
+        : null;
+    const previousTrace = activeFailed ?? settledFailed;
+    const traceRequest = previousTrace?.serverTrace
+      ? createDimeChatTraceRequest({
+          threadId: previousTrace.serverTrace.threadId,
+          clientSessionId:
+            clientSessionIdRef.current ?? getOrCreateDimeChatSessionId(),
+          clientTurnId: previousTrace.request.clientTurnId,
+          clientUserMessageId: previousTrace.request.clientUserMessageId,
+          clientAssistantMessageId: assistantId,
+          retryOfGenerationId: previousTrace.serverTrace.generationId,
+        })
+      : previousTrace
+        ? createDimeChatTraceRequest({
+            ...previousTrace.request,
+            // Reconcile an unknown network outcome with the exact same
+            // idempotency request. The UI row may have a fresh local id, but
+            // the server correlation stays byte-for-byte stable.
+            clientAssistantMessageId:
+              previousTrace.request.clientAssistantMessageId,
+            idempotencyKey: previousTrace.request.idempotencyKey,
+          })
+        : createDimeChatTraceRequest({
+            threadId,
+            clientSessionId:
+              clientSessionIdRef.current ?? getOrCreateDimeChatSessionId(),
+            clientUserMessageId: last.id,
+            clientAssistantMessageId: assistantId,
+          });
+    activeClientTraceRef.current = {
+      assistantId,
+      request: traceRequest,
+      serverOwned: false,
+      serverTrace: null,
+    };
     dispatch({ type: "open_assistant", id: assistantId });
     void runStream(
       state.messages.map(({ role, content }) => ({ role, content })),
-      assistantId
+      assistantId,
+      traceRequest
     );
-  }, [chatAccess, state.streaming, state.messages, runStream]);
+  }, [chatAccess, state.streaming, state.messages, threadId, runStream]);
 
   const stop = () => abortRef.current?.abort();
 
@@ -1926,6 +2122,8 @@ export default function DimeChatPage({
     setThreadId(null);
     setThreadMenuOpen(false);
     pendingUserTextRef.current = null;
+    activeClientTraceRef.current = null;
+    lastServerTraceRef.current = null;
     setInput("");
     setGhost(null);
     setFirstSendFx(false);
@@ -1940,6 +2138,18 @@ export default function DimeChatPage({
     prevStreamingRef.current = state.streaming;
     if (!wasStreaming || state.streaming) return; // only on stream settle
     if (!historyReady) return;
+
+    const activeTrace = activeClientTraceRef.current;
+    if (activeTrace?.serverOwned) {
+      pendingUserTextRef.current = null;
+      if (activeTrace.serverTrace) {
+        lastServerTraceRef.current = activeTrace;
+        setThreadId(activeTrace.serverTrace.threadId);
+      }
+      activeClientTraceRef.current = null;
+      void utils.dimeChats.list.invalidate();
+      return;
+    }
 
     const last = state.messages[state.messages.length - 1];
     if (!last || last.role !== "assistant" || last.content === "") return;
@@ -1975,6 +2185,7 @@ export default function DimeChatPage({
         { onSettled: refreshList }
       );
     }
+    activeClientTraceRef.current = null;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.streaming, state.messages, threadId, historyReady]);
 
@@ -1998,6 +2209,8 @@ export default function DimeChatPage({
         setThreadId(id);
         setThreadMenuOpen(false);
         pendingUserTextRef.current = null;
+        activeClientTraceRef.current = null;
+        lastServerTraceRef.current = null;
         setInput("");
         stuckRef.current = true;
         setStuck(true);

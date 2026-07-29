@@ -37,6 +37,7 @@ training project and release process:
 - [Tool and canonical market contracts](TOOL_AND_MARKET_CONTRACTS.md)
 - [Curriculum and evaluation](DIME_V1_CURRICULUM_AND_EVALUATION.md)
 - [Dime answer rubric v1](DIME_ANSWER_RUBRIC_V1.md)
+- [Sol-target capability benchmark](DIME_SOL_TARGET_CAPABILITY_BENCHMARK_V1.md)
 - [Data governance](DATA_GOVERNANCE.md)
 - [Release gates](RELEASE_GATES.md)
 - [Foundation build policy](../configs/foundation_v1_build.yaml)

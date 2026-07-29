@@ -50,8 +50,8 @@ describe("sidebar rail — collapse state", () => {
 
   it("uses the PanelLeft pair with state-dependent labels", () => {
     expect(chatSource).toMatch(/rail \? "Expand sidebar" : "Collapse sidebar"/);
-    expect(chatSource).toMatch(/<PanelLeftOpen /);
-    expect(chatSource).toMatch(/<PanelLeftClose /);
+    expect(chatSource).toMatch(/<PanelLeftOpen\b/);
+    expect(chatSource).toMatch(/<PanelLeftClose\b/);
   });
 
   it("rail search first re-expands, then opens the field", () => {

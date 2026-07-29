@@ -63,15 +63,13 @@ describe("POST /api/dime/chat — freeze short-circuits before Anthropic", () =>
 
   it("the frozen branch streams the hardcoded notice and terminates the response", () => {
     const branch = routeSrc.slice(freezeIdx, contextIdx);
-    expect(branch).toContain(
-      'sendFrozen({ type: "meta", dataFreshness: "none" })'
-    );
+    expect(branch).toContain('type: "meta"');
+    expect(branch).toContain('dataFreshness: "none"');
     expect(branch).toContain(
       'sendFrozen({ type: "delta", text: DIME_CHAT_FROZEN_NOTICE })'
     );
-    expect(branch).toContain(
-      'sendFrozen({ type: "done", stopReason: "end_turn" })'
-    );
+    expect(branch).toContain('type: "done"');
+    expect(branch).toContain('stopReason: "end_turn"');
     expect(branch).toMatch(/res\.end\(\);\s*return;/);
     // No Anthropic call sites inside the frozen branch itself (the guard's
     // "anthropic" string literal is the provider name, not a call).

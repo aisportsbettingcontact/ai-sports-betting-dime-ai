@@ -1018,7 +1018,7 @@ on `ai-sports-betting-backend` only; Railway redeployed the same commit
 inspection:
 
 - backend logged `DISABLE_BACKGROUND_JOBS set — web-only mode: recurring
-  background jobs skipped`; zero scheduler or MLB runner starts since;
+background jobs skipped`; zero scheduler or MLB runner starts since;
 - recurring `ER_NO_SUCH_TABLE` noise stopped (see Incident 39 for the
   once-per-boot residual);
 - both `/health` endpoints stayed green (db circuit CLOSED, 0 consecutive
@@ -1082,3 +1082,189 @@ the focused browser suite in the live workflow, and emits a reviewable baseline
 candidate artifact without write access to the repository. No run before that
 follow-up is deployed counts toward the 3–5-run observation requirement; the
 counter remains 0.
+
+## Incident 41 — 2026-07-28 — Initial GitHub fetch was blocked by the local sandbox
+
+Status: RESOLVED
+
+The first read-only refresh of `origin` ran inside the restricted local
+sandbox and could not resolve GitHub:
+
+```text
+fatal: unable to access 'https://github.com/aisportsbettingcontact/ai-sports-betting-dime-ai.git/': Could not resolve host: github.com
+```
+
+No repository or remote state changed. I reran the same `git fetch --prune
+origin` operation with the required network approval. It completed
+successfully and verified `origin/main` at
+`29fc398aaf199e035ceeb6ac2a37d9c2667947cd` before creating the Trace v1
+implementation branch.
+
+## Incident 42 — 2026-07-28 — Read-only search command had an unmatched shell quote
+
+Status: RESOLVED
+
+A combined read-only `rg` inspection command embedded a backtick-bearing SQL
+pattern inside a double-quoted shell argument. Zsh rejected the command before
+execution:
+
+```text
+zsh:4: unmatched "
+```
+
+No search or mutation ran. I split the inspection into plainly quoted commands
+without executable substitutions and continued read-only repository
+inspection.
+
+## Incident 43 — 2026-07-28 — Privacy search used a non-matching shell glob
+
+Status: RESOLVED
+
+The first read-only privacy-file search included
+`client/src/pages/Legal*`. Zsh's default `nomatch` behavior rejected the
+command because that path does not exist:
+
+```text
+zsh:1: no matches found: client/src/pages/Legal*
+```
+
+No search or mutation ran. I reran the inspection using the two verified files,
+`client/src/pages/Privacy.tsx` and `client/src/pages/Terms.tsx`, plus the
+governance and prerender sources.
+
+## Incident 44 — 2026-07-28 — Environment-presence probe returned unusable tool output
+
+Status: RESOLVED
+
+A read-only Node probe intended to report only whether `DATABASE_URL` was
+configured returned a tool-level output-truncation message instead of the
+expected boolean result. The command did not print or modify the credential,
+and no repository or database state changed.
+
+I replaced that inconclusive probe with a shell presence check that reports
+only `configured` or `absent`. Trace v1 implementation does not depend on
+reading or exposing the connection-string value.
+
+## Incident 45 — 2026-07-28 — Follow-up schema search repeated a shell-quoting error
+
+Status: RESOLVED
+
+A read-only combined inspection included a backtick inside a double-quoted
+search expression. Zsh rejected it as an unmatched quote before any command
+ran. No files, database records, or external systems changed.
+
+I removed the shell-sensitive expression and continued with literal,
+single-purpose searches. This is a command-construction failure only; it does
+not affect the Trace v1 implementation.
+
+## Incident 46 — 2026-07-28 — First Trace v1 typecheck found one retry identifier typo
+
+Status: RESOLVED
+
+The first implementation typecheck failed because the retry event metadata
+referenced `retryOfGenerationId` while the local variable is named
+`retryGenerationId`. No build artifact, database migration, deployment, or
+external state changed.
+
+The metadata key remains `retryOfGenerationId`; its value now correctly uses
+`retryGenerationId`. The typecheck was rerun after the correction.
+
+## Incident 47 — 2026-07-28 — Combined privacy-copy patch matched one renderer incorrectly
+
+Status: RESOLVED
+
+The first privacy-copy patch expected a literal em dash in the prerendered HTML
+source, while that source correctly uses the `&mdash;` entity. The patch tool
+rejected the combined patch atomically, so neither privacy source changed.
+
+I inspected both exact render sources and reapplied the same disclosure update
+with their native JSX and HTML encodings preserved.
+
+## Incident 48 — 2026-07-28 — First focused Trace v1 regression run exposed contract drift
+
+Status: RESOLVED
+
+The first focused Trace v1 regression run completed with 10 failures across
+81 tests. Four client tests incorrectly assumed a browser `sessionStorage`
+global even though this repository runs Vitest in Node. Six existing
+source-contract assertions used exact formatting or first-occurrence slicing
+that no longer identified the provider branches after Trace v1 added provider
+metadata and multiline SSE frames.
+
+The run did not mutate a database or external service. The client tests now
+use injected storage, and the existing contract tests assert the same security
+and provider-order invariants through stable route anchors rather than exact
+line formatting.
+
+## Incident 49 — 2026-07-28 — Trace v1 review found release-blocking retry and crash gaps
+
+Status: RESOLVED
+
+The bounded pre-publication review found that a process crash could leave a
+generation permanently marked `generating`, and post-persistence JSON errors
+did not return the canonical trace identity needed for a safe retry. It also
+found UTF-8 byte-length, stale prior-turn retry, and whole-file schema-format
+churn issues.
+
+Trace v1 now recovers expired generation leases under the thread lock, returns
+canonical trace metadata on every post-begin HTTP error, restricts retries to
+failed or aborted attempts, validates storage by UTF-8 bytes, and keeps the
+schema diff localized to the Dime Chat section. No production flag, migration,
+Railway service, RunPod endpoint, or Hugging Face repository was changed.
+
+## Incident 50 — 2026-07-28 — Migration check initially lacked its required local URL
+
+Status: RESOLVED
+
+The first local `drizzle-kit check` invocation failed closed because
+`drizzle.config.ts` requires `DATABASE_URL`, even though the check does not
+apply a migration:
+
+```text
+DATABASE_URL is required to run drizzle commands
+```
+
+No database connection or external mutation occurred. The same check was
+rerun with a non-secret loopback placeholder URL and returned
+`Everything's fine`, confirming the migration journal and snapshots are
+internally consistent.
+
+## Incident 51 — 2026-07-28 — React Doctor package lookup was blocked in the sandbox
+
+Status: RESOLVED
+
+The required changed-UI diagnostic could not resolve the npm registry from the
+restricted sandbox and exited with `ENOTFOUND`. No dependency or project file
+changed. The same command was rerun with narrowly scoped network approval;
+React Doctor completed, found no issue in the changed UI, and reported its
+repository score without modifying the worktree.
+
+## Incident 52 — 2026-07-28 — Full local suite reached environment-gated tests
+
+Status: RESOLVED FOR TRACE V1 / ENVIRONMENT GATES REMAIN EXTERNAL
+
+The repository-wide Vitest run passed 2,351 tests and failed 66. The failures
+were dominated by tests that explicitly require a live local database,
+credentials, Playwright/browser sockets, or other unavailable integration
+environment. Those are not bypassed or rewritten in this change.
+
+One failure was branch-caused: `sidebarRail.test.ts` matched an exact
+single-line JSX layout that Prettier wrapped after Trace v1 changed the chat
+page. The assertion now checks the component token independent of whitespace.
+The complete changed-chat and Trace-focused set was then rerun: 11 files and
+160 tests passed. TypeScript, migration consistency, formatting, and diff
+checks also remain green.
+
+## Incident 53 — 2026-07-28 — Main advanced during Trace v1 implementation
+
+Status: RESOLVED
+
+GitHub comparison before PR creation showed that `main` had advanced by 20
+commits and now owned migrations `0119` and `0120`. The first sandboxed fetch
+could not resolve GitHub; the approved retry fetched current `main`. Rebase
+then correctly stopped on the migration-number and snapshot conflicts.
+
+The Trace schema itself merged without conflict. Trace v1 was regenerated from
+the current `0120` snapshot as migration `0121`, its duplicate-sequence
+constraint remains first, and the old non-unique index remains the final drop.
+No migration was applied and no external database state changed.
