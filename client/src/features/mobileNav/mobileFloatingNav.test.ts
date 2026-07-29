@@ -283,8 +283,11 @@ describe("Page integrations under body.dime-floating-nav-active", () => {
     expect(dimeMobileCss).toMatch(
       /body\.dime-floating-nav-active \.dmf-root \.dmf-topbar \{\s*display: none/
     );
+    // 2026-07-29: the sticky feed menu bar pins FLUSH to the nav band — the
+    // 8px CLEARANCE_GAP_PX is subtracted so no transparent slit remains where
+    // scrolling content could peek through between nav and feedhead.
     expect(dimeMobileCss).toMatch(
-      /body\.dime-floating-nav-active \.dmf-root \.dmf-feedhead \{\s*top: var\(--dime-floating-nav-h/
+      /body\.dime-floating-nav-active \.dmf-root \.dmf-feedhead \{\s*top: calc\(var\(--dime-floating-nav-h, 112px\) - 8px\)/
     );
   });
 
