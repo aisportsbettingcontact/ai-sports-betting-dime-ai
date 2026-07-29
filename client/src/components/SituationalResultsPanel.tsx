@@ -88,6 +88,9 @@ export interface SituationalResultsPanelProps {
    *  splits surface. "embedded" renders frameless inside a host card
    *  (Trends page) — the card owns the chrome. */
   variant?: "standalone" | "embedded";
+  /** Hide the "TRENDS" title row — for hosts whose own chrome already labels
+   *  the panel (the Trends page segmented toggle). Default false. */
+  hideHeader?: boolean;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -182,14 +185,14 @@ function RecordBar({
       role="img"
       aria-label={`${teamName} ${label}: ${fmtRecord(rec)}`}
       className={cn(
-        "flex-1 flex items-baseline justify-center gap-1.5 py-1.5 rounded-lg",
-        "text-[12px] font-bold font-mono tabular-nums",
+        "flex-1 flex items-baseline justify-center gap-1.5 py-2 rounded-lg",
+        "text-[14px] font-bold font-mono tabular-nums",
         BAR_TONE_CLASS[tone]
       )}
     >
       <span>{fmtRecord(rec)}</span>
       {pctStr && (
-        <span className="text-[9px] font-medium leading-none">{pctStr}</span>
+        <span className="text-[11px] font-medium leading-none">{pctStr}</span>
       )}
     </div>
   );
@@ -212,7 +215,7 @@ function RecordRow({
 
   return (
     <div className="mb-2.5 last:mb-0">
-      <div className="mb-1 text-center text-[9px] font-mono font-medium uppercase tracking-[0.08em] text-[var(--text-muted)]">
+      <div className="mb-1 text-center text-[11px] font-mono font-medium uppercase tracking-[0.08em] text-[var(--text-muted)]">
         {label}
       </div>
       <div className="flex gap-1.5">
@@ -234,10 +237,10 @@ function StatsSkeleton() {
       </div>
       {Array.from({ length: 6 }).map((_, i) => (
         <div key={i} className="mb-2.5">
-          <div className="mx-auto mb-1 h-2 w-16 rounded bg-[var(--surface-raised)] animate-pulse" />
+          <div className="mx-auto mb-1 h-3 w-20 rounded bg-[var(--surface-raised)] animate-pulse" />
           <div className="flex gap-1.5">
-            <div className="flex-1 h-7 rounded-lg bg-[var(--surface-raised)] animate-pulse" />
-            <div className="flex-1 h-7 rounded-lg bg-[var(--surface-raised)] animate-pulse" />
+            <div className="flex-1 h-9 rounded-lg bg-[var(--surface-raised)] animate-pulse" />
+            <div className="flex-1 h-9 rounded-lg bg-[var(--surface-raised)] animate-pulse" />
           </div>
         </div>
       ))}
@@ -334,10 +337,10 @@ function StatsSection({
   if (error) {
     return (
       <div className="px-4 py-5 text-center">
-        <p className="text-[11px] font-semibold text-foreground">
+        <p className="text-[13px] font-semibold text-foreground">
           Couldn't load trends
         </p>
-        <p className="mt-1 text-[10px] text-[var(--text-muted)]">{error.message}</p>
+        <p className="mt-1 text-[12px] text-[var(--text-muted)]">{error.message}</p>
       </div>
     );
   }
@@ -357,11 +360,11 @@ function StatsSection({
               src={awayLogo}
               alt=""
               loading="lazy"
-              className="w-6 h-6 object-contain flex-shrink-0"
+              className="w-7 h-7 object-contain flex-shrink-0"
               onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
             />
           )}
-          <span className="text-[11px] font-bold text-foreground uppercase tracking-wide truncate">
+          <span className="text-[13px] font-bold text-foreground uppercase tracking-wide truncate">
             {awayName}
           </span>
         </div>
@@ -372,11 +375,11 @@ function StatsSection({
               src={homeLogo}
               alt=""
               loading="lazy"
-              className="w-6 h-6 object-contain flex-shrink-0"
+              className="w-7 h-7 object-contain flex-shrink-0"
               onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
             />
           )}
-          <span className="text-[11px] font-bold text-foreground uppercase tracking-wide truncate text-right">
+          <span className="text-[13px] font-bold text-foreground uppercase tracking-wide truncate text-right">
             {homeName}
           </span>
         </div>
@@ -468,6 +471,7 @@ export default function SituationalResultsPanel({
   collapsible = true,
   enabled = true,
   variant = "standalone",
+  hideHeader = false,
 }: SituationalResultsPanelProps) {
   const [tab, setTab] = useState<SitTab>("ml");
   const [expandedState, setIsExpanded] = useState(!defaultCollapsed);
@@ -509,7 +513,7 @@ export default function SituationalResultsPanel({
       }
     >
       {/* ── Collapsible Header ─────────────────────────────────────────────── */}
-      {collapsible ? (
+      {hideHeader ? null : collapsible ? (
         <button type="button" onClick={() => setIsExpanded((v) => !v)}
           aria-expanded={isExpanded}
           className={cn(
@@ -518,7 +522,7 @@ export default function SituationalResultsPanel({
             "hover:bg-[var(--row-hover)]"
           )}
         >
-          <span className="text-[10px] font-bold font-mono tracking-widest uppercase text-[var(--text-secondary)]">
+          <span className="text-[12px] font-bold font-mono tracking-widest uppercase text-[var(--text-secondary)]">
             Trends
           </span>
           <div className="flex items-center gap-1">
@@ -530,7 +534,7 @@ export default function SituationalResultsPanel({
         </button>
       ) : (
         <div className="w-full box-border flex items-center justify-between px-3 py-2">
-          <span className="text-[10px] font-bold font-mono tracking-widest uppercase text-[var(--text-secondary)]">
+          <span className="text-[12px] font-bold font-mono tracking-widest uppercase text-[var(--text-secondary)]">
             Trends
           </span>
           {/* empty spacer keeps the collapsible header's justify-between geometry */}
@@ -540,7 +544,7 @@ export default function SituationalResultsPanel({
 
       {/* ── Collapsible Body ───────────────────────────────────────────────── */}
       {isExpanded && (
-        <div className="border-t border-border flex-1 flex flex-col">
+        <div className={cn("flex-1 flex flex-col", !hideHeader && "border-t border-border")}>
           {/* ── Tab selector ─────────────────────────────────────────────── */}
           <div
             role="tablist"
@@ -554,7 +558,7 @@ export default function SituationalResultsPanel({
                 onClick={() => setTab(t.key)}
                 onKeyDown={onTabKeyDown}
                 className={cn(
-                  "flex-1 py-1.5 rounded-full text-[10px] font-bold cursor-pointer",
+                  "flex-1 py-2 rounded-full text-[12px] font-bold cursor-pointer",
                   "transition-[background-color,color,transform] duration-[160ms] ease-[cubic-bezier(0.16,1,0.3,1)]",
                   "active:scale-[0.97] motion-reduce:transform-none",
                   tab === t.key

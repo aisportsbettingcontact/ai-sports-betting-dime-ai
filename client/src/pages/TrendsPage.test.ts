@@ -35,16 +35,32 @@ describe("gameUtils handles the 12-hour DB form (the 6:40 AM bug)", () => {
   });
 });
 
-describe("Trends page layout: always-open, side-by-side", () => {
-  it("renders both panels non-collapsible and expanded", () => {
+describe("Trends page layout v2: toggle cards on a container-query grid", () => {
+  it("renders both panels non-collapsible (the card owns collapse/toggle)", () => {
     const collapsibleFalse = src.match(/collapsible=\{false\}/g) ?? [];
     expect(collapsibleFalse).toHaveLength(2);
     expect(src).not.toMatch(/defaultCollapsed=\{true\}/);
+    // The segmented toggle labels the panel, so the panels' own title rows
+    // are hidden on this surface.
+    const hideHeader = src.match(/hideHeader/g) ?? [];
+    expect(hideHeader.length).toBeGreaterThanOrEqual(2);
   });
-  it("lays each game out as one responsive two-column row", () => {
-    expect(src).toMatch(/data-trends-game-row/);
-    // Tailwind grid-cols-2 === repeat(2, minmax(0, 1fr)); stacked below xl so
-    // tablets aren't cramped, side-by-side at desktop widths.
-    expect(src).toMatch(/grid-cols-1 xl:grid-cols-2/);
+  it("shows one panel at a time behind a Last 5 Games / Trends toggle", () => {
+    expect(src).toMatch(/activePanel/);
+    expect(src).toMatch(/"last5"/);
+    expect(src).toMatch(/"trends"/);
+  });
+  it("lays the slate out as a pane-width-aware two-up grid", () => {
+    expect(src).toMatch(/data-trends-grid/);
+    // Container query, not a viewport breakpoint: the shell sidebar eats
+    // 264px, so two-up only when the PANE itself fits two readable cards.
+    expect(src).toMatch(/@container/);
+    expect(src).toMatch(/grid-cols-1 @\[52rem\]:grid-cols-2/);
+  });
+  it("collapses game cards below the shell boundary", () => {
+    expect(src).toMatch(
+      /import \{ useIsMdUp \} from ["']@\/hooks\/useIsMdUp["']/
+    );
+    expect(src).toMatch(/aria-expanded=\{expanded\}/);
   });
 });
