@@ -1,0 +1,542 @@
+{
+  "schema_version": "dime-runtime-answer-routing-benchmark-v1",
+  "benchmark_version": "runtime-answer-routing-v1.0.0",
+  "runtime_contract_version": "runtime-answer-routing-v1",
+  "synthetic_data_only": true,
+  "frozen_clock": {
+    "now_utc": "2026-07-28T16:00:00.000Z",
+    "platform_time_zone": "America/New_York"
+  },
+  "events": [
+    {
+      "id": 101,
+      "sport": "MLB",
+      "gameDate": "2026-07-28",
+      "startTimeEst": "10:10 PM",
+      "gameNumber": null,
+      "awayTeam": "Seattle Mariners",
+      "homeTeam": "Los Angeles Dodgers"
+    },
+    {
+      "id": 102,
+      "sport": "MLB",
+      "gameDate": "2026-07-29",
+      "startTimeEst": "10:10 PM",
+      "gameNumber": null,
+      "awayTeam": "Seattle Mariners",
+      "homeTeam": "Los Angeles Dodgers"
+    },
+    {
+      "id": 103,
+      "sport": "MLB",
+      "gameDate": "2026-07-28",
+      "startTimeEst": "7:05 PM",
+      "gameNumber": null,
+      "awayTeam": "Boston Red Sox",
+      "homeTeam": "New York Yankees"
+    },
+    {
+      "id": 104,
+      "sport": "MLB",
+      "gameDate": "2026-07-28",
+      "startTimeEst": "1:05 PM",
+      "gameNumber": 1,
+      "awayTeam": "Chicago Cubs",
+      "homeTeam": "Pittsburgh Pirates"
+    },
+    {
+      "id": 105,
+      "sport": "MLB",
+      "gameDate": "2026-07-28",
+      "startTimeEst": "7:05 PM",
+      "gameNumber": 2,
+      "awayTeam": "Chicago Cubs",
+      "homeTeam": "Pittsburgh Pirates"
+    },
+    {
+      "id": 201,
+      "sport": "MLB",
+      "gameDate": "2026-07-28",
+      "startTimeEst": "1:01 PM",
+      "gameNumber": null,
+      "awayTeam": "Synthetic Away 01",
+      "homeTeam": "Synthetic Home 01"
+    },
+    {
+      "id": 202,
+      "sport": "MLB",
+      "gameDate": "2026-07-28",
+      "startTimeEst": "1:02 PM",
+      "gameNumber": null,
+      "awayTeam": "Synthetic Away 02",
+      "homeTeam": "Synthetic Home 02"
+    },
+    {
+      "id": 203,
+      "sport": "MLB",
+      "gameDate": "2026-07-28",
+      "startTimeEst": "1:03 PM",
+      "gameNumber": null,
+      "awayTeam": "Synthetic Away 03",
+      "homeTeam": "Synthetic Home 03"
+    },
+    {
+      "id": 204,
+      "sport": "MLB",
+      "gameDate": "2026-07-28",
+      "startTimeEst": "1:04 PM",
+      "gameNumber": null,
+      "awayTeam": "Synthetic Away 04",
+      "homeTeam": "Synthetic Home 04"
+    },
+    {
+      "id": 205,
+      "sport": "MLB",
+      "gameDate": "2026-07-28",
+      "startTimeEst": "1:05 PM",
+      "gameNumber": null,
+      "awayTeam": "Synthetic Away 05",
+      "homeTeam": "Synthetic Home 05"
+    },
+    {
+      "id": 206,
+      "sport": "MLB",
+      "gameDate": "2026-07-28",
+      "startTimeEst": "1:06 PM",
+      "gameNumber": null,
+      "awayTeam": "Synthetic Away 06",
+      "homeTeam": "Synthetic Home 06"
+    },
+    {
+      "id": 207,
+      "sport": "MLB",
+      "gameDate": "2026-07-28",
+      "startTimeEst": "1:07 PM",
+      "gameNumber": null,
+      "awayTeam": "Synthetic Away 07",
+      "homeTeam": "Synthetic Home 07"
+    },
+    {
+      "id": 208,
+      "sport": "MLB",
+      "gameDate": "2026-07-28",
+      "startTimeEst": "1:08 PM",
+      "gameNumber": null,
+      "awayTeam": "Synthetic Away 08",
+      "homeTeam": "Synthetic Home 08"
+    },
+    {
+      "id": 209,
+      "sport": "MLB",
+      "gameDate": "2026-07-28",
+      "startTimeEst": "1:09 PM",
+      "gameNumber": null,
+      "awayTeam": "Synthetic Away 09",
+      "homeTeam": "Synthetic Home 09"
+    },
+    {
+      "id": 210,
+      "sport": "MLB",
+      "gameDate": "2026-07-28",
+      "startTimeEst": "1:10 PM",
+      "gameNumber": null,
+      "awayTeam": "Synthetic Away 10",
+      "homeTeam": "Synthetic Home 10"
+    },
+    {
+      "id": 211,
+      "sport": "MLB",
+      "gameDate": "2026-07-28",
+      "startTimeEst": "1:11 PM",
+      "gameNumber": null,
+      "awayTeam": "Synthetic Away 11",
+      "homeTeam": "Synthetic Home 11"
+    },
+    {
+      "id": 212,
+      "sport": "MLB",
+      "gameDate": "2026-07-28",
+      "startTimeEst": "1:12 PM",
+      "gameNumber": null,
+      "awayTeam": "Synthetic Away 12",
+      "homeTeam": "Synthetic Home 12"
+    },
+    {
+      "id": 213,
+      "sport": "MLB",
+      "gameDate": "2026-07-28",
+      "startTimeEst": "1:13 PM",
+      "gameNumber": null,
+      "awayTeam": "Synthetic Away 13",
+      "homeTeam": "Synthetic Home 13"
+    },
+    {
+      "id": 214,
+      "sport": "MLB",
+      "gameDate": "2026-07-28",
+      "startTimeEst": "1:14 PM",
+      "gameNumber": null,
+      "awayTeam": "Synthetic Away 14",
+      "homeTeam": "Synthetic Home 14"
+    }
+  ],
+  "cases": [
+    {
+      "case_id": "route_platform_capabilities_001",
+      "objective": "Broad platform questions bypass event retrieval and require the complete product-capabilities contract.",
+      "prompt": "What can Dime do across the platform?",
+      "routing_enabled": true,
+      "input_event_ids": [101, 103],
+      "freshness": "none",
+      "grounding": "catalog_only",
+      "response_fixture": {
+        "kind": "platform_capabilities_fallback"
+      },
+      "expected": {
+        "mode": "platform",
+        "platform_scope": "capabilities",
+        "league": null,
+        "requested_date": null,
+        "date_source": "none",
+        "retrieval_cap": 0,
+        "retrieval_bypassed": true,
+        "resolution_kind": "not_applicable",
+        "selected_event_ids": [],
+        "completeness_status": "passed"
+      }
+    },
+    {
+      "case_id": "route_platform_feature_002",
+      "objective": "A specific platform-feature question stays in the platform lane without database retrieval.",
+      "prompt": "Where can I find Betting Splits and Odds History?",
+      "routing_enabled": true,
+      "input_event_ids": [101],
+      "freshness": "none",
+      "grounding": "catalog_only",
+      "response_fixture": {
+        "kind": "literal",
+        "text": "Betting Splits and Odds History is an authenticated-access feature elsewhere in Dime."
+      },
+      "expected": {
+        "mode": "platform",
+        "platform_scope": "feature",
+        "league": null,
+        "requested_date": null,
+        "date_source": "none",
+        "retrieval_cap": 0,
+        "retrieval_bypassed": true,
+        "resolution_kind": "not_applicable",
+        "selected_event_ids": [],
+        "completeness_status": "passed"
+      }
+    },
+    {
+      "case_id": "route_educational_math_003",
+      "objective": "Hypothetical betting education does not retrieve current games or prices.",
+      "prompt": "Explain implied probability using +150 as a hypothetical example.",
+      "routing_enabled": true,
+      "input_event_ids": [101],
+      "freshness": "none",
+      "grounding": "none",
+      "response_fixture": {
+        "kind": "literal",
+        "text": "A hypothetical +150 price implies a 40% probability before vig."
+      },
+      "expected": {
+        "mode": "educational",
+        "platform_scope": "not_applicable",
+        "league": null,
+        "requested_date": null,
+        "date_source": "none",
+        "retrieval_cap": 0,
+        "retrieval_bypassed": true,
+        "resolution_kind": "not_applicable",
+        "selected_event_ids": [],
+        "completeness_status": "not_applicable"
+      }
+    },
+    {
+      "case_id": "route_alias_boundary_004",
+      "objective": "A word containing a team abbreviation does not create a false team or league match.",
+      "prompt": "What does market seasonality mean?",
+      "routing_enabled": true,
+      "input_event_ids": [],
+      "freshness": "none",
+      "grounding": "none",
+      "response_fixture": {
+        "kind": "literal",
+        "text": "Seasonality is a recurring descriptive pattern across comparable periods."
+      },
+      "expected": {
+        "mode": "educational",
+        "platform_scope": "not_applicable",
+        "league": null,
+        "requested_date": null,
+        "date_source": "none",
+        "retrieval_cap": 0,
+        "retrieval_bypassed": true,
+        "resolution_kind": "not_applicable",
+        "selected_event_ids": [],
+        "completeness_status": "not_applicable"
+      }
+    },
+    {
+      "case_id": "route_matchup_iso_exact_005",
+      "objective": "An explicit ISO date and two known teams resolve one exact event.",
+      "prompt": "Break down Seattle Mariners vs Los Angeles Dodgers MLB on 2026-07-28.",
+      "routing_enabled": true,
+      "input_event_ids": [101, 102],
+      "freshness": "delayed",
+      "grounding": "full_event",
+      "response_fixture": {
+        "kind": "literal",
+        "text": "Seattle Mariners at Los Angeles Dodgers on July 28, 2026, using delayed Dime evidence."
+      },
+      "expected": {
+        "mode": "matchup",
+        "platform_scope": "not_applicable",
+        "league": "MLB",
+        "requested_date": "2026-07-28",
+        "date_source": "explicit",
+        "retrieval_cap": 2,
+        "retrieval_bypassed": false,
+        "resolution_kind": "exact",
+        "selected_event_ids": [101],
+        "completeness_status": "passed"
+      }
+    },
+    {
+      "case_id": "route_matchup_numeric_exact_006",
+      "objective": "A numeric date and reversed team order still resolve the same exact event.",
+      "prompt": "Analyze Yankees vs Red Sox MLB on 7/28/2026.",
+      "routing_enabled": true,
+      "input_event_ids": [103],
+      "freshness": "live",
+      "grounding": "full_event",
+      "response_fixture": {
+        "kind": "literal",
+        "text": "Boston Red Sox at New York Yankees is the exact event."
+      },
+      "expected": {
+        "mode": "matchup",
+        "platform_scope": "not_applicable",
+        "league": "MLB",
+        "requested_date": "2026-07-28",
+        "date_source": "explicit",
+        "retrieval_cap": 2,
+        "retrieval_bypassed": false,
+        "resolution_kind": "exact",
+        "selected_event_ids": [103],
+        "completeness_status": "passed"
+      }
+    },
+    {
+      "case_id": "route_matchup_relative_today_007",
+      "objective": "Relative dates use the frozen America/New_York platform clock.",
+      "prompt": "Break down Boston Red Sox at New York Yankees today.",
+      "routing_enabled": true,
+      "input_event_ids": [103],
+      "freshness": "live",
+      "grounding": "full_event",
+      "response_fixture": {
+        "kind": "literal",
+        "text": "Boston Red Sox at New York Yankees is the exact event."
+      },
+      "expected": {
+        "mode": "matchup",
+        "platform_scope": "not_applicable",
+        "league": "MLB",
+        "requested_date": "2026-07-28",
+        "date_source": "relative",
+        "retrieval_cap": 2,
+        "retrieval_bypassed": false,
+        "resolution_kind": "exact",
+        "selected_event_ids": [103],
+        "completeness_status": "passed"
+      }
+    },
+    {
+      "case_id": "route_matchup_nearby_008",
+      "objective": "An adjacent-date candidate is disclosed as nearby and is not silently substituted.",
+      "prompt": "Break down Mariners vs Dodgers MLB on 2026-07-27.",
+      "routing_enabled": true,
+      "input_event_ids": [101, 102],
+      "freshness": "delayed",
+      "grounding": "identity_only",
+      "response_fixture": {
+        "kind": "literal",
+        "text": "DATE CHECK: I requested July 27, 2026, but the candidate is July 28, 2026. Please confirm."
+      },
+      "expected": {
+        "mode": "matchup",
+        "platform_scope": "not_applicable",
+        "league": "MLB",
+        "requested_date": "2026-07-27",
+        "date_source": "explicit",
+        "retrieval_cap": 2,
+        "retrieval_bypassed": false,
+        "resolution_kind": "nearby",
+        "selected_event_ids": [101],
+        "completeness_status": "passed"
+      }
+    },
+    {
+      "case_id": "route_matchup_missing_009",
+      "objective": "A known matchup with no eligible row fails closed instead of substituting another game.",
+      "prompt": "Break down New York Mets vs Philadelphia Phillies MLB on 2026-07-28.",
+      "routing_enabled": true,
+      "input_event_ids": [101, 103],
+      "freshness": "none",
+      "grounding": "none",
+      "response_fixture": {
+        "kind": "literal",
+        "text": "NO DATA: I could not match New York Mets vs Philadelphia Phillies on July 28, 2026."
+      },
+      "expected": {
+        "mode": "matchup",
+        "platform_scope": "not_applicable",
+        "league": "MLB",
+        "requested_date": "2026-07-28",
+        "date_source": "explicit",
+        "retrieval_cap": 2,
+        "retrieval_bypassed": false,
+        "resolution_kind": "missing",
+        "selected_event_ids": [],
+        "completeness_status": "passed"
+      }
+    },
+    {
+      "case_id": "route_matchup_doubleheader_010",
+      "objective": "Two exact doubleheader rows remain ambiguous until the user identifies the game.",
+      "prompt": "Analyze Chicago Cubs at Pittsburgh Pirates MLB on 2026-07-28.",
+      "routing_enabled": true,
+      "input_event_ids": [104, 105],
+      "freshness": "delayed",
+      "grounding": "identity_only",
+      "response_fixture": {
+        "kind": "literal",
+        "text": "AMBIGUOUS MATCH: choose Chicago Cubs at Pittsburgh Pirates game 1 or game 2."
+      },
+      "expected": {
+        "mode": "matchup",
+        "platform_scope": "not_applicable",
+        "league": "MLB",
+        "requested_date": "2026-07-28",
+        "date_source": "explicit",
+        "retrieval_cap": 2,
+        "retrieval_bypassed": false,
+        "resolution_kind": "ambiguous",
+        "selected_event_ids": [104, 105],
+        "completeness_status": "passed"
+      }
+    },
+    {
+      "case_id": "route_matchup_ambiguous_date_011",
+      "objective": "Two dates in one request are treated as ambiguous rather than first-match wins.",
+      "prompt": "Analyze Mariners vs Dodgers MLB on July 28, 2026 and July 29, 2026.",
+      "routing_enabled": true,
+      "input_event_ids": [101, 102],
+      "freshness": "delayed",
+      "grounding": "identity_only",
+      "response_fixture": {
+        "kind": "literal",
+        "text": "AMBIGUOUS MATCH: choose the July 28 or July 29 Mariners at Dodgers event."
+      },
+      "expected": {
+        "mode": "matchup",
+        "platform_scope": "not_applicable",
+        "league": "MLB",
+        "requested_date": null,
+        "date_source": "ambiguous",
+        "retrieval_cap": 2,
+        "retrieval_bypassed": false,
+        "resolution_kind": "ambiguous",
+        "selected_event_ids": [101, 102],
+        "completeness_status": "passed"
+      }
+    },
+    {
+      "case_id": "route_matchup_invalid_date_012",
+      "objective": "An impossible calendar date is explicit ambiguity and never becomes a valid event.",
+      "prompt": "Analyze Mariners vs Dodgers MLB on February 30, 2026.",
+      "routing_enabled": true,
+      "input_event_ids": [101, 102],
+      "freshness": "none",
+      "grounding": "identity_only",
+      "response_fixture": {
+        "kind": "literal",
+        "text": "AMBIGUOUS MATCH: February 30 is not a valid date. Confirm the exact event."
+      },
+      "expected": {
+        "mode": "matchup",
+        "platform_scope": "not_applicable",
+        "league": "MLB",
+        "requested_date": null,
+        "date_source": "invalid",
+        "retrieval_cap": 2,
+        "retrieval_bypassed": false,
+        "resolution_kind": "ambiguous",
+        "selected_event_ids": [101, 102],
+        "completeness_status": "passed"
+      }
+    },
+    {
+      "case_id": "route_slate_cap_013",
+      "objective": "A dated MLB slate is stable and never selects more than the 12-row retrieval cap.",
+      "prompt": "Rank the MLB slate today.",
+      "routing_enabled": true,
+      "input_event_ids": [
+        201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212, 213, 214
+      ],
+      "freshness": "delayed",
+      "grounding": "full_event",
+      "response_fixture": {
+        "kind": "literal",
+        "text": "Synthetic Away 01 at Synthetic Home 01 is the first supplied slate event."
+      },
+      "expected": {
+        "mode": "slate",
+        "platform_scope": "not_applicable",
+        "league": "MLB",
+        "requested_date": "2026-07-28",
+        "date_source": "relative",
+        "retrieval_cap": 12,
+        "retrieval_bypassed": false,
+        "resolution_kind": "exact",
+        "selected_event_ids": [
+          201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212
+        ],
+        "completeness_status": "passed"
+      }
+    },
+    {
+      "case_id": "route_kill_switch_014",
+      "objective": "The feature flag restores the bounded legacy retrieval path without claiming v1 routing enforcement.",
+      "prompt": "Rank the MLB slate today.",
+      "routing_enabled": false,
+      "input_event_ids": [
+        201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212, 213, 214
+      ],
+      "freshness": "delayed",
+      "grounding": "none",
+      "response_fixture": {
+        "kind": "literal",
+        "text": "Routing is disabled for this synthetic rollback case."
+      },
+      "expected": {
+        "mode": "slate",
+        "platform_scope": "not_applicable",
+        "league": "MLB",
+        "requested_date": "2026-07-28",
+        "date_source": "relative",
+        "retrieval_cap": 12,
+        "retrieval_bypassed": false,
+        "resolution_kind": "not_applicable",
+        "selected_event_ids": [
+          201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212
+        ],
+        "completeness_status": "disabled"
+      }
+    }
+  ]
+}

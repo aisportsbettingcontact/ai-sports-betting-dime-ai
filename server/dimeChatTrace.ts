@@ -40,6 +40,62 @@ export const DIME_CHAT_TRACE_GENERATION_LEASE_MS = 30 * 60 * 1_000;
 const MAX_RESTRICTED_TEXT_BYTES = 60_000;
 const MAX_HISTORY_SNAPSHOT_BYTES = 1_000_000;
 const TITLE_MAX = 80;
+const MAX_ROUTING_VERSION_LENGTH = 64;
+const MAX_RETRIEVAL_CANDIDATE_COUNT = 64;
+const MAX_RETRIEVAL_LATENCY_MS = 120_000;
+
+const traceRoutingMetadataSchema = z
+  .object({
+    answerMode: z
+      .enum(["platform", "matchup", "slate", "educational"])
+      .optional(),
+    routingVersion: z
+      .string()
+      .min(1)
+      .max(MAX_ROUTING_VERSION_LENGTH)
+      .regex(/^[a-z0-9][a-z0-9._-]*$/i)
+      .optional(),
+    dateSource: z
+      .enum(["explicit", "relative", "none", "invalid", "ambiguous"])
+      .optional(),
+    requestedDate: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/)
+      .refine(value => {
+        const [year, month, day] = value.split("-").map(Number);
+        const parsed = new Date(Date.UTC(year, month - 1, day));
+        return (
+          parsed.getUTCFullYear() === year &&
+          parsed.getUTCMonth() === month - 1 &&
+          parsed.getUTCDate() === day
+        );
+      })
+      .optional(),
+    league: z.enum(["MLB", "NBA", "NHL", "NCAAM", "NFL", "NCAAF"]).optional(),
+    eventResolution: z
+      .enum(["exact", "nearby", "ambiguous", "missing", "not_applicable"])
+      .optional(),
+    groundingStatus: z
+      .enum(["full_event", "identity_only", "catalog_only", "none"])
+      .optional(),
+    retrievalCandidateCount: z
+      .number()
+      .int()
+      .min(0)
+      .max(MAX_RETRIEVAL_CANDIDATE_COUNT)
+      .optional(),
+    retrievalLatencyMs: z
+      .number()
+      .int()
+      .min(0)
+      .max(MAX_RETRIEVAL_LATENCY_MS)
+      .optional(),
+    confidence: z.number().min(0).max(1).optional(),
+    completenessStatus: z
+      .enum(["passed", "failed", "not_applicable", "disabled"])
+      .optional(),
+  })
+  .strict();
 
 const traceEnvelopeSchema = z
   .object({
@@ -117,7 +173,12 @@ export interface BeginDimeChatTraceInput {
   provider: DimeChatTraceProviderMetadata;
 }
 
-export interface DimeChatTraceContextInput {
+export type DimeChatTraceRoutingMetadata = z.infer<
+  typeof traceRoutingMetadataSchema
+>;
+
+export interface DimeChatTraceContextInput
+  extends DimeChatTraceRoutingMetadata {
   freshness: "live" | "delayed" | "none";
   rowCount: number;
   eventIds?: number[];
@@ -125,7 +186,8 @@ export interface DimeChatTraceContextInput {
   lookupErrorClass?: string;
 }
 
-export interface FinalizeDimeChatTraceInput {
+export interface FinalizeDimeChatTraceInput
+  extends DimeChatTraceRoutingMetadata {
   rawOutput: string;
   servedOutput: string;
   status: "completed" | "blocked";
@@ -163,6 +225,36 @@ export function validateDimeChatTraceEventIds(
     );
   }
   return [...value];
+}
+
+export function validateDimeChatTraceRoutingMetadata(
+  value: unknown
+): DimeChatTraceRoutingMetadata {
+  const parsed = traceRoutingMetadataSchema.safeParse(value);
+  if (!parsed.success) {
+    throw new DimeChatTracePersistenceError(
+      "Trace v1 routing metadata failed its bounded contract."
+    );
+  }
+  return parsed.data;
+}
+
+function routingMetadataFromInput(
+  input: DimeChatTraceRoutingMetadata
+): DimeChatTraceRoutingMetadata {
+  return validateDimeChatTraceRoutingMetadata({
+    answerMode: input.answerMode,
+    routingVersion: input.routingVersion,
+    dateSource: input.dateSource,
+    requestedDate: input.requestedDate,
+    league: input.league,
+    eventResolution: input.eventResolution,
+    groundingStatus: input.groundingStatus,
+    retrievalCandidateCount: input.retrievalCandidateCount,
+    retrievalLatencyMs: input.retrievalLatencyMs,
+    confidence: input.confidence,
+    completenessStatus: input.completenessStatus,
+  });
 }
 
 class DimeChatTraceBusyError extends Error {
@@ -981,6 +1073,7 @@ export async function recordDimeChatTraceContext(
     "contextSnapshot"
   );
   const eventIds = validateDimeChatTraceEventIds(input.eventIds);
+  const routingMetadata = routingMetadataFromInput(input);
   const now = new Date();
   try {
     await db.transaction(
@@ -1032,6 +1125,7 @@ export async function recordDimeChatTraceContext(
             ...(input.lookupErrorClass
               ? { errorClass: input.lookupErrorClass }
               : {}),
+            ...routingMetadata,
           }),
           createdAt: now,
         });
@@ -1064,6 +1158,7 @@ export async function finalizeDimeChatTrace(
       JSON.stringify(input.validationErrors ?? []),
       "validationErrors"
     ) ?? "[]";
+  const routingMetadata = routingMetadataFromInput(input);
   if (!servedOutput) {
     throw new DimeChatTracePersistenceError(
       "Trace v1 refuses to persist an empty served response."
@@ -1197,6 +1292,7 @@ export async function finalizeDimeChatTrace(
             validationErrorCount: input.validationErrors?.length ?? 0,
             certaintyViolation: input.certaintyViolation ?? false,
             latencyMs: input.latencyMs,
+            ...routingMetadata,
           }),
           createdAt: now,
         });

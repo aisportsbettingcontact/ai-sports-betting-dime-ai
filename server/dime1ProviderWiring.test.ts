@@ -117,7 +117,9 @@ describe("POST /api/dime/chat — dime1 branch wiring", () => {
     );
     expect(handlerSrc).toContain('deploymentTier = "production"');
     expect(handlerSrc).toContain('"dime1-research-alpha"');
-    expect(handlerSrc).toContain("DIME_RESEARCH_ALPHA_SYSTEM_PROMPT");
+    expect(branch).toContain("requestProviderMetadata.systemPrompt");
+    expect(branch).toContain("DIME_RESEARCH_ALPHA_SYSTEM_PROMPT");
+    expect(handlerSrc).toContain("system: systemPrompt");
   });
 });
 
@@ -133,7 +135,10 @@ describe("dime1 handler — control-plane parity with the Claude path", () => {
   it("applies the same post-generation validation gates and withholds blocked answers", () => {
     expect(handlerSrc).toContain("validateDimeResponseText(");
     expect(handlerSrc).toContain("containsProhibitedBettingCertainty(");
-    expect(handlerSrc).toContain('stopReason: "validation_blocked"');
+    expect(handlerSrc).toContain("validateDimeResponseCompleteness(");
+    expect(handlerSrc).toContain("stopReason: blockedFinishReason");
+    expect(handlerSrc).toContain('"validation_blocked"');
+    expect(handlerSrc).toContain('"runtime_answer_fallback"');
     expect(handlerSrc).toContain('type: "done"');
   });
 

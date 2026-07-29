@@ -1,4 +1,12 @@
 import mysql, { type Pool, type RowDataPacket } from "mysql2/promise";
+import {
+  collectDimeNumericValues,
+  type DimeAnswerEvidence,
+  type DimeAnswerRoute,
+  type DimeEventResolution,
+  planDimeAnswerRoute,
+  resolveDimeEvent,
+} from "./dimeAnswerRouting";
 
 const MAX_CONTEXT_GAMES = 12;
 const MAX_CONTEXT_CANDIDATES = 64;
@@ -27,6 +35,12 @@ export interface DimeContextResult {
   context?: string;
   rowCount: number;
   eventIds: number[];
+  route: DimeAnswerRoute;
+  resolution: DimeEventResolution;
+  grounding: DimeAnswerEvidence["grounding"];
+  retrievalCandidateCount: number;
+  retrievalLatencyMs: number;
+  supportedNumericValues: string[];
 }
 
 export interface DimeGameContextRow extends RowDataPacket {
@@ -34,6 +48,7 @@ export interface DimeGameContextRow extends RowDataPacket {
   sport: string;
   gameDate: string;
   startTimeEst: string | null;
+  gameNumber: number | null;
   awayTeam: string;
   homeTeam: string;
   awayBookSpread: string | null;
@@ -119,6 +134,54 @@ function getPool(): Pool | null {
 
 function ymd(date: Date): string {
   return date.toISOString().slice(0, 10);
+}
+
+function resolutionContext(
+  route: DimeAnswerRoute,
+  resolution: DimeEventResolution
+): string {
+  const selected = resolution.selected.map(
+    event =>
+      `- event_id=${event.id} ${event.sport} ${event.gameDate} ${valueOrDash(event.startTimeEst)} — ${event.awayTeam} at ${event.homeTeam}${event.gameNumber ? ` game_number=${event.gameNumber}` : ""}`
+  );
+  return [
+    `DIME_EVENT_RESOLUTION version=${route.version} mode=${route.mode} result=${resolution.kind} confidence=${resolution.confidence.toFixed(2)}`,
+    `requested_date=${route.requestedDate ?? "none"} requested_game_number=${route.requestedGameNumber ?? "none"} date_source=${route.dateSource} league=${route.league ?? "unresolved"} reason=${resolution.reason}`,
+    resolution.kind === "exact"
+      ? "The selected event rows below may be used as grounded evidence."
+      : "Candidate events below are identity-only. Do not analyze their markets, projections, splits, or edges until the user confirms one exact event.",
+    ...(selected.length > 0 ? selected : ["- no eligible event selected"]),
+  ].join("\n");
+}
+
+function emptyContextResult(
+  route: DimeAnswerRoute,
+  resolution: DimeEventResolution,
+  retrievalLatencyMs: number,
+  context?: string
+): DimeContextResult {
+  return {
+    freshness: "none",
+    ...(context ? { context } : {}),
+    rowCount: 0,
+    eventIds: [],
+    route,
+    resolution,
+    grounding:
+      route.mode === "platform"
+        ? "catalog_only"
+        : route.mode === "educational"
+          ? "none"
+          : resolution.kind === "nearby" || resolution.kind === "ambiguous"
+            ? "identity_only"
+            : "none",
+    retrievalCandidateCount: 0,
+    retrievalLatencyMs,
+    supportedNumericValues: collectDimeNumericValues([
+      route.normalizedQuery,
+      context,
+    ]),
+  };
 }
 
 function yesNo(value: number | boolean | null): string {
@@ -302,15 +365,69 @@ export function formatDimeGameContext(
 
 export async function getDimeChatContext(
   now = new Date(),
-  query = ""
+  query = "",
+  plannedRoute?: DimeAnswerRoute
 ): Promise<DimeContextResult> {
-  const db = getPool();
-  if (!db) return { freshness: "none", rowCount: 0, eventIds: [] };
+  const retrievalStartedAt = Date.now();
+  const route = plannedRoute ?? planDimeAnswerRoute(query, now);
+  const bypassed = resolveDimeEvent([], route);
+  if (route.retrievalBypassed) {
+    return emptyContextResult(
+      route,
+      bypassed.resolution,
+      Date.now() - retrievalStartedAt
+    );
+  }
 
-  const start = ymd(now);
-  const endDate = new Date(now);
-  endDate.setUTCDate(endDate.getUTCDate() + CONTEXT_LOOKAHEAD_DAYS);
-  const end = ymd(endDate);
+  const db = getPool();
+  if (!db) {
+    const resolution =
+      route.enabled && (route.mode === "matchup" || route.mode === "slate")
+        ? {
+            ...bypassed.resolution,
+            kind: "missing" as const,
+            confidence: 0,
+            reason: "database_unavailable",
+          }
+        : bypassed.resolution;
+    return emptyContextResult(
+      route,
+      resolution,
+      Date.now() - retrievalStartedAt,
+      route.enabled && (route.mode === "matchup" || route.mode === "slate")
+        ? resolutionContext(route, resolution)
+        : undefined
+    );
+  }
+
+  const defaultStart = ymd(now);
+  const defaultEndDate = new Date(now);
+  defaultEndDate.setUTCDate(
+    defaultEndDate.getUTCDate() + CONTEXT_LOOKAHEAD_DAYS
+  );
+  const defaultEnd = ymd(defaultEndDate);
+  const start =
+    route.enabled && route.mode === "matchup" && route.requestedDate
+      ? new Date(
+          Date.parse(`${route.requestedDate}T12:00:00.000Z`) -
+            24 * 60 * 60 * 1_000
+        )
+          .toISOString()
+          .slice(0, 10)
+      : route.enabled && route.mode === "slate" && route.requestedDate
+        ? route.requestedDate
+        : defaultStart;
+  const end =
+    route.enabled && route.mode === "matchup" && route.requestedDate
+      ? new Date(
+          Date.parse(`${route.requestedDate}T12:00:00.000Z`) +
+            24 * 60 * 60 * 1_000
+        )
+          .toISOString()
+          .slice(0, 10)
+      : route.enabled && route.mode === "slate" && route.requestedDate
+        ? route.requestedDate
+        : defaultEnd;
   const queryTerms = extractQueryTerms(query);
   const queryRankSql =
     queryTerms.length > 0
@@ -322,12 +439,14 @@ export async function getDimeChatContext(
     `%${term}%`,
     `%${term}%`,
   ]);
+  const leagueFilterSql = route.enabled && route.league ? " AND sport = ?" : "";
+  const leagueParameters = route.enabled && route.league ? [route.league] : [];
 
   // mysql2 sends JavaScript number bindings as DOUBLE values. MySQL rejects
   // that prepared-statement type in LIMIT, so keep the two dates parameterized
   // and embed only this trusted, compile-time integer cap.
   const [rows] = await db.execute<DimeGameContextRow[]>(
-    `SELECT id, sport, gameDate, startTimeEst, awayTeam, homeTeam,
+    `SELECT id, sport, gameDate, startTimeEst, gameNumber, awayTeam, homeTeam,
             awayBookSpread, awayModelSpread, homeBookSpread, homeModelSpread,
             bookTotal, modelTotal, spreadEdge, spreadDiff, totalEdge, totalDiff,
             awayML, homeML, modelAwayML, modelHomeML,
@@ -345,23 +464,61 @@ export async function getDimeChatContext(
        FROM games
       WHERE gameDate >= ?
         AND gameDate <= ?
+        ${leagueFilterSql}
         AND gameStatus IN ('upcoming', 'live')
         AND (publishedToFeed = 1 OR publishedModel = 1)
       ORDER BY ${queryRankSql}gameDate ASC, sortOrder ASC, startTimeEst ASC
       LIMIT ${MAX_CONTEXT_CANDIDATES}`,
-    [start, end, ...queryRankParameters]
+    [start, end, ...leagueParameters, ...queryRankParameters]
   );
 
   if (rows.length === 0) {
-    return { freshness: "none", rowCount: 0, eventIds: [] };
+    const { resolution } = resolveDimeEvent(rows, route);
+    return emptyContextResult(
+      route,
+      resolution,
+      Date.now() - retrievalStartedAt,
+      route.enabled && (route.mode === "matchup" || route.mode === "slate")
+        ? resolutionContext(route, resolution)
+        : undefined
+    );
   }
 
-  const selectedRows = selectDimeContextRows(rows, query);
+  const { resolution, selectedRows } = resolveDimeEvent(
+    route.enabled ? rows : selectDimeContextRows(rows, query),
+    route
+  );
+  const identityOnly =
+    resolution.kind === "nearby" || resolution.kind === "ambiguous";
+  const fullContext =
+    resolution.kind === "exact" || !route.enabled
+      ? formatDimeGameContext(selectedRows, now)
+      : undefined;
+  const context =
+    route.enabled && (route.mode === "matchup" || route.mode === "slate")
+      ? [resolutionContext(route, resolution), fullContext]
+          .filter(Boolean)
+          .join("\n\n")
+      : fullContext;
 
   return {
     freshness: "delayed",
-    context: formatDimeGameContext(selectedRows, now),
+    ...(context ? { context } : {}),
     rowCount: selectedRows.length,
     eventIds: selectedRows.map(row => row.id),
+    route,
+    resolution,
+    grounding:
+      resolution.kind === "exact"
+        ? "full_event"
+        : identityOnly
+          ? "identity_only"
+          : "none",
+    retrievalCandidateCount: rows.length,
+    retrievalLatencyMs: Date.now() - retrievalStartedAt,
+    supportedNumericValues: collectDimeNumericValues([
+      route.normalizedQuery,
+      context,
+    ]),
   };
 }

@@ -22,11 +22,9 @@ import {
   DIME1_PROMPT_SOURCE,
   DIME1_PRODUCT_PROFILE,
   DIME1_PROFILE_VERSION,
-  DIME1_SYSTEM_PROMPT,
   DIME_RESEARCH_ALPHA_PROMPT_SOURCE,
   DIME_RESEARCH_ALPHA_PRODUCT_PROFILE,
   DIME_RESEARCH_ALPHA_PROFILE_VERSION,
-  DIME_RESEARCH_ALPHA_SYSTEM_PROMPT,
 } from "./dime1Model";
 import {
   DIME_PLATFORM_KNOWLEDGE_SHA256,
@@ -38,6 +36,13 @@ import {
   resolveDime1Config,
 } from "./dime1Client";
 import { getDimeChatContext } from "./dimeChatContext";
+import {
+  collectDimeNumericValues,
+  type DimeAnswerEvidence,
+  type DimeAnswerRoute,
+  resolveDimeEvent,
+  validateDimeResponseCompleteness,
+} from "./dimeAnswerRouting";
 import { validateDimeResponseText } from "./dimeVerdict";
 import { containsProhibitedBettingCertainty } from "./dimeSafety";
 import {
@@ -74,6 +79,8 @@ export interface Dime1ChatRequestArgs {
   messages: DimeChatMessage[];
   requestClass: DimeChatRequestClass;
   responseBudget: number;
+  answerRoute: DimeAnswerRoute;
+  systemPrompt: string;
   deploymentTier?: "production" | "research-alpha";
   trace?: ActiveDimeChatTrace;
 }
@@ -88,6 +95,8 @@ export async function handleDime1ChatRequest(
     messages,
     requestClass,
     responseBudget,
+    answerRoute,
+    systemPrompt,
     deploymentTier = "production",
     trace,
   } = args;
@@ -131,17 +140,45 @@ export async function handleDime1ChatRequest(
   let contextRowCount = 0;
   let contextEventIds: number[] = [];
   let contextLookupErrorClass: string | undefined;
+  const userNumericValues = collectDimeNumericValues(
+    messages
+      .filter(message => message.role === "user")
+      .map(message => message.content)
+  );
+  let answerEvidence: DimeAnswerEvidence = {
+    route: answerRoute,
+    resolution: resolveDimeEvent([], answerRoute).resolution,
+    freshness: "none",
+    grounding: answerRoute.mode === "platform" ? "catalog_only" : "none",
+    rowCount: 0,
+    retrievalCandidateCount: 0,
+    retrievalLatencyMs: 0,
+    supportedNumericValues: userNumericValues,
+  };
   const providerMessages = [...messages];
 
   try {
     const context = await getDimeChatContext(
       new Date(),
-      messages.at(-1)?.content ?? ""
+      messages.at(-1)?.content ?? "",
+      answerRoute
     );
     dataFreshness = context.freshness;
     contextSnapshot = context.context;
     contextRowCount = context.rowCount;
     contextEventIds = context.eventIds;
+    answerEvidence = {
+      route: context.route,
+      resolution: context.resolution,
+      freshness: context.freshness,
+      grounding: context.grounding,
+      rowCount: context.rowCount,
+      retrievalCandidateCount: context.retrievalCandidateCount,
+      retrievalLatencyMs: context.retrievalLatencyMs,
+      supportedNumericValues: Array.from(
+        new Set([...context.supportedNumericValues, ...userNumericValues])
+      ),
+    };
 
     if (context.context) {
       providerMessages.unshift(
@@ -158,6 +195,11 @@ export async function handleDime1ChatRequest(
       dataFreshness,
       rowCount: context.rowCount,
       eventIds: context.eventIds,
+      answerMode: context.route.mode,
+      eventResolution: context.resolution.kind,
+      groundingStatus: context.grounding,
+      retrievalCandidateCount: context.retrievalCandidateCount,
+      retrievalLatencyMs: context.retrievalLatencyMs,
       deploymentTier,
     });
   } catch (contextErr) {
@@ -179,6 +221,16 @@ export async function handleDime1ChatRequest(
         eventIds: contextEventIds,
         context: contextSnapshot,
         lookupErrorClass: contextLookupErrorClass,
+        answerMode: answerEvidence.route.mode,
+        routingVersion: answerEvidence.route.version,
+        dateSource: answerEvidence.route.dateSource,
+        requestedDate: answerEvidence.route.requestedDate,
+        league: answerEvidence.route.league,
+        eventResolution: answerEvidence.resolution.kind,
+        groundingStatus: answerEvidence.grounding,
+        retrievalCandidateCount: answerEvidence.retrievalCandidateCount,
+        retrievalLatencyMs: answerEvidence.retrievalLatencyMs,
+        confidence: answerEvidence.resolution.confidence,
       });
     } catch (traceError) {
       await failDimeChatTrace(trace, {
@@ -232,6 +284,11 @@ export async function handleDime1ChatRequest(
     model: config.model,
     requestClass,
     responseBudget,
+    answerMode: answerRoute.mode,
+    answerRoutingVersion: answerRoute.version,
+    eventResolution: answerEvidence.resolution.kind,
+    groundingStatus: answerEvidence.grounding,
+    routingConfidence: answerEvidence.resolution.confidence,
     ...(trace ? { trace: dimeChatTraceMeta(trace) } : {}),
   });
 
@@ -257,15 +314,17 @@ export async function handleDime1ChatRequest(
     responseBudget,
     platformKnowledgeVersion: DIME_PLATFORM_KNOWLEDGE_VERSION,
     platformKnowledgeSha256: DIME_PLATFORM_KNOWLEDGE_SHA256,
+    answerMode: answerRoute.mode,
+    answerRoutingVersion: answerRoute.version,
+    eventResolution: answerEvidence.resolution.kind,
+    groundingStatus: answerEvidence.grounding,
     deploymentTier,
   });
 
   let traceFinalized = false;
   try {
     const result = await dime1ChatComplete({
-      system: isResearchAlpha
-        ? DIME_RESEARCH_ALPHA_SYSTEM_PROMPT
-        : DIME1_SYSTEM_PROMPT,
+      system: systemPrompt,
       messages: providerMessages,
       maxTokens: responseBudget,
       temperature: DIME1_CHAT_TEMPERATURE,
@@ -287,30 +346,54 @@ export async function handleDime1ChatRequest(
     const certaintyViolation = containsProhibitedBettingCertainty(
       result.content
     );
+    const completeness = validateDimeResponseCompleteness(
+      answerEvidence,
+      result.content
+    );
+    const combinedValidationErrors = [
+      ...validation.errors,
+      ...completeness.errorCodes.map(code => `answer_completeness:${code}`),
+    ];
+    const completenessBlocked = completeness.status === "failed";
+    const servedBlockedOutput =
+      validation.ok && !certaintyViolation && completeness.safeFallback
+        ? completeness.safeFallback
+        : VALIDATION_BLOCKED_RESPONSE;
+    const blockedFinishReason =
+      validation.ok && !certaintyViolation && completeness.safeFallback
+        ? "runtime_answer_fallback"
+        : "validation_blocked";
 
     dime1Log("dime.chat.dime1.generate.done", requestId, {
       finishReason: result.finishReason,
       outputCharCount: result.content.length,
       latencyMs: Date.now() - startTime,
       verificationStatus:
-        validation.ok && !certaintyViolation ? "passed" : "blocked",
-      validationErrors: validation.errors,
+        validation.ok && !certaintyViolation && !completenessBlocked
+          ? "passed"
+          : "blocked",
+      validationErrors: combinedValidationErrors,
       certaintyViolation,
+      completenessStatus: completeness.status,
       usage: result.usage,
       deploymentTier,
     });
 
-    if (!validation.ok || certaintyViolation) {
+    if (!validation.ok || certaintyViolation || completenessBlocked) {
       let assistantMessageId: number | undefined;
       if (trace) {
         const finalized = await finalizeDimeChatTrace(trace, {
           rawOutput: result.content,
-          servedOutput: VALIDATION_BLOCKED_RESPONSE,
+          servedOutput: servedBlockedOutput,
           status: "blocked",
-          finishReason: "validation_blocked",
+          finishReason: blockedFinishReason,
           actualModel: result.model,
-          validationErrors: validation.errors,
+          validationErrors: combinedValidationErrors,
           certaintyViolation,
+          answerMode: answerRoute.mode,
+          routingVersion: answerRoute.version,
+          completenessStatus: completeness.status,
+          groundingStatus: answerEvidence.grounding,
           usage: result.usage,
           latencyMs: Date.now() - startTime,
         });
@@ -319,11 +402,12 @@ export async function handleDime1ChatRequest(
       }
       send({
         type: "delta",
-        text: VALIDATION_BLOCKED_RESPONSE,
+        text: servedBlockedOutput,
       });
       send({
         type: "done",
-        stopReason: "validation_blocked",
+        stopReason: blockedFinishReason,
+        completenessStatus: completeness.status,
         ...(trace
           ? { trace: dimeChatTraceMeta(trace, assistantMessageId) }
           : {}),
@@ -350,8 +434,12 @@ export async function handleDime1ChatRequest(
         status: "completed",
         finishReason: result.finishReason,
         actualModel: result.model,
-        validationErrors: validation.errors,
+        validationErrors: combinedValidationErrors,
         certaintyViolation,
+        answerMode: answerRoute.mode,
+        routingVersion: answerRoute.version,
+        completenessStatus: completeness.status,
+        groundingStatus: answerEvidence.grounding,
         usage: result.usage,
         latencyMs: Date.now() - startTime,
       });
@@ -362,6 +450,7 @@ export async function handleDime1ChatRequest(
     send({
       type: "done",
       stopReason: result.finishReason ?? "end_turn",
+      completenessStatus: completeness.status,
       ...(trace ? { trace: dimeChatTraceMeta(trace, assistantMessageId) } : {}),
     });
     if (trace) {
