@@ -11,13 +11,18 @@ vi.mock("mysql2/promise", () => ({
   },
 }));
 
-import { formatDimeGameContext, getDimeChatContext } from "./dimeChatContext";
+import {
+  formatDimeGameContext,
+  getDimeChatContext,
+  selectDimeContextRows,
+} from "./dimeChatContext";
 
 describe("Dime Chat TiDB context formatting", () => {
   it("formats grounded platform rows for the LLM without inventing missing fields", () => {
     const context = formatDimeGameContext(
       [
         {
+          id: 42,
           sport: "MLB",
           gameDate: "2026-07-10",
           startTimeEst: "7:05 PM",
@@ -35,6 +40,26 @@ describe("Dime Chat TiDB context formatting", () => {
           totalDiff: "0.6",
           awayML: "+120",
           homeML: "-140",
+          awaySpreadOdds: "-105",
+          homeSpreadOdds: "-115",
+          overOdds: "-108",
+          underOdds: "-112",
+          openAwaySpread: "+2.5",
+          openAwaySpreadOdds: "-110",
+          openHomeSpread: "-2.5",
+          openHomeSpreadOdds: "-110",
+          openTotal: "9.0",
+          openOverOdds: "-110",
+          openUnderOdds: "-110",
+          openAwayML: "+130",
+          openHomeML: "-150",
+          spreadAwayBetsPct: 38,
+          spreadAwayMoneyPct: 61,
+          totalOverBetsPct: 55,
+          totalOverMoneyPct: 49,
+          mlAwayBetsPct: 42,
+          mlAwayMoneyPct: 58,
+          oddsSource: "dk",
           modelAwayML: "+105",
           modelHomeML: "-105",
           modelAwayScore: "4.55",
@@ -54,15 +79,55 @@ describe("Dime Chat TiDB context formatting", () => {
           modelRunAt: 1783728000000,
         },
       ] as never,
-      new Date("2026-07-10T12:00:00.000Z"),
+      new Date("2026-07-10T12:00:00.000Z")
     );
 
-    expect(context).toContain("Dime platform context generated_at=2026-07-10T12:00:00.000Z");
+    expect(context).toContain(
+      "Dime platform context generated_at=2026-07-10T12:00:00.000Z"
+    );
+    expect(context).toContain("event_id=42 MLB");
     expect(context).toContain("Yankees at Red Sox");
-    expect(context).toContain("Market: spread Yankees +1.5 / Red Sox -1.5; total 8.5");
-    expect(context).toContain("Model: spread Yankees +0.4 / Red Sox -0.4; total 9.1");
-    expect(context).toContain("Edges: spread=Yankees +1.5 diff=1.1; total=Over diff=0.6");
-    expect(context).toContain("Pitchers: Ace Away (confirmed) vs Ace Home (projected)");
+    expect(context).toContain(
+      "Current market: spread Yankees +1.5 (-105) / Red Sox -1.5 (-115); total 8.5 over -108 / under -112"
+    );
+    expect(context).toContain(
+      "Opening market: spread Yankees +2.5 (-110) / Red Sox -2.5 (-110); total 9.0"
+    );
+    expect(context).toContain(
+      "Provider-scoped splits: spread away bets=38% money=61%"
+    );
+    expect(context).toContain(
+      "Model: spread Yankees +0.4 / Red Sox -0.4; total 9.1"
+    );
+    expect(context).toContain(
+      "Edges: spread=Yankees +1.5 diff=1.1; total=Over diff=0.6"
+    );
+    expect(context).toContain(
+      "Pitchers: Ace Away (confirmed) vs Ace Home (projected)"
+    );
+    expect(context).toContain("oddsSource=dk");
+    expect(context).toContain("marketObservedAt=unavailable");
+  });
+
+  it("prioritizes a named matchup outside the default first 64 candidates", () => {
+    const rows = Array.from({ length: 80 }, (_, index) => ({
+      id: index + 1,
+      sport: "MLB",
+      gameDate: "2026-07-10",
+      startTimeEst: "7:00 PM",
+      awayTeam: index === 79 ? "Seattle Mariners" : `Away ${index}`,
+      homeTeam: index === 79 ? "Boston Red Sox" : `Home ${index}`,
+    })) as never;
+
+    const selected = selectDimeContextRows(
+      rows,
+      "Break down Mariners at Red Sox",
+      12
+    );
+
+    expect(selected).toHaveLength(12);
+    expect(selected[0].id).toBe(80);
+    expect(selected[0].awayTeam).toBe("Seattle Mariners");
   });
 
   it("uses a trusted literal context cap instead of binding a prepared LIMIT value", async () => {
@@ -91,8 +156,60 @@ describe("Dime Chat TiDB context formatting", () => {
       unknown[],
     ];
 
-    expect(statement).toMatch(/LIMIT 12\s*$/);
+    expect(statement).toMatch(/LIMIT 64\s*$/);
     expect(statement).not.toContain("LIMIT ?");
     expect(parameters).toEqual(["2026-07-10", "2026-07-13"]);
+  });
+
+  it("parameterizes requested teams into SQL ordering and labels untimestamped evidence delayed", async () => {
+    const previousDatabaseUrl = process.env.DIME_CHAT_DATABASE_URL;
+    process.env.DIME_CHAT_DATABASE_URL = "mysql://localhost:3306/dime";
+    mysqlMocks.execute.mockClear();
+    mysqlMocks.execute.mockResolvedValueOnce([
+      [
+        {
+          id: 80,
+          sport: "MLB",
+          gameDate: "2026-07-10",
+          startTimeEst: "7:00 PM",
+          awayTeam: "Seattle Mariners",
+          homeTeam: "Boston Red Sox",
+          modelRunAt: null,
+        },
+      ],
+    ]);
+
+    let result;
+    try {
+      result = await getDimeChatContext(
+        new Date("2026-07-10T12:00:00.000Z"),
+        "Mariners Red Sox"
+      );
+    } finally {
+      if (previousDatabaseUrl === undefined) {
+        delete process.env.DIME_CHAT_DATABASE_URL;
+      } else {
+        process.env.DIME_CHAT_DATABASE_URL = previousDatabaseUrl;
+      }
+    }
+
+    const [statement, parameters] = mysqlMocks.execute.mock.calls[0] as [
+      string,
+      unknown[],
+    ];
+    expect(statement).toContain("ORDER BY CASE WHEN");
+    expect(statement).not.toContain("Mariners");
+    expect(parameters).toEqual([
+      "2026-07-10",
+      "2026-07-13",
+      "%mariners%",
+      "%mariners%",
+      "%red%",
+      "%red%",
+      "%sox%",
+      "%sox%",
+    ]);
+    expect(result.freshness).toBe("delayed");
+    expect(result.eventIds).toEqual([80]);
   });
 });

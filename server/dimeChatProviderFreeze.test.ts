@@ -48,7 +48,7 @@ describe("POST /api/dime/chat — freeze short-circuits before Anthropic", () =>
   const freezeIdx = routeSrc.indexOf(
     'if (DIME_CHAT_LLM_PROVIDER !== "anthropic")'
   );
-  const contextIdx = routeSrc.indexOf("getDimeChatContext()");
+  const contextIdx = routeSrc.indexOf("getDimeChatContext(", freezeIdx);
   const clientIdx = routeSrc.indexOf(
     "const anthropic = createAnthropicClient()"
   );

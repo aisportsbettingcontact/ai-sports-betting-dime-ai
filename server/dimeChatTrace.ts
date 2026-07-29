@@ -73,6 +73,8 @@ export interface DimeChatTraceProviderMetadata {
   promptSource: string;
   systemPrompt?: string;
   blueprintHash?: string;
+  platformKnowledgeVersion?: string;
+  platformKnowledgeSha256?: string;
   maxTokens: number;
   temperature?: number;
 }
@@ -118,6 +120,7 @@ export interface BeginDimeChatTraceInput {
 export interface DimeChatTraceContextInput {
   freshness: "live" | "delayed" | "none";
   rowCount: number;
+  eventIds?: number[];
   context?: string;
   lookupErrorClass?: string;
 }
@@ -143,6 +146,23 @@ export class DimeChatTracePersistenceError extends Error {
     super(message, options);
     this.name = "DimeChatTracePersistenceError";
   }
+}
+
+export function validateDimeChatTraceEventIds(
+  value: number[] | undefined
+): number[] {
+  if (value === undefined) return [];
+  if (
+    !Array.isArray(value) ||
+    value.length > 12 ||
+    value.some(eventId => !Number.isSafeInteger(eventId) || eventId <= 0) ||
+    new Set(value).size !== value.length
+  ) {
+    throw new DimeChatTracePersistenceError(
+      "Trace v1 context event IDs failed their bounded identity contract."
+    );
+  }
+  return [...value];
 }
 
 class DimeChatTraceBusyError extends Error {
@@ -689,6 +709,8 @@ async function createInitialAttempt(
           requestClass: input.requestClass,
           responseBudget: input.responseBudget,
           attempt: 1,
+          platformKnowledgeVersion: input.provider.platformKnowledgeVersion,
+          platformKnowledgeSha256: input.provider.platformKnowledgeSha256,
         }),
         createdAt: now,
       });
@@ -857,6 +879,8 @@ async function createRetryAttempt(
         metadata: safeMetadata({
           attempt,
           retryOfGenerationId: retryGenerationId,
+          platformKnowledgeVersion: input.provider.platformKnowledgeVersion,
+          platformKnowledgeSha256: input.provider.platformKnowledgeSha256,
         }),
         createdAt: now,
       });
@@ -956,6 +980,7 @@ export async function recordDimeChatTraceContext(
     input.context,
     "contextSnapshot"
   );
+  const eventIds = validateDimeChatTraceEventIds(input.eventIds);
   const now = new Date();
   try {
     await db.transaction(
@@ -1003,6 +1028,7 @@ export async function recordDimeChatTraceContext(
           metadata: safeMetadata({
             freshness: input.freshness,
             rowCount: input.rowCount,
+            eventIds,
             ...(input.lookupErrorClass
               ? { errorClass: input.lookupErrorClass }
               : {}),

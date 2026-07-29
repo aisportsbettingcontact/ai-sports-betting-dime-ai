@@ -123,7 +123,8 @@ describe("POST /api/dime/chat — dime1 branch wiring", () => {
 
 describe("dime1 handler — control-plane parity with the Claude path", () => {
   it("grounds from the platform context builder with the same ack framing", () => {
-    expect(handlerSrc).toContain("getDimeChatContext()");
+    expect(handlerSrc).toContain("getDimeChatContext(");
+    expect(handlerSrc).toContain("messages.at(-1)?.content");
     expect(handlerSrc).toContain(
       "ground Dime answers in this platform context"
     );

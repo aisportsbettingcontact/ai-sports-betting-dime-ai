@@ -87,6 +87,36 @@ First fix failures that do not require weight changes: missing platform
 knowledge, stale context, bad tool routing, unclear schemas, poor system
 instructions, and deterministic math. Re-evaluate before training.
 
+Runtime Evidence v1 implements the first controlled Stage 1 slice:
+
+- one canonical, versioned public product-knowledge catalog shared by the live
+  prompts and the model-development evaluator;
+- query-aware event selection before the bounded 12-game prompt cap;
+- explicit opening/current markets, provider-scoped splits, source labels, and
+  missing/partial/stale quality flags;
+- delayed—not live—freshness whenever an exact market observation timestamp is
+  unavailable;
+- Trace metadata for the catalog identity and selected event IDs; and
+- 12 visible synthetic platform-grounding development cases.
+
+This is a prompt/retrieval improvement, not a weight update or evidence of
+frontier-model equivalence. The 12-case slice is executable on an authorized
+RunPod GPU, but no pass is claimed until its generated traces are scored and
+human-reviewed.
+
+```bash
+python scripts/baseline_generate.py \
+  --cases data/eval/platform_grounding_v1.sample.jsonl \
+  --limit 12 \
+  --output artifacts/baselines/platform-grounding-base.jsonl
+
+python scripts/evaluate_outputs.py \
+  --cases data/eval/platform_grounding_v1.sample.jsonl \
+  --outputs artifacts/baselines/platform-grounding-base.jsonl \
+  --report artifacts/reports/platform-grounding-base-report.json \
+  --control
+```
+
 ### Stage 2 — Approved supervised fine-tuning
 
 Train QLoRA only on the frozen Foundation dataset. Examples teach Dime voice,

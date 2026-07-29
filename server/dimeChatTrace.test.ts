@@ -10,6 +10,7 @@ import {
   hashDimeChatTraceText,
   isDimeChatTraceEnabled,
   parseDimeChatTraceEnvelope,
+  validateDimeChatTraceEventIds,
   validateDimeChatTraceRestrictedText,
 } from "./dimeChatTrace";
 
@@ -24,6 +25,10 @@ const migrationSource = fs.readFileSync(
 );
 const routeSource = fs.readFileSync(
   path.join(import.meta.dirname, "dime-chat.route.ts"),
+  "utf8"
+);
+const traceSource = fs.readFileSync(
+  path.join(import.meta.dirname, "dimeChatTrace.ts"),
   "utf8"
 );
 const routerSource = fs.readFileSync(
@@ -126,6 +131,22 @@ describe("Dime Conversation Trace v1 request contract", () => {
       "exceeds the Trace v1 storage contract"
     );
   });
+
+  it("accepts only unique positive bounded context event IDs", () => {
+    expect(validateDimeChatTraceEventIds(undefined)).toEqual([]);
+    expect(validateDimeChatTraceEventIds([7, 11])).toEqual([7, 11]);
+    expect(() => validateDimeChatTraceEventIds([7, 7])).toThrow(
+      "bounded identity contract"
+    );
+    expect(() => validateDimeChatTraceEventIds([0])).toThrow(
+      "bounded identity contract"
+    );
+    expect(() =>
+      validateDimeChatTraceEventIds(
+        Array.from({ length: 13 }, (_, index) => index + 1)
+      )
+    ).toThrow("bounded identity contract");
+  });
 });
 
 describe("Dime Conversation Trace v1 persistence contract", () => {
@@ -173,6 +194,24 @@ describe("Dime Conversation Trace v1 persistence contract", () => {
     expect(routeSource.indexOf("await finalizeDimeChatTrace(")).toBeLessThan(
       routeSource.lastIndexOf('send({ type: "delta", text: output })')
     );
+  });
+
+  it("persists prompt knowledge identity and selected event IDs in Trace events", () => {
+    expect(traceSource).toContain(
+      "platformKnowledgeVersion: input.provider.platformKnowledgeVersion"
+    );
+    expect(traceSource).toContain(
+      "platformKnowledgeSha256: input.provider.platformKnowledgeSha256"
+    );
+    expect(traceSource).toContain(
+      "const eventIds = validateDimeChatTraceEventIds(input.eventIds)"
+    );
+    expect(traceSource).toContain("eventIds,");
+    expect(routeSource).toContain("eventIds: contextEventIds");
+  });
+
+  it("marks replay metadata as trace-owned instead of claiming the current prompt identity", () => {
+    expect(routeSource).toContain('evidenceIdentity: "trace_lookup"');
   });
 
   it("recovers expired workers and returns canonical trace errors", () => {

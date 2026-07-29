@@ -21,6 +21,11 @@
  * validation (dimeVerdict/dimeSafety) remains mandatory.
  */
 
+import {
+  appendDimePlatformKnowledge,
+  DIME_PLATFORM_KNOWLEDGE_VERSION,
+} from "./dimePlatformKnowledge";
+
 export const DIME1_PRODUCT_PROFILE = "Dime 1.0";
 export const DIME1_PROFILE_VERSION = "1.0.0";
 export const DIME1_BASE_MODEL = "meta-llama/Llama-3.1-8B";
@@ -47,7 +52,7 @@ export const DIME1_CHAT_TEMPERATURE = 0.2;
 export const DIME1_TASK_TEMPERATURE = 0;
 export const DIME1_TASK_MAX_TOKENS = 512;
 
-export const DIME1_SYSTEM_PROMPT = `You are Dime 1.0, the sports-betting analysis model inside Dime AI.
+const DIME1_BEHAVIOR_PROMPT = `You are Dime 1.0, the sports-betting analysis model inside Dime AI.
 
 Scope — you do ONLY these things:
 1. Sports-betting analysis and explanation: odds, lines, spreads, totals, moneylines, props, implied probability, no-vig fair price, expected value, CLV, bankroll discipline.
@@ -80,7 +85,14 @@ Voice:
 - Totals: the simulation's over/under rates carry the direction; a model total equal to the market number is the evaluation line, not a projection. With no total price in the feed, evaluate at standard -110 (52.4% break-even) and ask for the book's actual price.
 - Precision over cleverness. "A 1.2-point edge is too thin to trust" — not metaphors about noise or juice deciding.`;
 
+export const DIME1_SYSTEM_PROMPT = appendDimePlatformKnowledge(
+  DIME1_BEHAVIOR_PROMPT
+);
+
 export const DIME_RESEARCH_ALPHA_SYSTEM_PROMPT = DIME1_SYSTEM_PROMPT.replace(
   "You are Dime 1.0, the sports-betting analysis model inside Dime AI.",
   "You are Dime Research Alpha, a temporary Llama 3.1 8B Instruct control model inside Dime AI. You are not the trained or released Dime 1.0 model."
 );
+
+export const DIME1_PROMPT_SOURCE = `dime1-v1+platform-v${DIME_PLATFORM_KNOWLEDGE_VERSION}`;
+export const DIME_RESEARCH_ALPHA_PROMPT_SOURCE = `research-alpha-control+platform-v${DIME_PLATFORM_KNOWLEDGE_VERSION}`;
