@@ -93,7 +93,12 @@ describe("Claude wiring is preserved, not removed", () => {
     expect(routeSrc).toContain("const anthropic = createAnthropicClient()");
     expect(routeSrc).toContain("anthropic.messages.stream");
     expect(routeSrc).toContain("model: DIME_CHAT_MODEL");
-    expect(routeSrc).toContain("system: DIME_CHAT_SYSTEM_PROMPT");
+    expect(routeSrc).toContain(
+      "requestProviderMetadata.systemPrompt ?? DIME_CHAT_SYSTEM_PROMPT"
+    );
+    expect(routeSrc).toContain(
+      "applyDimeAnswerRoute(DIME_CHAT_SYSTEM_PROMPT, answerRoute)"
+    );
   });
 
   it("the freeze is scoped to the Dime Chat interface only", () => {

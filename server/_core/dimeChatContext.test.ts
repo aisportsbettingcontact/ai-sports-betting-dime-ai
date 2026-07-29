@@ -16,8 +16,27 @@ import {
   getDimeChatContext,
   selectDimeContextRows,
 } from "./dimeChatContext";
+import { planDimeAnswerRoute } from "./dimeAnswerRouting";
 
 describe("Dime Chat TiDB context formatting", () => {
+  const gameRow = (
+    id: number,
+    gameDate: string,
+    gameNumber = 1,
+    overrides: Record<string, unknown> = {}
+  ) =>
+    ({
+      id,
+      sport: "MLB",
+      gameDate,
+      startTimeEst: "7:00 PM",
+      gameNumber,
+      awayTeam: "Seattle Mariners",
+      homeTeam: "Los Angeles Dodgers",
+      modelRunAt: null,
+      ...overrides,
+    }) as never;
+
   it("formats grounded platform rows for the LLM without inventing missing fields", () => {
     const context = formatDimeGameContext(
       [
@@ -130,6 +149,164 @@ describe("Dime Chat TiDB context formatting", () => {
     expect(selected[0].awayTeam).toBe("Seattle Mariners");
   });
 
+  it("bypasses the games database for platform and educational requests", async () => {
+    const previousDatabaseUrl = process.env.DIME_CHAT_DATABASE_URL;
+    process.env.DIME_CHAT_DATABASE_URL = "mysql://localhost:3306/dime";
+    mysqlMocks.createPool.mockReturnValue({
+      execute: mysqlMocks.execute,
+    });
+    mysqlMocks.execute.mockClear();
+
+    try {
+      const platform = await getDimeChatContext(
+        new Date("2026-07-28T12:00:00.000Z"),
+        "What can Dime AI help me with?"
+      );
+      const educational = await getDimeChatContext(
+        new Date("2026-07-28T12:00:00.000Z"),
+        "Explain no-vig probability with a hypothetical example."
+      );
+
+      expect(platform.route.mode).toBe("platform");
+      expect(platform.grounding).toBe("catalog_only");
+      expect(platform.rowCount).toBe(0);
+      expect(educational.route.mode).toBe("educational");
+      expect(educational.grounding).toBe("none");
+      expect(educational.rowCount).toBe(0);
+      expect(mysqlMocks.execute).not.toHaveBeenCalled();
+    } finally {
+      if (previousDatabaseUrl === undefined) {
+        delete process.env.DIME_CHAT_DATABASE_URL;
+      } else {
+        process.env.DIME_CHAT_DATABASE_URL = previousDatabaseUrl;
+      }
+    }
+  });
+
+  it("retrieves one exact matchup and excludes a nearby event", async () => {
+    const previousDatabaseUrl = process.env.DIME_CHAT_DATABASE_URL;
+    process.env.DIME_CHAT_DATABASE_URL = "mysql://localhost:3306/dime";
+    mysqlMocks.createPool.mockReturnValue({
+      execute: mysqlMocks.execute,
+    });
+    mysqlMocks.execute.mockClear();
+    mysqlMocks.execute.mockResolvedValueOnce([
+      [
+        gameRow(101, "2026-07-28", 1, {
+          awayML: "-110",
+          bookTotal: "8.5",
+        }),
+        gameRow(102, "2026-07-29"),
+      ],
+    ]);
+
+    try {
+      const result = await getDimeChatContext(
+        new Date("2026-07-28T12:00:00.000Z"),
+        "Analyze SEA vs LAD in MLB on July 28, 2026"
+      );
+
+      expect(result.route.mode).toBe("matchup");
+      expect(result.resolution.kind).toBe("exact");
+      expect(result.grounding).toBe("full_event");
+      expect(result.eventIds).toEqual([101]);
+      expect(result.context).toContain("result=exact");
+      expect(result.context).toContain("event_id=101");
+      expect(result.context).not.toContain("event_id=102");
+      expect(result.supportedNumericValues).toEqual(
+        expect.arrayContaining(["-110", "8.5"])
+      );
+    } finally {
+      if (previousDatabaseUrl === undefined) {
+        delete process.env.DIME_CHAT_DATABASE_URL;
+      } else {
+        process.env.DIME_CHAT_DATABASE_URL = previousDatabaseUrl;
+      }
+    }
+  });
+
+  it("returns nearby and ambiguous candidates as identity-only evidence", async () => {
+    const previousDatabaseUrl = process.env.DIME_CHAT_DATABASE_URL;
+    process.env.DIME_CHAT_DATABASE_URL = "mysql://localhost:3306/dime";
+    mysqlMocks.createPool.mockReturnValue({
+      execute: mysqlMocks.execute,
+    });
+    mysqlMocks.execute.mockClear();
+    mysqlMocks.execute
+      .mockResolvedValueOnce([[gameRow(201, "2026-07-29")]])
+      .mockResolvedValueOnce([
+        [gameRow(202, "2026-07-28", 1), gameRow(203, "2026-07-28", 2)],
+      ]);
+
+    try {
+      const nearby = await getDimeChatContext(
+        new Date("2026-07-28T12:00:00.000Z"),
+        "Analyze SEA vs LAD in MLB on July 28, 2026"
+      );
+      const ambiguous = await getDimeChatContext(
+        new Date("2026-07-28T12:00:00.000Z"),
+        "Analyze SEA vs LAD in MLB on July 28, 2026"
+      );
+
+      expect(nearby.resolution.kind).toBe("nearby");
+      expect(nearby.grounding).toBe("identity_only");
+      expect(nearby.context).toContain("result=nearby");
+      expect(nearby.context).not.toContain("Current market:");
+      expect(ambiguous.resolution.kind).toBe("ambiguous");
+      expect(ambiguous.grounding).toBe("identity_only");
+      expect(ambiguous.eventIds).toEqual([202, 203]);
+      expect(ambiguous.context).not.toContain("Current market:");
+    } finally {
+      if (previousDatabaseUrl === undefined) {
+        delete process.env.DIME_CHAT_DATABASE_URL;
+      } else {
+        process.env.DIME_CHAT_DATABASE_URL = previousDatabaseUrl;
+      }
+    }
+  });
+
+  it("labels an unresolved matchup with unrelated candidates as ungrounded", async () => {
+    const previousDatabaseUrl = process.env.DIME_CHAT_DATABASE_URL;
+    process.env.DIME_CHAT_DATABASE_URL = "mysql://localhost:3306/dime";
+    mysqlMocks.createPool.mockReturnValue({
+      execute: mysqlMocks.execute,
+    });
+    mysqlMocks.execute.mockClear();
+    mysqlMocks.execute.mockResolvedValueOnce([
+      [
+        {
+          id: 204,
+          sport: "MLB",
+          gameDate: "2026-07-28",
+          startTimeEst: "7:00 PM",
+          gameNumber: 1,
+          awayTeam: "Boston Red Sox",
+          homeTeam: "New York Yankees",
+          modelRunAt: null,
+        } as never,
+      ],
+    ]);
+
+    try {
+      const result = await getDimeChatContext(
+        new Date("2026-07-28T12:00:00.000Z"),
+        "Analyze SEA vs LAD in MLB on July 28, 2026"
+      );
+      expect(result.resolution.kind).toBe("missing");
+      expect(result.grounding).toBe("none");
+      expect(result.rowCount).toBe(0);
+      expect(result.eventIds).toEqual([]);
+      expect(result.context).toContain("result=missing");
+      expect(result.context).not.toContain("Current market:");
+    } finally {
+      if (previousDatabaseUrl === undefined) {
+        delete process.env.DIME_CHAT_DATABASE_URL;
+      } else {
+        process.env.DIME_CHAT_DATABASE_URL = previousDatabaseUrl;
+      }
+    }
+  });
+
   it("uses a trusted literal context cap instead of binding a prepared LIMIT value", async () => {
     const previousDatabaseUrl = process.env.DIME_CHAT_DATABASE_URL;
     process.env.DIME_CHAT_DATABASE_URL = "mysql://localhost:3306/dime";
@@ -137,10 +314,18 @@ describe("Dime Chat TiDB context formatting", () => {
     mysqlMocks.createPool.mockReturnValue({
       execute: mysqlMocks.execute,
     });
+    mysqlMocks.execute.mockClear();
     mysqlMocks.execute.mockResolvedValueOnce([[]]);
 
     try {
-      await getDimeChatContext(new Date("2026-07-10T12:00:00.000Z"));
+      const now = new Date("2026-07-10T12:00:00.000Z");
+      await getDimeChatContext(
+        now,
+        "",
+        planDimeAnswerRoute("", now, {
+          DIME_ANSWER_ROUTING_V1_ENABLED: "false",
+        })
+      );
     } finally {
       if (previousDatabaseUrl === undefined) {
         delete process.env.DIME_CHAT_DATABASE_URL;
@@ -183,7 +368,7 @@ describe("Dime Chat TiDB context formatting", () => {
     try {
       result = await getDimeChatContext(
         new Date("2026-07-10T12:00:00.000Z"),
-        "Mariners Red Sox"
+        "Analyze Mariners vs Red Sox"
       );
     } finally {
       if (previousDatabaseUrl === undefined) {
@@ -202,6 +387,7 @@ describe("Dime Chat TiDB context formatting", () => {
     expect(parameters).toEqual([
       "2026-07-10",
       "2026-07-13",
+      "MLB",
       "%mariners%",
       "%mariners%",
       "%red%",

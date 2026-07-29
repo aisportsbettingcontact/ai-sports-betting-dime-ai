@@ -12,6 +12,7 @@ import {
   parseDimeChatTraceEnvelope,
   validateDimeChatTraceEventIds,
   validateDimeChatTraceRestrictedText,
+  validateDimeChatTraceRoutingMetadata,
 } from "./dimeChatTrace";
 
 const repositoryRoot = path.resolve(import.meta.dirname, "..");
@@ -147,6 +148,65 @@ describe("Dime Conversation Trace v1 request contract", () => {
       )
     ).toThrow("bounded identity contract");
   });
+
+  it("accepts only canonical bounded routing and context metadata", () => {
+    const metadata = {
+      answerMode: "matchup" as const,
+      routingVersion: "runtime-answer-routing-v1",
+      dateSource: "explicit" as const,
+      requestedDate: "2026-07-28",
+      league: "MLB" as const,
+      eventResolution: "exact" as const,
+      groundingStatus: "full_event" as const,
+      retrievalCandidateCount: 64,
+      retrievalLatencyMs: 120_000,
+      confidence: 1,
+      completenessStatus: "passed" as const,
+    };
+    expect(validateDimeChatTraceRoutingMetadata(metadata)).toEqual(metadata);
+    expect(validateDimeChatTraceRoutingMetadata({})).toEqual({});
+  });
+
+  it("rejects non-canonical routing labels and raw query-shaped metadata", () => {
+    for (const metadata of [
+      { answerMode: "game" },
+      { routingVersion: "" },
+      { routingVersion: "runtime answer routing v1" },
+      { routingVersion: `v${"1".repeat(64)}` },
+      { dateSource: "today" },
+      { requestedDate: "2026-02-29" },
+      { requestedDate: "July 28, 2026" },
+      { league: "BASEBALL" },
+      { eventResolution: "close_enough" },
+      { groundingStatus: "maybe" },
+      { completenessStatus: "mostly_complete" },
+      { prompt: "Who wins Yankees versus Red Sox?" },
+      { teamAliases: ["Yankees", "Red Sox"] },
+    ]) {
+      expect(() => validateDimeChatTraceRoutingMetadata(metadata)).toThrow(
+        "bounded contract"
+      );
+    }
+  });
+
+  it("rejects routing counts, latency, and confidence outside their bounds", () => {
+    for (const metadata of [
+      { retrievalCandidateCount: -1 },
+      { retrievalCandidateCount: 1.5 },
+      { retrievalCandidateCount: 65 },
+      { retrievalLatencyMs: -1 },
+      { retrievalLatencyMs: 1.5 },
+      { retrievalLatencyMs: 120_001 },
+      { confidence: -0.01 },
+      { confidence: 1.01 },
+      { confidence: Number.NaN },
+      { confidence: Number.POSITIVE_INFINITY },
+    ]) {
+      expect(() => validateDimeChatTraceRoutingMetadata(metadata)).toThrow(
+        "bounded contract"
+      );
+    }
+  });
 });
 
 describe("Dime Conversation Trace v1 persistence contract", () => {
@@ -208,6 +268,27 @@ describe("Dime Conversation Trace v1 persistence contract", () => {
     );
     expect(traceSource).toContain("eventIds,");
     expect(routeSource).toContain("eventIds: contextEventIds");
+  });
+
+  it("persists bounded answer-routing metadata in context and generation events", () => {
+    expect(traceSource.match(/\.\.\.routingMetadata/g)).toHaveLength(2);
+    for (const field of [
+      "answerMode",
+      "routingVersion",
+      "dateSource",
+      "requestedDate",
+      "league",
+      "eventResolution",
+      "groundingStatus",
+      "retrievalCandidateCount",
+      "retrievalLatencyMs",
+      "confidence",
+      "completenessStatus",
+    ]) {
+      expect(traceSource).toContain(`${field}: input.${field}`);
+    }
+    expect(traceSource).not.toContain("teamAliases: input.teamAliases");
+    expect(traceSource).not.toContain("prompt: input.prompt");
   });
 
   it("marks replay metadata as trace-owned instead of claiming the current prompt identity", () => {

@@ -11,6 +11,8 @@ experiment identity.
 ## Evidence classes
 
 - [`audits/`](audits/) contains deterministic, reproducible program audits.
+- [`benchmarks/`](benchmarks/) contains frozen, public-safe runtime contract
+  benchmarks with deterministic local evidence.
 - [`infrastructure/`](infrastructure/) contains sanitized setup and runtime
   verification records.
 - [`manifests/`](manifests/) is reserved for reviewed, sanitized manifest

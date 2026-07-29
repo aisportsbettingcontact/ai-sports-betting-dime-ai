@@ -1,0 +1,237 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dime.local/schemas/runtime-answer-routing-benchmark-v1.json",
+  "title": "Dime Runtime Answer Routing v1 synthetic benchmark",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "benchmark_version",
+    "runtime_contract_version",
+    "synthetic_data_only",
+    "frozen_clock",
+    "events",
+    "cases"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "dime-runtime-answer-routing-benchmark-v1"
+    },
+    "benchmark_version": {
+      "type": "string",
+      "pattern": "^runtime-answer-routing-v1\\.[0-9]+\\.[0-9]+$"
+    },
+    "runtime_contract_version": {
+      "const": "runtime-answer-routing-v1"
+    },
+    "synthetic_data_only": {
+      "const": true
+    },
+    "frozen_clock": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["now_utc", "platform_time_zone"],
+      "properties": {
+        "now_utc": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "platform_time_zone": {
+          "const": "America/New_York"
+        }
+      }
+    },
+    "events": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/event"
+      }
+    },
+    "cases": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/case"
+      }
+    }
+  },
+  "$defs": {
+    "event": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "sport",
+        "gameDate",
+        "startTimeEst",
+        "gameNumber",
+        "awayTeam",
+        "homeTeam"
+      ],
+      "properties": {
+        "id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "sport": {
+          "type": "string",
+          "minLength": 1
+        },
+        "gameDate": {
+          "type": "string",
+          "format": "date"
+        },
+        "startTimeEst": {
+          "type": ["string", "null"]
+        },
+        "gameNumber": {
+          "type": ["integer", "null"],
+          "minimum": 1
+        },
+        "awayTeam": {
+          "type": "string",
+          "minLength": 1
+        },
+        "homeTeam": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "case": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "case_id",
+        "objective",
+        "prompt",
+        "routing_enabled",
+        "input_event_ids",
+        "freshness",
+        "grounding",
+        "response_fixture",
+        "expected"
+      ],
+      "properties": {
+        "case_id": {
+          "type": "string",
+          "pattern": "^route_[a-z0-9_]+_[0-9]{3}$"
+        },
+        "objective": {
+          "type": "string",
+          "minLength": 1
+        },
+        "prompt": {
+          "type": "string",
+          "minLength": 1
+        },
+        "routing_enabled": {
+          "type": "boolean"
+        },
+        "input_event_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "freshness": {
+          "enum": ["live", "delayed", "none"]
+        },
+        "grounding": {
+          "enum": ["full_event", "identity_only", "catalog_only", "none"]
+        },
+        "response_fixture": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["kind"],
+              "properties": {
+                "kind": {
+                  "const": "platform_capabilities_fallback"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["kind", "text"],
+              "properties": {
+                "kind": {
+                  "const": "literal"
+                },
+                "text": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          ]
+        },
+        "expected": {
+          "$ref": "#/$defs/expected"
+        }
+      }
+    },
+    "expected": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "platform_scope",
+        "league",
+        "requested_date",
+        "date_source",
+        "retrieval_cap",
+        "retrieval_bypassed",
+        "resolution_kind",
+        "selected_event_ids",
+        "completeness_status"
+      ],
+      "properties": {
+        "mode": {
+          "enum": ["platform", "matchup", "slate", "educational"]
+        },
+        "platform_scope": {
+          "enum": ["capabilities", "feature", "not_applicable"]
+        },
+        "league": {
+          "type": ["string", "null"],
+          "enum": ["MLB", "NBA", "NHL", "NCAAM", "NFL", "NCAAF", null]
+        },
+        "requested_date": {
+          "type": ["string", "null"],
+          "format": "date"
+        },
+        "date_source": {
+          "enum": ["explicit", "relative", "none", "invalid", "ambiguous"]
+        },
+        "retrieval_cap": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 12
+        },
+        "retrieval_bypassed": {
+          "type": "boolean"
+        },
+        "resolution_kind": {
+          "enum": ["exact", "nearby", "ambiguous", "missing", "not_applicable"]
+        },
+        "selected_event_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "completeness_status": {
+          "enum": ["passed", "failed", "not_applicable", "disabled"]
+        }
+      }
+    }
+  }
+}

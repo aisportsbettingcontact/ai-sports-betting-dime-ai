@@ -1,0 +1,275 @@
+{
+  "schema_version": "dime-runtime-answer-routing-audit-v1",
+  "benchmark_version": "runtime-answer-routing-v1.0.0",
+  "runtime_contract_version": "runtime-answer-routing-v1",
+  "evidence_class": "deterministic_local_contract",
+  "synthetic_data_only": true,
+  "frozen_clock": {
+    "now_utc": "2026-07-28T16:00:00.000Z",
+    "platform_time_zone": "America/New_York"
+  },
+  "sources": {
+    "fixture_path": "ml/dime-1.0/data/eval/runtime_answer_routing_v1.benchmark.json",
+    "fixture_sha256": "ab4c8beea514cc423ee64b57e93b2a78078749a73d6225e5e400975f70aae84f",
+    "runtime_module_path": "server/_core/dimeAnswerRouting.ts",
+    "runtime_module_sha256": "126445f41ddae0d68ef5ca127508e7e07cf6e0c19a9cfc6572deac7d7a22639d"
+  },
+  "summary": {
+    "case_count": 14,
+    "passing_cases": 14,
+    "failing_cases": 0,
+    "deterministic_local_baseline_pass": true,
+    "production_promotion_authorized": false
+  },
+  "local_metrics": {
+    "route_exact_match": {
+      "numerator": 14,
+      "denominator": 14,
+      "rate": 1
+    },
+    "grounding_resolution_exact_match": {
+      "numerator": 14,
+      "denominator": 14,
+      "rate": 1
+    },
+    "completeness_guard_expectation_match": {
+      "numerator": 14,
+      "denominator": 14,
+      "rate": 1
+    },
+    "retrieval_cap_compliance": {
+      "numerator": 14,
+      "denominator": 14,
+      "rate": 1
+    },
+    "retrieval_bypass_compliance": {
+      "numerator": 14,
+      "denominator": 14,
+      "rate": 1
+    },
+    "full_case_contract_accuracy": {
+      "numerator": 14,
+      "denominator": 14,
+      "rate": 1
+    }
+  },
+  "post_deploy_live_metrics": {
+    "measurement_status": "pending",
+    "sample_count": null,
+    "answer_grounding_claim_support_rate": null,
+    "answer_completeness_rate": null,
+    "retrieval_rows": {
+      "p50": null,
+      "p95": null,
+      "maximum": null
+    },
+    "latency_ms": {
+      "routing_p50": null,
+      "routing_p95": null,
+      "retrieval_p50": null,
+      "retrieval_p95": null,
+      "provider_p50": null,
+      "provider_p95": null,
+      "total_p50": null,
+      "total_p95": null
+    },
+    "tokens": {
+      "prompt_total": null,
+      "completion_total": null,
+      "total": null,
+      "per_request_p50": null,
+      "per_request_p95": null
+    },
+    "provider_failure_rate": null,
+    "monetary_cost": {
+      "currency": "USD",
+      "total": null,
+      "per_request": null,
+      "status": "not_computable_without_verified_provider_price_snapshot"
+    }
+  },
+  "rollback_criteria": {
+    "immediate": [
+      "platform_or_educational_route_retrieves_event_rows",
+      "nearby_event_is_presented_as_exact",
+      "ambiguous_event_is_selected_without_confirmation",
+      "missing_event_is_replaced_with_another_event",
+      "retrieval_cap_is_exceeded",
+      "runtime_kill_switch_does_not_restore_the_bounded_legacy_path",
+      "private_or_production_data_appears_in_benchmark_or_evidence"
+    ],
+    "before_live_promotion": [
+      "any_frozen_case_fails",
+      "live_metric_capture_is_incomplete",
+      "owner_approved_live_thresholds_are_absent",
+      "verified_provider_price_snapshot_is_absent_when_reporting_dollar_cost"
+    ]
+  },
+  "limitations": [
+    "This baseline measures deterministic routing, event resolution, retrieval bounds, and completeness-guard behavior only.",
+    "Synthetic response fixtures are contract probes, not model-generated answers.",
+    "The baseline does not prove live answer quality, factual claim support, latency, token usage, provider reliability, or monetary cost.",
+    "Post-deploy metrics remain pending until sanitized runtime traces are collected under an approved measurement plan."
+  ],
+  "cases": [
+    {
+      "case_id": "route_platform_capabilities_001",
+      "pass": true,
+      "mode": "platform",
+      "date_source": "none",
+      "resolution_kind": "not_applicable",
+      "selected_event_ids": [],
+      "selected_event_count": 0,
+      "retrieval_cap": 0,
+      "completeness_status": "passed"
+    },
+    {
+      "case_id": "route_platform_feature_002",
+      "pass": true,
+      "mode": "platform",
+      "date_source": "none",
+      "resolution_kind": "not_applicable",
+      "selected_event_ids": [],
+      "selected_event_count": 0,
+      "retrieval_cap": 0,
+      "completeness_status": "passed"
+    },
+    {
+      "case_id": "route_educational_math_003",
+      "pass": true,
+      "mode": "educational",
+      "date_source": "none",
+      "resolution_kind": "not_applicable",
+      "selected_event_ids": [],
+      "selected_event_count": 0,
+      "retrieval_cap": 0,
+      "completeness_status": "not_applicable"
+    },
+    {
+      "case_id": "route_alias_boundary_004",
+      "pass": true,
+      "mode": "educational",
+      "date_source": "none",
+      "resolution_kind": "not_applicable",
+      "selected_event_ids": [],
+      "selected_event_count": 0,
+      "retrieval_cap": 0,
+      "completeness_status": "not_applicable"
+    },
+    {
+      "case_id": "route_matchup_iso_exact_005",
+      "pass": true,
+      "mode": "matchup",
+      "date_source": "explicit",
+      "resolution_kind": "exact",
+      "selected_event_ids": [101],
+      "selected_event_count": 1,
+      "retrieval_cap": 2,
+      "completeness_status": "passed"
+    },
+    {
+      "case_id": "route_matchup_numeric_exact_006",
+      "pass": true,
+      "mode": "matchup",
+      "date_source": "explicit",
+      "resolution_kind": "exact",
+      "selected_event_ids": [103],
+      "selected_event_count": 1,
+      "retrieval_cap": 2,
+      "completeness_status": "passed"
+    },
+    {
+      "case_id": "route_matchup_relative_today_007",
+      "pass": true,
+      "mode": "matchup",
+      "date_source": "relative",
+      "resolution_kind": "exact",
+      "selected_event_ids": [103],
+      "selected_event_count": 1,
+      "retrieval_cap": 2,
+      "completeness_status": "passed"
+    },
+    {
+      "case_id": "route_matchup_nearby_008",
+      "pass": true,
+      "mode": "matchup",
+      "date_source": "explicit",
+      "resolution_kind": "nearby",
+      "selected_event_ids": [101],
+      "selected_event_count": 1,
+      "retrieval_cap": 2,
+      "completeness_status": "passed"
+    },
+    {
+      "case_id": "route_matchup_missing_009",
+      "pass": true,
+      "mode": "matchup",
+      "date_source": "explicit",
+      "resolution_kind": "missing",
+      "selected_event_ids": [],
+      "selected_event_count": 0,
+      "retrieval_cap": 2,
+      "completeness_status": "passed"
+    },
+    {
+      "case_id": "route_matchup_doubleheader_010",
+      "pass": true,
+      "mode": "matchup",
+      "date_source": "explicit",
+      "resolution_kind": "ambiguous",
+      "selected_event_ids": [104, 105],
+      "selected_event_count": 2,
+      "retrieval_cap": 2,
+      "completeness_status": "passed"
+    },
+    {
+      "case_id": "route_matchup_ambiguous_date_011",
+      "pass": true,
+      "mode": "matchup",
+      "date_source": "ambiguous",
+      "resolution_kind": "ambiguous",
+      "selected_event_ids": [101, 102],
+      "selected_event_count": 2,
+      "retrieval_cap": 2,
+      "completeness_status": "passed"
+    },
+    {
+      "case_id": "route_matchup_invalid_date_012",
+      "pass": true,
+      "mode": "matchup",
+      "date_source": "invalid",
+      "resolution_kind": "ambiguous",
+      "selected_event_ids": [101, 102],
+      "selected_event_count": 2,
+      "retrieval_cap": 2,
+      "completeness_status": "passed"
+    },
+    {
+      "case_id": "route_slate_cap_013",
+      "pass": true,
+      "mode": "slate",
+      "date_source": "relative",
+      "resolution_kind": "exact",
+      "selected_event_ids": [
+        201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212
+      ],
+      "selected_event_count": 12,
+      "retrieval_cap": 12,
+      "completeness_status": "passed"
+    },
+    {
+      "case_id": "route_kill_switch_014",
+      "pass": true,
+      "mode": "slate",
+      "date_source": "relative",
+      "resolution_kind": "not_applicable",
+      "selected_event_ids": [
+        201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212
+      ],
+      "selected_event_count": 12,
+      "retrieval_cap": 12,
+      "completeness_status": "disabled"
+    }
+  ],
+  "failures": []
+}
