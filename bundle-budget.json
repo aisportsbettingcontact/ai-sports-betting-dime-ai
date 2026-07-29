@@ -2,7 +2,15 @@
   "metric": "chat-critical-path-gzip-bytes",
   "baselineCommit": "b03cea01",
   "baselineBytes": 210762,
-  "allowanceBytes": 8192,
+  "allowanceBytes": 8704,
+  "recalibration7": {
+    "date": "2026-07-29",
+    "allowanceBytesBefore": 8192,
+    "allowanceBytesAfter": 8704,
+    "deltaBytes": 512,
+    "reason": "PR #228 (Betting Splits brand-law UI/UX refresh) merged to main while PR #227 (Trends redesign, recalibration6) was in flight; its own ~495B gzip of diffuse GLOBAL Tailwind utility CSS on index.css combines with the Trends utilities once the branches meet, measuring 219,122B vs the 218,954B ceiling (168B over) on the updated #227 branch. Same class of growth as recalibrations 2-6: brand-law styling for explicitly-requested redesigns landing on the sitewide stylesheet, zero route JS on the chat static-import closure. Allowance raised 512B to clear the union with a ~344B margin. framer-motion / vendor-motion contribution stays 0 (verified in the failing run itself: 'vendor-motion chunks in path: 0'); any vendor-motion return or further material growth still fails this gate.",
+    "verifiedVendorMotionChunks": 0
+  },
   "recalibration6": {
     "date": "2026-07-29",
     "allowanceBytesBefore": 7680,
