@@ -58,13 +58,13 @@ const schemaSrc = fs.readFileSync(
 );
 
 describe("deriveThreadTitle", () => {
-  it("collapses whitespace and passes short titles through", () => {
-    expect(deriveThreadTitle("  best   MLB\nedges today ")).toBe(
-      "best MLB edges today"
-    );
+  // 2026-07-29 r3: new-thread titles route through the topic-detection engine
+  // (server/dimeChatTitle.ts — its own test file carries the full matrix).
+  it("collapses whitespace and composes a topic title", () => {
+    expect(deriveThreadTitle("  best   MLB\nedges today ")).toBe("MLB Edges — Today");
   });
-  it("truncates long titles with an ellipsis at the cap", () => {
-    const long = "x".repeat(200);
+  it("truncates undetectable long input with an ellipsis under the cap", () => {
+    const long = "z".repeat(200);
     const title = deriveThreadTitle(long);
     expect(title.length).toBeLessThanOrEqual(80);
     expect(title.endsWith("…")).toBe(true);
@@ -85,12 +85,12 @@ describe("dimeChats router — security contract", () => {
   });
 
   it("every mutating/reading procedure on a thread goes through getOwnedThread", () => {
-    // get, appendMessages, setStarred, setArchived, softDelete
+    // get, appendMessages, rename, setStarred, setArchived, softDelete
     expect(
       routerSrc.match(
         /getOwnedThread\(\s*(?:db|tx),\s*input\.threadId,\s*ctx\.appUser\.id\s*\)/g
       )?.length
-    ).toBe(5);
+    ).toBe(6);
   });
 
   it("delete is SOFT — sets deletedAt, never removes rows", () => {
