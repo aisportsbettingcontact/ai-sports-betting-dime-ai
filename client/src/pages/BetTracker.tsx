@@ -253,6 +253,8 @@ function fmtDate(d: string): string {
   return `${m}/${day}/${y}`;
 }
 
+/* Law v2: WIN = mint, LOSS = scoped --loss-red; every no-signal state
+ * (PUSH / PENDING / VOID) de-emphasizes to the secondary grey tier. */
 function resultColor(r: Result): string {
   switch (r) {
     case "WIN":
@@ -260,11 +262,9 @@ function resultColor(r: Result): string {
     case "LOSS":
       return "text-[#FF3B3B]";
     case "PUSH":
-      return "text-white";
     case "PENDING":
-      return "text-white";
     case "VOID":
-      return "text-white";
+      return "bt-dim";
   }
 }
 
@@ -275,11 +275,9 @@ function resultBg(r: Result): string {
     case "LOSS":
       return "bg-transparent border-[#FF3B3B] text-[#FF3B3B]";
     case "PUSH":
-      return "bg-transparent border-white text-white";
     case "PENDING":
-      return "bg-black border-white text-white";
     case "VOID":
-      return "bg-black border-white text-white";
+      return "bg-transparent border-white bt-dim";
   }
 }
 
@@ -460,7 +458,7 @@ function BreakdownsSidebar({
   const showDollar = unitSize > 0;
 
   return (
-    <div className="bg-black border border-white rounded-2xl overflow-hidden">
+    <div className="bt-surface border border-white rounded-2xl overflow-hidden">
       {/* Header — always visible, acts as toggle on mobile/tablet */}
       <button
         type="button"
@@ -475,7 +473,7 @@ function BreakdownsSidebar({
             Breakdowns
           </span>
           {showDollar && (
-            <span className="text-xs text-white font-mono">
+            <span className="text-xs bt-dim font-mono">
               (1u = ${unitSize.toLocaleString()})
             </span>
           )}
@@ -515,17 +513,16 @@ function StatCard({
   color?: string;
 }) {
   return (
-    <div className="bg-black border border-white rounded-xl px-4 py-3 flex flex-col justify-center gap-0.5 min-w-0 min-h-[76px] h-auto overflow-visible">
+    <div className="bt-surface border border-white rounded-xl px-4 py-3 flex flex-col justify-center gap-1 min-w-0 min-h-[76px] h-auto overflow-visible">
+      {/* MASTER.md stat block: micro-label OVER the bold value */}
+      <div className="bt-label leading-tight whitespace-nowrap">{label}</div>
       <div
-        className={`text-lg sm:text-xl lg:text-2xl font-bold leading-tight whitespace-nowrap ${color ?? "text-white"}`}
+        className={`text-lg sm:text-xl lg:text-2xl font-bold leading-tight whitespace-nowrap bt-num ${color ?? "text-white"}`}
       >
         {value}
       </div>
-      <div className="text-sm text-white tracking-widest uppercase leading-tight">
-        {label}
-      </div>
       {sub && (
-        <div className="text-xs text-white leading-tight mt-0.5">{sub}</div>
+        <div className="text-[11px] bt-faint leading-tight">{sub}</div>
       )}
     </div>
   );
@@ -551,7 +548,7 @@ function SelectField({
     <div className="flex flex-col gap-1">
       <label
         htmlFor={id}
-        className="text-sm tracking-widest text-white uppercase font-medium"
+        className="bt-label"
       >
         {label}
       </label>
@@ -561,7 +558,7 @@ function SelectField({
           value={value}
           onChange={e => onChange(e.target.value)}
           disabled={disabled}
-          className="w-full bg-black border border-white rounded-lg px-3 py-2.5 pr-8 text-sm text-white appearance-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#45E0A8] focus:border-[#45E0A8] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          className="w-full bt-input pr-8 appearance-none"
         >
           {placeholder && (
             <option value="" disabled>
@@ -621,12 +618,12 @@ function PickButton({
       onClick={onClick}
       disabled={disabled}
       className={`
-        flex-1 flex flex-col items-center justify-center gap-1.5 p-3 rounded-xl border-2 transition-all
+        flex-1 flex flex-col items-center justify-center gap-1.5 p-3 rounded-xl border-2 bt-press transition-all
         min-w-0 relative
         ${
           selected
-            ? "border-[#45E0A8] bg-transparent"
-            : "border-white bg-black hover:border-white"
+            ? "border-[#45E0A8] bg-[var(--dime-row-active)]"
+            : "border-white bt-surface hover:border-white"
         }
         ${disabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}
       `}
@@ -659,7 +656,7 @@ function PickButton({
               {teamAbbr}
             </div>
             {teamNickname && (
-              <div className="text-xs text-white leading-tight truncate max-w-[64px]">
+              <div className="text-xs bt-dim leading-tight truncate max-w-[64px]">
                 {teamNickname}
               </div>
             )}
@@ -836,7 +833,7 @@ function GameSelector({
       );
     }
     // Not started — show start time in EST
-    return <span className="text-white text-xs">{g.gameTime} ET</span>;
+    return <span className="bt-dim text-xs">{g.gameTime} ET</span>;
   }
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -854,16 +851,16 @@ function GameSelector({
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2 bg-black border border-white rounded-lg px-3 py-2.5">
+      <div className="flex items-center gap-2 bt-input">
         <div className="w-3 h-3 border border-[#45E0A8] border-t-transparent rounded-full animate-spin" />
-        <span className="text-white text-sm">Loading slate…</span>
+        <span className="bt-dim text-sm">Loading slate…</span>
       </div>
     );
   }
 
   if (games.length === 0) {
     return (
-      <div className="bg-black border border-white rounded-lg px-3 py-2.5 text-white text-sm">
+      <div className="bt-input bt-dim text-sm">
         No {sport} games on {fmtDate(formDate)}
       </div>
     );
@@ -874,7 +871,7 @@ function GameSelector({
       <button
         type="button"
         onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center gap-2 bg-black border border-white rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#45E0A8] focus:border-[#45E0A8] transition-colors text-left"
+        className="w-full flex items-center gap-2 bt-input text-left"
       >
         {selected ? (
           (() => {
@@ -928,7 +925,7 @@ function GameSelector({
                     >
                       {selLs!.awayR}
                     </span>
-                    <span className="text-white text-xs">–</span>
+                    <span className="bt-dim text-xs">–</span>
                     <span
                       className={`font-black font-mono tabular-nums text-sm ${
                         selHomeWins
@@ -942,7 +939,7 @@ function GameSelector({
                     </span>
                   </span>
                 ) : (
-                  <span className="text-white text-xs mx-1">@</span>
+                  <span className="bt-dim text-xs mx-1">@</span>
                 )}
                 <span
                   className={`font-bold text-sm ${
@@ -992,7 +989,7 @@ function GameSelector({
                     );
                   })()}
                 {!selComplete && !selLive && (
-                  <span className="ml-1 text-xs text-white shrink-0">
+                  <span className="ml-1 text-xs bt-dim shrink-0">
                     {selected.gameTime} ET
                   </span>
                 )}
@@ -1000,7 +997,7 @@ function GameSelector({
             );
           })()
         ) : (
-          <span className="text-white">Select game…</span>
+          <span className="bt-faint">Select game…</span>
         )}
         <ChevronDown
           size={14}
@@ -1008,7 +1005,7 @@ function GameSelector({
         />
       </button>
       {open && (
-        <div className="absolute z-50 top-full mt-1 left-0 right-0 bg-black border border-white rounded-xl overflow-hidden max-h-72 overflow-y-auto">
+        <div className="absolute z-50 top-full mt-1 left-0 right-0 bt-float overflow-hidden max-h-72 overflow-y-auto">
           {games.map(g => {
             const ls = getLs(g);
             const isComplete =
@@ -1032,8 +1029,8 @@ function GameSelector({
                   onSelect(g);
                   setOpen(false);
                 }}
-                className={`w-full flex items-center gap-2 px-3 py-2.5 transition-colors text-left border-b border-white last:border-0 ${
-                  g.id === selectedId ? "bg-transparent" : ""
+                className={`w-full flex items-center gap-2 px-3 py-2.5 bt-row-hover transition-colors text-left border-b border-white last:border-0 ${
+                  g.id === selectedId ? "bg-[var(--dime-row-active)]" : ""
                 }`}
               >
                 {/* ── Away team ── */}
@@ -1075,7 +1072,7 @@ function GameSelector({
                       >
                         {ls!.awayR}
                       </span>
-                      <span className="text-white text-sm font-bold">–</span>
+                      <span className="bt-dim text-sm font-bold">–</span>
                       <span
                         className={`text-base font-black font-mono tabular-nums ${
                           homeWins
@@ -1112,7 +1109,7 @@ function GameSelector({
                     </div>
                   ) : (
                     // Scheduled — show start time
-                    <span className="text-white text-xs">{g.gameTime} ET</span>
+                    <span className="bt-dim text-xs">{g.gameTime} ET</span>
                   )}
                 </div>
 
@@ -1148,7 +1145,7 @@ function GameSelector({
                   )}
                   {/* ML odds for scheduled games */}
                   {!isComplete && !isLive && g.odds?.awayMl && (
-                    <span className="text-xs text-white font-mono">
+                    <span className="text-xs bt-dim font-mono">
                       {fmtOdds(g.odds.awayMl.odds)}/
                       {g.odds.homeMl ? fmtOdds(g.odds.homeMl.odds) : "—"}
                     </span>
@@ -1196,7 +1193,7 @@ function LinescoreGrid({
       >
         <thead>
           <tr>
-            <th className="text-xs text-white font-medium text-left pr-2 pb-1 w-8" />
+            <th className="text-xs bt-dim font-medium text-left pr-2 pb-1 w-8" />
             {cols.map(c => (
               <th
                 key={c.num}
@@ -1402,7 +1399,7 @@ const BetCard = memo(function BetCard({
 
   return (
     <div
-      className={`relative bg-black border rounded-xl overflow-hidden transition-all ${
+      className={`relative bt-surface border rounded-xl overflow-hidden transition-all ${
         result === "WIN"
           ? "border-[#45E0A8]"
           : result === "LOSS"
@@ -1422,8 +1419,8 @@ const BetCard = memo(function BetCard({
               : result === "PUSH"
                 ? "bg-white"
                 : result === "PENDING"
-                  ? "bg-black"
-                  : "bg-black"
+                  ? "bg-transparent"
+                  : "bg-transparent"
         }`}
       />
 
@@ -1442,7 +1439,7 @@ const BetCard = memo(function BetCard({
                 }}
               />
             ) : (
-              <div className="w-10 h-10 rounded-full bg-black flex items-center justify-center">
+              <div className="w-10 h-10 rounded-full bt-raised flex items-center justify-center">
                 <span className="text-xs font-bold text-white">
                   {(bet.awayTeam ?? "?").slice(0, 3)}
                 </span>
@@ -1481,7 +1478,7 @@ const BetCard = memo(function BetCard({
               <span className="text-sm font-bold tracking-widest text-white uppercase">
                 {bet.sport}
               </span>
-              <span className="text-white text-sm">·</span>
+              <span className="bt-dim text-sm">·</span>
               <span className="text-sm font-semibold text-white">
                 {fmtDate(bet.gameDate)}
               </span>
@@ -1511,7 +1508,7 @@ const BetCard = memo(function BetCard({
                   >
                     {awayR}
                   </span>
-                  <span className="text-white text-sm font-bold">-</span>
+                  <span className="bt-dim text-sm font-bold">-</span>
                   <span
                     className={`text-xl font-black font-mono ${
                       pickIsHome
@@ -1552,7 +1549,7 @@ const BetCard = memo(function BetCard({
                   <span className="text-xl font-black font-mono text-white">
                     {awayR}
                   </span>
-                  <span className="text-white text-sm font-bold">-</span>
+                  <span className="bt-dim text-sm font-bold">-</span>
                   <span className="text-xl font-black font-mono text-white">
                     {homeR}
                   </span>
@@ -1576,7 +1573,7 @@ const BetCard = memo(function BetCard({
                 <span className="text-sm font-bold text-white">
                   {fmtStartTime(bet.startUtc, bet.gameTime) || "—"}
                 </span>
-                <span className="text-xs text-white tracking-widest uppercase">
+                <span className="text-xs bt-dim tracking-widest uppercase">
                   Start Time
                 </span>
               </div>
@@ -1595,7 +1592,7 @@ const BetCard = memo(function BetCard({
                 }}
               />
             ) : (
-              <div className="w-10 h-10 rounded-full bg-black flex items-center justify-center">
+              <div className="w-10 h-10 rounded-full bt-raised flex items-center justify-center">
                 <span className="text-xs font-bold text-white">
                   {(bet.homeTeam ?? "?").slice(0, 3)}
                 </span>
@@ -1613,7 +1610,7 @@ const BetCard = memo(function BetCard({
                 <button
                   type="button"
                   onClick={() => onEdit(bet)}
-                  className="p-1.5 rounded-lg text-white hover:text-white transition-all"
+                  className="p-1.5 rounded-lg bt-dim hover:text-white bt-row-hover transition-all"
                   title="Edit bet"
                 >
                   <Pencil size={11} />
@@ -1621,7 +1618,7 @@ const BetCard = memo(function BetCard({
                 <button
                   type="button"
                   onClick={() => onDelete(bet.id)}
-                  className="p-1.5 rounded-lg text-white hover:text-white transition-all"
+                  className="p-1.5 rounded-lg bt-dim hover:text-white bt-row-hover transition-all"
                   title="Delete bet"
                 >
                   <Trash2 size={11} />
@@ -1632,7 +1629,7 @@ const BetCard = memo(function BetCard({
                 <button
                   type="button"
                   onClick={() => onEdit(bet)}
-                  className="p-1.5 rounded-lg text-white hover:text-white transition-all"
+                  className="p-1.5 rounded-lg bt-dim hover:text-white bt-row-hover transition-all"
                   title="Request edit"
                 >
                   <FileText size={11} />
@@ -1640,7 +1637,7 @@ const BetCard = memo(function BetCard({
                 <button
                   type="button"
                   onClick={() => onDelete(bet.id)}
-                  className="p-1.5 rounded-lg text-white hover:text-white transition-all"
+                  className="p-1.5 rounded-lg bt-dim hover:text-white bt-row-hover transition-all"
                   title="Request deletion"
                 >
                   <Lock size={11} />
@@ -1671,11 +1668,11 @@ const BetCard = memo(function BetCard({
             <span className="text-white font-bold text-sm">
               {fullPickLabel}
             </span>
-            <span className="text-xs bg-black text-white px-1.5 py-0.5 rounded font-medium tracking-wider">
+            <span className="text-xs bt-raised bt-dim px-1.5 py-0.5 rounded font-medium tracking-wider">
               {mktLabel}
             </span>
             {tfShort && (
-              <span className="text-xs bg-black text-white px-1.5 py-0.5 rounded font-medium">
+              <span className="text-xs bt-raised bt-dim px-1.5 py-0.5 rounded font-medium">
                 {tfShort}
               </span>
             )}
@@ -1695,17 +1692,17 @@ const BetCard = memo(function BetCard({
 
           {/* Stake row */}
           <div className="flex items-center justify-center gap-2 w-full">
-            <div className="flex items-center gap-1.5 bg-black rounded-lg px-3 py-1.5">
-              <span className="text-sm text-white uppercase tracking-wider">
+            <div className="flex items-center gap-1.5 bt-raised rounded-lg px-3 py-1.5">
+              <span className="text-[11px] bt-dim uppercase tracking-[0.08em]">
                 Risk
               </span>
               <span className="text-xs font-bold font-mono text-white">
                 {fmtStake(risk)}
               </span>
             </div>
-            <span className="text-white text-xs">→</span>
-            <div className="flex items-center gap-1.5 bg-black rounded-lg px-3 py-1.5">
-              <span className="text-sm text-white uppercase tracking-wider">
+            <span className="bt-dim text-xs">→</span>
+            <div className="flex items-center gap-1.5 bt-raised rounded-lg px-3 py-1.5">
+              <span className="text-[11px] bt-dim uppercase tracking-[0.08em]">
                 Win
               </span>
               <span className="text-xs font-bold font-mono text-[#45E0A8]">
@@ -1722,7 +1719,7 @@ const BetCard = memo(function BetCard({
                       : "bg-transparent"
                 }`}
               >
-                <span className="text-sm text-white uppercase tracking-wider">
+                <span className="text-[11px] bt-dim uppercase tracking-[0.08em]">
                   P/L
                 </span>
                 <span
@@ -1746,7 +1743,7 @@ const BetCard = memo(function BetCard({
                   key={r}
                   type="button"
                   onClick={() => onResult(bet.id, r)}
-                  className={`px-2.5 py-1 rounded-lg text-sm font-bold border transition-all hover:opacity-80 ${resultBg(r)}`}
+                  className={`px-2.5 py-1 rounded-lg text-sm font-bold border bt-press transition-all hover:opacity-80 ${resultBg(r)}`}
                 >
                   {r}
                 </button>
@@ -1759,7 +1756,7 @@ const BetCard = memo(function BetCard({
 
         {/* Notes */}
         {bet.notes && (
-          <div className="text-sm text-white bg-black rounded-lg px-3 py-1.5 italic">
+          <div className="text-sm bt-dim bt-raised rounded-lg px-3 py-1.5 italic">
             {bet.notes}
           </div>
         )}
@@ -1833,7 +1830,7 @@ function LogsTab({
           className={`px-4 py-2 text-xs font-bold tracking-wider rounded-lg transition-all ${
             activeSection === "REQUESTS"
               ? "bg-transparent text-[#45E0A8] border border-[#45E0A8]"
-              : "text-white hover:text-white"
+              : "bt-dim hover:text-white"
           }`}
         >
           EDIT REQUESTS
@@ -1849,11 +1846,11 @@ function LogsTab({
           className={`px-4 py-2 text-xs font-bold tracking-wider rounded-lg transition-all ${
             activeSection === "BETS"
               ? "bg-transparent text-[#45E0A8] border border-[#45E0A8]"
-              : "text-white hover:text-white"
+              : "bt-dim hover:text-white"
           }`}
         >
           ALL BETS LOG
-          <span className="ml-2 text-white text-sm">({bets.length})</span>
+          <span className="ml-2 bt-dim text-sm">({bets.length})</span>
         </button>
       </div>
 
@@ -1861,14 +1858,14 @@ function LogsTab({
       {activeSection === "REQUESTS" && (
         <div className="space-y-3">
           {editRequests.length === 0 ? (
-            <div className="text-center py-12 text-white text-sm">
+            <div className="text-center py-12 bt-dim text-sm">
               No edit requests submitted yet.
             </div>
           ) : (
             editRequests.map((req: any) => (
               <div
                 key={req.id}
-                className={`bg-black border rounded-xl p-4 space-y-2 ${
+                className={`bt-surface border rounded-xl p-4 space-y-2 ${
                   req.status === "PENDING"
                     ? "border-white"
                     : req.status === "APPROVED"
@@ -1884,7 +1881,7 @@ function LogsTab({
                           ? "bg-transparent border-white text-white"
                           : req.status === "APPROVED"
                             ? "bg-transparent border-[#45E0A8] text-[#45E0A8]"
-                            : "bg-black border-white text-white"
+                            : "bg-transparent border-white bt-dim"
                       }`}
                     >
                       {req.status}
@@ -1898,27 +1895,27 @@ function LogsTab({
                     >
                       {req.requestType}
                     </span>
-                    <span className="text-xs text-white font-medium">
+                    <span className="text-xs bt-dim font-medium">
                       @{req.requesterUsername}
                     </span>
-                    <span className="text-sm text-white">Bet #{req.betId}</span>
+                    <span className="text-sm bt-dim">Bet #{req.betId}</span>
                   </div>
-                  <span className="text-sm text-white">
+                  <span className="text-sm bt-dim">
                     {new Date(req.createdAt).toLocaleString()}
                   </span>
                 </div>
                 {req.reason && (
-                  <div className="text-xs text-white bg-black rounded-lg px-3 py-2 italic">
+                  <div className="text-xs bt-dim bt-raised rounded-lg px-3 py-2 italic">
                     "{req.reason}"
                   </div>
                 )}
                 {req.proposedChanges && (
-                  <div className="text-sm text-white bg-black rounded px-2 py-1 font-mono">
+                  <div className="text-sm bt-dim bt-raised rounded px-2 py-1 font-mono">
                     Changes: {req.proposedChanges}
                   </div>
                 )}
                 {req.reviewerUsername && (
-                  <div className="text-sm text-white">
+                  <div className="text-sm bt-dim">
                     Reviewed by @{req.reviewerUsername}
                     {req.reviewNote && `: "${req.reviewNote}"`}
                   </div>
@@ -1932,7 +1929,7 @@ function LogsTab({
                         setReviewAction("APPROVE");
                         setReviewNote("");
                       }}
-                      className="flex-1 py-1.5 rounded-lg bg-transparent border border-[#45E0A8] text-[#45E0A8] text-xs font-bold transition-all"
+                      className="flex-1 py-1.5 rounded-lg bg-transparent border border-[#45E0A8] text-[#45E0A8] text-xs font-bold bt-press hover:opacity-85 transition-all"
                     >
                       Approve
                     </button>
@@ -1943,7 +1940,7 @@ function LogsTab({
                         setReviewAction("DENY");
                         setReviewNote("");
                       }}
-                      className="flex-1 py-1.5 rounded-lg border border-white text-white text-xs font-bold transition-all"
+                      className="flex-1 py-1.5 rounded-lg border border-white bt-dim text-xs font-bold bt-press hover:border-white transition-all"
                     >
                       Deny
                     </button>
@@ -1959,14 +1956,14 @@ function LogsTab({
       {activeSection === "BETS" && (
         <div className="space-y-2">
           {bets.length === 0 ? (
-            <div className="text-center py-12 text-white text-sm">
+            <div className="text-center py-12 bt-dim text-sm">
               No bets tracked yet.
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
                 <thead>
-                  <tr className="text-sm text-white uppercase tracking-wider border-b border-white">
+                  <tr className="text-[11px] bt-dim uppercase tracking-[0.08em] border-b border-white">
                     <th className="text-left py-2 px-2">ID</th>
                     <th className="text-left py-2 px-2">User</th>
                     <th className="text-left py-2 px-2">Date</th>
@@ -2028,7 +2025,7 @@ function LogsTab({
                           className={`text-xs font-bold px-1.5 py-0.5 rounded ${
                             (b as any).wagerType === "LIVE"
                               ? "text-[#45E0A8]"
-                              : "bg-black text-white"
+                              : "bt-raised bt-dim"
                           }`}
                         >
                           {(b as any).wagerType ?? "PRE"}
@@ -2053,18 +2050,18 @@ function LogsTab({
 
       {/* Review modal */}
       {reviewId !== null && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black backdrop-blur-sm">
-          <div className="bg-black border border-white rounded-2xl p-6 w-full max-w-sm space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black">
+          <div className="bt-surface border border-white rounded-2xl p-6 w-full max-w-sm space-y-4">
             <h2 className="font-bold text-sm tracking-wider">
               {reviewAction === "APPROVE"
-                ? "✅ Approve Request"
-                : "❌ Deny Request"}
+                ? "Approve Request"
+                : "Deny Request"}
             </h2>
-            <p className="text-white text-xs">Request #{reviewId}</p>
+            <p className="bt-dim text-xs">Request #{reviewId}</p>
             <div className="flex flex-col gap-1">
               <label
                 htmlFor="bt-review-note"
-                className="text-sm tracking-widest text-white uppercase font-medium"
+                className="bt-label"
               >
                 Note (optional)
               </label>
@@ -2074,14 +2071,14 @@ function LogsTab({
                 onChange={e => setReviewNote(e.target.value)}
                 rows={2}
                 placeholder="Reason for decision…"
-                className="w-full bg-black border border-white rounded-lg px-3 py-2.5 text-sm text-white resize-none focus:outline-none focus:ring-1 focus:ring-[#45E0A8] transition-colors"
+                className="w-full bt-input resize-none"
               />
             </div>
             <div className="flex gap-3">
               <button
                 type="button"
                 onClick={() => setReviewId(null)}
-                className="flex-1 py-2.5 rounded-xl border border-white text-white text-sm font-medium hover:border-white transition-colors"
+                className="flex-1 py-2.5 rounded-xl border border-white bt-dim text-sm font-medium hover:border-white transition-colors"
               >
                 Cancel
               </button>
@@ -2089,9 +2086,7 @@ function LogsTab({
                 type="button"
                 onClick={handleReview}
                 disabled={reviewMut.isPending}
-                className={`flex-1 py-2.5 rounded-xl text-black text-sm font-bold transition-colors disabled:opacity-40 ${
-                  reviewAction === "APPROVE" ? "bg-[#45E0A8]" : "bg-[#45E0A8]"
-                }`}
+                className="flex-1 py-2.5 rounded-xl text-black text-sm font-bold bg-[#45E0A8] hover:opacity-85 bt-press transition-colors disabled:opacity-40"
               >
                 {reviewMut.isPending ? "Processing…" : reviewAction}
               </button>
@@ -2146,7 +2141,7 @@ function VerifiedBetsDrawer({
             }}
           >
             <thead>
-              <tr className="border-b border-white sticky top-0 bg-black">
+              <tr className="border-b border-white sticky top-0 bt-surface">
                 <th
                   className="px-3 py-2 text-left font-semibold tracking-widest uppercase"
                   style={{ color: "var(--bt-text-faint, #FFFFFF)" }}
@@ -3759,14 +3754,14 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
         <header className="sticky top-0 z-30 bg-black backdrop-blur border-b border-white">
           <div className="w-full px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-black animate-pulse" />
-              <div className="h-5 w-28 rounded bg-black animate-pulse" />
+              <div className="w-8 h-8 rounded-full bt-raised animate-pulse" />
+              <div className="h-5 w-28 rounded bt-raised animate-pulse" />
             </div>
             <div className="flex items-center gap-2">
               {[1, 2, 3].map(i => (
                 <div
                   key={i}
-                  className="h-8 w-16 rounded-full bg-black animate-pulse"
+                  className="h-8 w-16 rounded-full bt-raised animate-pulse"
                 />
               ))}
             </div>
@@ -3777,7 +3772,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
             {[1, 2, 3, 4, 5].map(i => (
               <div
                 key={i}
-                className="h-4 w-10 rounded bg-black animate-pulse mb-2"
+                className="h-4 w-10 rounded bt-raised animate-pulse mb-2"
               />
             ))}
           </div>
@@ -3786,7 +3781,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
           {[1, 2, 3, 4, 5, 6].map(i => (
             <div
               key={i}
-              className="h-8 w-16 rounded-full bg-black animate-pulse"
+              className="h-8 w-16 rounded-full bt-raised animate-pulse"
             />
           ))}
         </div>
@@ -3794,7 +3789,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
           {[1, 2, 3, 4, 5, 6].map(i => (
             <div
               key={i}
-              className="rounded-xl bg-black border border-white p-4 h-20 animate-pulse"
+              className="rounded-xl bt-raised border border-white p-4 h-20 animate-pulse"
             />
           ))}
         </div>
@@ -3837,7 +3832,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
       {/* ── Global error toast (fixed top, visible regardless of scroll) ── */}
       {formError && (
         <div
-          className="fixed top-0 left-0 right-0 z-[100] flex items-center gap-2 bg-black text-white text-xs font-semibold px-4 py-2.5"
+          className="fixed top-0 left-0 right-0 z-[100] flex items-center gap-2 bt-surface border-b border-white text-white text-xs font-semibold px-4 py-2.5"
           role="alert"
         >
           <AlertCircle size={14} className="flex-shrink-0" />
@@ -3845,7 +3840,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
           <button
             type="button"
             onClick={() => setFormError("")}
-            className="ml-2 text-white hover:text-white transition-colors text-base leading-none"
+            className="ml-2 bt-dim hover:text-white transition-colors text-base leading-none"
           >
             &times;
           </button>
@@ -3858,7 +3853,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
             <button
               type="button"
               onClick={() => navigate("/")}
-              className="text-white hover:text-white transition-colors p-1"
+              className="bt-dim hover:text-white transition-colors p-1"
             >
               <ChevronLeft size={18} />
             </button>
@@ -3878,18 +3873,18 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
 
           <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
             {/* $ / Units toggle */}
-            <div className="flex items-center bg-black border border-white rounded-lg p-0.5">
+            <div className="flex items-center bt-raised border border-white rounded-lg p-0.5">
               <button
                 type="button"
                 onClick={() => setStakeMode("$")}
-                className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-bold transition-all ${stakeMode === "$" ? "bg-[#45E0A8] text-black" : "text-white hover:text-white"}`}
+                className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-bold transition-all ${stakeMode === "$" ? "bg-[#45E0A8] text-black" : "bt-dim hover:text-white"}`}
               >
                 <DollarSign size={10} />$
               </button>
               <button
                 type="button"
                 onClick={() => setStakeMode("U")}
-                className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-bold transition-all ${stakeMode === "U" ? "bg-[#45E0A8] text-black" : "text-white hover:text-white"}`}
+                className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-bold transition-all ${stakeMode === "U" ? "bg-[#45E0A8] text-black" : "bt-dim hover:text-white"}`}
               >
                 <Hash size={10} />U
               </button>
@@ -3897,7 +3892,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
             {/* Unit size (only in U mode) — narrower on mobile */}
             {stakeMode === "U" && (
               <div className="flex items-center gap-1">
-                <span className="text-xs text-white hidden xs:inline">
+                <span className="text-xs bt-dim hidden xs:inline">
                   1u=$
                 </span>
                 <input
@@ -3905,7 +3900,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                   value={unitSize}
                   onChange={e => setUnitSize(parseFloat(e.target.value) || 100)}
                   aria-label="Unit size in dollars (1u=$)"
-                  className="w-12 sm:w-16 bg-black border border-white rounded px-1.5 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-[#45E0A8]"
+                  className="w-12 sm:w-16 bt-raised border border-white rounded px-1.5 py-1 text-xs bt-dim focus:outline-none focus:ring-1 focus:ring-[#45E0A8]"
                   min={1}
                 />
               </div>
@@ -3917,7 +3912,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
               className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all border ${
                 showAnalytics
                   ? "bg-transparent border-[#45E0A8] text-[#45E0A8]"
-                  : "bg-black border-white text-white hover:text-white"
+                  : "bt-surface border-white bt-dim hover:text-white"
               }`}
               title="Toggle Analytics Panel"
             >
@@ -3954,7 +3949,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                 className={`flex-shrink-0 px-4 py-2.5 text-xs font-bold tracking-wider transition-all border-b-2 ${
                   activeSport === s
                     ? "border-[#45E0A8] text-[#45E0A8]"
-                    : "border-transparent text-white hover:text-white"
+                    : "border-transparent bt-dim hover:text-white"
                 }`}
               >
                 {s}
@@ -4007,7 +4002,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                   className={`flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${
                     dateRange === r
                       ? "bg-transparent border-[#45E0A8] text-[#45E0A8]"
-                      : "bg-black border-white text-white hover:text-white"
+                      : "bt-surface border-white bt-dim hover:text-white"
                   }`}
                 >
                   {r === "ALL_TIME"
@@ -4214,24 +4209,19 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                             />
                           )}
                           {activeSport === "NHL" && (
-                            <span className="text-xl" role="img">
-                              🏒
-                            </span>
+                            <img
+                              src="https://assets.nhle.com/logos/nhl/svg/NHL_light.svg"
+                              alt="NHL"
+                              className="w-7 h-7 object-contain"
+                            />
                           )}
-                          {activeSport === "NBA" && (
-                            <span className="text-xl" role="img">
-                              🏀
-                            </span>
-                          )}
-                          {activeSport === "NCAAM" && (
-                            <span className="text-xl" role="img">
-                              🏀
-                            </span>
-                          )}
-                          {activeSport === "ALL" && (
-                            <span className="text-xl" role="img">
-                              🏆
-                            </span>
+                          {(activeSport === "NBA" ||
+                            activeSport === "NCAAM") && (
+                            <img
+                              src="https://cdn.nba.com/logos/leagues/logo-nba.svg"
+                              alt="NBA"
+                              className="w-7 h-7 object-contain"
+                            />
                           )}
                           <span
                             className="text-xs font-bold tracking-widest uppercase"
@@ -4292,7 +4282,6 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                                 color: "var(--bt-green, #45E0A8)",
                               }}
                             >
-                              <span style={{ fontSize: "10px" }}>🔥</span>
                               CURRENT RUN: +{runUnits!.toFixed(1)}U SINCE{" "}
                               {fmtRunSince(runSince)}
                             </div>
@@ -4346,7 +4335,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                         }}
                       />
                       <span
-                        className="text-3xl sm:text-4xl font-bold tracking-widest uppercase"
+                        className="text-3xl sm:text-4xl font-bold bt-num"
                         style={{
                           color:
                             stats.netProfit >= 0
@@ -4358,7 +4347,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                         {fmtUnits(stats.netProfit)}
                       </span>
                     </div>
-                    <span className="text-sm text-white">
+                    <span className="text-sm bt-dim">
                       {dateRange === "ALL_TIME"
                         ? activeSport === "ALL"
                           ? "All Sports · All-Time"
@@ -4406,7 +4395,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
           {/* ── Left Column: Add Bet Form + Breakdowns ───────────────────── */}
           <div className="flex flex-col gap-4 min-w-0">
             {/* ── Add Bet Form ──────────────────────────────────────────────── */}
-            <div className="bg-black border border-white rounded-2xl h-fit">
+            <div className="bt-surface border border-white rounded-2xl h-fit">
               {/* Header — always visible; tap to collapse/expand on mobile */}
               <button
                 type="button"
@@ -4439,7 +4428,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                 <div className="flex flex-col gap-1">
                   <label
                     htmlFor="bt-form-date"
-                    className="text-sm tracking-widest text-white uppercase font-medium"
+                    className="bt-label"
                   >
                     Date
                   </label>
@@ -4468,23 +4457,23 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                       );
                       setFormDate(normalized);
                     }}
-                    className="w-full bg-black border border-white rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#45E0A8] focus:border-[#45E0A8] transition-colors"
+                    className="w-full bt-input"
                   />
                 </div>
 
                 {/* WAGER TYPE: PREGAME / LIVE */}
                 <div className="flex flex-col gap-1">
-                  <label className="text-sm tracking-widest text-white uppercase font-medium">
+                  <label className="bt-label">
                     Wager Type
                   </label>
-                  <div className="flex items-center bg-black border border-white rounded-lg p-0.5 w-fit">
+                  <div className="flex items-center bt-raised border border-white rounded-lg p-0.5 w-fit">
                     <button
                       type="button"
                       onClick={() => setFormWagerType("PREGAME")}
                       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-all ${
                         formWagerType === "PREGAME"
                           ? "bg-[#45E0A8] text-black"
-                          : "text-white hover:text-white"
+                          : "bt-dim hover:text-white"
                       }`}
                     >
                       PRE-GAME
@@ -4495,7 +4484,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-all ${
                         formWagerType === "LIVE"
                           ? "border border-[#45E0A8] text-[#45E0A8]"
-                          : "text-white hover:text-white"
+                          : "bt-dim hover:text-white"
                       }`}
                     >
                       <Radio size={10} />
@@ -4506,7 +4495,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
 
                 {/* GAME */}
                 <div className="flex flex-col gap-1">
-                  <label className="text-sm tracking-widest text-white uppercase font-medium">
+                  <label className="bt-label">
                     Game
                   </label>
                   <GameSelector
@@ -4550,7 +4539,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                       size={13}
                       className="text-[#45E0A8] shrink-0 mt-0.5"
                     />
-                    <div className="text-sm text-white leading-relaxed">
+                    <div className="text-sm bt-dim leading-relaxed">
                       <span className="font-bold text-[#45E0A8]">
                         {formTimeframe}
                       </span>
@@ -4564,7 +4553,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                 {/* PICK — hidden for NRFI/YRFI */}
                 {formTimeframe !== "NRFI" && formTimeframe !== "YRFI" && (
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-sm tracking-widest text-white uppercase font-medium">
+                    <label className="bt-label">
                       Pick
                     </label>
                     {formGame ? (
@@ -4577,10 +4566,10 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                         ).map(s => (
                           <div
                             key={s}
-                            className="flex-1 flex flex-col items-center justify-center gap-1.5 p-3 rounded-xl border-2 border-white bg-black opacity-40"
+                            className="flex-1 flex flex-col items-center justify-center gap-1.5 p-3 rounded-xl border-2 border-white bt-surface opacity-40"
                           >
-                            <div className="w-8 h-8 rounded-full bg-black" />
-                            <div className="text-sm text-white font-bold">
+                            <div className="w-8 h-8 rounded-full bt-raised" />
+                            <div className="text-sm bt-dim font-bold">
                               {s}
                             </div>
                           </div>
@@ -4597,7 +4586,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                     <div className="flex flex-col gap-1">
                       <label
                         htmlFor="bt-form-custom-line"
-                        className="text-sm tracking-widest text-white uppercase font-medium"
+                        className="bt-label"
                       >
                         {formMarket === "TOTAL"
                           ? "Total Line (e.g. 8, 8.5)"
@@ -4610,7 +4599,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                         onChange={e => setFormCustomLine(e.target.value)}
                         placeholder={formMarket === "TOTAL" ? "8.0" : "-1.5"}
                         step="0.5"
-                        className="w-full bg-black border border-white rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#45E0A8] focus:border-[#45E0A8] transition-colors"
+                        className="w-full bt-input"
                       />
                     </div>
                   )}
@@ -4620,7 +4609,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                   <div className="flex flex-col gap-1">
                     <label
                       htmlFor="bt-form-odds"
-                      className="text-sm tracking-widest text-white uppercase font-medium"
+                      className="bt-label"
                     >
                       Odds
                     </label>
@@ -4630,13 +4619,13 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                       value={formOdds}
                       onChange={e => setFormOdds(e.target.value)}
                       placeholder="-110"
-                      className="w-full bg-black border border-white rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#45E0A8] focus:border-[#45E0A8] transition-colors"
+                      className="w-full bt-input"
                     />
                   </div>
                   <div className="flex flex-col gap-1">
                     <label
                       htmlFor="bt-form-risk"
-                      className="text-sm tracking-widest text-white uppercase font-medium"
+                      className="bt-label"
                     >
                       {riskLabel}
                     </label>
@@ -4648,13 +4637,13 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                       placeholder={stakeMode === "U" ? "2" : "200"}
                       min={0}
                       step={stakeMode === "U" ? "0.5" : "10"}
-                      className="w-full bg-black border border-white rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#45E0A8] focus:border-[#45E0A8] transition-colors"
+                      className="w-full bt-input"
                     />
                   </div>
                   <div className="flex flex-col gap-1">
                     <label
                       htmlFor="bt-form-to-win"
-                      className="text-sm tracking-widest text-white uppercase font-medium"
+                      className="bt-label"
                     >
                       {toWinLabel}
                       {formToWinManual && (
@@ -4682,10 +4671,10 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                       placeholder={autoToWin !== null ? String(autoToWin) : "0"}
                       min={0}
                       step={stakeMode === "U" ? "0.5" : "10"}
-                      className={`w-full bg-black border rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-[#45E0A8] focus:border-[#45E0A8] transition-colors ${
+                      className={`w-full bt-input ${
                         formToWinManual
-                          ? "border-[#45E0A8]/50 text-[#45E0A8]"
-                          : "border-white"
+                          ? "!border-[#45E0A8] !text-[#45E0A8]"
+                          : ""
                       }`}
                     />
                   </div>
@@ -4696,7 +4685,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                   !isNaN(toWinNum) &&
                   toWinNum > 0 &&
                   riskNum > 0 && (
-                    <div className="flex items-center gap-1.5 text-sm text-white bg-black rounded-lg px-3 py-2">
+                    <div className="flex items-center gap-1.5 text-sm bt-dim bt-raised rounded-lg px-3 py-2">
                       <Hash size={10} className="text-[#45E0A8] shrink-0" />
                       <span>
                         {fmtUnits(riskNum)} to win {fmtUnits(toWinNum)}
@@ -4714,7 +4703,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                 <div className="flex flex-col gap-1">
                   <label
                     htmlFor="bt-form-notes"
-                    className="text-sm tracking-widest text-white uppercase font-medium"
+                    className="bt-label"
                   >
                     Notes (optional)
                   </label>
@@ -4724,13 +4713,13 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                     onChange={e => setFormNotes(e.target.value)}
                     placeholder="Model edge, reasoning, context…"
                     rows={2}
-                    className="w-full bg-black border border-white rounded-lg px-3 py-2.5 text-sm text-white resize-none focus:outline-none focus:ring-1 focus:ring-[#45E0A8] focus:border-[#45E0A8] transition-colors placeholder:text-white"
+                    className="w-full bt-input resize-none"
                   />
                 </div>
 
                 {/* Error */}
                 {formError && (
-                  <div className="flex items-center gap-2 text-white text-xs border border-white rounded-lg px-3 py-2">
+                  <div className="flex items-center gap-2 bt-dim text-xs border border-white rounded-lg px-3 py-2">
                     <AlertCircle size={13} />
                     {formError}
                   </div>
@@ -4741,7 +4730,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                   type="button"
                   onClick={handleSubmit}
                   disabled={createMut.isPending || !formGame}
-                  className="w-full bg-[#45E0A8] disabled:opacity-40 disabled:cursor-not-allowed text-black font-bold py-3 rounded-xl text-sm tracking-wider transition-all"
+                  className="w-full bg-[#45E0A8] hover:opacity-85 bt-press disabled:opacity-40 disabled:cursor-not-allowed text-black font-bold py-3 rounded-xl text-sm tracking-wider transition-all"
                 >
                   {createMut.isPending ? "Saving…" : "TRACK BET"}
                 </button>
@@ -4775,7 +4764,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                 className={`px-4 py-2.5 text-xs font-bold tracking-wider border-b-2 transition-all ${
                   activeTab === "BETS"
                     ? "border-[#45E0A8] text-[#45E0A8]"
-                    : "border-transparent text-white hover:text-white"
+                    : "border-transparent bt-dim hover:text-white"
                 }`}
               >
                 BETS
@@ -4787,7 +4776,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                   className={`px-4 py-2.5 text-xs font-bold tracking-wider border-b-2 transition-all flex items-center gap-1.5 ${
                     activeTab === "LOGS"
                       ? "border-[#45E0A8] text-[#45E0A8]"
-                      : "border-transparent text-white hover:text-white"
+                      : "border-transparent bt-dim hover:text-white"
                   }`}
                 >
                   <FileText size={11} />
@@ -4804,7 +4793,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                   <div className="flex flex-col gap-1">
                     <label
                       htmlFor="bt-filter-result"
-                      className="text-sm tracking-widest text-white uppercase font-medium"
+                      className="bt-label"
                     >
                       Result
                     </label>
@@ -4815,7 +4804,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                         onChange={e =>
                           setFilterResult(e.target.value as Result | "")
                         }
-                        className="bg-black border border-white rounded-lg px-3 py-2 pr-8 text-sm text-white appearance-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#45E0A8] transition-colors"
+                        className="bt-input pr-8 appearance-none"
                       >
                         <option value="">All Results</option>
                         {RESULTS.map(r => (
@@ -4831,12 +4820,12 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                     </div>
                   </div>
                   <div className="ml-auto flex items-center gap-2 self-end pb-2">
-                    <span className="text-xs text-white">
+                    <span className="text-xs bt-dim">
                       {bets.length} bet{bets.length !== 1 ? "s" : ""}
                     </span>
                     {(linescoreQuery.isFetching || autoGradeMut.isPending) && (
                       <div
-                        className="flex items-center gap-1.5 text-xs text-white"
+                        className="flex items-center gap-1.5 text-xs bt-dim"
                         role="status"
                       >
                         <div className="w-3 h-3 border border-[#45E0A8] border-t-transparent rounded-full animate-spin" />
@@ -4863,7 +4852,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                       mlbDates.length > 0 &&
                       linescoreData !== undefined &&
                       Object.keys(linescoreData).length === 0 && (
-                        <span className="text-xs text-white">
+                        <span className="text-xs bt-dim">
                           No linescores available
                         </span>
                       )}
@@ -4880,26 +4869,26 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                         className="rounded-xl overflow-hidden border border-white animate-pulse"
                       >
                         {/* Date strip skeleton */}
-                        <div className="flex items-center gap-3 px-3 py-2.5 bg-black">
-                          <div className="h-4 w-24 bg-black rounded" />
-                          <div className="flex-1 h-px bg-black" />
-                          <div className="h-3 w-16 bg-black rounded" />
-                          <div className="h-3 w-12 bg-black rounded" />
+                        <div className="flex items-center gap-3 px-3 py-2.5 bt-surface">
+                          <div className="h-4 w-24 bt-raised rounded" />
+                          <div className="flex-1 h-px bg-[var(--dime-border)]" />
+                          <div className="h-3 w-16 bt-raised rounded" />
+                          <div className="h-3 w-12 bt-raised rounded" />
                         </div>
                         {/* BetCard skeleton */}
-                        <div className="p-3 space-y-3 bg-black">
+                        <div className="p-3 space-y-3">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-black" />
+                            <div className="w-10 h-10 rounded-full bt-raised" />
                             <div className="flex-1 flex flex-col items-center gap-1">
-                              <div className="h-4 w-32 bg-black rounded" />
-                              <div className="h-3 w-20 bg-black rounded" />
+                              <div className="h-4 w-32 bt-raised rounded" />
+                              <div className="h-3 w-20 bt-raised rounded" />
                             </div>
-                            <div className="w-10 h-10 rounded-full bg-black" />
+                            <div className="w-10 h-10 rounded-full bt-raised" />
                           </div>
                           <div className="flex items-center justify-between">
-                            <div className="h-6 w-28 bg-black rounded-lg" />
-                            <div className="h-5 w-16 bg-black rounded" />
-                            <div className="h-5 w-16 bg-black rounded" />
+                            <div className="h-6 w-28 bt-raised rounded-lg" />
+                            <div className="h-5 w-16 bt-raised rounded" />
+                            <div className="h-5 w-16 bt-raised rounded" />
                           </div>
                         </div>
                       </div>
@@ -4908,7 +4897,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                 ) : bets.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-16 text-center space-y-3">
                     <Clock size={28} className="text-white" />
-                    <p className="text-white text-sm">
+                    <p className="bt-dim text-sm">
                       {filterAllTime
                         ? `No bets tracked yet${activeSport !== "ALL" ? ` for ${activeSport}` : ""}.`
                         : dateRange === "TODAY"
@@ -4936,7 +4925,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                       </button>
                     )}
                     {filterAllTime && (
-                      <p className="text-white text-xs">
+                      <p className="bt-dim text-xs">
                         Use the form above to add your first bet.
                       </p>
                     )}
@@ -4965,16 +4954,16 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                           <button
                             type="button"
                             onClick={() => toggleDate(sep.date)}
-                            className="w-full flex items-center gap-3 px-3 py-2.5 bg-black transition-colors"
+                            className="w-full flex items-center gap-3 px-3 py-2.5 bt-surface bt-row-hover transition-colors"
                           >
                             {/* Date label */}
                             <span className="text-sm font-bold tracking-wide text-white whitespace-nowrap">
                               {sep.date ? fmtDate(sep.date) : "Unknown Date"}
                             </span>
                             {/* Divider line */}
-                            <div className="flex-1 h-px bg-black" />
+                            <div className="flex-1 h-px bg-[var(--dime-border)]" />
                             {/* W-L record */}
-                            <span className="text-xs font-mono text-white whitespace-nowrap">
+                            <span className="text-xs font-mono bt-dim whitespace-nowrap">
                               {record}
                             </span>
                             {/* +/- units */}
@@ -4992,7 +4981,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
 
                           {/* ── Expanded bet cards ── */}
                           {isExpanded && (
-                            <div className="space-y-2 p-2 bg-black">
+                            <div className="space-y-2 p-2">
                               {section.bets.map(bet => {
                                 // DH-SAFE linescore resolution for bet history cards.
                                 // AN game IDs ≠ MLB gamePks — linescoreByPk.get(bet.anGameId) ALWAYS misses.
@@ -5051,7 +5040,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                   className="flex flex-col items-center gap-3 py-6 min-h-[48px]"
                 >
                   {isFetchingNextPage && (
-                    <div className="flex items-center gap-2 text-xs text-white">
+                    <div className="flex items-center gap-2 text-xs bt-dim">
                       <div className="w-3 h-3 border border-[#45E0A8] border-t-transparent rounded-full animate-spin" />
                       Loading more bets…
                     </div>
@@ -5066,7 +5055,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                           );
                         paginatedQuery.fetchNextPage();
                       }}
-                      className="px-5 py-2 rounded-lg text-xs font-bold bg-black border border-white text-white hover:text-white transition-all"
+                      className="px-5 py-2 rounded-lg text-xs font-bold bt-surface border border-white bt-dim hover:text-white hover:border-white bt-press transition-all"
                     >
                       Load More Bets
                     </button>
@@ -5074,7 +5063,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                   {!hasNextPage &&
                     !isFetchingNextPage &&
                     enrichedBets.length > 0 && (
-                      <p className="text-xs text-white font-mono">
+                      <p className="text-xs bt-dim font-mono">
                         All {enrichedBets.length} bets loaded
                       </p>
                     )}
@@ -5097,21 +5086,21 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
 
       {/* ── Edit modal ──────────────────────────────────────────────────────── */}
       {editBet && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black backdrop-blur-sm">
-          <div className="bg-black border border-white rounded-2xl p-6 w-full max-w-sm space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black">
+          <div className="bt-surface border border-white rounded-2xl p-6 w-full max-w-sm space-y-4">
             <h2 className="font-bold text-sm tracking-wider">
-              {editIsRequest ? "📋 REQUEST EDIT" : "EDIT BET"}
+              {editIsRequest ? "REQUEST EDIT" : "EDIT BET"}
             </h2>
             {editIsRequest && (
               <div className="flex items-start gap-2 bg-transparent border border-white rounded-lg px-3 py-2.5">
                 <Lock size={12} className="text-white shrink-0 mt-0.5" />
-                <p className="text-sm text-white">
+                <p className="text-sm bt-dim">
                   Your bets are immutable. This will submit an edit request for
                   owner/admin review.
                 </p>
               </div>
             )}
-            <div className="text-xs text-white">
+            <div className="text-xs bt-dim">
               {editBet.pick} · {fmtOdds(editBet.odds)}
             </div>
             <SelectField
@@ -5123,7 +5112,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
             <div className="flex flex-col gap-1">
               <label
                 htmlFor="bt-edit-notes"
-                className="text-sm tracking-widest text-white uppercase font-medium"
+                className="bt-label"
               >
                 Notes
               </label>
@@ -5132,14 +5121,14 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                 value={editNotes}
                 onChange={e => setEditNotes(e.target.value)}
                 rows={3}
-                className="w-full bg-black border border-white rounded-lg px-3 py-2.5 text-sm text-white resize-none focus:outline-none focus:ring-1 focus:ring-[#45E0A8] transition-colors"
+                className="w-full bt-input resize-none"
               />
             </div>
             {editIsRequest && (
               <div className="flex flex-col gap-1">
                 <label
                   htmlFor="bt-edit-reason"
-                  className="text-sm tracking-widest text-white uppercase font-medium"
+                  className="bt-label"
                 >
                   Reason for Request
                 </label>
@@ -5149,7 +5138,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                   onChange={e => setEditRequestReason(e.target.value)}
                   rows={2}
                   placeholder="Explain why this change is needed…"
-                  className="w-full bg-black border border-white rounded-lg px-3 py-2.5 text-sm text-white resize-none focus:outline-none focus:ring-1 focus:ring-[#45E0A8] transition-colors"
+                  className="w-full bt-input resize-none"
                 />
               </div>
             )}
@@ -5157,7 +5146,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
               <button
                 type="button"
                 onClick={() => setEditBet(null)}
-                className="flex-1 py-2.5 rounded-xl border border-white text-white text-sm font-medium hover:border-white transition-colors"
+                className="flex-1 py-2.5 rounded-xl border border-white bt-dim text-sm font-medium hover:border-white transition-colors"
               >
                 Cancel
               </button>
@@ -5165,9 +5154,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                 type="button"
                 onClick={handleEditSave}
                 disabled={updateMut.isPending || submitRequestMut.isPending}
-                className={`flex-1 py-2.5 rounded-xl text-black text-sm font-bold transition-colors disabled:opacity-40 ${
-                  editIsRequest ? "bg-[#45E0A8]" : "bg-[#45E0A8]"
-                }`}
+                className="flex-1 py-2.5 rounded-xl text-black text-sm font-bold bg-[#45E0A8] hover:opacity-85 bt-press transition-colors disabled:opacity-40"
               >
                 {updateMut.isPending || submitRequestMut.isPending
                   ? "Saving…"
@@ -5182,7 +5169,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
 
       {/* ── Grade toast ─────────────────────────────────────────────────────── */}
       {gradeToast && (
-        <div className="fixed bottom-6 right-6 z-50 bg-black border border-[#45E0A8]/40 rounded-2xl p-4 w-72 animate-in slide-in-from-bottom-4 fade-in">
+        <div className="fixed bottom-6 right-6 z-50 bt-float rounded-2xl p-4 w-72 animate-in slide-in-from-bottom-4 fade-in">
           <div className="flex items-center gap-2 mb-2">
             <Zap size={14} className="text-[#45E0A8]" />
             <span className="text-sm font-bold text-white tracking-wider">
@@ -5191,44 +5178,41 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
             <button
               type="button"
               onClick={() => setGradeToast(null)}
-              className="ml-auto text-white hover:text-white transition-colors"
+              className="ml-auto bt-dim hover:text-white transition-colors"
             >
               <Minus size={12} />
             </button>
           </div>
           <div className="grid grid-cols-2 gap-2 text-xs">
-            <div className="bg-black rounded-lg px-3 py-2">
-              <div className="text-white text-sm uppercase tracking-wider">
+            <div className="bg-transparent border border-white rounded-lg px-3 py-2">
+              <div className="text-[11px] bt-dim uppercase tracking-[0.08em]">
                 Graded
               </div>
               <div className="text-white font-bold">{gradeToast.graded}</div>
             </div>
             <div className="bg-transparent border border-[#45E0A8] rounded-lg px-3 py-2">
-              <div className="text-white text-sm uppercase tracking-wider">
+              <div className="text-[11px] bt-dim uppercase tracking-[0.08em]">
                 Wins
               </div>
               <div className="text-[#45E0A8] font-bold">{gradeToast.wins}</div>
             </div>
             <div className="bg-transparent border border-[#FF3B3B] rounded-lg px-3 py-2">
-              <div className="text-white text-sm uppercase tracking-wider">
+              <div className="text-[11px] bt-dim uppercase tracking-[0.08em]">
                 Losses
               </div>
               <div className="text-[#FF3B3B] font-bold">
                 {gradeToast.losses}
               </div>
             </div>
-            <div
-              className="bg-transparent border border-white rounded
--lg px-3 py-2"
-            >
-              <div className="text-white text-sm uppercase tracking-wider">
+            <div className="bg-transparent border border-white rounded-lg px-3 py-2">
+              <div className="text-[11px] bt-dim uppercase tracking-[0.08em]">
                 Pushes
               </div>
               <div className="text-white font-bold">{gradeToast.pushes}</div>
             </div>
           </div>
           {gradeToast.stillPending > 0 && (
-            <div className="mt-2 text-sm text-white">
+            <div className="mt-2 text-sm bt-dim">
               {gradeToast.stillPending} bet
               {gradeToast.stillPending !== 1 ? "s" : ""} still pending (game not
               final yet)
@@ -5239,16 +5223,16 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
 
       {/* ── Delete confirmation modal ─────────────────────────────────────── */}
       {deleteId !== null && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black backdrop-blur-sm">
-          <div className="bg-black border border-white rounded-2xl p-6 w-full max-w-sm space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black">
+          <div className="bt-surface border border-white rounded-2xl p-6 w-full max-w-sm space-y-4">
             <h2 className="font-bold text-sm tracking-wider text-white">
-              {deleteIsRequest ? "📋 REQUEST DELETION" : "DELETE BET"}
+              {deleteIsRequest ? "REQUEST DELETION" : "DELETE BET"}
             </h2>
             {deleteIsRequest ? (
               <>
                 <div className="flex items-start gap-2 bg-transparent border border-white rounded-lg px-3 py-2.5">
                   <Lock size={12} className="text-white shrink-0 mt-0.5" />
-                  <p className="text-sm text-white">
+                  <p className="text-sm bt-dim">
                     Your bets are immutable. This will submit a deletion request
                     for owner/admin review.
                   </p>
@@ -5256,7 +5240,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                 <div className="flex flex-col gap-1">
                   <label
                     htmlFor="bt-delete-reason"
-                    className="text-sm tracking-widest text-white uppercase font-medium"
+                    className="bt-label"
                   >
                     Reason for Request
                   </label>
@@ -5266,12 +5250,12 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                     onChange={e => setDeleteRequestReason(e.target.value)}
                     rows={2}
                     placeholder="Explain why this bet should be removed…"
-                    className="w-full bg-black border border-white rounded-lg px-3 py-2.5 text-sm text-white resize-none focus:outline-none focus:ring-1 focus:ring-[#45E0A8] transition-colors"
+                    className="w-full bt-input resize-none"
                   />
                 </div>
               </>
             ) : (
-              <p className="text-white text-sm">
+              <p className="bt-dim text-sm">
                 This action cannot be undone. The bet will be permanently
                 removed.
               </p>
@@ -5284,7 +5268,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                   setDeleteIsRequest(false);
                   setDeleteRequestReason("");
                 }}
-                className="flex-1 py-2.5 rounded-xl border border-white text-white text-sm font-medium hover:border-white transition-colors"
+                className="flex-1 py-2.5 rounded-xl border border-white bt-dim text-sm font-medium hover:border-white transition-colors"
               >
                 Cancel
               </button>
@@ -5292,9 +5276,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                 type="button"
                 onClick={handleDeleteConfirm}
                 disabled={deleteMut.isPending || submitRequestMut.isPending}
-                className={`flex-1 py-2.5 rounded-xl text-black text-sm font-bold transition-colors disabled:opacity-40 ${
-                  deleteIsRequest ? "bg-[#45E0A8]" : "bg-[#45E0A8]"
-                }`}
+                className="flex-1 py-2.5 rounded-xl text-black text-sm font-bold bg-[#45E0A8] hover:opacity-85 bt-press transition-colors disabled:opacity-40"
               >
                 {deleteMut.isPending || submitRequestMut.isPending
                   ? "Processing…"
