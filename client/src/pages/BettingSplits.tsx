@@ -7,7 +7,7 @@
 
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
-import { Loader2, Search, X } from "lucide-react";
+import { FlaskConical, Loader2, Search, X } from "lucide-react";
 import { CalendarPicker, todayUTC } from "@/components/CalendarPicker";
 import { bettingSplitsPath } from "@/lib/feedRoutes";
 import { useTrackAction } from "@/lib/analytics";
@@ -18,8 +18,6 @@ import {
 } from "./dime-shell/splitsDateState";
 
 // CDN icon URLs
-const CDN_TEST_TUBE =
-  "https://d2xsxph8kpxj0f.cloudfront.net/310519663397752079/MW3FicTy7ae3qrm8dx8Lua/icon-test-tube_0cb720ac.png";
 const CDN_NBA =
   "https://d2xsxph8kpxj0f.cloudfront.net/310519663397752079/MW3FicTy7ae3qrm8dx8Lua/icon-nba_3fa4f508.png";
 
@@ -214,7 +212,7 @@ function SearchResultRow({
     <button
       type="button"
       onClick={onClick}
-      className="w-full transition-colors text-left border-b border-white last:border-0"
+      className="bs-result w-full text-left"
     >
       <div className="flex items-center px-3 py-2.5 gap-2">
         {/* Away team: logo + responsive name */}
@@ -226,26 +224,35 @@ function SearchResultRow({
           <div className="flex flex-col" style={{ minWidth: 0 }}>
             {/* xs/sm: abbreviation only — never truncates */}
             <span
-              className="font-bold text-white leading-tight sm:hidden"
+              className="font-bold leading-tight sm:hidden"
               style={{
                 fontSize: 12,
                 whiteSpace: "nowrap",
                 letterSpacing: "0.06em",
+                color: "var(--dime-text-primary)",
               }}
             >
               {awayAbbr}
             </span>
             {/* sm+: city name + nickname — nowrap, no ellipsis */}
             <span
-              className="font-bold text-white leading-tight hidden sm:block"
-              style={{ fontSize: 12, whiteSpace: "nowrap" }}
+              className="font-bold leading-tight hidden sm:block"
+              style={{
+                fontSize: 12,
+                whiteSpace: "nowrap",
+                color: "var(--dime-text-primary)",
+              }}
             >
               {awaySchool}
             </span>
             {awayNick && (
               <span
-                className="bs-nick font-normal text-white leading-tight hidden sm:block"
-                style={{ fontSize: 10, whiteSpace: "nowrap" }}
+                className="bs-nick font-normal leading-tight hidden sm:block"
+                style={{
+                  fontSize: 10,
+                  whiteSpace: "nowrap",
+                  color: "var(--dime-text-secondary)",
+                }}
               >
                 {awayNick}
               </span>
@@ -257,13 +264,22 @@ function SearchResultRow({
           className="flex flex-col items-center flex-shrink-0"
           style={{ minWidth: 60 }}
         >
-          <span className="text-sm text-white font-medium leading-tight">
+          <span
+            className="text-sm font-medium leading-tight"
+            style={{ color: "var(--dime-text-secondary)" }}
+          >
             @
           </span>
-          <span className="text-xs text-white leading-tight text-center whitespace-nowrap mt-0.5">
+          <span
+            className="text-xs leading-tight text-center whitespace-nowrap mt-0.5"
+            style={{ color: "var(--dime-text-secondary)" }}
+          >
             {dateShort}
           </span>
-          <span className="text-xs text-white leading-tight text-center whitespace-nowrap">
+          <span
+            className="text-xs leading-tight text-center whitespace-nowrap"
+            style={{ color: "var(--dime-text-secondary)" }}
+          >
             {time}
           </span>
         </div>
@@ -275,26 +291,35 @@ function SearchResultRow({
           <div className="flex flex-col items-end" style={{ minWidth: 0 }}>
             {/* xs/sm: abbreviation only — never truncates */}
             <span
-              className="font-bold text-white leading-tight sm:hidden"
+              className="font-bold leading-tight sm:hidden"
               style={{
                 fontSize: 12,
                 whiteSpace: "nowrap",
                 letterSpacing: "0.06em",
+                color: "var(--dime-text-primary)",
               }}
             >
               {homeAbbr}
             </span>
             {/* sm+: city name + nickname — nowrap, no ellipsis */}
             <span
-              className="font-bold text-white leading-tight hidden sm:block"
-              style={{ fontSize: 12, whiteSpace: "nowrap" }}
+              className="font-bold leading-tight hidden sm:block"
+              style={{
+                fontSize: 12,
+                whiteSpace: "nowrap",
+                color: "var(--dime-text-primary)",
+              }}
             >
               {homeSchool}
             </span>
             {homeNick && (
               <span
-                className="bs-nick font-normal text-white leading-tight hidden sm:block"
-                style={{ fontSize: 10, whiteSpace: "nowrap" }}
+                className="bs-nick font-normal leading-tight hidden sm:block"
+                style={{
+                  fontSize: 10,
+                  whiteSpace: "nowrap",
+                  color: "var(--dime-text-secondary)",
+                }}
               >
                 {homeNick}
               </span>
@@ -752,7 +777,7 @@ export default function BettingSplitsPage({
         behavior: reducedMotion ? "auto" : "smooth",
         block: "center",
       });
-      el.style.outline = "2px solid #45E0A8";
+      el.style.outline = "2px solid var(--dime-mint)";
       el.style.borderRadius = "12px";
       if (reducedMotion) {
         // Static highlight, no pulse — clears after the same total dwell time
@@ -769,10 +794,10 @@ export default function BettingSplitsPage({
         count++;
         if (count % 2 === 0) {
           el.style.boxShadow = "0 0 0 4px transparent";
-          el.style.outline = "2px solid #45E0A8";
+          el.style.outline = "2px solid var(--dime-mint)";
         } else {
           el.style.boxShadow = "0 0 0 2px transparent";
-          el.style.outline = "2px solid #45E0A8";
+          el.style.outline = "2px solid var(--dime-mint)";
         }
         if (count >= 5) {
           clearInterval(pulse);
@@ -859,23 +884,22 @@ export default function BettingSplitsPage({
           {/* Search bar — takes remaining space */}
           <div className="flex-1 min-w-0">
             <div
-              className="bs-search flex items-center gap-2 px-2.5 py-1.5 rounded-full border transition-all duration-150"
+              className="bs-search flex items-center gap-2 px-2.5 py-1.5 rounded-full border"
               data-focused={searchFocused}
-              style={{
-                background: "hsl(var(--secondary))",
-                borderColor: searchFocused
-                  ? "#45E0A8"
-                  : "hsl(var(--border))",
-                boxShadow: searchFocused
-                  ? "0 0 0 1px #45E0A8"
-                  : "none",
-              }}
             >
-              <Search className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+              <Search
+                className="w-3 h-3 flex-shrink-0"
+                aria-hidden="true"
+                style={{ color: "var(--dime-text-muted)" }}
+              />
               {/* 16px on touch widths — anything smaller makes iOS Safari zoom the page on focus */}
               <input
                 ref={inputRef}
                 type="text"
+                role="combobox"
+                aria-expanded={showDropdown}
+                aria-controls="bs-search-listbox"
+                aria-label={`Search ${selectedSport} games`}
                 placeholder="Search…"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
@@ -901,30 +925,43 @@ export default function BettingSplitsPage({
           {/* Search dropdown */}
           {showDropdown && (
             <div
-              className="bs-dropdown absolute left-3 right-3 top-full mt-0.5 z-50 rounded-xl border border-white shadow-2xl overflow-hidden"
+              id="bs-search-listbox"
+              className="bs-dropdown absolute left-3 right-3 top-full mt-0.5 z-50 overflow-hidden"
               style={{
-                background: "#000000",
                 maxHeight: "calc(3 * 68px + 44px)",
                 overflowY: "auto",
               }}
             >
               <div
-                className="bs-dropdown-head flex items-center justify-between px-3 py-2 border-b border-white sticky top-0"
-                style={{ background: "#000000", zIndex: 10 }}
+                className="bs-dropdown-head flex items-center justify-between px-3 py-2 border-b sticky top-0"
+                style={{ zIndex: 10 }}
               >
-                <span className="text-sm text-white uppercase tracking-widest">
+                <span
+                  className="dime-mono-label"
+                  style={{ fontSize: 11 }}
+                  aria-live="polite"
+                >
                   {dropdownResults.length === 0
                     ? "No results"
                     : `${dropdownResults.length} game${dropdownResults.length !== 1 ? "s" : ""}`}
                 </span>
                 {dropdownResults.length > 0 && (
-                  <span className="text-sm text-white">tap to jump</span>
+                  <span className="dime-mono-label" style={{ fontSize: 10 }}>
+                    tap to jump
+                  </span>
                 )}
               </div>
               {dropdownResults.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-6 gap-2">
-                  <Search className="w-5 h-5 text-white" />
-                  <p className="text-xs text-white">
+                  <Search
+                    className="w-5 h-5"
+                    aria-hidden="true"
+                    style={{ color: "var(--dime-text-muted)" }}
+                  />
+                  <p
+                    className="text-xs"
+                    style={{ color: "var(--dime-text-secondary)" }}
+                  >
                     No games found for "{searchQuery}"
                   </p>
                 </div>
@@ -950,17 +987,18 @@ export default function BettingSplitsPage({
                 className="bs-datehdr font-bold tracking-widest uppercase"
                 style={{
                   fontSize: "clamp(11px, 3.5vw, 19px)",
-                  color: "#ffffff",
+                  color: "var(--dime-text-primary)",
                   whiteSpace: "nowrap",
                 }}
               >
                 {formatDateHeader(selectedDate)}
               </span>
               <span
+                aria-hidden="true"
                 style={{
                   fontSize: "clamp(14px, 3.5vw, 22px)",
-                  color: "#ffffff",
-                  fontWeight: 800,
+                  color: "var(--dime-text-secondary)",
+                  fontWeight: 700,
                   lineHeight: 1,
                   flexShrink: 0,
                 }}
@@ -970,7 +1008,7 @@ export default function BettingSplitsPage({
               <span
                 className="bs-datehdr-sub font-semibold"
                 style={{
-                  color: "#FFFFFF",
+                  color: "var(--dime-text-secondary)",
                   letterSpacing: "0.06em",
                   fontSize: "clamp(9px, 2.8vw, 17px)",
                   textTransform: "uppercase",
@@ -998,7 +1036,8 @@ export default function BettingSplitsPage({
           <div className="flex flex-col items-center justify-center py-24 gap-3">
             <Loader2
               className="w-8 h-8 animate-spin"
-              style={{ color: "#45E0A8" }}
+              aria-hidden="true"
+              style={{ color: "var(--dime-mint)" }}
             />
             <p className="text-sm text-muted-foreground">
               Loading betting splits…
@@ -1006,16 +1045,11 @@ export default function BettingSplitsPage({
           </div>
         ) : sortedDates.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 gap-4 text-center px-4">
-            <img
-              src={CDN_TEST_TUBE}
-              alt="Test tube"
-              width={40}
-              height={40}
-              style={{
-                objectFit: "contain",
-                filter: "invert(1)",
-                opacity: 0.4,
-              }}
+            <FlaskConical
+              size={40}
+              strokeWidth={1.5}
+              aria-hidden="true"
+              style={{ color: "var(--dime-text-muted)" }}
             />
             <div>
               <p className="text-sm font-semibold text-foreground mb-1">
