@@ -24,6 +24,10 @@ const pageSrc = fs.readFileSync(
   path.join(import.meta.dirname, "..", "client", "src", "pages", "dime-chat", "DimeChatPage.tsx"),
   "utf8"
 );
+const conversationCssSrc = fs.readFileSync(
+  path.join(import.meta.dirname, "..", "client", "src", "pages", "dime-chat", "conversation.css"),
+  "utf8"
+);
 const chatRouteSrc = fs.readFileSync(
   path.join(import.meta.dirname, "dime-chat.route.ts"),
   "utf8"
@@ -148,5 +152,18 @@ describe("Dime chat page — owner gate + live identity + ⋯ menu", () => {
     expect(pageSrc).toContain("firstAssistantMessage: assistantText");
     expect(pageSrc).toMatch(/utils\.dimeChats\.list\.invalidate\(\)/);
     expect(pageSrc).toMatch(/utils\.dimeChats\.get\.fetch\(\{ threadId: id \}\)/);
+  });
+
+  it("keeps the responsible-gaming notice out of the live log and in a muted page footer", () => {
+    expect(pageSrc).not.toContain(
+      '<div className="dc-footnote">{DISCLAIMER}</div>'
+    );
+    expect(pageSrc).toMatch(
+      /<footer\s+className="dc-chat-footer"\s+aria-label="Responsible gaming notice"\s*>\s*\{DISCLAIMER\}\s*<\/footer>/
+    );
+    expect(pageSrc.match(/\{DISCLAIMER\}/g)).toHaveLength(1);
+    expect(conversationCssSrc).toMatch(
+      /\.dc-chat-footer\s*\{[\s\S]*?color:\s*var\(--text-secondary\)/
+    );
   });
 });

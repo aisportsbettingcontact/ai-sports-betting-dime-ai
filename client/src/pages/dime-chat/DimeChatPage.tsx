@@ -2456,7 +2456,6 @@ export default function DimeChatPage({
                     {state.error && (
                       <ErrorCard message={state.error} onRetry={retry} />
                     )}
-                    <div className="dc-footnote">{DISCLAIMER}</div>
                   </div>
                 </div>
               )}
@@ -2517,6 +2516,14 @@ export default function DimeChatPage({
                   onPick={submit}
                   innerRef={pillsRef}
                 />
+              )}
+              {chatAccess === "granted" && (
+                <footer
+                  className="dc-chat-footer"
+                  aria-label="Responsible gaming notice"
+                >
+                  {DISCLAIMER}
+                </footer>
               )}
               {chatAccess === "granted" && ghost && (
                 <div aria-hidden="true">
