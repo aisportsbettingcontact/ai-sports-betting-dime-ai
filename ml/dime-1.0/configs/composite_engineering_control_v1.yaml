@@ -1,0 +1,84 @@
+schema_version: dime-composite-engineering-control-v1
+status: proposed_non_authorizing
+objective:
+  name: dime_intelligence_efficiency
+  numerator:
+    - correctness
+    - usefulness
+    - groundedness
+    - calibration
+    - reliability
+  denominator:
+    - latency
+    - cost
+    - complexity
+    - regression_risk
+  advancement_rule: candidate_score_must_exceed_production_score
+artifact_contract:
+  schema: schemas/engineering_control_artifact.schema.json
+  exchange_format: json
+authorization_effect:
+  authorizes_training: false
+  authorizes_locked_evaluation: false
+  authorizes_release: false
+  authorizes_serving: false
+  authorizes_provider_activation: false
+agents:
+  model_strategy_governor:
+    output_artifacts:
+      - failure_diagnosis
+      - training_strategy
+  failure_diagnosis_agent:
+    output_artifacts:
+      - failure_diagnosis
+  data_and_pretraining_agent:
+    output_artifacts:
+      - training_strategy
+  architecture_research_agent:
+    output_artifacts:
+      - architecture_experiment
+  scaling_science_agent:
+    output_artifacts:
+      - scaling_forecast
+  post_training_agent:
+    output_artifacts:
+      - training_strategy
+  training_systems_agent:
+    output_artifacts: []
+  evaluation_authority:
+    output_artifacts:
+      - evaluation_decision
+  release_controller:
+    output_artifacts:
+      - evaluation_decision
+  developer_platform_agent:
+    output_artifacts:
+      - architecture_experiment
+  production_learning_agent:
+    output_artifacts:
+      - failure_diagnosis
+separation_of_duties:
+  builder_may_approve_own_candidate: false
+  training_agent_may_open_locked_answers: false
+  release_controller_requires_evaluation_authority: true
+  every_release_reversible: true
+intervention_order:
+  - runtime_fix
+  - prompt_or_schema
+  - retrieval_improvement
+  - small_adapter
+  - large_adapter
+  - continued_pretraining
+  - new_architecture
+release_verdicts:
+  - REJECT
+  - REVISE
+  - SHADOW
+  - CANARY
+  - RELEASE
+  - ROLLBACK
+immediate_sequence:
+  - runtime_intelligence
+  - foundation_dataset_2400
+  - first_qlora_adapter
+  - independent_promotion

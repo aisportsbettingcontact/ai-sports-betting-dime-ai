@@ -1,0 +1,91 @@
+{
+  "schemaVersion": "dime-railway-phase1-readiness-observation-v1",
+  "observationId": "railway-phase1-readiness-2026-07-29",
+  "observedAt": "2026-07-29T12:40:55Z",
+  "observationMode": "read_only_sanitized",
+  "productionBoundary": {
+    "workspaceLabel": "aisportsbettingcontact",
+    "projectLabel": "stunning-creativity",
+    "environmentLabel": "production",
+    "applicationServiceLabel": "ai-sports-betting-dime-ai",
+    "databaseServiceLabel": "MySQL: Dime AI",
+    "backendServiceLabel": "ai-sports-betting-backend",
+    "publicApplicationDomain": "www.aisportsbettingmodels.com",
+    "applicationStatus": "online",
+    "databaseStatus": "online",
+    "backendStatus": "online",
+    "applicationRegion": "US West",
+    "applicationReplicaCount": 1
+  },
+  "activeDeployment": {
+    "status": "successful",
+    "source": "github_pull_request",
+    "pullRequestNumber": 238,
+    "pullRequestState": "merged",
+    "mergeCommit": "ff95a7cf2bb1aba2c9f79e7c523ea62a6b655a7c",
+    "commitAssociation": "inferred_from_active_railway_deployment_title_and_github_merge_record"
+  },
+  "configurationPresence": {
+    "DATABASE_URL": true,
+    "DIME_CHAT_TRACE_V1_ENABLED": true,
+    "DIME_APPLICATION_VERSION": false,
+    "DIME_PRICING_REGISTRY_PATH": false,
+    "DIME_MODEL_VERSION": true,
+    "DIME_MODEL_BASE_URL": false,
+    "DIME_MODEL_API_SECRET": false,
+    "RUNPOD_ENDPOINT_ID": true,
+    "RUNPOD_API_KEY": true,
+    "DIME_ANSWER_ROUTING_V1_ENABLED": false,
+    "DIME_RESEARCH_ALPHA_ENABLED": true,
+    "DIME_RESEARCH_ALPHA_KILL_SWITCH": true,
+    "DIME_RESEARCH_ALPHA_MODEL_REVISION": true
+  },
+  "nonSecretControlState": {
+    "dimeChatTraceV1Enabled": false,
+    "dimeAnswerRoutingV1UsesExplicitEnvironmentOverride": false,
+    "dimeResearchAlphaEnabled": false,
+    "dimeResearchAlphaKillSwitchEngaged": false
+  },
+  "deployedSourceEvidence": {
+    "phase1ObservabilitySourcePresent": false,
+    "requiredTimestampFields": {
+      "providerObservedAt": false,
+      "sourceObservedAt": false,
+      "receivedAt": false,
+      "normalizedAt": false,
+      "persistedAt": false,
+      "databaseIngestedAt": false,
+      "ingestionRunId": false,
+      "pipelineRevision": false
+    }
+  },
+  "closureImpact": {
+    "productionConnectionEvidence": "available",
+    "productionServiceIdentityEvidence": "available",
+    "activeDeploymentEvidence": "available_with_commit_inference",
+    "phase1DeploymentParity": "failed_not_deployed",
+    "providerObservationTimestampEvidence": "blocked_schema_absent",
+    "ingestionLifecycleTimestampEvidence": "blocked_schema_absent",
+    "reviewedPricingEvidence": "blocked_registry_path_absent",
+    "representativeTrafficEvidence": "blocked_trace_disabled",
+    "independentVerdict": "not_issued"
+  },
+  "limitations": [
+    "Railway system-provided Git and environment variables are not listed among custom service variables.",
+    "The exact active commit was inferred from Railway's active pull-request title and GitHub's public merged-commit record.",
+    "Configuration values other than explicit non-secret boolean controls were not read.",
+    "No database query, raw log review, trace export, prompt review, response review, or user-data inspection was performed."
+  ],
+  "mutationsPerformed": [],
+  "authorizationEffect": {
+    "authorizesProductionAccess": false,
+    "authorizesProductionTraceExport": false,
+    "authorizesProviderTimestampAcceptance": false,
+    "authorizesPricingApproval": false,
+    "authorizesDeployment": false,
+    "authorizesShadow": false,
+    "authorizesCanary": false,
+    "authorizesRelease": false,
+    "authorizesTraining": false
+  }
+}

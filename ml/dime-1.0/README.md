@@ -97,6 +97,7 @@ environment.
 
 See:
 
+- [Composite LLM engineering control](docs/COMPOSITE_ENGINEERING_CONTROL.md)
 - [Tool and canonical market contracts](docs/TOOL_AND_MARKET_CONTRACTS.md)
 - [Platform ownership](docs/PLATFORM_OWNERSHIP.md)
 - [Hugging Face registry](docs/HUGGING_FACE_REGISTRY.md)

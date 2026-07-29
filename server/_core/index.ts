@@ -55,6 +55,10 @@ import { invalidateAppUserByIdCache, lookupAppUserByIdFresh } from "../db";
 import { getCachedAppUserEntry, setCachedAppUser } from "../dbCircuitBreaker";
 import { resolveOwnerIdentity } from "../ownerAuth";
 import { installFatalErrorHandler } from "./fatalErrorHandler";
+import {
+  formatDimeRuntimeReadinessLog,
+  getDimeRuntimeReadiness,
+} from "./dimeRuntimeReadiness";
 
 // ─── Owner-only app_session auth (Railway-native) ──────────────────────────────
 // The legacy owner debug endpoints authenticated via the retired platform's SDK
@@ -813,6 +817,7 @@ async function startServer() {
   // Plain Express SSE route (not tRPC) for optimal streaming performance.
   console.log(`[SERVER_STARTUP] Registering Dime AI chat SSE route`);
   registerDimeChatRoute(app);
+  console.log(formatDimeRuntimeReadinessLog(getDimeRuntimeReadiness()));
 
   // ─── Dime WC2026 Intelligence — Tier 4 authenticated, credit-gated, source-grounded
   // POST /api/dime/wc2026 — 14-step enforcement, 22-path validated

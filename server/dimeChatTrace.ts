@@ -30,6 +30,22 @@ import type {
   DimeChatMessage,
   DimeChatRequestClass,
 } from "./_core/dimeChatModel";
+import {
+  assessDimeTraceCompleteness,
+  estimateDimeTraceCost,
+  validateDimeContextMetrics,
+  validateDimeEvidenceTimestamps,
+  validateDimeStageLatency,
+  validateDimeTraceMetadataSafety,
+  validateDimeToolCallTrace,
+  type DimeTraceContextObservability,
+  type DimeTraceIdentity,
+} from "./_core/dimeTraceObservability";
+import {
+  completeDimeIngestionLifecycleForResponse,
+  validateDimeIngestionLifecycle,
+  validateDimeProviderObservation,
+} from "./_core/dimeEvidenceProvenance";
 
 export const DIME_CHAT_TRACE_VERSION = 1 as const;
 export const DIME_CHAT_TRACE_POLICY_VERSION = "trace-v1-2026-07-28";
@@ -48,6 +64,19 @@ const traceRoutingMetadataSchema = z
   .object({
     answerMode: z
       .enum(["platform", "matchup", "slate", "educational"])
+      .optional(),
+    productRoute: z
+      .enum([
+        "platform",
+        "matchup",
+        "full_slate",
+        "educational",
+        "bet_explanation",
+        "historical",
+        "account",
+        "live_data",
+        "general_sports",
+      ])
       .optional(),
     routingVersion: z
       .string()
@@ -145,6 +174,8 @@ export interface ActiveDimeChatTrace {
   generationId: string;
   clientAssistantMessageId: string;
   attempt: number;
+  identity: DimeTraceIdentity;
+  contextObservability?: DimeTraceContextObservability;
 }
 
 export type DimeChatTraceBeginResult =
@@ -171,6 +202,7 @@ export interface BeginDimeChatTraceInput {
   requestClass: DimeChatRequestClass;
   responseBudget: number;
   provider: DimeChatTraceProviderMetadata;
+  identity: DimeTraceIdentity;
 }
 
 export type DimeChatTraceRoutingMetadata = z.infer<
@@ -184,6 +216,7 @@ export interface DimeChatTraceContextInput
   eventIds?: number[];
   context?: string;
   lookupErrorClass?: string;
+  observability: DimeTraceContextObservability;
 }
 
 export interface FinalizeDimeChatTraceInput
@@ -199,7 +232,12 @@ export interface FinalizeDimeChatTraceInput
     promptTokens?: number;
     completionTokens?: number;
     totalTokens?: number;
+    cachedInputTokens?: number;
   };
+  modelTimeToFirstTokenMs?: number;
+  modelCompletionMs?: number;
+  validationMs?: number;
+  zeroCostRuntime?: boolean;
   latencyMs: number;
 }
 
@@ -244,6 +282,7 @@ function routingMetadataFromInput(
 ): DimeChatTraceRoutingMetadata {
   return validateDimeChatTraceRoutingMetadata({
     answerMode: input.answerMode,
+    productRoute: input.productRoute,
     routingVersion: input.routingVersion,
     dateSource: input.dateSource,
     requestedDate: input.requestedDate,
@@ -294,12 +333,15 @@ export function dimeChatTraceMeta(
 ) {
   return {
     version: DIME_CHAT_TRACE_VERSION,
+    observabilityRevision: trace.identity.observabilityRevision,
+    traceSchemaRevision: trace.identity.traceSchemaRevision,
     requestId: trace.requestId,
     chatSessionId: trace.chatSessionId,
     threadId: trace.threadId,
     turnId: trace.turnId,
     userMessageId: trace.userMessageId,
     generationId: trace.generationId,
+    productRoute: trace.identity.route,
     ...(assistantMessageId ? { assistantMessageId } : {}),
   };
 }
@@ -334,7 +376,7 @@ function historySnapshot(history: DimeChatMessage[]): string {
 }
 
 function safeMetadata(value: Record<string, unknown>): string {
-  const serialized = JSON.stringify(value);
+  const serialized = JSON.stringify(validateDimeTraceMetadataSafety(value));
   if (serialized.length > 8_000) {
     throw new DimeChatTracePersistenceError(
       "Trace event metadata exceeds the storage contract."
@@ -367,6 +409,7 @@ function requestFingerprint(
       requestClass: input.requestClass,
       responseBudget: input.responseBudget,
       provider: input.provider,
+      identity: input.identity,
     })
   );
 }
@@ -382,13 +425,6 @@ export function sendDimeChatTraceJsonError(
     error,
     ...(trace ? { trace: dimeChatTraceMeta(trace) } : {}),
   });
-}
-
-function sourceCommit(): string | undefined {
-  const value =
-    process.env.RAILWAY_GIT_COMMIT_SHA?.trim() ||
-    process.env.GIT_COMMIT_SHA?.trim();
-  return value || undefined;
 }
 
 function isDuplicateKeyError(error: unknown): boolean {
@@ -446,16 +482,19 @@ async function findExistingAttempt(
   return rows[0];
 }
 
-function activeTraceFromRow(row: {
-  generationId: string;
-  generationRequestId: string;
-  clientAssistantMessageId: string;
-  attempt: number;
-  turnId: string;
-  sessionId: string;
-  threadId: number;
-  userMessageId: number;
-}): ActiveDimeChatTrace {
+function activeTraceFromRow(
+  row: {
+    generationId: string;
+    generationRequestId: string;
+    clientAssistantMessageId: string;
+    attempt: number;
+    turnId: string;
+    sessionId: string;
+    threadId: number;
+    userMessageId: number;
+  },
+  identity: DimeTraceIdentity
+): ActiveDimeChatTrace {
   return {
     version: DIME_CHAT_TRACE_VERSION,
     requestId: row.generationRequestId,
@@ -466,12 +505,14 @@ function activeTraceFromRow(row: {
     generationId: row.generationId,
     clientAssistantMessageId: row.clientAssistantMessageId,
     attempt: row.attempt,
+    identity,
   };
 }
 
 function resolveExistingAttempt(
   row: Awaited<ReturnType<typeof findExistingAttempt>>,
-  requestFingerprintSha256: string
+  requestFingerprintSha256: string,
+  identity: DimeTraceIdentity
 ): DimeChatTraceBeginResult | null {
   if (!row) return null;
   if (row.requestFingerprintSha256 !== requestFingerprintSha256) {
@@ -481,7 +522,7 @@ function resolveExistingAttempt(
     };
   }
 
-  const trace = activeTraceFromRow(row);
+  const trace = activeTraceFromRow(row, identity);
   if (
     (row.generationStatus === "completed" ||
       row.generationStatus === "blocked") &&
@@ -774,7 +815,7 @@ async function createInitialAttempt(
         requestedModel: input.provider.requestedModel,
         baseRevision: input.provider.baseRevision,
         adapterRevision: input.provider.adapterRevision,
-        sourceCommit: sourceCommit(),
+        sourceCommit: input.identity.gitCommit,
         productProfile: input.provider.productProfile,
         profileVersion: input.provider.profileVersion,
         promptSource: input.provider.promptSource,
@@ -798,6 +839,7 @@ async function createInitialAttempt(
         generationId,
         eventType: "prompt_persisted",
         metadata: safeMetadata({
+          identity: input.identity,
           requestClass: input.requestClass,
           responseBudget: input.responseBudget,
           attempt: 1,
@@ -822,6 +864,7 @@ async function createInitialAttempt(
         generationId,
         clientAssistantMessageId: input.envelope.clientAssistantMessageId,
         attempt: 1,
+        identity: input.identity,
       };
     }
   );
@@ -937,7 +980,7 @@ async function createRetryAttempt(
         requestedModel: input.provider.requestedModel,
         baseRevision: input.provider.baseRevision,
         adapterRevision: input.provider.adapterRevision,
-        sourceCommit: sourceCommit(),
+        sourceCommit: input.identity.gitCommit,
         productProfile: input.provider.productProfile,
         profileVersion: input.provider.profileVersion,
         promptSource: input.provider.promptSource,
@@ -969,6 +1012,7 @@ async function createRetryAttempt(
         generationId,
         eventType: "generation_retry_started",
         metadata: safeMetadata({
+          identity: input.identity,
           attempt,
           retryOfGenerationId: retryGenerationId,
           platformKnowledgeVersion: input.provider.platformKnowledgeVersion,
@@ -987,6 +1031,7 @@ async function createRetryAttempt(
         generationId,
         clientAssistantMessageId: input.envelope.clientAssistantMessageId,
         attempt,
+        identity: input.identity,
       };
     }
   );
@@ -999,6 +1044,11 @@ async function createRetryAttempt(
 export async function beginDimeChatTrace(
   input: BeginDimeChatTraceInput
 ): Promise<DimeChatTraceBeginResult> {
+  if (input.identity.requestId !== input.requestId) {
+    throw new DimeChatTracePersistenceError(
+      "Trace v1 request identity does not match the accepted request."
+    );
+  }
   const db = await requireTraceDb();
   const inputSha256 = hashDimeChatTraceText(input.userPrompt);
   const acceptedHistorySnapshot = historySnapshot(input.history);
@@ -1011,7 +1061,8 @@ export async function beginDimeChatTrace(
 
   const existing = resolveExistingAttempt(
     await findExistingAttempt(db, input.userId, input.envelope.idempotencyKey),
-    fingerprintSha256
+    fingerprintSha256,
+    input.identity
   );
   if (existing) return existing;
 
@@ -1050,7 +1101,8 @@ export async function beginDimeChatTrace(
           input.userId,
           input.envelope.idempotencyKey
         ),
-        fingerprintSha256
+        fingerprintSha256,
+        input.identity
       );
       if (raced) return raced;
     }
@@ -1074,6 +1126,21 @@ export async function recordDimeChatTraceContext(
   );
   const eventIds = validateDimeChatTraceEventIds(input.eventIds);
   const routingMetadata = routingMetadataFromInput(input);
+  const observability: DimeTraceContextObservability = {
+    toolCall: validateDimeToolCallTrace(input.observability.toolCall),
+    timestamps: validateDimeEvidenceTimestamps(input.observability.timestamps),
+    providerObservation: validateDimeProviderObservation(
+      input.observability.providerObservation
+    ),
+    ingestionLifecycle: validateDimeIngestionLifecycle(
+      input.observability.ingestionLifecycle
+    ),
+    stageLatency: validateDimeStageLatency(input.observability.stageLatency),
+    contextMetrics: validateDimeContextMetrics(
+      input.observability.contextMetrics
+    ),
+    dynamicEvidenceUsed: input.observability.dynamicEvidenceUsed,
+  };
   const now = new Date();
   try {
     await db.transaction(
@@ -1126,11 +1193,13 @@ export async function recordDimeChatTraceContext(
               ? { errorClass: input.lookupErrorClass }
               : {}),
             ...routingMetadata,
+            observability,
           }),
           createdAt: now,
         });
       }
     );
+    trace.contextObservability = observability;
   } catch (error) {
     throw new DimeChatTracePersistenceError(
       "Trace v1 could not persist model context.",
@@ -1165,6 +1234,62 @@ export async function finalizeDimeChatTrace(
     );
   }
   const now = new Date();
+  if (!trace.contextObservability) {
+    throw new DimeChatTracePersistenceError(
+      "Trace v1 refuses to finalize without explicit context/tool observability."
+    );
+  }
+  const contextObservability = trace.contextObservability;
+  const stageLatency = validateDimeStageLatency({
+    ...contextObservability.stageLatency,
+    modelTimeToFirstTokenMs: input.modelTimeToFirstTokenMs ?? null,
+    modelCompletionMs: input.modelCompletionMs ?? null,
+    validationMs: input.validationMs ?? null,
+    endToEndMs: input.latencyMs,
+  });
+  const timestamps = validateDimeEvidenceTimestamps({
+    ...contextObservability.timestamps,
+    responseGeneratedAt: now.toISOString(),
+  });
+  const providerObservation = validateDimeProviderObservation(
+    contextObservability.providerObservation
+  );
+  const ingestionLifecycle = completeDimeIngestionLifecycleForResponse({
+    lifecycle: contextObservability.ingestionLifecycle,
+    responseGeneratedAt: now.toISOString(),
+  });
+  const contextMetrics = validateDimeContextMetrics({
+    ...contextObservability.contextMetrics,
+    inputTokens:
+      input.usage?.promptTokens ??
+      contextObservability.contextMetrics.inputTokens,
+  });
+  const cost = estimateDimeTraceCost({
+    inputTokens: input.usage?.promptTokens,
+    outputTokens: input.usage?.completionTokens,
+    cachedInputTokens: input.usage?.cachedInputTokens,
+    toolRequestCount: ["not_required", "selected_not_invoked"].includes(
+      contextObservability.toolCall.status
+    )
+      ? 0
+      : 1,
+    zeroCostRuntime: input.zeroCostRuntime,
+    provider: trace.identity.modelProvider,
+    model: trace.identity.baseModel,
+    modelRevision: trace.identity.modelRevision,
+    requestAt: now,
+  });
+  const traceCompleteness = assessDimeTraceCompleteness({
+    identity: trace.identity,
+    toolCall: contextObservability.toolCall,
+    timestamps,
+    providerObservation,
+    ingestionLifecycle,
+    stageLatency,
+    contextMetrics,
+    cost,
+    dynamicEvidenceUsed: contextObservability.dynamicEvidenceUsed,
+  });
 
   try {
     return await db.transaction(
@@ -1292,6 +1417,16 @@ export async function finalizeDimeChatTrace(
             validationErrorCount: input.validationErrors?.length ?? 0,
             certaintyViolation: input.certaintyViolation ?? false,
             latencyMs: input.latencyMs,
+            phase1: {
+              stageLatency,
+              timestamps,
+              providerObservation,
+              ingestionLifecycle,
+              contextMetrics,
+              toolCall: contextObservability.toolCall,
+              cost,
+              completeness: traceCompleteness,
+            },
             ...routingMetadata,
           }),
           createdAt: now,

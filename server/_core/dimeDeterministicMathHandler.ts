@@ -17,6 +17,10 @@ import {
   recordDimeChatTraceContext,
   sendDimeChatTraceJsonError,
 } from "../dimeChatTrace";
+import {
+  dimeNoDynamicContextObservability,
+  dimeToolCallTrace,
+} from "./dimeTraceObservability";
 
 const VALIDATION_BLOCKED_RESPONSE =
   "I can’t verify that betting verdict against grounded Dime data, so I’m blocking it rather than risking a fabricated edge. Please provide the event, market, current line/odds, sportsbook, timestamp, and model projection/version so I can evaluate it safely.";
@@ -32,6 +36,7 @@ export interface DimeDeterministicMathResponseArgs {
   requestId: string;
   startTime: number;
   answerRoute: DimeAnswerRoute;
+  classificationLatencyMs: number;
   trace?: ActiveDimeChatTrace;
   log: DimeRuntimeLog;
   meta?: Record<string, unknown>;
@@ -49,6 +54,7 @@ export async function handleDimeDeterministicMathResponse(
     requestId,
     startTime,
     answerRoute,
+    classificationLatencyMs,
     trace,
     log,
     meta = {},
@@ -89,6 +95,26 @@ export async function handleDimeDeterministicMathResponse(
 
   if (trace) {
     try {
+      const completedAt = new Date();
+      const observability = dimeNoDynamicContextObservability(
+        classificationLatencyMs,
+        completedAt
+      );
+      observability.toolCall = dimeToolCallTrace({
+        toolName: "deterministic_market_math",
+        toolRevision: deterministicMath.version,
+        sourceAuthority: "dime-runtime-contract",
+        status: "succeeded",
+        normalizedArguments: {
+          kind: deterministicMath.kind,
+        },
+        startedAt: new Date(startTime),
+        completedAt,
+        recordsReturned: 1,
+        resultText: deterministicOutput,
+        freshnessAtRequest: "not_applicable",
+        validationResult: "passed",
+      });
       await recordDimeChatTraceContext(trace, {
         freshness: "none",
         rowCount: 0,
@@ -102,6 +128,7 @@ export async function handleDimeDeterministicMathResponse(
         retrievalCandidateCount: 0,
         retrievalLatencyMs: 0,
         confidence: resolution.confidence,
+        observability,
       });
       const finalized = await finalizeDimeChatTrace(trace, {
         rawOutput: deterministicOutput,
@@ -117,9 +144,11 @@ export async function handleDimeDeterministicMathResponse(
           totalTokens: 0,
         },
         answerMode: answerRoute.mode,
+        productRoute: answerRoute.productRoute,
         routingVersion: answerRoute.version,
         completenessStatus: completeness.status,
         groundingStatus: "none",
+        zeroCostRuntime: true,
         latencyMs: Date.now() - startTime,
       });
       assistantMessageId = finalized.assistantMessageId;

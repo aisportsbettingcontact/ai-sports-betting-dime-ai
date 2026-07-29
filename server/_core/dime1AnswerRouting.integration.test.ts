@@ -38,6 +38,7 @@ vi.mock("../dimeChatTrace", () => ({
 }));
 
 import type { DimeContextResult } from "./dimeChatContext";
+import { dimeNoDynamicContextObservability } from "./dimeTraceObservability";
 import { handleDime1ChatRequest } from "./dime1ChatHandler";
 import {
   applyDimeAnswerRoute,
@@ -105,6 +106,7 @@ function contextResult(
   overrides: Partial<DimeContextResult> = {}
 ): DimeContextResult {
   const resolution = resolveDimeEvent([], route).resolution;
+  const observability = dimeNoDynamicContextObservability(0);
   return {
     freshness: "none",
     rowCount: 0,
@@ -115,6 +117,20 @@ function contextResult(
     retrievalCandidateCount: 0,
     retrievalLatencyMs: 0,
     supportedNumericValues: [],
+    observability: {
+      toolCall: observability.toolCall,
+      timestamps: observability.timestamps,
+      providerObservation: observability.providerObservation,
+      ingestionLifecycle: observability.ingestionLifecycle,
+      stageLatency: {
+        entityResolutionMs: observability.stageLatency.entityResolutionMs,
+        retrievalMs: observability.stageLatency.retrievalMs,
+        toolMs: observability.stageLatency.toolMs,
+        contextConstructionMs: observability.stageLatency.contextConstructionMs,
+      },
+      contextMetrics: observability.contextMetrics,
+      dynamicEvidenceUsed: false,
+    },
     ...overrides,
   };
 }
@@ -159,6 +175,7 @@ async function invoke(
     requestClass: "standard",
     responseBudget: 512,
     answerRoute: route,
+    classificationLatencyMs: 0,
     systemPrompt,
   });
   return { ...harness, frames: harness.frames() };

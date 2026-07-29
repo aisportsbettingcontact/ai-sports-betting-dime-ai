@@ -19,6 +19,11 @@ experiment identity.
   examples and publication records.
 - [`rehearsals/`](rehearsals/) contains non-release rehearsal evidence.
 
+The current local Phase 1 observability boundary is frozen at
+[`manifests/phase1-observability-closure-v1/`](manifests/phase1-observability-closure-v1/).
+It records production closure as blocked and authorizes no deployment or
+traffic stage.
+
 ## Publication boundary
 
 Evidence committed here must exclude:

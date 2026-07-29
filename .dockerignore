@@ -9,8 +9,13 @@ dist
 # Personal reference material — never ship to production bundles (CLAUDE.md)
 dime-ai/design-bundle/uploads
 # Governed LLM development sources, fixtures, and evidence are never part of
-# the Railway production image.
-ml/dime-1.0/
+# the Railway production image. The one explicitly allow-listed pricing
+# registry is a bounded runtime configuration artifact; its own review status
+# remains fail-closed and is validated by the application.
+ml/dime-1.0/*
+!ml/dime-1.0/configs
+ml/dime-1.0/configs/*
+!ml/dime-1.0/configs/dime_observability_pricing_v1.json
 # Local tooling / scratch
 .claude
 .agents

@@ -16,6 +16,10 @@ import {
   resolveDimeEducationalMath,
   type DimeEducationalMathResult,
 } from "./dimeEducationalMath";
+import {
+  classifyDimeProductRoute,
+  type DimeProductRoute,
+} from "./dimeEngineeringControl";
 
 export const DIME_ANSWER_ROUTING_VERSION = "runtime-answer-routing-v1";
 export const DIME_PLATFORM_TIME_ZONE = "America/New_York";
@@ -134,6 +138,7 @@ export interface DimeAnswerRoute {
   version: typeof DIME_ANSWER_ROUTING_VERSION;
   enabled: boolean;
   mode: DimeAnswerMode;
+  productRoute: DimeProductRoute;
   platformScope: "capabilities" | "feature" | "not_applicable";
   leagueCandidates: DimeLeague[];
   league?: DimeLeague;
@@ -802,6 +807,7 @@ export function planDimeAnswerRoute(
     provisionalTeams,
     provisionalLeagueCandidates
   );
+  const productRoute = classifyDimeProductRoute(query, mode);
   const deterministicMath =
     enabled && mode === "educational"
       ? resolveDimeEducationalMath(query)
@@ -820,6 +826,7 @@ export function planDimeAnswerRoute(
     version: DIME_ANSWER_ROUTING_VERSION,
     enabled,
     mode,
+    productRoute,
     platformScope: platformScope(query, mode),
     leagueCandidates,
     ...(league ? { league } : {}),

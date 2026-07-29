@@ -430,4 +430,64 @@ describe("Dime Chat TiDB context formatting", () => {
     expect(result.freshness).toBe("delayed");
     expect(result.eventIds).toEqual([80]);
   });
+
+  it("reads persisted lifecycle metadata without adding it to answer context", async () => {
+    const previousDatabaseUrl = process.env.DIME_CHAT_DATABASE_URL;
+    process.env.DIME_CHAT_DATABASE_URL = "mysql://localhost:3306/dime";
+    mysqlMocks.execute.mockClear();
+    mysqlMocks.execute.mockResolvedValueOnce([
+      [
+        gameRow(81, "2026-07-10", 1, {
+          providerObservedAt: new Date("2026-07-10T19:00:00.100Z"),
+          sourceUpdatedAt: new Date("2026-07-10T19:00:00.200Z"),
+          ingestionReceivedAt: new Date("2026-07-10T19:00:00.300Z"),
+          ingestionNormalizedAt: new Date("2026-07-10T19:00:00.400Z"),
+          ingestionPersistedAt: new Date("2026-07-10T19:00:00.500Z"),
+          ingestionPipelineRevision: "odds-normalizer-v3",
+          ingestionRunId: "ingestion-20260710-190000",
+        }),
+      ],
+    ]);
+
+    let result;
+    try {
+      result = await getDimeChatContext(
+        new Date("2026-07-10T12:00:00.000Z"),
+        "Analyze Mariners vs Dodgers"
+      );
+    } finally {
+      if (previousDatabaseUrl === undefined) {
+        delete process.env.DIME_CHAT_DATABASE_URL;
+      } else {
+        process.env.DIME_CHAT_DATABASE_URL = previousDatabaseUrl;
+      }
+    }
+
+    const [statement] = mysqlMocks.execute.mock.calls[0] as [string, unknown[]];
+    expect(statement).toContain("provider_observed_at AS providerObservedAt");
+    expect(statement).toContain(
+      "ingestion_persisted_at AS ingestionPersistedAt"
+    );
+    expect(result.observability.timestamps).toMatchObject({
+      providerObservedAt: "2026-07-10T19:00:00.100Z",
+      sourceUpdatedAt: "2026-07-10T19:00:00.200Z",
+      databaseIngestedAt: "2026-07-10T19:00:00.500Z",
+    });
+    expect(result.observability.ingestionLifecycle).toMatchObject({
+      status: "unavailable",
+      sourceObservedAt: "2026-07-10T19:00:00.100Z",
+      receivedAt: "2026-07-10T19:00:00.300Z",
+      normalizedAt: "2026-07-10T19:00:00.400Z",
+      persistedAt: "2026-07-10T19:00:00.500Z",
+      responseGeneratedAt: null,
+      pipelineRevision: "odds-normalizer-v3",
+      ingestionRunId: "ingestion-20260710-190000",
+    });
+    expect(result.observability.providerObservation).toMatchObject({
+      status: "unavailable",
+      issues: ["provider_identity_revision_not_persisted"],
+    });
+    expect(result.context).toContain("marketObservedAt=unavailable");
+    expect(result.context).not.toContain("2026-07-10T19:00:00.100Z");
+  });
 });

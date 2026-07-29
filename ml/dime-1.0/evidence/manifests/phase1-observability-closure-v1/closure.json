@@ -1,0 +1,277 @@
+{
+  "schemaVersion": "dime-phase1-observability-closure-v1",
+  "closureId": "phase1-observability-closure-2026-07-29",
+  "createdAt": "2026-07-29T12:18:00Z",
+  "implementationBoundary": "local_non_production_evidence_closure",
+  "sourceState": {
+    "repository": "aisportsbettingcontact/ai-sports-betting-dime-ai",
+    "branch": "codex/dime-runtime-readiness-v1",
+    "headCommit": "47e338fbbcb10e30f63fc048ac366f85a9a18f72",
+    "worktreeState": "uncommitted_local_changes"
+  },
+  "status": {
+    "phase1LocalImplementation": "pass",
+    "syntheticValidation": "pass",
+    "productionEvidence": "blocked",
+    "productionClosure": "blocked",
+    "shadow": "not_authorized"
+  },
+  "evidenceGaps": {
+    "providerObservationTimestamps": {
+      "contractStatus": "implemented",
+      "productionEvidenceStatus": "blocked",
+      "reason": "The local nullable timestamp storage is implemented, but production migration 0122 is not applied and provider identity/revision are not yet persisted."
+    },
+    "ingestionLifecycleTimestamps": {
+      "contractStatus": "implemented",
+      "productionEvidenceStatus": "blocked",
+      "reason": "Migration 0122 and its guarded rollback pass isolated MySQL 8 validation, but production is unmigrated and current producers do not populate a complete authoritative lifecycle."
+    },
+    "reviewedPricing": {
+      "contractStatus": "implemented",
+      "productionEvidenceStatus": "blocked",
+      "reason": "The governed registry is review_required with no active entries, and the production service has no pricing-registry path configured."
+    },
+    "representativeSanitizedTraffic": {
+      "contractStatus": "implemented",
+      "productionEvidenceStatus": "blocked",
+      "reason": "The production trace flag is disabled and the Phase 1 observability source is not deployed; no representative production trace export was authorized or supplied."
+    },
+    "independentVerdict": {
+      "contractStatus": "implemented",
+      "productionEvidenceStatus": "blocked",
+      "reason": "No independent Evaluation Authority verdict has been issued."
+    }
+  },
+  "closureThresholds": [
+    {
+      "name": "trace_identity_completeness",
+      "target": "100% of representative production requests",
+      "current": "Production service and active deployment identified; Phase 1 trace source is not deployed and tracing is disabled",
+      "status": "blocked"
+    },
+    {
+      "name": "schema_validation",
+      "target": "100% of representative production traces",
+      "current": "Local contracts and isolated MySQL 8 migration checks pass; migration 0122 and Phase 1 validation are absent from the active deployment",
+      "status": "blocked"
+    },
+    {
+      "name": "secret_safe_trace_metadata",
+      "target": "100% of representative production traces",
+      "current": "Local adversarial cases pass; production rate not measured",
+      "status": "not_measured"
+    },
+    {
+      "name": "tool_state_classification",
+      "target": "100% classified without implicit null state",
+      "current": "Local explicit-state contract passes; production tracing is disabled and the Phase 1 source is absent",
+      "status": "blocked"
+    },
+    {
+      "name": "timestamp_provenance_classification",
+      "target": "100% authoritative or explicitly unavailable",
+      "current": "Contract and nullable storage implemented; production fields are absent and current dynamic evidence remains explicitly unavailable",
+      "status": "blocked"
+    },
+    {
+      "name": "pricing_resolution_classification",
+      "target": "100% resolved from reviewed entry or explicitly cost_unavailable",
+      "current": "No reviewed active pricing entry; cost remains unavailable",
+      "status": "blocked"
+    },
+    {
+      "name": "deployment_parity",
+      "target": "100% identity and trace-schema parity across measured deployment",
+      "current": "Disabled-state parity runbook is locally prepared; the active deployment remains associated with inferred merge commit ff95a7cf2bb1aba2c9f79e7c523ea62a6b655a7c and lacks the Phase 1 source and migration",
+      "status": "blocked"
+    },
+    {
+      "name": "all_routes_reported",
+      "target": "All nine routes reported from representative traffic",
+      "current": "All nine routes reported synthetically; production report unavailable",
+      "status": "blocked"
+    },
+    {
+      "name": "immutable_production_benchmark",
+      "target": "One sanitized production-derived benchmark pinned by SHA-256",
+      "current": "Unavailable-evidence record only",
+      "status": "blocked"
+    },
+    {
+      "name": "user_visible_behavior_change",
+      "target": "0 user-visible behavior changes during observability closure",
+      "current": "Local metadata-only implementation; production not exercised",
+      "status": "not_measured"
+    },
+    {
+      "name": "telemetry_write_failures",
+      "target": "0 failures in representative traffic window",
+      "current": "No representative production traffic window",
+      "status": "not_measured"
+    }
+  ],
+  "evidence": [
+    {
+      "artifact": "server/_core/dimeEvidenceProvenance.ts",
+      "sha256": "bb2e4f30c4e47b4f06ffb1aa735f037de10b153923b7fa762ca016c5a264bc8e",
+      "classification": "source_contract"
+    },
+    {
+      "artifact": "drizzle/schema.ts",
+      "sha256": "74a534921f2a6b6130d029c0fdc2cdab3173f71890fd637071a5e8b072ca8b15",
+      "classification": "schema"
+    },
+    {
+      "artifact": "drizzle/meta/0122_snapshot.json",
+      "sha256": "43ca81ae31f67163a279d579d2289a07e12019506594ff2ca8c6ea3cae669021",
+      "classification": "schema"
+    },
+    {
+      "artifact": "drizzle/0122_dime_evidence_lifecycle_v1.sql",
+      "sha256": "22a8fbeb3349381ff7f76a2a421efea1200917a451ea873bc7cf657e23209a25",
+      "classification": "database_migration"
+    },
+    {
+      "artifact": "drizzle/rollbacks/0122_dime_evidence_lifecycle_v1.rollback.sql",
+      "sha256": "26f0b22b9983c128c99be7e48f6848231d2887f23f19fb82f6637142a18961ce",
+      "classification": "rollback"
+    },
+    {
+      "artifact": "server/_core/dimeEvidenceLifecycleMigration.test.ts",
+      "sha256": "5dd4f38c88b40fc7f1df9bb0c1ed3a5ec1900bc5227ef910bc2fb7d402c00518",
+      "classification": "verification"
+    },
+    {
+      "artifact": "ml/dime-1.0/schemas/dynamic_evidence_provenance.schema.json",
+      "sha256": "bf039593ad00447f04bbaadc2a36804d90ef196cdc944febc551b326808a3188",
+      "classification": "schema"
+    },
+    {
+      "artifact": "server/_core/dimePricingGovernance.ts",
+      "sha256": "5781f60d7d76f50856d156ff1af5d92f90e0c766bd26d43d59b1339c8c61fadf",
+      "classification": "source_contract"
+    },
+    {
+      "artifact": "ml/dime-1.0/configs/dime_observability_pricing_v1.json",
+      "sha256": "54d0cd7e20bf60079149441126392c4e0520628f136dd88bcb9a07baf03028c2",
+      "classification": "configuration"
+    },
+    {
+      "artifact": "ml/dime-1.0/schemas/observability_pricing_registry.schema.json",
+      "sha256": "8b74c71ef85acbf9f246dbc31b3078560e6b3bde4a02adebd1518bd027824831",
+      "classification": "schema"
+    },
+    {
+      "artifact": "server/_core/dimeTrafficEvidence.ts",
+      "sha256": "1371c4a8073b2b148e0daa9fb0a5a11988a7bace9ef38bab1c48477f2a84420a",
+      "classification": "source_contract"
+    },
+    {
+      "artifact": "ml/dime-1.0/schemas/production_traffic_distribution_evidence.schema.json",
+      "sha256": "fab2f1fe10d615b321fc3467599fd4cebfb8874ba983902482e2d4c49d2d067b",
+      "classification": "schema"
+    },
+    {
+      "artifact": "ml/dime-1.0/evidence/benchmarks/product-route-observability-v1/production-traffic-distribution.json",
+      "sha256": "48297a187a9689e285d720dbbb1fe27f63220409357b4ca52a9f43729376d0de",
+      "classification": "production_evidence_unavailable"
+    },
+    {
+      "artifact": "ml/dime-1.0/data/eval/product_route_observability_v1.benchmark.json",
+      "sha256": "b85271e867c531b0472513ce2cb06214632fd8c0ea910efec207a51750e36372",
+      "classification": "synthetic_benchmark"
+    },
+    {
+      "artifact": "ml/dime-1.0/evidence/benchmarks/product-route-observability-v1/local-baseline.json",
+      "sha256": "da2abf7d073232601d4895bcc99b25a489062ea6a57c4fff3dc9eb161101d430",
+      "classification": "synthetic_benchmark"
+    },
+    {
+      "artifact": "ml/dime-1.0/configs/composite_engineering_control_v1.yaml",
+      "sha256": "efcdf6d2877d921ba7c50abea7fddcbaa12d5be8d47eafe4f15d71eb6ca3cf08",
+      "classification": "configuration"
+    },
+    {
+      "artifact": "server/_core/dimeTraceObservability.ts",
+      "sha256": "c90674e11015517fdccaa604c85160301e03efce2d8925fb35ff5eef889c5a44",
+      "classification": "source_contract"
+    },
+    {
+      "artifact": "docs/runbooks/2026-07-29-dime-chat-observability-phase1.md",
+      "sha256": "ab40c347b050c7859cb1197061f6dee038665b28ff09dab470dd0ee53a66bd80",
+      "classification": "runbook"
+    },
+    {
+      "artifact": "docs/runbooks/2026-07-29-dime-evidence-lifecycle-migration.md",
+      "sha256": "3859128194fe4c199abf21818b1596a645958dfb3534648733466e337a2725c4",
+      "classification": "runbook"
+    },
+    {
+      "artifact": "docs/runbooks/2026-07-29-dime-phase1-disabled-deployment-parity.md",
+      "sha256": "bf6b7847198766c07888fb861e66b94534c37d504ca0a839006bffe836cafc91",
+      "classification": "runbook"
+    },
+    {
+      "artifact": ".dockerignore",
+      "sha256": "8254bb03945ebcef4562ec6a082f7684ce094c3b842940887092ee294ec40be5",
+      "classification": "configuration"
+    },
+    {
+      "artifact": "ml/dime-1.0/evidence/manifests/phase1-observability-closure-v1/migration-local-verification.json",
+      "sha256": "fa80b030348f4eaa6e0d39db52ed961ff87e434a9e64bf9595b8d32991865f8b",
+      "classification": "verification"
+    },
+    {
+      "artifact": "ml/dime-1.0/evidence/benchmarks/product-route-observability-v1/local-verification.json",
+      "sha256": "d747a25ccd978263db255b5d1f433a2cf390d17dc31be3ac7d435d5c5bc3a8cd",
+      "classification": "verification"
+    },
+    {
+      "artifact": "ml/dime-1.0/evidence/infrastructure/2026-07-29/railway_phase1_readiness_observation.json",
+      "sha256": "1cd235a84a3a9287cf5af78940e68bcd1f15cb5aacf40c286c6fd16bc74f19ff",
+      "classification": "production_observation"
+    },
+    {
+      "artifact": "ml/dime-1.0/evidence/infrastructure/2026-07-29/research_alpha_kill_switch_hardening_proposal.json",
+      "sha256": "20d023d69bf7d0b05d67adfc54f98f3190d333462f42e99a1d50568105d2ff4c",
+      "classification": "configuration_proposal"
+    }
+  ],
+  "independentGate": {
+    "allowedVerdicts": ["REJECT", "REVISE", "SHADOW"],
+    "verdict": null,
+    "reviewer": null,
+    "issuedAt": null,
+    "decisionArtifactSha256": null
+  },
+  "authorizations": {
+    "productionAccess": false,
+    "productionTraceExport": false,
+    "providerTimestampAcceptance": false,
+    "pricingApproval": false,
+    "deployment": false,
+    "shadow": false,
+    "canary": false,
+    "release": false,
+    "training": false
+  },
+  "knownLimitations": [
+    "The local game schema can persist lifecycle fields, but production migration 0122 is not applied and current producers do not populate complete authoritative values.",
+    "Provider identity and provider revision are not persisted, so a provider timestamp alone cannot make provider-observation evidence available.",
+    "The governed pricing registry has no reviewed active entry.",
+    "The production traffic distribution is an unavailable-evidence record, not a benchmark.",
+    "The active Railway deployment does not contain the local Phase 1 observability implementation.",
+    "The production trace flag is present but disabled.",
+    "The source commit predates the current uncommitted local worktree changes.",
+    "The repository-wide test suite depends on unavailable databases, credentials, live APIs, and browser socket permissions."
+  ],
+  "residualRisks": [
+    "Future provider adapters may mis-map a retrieval timestamp as an observation timestamp unless their mapping is independently reviewed.",
+    "The existing full historical migration chain has a duplicate-table baseline failure in a fresh MySQL 8 database; migration 0122 passed isolated validation but production journal reconciliation remains a preflight gate.",
+    "Clock skew may hide pipeline-order defects if classifications are not supported by infrastructure evidence.",
+    "A future traffic export may be unrepresentative even when it is privacy-safe.",
+    "Provider pricing may drift after review unless effective intervals and historical revisions are maintained.",
+    "Production latency, cost, completeness, and telemetry reliability remain unknown."
+  ]
+}

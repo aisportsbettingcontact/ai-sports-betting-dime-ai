@@ -56,6 +56,12 @@ import {
   recordDimeChatTraceContext,
   sendDimeChatTraceJsonError,
 } from "../dimeChatTrace";
+import {
+  assembleDimeContextObservability,
+  dimeContextToolTrace,
+  dimeNoDynamicContextObservability,
+  type DimeTraceContextObservability,
+} from "./dimeTraceObservability";
 
 const VALIDATION_BLOCKED_RESPONSE =
   "I can’t verify that betting verdict against grounded Dime data, so I’m blocking it rather than risking a fabricated edge. Please provide the event, market, current line/odds, sportsbook, timestamp, and model projection/version so I can evaluate it safely.";
@@ -81,6 +87,7 @@ export interface Dime1ChatRequestArgs {
   requestClass: DimeChatRequestClass;
   responseBudget: number;
   answerRoute: DimeAnswerRoute;
+  classificationLatencyMs: number;
   systemPrompt: string;
   deploymentTier?: "production" | "research-alpha";
   trace?: ActiveDimeChatTrace;
@@ -97,6 +104,7 @@ export async function handleDime1ChatRequest(
     requestClass,
     responseBudget,
     answerRoute,
+    classificationLatencyMs,
     systemPrompt,
     deploymentTier = "production",
     trace,
@@ -109,6 +117,7 @@ export async function handleDime1ChatRequest(
       requestId,
       startTime,
       answerRoute,
+      classificationLatencyMs,
       trace,
       log: dime1Log,
       meta: {
@@ -166,6 +175,9 @@ export async function handleDime1ChatRequest(
   let contextRowCount = 0;
   let contextEventIds: number[] = [];
   let contextLookupErrorClass: string | undefined;
+  let contextObservability: DimeTraceContextObservability =
+    dimeNoDynamicContextObservability(classificationLatencyMs);
+  const contextToolStartedAt = new Date();
   const userNumericValues = collectDimeNumericValues(
     messages
       .filter(message => message.role === "user")
@@ -193,6 +205,10 @@ export async function handleDime1ChatRequest(
     contextSnapshot = context.context;
     contextRowCount = context.rowCount;
     contextEventIds = context.eventIds;
+    contextObservability = assembleDimeContextObservability({
+      classificationMs: classificationLatencyMs,
+      ...context.observability,
+    });
     answerEvidence = {
       route: context.route,
       resolution: context.resolution,
@@ -222,6 +238,7 @@ export async function handleDime1ChatRequest(
       rowCount: context.rowCount,
       eventIds: context.eventIds,
       answerMode: context.route.mode,
+      productRoute: context.route.productRoute,
       eventResolution: context.resolution.kind,
       groundingStatus: context.grounding,
       retrievalCandidateCount: context.retrievalCandidateCount,
@@ -232,6 +249,25 @@ export async function handleDime1ChatRequest(
     dataFreshness = "none";
     contextLookupErrorClass =
       (contextErr as Error)?.constructor?.name ?? "Unknown";
+    const contextToolCompletedAt = new Date();
+    contextObservability = {
+      ...dimeNoDynamicContextObservability(
+        classificationLatencyMs,
+        contextToolCompletedAt
+      ),
+      toolCall: dimeContextToolTrace({
+        status: "failed",
+        normalizedArguments: {
+          route: answerRoute.productRoute,
+          league: answerRoute.league ?? null,
+          requestedDate: answerRoute.requestedDate ?? null,
+          retrievalCap: answerRoute.retrievalCap,
+        },
+        startedAt: contextToolStartedAt,
+        completedAt: contextToolCompletedAt,
+        validationResult: "not_run",
+      }),
+    };
     dime1Log("dime.chat.dime1.context_error", requestId, {
       errorClass: contextLookupErrorClass,
       detail: (contextErr as Error)?.message ?? "Context lookup failed",
@@ -248,6 +284,7 @@ export async function handleDime1ChatRequest(
         context: contextSnapshot,
         lookupErrorClass: contextLookupErrorClass,
         answerMode: answerEvidence.route.mode,
+        productRoute: answerEvidence.route.productRoute,
         routingVersion: answerEvidence.route.version,
         dateSource: answerEvidence.route.dateSource,
         requestedDate: answerEvidence.route.requestedDate,
@@ -257,6 +294,7 @@ export async function handleDime1ChatRequest(
         retrievalCandidateCount: answerEvidence.retrievalCandidateCount,
         retrievalLatencyMs: answerEvidence.retrievalLatencyMs,
         confidence: answerEvidence.resolution.confidence,
+        observability: contextObservability,
       });
     } catch (traceError) {
       await failDimeChatTrace(trace, {
@@ -311,6 +349,7 @@ export async function handleDime1ChatRequest(
     requestClass,
     responseBudget,
     answerMode: answerRoute.mode,
+    productRoute: answerRoute.productRoute,
     answerRoutingVersion: answerRoute.version,
     eventResolution: answerEvidence.resolution.kind,
     groundingStatus: answerEvidence.grounding,
@@ -341,6 +380,7 @@ export async function handleDime1ChatRequest(
     platformKnowledgeVersion: DIME_PLATFORM_KNOWLEDGE_VERSION,
     platformKnowledgeSha256: DIME_PLATFORM_KNOWLEDGE_SHA256,
     answerMode: answerRoute.mode,
+    productRoute: answerRoute.productRoute,
     answerRoutingVersion: answerRoute.version,
     eventResolution: answerEvidence.resolution.kind,
     groundingStatus: answerEvidence.grounding,
@@ -349,6 +389,7 @@ export async function handleDime1ChatRequest(
 
   let traceFinalized = false;
   try {
+    const modelStartedAt = Date.now();
     const result = await dime1ChatComplete({
       system: systemPrompt,
       messages: providerMessages,
@@ -356,6 +397,7 @@ export async function handleDime1ChatRequest(
       temperature: DIME1_CHAT_TEMPERATURE,
       signal: abort.signal,
     });
+    const modelCompletedAt = Date.now();
     if (aborted || res.destroyed) {
       if (trace) {
         await failDimeChatTrace(trace, {
@@ -368,6 +410,7 @@ export async function handleDime1ChatRequest(
       return;
     }
 
+    const validationStartedAt = Date.now();
     const validation = validateDimeResponseText(result.content);
     const certaintyViolation = containsProhibitedBettingCertainty(
       result.content
@@ -389,6 +432,7 @@ export async function handleDime1ChatRequest(
       validation.ok && !certaintyViolation && completeness.safeFallback
         ? "runtime_answer_fallback"
         : "validation_blocked";
+    const validationMs = Date.now() - validationStartedAt;
 
     dime1Log("dime.chat.dime1.generate.done", requestId, {
       finishReason: result.finishReason,
@@ -417,10 +461,13 @@ export async function handleDime1ChatRequest(
           validationErrors: combinedValidationErrors,
           certaintyViolation,
           answerMode: answerRoute.mode,
+          productRoute: answerRoute.productRoute,
           routingVersion: answerRoute.version,
           completenessStatus: completeness.status,
           groundingStatus: answerEvidence.grounding,
           usage: result.usage,
+          modelCompletionMs: modelCompletedAt - modelStartedAt,
+          validationMs,
           latencyMs: Date.now() - startTime,
         });
         assistantMessageId = finalized.assistantMessageId;
@@ -463,10 +510,13 @@ export async function handleDime1ChatRequest(
         validationErrors: combinedValidationErrors,
         certaintyViolation,
         answerMode: answerRoute.mode,
+        productRoute: answerRoute.productRoute,
         routingVersion: answerRoute.version,
         completenessStatus: completeness.status,
         groundingStatus: answerEvidence.grounding,
         usage: result.usage,
+        modelCompletionMs: modelCompletedAt - modelStartedAt,
+        validationMs,
         latencyMs: Date.now() - startTime,
       });
       assistantMessageId = finalized.assistantMessageId;
