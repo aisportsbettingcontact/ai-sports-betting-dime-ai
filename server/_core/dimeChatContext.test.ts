@@ -183,6 +183,38 @@ describe("Dime Chat TiDB context formatting", () => {
     }
   });
 
+  it("bypasses the games database for unresolved cross-league aliases", async () => {
+    const previousDatabaseUrl = process.env.DIME_CHAT_DATABASE_URL;
+    process.env.DIME_CHAT_DATABASE_URL = "mysql://localhost:3306/dime";
+    mysqlMocks.createPool.mockReturnValue({
+      execute: mysqlMocks.execute,
+    });
+    mysqlMocks.execute.mockClear();
+
+    try {
+      const result = await getDimeChatContext(
+        new Date("2026-07-29T12:00:00.000Z"),
+        "Yankees vs Lakers game on July 29, 2026"
+      );
+
+      expect(result.route.retrievalBypassed).toBe(true);
+      expect(result.resolution).toMatchObject({
+        kind: "ambiguous",
+        reason: "unresolved_team_league_conflict",
+      });
+      expect(result.grounding).toBe("none");
+      expect(result.rowCount).toBe(0);
+      expect(result.eventIds).toEqual([]);
+      expect(mysqlMocks.execute).not.toHaveBeenCalled();
+    } finally {
+      if (previousDatabaseUrl === undefined) {
+        delete process.env.DIME_CHAT_DATABASE_URL;
+      } else {
+        process.env.DIME_CHAT_DATABASE_URL = previousDatabaseUrl;
+      }
+    }
+  });
+
   it("retrieves one exact matchup and excludes a nearby event", async () => {
     const previousDatabaseUrl = process.env.DIME_CHAT_DATABASE_URL;
     process.env.DIME_CHAT_DATABASE_URL = "mysql://localhost:3306/dime";

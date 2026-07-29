@@ -325,6 +325,55 @@ describe("Dime1 provider boundary with Answer Routing v1", () => {
 
   it.each([
     {
+      query: "What is the implied probability at -150?",
+      badProviderOutput: "The implied probability is 87.07%.",
+      expected: "60.00%",
+      forbidden: "87.07%",
+    },
+    {
+      query: "At -110 with a 55% win probability, what is EV per $100 risked?",
+      badProviderOutput: "The expected value is +$2.62 per $100 risked.",
+      expected: "+$5.00",
+      forbidden: "+$2.62",
+    },
+  ])(
+    "serves canonical arithmetic without contacting the provider for $query",
+    async ({ query, badProviderOutput, expected, forbidden }) => {
+      const route = planDimeAnswerRoute(query, NOW, {});
+      const routedSystemPrompt = applyDimeAnswerRoute(
+        BASE_SYSTEM_PROMPT,
+        route
+      );
+      mocked.context.mockResolvedValue(contextResult(route));
+      mocked.complete.mockResolvedValue(providerResult(badProviderOutput));
+
+      const result = await invoke(query, route, routedSystemPrompt);
+      const [meta, delta, done] = result.frames;
+
+      expect(route.mode).toBe("educational");
+      expect(route.retrievalBypassed).toBe(true);
+      expect(mocked.resolveConfig).not.toHaveBeenCalled();
+      expect(mocked.context).not.toHaveBeenCalled();
+      expect(mocked.complete).not.toHaveBeenCalled();
+      expect(meta).toMatchObject({
+        type: "meta",
+        provider: "dime-deterministic",
+        answerMode: "educational",
+        eventResolution: "not_applicable",
+      });
+      expect(delta.text).toContain(expected);
+      expect(delta.text).not.toContain(forbidden);
+      expect(done).toMatchObject({
+        type: "done",
+        stopReason: "deterministic_math",
+        completenessStatus: "passed",
+      });
+      expectTraceOffAndNoExternalFetch(fetchGuard);
+    }
+  );
+
+  it.each([
+    {
       label: "missing",
       context:
         "DIME_EVENT_RESOLUTION result=missing\n- no eligible event selected",

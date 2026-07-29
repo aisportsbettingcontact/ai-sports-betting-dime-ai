@@ -41,6 +41,7 @@ import {
   selectDimeChatResponseBudget,
 } from "./_core/dimeChatModel";
 import { getDimeChatContext } from "./_core/dimeChatContext";
+import { handleDimeDeterministicMathResponse } from "./_core/dimeDeterministicMathHandler";
 import {
   applyDimeAnswerRoute,
   collectDimeNumericValues,
@@ -118,6 +119,19 @@ function traceProviderMetadata(
   responseBudget: number,
   answerRoute: DimeAnswerRoute
 ): DimeChatTraceProviderMetadata {
+  if (answerRoute.deterministicMath) {
+    return {
+      provider: "dime-deterministic",
+      deploymentTier: "local-runtime",
+      requestedModel: answerRoute.deterministicMath.version,
+      endpointSource: "server-runtime",
+      productProfile: "Dime deterministic betting math",
+      profileVersion: answerRoute.deterministicMath.version,
+      promptSource: "server/_core/dimeEducationalMath.ts",
+      maxTokens: 0,
+      temperature: 0,
+    };
+  }
   if (researchAlphaGate.active) {
     return {
       provider: "dime1-research-alpha",
@@ -552,6 +566,26 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
       });
     }
     res.end();
+    return;
+  }
+
+  // Deterministic betting math is resolved before provider configuration,
+  // context retrieval, or provider execution.
+  if (
+    await handleDimeDeterministicMathResponse({
+      res,
+      requestId,
+      startTime,
+      answerRoute,
+      trace: activeTrace,
+      log: dimeLog,
+      meta: {
+        dimeProfile: requestProviderMetadata.productProfile,
+        profileVersion: requestProviderMetadata.profileVersion,
+        promptSource: requestProviderMetadata.promptSource,
+      },
+    })
+  ) {
     return;
   }
 

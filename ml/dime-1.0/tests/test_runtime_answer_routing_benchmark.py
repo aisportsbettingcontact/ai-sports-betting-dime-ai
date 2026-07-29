@@ -13,6 +13,7 @@ REPORT_PATH = (
 )
 CHECKSUM_PATH = REPORT_PATH.with_name("SHA256SUMS")
 RUNTIME_PATH = REPOSITORY_ROOT / "server" / "_core" / "dimeAnswerRouting.ts"
+EDUCATIONAL_MATH_PATH = REPOSITORY_ROOT / "server" / "_core" / "dimeEducationalMath.ts"
 
 
 def load(path: Path) -> dict:
@@ -46,7 +47,7 @@ def test_frozen_benchmark_is_synthetic_unique_and_referentially_closed() -> None
     case_ids = [case["case_id"] for case in fixture["cases"]]
     assert len(event_ids) == len(set(event_ids))
     assert len(case_ids) == len(set(case_ids))
-    assert len(case_ids) == 14
+    assert len(case_ids) == 19
 
     known_event_ids = set(event_ids)
     for case in fixture["cases"]:
@@ -59,12 +60,17 @@ def test_local_report_is_bound_to_the_frozen_fixture() -> None:
     report = load(REPORT_PATH)
     fixture_hash = hashlib.sha256(FIXTURE_PATH.read_bytes()).hexdigest()
     runtime_hash = hashlib.sha256(RUNTIME_PATH.read_bytes()).hexdigest()
+    educational_math_hash = hashlib.sha256(EDUCATIONAL_MATH_PATH.read_bytes()).hexdigest()
     assert report["sources"]["fixture_sha256"] == fixture_hash
     assert report["sources"]["runtime_module_sha256"] == runtime_hash
+    assert report["sources"]["educational_math_module_sha256"] == educational_math_hash
     assert report["sources"]["fixture_path"] == (
         "ml/dime-1.0/data/eval/runtime_answer_routing_v1.benchmark.json"
     )
     assert report["sources"]["runtime_module_path"] == ("server/_core/dimeAnswerRouting.ts")
+    assert report["sources"]["educational_math_module_path"] == (
+        "server/_core/dimeEducationalMath.ts"
+    )
     assert report["evidence_class"] == "deterministic_local_contract"
     assert report["synthetic_data_only"] is True
 
@@ -78,20 +84,20 @@ def test_evidence_checksum_covers_the_local_report() -> None:
 def test_local_contract_baseline_passes_without_authorizing_promotion() -> None:
     report = load(REPORT_PATH)
     assert report["summary"] == {
-        "case_count": 14,
-        "passing_cases": 14,
+        "case_count": 19,
+        "passing_cases": 19,
         "failing_cases": 0,
         "deterministic_local_baseline_pass": True,
         "production_promotion_authorized": False,
     }
     assert report["failures"] == []
-    assert len(report["cases"]) == 14
+    assert len(report["cases"]) == 19
     assert all(case["pass"] is True for case in report["cases"])
 
     for value in report["local_metrics"].values():
         assert value == {
-            "numerator": 14,
-            "denominator": 14,
+            "numerator": 19,
+            "denominator": 19,
             "rate": 1,
         }
 
