@@ -137,10 +137,12 @@ describe("POST /api/dime/chat — route wiring", () => {
       safetyIdx
     );
     const dime1Idx = chatRouteSrc.indexOf(
-      'if (DIME_CHAT_LLM_PROVIDER === "dime1")'
+      'if (DIME_CHAT_LLM_PROVIDER === "dime1")',
+      alphaIdx
     );
     const freezeIdx = chatRouteSrc.indexOf(
-      'if (DIME_CHAT_LLM_PROVIDER !== "anthropic")'
+      'if (DIME_CHAT_LLM_PROVIDER !== "anthropic")',
+      dime1Idx
     );
     expect(safetyIdx).toBeGreaterThan(-1);
     expect(alphaIdx).toBeGreaterThan(safetyIdx);

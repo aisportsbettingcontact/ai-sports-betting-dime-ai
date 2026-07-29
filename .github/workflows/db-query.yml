@@ -17,9 +17,10 @@ on:
         default: summary
         type: choice
         options:
-          - summary        # table count + estimated rows + grand total
-          - tables         # full table list
-          - exact-counts   # exact SELECT COUNT(*) per table (slower, precise)
+          - summary # table count + estimated rows + grand total
+          - tables # full table list
+          - exact-counts # exact SELECT COUNT(*) per table (slower, precise)
+          - dime-trace-v1 # duplicate-sequence preflight + additive schema state
 
 permissions:
   contents: read
@@ -88,6 +89,38 @@ jobs:
               n=$(mysql --defaults-extra-file=client.cnf -N -e "SELECT COUNT(*) FROM \`$DB_SCHEMA\`.\`$t\`;")
               printf "  %-48s %s\n" "$t" "$n"
             done
+
+          elif [ "$MODE" = "dime-trace-v1" ]; then
+            echo "===== $DB_SCHEMA: Dime Conversation Trace v1 ====="
+            mysql --defaults-extra-file=client.cnf -t -e "
+              SELECT COUNT(*) AS duplicate_thread_seq_pairs
+              FROM (
+                SELECT threadId, seq
+                FROM \`$DB_SCHEMA\`.\`dime_chat_messages\`
+                GROUP BY threadId, seq
+                HAVING COUNT(*) > 1
+              ) duplicate_pairs;
+
+              SELECT COUNT(*) AS trace_v1_tables_present
+              FROM information_schema.tables
+              WHERE table_schema='$DB_SCHEMA'
+                AND table_name IN (
+                  'dime_chat_sessions',
+                  'dime_chat_turns',
+                  'dime_chat_generations',
+                  'dime_chat_trace_events'
+                );
+
+              SELECT index_name, non_unique
+              FROM information_schema.statistics
+              WHERE table_schema='$DB_SCHEMA'
+                AND table_name='dime_chat_messages'
+                AND index_name IN (
+                  'idx_dime_chat_messages_thread_seq',
+                  'uq_dime_chat_messages_thread_seq'
+                )
+              GROUP BY index_name, non_unique
+              ORDER BY index_name;"
           fi
 
       - name: "[STEP] Cleanup"
