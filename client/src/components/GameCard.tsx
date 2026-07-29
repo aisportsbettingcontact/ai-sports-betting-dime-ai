@@ -26,6 +26,10 @@ import React, { useState, useRef, useEffect, useCallback, memo } from "react";
 // MotionConfig honors the OS reduced-motion setting for the entrance fade.
 import { LazyMotion, MotionConfig, domAnimation, m } from "framer-motion";
 
+// Splits-surface interaction styles ride this chunk (NOT the chat critical
+// path — see the bundle budget note in splits-interactions.css).
+import "@/styles/splits-interactions.css";
+
 import { toast } from "sonner";
 import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "@/lib/trpc";
