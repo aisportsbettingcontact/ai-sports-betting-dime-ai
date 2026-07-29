@@ -105,6 +105,9 @@ export interface RecentSchedulePanelProps {
    *  splits surface. "embedded" renders frameless inside a host card
    *  (Trends page) — the card owns the chrome. */
   variant?: "standalone" | "embedded";
+  /** Hide the "LAST 5 GAMES" title row — for hosts whose own chrome already
+   *  labels the panel (the Trends page segmented toggle). Default false. */
+  hideHeader?: boolean;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -189,8 +192,8 @@ function ResultBadge({
   }[variant];
 
   const sizeClass = size === "xs"
-    ? "w-5 h-5 text-[10px]"
-    : "w-6 h-6 text-[10px]";
+    ? "w-6 h-6 text-[11px]"
+    : "w-7 h-7 text-[12px]";
 
   return (
     <span
@@ -225,7 +228,7 @@ function AtsBadge({
         variant={covVariant}
         size="xs"
       />
-      <span className="text-[10px] font-mono tabular-nums text-[var(--text-secondary)]">
+      <span className="text-[12px] font-mono tabular-nums text-[var(--text-secondary)]">
         {spreadStr}
       </span>
     </div>
@@ -252,7 +255,7 @@ function OuBadge({
   return (
     <div className="flex items-center gap-1.5">
       <ResultBadge label={label} variant={ouVariant} size="xs" />
-      <span className="text-[10px] font-mono tabular-nums text-[var(--text-secondary)]">
+      <span className="text-[12px] font-mono tabular-nums text-[var(--text-secondary)]">
         {fmtTotal(total)}
       </span>
     </div>
@@ -267,7 +270,7 @@ function Th({ children, first = false }: { children: React.ReactNode; first?: bo
       scope="col"
       className={cn(
         first ? "px-3" : "px-2",
-        "py-1.5 text-left text-[9px] font-bold font-mono tracking-[0.08em] uppercase text-[var(--text-muted)]"
+        "py-2 text-left text-[11px] font-bold font-mono tracking-[0.08em] uppercase text-[var(--text-muted)]"
       )}
     >
       {children}
@@ -325,14 +328,14 @@ function GameRow({
       )}
     >
       {/* Date */}
-      <td className="px-3 py-2 text-[11px] font-mono tabular-nums text-[var(--text-secondary)] whitespace-nowrap">
+      <td className="px-3 py-2.5 text-[13px] font-mono tabular-nums text-[var(--text-secondary)] whitespace-nowrap">
         {fmtDate(game.gameDate)}
       </td>
 
       {/* H/A + Opponent */}
-      <td className="px-2 py-2">
+      <td className="px-2 py-2.5">
         <div className="flex items-center gap-1.5">
-          <span className="text-[10px] font-mono text-[var(--text-muted)]">
+          <span className="text-[12px] font-mono text-[var(--text-muted)]">
             {isAway ? "@" : "vs"}
           </span>
           {oppLogo ? (
@@ -340,20 +343,20 @@ function GameRow({
               src={oppLogo}
               alt=""
               loading="lazy"
-              className="w-5 h-5 object-contain flex-shrink-0"
+              className="w-6 h-6 object-contain flex-shrink-0"
               onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
             />
           ) : (
-            <div className="w-5 h-5 rounded-full bg-[var(--surface-raised)] flex-shrink-0" />
+            <div className="w-6 h-6 rounded-full bg-[var(--surface-raised)] flex-shrink-0" />
           )}
-          <span className="text-[11px] font-mono font-semibold text-foreground">
+          <span className="text-[13px] font-mono font-semibold text-foreground">
             {oppAbbr}
           </span>
         </div>
       </td>
 
       {/* Result: W/L badge + score */}
-      <td className="px-2 py-2">
+      <td className="px-2 py-2.5">
         <div className="flex items-center gap-1.5">
           <ResultBadge
             label={myWon === true ? "W" : myWon === false ? "L" : "—"}
@@ -361,7 +364,7 @@ function GameRow({
           />
           <span
             className={cn(
-              "text-[11px] font-mono font-bold tabular-nums",
+              "text-[13px] font-mono font-bold tabular-nums",
               myWon === true ? "text-[#45E0A8]" : "text-[var(--text-secondary)]"
             )}
           >
@@ -371,12 +374,12 @@ function GameRow({
       </td>
 
       {/* ATS */}
-      <td className="px-2 py-2">
+      <td className="px-2 py-2.5">
         <AtsBadge spread={mySpread} covered={myCovered} />
       </td>
 
       {/* O/U */}
-      <td className="px-2 py-2">
+      <td className="px-2 py-2.5">
         <OuBadge total={game.dkTotal} result={game.totalResult} />
       </td>
     </tr>
@@ -390,11 +393,11 @@ function TableSkeleton() {
     <div className="px-3 py-2 space-y-2" aria-hidden="true">
       {Array.from({ length: 5 }).map((_, i) => (
         <div key={i} className="flex items-center gap-3">
-          <div className="h-3 w-8 rounded bg-[var(--surface-raised)] animate-pulse" />
-          <div className="h-5 w-5 rounded-full bg-[var(--surface-raised)] animate-pulse" />
-          <div className="h-3 flex-1 rounded bg-[var(--surface-raised)] animate-pulse" />
-          <div className="h-5 w-12 rounded bg-[var(--surface-raised)] animate-pulse" />
-          <div className="h-5 w-12 rounded bg-[var(--surface-raised)] animate-pulse" />
+          <div className="h-4 w-10 rounded bg-[var(--surface-raised)] animate-pulse" />
+          <div className="h-6 w-6 rounded-full bg-[var(--surface-raised)] animate-pulse" />
+          <div className="h-4 flex-1 rounded bg-[var(--surface-raised)] animate-pulse" />
+          <div className="h-6 w-14 rounded bg-[var(--surface-raised)] animate-pulse" />
+          <div className="h-6 w-14 rounded bg-[var(--surface-raised)] animate-pulse" />
         </div>
       ))}
     </div>
@@ -415,8 +418,8 @@ function TeamScheduleTable({
   if (games.length === 0) {
     return (
       <div className="px-4 py-6 text-center">
-        <p className="text-[11px] font-semibold text-foreground">No completed games found.</p>
-        <p className="text-[10px] text-[var(--text-muted)] mt-1">
+        <p className="text-[13px] font-semibold text-foreground">No completed games found.</p>
+        <p className="text-[12px] text-[var(--text-muted)] mt-1">
           Data populates automatically each day via the DK NJ schedule refresh.
         </p>
       </div>
@@ -425,7 +428,7 @@ function TeamScheduleTable({
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[360px]">
+      <table className="w-full min-w-[420px]">
         <thead>
           <tr className="border-b border-border">
             <Th first>Game</Th>
@@ -499,12 +502,12 @@ function H2HRow({
       )}
     >
       {/* Date */}
-      <td className="px-3 py-2 text-[11px] font-mono tabular-nums text-[var(--text-secondary)] whitespace-nowrap">
+      <td className="px-3 py-2.5 text-[13px] font-mono tabular-nums text-[var(--text-secondary)] whitespace-nowrap">
         {fmtDate(game.gameDate)}
       </td>
 
       {/* Matchup: AWAY @ HOME with logos and W/L badges */}
-      <td className="px-2 py-2">
+      <td className="px-2 py-2.5">
         <div className="flex items-center gap-1.5 flex-wrap">
           {/* Away team */}
           <div className="flex items-center gap-1">
@@ -518,15 +521,15 @@ function H2HRow({
                 src={awayLogo}
                 alt=""
                 loading="lazy"
-                className="w-4 h-4 object-contain flex-shrink-0"
+                className="w-5 h-5 object-contain flex-shrink-0"
                 onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
               />
             ) : null}
-            <span className="text-[10px] font-mono font-semibold text-foreground">{game.awayAbbr}</span>
+            <span className="text-[12px] font-mono font-semibold text-foreground">{game.awayAbbr}</span>
           </div>
 
           {/* @ separator */}
-          <span className="text-[10px] font-mono text-[var(--text-muted)]">@</span>
+          <span className="text-[12px] font-mono text-[var(--text-muted)]">@</span>
 
           {/* Home team */}
           <div className="flex items-center gap-1">
@@ -535,11 +538,11 @@ function H2HRow({
                 src={homeLogo}
                 alt=""
                 loading="lazy"
-                className="w-4 h-4 object-contain flex-shrink-0"
+                className="w-5 h-5 object-contain flex-shrink-0"
                 onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
               />
             ) : null}
-            <span className="text-[10px] font-mono font-semibold text-foreground">{game.homeAbbr}</span>
+            <span className="text-[12px] font-mono font-semibold text-foreground">{game.homeAbbr}</span>
             <ResultBadge
               label={awayWon === false ? "W" : awayWon === true ? "L" : "—"}
               variant={homeVariant}
@@ -550,19 +553,19 @@ function H2HRow({
       </td>
 
       {/* Score */}
-      <td className="px-2 py-2">
-        <span className="text-[11px] font-mono font-bold tabular-nums text-foreground">
+      <td className="px-2 py-2.5">
+        <span className="text-[13px] font-mono font-bold tabular-nums text-foreground">
           {scoreStr}
         </span>
       </td>
 
       {/* ATS — from actual away team's perspective */}
-      <td className="px-2 py-2">
+      <td className="px-2 py-2.5">
         <AtsBadge spread={awaySpread} covered={awayCovered} />
       </td>
 
       {/* O/U */}
-      <td className="px-2 py-2">
+      <td className="px-2 py-2.5">
         <OuBadge total={game.dkTotal} result={game.totalResult} />
       </td>
     </tr>
@@ -593,7 +596,7 @@ function H2HSection({
   if (error) {
     return (
       <div className="px-4 py-4 text-center">
-        <p className="text-[10px] text-[var(--text-muted)]">Failed to load H2H history.</p>
+        <p className="text-[12px] text-[var(--text-muted)]">Failed to load H2H history.</p>
       </div>
     );
   }
@@ -601,10 +604,10 @@ function H2HSection({
   if (games.length === 0) {
     return (
       <div className="px-4 py-6 text-center">
-        <p className="text-[11px] font-semibold text-foreground">
+        <p className="text-[13px] font-semibold text-foreground">
           No head-to-head history found.
         </p>
-        <p className="text-[10px] text-[var(--text-muted)] mt-1">
+        <p className="text-[12px] text-[var(--text-muted)] mt-1">
           H2H data populates automatically as the season progresses.
         </p>
       </div>
@@ -624,16 +627,16 @@ function H2HSection({
   return (
     <div>
       {/* H2H summary header — mint W counts are signal */}
-      <div className="flex items-center justify-center gap-3 px-3 py-1.5 border-b border-border">
-        <span className="text-[10px] font-mono font-bold tabular-nums text-[#45E0A8]">{awayTeamWins}W</span>
-        <span className="text-[9px] font-mono uppercase tracking-[0.08em] text-[var(--text-muted)]">
+      <div className="flex items-center justify-center gap-3 px-3 py-2 border-b border-border">
+        <span className="text-[13px] font-mono font-bold tabular-nums text-[#45E0A8]">{awayTeamWins}W</span>
+        <span className="text-[11px] font-mono uppercase tracking-[0.08em] text-[var(--text-muted)]">
           Last {games.length}
         </span>
-        <span className="text-[10px] font-mono font-bold tabular-nums text-[#45E0A8]">{homeTeamWins}W</span>
+        <span className="text-[13px] font-mono font-bold tabular-nums text-[#45E0A8]">{homeTeamWins}W</span>
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[380px]">
+        <table className="w-full min-w-[440px]">
           <thead>
             <tr className="border-b border-border">
               <Th first>Date</Th>
@@ -671,6 +674,7 @@ export default function RecentSchedulePanel({
   collapsible = true,
   enabled = true,
   variant = "standalone",
+  hideHeader = false,
 }: RecentSchedulePanelProps) {
   const [, navigate] = useLocation();
   const [tab, setTab] = useState<TabView>("away");
@@ -745,7 +749,7 @@ export default function RecentSchedulePanel({
   };
 
   const tabBase = cn(
-    "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold",
+    "flex items-center gap-1.5 px-3 py-2 rounded-full text-[12px] font-bold",
     "flex-1 justify-center min-w-0 cursor-pointer",
     "transition-[background-color,color,transform] duration-[160ms] ease-[cubic-bezier(0.16,1,0.3,1)]",
     "active:scale-[0.97] motion-reduce:transform-none"
@@ -767,7 +771,7 @@ export default function RecentSchedulePanel({
       }
     >
       {/* ── Collapsible Header ─────────────────────────────────────────────── */}
-      {collapsible ? (
+      {hideHeader ? null : collapsible ? (
         <button type="button" onClick={() => setIsExpanded((v) => !v)}
           aria-expanded={isExpanded}
           className={cn(
@@ -776,7 +780,7 @@ export default function RecentSchedulePanel({
             "hover:bg-[var(--row-hover)]"
           )}
         >
-          <span className="text-[10px] font-bold font-mono tracking-widest uppercase text-[var(--text-secondary)]">
+          <span className="text-[12px] font-bold font-mono tracking-widest uppercase text-[var(--text-secondary)]">
             Last 5 Games
           </span>
           <div className="flex items-center gap-2">
@@ -791,7 +795,7 @@ export default function RecentSchedulePanel({
         </button>
       ) : (
         <div className="w-full box-border flex items-center justify-between px-3 py-2">
-          <span className="text-[10px] font-bold font-mono tracking-widest uppercase text-[var(--text-secondary)]">
+          <span className="text-[12px] font-bold font-mono tracking-widest uppercase text-[var(--text-secondary)]">
             Last 5 Games
           </span>
           <div className="flex items-center gap-2">
@@ -804,7 +808,7 @@ export default function RecentSchedulePanel({
 
       {/* ── Collapsible Body ───────────────────────────────────────────────── */}
       {isExpanded && (
-        <div className="border-t border-border flex-1 flex flex-col">
+        <div className={cn("flex-1 flex flex-col", !hideHeader && "border-t border-border")}>
           {/* ── Team Tab Selector ─────────────────────────────────────────── */}
           <div
             role="tablist"
@@ -821,7 +825,7 @@ export default function RecentSchedulePanel({
                   src={awayLogo}
                   alt=""
                   loading="lazy"
-                  className="w-4 h-4 object-contain flex-shrink-0"
+                  className="w-5 h-5 object-contain flex-shrink-0"
                   onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
                 />
               )}
@@ -846,7 +850,7 @@ export default function RecentSchedulePanel({
                   src={homeLogo}
                   alt=""
                   loading="lazy"
-                  className="w-4 h-4 object-contain flex-shrink-0"
+                  className="w-5 h-5 object-contain flex-shrink-0"
                   onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
                 />
               )}
@@ -860,11 +864,11 @@ export default function RecentSchedulePanel({
           {/* ── Error ─────────────────────────────────────────────────────── */}
           {error && !isLoading && (
             <div className="px-4 py-4 text-center">
-              <p className="text-[11px] font-semibold text-foreground">Couldn't load schedule</p>
-              <p className="text-[10px] text-[var(--text-muted)] mt-1">{error.message}</p>
+              <p className="text-[13px] font-semibold text-foreground">Couldn't load schedule</p>
+              <p className="text-[12px] text-[var(--text-muted)] mt-1">{error.message}</p>
               <button type="button" onClick={() => activeQuery.refetch()}
                 className={cn(
-                  "mt-2 px-3 py-1 rounded-full border border-border text-[10px] font-semibold",
+                  "mt-2 px-3 py-1.5 rounded-full border border-border text-[12px] font-semibold",
                   "text-[var(--text-secondary)] cursor-pointer",
                   "transition-colors duration-[160ms] ease-[cubic-bezier(0.16,1,0.3,1)]",
                   "hover:text-foreground hover:bg-[var(--row-hover)]"
@@ -902,26 +906,26 @@ export default function RecentSchedulePanel({
             <div className="mt-auto flex items-center justify-between gap-2 px-3 py-2 border-t border-border">
               <button type="button" onClick={handleAwayLogoClick}
                 className={cn(
-                  "flex items-center gap-1.5 min-w-0 text-[10px] font-medium cursor-pointer",
+                  "flex items-center gap-1.5 min-w-0 text-[12px] font-medium cursor-pointer",
                   "text-[var(--text-muted)] transition-colors duration-[160ms] ease-[cubic-bezier(0.16,1,0.3,1)]",
                   "hover:text-foreground"
                 )}
               >
                 {awayLogo && (
-                  <img src={awayLogo} alt="" loading="lazy" className="w-4 h-4 object-contain flex-shrink-0" />
+                  <img src={awayLogo} alt="" loading="lazy" className="w-5 h-5 object-contain flex-shrink-0" />
                 )}
                 <span className="truncate">{awayAbbr} full schedule →</span>
               </button>
               <button type="button" onClick={handleHomeLogoClick}
                 className={cn(
-                  "flex items-center gap-1.5 min-w-0 text-[10px] font-medium cursor-pointer",
+                  "flex items-center gap-1.5 min-w-0 text-[12px] font-medium cursor-pointer",
                   "text-[var(--text-muted)] transition-colors duration-[160ms] ease-[cubic-bezier(0.16,1,0.3,1)]",
                   "hover:text-foreground"
                 )}
               >
                 <span className="truncate">{homeAbbr} full schedule →</span>
                 {homeLogo && (
-                  <img src={homeLogo} alt="" loading="lazy" className="w-4 h-4 object-contain flex-shrink-0" />
+                  <img src={homeLogo} alt="" loading="lazy" className="w-5 h-5 object-contain flex-shrink-0" />
                 )}
               </button>
             </div>
