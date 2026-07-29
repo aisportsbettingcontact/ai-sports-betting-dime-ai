@@ -14,6 +14,10 @@ import { useIsMdUp } from "@/hooks/useIsMdUp";
 import { trpc } from "@/lib/trpc";
 import { getGameTeamColorsClient } from "@shared/teamColors";
 import { OddsHistoryPanel } from "./OddsHistoryPanel";
+// The panel's .bsp-* styles ride whichever chunk renders it (NOT the chat
+// critical path) — importing here covers every direct consumer, including
+// PublishProjections, regardless of navigation order.
+import "@/styles/splits-interactions.css";
 
 type MobileMarket = "spread" | "total" | "ml";
 

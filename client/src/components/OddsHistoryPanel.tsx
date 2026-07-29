@@ -49,6 +49,10 @@ import { useId, useState } from "react";
 import { ChevronDown, Clock, RefreshCw } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useIsMdUp } from "@/hooks/useIsMdUp";
+// The panel's .ohp-* styles ride whichever chunk renders it (NOT the chat
+// critical path) — importing here covers every direct consumer, including
+// PublishProjections, regardless of navigation order.
+import "@/styles/splits-interactions.css";
 
 export type ActiveMarket = "spread" | "total" | "ml";
 
