@@ -1268,3 +1268,21 @@ The Trace schema itself merged without conflict. Trace v1 was regenerated from
 the current `0120` snapshot as migration `0121`, its duplicate-sequence
 constraint remains first, and the old non-unique index remains the final drop.
 No migration was applied and no external database state changed.
+
+## Incident 54 — 2026-07-28 — Trace v1 exceeded the chat bundle gate
+
+Status: RESOLVED
+
+The first pull-request CI run passed security, TypeScript, database, Vitest,
+Gitleaks, and Dime LLM validation, but the production chat critical path was
+219,216 gzip bytes—774 bytes above its 218,442-byte ceiling.
+
+The Trace browser utility is now a real on-demand chunk instead of a static
+chat dependency. Initial and retry correlation remain guarded against duplicate
+submission and stale async completion, secure UUID generation fails closed,
+and server-owned persistence/retry identity behavior is unchanged. The budget
+was not raised.
+
+The corrected production build measures 218,373 gzip bytes, 69 bytes below the
+existing ceiling. TypeScript, the full production client/server build, preview
+verification, 255 focused chat/Trace tests, and `git diff --check` all pass.

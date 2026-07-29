@@ -8,7 +8,6 @@ const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 let volatileSessionId: string | null = null;
-let fallbackCounter = 0;
 
 export interface DimeChatTraceRequest {
   version: typeof DIME_CHAT_TRACE_VERSION;
@@ -32,19 +31,16 @@ export interface DimeChatServerTrace {
   assistantMessageId?: number;
 }
 
-function formatUuid(bytes: Uint8Array): string {
-  bytes[6] = (bytes[6] & 0x0f) | 0x40;
-  bytes[8] = (bytes[8] & 0x3f) | 0x80;
-  const hex = Array.from(bytes, value =>
-    value.toString(16).padStart(2, "0")
-  ).join("");
-  return [
-    hex.slice(0, 8),
-    hex.slice(8, 12),
-    hex.slice(12, 16),
-    hex.slice(16, 20),
-    hex.slice(20),
-  ].join("-");
+export interface DimeChatClientTraceState {
+  assistantId: string;
+  request: DimeChatTraceRequest;
+  serverOwned: boolean;
+  serverTrace: DimeChatServerTrace | null;
+}
+
+interface PreviousClientTrace {
+  request: DimeChatTraceRequest;
+  serverTrace: DimeChatServerTrace | null;
 }
 
 /** UUIDs are identity-free and used only for replay/idempotency correlation. */
@@ -53,24 +49,17 @@ export function createDimeTraceId(
     | Pick<Crypto, "randomUUID" | "getRandomValues">
     | undefined = globalThis.crypto
 ): string {
-  if (typeof cryptoApi?.randomUUID === "function") {
-    return cryptoApi.randomUUID();
+  if (cryptoApi?.randomUUID) return cryptoApi.randomUUID();
+  if (!cryptoApi?.getRandomValues) {
+    throw new Error("Secure UUID generation is unavailable.");
   }
-  if (typeof cryptoApi?.getRandomValues === "function") {
-    return formatUuid(cryptoApi.getRandomValues(new Uint8Array(16)));
-  }
-
-  // Last-resort compatibility path for unusually restricted browsers. This
-  // carries no user identity and combines time, a monotonic counter, and
-  // process-local entropy before applying the UUID v4 shape.
-  fallbackCounter += 1;
-  const seed = `${Date.now()}-${fallbackCounter}-${Math.random()}`;
-  const bytes = new Uint8Array(16);
-  for (let index = 0; index < seed.length; index += 1) {
-    bytes[index % 16] =
-      (bytes[index % 16] * 31 + seed.charCodeAt(index)) & 0xff;
-  }
-  return formatUuid(bytes);
+  const bytes = cryptoApi.getRandomValues(new Uint8Array(16));
+  bytes[6] = (bytes[6] & 15) | 64;
+  bytes[8] = (bytes[8] & 63) | 128;
+  const hex = Array.from(bytes)
+    .map(byte => byte.toString(16).padStart(2, "0"))
+    .join("");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 
 export function isDimeTraceId(value: unknown): value is string {
@@ -132,6 +121,71 @@ export function createDimeChatTraceRequest(input: {
   };
 }
 
+export function createInitialDimeChatTrace(input: {
+  threadId: number | null;
+  clientSessionId: string | null;
+}) {
+  const clientSessionId =
+    input.clientSessionId ?? getOrCreateDimeChatSessionId();
+  const userId = createDimeTraceId();
+  const assistantId = createDimeTraceId();
+  const request = createDimeChatTraceRequest({
+    threadId: input.threadId,
+    clientSessionId,
+    clientUserMessageId: userId,
+    clientAssistantMessageId: assistantId,
+  });
+  return {
+    userId,
+    clientSessionId,
+    state: { assistantId, request, serverOwned: false, serverTrace: null },
+  };
+}
+
+export function createRetryDimeChatTrace(input: {
+  threadId: number | null;
+  clientSessionId: string | null;
+  clientUserMessageId: string;
+  activeTrace: PreviousClientTrace | null;
+  settledTrace: PreviousClientTrace | null;
+}) {
+  const clientSessionId =
+    input.clientSessionId ?? getOrCreateDimeChatSessionId();
+  const assistantId = createDimeTraceId();
+  const previous =
+    input.activeTrace?.request.clientUserMessageId === input.clientUserMessageId
+      ? input.activeTrace
+      : input.settledTrace?.request.clientUserMessageId ===
+          input.clientUserMessageId
+        ? input.settledTrace
+        : null;
+  const request = previous?.serverTrace
+    ? createDimeChatTraceRequest({
+        threadId: previous.serverTrace.threadId,
+        clientSessionId,
+        clientTurnId: previous.request.clientTurnId,
+        clientUserMessageId: previous.request.clientUserMessageId,
+        clientAssistantMessageId: assistantId,
+        retryOfGenerationId: previous.serverTrace.generationId,
+      })
+    : previous
+      ? createDimeChatTraceRequest({
+          ...previous.request,
+          clientAssistantMessageId: previous.request.clientAssistantMessageId,
+          idempotencyKey: previous.request.idempotencyKey,
+        })
+      : createDimeChatTraceRequest({
+          threadId: input.threadId,
+          clientSessionId,
+          clientUserMessageId: input.clientUserMessageId,
+          clientAssistantMessageId: assistantId,
+        });
+  return {
+    clientSessionId,
+    state: { assistantId, request, serverOwned: false, serverTrace: null },
+  };
+}
+
 function positiveInteger(value: unknown): value is number {
   return Number.isInteger(value) && Number(value) > 0;
 }
@@ -167,4 +221,46 @@ export function parseDimeChatServerTrace(
       ? { assistantMessageId: trace.assistantMessageId }
       : {}),
   };
+}
+
+function isActiveTrace(
+  active: DimeChatClientTraceState | null,
+  assistantId: string,
+  idempotencyKey: string
+): active is DimeChatClientTraceState {
+  return (
+    active?.assistantId === assistantId &&
+    active.request.idempotencyKey === idempotencyKey
+  );
+}
+
+export function bindDimeChatServerTrace(
+  value: unknown,
+  active: DimeChatClientTraceState | null,
+  assistantId: string,
+  idempotencyKey: string
+): DimeChatServerTrace | null {
+  const serverTrace = parseDimeChatServerTrace(value);
+  if (!serverTrace || !isActiveTrace(active, assistantId, idempotencyKey)) {
+    return null;
+  }
+  active.serverOwned = true;
+  active.serverTrace = serverTrace;
+  return serverTrace;
+}
+
+export function claimDimeChatTraceResponse(
+  header: string | null,
+  active: DimeChatClientTraceState | null,
+  assistantId: string,
+  idempotencyKey: string
+): boolean {
+  if (
+    !isDimeChatTraceResponse(header) ||
+    !isActiveTrace(active, assistantId, idempotencyKey)
+  ) {
+    return false;
+  }
+  active.serverOwned = true;
+  return true;
 }

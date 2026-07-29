@@ -44,15 +44,9 @@ import {
   rubberBand,
 } from "./drawerMotion";
 import { createRafDeltaBatcher, type RafDeltaBatcher } from "./streamBatcher";
-import {
-  DIME_CHAT_TRACE_HEADER,
-  createDimeChatTraceRequest,
-  createDimeTraceId,
-  getOrCreateDimeChatSessionId,
-  isDimeChatTraceResponse,
-  parseDimeChatServerTrace,
-  type DimeChatServerTrace,
-  type DimeChatTraceRequest,
+import type {
+  DimeChatClientTraceState,
+  DimeChatTraceRequest,
 } from "./chatTrace";
 import {
   REDUCED_MOTION_QUERY,
@@ -175,14 +169,9 @@ const ERROR_COPY =
 const DISCLAIMER =
   "Model estimates, not guarantees. 21+ · Gambling problem? 1-800-GAMBLER."; // spec §4
 
-const uid = createDimeTraceId;
+type DimeChatTraceTools = typeof import("./chatTrace");
 
-interface ActiveClientTrace {
-  assistantId: string;
-  request: DimeChatTraceRequest;
-  serverOwned: boolean;
-  serverTrace: DimeChatServerTrace | null;
-}
+const loadDimeChatTrace = () => import("./chatTrace");
 
 const prefersReducedMotion = () =>
   typeof window !== "undefined" &&
@@ -1327,11 +1316,9 @@ export default function DimeChatPage({
   const pendingUserTextRef = useRef<string | null>(null);
   const prevStreamingRef = useRef(false);
   const clientSessionIdRef = useRef<string | null>(null);
-  if (clientSessionIdRef.current === null) {
-    clientSessionIdRef.current = getOrCreateDimeChatSessionId();
-  }
-  const activeClientTraceRef = useRef<ActiveClientTrace | null>(null);
-  const lastServerTraceRef = useRef<ActiveClientTrace | null>(null);
+  const traceStartingRef = useRef<Promise<DimeChatTraceTools> | null>(null);
+  const activeClientTraceRef = useRef<DimeChatClientTraceState | null>(null);
+  const lastServerTraceRef = useRef<DimeChatClientTraceState | null>(null);
   const createThreadMut = trpc.dimeChats.create.useMutation();
   const appendMut = trpc.dimeChats.appendMessages.useMutation();
   const setStarredMut = trpc.dimeChats.setStarred.useMutation();
@@ -1766,18 +1753,42 @@ export default function DimeChatPage({
     [settleDrawer]
   );
 
+  const startDimeChatTrace = useCallback(
+    (
+      start: (
+        traceTools: DimeChatTraceTools,
+        traceLoad: Promise<DimeChatTraceTools>
+      ) => void
+    ) => {
+      const traceLoad = loadDimeChatTrace();
+      traceStartingRef.current = traceLoad;
+      void traceLoad
+        .then(traceTools => {
+          if (traceStartingRef.current === traceLoad) {
+            start(traceTools, traceLoad);
+          }
+        })
+        .catch(() => {
+          if (traceStartingRef.current === traceLoad) {
+            traceStartingRef.current = null;
+          }
+        });
+    },
+    []
+  );
+
   /* --- SSE streaming core (preserved from the previous DimeChat.tsx) --- */
   const runStream = useCallback(
     async (
       history: Array<{ role: "user" | "assistant"; content: string }>,
       assistantId: string,
-      traceRequest: DimeChatTraceRequest
+      traceRequest: DimeChatTraceRequest,
+      traceTools: DimeChatTraceTools,
+      traceLoad: Promise<DimeChatTraceTools>
     ) => {
       const controller = new AbortController();
       abortRef.current = controller;
 
-      const streamStart = Date.now();
-      let frameCount = 0;
       let settled = false;
       const batcher = createRafDeltaBatcher(text => {
         dispatch({ type: "stream_delta", id: assistantId, text });
@@ -1787,17 +1798,14 @@ export default function DimeChatPage({
       dimeDebug("stream.open", { historyLength: history.length });
 
       const bindServerTrace = (value: unknown) => {
-        const serverTrace = parseDimeChatServerTrace(value);
         const active = activeClientTraceRef.current;
-        if (
-          !serverTrace ||
-          active?.assistantId !== assistantId ||
-          active.request.idempotencyKey !== traceRequest.idempotencyKey
-        ) {
-          return null;
-        }
-        active.serverOwned = true;
-        active.serverTrace = serverTrace;
+        const serverTrace = traceTools.bindDimeChatServerTrace(
+          value,
+          active,
+          assistantId,
+          traceRequest.idempotencyKey
+        );
+        if (!serverTrace || !active) return null;
         lastServerTraceRef.current = active;
         setThreadId(serverTrace.threadId);
         return serverTrace;
@@ -1815,31 +1823,22 @@ export default function DimeChatPage({
         });
 
         const active = activeClientTraceRef.current;
-        if (
-          isDimeChatTraceResponse(res.headers.get(DIME_CHAT_TRACE_HEADER)) &&
-          active?.assistantId === assistantId &&
-          active.request.idempotencyKey === traceRequest.idempotencyKey
-        ) {
-          // The server has already persisted this turn. Even if a later frame
-          // is malformed or the connection breaks, never run the legacy
-          // browser writer and duplicate the canonical Railway record.
-          active.serverOwned = true;
-        }
+        traceTools.claimDimeChatTraceResponse(
+          res.headers.get("X-Dime-Trace-Version"),
+          active,
+          assistantId,
+          traceRequest.idempotencyKey
+        );
 
         if (!res.ok) {
           const payload = (await res.json().catch(() => null)) as {
-            error?: unknown;
             trace?: unknown;
           } | null;
           bindServerTrace(payload?.trace);
-          throw new Error(
-            typeof payload?.error === "string"
-              ? payload.error
-              : `Request failed (${res.status})`
-          );
+          throw new Error();
         }
         if (!res.body) {
-          throw new Error("The Dime response stream was unavailable.");
+          throw new Error();
         }
 
         chatStartRef.current = Date.now();
@@ -1861,7 +1860,6 @@ export default function DimeChatPage({
             if (!line) continue;
             try {
               const event = JSON.parse(line.slice(6));
-              frameCount++;
               if (event.type === "delta" && typeof event.text === "string") {
                 batcher.push(event.text);
               } else if (event.type === "meta") {
@@ -1923,13 +1921,7 @@ export default function DimeChatPage({
           );
         }
 
-        const latency = Date.now() - streamStart;
-        const fps = frameCount / (latency / 1000);
-        dimeDebug("stream.done", {
-          frameCount,
-          latencyMs: latency,
-          fps: fps.toFixed(1),
-        });
+        dimeDebug("stream.done");
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") {
           batcher.flushBeforeTerminal(() =>
@@ -1950,6 +1942,9 @@ export default function DimeChatPage({
         if (activeBatcherRef.current === batcher)
           activeBatcherRef.current = null;
         abortRef.current = null;
+        if (traceStartingRef.current === traceLoad) {
+          traceStartingRef.current = null;
+        }
       }
     },
     []
@@ -1971,76 +1966,72 @@ export default function DimeChatPage({
       // path may start a stream either (server 403s regardless).
       if (chatAccess !== "granted") return;
       const trimmed = text.trim();
-      if (!trimmed || state.streaming) return;
+      if (!trimmed || state.streaming || traceStartingRef.current) return;
+      startDimeChatTrace((traceTools, traceLoad) => {
+        // D3 analytics (inert until an island registers the emitter).
+        emitAction("chat_message_sent", {
+          props: {
+            len_bucket:
+              trimmed.length < 120
+                ? "short"
+                : trimmed.length < 600
+                  ? "medium"
+                  : "long",
+          },
+        });
 
-      // D3 analytics (inert until an island registers the emitter; fire-and-forget).
-      emitAction("chat_message_sent", {
-        props: {
-          len_bucket:
-            trimmed.length < 120
-              ? "short"
-              : trimmed.length < 600
-                ? "medium"
-                : "long",
-        },
-      });
-
-      // Remember the outbound text so the settle effect can persist the full
-      // user→assistant turn to the dimeChats history once the stream ends.
-      pendingUserTextRef.current = trimmed;
-
-      const wasHome = state.messages.length === 0;
-      if (wasHome) captureComposerPresentation();
-      if (wasHome && !reduceMotion) {
-        // FLIP first-position capture + ghost rects (spec §3.2)
-        const hero = heroRef.current?.getBoundingClientRect();
-        const pills = pillsRef.current?.getBoundingClientRect();
-        if (hero && pills) {
-          setGhost({
-            hero: {
-              left: hero.left,
-              top: hero.top,
-              width: hero.width,
-              height: hero.height,
-            },
-            pills: {
-              left: pills.left,
-              top: pills.top,
-              width: pills.width,
-              height: pills.height,
-            },
-            fading: false,
-          });
+        pendingUserTextRef.current = trimmed;
+        const wasHome = state.messages.length === 0;
+        if (wasHome) captureComposerPresentation();
+        if (wasHome && !reduceMotion) {
+          const hero = heroRef.current?.getBoundingClientRect();
+          const pills = pillsRef.current?.getBoundingClientRect();
+          if (hero && pills) {
+            setGhost({
+              hero: {
+                left: hero.left,
+                top: hero.top,
+                width: hero.width,
+                height: hero.height,
+              },
+              pills: {
+                left: pills.left,
+                top: pills.top,
+                width: pills.width,
+                height: pills.height,
+              },
+              fading: false,
+            });
+          }
+          setFirstSendFx(true);
         }
-        setFirstSendFx(true);
-      }
 
-      setInput("");
-      stuckRef.current = true;
-      setStuck(true);
+        setInput("");
+        stuckRef.current = true;
+        setStuck(true);
 
-      const userId = uid();
-      const assistantId = uid();
-      const traceRequest = createDimeChatTraceRequest({
-        threadId,
-        clientSessionId:
-          clientSessionIdRef.current ?? getOrCreateDimeChatSessionId(),
-        clientUserMessageId: userId,
-        clientAssistantMessageId: assistantId,
+        const trace = traceTools.createInitialDimeChatTrace({
+          threadId,
+          clientSessionId: clientSessionIdRef.current,
+        });
+        const { userId, state: activeTrace } = trace;
+        const { assistantId, request: traceRequest } = activeTrace;
+        clientSessionIdRef.current = trace.clientSessionId;
+        activeClientTraceRef.current = activeTrace;
+        const history = [
+          ...state.messages.map(({ role, content }) => ({ role, content })),
+          { role: "user" as const, content: trimmed },
+        ];
+        dispatch({ type: "append_user", id: userId, text: trimmed });
+        dispatch({ type: "open_assistant", id: assistantId });
+        void runStream(
+          history,
+          assistantId,
+          traceRequest,
+          traceTools,
+          traceLoad
+        );
       });
-      activeClientTraceRef.current = {
-        assistantId,
-        request: traceRequest,
-        serverOwned: false,
-        serverTrace: null,
-      };
-      const history = [
-        ...state.messages.map(({ role, content }) => ({ role, content })),
-        { role: "user" as const, content: trimmed },
-      ];
-      dispatch({ type: "append_user", id: userId, text: trimmed });
-      dispatch({ type: "open_assistant", id: assistantId });
-      void runStream(history, assistantId, traceRequest);
     },
     [
       chatAccess,
@@ -2050,65 +2041,49 @@ export default function DimeChatPage({
       runStream,
       reduceMotion,
       captureComposerPresentation,
+      startDimeChatTrace,
     ]
   );
 
   /** Retry re-runs the same history (failed empty row was already removed — spec §2.6). */
   const retry = useCallback(() => {
     if (chatAccess !== "granted") return;
-    if (state.streaming || state.messages.length === 0) return;
+    if (
+      state.streaming ||
+      state.messages.length === 0 ||
+      traceStartingRef.current
+    )
+      return;
     const last = state.messages[state.messages.length - 1];
     if (last.role !== "user") return;
-    const assistantId = uid();
-    const activeFailed =
-      activeClientTraceRef.current?.request.clientUserMessageId === last.id
-        ? activeClientTraceRef.current
-        : null;
-    const settledFailed =
-      lastServerTraceRef.current?.request.clientUserMessageId === last.id
-        ? lastServerTraceRef.current
-        : null;
-    const previousTrace = activeFailed ?? settledFailed;
-    const traceRequest = previousTrace?.serverTrace
-      ? createDimeChatTraceRequest({
-          threadId: previousTrace.serverTrace.threadId,
-          clientSessionId:
-            clientSessionIdRef.current ?? getOrCreateDimeChatSessionId(),
-          clientTurnId: previousTrace.request.clientTurnId,
-          clientUserMessageId: previousTrace.request.clientUserMessageId,
-          clientAssistantMessageId: assistantId,
-          retryOfGenerationId: previousTrace.serverTrace.generationId,
-        })
-      : previousTrace
-        ? createDimeChatTraceRequest({
-            ...previousTrace.request,
-            // Reconcile an unknown network outcome with the exact same
-            // idempotency request. The UI row may have a fresh local id, but
-            // the server correlation stays byte-for-byte stable.
-            clientAssistantMessageId:
-              previousTrace.request.clientAssistantMessageId,
-            idempotencyKey: previousTrace.request.idempotencyKey,
-          })
-        : createDimeChatTraceRequest({
-            threadId,
-            clientSessionId:
-              clientSessionIdRef.current ?? getOrCreateDimeChatSessionId(),
-            clientUserMessageId: last.id,
-            clientAssistantMessageId: assistantId,
-          });
-    activeClientTraceRef.current = {
-      assistantId,
-      request: traceRequest,
-      serverOwned: false,
-      serverTrace: null,
-    };
-    dispatch({ type: "open_assistant", id: assistantId });
-    void runStream(
-      state.messages.map(({ role, content }) => ({ role, content })),
-      assistantId,
-      traceRequest
-    );
-  }, [chatAccess, state.streaming, state.messages, threadId, runStream]);
+    startDimeChatTrace((traceTools, traceLoad) => {
+      const trace = traceTools.createRetryDimeChatTrace({
+        threadId,
+        clientSessionId: clientSessionIdRef.current,
+        clientUserMessageId: last.id,
+        activeTrace: activeClientTraceRef.current,
+        settledTrace: lastServerTraceRef.current,
+      });
+      const { assistantId, request: traceRequest } = trace.state;
+      clientSessionIdRef.current = trace.clientSessionId;
+      activeClientTraceRef.current = trace.state;
+      dispatch({ type: "open_assistant", id: assistantId });
+      void runStream(
+        state.messages.map(({ role, content }) => ({ role, content })),
+        assistantId,
+        traceRequest,
+        traceTools,
+        traceLoad
+      );
+    });
+  }, [
+    chatAccess,
+    state.streaming,
+    state.messages,
+    threadId,
+    runStream,
+    startDimeChatTrace,
+  ]);
 
   const stop = () => abortRef.current?.abort();
 
@@ -2122,6 +2097,7 @@ export default function DimeChatPage({
     setThreadId(null);
     setThreadMenuOpen(false);
     pendingUserTextRef.current = null;
+    traceStartingRef.current = null;
     activeClientTraceRef.current = null;
     lastServerTraceRef.current = null;
     setInput("");

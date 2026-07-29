@@ -2,7 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   DIME_CHAT_TRACE_HEADER,
   DIME_CHAT_TRACE_SESSION_KEY,
+  bindDimeChatServerTrace,
+  claimDimeChatTraceResponse,
   createDimeChatTraceRequest,
+  createInitialDimeChatTrace,
+  createRetryDimeChatTrace,
   createDimeTraceId,
   getOrCreateDimeChatSessionId,
   isDimeChatTraceResponse,
@@ -113,5 +117,68 @@ describe("Dime Conversation Trace v1 server metadata", () => {
     },
   ])("rejects malformed metadata without partial state (%j)", value => {
     expect(parseDimeChatServerTrace(value)).toBeNull();
+  });
+
+  it("claims only matching server-owned responses", () => {
+    const initial = createInitialDimeChatTrace({
+      threadId: null,
+      clientSessionId: ids.chatSessionId,
+    });
+    expect(
+      claimDimeChatTraceResponse(
+        "1",
+        initial.state,
+        initial.state.assistantId,
+        initial.state.request.idempotencyKey
+      )
+    ).toBe(true);
+    expect(initial.state.serverOwned).toBe(true);
+
+    const metadata = {
+      version: 1,
+      ...ids,
+      threadId: 42,
+      userMessageId: 101,
+    };
+    expect(
+      bindDimeChatServerTrace(
+        metadata,
+        initial.state,
+        initial.state.assistantId,
+        initial.state.request.idempotencyKey
+      )
+    ).toEqual(metadata);
+    expect(initial.state.serverTrace).toEqual(metadata);
+  });
+
+  it("preserves the turn identity while creating a distinct retry generation", () => {
+    const initial = createInitialDimeChatTrace({
+      threadId: 42,
+      clientSessionId: ids.chatSessionId,
+    });
+    initial.state.serverTrace = {
+      version: 1,
+      ...ids,
+      threadId: 42,
+      userMessageId: 101,
+    };
+    const retry = createRetryDimeChatTrace({
+      threadId: 42,
+      clientSessionId: ids.chatSessionId,
+      clientUserMessageId: initial.userId,
+      activeTrace: initial.state,
+      settledTrace: null,
+    });
+
+    expect(retry.state.request.clientTurnId).toBe(
+      initial.state.request.clientTurnId
+    );
+    expect(retry.state.request.clientUserMessageId).toBe(initial.userId);
+    expect(retry.state.assistantId).not.toBe(initial.state.assistantId);
+    expect(retry.state.request.idempotencyKey).not.toBe(
+      initial.state.request.idempotencyKey
+    );
+    expect(retry.state.request.retryOfGenerationId).toBe(ids.generationId);
+    expect(retry.state.serverOwned).toBe(false);
   });
 });
