@@ -41,8 +41,10 @@ describe("Trends page layout: always-open, side-by-side", () => {
     expect(collapsibleFalse).toHaveLength(2);
     expect(src).not.toMatch(/defaultCollapsed=\{true\}/);
   });
-  it("lays each game out as one two-column row", () => {
+  it("lays each game out as one responsive two-column row", () => {
     expect(src).toMatch(/data-trends-game-row/);
-    expect(src).toMatch(/gridTemplateColumns: ["']repeat\(2, minmax\(0,1fr\)\)["']/);
+    // Tailwind grid-cols-2 === repeat(2, minmax(0, 1fr)); stacked below xl so
+    // tablets aren't cramped, side-by-side at desktop widths.
+    expect(src).toMatch(/grid-cols-1 xl:grid-cols-2/);
   });
 });
