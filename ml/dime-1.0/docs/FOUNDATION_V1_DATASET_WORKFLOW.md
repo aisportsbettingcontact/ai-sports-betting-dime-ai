@@ -39,6 +39,25 @@ only approved frozen releases. RunPod is a rebuildable working area and must
 never be the sole location of a candidate, review ledger, audit report, or
 frozen snapshot.
 
+The owner-selected private candidate workbench is
+`taileredsports/dime-foundation-workbench`. It now exists privately at
+governance commit `ace82f0ccef7313b39f66ecbd46cfb3784999dcd` with only
+`.gitattributes` and a root governance `README.md`. Its state is
+`provisioned_access_verification_pending`; it may not receive private data
+until least-privilege access, credential denial, individual human identity,
+registered agent workload identity, and immutable review-receipt controls
+have been implemented and verified. The workbench stores pre-freeze candidate
+and review material only. It is not the approved Foundation release and
+cannot authorize training.
+
+Foundation v1 admits substantive human-authored gold examples and fully
+synthetic scenarios or fixtures only. Substantive AI drafting, retained
+AI-supplied prose, and relabeling AI-authored prose as `synthetic` are
+prohibited. Automated assistance may check spelling, formatting, critique, or
+compliance without supplying retained substantive prose. A separately
+registered AI-agent reviewer may approve the exact bytes under this contract;
+review authority never grants authorship authority.
+
 No current platform state authorizes publication or training.
 
 ## Trusted reviewer authority
@@ -48,12 +67,52 @@ No current platform state authorizes publication or training.
 source of reviewer status and roles. Its exact UTF-8 file bytes are the
 hashable authority. Every authority change requires a reviewed pull request
 and a new `registry_version`; IDs are stable opaque identifiers and must not be
-reassigned to another person.
+reassigned to another human or AI-agent principal.
 
-The current registry is `proposed` and has no reviewer entries. A proposed or
-retired registry cannot contain an active reviewer, so the current file grants
-no review, audit, or approval authority and cannot authorize a dataset,
-training run, release, or serving change.
+Every reviewer entry must also define an opaque `independence_group_id` and a
+half-open authority period: `effective_start` is inclusive and
+`effective_end_or_open_ended` is exclusive, or `null` for open-ended authority.
+Quorums count distinct independence groups, not aliases or reviewer IDs.
+Review, source-rights, external-audit, and dataset-approval timestamps must
+fall inside the referenced reviewer's authority period.
+
+The current v4 registry is `proposed` and contains two inactive AI-agent
+reviewer assignments in distinct independence groups. Their proposed roles
+collectively cover every elevated specialist, external audit, and
+dataset-approval duty, but neither entry grants authority. A proposed or
+retired registry cannot contain an active reviewer, so the current file cannot
+authorize a dataset, training run, release, or serving change.
+
+Registry activation requires every AI-agent profile to pin the exact model
+provider, model ID and immutable revision, runtime version, explicit model and
+policy lineages, workload identity, system-instruction hash, tool-contract
+hash, inference-policy hash, conflict-policy hash, recusal-policy hash,
+receipt-issuer key, approved roles, independence group, effective period, and
+revocation state. Materially correlated model or policy lineages count as one
+independence group. Every governed AI-agent decision must carry the SHA-256 of
+an immutable identity-bound receipt. Shared service credentials cannot
+establish reviewer identity or sign a decision. No placeholder reviewer or
+movable model alias may satisfy this gate.
+
+AI agents are an owner-approved official reviewer principal type, and the two
+checked-in assignments are the proposed official roster. They remain inactive.
+The runtime now verifies identity-bound Ed25519 decision receipts for every
+AI-agent source-rights review, record review, external audit, and dataset
+approval. It still rejects every active AI-agent entry unless a separate,
+owner-controlled activation boundary is explicitly authorized. Receipt
+verification capability is not activation authority.
+
+The candidate-only workflow in
+[Foundation AI reviewer provisioning](FOUNDATION_AI_REVIEWER_PROVISIONING.md)
+computes these hashes, validates signer possession, and rejects shared or
+correlated identities while leaving the registry and reviewers inactive.
+
+The auditor and freezer accept an optional private `--agent-receipt-dir`.
+Human-only candidates do not need it. A candidate referencing any AI-agent
+decision must supply the exact flat, content-addressed receipt inventory; the
+freezer rejects missing, extra, duplicated, noncanonical, unsigned, or
+misbound receipts. Private signing keys are prohibited from the repository,
+receipt store, and release artifacts.
 
 Review ledgers, external reports, and approval records may only reference a
 stable `reviewer_id` that resolves to an active entry and the required role in
@@ -62,11 +121,13 @@ one, or grant a role. The review ledger contains rubric-bound decisions; it
 does not contain reviewer status or role definitions.
 
 The candidate auditor and freezer require an `active` registry, resolve ledger,
-external-audit, and approval IDs from it, and enforce each required role. The
-SHA-256 of the exact registry file is bound as `reviewer_registry_sha256` in
-the candidate audit and every external audit, the Foundation approval, the v4
-dataset manifest, and the candidate-specific training evidence. All five
-evidence layers must bind the same digest.
+source-rights, external-audit, and approval IDs from it, and enforce each
+required role, authority period, and independence-group quorum. Dataset
+approvers must also be distinct from candidate authors. The SHA-256 of the
+exact registry file—therefore also its embedded `registry_version`—is bound as
+`reviewer_registry_sha256` in the candidate audit and every external audit,
+the Foundation approval, the v4 dataset manifest, and the candidate-specific
+training evidence. All five evidence layers must bind the same digest.
 
 ## Record lifecycle
 
@@ -292,7 +353,7 @@ The auditor resolves every ledger reviewer ID and specialist role against the
 trusted registry. The registry gate fails when the registry is not `active`,
 an ID is unknown or inactive, or the required role is absent.
 
-## Human and external approval
+## Governed reviewer and external approval
 
 The approval record binds:
 
@@ -307,6 +368,7 @@ The approval record binds:
 - six external audit report hashes, tools, versions, completion times, and
   reviewer identities, each bound to the candidate-audit hash and exact
   governed input map;
+- an exact reviewer-to-receipt-digest mapping for every AI-agent decision;
 - the approved locked-evaluation full revision or structured opaque reference;
   and
 - two dataset approvers, deletion policy, and limitations.
@@ -410,6 +472,24 @@ paths, mutable aliases, passing local audits, and an approved dataset revision
 without the reviewed evidence mapping are insufficient.
 
 ## Stop conditions
+
+Candidate validation loads the complete
+[tool and canonical market contract bundle](TOOL_AND_MARKET_CONTRACTS.md).
+Each tool call must use the exact request schema and canonical market key, and
+each linked result must pass both the common envelope and its tool-specific
+data schema. The Foundation build contract binds the aggregate bundle
+SHA-256 across all 13 governed files, including both governing schemas,
+preventing later evidence from retaining one request-catalog hash while
+silently changing response or market contracts. Validation retains original
+call arguments and binds every nonempty result to them. It also executes
+registry scope/freshness classes, selection-keyed split totals and disclosure,
+Decimal numeric domains, internal timestamp consistency, and recursive
+server-owned argument exclusion. Item-level odds sources must be declared by
+their envelope, returned temporal coverage must stay inside explicit request
+filters, known split samples must be positive, warnings are bound to exact
+tool/status/quote semantics, successful deterministic math is independently
+recomputed for SFT and development-evaluation records, and schema failures
+expose only governed schema paths and static categories.
 
 Stop before freeze when:
 

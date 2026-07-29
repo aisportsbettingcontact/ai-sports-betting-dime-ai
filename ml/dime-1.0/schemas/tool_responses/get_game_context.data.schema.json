@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dime.local/schemas/tool_responses/get_game_context.data.schema.json",
+  "title": "get_game_context data v1",
+  "oneOf": [
+    {"type": "object", "additionalProperties": false, "maxProperties": 0},
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["event_ref", "requested_fields", "facts", "missing_fields"],
+      "properties": {
+        "event_ref": {"type": "string", "minLength": 1, "maxLength": 128},
+        "requested_fields": {
+          "type": "array",
+          "maxItems": 6,
+          "uniqueItems": true,
+          "items": {"enum": ["schedule", "teams", "rosters", "injuries", "result", "live_state"]}
+        },
+        "facts": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "schedule": {"type": ["string", "null"], "maxLength": 128},
+            "home_team": {"type": ["string", "null"], "maxLength": 128},
+            "away_team": {"type": ["string", "null"], "maxLength": 128},
+            "home_score": {"type": ["integer", "null"], "minimum": 0},
+            "away_score": {"type": ["integer", "null"], "minimum": 0},
+            "period": {"type": ["string", "null"], "maxLength": 32},
+            "clock": {"type": ["string", "null"], "maxLength": 32},
+            "roster_count": {"type": ["integer", "null"], "minimum": 0, "maximum": 200},
+            "injury_count": {"type": ["integer", "null"], "minimum": 0, "maximum": 200}
+          },
+          "maxProperties": 9
+        },
+        "missing_fields": {
+          "type": "array",
+          "maxItems": 6,
+          "uniqueItems": true,
+          "items": {"enum": ["schedule", "teams", "rosters", "injuries", "result", "live_state"]}
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dime.local/schemas/tool_responses/calculate_market_math.data.schema.json",
+  "title": "calculate_market_math data v1",
+  "oneOf": [
+    {"type": "object", "additionalProperties": false, "maxProperties": 0},
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["operation", "formula_version", "normalized_inputs", "output"],
+      "properties": {
+        "operation": {
+          "enum": [
+            "implied_probability",
+            "remove_vig",
+            "market_hold",
+            "expected_value",
+            "settled_profit",
+            "roi",
+            "probability_clv"
+          ]
+        },
+        "formula_version": {"const": "dime-market-math-v1"},
+        "normalized_inputs": {
+          "type": "object",
+          "additionalProperties": false,
+          "minProperties": 1,
+          "maxProperties": 8,
+          "properties": {
+            "american_odds": {
+              "oneOf": [
+                {"$ref": "#/$defs/americanOdds"},
+                {"$ref": "#/$defs/selectionOdds"}
+              ]
+            },
+            "probability": {"type": "number", "minimum": 0, "maximum": 1},
+            "stake": {"type": "number", "minimum": 0, "maximum": 1000000000},
+            "result": {"enum": ["win", "loss", "push", "void"]},
+            "profits": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 1000,
+              "items": {"type": "number", "minimum": -1000000000, "maximum": 1000000000}
+            },
+            "stakes": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 1000,
+              "items": {"type": "number", "minimum": 0, "maximum": 1000000000}
+            },
+            "backed_selection": {"type": "string", "minLength": 1, "maxLength": 64},
+            "event_id": {"type": "string", "minLength": 1, "maxLength": 128},
+            "market_key": {"$ref": "#/$defs/marketKey"},
+            "entry_market_odds": {"$ref": "#/$defs/selectionOdds"},
+            "closing_market_odds": {"$ref": "#/$defs/selectionOdds"}
+          }
+        },
+        "output": {
+          "type": "object",
+          "minProperties": 1,
+          "maxProperties": 16,
+          "propertyNames": {
+            "enum": [
+              "implied_probability",
+              "decimal_odds",
+              "raw_probabilities",
+              "hold",
+              "no_vig_probabilities",
+              "expected_profit_per_unit",
+              "expected_roi",
+              "settled_profit",
+              "roi",
+              "entry_no_vig_probability",
+              "closing_no_vig_probability",
+              "probability_clv"
+            ]
+          },
+          "additionalProperties": {
+            "oneOf": [
+              {"$ref": "#/$defs/decimal"},
+              {
+                "type": "object",
+                "minProperties": 2,
+                "maxProperties": 16,
+                "propertyNames": {"pattern": "^[A-Za-z0-9_.:-]{1,64}$"},
+                "additionalProperties": {"$ref": "#/$defs/decimal"}
+              }
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "decimal": {"type": "string", "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$"},
+    "americanOdds": {
+      "type": "integer",
+      "minimum": -100000,
+      "maximum": 100000,
+      "anyOf": [{"maximum": -100}, {"minimum": 100}]
+    },
+    "selectionOdds": {
+      "type": "object",
+      "minProperties": 2,
+      "maxProperties": 16,
+      "propertyNames": {"pattern": "^[A-Za-z0-9_.:-]{1,64}$"},
+      "additionalProperties": {"$ref": "#/$defs/americanOdds"}
+    },
+    "marketKey": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["market_type", "period"],
+      "properties": {
+        "market_type": {"enum": ["moneyline", "spread", "total"]},
+        "period": {"const": "full_game"}
+      }
+    }
+  }
+}

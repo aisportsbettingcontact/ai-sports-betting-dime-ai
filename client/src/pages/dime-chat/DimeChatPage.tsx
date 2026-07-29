@@ -1952,17 +1952,14 @@ export default function DimeChatPage({
     if (threadId == null) {
       if (!userText) return;
       createThreadMut.mutate(
-        { firstMessage: userText },
+        {
+          firstMessage: userText,
+          firstAssistantMessage: assistantText,
+        },
         {
           onSuccess: ({ threadId: newId }) => {
             setThreadId(newId);
-            appendMut.mutate(
-              {
-                threadId: newId,
-                messages: [{ role: "assistant", content: assistantText }],
-              },
-              { onSettled: refreshList }
-            );
+            refreshList();
           },
         }
       );
@@ -2459,7 +2456,6 @@ export default function DimeChatPage({
                     {state.error && (
                       <ErrorCard message={state.error} onRetry={retry} />
                     )}
-                    <div className="dc-footnote">{DISCLAIMER}</div>
                   </div>
                 </div>
               )}
@@ -2520,6 +2516,14 @@ export default function DimeChatPage({
                   onPick={submit}
                   innerRef={pillsRef}
                 />
+              )}
+              {chatAccess === "granted" && (
+                <footer
+                  className="dc-chat-footer"
+                  aria-label="Responsible gaming notice"
+                >
+                  {DISCLAIMER}
+                </footer>
               )}
               {chatAccess === "granted" && ghost && (
                 <div aria-hidden="true">

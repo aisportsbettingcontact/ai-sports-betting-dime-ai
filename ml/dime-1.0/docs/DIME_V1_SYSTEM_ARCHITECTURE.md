@@ -219,9 +219,9 @@ prompt, template, tool schemas, policy, math, simulator, and evaluator versions.
 | Current tool | Required production constraint |
 |---|---|
 | `get_game_context` | Canonical event reference, field allowlist, timestamp per fact |
-| `get_current_odds` | Canonical market key, provider/book scope, selection, line, price, observation and freshness |
-| `get_odds_history` | Bounded range, stable pagination, chronological order, truncation/gap flags |
-| `get_market_splits` | Server-owned entitlement scope, provider universe, methodology, sample size or explicit unknown |
+| `get_current_odds` | Canonical market key, provider/book scope, selection, line, price, observation, freshness, and envelope-authorized quote source |
+| `get_odds_history` | Requested/returned range containment, stable pagination, chronological order, truncation/gap flags, and envelope-authorized item sources |
+| `get_market_splits` | Server-owned entitlement scope, provider universe, methodology, selection-keyed ticket/handle percentages, complete/partial coverage, sample size or explicit unknown |
 | `calculate_market_math` | Operation-specific schema, Decimal-string output, formula/version, no executable expression |
 | `get_bet_tracker_summary` | Server-bound subject, aggregates only, sample and coverage disclosures |
 | `run_simulation` | Server-selected approved version, bounded draws, immutable inputs, seed, artifact hash and calibration version |
@@ -276,7 +276,17 @@ Before display:
   recorded tool arguments;
 - event, market, period, selection, and timestamp identities must agree;
 - freshness policy must pass;
-- split scope and unavailable sample size must be disclosed;
+- split scope and unavailable sample size must be disclosed, and a known
+  sample must contain at least one observation;
+- each nonempty tool result must exactly acknowledge its originating
+  schema-valid call arguments, including deterministic optional defaults;
+- registry scope/freshness classes, Decimal numeric domains, temporal
+  relationships, and nested server-owned argument exclusion are enforced by
+  the local contract validator;
+- warnings are closed codes bound to exact tool, status, and quote semantics
+  rather than provider prose; schema failures expose only governed schema
+  locations/categories; and every public response validation requires the
+  originating arguments;
 - unsupported causal claims about market movement must be suppressed;
 - simulations must name version, inputs, seed, draws, and limitations;
 - guarantees, loss chasing, authorization bypass, and cross-user access are
@@ -352,6 +362,13 @@ Extract a separately deployed service only after telemetry demonstrates an
 isolation, scaling, or ownership need.
 
 ## Unresolved decisions
+
+The proposed Foundation request and response boundary is now concretized by
+the [tool and canonical market contracts](TOOL_AND_MARKET_CONTRACTS.md).
+Those contracts close market identity and exact response shapes without
+selecting a provider, implementing an authenticated broker, or authorizing
+production. Server-owned entitlement, subject, policy, and simulation choices
+remain outside model-visible arguments.
 
 Production work still requires:
 

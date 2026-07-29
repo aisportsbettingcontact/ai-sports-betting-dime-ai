@@ -1,0 +1,354 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dime.local/schemas/foundation_separation_of_duties.schema.json",
+  "title": "Dime Foundation Separation of Duties v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "contract_version",
+    "status",
+    "dataset_version",
+    "unresolved_decisions",
+    "authorization_effect",
+    "purpose",
+    "reviewer_authority",
+    "record_review",
+    "independence",
+    "elevated_review",
+    "dataset_approval",
+    "external_audits",
+    "effective_authority",
+    "registry_migration",
+    "prohibited_content"
+  ],
+  "properties": {
+    "schema_version": {"const": "dime-foundation-separation-of-duties-v1"},
+    "contract_version": {"const": "dime-foundation-separation-of-duties-v1.3.0"},
+    "status": {"const": "proposed"},
+    "dataset_version": {"const": "dime-sft-foundation-v1"},
+    "unresolved_decisions": {"type": "array", "maxItems": 0},
+    "authorization_effect": {"$ref": "#/$defs/authorizationEffect"},
+    "purpose": {"const": "governance_and_validation_metadata_only"},
+    "reviewer_authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "registry_path",
+        "registry_schema_path",
+        "registry_schema_validation_required",
+        "active_registry_required_for_real_approval",
+        "active_reviewer_entries_required",
+        "opaque_stable_reviewer_ids_required",
+        "reviewer_id_reassignment_allowed",
+        "approval_files_may_self_grant_roles"
+      ],
+      "properties": {
+        "registry_path": {"const": "configs/foundation_reviewer_registry.json"},
+        "registry_schema_path": {
+          "const": "schemas/foundation_reviewer_registry.schema.json"
+        },
+        "registry_schema_validation_required": {"const": true},
+        "active_registry_required_for_real_approval": {"const": true},
+        "active_reviewer_entries_required": {"const": true},
+        "opaque_stable_reviewer_ids_required": {"const": true},
+        "reviewer_id_reassignment_allowed": {"const": false},
+        "approval_files_may_self_grant_roles": {"const": false}
+      }
+    },
+    "record_review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "allowed_reviewer_principal_types",
+        "human_review_required",
+        "human_reviewer_may_approve",
+        "automated_agent_may_approve",
+        "agent_profile_binding_required",
+        "agent_decision_receipt_required",
+        "agent_decision_receipt_signature_verification_required",
+        "agent_may_review_own_output",
+        "author_may_review_own_record",
+        "standard_minimum_approvals",
+        "elevated_minimum_approvals"
+      ],
+      "properties": {
+        "allowed_reviewer_principal_types": {
+          "const": ["human", "ai_agent"]
+        },
+        "human_review_required": {"const": false},
+        "human_reviewer_may_approve": {"const": true},
+        "automated_agent_may_approve": {"const": true},
+        "agent_profile_binding_required": {"const": true},
+        "agent_decision_receipt_required": {"const": true},
+        "agent_decision_receipt_signature_verification_required": {"const": true},
+        "agent_may_review_own_output": {"const": false},
+        "author_may_review_own_record": {"const": false},
+        "standard_minimum_approvals": {"type": "integer", "minimum": 1, "const": 1},
+        "elevated_minimum_approvals": {"type": "integer", "minimum": 2, "const": 2}
+      }
+    },
+    "independence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "distinct_reviewer_ids_required",
+        "distinct_independence_groups_required",
+        "same_group_aliases_count_once",
+        "active_specialist_required",
+        "review_within_effective_authority_period_required",
+        "exact_registry_sha256_binding_required",
+        "same_agent_model_or_policy_lineage_counts_as_one_group"
+      ],
+      "properties": {
+        "distinct_reviewer_ids_required": {"const": true},
+        "distinct_independence_groups_required": {"const": true},
+        "same_group_aliases_count_once": {"const": true},
+        "active_specialist_required": {"const": true},
+        "review_within_effective_authority_period_required": {"const": true},
+        "exact_registry_sha256_binding_required": {"const": true},
+        "same_agent_model_or_policy_lineage_counts_as_one_group": {"const": true}
+      }
+    },
+    "elevated_review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["task_families", "policy_actions", "required_specialists"],
+      "properties": {
+        "task_families": {
+          "const": [
+            "market_math",
+            "bet_tracker_coaching",
+            "simulation_analysis",
+            "safety_privacy_security"
+          ]
+        },
+        "policy_actions": {
+          "const": [
+            "privacy_block",
+            "age_block",
+            "jurisdiction_block",
+            "self_exclusion_block",
+            "protective_block",
+            "acute_distress_block"
+          ]
+        },
+        "required_specialists": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "market_math",
+            "bet_tracker_coaching",
+            "simulation_analysis",
+            "safety_privacy_security"
+          ],
+          "properties": {
+            "market_math": {"const": "numeric"},
+            "bet_tracker_coaching": {"const": "coaching"},
+            "simulation_analysis": {"const": "simulation"},
+            "safety_privacy_security": {"const": "safety"}
+          }
+        }
+      }
+    },
+    "dataset_approval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "minimum_dataset_approvals",
+        "required_role",
+        "distinct_reviewer_ids",
+        "distinct_independence_groups",
+        "candidate_author_may_approve"
+      ],
+      "properties": {
+        "minimum_dataset_approvals": {"type": "integer", "minimum": 2, "const": 2},
+        "required_role": {"const": "dataset-approver"},
+        "distinct_reviewer_ids": {"const": true},
+        "distinct_independence_groups": {"const": true},
+        "candidate_author_may_approve": {"const": false}
+      }
+    },
+    "external_audits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "semantic_deduplication",
+        "privacy_and_identifiers",
+        "rights",
+        "development_evaluation_contamination",
+        "locked_evaluation_contamination",
+        "numeric_traceability"
+      ],
+      "properties": {
+        "semantic_deduplication": {
+          "$ref": "#/$defs/externalAuditSemantic"
+        },
+        "privacy_and_identifiers": {
+          "$ref": "#/$defs/externalAuditPrivacy"
+        },
+        "rights": {"$ref": "#/$defs/externalAuditRights"},
+        "development_evaluation_contamination": {
+          "$ref": "#/$defs/externalAuditDevelopment"
+        },
+        "locked_evaluation_contamination": {
+          "$ref": "#/$defs/externalAuditLocked"
+        },
+        "numeric_traceability": {
+          "$ref": "#/$defs/externalAuditNumeric"
+        }
+      }
+    },
+    "effective_authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "authority_period_required",
+        "effective_start_required",
+        "effective_end_or_open_ended_required",
+        "active_at_decision_time_required",
+        "registry_version_binding_required",
+        "registry_sha256_binding_required",
+        "author_reviewer_recusal_required",
+        "same_independence_group_never_counts_twice"
+      ],
+      "properties": {
+        "authority_period_required": {"const": true},
+        "effective_start_required": {"const": true},
+        "effective_end_or_open_ended_required": {"const": true},
+        "active_at_decision_time_required": {"const": true},
+        "registry_version_binding_required": {"const": true},
+        "registry_sha256_binding_required": {"const": true},
+        "author_reviewer_recusal_required": {"const": true},
+        "same_independence_group_never_counts_twice": {"const": true}
+      }
+    },
+    "registry_migration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["required", "status", "implemented_fields"],
+      "properties": {
+        "required": {"const": false},
+        "status": {
+          "const": "cryptographic_receipt_verifier_implemented_activation_blocked"
+        },
+        "implemented_fields": {
+          "const": [
+            "principal_type",
+            "agent_profile",
+            "independence_group_id",
+            "effective_start",
+            "effective_end_or_open_ended",
+            "decision_receipt_sha256",
+            "receipt_verification_key",
+            "signed_decision_receipt"
+          ]
+        }
+      }
+    },
+    "prohibited_content": {
+      "const": [
+        "personal_names",
+        "email_addresses",
+        "credentials",
+        "secret_values",
+        "token_names_or_values",
+        "real_reviewer_roster",
+        "active_placeholder_reviewers",
+        "self_granted_authority",
+        "unpinned_active_agent_profiles",
+        "shared_agent_decision_receipts"
+      ]
+    }
+  },
+  "$defs": {
+    "authorizationEffect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scope",
+        "creates_data",
+        "approves_data",
+        "authorizes_gpu_execution",
+        "authorizes_training",
+        "authorizes_locked_evaluation",
+        "authorizes_publication",
+        "authorizes_release",
+        "authorizes_serving",
+        "authorizes_provider_activation"
+      ],
+      "properties": {
+        "scope": {"const": "governance_validation_only"},
+        "creates_data": {"const": false},
+        "approves_data": {"const": false},
+        "authorizes_gpu_execution": {"const": false},
+        "authorizes_training": {"const": false},
+        "authorizes_locked_evaluation": {"const": false},
+        "authorizes_publication": {"const": false},
+        "authorizes_release": {"const": false},
+        "authorizes_serving": {"const": false},
+        "authorizes_provider_activation": {"const": false}
+      }
+    },
+    "externalAuditSemantic": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["required_role", "tool_id", "tool_version"],
+      "properties": {
+        "required_role": {"const": "semantic-audit"},
+        "tool_id": {"const": "dime-semantic-audit"},
+        "tool_version": {"const": "1.0.0"}
+      }
+    },
+    "externalAuditPrivacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["required_role", "tool_id", "tool_version"],
+      "properties": {
+        "required_role": {"const": "privacy"},
+        "tool_id": {"const": "dime-privacy-audit"},
+        "tool_version": {"const": "1.0.0"}
+      }
+    },
+    "externalAuditRights": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["required_role", "tool_id", "tool_version"],
+      "properties": {
+        "required_role": {"const": "rights"},
+        "tool_id": {"const": "dime-rights-audit"},
+        "tool_version": {"const": "1.0.0"}
+      }
+    },
+    "externalAuditDevelopment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["required_role", "tool_id", "tool_version"],
+      "properties": {
+        "required_role": {"const": "evaluation-audit"},
+        "tool_id": {"const": "dime-development-contamination-audit"},
+        "tool_version": {"const": "1.0.0"}
+      }
+    },
+    "externalAuditLocked": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["required_role", "tool_id", "tool_version"],
+      "properties": {
+        "required_role": {"const": "locked-evaluation"},
+        "tool_id": {"const": "dime-locked-contamination-audit"},
+        "tool_version": {"const": "1.0.0"}
+      }
+    },
+    "externalAuditNumeric": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["required_role", "tool_id", "tool_version"],
+      "properties": {
+        "required_role": {"const": "numeric"},
+        "tool_id": {"const": "dime-numeric-audit"},
+        "tool_version": {"const": "1.0.0"}
+      }
+    }
+  }
+}

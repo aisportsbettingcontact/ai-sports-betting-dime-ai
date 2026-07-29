@@ -15,6 +15,7 @@ checkpoint.
 | Parent revision | `d04e592bb4f6aa9cfee91e2e20afa771667e1d4b` |
 | Model type | Llama 3.1 8B Base, not Instruct |
 | Development method | QLoRA/SFT post-training and evaluation |
+| Private candidate workbench | `taileredsports/dime-foundation-workbench` |
 | Approved-training dataset repository | `taileredsports/dime-foundation-sft` |
 | Development-evaluation repository | `taileredsports/dime-eval-development` |
 | Locked-evaluation repository | `taileredsports/dime-eval-locked` |
@@ -40,16 +41,29 @@ authorize a model call, deployment, or production change.
 - No production vLLM endpoint exists.
 - No provider activation is approved.
 
-The four private Hugging Face repositories currently contain governance cards
-only. No approved foundation dataset, development-evaluation release,
-locked-evaluation release, or serving-approved adapter has been published.
-Their current card commits are registry evidence, not training, evaluation, or
-serving revisions.
+The four private Hugging Face release repositories currently contain
+governance cards only. No approved foundation dataset, development-evaluation
+release, locked-evaluation release, or serving-approved adapter has been
+published. Their current card commits are registry evidence, not training,
+evaluation, or serving revisions. The separate private Foundation candidate
+workbench now exists at governance commit
+`ace82f0ccef7313b39f66ecbd46cfb3784999dcd`; it contains only
+`.gitattributes` and `README.md`. Candidate-data admission remains blocked
+until its least-privilege credential and identity controls pass live
+verification.
 
 `configs/curriculum_v1.yaml` remains a proposed curriculum. The tracked
 Foundation v1 candidate, review, audit, and freeze contracts make a future
 dataset reviewable; they do not create an approved dataset, publish anything
 to Hugging Face, authorize training, change serving, or activate the provider.
+
+The AWS signing control plane for the two Foundation AI reviewer runtimes is
+deployed in `us-west-2` as stack `dime-foundation-reviewer-signers` and remains
+in fail-closed `LOCKED` mode. Its reviewer profile hashes are unpopulated and
+signing is unavailable. No RunPod reviewer endpoint, active reviewer
+authority, or reviewer GPU execution is authorized by this repository state.
+The sanitized external-state observation is recorded in
+`evidence/foundation/production_entry_state_2026-07-28.json`.
 
 The small 2026-07-25 rehearsal proved only that selected infrastructure
 mechanics execute. It used 8 training and 4 validation records, scored 3 of 10
@@ -63,6 +77,11 @@ tool contracts, schemas, synthetic public fixtures, configurations, tests,
 documentation, sanitized evidence, and release gates. Branches and pull
 requests are review-visible draft work.
 
+The tool-contract identity covers the request and market catalogs, both
+governing schemas, the response registry and envelope, and all seven data
+schemas. Stored nonempty results are validated against their originating call
+arguments plus executable scope, freshness, numeric, and temporal rules.
+
 Approved data and model artifacts are separated across four private Hugging
 Face repositories. The model repository is adapter-only: it must never receive
 Meta base weights, merged full-model weights, quantized full-model weights, or
@@ -73,9 +92,13 @@ environment.
 
 See:
 
+- [Tool and canonical market contracts](docs/TOOL_AND_MARKET_CONTRACTS.md)
 - [Platform ownership](docs/PLATFORM_OWNERSHIP.md)
 - [Hugging Face registry](docs/HUGGING_FACE_REGISTRY.md)
 - [Foundation v1 dataset workflow](docs/FOUNDATION_V1_DATASET_WORKFLOW.md)
+- [Foundation AI-agent decision receipts](docs/FOUNDATION_AI_DECISION_RECEIPTS.md)
+- [Foundation AI reviewer provisioning](docs/FOUNDATION_AI_REVIEWER_PROVISIONING.md)
+- [Foundation AI reviewer runtime](docs/FOUNDATION_AI_REVIEWER_RUNTIME.md)
 - [RunPod workspace and runbook](docs/RUNPOD_WORKSPACE_RUNBOOK.md)
 - [Candidate-to-locked-evaluator handoff](docs/CANDIDATE_EVALUATION_HANDOFF.md)
 - [Public data boundary](data/README.md)
@@ -88,6 +111,7 @@ ml/dime-1.0/
 ├── data/                    # Synthetic public samples and private-workflow templates
 ├── docs/                    # Governance, plans, research, and release gates
 ├── evidence/                # Reviewed sanitized audits and rehearsal evidence
+├── infrastructure/          # Non-authorizing, deployable cloud control planes
 ├── prompts/                 # Versioned training prompt and chat template
 ├── schemas/                 # Dataset, evaluation, and tool contracts
 ├── scripts/                 # CPU validation plus explicitly gated GPU utilities
@@ -127,8 +151,10 @@ uv sync --frozen --dev
 uv lock --check
 uv run ruff check .
 uv run pytest -q
-uv run python -m compileall -q src scripts
+uv run python -m compileall -q src scripts infrastructure
 uv run python scripts/validate_data.py
+uv run python scripts/prepare_reviewer_runtime.py --check
+uv run python scripts/validate_reviewer_signer_iac.py
 
 audit_dir="$(mktemp -d)"
 uv run python scripts/audit_curriculum.py \

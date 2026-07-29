@@ -1,6 +1,86 @@
 {
-  "schema_version": "dime-foundation-reviewer-registry-v1",
-  "registry_version": "dime-foundation-reviewers-v0.1.0",
+  "schema_version": "dime-foundation-reviewer-registry-v4",
+  "registry_version": "dime-foundation-reviewers-v0.5.1",
   "status": "proposed",
-  "reviewers": []
+  "receipt_verifier": {
+    "receipt_schema_version": "dime-agent-decision-receipt-v1",
+    "receipt_schema_path": "schemas/foundation_agent_decision_receipt.schema.json",
+    "verifier_id": "dime-ed25519-decision-receipt-verifier",
+    "verifier_version": "1.0.0",
+    "canonicalization": "dime-canonical-json-v1",
+    "signature_algorithm": "ed25519",
+    "activation_authorized": false
+  },
+  "reviewers": [
+    {
+      "reviewer_id": "dime-reviewer-d55729f9-9153-4534-95bd-6bf097416980",
+      "principal_type": "ai_agent",
+      "active": false,
+      "agent_profile": {
+        "profile_id": "dime-agent-profile-85ef4149-03e2-49ae-b8a4-2767e8627404",
+        "status": "configuration_pending",
+        "model_provider": null,
+        "model_id": null,
+        "model_revision": null,
+        "runtime_version": null,
+        "model_lineage_id": null,
+        "policy_lineage_id": null,
+        "workload_identity_id": null,
+        "system_instruction_sha256": null,
+        "tool_contract_sha256": null,
+        "inference_policy_sha256": null,
+        "conflict_policy_sha256": null,
+        "recusal_policy_sha256": null,
+        "revocation_status": "configuration_pending",
+        "receipt_issuer_key_id": null,
+        "receipt_verification_key": null
+      },
+      "roles": [
+        "domain",
+        "numeric",
+        "simulation",
+        "semantic-audit",
+        "dataset-approver"
+      ],
+      "independence_group_id": "dime-independence-group-7e33b5f6-5167-4a16-b3a3-ec7d27140b1d",
+      "effective_start": "2026-07-27T00:00:00Z",
+      "effective_end_or_open_ended": null
+    },
+    {
+      "reviewer_id": "dime-reviewer-c3ddb330-def3-4406-9325-1b4d48d32543",
+      "principal_type": "ai_agent",
+      "active": false,
+      "agent_profile": {
+        "profile_id": "dime-agent-profile-1a0eb37e-2be7-40c7-bae5-d2e71a2889b1",
+        "status": "configuration_pending",
+        "model_provider": null,
+        "model_id": null,
+        "model_revision": null,
+        "runtime_version": null,
+        "model_lineage_id": null,
+        "policy_lineage_id": null,
+        "workload_identity_id": null,
+        "system_instruction_sha256": null,
+        "tool_contract_sha256": null,
+        "inference_policy_sha256": null,
+        "conflict_policy_sha256": null,
+        "recusal_policy_sha256": null,
+        "revocation_status": "configuration_pending",
+        "receipt_issuer_key_id": null,
+        "receipt_verification_key": null
+      },
+      "roles": [
+        "coaching",
+        "safety",
+        "privacy",
+        "rights",
+        "evaluation-audit",
+        "locked-evaluation",
+        "dataset-approver"
+      ],
+      "independence_group_id": "dime-independence-group-0734717e-69c8-4cc4-a1b6-bbb33f404be5",
+      "effective_start": "2026-07-27T00:00:00Z",
+      "effective_end_or_open_ended": null
+    }
+  ]
 }

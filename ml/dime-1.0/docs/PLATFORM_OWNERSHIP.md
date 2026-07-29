@@ -16,10 +16,88 @@ review, audit, approval, and freeze layer has not produced an approved
 Foundation dataset and does not change any Hugging Face repository, training
 authorization, serving configuration, or provider state.
 
-The trusted reviewer registry is also `proposed` and empty. It grants no
-reviewer or approver authority. Reviewer-backed transitions remain blocked
-until a reviewed registry is activated. The audit, freeze, and training paths
-bind its exact SHA-256 through every evidence layer.
+The trusted reviewer registry is also `proposed`. It contains two owner-
+confirmed, independent AI-agent reviewer assignments, but both entries are
+inactive and grant no reviewer or approver authority. Reviewer-backed
+transitions remain blocked until each exact agent profile and receipt issuer is
+pinned and a reviewed registry revision activates them. The audit, freeze, and
+training paths bind its exact SHA-256 through every evidence layer.
+
+## Foundation v1 owner decision
+
+The repository owner has selected the private Hugging Face dataset repository
+`taileredsports/dime-foundation-workbench` as the Foundation v1 candidate
+workbench. The machine-readable decision is
+`configs/platform_contract.json.foundation_v1_owner_decision`.
+
+The workbench now exists privately at full Hugging Face commit
+`ace82f0ccef7313b39f66ecbd46cfb3784999dcd` with the exact root inventory
+`.gitattributes` and `README.md`. Its state is
+`provisioned_access_verification_pending`. Private-data admission remains false
+until the fine-grained access boundary passes live positive and negative
+checks and the reviewer identity/receipt control below is operational.
+
+The workbench is authoritative only for private candidate records, source
+artifacts and registry, review ledger, raw external audits, and the Foundation
+approval record before freeze. It is never the approved Foundation release,
+training authority, an adapter release, or a serving source. RunPod may hold a
+working copy but is never authoritative.
+
+Foundation v1 is strictly limited to substantive human-authored gold examples
+and fully synthetic scenarios or fixtures. Substantive AI drafting and retained
+AI-supplied prose are prohibited. The `synthetic` source class cannot be used
+to relabel AI-authored answers. AI assistance may be limited to spelling,
+formatting, critique, and checklist validation when it supplies no retained
+substantive prose. Registered AI-agent reviewers may approve exact candidate
+bytes under the separation-of-duties contract; that authority does not permit
+AI-authored training prose.
+
+Human workbench access requires individual accounts and MFA. Registered AI
+reviewers require a unique workload identity bound to one reviewer profile.
+Shared human or AI-agent credentials are prohibited. The planned
+`dime-foundation-workbench-read-v1` and
+`dime-foundation-workbench-write-v1` service credentials are scoped only to
+that workbench and cannot establish reviewer identity or sign a decision.
+Training, serving, release-publisher, locked-evaluator, and locked-publisher
+credentials are all denied access.
+
+Reviewer activation remains deliberately blocked. The proposed v4 registry now
+contains two inactive opaque AI-agent reviewer IDs in distinct independence
+groups. One proposed assignment covers domain, numeric, simulation,
+semantic-audit, and dataset-approver duties; the other covers coaching, safety,
+privacy, rights, evaluation-audit, locked-evaluation, and dataset-approver
+duties. Before either entry can become active, its profile must pin the exact
+provider, model and revision, runtime, system instructions, tool contract,
+inference policy, receipt issuer, approved roles, effective authority dates,
+conflicts, recusals, and revocation state. Every agent review, audit, and
+approval must carry an immutable identity-bound receipt digest. A shared
+service token is never evidence that a particular principal made a decision.
+No placeholder identity or movable model alias may be used.
+
+The repository now provides a candidate-only provisioning tool that hashes the
+exact reviewer policies, verifies public-key possession, and rejects shared
+keys, workload identities, model lineages, policy lineages, or materially
+correlated stacks. It writes only an inactive candidate outside Git and never
+handles private signing keys. The governed profiles remain
+`configuration_pending`.
+
+This owner decision approves AI agents as an official reviewer principal type
+and designates the two inactive assignments as the proposed official roster.
+It does not activate them. The runtime now implements fail-closed Ed25519
+signature verification for identity-bound decision receipts, but deliberately
+rejects active AI-agent registry entries unless an independent owner-controlled
+activation boundary is also authorized. A later focused change must provision
+the exact public keys and immutable profiles, validate isolated workload
+identities, and explicitly set that authorization before
+`ai_agent_activation_authorized` can become true.
+
+The owner decision itself did not create the repository. A later interactive
+administrative bootstrap created the private repository and its governance
+card; that completed external action is recorded separately and grants no
+additional authority. The decision still does not provision credentials,
+admit private data, activate reviewers, approve a record or dataset, authorize
+GPU execution or training, publish a release, change serving, or activate the
+provider.
 
 Authorization is never a reusable global switch. Full training additionally
 requires `authorization.training_candidate` to match the exact experiment,
@@ -39,6 +117,35 @@ hash, quality-slice-report hash, and destination parent commit. A prior
 `promoted_adapter.approved_release_revision` must remain the champion and serve
 as both comparison control and destination parent; only an inaugural release
 may use the pinned Meta base control while that field is `null`.
+
+## Foundation reviewer runtime ownership
+
+GitHub owns the public, reviewed reviewer-runtime contract, policy artifacts,
+AWS SAM template, validation code, and sanitized evidence formats. RunPod will
+own two separate private Serverless inference endpoints after they are
+explicitly provisioned. AWS will own the two isolated workload identities,
+purpose-bound signing functions, non-exportable Ed25519 KMS keys, and
+infrastructure audit trail.
+
+Those three ownership layers are deliberately separate. RunPod endpoint
+credentials and Hugging Face access tokens belong only in their authorized
+secret stores. AWS private key material never leaves KMS. GitHub never stores
+raw endpoint IDs, account identifiers, credentials, private provisioning
+bundles, or unsanitized CloudTrail output. Railway is not part of this reviewer
+control plane.
+
+The pinned reviewer-runtime configuration remains `planned_unprovisioned`
+because no RunPod reviewer endpoint or live model runtime exists. The separate
+AWS signing control plane is deployed in `us-west-2` as
+`dime-foundation-reviewer-signers`, but remains in `LOCKED`: reviewer profile
+hashes are unpopulated, signing is unavailable, and no reviewer authority or
+GPU execution exists. Changing infrastructure state cannot activate a
+reviewer; only a later owner-approved registry change can grant authority
+after the required positive, negative, cryptographic, and independence
+evidence passes.
+
+See [Foundation AI reviewer runtime](FOUNDATION_AI_REVIEWER_RUNTIME.md) for the
+deployment and rollback sequence.
 
 ## Non-negotiable invariants
 
@@ -73,6 +180,12 @@ may use the pinned Meta base control while that field is `null`.
 13. The Git-controlled trusted reviewer registry is the sole authority for
     reviewer status and roles. Ledgers and reports reference its stable IDs;
     they cannot create identities, activate reviewers, or grant roles.
+14. Each AI reviewer uses a distinct model lineage, policy lineage, RunPod
+    endpoint credential, AWS workload role, signing function, and
+    non-exportable KMS key. Cross-reviewer invocation is denied.
+15. Infrastructure deployment, model loading, and possession proofs establish
+    identity readiness only. They cannot authorize review, training,
+    publication, serving, or provider activation.
 
 ## End-to-end boundary
 
@@ -139,10 +252,16 @@ into `main`.
 
 `configs/foundation_reviewer_registry.json` is the sole reviewer authority.
 Every change requires review and a new registry version. Its exact bytes are
-hashed as `reviewer_registry_sha256`. The current `proposed` registry is empty,
-so it cannot authorize a decision, audit, approval, dataset, or training run.
-A ledger may reference only a stable registry ID. Any ledger-carried status or
-role is non-authoritative and cannot override the registry.
+hashed as `reviewer_registry_sha256`. The current `proposed` registry contains
+two inactive AI-agent assignments, so it cannot authorize a decision, audit,
+approval, dataset, or training run. Every v4 reviewer entry defines its
+principal type, opaque independence group, and half-open effective period; AI
+entries additionally carry an immutable activation profile. Runtime validation counts
+distinct groups and requires record reviews, source-rights reviews, external
+audits, and dataset approvals to occur during the referenced reviewer's
+authority. A ledger may reference only a stable registry ID. Any ledger-
+carried status, role, group, or authority date is non-authoritative and cannot
+override the registry.
 
 GitHub must not contain:
 

@@ -1,5 +1,25 @@
-schema_version: dime-foundation-build-v1
+schema_version: dime-foundation-build-v2
 dataset_version: dime-sft-foundation-v1
+tool_contract_bundle_sha256: 9ea1e35327cd7467042d0c718ecab0d0c1ecc42068a82ed99b8ba9aa3d6696ec
+contract_registry:
+  schema_version: dime-foundation-contract-registry-v1
+  contracts:
+    taxonomy:
+      config_path: configs/foundation_taxonomy_v1.yaml
+      schema_path: schemas/foundation_taxonomy.schema.json
+      schema_version: dime-foundation-taxonomy-v1
+    stage_profiles:
+      config_path: configs/foundation_stage_profiles_v1.yaml
+      schema_path: schemas/foundation_stage_profiles.schema.json
+      schema_version: dime-foundation-stage-profiles-v1
+    numeric_policy:
+      config_path: configs/foundation_numeric_policy_v1.yaml
+      schema_path: schemas/foundation_numeric_policy.schema.json
+      schema_version: dime-foundation-numeric-policy-v1
+    separation_of_duties:
+      config_path: configs/foundation_separation_of_duties_v1.yaml
+      schema_path: schemas/foundation_separation_of_duties.schema.json
+      schema_version: dime-foundation-separation-of-duties-v1
 release_directory: foundation-v1
 release_inventory:
   - train.jsonl

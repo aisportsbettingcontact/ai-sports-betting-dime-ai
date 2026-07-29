@@ -172,6 +172,13 @@ Desktop (>=1024px) only — tablet/mobile keep their shipped layouts:
 - **Games per row:** mobile (<768px) renders 1, tablet (768–1023px) renders
   2, and desktop (>=1024px) renders 3 inside each league section. Cards keep
   their container-driven internal reflow.
+- **Amendment (UI/UX resolution, FEED-CL01a):** the desktop 3-across promotion
+  is content-aware — it engages only when the league body itself affords
+  >=940px (every card >=~305px usable width), via a `dmf-league` container
+  query. Standalone /feed still promotes at ~1024px viewport; inside the app
+  shell (sidebar ≈250px) rows stay 2-across until roughly a 1230px window,
+  eliminating the ~194px-card crest-overhang band. A viewport media query must
+  never reintroduce the 3-across rule.
 - Tablet rows stay start-aligned so each card keeps its natural height.
   Desktop rows stretch for scheduled cards; each summary centers within surplus height and
   the "VIEW FULL AI MODEL PROJECTIONS" popover trigger stays pinned to the bottom.

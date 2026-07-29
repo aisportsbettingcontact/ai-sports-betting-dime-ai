@@ -124,6 +124,9 @@ export async function getDimeChatContext(now = new Date()): Promise<DimeContextR
   endDate.setUTCDate(endDate.getUTCDate() + CONTEXT_LOOKAHEAD_DAYS);
   const end = ymd(endDate);
 
+  // mysql2 sends JavaScript number bindings as DOUBLE values. MySQL rejects
+  // that prepared-statement type in LIMIT, so keep the two dates parameterized
+  // and embed only this trusted, compile-time integer cap.
   const [rows] = await db.execute<DimeGameContextRow[]>(
     `SELECT sport, gameDate, startTimeEst, awayTeam, homeTeam,
             awayBookSpread, awayModelSpread, homeBookSpread, homeModelSpread,
@@ -140,8 +143,8 @@ export async function getDimeChatContext(now = new Date()): Promise<DimeContextR
         AND gameStatus IN ('upcoming', 'live')
         AND (publishedToFeed = 1 OR publishedModel = 1)
       ORDER BY gameDate ASC, sortOrder ASC, startTimeEst ASC
-      LIMIT ?`,
-    [start, end, MAX_CONTEXT_GAMES],
+      LIMIT ${MAX_CONTEXT_GAMES}`,
+    [start, end],
   );
 
   if (rows.length === 0) return { freshness: "none", rowCount: 0 };

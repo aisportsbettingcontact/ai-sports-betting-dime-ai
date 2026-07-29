@@ -1,8 +1,14 @@
 import hashlib
 import json
 import re
+import subprocess
+import sys
 from pathlib import Path, PurePosixPath
 
+import yaml
+from jsonschema import Draft202012Validator
+
+from dime_ai.foundation_contracts import load_foundation_contracts
 from dime_ai.release_contract import (
     OPTIONAL_FILES,
     REMOTE_METADATA_FILES,
@@ -51,6 +57,134 @@ ACCESS_MATRIX = {
         "write": ["locked_eval"],
         "gated_public_read": False,
     },
+}
+
+FOUNDATION_OWNER_DECISION = {
+    "decision_version": "dime-foundation-v1-owner-decision-v1",
+    "status": "owner_approved",
+    "workbench": {
+        "provider": "hugging_face",
+        "repo_type": "dataset",
+        "repo_id": "taileredsports/dime-foundation-workbench",
+        "visibility": "private",
+        "lifecycle_state": "provisioned_access_verification_pending",
+        "repository_provisioning": {
+            "provisioned": True,
+            "private_visibility_verified": True,
+            "current_governance_head": "ace82f0ccef7313b39f66ecbd46cfb3784999dcd",
+            "root_inventory": [".gitattributes", "README.md"],
+            "credential_provisioning_complete": False,
+            "live_access_verification_complete": False,
+        },
+        "private_data_admission_authorized": False,
+        "authoritative_for": [
+            "candidate_records",
+            "source_artifacts",
+            "source_registry",
+            "review_ledger",
+            "raw_external_audits",
+            "foundation_approval",
+        ],
+        "never_authoritative_for": [
+            "approved_foundation_release",
+            "training_authorization",
+            "adapter_release",
+            "serving",
+        ],
+        "runpod_is_authoritative": False,
+    },
+    "authorship_policy": {
+        "allowed_source_classes": ["human-authored", "synthetic"],
+        "substantive_ai_drafting_allowed": False,
+        "retained_ai_supplied_prose_allowed": False,
+        "synthetic_may_relabel_ai_authored_prose": False,
+        "non_substantive_ai_assistance": [
+            "spelling",
+            "formatting",
+            "critique",
+            "checklist_validation",
+        ],
+        "automated_agent_may_approve": True,
+    },
+    "credential_boundary": {
+        "individual_human_accounts_required": True,
+        "mfa_required": True,
+        "shared_human_credentials_allowed": False,
+        "agent_workload_identity_required": True,
+        "shared_agent_credentials_allowed": False,
+        "planned_service_credentials": {
+            "dime-foundation-workbench-read-v1": {
+                "read": ["foundation_workbench"],
+                "write": [],
+                "gated_public_read": False,
+            },
+            "dime-foundation-workbench-write-v1": {
+                "read": ["foundation_workbench"],
+                "write": ["foundation_workbench"],
+                "gated_public_read": False,
+            },
+        },
+        "prohibited_existing_credentials": list(ACCESS_MATRIX),
+        "service_credentials_may_establish_reviewer_identity": False,
+        "live_positive_and_negative_tests_required_before_private_data": True,
+    },
+    "reviewer_authority": {
+        "registry_path": "configs/foundation_reviewer_registry.json",
+        "registry_status": "proposed",
+        "roster_status": "proposed_inactive_ai_agent_assignments",
+        "activation_authorized": False,
+        "ai_agent_activation_authorized": False,
+        "agent_receipt_verifier_status": "implemented_fail_closed_activation_blocked",
+        "agent_receipt_schema_path": "schemas/foundation_agent_decision_receipt.schema.json",
+        "agent_receipt_verifier_id": "dime-ed25519-decision-receipt-verifier",
+        "agent_receipt_verifier_version": "1.0.0",
+        "agent_receipt_canonicalization": "dime-canonical-json-v1",
+        "agent_receipt_signature_algorithm": "ed25519",
+        "private_receipt_store_required_for_ai": True,
+        "agent_profile_provisioning_status": "tooling_ready_public_inputs_pending",
+        "agent_profile_provisioning_schema_path": (
+            "schemas/foundation_ai_reviewer_provisioning_input.schema.json"
+        ),
+        "agent_profile_provisioning_script_path": "scripts/prepare_ai_reviewer_profiles.py",
+        "agent_profile_provisioning_candidate_only": True,
+        "agent_profile_provisioning_private_keys_allowed": False,
+        "allowed_principal_types": ["human", "ai_agent"],
+        "private_identity_mapping_required_for_humans": True,
+        "immutable_agent_profile_binding_required": True,
+        "identity_bound_decision_receipts_required": True,
+        "agent_decision_receipt_sha256_required": True,
+        "agent_decision_receipt_signature_verification_required": True,
+        "shared_service_tokens_may_sign_decisions": False,
+        "same_agent_model_or_policy_lineage_counts_as_one_group": True,
+        "minimum_dataset_approver_independence_groups": 2,
+    },
+    "authorization_effect": {
+        "creates_repository": False,
+        "provisions_credentials": False,
+        "admits_private_data": False,
+        "activates_reviewers": False,
+        "approves_data": False,
+        "authorizes_gpu_execution": False,
+        "authorizes_training": False,
+        "authorizes_locked_evaluation": False,
+        "authorizes_publication": False,
+        "authorizes_release": False,
+        "authorizes_serving": False,
+        "authorizes_provider_activation": False,
+    },
+}
+
+FOUNDATION_CONTRACT_PATHS = {
+    "configs/foundation_taxonomy_v1.yaml",
+    "configs/foundation_stage_profiles_v1.yaml",
+    "configs/foundation_numeric_policy_v1.yaml",
+    "configs/foundation_separation_of_duties_v1.yaml",
+    "schemas/foundation_taxonomy.schema.json",
+    "schemas/foundation_stage_profiles.schema.json",
+    "schemas/foundation_numeric_policy.schema.json",
+    "schemas/foundation_separation_of_duties.schema.json",
+    "schemas/foundation_build.schema.json",
+    "src/dime_ai/foundation_contracts.py",
 }
 
 
@@ -217,6 +351,98 @@ def test_hugging_face_registry_and_access_matrix_are_exact() -> None:
         assert repositories["promoted_adapter"]["current_state"] == "release_authorized"
 
 
+def test_foundation_v1_owner_decision_is_exact_and_non_authorizing() -> None:
+    contract = load_platform_contract()
+    decision = contract["foundation_v1_owner_decision"]
+    assert decision == FOUNDATION_OWNER_DECISION
+
+    source_policy = yaml.safe_load(
+        (PROJECT / "configs/foundation_v1_build.yaml").read_text(encoding="utf-8")
+    )["source_policy"]
+    assert (
+        decision["authorship_policy"]["allowed_source_classes"]
+        == source_policy["allowed_source_classes"]
+    )
+    assert source_policy["teacher_generated_allowed"] is False
+
+    credentials = contract["hugging_face"]["credentials"]
+    prohibited = decision["credential_boundary"]["prohibited_existing_credentials"]
+    assert set(prohibited) == set(credentials)
+    assert all(
+        "foundation_workbench" not in permissions["read"] + permissions["write"]
+        for permissions in credentials.values()
+    )
+    assert all(
+        not permissions["gated_public_read"]
+        for permissions in decision["credential_boundary"]["planned_service_credentials"].values()
+    )
+    assert not any(decision["authorization_effect"].values())
+    assert decision["reviewer_authority"]["activation_authorized"] is False
+
+
+def test_foundation_production_entry_evidence_matches_locked_platform_state() -> None:
+    contract = load_platform_contract()
+    evidence = json.loads(
+        (PROJECT / "evidence/foundation/production_entry_state_2026-07-28.json").read_text(
+            encoding="utf-8"
+        )
+    )
+
+    workbench = contract["foundation_v1_owner_decision"]["workbench"]
+    assert evidence["source_git_commit"] == "2af9a9315384160f2495b8e586b0459ba00a1b58"
+    assert evidence["workbench"]["repo_id"] == workbench["repo_id"]
+    assert evidence["workbench"]["private"] is True
+    assert (
+        evidence["workbench"]["current_governance_head"]
+        == workbench["repository_provisioning"]["current_governance_head"]
+    )
+    assert (
+        evidence["workbench"]["root_inventory"]
+        == workbench["repository_provisioning"]["root_inventory"]
+    )
+    assert evidence["workbench"]["candidate_data_present"] is False
+    assert evidence["workbench"]["private_data_admission_authorized"] is False
+
+    reviewer_runtime = contract["reviewer_runtime"]
+    signer = evidence["reviewer_signer_control_plane"]
+    assert signer["region"] == reviewer_runtime["aws_region"]
+    assert signer["stack_name"] == reviewer_runtime["aws_stack_name"]
+    assert signer["stack_mode"] == reviewer_runtime["aws_stack_mode"]
+    assert signer["resource_count"] == reviewer_runtime["aws_resource_count"]
+    assert signer["reviewer_profile_hashes_populated"] is False
+    assert signer["signing_available"] is False
+    assert signer["reviewer_activation_authorized"] is False
+    assert not any(evidence["authorization"].values())
+
+
+def test_reviewer_runtime_is_deployed_locked_and_non_authorizing() -> None:
+    contract = load_platform_contract()
+    assert contract["reviewer_runtime"] == {
+        "schema_path": "schemas/foundation_reviewer_runtime.schema.json",
+        "config_path": "configs/foundation_reviewer_runtime_v1.json",
+        "status": "aws_control_plane_deployed_locked",
+        "reviewer_count": 2,
+        "candidate_registry_version": "dime-foundation-reviewers-v0.5.2",
+        "runpod_endpoint_state": "not_created",
+        "aws_resource_state": "create_complete_locked",
+        "aws_region": "us-west-2",
+        "aws_stack_name": "dime-foundation-reviewer-signers",
+        "aws_stack_mode": "LOCKED",
+        "aws_resource_count": 31,
+        "reviewer_profile_hashes_populated": False,
+        "signing_available": False,
+        "aws_control_plane_template": "infrastructure/aws/reviewer-signers/template.yaml",
+        "credentials_provisioned": False,
+        "gpu_execution_authorized": False,
+        "activation_authorized": False,
+    }
+    assert (PROJECT / contract["reviewer_runtime"]["schema_path"]).is_file()
+    assert (PROJECT / contract["reviewer_runtime"]["config_path"]).is_file()
+    assert (PROJECT / contract["reviewer_runtime"]["aws_control_plane_template"]).is_file()
+    assert contract["status"] == "foundation_only"
+    assert not any(contract["authorization"].values())
+
+
 def test_runpod_workspace_and_credential_boundaries_are_exact() -> None:
     runpod = load_platform_contract()["runpod"]
     assert runpod["template_name"] == "dime-llama31-8b-training-v1"
@@ -333,3 +559,125 @@ def test_sanitized_infrastructure_evidence_is_integral_and_non_release() -> None
     recorded_digest, recorded_name = checksum_line.split(maxsplit=1)
     assert recorded_name == "setup-summary.json"
     assert recorded_digest == hashlib.sha256(summary_path.read_bytes()).hexdigest()
+
+
+def test_foundation_contract_bundle_inventory_registry_and_authorization_are_exact() -> None:
+    assert all((PROJECT / path).is_file() for path in FOUNDATION_CONTRACT_PATHS)
+    build = yaml.safe_load(
+        (PROJECT / "configs/foundation_v1_build.yaml").read_text(encoding="utf-8")
+    )
+    assert build["schema_version"] == "dime-foundation-build-v2"
+    assert build["contract_registry"] == {
+        "schema_version": "dime-foundation-contract-registry-v1",
+        "contracts": {
+            "taxonomy": {
+                "config_path": "configs/foundation_taxonomy_v1.yaml",
+                "schema_path": "schemas/foundation_taxonomy.schema.json",
+                "schema_version": "dime-foundation-taxonomy-v1",
+            },
+            "stage_profiles": {
+                "config_path": "configs/foundation_stage_profiles_v1.yaml",
+                "schema_path": "schemas/foundation_stage_profiles.schema.json",
+                "schema_version": "dime-foundation-stage-profiles-v1",
+            },
+            "numeric_policy": {
+                "config_path": "configs/foundation_numeric_policy_v1.yaml",
+                "schema_path": "schemas/foundation_numeric_policy.schema.json",
+                "schema_version": "dime-foundation-numeric-policy-v1",
+            },
+            "separation_of_duties": {
+                "config_path": "configs/foundation_separation_of_duties_v1.yaml",
+                "schema_path": "schemas/foundation_separation_of_duties.schema.json",
+                "schema_version": "dime-foundation-separation-of-duties-v1",
+            },
+        },
+    }
+
+    bundle = load_foundation_contracts()
+    assert len(bundle.contracts) == 4
+    for contract in bundle.contracts.values():
+        assert contract.document["status"] == "proposed"
+        assert contract.document["authorization_effect"]["scope"] == ("governance_validation_only")
+        assert not any(
+            value
+            for key, value in contract.document["authorization_effect"].items()
+            if key != "scope"
+        )
+
+
+def test_foundation_contract_schemas_are_draft_2020_12_and_local_only() -> None:
+    schema_paths = [
+        PROJECT / "schemas/foundation_build.schema.json",
+        PROJECT / "schemas/foundation_taxonomy.schema.json",
+        PROJECT / "schemas/foundation_stage_profiles.schema.json",
+        PROJECT / "schemas/foundation_numeric_policy.schema.json",
+        PROJECT / "schemas/foundation_separation_of_duties.schema.json",
+        PROJECT / "schemas/foundation_ai_reviewer_provisioning_input.schema.json",
+    ]
+    for path in schema_paths:
+        schema = json.loads(path.read_text(encoding="utf-8"))
+        assert schema["$schema"] == "https://json-schema.org/draft/2020-12/schema"
+        Draft202012Validator.check_schema(schema)
+        for value in walk_json_values(schema):
+            if isinstance(value, str) and value.startswith(("#", "http://", "https://")):
+                if value.startswith("#"):
+                    continue
+                assert value in {
+                    "https://json-schema.org/draft/2020-12/schema",
+                    schema.get("$id"),
+                }
+
+
+def test_platform_remains_foundation_only_and_operationally_blocked() -> None:
+    platform = load_platform_contract()
+    assert platform["status"] == "foundation_only"
+    assert platform["authorization"] == {
+        "full_training": False,
+        "locked_evaluation": False,
+        "adapter_publication": False,
+        "serving": False,
+        "provider_activation": False,
+        "training_candidate": None,
+        "release_candidate": None,
+    }
+
+
+def test_public_validation_loads_foundation_bundle_before_success() -> None:
+    result = subprocess.run(
+        [sys.executable, "scripts/validate_data.py"],
+        cwd=PROJECT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    lines = result.stdout.splitlines()
+    assert lines[0] == "Foundation contracts: 4"
+    assert re.fullmatch(
+        r"Foundation contract bundle SHA-256: [0-9a-f]{64}",
+        lines[1],
+    )
+    assert lines[2] == "FOUNDATION CONTRACTS VALIDATED"
+    assert lines[-1] == "DATA VALIDATION PASSED"
+
+
+def test_public_validation_rejects_symlinked_project_dir(tmp_path: Path) -> None:
+    project_alias = tmp_path / "project-alias"
+    project_alias.symlink_to(PROJECT, target_is_directory=True)
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "scripts/validate_data.py",
+            "--project-dir",
+            str(project_alias),
+        ],
+        cwd=PROJECT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    output = result.stdout + result.stderr
+    assert result.returncode != 0
+    assert "project_root: symlink paths are not allowed" in output
+    assert str(project_alias) not in output
+    assert "DATA VALIDATION PASSED" not in output

@@ -1,0 +1,19 @@
+{
+  "schema_version": "dime-agent-decision-receipt-v1",
+  "canonicalization": "dime-canonical-json-v1",
+  "signature_algorithm": "ed25519",
+  "payload": {
+    "receipt_id": "dime-receipt-REPLACE_WITH_32_LOWERCASE_HEX_CHARACTERS",
+    "purpose": "REPLACE_WITH_GOVERNED_PURPOSE",
+    "reviewer_id": "REPLACE_WITH_ACTIVE_AI_REVIEWER_ID",
+    "agent_profile_id": "REPLACE_WITH_ACTIVE_AGENT_PROFILE_ID",
+    "agent_profile_sha256": "REPLACE_WITH_64_CHARACTER_SHA256",
+    "reviewer_registry_version": "REPLACE_WITH_EXACT_REVIEWER_REGISTRY_VERSION",
+    "reviewer_registry_sha256": "REPLACE_WITH_64_CHARACTER_SHA256",
+    "receipt_issuer_key_id": "key-REPLACE_WITH_64_CHARACTER_PUBLIC_KEY_SHA256",
+    "subject_sha256": "REPLACE_WITH_64_CHARACTER_SHA256",
+    "decision_context_sha256": "REPLACE_WITH_64_CHARACTER_SHA256",
+    "decision_at_utc": "REPLACE_WITH_NORMALIZED_UTC_TIMESTAMP"
+  },
+  "signature_base64": "REPLACE_WITH_CANONICAL_64_BYTE_ED25519_SIGNATURE_BASE64"
+}

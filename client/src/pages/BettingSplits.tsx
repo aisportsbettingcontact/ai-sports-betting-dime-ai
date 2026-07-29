@@ -321,6 +321,8 @@ export interface BettingSplitsPageProps {
   initialDateSource?: SplitsDateSource;
   /** Allows the shell to preserve a local-only preview capability in route changes. */
   resolveRouteHref?: (href: string) => string;
+  /** Shell pane already exposes an sr-only h1; standalone this page owns it. */
+  embeddedInShell?: boolean;
 }
 
 const identityRouteHref = (href: string) => href;
@@ -330,6 +332,7 @@ export default function BettingSplitsPage({
   initialDate,
   initialDateSource = initialDate ? "url-explicit" : "app-default",
   resolveRouteHref = identityRouteHref,
+  embeddedInShell = false,
 }: BettingSplitsPageProps) {
   const [, setLocation] = useLocation();
   const trackAction = useTrackAction();
@@ -988,6 +991,9 @@ export default function BettingSplitsPage({
 
       {/* ── Main Feed ── */}
       <main className="w-full pb-1">
+        {/* A11Y-NO-H1: standalone (<768px bottom-tab world) this page owns its
+            heading; embedded, the shell pane's sr-only h1 already announces it. */}
+        {!embeddedInShell && <h1 className="sr-only">Betting Splits</h1>}
         {gamesLoading ? (
           <div className="flex flex-col items-center justify-center py-24 gap-3">
             <Loader2

@@ -32,6 +32,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--approval", required=True, type=Path)
     parser.add_argument("--dataset-card", required=True, type=Path)
     parser.add_argument("--external-audit-dir", required=True, type=Path)
+    parser.add_argument(
+        "--agent-receipt-dir",
+        type=Path,
+        help=(
+            "Private flat directory containing exactly the canonical <sha256>.json "
+            "AI-agent receipts referenced by the governed evidence."
+        ),
+    )
     parser.add_argument("--output", required=True, type=Path)
     return parser.parse_args()
 
@@ -52,6 +60,7 @@ def main() -> None:
             approval_path=args.approval,
             dataset_card_path=args.dataset_card,
             external_audit_dir=args.external_audit_dir,
+            agent_receipt_dir=args.agent_receipt_dir,
             output_directory=args.output,
             hf_token=os.environ.get("HF_TOKEN", ""),
         )

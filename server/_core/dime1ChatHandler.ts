@@ -22,13 +22,24 @@ import {
   DIME1_PRODUCT_PROFILE,
   DIME1_PROFILE_VERSION,
   DIME1_SYSTEM_PROMPT,
+  DIME_RESEARCH_ALPHA_PRODUCT_PROFILE,
+  DIME_RESEARCH_ALPHA_PROFILE_VERSION,
+  DIME_RESEARCH_ALPHA_SYSTEM_PROMPT,
 } from "./dime1Model";
-import { Dime1ApiError, dime1ChatComplete, resolveDime1Config } from "./dime1Client";
+import {
+  Dime1ApiError,
+  dime1ChatComplete,
+  resolveDime1Config,
+} from "./dime1Client";
 import { getDimeChatContext } from "./dimeChatContext";
 import { validateDimeResponseText } from "./dimeVerdict";
 import { containsProhibitedBettingCertainty } from "./dimeSafety";
 
-function dime1Log(event: string, requestId: string, data: Record<string, unknown> = {}) {
+function dime1Log(
+  event: string,
+  requestId: string,
+  data: Record<string, unknown> = {}
+) {
   const timestamp = new Date().toISOString();
   console.log(
     `[Dime] [${timestamp}] [${requestId}] ${event}`,
@@ -44,10 +55,23 @@ export interface Dime1ChatRequestArgs {
   messages: DimeChatMessage[];
   requestClass: DimeChatRequestClass;
   responseBudget: number;
+  deploymentTier?: "production" | "research-alpha";
 }
 
-export async function handleDime1ChatRequest(args: Dime1ChatRequestArgs): Promise<void> {
-  const { req, res, requestId, startTime, messages, requestClass, responseBudget } = args;
+export async function handleDime1ChatRequest(
+  args: Dime1ChatRequestArgs
+): Promise<void> {
+  const {
+    req,
+    res,
+    requestId,
+    startTime,
+    messages,
+    requestClass,
+    responseBudget,
+    deploymentTier = "production",
+  } = args;
+  const isResearchAlpha = deploymentTier === "research-alpha";
 
   // Config check before any SSE header flush so a misconfigured endpoint
   // fails as a clean HTTP 500 instead of a broken stream.
@@ -57,6 +81,7 @@ export async function handleDime1ChatRequest(args: Dime1ChatRequestArgs): Promis
       errorClass: "ConfigurationError",
       statusCode: 500,
       detail: "Dime 1.0 endpoint not configured",
+      deploymentTier,
     });
     res.status(500).json({
       error:
@@ -78,19 +103,21 @@ export async function handleDime1ChatRequest(args: Dime1ChatRequestArgs): Promis
           role: "assistant",
           content:
             "Understood. I will ground Dime answers in this platform context and clearly say when a requested market is missing.",
-        },
+        }
       );
     }
 
     dime1Log("dime.chat.dime1.context", requestId, {
       dataFreshness,
       rowCount: context.rowCount,
+      deploymentTier,
     });
   } catch (contextErr) {
     dataFreshness = "none";
     dime1Log("dime.chat.dime1.context_error", requestId, {
       errorClass: (contextErr as Error)?.constructor?.name ?? "Unknown",
       detail: (contextErr as Error)?.message ?? "Context lookup failed",
+      deploymentTier,
     });
   }
 
@@ -106,10 +133,15 @@ export async function handleDime1ChatRequest(args: Dime1ChatRequestArgs): Promis
   send({
     type: "meta",
     dataFreshness,
-    dimeProfile: DIME1_PRODUCT_PROFILE,
-    profileVersion: DIME1_PROFILE_VERSION,
-    promptSource: "dime1-v1",
-    provider: "dime1",
+    dimeProfile: isResearchAlpha
+      ? DIME_RESEARCH_ALPHA_PRODUCT_PROFILE
+      : DIME1_PRODUCT_PROFILE,
+    profileVersion: isResearchAlpha
+      ? DIME_RESEARCH_ALPHA_PROFILE_VERSION
+      : DIME1_PROFILE_VERSION,
+    promptSource: isResearchAlpha ? "research-alpha-control" : "dime1-v1",
+    provider: isResearchAlpha ? "dime1-research-alpha" : "dime1",
+    deploymentTier,
     model: config.model,
     requestClass,
     responseBudget,
@@ -124,6 +156,7 @@ export async function handleDime1ChatRequest(args: Dime1ChatRequestArgs): Promis
       abort.abort();
       dime1Log("dime.chat.dime1.aborted", requestId, {
         latencyMs: Date.now() - startTime,
+        deploymentTier,
       });
     }
   });
@@ -134,11 +167,14 @@ export async function handleDime1ChatRequest(args: Dime1ChatRequestArgs): Promis
     historyLength: messages.length,
     requestClass,
     responseBudget,
+    deploymentTier,
   });
 
   try {
     const result = await dime1ChatComplete({
-      system: DIME1_SYSTEM_PROMPT,
+      system: isResearchAlpha
+        ? DIME_RESEARCH_ALPHA_SYSTEM_PROMPT
+        : DIME1_SYSTEM_PROMPT,
       messages,
       maxTokens: responseBudget,
       temperature: DIME1_CHAT_TEMPERATURE,
@@ -146,16 +182,20 @@ export async function handleDime1ChatRequest(args: Dime1ChatRequestArgs): Promis
     });
 
     const validation = validateDimeResponseText(result.content);
-    const certaintyViolation = containsProhibitedBettingCertainty(result.content);
+    const certaintyViolation = containsProhibitedBettingCertainty(
+      result.content
+    );
 
     dime1Log("dime.chat.dime1.generate.done", requestId, {
       finishReason: result.finishReason,
       outputCharCount: result.content.length,
       latencyMs: Date.now() - startTime,
-      verificationStatus: validation.ok && !certaintyViolation ? "passed" : "blocked",
+      verificationStatus:
+        validation.ok && !certaintyViolation ? "passed" : "blocked",
       validationErrors: validation.errors,
       certaintyViolation,
       usage: result.usage,
+      deploymentTier,
     });
 
     if (!validation.ok || certaintyViolation) {
@@ -172,12 +212,17 @@ export async function handleDime1ChatRequest(args: Dime1ChatRequestArgs): Promis
   } catch (err: unknown) {
     if (!aborted) {
       const isApiError = err instanceof Dime1ApiError;
-      const message = isApiError ? `Model error (${err.status}).` : "Dime hit a connection problem.";
+      const message = isApiError
+        ? `Model error (${err.status}).`
+        : "Dime hit a connection problem.";
 
       dime1Log("dime.chat.dime1.error", requestId, {
-        errorClass: isApiError ? "Dime1ApiError" : (err as Error)?.constructor?.name ?? "Unknown",
+        errorClass: isApiError
+          ? "Dime1ApiError"
+          : ((err as Error)?.constructor?.name ?? "Unknown"),
         statusCode: isApiError ? err.status : undefined,
         latencyMs: Date.now() - startTime,
+        deploymentTier,
       });
 
       send({ type: "error", message });

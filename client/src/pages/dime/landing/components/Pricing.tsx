@@ -80,7 +80,9 @@ export default function Pricing() {
           </div>
 
           <div className="credits-note">
-            <h4>{CREDITS_NOTE.title}</h4>
+            {/* h3, not h4: the pricing section's heading is an h2 — an h4 here
+                skips a level (LANDING-HEADING-ORDER). */}
+            <h3>{CREDITS_NOTE.title}</h3>
             <p>{CREDITS_NOTE.copy}</p>
           </div>
 

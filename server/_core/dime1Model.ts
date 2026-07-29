@@ -24,11 +24,23 @@
 export const DIME1_PRODUCT_PROFILE = "Dime 1.0";
 export const DIME1_PROFILE_VERSION = "1.0.0";
 export const DIME1_BASE_MODEL = "meta-llama/Llama-3.1-8B";
+// prettier-ignore
 export const DIME1_BASE_MODEL_REVISION = "d04e592bb4f6aa9cfee91e2e20afa771667e1d4b";
 /** Meta Llama 3 license naming clause: derivative names start with "Llama 3". */
 export const DIME1_ARTIFACT_NAME = "Llama-3-Dime-1.0";
 /** Reserved future served-model alias; no endpoint is approved or active. */
 export const DIME1_DEFAULT_SERVED_MODEL = "dime-1.0";
+
+/**
+ * Temporary control model used only by the isolated Research Alpha lane.
+ * This is an official Meta instruct checkpoint, not a trained Dime artifact.
+ */
+export const DIME_RESEARCH_ALPHA_PRODUCT_PROFILE = "Dime Research Alpha";
+export const DIME_RESEARCH_ALPHA_PROFILE_VERSION = "alpha.1";
+export const DIME_RESEARCH_ALPHA_BASE_MODEL =
+  "meta-llama/Llama-3.1-8B-Instruct";
+export const DIME_RESEARCH_ALPHA_BASE_MODEL_REVISION =
+  "0e9e39f249a16976918f6564b8830bc894c89659";
 
 /** Low temperature: analysis and utility work, not creative writing. */
 export const DIME1_CHAT_TEMPERATURE = 0.2;
@@ -67,3 +79,8 @@ Voice:
 - The play bar is a 2.0 percentage-point edge over the price's implied probability. Below the bar: pass. Fair (break-even) odds are never an entry price — quoted entry thresholds always include the bar.
 - Totals: the simulation's over/under rates carry the direction; a model total equal to the market number is the evaluation line, not a projection. With no total price in the feed, evaluate at standard -110 (52.4% break-even) and ask for the book's actual price.
 - Precision over cleverness. "A 1.2-point edge is too thin to trust" — not metaphors about noise or juice deciding.`;
+
+export const DIME_RESEARCH_ALPHA_SYSTEM_PROMPT = DIME1_SYSTEM_PROMPT.replace(
+  "You are Dime 1.0, the sports-betting analysis model inside Dime AI.",
+  "You are Dime Research Alpha, a temporary Llama 3.1 8B Instruct control model inside Dime AI. You are not the trained or released Dime 1.0 model."
+);

@@ -23,6 +23,17 @@ from typing import Any
 import yaml
 from jsonschema import Draft202012Validator, FormatChecker
 
+from dime_ai.agent_decision_receipts import (
+    RECEIPT_CANONICALIZATION,
+    RECEIPT_SCHEMA_VERSION,
+    RECEIPT_SIGNATURE_ALGORITHM,
+    RECEIPT_VERIFIER_ID,
+    RECEIPT_VERIFIER_VERSION,
+    AgentDecisionReceiptError,
+    decision_context_sha256,
+    verify_agent_decision_receipt,
+)
+from dime_ai.canonical_json import canonical_json_bytes
 from dime_ai.data_validation import (
     DataValidationError,
     partition_keys,
@@ -32,6 +43,7 @@ from dime_ai.data_validation import (
     validate_sft_record,
     validate_unique_ids,
 )
+from dime_ai.foundation_contracts import _safe_schema_error_message
 from dime_ai.hf_provenance import (
     DevelopmentEvalProvenanceError,
     DevelopmentEvalRemote,
@@ -53,7 +65,7 @@ from dime_ai.program_audit import audit_curriculum
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SCHEMA_ROOT = PROJECT_ROOT / "schemas"
 AUDITOR_ID = "dime-foundation-auditor"
-AUDITOR_VERSION = "1.0.0"
+AUDITOR_VERSION = "1.1.0"
 DATASET_VERSION = "dime-sft-foundation-v1"
 RELEASE_INVENTORY = {
     "train.jsonl",
@@ -71,6 +83,8 @@ EXTERNAL_AUDIT_FILES = {
     "numeric_traceability": "numeric-traceability.json",
 }
 SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
+MAX_AGENT_RECEIPT_BYTES = 64 * 1024
+MAX_AGENT_RECEIPT_FILES = 10_000
 TOKEN_PATTERN = re.compile(r"[a-z0-9]+")
 NUMERIC_TOKEN_PATTERN = re.compile(
     r"(?<![A-Za-z0-9_])[-+]?(?:\d{1,3}(?:,\d{3})+|\d+|\.\d+)(?:\.\d+)?%?"
@@ -138,12 +152,13 @@ def _validator(schema_name: str) -> Draft202012Validator:
 def _validate_schema(value: dict[str, Any], schema_name: str, label: str) -> None:
     errors = sorted(
         _validator(schema_name).iter_errors(value),
-        key=lambda error: list(error.absolute_path),
+        key=lambda error: (
+            tuple(str(item) for item in error.absolute_schema_path),
+            str(error.validator),
+        ),
     )
     if errors:
-        error = errors[0]
-        path = ".".join(str(item) for item in error.absolute_path) or "$"
-        raise FoundationDatasetError(f"{label}: schema violation at {path}: {error.message}")
+        raise FoundationDatasetError(_safe_schema_error_message(errors[0], label=label))
 
 
 def _regular_file(path: str | Path, label: str) -> Path:
@@ -294,6 +309,123 @@ def _capture_inputs(
     return captured
 
 
+def _capture_agent_receipt_store(directory: Path) -> dict[Path, CapturedInput]:
+    """Bound and capture one flat receipt store through a validated directory FD."""
+
+    root = _regular_directory(directory, "AI-agent receipt directory")
+    required_flags = ("O_CLOEXEC", "O_DIRECTORY", "O_NOFOLLOW", "O_NONBLOCK")
+    if any(not hasattr(os, flag) for flag in required_flags) or os.open not in os.supports_dir_fd:
+        raise FoundationDatasetError(
+            "secure descriptor-based AI-agent receipt access is unavailable"
+        )
+    directory_flags = os.O_RDONLY | os.O_CLOEXEC | os.O_DIRECTORY | os.O_NOFOLLOW
+    file_flags = os.O_RDONLY | os.O_CLOEXEC | os.O_NOFOLLOW | os.O_NONBLOCK
+    captured: dict[Path, CapturedInput] = {}
+    try:
+        root_fd = os.open(root, directory_flags)
+    except OSError as exc:
+        raise FoundationDatasetError(
+            "AI-agent receipt directory could not be opened securely"
+        ) from exc
+    try:
+        if not stat.S_ISDIR(os.fstat(root_fd).st_mode):
+            raise FoundationDatasetError("AI-agent receipt directory must be a real directory")
+        try:
+            entries = os.scandir(root_fd)
+        except OSError as exc:
+            raise FoundationDatasetError(
+                "AI-agent receipt directory could not be enumerated securely"
+            ) from exc
+        with entries:
+            for count, entry in enumerate(entries, 1):
+                if count > MAX_AGENT_RECEIPT_FILES:
+                    raise FoundationDatasetError(
+                        "AI-agent receipt directory exceeds the file-count limit"
+                    )
+                name = entry.name
+                if re.fullmatch(r"[0-9a-f]{64}\.json", name) is None:
+                    raise FoundationDatasetError(
+                        "AI-agent receipt directory must contain only flat <sha256>.json files"
+                    )
+                try:
+                    descriptor = os.open(name, file_flags, dir_fd=root_fd)
+                except OSError as exc:
+                    raise FoundationDatasetError(
+                        "AI-agent receipt store contains an entry that cannot be opened securely"
+                    ) from exc
+                try:
+                    before = os.fstat(descriptor)
+                    if not stat.S_ISREG(before.st_mode):
+                        raise FoundationDatasetError(
+                            "AI-agent receipt directory must contain only regular files"
+                        )
+                    if before.st_size > MAX_AGENT_RECEIPT_BYTES:
+                        raise FoundationDatasetError(
+                            "AI-agent receipt exceeds the 64 KiB size limit"
+                        )
+                    digest = hashlib.sha256()
+                    chunks: list[bytes] = []
+                    bytes_read = 0
+                    while bytes_read <= MAX_AGENT_RECEIPT_BYTES:
+                        chunk = os.read(
+                            descriptor,
+                            min(64 * 1024, MAX_AGENT_RECEIPT_BYTES + 1 - bytes_read),
+                        )
+                        if not chunk:
+                            break
+                        chunks.append(chunk)
+                        digest.update(chunk)
+                        bytes_read += len(chunk)
+                    if bytes_read > MAX_AGENT_RECEIPT_BYTES:
+                        raise FoundationDatasetError(
+                            "AI-agent receipt exceeds the 64 KiB size limit"
+                        )
+                    after = os.fstat(descriptor)
+                finally:
+                    os.close(descriptor)
+                before_identity = (
+                    before.st_dev,
+                    before.st_ino,
+                    before.st_size,
+                    before.st_mtime_ns,
+                )
+                after_identity = (
+                    after.st_dev,
+                    after.st_ino,
+                    after.st_size,
+                    after.st_mtime_ns,
+                )
+                if before_identity != after_identity or bytes_read != after.st_size:
+                    raise FoundationDatasetError(
+                        "AI-agent receipt changed while it was being captured"
+                    )
+                path = (root / name).absolute()
+                captured[path] = CapturedInput(
+                    path=path,
+                    data=b"".join(chunks),
+                    sha256=digest.hexdigest(),
+                    identity=after_identity,
+                )
+    finally:
+        os.close(root_fd)
+    return captured
+
+
+def _assert_agent_receipt_store_unchanged(
+    directory: Path,
+    expected: dict[Path, CapturedInput],
+) -> None:
+    current = _capture_agent_receipt_store(directory)
+    if set(current) != set(expected):
+        raise FoundationDatasetError(
+            "AI-agent receipt directory inventory changed after validation"
+        )
+    for path, captured in expected.items():
+        observed = current[path]
+        if observed.identity != captured.identity or observed.sha256 != captured.sha256:
+            raise FoundationDatasetError("AI-agent receipt changed after validation")
+
+
 def _assert_inputs_unchanged(
     captured: dict[Path, CapturedInput],
     label: str,
@@ -416,19 +548,6 @@ def _regular_tree_files(root: Path, label: str) -> list[Path]:
     return files
 
 
-def canonical_json_bytes(value: Any) -> bytes:
-    return (
-        json.dumps(
-            value,
-            ensure_ascii=False,
-            allow_nan=False,
-            separators=(",", ":"),
-            sort_keys=True,
-        )
-        + "\n"
-    ).encode("utf-8")
-
-
 def canonical_record_sha256(record: dict[str, Any]) -> str:
     return sha256_bytes(canonical_json_bytes(record))
 
@@ -493,7 +612,11 @@ def _valid_identity(value: Any) -> bool:
     )
 
 
-def trusted_reviewer_index(registry: dict[str, Any]) -> dict[str, dict[str, Any]]:
+def trusted_reviewer_index(
+    registry: dict[str, Any],
+    *,
+    independent_ai_activation_authorized: bool = False,
+) -> dict[str, dict[str, Any]]:
     """Resolve reviewer authority only from the Git-controlled registry."""
 
     _validate_schema(
@@ -506,6 +629,30 @@ def trusted_reviewer_index(registry: dict[str, Any]) -> dict[str, dict[str, Any]
             "foundation reviewer registry must be independently reviewed and active"
         )
     reviewers: dict[str, dict[str, Any]] = {}
+    agent_profile_ids: set[str] = set()
+    receipt_issuer_key_ids: set[str] = set()
+    workload_identity_ids: set[str] = set()
+    verifier = registry.get("receipt_verifier")
+    supported_verifier = {
+        "receipt_schema_version": RECEIPT_SCHEMA_VERSION,
+        "receipt_schema_path": "schemas/foundation_agent_decision_receipt.schema.json",
+        "verifier_id": RECEIPT_VERIFIER_ID,
+        "verifier_version": RECEIPT_VERIFIER_VERSION,
+        "canonicalization": RECEIPT_CANONICALIZATION,
+        "signature_algorithm": RECEIPT_SIGNATURE_ALGORITHM,
+    }
+    active_ai_present = any(
+        reviewer["principal_type"] == "ai_agent" and reviewer["active"]
+        for reviewer in registry["reviewers"]
+    )
+    if active_ai_present and not isinstance(verifier, dict):
+        raise FoundationDatasetError(
+            "active AI-agent reviewers require the v4 cryptographic receipt verifier"
+        )
+    if isinstance(verifier, dict) and any(
+        verifier.get(field) != value for field, value in supported_verifier.items()
+    ):
+        raise FoundationDatasetError("foundation reviewer registry receipt verifier is unsupported")
     for reviewer in registry["reviewers"]:
         reviewer_id = reviewer["reviewer_id"]
         if reviewer_id in reviewers:
@@ -514,10 +661,324 @@ def trusted_reviewer_index(registry: dict[str, Any]) -> dict[str, dict[str, Any]
             raise FoundationDatasetError(
                 "trusted reviewer registry contains a placeholder identity"
             )
+        _reviewer_authority_period(
+            reviewer,
+            label=f"trusted reviewer {reviewer_id}",
+        )
+        if reviewer["principal_type"] == "ai_agent":
+            profile = reviewer["agent_profile"]
+            profile_id = profile["profile_id"]
+            if profile_id in agent_profile_ids:
+                raise FoundationDatasetError(f"duplicate trusted AI-agent profile_id: {profile_id}")
+            agent_profile_ids.add(profile_id)
+            key_id = profile["receipt_issuer_key_id"]
+            if key_id is not None and key_id in receipt_issuer_key_ids:
+                raise FoundationDatasetError(
+                    f"duplicate trusted AI-agent receipt issuer key: {key_id}"
+                )
+            if key_id is not None:
+                receipt_issuer_key_ids.add(key_id)
+            workload_identity_id = profile.get("workload_identity_id")
+            if workload_identity_id is not None and (workload_identity_id in workload_identity_ids):
+                raise FoundationDatasetError("duplicate trusted AI-agent workload identity")
+            if workload_identity_id is not None:
+                workload_identity_ids.add(workload_identity_id)
+            if reviewer["active"] and not verifier["activation_authorized"]:
+                raise FoundationDatasetError(
+                    "AI-agent reviewer activation is not authorized by the reviewer registry"
+                )
+            if reviewer["active"] and not independent_ai_activation_authorized:
+                raise FoundationDatasetError(
+                    "AI-agent reviewer activation requires a separate owner-controlled "
+                    "authorization gate; activation remains blocked"
+                )
         reviewers[reviewer_id] = reviewer
     if not reviewers:
         raise FoundationDatasetError("active reviewer registry cannot be empty")
     return reviewers
+
+
+def load_agent_decision_receipts(
+    directory: Path | None,
+    *,
+    captured_inputs: dict[Path, CapturedInput] | None = None,
+) -> dict[str, dict[str, Any]]:
+    """Load canonical, content-addressed receipt files from one private flat directory."""
+
+    if directory is None:
+        return {}
+    root = _regular_directory(directory, "AI-agent receipt directory")
+    receipt_capture = (
+        _captured_tree(captured_inputs, root)
+        if captured_inputs is not None
+        else _capture_agent_receipt_store(root)
+    )
+    if len(receipt_capture) > MAX_AGENT_RECEIPT_FILES:
+        raise FoundationDatasetError("AI-agent receipt directory exceeds the file-count limit")
+    paths = sorted(receipt_capture)
+    receipts: dict[str, dict[str, Any]] = {}
+    for path in paths:
+        relative = path.relative_to(root).as_posix()
+        match = re.fullmatch(r"([0-9a-f]{64})\.json", relative)
+        if match is None:
+            raise FoundationDatasetError(
+                "AI-agent receipt directory must contain only flat <sha256>.json files"
+            )
+        digest = match.group(1)
+        if digest in receipts:
+            raise FoundationDatasetError("duplicate AI-agent receipt digest")
+        item = (
+            _captured_input(receipt_capture, path, "AI-agent receipt")
+            if captured_inputs is not None
+            else receipt_capture[path]
+        )
+        if item.data is None:
+            raise FoundationDatasetError("AI-agent receipt bytes were not retained")
+        if len(item.data) > MAX_AGENT_RECEIPT_BYTES:
+            raise FoundationDatasetError("AI-agent receipt exceeds the 64 KiB size limit")
+        if item.sha256 != digest:
+            raise FoundationDatasetError("AI-agent receipt filename does not match its byte digest")
+        try:
+            text = item.data.decode("utf-8")
+        except UnicodeDecodeError as exc:
+            raise FoundationDatasetError("AI-agent receipt is invalid UTF-8") from exc
+        try:
+            receipt = strict_json_loads(text, "AI-agent receipt")
+        except (DataValidationError, json.JSONDecodeError) as exc:
+            raise FoundationDatasetError(str(exc)) from exc
+        if not isinstance(receipt, dict):
+            raise FoundationDatasetError("AI-agent receipt must be a JSON object")
+        _validate_schema(
+            receipt,
+            "foundation_agent_decision_receipt.schema.json",
+            "AI-agent receipt",
+        )
+        if item.data != canonical_json_bytes(receipt):
+            raise FoundationDatasetError("AI-agent receipt bytes must use Dime canonical JSON v1")
+        receipts[digest] = receipt
+    receipt_ids = [receipt["payload"]["receipt_id"] for receipt in receipts.values()]
+    if len(receipt_ids) != len(set(receipt_ids)):
+        raise FoundationDatasetError("AI-agent receipt_id values must be globally unique")
+    return receipts
+
+
+def _reviewer_authority_period(
+    reviewer: dict[str, Any],
+    *,
+    label: str,
+) -> tuple[datetime, datetime | None]:
+    start = _parse_utc(reviewer.get("effective_start"), f"{label}.effective_start")
+    raw_end = reviewer.get("effective_end_or_open_ended")
+    end = None if raw_end is None else _parse_utc(raw_end, f"{label}.effective_end_or_open_ended")
+    if end is not None and end <= start:
+        raise FoundationDatasetError(
+            f"{label}: effective authority end must be later than its start"
+        )
+    return start, end
+
+
+def _require_reviewer_authority(
+    reviewer_index: dict[str, dict[str, Any]],
+    reviewer_id: str,
+    *,
+    event_at: datetime,
+    label: str,
+    required_role: str | None = None,
+) -> dict[str, Any]:
+    reviewer = reviewer_index.get(reviewer_id)
+    if reviewer is None or not reviewer["active"]:
+        if required_role is None:
+            raise FoundationDatasetError(f"inactive or unknown reviewer: {reviewer_id}")
+        raise FoundationDatasetError(f"{label}: reviewer lacks active {required_role} role")
+    if required_role is not None and required_role not in reviewer["roles"]:
+        raise FoundationDatasetError(f"{label}: reviewer lacks active {required_role} role")
+    start, end = _reviewer_authority_period(
+        reviewer,
+        label=f"{label} reviewer {reviewer_id}",
+    )
+    if event_at < start or (end is not None and event_at >= end):
+        raise FoundationDatasetError(
+            f"{label}: reviewer {reviewer_id} is outside their authority period"
+        )
+    return reviewer
+
+
+def _require_independent_reviewer_groups(
+    reviewer_ids: set[str],
+    reviewer_index: dict[str, dict[str, Any]],
+    *,
+    minimum: int,
+    label: str,
+) -> None:
+    groups = {reviewer_index[reviewer_id]["independence_group_id"] for reviewer_id in reviewer_ids}
+    model_lineages = {
+        _reviewer_lineage_keys(reviewer_index[reviewer_id])[0] for reviewer_id in reviewer_ids
+    }
+    policy_lineages = {
+        _reviewer_lineage_keys(reviewer_index[reviewer_id])[1] for reviewer_id in reviewer_ids
+    }
+    if min(len(groups), len(model_lineages), len(policy_lineages)) < minimum:
+        raise FoundationDatasetError(
+            f"{label}: requires at least {minimum} distinct reviewer independence groups"
+        )
+
+
+def _reviewer_lineage_keys(reviewer: dict[str, Any]) -> tuple[str, str]:
+    if reviewer.get("principal_type", "human") != "ai_agent":
+        key = f"human:{reviewer['reviewer_id']}"
+        return key, key
+    profile = reviewer.get("agent_profile")
+    if not isinstance(profile, dict):
+        key = f"ai_agent:{reviewer['reviewer_id']}"
+        return key, key
+    explicit_model_lineage = profile.get("model_lineage_id")
+    explicit_policy_lineage = profile.get("policy_lineage_id")
+    if isinstance(explicit_model_lineage, str) and isinstance(explicit_policy_lineage, str):
+        return (
+            f"ai_model_lineage:{explicit_model_lineage}",
+            f"ai_policy_lineage:{explicit_policy_lineage}",
+        )
+    model_lineage = {
+        field: profile.get(field)
+        for field in (
+            "model_provider",
+            "model_id",
+            "model_revision",
+        )
+    }
+    policy_lineage = {
+        field: profile.get(field)
+        for field in (
+            "system_instruction_sha256",
+            "tool_contract_sha256",
+            "inference_policy_sha256",
+        )
+    }
+    return (
+        f"ai_model:{sha256_bytes(canonical_json_bytes(model_lineage))}",
+        f"ai_policy:{sha256_bytes(canonical_json_bytes(policy_lineage))}",
+    )
+
+
+def _require_agent_decision_receipts(
+    reviewer_ids: set[str],
+    reviewer_index: dict[str, dict[str, Any]],
+    receipts: dict[str, str] | None,
+    *,
+    label: str,
+    receipt_documents: dict[str, dict[str, Any]] | None = None,
+    reviewer_registry_sha256: str | None = None,
+    reviewer_registry_version: str | None = None,
+    purpose: str | None = None,
+    subject_sha256: str | None = None,
+    decision_document: dict[str, Any] | None = None,
+    receipt_field: str = "agent_decision_receipts",
+    decision_at: datetime | None = None,
+) -> None:
+    required_ids = {
+        reviewer_id
+        for reviewer_id in reviewer_ids
+        if reviewer_index[reviewer_id].get("principal_type", "human") == "ai_agent"
+    }
+    supplied = receipts or {}
+    if set(supplied) != required_ids:
+        raise FoundationDatasetError(
+            f"{label}: AI-agent receipt IDs must exactly match AI-agent reviewer IDs"
+        )
+    if any(not SHA256_PATTERN.fullmatch(value) for value in supplied.values()):
+        raise FoundationDatasetError(
+            f"{label}: AI-agent decision receipts must be lowercase SHA-256 digests"
+        )
+    if len(set(supplied.values())) != len(supplied):
+        raise FoundationDatasetError(
+            f"{label}: one AI-agent decision receipt cannot represent multiple principals"
+        )
+    if not required_ids:
+        return
+    if (
+        receipt_documents is None
+        or reviewer_registry_sha256 is None
+        or reviewer_registry_version is None
+        or purpose is None
+        or subject_sha256 is None
+        or decision_document is None
+        or decision_at is None
+    ):
+        raise FoundationDatasetError(
+            f"{label}: cryptographic AI-agent receipt verification context is required"
+        )
+    context_sha256 = decision_context_sha256(
+        decision_document,
+        receipt_field=receipt_field,
+    )
+    for reviewer_id in sorted(required_ids):
+        digest = supplied[reviewer_id]
+        receipt = receipt_documents.get(digest)
+        if receipt is None:
+            raise FoundationDatasetError(f"{label}: referenced AI-agent receipt bytes are missing")
+        try:
+            verify_agent_decision_receipt(
+                receipt,
+                expected_receipt_sha256=digest,
+                reviewer=reviewer_index[reviewer_id],
+                reviewer_registry_sha256=reviewer_registry_sha256,
+                reviewer_registry_version=reviewer_registry_version,
+                purpose=purpose,
+                subject_sha256=subject_sha256,
+                decision_context_sha256_value=context_sha256,
+                decision_at=decision_at,
+            )
+        except AgentDecisionReceiptError as exc:
+            raise FoundationDatasetError(f"{label}: {exc}") from exc
+
+
+def _validate_dataset_approver_authority(
+    approver_ids: list[str],
+    reviewer_index: dict[str, dict[str, Any]],
+    *,
+    approval_time: datetime,
+    candidate_author_ids: set[str],
+    agent_decision_receipts: dict[str, str] | None = None,
+    approval_document: dict[str, Any] | None = None,
+    receipt_documents: dict[str, dict[str, Any]] | None = None,
+    reviewer_registry_sha256: str | None = None,
+    reviewer_registry_version: str | None = None,
+) -> None:
+    approver_set = set(approver_ids)
+    for approver_id in approver_ids:
+        _require_reviewer_authority(
+            reviewer_index,
+            approver_id,
+            event_at=approval_time,
+            label="dataset approval",
+            required_role="dataset-approver",
+        )
+    _require_independent_reviewer_groups(
+        approver_set,
+        reviewer_index,
+        minimum=2,
+        label="dataset approval",
+    )
+    _require_agent_decision_receipts(
+        approver_set,
+        reviewer_index,
+        agent_decision_receipts,
+        label="dataset approval",
+        receipt_documents=receipt_documents,
+        reviewer_registry_sha256=reviewer_registry_sha256,
+        reviewer_registry_version=reviewer_registry_version,
+        purpose="dataset_approval",
+        subject_sha256=(
+            approval_document.get("candidate_audit_sha256")
+            if approval_document is not None
+            else None
+        ),
+        decision_document=approval_document,
+        decision_at=approval_time,
+    )
+    overlapping_authors = sorted(approver_set & candidate_author_ids)
+    if overlapping_authors:
+        raise FoundationDatasetError("dataset approval cannot be granted by a candidate author")
 
 
 def _load_shards(paths: list[Path], label: str) -> list[dict[str, Any]]:
@@ -1049,7 +1510,12 @@ def validate_numeric_traceability(
             continue
         expected, units = _expected_market_math(call)
         expected_values = _flatten_decimal_values(expected)
-        result_values = _flatten_decimal_values(result["data"])
+        output = result["data"].get("output")
+        if not isinstance(output, dict):
+            raise FoundationDatasetError(
+                f"{record_id}: market-math result requires operation-specific output"
+            )
+        result_values = _flatten_decimal_values(output)
         if set(result_values) != set(expected_values):
             expected_paths = sorted(".".join(path) for path in expected_values)
             actual_paths = sorted(".".join(path) for path in result_values)
@@ -1067,7 +1533,7 @@ def validate_numeric_traceability(
                 raise FoundationDatasetError(
                     f"{record_id}: market-math result mismatch at data.{dotted}"
                 )
-            assertion_path = f"tool:{call_id}:data.{dotted}"
+            assertion_path = f"tool:{call_id}:data.output.{dotted}"
             traceable_assertions[assertion_path] = (expected_value, units[dotted])
             required_assertion_paths.add(assertion_path)
 
@@ -1166,8 +1632,7 @@ def validate_numeric_traceability(
         for token in NUMERIC_TOKEN_PATTERN.finditer(message["content"]):
             if not any(start <= token.start() and token.end() <= end for start, end in ranges):
                 raise FoundationDatasetError(
-                    f"{record_id}: assistant numeric token {token.group(0)!r} "
-                    "is outside every reviewed numeric claim"
+                    f"{record_id}: assistant numeric token is outside every reviewed numeric claim"
                 )
 
 
@@ -1179,6 +1644,9 @@ def validate_review_ledger(
     rubric_sha256: str,
     *,
     effective_at: datetime,
+    receipt_documents: dict[str, dict[str, Any]] | None = None,
+    reviewer_registry_sha256: str | None = None,
+    reviewer_registry_version: str | None = None,
 ) -> None:
     _validate_schema(
         ledger,
@@ -1189,10 +1657,9 @@ def validate_review_ledger(
         raise FoundationDatasetError("review ledger rubric hash does not match the frozen rubric")
     decisions: dict[str, list[dict[str, Any]]] = defaultdict(list)
     decision_keys: set[tuple[str, str]] = set()
+    seen_agent_receipts: set[str] = set()
     for decision in ledger["decisions"]:
         reviewer_id = decision["reviewer_id"]
-        if reviewer_id not in reviewer_index or not reviewer_index[reviewer_id]["active"]:
-            raise FoundationDatasetError(f"inactive or unknown reviewer: {reviewer_id}")
         reviewed_at = _parse_utc(
             decision["reviewed_at_utc"],
             f"{decision['example_id']}.reviewed_at_utc",
@@ -1201,6 +1668,33 @@ def validate_review_ledger(
             raise FoundationDatasetError(
                 f"{decision['example_id']}: review decision is after the audit cutoff"
             )
+        _require_reviewer_authority(
+            reviewer_index,
+            reviewer_id,
+            event_at=reviewed_at,
+            label=f"{decision['example_id']} review",
+        )
+        receipt = decision.get("agent_decision_receipt_sha256")
+        _require_agent_decision_receipts(
+            {reviewer_id},
+            reviewer_index,
+            {} if receipt is None else {reviewer_id: receipt},
+            label=f"{decision['example_id']} review",
+            receipt_documents=receipt_documents,
+            reviewer_registry_sha256=reviewer_registry_sha256,
+            reviewer_registry_version=reviewer_registry_version,
+            purpose="record_review",
+            subject_sha256=decision["record_sha256"],
+            decision_document=decision,
+            receipt_field="agent_decision_receipt_sha256",
+            decision_at=reviewed_at,
+        )
+        if receipt is not None:
+            if receipt in seen_agent_receipts:
+                raise FoundationDatasetError(
+                    "AI-agent decision receipt cannot be reused across review decisions"
+                )
+            seen_agent_receipts.add(receipt)
         key = (decision["record_sha256"], reviewer_id)
         if key in decision_keys:
             raise FoundationDatasetError(
@@ -1258,6 +1752,12 @@ def validate_review_ledger(
             raise FoundationDatasetError(
                 f"{record_id}: requires at least {minimum} independent approvals"
             )
+        _require_independent_reviewer_groups(
+            approval_ids,
+            reviewer_index,
+            minimum=minimum,
+            label=record_id,
+        )
         if record["metadata"]["author_id"] in approval_ids:
             raise FoundationDatasetError(f"{record_id}: author cannot review their own record")
         embedded = set(record["quality"]["reviewer_ids"])
@@ -1485,6 +1985,7 @@ def audit_foundation_candidates(
     development_eval_manifest_path: Path,
     generated_at_utc: str,
     hf_token: str,
+    agent_receipt_dir: Path | None = None,
     development_eval_remote: DevelopmentEvalRemote | None = None,
     project_root: Path = PROJECT_ROOT,
 ) -> FoundationAuditResult:
@@ -1507,7 +2008,10 @@ def audit_foundation_candidates(
             ("development evaluation identity", development_eval_identity_path),
             ("development evaluation manifest", development_eval_manifest_path),
         ),
-        directories=(("source artifact root", source_artifact_root),),
+        directories=(
+            ("source artifact root", source_artifact_root),
+            *((("AI-agent receipt directory", agent_receipt_dir),) if agent_receipt_dir else ()),
+        ),
     )
     generated_at = _parse_utc(generated_at_utc, "generated_at_utc")
     _reject_future_timestamp(generated_at, "generated_at_utc")
@@ -1521,6 +2025,9 @@ def audit_foundation_candidates(
     source_artifact_paths = _regular_tree_files(
         source_artifact_root,
         "source artifact root",
+    )
+    agent_receipt_capture = (
+        _capture_agent_receipt_store(agent_receipt_dir) if agent_receipt_dir is not None else {}
     )
     audit_input_paths = [
         *train_paths,
@@ -1552,6 +2059,7 @@ def audit_foundation_candidates(
             reviewer_registry_path,
         },
     )
+    audit_input_fence.update(agent_receipt_capture)
     build_config = yaml.safe_load(_captured_text(audit_input_fence, config_path, "build config"))
     curriculum = yaml.safe_load(_captured_text(audit_input_fence, curriculum_path, "curriculum"))
     _require_fresh(
@@ -1592,6 +2100,15 @@ def audit_foundation_candidates(
         reviewer_registry_path,
         schema_name="foundation_reviewer_registry.schema.json",
         label="foundation reviewer registry",
+    )
+    reviewer_registry_sha256 = _captured_sha256(
+        audit_input_fence,
+        reviewer_registry_path,
+        "foundation reviewer registry",
+    )
+    receipt_documents = load_agent_decision_receipts(
+        agent_receipt_dir,
+        captured_inputs=audit_input_fence,
     )
     development_evaluation_sha256 = "0" * 64
     development_eval_manifest_sha256 = "0" * 64
@@ -1706,12 +2223,31 @@ def audit_foundation_candidates(
                 "source registry must contain exactly the sources used by this candidate"
             )
         for source in source_registry["sources"]:
+            reviewed_at = _parse_utc(
+                source["reviewed_at_utc"],
+                f"{source['source_id']}.reviewed_at_utc",
+            )
             for reviewer_id in source["reviewer_ids"]:
-                reviewer = reviewer_index.get(reviewer_id)
-                if reviewer is None or not reviewer["active"] or "rights" not in reviewer["roles"]:
-                    raise FoundationDatasetError(
-                        f"{source['source_id']}: source reviewer lacks active rights role"
-                    )
+                _require_reviewer_authority(
+                    reviewer_index,
+                    reviewer_id,
+                    event_at=reviewed_at,
+                    label=f"{source['source_id']} source",
+                    required_role="rights",
+                )
+            _require_agent_decision_receipts(
+                set(source["reviewer_ids"]),
+                reviewer_index,
+                source.get("agent_decision_receipts"),
+                label=f"{source['source_id']} source rights review",
+                receipt_documents=receipt_documents,
+                reviewer_registry_sha256=reviewer_registry_sha256,
+                reviewer_registry_version=reviewer_registry["registry_version"],
+                purpose="source_rights_review",
+                subject_sha256=source["snapshot_sha256"],
+                decision_document=source,
+                decision_at=reviewed_at,
+            )
 
     gate("source_registry", source_gate)
     gate(
@@ -1723,6 +2259,9 @@ def audit_foundation_candidates(
             build_config,
             rubric_sha256,
             effective_at=generated_at,
+            receipt_documents=receipt_documents,
+            reviewer_registry_sha256=reviewer_registry_sha256,
+            reviewer_registry_version=reviewer_registry["registry_version"],
         ),
     )
     gate(
@@ -1837,12 +2376,20 @@ def audit_foundation_candidates(
         "foundation_candidate_audit.schema.json",
         "candidate audit",
     )
-    _assert_inputs_unchanged(audit_input_fence, "candidate audit input")
+    non_receipt_inputs = {
+        path: item for path, item in audit_input_fence.items() if path not in agent_receipt_capture
+    }
+    _assert_inputs_unchanged(non_receipt_inputs, "candidate audit input")
     _assert_tree_inventory_unchanged(
         source_artifact_root,
         audit_input_fence,
         "source artifact root",
     )
+    if agent_receipt_dir is not None:
+        _assert_agent_receipt_store_unchanged(
+            agent_receipt_dir,
+            agent_receipt_capture,
+        )
     return FoundationAuditResult(
         train_records=train,
         validation_records=validation,
@@ -1865,6 +2412,9 @@ def _load_external_audits(
     locked_evaluation_reference: str,
     reviewer_index: dict[str, dict[str, Any]],
     captured_inputs: dict[Path, CapturedInput] | None = None,
+    receipt_documents: dict[str, dict[str, Any]] | None = None,
+    reviewer_registry_sha256: str | None = None,
+    reviewer_registry_version: str | None = None,
 ) -> tuple[dict[str, dict[str, Any]], dict[str, str]]:
     _regular_directory(directory, "external audit directory")
     actual = (
@@ -1925,16 +2475,35 @@ def _load_external_audits(
         if report["scope_reference"] != expected_scope:
             raise FoundationDatasetError(f"{filename}: audit scope reference mismatch")
         required_role = EXTERNAL_AUDIT_REVIEWER_ROLES[audit_type]
+        completed_at = _parse_utc(
+            report["completed_at_utc"],
+            f"{filename}.completed_at_utc",
+        )
         for reviewer_id in report["reviewer_ids"]:
             if not _valid_identity(reviewer_id):
                 raise FoundationDatasetError(
                     f"{filename}: audit reviewer contains a placeholder identity"
                 )
-            reviewer = reviewer_index.get(reviewer_id)
-            if reviewer is None or not reviewer["active"] or required_role not in reviewer["roles"]:
-                raise FoundationDatasetError(
-                    f"{filename}: reviewer lacks active {required_role} role"
-                )
+            _require_reviewer_authority(
+                reviewer_index,
+                reviewer_id,
+                event_at=completed_at,
+                label=filename,
+                required_role=required_role,
+            )
+        _require_agent_decision_receipts(
+            set(report["reviewer_ids"]),
+            reviewer_index,
+            report.get("agent_decision_receipts"),
+            label=filename,
+            receipt_documents=receipt_documents,
+            reviewer_registry_sha256=reviewer_registry_sha256,
+            reviewer_registry_version=reviewer_registry_version,
+            purpose="external_audit",
+            subject_sha256=report["candidate_audit_sha256"],
+            decision_document=report,
+            decision_at=completed_at,
+        )
         reports[audit_type] = report
         hashes[audit_type] = (
             _captured_sha256(captured_inputs, path, audit_type)
@@ -1945,7 +2514,7 @@ def _load_external_audits(
 
 
 def _audit_metadata(report: dict[str, Any], report_sha256: str) -> dict[str, Any]:
-    return {
+    metadata = {
         "passed": True,
         "report_sha256": report_sha256,
         "tool_id": report["tool_id"],
@@ -1953,6 +2522,9 @@ def _audit_metadata(report: dict[str, Any], report_sha256: str) -> dict[str, Any
         "completed_at_utc": report["completed_at_utc"],
         "reviewer_ids": report["reviewer_ids"],
     }
+    if "agent_decision_receipts" in report:
+        metadata["agent_decision_receipts"] = report["agent_decision_receipts"]
+    return metadata
 
 
 def _verify_dataset_card(
@@ -2193,6 +2765,7 @@ def _freeze_audited_snapshot(
     external_audit_dir: Path,
     output_directory: Path,
     hf_token: str,
+    agent_receipt_dir: Path | None = None,
     development_eval_remote: DevelopmentEvalRemote | None = None,
     project_root: Path = PROJECT_ROOT,
 ) -> dict[str, Any]:
@@ -2228,6 +2801,7 @@ def _freeze_audited_snapshot(
         directories=(
             ("source artifact root", source_artifact_root),
             ("external audit directory", external_audit_dir),
+            *((("AI-agent receipt directory", agent_receipt_dir),) if agent_receipt_dir else ()),
         ),
         destinations=(("private frozen snapshot destination", output_directory),),
     )
@@ -2239,6 +2813,9 @@ def _freeze_audited_snapshot(
     external_audit_paths = _regular_tree_files(
         external_audit_dir,
         "external audit directory",
+    )
+    agent_receipt_capture = (
+        _capture_agent_receipt_store(agent_receipt_dir) if agent_receipt_dir is not None else {}
     )
     freeze_input_paths = [
         *train_paths,
@@ -2277,6 +2854,7 @@ def _freeze_audited_snapshot(
             *external_audit_paths,
         },
     )
+    freeze_input_fence.update(agent_receipt_capture)
     if not audit_result.report["pass"]:
         raise FoundationDatasetError("candidate audit did not pass")
     saved_audit = _captured_json_document(
@@ -2351,6 +2929,15 @@ def _freeze_audited_snapshot(
         label="foundation reviewer registry",
     )
     reviewer_index = trusted_reviewer_index(reviewer_registry)
+    reviewer_registry_sha256 = _captured_sha256(
+        freeze_input_fence,
+        reviewer_registry_path,
+        "foundation reviewer registry",
+    )
+    receipt_documents = load_agent_decision_receipts(
+        agent_receipt_dir,
+        captured_inputs=freeze_input_fence,
+    )
     development_identity = validate_development_evaluation_identity(
         development_eval_paths,
         development_eval_identity_path,
@@ -2552,7 +3139,36 @@ def _freeze_audited_snapshot(
         locked_evaluation_reference=approval["locked_evaluation_reference"],
         reviewer_index=reviewer_index,
         captured_inputs=freeze_input_fence,
+        receipt_documents=receipt_documents,
+        reviewer_registry_sha256=reviewer_registry_sha256,
+        reviewer_registry_version=reviewer_registry["registry_version"],
     )
+    agent_receipt_digests = [
+        *[
+            digest
+            for source in registry["sources"]
+            for digest in source.get("agent_decision_receipts", {}).values()
+        ],
+        *[
+            decision["agent_decision_receipt_sha256"]
+            for decision in ledger["decisions"]
+            if decision.get("agent_decision_receipt_sha256") is not None
+        ],
+        *[
+            digest
+            for report in external_reports.values()
+            for digest in report.get("agent_decision_receipts", {}).values()
+        ],
+        *approval.get("agent_decision_receipts", {}).values(),
+    ]
+    if len(agent_receipt_digests) != len(set(agent_receipt_digests)):
+        raise FoundationDatasetError(
+            "AI-agent decision receipts must be unique across reviews, audits, and approval"
+        )
+    if set(agent_receipt_digests) != set(receipt_documents):
+        raise FoundationDatasetError(
+            "AI-agent receipt directory must exactly match all governed receipt references"
+        )
     expected_audits = {
         audit_type: _audit_metadata(
             external_reports[audit_type],
@@ -2572,16 +3188,23 @@ def _freeze_audited_snapshot(
             maximum_age=timedelta(hours=int(freshness["external_audit_max_age_hours"])),
             now=now,
         )
-    for approver_id in approval["approver_ids"]:
-        reviewer = reviewer_index.get(approver_id)
-        if (
-            reviewer is None
-            or not reviewer["active"]
-            or "dataset-approver" not in reviewer["roles"]
-        ):
-            raise FoundationDatasetError(
-                f"dataset approver is unknown, inactive, or unauthorized: {approver_id}"
-            )
+    _validate_dataset_approver_authority(
+        approval["approver_ids"],
+        reviewer_index,
+        approval_time=approval_time,
+        candidate_author_ids={
+            str(record["metadata"]["author_id"])
+            for record in [
+                *audit_result.train_records,
+                *audit_result.validation_records,
+            ]
+        },
+        agent_decision_receipts=approval.get("agent_decision_receipts"),
+        approval_document=approval,
+        receipt_documents=receipt_documents,
+        reviewer_registry_sha256=reviewer_registry_sha256,
+        reviewer_registry_version=reviewer_registry["registry_version"],
+    )
     prerequisite_times = [
         _parse_utc(saved_audit["generated_at_utc"], "candidate_audit.generated_at_utc"),
         *[
@@ -2700,7 +3323,12 @@ def _freeze_audited_snapshot(
             path.is_symlink() or not path.is_file() for path in temporary.iterdir()
         ):
             raise FoundationDatasetError("frozen snapshot inventory is not exact")
-        _assert_inputs_unchanged(freeze_input_fence, "freeze input")
+        non_receipt_inputs = {
+            path: item
+            for path, item in freeze_input_fence.items()
+            if path not in agent_receipt_capture
+        }
+        _assert_inputs_unchanged(non_receipt_inputs, "freeze input")
         _assert_tree_inventory_unchanged(
             source_artifact_root,
             freeze_input_fence,
@@ -2711,6 +3339,11 @@ def _freeze_audited_snapshot(
             freeze_input_fence,
             "external audit directory",
         )
+        if agent_receipt_dir is not None:
+            _assert_agent_receipt_store_unchanged(
+                agent_receipt_dir,
+                agent_receipt_capture,
+            )
         for path in temporary.iterdir():
             _fsync_file(path)
         _fsync_directory(temporary)
@@ -2739,6 +3372,7 @@ def freeze_foundation_snapshot(
     external_audit_dir: Path,
     output_directory: Path,
     hf_token: str,
+    agent_receipt_dir: Path | None = None,
     development_eval_remote: DevelopmentEvalRemote | None = None,
     project_root: Path = PROJECT_ROOT,
 ) -> dict[str, Any]:
@@ -2760,6 +3394,7 @@ def freeze_foundation_snapshot(
         development_eval_manifest_path=development_eval_manifest_path,
         generated_at_utc=saved_audit["generated_at_utc"],
         hf_token=hf_token,
+        agent_receipt_dir=agent_receipt_dir,
         development_eval_remote=development_eval_remote,
         project_root=project_root,
     )
@@ -2777,6 +3412,7 @@ def freeze_foundation_snapshot(
         approval_path=approval_path,
         dataset_card_path=dataset_card_path,
         external_audit_dir=external_audit_dir,
+        agent_receipt_dir=agent_receipt_dir,
         output_directory=output_directory,
         hf_token=hf_token,
         development_eval_remote=development_eval_remote,

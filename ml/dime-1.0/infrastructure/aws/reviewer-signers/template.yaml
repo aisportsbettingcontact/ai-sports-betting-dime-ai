@@ -1,0 +1,950 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: >-
+  Default-locked Dime Foundation AI reviewer provisioning identities and
+  purpose-bound Ed25519 signers. This stack does not activate reviewers.
+
+Parameters:
+  StackMode:
+    Type: String
+    Default: LOCKED
+    AllowedValues:
+      - LOCKED
+      - KEY_SETUP
+      - PROVISIONING
+    Description: >-
+      LOCKED disables keys and functions. KEY_SETUP enables public-key
+      retrieval only. PROVISIONING permits one bounded signing probe at a time.
+  ReviewerAExpectedChallengeSha256:
+    Type: String
+    Default: "0000000000000000000000000000000000000000000000000000000000000000"
+    AllowedPattern: "^[0-9a-f]{64}$"
+    NoEcho: false
+    Description: Public SHA-256 of reviewer A's exact provisioning challenge.
+  ReviewerBExpectedChallengeSha256:
+    Type: String
+    Default: "0000000000000000000000000000000000000000000000000000000000000000"
+    AllowedPattern: "^[0-9a-f]{64}$"
+    NoEcho: false
+    Description: Public SHA-256 of reviewer B's exact provisioning challenge.
+  AuditTrailName:
+    Type: String
+    Default: dime-reviewer-signers-audit
+    AllowedPattern: "^[A-Za-z0-9._-]{3,128}$"
+    Description: Dedicated private CloudTrail name.
+
+Rules:
+  ProvisioningRequiresConfiguredChallengeHashes:
+    Assertions:
+      - Assert:
+          Fn::Or:
+            - Fn::Not:
+                - Fn::Equals:
+                    - Ref: StackMode
+                    - PROVISIONING
+            - Fn::And:
+                - Fn::Not:
+                    - Fn::Equals:
+                        - Ref: ReviewerAExpectedChallengeSha256
+                        - "0000000000000000000000000000000000000000000000000000000000000000"
+                - Fn::Not:
+                    - Fn::Equals:
+                        - Ref: ReviewerBExpectedChallengeSha256
+                        - "0000000000000000000000000000000000000000000000000000000000000000"
+        AssertDescription: >-
+          PROVISIONING requires both exact reviewer challenge hashes.
+
+Conditions:
+  KeysEnabled:
+    Fn::Or:
+      - Fn::Equals:
+          - Ref: StackMode
+          - KEY_SETUP
+      - Fn::Equals:
+          - Ref: StackMode
+          - PROVISIONING
+  FunctionsEnabled:
+    Fn::Equals:
+      - Ref: StackMode
+      - PROVISIONING
+
+Resources:
+  ReviewerAWorkloadRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Description: Dime reviewer A workload identity; no human or cross-reviewer trust.
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: LambdaServiceOnly
+            Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Tags:
+        - Key: dime:component
+          Value: reviewer-a-workload
+        - Key: dime:authorization
+          Value: provisioning-only
+
+  ReviewerBWorkloadRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Description: Dime reviewer B workload identity; no human or cross-reviewer trust.
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: LambdaServiceOnly
+            Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Tags:
+        - Key: dime:component
+          Value: reviewer-b-workload
+        - Key: dime:authorization
+          Value: provisioning-only
+
+  ReviewerASignerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Description: Dime reviewer A purpose-bound signer execution identity.
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: LambdaServiceOnly
+            Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Tags:
+        - Key: dime:component
+          Value: reviewer-a-signer
+        - Key: dime:authorization
+          Value: provisioning-only
+
+  ReviewerBSignerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Description: Dime reviewer B purpose-bound signer execution identity.
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: LambdaServiceOnly
+            Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Tags:
+        - Key: dime:component
+          Value: reviewer-b-signer
+        - Key: dime:authorization
+          Value: provisioning-only
+
+  ReviewerASigningKey:
+    Type: AWS::KMS::Key
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      Description: Dime reviewer A non-exportable Ed25519 signing key.
+      Enabled:
+        Fn::If:
+          - KeysEnabled
+          - true
+          - false
+      EnableKeyRotation: false
+      KeySpec: ECC_NIST_EDWARDS25519
+      KeyUsage: SIGN_VERIFY
+      MultiRegion: false
+      Origin: AWS_KMS
+      PendingWindowInDays: 30
+      KeyPolicy:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: PermitAccountControlledKeyAdministration
+            Effect: Allow
+            Principal:
+              AWS:
+                Fn::Sub: "arn:${AWS::Partition}:iam::${AWS::AccountId}:root"
+            Action:
+              - kms:CancelKeyDeletion
+              - kms:Create*
+              - kms:Delete*
+              - kms:Describe*
+              - kms:Disable*
+              - kms:Enable*
+              - kms:Get*
+              - kms:List*
+              - kms:Put*
+              - kms:Revoke*
+              - kms:ScheduleKeyDeletion
+              - kms:TagResource
+              - kms:UntagResource
+              - kms:Update*
+            Resource: "*"
+          - Sid: AllowOnlyReviewerASigner
+            Effect: Allow
+            Principal:
+              AWS:
+                Fn::GetAtt:
+                  - ReviewerASignerRole
+                  - Arn
+            Action: kms:Sign
+            Resource: "*"
+            Condition:
+              StringEquals:
+                kms:MessageType: RAW
+                kms:SigningAlgorithm: ED25519_SHA_512
+          - Sid: DenyEveryOtherSigningPrincipal
+            Effect: Deny
+            Principal: "*"
+            Action: kms:Sign
+            Resource: "*"
+            Condition:
+              ArnNotEquals:
+                aws:PrincipalArn:
+                  Fn::GetAtt:
+                    - ReviewerASignerRole
+                    - Arn
+          - Sid: DenyUnexpectedSigningAlgorithm
+            Effect: Deny
+            Principal:
+              AWS:
+                Fn::GetAtt:
+                  - ReviewerASignerRole
+                  - Arn
+            Action: kms:Sign
+            Resource: "*"
+            Condition:
+              StringNotEquals:
+                kms:SigningAlgorithm: ED25519_SHA_512
+          - Sid: DenyUnexpectedMessageType
+            Effect: Deny
+            Principal:
+              AWS:
+                Fn::GetAtt:
+                  - ReviewerASignerRole
+                  - Arn
+            Action: kms:Sign
+            Resource: "*"
+            Condition:
+              StringNotEquals:
+                kms:MessageType: RAW
+      Tags:
+        - Key: dime:component
+          Value: reviewer-a-signer
+        - Key: dime:exportable
+          Value: "false"
+
+  ReviewerBSigningKey:
+    Type: AWS::KMS::Key
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      Description: Dime reviewer B non-exportable Ed25519 signing key.
+      Enabled:
+        Fn::If:
+          - KeysEnabled
+          - true
+          - false
+      EnableKeyRotation: false
+      KeySpec: ECC_NIST_EDWARDS25519
+      KeyUsage: SIGN_VERIFY
+      MultiRegion: false
+      Origin: AWS_KMS
+      PendingWindowInDays: 30
+      KeyPolicy:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: PermitAccountControlledKeyAdministration
+            Effect: Allow
+            Principal:
+              AWS:
+                Fn::Sub: "arn:${AWS::Partition}:iam::${AWS::AccountId}:root"
+            Action:
+              - kms:CancelKeyDeletion
+              - kms:Create*
+              - kms:Delete*
+              - kms:Describe*
+              - kms:Disable*
+              - kms:Enable*
+              - kms:Get*
+              - kms:List*
+              - kms:Put*
+              - kms:Revoke*
+              - kms:ScheduleKeyDeletion
+              - kms:TagResource
+              - kms:UntagResource
+              - kms:Update*
+            Resource: "*"
+          - Sid: AllowOnlyReviewerBSigner
+            Effect: Allow
+            Principal:
+              AWS:
+                Fn::GetAtt:
+                  - ReviewerBSignerRole
+                  - Arn
+            Action: kms:Sign
+            Resource: "*"
+            Condition:
+              StringEquals:
+                kms:MessageType: RAW
+                kms:SigningAlgorithm: ED25519_SHA_512
+          - Sid: DenyEveryOtherSigningPrincipal
+            Effect: Deny
+            Principal: "*"
+            Action: kms:Sign
+            Resource: "*"
+            Condition:
+              ArnNotEquals:
+                aws:PrincipalArn:
+                  Fn::GetAtt:
+                    - ReviewerBSignerRole
+                    - Arn
+          - Sid: DenyUnexpectedSigningAlgorithm
+            Effect: Deny
+            Principal:
+              AWS:
+                Fn::GetAtt:
+                  - ReviewerBSignerRole
+                  - Arn
+            Action: kms:Sign
+            Resource: "*"
+            Condition:
+              StringNotEquals:
+                kms:SigningAlgorithm: ED25519_SHA_512
+          - Sid: DenyUnexpectedMessageType
+            Effect: Deny
+            Principal:
+              AWS:
+                Fn::GetAtt:
+                  - ReviewerBSignerRole
+                  - Arn
+            Action: kms:Sign
+            Resource: "*"
+            Condition:
+              StringNotEquals:
+                kms:MessageType: RAW
+      Tags:
+        - Key: dime:component
+          Value: reviewer-b-signer
+        - Key: dime:exportable
+          Value: "false"
+
+  ReviewerASigningAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName:
+        Fn::Sub: "alias/dime/${AWS::StackName}/reviewer-a"
+      TargetKeyId:
+        Ref: ReviewerASigningKey
+
+  ReviewerBSigningAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName:
+        Fn::Sub: "alias/dime/${AWS::StackName}/reviewer-b"
+      TargetKeyId:
+        Ref: ReviewerBSigningKey
+
+  ReviewerAWorkloadFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: Reviewer A fixed provisioning and cross-denial probe.
+      CodeUri: functions/reviewer_workload/
+      Handler: app.lambda_handler
+      Runtime: python3.12
+      Architectures:
+        - arm64
+      MemorySize: 128
+      Timeout: 10
+      ReservedConcurrentExecutions:
+        Fn::If:
+          - FunctionsEnabled
+          - 1
+          - 0
+      Role:
+        Fn::GetAtt:
+          - ReviewerAWorkloadRole
+          - Arn
+      AutoPublishAlias: provisioning-v1
+      AutoPublishAliasAllProperties: true
+      RecursiveLoop: Terminate
+      LoggingConfig:
+        ApplicationLogLevel: ERROR
+        LogFormat: JSON
+        SystemLogLevel: WARN
+      Environment:
+        Variables:
+          EXPECTED_CHALLENGE_SHA256:
+            Ref: ReviewerAExpectedChallengeSha256
+          FORBIDDEN_SIGNER_ALIAS_ARN:
+            Fn::Sub: "${ReviewerBSignerFunction.Arn}:provisioning-v1"
+          OWN_SIGNER_ALIAS_ARN:
+            Fn::Sub: "${ReviewerASignerFunction.Arn}:provisioning-v1"
+          PROFILE_ID: dime-agent-profile-85ef4149-03e2-49ae-b8a4-2767e8627404
+          REVIEWER_ID: dime-reviewer-d55729f9-9153-4534-95bd-6bf097416980
+      Tags:
+        dime:authorization: provisioning-only
+        dime:reviewer: reviewer-a
+
+  ReviewerBWorkloadFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: Reviewer B fixed provisioning and cross-denial probe.
+      CodeUri: functions/reviewer_workload/
+      Handler: app.lambda_handler
+      Runtime: python3.12
+      Architectures:
+        - arm64
+      MemorySize: 128
+      Timeout: 10
+      ReservedConcurrentExecutions:
+        Fn::If:
+          - FunctionsEnabled
+          - 1
+          - 0
+      Role:
+        Fn::GetAtt:
+          - ReviewerBWorkloadRole
+          - Arn
+      AutoPublishAlias: provisioning-v1
+      AutoPublishAliasAllProperties: true
+      RecursiveLoop: Terminate
+      LoggingConfig:
+        ApplicationLogLevel: ERROR
+        LogFormat: JSON
+        SystemLogLevel: WARN
+      Environment:
+        Variables:
+          EXPECTED_CHALLENGE_SHA256:
+            Ref: ReviewerBExpectedChallengeSha256
+          FORBIDDEN_SIGNER_ALIAS_ARN:
+            Fn::Sub: "${ReviewerASignerFunction.Arn}:provisioning-v1"
+          OWN_SIGNER_ALIAS_ARN:
+            Fn::Sub: "${ReviewerBSignerFunction.Arn}:provisioning-v1"
+          PROFILE_ID: dime-agent-profile-1a0eb37e-2be7-40c7-bae5-d2e71a2889b1
+          REVIEWER_ID: dime-reviewer-c3ddb330-def3-4406-9325-1b4d48d32543
+      Tags:
+        dime:authorization: provisioning-only
+        dime:reviewer: reviewer-b
+
+  ReviewerASignerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: Reviewer A exact-challenge Ed25519 signer.
+      CodeUri: functions/purpose_bound_signer/
+      Handler: app.lambda_handler
+      Runtime: python3.12
+      Architectures:
+        - arm64
+      MemorySize: 128
+      Timeout: 10
+      ReservedConcurrentExecutions:
+        Fn::If:
+          - FunctionsEnabled
+          - 1
+          - 0
+      Role:
+        Fn::GetAtt:
+          - ReviewerASignerRole
+          - Arn
+      AutoPublishAlias: provisioning-v1
+      AutoPublishAliasAllProperties: true
+      RecursiveLoop: Terminate
+      LoggingConfig:
+        ApplicationLogLevel: ERROR
+        LogFormat: JSON
+        SystemLogLevel: WARN
+      Environment:
+        Variables:
+          EXPECTED_CHALLENGE_SHA256:
+            Ref: ReviewerAExpectedChallengeSha256
+          KMS_KEY_ARN:
+            Fn::GetAtt:
+              - ReviewerASigningKey
+              - Arn
+          PROFILE_ID: dime-agent-profile-85ef4149-03e2-49ae-b8a4-2767e8627404
+          REVIEWER_ID: dime-reviewer-d55729f9-9153-4534-95bd-6bf097416980
+      Tags:
+        dime:authorization: provisioning-only
+        dime:reviewer: reviewer-a
+
+  ReviewerBSignerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: Reviewer B exact-challenge Ed25519 signer.
+      CodeUri: functions/purpose_bound_signer/
+      Handler: app.lambda_handler
+      Runtime: python3.12
+      Architectures:
+        - arm64
+      MemorySize: 128
+      Timeout: 10
+      ReservedConcurrentExecutions:
+        Fn::If:
+          - FunctionsEnabled
+          - 1
+          - 0
+      Role:
+        Fn::GetAtt:
+          - ReviewerBSignerRole
+          - Arn
+      AutoPublishAlias: provisioning-v1
+      AutoPublishAliasAllProperties: true
+      RecursiveLoop: Terminate
+      LoggingConfig:
+        ApplicationLogLevel: ERROR
+        LogFormat: JSON
+        SystemLogLevel: WARN
+      Environment:
+        Variables:
+          EXPECTED_CHALLENGE_SHA256:
+            Ref: ReviewerBExpectedChallengeSha256
+          KMS_KEY_ARN:
+            Fn::GetAtt:
+              - ReviewerBSigningKey
+              - Arn
+          PROFILE_ID: dime-agent-profile-1a0eb37e-2be7-40c7-bae5-d2e71a2889b1
+          REVIEWER_ID: dime-reviewer-c3ddb330-def3-4406-9325-1b4d48d32543
+      Tags:
+        dime:authorization: provisioning-only
+        dime:reviewer: reviewer-b
+
+  ReviewerAWorkloadLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      LogGroupName:
+        Fn::Sub: "/aws/lambda/${ReviewerAWorkloadFunction}"
+      RetentionInDays: 30
+
+  ReviewerBWorkloadLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      LogGroupName:
+        Fn::Sub: "/aws/lambda/${ReviewerBWorkloadFunction}"
+      RetentionInDays: 30
+
+  ReviewerASignerLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      LogGroupName:
+        Fn::Sub: "/aws/lambda/${ReviewerASignerFunction}"
+      RetentionInDays: 30
+
+  ReviewerBSignerLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      LogGroupName:
+        Fn::Sub: "/aws/lambda/${ReviewerBSignerFunction}"
+      RetentionInDays: 30
+
+  ReviewerAWorkloadBoundaryPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: reviewer-a-workload-boundary
+      Roles:
+        - Ref: ReviewerAWorkloadRole
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowOwnedSignerAlias
+            Effect: Allow
+            Action: lambda:InvokeFunction
+            Resource:
+              Fn::Sub: "${ReviewerASignerFunction.Arn}:provisioning-v1"
+          - Sid: DenyPeerSigner
+            Effect: Deny
+            Action: lambda:InvokeFunction
+            Resource:
+              - Fn::GetAtt:
+                  - ReviewerBSignerFunction
+                  - Arn
+              - Fn::Sub: "${ReviewerBSignerFunction.Arn}:*"
+          - Sid: DenyEveryOtherLambdaTarget
+            Effect: Deny
+            Action: lambda:InvokeFunction
+            NotResource:
+              Fn::Sub: "${ReviewerASignerFunction.Arn}:provisioning-v1"
+          - Sid: DenyDirectKmsSigning
+            Effect: Deny
+            Action: kms:Sign
+            Resource: "*"
+          - Sid: WriteOnlyOwnedLogs
+            Effect: Allow
+            Action:
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Resource:
+              Fn::GetAtt:
+                - ReviewerAWorkloadLogGroup
+                - Arn
+
+  ReviewerBWorkloadBoundaryPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: reviewer-b-workload-boundary
+      Roles:
+        - Ref: ReviewerBWorkloadRole
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowOwnedSignerAlias
+            Effect: Allow
+            Action: lambda:InvokeFunction
+            Resource:
+              Fn::Sub: "${ReviewerBSignerFunction.Arn}:provisioning-v1"
+          - Sid: DenyPeerSigner
+            Effect: Deny
+            Action: lambda:InvokeFunction
+            Resource:
+              - Fn::GetAtt:
+                  - ReviewerASignerFunction
+                  - Arn
+              - Fn::Sub: "${ReviewerASignerFunction.Arn}:*"
+          - Sid: DenyEveryOtherLambdaTarget
+            Effect: Deny
+            Action: lambda:InvokeFunction
+            NotResource:
+              Fn::Sub: "${ReviewerBSignerFunction.Arn}:provisioning-v1"
+          - Sid: DenyDirectKmsSigning
+            Effect: Deny
+            Action: kms:Sign
+            Resource: "*"
+          - Sid: WriteOnlyOwnedLogs
+            Effect: Allow
+            Action:
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Resource:
+              Fn::GetAtt:
+                - ReviewerBWorkloadLogGroup
+                - Arn
+
+  ReviewerASignerBoundaryPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: reviewer-a-signer-boundary
+      Roles:
+        - Ref: ReviewerASignerRole
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowOwnedKeyWithExactAlgorithm
+            Effect: Allow
+            Action: kms:Sign
+            Resource:
+              Fn::GetAtt:
+                - ReviewerASigningKey
+                - Arn
+            Condition:
+              StringEquals:
+                kms:MessageType: RAW
+                kms:SigningAlgorithm: ED25519_SHA_512
+          - Sid: DenyPeerSigningKey
+            Effect: Deny
+            Action: kms:Sign
+            Resource:
+              Fn::GetAtt:
+                - ReviewerBSigningKey
+                - Arn
+          - Sid: DenyEveryOtherSigningKey
+            Effect: Deny
+            Action: kms:Sign
+            NotResource:
+              Fn::GetAtt:
+                - ReviewerASigningKey
+                - Arn
+          - Sid: DenyUnexpectedSigningAlgorithm
+            Effect: Deny
+            Action: kms:Sign
+            Resource:
+              Fn::GetAtt:
+                - ReviewerASigningKey
+                - Arn
+            Condition:
+              StringNotEquals:
+                kms:SigningAlgorithm: ED25519_SHA_512
+          - Sid: DenyUnexpectedMessageType
+            Effect: Deny
+            Action: kms:Sign
+            Resource:
+              Fn::GetAtt:
+                - ReviewerASigningKey
+                - Arn
+            Condition:
+              StringNotEquals:
+                kms:MessageType: RAW
+          - Sid: WriteOnlyOwnedLogs
+            Effect: Allow
+            Action:
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Resource:
+              Fn::GetAtt:
+                - ReviewerASignerLogGroup
+                - Arn
+
+  ReviewerBSignerBoundaryPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: reviewer-b-signer-boundary
+      Roles:
+        - Ref: ReviewerBSignerRole
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowOwnedKeyWithExactAlgorithm
+            Effect: Allow
+            Action: kms:Sign
+            Resource:
+              Fn::GetAtt:
+                - ReviewerBSigningKey
+                - Arn
+            Condition:
+              StringEquals:
+                kms:MessageType: RAW
+                kms:SigningAlgorithm: ED25519_SHA_512
+          - Sid: DenyPeerSigningKey
+            Effect: Deny
+            Action: kms:Sign
+            Resource:
+              Fn::GetAtt:
+                - ReviewerASigningKey
+                - Arn
+          - Sid: DenyEveryOtherSigningKey
+            Effect: Deny
+            Action: kms:Sign
+            NotResource:
+              Fn::GetAtt:
+                - ReviewerBSigningKey
+                - Arn
+          - Sid: DenyUnexpectedSigningAlgorithm
+            Effect: Deny
+            Action: kms:Sign
+            Resource:
+              Fn::GetAtt:
+                - ReviewerBSigningKey
+                - Arn
+            Condition:
+              StringNotEquals:
+                kms:SigningAlgorithm: ED25519_SHA_512
+          - Sid: DenyUnexpectedMessageType
+            Effect: Deny
+            Action: kms:Sign
+            Resource:
+              Fn::GetAtt:
+                - ReviewerBSigningKey
+                - Arn
+            Condition:
+              StringNotEquals:
+                kms:MessageType: RAW
+          - Sid: WriteOnlyOwnedLogs
+            Effect: Allow
+            Action:
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Resource:
+              Fn::GetAtt:
+                - ReviewerBSignerLogGroup
+                - Arn
+
+  AuditLogBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      LifecycleConfiguration:
+        Rules:
+          - Id: RetainAuditEvidenceForOneYear
+            Status: Enabled
+            ExpirationInDays: 365
+            NoncurrentVersionExpiration:
+              NoncurrentDays: 365
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      VersioningConfiguration:
+        Status: Enabled
+      Tags:
+        - Key: dime:classification
+          Value: private-security-audit
+
+  AuditLogBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket:
+        Ref: AuditLogBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: CloudTrailAclCheck
+            Effect: Allow
+            Principal:
+              Service: cloudtrail.amazonaws.com
+            Action: s3:GetBucketAcl
+            Resource:
+              Fn::GetAtt:
+                - AuditLogBucket
+                - Arn
+            Condition:
+              StringEquals:
+                aws:SourceAccount:
+                  Ref: AWS::AccountId
+                aws:SourceArn:
+                  Fn::Sub: "arn:${AWS::Partition}:cloudtrail:${AWS::Region}:${AWS::AccountId}:trail/${AuditTrailName}"
+          - Sid: CloudTrailWrite
+            Effect: Allow
+            Principal:
+              Service: cloudtrail.amazonaws.com
+            Action: s3:PutObject
+            Resource:
+              Fn::Sub: "${AuditLogBucket.Arn}/AWSLogs/${AWS::AccountId}/*"
+            Condition:
+              StringEquals:
+                aws:SourceAccount:
+                  Ref: AWS::AccountId
+                aws:SourceArn:
+                  Fn::Sub: "arn:${AWS::Partition}:cloudtrail:${AWS::Region}:${AWS::AccountId}:trail/${AuditTrailName}"
+                s3:x-amz-acl: bucket-owner-full-control
+          - Sid: DenyInsecureTransport
+            Effect: Deny
+            Principal: "*"
+            Action: s3:*
+            Resource:
+              - Fn::GetAtt:
+                  - AuditLogBucket
+                  - Arn
+              - Fn::Sub: "${AuditLogBucket.Arn}/*"
+            Condition:
+              Bool:
+                aws:SecureTransport: false
+
+  ReviewerSignerAuditTrail:
+    Type: AWS::CloudTrail::Trail
+    DependsOn:
+      - AuditLogBucketPolicy
+    Properties:
+      TrailName:
+        Ref: AuditTrailName
+      S3BucketName:
+        Ref: AuditLogBucket
+      EnableLogFileValidation: true
+      IncludeGlobalServiceEvents: true
+      IsLogging: true
+      IsMultiRegionTrail: true
+      AdvancedEventSelectors:
+        - Name: AllManagementEvents
+          FieldSelectors:
+            - Field: eventCategory
+              Equals:
+                - Management
+        - Name: ReviewerLambdaInvocationDataEvents
+          FieldSelectors:
+            - Field: eventCategory
+              Equals:
+                - Data
+            - Field: resources.type
+              Equals:
+                - AWS::Lambda::Function
+            - Field: resources.ARN
+              StartsWith:
+                - Fn::GetAtt:
+                    - ReviewerAWorkloadFunction
+                    - Arn
+                - Fn::GetAtt:
+                    - ReviewerBWorkloadFunction
+                    - Arn
+                - Fn::GetAtt:
+                    - ReviewerASignerFunction
+                    - Arn
+                - Fn::GetAtt:
+                    - ReviewerBSignerFunction
+                    - Arn
+      Tags:
+        - Key: dime:classification
+          Value: private-security-audit
+
+Outputs:
+  StackMode:
+    Value:
+      Ref: StackMode
+  ReviewerAWorkloadRoleArn:
+    Value:
+      Fn::GetAtt:
+        - ReviewerAWorkloadRole
+        - Arn
+  ReviewerBWorkloadRoleArn:
+    Value:
+      Fn::GetAtt:
+        - ReviewerBWorkloadRole
+        - Arn
+  ReviewerAWorkloadAliasArn:
+    Value:
+      Fn::Sub: "${ReviewerAWorkloadFunction.Arn}:provisioning-v1"
+  ReviewerBWorkloadAliasArn:
+    Value:
+      Fn::Sub: "${ReviewerBWorkloadFunction.Arn}:provisioning-v1"
+  ReviewerASignerRoleArn:
+    Value:
+      Fn::GetAtt:
+        - ReviewerASignerRole
+        - Arn
+  ReviewerBSignerRoleArn:
+    Value:
+      Fn::GetAtt:
+        - ReviewerBSignerRole
+        - Arn
+  ReviewerASignerAliasArn:
+    Value:
+      Fn::Sub: "${ReviewerASignerFunction.Arn}:provisioning-v1"
+  ReviewerBSignerAliasArn:
+    Value:
+      Fn::Sub: "${ReviewerBSignerFunction.Arn}:provisioning-v1"
+  ReviewerAKmsKeyArn:
+    Value:
+      Fn::GetAtt:
+        - ReviewerASigningKey
+        - Arn
+  ReviewerBKmsKeyArn:
+    Value:
+      Fn::GetAtt:
+        - ReviewerBSigningKey
+        - Arn
+  ReviewerAKmsKeyId:
+    Value:
+      Ref: ReviewerASigningKey
+  ReviewerBKmsKeyId:
+    Value:
+      Ref: ReviewerBSigningKey
+  ReviewerAKmsAlias:
+    Value:
+      Fn::Sub: "alias/dime/${AWS::StackName}/reviewer-a"
+  ReviewerBKmsAlias:
+    Value:
+      Fn::Sub: "alias/dime/${AWS::StackName}/reviewer-b"
+  AuditTrailArn:
+    Value:
+      Fn::GetAtt:
+        - ReviewerSignerAuditTrail
+        - Arn
+  AuditLogBucketName:
+    Value:
+      Ref: AuditLogBucket

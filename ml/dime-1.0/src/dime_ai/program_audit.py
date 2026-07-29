@@ -15,6 +15,7 @@ from typing import Any
 from jsonschema import Draft202012Validator
 
 from dime_ai.data_validation import partition_keys
+from dime_ai.tool_contracts import MARKET_TYPES
 
 
 class ProgramAuditConfigError(ValueError):
@@ -874,9 +875,12 @@ def audit_curriculum(
                     f"{record_id}: task family {task_type} requires market_type"
                 )
             canonical_market_type, market_type_is_alias = _canonical_dimension(market_type)
+            if canonical_market_type is not None and canonical_market_type not in MARKET_TYPES:
+                canonical_market_type = None
+                market_type_is_alias = False
             if _nonempty_string(market_type) and canonical_market_type is None:
                 metadata_coherence_failures.append(
-                    f"{record_id}: market_type is not a canonical identifier"
+                    f"{record_id}: market_type is not in the canonical market catalog"
                 )
             if canonical_market_type is not None:
                 dimension_variants["market_type"][canonical_market_type].add(str(market_type))

@@ -33,6 +33,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--source-registry", required=True, type=Path)
     parser.add_argument("--review-ledger", required=True, type=Path)
     parser.add_argument(
+        "--agent-receipt-dir",
+        type=Path,
+        help=(
+            "Private flat directory of canonical <sha256>.json AI-agent receipts. "
+            "Optional for human-only evidence and mandatory when an AI-agent is referenced."
+        ),
+    )
+    parser.add_argument(
         "--generated-at-utc",
         required=True,
         help="Normalized UTC timestamp intentionally bound into the immutable audit.",
@@ -80,6 +88,7 @@ def main() -> None:
             development_eval_manifest_path=args.development_eval_manifest,
             generated_at_utc=args.generated_at_utc,
             hf_token=os.environ.get("HF_TOKEN", ""),
+            agent_receipt_dir=getattr(args, "agent_receipt_dir", None),
         )
         write_new_report(args.report, canonical_json_bytes(result.report))
     except FoundationDatasetError as exc:

@@ -1,0 +1,134 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dime.local/schemas/tool_response_registry.schema.json",
+  "title": "Dime tool-response registry v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "registry_version",
+    "status",
+    "request_catalog_path",
+    "request_catalog_version",
+    "request_catalog_sha256",
+    "response_envelope_path",
+    "response_envelope_version",
+    "response_envelope_sha256",
+    "market_catalog_path",
+    "market_catalog_version",
+    "market_catalog_sha256",
+    "authorization_effect",
+    "tools"
+  ],
+  "properties": {
+    "schema_version": {"const": "dime-tool-response-registry-v1"},
+    "registry_version": {"const": "1.0.0"},
+    "status": {"const": "proposed"},
+    "request_catalog_path": {"const": "tools/tools.v1.json"},
+    "request_catalog_version": {"const": "1.0.0"},
+    "request_catalog_sha256": {"$ref": "#/$defs/sha256"},
+    "response_envelope_path": {"const": "schemas/tool_response.schema.json"},
+    "response_envelope_version": {"const": "dime-tool-response-v1"},
+    "response_envelope_sha256": {"$ref": "#/$defs/sha256"},
+    "market_catalog_path": {"const": "tools/market_keys.v1.json"},
+    "market_catalog_version": {"const": "1.0.0"},
+    "market_catalog_sha256": {"$ref": "#/$defs/sha256"},
+    "authorization_effect": {"$ref": "#/$defs/authorizationEffect"},
+    "tools": {
+      "type": "array",
+      "minItems": 7,
+      "maxItems": 7,
+      "items": {"$ref": "#/$defs/toolEntry"}
+    }
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "authorizationEffect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "authorizes_training",
+        "authorizes_locked_evaluation",
+        "authorizes_publication",
+        "authorizes_serving",
+        "authorizes_provider_activation"
+      ],
+      "properties": {
+        "authorizes_training": {"const": false},
+        "authorizes_locked_evaluation": {"const": false},
+        "authorizes_publication": {"const": false},
+        "authorizes_serving": {"const": false},
+        "authorizes_provider_activation": {"const": false}
+      }
+    },
+    "toolEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tool_name",
+        "tool_version",
+        "data_schema_path",
+        "data_schema_sha256",
+        "permitted_statuses",
+        "source_requirement",
+        "permitted_source_scope_types",
+        "freshness_requirement",
+        "execution_class",
+        "privacy_classification",
+        "maximum_data_bytes",
+        "uses_market_catalog"
+      ],
+      "properties": {
+        "tool_name": {
+          "enum": [
+            "get_game_context",
+            "get_current_odds",
+            "get_odds_history",
+            "get_market_splits",
+            "calculate_market_math",
+            "get_bet_tracker_summary",
+            "run_simulation"
+          ]
+        },
+        "tool_version": {"const": "1.0.0"},
+        "data_schema_path": {
+          "type": "string",
+          "pattern": "^schemas/tool_responses/[a-z_]+\\.data\\.schema\\.json$"
+        },
+        "data_schema_sha256": {"$ref": "#/$defs/sha256"},
+        "permitted_statuses": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 7,
+          "uniqueItems": true,
+          "items": {
+            "enum": ["ok", "partial", "not_found", "stale", "unauthorized", "blocked_by_policy", "error"]
+          }
+        },
+        "source_requirement": {"enum": ["required_for_nonempty_data", "not_required"]},
+        "permitted_source_scope_types": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "provider_scoped",
+              "deterministic",
+              "authorized_private_aggregate"
+            ]
+          }
+        },
+        "freshness_requirement": {
+          "enum": ["validity_interval_required_for_ok_partial_or_stale", "as_of_only"]
+        },
+        "execution_class": {
+          "enum": ["provider_backed", "deterministic", "session_bound", "server_selected_deterministic"]
+        },
+        "privacy_classification": {"type": "string", "pattern": "^[a-z][a-z0-9_]{0,63}$"},
+        "maximum_data_bytes": {"type": "integer", "minimum": 1024, "maximum": 1048576},
+        "uses_market_catalog": {"type": "boolean"}
+      }
+    }
+  }
+}

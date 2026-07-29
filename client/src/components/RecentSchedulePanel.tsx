@@ -177,7 +177,7 @@ function ResultBadge({
   }[variant];
 
   const sizeClass = size === "xs"
-    ? "w-5 h-5 text-[9px]"
+    ? "w-5 h-5 text-[10px]"
     : "w-6 h-6 text-[10px]";
 
   return (
@@ -213,7 +213,7 @@ function AtsBadge({
         variant={covVariant}
         size="xs"
       />
-      <span className="text-[10px] font-mono text-white">{spreadStr}</span>
+      <span className="text-[10px] font-mono text-foreground">{spreadStr}</span>
     </div>
   );
 }
@@ -238,7 +238,7 @@ function OuBadge({
   return (
     <div className="flex items-center gap-1">
       <ResultBadge label={label} variant={ouVariant} size="xs" />
-      <span className="text-[10px] font-mono text-white">{fmtTotal(total)}</span>
+      <span className="text-[10px] font-mono text-foreground">{fmtTotal(total)}</span>
     </div>
   );
 }
@@ -287,14 +287,14 @@ function GameRow({
   return (
     <tr className="border-b border-white transition-colors">
       {/* Date */}
-      <td className="px-3 py-2 text-[11px] text-white font-mono whitespace-nowrap">
+      <td className="px-3 py-2 text-[11px] text-foreground font-mono whitespace-nowrap">
         {fmtDate(game.gameDate)}
       </td>
 
       {/* H/A + Opponent */}
       <td className="px-2 py-2">
         <div className="flex items-center gap-1.5">
-          <span className="text-[9px] text-white font-mono">
+          <span className="text-[10px] text-foreground font-mono">
             {isAway ? "@" : "vs"}
           </span>
           {oppLogo ? (
@@ -307,7 +307,7 @@ function GameRow({
           ) : (
             <div className="w-5 h-5 rounded-full bg-black flex-shrink-0" />
           )}
-          <span className="text-[11px] font-mono font-semibold text-white">
+          <span className="text-[11px] font-mono font-semibold text-foreground">
             {oppAbbr}
           </span>
         </div>
@@ -324,8 +324,8 @@ function GameRow({
             className={cn(
               "text-[11px] font-mono font-bold",
               myWon === true ? "text-[#45E0A8]"
-              : myWon === false ? "text-white"
-              : "text-white"
+              : myWon === false ? "text-foreground"
+              : "text-foreground"
             )}
           >
             {scoreStr}
@@ -362,8 +362,8 @@ function TeamScheduleTable({
   if (games.length === 0) {
     return (
       <div className="px-4 py-6 text-center">
-        <p className="text-[11px] text-white font-mono">No completed games found.</p>
-        <p className="text-[10px] text-white font-mono mt-1">
+        <p className="text-[11px] text-foreground font-mono">No completed games found.</p>
+        <p className="text-[10px] text-foreground font-mono mt-1">
           Data populates automatically each day via the DK NJ schedule refresh.
         </p>
       </div>
@@ -375,11 +375,11 @@ function TeamScheduleTable({
       <table className="w-full min-w-[360px]">
         <thead>
           <tr className="border-b border-white">
-            <th className="px-3 py-1.5 text-left text-[9px] font-bold text-white font-mono tracking-widest">GAME</th>
-            <th className="px-2 py-1.5 text-left text-[9px] font-bold text-white font-mono tracking-widest">OPP</th>
-            <th className="px-2 py-1.5 text-left text-[9px] font-bold text-white font-mono tracking-widest">RESULT</th>
-            <th className="px-2 py-1.5 text-left text-[9px] font-bold text-white font-mono tracking-widest">ATS</th>
-            <th className="px-2 py-1.5 text-left text-[9px] font-bold text-white font-mono tracking-widest">O/U</th>
+            <th className="px-3 py-1.5 text-left text-[10px] font-bold text-foreground font-mono tracking-widest">GAME</th>
+            <th className="px-2 py-1.5 text-left text-[10px] font-bold text-foreground font-mono tracking-widest">OPP</th>
+            <th className="px-2 py-1.5 text-left text-[10px] font-bold text-foreground font-mono tracking-widest">RESULT</th>
+            <th className="px-2 py-1.5 text-left text-[10px] font-bold text-foreground font-mono tracking-widest">ATS</th>
+            <th className="px-2 py-1.5 text-left text-[10px] font-bold text-foreground font-mono tracking-widest">O/U</th>
           </tr>
         </thead>
         <tbody>
@@ -440,7 +440,7 @@ function H2HRow({
   return (
     <tr className="border-b border-white transition-colors">
       {/* Date */}
-      <td className="px-3 py-2 text-[11px] text-white font-mono whitespace-nowrap">
+      <td className="px-3 py-2 text-[11px] text-foreground font-mono whitespace-nowrap">
         {fmtDate(game.gameDate)}
       </td>
 
@@ -462,11 +462,11 @@ function H2HRow({
                 onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
               />
             ) : null}
-            <span className="text-[10px] font-mono font-semibold text-white">{game.awayAbbr}</span>
+            <span className="text-[10px] font-mono font-semibold text-foreground">{game.awayAbbr}</span>
           </div>
 
           {/* @ separator */}
-          <span className="text-[9px] text-white font-mono">@</span>
+          <span className="text-[10px] text-foreground font-mono">@</span>
 
           {/* Home team */}
           <div className="flex items-center gap-1">
@@ -478,7 +478,7 @@ function H2HRow({
                 onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
               />
             ) : null}
-            <span className="text-[10px] font-mono font-semibold text-white">{game.homeAbbr}</span>
+            <span className="text-[10px] font-mono font-semibold text-foreground">{game.homeAbbr}</span>
             <ResultBadge
               label={awayWon === false ? "W" : awayWon === true ? "L" : "—"}
               variant={homeVariant}
@@ -491,7 +491,7 @@ function H2HRow({
       {/* Score */}
       <td className="px-2 py-2">
         <span
-          className="text-[11px] font-mono font-bold text-white"
+          className="text-[11px] font-mono font-bold text-foreground"
         >
           {scoreStr}
         </span>
@@ -506,7 +506,7 @@ function H2HRow({
       <td className="px-2 py-2">
         <div className="flex items-center gap-1">
           <ResultBadge label={ouLabel} variant={ouVariant} size="xs" />
-          <span className="text-[10px] font-mono text-white">{fmtTotal(game.dkTotal)}</span>
+          <span className="text-[10px] font-mono text-foreground">{fmtTotal(game.dkTotal)}</span>
         </div>
       </td>
     </tr>
@@ -535,8 +535,8 @@ function H2HSection({
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-6">
-        <RefreshCw className="w-4 h-4 text-white animate-spin mr-2" />
-        <span className="text-[10px] text-white font-mono">Loading H2H history...</span>
+        <RefreshCw className="w-4 h-4 text-foreground animate-spin mr-2" />
+        <span className="text-[10px] text-foreground font-mono">Loading H2H history...</span>
       </div>
     );
   }
@@ -544,7 +544,7 @@ function H2HSection({
   if (error) {
     return (
       <div className="px-3 py-3">
-        <p className="text-[10px] text-white font-mono">Failed to load H2H history.</p>
+        <p className="text-[10px] text-foreground font-mono">Failed to load H2H history.</p>
       </div>
     );
   }
@@ -552,10 +552,10 @@ function H2HSection({
   if (games.length === 0) {
     return (
       <div className="px-4 py-6 text-center">
-        <p className="text-[11px] text-white font-mono">
+        <p className="text-[11px] text-foreground font-mono">
           No head-to-head history found in the database.
         </p>
-        <p className="text-[10px] text-white font-mono mt-1">
+        <p className="text-[10px] text-foreground font-mono mt-1">
           H2H data populates automatically as the season progresses.
         </p>
       </div>
@@ -577,7 +577,7 @@ function H2HSection({
       {/* H2H summary header */}
       <div className="flex items-center justify-center gap-3 px-3 py-1.5 border-b border-white bg-black">
         <span className="text-[10px] font-mono font-bold text-[#45E0A8]">{awayTeamWins}W</span>
-        <span className="text-[9px] font-mono text-white">LAST {games.length}</span>
+        <span className="text-[10px] font-mono text-foreground">LAST {games.length}</span>
         <span className="text-[10px] font-mono font-bold text-[#45E0A8]">{homeTeamWins}W</span>
       </div>
 
@@ -585,11 +585,11 @@ function H2HSection({
         <table className="w-full min-w-[380px]">
           <thead>
             <tr className="border-b border-white">
-              <th className="px-3 py-1.5 text-left text-[9px] font-bold text-white font-mono tracking-widest">DATE</th>
-              <th className="px-2 py-1.5 text-left text-[9px] font-bold text-white font-mono tracking-widest">MATCHUP</th>
-              <th className="px-2 py-1.5 text-left text-[9px] font-bold text-white font-mono tracking-widest">SCORE</th>
-              <th className="px-2 py-1.5 text-left text-[9px] font-bold text-white font-mono tracking-widest">ATS</th>
-              <th className="px-2 py-1.5 text-left text-[9px] font-bold text-white font-mono tracking-widest">O/U</th>
+              <th className="px-3 py-1.5 text-left text-[10px] font-bold text-foreground font-mono tracking-widest">DATE</th>
+              <th className="px-2 py-1.5 text-left text-[10px] font-bold text-foreground font-mono tracking-widest">MATCHUP</th>
+              <th className="px-2 py-1.5 text-left text-[10px] font-bold text-foreground font-mono tracking-widest">SCORE</th>
+              <th className="px-2 py-1.5 text-left text-[10px] font-bold text-foreground font-mono tracking-widest">ATS</th>
+              <th className="px-2 py-1.5 text-left text-[10px] font-bold text-foreground font-mono tracking-widest">O/U</th>
             </tr>
           </thead>
           <tbody>
@@ -698,16 +698,16 @@ export default function RecentSchedulePanel({
           style={{ boxSizing: "border-box" }}
         >
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold text-white font-mono tracking-widest uppercase">
+            <span className="text-[10px] font-bold text-foreground font-mono tracking-widest uppercase">
               Last 5 Games
             </span>
 
           </div>
           <div className="flex items-center gap-2">
-            {isFetching && <RefreshCw className="w-3 h-3 text-white animate-spin" />}
+            {isFetching && <RefreshCw className="w-3 h-3 text-foreground animate-spin" />}
             {isExpanded
-              ? <ChevronUp className="w-3.5 h-3.5 text-white" />
-              : <ChevronDown className="w-3.5 h-3.5 text-white" />
+              ? <ChevronUp className="w-3.5 h-3.5 text-foreground" />
+              : <ChevronDown className="w-3.5 h-3.5 text-foreground" />
             }
           </div>
         </button>
@@ -717,13 +717,13 @@ export default function RecentSchedulePanel({
           style={{ boxSizing: "border-box" }}
         >
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold text-white font-mono tracking-widest uppercase">
+            <span className="text-[10px] font-bold text-foreground font-mono tracking-widest uppercase">
               Last 5 Games
             </span>
 
           </div>
           <div className="flex items-center gap-2">
-            {isFetching && <RefreshCw className="w-3 h-3 text-white animate-spin" />}
+            {isFetching && <RefreshCw className="w-3 h-3 text-foreground animate-spin" />}
           </div>
         </div>
       )}
@@ -739,7 +739,7 @@ export default function RecentSchedulePanel({
                 "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold font-mono transition-all flex-1 justify-center",
                 tab === "away"
                   ? "bg-[#45E0A8] text-black"
-                  : "text-white hover:text-white"
+                  : "text-foreground hover:text-foreground"
               )}
             >
               {awayLogo && (
@@ -759,7 +759,7 @@ export default function RecentSchedulePanel({
                 "px-3 py-1.5 rounded-full text-[10px] font-bold font-mono transition-all flex-1 justify-center",
                 tab === "h2h"
                   ? "bg-[#45E0A8] text-black"
-                  : "text-white hover:text-white"
+                  : "text-foreground hover:text-foreground"
               )}
             >
               Head-to-Head
@@ -771,7 +771,7 @@ export default function RecentSchedulePanel({
                 "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold font-mono transition-all flex-1 justify-center",
                 tab === "home"
                   ? "bg-[#45E0A8] text-black"
-                  : "text-white hover:text-white"
+                  : "text-foreground hover:text-foreground"
               )}
             >
               {homeLogo && (
@@ -789,17 +789,17 @@ export default function RecentSchedulePanel({
           {/* ── Loading ───────────────────────────────────────────────────── */}
           {isLoading && (
             <div className="flex items-center justify-center py-6">
-              <RefreshCw className="w-4 h-4 text-white animate-spin mr-2" />
-              <span className="text-[10px] text-white font-mono">Loading schedule...</span>
+              <RefreshCw className="w-4 h-4 text-foreground animate-spin mr-2" />
+              <span className="text-[10px] text-foreground font-mono">Loading schedule...</span>
             </div>
           )}
 
           {/* ── Error ─────────────────────────────────────────────────────── */}
           {error && !isLoading && (
             <div className="px-3 py-3">
-              <p className="text-[10px] text-white font-mono">Error: {error.message}</p>
+              <p className="text-[10px] text-foreground font-mono">Error: {error.message}</p>
               <button type="button" onClick={() => activeQuery.refetch()}
-                className="text-[9px] text-white font-mono mt-1 hover:underline"
+                className="text-[10px] text-foreground font-mono mt-1 hover:underline"
               >
                 Retry
               </button>
@@ -843,7 +843,7 @@ export default function RecentSchedulePanel({
           {!isLoading && !error && (
             <div className="flex items-center justify-between px-3 py-2 border-t border-white">
               <button type="button" onClick={handleAwayLogoClick}
-                className="flex items-center gap-1.5 text-[9px] text-white font-mono hover:underline"
+                className="flex items-center gap-1.5 text-[10px] text-foreground font-mono hover:underline"
               >
                 {awayLogo && (
                   <img src={awayLogo} alt={awayAbbr} className="w-4 h-4 object-contain" />
@@ -851,7 +851,7 @@ export default function RecentSchedulePanel({
                 View {awayAbbr} full schedule →
               </button>
               <button type="button" onClick={handleHomeLogoClick}
-                className="flex items-center gap-1.5 text-[9px] text-white font-mono hover:underline"
+                className="flex items-center gap-1.5 text-[10px] text-foreground font-mono hover:underline"
               >
                 View {homeAbbr} full schedule →
                 {homeLogo && (
