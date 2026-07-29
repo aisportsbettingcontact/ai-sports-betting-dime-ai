@@ -9,10 +9,18 @@
  *   railway run --service ai-sports-betting-dime-ai -- npx tsx scripts/mlb-etl/load.mts --season 2026
  *   railway run --service ai-sports-betting-dime-ai -- npx tsx scripts/mlb-etl/load.mts --all
  *   railway run --service ai-sports-betting-dime-ai -- npx tsx scripts/mlb-etl/load.mts --season 2026 --table mlb_games
+ *   railway run --service ai-sports-betting-dime-ai -- npx tsx scripts/mlb-etl/load.mts --season 2026 --delta
  *
  * Dependency order: mlb_seasons, mlb_franchises, mlb_venues, mlb_people (dims — loaded once,
  * before the first season) then per season: mlb_games, mlb_plays, mlb_pitches,
  * mlb_boxscore_batting, mlb_boxscore_pitching, mlb_officials.
+ *
+ * --delta: for the nightly canonical refresh, where etl-out/{season}/*.ndjson on the runner only
+ * ever holds the newly-crawled missing games rather than the whole season. Swaps the post-load
+ * sanity check from season-wide equality against manifest.json to (1) mlb_games checked with
+ * `>=` season-wide plus an explicit "every gamePk loaded this run now exists" check, and (2)
+ * every other table checked for exact equality but scoped to `game_pk IN (<gamePks loaded into
+ * mlb_games this run>)`. Default (non-delta) behavior is unchanged.
  *
  * NEVER print, log, or persist DATABASE_URL.
  */
@@ -379,6 +387,7 @@ async function loadTable(
   spec: TableSpec,
   filePath: string,
   season: number | null,
+  collectGamePks?: number[],
 ): Promise<boolean> {
   const label = season !== null ? `season=${season}` : "dims";
   if (!existsSync(filePath)) {
@@ -400,6 +409,7 @@ async function loadTable(
     if (!trimmed) continue;
     const obj = JSON.parse(trimmed);
     buffer.push(toRow(spec, obj));
+    if (collectGamePks && typeof obj.game_pk === "number") collectGamePks.push(obj.game_pk);
     rowsRead++;
 
     if (buffer.length >= state.batchSize) {
@@ -425,30 +435,46 @@ interface SanityCheckDef {
   table: string;
   manifestKey: string;
   sql: string;
+  /** Delta-mode equivalent: scoped to `game_pk IN (?)` instead of `season = ?`. */
+  deltaSql: string;
 }
 
 const SANITY_CHECKS: SanityCheckDef[] = [
-  { table: "mlb_games", manifestKey: "games", sql: `SELECT COUNT(*) n FROM mlb_games WHERE season = ?` },
-  { table: "mlb_pitches", manifestKey: "pitches", sql: `SELECT COUNT(*) n FROM mlb_pitches WHERE season = ?` },
+  {
+    table: "mlb_games",
+    manifestKey: "games",
+    sql: `SELECT COUNT(*) n FROM mlb_games WHERE season = ?`,
+    deltaSql: `SELECT COUNT(*) n FROM mlb_games WHERE game_pk IN (?)`,
+  },
+  {
+    table: "mlb_pitches",
+    manifestKey: "pitches",
+    sql: `SELECT COUNT(*) n FROM mlb_pitches WHERE season = ?`,
+    deltaSql: `SELECT COUNT(*) n FROM mlb_pitches WHERE game_pk IN (?)`,
+  },
   {
     table: "mlb_plays",
     manifestKey: "plays",
     sql: `SELECT COUNT(*) n FROM mlb_plays p JOIN mlb_games g ON g.game_pk = p.game_pk WHERE g.season = ?`,
+    deltaSql: `SELECT COUNT(*) n FROM mlb_plays WHERE game_pk IN (?)`,
   },
   {
     table: "mlb_boxscore_batting",
     manifestKey: "batting_rows",
     sql: `SELECT COUNT(*) n FROM mlb_boxscore_batting b JOIN mlb_games g ON g.game_pk = b.game_pk WHERE g.season = ?`,
+    deltaSql: `SELECT COUNT(*) n FROM mlb_boxscore_batting WHERE game_pk IN (?)`,
   },
   {
     table: "mlb_boxscore_pitching",
     manifestKey: "pitching_rows",
     sql: `SELECT COUNT(*) n FROM mlb_boxscore_pitching b JOIN mlb_games g ON g.game_pk = b.game_pk WHERE g.season = ?`,
+    deltaSql: `SELECT COUNT(*) n FROM mlb_boxscore_pitching WHERE game_pk IN (?)`,
   },
   {
     table: "mlb_officials",
     manifestKey: "officials",
     sql: `SELECT COUNT(*) n FROM mlb_officials o JOIN mlb_games g ON g.game_pk = o.game_pk WHERE g.season = ?`,
+    deltaSql: `SELECT COUNT(*) n FROM mlb_officials WHERE game_pk IN (?)`,
   },
 ];
 
@@ -481,15 +507,90 @@ async function sanityCheckSeason(pool: mysql.Pool, season: number, loadedTables:
   }
 }
 
-function parseArgs(argv: string[]): { seasons: number[]; tableFilter: string | null } {
+/** Delta-mode reconciliation. Unlike `sanityCheckSeason` (equality against a manifest that is
+ * assumed to represent the *whole* season), delta runs only ever transform whatever is on disk
+ * in feeds-{season}/ this invocation — on a nightly refresh runner that's just the newly-crawled
+ * missing games, so `manifest.json` reflects only this run's rows. Two different comparisons
+ * follow from that:
+ *   - mlb_games is season-scoped (`WHERE season = ?`) and already holds every prior load, so it
+ *     can only ever be checked with `>=` against this run's manifest count, plus an explicit
+ *     "every gamePk we just loaded now exists" check.
+ *   - every other table is checked with an exact match, but scoped to `game_pk IN (<gamePks
+ *     loaded into mlb_games this run>)` rather than the whole season — that scoped count is
+ *     always exactly the manifest count, however small or large the delta was.
+ * `loadedGamePks` comes from `loadTable`'s optional collector on the mlb_games file for this
+ * invocation; if mlb_games wasn't loaded this run (e.g. a `--table` retry of another table) there
+ * is nothing to scope the delta checks to, so they are skipped with a warning rather than failed. */
+async function deltaSanityCheckSeason(
+  pool: mysql.Pool,
+  season: number,
+  loadedTables: Set<string>,
+  loadedGamePks: number[],
+): Promise<void> {
+  const manifestPath = join(ETL_OUT, String(season), "manifest.json");
+  if (!existsSync(manifestPath)) {
+    console.warn(`${TAG}[DELTA-SANITY] season=${season} — no manifest.json found, skipping delta sanity check`);
+    return;
+  }
+  const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+
+  if (loadedGamePks.length === 0) {
+    console.warn(
+      `${TAG}[DELTA-SANITY] season=${season} — mlb_games was not loaded this run, no gamePks to scope delta checks to; skipping`,
+    );
+    return;
+  }
+
+  let allOk = true;
+
+  if (loadedTables.has("mlb_games")) {
+    const expected = manifest.games;
+    const [rows] = await pool.query(`SELECT COUNT(*) n FROM mlb_games WHERE season = ?`, [season]);
+    const actual = Number((rows as any)[0].n);
+    const ok = actual >= expected;
+    console.log(
+      `${TAG}[DELTA-SANITY] season=${season} table=mlb_games mode=season>=manifest expected>=${expected} actual=${actual} ${ok ? "OK" : "MISMATCH"}`,
+    );
+    if (!ok) allOk = false;
+
+    const [existsRows] = await pool.query(`SELECT COUNT(*) n FROM mlb_games WHERE game_pk IN (?)`, [loadedGamePks]);
+    const existsCount = Number((existsRows as any)[0].n);
+    const existsOk = existsCount === loadedGamePks.length;
+    console.log(
+      `${TAG}[DELTA-SANITY] season=${season} check=all_delta_gamepks_present expected=${loadedGamePks.length} actual=${existsCount} ${existsOk ? "OK" : "MISMATCH"}`,
+    );
+    if (!existsOk) allOk = false;
+  }
+
+  for (const check of SANITY_CHECKS) {
+    if (check.table === "mlb_games") continue;
+    if (!loadedTables.has(check.table)) continue;
+    const expected = manifest[check.manifestKey];
+    const [rows] = await pool.query(check.deltaSql, [loadedGamePks]);
+    const actual = Number((rows as any)[0].n);
+    const ok = actual === expected;
+    console.log(
+      `${TAG}[DELTA-SANITY] season=${season} table=${check.table} scope=delta_gamepks expected=${expected} actual=${actual} ${ok ? "OK" : "MISMATCH"}`,
+    );
+    if (!ok) allOk = false;
+  }
+
+  if (!allOk) {
+    console.error(`${TAG} delta sanity check FAILED for season ${season} — aborting.`);
+    process.exit(1);
+  }
+}
+
+function parseArgs(argv: string[]): { seasons: number[]; tableFilter: string | null; delta: boolean } {
   const all = argv.includes("--all");
   const seasonIdx = argv.indexOf("--season");
   const season = seasonIdx >= 0 ? parseInt(argv[seasonIdx + 1], 10) : null;
   const tableIdx = argv.indexOf("--table");
   const tableFilter = tableIdx >= 0 ? argv[tableIdx + 1] : null;
+  const delta = argv.includes("--delta");
 
   if (!all && season === null) {
-    console.error(`${TAG} usage: load.mts (--season YYYY | --all) [--table TABLE_NAME]`);
+    console.error(`${TAG} usage: load.mts (--season YYYY | --all) [--table TABLE_NAME] [--delta]`);
     process.exit(1);
   }
   if (tableFilter) {
@@ -505,7 +606,7 @@ function parseArgs(argv: string[]): { seasons: number[]; tableFilter: string | n
     console.error(`${TAG} no seasons found under ${ETL_OUT}`);
     process.exit(1);
   }
-  return { seasons, tableFilter };
+  return { seasons, tableFilter, delta };
 }
 
 async function main(): Promise<void> {
@@ -515,8 +616,8 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  const { seasons, tableFilter } = parseArgs(process.argv.slice(2));
-  console.log(`${TAG} seasons=${seasons.join(",")} table=${tableFilter ?? "(all)"}`);
+  const { seasons, tableFilter, delta } = parseArgs(process.argv.slice(2));
+  console.log(`${TAG} seasons=${seasons.join(",")} table=${tableFilter ?? "(all)"} delta=${delta}`);
 
   const pool = mysql.createPool({
     uri: dbUrl,
@@ -542,15 +643,21 @@ async function main(): Promise<void> {
       }
 
       const loadedTables = new Set<string>();
+      const loadedGamePks: number[] = [];
       for (const t of SEASON_TABLES) {
         if (tableFilter && t.name !== tableFilter) continue;
         const file = join(ETL_OUT, String(season), `${t.name}.ndjson`);
-        const loaded = await loadTable(pool, t, file, season);
+        const collect = delta && t.name === "mlb_games" ? loadedGamePks : undefined;
+        const loaded = await loadTable(pool, t, file, season, collect);
         if (loaded) loadedTables.add(t.name);
       }
 
       if (loadedTables.size > 0) {
-        await sanityCheckSeason(pool, season, loadedTables);
+        if (delta) {
+          await deltaSanityCheckSeason(pool, season, loadedTables, loadedGamePks);
+        } else {
+          await sanityCheckSeason(pool, season, loadedTables);
+        }
       }
     }
     console.log(`${TAG} complete.`);
