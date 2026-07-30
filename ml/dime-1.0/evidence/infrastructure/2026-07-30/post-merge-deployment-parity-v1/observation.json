@@ -1,0 +1,285 @@
+{
+  "schemaVersion": "dime-post-merge-deployment-parity-evidence-v1",
+  "evidenceId": "pr-243-railway-production-parity-2026-07-29",
+  "classification": "sanitized_production_deployment_evidence",
+  "observedAt": "2026-07-30T04:57:39.529Z",
+  "verdict": "PASS",
+  "scope": {
+    "repository": "aisportsbettingcontact/ai-sports-betting-dime-ai",
+    "pullRequest": 243,
+    "railwayProject": "stunning-creativity",
+    "railwayEnvironment": "production",
+    "containsSecrets": false,
+    "containsRawPromptsOrResponses": false,
+    "containsRawUserOrGameRows": false,
+    "observationMode": "read_only_sanitized"
+  },
+  "github": {
+    "pullRequestUrl": "https://github.com/aisportsbettingcontact/ai-sports-betting-dime-ai/pull/243",
+    "state": "MERGED",
+    "headSha": "4948c797a37625bb2dd93d17568e967a0a385cf2",
+    "mergeSha": "74649deee4ece8e854a83c4e2b896a4e2ccc5a1b",
+    "mergedAt": "2026-07-30T04:37:13Z",
+    "headIsAncestorOfMerge": true,
+    "headAndMergeTreeDelta": false,
+    "checks": [
+      {
+        "name": "Security Audit",
+        "conclusion": "SUCCESS"
+      },
+      {
+        "name": "Dime LLM Validation",
+        "conclusion": "SUCCESS"
+      },
+      {
+        "name": "Secret Scan (gitleaks)",
+        "conclusion": "SUCCESS"
+      },
+      {
+        "name": "TypeScript Check",
+        "conclusion": "SUCCESS"
+      },
+      {
+        "name": "Vitest",
+        "conclusion": "SUCCESS"
+      },
+      {
+        "name": "DB Tests",
+        "conclusion": "SUCCESS"
+      },
+      {
+        "name": "Build & Preview Gate",
+        "conclusion": "SUCCESS"
+      }
+    ],
+    "submittedIndependentReviews": 0,
+    "independentReviewDecision": null
+  },
+  "deployment": {
+    "expectedMergeSha": "74649deee4ece8e854a83c4e2b896a4e2ccc5a1b",
+    "application": {
+      "service": "ai-sports-betting-dime-ai",
+      "serviceId": "a46ea921-5c5d-4225-9254-92f742e95b51",
+      "deploymentId": "0fd3a068-7aa4-4280-8656-79069d1e2721",
+      "createdAt": "2026-07-30T04:37:15.294Z",
+      "status": "SUCCESS",
+      "instanceStatus": "RUNNING",
+      "commitSha": "74649deee4ece8e854a83c4e2b896a4e2ccc5a1b",
+      "imageDigest": "sha256:d2edaef2709cd43e5e0185dd1a7e7629f7a84a1d576c44a5e6668f58e33cd986"
+    },
+    "backend": {
+      "service": "ai-sports-betting-backend",
+      "serviceId": "3528dc9f-a63b-45e9-94bb-6d1df25d6f3a",
+      "deploymentId": "7cc68958-961e-4ae2-94ce-5a5875ad7a7c",
+      "createdAt": "2026-07-30T04:37:15.744Z",
+      "status": "SUCCESS",
+      "instanceStatus": "RUNNING",
+      "commitSha": "74649deee4ece8e854a83c4e2b896a4e2ccc5a1b",
+      "imageDigest": "sha256:bb46e77c97d69a6a77827dd57374154463093a564bcdd60668912a0ad71a55d5"
+    },
+    "applicationShaMatchesExpected": true,
+    "backendShaMatchesExpected": true,
+    "allInstancesRunning": true
+  },
+  "health": [
+    {
+      "url": "https://aisportsbettingmodels.com/health",
+      "observedAt": "2026-07-30T04:53:50.835Z",
+      "status": "ok",
+      "databaseCircuit": "CLOSED",
+      "databaseConsecutiveFailures": 0
+    },
+    {
+      "url": "https://ai-sports-betting-backend-production.up.railway.app/health",
+      "observedAt": "2026-07-30T04:53:56.436Z",
+      "status": "ok",
+      "databaseCircuit": "CLOSED",
+      "databaseConsecutiveFailures": 0
+    }
+  ],
+  "userVisibleParity": {
+    "url": "https://aisportsbettingmodels.com/feed/model/mlb-07-29-2026",
+    "expectedGameCards": 16,
+    "observedGameCards": 16,
+    "freshBrowserLogCount": 4,
+    "freshBrowserWarnings": 0,
+    "freshBrowserErrors": 0,
+    "verdict": "PASS"
+  },
+  "runtimeReadiness": {
+    "answerSurfaceChangeAssessment": {
+      "comparisonBaseSha": "7cfdafb6cd8501389fb9f817f1c976cf1a8dcece",
+      "deployedMergeSha": "74649deee4ece8e854a83c4e2b896a4e2ccc5a1b",
+      "providerFreezeConstantChanged": false,
+      "dimeChatRequestHandlerChanged": false,
+      "dimeChatClientAnswerPathChanged": false,
+      "startupDiagnosticsAdded": true
+    },
+    "startupAttestations": [
+      {
+        "service": "ai-sports-betting-dime-ai",
+        "observedAt": "2026-07-30T04:38:12.961508925Z",
+        "state": "limited",
+        "mode": "frozen",
+        "deterministicAnswerRouting": "on",
+        "trace": "off",
+        "issues": [
+          "provider_frozen",
+          "trace_disabled"
+        ]
+      },
+      {
+        "service": "ai-sports-betting-backend",
+        "observedAt": "2026-07-30T04:39:20.846186681Z",
+        "state": "limited",
+        "mode": "frozen",
+        "deterministicAnswerRouting": "on",
+        "trace": "off",
+        "issues": [
+          "provider_frozen",
+          "trace_disabled"
+        ]
+      }
+    ],
+    "productionEnvironmentEvaluation": {
+      "state": "limited",
+      "mode": "frozen",
+      "generativeLaneConfigured": false,
+      "deterministicResponsesConfigured": true,
+      "serverAuthoritativeTraceConfigured": false,
+      "runpodEndpointConfigured": true,
+      "runpodCredentialConfigured": true,
+      "anthropicCredentialConfigured": true,
+      "externalProviderInvocationAuthorized": false
+    }
+  },
+  "pricingAttestation": {
+    "startupAttestations": [
+      {
+        "service": "ai-sports-betting-dime-ai",
+        "observedAt": "2026-07-30T04:38:12.961515315Z"
+      },
+      {
+        "service": "ai-sports-betting-backend",
+        "observedAt": "2026-07-30T04:39:20.846191041Z"
+      }
+    ],
+    "pathConfigured": false,
+    "expectedChecksumConfigured": false,
+    "registryRevision": null,
+    "observedChecksum": null,
+    "registryStatus": "not_configured",
+    "approvedEntryCount": 0,
+    "activeProvider": "frozen",
+    "activeModel": "no-provider",
+    "activeModelRevision": "no-provider",
+    "deploymentTier": "disabled",
+    "currency": "USD",
+    "zeroCostRuntime": true,
+    "exactMatchAvailable": false,
+    "requiredRegistryStatus": "review_required",
+    "requiredResultSatisfied": false,
+    "gateVerdict": "REVISE",
+    "reason": "The production registry path and checksum remain absent. No pricing entry or provider is active, so the runtime fails closed without resolving a price."
+  },
+  "ownerOnlyAttestationContract": {
+    "procedure": "dimeRuntime.observability",
+    "directAuthenticatedResponseCaptured": false,
+    "secretSafePayloadEvaluatedAgainstProductionVariables": true,
+    "evaluationResult": {
+      "pricingComplete": false,
+      "registryConfigured": false,
+      "registryLoaded": false,
+      "registryReviewed": false,
+      "registryApproved": false,
+      "entryCount": 0,
+      "independentGateVerdict": "not_issued",
+      "exposesRawTraces": false,
+      "acceptsTraceIdentifiers": false,
+      "exposesCredentials": false,
+      "readyForIndependentGate": false
+    },
+    "verificationStatus": "PARTIAL",
+    "remainingCheck": "Capture the owner-authenticated procedure response from the deployed process during independent post-merge review."
+  },
+  "featureState": {
+    "applicationService": {
+      "traceEnabled": false,
+      "traceSource": "explicit_false",
+      "researchAlphaEnabled": false,
+      "researchAlphaEnabledSource": "explicit_false",
+      "researchAlphaKillSwitch": true,
+      "researchAlphaKillSwitchSource": "explicit_true"
+    },
+    "backendService": {
+      "traceEnabled": false,
+      "traceSource": "fail_closed_default",
+      "researchAlphaEnabled": false,
+      "researchAlphaEnabledSource": "fail_closed_default",
+      "researchAlphaKillSwitch": true,
+      "researchAlphaKillSwitchSource": "fail_closed_default"
+    },
+    "shadowEnabled": false,
+    "generativeRouteActivation": false,
+    "deterministicAnswerRoutingEnabled": true
+  },
+  "rollbackAssessment": {
+    "activeProviderClaimed": false,
+    "priceResolved": false,
+    "traceEnabled": false,
+    "generativeRouteExecutionChanged": false,
+    "feedRegression": false,
+    "healthRegression": false,
+    "rollbackRequired": false,
+    "rollbackPerformed": false
+  },
+  "postMergeIndependentReview": {
+    "requiredReviewer": "prez-ai-sports-betting",
+    "reviewedCommit": "74649deee4ece8e854a83c4e2b896a4e2ccc5a1b",
+    "status": "required",
+    "submittedReviewer": null,
+    "verdict": null,
+    "absenceOfReviewCountsAsApproval": false,
+    "requiredAssertions": [
+      "No inactive RunPod configuration receives a price.",
+      "no-provider remains zero-cost only because no external model invocation occurs.",
+      "Unknown or inactive provider pricing remains cost_unavailable.",
+      "The pricing state machine cannot be bypassed.",
+      "The owner-only and startup attestations expose no secrets.",
+      "Deployment of the governance layer does not authorize provider activation."
+    ]
+  },
+  "gateStatus": {
+    "githubMergeIntegrity": "PASS",
+    "railwayDeploymentParity": "PASS",
+    "healthParity": "PASS",
+    "productionFeedParity": "PASS",
+    "disabledStateDeployment": "PASS",
+    "pricingGovernanceCode": "DEPLOYED",
+    "pricingGate": "REVISE",
+    "ownerOnlyAttestationDirectObservation": "REQUIRED",
+    "postMergeIndependentReview": "REQUIRED",
+    "activeProviderDecision": "NOT_ISSUED",
+    "traceActivation": "NOT_AUTHORIZED",
+    "shadowTraffic": "NOT_AUTHORIZED",
+    "generativeRouteActivation": "NOT_AUTHORIZED",
+    "modelTraining": "NOT_AUTHORIZED",
+    "researchAlphaActivation": "NOT_AUTHORIZED"
+  },
+  "authorizations": {
+    "environmentVariableChange": false,
+    "pricingApproval": false,
+    "providerActivation": false,
+    "traceActivation": false,
+    "shadowTraffic": false,
+    "generativeRouteActivation": false,
+    "modelTraining": false,
+    "researchAlphaActivation": false
+  },
+  "productionMutationsPerformed": [],
+  "limitations": [
+    "The owner-only observability contract was evaluated with the production application variable set, but a direct authenticated procedure response was not captured.",
+    "Registry status is not_configured rather than the required review_required state because DIME_PRICING_REGISTRY_PATH and its expected checksum are absent.",
+    "The presence of dormant RunPod and Anthropic credentials is recorded only as secret-safe booleans and does not authorize endpoint calls or provider activation."
+  ]
+}

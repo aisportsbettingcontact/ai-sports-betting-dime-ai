@@ -34,6 +34,7 @@ The following documents stay beside the code because they govern the active
 training project and release process:
 
 - [Composite LLM engineering control](COMPOSITE_ENGINEERING_CONTROL.md)
+- [Active Provider Decision v1](ACTIVE_PROVIDER_DECISION_V1.md)
 - [System architecture](DIME_V1_SYSTEM_ARCHITECTURE.md)
 - [Tool and canonical market contracts](TOOL_AND_MARKET_CONTRACTS.md)
 - [Curriculum and evaluation](DIME_V1_CURRICULUM_AND_EVALUATION.md)

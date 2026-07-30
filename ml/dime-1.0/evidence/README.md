@@ -13,6 +13,8 @@ experiment identity.
 - [`audits/`](audits/) contains deterministic, reproducible program audits.
 - [`benchmarks/`](benchmarks/) contains frozen, public-safe runtime contract
   benchmarks with deterministic local evidence.
+- [`decisions/`](decisions/) contains structured, checksum-pinned decision
+  records that remain non-authorizing until their named authority acts.
 - [`infrastructure/`](infrastructure/) contains sanitized setup and runtime
   verification records.
 - [`manifests/`](manifests/) is reserved for reviewed, sanitized manifest
