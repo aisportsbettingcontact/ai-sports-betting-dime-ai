@@ -1,0 +1,106 @@
+{
+  "schemaVersion": 1,
+  "observedAt": "2026-07-30T02:25:17Z",
+  "scope": "wc2026 migration-chain reconciliation and migration 0122 readiness",
+  "baseCommit": "0b4425906f8b708b0d1025da3cec06983063c7e8",
+  "production": {
+    "applicationCommit": "ff95a7cf2bb1aba2c9f79e7c523ea62a6b655a7c",
+    "rollbackDeploymentId": "bafde89f-cc97-40de-877b-ca1c5fd6eb16",
+    "rollbackDeploymentStatus": "SUCCESS",
+    "backendHealth": {
+      "status": "ok",
+      "databaseCircuitState": "CLOSED",
+      "consecutiveFailures": 0
+    },
+    "feed": {
+      "gameCards": 16,
+      "consoleErrors": 0
+    },
+    "applicationServiceSourcesDisconnected": true,
+    "journal": {
+      "rows": 123,
+      "latestRepositoryMigration": "0121_dime_conversation_trace_v1",
+      "latestCreatedAt": 1785292771387,
+      "legacyRowsPinnedByExactTimestampAndHash": 14,
+      "repositoryTimestampsAbsentThrough0121": 13,
+      "planThrough0121Pending": 0,
+      "planThrough0122Pending": 1
+    },
+    "migration0122Applied": false,
+    "productionDatabaseWritesPerformedByReconciliation": false
+  },
+  "incidentRecovery": {
+    "unintendedRepositoryAutoDeploymentDetected": true,
+    "unintendedDeploymentCommit": "0b4425906f8b708b0d1025da3cec06983063c7e8",
+    "recoveredWithNativeRailwayRollback": true,
+    "sourceDisconnectedAfterRecovery": true
+  },
+  "rootCause": {
+    "primary": "migration_chain_integrity",
+    "canonicalCollision": {
+      "firstMigration": "0097_happy_yellow_claw",
+      "secondMigration": "0104_outgoing_night_thrasher",
+      "table": "wc2026_matches"
+    },
+    "outOfBandAdoptionMarker": "0108_adopt_8_orphan_tables",
+    "firstSubsequentMissingTableFailure": "wc2026MatchOdds"
+  },
+  "repair": {
+    "historicalSqlModified": false,
+    "productionJournalRewritten": false,
+    "freshReplayBridge": "park canonical wc2026_matches around 0104 through 0107",
+    "adoptedTablesMaterializedFrom": "drizzle/meta/0108_snapshot.json",
+    "adoptedTableCount": 9,
+    "legacyJournalManifest": "drizzle/meta/production_legacy_journal.json",
+    "defaultMode": "plan",
+    "applyConfirmation": "MODE=apply and CONFIRM=RECONCILE",
+    "unknownJournalRowBehavior": "fail_closed"
+  },
+  "verification": {
+    "freshMysql8": {
+      "migrationsApplied": 123,
+      "target": "0122_dime_evidence_lifecycle_v1",
+      "result": "PASS",
+      "secondPlanPending": 0
+    },
+    "productionSchemaClone": {
+      "sourceDumpScope": "schema_only",
+      "sourceDumpSha256": "8535b16e65fa8639f281d8e6d94562998076e778bedf65fc30c51d5712f02b5e",
+      "mysql8CloneSha256": "582c47b32af1ca10e468680339144c52858fe4f3c74602f6c9ba3ddbe4259d85",
+      "tidbConstraintLabelsNormalized": 56,
+      "applicationColumnsAddedBy0122": 7,
+      "firstRollback": "PASS",
+      "repeatedRollback": "PASS"
+    },
+    "databaseTests": {
+      "files": 6,
+      "tests": 57,
+      "passed": 57,
+      "result": "PASS"
+    },
+    "typescript": "PASS",
+    "productionBuild": "PASS",
+    "fullLocalVitest": {
+      "passed": 2575,
+      "failed": 65,
+      "skipped": 5,
+      "result": "ENVIRONMENT_BOUND_FAILURES",
+      "causes": [
+        "credential validation suites without local credentials",
+        "real-database suites without the default DATABASE_URL",
+        "performance harness socket restriction in the local sandbox"
+      ]
+    },
+    "bogusJournalRowNegativeTest": "PASS_FAIL_CLOSED",
+    "legacyBaselineApplyRequiresConfirmation": "PASS"
+  },
+  "authorization": {
+    "railwayDeployment": false,
+    "productionMigration": false,
+    "traceActivation": false,
+    "routeActivation": false,
+    "shadowTraffic": false,
+    "modelTraining": false,
+    "researchAlphaConfigurationChange": false
+  }
+}

@@ -93,10 +93,10 @@ meaning. Do not coerce or overwrite it during this migration.
 
 ## Application
 
-Use the exact reviewed commit and the checked-in Drizzle migration runner:
+Use the exact reviewed commit and the checked-in reconciled migration runner:
 
 ```bash
-corepack pnpm exec drizzle-kit migrate
+corepack pnpm db:migrate:reconciled
 ```
 
 Do not run ad hoc `ALTER` statements. The migration guards each column through
@@ -144,4 +144,4 @@ drizzle/rollbacks/0122_dime_evidence_lifecycle_v1.rollback.sql
 ```
 
 The rollback script is guarded and manual. It is never discovered or run by
-`drizzle-kit migrate`.
+the reconciled migration runner.

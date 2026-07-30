@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Pin the exact legacy production journal rows observed read-only on 2026-07-30. These rows are accepted as historical evidence; they are never inserted, deleted, or rewritten by the reconciled migrator.",
+  "rows": [
+    {
+      "createdAt": 1782800000000,
+      "hash": "e3f94adaa3fa8769355f90d979edb21d995fb34e41a74f75b09a87e5201645be",
+      "classification": "legacy_wc2026_baseline"
+    },
+    {
+      "createdAt": 1782800000001,
+      "hash": "1e17aa9b6fa53019385455c0a9014fc4ef2c176fd04ebd9c9e7e204c4229b268",
+      "classification": "legacy_wc2026_baseline"
+    },
+    {
+      "createdAt": 1782800000002,
+      "hash": "5373044c81825c9402cb852b7f43543faea5b3cb18d5c465e2ac124926d7c238",
+      "classification": "legacy_wc2026_baseline"
+    },
+    {
+      "createdAt": 1782800000003,
+      "hash": "b9d85253800fce8ba3e08abeff818ede69ddadfb7f983fd55dc1aacf0a0ffc22",
+      "classification": "legacy_wc2026_baseline"
+    },
+    {
+      "createdAt": 1782800000004,
+      "hash": "fccfb8c23db7ae97cbef4d0d2807f7b0b1929a14a1a10d617150d9ee67c89698",
+      "classification": "legacy_wc2026_baseline"
+    },
+    {
+      "createdAt": 1782800000005,
+      "hash": "c3f34d076cd37a72ae398dc21286bc15040e96f3c6179309c81f63003a34e06d",
+      "classification": "legacy_wc2026_baseline"
+    },
+    {
+      "createdAt": 1782800000006,
+      "hash": "d561afa28015a3fb5d286732a89d90fcf8d0951cdf2d78431ca57ceb0ab58203",
+      "classification": "legacy_wc2026_baseline"
+    },
+    {
+      "createdAt": 1782800000007,
+      "hash": "e77aa3fbed6dfed049ecc69d817cd4b98464937eedcfd05417442356fc579fd6",
+      "classification": "legacy_exact_hash_shifted_timestamp"
+    },
+    {
+      "createdAt": 1782809242243,
+      "hash": "5e5d1709b8332658b1df6615d67360322a06727091af076655f253f9cc25b34c",
+      "classification": "legacy_exact_hash_shifted_timestamp"
+    },
+    {
+      "createdAt": 1783458101436,
+      "hash": "f34cb07b9c2077caac40634115862fcc88fcd542bb5874fa94219060085dbaa1",
+      "classification": "legacy_exact_hash_shifted_timestamp"
+    },
+    {
+      "createdAt": 1783458101437,
+      "hash": "7ccd9227161ba67dc898abdb4ca50a3f0249c915c364c6fb011d03a498685cb5",
+      "classification": "legacy_exact_hash_shifted_timestamp"
+    },
+    {
+      "createdAt": 1783488541481,
+      "hash": "uq_me_natural_key_0110_blushing_silver_sable",
+      "classification": "legacy_manual_constraint_marker"
+    },
+    {
+      "createdAt": 1783863577413,
+      "hash": "96917cba557a0227c0a40b941d78ba0f54c0e86a57da2a7b2d1cbada26f9b3af",
+      "classification": "legacy_exact_hash_shifted_timestamp"
+    },
+    {
+      "createdAt": 1784872793717,
+      "hash": "16f87476a289b8913e3ac933ffd4f44e34ee2a4bd1f856f5eb07a76d440bdb9d",
+      "classification": "legacy_manual_schema_marker"
+    }
+  ]
+}
