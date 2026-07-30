@@ -26,6 +26,15 @@ The current local Phase 1 observability boundary is frozen at
 It records production closure as blocked and authorizes no deployment or
 traffic stage.
 
+The active Dime LLM training and model-candidate decision is
+[`decisions/dime-model-artifact-decision-v1/`](decisions/dime-model-artifact-decision-v1/).
+Its starting-model decision gate is
+[`benchmarks/base-model-suitability-v1/`](benchmarks/base-model-suitability-v1/).
+Its frozen A/B/C comparison is
+[`benchmarks/model-artifact-evaluation-v1/`](benchmarks/model-artifact-evaluation-v1/).
+The older `active-provider-decision-v1` and `provider-selection-v1` packages
+remain historical evidence and are not current authority.
+
 ## Publication boundary
 
 Evidence committed here must exclude:

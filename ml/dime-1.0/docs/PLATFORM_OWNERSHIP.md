@@ -16,6 +16,24 @@ review, audit, approval, and freeze layer has not produced an approved
 Foundation dataset and does not change any Hugging Face repository, training
 authorization, serving configuration, or provider state.
 
+## Dime LLM engineering and compute boundary
+
+Codex with 5.6 Sol is the Dime LLM engineering and training-control
+orchestrator. RunPod is the training and inference compute platform. Dime LLM
+is the trained model capability, Dime Chat is the user-facing interface, and
+frozen/no-provider is the deterministic fallback and non-generative control.
+
+The active candidate comparison is model-artifact based: the pinned base
+without Runtime Answer Routing v1, the same base with Runtime Answer Routing
+v1, and a Dime QLoRA adapter with the same routing revision. Anthropic is
+excluded from the active architecture. Historical checksum-pinned provider
+evidence is preserved but is not current decision authority.
+
+The exact machine-readable boundary is
+`configs/platform_contract.json.dime_llm_architecture`. It changes no
+authorization: RunPod invocation, training, evaluation, publication, serving,
+provider activation, and Railway mutation all remain blocked.
+
 The trusted reviewer registry is also `proposed`. It contains two owner-
 confirmed, independent AI-agent reviewer assignments, but both entries are
 inactive and grant no reviewer or approver authority. Reviewer-backed

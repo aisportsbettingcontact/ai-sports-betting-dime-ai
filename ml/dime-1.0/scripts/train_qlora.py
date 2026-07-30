@@ -114,6 +114,10 @@ FULL_RUN_REQUIRED_ENTRIES = {
     "reports",
     "run_manifest.json",
 }
+CHECKPOINT_MANIFEST_FILENAME = "checkpoint_manifest.json"
+CHECKPOINT_MANIFEST_SCHEMA_VERSION = "dime-checkpoint-integrity-v1"
+CHECKPOINT_DIRECTORY = re.compile(r"^checkpoint-([1-9][0-9]*)$")
+DETERMINISTIC_SAMPLER_CONTRACT = "transformers-seeded-sampler-data-skip-v1"
 FOUNDATION_EVIDENCE_HASH_FIELDS = {
     "system_prompt_sha256",
     "foundation_build_config_sha256",
@@ -168,6 +172,16 @@ class FoundationRemoteSnapshot:
     private: bool
     inventory: frozenset[str]
     files: dict[str, bytes]
+
+
+@dataclass(frozen=True)
+class ResumeEvidence:
+    """Verified checkpoint identity used to prove an exact continuation."""
+
+    checkpoint_name: str
+    global_step: int
+    checkpoint_payload_sha256: str
+    manifest_sha256: str
 
 
 def absolute_without_resolution(path: Path) -> Path:
@@ -320,6 +334,209 @@ def parse_args() -> argparse.Namespace:
 
 def file_sha256(path: Path) -> str:
     return read_bound_file(path, "hash input").sha256
+
+
+def canonical_json_sha256(value: Any) -> str:
+    payload = json.dumps(value, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()
+
+
+def checkpoint_file_hashes(checkpoint_dir: Path) -> dict[str, str]:
+    """Hash a closed checkpoint inventory without following symbolic links."""
+
+    checkpoint_dir = require_no_symlink_components(
+        checkpoint_dir,
+        "checkpoint directory",
+        require_directory=True,
+    )
+    hashes: dict[str, str] = {}
+    for root, directories, filenames in os.walk(checkpoint_dir, followlinks=False):
+        root_path = Path(root)
+        for name in directories:
+            directory = root_path / name
+            if directory.is_symlink():
+                raise ValueError(f"Checkpoint contains a symbolic-link directory: {directory}")
+        for name in filenames:
+            path = root_path / name
+            relative = path.relative_to(checkpoint_dir).as_posix()
+            if relative == CHECKPOINT_MANIFEST_FILENAME:
+                continue
+            if path.is_symlink():
+                raise ValueError(f"Checkpoint contains a symbolic-link file: {path}")
+            hashes[relative] = file_sha256(path)
+    return dict(sorted(hashes.items()))
+
+
+def validate_checkpoint_state_inventory(
+    checkpoint_dir: Path,
+    files: dict[str, str],
+    expected_global_step: int,
+) -> None:
+    required = {"trainer_state.json", "optimizer.pt", "scheduler.pt"}
+    missing = sorted(required - files.keys())
+    if missing:
+        raise ValueError("Checkpoint is missing resumable state files: " + ", ".join(missing))
+    rng_files = sorted(name for name in files if Path(name).name.startswith("rng_state"))
+    if not rng_files or any(not name.endswith(".pth") for name in rng_files):
+        raise ValueError("Checkpoint must contain hashed RNG state.")
+    model_state_names = {
+        "adapter_model.safetensors",
+        "model.safetensors",
+        "pytorch_model.bin",
+    }
+    if not any(Path(name).name in model_state_names for name in files):
+        raise ValueError("Checkpoint must contain hashed model or adapter state.")
+    trainer_state = strict_json_loads(
+        (checkpoint_dir / "trainer_state.json").read_text(encoding="utf-8"),
+        "checkpoint trainer state",
+    )
+    if not isinstance(trainer_state, dict):
+        raise ValueError("Checkpoint trainer state must be an object.")
+    if trainer_state.get("global_step") != expected_global_step:
+        raise ValueError("Checkpoint trainer-state global step does not match its directory.")
+
+
+def write_checkpoint_integrity_manifest(
+    checkpoint_dir: Path,
+    *,
+    run_fingerprint_sha256: str,
+    seed: int,
+    global_step: int,
+) -> Path:
+    """Create one immutable checksum manifest after a checkpoint save."""
+
+    checkpoint_dir = require_no_symlink_components(
+        checkpoint_dir,
+        "checkpoint directory",
+        require_directory=True,
+    )
+    match = CHECKPOINT_DIRECTORY.fullmatch(checkpoint_dir.name)
+    if match is None or int(match.group(1)) != global_step:
+        raise ValueError("Checkpoint directory does not match the saved global step.")
+    manifest_path = checkpoint_dir / CHECKPOINT_MANIFEST_FILENAME
+    if manifest_path.exists():
+        raise ValueError("Checkpoint integrity manifest already exists.")
+    files = checkpoint_file_hashes(checkpoint_dir)
+    validate_checkpoint_state_inventory(checkpoint_dir, files, global_step)
+    manifest = {
+        "schema_version": CHECKPOINT_MANIFEST_SCHEMA_VERSION,
+        "checkpoint_name": checkpoint_dir.name,
+        "global_step": global_step,
+        "seed": seed,
+        "sampler_contract": DETERMINISTIC_SAMPLER_CONTRACT,
+        "ignore_data_skip": False,
+        "run_fingerprint_sha256": run_fingerprint_sha256,
+        "file_count": len(files),
+        "files": files,
+        "checkpoint_payload_sha256": canonical_json_sha256(files),
+    }
+    temporary_path = checkpoint_dir / f".{CHECKPOINT_MANIFEST_FILENAME}.tmp"
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+    descriptor = os.open(temporary_path, flags, 0o600)
+    try:
+        payload = (json.dumps(manifest, indent=2, sort_keys=True) + "\n").encode("utf-8")
+        view = memoryview(payload)
+        while view:
+            written = os.write(descriptor, view)
+            if written == 0:
+                raise OSError("Checkpoint manifest write made no progress.")
+            view = view[written:]
+        os.fsync(descriptor)
+    finally:
+        os.close(descriptor)
+    os.replace(temporary_path, manifest_path)
+    directory_descriptor = os.open(checkpoint_dir, os.O_RDONLY)
+    try:
+        os.fsync(directory_descriptor)
+    finally:
+        os.close(directory_descriptor)
+    return manifest_path
+
+
+def verify_checkpoint_for_resume(
+    checkpoint_dir: Path,
+    *,
+    run_fingerprint_path: Path,
+    seed: int,
+) -> ResumeEvidence:
+    """Fail closed unless a checkpoint is an exact, complete continuation."""
+
+    checkpoint_dir = require_no_symlink_components(
+        checkpoint_dir,
+        "resume checkpoint",
+        require_directory=True,
+    )
+    match = CHECKPOINT_DIRECTORY.fullmatch(checkpoint_dir.name)
+    if match is None:
+        raise ValueError("Resume checkpoint name is invalid.")
+    expected_global_step = int(match.group(1))
+    fingerprint = strict_json_loads(
+        read_bound_file(run_fingerprint_path, "run fingerprint").data.decode("utf-8"),
+        "run fingerprint",
+    )
+    if not isinstance(fingerprint, dict):
+        raise ValueError("Run fingerprint must be an object.")
+    expected_fingerprint_fields = {
+        "parent_model_id": PINNED_MODEL_ID,
+        "parent_model_revision": PINNED_MODEL_REVISION,
+        "tokenizer_id": PINNED_MODEL_ID,
+        "tokenizer_revision": PINNED_MODEL_REVISION,
+        "seed": seed,
+        "sampler_contract": DETERMINISTIC_SAMPLER_CONTRACT,
+    }
+    for field, expected in expected_fingerprint_fields.items():
+        if fingerprint.get(field) != expected:
+            raise ValueError(f"Run fingerprint cannot authorize resume: {field} mismatch.")
+    manifest_path = checkpoint_dir / CHECKPOINT_MANIFEST_FILENAME
+    manifest_bound = read_bound_file(manifest_path, "checkpoint integrity manifest")
+    manifest = strict_json_loads(
+        manifest_bound.data.decode("utf-8"),
+        "checkpoint integrity manifest",
+    )
+    if not isinstance(manifest, dict):
+        raise ValueError("Checkpoint integrity manifest must be an object.")
+    expected_keys = {
+        "schema_version",
+        "checkpoint_name",
+        "global_step",
+        "seed",
+        "sampler_contract",
+        "ignore_data_skip",
+        "run_fingerprint_sha256",
+        "file_count",
+        "files",
+        "checkpoint_payload_sha256",
+    }
+    if set(manifest) != expected_keys:
+        raise ValueError("Checkpoint integrity manifest has an unexpected schema.")
+    if manifest["schema_version"] != CHECKPOINT_MANIFEST_SCHEMA_VERSION:
+        raise ValueError("Checkpoint integrity manifest version is unsupported.")
+    if manifest["checkpoint_name"] != checkpoint_dir.name:
+        raise ValueError("Checkpoint integrity manifest names a different checkpoint.")
+    if manifest["global_step"] != expected_global_step:
+        raise ValueError("Checkpoint integrity manifest global step is inconsistent.")
+    if manifest["seed"] != seed:
+        raise ValueError("Checkpoint integrity manifest seed is inconsistent.")
+    if manifest["sampler_contract"] != DETERMINISTIC_SAMPLER_CONTRACT:
+        raise ValueError("Checkpoint sampler contract is inconsistent.")
+    if manifest["ignore_data_skip"] is not False:
+        raise ValueError("Checkpoint resume would permit sample replay.")
+    expected_fingerprint_sha256 = file_sha256(run_fingerprint_path)
+    if manifest["run_fingerprint_sha256"] != expected_fingerprint_sha256:
+        raise ValueError("Checkpoint belongs to a different run fingerprint.")
+    files = checkpoint_file_hashes(checkpoint_dir)
+    if manifest["files"] != files or manifest["file_count"] != len(files):
+        raise ValueError("Checkpoint file inventory or hash verification failed.")
+    payload_sha256 = canonical_json_sha256(files)
+    if manifest["checkpoint_payload_sha256"] != payload_sha256:
+        raise ValueError("Checkpoint payload digest verification failed.")
+    validate_checkpoint_state_inventory(checkpoint_dir, files, expected_global_step)
+    return ResumeEvidence(
+        checkpoint_name=checkpoint_dir.name,
+        global_step=expected_global_step,
+        checkpoint_payload_sha256=payload_sha256,
+        manifest_sha256=manifest_bound.sha256,
+    )
 
 
 def git_output(project: Path, *args: str) -> str:
@@ -1656,6 +1873,7 @@ def validate_run_manifest(
             "save_steps": int(training["save_steps"]),
             "save_total_limit": int(training["save_total_limit"]),
         },
+        "early_stopping": training["early_stopping"],
     }
     if manifest["training"] != expected_training:
         raise ValueError(
@@ -1701,6 +1919,26 @@ def assert_config(
     warmup_fraction = float(config["training"]["warmup_fraction"])
     if not 0 <= warmup_fraction <= 1:
         raise ValueError("training.warmup_fraction must be between 0 and 1.")
+    early_stopping = require_mapping(
+        config["training"].get("early_stopping"),
+        "training.early_stopping",
+    )
+    expected_early_stopping = {
+        "metric": "validation_loss",
+        "mode": "minimize",
+        "patience_evaluations": 3,
+        "minimum_delta": 0.001,
+        "restore_best_checkpoint": True,
+    }
+    if early_stopping != expected_early_stopping:
+        raise ValueError("training.early_stopping must match the frozen validation-loss policy.")
+    eval_steps = int(config["training"]["eval_steps"])
+    save_steps = int(config["training"]["save_steps"])
+    if eval_steps < 1 or save_steps < 1 or save_steps % eval_steps != 0:
+        raise ValueError(
+            "Early stopping requires positive eval/save steps and save_steps "
+            "must be a multiple of eval_steps."
+        )
     return full_provenance
 
 
@@ -1783,10 +2021,15 @@ def build_run_fingerprint(
     run_manifest_path: Path | None = None,
     run_manifest_schema_path: Path | None = None,
     foundation_checksums_schema_path: Path | None = None,
+    seed: int,
 ) -> dict[str, Any]:
     fingerprint = {
         "parent_model_id": PINNED_MODEL_ID,
         "parent_model_revision": PINNED_MODEL_REVISION,
+        "tokenizer_id": PINNED_MODEL_ID,
+        "tokenizer_revision": PINNED_MODEL_REVISION,
+        "seed": seed,
+        "sampler_contract": DETERMINISTIC_SAMPLER_CONTRACT,
         "config_sha256": file_sha256(config_path),
         "train_data_sha256": file_sha256(train_path),
         "validation_data_sha256": file_sha256(validation_path),
@@ -2189,7 +2432,9 @@ def main() -> None:
         AutoModelForCausalLM,
         AutoTokenizer,
         BitsAndBytesConfig,
+        EarlyStoppingCallback,
         GenerationConfig,
+        TrainerCallback,
     )
     from transformers.trainer_utils import get_last_checkpoint
     from trl import SFTConfig, SFTTrainer
@@ -2252,6 +2497,7 @@ def main() -> None:
         run_manifest_path=run_manifest_path,
         run_manifest_schema_path=run_manifest_schema_path,
         foundation_checksums_schema_path=foundation_checksums_schema_path,
+        seed=seed,
     )
     if full_provenance is not None:
         if platform_contract is None:
@@ -2405,6 +2651,7 @@ def main() -> None:
     model.print_trainable_parameters()
 
     training = config["training"]
+    early_stopping = training["early_stopping"]
     max_steps = int(training["max_steps"])
     epochs = float(training["epochs"])
     batch_size = int(training["per_device_train_batch_size"])
@@ -2434,6 +2681,10 @@ def main() -> None:
         save_steps=int(training["save_steps"]),
         save_total_limit=int(training["save_total_limit"]),
         save_only_model=False,
+        load_best_model_at_end=bool(early_stopping["restore_best_checkpoint"]),
+        metric_for_best_model="eval_loss",
+        greater_is_better=False,
+        ignore_data_skip=False,
         max_grad_norm=float(training["max_grad_norm"]),
         optim=training["optimizer"],
         gradient_checkpointing=bool(training["gradient_checkpointing"]),
@@ -2448,6 +2699,20 @@ def main() -> None:
         seed=seed,
         data_seed=seed,
     )
+    run_fingerprint_path = output_dir / "run_fingerprint.json"
+    run_fingerprint_sha256 = file_sha256(run_fingerprint_path)
+
+    class CheckpointIntegrityCallback(TrainerCallback):
+        def on_save(self, args: Any, state: Any, control: Any, **_kwargs: Any) -> Any:
+            checkpoint_dir = Path(args.output_dir) / f"checkpoint-{state.global_step}"
+            write_checkpoint_integrity_manifest(
+                checkpoint_dir,
+                run_fingerprint_sha256=run_fingerprint_sha256,
+                seed=seed,
+                global_step=int(state.global_step),
+            )
+            return control
+
     trainer = SFTTrainer(
         model=model,
         args=training_args,
@@ -2455,15 +2720,44 @@ def main() -> None:
         eval_dataset=eval_dataset,
         data_collator=AssistantOnlyCollator(tokenizer.pad_token_id),
         processing_class=tokenizer,
+        callbacks=[
+            EarlyStoppingCallback(
+                early_stopping_patience=int(early_stopping["patience_evaluations"]),
+                early_stopping_threshold=float(early_stopping["minimum_delta"]),
+            ),
+            CheckpointIntegrityCallback(),
+        ],
     )
 
     checkpoint = None if cli.restart else get_last_checkpoint(str(output_dir))
-    if full_provenance is not None:
-        if checkpoint is not None:
-            raise ValueError(
-                "Full-training checkpoint resume is blocked until checkpoint contents "
-                "have an approved checksum manifest."
-            )
+    resume_evidence: ResumeEvidence | None = None
+    continuity_callback: TrainerCallback | None = None
+    if checkpoint is not None:
+        resume_evidence = verify_checkpoint_for_resume(
+            Path(checkpoint),
+            run_fingerprint_path=run_fingerprint_path,
+            seed=seed,
+        )
+
+        class ResumeContinuityCallback(TrainerCallback):
+            observed = False
+
+            def on_train_begin(
+                self,
+                _args: Any,
+                state: Any,
+                control: Any,
+                **kwargs: Any,
+            ) -> Any:
+                if int(state.global_step) != resume_evidence.global_step:
+                    raise ValueError("Checkpoint global-step continuity verification failed.")
+                if kwargs.get("optimizer") is None or kwargs.get("lr_scheduler") is None:
+                    raise ValueError("Optimizer or scheduler restoration verification failed.")
+                self.observed = True
+                return control
+
+        continuity_callback = ResumeContinuityCallback()
+        trainer.add_callback(continuity_callback)
     result = train_with_execution_fences(
         trainer,
         checkpoint,
@@ -2473,6 +2767,8 @@ def main() -> None:
         foundation_manifest=foundation_manifest,
         authorization_commit=authorization_commit,
     )
+    if continuity_callback is not None and not continuity_callback.observed:
+        raise ValueError("Resume continuity callback did not observe restored trainer state.")
     if not math.isfinite(result.training_loss):
         raise RuntimeError("Training loss is not finite.")
 
@@ -2528,6 +2824,27 @@ def main() -> None:
         "generation_eos_token_ids": [tokenizer.eos_token_id, eot_id],
         "planned_optimizer_steps": planned_steps,
         "warmup_steps": warmup_steps,
+        "early_stopping": {
+            **early_stopping,
+            "trainer_metric": "eval_loss",
+            "best_checkpoint": trainer.state.best_model_checkpoint,
+        },
+        "resume": {
+            "resumed": resume_evidence is not None,
+            "checkpoint_name": (
+                resume_evidence.checkpoint_name if resume_evidence is not None else None
+            ),
+            "verified_global_step": (
+                resume_evidence.global_step if resume_evidence is not None else None
+            ),
+            "checkpoint_payload_sha256": (
+                resume_evidence.checkpoint_payload_sha256 if resume_evidence is not None else None
+            ),
+            "checkpoint_manifest_sha256": (
+                resume_evidence.manifest_sha256 if resume_evidence is not None else None
+            ),
+            "sampler_contract": DETERMINISTIC_SAMPLER_CONTRACT,
+        },
     }
     if full_provenance is not None:
         validate_full_manifest_provenance(manifest, full_provenance)

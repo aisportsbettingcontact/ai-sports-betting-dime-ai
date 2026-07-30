@@ -54,6 +54,12 @@ training:
   eval_steps: 1
   save_steps: 1
   save_total_limit: 2
+  early_stopping:
+    metric: validation_loss
+    mode: minimize
+    patience_evaluations: 3
+    minimum_delta: 0.001
+    restore_best_checkpoint: true
   max_grad_norm: 1.0
   optimizer: paged_adamw_8bit
   gradient_checkpointing: true
