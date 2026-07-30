@@ -15,6 +15,7 @@
 
 import { createHash, randomUUID } from "node:crypto";
 import { and, eq, inArray, isNotNull, isNull, lte, or, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/mysql-core";
 import type { Response } from "express";
 import { z } from "zod";
 import {
@@ -33,6 +34,7 @@ import type {
 import {
   assessDimeTraceCompleteness,
   estimateDimeTraceCost,
+  parsePersistedDimeTraceIdentity,
   validateDimeContextMetrics,
   validateDimeEvidenceTimestamps,
   validateDimeStageLatency,
@@ -40,12 +42,18 @@ import {
   validateDimeToolCallTrace,
   type DimeTraceContextObservability,
   type DimeTraceIdentity,
+  type PersistedDimeTraceIdentity,
 } from "./_core/dimeTraceObservability";
 import {
   completeDimeIngestionLifecycleForResponse,
   validateDimeIngestionLifecycle,
   validateDimeProviderObservation,
 } from "./_core/dimeEvidenceProvenance";
+
+const acceptedAttemptEvent = alias(
+  dimeChatTraceEvents,
+  "accepted_attempt_event"
+);
 
 export const DIME_CHAT_TRACE_VERSION = 1 as const;
 export const DIME_CHAT_TRACE_POLICY_VERSION = "trace-v1-2026-07-28";
@@ -174,7 +182,7 @@ export interface ActiveDimeChatTrace {
   generationId: string;
   clientAssistantMessageId: string;
   attempt: number;
-  identity: DimeTraceIdentity;
+  identity: PersistedDimeTraceIdentity;
   contextObservability?: DimeTraceContextObservability;
 }
 
@@ -395,7 +403,15 @@ function generationLeaseDeadline(now: Date): Date {
   return new Date(now.getTime() + DIME_CHAT_TRACE_GENERATION_LEASE_MS);
 }
 
-function requestFingerprint(
+/**
+ * Hash only authenticated user scope and client-owned request semantics.
+ *
+ * Server-owned execution metadata (requestId, release identity, routing,
+ * provider configuration, and response budgets) can legitimately change
+ * between an accepted request and a transport retry. Including any of it
+ * would turn a lost-response replay into a false idempotency conflict.
+ */
+export function hashDimeChatTraceRequestFingerprint(
   input: BeginDimeChatTraceInput,
   inputSha256: string,
   historySha256: string
@@ -403,13 +419,10 @@ function requestFingerprint(
   return hashDimeChatTraceText(
     JSON.stringify({
       version: DIME_CHAT_TRACE_VERSION,
+      userId: input.userId,
       envelope: input.envelope,
       inputSha256,
       historySha256,
-      requestClass: input.requestClass,
-      responseBudget: input.responseBudget,
-      provider: input.provider,
-      identity: input.identity,
     })
   );
 }
@@ -457,6 +470,7 @@ async function findExistingAttempt(
       generationRequestId: dimeChatGenerations.requestId,
       clientAssistantMessageId: dimeChatGenerations.clientAssistantMessageId,
       generationInputSha256: dimeChatGenerations.inputSha256,
+      generationHistorySha256: dimeChatGenerations.historySha256,
       requestFingerprintSha256: dimeChatGenerations.requestFingerprintSha256,
       requestedThreadId: dimeChatGenerations.requestedThreadId,
       generationStatus: dimeChatGenerations.status,
@@ -469,9 +483,34 @@ async function findExistingAttempt(
       threadId: dimeChatTurns.threadId,
       userMessageId: dimeChatTurns.userMessageId,
       assistantMessageId: dimeChatTurns.assistantMessageId,
+      clientTurnId: dimeChatTurns.clientTurnId,
+      clientSessionId: dimeChatSessions.clientSessionId,
+      clientUserMessageId: dimeChatMessages.clientMessageId,
+      acceptedIdentityMetadata: acceptedAttemptEvent.metadata,
+      retryOfGenerationId: sql<
+        string | null
+      >`JSON_UNQUOTE(JSON_EXTRACT(${acceptedAttemptEvent.metadata}, '$.retryOfGenerationId'))`,
     })
     .from(dimeChatGenerations)
     .innerJoin(dimeChatTurns, eq(dimeChatTurns.id, dimeChatGenerations.turnId))
+    .innerJoin(
+      dimeChatSessions,
+      eq(dimeChatSessions.id, dimeChatTurns.sessionId)
+    )
+    .innerJoin(
+      dimeChatMessages,
+      eq(dimeChatMessages.id, dimeChatTurns.userMessageId)
+    )
+    .leftJoin(
+      acceptedAttemptEvent,
+      and(
+        eq(acceptedAttemptEvent.generationId, dimeChatGenerations.id),
+        inArray(acceptedAttemptEvent.eventType, [
+          "prompt_persisted",
+          "generation_retry_started",
+        ])
+      )
+    )
     .where(
       and(
         eq(dimeChatGenerations.userId, userId),
@@ -482,19 +521,46 @@ async function findExistingAttempt(
   return rows[0];
 }
 
-function activeTraceFromRow(
-  row: {
-    generationId: string;
-    generationRequestId: string;
-    clientAssistantMessageId: string;
-    attempt: number;
-    turnId: string;
-    sessionId: string;
-    threadId: number;
-    userMessageId: number;
-  },
-  identity: DimeTraceIdentity
-): ActiveDimeChatTrace {
+export function rehydrateDimeChatTraceIdentity(
+  metadata: string | null,
+  requestId: string
+): PersistedDimeTraceIdentity {
+  let parsedMetadata: unknown;
+  try {
+    parsedMetadata = metadata ? JSON.parse(metadata) : null;
+  } catch {
+    parsedMetadata = null;
+  }
+  const candidate =
+    parsedMetadata &&
+    typeof parsedMetadata === "object" &&
+    "identity" in parsedMetadata
+      ? (parsedMetadata as { identity?: unknown }).identity
+      : null;
+  const identity = parsePersistedDimeTraceIdentity(candidate);
+  if (!identity || identity.requestId !== requestId) {
+    throw new DimeChatTracePersistenceError(
+      "Trace v1 stored generation identity is missing or invalid."
+    );
+  }
+  return identity;
+}
+
+function activeTraceFromRow(row: {
+  generationId: string;
+  generationRequestId: string;
+  acceptedIdentityMetadata: string | null;
+  clientAssistantMessageId: string;
+  attempt: number;
+  turnId: string;
+  sessionId: string;
+  threadId: number;
+  userMessageId: number;
+}): ActiveDimeChatTrace {
+  const identity = rehydrateDimeChatTraceIdentity(
+    row.acceptedIdentityMetadata,
+    row.generationRequestId
+  );
   return {
     version: DIME_CHAT_TRACE_VERSION,
     requestId: row.generationRequestId,
@@ -509,20 +575,65 @@ function activeTraceFromRow(
   };
 }
 
+export interface DimeChatTraceStoredRequestSemantics {
+  generationInputSha256: string;
+  generationHistorySha256: string;
+  requestedThreadId: number | null;
+  clientSessionId: string;
+  clientTurnId: string;
+  clientUserMessageId: string | null;
+  clientAssistantMessageId: string;
+  retryOfGenerationId: string | null;
+}
+
+/**
+ * Migration-free compatibility for rows written with the original Trace v1
+ * fingerprint. All fields come from the durable client-owned request record;
+ * no mutable server execution metadata participates in the comparison.
+ */
+export function matchesDimeChatTraceRequestSemantics(
+  stored: DimeChatTraceStoredRequestSemantics,
+  input: BeginDimeChatTraceInput,
+  inputSha256: string,
+  historySha256: string
+): boolean {
+  return (
+    stored.generationInputSha256 === inputSha256 &&
+    stored.generationHistorySha256 === historySha256 &&
+    stored.requestedThreadId === input.envelope.threadId &&
+    stored.clientSessionId === input.envelope.clientSessionId &&
+    stored.clientTurnId === input.envelope.clientTurnId &&
+    stored.clientUserMessageId === input.envelope.clientUserMessageId &&
+    stored.clientAssistantMessageId ===
+      input.envelope.clientAssistantMessageId &&
+    stored.retryOfGenerationId === (input.envelope.retryOfGenerationId ?? null)
+  );
+}
+
 function resolveExistingAttempt(
   row: Awaited<ReturnType<typeof findExistingAttempt>>,
   requestFingerprintSha256: string,
-  identity: DimeTraceIdentity
+  input: BeginDimeChatTraceInput,
+  inputSha256: string,
+  historySha256: string
 ): DimeChatTraceBeginResult | null {
   if (!row) return null;
-  if (row.requestFingerprintSha256 !== requestFingerprintSha256) {
+  if (
+    row.requestFingerprintSha256 !== requestFingerprintSha256 &&
+    !matchesDimeChatTraceRequestSemantics(
+      row,
+      input,
+      inputSha256,
+      historySha256
+    )
+  ) {
     return {
       kind: "conflict",
       reason: "The idempotency key was already used for different input.",
     };
   }
 
-  const trace = activeTraceFromRow(row, identity);
+  const trace = activeTraceFromRow(row);
   if (
     (row.generationStatus === "completed" ||
       row.generationStatus === "blocked") &&
@@ -1053,7 +1164,7 @@ export async function beginDimeChatTrace(
   const inputSha256 = hashDimeChatTraceText(input.userPrompt);
   const acceptedHistorySnapshot = historySnapshot(input.history);
   const acceptedHistorySha256 = hashDimeChatTraceText(acceptedHistorySnapshot);
-  const fingerprintSha256 = requestFingerprint(
+  const fingerprintSha256 = hashDimeChatTraceRequestFingerprint(
     input,
     inputSha256,
     acceptedHistorySha256
@@ -1062,7 +1173,9 @@ export async function beginDimeChatTrace(
   const existing = resolveExistingAttempt(
     await findExistingAttempt(db, input.userId, input.envelope.idempotencyKey),
     fingerprintSha256,
-    input.identity
+    input,
+    inputSha256,
+    acceptedHistorySha256
   );
   if (existing) return existing;
 
@@ -1102,7 +1215,9 @@ export async function beginDimeChatTrace(
           input.envelope.idempotencyKey
         ),
         fingerprintSha256,
-        input.identity
+        input,
+        inputSha256,
+        acceptedHistorySha256
       );
       if (raced) return raced;
     }

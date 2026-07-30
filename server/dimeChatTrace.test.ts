@@ -7,9 +7,14 @@ import {
   DIME_CHAT_TRACE_POLICY_VERSION,
   DIME_CHAT_TRACE_RETENTION_DAYS,
   dimeChatTraceMeta,
+  hashDimeChatTraceRequestFingerprint,
   hashDimeChatTraceText,
   isDimeChatTraceEnabled,
+  matchesDimeChatTraceRequestSemantics,
   parseDimeChatTraceEnvelope,
+  rehydrateDimeChatTraceIdentity,
+  type BeginDimeChatTraceInput,
+  type DimeChatTraceStoredRequestSemantics,
   validateDimeChatTraceEventIds,
   validateDimeChatTraceRestrictedText,
   validateDimeChatTraceRoutingMetadata,
@@ -50,6 +55,76 @@ function validEnvelope() {
     clientUserMessageId: randomUUID(),
     clientAssistantMessageId: randomUUID(),
     idempotencyKey: randomUUID(),
+  };
+}
+
+function validBeginInput(): BeginDimeChatTraceInput {
+  const requestId = randomUUID();
+  return {
+    requestId,
+    userId: 7,
+    envelope: validEnvelope(),
+    userPrompt: "What is the current Lakers moneyline?",
+    history: [
+      {
+        role: "user",
+        content: "What is the current Lakers moneyline?",
+      },
+    ],
+    requestClass: "standard",
+    responseBudget: 800,
+    provider: {
+      provider: "runpod",
+      deploymentTier: "production",
+      requestedModel: "dime-1.0",
+      baseRevision: "base-a",
+      adapterRevision: "adapter-a",
+      productProfile: "dime-chat",
+      profileVersion: "profile-a",
+      promptSource: "server",
+      maxTokens: 800,
+    },
+    identity: {
+      observabilityRevision: "dime-trace-observability-v1",
+      requestId,
+      applicationVersion: "1.0.0",
+      gitCommit: "03f75a9348d588714ba7da68e28cfe8d186fed7c",
+      environment: "production",
+      modelProvider: "runpod",
+      baseModel: "dime-1.0",
+      modelRevision: "base-a",
+      adapterRevision: "adapter-a",
+      promptRevision: "profile-a",
+      route: "live_data",
+      routePolicyRevision: "a".repeat(64),
+      controlPlaneRevision: "dime-composite-engineering-control-v1",
+      traceSchemaRevision: "trace-v1-phase1-2026-07-29",
+    },
+  };
+}
+
+function requestFingerprint(input: BeginDimeChatTraceInput): string {
+  return hashDimeChatTraceRequestFingerprint(
+    input,
+    hashDimeChatTraceText(input.userPrompt),
+    hashDimeChatTraceText(JSON.stringify(input.history))
+  );
+}
+
+function storedRequestSemantics(
+  input: BeginDimeChatTraceInput
+): DimeChatTraceStoredRequestSemantics {
+  return {
+    generationInputSha256: hashDimeChatTraceText(input.userPrompt),
+    generationHistorySha256: hashDimeChatTraceText(
+      JSON.stringify(input.history)
+    ),
+    requestedThreadId: input.envelope.threadId,
+    clientSessionId: input.envelope.clientSessionId,
+    clientTurnId: input.envelope.clientTurnId,
+    clientUserMessageId: input.envelope.clientUserMessageId,
+    clientAssistantMessageId: input.envelope.clientAssistantMessageId,
+    retryOfGenerationId: input.envelope.retryOfGenerationId ?? null,
   };
 }
 
@@ -96,6 +171,189 @@ describe("Dime Conversation Trace v1 request contract", () => {
     );
     expect(hashDimeChatTraceText("Dime ")).not.toBe(
       hashDimeChatTraceText("Dime")
+    );
+  });
+
+  it("replays the same client request after a lost response or process restart", () => {
+    const accepted = validBeginInput();
+    const retry = structuredClone(accepted);
+    retry.requestId = randomUUID();
+    retry.identity = {
+      ...retry.identity,
+      requestId: retry.requestId,
+      applicationVersion: "1.0.1",
+      gitCommit: "a".repeat(40),
+      modelRevision: "base-b",
+      routePolicyRevision: "b".repeat(64),
+    };
+    retry.requestClass = "deep";
+    retry.responseBudget = 1_200;
+    retry.provider = {
+      ...retry.provider,
+      requestedModel: "dime-1.1",
+      baseRevision: "base-b",
+      maxTokens: 1_200,
+    };
+
+    expect(requestFingerprint(retry)).toBe(requestFingerprint(accepted));
+  });
+
+  it("rehydrates replay metadata from the accepted durable identity", () => {
+    const accepted = validBeginInput();
+    const retryRequestId = randomUUID();
+    const retryIdentity = {
+      ...accepted.identity,
+      requestId: retryRequestId,
+      route: "platform" as const,
+      gitCommit: "b".repeat(40),
+    };
+    const identity = rehydrateDimeChatTraceIdentity(
+      JSON.stringify({ identity: accepted.identity }),
+      accepted.requestId
+    );
+    const meta = dimeChatTraceMeta({
+      version: 1,
+      requestId: accepted.requestId,
+      chatSessionId: randomUUID(),
+      threadId: 42,
+      turnId: randomUUID(),
+      userMessageId: 1,
+      generationId: randomUUID(),
+      clientAssistantMessageId: accepted.envelope.clientAssistantMessageId,
+      attempt: 1,
+      identity,
+    });
+
+    expect(identity).toEqual(accepted.identity);
+    expect(identity).not.toEqual(retryIdentity);
+    expect(meta.requestId).toBe(accepted.requestId);
+    expect(meta.productRoute).toBe("live_data");
+  });
+
+  it("rehydrates a strict identity written by an earlier Trace revision", () => {
+    const accepted = validBeginInput();
+    const historicalIdentity = {
+      ...accepted.identity,
+      observabilityRevision: "dime-trace-observability-v0",
+      traceSchemaRevision: "trace-v1-phase0-2026-07-28",
+    };
+
+    expect(
+      rehydrateDimeChatTraceIdentity(
+        JSON.stringify({ identity: historicalIdentity }),
+        accepted.requestId
+      )
+    ).toEqual(historicalIdentity);
+  });
+
+  it("fails closed when a replay cannot prove its accepted identity", () => {
+    const accepted = validBeginInput();
+
+    expect(() =>
+      rehydrateDimeChatTraceIdentity(null, accepted.requestId)
+    ).toThrow("stored generation identity is missing or invalid");
+    expect(() =>
+      rehydrateDimeChatTraceIdentity(
+        JSON.stringify({
+          identity: { ...accepted.identity, requestId: randomUUID() },
+        }),
+        accepted.requestId
+      )
+    ).toThrow("stored generation identity is missing or invalid");
+  });
+
+  it("replays legacy-fingerprint rows across the old-to-new release boundary", () => {
+    const accepted = validBeginInput();
+    const retry = structuredClone(accepted);
+    retry.requestId = randomUUID();
+    retry.identity = {
+      ...retry.identity,
+      requestId: retry.requestId,
+      gitCommit: "b".repeat(40),
+      modelRevision: "base-b",
+    };
+
+    expect(
+      matchesDimeChatTraceRequestSemantics(
+        storedRequestSemantics(accepted),
+        retry,
+        hashDimeChatTraceText(retry.userPrompt),
+        hashDimeChatTraceText(JSON.stringify(retry.history))
+      )
+    ).toBe(true);
+    expect(traceSource).toContain(
+      "row.requestFingerprintSha256 !== requestFingerprintSha256 &&"
+    );
+    expect(traceSource).toContain("!matchesDimeChatTraceRequestSemantics(");
+  });
+
+  it("rejects reuse of an idempotency key for changed prompt input", () => {
+    const accepted = validBeginInput();
+    const changed = structuredClone(accepted);
+    changed.userPrompt = "What is the current Celtics moneyline?";
+    changed.history = [{ role: "user", content: changed.userPrompt }];
+
+    expect(requestFingerprint(changed)).not.toBe(requestFingerprint(accepted));
+    expect(
+      matchesDimeChatTraceRequestSemantics(
+        storedRequestSemantics(accepted),
+        changed,
+        hashDimeChatTraceText(changed.userPrompt),
+        hashDimeChatTraceText(JSON.stringify(changed.history))
+      )
+    ).toBe(false);
+  });
+
+  it("rejects a legacy-row replay when any client correlation identity changes", () => {
+    const accepted = validBeginInput();
+    const stored = storedRequestSemantics(accepted);
+
+    for (const changedEnvelope of [
+      { clientSessionId: randomUUID() },
+      { clientTurnId: randomUUID() },
+      { clientUserMessageId: randomUUID() },
+      { clientAssistantMessageId: randomUUID() },
+      { retryOfGenerationId: randomUUID() },
+    ]) {
+      const changed = structuredClone(accepted);
+      changed.envelope = { ...changed.envelope, ...changedEnvelope };
+      expect(
+        matchesDimeChatTraceRequestSemantics(
+          stored,
+          changed,
+          hashDimeChatTraceText(changed.userPrompt),
+          hashDimeChatTraceText(JSON.stringify(changed.history))
+        )
+      ).toBe(false);
+    }
+  });
+
+  it("keeps concurrent duplicate attempts on one canonical fingerprint", async () => {
+    const accepted = validBeginInput();
+    const fingerprints = await Promise.all(
+      Array.from({ length: 8 }, async () =>
+        requestFingerprint(structuredClone(accepted))
+      )
+    );
+
+    expect(new Set(fingerprints)).toEqual(
+      new Set([requestFingerprint(accepted)])
+    );
+    expect(schemaSource).toContain(
+      '"idx_dime_chat_generations_user_idempotency"'
+    );
+    expect(schemaSource).toContain(").on(t.userId, t.idempotencyKey)");
+    expect(traceSource).toContain('code === "ER_DUP_ENTRY"');
+    expect(traceSource).toContain("const raced = resolveExistingAttempt(");
+  });
+
+  it("separates the same idempotency envelope across authenticated users", () => {
+    const firstUser = validBeginInput();
+    const secondUser = structuredClone(firstUser);
+    secondUser.userId = firstUser.userId + 1;
+
+    expect(requestFingerprint(secondUser)).not.toBe(
+      requestFingerprint(firstUser)
     );
   });
 
