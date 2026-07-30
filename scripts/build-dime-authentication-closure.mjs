@@ -65,9 +65,14 @@ async function hardenCandidateTree(path) {
   await chmod(path, 0o400);
 }
 
-async function copyPackageTree(name, destinationRoot) {
-  const packageJson = await realpath(require.resolve(`${name}/package.json`));
-  const sourceRoot = dirname(packageJson);
+async function resolvePackageRoot(name, packageRequire = require) {
+  const packageJson = await realpath(
+    packageRequire.resolve(`${name}/package.json`)
+  );
+  return dirname(packageJson);
+}
+
+async function copyPackageTree(name, sourceRoot, destinationRoot) {
   const destination = resolve(destinationRoot, "node_modules", name);
   await mkdir(dirname(destination), { recursive: true, mode: 0o700 });
   await cp(sourceRoot, destination, {
@@ -182,18 +187,32 @@ export async function buildAuthenticationClosureCandidate({
       recursive: true,
       mode: 0o700,
     });
-    await Promise.all([
-      cp(
-        resolve(repositoryRoot, "config/dime-agent-access.v1.json"),
-        accessConfiguration
-      ),
-      cp(
-        resolve(repositoryRoot, "ml/dime-1.0/configs/platform_contract.json"),
-        platformConfiguration
-      ),
-      copyPackageTree("playwright", temporaryDirectory),
-      copyPackageTree("playwright-core", temporaryDirectory),
-    ]);
+    const playwrightSourceRoot = await resolvePackageRoot("playwright");
+    const playwrightRequire = createRequire(
+      resolve(playwrightSourceRoot, "package.json")
+    );
+    const playwrightCoreSourceRoot = await resolvePackageRoot(
+      "playwright-core",
+      playwrightRequire
+    );
+    await cp(
+      resolve(repositoryRoot, "config/dime-agent-access.v1.json"),
+      accessConfiguration
+    );
+    await cp(
+      resolve(repositoryRoot, "ml/dime-1.0/configs/platform_contract.json"),
+      platformConfiguration
+    );
+    await copyPackageTree(
+      "playwright",
+      playwrightSourceRoot,
+      temporaryDirectory
+    );
+    await copyPackageTree(
+      "playwright-core",
+      playwrightCoreSourceRoot,
+      temporaryDirectory
+    );
     await hardenCandidateTree(temporaryDirectory);
     const inventory = await collectAuthenticationTree(temporaryDirectory, {
       expectedUid: process.getuid(),

@@ -16,6 +16,7 @@ import {
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 import { test } from "vitest";
 
@@ -402,6 +403,45 @@ test("authentication bundle generation is deterministic and closes local imports
     assert.equal(
       candidates[0].credentialExecution,
       "BLOCKED_PENDING_INDEPENDENT_ADMIN_PROVENANCE"
+    );
+    const buildModuleUrl = pathToFileURL(
+      resolve(process.cwd(), "scripts/build-dime-authentication-closure.mjs")
+    ).href;
+    const subprocessCandidate = resolve(root, "subprocess.candidate");
+    const subprocessDescriptor = resolve(root, "subprocess.descriptor.json");
+    const subprocessSource = [
+      `import { buildAuthenticationClosureCandidate } from ${JSON.stringify(buildModuleUrl)};`,
+      "await buildAuthenticationClosureCandidate({",
+      `candidateDirectory: ${JSON.stringify(subprocessCandidate)},`,
+      `descriptorPath: ${JSON.stringify(subprocessDescriptor)},`,
+      `browserCandidatePaths: [${JSON.stringify(browser)}],`,
+      `browserAllowedRoots: [${JSON.stringify(root)}],`,
+      `nodeExecutablePath: ${JSON.stringify(node)},`,
+      `nodeAllowedRoots: [${JSON.stringify(root)}],`,
+      "});",
+    ].join("\n");
+    await execFileAsync(
+      process.execPath,
+      ["--input-type=module", "--eval", subprocessSource],
+      {
+        cwd: process.cwd(),
+        env: { NODE_ENV: "test" },
+        timeout: 30_000,
+        maxBuffer: 64 * 1024,
+      }
+    );
+    assert.equal((await lstat(subprocessCandidate)).isDirectory(), true);
+    assert.equal((await lstat(subprocessDescriptor)).isFile(), true);
+    assert.equal(
+      (
+        await lstat(
+          resolve(
+            subprocessCandidate,
+            "node_modules/playwright-core/package.json"
+          )
+        )
+      ).isFile(),
+      true
     );
     const bundledEntrypoint = resolve(
       root,
