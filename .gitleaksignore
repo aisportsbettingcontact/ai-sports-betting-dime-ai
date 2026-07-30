@@ -32,3 +32,8 @@ e0a4e44c405385fe78aa9ca8971e592eb45eee4b:docs/superpowers/plans/2026-07-24-defer
 # working-tree copy now uses DATABASE_URL="placeholder" (no URL shape); this
 # fingerprint covers the immutable history.
 da062b383ccf3b11924dc6e60746523b800f53dc:docs/superpowers/plans/2026-07-25-cfb-2026-database.md:connection-string-password:237
+c63bb85031c2a3404ae2a4a049dfb02e39777c2d:ml/dime-1.0/configs/dime_training_contract_v1.json:generic-api-key:43
+c63bb85031c2a3404ae2a4a049dfb02e39777c2d:ml/dime-1.0/configs/dime_training_contract_v1.json:generic-api-key:49
+f20c968af422131eb6a6e075fefad77f42511d28:ml/dime-1.0/evidence/benchmarks/model-artifact-evaluation-v1/contract.json:generic-api-key:89
+c63bb85031c2a3404ae2a4a049dfb02e39777c2d:ml/dime-1.0/evidence/benchmarks/base-model-suitability-v1/contract.json:generic-api-key:22
+c63bb85031c2a3404ae2a4a049dfb02e39777c2d:ml/dime-1.0/evidence/benchmarks/base-model-suitability-v1/contract.json:generic-api-key:32
