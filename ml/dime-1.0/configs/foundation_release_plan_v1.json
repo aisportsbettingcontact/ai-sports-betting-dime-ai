@@ -1,0 +1,163 @@
+{
+  "schema_version": "dime-foundation-release-plan-v1",
+  "plan_id": "dime-foundation-v1",
+  "status": "INCOMPLETE_NOT_AUTHORIZED",
+  "source_commit": "77caa613ad2c64ff91a5c6fab1839b3d1278f4ba",
+  "canonical_record_boundary": {
+    "path": "ml/dime-1.0/schemas/foundation_record.schema.json",
+    "sha256": "96eedfaff3869f56feac1039ebc6c23465192d3bb13c76aeba5cb8a7ee2b350d"
+  },
+  "trainer_release_boundary": {
+    "schema": {
+      "path": "ml/dime-1.0/schemas/sft_record.schema.json",
+      "sha256": "955f0a773a1eced4154aa159e6a22249810f8cca5047ceb3c589dd566855ab4e"
+    },
+    "conversion_contract_status": "MISSING",
+    "conversion_approved": false
+  },
+  "route_mixture": {
+    "platform": {
+      "total": 300,
+      "train": 270,
+      "validation": 30
+    },
+    "account": {
+      "total": 180,
+      "train": 162,
+      "validation": 18
+    },
+    "educational": {
+      "total": 300,
+      "train": 270,
+      "validation": 30
+    },
+    "bet_explanation": {
+      "total": 300,
+      "train": 270,
+      "validation": 30
+    },
+    "matchup": {
+      "total": 420,
+      "train": 378,
+      "validation": 42
+    },
+    "full_slate": {
+      "total": 180,
+      "train": 162,
+      "validation": 18
+    },
+    "historical": {
+      "total": 240,
+      "train": 216,
+      "validation": 24
+    },
+    "live_data": {
+      "total": 300,
+      "train": 270,
+      "validation": 30
+    },
+    "general_sports": {
+      "total": 180,
+      "train": 162,
+      "validation": 18
+    }
+  },
+  "cross_cutting_minimums": {
+    "tool_required": 720,
+    "temporal_or_freshness_sensitive": 600,
+    "missing_or_ambiguous_information": 480,
+    "abstention_or_error_correction": 360,
+    "multi_turn": 360,
+    "adversarial_or_false_premise": 240
+  },
+  "data_factory": {
+    "orchestrator": {
+      "platform": "Codex",
+      "agent": "5.6 Sol"
+    },
+    "maximum_records_per_generation_shard": 200,
+    "stages": [
+      "immutable_source_packets",
+      "bounded_specialized_generation",
+      "independent_critique",
+      "automated_integrity",
+      "risk_focused_review"
+    ],
+    "source_packet_classes": [
+      "platform_documentation",
+      "product_and_account_contracts",
+      "tool_schemas",
+      "routing_policies",
+      "timestamped_historical_sports_records",
+      "deterministic_market_math",
+      "failure_catalogs",
+      "behavioral_principles"
+    ],
+    "generator_may_approve_own_record": false,
+    "failed_record_disposition": [
+      "repair",
+      "reject"
+    ],
+    "live_data_policy": "retrieve_validate_or_abstain_never_memorize_current_facts",
+    "quantitative_source_of_truth": "deterministic_code",
+    "private_chain_of_thought_allowed": false,
+    "risk_review_all": [
+      "current_or_live_information",
+      "specific_odds_or_prices",
+      "player_injuries",
+      "tool_failure",
+      "missing_data",
+      "responsible_betting_behavior",
+      "account_access",
+      "high_confidence_recommendations"
+    ],
+    "stratified_review_remaining_categories": true,
+    "ai_authorship_policy": {
+      "current_repository_policy": "PROHIBITED",
+      "requested_policy": "GOVERNED_CODEX_GENERATION",
+      "resolution_status": "BLOCKED_PENDING_EXPLICIT_GOVERNANCE_CHANGE"
+    }
+  },
+  "private_release": {
+    "repo_id": "taileredsports/dime-foundation-sft",
+    "revision": null,
+    "dataset_manifest_sha256": null,
+    "release_checksums_sha256": null,
+    "approved": false,
+    "expected_public_evidence": [
+      "release_identity.json",
+      "dataset_manifest.json",
+      "checksums.json",
+      "dataset_card.md",
+      "provenance_report.json",
+      "split_report.json",
+      "leakage_report.json",
+      "coverage_report.json",
+      "rights_report.json",
+      "SHA256SUMS"
+    ]
+  },
+  "known_blockers": [
+    "The governed authoring-to-trainer conversion contract does not exist.",
+    "Current Foundation governance prohibits retained AI-authored substantive prose.",
+    "No approved 2,400-record private Foundation release exists.",
+    "The immutable Hugging Face release revision and evidence hashes are null.",
+    "The reviewer registry and curriculum remain unapproved.",
+    "Historical sports source-packet rights have not been established."
+  ],
+  "authorization_boundary": {
+    "record_generation": false,
+    "private_dataset_publication": false,
+    "foundation_dataset_approval": false,
+    "runpod_invocation": false,
+    "model_download": false,
+    "model_training": false,
+    "benchmark_execution": false,
+    "model_selection": false,
+    "provider_activation": false,
+    "railway_mutation": false,
+    "trace_activation": false,
+    "shadow_traffic": false,
+    "route_activation": false
+  }
+}

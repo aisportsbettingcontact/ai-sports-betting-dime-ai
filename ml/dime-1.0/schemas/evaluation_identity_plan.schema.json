@@ -1,0 +1,199 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dime.internal/schemas/evaluation_identity_plan.schema.json",
+  "title": "Dime Evaluation Identity Plan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "plan_id",
+    "status",
+    "source_commit",
+    "layers",
+    "legacy_exposed_critical",
+    "required_identity_controls",
+    "access_separation",
+    "non_overlap_proof",
+    "known_blockers",
+    "authorization_boundary"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "dime-evaluation-identity-plan-v1"
+    },
+    "plan_id": {
+      "const": "dime-llm-v1-evaluation-identities"
+    },
+    "status": {
+      "const": "INCOMPLETE_NOT_AUTHORIZED"
+    },
+    "source_commit": {
+      "$ref": "#/$defs/commit"
+    },
+    "layers": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "development",
+        "critical",
+        "locked",
+        "general_regression"
+      ],
+      "properties": {
+        "development": {
+          "$ref": "#/$defs/layer"
+        },
+        "critical": {
+          "$ref": "#/$defs/layer"
+        },
+        "locked": {
+          "$ref": "#/$defs/layer"
+        },
+        "general_regression": {
+          "$ref": "#/$defs/layer"
+        }
+      }
+    },
+    "legacy_exposed_critical": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "sha256",
+        "case_count",
+        "status",
+        "allowed_use"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 3
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "case_count": {
+          "const": 81
+        },
+        "status": {
+          "const": "EXPOSED_NOT_SELECTION_ELIGIBLE"
+        },
+        "allowed_use": {
+          "const": "development_and_architecture_regression_only"
+        }
+      }
+    },
+    "required_identity_controls": {
+      "type": "array",
+      "minItems": 7,
+      "uniqueItems": true,
+      "items": {
+        "type": "string"
+      }
+    },
+    "access_separation": {
+      "type": "object"
+    },
+    "non_overlap_proof": {
+      "type": "object"
+    },
+    "known_blockers": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 10
+      }
+    },
+    "authorization_boundary": {
+      "$ref": "#/$defs/false_map"
+    }
+  },
+  "$defs": {
+    "commit": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "layer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "purpose",
+        "case_count",
+        "route_distribution",
+        "semantic_repository",
+        "answer_key_repository",
+        "revision",
+        "manifest_sha256",
+        "record_checksums_sha256",
+        "provenance_sha256",
+        "training_access",
+        "status"
+      ],
+      "properties": {
+        "purpose": {
+          "type": "string",
+          "minLength": 3
+        },
+        "case_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "route_distribution": {
+          "oneOf": [
+            {
+              "type": "object",
+              "minProperties": 9,
+              "maxProperties": 9,
+              "additionalProperties": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "semantic_repository": {
+          "type": "string",
+          "minLength": 3
+        },
+        "answer_key_repository": {
+          "type": "string",
+          "minLength": 3
+        },
+        "revision": {
+          "type": "null"
+        },
+        "manifest_sha256": {
+          "type": "null"
+        },
+        "record_checksums_sha256": {
+          "type": "null"
+        },
+        "provenance_sha256": {
+          "type": "null"
+        },
+        "training_access": {
+          "const": "prohibited"
+        },
+        "status": {
+          "enum": [
+            "MISSING",
+            "EXPOSED_NOT_SELECTION_ELIGIBLE"
+          ]
+        }
+      }
+    },
+    "false_map": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "const": false
+      }
+    }
+  }
+}

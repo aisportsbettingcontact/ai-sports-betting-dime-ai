@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dime.internal/schemas/model_execution_gates.schema.json",
+  "title": "Dime Model Execution Gates v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "contract_id",
+    "status",
+    "source_commit",
+    "base_vs_instruct",
+    "candidate_ab",
+    "early_stopping_preflight",
+    "runpod_gates",
+    "candidate_c_selection",
+    "authorization_boundary"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "dime-model-execution-gates-v1"
+    },
+    "contract_id": {
+      "const": "dime-llm-v1-model-execution"
+    },
+    "status": {
+      "const": "FROZEN_NOT_AUTHORIZED"
+    },
+    "source_commit": {
+      "$ref": "#/$defs/commit"
+    },
+    "base_vs_instruct": {
+      "type": "object"
+    },
+    "candidate_ab": {
+      "type": "object"
+    },
+    "early_stopping_preflight": {
+      "type": "object"
+    },
+    "runpod_gates": {
+      "type": "object"
+    },
+    "candidate_c_selection": {
+      "type": "object"
+    },
+    "authorization_boundary": {
+      "$ref": "#/$defs/false_map"
+    }
+  },
+  "$defs": {
+    "commit": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "false_map": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "const": false
+      }
+    }
+  }
+}

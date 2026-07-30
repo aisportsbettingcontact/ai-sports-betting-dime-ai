@@ -447,6 +447,45 @@ def validate_training_manifest(manifest: dict[str, Any]) -> None:
         manifest.get("training_platform_contract_sha256"),
         "training_manifest.training_platform_contract_sha256",
     )
+    preflight = manifest.get("training_preflight")
+    if not isinstance(preflight, dict):
+        raise ReleaseContractError("Training manifest requires a derived training preflight.")
+    if (
+        preflight.get("minimum_validation_events") != 6
+        or not isinstance(preflight.get("expected_validation_events"), int)
+        or preflight["expected_validation_events"] < 6
+        or preflight.get("evaluation_and_checkpoint_cadence_aligned") is not True
+        or preflight.get("best_checkpoint_restoration_verification_required") is not True
+        or preflight.get("eval_steps") != preflight.get("save_steps")
+    ):
+        raise ReleaseContractError(
+            "Training manifest does not prove an operable early-stopping schedule."
+        )
+    early_stopping = manifest.get("early_stopping")
+    if not isinstance(early_stopping, dict):
+        raise ReleaseContractError("Training manifest requires early-stopping evidence.")
+    if early_stopping.get("best_checkpoint_restoration_verified") is not True:
+        raise ReleaseContractError("Training manifest does not verify best-checkpoint restoration.")
+    if (
+        not isinstance(early_stopping.get("best_metric"), (int, float))
+        or isinstance(early_stopping.get("best_metric"), bool)
+        or not math.isfinite(float(early_stopping["best_metric"]))
+    ):
+        raise ReleaseContractError("Training manifest best_metric must be finite.")
+    for field in (
+        "checkpoint_payload_sha256",
+        "checkpoint_manifest_sha256",
+        "checkpoint_adapter_sha256",
+        "staged_adapter_sha256",
+    ):
+        require_sha256(
+            early_stopping.get(field),
+            f"training_manifest.early_stopping.{field}",
+        )
+    if early_stopping["checkpoint_adapter_sha256"] != early_stopping["staged_adapter_sha256"]:
+        raise ReleaseContractError(
+            "Training manifest staged adapter does not match the best checkpoint."
+        )
 
 
 def validate_evaluation_report(

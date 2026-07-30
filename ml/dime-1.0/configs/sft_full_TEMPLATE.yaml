@@ -83,8 +83,8 @@ training:
   warmup_fraction: 0.03
   scheduler: cosine
   logging_steps: 5
-  eval_steps: 50
-  save_steps: 50
+  eval_steps: 20
+  save_steps: 20
   save_total_limit: 3
   early_stopping:
     metric: validation_loss
@@ -92,6 +92,10 @@ training:
     patience_evaluations: 3
     minimum_delta: 0.001
     restore_best_checkpoint: true
+  validation_schedule:
+    minimum_validation_events: 6
+    evaluation_and_checkpoint_cadence_aligned: true
+    best_checkpoint_restoration_verification_required: true
   max_grad_norm: 1.0
   optimizer: paged_adamw_8bit
   gradient_checkpointing: true

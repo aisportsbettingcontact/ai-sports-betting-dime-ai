@@ -539,6 +539,54 @@ def verify_checkpoint_for_resume(
     )
 
 
+def verify_best_checkpoint_restoration(
+    staging_dir: Path,
+    *,
+    best_checkpoint: object,
+    best_metric: object,
+    run_fingerprint_path: Path,
+    seed: int,
+) -> dict[str, Any]:
+    """Prove the staged adapter is exactly the retained, integrity-checked best checkpoint."""
+
+    if (
+        isinstance(best_metric, bool)
+        or not isinstance(best_metric, (int, float))
+        or not math.isfinite(float(best_metric))
+    ):
+        raise ValueError("Trainer best_metric must be a finite number.")
+    if not isinstance(best_checkpoint, str) or not best_checkpoint:
+        raise ValueError("Trainer best_model_checkpoint must identify a retained checkpoint.")
+    checkpoint_dir = absolute_without_resolution(Path(best_checkpoint))
+    output_dir = absolute_without_resolution(run_fingerprint_path.parent)
+    if checkpoint_dir.parent != output_dir:
+        raise ValueError("Best checkpoint must be a direct child of the governed output directory.")
+    resume_evidence = verify_checkpoint_for_resume(
+        checkpoint_dir,
+        run_fingerprint_path=run_fingerprint_path,
+        seed=seed,
+    )
+    checkpoint_adapter = checkpoint_dir / "adapter_model.safetensors"
+    staged_adapter = staging_dir / "adapter_model.safetensors"
+    if not checkpoint_adapter.is_file():
+        raise ValueError("Best checkpoint is missing adapter_model.safetensors.")
+    if not staged_adapter.is_file():
+        raise ValueError("Staged adapter is missing adapter_model.safetensors.")
+    checkpoint_adapter_sha256 = file_sha256(checkpoint_adapter)
+    staged_adapter_sha256 = file_sha256(staged_adapter)
+    if checkpoint_adapter_sha256 != staged_adapter_sha256:
+        raise ValueError("Staged adapter does not match the restored best checkpoint.")
+    return {
+        "best_checkpoint_restoration_verified": True,
+        "best_checkpoint": resume_evidence.checkpoint_name,
+        "best_metric": float(best_metric),
+        "checkpoint_payload_sha256": resume_evidence.checkpoint_payload_sha256,
+        "checkpoint_manifest_sha256": resume_evidence.manifest_sha256,
+        "checkpoint_adapter_sha256": checkpoint_adapter_sha256,
+        "staged_adapter_sha256": staged_adapter_sha256,
+    }
+
+
 def git_output(project: Path, *args: str) -> str:
     try:
         return subprocess.run(
@@ -1932,12 +1980,33 @@ def assert_config(
     }
     if early_stopping != expected_early_stopping:
         raise ValueError("training.early_stopping must match the frozen validation-loss policy.")
-    eval_steps = int(config["training"]["eval_steps"])
-    save_steps = int(config["training"]["save_steps"])
-    if eval_steps < 1 or save_steps < 1 or save_steps % eval_steps != 0:
+    eval_steps = config["training"]["eval_steps"]
+    save_steps = config["training"]["save_steps"]
+    if (
+        isinstance(eval_steps, bool)
+        or not isinstance(eval_steps, int)
+        or isinstance(save_steps, bool)
+        or not isinstance(save_steps, int)
+        or eval_steps < 1
+        or save_steps < 1
+        or save_steps != eval_steps
+    ):
         raise ValueError(
-            "Early stopping requires positive eval/save steps and save_steps "
-            "must be a multiple of eval_steps."
+            "Early stopping requires positive integer eval/save steps with "
+            "save_steps exactly equal to eval_steps."
+        )
+    validation_schedule = require_mapping(
+        config["training"].get("validation_schedule"),
+        "training.validation_schedule",
+    )
+    expected_validation_schedule = {
+        "minimum_validation_events": 6 if mode == "full" else 3,
+        "evaluation_and_checkpoint_cadence_aligned": True,
+        "best_checkpoint_restoration_verification_required": True,
+    }
+    if validation_schedule != expected_validation_schedule:
+        raise ValueError(
+            "training.validation_schedule must match the frozen practical early-stopping policy."
         )
     return full_provenance
 
@@ -1999,6 +2068,107 @@ def tokenize_records(
             )
         encoded_records.append(encoded)
     return Dataset.from_list(encoded_records)
+
+
+def _strict_int(value: object, label: str, *, minimum: int | None = None) -> int:
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise ValueError(f"{label} must be an integer.")
+    if minimum is not None and value < minimum:
+        raise ValueError(f"{label} must be at least {minimum}.")
+    return value
+
+
+def derive_training_preflight(
+    tokenized_sequence_count: int,
+    training: dict[str, Any],
+    *,
+    packing: bool,
+) -> dict[str, Any]:
+    """Derive the executable optimizer/evaluation schedule before model loading."""
+
+    sequence_count = _strict_int(
+        tokenized_sequence_count,
+        "post-tokenization sequence count",
+        minimum=1,
+    )
+    if packing is not False:
+        raise ValueError(
+            "The frozen Dime training schedule currently requires sequence packing: false."
+        )
+    microbatch_size = _strict_int(
+        training.get("per_device_train_batch_size"),
+        "training.per_device_train_batch_size",
+        minimum=1,
+    )
+    accumulation = _strict_int(
+        training.get("gradient_accumulation_steps"),
+        "training.gradient_accumulation_steps",
+        minimum=1,
+    )
+    eval_steps = _strict_int(training.get("eval_steps"), "training.eval_steps", minimum=1)
+    save_steps = _strict_int(training.get("save_steps"), "training.save_steps", minimum=1)
+    if save_steps != eval_steps:
+        raise ValueError(
+            "Early stopping requires save_steps exactly equal to eval_steps so every "
+            "evaluated improvement has a recoverable checkpoint."
+        )
+    schedule = require_mapping(
+        training.get("validation_schedule"),
+        "training.validation_schedule",
+    )
+    minimum_events = _strict_int(
+        schedule.get("minimum_validation_events"),
+        "training.validation_schedule.minimum_validation_events",
+        minimum=1,
+    )
+    if schedule.get("evaluation_and_checkpoint_cadence_aligned") is not True:
+        raise ValueError("Evaluation and checkpoint cadence must be declared aligned.")
+    if schedule.get("best_checkpoint_restoration_verification_required") is not True:
+        raise ValueError("Best-checkpoint restoration verification must be required.")
+
+    max_steps = _strict_int(training.get("max_steps"), "training.max_steps")
+    if max_steps == 0 or max_steps < -1:
+        raise ValueError("training.max_steps must be -1 or a positive integer.")
+    epochs_value = training.get("epochs")
+    if (
+        isinstance(epochs_value, bool)
+        or not isinstance(epochs_value, (int, float))
+        or not math.isfinite(float(epochs_value))
+        or float(epochs_value) <= 0
+    ):
+        raise ValueError("training.epochs must be a positive finite number.")
+    epochs = float(epochs_value)
+
+    microbatches_per_epoch = math.ceil(sequence_count / microbatch_size)
+    optimizer_steps_per_epoch = math.ceil(microbatches_per_epoch / accumulation)
+    expected_optimizer_steps = (
+        max_steps if max_steps > 0 else math.ceil(optimizer_steps_per_epoch * epochs)
+    )
+    expected_validation_events = expected_optimizer_steps // eval_steps
+    if expected_validation_events < minimum_events:
+        raise ValueError(
+            "Training schedule provides "
+            f"{expected_validation_events} validation events; at least "
+            f"{minimum_events} are required for practical early stopping."
+        )
+    return {
+        "post_tokenization_sequence_count": sequence_count,
+        "packed_sequence_count": sequence_count,
+        "packing": False,
+        "per_device_microbatch_size": microbatch_size,
+        "gradient_accumulation_steps": accumulation,
+        "microbatches_per_epoch": microbatches_per_epoch,
+        "optimizer_steps_per_epoch": optimizer_steps_per_epoch,
+        "epochs": epochs,
+        "max_steps": max_steps,
+        "expected_optimizer_steps": expected_optimizer_steps,
+        "eval_steps": eval_steps,
+        "save_steps": save_steps,
+        "minimum_validation_events": minimum_events,
+        "expected_validation_events": expected_validation_events,
+        "evaluation_and_checkpoint_cadence_aligned": True,
+        "best_checkpoint_restoration_verification_required": True,
+    }
 
 
 def build_run_fingerprint(
@@ -2597,6 +2767,11 @@ def main() -> None:
         production,
         system_prompt,
     )
+    training_preflight = derive_training_preflight(
+        len(train_dataset),
+        config["training"],
+        packing=False,
+    )
 
     quantization = BitsAndBytesConfig(
         load_in_4bit=bool(config["quantization"]["load_in_4bit"]),
@@ -2656,11 +2831,7 @@ def main() -> None:
     epochs = float(training["epochs"])
     batch_size = int(training["per_device_train_batch_size"])
     accumulation = int(training["gradient_accumulation_steps"])
-    if max_steps > 0:
-        planned_steps = max_steps
-    else:
-        optimizer_steps_per_epoch = math.ceil(len(train_dataset) / (batch_size * accumulation))
-        planned_steps = math.ceil(optimizer_steps_per_epoch * epochs)
+    planned_steps = int(training_preflight["expected_optimizer_steps"])
     warmup_steps = math.ceil(planned_steps * float(training["warmup_fraction"]))
     training_args = SFTConfig(
         output_dir=str(output_dir),
@@ -2783,6 +2954,13 @@ def main() -> None:
     staging_dir.mkdir(parents=True)
     trainer.save_model(str(staging_dir))
     pin_adapter_config_revision(staging_dir / "adapter_config.json")
+    best_checkpoint_restoration = verify_best_checkpoint_restoration(
+        staging_dir,
+        best_checkpoint=trainer.state.best_model_checkpoint,
+        best_metric=trainer.state.best_metric,
+        run_fingerprint_path=run_fingerprint_path,
+        seed=seed,
+    )
     tokenizer.save_pretrained(staging_dir)
     (staging_dir / "chat_template.jinja").write_bytes(chat_template_bound.data)
     eot_id = tokenizer.convert_tokens_to_ids("<|eot_id|>")
@@ -2823,11 +3001,13 @@ def main() -> None:
         "safetensors": version("safetensors"),
         "generation_eos_token_ids": [tokenizer.eos_token_id, eot_id],
         "planned_optimizer_steps": planned_steps,
+        "training_preflight": training_preflight,
         "warmup_steps": warmup_steps,
         "early_stopping": {
             **early_stopping,
             "trainer_metric": "eval_loss",
             "best_checkpoint": trainer.state.best_model_checkpoint,
+            **best_checkpoint_restoration,
         },
         "resume": {
             "resumed": resume_evidence is not None,

@@ -137,6 +137,22 @@ def valid_manifest() -> dict[str, Any]:
             },
         },
         "training_platform_contract_sha256": SHA_A,
+        "training_preflight": {
+            "minimum_validation_events": 6,
+            "expected_validation_events": 6,
+            "evaluation_and_checkpoint_cadence_aligned": True,
+            "best_checkpoint_restoration_verification_required": True,
+            "eval_steps": 20,
+            "save_steps": 20,
+        },
+        "early_stopping": {
+            "best_checkpoint_restoration_verified": True,
+            "best_metric": 0.5,
+            "checkpoint_payload_sha256": SHA_A,
+            "checkpoint_manifest_sha256": SHA_A,
+            "checkpoint_adapter_sha256": SHA_A,
+            "staged_adapter_sha256": SHA_A,
+        },
         **dict.fromkeys(PROVENANCE_HASH_FIELDS, SHA_A),
     }
 
@@ -601,6 +617,18 @@ def test_release_parent_and_provenance_are_exact() -> None:
     wrong_manifest = deepcopy(manifest)
     wrong_manifest["datasets"]["foundation_sft"]["revision"] = "main"
     with pytest.raises(ReleaseContractError, match="40-character"):
+        validate_training_manifest(wrong_manifest)
+    wrong_manifest = deepcopy(manifest)
+    wrong_manifest["training_preflight"]["expected_validation_events"] = 5
+    with pytest.raises(ReleaseContractError, match="operable early-stopping"):
+        validate_training_manifest(wrong_manifest)
+    wrong_manifest = deepcopy(manifest)
+    wrong_manifest["early_stopping"]["best_checkpoint_restoration_verified"] = False
+    with pytest.raises(ReleaseContractError, match="best-checkpoint restoration"):
+        validate_training_manifest(wrong_manifest)
+    wrong_manifest = deepcopy(manifest)
+    wrong_manifest["early_stopping"]["staged_adapter_sha256"] = "b" * 64
+    with pytest.raises(ReleaseContractError, match="does not match"):
         validate_training_manifest(wrong_manifest)
 
 

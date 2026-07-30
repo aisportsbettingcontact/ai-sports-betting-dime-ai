@@ -2022,9 +2022,84 @@ def test_early_stopping_policy_is_exact_and_cannot_be_disabled() -> None:
         TRAINING.assert_config(disabled, allow_full_run=True)
 
     misaligned = approved_full_config()
-    misaligned["training"]["save_steps"] = 51
-    with pytest.raises(ValueError, match="multiple of eval_steps"):
+    misaligned["training"]["save_steps"] = 40
+    with pytest.raises(ValueError, match="exactly equal to eval_steps"):
         TRAINING.assert_config(misaligned, allow_full_run=True)
+
+
+def test_full_schedule_provides_six_practical_early_stopping_events() -> None:
+    training = approved_full_config()["training"]
+    plan = TRAINING.derive_training_preflight(2160, training, packing=False)
+
+    assert plan == {
+        "post_tokenization_sequence_count": 2160,
+        "packed_sequence_count": 2160,
+        "packing": False,
+        "per_device_microbatch_size": 1,
+        "gradient_accumulation_steps": 16,
+        "microbatches_per_epoch": 2160,
+        "optimizer_steps_per_epoch": 135,
+        "epochs": 1.0,
+        "max_steps": -1,
+        "expected_optimizer_steps": 135,
+        "eval_steps": 20,
+        "save_steps": 20,
+        "minimum_validation_events": 6,
+        "expected_validation_events": 6,
+        "evaluation_and_checkpoint_cadence_aligned": True,
+        "best_checkpoint_restoration_verification_required": True,
+    }
+
+
+def test_training_preflight_rejects_an_inoperable_validation_schedule() -> None:
+    training = approved_full_config()["training"]
+    training["eval_steps"] = 50
+    training["save_steps"] = 50
+
+    with pytest.raises(ValueError, match="2 validation events; at least 6"):
+        TRAINING.derive_training_preflight(2160, training, packing=False)
+
+
+def test_training_preflight_six_event_boundary_and_max_steps_override() -> None:
+    training = approved_full_config()["training"]
+    training["max_steps"] = 120
+    passing = TRAINING.derive_training_preflight(1, training, packing=False)
+    assert passing["expected_optimizer_steps"] == 120
+    assert passing["expected_validation_events"] == 6
+
+    training["max_steps"] = 119
+    with pytest.raises(ValueError, match="5 validation events; at least 6"):
+        TRAINING.derive_training_preflight(10_000, training, packing=False)
+
+
+def test_training_preflight_rounds_partial_batches_and_rejects_invalid_controls() -> None:
+    training = approved_full_config()["training"]
+    training.update(
+        {
+            "per_device_train_batch_size": 2,
+            "gradient_accumulation_steps": 4,
+            "max_steps": 120,
+        }
+    )
+    plan = TRAINING.derive_training_preflight(17, training, packing=False)
+    assert plan["microbatches_per_epoch"] == 9
+    assert plan["optimizer_steps_per_epoch"] == 3
+
+    for field, value in (
+        ("per_device_train_batch_size", True),
+        ("gradient_accumulation_steps", "4"),
+        ("eval_steps", 20.0),
+        ("save_steps", False),
+    ):
+        invalid = deepcopy(training)
+        invalid[field] = value
+        with pytest.raises(ValueError, match="must be an integer"):
+            TRAINING.derive_training_preflight(17, invalid, packing=False)
+
+    with pytest.raises(ValueError, match="at least 1"):
+        TRAINING.derive_training_preflight(0, training, packing=False)
+    with pytest.raises(ValueError, match="requires sequence packing: false"):
+        TRAINING.derive_training_preflight(17, training, packing=True)
 
 
 def checkpoint_fixture(tmp_path: Path, *, global_step: int = 50) -> tuple[Path, Path]:
@@ -2057,6 +2132,63 @@ def checkpoint_fixture(tmp_path: Path, *, global_step: int = 50) -> tuple[Path, 
         encoding="utf-8",
     )
     return checkpoint, fingerprint_path
+
+
+def test_best_checkpoint_restoration_requires_exact_staged_adapter(
+    tmp_path: Path,
+) -> None:
+    checkpoint, fingerprint_path = checkpoint_fixture(tmp_path)
+    TRAINING.write_checkpoint_integrity_manifest(
+        checkpoint,
+        run_fingerprint_sha256=TRAINING.file_sha256(fingerprint_path),
+        seed=1729,
+        global_step=50,
+    )
+    staging = tmp_path / "adapter.staging"
+    staging.mkdir()
+    (staging / "adapter_model.safetensors").write_bytes(b"adapter-state")
+
+    evidence = TRAINING.verify_best_checkpoint_restoration(
+        staging,
+        best_checkpoint=str(checkpoint),
+        best_metric=0.25,
+        run_fingerprint_path=fingerprint_path,
+        seed=1729,
+    )
+    assert evidence["best_checkpoint_restoration_verified"] is True
+    assert evidence["best_checkpoint"] == "checkpoint-50"
+    assert evidence["best_metric"] == 0.25
+    assert evidence["checkpoint_adapter_sha256"] == evidence["staged_adapter_sha256"]
+
+    (staging / "adapter_model.safetensors").write_bytes(b"different-adapter")
+    with pytest.raises(ValueError, match="does not match"):
+        TRAINING.verify_best_checkpoint_restoration(
+            staging,
+            best_checkpoint=str(checkpoint),
+            best_metric=0.25,
+            run_fingerprint_path=fingerprint_path,
+            seed=1729,
+        )
+
+
+@pytest.mark.parametrize("best_metric", [None, True, float("nan"), float("inf")])
+def test_best_checkpoint_restoration_rejects_invalid_best_state(
+    tmp_path: Path,
+    best_metric: object,
+) -> None:
+    checkpoint, fingerprint_path = checkpoint_fixture(tmp_path)
+    staging = tmp_path / "adapter.staging"
+    staging.mkdir()
+    (staging / "adapter_model.safetensors").write_bytes(b"adapter-state")
+
+    with pytest.raises(ValueError, match="best_metric"):
+        TRAINING.verify_best_checkpoint_restoration(
+            staging,
+            best_checkpoint=str(checkpoint),
+            best_metric=best_metric,
+            run_fingerprint_path=fingerprint_path,
+            seed=1729,
+        )
 
 
 def test_checkpoint_manifest_proves_exact_resumable_state(tmp_path: Path) -> None:

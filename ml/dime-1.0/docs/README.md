@@ -8,6 +8,7 @@ public draft work. See [Platform ownership](PLATFORM_OWNERSHIP.md).
 
 ## Operations and registries
 
+- [Foundation and evaluation identity v1](FOUNDATION_AND_EVALUATION_IDENTITY_V1.md)
 - [Platform ownership](PLATFORM_OWNERSHIP.md)
 - [Hugging Face registry](HUGGING_FACE_REGISTRY.md)
 - [RunPod workspace and runbook](RUNPOD_WORKSPACE_RUNBOOK.md)

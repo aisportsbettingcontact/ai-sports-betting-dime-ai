@@ -1,0 +1,193 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dime.internal/schemas/foundation_release_plan.schema.json",
+  "title": "Dime Foundation v1 Release Plan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "plan_id",
+    "status",
+    "source_commit",
+    "canonical_record_boundary",
+    "trainer_release_boundary",
+    "route_mixture",
+    "cross_cutting_minimums",
+    "data_factory",
+    "private_release",
+    "known_blockers",
+    "authorization_boundary"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "dime-foundation-release-plan-v1"
+    },
+    "plan_id": {
+      "const": "dime-foundation-v1"
+    },
+    "status": {
+      "const": "INCOMPLETE_NOT_AUTHORIZED"
+    },
+    "source_commit": {
+      "$ref": "#/$defs/commit"
+    },
+    "canonical_record_boundary": {
+      "$ref": "#/$defs/file_binding"
+    },
+    "trainer_release_boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "conversion_contract_status",
+        "conversion_approved"
+      ],
+      "properties": {
+        "schema": {
+          "$ref": "#/$defs/file_binding"
+        },
+        "conversion_contract_status": {
+          "const": "MISSING"
+        },
+        "conversion_approved": {
+          "const": false
+        }
+      }
+    },
+    "route_mixture": {
+      "type": "object",
+      "minProperties": 9,
+      "maxProperties": 9,
+      "additionalProperties": {
+        "$ref": "#/$defs/split_count"
+      }
+    },
+    "cross_cutting_minimums": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tool_required",
+        "temporal_or_freshness_sensitive",
+        "missing_or_ambiguous_information",
+        "abstention_or_error_correction",
+        "multi_turn",
+        "adversarial_or_false_premise"
+      ],
+      "additionalProperties": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 2400
+      }
+    },
+    "data_factory": {
+      "type": "object"
+    },
+    "private_release": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repo_id",
+        "revision",
+        "dataset_manifest_sha256",
+        "release_checksums_sha256",
+        "approved",
+        "expected_public_evidence"
+      ],
+      "properties": {
+        "repo_id": {
+          "const": "taileredsports/dime-foundation-sft"
+        },
+        "revision": {
+          "type": "null"
+        },
+        "dataset_manifest_sha256": {
+          "type": "null"
+        },
+        "release_checksums_sha256": {
+          "type": "null"
+        },
+        "approved": {
+          "const": false
+        },
+        "expected_public_evidence": {
+          "type": "array",
+          "minItems": 8,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 3
+          }
+        }
+      }
+    },
+    "known_blockers": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 10
+      }
+    },
+    "authorization_boundary": {
+      "$ref": "#/$defs/false_map"
+    }
+  },
+  "$defs": {
+    "commit": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "file_binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 3
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "split_count": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "total",
+        "train",
+        "validation"
+      ],
+      "properties": {
+        "total": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "train": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "validation": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "false_map": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "const": false
+      }
+    }
+  }
+}

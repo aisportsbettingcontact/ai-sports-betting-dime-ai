@@ -34,6 +34,13 @@ behaviors must be taught and evaluated explicitly.
 The application provider remains hardcoded to `frozen`. This project does not
 authorize a model call, deployment, or production change.
 
+Validate the non-authorizing Foundation, evaluation-identity, and model-execution
+control plane with:
+
+```bash
+.venv/bin/python scripts/validate_foundation_control.py
+```
+
 - No production-trained Dime checkpoint exists.
 - No production release evaluation has passed.
 - No verified merged model exists.
