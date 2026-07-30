@@ -28,10 +28,11 @@ jobs:
   fire:
     name: Trigger /api/cron/scores
     runs-on: ubuntu-latest
+    environment: Production
     steps:
       - name: "[STEP] Preflight — verify required secrets are present"
         env:
-          RAILWAY_APP_URL: ${{ secrets.RAILWAY_APP_URL }}
+          RAILWAY_APP_URL: ${{ vars.RAILWAY_APP_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
           set -euo pipefail
@@ -45,7 +46,7 @@ jobs:
 
       - name: "[STEP] POST /api/cron/scores (secret never printed)"
         env:
-          RAILWAY_APP_URL: ${{ secrets.RAILWAY_APP_URL }}
+          RAILWAY_APP_URL: ${{ vars.RAILWAY_APP_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
           set -euo pipefail

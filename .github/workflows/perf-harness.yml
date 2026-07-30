@@ -35,13 +35,14 @@ jobs:
   measure:
     name: Measure live routes
     runs-on: ubuntu-latest
+    environment: Production
     steps:
       - name: "[INPUT] Checkout repository"
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
 
       - name: "[STEP] Preflight — RAILWAY_APP_URL present"
         env:
-          RAILWAY_APP_URL: ${{ secrets.RAILWAY_APP_URL }}
+          RAILWAY_APP_URL: ${{ vars.RAILWAY_APP_URL }}
         run: |
           set -euo pipefail
           if [ -z "${RAILWAY_APP_URL:-}" ]; then
@@ -50,10 +51,10 @@ jobs:
           echo "[PREFLIGHT] target secret present"
 
       - name: "[STEP] Setup pnpm"
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1
 
       - name: "[STEP] Setup Node.js 22"
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: 22
           cache: pnpm
@@ -69,7 +70,7 @@ jobs:
 
       - name: "[STEP] Run perf harness"
         env:
-          PERF_TARGET_URL: ${{ secrets.RAILWAY_APP_URL }}
+          PERF_TARGET_URL: ${{ vars.RAILWAY_APP_URL }}
         run: |
           set -euo pipefail
           if [ "${{ github.event.inputs.update_baseline }}" = "true" ]; then
@@ -80,7 +81,7 @@ jobs:
 
       - name: "[OUTPUT] Upload raw metrics artifact"
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: perf-results
           path: perf-results.json
@@ -88,7 +89,7 @@ jobs:
 
       - name: "[OUTPUT] Upload reviewable baseline candidate"
         if: ${{ success() && github.event_name == 'workflow_dispatch' && github.event.inputs.update_baseline == 'true' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: perf-baseline-candidate-${{ github.run_id }}-${{ github.run_attempt }}
           path: |

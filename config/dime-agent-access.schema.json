@@ -1,0 +1,380 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aisportsbettingmodels.com/schemas/dime-agent-access.v1.json",
+  "title": "Dime agent access v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "kind",
+    "controlPlaneManifest",
+    "cache",
+    "platform",
+    "providers",
+    "safety"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "kind": {
+      "const": "dime-agent-access"
+    },
+    "controlPlaneManifest": {
+      "const": "config/dime-control-plane-targets.v1.json"
+    },
+    "cache": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "identityTtlSeconds",
+        "productionAuthPersistenceAllowed"
+      ],
+      "properties": {
+        "identityTtlSeconds": {
+          "type": "integer",
+          "minimum": 30,
+          "maximum": 3600
+        },
+        "productionAuthPersistenceAllowed": {
+          "const": false
+        }
+      }
+    },
+    "platform": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "origin",
+        "loginPath",
+        "authenticatedPath",
+        "identityProcedure",
+        "browserChannel",
+        "credentialSource",
+        "roles"
+      ],
+      "properties": {
+        "origin": {
+          "const": "https://aisportsbettingmodels.com"
+        },
+        "loginPath": {
+          "const": "/login"
+        },
+        "authenticatedPath": {
+          "const": "/chat"
+        },
+        "identityProcedure": {
+          "const": "appUsers.me"
+        },
+        "browserChannel": {
+          "const": "chrome"
+        },
+        "credentialSource": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "service", "retrieval", "plaintextCacheAllowed"],
+          "properties": {
+            "kind": {
+              "const": "railway-service-variables"
+            },
+            "service": {
+              "const": "shared"
+            },
+            "retrieval": {
+              "const": "isolated-exact-role-filter"
+            },
+            "plaintextCacheAllowed": {
+              "const": false
+            }
+          }
+        },
+        "roles": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["owner", "user"],
+          "properties": {
+            "owner": {
+              "$ref": "#/$defs/platformOwner"
+            },
+            "user": {
+              "$ref": "#/$defs/platformUser"
+            }
+          }
+        }
+      }
+    },
+    "providers": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "github",
+        "railway",
+        "onePassword",
+        "aws",
+        "huggingFace",
+        "runPod"
+      ],
+      "properties": {
+        "github": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["cli", "credentialSource", "repository"],
+          "properties": {
+            "cli": {
+              "const": "gh"
+            },
+            "credentialSource": {
+              "const": "operating-system-keychain"
+            },
+            "repository": {
+              "const": "aisportsbettingcontact/ai-sports-betting-dime-ai"
+            }
+          }
+        },
+        "railway": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["cli", "credentialSource", "projectId", "environmentId"],
+          "properties": {
+            "cli": {
+              "const": "dime-railway-keychain"
+            },
+            "credentialSource": {
+              "const": "macos-keychain-device-only-broker"
+            },
+            "projectId": {
+              "const": "8dd7341d-702c-48c7-90df-5c19a4f04913"
+            },
+            "environmentId": {
+              "const": "787f3113-17ab-47d9-9819-1268aeb09b3e"
+            }
+          }
+        },
+        "onePassword": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["cli", "injectionMode", "plaintextSecretFilesAllowed"],
+          "properties": {
+            "cli": {
+              "const": "op"
+            },
+            "injectionMode": {
+              "const": "scope-isolated-op-run"
+            },
+            "plaintextSecretFilesAllowed": {
+              "const": false
+            }
+          }
+        },
+        "aws": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "cli",
+            "region",
+            "defaultProfile",
+            "allowedProfiles",
+            "profileEnvironment",
+            "staticCredentialsAllowed"
+          ],
+          "properties": {
+            "cli": {
+              "const": "aws"
+            },
+            "region": {
+              "const": "us-west-2"
+            },
+            "defaultProfile": {
+              "const": "dime-builder"
+            },
+            "allowedProfiles": {
+              "type": "array",
+              "prefixItems": [
+                {
+                  "const": "dime-builder"
+                },
+                {
+                  "const": "dime"
+                }
+              ],
+              "items": false
+            },
+            "profileEnvironment": {
+              "const": "DIME_AWS_PROFILE"
+            },
+            "staticCredentialsAllowed": {
+              "const": false
+            }
+          }
+        },
+        "huggingFace": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "cli",
+            "account",
+            "identityEndpoint",
+            "platformContract",
+            "scopes"
+          ],
+          "properties": {
+            "cli": {
+              "const": "hf"
+            },
+            "account": {
+              "const": "taileredsports"
+            },
+            "identityEndpoint": {
+              "const": "https://huggingface.co/api/whoami-v2"
+            },
+            "platformContract": {
+              "const": "ml/dime-1.0/configs/platform_contract.json"
+            },
+            "scopes": {
+              "type": "object"
+            }
+          }
+        },
+        "runPod": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "credentialName",
+            "permissionContract",
+            "brokerEnvFile",
+            "verificationEndpoint",
+            "verificationMethod"
+          ],
+          "properties": {
+            "credentialName": {
+              "const": "dime-control-plane-read-v1"
+            },
+            "permissionContract": {
+              "const": "restricted-read-only"
+            },
+            "brokerEnvFile": {
+              "const": ".env.agent.runpod.1password"
+            },
+            "verificationEndpoint": {
+              "const": "https://rest.runpod.io/v1/endpoints?includeTemplate=false&includeWorkers=false"
+            },
+            "verificationMethod": {
+              "const": "GET_BEARER"
+            }
+          }
+        }
+      }
+    },
+    "safety": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "automaticOperations",
+        "credentialValuesInRepository",
+        "credentialValuesInCache",
+        "rawProviderResponsesInCache",
+        "railwayVariableExportAllowed",
+        "railwayExactPlatformCredentialReadAllowed",
+        "arbitraryChildCommandsAllowed",
+        "remoteMutationsAuthorized",
+        "productionLoginIsExplicit",
+        "trainingAuthorized",
+        "providerActivationAuthorized"
+      ],
+      "properties": {
+        "automaticOperations": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "const": "cached-context"
+            },
+            {
+              "const": "identity-diagnostics"
+            },
+            {
+              "const": "public-health"
+            }
+          ],
+          "items": false
+        },
+        "credentialValuesInRepository": {
+          "const": false
+        },
+        "credentialValuesInCache": {
+          "const": false
+        },
+        "rawProviderResponsesInCache": {
+          "const": false
+        },
+        "railwayVariableExportAllowed": {
+          "const": false
+        },
+        "railwayExactPlatformCredentialReadAllowed": {
+          "const": true
+        },
+        "arbitraryChildCommandsAllowed": {
+          "const": false
+        },
+        "remoteMutationsAuthorized": {
+          "const": false
+        },
+        "productionLoginIsExplicit": {
+          "const": true
+        },
+        "trainingAuthorized": {
+          "const": false
+        },
+        "providerActivationAuthorized": {
+          "const": false
+        }
+      }
+    }
+  },
+  "$defs": {
+    "environmentTriple": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["email", "password", "username"],
+      "properties": {
+        "email": {
+          "type": "string"
+        },
+        "password": {
+          "type": "string"
+        },
+        "username": {
+          "type": "string"
+        }
+      }
+    },
+    "platformOwner": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["expectedRole", "environment"],
+      "properties": {
+        "expectedRole": {
+          "const": "owner"
+        },
+        "environment": {
+          "$ref": "#/$defs/environmentTriple"
+        }
+      }
+    },
+    "platformUser": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["expectedRole", "environment"],
+      "properties": {
+        "expectedRole": {
+          "const": "user"
+        },
+        "environment": {
+          "$ref": "#/$defs/environmentTriple"
+        }
+      }
+    }
+  }
+}

@@ -17,6 +17,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { VSCODE_TEST_VERSION } from './vscode-test-version.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(here, '..');
@@ -54,7 +55,9 @@ const extensionsDir = path.join(profile, 'extensions');
 fs.mkdirSync(userDataDir, { recursive: true });
 fs.mkdirSync(extensionsDir, { recursive: true });
 
-const vscodeExecutablePath = await downloadAndUnzipVSCode();
+const vscodeExecutablePath = await downloadAndUnzipVSCode(
+  VSCODE_TEST_VERSION,
+);
 const [cliPath, ...cliBaseArgs] = resolveCliArgsFromVSCodeExecutablePath(vscodeExecutablePath);
 const profileArgs = [`--user-data-dir=${userDataDir}`, `--extensions-dir=${extensionsDir}`];
 

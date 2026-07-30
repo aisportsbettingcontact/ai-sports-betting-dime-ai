@@ -48,7 +48,12 @@ for (const [from, to] of docsMap) {
 }
 
 // 4. Real node_modules for playwright-core (assets prevent bundling it).
-run('npm install --omit=dev --no-audit --no-fund --no-package-lock --ignore-scripts', staging);
+// The staging directory lives below the workspace root, so explicitly disable
+// workspace discovery and keep its dependency installation fully isolated.
+run(
+  'npm install --workspaces=false --omit=dev --no-audit --no-fund --no-package-lock --ignore-scripts',
+  staging,
+);
 
 // 5. Keep the VSIX lean but complete.
 fs.writeFileSync(

@@ -1,0 +1,124 @@
+{
+  "$schema": "./dime-agent-access.schema.json",
+  "schemaVersion": 1,
+  "kind": "dime-agent-access",
+  "controlPlaneManifest": "config/dime-control-plane-targets.v1.json",
+  "cache": {
+    "identityTtlSeconds": 300,
+    "productionAuthPersistenceAllowed": false
+  },
+  "platform": {
+    "origin": "https://aisportsbettingmodels.com",
+    "loginPath": "/login",
+    "authenticatedPath": "/chat",
+    "identityProcedure": "appUsers.me",
+    "browserChannel": "chrome",
+    "credentialSource": {
+      "kind": "railway-service-variables",
+      "service": "shared",
+      "retrieval": "isolated-exact-role-filter",
+      "plaintextCacheAllowed": false
+    },
+    "roles": {
+      "owner": {
+        "expectedRole": "owner",
+        "environment": {
+          "email": "DIME_PROD_OWNER_EMAIL",
+          "password": "DIME_PROD_OWNER_PASSWORD",
+          "username": "DIME_PROD_OWNER_USERNAME"
+        }
+      },
+      "user": {
+        "expectedRole": "user",
+        "environment": {
+          "email": "DIME_PROD_USER_EMAIL",
+          "password": "DIME_PROD_USER_PASSWORD",
+          "username": "DIME_PROD_USER_USERNAME"
+        }
+      }
+    }
+  },
+  "providers": {
+    "github": {
+      "cli": "gh",
+      "credentialSource": "operating-system-keychain",
+      "repository": "aisportsbettingcontact/ai-sports-betting-dime-ai"
+    },
+    "railway": {
+      "cli": "dime-railway-keychain",
+      "credentialSource": "macos-keychain-device-only-broker",
+      "projectId": "8dd7341d-702c-48c7-90df-5c19a4f04913",
+      "environmentId": "787f3113-17ab-47d9-9819-1268aeb09b3e"
+    },
+    "onePassword": {
+      "cli": "op",
+      "injectionMode": "scope-isolated-op-run",
+      "plaintextSecretFilesAllowed": false
+    },
+    "aws": {
+      "cli": "aws",
+      "region": "us-west-2",
+      "defaultProfile": "dime-builder",
+      "allowedProfiles": ["dime-builder", "dime"],
+      "profileEnvironment": "DIME_AWS_PROFILE",
+      "staticCredentialsAllowed": false
+    },
+    "huggingFace": {
+      "cli": "hf",
+      "account": "taileredsports",
+      "identityEndpoint": "https://huggingface.co/api/whoami-v2",
+      "platformContract": "ml/dime-1.0/configs/platform_contract.json",
+      "scopes": {
+        "hf-training": {
+          "credentialName": "dime-training-read-v1",
+          "tokenRole": "fineGrained",
+          "brokerEnvFile": ".env.agent.hf-training.1password"
+        },
+        "hf-serving": {
+          "credentialName": "dime-serving-read-v1",
+          "tokenRole": "fineGrained",
+          "brokerEnvFile": ".env.agent.hf-serving.1password"
+        },
+        "hf-release-publisher": {
+          "credentialName": "dime-release-publisher-v1",
+          "tokenRole": "fineGrained",
+          "brokerEnvFile": ".env.agent.hf-release-publisher.1password"
+        },
+        "hf-locked-evaluator": {
+          "credentialName": "dime-locked-evaluator-read-v1",
+          "tokenRole": "fineGrained",
+          "brokerEnvFile": ".env.agent.hf-locked-evaluator.1password"
+        },
+        "hf-locked-publisher": {
+          "credentialName": "dime-locked-publisher-v1",
+          "tokenRole": "fineGrained",
+          "brokerEnvFile": ".env.agent.hf-locked-publisher.1password"
+        }
+      }
+    },
+    "runPod": {
+      "credentialName": "dime-control-plane-read-v1",
+      "permissionContract": "restricted-read-only",
+      "brokerEnvFile": ".env.agent.runpod.1password",
+      "verificationEndpoint": "https://rest.runpod.io/v1/endpoints?includeTemplate=false&includeWorkers=false",
+      "verificationMethod": "GET_BEARER"
+    }
+  },
+  "safety": {
+    "automaticOperations": [
+      "cached-context",
+      "identity-diagnostics",
+      "public-health"
+    ],
+    "credentialValuesInRepository": false,
+    "credentialValuesInCache": false,
+    "rawProviderResponsesInCache": false,
+    "railwayVariableExportAllowed": false,
+    "railwayExactPlatformCredentialReadAllowed": true,
+    "arbitraryChildCommandsAllowed": false,
+    "remoteMutationsAuthorized": false,
+    "productionLoginIsExplicit": true,
+    "trainingAuthorized": false,
+    "providerActivationAuthorized": false
+  }
+}

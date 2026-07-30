@@ -29,6 +29,7 @@ jobs:
   query:
     name: "Query database (${{ github.event.inputs.mode }})"
     runs-on: ubuntu-latest
+    environment: Production
     steps:
       - name: "[STEP] Install MySQL client"
         run: sudo apt-get update -qq && sudo apt-get install -y -qq mysql-client

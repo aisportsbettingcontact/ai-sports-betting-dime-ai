@@ -54,10 +54,11 @@ jobs:
   fire:
     name: "POST /api/scheduled/wc2026-${{ inputs.action }}"
     runs-on: ubuntu-latest
+    environment: Production
     steps:
       - name: "[STEP] Preflight — verify required secrets are present"
         env:
-          RAILWAY_APP_URL: ${{ secrets.RAILWAY_APP_URL }}
+          RAILWAY_APP_URL: ${{ vars.RAILWAY_APP_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
           set -euo pipefail
@@ -71,7 +72,7 @@ jobs:
 
       - name: "[STEP] POST the selected endpoint (secret never printed)"
         env:
-          RAILWAY_APP_URL: ${{ secrets.RAILWAY_APP_URL }}
+          RAILWAY_APP_URL: ${{ vars.RAILWAY_APP_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
           ACTION: ${{ inputs.action }}
           DRY_RUN: ${{ inputs.dry_run }}

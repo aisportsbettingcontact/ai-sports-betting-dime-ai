@@ -82,7 +82,7 @@ export function installCodex(workspaceRoot: string): InstallResult {
   ].join('\n');
 
   let action: InstallResult['action'] = 'created';
-  let content = '';
+  let content: string;
   if (fs.existsSync(file)) {
     content = fs.readFileSync(file, 'utf8');
     if (/^\[mcp_servers\.livelab\]/m.test(content)) {

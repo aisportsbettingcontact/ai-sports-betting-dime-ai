@@ -264,7 +264,6 @@ export function buildCli(): Command {
       const daemonPath = resolveDaemonPath();
       add('runtime bundle', !!daemonPath, daemonPath ?? 'daemon.cjs not found — run npm run build');
 
-      let chromium = false;
       try {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const pw = require('playwright-core') as typeof import('playwright-core');
@@ -276,7 +275,7 @@ export function buildCli(): Command {
             .readdirSync(process.env.PLAYWRIGHT_BROWSERS_PATH)
             .some((entry) => entry.startsWith('chromium-'));
         }
-        chromium = exeExists || viaBrowsersPath;
+        const chromium = exeExists || viaBrowsersPath;
         add(
           'chromium',
           chromium,

@@ -146,8 +146,8 @@
   "devDependencies": {
     "@types/mocha": "^10.0.10",
     "@types/vscode": "^1.96.0",
-    "@vscode/test-electron": "^2.5.2",
+    "@vscode/test-electron": "3.1.0",
     "@vscode/vsce": "^3.3.0",
-    "mocha": "^11.1.0"
+    "mocha": "12.0.0-rc.5"
   }
 }

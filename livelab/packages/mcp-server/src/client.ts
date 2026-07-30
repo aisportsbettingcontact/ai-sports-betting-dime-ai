@@ -169,7 +169,7 @@ export class RuntimeClient {
       );
     }
     const text = await res.text();
-    let json: unknown = {};
+    let json: unknown;
     try {
       json = text ? JSON.parse(text) : {};
     } catch {

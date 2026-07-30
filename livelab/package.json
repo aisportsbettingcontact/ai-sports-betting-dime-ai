@@ -5,7 +5,7 @@
   "description": "LiveLab: live multi-device browser laboratory for VS Code with a shared MCP agent bridge",
   "license": "MIT",
   "engines": {
-    "node": ">=20"
+    "node": ">=22.13.0"
   },
   "workspaces": [
     "packages/protocol",
@@ -36,13 +36,15 @@
     "diff": "^8.0.3"
   },
   "devDependencies": {
-    "@eslint/js": "^9.17.0",
+    "@eslint/js": "10.0.1",
+    "@modelcontextprotocol/sdk": "1.30.0",
     "@types/node": "^22.10.0",
     "@types/ws": "^8.5.13",
+    "@vscode/test-electron": "3.1.0",
     "esbuild": "^0.25.0",
-    "eslint": "^9.17.0",
+    "eslint": "10.8.0",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.19.0",
+    "typescript-eslint": "8.65.0",
     "vitest": "^3.0.0"
   }
 }

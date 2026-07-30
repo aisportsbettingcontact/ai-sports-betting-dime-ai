@@ -1,0 +1,7 @@
+* @prez-ai-sports-betting
+
+# Security-sensitive boundaries require the independent owner explicitly.
+/.github/ @prez-ai-sports-betting
+/config/dime-agent-access* @prez-ai-sports-betting
+/scripts/dime-* @prez-ai-sports-betting
+/server/mlbModelRunner.ts @prez-ai-sports-betting

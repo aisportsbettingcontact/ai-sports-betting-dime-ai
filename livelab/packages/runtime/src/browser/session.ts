@@ -294,7 +294,6 @@ export class DeviceSession {
       let status: number | undefined;
       let ok: boolean | undefined;
       let responseHeaders: Record<string, string> | undefined;
-      let fromCache: boolean | undefined;
       let transferSize: number | undefined;
       try {
         const res = failed ? null : await req.response();
@@ -321,7 +320,6 @@ export class DeviceSession {
         failureText: failed ?? undefined,
         durationMs: timing.responseEnd > 0 ? Math.round(timing.responseEnd) : undefined,
         transferSize,
-        fromCache,
         initiator: undefined,
         requestHeaders: redactHeaders(req.headers(), this.redaction.headers),
         responseHeaders,

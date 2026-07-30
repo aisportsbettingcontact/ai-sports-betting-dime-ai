@@ -8,6 +8,7 @@ export default tseslint.config(
       '**/node_modules/**',
       '**/*.d.ts',
       'artifacts/**',
+      '.vscode-test/**',
       '**/.livelab/**',
       'apps/vscode-extension/media/**',
       'packages/test-app/dist/**',
