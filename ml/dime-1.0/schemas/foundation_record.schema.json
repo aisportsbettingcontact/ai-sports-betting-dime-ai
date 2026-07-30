@@ -330,6 +330,25 @@
         },
         "deterministic_validation_passed": {
           "type": "boolean"
+        },
+        "review_receipts": {
+          "type": "array",
+          "minItems": 2,
+          "uniqueItems": true,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["reviewer_id", "decision_receipt_sha256"],
+            "properties": {
+              "reviewer_id": {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9._-]{2,127}$"
+              },
+              "decision_receipt_sha256": {
+                "$ref": "#/$defs/sha256"
+              }
+            }
+          }
         }
       }
     },

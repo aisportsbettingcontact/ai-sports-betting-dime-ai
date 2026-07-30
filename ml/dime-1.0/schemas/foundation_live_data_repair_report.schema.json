@@ -1,0 +1,198 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dime.internal/schemas/foundation_live_data_repair_report.schema.json",
+  "title": "Dime Foundation Live Data Repair Report v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "revision_id",
+    "created_at",
+    "source_commit",
+    "source_execution_id",
+    "status",
+    "counts",
+    "bindings",
+    "records",
+    "gates",
+    "external_operations"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "dime-foundation-live-data-repair-report-v1"
+    },
+    "revision_id": {
+      "const": "foundation-live-data-shard-001-repair-001"
+    },
+    "created_at": {"type": "string", "format": "date-time"},
+    "source_commit": {
+      "const": "b9ba7788749365253a6f725fee2a2a367a3475dd"
+    },
+    "source_execution_id": {
+      "const": "foundation-live-data-shard-001-b9ba7788"
+    },
+    "status": {"const": "READY_FOR_INDEPENDENT_REREVIEW"},
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "original_records",
+        "approved_records_unchanged",
+        "changes_requested",
+        "repaired_records",
+        "repair_train",
+        "repair_validation",
+        "critic_findings_addressed",
+        "stale_claim_repairs",
+        "critic_decisions_written"
+      ],
+      "properties": {
+        "original_records": {"const": 150},
+        "approved_records_unchanged": {"const": 50},
+        "changes_requested": {"const": 100},
+        "repaired_records": {"const": 100},
+        "repair_train": {"const": 90},
+        "repair_validation": {"const": 10},
+        "critic_findings_addressed": {"const": 110},
+        "stale_claim_repairs": {"const": 10},
+        "critic_decisions_written": {"const": 0}
+      }
+    },
+    "bindings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_manifest_sha256",
+        "source_decision_manifest_sha256",
+        "repair_authoring_manifest_sha256",
+        "repair_context_manifest_sha256",
+        "repair_receipt_manifest_sha256",
+        "partition_registry_sha256",
+        "context_efficiency_report_sha256"
+      ],
+      "properties": {
+        "source_manifest_sha256": {"$ref": "#/$defs/sha256"},
+        "source_decision_manifest_sha256": {"$ref": "#/$defs/sha256"},
+        "repair_authoring_manifest_sha256": {"$ref": "#/$defs/sha256"},
+        "repair_context_manifest_sha256": {"$ref": "#/$defs/sha256"},
+        "repair_receipt_manifest_sha256": {"$ref": "#/$defs/sha256"},
+        "partition_registry_sha256": {"$ref": "#/$defs/sha256"},
+        "context_efficiency_report_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "records": {
+      "type": "array",
+      "minItems": 100,
+      "maxItems": 100,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "record_id",
+          "split",
+          "event_id",
+          "original_draft_sha256",
+          "original_decision_sha256",
+          "repaired_draft_sha256",
+          "generator_context_packet_sha256",
+          "critic_context_packet_sha256",
+          "generator_receipt_sha256",
+          "finding_closures"
+        ],
+        "properties": {
+          "record_id": {"type": "string", "minLength": 1},
+          "split": {"enum": ["train", "validation"]},
+          "event_id": {"type": "string", "pattern": "^synthetic-event-[0-9]{3}$"},
+          "original_draft_sha256": {"$ref": "#/$defs/sha256"},
+          "original_decision_sha256": {"$ref": "#/$defs/sha256"},
+          "repaired_draft_sha256": {"$ref": "#/$defs/sha256"},
+          "generator_context_packet_sha256": {"$ref": "#/$defs/sha256"},
+          "critic_context_packet_sha256": {"$ref": "#/$defs/sha256"},
+          "generator_receipt_sha256": {"$ref": "#/$defs/sha256"},
+          "finding_closures": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 2,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["finding_id", "resolution"],
+              "properties": {
+                "finding_id": {"type": "string", "minLength": 1},
+                "resolution": {"type": "string", "minLength": 1}
+              }
+            }
+          }
+        }
+      }
+    },
+    "gates": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_failures",
+        "decision_binding_failures",
+        "receipt_failures",
+        "ancestry_failures",
+        "approved_record_mutations",
+        "non_target_repairs",
+        "partition_failures",
+        "tool_semantic_failures",
+        "stale_claim_failures",
+        "mode_failures",
+        "future_timestamp_failures",
+        "exact_duplicates",
+        "semantic_duplicate_pairs",
+        "r5_evaluation_overlap",
+        "critic_decisions_written"
+      ],
+      "properties": {
+        "schema_failures": {"const": 0},
+        "decision_binding_failures": {"const": 0},
+        "receipt_failures": {"const": 0},
+        "ancestry_failures": {"const": 0},
+        "approved_record_mutations": {"const": 0},
+        "non_target_repairs": {"const": 0},
+        "partition_failures": {"const": 0},
+        "tool_semantic_failures": {"const": 0},
+        "stale_claim_failures": {"const": 0},
+        "mode_failures": {"const": 0},
+        "future_timestamp_failures": {"const": 0},
+        "exact_duplicates": {"const": 0},
+        "semantic_duplicate_pairs": {"const": 0},
+        "r5_evaluation_overlap": {"const": 0},
+        "critic_decisions_written": {"const": 0}
+      }
+    },
+    "external_operations": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "credential_reads",
+        "network_calls",
+        "provider_invocations",
+        "model_downloads",
+        "railway_mutations",
+        "production_data_reads",
+        "training_runs",
+        "publications"
+      ],
+      "properties": {
+        "credential_reads": {"const": 0},
+        "network_calls": {"const": 0},
+        "provider_invocations": {"const": 0},
+        "model_downloads": {"const": 0},
+        "railway_mutations": {"const": 0},
+        "production_data_reads": {"const": 0},
+        "training_runs": {"const": 0},
+        "publications": {"const": 0}
+      }
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  }
+}

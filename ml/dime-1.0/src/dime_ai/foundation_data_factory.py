@@ -113,6 +113,15 @@ def convert_authoring_record(record: dict[str, Any]) -> dict[str, Any]:
         or review["deterministic_validation_passed"] is not True
     ):
         raise DataFactoryError("independent review has not approved the exact record")
+    review_receipts = review.get("review_receipts")
+    if review_receipts is None:
+        reviewer_ids = [critic["actor_id"]]
+    else:
+        reviewer_ids = [item["reviewer_id"] for item in review_receipts]
+        if critic["actor_id"] not in reviewer_ids:
+            raise DataFactoryError(
+                "primary critic must appear in the independently bound review receipts"
+            )
 
     messages = _trainer_messages(record)
     authoring_sha256 = hashlib.sha256(canonical_json_bytes(record)).hexdigest()
@@ -176,7 +185,7 @@ def convert_authoring_record(record: dict[str, Any]) -> dict[str, Any]:
         },
         "quality": {
             "review_status": "approved",
-            "reviewer_ids": [critic["actor_id"]],
+            "reviewer_ids": reviewer_ids,
             "reviewed_at_utc": review["reviewed_at"],
             "rubric_version": review["rubric_version"],
         },

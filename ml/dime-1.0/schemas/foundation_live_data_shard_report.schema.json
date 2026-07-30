@@ -1,0 +1,186 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dime.internal/schemas/foundation_live_data_shard_report.schema.json",
+  "title": "Dime Foundation Live Data Shard Report v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "execution_id",
+    "created_at",
+    "source_commit",
+    "status",
+    "counts",
+    "gates",
+    "tool_state_counts",
+    "artifact_bindings",
+    "authorization",
+    "external_operations"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "dime-foundation-live-data-shard-report-v1"
+    },
+    "execution_id": {
+      "const": "foundation-live-data-shard-001-b9ba7788"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "source_commit": {
+      "const": "b9ba7788749365253a6f725fee2a2a367a3475dd"
+    },
+    "status": {
+      "const": "READY_FOR_INDEPENDENT_CRITIQUE"
+    },
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "drafts",
+        "train",
+        "validation",
+        "accepted_records",
+        "trainer_records"
+      ],
+      "properties": {
+        "drafts": {"const": 150},
+        "train": {"const": 135},
+        "validation": {"const": 15},
+        "accepted_records": {"const": 0},
+        "trainer_records": {"const": 0}
+      }
+    },
+    "gates": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_failures",
+        "partition_collisions",
+        "rights_failures",
+        "numeric_errors",
+        "silent_truncations",
+        "evaluation_overlap",
+        "exact_duplicates",
+        "semantic_duplicate_pairs",
+        "mode_failures",
+        "future_timestamp_failures",
+        "critic_decisions_written"
+      ],
+      "properties": {
+        "schema_failures": {"const": 0},
+        "partition_collisions": {"const": 0},
+        "rights_failures": {"const": 0},
+        "numeric_errors": {"const": 0},
+        "silent_truncations": {"const": 0},
+        "evaluation_overlap": {"const": 0},
+        "exact_duplicates": {"const": 0},
+        "semantic_duplicate_pairs": {"const": 0},
+        "mode_failures": {"const": 0},
+        "future_timestamp_failures": {"const": 0},
+        "critic_decisions_written": {"const": 0}
+      }
+    },
+    "tool_state_counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "skipped",
+        "success",
+        "empty",
+        "failure",
+        "timeout",
+        "stale",
+        "malformed",
+        "conflicting",
+        "rejected",
+        "no_tool"
+      ],
+      "properties": {
+        "skipped": {"const": 20},
+        "success": {"const": 20},
+        "empty": {"const": 20},
+        "failure": {"const": 10},
+        "timeout": {"const": 10},
+        "stale": {"const": 10},
+        "malformed": {"const": 10},
+        "conflicting": {"const": 10},
+        "rejected": {"const": 10},
+        "no_tool": {"const": 30}
+      }
+    },
+    "artifact_bindings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pilot_pass_report_sha256",
+        "authoring_manifest_sha256",
+        "context_manifest_sha256",
+        "receipt_manifest_sha256",
+        "partition_registry_sha256",
+        "token_profile_sha256",
+        "route_token_report_sha256",
+        "context_efficiency_report_sha256",
+        "execution_context_capsule_sha256"
+      ],
+      "properties": {
+        "pilot_pass_report_sha256": {"$ref": "#/$defs/sha256"},
+        "authoring_manifest_sha256": {"$ref": "#/$defs/sha256"},
+        "context_manifest_sha256": {"$ref": "#/$defs/sha256"},
+        "receipt_manifest_sha256": {"$ref": "#/$defs/sha256"},
+        "partition_registry_sha256": {"$ref": "#/$defs/sha256"},
+        "token_profile_sha256": {"$ref": "#/$defs/sha256"},
+        "route_token_report_sha256": {"$ref": "#/$defs/sha256"},
+        "context_efficiency_report_sha256": {"$ref": "#/$defs/sha256"},
+        "execution_context_capsule_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "authorization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["basis", "scope", "accepted_records_authorized"],
+      "properties": {
+        "basis": {
+          "const": "PILOT_PASS_WITH_ALL_REQUIRED_GATES_ZERO"
+        },
+        "scope": {
+          "const": "GENERATE_150_LIVE_DATA_DRAFTS"
+        },
+        "accepted_records_authorized": {
+          "const": false
+        }
+      }
+    },
+    "external_operations": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "credential_reads",
+        "network_calls",
+        "provider_invocations",
+        "model_downloads",
+        "railway_mutations",
+        "production_data_reads",
+        "training_runs",
+        "publications"
+      ],
+      "properties": {
+        "credential_reads": {"const": 0},
+        "network_calls": {"const": 0},
+        "provider_invocations": {"const": 0},
+        "model_downloads": {"const": 0},
+        "railway_mutations": {"const": 0},
+        "production_data_reads": {"const": 0},
+        "training_runs": {"const": 0},
+        "publications": {"const": 0}
+      }
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  }
+}

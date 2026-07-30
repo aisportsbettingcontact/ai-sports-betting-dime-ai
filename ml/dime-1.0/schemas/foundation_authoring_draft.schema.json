@@ -1,0 +1,199 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dime.internal/schemas/foundation_authoring_draft.schema.json",
+  "title": "Dime Foundation Authoring Draft v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "draft_id",
+    "record_id",
+    "status",
+    "record_payload",
+    "generator_context_packet_sha256",
+    "generator_receipt_sha256",
+    "draft_sha256"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "dime-foundation-authoring-draft-v1"
+    },
+    "draft_id": {
+      "type": "string",
+      "pattern": "^foundation-draft-[a-z0-9][a-z0-9._-]{7,127}$"
+    },
+    "record_id": {
+      "type": "string",
+      "pattern": "^dime-foundation-v1-[a-z0-9][a-z0-9._-]{7,95}$"
+    },
+    "status": {
+      "const": "PENDING_INDEPENDENT_CRITIQUE"
+    },
+    "record_payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "record_id",
+        "route",
+        "task_type",
+        "conversation",
+        "source_type",
+        "source_reference",
+        "source_timestamp",
+        "provenance",
+        "partition_identity",
+        "rights_status",
+        "tool_requirement",
+        "tool_schema_revision",
+        "expected_tool_trace",
+        "freshness_class",
+        "expected_behavior",
+        "trainer_labels",
+        "numeric_assertions",
+        "expected_response",
+        "expected_final_response",
+        "critical_constraints",
+        "uncertainty_behavior",
+        "split"
+      ],
+      "properties": {
+        "record_id": {
+          "type": "string",
+          "pattern": "^dime-foundation-v1-[a-z0-9][a-z0-9._-]{7,95}$"
+        },
+        "route": {
+          "enum": [
+            "platform",
+            "account",
+            "educational",
+            "bet_explanation",
+            "matchup",
+            "full_slate",
+            "historical",
+            "live_data",
+            "general_sports"
+          ]
+        },
+        "task_type": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:_[a-z0-9]+)*$"
+        },
+        "conversation": {
+          "type": "array",
+          "minItems": 2
+        },
+        "source_type": {
+          "enum": ["source_packet", "synthetic_behavioral"]
+        },
+        "source_reference": {
+          "type": ["object", "null"]
+        },
+        "source_timestamp": {
+          "type": ["string", "null"],
+          "format": "date-time"
+        },
+        "provenance": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["shard_id", "created_at", "generator"],
+          "properties": {
+            "shard_id": {
+              "type": "string",
+              "pattern": "^foundation-v1-[a-z0-9][a-z0-9._-]{3,95}$"
+            },
+            "created_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "generator": {
+              "$ref": "#/$defs/actor"
+            }
+          }
+        },
+        "partition_identity": {"type": "object"},
+        "rights_status": {
+          "enum": [
+            "approved_internal",
+            "licensed",
+            "public_domain",
+            "synthetic_behavioral",
+            "pending"
+          ]
+        },
+        "tool_requirement": {
+          "enum": ["required", "optional", "prohibited"]
+        },
+        "tool_schema_revision": {
+          "type": ["string", "null"]
+        },
+        "expected_tool_trace": {
+          "type": "array"
+        },
+        "freshness_class": {
+          "enum": ["static", "historical_as_of", "temporal", "live"]
+        },
+        "expected_behavior": {"type": "object"},
+        "trainer_labels": {"type": "object"},
+        "numeric_assertions": {"type": "array"},
+        "expected_response": {"type": "string", "minLength": 1},
+        "expected_final_response": {"type": "string", "minLength": 1},
+        "critical_constraints": {"type": "array"},
+        "uncertainty_behavior": {
+          "enum": [
+            "state_material_uncertainty",
+            "clarify",
+            "abstain",
+            "correct_false_premise",
+            "not_applicable"
+          ]
+        },
+        "split": {
+          "enum": ["train", "validation"]
+        }
+      }
+    },
+    "generator_context_packet_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "generator_receipt_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "draft_sha256": {
+      "$ref": "#/$defs/sha256"
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "actor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "actor_id",
+        "model_id",
+        "model_revision",
+        "prompt_revision",
+        "prompt_sha256",
+        "execution_receipt_sha256",
+        "context_sha256",
+        "responsibility"
+      ],
+      "properties": {
+        "actor_id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9._-]{2,95}$"
+        },
+        "model_id": {"const": "gpt-5.6-sol"},
+        "model_revision": {"type": "string", "minLength": 3},
+        "prompt_revision": {"type": "string", "minLength": 3},
+        "prompt_sha256": {"$ref": "#/$defs/sha256"},
+        "execution_receipt_sha256": {"$ref": "#/$defs/sha256"},
+        "context_sha256": {"$ref": "#/$defs/sha256"},
+        "responsibility": {"const": "generation"}
+      }
+    }
+  }
+}
+

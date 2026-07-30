@@ -1,0 +1,280 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dime.internal/schemas/foundation_private_evaluation_comparison.schema.json",
+  "title": "Dime Foundation to Private Evaluation Semantic Comparison v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "comparison_id",
+    "created_at",
+    "status",
+    "scope",
+    "foundation_bindings",
+    "semantic_r5_bindings",
+    "method",
+    "comparisons",
+    "summary",
+    "authorization",
+    "publication_authorized",
+    "external_operations"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "dime-foundation-private-evaluation-comparison-v1"
+    },
+    "comparison_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]{7,127}$"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "status": {
+      "enum": ["PASS_ZERO_DISALLOWED_OVERLAP", "FAIL_COLLISIONS"]
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "foundation_material",
+        "foundation_record_count",
+        "foundation_route_scope",
+        "complete_2400_record_foundation_release_claimed",
+        "semantic_revision",
+        "semantic_case_count",
+        "comparisons_required",
+        "comparisons_completed"
+      ],
+      "properties": {
+        "foundation_material": {"const": "accepted_trainer"},
+        "foundation_record_count": {"const": 150},
+        "foundation_route_scope": {
+          "const": ["live_data"]
+        },
+        "complete_2400_record_foundation_release_claimed": {"const": false},
+        "semantic_revision": {"const": "evaluation-semantic-v1-b9ba7788-r5"},
+        "semantic_case_count": {"const": 651},
+        "comparisons_required": {"const": 4},
+        "comparisons_completed": {"const": 4}
+      }
+    },
+    "foundation_bindings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "execution_id",
+        "final_report_sha256",
+        "manifest_sha256",
+        "sha256sums_sha256",
+        "trainer_manifest_sha256"
+      ],
+      "properties": {
+        "execution_id": {"type": "string", "minLength": 1},
+        "final_report_sha256": {"$ref": "#/$defs/sha256"},
+        "manifest_sha256": {"$ref": "#/$defs/sha256"},
+        "sha256sums_sha256": {"$ref": "#/$defs/sha256"},
+        "trainer_manifest_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "semantic_r5_bindings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "generation_id",
+        "manifest_sha256",
+        "record_checksums_sha256",
+        "sha256sums_sha256",
+        "source_commit"
+      ],
+      "properties": {
+        "generation_id": {"type": "string", "minLength": 1},
+        "manifest_sha256": {"$ref": "#/$defs/sha256"},
+        "record_checksums_sha256": {"$ref": "#/$defs/sha256"},
+        "sha256sums_sha256": {"$ref": "#/$defs/sha256"},
+        "source_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"}
+      }
+    },
+    "method": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "revision",
+        "normalization",
+        "semantic_material",
+        "character_shingle_size",
+        "character_jaccard_threshold",
+        "token_bigram_jaccard_threshold",
+        "exact_prompt_comparison",
+        "exact_material_comparison"
+      ],
+      "properties": {
+        "revision": {
+          "const": "dime-foundation-private-evaluation-semantic-comparison-v1"
+        },
+        "normalization": {"const": "unicode_casefold_word_tokens_v1"},
+        "semantic_material": {
+          "const": "foundation_user_prompt_vs_evaluation_user_prompt_plus_context"
+        },
+        "character_shingle_size": {"const": 5},
+        "character_jaccard_threshold": {"const": 0.92},
+        "token_bigram_jaccard_threshold": {"const": 0.86},
+        "exact_prompt_comparison": {"const": true},
+        "exact_material_comparison": {"const": true}
+      }
+    },
+    "comparisons": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "development",
+        "sealed_critical",
+        "locked",
+        "general_regression"
+      ],
+      "properties": {
+        "development": {
+          "$ref": "#/$defs/comparison",
+          "properties": {
+            "evaluation_cases": {"const": 270},
+            "pair_comparisons": {"const": 40500}
+          }
+        },
+        "sealed_critical": {
+          "$ref": "#/$defs/comparison",
+          "properties": {
+            "evaluation_cases": {"const": 81},
+            "pair_comparisons": {"const": 12150}
+          }
+        },
+        "locked": {
+          "$ref": "#/$defs/comparison",
+          "properties": {
+            "evaluation_cases": {"const": 180},
+            "pair_comparisons": {"const": 27000}
+          }
+        },
+        "general_regression": {
+          "$ref": "#/$defs/comparison",
+          "properties": {
+            "evaluation_cases": {"const": 120},
+            "pair_comparisons": {"const": 18000}
+          }
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pair_comparisons",
+        "disallowed_overlap_count",
+        "zero_disallowed_overlap"
+      ],
+      "properties": {
+        "pair_comparisons": {"const": 97650},
+        "disallowed_overlap_count": {"type": "integer", "minimum": 0},
+        "zero_disallowed_overlap": {"type": "boolean"}
+      }
+    },
+    "authorization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "publication",
+        "training",
+        "provider_execution",
+        "deployment",
+        "route_activation"
+      ],
+      "properties": {
+        "publication": {"const": false},
+        "training": {"const": false},
+        "provider_execution": {"const": false},
+        "deployment": {"const": false},
+        "route_activation": {"const": false}
+      }
+    },
+    "publication_authorized": {"const": false},
+    "external_operations": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "credential_reads",
+        "network_calls",
+        "provider_invocations",
+        "model_downloads",
+        "railway_mutations",
+        "production_data_reads",
+        "training_runs",
+        "publications"
+      ],
+      "properties": {
+        "credential_reads": {"const": 0},
+        "network_calls": {"const": 0},
+        "provider_invocations": {"const": 0},
+        "model_downloads": {"const": 0},
+        "railway_mutations": {"const": 0},
+        "production_data_reads": {"const": 0},
+        "training_runs": {"const": 0},
+        "publications": {"const": 0}
+      }
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "comparison": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "foundation_records",
+        "evaluation_cases",
+        "pair_comparisons",
+        "collision_count",
+        "collisions",
+        "status"
+      ],
+      "properties": {
+        "foundation_records": {"const": 150},
+        "evaluation_cases": {"type": "integer", "minimum": 1},
+        "pair_comparisons": {"type": "integer", "minimum": 1},
+        "collision_count": {"type": "integer", "minimum": 0},
+        "collisions": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/collision"}
+        },
+        "status": {"enum": ["PASS", "FAIL_COLLISIONS"]}
+      }
+    },
+    "collision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "foundation_example_id",
+        "evaluation_case_id",
+        "evaluation_partition",
+        "exact_normalized_prompt",
+        "exact_semantic_material",
+        "near_semantic",
+        "character_jaccard",
+        "token_bigram_jaccard"
+      ],
+      "properties": {
+        "foundation_example_id": {"type": "string", "minLength": 1},
+        "evaluation_case_id": {"type": "string", "minLength": 1},
+        "evaluation_partition": {
+          "enum": ["development", "sealed_critical", "locked", "general_regression"]
+        },
+        "exact_normalized_prompt": {"type": "boolean"},
+        "exact_semantic_material": {"type": "boolean"},
+        "near_semantic": {"type": "boolean"},
+        "character_jaccard": {"type": "number", "minimum": 0, "maximum": 1},
+        "token_bigram_jaccard": {"type": "number", "minimum": 0, "maximum": 1}
+      }
+    }
+  }
+}

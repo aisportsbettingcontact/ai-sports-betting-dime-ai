@@ -1,0 +1,148 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dime.internal/schemas/foundation_context_packet.schema.json",
+  "title": "Dime Foundation Execution Context Packet v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "packet_id",
+    "record_id",
+    "route",
+    "role",
+    "created_at",
+    "token_profile_id",
+    "units",
+    "metrics"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "dime-foundation-context-packet-v1"
+    },
+    "packet_id": {
+      "type": "string",
+      "pattern": "^foundation-context-[a-z0-9][a-z0-9._-]{7,127}$"
+    },
+    "record_id": {
+      "type": "string",
+      "pattern": "^dime-foundation-v1-[a-z0-9][a-z0-9._-]{7,95}$"
+    },
+    "route": {
+      "enum": [
+        "platform",
+        "account",
+        "educational",
+        "bet_explanation",
+        "matchup",
+        "full_slate",
+        "historical",
+        "live_data",
+        "general_sports"
+      ]
+    },
+    "role": {
+      "enum": ["generation", "independent_critique"]
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "token_profile_id": {
+      "type": "string",
+      "pattern": "^dime-foundation-[a-z0-9][a-z0-9._-]{7,95}$"
+    },
+    "units": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "unit_id",
+          "source_path",
+          "source_sha256",
+          "content",
+          "content_sha256",
+          "token_count",
+          "relevant",
+          "duplicate_of"
+        ],
+        "properties": {
+          "unit_id": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9._-]{2,95}$"
+          },
+          "source_path": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512
+          },
+          "source_sha256": {
+            "$ref": "#/$defs/sha256"
+          },
+          "content": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 24000
+          },
+          "content_sha256": {
+            "$ref": "#/$defs/sha256"
+          },
+          "token_count": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "relevant": {
+            "type": "boolean"
+          },
+          "duplicate_of": {
+            "type": ["string", "null"],
+            "pattern": "^[a-z0-9][a-z0-9._-]{2,95}$"
+          }
+        }
+      }
+    },
+    "metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "total_context_tokens",
+        "relevant_context_tokens",
+        "redundant_context_tokens",
+        "context_relevance",
+        "context_redundancy"
+      ],
+      "properties": {
+        "total_context_tokens": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "relevant_context_tokens": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "redundant_context_tokens": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "context_relevance": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "context_redundancy": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      }
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  }
+}
+

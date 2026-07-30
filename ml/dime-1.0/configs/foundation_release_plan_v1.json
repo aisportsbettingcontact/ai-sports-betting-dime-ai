@@ -5,7 +5,7 @@
   "source_commit": "c6e4d07ce2e7565c9ec94c6ddc2ffcd18511c3ae",
   "canonical_record_boundary": {
     "path": "ml/dime-1.0/schemas/foundation_record.schema.json",
-    "sha256": "95577a8161d597dd5851ac3ef6d659403f94edb8bce6e7162c7056bef5876a32"
+    "sha256": "9b8374f26d45a15e4dbf667373ada9dc4a9b776a64d96875d0ccaea82e3334e9"
   },
   "trainer_release_boundary": {
     "schema": {
@@ -151,7 +151,7 @@
     },
     "conversion_implementation": {
       "path": "ml/dime-1.0/src/dime_ai/foundation_data_factory.py",
-      "sha256": "e3ac393110e16cd511c6c509f3fff3ecb9b623390133b606a7f24cf2c52dacc0"
+      "sha256": "1b3e06b8b511797b830012f1302c49e2eef1f2f59d00513a6e488e72b78e58fc"
     },
     "publication_guard": {
       "path": "ml/dime-1.0/src/dime_ai/foundation_publication.py",

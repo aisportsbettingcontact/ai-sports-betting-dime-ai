@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dime.internal/schemas/foundation_token_profile.schema.json",
+  "title": "Dime Foundation Local Token Profile v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "profile_id",
+    "status",
+    "encoding",
+    "chat_format",
+    "max_length",
+    "training_tokenizer_equivalent",
+    "intended_use",
+    "prohibited_claims"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "dime-foundation-token-profile-v1"
+    },
+    "profile_id": {
+      "type": "string",
+      "pattern": "^dime-foundation-[a-z0-9][a-z0-9._-]{7,95}$"
+    },
+    "status": {
+      "const": "FROZEN_LOCAL_VALIDATION_ONLY"
+    },
+    "encoding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "implementation",
+        "revision",
+        "text_encoding",
+        "token_unit",
+        "special_token_ids"
+      ],
+      "properties": {
+        "implementation": {
+          "const": "dime_ai.foundation_instrumentation.DeterministicByteTokenizer"
+        },
+        "revision": {
+          "const": "dime-local-utf8-byte-tokenizer-v1"
+        },
+        "text_encoding": {
+          "const": "utf-8"
+        },
+        "token_unit": {
+          "const": "one_token_per_utf8_byte"
+        },
+        "special_token_ids": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "begin_of_text",
+            "start_header",
+            "end_header",
+            "end_of_turn"
+          ],
+          "properties": {
+            "begin_of_text": {"const": 1},
+            "start_header": {"const": 2},
+            "end_header": {"const": 3},
+            "end_of_turn": {"const": 4}
+          }
+        }
+      }
+    },
+    "chat_format": {
+      "const": "dime-assistant-only-fallback-v1"
+    },
+    "max_length": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1048576
+    },
+    "training_tokenizer_equivalent": {
+      "const": false
+    },
+    "intended_use": {
+      "const": "deterministic_local_conversion_truncation_and_relative_context_measurement"
+    },
+    "prohibited_claims": {
+      "type": "array",
+      "minItems": 2,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "production_model_token_count",
+          "production_model_cost",
+          "training_throughput",
+          "serving_latency"
+        ]
+      },
+      "allOf": [
+        {
+          "contains": {"const": "production_model_token_count"}
+        },
+        {
+          "contains": {"const": "production_model_cost"}
+        }
+      ]
+    }
+  }
+}
+

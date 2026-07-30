@@ -1,0 +1,448 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dime.internal/schemas/private_evaluation_semantic_case.schema.json",
+  "title": "Dime Private Evaluation Semantic Case",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "case_id",
+    "layer",
+    "task",
+    "input",
+    "partition_identity",
+    "provenance",
+    "privacy"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "dime-private-evaluation-semantic-case-v1"
+    },
+    "case_id": {
+      "type": "string",
+      "pattern": "^dime-eval-(development|sealed-critical|locked|general-regression)-[a-z0-9-]+-[0-9]{3}$"
+    },
+    "layer": {
+      "enum": [
+        "development",
+        "sealed_critical",
+        "locked",
+        "general_regression"
+      ]
+    },
+    "task": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "route",
+        "family",
+        "capabilities",
+        "severity"
+      ],
+      "properties": {
+        "route": {
+          "enum": [
+            "platform",
+            "account",
+            "educational",
+            "bet_explanation",
+            "matchup",
+            "full_slate",
+            "historical",
+            "live_data",
+            "general_sports",
+            "general_regression"
+          ]
+        },
+        "family": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9_-]{2,95}$"
+        },
+        "capabilities": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_-]{2,63}$"
+          }
+        },
+        "severity": {
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "critical"
+          ]
+        }
+      }
+    },
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "as_of_utc",
+        "messages",
+        "available_tools",
+        "context"
+      ],
+      "properties": {
+        "as_of_utc": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "messages": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 5,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "role",
+              "content"
+            ],
+            "properties": {
+              "role": {
+                "enum": [
+                  "user",
+                  "assistant"
+                ]
+              },
+              "content": {
+                "type": "string",
+                "minLength": 8,
+                "maxLength": 1600
+              }
+            }
+          }
+        },
+        "available_tools": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "get_game_context",
+              "get_current_odds",
+              "get_odds_history",
+              "get_market_splits",
+              "calculate_market_math",
+              "get_bet_tracker_summary",
+              "run_simulation"
+            ]
+          }
+        },
+        "context": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "synthetic_entities",
+            "facts",
+            "tool_fixtures",
+            "user_constraints"
+          ],
+          "properties": {
+            "synthetic_entities": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "minLength": 2,
+                "maxLength": 96
+              }
+            },
+            "facts": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "name",
+                  "value",
+                  "observed_at_utc",
+                  "source_kind"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9_]{1,63}$"
+                  },
+                  "value": {},
+                  "observed_at_utc": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "source_kind": {
+                    "enum": [
+                      "synthetic_fixture",
+                      "static_contract"
+                    ]
+                  }
+                }
+              }
+            },
+            "tool_fixtures": {
+              "type": "array",
+              "maxItems": 3,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "tool_call_id",
+                  "tool_name",
+                  "fixture_state",
+                  "malformed_target",
+                  "arguments",
+                  "response"
+                ],
+                "properties": {
+                  "tool_call_id": {
+                    "type": "string",
+                    "pattern": "^[a-z0-9][a-z0-9_.:-]{2,127}$"
+                  },
+                  "tool_name": {
+                    "enum": [
+                      "get_game_context",
+                      "get_current_odds",
+                      "get_odds_history",
+                      "get_market_splits",
+                      "calculate_market_math",
+                      "get_bet_tracker_summary",
+                      "run_simulation"
+                    ]
+                  },
+                  "fixture_state": {
+                    "enum": [
+                      "success",
+                      "empty",
+                      "failure",
+                      "timeout",
+                      "stale",
+                      "malformed",
+                      "conflicting",
+                      "rejected"
+                    ]
+                  },
+                  "malformed_target": {
+                    "enum": [
+                      "response",
+                      null
+                    ]
+                  },
+                  "arguments": {
+                    "type": "object"
+                  },
+                  "response": {
+                    "type": "object"
+                  }
+                },
+                "allOf": [
+                  {
+                    "if": {
+                      "properties": {
+                        "fixture_state": {
+                          "const": "malformed"
+                        }
+                      },
+                      "required": [
+                        "fixture_state"
+                      ]
+                    },
+                    "then": {
+                      "properties": {
+                        "malformed_target": {
+                          "const": "response"
+                        }
+                      }
+                    },
+                    "else": {
+                      "properties": {
+                        "malformed_target": {
+                          "type": "null"
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            "user_constraints": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 240
+              }
+            }
+          }
+        }
+      }
+    },
+    "partition_identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "assignment_revision",
+        "suite_partition",
+        "scenario_family_id",
+        "template_family_id",
+        "source_event_id",
+        "conversation_family_id",
+        "quantitative_scenario_id",
+        "entity_set_sha256",
+        "temporal_bucket"
+      ],
+      "properties": {
+        "assignment_revision": {
+          "const": "dime-private-evaluation-partition-v1"
+        },
+        "suite_partition": {
+          "enum": [
+            "development",
+            "sealed_critical",
+            "locked",
+            "general_regression"
+          ]
+        },
+        "scenario_family_id": {
+          "type": "string",
+          "pattern": "^eval-[a-z0-9][a-z0-9._-]{4,127}$"
+        },
+        "template_family_id": {
+          "type": "string",
+          "pattern": "^eval-[a-z0-9][a-z0-9._-]{4,127}$"
+        },
+        "source_event_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "conversation_family_id": {
+          "type": "string",
+          "pattern": "^eval-[a-z0-9][a-z0-9._-]{4,127}$"
+        },
+        "quantitative_scenario_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "entity_set_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "temporal_bucket": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}$"
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "synthetic",
+        "generation_method",
+        "source_commit",
+        "generator_revision",
+        "generator_sha256",
+        "config_sha256",
+        "schema_sha256",
+        "source_artifacts",
+        "generated_at_utc",
+        "rights_status"
+      ],
+      "properties": {
+        "synthetic": {
+          "const": true
+        },
+        "generation_method": {
+          "const": "deterministic_template_expansion"
+        },
+        "source_commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "generator_revision": {
+          "type": "string",
+          "minLength": 1
+        },
+        "generator_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "config_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "schema_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "source_artifacts": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "path",
+              "sha256"
+            ],
+            "properties": {
+              "path": {
+                "type": "string",
+                "minLength": 1
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              }
+            }
+          }
+        },
+        "generated_at_utc": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "rights_status": {
+          "const": "synthetic_behavioral"
+        }
+      }
+    },
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "classification",
+        "handling",
+        "contains_gold_answers",
+        "contains_private_chain_of_thought",
+        "contains_production_data",
+        "publication_authorized"
+      ],
+      "properties": {
+        "classification": {
+          "const": "PRIVATE_EVALUATION_SEMANTIC_CASES"
+        },
+        "handling": {
+          "const": "local_ignored_private_boundary"
+        },
+        "contains_gold_answers": {
+          "const": false
+        },
+        "contains_private_chain_of_thought": {
+          "const": false
+        },
+        "contains_production_data": {
+          "const": false
+        },
+        "publication_authorized": {
+          "const": false
+        }
+      }
+    }
+  }
+}

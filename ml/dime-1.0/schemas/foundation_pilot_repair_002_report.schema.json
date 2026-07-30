@@ -1,0 +1,181 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dime.internal/schemas/foundation_pilot_repair_002_report.schema.json",
+  "title": "Dime Foundation Pilot Repair 002 Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "revision_id",
+    "created_at",
+    "source_commit",
+    "source_pilot_execution_id",
+    "prior_repair_revision_id",
+    "status",
+    "counts",
+    "bindings",
+    "records",
+    "gates",
+    "external_operations"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "dime-foundation-pilot-repair-002-report-v1"
+    },
+    "revision_id": {
+      "const": "foundation-pilot-repair-002"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "source_commit": {
+      "const": "b9ba7788749365253a6f725fee2a2a367a3475dd"
+    },
+    "source_pilot_execution_id": {
+      "const": "foundation-pilot-v1-b9ba7788"
+    },
+    "prior_repair_revision_id": {
+      "const": "foundation-pilot-repair-001"
+    },
+    "status": {
+      "const": "READY_FOR_INDEPENDENT_REREVIEW"
+    },
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "records",
+        "train",
+        "validation",
+        "timestamp_findings_addressed",
+        "substantive_findings_preserved_resolved"
+      ],
+      "properties": {
+        "records": {"const": 8},
+        "train": {"const": 7},
+        "validation": {"const": 1},
+        "timestamp_findings_addressed": {"const": 8},
+        "substantive_findings_preserved_resolved": {"const": 10}
+      }
+    },
+    "bindings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "original_pilot_manifest_sha256",
+        "repair_001_manifest_sha256",
+        "repair_001_decisions_manifest_sha256",
+        "repair_002_authoring_manifest_sha256",
+        "repair_002_context_manifest_sha256",
+        "repair_002_receipt_manifest_sha256"
+      ],
+      "properties": {
+        "original_pilot_manifest_sha256": {"$ref": "#/$defs/sha256"},
+        "repair_001_manifest_sha256": {"$ref": "#/$defs/sha256"},
+        "repair_001_decisions_manifest_sha256": {"$ref": "#/$defs/sha256"},
+        "repair_002_authoring_manifest_sha256": {"$ref": "#/$defs/sha256"},
+        "repair_002_context_manifest_sha256": {"$ref": "#/$defs/sha256"},
+        "repair_002_receipt_manifest_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "records": {
+      "type": "array",
+      "minItems": 8,
+      "maxItems": 8,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "record_id",
+          "split",
+          "timestamp_finding_id",
+          "repair_001_draft_sha256",
+          "repair_001_decision_sha256",
+          "repair_002_draft_sha256",
+          "substantive_payload_sha256",
+          "generator_context_packet_sha256",
+          "critic_context_packet_sha256",
+          "generator_receipt_sha256"
+        ],
+        "properties": {
+          "record_id": {
+            "type": "string",
+            "pattern": "^dime-foundation-v1-pilot-(?:003|011|012|014|015|016|019|020)-[a-z_]+$"
+          },
+          "split": {
+            "enum": ["train", "validation"]
+          },
+          "timestamp_finding_id": {
+            "type": "string",
+            "pattern": "^repair-(?:003|011|012|014|015|016|019|020)-future-provenance-timestamp$"
+          },
+          "repair_001_draft_sha256": {"$ref": "#/$defs/sha256"},
+          "repair_001_decision_sha256": {"$ref": "#/$defs/sha256"},
+          "repair_002_draft_sha256": {"$ref": "#/$defs/sha256"},
+          "substantive_payload_sha256": {"$ref": "#/$defs/sha256"},
+          "generator_context_packet_sha256": {"$ref": "#/$defs/sha256"},
+          "critic_context_packet_sha256": {"$ref": "#/$defs/sha256"},
+          "generator_receipt_sha256": {"$ref": "#/$defs/sha256"}
+        }
+      }
+    },
+    "gates": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_failures",
+        "provenance_failures",
+        "future_timestamp_failures",
+        "mode_failures",
+        "original_pilot_mutations",
+        "repair_001_mutations",
+        "substantive_payload_mutations",
+        "partition_mutations",
+        "critic_decisions_written"
+      ],
+      "properties": {
+        "schema_failures": {"const": 0},
+        "provenance_failures": {"const": 0},
+        "future_timestamp_failures": {"const": 0},
+        "mode_failures": {"const": 0},
+        "original_pilot_mutations": {"const": 0},
+        "repair_001_mutations": {"const": 0},
+        "substantive_payload_mutations": {"const": 0},
+        "partition_mutations": {"const": 0},
+        "critic_decisions_written": {"const": 0}
+      }
+    },
+    "external_operations": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "credential_reads",
+        "network_calls",
+        "provider_invocations",
+        "model_downloads",
+        "railway_mutations",
+        "production_data_reads",
+        "training_runs",
+        "publications"
+      ],
+      "properties": {
+        "credential_reads": {"const": 0},
+        "network_calls": {"const": 0},
+        "provider_invocations": {"const": 0},
+        "model_downloads": {"const": 0},
+        "railway_mutations": {"const": 0},
+        "production_data_reads": {"const": 0},
+        "training_runs": {"const": 0},
+        "publications": {"const": 0}
+      }
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  }
+}

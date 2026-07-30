@@ -1,0 +1,194 @@
+{
+  "schema_version": "dime-llm-v1-context-capsule-v1",
+  "capsule_id": "dime-llm-v1-foundation-evaluation-2026-07-30",
+  "verified_at": "2026-07-30T23:38:16Z",
+  "classification": "SANITIZED_AGGREGATE_ONLY",
+  "private_content_counts": {
+    "foundation_records": 0,
+    "semantic_cases": 0,
+    "answer_keys": 0,
+    "credentials": 0
+  },
+  "production_baseline": {
+    "pull_request": 250,
+    "title": "fix(ops): close shared agent credential boundary bypasses",
+    "state": "MERGED",
+    "draft": false,
+    "base_branch": "main",
+    "base_commit": "b9ba7788749365253a6f725fee2a2a367a3475dd",
+    "head_branch": "agent/credential-boundary-hotfix-v1",
+    "head_commit": "62088bb3d2cf4d27c5f18f9bb67ac294158fe5dd",
+    "merge_commit": "7ed09adb4fcdb9e2d9047e73e34f84c80d865b78",
+    "merged_at": "2026-07-30T19:51:53Z",
+    "source": "github_connector_pr_metadata",
+    "legacy_commit_status_entries_returned": 0
+  },
+  "parallel_tracks": {
+    "track_f": {
+      "pull_request": 251,
+      "title": "feat(dime): add Route-Aware Context Compiler v1",
+      "state": "OPEN_DRAFT",
+      "base_commit": "7ed09adb4fcdb9e2d9047e73e34f84c80d865b78",
+      "head_commit": "9edff5ee4317cdce0b2a79e2fe78d2ff8c7d5916",
+      "mergeable": true,
+      "required_checks": "PASS",
+      "review_requested_from": [
+        "prez-ai-sports-betting"
+      ],
+      "runtime_active": false,
+      "source": "github_connector_pr_metadata"
+    },
+    "track_e": {
+      "pull_request": 252,
+      "title": "feat(dime): govern evaluation answer keys and scorer isolation v1",
+      "state": "OPEN_DRAFT",
+      "base_commit": "7ed09adb4fcdb9e2d9047e73e34f84c80d865b78",
+      "head_commit": "d420b4526b89ca649537180101be5633389e55f6",
+      "mergeable": true,
+      "required_checks": "PASS",
+      "review_requested_from": [
+        "prez-ai-sports-betting"
+      ],
+      "answer_keys_present": false,
+      "source": "github_connector_pr_metadata"
+    },
+    "runpod_gate_1": {
+      "pull_request": 253,
+      "title": "feat(dime): prepare RunPod Gate 1 authorization v1",
+      "state": "OPEN_DRAFT",
+      "base_commit": "7ed09adb4fcdb9e2d9047e73e34f84c80d865b78",
+      "head_commit": "3e406ac273cafcaf9d85c19b591ca09fb802219e",
+      "mergeable": true,
+      "review_requested_from": [
+        "prez-ai-sports-betting"
+      ],
+      "checks": {
+        "gitleaks": "PASS",
+        "dime": "PASS",
+        "security": "PASS",
+        "remaining_ci": "PENDING"
+      },
+      "effective_authorization": false,
+      "source": "github_connector_pr_metadata_and_coordinator_check_snapshot"
+    }
+  },
+  "security_p1": {
+    "id": "pr249-final-review-governance-exception",
+    "severity": "P1",
+    "status": "OPEN_REMEDIATION_REQUIRED",
+    "final_head": "88ac09d52e6f7f727d16ecb2c25c5b694e7f5504",
+    "independent_exact_final_head_approval_recorded": false,
+    "effective_protection_policy_reconciled": false,
+    "artifact": {
+      "path": "docs/governance/2026-07-30-pr249-final-review-exception.md",
+      "sha256": "347aaa59a9b3ada65ea125daafa118266f5f5a0d8101759dc12563d857ab324c"
+    },
+    "closure_blockers": [
+      "independent reviewer approval on the exact corrective final head with zero unresolved threads",
+      "repository protection and active ruleset reconciliation",
+      "evidence of effective settings with no bypass actor",
+      "independent review of the reconciliation evidence"
+    ]
+  },
+  "credential_execution_p1": {
+    "id": "pr250-post-merge-credential-execution-closure",
+    "severity": "P1",
+    "status": "BLOCKED_ROOT_TRUST_UNPROVISIONED",
+    "effective_authorization": "NONE",
+    "root_trust_provisioned": false,
+    "closure_tracks": [
+      {
+        "id": "codesign-cryptographic-verify",
+        "status": "PENDING"
+      },
+      {
+        "id": "full-credential-dependency-closure",
+        "status": "PENDING"
+      }
+    ],
+    "impact": "credential-bearing execution remains fail-closed after PR 250"
+  },
+  "foundation": {
+    "target_records": 2400,
+    "pilot_records_validated": 20,
+    "pilot_admission": "NOT_ADMITTED",
+    "pilot_reason": "PILOT_ARTIFACT_EXPLICITLY_NOT_RELEASE",
+    "first_live_data_records_admitted": 150,
+    "admitted_split": {
+      "train": 135,
+      "validation": 15
+    },
+    "remaining_records": 2250,
+    "remaining_split": {
+      "train": 2025,
+      "validation": 225
+    },
+    "complete_release": false,
+    "public_evidence": {
+      "path": "ml/dime-1.0/evidence/execution/dime-llm-v1-foundation-001/evidence.json",
+      "sha256": "28ff4ec9ef9572a50928864e58541432a4d20fb3584ea253eeacec408574b4d0",
+      "sha256sums_sha256": "97a03a7f6b268e26b392df9c087a62be981ea7b98aff4225f0086782ea5c91f1"
+    }
+  },
+  "semantic_evaluation": {
+    "semantic_only": true,
+    "partition_counts": {
+      "development": 270,
+      "sealed_critical": 81,
+      "locked": 180,
+      "general_regression": 120
+    },
+    "total_cases": 651,
+    "answer_keys": 0,
+    "foundation_records_compared": 150,
+    "four_way_pair_comparisons": 97650,
+    "disallowed_overlap": 0,
+    "status": "PASS_ZERO_DISALLOWED_OVERLAP"
+  },
+  "runpod_gate_1": {
+    "credential_status": "CREDENTIAL_PRESENT_PERMISSION_UNVERIFIED",
+    "permission_contract": "permission-unverified",
+    "identity_verified": false,
+    "permissions_verified": false,
+    "authorization": "NONE",
+    "effective_authorization": false,
+    "gate_1_baseline_inference_authorized": false,
+    "draft_pull_request": 253,
+    "draft_head_commit": "3e406ac273cafcaf9d85c19b591ca09fb802219e",
+    "draft_status": "BLOCKED_INCOMPLETE_NOT_AUTHORIZED",
+    "draft_blocker_count": 11,
+    "config_binding": {
+      "path": "config/dime-agent-access.v1.json",
+      "sha256": "3b48d2bbdfa0bf6fa9c14c0bd56d6d2663e01a6df0e96b26fe6400b233c67419"
+    }
+  },
+  "exact_blockers": [
+    "security P1 pr249-final-review-governance-exception remains open",
+    "PR 250 post-merge credential-execution P1 remains blocked because root trust is unprovisioned",
+    "codesign cryptographic verification and full credential dependency closure remain pending",
+    "Track F pull request 251 has passing required checks but remains an unmerged inactive draft",
+    "Track E pull request 252 has passing required checks but remains an unmerged draft and answer-key creation remains unauthorized",
+    "RunPod Gate 1 pull request 253 is an open draft with remaining CI pending and effective authorization false",
+    "2250 admitted Foundation records remain before the 2400-record target is complete",
+    "the private Foundation release revision, dataset manifest hash, and release checksum hash are not frozen",
+    "the exact base model, base revision, adapter revision, endpoint revision, and container digest are not selected",
+    "RunPod identity and permissions are unverified and Gate 1 authorization is NONE",
+    "model download, benchmark execution, training, publication, deployment, provider execution, route activation, and Railway mutation remain unauthorized"
+  ],
+  "model_artifact_decision": {
+    "status": "INCOMPLETE_NOT_AUTHORIZED",
+    "path": "ml/dime-1.0/evidence/decisions/dime-model-artifact-decision-v1/decision.json",
+    "sha256": "1473f9bede45e39bfb962f8dcf6e9e6bd4ed56809868aceb6f57da4ee4250d22"
+  },
+  "authorization_boundary": {
+    "credential_execution": false,
+    "provider_execution": false,
+    "model_download": false,
+    "benchmark_execution": false,
+    "training": false,
+    "publication": false,
+    "deployment": false,
+    "route_activation": false,
+    "railway_mutation": false
+  }
+}
