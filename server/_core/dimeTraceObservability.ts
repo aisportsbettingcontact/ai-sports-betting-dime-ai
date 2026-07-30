@@ -67,6 +67,13 @@ const traceIdentitySchema = z
 
 export type DimeTraceIdentity = z.infer<typeof traceIdentitySchema>;
 
+export function parseDimeTraceIdentity(
+  value: unknown
+): DimeTraceIdentity | null {
+  const parsed = traceIdentitySchema.safeParse(value);
+  return parsed.success ? parsed.data : null;
+}
+
 export interface DimeTraceIdentityInput {
   requestId: string;
   modelProvider: string;

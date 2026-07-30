@@ -12,6 +12,7 @@ import {
   isDimeChatTraceEnabled,
   matchesDimeChatTraceRequestSemantics,
   parseDimeChatTraceEnvelope,
+  rehydrateDimeChatTraceIdentity,
   type BeginDimeChatTraceInput,
   type DimeChatTraceStoredRequestSemantics,
   validateDimeChatTraceEventIds,
@@ -195,6 +196,54 @@ describe("Dime Conversation Trace v1 request contract", () => {
     };
 
     expect(requestFingerprint(retry)).toBe(requestFingerprint(accepted));
+  });
+
+  it("rehydrates replay metadata from the accepted durable identity", () => {
+    const accepted = validBeginInput();
+    const retryRequestId = randomUUID();
+    const retryIdentity = {
+      ...accepted.identity,
+      requestId: retryRequestId,
+      route: "platform" as const,
+      gitCommit: "b".repeat(40),
+    };
+    const identity = rehydrateDimeChatTraceIdentity(
+      JSON.stringify({ identity: accepted.identity }),
+      accepted.requestId
+    );
+    const meta = dimeChatTraceMeta({
+      version: 1,
+      requestId: accepted.requestId,
+      chatSessionId: randomUUID(),
+      threadId: 42,
+      turnId: randomUUID(),
+      userMessageId: 1,
+      generationId: randomUUID(),
+      clientAssistantMessageId: accepted.envelope.clientAssistantMessageId,
+      attempt: 1,
+      identity,
+    });
+
+    expect(identity).toEqual(accepted.identity);
+    expect(identity).not.toEqual(retryIdentity);
+    expect(meta.requestId).toBe(accepted.requestId);
+    expect(meta.productRoute).toBe("live_data");
+  });
+
+  it("fails closed when a replay cannot prove its accepted identity", () => {
+    const accepted = validBeginInput();
+
+    expect(() =>
+      rehydrateDimeChatTraceIdentity(null, accepted.requestId)
+    ).toThrow("stored generation identity is missing or invalid");
+    expect(() =>
+      rehydrateDimeChatTraceIdentity(
+        JSON.stringify({
+          identity: { ...accepted.identity, requestId: randomUUID() },
+        }),
+        accepted.requestId
+      )
+    ).toThrow("stored generation identity is missing or invalid");
   });
 
   it("replays legacy-fingerprint rows across the old-to-new release boundary", () => {

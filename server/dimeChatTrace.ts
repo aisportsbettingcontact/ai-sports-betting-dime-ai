@@ -15,6 +15,7 @@
 
 import { createHash, randomUUID } from "node:crypto";
 import { and, eq, inArray, isNotNull, isNull, lte, or, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/mysql-core";
 import type { Response } from "express";
 import { z } from "zod";
 import {
@@ -33,6 +34,7 @@ import type {
 import {
   assessDimeTraceCompleteness,
   estimateDimeTraceCost,
+  parseDimeTraceIdentity,
   validateDimeContextMetrics,
   validateDimeEvidenceTimestamps,
   validateDimeStageLatency,
@@ -46,6 +48,11 @@ import {
   validateDimeIngestionLifecycle,
   validateDimeProviderObservation,
 } from "./_core/dimeEvidenceProvenance";
+
+const acceptedAttemptEvent = alias(
+  dimeChatTraceEvents,
+  "accepted_attempt_event"
+);
 
 export const DIME_CHAT_TRACE_VERSION = 1 as const;
 export const DIME_CHAT_TRACE_POLICY_VERSION = "trace-v1-2026-07-28";
@@ -478,9 +485,10 @@ async function findExistingAttempt(
       clientTurnId: dimeChatTurns.clientTurnId,
       clientSessionId: dimeChatSessions.clientSessionId,
       clientUserMessageId: dimeChatMessages.clientMessageId,
+      acceptedIdentityMetadata: acceptedAttemptEvent.metadata,
       retryOfGenerationId: sql<
         string | null
-      >`JSON_UNQUOTE(JSON_EXTRACT(${dimeChatTraceEvents.metadata}, '$.retryOfGenerationId'))`,
+      >`JSON_UNQUOTE(JSON_EXTRACT(${acceptedAttemptEvent.metadata}, '$.retryOfGenerationId'))`,
     })
     .from(dimeChatGenerations)
     .innerJoin(dimeChatTurns, eq(dimeChatTurns.id, dimeChatGenerations.turnId))
@@ -493,10 +501,13 @@ async function findExistingAttempt(
       eq(dimeChatMessages.id, dimeChatTurns.userMessageId)
     )
     .leftJoin(
-      dimeChatTraceEvents,
+      acceptedAttemptEvent,
       and(
-        eq(dimeChatTraceEvents.generationId, dimeChatGenerations.id),
-        eq(dimeChatTraceEvents.eventType, "generation_retry_started")
+        eq(acceptedAttemptEvent.generationId, dimeChatGenerations.id),
+        inArray(acceptedAttemptEvent.eventType, [
+          "prompt_persisted",
+          "generation_retry_started",
+        ])
       )
     )
     .where(
@@ -509,19 +520,46 @@ async function findExistingAttempt(
   return rows[0];
 }
 
-function activeTraceFromRow(
-  row: {
-    generationId: string;
-    generationRequestId: string;
-    clientAssistantMessageId: string;
-    attempt: number;
-    turnId: string;
-    sessionId: string;
-    threadId: number;
-    userMessageId: number;
-  },
-  identity: DimeTraceIdentity
-): ActiveDimeChatTrace {
+export function rehydrateDimeChatTraceIdentity(
+  metadata: string | null,
+  requestId: string
+): DimeTraceIdentity {
+  let parsedMetadata: unknown;
+  try {
+    parsedMetadata = metadata ? JSON.parse(metadata) : null;
+  } catch {
+    parsedMetadata = null;
+  }
+  const candidate =
+    parsedMetadata &&
+    typeof parsedMetadata === "object" &&
+    "identity" in parsedMetadata
+      ? (parsedMetadata as { identity?: unknown }).identity
+      : null;
+  const identity = parseDimeTraceIdentity(candidate);
+  if (!identity || identity.requestId !== requestId) {
+    throw new DimeChatTracePersistenceError(
+      "Trace v1 stored generation identity is missing or invalid."
+    );
+  }
+  return identity;
+}
+
+function activeTraceFromRow(row: {
+  generationId: string;
+  generationRequestId: string;
+  acceptedIdentityMetadata: string | null;
+  clientAssistantMessageId: string;
+  attempt: number;
+  turnId: string;
+  sessionId: string;
+  threadId: number;
+  userMessageId: number;
+}): ActiveDimeChatTrace {
+  const identity = rehydrateDimeChatTraceIdentity(
+    row.acceptedIdentityMetadata,
+    row.generationRequestId
+  );
   return {
     version: DIME_CHAT_TRACE_VERSION,
     requestId: row.generationRequestId,
@@ -594,7 +632,7 @@ function resolveExistingAttempt(
     };
   }
 
-  const trace = activeTraceFromRow(row, input.identity);
+  const trace = activeTraceFromRow(row);
   if (
     (row.generationStatus === "completed" ||
       row.generationStatus === "blocked") &&
