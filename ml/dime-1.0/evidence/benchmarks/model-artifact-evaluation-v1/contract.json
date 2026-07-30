@@ -6,6 +6,14 @@
   "source_commit": "7e1f284329ac01cca9a873c0abcc1412b1405441",
   "purpose": "Measure runtime-engineering gain and Dime adapter gain separately under one frozen, reproducible RunPod model-compute contract.",
   "primary_question": "Does the Dime-trained adapter materially outperform the same base model with Runtime Answer Routing v1 under otherwise identical conditions?",
+  "base_model_selection_prerequisite": {
+    "path": "ml/dime-1.0/evidence/benchmarks/base-model-suitability-v1/contract.json",
+    "sha256": "dce71facbd7f5cf356642145f2cf3eda244f7272093e982b0cfb0956d6be75f2",
+    "status": "FROZEN_NOT_AUTHORIZED",
+    "selected_candidate": null,
+    "current_candidate_identity_is_provisional": true,
+    "must_close_before_model_artifact_execution": true
+  },
   "architecture": {
     "training_orchestrator": {
       "platform": "Codex",
@@ -338,9 +346,10 @@
     "generic_external_api_token_tariff_allowed": false
   },
   "execution_readiness": {
-    "verdict": "REVISE_AND_RETRAIN",
+    "verdict": "REVISE",
     "benchmark_run_authorized": false,
     "blocking_reasons": [
+      "The base-versus-Instruct suitability gate has no selection verdict.",
       "The approved 2,400-record Foundation dataset revision and checksum do not exist in the active platform contract.",
       "Candidate C has not been trained and has no immutable adapter revision.",
       "The exact RunPod evaluation endpoint revision and container digest are not pinned.",

@@ -62,19 +62,33 @@
     }
   ],
   "primary_decision": "Candidate C must materially outperform Candidate B under identical runtime, retrieval, prompt, tool, context, base-model, and decoding controls.",
+  "base_model_selection": {
+    "status": "BLOCKED_PENDING_SUITABILITY_EVALUATION",
+    "selected_candidate": null,
+    "current_training_code_binding": "candidate-base",
+    "current_binding_is_selection": false,
+    "evaluation_revision": "base-model-suitability-v1",
+    "required_before_dataset_approval": true,
+    "required_before_training_authorization": true
+  },
   "governed_artifacts": {
     "training_contract": {
       "path": "ml/dime-1.0/configs/dime_training_contract_v1.json",
-      "sha256": "912e90f2bb506364d8f94212280184bf290c18c21b3f71f0d11281d9ffe7eec1",
+      "sha256": "2afdabaaa554cd909271d162631a281a4335b99d40a779cf5277c40c9c955eae",
       "status": "INCOMPLETE_NOT_AUTHORIZED"
     },
     "training_contract_schema": {
       "path": "ml/dime-1.0/schemas/dime_training_contract.schema.json",
-      "sha256": "75307fd9becc58edf1bc9d31c78c9e100593b9223589dadf74d6ec20f72666c2"
+      "sha256": "fd89a26f5137df73f822a7987de76e17e9de88080920441f2be3fbc1195d8fd7"
+    },
+    "base_model_suitability_contract": {
+      "path": "ml/dime-1.0/evidence/benchmarks/base-model-suitability-v1/contract.json",
+      "sha256": "dce71facbd7f5cf356642145f2cf3eda244f7272093e982b0cfb0956d6be75f2",
+      "status": "FROZEN_NOT_AUTHORIZED"
     },
     "evaluation_contract": {
       "path": "ml/dime-1.0/evidence/benchmarks/model-artifact-evaluation-v1/contract.json",
-      "sha256": "d490c61f05dafa1799bf129d76209b9353f81d00b5f4cf7f887baa1475847647",
+      "sha256": "5df817d1ac003cf6485b53c01bbfb03b1be4cb05fde4ea06219fac4a9ba27c19",
       "status": "FROZEN_NOT_AUTHORIZED"
     }
   },

@@ -13,6 +13,7 @@
     "model_compute",
     "base_model",
     "tokenizer",
+    "base_model_selection",
     "foundation_dataset",
     "separation",
     "source",
@@ -80,6 +81,94 @@
     "tokenizer": {
       "$ref": "#/$defs/repository_revision"
     },
+    "base_model_selection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "selected_candidate",
+        "current_training_code_binding",
+        "current_binding_is_selection",
+        "evaluation_contract",
+        "candidates",
+        "required_before_dataset_approval",
+        "required_before_training_authorization"
+      ],
+      "properties": {
+        "status": {
+          "const": "BLOCKED_PENDING_SUITABILITY_EVALUATION"
+        },
+        "selected_candidate": {
+          "type": "null"
+        },
+        "current_training_code_binding": {
+          "const": "candidate-base"
+        },
+        "current_binding_is_selection": {
+          "const": false
+        },
+        "evaluation_contract": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "path",
+            "sha256",
+            "status"
+          ],
+          "properties": {
+            "path": {
+              "type": "string",
+              "minLength": 3
+            },
+            "sha256": {
+              "$ref": "#/$defs/sha256"
+            },
+            "status": {
+              "const": "FROZEN_NOT_AUTHORIZED"
+            }
+          }
+        },
+        "candidates": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "candidate_id",
+              "repo_id",
+              "revision",
+              "tokenizer_revision"
+            ],
+            "properties": {
+              "candidate_id": {
+                "enum": [
+                  "candidate-base",
+                  "candidate-instruct"
+                ]
+              },
+              "repo_id": {
+                "type": "string",
+                "minLength": 3
+              },
+              "revision": {
+                "$ref": "#/$defs/commit"
+              },
+              "tokenizer_revision": {
+                "$ref": "#/$defs/commit"
+              }
+            }
+          }
+        },
+        "required_before_dataset_approval": {
+          "const": true
+        },
+        "required_before_training_authorization": {
+          "const": true
+        }
+      }
+    },
     "foundation_dataset": {
       "type": "object",
       "additionalProperties": false,
@@ -146,6 +235,7 @@
         "foundation_train_and_validation",
         "development_evaluation",
         "model_artifact_evaluation",
+        "general_capability_regression_evaluation",
         "locked_evaluation"
       ],
       "properties": {
@@ -156,6 +246,9 @@
           "$ref": "#/$defs/data_identity"
         },
         "model_artifact_evaluation": {
+          "$ref": "#/$defs/data_identity"
+        },
+        "general_capability_regression_evaluation": {
           "$ref": "#/$defs/data_identity"
         },
         "locked_evaluation": {
@@ -181,7 +274,7 @@
           "const": "aisportsbettingcontact/ai-sports-betting-dime-ai"
         },
         "training_code_commit": {
-          "$ref": "#/$defs/commit"
+          "$ref": "#/$defs/nullable_commit"
         },
         "training_script_path": {
           "type": "string"
@@ -290,7 +383,7 @@
         "verdict": {
           "enum": [
             "REJECT",
-            "REVISE_AND_RETRAIN",
+            "REVISE",
             "READY_FOR_SEPARATE_AUTHORIZATION"
           ]
         },

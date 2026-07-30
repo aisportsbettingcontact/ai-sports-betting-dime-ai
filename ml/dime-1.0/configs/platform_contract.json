@@ -50,6 +50,13 @@
       "model": "no-provider",
       "role": "fallback_and_non_generative_control"
     },
+    "base_model_selection": {
+      "status": "blocked_pending_suitability_evaluation",
+      "selected_candidate": null,
+      "evaluation_revision": "base-model-suitability-v1",
+      "required_before_dataset_approval": true,
+      "required_before_training_authorization": true
+    },
     "candidate_evaluation": {
       "candidate_a": "base_model_without_runtime_answer_routing_v1",
       "candidate_b": "base_model_with_runtime_answer_routing_v1",

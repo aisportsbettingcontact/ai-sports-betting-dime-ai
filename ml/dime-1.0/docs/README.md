@@ -36,6 +36,7 @@ training project and release process:
 - [Composite LLM engineering control](COMPOSITE_ENGINEERING_CONTROL.md)
 - [Dime LLM training architecture v1](DIME_LLM_TRAINING_ARCHITECTURE_V1.md)
 - [Superseded provider-decision pointer](ACTIVE_PROVIDER_DECISION_V1.md)
+- [Base-model suitability gate](../evidence/benchmarks/base-model-suitability-v1/)
 - [System architecture](DIME_V1_SYSTEM_ARCHITECTURE.md)
 - [Tool and canonical market contracts](TOOL_AND_MARKET_CONTRACTS.md)
 - [Curriculum and evaluation](DIME_V1_CURRICULUM_AND_EVALUATION.md)

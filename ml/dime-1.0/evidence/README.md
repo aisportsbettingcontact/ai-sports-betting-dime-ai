@@ -28,6 +28,8 @@ traffic stage.
 
 The active Dime LLM training and model-candidate decision is
 [`decisions/dime-model-artifact-decision-v1/`](decisions/dime-model-artifact-decision-v1/).
+Its starting-model decision gate is
+[`benchmarks/base-model-suitability-v1/`](benchmarks/base-model-suitability-v1/).
 Its frozen A/B/C comparison is
 [`benchmarks/model-artifact-evaluation-v1/`](benchmarks/model-artifact-evaluation-v1/).
 The older `active-provider-decision-v1` and `provider-selection-v1` packages

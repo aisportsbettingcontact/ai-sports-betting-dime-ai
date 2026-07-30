@@ -13,6 +13,8 @@ TRAINING_SCHEMA_PATH = ML_ROOT / "schemas" / "dime_training_contract.schema.json
 PLATFORM_CONTRACT_PATH = ML_ROOT / "configs" / "platform_contract.json"
 BENCHMARK_ROOT = ML_ROOT / "evidence" / "benchmarks" / "model-artifact-evaluation-v1"
 BENCHMARK_CONTRACT_PATH = BENCHMARK_ROOT / "contract.json"
+SUITABILITY_ROOT = ML_ROOT / "evidence" / "benchmarks" / "base-model-suitability-v1"
+SUITABILITY_CONTRACT_PATH = SUITABILITY_ROOT / "contract.json"
 DECISION_ROOT = ML_ROOT / "evidence" / "decisions" / "dime-model-artifact-decision-v1"
 DECISION_PATH = DECISION_ROOT / "decision.json"
 
@@ -95,9 +97,7 @@ def test_training_contract_is_schema_valid_pinned_and_fail_closed() -> None:
     assert contract["capability_hypothesis"]["falsifiable"] is True
     assert contract["base_model"] == contract["tokenizer"]
     assert contract["base_model"]["revision"] == ("d04e592bb4f6aa9cfee91e2e20afa771667e1d4b")
-    assert contract["source"]["training_code_commit"] == (
-        "7e1f284329ac01cca9a873c0abcc1412b1405441"
-    )
+    assert contract["source"]["training_code_commit"] is None
 
     pinned_files = [
         ("training_script_path", "training_script_sha256"),
@@ -115,7 +115,7 @@ def test_training_contract_is_schema_valid_pinned_and_fail_closed() -> None:
     prohibited_aliases = {"main", "latest"}
     assert prohibited_aliases.isdisjoint(walk_strings(contract))
     assert contract["readiness"]["training_contract_complete"] is False
-    assert contract["readiness"]["verdict"] == "REVISE_AND_RETRAIN"
+    assert contract["readiness"]["verdict"] == "REVISE"
     assert not any(contract["authorization_boundary"].values())
 
 
@@ -142,7 +142,12 @@ def test_foundation_dataset_gate_does_not_misstate_the_public_sample_as_release(
 
     separation = contract["separation"]
     assert separation["foundation_train_and_validation"]["training_access"] == "allowed"
-    for key in ("development_evaluation", "model_artifact_evaluation", "locked_evaluation"):
+    for key in (
+        "development_evaluation",
+        "model_artifact_evaluation",
+        "general_capability_regression_evaluation",
+        "locked_evaluation",
+    ):
         assert separation[key]["training_access"] == "prohibited"
 
 
@@ -183,6 +188,42 @@ def test_model_artifact_evaluation_is_81_cases_and_excludes_provider_scoring() -
     assert candidates[2]["adapter_revision"] is None
     assert all(candidate["endpoint_invoked"] is False for candidate in candidates)
     assert "provider" not in {key for candidate in candidates for key in candidate}
+
+
+def test_base_model_selection_is_explicit_frozen_and_non_authorizing() -> None:
+    training = load_json(TRAINING_CONTRACT_PATH)
+    selection = training["base_model_selection"]
+    suitability = load_json(SUITABILITY_CONTRACT_PATH)
+
+    assert selection["status"] == "BLOCKED_PENDING_SUITABILITY_EVALUATION"
+    assert selection["selected_candidate"] is None
+    assert selection["current_training_code_binding"] == "candidate-base"
+    assert selection["current_binding_is_selection"] is False
+    assert selection["required_before_dataset_approval"] is True
+    assert selection["required_before_training_authorization"] is True
+    assert (
+        sha256(REPO_ROOT / selection["evaluation_contract"]["path"])
+        == (selection["evaluation_contract"]["sha256"])
+    )
+
+    assert suitability["status"] == "FROZEN_NOT_AUTHORIZED"
+    assert suitability["dataset"]["total_case_count"] == 81
+    candidates = {candidate["candidate_id"]: candidate for candidate in suitability["candidates"]}
+    assert candidates["candidate-base"]["revision"] == ("d04e592bb4f6aa9cfee91e2e20afa771667e1d4b")
+    assert candidates["candidate-instruct"]["repo_id"] == ("meta-llama/Llama-3.1-8B-Instruct")
+    assert candidates["candidate-instruct"]["revision"] == (
+        "0e9e39f249a16976918f6564b8830bc894c89659"
+    )
+    assert suitability["selection_rule"]["statistical_tie_preference"] == "candidate-instruct"
+    assert (
+        suitability["selection_rule"][
+            "base_selection_requires_minimum_factual_correctness_gain_over_instruct"
+        ]
+        == 0.02
+    )
+    assert suitability["execution_readiness"]["verdict"] == "REVISE"
+    assert not any(suitability["authorization_boundary"].values())
+    assert suitability["production_mutations_performed"] == []
 
 
 def test_model_artifact_thresholds_and_runpod_cost_policy_fail_closed() -> None:
@@ -257,6 +298,20 @@ def test_active_decision_supersedes_but_does_not_rewrite_historical_evidence() -
 
 
 def test_model_artifact_evidence_packages_are_checksum_pinned() -> None:
+    assert_checksum_manifest(
+        SUITABILITY_ROOT,
+        {
+            "README.md",
+            "contract.json",
+            "../../../data/eval/product_route_observability_v1.benchmark.json",
+            "../../../data/eval/runtime_answer_routing_v1.benchmark.json",
+            "../../../data/eval/platform_grounding_v1.sample.jsonl",
+            "../../../data/eval/dev.sample.jsonl",
+            "../../../data/eval/safety_red_team.sample.jsonl",
+            "../../../data/eval/provider_selection_v1.supplemental.json",
+            "../../../schemas/provider_selection_supplemental.schema.json",
+        },
+    )
     assert_checksum_manifest(
         BENCHMARK_ROOT,
         {

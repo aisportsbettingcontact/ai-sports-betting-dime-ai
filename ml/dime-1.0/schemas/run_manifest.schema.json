@@ -258,7 +258,8 @@
         "final_adapter_dir",
         "logs_dir",
         "reports_dir",
-        "checkpoint_retention"
+        "checkpoint_retention",
+        "early_stopping"
       ],
       "properties": {
         "seed": {
@@ -292,6 +293,34 @@
             "save_total_limit": {
               "type": "integer",
               "minimum": 1
+            }
+          }
+        },
+        "early_stopping": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "metric",
+            "mode",
+            "patience_evaluations",
+            "minimum_delta",
+            "restore_best_checkpoint"
+          ],
+          "properties": {
+            "metric": {
+              "const": "validation_loss"
+            },
+            "mode": {
+              "const": "minimize"
+            },
+            "patience_evaluations": {
+              "const": 3
+            },
+            "minimum_delta": {
+              "const": 0.001
+            },
+            "restore_best_checkpoint": {
+              "const": true
             }
           }
         }

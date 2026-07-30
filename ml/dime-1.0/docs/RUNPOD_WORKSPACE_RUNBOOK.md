@@ -276,6 +276,7 @@ Before training, `run_manifest.json` must record:
 - Python, package, PyTorch, CUDA, image, and GPU identity;
 - output directories;
 - checkpoint-retention policy;
+- validation-loss early-stopping policy; and
 - privacy, provenance, rights, and contamination approvals.
 
 The preflight manifest must validate against
@@ -366,6 +367,21 @@ training.
 Stream logs into the run directory without exposing credentials or private
 records. Retain recovery checkpoints according to the approved interval and
 space budget. A checkpoint is recovery state, not a promoted model.
+
+The frozen early-stopping policy monitors validation loss, minimizes it, uses
+three evaluation intervals of patience, requires a minimum improvement of
+`0.001`, and restores the best checkpoint. Save intervals must align with
+evaluation intervals so every candidate best checkpoint is recoverable.
+
+Each saved checkpoint must contain `checkpoint_manifest.json`. The trainer
+creates it after saving model/adapter state, trainer state, optimizer,
+scheduler, and RNG state. The manifest binds the closed file inventory and
+hashes, global step, seed, deterministic sampler contract, and exact
+`run_fingerprint.json` hash. Resume fails closed if any file, hash, identity,
+global step, optimizer/scheduler state, RNG state, or sampler rule differs.
+After the Trainer restores state, a continuity callback must observe the exact
+prior global step and non-null optimizer and scheduler before additional work
+is accepted.
 
 Do not change multiple major experimental variables in one run. Record every
 deviation from the approved manifest before continuing.
@@ -501,7 +517,9 @@ network volume.
 4. Verify the pinned full Git checkout.
 5. Verify the dataset revision directories and checksums.
 6. Read the run manifest and most recent approved recovery checkpoint.
-7. Confirm the resume command, seed behavior, scheduler state, and output path.
+7. Verify `checkpoint_manifest.json`, its exact payload hash, the run
+   fingerprint, seed, optimizer/scheduler/RNG state, global step, deterministic
+   data-skip behavior, resume command, and output path.
 8. Record the infrastructure transition in an append-only recovery log under
    the run's `logs/` or `reports/` directory. Do not modify
    `run_manifest.json`; it is the immutable, candidate-bound preflight

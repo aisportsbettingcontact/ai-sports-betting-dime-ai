@@ -1846,6 +1846,7 @@ def run_manifest_fixture(tmp_path: Path) -> tuple[Path, dict, dict, dict[str, Pa
                 "save_steps": config["training"]["save_steps"],
                 "save_total_limit": config["training"]["save_total_limit"],
             },
+            "early_stopping": config["training"]["early_stopping"],
         },
         "environment": {
             "runpod_image": runtime["RUNPOD_IMAGE"],
@@ -1977,6 +1978,7 @@ def test_full_fingerprint_and_manifest_keep_all_provenance_and_hashes(
         run_manifest_path=paths["run_manifest"],
         run_manifest_schema_path=paths["run_manifest_schema"],
         foundation_checksums_schema_path=paths["foundation_checksums_schema"],
+        seed=1729,
     )
 
     assert fingerprint["source"] == provenance["source"]
@@ -2001,6 +2003,125 @@ def test_full_fingerprint_and_manifest_keep_all_provenance_and_hashes(
 def test_rehearsal_config_remains_compatible_without_release_provenance() -> None:
     rehearsal = yaml.safe_load(REHEARSAL_CONFIG.read_text(encoding="utf-8"))
     assert TRAINING.assert_config(rehearsal, allow_full_run=False) is None
+
+
+def test_early_stopping_policy_is_exact_and_cannot_be_disabled() -> None:
+    config = approved_full_config()
+    assert TRAINING.assert_config(config, allow_full_run=True) is not None
+    assert config["training"]["early_stopping"] == {
+        "metric": "validation_loss",
+        "mode": "minimize",
+        "patience_evaluations": 3,
+        "minimum_delta": 0.001,
+        "restore_best_checkpoint": True,
+    }
+
+    disabled = approved_full_config()
+    disabled["training"]["early_stopping"]["restore_best_checkpoint"] = False
+    with pytest.raises(ValueError, match="frozen validation-loss policy"):
+        TRAINING.assert_config(disabled, allow_full_run=True)
+
+    misaligned = approved_full_config()
+    misaligned["training"]["save_steps"] = 51
+    with pytest.raises(ValueError, match="multiple of eval_steps"):
+        TRAINING.assert_config(misaligned, allow_full_run=True)
+
+
+def checkpoint_fixture(tmp_path: Path, *, global_step: int = 50) -> tuple[Path, Path]:
+    output_dir = tmp_path / "checkpoints"
+    checkpoint = output_dir / f"checkpoint-{global_step}"
+    checkpoint.mkdir(parents=True)
+    (checkpoint / "trainer_state.json").write_text(
+        json.dumps({"global_step": global_step}) + "\n",
+        encoding="utf-8",
+    )
+    (checkpoint / "optimizer.pt").write_bytes(b"optimizer-state")
+    (checkpoint / "scheduler.pt").write_bytes(b"scheduler-state")
+    (checkpoint / "rng_state.pth").write_bytes(b"rng-state")
+    (checkpoint / "adapter_model.safetensors").write_bytes(b"adapter-state")
+    fingerprint = {
+        "parent_model_id": TRAINING.PINNED_MODEL_ID,
+        "parent_model_revision": TRAINING.PINNED_MODEL_REVISION,
+        "tokenizer_id": TRAINING.PINNED_MODEL_ID,
+        "tokenizer_revision": TRAINING.PINNED_MODEL_REVISION,
+        "seed": 1729,
+        "sampler_contract": TRAINING.DETERMINISTIC_SAMPLER_CONTRACT,
+        "config_sha256": "a" * 64,
+        "train_data_sha256": "b" * 64,
+        "validation_data_sha256": "c" * 64,
+        "source": {"github_commit": SOURCE_SHA},
+    }
+    fingerprint_path = output_dir / "run_fingerprint.json"
+    fingerprint_path.write_text(
+        json.dumps(fingerprint, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    return checkpoint, fingerprint_path
+
+
+def test_checkpoint_manifest_proves_exact_resumable_state(tmp_path: Path) -> None:
+    checkpoint, fingerprint_path = checkpoint_fixture(tmp_path)
+    manifest_path = TRAINING.write_checkpoint_integrity_manifest(
+        checkpoint,
+        run_fingerprint_sha256=TRAINING.file_sha256(fingerprint_path),
+        seed=1729,
+        global_step=50,
+    )
+    evidence = TRAINING.verify_checkpoint_for_resume(
+        checkpoint,
+        run_fingerprint_path=fingerprint_path,
+        seed=1729,
+    )
+
+    assert evidence.checkpoint_name == "checkpoint-50"
+    assert evidence.global_step == 50
+    assert len(evidence.checkpoint_payload_sha256) == 64
+    assert evidence.manifest_sha256 == TRAINING.file_sha256(manifest_path)
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert manifest["ignore_data_skip"] is False
+    assert manifest["sampler_contract"] == TRAINING.DETERMINISTIC_SAMPLER_CONTRACT
+    assert {
+        "optimizer.pt",
+        "scheduler.pt",
+        "rng_state.pth",
+        "adapter_model.safetensors",
+        "trainer_state.json",
+    } <= manifest["files"].keys()
+
+
+def test_checkpoint_resume_rejects_changed_state_or_identity(tmp_path: Path) -> None:
+    checkpoint, fingerprint_path = checkpoint_fixture(tmp_path)
+    TRAINING.write_checkpoint_integrity_manifest(
+        checkpoint,
+        run_fingerprint_sha256=TRAINING.file_sha256(fingerprint_path),
+        seed=1729,
+        global_step=50,
+    )
+
+    (checkpoint / "optimizer.pt").write_bytes(b"tampered")
+    with pytest.raises(ValueError, match="inventory or hash"):
+        TRAINING.verify_checkpoint_for_resume(
+            checkpoint,
+            run_fingerprint_path=fingerprint_path,
+            seed=1729,
+        )
+
+    checkpoint_two, fingerprint_two = checkpoint_fixture(tmp_path / "identity")
+    TRAINING.write_checkpoint_integrity_manifest(
+        checkpoint_two,
+        run_fingerprint_sha256=TRAINING.file_sha256(fingerprint_two),
+        seed=1729,
+        global_step=50,
+    )
+    fingerprint = json.loads(fingerprint_two.read_text(encoding="utf-8"))
+    fingerprint["tokenizer_revision"] = "0" * 40
+    fingerprint_two.write_text(json.dumps(fingerprint) + "\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="tokenizer_revision mismatch"):
+        TRAINING.verify_checkpoint_for_resume(
+            checkpoint_two,
+            run_fingerprint_path=fingerprint_two,
+            seed=1729,
+        )
 
 
 def test_saved_adapter_config_is_pinned_to_exact_parent_revision(

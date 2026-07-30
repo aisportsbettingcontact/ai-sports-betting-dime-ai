@@ -22,10 +22,12 @@ control. It is not a model candidate.
 
 ## Current verdict
 
-`REVISE_AND_RETRAIN`. The 2,400-record Foundation release is not frozen and
-Candidate C does not exist. No model execution, training, pricing entry,
-provider activation, Railway mutation, tracing, shadow traffic, route
-activation, or Research Alpha change is authorized.
+`REVISE`. No governed training run exists, so a retraining verdict would be
+inaccurate. The base-versus-Instruct suitability gate has no selection, the
+2,400-record Foundation release is not frozen, and Candidate C does not exist.
+No model execution, training, pricing entry, provider activation, Railway
+mutation, tracing, shadow traffic, route activation, or Research Alpha change
+is authorized.
 
 ## Pricing boundary
 

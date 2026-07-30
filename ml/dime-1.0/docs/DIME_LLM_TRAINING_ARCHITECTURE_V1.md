@@ -31,6 +31,17 @@ record at
 
 ## Candidate evaluation
 
+Before these candidates are executable, the starting model must pass the
+checksum-pinned
+[`base-model-suitability-v1`](../evidence/benchmarks/base-model-suitability-v1/)
+gate. It compares exact Base and Instruct revisions under identical 81-case
+controls. The current Base binding in the training code is provisional and is
+not a model-selection decision. Dataset approval and training authorization
+remain blocked until an independent verdict selects one candidate. A
+statistical tie prefers Instruct because Dime Chat is conversational and the
+planned SFT corpus is small; selecting Base requires a material correctness
+advantage without instruction-adherence or calibration regression.
+
 The 81-case comparison isolates two sources of gain:
 
 | Candidate | Model artifact | Runtime Answer Routing v1 | Question |
@@ -59,10 +70,11 @@ in
 - RunPod container and hardware profile; and
 - the model-artifact evaluation revision.
 
-The contract deliberately remains `INCOMPLETE_NOT_AUTHORIZED`. The approved
-2,400-record Foundation revision and checksums, development and locked
-evaluation identities, early stopping, and authorized full-run resume
-verification are not complete.
+The contract deliberately remains `INCOMPLETE_NOT_AUTHORIZED`. The starting
+model is not selected; the approved 2,400-record Foundation revision and
+checksums plus development and locked evaluation identities are incomplete.
+Early stopping and fail-closed checkpoint-resume verification are implemented,
+but neither has passed an authorized RunPod smoke run.
 
 No `latest`, `main`, mutable tag, model alias, or inferred revision can fill an
 identity field.
@@ -95,8 +107,9 @@ stopping, authorized resume verification, artifact hashes, exact hardware and
 library capture, adapter-size constraints, and general-capability regression
 tests.
 
-Training is blocked until every required control is implemented and the
-platform contract separately authorizes the exact training tuple.
+Training is blocked until every required control is implemented, the resume
+path passes the bounded smoke test, and the platform contract separately
+authorizes the exact training tuple.
 
 ## Promotion and serving
 
