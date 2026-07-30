@@ -1,0 +1,183 @@
+{
+  "schema_version": "dime-evaluation-identity-plan-v1",
+  "plan_id": "dime-llm-v1-evaluation-identities",
+  "status": "INCOMPLETE_NOT_AUTHORIZED",
+  "source_commit": "77caa613ad2c64ff91a5c6fab1839b3d1278f4ba",
+  "layers": {
+    "development": {
+      "purpose": "iteration_and_diagnosis",
+      "case_count": 270,
+      "route_distribution": {
+        "platform": 30,
+        "account": 30,
+        "educational": 30,
+        "bet_explanation": 30,
+        "matchup": 30,
+        "full_slate": 30,
+        "historical": 30,
+        "live_data": 30,
+        "general_sports": 30
+      },
+      "semantic_identity": {
+        "repo_id": "taileredsports/dime-eval-development-cases",
+        "revision": null,
+        "manifest_sha256": null,
+        "record_checksums_sha256": null,
+        "provenance_sha256": null
+      },
+      "answer_key_identity": {
+        "repo_id": "taileredsports/dime-eval-development-keys",
+        "revision": null,
+        "manifest_sha256": null,
+        "record_checksums_sha256": null,
+        "provenance_sha256": null
+      },
+      "required_training_access": "prohibited",
+      "effective_access_verified": false,
+      "status": "MISSING"
+    },
+    "critical": {
+      "purpose": "hard_failures_and_protected_behaviors",
+      "case_count": 81,
+      "route_distribution": null,
+      "semantic_identity": {
+        "repo_id": "taileredsports/dime-eval-critical-cases",
+        "revision": null,
+        "manifest_sha256": null,
+        "record_checksums_sha256": null,
+        "provenance_sha256": null
+      },
+      "answer_key_identity": {
+        "repo_id": "taileredsports/dime-eval-critical-keys",
+        "revision": null,
+        "manifest_sha256": null,
+        "record_checksums_sha256": null,
+        "provenance_sha256": null
+      },
+      "required_training_access": "prohibited",
+      "effective_access_verified": false,
+      "status": "MISSING"
+    },
+    "locked": {
+      "purpose": "single_use_final_model_selection",
+      "case_count": 180,
+      "route_distribution": {
+        "platform": 20,
+        "account": 20,
+        "educational": 20,
+        "bet_explanation": 20,
+        "matchup": 20,
+        "full_slate": 20,
+        "historical": 20,
+        "live_data": 20,
+        "general_sports": 20
+      },
+      "semantic_identity": {
+        "repo_id": "taileredsports/dime-eval-locked-cases",
+        "revision": null,
+        "manifest_sha256": null,
+        "record_checksums_sha256": null,
+        "provenance_sha256": null
+      },
+      "answer_key_identity": {
+        "repo_id": "taileredsports/dime-eval-locked-keys",
+        "revision": null,
+        "manifest_sha256": null,
+        "record_checksums_sha256": null,
+        "provenance_sha256": null
+      },
+      "required_training_access": "prohibited",
+      "effective_access_verified": false,
+      "status": "MISSING"
+    },
+    "general_regression": {
+      "purpose": "detect_specialization_damage",
+      "case_count": 120,
+      "route_distribution": null,
+      "semantic_identity": {
+        "repo_id": "taileredsports/dime-eval-general-regression-cases",
+        "revision": null,
+        "manifest_sha256": null,
+        "record_checksums_sha256": null,
+        "provenance_sha256": null
+      },
+      "answer_key_identity": {
+        "repo_id": "taileredsports/dime-eval-general-regression-keys",
+        "revision": null,
+        "manifest_sha256": null,
+        "record_checksums_sha256": null,
+        "provenance_sha256": null
+      },
+      "required_training_access": "prohibited",
+      "effective_access_verified": false,
+      "status": "MISSING"
+    }
+  },
+  "legacy_exposed_critical": {
+    "path": "ml/dime-1.0/evidence/benchmarks/model-artifact-evaluation-v1/contract.json",
+    "sha256": "5df817d1ac003cf6485b53c01bbfb03b1be4cb05fde4ea06219fac4a9ba27c19",
+    "case_count": 81,
+    "status": "EXPOSED_NOT_SELECTION_ELIGIBLE",
+    "allowed_use": "development_and_architecture_regression_only"
+  },
+  "required_identity_controls": [
+    "immutable_repository_revision",
+    "manifest_checksum",
+    "record_checksum_manifest",
+    "creation_provenance",
+    "explicit_non_overlap_proof",
+    "training_access_prohibition",
+    "separate_answer_key_access"
+  ],
+  "access_separation": {
+    "semantic_cases_exclude_gold_answers": true,
+    "answer_keys_bind_semantic_record_sha256": true,
+    "training_denied_all_evaluation_repositories": false,
+    "runner_denied_answer_keys": false,
+    "scorer_denied_training_data_and_model_execution": false,
+    "locked_maximum_execution_count": 1,
+    "locked_consumption_ledger_required": true,
+    "current_status": "BLOCKED"
+  },
+  "non_overlap_proof": {
+    "required_pairwise_suite_comparisons": 6,
+    "foundation_against_each_suite_comparisons": 4,
+    "checks": [
+      "case_ids",
+      "exact_record_hashes",
+      "normalized_instructions",
+      "contexts_and_tool_fixtures",
+      "restricted_expected_answers",
+      "source_event_user_conversation_and_scenario_partitions",
+      "temporal_embargoes"
+    ],
+    "restricted_report_sha256": null,
+    "public_proof_sha256": null,
+    "status": "MISSING"
+  },
+  "known_blockers": [
+    "The current 81-case suite is exposed in the public application repository with gold behavior and is not selection-eligible.",
+    "The training credential can currently read development evaluation data.",
+    "No immutable identity exists for the 270-case development evaluation.",
+    "No immutable identity exists for the sealed replacement 81-case critical suite.",
+    "No immutable identity exists for the 180-case locked evaluation.",
+    "No immutable identity exists for the 120-case general-regression evaluation.",
+    "No complete pairwise and Foundation non-overlap proof exists.",
+    "Model-runner and isolated-scorer credential separation is not implemented."
+  ],
+  "authorization_boundary": {
+    "evaluation_dataset_publication": false,
+    "answer_key_publication": false,
+    "runpod_invocation": false,
+    "model_download": false,
+    "benchmark_execution": false,
+    "locked_evaluation_execution": false,
+    "model_selection": false,
+    "model_training": false,
+    "provider_activation": false,
+    "railway_mutation": false,
+    "trace_activation": false,
+    "shadow_traffic": false,
+    "route_activation": false
+  }
+}

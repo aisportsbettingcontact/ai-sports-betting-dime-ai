@@ -1,0 +1,56 @@
+{
+  "record_id": "dime-foundation-v1-replace-record-id",
+  "route": "matchup",
+  "task_type": "resolve_ambiguous_event",
+  "conversation": [
+    {
+      "role": "user",
+      "content": "Which matchup did you mean?"
+    },
+    {
+      "role": "assistant",
+      "content": "I need the league and date before I can identify the event."
+    }
+  ],
+  "source_type": "synthetic_behavioral",
+  "source_reference": null,
+  "source_timestamp": "2026-07-30T00:00:00Z",
+  "provenance": {
+    "shard_id": "foundation-v1-replace-shard",
+    "created_at": "2026-07-30T00:00:00Z",
+    "generator": {
+      "actor_id": "replace-generator",
+      "model_id": "gpt-5.6-sol",
+      "model_revision": "replace-exact-codex-revision"
+    },
+    "critic": {
+      "actor_id": "replace-independent-critic",
+      "model_id": "gpt-5.6-sol",
+      "model_revision": "replace-exact-codex-revision"
+    },
+    "generation_receipt_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "critique_receipt_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "rights_status": "synthetic_behavioral",
+  "tool_requirement": "required",
+  "tool_schema_revision": "tools-v1-replace-exact-revision",
+  "freshness_class": "temporal",
+  "expected_behavior": {
+    "summary": "Clarify the event identity before retrieving dynamic facts.",
+    "coverage": {
+      "tool_required": true,
+      "temporal_or_freshness_sensitive": true,
+      "missing_or_ambiguous_information": true,
+      "abstention_or_error_correction": true,
+      "multi_turn": false,
+      "adversarial_or_false_premise": false
+    }
+  },
+  "expected_response": "Ask for the missing league and date. Do not invent an event, line, injury, or recommendation.",
+  "critical_constraints": [
+    "Do not treat a guessed event as resolved.",
+    "Do not claim live facts without an authoritative tool result."
+  ],
+  "uncertainty_behavior": "clarify",
+  "split": "train"
+}

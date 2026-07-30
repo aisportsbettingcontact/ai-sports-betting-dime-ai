@@ -98,7 +98,7 @@ def test_training_contract_is_schema_valid_pinned_and_fail_closed() -> None:
     assert contract["base_model"] == contract["tokenizer"]
     assert contract["base_model"]["revision"] == ("d04e592bb4f6aa9cfee91e2e20afa771667e1d4b")
     assert contract["source"]["training_code_commit"] == (
-        "c63bb85031c2a3404ae2a4a049dfb02e39777c2d"
+        "ec32c8ae99a0b311dc77028d3ab306de51eed421"
     )
 
     pinned_files = [
@@ -119,6 +119,12 @@ def test_training_contract_is_schema_valid_pinned_and_fail_closed() -> None:
     assert contract["readiness"]["training_contract_complete"] is False
     assert contract["readiness"]["verdict"] == "REVISE"
     assert not any(contract["authorization_boundary"].values())
+    controls = contract["required_training_controls"]
+    assert controls["minimum_validation_events"] == 6
+    assert controls["evaluation_and_checkpoint_cadence_aligned"] is True
+    assert controls["practical_early_stopping_preflight_implemented"] is True
+    assert controls["best_checkpoint_restoration_verifier_implemented"] is True
+    assert controls["best_checkpoint_restoration_verified"] is False
 
 
 def test_foundation_dataset_gate_does_not_misstate_the_public_sample_as_release() -> None:
