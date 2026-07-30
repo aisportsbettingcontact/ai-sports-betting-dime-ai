@@ -34,7 +34,7 @@ import type {
 import {
   assessDimeTraceCompleteness,
   estimateDimeTraceCost,
-  parseDimeTraceIdentity,
+  parsePersistedDimeTraceIdentity,
   validateDimeContextMetrics,
   validateDimeEvidenceTimestamps,
   validateDimeStageLatency,
@@ -42,6 +42,7 @@ import {
   validateDimeToolCallTrace,
   type DimeTraceContextObservability,
   type DimeTraceIdentity,
+  type PersistedDimeTraceIdentity,
 } from "./_core/dimeTraceObservability";
 import {
   completeDimeIngestionLifecycleForResponse,
@@ -181,7 +182,7 @@ export interface ActiveDimeChatTrace {
   generationId: string;
   clientAssistantMessageId: string;
   attempt: number;
-  identity: DimeTraceIdentity;
+  identity: PersistedDimeTraceIdentity;
   contextObservability?: DimeTraceContextObservability;
 }
 
@@ -523,7 +524,7 @@ async function findExistingAttempt(
 export function rehydrateDimeChatTraceIdentity(
   metadata: string | null,
   requestId: string
-): DimeTraceIdentity {
+): PersistedDimeTraceIdentity {
   let parsedMetadata: unknown;
   try {
     parsedMetadata = metadata ? JSON.parse(metadata) : null;
@@ -536,7 +537,7 @@ export function rehydrateDimeChatTraceIdentity(
     "identity" in parsedMetadata
       ? (parsedMetadata as { identity?: unknown }).identity
       : null;
-  const identity = parseDimeTraceIdentity(candidate);
+  const identity = parsePersistedDimeTraceIdentity(candidate);
   if (!identity || identity.requestId !== requestId) {
     throw new DimeChatTracePersistenceError(
       "Trace v1 stored generation identity is missing or invalid."

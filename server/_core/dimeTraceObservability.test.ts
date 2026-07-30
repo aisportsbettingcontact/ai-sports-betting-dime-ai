@@ -7,6 +7,8 @@ import {
   dimeNoToolRequiredTrace,
   estimateDimeTraceCost,
   getDimeTraceObservabilityReadiness,
+  parseDimeTraceIdentity,
+  parsePersistedDimeTraceIdentity,
   requireDimeTraceIdentity,
   resolveDimeTraceIdentity,
   summarizeDimeRouteObservations,
@@ -104,6 +106,30 @@ describe("Dime Phase 1 trace identity", () => {
       missingFields: ["baseModel", "modelRevision"],
       invalidFields: [],
     });
+  });
+
+  it("accepts a strict historical identity only through the persisted parser", () => {
+    const current = requireDimeTraceIdentity({
+      ...IDENTITY_INPUT,
+      env: {
+        GIT_COMMIT_SHA: "47e338fb",
+        NODE_ENV: "test",
+      },
+    });
+    const historical = {
+      ...current,
+      observabilityRevision: "dime-trace-observability-v0",
+      traceSchemaRevision: "trace-v1-phase0-2026-07-28",
+    };
+
+    expect(parseDimeTraceIdentity(historical)).toBeNull();
+    expect(parsePersistedDimeTraceIdentity(historical)).toEqual(historical);
+    expect(
+      parsePersistedDimeTraceIdentity({
+        ...historical,
+        unexpectedField: "rejected",
+      })
+    ).toBeNull();
   });
 });
 

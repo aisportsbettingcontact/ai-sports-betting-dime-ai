@@ -230,6 +230,22 @@ describe("Dime Conversation Trace v1 request contract", () => {
     expect(meta.productRoute).toBe("live_data");
   });
 
+  it("rehydrates a strict identity written by an earlier Trace revision", () => {
+    const accepted = validBeginInput();
+    const historicalIdentity = {
+      ...accepted.identity,
+      observabilityRevision: "dime-trace-observability-v0",
+      traceSchemaRevision: "trace-v1-phase0-2026-07-28",
+    };
+
+    expect(
+      rehydrateDimeChatTraceIdentity(
+        JSON.stringify({ identity: historicalIdentity }),
+        accepted.requestId
+      )
+    ).toEqual(historicalIdentity);
+  });
+
   it("fails closed when a replay cannot prove its accepted identity", () => {
     const accepted = validBeginInput();
 

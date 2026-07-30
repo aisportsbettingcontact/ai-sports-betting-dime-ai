@@ -67,10 +67,31 @@ const traceIdentitySchema = z
 
 export type DimeTraceIdentity = z.infer<typeof traceIdentitySchema>;
 
+const persistedTraceIdentitySchema = traceIdentitySchema.extend({
+  observabilityRevision: boundedLabel,
+  traceSchemaRevision: boundedLabel,
+});
+
+export type PersistedDimeTraceIdentity = z.infer<
+  typeof persistedTraceIdentitySchema
+>;
+
 export function parseDimeTraceIdentity(
   value: unknown
 ): DimeTraceIdentity | null {
   const parsed = traceIdentitySchema.safeParse(value);
+  return parsed.success ? parsed.data : null;
+}
+
+/**
+ * Durable Trace identities describe the release that accepted the generation,
+ * not the release replaying it. Preserve the strict identity shape while
+ * allowing bounded historical revision labels.
+ */
+export function parsePersistedDimeTraceIdentity(
+  value: unknown
+): PersistedDimeTraceIdentity | null {
+  const parsed = persistedTraceIdentitySchema.safeParse(value);
   return parsed.success ? parsed.data : null;
 }
 
@@ -306,7 +327,7 @@ const costEstimateSchema = z
 export type DimeCostEstimate = z.infer<typeof costEstimateSchema>;
 
 export interface DimeTraceCompletenessInput {
-  identity?: DimeTraceIdentity;
+  identity?: PersistedDimeTraceIdentity;
   toolCall?: DimeToolCallTrace;
   timestamps?: DimeEvidenceTimestamps;
   providerObservation?: DimeProviderObservation;
