@@ -13,8 +13,9 @@ Railway changes, tracing, shadow traffic, or route activation.
 
 - The 2,400-record Foundation target: 2,160 train and 240 validation records.
 - The exact nine-route distribution and six cross-cutting minimums.
-- A canonical private Data Factory authoring record with source, rights, freshness, tool,
-  provenance, critique, expected-behavior, and uncertainty fields.
+- A canonical private Data Factory authoring record with source, rights,
+  pre-prose partition identity, nine-state structured tool supervision,
+  provenance, critique, trainer labels, expected behavior, and uncertainty.
 - Bounded generation shards of at most 200 records with separate generator and critic
   identities.
 - The 270-case development, 81-case critical, 180-case locked, and 120-case
@@ -32,7 +33,9 @@ The machine-readable sources are:
 - `configs/foundation_release_plan_v1.json`
 - `configs/evaluation_identity_plan_v1.json`
 - `configs/model_execution_gates_v1.json`
+- `configs/foundation_data_factory_governance_v1.json`
 - `schemas/foundation_record.schema.json`
+- `schemas/foundation_source_packet.schema.json`
 
 Run the static audit from `ml/dime-1.0`:
 
@@ -51,17 +54,18 @@ the separately governed evidence and access controls exist.
 separate because the existing release validator, numeric traceability, grouping, review ledger,
 and private Hugging Face freezer depend on the trainer schema.
 
-No record may enter the trainer-ready release until an independently reviewed, deterministic
-conversion contract binds every authoring field to the existing release controls. That
-conversion contract is currently missing, so the Foundation plan fails closed.
+`src/dime_ai/foundation_data_factory.py` implements the deterministic conversion boundary.
+It rejects unresolved rights, split drift, self-review, invalid tool traces, and silent
+truncation; it emits the existing trainer-ready schema and preserves assistant-only masking.
+This implementation does not generate or publish a record by itself.
 
-## AI-authorship governance blocker
+## Governed AI authorship
 
-The requested factory uses Codex 5.6 Sol for bounded generation and independent critique.
-Current repository governance prohibits retained substantive AI-authored prose. This PR records
-that conflict explicitly; it does not silently reinterpret generated prose as an already
-approved source class. An owner-reviewed governance change, pinned generator/critic identities,
-and signed receipts are required before record generation.
+The Data Factory policy creates a narrow `teacher-generated` source class for bounded private
+generation and independent critique. It does not reinterpret generated prose as `synthetic`.
+An owner merge of the exact reviewed governance PR may authorize only the five actions stated
+in its machine-readable scope. Model download, RunPod inference, training, benchmarking,
+Railway mutation, tracing, and route activation remain closed.
 
 ## Evaluation exposure finding
 
@@ -97,12 +101,11 @@ The 2,400 private records must not be packaged in the application image.
 
 ## Next separately authorized sequence
 
-1. Resolve AI-authorship policy and reviewer identities.
-2. Implement and approve the authoring-to-trainer conversion.
-3. Produce immutable source packets and bounded, independently critiqued shards.
-4. Freeze the private Foundation release and sanitized evidence.
-5. Implement evaluation credential separation and freeze all four identities.
-6. Produce the complete non-overlap proof.
-7. Request Gate 1 baseline inference authorization.
+1. Merge the exact reviewed Data Factory governance head.
+2. Produce immutable source packets and bounded, independently critiqued shards.
+3. Freeze the private Foundation release and sanitized evidence.
+4. Implement evaluation credential separation and freeze all four identities.
+5. Produce the complete non-overlap proof.
+6. Request Gate 1 baseline inference authorization.
 
 Nothing in this document advances any execution gate.

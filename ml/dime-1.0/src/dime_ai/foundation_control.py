@@ -3,11 +3,25 @@
 from __future__ import annotations
 
 import hashlib
-import json
 from pathlib import Path
 from typing import Any
 
 from jsonschema import Draft202012Validator, FormatChecker
+
+from dime_ai.foundation_contracts import FoundationContractError
+from dime_ai.foundation_partitioning import (
+    GROUP_DIMENSIONS,
+    PARTITION_REGISTRY_PATH,
+    PARTITION_REGISTRY_SCHEMA_PATH,
+    load_partition_registry,
+    validate_partition_registry,
+)
+from dime_ai.foundation_partitioning import (
+    assigned_split as assigned_partition_split,
+)
+from dime_ai.foundation_publication import private_hugging_face_publication_allowed
+from dime_ai.governed_json import load_governed_json
+from dime_ai.tool_contracts import validate_tool_response
 
 ML_ROOT = Path(__file__).resolve().parents[2]
 REPO_ROOT = ML_ROOT.parents[1]
@@ -16,6 +30,11 @@ FOUNDATION_PLAN_PATH = ML_ROOT / "configs" / "foundation_release_plan_v1.json"
 FOUNDATION_PLAN_SCHEMA_PATH = ML_ROOT / "schemas" / "foundation_release_plan.schema.json"
 FOUNDATION_RECORD_SCHEMA_PATH = ML_ROOT / "schemas" / "foundation_record.schema.json"
 FOUNDATION_RECORD_TEMPLATE_PATH = ML_ROOT / "data" / "templates" / "foundation_record_TEMPLATE.json"
+FOUNDATION_SOURCE_PACKET_SCHEMA_PATH = ML_ROOT / "schemas" / "foundation_source_packet.schema.json"
+DATA_FACTORY_GOVERNANCE_PATH = ML_ROOT / "configs" / "foundation_data_factory_governance_v1.json"
+DATA_FACTORY_GOVERNANCE_SCHEMA_PATH = (
+    ML_ROOT / "schemas" / "foundation_data_factory_governance.schema.json"
+)
 EVALUATION_PLAN_PATH = ML_ROOT / "configs" / "evaluation_identity_plan_v1.json"
 EVALUATION_PLAN_SCHEMA_PATH = ML_ROOT / "schemas" / "evaluation_identity_plan.schema.json"
 EXECUTION_GATES_PATH = ML_ROOT / "configs" / "model_execution_gates_v1.json"
@@ -67,6 +86,42 @@ FOUNDATION_AUTHORIZATION_KEYS = {
     "shadow_traffic",
     "route_activation",
 }
+DATA_FACTORY_OWNER_MERGE_SCOPE = {
+    "codex_private_record_generation",
+    "independent_record_critique",
+    "deterministic_record_validation",
+    "private_evaluation_case_generation",
+    "private_hugging_face_publication_after_release_gate",
+}
+CRITIC_INDEPENDENCE_MUST_DIFFER = (
+    "actor_id",
+    "prompt_revision",
+    "prompt_sha256",
+    "execution_receipt_sha256",
+    "context_sha256",
+    "responsibility",
+)
+CRITIC_INDEPENDENCE_MAY_MATCH = ("model_id", "model_revision")
+DATA_FACTORY_STILL_CLOSED = {
+    "model_download",
+    "runpod_inference",
+    "model_training",
+    "benchmark_execution",
+    "railway_mutation",
+    "tracing",
+    "route_activation",
+}
+FOUNDATION_TOOL_STATES = (
+    "skipped",
+    "success",
+    "empty",
+    "failure",
+    "timeout",
+    "stale",
+    "malformed",
+    "conflicting",
+    "rejected",
+)
 EVALUATION_CASE_COUNTS = {
     "development": 270,
     "critical": 81,
@@ -160,7 +215,7 @@ EXECUTION_AUTHORIZATION_KEYS = {
 
 
 def _load_json(path: Path) -> dict[str, Any]:
-    value = json.loads(path.read_text(encoding="utf-8"))
+    value = load_governed_json(path)
     if not isinstance(value, dict):
         raise ValueError(f"{path} must contain a JSON object.")
     return value
@@ -205,6 +260,64 @@ def _check_file_binding(binding: object, label: str, errors: list[str]) -> None:
         errors.append(f"{label} sha256 does not match {relative_path}.")
 
 
+def _assigned_foundation_split(record: dict[str, Any]) -> str:
+    return assigned_partition_split(record["partition_identity"])
+
+
+def validate_source_packet(packet: object) -> list[str]:
+    """Validate one immutable source packet without authorizing its release."""
+
+    errors = _schema_errors(packet, FOUNDATION_SOURCE_PACKET_SCHEMA_PATH)
+    if errors or not isinstance(packet, dict):
+        return errors
+    if set(packet["allowed_uses"]) & set(packet["prohibited_uses"]):
+        errors.append("Source-packet allowed and prohibited uses must not overlap.")
+    return errors
+
+
+def validate_data_factory_governance(contract: object) -> list[str]:
+    """Validate the proposed, non-executing Foundation Data Factory boundary."""
+
+    errors = _schema_errors(contract, DATA_FACTORY_GOVERNANCE_SCHEMA_PATH)
+    if errors or not isinstance(contract, dict):
+        return errors
+    source_schema = REPO_ROOT / contract["source_packets"]["schema_path"]
+    if source_schema != FOUNDATION_SOURCE_PACKET_SCHEMA_PATH or not source_schema.is_file():
+        errors.append("Data Factory source-packet schema path is not canonical.")
+    partitioning = contract["partitioning"]
+    partition_paths = {
+        "registry_path": PARTITION_REGISTRY_PATH,
+        "registry_schema_path": PARTITION_REGISTRY_SCHEMA_PATH,
+        "collection_validator_path": ML_ROOT / "src" / "dime_ai" / "foundation_partitioning.py",
+    }
+    for key, expected_path in partition_paths.items():
+        if REPO_ROOT / partitioning[key] != expected_path or not expected_path.is_file():
+            errors.append(f"Data Factory partition {key} is not canonical.")
+    if tuple(partitioning["group_keys"]) != GROUP_DIMENSIONS:
+        errors.append("Data Factory partition group dimensions differ from the global registry.")
+    errors.extend(
+        f"partition registry: {issue}"
+        for issue in validate_partition_registry(load_partition_registry())
+    )
+    owner_scope = contract["owner_merge_authorization_scope"]
+    if set(owner_scope) != DATA_FACTORY_OWNER_MERGE_SCOPE or not all(
+        value is True for value in owner_scope.values()
+    ):
+        errors.append("Owner-merge authorization scope must contain exactly five true actions.")
+    if contract["critic_independence"] != {
+        "must_differ": list(CRITIC_INDEPENDENCE_MUST_DIFFER),
+        "may_match": list(CRITIC_INDEPENDENCE_MAY_MATCH),
+    }:
+        errors.append("Data Factory critic independence differs from the exact contract.")
+    if not private_hugging_face_publication_allowed(contract["private_publication_preconditions"]):
+        errors.append("Data Factory private publication preconditions differ from the exact gate.")
+    if not _exact_false_map(contract["still_not_authorized"], DATA_FACTORY_STILL_CLOSED):
+        errors.append("Data Factory still_not_authorized must contain seven exact false gates.")
+    if tuple(contract["tool_states"]) != FOUNDATION_TOOL_STATES:
+        errors.append("Data Factory tool states differ from the exact nine-state contract.")
+    return errors
+
+
 def validate_foundation_record(record: object) -> list[str]:
     """Validate one canonical private authoring record without treating it as trainer-ready."""
 
@@ -213,8 +326,33 @@ def validate_foundation_record(record: object) -> list[str]:
         return errors
 
     provenance = record["provenance"]
-    if provenance["generator"]["actor_id"] == provenance["critic"]["actor_id"]:
-        errors.append("A Foundation record generator cannot be its own critic.")
+    generator = provenance["generator"]
+    critic = provenance["critic"]
+    for field in CRITIC_INDEPENDENCE_MUST_DIFFER:
+        if generator[field] == critic[field]:
+            errors.append(
+                f"Foundation generator and critic must use materially separate {field} identities."
+            )
+    if generator["responsibility"] != "generation":
+        errors.append("Foundation generator responsibility must be generation.")
+    if critic["responsibility"] != "independent_critique":
+        errors.append("Foundation critic responsibility must be independent_critique.")
+
+    if record["expected_response"] != record["expected_final_response"]:
+        errors.append("expected_response must exactly equal expected_final_response.")
+    if record["conversation"][0]["role"] != "user":
+        errors.append("Foundation conversations must begin with a user message.")
+    if record["conversation"][-1] != {
+        "role": "assistant",
+        "content": record["expected_final_response"],
+    }:
+        errors.append("Foundation conversations must end with the exact expected_final_response.")
+    for index, message in enumerate(record["conversation"]):
+        expected_role = "user" if index % 2 == 0 else "assistant"
+        if message["role"] != expected_role:
+            errors.append(
+                f"Foundation conversation message {index} must have role {expected_role}."
+            )
 
     coverage = record["expected_behavior"]["coverage"]
     if coverage["tool_required"] != (record["tool_requirement"] == "required"):
@@ -227,6 +365,70 @@ def validate_foundation_record(record: object) -> list[str]:
     user_turns = sum(message["role"] == "user" for message in record["conversation"])
     if coverage["multi_turn"] != (user_turns > 1):
         errors.append("expected_behavior.coverage.multi_turn must match the conversation.")
+    if _assigned_foundation_split(record) != record["split"]:
+        errors.append("split must match scenario_family_sha256_mod_10 before prose generation.")
+
+    expected_sequence = list(range(1, len(record["expected_tool_trace"]) + 1))
+    actual_sequence = [step["sequence"] for step in record["expected_tool_trace"]]
+    if actual_sequence != expected_sequence:
+        errors.append("expected_tool_trace sequences must be contiguous and start at 1.")
+    if record["tool_requirement"] == "required" and not record["expected_tool_trace"]:
+        errors.append("Required tool records must contain an expected tool trace.")
+    for step in record["expected_tool_trace"]:
+        if step["tool_revision"] != record["tool_schema_revision"]:
+            errors.append(
+                f"Tool trace step {step['sequence']} revision must match tool_schema_revision."
+            )
+        state = step["expected_execution_state"]
+        response = step["expected_tool_response"]
+        if state == "skipped":
+            if response is not None:
+                errors.append(
+                    f"Skipped tool trace step {step['sequence']} must not contain a response."
+                )
+            continue
+        if not isinstance(response, dict):
+            errors.append(f"Executed tool trace step {step['sequence']} requires a tool response.")
+            continue
+        expected_statuses = {
+            "success": {"ok", "partial"},
+            "empty": {"not_found"},
+            "failure": {"error"},
+            "timeout": {"error"},
+            "stale": {"stale"},
+            "malformed": {"error"},
+            "conflicting": {"partial"},
+            "rejected": {"unauthorized", "blocked_by_policy"},
+        }[state]
+        if response.get("status") not in expected_statuses:
+            errors.append(
+                f"Tool trace step {step['sequence']} state {state} has an incompatible "
+                "tool-response status."
+            )
+            continue
+        if response.get("source_ids") and step["source_authority"] is None:
+            errors.append(
+                f"Tool trace step {step['sequence']} with sources requires source_authority."
+            )
+        if state in {"success", "empty", "stale", "conflicting"}:
+            if step["source_observed_at"] is None:
+                errors.append(
+                    f"Tool trace step {step['sequence']} state {state} requires source_observed_at."
+                )
+            elif response.get("as_of_utc") != step["source_observed_at"]:
+                errors.append(
+                    f"Tool trace step {step['sequence']} must preserve the authoritative "
+                    "source_observed_at timestamp."
+                )
+        try:
+            validate_tool_response(
+                response,
+                expected_tool_name=step["tool_name"],
+                expected_call_id=(f"{record['record_id']}-tool-{step['sequence']:02d}"),
+                expected_arguments=step["normalized_arguments"],
+            )
+        except FoundationContractError as exc:
+            errors.append(f"Tool trace step {step['sequence']} response is invalid: {exc}")
     if record["freshness_class"] == "live":
         constraints = " ".join(record["critical_constraints"]).casefold()
         if not {"retrieve", "validate", "abstain"} & set(constraints.split()):
@@ -273,9 +475,22 @@ def validate_foundation_plan(plan: object) -> list[str]:
         errors.append("Data Factory generators must not approve their own records.")
     if (
         factory.get("ai_authorship_policy", {}).get("resolution_status")
-        != "BLOCKED_PENDING_EXPLICIT_GOVERNANCE_CHANGE"
+        != "RESOLVED_BY_DATA_FACTORY_GOVERNANCE_V1"
     ):
-        errors.append("AI-authorship policy conflict must remain explicit until resolved.")
+        errors.append("AI-authorship policy must bind the Data Factory governance resolution.")
+    for binding_name in (
+        "governance_contract",
+        "governance_schema",
+        "strict_json_loader",
+        "strict_json_validator",
+        "source_packet_schema",
+        "partition_registry",
+        "partition_registry_schema",
+        "partition_validator",
+        "conversion_implementation",
+        "publication_guard",
+    ):
+        _check_file_binding(factory[binding_name], f"data_factory.{binding_name}", errors)
     if factory.get("private_chain_of_thought_allowed") is not False:
         errors.append("Foundation Data Factory cannot retain private chain-of-thought.")
     if not _exact_false_map(plan["authorization_boundary"], FOUNDATION_AUTHORIZATION_KEYS):
@@ -421,15 +636,17 @@ def validate_execution_gates(contract: object) -> list[str]:
 
 
 def audit_foundation_control() -> dict[str, Any]:
-    """Return a deterministic, sanitized audit report for every PR #247 control."""
+    """Return a deterministic, sanitized audit report for the Foundation control plane."""
 
     foundation_plan = _load_json(FOUNDATION_PLAN_PATH)
+    data_factory_governance = _load_json(DATA_FACTORY_GOVERNANCE_PATH)
     evaluation_plan = _load_json(EVALUATION_PLAN_PATH)
     execution_gates = _load_json(EXECUTION_GATES_PATH)
     record_template = _load_json(FOUNDATION_RECORD_TEMPLATE_PATH)
     sections = {
         "foundation_plan": validate_foundation_plan(foundation_plan),
         "foundation_record_template": validate_foundation_record(record_template),
+        "data_factory_governance": validate_data_factory_governance(data_factory_governance),
         "evaluation_plan": validate_evaluation_plan(evaluation_plan),
         "execution_gates": validate_execution_gates(execution_gates),
     }

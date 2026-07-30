@@ -108,11 +108,15 @@
     "authorship_policy": {
       "allowed_source_classes": [
         "human-authored",
-        "synthetic"
+        "synthetic",
+        "teacher-generated"
       ],
-      "substantive_ai_drafting_allowed": false,
-      "retained_ai_supplied_prose_allowed": false,
+      "substantive_ai_drafting_allowed": true,
+      "retained_ai_supplied_prose_allowed": true,
       "synthetic_may_relabel_ai_authored_prose": false,
+      "teacher_generated_records_require_governance_contract": true,
+      "governance_contract_path": "configs/foundation_data_factory_governance_v1.json",
+      "generator_may_approve_own_record": false,
       "non_substantive_ai_assistance": [
         "spelling",
         "formatting",

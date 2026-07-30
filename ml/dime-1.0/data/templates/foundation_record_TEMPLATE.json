@@ -21,19 +21,61 @@
     "generator": {
       "actor_id": "replace-generator",
       "model_id": "gpt-5.6-sol",
-      "model_revision": "replace-exact-codex-revision"
+      "model_revision": "replace-exact-codex-revision",
+      "prompt_revision": "replace-exact-generation-prompt-revision",
+      "prompt_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+      "execution_receipt_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+      "context_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+      "responsibility": "generation"
     },
     "critic": {
       "actor_id": "replace-independent-critic",
       "model_id": "gpt-5.6-sol",
-      "model_revision": "replace-exact-codex-revision"
-    },
-    "generation_receipt_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
-    "critique_receipt_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      "model_revision": "replace-exact-codex-revision",
+      "prompt_revision": "replace-exact-critique-prompt-revision",
+      "prompt_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "execution_receipt_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "context_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "responsibility": "independent_critique"
+    }
+  },
+  "independent_review": {
+    "decision": "approved",
+    "rubric_version": "foundation-rubric-v1",
+    "reviewed_at": "2026-07-30T00:00:00Z",
+    "unresolved_material_findings": 0,
+    "deterministic_validation_passed": true
+  },
+  "partition_identity": {
+    "scenario_family_id": "scenario-replace-me",
+    "template_family_id": "template-replace-me",
+    "source_event_id": null,
+    "conversation_family_id": "conversation-replace-me",
+    "quantitative_scenario_id": null,
+    "entity_set_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "temporal_bucket": "2026-07",
+    "split_assignment_basis": "scenario_family_sha256_mod_10",
+    "split_assignment_revision": "dime-foundation-partition-v1",
+    "split_assignment_seed": 0
   },
   "rights_status": "synthetic_behavioral",
   "tool_requirement": "required",
   "tool_schema_revision": "tools-v1-replace-exact-revision",
+  "expected_tool_trace": [
+    {
+      "sequence": 1,
+      "tool_name": "get_game_context",
+      "tool_revision": "tools-v1-replace-exact-revision",
+      "normalized_arguments": {},
+      "expected_execution_state": "skipped",
+      "expected_result_constraints": ["Do not execute until event identity is complete."],
+      "expected_tool_response": null,
+      "source_authority": null,
+      "source_observed_at": null,
+      "freshness_requirement": "Resolve league and date first.",
+      "validation_requirement": "Reject incomplete event identity."
+    }
+  ],
   "freshness_class": "temporal",
   "expected_behavior": {
     "summary": "Clarify the event identity before retrieving dynamic facts.",
@@ -46,7 +88,18 @@
       "adversarial_or_false_premise": false
     }
   },
-  "expected_response": "Ask for the missing league and date. Do not invent an event, line, injury, or recommendation.",
+  "trainer_labels": {
+    "skill_ids": ["route.matchup", "capability.event_resolution"],
+    "difficulty": "foundation",
+    "interaction_mode": "clarification",
+    "evidence_status": "missing",
+    "policy_action": "clarify",
+    "risk_tier": "standard",
+    "answer_length": "concise"
+  },
+  "numeric_assertions": [],
+  "expected_response": "I need the league and date before I can identify the event.",
+  "expected_final_response": "I need the league and date before I can identify the event.",
   "critical_constraints": [
     "Do not treat a guessed event as resolved.",
     "Do not claim live facts without an authoritative tool result."

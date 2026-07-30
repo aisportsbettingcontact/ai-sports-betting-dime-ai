@@ -280,6 +280,7 @@ source_classes:
   foundation_allowed:
     - human-authored
     - synthetic
+    - teacher-generated
 matched_control_locator_types:
   - message_text_span
   - tool_result_json_pointer

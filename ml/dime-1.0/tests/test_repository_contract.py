@@ -94,10 +94,13 @@ FOUNDATION_OWNER_DECISION = {
         "runpod_is_authoritative": False,
     },
     "authorship_policy": {
-        "allowed_source_classes": ["human-authored", "synthetic"],
-        "substantive_ai_drafting_allowed": False,
-        "retained_ai_supplied_prose_allowed": False,
+        "allowed_source_classes": ["human-authored", "synthetic", "teacher-generated"],
+        "substantive_ai_drafting_allowed": True,
+        "retained_ai_supplied_prose_allowed": True,
         "synthetic_may_relabel_ai_authored_prose": False,
+        "teacher_generated_records_require_governance_contract": True,
+        "governance_contract_path": "configs/foundation_data_factory_governance_v1.json",
+        "generator_may_approve_own_record": False,
         "non_substantive_ai_assistance": [
             "spelling",
             "formatting",
@@ -371,7 +374,7 @@ def test_foundation_v1_owner_decision_is_exact_and_non_authorizing() -> None:
         decision["authorship_policy"]["allowed_source_classes"]
         == source_policy["allowed_source_classes"]
     )
-    assert source_policy["teacher_generated_allowed"] is False
+    assert source_policy["teacher_generated_allowed"] is True
 
     credentials = contract["hugging_face"]["credentials"]
     prohibited = decision["credential_boundary"]["prohibited_existing_credentials"]

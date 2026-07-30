@@ -36,6 +36,7 @@ def test_foundation_control_audit_validates_plan_without_claiming_readiness() ->
         "sections": {
             "foundation_plan": {"pass": True, "issue_count": 0},
             "foundation_record_template": {"pass": True, "issue_count": 0},
+            "data_factory_governance": {"pass": True, "issue_count": 0},
             "evaluation_plan": {"pass": True, "issue_count": 0},
             "execution_gates": {"pass": True, "issue_count": 0},
         },
@@ -72,7 +73,7 @@ def test_foundation_record_requires_independent_critique_and_consistent_coverage
         "actor_id"
     ]
     assert validate_foundation_record(self_reviewed) == [
-        "A Foundation record generator cannot be its own critic."
+        "Foundation generator and critic must use materially separate actor_id identities."
     ]
 
     inconsistent = deepcopy(record)
