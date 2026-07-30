@@ -10,15 +10,7 @@
  */
 
 import { createHash } from "node:crypto";
-import {
-  mkdir,
-  open,
-  readFile,
-  rename,
-  stat,
-  unlink,
-  writeFile,
-} from "node:fs/promises";
+import { mkdir, open, readFile, stat, unlink } from "node:fs/promises";
 import { execFile } from "node:child_process";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -28,6 +20,14 @@ import {
   SECURE_RAILWAY_EXECUTABLE,
   verifySecureRailwayBroker,
 } from "./dime-railway-secure.mjs";
+import {
+  fixedMinimalEnvironment,
+  resolveTrustedExecutable,
+} from "./lib/dime-trusted-executables.mjs";
+import {
+  readIntegrityProtectedJson,
+  tryWriteIntegrityProtectedJson,
+} from "./lib/dime-integrity-envelope.mjs";
 
 const execFileAsync = promisify(execFile);
 const SCRIPT_PATH = fileURLToPath(import.meta.url);
@@ -296,32 +296,11 @@ export async function loadManifest(path = MANIFEST_PATH) {
 }
 
 async function run(executable, args, options = {}) {
-  const inheritedNames = [
-    "HOME",
-    "PATH",
-    "TMPDIR",
-    "USER",
-    "LOGNAME",
-    "SHELL",
-    "LANG",
-    "LC_ALL",
-    "XDG_CONFIG_HOME",
-    "XDG_CACHE_HOME",
-    "SSH_AUTH_SOCK",
-  ];
-  if (executable === "gh") {
-    inheritedNames.push("GH_TOKEN", "GITHUB_TOKEN", "GH_CONFIG_DIR");
-  }
-  const isolatedEnvironment = Object.fromEntries(
-    inheritedNames
-      .filter(name => process.env[name] !== undefined)
-      .map(name => [name, process.env[name]])
-  );
   try {
     const resolvedExecutable =
       executable === "dime-railway-keychain"
         ? SECURE_RAILWAY_EXECUTABLE
-        : executable;
+        : (await resolveTrustedExecutable(executable)).path;
     if (executable === "dime-railway-keychain") {
       await verifySecureRailwayBroker();
     }
@@ -331,12 +310,9 @@ async function run(executable, args, options = {}) {
       timeout: options.timeoutMs ?? COMMAND_TIMEOUT_MS,
       maxBuffer: MAX_COMMAND_BUFFER,
       windowsHide: true,
-      env: {
-        ...isolatedEnvironment,
-        NO_COLOR: "1",
+      env: fixedMinimalEnvironment({
         GH_PAGER: "cat",
-        PAGER: "cat",
-      },
+      }),
     });
     return String(result.stdout ?? "").trim();
   } catch (error) {
@@ -876,7 +852,7 @@ export function cacheState(
 
 async function readCached(manifestSha256, currentLocal, allowStale = false) {
   try {
-    const snapshot = JSON.parse(await readFile(CACHE_PATH, "utf8"));
+    const snapshot = await readIntegrityProtectedJson(CACHE_PATH);
     const state = cacheState(
       snapshot,
       manifestSha256,
@@ -892,9 +868,8 @@ async function readCached(manifestSha256, currentLocal, allowStale = false) {
         ageSeconds: state.ageSeconds,
       },
     };
-  } catch (error) {
-    if (error?.code === "ENOENT" || error instanceof SyntaxError) return null;
-    throw error;
+  } catch {
+    return null;
   }
 }
 
@@ -941,13 +916,7 @@ async function releaseLock() {
 }
 
 async function writeCached(snapshot) {
-  await mkdir(dirname(CACHE_PATH), { recursive: true, mode: 0o700 });
-  const temporary = `${CACHE_PATH}.${process.pid}.${Date.now()}.tmp`;
-  await writeFile(temporary, `${JSON.stringify(snapshot, null, 2)}\n`, {
-    encoding: "utf8",
-    mode: 0o600,
-  });
-  await rename(temporary, CACHE_PATH);
+  return tryWriteIntegrityProtectedJson(CACHE_PATH, snapshot);
 }
 
 async function status({ refresh = false, allowStaleFallback = true } = {}) {

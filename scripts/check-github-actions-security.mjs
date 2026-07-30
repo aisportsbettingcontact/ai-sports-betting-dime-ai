@@ -1,108 +1,281 @@
 #!/usr/bin/env node
 
 import { readdir, readFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { basename, dirname, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
-const workflowsDirectory = resolve(root, ".github/workflows");
-const workflowNames = (await readdir(workflowsDirectory))
-  .filter(name => name.endsWith(".yml"))
-  .sort();
-const failures = [];
-let actionReferences = 0;
-let productionSecretReferences = 0;
+const SHA_PIN = /^[0-9a-f]{40}$/;
+const DOCKER_DIGEST_PIN = /@sha256:[0-9a-f]{64}$/;
+const WRITE_EXCEPTION = "auto-merge-dependabot.yml";
+const PERMISSION_SCOPES = new Set([
+  "actions",
+  "attestations",
+  "checks",
+  "contents",
+  "deployments",
+  "discussions",
+  "id-token",
+  "issues",
+  "models",
+  "packages",
+  "pages",
+  "pull-requests",
+  "security-events",
+  "statuses",
+]);
 
-for (const name of workflowNames) {
-  const source = await readFile(resolve(workflowsDirectory, name), "utf8");
-  const lines = source.split(/\r?\n/);
-  const jobBlocks = source.split(/(?=^  [A-Za-z0-9_-]+:\s*$)/gm);
-
-  for (const [index, line] of lines.entries()) {
-    const match = line.match(/^\s*uses:\s*([^#\s]+)(?:\s+#.*)?$/);
-    if (!match) continue;
-    actionReferences += 1;
-    const reference = match[1];
-    if (reference.startsWith("./")) continue;
-    const at = reference.lastIndexOf("@");
-    if (at < 1 || !/^[0-9a-f]{40}$/.test(reference.slice(at + 1))) {
-      failures.push(`${name}:${index + 1}: action is not pinned to a commit`);
+async function filesBelow(directory, predicate) {
+  const found = [];
+  async function visit(current) {
+    let entries;
+    try {
+      entries = await readdir(current, { withFileTypes: true });
+    } catch (error) {
+      if (error?.code === "ENOENT") return;
+      throw error;
+    }
+    for (const entry of entries) {
+      const path = resolve(current, entry.name);
+      if (entry.isDirectory()) await visit(path);
+      else if (entry.isFile() && predicate(entry.name)) found.push(path);
     }
   }
+  await visit(directory);
+  return found.sort();
+}
 
-  for (const block of jobBlocks) {
-    const secretNames = [
-      ...block.matchAll(/secrets\.([A-Z0-9_]+)/g),
-    ]
-      .map(match => match[1])
-      .filter(secretName => secretName !== "GITHUB_TOKEN");
-    if (secretNames.length === 0) continue;
-    productionSecretReferences += secretNames.length;
-    if (!/^    environment:\s*Production\s*$/m.test(block)) {
-      failures.push(
-        `${name}: production secret is outside the protected Production environment`
-      );
+function permissionBlocks(source) {
+  const lines = source.split(/\r?\n/);
+  const blocks = [];
+  for (let index = 0; index < lines.length; index += 1) {
+    const match = lines[index].match(/^(\s*)permissions:\s*(.*?)\s*$/);
+    if (!match) continue;
+    const indent = match[1].length;
+    const inline = match[2];
+    const values = [];
+    if (inline) {
+      values.push({ scope: "<inline>", access: inline, line: index + 1 });
+    } else {
+      for (let cursor = index + 1; cursor < lines.length; cursor += 1) {
+        const line = lines[cursor];
+        if (/^\s*(?:#.*)?$/.test(line)) continue;
+        const child = line.match(/^(\s+)([a-z-]+):\s*([^#\s]+).*$/i);
+        if (!child || child[1].length <= indent) break;
+        values.push({
+          scope: child[2],
+          access: child[3],
+          line: cursor + 1,
+        });
+      }
     }
-    for (const line of block.split(/\r?\n/)) {
+    blocks.push({ indent, line: index + 1, values });
+  }
+  return blocks;
+}
+
+function inspectPermissions(name, source, failures) {
+  const blocks = permissionBlocks(source);
+  const top = blocks.filter(block => block.indent === 0);
+  if (top.length !== 1) {
+    failures.push(
+      `${name}: workflow must define exactly one explicit top-level permissions map`
+    );
+    return;
+  }
+  const allowedWrites =
+    name === WRITE_EXCEPTION
+      ? new Set(["contents", "pull-requests"])
+      : new Set();
+  for (const block of blocks) {
+    for (const value of block.values) {
+      const normalized = String(value.access).toLowerCase();
       if (
-        /secrets\.[A-Z0-9_]+/.test(line) &&
-        !/secrets\.GITHUB_TOKEN/.test(line) &&
-        !/^\s{10,}[A-Z0-9_]+:\s*\$\{\{[^}]*secrets\.[A-Z0-9_]+[^}]*\}\}/.test(line)
+        value.scope === "<inline>" ||
+        normalized === "write-all" ||
+        normalized === "read-all"
       ) {
         failures.push(
-          `${name}: production secret is not scoped to an individual step`
+          `${name}:${value.line}: permissions must use an explicit least-privilege map`
+        );
+        continue;
+      }
+      if (!PERMISSION_SCOPES.has(value.scope)) {
+        failures.push(
+          `${name}:${value.line}: permission scope is outside the closed allowlist`
+        );
+        continue;
+      }
+      if (
+        normalized === "write" &&
+        (block.indent !== 0 || !allowedWrites.has(value.scope))
+      ) {
+        failures.push(
+          `${name}:${value.line}: unapproved write permission ${value.scope}`
+        );
+      }
+      if (!["read", "write", "none"].includes(normalized)) {
+        failures.push(
+          `${name}:${value.line}: invalid or dynamic permission value`
         );
       }
     }
   }
-
-  if (
-    name === "ci.yml" &&
-    /secrets\.(?!GITHUB_TOKEN\b)[A-Z0-9_]+/.test(source)
-  ) {
-    failures.push("ci.yml: pull-request CI must remain secretless");
-  }
-  if (/RAILWAY_API_TOKEN/.test(source)) {
-    failures.push(`${name}: Railway control-plane tokens are forbidden`);
-  }
-  if (/gh\s+pr\s+review[\s\S]{0,160}--approve/.test(source)) {
-    failures.push(`${name}: workflows may not self-approve pull requests`);
-  }
-}
-
-const railwayHealth = await readFile(
-  resolve(workflowsDirectory, "railway-p0-control.yml"),
-  "utf8"
-);
-for (const forbidden of [
-  "railway deploy",
-  "railway redeploy",
-  "railway run",
-  "railway variable",
-  "railway shell",
-  "secrets.",
-]) {
-  if (railwayHealth.toLowerCase().includes(forbidden)) {
-    failures.push(
-      `railway-p0-control.yml: forbidden capability present: ${forbidden}`
+  if (name === WRITE_EXCEPTION) {
+    const writes = new Set(
+      top[0].values
+        .filter(value => value.access.toLowerCase() === "write")
+        .map(value => value.scope)
     );
+    if (
+      writes.size !== allowedWrites.size ||
+      [...allowedWrites].some(scope => !writes.has(scope))
+    ) {
+      failures.push(
+        `${name}: write exception must remain exactly contents and pull-requests`
+      );
+    }
   }
 }
 
-const codeowners = await readFile(
-  resolve(root, ".github/CODEOWNERS"),
-  "utf8"
-);
-if (!/^\/\.github\/\s+@prez-ai-sports-betting\s*$/m.test(codeowners)) {
-  failures.push("CODEOWNERS: .github security owner is missing");
+function inspectActionReferences(name, source, failures) {
+  let count = 0;
+  for (const [index, line] of source.split(/\r?\n/).entries()) {
+    const match = line.match(/^\s*(?:-\s*)?uses\s*:\s*([^#\s]+)(?:\s+#.*)?$/);
+    if (!match) continue;
+    count += 1;
+    const reference = match[1];
+    if (reference.startsWith("./")) {
+      continue;
+    }
+    if (reference.startsWith("docker://")) {
+      if (!DOCKER_DIGEST_PIN.test(reference)) {
+        failures.push(
+          `${name}:${index + 1}: Docker action is not pinned to a digest`
+        );
+      }
+      continue;
+    }
+    const at = reference.lastIndexOf("@");
+    if (at < 1 || !SHA_PIN.test(reference.slice(at + 1))) {
+      failures.push(`${name}:${index + 1}: action is not pinned to a commit`);
+    }
+  }
+  return count;
 }
 
-const result = {
-  status: failures.length === 0 ? "PASS" : "FAIL",
-  workflowsChecked: workflowNames.length,
-  actionReferences,
-  productionSecretReferences,
-  failures,
-};
-process.stdout.write(`${JSON.stringify(result)}\n`);
-if (failures.length > 0) process.exitCode = 1;
+export async function scanActionsSecurity(
+  repositoryRoot,
+  { enforceRepositoryContracts = true } = {}
+) {
+  const workflowsDirectory = resolve(repositoryRoot, ".github/workflows");
+  const workflowPaths = await filesBelow(
+    workflowsDirectory,
+    name => name.endsWith(".yml") || name.endsWith(".yaml")
+  );
+  const compositePaths = await filesBelow(
+    resolve(repositoryRoot, ".github/actions"),
+    name => name === "action.yml" || name === "action.yaml"
+  );
+  const failures = [];
+  let actionReferences = 0;
+  let productionSecretReferences = 0;
+
+  for (const path of workflowPaths) {
+    const name = relative(workflowsDirectory, path);
+    const source = await readFile(path, "utf8");
+    inspectPermissions(name, source, failures);
+    actionReferences += inspectActionReferences(name, source, failures);
+    const jobBlocks = source.split(/(?=^  [A-Za-z0-9_-]+:\s*$)/gm);
+    for (const block of jobBlocks) {
+      const secretNames = [...block.matchAll(/secrets\.([A-Z0-9_]+)/g)]
+        .map(match => match[1])
+        .filter(secretName => secretName !== "GITHUB_TOKEN");
+      if (secretNames.length === 0) continue;
+      productionSecretReferences += secretNames.length;
+      if (!/^    environment:\s*Production\s*$/m.test(block)) {
+        failures.push(
+          `${name}: production secret is outside the protected Production environment`
+        );
+      }
+      for (const line of block.split(/\r?\n/)) {
+        if (
+          /secrets\.[A-Z0-9_]+/.test(line) &&
+          !/secrets\.GITHUB_TOKEN/.test(line) &&
+          !/^\s{10,}[A-Z0-9_]+:\s*\$\{\{[^}]*secrets\.[A-Z0-9_]+[^}]*\}\}/.test(
+            line
+          )
+        ) {
+          failures.push(
+            `${name}: production secret is not scoped to an individual step`
+          );
+        }
+      }
+    }
+    if (
+      basename(name) === "ci.yml" &&
+      /secrets\.(?!GITHUB_TOKEN\b)[A-Z0-9_]+/.test(source)
+    ) {
+      failures.push("ci.yml: pull-request CI must remain secretless");
+    }
+    if (/RAILWAY_API_TOKEN/.test(source)) {
+      failures.push(`${name}: Railway control-plane tokens are forbidden`);
+    }
+    if (/gh\s+pr\s+review[\s\S]{0,160}--approve/.test(source)) {
+      failures.push(`${name}: workflows may not self-approve pull requests`);
+    }
+  }
+
+  for (const path of compositePaths) {
+    const name = relative(repositoryRoot, path);
+    const source = await readFile(path, "utf8");
+    actionReferences += inspectActionReferences(name, source, failures);
+    if (/secrets\.[A-Z0-9_]+/.test(source)) {
+      failures.push(`${name}: composite actions must not reference secrets`);
+    }
+  }
+
+  if (enforceRepositoryContracts) {
+    const railwayHealth = await readFile(
+      resolve(workflowsDirectory, "railway-p0-control.yml"),
+      "utf8"
+    );
+    for (const forbidden of [
+      "railway deploy",
+      "railway redeploy",
+      "railway run",
+      "railway variable",
+      "railway shell",
+      "secrets.",
+    ]) {
+      if (railwayHealth.toLowerCase().includes(forbidden)) {
+        failures.push(
+          `railway-p0-control.yml: forbidden capability present: ${forbidden}`
+        );
+      }
+    }
+    const codeowners = await readFile(
+      resolve(repositoryRoot, ".github/CODEOWNERS"),
+      "utf8"
+    );
+    if (!/^\/\.github\/\s+@prez-ai-sports-betting\s*$/m.test(codeowners)) {
+      failures.push("CODEOWNERS: .github security owner is missing");
+    }
+  }
+
+  return {
+    status: failures.length === 0 ? "PASS" : "FAIL",
+    workflowsChecked: workflowPaths.length,
+    compositesChecked: compositePaths.length,
+    actionReferences,
+    productionSecretReferences,
+    failures,
+  };
+}
+
+const modulePath = fileURLToPath(import.meta.url);
+if (process.argv[1] && resolve(process.argv[1]) === modulePath) {
+  const root = resolve(dirname(modulePath), "..");
+  const result = await scanActionsSecurity(root);
+  process.stdout.write(`${JSON.stringify(result)}\n`);
+  if (result.failures.length > 0) process.exitCode = 1;
+}

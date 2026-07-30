@@ -54,6 +54,9 @@ concurrency:
   group: weekly-audit-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   weekly-security-audit:
     name: "Weekly Audit — pnpm audit --audit-level=${{ inputs.audit_level || 'moderate' }}"

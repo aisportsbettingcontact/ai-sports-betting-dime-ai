@@ -3,6 +3,9 @@ name: DB Push (apply schema migrations)
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   db-push:
     runs-on: ubuntu-latest

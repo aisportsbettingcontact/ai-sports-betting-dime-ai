@@ -65,17 +65,19 @@ Railway remain pinned to
 `stunning-creativity` (`8dd7341d-702c-48c7-90df-5c19a4f04913`), and production
 (`787f3113-17ab-47d9-9819-1268aeb09b3e`). Never use an implicit Railway link or
 print, persist, or place Railway variables in Claude's environment. Railway
-access runs through the signed device-only macOS Keychain broker; the standard
-Railway CLI config must not hold access or refresh tokens.
+access runs through the independently hash-pinned, device-only macOS Keychain
+broker; the standard Railway CLI config must not hold access or refresh tokens.
 
 Credentials are scope-isolated:
 
-- production owner and user logins use a shell-free Railway child pipeline
-  whose ephemeral filter emits only that role's exact three unreferenced shared
-  values; cookies remain browser-process-only and no storage state is written;
+- production owner and user logins use a native Railway broker that captures
+  the raw map privately, selects only that role's exact three unreferenced
+  values, and passes them to a fixed authentication child through a private
+  pipe; cookies remain browser-process-only and no storage state is written;
 - every Hugging Face training, serving, publisher, locked-evaluator, and
   locked-publisher credential has a separate `op run` process;
-- RunPod has a separate restricted/read-only identity scope;
+- RunPod has a separate scope, but identity and permissions remain unverified;
+  `CREDENTIAL_PRESENT_PERMISSION_UNVERIFIED` is not provider authorization;
 - AWS uses the allowlisted `dime-builder` SSO profile by default and never
   static keys.
 
@@ -84,6 +86,9 @@ Use `pnpm agent:doctor` for a live read-only identity preflight,
 login is explicitly required, and
 `pnpm credential:verify -- --scope <reviewed-scope>` only for identity proof.
 Do not print, persist in evidence, or move credential values between scopes.
+Credential execution fails closed unless each sensitive executable and the
+Railway broker match independently administered signing or root-owned hash
+provenance; same-user and ad-hoc signatures are insufficient.
 Passing context, identity, credential, or login checks never authorizes merge,
 deployment, Railway mutation, provider execution, Hugging Face publication,
 RunPod compute, model download, training, tracing, route activation, shadow

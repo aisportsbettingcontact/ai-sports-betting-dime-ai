@@ -11,7 +11,7 @@
  */
 
 import { createHash } from "node:crypto";
-import { execFile, spawn } from "node:child_process";
+import { execFile } from "node:child_process";
 import { unlink } from "node:fs/promises";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -32,10 +32,6 @@ import {
 
 const execFileAsync = promisify(execFile);
 const SCRIPT_PATH = fileURLToPath(import.meta.url);
-const RAILWAY_FILTER_SCRIPT = resolve(
-  REPOSITORY_ROOT,
-  "scripts/dime-railway-credential-filter.mjs"
-);
 const AUTH_CACHE_ROOT = resolve(REPOSITORY_ROOT, ".cache/dime-agent-auth");
 const COMMAND_TIMEOUT_MS = 90_000;
 const PAGE_TIMEOUT_MS = 35_000;
@@ -64,13 +60,18 @@ function safeRailwayEnvironment(scope) {
   });
 }
 
-export function railwayPlatformCredentialPlan(manifest, targets, role) {
+export function railwayPlatformCredentialPlan(
+  manifest,
+  targets,
+  role,
+  { headed = false } = {}
+) {
   invariant(ALLOWED_ROLES.has(role), `unknown platform role: ${role}`);
   invariant(
     manifest.platform.credentialSource.kind === "railway-service-variables" &&
       manifest.platform.credentialSource.service === "shared" &&
       manifest.platform.credentialSource.retrieval ===
-        "isolated-exact-role-filter",
+        "native-broker-exact-role-authentication",
     "Railway platform credential source is not pinned"
   );
   invariant(
@@ -79,24 +80,13 @@ export function railwayPlatformCredentialPlan(manifest, targets, role) {
         manifest.providers.railway.environmentId,
     "Railway platform target mismatch"
   );
-  const names = Object.values(manifest.platform.roles[role].environment);
   return {
     executable: SECURE_RAILWAY_EXECUTABLE,
-    args: [
-      "variable",
-      "list",
-      "--project",
-      targets.railway.project.id,
-      "--environment",
-      targets.railway.environment.id,
-      "--json",
-    ],
-    filterExecutable: "node",
-    filterArgs: [RAILWAY_FILTER_SCRIPT, JSON.stringify(names)],
-    names,
+    args: ["platform-auth", role, ...(headed ? ["--headed"] : [])],
+    names: Object.values(manifest.platform.roles[role].environment),
     scope: `railway-platform-${role}`,
     serviceId: null,
-    retrieval: "isolated-exact-role-filter",
+    retrieval: "native-broker-exact-role-authentication",
   };
 }
 
@@ -301,11 +291,7 @@ async function loginOnce(browser, manifest, expected, headed) {
   };
 }
 
-async function verifyWithBrowser(
-  manifest,
-  role,
-  { headed, credentialLoader }
-) {
+async function verifyWithBrowser(manifest, role, { headed, credentialLoader }) {
   await removeRoleCache(role);
   const { chromium } = await import("playwright");
   const browser = await chromium.launch({
@@ -373,96 +359,42 @@ async function verifyWithBrowser(
   }
 }
 
-async function readRailwayRoleCredentials(manifest, targets, role) {
-  await verifySecureRailwayBroker();
-  const plan = railwayPlatformCredentialPlan(manifest, targets, role);
-  let timeout;
-  try {
-    const source = spawn(plan.executable, plan.args, {
-      cwd: REPOSITORY_ROOT,
-      windowsHide: true,
-      env: safeRailwayEnvironment(plan.scope),
-      stdio: ["ignore", "pipe", "ignore"],
-    });
-    const filter = spawn(plan.filterExecutable, plan.filterArgs, {
-      cwd: REPOSITORY_ROOT,
-      windowsHide: true,
-      env: minimalEnvironment(),
-      stdio: ["pipe", "pipe", "ignore"],
-    });
-    source.stdout.pipe(filter.stdin);
-    filter.stdin.on("error", () => undefined);
-    const chunks = [];
-    let bytes = 0;
-    filter.stdout.on("data", chunk => {
-      bytes += chunk.length;
-      if (bytes > MAX_RAILWAY_CREDENTIAL_RESPONSE_BYTES) {
-        source.kill("SIGKILL");
-        filter.kill("SIGKILL");
-        return;
-      }
-      chunks.push(chunk);
-    });
-    const completion = child =>
-      new Promise(resolvePromise => {
-        child.once("error", () => resolvePromise({ code: null, error: true }));
-        child.once("close", code => resolvePromise({ code, error: false }));
-      });
-    timeout = setTimeout(() => {
-      source.kill("SIGKILL");
-      filter.kill("SIGKILL");
-    }, COMMAND_TIMEOUT_MS);
-    const [sourceResult, filterResult] = await Promise.all([
-      completion(source),
-      completion(filter),
-    ]);
+async function readPrivateCredentialInput(names) {
+  const chunks = [];
+  let bytes = 0;
+  for await (const chunk of process.stdin) {
+    bytes += chunk.length;
     invariant(
-      bytes <= MAX_RAILWAY_CREDENTIAL_RESPONSE_BYTES &&
-        sourceResult.code === 0 &&
-        sourceResult.error === false &&
-        filterResult.code === 0 &&
-        filterResult.error === false,
-      "Railway credential pipeline failed"
+      bytes <= MAX_RAILWAY_CREDENTIAL_RESPONSE_BYTES,
+      "private credential payload exceeded the size limit"
     );
-    const filtered = Buffer.concat(chunks, bytes);
-    for (const chunk of chunks) chunk.fill(0);
-    chunks.length = 0;
-    try {
-      return parseRailwayCredentialPayload(
-        filtered.toString("utf8").trim(),
-        plan.names
-      );
-    } finally {
-      filtered.fill(0);
-    }
-  } catch {
-    throw new Error(
-      `Railway credential source was unavailable for platform-${role}`
+    chunks.push(Buffer.from(chunk));
+  }
+  const payload = Buffer.concat(chunks, bytes);
+  for (const chunk of chunks) chunk.fill(0);
+  try {
+    return parseRailwayCredentialPayload(
+      payload.toString("utf8").trim(),
+      names
     );
   } finally {
-    if (timeout) clearTimeout(timeout);
+    payload.fill(0);
   }
 }
 
-async function runRailwayScopedProcess(role, passthrough) {
-  const scope = `railway-platform-${role}`;
-  const childArgs = [
-    SCRIPT_PATH,
-    "verify",
-    "--role",
-    role,
-    "--railway-active",
-    "--json",
-  ];
-  if (passthrough.refresh) childArgs.push("--refresh");
-  if (passthrough.headed) childArgs.push("--headed");
-  const result = await execFileAsync("node", childArgs, {
+async function runNativePlatformAuth(manifest, role, passthrough) {
+  const { manifest: targets } = await loadControlPlaneManifest();
+  await verifySecureRailwayBroker();
+  const plan = railwayPlatformCredentialPlan(manifest, targets, role, {
+    headed: passthrough.headed,
+  });
+  const result = await execFileAsync(plan.executable, plan.args, {
     cwd: REPOSITORY_ROOT,
     encoding: "utf8",
     timeout: passthrough.headed ? undefined : COMMAND_TIMEOUT_MS,
     maxBuffer: 2 * 1024 * 1024,
     windowsHide: true,
-    env: safeRailwayEnvironment(scope),
+    env: safeRailwayEnvironment(plan.scope),
   });
   return String(result.stdout ?? "").trim();
 }
@@ -475,7 +407,7 @@ function parseArguments(argv) {
   let refresh = false;
   let headed = false;
   let json = false;
-  let railwayActive = false;
+  let brokerActive = false;
   let help = false;
   while (values.length > 0) {
     const value = values.shift();
@@ -483,11 +415,11 @@ function parseArguments(argv) {
     else if (value === "--refresh") refresh = true;
     else if (value === "--headed") headed = true;
     else if (value === "--json") json = true;
-    else if (value === "--railway-active") railwayActive = true;
+    else if (value === "--broker-active") brokerActive = true;
     else if (value === "-h" || value === "--help") help = true;
     else throw new Error(`unknown option: ${value}`);
   }
-  return { command, role, refresh, headed, json, railwayActive, help };
+  return { command, role, refresh, headed, json, brokerActive, help };
 }
 
 function help() {
@@ -497,12 +429,11 @@ Usage:
   node scripts/dime-production-auth.mjs verify --role owner|user [--refresh] [--headed] [--json]
   node scripts/dime-production-auth.mjs invalidate --role owner|user
 
-Every explicit login uses a shell-free pipeline that sends the pinned Railway
-shared-variable response directly into an ephemeral exact-role filter.
-Only the selected role's three reviewed values reach the login process. The
-command attempts at most one login, verifies appUsers.me, and never prints,
-persists, or caches credential or browser-session values. Production login is
-explicit and does not authorize any other remote mutation.`;
+Every explicit login delegates to the independently provenance-pinned native
+broker. The broker captures the full Railway map privately, selects the exact
+role triple inside native code, and sends only that triple to this fixed child
+over private standard input. No variable map or credential value is printed.
+Production login is explicit and does not authorize any other remote mutation.`;
 }
 
 async function main() {
@@ -525,23 +456,23 @@ async function main() {
 
   const scope = `railway-platform-${args.role}`;
   if (process.env[SOURCE_MARKER] !== scope) {
-    const output = await runRailwayScopedProcess(args.role, args);
+    invariant(
+      !args.brokerActive,
+      "--broker-active is reserved for the provenance-pinned native broker"
+    );
+    const output = await runNativePlatformAuth(manifest, args.role, args);
     process.stdout.write(`${output}\n`);
     return;
   }
   invariant(
-    args.railwayActive,
-    "Railway source marker requires --railway-active"
+    args.brokerActive,
+    "Railway source marker requires --broker-active"
   );
-  const { manifest: targets } = await loadControlPlaneManifest();
+  const names = Object.values(manifest.platform.roles[args.role].environment);
   const result = await verifyWithBrowser(manifest, args.role, {
     headed: args.headed,
     credentialLoader: async () => {
-      const environment = await readRailwayRoleCredentials(
-        manifest,
-        targets,
-        args.role
-      );
+      const environment = await readPrivateCredentialInput(names);
       try {
         return expectedPlatformIdentity(manifest, args.role, environment);
       } finally {

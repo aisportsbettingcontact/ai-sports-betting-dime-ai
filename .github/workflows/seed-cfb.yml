@@ -8,6 +8,9 @@ on:
         type: boolean
         default: false
 
+permissions:
+  contents: read
+
 jobs:
   seed-cfb:
     runs-on: ubuntu-latest

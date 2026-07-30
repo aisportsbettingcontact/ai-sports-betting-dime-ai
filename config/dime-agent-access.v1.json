@@ -16,7 +16,7 @@
     "credentialSource": {
       "kind": "railway-service-variables",
       "service": "shared",
-      "retrieval": "isolated-exact-role-filter",
+      "retrieval": "native-broker-exact-role-authentication",
       "plaintextCacheAllowed": false
     },
     "roles": {
@@ -72,34 +72,72 @@
         "hf-training": {
           "credentialName": "dime-training-read-v1",
           "tokenRole": "fineGrained",
-          "brokerEnvFile": ".env.agent.hf-training.1password"
+          "brokerEnvFile": ".env.agent.hf-training.1password",
+          "onePasswordReference": {
+            "vault": "Dime Infrastructure",
+            "item": "dime-training-read-v1",
+            "section": null,
+            "field": "credential"
+          }
         },
         "hf-serving": {
           "credentialName": "dime-serving-read-v1",
           "tokenRole": "fineGrained",
-          "brokerEnvFile": ".env.agent.hf-serving.1password"
+          "brokerEnvFile": ".env.agent.hf-serving.1password",
+          "onePasswordReference": {
+            "vault": "Dime Infrastructure",
+            "item": "dime-serving-read-v1",
+            "section": null,
+            "field": "credential"
+          }
         },
         "hf-release-publisher": {
           "credentialName": "dime-release-publisher-v1",
           "tokenRole": "fineGrained",
-          "brokerEnvFile": ".env.agent.hf-release-publisher.1password"
+          "brokerEnvFile": ".env.agent.hf-release-publisher.1password",
+          "onePasswordReference": {
+            "vault": "Dime Infrastructure",
+            "item": "dime-release-publisher-v1",
+            "section": null,
+            "field": "credential"
+          }
         },
         "hf-locked-evaluator": {
           "credentialName": "dime-locked-evaluator-read-v1",
           "tokenRole": "fineGrained",
-          "brokerEnvFile": ".env.agent.hf-locked-evaluator.1password"
+          "brokerEnvFile": ".env.agent.hf-locked-evaluator.1password",
+          "onePasswordReference": {
+            "vault": "Dime Infrastructure",
+            "item": "dime-locked-evaluator-read-v1",
+            "section": null,
+            "field": "credential"
+          }
         },
         "hf-locked-publisher": {
           "credentialName": "dime-locked-publisher-v1",
           "tokenRole": "fineGrained",
-          "brokerEnvFile": ".env.agent.hf-locked-publisher.1password"
+          "brokerEnvFile": ".env.agent.hf-locked-publisher.1password",
+          "onePasswordReference": {
+            "vault": "Dime Infrastructure",
+            "item": "dime-locked-publisher-v1",
+            "section": null,
+            "field": "credential"
+          }
         }
       }
     },
     "runPod": {
       "credentialName": "dime-control-plane-read-v1",
-      "permissionContract": "restricted-read-only",
+      "permissionContract": "permission-unverified",
+      "identityVerified": false,
+      "permissionsVerified": false,
       "brokerEnvFile": ".env.agent.runpod.1password",
+      "onePasswordReference": {
+        "vault": "Dime Infrastructure",
+        "item": "Run Pod - dime-control-plane-read-v1",
+        "section": null,
+        "field": "credential"
+      },
       "verificationEndpoint": "https://rest.runpod.io/v1/endpoints?includeTemplate=false&includeWorkers=false",
       "verificationMethod": "GET_BEARER"
     }

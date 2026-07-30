@@ -41,9 +41,14 @@ The ignored local capsule is:
 .cache/dime-control-plane/status-v1.json
 ```
 
-It is written atomically with mode `0600`, tied to the SHA-256 of the target
-manifest, and considered fresh for 300 seconds. Concurrent refreshes use an
-expiring local lock so parallel tasks do not repeat the same remote reads.
+An existing capsule is accepted only when it is mode `0600`, wrapped in an
+Ed25519 signature, tied to the SHA-256 of the target manifest, and signed under
+the root-owned public key at
+`/Library/Application Support/DimeAI/trust/cache/cache-ed25519-public.pem`.
+There is intentionally no same-user signing oracle: until an independently
+attested writer exists, the live result is returned without persistence.
+Unsigned cache state is never accepted. Concurrent refreshes use an expiring
+local lock.
 
 ## Pinned connection
 
@@ -72,9 +77,11 @@ The command:
   override;
 - validates the local `origin` before remote inspection;
 - passes explicit Railway project, environment, and service IDs every time;
-- retrieves the Railway credential only inside the signed, mode-`0500`
-  `dime-railway-keychain` broker from a device-only, non-synchronizing macOS
-  Keychain item;
+- retrieves the Railway credential only inside the independently hash-pinned,
+  mode-`0500` `dime-railway-keychain` broker from a device-only,
+  non-synchronizing macOS Keychain item;
+- resolves security-sensitive executables to canonical absolute paths and
+  verifies their reviewed signing identity or root-owned SHA-256 provenance;
 - verifies the Railway workspace, project name, environment name, service
   names, application sources, and database image family;
 - stores only normalized metadata, health digests, status codes, and latency;
@@ -87,23 +94,32 @@ Only these secure Railway broker forms exist in the implementation:
 
 ```text
 dime-railway-keychain status
-dime-railway-keychain project status --project <pinned>
+dime-railway-keychain status --project <pinned>
   --environment <pinned> --json
 dime-railway-keychain deployment list --project <pinned>
   --environment <pinned>
   --service <pinned> --limit 1 --json
-dime-railway-keychain variable list --project <pinned>
-  --environment <pinned> --json
+dime-railway-keychain platform-auth owner
+dime-railway-keychain platform-auth user
 ```
 
-The connection capsule never calls the shared-variable form. It exists only as
-the source side of the explicit production-login pipeline: raw stdout is piped
-directly into the reviewed exact-role filter, and no raw variable map enters
-the agent process or cache. There is no implementation for `link`, `connect`,
-`run`, service-scoped variables, `up`, `redeploy`, restart, delete, database
-access, or source changes.
+The generic broker cannot invoke `railway variable list`. The dedicated
+production-login operations capture the complete response inside the native
+broker with Railway standard error redirected away from the terminal, select
+the exact role triple in native code, and pass only that triple to the
+provenance-pinned authentication child through a private pipe. Neither the raw
+map nor the selected values enter the agent process, terminal, or cache. There
+is no implementation for `link`, `connect`, `run`, service-scoped variables,
+`up`, `redeploy`, restart, delete, database access, or source changes.
 
 The broker directory is mode `0700`; the executable is mode `0500`.
+Credential execution additionally requires a root-owned mode-`0444` SHA-256
+pin outside the repository. Installation produces only an untrusted candidate
+manifest and reports `BLOCKED_PENDING_INDEPENDENT_ADMIN_PROVENANCE`; a
+same-user install or ad-hoc signature cannot authorize credential access.
+Candidate generation writes `dime-railway-keychain.candidate` and leaves the
+active broker unchanged. An independently administered promotion must install
+the reviewed candidate and matching root-owned pin as one controlled action.
 Railway CLI subprocesses receive a separate mode-`0700` broker home, preventing
 them from reading or repopulating the user's normal `~/.railway` state.
 `~/.railway/config.json` is retained only as a non-secret CLI configuration
@@ -151,6 +167,8 @@ doctor, a passing check rollup, or deployment parity.
 - Remote refresh failure without a prior capsule: fail with no inferred state.
 - Manifest change: invalidate the old capsule automatically because its
   checksum no longer matches.
+- Forged or edited capsule: reject it because the Ed25519 signature no longer
+  verifies.
 - Interrupted writer: atomic rename preserves the previous complete capsule.
 - Abandoned lock: remove it only after its reviewed maximum age.
 

@@ -29,10 +29,7 @@
     "cache": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "identityTtlSeconds",
-        "productionAuthPersistenceAllowed"
-      ],
+      "required": ["identityTtlSeconds", "productionAuthPersistenceAllowed"],
       "properties": {
         "identityTtlSeconds": {
           "type": "integer",
@@ -84,7 +81,7 @@
               "const": "shared"
             },
             "retrieval": {
-              "const": "isolated-exact-role-filter"
+              "const": "native-broker-exact-role-authentication"
             },
             "plaintextCacheAllowed": {
               "const": false
@@ -234,7 +231,32 @@
               "const": "ml/dime-1.0/configs/platform_contract.json"
             },
             "scopes": {
-              "type": "object"
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "hf-training",
+                "hf-serving",
+                "hf-release-publisher",
+                "hf-locked-evaluator",
+                "hf-locked-publisher"
+              ],
+              "properties": {
+                "hf-training": {
+                  "$ref": "#/$defs/hfTraining"
+                },
+                "hf-serving": {
+                  "$ref": "#/$defs/hfServing"
+                },
+                "hf-release-publisher": {
+                  "$ref": "#/$defs/hfReleasePublisher"
+                },
+                "hf-locked-evaluator": {
+                  "$ref": "#/$defs/hfLockedEvaluator"
+                },
+                "hf-locked-publisher": {
+                  "$ref": "#/$defs/hfLockedPublisher"
+                }
+              }
             }
           }
         },
@@ -244,7 +266,10 @@
           "required": [
             "credentialName",
             "permissionContract",
+            "identityVerified",
+            "permissionsVerified",
             "brokerEnvFile",
+            "onePasswordReference",
             "verificationEndpoint",
             "verificationMethod"
           ],
@@ -253,10 +278,24 @@
               "const": "dime-control-plane-read-v1"
             },
             "permissionContract": {
-              "const": "restricted-read-only"
+              "const": "permission-unverified"
+            },
+            "identityVerified": {
+              "const": false
+            },
+            "permissionsVerified": {
+              "const": false
             },
             "brokerEnvFile": {
               "const": ".env.agent.runpod.1password"
+            },
+            "onePasswordReference": {
+              "const": {
+                "vault": "Dime Infrastructure",
+                "item": "Run Pod - dime-control-plane-read-v1",
+                "section": null,
+                "field": "credential"
+              }
             },
             "verificationEndpoint": {
               "const": "https://rest.runpod.io/v1/endpoints?includeTemplate=false&includeWorkers=false"
@@ -334,6 +373,71 @@
     }
   },
   "$defs": {
+    "hfTraining": {
+      "const": {
+        "credentialName": "dime-training-read-v1",
+        "tokenRole": "fineGrained",
+        "brokerEnvFile": ".env.agent.hf-training.1password",
+        "onePasswordReference": {
+          "vault": "Dime Infrastructure",
+          "item": "dime-training-read-v1",
+          "section": null,
+          "field": "credential"
+        }
+      }
+    },
+    "hfServing": {
+      "const": {
+        "credentialName": "dime-serving-read-v1",
+        "tokenRole": "fineGrained",
+        "brokerEnvFile": ".env.agent.hf-serving.1password",
+        "onePasswordReference": {
+          "vault": "Dime Infrastructure",
+          "item": "dime-serving-read-v1",
+          "section": null,
+          "field": "credential"
+        }
+      }
+    },
+    "hfReleasePublisher": {
+      "const": {
+        "credentialName": "dime-release-publisher-v1",
+        "tokenRole": "fineGrained",
+        "brokerEnvFile": ".env.agent.hf-release-publisher.1password",
+        "onePasswordReference": {
+          "vault": "Dime Infrastructure",
+          "item": "dime-release-publisher-v1",
+          "section": null,
+          "field": "credential"
+        }
+      }
+    },
+    "hfLockedEvaluator": {
+      "const": {
+        "credentialName": "dime-locked-evaluator-read-v1",
+        "tokenRole": "fineGrained",
+        "brokerEnvFile": ".env.agent.hf-locked-evaluator.1password",
+        "onePasswordReference": {
+          "vault": "Dime Infrastructure",
+          "item": "dime-locked-evaluator-read-v1",
+          "section": null,
+          "field": "credential"
+        }
+      }
+    },
+    "hfLockedPublisher": {
+      "const": {
+        "credentialName": "dime-locked-publisher-v1",
+        "tokenRole": "fineGrained",
+        "brokerEnvFile": ".env.agent.hf-locked-publisher.1password",
+        "onePasswordReference": {
+          "vault": "Dime Infrastructure",
+          "item": "dime-locked-publisher-v1",
+          "section": null,
+          "field": "credential"
+        }
+      }
+    },
     "environmentTriple": {
       "type": "object",
       "additionalProperties": false,

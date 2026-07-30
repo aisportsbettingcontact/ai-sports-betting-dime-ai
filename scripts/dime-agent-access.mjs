@@ -11,19 +11,19 @@
 
 import { createHash } from "node:crypto";
 import { execFile } from "node:child_process";
-import {
-  mkdir,
-  lstat,
-  open,
-  readFile,
-  rename,
-  stat,
-  unlink,
-  writeFile,
-} from "node:fs/promises";
+import { mkdir, lstat, open, readFile, stat, unlink } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
+
+import {
+  fixedMinimalEnvironment,
+  resolveTrustedExecutable,
+} from "./lib/dime-trusted-executables.mjs";
+import {
+  readIntegrityProtectedJson,
+  tryWriteIntegrityProtectedJson,
+} from "./lib/dime-integrity-envelope.mjs";
 
 const execFileAsync = promisify(execFile);
 const SCRIPT_PATH = fileURLToPath(import.meta.url);
@@ -113,6 +113,28 @@ function validateBrokerFile(value, label) {
   );
 }
 
+function validateOnePasswordReference(reference, expectedItem, label) {
+  requireExactKeys(reference, ["vault", "item", "section", "field"], label);
+  invariant(
+    reference.vault === "Dime Infrastructure",
+    `${label}.vault is invalid`
+  );
+  invariant(reference.item === expectedItem, `${label}.item is invalid`);
+  invariant(reference.section === null, `${label}.section is invalid`);
+  invariant(reference.field === "credential", `${label}.field is invalid`);
+}
+
+function onePasswordReferenceValue(reference) {
+  return `op://${[
+    reference.vault,
+    reference.item,
+    reference.section,
+    reference.field,
+  ]
+    .filter(segment => segment !== null)
+    .join("/")}`;
+}
+
 export function validateAccessManifest(manifest) {
   requireExactKeys(
     manifest,
@@ -191,7 +213,7 @@ export function validateAccessManifest(manifest) {
     manifest.platform.credentialSource.kind === "railway-service-variables" &&
       manifest.platform.credentialSource.service === "shared" &&
       manifest.platform.credentialSource.retrieval ===
-        "isolated-exact-role-filter" &&
+        "native-broker-exact-role-authentication" &&
       manifest.platform.credentialSource.plaintextCacheAllowed === false,
     "platform credential source contract is invalid"
   );
@@ -286,7 +308,7 @@ export function validateAccessManifest(manifest) {
   for (const [scope, config] of Object.entries(hfScopes)) {
     requireExactKeys(
       config,
-      ["credentialName", "tokenRole", "brokerEnvFile"],
+      ["credentialName", "tokenRole", "brokerEnvFile", "onePasswordReference"],
       `huggingFace.scopes.${scope}`
     );
     invariant(
@@ -294,6 +316,11 @@ export function validateAccessManifest(manifest) {
       `${scope} must require a fine-grained token`
     );
     validateBrokerFile(config.brokerEnvFile, `${scope}.brokerEnvFile`);
+    validateOnePasswordReference(
+      config.onePasswordReference,
+      config.credentialName,
+      `${scope}.onePasswordReference`
+    );
     brokerFiles.push(config.brokerEnvFile);
   }
   invariant(
@@ -312,8 +339,24 @@ export function validateAccessManifest(manifest) {
   );
 
   const runPod = manifest.providers.runPod;
+  requireExactKeys(
+    runPod,
+    [
+      "credentialName",
+      "permissionContract",
+      "identityVerified",
+      "permissionsVerified",
+      "brokerEnvFile",
+      "onePasswordReference",
+      "verificationEndpoint",
+      "verificationMethod",
+    ],
+    "runPod"
+  );
   invariant(
-    runPod.permissionContract === "restricted-read-only",
+    runPod.permissionContract === "permission-unverified" &&
+      runPod.identityVerified === false &&
+      runPod.permissionsVerified === false,
     "RunPod permission contract is invalid"
   );
   invariant(
@@ -326,6 +369,11 @@ export function validateAccessManifest(manifest) {
     "RunPod verification method is invalid"
   );
   validateBrokerFile(runPod.brokerEnvFile, "runPod.brokerEnvFile");
+  validateOnePasswordReference(
+    runPod.onePasswordReference,
+    `Run Pod - ${runPod.credentialName}`,
+    "runPod.onePasswordReference"
+  );
   brokerFiles.push(runPod.brokerEnvFile);
   invariant(
     new Set(brokerFiles).size === brokerFiles.length,
@@ -419,33 +467,11 @@ function copyEnvironment(names) {
 }
 
 export function minimalEnvironment(extra = {}) {
-  return {
-    ...copyEnvironment([
-      "HOME",
-      "PATH",
-      "TMPDIR",
-      "USER",
-      "LOGNAME",
-      "SHELL",
-      "LANG",
-      "LC_ALL",
-      "XDG_CONFIG_HOME",
-      "XDG_CACHE_HOME",
-      "SSH_AUTH_SOCK",
-    ]),
-    NO_COLOR: "1",
-    PAGER: "cat",
-    ...extra,
-  };
+  return fixedMinimalEnvironment(extra);
 }
 
 function controlPlaneEnvironment() {
   return minimalEnvironment({
-    ...copyEnvironment([
-      "GH_TOKEN",
-      "GITHUB_TOKEN",
-      "GH_CONFIG_DIR",
-    ]),
     GH_PAGER: "cat",
   });
 }
@@ -509,20 +535,11 @@ async function runJson(executable, args, options = {}) {
 }
 
 async function runControlPlane(command, args = []) {
-  return runJson("node", [CONTROL_PLANE_SCRIPT, command, ...args], {
+  const node = await resolveTrustedExecutable("node");
+  return runJson(node.path, [CONTROL_PLANE_SCRIPT, command, ...args], {
     env: controlPlaneEnvironment(),
     acceptExitCode2: command === "context",
   });
-}
-
-async function atomicWriteJson(path, value) {
-  await mkdir(dirname(path), { recursive: true, mode: 0o700 });
-  const temporary = `${path}.${process.pid}.${Date.now()}.tmp`;
-  await writeFile(temporary, `${JSON.stringify(value, null, 2)}\n`, {
-    encoding: "utf8",
-    mode: 0o600,
-  });
-  await rename(temporary, path);
 }
 
 async function acquireCacheLock() {
@@ -586,7 +603,7 @@ export function accessCacheState(cache, manifestSha256, nowMs = Date.now()) {
 
 async function readAccessCache(manifestSha256, allowStale = false) {
   try {
-    const cache = JSON.parse(await readFile(ACCESS_CACHE_PATH, "utf8"));
+    const cache = await readIntegrityProtectedJson(ACCESS_CACHE_PATH);
     const state = accessCacheState(cache, manifestSha256);
     if (!state.valid || (!state.fresh && !allowStale)) return null;
     return {
@@ -597,9 +614,8 @@ async function readAccessCache(manifestSha256, allowStale = false) {
         ageSeconds: state.ageSeconds,
       },
     };
-  } catch (error) {
-    if (error?.code === "ENOENT" || error instanceof SyntaxError) return null;
-    throw error;
+  } catch {
+    return null;
   }
 }
 
@@ -608,7 +624,19 @@ function expectedBrokerVariable(scope) {
   return EXPECTED_HF_SCOPES.has(scope) ? "HF_TOKEN" : "RUNPOD_API_KEY";
 }
 
-function validateBrokerReference(contents, expectedVariable) {
+function expectedBrokerReference(manifest, scope) {
+  invariant(CREDENTIAL_SCOPES.has(scope), `unknown credential scope: ${scope}`);
+  const reference = EXPECTED_HF_SCOPES.has(scope)
+    ? manifest.providers.huggingFace.scopes[scope].onePasswordReference
+    : manifest.providers.runPod.onePasswordReference;
+  return onePasswordReferenceValue(reference);
+}
+
+export function validateBrokerReference(
+  contents,
+  expectedVariable,
+  expectedReference
+) {
   invariant(
     expectedVariable === "HF_TOKEN" || expectedVariable === "RUNPOD_API_KEY",
     "broker reference variable is invalid"
@@ -629,25 +657,27 @@ function validateBrokerReference(contents, expectedVariable) {
     lines[0].startsWith(prefix),
     `broker reference file must assign only ${expectedVariable}`
   );
-  const reference = lines[0].slice(prefix.length);
   invariant(
-    reference.startsWith("op://") &&
-      reference.length <= 4_096 &&
-      !/[\u0000-\u001f\u007f]/.test(reference),
-    "broker reference value must be one 1Password secret reference"
-  );
-  const segments = reference.slice("op://".length).split("/");
-  invariant(
-    (segments.length === 3 || segments.length === 4) &&
-      segments.every(segment => segment.trim().length > 0),
-    "broker reference value must identify one vault, item, and field"
+    typeof expectedReference === "string" &&
+      expectedReference.startsWith("op://") &&
+      expectedReference.length <= 4_096 &&
+      !/[\u0000-\u001f\u007f]/.test(expectedReference) &&
+      lines[0] === `${expectedVariable}="${expectedReference}"`,
+    "broker reference must match the exact reviewed vault, item, section, and field"
   );
 }
 
-export async function secureBrokerFile(path, expectedVariable) {
+export async function secureBrokerFile(
+  path,
+  expectedVariable,
+  expectedReference
+) {
   try {
     const info = await lstat(path);
-    invariant(!info.isSymbolicLink(), "broker reference path must not be a symlink");
+    invariant(
+      !info.isSymbolicLink(),
+      "broker reference path must not be a symlink"
+    );
     invariant(info.isFile(), "broker reference path must be a regular file");
     invariant(info.size <= 8 * 1024, "broker reference file is too large");
     invariant(
@@ -658,7 +688,11 @@ export async function secureBrokerFile(path, expectedVariable) {
       info.uid === process.getuid(),
       "broker reference file ownership mismatch"
     );
-    validateBrokerReference(await readFile(path, "utf8"), expectedVariable);
+    validateBrokerReference(
+      await readFile(path, "utf8"),
+      expectedVariable,
+      expectedReference
+    );
     return true;
   } catch (error) {
     if (error?.code === "ENOENT") return false;
@@ -666,11 +700,15 @@ export async function secureBrokerFile(path, expectedVariable) {
   }
 }
 
-async function brokerFileState(name, scope) {
+async function brokerFileState(manifest, name, scope) {
   const path = resolve(REPOSITORY_ROOT, name);
   try {
     return {
-      configured: await secureBrokerFile(path, expectedBrokerVariable(scope)),
+      configured: await secureBrokerFile(
+        path,
+        expectedBrokerVariable(scope),
+        expectedBrokerReference(manifest, scope)
+      ),
       securePermissions: true,
     };
   } catch (error) {
@@ -706,11 +744,16 @@ export function credentialContractSha256(manifest, scope) {
         credentialName:
           manifest.providers.huggingFace.scopes[scope].credentialName,
         tokenRole: manifest.providers.huggingFace.scopes[scope].tokenRole,
+        onePasswordReference:
+          manifest.providers.huggingFace.scopes[scope].onePasswordReference,
       }
     : {
         provider: "runpod",
         credentialName: manifest.providers.runPod.credentialName,
         permissionContract: manifest.providers.runPod.permissionContract,
+        identityVerified: manifest.providers.runPod.identityVerified,
+        permissionsVerified: manifest.providers.runPod.permissionsVerified,
+        onePasswordReference: manifest.providers.runPod.onePasswordReference,
         verificationEndpoint: manifest.providers.runPod.verificationEndpoint,
         verificationMethod: manifest.providers.runPod.verificationMethod,
       };
@@ -789,14 +832,11 @@ export function normalizeRunPodIdentity(identity, credentialName) {
     "RunPod identity email is missing"
   );
   return {
-    status: "PASS",
-    credentialName,
-    identityFingerprint: sha256(`${identity.id}\0${identity.email}`).slice(
-      0,
-      16
-    ),
-    permissionContract: "restricted-read-only",
-    authorization: "IDENTITY_ONLY",
+    status: "CREDENTIAL_PRESENT_PERMISSION_UNVERIFIED",
+    configuredCredentialName: credentialName,
+    identityVerified: false,
+    permissionsVerified: false,
+    authorization: "NONE",
   };
 }
 
@@ -843,8 +883,9 @@ export function normalizeOnePasswordDesktopAccess(accounts, vaults) {
 }
 
 async function inspectOnePassword() {
+  const op = await resolveTrustedExecutable("op");
   try {
-    const identity = await runJson("op", ["whoami", "--format=json"], {
+    const identity = await runJson(op.path, ["whoami", "--format=json"], {
       env: brokerEnvironment(),
     });
     let accountHost = null;
@@ -862,16 +903,20 @@ async function inspectOnePassword() {
   } catch (identityError) {
     try {
       const accounts = await runJson(
-        "op",
+        op.path,
         ["account", "list", "--format=json"],
         {
           env: brokerEnvironment(),
         }
       );
-      const vaults = await runJson("op", ["vault", "list", "--format=json"], {
-        env: brokerEnvironment(),
-        timeoutMs: BROKER_TIMEOUT_MS,
-      });
+      const vaults = await runJson(
+        op.path,
+        ["vault", "list", "--format=json"],
+        {
+          env: brokerEnvironment(),
+          timeoutMs: BROKER_TIMEOUT_MS,
+        }
+      );
       return normalizeOnePasswordDesktopAccess(accounts, vaults);
     } catch (desktopError) {
       return {
@@ -894,8 +939,9 @@ async function inspectAws(manifest) {
     "AWS profile is not in the reviewed allowlist"
   );
   try {
+    const executable = await resolveTrustedExecutable("aws");
     const identity = await runJson(
-      aws.cli,
+      executable.path,
       [
         "sts",
         "get-caller-identity",
@@ -945,7 +991,10 @@ async function allBrokerStates(manifest) {
     await Promise.all(
       entries.map(async ([scope, file]) => [
         scope,
-        { brokerEnvFile: file, ...(await brokerFileState(file, scope)) },
+        {
+          brokerEnvFile: file,
+          ...(await brokerFileState(manifest, file, scope)),
+        },
       ])
     )
   );
@@ -965,25 +1014,25 @@ function newCache(manifestSha256, ttlSeconds, previous = null) {
 }
 
 async function saveCredentialResult(manifest, scope, result) {
-  await atomicWriteJson(resolve(CREDENTIAL_CACHE_ROOT, `${scope}.json`), {
-    schemaVersion: 1,
-    kind: "dime-agent-credential-evidence",
-    scope,
-    contractSha256: credentialContractSha256(manifest, scope),
-    verifiedAt: new Date().toISOString(),
-    result,
-  });
+  await tryWriteIntegrityProtectedJson(
+    resolve(CREDENTIAL_CACHE_ROOT, `${scope}.json`),
+    {
+      schemaVersion: 1,
+      kind: "dime-agent-credential-evidence",
+      scope,
+      contractSha256: credentialContractSha256(manifest, scope),
+      verifiedAt: new Date().toISOString(),
+      result,
+    }
+  );
 }
 
 async function readCredentialEvidence(manifest) {
   const entries = await Promise.all(
     [...CREDENTIAL_SCOPES].map(async scope => {
       try {
-        const evidence = JSON.parse(
-          await readFile(
-            resolve(CREDENTIAL_CACHE_ROOT, `${scope}.json`),
-            "utf8"
-          )
+        const evidence = await readIntegrityProtectedJson(
+          resolve(CREDENTIAL_CACHE_ROOT, `${scope}.json`)
         );
         invariant(
           evidence?.schemaVersion === 1 &&
@@ -991,7 +1040,10 @@ async function readCredentialEvidence(manifest) {
             evidence?.scope === scope &&
             evidence?.contractSha256 ===
               credentialContractSha256(manifest, scope) &&
-            evidence?.result?.status === "PASS",
+            (evidence?.result?.status === "PASS" ||
+              (scope === "runpod" &&
+                evidence?.result?.status ===
+                  "CREDENTIAL_PRESENT_PERMISSION_UNVERIFIED")),
           "credential evidence contract mismatch"
         );
         return [
@@ -1002,10 +1054,7 @@ async function readCredentialEvidence(manifest) {
             contractSha256: evidence.contractSha256,
           },
         ];
-      } catch (error) {
-        if (error?.code === "ENOENT" || error instanceof SyntaxError) {
-          return [scope, null];
-        }
+      } catch {
         return [scope, null];
       }
     })
@@ -1050,12 +1099,18 @@ async function runDoctor(manifest, manifestSha256) {
     platformCredentials,
     brokerFiles,
   };
-  await atomicWriteJson(ACCESS_CACHE_PATH, next);
+  const cachePersisted = await tryWriteIntegrityProtectedJson(
+    ACCESS_CACHE_PATH,
+    next
+  );
   return {
     schemaVersion: 1,
     kind: "dime-agent-access-doctor",
     generatedAt: next.generatedAt,
     manifestSha256,
+    cacheIntegrity: cachePersisted
+      ? "SIGNED_AND_VERIFIED"
+      : "UNPERSISTED_TRUST_UNAVAILABLE",
     overall:
       controlPlane.summary?.connection === "PASS" &&
       onePassword.status === "PASS" &&
@@ -1154,28 +1209,48 @@ async function verifyRunPodCredential(manifest) {
   const payload = JSON.parse(body);
   invariant(Array.isArray(payload), "RunPod verification response is invalid");
   const result = {
-    status: "PASS",
-    credentialName: runPod.credentialName,
-    permissionContract: "restricted-read-only",
-    authorization: "READ_ACCESS_ONLY",
+    status: "CREDENTIAL_PRESENT_PERMISSION_UNVERIFIED",
+    configuredCredentialName: runPod.credentialName,
+    identityVerified: false,
+    permissionsVerified: false,
+    authorization: "NONE",
     accessibleEndpointCount: payload.length,
   };
   await saveCredentialResult(manifest, "runpod", result);
   return result;
 }
 
-export function credentialBrokerPlan(manifest, scope) {
+export async function credentialBrokerPlan(
+  manifest,
+  scope,
+  { executableResolver = resolveTrustedExecutable } = {}
+) {
   invariant(CREDENTIAL_SCOPES.has(scope), `unknown credential scope: ${scope}`);
   const brokerEnvFile = EXPECTED_HF_SCOPES.has(scope)
     ? manifest.providers.huggingFace.scopes[scope].brokerEnvFile
     : manifest.providers.runPod.brokerEnvFile;
+  const [op, node, environmentLauncher] = await Promise.all([
+    executableResolver("op"),
+    executableResolver("node"),
+    executableResolver("env"),
+  ]);
   return {
-    executable: "op",
+    executable: op.path,
+    executableSha256: op.sha256,
     args: [
       "run",
       `--env-file=${resolve(REPOSITORY_ROOT, brokerEnvFile)}`,
       "--",
-      "node",
+      environmentLauncher.path,
+      "-u",
+      "OP_SERVICE_ACCOUNT_TOKEN",
+      "-u",
+      "OP_CONNECT_HOST",
+      "-u",
+      "OP_CONNECT_TOKEN",
+      "-u",
+      "OP_ACCOUNT",
+      node.path,
       SCRIPT_PATH,
       "credential",
       "--scope",
@@ -1188,10 +1263,14 @@ export function credentialBrokerPlan(manifest, scope) {
 }
 
 async function brokerCredential(manifest, scope) {
-  const plan = credentialBrokerPlan(manifest, scope);
+  const plan = await credentialBrokerPlan(manifest, scope);
   const path = resolve(REPOSITORY_ROOT, plan.brokerEnvFile);
   invariant(
-    await secureBrokerFile(path, expectedBrokerVariable(scope)),
+    await secureBrokerFile(
+      path,
+      expectedBrokerVariable(scope),
+      expectedBrokerReference(manifest, scope)
+    ),
     `missing broker reference file: ${plan.brokerEnvFile}`
   );
   const output = await run(plan.executable, plan.args, {
@@ -1224,8 +1303,9 @@ function isolatedCredentialEnvironment(scope) {
 async function verifyInjectedCredential(scope) {
   const environment = isolatedCredentialEnvironment(scope);
   if (!environment) return null;
+  const node = await resolveTrustedExecutable("node");
   const output = await run(
-    "node",
+    node.path,
     [SCRIPT_PATH, "credential", "--scope", scope, "--broker-active", "--json"],
     {
       env: environment,

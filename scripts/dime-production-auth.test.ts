@@ -11,7 +11,6 @@ import {
   railwayPlatformCredentialPlan,
   verifyPlatformIdentity,
 } from "./dime-production-auth.mjs";
-import { filterRailwayVariableMap } from "./dime-railway-credential-filter.mjs";
 
 async function fixture() {
   return structuredClone((await loadAccessManifest()).manifest);
@@ -32,10 +31,8 @@ test("owner and user Railway reads remain role-separated and target-pinned", asy
   const user = railwayPlatformCredentialPlan(manifest, targets, "user");
   assert.match(owner.executable, /dime-railway-keychain$/);
   assert.match(user.executable, /dime-railway-keychain$/);
-  assert.deepEqual(owner.args.slice(0, 2), ["variable", "list"]);
-  assert.equal(owner.args.includes(targets.railway.project.id), true);
-  assert.equal(owner.args.includes(targets.railway.environment.id), true);
-  assert.equal(owner.args.includes("--service"), false);
+  assert.deepEqual(owner.args, ["platform-auth", "owner"]);
+  assert.deepEqual(user.args, ["platform-auth", "user"]);
   assert.equal(owner.serviceId, null);
   assert.deepEqual(
     owner.names,
@@ -47,13 +44,7 @@ test("owner and user Railway reads remain role-separated and target-pinned", asy
   );
   assert.equal(owner.scope, "railway-platform-owner");
   assert.equal(user.scope, "railway-platform-user");
-  assert.equal(owner.filterExecutable, "node");
-  assert.match(owner.filterArgs[0], /dime-railway-credential-filter\.mjs$/);
-  assert.deepEqual(owner.args.slice(-3), [
-    "--environment",
-    targets.railway.environment.id,
-    "--json",
-  ]);
+  assert.equal(owner.retrieval, "native-broker-exact-role-authentication");
   assert.equal(
     owner.args.some(value => ["shell", "run"].includes(value)),
     false
@@ -64,13 +55,6 @@ test("Railway credential payload accepts only the exact role triple", async () =
   const manifest = await fixture();
   const names = Object.values(manifest.platform.roles.owner.environment);
   const environment = ownerEnvironment();
-  const raw = {
-    ...environment,
-    DATABASE_URL: "must-not-cross",
-  };
-  const selected = filterRailwayVariableMap(raw, names);
-  assert.deepEqual(selected, environment);
-  assert.equal(raw.DATABASE_URL, null);
   assert.deepEqual(
     parseRailwayCredentialPayload(JSON.stringify(environment), names),
     environment
@@ -145,7 +129,6 @@ test("authenticated identity must match email, username, role, and access", asyn
       ),
     /role identity mismatch/
   );
-
 });
 
 test("production auth source pins the origin, identity endpoint, selectors, and one-attempt contract", async () => {
