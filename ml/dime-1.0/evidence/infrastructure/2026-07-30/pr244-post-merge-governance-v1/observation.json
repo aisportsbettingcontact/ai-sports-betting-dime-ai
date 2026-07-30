@@ -1,0 +1,221 @@
+{
+  "schemaVersion": "dime-pr244-post-merge-governance-evidence-v1",
+  "evidenceId": "pr-244-railway-production-parity-2026-07-29",
+  "classification": "sanitized_production_deployment_evidence",
+  "observedAt": "2026-07-30T05:39:37.000Z",
+  "verdict": "PASS_WITH_OPEN_GOVERNANCE_EXCEPTION",
+  "scope": {
+    "repository": "aisportsbettingcontact/ai-sports-betting-dime-ai",
+    "pullRequest": 244,
+    "railwayProjectId": "8dd7341d-702c-48c7-90df-5c19a4f04913",
+    "railwayEnvironmentId": "787f3113-17ab-47d9-9819-1268aeb09b3e",
+    "containsSecrets": false,
+    "containsRawPromptsOrResponses": false,
+    "containsRawUserOrGameRows": false,
+    "observationMode": "read_only_sanitized"
+  },
+  "github": {
+    "pullRequestUrl": "https://github.com/aisportsbettingcontact/ai-sports-betting-dime-ai/pull/244",
+    "state": "MERGED",
+    "headSha": "3114bb0d57c43c81d325d137a231e17179c34d67",
+    "mergeSha": "58232f3036aef1a3cfc49284c589fda5c8798d09",
+    "mergedAt": "2026-07-30T05:18:00Z",
+    "headIsAncestorOfMerge": true,
+    "headAndMergeTreeDelta": false,
+    "finalHeadChecks": {
+      "ci": "SUCCESS",
+      "dimeLlmValidation": "SUCCESS",
+      "gitleaks": "SUCCESS"
+    },
+    "submittedIndependentReviews": 0,
+    "independentReviewDecision": null
+  },
+  "deployment": {
+    "expectedMergeSha": "58232f3036aef1a3cfc49284c589fda5c8798d09",
+    "application": {
+      "service": "ai-sports-betting-dime-ai",
+      "serviceId": "a46ea921-5c5d-4225-9254-92f742e95b51",
+      "deploymentId": "4e47aeac-0490-42b0-9bc8-8efe8756e4ff",
+      "createdAt": "2026-07-30T05:18:03.129Z",
+      "status": "SUCCESS",
+      "instanceStatus": "RUNNING",
+      "commitSha": "58232f3036aef1a3cfc49284c589fda5c8798d09",
+      "imageDigest": "sha256:d2edaef2709cd43e5e0185dd1a7e7629f7a84a1d576c44a5e6668f58e33cd986"
+    },
+    "backend": {
+      "service": "ai-sports-betting-backend",
+      "serviceId": "3528dc9f-a63b-45e9-94bb-6d1df25d6f3a",
+      "deploymentId": "1b8ca0ed-f358-4fad-beaf-7d38e473f32c",
+      "createdAt": "2026-07-30T05:18:03.420Z",
+      "status": "SUCCESS",
+      "instanceStatus": "RUNNING",
+      "commitSha": "58232f3036aef1a3cfc49284c589fda5c8798d09",
+      "imageDigest": "sha256:bb46e77c97d69a6a77827dd57374154463093a564bcdd60668912a0ad71a55d5"
+    },
+    "applicationShaMatchesExpected": true,
+    "backendShaMatchesExpected": true,
+    "allInstancesRunning": true
+  },
+  "health": [
+    {
+      "url": "https://aisportsbettingmodels.com/health",
+      "observedAt": "2026-07-30T05:35:59.927Z",
+      "status": "ok",
+      "databaseCircuit": "CLOSED",
+      "databaseConsecutiveFailures": 0
+    },
+    {
+      "url": "https://ai-sports-betting-backend-production.up.railway.app/health",
+      "observedAt": "2026-07-30T05:36:10.262Z",
+      "status": "ok",
+      "databaseCircuit": "CLOSED",
+      "databaseConsecutiveFailures": 0
+    }
+  ],
+  "userVisibleParity": {
+    "url": "https://aisportsbettingmodels.com/feed/model/mlb-07-29-2026",
+    "expectedGameCards": 16,
+    "observedGameCards": 16,
+    "freshBrowserLogCount": 0,
+    "freshBrowserWarnings": 0,
+    "freshBrowserErrors": 0,
+    "verdict": "PASS"
+  },
+  "runtimeAttestation": {
+    "applicationObservedAt": "2026-07-30T05:18:45.930891941Z",
+    "state": "limited",
+    "mode": "frozen",
+    "activeProvider": "frozen",
+    "activeModel": "no-provider",
+    "deterministicAnswerRouting": "on",
+    "trace": "off",
+    "issues": [
+      "provider_frozen",
+      "trace_disabled"
+    ]
+  },
+  "pricingAttestation": {
+    "applicationObservedAt": "2026-07-30T05:18:45.930896411Z",
+    "pathConfigured": false,
+    "expectedChecksumConfigured": false,
+    "registryRevision": null,
+    "observedChecksum": null,
+    "registryStatus": "not_configured",
+    "approvedEntryCount": 0,
+    "activeProvider": "frozen",
+    "activeModel": "no-provider",
+    "activeModelRevision": "no-provider",
+    "deploymentTier": "disabled",
+    "currency": "USD",
+    "zeroCostRuntime": true,
+    "exactMatchAvailable": false,
+    "gateVerdict": "REVISE"
+  },
+  "featureState": {
+    "applicationService": {
+      "traceEnabled": false,
+      "researchAlphaEnabled": false,
+      "researchAlphaKillSwitch": true
+    },
+    "backendService": {
+      "traceEnabled": false,
+      "researchAlphaEnabled": false,
+      "researchAlphaKillSwitch": true
+    },
+    "shadowEnabled": false,
+    "generativeRouteActivation": false,
+    "deterministicAnswerRoutingEnabled": true
+  },
+  "candidateConfigurationObservation": {
+    "observationMode": "production_environment_read_only_no_endpoint_call",
+    "sharedControls": {
+      "promptProfileVersion": "1.0.0",
+      "promptBlueprintSha256": "ec28c2406d7b30a729a37571b96b983f58192a75bf3ab8b45e44ed024ee0b018",
+      "platformKnowledgeVersion": "1.0.0",
+      "platformKnowledgeSha256": "57c39072e7062341ac8d4217f4d544cc99cc60f8017f14af09044fcf8de97b8b",
+      "routingRevision": "runtime-answer-routing-v1",
+      "contextTokenBudget": 36000,
+      "hardMaximumOutputTokens": 4096
+    },
+    "anthropic": {
+      "credentialConfigured": true,
+      "authMode": "api_key",
+      "customBaseUrlConfigured": false,
+      "model": "claude-fable-5",
+      "modelSource": "code_default",
+      "modelRevision": null,
+      "sdkVersion": "0.104.1",
+      "timeoutMs": 600000,
+      "retryCount": 2,
+      "concurrencyLimit": null,
+      "endpointInvoked": false
+    },
+    "runpod": {
+      "endpointConfigured": true,
+      "credentialConfigured": true,
+      "model": "meta-llama/Llama-3.1-8B-Instruct",
+      "modelRevision": null,
+      "adapterRevision": null,
+      "timeoutMs": 120000,
+      "temperature": 0.2,
+      "retryCount": 0,
+      "concurrencyLimit": null,
+      "endpointInvoked": false
+    },
+    "productionReadiness": "REVISE",
+    "blockingReasons": [
+      "Neither candidate has an immutable model revision.",
+      "Neither candidate has an application-enforced concurrency limit.",
+      "Neither candidate has exact reviewed pricing for an immutable model tuple.",
+      "Candidate benchmark execution has not been authorized."
+    ]
+  },
+  "postMergeGovernanceException": {
+    "exceptionId": "pr244-missing-premerge-independent-review",
+    "historicalPullRequestStateRewritten": false,
+    "requiredReviewer": "prez-ai-sports-betting",
+    "reviewedCommit": "58232f3036aef1a3cfc49284c589fda5c8798d09",
+    "status": "required",
+    "submittedReviewer": null,
+    "verdict": null,
+    "closedAt": null,
+    "absenceOfReviewCountsAsApproval": false,
+    "requiredAssertions": [
+      "The frozen production parity evidence is accepted.",
+      "The not_configured pricing state is accepted as an open REVISE gate.",
+      "Dormant RunPod configuration is excluded from active pricing.",
+      "No active provider selection exists.",
+      "The Active Provider Decision v1 comparison methodology is accepted.",
+      "Provider, tracing, routing, and training activation remain prohibited."
+    ]
+  },
+  "gateStatus": {
+    "githubMergeIntegrity": "PASS",
+    "railwayDeploymentParity": "PASS",
+    "healthParity": "PASS",
+    "productionFeedParity": "PASS",
+    "disabledStateDeployment": "PASS",
+    "postMergeGovernanceException": "OPEN",
+    "activeProviderDecision": "NOT_ISSUED",
+    "pricingGate": "REVISE",
+    "providerActivation": "NOT_AUTHORIZED",
+    "traceActivation": "NOT_AUTHORIZED",
+    "shadowTraffic": "NOT_AUTHORIZED",
+    "generativeRouteActivation": "NOT_AUTHORIZED",
+    "modelTraining": "NOT_AUTHORIZED",
+    "researchAlphaActivation": "NOT_AUTHORIZED"
+  },
+  "authorizations": {
+    "candidateBenchmarkExecution": false,
+    "endpointInvocation": false,
+    "environmentVariableChange": false,
+    "pricingApproval": false,
+    "providerActivation": false,
+    "traceActivation": false,
+    "shadowTraffic": false,
+    "generativeRouteActivation": false,
+    "modelTraining": false,
+    "researchAlphaActivation": false
+  },
+  "productionMutationsPerformed": []
+}
