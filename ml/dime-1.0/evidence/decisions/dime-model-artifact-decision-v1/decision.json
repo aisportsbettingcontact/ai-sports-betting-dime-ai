@@ -74,12 +74,27 @@
   "governed_artifacts": {
     "training_contract": {
       "path": "ml/dime-1.0/configs/dime_training_contract_v1.json",
-      "sha256": "35d7e85506d9493340d7df0c2b02bb54277650a115400bd0e86f906f024d7ab3",
+      "sha256": "116c786e20f1d38cfa97f394a00a835ef0c7d72b87a769fcf4ae40ef91d13f3b",
       "status": "INCOMPLETE_NOT_AUTHORIZED"
     },
     "training_contract_schema": {
       "path": "ml/dime-1.0/schemas/dime_training_contract.schema.json",
-      "sha256": "fd89a26f5137df73f822a7987de76e17e9de88080920441f2be3fbc1195d8fd7"
+      "sha256": "e3c767d7880e848ad18a92b0154cfdc01532233bff73f1fc69474eff6021baf2"
+    },
+    "foundation_release_plan": {
+      "path": "ml/dime-1.0/configs/foundation_release_plan_v1.json",
+      "sha256": "dad8f4971c665f5a22f7dd6454d08daf5cae3824ff7c367a2ce660ae223612f0",
+      "status": "INCOMPLETE_NOT_AUTHORIZED"
+    },
+    "evaluation_identity_plan": {
+      "path": "ml/dime-1.0/configs/evaluation_identity_plan_v1.json",
+      "sha256": "9696c6425167918e45e650b8ef4941777f6e4a18f969e907a00c1002956d0342",
+      "status": "INCOMPLETE_NOT_AUTHORIZED"
+    },
+    "model_execution_gates": {
+      "path": "ml/dime-1.0/configs/model_execution_gates_v1.json",
+      "sha256": "45c42b74ad90b17f1231525197220552f64a13208c7033f4781f08fc9ca3a2ee",
+      "status": "FROZEN_NOT_AUTHORIZED"
     },
     "base_model_suitability_contract": {
       "path": "ml/dime-1.0/evidence/benchmarks/base-model-suitability-v1/contract.json",
@@ -129,7 +144,7 @@
       "status": "independent_pre_merge_approval_not_recorded"
     }
   ],
-  "next_authorizable_action": "Complete and independently approve the exact Foundation dataset and training contract. This record does not itself authorize that action.",
+  "next_authorizable_action": "Resolve the Foundation AI-authorship and evaluation-access blockers, then freeze exact private dataset and evaluation identities. This record does not authorize generation, publication, model execution, or training.",
   "authorization_boundary": {
     "external_provider_invocation": false,
     "runpod_invocation": false,

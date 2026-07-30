@@ -106,11 +106,11 @@
   },
   "source": {
     "github_repository": "aisportsbettingcontact/ai-sports-betting-dime-ai",
-    "training_code_commit": "c63bb85031c2a3404ae2a4a049dfb02e39777c2d",
+    "training_code_commit": "ec32c8ae99a0b311dc77028d3ab306de51eed421",
     "training_script_path": "ml/dime-1.0/scripts/train_qlora.py",
-    "training_script_sha256": "acc7a8efc1a25a08f8e59d6b15924341f5c04921e8faae0572d17f8f7713d311",
+    "training_script_sha256": "7a783ec0986384cb0ebf8cdaf495270bab7723d2cbd9b3a98f1f51824e40d677",
     "training_config_path": "ml/dime-1.0/configs/sft_full_TEMPLATE.yaml",
-    "training_config_sha256": "88f89f44fc3c30571f6cf58a850fd0d7de81791474af70d034e3560be68a2c6a",
+    "training_config_sha256": "c5467b101c6584cf24fd0a65e40942e3ebbb904867e775825d324a29d992cefd",
     "requirements_lock_path": "ml/dime-1.0/requirements.lock.txt",
     "requirements_lock_sha256": "f2353d0ebe258a9b3853b6d4ce6506ad983f530d20b52f619242f90f767853d6"
   },
@@ -154,6 +154,18 @@
       {
         "path": "ml/dime-1.0/configs/decoding_v1.json",
         "sha256": "c5c540b795aa217b1b32df9bf445924816d47a542acb313e05dc4a82eecbbbc1"
+      },
+      {
+        "path": "ml/dime-1.0/configs/foundation_release_plan_v1.json",
+        "sha256": "dad8f4971c665f5a22f7dd6454d08daf5cae3824ff7c367a2ce660ae223612f0"
+      },
+      {
+        "path": "ml/dime-1.0/configs/evaluation_identity_plan_v1.json",
+        "sha256": "9696c6425167918e45e650b8ef4941777f6e4a18f969e907a00c1002956d0342"
+      },
+      {
+        "path": "ml/dime-1.0/configs/model_execution_gates_v1.json",
+        "sha256": "45c42b74ad90b17f1231525197220552f64a13208c7033f4781f08fc9ca3a2ee"
       }
     ]
   },
@@ -180,7 +192,7 @@
     "epochs": 1,
     "learning_rate": 0.0002,
     "gradient_checkpointing": true,
-    "checkpoint_interval_steps": 50
+    "checkpoint_interval_steps": 20
   },
   "required_training_controls": {
     "immutable_dataset_revision": false,
@@ -189,6 +201,11 @@
     "gradient_monitoring": true,
     "validation_during_training": true,
     "early_stopping_implemented": true,
+    "minimum_validation_events": 6,
+    "evaluation_and_checkpoint_cadence_aligned": true,
+    "practical_early_stopping_preflight_implemented": true,
+    "best_checkpoint_restoration_verifier_implemented": true,
+    "best_checkpoint_restoration_verified": false,
     "authorized_resume_verification_implemented": true,
     "resume_verification_passed": false,
     "artifact_hashes": true,
@@ -210,8 +227,10 @@
       "The Foundation dataset approved revision, dataset-manifest hash, and checksum-manifest hash are null.",
       "The development-evaluation and locked-evaluation immutable identities are null.",
       "The general-capability regression evaluation identity is null.",
+      "The public 81-case suite is exposed and not eligible as a sealed model-selection suite.",
+      "Evaluation semantic-case, answer-key, runner, scorer, and training credential separation is not implemented.",
       "The repository contains only 12 public SFT sample records, not the approved 2,400-record Foundation release.",
-      "Early stopping and checkpoint-resume verification are implemented but have not passed an authorized RunPod smoke run.",
+      "Practical early stopping, best-checkpoint restoration, and checkpoint resume are enforced in code but have not passed an authorized RunPod smoke run.",
       "No independent authorization exists for RunPod GPU execution or model training."
     ]
   },

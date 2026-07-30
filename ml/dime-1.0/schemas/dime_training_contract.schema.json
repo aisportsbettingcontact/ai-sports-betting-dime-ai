@@ -366,7 +366,76 @@
       "type": "object"
     },
     "required_training_controls": {
-      "type": "object"
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "immutable_dataset_revision",
+        "checkpoint_intervals",
+        "loss_monitoring",
+        "gradient_monitoring",
+        "validation_during_training",
+        "early_stopping_implemented",
+        "minimum_validation_events",
+        "evaluation_and_checkpoint_cadence_aligned",
+        "practical_early_stopping_preflight_implemented",
+        "best_checkpoint_restoration_verifier_implemented",
+        "best_checkpoint_restoration_verified",
+        "authorized_resume_verification_implemented",
+        "resume_verification_passed",
+        "artifact_hashes",
+        "hardware_and_library_capture",
+        "general_capability_regression_tests"
+      ],
+      "properties": {
+        "immutable_dataset_revision": {
+          "const": false
+        },
+        "checkpoint_intervals": {
+          "const": true
+        },
+        "loss_monitoring": {
+          "const": true
+        },
+        "gradient_monitoring": {
+          "const": true
+        },
+        "validation_during_training": {
+          "const": true
+        },
+        "early_stopping_implemented": {
+          "const": true
+        },
+        "minimum_validation_events": {
+          "const": 6
+        },
+        "evaluation_and_checkpoint_cadence_aligned": {
+          "const": true
+        },
+        "practical_early_stopping_preflight_implemented": {
+          "const": true
+        },
+        "best_checkpoint_restoration_verifier_implemented": {
+          "const": true
+        },
+        "best_checkpoint_restoration_verified": {
+          "const": false
+        },
+        "authorized_resume_verification_implemented": {
+          "const": true
+        },
+        "resume_verification_passed": {
+          "const": false
+        },
+        "artifact_hashes": {
+          "const": true
+        },
+        "hardware_and_library_capture": {
+          "const": true
+        },
+        "general_capability_regression_tests": {
+          "const": true
+        }
+      }
     },
     "artifact_constraints": {
       "type": "object"
