@@ -1,0 +1,78 @@
+{
+  "schemaVersion": "dime-pricing-preflight-evidence-v1",
+  "evidenceId": "railway-production-pricing-preflight-2026-07-29",
+  "classification": "sanitized_production_configuration_evidence",
+  "observedAt": "2026-07-30T04:10:53Z",
+  "verdict": "REVISE",
+  "registry": {
+    "repositoryPath": "ml/dime-1.0/configs/dime_observability_pricing_v1.json",
+    "requiredProductionPath": "/app/ml/dime-1.0/configs/dime_observability_pricing_v1.json",
+    "repositorySha256": "54d0cd7e20bf60079149441126392c4e0520628f136dd88bcb9a07baf03028c2",
+    "schemaVersion": "dime-observability-pricing-registry-v1",
+    "registryRevision": "dime-pricing-review-required-2026-07-29",
+    "status": "review_required",
+    "entryCount": 0
+  },
+  "productionConfiguration": {
+    "DIME_PRICING_REGISTRY_PATH": null,
+    "DIME_CHAT_MODEL": null,
+    "DIME_MODEL_VERSION": "meta-llama/Llama-3.1-8B-Instruct",
+    "DIME_MODEL_BASE_URL_CONFIGURED": false,
+    "RUNPOD_ENDPOINT_ID_CONFIGURED": true,
+    "DIME_MODEL_API_SECRET_CONFIGURED": false,
+    "RUNPOD_API_KEY_CONFIGURED": true,
+    "secretsCaptured": false
+  },
+  "runtimeIdentity": {
+    "provider": "frozen",
+    "providerSource": "server/_core/dimeChatModel.ts",
+    "modelEnvironmentVariable": "DIME_CHAT_MODEL",
+    "modelEnvironmentValue": null,
+    "modelSourceDefault": "claude-fable-5",
+    "reviewablePricedRuntimeIdentityAvailable": false
+  },
+  "deployedRegistryChecksum": {
+    "expectedFromDeployedSourceCommit": "54d0cd7e20bf60079149441126392c4e0520628f136dd88bcb9a07baf03028c2",
+    "directlyObserved": null,
+    "verificationStatus": "BLOCKED",
+    "reason": "no_registered_railway_ssh_key",
+    "productionMutationAttempted": false
+  },
+  "unknownPricingContract": {
+    "verdict": "PASS",
+    "unknownPricingStatus": "cost_unavailable",
+    "unknownPricingDollarValue": null,
+    "zeroDollarFallbackPermitted": false,
+    "implementation": [
+      "server/_core/dimePricingGovernance.ts",
+      "server/_core/dimeTraceObservability.ts"
+    ],
+    "tests": [
+      "server/_core/dimePricingGovernance.test.ts",
+      "server/_core/dimeTraceObservability.test.ts"
+    ]
+  },
+  "blockers": [
+    "DIME_PRICING_REGISTRY_PATH is absent in production.",
+    "The checksum-pinned registry status is review_required.",
+    "The checksum-pinned registry contains no reviewed provider and model pricing entries.",
+    "The runtime is frozen and does not expose a complete active priced provider, model, revision, and effective interval identity for independent approval.",
+    "The file checksum inside the running Railway container could not be directly observed without registering an SSH key."
+  ],
+  "requiredNextEvidence": [
+    "A separately reviewed registry with an exact provider, model, model revision, effective interval, token units, and tamper-evident entry checksum.",
+    "An authorized production configuration change setting DIME_PRICING_REGISTRY_PATH to the checksum-pinned packaged path.",
+    "A direct checksum observation from the running deployment matching the reviewed registry artifact.",
+    "A repeat of the unknown and ambiguous pricing tests showing cost_unavailable with null dollar values."
+  ],
+  "authorizations": {
+    "environmentVariableChange": false,
+    "pricingApproval": false,
+    "traceActivation": false,
+    "shadowObservation": false,
+    "routeActivation": false,
+    "modelTraining": false,
+    "researchAlphaActivation": false
+  },
+  "productionMutationsPerformed": []
+}
