@@ -18,6 +18,10 @@ import {
   resolveDimePricing,
   type DimePricingRegistry,
 } from "./dimePricingGovernance";
+import {
+  getDimePricingAttestation,
+  type DimePricingAttestation,
+} from "./dimePricingAttestation";
 
 export const DIME_TRACE_OBSERVABILITY_VERSION =
   "dime-trace-observability-v1" as const;
@@ -285,10 +289,14 @@ const costEstimateSchema = z
         "pricing_identity_missing",
         "registry_not_configured",
         "registry_invalid",
+        "registry_checksum_mismatch",
         "registry_not_reviewed",
+        "registry_not_approved",
+        "pricing_entry_not_approved",
         "pricing_entry_not_found",
         "pricing_entry_ambiguous",
         "pricing_entry_checksum_invalid",
+        "cached_input_pricing_unavailable",
       ])
       .nullable(),
     status: z.enum(["estimated", "zero_cost_runtime", "cost_unavailable"]),
@@ -357,7 +365,9 @@ export interface DimeTraceObservabilityReadiness {
     registryConfigured: boolean;
     registryLoaded: boolean;
     registryReviewed: boolean;
+    registryApproved: boolean;
     entryCount: number;
+    attestation: DimePricingAttestation;
   };
   measurement: {
     authoritativeDynamicTimestampCoverage: "requires_measurement";
@@ -434,11 +444,13 @@ function readEnv(
 export function getDimeTraceObservabilityReadiness(
   env: Record<string, string | undefined> = process.env
 ): DimeTraceObservabilityReadiness {
-  const registry = loadDimePricingRegistry(env);
-  const registryLoaded = registry.status === "loaded";
+  const attestation = getDimePricingAttestation({ env });
+  const registryLoaded = attestation.registryChecksum !== null;
   const registryReviewed =
-    registryLoaded && registry.registry.status === "reviewed";
-  const entryCount = registryLoaded ? registry.registry.entries.length : 0;
+    attestation.registryStatus === "independently_reviewed" ||
+    attestation.registryStatus === "approved";
+  const registryApproved = attestation.registryStatus === "approved";
+  const entryCount = attestation.approvedEntryCount;
   return {
     version: DIME_TRACE_OBSERVABILITY_VERSION,
     traceSchemaRevision: DIME_TRACE_SCHEMA_REVISION,
@@ -453,11 +465,13 @@ export function getDimeTraceObservabilityReadiness(
       ),
     },
     pricing: {
-      complete: registryReviewed && entryCount > 0,
-      registryConfigured: Boolean(env.DIME_PRICING_REGISTRY_PATH?.trim()),
+      complete: registryApproved && attestation.exactMatchAvailable,
+      registryConfigured: attestation.pathConfigured,
       registryLoaded,
       registryReviewed,
+      registryApproved,
       entryCount,
+      attestation,
     },
     measurement: {
       authoritativeDynamicTimestampCoverage: "requires_measurement",
@@ -986,10 +1000,26 @@ export function estimateDimeTraceCost(input: {
     });
   }
   const entry = resolution.entry;
+  if (cachedInputTokens > 0 && entry.cachedInputUsdPerMillionTokens === null) {
+    return costEstimateSchema.parse({
+      inputTokens,
+      outputTokens,
+      cachedInputTokens,
+      toolCostUsd: null,
+      modelCostUsd: null,
+      estimatedTotalCostUsd: null,
+      pricingRevision: null,
+      pricingSource: null,
+      pricingRegistryRevision: loaded.registry.registryRevision,
+      pricingEntry: null,
+      unavailabilityReason: "cached_input_pricing_unavailable",
+      status: "cost_unavailable",
+    });
+  }
   const uncachedInputTokens = Math.max(0, inputTokens - cachedInputTokens);
   const modelCostUsd =
     (uncachedInputTokens * entry.inputUsdPerMillionTokens +
-      cachedInputTokens * entry.cachedInputUsdPerMillionTokens +
+      cachedInputTokens * (entry.cachedInputUsdPerMillionTokens ?? 0) +
       outputTokens * entry.outputUsdPerMillionTokens) /
       1_000_000 +
     entry.requestUsd;

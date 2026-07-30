@@ -13,7 +13,7 @@
       "$ref": "#/$defs/label"
     },
     "status": {
-      "enum": ["review_required", "reviewed"]
+      "enum": ["review_required", "independently_reviewed", "approved"]
     },
     "entries": {
       "type": "array",
@@ -61,6 +61,7 @@
         "currency",
         "source",
         "sourceDocumentSha256",
+        "reviewStatus",
         "reviewer",
         "reviewedAt",
         "reviewEvidenceSha256",
@@ -76,13 +77,18 @@
           "oneOf": [{ "$ref": "#/$defs/timestamp" }, { "type": "null" }]
         },
         "inputUsdPerMillionTokens": { "$ref": "#/$defs/usdRate" },
-        "cachedInputUsdPerMillionTokens": { "$ref": "#/$defs/usdRate" },
+        "cachedInputUsdPerMillionTokens": {
+          "oneOf": [{ "$ref": "#/$defs/usdRate" }, { "type": "null" }]
+        },
         "outputUsdPerMillionTokens": { "$ref": "#/$defs/usdRate" },
         "requestUsd": { "$ref": "#/$defs/usdRate" },
         "toolRequestUsd": { "$ref": "#/$defs/usdRate" },
         "currency": { "const": "USD" },
         "source": { "type": "string", "minLength": 1, "maxLength": 500 },
         "sourceDocumentSha256": { "$ref": "#/$defs/sha256" },
+        "reviewStatus": {
+          "enum": ["review_required", "independently_reviewed", "approved"]
+        },
         "reviewer": { "type": "string", "minLength": 1, "maxLength": 200 },
         "reviewedAt": { "$ref": "#/$defs/timestamp" },
         "reviewEvidenceSha256": { "$ref": "#/$defs/sha256" },
