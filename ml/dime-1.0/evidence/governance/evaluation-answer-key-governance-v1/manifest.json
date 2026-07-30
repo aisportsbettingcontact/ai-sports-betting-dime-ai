@@ -1,0 +1,30 @@
+{
+  "schema_version": "dime-evaluation-answer-key-governance-evidence-v1",
+  "governance_id": "dime-llm-v1-answer-key-and-scorer-isolation",
+  "status": "PROPOSED_NON_EXECUTING",
+  "source_commit": "7ed09adb4fcdb9e2d9047e73e34f84c80d865b78",
+  "authorization_effect": "NONE_UNTIL_OWNER_MERGE_OF_EXACT_REVIEWED_HEAD",
+  "contains_private_evaluation_material": false,
+  "contains_credentials": false,
+  "external_actions": {
+    "answer_key_generation": false,
+    "answer_key_publication": false,
+    "provider_invocation": false,
+    "model_download": false,
+    "benchmark_execution": false,
+    "model_training": false,
+    "model_serving": false,
+    "railway_mutation": false
+  },
+  "artifacts": {
+    "ml/dime-1.0/configs/evaluation_answer_key_governance_v1.json": "7887a871d0830ed0a0db01c41643cba3cee6e05712d60c69f754b787c08a7ac0",
+    "ml/dime-1.0/docs/EVALUATION_ANSWER_KEY_GOVERNANCE_V1.md": "79091f866715b8d6e76484d81ed13fc83b4a7fb72614913416f1124b59eb0589",
+    "ml/dime-1.0/schemas/evaluation_answer_key_governance.schema.json": "59c9989f89cd52d6e2aca05907159a191f8e1a22ac0fd69e153962e61df3ed59",
+    "ml/dime-1.0/schemas/evaluation_answer_key_record.schema.json": "65daf9980951815e7916c49d93f152fd61eb17101c51dd51e5a7bedec830d9e6",
+    "ml/dime-1.0/schemas/evaluation_blinded_output.schema.json": "3803a0f7d4066e1bd1515ec92dcc12e4cbfba7fa640af3a0aeb8775aaf801367",
+    "ml/dime-1.0/schemas/evaluation_locked_consumption_ledger.schema.json": "f9c6889998dd1ab6ca092df19797078ef02b3c3eb8355b4c9d42ebd84c218605",
+    "ml/dime-1.0/scripts/validate_evaluation_answer_key_governance.py": "463ede9c8bd45bf1a054c67f3c855e3c666a0636c03fd990dc4b6e720e379d65",
+    "ml/dime-1.0/src/dime_ai/evaluation_answer_key_governance.py": "d93ac11d76341c5ca2975203181d7ada3e29e8aa29048a719e250327f2a3db1f",
+    "ml/dime-1.0/tests/test_evaluation_answer_key_governance_v1.py": "240af29cef5b1d50a1ba7445fb4b7d0de5aa63522b9ccff858e2879259e9563e"
+  }
+}

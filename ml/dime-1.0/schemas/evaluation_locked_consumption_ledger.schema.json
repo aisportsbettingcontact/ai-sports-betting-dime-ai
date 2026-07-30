@@ -1,0 +1,121 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dime.internal/schemas/evaluation_locked_consumption_ledger.schema.json",
+  "title": "Dime Locked Evaluation Consumption Ledger v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "ledger_id",
+    "locked_semantic_revision",
+    "locked_semantic_manifest_sha256",
+    "locked_answer_key_revision",
+    "locked_answer_key_manifest_sha256",
+    "maximum_execution_count",
+    "execution_count",
+    "append_only",
+    "entries"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "dime-locked-evaluation-consumption-ledger-v1"
+    },
+    "ledger_id": {
+      "type": "string",
+      "pattern": "^dime-locked-ledger-[a-z0-9][a-z0-9-]{7,95}$"
+    },
+    "locked_semantic_revision": {
+      "$ref": "#/$defs/git_revision"
+    },
+    "locked_semantic_manifest_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "locked_answer_key_revision": {
+      "$ref": "#/$defs/git_revision"
+    },
+    "locked_answer_key_manifest_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "maximum_execution_count": {
+      "const": 1
+    },
+    "execution_count": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "append_only": {
+      "const": true
+    },
+    "entries": {
+      "type": "array",
+      "maxItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "lease_id",
+          "execution_id",
+          "authorized_at",
+          "consumed_at",
+          "state",
+          "runner_identity_sha256",
+          "scorer_identity_sha256",
+          "blinded_output_manifest_sha256",
+          "result_manifest_sha256",
+          "consumption_receipt_sha256",
+          "retry_authorized"
+        ],
+        "properties": {
+          "lease_id": {
+            "type": "string",
+            "pattern": "^lease-[a-f0-9]{32}$"
+          },
+          "execution_id": {
+            "type": "string",
+            "pattern": "^execution-[a-f0-9]{32}$"
+          },
+          "authorized_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "consumed_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "state": {
+            "const": "CONSUMED"
+          },
+          "runner_identity_sha256": {
+            "$ref": "#/$defs/sha256"
+          },
+          "scorer_identity_sha256": {
+            "$ref": "#/$defs/sha256"
+          },
+          "blinded_output_manifest_sha256": {
+            "$ref": "#/$defs/sha256"
+          },
+          "result_manifest_sha256": {
+            "$ref": "#/$defs/sha256"
+          },
+          "consumption_receipt_sha256": {
+            "$ref": "#/$defs/sha256"
+          },
+          "retry_authorized": {
+            "const": false
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "git_revision": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{40}$"
+    }
+  }
+}
