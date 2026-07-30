@@ -97,7 +97,9 @@ def test_training_contract_is_schema_valid_pinned_and_fail_closed() -> None:
     assert contract["capability_hypothesis"]["falsifiable"] is True
     assert contract["base_model"] == contract["tokenizer"]
     assert contract["base_model"]["revision"] == ("d04e592bb4f6aa9cfee91e2e20afa771667e1d4b")
-    assert contract["source"]["training_code_commit"] is None
+    assert contract["source"]["training_code_commit"] == (
+        "c63bb85031c2a3404ae2a4a049dfb02e39777c2d"
+    )
 
     pinned_files = [
         ("training_script_path", "training_script_sha256"),
