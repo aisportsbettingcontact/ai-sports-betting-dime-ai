@@ -1,0 +1,290 @@
+{
+  "schemaVersion": "dime-provider-selection-evaluation-contract-v1",
+  "contractId": "dime-llm-active-provider-selection-v1",
+  "status": "FROZEN_NOT_AUTHORIZED",
+  "frozenAt": "2026-07-30T05:39:37Z",
+  "sourceCommit": "58232f3036aef1a3cfc49284c589fda5c8798d09",
+  "purpose": "Compare the existing Anthropic integration and dormant RunPod lane under identical, replayable controls without changing production.",
+  "dataset": {
+    "classification": "synthetic_and_reviewed_nonproduction",
+    "containsProductionPromptsOrResponses": false,
+    "containsUserIdentifiers": false,
+    "sources": [
+      {
+        "path": "ml/dime-1.0/data/eval/product_route_observability_v1.benchmark.json",
+        "sha256": "b85271e867c531b0472513ce2cb06214632fd8c0ea910efec207a51750e36372",
+        "caseCount": 18
+      },
+      {
+        "path": "ml/dime-1.0/data/eval/runtime_answer_routing_v1.benchmark.json",
+        "sha256": "e7c54e314107ca680767253e3d3cd8b33cc2d90ef02863c6a91dcd7560981167",
+        "caseCount": 19
+      },
+      {
+        "path": "ml/dime-1.0/data/eval/platform_grounding_v1.sample.jsonl",
+        "sha256": "8cb453217f286b7c7411aed29c6c25832fbabb26bdf8e384b0a207840b0de931",
+        "caseCount": 12
+      },
+      {
+        "path": "ml/dime-1.0/data/eval/dev.sample.jsonl",
+        "sha256": "7871caf299457721d2b0c5ebb54e3dc4b120551680412110763767aaddcdb7df",
+        "caseCount": 10
+      },
+      {
+        "path": "ml/dime-1.0/data/eval/safety_red_team.sample.jsonl",
+        "sha256": "1576397bfe351e9bb9f54ec6abc9f16e8a5e73ca8152b9b8fd74fcb1f7220b09",
+        "caseCount": 6
+      },
+      {
+        "path": "ml/dime-1.0/data/eval/provider_selection_v1.supplemental.json",
+        "sha256": "4fc1d3c38753261fe095d49f16b246e83e9ebebd04cd2a26436ffd8e3a6aa0e2",
+        "caseCount": 16,
+        "schemaPath": "ml/dime-1.0/schemas/provider_selection_supplemental.schema.json",
+        "schemaSha256": "27f23c9d072e7c134e5e207f18144e1696ab72bbf08f1067447a87f092eba85a"
+      }
+    ],
+    "totalCaseCount": 81,
+    "requiredCoverage": [
+      "platform",
+      "account",
+      "educational",
+      "matchup",
+      "historical",
+      "current_data",
+      "tool_required",
+      "missing_data",
+      "conflicting_data",
+      "ambiguous_team",
+      "ambiguous_date",
+      "doubleheader",
+      "postponed",
+      "rescheduled",
+      "multi_turn_correction",
+      "unsupported_premise"
+    ]
+  },
+  "evaluationControls": {
+    "candidateOrder": "randomized_per_repetition",
+    "candidateLabels": "blinded",
+    "repetitionsPerCase": 3,
+    "promptProfileVersion": "1.0.0",
+    "promptBlueprintSha256": "ec28c2406d7b30a729a37571b96b983f58192a75bf3ab8b45e44ed024ee0b018",
+    "platformKnowledgeVersion": "1.0.0",
+    "platformKnowledgeSha256": "57c39072e7062341ac8d4217f4d544cc99cc60f8017f14af09044fcf8de97b8b",
+    "routingRevision": "runtime-answer-routing-v1",
+    "retrievalSource": {
+      "path": "server/_core/dimeChatContext.ts",
+      "sha256": "1436a564daa2b101607256fe17a57da6c5599960fa71b96c420b11f2ecc6261d"
+    },
+    "answerRoutingSource": {
+      "path": "server/_core/dimeAnswerRouting.ts",
+      "sha256": "f0ccc880992f6dfcfd91f93733dad4ab0c3b1c55485fb5d41e143051535f17b7"
+    },
+    "toolHandlerSource": {
+      "path": "server/_core/dime1ChatHandler.ts",
+      "sha256": "7f287ebf5013b37aa294b425dfc9e2e288f6deb32635d7711a2832572c8d2bf7"
+    },
+    "routeSource": {
+      "path": "server/dime-chat.route.ts",
+      "sha256": "37221e4b968ab2898f354c7041b8ce1f7eb44a9bd353c343e547d0ea3ed098ca"
+    },
+    "contextTokenBudget": 36000,
+    "maximumOutputTokens": 2048,
+    "temperature": 0.2,
+    "timeoutMs": 120000,
+    "retryCount": 0,
+    "concurrencyLimit": 1,
+    "toolFixtures": "identical_checksum_pinned",
+    "contextConstruction": "identical",
+    "responseSchema": "identical_per_case",
+    "fallbackBehavior": "record_provider_failure_without_substituting_another_candidate",
+    "sanitizedOutputsOnly": true
+  },
+  "candidates": [
+    {
+      "candidateId": "candidate-a",
+      "blindedMapping": "restricted_until_scoring_complete",
+      "provider": "anthropic",
+      "endpointClass": "anthropic_sdk_default",
+      "credentialConfigured": true,
+      "model": "claude-fable-5",
+      "modelSource": "code_default",
+      "modelRevision": null,
+      "adapterRevision": null,
+      "installedSdkVersion": "0.104.1",
+      "productionObservedTimeoutMs": 600000,
+      "productionObservedRetryCount": 2,
+      "productionObservedConcurrencyLimit": null,
+      "benchmarkOverrideRequired": true,
+      "endpointInvoked": false
+    },
+    {
+      "candidateId": "candidate-b",
+      "blindedMapping": "restricted_until_scoring_complete",
+      "provider": "runpod",
+      "endpointClass": "runpod_serverless_openai_compatible",
+      "credentialConfigured": true,
+      "endpointConfigured": true,
+      "model": "meta-llama/Llama-3.1-8B-Instruct",
+      "modelRevision": null,
+      "adapterRevision": null,
+      "productionObservedTimeoutMs": 120000,
+      "productionObservedRetryCount": 0,
+      "productionObservedConcurrencyLimit": null,
+      "benchmarkOverrideRequired": true,
+      "endpointInvoked": false
+    }
+  ],
+  "measurements": {
+    "quality": [
+      "factual_correctness",
+      "groundedness",
+      "unsupported_claim_rate",
+      "instruction_adherence",
+      "tool_selection_correctness",
+      "schema_compliance",
+      "response_completeness",
+      "expected_calibration_error"
+    ],
+    "operations": [
+      "time_to_first_token_ms",
+      "end_to_end_latency_ms",
+      "input_tokens",
+      "output_tokens",
+      "exact_estimated_cost_usd",
+      "provider_failure_rate",
+      "retry_count"
+    ],
+    "requiredSlices": [
+      "candidate",
+      "route",
+      "category",
+      "severity",
+      "tool_required",
+      "repetition"
+    ]
+  },
+  "promotionThresholds": {
+    "criticalFabricatedDynamicFactCount": {
+      "maximum": 0,
+      "hardGate": true
+    },
+    "crossUserOrIdentityFailureCount": {
+      "maximum": 0,
+      "hardGate": true
+    },
+    "mandatoryToolViolationCount": {
+      "maximum": 0,
+      "hardGate": true
+    },
+    "mandatorySchemaViolationCount": {
+      "maximum": 0,
+      "hardGate": true
+    },
+    "overallFactualCorrectness": {
+      "minimum": 0.9,
+      "hardGate": true
+    },
+    "criticalCaseFactualCorrectness": {
+      "minimum": 1.0,
+      "hardGate": true
+    },
+    "overallGroundedness": {
+      "minimum": 0.95,
+      "hardGate": true
+    },
+    "overallUnsupportedClaimRate": {
+      "maximum": 0.01,
+      "hardGate": true
+    },
+    "instructionAdherence": {
+      "minimum": 0.95,
+      "hardGate": true
+    },
+    "mandatoryToolSelectionCorrectness": {
+      "minimum": 1.0,
+      "hardGate": true
+    },
+    "mandatorySchemaCompliance": {
+      "minimum": 1.0,
+      "hardGate": true
+    },
+    "responseCompleteness": {
+      "minimum": 0.95,
+      "hardGate": true
+    },
+    "expectedCalibrationError": {
+      "maximum": 0.08,
+      "hardGate": true
+    },
+    "providerFailureRate": {
+      "maximum": 0.01,
+      "hardGate": true
+    },
+    "criticalRouteRegression": {
+      "maximumRelativeRegression": 0.0,
+      "comparison": "frozen_deterministic_control_or_better_candidate_per_capability",
+      "hardGate": true
+    },
+    "latency": {
+      "hardRequestTimeoutMs": 120000,
+      "absoluteProductSloMs": null,
+      "ownerApprovedSloRequiredBeforeSelection": true,
+      "hardGate": true
+    },
+    "cost": {
+      "exactOfficialPricingRequired": true,
+      "maximumCostPerRequestUsd": null,
+      "ownerApprovedBudgetRequiredBeforeSelection": true,
+      "unknownPricingTreatment": "cost_unavailable",
+      "hardGate": true
+    }
+  },
+  "identityAndReleaseRequirements": {
+    "immutableModelRevisionRequired": true,
+    "adapterRevisionOrExplicitNullRequired": true,
+    "exactOfficialPricingRequired": true,
+    "pricingEffectiveDateRequired": true,
+    "completeProductionTupleRequired": true,
+    "verifiedRollbackTargetRequired": true,
+    "independentApprovalRequired": true,
+    "builderMayApproveOwnCandidate": false
+  },
+  "productionBaseline": {
+    "provider": "frozen",
+    "model": "no-provider",
+    "modelRevision": "no-provider",
+    "applicationDeploymentId": "4e47aeac-0490-42b0-9bc8-8efe8756e4ff",
+    "backendDeploymentId": "1b8ca0ed-f358-4fad-beaf-7d38e473f32c",
+    "commitSha": "58232f3036aef1a3cfc49284c589fda5c8798d09",
+    "externalModelInvocations": 0,
+    "traceEnabled": false,
+    "generativeRouteActivation": false
+  },
+  "executionReadiness": {
+    "verdict": "REVISE",
+    "benchmarkRunAuthorized": false,
+    "blockingReasons": [
+      "Candidate benchmark execution has not received separate authorization.",
+      "Both candidate model revisions are null.",
+      "Exact official pricing is unavailable for both immutable candidate tuples.",
+      "An owner-approved absolute latency SLO is not recorded.",
+      "An owner-approved per-request cost budget is not recorded.",
+      "The PR #244 post-merge governance exception remains open."
+    ]
+  },
+  "authorizationBoundary": {
+    "endpointInvocation": false,
+    "benchmarkExecution": false,
+    "providerSelection": false,
+    "pricingEntryCreation": false,
+    "environmentVariableChange": false,
+    "providerActivation": false,
+    "traceActivation": false,
+    "shadowTraffic": false,
+    "generativeRouteActivation": false,
+    "modelTraining": false,
+    "researchAlphaActivation": false
+  },
+  "productionMutationsPerformed": []
+}

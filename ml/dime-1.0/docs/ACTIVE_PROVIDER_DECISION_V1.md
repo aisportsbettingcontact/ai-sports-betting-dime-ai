@@ -95,3 +95,15 @@ post-merge independent review
 
 The canonical machine-readable record is
 `ml/dime-1.0/evidence/decisions/active-provider-decision-v1/decision.json`.
+
+## Frozen evaluation contract
+
+The checksum-pinned comparison dataset, identical candidate controls, metrics,
+and promotion thresholds are frozen in
+`ml/dime-1.0/evidence/benchmarks/provider-selection-v1/contract.json`.
+
+The contract remains `FROZEN_NOT_AUTHORIZED`. It records the exact
+secret-safe candidate configurations observed after PR #244 without calling
+either provider. Benchmark execution remains blocked on separate
+authorization and immutable model revisions; provider selection additionally
+requires exact official pricing plus owner-approved latency and cost budgets.
