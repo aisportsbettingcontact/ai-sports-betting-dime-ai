@@ -3,6 +3,7 @@ import { execFile } from "node:child_process";
 import { generateKeyPairSync } from "node:crypto";
 import {
   chmod,
+  copyFile,
   lstat,
   mkdir,
   mkdtemp,
@@ -363,8 +364,11 @@ test("authentication bundle generation is deterministic and closes local imports
   );
   const root = await realpath(unresolvedRoot);
   const browser = resolve(root, "reviewed-browser");
+  const node = resolve(root, "reviewed-node");
   await writeFile(browser, "#!/bin/sh\nexit 0\n", { mode: 0o555 });
+  await copyFile(process.execPath, node);
   await chmod(browser, 0o555);
+  await chmod(node, 0o555);
   try {
     const candidates = [];
     for (const name of ["first", "second"]) {
@@ -374,6 +378,8 @@ test("authentication bundle generation is deterministic and closes local imports
           descriptorPath: resolve(root, `${name}.descriptor.json`),
           browserCandidatePaths: [browser],
           browserAllowedRoots: [root],
+          nodeExecutablePath: node,
+          nodeAllowedRoots: [root],
         })
       );
     }

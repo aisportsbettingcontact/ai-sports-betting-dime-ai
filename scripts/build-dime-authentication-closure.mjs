@@ -112,6 +112,8 @@ export async function buildAuthenticationClosureCandidate({
   descriptorPath = AUTHENTICATION_CANDIDATE_DESCRIPTOR,
   browserCandidatePaths = DEFAULT_BROWSER_CANDIDATES,
   browserAllowedRoots = ["/Applications", "/System/Applications"],
+  nodeExecutablePath = process.execPath,
+  nodeAllowedRoots = null,
 } = {}) {
   const temporaryDirectory = `${candidateDirectory}.${process.pid}.tmp`;
   await rm(temporaryDirectory, { recursive: true, force: true });
@@ -126,7 +128,12 @@ export async function buildAuthenticationClosureCandidate({
   try {
     const [{ build }, node, browser] = await Promise.all([
       import("esbuild"),
-      verifyAbsoluteExecutable(process.execPath, { label: "node" }),
+      verifyAbsoluteExecutable(nodeExecutablePath, {
+        label: "node",
+        ...(nodeAllowedRoots === null
+          ? {}
+          : { allowedRoots: nodeAllowedRoots }),
+      }),
       selectBrowser(browserCandidatePaths, browserAllowedRoots),
     ]);
     const outputPath = resolve(
