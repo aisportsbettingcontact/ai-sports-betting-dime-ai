@@ -7,9 +7,11 @@ import {
   DIME_CHAT_TRACE_POLICY_VERSION,
   DIME_CHAT_TRACE_RETENTION_DAYS,
   dimeChatTraceMeta,
+  hashDimeChatTraceRequestFingerprint,
   hashDimeChatTraceText,
   isDimeChatTraceEnabled,
   parseDimeChatTraceEnvelope,
+  type BeginDimeChatTraceInput,
   validateDimeChatTraceEventIds,
   validateDimeChatTraceRestrictedText,
   validateDimeChatTraceRoutingMetadata,
@@ -51,6 +53,59 @@ function validEnvelope() {
     clientAssistantMessageId: randomUUID(),
     idempotencyKey: randomUUID(),
   };
+}
+
+function validBeginInput(): BeginDimeChatTraceInput {
+  const requestId = randomUUID();
+  return {
+    requestId,
+    userId: 7,
+    envelope: validEnvelope(),
+    userPrompt: "What is the current Lakers moneyline?",
+    history: [
+      {
+        role: "user",
+        content: "What is the current Lakers moneyline?",
+      },
+    ],
+    requestClass: "standard",
+    responseBudget: 800,
+    provider: {
+      provider: "runpod",
+      deploymentTier: "production",
+      requestedModel: "dime-1.0",
+      baseRevision: "base-a",
+      adapterRevision: "adapter-a",
+      productProfile: "dime-chat",
+      profileVersion: "profile-a",
+      promptSource: "server",
+      maxTokens: 800,
+    },
+    identity: {
+      observabilityRevision: "dime-trace-observability-v1",
+      requestId,
+      applicationVersion: "1.0.0",
+      gitCommit: "03f75a9348d588714ba7da68e28cfe8d186fed7c",
+      environment: "production",
+      modelProvider: "runpod",
+      baseModel: "dime-1.0",
+      modelRevision: "base-a",
+      adapterRevision: "adapter-a",
+      promptRevision: "profile-a",
+      route: "live_data",
+      routePolicyRevision: "a".repeat(64),
+      controlPlaneRevision: "dime-composite-engineering-control-v1",
+      traceSchemaRevision: "trace-v1-phase1-2026-07-29",
+    },
+  };
+}
+
+function requestFingerprint(input: BeginDimeChatTraceInput): string {
+  return hashDimeChatTraceRequestFingerprint(
+    input,
+    hashDimeChatTraceText(input.userPrompt),
+    hashDimeChatTraceText(JSON.stringify(input.history))
+  );
 }
 
 describe("Dime Conversation Trace v1 request contract", () => {
@@ -96,6 +151,68 @@ describe("Dime Conversation Trace v1 request contract", () => {
     );
     expect(hashDimeChatTraceText("Dime ")).not.toBe(
       hashDimeChatTraceText("Dime")
+    );
+  });
+
+  it("replays the same client request after a lost response or process restart", () => {
+    const accepted = validBeginInput();
+    const retry = structuredClone(accepted);
+    retry.requestId = randomUUID();
+    retry.identity = {
+      ...retry.identity,
+      requestId: retry.requestId,
+      applicationVersion: "1.0.1",
+      gitCommit: "a".repeat(40),
+      modelRevision: "base-b",
+      routePolicyRevision: "b".repeat(64),
+    };
+    retry.requestClass = "deep";
+    retry.responseBudget = 1_200;
+    retry.provider = {
+      ...retry.provider,
+      requestedModel: "dime-1.1",
+      baseRevision: "base-b",
+      maxTokens: 1_200,
+    };
+
+    expect(requestFingerprint(retry)).toBe(requestFingerprint(accepted));
+  });
+
+  it("rejects reuse of an idempotency key for changed prompt input", () => {
+    const accepted = validBeginInput();
+    const changed = structuredClone(accepted);
+    changed.userPrompt = "What is the current Celtics moneyline?";
+    changed.history = [{ role: "user", content: changed.userPrompt }];
+
+    expect(requestFingerprint(changed)).not.toBe(requestFingerprint(accepted));
+  });
+
+  it("keeps concurrent duplicate attempts on one canonical fingerprint", async () => {
+    const accepted = validBeginInput();
+    const fingerprints = await Promise.all(
+      Array.from({ length: 8 }, async () =>
+        requestFingerprint(structuredClone(accepted))
+      )
+    );
+
+    expect(new Set(fingerprints)).toEqual(
+      new Set([requestFingerprint(accepted)])
+    );
+    expect(schemaSource).toContain(
+      '"idx_dime_chat_generations_user_idempotency"'
+    );
+    expect(schemaSource).toContain(").on(t.userId, t.idempotencyKey)");
+    expect(traceSource).toContain('code === "ER_DUP_ENTRY"');
+    expect(traceSource).toContain("const raced = resolveExistingAttempt(");
+  });
+
+  it("separates the same idempotency envelope across authenticated users", () => {
+    const firstUser = validBeginInput();
+    const secondUser = structuredClone(firstUser);
+    secondUser.userId = firstUser.userId + 1;
+
+    expect(requestFingerprint(secondUser)).not.toBe(
+      requestFingerprint(firstUser)
     );
   });
 

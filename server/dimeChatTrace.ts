@@ -395,7 +395,15 @@ function generationLeaseDeadline(now: Date): Date {
   return new Date(now.getTime() + DIME_CHAT_TRACE_GENERATION_LEASE_MS);
 }
 
-function requestFingerprint(
+/**
+ * Hash only authenticated user scope and client-owned request semantics.
+ *
+ * Server-owned execution metadata (requestId, release identity, routing,
+ * provider configuration, and response budgets) can legitimately change
+ * between an accepted request and a transport retry. Including any of it
+ * would turn a lost-response replay into a false idempotency conflict.
+ */
+export function hashDimeChatTraceRequestFingerprint(
   input: BeginDimeChatTraceInput,
   inputSha256: string,
   historySha256: string
@@ -403,13 +411,10 @@ function requestFingerprint(
   return hashDimeChatTraceText(
     JSON.stringify({
       version: DIME_CHAT_TRACE_VERSION,
+      userId: input.userId,
       envelope: input.envelope,
       inputSha256,
       historySha256,
-      requestClass: input.requestClass,
-      responseBudget: input.responseBudget,
-      provider: input.provider,
-      identity: input.identity,
     })
   );
 }
@@ -1053,7 +1058,7 @@ export async function beginDimeChatTrace(
   const inputSha256 = hashDimeChatTraceText(input.userPrompt);
   const acceptedHistorySnapshot = historySnapshot(input.history);
   const acceptedHistorySha256 = hashDimeChatTraceText(acceptedHistorySnapshot);
-  const fingerprintSha256 = requestFingerprint(
+  const fingerprintSha256 = hashDimeChatTraceRequestFingerprint(
     input,
     inputSha256,
     acceptedHistorySha256
