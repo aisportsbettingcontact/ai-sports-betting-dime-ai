@@ -11,6 +11,7 @@ from dime_ai.canonical_json import canonical_json_bytes
 from dime_ai.chat_format import encode_assistant_only
 from dime_ai.data_validation import validate_sft_record
 from dime_ai.foundation_control import validate_foundation_record, validate_source_packet
+from dime_ai.foundation_partitioning import assigned_split as assigned_partition_split
 
 
 class DataFactoryError(ValueError):
@@ -23,10 +24,7 @@ def _contains_placeholder(value: str) -> bool:
 
 
 def assigned_split(record: dict[str, Any]) -> str:
-    identity = record["partition_identity"]
-    material = f"{identity['split_assignment_seed']}:{identity['scenario_family_id']}"
-    bucket = int(hashlib.sha256(material.encode()).hexdigest(), 16) % 10
-    return "validation" if bucket == 0 else "train"
+    return assigned_partition_split(record["partition_identity"])
 
 
 def _trainer_messages(record: dict[str, Any]) -> list[dict[str, Any]]:

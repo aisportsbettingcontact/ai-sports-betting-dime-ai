@@ -88,6 +88,24 @@ def test_governance_is_closed_non_executing_and_scoped_to_five_actions() -> None
     assert tuple(contract["tool_states"]) == FOUNDATION_TOOL_STATES
     assert len(contract["owner_merge_authorization_scope"]) == 5
     assert all(contract["owner_merge_authorization_scope"].values())
+    assert (
+        contract["owner_merge_authorization_scope"][
+            "private_hugging_face_publication_after_release_gate"
+        ]
+        is True
+    )
+    assert "private_hugging_face_publication" not in contract["owner_merge_authorization_scope"]
+    assert contract["critic_independence"] == {
+        "must_differ": [
+            "actor_id",
+            "prompt_revision",
+            "prompt_sha256",
+            "execution_receipt_sha256",
+            "context_sha256",
+            "responsibility",
+        ],
+        "may_match": ["model_id", "model_revision"],
+    }
     assert len(contract["still_not_authorized"]) == 7
     assert not any(contract["still_not_authorized"].values())
 
@@ -214,7 +232,7 @@ def test_source_packets_are_immutable_and_pending_rights_fail_closed() -> None:
 def test_self_review_and_tool_state_mismatches_fail_closed() -> None:
     self_reviewed = template_record()
     self_reviewed["provenance"]["critic"] = deepcopy(self_reviewed["provenance"]["generator"])
-    with pytest.raises(DataFactoryError, match="cannot be its own critic"):
+    with pytest.raises(DataFactoryError, match="materially separate actor_id"):
         convert_authoring_record(self_reviewed)
 
     unapproved = template_record()
@@ -227,3 +245,53 @@ def test_self_review_and_tool_state_mismatches_fail_closed() -> None:
     mismatched["expected_tool_trace"][0]["expected_execution_state"] = "success"
     issues = validate_foundation_record(mismatched)
     assert any("requires a tool response" in issue for issue in issues)
+
+
+@pytest.mark.parametrize(
+    "field",
+    [
+        "actor_id",
+        "prompt_revision",
+        "prompt_sha256",
+        "execution_receipt_sha256",
+        "context_sha256",
+        "responsibility",
+    ],
+)
+def test_generator_and_critic_execution_identity_must_materially_differ(field: str) -> None:
+    record = template_record()
+    generator = record["provenance"]["generator"]
+    record["provenance"]["critic"][field] = generator[field]
+
+    with pytest.raises(DataFactoryError, match=f"materially separate {field}"):
+        convert_authoring_record(record)
+
+
+def test_different_actor_names_do_not_mask_identical_execution_identity() -> None:
+    record = template_record()
+    generator = record["provenance"]["generator"]
+    record["provenance"]["critic"] = deepcopy(generator)
+    record["provenance"]["critic"]["actor_id"] = "codex-critic-nominal-only"
+    record["provenance"]["critic"]["responsibility"] = "independent_critique"
+
+    with pytest.raises(DataFactoryError, match="materially separate prompt_revision"):
+        convert_authoring_record(record)
+
+
+@pytest.mark.parametrize(
+    ("role", "responsibility", "message"),
+    [
+        ("generator", "independent_critique", "generator responsibility must be generation"),
+        ("critic", "generation", "critic responsibility must be independent_critique"),
+    ],
+)
+def test_actor_responsibilities_are_role_exact(
+    role: str,
+    responsibility: str,
+    message: str,
+) -> None:
+    record = template_record()
+    record["provenance"][role]["responsibility"] = responsibility
+
+    with pytest.raises(DataFactoryError, match=message):
+        convert_authoring_record(record)

@@ -14,7 +14,8 @@ authorize only:
 2. Independent record critique.
 3. Deterministic record validation.
 4. Private evaluation semantic-case generation.
-5. Private Hugging Face publication.
+5. Private Hugging Face publication only after every exact release precondition
+   passes.
 
 It does not authorize model download, RunPod inference, training, benchmark
 execution, Railway mutation, tracing, or route activation.
@@ -33,23 +34,40 @@ be labeled `synthetic`. Every record binds:
 - rights, timestamps, route, tool, curriculum, and uncertainty fields; and
 - pre-prose partition identity.
 
-Placeholders, movable `latest` revisions, all-zero receipts, self-review, and
+The generator and critic may use the same pinned model revision, but their
+actor IDs, prompt revisions, prompt hashes, execution receipts, context
+hashes, and responsibilities must all differ. Placeholders, movable `latest`
+revisions, all-zero receipts, nominal-only critic identities, self-review, and
 pending rights fail conversion.
 
 ## Scenario-level partitioning
 
-The train/validation split is assigned before substantive prose generation.
-The frozen algorithm hashes:
+The train/validation split is assigned before substantive prose generation
+through `configs/foundation_partition_registry_v1.json`. The frozen algorithm
+hashes:
 
 ```text
 split_assignment_seed + ":" + scenario_family_id
 ```
 
 SHA-256 bucket `0 mod 10` is validation; all other buckets are train. The
-authoring record also carries template, source-event, conversation,
-quantitative-scenario, entity-set, and temporal-bucket identities for later
-group-leakage audits. Conversion rejects a declared split that differs from
-the deterministic assignment.
+global registry binds every non-null scenario, template, source event,
+conversation, quantitative scenario, and combined entity-set/temporal-bucket
+identity to one shard and split. Collection validation rejects cross-shard or
+cross-split collisions, seed or algorithm drift, stale registry entries, and
+record split disagreement.
+
+## Governed JSON and release publication
+
+All governed JSON under configs, schemas, evidence, tools, and authoring
+templates is parsed with duplicate-key rejection. Authorization-bearing
+documents never use last-value-wins semantics.
+
+Private publication is not unconditional. The pure publication guard accepts
+only an exact 2,400-authoring/2,400-trainer release with zero unconverted or
+extra records, pending rights, material findings, exact duplicates,
+cross-split collisions, evaluation contamination, conversion mismatches, or
+silent truncations, plus a verified release checksum.
 
 ## Structured tool supervision
 
@@ -97,6 +115,7 @@ From `ml/dime-1.0`:
 
 ```bash
 PYTHONPATH=src .venv/bin/python scripts/validate_foundation_data_factory.py
+PYTHONPATH=src .venv/bin/python scripts/validate_governed_json.py
 PYTHONPATH=src .venv/bin/python scripts/validate_foundation_control.py
 PYTHONPATH=src .venv/bin/pytest -q
 ```

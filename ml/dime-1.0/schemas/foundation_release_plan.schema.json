@@ -163,15 +163,43 @@
         },
         "governance_contract": {
           "path": "ml/dime-1.0/configs/foundation_data_factory_governance_v1.json",
-          "sha256": "0cd4ad1229a39dc8a2507f0dcda5ed60387b4b710a59c37ce7b13bcf4d3dc380"
+          "sha256": "529c26ad394c79707005b3df17500f7e22474b27ed4212cfede812a5d6c3ffc2"
+        },
+        "governance_schema": {
+          "path": "ml/dime-1.0/schemas/foundation_data_factory_governance.schema.json",
+          "sha256": "a4ec45ac242fb0ed266bae29e9011eae9c1cc243bbbb8860f0b58e2da622c30b"
+        },
+        "strict_json_loader": {
+          "path": "ml/dime-1.0/src/dime_ai/governed_json.py",
+          "sha256": "f2b00c11dc3fe57b6569f802041fe7155d1f31ca5dbf263910742e93b0931d64"
+        },
+        "strict_json_validator": {
+          "path": "ml/dime-1.0/scripts/validate_governed_json.py",
+          "sha256": "01a141b17baf249d4a8458a669aaa791f4cc9d576abfb7a89a8a1d2325954c14"
         },
         "source_packet_schema": {
           "path": "ml/dime-1.0/schemas/foundation_source_packet.schema.json",
           "sha256": "bb8180b274b536b5322b3f9c223dae2ebbb2c05cab910719b87864b49b2c7f99"
         },
+        "partition_registry": {
+          "path": "ml/dime-1.0/configs/foundation_partition_registry_v1.json",
+          "sha256": "63f765a2080c078e0bfaec48c27bc1f46a038d7c3ac1c49d518f9bd026cf991e"
+        },
+        "partition_registry_schema": {
+          "path": "ml/dime-1.0/schemas/foundation_partition_registry.schema.json",
+          "sha256": "c53895ca39531c184388e9501a8a91df92d0a08b5c1c3d3ca4674f36337e2868"
+        },
+        "partition_validator": {
+          "path": "ml/dime-1.0/src/dime_ai/foundation_partitioning.py",
+          "sha256": "fd8503113dbfe0cdcc959dab628aa51496205b798cfd57d8eefb262832ab5ca8"
+        },
         "conversion_implementation": {
           "path": "ml/dime-1.0/src/dime_ai/foundation_data_factory.py",
-          "sha256": "32fd245a6d09b0a5a79a0892dc76227c698f51293c02f28534bf5a7f0189b76f"
+          "sha256": "e3ac393110e16cd511c6c509f3fff3ecb9b623390133b606a7f24cf2c52dacc0"
+        },
+        "publication_guard": {
+          "path": "ml/dime-1.0/src/dime_ai/foundation_publication.py",
+          "sha256": "5dac5fc1b9f8c5e092c517c4c6a5853865691515c70abb0248a56e5520d551cf"
         }
       }
     },

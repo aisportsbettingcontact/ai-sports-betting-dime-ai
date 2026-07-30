@@ -118,37 +118,6 @@
         "$ref": "#/$defs/tool_trace_step"
       }
     },
-    "independent_review": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "decision",
-        "rubric_version",
-        "reviewed_at",
-        "unresolved_material_findings",
-        "deterministic_validation_passed"
-      ],
-      "properties": {
-        "decision": {
-          "enum": ["approved", "changes_requested", "rejected"]
-        },
-        "rubric_version": {
-          "type": "string",
-          "pattern": "^[a-z0-9][a-z0-9._-]{2,95}$"
-        },
-        "reviewed_at": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "unresolved_material_findings": {
-          "type": "integer",
-          "minimum": 0
-        },
-        "deterministic_validation_passed": {
-          "type": "boolean"
-        }
-      }
-    },
     "freshness_class": {
       "enum": [
         "static",
@@ -330,6 +299,37 @@
         },
         "critic": {
           "$ref": "#/$defs/actor"
+        }
+      }
+    },
+    "independent_review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "decision",
+        "rubric_version",
+        "reviewed_at",
+        "unresolved_material_findings",
+        "deterministic_validation_passed"
+      ],
+      "properties": {
+        "decision": {
+          "enum": ["approved", "changes_requested", "rejected"]
+        },
+        "rubric_version": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9._-]{2,95}$"
+        },
+        "reviewed_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "unresolved_material_findings": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "deterministic_validation_passed": {
+          "type": "boolean"
         }
       }
     },

@@ -3,13 +3,24 @@
 from __future__ import annotations
 
 import hashlib
-import json
 from pathlib import Path
 from typing import Any
 
 from jsonschema import Draft202012Validator, FormatChecker
 
 from dime_ai.foundation_contracts import FoundationContractError
+from dime_ai.foundation_partitioning import (
+    GROUP_DIMENSIONS,
+    PARTITION_REGISTRY_PATH,
+    PARTITION_REGISTRY_SCHEMA_PATH,
+    load_partition_registry,
+    validate_partition_registry,
+)
+from dime_ai.foundation_partitioning import (
+    assigned_split as assigned_partition_split,
+)
+from dime_ai.foundation_publication import private_hugging_face_publication_allowed
+from dime_ai.governed_json import load_governed_json
 from dime_ai.tool_contracts import validate_tool_response
 
 ML_ROOT = Path(__file__).resolve().parents[2]
@@ -80,8 +91,17 @@ DATA_FACTORY_OWNER_MERGE_SCOPE = {
     "independent_record_critique",
     "deterministic_record_validation",
     "private_evaluation_case_generation",
-    "private_hugging_face_publication",
+    "private_hugging_face_publication_after_release_gate",
 }
+CRITIC_INDEPENDENCE_MUST_DIFFER = (
+    "actor_id",
+    "prompt_revision",
+    "prompt_sha256",
+    "execution_receipt_sha256",
+    "context_sha256",
+    "responsibility",
+)
+CRITIC_INDEPENDENCE_MAY_MATCH = ("model_id", "model_revision")
 DATA_FACTORY_STILL_CLOSED = {
     "model_download",
     "runpod_inference",
@@ -195,7 +215,7 @@ EXECUTION_AUTHORIZATION_KEYS = {
 
 
 def _load_json(path: Path) -> dict[str, Any]:
-    value = json.loads(path.read_text(encoding="utf-8"))
+    value = load_governed_json(path)
     if not isinstance(value, dict):
         raise ValueError(f"{path} must contain a JSON object.")
     return value
@@ -241,10 +261,7 @@ def _check_file_binding(binding: object, label: str, errors: list[str]) -> None:
 
 
 def _assigned_foundation_split(record: dict[str, Any]) -> str:
-    identity = record["partition_identity"]
-    material = f"{identity['split_assignment_seed']}:{identity['scenario_family_id']}"
-    bucket = int(hashlib.sha256(material.encode()).hexdigest(), 16) % 10
-    return "validation" if bucket == 0 else "train"
+    return assigned_partition_split(record["partition_identity"])
 
 
 def validate_source_packet(packet: object) -> list[str]:
@@ -267,11 +284,33 @@ def validate_data_factory_governance(contract: object) -> list[str]:
     source_schema = REPO_ROOT / contract["source_packets"]["schema_path"]
     if source_schema != FOUNDATION_SOURCE_PACKET_SCHEMA_PATH or not source_schema.is_file():
         errors.append("Data Factory source-packet schema path is not canonical.")
+    partitioning = contract["partitioning"]
+    partition_paths = {
+        "registry_path": PARTITION_REGISTRY_PATH,
+        "registry_schema_path": PARTITION_REGISTRY_SCHEMA_PATH,
+        "collection_validator_path": ML_ROOT / "src" / "dime_ai" / "foundation_partitioning.py",
+    }
+    for key, expected_path in partition_paths.items():
+        if REPO_ROOT / partitioning[key] != expected_path or not expected_path.is_file():
+            errors.append(f"Data Factory partition {key} is not canonical.")
+    if tuple(partitioning["group_keys"]) != GROUP_DIMENSIONS:
+        errors.append("Data Factory partition group dimensions differ from the global registry.")
+    errors.extend(
+        f"partition registry: {issue}"
+        for issue in validate_partition_registry(load_partition_registry())
+    )
     owner_scope = contract["owner_merge_authorization_scope"]
     if set(owner_scope) != DATA_FACTORY_OWNER_MERGE_SCOPE or not all(
         value is True for value in owner_scope.values()
     ):
         errors.append("Owner-merge authorization scope must contain exactly five true actions.")
+    if contract["critic_independence"] != {
+        "must_differ": list(CRITIC_INDEPENDENCE_MUST_DIFFER),
+        "may_match": list(CRITIC_INDEPENDENCE_MAY_MATCH),
+    }:
+        errors.append("Data Factory critic independence differs from the exact contract.")
+    if not private_hugging_face_publication_allowed(contract["private_publication_preconditions"]):
+        errors.append("Data Factory private publication preconditions differ from the exact gate.")
     if not _exact_false_map(contract["still_not_authorized"], DATA_FACTORY_STILL_CLOSED):
         errors.append("Data Factory still_not_authorized must contain seven exact false gates.")
     if tuple(contract["tool_states"]) != FOUNDATION_TOOL_STATES:
@@ -287,11 +326,16 @@ def validate_foundation_record(record: object) -> list[str]:
         return errors
 
     provenance = record["provenance"]
-    if provenance["generator"]["actor_id"] == provenance["critic"]["actor_id"]:
-        errors.append("A Foundation record generator cannot be its own critic.")
-    if provenance["generator"]["responsibility"] != "generation":
+    generator = provenance["generator"]
+    critic = provenance["critic"]
+    for field in CRITIC_INDEPENDENCE_MUST_DIFFER:
+        if generator[field] == critic[field]:
+            errors.append(
+                f"Foundation generator and critic must use materially separate {field} identities."
+            )
+    if generator["responsibility"] != "generation":
         errors.append("Foundation generator responsibility must be generation.")
-    if provenance["critic"]["responsibility"] != "independent_critique":
+    if critic["responsibility"] != "independent_critique":
         errors.append("Foundation critic responsibility must be independent_critique.")
 
     if record["expected_response"] != record["expected_final_response"]:
@@ -436,8 +480,15 @@ def validate_foundation_plan(plan: object) -> list[str]:
         errors.append("AI-authorship policy must bind the Data Factory governance resolution.")
     for binding_name in (
         "governance_contract",
+        "governance_schema",
+        "strict_json_loader",
+        "strict_json_validator",
         "source_packet_schema",
+        "partition_registry",
+        "partition_registry_schema",
+        "partition_validator",
         "conversion_implementation",
+        "publication_guard",
     ):
         _check_file_binding(factory[binding_name], f"data_factory.{binding_name}", errors)
     if factory.get("private_chain_of_thought_allowed") is not False:

@@ -1,0 +1,128 @@
+{
+  "schemaVersion": "dime-pr248-correction-evidence-v1",
+  "observedAt": "2026-07-30T10:30:27Z",
+  "repository": {
+    "repository": "aisportsbettingcontact/ai-sports-betting-dime-ai",
+    "branch": "agent/dime-foundation-data-factory-governance-v1",
+    "startingHead": "b2adebe253ef5398d9eaa6ac16239fb6240f002c",
+    "baseHead": "c6e4d07ce2e7565c9ec94c6ddc2ffcd18511c3ae",
+    "pullRequest": 248
+  },
+  "livePullRequestBeforeCorrection": {
+    "state": "OPEN",
+    "draft": true,
+    "mergeable": true,
+    "requestedReviewer": "prez-ai-sports-betting",
+    "reviews": 0,
+    "reviewThreads": 0,
+    "ci": "PASS",
+    "dimeLlmValidation": "PASS",
+    "gitleaks": "PASS"
+  },
+  "defects": {
+    "strictGovernedJson": {
+      "reproduced": true,
+      "rootCause": "foundation_record.schema.json repeated independent_review and ordinary JSON parsing used last-value-wins semantics",
+      "duplicateGovernedJsonKeys": 0,
+      "negativeTests": "PASS"
+    },
+    "criticIndependence": {
+      "reproduced": true,
+      "rootCause": "different actor IDs could reuse the same prompt, context, and execution receipt",
+      "nominalIdentityOnlyIndependenceAllowed": false,
+      "negativeTests": "PASS"
+    },
+    "globalPartitionRegistry": {
+      "reproduced": true,
+      "rootCause": "individual split assignment did not globally bind every group identity across shards",
+      "crossSplitGroupCollisions": 0,
+      "partitionRegistryDrift": 0,
+      "collectionTests": "PASS"
+    },
+    "conditionalPrivatePublication": {
+      "reproduced": true,
+      "rootCause": "private Hugging Face publication was named as an unconditional owner-merge action",
+      "incompleteReleasePublicationPossible": false,
+      "preconditionTests": "PASS"
+    }
+  },
+  "validation": {
+    "focusedTests": {
+      "status": "PASS",
+      "passed": 134
+    },
+    "fullMlTests": {
+      "status": "PASS",
+      "passed": 1103,
+      "durationSeconds": 31.55
+    },
+    "governedJsonScan": {
+      "status": "PASS",
+      "filesBeforeThisEvidencePackage": 114,
+      "issues": 0
+    },
+    "ruffFormat": "PASS",
+    "ruffLint": "PASS",
+    "compileall": "PASS",
+    "uvLock": "PASS",
+    "uvPipCheck": "PASS",
+    "dataValidation": "PASS",
+    "foundationControl": "PASS",
+    "foundationDataFactory": "PASS",
+    "reviewerRuntime": "PASS",
+    "reviewerSignerIac": "PASS",
+    "deterministicStarterAudits": "PASS",
+    "typescript": "PASS",
+    "productionBuild": "PASS",
+    "localGitleaks": "UNAVAILABLE_GITHUB_RERUN_REQUIRED"
+  },
+  "productionNonDeployment": {
+    "railwayProjectId": "8dd7341d-702c-48c7-90df-5c19a4f04913",
+    "environmentId": "787f3113-17ab-47d9-9819-1268aeb09b3e",
+    "application": {
+      "serviceId": "a46ea921-5c5d-4225-9254-92f742e95b51",
+      "deploymentId": "fad6ac88-89f8-46ae-81be-46db30b5db8e",
+      "status": "SUCCESS",
+      "commitSha": "c6e4d07ce2e7565c9ec94c6ddc2ffcd18511c3ae",
+      "health": "ok",
+      "databaseCircuit": "CLOSED",
+      "databaseConsecutiveFailures": 0
+    },
+    "backend": {
+      "serviceId": "3528dc9f-a63b-45e9-94bb-6d1df25d6f3a",
+      "deploymentId": "27bf3038-f0b7-40f4-a460-0d9027181d04",
+      "status": "SUCCESS",
+      "commitSha": "c6e4d07ce2e7565c9ec94c6ddc2ffcd18511c3ae",
+      "health": "ok",
+      "databaseCircuit": "CLOSED",
+      "databaseConsecutiveFailures": 0
+    },
+    "mutationsPerformed": []
+  },
+  "authorizationBoundary": {
+    "codexPrivateRecordGeneration": false,
+    "independentRecordCritique": false,
+    "deterministicRecordValidationExecution": false,
+    "privateEvaluationCaseGeneration": false,
+    "privateHuggingFacePublication": false,
+    "modelDownload": false,
+    "runpodInference": false,
+    "modelTraining": false,
+    "benchmarkExecution": false,
+    "railwayMutation": false,
+    "tracing": false,
+    "shadowTraffic": false,
+    "routeActivation": false,
+    "researchAlphaActivation": false
+  },
+  "externalOperations": {
+    "generatedRecordCount": 0,
+    "publishedRecordCount": 0,
+    "modelDownloadCount": 0,
+    "runpodInvocationCount": 0,
+    "trainingRunCount": 0,
+    "benchmarkRunCount": 0,
+    "railwayMutationCount": 0
+  },
+  "currentGate": "HOLD_FOR_CORRECTED_HEAD_CHECKS_AND_INDEPENDENT_REVIEW"
+}

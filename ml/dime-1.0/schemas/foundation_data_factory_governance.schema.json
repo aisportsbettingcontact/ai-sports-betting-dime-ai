@@ -9,12 +9,13 @@
     "status",
     "authorization_effect",
     "governed_ai_authorship",
-    "actor_separation",
+    "critic_independence",
     "partitioning",
     "source_packets",
     "tool_states",
     "conversion",
     "owner_merge_authorization_scope",
+    "private_publication_preconditions",
     "still_not_authorized"
   ],
   "properties": {
@@ -67,16 +68,21 @@
         }
       }
     },
-    "actor_separation": {
-      "const": [
-        "actor_id",
-        "model_revision",
-        "prompt_revision",
-        "prompt_sha256",
-        "execution_receipt_sha256",
-        "context_sha256",
-        "responsibility"
-      ]
+    "critic_independence": {
+      "const": {
+        "must_differ": [
+          "actor_id",
+          "prompt_revision",
+          "prompt_sha256",
+          "execution_receipt_sha256",
+          "context_sha256",
+          "responsibility"
+        ],
+        "may_match": [
+          "model_id",
+          "model_revision"
+        ]
+      }
     },
     "partitioning": {
       "type": "object",
@@ -87,7 +93,10 @@
         "assignment_timing",
         "validation_bucket",
         "bucket_modulus",
-        "group_keys"
+        "group_keys",
+        "registry_path",
+        "registry_schema_path",
+        "collection_validator_path"
       ],
       "properties": {
         "assignment_basis": {"const": "scenario_family_sha256_mod_10"},
@@ -102,9 +111,17 @@
             "source_event_id",
             "conversation_family_id",
             "quantitative_scenario_id",
-            "entity_set_sha256",
-            "temporal_bucket"
+            "entity_set_temporal_bucket"
           ]
+        },
+        "registry_path": {
+          "const": "ml/dime-1.0/configs/foundation_partition_registry_v1.json"
+        },
+        "registry_schema_path": {
+          "const": "ml/dime-1.0/schemas/foundation_partition_registry.schema.json"
+        },
+        "collection_validator_path": {
+          "const": "ml/dime-1.0/src/dime_ai/foundation_partitioning.py"
         }
       }
     },
@@ -181,7 +198,23 @@
         "independent_record_critique": true,
         "deterministic_record_validation": true,
         "private_evaluation_case_generation": true,
-        "private_hugging_face_publication": true
+        "private_hugging_face_publication_after_release_gate": true
+      }
+    },
+    "private_publication_preconditions": {
+      "const": {
+        "authoring_records": 2400,
+        "trainer_records": 2400,
+        "unconverted_records": 0,
+        "unexpected_extra_records": 0,
+        "pending_rights_records": 0,
+        "unresolved_material_findings": 0,
+        "exact_duplicates": 0,
+        "cross_split_group_collisions": 0,
+        "evaluation_contamination": 0,
+        "conversion_hash_mismatches": 0,
+        "silent_truncations": 0,
+        "release_checksum_verified": true
       }
     },
     "still_not_authorized": {

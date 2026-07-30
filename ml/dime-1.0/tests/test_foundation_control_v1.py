@@ -73,7 +73,7 @@ def test_foundation_record_requires_independent_critique_and_consistent_coverage
         "actor_id"
     ]
     assert validate_foundation_record(self_reviewed) == [
-        "A Foundation record generator cannot be its own critic."
+        "Foundation generator and critic must use materially separate actor_id identities."
     ]
 
     inconsistent = deepcopy(record)
