@@ -37,3 +37,14 @@ c63bb85031c2a3404ae2a4a049dfb02e39777c2d:ml/dime-1.0/configs/dime_training_contr
 f20c968af422131eb6a6e075fefad77f42511d28:ml/dime-1.0/evidence/benchmarks/model-artifact-evaluation-v1/contract.json:generic-api-key:89
 c63bb85031c2a3404ae2a4a049dfb02e39777c2d:ml/dime-1.0/evidence/benchmarks/base-model-suitability-v1/contract.json:generic-api-key:22
 c63bb85031c2a3404ae2a4a049dfb02e39777c2d:ml/dime-1.0/evidence/benchmarks/base-model-suitability-v1/contract.json:generic-api-key:32
+
+# PR #252 immutable SHA-256 artifact identities. The generic-api-key detector
+# matched six content checksums in the sanitized governance evidence manifest.
+# These exact commit/path/rule/line fingerprints do not suppress either the
+# checksum values elsewhere or future findings.
+8e75ee77ddc2221055d2a8febec6378d23257dbb:ml/dime-1.0/evidence/governance/evaluation-answer-key-governance-v1/manifest.json:generic-api-key:20
+8e75ee77ddc2221055d2a8febec6378d23257dbb:ml/dime-1.0/evidence/governance/evaluation-answer-key-governance-v1/manifest.json:generic-api-key:21
+8e75ee77ddc2221055d2a8febec6378d23257dbb:ml/dime-1.0/evidence/governance/evaluation-answer-key-governance-v1/manifest.json:generic-api-key:23
+8e75ee77ddc2221055d2a8febec6378d23257dbb:ml/dime-1.0/evidence/governance/evaluation-answer-key-governance-v1/manifest.json:generic-api-key:26
+8e75ee77ddc2221055d2a8febec6378d23257dbb:ml/dime-1.0/evidence/governance/evaluation-answer-key-governance-v1/manifest.json:generic-api-key:27
+8e75ee77ddc2221055d2a8febec6378d23257dbb:ml/dime-1.0/evidence/governance/evaluation-answer-key-governance-v1/manifest.json:generic-api-key:28
