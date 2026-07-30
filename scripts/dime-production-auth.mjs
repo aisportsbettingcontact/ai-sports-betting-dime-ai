@@ -29,6 +29,7 @@ import {
   SECURE_RAILWAY_EXECUTABLE,
   verifySecureRailwayBroker,
 } from "./dime-railway-secure.mjs";
+import { verifyAuthenticationClosure } from "./lib/dime-authentication-closure.mjs";
 
 const execFileAsync = promisify(execFile);
 const SCRIPT_PATH = fileURLToPath(import.meta.url);
@@ -37,6 +38,7 @@ const COMMAND_TIMEOUT_MS = 90_000;
 const PAGE_TIMEOUT_MS = 35_000;
 const MAX_RAILWAY_CREDENTIAL_RESPONSE_BYTES = 32 * 1024;
 const SOURCE_MARKER = "DIME_PLATFORM_CREDENTIAL_SOURCE";
+const CLOSURE_PREFLIGHT_MARKER = "DIME_AUTH_CLOSURE_PREFLIGHT";
 const ALLOWED_ROLES = new Set(["owner", "user"]);
 
 function invariant(condition, message) {
@@ -291,11 +293,15 @@ async function loginOnce(browser, manifest, expected, headed) {
   };
 }
 
-async function verifyWithBrowser(manifest, role, { headed, credentialLoader }) {
+async function verifyWithBrowser(
+  manifest,
+  role,
+  { headed, credentialLoader, browserExecutablePath }
+) {
   await removeRoleCache(role);
   const { chromium } = await import("playwright");
   const browser = await chromium.launch({
-    channel: manifest.platform.browserChannel,
+    executablePath: browserExecutablePath,
     headless: !headed,
     env: minimalEnvironment(),
   });
@@ -442,6 +448,25 @@ async function main() {
     process.stdout.write(`${help()}\n`);
     return;
   }
+  if (args.command === "closure-preflight") {
+    invariant(
+      args.brokerActive &&
+        process.env[CLOSURE_PREFLIGHT_MARKER] === "1" &&
+        process.env[SOURCE_MARKER] === undefined,
+      "closure preflight is reserved for the provenance-pinned native broker"
+    );
+    const closure = await verifyAuthenticationClosure();
+    process.stdout.write(
+      `${JSON.stringify({
+        schemaVersion: closure.schemaVersion,
+        kind: closure.kind,
+        status: closure.status,
+        credentialBytesRead: closure.credentialBytesRead,
+        authorization: closure.authorization,
+      })}\n`
+    );
+    return;
+  }
   invariant(ALLOWED_ROLES.has(args.role), "--role must be owner or user");
   const { manifest } = await loadAccessManifest();
 
@@ -468,9 +493,11 @@ async function main() {
     args.brokerActive,
     "Railway source marker requires --broker-active"
   );
+  const closure = await verifyAuthenticationClosure();
   const names = Object.values(manifest.platform.roles[args.role].environment);
   const result = await verifyWithBrowser(manifest, args.role, {
     headed: args.headed,
+    browserExecutablePath: closure.manifest.browser.path,
     credentialLoader: async () => {
       const environment = await readPrivateCredentialInput(names);
       try {

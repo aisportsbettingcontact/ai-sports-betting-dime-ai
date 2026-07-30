@@ -22,15 +22,21 @@ import {
   SECURE_RAILWAY_HOME,
   SECURE_RAILWAY_PROVENANCE,
 } from "./dime-railway-secure.mjs";
+import {
+  AUTHENTICATION_CLOSURE_MANIFEST,
+  AUTHENTICATION_CLOSURE_PUBLIC_KEY,
+  AUTHENTICATION_APPLICATION_DIRECTORY,
+  AUTHENTICATION_ENTRYPOINT,
+} from "./lib/dime-authentication-closure.mjs";
 import { verifyAbsoluteExecutable } from "./lib/dime-trusted-executables.mjs";
+import {
+  AUTHENTICATION_CANDIDATE_DESCRIPTOR,
+  buildAuthenticationClosureCandidate,
+} from "./build-dime-authentication-closure.mjs";
 
 const execFileAsync = promisify(execFile);
 const scriptPath = fileURLToPath(import.meta.url);
 const sourcePath = resolve(dirname(scriptPath), "dime-railway-keychain.c");
-const productionAuthPath = resolve(
-  dirname(scriptPath),
-  "dime-production-auth.mjs"
-);
 const candidateExecutable = resolve(
   SECURE_RAILWAY_DIRECTORY,
   "dime-railway-keychain.candidate"
@@ -79,6 +85,7 @@ async function main() {
   await chmod(SECURE_RAILWAY_DIRECTORY, 0o700);
   await mkdir(SECURE_RAILWAY_HOME, { recursive: true, mode: 0o700 });
   await hardenTree(SECURE_RAILWAY_HOME);
+  const authenticationCandidate = await buildAuthenticationClosureCandidate();
   const [node, railway, sourceSha256, productionAuthSha256] = await Promise.all(
     [
       verifyAbsoluteExecutable(process.execPath, { label: "node" }),
@@ -87,7 +94,7 @@ async function main() {
         allowedRoots: ["/opt/homebrew"],
       }),
       sha256File(sourcePath),
-      sha256File(productionAuthPath),
+      Promise.resolve(authenticationCandidate.deterministicBundle.sha256),
     ]
   );
   try {
@@ -99,8 +106,23 @@ async function main() {
         compilerString("DIME_NODE_SHA256", node.sha256),
         compilerString("DIME_RAILWAY_EXECUTABLE", railway.path),
         compilerString("DIME_RAILWAY_SHA256", railway.sha256),
-        compilerString("DIME_PRODUCTION_AUTH_SCRIPT", productionAuthPath),
+        compilerString(
+          "DIME_AUTH_APPLICATION_DIRECTORY",
+          AUTHENTICATION_APPLICATION_DIRECTORY
+        ),
+        compilerString(
+          "DIME_PRODUCTION_AUTH_SCRIPT",
+          AUTHENTICATION_ENTRYPOINT
+        ),
         compilerString("DIME_PRODUCTION_AUTH_SHA256", productionAuthSha256),
+        compilerString(
+          "DIME_AUTH_CLOSURE_MANIFEST",
+          AUTHENTICATION_CLOSURE_MANIFEST
+        ),
+        compilerString(
+          "DIME_AUTH_CLOSURE_PUBLIC_KEY",
+          AUTHENTICATION_CLOSURE_PUBLIC_KEY
+        ),
         "-framework",
         "Security",
         "-framework",
@@ -142,8 +164,15 @@ async function main() {
             railway: { path: railway.path, sha256: railway.sha256 },
           },
           authenticationChild: {
-            path: productionAuthPath,
+            path: AUTHENTICATION_ENTRYPOINT,
             sha256: productionAuthSha256,
+            applicationDirectory: AUTHENTICATION_APPLICATION_DIRECTORY,
+            candidateDescriptor: AUTHENTICATION_CANDIDATE_DESCRIPTOR,
+            manifest: AUTHENTICATION_CLOSURE_MANIFEST,
+            publicKey: AUTHENTICATION_CLOSURE_PUBLIC_KEY,
+            manifestSha256Compiled: false,
+            publicKeySha256Compiled: false,
+            completeClosureAttested: false,
           },
           requiredImmutableProvenancePath: SECURE_RAILWAY_PROVENANCE,
         },
@@ -171,6 +200,7 @@ async function main() {
       credentialImported: false,
       credentialExecution: "BLOCKED_PENDING_INDEPENDENT_ADMIN_PROVENANCE",
       provenanceCandidate: candidateProvenancePath,
+      authenticationClosureCandidate: AUTHENTICATION_CANDIDATE_DESCRIPTOR,
       requiredImmutableProvenance: SECURE_RAILWAY_PROVENANCE,
       adHocSignatureAccepted: false,
     }) + "\n"
