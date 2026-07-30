@@ -59,6 +59,10 @@ import {
   formatDimeRuntimeReadinessLog,
   getDimeRuntimeReadiness,
 } from "./dimeRuntimeReadiness";
+import {
+  formatDimePricingAttestationLog,
+  getDimePricingAttestation,
+} from "./dimePricingAttestation";
 
 // ─── Owner-only app_session auth (Railway-native) ──────────────────────────────
 // The legacy owner debug endpoints authenticated via the retired platform's SDK
@@ -818,6 +822,7 @@ async function startServer() {
   console.log(`[SERVER_STARTUP] Registering Dime AI chat SSE route`);
   registerDimeChatRoute(app);
   console.log(formatDimeRuntimeReadinessLog(getDimeRuntimeReadiness()));
+  console.log(formatDimePricingAttestationLog(getDimePricingAttestation()));
 
   // ─── Dime WC2026 Intelligence — Tier 4 authenticated, credit-gated, source-grounded
   // POST /api/dime/wc2026 — 14-step enforcement, 22-path validated

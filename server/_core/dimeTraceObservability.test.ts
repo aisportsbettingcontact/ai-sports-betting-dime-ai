@@ -49,6 +49,7 @@ function pricingRegistry() {
     currency: "USD" as const,
     source: "https://provider.example/pricing",
     sourceDocumentSha256: "a".repeat(64),
+    reviewStatus: "approved" as const,
     reviewer: "pricing-reviewer@example.com",
     reviewedAt: "2026-07-29T01:00:00Z",
     reviewEvidenceSha256: "b".repeat(64),
@@ -60,7 +61,7 @@ function pricingRegistry() {
   return {
     schemaVersion: DIME_PRICING_REGISTRY_VERSION,
     registryRevision: "pricing-registry-2026-07-29",
-    status: "reviewed" as const,
+    status: "approved" as const,
     entries: [entry],
   };
 }
@@ -266,7 +267,18 @@ describe("Dime Phase 1 timestamp, cost, and completeness contracts", () => {
       registryConfigured: false,
       registryLoaded: false,
       registryReviewed: false,
+      registryApproved: false,
       entryCount: 0,
+      attestation: {
+        pathConfigured: false,
+        registryStatus: "not_configured",
+        activeProvider: "frozen",
+        activeModel: "no-provider",
+        activeModelRevision: "no-provider",
+        deploymentTier: "disabled",
+        zeroCostRuntime: true,
+        exactMatchAvailable: false,
+      },
     });
     expect(readiness.readyForIndependentGate).toBe(false);
     expect(readiness.security).toEqual({
@@ -303,6 +315,36 @@ describe("Dime Phase 1 timestamp, cost, and completeness contracts", () => {
         zeroCostRuntime: true,
       })
     ).toThrow("cannot exceed");
+  });
+
+  it("does not infer cached-token pricing from the input-token rate", () => {
+    const registry = pricingRegistry();
+    const entryInput = {
+      ...registry.entries[0],
+      cachedInputUsdPerMillionTokens: null,
+    };
+    const { entryChecksumSha256: _discardedChecksum, ...checksumInput } =
+      entryInput;
+    registry.entries[0] = {
+      ...entryInput,
+      entryChecksumSha256: checksumDimePricingEntry(checksumInput),
+    };
+    expect(
+      estimateDimeTraceCost({
+        inputTokens: 1_000,
+        outputTokens: 100,
+        cachedInputTokens: 500,
+        provider: "example-provider",
+        model: "dime-test-model",
+        modelRevision: "2026-07-29",
+        requestAt: new Date("2026-07-29T12:00:00Z"),
+        pricingRegistry: registry,
+      })
+    ).toMatchObject({
+      status: "cost_unavailable",
+      modelCostUsd: null,
+      unavailabilityReason: "cached_input_pricing_unavailable",
+    });
   });
 
   it("fails dynamic-evidence completeness when provenance timestamps are absent", () => {
