@@ -1,0 +1,366 @@
+{
+  "schema_version": "dime-model-artifact-evaluation-contract-v1",
+  "contract_id": "dime-llm-v1-base-runtime-adapter-comparison",
+  "status": "FROZEN_NOT_AUTHORIZED",
+  "frozen_at": "2026-07-30T06:06:33Z",
+  "source_commit": "7e1f284329ac01cca9a873c0abcc1412b1405441",
+  "purpose": "Measure runtime-engineering gain and Dime adapter gain separately under one frozen, reproducible RunPod model-compute contract.",
+  "primary_question": "Does the Dime-trained adapter materially outperform the same base model with Runtime Answer Routing v1 under otherwise identical conditions?",
+  "architecture": {
+    "training_orchestrator": {
+      "platform": "Codex",
+      "agent": "5.6 Sol",
+      "role": "engineering_and_training_control"
+    },
+    "model_compute": {
+      "platform": "RunPod",
+      "role": "training_and_inference_compute"
+    },
+    "excluded_providers": [
+      "anthropic"
+    ],
+    "frozen_no_provider_role": "deterministic_fallback_and_non_generative_control"
+  },
+  "dataset": {
+    "classification": "synthetic_and_reviewed_nonproduction",
+    "contains_production_prompts_or_responses": false,
+    "contains_user_identifiers": false,
+    "sources": [
+      {
+        "path": "ml/dime-1.0/data/eval/product_route_observability_v1.benchmark.json",
+        "sha256": "b85271e867c531b0472513ce2cb06214632fd8c0ea910efec207a51750e36372",
+        "case_count": 18
+      },
+      {
+        "path": "ml/dime-1.0/data/eval/runtime_answer_routing_v1.benchmark.json",
+        "sha256": "e7c54e314107ca680767253e3d3cd8b33cc2d90ef02863c6a91dcd7560981167",
+        "case_count": 19
+      },
+      {
+        "path": "ml/dime-1.0/data/eval/platform_grounding_v1.sample.jsonl",
+        "sha256": "8cb453217f286b7c7411aed29c6c25832fbabb26bdf8e384b0a207840b0de931",
+        "case_count": 12
+      },
+      {
+        "path": "ml/dime-1.0/data/eval/dev.sample.jsonl",
+        "sha256": "7871caf299457721d2b0c5ebb54e3dc4b120551680412110763767aaddcdb7df",
+        "case_count": 10
+      },
+      {
+        "path": "ml/dime-1.0/data/eval/safety_red_team.sample.jsonl",
+        "sha256": "1576397bfe351e9bb9f54ec6abc9f16e8a5e73ca8152b9b8fd74fcb1f7220b09",
+        "case_count": 6
+      },
+      {
+        "path": "ml/dime-1.0/data/eval/provider_selection_v1.supplemental.json",
+        "sha256": "4fc1d3c38753261fe095d49f16b246e83e9ebebd04cd2a26436ffd8e3a6aa0e2",
+        "case_count": 16,
+        "schema_path": "ml/dime-1.0/schemas/provider_selection_supplemental.schema.json",
+        "schema_sha256": "27f23c9d072e7c134e5e207f18144e1696ab72bbf08f1067447a87f092eba85a"
+      }
+    ],
+    "total_case_count": 81,
+    "required_coverage": [
+      "platform",
+      "account",
+      "educational",
+      "matchup",
+      "historical",
+      "current_data",
+      "tool_required",
+      "missing_data",
+      "conflicting_data",
+      "ambiguous_team",
+      "ambiguous_date",
+      "doubleheader",
+      "postponed",
+      "rescheduled",
+      "multi_turn_correction",
+      "unsupported_premise"
+    ]
+  },
+  "evaluation_controls": {
+    "candidate_order": "randomized_per_repetition",
+    "candidate_labels": "blinded",
+    "repetitions_per_case": 3,
+    "random_seed": 1729,
+    "base_model": "meta-llama/Llama-3.1-8B",
+    "base_revision": "d04e592bb4f6aa9cfee91e2e20afa771667e1d4b",
+    "tokenizer_revision": "d04e592bb4f6aa9cfee91e2e20afa771667e1d4b",
+    "system_prompt": {
+      "path": "ml/dime-1.0/prompts/dime_system_v1.md",
+      "sha256": "8ebdbcbdccafca8faaef490a7bda120b7095bdd9d55fe879147b3fd3c04af4e9"
+    },
+    "chat_template": {
+      "path": "ml/dime-1.0/prompts/llama3_dime_chat_template_v1.jinja",
+      "sha256": "2407ed345ce3013e1e1279d46ea7e4e6e78a9a0696ac226a2f24f697b9504087"
+    },
+    "tool_catalog": {
+      "path": "ml/dime-1.0/tools/tools.v1.json",
+      "sha256": "56f3c39fd730f9d923efcf837433825d76de4c4acb51d668095d1eb68db4cca5"
+    },
+    "decoding": {
+      "path": "ml/dime-1.0/configs/decoding_v1.json",
+      "sha256": "c5c540b795aa217b1b32df9bf445924816d47a542acb313e05dc4a82eecbbbc1",
+      "do_sample": false,
+      "temperature": 0,
+      "top_p": 1,
+      "maximum_output_tokens": 512
+    },
+    "retrieval_source": {
+      "path": "server/_core/dimeChatContext.ts",
+      "sha256": "1436a564daa2b101607256fe17a57da6c5599960fa71b96c420b11f2ecc6261d"
+    },
+    "answer_routing_source": {
+      "revision": "runtime-answer-routing-v1",
+      "path": "server/_core/dimeAnswerRouting.ts",
+      "sha256": "f0ccc880992f6dfcfd91f93733dad4ab0c3b1c55485fb5d41e143051535f17b7"
+    },
+    "tool_handler_source": {
+      "path": "server/_core/dime1ChatHandler.ts",
+      "sha256": "7f287ebf5013b37aa294b425dfc9e2e288f6deb32635d7711a2832572c8d2bf7"
+    },
+    "route_source": {
+      "path": "server/dime-chat.route.ts",
+      "sha256": "37221e4b968ab2898f354c7041b8ce1f7eb44a9bd353c343e547d0ea3ed098ca"
+    },
+    "context_token_budget": 36000,
+    "timeout_ms": 120000,
+    "retry_count": 0,
+    "concurrency_limit": 1,
+    "tool_fixtures": "identical_checksum_pinned",
+    "retrieval": "identical",
+    "context_construction": "identical",
+    "response_schema": "identical_per_case",
+    "provider_failure_behavior": "record_failure_without_substituting_another_model_or_provider",
+    "sanitized_outputs_only": true
+  },
+  "candidates": [
+    {
+      "candidate_id": "candidate-a",
+      "blinded_mapping": "restricted_until_scoring_complete",
+      "model_compute": "runpod",
+      "model_artifact": "base_model",
+      "base_model": "meta-llama/Llama-3.1-8B",
+      "base_revision": "d04e592bb4f6aa9cfee91e2e20afa771667e1d4b",
+      "adapter_revision": null,
+      "runtime_answer_routing_revision": null,
+      "purpose": "Measure the unadapted base-model control without Runtime Answer Routing v1.",
+      "endpoint_invoked": false
+    },
+    {
+      "candidate_id": "candidate-b",
+      "blinded_mapping": "restricted_until_scoring_complete",
+      "model_compute": "runpod",
+      "model_artifact": "base_model",
+      "base_model": "meta-llama/Llama-3.1-8B",
+      "base_revision": "d04e592bb4f6aa9cfee91e2e20afa771667e1d4b",
+      "adapter_revision": null,
+      "runtime_answer_routing_revision": "runtime-answer-routing-v1",
+      "purpose": "Measure the incremental gain from Runtime Answer Routing v1.",
+      "endpoint_invoked": false
+    },
+    {
+      "candidate_id": "candidate-c",
+      "blinded_mapping": "restricted_until_scoring_complete",
+      "model_compute": "runpod",
+      "model_artifact": "dime_qlora_adapter",
+      "base_model": "meta-llama/Llama-3.1-8B",
+      "base_revision": "d04e592bb4f6aa9cfee91e2e20afa771667e1d4b",
+      "adapter_revision": null,
+      "runtime_answer_routing_revision": "runtime-answer-routing-v1",
+      "purpose": "Measure the incremental gain from Dime training over Candidate B.",
+      "endpoint_invoked": false
+    }
+  ],
+  "comparison_invariants": {
+    "candidate_a_to_b_only_allowed_difference": "runtime_answer_routing_v1",
+    "candidate_b_to_c_only_allowed_difference": "dime_qlora_adapter",
+    "candidate_b_and_c_identical_runtime_required": true,
+    "candidate_b_and_c_identical_retrieval_required": true,
+    "candidate_b_and_c_identical_prompt_required": true,
+    "candidate_b_and_c_identical_tools_required": true,
+    "candidate_b_and_c_identical_decoding_required": true,
+    "candidate_b_and_c_identical_base_revision_required": true
+  },
+  "measurements": {
+    "quality": [
+      "factual_correctness",
+      "groundedness",
+      "unsupported_claim_rate",
+      "instruction_adherence",
+      "tool_selection_correctness",
+      "schema_compliance",
+      "response_completeness",
+      "expected_calibration_error"
+    ],
+    "operations": [
+      "time_to_first_token_ms",
+      "end_to_end_latency_ms",
+      "input_tokens",
+      "output_tokens",
+      "provider_failure_rate",
+      "retry_count"
+    ],
+    "required_slices": [
+      "candidate",
+      "route",
+      "category",
+      "severity",
+      "tool_required",
+      "repetition"
+    ]
+  },
+  "promotion_thresholds": {
+    "fabricated_dynamic_fact_count": {
+      "maximum": 0,
+      "hard_gate": true
+    },
+    "incorrect_event_identity_count": {
+      "maximum": 0,
+      "hard_gate": true
+    },
+    "doubleheader_confusion_count": {
+      "maximum": 0,
+      "hard_gate": true
+    },
+    "cross_user_or_identity_failure_count": {
+      "maximum": 0,
+      "hard_gate": true
+    },
+    "mandatory_tool_violation_count": {
+      "maximum": 0,
+      "hard_gate": true
+    },
+    "stale_data_presented_as_current_count": {
+      "maximum": 0,
+      "hard_gate": true
+    },
+    "missing_evidence_presented_as_no_edge_count": {
+      "maximum": 0,
+      "hard_gate": true
+    },
+    "critical_schema_failure_count": {
+      "maximum": 0,
+      "hard_gate": true
+    },
+    "overall_factual_correctness": {
+      "minimum": 0.9,
+      "hard_gate": true
+    },
+    "critical_case_factual_correctness": {
+      "minimum": 1.0,
+      "hard_gate": true
+    },
+    "overall_groundedness": {
+      "minimum": 0.95,
+      "hard_gate": true
+    },
+    "overall_unsupported_claim_rate": {
+      "maximum": 0.01,
+      "hard_gate": true
+    },
+    "instruction_adherence": {
+      "minimum": 0.95,
+      "hard_gate": true
+    },
+    "mandatory_tool_selection_correctness": {
+      "minimum": 1.0,
+      "hard_gate": true
+    },
+    "mandatory_schema_compliance": {
+      "minimum": 1.0,
+      "hard_gate": true
+    },
+    "response_completeness": {
+      "minimum": 0.95,
+      "hard_gate": true
+    },
+    "expected_calibration_error": {
+      "maximum": 0.08,
+      "hard_gate": true
+    },
+    "protected_platform_or_account_route_regression": {
+      "maximum_relative_regression": 0.0,
+      "hard_gate": true
+    },
+    "candidate_c_material_correctness_gain_over_b": {
+      "minimum_absolute_gain": 0.02,
+      "hard_gate": true
+    },
+    "candidate_c_calibration_regression_against_b": {
+      "maximum_absolute_increase": 0.0,
+      "hard_gate": true
+    },
+    "candidate_c_p95_latency_regression_against_b": {
+      "maximum_relative_increase": 0.15,
+      "hard_gate": true
+    },
+    "serving_failure_rate": {
+      "maximum": 0.01,
+      "hard_gate": true
+    },
+    "absolute_product_latency": {
+      "maximum_p95_ms": null,
+      "owner_approved_slo_required_before_selection": true,
+      "hard_gate": true
+    }
+  },
+  "selection_rule": {
+    "candidate_b_as_good_as_candidate_c_result": "REVISE_AND_RETRAIN",
+    "candidate_c_must_clear_every_hard_gate": true,
+    "allowed_verdicts": [
+      "REJECT",
+      "REVISE_AND_RETRAIN",
+      "SELECT_FOR_CONTROLLED_VALIDATION"
+    ],
+    "selection_does_not_authorize_provider_activation": true
+  },
+  "runpod_pricing_policy": {
+    "pricing_entry_authorized": false,
+    "pricing_may_be_created_only_after_model_selection": true,
+    "required_inputs": [
+      "gpu_cost_per_hour",
+      "container_idle_cost",
+      "average_requests_per_hour",
+      "average_tokens_per_request",
+      "average_generation_duration",
+      "utilization",
+      "cold_start_cost",
+      "storage_cost",
+      "network_cost"
+    ],
+    "derived_outputs": [
+      "estimated_cost_per_request",
+      "estimated_cost_per_1000_tokens"
+    ],
+    "unknown_utilization_treatment": "cost_unavailable",
+    "generic_external_api_token_tariff_allowed": false
+  },
+  "execution_readiness": {
+    "verdict": "REVISE_AND_RETRAIN",
+    "benchmark_run_authorized": false,
+    "blocking_reasons": [
+      "The approved 2,400-record Foundation dataset revision and checksum do not exist in the active platform contract.",
+      "Candidate C has not been trained and has no immutable adapter revision.",
+      "The exact RunPod evaluation endpoint revision and container digest are not pinned.",
+      "An owner-approved absolute p95 latency SLO is not recorded.",
+      "Independent authorization for model execution has not been granted."
+    ]
+  },
+  "authorization_boundary": {
+    "runpod_invocation": false,
+    "benchmark_execution": false,
+    "model_training": false,
+    "model_selection": false,
+    "pricing_entry_creation": false,
+    "environment_variable_change": false,
+    "provider_activation": false,
+    "railway_mutation": false,
+    "trace_activation": false,
+    "shadow_traffic": false,
+    "generative_route_activation": false,
+    "research_alpha_activation": false
+  },
+  "production_mutations_performed": []
+}

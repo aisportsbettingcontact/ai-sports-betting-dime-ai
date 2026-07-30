@@ -1,0 +1,136 @@
+{
+  "schema_version": "dime-model-artifact-decision-v1",
+  "decision_id": "dime-llm-v1-training-and-serving-architecture",
+  "created_at": "2026-07-30T06:06:33Z",
+  "status": "training_contract_incomplete",
+  "verdict": "REVISE",
+  "selection": null,
+  "supersedes_active_authority": [
+    {
+      "path": "ml/dime-1.0/evidence/decisions/active-provider-decision-v1/decision.json",
+      "sha256": "a8858c330d41efa2783d5ad939cebd08124f1145b8d66a74f2f8d7e785133997",
+      "preservation": "immutable_historical_evidence"
+    },
+    {
+      "path": "ml/dime-1.0/evidence/benchmarks/provider-selection-v1/contract.json",
+      "sha256": "db5538686f0d10274b9ed4df605d3b013fc8fcd5c9c56eccefdfce597eab22aa",
+      "preservation": "immutable_historical_evidence"
+    }
+  ],
+  "training_orchestrator": {
+    "platform": "Codex",
+    "agent": "5.6 Sol",
+    "role": "engineering_and_training_control"
+  },
+  "model_compute": {
+    "platform": "RunPod",
+    "role": "training_and_inference_compute"
+  },
+  "product_layers": {
+    "dime_llm": "trained_model_capability",
+    "dime_chat": "user_facing_interface_powered_by_dime_llm",
+    "frozen_no_provider": "deterministic_fallback_and_non_generative_control"
+  },
+  "excluded_providers": [
+    "anthropic"
+  ],
+  "production_candidate": {
+    "provider": "runpod",
+    "model": null,
+    "model_revision": null,
+    "adapter_revision": null,
+    "status": "pending_training_and_evaluation"
+  },
+  "candidate_design": [
+    {
+      "candidate_id": "candidate-a",
+      "artifact": "base_model",
+      "runtime_answer_routing_revision": null,
+      "purpose": "unadapted_base_control"
+    },
+    {
+      "candidate_id": "candidate-b",
+      "artifact": "base_model",
+      "runtime_answer_routing_revision": "runtime-answer-routing-v1",
+      "purpose": "runtime_engineering_increment"
+    },
+    {
+      "candidate_id": "candidate-c",
+      "artifact": "dime_qlora_adapter",
+      "runtime_answer_routing_revision": "runtime-answer-routing-v1",
+      "purpose": "training_increment_over_candidate_b"
+    }
+  ],
+  "primary_decision": "Candidate C must materially outperform Candidate B under identical runtime, retrieval, prompt, tool, context, base-model, and decoding controls.",
+  "governed_artifacts": {
+    "training_contract": {
+      "path": "ml/dime-1.0/configs/dime_training_contract_v1.json",
+      "sha256": "912e90f2bb506364d8f94212280184bf290c18c21b3f71f0d11281d9ffe7eec1",
+      "status": "INCOMPLETE_NOT_AUTHORIZED"
+    },
+    "training_contract_schema": {
+      "path": "ml/dime-1.0/schemas/dime_training_contract.schema.json",
+      "sha256": "75307fd9becc58edf1bc9d31c78c9e100593b9223589dadf74d6ec20f72666c2"
+    },
+    "evaluation_contract": {
+      "path": "ml/dime-1.0/evidence/benchmarks/model-artifact-evaluation-v1/contract.json",
+      "sha256": "d490c61f05dafa1799bf129d76209b9353f81d00b5f4cf7f887baa1475847647",
+      "status": "FROZEN_NOT_AUTHORIZED"
+    }
+  },
+  "dataset_state": {
+    "target_record_count": 2400,
+    "approved_revision": null,
+    "dataset_manifest_sha256": null,
+    "checksums_sha256": null,
+    "approved_for_training": false
+  },
+  "runpod_pricing": {
+    "pricing_entry_authorized": false,
+    "model_selection_required_first": true,
+    "basis": "actual_runpod_infrastructure_cost",
+    "unknown_utilization_treatment": "cost_unavailable",
+    "generic_external_api_token_tariff_allowed": false
+  },
+  "exact_production_tuple": {
+    "provider": "runpod",
+    "base_model": null,
+    "base_revision": null,
+    "adapter_revision": null,
+    "endpoint_revision": null,
+    "container_digest": null,
+    "context_limit": null,
+    "maximum_output_tokens": null,
+    "timeout_ms": null,
+    "concurrency_limit": null,
+    "rollback_model": null
+  },
+  "unresolved_governance_exceptions": [
+    {
+      "pull_request": 244,
+      "status": "independent_post_merge_review_not_recorded"
+    },
+    {
+      "pull_request": 245,
+      "status": "independent_pre_merge_approval_not_recorded"
+    }
+  ],
+  "next_authorizable_action": "Complete and independently approve the exact Foundation dataset and training contract. This record does not itself authorize that action.",
+  "authorization_boundary": {
+    "external_provider_invocation": false,
+    "runpod_invocation": false,
+    "model_training": false,
+    "checkpoint_resume": false,
+    "benchmark_execution": false,
+    "model_selection": false,
+    "pricing_entry_creation": false,
+    "environment_variable_change": false,
+    "provider_activation": false,
+    "railway_mutation": false,
+    "trace_activation": false,
+    "shadow_traffic": false,
+    "generative_route_activation": false,
+    "research_alpha_activation": false
+  },
+  "production_mutations_performed": []
+}

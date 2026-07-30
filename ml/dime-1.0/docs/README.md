@@ -34,7 +34,8 @@ The following documents stay beside the code because they govern the active
 training project and release process:
 
 - [Composite LLM engineering control](COMPOSITE_ENGINEERING_CONTROL.md)
-- [Active Provider Decision v1](ACTIVE_PROVIDER_DECISION_V1.md)
+- [Dime LLM training architecture v1](DIME_LLM_TRAINING_ARCHITECTURE_V1.md)
+- [Superseded provider-decision pointer](ACTIVE_PROVIDER_DECISION_V1.md)
 - [System architecture](DIME_V1_SYSTEM_ARCHITECTURE.md)
 - [Tool and canonical market contracts](TOOL_AND_MARKET_CONTRACTS.md)
 - [Curriculum and evaluation](DIME_V1_CURRICULUM_AND_EVALUATION.md)
@@ -58,6 +59,8 @@ training project and release process:
 - [Foundation dataset-manifest v4 schema](../schemas/dataset_manifest.v4.schema.json)
 - [Run-manifest template](../configs/run_manifest_TEMPLATE.json)
 - [Run-manifest schema](../schemas/run_manifest.schema.json)
+- [Dime training contract](../configs/dime_training_contract_v1.json)
+- [Dime training-contract schema](../schemas/dime_training_contract.schema.json)
 - [Foundation checksum-manifest schema](../schemas/foundation_checksums.schema.json)
 - [Sanitized release-evaluation schema](../schemas/release_evaluation_summary.schema.json)
 - [Engineering-control artifact schema](../schemas/engineering_control_artifact.schema.json)

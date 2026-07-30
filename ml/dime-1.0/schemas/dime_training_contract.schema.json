@@ -1,0 +1,475 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dime.internal/schemas/dime_training_contract.schema.json",
+  "title": "Dime model-artifact training contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "contract_id",
+    "status",
+    "capability_hypothesis",
+    "training_orchestrator",
+    "model_compute",
+    "base_model",
+    "tokenizer",
+    "foundation_dataset",
+    "separation",
+    "source",
+    "prompt",
+    "routing",
+    "evaluation",
+    "random_seeds",
+    "hardware_profile",
+    "training_method",
+    "required_training_controls",
+    "artifact_constraints",
+    "readiness",
+    "authorization_boundary"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "dime-training-contract-v1"
+    },
+    "contract_id": {
+      "const": "dime-qlora-foundation-v1"
+    },
+    "status": {
+      "enum": [
+        "INCOMPLETE_NOT_AUTHORIZED",
+        "FROZEN_NOT_AUTHORIZED",
+        "AUTHORIZED"
+      ]
+    },
+    "capability_hypothesis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "statement",
+        "falsifiable",
+        "success_condition",
+        "failure_condition"
+      ],
+      "properties": {
+        "statement": {
+          "type": "string",
+          "minLength": 20
+        },
+        "falsifiable": {
+          "const": true
+        },
+        "success_condition": {
+          "type": "string",
+          "minLength": 20
+        },
+        "failure_condition": {
+          "type": "string",
+          "minLength": 20
+        }
+      }
+    },
+    "training_orchestrator": {
+      "$ref": "#/$defs/training_orchestrator"
+    },
+    "model_compute": {
+      "$ref": "#/$defs/model_compute"
+    },
+    "base_model": {
+      "$ref": "#/$defs/repository_revision"
+    },
+    "tokenizer": {
+      "$ref": "#/$defs/repository_revision"
+    },
+    "foundation_dataset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repo_id",
+        "dataset_version",
+        "target_record_count",
+        "train_record_count",
+        "validation_record_count",
+        "revision",
+        "dataset_manifest_sha256",
+        "checksums_sha256",
+        "approved_release",
+        "observed_public_sample_record_count",
+        "validation_requirements"
+      ],
+      "properties": {
+        "repo_id": {
+          "const": "taileredsports/dime-foundation-sft"
+        },
+        "dataset_version": {
+          "const": "dime-sft-foundation-v1"
+        },
+        "target_record_count": {
+          "const": 2400
+        },
+        "train_record_count": {
+          "const": 2160
+        },
+        "validation_record_count": {
+          "const": 240
+        },
+        "revision": {
+          "$ref": "#/$defs/nullable_commit"
+        },
+        "dataset_manifest_sha256": {
+          "$ref": "#/$defs/nullable_sha256"
+        },
+        "checksums_sha256": {
+          "$ref": "#/$defs/nullable_sha256"
+        },
+        "approved_release": {
+          "type": "boolean"
+        },
+        "observed_public_sample_record_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "validation_requirements": {
+          "type": "array",
+          "minItems": 10,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 3
+          }
+        }
+      }
+    },
+    "separation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "foundation_train_and_validation",
+        "development_evaluation",
+        "model_artifact_evaluation",
+        "locked_evaluation"
+      ],
+      "properties": {
+        "foundation_train_and_validation": {
+          "$ref": "#/$defs/data_identity"
+        },
+        "development_evaluation": {
+          "$ref": "#/$defs/data_identity"
+        },
+        "model_artifact_evaluation": {
+          "$ref": "#/$defs/data_identity"
+        },
+        "locked_evaluation": {
+          "$ref": "#/$defs/data_identity"
+        }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "github_repository",
+        "training_code_commit",
+        "training_script_path",
+        "training_script_sha256",
+        "training_config_path",
+        "training_config_sha256",
+        "requirements_lock_path",
+        "requirements_lock_sha256"
+      ],
+      "properties": {
+        "github_repository": {
+          "const": "aisportsbettingcontact/ai-sports-betting-dime-ai"
+        },
+        "training_code_commit": {
+          "$ref": "#/$defs/commit"
+        },
+        "training_script_path": {
+          "type": "string"
+        },
+        "training_script_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "training_config_path": {
+          "type": "string"
+        },
+        "training_config_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "requirements_lock_path": {
+          "type": "string"
+        },
+        "requirements_lock_sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "prompt": {
+      "$ref": "#/$defs/versioned_file_set"
+    },
+    "routing": {
+      "$ref": "#/$defs/versioned_file_set"
+    },
+    "evaluation": {
+      "$ref": "#/$defs/versioned_file_set"
+    },
+    "random_seeds": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "training",
+        "data",
+        "evaluation"
+      ],
+      "properties": {
+        "training": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "data": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "evaluation": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "hardware_profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "profile_id",
+        "container_image",
+        "gpu",
+        "python",
+        "pytorch",
+        "cuda_runtime"
+      ],
+      "properties": {
+        "profile_id": {
+          "const": "dime-llama31-8b-training-v1"
+        },
+        "container_image": {
+          "type": "string",
+          "minLength": 10
+        },
+        "gpu": {
+          "type": "string",
+          "minLength": 5
+        },
+        "python": {
+          "type": "string"
+        },
+        "pytorch": {
+          "type": "string"
+        },
+        "cuda_runtime": {
+          "type": "string"
+        }
+      }
+    },
+    "training_method": {
+      "type": "object"
+    },
+    "required_training_controls": {
+      "type": "object"
+    },
+    "artifact_constraints": {
+      "type": "object"
+    },
+    "readiness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "verdict",
+        "training_contract_complete",
+        "blocking_reasons"
+      ],
+      "properties": {
+        "verdict": {
+          "enum": [
+            "REJECT",
+            "REVISE_AND_RETRAIN",
+            "READY_FOR_SEPARATE_AUTHORIZATION"
+          ]
+        },
+        "training_contract_complete": {
+          "type": "boolean"
+        },
+        "blocking_reasons": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 10
+          }
+        }
+      }
+    },
+    "authorization_boundary": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "const": false
+      }
+    }
+  },
+  "$defs": {
+    "commit": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "nullable_commit": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/commit"
+        }
+      ]
+    },
+    "nullable_sha256": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/sha256"
+        }
+      ]
+    },
+    "repository_revision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repo_id",
+        "revision"
+      ],
+      "properties": {
+        "repo_id": {
+          "type": "string",
+          "minLength": 3
+        },
+        "revision": {
+          "$ref": "#/$defs/commit"
+        }
+      }
+    },
+    "data_identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repo_or_path",
+        "revision_or_sha256",
+        "training_access"
+      ],
+      "properties": {
+        "repo_or_path": {
+          "type": "string",
+          "minLength": 3
+        },
+        "revision_or_sha256": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "pattern": "^(?:[0-9a-f]{40}|[0-9a-f]{64}|model-artifact-evaluation-v1)$"
+            }
+          ]
+        },
+        "training_access": {
+          "enum": [
+            "allowed",
+            "prohibited"
+          ]
+        }
+      }
+    },
+    "versioned_file_set": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "revision",
+        "files"
+      ],
+      "properties": {
+        "revision": {
+          "type": "string",
+          "minLength": 3,
+          "not": {
+            "enum": [
+              "latest",
+              "main"
+            ]
+          }
+        },
+        "files": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "path",
+              "sha256"
+            ],
+            "properties": {
+              "path": {
+                "type": "string",
+                "minLength": 3
+              },
+              "sha256": {
+                "$ref": "#/$defs/sha256"
+              }
+            }
+          }
+        }
+      }
+    },
+    "training_orchestrator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "platform",
+        "agent",
+        "role"
+      ],
+      "properties": {
+        "platform": {
+          "const": "Codex"
+        },
+        "agent": {
+          "const": "5.6 Sol"
+        },
+        "role": {
+          "const": "engineering_and_training_control"
+        }
+      }
+    },
+    "model_compute": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "platform",
+        "role"
+      ],
+      "properties": {
+        "platform": {
+          "const": "RunPod"
+        },
+        "role": {
+          "const": "training_and_inference_compute"
+        }
+      }
+    }
+  }
+}
