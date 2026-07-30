@@ -255,15 +255,11 @@ jobs:
       - name: "[STEP] Install dependencies (frozen lockfile)"
         run: pnpm install --frozen-lockfile
 
-      # Schema comes from `drizzle-kit push` (the current TS schema), NOT
-      # `drizzle-kit migrate`: the checked-in migration history is not
-      # replayable from scratch (0097 and 0104 both CREATE TABLE
-      # wc2026_matches — proven by this job's first run on PR #84). Production
-      # never replays history either; db-push.yml applies increments to the
-      # long-lived database. Recorded in
-      # docs/remediation/2026-07-12-pr70/final-report.md (finding 11).
-      - name: "[STEP] Provision the current schema on the isolated database"
-        run: pnpm exec drizzle-kit push --force
+      # Replays the immutable history on a fresh MySQL 8 database. The guarded
+      # runner parks the canonical wc2026_matches table around the verified
+      # 0104/0107 ESPN naming collision, then restores it before continuing.
+      - name: "[STEP] Replay reconciled migration chain on the isolated database"
+        run: pnpm db:migrate:reconciled
 
       # --no-file-parallelism: the five suites share ONE database and
       # tokenVersion.db.test.ts performs a global mutation

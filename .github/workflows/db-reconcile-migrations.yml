@@ -1,9 +1,8 @@
 name: DB Reconcile migrations (baseline)
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Repairs the pre-existing drift between the live schema and drizzle's
-# __drizzle_migrations journal, so `db-push.yml` (drizzle-kit migrate) stops
-# colliding on migration 0112 and works again for future schema changes.
+# Repairs only the verified pre-existing 0112–0115 drift between the live
+# schema and drizzle's __drizzle_migrations journal.
 #
 # Migrations 0112–0115 are already live (0112–0114 applied via drizzle-kit push;
 # 0115's DROPs run by the one-shot drop workflow) but were never recorded as
@@ -12,15 +11,15 @@ name: DB Reconcile migrations (baseline)
 # running any migration SQL — pure bookkeeping, never touches app tables.
 #
 # Default mode is dry-run (writes nothing, just lists what it would baseline).
-# apply mode requires typing RECONCILE, then proves the result by running
-# `drizzle-kit migrate` — which must now be a clean no-op instead of colliding.
+# apply mode requires typing RECONCILE. The legacy repair is hard-capped at
+# 0115, and verification uses the current reconciled runner in plan-only mode.
 # ─────────────────────────────────────────────────────────────────────────────
 
 on:
   workflow_dispatch:
     inputs:
       mode:
-        description: 'dry-run (list only) or apply (write journal rows)'
+        description: "dry-run (list only) or apply (write journal rows)"
         required: true
         default: dry-run
         type: choice
@@ -28,9 +27,9 @@ on:
           - dry-run
           - apply
       confirm:
-        description: 'For apply mode, type RECONCILE'
+        description: "For apply mode, type RECONCILE"
         required: false
-        default: ''
+        default: ""
         type: string
 
 permissions:
@@ -66,13 +65,11 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           MODE: ${{ inputs.mode }}
+          CONFIRM: ${{ inputs.confirm }}
         run: node scripts/reconcile-migrations.mjs
 
-      - name: Verify — drizzle-kit migrate is now a clean no-op
+      - name: Verify current migration plan without writes
         if: ${{ inputs.mode == 'apply' }}
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        run: |
-          echo "Running drizzle-kit migrate to confirm the journal is consistent (expect: nothing to apply)…"
-          pnpm exec drizzle-kit migrate
-          echo "drizzle-kit migrate completed without collision."
+        run: pnpm db:migrate:plan
