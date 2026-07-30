@@ -157,7 +157,7 @@
       },
       {
         "path": "ml/dime-1.0/configs/foundation_release_plan_v1.json",
-        "sha256": "ec10316a75353a471e5fdfa2be5bf38f4bc251ec6215bec729977d498f5da679"
+        "sha256": "bc5889af786ea5828c67799afe44712ba5ac933297773204095962765787a510"
       },
       {
         "path": "ml/dime-1.0/configs/evaluation_identity_plan_v1.json",

@@ -1,0 +1,199 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dime.internal/schemas/foundation_data_factory_governance.schema.json",
+  "title": "Dime Foundation Data Factory Governance v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "status",
+    "authorization_effect",
+    "governed_ai_authorship",
+    "actor_separation",
+    "partitioning",
+    "source_packets",
+    "tool_states",
+    "conversion",
+    "owner_merge_authorization_scope",
+    "still_not_authorized"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "dime-foundation-data-factory-governance-v1"
+    },
+    "status": {
+      "const": "PROPOSED_NON_EXECUTING"
+    },
+    "authorization_effect": {
+      "const": "NONE_UNTIL_OWNER_MERGE_OF_EXACT_REVIEWED_HEAD"
+    },
+    "governed_ai_authorship": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["permitted", "mandatory_controls", "prohibited"],
+      "properties": {
+        "permitted": {
+          "const": [
+            "private_foundation_training_records",
+            "private_foundation_validation_records",
+            "private_evaluation_semantic_cases",
+            "private_critique_records",
+            "private_adjudication_records"
+          ]
+        },
+        "mandatory_controls": {
+          "const": [
+            "immutable_source_packets",
+            "record_level_provenance",
+            "independent_critic_identity",
+            "deterministic_quantitative_validation",
+            "rights_validation",
+            "exact_and_semantic_deduplication",
+            "temporal_leakage_detection",
+            "evaluation_contamination_detection",
+            "immutable_release_checksums",
+            "no_private_chain_of_thought"
+          ]
+        },
+        "prohibited": {
+          "const": [
+            "generator_self_approval",
+            "unsupported_factual_generation",
+            "current_fact_memorization",
+            "hidden_answer_key_access",
+            "unreviewed_private_publication",
+            "silent_record_overwrite"
+          ]
+        }
+      }
+    },
+    "actor_separation": {
+      "const": [
+        "actor_id",
+        "model_revision",
+        "prompt_revision",
+        "prompt_sha256",
+        "execution_receipt_sha256",
+        "context_sha256",
+        "responsibility"
+      ]
+    },
+    "partitioning": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "assignment_basis",
+        "assignment_revision",
+        "assignment_timing",
+        "validation_bucket",
+        "bucket_modulus",
+        "group_keys"
+      ],
+      "properties": {
+        "assignment_basis": {"const": "scenario_family_sha256_mod_10"},
+        "assignment_revision": {"const": "dime-foundation-partition-v1"},
+        "assignment_timing": {"const": "before_substantive_prose_generation"},
+        "validation_bucket": {"const": 0},
+        "bucket_modulus": {"const": 10},
+        "group_keys": {
+          "const": [
+            "scenario_family_id",
+            "template_family_id",
+            "source_event_id",
+            "conversation_family_id",
+            "quantitative_scenario_id",
+            "entity_set_sha256",
+            "temporal_bucket"
+          ]
+        }
+      }
+    },
+    "source_packets": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_path",
+        "immutable_snapshot_required",
+        "pending_rights_release_allowed",
+        "silent_snapshot_replacement_allowed"
+      ],
+      "properties": {
+        "schema_path": {
+          "const": "ml/dime-1.0/schemas/foundation_source_packet.schema.json"
+        },
+        "immutable_snapshot_required": {"const": true},
+        "pending_rights_release_allowed": {"const": false},
+        "silent_snapshot_replacement_allowed": {"const": false}
+      }
+    },
+    "tool_states": {
+      "const": [
+        "skipped",
+        "success",
+        "empty",
+        "failure",
+        "timeout",
+        "stale",
+        "malformed",
+        "conflicting",
+        "rejected"
+      ]
+    },
+    "conversion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "record_count",
+        "system_tokens_masked",
+        "user_tokens_masked",
+        "tool_call_tokens_supervised",
+        "tool_result_tokens_masked",
+        "assistant_tokens_supervised",
+        "multi_turn_supported",
+        "silent_truncation_rejected",
+        "required_result"
+      ],
+      "properties": {
+        "record_count": {"const": 2400},
+        "system_tokens_masked": {"const": true},
+        "user_tokens_masked": {"const": true},
+        "tool_call_tokens_supervised": {"const": true},
+        "tool_result_tokens_masked": {"const": true},
+        "assistant_tokens_supervised": {"const": true},
+        "multi_turn_supported": {"const": true},
+        "silent_truncation_rejected": {"const": true},
+        "required_result": {
+          "const": {
+            "authoring_records": 2400,
+            "trainer_records": 2400,
+            "unconverted_records": 0,
+            "unexpected_extra_records": 0,
+            "pending_rights_records": 0,
+            "conversion_hash_mismatches": 0,
+            "silent_truncations": 0
+          }
+        }
+      }
+    },
+    "owner_merge_authorization_scope": {
+      "const": {
+        "codex_private_record_generation": true,
+        "independent_record_critique": true,
+        "deterministic_record_validation": true,
+        "private_evaluation_case_generation": true,
+        "private_hugging_face_publication": true
+      }
+    },
+    "still_not_authorized": {
+      "const": {
+        "model_download": false,
+        "runpod_inference": false,
+        "model_training": false,
+        "benchmark_execution": false,
+        "railway_mutation": false,
+        "tracing": false,
+        "route_activation": false
+      }
+    }
+  }
+}

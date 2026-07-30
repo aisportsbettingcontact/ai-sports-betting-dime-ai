@@ -39,6 +39,7 @@ control plane with:
 
 ```bash
 .venv/bin/python scripts/validate_foundation_control.py
+.venv/bin/python scripts/validate_foundation_data_factory.py
 ```
 
 - No production-trained Dime checkpoint exists.
@@ -109,6 +110,7 @@ See:
 - [Platform ownership](docs/PLATFORM_OWNERSHIP.md)
 - [Hugging Face registry](docs/HUGGING_FACE_REGISTRY.md)
 - [Foundation v1 dataset workflow](docs/FOUNDATION_V1_DATASET_WORKFLOW.md)
+- [Foundation Data Factory governance v1](docs/FOUNDATION_DATA_FACTORY_GOVERNANCE_V1.md)
 - [Foundation AI-agent decision receipts](docs/FOUNDATION_AI_DECISION_RECEIPTS.md)
 - [Foundation AI reviewer provisioning](docs/FOUNDATION_AI_REVIEWER_PROVISIONING.md)
 - [Foundation AI reviewer runtime](docs/FOUNDATION_AI_REVIEWER_RUNTIME.md)

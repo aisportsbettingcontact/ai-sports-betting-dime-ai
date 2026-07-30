@@ -72,10 +72,12 @@
         "expired_rights_allowed"
       ],
       "properties": {
-        "allowed_source_classes": {"const": ["human-authored", "synthetic"]},
+        "allowed_source_classes": {
+          "const": ["human-authored", "synthetic", "teacher-generated"]
+        },
         "contains_user_data": {"const": false},
         "contains_provider_derived_data": {"const": false},
-        "teacher_generated_allowed": {"const": false},
+        "teacher_generated_allowed": {"const": true},
         "unknown_sources_allowed": {"const": false},
         "expired_rights_allowed": {"const": false}
       }

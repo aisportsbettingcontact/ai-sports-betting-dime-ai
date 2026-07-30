@@ -79,12 +79,13 @@ The public-only provisioning workflow is defined in
 It can prepare a signed, fully pinned candidate profile without creating or
 exposing private keys and without changing any activation gate.
 
-Foundation v1 substantive prose is human-authored. Fully synthetic scenarios
-and fixtures remain allowed, but `synthetic` cannot relabel AI-authored answers.
-AI may assist with spelling, formatting, critique, or checklist validation only
-when it contributes no retained substantive prose. A separately registered,
-independent AI-agent reviewer may approve the exact candidate bytes; reviewer
-authority does not grant authorship or permit AI-drafted training prose.
+Foundation v1 substantive prose may be human-authored or teacher-generated
+under `configs/foundation_data_factory_governance_v1.json`. Fully synthetic
+scenarios and fixtures remain allowed, but `synthetic` cannot relabel
+AI-authored answers. Governed teacher-generated records require immutable
+source packets, exact provenance, independent critique, deterministic
+validation, and private-only handling. Reviewer authority does not grant
+generator self-approval or model-compute authority.
 
 ## Required dataset lineage
 

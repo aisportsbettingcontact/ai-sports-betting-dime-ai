@@ -2,17 +2,17 @@
   "schema_version": "dime-foundation-release-plan-v1",
   "plan_id": "dime-foundation-v1",
   "status": "INCOMPLETE_NOT_AUTHORIZED",
-  "source_commit": "77caa613ad2c64ff91a5c6fab1839b3d1278f4ba",
+  "source_commit": "c6e4d07ce2e7565c9ec94c6ddc2ffcd18511c3ae",
   "canonical_record_boundary": {
     "path": "ml/dime-1.0/schemas/foundation_record.schema.json",
-    "sha256": "96eedfaff3869f56feac1039ebc6c23465192d3bb13c76aeba5cb8a7ee2b350d"
+    "sha256": "35842f408aa947a45865e5c1bda22ca29c07212738fc67710c9a6f58f022b31f"
   },
   "trainer_release_boundary": {
     "schema": {
       "path": "ml/dime-1.0/schemas/sft_record.schema.json",
       "sha256": "955f0a773a1eced4154aa159e6a22249810f8cca5047ceb3c589dd566855ab4e"
     },
-    "conversion_contract_status": "MISSING",
+    "conversion_contract_status": "IMPLEMENTED_NOT_EXECUTED",
     "conversion_approved": false
   },
   "route_mixture": {
@@ -113,9 +113,21 @@
     ],
     "stratified_review_remaining_categories": true,
     "ai_authorship_policy": {
-      "current_repository_policy": "PROHIBITED",
+      "current_repository_policy": "GOVERNED_TEACHER_GENERATED",
       "requested_policy": "GOVERNED_CODEX_GENERATION",
-      "resolution_status": "BLOCKED_PENDING_EXPLICIT_GOVERNANCE_CHANGE"
+      "resolution_status": "RESOLVED_BY_DATA_FACTORY_GOVERNANCE_V1"
+    },
+    "governance_contract": {
+      "path": "ml/dime-1.0/configs/foundation_data_factory_governance_v1.json",
+      "sha256": "0cd4ad1229a39dc8a2507f0dcda5ed60387b4b710a59c37ce7b13bcf4d3dc380"
+    },
+    "source_packet_schema": {
+      "path": "ml/dime-1.0/schemas/foundation_source_packet.schema.json",
+      "sha256": "bb8180b274b536b5322b3f9c223dae2ebbb2c05cab910719b87864b49b2c7f99"
+    },
+    "conversion_implementation": {
+      "path": "ml/dime-1.0/src/dime_ai/foundation_data_factory.py",
+      "sha256": "32fd245a6d09b0a5a79a0892dc76227c698f51293c02f28534bf5a7f0189b76f"
     }
   },
   "private_release": {
@@ -139,8 +151,6 @@
     ]
   },
   "known_blockers": [
-    "The governed authoring-to-trainer conversion contract does not exist.",
-    "Current Foundation governance prohibits retained AI-authored substantive prose.",
     "The immutable source-packet registry and bounded production shard manifest do not exist.",
     "No approved 2,400-record private Foundation release exists.",
     "The immutable Hugging Face release revision and evidence hashes are null.",

@@ -10,10 +10,12 @@ start a GPU run, or activate serving.
 Foundation v1 is deliberately limited to:
 
 - Dime-owned human-authored gold examples; and
-- fully synthetic scenarios and tool fixtures.
+- fully synthetic scenarios and tool fixtures; and
+- governed, privately retained teacher-generated records that satisfy
+  `foundation_data_factory_governance_v1.json`.
 
 It excludes chats, Bet Tracker history, user-derived examples, provider
-exports, licensed odds/splits feeds, and teacher-generated drafts. This
+exports, licensed odds/splits feeds, and ungoverned teacher-generated drafts. This
 restriction resolves the current private-draft storage risk: every draft that
 appears in a public GitHub branch must already be safe for public review. The
 eventual approved frozen release will remain private on Hugging Face.
@@ -50,13 +52,14 @@ have been implemented and verified. The workbench stores pre-freeze candidate
 and review material only. It is not the approved Foundation release and
 cannot authorize training.
 
-Foundation v1 admits substantive human-authored gold examples and fully
-synthetic scenarios or fixtures only. Substantive AI drafting, retained
-AI-supplied prose, and relabeling AI-authored prose as `synthetic` are
-prohibited. Automated assistance may check spelling, formatting, critique, or
-compliance without supplying retained substantive prose. A separately
-registered AI-agent reviewer may approve the exact bytes under this contract;
-review authority never grants authorship authority.
+Foundation v1 admits substantive human-authored gold examples, fully synthetic
+scenarios or fixtures, and teacher-generated records under the Data Factory
+governance contract. Teacher-generated records require immutable source
+packets, record-level provenance, pre-prose scenario partitioning, independent
+critique, deterministic validation, and private-only handling. AI-authored
+prose may never be relabeled as `synthetic`. A generator cannot approve or
+critique its own record, and reviewer authority never grants broader
+authorship or execution authority.
 
 No current platform state authorizes publication or training.
 

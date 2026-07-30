@@ -36,6 +36,7 @@ def test_foundation_control_audit_validates_plan_without_claiming_readiness() ->
         "sections": {
             "foundation_plan": {"pass": True, "issue_count": 0},
             "foundation_record_template": {"pass": True, "issue_count": 0},
+            "data_factory_governance": {"pass": True, "issue_count": 0},
             "evaluation_plan": {"pass": True, "issue_count": 0},
             "execution_gates": {"pass": True, "issue_count": 0},
         },

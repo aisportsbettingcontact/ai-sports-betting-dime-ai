@@ -1,0 +1,160 @@
+{
+  "schemaVersion": "dime-pr247-deployment-parity-evidence-v1",
+  "evidenceId": "pr-247-railway-production-parity-2026-07-30",
+  "classification": "sanitized_production_deployment_evidence",
+  "observedAt": "2026-07-30T09:24:21Z",
+  "verdict": "PASS",
+  "scope": {
+    "repository": "aisportsbettingcontact/ai-sports-betting-dime-ai",
+    "pullRequest": 247,
+    "railwayProjectId": "8dd7341d-702c-48c7-90df-5c19a4f04913",
+    "railwayEnvironmentId": "787f3113-17ab-47d9-9819-1268aeb09b3e",
+    "containsSecrets": false,
+    "containsRawPromptsOrResponses": false,
+    "containsRawUserOrGameRows": false,
+    "observationMode": "read_only_sanitized"
+  },
+  "github": {
+    "pullRequestUrl": "https://github.com/aisportsbettingcontact/ai-sports-betting-dime-ai/pull/247",
+    "state": "MERGED",
+    "reviewedHeadSha": "5ebc003255104c7f062bcefc94facf59f8b1281e",
+    "mergeSha": "c6e4d07ce2e7565c9ec94c6ddc2ffcd18511c3ae",
+    "mergedAt": "2026-07-30T09:16:41Z",
+    "headIsAncestorOfMerge": true,
+    "checks": [
+      {"name": "Dime LLM Validation", "conclusion": "SUCCESS"},
+      {"name": "Secret Scan (gitleaks)", "conclusion": "SUCCESS"},
+      {"name": "Security Audit", "conclusion": "SUCCESS"},
+      {"name": "TypeScript Check", "conclusion": "SUCCESS"},
+      {"name": "Vitest", "conclusion": "SUCCESS"},
+      {"name": "DB Tests", "conclusion": "SUCCESS"},
+      {"name": "Build & Preview Gate", "conclusion": "SUCCESS"}
+    ],
+    "submittedIndependentReviews": 0,
+    "independentReviewDecision": null,
+    "absenceOfReviewCountsAsApproval": false
+  },
+  "deployment": {
+    "expectedMergeSha": "c6e4d07ce2e7565c9ec94c6ddc2ffcd18511c3ae",
+    "application": {
+      "service": "ai-sports-betting-dime-ai",
+      "serviceId": "a46ea921-5c5d-4225-9254-92f742e95b51",
+      "deploymentId": "fad6ac88-89f8-46ae-81be-46db30b5db8e",
+      "status": "SUCCESS",
+      "instanceStatus": "ACTIVE",
+      "commitSha": "c6e4d07ce2e7565c9ec94c6ddc2ffcd18511c3ae"
+    },
+    "backend": {
+      "service": "ai-sports-betting-backend",
+      "serviceId": "3528dc9f-a63b-45e9-94bb-6d1df25d6f3a",
+      "deploymentId": "27bf3038-f0b7-40f4-a460-0d9027181d04",
+      "status": "SUCCESS",
+      "instanceStatus": "ACTIVE",
+      "commitSha": "c6e4d07ce2e7565c9ec94c6ddc2ffcd18511c3ae"
+    },
+    "mysql": {
+      "serviceId": "a48cf462-136a-4d9b-b427-00504927116a",
+      "status": "ONLINE",
+      "mutatedDuringObservation": false
+    },
+    "applicationShaMatchesExpected": true,
+    "backendShaMatchesExpected": true,
+    "allServicesOnline": true
+  },
+  "health": [
+    {
+      "url": "https://aisportsbettingmodels.com/health",
+      "observedAt": "2026-07-30T09:24:20Z",
+      "status": "ok",
+      "databaseCircuit": "CLOSED",
+      "databaseConsecutiveFailures": 0
+    },
+    {
+      "url": "https://ai-sports-betting-backend-production.up.railway.app/health",
+      "observedAt": "2026-07-30T09:24:21Z",
+      "status": "ok",
+      "databaseCircuit": "CLOSED",
+      "databaseConsecutiveFailures": 0
+    }
+  ],
+  "userVisibleParity": {
+    "url": "https://aisportsbettingmodels.com/feed/model/mlb-07-29-2026",
+    "expectedGameCards": 16,
+    "observedGameCards": 16,
+    "freshBrowserErrors": 0,
+    "verdict": "PASS"
+  },
+  "serverObservation": {
+    "stableObservationWindow": {
+      "from": "2026-07-30T09:18:30Z",
+      "through": "2026-07-30T09:24:21Z",
+      "freshErrors": 0,
+      "freshUnknownColumnErrors": 0
+    },
+    "disclosedStartupExceptions": [
+      {
+        "service": "ai-sports-betting-backend",
+        "observedAt": "2026-07-30T09:17:47Z",
+        "count": 1,
+        "classification": "nonfatal_startup_prewarm",
+        "sanitizedMessage": "Table railway.games does not exist",
+        "recovered": true,
+        "healthCircuitAfterRecovery": "CLOSED"
+      }
+    ]
+  },
+  "foundationControlAuditAtDeployedMerge": {
+    "command": "PYTHONPATH=src .venv/bin/python scripts/validate_foundation_control.py",
+    "schema_version": "dime-foundation-control-audit-v1",
+    "plan_valid": true,
+    "ready": false,
+    "status": "INCOMPLETE_NOT_AUTHORIZED",
+    "sections": {
+      "foundation_plan": {"pass": true, "issue_count": 0},
+      "foundation_record_template": {"pass": true, "issue_count": 0},
+      "evaluation_plan": {"pass": true, "issue_count": 0},
+      "execution_gates": {"pass": true, "issue_count": 0}
+    },
+    "issues": [],
+    "authorization_effect": "none"
+  },
+  "featureState": {
+    "traceV1Enabled": false,
+    "researchAlphaEnabled": false,
+    "researchAlphaKillSwitch": true,
+    "shadowTrafficEnabled": false,
+    "generativeRouteActivation": false,
+    "modelTrainingAuthorized": false
+  },
+  "dataAndExternalOperations": {
+    "foundationRecordsGenerated": 0,
+    "evaluationCasesGenerated": 0,
+    "privateHuggingFacePublications": 0,
+    "modelDownloads": 0,
+    "runpodInvocations": 0,
+    "modelTrainingRuns": 0,
+    "benchmarkExecutions": 0,
+    "providerInvocations": 0
+  },
+  "gateStatus": {
+    "githubMergeIntegrity": "PASS",
+    "railwayDeploymentParity": "PASS",
+    "healthParity": "PASS",
+    "productionFeedParity": "PASS",
+    "foundationControlAudit": "PASS",
+    "independentReview": "NULL_TECHNICAL_DEBT",
+    "foundationDataFactoryExecution": "NOT_AUTHORIZED",
+    "modelDownload": "NOT_AUTHORIZED",
+    "runpodInference": "NOT_AUTHORIZED",
+    "modelTraining": "NOT_AUTHORIZED",
+    "benchmarkExecution": "NOT_AUTHORIZED",
+    "traceActivation": "NOT_AUTHORIZED",
+    "routeActivation": "NOT_AUTHORIZED"
+  },
+  "productionMutationsPerformed": [],
+  "limitations": [
+    "One nonfatal backend startup prewarm exception preceded the stable observation window and is preserved explicitly.",
+    "Zero external and data operations are established from the closed authorization state and the observed workflow; no private remote dataset inventory was inspected.",
+    "The absent independent GitHub review is preserved as null technical debt and is not represented as approval."
+  ]
+}
