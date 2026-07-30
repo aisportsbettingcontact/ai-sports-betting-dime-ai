@@ -119,8 +119,29 @@ def test_pricing_preflight_fails_closed_without_approving_activation() -> None:
     assert pricing["registry"]["status"] == "review_required"
     assert pricing["registry"]["entryCount"] == 0
     assert pricing["productionConfiguration"]["DIME_PRICING_REGISTRY_PATH"] is None
-    assert pricing["runtimeIdentity"]["reviewablePricedRuntimeIdentityAvailable"] is False
+    assert pricing["runtimeIdentity"] == {
+        "provider": "frozen",
+        "model": "no-provider",
+        "modelRevision": "no-provider",
+        "deploymentTier": "disabled",
+        "currency": "USD",
+        "zeroCostRuntime": True,
+        "state": "limited",
+        "observationMethod": (
+            "named Railway production variables evaluated through the "
+            "secret-safe runtime-readiness contract"
+        ),
+        "dormantRunpodConfiguration": {
+            "configured": True,
+            "model": "meta-llama/Llama-3.1-8B-Instruct",
+            "activeForDimeChat": False,
+            "eligibleForPricingEntry": False,
+        },
+        "reviewablePricedRuntimeIdentityAvailable": False,
+    }
     assert pricing["deployedRegistryChecksum"]["verificationStatus"] == "BLOCKED"
+    assert pricing["localAttestationImplementation"]["deployed"] is False
+    assert pricing["localAttestationImplementation"]["authorizesDeployment"] is False
 
     contract = pricing["unknownPricingContract"]
     assert contract["verdict"] == "PASS"

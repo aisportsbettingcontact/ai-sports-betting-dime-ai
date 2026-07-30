@@ -1,13 +1,13 @@
 {
   "schemaVersion": "dime-phase1-observability-closure-v1",
-  "closureId": "phase1-observability-closure-2026-07-29",
-  "createdAt": "2026-07-29T12:18:00Z",
+  "closureId": "phase1-observability-closure-2026-07-30",
+  "createdAt": "2026-07-30T04:29:11Z",
   "implementationBoundary": "local_non_production_evidence_closure",
   "sourceState": {
     "repository": "aisportsbettingcontact/ai-sports-betting-dime-ai",
-    "branch": "codex/dime-runtime-readiness-v1",
-    "headCommit": "47e338fbbcb10e30f63fc048ac366f85a9a18f72",
-    "worktreeState": "uncommitted_local_changes"
+    "branch": "agent/dime-phase1-recovery-evidence",
+    "headCommit": "c31fd9cc6427ec3b6739545091cb35650360f327",
+    "worktreeState": "clean_committed"
   },
   "status": {
     "phase1LocalImplementation": "pass",
@@ -20,17 +20,17 @@
     "providerObservationTimestamps": {
       "contractStatus": "implemented",
       "productionEvidenceStatus": "blocked",
-      "reason": "The local nullable timestamp storage is implemented, but production migration 0122 is not applied and provider identity/revision are not yet persisted."
+      "reason": "Migration 0122 is applied and nullable storage is deployed, but the existing rows remain null and provider identity/revision are not yet persisted by current producers."
     },
     "ingestionLifecycleTimestamps": {
       "contractStatus": "implemented",
       "productionEvidenceStatus": "blocked",
-      "reason": "Migration 0122 and its guarded rollback pass isolated MySQL 8 validation, but production is unmigrated and current producers do not populate a complete authoritative lifecycle."
+      "reason": "Migration 0122, journal parity, null preservation, and disabled-state application parity pass in production, but current producers do not populate a complete authoritative lifecycle."
     },
     "reviewedPricing": {
       "contractStatus": "implemented",
       "productionEvidenceStatus": "blocked",
-      "reason": "The governed registry is review_required with no active entries, and the production service has no pricing-registry path configured."
+      "reason": "The governed registry is review_required with no approved entries, the production path is absent, and the active Dime Chat runtime is frozen with no priced provider call."
     },
     "representativeSanitizedTraffic": {
       "contractStatus": "implemented",
@@ -53,7 +53,7 @@
     {
       "name": "schema_validation",
       "target": "100% of representative production traces",
-      "current": "Local contracts and isolated MySQL 8 migration checks pass; migration 0122 and Phase 1 validation are absent from the active deployment",
+      "current": "Migration 0122, journal parity, exact seven-column schema parity, existing-row null preservation, and disabled-state application compatibility pass; representative production traces remain unavailable",
       "status": "blocked"
     },
     {
@@ -83,8 +83,8 @@
     {
       "name": "deployment_parity",
       "target": "100% identity and trace-schema parity across measured deployment",
-      "current": "Disabled-state parity runbook is locally prepared; the active deployment remains associated with inferred merge commit ff95a7cf2bb1aba2c9f79e7c523ea62a6b655a7c and lacks the Phase 1 source and migration",
-      "status": "blocked"
+      "current": "Application and backend are deployed from exact commit 7cfdafb6cd8501389fb9f817f1c976cf1a8dcece with migration 0122 applied and tracing disabled",
+      "status": "pass"
     },
     {
       "name": "all_routes_reported",
@@ -101,8 +101,8 @@
     {
       "name": "user_visible_behavior_change",
       "target": "0 user-visible behavior changes during observability closure",
-      "current": "Local metadata-only implementation; production not exercised",
-      "status": "not_measured"
+      "current": "Disabled-state production parity passed with 16 feed cards, healthy database circuits, and zero fresh browser or unknown-column errors",
+      "status": "pass"
     },
     {
       "name": "telemetry_write_failures",
@@ -149,7 +149,7 @@
     },
     {
       "artifact": "server/_core/dimePricingGovernance.ts",
-      "sha256": "5781f60d7d76f50856d156ff1af5d92f90e0c766bd26d43d59b1339c8c61fadf",
+      "sha256": "4c4aba2e98f189a1202bc2ef0018997cabd99884dc3060e93880c6fda06449b6",
       "classification": "source_contract"
     },
     {
@@ -159,7 +159,7 @@
     },
     {
       "artifact": "ml/dime-1.0/schemas/observability_pricing_registry.schema.json",
-      "sha256": "8b74c71ef85acbf9f246dbc31b3078560e6b3bde4a02adebd1518bd027824831",
+      "sha256": "9f12ce476c19b688aefdc8777af23033cc343821428ab31d9589fe626f5edd99",
       "classification": "schema"
     },
     {
@@ -194,7 +194,7 @@
     },
     {
       "artifact": "server/_core/dimeTraceObservability.ts",
-      "sha256": "f04e786c5c5e654cec4a54b80a0cc3a08997c8aedf486e752d528b424ac45b3a",
+      "sha256": "4477499cec0eb16879ac0317bd6b826982f47c6fed9e3dc61149157da82a145d",
       "classification": "source_contract"
     },
     {
@@ -236,6 +236,31 @@
       "artifact": "ml/dime-1.0/evidence/infrastructure/2026-07-29/research_alpha_kill_switch_hardening_proposal.json",
       "sha256": "20d023d69bf7d0b05d67adfc54f98f3190d333462f42e99a1d50568105d2ff4c",
       "classification": "configuration_proposal"
+    },
+    {
+      "artifact": "server/_core/dimePricingAttestation.ts",
+      "sha256": "b96a4392824994e456590efe2c0ebfba0259bb7e8b79f51cc8ba6d841e1c05a2",
+      "classification": "source_contract"
+    },
+    {
+      "artifact": "server/_core/dimePricingAttestation.test.ts",
+      "sha256": "8b47086fb2a05a7d2dea119c4ba1e83984caf1f35409cd40f31fb87f475d8afe",
+      "classification": "verification"
+    },
+    {
+      "artifact": "docs/runbooks/2026-07-29-dime-pricing-governance-v1.md",
+      "sha256": "69f444eaa8fa526ab7a351929eb1d2cbcfd7c0e4f79b6a57a403585fd9e6b197",
+      "classification": "runbook"
+    },
+    {
+      "artifact": "ml/dime-1.0/evidence/infrastructure/2026-07-30/production-recovery-0122/recovery.json",
+      "sha256": "c0f27e1738543cbf51fd2e53c6500e6018c942896c835684f5cdf33e0974d69d",
+      "classification": "production_observation"
+    },
+    {
+      "artifact": "ml/dime-1.0/evidence/infrastructure/2026-07-30/pricing-preflight-v1/observation.json",
+      "sha256": "215ec84462849de2539972f628e9899c920f5796a2a4c3dc7c30934912dd8e03",
+      "classification": "production_observation"
     }
   ],
   "independentGate": {
@@ -257,18 +282,17 @@
     "training": false
   },
   "knownLimitations": [
-    "The local game schema can persist lifecycle fields, but production migration 0122 is not applied and current producers do not populate complete authoritative values.",
+    "The production game schema can persist lifecycle fields, but current producers do not populate complete authoritative values.",
     "Provider identity and provider revision are not persisted, so a provider timestamp alone cannot make provider-observation evidence available.",
-    "The governed pricing registry has no reviewed active entry.",
+    "The governed pricing registry has no approved active entry; the exact production runtime is frozen and has no model-provider call.",
     "The production traffic distribution is an unavailable-evidence record, not a benchmark.",
-    "The active Railway deployment does not contain the local Phase 1 observability implementation.",
+    "The pricing attestation implementation is committed only to the draft branch and is not deployed.",
     "The production trace flag is present but disabled.",
-    "The source commit predates the current uncommitted local worktree changes.",
     "The repository-wide test suite depends on unavailable databases, credentials, live APIs, and browser socket permissions."
   ],
   "residualRisks": [
     "Future provider adapters may mis-map a retrieval timestamp as an observation timestamp unless their mapping is independently reviewed.",
-    "The existing full historical migration chain has a duplicate-table baseline failure in a fresh MySQL 8 database; migration 0122 passed isolated validation but production journal reconciliation remains a preflight gate.",
+    "The historical duplicate-table migration chain was reconciled for the known Railway journal; future migration tooling must preserve that journal profile.",
     "Clock skew may hide pipeline-order defects if classifications are not supported by infrastructure evidence.",
     "A future traffic export may be unrepresentative even when it is privacy-safe.",
     "Provider pricing may drift after review unless effective intervals and historical revisions are maintained.",
