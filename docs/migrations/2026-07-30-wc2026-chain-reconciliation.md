@@ -66,15 +66,24 @@ The bridge runs only when the corresponding historical migration is pending:
 An existing production journal at `0121` skips both bridge points and leaves the
 production schema and journal untouched.
 
-The runner validates every recorded migration timestamp and hash against the
-immutable repository history before planning or applying work. Exact duplicate
-journal rows are reported but accepted only when their timestamp and hash are
-identical.
+The runner validates the complete journal before planning or applying work.
+Normal repository histories must form an unbroken prefix of the immutable
+migration sequence. A valid maximum timestamp cannot conceal a missing earlier
+migration, and pending work is selected from the verified prefix boundary—not
+from the largest observed timestamp.
 
-The 14 observed legacy rows are pinned by full timestamp and full hash in
-`drizzle/meta/production_legacy_journal.json`. A row absent from both the
-repository journal and that exact manifest fails closed. The manifest is
-recognition-only: the runner never writes, deletes, or renumbers those rows.
+The Railway production history is a closed, named profile. Its 14 legacy rows
+are pinned as an exact `(createdAt, hash)` multiset in
+`drizzle/meta/production_legacy_journal.json`. Missing, additional, or
+duplicated legacy rows fail closed. The manifest also declares every repository
+timestamp that production legitimately lacks and maps it to a pinned baseline,
+shifted-hash row, or manual marker with an explicit coverage boundary. All
+other repository migrations through `0121` must be present exactly once.
+
+The manifest is recognition-only: the runner never writes, deletes, renumbers,
+or repairs its rows. Railway entry points force
+`JOURNAL_PROFILE=railway-production-v1`; fresh development and CI databases use
+automatic repository-prefix detection.
 
 ## Failure behavior
 
@@ -83,6 +92,13 @@ The runner fails closed when:
 - the database journal is ahead of the requested target;
 - a row is absent from both the repository journal and the exact pinned legacy
   manifest;
+- the observed legacy-row multiset differs from the complete pinned multiset;
+- a legacy mapping names the wrong migration or timestamp;
+- a manual schema marker has no explicit coverage boundary;
+- a repository migration through the verified profile boundary is missing
+  without an explicit manifest explanation;
+- any direct repository row is duplicated;
+- the observed repository rows do not form a complete historical prefix;
 - any recorded migration hash differs from the immutable repository file;
 - either table has an unexpected identity shape;
 - canonical and parked tables coexist ambiguously;

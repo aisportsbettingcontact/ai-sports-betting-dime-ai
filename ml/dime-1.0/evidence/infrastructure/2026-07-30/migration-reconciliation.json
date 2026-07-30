@@ -1,6 +1,7 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "observedAt": "2026-07-30T02:25:17Z",
+  "integrityValidationRefreshedAt": "2026-07-30T03:09:28Z",
   "scope": "wc2026 migration-chain reconciliation and migration 0122 readiness",
   "baseCommit": "0b4425906f8b708b0d1025da3cec06983063c7e8",
   "production": {
@@ -22,7 +23,9 @@
       "latestRepositoryMigration": "0121_dime_conversation_trace_v1",
       "latestCreatedAt": 1785292771387,
       "legacyRowsPinnedByExactTimestampAndHash": 14,
+      "legacyRowsRequiredByExactMultiset": 14,
       "repositoryTimestampsAbsentThrough0121": 13,
+      "repositoryTimestampsExplicitlyCoveredThrough0121": 13,
       "planThrough0121Pending": 0,
       "planThrough0122Pending": 1
     },
@@ -52,6 +55,10 @@
     "adoptedTablesMaterializedFrom": "drizzle/meta/0108_snapshot.json",
     "adoptedTableCount": 9,
     "legacyJournalManifest": "drizzle/meta/production_legacy_journal.json",
+    "legacyJournalProfile": "railway-production-v1",
+    "legacyMultisetBehavior": "exact_equality_fail_closed",
+    "repositoryPrefixBehavior": "explicit_contiguous_coverage_fail_closed",
+    "pendingSelectionBasis": "verified_coverage_not_maximum_timestamp",
     "defaultMode": "plan",
     "applyConfirmation": "MODE=apply and CONFIRM=RECONCILE",
     "unknownJournalRowBehavior": "fail_closed"
@@ -62,6 +69,21 @@
       "target": "0122_dime_evidence_lifecycle_v1",
       "result": "PASS",
       "secondPlanPending": 0
+    },
+    "journalIntegrity": {
+      "testFile": "scripts/migration-journal-integrity.test.ts",
+      "tests": 9,
+      "passed": 9,
+      "requiredNegativeCases": [
+        "missing_pinned_legacy_row",
+        "duplicated_pinned_legacy_row",
+        "repository_migration_missing_below_boundary",
+        "shifted_hash_mapped_to_wrong_migration",
+        "manual_marker_without_coverage_boundary",
+        "valid_hash_paired_with_wrong_timestamp",
+        "valid_maximum_with_incomplete_historical_prefix"
+      ],
+      "result": "PASS"
     },
     "productionSchemaClone": {
       "sourceDumpScope": "schema_only",
@@ -81,15 +103,15 @@
     "typescript": "PASS",
     "productionBuild": "PASS",
     "fullLocalVitest": {
-      "passed": 2575,
-      "failed": 65,
-      "skipped": 5,
+      "passed": 2590,
+      "failed": 64,
+      "skipped": 0,
       "result": "ENVIRONMENT_BOUND_FAILURES",
       "causes": [
         "credential validation suites without local credentials",
-        "real-database suites without the default DATABASE_URL",
-        "performance harness socket restriction in the local sandbox"
-      ]
+        "real-database suites without the default DATABASE_URL"
+      ],
+      "environmentFailureGate": "PASS"
     },
     "bogusJournalRowNegativeTest": "PASS_FAIL_CLOSED",
     "legacyBaselineApplyRequiresConfirmation": "PASS"

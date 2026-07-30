@@ -24,10 +24,12 @@
 import { readFileSync } from "node:fs";
 import { readMigrationFiles } from "drizzle-orm/migrator";
 import mysql from "mysql2/promise";
+import { validateMigrationJournal } from "./lib/migration-journal-integrity.mjs";
 
 const MODE = (process.env.MODE || "plan").trim();
 const CONFIRM = (process.env.CONFIRM || "").trim();
 const TARGET_TAG = (process.env.TARGET_TAG || "").trim();
+const JOURNAL_PROFILE = (process.env.JOURNAL_PROFILE || "auto").trim();
 const DATABASE_URL = process.env.DATABASE_URL;
 
 const PRESERVE_BEFORE_TAG = "0104_outgoing_night_thrasher";
@@ -73,18 +75,17 @@ const migrations = readMigrationFiles({ migrationsFolder: "./drizzle" });
 const tagByWhen = new Map(
   journal.entries.map(entry => [Number(entry.when), entry.tag])
 );
-const migrationByWhen = new Map(
-  migrations.map(migration => [Number(migration.folderMillis), migration])
-);
 const migrationByTag = new Map(
   migrations.map(migration => [
     tagByWhen.get(Number(migration.folderMillis)),
     migration,
   ])
 );
-const legacyJournalRows = new Set(
-  legacyJournal.rows.map(row => `${Number(row.createdAt)}:${String(row.hash)}`)
-);
+const migrationHistory = migrations.map(migration => ({
+  tag: tagByWhen.get(Number(migration.folderMillis)),
+  when: Number(migration.folderMillis),
+  hash: String(migration.hash),
+}));
 
 if (migrations.length !== journal.entries.length) {
   console.error(
@@ -290,57 +291,37 @@ try {
     );
   }
 
-  const lastApplied = rows.length ? Number(rows[0].created_at) : -1;
-  const duplicateCounts = new Map();
-  let acceptedLegacyRows = 0;
-  for (const row of rows) {
-    const createdAt = Number(row.created_at);
-    const migration = migrationByWhen.get(createdAt);
-    if (!migration) {
-      if (legacyJournalRows.has(`${createdAt}:${String(row.hash)}`)) {
-        acceptedLegacyRows += 1;
-        continue;
-      }
-      throw new Error(
-        `journal row created_at=${createdAt} is absent from both the repository journal and the pinned legacy manifest`
-      );
-    }
-    if (String(row.hash) !== String(migration.hash)) {
-      throw new Error(`journal hash mismatch at created_at=${createdAt}`);
-    }
-    duplicateCounts.set(createdAt, (duplicateCounts.get(createdAt) || 0) + 1);
-  }
-  const exactDuplicates = [...duplicateCounts.entries()].filter(
-    ([, count]) => count > 1
-  );
-  if (exactDuplicates.length > 0) {
+  const validation = validateMigrationJournal({
+    rows,
+    migrations: migrationHistory,
+    manifest: legacyJournal,
+    profileMode: JOURNAL_PROFILE,
+  });
+  const lastApplied = validation.coverageWhen;
+  if (validation.legacyRowsVerified > 0) {
     console.log(
-      `[reconciled-migrate] observed ${exactDuplicates.length} exact duplicate journal timestamp(s); ` +
-        "hashes match immutable migration files"
+      `[reconciled-migrate] verified exact ${validation.profileId} legacy multiset ` +
+        `(${validation.legacyRowsVerified} rows)`
     );
   }
-  if (acceptedLegacyRows > 0) {
-    console.log(
-      `[reconciled-migrate] verified ${acceptedLegacyRows} exact row(s) from the pinned legacy journal manifest`
-    );
-  }
-  if (lastApplied > targetWhen) {
+  if (validation.coverageIndex > targetIndex) {
     throw new Error(
       `target ${targetTag} (${targetWhen}) is older than the database journal (${lastApplied})`
     );
   }
   if (
-    lastApplied >= Number(migrationByTag.get(RESTORE_AFTER_TAG).folderMillis)
+    validation.coverageIndex >=
+    migrations.indexOf(migrationByTag.get(RESTORE_AFTER_TAG))
   ) {
     await validateCanonicalPostcondition(conn);
   }
 
-  const pending = selectedMigrations.filter(
-    migration => Number(migration.folderMillis) > lastApplied
-  );
+  const pending = selectedMigrations.slice(validation.coverageIndex + 1);
   console.log(
     `[reconciled-migrate] mode=${MODE}; journalRows=${rows.length}; ` +
-      `lastApplied=${lastApplied}; target=${targetTag}; pending=${pending.length}`
+      `verifiedThrough=${validation.coverageTag || "empty"}; ` +
+      `profile=${validation.profileId || "repository-prefix"}; ` +
+      `target=${targetTag}; pending=${pending.length}`
   );
   for (const migration of pending) {
     const tag = tagByWhen.get(Number(migration.folderMillis));
@@ -360,9 +341,9 @@ try {
     );
 
     if (
-      lastApplied >=
-        Number(migrationByTag.get(RESTORE_AFTER_TAG).folderMillis) &&
-      lastApplied < targetWhen
+      validation.coverageIndex >=
+        migrations.indexOf(migrationByTag.get(RESTORE_AFTER_TAG)) &&
+      validation.coverageIndex < targetIndex
     ) {
       const parkedColumns = await tableColumns(conn, PARKED_CANONICAL_TABLE);
       if (parkedColumns.length > 0) {
@@ -396,16 +377,25 @@ try {
     }
 
     const [after] = await conn.query(
-      "SELECT created_at FROM `__drizzle_migrations` ORDER BY created_at DESC LIMIT 1"
+      "SELECT hash, created_at FROM `__drizzle_migrations` ORDER BY created_at DESC"
     );
-    const newMax = Number(after[0].created_at);
-    if (newMax !== targetWhen) {
+    const finalValidation = validateMigrationJournal({
+      rows: after,
+      migrations: migrationHistory,
+      manifest: legacyJournal,
+      profileMode: JOURNAL_PROFILE,
+    });
+    if (finalValidation.coverageIndex !== targetIndex) {
       throw new Error(
-        `journal ended at ${newMax}; expected target ${targetWhen}`
+        `journal verified through ${finalValidation.coverageTag}; expected target ${targetTag}`
       );
     }
 
-    await validateCanonicalPostcondition(conn);
+    if (
+      targetIndex >= migrations.indexOf(migrationByTag.get(RESTORE_AFTER_TAG))
+    ) {
+      await validateCanonicalPostcondition(conn);
+    }
     console.log(
       `[reconciled-migrate] PASS: journal and canonical table reached ${targetTag}`
     );
