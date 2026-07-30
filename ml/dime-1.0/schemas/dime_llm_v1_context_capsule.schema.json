@@ -1,0 +1,155 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dime.internal/schemas/dime_llm_v1_context_capsule.schema.json",
+  "title": "Dime LLM v1 Compact Context Capsule",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "repository_sha",
+    "production_application_sha",
+    "production_backend_sha",
+    "active_authorizations",
+    "closed_authorizations",
+    "security_hotfix_state",
+    "foundation_counts",
+    "foundation_deficits",
+    "evaluation_counts",
+    "evaluation_key_state",
+    "context_compiler_state",
+    "runpod_gate_state",
+    "candidate_a_state",
+    "candidate_b_state",
+    "candidate_c_state",
+    "current_workstream",
+    "top_blockers",
+    "next_exact_action",
+    "critical_artifact_hashes"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "dime-llm-v1-context-capsule-v1"
+    },
+    "repository_sha": {
+      "const": "7ed09adb4fcdb9e2d9047e73e34f84c80d865b78"
+    },
+    "production_application_sha": {
+      "type": "null"
+    },
+    "production_backend_sha": {
+      "type": "null"
+    },
+    "active_authorizations": {
+      "const": [
+        "repository_inspection",
+        "repository_implementation",
+        "local_testing",
+        "sanitized_evidence_creation",
+        "commit",
+        "push",
+        "draft_pull_request"
+      ]
+    },
+    "closed_authorizations": {
+      "const": [
+        "credential_execution",
+        "model_download",
+        "runpod_inference",
+        "benchmark_execution",
+        "model_training",
+        "model_serving",
+        "railway_mutation",
+        "deployment",
+        "trace_activation",
+        "shadow_traffic",
+        "route_activation"
+      ]
+    },
+    "security_hotfix_state": {
+      "const": {
+        "status": "BLOCKED",
+        "repository_verification_available": false,
+        "root_trust_material_provisioned": false,
+        "credential_execution_authorized": false
+      }
+    },
+    "foundation_counts": {
+      "const": {
+        "status": "BLOCKED",
+        "verified_authoring_records": null,
+        "verified_trainer_records": null,
+        "verified_train_records": null,
+        "verified_validation_records": null
+      }
+    },
+    "foundation_deficits": {
+      "const": {
+        "status": "BLOCKED",
+        "authoring_records": null,
+        "trainer_records": null,
+        "train_records": null,
+        "validation_records": null
+      }
+    },
+    "evaluation_counts": {
+      "const": {
+        "status": "BLOCKED",
+        "development_target": 270,
+        "critical_target": 81,
+        "locked_target": 180,
+        "general_regression_target": 120,
+        "verified_total": null
+      }
+    },
+    "evaluation_key_state": {
+      "const": "NOT_AUTHORIZED"
+    },
+    "context_compiler_state": {
+      "const": "NOT_STARTED"
+    },
+    "runpod_gate_state": {
+      "const": "BLOCKED"
+    },
+    "candidate_a_state": {
+      "const": "NOT_STARTED"
+    },
+    "candidate_b_state": {
+      "const": "NOT_STARTED"
+    },
+    "candidate_c_state": {
+      "const": "NOT_STARTED"
+    },
+    "current_workstream": {
+      "const": "PREPARE_RUNPOD_GATE_1"
+    },
+    "top_blockers": {
+      "const": [
+        "container_digest_missing",
+        "serialization_profile_hashes_missing",
+        "retrieval_revision_missing",
+        "context_compiler_revision_missing",
+        "gpu_hour_budget_missing",
+        "spend_budget_missing",
+        "credential_execution_trust_missing",
+        "runpod_permission_attestation_missing"
+      ]
+    },
+    "next_exact_action": {
+      "const": "Freeze every missing identity and limit in a new exact reviewed head before any execution authorization can become effective."
+    },
+    "critical_artifact_hashes": {
+      "const": {
+        "existing_model_execution_gates": "45c42b74ad90b17f1231525197220552f64a13208c7033f4781f08fc9ca3a2ee",
+        "base_model_suitability_contract": "dce71facbd7f5cf356642145f2cf3eda244f7272093e982b0cfb0956d6be75f2",
+        "model_artifact_evaluation_contract": "5df817d1ac003cf6485b53c01bbfb03b1be4cb05fde4ea06219fac4a9ba27c19",
+        "training_contract": "d5801340dc9cfa4fc5e88201226a7cb06daa8573c10814a2cb4e0ca88961237b",
+        "decoding_contract": "c5c540b795aa217b1b32df9bf445924816d47a542acb313e05dc4a82eecbbbc1",
+        "tool_contract": "56f3c39fd730f9d923efcf837433825d76de4c4acb51d668095d1eb68db4cca5",
+        "prompt": "8ebdbcbdccafca8faaef490a7bda120b7095bdd9d55fe879147b3fd3c04af4e9",
+        "chat_template": "2407ed345ce3013e1e1279d46ea7e4e6e78a9a0696ac226a2f24f697b9504087",
+        "routing_source": "f0ccc880992f6dfcfd91f93733dad4ab0c3b1c55485fb5d41e143051535f17b7",
+        "retrieval_source": "1436a564daa2b101607256fe17a57da6c5599960fa71b96c420b11f2ecc6261d"
+      }
+    }
+  }
+}
