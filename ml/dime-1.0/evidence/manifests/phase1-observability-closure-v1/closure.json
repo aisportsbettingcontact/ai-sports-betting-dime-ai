@@ -194,7 +194,7 @@
     },
     {
       "artifact": "server/_core/dimeTraceObservability.ts",
-      "sha256": "c90674e11015517fdccaa604c85160301e03efce2d8925fb35ff5eef889c5a44",
+      "sha256": "cbcae5a5c13e1357a5adfdadcefc545cee8334fc5352d21d870aa8dbd0705ba3",
       "classification": "source_contract"
     },
     {
