@@ -34,14 +34,38 @@ The command reuses:
 ```
 
 Both locations are ignored. Cache files and directories use mode `0600` and
-`0700`, respectively. The five-minute GitHub/Railway capsule remains bound to
-the exact target-manifest checksum, local branch, local HEAD, and dirty-state
-hash. Each provider identity proof is separately bound to a minimal
-scope-specific contract checksum, so an unrelated platform, cache, or provider
-edit cannot invalidate every credential proof.
+`0700`, respectively. Every persisted cache or credential-evidence payload
+must have a valid Ed25519 signature under a root-administered public key outside
+the repository. If independent signing trust is unavailable, the live result
+is not persisted. The five-minute GitHub/Railway capsule remains bound to the
+exact target-manifest checksum, local branch, local HEAD, and dirty-state hash.
+Each provider proof is separately bound to a minimal scope-specific contract
+checksum, so an unrelated platform, cache, or provider edit cannot invalidate
+every proof.
 
 The automatic path reads no platform password, provider token, browser cookie,
 Railway variable, database value, prompt, or response.
+
+## Independent local trust
+
+Same-user files and ad-hoc code signatures are never authorization roots.
+Execution fails closed unless an independent administrator has provisioned:
+
+- root-owned mode-`0444` SHA-256 pins beneath
+  `/Library/Application Support/DimeAI/trust/executables/` for `node`, `env`,
+  `git`, `gh`, and `aws`;
+- the reviewed 1Password CLI signing identity
+  `com.1password.op` / Team ID `2BUA8C4S2C`;
+- the root-owned Railway broker pin
+  `/Library/Application Support/DimeAI/trust/dime-railway-keychain.sha256`;
+  and
+- the root-owned cache-signing public key and a separately governed attestation
+  writer described by the control-plane runbook.
+
+Candidate generation cannot create this trust. Credential execution remains
+`BLOCKED_PENDING_INDEPENDENT_ADMIN_PROVENANCE` until the external trust
+artifacts exist and match. Cache writes are skipped when cache-signing trust is
+unavailable.
 
 ## Pinned identities
 
@@ -67,16 +91,18 @@ Credential values are never committed, cached in the context capsule, written
 to evidence, placed in an agent prompt, or printed by these commands.
 
 1Password is the local broker for Hugging Face and RunPod. `op run` injects one
-provider scope into one child process. The runtime reference file must be
-ignored, smaller than 64 KiB, and mode `0600`.
+provider scope into one child process. Each runtime file is bound to an exact
+reviewed vault, item, section, and field; it must be ignored, smaller than
+8 KiB, and mode `0600`.
 
 The production owner and user credentials remain solely as unreferenced Railway
 shared variables. They are not referenced into the production application
 service and are never copied to 1Password or a local environment file. On an
-explicit login, the device-only Keychain broker runs Railway's JSON shared
-variable read and pipes its stdout directly into a short-lived filter process.
-The raw map is never buffered by the agent or login process; only the selected
-role's exact three values exit the filter. Railway `shell` and `run` are not
+explicit login, the device-only Keychain broker captures Railway's JSON shared
+variable read in a private pipe and selects the exact role triple inside the
+native broker. It then sends only that triple to the fixed authentication child
+through a second private pipe. The raw map is never written to standard output
+or exposed to the agent or login process. Railway `shell` and `run` are not
 used.
 
 Do not create an all-provider environment file. The exact isolation boundaries
@@ -84,7 +110,7 @@ are:
 
 | Scope                     | Ignored runtime reference file              |
 | ------------------------- | ------------------------------------------- |
-| RunPod read-only identity | `.env.agent.runpod.1password`               |
+| RunPod permission-unverified | `.env.agent.runpod.1password`            |
 | HF training read          | `.env.agent.hf-training.1password`          |
 | HF serving read           | `.env.agent.hf-serving.1password`           |
 | HF release publisher      | `.env.agent.hf-release-publisher.1password` |
@@ -93,7 +119,7 @@ are:
 
 Tracked provider reference-only templates live under
 `config/agent-secret-templates/`. Copy only the needed provider template to the
-repository root, replace its placeholder `op://` references, and restrict it:
+repository root without changing its exact `op://` reference, and restrict it:
 
 ```bash
 cp \
@@ -120,11 +146,12 @@ DIME_PROD_USER_USERNAME
 
 Those names must exist as unreferenced shared variables in the pinned Railway
 production environment.
-The raw Railway response flows only through an OS pipe between two shell-free
-child processes. The ephemeral filter clears the raw buffer, nulls the parsed
-map, and emits one exact three-key JSON object held in memory. The login process
-rejects missing keys, extra keys, empty values, malformed payloads, target
-drift, and oversized responses before any browser operation.
+The raw Railway response is captured only inside the native broker. The broker
+clears its raw buffer after selecting the exact role fields, clears selected
+values after serializing the private child payload, and never emits either
+payload to its own standard output. The login child rejects missing keys,
+extra keys, empty values, malformed payloads, target drift, and oversized
+responses before any browser operation.
 
 ## Read-only identity doctor
 
@@ -178,9 +205,11 @@ identity, and `fineGrained` role already defined in
 `https://huggingface.co/api/whoami-v2` identity endpoint so these fields remain
 verifiable across local `hf` CLI output changes. RunPod proof performs one
 read-only endpoint-list request to the official REST API with
-`Authorization: Bearer`; the credential never appears in a URL. Only a status
-and endpoint count are retained. The RunPod API key must be a separate
-restricted/read-only key.
+`Authorization: Bearer`; the credential never appears in a URL. Only credential
+presence and endpoint count are retained. That endpoint does not attest key
+identity or grants, so the result is always
+`CREDENTIAL_PRESENT_PERMISSION_UNVERIFIED`, with `identityVerified: false`,
+`permissionsVerified: false`, and authorization `NONE`.
 
 These commands prove identity only. They do not download a model, read a
 dataset, enumerate RunPod resources, invoke an endpoint, start a Pod, publish,
@@ -212,8 +241,8 @@ The harness:
 1. deletes any legacy role-specific storage-state artifacts before login;
 2. pins the origin to `https://aisportsbettingmodels.com` and the login route
    to `/login`;
-3. pins the Railway project and production environment before piping the
-   unreferenced shared-variable response through the exact-role filter;
+3. pins the Railway project and production environment before the native
+   broker privately selects the exact-role credential triple;
 4. rejects extra, missing, malformed, or oversized credential responses and
    otherwise makes exactly one credential login attempt;
 5. verifies `appUsers.me` against the expected email, username, role, and

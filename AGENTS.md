@@ -28,12 +28,13 @@ Operating rules:
 - Never use an implicit local Railway link for this repository. The reviewed
   broker passes explicit project, environment, and service IDs. Railway
   credentials are device-only in macOS Keychain and are retrieved only inside
-  the signed `dime-railway-keychain` executable; `~/.railway/config.json` must
-  contain no access or refresh token.
+  the independently hash-pinned `dime-railway-keychain` executable;
+  `~/.railway/config.json` must contain no access or refresh token.
 - Never print, persist, or place Railway variables in an agent environment. On
-  an explicit production login, a shell-free child pipeline sends the pinned
-  unreferenced shared-variable response directly into an ephemeral filter; only
-  the requested role's exact three reviewed values reach the login process.
+  an explicit production login, the native broker captures the pinned
+  unreferenced shared-variable response in a private pipe, selects the requested
+  role's exact three reviewed values in native code, and sends only that triple
+  to the fixed authentication child over a second private pipe.
 - Platform login is explicit. For production UI work run
   `pnpm platform:auth:owner` or `pnpm platform:auth:user`; use the headed
   variants only when a human-visible browser is needed. The harness attempts at
@@ -44,6 +45,13 @@ Operating rules:
   `pnpm credential:verify -- --scope <reviewed-scope>`. Each scope has its own
   1Password process; never combine training, serving, publisher,
   locked-evaluator, RunPod, or AWS credentials.
+- RunPod credential presence does not prove identity or least privilege. Until
+  independently attested grants exist, its only valid status is
+  `CREDENTIAL_PRESENT_PERMISSION_UNVERIFIED` and its authorization is `NONE`.
+- Credential-bearing execution remains blocked unless the Railway broker and
+  other security-sensitive executables match independently administered trust
+  roots. Same-user modes, ad-hoc signatures, and repository-writable manifests
+  are not trust roots.
 - AWS uses the reviewed `dime-builder` SSO profile by default. Do not add static
   AWS access keys to repository or broker files.
 - A passing connection is evidence of identity and read access. It is never

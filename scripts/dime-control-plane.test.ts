@@ -165,10 +165,12 @@ test("the control-plane runner does not pass unrelated provider credentials to c
       "utf8"
     )
   );
-  assert.match(source, /executable === "gh"/);
+  assert.match(source, /resolveTrustedExecutable\(executable\)/);
   assert.match(source, /executable === "dime-railway-keychain"/);
   assert.equal(source.includes("...process.env"), false);
   for (const forbidden of [
+    "GH_TOKEN",
+    "GITHUB_TOKEN",
     "HF_TOKEN",
     "RUNPOD_API_KEY",
     "AWS_SECRET_ACCESS_KEY",

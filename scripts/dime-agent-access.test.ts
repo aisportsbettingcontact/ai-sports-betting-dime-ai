@@ -69,7 +69,7 @@ test("platform roles use six exact names from unreferenced Railway shared variab
   assert.deepEqual(manifest.platform.credentialSource, {
     kind: "railway-service-variables",
     service: "shared",
-    retrieval: "isolated-exact-role-filter",
+    retrieval: "native-broker-exact-role-authentication",
     plaintextCacheAllowed: false,
   });
   assert.equal(
@@ -98,6 +98,17 @@ test("manifest rejects bulk Railway export and merged provider scopes", async ()
   assert.throws(
     () => validateAccessManifest(duplicate),
     /different broker environment file/
+  );
+});
+
+test("a full-access RunPod key can never be labeled read-only", async () => {
+  const manifest = await fixture();
+  manifest.providers.runPod.permissionContract = "restricted-read-only";
+  manifest.providers.runPod.identityVerified = true;
+  manifest.providers.runPod.permissionsVerified = true;
+  assert.throws(
+    () => validateAccessManifest(manifest),
+    /RunPod permission contract is invalid/
   );
 });
 
@@ -183,7 +194,10 @@ test("AWS and RunPod normalization stores fingerprints, not raw identity", () =>
   const runPodJson = JSON.stringify(runPod);
   assert.equal(runPodJson.includes(email), false);
   assert.equal(runPodJson.includes("runpod-account-id"), false);
-  assert.equal(runPod.permissionContract, "restricted-read-only");
+  assert.equal(runPod.status, "CREDENTIAL_PRESENT_PERMISSION_UNVERIFIED");
+  assert.equal(runPod.identityVerified, false);
+  assert.equal(runPod.permissionsVerified, false);
+  assert.equal(runPod.authorization, "NONE");
 });
 
 test("RunPod verification uses a bearer header and never a credential-bearing URL", async () => {
@@ -248,10 +262,26 @@ test("1Password desktop access retains no account or vault identity", () => {
 
 test("credential broker plans are fixed op-run commands with no arbitrary command", async () => {
   const manifest = await fixture();
+  const executableResolver = async (name: string) => ({
+    path: `/reviewed/${name}`,
+    sha256: name.repeat(64).slice(0, 64),
+  });
   for (const scope of ["hf-training", "runpod"]) {
-    const plan = credentialBrokerPlan(manifest, scope);
-    assert.equal(plan.executable, "op");
+    const plan = await credentialBrokerPlan(manifest, scope, {
+      executableResolver,
+    });
+    assert.equal(plan.executable, "/reviewed/op");
     assert.equal(plan.args[0], "run");
+    assert.equal(plan.args.includes("/reviewed/env"), true);
+    for (const name of [
+      "OP_SERVICE_ACCOUNT_TOKEN",
+      "OP_CONNECT_HOST",
+      "OP_CONNECT_TOKEN",
+      "OP_ACCOUNT",
+    ]) {
+      assert.equal(plan.args.includes(name), true);
+    }
+    assert.equal(plan.args.includes("/reviewed/node"), true);
     assert.equal(plan.args.includes("--broker-active"), true);
     assert.equal(plan.args.includes(scope), true);
     assert.equal(
@@ -269,51 +299,68 @@ test("1Password broker files accept only one scope-exact secret reference", asyn
   const plaintext = resolve(directory, "plaintext.env");
   const mixed = resolve(directory, "mixed.env");
   const wrongScope = resolve(directory, "wrong-scope.env");
+  const wrongItem = resolve(directory, "wrong-item.env");
   const linked = resolve(directory, "linked.env");
+  const expectedReference =
+    "op://Dime Infrastructure/dime-training-read-v1/credential";
   try {
-    await writeFile(
-      valid,
-      "HF_TOKEN=op://Dime AI/dime-training-read-v1/credential\n",
-      { mode: 0o600 }
-    );
+    await writeFile(valid, `HF_TOKEN="${expectedReference}"\n`, {
+      mode: 0o600,
+    });
     await chmod(valid, 0o600);
-    assert.equal(await secureBrokerFile(valid, "HF_TOKEN"), true);
+    assert.equal(
+      await secureBrokerFile(valid, "HF_TOKEN", expectedReference),
+      true
+    );
 
-    await writeFile(plaintext, "HF_TOKEN=plaintext-forbidden\n", { mode: 0o600 });
+    await writeFile(plaintext, "HF_TOKEN=plaintext-forbidden\n", {
+      mode: 0o600,
+    });
     await chmod(plaintext, 0o600);
     await assert.rejects(
-      secureBrokerFile(plaintext, "HF_TOKEN"),
-      /one 1Password secret reference/
+      secureBrokerFile(plaintext, "HF_TOKEN", expectedReference),
+      /exact reviewed vault, item, section, and field/
     );
 
     await writeFile(
       mixed,
       [
-        "HF_TOKEN=op://Dime AI/dime-training-read-v1/credential",
-        "RUNPOD_API_KEY=op://Dime AI/dime-control-plane-read-v1/credential",
+        `HF_TOKEN="${expectedReference}"`,
+        'RUNPOD_API_KEY="op://Dime Infrastructure/Run Pod - dime-control-plane-read-v1/credential"',
       ].join("\n"),
       { mode: 0o600 }
     );
     await chmod(mixed, 0o600);
     await assert.rejects(
-      secureBrokerFile(mixed, "HF_TOKEN"),
+      secureBrokerFile(mixed, "HF_TOKEN", expectedReference),
       /exactly one assignment/
     );
 
     await writeFile(
       wrongScope,
-      "RUNPOD_API_KEY=op://Dime AI/dime-control-plane-read-v1/credential\n",
+      'RUNPOD_API_KEY="op://Dime Infrastructure/Run Pod - dime-control-plane-read-v1/credential"\n',
       { mode: 0o600 }
     );
     await chmod(wrongScope, 0o600);
     await assert.rejects(
-      secureBrokerFile(wrongScope, "HF_TOKEN"),
+      secureBrokerFile(wrongScope, "HF_TOKEN", expectedReference),
       /must assign only HF_TOKEN/
+    );
+
+    await writeFile(
+      wrongItem,
+      'HF_TOKEN="op://Dime Infrastructure/dime-release-publisher-v1/credential"\n',
+      { mode: 0o600 }
+    );
+    await chmod(wrongItem, 0o600);
+    await assert.rejects(
+      secureBrokerFile(wrongItem, "HF_TOKEN", expectedReference),
+      /exact reviewed vault, item, section, and field/
     );
 
     await symlink(valid, linked);
     await assert.rejects(
-      secureBrokerFile(linked, "HF_TOKEN"),
+      secureBrokerFile(linked, "HF_TOKEN", expectedReference),
       /must not be a symlink/
     );
   } finally {

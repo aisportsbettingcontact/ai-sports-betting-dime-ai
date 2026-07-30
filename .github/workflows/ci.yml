@@ -38,6 +38,9 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   # ─── Stage 1: Dependency Security Audit ──────────────────────────────────
   security-audit:
