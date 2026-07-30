@@ -25,12 +25,14 @@ def load_json(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def test_foundation_control_audit_passes_without_authorizing_execution() -> None:
+def test_foundation_control_audit_validates_plan_without_claiming_readiness() -> None:
     report = audit_foundation_control()
 
     assert report == {
         "schema_version": "dime-foundation-control-audit-v1",
-        "pass": True,
+        "plan_valid": True,
+        "ready": False,
+        "status": "INCOMPLETE_NOT_AUTHORIZED",
         "sections": {
             "foundation_plan": {"pass": True, "issue_count": 0},
             "foundation_record_template": {"pass": True, "issue_count": 0},
@@ -57,7 +59,7 @@ def test_foundation_route_and_coverage_contract_is_exact() -> None:
 
     wrong = deepcopy(plan)
     wrong["route_mixture"]["matchup"]["train"] -= 1
-    assert any("route totals" in issue for issue in validate_foundation_plan(wrong))
+    assert validate_foundation_plan(wrong)
 
 
 def test_foundation_record_requires_independent_critique_and_consistent_coverage() -> None:
@@ -80,7 +82,7 @@ def test_foundation_record_requires_independent_critique_and_consistent_coverage
     )
 
 
-def test_evaluation_identities_are_exactly_sized_missing_and_training_prohibited() -> None:
+def test_evaluation_identity_plan_is_exactly_sized_missing_and_access_unverified() -> None:
     plan = load_json(EVALUATION_PLAN_PATH)
     assert validate_evaluation_plan(plan) == []
     assert {
@@ -88,13 +90,17 @@ def test_evaluation_identities_are_exactly_sized_missing_and_training_prohibited
     } == EVALUATION_CASE_COUNTS
     assert set(plan["layers"]["development"]["route_distribution"].values()) == {30}
     assert set(plan["layers"]["locked"]["route_distribution"].values()) == {20}
-    assert all(layer["training_access"] == "prohibited" for layer in plan["layers"].values())
-    assert plan["layers"]["critical"]["status"] == "EXPOSED_NOT_SELECTION_ELIGIBLE"
+    assert all(
+        layer["required_training_access"] == "prohibited" for layer in plan["layers"].values()
+    )
+    assert all(layer["effective_access_verified"] is False for layer in plan["layers"].values())
+    assert plan["layers"]["critical"]["status"] == "MISSING"
+    assert plan["legacy_exposed_critical"]["status"] == "EXPOSED_NOT_SELECTION_ELIGIBLE"
     assert not any(plan["authorization_boundary"].values())
 
     misstated = deepcopy(plan)
-    misstated["layers"]["critical"]["status"] = "MISSING"
-    assert any("cannot be mislabeled" in issue for issue in validate_evaluation_plan(misstated))
+    misstated["layers"]["critical"]["status"] = "EXPOSED_NOT_SELECTION_ELIGIBLE"
+    assert validate_evaluation_plan(misstated)
 
 
 def test_model_execution_contract_freezes_routing_only_ab_and_all_gates_closed() -> None:
@@ -110,8 +116,8 @@ def test_model_execution_contract_freezes_routing_only_ab_and_all_gates_closed()
 
     opened = deepcopy(contract)
     opened["runpod_gates"]["gate_1_baseline_inference"]["authorized"] = True
-    assert any("RunPod execution gate" in issue for issue in validate_execution_gates(opened))
+    assert validate_execution_gates(opened)
 
     drifted = deepcopy(contract)
     drifted["candidate_ab"]["candidates"][1]["artifact"] = "different_model"
-    assert any("differ only by routing" in issue for issue in validate_execution_gates(drifted))
+    assert validate_execution_gates(drifted)

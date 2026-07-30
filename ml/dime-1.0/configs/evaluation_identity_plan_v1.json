@@ -18,27 +18,45 @@
         "live_data": 30,
         "general_sports": 30
       },
-      "semantic_repository": "taileredsports/dime-eval-development-cases",
-      "answer_key_repository": "taileredsports/dime-eval-development-keys",
-      "revision": null,
-      "manifest_sha256": null,
-      "record_checksums_sha256": null,
-      "provenance_sha256": null,
-      "training_access": "prohibited",
+      "semantic_identity": {
+        "repo_id": "taileredsports/dime-eval-development-cases",
+        "revision": null,
+        "manifest_sha256": null,
+        "record_checksums_sha256": null,
+        "provenance_sha256": null
+      },
+      "answer_key_identity": {
+        "repo_id": "taileredsports/dime-eval-development-keys",
+        "revision": null,
+        "manifest_sha256": null,
+        "record_checksums_sha256": null,
+        "provenance_sha256": null
+      },
+      "required_training_access": "prohibited",
+      "effective_access_verified": false,
       "status": "MISSING"
     },
     "critical": {
       "purpose": "hard_failures_and_protected_behaviors",
       "case_count": 81,
       "route_distribution": null,
-      "semantic_repository": "taileredsports/dime-eval-critical-cases",
-      "answer_key_repository": "taileredsports/dime-eval-critical-keys",
-      "revision": null,
-      "manifest_sha256": null,
-      "record_checksums_sha256": null,
-      "provenance_sha256": null,
-      "training_access": "prohibited",
-      "status": "EXPOSED_NOT_SELECTION_ELIGIBLE"
+      "semantic_identity": {
+        "repo_id": "taileredsports/dime-eval-critical-cases",
+        "revision": null,
+        "manifest_sha256": null,
+        "record_checksums_sha256": null,
+        "provenance_sha256": null
+      },
+      "answer_key_identity": {
+        "repo_id": "taileredsports/dime-eval-critical-keys",
+        "revision": null,
+        "manifest_sha256": null,
+        "record_checksums_sha256": null,
+        "provenance_sha256": null
+      },
+      "required_training_access": "prohibited",
+      "effective_access_verified": false,
+      "status": "MISSING"
     },
     "locked": {
       "purpose": "single_use_final_model_selection",
@@ -54,26 +72,44 @@
         "live_data": 20,
         "general_sports": 20
       },
-      "semantic_repository": "taileredsports/dime-eval-locked-cases",
-      "answer_key_repository": "taileredsports/dime-eval-locked-keys",
-      "revision": null,
-      "manifest_sha256": null,
-      "record_checksums_sha256": null,
-      "provenance_sha256": null,
-      "training_access": "prohibited",
+      "semantic_identity": {
+        "repo_id": "taileredsports/dime-eval-locked-cases",
+        "revision": null,
+        "manifest_sha256": null,
+        "record_checksums_sha256": null,
+        "provenance_sha256": null
+      },
+      "answer_key_identity": {
+        "repo_id": "taileredsports/dime-eval-locked-keys",
+        "revision": null,
+        "manifest_sha256": null,
+        "record_checksums_sha256": null,
+        "provenance_sha256": null
+      },
+      "required_training_access": "prohibited",
+      "effective_access_verified": false,
       "status": "MISSING"
     },
     "general_regression": {
       "purpose": "detect_specialization_damage",
       "case_count": 120,
       "route_distribution": null,
-      "semantic_repository": "taileredsports/dime-eval-general-regression-cases",
-      "answer_key_repository": "taileredsports/dime-eval-general-regression-keys",
-      "revision": null,
-      "manifest_sha256": null,
-      "record_checksums_sha256": null,
-      "provenance_sha256": null,
-      "training_access": "prohibited",
+      "semantic_identity": {
+        "repo_id": "taileredsports/dime-eval-general-regression-cases",
+        "revision": null,
+        "manifest_sha256": null,
+        "record_checksums_sha256": null,
+        "provenance_sha256": null
+      },
+      "answer_key_identity": {
+        "repo_id": "taileredsports/dime-eval-general-regression-keys",
+        "revision": null,
+        "manifest_sha256": null,
+        "record_checksums_sha256": null,
+        "provenance_sha256": null
+      },
+      "required_training_access": "prohibited",
+      "effective_access_verified": false,
       "status": "MISSING"
     }
   },

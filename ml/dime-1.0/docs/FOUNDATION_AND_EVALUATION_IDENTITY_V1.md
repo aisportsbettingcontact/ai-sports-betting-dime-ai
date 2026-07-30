@@ -40,7 +40,9 @@ Run the static audit from `ml/dime-1.0`:
 .venv/bin/python scripts/validate_foundation_control.py
 ```
 
-The audit is deterministic and has no authorization effect.
+The audit is deterministic and has no authorization effect. `plan_valid: true` means only
+that the missing-state control plane matches its frozen schema; `ready` remains `false` until
+the separately governed evidence and access controls exist.
 
 ## Authoring and trainer boundaries
 

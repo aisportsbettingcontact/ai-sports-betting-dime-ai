@@ -74,7 +74,7 @@
   "governed_artifacts": {
     "training_contract": {
       "path": "ml/dime-1.0/configs/dime_training_contract_v1.json",
-      "sha256": "116c786e20f1d38cfa97f394a00a835ef0c7d72b87a769fcf4ae40ef91d13f3b",
+      "sha256": "f02148536e881fa03eef63385d94677c27a0f7aae1c4a078752d66066070896a",
       "status": "INCOMPLETE_NOT_AUTHORIZED"
     },
     "training_contract_schema": {
@@ -83,12 +83,12 @@
     },
     "foundation_release_plan": {
       "path": "ml/dime-1.0/configs/foundation_release_plan_v1.json",
-      "sha256": "dad8f4971c665f5a22f7dd6454d08daf5cae3824ff7c367a2ce660ae223612f0",
+      "sha256": "ec10316a75353a471e5fdfa2be5bf38f4bc251ec6215bec729977d498f5da679",
       "status": "INCOMPLETE_NOT_AUTHORIZED"
     },
     "evaluation_identity_plan": {
       "path": "ml/dime-1.0/configs/evaluation_identity_plan_v1.json",
-      "sha256": "9696c6425167918e45e650b8ef4941777f6e4a18f969e907a00c1002956d0342",
+      "sha256": "9ceb670946697ccb5f32ed07bf72edbdf45571b4ddf6193466158861cfa879ec",
       "status": "INCOMPLETE_NOT_AUTHORIZED"
     },
     "model_execution_gates": {

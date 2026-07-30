@@ -33,6 +33,17 @@ PRODUCT_ROUTES = (
     "general_sports",
 )
 FOUNDATION_SPLIT_TOTALS = {"total": 2400, "train": 2160, "validation": 240}
+FOUNDATION_ROUTE_MIXTURE = {
+    "platform": {"total": 300, "train": 270, "validation": 30},
+    "account": {"total": 180, "train": 162, "validation": 18},
+    "educational": {"total": 300, "train": 270, "validation": 30},
+    "bet_explanation": {"total": 300, "train": 270, "validation": 30},
+    "matchup": {"total": 420, "train": 378, "validation": 42},
+    "full_slate": {"total": 180, "train": 162, "validation": 18},
+    "historical": {"total": 240, "train": 216, "validation": 24},
+    "live_data": {"total": 300, "train": 270, "validation": 30},
+    "general_sports": {"total": 180, "train": 162, "validation": 18},
+}
 FOUNDATION_COVERAGE_MINIMUMS = {
     "tool_required": 720,
     "temporal_or_freshness_sensitive": 600,
@@ -41,11 +52,110 @@ FOUNDATION_COVERAGE_MINIMUMS = {
     "multi_turn": 360,
     "adversarial_or_false_premise": 240,
 }
+FOUNDATION_AUTHORIZATION_KEYS = {
+    "record_generation",
+    "private_dataset_publication",
+    "foundation_dataset_approval",
+    "runpod_invocation",
+    "model_download",
+    "model_training",
+    "benchmark_execution",
+    "model_selection",
+    "provider_activation",
+    "railway_mutation",
+    "trace_activation",
+    "shadow_traffic",
+    "route_activation",
+}
 EVALUATION_CASE_COUNTS = {
     "development": 270,
     "critical": 81,
     "locked": 180,
     "general_regression": 120,
+}
+EVALUATION_REPOSITORIES = {
+    "development": (
+        "taileredsports/dime-eval-development-cases",
+        "taileredsports/dime-eval-development-keys",
+    ),
+    "critical": (
+        "taileredsports/dime-eval-critical-cases",
+        "taileredsports/dime-eval-critical-keys",
+    ),
+    "locked": (
+        "taileredsports/dime-eval-locked-cases",
+        "taileredsports/dime-eval-locked-keys",
+    ),
+    "general_regression": (
+        "taileredsports/dime-eval-general-regression-cases",
+        "taileredsports/dime-eval-general-regression-keys",
+    ),
+}
+EVALUATION_IDENTITY_CONTROLS = [
+    "immutable_repository_revision",
+    "manifest_checksum",
+    "record_checksum_manifest",
+    "creation_provenance",
+    "explicit_non_overlap_proof",
+    "training_access_prohibition",
+    "separate_answer_key_access",
+]
+EVALUATION_ACCESS_SEPARATION = {
+    "semantic_cases_exclude_gold_answers": True,
+    "answer_keys_bind_semantic_record_sha256": True,
+    "training_denied_all_evaluation_repositories": False,
+    "runner_denied_answer_keys": False,
+    "scorer_denied_training_data_and_model_execution": False,
+    "locked_maximum_execution_count": 1,
+    "locked_consumption_ledger_required": True,
+    "current_status": "BLOCKED",
+}
+EVALUATION_NON_OVERLAP = {
+    "required_pairwise_suite_comparisons": 6,
+    "foundation_against_each_suite_comparisons": 4,
+    "checks": [
+        "case_ids",
+        "exact_record_hashes",
+        "normalized_instructions",
+        "contexts_and_tool_fixtures",
+        "restricted_expected_answers",
+        "source_event_user_conversation_and_scenario_partitions",
+        "temporal_embargoes",
+    ],
+    "restricted_report_sha256": None,
+    "public_proof_sha256": None,
+    "status": "MISSING",
+}
+EVALUATION_AUTHORIZATION_KEYS = {
+    "evaluation_dataset_publication",
+    "answer_key_publication",
+    "runpod_invocation",
+    "model_download",
+    "benchmark_execution",
+    "locked_evaluation_execution",
+    "model_selection",
+    "model_training",
+    "provider_activation",
+    "railway_mutation",
+    "trace_activation",
+    "shadow_traffic",
+    "route_activation",
+}
+EXECUTION_AUTHORIZATION_KEYS = {
+    "runpod_invocation",
+    "model_download",
+    "baseline_inference",
+    "model_training",
+    "checkpoint_resume",
+    "benchmark_execution",
+    "locked_evaluation_execution",
+    "model_selection",
+    "model_serving",
+    "provider_activation",
+    "railway_mutation",
+    "trace_activation",
+    "shadow_traffic",
+    "route_activation",
 }
 
 
@@ -71,8 +181,12 @@ def _schema_errors(instance: object, schema_path: Path) -> list[str]:
     return errors
 
 
-def _all_false(value: object) -> bool:
-    return isinstance(value, dict) and bool(value) and all(item is False for item in value.values())
+def _exact_false_map(value: object, expected_keys: set[str]) -> bool:
+    return (
+        isinstance(value, dict)
+        and set(value) == expected_keys
+        and all(item is False for item in value.values())
+    )
 
 
 def _check_file_binding(binding: object, label: str, errors: list[str]) -> None:
@@ -130,6 +244,8 @@ def validate_foundation_plan(plan: object) -> list[str]:
     routes = plan["route_mixture"]
     if tuple(routes) != PRODUCT_ROUTES:
         errors.append("Foundation route mixture must use the canonical ordered nine routes.")
+    if routes != FOUNDATION_ROUTE_MIXTURE:
+        errors.append("Foundation route mixture differs from the exact frozen allocation.")
     observed_totals = {
         key: sum(route_counts[key] for route_counts in routes.values())
         for key in FOUNDATION_SPLIT_TOTALS
@@ -160,8 +276,10 @@ def validate_foundation_plan(plan: object) -> list[str]:
         != "BLOCKED_PENDING_EXPLICIT_GOVERNANCE_CHANGE"
     ):
         errors.append("AI-authorship policy conflict must remain explicit until resolved.")
-    if not _all_false(plan["authorization_boundary"]):
-        errors.append("Foundation plan authorization_boundary must remain entirely false.")
+    if factory.get("private_chain_of_thought_allowed") is not False:
+        errors.append("Foundation Data Factory cannot retain private chain-of-thought.")
+    if not _exact_false_map(plan["authorization_boundary"], FOUNDATION_AUTHORIZATION_KEYS):
+        errors.append("Foundation authorization_boundary must contain every exact false gate.")
     return errors
 
 
@@ -177,18 +295,36 @@ def validate_evaluation_plan(plan: object) -> list[str]:
         layer = layers[layer_id]
         if layer["case_count"] != expected_count:
             errors.append(f"Evaluation layer {layer_id} must contain {expected_count} cases.")
-        if layer["training_access"] != "prohibited":
-            errors.append(f"Evaluation layer {layer_id} must prohibit training access.")
-        for field in (
-            "revision",
-            "manifest_sha256",
-            "record_checksums_sha256",
-            "provenance_sha256",
-        ):
-            if layer[field] is not None:
-                errors.append(
-                    f"Evaluation layer {layer_id}.{field} must remain null while missing."
-                )
+        semantic_repo, answer_key_repo = EVALUATION_REPOSITORIES[layer_id]
+        identities = (
+            ("semantic_identity", semantic_repo),
+            ("answer_key_identity", answer_key_repo),
+        )
+        for identity_key, expected_repo in identities:
+            identity = layer[identity_key]
+            if identity["repo_id"] != expected_repo:
+                errors.append(f"Evaluation layer {layer_id}.{identity_key}.repo_id is not frozen.")
+            for field in (
+                "revision",
+                "manifest_sha256",
+                "record_checksums_sha256",
+                "provenance_sha256",
+            ):
+                if identity[field] is not None:
+                    errors.append(
+                        f"Evaluation layer {layer_id}.{identity_key}.{field} "
+                        "must remain null while missing."
+                    )
+        if semantic_repo == answer_key_repo:
+            errors.append(f"Evaluation layer {layer_id} must separate semantic and answer keys.")
+        if layer["required_training_access"] != "prohibited":
+            errors.append(f"Evaluation layer {layer_id} must require prohibited training access.")
+        if layer["effective_access_verified"] is not False:
+            errors.append(
+                f"Evaluation layer {layer_id} cannot claim effective access verification."
+            )
+        if layer["status"] != "MISSING":
+            errors.append(f"Evaluation layer {layer_id} must remain missing.")
 
     for layer_id, per_route in (("development", 30), ("locked", 20)):
         distribution = layers[layer_id]["route_distribution"]
@@ -198,19 +334,16 @@ def validate_evaluation_plan(plan: object) -> list[str]:
             errors.append(f"Evaluation layer {layer_id} must contain {per_route} cases per route.")
 
     _check_file_binding(plan["legacy_exposed_critical"], "legacy_exposed_critical", errors)
-    if (
-        layers["critical"]["status"] != "EXPOSED_NOT_SELECTION_ELIGIBLE"
-        or plan["legacy_exposed_critical"]["status"] != "EXPOSED_NOT_SELECTION_ELIGIBLE"
-    ):
-        errors.append(
-            "The exposed 81-case suite cannot be mislabeled as sealed or selection-ready."
-        )
-    if plan["access_separation"]["current_status"] != "BLOCKED":
-        errors.append("Evaluation access separation must remain blocked until implemented.")
-    if plan["non_overlap_proof"]["status"] != "MISSING":
-        errors.append("Evaluation non-overlap proof must remain missing until evidence exists.")
-    if not _all_false(plan["authorization_boundary"]):
-        errors.append("Evaluation plan authorization_boundary must remain entirely false.")
+    if plan["legacy_exposed_critical"]["status"] != "EXPOSED_NOT_SELECTION_ELIGIBLE":
+        errors.append("The legacy public 81-case suite must remain exposed and ineligible.")
+    if plan["required_identity_controls"] != EVALUATION_IDENTITY_CONTROLS:
+        errors.append("Evaluation identity controls differ from the frozen contract.")
+    if plan["access_separation"] != EVALUATION_ACCESS_SEPARATION:
+        errors.append("Evaluation access separation differs from the blocked contract.")
+    if plan["non_overlap_proof"] != EVALUATION_NON_OVERLAP:
+        errors.append("Evaluation non-overlap requirements differ from the missing-state contract.")
+    if not _exact_false_map(plan["authorization_boundary"], EVALUATION_AUTHORIZATION_KEYS):
+        errors.append("Evaluation plan authorization_boundary must contain every exact false gate.")
     return errors
 
 
@@ -258,6 +391,12 @@ def validate_execution_gates(contract: object) -> list[str]:
     )
     if any(candidate_ab["shared_tuple"][key] is not None for key in unresolved_shared):
         errors.append("Unresolved Candidate A/B shared controls must remain null.")
+    if (
+        candidate_ab["candidate_a_complete"] is not False
+        or candidate_ab["candidate_b_complete"] is not False
+        or candidate_ab["execution_authorized"] is not False
+    ):
+        errors.append("Candidate A/B completion and execution flags must remain false.")
 
     early = contract["early_stopping_preflight"]
     if early["minimum_validation_events"] != 6:
@@ -270,10 +409,14 @@ def validate_execution_gates(contract: object) -> list[str]:
     gates = contract["runpod_gates"]
     if any(gate["authorized"] is not False for gate in gates.values()):
         errors.append("Every RunPod execution gate must remain unauthorized.")
+    if gates["gate_2_smoke_training"]["serving_authorized"] is not False:
+        errors.append("Gate 2 cannot authorize serving.")
     if any(gates["gate_3_full_candidate_c"]["prerequisites"].values()):
         errors.append("Full Candidate C prerequisites must remain false before evidence.")
-    if not _all_false(contract["authorization_boundary"]):
-        errors.append("Model execution authorization_boundary must remain entirely false.")
+    if contract["candidate_c_selection"]["selection_authorized"] is not False:
+        errors.append("Candidate C selection must remain unauthorized.")
+    if not _exact_false_map(contract["authorization_boundary"], EXECUTION_AUTHORIZATION_KEYS):
+        errors.append("Model execution authorization_boundary must contain every exact false gate.")
     return errors
 
 
@@ -297,7 +440,9 @@ def audit_foundation_control() -> dict[str, Any]:
     ]
     return {
         "schema_version": "dime-foundation-control-audit-v1",
-        "pass": not issues,
+        "plan_valid": not issues,
+        "ready": False,
+        "status": "INCOMPLETE_NOT_AUTHORIZED",
         "sections": {
             section: {"pass": not section_issues, "issue_count": len(section_issues)}
             for section, section_issues in sections.items()

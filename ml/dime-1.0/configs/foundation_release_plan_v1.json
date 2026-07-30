@@ -134,14 +134,17 @@
       "leakage_report.json",
       "coverage_report.json",
       "rights_report.json",
+      "foundation_fixture.sample.jsonl",
       "SHA256SUMS"
     ]
   },
   "known_blockers": [
     "The governed authoring-to-trainer conversion contract does not exist.",
     "Current Foundation governance prohibits retained AI-authored substantive prose.",
+    "The immutable source-packet registry and bounded production shard manifest do not exist.",
     "No approved 2,400-record private Foundation release exists.",
     "The immutable Hugging Face release revision and evidence hashes are null.",
+    "The immutable application-repository release identity contract does not exist.",
     "The reviewer registry and curriculum remain unapproved.",
     "Historical sports source-packet rights have not been established."
   ],

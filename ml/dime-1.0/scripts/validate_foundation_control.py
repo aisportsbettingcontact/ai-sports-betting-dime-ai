@@ -12,7 +12,7 @@ from dime_ai.foundation_control import audit_foundation_control
 def main() -> None:
     report = audit_foundation_control()
     print(json.dumps(report, indent=2, sort_keys=True))
-    if not report["pass"]:
+    if not report["plan_valid"]:
         sys.exit(2)
 
 
