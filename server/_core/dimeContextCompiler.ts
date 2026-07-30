@@ -509,6 +509,25 @@ export function compileDimeContext(
       }
     }
   }
+  const contradictionParticipantIds = new Set<string>();
+  for (const item of input.items) {
+    if (item.contradicts.length > 0) {
+      contradictionParticipantIds.add(item.factId);
+      for (const contradictedId of item.contradicts) {
+        contradictionParticipantIds.add(contradictedId);
+      }
+    }
+  }
+  for (const item of input.items) {
+    if (
+      contradictionParticipantIds.has(item.factId) &&
+      (!item.required || item.factClass !== "contradiction")
+    ) {
+      issues.push(
+        `${item.factId}: contradiction participants must be required contradiction facts`
+      );
+    }
+  }
   issues.push(...routePolicyIssues(input, input.items));
   if (issues.length > 0) throw new DimeContextCompilerError(issues);
 

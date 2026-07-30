@@ -233,6 +233,32 @@ describe("Route-Aware Context Compiler v1", () => {
     ]);
   });
 
+  it("makes contradiction groups atomic so packing cannot omit either side", () => {
+    expect(() =>
+      compileDimeContext(
+        input({
+          tokenBudget: 20,
+          items: [
+            item("source-a", {
+              required: true,
+              tokenCost: 20,
+              contradicts: ["source-b"],
+              factClass: "contradiction",
+            }),
+            item("source-b", {
+              required: false,
+              tokenCost: 20,
+              contradicts: ["source-a"],
+              factClass: "contradiction",
+            }),
+          ],
+        })
+      )
+    ).toThrow(
+      /source-b: contradiction participants must be required contradiction facts/
+    );
+  });
+
   it("rejects excessive duplicate context before packing", () => {
     expect(() =>
       compileDimeContext(

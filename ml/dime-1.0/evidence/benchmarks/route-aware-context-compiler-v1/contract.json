@@ -9,8 +9,8 @@
     "runtime_integration": false
   },
   "source_identities": {
-    "server/_core/dimeContextCompiler.ts": "e80ebfbd773ae8f3e8b0b2100db4d7dbc3fe4df97eab1da7e1422b5f55895beb",
-    "server/_core/dimeContextCompiler.test.ts": "5e1be352c927856b24bcc5c301a068f4c76f9d62e663c1de0297b8364e8cdf77",
+    "server/_core/dimeContextCompiler.ts": "ee5bcc748fe5ac99d49352031b6cd1baa53a8456af8f471cad4c5d93c8feaae3",
+    "server/_core/dimeContextCompiler.test.ts": "5260f8fdbab93f19354b263c31fe6fac8a532c8ac0c792635778551632c2ffcd",
     "ml/dime-1.0/configs/route_context_compiler_v1.json": "6f05caa5b7f35914ceaff592cc5b52114407612707ce1b869ac891e436a59067",
     "ml/dime-1.0/schemas/route_context_compiler_v1.schema.json": "c3a91bd7544cc14a487c6b443d0a07445453f037a4dff469d18a12c83d61665d",
     "ml/dime-1.0/tests/test_route_context_compiler_v1.py": "f9bfa173970490f2f33de653783a914c2039f4228e2760ca78da01acdf579cb0",
@@ -27,7 +27,7 @@
   "verification": {
     "targeted_typescript_tests": {
       "status": "PASS",
-      "tests_passed": 19
+      "tests_passed": 20
     },
     "typescript_check": {
       "status": "PASS"
