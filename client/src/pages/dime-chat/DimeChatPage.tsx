@@ -1152,6 +1152,40 @@ function ErrorCard({
   );
 }
 
+/**
+ * Landing-demo answers. Product copy, not model output — the public embed
+ * never calls the model (see `demoMode`). Matching is intentionally loose so
+ * a visitor typing their own question still gets a coherent, honest reply
+ * rather than silence.
+ */
+const DEMO_ANSWERS: Array<{ match: RegExp; answer: string }> = [
+  {
+    match: /pass|why/i,
+    answer:
+      "Pass. The book price and Dime's projection agree inside the noise band, so there is no edge to take. Most markets resolve here — that is the point of the scan, not a failure of it.",
+  },
+  {
+    match: /disagree|edge|value/i,
+    answer:
+      "Edge detected. Dime projects 58.9% against a 53.5% implied price — a +5.4pp gap at −115, with confidence 74/100. Price moved −108 to −115 since open, so the number is still ahead of the market.",
+  },
+  {
+    match: /total|over|under/i,
+    answer:
+      "Monitor. The total sits within a point of fair value and volatility is medium, so the number is live but not yet actionable. If it moves past fair value before close, it becomes a Pass.",
+  },
+];
+
+const DEMO_FALLBACK =
+  "This is a preview of the Dime Chat surface: the interface, the streaming, and the answer format are the product's own. Live answers run against tonight's real slate once you have access.";
+
+function demoAnswerFor(question: string): string {
+  return (
+    DEMO_ANSWERS.find(entry => entry.match.test(question))?.answer ??
+    DEMO_FALLBACK
+  );
+}
+
 /* ----------------------------------------------------------------- */
 /* Page                                                               */
 /* ----------------------------------------------------------------- */
@@ -1222,12 +1256,23 @@ export interface DimeChatPageProps {
   /** DEV-only visual-review escape hatch (previewGate.ts). Production builds
    *  always pass false/undefined, so the owner gate cannot be bypassed. */
   previewMode?: boolean;
+  /**
+   * Public landing-page demo (owner directive 2026-07-31). Renders the REAL
+   * chat surface — sidebar, top bar, hero, composer, thread — for anonymous
+   * visitors, with two hard guarantees:
+   *   • no history reads/writes, even if an owner happens to be signed in
+   *     (their private threads must never appear inside a marketing embed);
+   *   • no SSE call. /api/dime/chat is auth-gated and costs model credits, so
+   *     submits replay scripted product copy through the real reducer instead.
+   */
+  demoMode?: boolean;
 }
 
 export default function DimeChatPage({
   theme: themeProp,
   shell,
   previewMode = false,
+  demoMode = false,
 }: DimeChatPageProps = {}) {
   const { theme: contextTheme, mode: contextThemeMode } = useTheme();
   const theme: Theme =
@@ -1241,7 +1286,9 @@ export default function DimeChatPage({
   // renders (never flash the composer); resolved non-owners get the Dime
   // wordmark + AI MODEL CHAT COMING SOON. previewMode is compile-time gated
   // to DEV builds (previewGate.ts) for frozen-design review.
-  const chatAccess: "granted" | "pending" | "denied" = previewMode
+  const chatAccess: "granted" | "pending" | "denied" = demoMode
+    ? "granted"
+    : previewMode
     ? "granted"
     : authLoading
       ? "pending"
@@ -1251,7 +1298,9 @@ export default function DimeChatPage({
 
   // History reads/writes need a real authenticated owner session — previewMode
   // grants the visual surface only, never the tRPC history calls.
-  const historyReady = !!appUser && isOwner;
+  // demoMode force-closes history: a signed-in owner scrolling the public
+  // landing page must not see their own threads inside the embed.
+  const historyReady = !demoMode && !!appUser && isOwner;
 
   // Settings modal (Round 3 Step 2, owner directive 2026-07-22): the
   // popover's Settings row (Step 1's onOpenSettings hook, TODO(step-2))
@@ -2077,6 +2126,51 @@ export default function DimeChatPage({
     flipFromRef.current = composer.getBoundingClientRect().top;
   }, []);
 
+  /* --- Landing-demo replay (no network, real reducer) --- */
+  const demoTimersRef = useRef<number[]>([]);
+  useEffect(
+    () => () => {
+      demoTimersRef.current.forEach(id => window.clearTimeout(id));
+      demoTimersRef.current = [];
+    },
+    []
+  );
+  const demoReplay = useCallback(
+    (question: string) => {
+      demoTimersRef.current.forEach(id => window.clearTimeout(id));
+      demoTimersRef.current = [];
+      const answer = demoAnswerFor(question);
+      const userId = `demo-u-${Date.now()}`;
+      const botId = `demo-a-${Date.now()}`;
+      dispatch({ type: "append_user", id: userId, text: question });
+      setInput("");
+      dispatch({ type: "open_assistant", id: botId });
+      if (reduceMotion) {
+        dispatch({ type: "stream_delta", id: botId, text: answer });
+        dispatch({ type: "stream_done", id: botId });
+        return;
+      }
+      // Cadence chosen to read as live typing without outpacing the eye.
+      let cursor = 0;
+      const step = () => {
+        const next = Math.min(answer.length, cursor + 3);
+        dispatch({
+          type: "stream_delta",
+          id: botId,
+          text: answer.slice(cursor, next),
+        });
+        cursor = next;
+        if (cursor < answer.length) {
+          demoTimersRef.current.push(window.setTimeout(step, 26));
+        } else {
+          dispatch({ type: "stream_done", id: botId });
+        }
+      };
+      demoTimersRef.current.push(window.setTimeout(step, 620));
+    },
+    [reduceMotion]
+  );
+
   /* --- Single submit choke point: composer, Enter, chips, all of it --- */
   const submit = useCallback(
     (text: string) => {
@@ -2085,6 +2179,14 @@ export default function DimeChatPage({
       if (chatAccess !== "granted") return;
       const trimmed = text.trim();
       if (!trimmed || state.streaming || traceStartingRef.current) return;
+      // Landing demo: replay scripted product copy through the SAME reducer
+      // the live stream drives (append_user → open_assistant → deltas →
+      // done), so the surface behaves exactly like the product without ever
+      // touching the auth-gated, credit-metered SSE endpoint.
+      if (demoMode) {
+        demoReplay(trimmed);
+        return;
+      }
       startDimeChatTrace((traceTools, traceLoad) => {
         // D3 analytics (inert until an island registers the emitter).
         emitAction("chat_message_sent", {
@@ -2146,6 +2248,8 @@ export default function DimeChatPage({
     },
     [
       chatAccess,
+      demoMode,
+      demoReplay,
       state.streaming,
       state.messages,
       threadId,
