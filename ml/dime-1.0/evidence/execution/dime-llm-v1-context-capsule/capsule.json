@@ -1,7 +1,7 @@
 {
   "schema_version": "dime-llm-v1-context-capsule-v1",
   "capsule_id": "dime-llm-v1-foundation-evaluation-2026-07-31",
-  "verified_at": "2026-07-31T00:20:07Z",
+  "verified_at": "2026-07-31T01:12:55Z",
   "snapshot_semantics": "IMMUTABLE_POINT_IN_TIME_NOT_LIVE_STATUS",
   "classification": "SANITIZED_AGGREGATE_ONLY",
   "private_content_counts": {
@@ -69,6 +69,10 @@
         "ci": "PASS",
         "security_audit": "PASS"
       },
+      "review_required": true,
+      "independent_approval": false,
+      "merged": false,
+      "deployed": false,
       "effective_authorization": false,
       "source": "github_connector_pr_metadata_and_coordinator_check_snapshot"
     },
@@ -93,6 +97,7 @@
         "dime_llm_validation": "NOT_TRIGGERED_PATH_FILTER",
         "livelab": "NOT_TRIGGERED_PATH_FILTER"
       },
+      "review_required": true,
       "independent_approval": false,
       "merged": false,
       "deployed": false,
@@ -149,20 +154,22 @@
     "pilot_admission": "NOT_ADMITTED",
     "pilot_reason": "PILOT_ARTIFACT_EXPLICITLY_NOT_RELEASE",
     "first_live_data_records_admitted": 150,
+    "second_live_data_records_admitted": 150,
+    "total_live_data_records_admitted": 300,
     "admitted_split": {
-      "train": 135,
-      "validation": 15
+      "train": 270,
+      "validation": 30
     },
-    "remaining_records": 2250,
+    "remaining_records": 2100,
     "remaining_split": {
-      "train": 2025,
-      "validation": 225
+      "train": 1890,
+      "validation": 210
     },
     "complete_release": false,
     "public_evidence": {
-      "path": "ml/dime-1.0/evidence/execution/dime-llm-v1-foundation-001/evidence.json",
-      "sha256": "1a854aecf63029d0c51a981eb27d0fa7d08f99903d796bcaab18eb7d2002b86e",
-      "sha256sums_sha256": "13ae6070b6d09de9356a74b3c5f1410f9dcabd2808c1d0f9c9db5f96ce9d068c"
+      "path": "ml/dime-1.0/evidence/execution/dime-llm-v1-foundation-002/evidence.json",
+      "sha256": "486e26aabae057e5168ee2f52e554077cbc0993cbdc337cdc01f1eaecb6ac39b",
+      "sha256sums_sha256": "d0f97429be92983da266c4a60f86093e5620efc23416556db0ccdb2a92745ad8"
     }
   },
   "semantic_evaluation": {
@@ -175,10 +182,10 @@
     },
     "total_cases": 651,
     "answer_keys": 0,
-    "foundation_records_compared": 150,
+    "foundation_records_compared": 300,
     "evaluation_cross_suite_case_pair_comparisons": 148770,
     "evaluation_cross_suite_disallowed_overlap": 0,
-    "foundation_to_evaluation_pair_comparisons": 97650,
+    "foundation_to_evaluation_pair_comparisons": 195300,
     "foundation_to_evaluation_disallowed_overlap": 0,
     "composite_status": "PASS_COMPOSITE_PROOF_COMPLETE"
   },
@@ -207,7 +214,7 @@
     "Track E pull request 252 has passing required checks but remains an unmerged draft and answer-key creation remains unauthorized",
     "RunPod Gate 1 pull request 253 has passing triggered checks but remains an unapproved, unmerged draft with effective authorization false",
     "credential-execution closure pull request 255 has passing triggered checks but remains an unapproved, unmerged, undeployed draft",
-    "2250 admitted Foundation records remain before the 2400-record target is complete",
+    "2,100 Foundation records remain to be admitted before the 2,400-record target is complete",
     "the private Foundation release revision, dataset manifest hash, and release checksum hash are not frozen",
     "the exact base model, base revision, adapter revision, endpoint revision, and container digest are not selected",
     "RunPod identity and permissions are unverified and Gate 1 authorization is NONE",
@@ -216,7 +223,7 @@
   "model_artifact_decision": {
     "status": "INCOMPLETE_NOT_AUTHORIZED",
     "path": "ml/dime-1.0/evidence/decisions/dime-model-artifact-decision-v1/decision.json",
-    "sha256": "1473f9bede45e39bfb962f8dcf6e9e6bd4ed56809868aceb6f57da4ee4250d22"
+    "sha256": "031c6c6d4e7efdc3782c264bed566642ddfcafb78041885d4033459c9d653141"
   },
   "authorization_boundary": {
     "credential_execution": false,

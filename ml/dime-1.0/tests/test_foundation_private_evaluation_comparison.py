@@ -302,6 +302,22 @@ def test_pre_final_foundation_artifact_is_rejected_before_trainer_read(tmp_path:
         load_accepted_foundation(root)
 
 
+def test_live_data_expected_count_boundary_is_fail_closed(tmp_path: Path) -> None:
+    with pytest.raises(FoundationEvaluationComparisonError, match="expected-count"):
+        load_accepted_foundation(
+            tmp_path / "unread",
+            expected_counts={
+                "accepted_records": 150,
+                "trainer_records": 150,
+                "train": 135,
+                "validation": 15,
+                "approved_originals": 149,
+                "approved_repairs": 0,
+                "resolved_carried_findings": 0,
+            },
+        )
+
+
 def test_manifest_target_cannot_escape_private_root(tmp_path: Path) -> None:
     root = private_directory(tmp_path / "accepted")
     outside = tmp_path / "outside.jsonl"

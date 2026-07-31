@@ -162,8 +162,17 @@ def assigned_split(
     active_registry = _require_valid_registry(
         load_partition_registry() if registry is None else registry
     )
-    identity = _validate_partition_identity(partition_identity, active_registry)
-    algorithm = active_registry["assignment_algorithm"]
+    return _assigned_split_from_valid_registry(partition_identity, active_registry)
+
+
+def _assigned_split_from_valid_registry(
+    partition_identity: object,
+    registry: dict[str, Any],
+) -> str:
+    """Derive a split after the caller has validated the registry exactly once."""
+
+    identity = _validate_partition_identity(partition_identity, registry)
+    algorithm = registry["assignment_algorithm"]
     material = f"{algorithm['assignment_seed']}:{identity['scenario_family_id']}".encode()
     digest = hashlib.sha256(material).hexdigest()
     bucket = int(digest, 16) % algorithm["bucket_modulus"]
@@ -279,6 +288,7 @@ def validate_partition_groups(
         records_by_id[record_id] = record
 
     candidate = deepcopy(source_registry)
+    candidate_assignments = dict(committed_assignments)
     for record_id in sorted(records_by_id):
         record = records_by_id[record_id]
         provenance = record.get("provenance")
@@ -288,13 +298,14 @@ def validate_partition_groups(
         if not isinstance(shard_id, str) or not SHARD_ID.fullmatch(shard_id):
             raise PartitionRegistryError(f"{record_id}: invalid provenance.shard_id")
         identity = record.get("partition_identity")
-        expected_split = assigned_split(identity, source_registry)
+        expected_split = _assigned_split_from_valid_registry(identity, source_registry)
         if record.get("split") != expected_split:
             raise PartitionRegistryError(
                 f"{record_id}: record split disagrees with the frozen registry assignment"
             )
 
-        for key in _partition_groups(identity, source_registry):
+        groups = _partition_groups(identity, source_registry)
+        for key in groups:
             committed = committed_assignments.get(key)
             if committed is None:
                 continue
@@ -304,18 +315,34 @@ def validate_partition_groups(
                     f"{record_id}: committed partition registry drift for {key[0]}"
                 )
 
-        candidate, frozen_split = freeze_partition_assignment(
-            candidate,
-            record_id=record_id,
-            shard_id=shard_id,
-            partition_identity=identity,
-        )
-        if frozen_split != expected_split:
-            raise AssertionError("partition assignment changed during in-memory registry build")
+        for group_dimension, group_key_sha256 in groups:
+            key = (group_dimension, group_key_sha256)
+            existing = candidate_assignments.get(key)
+            if existing is not None:
+                if existing["shard_id"] != shard_id:
+                    raise PartitionRegistryError(
+                        f"partition group cross-shard collision for {group_dimension}"
+                    )
+                if existing["split"] != expected_split:
+                    raise PartitionRegistryError(
+                        f"partition group cross-split collision for {group_dimension}"
+                    )
+                continue
+            assignment = {
+                "group_dimension": group_dimension,
+                "group_key_sha256": group_key_sha256,
+                "shard_id": shard_id,
+                "split": expected_split,
+            }
+            candidate["assignments"].append(assignment)
+            candidate_assignments[key] = assignment
 
     stale_assignments = set(committed_assignments) - observed_committed
     if stale_assignments:
         raise PartitionRegistryError(
             "committed partition registry drift: assignments are absent from the full collection"
         )
-    return candidate
+    candidate["assignments"].sort(
+        key=lambda item: (item["group_dimension"], item["group_key_sha256"])
+    )
+    return _require_valid_registry(candidate)

@@ -25,7 +25,11 @@ from dime_ai.foundation_data_factory import (
     convert_and_encode,
     source_packet_is_releasable,
 )
-from dime_ai.foundation_dataset import find_exact_duplicates, find_semantic_neighbors
+from dime_ai.foundation_dataset import (
+    _development_contamination,
+    find_exact_duplicates,
+    find_semantic_neighbors,
+)
 from dime_ai.foundation_instrumentation import (
     DeterministicByteTokenizer,
     token_profile,
@@ -33,8 +37,11 @@ from dime_ai.foundation_instrumentation import (
 )
 from dime_ai.foundation_partitioning import PartitionRegistryError, validate_partition_groups
 from dime_ai.foundation_private_evaluation_comparison import (
+    FOUNDATION_COUNTS,
     PARTITION_COUNTS,
+    SECOND_LIVE_DATA_SHARD_COUNTS,
     FoundationEvaluationComparisonError,
+    compare_partitions,
     load_accepted_foundation,
     load_semantic_r5,
 )
@@ -45,6 +52,9 @@ ML_ROOT = Path(__file__).resolve().parents[2]
 REPO_ROOT = ML_ROOT.parents[1]
 RELEASE_PLAN_PATH = ML_ROOT / "configs" / "foundation_release_plan_v1.json"
 EVIDENCE_SCHEMA_PATH = ML_ROOT / "schemas" / "foundation_execution_evidence.schema.json"
+CONTINUATION_EVIDENCE_SCHEMA_PATH = (
+    ML_ROOT / "schemas" / "foundation_continuation_evidence.schema.json"
+)
 NUMERIC_TOKEN = re.compile(r"(?<![A-Za-z0-9_])[-+]?(?:\d+(?:\.\d+)?|\.\d+)%?")
 SHA256 = re.compile(r"^[0-9a-f]{64}$")
 PRIVATE_MODE = 0o700
@@ -68,6 +78,28 @@ AUTHORIZATION_BOUNDARY = {
     "route_activation": False,
     "training": False,
 }
+CONTINUATION_FORBIDDEN_PUBLIC_KEYS = frozenset(
+    {
+        "answer",
+        "answer_key",
+        "case_id",
+        "conversation",
+        "example_id",
+        "expected_answer",
+        "gold",
+        "messages",
+        "packet_id",
+        "private_record_content",
+        "prompt",
+        "raw_private_record",
+        "raw_private_records",
+        "record_id",
+        "semantic_case_content",
+        "source_id",
+        "source_locator",
+        "task_type",
+    }
+)
 
 
 class FoundationExecutionEvidenceError(ValueError):
@@ -582,10 +614,21 @@ def validate_foundation_artifact(
     root: Path,
     source_packet_root: Path,
     pilot: bool,
+    artifact_label: str | None = None,
+    expected_counts: Mapping[str, int] | None = None,
+    expected_execution_id: str | None = None,
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     """Validate one finalized private artifact and return only sanitized admission facts."""
 
-    label = "pilot" if pilot else "first_live_data_shard"
+    if pilot and (
+        artifact_label is not None
+        or expected_counts is not None
+        or expected_execution_id is not None
+    ):
+        raise FoundationExecutionEvidenceError(
+            "pilot admission does not accept a live-data boundary override"
+        )
+    label = "pilot" if pilot else artifact_label or "first_live_data_shard"
     absolute = _private_root(root, label)
     inventory = secure_inventory(absolute, label)
     report, report_name, expected_count = _report_boundary(absolute, pilot=pilot)
@@ -627,7 +670,11 @@ def validate_foundation_artifact(
     else:
         # The stricter comparison loader re-verifies the accepted trainer boundary.
         try:
-            load_accepted_foundation(absolute)
+            load_accepted_foundation(
+                absolute,
+                expected_counts=FOUNDATION_COUNTS if expected_counts is None else expected_counts,
+                expected_execution_id=expected_execution_id,
+            )
         except FoundationEvaluationComparisonError as exc:
             raise FoundationExecutionEvidenceError("accepted Foundation boundary failed") from exc
         decision = "ADMITTED"
@@ -1102,6 +1149,617 @@ def freeze_public_evidence(
         "foundation_evaluation_pair_comparisons": semantic["foundation_to_evaluation_non_overlap"][
             "pair_comparisons"
         ],
+        "answer_keys": 0,
+        "bindings": {
+            "readme_sha256": readme_hash,
+            "evidence_sha256": evidence_hash,
+            "sha256sums_sha256": sums_hash,
+        },
+    }
+
+
+def _repository_evaluation_records() -> list[dict[str, Any]]:
+    """Load only public repository evaluation prompts for contamination checks."""
+
+    records: list[dict[str, Any]] = []
+
+    def walk(value: object) -> None:
+        if isinstance(value, dict):
+            if isinstance(value.get("case_id"), str) and isinstance(value.get("messages"), list):
+                records.append(value)
+            for child in value.values():
+                walk(child)
+        elif isinstance(value, list):
+            for child in value:
+                walk(child)
+
+    for path in sorted((ML_ROOT / "data" / "eval").glob("*")):
+        if path.suffix == ".jsonl":
+            values = [
+                loads_governed_json(line, source=f"repository evaluation {path.name}")
+                for line in path.read_bytes().splitlines(keepends=True)
+                if line.strip()
+            ]
+        elif path.suffix == ".json":
+            values = [load_governed_json(path, source=f"repository evaluation {path.name}")]
+        else:
+            continue
+        for value in values:
+            walk(value)
+    if not records:
+        raise FoundationExecutionEvidenceError("repository evaluation prompt inventory is empty")
+    return records
+
+
+def validate_live_data_continuation(
+    *,
+    first_root: Path,
+    first_source_packet_root: Path,
+    second_root: Path,
+    second_source_packet_root: Path,
+    semantic_root: Path,
+) -> dict[str, Any]:
+    """Reproduce the closed combined-300 continuation boundary without private output."""
+
+    first, first_authoring = validate_foundation_artifact(
+        root=first_root,
+        source_packet_root=first_source_packet_root,
+        pilot=False,
+        artifact_label="first_live_data_shard",
+        expected_counts=FOUNDATION_COUNTS,
+        expected_execution_id="foundation-live-data-shard-001-accepted-b9ba7788",
+    )
+    second, second_authoring = validate_foundation_artifact(
+        root=second_root,
+        source_packet_root=second_source_packet_root,
+        pilot=False,
+        artifact_label="second_live_data_shard",
+        expected_counts=SECOND_LIVE_DATA_SHARD_COUNTS,
+        expected_execution_id="foundation-live-data-shard-002-ae039e87",
+    )
+    first_trainers, _, _ = load_accepted_foundation(
+        first_root,
+        expected_counts=FOUNDATION_COUNTS,
+        expected_execution_id="foundation-live-data-shard-001-accepted-b9ba7788",
+    )
+    second_trainers, second_report, _ = load_accepted_foundation(
+        second_root,
+        expected_counts=SECOND_LIVE_DATA_SHARD_COUNTS,
+        expected_execution_id="foundation-live-data-shard-002-ae039e87",
+    )
+    authoring = first_authoring + second_authoring
+    trainers = first_trainers + second_trainers
+    if len(authoring) != 300 or len(trainers) != 300:
+        raise FoundationExecutionEvidenceError("combined live-data record inventory drifted")
+    if Counter(record["route"] for record in authoring) != {"live_data": 300}:
+        raise FoundationExecutionEvidenceError("combined route boundary drifted")
+    if Counter(record["split"] for record in authoring) != {
+        "train": 270,
+        "validation": 30,
+    }:
+        raise FoundationExecutionEvidenceError("combined split boundary drifted")
+
+    try:
+        partition_registry = validate_partition_groups(authoring)
+    except PartitionRegistryError as exc:
+        raise FoundationExecutionEvidenceError("combined partition gate failed") from exc
+    exact = find_exact_duplicates(trainers)
+    semantic_duplicates = find_semantic_neighbors(
+        trainers,
+        shingle_size=5,
+        threshold=0.92,
+    )
+    repository_overlap = _development_contamination(
+        trainers,
+        _repository_evaluation_records(),
+        shingle_size=5,
+        threshold=0.80,
+    )
+    try:
+        semantic_cases, semantic_manifest, semantic_bindings = load_semantic_r5(semantic_root)
+        comparisons, collisions = compare_partitions(trainers, semantic_cases)
+    except FoundationEvaluationComparisonError as exc:
+        raise FoundationExecutionEvidenceError("combined semantic boundary failed") from exc
+
+    invalid_semantic_cases = 0
+    answer_key_cases = 0
+    for partition, records in semantic_cases.items():
+        if len(records) != PARTITION_COUNTS[partition]:
+            raise FoundationExecutionEvidenceError("semantic partition count drifted")
+        for record in records:
+            if validate_semantic_case(record):
+                invalid_semantic_cases += 1
+            if record.get("privacy", {}).get("contains_gold_answers") is not False or any(
+                key in record for key in ("answer", "answer_key", "expected_answer", "gold")
+            ):
+                answer_key_cases += 1
+    if (
+        invalid_semantic_cases
+        or answer_key_cases
+        or semantic_manifest.get("contains_answer_keys") is not False
+    ):
+        raise FoundationExecutionEvidenceError("semantic schema or answer-key boundary failed")
+
+    second_absolute = _private_root(second_root, "second_live_data_shard")
+    cross_report_path = second_absolute / "cross-shard-report.json"
+    cross_report = _load_object(cross_report_path, "combined cross-shard report")
+    expected_gates = {
+        "partition_collisions": 0,
+        "exact_duplicates": 0,
+        "semantic_duplicate_pairs": 0,
+        "repository_evaluation_overlap": 0,
+        "private_semantic_overlap": 0,
+    }
+    reported_semantic = cross_report.get("private_semantic_comparison")
+    if (
+        cross_report.get("schema_version") != "dime-foundation-cross-shard-gate-report-v1"
+        or cross_report.get("execution_id") != "foundation-live-data-shard-002-ae039e87"
+        or cross_report.get("prior_execution_id")
+        != "foundation-live-data-shard-001-accepted-b9ba7788"
+        or cross_report.get("combined_record_count") != 300
+        or cross_report.get("combined_split") != {"train": 270, "validation": 30}
+        or cross_report.get("route_counts") != {"live_data": 300}
+        or cross_report.get("gates") != expected_gates
+        or cross_report.get("admission") != second["per_record_admission"]
+        or not isinstance(reported_semantic, dict)
+        or reported_semantic.get("pair_comparisons") != 195300
+        or reported_semantic.get("collision_count") != 0
+        or reported_semantic.get("status") != "PASS_ZERO_DISALLOWED_OVERLAP"
+        or reported_semantic.get("semantic_bindings") != semantic_bindings
+        or second_report.get("artifact_bindings", {}).get("cross_shard_report_sha256")
+        != _sha256_file(cross_report_path)
+    ):
+        raise FoundationExecutionEvidenceError("combined cross-shard report boundary drifted")
+    reported_partitions = reported_semantic.get("partitions")
+    if not isinstance(reported_partitions, dict) or set(reported_partitions) != set(
+        PARTITION_COUNTS
+    ):
+        raise FoundationExecutionEvidenceError("combined semantic partition report drifted")
+    for partition, case_count in PARTITION_COUNTS.items():
+        comparison = comparisons[partition]
+        reported = reported_partitions[partition]
+        expected = {
+            "foundation_records": 300,
+            "evaluation_cases": case_count,
+            "pair_comparisons": 300 * case_count,
+            "collision_count": 0,
+            "status": "PASS",
+        }
+        if (
+            comparison["foundation_records"] != 300
+            or comparison["evaluation_cases"] != case_count
+            or comparison["pair_comparisons"] != 300 * case_count
+            or comparison["collision_count"] != 0
+            or comparison["collisions"] != []
+            or comparison["status"] != "PASS"
+            or reported != expected
+        ):
+            raise FoundationExecutionEvidenceError("combined semantic comparison partition drifted")
+
+    recorded_registry = _load_object(
+        second_absolute / "partition-registry.json",
+        "combined partition registry",
+    )
+    if recorded_registry != partition_registry:
+        raise FoundationExecutionEvidenceError("combined partition registry binding drifted")
+    source_selection = _load_object(
+        second_absolute / "source-selection-manifest.json",
+        "second source selection",
+    )
+    first_task_types = {record["task_type"] for record in first_authoring}
+    second_task_types = {record["task_type"] for record in second_authoring}
+    selected_task_types = source_selection.get("genuinely_new_task_types")
+    if (
+        source_selection.get("schema_version") != "dime-foundation-source-selection-manifest-v1"
+        or source_selection.get("execution_id") != "foundation-live-data-shard-002-ae039e87"
+        or source_selection.get("selected_route") != "live_data"
+        or source_selection.get("record_count") != 150
+        or source_selection.get("source_packet_count") != 5
+        or source_selection.get("prior_task_type_overlap") != 0
+        or source_selection.get("source_rights_statuses") != ["approved_internal"]
+        or source_selection.get("public_raw_distribution_authorized") is not False
+        or not isinstance(selected_task_types, list)
+        or set(selected_task_types) != second_task_types
+        or len(second_task_types) != 15
+        or first_task_types & second_task_types
+    ):
+        raise FoundationExecutionEvidenceError("second source selection drifted")
+
+    if exact or semantic_duplicates or repository_overlap or collisions:
+        raise FoundationExecutionEvidenceError(
+            "combined deduplication or evaluation-overlap gate failed"
+        )
+    release_plan = _load_object(RELEASE_PLAN_PATH, "Foundation release plan")
+    deficits = route_deficits(authoring, release_plan=release_plan)
+    if (
+        deficits["admitted_records"] != 300
+        or deficits["remaining_records"] != 2100
+        or deficits["admitted_split"] != {"train": 270, "validation": 30}
+        or deficits["remaining_split"] != {"train": 1890, "validation": 210}
+        or deficits["routes"]["live_data"]["deficit"] != {"total": 0, "train": 0, "validation": 0}
+    ):
+        raise FoundationExecutionEvidenceError("combined Foundation deficit calculation drifted")
+    semantic_inventory = secure_inventory(semantic_root, "semantic_r5")
+    cross_suite_case_pairs = sum(
+        PARTITION_COUNTS[left] * PARTITION_COUNTS[right]
+        for index, left in enumerate(PARTITION_COUNTS)
+        for right in tuple(PARTITION_COUNTS)[index + 1 :]
+    )
+    return {
+        "admission": {
+            "first_live_data_shard": first,
+            "second_live_data_shard": second,
+            "admitted_artifacts": [
+                "first_live_data_shard",
+                "second_live_data_shard",
+            ],
+            "admitted_record_count": 300,
+        },
+        "combined_gate": {
+            "record_count": 300,
+            "split": {"train": 270, "validation": 30},
+            "route_counts": {"live_data": 300},
+            "gates": expected_gates,
+            "new_source_coverage": {
+                "source_packet_count": 5,
+                "new_task_type_count": 15,
+                "prior_task_type_overlap": 0,
+                "public_raw_distribution_authorized": False,
+            },
+            "cross_shard_report_sha256": _sha256_file(cross_report_path),
+            "partition_registry_sha256": _sha256_file(second_absolute / "partition-registry.json"),
+        },
+        "foundation_deficits": deficits,
+        "semantic_evaluation": {
+            "status": "PASS",
+            "semantic_only": True,
+            "case_count": sum(PARTITION_COUNTS.values()),
+            "partition_counts": PARTITION_COUNTS,
+            "answer_key_case_count": 0,
+            "answer_key_artifact_count": 0,
+            "schema_failure_count": 0,
+            "evaluation_cross_suite_non_overlap": {
+                "suite_relationships_evaluated": 6,
+                "cross_suite_case_pair_comparisons": cross_suite_case_pairs,
+                "disallowed_overlap_count": 0,
+                "status": "PASS_ZERO_DISALLOWED_OVERLAP",
+            },
+            "foundation_to_evaluation_non_overlap": {
+                "foundation_records": 300,
+                "comparisons_completed": 4,
+                "pair_comparisons": 195300,
+                "disallowed_overlap_count": 0,
+                "status": "PASS_ZERO_DISALLOWED_OVERLAP",
+            },
+            "composite_non_overlap": {
+                "semantic_manifest_release_proof_complete": False,
+                "semantic_manifest_blocker": semantic_manifest["release_blocker"],
+                "foundation_gap_closed_by_separate_comparison": True,
+                "status": "PASS_COMPOSITE_PROOF_COMPLETE",
+            },
+            "semantic_inventory": semantic_inventory,
+            "bindings": semantic_bindings,
+        },
+        "private_inventory_bindings": {
+            "first_live_data_shard": first["inventory"],
+            "first_live_data_source_packets": first["source_packet_inventory"],
+            "second_live_data_shard": second["inventory"],
+            "second_live_data_source_packets": second["source_packet_inventory"],
+            "semantic_r5": semantic_inventory,
+        },
+    }
+
+
+def _reject_continuation_private_fields(
+    value: object,
+    *,
+    location: tuple[str, ...] = (),
+) -> None:
+    """Reject case-level or raw-private keys anywhere in a public continuation document."""
+
+    if isinstance(value, Mapping):
+        for key, child in value.items():
+            if not isinstance(key, str):
+                raise FoundationExecutionEvidenceError(
+                    "continuation evidence contains a non-string object key"
+                )
+            child_location = (*location, key)
+            if key in CONTINUATION_FORBIDDEN_PUBLIC_KEYS:
+                joined = ".".join(child_location)
+                raise FoundationExecutionEvidenceError(
+                    f"continuation evidence contains forbidden private field: {joined}"
+                )
+            _reject_continuation_private_fields(child, location=child_location)
+    elif isinstance(value, (list, tuple)):
+        for index, child in enumerate(value):
+            _reject_continuation_private_fields(
+                child,
+                location=(*location, str(index)),
+            )
+
+
+def validate_continuation_evidence_document(document: Mapping[str, Any]) -> None:
+    """Validate the sanitized continuation evidence schema and cross-field totals."""
+
+    _reject_continuation_private_fields(document)
+    schema = _load_object(
+        CONTINUATION_EVIDENCE_SCHEMA_PATH,
+        "Foundation continuation evidence schema",
+    )
+    Draft202012Validator.check_schema(schema)
+    errors = sorted(
+        Draft202012Validator(schema, format_checker=FormatChecker()).iter_errors(document),
+        key=lambda error: tuple(str(part) for part in error.absolute_path),
+    )
+    if errors:
+        error = errors[0]
+        location = ".".join(str(part) for part in error.absolute_path) or "<root>"
+        raise FoundationExecutionEvidenceError(f"continuation evidence.{location}: {error.message}")
+    for name in (
+        "first_live_data_shard",
+        "second_live_data_shard",
+        "semantic_r5",
+    ):
+        inventory = document["private_inventory_bindings"][name]
+        if (
+            inventory["total_file_count"]
+            != inventory["payload_file_count"] + inventory["checksum_ledger_file_count"]
+            or inventory["total_byte_count"]
+            != inventory["payload_byte_count"] + inventory["checksum_ledger_byte_count"]
+        ):
+            raise FoundationExecutionEvidenceError(
+                "continuation evidence inventory totals do not reconcile"
+            )
+    for name in ("first_live_data_shard", "second_live_data_shard"):
+        admission = document["admission"][name]
+        private_inventory = document["private_inventory_bindings"][name]
+        private_source_inventory = document["private_inventory_bindings"][
+            f"{name.removesuffix('_shard')}_source_packets"
+        ]
+        if (
+            admission["inventory"] != private_inventory
+            or admission["source_packet_inventory"] != private_source_inventory
+            or admission["bindings"]["sha256sums_sha256"] != private_inventory["sha256sums_sha256"]
+            or admission["bindings"]["source_packet_content_inventory_sha256"]
+            != private_source_inventory["content_inventory_sha256"]
+        ):
+            raise FoundationExecutionEvidenceError(
+                f"continuation evidence {name} inventory binding does not reconcile"
+            )
+    if (
+        document["semantic_evaluation"]["semantic_inventory"]
+        != document["private_inventory_bindings"]["semantic_r5"]
+    ):
+        raise FoundationExecutionEvidenceError(
+            "continuation evidence semantic inventory binding does not reconcile"
+        )
+    if (
+        document["admission"]["admitted_record_count"]
+        != sum(
+            document["admission"][name]["record_count"]
+            for name in ("first_live_data_shard", "second_live_data_shard")
+        )
+        or document["semantic_evaluation"]["foundation_to_evaluation_non_overlap"][
+            "pair_comparisons"
+        ]
+        != document["admission"]["admitted_record_count"]
+        * document["semantic_evaluation"]["case_count"]
+    ):
+        raise FoundationExecutionEvidenceError(
+            "continuation evidence aggregate totals do not reconcile"
+        )
+
+
+def _continuation_readme(evidence: Mapping[str, Any]) -> str:
+    deficits = evidence["foundation_deficits"]
+    semantic = evidence["semantic_evaluation"]
+    return f"""# Foundation continuation evidence v1
+
+This directory contains sanitized, aggregate-only evidence for the second
+live-data shard and the cumulative live-data boundary. It contains no private
+Foundation records, semantic cases, answer keys, credentials, or provider output.
+
+## Admission result
+
+- First live-data shard: 150 records admitted.
+- Second live-data shard: 150 genuinely new records admitted.
+- Combined live-data route: 300 records (270 train / 30 validation).
+- Complete Foundation target: {deficits["target_records"]} records.
+- Remaining deficit: {deficits["remaining_records"]} records
+  ({deficits["remaining_split"]["train"]} train /
+  {deficits["remaining_split"]["validation"]} validation).
+
+Every combined partition, exact-duplicate, semantic-duplicate,
+repository-evaluation-overlap, and private-semantic-overlap gate is zero. The
+second shard contributes 15 new task types from five checksum-bound source packets
+with zero prior task-type overlap.
+
+## Semantic result
+
+The authoritative semantic-only r5 suite contains {semantic["case_count"]} cases
+and zero answer keys. Internal cross-suite isolation covers
+{semantic["evaluation_cross_suite_non_overlap"]["cross_suite_case_pair_comparisons"]}
+case pairs with zero disallowed overlap. The cumulative 300 Foundation records
+complete
+{semantic["foundation_to_evaluation_non_overlap"]["pair_comparisons"]}
+Foundation-to-evaluation comparisons with zero disallowed overlap.
+
+## Verification
+
+From `ml/dime-1.0`:
+
+```bash
+sha256sum -c evidence/execution/dime-llm-v1-foundation-002/SHA256SUMS
+python scripts/validate_governed_json.py
+pytest -q
+```
+
+No command or evidence here authorizes training, publication, deployment,
+provider execution, route activation, model download, credential access, or
+Railway mutation.
+"""
+
+
+def freeze_continuation_evidence(
+    *,
+    first_root: Path,
+    first_source_packet_root: Path,
+    second_root: Path,
+    second_source_packet_root: Path,
+    semantic_root: Path,
+    output_root: Path,
+    base_commit: str,
+    corrective_commit: str,
+    created_at: str,
+) -> dict[str, Any]:
+    """Create one new sanitized evidence artifact for the combined-300 boundary."""
+
+    for label, value in (
+        ("base commit", base_commit),
+        ("corrective commit", corrective_commit),
+    ):
+        if re.fullmatch(r"[0-9a-f]{40}", value) is None:
+            raise FoundationExecutionEvidenceError(f"{label} must be a full Git SHA")
+    try:
+        parsed = datetime.strptime(created_at, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=UTC)
+    except ValueError as exc:
+        raise FoundationExecutionEvidenceError("created_at must be canonical UTC") from exc
+    if parsed.strftime("%Y-%m-%dT%H:%M:%SZ") != created_at or parsed > datetime.now(UTC):
+        raise FoundationExecutionEvidenceError("created_at must be canonical non-future UTC")
+
+    continuation = validate_live_data_continuation(
+        first_root=first_root,
+        first_source_packet_root=first_source_packet_root,
+        second_root=second_root,
+        second_source_packet_root=second_source_packet_root,
+        semantic_root=semantic_root,
+    )
+    release_plan = _load_object(RELEASE_PLAN_PATH, "Foundation release plan")
+    evidence = {
+        "schema_version": "dime-foundation-continuation-evidence-v1",
+        "evidence_id": "dime-llm-v1-foundation-002",
+        "created_at": created_at,
+        "classification": "SANITIZED_AGGREGATE_ONLY",
+        "private_content_counts": {
+            "foundation_records": 0,
+            "semantic_cases": 0,
+            "answer_keys": 0,
+            "credentials": 0,
+        },
+        **continuation,
+        "findings": [
+            {
+                "finding": "second live-data shard admitted",
+                "status": "CONFIRMED",
+                "impact": "150 genuinely new records complete the live_data allocation",
+            },
+            {
+                "finding": "combined live-data gates reproduced",
+                "status": "CONFIRMED",
+                "impact": "300 records pass all partition, deduplication, and overlap gates",
+            },
+            {
+                "finding": "complete Foundation release remains incomplete",
+                "status": "CONFIRMED",
+                "impact": "2100 records remain across non-live-data routes",
+            },
+            {
+                "finding": "semantic r5 cross-suite non-overlap reproduced",
+                "status": "CONFIRMED",
+                "impact": "148,770 internal cross-suite case pairs found zero disallowed overlap",
+            },
+            {
+                "finding": "cumulative Foundation-to-evaluation non-overlap reproduced",
+                "status": "CONFIRMED",
+                "impact": "195,300 comparisons found zero disallowed overlap",
+            },
+        ],
+        "context_capsule": {
+            "repository": {
+                "branch": "agent/foundation-next-shard-v1",
+                "base_commit": base_commit,
+                "corrective_commit": corrective_commit,
+            },
+            "input_source_commits": {
+                "first_live_data_shard": "b9ba7788749365253a6f725fee2a2a367a3475dd",
+                "second_live_data_shard": "ae039e8735a1a8cd4138f916ffe243df104408c0",
+            },
+            "release_plan": {
+                "path": "ml/dime-1.0/configs/foundation_release_plan_v1.json",
+                "sha256": _sha256_file(RELEASE_PLAN_PATH),
+                "status": release_plan["status"],
+            },
+            "governing_implementations": {
+                relative: _sha256_file(ML_ROOT / relative)
+                for relative in (
+                    "src/dime_ai/foundation_data_factory.py",
+                    "src/dime_ai/foundation_execution_evidence.py",
+                    "src/dime_ai/foundation_partitioning.py",
+                    "src/dime_ai/foundation_private_evaluation_comparison.py",
+                    "src/dime_ai/private_evaluation_semantics.py",
+                )
+            },
+            "parallel_status": {
+                "runpod_gate_1": {
+                    "pull_request": 253,
+                    "head_commit": "3e406ac273cafcaf9d85c19b591ca09fb802219e",
+                    "state": "OPEN_DRAFT",
+                    "triggered_checks": "PASS",
+                    "review_required": True,
+                    "independent_approval": False,
+                    "merged": False,
+                    "effective_authorization": False,
+                },
+                "credential_execution_closure": {
+                    "pull_request": 255,
+                    "head_commit": "2ca08f7756ecb33485d12bc0464e004f34c0e4c3",
+                    "state": "OPEN_DRAFT",
+                    "triggered_checks": {
+                        "build": "PASS",
+                        "database": "PASS",
+                        "typescript": "PASS",
+                        "vitest": "PASS",
+                        "security_audit": "PASS",
+                        "gitleaks": "PASS",
+                    },
+                    "path_filtered_checks": {
+                        "dime_llm_validation": "NOT_TRIGGERED_PATH_FILTER",
+                        "livelab": "NOT_TRIGGERED_PATH_FILTER",
+                    },
+                    "review_required": True,
+                    "independent_approval": False,
+                    "merged": False,
+                    "deployed": False,
+                    "root_trust_provisioned": False,
+                    "effective_authorization": False,
+                },
+            },
+            "external_operations": EXTERNAL_OPERATIONS,
+            "authorization_boundary": AUTHORIZATION_BOUNDARY,
+        },
+    }
+    validate_continuation_evidence_document(evidence)
+    output = output_root.absolute()
+    if output.exists() or output.is_symlink():
+        raise FoundationExecutionEvidenceError("continuation evidence output already exists")
+    output.mkdir(mode=0o755, parents=False)
+    evidence_hash = _public_file(
+        output / "evidence.json",
+        canonical_json_bytes(evidence),
+    )
+    readme_hash = _public_file(
+        output / "README.md",
+        _continuation_readme(evidence).encode("utf-8"),
+    )
+    sums_hash = _public_file(
+        output / "SHA256SUMS",
+        (f"{readme_hash}  README.md\n{evidence_hash}  evidence.json\n").encode("ascii"),
+    )
+    return {
+        "status": "PASS",
+        "admitted_records": 300,
+        "remaining_records": 2100,
+        "foundation_evaluation_pair_comparisons": 195300,
         "answer_keys": 0,
         "bindings": {
             "readme_sha256": readme_hash,
