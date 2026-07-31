@@ -257,8 +257,12 @@ export async function scanActionsSecurity(
       resolve(repositoryRoot, ".github/CODEOWNERS"),
       "utf8"
     );
-    if (!/^\/\.github\/\s+@prez-ai-sports-betting\s*$/m.test(codeowners)) {
-      failures.push("CODEOWNERS: .github security owner is missing");
+    if (
+      !/^\/\.github\/\s+@prez-ai-sports-betting\s+@aisportsbettingcontact\s*$/m.test(
+        codeowners
+      )
+    ) {
+      failures.push("CODEOWNERS: .github security owners are missing");
     }
   }
 
