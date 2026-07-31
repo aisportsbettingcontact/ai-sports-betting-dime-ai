@@ -1,7 +1,7 @@
 """Fail-closed Foundation-to-private-evaluation semantic comparison.
 
-This module compares only an immutable, accepted 150-record Foundation trainer
-artifact with the four semantic-only partitions in the authoritative private
+This module compares only immutable, accepted 150-record Foundation trainer
+artifacts with the four semantic-only partitions in the authoritative private
 evaluation r5 artifact. It never reads answer keys and never mutates either
 input.
 """
@@ -41,6 +41,15 @@ FOUNDATION_COUNTS = {
     "approved_originals": 50,
     "approved_repairs": 100,
     "resolved_carried_findings": 110,
+}
+SECOND_LIVE_DATA_SHARD_COUNTS = {
+    "accepted_records": 150,
+    "trainer_records": 150,
+    "train": 135,
+    "validation": 15,
+    "approved_originals": 150,
+    "approved_repairs": 0,
+    "resolved_carried_findings": 0,
 }
 SEMANTIC_R5_BASENAME = "evaluation-semantic-v1-b9ba7788-r5"
 SEMANTIC_CLASSIFICATION = "PRIVATE_EVALUATION_SEMANTIC_CASES"
@@ -269,9 +278,31 @@ def _canonical_utc(value: object, label: str) -> str:
 
 def load_accepted_foundation(
     root: Path,
+    *,
+    expected_counts: Mapping[str, int] | None = None,
+    expected_execution_id: str | None = None,
 ) -> tuple[list[dict[str, Any]], dict[str, Any], dict[str, str]]:
     """Load only an immutable 150-record accepted/trainer PASS artifact."""
 
+    counts = dict(FOUNDATION_COUNTS if expected_counts is None else expected_counts)
+    if (
+        set(counts) != set(FOUNDATION_COUNTS)
+        or any(not isinstance(value, int) or isinstance(value, bool) for value in counts.values())
+        or counts["accepted_records"] != 150
+        or counts["trainer_records"] != 150
+        or counts["train"] != 135
+        or counts["validation"] != 15
+        or counts["approved_originals"] + counts["approved_repairs"] != 150
+        or not 0 <= counts["resolved_carried_findings"] <= 150
+    ):
+        raise FoundationEvaluationComparisonError("Foundation expected-count boundary is malformed")
+    if expected_execution_id is not None and (
+        not expected_execution_id
+        or re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*", expected_execution_id) is None
+    ):
+        raise FoundationEvaluationComparisonError(
+            "Foundation expected execution identity is malformed"
+        )
     accepted_root = _validate_private_root(root, "accepted Foundation")
     snapshot = _file_snapshot(accepted_root)
     _verify_sha256sums(accepted_root)
@@ -279,7 +310,11 @@ def load_accepted_foundation(
     if (
         report.get("schema_version") != "dime-foundation-live-data-final-report-v1"
         or report.get("status") != "PASS"
-        or report.get("counts") != FOUNDATION_COUNTS
+        or report.get("counts") != counts
+        or (
+            expected_execution_id is not None
+            and report.get("execution_id") != expected_execution_id
+        )
     ):
         raise FoundationEvaluationComparisonError(
             "Foundation input is not the exact accepted 150-record PASS artifact"

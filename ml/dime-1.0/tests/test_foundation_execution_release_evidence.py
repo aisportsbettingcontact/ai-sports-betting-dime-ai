@@ -8,6 +8,7 @@ from dime_ai.governed_json import load_governed_json
 
 ML_ROOT = Path(__file__).resolve().parents[1]
 FOUNDATION_ROOT = ML_ROOT / "evidence/execution/dime-llm-v1-foundation-001"
+CONTINUATION_ROOT = ML_ROOT / "evidence/execution/dime-llm-v1-foundation-002"
 CAPSULE_ROOT = ML_ROOT / "evidence/execution/dime-llm-v1-context-capsule"
 
 
@@ -104,9 +105,13 @@ def test_context_capsule_is_an_immutable_closed_snapshot_bound_to_foundation_evi
     )
     assert set(capsule["parallel_tracks"]["runpod_gate_1"]["checks"].values()) == {"PASS"}
     assert capsule["parallel_tracks"]["runpod_gate_1"]["effective_authorization"] is False
+    assert capsule["parallel_tracks"]["runpod_gate_1"]["review_required"] is True
+    assert capsule["parallel_tracks"]["runpod_gate_1"]["independent_approval"] is False
+    assert capsule["parallel_tracks"]["runpod_gate_1"]["merged"] is False
+    assert capsule["parallel_tracks"]["runpod_gate_1"]["deployed"] is False
     assert capsule["parallel_tracks"]["credential_execution_closure"]["pull_request"] == 255
     assert capsule["parallel_tracks"]["credential_execution_closure"]["head_commit"] == (
-        "2ca08f7756ecb33485d12bc0464e004f34c0e4c3"
+        "0a0219fc38fdea795c21812898b072266980d460"
     )
     assert (
         capsule["parallel_tracks"]["credential_execution_closure"]["internal_reviewed_checkpoint"]
@@ -116,14 +121,27 @@ def test_context_capsule_is_an_immutable_closed_snapshot_bound_to_foundation_evi
         capsule["parallel_tracks"]["credential_execution_closure"]["effective_authorization"]
         is False
     )
+    assert capsule["parallel_tracks"]["credential_execution_closure"]["review_required"] is True
+    assert (
+        capsule["parallel_tracks"]["credential_execution_closure"]["checks"]["dime_llm_validation"]
+        == "NOT_TRIGGERED_PATH_FILTER"
+    )
+    assert (
+        capsule["parallel_tracks"]["credential_execution_closure"]["checks"]["livelab"]
+        == "NOT_TRIGGERED_PATH_FILTER"
+    )
     assert capsule["security_p1"]["status"] == "OPEN_REMEDIATION_REQUIRED"
     assert capsule["credential_execution_p1"]["status"] == "BLOCKED_ROOT_TRUST_UNPROVISIONED"
     assert capsule["credential_execution_p1"]["root_trust_provisioned"] is False
     assert capsule["runpod_gate_1"]["authorization"] == "NONE"
     assert capsule["runpod_gate_1"]["effective_authorization"] is False
     assert capsule["runpod_gate_1"]["gate_1_baseline_inference_authorized"] is False
+    assert capsule["foundation"]["total_live_data_records_admitted"] == 300
+    assert capsule["foundation"]["remaining_records"] == 2100
+    assert capsule["semantic_evaluation"]["foundation_records_compared"] == 300
+    assert capsule["semantic_evaluation"]["foundation_to_evaluation_pair_comparisons"] == 195300
     assert capsule["foundation"]["public_evidence"]["sha256"] == _sha256(
-        FOUNDATION_ROOT / "evidence.json"
+        CONTINUATION_ROOT / "evidence.json"
     )
     assert capsule["private_content_counts"] == {
         "foundation_records": 0,
