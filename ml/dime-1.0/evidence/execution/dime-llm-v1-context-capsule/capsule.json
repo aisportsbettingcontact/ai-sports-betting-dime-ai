@@ -1,7 +1,7 @@
 {
   "schema_version": "dime-llm-v1-context-capsule-v1",
   "capsule_id": "dime-llm-v1-foundation-evaluation-2026-07-31",
-  "verified_at": "2026-07-31T00:45:07Z",
+  "verified_at": "2026-07-31T01:12:55Z",
   "snapshot_semantics": "IMMUTABLE_POINT_IN_TIME_NOT_LIVE_STATUS",
   "classification": "SANITIZED_AGGREGATE_ONLY",
   "private_content_counts": {
@@ -168,8 +168,8 @@
     "complete_release": false,
     "public_evidence": {
       "path": "ml/dime-1.0/evidence/execution/dime-llm-v1-foundation-002/evidence.json",
-      "sha256": "81cf673e2d805e1ca9d5ced4e8cd67025c1c142536c8c51a15e4342951e08c05",
-      "sha256sums_sha256": "cd8c52230531ab2fa620953359228a335cac3c65aa76c449ba3854aaa53604c2"
+      "sha256": "486e26aabae057e5168ee2f52e554077cbc0993cbdc337cdc01f1eaecb6ac39b",
+      "sha256sums_sha256": "d0f97429be92983da266c4a60f86093e5620efc23416556db0ccdb2a92745ad8"
     }
   },
   "semantic_evaluation": {
@@ -214,7 +214,7 @@
     "Track E pull request 252 has passing required checks but remains an unmerged draft and answer-key creation remains unauthorized",
     "RunPod Gate 1 pull request 253 has passing triggered checks but remains an unapproved, unmerged draft with effective authorization false",
     "credential-execution closure pull request 255 has passing triggered checks but remains an unapproved, unmerged, undeployed draft",
-    "2100 admitted Foundation records remain before the 2400-record target is complete",
+    "2,100 Foundation records remain to be admitted before the 2,400-record target is complete",
     "the private Foundation release revision, dataset manifest hash, and release checksum hash are not frozen",
     "the exact base model, base revision, adapter revision, endpoint revision, and container digest are not selected",
     "RunPod identity and permissions are unverified and Gate 1 authorization is NONE",

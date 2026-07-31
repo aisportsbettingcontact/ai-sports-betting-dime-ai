@@ -76,3 +76,82 @@ def test_continuation_evidence_rejects_aggregate_drift() -> None:
 
     with pytest.raises(FoundationExecutionEvidenceError, match="continuation evidence"):
         validate_continuation_evidence_document(evidence)
+
+
+@pytest.mark.parametrize(
+    ("path", "replacement"),
+    [
+        (
+            (
+                "admission",
+                "second_live_data_shard",
+                "bindings",
+                "sha256sums_sha256",
+            ),
+            "0" * 64,
+        ),
+        (
+            (
+                "admission",
+                "second_live_data_shard",
+                "bindings",
+                "source_packet_content_inventory_sha256",
+            ),
+            "1" * 64,
+        ),
+        (
+            (
+                "private_inventory_bindings",
+                "second_live_data_shard",
+                "sha256sums_sha256",
+            ),
+            "2" * 64,
+        ),
+        (
+            (
+                "private_inventory_bindings",
+                "second_live_data_source_packets",
+                "content_inventory_sha256",
+            ),
+            "3" * 64,
+        ),
+        (
+            (
+                "semantic_evaluation",
+                "semantic_inventory",
+                "sha256sums_sha256",
+            ),
+            "4" * 64,
+        ),
+    ],
+)
+def test_continuation_evidence_rejects_binding_drift(
+    path: tuple[str, ...],
+    replacement: str,
+) -> None:
+    evidence = deepcopy(load_governed_json(EVIDENCE_ROOT / "evidence.json"))
+    target = evidence
+    for key in path[:-1]:
+        target = target[key]
+    target[path[-1]] = replacement
+
+    with pytest.raises(FoundationExecutionEvidenceError, match="binding does not reconcile"):
+        validate_continuation_evidence_document(evidence)
+
+
+def test_continuation_evidence_rejects_unknown_aggregate_field() -> None:
+    evidence = deepcopy(load_governed_json(EVIDENCE_ROOT / "evidence.json"))
+    evidence["foundation_deficits"]["unexpected_aggregate"] = 0
+
+    with pytest.raises(FoundationExecutionEvidenceError, match="Additional properties"):
+        validate_continuation_evidence_document(evidence)
+
+
+def test_continuation_evidence_rejects_private_field_at_any_depth() -> None:
+    evidence = deepcopy(load_governed_json(EVIDENCE_ROOT / "evidence.json"))
+    evidence["admission"]["second_live_data_shard"]["token_profile"]["messages"] = [
+        "synthetic sentinel"
+    ]
+
+    with pytest.raises(FoundationExecutionEvidenceError, match="forbidden private field"):
+        validate_continuation_evidence_document(evidence)

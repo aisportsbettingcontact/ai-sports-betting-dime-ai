@@ -78,6 +78,28 @@ AUTHORIZATION_BOUNDARY = {
     "route_activation": False,
     "training": False,
 }
+CONTINUATION_FORBIDDEN_PUBLIC_KEYS = frozenset(
+    {
+        "answer",
+        "answer_key",
+        "case_id",
+        "conversation",
+        "example_id",
+        "expected_answer",
+        "gold",
+        "messages",
+        "packet_id",
+        "private_record_content",
+        "prompt",
+        "raw_private_record",
+        "raw_private_records",
+        "record_id",
+        "semantic_case_content",
+        "source_id",
+        "source_locator",
+        "task_type",
+    }
+)
 
 
 class FoundationExecutionEvidenceError(ValueError):
@@ -1428,9 +1450,38 @@ def validate_live_data_continuation(
     }
 
 
+def _reject_continuation_private_fields(
+    value: object,
+    *,
+    location: tuple[str, ...] = (),
+) -> None:
+    """Reject case-level or raw-private keys anywhere in a public continuation document."""
+
+    if isinstance(value, Mapping):
+        for key, child in value.items():
+            if not isinstance(key, str):
+                raise FoundationExecutionEvidenceError(
+                    "continuation evidence contains a non-string object key"
+                )
+            child_location = (*location, key)
+            if key in CONTINUATION_FORBIDDEN_PUBLIC_KEYS:
+                joined = ".".join(child_location)
+                raise FoundationExecutionEvidenceError(
+                    f"continuation evidence contains forbidden private field: {joined}"
+                )
+            _reject_continuation_private_fields(child, location=child_location)
+    elif isinstance(value, (list, tuple)):
+        for index, child in enumerate(value):
+            _reject_continuation_private_fields(
+                child,
+                location=(*location, str(index)),
+            )
+
+
 def validate_continuation_evidence_document(document: Mapping[str, Any]) -> None:
     """Validate the sanitized continuation evidence schema and cross-field totals."""
 
+    _reject_continuation_private_fields(document)
     schema = _load_object(
         CONTINUATION_EVIDENCE_SCHEMA_PATH,
         "Foundation continuation evidence schema",
@@ -1459,6 +1510,29 @@ def validate_continuation_evidence_document(document: Mapping[str, Any]) -> None
             raise FoundationExecutionEvidenceError(
                 "continuation evidence inventory totals do not reconcile"
             )
+    for name in ("first_live_data_shard", "second_live_data_shard"):
+        admission = document["admission"][name]
+        private_inventory = document["private_inventory_bindings"][name]
+        private_source_inventory = document["private_inventory_bindings"][
+            f"{name.removesuffix('_shard')}_source_packets"
+        ]
+        if (
+            admission["inventory"] != private_inventory
+            or admission["source_packet_inventory"] != private_source_inventory
+            or admission["bindings"]["sha256sums_sha256"] != private_inventory["sha256sums_sha256"]
+            or admission["bindings"]["source_packet_content_inventory_sha256"]
+            != private_source_inventory["content_inventory_sha256"]
+        ):
+            raise FoundationExecutionEvidenceError(
+                f"continuation evidence {name} inventory binding does not reconcile"
+            )
+    if (
+        document["semantic_evaluation"]["semantic_inventory"]
+        != document["private_inventory_bindings"]["semantic_r5"]
+    ):
+        raise FoundationExecutionEvidenceError(
+            "continuation evidence semantic inventory binding does not reconcile"
+        )
     if (
         document["admission"]["admitted_record_count"]
         != sum(
