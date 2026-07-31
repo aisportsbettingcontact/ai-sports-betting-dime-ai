@@ -31,7 +31,7 @@ import { getCachedAppUser, getCachedAppUserEntry, setCachedAppUser, invalidateCa
 import { resolveOwnerIdentity } from "../ownerAuth";
 import { getDb } from "../db";
 import { discordInviteTokens, appUsers as appUsersTable } from "../../drizzle/schema";
-import { eq, and, isNull, gt, or } from "drizzle-orm";
+import { eq, ne, and, isNull, gt, or } from "drizzle-orm";
 import { emitServerEvent } from "../analytics/emitServer";
 
 export const APP_USER_COOKIE = "app_session";
@@ -642,9 +642,23 @@ export const appUsersRouter = router({
       role: z.enum(["owner", "admin", "handicapper", "user"]).default("user"),
       hasAccess: z.boolean().default(true),
       expiryDate: z.number().nullable().default(null), // null = lifetime
+      /**
+       * Entitlement assignment, both optional and both defaulting to NULL.
+       *
+       * An admin-created member used to land with hasAccess=true but NO plan and
+       * NO interval, which made them invisible to every plan/interval query
+       * until someone backfilled by hand. These make it settable at creation.
+       *
+       * There is deliberately NO default plan here: choosing which plan a
+       * hand-created account lands on is a pricing/policy decision the owner has
+       * not delegated to this procedure. NULL means "unassigned", not "monthly".
+       */
+      stripePlanId: z.string().min(1).max(64).nullable().default(null),
+      /** plan_prices.id — WHICH billing interval, not just which plan. */
+      planPriceId: z.number().int().positive().nullable().default(null),
     }))
     .mutation(async ({ input }) => {
-      console.log(`[AppAdmin][createUser][INPUT] email=${input.email} username=${input.username} role=${input.role}`);
+      console.log(`[AppAdmin][createUser][INPUT] email=${input.email} username=${input.username} role=${input.role} stripePlanId=${input.stripePlanId ?? "(none)"} planPriceId=${input.planPriceId ?? "(none)"}`);
       // ── retryOnce: automatically retry on TiDB cold-start transient errors ──
       return retryOnce(async () => {
         // [STEP 1] Parallel uniqueness checks — run concurrently to halve DB round-trips
@@ -670,8 +684,13 @@ export const appUsersRouter = router({
           role: input.role,
           hasAccess: input.hasAccess,
           expiryDate: input.expiryDate ?? undefined,
+          // Written verbatim — null included. This is one of only two paths that
+          // INSERT into app_users (the other is the Stripe webhook), so what is
+          // omitted here can only be repaired by a backfill.
+          stripePlanId: input.stripePlanId,
+          planPriceId: input.planPriceId,
         });
-        console.log(`[AppAdmin][createUser][OUTPUT] SUCCESS username=${input.username}`);
+        console.log(`[AppAdmin][createUser][OUTPUT] SUCCESS username=${input.username} stripePlanId=${input.stripePlanId ?? "null"} planPriceId=${input.planPriceId ?? "null"}`);
         return { success: true };
       }, '[AppAdmin][createUser]').catch((err) => {
         if (err instanceof TRPCError) throw err;
@@ -681,6 +700,114 @@ export const appUsersRouter = router({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to create account. Please try again.',
         });
+      });
+    }),
+
+  /**
+   * backfillEntitlement — owner-only bulk assignment of a plan + billing
+   * interval to every member that is missing it.
+   *
+   * WHY THIS EXISTS: nothing wrote app_users.planPriceId on the normal paths
+   * until now, so members exist with a plan and a NULL interval — and
+   * admin-created members exist with neither. Repairing that took an ad-hoc
+   * script run by hand against production (2026-07-31, @suprax718). This is the
+   * same repair, owner-authenticated, dry-runnable and re-runnable.
+   *
+   * Invariants:
+   *  - role='user' ONLY. `admin` and `owner` rows are never touched: their
+   *    access does not come from a subscription and giving them a plan slug
+   *    would misreport paid seats.
+   *  - expiryDate is NOT in the SET clause. NULL already means lifetime
+   *    (drizzle/schema.ts); changing an expiry is a separate decision with its
+   *    own blast radius, and a backfill must not smuggle one in.
+   *  - Idempotent: the WHERE clause excludes rows that ALREADY hold exactly
+   *    hasAccess=1 + this slug + this price id, so a second run matches nothing.
+   *    That also makes retryOnce safe here.
+   */
+  backfillEntitlement: ownerProcedure
+    .input(z.object({
+      planSlug: z.string().min(1).max(64),
+      planPriceId: z.number().int().positive(),
+      /** Report what WOULD change and write nothing. */
+      dryRun: z.boolean().optional().default(false),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const TAG = "[AppAdmin][backfillEntitlement]";
+      console.log(`${TAG} [INPUT] planSlug=${input.planSlug} planPriceId=${input.planPriceId} dryRun=${input.dryRun} owner=${ctx.appUser.username}(id=${ctx.appUser.id})`);
+
+      return retryOnce(async () => {
+        const db = await getDb();
+        if (!db) {
+          console.error(`${TAG} [VERIFY] FAIL — DB unavailable`);
+          throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Database unavailable. Please try again.' });
+        }
+
+        // [STEP 1] "Missing this exact entitlement" — spelled out NULL-safely.
+        // `planPriceId <> 7` is NULL (not TRUE) for a NULL row in SQL, so the
+        // isNull() legs are required: without them the backfill would skip
+        // precisely the rows it exists to fix.
+        const missingEntitlement = and(
+          eq(appUsersTable.role, "user"),
+          or(
+            eq(appUsersTable.hasAccess, false),
+            isNull(appUsersTable.stripePlanId),
+            ne(appUsersTable.stripePlanId, input.planSlug),
+            isNull(appUsersTable.planPriceId),
+            ne(appUsersTable.planPriceId, input.planPriceId),
+          ),
+        );
+
+        // [STEP 2] Read the affected rows FIRST — the usernames are the whole
+        // point of dryRun, and they are also what makes the write auditable.
+        // Annotated: getDb()'s handle is loosely typed here, so the row shape
+        // would otherwise land as implicit `any` in the map below.
+        const rows: Array<{ id: number; username: string }> = await db
+          .select({ id: appUsersTable.id, username: appUsersTable.username })
+          .from(appUsersTable)
+          .where(missingEntitlement);
+        const usernames = rows.map((r) => r.username);
+        console.log(`${TAG} [STATE] matched=${rows.length} usernames=${usernames.length ? usernames.join(",") : "(none)"}`);
+
+        if (input.dryRun) {
+          console.log(`${TAG} [OUTPUT] DRY RUN — no rows written matched=${rows.length}`);
+          console.log(`${TAG} [VERIFY] PASS`);
+          return { ok: true, matched: rows.length, updated: 0, usernames };
+        }
+        if (rows.length === 0) {
+          console.log(`${TAG} [OUTPUT] Nothing to do — every role='user' row already holds this plan + interval`);
+          console.log(`${TAG} [VERIFY] PASS`);
+          return { ok: true, matched: 0, updated: 0, usernames };
+        }
+
+        // [STEP 3] One UPDATE over the SAME predicate. expiryDate is absent on
+        // purpose (see the invariants above).
+        const result = await db.update(appUsersTable).set({
+          hasAccess: true,
+          stripePlanId: input.planSlug,
+          planPriceId: input.planPriceId,
+        }).where(missingEntitlement);
+
+        // mysql2 returns [ResultSetHeader, FieldPacket[]]; fall back to the
+        // matched count rather than reporting an unknown number of writes.
+        const header = (Array.isArray(result) ? result[0] : result) as { affectedRows?: number } | undefined;
+        const updated = typeof header?.affectedRows === "number" ? header.affectedRows : rows.length;
+
+        // [STEP 4] Entitlement is cached per user (30s by-id cache + the circuit
+        // breaker's fallback copy). Without this the members just granted access
+        // keep being served their pre-backfill state.
+        for (const r of rows) {
+          invalidateAppUserByIdCache(r.id);
+          invalidateCachedAppUser(r.id);
+        }
+
+        console.log(`${TAG} [OUTPUT] matched=${rows.length} updated=${updated} planSlug=${input.planSlug} planPriceId=${input.planPriceId} (expiryDate untouched)`);
+        console.log(`${TAG} [VERIFY] ${updated === rows.length ? 'PASS' : `PASS (updated=${updated} differs from matched=${rows.length} — concurrent writes)`}`);
+        return { ok: true, matched: rows.length, updated, usernames };
+      }, TAG).catch((err) => {
+        if (err instanceof TRPCError) throw err;
+        const msg = (err as Error)?.message ?? String(err);
+        console.error(`${TAG} [FAIL] planSlug=${input.planSlug} planPriceId=${input.planPriceId} error=${msg}`);
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to backfill entitlements. Please try again.' });
       });
     }),
 

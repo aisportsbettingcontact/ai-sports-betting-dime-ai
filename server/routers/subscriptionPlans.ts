@@ -101,6 +101,13 @@ const intervalUpdateSchema = z.object({
   label: z.string().max(80).nullable().optional(),
   trialPeriodDays: z.number().int().min(0).max(365).nullable().optional(),
   isDefault: z.boolean().optional(),
+  /**
+   * Conscious opt-in to break Stripe Payment Links. A reprice archives the old
+   * Price, and any Payment Link bound to it stops working silently — so the
+   * provisioning layer refuses by default and names the links that would break.
+   * The admin re-sends the same edit with this flag to proceed anyway.
+   */
+  allowBreakingPaymentLinks: z.boolean().optional(),
 });
 
 const restockSchema = z.object({
@@ -279,18 +286,24 @@ export const subscriptionPlansRouter = router({
    */
   updateInterval: ownerProcedure.input(intervalUpdateSchema).mutation(async ({ input }) => {
     const tag = "[tRPC][subscriptionPlans.updateInterval]";
-    const { priceId, isDefault, interval, label, trialPeriodDays, ...rest } = input;
+    const { priceId, isDefault, interval, label, trialPeriodDays, allowBreakingPaymentLinks, ...rest } = input;
     console.log(
-      `${tag} [INPUT] priceId=${priceId} amount=${rest.amountCents}c currency=${rest.currency ?? "usd"} interval=${interval ?? "once"}x${rest.intervalCount ?? 1} trial=${trialPeriodDays ?? 0}d label="${label ?? ""}" hidden=${rest.hidden ?? "carry"} promo=${rest.promo ? `${rest.promo.type}:${rest.promo.value}` : "none"} isDefault=${isDefault ?? "unchanged"}`,
+      `${tag} [INPUT] priceId=${priceId} amount=${rest.amountCents}c currency=${rest.currency ?? "usd"} interval=${interval ?? "once"}x${rest.intervalCount ?? 1} trial=${trialPeriodDays ?? 0}d label="${label ?? ""}" hidden=${rest.hidden ?? "carry"} promo=${rest.promo ? `${rest.promo.type}:${rest.promo.value}` : "none"} isDefault=${isDefault ?? "unchanged"} allowBreakingPaymentLinks=${allowBreakingPaymentLinks === true}`,
     );
-    const result = await repriceInterval(priceId, {
-      ...rest,
-      // null (an explicit "Lifetime" / cleared field) and undefined mean the same
-      // thing to the provisioning layer, which takes the interval's full state.
-      interval: interval ?? undefined,
-      label: label ?? undefined,
-      trialPeriodDays: trialPeriodDays ?? undefined,
-    });
+    const result = await repriceInterval(
+      priceId,
+      {
+        ...rest,
+        // null (an explicit "Lifetime" / cleared field) and undefined mean the same
+        // thing to the provisioning layer, which takes the interval's full state.
+        interval: interval ?? undefined,
+        label: label ?? undefined,
+        trialPeriodDays: trialPeriodDays ?? undefined,
+      },
+      // Default (flag absent) = refuse the edit if an ACTIVE Payment Link sells
+      // the price this reprice would archive; the thrown message names the links.
+      { allowBreakingPaymentLinks },
+    );
     // Only `isDefault: true` is actionable — a plan must always have exactly one
     // default, so "unset" is expressed by making a DIFFERENT interval the default.
     // A missing row id is warned about rather than thrown: the reprice already
@@ -308,7 +321,11 @@ export const subscriptionPlansRouter = router({
         result.changed
           ? `MINTED new Stripe Price ${result.newStripePriceId} (row ${result.newPriceRowId}); old interval archived, existing subscribers keep the OLD amount`
           : `NO new Stripe Price — presentation-only edit applied in place on ${result.newStripePriceId}`
-      } default=${isDefault ? "set" : result.carriedDefault ? "carried" : "no"}`,
+      } default=${isDefault ? "set" : result.carriedDefault ? "carried" : "no"}` +
+        // Whether the archived price still had Payment Links pointing at it —
+        // checked / clear / overridden / lookup failed. A break is invisible in
+        // Stripe, so it has to be visible here.
+        ` paymentLinks=${result.paymentLinks.status} (${result.paymentLinks.summary})`,
     );
     console.log(`${tag} [VERIFY] PASS`);
     return {
@@ -316,6 +333,11 @@ export const subscriptionPlansRouter = router({
       changed: result.changed,
       newPriceRowId: result.newPriceRowId,
       newStripePriceId: result.newStripePriceId,
+      paymentLinks: {
+        status: result.paymentLinks.status,
+        brokenLinks: result.paymentLinks.activeLinks,
+        summary: result.paymentLinks.summary,
+      },
     };
   }),
 
