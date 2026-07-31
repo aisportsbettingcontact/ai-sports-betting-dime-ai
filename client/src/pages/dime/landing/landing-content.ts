@@ -400,7 +400,7 @@ export const TIERS: Tier[] = [
     badge: "Most popular",
     features: [
       "Full AI Model Projections board, every game priced",
-      "Dime Chat with Standard + Pro Analyst (Sonnet + Opus)",
+      "Dime Chat on any game the model prices",
       "Live edge grades, honest PASS signals",
     ],
     cta: { paid: "Start Pro", waitlist: "Request Pro Access" },
@@ -415,7 +415,6 @@ export const TIERS: Tier[] = [
     perDay: "≈ $8.30 / day · cancel anytime",
     features: [
       "Everything in Pro",
-      "MAX Analyst access (monthly cap)",
       "Priority access to new model markets",
     ],
     cta: { paid: "Start Sharp", waitlist: "Request Sharp Access" },
@@ -430,7 +429,6 @@ export const TIERS: Tier[] = [
     perDay: "≈ $16.63 / day · cancel anytime",
     features: [
       "Everything in Sharp",
-      "Full MAX Analyst access (no cap)",
       "Early access to new markets and model releases",
     ],
     cta: { paid: "Start Operator", waitlist: "Request Operator Access" },
@@ -453,7 +451,7 @@ export const CREDITS_NOTE = {
 export const PRICING_HEAD = {
   eyebrow: "Pricing",
   headline: { before: "One engine. ", em: "Priced like software", after: "." },
-  sub: "Three levels of the same engine, with more analyst depth at each step. The upgrade buys capacity rather than a \"VIP room\" of picks. Cancel anytime and keep access through the period you paid for.",
+  sub: "Three levels of the same engine, with earlier access to new markets at each step. The upgrade buys capacity rather than a \"VIP room\" of picks. Cancel anytime and keep access through the period you paid for.",
   legal: "Secure checkout · Auto-renews · Cancel anytime · 21+",
   proof:
     "The engine grades every number you pay for against the close after the final out, and when the edge is missing it says PASS instead of selling you a pick. A month costs less than one losing $110 bet; one honest Pass that keeps you off a bad number covers it.",
@@ -491,7 +489,7 @@ export const OBJECTIONS = {
     },
     {
       q: "Why $99 a month?",
-      a: "That's ≈ $3.30 a day for every market the model prices: full board, full chat, all 55+ outputs per game. Sharp and Operator add analyst depth on top of the same engine.",
+      a: "That's ≈ $3.30 a day for every market the model prices: full board, full chat, all 55+ outputs per game. Sharp and Operator add earlier access to new markets on top of the same engine.",
       stamp: "≈ $3.30/day",
     },
     {
