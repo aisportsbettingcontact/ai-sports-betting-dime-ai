@@ -15,4 +15,3 @@ Requirements:
 - Abstain when the supported schema cannot establish the requested fact.
 - Do not expose chain-of-thought.
 - Do not critique or approve the generated draft.
-

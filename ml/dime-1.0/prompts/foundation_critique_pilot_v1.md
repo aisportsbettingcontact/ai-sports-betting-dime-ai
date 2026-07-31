@@ -14,4 +14,3 @@ Requirements:
   abstains or clarifies.
 - Emit only a decision, bounded findings, and a receipt over the exact draft.
 - Do not expose private chain-of-thought.
-
