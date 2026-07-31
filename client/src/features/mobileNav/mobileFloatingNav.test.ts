@@ -300,9 +300,16 @@ describe("Page integrations under body.dime-floating-nav-active", () => {
     );
   });
 
-  it("chat: the fixed viewport app shifts down by the nav height, keyboard vars intact", () => {
+  it("chat: the fixed viewport app shifts down by the nav offset, keyboard vars intact", () => {
+    // 2026-07-31: the offset became keyboard-aware — --dc-nav-offset
+    // interpolates the nav height by (1 - --dc-kb-progress), so the shell
+    // still shifts by the full nav height at rest but rises to the true top
+    // of the visual viewport while the OS keyboard is up.
     expect(conversationCss).toMatch(
-      /body\.dime-floating-nav-active \.dc-page\.dc-page--app \{[^}]*var\(--dc-visual-top, 0px\) \+ var\(--dime-floating-nav-h/s
+      /body\.dime-floating-nav-active \{[^}]*--dc-nav-offset:\s*calc\(\s*var\(--dime-floating-nav-h, 112px\) \* \(1 - var\(--dc-kb-progress, 0\)\)/s
+    );
+    expect(conversationCss).toMatch(
+      /body\.dime-floating-nav-active \.dc-page\.dc-page--app \{[^}]*var\(--dc-visual-top, 0px\)[\s\S]*?var\(--dc-nav-offset, var\(--dime-floating-nav-h/s
     );
     expect(conversationCss).toMatch(
       /body\.dime-floating-nav-active \.dc-mobile-bar \{[^}]*var\(--dime-floating-nav-h/s

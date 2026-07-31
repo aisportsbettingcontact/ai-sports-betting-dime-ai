@@ -151,27 +151,8 @@ interface ThreadSummary {
   starred: boolean;
 }
 
-/** Today's date in ET, matching the feed's display convention — the design
- *  reference (D/L:107-109) froze "July 7, 2026" into the third pill, which
- *  shipped as a permanently stale prompt (audit DIME-UI-028). */
-const PILL_TRENDS_DATE = new Date().toLocaleDateString("en-US", {
-  timeZone: "America/New_York",
-  month: "long",
-  day: "numeric",
-  year: "numeric",
-});
-
-const PILL_LABELS = [
-  "World Cup Model Simulations",
-  "Player Props with the Most Edge",
-  `Best Trends for MLB ${PILL_TRENDS_DATE}`,
-]; // D/L:107-109 (labels frozen; the date is live per DIME-UI-028)
-
-/** Frozen pill emphasis ORDER differs per theme (extraction-mapping §2.24). */
-const PILL_VARIANTS: Record<Theme, Array<"contrast" | "outline" | "mint">> = {
-  dark: ["contrast", "outline", "mint"], // D:107-109
-  light: ["mint", "outline", "contrast"], // L:107-109
-};
+/* Suggested-prompt pills retired (owner directive 2026-07-31): the empty
+   state opens straight into the composer on phone, tablet and desktop. */
 
 const ERROR_COPY =
   "Dime couldn't reach the model. Your message is saved above."; // spec §4
@@ -220,22 +201,6 @@ function StopGlyph() {
   return (
     <svg viewBox="0 0 512 512" width="20" height="20" aria-hidden="true">
       <rect className="dc-send-rect" x="166" y="166" width="180" height="180" />
-    </svg>
-  );
-}
-
-function PillGlyph() {
-  return (
-    <svg viewBox="0 0 512 512" width="13" height="13" aria-hidden="true">
-      <path
-        className="dc-pill-chevron"
-        d="M96 140 L248 256 L96 372"
-        fill="none"
-        strokeWidth="64"
-        strokeLinecap="square"
-      />
-      <rect className="dc-pill-rect" x="330" y="228" width="150" height="56" />
-      <rect className="dc-pill-rect" x="377" y="181" width="56" height="150" />
     </svg>
   );
 }
@@ -1009,40 +974,6 @@ function BrandHero({
   );
 }
 
-function PromptPills({
-  theme,
-  onPick,
-  innerRef,
-  ghost = false,
-}: {
-  theme: Theme;
-  onPick?: (label: string) => void;
-  innerRef?: MutableRefObject<HTMLDivElement | null>;
-  ghost?: boolean;
-}) {
-  return (
-    <div className="dc-pills" ref={innerRef}>
-      {PILL_LABELS.map((label, i) => {
-        const variant = PILL_VARIANTS[theme][i];
-        return (
-          <button
-            key={label}
-            type="button"
-            className={`dc-pill dc-pill--${variant} dc-hv1 dc-focusable dc-pressable`}
-            onClick={onPick ? () => onPick(label) : undefined}
-            tabIndex={ghost ? -1 : 0}
-          >
-            {label}
-            <span className={`dc-pill-icon dc-pill-icon--on-${variant}`}>
-              <PillGlyph />
-            </span>
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
 /* ----------------------------------------------------------------- */
 /* Conversation pieces — chat-derivation-spec.md §2                   */
 /* ----------------------------------------------------------------- */
@@ -1221,7 +1152,6 @@ function ErrorCard({
 
 type GhostRects = {
   hero: { left: number; top: number; width: number; height: number };
-  pills: { left: number; top: number; width: number; height: number };
   fading: boolean;
 };
 
@@ -1381,7 +1311,6 @@ export default function DimeChatPage({
   const pageRef = useRef<HTMLDivElement>(null);
   const composerRef = useRef<HTMLFormElement>(null);
   const heroRef = useRef<HTMLDivElement | null>(null);
-  const pillsRef = useRef<HTMLDivElement | null>(null);
   const scrollerRef = useRef<HTMLDivElement>(null);
   const chatPaneRef = useRef<HTMLElement | null>(null);
   const externalPaneRef = useRef<HTMLElement | null>(null);
@@ -1535,6 +1464,9 @@ export default function DimeChatPage({
         const prevInset = kbInsetRef.current;
         kbInsetRef.current = inset;
         pageRef.current?.style.setProperty("--dc-kb-inset", `${inset}px`);
+        // Also on <html>: the floating nav and body-level chrome live outside
+        // .dc-page and must read the same keyboard state.
+        document.documentElement.style.setProperty("--dc-kb-inset", `${inset}px`);
 
         // Bubbles ride the keyboard 1:1 (owner directive 2026-07-31): the
         // page container already shrinks to the visual viewport, so keep the
@@ -1559,7 +1491,9 @@ export default function DimeChatPage({
           const writeProgress = (v: number) => {
             kbProgressRef.current = v;
             pageRef.current?.style.setProperty("--dc-kb-progress", String(v));
+            document.documentElement.style.setProperty("--dc-kb-progress", String(v));
           };
+          document.documentElement.classList.toggle("dc-kb-open", open);
           if (reduceMotion) {
             kbSpringRef.current?.stop();
             kbSpringRef.current = null;
@@ -1591,12 +1525,61 @@ export default function DimeChatPage({
         }
       });
     };
+    // iOS Safari pushes the DOCUMENT up on focus instead of resizing the
+    // layout viewport, desyncing every position:fixed offset (the shell floats
+    // mid-screen with dead space above it — the real-device failure this
+    // hardening fixes). The chat shell is fully fixed and needs no document
+    // scroll at all, so pin it back to 0 and resample.
+    const pinDocument = () => {
+      if (window.scrollY !== 0 || window.scrollX !== 0) window.scrollTo(0, 0);
+    };
+    // Safari emits ONE visualViewport resize part-way through the keyboard's
+    // ~250ms slide, so a single read lands on stale geometry. Resample across
+    // the animation until two consecutive frames agree, then stop — no polling
+    // once the keyboard is at rest.
+    let settleFrame: number | null = null;
+    let settleUntil = 0;
+    let lastHeight = -1;
+    const settleSample = () => {
+      settleFrame = null;
+      const h = viewport.height;
+      const stable = h === lastHeight;
+      lastHeight = h;
+      pinDocument();
+      schedule();
+      if (!stable || performance.now() < settleUntil)
+        settleFrame = requestAnimationFrame(settleSample);
+    };
+    const startSettle = () => {
+      settleUntil = performance.now() + 420; // covers the slowest iOS slide
+      lastHeight = -1;
+      if (settleFrame == null) settleFrame = requestAnimationFrame(settleSample);
+    };
+    const onFocusIn = (e: FocusEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (
+        t &&
+        (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)
+      )
+        startSettle();
+    };
+
     schedule();
-    viewport.addEventListener("resize", schedule);
+    viewport.addEventListener("resize", startSettle);
     viewport.addEventListener("scroll", schedule);
+    window.addEventListener("scroll", pinDocument, { passive: true });
+    document.addEventListener("focusin", onFocusIn);
+    document.addEventListener("focusout", startSettle);
     return () => {
-      viewport.removeEventListener("resize", schedule);
+      viewport.removeEventListener("resize", startSettle);
       viewport.removeEventListener("scroll", schedule);
+      window.removeEventListener("scroll", pinDocument);
+      document.removeEventListener("focusin", onFocusIn);
+      document.removeEventListener("focusout", startSettle);
+      if (settleFrame != null) cancelAnimationFrame(settleFrame);
+      document.documentElement.classList.remove("dc-kb-open");
+      document.documentElement.style.removeProperty("--dc-kb-progress");
+      document.documentElement.style.removeProperty("--dc-kb-inset");
       if (viewportFrameRef.current != null)
         cancelAnimationFrame(viewportFrameRef.current);
       viewportFrameRef.current = null;
@@ -2114,20 +2097,13 @@ export default function DimeChatPage({
         if (wasHome) captureComposerPresentation();
         if (wasHome && !reduceMotion) {
           const hero = heroRef.current?.getBoundingClientRect();
-          const pills = pillsRef.current?.getBoundingClientRect();
-          if (hero && pills) {
+          if (hero) {
             setGhost({
               hero: {
                 left: hero.left,
                 top: hero.top,
                 width: hero.width,
                 height: hero.height,
-              },
-              pills: {
-                left: pills.left,
-                top: pills.top,
-                width: pills.width,
-                height: pills.height,
               },
               fading: false,
             });
@@ -2971,13 +2947,6 @@ export default function DimeChatPage({
                   </form>
                 </div>
               )}
-              {chatAccess === "granted" && !conversation && (
-                <PromptPills
-                  theme={theme}
-                  onPick={submit}
-                  innerRef={pillsRef}
-                />
-              )}
               {chatAccess === "granted" && (
                 <footer
                   className="dc-chat-footer"
@@ -2993,12 +2962,6 @@ export default function DimeChatPage({
                     style={rectStyle(ghost.hero)}
                   >
                     <BrandHero />
-                  </div>
-                  <div
-                    className={`dc-ghost${ghost.fading ? " dc-ghost--fading" : ""}`}
-                    style={rectStyle(ghost.pills)}
-                  >
-                    <PromptPills theme={theme} ghost />
                   </div>
                 </div>
               )}

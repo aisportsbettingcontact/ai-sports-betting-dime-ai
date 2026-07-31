@@ -2,7 +2,6 @@ import { useState } from "react";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -194,12 +193,13 @@ export function MlbPregamePanel({
             Lineups
           </button>
         </DialogTrigger>
-        <DialogContent className="projection-lineups-dialog">
+        {/* aria-describedby={undefined}: the source-attribution description was
+            removed (owner directive 2026-07-31) and this is Radix's documented
+            opt-out, so the dialog stays warning-free with the title alone as
+            its accessible name. */}
+        <DialogContent className="projection-lineups-dialog" aria-describedby={undefined}>
           <DialogHeader className="projection-lineups-dialog__header">
             <DialogTitle>{away.name} at {home.name} lineups</DialogTitle>
-            <DialogDescription>
-              Expected and confirmed starters and batting orders from Rotowire.
-            </DialogDescription>
           </DialogHeader>
 
           <div className="lineups-dialog__teams">
