@@ -51,19 +51,36 @@ def test_foundation_execution_evidence_is_sanitized_and_checksum_bound() -> None
     }
     assert evidence["semantic_evaluation"]["answer_key_case_count"] == 0
     assert evidence["semantic_evaluation"]["answer_key_artifact_count"] == 0
-    assert evidence["semantic_evaluation"]["four_way_non_overlap"] == {
+    assert evidence["semantic_evaluation"]["evaluation_cross_suite_non_overlap"] == {
+        "suite_relationships_evaluated": 6,
+        "cross_suite_case_pair_comparisons": 148770,
+        "disallowed_overlap_count": 0,
+        "status": "PASS_ZERO_DISALLOWED_OVERLAP",
+    }
+    assert evidence["semantic_evaluation"]["foundation_to_evaluation_non_overlap"] == {
         "comparisons_completed": 4,
         "pair_comparisons": 97650,
         "disallowed_overlap_count": 0,
         "status": "PASS_ZERO_DISALLOWED_OVERLAP",
     }
+    assert evidence["semantic_evaluation"]["composite_non_overlap"]["status"] == (
+        "PASS_COMPOSITE_PROOF_COMPLETE"
+    )
+    for artifact in ("pilot", "first_live_data_shard"):
+        source_inventory = evidence["admission"][artifact]["source_packet_inventory"]
+        assert source_inventory["closed_inventory"] is True
+        assert (
+            evidence["admission"][artifact]["bindings"]["source_packet_content_inventory_sha256"]
+            == source_inventory["content_inventory_sha256"]
+        )
     assert not list(FOUNDATION_ROOT.rglob("*.jsonl"))
 
 
-def test_context_capsule_is_current_closed_and_bound_to_foundation_evidence() -> None:
+def test_context_capsule_is_an_immutable_closed_snapshot_bound_to_foundation_evidence() -> None:
     capsule = load_governed_json(CAPSULE_ROOT / "capsule.json")
 
     _verify_sums(CAPSULE_ROOT)
+    assert capsule["snapshot_semantics"] == "IMMUTABLE_POINT_IN_TIME_NOT_LIVE_STATUS"
     assert capsule["production_baseline"]["pull_request"] == 250
     assert capsule["production_baseline"]["merge_commit"] == (
         "7ed09adb4fcdb9e2d9047e73e34f84c80d865b78"
@@ -85,8 +102,20 @@ def test_context_capsule_is_current_closed_and_bound_to_foundation_evidence() ->
     assert capsule["parallel_tracks"]["runpod_gate_1"]["head_commit"] == (
         "3e406ac273cafcaf9d85c19b591ca09fb802219e"
     )
-    assert capsule["parallel_tracks"]["runpod_gate_1"]["checks"]["remaining_ci"] == "PENDING"
+    assert set(capsule["parallel_tracks"]["runpod_gate_1"]["checks"].values()) == {"PASS"}
     assert capsule["parallel_tracks"]["runpod_gate_1"]["effective_authorization"] is False
+    assert capsule["parallel_tracks"]["credential_execution_closure"]["pull_request"] == 255
+    assert capsule["parallel_tracks"]["credential_execution_closure"]["head_commit"] == (
+        "2ca08f7756ecb33485d12bc0464e004f34c0e4c3"
+    )
+    assert (
+        capsule["parallel_tracks"]["credential_execution_closure"]["internal_reviewed_checkpoint"]
+        == "b3194a1799255611b079b3f7a76986129b3c9fa6"
+    )
+    assert (
+        capsule["parallel_tracks"]["credential_execution_closure"]["effective_authorization"]
+        is False
+    )
     assert capsule["security_p1"]["status"] == "OPEN_REMEDIATION_REQUIRED"
     assert capsule["credential_execution_p1"]["status"] == "BLOCKED_ROOT_TRUST_UNPROVISIONED"
     assert capsule["credential_execution_p1"]["root_trust_provisioned"] is False

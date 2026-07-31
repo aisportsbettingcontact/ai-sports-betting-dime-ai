@@ -84,6 +84,7 @@
       "required": [
         "generation_id",
         "manifest_sha256",
+        "overlap_report_sha256",
         "record_checksums_sha256",
         "sha256sums_sha256",
         "source_commit"
@@ -91,6 +92,7 @@
       "properties": {
         "generation_id": {"type": "string", "minLength": 1},
         "manifest_sha256": {"$ref": "#/$defs/sha256"},
+        "overlap_report_sha256": {"$ref": "#/$defs/sha256"},
         "record_checksums_sha256": {"$ref": "#/$defs/sha256"},
         "sha256sums_sha256": {"$ref": "#/$defs/sha256"},
         "source_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"}

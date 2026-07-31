@@ -137,7 +137,9 @@
         "answer_key_case_count",
         "answer_key_artifact_count",
         "schema_failure_count",
-        "four_way_non_overlap"
+        "evaluation_cross_suite_non_overlap",
+        "foundation_to_evaluation_non_overlap",
+        "composite_non_overlap"
       ],
       "properties": {
         "status": {"const": "PASS"},
@@ -154,8 +156,25 @@
         "answer_key_case_count": {"const": 0},
         "answer_key_artifact_count": {"const": 0},
         "schema_failure_count": {"const": 0},
-        "four_way_non_overlap": {
+        "evaluation_cross_suite_non_overlap": {
           "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "suite_relationships_evaluated",
+            "cross_suite_case_pair_comparisons",
+            "disallowed_overlap_count",
+            "status"
+          ],
+          "properties": {
+            "suite_relationships_evaluated": {"const": 6},
+            "cross_suite_case_pair_comparisons": {"const": 148770},
+            "disallowed_overlap_count": {"const": 0},
+            "status": {"const": "PASS_ZERO_DISALLOWED_OVERLAP"}
+          }
+        },
+        "foundation_to_evaluation_non_overlap": {
+          "type": "object",
+          "additionalProperties": false,
           "required": [
             "comparisons_completed",
             "pair_comparisons",
@@ -168,6 +187,24 @@
             "disallowed_overlap_count": {"const": 0},
             "status": {"const": "PASS_ZERO_DISALLOWED_OVERLAP"}
           }
+        },
+        "composite_non_overlap": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "semantic_manifest_release_proof_complete",
+            "semantic_manifest_blocker",
+            "foundation_gap_closed_by_separate_comparison",
+            "status"
+          ],
+          "properties": {
+            "semantic_manifest_release_proof_complete": {"const": false},
+            "semantic_manifest_blocker": {
+              "const": "FOUNDATION_PRIVATE_RECORDS_NOT_AVAILABLE_FOR_FOUR_REQUIRED_COMPARISONS"
+            },
+            "foundation_gap_closed_by_separate_comparison": {"const": true},
+            "status": {"const": "PASS_COMPOSITE_PROOF_COMPLETE"}
+          }
         }
       }
     },
@@ -176,15 +213,26 @@
       "required": [
         "protected_recovery",
         "pilot",
+        "pilot_source_packets",
         "first_live_data_shard",
+        "first_live_data_source_packets",
         "semantic_r5",
         "semantic_comparison"
       ],
-      "additionalProperties": {"$ref": "#/$defs/inventory"}
+      "additionalProperties": false,
+      "properties": {
+        "protected_recovery": {"$ref": "#/$defs/inventory"},
+        "pilot": {"$ref": "#/$defs/inventory"},
+        "pilot_source_packets": {"$ref": "#/$defs/sourcePacketInventory"},
+        "first_live_data_shard": {"$ref": "#/$defs/inventory"},
+        "first_live_data_source_packets": {"$ref": "#/$defs/sourcePacketInventory"},
+        "semantic_r5": {"$ref": "#/$defs/inventory"},
+        "semantic_comparison": {"$ref": "#/$defs/inventory"}
+      }
     },
     "findings": {
       "type": "array",
-      "minItems": 4,
+      "minItems": 5,
       "items": {
         "type": "object",
         "additionalProperties": false,
@@ -245,9 +293,12 @@
       "additionalProperties": false,
       "required": [
         "directory_count",
-        "file_count",
-        "inventory_entry_count",
-        "byte_count",
+        "payload_file_count",
+        "payload_byte_count",
+        "checksum_ledger_file_count",
+        "checksum_ledger_byte_count",
+        "total_file_count",
+        "total_byte_count",
         "sha256sums_sha256",
         "symlink_count",
         "mode_failures",
@@ -256,13 +307,44 @@
       ],
       "properties": {
         "directory_count": {"type": "integer", "minimum": 1},
-        "file_count": {"type": "integer", "minimum": 1},
-        "inventory_entry_count": {"type": "integer", "minimum": 1},
-        "byte_count": {"type": "integer", "minimum": 1},
+        "payload_file_count": {"type": "integer", "minimum": 1},
+        "payload_byte_count": {"type": "integer", "minimum": 1},
+        "checksum_ledger_file_count": {"const": 1},
+        "checksum_ledger_byte_count": {"type": "integer", "minimum": 1},
+        "total_file_count": {"type": "integer", "minimum": 2},
+        "total_byte_count": {"type": "integer", "minimum": 2},
         "sha256sums_sha256": {"$ref": "#/$defs/sha256"},
         "symlink_count": {"const": 0},
         "mode_failures": {"const": 0},
         "checksum_failures": {"const": 0},
+        "closed_inventory": {"const": true}
+      }
+    },
+    "sourcePacketInventory": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "directory_count",
+        "payload_file_count",
+        "payload_byte_count",
+        "content_inventory_sha256",
+        "inventory_origin",
+        "symlink_count",
+        "mode_failures",
+        "mutation_failures",
+        "closed_inventory"
+      ],
+      "properties": {
+        "directory_count": {"const": 1},
+        "payload_file_count": {"type": "integer", "minimum": 1},
+        "payload_byte_count": {"type": "integer", "minimum": 1},
+        "content_inventory_sha256": {"$ref": "#/$defs/sha256"},
+        "inventory_origin": {
+          "const": "COMPUTED_IN_MEMORY_FROM_CLOSED_SOURCE_ROOT"
+        },
+        "symlink_count": {"const": 0},
+        "mode_failures": {"const": 0},
+        "mutation_failures": {"const": 0},
         "closed_inventory": {"const": true}
       }
     },
@@ -281,6 +363,7 @@
         "per_record_admission",
         "token_profile",
         "inventory",
+        "source_packet_inventory",
         "bindings"
       ],
       "properties": {
@@ -328,6 +411,7 @@
         },
         "token_profile": {"type": "object"},
         "inventory": {"$ref": "#/$defs/inventory"},
+        "source_packet_inventory": {"$ref": "#/$defs/sourcePacketInventory"},
         "bindings": {
           "type": "object",
           "minProperties": 4,

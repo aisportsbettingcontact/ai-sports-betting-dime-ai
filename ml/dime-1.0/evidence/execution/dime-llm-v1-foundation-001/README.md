@@ -15,8 +15,12 @@ Foundation records, semantic cases, answer keys, credentials, or provider output
 
 The private semantic suites reproduce 651 cases across development,
 sealed critical, locked, and general regression. Answer-key-bearing cases and artifacts
-are both zero. The four-way comparison completed
-97650 pairs with zero disallowed overlap.
+are both zero. Internal evaluation cross-suite isolation covers
+148770
+case pairs with zero disallowed overlap. The separate Foundation-to-evaluation
+comparison completed
+97650 pairs with zero
+disallowed overlap, closing the semantic manifest's explicit Foundation-availability gap.
 
 ## Reproduction
 
@@ -38,7 +42,7 @@ python scripts/freeze_foundation_execution_evidence.py \
   --comparison-root <private-comparison-root> \
   --recovery-root <protected-recovery-root> \
   --output-root <new-public-evidence-root> \
-  --base-commit 7ed09adb4fcdb9e2d9047e73e34f84c80d865b78 \
+  --base-commit ae039e8735a1a8cd4138f916ffe243df104408c0 \
   --created-at <canonical-utc-timestamp>
 ```
 

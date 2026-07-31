@@ -12,6 +12,9 @@ from dime_ai.canonical_json import canonical_json_bytes
 from dime_ai.foundation_private_evaluation_comparison import (
     PARTITIONS,
     FoundationEvaluationComparisonError,
+    _manifest_target,
+    _validate_loaded_semantic_partitions,
+    _validate_semantic_overlap_boundary,
     build_comparison_report,
     compare_partitions,
     freeze_comparison_artifact,
@@ -86,11 +89,36 @@ def bindings() -> tuple[dict[str, str], dict[str, str]]:
     semantic = {
         "generation_id": "dime-llm-v1-private-semantic-cases-tool-contract-v2",
         "manifest_sha256": "e" * 64,
+        "overlap_report_sha256": "0" * 64,
         "record_checksums_sha256": "f" * 64,
         "sha256sums_sha256": "1" * 64,
         "source_commit": "2" * 40,
     }
     return foundation, semantic
+
+
+def semantic_overlap_boundary() -> tuple[dict, dict]:
+    manifest = {
+        "release_non_overlap_proof_complete": False,
+        "release_blocker": (
+            "FOUNDATION_PRIVATE_RECORDS_NOT_AVAILABLE_FOR_FOUR_REQUIRED_COMPARISONS"
+        ),
+    }
+    overlap = {
+        "schema_version": "dime-private-evaluation-overlap-report-v1",
+        "generated_case_count": 651,
+        "public_material_count": 81,
+        "foundation_material_count": 0,
+        "foundation_material_status": "NOT_AVAILABLE",
+        "exact_normalized_prompt_collisions": [],
+        "exact_semantic_material_collisions": [],
+        "near_semantic_collisions": [],
+        "pairwise_suite_comparisons": 6,
+        "foundation_suite_comparisons_completed": 0,
+        "case_generation_overlap_gate": True,
+        "release_non_overlap_proof_complete": False,
+    }
+    return manifest, overlap
 
 
 def private_directory(path: Path) -> Path:
@@ -127,6 +155,45 @@ def test_four_required_comparisons_pass_without_overlap() -> None:
     assert collisions == []
     assert all(result["status"] == "PASS" for result in results.values())
     assert all(result["pair_comparisons"] == 1 for result in results.values())
+
+
+def test_false_or_inconsistent_semantic_proof_is_rejected() -> None:
+    manifest, overlap = semantic_overlap_boundary()
+    _validate_semantic_overlap_boundary(manifest, overlap)
+
+    false_manifest = dict(manifest)
+    false_manifest["release_blocker"] = None
+    with pytest.raises(FoundationEvaluationComparisonError, match="proof flag"):
+        _validate_semantic_overlap_boundary(false_manifest, overlap)
+
+    false_overlap = dict(overlap)
+    false_overlap["case_generation_overlap_gate"] = False
+    with pytest.raises(FoundationEvaluationComparisonError, match="zero-collision"):
+        _validate_semantic_overlap_boundary(manifest, false_overlap)
+
+
+def test_loaded_semantic_group_collision_is_rejected() -> None:
+    partitions = {}
+    for partition in PARTITIONS:
+        partitions[partition] = [
+            {
+                "partition_identity": {
+                    "scenario_family_id": f"{partition}-scenario",
+                    "template_family_id": f"{partition}-template",
+                    "source_event_id": None,
+                    "conversation_family_id": None,
+                    "quantitative_scenario_id": None,
+                    "entity_set_sha256": partition * 8,
+                    "temporal_bucket": f"{partition}-bucket",
+                }
+            }
+        ]
+    partitions["locked"][0]["partition_identity"]["scenario_family_id"] = partitions["development"][
+        0
+    ]["partition_identity"]["scenario_family_id"]
+
+    with pytest.raises(FoundationEvaluationComparisonError, match="partition isolation"):
+        _validate_loaded_semantic_partitions(partitions)
 
 
 def test_collision_report_preserves_exact_identifiers_without_prompt_text() -> None:
@@ -233,6 +300,15 @@ def test_pre_final_foundation_artifact_is_rejected_before_trainer_read(tmp_path:
 
     with pytest.raises(FoundationEvaluationComparisonError, match="not the exact accepted"):
         load_accepted_foundation(root)
+
+
+def test_manifest_target_cannot_escape_private_root(tmp_path: Path) -> None:
+    root = private_directory(tmp_path / "accepted")
+    outside = tmp_path / "outside.jsonl"
+    outside.write_text("{}\n", encoding="utf-8")
+
+    with pytest.raises(FoundationEvaluationComparisonError, match="manifest path is unsafe"):
+        _manifest_target(root, "../outside.jsonl")
 
 
 def test_semantic_r5_with_answer_keys_is_rejected(tmp_path: Path) -> None:

@@ -1,7 +1,8 @@
 {
   "schema_version": "dime-llm-v1-context-capsule-v1",
-  "capsule_id": "dime-llm-v1-foundation-evaluation-2026-07-30",
-  "verified_at": "2026-07-30T23:38:16Z",
+  "capsule_id": "dime-llm-v1-foundation-evaluation-2026-07-31",
+  "verified_at": "2026-07-31T00:20:07Z",
+  "snapshot_semantics": "IMMUTABLE_POINT_IN_TIME_NOT_LIVE_STATUS",
   "classification": "SANITIZED_AGGREGATE_ONLY",
   "private_content_counts": {
     "foundation_records": 0,
@@ -64,10 +65,37 @@
       ],
       "checks": {
         "gitleaks": "PASS",
-        "dime": "PASS",
-        "security": "PASS",
-        "remaining_ci": "PENDING"
+        "dime_llm_validation": "PASS",
+        "ci": "PASS",
+        "security_audit": "PASS"
       },
+      "effective_authorization": false,
+      "source": "github_connector_pr_metadata_and_coordinator_check_snapshot"
+    },
+    "credential_execution_closure": {
+      "pull_request": 255,
+      "title": "fix(ops): verify credential executable closure v2",
+      "state": "OPEN_DRAFT",
+      "base_commit": "7ed09adb4fcdb9e2d9047e73e34f84c80d865b78",
+      "head_commit": "2ca08f7756ecb33485d12bc0464e004f34c0e4c3",
+      "internal_reviewed_checkpoint": "b3194a1799255611b079b3f7a76986129b3c9fa6",
+      "mergeable": true,
+      "review_requested_from": [
+        "prez-ai-sports-betting"
+      ],
+      "checks": {
+        "build": "PASS",
+        "database": "PASS",
+        "typescript": "PASS",
+        "vitest": "PASS",
+        "security_audit": "PASS",
+        "gitleaks": "PASS",
+        "dime_llm_validation": "NOT_TRIGGERED_PATH_FILTER",
+        "livelab": "NOT_TRIGGERED_PATH_FILTER"
+      },
+      "independent_approval": false,
+      "merged": false,
+      "deployed": false,
       "effective_authorization": false,
       "source": "github_connector_pr_metadata_and_coordinator_check_snapshot"
     }
@@ -96,6 +124,13 @@
     "status": "BLOCKED_ROOT_TRUST_UNPROVISIONED",
     "effective_authorization": "NONE",
     "root_trust_provisioned": false,
+    "remediation_pull_request": 255,
+    "remediation_head_commit": "2ca08f7756ecb33485d12bc0464e004f34c0e4c3",
+    "internal_reviewed_checkpoint": "b3194a1799255611b079b3f7a76986129b3c9fa6",
+    "required_checks": "PASS",
+    "independent_approval": false,
+    "merged": false,
+    "deployed": false,
     "closure_tracks": [
       {
         "id": "codesign-cryptographic-verify",
@@ -126,8 +161,8 @@
     "complete_release": false,
     "public_evidence": {
       "path": "ml/dime-1.0/evidence/execution/dime-llm-v1-foundation-001/evidence.json",
-      "sha256": "28ff4ec9ef9572a50928864e58541432a4d20fb3584ea253eeacec408574b4d0",
-      "sha256sums_sha256": "97a03a7f6b268e26b392df9c087a62be981ea7b98aff4225f0086782ea5c91f1"
+      "sha256": "1a854aecf63029d0c51a981eb27d0fa7d08f99903d796bcaab18eb7d2002b86e",
+      "sha256sums_sha256": "13ae6070b6d09de9356a74b3c5f1410f9dcabd2808c1d0f9c9db5f96ce9d068c"
     }
   },
   "semantic_evaluation": {
@@ -141,9 +176,11 @@
     "total_cases": 651,
     "answer_keys": 0,
     "foundation_records_compared": 150,
-    "four_way_pair_comparisons": 97650,
-    "disallowed_overlap": 0,
-    "status": "PASS_ZERO_DISALLOWED_OVERLAP"
+    "evaluation_cross_suite_case_pair_comparisons": 148770,
+    "evaluation_cross_suite_disallowed_overlap": 0,
+    "foundation_to_evaluation_pair_comparisons": 97650,
+    "foundation_to_evaluation_disallowed_overlap": 0,
+    "composite_status": "PASS_COMPOSITE_PROOF_COMPLETE"
   },
   "runpod_gate_1": {
     "credential_status": "CREDENTIAL_PRESENT_PERMISSION_UNVERIFIED",
@@ -168,7 +205,8 @@
     "codesign cryptographic verification and full credential dependency closure remain pending",
     "Track F pull request 251 has passing required checks but remains an unmerged inactive draft",
     "Track E pull request 252 has passing required checks but remains an unmerged draft and answer-key creation remains unauthorized",
-    "RunPod Gate 1 pull request 253 is an open draft with remaining CI pending and effective authorization false",
+    "RunPod Gate 1 pull request 253 has passing triggered checks but remains an unapproved, unmerged draft with effective authorization false",
+    "credential-execution closure pull request 255 has passing triggered checks but remains an unapproved, unmerged, undeployed draft",
     "2250 admitted Foundation records remain before the 2400-record target is complete",
     "the private Foundation release revision, dataset manifest hash, and release checksum hash are not frozen",
     "the exact base model, base revision, adapter revision, endpoint revision, and container digest are not selected",
