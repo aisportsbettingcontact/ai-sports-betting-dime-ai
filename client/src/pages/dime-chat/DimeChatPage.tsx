@@ -1266,6 +1266,9 @@ export interface DimeChatPageProps {
    *     submits replay scripted product copy through the real reducer instead.
    */
   demoMode?: boolean;
+  /** Forces the embedded demo's appearance independent of the visitor's theme
+   *  (the landing hosts it on a light panel). demoMode only. */
+  demoTheme?: "light" | "dark";
 }
 
 export default function DimeChatPage({
@@ -1273,6 +1276,7 @@ export default function DimeChatPage({
   shell,
   previewMode = false,
   demoMode = false,
+  demoTheme,
 }: DimeChatPageProps = {}) {
   const { theme: contextTheme, mode: contextThemeMode } = useTheme();
   const theme: Theme =
@@ -2648,7 +2652,7 @@ export default function DimeChatPage({
   return (
     <div
       ref={pageRef}
-      className={`dc-page dc-page--app theme-${theme} theme-mode-${themeMode}${drawerMoving ? " dc-drawer-is-moving" : ""}`}
+      className={`dc-page dc-page--app theme-${demoTheme ?? theme} theme-mode-${demoTheme ?? themeMode}${drawerMoving ? " dc-drawer-is-moving" : ""}`}
       data-theme={theme}
       data-theme-mode={themeMode}
     >

@@ -2,7 +2,6 @@
 
 import { Link } from "wouter";
 import { FOOTER_LEGAL } from "../landing-content";
-import { Wordmark } from "./shared";
 
 export default function FooterSection() {
   return (
@@ -10,10 +9,17 @@ export default function FooterSection() {
       <div className="wrap">
         <div className="foot-top">
           <div className="foot-brand">
-            <span className="lockup">AI Sports Betting</span>
-            <span className="mono">
-              powered by <Wordmark fontSize={14} />
-            </span>
+            {/* The real wordmark asset, not a typeset lockup (owner directive
+                2026-07-31). Tailered Sports, Inc. is the company; dime is the
+                product, and the product mark is what belongs here. */}
+            <img
+              className="foot-logo"
+              src="/brand/dime-wordmark-on-dark.svg"
+              alt="dime"
+              width={92}
+              height={26}
+            />
+            <span className="mono foot-company">Tailered Sports, Inc.</span>
           </div>
           <div className="foot-links">
             <a href="#mechanism">How it works</a>

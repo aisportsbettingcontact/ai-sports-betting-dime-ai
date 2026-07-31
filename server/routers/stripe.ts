@@ -663,6 +663,38 @@ export const stripeRouter = router({
    * ui_mode:"elements"). Called by /checkout before actions.confirm(); the
    * webhook reads session.metadata.desired_username at fulfillment.
    */
+  /**
+   * publicListCheckoutPrices
+   *
+   * Display-only companion to publicGetCheckoutPlan: every sellable interval
+   * for one plan, so the public pricing grid can show the true monthly figure
+   * and deep-link to that exact price row. Without it the landing has to guess
+   * — and a plan whose default price is weekly would advertise "billed
+   * monthly" while opening a weekly checkout.
+   *
+   * Same safety envelope as publicGetCheckoutPlan: display fields only, never
+   * Stripe IDs, and only prices active in the current key's mode.
+   */
+  publicListCheckoutPrices: stripeProcedure
+    .input(z.object({ slug: zodPlanId }))
+    .query(async ({ input }) => {
+      const plan = await getPlanBySlug(input.slug);
+      if (!plan || !plan.active) return null;
+      const wantLivemode = checkoutKeyIsLive();
+      const prices = plan.prices
+        .filter((pr) => pr.active && pr.livemode === wantLivemode)
+        .map((pr) => ({
+          id: pr.id,
+          amountCents: pr.amountCents,
+          currency: pr.currency,
+          interval: pr.interval,
+          intervalCount: pr.intervalCount,
+          label: pr.label,
+        }));
+      console.log(`[tRPC][stripe.publicListCheckoutPrices] PUBLIC slug=${plan.slug} prices=${prices.length}`);
+      return { slug: plan.slug, name: plan.name, soldOut: isSoldOut(plan), prices };
+    }),
+
   publicAttachCheckoutIdentity: stripeProcedure
     .input(
       z.object({

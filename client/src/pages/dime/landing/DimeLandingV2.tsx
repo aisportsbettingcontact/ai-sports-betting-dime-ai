@@ -33,7 +33,6 @@ import MarketSignals from "./components/MarketSignals";
 import FeatureGrid from "./components/FeatureGrid";
 import TrustArchitecture from "./components/TrustArchitecture";
 import Pricing from "./components/Pricing";
-import ControlledAccess from "./components/ControlledAccess";
 import ObjectionHandling from "./components/ObjectionHandling";
 import FAQSection from "./components/FAQSection";
 import FinalCTA from "./components/FinalCTA";
@@ -80,7 +79,6 @@ export default function DimeLandingV2() {
         <FeatureGrid />
         <TrustArchitecture />
         <Pricing />
-        <ControlledAccess />
         <ObjectionHandling />
         <FAQSection />
         <FinalCTA />
