@@ -124,17 +124,17 @@ def test_context_capsule_is_complete_compact_and_sanitized() -> None:
     assert capsule["classification"] == "SANITIZED_AGGREGATE_ONLY"
     assert capsule["foundation_counts"] == {
         "status": "IN_PROGRESS",
-        "verified_authoring_records": 300,
-        "verified_trainer_records": 300,
-        "verified_train_records": 270,
-        "verified_validation_records": 30,
+        "verified_authoring_records": 450,
+        "verified_trainer_records": 450,
+        "verified_train_records": 405,
+        "verified_validation_records": 45,
     }
     assert capsule["foundation_deficits"] == {
         "status": "IN_PROGRESS",
-        "authoring_records": 2100,
-        "trainer_records": 2100,
-        "train_records": 1890,
-        "validation_records": 210,
+        "authoring_records": 1950,
+        "trainer_records": 1950,
+        "train_records": 1755,
+        "validation_records": 195,
     }
     assert capsule["evaluation_key_state"] == "OWNER_MERGE_SCOPE_AUTHORIZED_ZERO_KEYS"
     assert capsule["runpod_gate_state"] == ("GOVERNANCE_MERGED_EFFECTIVE_AUTHORIZATION_FALSE")

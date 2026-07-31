@@ -169,6 +169,7 @@ def secure_inventory(path: Path, label: str) -> dict[str, Any]:
 
     root = _private_root(path, label)
     files: dict[str, Path] = {}
+    initial_snapshot: dict[str, tuple[int, int, int, int, int, str | None]] = {}
     directory_count = 1
     file_sizes: dict[str, int] = {}
     for candidate in sorted(root.rglob("*")):
@@ -177,13 +178,31 @@ def secure_inventory(path: Path, label: str) -> dict[str, Any]:
             raise FoundationExecutionEvidenceError(f"{label} contains a symlink")
         if candidate.is_dir():
             directory_count += 1
-            if _mode(candidate) != PRIVATE_MODE:
+            info = candidate.stat()
+            if stat.S_IMODE(info.st_mode) != PRIVATE_MODE:
                 raise FoundationExecutionEvidenceError(f"{label} contains a non-0700 directory")
+            initial_snapshot[relative] = (
+                info.st_dev,
+                info.st_ino,
+                stat.S_IMODE(info.st_mode),
+                info.st_nlink,
+                info.st_size,
+                None,
+            )
         elif candidate.is_file():
-            if _mode(candidate) != PRIVATE_FILE_MODE:
+            info = candidate.stat()
+            if stat.S_IMODE(info.st_mode) != PRIVATE_FILE_MODE or info.st_nlink != 1:
                 raise FoundationExecutionEvidenceError(f"{label} contains a non-0600 file")
             files[relative] = candidate
-            file_sizes[relative] = candidate.stat().st_size
+            file_sizes[relative] = info.st_size
+            initial_snapshot[relative] = (
+                info.st_dev,
+                info.st_ino,
+                stat.S_IMODE(info.st_mode),
+                info.st_nlink,
+                info.st_size,
+                _sha256_file(candidate),
+            )
         else:
             raise FoundationExecutionEvidenceError(f"{label} contains a non-regular entry")
     entries = _parse_sha256sums(root)
@@ -191,8 +210,31 @@ def secure_inventory(path: Path, label: str) -> dict[str, Any]:
     if set(entries) != expected_paths:
         raise FoundationExecutionEvidenceError(f"{label} SHA256SUMS is not a closed inventory")
     for relative, expected in entries.items():
-        if _sha256_file(files[relative]) != expected:
+        if initial_snapshot[relative][-1] != expected:
             raise FoundationExecutionEvidenceError(f"{label} checksum mismatch")
+    final_paths = sorted(root.rglob("*"))
+    final_snapshot: dict[str, tuple[int, int, int, int, int, str | None]] = {}
+    for candidate in final_paths:
+        relative = candidate.relative_to(root).as_posix()
+        if candidate.is_symlink():
+            raise FoundationExecutionEvidenceError(f"{label} changed during inventory")
+        info = candidate.stat()
+        if candidate.is_dir():
+            digest = None
+        elif candidate.is_file() and info.st_nlink == 1:
+            digest = _sha256_file(candidate)
+        else:
+            raise FoundationExecutionEvidenceError(f"{label} changed during inventory")
+        final_snapshot[relative] = (
+            info.st_dev,
+            info.st_ino,
+            stat.S_IMODE(info.st_mode),
+            info.st_nlink,
+            info.st_size,
+            digest,
+        )
+    if final_snapshot != initial_snapshot:
+        raise FoundationExecutionEvidenceError(f"{label} changed during inventory")
     payload_byte_count = sum(file_sizes[relative] for relative in entries)
     checksum_ledger_byte_count = file_sizes["SHA256SUMS"]
     return {
@@ -223,7 +265,7 @@ def _safe_private_file(root: Path, relative: str, label: str) -> Path:
     ):
         raise FoundationExecutionEvidenceError(f"{label} path is unsafe")
     candidate = root / candidate_relative
-    if candidate.is_symlink() or not candidate.is_file():
+    if candidate.is_symlink() or not candidate.is_file() or candidate.stat().st_nlink != 1:
         raise FoundationExecutionEvidenceError(f"{label} path is not a regular file")
     resolved = candidate.resolve(strict=True)
     if not resolved.is_relative_to(root):
@@ -316,6 +358,7 @@ def _source_packet_snapshot(
         if (
             not candidate.is_file()
             or _mode(candidate) != PRIVATE_FILE_MODE
+            or candidate.stat().st_nlink != 1
             or candidate.suffix != ".json"
         ):
             raise FoundationExecutionEvidenceError(
@@ -377,12 +420,11 @@ def _report_boundary(
     root: Path,
     *,
     pilot: bool,
+    expected_final_report_schema: str = "dime-foundation-live-data-final-report-v1",
 ) -> tuple[dict[str, Any], str, int]:
     report_name = "pilot-report.json" if pilot else "final-report.json"
     report = _load_object(root / report_name, report_name)
-    expected_schema = (
-        "dime-foundation-pilot-report-v1" if pilot else "dime-foundation-live-data-final-report-v1"
-    )
+    expected_schema = "dime-foundation-pilot-report-v1" if pilot else expected_final_report_schema
     if report.get("schema_version") != expected_schema or report.get("status") != "PASS":
         raise FoundationExecutionEvidenceError(f"{report_name} is not PASS")
     gates = report.get("gates")
@@ -617,6 +659,7 @@ def validate_foundation_artifact(
     artifact_label: str | None = None,
     expected_counts: Mapping[str, int] | None = None,
     expected_execution_id: str | None = None,
+    expected_report_schema: str = "dime-foundation-live-data-final-report-v1",
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     """Validate one finalized private artifact and return only sanitized admission facts."""
 
@@ -624,6 +667,7 @@ def validate_foundation_artifact(
         artifact_label is not None
         or expected_counts is not None
         or expected_execution_id is not None
+        or expected_report_schema != "dime-foundation-live-data-final-report-v1"
     ):
         raise FoundationExecutionEvidenceError(
             "pilot admission does not accept a live-data boundary override"
@@ -631,7 +675,11 @@ def validate_foundation_artifact(
     label = "pilot" if pilot else artifact_label or "first_live_data_shard"
     absolute = _private_root(root, label)
     inventory = secure_inventory(absolute, label)
-    report, report_name, expected_count = _report_boundary(absolute, pilot=pilot)
+    report, report_name, expected_count = _report_boundary(
+        absolute,
+        pilot=pilot,
+        expected_final_report_schema=expected_report_schema,
+    )
     expected_status = "APPROVED_PILOT_NOT_RELEASE" if pilot else "ACCEPTED_PRIVATE_NOT_RELEASED"
     authoring, authoring_manifest = _manifest_records(
         absolute,
@@ -674,6 +722,7 @@ def validate_foundation_artifact(
                 absolute,
                 expected_counts=FOUNDATION_COUNTS if expected_counts is None else expected_counts,
                 expected_execution_id=expected_execution_id,
+                expected_report_schema=expected_report_schema,
             )
         except FoundationEvaluationComparisonError as exc:
             raise FoundationExecutionEvidenceError("accepted Foundation boundary failed") from exc
