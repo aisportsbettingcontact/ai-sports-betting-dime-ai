@@ -260,7 +260,7 @@ function resultColor(r: Result): string {
     case "WIN":
       return "text-primary";
     case "LOSS":
-      return "text-[#FF3B3B]";
+      return "text-[color:var(--bt-red)]";
     case "PUSH":
     case "PENDING":
     case "VOID":
@@ -273,7 +273,7 @@ function resultBg(r: Result): string {
     case "WIN":
       return "bg-transparent border-primary text-primary";
     case "LOSS":
-      return "bg-transparent border-[#FF3B3B] text-[#FF3B3B]";
+      return "bg-transparent border-[color:var(--bt-red)] text-[color:var(--bt-red)]";
     case "PUSH":
     case "PENDING":
     case "VOID":
@@ -1403,7 +1403,7 @@ const BetCard = memo(function BetCard({
         result === "WIN"
           ? "border-primary"
           : result === "LOSS"
-            ? "border-[#FF3B3B]"
+            ? "border-[color:var(--bt-red)]"
             : result === "PUSH"
               ? "border-white"
               : "border-white"
@@ -1415,7 +1415,7 @@ const BetCard = memo(function BetCard({
           result === "WIN"
             ? "bg-primary"
             : result === "LOSS"
-              ? "bg-[#FF3B3B]"
+              ? "bg-[color:var(--bt-red)]"
               : result === "PUSH"
                 ? "bg-white"
                 : result === "PENDING"
@@ -1501,7 +1501,7 @@ const BetCard = memo(function BetCard({
                         ? result === "WIN"
                           ? "text-primary"
                           : result === "LOSS"
-                            ? "text-[#FF3B3B]"
+                            ? "text-[color:var(--bt-red)]"
                             : "text-white"
                         : "text-white"
                     }`}
@@ -1515,7 +1515,7 @@ const BetCard = memo(function BetCard({
                         ? result === "WIN"
                           ? "text-primary"
                           : result === "LOSS"
-                            ? "text-[#FF3B3B]"
+                            ? "text-[color:var(--bt-red)]"
                             : "text-white"
                         : "text-white"
                     }`}
@@ -4041,7 +4041,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
               <StatCard
                 label="Losses"
                 value={stats.losses}
-                color="text-[#FF3B3B]"
+                color="text-[color:var(--bt-red)]"
               />
             </div>
             {stats.pushes > 0 && (
@@ -4073,7 +4073,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
               <StatCard
                 label="ROI%"
                 value={`${stats.roi.toFixed(1)}%`}
-                color={stats.roi >= 0 ? "text-primary" : "text-[#FF3B3B]"}
+                color={stats.roi >= 0 ? "text-primary" : "text-[color:var(--bt-red)]"}
                 sub={`on ${stakeMode === "$" ? fmtDollar(stats.totalRisk * unitSize) : fmtUnits(stats.totalRisk)} risked`}
               />
             </div>
@@ -4112,13 +4112,13 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
             <StatCard
               label="+/- Units"
               value={fmtUnits(stats.netProfit)}
-              color={stats.netProfit >= 0 ? "text-primary" : "text-[#FF3B3B]"}
+              color={stats.netProfit >= 0 ? "text-primary" : "text-[color:var(--bt-red)]"}
             />
             <StatCard label="Wins" value={stats.wins} color="text-primary" />
             <StatCard
               label="Losses"
               value={stats.losses}
-              color="text-[#FF3B3B]"
+              color="text-[color:var(--bt-red)]"
             />
             <StatCard
               label="WP%"
@@ -4128,7 +4128,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
             <StatCard
               label="ROI%"
               value={`${stats.roi.toFixed(1)}%`}
-              color={stats.roi >= 0 ? "text-primary" : "text-[#FF3B3B]"}
+              color={stats.roi >= 0 ? "text-primary" : "text-[color:var(--bt-red)]"}
               sub={`on ${stakeMode === "$" ? fmtDollar(stats.totalRisk * unitSize) : fmtUnits(stats.totalRisk)} risked`}
             />
           </div>
@@ -4950,7 +4950,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                         pl > 0
                           ? "text-primary"
                           : pl < 0
-                            ? "text-[#FF3B3B]"
+                            ? "text-[color:var(--bt-red)]"
                             : "text-white";
 
                       return (
@@ -5204,11 +5204,11 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
               </div>
               <div className="text-primary font-bold">{gradeToast.wins}</div>
             </div>
-            <div className="bg-transparent border border-[#FF3B3B] rounded-lg px-3 py-2">
+            <div className="bg-transparent border border-[color:var(--bt-red)] rounded-lg px-3 py-2">
               <div className="text-[11px] bt-dim uppercase tracking-[0.08em]">
                 Losses
               </div>
-              <div className="text-[#FF3B3B] font-bold">
+              <div className="text-[color:var(--bt-red)] font-bold">
                 {gradeToast.losses}
               </div>
             </div>

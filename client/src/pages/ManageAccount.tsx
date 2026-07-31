@@ -162,7 +162,7 @@ export default function ManageAccount() {
         </button>
         <div className="flex-1 flex items-center justify-center gap-2">
           <BarChart3 className="w-5 h-5 text-primary flex-shrink-0" />
-          <span className="font-black text-white tracking-wider text-sm">AI SPORTS BETTING</span>
+          <span className="font-black text-foreground tracking-wider text-sm">AI SPORTS BETTING</span>
         </div>
         {/* spacer to balance back button */}
         <div className="w-20 hidden xs:block" />
@@ -173,12 +173,12 @@ export default function ManageAccount() {
         <div className="w-full max-w-md space-y-4">
           {/* ── Account info card ── */}
           <div className="bg-card border border-border rounded-xl p-5 space-y-3">
-            <h1 className="text-base font-black text-white tracking-wider uppercase">Manage account</h1>
+            <h1 className="text-base font-black text-foreground tracking-wider uppercase">Manage account</h1>
 
             {/* Username */}
             <div className="space-y-0.5">
               <p className="text-[11px] text-muted-foreground uppercase tracking-wider font-semibold">Username</p>
-              <p className="text-sm font-bold text-white">@{appUser.username}</p>
+              <p className="text-sm font-bold text-foreground">@{appUser.username}</p>
               <p className="text-[10px] text-muted-foreground">Username cannot be changed.</p>
             </div>
 
@@ -207,7 +207,7 @@ export default function ManageAccount() {
                     {planId === "annual" ? "ANNUAL" : "MONTHLY"} · EXP {formatExpiry(expiry!)}
                   </span>
                   {cancelledAt && (
-                    <span className="text-[11px] text-white font-semibold">
+                    <span className="text-[11px] text-foreground font-semibold">
                       Cancels {formatExpiry(cancelledAt)}
                     </span>
                   )}
@@ -242,7 +242,7 @@ export default function ManageAccount() {
               }}
               className="w-full flex items-center gap-3 px-4 py-3.5 bg-card border border-border rounded-xl text-sm font-semibold text-foreground hover:bg-secondary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Key className="w-4 h-4 text-white flex-shrink-0" />
+              <Key className="w-4 h-4 text-foreground flex-shrink-0" />
               <span className="flex-1 text-left">
                 {forgotSent ? "Reset email sent: check your inbox" : "Forgot password"}
               </span>
@@ -277,7 +277,7 @@ export default function ManageAccount() {
                   <button
                     type="button"
                     onClick={() => setShowCancelConfirm(true)}
-                    className="w-full flex items-center gap-3 px-4 py-3.5 bg-card border border-white rounded-xl text-sm font-semibold text-white transition-colors"
+                    className="w-full flex items-center gap-3 px-4 py-3.5 bg-card border border-border-strong rounded-xl text-sm font-semibold text-foreground transition-colors"
                   >
                     <XCircle className="w-4 h-4 flex-shrink-0" />
                     <span className="flex-1 text-left">Cancel subscription</span>

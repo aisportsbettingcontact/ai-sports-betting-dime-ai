@@ -535,10 +535,11 @@ describe("ProjectionCard — paginated market popover", () => {
       "max-block-size: min(34rem, var(--radix-popover-content-available-height));"
     );
     expect(popoverCss).toContain("overflow-y: auto;");
-    // Audit DIME-UI-015 ruling: 0B8557 is the canonical mint text on light
-    // (4.66:1 on white); 0FA36B (3.25:1) is retired.
+    // Audit DIME-UI-015 + theme audit 2026-07-31: 0A7C50 is the canonical mint
+    // text on light (5.2:1 white, 4.9:1 on F7-tier cards); 0FA36B and 0B8557
+    // are retired.
     expect(popoverCss).toMatch(
-      /html:not\(\.dark\) \.projection-card__markets-eyebrow \{\s*color: #0b8557;/
+      /html:not\(\.dark\) \.projection-card__markets-eyebrow \{\s*color: #0a7c50;/
     );
   });
 

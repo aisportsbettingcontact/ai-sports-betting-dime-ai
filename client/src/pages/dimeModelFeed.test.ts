@@ -179,8 +179,8 @@ describe("DimeModelFeed — owner rules", () => {
 
   it("three-color law: mint #45E0A8 only (both themes), no neon/gold/legacy-mint", () => {
     expect(src).toContain("#45E0A8");
-    // 0FA36B (3.25:1 on white) is retired; 0B8557 (4.66:1) is the one
-    // sanctioned mint-text-on-light (audit DIME-UI-015 ruling). The old
+    // 0FA36B (3.25:1 on white) is retired; 0A7C50 is the one sanctioned
+    // mint-text-on-light (DIME-UI-015 + theme audit 2026-07-31). The old
     // case-sensitive toContain never fired against lowercase usage.
     expect(src).not.toMatch(/#0fa36b/i);
     expect(src).not.toMatch(/#39FF14|#FFD700|#FF6B35|#22D3EE|#F87171/i);

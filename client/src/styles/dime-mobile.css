@@ -19,9 +19,11 @@
   /* 2026-07-13 audit P0-11: raw mint text on white is 1.68:1 (hard AA fail).
    * The law's literal mapping (black) deleted all light-mode signal, which is
    * why this token drifted back to raw mint. Scoped exception (like --loss-red):
-   * #0B8557 is the same mint hue darkened to 4.66:1 on white — signal survives,
+   * #0A7C50 is the same mint hue darkened to 5.2:1 on white and 4.9:1 on the
+   * F7-tier light cards (theme audit 2026-07-31: the previous step passed on
+   * pure white but measured 4.35:1 on cards) — signal survives,
    * contrast passes. Strict-3 alternative remains #000000 if that direction wins. */
-  --dime-mint-text: #0b8557;
+  --dime-mint-text: #0a7c50;
   --dime-mint-keyline: #000000;
   --dime-bg: #ffffff;
   /* Law v2 tonal ramp (light): achromatic greys, mint still the only hue. */
@@ -34,7 +36,7 @@
   --dime-text-primary: #000000;
   --dime-text-body: #000000;
   --dime-text-secondary: #595959; /* 7.0:1 on white */
-  --dime-text-muted: #767676; /* 4.5:1 on white */
+  --dime-text-muted: #6e6e6e; /* 5.1:1 on white, 4.8:1 on F7-tier cards (theme audit 2026-07-31: 767676 measured 4.24:1 on cards) */
   --dime-text-faint: #767676;
   --dime-ring: #45e0a8;
   --dime-row-hover: #efefef; /* v2: hover returns */
@@ -46,7 +48,7 @@
    * unmapped text-black). */
   --dime-ink-on-mint: #000000;
   /* bet-loss red exception (Bet Tracker / calendar) */
-  --loss-red: #ff3b3b;
+  --loss-red: #d92d2d; /* light: 4.8:1 on white (theme audit 2026-07-31: ff3b3b measured 3.3:1); dark keeps ff3b3b below */
   --dime-font-sans: "Familjen Grotesk", system-ui, -apple-system, sans-serif;
   /* Single-font mandate: the "mono" token now resolves to Familjen Grotesk so
    * every legacy var(--dime-font-mono) / var(--bt-mono) consumer renders the
@@ -62,6 +64,7 @@
 html.dark {
   /* ── THREE-COLOR LAW — dark theme: black ground, white ink/borders, mint. */
   /* Law v2 tonal ramp (dark): achromatic greys, mint still the only hue. */
+  --loss-red: #ff3b3b; /* 5.9:1 on black — dark keeps the brighter bet-loss red (theme audit 2026-07-31) */
   --dime-mint-text: #45e0a8; /* mint text passes on black */
   --dime-bg: #000000;
   --dime-surface-sidebar: #000000;
@@ -430,7 +433,7 @@ html:not(.dark) .cal-panel {
 }
 
 /* Raw mint TEXT must ride the mint-text token: #45E0A8 passes on black but
- * is 1.68:1 on white — light resolves to the law's #0B8557. Mint FILLS and
+ * is 1.68:1 on white — light resolves to the law's 0A7C50 tone. Mint FILLS and
  * borders stay raw mint in both themes (brand rule). */
 .bt-page [class*="text-[#45E0A8]"] {
   color: var(--dime-mint-text) !important;
@@ -439,6 +442,13 @@ html:not(.dark) .cal-panel {
 /* Theme-keyed coming-soon wordmark (the SVG assets are single-ground). */
 html.dark .bt-page .bt-wordmark-light {
   display: none;
+}
+/* Theme audit 2026-07-31: `text-primary` resolves to raw mint in BOTH themes
+   (fills law), but as TEXT on light tracker surfaces it measured 1.68:1. On
+   light, tracker mint TEXT drops to the sanctioned mint-text tone. Same
+   defensive-override pattern as the [class*=] nets below. */
+html:not(.dark) .bt-page .text-primary {
+  color: var(--dime-mint-text) !important;
 }
 html:not(.dark) .bt-page .bt-wordmark-dark {
   display: none;
