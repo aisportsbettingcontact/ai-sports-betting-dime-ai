@@ -570,6 +570,35 @@ export async function lookupAppUserByIdFresh(id: number): Promise<AppUserLookupR
   }
 }
 
+/**
+ * MySQL/TiDB error codes that mean "the QUERY is wrong", not "the row is absent".
+ *
+ * [2026-07-31 login outage] app_users.planPriceId shipped in the Drizzle schema
+ * before its migration ran. Drizzle enumerates every declared column, so every
+ * lookup failed with ER_BAD_FIELD_ERROR — and the blanket `catch { return null }`
+ * below turned that into "user not found". Logins broke platform-wide while the
+ * logs said `USER_NOT_FOUND ... DB inconsistency`, pointing at the data instead
+ * of at the schema. Swallowing a structural error as an empty result is how a
+ * five-second fix became an outage.
+ *
+ * These specific codes are re-thrown so the caller fails loudly. Transient
+ * faults (connection resets, timeouts, circuit-breaker trips) keep the previous
+ * fail-soft behaviour — those genuinely should degrade rather than 500.
+ */
+const SCHEMA_ERROR_CODES = new Set([
+  "ER_BAD_FIELD_ERROR",   // unknown column — schema is behind the code
+  "ER_NO_SUCH_TABLE",     // missing table — migration not applied
+  "ER_PARSE_ERROR",       // malformed SQL
+  "ER_WRONG_FIELD_SPEC",
+  "ER_BAD_TABLE_ERROR",
+]);
+
+/** True when the failure means the query itself is invalid against this schema. */
+export function isSchemaError(err: unknown): boolean {
+  const code = (err as { code?: string } | null)?.code;
+  return typeof code === "string" && SCHEMA_ERROR_CODES.has(code);
+}
+
 export async function getAppUserById(id: number) {
   // Cache hit: skip DB round-trip
   const cached = _appUserByIdCache.get(id);
@@ -586,7 +615,17 @@ export async function getAppUserById(id: number) {
     // Cache result (including null = user not found)
     _appUserByIdCache.set(id, { data: result, expiresAt: Date.now() + APP_USER_CACHE_TTL_MS });
     return result;
-  } catch {
+  } catch (err) {
+    // A schema mismatch is NOT "no such user" — say so loudly rather than
+    // silently reporting every account as missing.
+    if (isSchemaError(err)) {
+      console.error(
+        `[DB][getAppUserById] SCHEMA ERROR — the app_users query is invalid against the live schema. ` +
+        `This usually means code deployed ahead of its migration. id=${id} code=${(err as { code?: string }).code} ` +
+        `message=${err instanceof Error ? err.message : String(err)}`
+      );
+      throw err;
+    }
     return null;
   }
 }

@@ -43,6 +43,7 @@ import { ensureDebugLogsTable } from "./debugLogger";
 import { registerAnalyticsIngestRoute } from "../analytics/ingestRoute";
 import { registerAnalyticsReadRoute } from "../analytics/readRoute";
 import { registerStripeWebhookRoute } from "../stripeWebhook";
+import { assertSchemaCurrent } from "./schemaGuard";
 import { registerWc2026Heartbeats } from "../wc2026/wc2026Heartbeat";
 import { registerCronRoutes } from "../cron/cronRoutes";
 import { registerDimeChatRoute } from "../dime-chat.route";
@@ -955,6 +956,15 @@ async function startServer() {
       `[SERVER_STARTUP] ✓ Server listening — bound=${JSON.stringify(addr)} url=http://localhost:${port}/`
     );
     console.log(`Server running on http://localhost:${port}/`);
+    // Does the live schema actually satisfy what this build's queries assume?
+    // Drizzle enumerates every declared column, so code deployed ahead of its
+    // migration breaks every query against the affected table — which on
+    // 2026-07-31 took platform-wide login down while the deploy looked green.
+    // Warn-only by default (SCHEMA_GUARD_FATAL=1 to fail closed) so a check
+    // failure can never crash-loop the service it is meant to protect.
+    assertSchemaCurrent().catch((err: unknown) =>
+      console.warn(`[SchemaGuard] check failed to run: ${err instanceof Error ? err.message : String(err)}`)
+    );
     // Ensure debug_logs table exists — idempotent, non-fatal
     ensureDebugLogsTable().catch((err: unknown) =>
       console.warn(
