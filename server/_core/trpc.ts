@@ -366,7 +366,7 @@ export const router = t.router;
  * [OUTPUT] Pass to next middleware, or throw FORBIDDEN + fire alert
  * [VERIFY] Log every decision with IP, path, method, and origin for audit trail
  */
-const csrfOriginCheck = t.middleware(async ({ ctx, next, path }) => {
+export const csrfOriginCheck = t.middleware(async ({ ctx, next, path }) => {
   const req = ctx.req;
   const method = req.method?.toUpperCase() ?? "UNKNOWN";
   const origin = req.get("origin");

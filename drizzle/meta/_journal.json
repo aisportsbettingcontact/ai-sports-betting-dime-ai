@@ -862,6 +862,13 @@
       "when": 1785329270345,
       "tag": "0122_dime_evidence_lifecycle_v1",
       "breakpoints": true
+    },
+    {
+      "idx": 123,
+      "version": "5",
+      "when": 1785329270346,
+      "tag": "0123_stripe_hardening",
+      "breakpoints": true
     }
   ]
 }

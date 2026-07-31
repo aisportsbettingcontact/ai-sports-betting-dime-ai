@@ -112,6 +112,13 @@ export function computeExpiryMsForPrice(
     return plan.accessUntil ?? null;
   }
   // No recurring interval → a single payment grants lifetime access.
+  //
+  // This is deliberate and load-bearing: it is how a "Lifetime" interval can sit
+  // inside an otherwise-recurring plan (e.g. the book-price one-time option
+  // alongside day/week/month/year). Do NOT gate this on planType — doing so
+  // breaks selling lifetime at book price. The related audit finding (CAT-001,
+  // a $99 one-time price on the `dime-lifetime` plan granting access to 2100)
+  // is a CATALOG DATA problem to fix in the admin UI, not a flaw in this rule.
   if (!price.interval) {
     return plan.accessUntil ?? LIFETIME_ACCESS_UNTIL_MS;
   }

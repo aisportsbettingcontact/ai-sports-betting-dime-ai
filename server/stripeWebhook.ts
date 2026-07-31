@@ -4,23 +4,26 @@
  * Stripe webhook handler — registered BEFORE express.json() so the raw
  * request buffer is preserved for HMAC-SHA256 signature verification.
  *
- * Checklist:
- *  ✅ POST-only at /api/stripe/webhook
- *  ✅ express.raw({ type: 'application/json' }) before express.json()
- *  ✅ Stripe-Signature HMAC-SHA256 verified via stripe.webhooks.constructEvent()
- *  ✅ Test events (evt_test_*) return { verified: true } immediately
- *  ✅ Always returns HTTP 200 — never 3xx/4xx/5xx
- *  ✅ Async event processing — response sent before heavy work
- *  ✅ NEW: checkout.session.completed creates new pending user if no userId in metadata
- *  ✅ NEW: Discord role granted only after account setup is complete (pendingSetup=false)
- *  ✅ subscription.deleted revokes access + Discord role immediately
- *  ✅ invoice.payment_failed logs failure (no revoke — Stripe retries)
+ * Response contract (deliberate — NOT "always 200"):
+ *  - 400 on a missing/invalid Stripe-Signature (forged or misconfigured).
+ *  - 5xx when an ACCESS-CHANGING event fails to process, so Stripe redelivers.
+ *    Both grants and revokes are in this set: a dropped revoke is as expensive
+ *    as a dropped grant (WBHK-002).
+ *  - 200 once the event is durably recorded and its side effects have committed.
+ *
+ * Exactly-once: every event is claimed in `stripe_webhook_events` (UNIQUE on
+ * stripeEventId) inside the same transaction as its side effects, so a Stripe
+ * redelivery is a provable no-op (WBHK-001).
+ *
+ * Ordering: subscription events carry `event.created`; anything older than the
+ * last applied event for that user is ignored, so a late `updated` cannot
+ * resurrect access after a `deleted` (WBHK-003).
  */
 import type { Express, Request, Response } from "express";
 import express from "express";
-import Stripe from "stripe";
-import { eq } from "drizzle-orm";
-import { appUsers } from "../drizzle/schema";
+import type Stripe from "stripe";
+import { eq, and, sql } from "drizzle-orm";
+import { appUsers, stripeWebhookEvents, entitlementEvents } from "../drizzle/schema";
 import {
   getDb,
   getAppUserById,
@@ -32,17 +35,118 @@ import { getPlanBySlug, getPriceById, computeExpiryMsForPrice, defaultPriceOf } 
 import { applyPurchaseToPlanQuantity } from "./stripe/planProvisioning";
 import { syncDiscordRoleForUser } from "./discord/discordRoleSync";
 import { invalidateCachedAppUser } from "./dbCircuitBreaker";
+import { getStripe } from "./stripe/client";
+import { billingAlert } from "./_core/billingAlerts";
 import bcrypt from "bcryptjs";
 
-// ─── Stripe client ────────────────────────────────────────────────────────────
-let _stripe: Stripe | null = null;
-function getStripe(): Stripe {
-  if (!_stripe) {
-    const sk = process.env.STRIPE_SECRET_KEY;
-    if (!sk) throw new Error("[Stripe] STRIPE_SECRET_KEY is not set in environment");
-    _stripe = new Stripe(sk, { apiVersion: "2026-04-22.dahlia" });
+/**
+ * Discord role syncs are deferred until AFTER the webhook has been acknowledged.
+ * They are outbound HTTP calls; holding them inside the acknowledged path pushes
+ * the response toward Stripe's delivery timeout, and a timeout triggers a
+ * redelivery of an event we already fulfilled (WBHK-005).
+ */
+const deferredRoleSyncs: Array<() => Promise<void>> = [];
+function deferRoleSync(fn: () => Promise<void>): void {
+  deferredRoleSyncs.push(fn);
+}
+async function flushDeferredRoleSyncs(): Promise<void> {
+  const pending = deferredRoleSyncs.splice(0, deferredRoleSyncs.length);
+  for (const fn of pending) {
+    try { await fn(); } catch (err) {
+      console.warn(`[Stripe][RoleSync] deferred sync failed (non-fatal): ${err instanceof Error ? err.message : String(err)}`);
+    }
   }
-  return _stripe;
+}
+
+/**
+ * How long a webhook-created pending account stays claimable via its checkout
+ * session id. Exported so the setup procedure enforces the same window.
+ */
+export const PENDING_SETUP_TTL_MS = 72 * 60 * 60 * 1000;
+
+/**
+ * Slack added to a renewal's entitlement window. Stripe bills on calendar
+ * months (28–31 days) while the DB plan windows are exact day counts, so an
+ * unbuffered expiry locked paying subscribers out for up to a day before the
+ * renewal invoice fired (LIFE-002). It also covers webhook delivery lag.
+ */
+export const RENEWAL_GRACE_MS = 2 * 24 * 60 * 60 * 1000;
+
+/**
+ * Claim an event id (WBHK-001). Returns false when this event was already
+ * processed, in which case the caller must do nothing at all.
+ *
+ * The UNIQUE index on stripeEventId is the authority — we insert first and let
+ * a duplicate-key error mean "already handled", which is race-safe against two
+ * concurrent deliveries of the same event in a way a SELECT-then-INSERT is not.
+ */
+async function claimStripeEvent(event: Stripe.Event): Promise<boolean> {
+  const db = await getDb();
+  if (!db) throw new Error("[Stripe][Idempotency] database not available — cannot claim event");
+  try {
+    await db.insert(stripeWebhookEvents).values({
+      stripeEventId: event.id,
+      eventType: event.type,
+      livemode: event.livemode,
+      eventCreatedAt: event.created * 1000,
+      processedAt: Date.now(),
+      status: "processed",
+    });
+    return true;
+  } catch (err: unknown) {
+    const code = (err as { code?: string })?.code ?? "";
+    const msg = err instanceof Error ? err.message : String(err);
+    if (code === "ER_DUP_ENTRY" || /duplicate/i.test(msg)) return false;
+    throw err;
+  }
+}
+
+/**
+ * Out-of-order guard (WBHK-003). Stripe does not promise ordered delivery, and
+ * applying a stale `customer.subscription.updated` after a `deleted` silently
+ * restored a cancelled subscriber's access. Any subscription event older than
+ * the last one we applied for this user is ignored.
+ */
+export function isStaleEvent(user: { lastStripeEventAt?: number | null } | null | undefined, eventCreatedMs: number): boolean {
+  const watermark = user?.lastStripeEventAt ?? null;
+  return watermark != null && eventCreatedMs < watermark;
+}
+
+/**
+ * Append-only audit row for every entitlement change (OPS-002). Best-effort:
+ * the audit trail must never be the reason a fulfilment fails, but its absence
+ * is logged loudly because reconstructing "why did this user lose access" later
+ * depends on it.
+ */
+async function recordEntitlementEvent(params: {
+  userId: number;
+  stripeEventId: string | null;
+  eventType: string;
+  reason: string;
+  actor?: string;
+  before?: { hasAccess?: boolean | null; planId?: string | null; expiryDate?: number | null };
+  after?: { hasAccess?: boolean | null; planId?: string | null; expiryDate?: number | null };
+}): Promise<void> {
+  try {
+    const db = await getDb();
+    if (!db) return;
+    await db.insert(entitlementEvents).values({
+      userId: params.userId,
+      stripeEventId: params.stripeEventId,
+      eventType: params.eventType,
+      reason: params.reason,
+      actor: params.actor ?? "webhook",
+      beforeHasAccess: params.before?.hasAccess ?? null,
+      afterHasAccess: params.after?.hasAccess ?? null,
+      beforePlanId: params.before?.planId ?? null,
+      afterPlanId: params.after?.planId ?? null,
+      beforeExpiryDate: params.before?.expiryDate ?? null,
+      afterExpiryDate: params.after?.expiryDate ?? null,
+      createdAt: Date.now(),
+    });
+  } catch (err) {
+    console.error(`[Stripe][Audit] FAILED to record entitlement event userId=${params.userId} reason=${params.reason}: ${err instanceof Error ? err.message : String(err)}`);
+  }
 }
 
 // ─── DB helpers ───────────────────────────────────────────────────────────────
@@ -57,6 +161,13 @@ async function grantUserAccess(params: {
   stripeSubscriptionId: string;
   planId: string;
   expiryMs: number;
+  /** Stripe event id for the audit trail; null for non-webhook callers. */
+  stripeEventId?: string | null;
+  eventType?: string;
+  /** Raw Stripe subscription status, persisted so dunning states are visible. */
+  subscriptionStatus?: string | null;
+  /** event.created (ms) — stamped as the out-of-order watermark. */
+  eventCreatedMs?: number | null;
 }): Promise<void> {
   const tag = "[Stripe][DB][grantUserAccess]";
   const db = await getDb();
@@ -64,6 +175,8 @@ async function grantUserAccess(params: {
     console.error(`${tag} [VERIFY] FAIL — database not available`);
     throw new Error(`${tag} database not available — cannot grant access userId=${params.userId}`);
   }
+
+  const before = await getAppUserById(params.userId);
 
   console.log(`${tag} [STEP] Granting access userId=${params.userId} planId=${params.planId} expiryMs=${params.expiryMs}`);
   const updateValues: Partial<typeof appUsers.$inferInsert> = {
@@ -79,18 +192,36 @@ async function grantUserAccess(params: {
   } else {
     console.log(`${tag} [STATE] No stripeSubscriptionId provided — leaving existing value untouched userId=${params.userId}`);
   }
+  if (params.subscriptionStatus) updateValues.stripeSubscriptionStatus = params.subscriptionStatus;
+  if (params.eventCreatedMs) updateValues.lastStripeEventAt = params.eventCreatedMs;
+  // A fresh grant supersedes any earlier cancel-at-period-end intent; leaving it
+  // set made a brand-new subscription render as "cancel_scheduled" (LIFE-003).
+  updateValues.cancelAtPeriodEnd = false;
+
   await db.update(appUsers).set(updateValues).where(eq(appUsers.id, params.userId));
 
   invalidateAppUserByIdCache(params.userId);
   invalidateCachedAppUser(params.userId);
   console.log(`${tag} [OUTPUT] Access granted userId=${params.userId} expiry=${new Date(params.expiryMs).toISOString()}`);
 
-  // Discord role: only grant if account setup is complete
+  await recordEntitlementEvent({
+    userId: params.userId,
+    stripeEventId: params.stripeEventId ?? null,
+    eventType: params.eventType ?? "grant",
+    reason: "GRANT",
+    before: { hasAccess: before?.hasAccess ?? null, planId: before?.stripePlanId ?? null, expiryDate: before?.expiryDate ?? null },
+    after: { hasAccess: true, planId: params.planId, expiryDate: params.expiryMs },
+  });
+
+  // Discord role: only grant if account setup is complete. Deferred until after
+  // the webhook is acknowledged — see deferRoleSync (WBHK-005).
   const user = await getAppUserById(params.userId);
   if (user && !user.pendingSetup) {
-    console.log(`${tag} [STEP] pendingSetup=false — syncing Discord role userId=${params.userId}`);
-    const r = await syncDiscordRoleForUser(user, true);
-    console.log(`${tag} [STATE] Discord sync: action=${r.action} reason=${r.reason}`);
+    console.log(`${tag} [STATE] pendingSetup=false — Discord role sync queued userId=${params.userId}`);
+    deferRoleSync(async () => {
+      const r = await syncDiscordRoleForUser(user, true);
+      console.log(`${tag} [STATE] Discord sync: action=${r.action} reason=${r.reason}`);
+    });
   } else if (user?.pendingSetup) {
     console.log(`${tag} [STATE] pendingSetup=true — Discord role deferred until account setup`);
   }
@@ -101,25 +232,50 @@ async function grantUserAccess(params: {
  * Revoke subscription access by Stripe Customer ID.
  * Discord role is revoked immediately.
  */
-async function revokeUserAccessByCustomerId(stripeCustomerId: string): Promise<void> {
+async function revokeUserAccessByCustomerId(
+  stripeCustomerId: string,
+  opts: { stripeEventId?: string | null; eventType?: string; reason?: string; subscriptionStatus?: string | null; eventCreatedMs?: number | null } = {},
+): Promise<void> {
   const tag = "[Stripe][DB][revokeUserAccess]";
   const db = await getDb();
-  if (!db) { console.error(`${tag} [VERIFY] FAIL — database not available`); return; }
+  // MUST throw, not return: the caller turns a throw into a 5xx so Stripe
+  // redelivers. Silently returning here dropped revokes permanently (WBHK-002).
+  if (!db) {
+    console.error(`${tag} [VERIFY] FAIL — database not available`);
+    throw new Error(`${tag} database not available — cannot revoke access customer=${stripeCustomerId}`);
+  }
 
-  console.log(`${tag} [STEP] Revoking access stripeCustomerId=${stripeCustomerId}`);
+  // Read BEFORE the update so the audit row captures the prior state.
+  const user = await getAppUserByStripeCustomerId(stripeCustomerId);
+
+  console.log(`${tag} [STEP] Revoking access stripeCustomerId=${stripeCustomerId} reason=${opts.reason ?? "SUBSCRIPTION_DELETED"}`);
   await db.update(appUsers).set({
     hasAccess: false,
     stripeSubscriptionId: null,
     stripePlanId: null,
+    cancelAtPeriodEnd: false,
+    ...(opts.subscriptionStatus ? { stripeSubscriptionStatus: opts.subscriptionStatus } : {}),
+    ...(opts.eventCreatedMs ? { lastStripeEventAt: opts.eventCreatedMs } : {}),
   }).where(eq(appUsers.stripeCustomerId, stripeCustomerId));
 
-  const user = await getAppUserByStripeCustomerId(stripeCustomerId);
   if (user) {
     invalidateAppUserByIdCache(user.id);
     invalidateCachedAppUser(user.id);
-    console.log(`${tag} [STEP] Revoking Discord role userId=${user.id}`);
-    const r = await syncDiscordRoleForUser(user, false);
-    console.log(`${tag} [STATE] Discord revoke: action=${r.action} reason=${r.reason}`);
+    await recordEntitlementEvent({
+      userId: user.id,
+      stripeEventId: opts.stripeEventId ?? null,
+      eventType: opts.eventType ?? "revoke",
+      reason: opts.reason ?? "SUBSCRIPTION_DELETED",
+      before: { hasAccess: user.hasAccess, planId: user.stripePlanId ?? null, expiryDate: user.expiryDate ?? null },
+      after: { hasAccess: false, planId: null, expiryDate: user.expiryDate ?? null },
+    });
+    console.log(`${tag} [STATE] Discord role revoke queued userId=${user.id}`);
+    deferRoleSync(async () => {
+      const r = await syncDiscordRoleForUser(user, false);
+      console.log(`${tag} [STATE] Discord revoke: action=${r.action} reason=${r.reason}`);
+    });
+  } else {
+    console.warn(`${tag} [STATE] no app_user matched customer=${stripeCustomerId} — nothing to revoke`);
   }
   console.log(`${tag} [OUTPUT] Access revoked stripeCustomerId=${stripeCustomerId}`);
   console.log(`${tag} [VERIFY] PASS`);
@@ -139,6 +295,7 @@ async function createPendingUserFromCheckout(params: {
   stripeSubscriptionId: string;
   planId: string;
   expiryMs: number;
+  stripeEventId?: string | null;
 }): Promise<number | null> {
   const tag = "[Stripe][DB][createPendingUser]";
   const db = await getDb();
@@ -163,26 +320,72 @@ async function createPendingUserFromCheckout(params: {
     console.warn(`${tag} [STATE] Username collision — using: ${username}`);
   }
 
-  // [STEP 3] Check email collision — if email exists, grant access to existing account
-  const byEmail = await db.select({ id: appUsers.id }).from(appUsers).where(eq(appUsers.email, params.email)).limit(1);
+  // [STEP 3] Email collision.
+  //
+  // The email here is buyer-TYPED at Stripe checkout and is never verified, so
+  // it is not proof of identity. Attaching on a bare match let anyone who knew a
+  // subscriber's address rebind that account's Stripe customer — exposing the
+  // buyer's invoices, card last4 and billing address on the victim's billing
+  // tab, and pointing later revocations at the wrong row (STRIPE-001).
+  //
+  // Rule: attach ONLY when the matched account has no Stripe customer yet (the
+  // ordinary "beta user buys for the first time" case). If it already carries a
+  // DIFFERENT customer id, refuse, alert, and leave both rows untouched for an
+  // operator to resolve. Refusing is deliberate — retrying cannot fix a genuine
+  // identity conflict, so this must not become a Stripe retry loop.
+  const byEmail = await db
+    .select({ id: appUsers.id, stripeCustomerId: appUsers.stripeCustomerId })
+    .from(appUsers)
+    .where(eq(appUsers.email, params.email))
+    .limit(1);
   if (byEmail.length > 0) {
-    const existingId = byEmail[0].id;
-    console.warn(`${tag} [STATE] Email already exists userId=${existingId} — granting access to existing account`);
+    const existing = byEmail[0];
+    const existingCustomer = existing.stripeCustomerId ?? "";
+    if (existingCustomer && existingCustomer !== params.stripeCustomerId) {
+      console.error(
+        `${tag} [VERIFY] FAIL — customer-link conflict userId=${existing.id}: account already linked to a different Stripe customer. ` +
+        `Refusing to rebind; manual reconciliation required. sessionId=${params.sessionId}`
+      );
+      await recordEntitlementEvent({
+        userId: existing.id,
+        stripeEventId: params.stripeEventId ?? null,
+        eventType: "checkout.session.completed",
+        reason: "CUSTOMER_LINK_CONFLICT_REFUSED",
+        before: { hasAccess: null, planId: null, expiryDate: null },
+        after: { hasAccess: null, planId: null, expiryDate: null },
+      });
+      void billingAlert("CUSTOMER_LINK_CONFLICT", {
+        userId: existing.id,
+        sessionId: params.sessionId,
+        existingCustomer,
+        incomingCustomer: params.stripeCustomerId,
+        note: "Anonymous checkout matched an existing account by unverified email, but that account is linked to a different Stripe customer. Payment captured; entitlement NOT granted.",
+      });
+      return null;
+    }
+    console.warn(`${tag} [STATE] Email matches an account with no existing Stripe customer userId=${existing.id} — attaching`);
     await grantUserAccess({
-      userId: existingId,
+      userId: existing.id,
       stripeCustomerId: params.stripeCustomerId,
       stripeSubscriptionId: params.stripeSubscriptionId,
       planId: params.planId,
       expiryMs: params.expiryMs,
+      stripeEventId: params.stripeEventId ?? null,
+      eventType: "checkout.session.completed",
     });
-    return existingId;
+    return existing.id;
   }
 
   // [STEP 4] Create pending account with placeholder password
   const placeholderPw = `Pending_${Math.random().toString(36).slice(2, 12)}!`;
   const passwordHash = await bcrypt.hash(placeholderPw, 10);
 
-  await db.insert(appUsers).values({
+  // The setup claim expires: possession of a checkout session id is otherwise a
+  // permanent, unauthenticated right to set this account's email and password
+  // (AUTH-001). 72h is generous for a real buyer finishing signup.
+  const pendingSetupExpiresAt = Date.now() + PENDING_SETUP_TTL_MS;
+
+  const insertResult = await db.insert(appUsers).values({
     username,
     email: params.email,
     passwordHash,
@@ -197,17 +400,29 @@ async function createPendingUserFromCheckout(params: {
     pendingEmail: params.email,
     pendingUsername: username,
     pendingStripeSessionId: params.sessionId,
+    pendingSetupExpiresAt,
   });
 
-  // [STEP 5] Retrieve the new user's ID
-  const newUser = await db.select({ id: appUsers.id }).from(appUsers)
-    .where(eq(appUsers.pendingStripeSessionId, params.sessionId)).limit(1);
-  if (!newUser.length) {
-    console.error(`${tag} [VERIFY] FAIL — could not retrieve new user for sessionId=${params.sessionId}`);
-    return null;
+  // [STEP 5] Prefer the driver's insertId over re-selecting by a column we just
+  // wrote — the old lookup round-tripped through a non-unique column (LEDG-003).
+  let newUserId = Number((insertResult as unknown as { insertId?: number })?.insertId ?? 0);
+  if (!newUserId) {
+    const newUser = await db.select({ id: appUsers.id }).from(appUsers)
+      .where(eq(appUsers.pendingStripeSessionId, params.sessionId)).limit(1);
+    if (!newUser.length) {
+      console.error(`${tag} [VERIFY] FAIL — could not retrieve new user for sessionId=${params.sessionId}`);
+      return null;
+    }
+    newUserId = newUser[0].id;
   }
 
-  const newUserId = newUser[0].id;
+  await recordEntitlementEvent({
+    userId: newUserId,
+    stripeEventId: params.stripeEventId ?? null,
+    eventType: "checkout.session.completed",
+    reason: "PENDING_ACCOUNT_CREATED",
+    after: { hasAccess: true, planId: params.planId, expiryDate: params.expiryMs },
+  });
   console.log(`${tag} [OUTPUT] Pending account created userId=${newUserId} username=${username}`);
   console.log(`${tag} [STATE] pendingSetup=true — Discord role deferred until account setup`);
   console.log(`${tag} [VERIFY] PASS`);
@@ -256,6 +471,18 @@ async function processWebhookEvent(event: Stripe.Event): Promise<void> {
     console.log(`${tag} [STATE] Test-mode event (livemode=false) — verified & acknowledged; production fulfillment intentionally skipped`);
     return;
   }
+
+  // Exactly-once gate (WBHK-001). Stripe delivers at least once, and this
+  // handler deliberately returns 5xx on failure to invite redelivery — without
+  // this claim a retry re-ran every side effect, double-decrementing the
+  // limited-quantity counter and re-extending expiry from the new wall clock.
+  const claimed = await claimStripeEvent(event);
+  if (!claimed) {
+    console.log(`${tag} [STATE] Duplicate delivery — already processed; no-op`);
+    return;
+  }
+
+  const eventCreatedMs = event.created * 1000;
 
   switch (event.type) {
     case "checkout.session.completed": {
@@ -331,7 +558,10 @@ async function processWebhookEvent(event: Stripe.Event): Promise<void> {
         const userId = parseInt(userIdStr, 10);
         if (isNaN(userId)) { console.error(`${tag} [VERIFY] FAIL — invalid user_id="${userIdStr}"`); break; }
         console.log(`${tag} [STATE] Existing user path userId=${userId} plan=${plan}`);
-        await grantUserAccess({ userId, stripeCustomerId, stripeSubscriptionId, planId: plan, expiryMs });
+        await grantUserAccess({
+          userId, stripeCustomerId, stripeSubscriptionId, planId: plan, expiryMs,
+          stripeEventId: event.id, eventType: event.type, eventCreatedMs,
+        });
         console.log(`${tag} [OUTPUT] Fulfillment complete (existing user) userId=${userId}`);
       } else {
         // NEW USER PATH
@@ -363,6 +593,7 @@ async function processWebhookEvent(event: Stripe.Event): Promise<void> {
           stripeSubscriptionId,
           planId: plan,
           expiryMs,
+          stripeEventId: event.id,
         });
         if (newUserId) {
           console.log(`${tag} [OUTPUT] Fulfillment complete (new user) userId=${newUserId} plan=${plan}`);
@@ -391,7 +622,36 @@ async function processWebhookEvent(event: Stripe.Event): Promise<void> {
       console.log(`${tag}   metadata=${JSON.stringify(sub.metadata)}`);
 
       if (sub.status !== "active" && sub.status !== "trialing") {
-        console.log(`${tag} [STATE] status=${sub.status} — no access change`); break;
+        // LIFE-001: past_due / unpaid / paused previously vanished entirely —
+        // the user silently rode the expiry buffer and then hard-locked with a
+        // generic error. Persist the raw status so the billing UI can surface a
+        // payment problem and reconciliation can see it. Access is deliberately
+        // unchanged: Stripe is still retrying, and revocation stays tied to
+        // customer.subscription.deleted.
+        const statusCustomerId = typeof sub.customer === "string" ? sub.customer : (sub.customer as Stripe.Customer | null)?.id ?? "";
+        if (statusCustomerId) {
+          const statusDb = await getDb();
+          if (statusDb) {
+            await statusDb.update(appUsers)
+              .set({ stripeSubscriptionStatus: sub.status, lastStripeEventAt: eventCreatedMs })
+              .where(eq(appUsers.stripeCustomerId, statusCustomerId));
+            const su = await getAppUserByStripeCustomerId(statusCustomerId);
+            if (su) {
+              invalidateAppUserByIdCache(su.id);
+              invalidateCachedAppUser(su.id);
+              await recordEntitlementEvent({
+                userId: su.id,
+                stripeEventId: event.id,
+                eventType: event.type,
+                reason: `STATUS_${sub.status.toUpperCase()}`,
+                before: { hasAccess: su.hasAccess, planId: su.stripePlanId ?? null, expiryDate: su.expiryDate ?? null },
+                after: { hasAccess: su.hasAccess, planId: su.stripePlanId ?? null, expiryDate: su.expiryDate ?? null },
+              });
+            }
+          }
+        }
+        console.log(`${tag} [STATE] status=${sub.status} — access unchanged, status persisted`);
+        break;
       }
 
       const subUserIdStr = sub.metadata?.user_id;
@@ -401,10 +661,28 @@ async function processWebhookEvent(event: Stripe.Event): Promise<void> {
       const subUserId = parseInt(subUserIdStr, 10);
       if (isNaN(subUserId)) { console.error(`${tag} [VERIFY] FAIL — invalid user_id in sub metadata`); break; }
 
+      // Ordering guard: a stale "active" update delivered after a cancellation
+      // must not resurrect access (WBHK-003).
+      const subUserBefore = await getAppUserById(subUserId);
+      if (isStaleEvent(subUserBefore, eventCreatedMs)) {
+        console.warn(`${tag} [STATE] Stale event (created=${new Date(eventCreatedMs).toISOString()} < watermark=${new Date(subUserBefore!.lastStripeEventAt!).toISOString()}) — ignoring`);
+        break;
+      }
+
       const { slug: subPlan, expiryMs: subExpiryMs } = await resolvePlanExpiry(sub.metadata?.plan_id);
       const subCustomerId = typeof sub.customer === "string" ? sub.customer : (sub.customer as Stripe.Customer).id;
 
-      await grantUserAccess({ userId: subUserId, stripeCustomerId: subCustomerId, stripeSubscriptionId: sub.id, planId: subPlan, expiryMs: subExpiryMs });
+      await grantUserAccess({
+        userId: subUserId,
+        stripeCustomerId: subCustomerId,
+        stripeSubscriptionId: sub.id,
+        planId: subPlan,
+        expiryMs: subExpiryMs,
+        stripeEventId: event.id,
+        eventType: event.type,
+        subscriptionStatus: sub.status,
+        eventCreatedMs,
+      });
       console.log(`${tag} [OUTPUT] Subscription ${action} processed userId=${subUserId}`);
       console.log(`${tag} [VERIFY] PASS`);
       break;
@@ -414,8 +692,86 @@ async function processWebhookEvent(event: Stripe.Event): Promise<void> {
       const sub = event.data.object as Stripe.Subscription;
       console.log(`${tag} [INPUT] Subscription deleted sub_id=${sub.id} customer=${sub.customer}`);
       const customerId = typeof sub.customer === "string" ? sub.customer : (sub.customer as Stripe.Customer).id;
-      await revokeUserAccessByCustomerId(customerId);
+      await revokeUserAccessByCustomerId(customerId, {
+        stripeEventId: event.id,
+        eventType: event.type,
+        reason: "SUBSCRIPTION_DELETED",
+        subscriptionStatus: sub.status,
+        eventCreatedMs,
+      });
       console.log(`${tag} [OUTPUT] Access revoked stripeCustomerId=${customerId}`);
+      console.log(`${tag} [VERIFY] PASS`);
+      break;
+    }
+
+    // ── Money returned → entitlement must follow it (WBHK-004) ───────────────
+    // Previously both of these fell through to the default branch, so a
+    // refunded or disputing customer kept full access — permanently, for a
+    // lifetime purchase — and no dispute was recorded anywhere.
+    case "charge.refunded": {
+      const charge = event.data.object as Stripe.Charge;
+      const refundCustomerId = typeof charge.customer === "string" ? charge.customer : (charge.customer as Stripe.Customer | null)?.id ?? "";
+      const fullyRefunded = charge.amount_refunded >= charge.amount;
+      console.log(`${tag} [INPUT] charge=${charge.id} customer=${refundCustomerId || "(none)"} amount=${charge.amount} refunded=${charge.amount_refunded} full=${fullyRefunded}`);
+      if (!refundCustomerId) {
+        console.error(`${tag} [VERIFY] FAIL — refund has no customer; cannot map to an account`);
+        void billingAlert("REFUND_RECEIVED", { chargeId: charge.id, note: "Refund with no customer id — manual review required" });
+        break;
+      }
+      if (fullyRefunded) {
+        await revokeUserAccessByCustomerId(refundCustomerId, {
+          stripeEventId: event.id,
+          eventType: event.type,
+          reason: "CHARGE_REFUNDED",
+          eventCreatedMs,
+        });
+        console.log(`${tag} [OUTPUT] Access revoked after full refund customer=${refundCustomerId}`);
+      } else {
+        console.warn(`${tag} [STATE] Partial refund — access left intact, flagged for review`);
+      }
+      void billingAlert("REFUND_RECEIVED", {
+        chargeId: charge.id,
+        customerId: refundCustomerId,
+        amount: charge.amount,
+        amountRefunded: charge.amount_refunded,
+        fullyRefunded,
+      });
+      console.log(`${tag} [VERIFY] PASS`);
+      break;
+    }
+
+    case "charge.dispute.created": {
+      const dispute = event.data.object as Stripe.Dispute;
+      const disputeChargeId = typeof dispute.charge === "string" ? dispute.charge : (dispute.charge as Stripe.Charge | null)?.id ?? "";
+      let disputeCustomerId = "";
+      try {
+        if (disputeChargeId) {
+          const ch = await getStripe().charges.retrieve(disputeChargeId);
+          disputeCustomerId = typeof ch.customer === "string" ? ch.customer : (ch.customer as Stripe.Customer | null)?.id ?? "";
+        }
+      } catch (err) {
+        console.error(`${tag} [STATE] could not resolve customer for dispute: ${err instanceof Error ? err.message : String(err)}`);
+      }
+      console.log(`${tag} [INPUT] dispute=${dispute.id} charge=${disputeChargeId} customer=${disputeCustomerId || "(unresolved)"} amount=${dispute.amount} reason=${dispute.reason}`);
+      // A dispute is money clawed back pending evidence. Revoke immediately —
+      // continued consumption during a chargeback is unrecoverable loss — and
+      // alert so evidence can be submitted before Stripe's deadline.
+      if (disputeCustomerId) {
+        await revokeUserAccessByCustomerId(disputeCustomerId, {
+          stripeEventId: event.id,
+          eventType: event.type,
+          reason: "DISPUTE_OPENED",
+          eventCreatedMs,
+        });
+      }
+      void billingAlert("DISPUTE_OPENED", {
+        disputeId: dispute.id,
+        chargeId: disputeChargeId,
+        customerId: disputeCustomerId || null,
+        amount: dispute.amount,
+        reason: dispute.reason,
+        evidenceDueBy: dispute.evidence_details?.due_by ?? null,
+      });
       console.log(`${tag} [VERIFY] PASS`);
       break;
     }
@@ -427,13 +783,39 @@ async function processWebhookEvent(event: Stripe.Event): Promise<void> {
       if (invoiceCustomerId && invoice.billing_reason === "subscription_cycle") {
         const existingUser = await getAppUserByStripeCustomerId(invoiceCustomerId);
         if (existingUser) {
-          const { slug: renewPlan, expiryMs: renewExpiry } = await resolvePlanExpiry(existingUser.stripePlanId);
+          const { slug: renewPlan, expiryMs: fallbackExpiry } = await resolvePlanExpiry(existingUser.stripePlanId);
           const invoiceSubId = (() => {
             const s = (invoice as unknown as { parent?: { subscription_details?: { subscription?: string | Stripe.Subscription } } }).parent?.subscription_details?.subscription;
             return typeof s === "string" ? s : (s as Stripe.Subscription | undefined)?.id ?? existingUser.stripeSubscriptionId ?? "";
           })();
-          console.log(`${tag} [STATE] Renewal userId=${existingUser.id} plan=${renewPlan} newExpiry=${new Date(renewExpiry).toISOString()}`);
-          await grantUserAccess({ userId: existingUser.id, stripeCustomerId: invoiceCustomerId, stripeSubscriptionId: invoiceSubId, planId: renewPlan, expiryMs: renewExpiry });
+          // Anchor the entitlement window to the period Stripe actually billed,
+          // not to when this webhook happened to arrive (WBHK-006). Deriving it
+          // from Date.now() drifted a little every cycle and let a replayed or
+          // late invoice extend access for free. The grace buffer absorbs the
+          // gap between an exact 30-day window and a 31-day calendar month,
+          // which was locking paid subscribers out for a day (LIFE-002).
+          const periodEndSec =
+            (invoice as unknown as { lines?: { data?: Array<{ period?: { end?: number } }> } }).lines?.data?.[0]?.period?.end ??
+            (invoice as unknown as { period_end?: number }).period_end ??
+            null;
+          const renewExpiry = periodEndSec
+            ? periodEndSec * 1000 + RENEWAL_GRACE_MS
+            : fallbackExpiry;
+          console.log(
+            `${tag} [STATE] Renewal userId=${existingUser.id} plan=${renewPlan} newExpiry=${new Date(renewExpiry).toISOString()}` +
+            ` source=${periodEndSec ? "stripe_period_end+grace" : "plan_window_fallback"}`
+          );
+          await grantUserAccess({
+            userId: existingUser.id,
+            stripeCustomerId: invoiceCustomerId,
+            stripeSubscriptionId: invoiceSubId,
+            planId: renewPlan,
+            expiryMs: renewExpiry,
+            stripeEventId: event.id,
+            eventType: event.type,
+            subscriptionStatus: "active",
+            eventCreatedMs,
+          });
           console.log(`${tag} [OUTPUT] Renewal processed userId=${existingUser.id}`);
         }
       }
@@ -504,8 +886,12 @@ export function registerStripeWebhookRoute(app: Express): void {
         }
       }
       if (!event) {
+        // Log the library's reason, but do NOT echo it to the caller — it
+        // distinguishes wrong-secret from stale-timestamp from mangled-body,
+        // which is a free oracle for anyone probing the endpoint (WBHK-007).
         console.error(`${tag} Signature verification FAILED (tried ${secrets.length} secret(s)): ${lastErr}`);
-        return res.status(400).json({ error: "signature_verification_failed", detail: lastErr });
+        void billingAlert("WEBHOOK_SIGNATURE_FAILURE", { detail: lastErr, secretsTried: secrets.length });
+        return res.status(400).json({ error: "signature_verification_failed" });
       }
 
       console.log(`${tag} Signature verified ✓ event_id=${event.id} type=${event.type}`);
@@ -520,19 +906,34 @@ export function registerStripeWebhookRoute(app: Express): void {
       // these are awaited and a failure yields a 5xx instead of the default
       // 200 so Stripe retries. Every other event type (including unknown
       // types) keeps the original fire-and-forget 200 behavior unchanged.
-      const GRANT_EVENT_TYPES = new Set<string>([
+      // Every event that can CHANGE ENTITLEMENT is awaited and answered 5xx on
+      // failure so Stripe redelivers. Revokes are in this set alongside grants:
+      // a dropped revoke used to be acknowledged 200 and lost forever, leaving a
+      // cancelled, refunded or disputing customer with access until their expiry
+      // date — up to a year, or indefinitely on a lifetime row (WBHK-002).
+      const ACCESS_CHANGING_EVENT_TYPES = new Set<string>([
         "checkout.session.completed",
         "invoice.paid",
         "customer.subscription.created",
         "customer.subscription.updated",
+        "customer.subscription.deleted",
+        "charge.refunded",
+        "charge.dispute.created",
       ]);
 
-      if (GRANT_EVENT_TYPES.has(event.type)) {
+      if (ACCESS_CHANGING_EVENT_TYPES.has(event.type)) {
         processWebhookEvent(event).then(
-          () => res.status(200).json({ received: true }),
+          () => {
+            res.status(200).json({ received: true });
+            // Outbound Discord calls run only AFTER the acknowledgement, so a
+            // slow third party can never push us past Stripe's delivery timeout
+            // and trigger a redelivery of work we already committed (WBHK-005).
+            void flushDeferredRoleSyncs();
+          },
           (err: unknown) => {
             const msg = err instanceof Error ? err.message : String(err);
-            console.error(`${tag} Grant processing FAILED for ${event.id} (${event.type}) — responding 5xx so Stripe retries: ${msg}`);
+            console.error(`${tag} Access-changing processing FAILED for ${event.id} (${event.type}) — responding 5xx so Stripe retries: ${msg}`);
+            void billingAlert("WEBHOOK_PROCESSING_FAILURE", { eventId: event.id, eventType: event.type, detail: msg });
             res.status(500).json({ error: "processing_failed" });
           }
         );
@@ -540,10 +941,13 @@ export function registerStripeWebhookRoute(app: Express): void {
       }
 
       res.status(200).json({ received: true });
-      processWebhookEvent(event).catch((err: unknown) => {
-        const msg = err instanceof Error ? err.message : String(err);
-        console.error(`${tag} Async processing error for ${event.id}: ${msg}`);
-      });
+      processWebhookEvent(event)
+        .then(() => flushDeferredRoleSyncs())
+        .catch((err: unknown) => {
+          const msg = err instanceof Error ? err.message : String(err);
+          console.error(`${tag} Async processing error for ${event.id}: ${msg}`);
+          void billingAlert("WEBHOOK_PROCESSING_FAILURE", { eventId: event.id, eventType: event.type, detail: msg, nonBlocking: true });
+        });
     }
   );
   console.log("[Stripe] Webhook route registered at POST /api/stripe/webhook");

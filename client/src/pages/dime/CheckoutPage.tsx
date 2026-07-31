@@ -61,6 +61,7 @@ interface PlanCopy {
   perDay?: string;
   /** v2 ladder rail rows — legacy plans keep their existing compact rail. */
   modelAccess?: string;
+  /** Withheld until the credit ledger grants and meters credits (PROD-001). */
   credits?: string;
   features?: string[];
   payLabel: string;
@@ -94,11 +95,9 @@ const PLAN_COPY: Record<PlanId, PlanCopy> = {
     period: "/month",
     perDay: "≈ $3.30 / day",
     modelAccess: "Standard + Pro Analyst",
-    credits: "1,000 / mo",
     features: [
       "Full AI Model Projections board — every game, priced",
       "Dime Chat — Standard + Pro Analyst (Sonnet + Opus)",
-      "1,000 AI Analyst credits / month",
       "Live edge grades, honest PASS signals",
     ],
     payLabel: "Start Pro — $99/mo",
@@ -113,11 +112,9 @@ const PLAN_COPY: Record<PlanId, PlanCopy> = {
     period: "/month",
     perDay: "≈ $8.30 / day",
     modelAccess: "Pro + MAX (capped)",
-    credits: "3,000 / mo",
     features: [
       "Everything in Pro",
       "MAX Analyst access — monthly cap",
-      "3,000 AI Analyst credits / month",
       "Priority access to new model markets",
     ],
     payLabel: "Start Sharp — $249/mo",
@@ -132,11 +129,9 @@ const PLAN_COPY: Record<PlanId, PlanCopy> = {
     period: "/month",
     perDay: "≈ $16.63 / day",
     modelAccess: "Full MAX",
-    credits: "8,000 / mo",
     features: [
       "Everything in Sharp",
       "Full MAX Analyst access — no cap",
-      "8,000 AI Analyst credits / month",
       "Early access to new markets and model releases",
     ],
     payLabel: "Start Operator — $499/mo",
