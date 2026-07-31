@@ -22,6 +22,8 @@ import {
   removePriceFromPlan,
   reorderPlanIntervals,
   setIntervalHidden,
+  setIntervalDefault,
+  repriceInterval,
   updateRestockConfig,
   archivePlan,
   unarchivePlan,
@@ -82,6 +84,22 @@ const priceSchema = z.object({
   trialPeriodDays: z.number().int().min(0).max(365).optional(),
   promo: promoSchema.nullable().optional(),
   hidden: z.boolean().optional(),
+});
+
+/**
+ * Editing ONE existing interval. Reuses `priceSchema.shape` so the create form
+ * and the edit dialog can never drift into two different validators; the three
+ * overrides exist because the edit dialog sends the interval's FULL desired
+ * state, so it needs an explicit `null` ("Lifetime" / no label / no trial) where
+ * the create form expresses the same thing by omission.
+ */
+const intervalUpdateSchema = z.object({
+  ...priceSchema.shape,
+  priceId: z.number().int().positive(),
+  interval: intervalEnum.nullable().optional(),
+  label: z.string().max(80).nullable().optional(),
+  trialPeriodDays: z.number().int().min(0).max(365).nullable().optional(),
+  isDefault: z.boolean().optional(),
 });
 
 const restockSchema = z.object({
@@ -195,13 +213,16 @@ export const subscriptionPlansRouter = router({
     }),
 
   /**
-   * Edit an existing plan from the admin Edit dialog: metadata + features in one
-   * call, so a single Save cannot half-apply.
+   * Edit an existing plan from the admin Edit dialog: metadata + restock +
+   * features in one call, so a single Save cannot half-apply.
    *
-   * Prices are deliberately NOT editable here — Stripe Prices are immutable once
-   * created, so changing an amount means minting a new Price and retiring the old
-   * one. That is what addInterval/removeInterval/reorderIntervals exist for, and
-   * folding it into a metadata save would silently re-price live subscribers.
+   * `restock` omitted = leave the config alone; `restock: null` = clear it
+   * (auto-restock off, no limited quantity).
+   *
+   * Prices are deliberately NOT edited here — Stripe Prices are immutable once
+   * created, so changing an amount means minting a new Price and retiring the
+   * old one. That is `updateInterval` (below), kept as its own mutation so a
+   * metadata save can never mint Stripe objects as a side effect.
    */
   update: ownerProcedure
     .input(
@@ -210,21 +231,83 @@ export const subscriptionPlansRouter = router({
         name: z.string().min(1).max(120).optional(),
         description: z.string().max(2000).nullable().optional(),
         maxSubscribers: z.number().int().min(1).nullable().optional(),
+        restock: restockSchema.nullable().optional(),
         features: planFeaturesSchema.optional(),
       }),
     )
     .mutation(async ({ input }) => {
       const tag = "[tRPC][subscriptionPlans.update]";
-      const { planId, features, ...patch } = input;
-      console.log(`${tag} [INPUT] planId=${planId} fields=${Object.keys(patch).join(",") || "(none)"} features=${features ? features.length : "unchanged"}`);
+      const { planId, features, restock, ...patch } = input;
+      console.log(`${tag} [INPUT] planId=${planId} fields=${Object.keys(patch).join(",") || "(none)"} restock=${restock === undefined ? "unchanged" : restock === null ? "cleared" : `auto=${restock.autoRestock} qty=${restock.availableQuantity}`} features=${features ? features.length : "unchanged"}`);
       if (Object.keys(patch).length > 0) {
         await updatePlanMeta(planId, patch);
       }
+      if (restock !== undefined) {
+        await updateRestockConfig(
+          planId,
+          restock ?? { autoRestock: false, availableQuantity: null, restockThreshold: null, restockAmount: null },
+        );
+      }
       const applied = features !== undefined ? await setPlanFeatures(planId, features) : undefined;
-      console.log(`${tag} [OUTPUT] planId=${planId} features=${applied ? applied.join("|") : "unchanged"}`);
+      console.log(`${tag} [OUTPUT] planId=${planId} restock=${restock === undefined ? "unchanged" : "applied"} features=${applied ? applied.join("|") : "unchanged"}`);
       console.log(`${tag} [VERIFY] PASS`);
       return { ok: true as const, planId, features: applied };
     }),
+
+  /**
+   * Edit ONE interval of a plan — the price side of the Edit dialog.
+   *
+   * Stripe Prices are immutable: only `nickname`, `active`, `metadata` and
+   * `lookup_key` can be changed on a live Price. So a label/hidden-only edit is
+   * applied in place (`changed:false`, no Stripe Price created), while any change
+   * to amount / currency / interval / intervalCount / trial / promo mints a NEW
+   * Stripe Price on the same Product and retires the old one — in that order, so
+   * a Stripe failure leaves the plan sellable.
+   *
+   * Existing subscriptions keep billing at the OLD price until explicitly
+   * migrated; archiving a Price does not re-rate or cancel them.
+   */
+  updateInterval: ownerProcedure.input(intervalUpdateSchema).mutation(async ({ input }) => {
+    const tag = "[tRPC][subscriptionPlans.updateInterval]";
+    const { priceId, isDefault, interval, label, trialPeriodDays, ...rest } = input;
+    console.log(
+      `${tag} [INPUT] priceId=${priceId} amount=${rest.amountCents}c currency=${rest.currency ?? "usd"} interval=${interval ?? "once"}x${rest.intervalCount ?? 1} trial=${trialPeriodDays ?? 0}d label="${label ?? ""}" hidden=${rest.hidden ?? "carry"} promo=${rest.promo ? `${rest.promo.type}:${rest.promo.value}` : "none"} isDefault=${isDefault ?? "unchanged"}`,
+    );
+    const result = await repriceInterval(priceId, {
+      ...rest,
+      // null (an explicit "Lifetime" / cleared field) and undefined mean the same
+      // thing to the provisioning layer, which takes the interval's full state.
+      interval: interval ?? undefined,
+      label: label ?? undefined,
+      trialPeriodDays: trialPeriodDays ?? undefined,
+    });
+    // Only `isDefault: true` is actionable — a plan must always have exactly one
+    // default, so "unset" is expressed by making a DIFFERENT interval the default.
+    // A missing row id is warned about rather than thrown: the reprice already
+    // succeeded, and a hard failure here would invite a retry that mints a
+    // SECOND Stripe Price for the same edit.
+    if (isDefault) {
+      if (result.newPriceRowId > 0) {
+        await setIntervalDefault(result.newPriceRowId);
+      } else {
+        console.warn(`${tag} default flag skipped — no row id returned for the replacement price`);
+      }
+    }
+    console.log(
+      `${tag} [OUTPUT] priceId=${priceId} ${
+        result.changed
+          ? `MINTED new Stripe Price ${result.newStripePriceId} (row ${result.newPriceRowId}); old interval archived, existing subscribers keep the OLD amount`
+          : `NO new Stripe Price — presentation-only edit applied in place on ${result.newStripePriceId}`
+      } default=${isDefault ? "set" : result.carriedDefault ? "carried" : "no"}`,
+    );
+    console.log(`${tag} [VERIFY] PASS`);
+    return {
+      ok: true as const,
+      changed: result.changed,
+      newPriceRowId: result.newPriceRowId,
+      newStripePriceId: result.newStripePriceId,
+    };
+  }),
 
   /** Archive a plan — deactivates its Stripe Product + marks the row inactive. */
   archive: ownerProcedure

@@ -14,8 +14,11 @@
  *
  * Every plan also carries a set of feature keys from shared/planFeatures.ts,
  * picked in the create/edit modals and rendered as chips on the card. Edit
- * reopens the plan in a pre-filled modal for details + features; pricing stays
- * on the card because Stripe prices are immutable.
+ * reopens the plan in a pre-filled modal where EVERY field is editable —
+ * details, features, inventory/restock, and each interval's price, cadence,
+ * label, trial, promo, visibility and default flag. Stripe Prices are immutable,
+ * so a repriced interval mints a NEW Stripe price server-side and retires the
+ * old one; the dialog says so next to the pricing controls.
  *
  * Auth: CLIENT (cosmetic) half of the owner lockdown — the real boundary is the
  * server-verified ownerProcedure on EVERY subscriptionPlans procedure.
@@ -57,8 +60,25 @@ import { useAppAuth } from "@/_core/hooks/useAppAuth";
 import { trpc } from "@/lib/trpc";
 import { AdminShell } from "@/pages/admin/AdminShell";
 import { IntervalPicker } from "@/pages/admin/IntervalPicker";
-import { DEFAULT_INTERVAL, buildPlanUpdateInput, planEditDraftFrom, toggleFeatureKey } from "@/pages/admin/planTypes";
-import type { StoredPlan, StoredPrice, IntervalValue, PromoType, BillingInterval, PlanEditDraft } from "@/pages/admin/planTypes";
+import {
+  DEFAULT_INTERVAL,
+  buildIntervalUpdateInput,
+  buildPlanUpdateInput,
+  planEditDraftFrom,
+  removeIntervalDraft,
+  setDefaultIntervalKey,
+  toggleFeatureKey,
+} from "@/pages/admin/planTypes";
+import type {
+  StoredPlan,
+  StoredPrice,
+  IntervalFormDraft,
+  IntervalEditDraft,
+  IntervalUpdateInput,
+  PromoType,
+  BillingInterval,
+  PlanEditDraft,
+} from "@/pages/admin/planTypes";
 import { PLAN_FEATURES, normalizePlanFeatures, planFeatureLabel } from "@shared/planFeatures";
 import type { PlanFeatureKey } from "@shared/planFeatures";
 import { useDialogFocus } from "@/hooks/useDialogFocus";
@@ -67,17 +87,12 @@ type PlanWithCount = StoredPlan & { subscriberCount: number };
 
 // ─── Draft model ─────────────────────────────────────────────────────────────
 
-interface IntervalDraft {
-  key: string;
-  price: string; // dollars
-  interval: IntervalValue;
-  trialDays: string;
-  hidden: boolean;
-  promoOn: boolean;
-  promoType: PromoType;
-  promoValue: string; // percent (int) or dollars
-  promoCode: string;
-}
+/**
+ * The create forms' per-interval row state. Defined in planTypes.ts (pure, so
+ * the Edit modal's builders can be unit-tested); aliased here because the rest
+ * of this file has always called it IntervalDraft.
+ */
+type IntervalDraft = IntervalFormDraft;
 
 function blankInterval(): IntervalDraft {
   return {
@@ -241,15 +256,33 @@ function IntervalFields({
   value,
   onChange,
   oneTime = false,
+  displayLabel,
 }: {
   value: IntervalDraft;
   onChange: (patch: Partial<IntervalDraft>) => void;
   oneTime?: boolean;
+  /** Edit Plan modal only — the interval's customer-facing display label. */
+  displayLabel?: { value: string; onChange: (next: string) => void };
 }) {
   // A "Lifetime" cadence is a single payment — no free-trial field applies.
   const lifetime = value.interval.interval === "lifetime";
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      {displayLabel && (
+        <div className="flex flex-col gap-1.5">
+          <label className={labelClass}>
+            Label <span className="normal-case tracking-normal">(optional)</span>
+          </label>
+          <input
+            type="text"
+            value={displayLabel.value}
+            onChange={(e) => displayLabel.onChange(e.target.value)}
+            placeholder="Most popular"
+            className={inputClass}
+          />
+        </div>
+      )}
+
       <div className="flex flex-col gap-1.5">
         <label className={labelClass}>Price (USD)</label>
         <input
@@ -789,48 +822,191 @@ function CreatePersonalizedModal({ onClose }: { onClose: () => void }) {
   );
 }
 
-// ─── Edit Plan modal (metadata + features) ───────────────────────────────────
+// ─── Edit Plan modal (every field on the plan) ───────────────────────────────
+
+/** A brand-new interval row added inside the Edit modal — no Stripe price yet. */
+function blankEditInterval(): IntervalEditDraft {
+  return { ...blankInterval(), priceId: null, label: "", isDefault: false };
+}
+
+/** Whatever a rejected mutation threw, as text for the per-row error list. */
+function errText(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
 
 /**
- * EditPlanModal — the create modal's twin, pre-filled from an existing plan.
+ * EditPlanModal — the create modal's twin, pre-filled from an existing plan, and
+ * the one place EVERY field on a plan can be changed: details, features,
+ * inventory/restock, and each interval's price, cadence, label, trial, promo,
+ * visibility and default flag.
  *
- * Scope is deliberately metadata + features. Pricing is NOT editable here: a
- * plan's intervals are Stripe prices, which are immutable once created, so they
- * are managed on the card through addInterval / removeInterval /
- * setIntervalHidden / reorderIntervals. Inventory (available quantity, restock)
- * is shown read-only for the same reason — subscriptionPlans.update carries
- * name, description, maxSubscribers and features only.
+ * Pricing carries a Stripe constraint the dialog states inline rather than
+ * hides: a Stripe Price is immutable. Re-pricing an interval makes the server
+ * mint a NEW price and retire the old one (`changed: true` in the result), and
+ * anyone already subscribed keeps the price they bought until they are migrated.
+ * Save surfaces that count in the toast so the behaviour is never silent.
+ *
+ * Save fans out in order — update (details + features + restock) →
+ * removeInterval → updateInterval → addInterval → reorderIntervals. Every
+ * interval is validated up front, and a failure after that is attributed to the
+ * row it came from instead of aborting the rest of the edit.
  */
 function EditPlanModal({ plan, onClose }: { plan: StoredPlan; onClose: () => void }) {
   const utils = trpc.useUtils();
+  const invalidate = () => utils.subscriptionPlans.list.invalidate();
   const [draft, setDraft] = useState<PlanEditDraft>(() => planEditDraftFrom(plan));
-  const [error, setError] = useState<string | null>(null);
+  const [removedPriceIds, setRemovedPriceIds] = useState<number[]>([]);
+  const [errors, setErrors] = useState<string[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
 
-  const update = trpc.subscriptionPlans.update.useMutation({
-    onSuccess: () => {
-      utils.subscriptionPlans.list.invalidate();
-      toast.success("Plan updated", { description: plan.slug });
-      onClose();
-    },
-    onError: (err) => setError(err.message),
-  });
+  const oneTime = plan.planType === "one_time";
+  /** The prices as the modal opened on them — buildIntervalUpdateInput's anchor. */
+  const priceById = useMemo(() => new Map(plan.prices.map((p) => [p.id, p])), [plan.prices]);
+  /** Opening order of the live intervals; a reorder only ships when it differs. */
+  const openingOrder = useMemo(() => plan.prices.filter((p) => p.active).map((p) => p.id), [plan.prices]);
+
+  // No onError handlers: submit drives these with mutateAsync so it can attribute
+  // each failure to its row. onSuccess invalidates the list, as the create and
+  // archive mutations do.
+  const update = trpc.subscriptionPlans.update.useMutation({ onSuccess: invalidate });
+  const updateInterval = trpc.subscriptionPlans.updateInterval.useMutation({ onSuccess: invalidate });
+  const addInterval = trpc.subscriptionPlans.addInterval.useMutation({ onSuccess: invalidate });
+  const removeInterval = trpc.subscriptionPlans.removeInterval.useMutation({ onSuccess: invalidate });
+  const reorder = trpc.subscriptionPlans.reorderIntervals.useMutation({ onSuccess: invalidate });
 
   function patch(p: Partial<PlanEditDraft>) {
     setDraft((d) => ({ ...d, ...p }));
   }
 
-  function submit(e: FormEvent) {
-    e.preventDefault();
-    setError(null);
-    const built = buildPlanUpdateInput(plan.id, draft);
-    if (typeof built === "string") {
-      setError(built);
-      return;
-    }
-    update.mutate(built);
+  function patchInterval(key: string, p: Partial<IntervalEditDraft>) {
+    setDraft((d) => ({ ...d, intervals: d.intervals.map((iv) => (iv.key === key ? { ...iv, ...p } : iv)) }));
   }
 
-  const readOnlyInput = `${inputClass} font-mono disabled:cursor-not-allowed disabled:opacity-60`;
+  /** Remove a row from the form; an existing price is retired on save. */
+  function removeRow(iv: IntervalEditDraft) {
+    if (draft.intervals.length <= 1) return;
+    setDraft((d) => ({ ...d, intervals: removeIntervalDraft(d.intervals, iv.key) }));
+    if (iv.priceId != null) setRemovedPriceIds((ids) => [...ids, iv.priceId as number]);
+  }
+
+  function dropAt(index: number) {
+    if (dragIndex != null && dragIndex !== index) {
+      setDraft((d) => ({ ...d, intervals: moveItem(d.intervals, dragIndex, index) }));
+    }
+    setDragIndex(null);
+  }
+
+  /** The name an error message uses for a row — its label, else its position. */
+  const rowLabel = (iv: IntervalEditDraft, i: number) => iv.label.trim() || `Interval ${i + 1}`;
+
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    setErrors([]);
+
+    const built = buildPlanUpdateInput(plan.id, draft);
+    if (typeof built === "string") {
+      setErrors([built]);
+      return;
+    }
+
+    // Validate every interval BEFORE anything is mutated: a typo in row 3 must
+    // not leave rows 1–2 already saved against a dialog the admin then cancels.
+    const updates: { label: string; input: IntervalUpdateInput }[] = [];
+    const adds: { label: string; price: PricePayload }[] = [];
+    const invalid: string[] = [];
+    draft.intervals.forEach((iv, i) => {
+      const label = rowLabel(iv, i);
+      if (iv.priceId == null) {
+        const price = buildPricePayload(iv, label, !oneTime);
+        if (typeof price === "string") invalid.push(price);
+        else adds.push({ label, price });
+        return;
+      }
+      const price = priceById.get(iv.priceId);
+      if (!price) {
+        invalid.push(`${label}: this interval is no longer on the plan — reopen the dialog.`);
+        return;
+      }
+      const input = buildIntervalUpdateInput(price, iv, label);
+      if (typeof input === "string") invalid.push(input);
+      else updates.push({ label, input });
+    });
+    if (invalid.length > 0) {
+      setErrors(invalid);
+      return;
+    }
+
+    setSaving(true);
+
+    // Plan details are the one all-or-nothing step: if they fail there is nothing
+    // meaningful to attribute a per-interval error to.
+    try {
+      await update.mutateAsync(built);
+    } catch (err) {
+      setSaving(false);
+      setErrors([`Plan details: ${errText(err)}`]);
+      return;
+    }
+
+    const failed: string[] = [];
+    let repriced = 0;
+
+    for (const priceId of removedPriceIds) {
+      try {
+        await removeInterval.mutateAsync({ priceId });
+      } catch (err) {
+        failed.push(`Removing interval #${priceId}: ${errText(err)}`);
+      }
+    }
+    for (const row of updates) {
+      try {
+        const result = await updateInterval.mutateAsync(row.input);
+        if (result.changed) repriced += 1;
+      } catch (err) {
+        failed.push(`${row.label}: ${errText(err)}`);
+      }
+    }
+    for (const row of adds) {
+      try {
+        await addInterval.mutateAsync({ planId: plan.id, price: row.price });
+      } catch (err) {
+        failed.push(`${row.label}: ${errText(err)}`);
+      }
+    }
+
+    // Reorder only the rows that still have a Stripe price, and only when the
+    // admin actually dragged them out of the order the dialog opened in.
+    const keptOrder = draft.intervals.flatMap((iv) => (iv.priceId == null ? [] : [iv.priceId]));
+    const expectedOrder = openingOrder.filter((id) => !removedPriceIds.includes(id));
+    if (keptOrder.length > 1 && keptOrder.join(",") !== expectedOrder.join(",")) {
+      try {
+        await reorder.mutateAsync({ planId: plan.id, orderedPriceIds: keptOrder });
+      } catch (err) {
+        failed.push(`Reordering intervals: ${errText(err)}`);
+      }
+    }
+
+    setSaving(false);
+
+    if (failed.length > 0) {
+      setErrors(failed);
+      toast.error("Some pricing changes did not save", {
+        description: `Plan details saved. ${failed.length} of ${
+          updates.length + adds.length + removedPriceIds.length
+        } pricing changes failed — see the dialog.`,
+      });
+      return;
+    }
+
+    toast.success("Plan updated", {
+      description:
+        repriced > 0
+          ? `${plan.slug} · ${repriced} new Stripe price${repriced === 1 ? "" : "s"} created; existing subscribers stay on the old price until migrated.`
+          : plan.slug,
+    });
+    onClose();
+  }
 
   return (
     <Modal title="Edit plan" icon={<Pencil className="h-5 w-5 text-muted-foreground" aria-hidden="true" />} onClose={onClose}>
@@ -869,63 +1045,193 @@ function EditPlanModal({ plan, onClose }: { plan: StoredPlan; onClose: () => voi
           />
         </div>
 
-        {/* Pricing: read-only pointer back to the card, which owns the interval mutations. */}
-        <div className="rounded-lg border border-border bg-card p-3 sm:p-4">
-          <span className={labelClass}>Pricing options</span>
-          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            Stripe prices are immutable, so intervals are added, hidden, reordered and removed on the plan card —
-            not here. This form saves plan details and features only.
+        {/* Pricing — fully editable, with the Stripe immutability contract stated in place. */}
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <span className={labelClass}>Pricing options</span>
+            <button
+              type="button"
+              onClick={() => setDraft((d) => ({ ...d, intervals: [...d.intervals, blankEditInterval()] }))}
+              className={chipBtn}
+            >
+              <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+              Add interval
+            </button>
+          </div>
+
+          <p className="rounded-lg border border-border bg-card px-3 py-2.5 text-xs leading-relaxed text-muted-foreground">
+            <span className="font-semibold text-foreground">Stripe prices can’t be edited.</span> Changing an amount,
+            currency, cadence or interval count creates a new Stripe price and retires the old one — everyone already
+            subscribed keeps the price they bought until you migrate them. Label, trial, promo, visibility and the
+            default flag change in place.
           </p>
+
+          <div className="flex flex-col gap-4">
+            {draft.intervals.map((iv, i) => (
+              <div
+                key={iv.key}
+                draggable
+                onDragStart={() => setDragIndex(i)}
+                onDragOver={(e: DragEvent) => e.preventDefault()}
+                onDrop={(e: DragEvent) => {
+                  e.preventDefault();
+                  dropAt(i);
+                }}
+                onDragEnd={() => setDragIndex(null)}
+                className={`rounded-lg border border-border bg-card p-3 sm:p-4 ${iv.hidden ? "opacity-60" : ""} ${
+                  dragIndex === i ? "ring-2 ring-primary" : ""
+                }`}
+              >
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                  <span className="flex items-center gap-2">
+                    <GripVertical className="h-4 w-4 cursor-grab text-muted-foreground active:cursor-grabbing" aria-hidden="true" />
+                    <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+                      Interval {i + 1}
+                    </span>
+                    {iv.priceId == null && (
+                      <span className="rounded-full border border-primary px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wider text-primary">
+                        New
+                      </span>
+                    )}
+                  </span>
+                  <span className="flex items-center gap-2">
+                    {/* Radio, not a checkbox: exactly one interval is the default price. */}
+                    <label
+                      title={
+                        iv.priceId == null
+                          ? "Save this interval first, then make it the default."
+                          : "The price customers get by default"
+                      }
+                      className={`inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-wider transition-colors duration-150 ${
+                        iv.isDefault ? "text-primary" : "text-muted-foreground"
+                      } ${iv.priceId == null ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`}
+                    >
+                      <input
+                        type="radio"
+                        name={`default-interval-${plan.id}`}
+                        checked={iv.isDefault}
+                        disabled={iv.priceId == null}
+                        onChange={() => setDraft((d) => ({ ...d, intervals: setDefaultIntervalKey(d.intervals, iv.key) }))}
+                        className="h-3.5 w-3.5 accent-[var(--primary)]"
+                      />
+                      Default
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => patchInterval(iv.key, { hidden: !iv.hidden })}
+                      aria-pressed={iv.hidden}
+                      title={iv.hidden ? "Hidden from customers — click to show" : "Visible — click to hide"}
+                      className="cursor-pointer rounded-md p-1.5 text-muted-foreground transition-colors duration-150 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                    >
+                      {iv.hidden ? <EyeOff className="h-4 w-4" aria-hidden="true" /> : <Eye className="h-4 w-4" aria-hidden="true" />}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => removeRow(iv)}
+                      disabled={draft.intervals.length === 1}
+                      title={draft.intervals.length === 1 ? "A plan needs at least one interval" : "Remove interval"}
+                      aria-label="Remove interval"
+                      className="cursor-pointer rounded-md p-1.5 text-muted-foreground transition-colors duration-150 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      <X className="h-4 w-4" aria-hidden="true" />
+                    </button>
+                  </span>
+                </div>
+                <IntervalFields
+                  value={iv}
+                  onChange={(p) => patchInterval(iv.key, p)}
+                  oneTime={oneTime}
+                  displayLabel={{ value: iv.label, onChange: (label) => patchInterval(iv.key, { label }) }}
+                />
+              </div>
+            ))}
+          </div>
         </div>
 
-        {/* Inventory: pre-filled from the plan but not part of the update contract. */}
+        {/* Inventory — the limited-quantity / auto-restock FOMO loop, editable. */}
         <div className="rounded-lg border border-border bg-card p-3 sm:p-4">
-          <span className="flex items-center gap-1.5 text-sm font-medium text-foreground">
-            <Package className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-            Limited quantity
-            <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-              {draft.limitedQuantity ? "· on" : "· off"}
+          <label className="flex cursor-pointer items-center gap-2.5">
+            <input
+              type="checkbox"
+              checked={draft.limitedQuantity}
+              onChange={(e) => patch({ limitedQuantity: e.target.checked })}
+              className="h-4 w-4 accent-[var(--primary)]"
+            />
+            <span className="flex items-center gap-1.5 text-sm font-medium text-foreground">
+              <Package className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+              Limited quantity
             </span>
-          </span>
+          </label>
           {draft.limitedQuantity ? (
             <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
               <div className="flex flex-col gap-1.5">
                 <label className={labelClass}>Available quantity</label>
-                <input type="number" value={draft.availableQuantity} disabled className={readOnlyInput} />
+                <input
+                  type="number"
+                  min={0}
+                  value={draft.availableQuantity}
+                  onChange={(e) => patch({ availableQuantity: e.target.value })}
+                  placeholder="5"
+                  className={`${inputClass} font-mono`}
+                />
               </div>
               <div className="flex items-end">
-                <span className="pb-2.5 text-sm text-muted-foreground">
-                  Auto restock: {draft.autoRestock ? "on" : "off"}
-                </span>
+                <label className="flex cursor-pointer items-center gap-2.5 pb-2.5">
+                  <input
+                    type="checkbox"
+                    checked={draft.autoRestock}
+                    onChange={(e) => patch({ autoRestock: e.target.checked })}
+                    className="h-4 w-4 accent-[var(--primary)]"
+                  />
+                  <span className="text-sm text-foreground">Auto restock</span>
+                </label>
               </div>
               {draft.autoRestock && (
                 <>
                   <div className="flex flex-col gap-1.5">
                     <label className={labelClass}>Restock when below</label>
-                    <input type="number" value={draft.restockThreshold} disabled className={readOnlyInput} />
+                    <input
+                      type="number"
+                      min={0}
+                      value={draft.restockThreshold}
+                      onChange={(e) => patch({ restockThreshold: e.target.value })}
+                      placeholder="2"
+                      className={`${inputClass} font-mono`}
+                    />
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label className={labelClass}>Reset available to</label>
-                    <input type="number" value={draft.restockAmount} disabled className={readOnlyInput} />
+                    <input
+                      type="number"
+                      min={1}
+                      value={draft.restockAmount}
+                      onChange={(e) => patch({ restockAmount: e.target.value })}
+                      placeholder="3"
+                      className={`${inputClass} font-mono`}
+                    />
                   </div>
                 </>
               )}
             </div>
           ) : (
-            <p className="mt-2 text-sm text-muted-foreground">This plan has no quantity cap.</p>
+            <p className="mt-2 text-sm text-muted-foreground">No quantity cap — unlimited spots.</p>
           )}
         </div>
 
-        {error && (
-          <p className="text-sm text-muted-foreground" role="alert">
-            {error}
-          </p>
+        {errors.length > 0 && (
+          <ul className="flex flex-col gap-1" role="alert">
+            {errors.map((message) => (
+              <li key={message} className="text-sm text-muted-foreground">
+                {message}
+              </li>
+            ))}
+          </ul>
         )}
 
         <div className="flex items-center gap-3">
-          <button type="submit" disabled={update.isPending} className={primaryBtn}>
-            {update.isPending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Check className="h-4 w-4" aria-hidden="true" />}
-            {update.isPending ? "Saving…" : "Save changes"}
+          <button type="submit" disabled={saving} className={primaryBtn}>
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Check className="h-4 w-4" aria-hidden="true" />}
+            {saving ? "Saving…" : "Save changes"}
           </button>
           <button type="button" onClick={onClose} className={chipBtn}>
             Cancel
@@ -1178,8 +1484,8 @@ function PlanCard({ plan }: { plan: PlanWithCount }) {
           </button>
         )}
 
-        {/* Edit — plan details + features (pricing stays on this card). */}
-        <button type="button" onClick={() => setEditing(true)} title="Edit plan details and features" className={chipBtn}>
+        {/* Edit — every field on the plan, pricing included. */}
+        <button type="button" onClick={() => setEditing(true)} title="Edit details, features, pricing and inventory" className={chipBtn}>
           <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
           Edit
         </button>
