@@ -487,9 +487,11 @@
   border: 1px solid var(--border);
   border-radius: 14px;
   background: var(--surface-1, var(--mural));
+  /* Owner directive 2026-07-31 (round 2): cut the sample off where scrolling
+     would begin — the rows above that point are enough to visualise the real
+     table, and a scrollport inside a marketing page fights the page's own. */
   max-height: clamp(420px, 62vh, 660px);
-  overflow-y: auto;
-  overscroll-behavior: contain;
+  overflow: hidden;
   -webkit-mask-image: linear-gradient(to bottom, black calc(100% - 56px), transparent 100%);
   mask-image: linear-gradient(to bottom, black calc(100% - 56px), transparent 100%);
 }
@@ -498,15 +500,101 @@
 /* The chat panel hosts the product's real thread renderer: give it room to
    breathe and let long answers scroll inside the frame rather than stretching
    the section. */
-.dlv2 .dc-demo-thread {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  /* Size to the exchange, with a floor so switching between a short and a
-     long answer never collapses the panel or jumps the page. */
-  /* Overrides .chat-body's 320px floor: the real turns set their own height. */
-  min-height: clamp(180px, 22vw, 240px);
-  max-height: clamp(280px, 38vw, 420px);
-  overflow-y: auto;
-  overscroll-behavior: contain;
+/* ── The real chat page, contained ─────────────────────────────────────────
+   <DimeChatPage demoMode /> is a full-viewport application: below 1024px its
+   shell, mobile bar, drawer, scrim and edge-capture are all `position: fixed`
+   and sized from --dc-visual-height; at >=1024px the shell claims 100dvh.
+   Re-anchoring that layer to this frame contains the whole app inside the
+   section without touching a line of product CSS — so the visitor previews
+   the exact layout their own device would get. */
+.dlv2 .dc-demo-embed {
+  position: relative;
+  /* Full-bleed on purpose. The product's composer is a frozen 680px and the
+     >=1024px sidebar is scaled 1.75x, so the app needs ~1170px before it will
+     lay out without compressing — more than the reading column gives it.
+     Rather than squeeze the product (which would misrepresent the UI this
+     section exists to show), the frame breaks out to the viewport edges and
+     the app renders at its natural width. */
+  margin-inline: calc(50% - 50vw);
+  width: auto;
+  height: clamp(560px, 68vh, 760px);
+  overflow: hidden;
+  border-block: 1px solid var(--border);
+  background: var(--mural);
+  isolation: isolate;
+}
+.dlv2 .dc-demo-embed .dc-page.dc-page--app,
+.dlv2 .dc-demo-embed .dc-mobile-bar,
+.dlv2 .dc-demo-embed .dc-sidebar.dc-drawer,
+.dlv2 .dc-demo-embed .dc-drawer-scrim,
+.dlv2 .dc-demo-embed .dc-edge-capture {
+  position: absolute;
+}
+.dlv2 .dc-demo-embed .dc-page.dc-page--app {
+  inset: 0;
+  height: 100%;
+  min-height: 0;
+}
+.dlv2 .dc-demo-embed .dc-app,
+.dlv2 .dc-demo-embed .dc-sidebar.dc-drawer,
+.dlv2 .dc-demo-embed .dc-drawer-scrim {
+  height: 100%;
+}
+.dlv2 .dc-demo-embed .dc-mobile-bar,
+.dlv2 .dc-demo-embed .dc-sidebar.dc-drawer,
+.dlv2 .dc-demo-embed .dc-drawer-scrim,
+.dlv2 .dc-demo-embed .dc-edge-capture {
+  top: 0;
+}
+/* The product composer is a frozen 680px (design F:99) and its zone carries
+   the default `min-width: auto`, so at >=1024px the main pane refuses to
+   shrink below 680 + 80px gutters. A real viewport always has room for that;
+   this frame (page wrap minus the 1.75x-scaled sidebar) does not, and the
+   thread would overflow the right edge. Allowing the flex children to shrink
+   lets the composer's own `max-width: 100%` take over — the layout the
+   product already ships for narrow panes. */
+/* The thread column and composer are frozen at 680px with `max-width: 100%`.
+   That resolves against the pane, and every wrapper between pane and composer
+   carries the default `min-width: auto`, so the chain refuses to shrink below
+   ~712px — fine at any real viewport, too wide for this frame on a phone.
+   Zeroing the automatic minimum down the chain lets each element's own
+   `max-width: 100%` take over, which is the product's intended narrow-pane
+   behaviour. */
+.dlv2 .dc-demo-embed .dc-main,
+.dlv2 .dc-demo-embed .dc-shell-stack,
+.dlv2 .dc-demo-embed .dc-scroller,
+.dlv2 .dc-demo-embed .dc-thread,
+.dlv2 .dc-demo-embed .dc-composer-zone,
+.dlv2 .dc-demo-embed .dc-composer {
+  min-width: 0;
+  max-width: 100%;
+}
+/* The product sizes its main pane from the app's own 100dvh; re-anchored to
+   the frame it collapses to content height, which strands the hero/composer
+   at the top and leaves the rest of the panel empty. Filling the frame hands
+   the product's own vertical composition (centered home state, bottom-docked
+   composer in a thread) back to it. */
+.dlv2 .dc-demo-embed .dc-main {
+  height: 100%;
+  align-self: stretch;
+  /* border-box so the pane's own 40px gutters live inside the frame instead
+     of pushing the disclaimer footer past its bottom edge. */
+  box-sizing: border-box;
+}
+
+/* Honest labelling rides above the embedded app's own chrome. */
+.dlv2 .dc-demo-tag {
+  position: absolute;
+  z-index: 120;
+  top: 10px;
+  right: 12px;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--mural);
+  color: var(--text-secondary);
+  font-size: 10.5px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  pointer-events: none;
 }

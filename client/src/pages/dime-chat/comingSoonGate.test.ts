@@ -234,9 +234,14 @@ describe("account popover v2 (Round 3 Step 1, owner directive 2026-07-22)", () =
 
 describe("non-owner coming-soon gate (Phase 2)", () => {
   it("computes a fail-closed access state (pending while auth resolves)", () => {
+    // 2026-07-31: demoMode (public landing embed) joins previewMode ahead of
+    // the auth branches; the fail-closed tail is unchanged — while auth
+    // resolves nothing renders, and resolved non-owners are denied.
     expect(chatSource).toMatch(
-      /const chatAccess: "granted" \| "pending" \| "denied" = previewMode\s*\? "granted"\s*: authLoading\s*\? "pending"\s*: isOwner\s*\? "granted"\s*: "denied"/
+      /const chatAccess: "granted" \| "pending" \| "denied" = demoMode\s*\? "granted"\s*: previewMode\s*\? "granted"\s*: authLoading\s*\? "pending"\s*: isOwner\s*\? "granted"\s*: "denied"/
     );
+    // demoMode must never open history reads/writes.
+    expect(chatSource).toMatch(/const historyReady = !demoMode && !!appUser && isOwner;/);
   });
 
   it("renders the wordmark + exact copy for denied users", () => {
