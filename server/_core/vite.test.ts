@@ -55,11 +55,15 @@ describe("serveStatic — root index.html is always no-store (2026-07-22 stale-b
   });
 
   it("the catch-all \"/\" now falls through to — still sends index.html with NO_CACHE_HEADERS", () => {
-    const catchAllIdx = viteSrc.indexOf('app.use("*", (_req, res) => {');
+    // Locate by mount, not by parameter name: the handler now inspects the
+    // request URL (to 404 missing build assets instead of serving the SPA
+    // shell), so it takes `req` rather than `_req`. The bfcache contract this
+    // test guards is unchanged.
+    const catchAllIdx = viteSrc.search(/app\.use\("\*",\s*\(\s*_?req,\s*res\s*\)\s*=>\s*\{/);
     expect(catchAllIdx).toBeGreaterThan(-1);
     const sendFileIdx = viteSrc.indexOf("res.sendFile(", catchAllIdx);
     expect(sendFileIdx).toBeGreaterThan(catchAllIdx);
-    const catchAllEnd = viteSrc.indexOf("});", sendFileIdx);
+    const catchAllEnd = viteSrc.indexOf("});", sendFileIdx);  // after sendFile, so the asset-404 branch above is excluded
     const catchAllBlock = viteSrc.slice(catchAllIdx, catchAllEnd);
     expect(catchAllBlock).toMatch(/res\.set\(\{ \.\.\.NO_CACHE_HEADERS \}\)/);
     expect(catchAllBlock).toMatch(

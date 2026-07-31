@@ -140,11 +140,38 @@ export function serveStatic(app: Express) {
     })
   );
 
-  // fall through to index.html if the file doesn't exist — also the sole
-  // path "/" (and any other unmatched route) now takes, since the static
-  // mount above no longer auto-serves it.
-  // [FIX] Apply no-store headers so iOS Safari never serves a stale cached page.
-  app.use("*", (_req, res) => {
+  // ── Missing build assets must 404, never fall through to index.html ─────────
+  // [FIX 2026-07-31 stale-chunk incident]
+  //
+  // Vite code-splits routes into content-hashed chunks. A deploy replaces those
+  // filenames wholesale, so a browser that loaded the app BEFORE the deploy still
+  // holds references to the old ones. When it lazily imports a route, it requests
+  // a chunk that no longer exists — and the SPA catch-all below answered with
+  // `200 text/html` (index.html). The browser then tried to parse HTML as an ES
+  // module and threw:
+  //
+  //   TypeError: Failed to fetch dynamically imported module: /assets/Home-<hash>.js
+  //
+  // which surfaced to users as a hard "Something broke on this screen." That is
+  // the catch-all lying: the asset is genuinely gone, so say so. A truthful 404
+  // (a) stops the browser mis-parsing HTML as JavaScript, and (b) gives the
+  // client a signal it can actually recognise and recover from — see the
+  // stale-chunk reload guard in client/src/main.tsx.
+  //
+  // Scoped to build-output paths only. HTML routes must still fall through, or
+  // deep links like /admin/users would 404 instead of booting the SPA.
+  const BUILD_ASSET_PATH = /^\/assets\//;
+  const STATIC_FILE_EXT = /\.(?:js|mjs|cjs|css|map|json|wasm|woff2?|ttf|otf|eot|png|jpe?g|gif|svg|webp|avif|ico|mp4|webm)$/i;
+
+  app.use("*", (req, res) => {
+    const pathname = req.originalUrl.split("?")[0];
+    if (BUILD_ASSET_PATH.test(pathname) || STATIC_FILE_EXT.test(pathname)) {
+      console.warn(`[Static] 404 missing asset ${pathname} — stale client chunk or bad reference`);
+      res.status(404).type("text/plain").send("Not found");
+      return;
+    }
+    // SPA route: serve the shell. no-store so iOS Safari never restores a stale
+    // pre-deploy page from bfcache.
     res.set({ ...NO_CACHE_HEADERS });
     res.sendFile(path.resolve(distPath, "index.html"));
   });
