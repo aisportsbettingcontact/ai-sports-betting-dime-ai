@@ -64,6 +64,14 @@ interface OddsHistoryPanelProps {
   activeMarket: ActiveMarket;
   /** IntersectionObserver gate — only fetch data when card is in viewport */
   enabled?: boolean;
+  /**
+   * Landing-page marketing sample (owner directive 2026-07-31): source the
+   * rows from the public, input-less `listForDemoGame` procedure instead of
+   * the gated per-game one, and start expanded. EVERYTHING else — markup,
+   * dedupe, formatting, tokens — is the shipped product component, so the
+   * landing shows the real table rather than a mock of it.
+   */
+  demo?: boolean;
 }
 
 // ── Logging ────────────────────────────────────────────────────────────────────
@@ -651,8 +659,9 @@ export function OddsHistoryPanel({
   homeTeam,
   activeMarket,
   enabled = true,
+  demo = false,
 }: OddsHistoryPanelProps) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(demo);
   const bodyId = useId();
 
   // Tablet + desktop show every market together; mobile follows the toggle.
@@ -662,14 +671,20 @@ export function OddsHistoryPanel({
     : [activeMarket];
 
   // ── Data fetch (lazy — only when panel is expanded) ────────────────────────
-  const { data, isLoading, error } = trpc.oddsHistory.listForGame.useQuery(
+  const gatedQuery = trpc.oddsHistory.listForGame.useQuery(
     { gameId },
     {
-      enabled: (enabled ?? true) && open,
+      enabled: !demo && (enabled ?? true) && open,
       staleTime: 30_000,
       refetchInterval: 30_000, // auto-poll every 30s when panel is open — keeps odds history current
     }
   );
+  // The demo game is a completed, pinned matchup: fetch once, never poll.
+  const demoQuery = trpc.oddsHistory.listForDemoGame.useQuery(undefined, {
+    enabled: demo && (enabled ?? true) && open,
+    staleTime: Infinity,
+  });
+  const { data, isLoading, error } = demo ? demoQuery : gatedQuery;
 
   // ── Team colors + logos (try MLB → NHL → NBA) ──────────────────────────────
   const { data: colorsMlb } = trpc.teamColors.getForGame.useQuery(

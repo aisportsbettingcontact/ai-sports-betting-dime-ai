@@ -468,3 +468,45 @@
 @media (prefers-reduced-motion: reduce) {
   .dlv2 .pe-skeleton .bar { opacity: 0.6; }
 }
+
+/* ── Live-product demo sections (owner directive 2026-07-31) ────────────────
+   Both sections are lazy chunks; the reserve keeps the scroll position stable
+   while they arrive so nothing below them jumps (CLS). */
+.dlv2 .sec-reserve { min-height: clamp(420px, 46vw, 620px); }
+
+/* The odds-history panel ships its own chrome; the landing only supplies the
+   frame it sits in and pins the chat/product token layer to the dark surface
+   this page always is. */
+/* The real panel prints every snapshot for all three markets — thousands of
+   px on a desktop slate. On a marketing page that is a wall, so the frame
+   becomes a fixed-height PREVIEW the visitor scrolls inside: the component and
+   its data are untouched, only the window onto them is bounded. The bottom
+   edge fades instead of hard-cutting, so it reads as "more below" rather than
+   a clipped screenshot (apple-design: scroll edge, not a divider). */
+.dlv2 .odds-demo-frame {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-1, var(--mural));
+  max-height: clamp(420px, 62vh, 660px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-mask-image: linear-gradient(to bottom, black calc(100% - 56px), transparent 100%);
+  mask-image: linear-gradient(to bottom, black calc(100% - 56px), transparent 100%);
+}
+/* The panel's own sticky market headers keep working inside the preview. */
+.dlv2 .odds-demo-frame > * { min-width: 0; }
+/* The chat panel hosts the product's real thread renderer: give it room to
+   breathe and let long answers scroll inside the frame rather than stretching
+   the section. */
+.dlv2 .dc-demo-thread {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  /* Size to the exchange, with a floor so switching between a short and a
+     long answer never collapses the panel or jumps the page. */
+  /* Overrides .chat-body's 320px floor: the real turns set their own height. */
+  min-height: clamp(180px, 22vw, 240px);
+  max-height: clamp(280px, 38vw, 420px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
