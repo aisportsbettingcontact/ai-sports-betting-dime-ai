@@ -265,10 +265,52 @@ export const planPrices = mysqlTable("plan_prices", {
   stripePriceIdUnique: uniqueIndex("plan_prices_stripe_price_id_unique").on(table.stripePriceId),
 }));
 
+/**
+ * plan_features — which marketing/entitlement features a plan advertises, one
+ * row per (plan, feature).
+ *
+ * WHY A JOIN TABLE AND NOT A JSON/TEXT COLUMN ON subscription_plans: feature
+ * membership is a query, not prose. "Which plans include player prop
+ * projections?" is an indexed equality lookup here; against a JSON blob or a
+ * comma-joined string it degrades to a LIKE over free text that cannot use an
+ * index and matches substrings by accident (`daily_lineups` inside
+ * `daily_lineups_beta`). A row per feature also makes reordering, per-feature
+ * analytics, and future per-feature metadata additive column work instead of a
+ * blob rewrite, and it lets the DB — not application code — enforce that a plan
+ * cannot list the same feature twice.
+ */
+export const planFeatures = mysqlTable("plan_features", {
+  id: int("id").autoincrement().primaryKey(),
+  /** subscription_plans.id (joined in app; no DB-level FK, matching this repo). */
+  planId: int("planId").notNull(),
+  /**
+   * A key from shared/planFeatures.ts — the KEY is stored, never the label, so
+   * marketing can reword a feature without a data migration.
+   */
+  featureKey: varchar("featureKey", { length: 64 }).notNull(),
+  /** Display order within the plan — drag-to-reorder in the plan editor. */
+  sortOrder: int("sortOrder").default(0).notNull(),
+  /** UTC ms, matching the bigint time columns elsewhere in this file. */
+  createdAt: bigint("createdAt", { mode: "number" }).notNull(),
+}, (table) => ({
+  /**
+   * One row per feature per plan. This is what makes a re-save idempotent: the
+   * editor can upsert the selected set without first proving what is already
+   * there, and a double-submit cannot duplicate a chip.
+   */
+  planFeatureUnique: uniqueIndex("plan_features_plan_feature_unique").on(table.planId, table.featureKey),
+  /** Powers the reverse lookup: "which plans include feature X?". */
+  featureIdx: index("plan_features_feature_idx").on(table.featureKey),
+  /** Powers the ordered render of one plan's feature list without a filesort. */
+  planSortIdx: index("plan_features_plan_sort_idx").on(table.planId, table.sortOrder),
+}));
+
 export type SubscriptionPlan = typeof subscriptionPlans.$inferSelect;
 export type InsertSubscriptionPlan = typeof subscriptionPlans.$inferInsert;
 export type PlanPrice = typeof planPrices.$inferSelect;
 export type InsertPlanPrice = typeof planPrices.$inferInsert;
+export type PlanFeature = typeof planFeatures.$inferSelect;
+export type InsertPlanFeature = typeof planFeatures.$inferInsert;
 
 export type AppUser = typeof appUsers.$inferSelect;
 export type InsertAppUser = typeof appUsers.$inferInsert;
