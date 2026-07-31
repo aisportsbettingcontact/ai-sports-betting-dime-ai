@@ -10,6 +10,7 @@ import pytest
 from dime_ai.foundation_cumulative_evidence import (
     FoundationExecutionEvidenceError,
     _compare_delta_to_prior,
+    _primitive_hashes,
     validate_cumulative_boundary_manifest,
     validate_cumulative_evidence_document,
 )
@@ -29,6 +30,12 @@ def _evidence() -> dict:
     value = load_governed_json(EVIDENCE_ROOT / "evidence.json")
     assert isinstance(value, dict)
     return value
+
+
+def test_committed_primitive_hashes_match_current_runtime() -> None:
+    boundary = load_governed_json(BOUNDARY_PATH)
+
+    assert boundary["proof_contract"]["primitive_ast_sha256"] == _primitive_hashes()
 
 
 def test_incremental_boundary_and_evidence_are_closed_and_checksum_bound() -> None:
