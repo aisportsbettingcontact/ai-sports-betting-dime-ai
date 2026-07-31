@@ -11,50 +11,38 @@ import {
 } from "./ThemeContext";
 
 /**
- * ThemeContext — "system" mode (Round 3 Step 1, owner directive 2026-07-22).
+ * ThemeContext — two-mode system (owner directive 2026-07-31: Dark and Light
+ * only; the 2026-07-22 "system" mode is retired and stored selections migrate
+ * to Dark, the appearance System had resolved to since D-BG-SEAM).
  *
  * `resolveTheme`/`resolveInitialMode` are exported, pure, and DOM-free
  * specifically so they're unit-testable with real execution: this suite
  * runs under `environment: "node"` (vitest.config.ts) — no jsdom, no
- * `window`/`document`/`localStorage` — the same reason every other
- * ThemeProvider-adjacent behavior in this repo (and the sibling
- * comingSoonGate.test.ts source-contract tests) is verified this way.
- * The remaining stateful wiring (persistence write, <html>.dark toggle,
- * View Transitions crossfade) is checked as a
- * source contract below, the same pattern comingSoonGate.test.ts already
- * uses for effect/handler wiring in this codebase.
+ * `window`/`document`/`localStorage`. The remaining stateful wiring
+ * (persistence write, <html>.dark toggle, View Transitions crossfade) is
+ * checked as a source contract below, the same pattern
+ * comingSoonGate.test.ts already uses.
  */
 
 describe("resolveTheme — appearance contrast", () => {
-  it("resolves fixed-grey System to dark contrast", () => {
-    expect(resolveTheme("system")).toBe("dark");
-  });
-
-  it("passes explicit light/dark through untouched", () => {
+  it("passes explicit light/dark through untouched (identity in the two-mode system)", () => {
     expect(resolveTheme("light")).toBe("light");
     expect(resolveTheme("dark")).toBe("dark");
   });
 });
 
 describe("resolveInitialMode — persistence + migration precedence", () => {
-  it("defaults to \"system\" when nothing is stored anywhere (round3-constraints.md defaults #3)", () => {
+  it('defaults to "dark" when nothing is stored anywhere (app default; App.tsx mounts defaultTheme="dark")', () => {
     expect(
       resolveInitialMode({
         modeStored: null,
         legacyStored: null,
         legacyFeedStored: null,
       })
-    ).toBe("system");
+    ).toBe("dark");
   });
 
-  it("prefers the new dime-theme key, including an explicit \"system\" value", () => {
-    expect(
-      resolveInitialMode({
-        modeStored: "system",
-        legacyStored: "dark",
-        legacyFeedStored: "light",
-      })
-    ).toBe("system");
+  it("prefers the new dime-theme key for explicit light/dark", () => {
     expect(
       resolveInitialMode({
         modeStored: "light",
@@ -71,7 +59,17 @@ describe("resolveInitialMode — persistence + migration precedence", () => {
     ).toBe("dark");
   });
 
-  it("migrates an existing explicit theme choice instead of resetting it to system", () => {
+  it('migrates a stored "system" selection (retired mode) to dark — the appearance it resolved to', () => {
+    expect(
+      resolveInitialMode({
+        modeStored: "system",
+        legacyStored: "light",
+        legacyFeedStored: "light",
+      })
+    ).toBe("dark");
+  });
+
+  it("migrates an existing explicit legacy theme choice instead of resetting it", () => {
     expect(
       resolveInitialMode({
         modeStored: null,
@@ -98,14 +96,14 @@ describe("resolveInitialMode — persistence + migration precedence", () => {
     ).toBe("dark");
   });
 
-  it("ignores garbage/corrupted stored values at every tier and falls back to system", () => {
+  it("ignores garbage/corrupted stored values at every tier and falls back to dark", () => {
     expect(
       resolveInitialMode({
         modeStored: "purple",
         legacyStored: "purple",
         legacyFeedStored: "purple",
       })
-    ).toBe("system");
+    ).toBe("dark");
   });
 });
 
@@ -114,16 +112,16 @@ describe("storage keys — owner spec verbatim", () => {
     expect(MODE_STORAGE_KEY).toBe("dime-theme");
   });
 
-  it("keeps the pre-\"system\" legacy keys for migration, unchanged", () => {
+  it("keeps the legacy keys for migration, unchanged", () => {
     expect(LEGACY_THEME_KEY).toBe("theme");
     expect(LEGACY_FEED_THEME_KEY).toBe("dime-feed-theme");
   });
 });
 
-describe("ThemeMode — includes system alongside the existing resolved values", () => {
-  it("type-checks system/light/dark as valid modes", () => {
-    const modes: ThemeMode[] = ["system", "light", "dark"];
-    expect(modes).toHaveLength(3);
+describe("ThemeMode — two modes only", () => {
+  it("type-checks light/dark as the only valid modes", () => {
+    const modes: ThemeMode[] = ["light", "dark"];
+    expect(modes).toHaveLength(2);
   });
 });
 
@@ -133,10 +131,11 @@ const contextSource = fs.readFileSync(
 );
 
 describe("ThemeProvider wiring — source contract (no jsdom in this suite)", () => {
-  it("keeps System on dark-contrast ink instead of inheriting a light-OS palette", () => {
-    expect(contextSource).toMatch(
-      /return mode === "system" \? "dark" : mode;/
-    );
+  it('has no "system" branch anywhere in the provider besides the stored-value migration', () => {
+    expect(contextSource).toMatch(/if \(modeStored === "system"\) return "dark";/);
+    // the old three-mode resolution must be gone
+    expect(contextSource).not.toMatch(/mode === "system" \? "dark" : mode/);
+    expect(contextSource).not.toContain('"system" | Theme');
     expect(contextSource).not.toContain("prefers-color-scheme: dark");
   });
 
@@ -146,12 +145,12 @@ describe("ThemeProvider wiring — source contract (no jsdom in this suite)", ()
     );
   });
 
-  it("publishes the selected mode on <html> so System can own a grey palette distinct from Dark", () => {
+  it("still publishes the selected mode on <html> (data-theme-mode) for the dark-scoped CSS selectors", () => {
     expect(contextSource).toMatch(/root\.dataset\.themeMode = mode;/);
     expect(contextSource).toMatch(/root\.dataset\.themeMode = next;/);
   });
 
-  it("existing consumers keep reading `theme` as light|dark — resolveTheme is the only place \"system\" can leak from", () => {
+  it("existing consumers keep reading `theme` as light|dark through resolveTheme", () => {
     expect(contextSource).toMatch(
       /interface ThemeContextType \{[\s\S]{0,300}theme: Theme;/
     );

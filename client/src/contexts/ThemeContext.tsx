@@ -3,44 +3,47 @@ import React, { createContext, useCallback, useContext, useEffect, useState } fr
 type Theme = "light" | "dark";
 
 /**
- * Selected theme mode — "system" added (owner directive 2026-07-22: account
- * popover v2, Round 3 Step 1). Existing consumers only ever cared about the
- * dark-contrast/light value (`theme` below); `mode` is the new, separate field
- * that also carries "system" so a segmented System|Light|Dark control can
- * render its own selection state without breaking anything reading `theme`
- * as light|dark. System is the product's fixed grey appearance, so it uses
- * dark-contrast ink regardless of the OS color-scheme preference.
+ * Selected theme mode. Two modes only — Dark and Light (owner directive
+ * 2026-07-31: "get rid of system"). The "system" mode from the 2026-07-22
+ * account-popover round is retired; it had already been reduced to an alias
+ * of Dark (index.css D-BG-SEAM note), so stored "system" selections migrate
+ * to "dark" — visually identical to what those users were seeing.
+ * `ThemeMode` is kept as an exported alias so existing type imports compile.
  */
-export type ThemeMode = "system" | Theme;
+export type ThemeMode = Theme;
 
 /** localStorage key for the persisted mode selection (owner spec, verbatim:
  *  "persists to localStorage['dime-theme']"). */
 export const MODE_STORAGE_KEY = "dime-theme";
-/** Pre-"system" key: used to still hold a resolved light|dark value directly.
- *  Read once as a migration fallback so an existing explicit choice survives
- *  the upgrade instead of silently resetting to "system". */
+/** Pre-"system"-era key: held a resolved light|dark value directly. Read once
+ *  as a migration fallback so an existing explicit choice survives upgrades
+ *  instead of silently resetting. */
 export const LEGACY_THEME_KEY = "theme";
-/** Older still: the feed's pre-unification private key (see the original
- *  migration this amends, just below). */
+/** Older still: the feed's pre-unification private key. */
 export const LEGACY_FEED_THEME_KEY = "dime-feed-theme";
 
 /**
- * Resolves the mode's contrast treatment. System has its own neutral-grey
- * palette and therefore always takes dark-contrast ink; it does not borrow
- * Light's black-on-white rules when the OS preference is light.
- * Pure and DOM-free on purpose — this vitest suite runs under
- * `environment: "node"` (vitest.config.ts), so this is what makes "system
- * resolution" directly unit-testable without a jsdom dependency.
+ * Resolves a mode's contrast treatment. With the two-mode system this is the
+ * identity — kept (and exported) because consumers and tests treat it as the
+ * single seam where mode→theme resolution happens.
+ * Pure and DOM-free on purpose — the vitest suite runs under
+ * `environment: "node"` (vitest.config.ts).
  */
 export function resolveTheme(mode: ThemeMode): Theme {
-  return mode === "system" ? "dark" : mode;
+  return mode;
 }
 
 /**
  * Decides the initial mode from whatever localStorage.getItem returned for
- * each key, newest-first, falling back to "system" (round3-constraints.md
- * defaults #3). Pure — takes the three raw reads as plain values instead of
- * touching localStorage itself, so it is unit-testable without a DOM too.
+ * each key, newest-first, falling back to "dark" (the app default —
+ * App.tsx mounts ThemeProvider with defaultTheme="dark"). Pure — takes the
+ * three raw reads as plain values instead of touching localStorage itself,
+ * so it is unit-testable without a DOM.
+ *
+ * Migration (owner directive 2026-07-31): a stored "system" value — the
+ * retired third mode — maps to "dark", which is exactly the appearance
+ * System resolved to since the D-BG-SEAM amendment. Explicit light/dark
+ * choices under any key are always honored.
  */
 export function resolveInitialMode(reads: {
   modeStored: string | null;
@@ -48,29 +51,24 @@ export function resolveInitialMode(reads: {
   legacyFeedStored: string | null;
 }): ThemeMode {
   const { modeStored, legacyStored, legacyFeedStored } = reads;
-  if (modeStored === "system" || modeStored === "light" || modeStored === "dark") {
-    return modeStored;
-  }
-  // Migration (owner directive 2026-07-22): pre-"system" installs stored a
-  // resolved light|dark value directly under the old keys. Carry that
-  // explicit choice forward as the equivalent mode rather than resetting
-  // everyone to "system" on upgrade.
+  if (modeStored === "light" || modeStored === "dark") return modeStored;
+  if (modeStored === "system") return "dark";
   if (legacyStored === "light" || legacyStored === "dark") return legacyStored;
   if (legacyFeedStored === "light" || legacyFeedStored === "dark") return legacyFeedStored;
-  return "system";
+  return "dark";
 }
 
 interface ThemeContextType {
-  /** Contrast theme — still light|dark for every existing consumer
-   *  (index.css `.dark` class, page-level theme branches). System resolves to
-   *  dark contrast while `mode` selects its separate grey surfaces. */
+  /** Contrast theme — light|dark for every consumer
+   *  (index.css `.dark` class, page-level theme branches). */
   theme: Theme;
-  /** The user's selection, INCLUDING "system" — drives the Theme row and the
-   *  independent grey System palette. */
+  /** The user's selection. Identical to `theme` in the two-mode system; kept
+   *  as a separate field so existing `mode` consumers (feed data attributes,
+   *  settings controls) compile unchanged. */
   mode: ThemeMode;
   setTheme?: (theme: Theme) => void;
-  /** Sets mode directly (including "system"); resolves + persists + animates
-   *  through the same View Transitions crossfade as setTheme. */
+  /** Sets mode directly; resolves + persists + animates through the same
+   *  View Transitions crossfade as setTheme. */
   setMode?: (mode: ThemeMode) => void;
   toggleTheme?: () => void;
   switchable: boolean;
@@ -121,7 +119,7 @@ export function ThemeProvider({
     } catch {
       // private mode: no localStorage access at all — same "nothing stored"
       // outcome as resolveInitialMode would give three nulls.
-      return "system";
+      return "dark";
     }
   });
 
@@ -147,7 +145,7 @@ export function ThemeProvider({
 
   // A user-initiated mode change: animate the root crossfade, toggling the
   // class synchronously inside the transition so old/new snapshots are
-  // correct. System always resolves to the dark-contrast grey appearance.
+  // correct.
   const updateMode = useCallback(
     (next: ThemeMode) => {
       const nextResolved: Theme = resolveTheme(next);
@@ -161,8 +159,7 @@ export function ThemeProvider({
     [],
   );
 
-  // Back-compat surface: existing callers only ever pass light|dark, which
-  // is a valid ThemeMode, so this is just a narrower view of updateMode.
+  // Narrower alias kept for existing callers.
   const updateTheme = useCallback(
     (next: Theme) => updateMode(next),
     [updateMode],

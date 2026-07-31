@@ -246,7 +246,16 @@ export default function Home() {
      */
     <div
       className="flex flex-col lg:flex-row min-h-screen w-full"
-      style={{ background: "#000000", fontFamily: "'Familjen Grotesk', sans-serif" /* brand law: never inherit legacy Inter */ }}
+      style={{
+        background: "#000000",
+        fontFamily: "'Familjen Grotesk', sans-serif" /* brand law: never inherit legacy Inter */,
+        // Dark-fixed page (like the landing): the surface is always black, so
+        // the flipping text tokens pin to their dark values here — in light
+        // mode they otherwise resolve to dark greys on black (measured 3.0:1,
+        // theme audit 2026-07-31).
+        ["--text-secondary" as string]: "#A6A6A6",
+        ["--text-muted" as string]: "#7E7E7E",
+      }}
     >
 
       {/* ═══════════════════════════════════════════════════════════════════════

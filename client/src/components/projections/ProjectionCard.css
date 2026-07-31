@@ -134,11 +134,10 @@
   border-radius: 0;
   box-shadow: none;
 }
-/* A crisp alpha-following keyline, not a rectangular image border. System is
-   the grey surface and Dark the black surface; Light keeps the original mark. */
-html[data-theme-mode="system"] .team-logo-box--dark-outline .team-logo,
+/* A crisp alpha-following keyline, not a rectangular image border. Dark is
+   the black surface; Light keeps the original mark. (Two-mode system,
+   2026-07-31 — the retired "system" selectors are gone.) */
 html[data-theme-mode="dark"] .team-logo-box--dark-outline .team-logo,
-html:not([data-theme-mode]) .dmf-root[data-dmf-mode="system"] .team-logo-box--dark-outline .team-logo,
 html:not([data-theme-mode]) .dmf-root[data-dmf-mode="dark"] .team-logo-box--dark-outline .team-logo {
   filter: drop-shadow(0 0 0.2px rgba(255, 255, 255, 0.92));
 }
@@ -188,7 +187,7 @@ html:not([data-theme-mode]) .dmf-root[data-dmf-mode="dark"] .team-logo-box--dark
   text-transform: uppercase;
 }
 .pregame-pitcher__status--confirmed { color: #45e0a8; }
-html:not(.dark) .pregame-pitcher__status--confirmed { color: #0b8557; }
+html:not(.dark) .pregame-pitcher__status--confirmed { color: #0a7c50; }
 .pregame-pitcher__status--pending { color: var(--text-secondary, #a6a6a6); }
 .pregame-pitcher__photo {
   display: grid;
@@ -688,7 +687,7 @@ html:not(.dark) .pregame-pitcher__status--confirmed { color: #0b8557; }
     box-shadow: 0 0 0 1px var(--border-strong, #000000);
   }
   .projection-card__status--live { letter-spacing: 0.08em; }
-  html:not(.dark) .projection-card__status--live { color: #0b8557; }
+  html:not(.dark) .projection-card__status--live { color: #0a7c50; }
 }
 
 /* ══ Centered summary group — MODEL EDGE | BOOK | MODEL | signal ════════════
@@ -956,7 +955,7 @@ html:not(.dark) .pregame-pitcher__status--confirmed { color: #0b8557; }
   color: #45e0a8;
 }
 html:not(.dark) .projection-card__markets-eyebrow {
-  color: #0b8557;
+  color: #0a7c50;
 }
 .projection-card__markets-matchup {
   margin: var(--space-2xs) 0 0;

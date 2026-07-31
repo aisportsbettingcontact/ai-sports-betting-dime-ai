@@ -67,21 +67,18 @@ describe("TeamLogoMark — whitespace-free optical sizing and dark contrast", ()
     expect(cardCss).toContain(".team-logo-box--mono { aspect-ratio: 1; }");
   });
 
-  it("outlines only allowlisted dark marks on System/Dark and never Light", () => {
+  it("outlines only allowlisted dark marks on Dark and never Light (two-mode, 2026-07-31)", () => {
     expect(renderLogo("NYY")).toContain("team-logo-box--dark-outline");
     expect(renderLogo("CHC")).not.toContain("team-logo-box--dark-outline");
-    expect(cardCss).toContain(
-      'html[data-theme-mode="system"] .team-logo-box--dark-outline .team-logo',
-    );
     expect(cardCss).toContain(
       'html[data-theme-mode="dark"] .team-logo-box--dark-outline .team-logo',
     );
     expect(cardCss).toContain(
-      'html:not([data-theme-mode]) .dmf-root[data-dmf-mode="system"] .team-logo-box--dark-outline .team-logo',
-    );
-    expect(cardCss).toContain(
       'html:not([data-theme-mode]) .dmf-root[data-dmf-mode="dark"] .team-logo-box--dark-outline .team-logo',
     );
+    // the retired "system" mode must not resurface in selectors
+    expect(cardCss).not.toContain('data-theme-mode="system"');
+    expect(cardCss).not.toContain('data-dmf-mode="system"');
     expect(cardCss).not.toContain(
       'html[data-theme-mode="light"] .team-logo-box--dark-outline .team-logo',
     );
@@ -89,7 +86,7 @@ describe("TeamLogoMark — whitespace-free optical sizing and dark contrast", ()
       '.dmf-root[data-dmf-mode="light"] .team-logo-box--dark-outline .team-logo',
     );
     const outlineRule = cardCss.slice(
-      cardCss.indexOf('html[data-theme-mode="system"] .team-logo-box--dark-outline'),
+      cardCss.indexOf('html[data-theme-mode="dark"] .team-logo-box--dark-outline'),
       cardCss.indexOf(".team-logo-box--mono"),
     );
     expect(countOccurrences(outlineRule, "drop-shadow(")).toBe(1);
@@ -538,10 +535,11 @@ describe("ProjectionCard — paginated market popover", () => {
       "max-block-size: min(34rem, var(--radix-popover-content-available-height));"
     );
     expect(popoverCss).toContain("overflow-y: auto;");
-    // Audit DIME-UI-015 ruling: 0B8557 is the canonical mint text on light
-    // (4.66:1 on white); 0FA36B (3.25:1) is retired.
+    // Audit DIME-UI-015 + theme audit 2026-07-31: 0A7C50 is the canonical mint
+    // text on light (5.2:1 white, 4.9:1 on F7-tier cards); 0FA36B and 0B8557
+    // are retired.
     expect(popoverCss).toMatch(
-      /html:not\(\.dark\) \.projection-card__markets-eyebrow \{\s*color: #0b8557;/
+      /html:not\(\.dark\) \.projection-card__markets-eyebrow \{\s*color: #0a7c50;/
     );
   });
 

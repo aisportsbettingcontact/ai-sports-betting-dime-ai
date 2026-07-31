@@ -1334,8 +1334,9 @@ const DMF_CSS = `
    carried its own [data-dmf-mode="system"] neutral-grey palette (dmf + shadcn
    token sets; exact values in git history) — the fourth System-palette site,
    found by the residual sweep after automated review flagged the chat one.
-   System follows Dark everywhere: mode="system" now falls through to the
-   pure-black dmf palette above. Do not reintroduce. */
+   System followed Dark everywhere after that, and the mode itself was
+   retired 2026-07-31 (two modes only: Dark and Light — stored "system"
+   selections migrate to dark in ThemeContext). Do not reintroduce. */
 .dmf-root *{box-sizing:border-box}
 .dmf-root :where(button){font:inherit;color:inherit;background:none;border:0;cursor:pointer;touch-action:manipulation}
 .dmf-root :where(a){touch-action:manipulation}

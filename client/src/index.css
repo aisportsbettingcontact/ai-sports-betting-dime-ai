@@ -222,7 +222,7 @@ html:not(.dark) {
   --ring: #45E0A8;
   --edge-green: #45E0A8;
   --edge-red: #000000;
-  --loss-red: #FF3B3B;
+  --loss-red: #D92D2D; /* theme audit 2026-07-31: FF3B3B measured 3.3:1 on light; 4.8:1 on white here. Dark keeps FF3B3B (5.9:1 on black). */
   --sidebar: #FFFFFF;
   --sidebar-foreground: #000000;
   --sidebar-primary: #45E0A8;

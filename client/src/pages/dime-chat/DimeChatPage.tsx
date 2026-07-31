@@ -78,7 +78,6 @@ import {
   ChevronRight,
   Ellipsis,
   Eraser,
-  Monitor,
   Moon,
   MessageSquarePlus,
   NotebookPen,
@@ -244,14 +243,14 @@ function PillGlyph() {
 const GEAR_PATH =
   "M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"; // D/L:94
 
-/** Account popover v2 Theme row (owner directive 2026-07-22): the segmented
- *  System | Light | Dark options, in display order. */
+/** Account popover Theme row: the segmented Light | Dark options, in display
+ *  order. Two modes only (owner directive 2026-07-31 — "System" retired;
+ *  stored selections migrate to Dark in ThemeContext). */
 const THEME_MODE_OPTIONS: Array<{
   mode: ThemeMode;
   label: string;
   Icon: LucideIcon;
 }> = [
-  { mode: "system", label: "System", Icon: Monitor },
   { mode: "light", label: "Light", Icon: Sun },
   { mode: "dark", label: "Dark", Icon: Moon },
 ];
