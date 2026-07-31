@@ -2,16 +2,49 @@
  * planEditor.test.ts — pure unit contract for the Edit Plan modal's draft model.
  *
  * Runs under vitest's node environment (no DOM, no React). Everything the edit
- * flow decides — seeding the form from a StoredPlan, toggling a feature, and
- * converting the draft into the subscriptionPlans.update payload — lives in
- * planTypes.ts precisely so it can be pinned here. If the draft ever drifts from
- * the plan it was opened on, or a feature list reaches the server out of
- * canonical order, this fails.
+ * flow decides — seeding the form from a StoredPlan, toggling a feature, picking
+ * the default interval, and converting the draft into the subscriptionPlans
+ * .update / .updateInterval payloads — lives in planTypes.ts precisely so it can
+ * be pinned here. If the draft ever drifts from the plan it was opened on, a
+ * feature list reaches the server out of canonical order, or a lifetime interval
+ * starts shipping a cadence, this fails.
  */
 import { describe, it, expect } from "vitest";
-import { buildPlanUpdateInput, planEditDraftFrom, toggleFeatureKey } from "./planTypes";
-import type { StoredPlan } from "./planTypes";
+import {
+  buildIntervalUpdateInput,
+  buildPlanUpdateInput,
+  intervalEditDraftFrom,
+  planEditDraftFrom,
+  removeIntervalDraft,
+  setDefaultIntervalKey,
+  toggleFeatureKey,
+} from "./planTypes";
+import type { IntervalEditDraft, StoredPlan, StoredPrice } from "./planTypes";
 import { PLAN_FEATURE_KEYS } from "@shared/planFeatures";
+
+/** A price shaped exactly as subscriptionPlans.list nests it under a plan. */
+function price(overrides: Partial<StoredPrice> = {}): StoredPrice {
+  return {
+    id: 31,
+    stripePriceId: "price_abc",
+    label: "Monthly",
+    amountCents: 4900,
+    currency: "usd",
+    interval: "month",
+    intervalCount: 1,
+    trialPeriodDays: 7,
+    promoType: null,
+    promoValue: null,
+    promoCode: null,
+    stripeCouponId: null,
+    active: true,
+    isDefault: true,
+    hidden: false,
+    sortOrder: 0,
+    livemode: false,
+    ...overrides,
+  };
+}
 
 /** A plan shaped exactly as subscriptionPlans.list returns it. */
 function plan(overrides: Partial<StoredPlan> = {}): StoredPlan {
@@ -39,6 +72,11 @@ function plan(overrides: Partial<StoredPlan> = {}): StoredPlan {
   };
 }
 
+/** The draft row for a price, as the modal would hold it. */
+function draftFor(overrides: Partial<StoredPrice> = {}): IntervalEditDraft {
+  return intervalEditDraftFrom(price(overrides));
+}
+
 describe("planEditDraftFrom", () => {
   it("seeds every field from the plan's current values", () => {
     expect(planEditDraftFrom(plan())).toEqual({
@@ -51,6 +89,56 @@ describe("planEditDraftFrom", () => {
       restockThreshold: "2",
       restockAmount: "3",
       features: ["daily_lineups", "betting_splits"],
+      intervals: [],
+    });
+  });
+
+  it("seeds the plan's live intervals, skipping retired prices", () => {
+    const draft = planEditDraftFrom(
+      plan({
+        prices: [
+          price({ id: 31, amountCents: 4900 }),
+          price({ id: 32, stripePriceId: "price_dead", active: false, isDefault: false }),
+          price({ id: 33, stripePriceId: "price_year", label: null, amountCents: 49000, interval: "year", isDefault: false }),
+        ],
+      }),
+    );
+    expect(draft.intervals.map((iv) => iv.priceId)).toEqual([31, 33]);
+    expect(draft.intervals[0]).toEqual({
+      key: "price-31",
+      priceId: 31,
+      price: "49.00",
+      interval: { interval: "month", intervalCount: 1 },
+      trialDays: "7",
+      hidden: false,
+      promoOn: false,
+      promoType: "percent",
+      promoValue: "",
+      promoCode: "",
+      label: "Monthly",
+      isDefault: true,
+    });
+    expect(draft.intervals[1].label).toBe("");
+  });
+
+  it("seeds a cadence-less price as the one-time Lifetime sentinel", () => {
+    const draft = draftFor({ interval: null, intervalCount: null, trialPeriodDays: null });
+    expect(draft.interval).toEqual({ interval: "lifetime", intervalCount: 1 });
+    expect(draft.trialDays).toBe("");
+  });
+
+  it("seeds a promo back into the form, in the units its input renders", () => {
+    expect(draftFor({ promoType: "percent", promoValue: 25, promoCode: "LAUNCH" })).toMatchObject({
+      promoOn: true,
+      promoType: "percent",
+      promoValue: "25",
+      promoCode: "LAUNCH",
+    });
+    expect(draftFor({ promoType: "amount", promoValue: 1500 })).toMatchObject({
+      promoOn: true,
+      promoType: "amount",
+      promoValue: "15.00",
+      promoCode: "",
     });
   });
 
@@ -131,6 +219,7 @@ describe("buildPlanUpdateInput", () => {
       description: "Everything the model prices.",
       maxSubscribers: 250,
       features: ["daily_lineups", "betting_splits"],
+      restock: { autoRestock: true, availableQuantity: 5, restockThreshold: 2, restockAmount: 3 },
     });
   });
 
@@ -171,14 +260,190 @@ describe("buildPlanUpdateInput", () => {
     );
   });
 
-  it("never carries prices or inventory into the payload", () => {
-    const built = buildPlanUpdateInput(7, planEditDraftFrom(plan()));
+  it("carries inventory but never a price into the payload", () => {
+    const built = buildPlanUpdateInput(7, planEditDraftFrom(plan({ prices: [price()] })));
     expect(Object.keys(built as object).sort()).toEqual([
       "description",
       "features",
       "maxSubscribers",
       "name",
       "planId",
+      "restock",
     ]);
+  });
+});
+
+describe("buildPlanUpdateInput — restock", () => {
+  it("submits null restock when the limited-quantity toggle is off (unlimited)", () => {
+    const draft = { ...planEditDraftFrom(plan()), limitedQuantity: false };
+    expect(buildPlanUpdateInput(7, draft)).toMatchObject({ restock: null });
+  });
+
+  it("nulls the thresholds when the cap is on but auto-restock is off", () => {
+    const draft = { ...planEditDraftFrom(plan()), autoRestock: false };
+    expect(buildPlanUpdateInput(7, draft)).toMatchObject({
+      restock: { autoRestock: false, availableQuantity: 5, restockThreshold: null, restockAmount: null },
+    });
+  });
+
+  it("keeps a zero available quantity (sold out) rather than reading it as unset", () => {
+    const draft = { ...planEditDraftFrom(plan()), availableQuantity: "0", autoRestock: false };
+    expect(buildPlanUpdateInput(7, draft)).toMatchObject({
+      restock: { autoRestock: false, availableQuantity: 0, restockThreshold: null, restockAmount: null },
+    });
+  });
+
+  it("rejects a blank or negative available quantity", () => {
+    const seed = planEditDraftFrom(plan());
+    expect(buildPlanUpdateInput(7, { ...seed, availableQuantity: "" })).toBe("Available quantity must be 0 or more.");
+    expect(buildPlanUpdateInput(7, { ...seed, availableQuantity: "-1" })).toBe("Available quantity must be 0 or more.");
+  });
+
+  it("rejects restock thresholds that cannot restock anything", () => {
+    const seed = planEditDraftFrom(plan());
+    expect(buildPlanUpdateInput(7, { ...seed, restockThreshold: "nope" })).toBe("Restock threshold must be 0 or more.");
+    expect(buildPlanUpdateInput(7, { ...seed, restockAmount: "0" })).toBe("Restock amount must be 1 or more.");
+  });
+});
+
+describe("buildIntervalUpdateInput", () => {
+  it("round-trips an untouched interval row back to the price's own values", () => {
+    const p = price();
+    expect(buildIntervalUpdateInput(p, intervalEditDraftFrom(p))).toEqual({
+      priceId: 31,
+      amountCents: 4900,
+      currency: "usd",
+      interval: "month",
+      intervalCount: 1,
+      label: "Monthly",
+      trialPeriodDays: 7,
+      hidden: false,
+      isDefault: true,
+      promo: null,
+    });
+  });
+
+  it("maps a lifetime selection to no interval — no cadence, no count, no trial", () => {
+    const p = price();
+    const draft: IntervalEditDraft = {
+      ...intervalEditDraftFrom(p),
+      interval: { interval: "lifetime", intervalCount: 1 },
+      trialDays: "14",
+    };
+    const built = buildIntervalUpdateInput(p, draft);
+    expect(built).toMatchObject({ interval: null, trialPeriodDays: null });
+    expect(built as object).not.toHaveProperty("intervalCount");
+  });
+
+  it("keeps a price already stored as one-time one-time", () => {
+    const p = price({ interval: null, intervalCount: null, trialPeriodDays: null });
+    expect(buildIntervalUpdateInput(p, intervalEditDraftFrom(p))).toMatchObject({ interval: null });
+  });
+
+  it("submits a blank label as null", () => {
+    const p = price();
+    expect(buildIntervalUpdateInput(p, { ...intervalEditDraftFrom(p), label: "   " })).toMatchObject({ label: null });
+  });
+
+  it("carries hidden and isDefault through on every save", () => {
+    const p = price();
+    expect(
+      buildIntervalUpdateInput(p, { ...intervalEditDraftFrom(p), hidden: true, isDefault: false }),
+    ).toMatchObject({ hidden: true, isDefault: false });
+  });
+
+  it("rejects a non-positive amount", () => {
+    const p = price();
+    expect(buildIntervalUpdateInput(p, { ...intervalEditDraftFrom(p), price: "0" })).toBe(
+      "Monthly: enter a price of at least $0.50.",
+    );
+    expect(buildIntervalUpdateInput(p, { ...intervalEditDraftFrom(p), price: "-5.00" })).toBe(
+      "Monthly: enter a price of at least $0.50.",
+    );
+  });
+
+  it("rejects a non-numeric amount", () => {
+    const p = price();
+    expect(buildIntervalUpdateInput(p, { ...intervalEditDraftFrom(p), price: "free" })).toBe(
+      "Monthly: enter a price of at least $0.50.",
+    );
+  });
+
+  it("names an unlabelled row by its price id in errors", () => {
+    const p = price({ label: null });
+    expect(buildIntervalUpdateInput(p, { ...intervalEditDraftFrom(p), price: "" })).toBe(
+      "Interval 31: enter a price of at least $0.50.",
+    );
+  });
+
+  it("rejects a negative free trial", () => {
+    const p = price();
+    expect(buildIntervalUpdateInput(p, { ...intervalEditDraftFrom(p), trialDays: "-1" })).toBe(
+      "Monthly: free trial days must be 0 or more.",
+    );
+  });
+
+  it("converts a percent promo as an integer and a dollar promo to cents", () => {
+    const p = price();
+    const seed = intervalEditDraftFrom(p);
+    expect(
+      buildIntervalUpdateInput(p, { ...seed, promoOn: true, promoType: "percent", promoValue: "30", promoCode: "LAUNCH30" }),
+    ).toMatchObject({ promo: { type: "percent", value: 30, code: "LAUNCH30" } });
+    expect(buildIntervalUpdateInput(p, { ...seed, promoOn: true, promoType: "amount", promoValue: "10.00" })).toMatchObject({
+      promo: { type: "amount", value: 1000 },
+    });
+  });
+
+  it("rejects a discount that is not smaller than the price", () => {
+    const p = price();
+    expect(
+      buildIntervalUpdateInput(p, { ...intervalEditDraftFrom(p), promoOn: true, promoType: "amount", promoValue: "49.00" }),
+    ).toBe("Monthly: discount must be less than the price.");
+  });
+
+  it("rejects a percent promo outside 1–100", () => {
+    const p = price();
+    expect(
+      buildIntervalUpdateInput(p, { ...intervalEditDraftFrom(p), promoOn: true, promoType: "percent", promoValue: "150" }),
+    ).toBe("Monthly: percent promo must be 1–100.");
+  });
+});
+
+describe("setDefaultIntervalKey / removeIntervalDraft", () => {
+  const rows = (): IntervalEditDraft[] => [
+    intervalEditDraftFrom(price({ id: 31, label: "Monthly", isDefault: true })),
+    intervalEditDraftFrom(price({ id: 32, label: "Annual", isDefault: false })),
+    intervalEditDraftFrom(price({ id: 33, label: "Lifetime", isDefault: false })),
+  ];
+
+  it("leaves exactly one interval default after a pick", () => {
+    const picked = setDefaultIntervalKey(rows(), "price-33");
+    expect(picked.filter((iv) => iv.isDefault).map((iv) => iv.priceId)).toEqual([33]);
+  });
+
+  it("still leaves exactly one default when the current default is re-picked", () => {
+    const picked = setDefaultIntervalKey(rows(), "price-31");
+    expect(picked.filter((iv) => iv.isDefault)).toHaveLength(1);
+  });
+
+  it("cannot leave two defaults however many times it is applied", () => {
+    const picked = ["price-32", "price-33", "price-31"].reduce(setDefaultIntervalKey, rows());
+    expect(picked.filter((iv) => iv.isDefault).map((iv) => iv.priceId)).toEqual([31]);
+  });
+
+  it("promotes the first survivor when the default row is removed", () => {
+    const kept = removeIntervalDraft(rows(), "price-31");
+    expect(kept.map((iv) => iv.priceId)).toEqual([32, 33]);
+    expect(kept.filter((iv) => iv.isDefault).map((iv) => iv.priceId)).toEqual([32]);
+  });
+
+  it("keeps the existing default when a non-default row is removed", () => {
+    const kept = removeIntervalDraft(rows(), "price-33");
+    expect(kept.filter((iv) => iv.isDefault).map((iv) => iv.priceId)).toEqual([31]);
+  });
+
+  it("refuses to remove a plan's last interval", () => {
+    const one = [rows()[0]];
+    expect(removeIntervalDraft(one, "price-31")).toEqual(one);
   });
 });

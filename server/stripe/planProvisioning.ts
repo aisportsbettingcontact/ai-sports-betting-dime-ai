@@ -12,8 +12,10 @@
  * lets the UI show a loud TEST badge so the owner always knows which account
  * they're writing to.
  *
- * Prices are immutable in Stripe: "editing" an amount/interval is archive + create
- * (Phase 3). Here we create; archivePlan deactivates the Product + row.
+ * Prices are immutable in Stripe: "editing" an amount/interval is create + archive
+ * (see repriceInterval — new Price first, old one retired second, live
+ * subscriptions left billing at their original amount). Here we create;
+ * archivePlan deactivates the Product + row.
  */
 import Stripe from "stripe";
 import { eq, and } from "drizzle-orm";
@@ -282,7 +284,7 @@ async function createAndPersistPrice(
   productId: string,
   slug: string,
   input: NewPriceInput,
-  opts: { isDefault: boolean; sortOrder: number; planType: PlanType },
+  opts: { isDefault: boolean; sortOrder: number; planType: PlanType; idemSalt?: string },
 ): Promise<{ priceId: string; rowId: number }> {
   validateAmount(input.amountCents);
   const currency = (input.currency ?? "usd").toLowerCase();
@@ -294,7 +296,13 @@ async function createAndPersistPrice(
   const interval: BillingInterval | null = recurring ? (input.interval as BillingInterval) : null;
   const intervalCount: number | null = recurring ? clampCount(interval as BillingInterval, input.intervalCount ?? 1) : null;
   // sortOrder keeps idempotency keys distinct even for same-amount one-time prices.
-  const idemTag = `${slug}-${input.amountCents}-${recurring ? `${interval}${intervalCount}` : "once"}-${opts.sortOrder}`;
+  // `idemSalt` distinguishes repeat *reprices* of the same plan: repriceInterval
+  // rewrites the replacement row's sortOrder back to the original's, so sortOrder
+  // alone can repeat and a flip-flopping edit ($10→$11→$10→$11) would otherwise
+  // replay a 24h-old idempotency key and hand back an ARCHIVED Stripe Price.
+  const idemTag =
+    `${slug}-${input.amountCents}-${recurring ? `${interval}${intervalCount}` : "once"}-${opts.sortOrder}` +
+    (opts.idemSalt ? `-${opts.idemSalt}` : "");
 
   const price = await stripe.prices.create(
     {
@@ -450,10 +458,17 @@ export async function provisionPlan(
   return { planId, slug, stripeProductId: product.id, stripePriceId: defaultPriceId };
 }
 
-/** Add one more interval (billing variant) to an existing plan. */
+/**
+ * Add one more interval (billing variant) to an existing plan.
+ *
+ * `opts.idemSalt` (optional) widens the Stripe idempotency key for callers that
+ * can legitimately re-create the same billing shape on the same plan — see
+ * repriceInterval. Existing callers pass nothing and keep today's behaviour.
+ */
 export async function addPriceToPlan(
   planId: number,
   input: NewPriceInput,
+  opts?: { idemSalt?: string },
 ): Promise<{ priceId: string; rowId: number }> {
   validateAmount(input.amountCents);
   if (input.promo) validatePromo(input.promo, input.amountCents);
@@ -476,6 +491,7 @@ export async function addPriceToPlan(
     isDefault: false,
     sortOrder: nextSort,
     planType: plan.planType,
+    idemSalt: opts?.idemSalt,
   });
   invalidatePlanCache();
   console.log(`${TAG} added interval to plan ${planId}: price=${created.priceId}`);
@@ -548,6 +564,269 @@ export async function setIntervalHidden(priceId: number, hidden: boolean): Promi
   );
   invalidatePlanCache();
   console.log(`${TAG} interval ${priceId} hidden=${hidden}`);
+}
+
+/**
+ * Make ONE interval the plan's default (the price checkout charges when the
+ * buyer doesn't pick a variant) and clear the flag on its siblings — scoped to
+ * that plan only, so two plans never fight over a single default.
+ */
+export async function setIntervalDefault(priceId: number): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("database unavailable");
+  const rows = (await withCircuitBreaker(async () =>
+    db.select().from(planPrices).where(eq(planPrices.id, priceId)).limit(1),
+  )) as Array<{ id: number; planId: number; active: boolean }>;
+  const target = rows[0];
+  if (!target) throw new Error(`price ${priceId} not found`);
+  if (!target.active) {
+    throw new Error(`price ${priceId} is archived — an inactive interval cannot be the default`);
+  }
+  // Clear first, then set: the target ends up as the only default even if it
+  // was already flagged, and no window exists where the plan has two defaults.
+  await withCircuitBreaker(async () =>
+    db.update(planPrices).set({ isDefault: false }).where(eq(planPrices.planId, target.planId)),
+  );
+  await withCircuitBreaker(async () =>
+    db.update(planPrices).set({ isDefault: true }).where(eq(planPrices.id, priceId)),
+  );
+  invalidatePlanCache();
+  console.log(`${TAG} interval ${priceId} is now the default for plan ${target.planId}`);
+}
+
+// ─── Repricing (Stripe Prices are immutable) ─────────────────────────────────
+
+/**
+ * The subset of a plan_prices row that Stripe FREEZES at Price-creation time.
+ * `amount`, `currency`, `recurring.interval`, `recurring.interval_count` and
+ * `recurring.trial_period_days` cannot be updated on an existing Stripe Price —
+ * only `nickname`, `active`, `metadata` and `lookup_key` are mutable. Changing
+ * anything in this shape therefore means minting a NEW Price.
+ */
+export interface BillingShapeRow {
+  amountCents: number;
+  currency: string;
+  interval: BillingInterval | null;
+  intervalCount: number | null;
+  trialPeriodDays: number | null;
+  promoType: "percent" | "amount" | null;
+  promoValue: number | null;
+  promoCode: string | null;
+}
+
+/** null / undefined / "" all mean "not set" — a blank form field is not a change. */
+function normStr(s: string | null | undefined): string | null {
+  return s == null || s === "" ? null : s;
+}
+/** 0 days and NULL both mean "no trial" — treat them as equal, or a form that
+ *  defaults the trial box to 0 would reprice every untrialled interval. */
+function normTrial(days: number | null | undefined): number | null {
+  return days == null || days <= 0 ? null : days;
+}
+
+/**
+ * True when `input` would need a NEW Stripe Price rather than an in-place edit.
+ *
+ * Pure and exported so the no-op detector is unit-testable without a DB or a
+ * Stripe account. Deliberately compares the NORMALIZED shape (currency cased,
+ * intervalCount clamped exactly as createAndPersistPrice clamps it, 0-day trial
+ * ≡ no trial, "" ≡ null) so a round-trip through the admin form that changed
+ * nothing reads as unchanged. Presentation fields — `label` and `hidden` — are
+ * NOT part of the shape: they are mutable on a live Price and must never cause
+ * a reprice.
+ */
+export function billingShapeChanged(row: BillingShapeRow, input: NewPriceInput): boolean {
+  if (row.amountCents !== input.amountCents) return true;
+  if ((row.currency ?? "usd").toLowerCase() !== (input.currency ?? "usd").toLowerCase()) return true;
+
+  const oldInterval = row.interval ?? null;
+  const newInterval = input.interval ?? null;
+  if (oldInterval !== newInterval) return true;
+  const oldCount = oldInterval ? clampCount(oldInterval, row.intervalCount ?? 1) : null;
+  const newCount = newInterval ? clampCount(newInterval, input.intervalCount ?? 1) : null;
+  if (oldCount !== newCount) return true;
+
+  if (normTrial(row.trialPeriodDays) !== normTrial(input.trialPeriodDays)) return true;
+
+  const promo = input.promo ?? null;
+  if ((row.promoType ?? null) !== (promo?.type ?? null)) return true;
+  if ((row.promoValue ?? null) !== (promo?.value ?? null)) return true;
+  if (normStr(row.promoCode) !== normStr(promo?.code)) return true;
+
+  return false;
+}
+
+export interface RepriceResult {
+  /** True when a NEW Stripe Price was minted (billing shape changed). */
+  changed: boolean;
+  oldPriceRowId: number;
+  /** Same as oldPriceRowId when `changed` is false. */
+  newPriceRowId: number;
+  newStripePriceId: string;
+  /** True when the edited interval was the plan's default and the replacement inherited it. */
+  carriedDefault: boolean;
+}
+
+/**
+ * "Edit" one interval of a plan. Because Stripe Prices are immutable, this is
+ * two different operations behind one call:
+ *
+ *  1. **Presentation-only edit** (billing shape unchanged) — no Stripe Price is
+ *     created. `label` is written to the row AND to the live Price's `nickname`,
+ *     `hidden` is written to the row, and the function returns `changed:false`.
+ *     This is what stops a Save that only renamed the plan from minting a fresh
+ *     Price for every interval on the plan.
+ *  2. **Reprice** (amount / currency / interval / intervalCount / trial / promo
+ *     changed) — a NEW Stripe Price is created on the SAME Product, the old row's
+ *     `sortOrder` and `hidden` are carried onto it, the default flag moves to it
+ *     if the original held it, and only THEN is the original deactivated.
+ *
+ * ORDERING GUARANTEE: create-then-deactivate, never the reverse. If Stripe fails
+ * while minting the replacement, the original is untouched and the plan is still
+ * sellable. If deactivating the original fails AFTER the replacement exists, we
+ * log a loud `[REPRICE-ORPHAN]` line and still report success — the plan then
+ * offers both prices (recoverable) rather than none (an outage).
+ *
+ * EXISTING SUBSCRIBERS ARE NOT TOUCHED. Stripe keeps billing every live
+ * subscription at the Price it was created with, and archiving a Price does not
+ * cancel or re-rate those subscriptions. A reprice changes what NEW buyers pay;
+ * moving existing subscribers is a separate, explicit migration and is
+ * deliberately not done here.
+ *
+ * `input` is the interval's FULL desired state, not a sparse patch: an omitted
+ * `label`/`trialPeriodDays`/`promo` clears it, exactly as it would on create.
+ * `hidden` is the one exception — omitted means "carry the current value".
+ */
+export async function repriceInterval(
+  priceId: number,
+  input: NewPriceInput,
+): Promise<RepriceResult> {
+  validateAmount(input.amountCents);
+  if (input.promo) validatePromo(input.promo, input.amountCents);
+
+  const db = await getDb();
+  if (!db) throw new Error("database unavailable");
+
+  const targetRows = (await withCircuitBreaker(async () =>
+    db.select().from(planPrices).where(eq(planPrices.id, priceId)).limit(1),
+  )) as Array<
+    BillingShapeRow & {
+      id: number;
+      planId: number;
+      stripePriceId: string;
+      label: string | null;
+      active: boolean;
+      isDefault: boolean;
+      hidden: boolean;
+      sortOrder: number;
+    }
+  >;
+  const target = targetRows[0];
+  if (!target) throw new Error(`price ${priceId} not found`);
+  if (!target.active) {
+    throw new Error(`price ${priceId} is archived — add a new interval instead of repricing it`);
+  }
+
+  const siblingRows = (await withCircuitBreaker(async () =>
+    db.select().from(planPrices).where(eq(planPrices.planId, target.planId)).limit(1000),
+  )) as Array<{ id: number; active: boolean }>;
+  const otherActive = siblingRows.filter((r) => r.id !== priceId && r.active);
+
+  // Presentation resolution: label follows create semantics (omitted = cleared);
+  // hidden is carried when omitted, so a reprice never silently un-hides.
+  const label = input.label ?? null;
+  const hidden = input.hidden ?? target.hidden;
+
+  // GUARD — never let an edit be the thing that makes a plan unsellable. Hiding
+  // the plan's ONLY active interval leaves nothing to sell, so refuse it. An
+  // interval that was ALREADY hidden is allowed through: the plan is unsellable
+  // either way, and blocking the edit would trap the owner (they could not fix
+  // the price before unhiding it).
+  if (otherActive.length === 0 && hidden && !target.hidden) {
+    throw new Error(
+      "cannot hide a plan's only active interval — the plan would have nothing to sell. Add another interval first.",
+    );
+  }
+
+  const changed = billingShapeChanged(target, input);
+
+  if (!changed) {
+    if (label !== (target.label ?? null)) {
+      try {
+        // nickname is one of the four mutable fields on a live Stripe Price.
+        await getProvisioningStripe().prices.update(target.stripePriceId, { nickname: label ?? "" });
+      } catch (err) {
+        console.warn(`${TAG} reprice: Stripe price nickname update failed — ${(err as Error).message}`);
+      }
+    }
+    await withCircuitBreaker(async () =>
+      db.update(planPrices).set({ label, hidden }).where(eq(planPrices.id, priceId)),
+    );
+    invalidatePlanCache();
+    console.log(
+      `${TAG} reprice ${priceId}: billing shape UNCHANGED — NO new Stripe Price minted; applied presentation only (label="${label ?? ""}" hidden=${hidden}) on ${target.stripePriceId}`,
+    );
+    return {
+      changed: false,
+      oldPriceRowId: priceId,
+      newPriceRowId: priceId,
+      newStripePriceId: target.stripePriceId,
+      carriedDefault: target.isDefault,
+    };
+  }
+
+  console.log(
+    `${TAG} reprice ${priceId} plan=${target.planId}: billing shape CHANGED ` +
+      `(${target.amountCents}${target.currency} ${target.interval ?? "once"}x${target.intervalCount ?? 1} → ${input.amountCents}${(input.currency ?? "usd").toLowerCase()} ${input.interval ?? "once"}x${input.intervalCount ?? 1}) ` +
+      `— MINTING a new Stripe Price; existing subscriptions stay on ${target.stripePriceId} at the old amount`,
+  );
+
+  // 1) Mint the replacement FIRST. A Stripe failure here throws with the plan
+  //    untouched and still sellable.
+  const created = await addPriceToPlan(
+    target.planId,
+    { ...input, label: label ?? undefined, hidden },
+    { idemSalt: `rp${priceId}` },
+  );
+
+  // 2) Carry the old row's presentation/ordering state onto the replacement so
+  //    the interval keeps its slot in the plan's list and its default flag.
+  await withCircuitBreaker(async () =>
+    db
+      .update(planPrices)
+      .set({ sortOrder: target.sortOrder, hidden, ...(target.isDefault ? { isDefault: true } : {}) })
+      .where(eq(planPrices.id, created.rowId)),
+  );
+  if (target.isDefault) {
+    // Clear the old flag BEFORE removePriceFromPlan runs, so it sees a non-default
+    // row and does not promote an unrelated sibling over the replacement.
+    await withCircuitBreaker(async () =>
+      db.update(planPrices).set({ isDefault: false }).where(eq(planPrices.id, priceId)),
+    );
+  }
+
+  // 3) Only now retire the original. Never fatal: the replacement is already live.
+  try {
+    await removePriceFromPlan(priceId);
+  } catch (err) {
+    console.error(
+      `${TAG} [REPRICE-ORPHAN] replacement price ${created.priceId} (row ${created.rowId}) IS LIVE but retiring the old interval ${priceId} (${target.stripePriceId}) FAILED — ${(err as Error).message}. ` +
+        `Plan ${target.planId} now offers BOTH prices; archive the old interval by hand. Reported as success on purpose — the plan must never be left with zero active prices.`,
+    );
+  }
+
+  invalidatePlanCache();
+  console.log(
+    `${TAG} repriced interval ${priceId} → row ${created.rowId} price ${created.priceId} ` +
+      `plan=${target.planId} sortOrder=${target.sortOrder} hidden=${hidden} carriedDefault=${target.isDefault}`,
+  );
+  return {
+    changed: true,
+    oldPriceRowId: priceId,
+    newPriceRowId: created.rowId,
+    newStripePriceId: created.priceId,
+    carriedDefault: target.isDefault,
+  };
 }
 
 /** Update a plan's auto-restock / limited-quantity configuration. */
