@@ -9,8 +9,12 @@
  *
  * `INTERVAL_OPTIONS` is the curated billing-cadence list the Create Plan form
  * offers (Winible's cadences + Annual). It is pure data with no React
- * dependency so it can be unit-tested in vitest's node environment.
+ * dependency so it can be unit-tested in vitest's node environment — which is
+ * also why the Edit Plan modal's draft model and its validation live here
+ * rather than inside SubscriptionPlans.tsx.
  */
+import { normalizePlanFeatures } from "@shared/planFeatures";
+import type { PlanFeatureKey } from "@shared/planFeatures";
 
 export type BillingInterval = "day" | "week" | "month" | "year";
 export type PlanType = "recurring" | "one_time" | "fixed_date";
@@ -73,6 +77,12 @@ export interface StoredPlan {
   /** false → the plan was provisioned in the Stripe sandbox, not the live account. */
   livemode: boolean;
   prices: StoredPrice[];
+  /**
+   * Entitlement keys attached to this plan, already in the canonical
+   * PLAN_FEATURE_KEYS order the server sorts them into. Empty = no features
+   * selected yet.
+   */
+  features: PlanFeatureKey[];
   /** Count of subscribers with access on this plan (shown on the plan card). */
   subscriberCount: number;
 }
@@ -115,3 +125,82 @@ export const INTERVAL_OPTIONS: IntervalOption[] = [
 
 /** The picker's default cadence — Monthly ({month, 1}). */
 export const DEFAULT_INTERVAL: IntervalValue = { interval: "month", intervalCount: 1 };
+
+// ─── Edit Plan draft model ───────────────────────────────────────────────────
+
+/**
+ * The Edit Plan modal's form state. Numbers are held as strings because they
+ * come straight off <input> elements — the same convention IntervalDraft uses
+ * in SubscriptionPlans.tsx. Coercion + validation happens once, in
+ * buildPlanUpdateInput.
+ */
+export interface PlanEditDraft {
+  name: string;
+  /** "" means "clear the description" (submitted as null). */
+  description: string;
+  /** "" means unlimited (submitted as null). */
+  maxSubscribers: string;
+  /** Mirrors `availableQuantity != null` — the limited-quantity toggle. */
+  limitedQuantity: boolean;
+  availableQuantity: string;
+  autoRestock: boolean;
+  restockThreshold: string;
+  restockAmount: string;
+  features: PlanFeatureKey[];
+}
+
+/** Seed the Edit Plan modal from the plan exactly as the list query returned it. */
+export function planEditDraftFrom(plan: StoredPlan): PlanEditDraft {
+  const num = (v: number | null) => (v == null ? "" : String(v));
+  return {
+    name: plan.name,
+    description: plan.description ?? "",
+    maxSubscribers: num(plan.maxSubscribers),
+    limitedQuantity: plan.availableQuantity != null,
+    availableQuantity: num(plan.availableQuantity),
+    autoRestock: plan.autoRestock,
+    restockThreshold: num(plan.restockThreshold),
+    restockAmount: num(plan.restockAmount),
+    features: normalizePlanFeatures(plan.features),
+  };
+}
+
+/** Add or remove one key, always returning the canonical de-duplicated order. */
+export function toggleFeatureKey(selected: readonly string[], key: string): PlanFeatureKey[] {
+  const next = selected.includes(key) ? selected.filter((k) => k !== key) : [...selected, key];
+  return normalizePlanFeatures(next);
+}
+
+/**
+ * The subscriptionPlans.update input. Deliberately metadata + features only:
+ * prices are owned by addInterval / removeInterval / reorderIntervals, and
+ * inventory (availableQuantity / restock) is fixed at creation.
+ */
+export interface PlanUpdateInput {
+  planId: number;
+  name: string;
+  description: string | null;
+  maxSubscribers: number | null;
+  features: PlanFeatureKey[];
+}
+
+/** Validate + convert an edit draft to the update payload, or an error string. */
+export function buildPlanUpdateInput(planId: number, draft: PlanEditDraft): PlanUpdateInput | string {
+  const name = draft.name.trim();
+  if (!name) return "Name is required.";
+
+  let maxSubscribers: number | null = null;
+  if (draft.maxSubscribers.trim()) {
+    const m = parseInt(draft.maxSubscribers, 10);
+    if (Number.isNaN(m) || m < 1) return "Max subscribers must be 1 or more (leave blank for unlimited).";
+    maxSubscribers = m;
+  }
+
+  return {
+    planId,
+    name,
+    description: draft.description.trim() || null,
+    maxSubscribers,
+    features: normalizePlanFeatures(draft.features),
+  };
+}
