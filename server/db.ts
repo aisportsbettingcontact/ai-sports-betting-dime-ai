@@ -593,10 +593,57 @@ const SCHEMA_ERROR_CODES = new Set([
   "ER_BAD_TABLE_ERROR",
 ]);
 
+/**
+ * The driver error code behind a failure, looked up THROUGH any wrapper.
+ *
+ * drizzle-orm (>=0.4x) raises `DrizzleQueryError`, whose own `.code` is
+ * `undefined` and whose message is `"Failed query: <sql> params: …"`. The mysql2
+ * error carrying `code: "ER_…"` / `errno` hangs off `.cause`. Classifying on the
+ * top-level `.code` alone therefore matches NOTHING for any query issued through
+ * drizzle — verified against drizzle-orm 0.45.2:
+ *
+ *   duplicate key  → DrizzleQueryError { code: undefined, cause: { code: "ER_DUP_ENTRY",      errno: 1062 } }
+ *   unknown column → DrizzleQueryError { code: undefined, cause: { code: "ER_BAD_FIELD_ERROR", errno: 1054 } }
+ *
+ * This shipped as two live defects: duplicate webhook deliveries were rethrown
+ * as processing failures (answered 5xx, so Stripe redelivered, so it failed
+ * again — a self-sustaining retry storm), and isSchemaError() never fired, so
+ * the fail-loud drift detection could not see the very error class it was
+ * written for. Walk the chain; do not read `.code` directly.
+ */
+export function driverErrorCode(err: unknown): string | null {
+  let current: unknown = err;
+  // Bounded: a malformed or self-referential cause chain must not spin.
+  for (let depth = 0; current != null && depth < 5; depth += 1) {
+    const code = (current as { code?: unknown }).code;
+    if (typeof code === "string" && code.length > 0) return code;
+    current = (current as { cause?: unknown }).cause;
+  }
+  return null;
+}
+
 /** True when the failure means the query itself is invalid against this schema. */
 export function isSchemaError(err: unknown): boolean {
-  const code = (err as { code?: string } | null)?.code;
-  return typeof code === "string" && SCHEMA_ERROR_CODES.has(code);
+  const code = driverErrorCode(err);
+  return code !== null && SCHEMA_ERROR_CODES.has(code);
+}
+
+/**
+ * True when the failure is a unique-constraint collision.
+ *
+ * Load-bearing for insert-first idempotency claims: a duplicate is the SUCCESS
+ * signal ("someone already processed this"), not an error. Misreading it as a
+ * failure turns every redelivery into a 5xx.
+ */
+export function isDuplicateKeyError(err: unknown): boolean {
+  if (driverErrorCode(err) === "ER_DUP_ENTRY") return true;
+  // errno survives some driver/proxy layers that drop the string code.
+  let current: unknown = err;
+  for (let depth = 0; current != null && depth < 5; depth += 1) {
+    if ((current as { errno?: unknown }).errno === 1062) return true;
+    current = (current as { cause?: unknown }).cause;
+  }
+  return false;
 }
 
 export async function getAppUserById(id: number) {
