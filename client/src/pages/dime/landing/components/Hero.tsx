@@ -40,7 +40,6 @@ export default function Hero() {
               {HERO.secondaryCta}
             </a>
           </div>
-          <span className="mono hero-micro">{HERO.trustMicrocopy}</span>
         </div>
       </header>
 

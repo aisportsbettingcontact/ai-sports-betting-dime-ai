@@ -26,7 +26,6 @@ export const HERO = {
     "Dime AI compares sportsbook prices against projected probability, movement, volatility, matchup context, and risk flags so every market resolves to Pass, Monitor, or Edge Detected.",
   primaryCta: "Get access",
   secondaryCta: "Preview Dime Chat",
-  trustMicrocopy: "Analytical software for disciplined market evaluation. No guaranteed outcomes.",
 } as const;
 
 // (The scripted Dime Market Console and its data were removed 2026-07-31 by
@@ -273,7 +272,7 @@ export const TRUST = {
 
 // ─── Pricing ──────────────────────────────────────────────────────────────────
 
-export type CheckoutPlanId = "pro" | "sharp" | "operator" | "monthly" | "annual";
+export type CheckoutPlanId = "dime-pro" | "dime-sharp" | "dime-max";
 
 export interface Tier {
   id: string;
@@ -292,64 +291,54 @@ export interface Tier {
 
 export const TIERS: Tier[] = [
   {
-    id: "free",
-    name: "Free Preview",
-    audience: "For validating the workflow",
-    price: "$0",
-    period: "",
-    features: [
-      "Live Dime Market Console demo",
-      "Dime Chat preview with sample markets",
-      "Sample market signal cards",
-      "See Pass, Monitor and Edge Detected in action",
-    ],
-    cta: { paid: "Preview the demos", waitlist: "Preview the demos" },
-    action: { type: "scroll", target: "console" },
-  },
-  {
     id: "pro",
     name: "Pro",
-    audience: "For serious daily bettors",
-    price: "$99",
+    audience: "Daily lineups, splits and line movement",
+    price: "$49.99",
     period: "/month",
-    perDay: "≈ $3.30 / day · cancel anytime",
-    featured: true,
-    badge: "Most popular",
     features: [
-      "Full AI Model Projections board, every game priced",
-      "Dime Chat on any game the model prices",
-      "Live edge grades, honest PASS signals",
+      "Daily Lineups",
+      "Betting Splits",
+      "Historical Odds + Line Movement",
+      "Personalized Bet Tracker",
     ],
-    cta: { paid: "Start Pro", waitlist: "Request Pro Access" },
-    action: { type: "checkout", plan: "pro" },
+    cta: { paid: "Start Pro", waitlist: "Join the waitlist" },
+    action: { type: "checkout", plan: "dime-pro" },
   },
   {
     id: "sharp",
     name: "Sharp",
-    audience: "For bettors working the full slate",
-    price: "$249",
+    audience: "Adds the model's own projections",
+    price: "$99.99",
     period: "/month",
-    perDay: "≈ $8.30 / day · cancel anytime",
+    featured: true,
     features: [
-      "Everything in Pro",
-      "Priority access to new model markets",
+      "Dime AI Model Projections",
+      "Daily Lineups",
+      "Betting Splits",
+      "Historical Odds + Line Movement",
+      "Personalized Bet Tracker",
     ],
-    cta: { paid: "Start Sharp", waitlist: "Request Sharp Access" },
-    action: { type: "checkout", plan: "sharp" },
+    cta: { paid: "Start Sharp", waitlist: "Join the waitlist" },
+    action: { type: "checkout", plan: "dime-sharp" },
   },
   {
-    id: "operator",
-    name: "Operator",
-    audience: "For operators running this professionally",
-    price: "$499",
+    id: "max",
+    name: "Max",
+    audience: "Every market the engine prices, first",
+    price: "$199.99",
     period: "/month",
-    perDay: "≈ $16.63 / day · cancel anytime",
     features: [
-      "Everything in Sharp",
-      "Early access to new markets and model releases",
+      "Dime AI Model Projections",
+      "Daily Lineups",
+      "Betting Splits",
+      "Historical Odds + Line Movement",
+      "Player Prop Projections",
+      "Personalized Bet Tracker",
+      "Early Access to Features",
     ],
-    cta: { paid: "Start Operator", waitlist: "Request Operator Access" },
-    action: { type: "checkout", plan: "operator" },
+    cta: { paid: "Start Max", waitlist: "Join the waitlist" },
+    action: { type: "checkout", plan: "dime-max" },
   },
 ];
 
@@ -368,10 +357,10 @@ export const CREDITS_NOTE = {
 export const PRICING_HEAD = {
   eyebrow: "Pricing",
   headline: { before: "One engine. ", em: "Priced like software", after: "." },
-  sub: "Three levels of the same engine, with earlier access to new markets at each step. The upgrade buys capacity rather than a \"VIP room\" of picks. Cancel anytime and keep access through the period you paid for.",
+  sub: "Three levels of the same engine. Cancel anytime.",
   legal: "Secure checkout · Auto-renews · Cancel anytime · 21+",
   proof:
-    "The engine grades every number you pay for against the close after the final out, and when the edge is missing it says PASS instead of selling you a pick. A month costs less than one losing $110 bet; one honest Pass that keeps you off a bad number covers it.",
+    "Every number is graded against the close. When the edge is missing, the answer is Pass.",
 } as const;
 
 // ─── Controlled access ────────────────────────────────────────────────────────
@@ -467,7 +456,7 @@ export const FINAL_CTA = {
 // ─── Footer ───────────────────────────────────────────────────────────────────
 
 export const FOOTER_LEGAL =
-  "© 2026 AI Sports Betting. dime provides statistical model projections for informational and entertainment purposes only. Nothing here is financial advice, and no model guarantees a profit. Must be 21+ (or of legal betting age in your jurisdiction) to wager. Please bet responsibly. If you or someone you know has a gambling problem, call 1-800-GAMBLER.";
+  "© 2026 Tailered Sports, Inc. dime provides statistical model projections for informational and entertainment purposes only. Nothing here is financial advice, and no model guarantees a profit. Must be 21+ (or of legal betting age in your jurisdiction) to wager. Please bet responsibly. If you or someone you know has a gambling problem, call 1-800-GAMBLER.";
 
 // ─── Stats band ───────────────────────────────────────────────────────────────
 

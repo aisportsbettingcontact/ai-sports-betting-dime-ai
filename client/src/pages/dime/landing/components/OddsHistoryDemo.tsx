@@ -16,7 +16,7 @@
 
 import { OddsHistoryPanel } from "@/components/OddsHistoryPanel";
 import { trpc } from "@/lib/trpc";
-import { SectionHead, CtaRow } from "./shared";
+import { SectionHead } from "./shared";
 
 export default function OddsHistoryDemo() {
   // Resolves the pinned demo matchup (and its real team names) so the panel
@@ -41,7 +41,7 @@ export default function OddsHistoryDemo() {
               em: "timestamped",
               after: ".",
             }}
-            sub="The panel below is the product's own odds-history table, reading a completed game straight from the database — not a picture of one. Members get this under every card on the live slate."
+            sub="Every price, every split, every timestamp."
           />
 
           <div
@@ -57,13 +57,6 @@ export default function OddsHistoryDemo() {
             />
           </div>
 
-          <CtaRow
-            label="Members see this under every game on the live slate"
-            cta="Get access"
-            href="#pricing"
-            ctaId="odds-history-get-access"
-            location="odds-history"
-          />
         </div>
       </div>
     </section>

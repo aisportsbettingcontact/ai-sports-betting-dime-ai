@@ -21,7 +21,7 @@
  */
 
 import DimeChatPage from "@/pages/dime-chat/DimeChatPage";
-import { SectionHead, CtaRow } from "./shared";
+import { SectionHead } from "./shared";
 
 export default function ChatDemo() {
   return (
@@ -35,24 +35,13 @@ export default function ChatDemo() {
               em: "not the narrative",
               after: ".",
             }}
-            sub="The panel below is the product's own chat interface, running live — ask it something, or press a suggestion. Answers here are sample copy; with access it runs against tonight's real slate."
+            sub="Ask it anything about tonight's board."
           />
 
-          <div
-            className="dc-demo-embed"
-            style={{ marginTop: "clamp(28px, 4vw, 44px)" }}
-          >
-            <span className="dc-demo-tag">Demo · sample markets</span>
-            <DimeChatPage demoMode />
+          <div className="dc-demo-embed dc-demo-embed--hero">
+            <DimeChatPage demoMode demoTheme="light" />
           </div>
 
-          <CtaRow
-            label="The full chat runs on tonight's real slate"
-            cta="Open the full chat"
-            href="#pricing"
-            ctaId="chat-demo-open-full-chat"
-            location="chat-demo"
-          />
         </div>
       </div>
     </section>

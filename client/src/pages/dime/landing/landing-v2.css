@@ -544,3 +544,257 @@
   text-transform: uppercase;
   pointer-events: none;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Landing overhaul — owner directive 2026-07-31 r3
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Type scale ────────────────────────────────────────────────────────────
+   The landing runs a LARGER fluid scale than the app. Overridden here on
+   .dlv2 only, never in type-system.css, so product surfaces keep their own
+   sizes. Every step is clamp(floor, vw-driven, ceiling): the floor protects
+   360px phones, the vw term does the scaling, the ceiling stops 4K monitors
+   printing billboards. Headlines additionally cap against vh (see below), so
+   a short landscape window scales by HEIGHT instead of overflowing. */
+.dlv2 {
+  --fs-display: clamp(2.75rem, 1rem + 7.6vw, 7.5rem);
+  --fs-h2: clamp(1.9rem, 0.95rem + 3.3vw, 4.25rem);
+  --fs-body-lg: clamp(1.0625rem, 0.94rem + 0.85vw, 1.65rem);
+  --fs-body: clamp(1rem, 0.94rem + 0.45vw, 1.3rem);
+  --type-display: var(--fs-display);
+  --measure-narrow: 34ch;
+  --pad-section: clamp(40px, 5.5vw, 88px);
+  --head-gap: clamp(20px, 2.6vw, 40px);
+}
+/* Aspect-ratio guard: cap display type against the viewport's SHORT axis so a
+   wide-but-short window (laptop in landscape, tablet split-view) never gets a
+   headline taller than the space it has to live in. */
+.dlv2 h1,
+.dlv2 .plate h2 {
+  font-size: min(var(--type-display), 19vh);
+}
+.dlv2 h2 {
+  font-size: min(var(--fs-h2), 13vh);
+}
+
+/* ── Edge-to-edge ─────────────────────────────────────────────────────────
+   No centred reading column and no dead rails: content runs the full width
+   with only a small proportional gutter so type never touches the glass. */
+.dlv2 .wrap {
+  max-width: none;
+  margin: 0;
+  padding-inline: clamp(14px, 2.2vw, 34px);
+}
+
+/* ── Membership tiers ─────────────────────────────────────────────────────
+   Three surfaces, per owner directive: Pro on the system grey grid, Sharp on
+   mint, Max on white. Depth is real (perspective + layered shadow + a lifted
+   inner highlight), not a drop-shadow sticker, and every transform is
+   compositor-only so the hover stays at 60fps. */
+.dlv2 .tier-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: clamp(12px, 1.6vw, 22px);
+  align-items: stretch;
+  perspective: 1400px;
+  perspective-origin: 50% 40%;
+  margin-top: clamp(24px, 3vw, 44px);
+}
+.dlv2 .tier {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(10px, 1.1vw, 18px);
+  padding: clamp(20px, 2.2vw, 34px);
+  border-radius: 20px;
+  text-align: left;
+  transform-style: preserve-3d;
+  will-change: transform;
+  transition:
+    transform 160ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+@media (hover: hover) and (pointer: fine) {
+  .dlv2 .tier:hover {
+    transform: translateY(-6px) rotateX(2.2deg) scale(1.012);
+  }
+}
+.dlv2 .tier:focus-within {
+  transform: translateY(-4px);
+}
+
+/* Pro — system grey with a hairline grid. The grid is an SVG pattern, not a
+   repeating-gradient: brand law bans gradient fills, and a %23-encoded data
+   URI also keeps raw hex out of the stylesheet. */
+.dlv2 .tier--pro {
+  color: var(--text-primary);
+  background-color: var(--surface-raised);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28'%3E%3Cpath d='M28 0H0v28' fill='none' stroke='white' stroke-opacity='0.07' stroke-width='1'/%3E%3C/svg%3E");
+  border: 1px solid var(--border);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.6),
+    0 18px 40px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+@media (hover: hover) and (pointer: fine) {
+  .dlv2 .tier--pro:hover {
+    box-shadow:
+      0 2px 4px rgba(0, 0, 0, 0.6),
+      0 30px 60px rgba(0, 0, 0, 0.6),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+}
+
+/* Sharp — mint plate, black ink (mint fills always carry black ink). */
+.dlv2 .tier--sharp {
+  color: black;
+  background: var(--mint);
+  border: 1px solid var(--mint-keyline, var(--mint));
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.5),
+    0 22px 50px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+.dlv2 .tier--sharp .tier-aud,
+.dlv2 .tier--sharp .tier-billed {
+  color: rgba(0, 0, 0, 0.72);
+}
+.dlv2 .tier--sharp .tier-features li::before {
+  border-color: rgba(0, 0, 0, 0.5);
+}
+
+/* Max — white plate, black ink. */
+.dlv2 .tier--max {
+  color: black;
+  background: white;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.45),
+    0 22px 50px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+.dlv2 .tier--max .tier-aud,
+.dlv2 .tier--max .tier-billed {
+  color: rgba(0, 0, 0, 0.62);
+}
+.dlv2 .tier--max .tier-features li::before {
+  border-color: rgba(0, 0, 0, 0.45);
+}
+
+.dlv2 .tier-head { display: flex; flex-direction: column; gap: 4px; }
+.dlv2 .tier-name {
+  font-size: clamp(1.5rem, 0.9rem + 1.8vw, 2.6rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.02;
+  text-transform: none;
+  color: inherit;
+}
+.dlv2 .tier-aud {
+  font-size: var(--fs-body);
+  line-height: 1.35;
+  color: var(--text-secondary);
+}
+.dlv2 .tier--pro .tier-features li { color: var(--text-primary); }
+.dlv2 .tier-features {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(6px, 0.7vw, 12px);
+  font-size: var(--fs-body);
+  line-height: 1.3;
+}
+.dlv2 .tier-features li {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: start;
+  gap: 10px;
+  /* Inherit the PLATE's ink. Without this the earlier dark-theme rule wins and
+     the list renders near-white on mint and on white. */
+  color: inherit;
+}
+/* Check drawn in CSS: one shape, inherits the plate's ink, no icon payload. */
+.dlv2 .tier-features li::before {
+  content: "";
+  inline-size: 0.62em;
+  block-size: 1.05em;
+  margin-block-start: 0.14em;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg);
+  opacity: 0.85;
+}
+.dlv2 .tier-foot { margin-block-start: auto; display: flex; flex-direction: column; gap: 8px; }
+.dlv2 .tier-cta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: clamp(13px, 1.3vw, 20px) clamp(16px, 1.6vw, 24px);
+  border-radius: 999px;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: clamp(1rem, 0.9rem + 0.55vw, 1.35rem);
+  transition:
+    transform 160ms cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.dlv2 .tier-cta:active { transform: scale(0.985); }
+.dlv2 .tier-cta:hover { opacity: 0.88; }
+.dlv2 .tier--pro .tier-cta { background: var(--mint); color: black; }
+.dlv2 .tier--sharp .tier-cta { background: black; color: var(--mint); }
+.dlv2 .tier--max .tier-cta { background: black; color: white; }
+.dlv2 .tier-cta-price { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.dlv2 .tier-billed {
+  text-align: center;
+  font-size: clamp(0.8rem, 0.76rem + 0.2vw, 0.95rem);
+  letter-spacing: 0.04em;
+  color: var(--text-tertiary);
+}
+
+@media (max-width: 900px) {
+  .dlv2 .tier-grid { grid-template-columns: 1fr; perspective: none; }
+  .dlv2 .tier { transform: none !important; }
+}
+
+/* ── Chat demo: brand hero + composer only, on a light plate ───────────────
+   The embedded app renders its home state; everything outside the hero band
+   (rail, thread chrome, disclaimer) is cropped away rather than rebuilt, so
+   what shows is still the product's own markup. */
+.dlv2 .dc-demo-embed--hero {
+  height: clamp(300px, 34vh, 420px);
+  border-radius: 20px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: white;
+  margin-inline: 0;
+  width: auto;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.4),
+    0 24px 56px rgba(0, 0, 0, 0.45);
+}
+.dlv2 .dc-demo-embed--hero .dc-sidebar,
+.dlv2 .dc-demo-embed--hero .dc-mobile-bar,
+.dlv2 .dc-demo-embed--hero .dc-chat-footer,
+.dlv2 .dc-demo-embed--hero .dc-edge-capture,
+.dlv2 .dc-demo-embed--hero .dc-drawer-scrim {
+  display: none;
+}
+.dlv2 .dc-demo-embed--hero .dc-page.dc-page--app,
+.dlv2 .dc-demo-embed--hero .dc-app { background: transparent; }
+/* With the rail cropped away the pane no longer sits centre-stage on its own —
+   the app still lays out around the space the sidebar used to hold. Centre the
+   band so the wordmark and composer sit on the frame's optical midline. */
+.dlv2 .dc-demo-embed--hero .dc-app { justify-content: center; }
+.dlv2 .dc-demo-embed--hero .dc-main {
+  margin-inline: auto;
+  max-width: min(920px, 100%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dlv2 .tier,
+  .dlv2 .tier-cta { transition: none; }
+  .dlv2 .tier:hover,
+  .dlv2 .tier:focus-within { transform: none; }
+}
