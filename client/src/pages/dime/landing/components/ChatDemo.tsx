@@ -1,114 +1,29 @@
 /**
- * Dime Chat demo — the REAL product interface, driven by scripted exchanges.
+ * Dime Chat demo — the REAL chat page, embedded.
  *
- * Owner directive 2026-07-31: "use the actual Dime Chat AI interface … display
- * it as a demo". So the thread below is not a lookalike: it renders the
- * product's own <Turn> (dc-turn--user / dc-user-capsule / dc-turn--assistant,
- * dc-prose, [EDGE] blocks, the dimeTyping dots) under the product's own
- * conversation.css. If chat rendering changes, this section changes with it —
- * there is no second copy to drift.
+ * Owner directive 2026-07-31 (round 2): "We need the actual Dime AI Chat
+ * interface on the landing page. As a Demo for the users to see the UI/UX."
+ * So this is no longer landing-invented chrome wrapped around real bubbles —
+ * it mounts <DimeChatPage demoMode /> itself. Sidebar, top bar, brand hero,
+ * composer, thread, streaming states, motion: all the product's own.
  *
- * What is simulated, and why: the live thread streams from POST /api/dime/chat,
- * which is auth-gated and model-backed. A public landing page cannot call it
- * (401 by design, and every message costs real credits), so the exchanges are
- * pre-written product copy replayed through the real streaming STATES —
- * user turn → typing dots → delta-by-delta reveal → done. The bar stays
- * labelled "Demo · sample markets", and the CTA points at the real thing.
+ * demoMode (DimeChatPage) guarantees two things for a public page:
+ *   • no history reads/writes — a signed-in owner scrolling past must never
+ *     see their private threads inside a marketing embed;
+ *   • no SSE call — /api/dime/chat is auth-gated and metered, so submits
+ *     replay scripted product copy through the real reducer.
  *
- * Motion (apple-design): the reveal is a timer-driven text stream that
- * collapses to the final state under prefers-reduced-motion — no movement,
- * no partial text, just the answer.
+ * Containment: the chat shell is a fixed, full-viewport app below 1024px.
+ * `.dc-demo-embed` re-anchors that fixed layer to the frame (see
+ * landing-v2.css) so the product renders at whatever layout matches the
+ * visitor's device — a phone visitor previews the phone UI — without ever
+ * escaping its box.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { CHAT_EXCHANGES, CHAT_SIDE } from "../landing-content";
+import DimeChatPage from "@/pages/dime-chat/DimeChatPage";
 import { SectionHead, CtaRow } from "./shared";
-import { Turn } from "@/pages/dime-chat/DimeChatPage";
-import type { ChatMessage } from "@/pages/dime-chat/chatReducer";
-import { useReducedMotionPreference } from "@/pages/dime-chat/useReducedMotionPreference";
-import "@/pages/dime-chat/conversation.css";
-
-/** Streaming cadence — fast enough to feel live, slow enough to read as typing. */
-const STREAM_MS_PER_CHUNK = 26;
-const STREAM_CHUNK_CHARS = 3;
-const TYPING_DOTS_MS = 620;
 
 export default function ChatDemo() {
-  const [activeId, setActiveId] = useState(CHAT_EXCHANGES[0].id);
-  const [creditsUsed, setCreditsUsed] = useState(1);
-  const [revealed, setRevealed] = useState<string>(CHAT_EXCHANGES[0].dime);
-  const [phase, setPhase] = useState<"typing" | "streaming" | "done">("done");
-  const reduceMotion = useReducedMotionPreference();
-
-  const timers = useRef<number[]>([]);
-  const clearTimers = useCallback(() => {
-    timers.current.forEach(id => window.clearTimeout(id));
-    timers.current = [];
-  }, []);
-
-  const exchange = useMemo(
-    () => CHAT_EXCHANGES.find(e => e.id === activeId) ?? CHAT_EXCHANGES[0],
-    [activeId]
-  );
-
-  /** Replay one exchange through the product's real streaming states. */
-  const play = useCallback(
-    (text: string) => {
-      clearTimers();
-      if (reduceMotion) {
-        setPhase("done");
-        setRevealed(text);
-        return;
-      }
-      setPhase("typing");
-      setRevealed("");
-      timers.current.push(
-        window.setTimeout(() => {
-          setPhase("streaming");
-          let cursor = 0;
-          const tick = () => {
-            cursor = Math.min(text.length, cursor + STREAM_CHUNK_CHARS);
-            setRevealed(text.slice(0, cursor));
-            if (cursor < text.length) {
-              timers.current.push(window.setTimeout(tick, STREAM_MS_PER_CHUNK));
-            } else {
-              setPhase("done");
-            }
-          };
-          tick();
-        }, TYPING_DOTS_MS)
-      );
-    },
-    [clearTimers, reduceMotion]
-  );
-
-  // Timers must never outlive the section (or a fast unmount mid-stream).
-  useEffect(() => clearTimers, [clearTimers]);
-
-  const pick = (id: string) => {
-    if (id === activeId) return;
-    const next = CHAT_EXCHANGES.find(e => e.id === id);
-    if (!next) return;
-    setActiveId(id);
-    setCreditsUsed(c => Math.min(CHAT_SIDE.creditsTotal, c + 1));
-    play(next.dime);
-  };
-
-  // The exact message shape the product's reducer produces, so <Turn> takes
-  // the same branches here as it does in a live thread.
-  const userMsg: ChatMessage = {
-    id: `${exchange.id}-user`,
-    role: "user",
-    content: exchange.user,
-    status: "done",
-  };
-  const assistantMsg: ChatMessage = {
-    id: `${exchange.id}-assistant`,
-    role: "assistant",
-    content: phase === "typing" ? "" : revealed,
-    status: phase === "done" ? "done" : "open",
-  };
-
   return (
     <section className="sec" id="chat-demo" aria-label="Dime Chat demo">
       <div className="wrap">
@@ -120,84 +35,15 @@ export default function ChatDemo() {
               em: "not the narrative",
               after: ".",
             }}
-            sub="This is the product's own chat surface. Pick a question — the answers are real product tone on sample markets."
+            sub="The panel below is the product's own chat interface, running live — ask it something, or press a suggestion. Answers here are sample copy; with access it runs against tonight's real slate."
           />
 
           <div
-            className="chat-grid"
+            className="dc-demo-embed"
             style={{ marginTop: "clamp(28px, 4vw, 44px)" }}
           >
-            {/* Left: prompts, filters, credits */}
-            <div className="chat-side">
-              <div>
-                <span
-                  className="mono"
-                  style={{ display: "block", marginBottom: 10 }}
-                >
-                  Suggested questions
-                </span>
-                <div className="chip-group">
-                  {CHAT_EXCHANGES.map(e => (
-                    <button
-                      key={e.id}
-                      type="button"
-                      className="chip"
-                      aria-pressed={e.id === activeId}
-                      onClick={() => pick(e.id)}
-                    >
-                      {e.chip}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <span
-                  className="mono"
-                  style={{ display: "block", marginBottom: 10 }}
-                >
-                  Market filters
-                </span>
-                <div className="filter-row">
-                  {CHAT_SIDE.filters.map(f => (
-                    <span key={f} className="filter-chip">
-                      {f}
-                    </span>
-                  ))}
-                </div>
-              </div>
-              <div className="credit-meter">
-                <span className="mono num">
-                  {CHAT_SIDE.creditsLabel} · {creditsUsed}/
-                  {CHAT_SIDE.creditsTotal}
-                </span>
-                <span className="bar">
-                  <b
-                    style={{
-                      width: `${(creditsUsed / CHAT_SIDE.creditsTotal) * 100}%`,
-                    }}
-                  />
-                </span>
-              </div>
-            </div>
-
-            {/* Right: the product's own thread surface */}
-            <div className="chat-window">
-              <div className="chat-bar">
-                <span className="pulse" aria-hidden="true" />
-                <span>dime.chat</span>
-                <span className="right">Demo · sample markets</span>
-              </div>
-              {/* theme-dark scopes the product's chat tokens to this panel —
-                  the landing is a black-fixed surface in both themes. */}
-              <div
-                className="chat-body theme-dark dc-demo-thread"
-                role="log"
-                aria-live="polite"
-              >
-                <Turn msg={userMsg} freshness="none" fx={false} />
-                <Turn msg={assistantMsg} freshness="none" fx={false} />
-              </div>
-            </div>
+            <span className="dc-demo-tag">Demo · sample markets</span>
+            <DimeChatPage demoMode />
           </div>
 
           <CtaRow
