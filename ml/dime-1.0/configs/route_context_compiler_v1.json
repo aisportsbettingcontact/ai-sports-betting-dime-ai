@@ -1,0 +1,103 @@
+{
+  "schemaVersion": "dime-route-aware-context-compiler-config-v1",
+  "status": "IMPLEMENTED_OFFLINE_NOT_ACTIVATED",
+  "compilerVersion": "dime-route-aware-context-compiler-v1",
+  "tokenMeasurementStatus": "STRUCTURAL_ESTIMATE_NOT_MODEL_EXACT",
+  "authorizations": {
+    "runtimeIntegration": false,
+    "routeActivation": false,
+    "providerExecution": false,
+    "deployment": false,
+    "training": false
+  },
+  "routePolicies": {
+    "platform": {
+      "maxTokens": 1000,
+      "gameRetrieval": "prohibited",
+      "dynamicRetrieval": "prohibited",
+      "exactEventMaximum": 0,
+      "candidateEventMaximum": 0,
+      "pointInTimeCutoffRequired": false,
+      "authoritativeObservationTimestampRequired": false
+    },
+    "account": {
+      "maxTokens": 800,
+      "gameRetrieval": "prohibited",
+      "dynamicRetrieval": "prohibited",
+      "exactEventMaximum": 0,
+      "candidateEventMaximum": 0,
+      "pointInTimeCutoffRequired": false,
+      "authoritativeObservationTimestampRequired": false
+    },
+    "educational": {
+      "maxTokens": 1000,
+      "gameRetrieval": "allowed",
+      "dynamicRetrieval": "explicit_only",
+      "exactEventMaximum": 1,
+      "candidateEventMaximum": 2,
+      "pointInTimeCutoffRequired": false,
+      "authoritativeObservationTimestampRequired": false
+    },
+    "bet_explanation": {
+      "maxTokens": 1200,
+      "gameRetrieval": "allowed",
+      "dynamicRetrieval": "explicit_only",
+      "exactEventMaximum": 1,
+      "candidateEventMaximum": 2,
+      "pointInTimeCutoffRequired": false,
+      "authoritativeObservationTimestampRequired": false
+    },
+    "matchup": {
+      "maxTokens": 2200,
+      "gameRetrieval": "allowed",
+      "dynamicRetrieval": "allowed",
+      "exactEventMaximum": 1,
+      "candidateEventMaximum": 2,
+      "pointInTimeCutoffRequired": false,
+      "authoritativeObservationTimestampRequired": false
+    },
+    "full_slate": {
+      "maxTokens": 3200,
+      "gameRetrieval": "allowed",
+      "dynamicRetrieval": "allowed",
+      "exactEventMaximum": null,
+      "candidateEventMaximum": 12,
+      "pointInTimeCutoffRequired": false,
+      "authoritativeObservationTimestampRequired": false
+    },
+    "historical": {
+      "maxTokens": 2400,
+      "gameRetrieval": "allowed",
+      "dynamicRetrieval": "allowed",
+      "exactEventMaximum": 1,
+      "candidateEventMaximum": 2,
+      "pointInTimeCutoffRequired": true,
+      "authoritativeObservationTimestampRequired": false
+    },
+    "live_data": {
+      "maxTokens": 1800,
+      "gameRetrieval": "allowed",
+      "dynamicRetrieval": "allowed",
+      "exactEventMaximum": 1,
+      "candidateEventMaximum": 2,
+      "pointInTimeCutoffRequired": false,
+      "authoritativeObservationTimestampRequired": true
+    },
+    "general_sports": {
+      "maxTokens": 1200,
+      "gameRetrieval": "allowed",
+      "dynamicRetrieval": "explicit_only",
+      "exactEventMaximum": 1,
+      "candidateEventMaximum": 2,
+      "pointInTimeCutoffRequired": false,
+      "authoritativeObservationTimestampRequired": false
+    }
+  },
+  "offlineAcceptance": {
+    "criticalFactRecall": 1.0,
+    "routePolicyViolations": 0,
+    "duplicateContextRateMaximum": 0.02,
+    "irrelevantContextRateMaximum": 0.05,
+    "silentContextTruncations": 0
+  }
+}
