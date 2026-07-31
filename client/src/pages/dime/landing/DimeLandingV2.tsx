@@ -13,12 +13,20 @@
  * approval. Checkout stays in-domain via /checkout (Stripe Embedded Checkout).
  */
 
-import { useEffect } from "react";
+import { Suspense, lazy, useEffect } from "react";
 import "./landing-v2.css";
 
 import Nav from "./components/Nav";
 import Hero from "./components/Hero";
-import ChatDemo from "./components/ChatDemo";
+// Both live-product demos are LAZY on purpose. The landing page is the
+// first paint for every unauthenticated visitor (App.tsx keeps it eager for
+// exactly that reason), and these two sections pull in real product code —
+// the chat thread renderer + conversation.css, and the odds-history panel.
+// Code-splitting them keeps that critical path byte-identical to before;
+// the chunks arrive after paint, each inside a height-reserved frame so
+// nothing shifts when they land.
+const ChatDemo = lazy(() => import("./components/ChatDemo"));
+const OddsHistoryDemo = lazy(() => import("./components/OddsHistoryDemo"));
 import ProblemSection from "./components/ProblemSection";
 import Mechanism from "./components/Mechanism";
 import MarketSignals from "./components/MarketSignals";
@@ -60,10 +68,15 @@ export default function DimeLandingV2() {
       <Nav />
       <main>
         <Hero />           {/* includes Dime Market Console + stats strip */}
-        <ChatDemo />
+        <Suspense fallback={<div className="sec-reserve" aria-hidden="true" />}>
+          <ChatDemo />
+        </Suspense>
         <ProblemSection />
         <Mechanism />
         <MarketSignals />
+        <Suspense fallback={<div className="sec-reserve" aria-hidden="true" />}>
+          <OddsHistoryDemo />
+        </Suspense>
         <FeatureGrid />
         <TrustArchitecture />
         <Pricing />

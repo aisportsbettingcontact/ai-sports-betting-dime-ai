@@ -1069,7 +1069,13 @@ function Prose({ text }: { text: string }) {
   );
 }
 
-function Turn({
+/**
+ * One conversation turn. Exported so the public landing page renders the
+ * PRODUCT's bubbles, prose and [EDGE] blocks (owner directive 2026-07-31 —
+ * "use the actual Dime Chat AI interface"), instead of a lookalike that
+ * would drift from this one the first time chat rendering changes.
+ */
+export function Turn({
   msg,
   freshness,
   fx,
