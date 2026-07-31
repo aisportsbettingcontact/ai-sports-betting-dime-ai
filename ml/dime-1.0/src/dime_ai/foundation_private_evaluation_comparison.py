@@ -21,6 +21,10 @@ from typing import Any
 
 from dime_ai.canonical_json import canonical_json_bytes
 from dime_ai.foundation_instrumentation import validate_schema
+from dime_ai.private_evaluation_semantics import (
+    PrivateEvaluationError,
+    validate_partition_isolation,
+)
 
 PARTITIONS = ("development", "sealed_critical", "locked", "general_regression")
 PARTITION_COUNTS = {
@@ -40,6 +44,7 @@ FOUNDATION_COUNTS = {
 }
 SEMANTIC_R5_BASENAME = "evaluation-semantic-v1-b9ba7788-r5"
 SEMANTIC_CLASSIFICATION = "PRIVATE_EVALUATION_SEMANTIC_CASES"
+SEMANTIC_RELEASE_BLOCKER = "FOUNDATION_PRIVATE_RECORDS_NOT_AVAILABLE_FOR_FOUR_REQUIRED_COMPARISONS"
 METHOD_REVISION = "dime-foundation-private-evaluation-semantic-comparison-v1"
 CHARACTER_SHINGLE_SIZE = 5
 CHARACTER_JACCARD_THRESHOLD = 0.92
@@ -152,13 +157,38 @@ def _verify_sha256sums(root: Path) -> None:
         expected, relative = match.groups()
         if relative in seen:
             raise FoundationEvaluationComparisonError(f"duplicate checksum path: {relative}")
+        relative_path = Path(relative)
+        if (
+            relative_path.is_absolute()
+            or ".." in relative_path.parts
+            or relative_path.as_posix() != relative
+        ):
+            raise FoundationEvaluationComparisonError(f"unsafe checksum path: {relative}")
         seen.add(relative)
-        target = root / relative
+        target = root / relative_path
         resolved = target.absolute().resolve(strict=True)
         if not resolved.is_relative_to(root):
             raise FoundationEvaluationComparisonError(f"checksum target escapes root: {relative}")
         if _sha256_file(target) != expected:
             raise FoundationEvaluationComparisonError(f"checksum mismatch: {relative}")
+
+
+def _manifest_target(root: Path, relative: str) -> Path:
+    relative_path = Path(relative)
+    if (
+        not relative
+        or relative_path.is_absolute()
+        or ".." in relative_path.parts
+        or relative_path.as_posix() != relative
+    ):
+        raise FoundationEvaluationComparisonError(f"manifest path is unsafe: {relative}")
+    target = root / relative_path
+    if target.is_symlink() or not target.is_file():
+        raise FoundationEvaluationComparisonError(f"manifest target is unsafe: {relative}")
+    resolved = target.resolve(strict=True)
+    if not resolved.is_relative_to(root):
+        raise FoundationEvaluationComparisonError(f"manifest target escapes root: {relative}")
+    return resolved
 
 
 def _verify_file_entries(root: Path, entries: Sequence[Mapping[str, Any]]) -> None:
@@ -167,13 +197,57 @@ def _verify_file_entries(root: Path, entries: Sequence[Mapping[str, Any]]) -> No
         expected = entry.get("sha256")
         if not isinstance(relative, str) or not isinstance(expected, str):
             raise FoundationEvaluationComparisonError("manifest entry is incomplete")
-        target = root / relative
-        if not target.absolute().resolve(strict=True).is_relative_to(root):
-            raise FoundationEvaluationComparisonError(f"manifest target escapes root: {relative}")
+        target = _manifest_target(root, relative)
         if _sha256_file(target) != expected:
             raise FoundationEvaluationComparisonError(f"manifest hash mismatch: {relative}")
         if "bytes" in entry and target.stat().st_size != entry["bytes"]:
             raise FoundationEvaluationComparisonError(f"manifest size mismatch: {relative}")
+
+
+def _validate_semantic_overlap_boundary(
+    manifest: Mapping[str, Any],
+    overlap: Mapping[str, Any],
+) -> None:
+    """Verify the exact internal r5 proof and its explicit Foundation gap."""
+
+    expected = {
+        "schema_version": "dime-private-evaluation-overlap-report-v1",
+        "generated_case_count": 651,
+        "public_material_count": 81,
+        "foundation_material_count": 0,
+        "foundation_material_status": "NOT_AVAILABLE",
+        "exact_normalized_prompt_collisions": [],
+        "exact_semantic_material_collisions": [],
+        "near_semantic_collisions": [],
+        "pairwise_suite_comparisons": 6,
+        "foundation_suite_comparisons_completed": 0,
+        "case_generation_overlap_gate": True,
+        "release_non_overlap_proof_complete": False,
+    }
+    if dict(overlap) != expected:
+        raise FoundationEvaluationComparisonError(
+            "semantic r5 overlap report is not the exact zero-collision internal proof"
+        )
+    if (
+        manifest.get("release_non_overlap_proof_complete") is not False
+        or manifest.get("release_blocker") != SEMANTIC_RELEASE_BLOCKER
+    ):
+        raise FoundationEvaluationComparisonError(
+            "semantic r5 manifest proof flag or Foundation blocker drifted"
+        )
+
+
+def _validate_loaded_semantic_partitions(
+    cases_by_partition: Mapping[str, Sequence[Mapping[str, Any]]],
+) -> None:
+    """Re-run governed group isolation on the exact records loaded for comparison."""
+
+    try:
+        validate_partition_isolation(cases_by_partition)
+    except PrivateEvaluationError as error:
+        raise FoundationEvaluationComparisonError(
+            "semantic r5 cross-suite partition isolation failed"
+        ) from error
 
 
 def _require_zero_mapping(value: object, label: str) -> None:
@@ -306,8 +380,15 @@ def load_semantic_r5(
     for relative, expected in files.items():
         if not isinstance(relative, str) or not isinstance(expected, str):
             raise FoundationEvaluationComparisonError("semantic r5 file manifest is malformed")
-        if _sha256_file(semantic_root / relative) != expected:
+        if _sha256_file(_manifest_target(semantic_root, relative)) != expected:
             raise FoundationEvaluationComparisonError(f"semantic r5 hash mismatch: {relative}")
+    overlap_path = semantic_root / "overlap-report.json"
+    overlap = _load_json(overlap_path)
+    if manifest.get("overlap_report_sha256") != _sha256_file(overlap_path) or files.get(
+        "overlap-report.json"
+    ) != _sha256_file(overlap_path):
+        raise FoundationEvaluationComparisonError("semantic r5 overlap report is not hash-bound")
+    _validate_semantic_overlap_boundary(manifest, overlap)
     checksum_path = semantic_root / "RECORD_CHECKSUMS.json"
     checksums = _load_json(checksum_path)
     if checksums.get("algorithm") != "sha256" or manifest.get(
@@ -343,11 +424,13 @@ def load_semantic_r5(
         cases_by_partition[partition] = cases
     if len(seen_ids) != 651 or set(expected_record_hashes) != seen_ids:
         raise FoundationEvaluationComparisonError("semantic r5 record inventory is incomplete")
+    _validate_loaded_semantic_partitions(cases_by_partition)
     if _file_snapshot(semantic_root) != snapshot:
         raise FoundationEvaluationComparisonError("semantic r5 changed during comparison load")
     bindings = {
         "generation_id": str(manifest["generation_id"]),
         "manifest_sha256": _sha256_file(semantic_root / "manifest.json"),
+        "overlap_report_sha256": _sha256_file(overlap_path),
         "record_checksums_sha256": _sha256_file(checksum_path),
         "sha256sums_sha256": _sha256_file(semantic_root / "SHA256SUMS"),
         "source_commit": str(manifest["source_commit"]),

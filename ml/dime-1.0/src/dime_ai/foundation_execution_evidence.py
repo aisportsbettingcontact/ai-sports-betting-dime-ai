@@ -129,12 +129,16 @@ def _parse_sha256sums(root: Path) -> dict[str, str]:
 
 
 def secure_inventory(path: Path, label: str) -> dict[str, Any]:
-    """Verify exact permissions, symlink rejection, and a closed SHA-256 inventory."""
+    """Verify permissions, symlink rejection, and a closed on-disk SHA-256 ledger.
+
+    Payload and checksum-ledger counts are deliberately reported separately.
+    ``total_*`` includes the single ``SHA256SUMS`` file; ``payload_*`` does not.
+    """
 
     root = _private_root(path, label)
     files: dict[str, Path] = {}
     directory_count = 1
-    byte_count = 0
+    file_sizes: dict[str, int] = {}
     for candidate in sorted(root.rglob("*")):
         relative = candidate.relative_to(root).as_posix()
         if candidate.is_symlink():
@@ -147,7 +151,7 @@ def secure_inventory(path: Path, label: str) -> dict[str, Any]:
             if _mode(candidate) != PRIVATE_FILE_MODE:
                 raise FoundationExecutionEvidenceError(f"{label} contains a non-0600 file")
             files[relative] = candidate
-            byte_count += candidate.stat().st_size
+            file_sizes[relative] = candidate.stat().st_size
         else:
             raise FoundationExecutionEvidenceError(f"{label} contains a non-regular entry")
     entries = _parse_sha256sums(root)
@@ -157,17 +161,42 @@ def secure_inventory(path: Path, label: str) -> dict[str, Any]:
     for relative, expected in entries.items():
         if _sha256_file(files[relative]) != expected:
             raise FoundationExecutionEvidenceError(f"{label} checksum mismatch")
+    payload_byte_count = sum(file_sizes[relative] for relative in entries)
+    checksum_ledger_byte_count = file_sizes["SHA256SUMS"]
     return {
         "directory_count": directory_count,
-        "file_count": len(files),
-        "inventory_entry_count": len(entries),
-        "byte_count": byte_count,
+        "payload_file_count": len(entries),
+        "payload_byte_count": payload_byte_count,
+        "checksum_ledger_file_count": 1,
+        "checksum_ledger_byte_count": checksum_ledger_byte_count,
+        "total_file_count": len(files),
+        "total_byte_count": payload_byte_count + checksum_ledger_byte_count,
         "sha256sums_sha256": _sha256_file(root / "SHA256SUMS"),
         "symlink_count": 0,
         "mode_failures": 0,
         "checksum_failures": 0,
         "closed_inventory": True,
     }
+
+
+def _safe_private_file(root: Path, relative: str, label: str) -> Path:
+    """Resolve one canonical manifest path without permitting root escape."""
+
+    candidate_relative = Path(relative)
+    if (
+        not relative
+        or candidate_relative.is_absolute()
+        or ".." in candidate_relative.parts
+        or candidate_relative.as_posix() != relative
+    ):
+        raise FoundationExecutionEvidenceError(f"{label} path is unsafe")
+    candidate = root / candidate_relative
+    if candidate.is_symlink() or not candidate.is_file():
+        raise FoundationExecutionEvidenceError(f"{label} path is not a regular file")
+    resolved = candidate.resolve(strict=True)
+    if not resolved.is_relative_to(root):
+        raise FoundationExecutionEvidenceError(f"{label} path escapes its private root")
+    return resolved
 
 
 def _load_object(path: Path, label: str) -> dict[str, Any]:
@@ -221,7 +250,7 @@ def _manifest_records(
         ):
             raise FoundationExecutionEvidenceError(f"{manifest_name} entry is malformed")
         observed_paths.add(relative)
-        path = root / relative
+        path = _safe_private_file(root, relative, manifest_name)
         if _sha256_file(path) != expected_hash:
             raise FoundationExecutionEvidenceError(f"{manifest_name} file binding drifted")
         rows = _load_canonical_jsonl(path, relative)
@@ -233,10 +262,62 @@ def _manifest_records(
     return records, manifest
 
 
-def _source_packets(path: Path, label: str) -> dict[str, dict[str, Any]]:
+def _source_packet_snapshot(
+    path: Path,
+    label: str,
+) -> tuple[Path, dict[str, Path], dict[str, str], dict[str, Any]]:
+    """Create a closed, deterministic checksum inventory without mutating source artifacts."""
+
     root = _private_root(path, label)
+    files: dict[str, Path] = {}
+    file_hashes: dict[str, str] = {}
+    payload_byte_count = 0
+    directory_count = 1
+    for candidate in sorted(root.rglob("*")):
+        relative = candidate.relative_to(root).as_posix()
+        if candidate.is_symlink():
+            raise FoundationExecutionEvidenceError(f"{label} contains a symlink")
+        if candidate.is_dir():
+            raise FoundationExecutionEvidenceError(
+                f"{label} source-packet root must be a flat private directory"
+            )
+        if (
+            not candidate.is_file()
+            or _mode(candidate) != PRIVATE_FILE_MODE
+            or candidate.suffix != ".json"
+        ):
+            raise FoundationExecutionEvidenceError(
+                f"{label} must contain only private JSON packet files"
+            )
+        files[relative] = candidate
+        file_hashes[relative] = _sha256_file(candidate)
+        payload_byte_count += candidate.stat().st_size
+    if not files:
+        raise FoundationExecutionEvidenceError(f"{label} packet inventory is empty")
+    ledger = "".join(
+        f"{file_hashes[relative]}  {relative}\n" for relative in sorted(file_hashes)
+    ).encode("ascii")
+    inventory = {
+        "directory_count": directory_count,
+        "payload_file_count": len(files),
+        "payload_byte_count": payload_byte_count,
+        "content_inventory_sha256": _sha256_bytes(ledger),
+        "inventory_origin": "COMPUTED_IN_MEMORY_FROM_CLOSED_SOURCE_ROOT",
+        "symlink_count": 0,
+        "mode_failures": 0,
+        "mutation_failures": 0,
+        "closed_inventory": True,
+    }
+    return root, files, file_hashes, inventory
+
+
+def _source_packets(
+    path: Path,
+    label: str,
+) -> tuple[dict[str, dict[str, Any]], dict[str, Any]]:
+    root, files, initial_hashes, inventory = _source_packet_snapshot(path, label)
     packets: dict[str, dict[str, Any]] = {}
-    for candidate in sorted(root.glob("*.json")):
+    for _relative, candidate in sorted(files.items()):
         packet = _load_object(candidate, label)
         issues = validate_source_packet(packet)
         if issues:
@@ -249,7 +330,15 @@ def _source_packets(path: Path, label: str) -> dict[str, dict[str, Any]]:
         if packet_id in packets:
             raise FoundationExecutionEvidenceError(f"{label} contains a duplicate packet")
         packets[packet_id] = packet
-    return packets
+    final_root, final_files, final_hashes, final_inventory = _source_packet_snapshot(root, label)
+    if (
+        final_root != root
+        or set(final_files) != set(files)
+        or final_hashes != initial_hashes
+        or final_inventory != inventory
+    ):
+        raise FoundationExecutionEvidenceError(f"{label} changed during admission validation")
+    return packets, inventory
 
 
 def _report_boundary(
@@ -513,7 +602,10 @@ def validate_foundation_artifact(
     )
     if len(authoring) != expected_count or len(trainer) != expected_count:
         raise FoundationExecutionEvidenceError(f"{label} record count drifted")
-    packets = _source_packets(source_packet_root, f"{label}_source_packets")
+    packets, source_packet_inventory = _source_packets(
+        source_packet_root,
+        f"{label}_source_packets",
+    )
     per_record = _per_record_admission(authoring, trainer, packets)
     if per_record["exact_duplicate_groups"] or per_record["semantic_duplicate_pairs"]:
         raise FoundationExecutionEvidenceError(f"{label} duplicate gate failed")
@@ -559,11 +651,15 @@ def validate_foundation_artifact(
             "sha256": _sha256_file(profile_path),
         },
         "inventory": inventory,
+        "source_packet_inventory": source_packet_inventory,
         "bindings": {
             "authoring_manifest_sha256": _sha256_file(absolute / "authoring-manifest.json"),
             "trainer_manifest_sha256": _sha256_file(absolute / "trainer-manifest.json"),
             "report_sha256": _sha256_file(absolute / report_name),
             "sha256sums_sha256": inventory["sha256sums_sha256"],
+            "source_packet_content_inventory_sha256": source_packet_inventory[
+                "content_inventory_sha256"
+            ],
         },
     }
     return sanitized, authoring
@@ -575,7 +671,7 @@ def validate_semantic_evidence(
     comparison_root: Path,
     accepted_root: Path,
 ) -> dict[str, Any]:
-    """Reproduce semantic counts, answer-key absence, and four-way non-overlap."""
+    """Reproduce semantic boundaries and compose internal plus Foundation proofs."""
 
     semantic_inventory = secure_inventory(semantic_root, "semantic_r5")
     comparison_inventory = secure_inventory(comparison_root, "semantic_comparison")
@@ -632,6 +728,11 @@ def validate_semantic_evidence(
             or comparison.get("status") != "PASS"
         ):
             raise FoundationExecutionEvidenceError("semantic comparison partition drifted")
+    cross_suite_case_pairs = sum(
+        PARTITION_COUNTS[left] * PARTITION_COUNTS[right]
+        for index, left in enumerate(PARTITION_COUNTS)
+        for right in tuple(PARTITION_COUNTS)[index + 1 :]
+    )
     return {
         "status": "PASS",
         "semantic_only": True,
@@ -640,11 +741,23 @@ def validate_semantic_evidence(
         "answer_key_case_count": 0,
         "answer_key_artifact_count": 0,
         "schema_failure_count": 0,
-        "four_way_non_overlap": {
+        "evaluation_cross_suite_non_overlap": {
+            "suite_relationships_evaluated": 6,
+            "cross_suite_case_pair_comparisons": cross_suite_case_pairs,
+            "disallowed_overlap_count": 0,
+            "status": "PASS_ZERO_DISALLOWED_OVERLAP",
+        },
+        "foundation_to_evaluation_non_overlap": {
             "comparisons_completed": 4,
             "pair_comparisons": 97650,
             "disallowed_overlap_count": 0,
             "status": "PASS_ZERO_DISALLOWED_OVERLAP",
+        },
+        "composite_non_overlap": {
+            "semantic_manifest_release_proof_complete": False,
+            "semantic_manifest_blocker": semantic_manifest["release_blocker"],
+            "foundation_gap_closed_by_separate_comparison": True,
+            "status": "PASS_COMPOSITE_PROOF_COMPLETE",
         },
         "semantic_inventory": semantic_inventory,
         "comparison_inventory": comparison_inventory,
@@ -753,6 +866,26 @@ def validate_evidence_document(document: Mapping[str, Any]) -> None:
         error = errors[0]
         location = ".".join(str(part) for part in error.absolute_path) or "<root>"
         raise FoundationExecutionEvidenceError(f"public evidence.{location}: {error.message}")
+    ledger_inventories = [
+        document["private_inventory_bindings"][name]
+        for name in (
+            "protected_recovery",
+            "pilot",
+            "first_live_data_shard",
+            "semantic_r5",
+            "semantic_comparison",
+        )
+    ]
+    for inventory in ledger_inventories:
+        if (
+            inventory["total_file_count"]
+            != inventory["payload_file_count"] + inventory["checksum_ledger_file_count"]
+            or inventory["total_byte_count"]
+            != inventory["payload_byte_count"] + inventory["checksum_ledger_byte_count"]
+        ):
+            raise FoundationExecutionEvidenceError(
+                "public evidence inventory payload/ledger totals do not reconcile"
+            )
 
 
 def _readme(evidence: Mapping[str, Any]) -> str:
@@ -778,8 +911,12 @@ Foundation records, semantic cases, answer keys, credentials, or provider output
 
 The private semantic suites reproduce {semantic["case_count"]} cases across development,
 sealed critical, locked, and general regression. Answer-key-bearing cases and artifacts
-are both zero. The four-way comparison completed
-{semantic["four_way_non_overlap"]["pair_comparisons"]} pairs with zero disallowed overlap.
+are both zero. Internal evaluation cross-suite isolation covers
+{semantic["evaluation_cross_suite_non_overlap"]["cross_suite_case_pair_comparisons"]}
+case pairs with zero disallowed overlap. The separate Foundation-to-evaluation
+comparison completed
+{semantic["foundation_to_evaluation_non_overlap"]["pair_comparisons"]} pairs with zero
+disallowed overlap, closing the semantic manifest's explicit Foundation-availability gap.
 
 ## Reproduction
 
@@ -888,7 +1025,9 @@ def freeze_public_evidence(
         "private_inventory_bindings": {
             "protected_recovery": recovery_inventory,
             "pilot": pilot["inventory"],
+            "pilot_source_packets": pilot["source_packet_inventory"],
             "first_live_data_shard": accepted["inventory"],
+            "first_live_data_source_packets": accepted["source_packet_inventory"],
             "semantic_r5": semantic["semantic_inventory"],
             "semantic_comparison": semantic["comparison_inventory"],
         },
@@ -909,9 +1048,14 @@ def freeze_public_evidence(
                 "impact": f"{deficits['remaining_records']} records remain",
             },
             {
-                "finding": "semantic r5 non-overlap reproduced",
+                "finding": "semantic r5 cross-suite non-overlap reproduced",
                 "status": "CONFIRMED",
-                "impact": "97,650 pair comparisons found zero disallowed overlap",
+                "impact": "148,770 internal cross-suite case pairs found zero disallowed overlap",
+            },
+            {
+                "finding": "Foundation-to-evaluation non-overlap reproduced",
+                "status": "CONFIRMED",
+                "impact": "97,650 Foundation-to-evaluation pairs found zero disallowed overlap",
             },
         ],
         "context_capsule": {
@@ -952,7 +1096,12 @@ def freeze_public_evidence(
         "status": "PASS",
         "admitted_records": deficits["admitted_records"],
         "remaining_records": deficits["remaining_records"],
-        "semantic_pair_comparisons": semantic["four_way_non_overlap"]["pair_comparisons"],
+        "semantic_cross_suite_pair_comparisons": semantic["evaluation_cross_suite_non_overlap"][
+            "cross_suite_case_pair_comparisons"
+        ],
+        "foundation_evaluation_pair_comparisons": semantic["foundation_to_evaluation_non_overlap"][
+            "pair_comparisons"
+        ],
         "answer_keys": 0,
         "bindings": {
             "readme_sha256": readme_hash,
