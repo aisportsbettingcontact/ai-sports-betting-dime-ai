@@ -9,6 +9,7 @@ from dime_ai.governed_json import load_governed_json
 ML_ROOT = Path(__file__).resolve().parents[1]
 FOUNDATION_ROOT = ML_ROOT / "evidence/execution/dime-llm-v1-foundation-001"
 CONTINUATION_ROOT = ML_ROOT / "evidence/execution/dime-llm-v1-foundation-002"
+CUMULATIVE_ROOT = ML_ROOT / "evidence/execution/dime-llm-v1-foundation-003"
 CAPSULE_ROOT = ML_ROOT / "evidence/execution/dime-llm-v1-context-capsule"
 
 
@@ -139,12 +140,17 @@ def test_context_capsule_is_an_immutable_closed_snapshot_bound_to_foundation_evi
     assert capsule["runpod_gate_1"]["authorization"] == "NONE"
     assert capsule["runpod_gate_1"]["effective_authorization"] is False
     assert capsule["runpod_gate_1"]["gate_1_baseline_inference_authorized"] is False
+    assert capsule["reconciliation"]["pull_request"] == 257
+    assert capsule["parallel_tracks"]["foundation_evaluation"]["pull_request"] == 254
+    assert capsule["parallel_tracks"]["foundation_evaluation"]["state"] == "MERGED"
     assert capsule["foundation"]["total_live_data_records_admitted"] == 300
-    assert capsule["foundation"]["remaining_records"] == 2100
-    assert capsule["semantic_evaluation"]["foundation_records_compared"] == 300
-    assert capsule["semantic_evaluation"]["foundation_to_evaluation_pair_comparisons"] == 195300
+    assert capsule["foundation"]["platform_records_admitted"] == 150
+    assert capsule["foundation"]["total_records_admitted"] == 450
+    assert capsule["foundation"]["remaining_records"] == 1950
+    assert capsule["semantic_evaluation"]["foundation_records_compared"] == 450
+    assert capsule["semantic_evaluation"]["foundation_to_evaluation_pair_comparisons"] == 292950
     assert capsule["foundation"]["public_evidence"]["sha256"] == _sha256(
-        CONTINUATION_ROOT / "evidence.json"
+        CUMULATIVE_ROOT / "evidence.json"
     )
     assert capsule["private_content_counts"] == {
         "foundation_records": 0,

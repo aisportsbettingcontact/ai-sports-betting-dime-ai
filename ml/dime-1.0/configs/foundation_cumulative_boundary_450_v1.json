@@ -163,7 +163,7 @@
       {"path": "schemas/foundation_partition_registry.schema.json", "sha256": "c53895ca39531c184388e9501a8a91df92d0a08b5c1c3d3ca4674f36337e2868"},
       {"path": "schemas/foundation_record.schema.json", "sha256": "9b8374f26d45a15e4dbf667373ada9dc4a9b776a64d96875d0ccaea82e3334e9"},
       {"path": "schemas/foundation_source_packet.schema.json", "sha256": "bb8180b274b536b5322b3f9c223dae2ebbb2c05cab910719b87864b49b2c7f99"},
-      {"path": "schemas/foundation_token_profile.schema.json", "sha256": "9c4f706453f3ea602925191724ecbbe5a55db21dca06361ffd7f15862c41719f"},
+      {"path": "schemas/foundation_token_profile.schema.json", "sha256": "c2ea395643d029ddda2f7ba5c687aa66849f75ba78d03259acdea1b077d6f102"},
       {"path": "schemas/sft_record.schema.json", "sha256": "955f0a773a1eced4154aa159e6a22249810f8cca5047ceb3c589dd566855ab4e"},
       {"path": "schemas/private_evaluation_semantic_case.schema.json", "sha256": "d73068a5a7875cf0764223fd296ba597039c9b9a18675e26564332daa40b2ff5"}
     ],
@@ -198,7 +198,7 @@
         {"path": "data/eval/safety_red_team.sample.jsonl", "sha256": "1576397bfe351e9bb9f54ec6abc9f16e8a5e73ca8152b9b8fd74fcb1f7220b09"}
       ]
     },
-    "contract_sha256": "c76fd9d4714aad5c1ca4441a34d538055d470e53f31a83d72837940da4793407"
+    "contract_sha256": "3d4ddef0d36e84098327b2304a2f0bc6b45e0f1c70bbcd98e98593f96b2abde8"
   },
   "quarantines": [
     {

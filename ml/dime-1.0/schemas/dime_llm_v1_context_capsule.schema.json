@@ -48,7 +48,7 @@
       "const": "dime-llm-v1-context-capsule-v1"
     },
     "repository_sha": {
-      "const": "2e2e09074d0e7bd8cc5ddfac0c17769a3c5a9657"
+      "const": "438848a1414bea8225c514c0a92fdfa1b5520999"
     },
     "production_application_sha": {
       "const": null
@@ -57,10 +57,10 @@
       "const": null
     },
     "capsule_id": {
-      "const": "dime-llm-v1-foundation-evaluation-2026-07-31-pr254-reconciled"
+      "const": "dime-llm-v1-foundation-evaluation-2026-07-31-pr257-reconciled"
     },
     "verified_at": {
-      "const": "2026-07-31T06:13:17Z"
+      "const": "2026-07-31T06:50:12Z"
     },
     "snapshot_semantics": {
       "const": "IMMUTABLE_POINT_IN_TIME_NOT_LIVE_STATUS"
@@ -113,19 +113,19 @@
     "foundation_counts": {
       "const": {
         "status": "IN_PROGRESS",
-        "verified_authoring_records": 300,
-        "verified_trainer_records": 300,
-        "verified_train_records": 270,
-        "verified_validation_records": 30
+        "verified_authoring_records": 450,
+        "verified_trainer_records": 450,
+        "verified_train_records": 405,
+        "verified_validation_records": 45
       }
     },
     "foundation_deficits": {
       "const": {
         "status": "IN_PROGRESS",
-        "authoring_records": 2100,
-        "trainer_records": 2100,
-        "train_records": 1890,
-        "validation_records": 210
+        "authoring_records": 1950,
+        "trainer_records": 1950,
+        "train_records": 1755,
+        "validation_records": 195
       }
     },
     "evaluation_counts": {
@@ -161,7 +161,7 @@
     },
     "top_blockers": {
       "const": [
-        "foundation_remaining_records_2100",
+        "foundation_remaining_records_1950",
         "credential_execution_root_trust_unprovisioned",
         "runpod_identity_unverified",
         "runpod_permissions_unverified",
@@ -171,7 +171,7 @@
       ]
     },
     "next_exact_action": {
-      "const": "Merge the exact reviewed Foundation evidence head, then reconcile the platform shard without enabling credentials, model execution, training, serving, deployment, tracing, or route activation."
+      "const": "Merge the exact reviewed cumulative Foundation evidence head without enabling credentials, model execution, training, serving, deployment, tracing, or route activation."
     },
     "critical_artifact_hashes": {
       "const": {
@@ -189,14 +189,15 @@
     },
     "reconciliation": {
       "const": {
-        "pull_request": 254,
-        "source_head": "2e2e09074d0e7bd8cc5ddfac0c17769a3c5a9657",
-        "current_main": "62edd3e9af1730676ae0f7a4adfb5a8d600446b8",
+        "pull_request": 257,
+        "source_head": "438848a1414bea8225c514c0a92fdfa1b5520999",
+        "current_main": "90fdf151d2a79fa2c9106753419d93d35f9f81c0",
         "merge_strategy": "NO_FF_MERGE_SEMANTIC_SUPERSET",
         "merged_dependencies": {
           "pr_251": "21f9375455728b604b9e5aca6b75a6439a9e2cff",
           "pr_252": "62edd3e9af1730676ae0f7a4adfb5a8d600446b8",
           "pr_253": "cd39402a5321d44b19e85bf1077f48379da6b542",
+          "pr_254": "90fdf151d2a79fa2c9106753419d93d35f9f81c0",
           "pr_255": "092435b33f3b543f9b509f90fde853fcf7cb857d"
         }
       }
@@ -275,6 +276,18 @@
           "root_trust_provisioned": false,
           "effective_authorization": false,
           "source": "github_connector_pr_metadata"
+        },
+        "foundation_evaluation": {
+          "pull_request": 254,
+          "title": "feat(ml): freeze Foundation evaluation artifacts and release evidence",
+          "state": "MERGED",
+          "head_commit": "7767cfdfad1beef1672aebd985898c6ee0b830d5",
+          "merge_commit": "90fdf151d2a79fa2c9106753419d93d35f9f81c0",
+          "required_checks": "PASS",
+          "independent_approval": true,
+          "merged": true,
+          "answer_keys_present": false,
+          "source": "github_connector_pr_metadata"
         }
       }
     },
@@ -334,20 +347,22 @@
         "first_live_data_records_admitted": 150,
         "second_live_data_records_admitted": 150,
         "total_live_data_records_admitted": 300,
+        "platform_records_admitted": 150,
+        "total_records_admitted": 450,
         "admitted_split": {
-          "train": 270,
-          "validation": 30
+          "train": 405,
+          "validation": 45
         },
-        "remaining_records": 2100,
+        "remaining_records": 1950,
         "remaining_split": {
-          "train": 1890,
-          "validation": 210
+          "train": 1755,
+          "validation": 195
         },
         "complete_release": false,
         "public_evidence": {
-          "path": "ml/dime-1.0/evidence/execution/dime-llm-v1-foundation-002/evidence.json",
-          "sha256": "486e26aabae057e5168ee2f52e554077cbc0993cbdc337cdc01f1eaecb6ac39b",
-          "sha256sums_sha256": "d0f97429be92983da266c4a60f86093e5620efc23416556db0ccdb2a92745ad8"
+          "path": "ml/dime-1.0/evidence/execution/dime-llm-v1-foundation-003/evidence.json",
+          "sha256": "9946b1583ff686ecbb9fc4d915cb46a122541145f4d6cccf50014cfc13b536b9",
+          "sha256sums_sha256": "98279dcae2f7e54c33abe0d71f7fb0c854e7111d9010e6dd22918f41177b7518"
         }
       }
     },
@@ -362,10 +377,10 @@
         },
         "total_cases": 651,
         "answer_keys": 0,
-        "foundation_records_compared": 300,
+        "foundation_records_compared": 450,
         "evaluation_cross_suite_case_pair_comparisons": 148770,
         "evaluation_cross_suite_disallowed_overlap": 0,
-        "foundation_to_evaluation_pair_comparisons": 195300,
+        "foundation_to_evaluation_pair_comparisons": 292950,
         "foundation_to_evaluation_disallowed_overlap": 0,
         "composite_status": "PASS_COMPOSITE_PROOF_COMPLETE"
       }
@@ -395,7 +410,7 @@
         "credential execution remains false",
         "RunPod identity and permissions remain unverified",
         "RunPod Gate 1 effective authorization remains false",
-        "2,100 Foundation records remain before the 2,400-record target is complete",
+        "1,950 Foundation records remain before the 2,400-record target is complete",
         "the private Foundation release revision, dataset manifest hash, and release checksum hash are not frozen",
         "answer-key count remains zero despite the narrow PR #252 owner-merge authorization scope",
         "the exact selected model artifact and production serving tuple remain unset",
