@@ -18,11 +18,11 @@
  * archivePlan deactivates the Product + row.
  */
 import Stripe from "stripe";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import { getDb } from "../db";
 import { withCircuitBreaker } from "../dbCircuitBreaker";
 import { normalizePlanFeatures, type PlanFeatureKey } from "../../shared/planFeatures";
-import { subscriptionPlans, planPrices, planFeatures } from "../../drizzle/schema";
+import { subscriptionPlans, planPrices, planFeatures, appUsers } from "../../drizzle/schema";
 import {
   getPlanBySlug,
   invalidatePlanCache,
@@ -85,12 +85,33 @@ export function slugify(name: string): string {
   return s || "plan";
 }
 
-/** A slug not already taken by an existing plan. */
-async function uniqueSlug(name: string): Promise<string> {
+/**
+ * Slug-collision resolution, shared by plan creation and plan rename.
+ *
+ * `lookup` returns the plan currently holding a slug (or null). It is a
+ * parameter rather than a direct getPlanBySlug call so the collision walk —
+ * base, base-2, base-3, … — is unit-testable without a database.
+ *
+ * SELF-COLLISION: when `ownerPlanId` is given, a slug already held by THAT plan
+ * is not a collision, it is the status quo. Without this rule, re-saving a plan
+ * whose name still slugifies to its own current slug walks the suffix chain and
+ * renames `dime-pro` → `dime-pro-2` on every single save — churning the
+ * entitlement key that app_users.stripePlanId points at, for no change at all.
+ * Creation passes no ownerPlanId (the plan does not exist yet), so its
+ * behaviour is unchanged: every existing slug is a collision.
+ */
+export async function resolveUniqueSlug(
+  name: string,
+  lookup: (slug: string) => Promise<{ id: number } | null>,
+  ownerPlanId?: number | null,
+): Promise<string> {
   const base = slugify(name);
   let slug = base;
   let n = 2;
-  while (await getPlanBySlug(slug)) {
+  for (;;) {
+    const holder = await lookup(slug);
+    if (!holder) break;
+    if (ownerPlanId != null && holder.id === ownerPlanId) break;
     slug = `${base}-${n}`;
     n += 1;
     if (n > 200) {
@@ -99,6 +120,11 @@ async function uniqueSlug(name: string): Promise<string> {
     }
   }
   return slug;
+}
+
+/** A slug not already taken by an existing plan. */
+async function uniqueSlug(name: string): Promise<string> {
+  return resolveUniqueSlug(name, getPlanBySlug);
 }
 
 /** Stripe caps a recurring billing interval at ≤ 1 year. */
@@ -919,11 +945,138 @@ export async function unarchivePlan(planId: number): Promise<void> {
   console.log(`${TAG} unarchived plan ${planId}`);
 }
 
+// ─── Slug sync (plan rename → entitlement key + referrers) ───────────────────
+
+export interface SlugSyncResult {
+  /** False when the plan's name already agrees with its slug — nothing written. */
+  changed: boolean;
+  oldSlug: string;
+  newSlug: string;
+  /** app_users rows moved from oldSlug to newSlug (0 when changed:false). */
+  referrersUpdated: number;
+}
+
+/**
+ * mysql2 reports an UPDATE's row count on the ResultSetHeader; Drizzle hands
+ * back the raw driver tuple `[ResultSetHeader, FieldPacket[]]`. Pure + exported
+ * so the referrer count is unit-tested without a database.
+ */
+export function readAffectedRows(result: unknown): number | null {
+  const header = Array.isArray(result) ? result[0] : result;
+  const n = (header as { affectedRows?: unknown } | null | undefined)?.affectedRows;
+  return typeof n === "number" && Number.isFinite(n) ? n : null;
+}
+
+/**
+ * Re-derive a plan's slug from its CURRENT name and move every referrer with it.
+ *
+ * WHY THIS EXISTS: `subscription_plans.slug` is an FK-BY-VALUE target.
+ * `app_users.stripePlanId` stores the slug STRING, and checkout resolves plans
+ * by slug — so a slug that changes without its referrers changing silently
+ * breaks the entitlement lookup for every user still holding the old value.
+ * Renaming a plan in the admin previously moved the name only, which is how
+ * production ended up with "Dime Sharp" answering to `dime-pro-copy`.
+ *
+ * ORDER AND ATOMICITY: this repo has no cross-statement transaction helper here,
+ * so the plan row is moved first and the referrers immediately after, in the
+ * same logical operation. If the referrer update fails, the plan slug is rolled
+ * back to `oldSlug` — the invariant being defended is "no app_users row ever
+ * points at a slug that does not exist", and the old slug is known-good.
+ *
+ * `dryRun` reports what WOULD change (including the referrer count) and writes
+ * nothing — that is what the admin previews before repairing a stale slug.
+ *
+ * The Stripe Product's `metadata.dime_plan_slug` is mirrored best-effort: the
+ * database is the source of truth for entitlement, and a Stripe outage must not
+ * abort a rename that has already been persisted.
+ */
+export async function syncPlanSlug(
+  planId: number,
+  opts?: { dryRun?: boolean },
+): Promise<SlugSyncResult> {
+  const dryRun = opts?.dryRun === true;
+  const db = await getDb();
+  if (!db) throw new Error("database unavailable");
+
+  const rows = (await withCircuitBreaker(async () =>
+    db.select().from(subscriptionPlans).where(eq(subscriptionPlans.id, planId)).limit(1),
+  )) as Array<{ id: number; slug: string; name: string; stripeProductId: string | null }>;
+  const row = rows[0];
+  if (!row) throw new Error(`plan ${planId} not found`);
+
+  const oldSlug = row.slug;
+  // ownerPlanId = this plan: a desired slug already held by THIS row is the
+  // status quo, not a collision, so a no-op save cannot append a suffix.
+  const newSlug = await resolveUniqueSlug(row.name, getPlanBySlug, planId);
+
+  if (newSlug === oldSlug) {
+    console.log(`${TAG} slug sync plan=${planId} name="${row.name}" slug=${oldSlug} UNCHANGED`);
+    return { changed: false, oldSlug, newSlug: oldSlug, referrersUpdated: 0 };
+  }
+
+  const countRows = (await withCircuitBreaker(async () =>
+    db
+      .select({ n: sql<number>`count(*)` })
+      .from(appUsers)
+      .where(eq(appUsers.stripePlanId, oldSlug)),
+  )) as Array<{ n: number }>;
+  const referrers = Number(countRows[0]?.n ?? 0);
+
+  if (dryRun) {
+    console.log(
+      `${TAG} slug sync plan=${planId} DRY-RUN ${oldSlug} → ${newSlug} would move ${referrers} referrer(s)`,
+    );
+    return { changed: true, oldSlug, newSlug, referrersUpdated: referrers };
+  }
+
+  await withCircuitBreaker(async () =>
+    db.update(subscriptionPlans).set({ slug: newSlug }).where(eq(subscriptionPlans.id, planId)),
+  );
+
+  let referrersUpdated = 0;
+  try {
+    const res = await withCircuitBreaker(async () =>
+      db.update(appUsers).set({ stripePlanId: newSlug }).where(eq(appUsers.stripePlanId, oldSlug)),
+    );
+    referrersUpdated = readAffectedRows(res) ?? referrers;
+  } catch (err) {
+    // Compensate: put the slug back so the referrers we failed to move still
+    // resolve. A rename that half-applies is worse than one that did not happen.
+    await withCircuitBreaker(async () =>
+      db.update(subscriptionPlans).set({ slug: oldSlug }).where(eq(subscriptionPlans.id, planId)),
+    );
+    invalidatePlanCache();
+    console.error(
+      `${TAG} slug sync plan=${planId} ROLLED BACK ${newSlug} → ${oldSlug}: referrer update failed — ${(err as Error).message}`,
+    );
+    throw err instanceof Error ? err : new Error(String(err));
+  }
+
+  invalidatePlanCache();
+
+  if (row.stripeProductId) {
+    try {
+      await getProvisioningStripe().products.update(row.stripeProductId, {
+        metadata: { dime_plan_slug: newSlug },
+      });
+    } catch (err) {
+      console.warn(
+        `${TAG} slug sync: Stripe product metadata update failed (DB is authoritative) — ${(err as Error).message}`,
+      );
+    }
+  }
+
+  console.log(
+    `${TAG} slug sync plan=${planId} name="${row.name}" ${oldSlug} → ${newSlug} referrersUpdated=${referrersUpdated}`,
+  );
+  return { changed: true, oldSlug, newSlug, referrersUpdated };
+}
+
 /** Edit plan metadata (name/description/maxSubscribers). Amount/interval are immutable — a new price is Phase 3. */
 export async function updatePlanMeta(
   planId: number,
   patch: { name?: string; description?: string | null; maxSubscribers?: number | null },
-): Promise<void> {
+): Promise<{ slugSync: SlugSyncResult | null }> {
   const db = await getDb();
   if (!db) throw new Error("database unavailable");
   const rows = (await withCircuitBreaker(async () =>
@@ -953,7 +1106,26 @@ export async function updatePlanMeta(
       .where(eq(subscriptionPlans.id, planId)),
   );
   invalidatePlanCache();
-  console.log(`${TAG} updated plan meta ${planId}`);
+
+  // A rename must carry the slug — and therefore every app_users.stripePlanId
+  // pointing at it — along with the name, or the plan keeps answering to the
+  // slug of whatever it used to be called. Runs AFTER the name is persisted, so
+  // the slug is derived from the name the plan now has. Self-collision is
+  // excluded inside syncPlanSlug, so a save that does not actually change the
+  // name writes nothing.
+  let slugSync: SlugSyncResult | null = null;
+  if (patch.name !== undefined) {
+    slugSync = await syncPlanSlug(planId);
+  }
+
+  console.log(
+    `${TAG} updated plan meta ${planId}${
+      slugSync?.changed
+        ? ` slug ${slugSync.oldSlug} → ${slugSync.newSlug} (${slugSync.referrersUpdated} referrer(s) moved)`
+        : ""
+    }`,
+  );
+  return { slugSync };
 }
 
 /**

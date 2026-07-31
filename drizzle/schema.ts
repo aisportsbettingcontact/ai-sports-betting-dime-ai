@@ -105,6 +105,20 @@ export const appUsers = mysqlTable("app_users", {
    */
   stripePlanId: varchar("stripePlanId", { length: 64 }),
   /**
+   * Which plan_prices row (i.e. which billing interval) this user is subscribed
+   * on. NULL = unknown/legacy — every row predating this column, plus users with
+   * no subscription. FK-by-value to plan_prices.id, joined in the application:
+   * this repo declares NO DB-level foreign keys, so nothing cascades and nothing
+   * is enforced by the database.
+   *
+   * WHY THE ID AND NOT THE INTERVAL STRING: "month" is ambiguous across plans and
+   * across repricings. plan_prices rows are immutable-by-convention (a repriced
+   * interval mints a NEW row and archives the old one), so the id records the
+   * exact price the user actually bought — the amount, currency, cadence, trial
+   * and promo they are still being billed at after the plan was repriced.
+   */
+  planPriceId: int("planPriceId"),
+  /**
    * TRUE when the Stripe subscription is set to cancel at period end (user clicked Cancel).
    * FALSE/NULL = subscription is active and will auto-renew.
    * Set to TRUE by cancelSubscription, FALSE by reactivateSubscription.
@@ -167,6 +181,20 @@ export const appUsers = mysqlTable("app_users", {
   stripeCustomerIdUnique: uniqueIndex("app_users_stripe_customer_id_unique").on(table.stripeCustomerId),
   stripeSubscriptionIdUnique: uniqueIndex("app_users_stripe_subscription_id_unique").on(table.stripeSubscriptionId),
   pendingStripeSessionIdUnique: uniqueIndex("app_users_pending_stripe_session_id_unique").on(table.pendingStripeSessionId),
+  /**
+   * "Who is on this billing interval?" — the query behind per-interval revenue
+   * and behind migrating subscribers off a retired plan_prices row. Without this
+   * it is a full table scan of app_users.
+   */
+  planPriceIdIdx: index("app_users_plan_price_idx").on(table.planPriceId),
+  /**
+   * stripePlanId is an FK-BY-VALUE into subscription_plans.slug and was, until
+   * now, entirely unindexed — despite being read on every entitlement check and
+   * rewritten in bulk whenever a plan rename changes a slug (syncPlanSlug in
+   * server/stripe/planProvisioning.ts updates every referrer by this column).
+   * Non-unique on purpose: many users share one plan.
+   */
+  stripePlanIdIdx: index("app_users_stripe_plan_id_idx").on(table.stripePlanId),
 }));
 
 // ─── Subscription plan catalog (owner-managed, Stripe-backed) ────────────────

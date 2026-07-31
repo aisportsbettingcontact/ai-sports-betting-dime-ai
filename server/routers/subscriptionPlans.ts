@@ -28,6 +28,7 @@ import {
   archivePlan,
   unarchivePlan,
   updatePlanMeta,
+  syncPlanSlug,
   duplicatePlan,
   deletePlan,
   isProvisioningTestMode,
@@ -208,8 +209,10 @@ export const subscriptionPlansRouter = router({
     )
     .mutation(async ({ input }) => {
       const { planId, ...patch } = input;
-      await updatePlanMeta(planId, patch);
-      return { ok: true };
+      // A name change re-derives the slug and repoints every app_users referrer
+      // inside updatePlanMeta; report what moved rather than a bare ok.
+      const { slugSync } = await updatePlanMeta(planId, patch);
+      return { ok: true, slugSync };
     }),
 
   /**
@@ -239,8 +242,9 @@ export const subscriptionPlansRouter = router({
       const tag = "[tRPC][subscriptionPlans.update]";
       const { planId, features, restock, ...patch } = input;
       console.log(`${tag} [INPUT] planId=${planId} fields=${Object.keys(patch).join(",") || "(none)"} restock=${restock === undefined ? "unchanged" : restock === null ? "cleared" : `auto=${restock.autoRestock} qty=${restock.availableQuantity}`} features=${features ? features.length : "unchanged"}`);
+      let slugSync: Awaited<ReturnType<typeof updatePlanMeta>>["slugSync"] = null;
       if (Object.keys(patch).length > 0) {
-        await updatePlanMeta(planId, patch);
+        ({ slugSync } = await updatePlanMeta(planId, patch));
       }
       if (restock !== undefined) {
         await updateRestockConfig(
@@ -249,9 +253,15 @@ export const subscriptionPlansRouter = router({
         );
       }
       const applied = features !== undefined ? await setPlanFeatures(planId, features) : undefined;
-      console.log(`${tag} [OUTPUT] planId=${planId} restock=${restock === undefined ? "unchanged" : "applied"} features=${applied ? applied.join("|") : "unchanged"}`);
+      console.log(
+        `${tag} [OUTPUT] planId=${planId} restock=${restock === undefined ? "unchanged" : "applied"} features=${applied ? applied.join("|") : "unchanged"} slug=${
+          slugSync?.changed
+            ? `${slugSync.oldSlug} → ${slugSync.newSlug} (${slugSync.referrersUpdated} app_users referrer(s) repointed)`
+            : "unchanged"
+        }`,
+      );
       console.log(`${tag} [VERIFY] PASS`);
-      return { ok: true as const, planId, features: applied };
+      return { ok: true as const, planId, features: applied, slugSync };
     }),
 
   /**
@@ -308,6 +318,36 @@ export const subscriptionPlansRouter = router({
       newStripePriceId: result.newStripePriceId,
     };
   }),
+
+  /**
+   * Repair a stale slug: re-derive it from the plan's CURRENT name and move
+   * every referrer with it.
+   *
+   * `updateMeta`/`update` already do this on every rename. This procedure exists
+   * for the plans that were renamed BEFORE that wiring landed and are still
+   * answering to their old slug ("Dime Sharp" on `dime-pro-copy`), and it is the
+   * only safe way to move one: `subscription_plans.slug` is an FK-by-value target
+   * — `app_users.stripePlanId` holds the string and checkout resolves by it — so
+   * editing the slug directly in the database would strand every subscriber.
+   *
+   * `dryRun: true` previews the rename and the referrer count without writing.
+   */
+  syncSlug: ownerProcedure
+    .input(z.object({ planId: z.number().int().positive(), dryRun: z.boolean().optional() }))
+    .mutation(async ({ input }) => {
+      const tag = "[tRPC][subscriptionPlans.syncSlug]";
+      console.log(`${tag} [INPUT] planId=${input.planId} dryRun=${input.dryRun ?? false}`);
+      const result = await syncPlanSlug(input.planId, { dryRun: input.dryRun });
+      console.log(
+        `${tag} [OUTPUT] planId=${input.planId} ${
+          result.changed
+            ? `${input.dryRun ? "WOULD MOVE" : "MOVED"} ${result.oldSlug} → ${result.newSlug}, ${result.referrersUpdated} app_users referrer(s) ${input.dryRun ? "would be" : ""} repointed`
+            : `UNCHANGED slug=${result.oldSlug} already matches the plan name; 0 referrers touched`
+        }`,
+      );
+      console.log(`${tag} [VERIFY] PASS`);
+      return result;
+    }),
 
   /** Archive a plan — deactivates its Stripe Product + marks the row inactive. */
   archive: ownerProcedure
