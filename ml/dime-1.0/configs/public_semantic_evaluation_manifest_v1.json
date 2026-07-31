@@ -1,0 +1,48 @@
+{
+  "schema_version": "dime-public-semantic-evaluation-manifest-v1",
+  "release_id": "dime-public-semantic-evaluation-v1-651",
+  "status": "PUBLIC_RELEASED_RETIRED_FROM_LOCKED_USE",
+  "visibility": "public",
+  "publication_classification": "approved-public",
+  "published_at_utc": "2026-07-31T11:33:43Z",
+  "owner_authorization": "platform-owner-publication-authorization-2026-07-31",
+  "original_generation_id": "dime-llm-v1-private-semantic-cases-tool-contract-v2",
+  "original_source_commit": "b9ba7788749365253a6f725fee2a2a367a3475dd",
+  "original_manifest_sha256": "160e89272149034493fa194df735d8e1daf3190bc110849bf76ff6ebd0c8f760",
+  "case_level_original_classification": "PRIVATE_EVALUATION_SEMANTIC_CASES",
+  "case_level_original_publication_authorized": false,
+  "record_count": 651,
+  "partitions": {
+    "development": {
+      "path": "datasets/public_semantic_v1/development.jsonl",
+      "record_count": 270,
+      "sha256": "8c84807ba3a7bc93a0bacddb47bcf1d04bde2e33bca94fec37bf8b7cab76539a"
+    },
+    "sealed_critical": {
+      "path": "datasets/public_semantic_v1/sealed_critical.jsonl",
+      "record_count": 81,
+      "sha256": "e2040f8028bae1ead98a3b59278179e034bcb977ba227654e8d063fd44e4a5d4"
+    },
+    "locked": {
+      "path": "datasets/public_semantic_v1/locked.jsonl",
+      "record_count": 180,
+      "sha256": "8b84bf19556d545b248fb3fa312b0c4a1f4719c3700a64724cd8a698265bbd29"
+    },
+    "general_regression": {
+      "path": "datasets/public_semantic_v1/general_regression.jsonl",
+      "record_count": 120,
+      "sha256": "a6896e527724435542b4c34a148a021a6e70c756bd88ca7e4baada9173c49411"
+    }
+  },
+  "synthetic": true,
+  "contains_answer_keys": false,
+  "contains_private_chain_of_thought": false,
+  "contains_production_data": false,
+  "privacy_reviewed": true,
+  "rights_reviewed": true,
+  "direct_identifier_scan_version": "dime-publication-sensitive-material-scan-v1",
+  "contamination_state": "PUBLICLY_EXPOSED",
+  "eligible_for_locked_evaluation": false,
+  "eligible_for_model_selection": false,
+  "limitations": "These exact 651 semantic-only cases are now public and must never again be represented as sealed, locked, or independent final-selection evidence. They contain no gold answers or private chain-of-thought."
+}

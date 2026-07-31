@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dime.local/schemas/public_semantic_evaluation_manifest.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "release_id",
+    "status",
+    "visibility",
+    "publication_classification",
+    "published_at_utc",
+    "owner_authorization",
+    "original_generation_id",
+    "original_source_commit",
+    "original_manifest_sha256",
+    "case_level_original_classification",
+    "case_level_original_publication_authorized",
+    "record_count",
+    "partitions",
+    "synthetic",
+    "contains_answer_keys",
+    "contains_private_chain_of_thought",
+    "contains_production_data",
+    "privacy_reviewed",
+    "rights_reviewed",
+    "direct_identifier_scan_version",
+    "contamination_state",
+    "eligible_for_locked_evaluation",
+    "eligible_for_model_selection",
+    "limitations"
+  ],
+  "properties": {
+    "schema_version": {"const": "dime-public-semantic-evaluation-manifest-v1"},
+    "release_id": {"const": "dime-public-semantic-evaluation-v1-651"},
+    "status": {"const": "PUBLIC_RELEASED_RETIRED_FROM_LOCKED_USE"},
+    "visibility": {"const": "public"},
+    "publication_classification": {"const": "approved-public"},
+    "published_at_utc": {"type": "string", "format": "date-time"},
+    "owner_authorization": {"type": "string", "minLength": 1},
+    "original_generation_id": {"type": "string", "minLength": 1},
+    "original_source_commit": {"$ref": "#/$defs/gitSha"},
+    "original_manifest_sha256": {"$ref": "#/$defs/sha256"},
+    "case_level_original_classification": {"const": "PRIVATE_EVALUATION_SEMANTIC_CASES"},
+    "case_level_original_publication_authorized": {"const": false},
+    "record_count": {"const": 651},
+    "partitions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["development", "sealed_critical", "locked", "general_regression"],
+      "properties": {
+        "development": {"$ref": "#/$defs/development"},
+        "sealed_critical": {"$ref": "#/$defs/sealedCritical"},
+        "locked": {"$ref": "#/$defs/locked"},
+        "general_regression": {"$ref": "#/$defs/generalRegression"}
+      }
+    },
+    "synthetic": {"const": true},
+    "contains_answer_keys": {"const": false},
+    "contains_private_chain_of_thought": {"const": false},
+    "contains_production_data": {"const": false},
+    "privacy_reviewed": {"const": true},
+    "rights_reviewed": {"const": true},
+    "direct_identifier_scan_version": {"type": "string", "minLength": 1},
+    "contamination_state": {"const": "PUBLICLY_EXPOSED"},
+    "eligible_for_locked_evaluation": {"const": false},
+    "eligible_for_model_selection": {"const": false},
+    "limitations": {"type": "string", "minLength": 1}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "gitSha": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "development": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "record_count", "sha256"],
+      "properties": {
+        "path": {"const": "datasets/public_semantic_v1/development.jsonl"},
+        "record_count": {"const": 270},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "sealedCritical": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "record_count", "sha256"],
+      "properties": {
+        "path": {"const": "datasets/public_semantic_v1/sealed_critical.jsonl"},
+        "record_count": {"const": 81},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "locked": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "record_count", "sha256"],
+      "properties": {
+        "path": {"const": "datasets/public_semantic_v1/locked.jsonl"},
+        "record_count": {"const": 180},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "generalRegression": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "record_count", "sha256"],
+      "properties": {
+        "path": {"const": "datasets/public_semantic_v1/general_regression.jsonl"},
+        "record_count": {"const": 120},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    }
+  }
+}
