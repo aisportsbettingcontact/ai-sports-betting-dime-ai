@@ -60,10 +60,19 @@ function gamesColumns(): Record<string, Record<string, unknown>> {
 describe("Dime evidence lifecycle migration", () => {
   it("is the ordered Drizzle migration and has a generated schema snapshot", () => {
     expect(fs.existsSync(snapshotPath)).toBe(true);
-    expect(journal.entries.at(-1)).toMatchObject({
+    // Identity, not position: asserting `.at(-1)` hard-coded "this is the
+    // newest migration", so every subsequent migration broke this test through
+    // no fault of its own. Locate the entry by tag and assert its declared idx
+    // matches its journal position — which is what "ordered" actually means.
+    const journalIndex = journal.entries.findIndex(
+      (entry: { tag: string }) => entry.tag === "0122_dime_evidence_lifecycle_v1"
+    );
+    expect(journalIndex).toBeGreaterThanOrEqual(0);
+    expect(journal.entries[journalIndex]).toMatchObject({
       idx: 122,
       tag: "0122_dime_evidence_lifecycle_v1",
     });
+    expect(journalIndex).toBe(122);
   });
 
   it("adds only nullable no-default lifecycle storage", () => {
