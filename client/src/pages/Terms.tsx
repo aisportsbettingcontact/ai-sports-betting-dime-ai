@@ -71,8 +71,6 @@ export default function Terms() {
                 cycle after the notice period.
               </li>
               <li>
-                AI credit allocations (DIME credits) are included with your subscription
-                tier. Unused credits do not roll over between billing periods.
               </li>
             </ul>
           </div>

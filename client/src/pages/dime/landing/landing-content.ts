@@ -401,7 +401,6 @@ export const TIERS: Tier[] = [
     features: [
       "Full AI Model Projections board, every game priced",
       "Dime Chat with Standard + Pro Analyst (Sonnet + Opus)",
-      "1,000 AI Analyst credits / month",
       "Live edge grades, honest PASS signals",
     ],
     cta: { paid: "Start Pro", waitlist: "Request Pro Access" },
@@ -417,7 +416,6 @@ export const TIERS: Tier[] = [
     features: [
       "Everything in Pro",
       "MAX Analyst access (monthly cap)",
-      "3,000 AI Analyst credits / month",
       "Priority access to new model markets",
     ],
     cta: { paid: "Start Sharp", waitlist: "Request Sharp Access" },
@@ -433,7 +431,6 @@ export const TIERS: Tier[] = [
     features: [
       "Everything in Sharp",
       "Full MAX Analyst access (no cap)",
-      "8,000 AI Analyst credits / month",
       "Early access to new markets and model releases",
     ],
     cta: { paid: "Start Operator", waitlist: "Request Operator Access" },
@@ -441,16 +438,22 @@ export const TIERS: Tier[] = [
   },
 ];
 
+/**
+ * Credit messaging is withheld until the credit ledger actually grants and
+ * meters credits. Advertising a monthly allowance the code never provisions is
+ * a claim we cannot honour at checkout (audit PROD-001). `show: false` keeps the
+ * component and copy intact for the day it ships.
+ */
 export const CREDITS_NOTE = {
+  show: false as boolean,
   title: "AI Analyst credits",
-  copy:
-    "Each paid tier includes a monthly allowance of AI Analyst credits: 1,000 on Pro, 3,000 on Sharp, 8,000 on Operator. Credits cover scans, chat queries and simulation runs, and add-on packs ship once the credit ledger does.",
+  copy: "",
 } as const;
 
 export const PRICING_HEAD = {
   eyebrow: "Pricing",
   headline: { before: "One engine. ", em: "Priced like software", after: "." },
-  sub: "Three levels of the same engine, with more analyst depth and more credits at each step. The upgrade buys capacity rather than a \"VIP room\" of picks. Cancel anytime and keep access through the period you paid for.",
+  sub: "Three levels of the same engine, with more analyst depth at each step. The upgrade buys capacity rather than a \"VIP room\" of picks. Cancel anytime and keep access through the period you paid for.",
   legal: "Secure checkout · Auto-renews · Cancel anytime · 21+",
   proof:
     "The engine grades every number you pay for against the close after the final out, and when the edge is missing it says PASS instead of selling you a pick. A month costs less than one losing $110 bet; one honest Pass that keeps you off a bad number covers it.",
@@ -488,7 +491,7 @@ export const OBJECTIONS = {
     },
     {
       q: "Why $99 a month?",
-      a: "That's ≈ $3.30 a day for every market the model prices: full board, full chat, all 55+ outputs per game. Sharp and Operator add analyst depth and credits on top of the same engine.",
+      a: "That's ≈ $3.30 a day for every market the model prices: full board, full chat, all 55+ outputs per game. Sharp and Operator add analyst depth on top of the same engine.",
       stamp: "≈ $3.30/day",
     },
     {

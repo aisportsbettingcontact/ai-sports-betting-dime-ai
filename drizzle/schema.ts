@@ -136,9 +136,37 @@ export const appUsers = mysqlTable("app_users", {
    * Cleared (set to NULL) after the user completes account setup.
    */
   pendingStripeSessionId: varchar("pendingStripeSessionId", { length: 128 }),
+  /**
+   * UTC ms when the pending-setup claim expires. After this instant the
+   * pendingStripeSessionId can no longer be redeemed to claim the account.
+   * NULL = legacy row created before the claim window existed.
+   */
+  pendingSetupExpiresAt: bigint("pendingSetupExpiresAt", { mode: "number" }),
+  /**
+   * Last known RAW Stripe subscription status, stored verbatim so the app can
+   * reason about states `hasAccess` alone cannot express:
+   * active | trialing | past_due | unpaid | paused | incomplete |
+   * incomplete_expired | canceled. NULL = never observed.
+   */
+  stripeSubscriptionStatus: varchar("stripeSubscriptionStatus", { length: 32 }),
+  /**
+   * `event.created` (converted to UTC ms) of the most recent APPLIED Stripe
+   * subscription event. Out-of-order guard: a webhook whose event.created is
+   * older than this value must NOT overwrite entitlement state.
+   */
+  lastStripeEventAt: bigint("lastStripeEventAt", { mode: "number" }),
 }, (table) => ({
   discordIdUnique: uniqueIndex("app_users_discord_id_unique").on(table.discordId),
   manualDiscordIdUnique: uniqueIndex("app_users_manual_discord_id_unique").on(table.manualDiscordId),
+  /**
+   * Stripe identity uniqueness. All three columns are nullable and MySQL/TiDB
+   * allow unlimited NULLs in a unique index, so unsubscribed rows are unaffected.
+   * These prevent two app_users rows ever sharing one Stripe customer /
+   * subscription / checkout session — the root shape of double-entitlement bugs.
+   */
+  stripeCustomerIdUnique: uniqueIndex("app_users_stripe_customer_id_unique").on(table.stripeCustomerId),
+  stripeSubscriptionIdUnique: uniqueIndex("app_users_stripe_subscription_id_unique").on(table.stripeSubscriptionId),
+  pendingStripeSessionIdUnique: uniqueIndex("app_users_pending_stripe_session_id_unique").on(table.pendingStripeSessionId),
 }));
 
 // ─── Subscription plan catalog (owner-managed, Stripe-backed) ────────────────
@@ -227,7 +255,14 @@ export const planPrices = mysqlTable("plan_prices", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, (table) => ({
   planIdIdx: index("plan_prices_plan_id_idx").on(table.planId),
-  stripePriceIdIdx: index("plan_prices_stripe_price_id_idx").on(table.stripePriceId),
+  /**
+   * One row per Stripe Price — a duplicate price row silently doubles a plan's
+   * checkout options and breaks price→plan resolution. Declared under a NEW
+   * name because the legacy non-unique KEY `plan_prices_stripe_price_id_idx`
+   * still exists in production; the hardening migration is additive-only and
+   * does NOT drop it (a redundant secondary index is harmless).
+   */
+  stripePriceIdUnique: uniqueIndex("plan_prices_stripe_price_id_unique").on(table.stripePriceId),
 }));
 
 export type SubscriptionPlan = typeof subscriptionPlans.$inferSelect;
@@ -237,6 +272,75 @@ export type InsertPlanPrice = typeof planPrices.$inferInsert;
 
 export type AppUser = typeof appUsers.$inferSelect;
 export type InsertAppUser = typeof appUsers.$inferInsert;
+
+// ─── Stripe webhook idempotency ledger ───────────────────────────────────────
+/**
+ * stripe_webhook_events — one row per Stripe event the webhook has APPLIED.
+ * Stripe guarantees at-least-once delivery, so the same event.id can arrive
+ * twice (retries, replays, concurrent deliveries). The handler inserts here
+ * FIRST: a duplicate-key violation on `stripeEventId` is the proof the event
+ * was already processed, and the handler acks 200 without re-applying money
+ * effects. `livemode` is recorded so test-mode traffic can never be mistaken
+ * for live traffic during an audit.
+ */
+export const stripeWebhookEvents = mysqlTable("stripe_webhook_events", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Stripe `event.id` (evt_xxx). The idempotency key — UNIQUE. */
+  stripeEventId: varchar("stripeEventId", { length: 255 }).notNull(),
+  /** Stripe `event.type`, e.g. 'customer.subscription.updated'. */
+  eventType: varchar("eventType", { length: 64 }).notNull(),
+  /** Stripe `event.livemode` — TRUE=live keys, FALSE=test/sandbox. */
+  livemode: boolean("livemode").default(false).notNull(),
+  /** Stripe `event.created` converted to UTC ms. NULL = not supplied. */
+  eventCreatedAt: bigint("eventCreatedAt", { mode: "number" }),
+  /** UTC ms when this row was written (i.e. when the event was applied). */
+  processedAt: bigint("processedAt", { mode: "number" }).notNull(),
+  /** 'processed' | 'skipped' | 'failed' — outcome of the applied attempt. */
+  status: varchar("status", { length: 16 }).default("processed").notNull(),
+}, (table) => ({
+  stripeEventIdUnique: uniqueIndex("stripe_webhook_events_event_id_unique").on(table.stripeEventId),
+  eventTypeIdx: index("stripe_webhook_events_event_type_idx").on(table.eventType),
+}));
+
+export type StripeWebhookEvent = typeof stripeWebhookEvents.$inferSelect;
+export type InsertStripeWebhookEvent = typeof stripeWebhookEvents.$inferInsert;
+
+// ─── Entitlement audit trail (durable money-event log) ───────────────────────
+/**
+ * entitlement_events — append-only record of every change to a user's paid
+ * access, with the BEFORE and AFTER of each entitlement field. This is the
+ * forensic trail for "why does this user have (or not have) access?": logs
+ * rotate, this table does not. `actor` distinguishes automated Stripe webhook
+ * changes from manual owner/admin grants. Rows are never updated or deleted.
+ */
+export const entitlementEvents = mysqlTable("entitlement_events", {
+  id: int("id").autoincrement().primaryKey(),
+  /** app_users.id whose entitlement changed (joined in app; no DB-level FK). */
+  userId: int("userId").notNull(),
+  /** Stripe `event.id` that caused the change; NULL for manual/admin actions. */
+  stripeEventId: varchar("stripeEventId", { length: 255 }),
+  /** Stripe event type, or a synthetic type for non-Stripe changes. */
+  eventType: varchar("eventType", { length: 64 }).notNull(),
+  /** Short machine reason, e.g. 'subscription_deleted', 'manual_grant'. */
+  reason: varchar("reason", { length: 64 }).notNull(),
+  /** Who applied it: 'webhook' (default), 'owner', 'admin', 'cron', 'backfill'. */
+  actor: varchar("actor", { length: 64 }).default("webhook").notNull(),
+  beforeHasAccess: boolean("beforeHasAccess"),
+  afterHasAccess: boolean("afterHasAccess"),
+  beforePlanId: varchar("beforePlanId", { length: 64 }),
+  afterPlanId: varchar("afterPlanId", { length: 64 }),
+  /** UTC ms; NULL carries the "lifetime access" meaning of app_users.expiryDate. */
+  beforeExpiryDate: bigint("beforeExpiryDate", { mode: "number" }),
+  afterExpiryDate: bigint("afterExpiryDate", { mode: "number" }),
+  /** UTC ms when this audit row was written. */
+  createdAt: bigint("createdAt", { mode: "number" }).notNull(),
+}, (table) => ({
+  userCreatedIdx: index("entitlement_events_user_created_idx").on(table.userId, table.createdAt),
+  stripeEventIdIdx: index("entitlement_events_stripe_event_id_idx").on(table.stripeEventId),
+}));
+
+export type EntitlementEvent = typeof entitlementEvents.$inferSelect;
+export type InsertEntitlementEvent = typeof entitlementEvents.$inferInsert;
 
 // ─── Discord OAuth CSRF state store (DB-backed, survives server restarts) ────
 //
