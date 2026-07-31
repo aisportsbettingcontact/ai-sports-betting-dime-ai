@@ -1773,7 +1773,6 @@ def freeze_continuation_evidence(
                     },
                     "path_filtered_checks": {
                         "dime_llm_validation": "NOT_TRIGGERED_PATH_FILTER",
-                        "livelab": "NOT_TRIGGERED_PATH_FILTER",
                     },
                     "review_required": True,
                     "independent_approval": False,

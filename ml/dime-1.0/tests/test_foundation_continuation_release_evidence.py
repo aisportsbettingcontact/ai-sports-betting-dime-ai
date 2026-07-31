@@ -60,7 +60,6 @@ def test_continuation_evidence_is_sanitized_closed_and_cumulative() -> None:
     assert set(credential["triggered_checks"].values()) == {"PASS"}
     assert credential["path_filtered_checks"] == {
         "dime_llm_validation": "NOT_TRIGGERED_PATH_FILTER",
-        "livelab": "NOT_TRIGGERED_PATH_FILTER",
     }
     assert credential["independent_approval"] is False
     assert credential["merged"] is False

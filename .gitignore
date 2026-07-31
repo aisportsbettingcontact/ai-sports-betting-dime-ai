@@ -127,8 +127,6 @@ __pycache__/
 
 # Claude skills symlinks (local tooling, not for deployment)
 .claude/skills/*
-# LiveLab skill is real project content, not a symlink
-!.claude/skills/livelab/
 
 # Audit notes, DB dumps, and run artifacts (non-sensitive but bulky)
 audit-notes/
@@ -163,13 +161,3 @@ osv-report.json
 test-results/
 playwright-report/
 blob-report/
-
-# LiveLab (livelab/) — generated state and build outputs
-.livelab/
-livelab/.vscode-test/
-livelab/artifacts/
-livelab/**/*.tsbuildinfo
-livelab/apps/vscode-extension/media/webview.js
-livelab/apps/vscode-extension/media/webview.js.map
-livelab/apps/vscode-extension/media/webview.css
-livelab/apps/vscode-extension/out/

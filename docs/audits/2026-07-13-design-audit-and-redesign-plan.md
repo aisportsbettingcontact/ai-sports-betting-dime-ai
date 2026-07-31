@@ -227,4 +227,4 @@ Unchanged: 160ms brand curve, reduced-motion discipline, no scroll effects. Hove
 
 ## 12. Verification limits
 
-Static audit: file-level reads + computed contrast + font inspection. Runtime rendering (halation severity, actual chart legibility, Stripe iframe behavior) was not re-verified in-browser because browser automation is blocked in this environment; recommend a LiveLab pass over Phases 1-3 before merge.
+Static audit: file-level reads + computed contrast + font inspection. Runtime rendering (halation severity, actual chart legibility, Stripe iframe behavior) was not re-verified in-browser because browser automation is blocked in this environment; recommend an in-browser pass over Phases 1-3 before merge.

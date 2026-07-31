@@ -20,8 +20,8 @@
   "artifacts": {
     "ml/dime-1.0/configs/runpod_gate_1_authorization_v1.json": "045c3dc325f4489d058509d0e4f9311c3a1b0baee4bb046acbd49f6330820c01",
     "ml/dime-1.0/docs/RUNPOD_GATE_1_AUTHORIZATION_V1.md": "3bf13872c9aa561338ede07945f6bb9c7df444e83e39cb5659e4d781983ecdbe",
-    "ml/dime-1.0/evidence/execution/dime-llm-v1-context-capsule/capsule.json": "02c976f41a42a529dd6f892b02aa3fc0197ad1cee43794c3d80adb55dabfb2ea",
-    "ml/dime-1.0/schemas/dime_llm_v1_context_capsule.schema.json": "3d4b02eb80fbc4ccc236bfbb443659f05407cce8de5f2bfd95fd6e5e8a0c0190",
+    "ml/dime-1.0/evidence/execution/dime-llm-v1-context-capsule/capsule.json": "183110ad0cea758171621818fb5076625467f2d3b4d392f63a4b7749d2610a94",
+    "ml/dime-1.0/schemas/dime_llm_v1_context_capsule.schema.json": "50e73e027cac1401869d328deacf689d87ea9abff23b7640f98f30f9ce681fd9",
     "ml/dime-1.0/schemas/runpod_gate_1_authorization.schema.json": "326d611809b3d563e077e6dcfaae7f67ac249c04e489054e0a246b70b34355c8",
     "ml/dime-1.0/scripts/validate_runpod_gate_1.py": "ef27ccc9c9ecb653e626bf48af631d63afc0532cbc5c6d7f7b4ee60fe6a629a7",
     "ml/dime-1.0/src/dime_ai/runpod_gate_1.py": "d3ae270cdb195b53a3412115d5db153758fa057e16ccb6b4c396fa1f8657bbb9",

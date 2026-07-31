@@ -9,13 +9,13 @@
     "evidence_commit": "35118453e423426fe163f19d17b3fe021251f54a",
     "private_proof_dependency_commit": "6e6fcc25243070c2849c871f86b4b0e4e3637548",
     "evidence_path": "evidence/execution/dime-llm-v1-foundation-002/evidence.json",
-    "evidence_sha256": "486e26aabae057e5168ee2f52e554077cbc0993cbdc337cdc01f1eaecb6ac39b",
+    "evidence_sha256": "28ddecf19f4d6b260b27fb431303da130a468e5499509d368bac3468d0d7bf72",
     "readme_path": "evidence/execution/dime-llm-v1-foundation-002/README.md",
     "readme_sha256": "6356cec2c749a5b880120dbfaf1a789cff764b950be2df40e2952848bcb19078",
     "sha256sums_path": "evidence/execution/dime-llm-v1-foundation-002/SHA256SUMS",
-    "sha256sums_sha256": "d0f97429be92983da266c4a60f86093e5620efc23416556db0ccdb2a92745ad8",
+    "sha256sums_sha256": "5439f548d14751eeede6672ac49b0c22f75618d1708a4082d41c53264c7eac23",
     "schema_path": "schemas/foundation_continuation_evidence.schema.json",
-    "schema_sha256": "1c6b65157436d550bcf150c7deba3328d735b08673e0afc83cd35069df257bc9",
+    "schema_sha256": "85a04e7e1eec21ebb6176833b0fa5f3a3cdc3007c3c9957d622b762e189d68dc",
     "schema_version": "dime-foundation-continuation-evidence-v1",
     "artifact_count": 2,
     "record_count": 300,
@@ -151,13 +151,13 @@
       {"path": "src/dime_ai/foundation_cumulative_evidence.py", "sha256": "da6df52294614e6abe77e9b3f4cfe641ec9c4ab2eded571dc8e14a53d28a139f"},
       {"path": "src/dime_ai/foundation_data_factory.py", "sha256": "1b3e06b8b511797b830012f1302c49e2eef1f2f59d00513a6e488e72b78e58fc"},
       {"path": "src/dime_ai/foundation_dataset.py", "sha256": "167f5c586b6d9627b693c6c76536849e8aef0bf73baa256d5a503663aa7a35ec"},
-      {"path": "src/dime_ai/foundation_execution_evidence.py", "sha256": "326ff020f8b1290d982a41d4251d9e0d2f46558068a1d7180b6bc559b619587d"},
+      {"path": "src/dime_ai/foundation_execution_evidence.py", "sha256": "366e26f7c287a02aa92fe94907c132d249920efc45b9df88af01b298c93f825e"},
       {"path": "src/dime_ai/foundation_instrumentation.py", "sha256": "fa45a722d16479950992f8334bb23407ac7bb1e65ce52e55e6474ae568dce7d4"},
       {"path": "src/dime_ai/foundation_partitioning.py", "sha256": "5b8731ac885fd772ac83868ed05551e2dc230544cb60bbc157d3739692cf63da"},
       {"path": "src/dime_ai/foundation_private_evaluation_comparison.py", "sha256": "044a8177a99e2118290ecca324c23e325934bbad510a351f5644dd58d520bd6a"},
       {"path": "src/dime_ai/governed_json.py", "sha256": "f2b00c11dc3fe57b6569f802041fe7155d1f31ca5dbf263910742e93b0931d64"},
       {"path": "src/dime_ai/private_evaluation_semantics.py", "sha256": "e6d7f55820e872acc8ceca7a10b7cb4273893af1eaaa1b880abba9ab25f4ca72"},
-      {"path": "schemas/foundation_continuation_evidence.schema.json", "sha256": "1c6b65157436d550bcf150c7deba3328d735b08673e0afc83cd35069df257bc9"},
+      {"path": "schemas/foundation_continuation_evidence.schema.json", "sha256": "85a04e7e1eec21ebb6176833b0fa5f3a3cdc3007c3c9957d622b762e189d68dc"},
       {"path": "schemas/foundation_cumulative_boundary.schema.json", "sha256": "87870f927044d05f1c3df8a1599a2a88e387768aa76e625ee6ef844c12b30914"},
       {"path": "schemas/foundation_cumulative_evidence.schema.json", "sha256": "b87091aa5a197eaae8c840f01d76cf40b4e459c61aeec2447373fa830e62ea1e"},
       {"path": "schemas/foundation_partition_registry.schema.json", "sha256": "c53895ca39531c184388e9501a8a91df92d0a08b5c1c3d3ca4674f36337e2868"},
@@ -198,7 +198,7 @@
         {"path": "data/eval/safety_red_team.sample.jsonl", "sha256": "1576397bfe351e9bb9f54ec6abc9f16e8a5e73ca8152b9b8fd74fcb1f7220b09"}
       ]
     },
-    "contract_sha256": "3d4ddef0d36e84098327b2304a2f0bc6b45e0f1c70bbcd98e98593f96b2abde8"
+    "contract_sha256": "490d2809f246a9a759e99cae8b19f5d524242960717c2e7ffe711be9c44b901b"
   },
   "quarantines": [
     {
@@ -274,13 +274,13 @@
   },
   "lineage": {
     "parent_evidence_id": "dime-llm-v1-foundation-002",
-    "parent_state_sha256": "eac4d1e5c3aaee985e7a10af4cfc7f7928ab332b671c7f65261e93ae3fd8e947",
+    "parent_state_sha256": "e91195ba0d02092501f7c00dce577f43a89f1b2a5abada7d81c6b73d0f2a4df8",
     "delta_artifact_id": "platform_shard_003",
     "delta_identity_sha256": "3a44a8d65e28a3673219770d849ea7b8cc248e842cd9e2d193e28ffd17c89ffb",
     "prior_record_identity_root_sha256": "e9c8e459816dfb09f9f42b0872edf167db31ee910efdf09b999c360584ce19f4",
     "delta_record_identity_root_sha256": "6bb911f4b36382b3b2371c3630bf758ceec18f725461ba30ea8b6a75da3ee6e3",
     "cumulative_record_identity_root_sha256": "cac7179973064d90c859a348243c11db4113722d7d18401c34a5f00b306369c3",
-    "cumulative_state_sha256": "056e068276c9d95b384c7f1d034cc38598def6170c1c7cee6c804b83a635c1b2",
+    "cumulative_state_sha256": "ce6bac1aacfa9a6cbbfbf1ec228ebcbf4688f70b467e4b316b05aabd975d227c",
     "domain": "dime-foundation-cumulative-state-v1"
   },
   "private_content_counts": {

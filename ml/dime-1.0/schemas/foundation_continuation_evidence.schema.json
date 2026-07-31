@@ -497,8 +497,7 @@
                 },
                 "path_filtered_checks": {
                   "const": {
-                    "dime_llm_validation": "NOT_TRIGGERED_PATH_FILTER",
-                    "livelab": "NOT_TRIGGERED_PATH_FILTER"
+                    "dime_llm_validation": "NOT_TRIGGERED_PATH_FILTER"
                   }
                 },
                 "review_required": {"const": true},

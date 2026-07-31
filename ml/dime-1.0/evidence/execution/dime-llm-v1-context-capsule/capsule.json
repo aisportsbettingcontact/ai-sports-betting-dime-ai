@@ -255,8 +255,8 @@
     "complete_release": false,
     "public_evidence": {
       "path": "ml/dime-1.0/evidence/execution/dime-llm-v1-foundation-003/evidence.json",
-      "sha256": "9946b1583ff686ecbb9fc4d915cb46a122541145f4d6cccf50014cfc13b536b9",
-      "sha256sums_sha256": "98279dcae2f7e54c33abe0d71f7fb0c854e7111d9010e6dd22918f41177b7518"
+      "sha256": "25839630f0cc017a2d14e792fd8f06e994415c7da796d5211a9c523452f98233",
+      "sha256sums_sha256": "6a43b1c5513fba9c992de6d28b2331ef185a512dacb8014426de7f87a45afd28"
     }
   },
   "semantic_evaluation": {
