@@ -613,7 +613,7 @@ export default function CheckoutPage() {
   );
 
   return (
-    <div className="dlv2" style={{ minHeight: "100vh" }}>
+    <div className="dlv2" style={{ minHeight: "100dvh" }}>
       <nav className="nav" aria-label="Checkout">
         <div className="wrap nav-inner">
           <Link href="/" aria-label="dime home" style={{ textDecoration: "none" }}>

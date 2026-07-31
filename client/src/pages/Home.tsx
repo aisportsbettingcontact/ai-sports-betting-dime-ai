@@ -279,8 +279,8 @@ export default function Home() {
           {/* Headline */}
           <div className="mb-10">
             <div className="flex items-center gap-2 mb-4">
-              <span className="w-2 h-2 rounded-full bg-[#45E0A8]" />
-              <span className="text-[11px] font-bold text-[#45E0A8] tracking-widest uppercase">
+              <span className="w-2 h-2 rounded-full bg-primary" />
+              <span className="text-[11px] font-bold text-primary tracking-widest uppercase">
                 Sports betting intelligence software
               </span>
             </div>
@@ -465,7 +465,7 @@ export default function Home() {
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
                   placeholder="your_username"
-                  className="w-full px-4 py-3 rounded-lg text-sm text-white placeholder-[color:var(--text-muted)] border border-white bg-black focus:outline-none focus:ring-2 focus:ring-[#45E0A8] focus:border-[#45E0A8] transition-colors"
+                  className="w-full px-4 py-3 rounded-lg text-sm text-white placeholder-[color:var(--text-muted)] border border-white bg-black focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
                   disabled={loginMutation.isPending}
                 />
               </div>
@@ -486,7 +486,7 @@ export default function Home() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="w-full px-4 py-3 pr-11 rounded-lg text-sm text-white placeholder-[color:var(--text-muted)] border border-white bg-black focus:outline-none focus:ring-2 focus:ring-[#45E0A8] focus:border-[#45E0A8] transition-colors"
+                    className="w-full px-4 py-3 pr-11 rounded-lg text-sm text-white placeholder-[color:var(--text-muted)] border border-white bg-black focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
                     disabled={loginMutation.isPending}
                   />
                   <button
@@ -546,7 +546,7 @@ export default function Home() {
               </div>
 
               {forgotSent ? (
-                <div className="px-4 py-3 rounded-xl bg-transparent border border-[#45E0A8] text-[12px] text-[#45E0A8] text-center">
+                <div className="px-4 py-3 rounded-xl bg-transparent border border-primary text-[12px] text-primary text-center">
                   If an account exists for that username or email, a reset link has been sent.
                 </div>
               ) : (
@@ -564,7 +564,7 @@ export default function Home() {
                     value={forgotIdentifier}
                     onChange={(e) => setForgotIdent(e.target.value)}
                     placeholder="Username or email"
-                    className="w-full px-4 py-3 rounded-lg text-sm text-white placeholder-[color:var(--text-muted)] border border-white bg-black focus:outline-none focus:ring-2 focus:ring-[#45E0A8] focus:border-[#45E0A8] transition-colors"
+                    className="w-full px-4 py-3 rounded-lg text-sm text-white placeholder-[color:var(--text-muted)] border border-white bg-black focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-colors"
                     disabled={requestResetMutation.isPending}
                   />
                   <button
@@ -626,7 +626,7 @@ export default function Home() {
               Don't have an account?{" "}
               <a
                 href="/#pricing"
-                className="font-semibold text-white underline hover:text-[#45E0A8] transition-colors"
+                className="font-semibold text-white underline hover:text-primary transition-colors"
               >
                 Sign up
               </a>

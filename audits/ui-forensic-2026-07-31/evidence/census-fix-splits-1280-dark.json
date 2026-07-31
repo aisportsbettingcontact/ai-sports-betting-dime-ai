@@ -1,0 +1,781 @@
+{
+ "typography": [
+  {
+   "key": "Familjen Grotesk|15.36px|700|15.36px|0.6144px",
+   "count": 177,
+   "sample": "67%",
+   "cls": "SPAN"
+  },
+  {
+   "key": "Familjen Grotesk|11.52px|500|normal|1.152px",
+   "count": 90,
+   "sample": "Tickets",
+   "cls": "text-center uppercase"
+  },
+  {
+   "key": "Familjen Grotesk|10.24px|400|normal|normal",
+   "count": 60,
+   "sample": "SP:",
+   "cls": "SPAN"
+  },
+  {
+   "key": "Familjen Grotesk|12.8px|700|normal|0.256px",
+   "count": 60,
+   "sample": "NYY (+1.5)",
+   "cls": "uppercase"
+  },
+  {
+   "key": "Familjen Grotesk|14.08px|700|normal|1.9712px",
+   "count": 45,
+   "sample": "Spread",
+   "cls": "uppercase tracking-widest font-bold whitespace-now"
+  },
+  {
+   "key": "Familjen Grotesk|12.8px|600|14.72px|normal",
+   "count": 30,
+   "sample": "New York",
+   "cls": "font-semibold leading-tight hidden lg:block"
+  },
+  {
+   "key": "Familjen Grotesk|10.24px|400|10.24px|normal",
+   "count": 30,
+   "sample": "Yankees",
+   "cls": "leading-none hidden lg:block"
+  },
+  {
+   "key": "Familjen Grotesk|12.8px|700|normal|0.768px",
+   "count": 30,
+   "sample": "OVER",
+   "cls": "SPAN"
+  },
+  {
+   "key": "Familjen Grotesk|12.928px|700|normal|normal",
+   "count": 15,
+   "sample": "2:20 PM ET",
+   "cls": "font-bold"
+  },
+  {
+   "key": "Familjen Grotesk|11px|400|normal|normal",
+   "count": 15,
+   "sample": "Wrigley Field",
+   "cls": "SPAN"
+  },
+  {
+   "key": "Familjen Grotesk|10px|400|normal|normal",
+   "count": 15,
+   "sample": "·",
+   "cls": "SPAN"
+  },
+  {
+   "key": "Familjen Grotesk|11px|600|normal|normal",
+   "count": 15,
+   "sample": "YES",
+   "cls": "SPAN"
+  },
+  {
+   "key": "Familjen Grotesk|15.36px|700|normal|normal",
+   "count": 15,
+   "sample": "9",
+   "cls": "SPAN"
+  },
+  {
+   "key": "Familjen Grotesk|22.75px|400|normal|normal",
+   "count": 5,
+   "sample": "New Chat",
+   "cls": "dc-sidebar-text"
+  },
+  {
+   "key": "Familjen Grotesk|11.5px|500|normal|1.38px",
+   "count": 5,
+   "sample": "Odds & Splits History",
+   "cls": "SPAN"
+  },
+  {
+   "key": "Familjen Grotesk|64px|700|64px|-3.2px",
+   "count": 3,
+   "sample": "d",
+   "cls": "SPAN"
+  },
+  {
+   "key": "Familjen Grotesk|13px|600|normal|normal",
+   "count": 3,
+   "sample": "World Cup Model Simulations",
+   "cls": "dc-pill dc-pill--contrast dc-hv1 dc-focusable dc-p"
+  },
+  {
+   "key": "Familjen Grotesk|50px|700|50px|-2.5px",
+   "count": 2,
+   "sample": "dıme",
+   "cls": "dime-wordmark"
+  },
+  {
+   "key": "Familjen Grotesk|16.64px|400|normal|normal",
+   "count": 2,
+   "sample": "Dime Chat",
+   "cls": "dc-shell-sr-only"
+  },
+  {
+   "key": "Familjen Grotesk|24px|700|24px|-1.2px",
+   "count": 2,
+   "sample": "dıme",
+   "cls": "dime-wordmark"
+  },
+  {
+   "key": "Familjen Grotesk|22.75px|600|normal|normal",
+   "count": 1,
+   "sample": "Betting Splits + Odds Histor",
+   "cls": "dc-sidebar-text"
+  },
+  {
+   "key": "Familjen Grotesk|18px|500|normal|normal",
+   "count": 1,
+   "sample": "＋",
+   "cls": "dc-composer-plus"
+  },
+  {
+   "key": "Familjen Grotesk|11px|400|15.4px|normal",
+   "count": 1,
+   "sample": "Model estimates, not guarant",
+   "cls": "dc-chat-footer"
+  },
+  {
+   "key": "Familjen Grotesk|13px|700|18.5714px|0.325px",
+   "count": 1,
+   "sample": "TODAY",
+   "cls": "SPAN"
+  },
+  {
+   "key": "Familjen Grotesk|13px|600|normal|0.325px",
+   "count": 1,
+   "sample": "MLB",
+   "cls": "bs-pill flex items-center gap-1 px-2.5 py-1.5 roun"
+  },
+  {
+   "key": "Familjen Grotesk|19px|700|normal|1.9px",
+   "count": 1,
+   "sample": "Friday, July 31, 2026",
+   "cls": "bs-datehdr font-bold tracking-widest uppercase"
+  },
+  {
+   "key": "Familjen Grotesk|22px|700|22px|normal",
+   "count": 1,
+   "sample": "·",
+   "cls": "SPAN"
+  },
+  {
+   "key": "Familjen Grotesk|17px|600|normal|1.02px",
+   "count": 1,
+   "sample": "MLB BASEBALL",
+   "cls": "bs-datehdr-sub font-semibold"
+  }
+ ],
+ "distinctFontSizes": [
+  "10px",
+  "10.24px",
+  "11px",
+  "11.5px",
+  "11.52px",
+  "12.8px",
+  "12.928px",
+  "13px",
+  "14.08px",
+  "15.36px",
+  "16.64px",
+  "17px",
+  "18px",
+  "19px",
+  "22px",
+  "22.75px",
+  "24px",
+  "50px",
+  "64px"
+ ],
+ "distinctFamilies": [
+  "Familjen Grotesk"
+ ],
+ "numericSample": [
+  {
+   "text": "67%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "15.36px",
+   "weight": "700"
+  },
+  {
+   "text": "33%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "15.36px",
+   "weight": "700"
+  },
+  {
+   "text": "3%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "15.36px",
+   "weight": "700"
+  },
+  {
+   "text": "97%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "15.36px",
+   "weight": "700"
+  },
+  {
+   "text": "9",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "15.36px",
+   "weight": "700"
+  },
+  {
+   "text": "42%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "15.36px",
+   "weight": "700"
+  },
+  {
+   "text": "58%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "15.36px",
+   "weight": "700"
+  },
+  {
+   "text": "31%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "15.36px",
+   "weight": "700"
+  },
+  {
+   "text": "69%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "15.36px",
+   "weight": "700"
+  },
+  {
+   "text": "44%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "15.36px",
+   "weight": "700"
+  },
+  {
+   "text": "56%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "15.36px",
+   "weight": "700"
+  },
+  {
+   "text": "34%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "15.36px",
+   "weight": "700"
+  },
+  {
+   "text": "66%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "15.36px",
+   "weight": "700"
+  },
+  {
+   "text": "49%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "15.36px",
+   "weight": "700"
+  },
+  {
+   "text": "51%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "15.36px",
+   "weight": "700"
+  },
+  {
+   "text": "82%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "15.36px",
+   "weight": "700"
+  },
+  {
+   "text": "18%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "15.36px",
+   "weight": "700"
+  },
+  {
+   "text": "7.5",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "15.36px",
+   "weight": "700"
+  },
+  {
+   "text": "56%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "15.36px",
+   "weight": "700"
+  },
+  {
+   "text": "44%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "15.36px",
+   "weight": "700"
+  },
+  {
+   "text": "93%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "15.36px",
+   "weight": "700"
+  },
+  {
+   "text": "7%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "15.36px",
+   "weight": "700"
+  },
+  {
+   "text": "66%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "15.36px",
+   "weight": "700"
+  },
+  {
+   "text": "34%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "15.36px",
+   "weight": "700"
+  },
+  {
+   "text": "75%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "15.36px",
+   "weight": "700"
+  },
+  {
+   "text": "25%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "15.36px",
+   "weight": "700"
+  },
+  {
+   "text": "100%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "15.36px",
+   "weight": "700"
+  },
+  {
+   "text": "100%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "15.36px",
+   "weight": "700"
+  },
+  {
+   "text": "9",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "15.36px",
+   "weight": "700"
+  },
+  {
+   "text": "33%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "15.36px",
+   "weight": "700"
+  },
+  {
+   "text": "67%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "15.36px",
+   "weight": "700"
+  },
+  {
+   "text": "34%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "15.36px",
+   "weight": "700"
+  },
+  {
+   "text": "66%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "15.36px",
+   "weight": "700"
+  },
+  {
+   "text": "43%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "15.36px",
+   "weight": "700"
+  },
+  {
+   "text": "57%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "15.36px",
+   "weight": "700"
+  },
+  {
+   "text": "76%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "15.36px",
+   "weight": "700"
+  },
+  {
+   "text": "24%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "15.36px",
+   "weight": "700"
+  },
+  {
+   "text": "22%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "15.36px",
+   "weight": "700"
+  },
+  {
+   "text": "78%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "15.36px",
+   "weight": "700"
+  },
+  {
+   "text": "1%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "15.36px",
+   "weight": "700"
+  }
+ ],
+ "radii": [
+  [
+   "9999px",
+   93
+  ],
+  [
+   "9999px 0px 0px 9999px",
+   87
+  ],
+  [
+   "0px 9999px 9999px 0px",
+   87
+  ],
+  [
+   "8px",
+   8
+  ],
+  [
+   "50%",
+   7
+  ],
+  [
+   "20px",
+   3
+  ],
+  [
+   "3.35544e+07px",
+   3
+  ],
+  [
+   "0px 0px 8px 8px",
+   1
+  ],
+  [
+   "26px",
+   1
+  ]
+ ],
+ "shadows": [],
+ "mint": {
+  "text": 4,
+  "bg": 94,
+  "border": 0,
+  "samples": [
+   {
+    "tag": "SPAN",
+    "cls": "dime-coindot",
+    "text": ""
+   },
+   {
+    "tag": "svg",
+    "cls": "[object SVGAnimatedString]",
+    "text": ""
+   },
+   {
+    "tag": "rect",
+    "cls": "[object SVGAnimatedString]",
+    "text": ""
+   },
+   {
+    "tag": "rect",
+    "cls": "[object SVGAnimatedString]",
+    "text": ""
+   },
+   {
+    "tag": "path",
+    "cls": "[object SVGAnimatedString]",
+    "text": ""
+   },
+   {
+    "tag": "SPAN",
+    "cls": "dc-hero-dot",
+    "text": ""
+   },
+   {
+    "tag": "BUTTON",
+    "cls": "dc-pill dc-pill--mint dc-hv1 dc-focusabl",
+    "text": "Best Trends for MLB "
+   },
+   {
+    "tag": "SPAN",
+    "cls": "dime-coindot",
+    "text": ""
+   },
+   {
+    "tag": "DIV",
+    "cls": "bsp-seg bsp-seg--away transition-all dur",
+    "text": "67%"
+   },
+   {
+    "tag": "DIV",
+    "cls": "bsp-seg bsp-seg--away transition-all dur",
+    "text": "3%"
+   },
+   {
+    "tag": "DIV",
+    "cls": "bsp-seg bsp-seg--away transition-all dur",
+    "text": "42%"
+   },
+   {
+    "tag": "DIV",
+    "cls": "bsp-seg bsp-seg--away transition-all dur",
+    "text": "31%"
+   },
+   {
+    "tag": "DIV",
+    "cls": "bsp-seg bsp-seg--away transition-all dur",
+    "text": "44%"
+   },
+   {
+    "tag": "DIV",
+    "cls": "bsp-seg bsp-seg--away transition-all dur",
+    "text": "34%"
+   },
+   {
+    "tag": "DIV",
+    "cls": "bsp-seg bsp-seg--away transition-all dur",
+    "text": "49%"
+   },
+   {
+    "tag": "DIV",
+    "cls": "bsp-seg bsp-seg--away transition-all dur",
+    "text": "82%"
+   },
+   {
+    "tag": "DIV",
+    "cls": "bsp-seg bsp-seg--away transition-all dur",
+    "text": "56%"
+   },
+   {
+    "tag": "DIV",
+    "cls": "bsp-seg bsp-seg--away transition-all dur",
+    "text": "93%"
+   },
+   {
+    "tag": "DIV",
+    "cls": "bsp-seg bsp-seg--away transition-all dur",
+    "text": "66%"
+   },
+   {
+    "tag": "DIV",
+    "cls": "bsp-seg bsp-seg--away transition-all dur",
+    "text": "75%"
+   },
+   {
+    "tag": "DIV",
+    "cls": "bsp-seg bsp-seg--away transition-all dur",
+    "text": "100%"
+   },
+   {
+    "tag": "DIV",
+    "cls": "bsp-seg bsp-seg--away transition-all dur",
+    "text": "100%"
+   },
+   {
+    "tag": "DIV",
+    "cls": "bsp-seg bsp-seg--away transition-all dur",
+    "text": "33%"
+   },
+   {
+    "tag": "DIV",
+    "cls": "bsp-seg bsp-seg--away transition-all dur",
+    "text": "34%"
+   },
+   {
+    "tag": "DIV",
+    "cls": "bsp-seg bsp-seg--away transition-all dur",
+    "text": "43%"
+   }
+  ]
+ },
+ "contrastFails": [],
+ "contrastFailTotal": 0,
+ "smallTargets": [
+  {
+   "tag": "BUTTON",
+   "cls": "dc-icon-btn dc-hv2 dc-pressable dc-focus",
+   "w": 32,
+   "h": 32,
+   "text": "Search chats"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "dc-icon-btn dc-hv2 dc-pressable dc-focus",
+   "w": 32,
+   "h": 32,
+   "text": "Collapse sidebar"
+  },
+  {
+   "tag": "H1",
+   "cls": "dc-shell-sr-only",
+   "w": 1,
+   "h": 1,
+   "text": "Dime Chat"
+  },
+  {
+   "tag": "INPUT",
+   "cls": "dc-composer-input",
+   "w": 606,
+   "h": 17,
+   "text": ""
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "dc-send dc-hv3 dc-focusable dc-pressable",
+   "w": 36,
+   "h": 36,
+   "text": "Submit prompt"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "dc-pill dc-pill--contrast dc-hv1 dc-focu",
+   "w": 227,
+   "h": 36,
+   "text": "World Cup Model Simu"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "dc-pill dc-pill--outline dc-hv1 dc-focus",
+   "w": 243,
+   "h": 36,
+   "text": "Player Props with th"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "dc-pill dc-pill--mint dc-hv1 dc-focusabl",
+   "w": 246,
+   "h": 36,
+   "text": "Best Trends for MLB "
+  },
+  {
+   "tag": "H1",
+   "cls": "dc-shell-sr-only",
+   "w": 1,
+   "h": 1,
+   "text": "Betting Splits and O"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "cal-trigger flex items-center gap-1 sm:g",
+   "w": 92,
+   "h": 37,
+   "text": "TODAY"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "bs-pill flex items-center gap-1 px-2.5 p",
+   "w": 66,
+   "h": 30,
+   "text": "MLB"
+  },
+  {
+   "tag": "INPUT",
+   "cls": "flex-1 min-w-0 bg-transparent text-base ",
+   "w": 650,
+   "h": 17,
+   "text": "Search MLB games"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "ohp-toggle w-full flex items-center just",
+   "w": 893,
+   "h": 36,
+   "text": "Odds & Splits Histor"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "ohp-toggle w-full flex items-center just",
+   "w": 893,
+   "h": 36,
+   "text": "Odds & Splits Histor"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "ohp-toggle w-full flex items-center just",
+   "w": 893,
+   "h": 36,
+   "text": "Odds & Splits Histor"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "ohp-toggle w-full flex items-center just",
+   "w": 893,
+   "h": 36,
+   "text": "Odds & Splits Histor"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "ohp-toggle w-full flex items-center just",
+   "w": 893,
+   "h": 36,
+   "text": "Odds & Splits Histor"
+  }
+ ],
+ "clickableCount": 23,
+ "cardGeometry": [],
+ "unnamedIconButtons": [
+  {
+   "tag": "INPUT",
+   "cls": "dc-composer-input"
+  }
+ ],
+ "animations": []
+}

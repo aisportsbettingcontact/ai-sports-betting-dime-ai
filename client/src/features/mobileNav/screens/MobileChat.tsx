@@ -12,7 +12,6 @@ import {
   TrendingUp,
   BarChart3,
   Brain,
-  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 import { mobileNavLogger } from "../logger";
@@ -42,7 +41,7 @@ const AI_ACTIONS = [
     id: "summarize_slate",
     label: "Summarize today's slate",
     credits: 2500,
-    icon: Sparkles,
+    icon: MessageSquare,
   },
 ] as const;
 
@@ -88,8 +87,8 @@ export function MobileChat() {
       <header className="sticky top-0 z-40 bg-black backdrop-blur-sm border-b border-white px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-[#45E0A8] flex items-center justify-center">
-              <Sparkles className="w-4 h-4 text-white" />
+            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
+              <MessageSquare className="w-4 h-4 text-white" />
             </div>
             <div>
               <h1 className="text-lg font-bold text-white tracking-tight">
@@ -114,7 +113,7 @@ export function MobileChat() {
               Dime Credits
             </p>
             {creditState === "planned" ? (
-              <p className="text-sm text-[#45E0A8] font-semibold mt-0.5">
+              <p className="text-sm text-primary font-semibold mt-0.5">
                 20,000 monthly Dime Credits planned
               </p>
             ) : (
@@ -145,7 +144,7 @@ export function MobileChat() {
                 className="w-full flex items-center gap-3 p-3 rounded-xl bg-black border border-white hover:border-white transition-all active:scale-[0.98]"
               >
                 <div className="w-8 h-8 rounded-lg bg-transparent flex items-center justify-center flex-shrink-0">
-                  <Icon className="w-4 h-4 text-[#45E0A8]" />
+                  <Icon className="w-4 h-4 text-primary" />
                 </div>
                 <div className="flex-1 text-left">
                   <p className="text-sm font-medium text-white">

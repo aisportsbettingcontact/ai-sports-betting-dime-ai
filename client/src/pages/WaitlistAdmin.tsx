@@ -27,6 +27,7 @@ import { useAppAuth } from "@/_core/hooks/useAppAuth";
 import { AdminShell } from "@/pages/admin/AdminShell";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
+import { X } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type WaitlistStatus = "pending" | "approved" | "denied";
@@ -96,7 +97,6 @@ function ContactModal({
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background"
-      style={{ backdropFilter: "blur(4px)" }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div className="w-full max-w-lg bg-background border border-border rounded-2xl p-6 flex flex-col gap-5">
@@ -108,9 +108,10 @@ function ContactModal({
           </div>
           <button
             onClick={onClose}
+            aria-label="Close"
             className="w-8 h-8 flex items-center justify-center rounded-lg text-foreground hover:text-foreground transition-colors"
           >
-            ✕
+            <X size={16} />
           </button>
         </div>
 
@@ -380,7 +381,7 @@ export default function WaitlistAdmin() {
     <AdminShell active="waitlist">
       {/* Theme-aware surface so the page adapts to light/dark theme within the
           theme-aware AdminShell chrome (token migration complete). */}
-      <div className="min-h-[calc(100vh-3.5rem)] bg-background text-foreground">
+      <div className="min-h-[calc(100dvh-3.5rem)] bg-background text-foreground">
       {/* Contact modal */}
       {contactEntry && (
         <ContactModal entry={contactEntry} onClose={() => setContactEntry(null)} />

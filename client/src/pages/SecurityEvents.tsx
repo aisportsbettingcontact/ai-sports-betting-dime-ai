@@ -52,6 +52,9 @@ import {
   FlaskConical,
   Send,
   BookOpen,
+  Ban,
+  Zap,
+  Lock,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -179,7 +182,7 @@ function DiscordTestPanel() {
 
       <p className="text-foreground text-xs leading-relaxed">
         Use these controls to confirm that the Discord{" "}
-        <span className="text-foreground font-mono">🗒️-𝗦𝗘𝗖𝗨𝗥𝗜𝗧𝗬-𝗘𝗩𝗘𝗡𝗧𝗦</span> channel is
+        <span className="text-foreground font-mono font-bold">SECURITY EVENTS</span> channel is
         receiving alerts correctly. Test embeds use a synthetic IP and are clearly
         labeled as tests — they will not affect event counts in the database.
       </p>
@@ -207,9 +210,15 @@ function DiscordTestPanel() {
             </SelectTrigger>
             <SelectContent className="bg-background border-border">
               <SelectItem value="ALL" className="text-xs">All 3 Types</SelectItem>
-              <SelectItem value="CSRF_BLOCK" className="text-xs">🚫 CSRF Block</SelectItem>
-              <SelectItem value="RATE_LIMIT" className="text-xs">⚡ Rate Limit</SelectItem>
-              <SelectItem value="AUTH_FAIL" className="text-xs">🔐 Auth Fail</SelectItem>
+              <SelectItem value="CSRF_BLOCK" className="text-xs">
+                <span className="inline-flex items-center gap-1.5"><Ban size={14} /> CSRF Block</span>
+              </SelectItem>
+              <SelectItem value="RATE_LIMIT" className="text-xs">
+                <span className="inline-flex items-center gap-1.5"><Zap size={14} /> Rate Limit</span>
+              </SelectItem>
+              <SelectItem value="AUTH_FAIL" className="text-xs">
+                <span className="inline-flex items-center gap-1.5"><Lock size={14} /> Auth Fail</span>
+              </SelectItem>
             </SelectContent>
           </Select>
           <Button

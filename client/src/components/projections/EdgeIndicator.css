@@ -38,8 +38,10 @@
 .edge-indicator--none {
   display: inline-flex;
   align-items: center;
-  min-block-size: 1.75rem;
-  padding: 0.25rem 0.5rem;
+  /* Audit DIME-UI-008: one badge geometry — the neutral variant shares the
+     mint cell's height and padding so mixed rows align. */
+  min-block-size: 2rem;
+  padding: 0.375rem 0.75rem;
   border-radius: 10px;
   color: var(--text-secondary, #a6a6a6);
   background: transparent;

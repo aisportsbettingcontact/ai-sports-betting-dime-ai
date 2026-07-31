@@ -1,0 +1,619 @@
+{
+ "typography": [
+  {
+   "key": "Familjen Grotesk|12.48px|700|16.64px|normal",
+   "count": 11,
+   "sample": "$",
+   "cls": "flex items-center gap-1 px-2 py-1 rounded-md text-"
+  },
+  {
+   "key": "Familjen Grotesk|11px|500|normal|0.88px",
+   "count": 11,
+   "sample": "Date",
+   "cls": "bt-label"
+  },
+  {
+   "key": "Familjen Grotesk|12.48px|700|16.64px|0.624px",
+   "count": 7,
+   "sample": "ALL",
+   "cls": "flex-shrink-0 px-4 py-2.5 text-xs font-bold tracki"
+  },
+  {
+   "key": "Familjen Grotesk|11px|500|13.75px|0.88px",
+   "count": 7,
+   "sample": "Total Bets",
+   "cls": "bt-label leading-tight whitespace-nowrap"
+  },
+  {
+   "key": "Familjen Grotesk|24.96px|700|31.2px|-0.2496px",
+   "count": 7,
+   "sample": "0",
+   "cls": "text-lg sm:text-xl lg:text-2xl font-bold leading-t"
+  },
+  {
+   "key": "Familjen Grotesk|22.75px|400|normal|normal",
+   "count": 5,
+   "sample": "New Chat",
+   "cls": "dc-sidebar-text"
+  },
+  {
+   "key": "Familjen Grotesk|10px|400|normal|1.5px",
+   "count": 4,
+   "sample": "RECORD",
+   "cls": "DIV"
+  },
+  {
+   "key": "Familjen Grotesk|13px|700|normal|normal",
+   "count": 4,
+   "sample": "0W–0L",
+   "cls": "DIV"
+  },
+  {
+   "key": "Familjen Grotesk|64px|700|64px|-3.2px",
+   "count": 3,
+   "sample": "d",
+   "cls": "SPAN"
+  },
+  {
+   "key": "Familjen Grotesk|13px|600|normal|normal",
+   "count": 3,
+   "sample": "World Cup Model Simulations",
+   "cls": "dc-pill dc-pill--contrast dc-hv1 dc-focusable dc-p"
+  },
+  {
+   "key": "Familjen Grotesk|12.48px|400|16.64px|normal",
+   "count": 3,
+   "sample": "(1u = $100)",
+   "cls": "text-xs bt-dim font-mono"
+  },
+  {
+   "key": "Familjen Grotesk|50px|700|50px|-2.5px",
+   "count": 2,
+   "sample": "dıme",
+   "cls": "dime-wordmark"
+  },
+  {
+   "key": "Familjen Grotesk|16.64px|400|normal|normal",
+   "count": 2,
+   "sample": "Dime Chat",
+   "cls": "dc-shell-sr-only"
+  },
+  {
+   "key": "Familjen Grotesk|14.56px|700|20.8px|1.456px",
+   "count": 2,
+   "sample": "owner",
+   "cls": "text-sm font-bold tracking-widest px-2 py-0.5 roun"
+  },
+  {
+   "key": "Familjen Grotesk|14.56px|700|20.8px|0.728px",
+   "count": 2,
+   "sample": "ADD BET",
+   "cls": "font-bold text-sm tracking-wider flex-1 text-left"
+  },
+  {
+   "key": "Familjen Grotesk|14.56px|700|20.8px|normal",
+   "count": 2,
+   "sample": "AWAY",
+   "cls": "text-sm bt-dim font-bold"
+  },
+  {
+   "key": "Familjen Grotesk|22.75px|600|normal|normal",
+   "count": 1,
+   "sample": "Bet Tracker",
+   "cls": "dc-sidebar-text"
+  },
+  {
+   "key": "Familjen Grotesk|18px|500|normal|normal",
+   "count": 1,
+   "sample": "＋",
+   "cls": "dc-composer-plus"
+  },
+  {
+   "key": "Familjen Grotesk|11px|400|15.4px|normal",
+   "count": 1,
+   "sample": "Model estimates, not guarant",
+   "cls": "dc-chat-footer"
+  },
+  {
+   "key": "Familjen Grotesk|16.64px|700|24.96px|0.832px",
+   "count": 1,
+   "sample": "BET TRACKER",
+   "cls": "bt-title font-bold tracking-wider text-sm sm:text-"
+  },
+  {
+   "key": "Familjen Grotesk|11px|400|13.75px|normal",
+   "count": 1,
+   "sample": "on $0.00 risked",
+   "cls": "text-[11px] bt-faint leading-tight"
+  },
+  {
+   "key": "Familjen Grotesk|14px|400|20px|normal",
+   "count": 1,
+   "sample": "No MLB games on 07/31/2026",
+   "cls": "bt-input bt-dim text-sm"
+  },
+  {
+   "key": "Familjen Grotesk|11px|700|normal|2px",
+   "count": 1,
+   "sample": "OVERALL SUMMARY",
+   "cls": "SPAN"
+  },
+  {
+   "key": "Familjen Grotesk|14.56px|400|20.8px|normal",
+   "count": 1,
+   "sample": "No bets tracked yet.",
+   "cls": "bt-dim text-sm"
+  }
+ ],
+ "distinctFontSizes": [
+  "10px",
+  "11px",
+  "12.48px",
+  "13px",
+  "14px",
+  "14.56px",
+  "16.64px",
+  "18px",
+  "22.75px",
+  "24.96px",
+  "50px",
+  "64px"
+ ],
+ "distinctFamilies": [
+  "Familjen Grotesk"
+ ],
+ "numericSample": [
+  {
+   "text": "0",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "24.96px",
+   "weight": "700"
+  },
+  {
+   "text": "0",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "24.96px",
+   "weight": "700"
+  },
+  {
+   "text": "0",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "24.96px",
+   "weight": "700"
+  },
+  {
+   "text": "0.0%",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "24.96px",
+   "weight": "700"
+  },
+  {
+   "text": "0.0%",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "24.96px",
+   "weight": "700"
+  },
+  {
+   "text": "+0.0%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "13px",
+   "weight": "700"
+  }
+ ],
+ "radii": [
+  [
+   "12.32px",
+   10
+  ],
+  [
+   "8.32px",
+   9
+  ],
+  [
+   "10px",
+   9
+  ],
+  [
+   "8px",
+   8
+  ],
+  [
+   "50%",
+   6
+  ],
+  [
+   "6.32px",
+   4
+  ],
+  [
+   "20px",
+   3
+  ],
+  [
+   "3.35544e+07px",
+   3
+  ],
+  [
+   "16.64px",
+   2
+  ],
+  [
+   "0px 0px 8px 8px",
+   1
+  ],
+  [
+   "26px",
+   1
+  ],
+  [
+   "4px",
+   1
+  ]
+ ],
+ "shadows": [],
+ "mint": {
+  "text": 19,
+  "bg": 6,
+  "border": 1,
+  "samples": [
+   {
+    "tag": "SPAN",
+    "cls": "dime-coindot",
+    "text": ""
+   },
+   {
+    "tag": "svg",
+    "cls": "[object SVGAnimatedString]",
+    "text": ""
+   },
+   {
+    "tag": "path",
+    "cls": "[object SVGAnimatedString]",
+    "text": ""
+   },
+   {
+    "tag": "path",
+    "cls": "[object SVGAnimatedString]",
+    "text": ""
+   },
+   {
+    "tag": "SPAN",
+    "cls": "dc-hero-dot",
+    "text": ""
+   },
+   {
+    "tag": "BUTTON",
+    "cls": "dc-pill dc-pill--mint dc-hv1 dc-focusabl",
+    "text": "Best Trends for MLB "
+   },
+   {
+    "tag": "svg",
+    "cls": "[object SVGAnimatedString]",
+    "text": ""
+   },
+   {
+    "tag": "polyline",
+    "cls": "[object SVGAnimatedString]",
+    "text": ""
+   },
+   {
+    "tag": "polyline",
+    "cls": "[object SVGAnimatedString]",
+    "text": ""
+   },
+   {
+    "tag": "BUTTON",
+    "cls": "flex items-center gap-1 px-2 py-1 rounde",
+    "text": "$"
+   },
+   {
+    "tag": "BUTTON",
+    "cls": "flex-shrink-0 px-4 py-2.5 text-xs font-b",
+    "text": "ALL"
+   },
+   {
+    "tag": "BUTTON",
+    "cls": "flex-shrink-0 flex items-center gap-1 px",
+    "text": "All-Time"
+   },
+   {
+    "tag": "DIV",
+    "cls": "text-lg sm:text-xl lg:text-2xl font-bold",
+    "text": "0"
+   },
+   {
+    "tag": "DIV",
+    "cls": "text-lg sm:text-xl lg:text-2xl font-bold",
+    "text": "0.0%"
+   },
+   {
+    "tag": "DIV",
+    "cls": "text-lg sm:text-xl lg:text-2xl font-bold",
+    "text": "—"
+   },
+   {
+    "tag": "DIV",
+    "cls": "text-lg sm:text-xl lg:text-2xl font-bold",
+    "text": "—"
+   },
+   {
+    "tag": "svg",
+    "cls": "[object SVGAnimatedString]",
+    "text": ""
+   },
+   {
+    "tag": "BUTTON",
+    "cls": "flex items-center gap-1.5 px-3 py-1.5 ro",
+    "text": "PRE-GAME"
+   },
+   {
+    "tag": "BUTTON",
+    "cls": "w-full bg-primary hover:opacity-85 bt-pr",
+    "text": "TRACK BET"
+   },
+   {
+    "tag": "svg",
+    "cls": "[object SVGAnimatedString]",
+    "text": ""
+   },
+   {
+    "tag": "SPAN",
+    "cls": "",
+    "text": ""
+   },
+   {
+    "tag": "svg",
+    "cls": "[object SVGAnimatedString]",
+    "text": ""
+   },
+   {
+    "tag": "DIV",
+    "cls": "",
+    "text": "+0.00u"
+   },
+   {
+    "tag": "DIV",
+    "cls": "",
+    "text": "+0.0%"
+   },
+   {
+    "tag": "BUTTON",
+    "cls": "px-4 py-2.5 text-xs font-bold tracking-w",
+    "text": "BETS"
+   }
+  ]
+ },
+ "contrastFails": [],
+ "contrastFailTotal": 0,
+ "smallTargets": [
+  {
+   "tag": "BUTTON",
+   "cls": "dc-icon-btn dc-hv2 dc-pressable dc-focus",
+   "w": 32,
+   "h": 32,
+   "text": "Search chats"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "dc-icon-btn dc-hv2 dc-pressable dc-focus",
+   "w": 32,
+   "h": 32,
+   "text": "Collapse sidebar"
+  },
+  {
+   "tag": "H1",
+   "cls": "dc-shell-sr-only",
+   "w": 1,
+   "h": 1,
+   "text": "Dime Chat"
+  },
+  {
+   "tag": "INPUT",
+   "cls": "dc-composer-input",
+   "w": 606,
+   "h": 17,
+   "text": ""
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "dc-send dc-hv3 dc-focusable dc-pressable",
+   "w": 36,
+   "h": 36,
+   "text": "Submit prompt"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "dc-pill dc-pill--contrast dc-hv1 dc-focu",
+   "w": 227,
+   "h": 36,
+   "text": "World Cup Model Simu"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "dc-pill dc-pill--outline dc-hv1 dc-focus",
+   "w": 243,
+   "h": 36,
+   "text": "Player Props with th"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "dc-pill dc-pill--mint dc-hv1 dc-focusabl",
+   "w": 246,
+   "h": 36,
+   "text": "Best Trends for MLB "
+  },
+  {
+   "tag": "H1",
+   "cls": "dc-shell-sr-only",
+   "w": 1,
+   "h": 1,
+   "text": "Bet Tracker"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "bt-dim hover:text-white transition-color",
+   "w": 26,
+   "h": 26,
+   "text": ""
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "flex items-center gap-1 px-2 py-1 rounde",
+   "w": 38,
+   "h": 25,
+   "text": "$"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "flex items-center gap-1 px-2 py-1 rounde",
+   "w": 39,
+   "h": 25,
+   "text": "U"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "flex items-center gap-1.5 px-2.5 py-1.5 ",
+   "w": 93,
+   "h": 31,
+   "text": "Analytics"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "flex-shrink-0 px-4 py-2.5 text-xs font-b",
+   "w": 55,
+   "h": 39,
+   "text": "ALL"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "flex-shrink-0 px-4 py-2.5 text-xs font-b",
+   "w": 60,
+   "h": 39,
+   "text": "MLB"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "flex-shrink-0 px-4 py-2.5 text-xs font-b",
+   "w": 59,
+   "h": 39,
+   "text": "NHL"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "flex-shrink-0 px-4 py-2.5 text-xs font-b",
+   "w": 59,
+   "h": 39,
+   "text": "NBA"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "flex-shrink-0 px-4 py-2.5 text-xs font-b",
+   "w": 80,
+   "h": 39,
+   "text": "NCAAM"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "flex-shrink-0 flex items-center gap-1 px",
+   "w": 71,
+   "h": 31,
+   "text": "All-Time"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "flex-shrink-0 flex items-center gap-1 px",
+   "w": 61,
+   "h": 31,
+   "text": "Today"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "flex-shrink-0 flex items-center gap-1 px",
+   "w": 40,
+   "h": 31,
+   "text": "L7"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "flex-shrink-0 flex items-center gap-1 px",
+   "w": 47,
+   "h": 31,
+   "text": "L14"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "flex-shrink-0 flex items-center gap-1 px",
+   "w": 45,
+   "h": 31,
+   "text": "1M"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "flex-shrink-0 flex items-center gap-1 px",
+   "w": 68,
+   "h": 31,
+   "text": "Season"
+  },
+  {
+   "tag": "INPUT",
+   "cls": "w-full bt-input",
+   "w": 484,
+   "h": 40,
+   "text": "Date"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "flex items-center gap-1.5 px-3 py-1.5 ro",
+   "w": 84,
+   "h": 29,
+   "text": "PRE-GAME"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "flex items-center gap-1.5 px-3 py-1.5 ro",
+   "w": 65,
+   "h": 29,
+   "text": "LIVE"
+  },
+  {
+   "tag": "SELECT",
+   "cls": "w-full bt-input pr-8 appearance-none",
+   "w": 484,
+   "h": 39,
+   "text": "Full GameFirst 5 Inn"
+  },
+  {
+   "tag": "SELECT",
+   "cls": "w-full bt-input pr-8 appearance-none",
+   "w": 484,
+   "h": 39,
+   "text": "MoneylineRun LineTot"
+  },
+  {
+   "tag": "INPUT",
+   "cls": "w-full bt-input",
+   "w": 153,
+   "h": 39,
+   "text": "Odds"
+  }
+ ],
+ "clickableCount": 44,
+ "cardGeometry": [],
+ "unnamedIconButtons": [
+  {
+   "tag": "INPUT",
+   "cls": "dc-composer-input"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "bt-dim hover:text-white transition-colors p-1"
+  }
+ ],
+ "animations": []
+}

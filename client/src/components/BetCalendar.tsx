@@ -2,20 +2,18 @@
  * BetCalendar.tsx — Bloomberg Terminal × DraftKings Sportsbook calendar recap
  *
  * Design language:
- *   - #000000 base, #000000 cards, #000000 hover
- *   - #45E0A8 neon green for wins/positives
- *   - #FF3B3B loss red for negatives
- *   - JetBrains Mono for all numbers (monospace = quant feel)
- *   - Barlow Condensed for section headers
+ *   - Token-driven surfaces via --bt-* custom properties (base/card/hover)
+ *   - Dime mint accent (--bt-green) for wins/positives, loss red (--bt-red) for negatives
+ *   - Familjen Grotesk throughout (tabular numerals for stats)
  *   - Sharp corners (max 6px radius)
- *   - 150ms transitions
+ *   - 160ms cubic-bezier(0.16,1,0.3,1) transitions
  *
  * Features:
  *   - Monthly summary header bar (record, win%, P/L, ROI, current streak)
  *   - Magnitude-scaled color intensity (opacity/saturation scales with |units|)
  *   - Day tiles: date number (top-left), P/L units (bold center), bet count (bottom-right)
  *   - Best day crown badge, worst day skull badge
- *   - Today tile: neon green border pulse animation
+ *   - Today tile: mint border pulse animation
  *   - Future dates: invisible (dim number only, no tile)
  *   - Equity sparkline behind the calendar grid
  *   - Month navigation (prev/next)
@@ -28,7 +26,7 @@
  */
 
 import { useState, useMemo } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Crown, Skull } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 
 const IS_DEV = process.env.NODE_ENV === "development";
@@ -313,7 +311,7 @@ export function BetCalendar({
                 color: "var(--bt-text-muted, #FFFFFF)",
                 cursor: "pointer",
                 display: "flex", alignItems: "center", justifyContent: "center",
-                transition: "all 150ms ease",
+                transition: "background 160ms cubic-bezier(0.16,1,0.3,1), color 160ms cubic-bezier(0.16,1,0.3,1)",
               }}
               onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "var(--bt-hover, #000000)"; (e.currentTarget as HTMLButtonElement).style.color = "var(--bt-strong, #FFFFFF)"; }}
               onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "var(--bt-card, #000000)"; (e.currentTarget as HTMLButtonElement).style.color = "var(--bt-text-muted, #FFFFFF)"; }}
@@ -336,7 +334,7 @@ export function BetCalendar({
                 color: canGoNext ? "var(--bt-text-muted, #FFFFFF)" : "var(--dime-text-muted)",
                 cursor: canGoNext ? "pointer" : "not-allowed",
                 display: "flex", alignItems: "center", justifyContent: "center",
-                transition: "all 150ms ease",
+                transition: "background 160ms cubic-bezier(0.16,1,0.3,1), color 160ms cubic-bezier(0.16,1,0.3,1)",
               }}
               onMouseEnter={e => { if (canGoNext) { (e.currentTarget as HTMLButtonElement).style.background = "var(--bt-hover, #000000)"; (e.currentTarget as HTMLButtonElement).style.color = "var(--bt-strong, #FFFFFF)"; } }}
               onMouseLeave={e => { if (canGoNext) { (e.currentTarget as HTMLButtonElement).style.background = "var(--bt-card, #000000)"; (e.currentTarget as HTMLButtonElement).style.color = "var(--bt-text-muted, #FFFFFF)"; } }}
@@ -469,11 +467,11 @@ export function BetCalendar({
         {calendarQuery.isLoading && (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: "4px", marginBottom: "14px" }}>
             {Array.from({ length: 35 }).map((_, i) => (
-              <div key={i} style={{
+              <div key={i} className="bt-cal-animated" style={{
                 aspectRatio: "1",
                 borderRadius: "4px",
                 background: "color-mix(in srgb, var(--bt-text, #FFFFFF) 8%, transparent)",
-                animation: "pulse 1.5s ease-in-out infinite",
+                animation: "btCalPulse 1.5s ease-in-out infinite",
               }} />
             ))}
           </div>
@@ -508,6 +506,7 @@ export function BetCalendar({
                 return (
                   <div
                     key={dateStr}
+                    className="bt-cal-animated"
                     style={{
                       aspectRatio: "1",
                       borderRadius: "4px",
@@ -546,6 +545,7 @@ export function BetCalendar({
               return (
                 <div
                   key={dateStr}
+                  className="bt-cal-animated"
                   title={`${dateStr}: ${fmtUnits(dayData.units)} (${dayData.wins}W-${dayData.losses}L${dayData.pushes > 0 ? `-${dayData.pushes}P` : ""}${dayData.pending > 0 ? ` +${dayData.pending} pend` : ""}) — ${dayData.betCount} bet${dayData.betCount !== 1 ? "s" : ""}`}
                   style={{
                     aspectRatio: "1",
@@ -560,7 +560,7 @@ export function BetCalendar({
                     justifyContent: "center",
                     position: "relative",
                     cursor: "default",
-                    transition: "all 150ms ease",
+                    transition: "transform 160ms cubic-bezier(0.16,1,0.3,1)",
                     animation: isToday ? "todayPulse 2s ease-in-out infinite" : undefined,
                   }}
                   onMouseEnter={e => {
@@ -624,11 +624,12 @@ export function BetCalendar({
                         position: "absolute",
                         top: "2px",
                         right: "3px",
-                        fontSize: "9px",
                         lineHeight: 1,
+                        display: "inline-flex",
+                        color: textColor,
                       }}
                     >
-                      👑
+                      <Crown size={12} />
                     </span>
                   )}
 
@@ -640,11 +641,12 @@ export function BetCalendar({
                         position: "absolute",
                         top: "2px",
                         right: "3px",
-                        fontSize: "9px",
                         lineHeight: 1,
+                        display: "inline-flex",
+                        color: textColor,
                       }}
                     >
-                      💀
+                      <Skull size={12} />
                     </span>
                   )}
 
@@ -713,9 +715,12 @@ export function BetCalendar({
           0%, 100% { box-shadow: 0 0 0 0 transparent; }
           50%       { box-shadow: 0 0 0 3px color-mix(in srgb, var(--bt-green, #45E0A8) 25%, transparent); }
         }
-        @keyframes pulse {
+        @keyframes btCalPulse {
           0%, 100% { opacity: 0.4; }
           50%       { opacity: 0.7; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .bt-cal-animated { animation: none !important; }
         }
       `}</style>
     </div>

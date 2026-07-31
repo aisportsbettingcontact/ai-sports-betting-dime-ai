@@ -258,7 +258,7 @@ function fmtDate(d: string): string {
 function resultColor(r: Result): string {
   switch (r) {
     case "WIN":
-      return "text-[#45E0A8]";
+      return "text-primary";
     case "LOSS":
       return "text-[#FF3B3B]";
     case "PUSH":
@@ -271,7 +271,7 @@ function resultColor(r: Result): string {
 function resultBg(r: Result): string {
   switch (r) {
     case "WIN":
-      return "bg-transparent border-[#45E0A8] text-[#45E0A8]";
+      return "bg-transparent border-primary text-primary";
     case "LOSS":
       return "bg-transparent border-[#FF3B3B] text-[#FF3B3B]";
     case "PUSH":
@@ -468,7 +468,7 @@ function BreakdownsSidebar({
         aria-label="Toggle Breakdowns panel"
       >
         <div className="flex items-center gap-2">
-          <BarChart2 size={13} className="text-[#45E0A8]" />
+          <BarChart2 size={13} className="text-primary" />
           <span className="text-sm font-bold tracking-widest text-white uppercase">
             Breakdowns
           </span>
@@ -622,7 +622,7 @@ function PickButton({
         min-w-0 relative
         ${
           selected
-            ? "border-[#45E0A8] bg-[var(--dime-row-active)]"
+            ? "border-primary bg-[var(--dime-row-active)]"
             : "border-white bt-surface hover:border-white"
         }
         ${disabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}
@@ -630,7 +630,7 @@ function PickButton({
     >
       {selected && (
         <div className="absolute top-1.5 right-1.5">
-          <CheckCircle2 size={12} className="text-[#45E0A8]" />
+          <CheckCircle2 size={12} className="text-primary" />
         </div>
       )}
       {!isTotal && logo ? (
@@ -644,7 +644,7 @@ function PickButton({
         />
       ) : (
         <div
-          className={`text-lg font-black ${isTotal ? (side === "OVER" ? "text-[#45E0A8]" : "text-white") : "text-white"}`}
+          className={`text-lg font-black ${isTotal ? (side === "OVER" ? "text-primary" : "text-white") : "text-white"}`}
         >
           {side === "OVER" ? "O" : side === "UNDER" ? "U" : ""}
         </div>
@@ -669,7 +669,7 @@ function PickButton({
       </div>
       {/* Line display: prefer customLine over API line; TOTAL shows bare number, RL shows signed */}
       {customLine !== undefined && customLine !== "" && customLine !== null ? (
-        <div className="text-sm font-bold text-[#45E0A8]">
+        <div className="text-sm font-bold text-primary">
           {isTotal
             ? `${parseFloat(customLine)}`
             : parseFloat(customLine) > 0
@@ -682,7 +682,7 @@ function PickButton({
         </div>
       ) : null}
       <div
-        className={`text-sm font-bold font-mono ${odds !== null ? (odds >= 0 ? "text-[#45E0A8]" : "text-white") : "text-white"}`}
+        className={`text-sm font-bold font-mono ${odds !== null ? (odds >= 0 ? "text-primary" : "text-white") : "text-white"}`}
       >
         {odds !== null ? fmtOdds(odds) : "—"}
       </div>
@@ -824,8 +824,8 @@ function GameSelector({
             </span>
           )}
           <span className="flex items-center gap-0.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#45E0A8] animate-pulse" />
-            <span className="text-xs font-bold text-[#45E0A8] uppercase">
+            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+            <span className="text-xs font-bold text-primary uppercase">
               {innLabel ? `${innLabel}${compact ? "" : " INN"}` : "LIVE"}
             </span>
           </span>
@@ -852,7 +852,7 @@ function GameSelector({
   if (loading) {
     return (
       <div className="flex items-center gap-2 bt-input">
-        <div className="w-3 h-3 border border-[#45E0A8] border-t-transparent rounded-full animate-spin" />
+        <div className="w-3 h-3 border border-primary border-t-transparent rounded-full animate-spin" />
         <span className="bt-dim text-sm">Loading slate…</span>
       </div>
     );
@@ -981,8 +981,8 @@ function GameSelector({
                       : "";
                     return (
                       <span className="flex items-center gap-0.5 ml-1 shrink-0">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#45E0A8] animate-pulse" />
-                        <span className="text-xs font-bold text-[#45E0A8]">
+                        <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                        <span className="text-xs font-bold text-primary">
                           {innLabel || "LIVE"}
                         </span>
                       </span>
@@ -1099,8 +1099,8 @@ function GameSelector({
                             : "";
                           return (
                             <span className="flex items-center gap-0.5 ml-1">
-                              <span className="w-1.5 h-1.5 rounded-full bg-[#45E0A8] animate-pulse" />
-                              <span className="text-xs font-bold text-[#45E0A8]">
+                              <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                              <span className="text-xs font-bold text-primary">
                                 {innLabel || "LIVE"}
                               </span>
                             </span>
@@ -1181,7 +1181,7 @@ function LinescoreGrid({
 
   function cellCls(runs: number | null, isCurrentInning: boolean): string {
     if (runs === null) return "text-white";
-    if (isCurrentInning && isLive) return "text-[#45E0A8] font-bold";
+    if (isCurrentInning && isLive) return "text-primary font-bold";
     return "text-white";
   }
 
@@ -1199,7 +1199,7 @@ function LinescoreGrid({
                 key={c.num}
                 className={`text-xs font-bold pb-1 w-6 ${
                   isLive && ls.currentInning === c.num
-                    ? "text-[#45E0A8]"
+                    ? "text-primary"
                     : "text-white"
                 }`}
               >
@@ -1401,7 +1401,7 @@ const BetCard = memo(function BetCard({
     <div
       className={`relative bt-surface border rounded-xl overflow-hidden transition-all ${
         result === "WIN"
-          ? "border-[#45E0A8]"
+          ? "border-primary"
           : result === "LOSS"
             ? "border-[#FF3B3B]"
             : result === "PUSH"
@@ -1413,7 +1413,7 @@ const BetCard = memo(function BetCard({
       <div
         className={`absolute left-0 top-0 bottom-0 w-1 ${
           result === "WIN"
-            ? "bg-[#45E0A8]"
+            ? "bg-primary"
             : result === "LOSS"
               ? "bg-[#FF3B3B]"
               : result === "PUSH"
@@ -1484,7 +1484,7 @@ const BetCard = memo(function BetCard({
               </span>
               {/* Wager type badge */}
               {wagerType === "LIVE" && (
-                <span className="flex items-center gap-0.5 text-xs font-bold text-[#45E0A8] border border-[#45E0A8] px-1.5 py-0.5 rounded">
+                <span className="flex items-center gap-0.5 text-xs font-bold text-primary border border-primary px-1.5 py-0.5 rounded">
                   <Radio size={8} />
                   LIVE
                 </span>
@@ -1499,7 +1499,7 @@ const BetCard = memo(function BetCard({
                     className={`text-xl font-black font-mono ${
                       pickIsAway
                         ? result === "WIN"
-                          ? "text-[#45E0A8]"
+                          ? "text-primary"
                           : result === "LOSS"
                             ? "text-[#FF3B3B]"
                             : "text-white"
@@ -1513,7 +1513,7 @@ const BetCard = memo(function BetCard({
                     className={`text-xl font-black font-mono ${
                       pickIsHome
                         ? result === "WIN"
-                          ? "text-[#45E0A8]"
+                          ? "text-primary"
                           : result === "LOSS"
                             ? "text-[#FF3B3B]"
                             : "text-white"
@@ -1555,16 +1555,16 @@ const BetCard = memo(function BetCard({
                   </span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#45E0A8] animate-pulse" />
-                  <span className="text-xs font-bold text-[#45E0A8] tracking-widest uppercase">
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                  <span className="text-xs font-bold text-primary tracking-widest uppercase">
                     {inningLabel ? `${inningLabel} INN` : "LIVE"}
                   </span>
                 </div>
               </div>
             ) : isLive ? (
               <div className="flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#45E0A8] animate-pulse" />
-                <span className="text-xs font-bold text-[#45E0A8] tracking-widest uppercase">
+                <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                <span className="text-xs font-bold text-primary tracking-widest uppercase">
                   {inningLabel ? `${inningLabel} INN` : "LIVE"}
                 </span>
               </div>
@@ -1678,7 +1678,7 @@ const BetCard = memo(function BetCard({
             )}
             <span
               className={`text-sm font-bold font-mono ${
-                bet.odds >= 0 ? "text-[#45E0A8]" : "text-white"
+                bet.odds >= 0 ? "text-primary" : "text-white"
               }`}
             >
               {fmtOdds(bet.odds)}
@@ -1705,7 +1705,7 @@ const BetCard = memo(function BetCard({
               <span className="text-[11px] bt-dim uppercase tracking-[0.08em]">
                 Win
               </span>
-              <span className="text-xs font-bold font-mono text-[#45E0A8]">
+              <span className="text-xs font-bold font-mono text-primary">
                 {fmtStake(toWin)}
               </span>
             </div>
@@ -1815,7 +1815,7 @@ function LogsTab({
   if (logsQuery.isLoading) {
     return (
       <div className="flex items-center justify-center py-16">
-        <div className="w-6 h-6 border-2 border-[#45E0A8] border-t-transparent rounded-full animate-spin" />
+        <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -1829,7 +1829,7 @@ function LogsTab({
           onClick={() => setActiveSection("REQUESTS")}
           className={`px-4 py-2 text-xs font-bold tracking-wider rounded-lg transition-all ${
             activeSection === "REQUESTS"
-              ? "bg-transparent text-[#45E0A8] border border-[#45E0A8]"
+              ? "bg-transparent text-primary border border-primary"
               : "bt-dim hover:text-white"
           }`}
         >
@@ -1845,7 +1845,7 @@ function LogsTab({
           onClick={() => setActiveSection("BETS")}
           className={`px-4 py-2 text-xs font-bold tracking-wider rounded-lg transition-all ${
             activeSection === "BETS"
-              ? "bg-transparent text-[#45E0A8] border border-[#45E0A8]"
+              ? "bg-transparent text-primary border border-primary"
               : "bt-dim hover:text-white"
           }`}
         >
@@ -1869,7 +1869,7 @@ function LogsTab({
                   req.status === "PENDING"
                     ? "border-white"
                     : req.status === "APPROVED"
-                      ? "border-[#45E0A8]"
+                      ? "border-primary"
                       : "border-white"
                 }`}
               >
@@ -1880,7 +1880,7 @@ function LogsTab({
                         req.status === "PENDING"
                           ? "bg-transparent border-white text-white"
                           : req.status === "APPROVED"
-                            ? "bg-transparent border-[#45E0A8] text-[#45E0A8]"
+                            ? "bg-transparent border-primary text-primary"
                             : "bg-transparent border-white bt-dim"
                       }`}
                     >
@@ -1929,7 +1929,7 @@ function LogsTab({
                         setReviewAction("APPROVE");
                         setReviewNote("");
                       }}
-                      className="flex-1 py-1.5 rounded-lg bg-transparent border border-[#45E0A8] text-[#45E0A8] text-xs font-bold bt-press hover:opacity-85 transition-all"
+                      className="flex-1 py-1.5 rounded-lg bg-transparent border border-primary text-primary text-xs font-bold bt-press hover:opacity-85 transition-all"
                     >
                       Approve
                     </button>
@@ -1996,7 +1996,7 @@ function LogsTab({
                               ? "text-white"
                               : b.userRole === "admin"
                                 ? "text-white"
-                                : "text-[#45E0A8]"
+                                : "text-primary"
                           }`}
                         >
                           {b.userRole}
@@ -2010,21 +2010,21 @@ function LogsTab({
                         {b.pick}
                       </td>
                       <td
-                        className={`py-2 px-2 font-mono font-bold ${b.odds >= 0 ? "text-[#45E0A8]" : "text-white"}`}
+                        className={`py-2 px-2 font-mono font-bold ${b.odds >= 0 ? "text-primary" : "text-white"}`}
                       >
                         {fmtOdds(b.odds)}
                       </td>
                       <td className="py-2 px-2 text-white font-mono">
                         {parseFloat(b.risk).toFixed(2)}
                       </td>
-                      <td className="py-2 px-2 text-[#45E0A8] font-mono">
+                      <td className="py-2 px-2 text-primary font-mono">
                         {parseFloat(b.toWin).toFixed(2)}
                       </td>
                       <td className="py-2 px-2">
                         <span
                           className={`text-xs font-bold px-1.5 py-0.5 rounded ${
                             (b as any).wagerType === "LIVE"
-                              ? "text-[#45E0A8]"
+                              ? "text-primary"
                               : "bt-raised bt-dim"
                           }`}
                         >
@@ -2086,7 +2086,7 @@ function LogsTab({
                 type="button"
                 onClick={handleReview}
                 disabled={reviewMut.isPending}
-                className="flex-1 py-2.5 rounded-xl text-black text-sm font-bold bg-[#45E0A8] hover:opacity-85 bt-press transition-colors disabled:opacity-40"
+                className="flex-1 py-2.5 rounded-xl text-black text-sm font-bold bg-primary hover:opacity-85 bt-press transition-colors disabled:opacity-40"
               >
                 {reviewMut.isPending ? "Processing…" : reviewAction}
               </button>
@@ -3848,7 +3848,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
       )}
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <header className="sticky top-0 z-30 bg-black backdrop-blur border-b border-white">
-        <div className="w-full px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between gap-4">
+        <div className="w-full px-4 sm:px-6 lg:px-8 min-h-14 py-1.5 flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5">
           <div className="flex items-center gap-3">
             <button
               type="button"
@@ -3857,7 +3857,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
             >
               <ChevronLeft size={18} />
             </button>
-            <TrendingUp size={18} className="bt-trend text-[#45E0A8]" />
+            <TrendingUp size={18} className="bt-trend text-primary" />
             {/* Embedded, the shell pane's sr-only h1 already announces this
                 page — a second h1 here would duplicate it (A11Y-NO-H1). */}
             {embeddedInShell ? (
@@ -3877,14 +3877,14 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
               <button
                 type="button"
                 onClick={() => setStakeMode("$")}
-                className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-bold transition-all ${stakeMode === "$" ? "bg-[#45E0A8] text-black" : "bt-dim hover:text-white"}`}
+                className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-bold transition-all ${stakeMode === "$" ? "bg-primary text-black" : "bt-dim hover:text-white"}`}
               >
                 <DollarSign size={10} />$
               </button>
               <button
                 type="button"
                 onClick={() => setStakeMode("U")}
-                className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-bold transition-all ${stakeMode === "U" ? "bg-[#45E0A8] text-black" : "bt-dim hover:text-white"}`}
+                className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-bold transition-all ${stakeMode === "U" ? "bg-primary text-black" : "bt-dim hover:text-white"}`}
               >
                 <Hash size={10} />U
               </button>
@@ -3900,7 +3900,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                   value={unitSize}
                   onChange={e => setUnitSize(parseFloat(e.target.value) || 100)}
                   aria-label="Unit size in dollars (1u=$)"
-                  className="w-12 sm:w-16 bt-raised border border-white rounded px-1.5 py-1 text-xs bt-dim focus:outline-none focus:ring-1 focus:ring-[#45E0A8]"
+                  className="w-12 sm:w-16 bt-raised border border-white rounded px-1.5 py-1 text-xs bt-dim focus:outline-none focus:ring-1 focus:ring-primary"
                   min={1}
                 />
               </div>
@@ -3911,7 +3911,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
               onClick={() => setShowAnalytics(v => !v)}
               className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all border ${
                 showAnalytics
-                  ? "bg-transparent border-[#45E0A8] text-[#45E0A8]"
+                  ? "bg-transparent border-primary text-primary"
                   : "bt-surface border-white bt-dim hover:text-white"
               }`}
               title="Toggle Analytics Panel"
@@ -3926,7 +3926,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                   ? "bg-transparent border-white text-white"
                   : role === "admin"
                     ? "bg-transparent border-white text-white"
-                    : "bg-transparent border-[#45E0A8] text-[#45E0A8]"
+                    : "bg-transparent border-primary text-primary"
               }`}
             >
               {appUser?.username ?? role}
@@ -3948,7 +3948,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                 }
                 className={`flex-shrink-0 px-4 py-2.5 text-xs font-bold tracking-wider transition-all border-b-2 ${
                   activeSport === s
-                    ? "border-[#45E0A8] text-[#45E0A8]"
+                    ? "border-primary text-primary"
                     : "border-transparent bt-dim hover:text-white"
                 }`}
               >
@@ -4001,7 +4001,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                   }
                   className={`flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${
                     dateRange === r
-                      ? "bg-transparent border-[#45E0A8] text-[#45E0A8]"
+                      ? "bg-transparent border-primary text-primary"
                       : "bt-surface border-white bt-dim hover:text-white"
                   }`}
                 >
@@ -4020,7 +4020,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
               )
             )}
             {statsQuery.isLoading && (
-              <div className="flex-shrink-0 w-4 h-4 border-2 border-[#45E0A8] border-t-transparent rounded-full animate-spin" />
+              <div className="flex-shrink-0 w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
             )}
           </div>
 
@@ -4034,7 +4034,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
               <StatCard
                 label="Wins"
                 value={stats.wins}
-                color="text-[#45E0A8]"
+                color="text-primary"
               />
             </div>
             <div className="min-w-[100px]">
@@ -4072,8 +4072,8 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
             <div className="min-w-[110px]">
               <StatCard
                 label="ROI%"
-                value={`${stats.roi}%`}
-                color={stats.roi >= 0 ? "text-[#45E0A8]" : "text-[#FF3B3B]"}
+                value={`${stats.roi.toFixed(1)}%`}
+                color={stats.roi >= 0 ? "text-primary" : "text-[#FF3B3B]"}
                 sub={`on ${stakeMode === "$" ? fmtDollar(stats.totalRisk * unitSize) : fmtUnits(stats.totalRisk)} risked`}
               />
             </div>
@@ -4085,7 +4085,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                     ? `+${fmtUnits(stats.biggestDayUnits ?? 0)}`
                     : "—"
                 }
-                color="text-[#45E0A8]"
+                color="text-primary"
                 sub={
                   stats.biggestDayDate
                     ? stats.biggestDayDate.substring(5)
@@ -4101,7 +4101,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                     ? `${stats.longestWinStreak}W`
                     : "—"
                 }
-                color="text-[#45E0A8]"
+                color="text-primary"
               />
             </div>
           </div>
@@ -4112,9 +4112,9 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
             <StatCard
               label="+/- Units"
               value={fmtUnits(stats.netProfit)}
-              color={stats.netProfit >= 0 ? "text-[#45E0A8]" : "text-[#FF3B3B]"}
+              color={stats.netProfit >= 0 ? "text-primary" : "text-[#FF3B3B]"}
             />
-            <StatCard label="Wins" value={stats.wins} color="text-[#45E0A8]" />
+            <StatCard label="Wins" value={stats.wins} color="text-primary" />
             <StatCard
               label="Losses"
               value={stats.losses}
@@ -4127,8 +4127,8 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
             />
             <StatCard
               label="ROI%"
-              value={`${stats.roi}%`}
-              color={stats.roi >= 0 ? "text-[#45E0A8]" : "text-[#FF3B3B]"}
+              value={`${stats.roi.toFixed(1)}%`}
+              color={stats.roi >= 0 ? "text-primary" : "text-[#FF3B3B]"}
               sub={`on ${stakeMode === "$" ? fmtDollar(stats.totalRisk * unitSize) : fmtUnits(stats.totalRisk)} risked`}
             />
           </div>
@@ -4408,7 +4408,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                 }}
                 className="w-full flex items-center gap-2 px-5 pt-5 pb-4 border-b border-white xl:cursor-default"
               >
-                <Plus size={15} className="text-[#45E0A8] shrink-0" />
+                <Plus size={15} className="text-primary shrink-0" />
                 <h2 className="font-bold text-sm tracking-wider flex-1 text-left">
                   ADD BET
                 </h2>
@@ -4435,6 +4435,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                   <input
                     id="bt-form-date"
                     type="date"
+                    aria-label="Date"
                     value={formDate}
                     onChange={e => {
                       // [FIX] iOS Safari <input type="date"> sometimes returns a full ISO datetime
@@ -4472,7 +4473,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                       onClick={() => setFormWagerType("PREGAME")}
                       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-all ${
                         formWagerType === "PREGAME"
-                          ? "bg-[#45E0A8] text-black"
+                          ? "bg-primary text-black"
                           : "bt-dim hover:text-white"
                       }`}
                     >
@@ -4483,7 +4484,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                       onClick={() => setFormWagerType("LIVE")}
                       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-all ${
                         formWagerType === "LIVE"
-                          ? "border border-[#45E0A8] text-[#45E0A8]"
+                          ? "border border-primary text-primary"
                           : "bt-dim hover:text-white"
                       }`}
                     >
@@ -4534,13 +4535,13 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
 
                 {/* NRFI/YRFI locked info banner */}
                 {(formTimeframe === "NRFI" || formTimeframe === "YRFI") && (
-                  <div className="flex items-start gap-2 bg-transparent border border-[#45E0A8] rounded-lg px-3 py-2.5">
+                  <div className="flex items-start gap-2 bg-transparent border border-primary rounded-lg px-3 py-2.5">
                     <CheckCircle2
                       size={13}
-                      className="text-[#45E0A8] shrink-0 mt-0.5"
+                      className="text-primary shrink-0 mt-0.5"
                     />
                     <div className="text-sm bt-dim leading-relaxed">
-                      <span className="font-bold text-[#45E0A8]">
+                      <span className="font-bold text-primary">
                         {formTimeframe}
                       </span>
                       {formTimeframe === "NRFI"
@@ -4616,6 +4617,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                     <input
                       id="bt-form-odds"
                       type="number"
+                      aria-label="Odds"
                       value={formOdds}
                       onChange={e => setFormOdds(e.target.value)}
                       placeholder="-110"
@@ -4632,6 +4634,9 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                     <input
                       id="bt-form-risk"
                       type="number"
+                      aria-label={
+                        stakeMode === "$" ? "Risk amount in dollars" : "Risk amount in units"
+                      }
                       value={formRisk}
                       onChange={e => setFormRisk(e.target.value)}
                       placeholder={stakeMode === "U" ? "2" : "200"}
@@ -4654,7 +4659,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                             if (autoToWin !== null)
                               setFormToWin(String(autoToWin));
                           }}
-                          className="ml-1 text-xs text-[#45E0A8] underline"
+                          className="ml-1 text-xs text-primary underline"
                         >
                           reset
                         </button>
@@ -4663,6 +4668,9 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                     <input
                       id="bt-form-to-win"
                       type="number"
+                      aria-label={
+                        stakeMode === "$" ? "To win amount in dollars" : "To win amount in units"
+                      }
                       value={formToWin}
                       onChange={e => {
                         setFormToWin(e.target.value);
@@ -4673,7 +4681,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                       step={stakeMode === "U" ? "0.5" : "10"}
                       className={`w-full bt-input ${
                         formToWinManual
-                          ? "!border-[#45E0A8] !text-[#45E0A8]"
+                          ? "!border-primary !text-primary"
                           : ""
                       }`}
                     />
@@ -4686,7 +4694,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                   toWinNum > 0 &&
                   riskNum > 0 && (
                     <div className="flex items-center gap-1.5 text-sm bt-dim bt-raised rounded-lg px-3 py-2">
-                      <Hash size={10} className="text-[#45E0A8] shrink-0" />
+                      <Hash size={10} className="text-primary shrink-0" />
                       <span>
                         {fmtUnits(riskNum)} to win {fmtUnits(toWinNum)}
                         {unitSize > 0 && (
@@ -4730,7 +4738,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                   type="button"
                   onClick={handleSubmit}
                   disabled={createMut.isPending || !formGame}
-                  className="w-full bg-[#45E0A8] hover:opacity-85 bt-press disabled:opacity-40 disabled:cursor-not-allowed text-black font-bold py-3 rounded-xl text-sm tracking-wider transition-all"
+                  className="w-full bg-primary hover:opacity-85 bt-press disabled:opacity-40 disabled:cursor-not-allowed text-black font-bold py-3 rounded-xl text-sm tracking-wider transition-all"
                 >
                   {createMut.isPending ? "Saving…" : "TRACK BET"}
                 </button>
@@ -4763,7 +4771,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                 onClick={() => setActiveTab("BETS")}
                 className={`px-4 py-2.5 text-xs font-bold tracking-wider border-b-2 transition-all ${
                   activeTab === "BETS"
-                    ? "border-[#45E0A8] text-[#45E0A8]"
+                    ? "border-primary text-primary"
                     : "border-transparent bt-dim hover:text-white"
                 }`}
               >
@@ -4775,7 +4783,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                   onClick={() => setActiveTab("LOGS")}
                   className={`px-4 py-2.5 text-xs font-bold tracking-wider border-b-2 transition-all flex items-center gap-1.5 ${
                     activeTab === "LOGS"
-                      ? "border-[#45E0A8] text-[#45E0A8]"
+                      ? "border-primary text-primary"
                       : "border-transparent bt-dim hover:text-white"
                   }`}
                 >
@@ -4828,7 +4836,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                         className="flex items-center gap-1.5 text-xs bt-dim"
                         role="status"
                       >
-                        <div className="w-3 h-3 border border-[#45E0A8] border-t-transparent rounded-full animate-spin" />
+                        <div className="w-3 h-3 border border-primary border-t-transparent rounded-full animate-spin" />
                         {autoGradeMut.isPending
                           ? "Auto-grading…"
                           : "Loading scores…"}
@@ -4919,7 +4927,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                           setDateRange("ALL_TIME");
                           setFilterAllTime(true);
                         }}
-                        className="mt-1 px-4 py-1.5 rounded-lg text-xs font-bold bg-transparent border border-[#45E0A8] text-[#45E0A8] transition-colors"
+                        className="mt-1 px-4 py-1.5 rounded-lg text-xs font-bold bg-transparent border border-primary text-primary transition-colors"
                       >
                         ← Switch to All-Time
                       </button>
@@ -4940,7 +4948,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                       const plStr = `${pl >= 0 ? "+" : ""}${pl.toFixed(2)}u`;
                       const plColor =
                         pl > 0
-                          ? "text-[#45E0A8]"
+                          ? "text-primary"
                           : pl < 0
                             ? "text-[#FF3B3B]"
                             : "text-white";
@@ -5041,7 +5049,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                 >
                   {isFetchingNextPage && (
                     <div className="flex items-center gap-2 text-xs bt-dim">
-                      <div className="w-3 h-3 border border-[#45E0A8] border-t-transparent rounded-full animate-spin" />
+                      <div className="w-3 h-3 border border-primary border-t-transparent rounded-full animate-spin" />
                       Loading more bets…
                     </div>
                   )}
@@ -5154,7 +5162,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                 type="button"
                 onClick={handleEditSave}
                 disabled={updateMut.isPending || submitRequestMut.isPending}
-                className="flex-1 py-2.5 rounded-xl text-black text-sm font-bold bg-[#45E0A8] hover:opacity-85 bt-press transition-colors disabled:opacity-40"
+                className="flex-1 py-2.5 rounded-xl text-black text-sm font-bold bg-primary hover:opacity-85 bt-press transition-colors disabled:opacity-40"
               >
                 {updateMut.isPending || submitRequestMut.isPending
                   ? "Saving…"
@@ -5171,7 +5179,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
       {gradeToast && (
         <div className="fixed bottom-6 right-6 z-50 bt-float rounded-2xl p-4 w-72 animate-in slide-in-from-bottom-4 fade-in">
           <div className="flex items-center gap-2 mb-2">
-            <Zap size={14} className="text-[#45E0A8]" />
+            <Zap size={14} className="text-primary" />
             <span className="text-sm font-bold text-white tracking-wider">
               BETS GRADED
             </span>
@@ -5190,11 +5198,11 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
               </div>
               <div className="text-white font-bold">{gradeToast.graded}</div>
             </div>
-            <div className="bg-transparent border border-[#45E0A8] rounded-lg px-3 py-2">
+            <div className="bg-transparent border border-primary rounded-lg px-3 py-2">
               <div className="text-[11px] bt-dim uppercase tracking-[0.08em]">
                 Wins
               </div>
-              <div className="text-[#45E0A8] font-bold">{gradeToast.wins}</div>
+              <div className="text-primary font-bold">{gradeToast.wins}</div>
             </div>
             <div className="bg-transparent border border-[#FF3B3B] rounded-lg px-3 py-2">
               <div className="text-[11px] bt-dim uppercase tracking-[0.08em]">
@@ -5276,7 +5284,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                 type="button"
                 onClick={handleDeleteConfirm}
                 disabled={deleteMut.isPending || submitRequestMut.isPending}
-                className="flex-1 py-2.5 rounded-xl text-black text-sm font-bold bg-[#45E0A8] hover:opacity-85 bt-press transition-colors disabled:opacity-40"
+                className="flex-1 py-2.5 rounded-xl text-black text-sm font-bold bg-primary hover:opacity-85 bt-press transition-colors disabled:opacity-40"
               >
                 {deleteMut.isPending || submitRequestMut.isPending
                   ? "Processing…"

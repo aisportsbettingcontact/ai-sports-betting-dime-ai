@@ -34,7 +34,7 @@ import { toast } from "sonner";
 import { formatMutationError } from "@/lib/errorUtils";
 import {
   Plus, Pencil, Trash2, Shield, User, Crown, RefreshCw,
-  Eye, EyeOff, ChevronDown, ArrowUp, ArrowDown, ChevronsUpDown, X, LogOut, ShieldAlert, BarChart2,
+  Eye, EyeOff, ChevronDown, ArrowUp, ArrowDown, ChevronsUpDown, X, LogOut, ShieldAlert, BarChart2, Star,
 } from "lucide-react";
 
 type AppUserRow = {
@@ -854,7 +854,7 @@ export default function UserManagement() {
                                   ? 'bg-card text-foreground border-border'
                                   : 'bg-card text-foreground border-border'
                               }`}>
-                                {user.stripePlanId === 'annual' ? '★ ANNUAL' : 'MONTHLY'}
+                                {user.stripePlanId === 'annual' ? <><Star size={12} /> ANNUAL</> : 'MONTHLY'}
                               </span>
                             ) : (
                               <span className="text-[10px] text-foreground">Stripe</span>

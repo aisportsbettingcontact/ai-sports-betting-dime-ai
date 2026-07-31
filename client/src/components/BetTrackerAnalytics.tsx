@@ -2,13 +2,11 @@
  * BetTrackerAnalytics.tsx — Bloomberg Terminal × DraftKings quant analytics
  *
  * Design language:
- *   - #0d0f0e base, #141614 cards, #1a1f1a hover
- *   - #39FF14 neon green for wins/positives
- *   - #FF3B3B loss red for negatives
- *   - JetBrains Mono for all numbers
- *   - Barlow Condensed for section headers
+ *   - Token-driven surfaces via the T theme object (base/card/hover)
+ *   - Dime mint accent for wins/positives, loss red for negatives
+ *   - Familjen Grotesk throughout (tabular numerals for stats)
  *   - Sharp corners (max 6px radius)
- *   - 150ms transitions
+ *   - 160ms cubic-bezier(0.16,1,0.3,1) transitions
  *
  * Components:
  *   EquityChart         — Canvas-based cumulative P/L curve with hover tooltip
@@ -568,7 +566,7 @@ function DualBar({ wins, losses, maxTotal }: { wins: number; losses: number; max
           width: `${Math.min(100, lossPct * 2)}%`,
           background: T.red,
           borderRadius: "2px 0 0 2px",
-          transition: "width 300ms ease",
+          transition: "width 160ms cubic-bezier(0.16,1,0.3,1)",
         }} />
       </div>
       {/* Center divider */}
@@ -579,7 +577,7 @@ function DualBar({ wins, losses, maxTotal }: { wins: number; losses: number; max
           width: `${Math.min(100, winPct * 2)}%`,
           background: T.green,
           borderRadius: "0 2px 2px 0",
-          transition: "width 300ms ease",
+          transition: "width 160ms cubic-bezier(0.16,1,0.3,1)",
         }} />
       </div>
     </div>
@@ -1118,7 +1116,7 @@ function HandicapperSelectorInner({
           fontSize: "11px",
           fontFamily: T.mono,
           cursor: "pointer",
-          transition: "all 150ms ease",
+          transition: "background 160ms cubic-bezier(0.16,1,0.3,1)",
         }}
         onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = T.hover; }}
         onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = T.card; }}

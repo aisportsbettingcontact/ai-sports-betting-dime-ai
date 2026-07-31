@@ -73,7 +73,11 @@ export function SummaryCarousel({
         className="summary-carousel__track"
         ref={trackRef}
         onScroll={onScroll}
-        tabIndex={0}
+        // Audit DIME-UI-012: the track stays OUT of the tab order — each slide
+        // already exposes a labeled tabbable region (summary__viewport) and
+        // the next-edge arrow advances the carousel, so a second nested
+        // scroll stop per card was pure tab bloat.
+        tabIndex={-1}
         aria-label={
           isNoEdgeRanking
             ? "Swipe through this game's highest no-vig ROI market projections"
