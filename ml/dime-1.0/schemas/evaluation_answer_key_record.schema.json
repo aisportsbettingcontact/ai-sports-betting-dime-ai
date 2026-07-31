@@ -1,0 +1,163 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dime.internal/schemas/evaluation_answer_key_record.schema.json",
+  "title": "Dime Private Evaluation Answer-Key Record v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "key_id",
+    "layer",
+    "semantic_case_id",
+    "semantic_record_sha256",
+    "semantic_revision",
+    "semantic_manifest_sha256",
+    "rubric_revision",
+    "expected_judgment",
+    "provenance",
+    "privacy"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "dime-private-evaluation-answer-key-v1"
+    },
+    "key_id": {
+      "type": "string",
+      "pattern": "^dime-key-[a-z0-9][a-z0-9-]{7,95}$"
+    },
+    "layer": {
+      "enum": [
+        "development",
+        "critical",
+        "locked",
+        "general_regression"
+      ]
+    },
+    "semantic_case_id": {
+      "type": "string",
+      "pattern": "^dime-case-[a-z0-9][a-z0-9-]{7,95}$"
+    },
+    "semantic_record_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "semantic_revision": {
+      "$ref": "#/$defs/git_revision"
+    },
+    "semantic_manifest_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "rubric_revision": {
+      "type": "string",
+      "pattern": "^dime-evaluation-rubric-v[0-9]+(?:\\.[0-9]+){0,2}$"
+    },
+    "expected_judgment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "expected_outcome",
+        "required_tool_state",
+        "critical_failure",
+        "scoring_dimensions",
+        "rationale_tags"
+      ],
+      "properties": {
+        "expected_outcome": {
+          "enum": [
+            "answer",
+            "abstain",
+            "clarify",
+            "correct_user_premise",
+            "tool_error"
+          ]
+        },
+        "required_tool_state": {
+          "enum": [
+            "not_required",
+            "required_success",
+            "required_abstention_on_failure",
+            "required_clarification"
+          ]
+        },
+        "critical_failure": {
+          "type": "boolean"
+        },
+        "scoring_dimensions": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "correctness",
+              "groundedness",
+              "temporal_correctness",
+              "calculation_correctness",
+              "instruction_adherence",
+              "uncertainty",
+              "completeness",
+              "schema_compliance",
+              "tool_use"
+            ]
+          }
+        },
+        "rationale_tags": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9_-]{1,63}$"
+          }
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "generator_actor_id",
+        "reviewer_actor_id",
+        "authoring_receipt_sha256",
+        "review_receipt_sha256",
+        "created_at"
+      ],
+      "properties": {
+        "generator_actor_id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]{7,95}$"
+        },
+        "reviewer_actor_id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]{7,95}$"
+        },
+        "authoring_receipt_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "review_receipt_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "privacy": {
+      "const": {
+        "classification": "PRIVATE_EVALUATION_ANSWER_KEY",
+        "contains_semantic_case_content": false,
+        "publication_scope": "separate_private_answer_key_repository",
+        "public_publication_authorized": false
+      }
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "git_revision": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{40}$"
+    }
+  }
+}
