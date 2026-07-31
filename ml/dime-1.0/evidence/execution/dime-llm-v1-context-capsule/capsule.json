@@ -1,7 +1,7 @@
 {
   "schema_version": "dime-llm-v1-context-capsule-v1",
   "capsule_id": "dime-llm-v1-foundation-evaluation-2026-07-31",
-  "verified_at": "2026-07-31T00:33:16Z",
+  "verified_at": "2026-07-31T00:45:07Z",
   "snapshot_semantics": "IMMUTABLE_POINT_IN_TIME_NOT_LIVE_STATUS",
   "classification": "SANITIZED_AGGREGATE_ONLY",
   "private_content_counts": {
@@ -81,7 +81,7 @@
       "title": "fix(ops): verify credential executable closure v2",
       "state": "OPEN_DRAFT",
       "base_commit": "7ed09adb4fcdb9e2d9047e73e34f84c80d865b78",
-      "head_commit": "0a0219fc38fdea795c21812898b072266980d460",
+      "head_commit": "2ca08f7756ecb33485d12bc0464e004f34c0e4c3",
       "internal_reviewed_checkpoint": "b3194a1799255611b079b3f7a76986129b3c9fa6",
       "mergeable": true,
       "review_requested_from": [
@@ -130,7 +130,7 @@
     "effective_authorization": "NONE",
     "root_trust_provisioned": false,
     "remediation_pull_request": 255,
-    "remediation_head_commit": "0a0219fc38fdea795c21812898b072266980d460",
+    "remediation_head_commit": "2ca08f7756ecb33485d12bc0464e004f34c0e4c3",
     "internal_reviewed_checkpoint": "b3194a1799255611b079b3f7a76986129b3c9fa6",
     "required_checks": "PASS",
     "independent_approval": false,
@@ -168,8 +168,8 @@
     "complete_release": false,
     "public_evidence": {
       "path": "ml/dime-1.0/evidence/execution/dime-llm-v1-foundation-002/evidence.json",
-      "sha256": "1eefca2301058d69200e1fe1073ad8b832e27ea8e825ed486926998a662f3e47",
-      "sha256sums_sha256": "7ed450637d7379855dfe333792a4258692854f8460688dda15017deada16bef9"
+      "sha256": "81cf673e2d805e1ca9d5ced4e8cd67025c1c142536c8c51a15e4342951e08c05",
+      "sha256sums_sha256": "cd8c52230531ab2fa620953359228a335cac3c65aa76c449ba3854aaa53604c2"
     }
   },
   "semantic_evaluation": {

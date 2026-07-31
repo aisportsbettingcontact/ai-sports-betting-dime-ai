@@ -111,7 +111,7 @@ def test_context_capsule_is_an_immutable_closed_snapshot_bound_to_foundation_evi
     assert capsule["parallel_tracks"]["runpod_gate_1"]["deployed"] is False
     assert capsule["parallel_tracks"]["credential_execution_closure"]["pull_request"] == 255
     assert capsule["parallel_tracks"]["credential_execution_closure"]["head_commit"] == (
-        "0a0219fc38fdea795c21812898b072266980d460"
+        "2ca08f7756ecb33485d12bc0464e004f34c0e4c3"
     )
     assert (
         capsule["parallel_tracks"]["credential_execution_closure"]["internal_reviewed_checkpoint"]

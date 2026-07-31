@@ -56,7 +56,7 @@ def test_continuation_evidence_is_sanitized_closed_and_cumulative() -> None:
         "status": "PASS_ZERO_DISALLOWED_OVERLAP",
     }
     credential = evidence["context_capsule"]["parallel_status"]["credential_execution_closure"]
-    assert credential["head_commit"] == "0a0219fc38fdea795c21812898b072266980d460"
+    assert credential["head_commit"] == "2ca08f7756ecb33485d12bc0464e004f34c0e4c3"
     assert set(credential["triggered_checks"].values()) == {"PASS"}
     assert credential["path_filtered_checks"] == {
         "dime_llm_validation": "NOT_TRIGGERED_PATH_FILTER",

@@ -11,7 +11,7 @@ not a continuously current status feed; consumers must use `verified_at`.
   checks pass. Review remains required, and independent approval, merge,
   deployment, and effective authorization are false.
 - PR #255 is an open credential-execution closure draft at exact head
-  `0a0219fc`; all applicable triggered checks pass. Dime LLM validation and
+  `2ca08f77`; all applicable triggered checks pass. Dime LLM validation and
   LiveLab did not trigger because of path filters. `b3194a17` is retained only
   as the prior internally reviewed checkpoint, not the current PR head. Review
   remains required; independent approval, merge, deployment, root trust, and

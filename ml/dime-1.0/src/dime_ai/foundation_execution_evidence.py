@@ -1638,7 +1638,7 @@ def freeze_continuation_evidence(
                 },
                 "credential_execution_closure": {
                     "pull_request": 255,
-                    "head_commit": "0a0219fc38fdea795c21812898b072266980d460",
+                    "head_commit": "2ca08f7756ecb33485d12bc0464e004f34c0e4c3",
                     "state": "OPEN_DRAFT",
                     "triggered_checks": {
                         "build": "PASS",
