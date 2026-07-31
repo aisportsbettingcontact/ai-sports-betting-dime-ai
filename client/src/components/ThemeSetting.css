@@ -3,7 +3,7 @@
    never small mint text. */
 .theme-setting {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr); /* two-mode: Light | Dark (2026-07-31) */
   gap: 4px;
   padding: 4px;
   background: var(--surface-raised, #141414);

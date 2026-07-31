@@ -190,10 +190,11 @@ describe("account popover v2 (Round 3 Step 1, owner directive 2026-07-22)", () =
     expect(chatSource).toMatch(/THEME_MODE_OPTIONS\.map/);
   });
 
-  it("Theme options are exactly System, Light, Dark in that order", () => {
+  it("Theme options are exactly Light, Dark in that order (two-mode, 2026-07-31)", () => {
     expect(chatSource).toMatch(
-      /const THEME_MODE_OPTIONS: Array<\{[\s\S]{0,120}\}> = \[\s*\{ mode: "system", label: "System", Icon: Monitor \},\s*\{ mode: "light", label: "Light", Icon: Sun \},\s*\{ mode: "dark", label: "Dark", Icon: Moon \},\s*\];/
+      /const THEME_MODE_OPTIONS: Array<\{[\s\S]{0,120}\}> = \[\s*\{ mode: "light", label: "Light", Icon: Sun \},\s*\{ mode: "dark", label: "Dark", Icon: Moon \},\s*\];/
     );
+    expect(chatSource).not.toContain('{ mode: "system"');
   });
 
   it("Settings row is wired to the real onOpenSettings callback that opens SettingsModal — not a route, and no longer described as a stale no-op", () => {

@@ -134,11 +134,10 @@
   border-radius: 0;
   box-shadow: none;
 }
-/* A crisp alpha-following keyline, not a rectangular image border. System is
-   the grey surface and Dark the black surface; Light keeps the original mark. */
-html[data-theme-mode="system"] .team-logo-box--dark-outline .team-logo,
+/* A crisp alpha-following keyline, not a rectangular image border. Dark is
+   the black surface; Light keeps the original mark. (Two-mode system,
+   2026-07-31 — the retired "system" selectors are gone.) */
 html[data-theme-mode="dark"] .team-logo-box--dark-outline .team-logo,
-html:not([data-theme-mode]) .dmf-root[data-dmf-mode="system"] .team-logo-box--dark-outline .team-logo,
 html:not([data-theme-mode]) .dmf-root[data-dmf-mode="dark"] .team-logo-box--dark-outline .team-logo {
   filter: drop-shadow(0 0 0.2px rgba(255, 255, 255, 0.92));
 }

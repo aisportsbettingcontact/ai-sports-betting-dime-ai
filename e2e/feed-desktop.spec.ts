@@ -428,14 +428,15 @@ async function stubApi(page: Page) {
   );
 }
 
-/** Deterministic explicit mode so System's distinct grey palette does not
- *  silently inherit a host OS setting during Dark/Light geometry assertions. */
+/** Deterministic explicit mode for Dark/Light geometry assertions. The last
+ *  param is the RAW localStorage value — "system" is accepted only to test
+ *  the retired mode's migration to dark (two-mode system, 2026-07-31). */
 async function gotoShellFeed(
   page: Page,
   width: number,
   height = 1400,
   colorScheme: "dark" | "light" = "dark",
-  themeMode: "system" | "light" | "dark" = colorScheme,
+  themeMode: "light" | "dark" | "system" = colorScheme,
 ) {
   await stubApi(page);
   await page.emulateMedia({ colorScheme });
@@ -1899,10 +1900,13 @@ test("light theme: the next-edge control keeps a black border and mint arrow", a
   await assertNoHorizontalOverflow(page, "shell-900-light");
 });
 
-test("System stays neutral grey with dark-contrast ink even when the OS prefers light", async ({ page }) => {
+test("retired 'system' selection migrates to Dark (two-mode system, 2026-07-31)", async ({ page }) => {
+  // OS prefers light AND the stored value is the retired "system" mode — the
+  // app must resolve to explicit Dark: dark ink, pure-black Law-v2 surfaces,
+  // and the persisted mode rewritten to "dark".
   await gotoShellFeed(page, 900, 900, "light", "system");
   const root = page.locator(".dmf-root");
-  await expect(root).toHaveAttribute("data-dmf-mode", "system");
+  await expect(root).toHaveAttribute("data-dmf-mode", "dark");
   const palette = await root.evaluate((el) => {
     const cs = getComputedStyle(el);
     return {
@@ -1911,43 +1915,22 @@ test("System stays neutral grey with dark-contrast ink even when the OS prefers 
       htmlMode: document.documentElement.dataset.themeMode,
       htmlDark: document.documentElement.classList.contains("dark"),
       contrastTheme: el.getAttribute("data-dmf-theme"),
+      persisted: localStorage.getItem("dime-theme"),
     };
   });
-  expect(palette.htmlMode).toBe("system");
-  expect(palette.htmlDark, "System uses dark-contrast ink on its grey ground").toBe(true);
+  expect(palette.htmlMode).toBe("dark");
+  expect(palette.htmlDark, "migrated mode uses dark ink").toBe(true);
   expect(palette.contrastTheme).toBe("dark");
-  expect(palette.page, "System page is grey, not black").toBe("rgb(18, 18, 18)");
-  expect(palette.card, "System cards use the raised grey surface").toBe("rgb(24, 24, 24)");
+  expect(palette.page, "migrated page is Law-v2 pure black").toBe("rgb(0, 0, 0)");
+  expect(palette.card, "migrated cards use the tier-1 surface").toBe("rgb(10, 10, 10)");
+  expect(palette.persisted, "the retired value is rewritten on first load").toBe("dark");
 
   const yankeesFilter = await cardByAriaLabel(page, "Dodgers at Yankees")
     .locator(".team-logo-box--dark-outline .team-logo")
     .last()
     .evaluate((el) => getComputedStyle(el).filter);
-  expect(yankeesFilter, "System keeps exactly the same 0.2px Yankees keyline as Dark").toBe(THIN_LOGO_FILTER);
-});
-
-test("System mobile keeps the same exact 0.2px dark-logo keyline", async ({ page }) => {
-  await gotoShellFeed(page, 375, 667, "light", "system");
-  const root = page.locator(".dmf-root");
-  await expect(root).toHaveAttribute("data-dmf-mode", "system");
-  const appearance = await root.evaluate((element) => ({
-    page: getComputedStyle(element).backgroundColor,
-    htmlMode: document.documentElement.dataset.themeMode,
-    htmlDark: document.documentElement.classList.contains("dark"),
-  }));
-  expect(appearance).toEqual({
-    page: "rgb(18, 18, 18)",
-    htmlMode: "system",
-    htmlDark: true,
-  });
-  const yankeesFilter = await cardByAriaLabel(page, "Dodgers at Yankees")
-    .locator(".team-logo-box--dark-outline .team-logo")
-    .last()
-    .evaluate((element) => getComputedStyle(element).filter);
-  expect(yankeesFilter, "System mobile keeps the exact 0.2px keyline").toBe(
-    THIN_LOGO_FILTER,
-  );
-  await assertNoHorizontalOverflow(page, "shell-375-system");
+  expect(yankeesFilter, "Dark keeps the 0.2px dark-logo keyline").toBe(THIN_LOGO_FILTER);
+  await assertNoHorizontalOverflow(page, "shell-900-migrated-dark");
 });
 
 // ─── Standalone /feed at 1440: item-6 rhythm absent (negative contract) ──────
