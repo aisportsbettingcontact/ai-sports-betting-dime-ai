@@ -1,0 +1,134 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dime.internal/schemas/route_context_compiler_v1.schema.json",
+  "title": "Dime Route-Aware Context Compiler v1 configuration",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "status",
+    "compilerVersion",
+    "tokenMeasurementStatus",
+    "authorizations",
+    "routePolicies",
+    "offlineAcceptance"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "dime-route-aware-context-compiler-config-v1"
+    },
+    "status": {
+      "const": "IMPLEMENTED_OFFLINE_NOT_ACTIVATED"
+    },
+    "compilerVersion": {
+      "const": "dime-route-aware-context-compiler-v1"
+    },
+    "tokenMeasurementStatus": {
+      "const": "STRUCTURAL_ESTIMATE_NOT_MODEL_EXACT"
+    },
+    "authorizations": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "runtimeIntegration",
+        "routeActivation",
+        "providerExecution",
+        "deployment",
+        "training"
+      ],
+      "properties": {
+        "runtimeIntegration": { "const": false },
+        "routeActivation": { "const": false },
+        "providerExecution": { "const": false },
+        "deployment": { "const": false },
+        "training": { "const": false }
+      }
+    },
+    "routePolicies": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "platform",
+        "account",
+        "educational",
+        "bet_explanation",
+        "matchup",
+        "full_slate",
+        "historical",
+        "live_data",
+        "general_sports"
+      ],
+      "properties": {
+        "platform": { "$ref": "#/$defs/routePolicy" },
+        "account": { "$ref": "#/$defs/routePolicy" },
+        "educational": { "$ref": "#/$defs/routePolicy" },
+        "bet_explanation": { "$ref": "#/$defs/routePolicy" },
+        "matchup": { "$ref": "#/$defs/routePolicy" },
+        "full_slate": { "$ref": "#/$defs/routePolicy" },
+        "historical": { "$ref": "#/$defs/routePolicy" },
+        "live_data": { "$ref": "#/$defs/routePolicy" },
+        "general_sports": { "$ref": "#/$defs/routePolicy" }
+      }
+    },
+    "offlineAcceptance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "criticalFactRecall",
+        "routePolicyViolations",
+        "duplicateContextRateMaximum",
+        "irrelevantContextRateMaximum",
+        "silentContextTruncations"
+      ],
+      "properties": {
+        "criticalFactRecall": { "const": 1.0 },
+        "routePolicyViolations": { "const": 0 },
+        "duplicateContextRateMaximum": { "const": 0.02 },
+        "irrelevantContextRateMaximum": { "const": 0.05 },
+        "silentContextTruncations": { "const": 0 }
+      }
+    }
+  },
+  "$defs": {
+    "routePolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "maxTokens",
+        "gameRetrieval",
+        "dynamicRetrieval",
+        "exactEventMaximum",
+        "candidateEventMaximum",
+        "pointInTimeCutoffRequired",
+        "authoritativeObservationTimestampRequired"
+      ],
+      "properties": {
+        "maxTokens": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16384
+        },
+        "gameRetrieval": {
+          "enum": ["allowed", "prohibited"]
+        },
+        "dynamicRetrieval": {
+          "enum": ["allowed", "explicit_only", "prohibited"]
+        },
+        "exactEventMaximum": {
+          "oneOf": [
+            { "type": "integer", "minimum": 0, "maximum": 12 },
+            { "type": "null" }
+          ]
+        },
+        "candidateEventMaximum": {
+          "oneOf": [
+            { "type": "integer", "minimum": 0, "maximum": 12 },
+            { "type": "null" }
+          ]
+        },
+        "pointInTimeCutoffRequired": { "type": "boolean" },
+        "authoritativeObservationTimestampRequired": { "type": "boolean" }
+      }
+    }
+  }
+}
