@@ -48,6 +48,7 @@ c63bb85031c2a3404ae2a4a049dfb02e39777c2d:ml/dime-1.0/evidence/benchmarks/base-mo
 8e75ee77ddc2221055d2a8febec6378d23257dbb:ml/dime-1.0/evidence/governance/evaluation-answer-key-governance-v1/manifest.json:generic-api-key:26
 8e75ee77ddc2221055d2a8febec6378d23257dbb:ml/dime-1.0/evidence/governance/evaluation-answer-key-governance-v1/manifest.json:generic-api-key:27
 8e75ee77ddc2221055d2a8febec6378d23257dbb:ml/dime-1.0/evidence/governance/evaluation-answer-key-governance-v1/manifest.json:generic-api-key:28
+# The reconciled allowlist intentionally keeps both exact evidence families.
 # PR #253 exact Hugging Face model/tokenizer revision identities. The
 # generic-api-key detector matched the two pinned public commit revisions in
 # the config, schema constants, and tests. These exact fingerprints do not
