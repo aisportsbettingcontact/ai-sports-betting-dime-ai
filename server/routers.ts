@@ -159,6 +159,32 @@ function isValidGame(awayTeam: string, homeTeam: string, sport?: string | null):
   return MARCH_MADNESS_DB_SLUGS.has(awayTeam) && MARCH_MADNESS_DB_SLUGS.has(homeTeam);
 }
 
+/**
+ * The single pinned game the public landing-page odds sample may show:
+ * a COMPLETED MLB matchup, resolved by date + teams rather than a hardcoded
+ * row id so it survives re-ingests. Nothing about this is caller-controlled.
+ */
+const DEMO_GAME = {
+  gameDate: "2026-07-24",
+  sport: "MLB",
+  teams: ["CHC", "PIT"],
+} as const;
+
+async function findDemoGame() {
+  try {
+    const slate = await listGamesByDate(DEMO_GAME.gameDate, DEMO_GAME.sport);
+    const isDemoTeam = (name: string) =>
+      (DEMO_GAME.teams as readonly string[]).includes(name);
+    const match = slate.find(
+      g => isDemoTeam(g.awayTeam) && isDemoTeam(g.homeTeam)
+    );
+    return match ?? null;
+  } catch (err) {
+    console.warn(`[oddsHistory.listForDemoGame] demo lookup failed:`, err);
+    return null;
+  }
+}
+
 export const appRouter = router({
   system: systemRouter,
   appUsers: appUsersRouter,
@@ -1013,6 +1039,32 @@ export const appRouter = router({
         const rows = await listOddsHistory(input.gameId);
         return { history: rows };
       }),
+
+    /**
+     * Landing-page marketing sample (owner directive 2026-07-31).
+     *
+     * SECURITY NOTE: odds movement is premium content and `listForGame`
+     * above stays gated. This procedure is a deliberately narrow carve-out:
+     * it takes NO caller input and can only ever resolve ONE pinned,
+     * already-completed game (DEMO_GAME below) — a visitor cannot pivot it
+     * to today's slate or to any other matchup. That is the whole product
+     * sample the public landing page is allowed to show.
+     */
+    listForDemoGame: publicProcedure.query(async () => {
+      const game = await findDemoGame();
+      if (!game) {
+        console.log(`[tRPC][oddsHistory.listForDemoGame] PUBLIC — demo game not found; serving empty`);
+        return { history: [], game: null };
+      }
+      const rows = await listOddsHistory(game.id);
+      console.log(
+        `[tRPC][oddsHistory.listForDemoGame] PUBLIC gameId=${game.id} rows=${rows.length}`
+      );
+      return {
+        history: rows,
+        game: { id: game.id, awayTeam: game.awayTeam, homeTeam: game.homeTeam },
+      };
+    }),
   }),
   // ─── MLB Strikeout Props ──────────────────────────────────────────────────────────────────────
   strikeoutProps: router({
