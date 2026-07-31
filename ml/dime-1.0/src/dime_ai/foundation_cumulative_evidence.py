@@ -168,6 +168,12 @@ def _exact_public_ledger(
 def _ast_sha256(function: Callable[..., object]) -> str:
     source = textwrap.dedent(inspect.getsource(function))
     tree = ast.parse(source)
+    for node in ast.walk(tree):
+        for field_name in node._fields:
+            value = getattr(node, field_name, None)
+            required_none = isinstance(node, ast.Constant) and field_name == "value"
+            if value == [] or (value is None and not required_none):
+                delattr(node, field_name)
     return _sha256_bytes(ast.dump(tree, include_attributes=False).encode("utf-8"))
 
 

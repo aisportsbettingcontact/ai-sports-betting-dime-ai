@@ -15,7 +15,7 @@ Set the nine private-root variables below to independently protected local roots
 ```sh
 uv run --frozen python scripts/freeze_foundation_cumulative_evidence.py \
   --boundary-manifest configs/foundation_cumulative_boundary_450_v1.json \
-  --boundary-manifest-sha256 45a413f3508114548996ef5e27e7691d3a0acbcdf49843b73424974a743e419f \
+  --boundary-manifest-sha256 623ef50a724b2759cbc8df184f6fb6d0fe97ebc49124a6d9d0dcac60f8c9c426 \
   --prior-artifact-root "first_live_data_shard=${DIME_PRIOR_FIRST_ROOT}" \
   --prior-artifact-root "second_live_data_shard=${DIME_PRIOR_SECOND_ROOT}" \
   --prior-source-packet-root "first_live_data_shard=${DIME_PRIOR_FIRST_SOURCES}" \

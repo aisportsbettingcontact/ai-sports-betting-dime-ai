@@ -148,7 +148,7 @@
       {"path": "src/dime_ai/chat_format.py", "sha256": "7761d7dbb5f3cd4587cd690a2637331d25c18800746344419fa8a88a6efc58d6"},
       {"path": "src/dime_ai/data_validation.py", "sha256": "a009ea239ee7fb848a7c36f408951cd9daa3a9fd0c160015ef20546a6e69fc48"},
       {"path": "src/dime_ai/foundation_control.py", "sha256": "0a934cfc9d0033ff1a4350df665a3c176e08aad7e357520776dd2915061bf4b9"},
-      {"path": "src/dime_ai/foundation_cumulative_evidence.py", "sha256": "a93480fd884c8220bce6c3b47b1701b1dc06a30f6d2d31bb2fed7d579a6fdcda"},
+      {"path": "src/dime_ai/foundation_cumulative_evidence.py", "sha256": "da6df52294614e6abe77e9b3f4cfe641ec9c4ab2eded571dc8e14a53d28a139f"},
       {"path": "src/dime_ai/foundation_data_factory.py", "sha256": "1b3e06b8b511797b830012f1302c49e2eef1f2f59d00513a6e488e72b78e58fc"},
       {"path": "src/dime_ai/foundation_dataset.py", "sha256": "167f5c586b6d9627b693c6c76536849e8aef0bf73baa256d5a503663aa7a35ec"},
       {"path": "src/dime_ai/foundation_execution_evidence.py", "sha256": "326ff020f8b1290d982a41d4251d9e0d2f46558068a1d7180b6bc559b619587d"},
@@ -198,7 +198,7 @@
         {"path": "data/eval/safety_red_team.sample.jsonl", "sha256": "1576397bfe351e9bb9f54ec6abc9f16e8a5e73ca8152b9b8fd74fcb1f7220b09"}
       ]
     },
-    "contract_sha256": "3e3fc6a674a4884c612e52434ee12281a0504a0ed1495d8d9d54df6b53c0abcf"
+    "contract_sha256": "c76fd9d4714aad5c1ca4441a34d538055d470e53f31a83d72837940da4793407"
   },
   "quarantines": [
     {
