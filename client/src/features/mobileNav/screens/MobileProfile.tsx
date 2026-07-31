@@ -39,7 +39,7 @@ export function MobileProfile() {
     return (
       <div className="min-h-full bg-black flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 rounded-full border-2 border-[#45E0A8] border-t-[#45E0A8] animate-spin" />
+          <div className="w-10 h-10 rounded-full border-2 border-primary border-t-transparent animate-spin" />
           <span className="text-xs text-white">Loading profile...</span>
         </div>
       </div>
@@ -72,7 +72,7 @@ export function MobileProfile() {
       : appUser.role === "admin"
         ? "text-white"
         : appUser.role === "handicapper"
-          ? "text-[#45E0A8]"
+          ? "text-primary"
           : "text-white";
 
   const roleBg =
@@ -81,7 +81,7 @@ export function MobileProfile() {
       : appUser.role === "admin"
         ? "bg-black border-white"
         : appUser.role === "handicapper"
-          ? "bg-[#45E0A8] border-[#45E0A8]"
+          ? "bg-primary border-primary"
           : "bg-black border-white";
 
   return (
@@ -95,8 +95,8 @@ export function MobileProfile() {
       <div className="px-4 pt-5">
         <div className="rounded-2xl bg-black border border-white p-5">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-full bg-[#45E0A8] border border-[#45E0A8] flex items-center justify-center">
-              <Crown className="w-6 h-6 text-[#45E0A8]" />
+            <div className="w-14 h-14 rounded-full bg-primary border border-primary flex items-center justify-center">
+              <Crown className="w-6 h-6 text-primary" />
             </div>
             <div className="flex-1">
               <h2 className="text-white font-bold text-base">
@@ -133,7 +133,7 @@ export function MobileProfile() {
             <span
               className={`text-[10px] font-bold px-2 py-0.5 rounded ${
                 appUser.stripePlanId
-                  ? "text-[#45E0A8] bg-[#45E0A8]"
+                  ? "text-primary bg-primary"
                   : "text-white bg-black"
               }`}
             >
@@ -148,7 +148,7 @@ export function MobileProfile() {
             <div>
               <p className="text-[9px] text-white uppercase">Auto-Renew</p>
               <p
-                className={`text-sm font-medium ${appUser.cancelAtPeriodEnd ? "text-white" : "text-[#45E0A8]"}`}
+                className={`text-sm font-medium ${appUser.cancelAtPeriodEnd ? "text-white" : "text-primary"}`}
               >
                 {appUser.cancelAtPeriodEnd
                   ? "Cancelling"
@@ -163,12 +163,12 @@ export function MobileProfile() {
 
       {/* Credit Preview */}
       <div className="px-4 mt-4">
-        <div className="rounded-xl bg-[#45E0A8] border border-[#45E0A8] p-4">
+        <div className="rounded-xl bg-primary border border-primary p-4">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs text-white font-medium">
               Model Credits
             </span>
-            <span className="text-[10px] text-[#45E0A8] font-medium px-2 py-0.5 rounded-full bg-[#45E0A8]">
+            <span className="text-[10px] text-primary font-medium px-2 py-0.5 rounded-full bg-primary">
               UNLIMITED
             </span>
           </div>

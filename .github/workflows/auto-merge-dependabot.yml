@@ -4,14 +4,15 @@ name: Dependabot Auto-Merge (Patch Only)
 # Fires on every Dependabot PR. The job gates on:
 #   1. PR is opened by dependabot[bot]
 #   2. Version bump is patch-level only (semver: x.y.Z)
-#   3. All CI checks pass (enforced by `gh pr merge --auto`)
+#   3. An independent reviewer approves
+#   4. All CI checks pass (enforced by branch protection and auto-merge)
 on:
   pull_request:
     types: [opened, synchronize, reopened]
 
 # ─── Permissions ──────────────────────────────────────────────────────────────
 # contents:write  — needed to merge the PR
-# pull-requests:write — needed to approve and merge
+# pull-requests:write — needed to enable auto-merge
 permissions:
   contents: write
   pull-requests: write
@@ -28,7 +29,7 @@ jobs:
       # ── Step 1: Fetch Dependabot metadata ─────────────────────────────────
       - name: Fetch Dependabot metadata
         id: meta
-        uses: dependabot/fetch-metadata@v2
+        uses: dependabot/fetch-metadata@21025c705c08248db411dc16f3619e6b5f9ea21a
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -43,22 +44,9 @@ jobs:
           echo "[STATE] Ecosystem:        ${{ steps.meta.outputs.package-ecosystem }}"
           echo "[STATE] Actor:            ${{ github.actor }}"
 
-      # ── Step 3: Approve patch-only PRs ────────────────────────────────────
-      # Approves the PR so the merge step can proceed.
-      # Only patch updates are approved — minor and major require manual review.
-      - name: Approve patch update
-        if: steps.meta.outputs.update-type == 'version-update:semver-patch'
-        run: |
-          echo "[STEP] Approving patch-level PR #${{ github.event.pull_request.number }}..."
-          gh pr review "${{ github.event.pull_request.number }}" \
-            --approve \
-            --body "Auto-approved: patch-level dependency update (semver-patch). CI must pass before merge."
-          echo "[OUTPUT] PR approved"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      # ── Step 4: Enable auto-merge (squash) ────────────────────────────────
+      # ── Step 3: Enable auto-merge (squash) ────────────────────────────────
       # `--auto` waits for all required status checks to pass before merging.
+      # Branch protection still requires an independent human approval.
       # Uses squash to keep the commit history clean.
       # Only runs for patch updates — minor/major are skipped entirely.
       - name: Enable auto-merge for patch update
@@ -75,7 +63,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # ── Step 5: Log skip reason for non-patch updates ─────────────────────
+      # ── Step 4: Log skip reason for non-patch updates ─────────────────────
       - name: Skip non-patch update
         if: steps.meta.outputs.update-type != 'version-update:semver-patch'
         run: |

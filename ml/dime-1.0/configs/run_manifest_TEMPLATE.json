@@ -56,8 +56,15 @@
     "logs_dir": "/workspace/runs/replace-with-unique-experiment-id/logs",
     "reports_dir": "/workspace/runs/replace-with-unique-experiment-id/reports",
     "checkpoint_retention": {
-      "save_steps": 50,
+      "save_steps": 20,
       "save_total_limit": 3
+    },
+    "early_stopping": {
+      "metric": "validation_loss",
+      "mode": "minimize",
+      "patience_evaluations": 3,
+      "minimum_delta": 0.001,
+      "restore_best_checkpoint": true
     }
   },
   "environment": {

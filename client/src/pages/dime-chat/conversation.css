@@ -724,6 +724,353 @@ button.dc-sidebar-row {
   .dc-composer-input {
     min-height: 44px;
   }
+
+  /* ── Phone chat chrome (owner directive 2026-07-29) ──────────────────────
+     The "Menu" word is replaced by the PanelLeftOpen chat-history toggle, so
+     the bar sheds its full-width hairline — a lone icon over the page ground
+     needs no band divider. The icon centers in the former text button. */
+  .theme-dark .dc-mobile-bar,
+  .theme-light .dc-mobile-bar {
+    border-bottom: 0;
+  }
+  .dc-mobile-menu {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  /* The drawer close swaps × for the matched PanelLeftClose glyph on phones —
+     same centering treatment. */
+  .dc-drawer-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Responsible-gaming line (owner directive 2026-07-29): ONE line, smaller
+     and dimmer — deliberate exception to the 11px floor above for this legal
+     micro-copy; the copy itself never changes (marketing-surface law). The
+     clamp keeps all 72 characters on a single line down to 320px. */
+  .dc-chat-footer {
+    white-space: nowrap;
+    overflow: hidden;
+    font-size: clamp(8px, 2.45vw, 9.5px);
+    line-height: 1;
+    opacity: 0.55;
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
+  }
+  /* ── Floating composer (owner directive 2026-07-29 r2) ───────────────────
+     In conversation the pill leaves document flow entirely: it floats over
+     the chat ground almost at the bottom edge, with just the one-line
+     disclaimer beneath it. The scroller runs the full height behind it; a
+     mask-image gradient makes turns SLOWLY VANISH as they flow under the
+     pill (and the bottom padding lets the last turn scroll fully clear of
+     the fade). Pure compositing — no scroll listeners, and the effect is
+     continuous with scroll position, so reduced-motion needs no fork. */
+  .dc-main--conv {
+    position: relative;
+  }
+  .dc-main--conv .dc-composer-zone {
+    position: absolute;
+    left: 16px;
+    right: 16px;
+    /* Clear of the one-line disclaimer AND the home-indicator inset — the
+       r2 fixed 34px let the pill sit on the disclaimer on notched phones. */
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 26px);
+    width: auto;
+    padding: 0;
+    z-index: 5;
+  }
+  .dc-main--conv .dc-scroller {
+    padding-bottom: 176px;
+    /* Fade depth is CAPPED proportionally (r3): with the keyboard up the
+       visual viewport shrinks to ~1/3 height, and a fixed 170px fade was
+       swallowing most of the remaining conversation — the max() terms keep
+       at least the top ~55% of the scroller fully legible at any height. */
+    -webkit-mask-image: linear-gradient(
+      to bottom,
+      black max(55%, calc(100% - 170px)),
+      transparent max(80%, calc(100% - 70px))
+    );
+    mask-image: linear-gradient(
+      to bottom,
+      black max(55%, calc(100% - 170px)),
+      transparent max(80%, calc(100% - 70px))
+    );
+  }
+
+  /* ── Phone kebab: chat options opposite the history toggle (r3) ────────── */
+  .dc-mobile-kebab-wrap {
+    position: relative;
+    justify-self: end;
+    margin-top: -6px;
+  }
+  .dc-mobile-kebab {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    min-width: 40px;
+    min-height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    color: var(--text-primary);
+    cursor: pointer;
+    padding: 0;
+  }
+  .dc-mobile-kebab-wrap .dc-thread-menu {
+    top: calc(100% + 6px);
+    right: 0;
+  }
+  .dc-thread-menu-item:disabled {
+    opacity: 0.45;
+    cursor: default;
+  }
+  .dc-rename-form {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px;
+  }
+  .dc-rename-input {
+    flex: 1;
+    min-width: 0;
+    font: inherit;
+    font-size: 13px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-primary);
+    border: 1px solid var(--text-secondary);
+    outline: none;
+  }
+  .dc-rename-input:focus {
+    box-shadow: 0 0 0 3px var(--ring);
+    border-color: transparent;
+  }
+
+  /* ── Composer theme swap (owner directive 2026-07-29 r2) ─────────────────
+     Phones run each theme's OPPOSITE composer kit: dark shows the light-kit
+     pill (white ground, black send disc, mint chevron + white plus-rect);
+     light shows the dark-kit pill (black ground, white send disc, black
+     chevron + mint plus-rect). Each pill keeps its designed button pairing
+     verbatim — only which theme wears which flips. The dime token pair is
+     the inverse in both themes, so the shared decls collapse to one rule;
+     only the glyph inks need theme scopes. A floating-surface shadow lifts
+     the pill off the chat ground. */
+  /* Theme-scoped to tie the frozen kit's 0-2-0 specificity — this file
+     imports after frozen-tokens.css, so the tie resolves here. */
+  .theme-dark .dc-composer,
+  .theme-light .dc-composer {
+    background: var(--dime-text-primary);
+    border: 1px solid var(--dime-bg);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.38);
+  }
+  .theme-dark .dc-composer:focus-within,
+  .theme-light .dc-composer:focus-within {
+    box-shadow:
+      0 0 0 3px var(--ring),
+      0 10px 28px rgba(0, 0, 0, 0.38);
+  }
+  .theme-dark .dc-composer-plus,
+  .theme-light .dc-composer-plus,
+  .theme-dark .dc-composer-input,
+  .theme-light .dc-composer-input {
+    color: var(--dime-bg);
+  }
+  .theme-dark .dc-composer-input::placeholder,
+  .theme-light .dc-composer-input::placeholder {
+    color: var(--dime-bg);
+  }
+  .theme-dark .dc-send,
+  .theme-light .dc-send {
+    background: var(--dime-bg);
+    border: 0.5px solid var(--dime-text-primary);
+  }
+  .theme-dark .dc-send-chevron {
+    stroke: var(--accent);
+  }
+  .theme-light .dc-send-chevron {
+    stroke: var(--text-primary);
+  }
+  .theme-dark .dc-send-rect {
+    fill: var(--text-primary);
+  }
+  .theme-light .dc-send-rect {
+    fill: var(--accent);
+  }
+
+  /* ── Phone drawer pass (owner directive 2026-07-29) ──────────────────────
+     The floating nav paints above the drawer (root stacking context vs the
+     fixed page's), so the drawer's own head/rows shift below the nav band —
+     nothing hides behind the pill chrome and the PanelLeftClose collapse
+     control stays visible and tappable. */
+  body.dime-floating-nav-active .dc-sidebar.dc-drawer {
+    padding-top: calc(var(--dime-floating-nav-h, 112px) + 10px);
+  }
+  /* NEW CHAT leads the panel at 1.5x the former recents-label size (11px ->
+     16.5px), icon + uppercase; RECENT CHATS steps up 1.25x (11px -> 13.75px). */
+  .dc-drawer .dc-nav-group .dc-sidebar-row {
+    font-size: 16.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .dc-drawer .dc-nav-group .dc-nav-ico {
+    width: 26px;
+    height: 26px;
+  }
+  .dc-drawer .dc-recents-label {
+    font-size: 13.75px;
+  }
+  /* Active-chat undertone: the current thread carries a solid mint inset
+     rail on top of its row fill — identifiable at a glance, mint stays the
+     single accent (THREE-COLOR-LAW). */
+  .dc-drawer .dc-recent-list .dc-sidebar-row.is-active {
+    box-shadow: inset 3px 0 0 var(--accent);
+  }
+  /* Graceful expand: while the spring slides the panel in (drawerMotion.ts),
+     its content cascades — one 160ms brand beat per group, small x-offset,
+     40ms stagger. aria-hidden is present only while closed, so removing it
+     on open (re)runs the animation. */
+  .dc-drawer:not([aria-hidden]) .dc-nav-group,
+  .dc-drawer:not([aria-hidden]) .dc-recents-head,
+  .dc-drawer:not([aria-hidden]) .dc-recent-list {
+    animation: dcDrawerCascade 160ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .dc-drawer:not([aria-hidden]) .dc-recents-head {
+    animation-delay: 40ms;
+  }
+  .dc-drawer:not([aria-hidden]) .dc-recent-list {
+    animation-delay: 80ms;
+  }
+
+  /* ── Toggle bar sizing (owner directive 2026-07-29 r2) ───────────────────
+     With the credits living solely in the floating nav pill, the bar holds
+     only the chat-history toggle — the band collapses to the button's own
+     footprint (0.9x: 44 -> 40px, icon 22.5 -> 20px), nudged up toward the
+     nav so the chrome reads as one cluster. */
+  body.dime-floating-nav-active .dc-mobile-bar {
+    height: 40px;
+  }
+  body.dime-floating-nav-active .dc-scroller {
+    padding-top: calc(40px + 12px);
+  }
+  .dc-mobile-menu {
+    min-width: 40px;
+    min-height: 40px;
+    margin-top: -6px;
+  }
+  .dc-mobile-menu svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  /* ── iMessage-register bubbles (owner directive 2026-07-29) ──────────────
+     User turns: inverse-ground bubble — light bubble/black ink on dark,
+     dark bubble/white ink on light — anchored right with a bottom-right
+     tail. Dime turns: mint bubble/black ink on BOTH themes, anchored left
+     with a bottom-left tail. Depth comes from a real drop shadow beneath
+     plus a 1px inner highlight (alpha lives only in box-shadow). Edge-stat
+     blocks and footnotes keep their own card/plain registers. */
+  .dc-thread {
+    row-gap: 16px;
+  }
+  .dc-user-capsule {
+    border-radius: 20px 20px 6px 20px;
+    padding: 10px 16px;
+  }
+  /* Inverse-ground bubble via the app token pair (X-HEX-EPIDEMIC: no raw
+     hex) — --dime-text-primary/--dime-bg IS the inverse in both themes:
+     WHITE bubble/black ink on dark, black bubble/white ink on light. Theme-
+     scoped (r3 fix): the frozen kit's .theme-* rules are 0-2-0 and were
+     silently winning over an unscoped 0-1-0 override — which is why dark
+     showed the old outline capsule instead of the white bubble. */
+  .theme-dark .dc-user-capsule,
+  .theme-light .dc-user-capsule {
+    background: var(--dime-text-primary);
+    color: var(--dime-bg);
+    border: 0;
+  }
+  .theme-dark .dc-user-capsule {
+    box-shadow:
+      0 2px 3px rgba(0, 0, 0, 0.45),
+      0 10px 22px rgba(0, 0, 0, 0.55),
+      inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  }
+  .theme-light .dc-user-capsule {
+    box-shadow:
+      0 2px 3px rgba(0, 0, 0, 0.16),
+      0 10px 22px rgba(0, 0, 0, 0.26),
+      inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  }
+  /* 3D pop-in: each bubble rises and settles as it is populated — one 160ms
+     brand beat, origin at the tail edge. Collapsed under reduced motion. */
+  .dc-turn--user .dc-user-capsule,
+  .dc-turn--assistant .dc-prose {
+    animation: dcBubbleIn 160ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    transform-origin: 50% 100%;
+  }
+  /* Conversation reads top-down (owner directive 2026-07-29 r3): the thread
+     anchors to the TOP of the viewport — the first-send FLIP carries the
+     opening message up to the top of the page, not to a centered float. */
+  .dc-thread {
+    margin-block-start: 0;
+  }
+  .dc-turn--assistant {
+    align-items: flex-start;
+  }
+  .dc-turn--assistant .dc-prose {
+    max-width: 85%;
+    /* Mint bubble both themes; --mint-on-light is the law's contrast ink
+       (near-black) — exactly the readable ink on the mint ground. */
+    background: var(--accent);
+    color: var(--mint-on-light);
+    border-radius: 20px 20px 20px 6px;
+    padding: 10px 16px;
+    line-height: 1.5;
+  }
+  .theme-dark .dc-turn--assistant .dc-prose {
+    box-shadow:
+      0 2px 3px rgba(0, 0, 0, 0.45),
+      0 10px 22px rgba(0, 0, 0, 0.55),
+      inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  }
+  .theme-light .dc-turn--assistant .dc-prose {
+    box-shadow:
+      0 2px 3px rgba(0, 0, 0, 0.16),
+      0 10px 22px rgba(0, 0, 0, 0.26),
+      inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  }
+  /* Links inside the mint bubble: mint-on-mint would vanish — black ink,
+     underline carries the affordance (never color alone). */
+  .dc-turn--assistant .dc-prose a,
+  .theme-light .dc-turn--assistant .dc-prose a {
+    color: var(--mint-on-light);
+    text-decoration: underline;
+  }
+}
+
+@keyframes dcDrawerCascade {
+  from {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes dcBubbleIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 @media (max-width: 430px) {
@@ -749,6 +1096,17 @@ button.dc-sidebar-row {
   }
   .dc-jump.dc-pressable:active {
     transform: translateX(-50%);
+  }
+  /* Drawer content cascade collapses with the rest of the motion system. */
+  .dc-drawer:not([aria-hidden]) .dc-nav-group,
+  .dc-drawer:not([aria-hidden]) .dc-recents-head,
+  .dc-drawer:not([aria-hidden]) .dc-recent-list {
+    animation: none;
+  }
+  /* Bubble pop-in likewise. */
+  .dc-turn--user .dc-user-capsule,
+  .dc-turn--assistant .dc-prose {
+    animation: none;
   }
 }
 

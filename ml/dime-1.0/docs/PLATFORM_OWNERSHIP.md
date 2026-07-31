@@ -16,6 +16,24 @@ review, audit, approval, and freeze layer has not produced an approved
 Foundation dataset and does not change any Hugging Face repository, training
 authorization, serving configuration, or provider state.
 
+## Dime LLM engineering and compute boundary
+
+Codex with 5.6 Sol is the Dime LLM engineering and training-control
+orchestrator. RunPod is the training and inference compute platform. Dime LLM
+is the trained model capability, Dime Chat is the user-facing interface, and
+frozen/no-provider is the deterministic fallback and non-generative control.
+
+The active candidate comparison is model-artifact based: the pinned base
+without Runtime Answer Routing v1, the same base with Runtime Answer Routing
+v1, and a Dime QLoRA adapter with the same routing revision. Anthropic is
+excluded from the active architecture. Historical checksum-pinned provider
+evidence is preserved but is not current decision authority.
+
+The exact machine-readable boundary is
+`configs/platform_contract.json.dime_llm_architecture`. It changes no
+authorization: RunPod invocation, training, evaluation, publication, serving,
+provider activation, and Railway mutation all remain blocked.
+
 The trusted reviewer registry is also `proposed`. It contains two owner-
 confirmed, independent AI-agent reviewer assignments, but both entries are
 inactive and grant no reviewer or approver authority. Reviewer-backed
@@ -43,14 +61,14 @@ approval record before freeze. It is never the approved Foundation release,
 training authority, an adapter release, or a serving source. RunPod may hold a
 working copy but is never authoritative.
 
-Foundation v1 is strictly limited to substantive human-authored gold examples
-and fully synthetic scenarios or fixtures. Substantive AI drafting and retained
-AI-supplied prose are prohibited. The `synthetic` source class cannot be used
-to relabel AI-authored answers. AI assistance may be limited to spelling,
-formatting, critique, and checklist validation when it supplies no retained
-substantive prose. Registered AI-agent reviewers may approve exact candidate
-bytes under the separation-of-duties contract; that authority does not permit
-AI-authored training prose.
+Foundation v1 permits human-authored gold examples, fully synthetic scenarios
+or fixtures, and teacher-generated records governed by
+`configs/foundation_data_factory_governance_v1.json`. The `synthetic` source
+class cannot relabel AI-authored answers. Teacher-generated records require
+immutable source packets, exact provenance, independent critique,
+deterministic validation, and private-only handling. Registered AI-agent
+reviewers may approve exact candidate bytes under the separation-of-duties
+contract; no generator may approve its own work.
 
 Human workbench access requires individual accounts and MFA. Registered AI
 reviewers require a unique workload identity bound to one reviewer profile.

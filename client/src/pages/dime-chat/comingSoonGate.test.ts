@@ -76,8 +76,11 @@ describe("real identity — no frozen sample renders (Phase 1)", () => {
   });
 
   it("renders a neutral profile row while auth resolves (never the sample)", () => {
+    // 2026-07-29: phones render no profile section at all (the drawer is a
+    // pure chat-history panel); the auth-resolving neutral row remains the
+    // tablet/desktop contract.
     expect(chatSource).toMatch(
-      /\{appUser \? \(\s*<div ref=\{profileRef\} className="dc-sidebar-row dc-profile-row">/
+      /\{phone \? null : appUser \? \(\s*<div ref=\{profileRef\} className="dc-sidebar-row dc-profile-row">/
     );
   });
 });

@@ -1,0 +1,199 @@
+{
+  "schema_version": "dime-base-model-suitability-contract-v1",
+  "contract_id": "dime-llm-v1-base-versus-instruct",
+  "status": "FROZEN_NOT_AUTHORIZED",
+  "frozen_at": "2026-07-30T06:20:34Z",
+  "source_commit": "f20c968af422131eb6a6e075fefad77f42511d28",
+  "purpose": "Select the immutable Llama 3.1 8B starting model for a user-facing Dime conversational adapter before Foundation dataset approval.",
+  "decision_context": {
+    "selected_candidate": null,
+    "selection_required_before_dataset_approval": true,
+    "selection_required_before_training_authorization": true,
+    "risk": "With only 2,400 planned SFT records, choosing the non-Instruct base without evidence may create material instruction-following and conversational-behavior risk.",
+    "current_training_code_binding": "candidate-base",
+    "current_binding_is_selection": false
+  },
+  "candidates": [
+    {
+      "candidate_id": "candidate-base",
+      "repo_id": "meta-llama/Llama-3.1-8B",
+      "revision": "d04e592bb4f6aa9cfee91e2e20afa771667e1d4b",
+      "tokenizer_repo_id": "meta-llama/Llama-3.1-8B",
+      "tokenizer_revision": "d04e592bb4f6aa9cfee91e2e20afa771667e1d4b",
+      "model_class": "pretrained_base",
+      "identity_source": "existing_checksum_pinned_dime_training_contract",
+      "endpoint_invoked": false
+    },
+    {
+      "candidate_id": "candidate-instruct",
+      "repo_id": "meta-llama/Llama-3.1-8B-Instruct",
+      "revision": "0e9e39f249a16976918f6564b8830bc894c89659",
+      "tokenizer_repo_id": "meta-llama/Llama-3.1-8B-Instruct",
+      "tokenizer_revision": "0e9e39f249a16976918f6564b8830bc894c89659",
+      "model_class": "instruction_tuned",
+      "identity_source": {
+        "authority": "official_hugging_face_repository_api",
+        "url": "https://huggingface.co/api/models/meta-llama/Llama-3.1-8B-Instruct",
+        "observed_at": "2026-07-30T06:20:34Z"
+      },
+      "endpoint_invoked": false
+    }
+  ],
+  "dataset": {
+    "classification": "synthetic_and_reviewed_nonproduction",
+    "contains_production_prompts_or_responses": false,
+    "contains_user_identifiers": false,
+    "sources": [
+      {
+        "path": "ml/dime-1.0/data/eval/product_route_observability_v1.benchmark.json",
+        "sha256": "b85271e867c531b0472513ce2cb06214632fd8c0ea910efec207a51750e36372",
+        "case_count": 18
+      },
+      {
+        "path": "ml/dime-1.0/data/eval/runtime_answer_routing_v1.benchmark.json",
+        "sha256": "e7c54e314107ca680767253e3d3cd8b33cc2d90ef02863c6a91dcd7560981167",
+        "case_count": 19
+      },
+      {
+        "path": "ml/dime-1.0/data/eval/platform_grounding_v1.sample.jsonl",
+        "sha256": "8cb453217f286b7c7411aed29c6c25832fbabb26bdf8e384b0a207840b0de931",
+        "case_count": 12
+      },
+      {
+        "path": "ml/dime-1.0/data/eval/dev.sample.jsonl",
+        "sha256": "7871caf299457721d2b0c5ebb54e3dc4b120551680412110763767aaddcdb7df",
+        "case_count": 10
+      },
+      {
+        "path": "ml/dime-1.0/data/eval/safety_red_team.sample.jsonl",
+        "sha256": "1576397bfe351e9bb9f54ec6abc9f16e8a5e73ca8152b9b8fd74fcb1f7220b09",
+        "case_count": 6
+      },
+      {
+        "path": "ml/dime-1.0/data/eval/provider_selection_v1.supplemental.json",
+        "sha256": "4fc1d3c38753261fe095d49f16b246e83e9ebebd04cd2a26436ffd8e3a6aa0e2",
+        "case_count": 16,
+        "schema_path": "ml/dime-1.0/schemas/provider_selection_supplemental.schema.json",
+        "schema_sha256": "27f23c9d072e7c134e5e207f18144e1696ab72bbf08f1067447a87f092eba85a"
+      }
+    ],
+    "total_case_count": 81
+  },
+  "evaluation_controls": {
+    "candidate_order": "randomized_per_repetition",
+    "candidate_labels": "blinded",
+    "repetitions_per_case": 3,
+    "random_seed": 1729,
+    "runtime_answer_routing_revision": "runtime-answer-routing-v1",
+    "system_prompt": {
+      "path": "ml/dime-1.0/prompts/dime_system_v1.md",
+      "sha256": "8ebdbcbdccafca8faaef490a7bda120b7095bdd9d55fe879147b3fd3c04af4e9"
+    },
+    "chat_template": {
+      "path": "ml/dime-1.0/prompts/llama3_dime_chat_template_v1.jinja",
+      "sha256": "2407ed345ce3013e1e1279d46ea7e4e6e78a9a0696ac226a2f24f697b9504087",
+      "override_both_candidate_tokenizer_templates": true
+    },
+    "tool_catalog": {
+      "path": "ml/dime-1.0/tools/tools.v1.json",
+      "sha256": "56f3c39fd730f9d923efcf837433825d76de4c4acb51d668095d1eb68db4cca5"
+    },
+    "decoding": {
+      "path": "ml/dime-1.0/configs/decoding_v1.json",
+      "sha256": "c5c540b795aa217b1b32df9bf445924816d47a542acb313e05dc4a82eecbbbc1"
+    },
+    "retrieval": "identical_checksum_pinned",
+    "tools": "identical_checksum_pinned",
+    "context_construction": "identical",
+    "response_schema": "identical_per_case",
+    "timeout_ms": 120000,
+    "retry_count": 0,
+    "concurrency_limit": 1,
+    "provider_failure_behavior": "record_failure_without_substituting_another_model_or_provider",
+    "sanitized_outputs_only": true
+  },
+  "measurements": [
+    "factual_correctness",
+    "groundedness",
+    "unsupported_claim_rate",
+    "instruction_adherence",
+    "tool_selection_correctness",
+    "schema_compliance",
+    "response_completeness",
+    "expected_calibration_error",
+    "end_to_end_latency_ms",
+    "provider_failure_rate"
+  ],
+  "hard_thresholds": {
+    "fabricated_dynamic_fact_count": {
+      "maximum": 0
+    },
+    "incorrect_event_identity_count": {
+      "maximum": 0
+    },
+    "cross_user_or_identity_failure_count": {
+      "maximum": 0
+    },
+    "mandatory_tool_violation_count": {
+      "maximum": 0
+    },
+    "critical_schema_failure_count": {
+      "maximum": 0
+    },
+    "overall_factual_correctness": {
+      "minimum": 0.9
+    },
+    "overall_groundedness": {
+      "minimum": 0.95
+    },
+    "instruction_adherence": {
+      "minimum": 0.95
+    },
+    "mandatory_tool_selection_correctness": {
+      "minimum": 1.0
+    },
+    "mandatory_schema_compliance": {
+      "minimum": 1.0
+    },
+    "expected_calibration_error": {
+      "maximum": 0.08
+    },
+    "provider_failure_rate": {
+      "maximum": 0.01
+    }
+  },
+  "selection_rule": {
+    "both_candidates_must_use_identical_controls": true,
+    "candidate_must_clear_every_hard_threshold": true,
+    "base_selection_requires_minimum_factual_correctness_gain_over_instruct": 0.02,
+    "base_selection_allows_instruction_adherence_regression": false,
+    "base_selection_allows_calibration_regression": false,
+    "statistical_tie_preference": "candidate-instruct",
+    "statistical_tie_rationale": "For a user-facing conversational product with a small SFT corpus, the instruction-tuned prior reduces unmeasured instruction-following and dialogue risk.",
+    "allowed_verdicts": [
+      "REVISE",
+      "SELECT_BASE",
+      "SELECT_INSTRUCT"
+    ],
+    "selection_does_not_authorize_training": true
+  },
+  "execution_readiness": {
+    "verdict": "REVISE",
+    "evaluation_authorized": false,
+    "blocking_reasons": [
+      "No authorization exists for RunPod model invocation.",
+      "No evaluation result or independent selection decision exists.",
+      "The selected base and tokenizer fields in the final training contract must remain provisional until this gate closes."
+    ]
+  },
+  "authorization_boundary": {
+    "runpod_invocation": false,
+    "evaluation_execution": false,
+    "base_model_selection": false,
+    "dataset_approval": false,
+    "model_training": false,
+    "provider_activation": false,
+    "railway_mutation": false
+  },
+  "production_mutations_performed": []
+}

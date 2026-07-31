@@ -1,0 +1,196 @@
+{
+ "typography": [
+  {
+   "key": "Familjen Grotesk|22.75px|400|normal|normal",
+   "count": 5,
+   "sample": "AI Model Projections",
+   "cls": "dc-sidebar-text"
+  },
+  {
+   "key": "Familjen Grotesk|64px|700|64px|-3.2px",
+   "count": 3,
+   "sample": "d",
+   "cls": "SPAN"
+  },
+  {
+   "key": "Familjen Grotesk|13px|600|normal|normal",
+   "count": 3,
+   "sample": "World Cup Model Simulations",
+   "cls": "dc-pill dc-pill--contrast dc-hv1 dc-focusable dc-p"
+  },
+  {
+   "key": "Familjen Grotesk|50px|700|50px|-2.5px",
+   "count": 2,
+   "sample": "dıme",
+   "cls": "dime-wordmark"
+  },
+  {
+   "key": "Familjen Grotesk|16.64px|400|normal|normal",
+   "count": 2,
+   "sample": "Dime Chat",
+   "cls": "dc-shell-sr-only"
+  },
+  {
+   "key": "Familjen Grotesk|22.75px|600|normal|normal",
+   "count": 1,
+   "sample": "New Chat",
+   "cls": "dc-sidebar-text"
+  },
+  {
+   "key": "Familjen Grotesk|18px|500|normal|normal",
+   "count": 1,
+   "sample": "＋",
+   "cls": "dc-composer-plus"
+  },
+  {
+   "key": "Familjen Grotesk|11px|400|15.4px|normal",
+   "count": 1,
+   "sample": "Model estimates, not guarant",
+   "cls": "dc-chat-footer"
+  }
+ ],
+ "distinctFontSizes": [
+  "11px",
+  "13px",
+  "16.64px",
+  "18px",
+  "22.75px",
+  "50px",
+  "64px"
+ ],
+ "distinctFamilies": [
+  "Familjen Grotesk"
+ ],
+ "numericSample": [],
+ "radii": [
+  [
+   "8px",
+   8
+  ],
+  [
+   "50%",
+   6
+  ],
+  [
+   "20px",
+   3
+  ],
+  [
+   "0px 0px 8px 8px",
+   1
+  ],
+  [
+   "26px",
+   1
+  ]
+ ],
+ "shadows": [],
+ "mint": {
+  "text": 2,
+  "bg": 3,
+  "border": 0,
+  "samples": [
+   {
+    "tag": "SPAN",
+    "cls": "dime-coindot",
+    "text": ""
+   },
+   {
+    "tag": "svg",
+    "cls": "[object SVGAnimatedString]",
+    "text": ""
+   },
+   {
+    "tag": "path",
+    "cls": "[object SVGAnimatedString]",
+    "text": ""
+   },
+   {
+    "tag": "SPAN",
+    "cls": "dc-hero-dot",
+    "text": ""
+   },
+   {
+    "tag": "BUTTON",
+    "cls": "dc-pill dc-pill--mint dc-hv1 dc-focusabl",
+    "text": "Best Trends for MLB "
+   }
+  ]
+ },
+ "contrastFails": [],
+ "contrastFailTotal": 0,
+ "smallTargets": [
+  {
+   "tag": "BUTTON",
+   "cls": "dc-icon-btn dc-hv2 dc-pressable dc-focus",
+   "w": 32,
+   "h": 32,
+   "text": "Search chats"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "dc-icon-btn dc-hv2 dc-pressable dc-focus",
+   "w": 32,
+   "h": 32,
+   "text": "Collapse sidebar"
+  },
+  {
+   "tag": "H1",
+   "cls": "dc-shell-sr-only",
+   "w": 1,
+   "h": 1,
+   "text": "Dime Chat"
+  },
+  {
+   "tag": "INPUT",
+   "cls": "dc-composer-input",
+   "w": 606,
+   "h": 17,
+   "text": ""
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "dc-send dc-hv3 dc-focusable dc-pressable",
+   "w": 36,
+   "h": 36,
+   "text": "Submit prompt"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "dc-pill dc-pill--contrast dc-hv1 dc-focu",
+   "w": 227,
+   "h": 36,
+   "text": "World Cup Model Simu"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "dc-pill dc-pill--outline dc-hv1 dc-focus",
+   "w": 243,
+   "h": 36,
+   "text": "Player Props with th"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "dc-pill dc-pill--mint dc-hv1 dc-focusabl",
+   "w": 238,
+   "h": 36,
+   "text": "Best Trends for MLB "
+  },
+  {
+   "tag": "H1",
+   "cls": "dc-shell-sr-only",
+   "w": 1,
+   "h": 1,
+   "text": "Dime Chat"
+  }
+ ],
+ "clickableCount": 15,
+ "cardGeometry": [],
+ "unnamedIconButtons": [
+  {
+   "tag": "INPUT",
+   "cls": "dc-composer-input"
+  }
+ ],
+ "animations": []
+}

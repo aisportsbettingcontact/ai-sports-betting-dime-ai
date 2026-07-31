@@ -172,7 +172,11 @@ describe("GameCard MLB spread odds rendering gate", () => {
 
   it("uses isMlbGame && modelAwaySpreadOdds to gate RL odds display", () => {
     // GameCard checks (isNcaamGame || isMlbGame) && game.modelAwaySpreadOdds
-    expect(source).toMatch(/isMlbGame.*modelAwaySpreadOdds|modelAwaySpreadOdds.*isMlbGame/);
+    // Newline-tolerant within a short window — prettier may wrap the gate
+    // expression across lines.
+    expect(source).toMatch(
+      /isMlbGame[\s\S]{0,200}modelAwaySpreadOdds|modelAwaySpreadOdds[\s\S]{0,200}isMlbGame/
+    );
   });
 
   it("renders mdlAwaySpreadStr with odds when modelAwaySpreadOdds is present", () => {

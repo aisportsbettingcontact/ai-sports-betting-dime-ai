@@ -45,10 +45,14 @@
  *   [OddsHistoryPanel] [ERROR]  ...
  */
 
-import { useState } from "react";
-import { ChevronDown, ChevronUp, Clock, RefreshCw } from "lucide-react";
+import { useId, useState } from "react";
+import { ChevronDown, Clock, RefreshCw } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useIsMdUp } from "@/hooks/useIsMdUp";
+// The panel's .ohp-* styles ride whichever chunk renders it (NOT the chat
+// critical path) — importing here covers every direct consumer, including
+// PublishProjections, regardless of navigation order.
+import "@/styles/splits-interactions.css";
 
 export type ActiveMarket = "spread" | "total" | "ml";
 
@@ -64,8 +68,14 @@ interface OddsHistoryPanelProps {
 
 // ── Logging ────────────────────────────────────────────────────────────────────
 
-function log(tag: "INPUT" | "STATE" | "OUTPUT" | "VERIFY" | "ERROR" | "TOGGLE" | "RENDER", msg: string) {
-  console.log(`[OddsHistoryPanel] [${tag}]  ${msg}`);
+function log(
+  tag: "INPUT" | "STATE" | "OUTPUT" | "VERIFY" | "ERROR" | "TOGGLE" | "RENDER",
+  msg: string
+) {
+  // Diagnostic tracing only — silent in production builds.
+  if (process.env.NODE_ENV === "development") {
+    console.log(`[OddsHistoryPanel] [${tag}]  ${msg}`);
+  }
 }
 
 // ── Timestamp formatter ────────────────────────────────────────────────────────
@@ -88,11 +98,11 @@ function fmtTimestamp(epochMs: number): string {
     hour12: true,
   }).formatToParts(d);
 
-  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "??";
+  const get = (type: string) => parts.find(p => p.type === type)?.value ?? "??";
 
-  const month  = get("month");
-  const day    = get("day");
-  const hour   = get("hour");
+  const month = get("month");
+  const day = get("day");
+  const hour = get("hour");
   const minute = get("minute");
   const dayPeriod = get("dayPeriod").toLowerCase();
 
@@ -102,7 +112,10 @@ function fmtTimestamp(epochMs: number): string {
 // ── Line formatters ────────────────────────────────────────────────────────────
 
 /** "+1.5 (-175)" or "—" */
-function fmtSpread(value: string | null | undefined, odds: string | null | undefined): string {
+function fmtSpread(
+  value: string | null | undefined,
+  odds: string | null | undefined
+): string {
   if (!value) return "—";
   const v = parseFloat(value);
   if (isNaN(v)) return value;
@@ -112,7 +125,10 @@ function fmtSpread(value: string | null | undefined, odds: string | null | undef
 }
 
 /** "o8.5 (-115)" or "—" */
-function fmtOver(total: string | null | undefined, odds: string | null | undefined): string {
+function fmtOver(
+  total: string | null | undefined,
+  odds: string | null | undefined
+): string {
   if (!total) return "—";
   const t = parseFloat(total);
   if (isNaN(t)) return total;
@@ -120,7 +136,10 @@ function fmtOver(total: string | null | undefined, odds: string | null | undefin
 }
 
 /** "u8.5 (-105)" or "—" */
-function fmtUnder(total: string | null | undefined, odds: string | null | undefined): string {
+function fmtUnder(
+  total: string | null | undefined,
+  odds: string | null | undefined
+): string {
   if (!total) return "—";
   const t = parseFloat(total);
   if (isNaN(t)) return total;
@@ -168,24 +187,32 @@ type HistoryRow = {
 function dedupKey(row: HistoryRow, market: ActiveMarket): string {
   if (market === "spread") {
     return [
-      row.awaySpread, row.awaySpreadOdds,
-      row.homeSpread, row.homeSpreadOdds,
-      row.spreadAwayBetsPct, row.spreadAwayMoneyPct,
+      row.awaySpread,
+      row.awaySpreadOdds,
+      row.homeSpread,
+      row.homeSpreadOdds,
+      row.spreadAwayBetsPct,
+      row.spreadAwayMoneyPct,
     ].join("|");
   }
   if (market === "total") {
     return [
-      row.total, row.overOdds, row.underOdds,
-      row.totalOverBetsPct, row.totalOverMoneyPct,
+      row.total,
+      row.overOdds,
+      row.underOdds,
+      row.totalOverBetsPct,
+      row.totalOverMoneyPct,
     ].join("|");
   }
-  return [
-    row.awayML, row.homeML,
-    row.mlAwayBetsPct, row.mlAwayMoneyPct,
-  ].join("|");
+  return [row.awayML, row.homeML, row.mlAwayBetsPct, row.mlAwayMoneyPct].join(
+    "|"
+  );
 }
 
-function deduplicateRows(rows: HistoryRow[], market: ActiveMarket): HistoryRow[] {
+function deduplicateRows(
+  rows: HistoryRow[],
+  market: ActiveMarket
+): HistoryRow[] {
   const out: HistoryRow[] = [];
   let lastKey: string | null = null;
   for (const row of rows) {
@@ -200,8 +227,14 @@ function deduplicateRows(rows: HistoryRow[], market: ActiveMarket): HistoryRow[]
 
 /** True when the row carries any value for the market (null-row filter). */
 function hasMarketValue(row: HistoryRow, market: ActiveMarket): boolean {
-  if (market === "spread") return !!(row.awaySpread || row.homeSpread || row.awaySpreadOdds || row.homeSpreadOdds);
-  if (market === "total")  return !!(row.total || row.overOdds || row.underOdds);
+  if (market === "spread")
+    return !!(
+      row.awaySpread ||
+      row.homeSpread ||
+      row.awaySpreadOdds ||
+      row.homeSpreadOdds
+    );
+  if (market === "total") return !!(row.total || row.overOdds || row.underOdds);
   return !!(row.awayML || row.homeML);
 }
 
@@ -220,7 +253,8 @@ type MarketCells = {
 };
 
 function marketCells(row: HistoryRow, market: ActiveMarket): MarketCells {
-  const inv = (pending: boolean, v: number | null) => (pending || v == null ? null : 100 - v);
+  const inv = (pending: boolean, v: number | null) =>
+    pending || v == null ? null : 100 - v;
   if (market === "spread") {
     const pending =
       (row.spreadAwayBetsPct == null || row.spreadAwayBetsPct === 0) &&
@@ -270,8 +304,8 @@ function marketCells(row: HistoryRow, market: ActiveMarket): MarketCells {
 
 const MARKET_LABEL: Record<ActiveMarket, string> = {
   spread: "SPREAD",
-  total:  "TOTAL",
-  ml:     "MONEYLINE",
+  total: "TOTAL",
+  ml: "MONEYLINE",
 };
 
 // ── Team logo + name component ─────────────────────────────────────────────────
@@ -311,7 +345,7 @@ function TeamHeader({
             objectFit: "contain",
             flexShrink: 0,
           }}
-          onError={(e) => {
+          onError={e => {
             (e.currentTarget as HTMLImageElement).style.display = "none";
           }}
         />
@@ -364,7 +398,10 @@ const TD: React.CSSProperties = {
 };
 
 /** Line/odds cells — the payload of the table reads loudest. */
-const TD_LINE: React.CSSProperties = { fontWeight: 700, color: "var(--dime-text-primary)" };
+const TD_LINE: React.CSSProperties = {
+  fontWeight: 700,
+  color: "var(--dime-text-primary)",
+};
 
 /** Timestamp cells — technical metadata, mono for column alignment. */
 const TD_TIME: React.CSSProperties = {
@@ -374,7 +411,9 @@ const TD_TIME: React.CSSProperties = {
   color: "var(--dime-text-secondary)",
 };
 
-const BORDER_L: React.CSSProperties = { borderLeft: "1px solid var(--dime-border)" };
+const BORDER_L: React.CSSProperties = {
+  borderLeft: "1px solid var(--dime-border)",
+};
 
 const DIM_COLOR = "var(--dime-text-secondary)";
 
@@ -402,46 +441,70 @@ function MarketHistoryTable({
 }) {
   // OPEN pinning: first OPEN row with values for THIS market (oldest = last in
   // the DESC-ordered array); DK rows dedupe per market so every move is real.
-  const openRows = rawRows.filter(r => r.lineSource === 'open');
-  const dkRows   = rawRows.filter(r => r.lineSource !== 'open');
+  const openRows = rawRows.filter(r => r.lineSource === "open");
+  const dkRows = rawRows.filter(r => r.lineSource !== "open");
   const pinnedOpenRow = openRows.find(r => hasMarketValue(r, market)) ?? null;
-  const rows = deduplicateRows(dkRows.filter(r => hasMarketValue(r, market)), market);
+  const rows = deduplicateRows(
+    dkRows.filter(r => hasMarketValue(r, market)),
+    market
+  );
 
   if (rows.length === 0 && !pinnedOpenRow) {
     return (
-      <p className="text-xs py-3 text-center" style={{ color: "var(--dime-text-secondary)" }}>
-        No snapshots yet — history populates after the next 10-min refresh cycle.
+      <p
+        className="text-xs py-3 text-center"
+        style={{ color: "var(--dime-text-secondary)" }}
+      >
+        No snapshots yet — history populates after the next 10-min refresh
+        cycle.
       </p>
     );
   }
 
-  const pctColor = (pending: boolean) => (pending ? DIM_COLOR : "var(--dime-text-body)");
+  const pctColor = (pending: boolean) =>
+    pending ? DIM_COLOR : "var(--dime-text-body)";
 
-  const renderDataRow = (row: HistoryRow, opts: { pinned?: boolean; zebra?: boolean; lastRow?: boolean }) => {
+  const renderDataRow = (
+    row: HistoryRow,
+    opts: { pinned?: boolean; zebra?: boolean; lastRow?: boolean }
+  ) => {
     const cells = marketCells(row, market);
     return (
       <tr
         key={`${market}-${row.id}${opts.pinned ? "-open" : ""}`}
         style={{
-          background: opts.pinned || opts.zebra ? "var(--dime-row-hover)" : "transparent",
+          background:
+            opts.pinned || opts.zebra ? "var(--dime-row-hover)" : "transparent",
           borderBottom: opts.lastRow ? "none" : "1px solid var(--dime-border)",
         }}
       >
         <td style={{ ...TD, ...TD_TIME, textAlign: "left" }}>
           {fmtTimestamp(row.scrapedAt)}
         </td>
-        <td style={{ ...TD, ...TD_LINE, ...BORDER_L, textAlign: "center" }}>{cells.lineA}</td>
-        <td style={{ ...TD, textAlign: "center", color: pctColor(cells.pending) }}>
+        <td style={{ ...TD, ...TD_LINE, ...BORDER_L, textAlign: "center" }}>
+          {cells.lineA}
+        </td>
+        <td
+          style={{ ...TD, textAlign: "center", color: pctColor(cells.pending) }}
+        >
           {cells.pending ? "—" : fmtPct(cells.betsA)}
         </td>
-        <td style={{ ...TD, textAlign: "center", color: pctColor(cells.pending) }}>
+        <td
+          style={{ ...TD, textAlign: "center", color: pctColor(cells.pending) }}
+        >
           {cells.pending ? "—" : fmtPct(cells.moneyA)}
         </td>
-        <td style={{ ...TD, ...TD_LINE, ...BORDER_L, textAlign: "center" }}>{cells.lineB}</td>
-        <td style={{ ...TD, textAlign: "center", color: pctColor(cells.pending) }}>
+        <td style={{ ...TD, ...TD_LINE, ...BORDER_L, textAlign: "center" }}>
+          {cells.lineB}
+        </td>
+        <td
+          style={{ ...TD, textAlign: "center", color: pctColor(cells.pending) }}
+        >
           {cells.pending ? "—" : fmtPct(cells.betsB)}
         </td>
-        <td style={{ ...TD, textAlign: "center", color: pctColor(cells.pending) }}>
+        <td
+          style={{ ...TD, textAlign: "center", color: pctColor(cells.pending) }}
+        >
           {cells.pending ? "—" : fmtPct(cells.moneyB)}
         </td>
       </tr>
@@ -454,7 +517,9 @@ function MarketHistoryTable({
         colSpan={7}
         style={{
           padding: "3px 8px",
-          background: live ? "var(--dime-mint-dim)" : "var(--dime-surface-raised)",
+          background: live
+            ? "var(--dime-mint-dim)"
+            : "var(--dime-surface-raised)",
           borderTop: `1px solid ${live ? "var(--dime-mint-border)" : "var(--dime-border-strong)"}`,
           borderBottom: `1px solid ${live ? "var(--dime-mint-border)" : "var(--dime-border-strong)"}`,
           textAlign: "center",
@@ -506,32 +571,71 @@ function MarketHistoryTable({
               <th style={{ ...TH, ...BORDER_L, textAlign: "center" }}>OVER</th>
             ) : (
               <th style={{ ...TH, ...BORDER_L, textAlign: "center" }}>
-                <TeamHeader logoUrl={awayLogo} abbrev={awayAbbrev} name={awayAbbrev} />
+                <TeamHeader
+                  logoUrl={awayLogo}
+                  abbrev={awayAbbrev}
+                  name={awayAbbrev}
+                />
               </th>
             )}
-            <th style={{ ...TH, textAlign: "center" }} title={market === "total" ? "Over tickets %" : "Away tickets %"}>Tickets</th>
-            <th style={{ ...TH, textAlign: "center" }} title={market === "total" ? "Over money %" : "Away money %"}>Handle</th>
+            <th
+              style={{ ...TH, textAlign: "center" }}
+              title={market === "total" ? "Over tickets %" : "Away tickets %"}
+            >
+              Tickets
+            </th>
+            <th
+              style={{ ...TH, textAlign: "center" }}
+              title={market === "total" ? "Over money %" : "Away money %"}
+            >
+              Handle
+            </th>
             {market === "total" ? (
               <th style={{ ...TH, ...BORDER_L, textAlign: "center" }}>UNDER</th>
             ) : (
               <th style={{ ...TH, ...BORDER_L, textAlign: "center" }}>
-                <TeamHeader logoUrl={homeLogo} abbrev={homeAbbrev} name={homeAbbrev} />
+                <TeamHeader
+                  logoUrl={homeLogo}
+                  abbrev={homeAbbrev}
+                  name={homeAbbrev}
+                />
               </th>
             )}
-            <th style={{ ...TH, textAlign: "center" }} title={market === "total" ? "Under tickets %" : "Home tickets %"}>Tickets</th>
-            <th style={{ ...TH, textAlign: "center" }} title={market === "total" ? "Under money %" : "Home money %"}>Handle</th>
+            <th
+              style={{ ...TH, textAlign: "center" }}
+              title={market === "total" ? "Under tickets %" : "Home tickets %"}
+            >
+              Tickets
+            </th>
+            <th
+              style={{ ...TH, textAlign: "center" }}
+              title={market === "total" ? "Under money %" : "Home money %"}
+            >
+              Handle
+            </th>
           </tr>
         </thead>
         <tbody>
           {pinnedOpenRow && (
             <>
               {separatorRow(`${market}-sep-open`, "OPENING LINE", false)}
-              {renderDataRow(pinnedOpenRow, { pinned: true, lastRow: rows.length === 0 })}
-              {rows.length > 0 && separatorRow(`${market}-sep-live`, "LIVE MARKET MOVEMENT", true)}
+              {renderDataRow(pinnedOpenRow, {
+                pinned: true,
+                lastRow: rows.length === 0,
+              })}
+              {rows.length > 0 &&
+                separatorRow(
+                  `${market}-sep-live`,
+                  "LIVE MARKET MOVEMENT",
+                  true
+                )}
             </>
           )}
           {rows.map((row, idx) =>
-            renderDataRow(row, { zebra: idx % 2 === 0, lastRow: idx === rows.length - 1 })
+            renderDataRow(row, {
+              zebra: idx % 2 === 0,
+              lastRow: idx === rows.length - 1,
+            })
           )}
         </tbody>
       </table>
@@ -549,10 +653,13 @@ export function OddsHistoryPanel({
   enabled = true,
 }: OddsHistoryPanelProps) {
   const [open, setOpen] = useState(false);
+  const bodyId = useId();
 
   // Tablet + desktop show every market together; mobile follows the toggle.
   const isMdUp = useIsMdUp();
-  const markets: ActiveMarket[] = isMdUp ? ["spread", "total", "ml"] : [activeMarket];
+  const markets: ActiveMarket[] = isMdUp
+    ? ["spread", "total", "ml"]
+    : [activeMarket];
 
   // ── Data fetch (lazy — only when panel is expanded) ────────────────────────
   const { data, isLoading, error } = trpc.oddsHistory.listForGame.useQuery(
@@ -575,16 +682,22 @@ export function OddsHistoryPanel({
   );
   const { data: colorsNba } = trpc.teamColors.getForGame.useQuery(
     { awayTeam, homeTeam, sport: "NBA" },
-    { staleTime: 3_600_000, enabled: open && !colorsMlb?.away?.logoUrl && !colorsNhl?.away?.logoUrl }
+    {
+      staleTime: 3_600_000,
+      enabled: open && !colorsMlb?.away?.logoUrl && !colorsNhl?.away?.logoUrl,
+    }
   );
 
-  const colors = colorsMlb?.away?.logoUrl ? colorsMlb
-    : colorsNhl?.away?.logoUrl ? colorsNhl
-    : colorsNba?.away?.logoUrl ? colorsNba
-    : colorsMlb;
+  const colors = colorsMlb?.away?.logoUrl
+    ? colorsMlb
+    : colorsNhl?.away?.logoUrl
+      ? colorsNhl
+      : colorsNba?.away?.logoUrl
+        ? colorsNba
+        : colorsMlb;
 
-  const awayLogo   = colors?.away?.logoUrl;
-  const homeLogo   = colors?.home?.logoUrl;
+  const awayLogo = colors?.away?.logoUrl;
+  const homeLogo = colors?.home?.logoUrl;
   const awayAbbrev = colors?.away?.abbrev ?? awayTeam;
   const homeAbbrev = colors?.home?.abbrev ?? homeTeam;
 
@@ -592,10 +705,11 @@ export function OddsHistoryPanel({
 
   // ── Logging ────────────────────────────────────────────────────────────────
   if (open && !isLoading && !error && rawRows.length > 0) {
-    log("OUTPUT",
+    log(
+      "OUTPUT",
       `gameId=${gameId} markets=${markets.join(",")} | raw=${rawRows.length} | ` +
-      `latest=${fmtTimestamp(rawRows[0]?.scrapedAt ?? 0)} ` +
-      `oldest=${fmtTimestamp(rawRows[rawRows.length - 1]?.scrapedAt ?? 0)}`
+        `latest=${fmtTimestamp(rawRows[0]?.scrapedAt ?? 0)} ` +
+        `oldest=${fmtTimestamp(rawRows[rawRows.length - 1]?.scrapedAt ?? 0)}`
     );
   }
   if (open && error) {
@@ -604,17 +718,22 @@ export function OddsHistoryPanel({
 
   const handleToggle = () => {
     const next = !open;
-    log("TOGGLE", `gameId=${gameId} markets=${markets.join(",")} | ${next ? "OPEN" : "CLOSE"}`);
+    log(
+      "TOGGLE",
+      `gameId=${gameId} markets=${markets.join(",")} | ${next ? "OPEN" : "CLOSE"}`
+    );
     setOpen(next);
   };
 
   return (
     <div className="border-t" style={{ borderColor: "var(--dime-border)" }}>
-
       {/* ── Toggle header ─────────────────────────────────────────────────── */}
-      <button type="button" onClick={handleToggle}
+      <button
+        type="button"
+        onClick={handleToggle}
         className="ohp-toggle w-full flex items-center justify-between px-4 py-2.5"
         aria-expanded={open}
+        aria-controls={bodyId}
       >
         <div className="flex items-center gap-2">
           <Clock size={14} style={{ color: "var(--dime-text-secondary)" }} />
@@ -650,31 +769,52 @@ export function OddsHistoryPanel({
             </span>
           )}
         </div>
-        {open
-          ? <ChevronUp size={15} style={{ color: "var(--dime-text-secondary)" }} />
-          : <ChevronDown size={15} style={{ color: "var(--dime-text-secondary)" }} />
-        }
+        {/* One glyph, one axis: the chevron rotates in place (160ms brand
+            curve via .ohp-chevron) instead of swapping icons — the collapse
+            path mirrors the expand path. */}
+        <ChevronDown
+          size={15}
+          aria-hidden="true"
+          className="ohp-chevron"
+          data-open={open}
+          style={{ color: "var(--dime-text-secondary)" }}
+        />
       </button>
 
       {/* ── Expanded panel ────────────────────────────────────────────────── */}
       {open && (
-        <div className="px-3 pb-3">
+        <div
+          id={bodyId}
+          role="region"
+          aria-label="Odds and splits history"
+          className="ohp-body px-3 pb-3"
+        >
           {isLoading ? (
-            <div className="flex items-center justify-center py-6 gap-2" style={{ color: "var(--dime-text-secondary)" }}>
+            <div
+              className="flex items-center justify-center py-6 gap-2"
+              style={{ color: "var(--dime-text-secondary)" }}
+            >
               <RefreshCw size={13} className="animate-spin" />
               <span className="text-xs">Loading history…</span>
             </div>
           ) : error ? (
-            <p className="text-xs text-center py-4" style={{ color: "var(--dime-text-secondary)" }}>
+            <p
+              className="text-xs text-center py-4"
+              style={{ color: "var(--dime-text-secondary)" }}
+            >
               Failed to load odds &amp; splits history.
             </p>
           ) : rawRows.length === 0 ? (
-            <p className="text-xs text-center py-4" style={{ color: "var(--dime-text-secondary)" }}>
-              No snapshots yet — history populates after the next 10-min refresh cycle.
+            <p
+              className="text-xs text-center py-4"
+              style={{ color: "var(--dime-text-secondary)" }}
+            >
+              No snapshots yet — history populates after the next 10-min refresh
+              cycle.
             </p>
           ) : (
             <div className="flex flex-col" style={{ gap: 14 }}>
-              {markets.map((market) => (
+              {markets.map(market => (
                 <div key={market} className="flex flex-col" style={{ gap: 6 }}>
                   {/* Section label — only needed when several markets stack */}
                   {isMdUp && (

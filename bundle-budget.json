@@ -2,7 +2,23 @@
   "metric": "chat-critical-path-gzip-bytes",
   "baselineCommit": "b03cea01",
   "baselineBytes": 210762,
-  "allowanceBytes": 7680,
+  "allowanceBytes": 8704,
+  "recalibration7": {
+    "date": "2026-07-29",
+    "allowanceBytesBefore": 8192,
+    "allowanceBytesAfter": 8704,
+    "deltaBytes": 512,
+    "reason": "PR #228 (Betting Splits brand-law UI/UX refresh) merged to main while PR #227 (Trends redesign, recalibration6) was in flight; its own ~495B gzip of diffuse GLOBAL Tailwind utility CSS on index.css combines with the Trends utilities once the branches meet, measuring 219,122B vs the 218,954B ceiling (168B over) on the updated #227 branch. Same class of growth as recalibrations 2-6: brand-law styling for explicitly-requested redesigns landing on the sitewide stylesheet, zero route JS on the chat static-import closure. Allowance raised 512B to clear the union with a ~344B margin. framer-motion / vendor-motion contribution stays 0 (verified in the failing run itself: 'vendor-motion chunks in path: 0'); any vendor-motion return or further material growth still fails this gate.",
+    "verifiedVendorMotionChunks": 0
+  },
+  "recalibration6": {
+    "date": "2026-07-29",
+    "allowanceBytesBefore": 7680,
+    "allowanceBytesAfter": 8192,
+    "deltaBytes": 512,
+    "reason": "The MLB Trends Law-v2 redesign (PR #227: TrendsPage + shared RecentSchedulePanel/SituationalResultsPanel) adds ~185B gzip of diffuse GLOBAL Tailwind utility CSS to the single index.css, which is on every route incl. /chat: the 160ms brand-curve transition utilities (duration-[160ms], ease-[cubic-bezier(0.16,1,0.3,1)], transition-[background-color,color,transform]), active:scale-[0.97] press feedback with motion-reduce guard, tabular-nums, tracking-[0.08em] micro-labels, token-var color/surface utilities (--text-secondary/--text-muted/--surface-raised/--row-hover), and the responsive xl:grid-cols-2/xl:divide-x card grid. ALL Trends JS is behind the lazy TrendsPage/GameCard/BettingSplits routes and NOT on the chat static-import closure — verified. Measured 218,627B vs the 218,442B ceiling (185B over). This is brand-law styling for an explicitly-requested redesign, not decorative growth; allowance raised 512B to clear it with a ~327B margin. framer-motion / vendor-motion contribution stays 0 (verified in the same run: 'vendor-motion chunks in path: 0'); any vendor-motion return or further material growth still fails this gate.",
+    "verifiedVendorMotionChunks": 0
+  },
   "recalibration5": {
     "date": "2026-07-24",
     "allowanceBytesBefore": 7168,

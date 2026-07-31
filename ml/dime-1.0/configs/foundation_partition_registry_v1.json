@@ -1,0 +1,26 @@
+{
+  "schema_version": "dime-foundation-partition-registry-v1",
+  "registry_id": "dime-foundation-v1-global-partitions",
+  "dataset_version": "dime-sft-foundation-v1",
+  "status": "FROZEN",
+  "assignment_algorithm": {
+    "assignment_basis": "scenario_family_sha256_mod_10",
+    "assignment_revision": "dime-foundation-partition-v1",
+    "assignment_seed": 0,
+    "hash_algorithm": "sha256",
+    "input_encoding": "utf8_seed_colon_scenario_family_id",
+    "bucket_modulus": 10,
+    "validation_buckets": [
+      0
+    ]
+  },
+  "group_dimensions": [
+    "scenario_family_id",
+    "template_family_id",
+    "source_event_id",
+    "conversation_family_id",
+    "quantitative_scenario_id",
+    "entity_set_temporal_bucket"
+  ],
+  "assignments": []
+}

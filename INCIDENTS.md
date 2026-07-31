@@ -1018,7 +1018,7 @@ on `ai-sports-betting-backend` only; Railway redeployed the same commit
 inspection:
 
 - backend logged `DISABLE_BACKGROUND_JOBS set — web-only mode: recurring
-  background jobs skipped`; zero scheduler or MLB runner starts since;
+background jobs skipped`; zero scheduler or MLB runner starts since;
 - recurring `ER_NO_SUCH_TABLE` noise stopped (see Incident 39 for the
   once-per-boot residual);
 - both `/health` endpoints stayed green (db circuit CLOSED, 0 consecutive
@@ -1082,3 +1082,376 @@ the focused browser suite in the live workflow, and emits a reviewable baseline
 candidate artifact without write access to the repository. No run before that
 follow-up is deployed counts toward the 3–5-run observation requirement; the
 counter remains 0.
+
+## Incident 41 — 2026-07-28 — Initial GitHub fetch was blocked by the local sandbox
+
+Status: RESOLVED
+
+The first read-only refresh of `origin` ran inside the restricted local
+sandbox and could not resolve GitHub:
+
+```text
+fatal: unable to access 'https://github.com/aisportsbettingcontact/ai-sports-betting-dime-ai.git/': Could not resolve host: github.com
+```
+
+No repository or remote state changed. I reran the same `git fetch --prune
+origin` operation with the required network approval. It completed
+successfully and verified `origin/main` at
+`29fc398aaf199e035ceeb6ac2a37d9c2667947cd` before creating the Trace v1
+implementation branch.
+
+## Incident 42 — 2026-07-28 — Read-only search command had an unmatched shell quote
+
+Status: RESOLVED
+
+A combined read-only `rg` inspection command embedded a backtick-bearing SQL
+pattern inside a double-quoted shell argument. Zsh rejected the command before
+execution:
+
+```text
+zsh:4: unmatched "
+```
+
+No search or mutation ran. I split the inspection into plainly quoted commands
+without executable substitutions and continued read-only repository
+inspection.
+
+## Incident 43 — 2026-07-28 — Privacy search used a non-matching shell glob
+
+Status: RESOLVED
+
+The first read-only privacy-file search included
+`client/src/pages/Legal*`. Zsh's default `nomatch` behavior rejected the
+command because that path does not exist:
+
+```text
+zsh:1: no matches found: client/src/pages/Legal*
+```
+
+No search or mutation ran. I reran the inspection using the two verified files,
+`client/src/pages/Privacy.tsx` and `client/src/pages/Terms.tsx`, plus the
+governance and prerender sources.
+
+## Incident 44 — 2026-07-28 — Environment-presence probe returned unusable tool output
+
+Status: RESOLVED
+
+A read-only Node probe intended to report only whether `DATABASE_URL` was
+configured returned a tool-level output-truncation message instead of the
+expected boolean result. The command did not print or modify the credential,
+and no repository or database state changed.
+
+I replaced that inconclusive probe with a shell presence check that reports
+only `configured` or `absent`. Trace v1 implementation does not depend on
+reading or exposing the connection-string value.
+
+## Incident 45 — 2026-07-28 — Follow-up schema search repeated a shell-quoting error
+
+Status: RESOLVED
+
+A read-only combined inspection included a backtick inside a double-quoted
+search expression. Zsh rejected it as an unmatched quote before any command
+ran. No files, database records, or external systems changed.
+
+I removed the shell-sensitive expression and continued with literal,
+single-purpose searches. This is a command-construction failure only; it does
+not affect the Trace v1 implementation.
+
+## Incident 46 — 2026-07-28 — First Trace v1 typecheck found one retry identifier typo
+
+Status: RESOLVED
+
+The first implementation typecheck failed because the retry event metadata
+referenced `retryOfGenerationId` while the local variable is named
+`retryGenerationId`. No build artifact, database migration, deployment, or
+external state changed.
+
+The metadata key remains `retryOfGenerationId`; its value now correctly uses
+`retryGenerationId`. The typecheck was rerun after the correction.
+
+## Incident 47 — 2026-07-28 — Combined privacy-copy patch matched one renderer incorrectly
+
+Status: RESOLVED
+
+The first privacy-copy patch expected a literal em dash in the prerendered HTML
+source, while that source correctly uses the `&mdash;` entity. The patch tool
+rejected the combined patch atomically, so neither privacy source changed.
+
+I inspected both exact render sources and reapplied the same disclosure update
+with their native JSX and HTML encodings preserved.
+
+## Incident 48 — 2026-07-28 — First focused Trace v1 regression run exposed contract drift
+
+Status: RESOLVED
+
+The first focused Trace v1 regression run completed with 10 failures across
+81 tests. Four client tests incorrectly assumed a browser `sessionStorage`
+global even though this repository runs Vitest in Node. Six existing
+source-contract assertions used exact formatting or first-occurrence slicing
+that no longer identified the provider branches after Trace v1 added provider
+metadata and multiline SSE frames.
+
+The run did not mutate a database or external service. The client tests now
+use injected storage, and the existing contract tests assert the same security
+and provider-order invariants through stable route anchors rather than exact
+line formatting.
+
+## Incident 49 — 2026-07-28 — Trace v1 review found release-blocking retry and crash gaps
+
+Status: RESOLVED
+
+The bounded pre-publication review found that a process crash could leave a
+generation permanently marked `generating`, and post-persistence JSON errors
+did not return the canonical trace identity needed for a safe retry. It also
+found UTF-8 byte-length, stale prior-turn retry, and whole-file schema-format
+churn issues.
+
+Trace v1 now recovers expired generation leases under the thread lock, returns
+canonical trace metadata on every post-begin HTTP error, restricts retries to
+failed or aborted attempts, validates storage by UTF-8 bytes, and keeps the
+schema diff localized to the Dime Chat section. No production flag, migration,
+Railway service, RunPod endpoint, or Hugging Face repository was changed.
+
+## Incident 50 — 2026-07-28 — Migration check initially lacked its required local URL
+
+Status: RESOLVED
+
+The first local `drizzle-kit check` invocation failed closed because
+`drizzle.config.ts` requires `DATABASE_URL`, even though the check does not
+apply a migration:
+
+```text
+DATABASE_URL is required to run drizzle commands
+```
+
+No database connection or external mutation occurred. The same check was
+rerun with a non-secret loopback placeholder URL and returned
+`Everything's fine`, confirming the migration journal and snapshots are
+internally consistent.
+
+## Incident 51 — 2026-07-28 — React Doctor package lookup was blocked in the sandbox
+
+Status: RESOLVED
+
+The required changed-UI diagnostic could not resolve the npm registry from the
+restricted sandbox and exited with `ENOTFOUND`. No dependency or project file
+changed. The same command was rerun with narrowly scoped network approval;
+React Doctor completed, found no issue in the changed UI, and reported its
+repository score without modifying the worktree.
+
+## Incident 52 — 2026-07-28 — Full local suite reached environment-gated tests
+
+Status: RESOLVED FOR TRACE V1 / ENVIRONMENT GATES REMAIN EXTERNAL
+
+The repository-wide Vitest run passed 2,351 tests and failed 66. The failures
+were dominated by tests that explicitly require a live local database,
+credentials, Playwright/browser sockets, or other unavailable integration
+environment. Those are not bypassed or rewritten in this change.
+
+One failure was branch-caused: `sidebarRail.test.ts` matched an exact
+single-line JSX layout that Prettier wrapped after Trace v1 changed the chat
+page. The assertion now checks the component token independent of whitespace.
+The complete changed-chat and Trace-focused set was then rerun: 11 files and
+160 tests passed. TypeScript, migration consistency, formatting, and diff
+checks also remain green.
+
+## Incident 53 — 2026-07-28 — Main advanced during Trace v1 implementation
+
+Status: RESOLVED
+
+GitHub comparison before PR creation showed that `main` had advanced by 20
+commits and now owned migrations `0119` and `0120`. The first sandboxed fetch
+could not resolve GitHub; the approved retry fetched current `main`. Rebase
+then correctly stopped on the migration-number and snapshot conflicts.
+
+The Trace schema itself merged without conflict. Trace v1 was regenerated from
+the current `0120` snapshot as migration `0121`, its duplicate-sequence
+constraint remains first, and the old non-unique index remains the final drop.
+No migration was applied and no external database state changed.
+
+## Incident 54 — 2026-07-28 — Trace v1 exceeded the chat bundle gate
+
+Status: RESOLVED
+
+The first pull-request CI run passed security, TypeScript, database, Vitest,
+Gitleaks, and Dime LLM validation, but the production chat critical path was
+219,216 gzip bytes—774 bytes above its 218,442-byte ceiling.
+
+The Trace browser utility is now a real on-demand chunk instead of a static
+chat dependency. Initial and retry correlation remain guarded against duplicate
+submission and stale async completion, secure UUID generation fails closed,
+and server-owned persistence/retry identity behavior is unchanged. The budget
+was not raised.
+
+The corrected production build measures 218,373 gzip bytes, 69 bytes below the
+existing ceiling. TypeScript, the full production client/server build, preview
+verification, 255 focused chat/Trace tests, and `git diff --check` all pass.
+
+## Incident 55 — 2026-07-29 — Prettier batch included a Python test
+
+Status: RESOLVED
+
+I included
+`ml/dime-1.0/tests/test_engineering_control_contract.py` in a Prettier command
+that was intended for JavaScript, JSON, YAML, and Markdown files. Prettier
+formatted the supported files, then exited 2 before the chained tests ran:
+
+```text
+[error] No parser could be inferred for file ".../test_engineering_control_contract.py".
+```
+
+The Python file was not modified by Prettier. Required follow-up: validate it
+with Ruff, run the focused JavaScript and Python tests, and close this incident
+only after those commands execute successfully.
+
+### Update 2026-07-29: RESOLVED
+
+I reran the Python file through its correct formatter and linter, then ran the
+focused runtime and contract suites:
+
+```text
+All checks passed!
+1 file already formatted
+
+Test Files  4 passed (4)
+Tests       111 passed (111)
+
+4 passed in 0.28s
+```
+
+## Incident 56 — 2026-07-29 — Product-route metadata invalidated the frozen routing benchmark hash
+
+Status: RESOLVED
+
+The full Dime Python suite executed 769 tests and reported one failure:
+
+```text
+FAILED ml/dime-1.0/tests/test_runtime_answer_routing_benchmark.py::
+test_local_report_is_bound_to_the_frozen_fixture
+
+1 failed, 768 passed in 46.96s
+```
+
+The benchmark report still bound the prior SHA-256 of
+`server/_core/dimeAnswerRouting.ts`. This change intentionally adds the
+additive `productRoute` classification to that runtime module, so the frozen
+evidence must be regenerated and reviewed rather than having its hash edited
+by hand.
+
+Required follow-up: inspect the repository benchmark reproduction command,
+regenerate the report from the unchanged fixture through the current runtime,
+verify semantic results, checksums, and focused tests, then close only when the
+full Python suite passes.
+
+### Update 2026-07-29: RESOLVED
+
+The documented generator changed only the runtime-module hash in the report;
+all 19 frozen cases and every recorded metric remained unchanged and passing.
+I updated the report checksum, ran generator check mode, ran the focused
+JavaScript and Python evidence tests, and then reran the full Dime Python suite:
+
+```text
+Runtime Answer Routing v1 evidence matches .../local-baseline.json
+Test Files  1 passed (1)
+Tests       1 passed (1)
+7 passed in 0.09s
+769 passed in 48.72s
+```
+
+## Incident 57 — 2026-07-29 — TSX benchmark generator could not create its sandbox IPC socket
+
+Status: RESOLVED
+
+The documented routing-benchmark regeneration command failed before loading
+project code because TSX could not create its local IPC socket:
+
+```text
+Error: listen EPERM: operation not permitted
+.../T/tsx-501/59928.pipe
+code: 'EPERM'
+```
+
+No benchmark artifact changed. Required follow-up: rerun the same repository
+generator with narrowly scoped sandbox escalation, then continue Incident 56
+verification.
+
+### Update 2026-07-29: RESOLVED
+
+The approved rerun executed the same documented generator and wrote the
+deterministic report. The check-mode rerun and companion tests then passed:
+
+```text
+Runtime Answer Routing v1 evidence matches .../local-baseline.json
+Test Files  1 passed (1)
+Tests       1 passed (1)
+7 passed in 0.09s
+```
+
+## Incident 58 — 2026-07-29 — Authorization-label cleanup patch used pre-format context
+
+Status: RESOLVED
+
+I attempted to rename the training-strategy result from
+`trainingAuthorized` to the narrower `trainingEligibleForAuthorization`.
+`apply_patch` rejected the edit because Prettier had changed the exact line
+wrapping used as patch context:
+
+```text
+apply_patch verification failed: Failed to find expected lines
+```
+
+No file changed. Required follow-up: inspect the formatted declarations and
+return block, apply the scoped rename, then rerun the focused runtime suite.
+
+### Update 2026-07-29: RESOLVED
+
+The scoped rename now distinguishes eligibility from actual training
+authorization. The focused control-plane suite passed 10/10 tests and the
+repository TypeScript check exited 0.
+
+## Incident 59 — 2026-07-29 — Product-route evidence generator IPC denied in sandbox
+
+Status: RESOLVED
+
+The new product-route benchmark generator failed before loading repository
+code because TSX could not create its local IPC socket:
+
+```text
+Error: listen EPERM: operation not permitted
+.../T/tsx-501/63937.pipe
+code: 'EPERM'
+```
+
+No evidence artifact existed or changed during the failed attempt.
+
+### Update 2026-07-29: RESOLVED
+
+The same repository generator was rerun with narrowly scoped approval and
+wrote the deterministic local product-route baseline. Its check mode and
+contract tests are part of the Phase 1 verification matrix.
+
+## Incident 60 — 2026-07-29 — New Python benchmark test required Ruff formatting
+
+Status: RESOLVED
+
+The focused Ruff lint check passed, but `ruff format --check` correctly
+reported that the new product-route benchmark contract test needed mechanical
+line wrapping. No runtime or evidence artifact was affected.
+
+### Update 2026-07-29: RESOLVED
+
+Ruff formatted the single test file. Lint, format check, and all four focused
+Python benchmark tests then passed.
+
+## Incident 61 — 2026-07-29 — Checksum verification used the wrong working directory
+
+Status: RESOLVED
+
+The first `shasum --check` invocation ran from the repository root even though
+the manifest paths are relative to the manifest directory. All three entries
+therefore reported `No such file or directory`; no digest mismatch occurred.
+
+### Update 2026-07-29: RESOLVED
+
+The same manifest was verified from its owning evidence directory. The frozen
+fixture, local report, and JSON Schema all returned `OK`.

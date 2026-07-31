@@ -5,27 +5,27 @@ AI Sports Betting platform (React + tRPC + Drizzle/MySQL + Express) undergoing a
 
 ## Skill arsenal — structure
 
-| Layer | Location | Contents |
-|---|---|---|
-| Design intelligence | `.claude/skills/` (uipro) | ui-ux-pro-max (searchable styles/palettes/fonts/stacks + dials), design-system, design, ui-styling, brand, banner-design, slides |
-| Design intelligence (upstream plugin) | plugin `ui-ux-pro-max@ui-ux-pro-max-skill`, vendored at `.claude/plugins-vendored/ui-ux-pro-max-skill/` (v2.11.0) | Upstream nextlevelbuilder build, newer than the `.claude/skills/` copy (84 styles / 192 palettes / 74 font pairings vs 67 / 161 / 57). Ships 7 skills: ui-ux-pro-max, design, design-system, ui-styling, brand, banner-design, slides — namespaced `ui-ux-pro-max:<skill>`, so they coexist with the vendored flat copies |
-| Design taste | `.agents/skills/frontend-design/` | Anthropic official — distinctive, non-templated visual direction |
-| Writing quality | `.claude/skills/stop-slop/` | hardikpandya/stop-slop — strips AI writing tells from prose (filler phrases, formulaic structures, passive voice); use when drafting/editing copy or docs |
-| Design taste (Emil Kowalski) | `.claude/skills/` (emilkowalski/skill) | emil-design-eng (UI polish philosophy), apple-design (Apple-style motion/materials for web), animation-vocabulary (name-that-motion glossary), review-animations |
-| Design taste (Anthropic, pinned 9d2f1ae) | `.claude/skills/` | frontend-design (also in `.agents/skills/`), algorithmic-art (p5.js generative art + templates), mcp-builder (MCP server quality guide) |
-| Design taste (leonxlnx, pinned b177427) | `.claude/skills/` (13 skills, leonxlnx/taste-skill, MIT) + plugin `taste-skill@taste-skill` | Anti-slop frontend: taste-skill (v2 default, brief-inference + VARIANCE/MOTION/DENSITY dials), taste-skill-v1, redesign-skill (audit-first upgrades), soft-skill (expensive/agency look), minimalist-skill (Notion/Linear editorial), brutalist-skill (Swiss/terminal), gpt-tasteskill (GSAP motion), output-skill (anti-truncation), stitch-skill (Google Stitch DESIGN.md), image-to-code-skill, imagegen-frontend-web/-mobile, brandkit (image-gen only). Plugin tracks upstream alongside the vendored copies |
-| Code review | `.claude/skills/code-review-excellence/` | wshobson/agents (pinned d7cf7dc) — review methodology: severity triage, security/perf/maintainability checklists, feedback phrasing |
-| Product management (phuryn) | `.claude/skills/` (68 skills, phuryn/pm-skills) | Strategy (canvases, five-forces, pricing), discovery (assumptions, experiments, interviews, OST), execution (PRD, OKRs, sprints, retros), GTM (ICP, battlecards, growth loops), market research, analytics (SQL, A/B, cohorts), toolkit (NDA, privacy policy). Overlaps deanpeters plugins — prefer `/pm-*` commands for the deanpeters chain |
-| Upload bundles | `.claude/skill-zips/` | 31 claude.ai-ready zips — 30 one-skill zips plus `phuryn-pm-skills-all.zip` (68 inner zips) for Settings → Skills → Add |
-| Payments | `.agents/skills/stripe-best-practices/` | Stripe official — API selection, billing, webhooks, key security |
-| Engineering process | plugin `superpowers@claude-plugins-official` | 14 skills: brainstorming, writing/executing-plans, TDD, systematic-debugging, verification-before-completion, code review (both directions), subagent/parallel dispatch, worktrees, branch finishing, writing-skills |
-| MCP development | plugin `mcp-server-dev@claude-plugins-official` | Designing and building MCP servers that work well with Claude: deployment models (remote HTTP, MCPB, local), tool design patterns, auth, interactive MCP apps |
-| Product management | plugins `*@pm-skills` (55 enabled of 70 vendored), vendored at `.claude/plugins-vendored/pm-skills/` | Full deanpeters/Product-Manager-Skills catalog: discovery, JTBD, user stories/splitting/mapping, PRD, prioritization, roadmap, positioning, personas, journey maps, OST, POL probes, stakeholders, SaaS finance/growth metrics, TAM/SAM/SOM, workshops, exec-track advisors |
-| Advertising | `.agents/skills/` (12, realkimbarrett/advertising-skills) | Direct response: avatar/offer extraction, Schwartz awareness mapping, headline-matrix, mechanism-builder, objection-crusher, ad-angle-multiplier (creative testing), scroll-stopping-creative, conversion-path-builder, performance-diagnosis, generic-language-killer, full-funnel-campaign-orchestrator |
-| Architecture | `.agents/skills/` (2) | architect-backend-systems (system boundaries, APIs, data/identity/queues, reliability, migrations, threat models), architect-github-repos (repo-wide structure audits, dead/duplicated file classification, structural cleanup). Both carry `agents/` + `references/` subdirs; skip for isolated bug fixes and pure UI work |
-| Repo-specific verification | `.claude/skills/` (2) | livelab (drive/verify this app in live browser sessions via `livelab_*` MCP tools — console/network errors, responsive layouts, smoke checks), intended-vs-implemented (audit the gap between documented intent and actual code) |
-| Design handoff | plugin `figma@knowledge-work-plugins` | figma/mcp-server-guide (pinned 07316dd) — read design files, components, and tokens; translate Figma designs into code |
-| Deployment | plugin `railway@railway-skills` | railwayapp/railway-skills — `use-railway` skill + hosted MCP server for services, environments, deployments, logs, and troubleshooting. Pair with `references/railway-deploy.md` (deploy law below) |
+| Layer                                    | Location                                                                                                          | Contents                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Design intelligence                      | `.claude/skills/` (uipro)                                                                                         | ui-ux-pro-max (searchable styles/palettes/fonts/stacks + dials), design-system, design, ui-styling, brand, banner-design, slides                                                                                                                                                                                                                                                                                                                                                                                  |
+| Design intelligence (upstream plugin)    | plugin `ui-ux-pro-max@ui-ux-pro-max-skill`, vendored at `.claude/plugins-vendored/ui-ux-pro-max-skill/` (v2.11.0) | Upstream nextlevelbuilder build, newer than the `.claude/skills/` copy (84 styles / 192 palettes / 74 font pairings vs 67 / 161 / 57). Ships 7 skills: ui-ux-pro-max, design, design-system, ui-styling, brand, banner-design, slides — namespaced `ui-ux-pro-max:<skill>`, so they coexist with the vendored flat copies                                                                                                                                                                                         |
+| Design taste                             | `.agents/skills/frontend-design/`                                                                                 | Anthropic official — distinctive, non-templated visual direction                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| Writing quality                          | `.claude/skills/stop-slop/`                                                                                       | hardikpandya/stop-slop — strips AI writing tells from prose (filler phrases, formulaic structures, passive voice); use when drafting/editing copy or docs                                                                                                                                                                                                                                                                                                                                                         |
+| Design taste (Emil Kowalski)             | `.claude/skills/` (emilkowalski/skill)                                                                            | emil-design-eng (UI polish philosophy), apple-design (Apple-style motion/materials for web), animation-vocabulary (name-that-motion glossary), review-animations                                                                                                                                                                                                                                                                                                                                                  |
+| Design taste (Anthropic, pinned 9d2f1ae) | `.claude/skills/`                                                                                                 | frontend-design (also in `.agents/skills/`), algorithmic-art (p5.js generative art + templates), mcp-builder (MCP server quality guide)                                                                                                                                                                                                                                                                                                                                                                           |
+| Design taste (leonxlnx, pinned b177427)  | `.claude/skills/` (13 skills, leonxlnx/taste-skill, MIT) + plugin `taste-skill@taste-skill`                       | Anti-slop frontend: taste-skill (v2 default, brief-inference + VARIANCE/MOTION/DENSITY dials), taste-skill-v1, redesign-skill (audit-first upgrades), soft-skill (expensive/agency look), minimalist-skill (Notion/Linear editorial), brutalist-skill (Swiss/terminal), gpt-tasteskill (GSAP motion), output-skill (anti-truncation), stitch-skill (Google Stitch DESIGN.md), image-to-code-skill, imagegen-frontend-web/-mobile, brandkit (image-gen only). Plugin tracks upstream alongside the vendored copies |
+| Code review                              | `.claude/skills/code-review-excellence/`                                                                          | wshobson/agents (pinned d7cf7dc) — review methodology: severity triage, security/perf/maintainability checklists, feedback phrasing                                                                                                                                                                                                                                                                                                                                                                               |
+| Product management (phuryn)              | `.claude/skills/` (68 skills, phuryn/pm-skills)                                                                   | Strategy (canvases, five-forces, pricing), discovery (assumptions, experiments, interviews, OST), execution (PRD, OKRs, sprints, retros), GTM (ICP, battlecards, growth loops), market research, analytics (SQL, A/B, cohorts), toolkit (NDA, privacy policy). Overlaps deanpeters plugins — prefer `/pm-*` commands for the deanpeters chain                                                                                                                                                                     |
+| Upload bundles                           | `.claude/skill-zips/`                                                                                             | 31 claude.ai-ready zips — 30 one-skill zips plus `phuryn-pm-skills-all.zip` (68 inner zips) for Settings → Skills → Add                                                                                                                                                                                                                                                                                                                                                                                           |
+| Payments                                 | `.agents/skills/stripe-best-practices/`                                                                           | Stripe official — API selection, billing, webhooks, key security                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| Engineering process                      | plugin `superpowers@claude-plugins-official`                                                                      | 14 skills: brainstorming, writing/executing-plans, TDD, systematic-debugging, verification-before-completion, code review (both directions), subagent/parallel dispatch, worktrees, branch finishing, writing-skills                                                                                                                                                                                                                                                                                              |
+| MCP development                          | plugin `mcp-server-dev@claude-plugins-official`                                                                   | Designing and building MCP servers that work well with Claude: deployment models (remote HTTP, MCPB, local), tool design patterns, auth, interactive MCP apps                                                                                                                                                                                                                                                                                                                                                     |
+| Product management                       | plugins `*@pm-skills` (55 enabled of 70 vendored), vendored at `.claude/plugins-vendored/pm-skills/`              | Full deanpeters/Product-Manager-Skills catalog: discovery, JTBD, user stories/splitting/mapping, PRD, prioritization, roadmap, positioning, personas, journey maps, OST, POL probes, stakeholders, SaaS finance/growth metrics, TAM/SAM/SOM, workshops, exec-track advisors                                                                                                                                                                                                                                       |
+| Advertising                              | `.agents/skills/` (12, realkimbarrett/advertising-skills)                                                         | Direct response: avatar/offer extraction, Schwartz awareness mapping, headline-matrix, mechanism-builder, objection-crusher, ad-angle-multiplier (creative testing), scroll-stopping-creative, conversion-path-builder, performance-diagnosis, generic-language-killer, full-funnel-campaign-orchestrator                                                                                                                                                                                                         |
+| Architecture                             | `.agents/skills/` (2)                                                                                             | architect-backend-systems (system boundaries, APIs, data/identity/queues, reliability, migrations, threat models), architect-github-repos (repo-wide structure audits, dead/duplicated file classification, structural cleanup). Both carry `agents/` + `references/` subdirs; skip for isolated bug fixes and pure UI work                                                                                                                                                                                       |
+| Repo-specific verification               | `.claude/skills/` (1)                                                                                             | intended-vs-implemented (audit the gap between documented intent and actual code)                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| Design handoff                           | plugin `figma@knowledge-work-plugins`                                                                             | figma/mcp-server-guide (pinned 07316dd) — read design files, components, and tokens; translate Figma designs into code                                                                                                                                                                                                                                                                                                                                                                                            |
+| Deployment                               | plugin `railway@railway-skills`                                                                                   | railwayapp/railway-skills — `use-railway` skill + hosted MCP server for services, environments, deployments, logs, and troubleshooting. Pair with `references/railway-deploy.md` (deploy law below)                                                                                                                                                                                                                                                                                                               |
 
 Plugin config lives in `.claude/settings.json` (`extraKnownMarketplaces` + `enabledPlugins`, 61
 plugins across 6 marketplaces). `skills-lock.json` pins the npx-installed sources.
@@ -51,23 +51,66 @@ claude plugin list | grep -c @        # expect 61
 `--scope project` is a no-op against the already-declared `enabledPlugins`, so
 `.claude/settings.json` is left untouched. Installed plugins load in the **current** session.
 
+## Shared agent access (IMPORTANT)
+
+A second, non-blocking `SessionStart` hook runs
+`.claude/scripts/bootstrap-dime-context.sh`. It loads the same checksum-bound,
+five-minute `pnpm agent:context` capsule used by Codex. Reuse that capsule instead
+of repeating GitHub authentication, repository, PR/check, Railway topology,
+deployment, and health discovery.
+
+The exact non-secret authority is `config/dime-agent-access.v1.json`. GitHub and
+Railway remain pinned to
+`aisportsbettingcontact/ai-sports-betting-dime-ai`,
+`stunning-creativity` (`8dd7341d-702c-48c7-90df-5c19a4f04913`), and production
+(`787f3113-17ab-47d9-9819-1268aeb09b3e`). Never use an implicit Railway link or
+print, persist, or place Railway variables in Claude's environment. Railway
+access runs through the independently hash-pinned, device-only macOS Keychain
+broker; the standard Railway CLI config must not hold access or refresh tokens.
+
+Credentials are scope-isolated:
+
+- production owner and user logins use a native Railway broker that captures
+  the raw map privately, selects only that role's exact three unreferenced
+  values, and passes them to a fixed authentication child through a private
+  pipe; cookies remain browser-process-only and no storage state is written;
+- every Hugging Face training, serving, publisher, locked-evaluator, and
+  locked-publisher credential has a separate `op run` process;
+- RunPod has a separate scope, but identity and permissions remain unverified;
+  `CREDENTIAL_PRESENT_PERMISSION_UNVERIFIED` is not provider authorization;
+- AWS uses the allowlisted `dime-builder` SSO profile by default and never
+  static keys.
+
+Use `pnpm agent:doctor` for a live read-only identity preflight,
+`pnpm platform:auth:owner` or `pnpm platform:auth:user` only when production
+login is explicitly required, and
+`pnpm credential:verify -- --scope <reviewed-scope>` only for identity proof.
+Do not print, persist in evidence, or move credential values between scopes.
+Credential execution fails closed unless each sensitive executable and the
+Railway broker match independently administered signing or root-owned hash
+provenance; same-user and ad-hoc signatures are insufficient.
+Passing context, identity, credential, or login checks never authorizes merge,
+deployment, Railway mutation, provider execution, Hugging Face publication,
+RunPod compute, model download, training, tracing, route activation, shadow
+traffic, or Research Alpha.
+
 **All six marketplaces are vendored (`.claude/plugins-vendored/`, 18M) — bootstrap is fully
 offline.** `extraKnownMarketplaces` points at them with
 `{"source": "directory", "path": "./.claude/plugins-vendored/<name>"}`; no GitHub source remains.
 
-| Vendored marketplace | Size | Contents |
-|---|---|---|
-| `pm-skills` | 2.6M | all 70 plugin payloads, 55 enabled |
+| Vendored marketplace  | Size | Contents                                                           |
+| --------------------- | ---- | ------------------------------------------------------------------ |
+| `pm-skills`           | 2.6M | all 70 plugin payloads, 55 enabled                                 |
 | `ui-ux-pro-max-skill` | 8.5M | v2.11.0, the 7 skills it ships (5.5M is `ui-styling/canvas-fonts`) |
-| `dime-vendored` | 4.5M | superpowers, mcp-server-dev, figma |
-| `taste-skill` | 1.9M | taste-skill |
-| `railway-skills` | 672K | railway |
+| `dime-vendored`       | 4.5M | superpowers, mcp-server-dev, figma                                 |
+| `taste-skill`         | 1.9M | taste-skill                                                        |
+| `railway-skills`      | 672K | railway                                                            |
 
 **Why `dime-vendored` exists.** `claude-plugins-official` and `knowledge-work-plugins` are
-*reserved names* — the CLI accepts them only from GitHub `anthropics` sources and rejects a
+_reserved names_ — the CLI accepts them only from GitHub `anthropics` sources and rejects a
 directory source outright ("The name '…' is reserved for official Anthropic marketplaces"). So
 superpowers, mcp-server-dev, and figma are rehosted under a non-reserved marketplace name and keyed
-as `<plugin>@dime-vendored` in `enabledPlugins`. Skill IDs are namespaced by *plugin*, not
+as `<plugin>@dime-vendored` in `enabledPlugins`. Skill IDs are namespaced by _plugin_, not
 marketplace, so `superpowers:brainstorming`, `mcp-server-dev:build-mcp-server`, and `figma:figma-use`
 are unchanged.
 
@@ -75,14 +118,14 @@ Three things that are easy to get wrong here:
 
 - **`claude plugin marketplace remove` rewrites `.claude/settings.json`** — it strips every
   matching `enabledPlugins` entry (56 of them, for these two) and moves the marketplace
-  declaration into *user* settings as an absolute path. Check `git diff .claude/settings.json`
+  declaration into _user_ settings as an absolute path. Check `git diff .claude/settings.json`
   after any marketplace surgery; `git checkout .claude/settings.json` restores it.
 - **Installs are still cached to `/root/.claude/plugins/cache/`**, which is ephemeral. That cache
   is a derived artifact — the repo is the source of truth, and the cache is rebuilt from
   `.claude/plugins-vendored/` on demand. Do not edit skills in the cache; edit them in the repo.
 - **`bootstrap-plugins.sh` must stay cwd-independent and must never exit 2.** Hooks do not always
   run from the repo root, so the script resolves its root from `${BASH_SOURCE[0]}`, not `$PWD` or
-  `git rev-parse`. Exit 2 is a *blocking* error for `SessionStart` — a missing arsenal must degrade
+  `git rev-parse`. Exit 2 is a _blocking_ error for `SessionStart` — a missing arsenal must degrade
   to a warning, never wedge the session.
 
 Do not flat-vendor pm-skills into `.claude/skills/`: five names (`ansoff-matrix`,

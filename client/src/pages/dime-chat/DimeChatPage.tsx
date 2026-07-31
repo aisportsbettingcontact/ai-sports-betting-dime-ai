@@ -44,6 +44,10 @@ import {
   rubberBand,
 } from "./drawerMotion";
 import { createRafDeltaBatcher, type RafDeltaBatcher } from "./streamBatcher";
+import type {
+  DimeChatClientTraceState,
+  DimeChatTraceRequest,
+} from "./chatTrace";
 import {
   REDUCED_MOTION_QUERY,
   useReducedMotionPreference,
@@ -111,8 +115,18 @@ const NAV_ROWS: Array<{
   href: () => string;
   icon: LucideIcon;
 }> = [
-  { label: "New Chat", pane: "chat", href: () => "/chat", icon: MessageSquarePlus }, // D/L:57
-  { label: "AI Model Projections", pane: "feed", href: () => feedModelPath(), icon: BrainCircuit }, // D/L:58
+  {
+    label: "New Chat",
+    pane: "chat",
+    href: () => "/chat",
+    icon: MessageSquarePlus,
+  }, // D/L:57
+  {
+    label: "AI Model Projections",
+    pane: "feed",
+    href: () => feedModelPath(),
+    icon: BrainCircuit,
+  }, // D/L:58
   {
     label: "Betting Splits + Odds History",
     pane: "splits",
@@ -121,7 +135,12 @@ const NAV_ROWS: Array<{
   }, // D/L:59
   { label: "Trends", pane: "trends", href: () => "/trends", icon: ChartSpline }, // D/L:60 — route live 2026-07-21 (owner directive): hosts Last 5 Games + Trends at ≥768px
   { label: "Prop Projections", href: () => "#", icon: Target }, // D/L:61 — no route exists
-  { label: "Bet Tracker", pane: "tracker", href: () => "/bet-tracker", icon: NotebookPen }, // D/L:62
+  {
+    label: "Bet Tracker",
+    pane: "tracker",
+    href: () => "/bet-tracker",
+    icon: NotebookPen,
+  }, // D/L:62
 ];
 
 /** Stored-thread summary rendered in the sidebar Recent Chats list. Recents
@@ -133,11 +152,21 @@ interface ThreadSummary {
   starred: boolean;
 }
 
+/** Today's date in ET, matching the feed's display convention — the design
+ *  reference (D/L:107-109) froze "July 7, 2026" into the third pill, which
+ *  shipped as a permanently stale prompt (audit DIME-UI-028). */
+const PILL_TRENDS_DATE = new Date().toLocaleDateString("en-US", {
+  timeZone: "America/New_York",
+  month: "long",
+  day: "numeric",
+  year: "numeric",
+});
+
 const PILL_LABELS = [
   "World Cup Model Simulations",
   "Player Props with the Most Edge",
-  "Best Trends for MLB July 7, 2026",
-]; // D/L:107-109
+  `Best Trends for MLB ${PILL_TRENDS_DATE}`,
+]; // D/L:107-109 (labels frozen; the date is live per DIME-UI-028)
 
 /** Frozen pill emphasis ORDER differs per theme (extraction-mapping §2.24). */
 const PILL_VARIANTS: Record<Theme, Array<"contrast" | "outline" | "mint">> = {
@@ -150,7 +179,9 @@ const ERROR_COPY =
 const DISCLAIMER =
   "Model estimates, not guarantees. 21+ · Gambling problem? 1-800-GAMBLER."; // spec §4
 
-const uid = () => Math.random().toString(36).slice(2, 10);
+type DimeChatTraceTools = typeof import("./chatTrace");
+
+const loadDimeChatTrace = () => import("./chatTrace");
 
 const prefersReducedMotion = () =>
   typeof window !== "undefined" &&
@@ -275,6 +306,7 @@ function DimeSidebar({
   onClearAllChats,
   activeChatId,
   compact,
+  phone,
   drawerOpen,
   sidebarRef,
   onClose,
@@ -293,6 +325,11 @@ function DimeSidebar({
   onClearAllChats?: () => void;
   activeChatId: number | null;
   compact: boolean;
+  /** <768px (owner directive 2026-07-29): the drawer is a pure CHAT-HISTORY
+   *  panel — New Chat + Recent Chats only. The app-nav rows, profile row, and
+   *  owner eraser are tablet/desktop elements (the floating pill nav owns
+   *  primary navigation on phones). */
+  phone: boolean;
   drawerOpen: boolean;
   sidebarRef: MutableRefObject<HTMLElement | null>;
   onClose: () => void;
@@ -463,7 +500,7 @@ function DimeSidebar({
       className={`dc-sidebar${compact ? " dc-drawer" : ""}${rail ? " dc-sidebar--rail" : ""}`}
       role={compact && drawerOpen ? "dialog" : undefined}
       aria-modal={compact && drawerOpen ? true : undefined}
-      aria-label={compact ? "Dime navigation" : undefined}
+      aria-label={compact ? (phone ? "Chat history" : "Dime navigation") : undefined}
       aria-hidden={compact && !drawerOpen ? true : undefined}
     >
       <div className="dc-sidebar-head">
@@ -480,10 +517,17 @@ function DimeSidebar({
           <button
             type="button"
             className="dc-drawer-close dc-pressable dc-focusable"
-            aria-label="Close navigation"
+            aria-label={phone ? "Collapse chat history" : "Close navigation"}
             onClick={onClose}
           >
-            ×
+            {/* Phones pair with the PanelLeftOpen trigger in the mobile bar
+                (owner directive 2026-07-29) — the matched collapse glyph reads
+                as the same control; tablet keeps the frozen ×. */}
+            {phone ? (
+              <PanelLeftClose size={22.5} strokeWidth={1.8} aria-hidden="true" />
+            ) : (
+              "×"
+            )}
           </button>
         ) : (
           // Desktop header controls (owner directive 2026-07-21): chat search
@@ -517,9 +561,17 @@ function DimeSidebar({
               onClick={() => setRail(!railCollapsed)}
             >
               {rail ? (
-                <PanelLeftOpen size={22.5} strokeWidth={1.8} aria-hidden="true" />
+                <PanelLeftOpen
+                  size={22.5}
+                  strokeWidth={1.8}
+                  aria-hidden="true"
+                />
               ) : (
-                <PanelLeftClose size={22.5} strokeWidth={1.8} aria-hidden="true" />
+                <PanelLeftClose
+                  size={22.5}
+                  strokeWidth={1.8}
+                  aria-hidden="true"
+                />
               )}
             </button>
           </div>
@@ -550,8 +602,12 @@ function DimeSidebar({
           />
         </div>
       )}
-      <nav className="dc-nav-group" aria-label="Primary">
-        {NAV_ROWS.map(row => {
+      <nav className="dc-nav-group" aria-label={phone ? "Chat" : "Primary"}>
+        {/* Phones (owner directive 2026-07-29): New Chat only — the floating
+            pill nav owns every other destination, so repeating them here would
+            put two primary navs on one screen. Tablet/desktop keep the full
+            row set. */}
+        {(phone ? NAV_ROWS.filter(row => row.pane === "chat") : NAV_ROWS).map(row => {
           const href = row.href();
           const active = row.pane === activePane;
           const RowIcon = row.icon;
@@ -563,7 +619,12 @@ function DimeSidebar({
               aria-disabled="true"
               title={rail ? row.label : undefined}
             >
-              <RowIcon className="dc-nav-ico" size={22.5} strokeWidth={1.8} aria-hidden="true" />
+              <RowIcon
+                className="dc-nav-ico"
+                size={22.5}
+                strokeWidth={1.8}
+                aria-hidden="true"
+              />
               <span className="dc-sidebar-text">{row.label}</span>
             </button>
           ) : (
@@ -585,7 +646,12 @@ function DimeSidebar({
                 onNavigate();
               }}
             >
-              <RowIcon className="dc-nav-ico" size={22.5} strokeWidth={1.8} aria-hidden="true" />
+              <RowIcon
+                className="dc-nav-ico"
+                size={22.5}
+                strokeWidth={1.8}
+                aria-hidden="true"
+              />
               <span className="dc-sidebar-text">{row.label}</span>
             </Link>
           );
@@ -595,9 +661,11 @@ function DimeSidebar({
         <>
           <div className="dc-recents-head">
             <div className="dc-recents-label">Recent Chats</div>
-            {onClearAllChats && isOwner && (
+            {onClearAllChats && isOwner && !phone && (
               // OWNER-ONLY platform sweep (owner directive 2026-07-21): clears
               // recent chats for every user, behind its own confirm upstream.
+              // Tablet/desktop only — 2026-07-29 removed it from the phone
+              // drawer (chat-history panel carries no destructive sweeps).
               <button
                 type="button"
                 className="dc-icon-btn dc-icon-btn--sm dc-hv2 dc-pressable dc-focusable"
@@ -656,7 +724,11 @@ function DimeSidebar({
                         onDeleteChat(rc.id);
                       }}
                     >
-                      <Trash2 size={17.5} strokeWidth={1.8} aria-hidden="true" />
+                      <Trash2
+                        size={17.5}
+                        strokeWidth={1.8}
+                        aria-hidden="true"
+                      />
                       Delete chat
                     </button>
                   </div>
@@ -676,7 +748,10 @@ function DimeSidebar({
         // list's flex: 1 slot (D/L:65) so the profile row stays pinned.
         <div className="dc-sidebar-spacer" />
       )}
-      {appUser ? (
+      {/* Phones (owner directive 2026-07-29): no profile section — account
+          management lives behind the floating nav's Profile destination; the
+          drawer stays a pure chat-history panel. */}
+      {phone ? null : appUser ? (
         <div ref={profileRef} className="dc-sidebar-row dc-profile-row">
           {/* The avatar is itself a menu trigger — in the rail it is the whole
               profile section (owner directive 2026-07-21: collapsed shows only
@@ -772,7 +847,11 @@ function DimeSidebar({
                       aria-label="Back to account menu"
                       onClick={() => setMenuView("root")}
                     >
-                      <ChevronLeft size={16} strokeWidth={1.8} aria-hidden="true" />
+                      <ChevronLeft
+                        size={16}
+                        strokeWidth={1.8}
+                        aria-hidden="true"
+                      />
                       Theme
                     </button>
                     <div
@@ -780,21 +859,27 @@ function DimeSidebar({
                       role="radiogroup"
                       aria-label="Theme"
                     >
-                      {THEME_MODE_OPTIONS.map(({ mode: optMode, label, Icon }) => (
-                        <button
-                          key={optMode}
-                          type="button"
-                          role="radio"
-                          aria-checked={themeMode === optMode}
-                          className={`dc-theme-option dc-hv2 dc-focusable dc-pressable${
-                            themeMode === optMode ? " is-active" : ""
-                          }`}
-                          onClick={() => setThemeMode?.(optMode)}
-                        >
-                          <Icon size={15} strokeWidth={1.8} aria-hidden="true" />
-                          {label}
-                        </button>
-                      ))}
+                      {THEME_MODE_OPTIONS.map(
+                        ({ mode: optMode, label, Icon }) => (
+                          <button
+                            key={optMode}
+                            type="button"
+                            role="radio"
+                            aria-checked={themeMode === optMode}
+                            className={`dc-theme-option dc-hv2 dc-focusable dc-pressable${
+                              themeMode === optMode ? " is-active" : ""
+                            }`}
+                            onClick={() => setThemeMode?.(optMode)}
+                          >
+                            <Icon
+                              size={15}
+                              strokeWidth={1.8}
+                              aria-hidden="true"
+                            />
+                            {label}
+                          </button>
+                        )
+                      )}
                     </div>
                   </div>
                   <div
@@ -831,7 +916,11 @@ function DimeSidebar({
                         onOpenSettings?.();
                       }}
                     >
-                      <SettingsIcon size={16} strokeWidth={1.8} aria-hidden="true" />
+                      <SettingsIcon
+                        size={16}
+                        strokeWidth={1.8}
+                        aria-hidden="true"
+                      />
                       <span className="dc-menu-item-label">Settings</span>
                     </button>
                     {isOwner && (
@@ -841,8 +930,14 @@ function DimeSidebar({
                         className="dc-menu-item dc-menu-item--icon dc-hv2 dc-focusable dc-pressable"
                         onClick={() => goTo("/admin/users")}
                       >
-                        <ShieldCheck size={16} strokeWidth={1.8} aria-hidden="true" />
-                        <span className="dc-menu-item-label">Admin Dashboard</span>
+                        <ShieldCheck
+                          size={16}
+                          strokeWidth={1.8}
+                          aria-hidden="true"
+                        />
+                        <span className="dc-menu-item-label">
+                          Admin Dashboard
+                        </span>
                       </button>
                     )}
                   </div>
@@ -1250,10 +1345,19 @@ export default function DimeChatPage({
   const [threadId, setThreadId] = useState<number | null>(null);
   const [threadMenuOpen, setThreadMenuOpen] = useState(false);
   const threadMenuRef = useRef<HTMLDivElement | null>(null);
+  // Rename drill-in inside the phone kebab menu (owner directive 2026-07-29
+  // r3): non-null while the inline input is showing, prefilled with the
+  // current title. Always cleared when the menu closes.
+  const [renameDraft, setRenameDraft] = useState<string | null>(null);
   const pendingUserTextRef = useRef<string | null>(null);
   const prevStreamingRef = useRef(false);
+  const clientSessionIdRef = useRef<string | null>(null);
+  const traceStartingRef = useRef<Promise<DimeChatTraceTools> | null>(null);
+  const activeClientTraceRef = useRef<DimeChatClientTraceState | null>(null);
+  const lastServerTraceRef = useRef<DimeChatClientTraceState | null>(null);
   const createThreadMut = trpc.dimeChats.create.useMutation();
   const appendMut = trpc.dimeChats.appendMessages.useMutation();
+  const renameMut = trpc.dimeChats.rename.useMutation();
   const setStarredMut = trpc.dimeChats.setStarred.useMutation();
   const setArchivedMut = trpc.dimeChats.setArchived.useMutation();
   const softDeleteMut = trpc.dimeChats.softDelete.useMutation();
@@ -1262,6 +1366,15 @@ export default function DimeChatPage({
     () =>
       typeof window !== "undefined" &&
       !!window.matchMedia?.("(max-width: 1023px)").matches
+  );
+  // <768px (owner directive 2026-07-29): phones swap the "Menu" trigger for
+  // the PanelLeft* chat-history toggle, slim the drawer to New Chat + Recent
+  // Chats, and drop the thread kebab. Tablet (768-1023) keeps the shipped
+  // compact chrome.
+  const [phone, setPhone] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      !!window.matchMedia?.("(max-width: 767px)").matches
   );
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerMoving, setDrawerMoving] = useState(false);
@@ -1381,6 +1494,14 @@ export default function DimeChatPage({
     const mq = window.matchMedia?.("(max-width: 1023px)");
     if (!mq) return;
     const onChange = (e: MediaQueryListEvent) => setCompact(e.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+
+  useEffect(() => {
+    const mq = window.matchMedia?.("(max-width: 767px)");
+    if (!mq) return;
+    const onChange = (e: MediaQueryListEvent) => setPhone(e.matches);
     mq.addEventListener("change", onChange);
     return () => mq.removeEventListener("change", onChange);
   }, []);
@@ -1686,17 +1807,42 @@ export default function DimeChatPage({
     [settleDrawer]
   );
 
+  const startDimeChatTrace = useCallback(
+    (
+      start: (
+        traceTools: DimeChatTraceTools,
+        traceLoad: Promise<DimeChatTraceTools>
+      ) => void
+    ) => {
+      const traceLoad = loadDimeChatTrace();
+      traceStartingRef.current = traceLoad;
+      void traceLoad
+        .then(traceTools => {
+          if (traceStartingRef.current === traceLoad) {
+            start(traceTools, traceLoad);
+          }
+        })
+        .catch(() => {
+          if (traceStartingRef.current === traceLoad) {
+            traceStartingRef.current = null;
+          }
+        });
+    },
+    []
+  );
+
   /* --- SSE streaming core (preserved from the previous DimeChat.tsx) --- */
   const runStream = useCallback(
     async (
       history: Array<{ role: "user" | "assistant"; content: string }>,
-      assistantId: string
+      assistantId: string,
+      traceRequest: DimeChatTraceRequest,
+      traceTools: DimeChatTraceTools,
+      traceLoad: Promise<DimeChatTraceTools>
     ) => {
       const controller = new AbortController();
       abortRef.current = controller;
 
-      const streamStart = Date.now();
-      let frameCount = 0;
       let settled = false;
       const batcher = createRafDeltaBatcher(text => {
         dispatch({ type: "stream_delta", id: assistantId, text });
@@ -1705,16 +1851,48 @@ export default function DimeChatPage({
       activeBatcherRef.current = batcher;
       dimeDebug("stream.open", { historyLength: history.length });
 
+      const bindServerTrace = (value: unknown) => {
+        const active = activeClientTraceRef.current;
+        const serverTrace = traceTools.bindDimeChatServerTrace(
+          value,
+          active,
+          assistantId,
+          traceRequest.idempotencyKey
+        );
+        if (!serverTrace || !active) return null;
+        lastServerTraceRef.current = active;
+        setThreadId(serverTrace.threadId);
+        return serverTrace;
+      };
+
       try {
         const res = await fetch("/api/dime/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           signal: controller.signal,
-          body: JSON.stringify({ messages: history }),
+          body: JSON.stringify({
+            messages: history,
+            trace: traceRequest,
+          }),
         });
 
-        if (!res.ok || !res.body) {
-          throw new Error(`Request failed (${res.status})`);
+        const active = activeClientTraceRef.current;
+        traceTools.claimDimeChatTraceResponse(
+          res.headers.get("X-Dime-Trace-Version"),
+          active,
+          assistantId,
+          traceRequest.idempotencyKey
+        );
+
+        if (!res.ok) {
+          const payload = (await res.json().catch(() => null)) as {
+            trace?: unknown;
+          } | null;
+          bindServerTrace(payload?.trace);
+          throw new Error();
+        }
+        if (!res.body) {
+          throw new Error();
         }
 
         chatStartRef.current = Date.now();
@@ -1736,20 +1914,25 @@ export default function DimeChatPage({
             if (!line) continue;
             try {
               const event = JSON.parse(line.slice(6));
-              frameCount++;
               if (event.type === "delta" && typeof event.text === "string") {
                 batcher.push(event.text);
-              } else if (
-                event.type === "meta" &&
-                (event.dataFreshness === "live" ||
+              } else if (event.type === "meta") {
+                if (
+                  event.dataFreshness === "live" ||
                   event.dataFreshness === "delayed" ||
-                  event.dataFreshness === "none")
-              ) {
-                dispatch({ type: "meta", dataFreshness: event.dataFreshness });
+                  event.dataFreshness === "none"
+                ) {
+                  dispatch({
+                    type: "meta",
+                    dataFreshness: event.dataFreshness,
+                  });
+                }
+                bindServerTrace(event.trace);
               } else if (
                 event.type === "error" &&
                 typeof event.message === "string"
               ) {
+                bindServerTrace(event.trace);
                 settled = true;
                 batcher.flushBeforeTerminal(() =>
                   dispatch({
@@ -1759,6 +1942,7 @@ export default function DimeChatPage({
                   })
                 );
               } else if (event.type === "done") {
+                bindServerTrace(event.trace);
                 settled = true;
                 batcher.flushBeforeTerminal(() =>
                   dispatch({ type: "stream_done", id: assistantId })
@@ -1767,7 +1951,14 @@ export default function DimeChatPage({
                   featureId: "dime_chat",
                   outcome: "success",
                   ...(chatStartRef.current
-                    ? { props: { latency_ms: Math.max(0, Date.now() - chatStartRef.current) } }
+                    ? {
+                        props: {
+                          latency_ms: Math.max(
+                            0,
+                            Date.now() - chatStartRef.current
+                          ),
+                        },
+                      }
                     : {}),
                 });
                 chatStartRef.current = null;
@@ -1784,13 +1975,7 @@ export default function DimeChatPage({
           );
         }
 
-        const latency = Date.now() - streamStart;
-        const fps = frameCount / (latency / 1000);
-        dimeDebug("stream.done", {
-          frameCount,
-          latencyMs: latency,
-          fps: fps.toFixed(1),
-        });
+        dimeDebug("stream.done");
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") {
           batcher.flushBeforeTerminal(() =>
@@ -1811,6 +1996,9 @@ export default function DimeChatPage({
         if (activeBatcherRef.current === batcher)
           activeBatcherRef.current = null;
         abortRef.current = null;
+        if (traceStartingRef.current === traceLoad) {
+          traceStartingRef.current = null;
+        }
       }
     },
     []
@@ -1832,87 +2020,124 @@ export default function DimeChatPage({
       // path may start a stream either (server 403s regardless).
       if (chatAccess !== "granted") return;
       const trimmed = text.trim();
-      if (!trimmed || state.streaming) return;
+      if (!trimmed || state.streaming || traceStartingRef.current) return;
+      startDimeChatTrace((traceTools, traceLoad) => {
+        // D3 analytics (inert until an island registers the emitter).
+        emitAction("chat_message_sent", {
+          props: {
+            len_bucket:
+              trimmed.length < 120
+                ? "short"
+                : trimmed.length < 600
+                  ? "medium"
+                  : "long",
+          },
+        });
 
-      // D3 analytics (inert until an island registers the emitter; fire-and-forget).
-      emitAction("chat_message_sent", {
-        props: {
-          len_bucket:
-            trimmed.length < 120
-              ? "short"
-              : trimmed.length < 600
-                ? "medium"
-                : "long",
-        },
-      });
-
-      // Remember the outbound text so the settle effect can persist the full
-      // user→assistant turn to the dimeChats history once the stream ends.
-      pendingUserTextRef.current = trimmed;
-
-      const wasHome = state.messages.length === 0;
-      if (wasHome) captureComposerPresentation();
-      if (wasHome && !reduceMotion) {
-        // FLIP first-position capture + ghost rects (spec §3.2)
-        const hero = heroRef.current?.getBoundingClientRect();
-        const pills = pillsRef.current?.getBoundingClientRect();
-        if (hero && pills) {
-          setGhost({
-            hero: {
-              left: hero.left,
-              top: hero.top,
-              width: hero.width,
-              height: hero.height,
-            },
-            pills: {
-              left: pills.left,
-              top: pills.top,
-              width: pills.width,
-              height: pills.height,
-            },
-            fading: false,
-          });
+        pendingUserTextRef.current = trimmed;
+        const wasHome = state.messages.length === 0;
+        if (wasHome) captureComposerPresentation();
+        if (wasHome && !reduceMotion) {
+          const hero = heroRef.current?.getBoundingClientRect();
+          const pills = pillsRef.current?.getBoundingClientRect();
+          if (hero && pills) {
+            setGhost({
+              hero: {
+                left: hero.left,
+                top: hero.top,
+                width: hero.width,
+                height: hero.height,
+              },
+              pills: {
+                left: pills.left,
+                top: pills.top,
+                width: pills.width,
+                height: pills.height,
+              },
+              fading: false,
+            });
+          }
+          setFirstSendFx(true);
         }
-        setFirstSendFx(true);
-      }
 
-      setInput("");
-      stuckRef.current = true;
-      setStuck(true);
+        setInput("");
+        stuckRef.current = true;
+        setStuck(true);
 
-      const userId = uid();
-      const assistantId = uid();
-      const history = [
-        ...state.messages.map(({ role, content }) => ({ role, content })),
-        { role: "user" as const, content: trimmed },
-      ];
-      dispatch({ type: "append_user", id: userId, text: trimmed });
-      dispatch({ type: "open_assistant", id: assistantId });
-      void runStream(history, assistantId);
+        const trace = traceTools.createInitialDimeChatTrace({
+          threadId,
+          clientSessionId: clientSessionIdRef.current,
+        });
+        const { userId, state: activeTrace } = trace;
+        const { assistantId, request: traceRequest } = activeTrace;
+        clientSessionIdRef.current = trace.clientSessionId;
+        activeClientTraceRef.current = activeTrace;
+        const history = [
+          ...state.messages.map(({ role, content }) => ({ role, content })),
+          { role: "user" as const, content: trimmed },
+        ];
+        dispatch({ type: "append_user", id: userId, text: trimmed });
+        dispatch({ type: "open_assistant", id: assistantId });
+        void runStream(
+          history,
+          assistantId,
+          traceRequest,
+          traceTools,
+          traceLoad
+        );
+      });
     },
     [
       chatAccess,
       state.streaming,
       state.messages,
+      threadId,
       runStream,
       reduceMotion,
       captureComposerPresentation,
+      startDimeChatTrace,
     ]
   );
 
   /** Retry re-runs the same history (failed empty row was already removed — spec §2.6). */
   const retry = useCallback(() => {
     if (chatAccess !== "granted") return;
-    if (state.streaming || state.messages.length === 0) return;
+    if (
+      state.streaming ||
+      state.messages.length === 0 ||
+      traceStartingRef.current
+    )
+      return;
     const last = state.messages[state.messages.length - 1];
     if (last.role !== "user") return;
-    const assistantId = uid();
-    dispatch({ type: "open_assistant", id: assistantId });
-    void runStream(
-      state.messages.map(({ role, content }) => ({ role, content })),
-      assistantId
-    );
-  }, [chatAccess, state.streaming, state.messages, runStream]);
+    startDimeChatTrace((traceTools, traceLoad) => {
+      const trace = traceTools.createRetryDimeChatTrace({
+        threadId,
+        clientSessionId: clientSessionIdRef.current,
+        clientUserMessageId: last.id,
+        activeTrace: activeClientTraceRef.current,
+        settledTrace: lastServerTraceRef.current,
+      });
+      const { assistantId, request: traceRequest } = trace.state;
+      clientSessionIdRef.current = trace.clientSessionId;
+      activeClientTraceRef.current = trace.state;
+      dispatch({ type: "open_assistant", id: assistantId });
+      void runStream(
+        state.messages.map(({ role, content }) => ({ role, content })),
+        assistantId,
+        traceRequest,
+        traceTools,
+        traceLoad
+      );
+    });
+  }, [
+    chatAccess,
+    state.streaming,
+    state.messages,
+    threadId,
+    runStream,
+    startDimeChatTrace,
+  ]);
 
   const stop = () => abortRef.current?.abort();
 
@@ -1926,6 +2151,9 @@ export default function DimeChatPage({
     setThreadId(null);
     setThreadMenuOpen(false);
     pendingUserTextRef.current = null;
+    traceStartingRef.current = null;
+    activeClientTraceRef.current = null;
+    lastServerTraceRef.current = null;
     setInput("");
     setGhost(null);
     setFirstSendFx(false);
@@ -1940,6 +2168,18 @@ export default function DimeChatPage({
     prevStreamingRef.current = state.streaming;
     if (!wasStreaming || state.streaming) return; // only on stream settle
     if (!historyReady) return;
+
+    const activeTrace = activeClientTraceRef.current;
+    if (activeTrace?.serverOwned) {
+      pendingUserTextRef.current = null;
+      if (activeTrace.serverTrace) {
+        lastServerTraceRef.current = activeTrace;
+        setThreadId(activeTrace.serverTrace.threadId);
+      }
+      activeClientTraceRef.current = null;
+      void utils.dimeChats.list.invalidate();
+      return;
+    }
 
     const last = state.messages[state.messages.length - 1];
     if (!last || last.role !== "assistant" || last.content === "") return;
@@ -1975,6 +2215,7 @@ export default function DimeChatPage({
         { onSettled: refreshList }
       );
     }
+    activeClientTraceRef.current = null;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.streaming, state.messages, threadId, historyReady]);
 
@@ -1998,6 +2239,8 @@ export default function DimeChatPage({
         setThreadId(id);
         setThreadMenuOpen(false);
         pendingUserTextRef.current = null;
+        activeClientTraceRef.current = null;
+        lastServerTraceRef.current = null;
         setInput("");
         stuckRef.current = true;
         setStuck(true);
@@ -2010,6 +2253,7 @@ export default function DimeChatPage({
 
   /* --- "⋯" chat settings: Star / Archive / Delete for the open thread. --- */
   useEffect(() => {
+    if (!threadMenuOpen) setRenameDraft(null);
     if (!threadMenuOpen) return;
     const onDown = (e: MouseEvent) => {
       if (!threadMenuRef.current?.contains(e.target as Node))
@@ -2030,6 +2274,17 @@ export default function DimeChatPage({
     () => void utils.dimeChats.list.invalidate(),
     [utils]
   );
+
+  /** Commit the phone-menu rename: sanitized server-side; empty input is a
+   *  no-op cancel. The stored title is the user's — the topic engine never
+   *  overrides an explicit rename. */
+  const commitRename = useCallback(() => {
+    const title = (renameDraft ?? "").replace(/\s+/g, " ").trim();
+    setThreadMenuOpen(false);
+    setRenameDraft(null);
+    if (threadId == null || title === "") return;
+    renameMut.mutate({ threadId, title }, { onSettled: refreshThreads });
+  }, [renameDraft, threadId, renameMut, refreshThreads]);
 
   const toggleStar = useCallback(() => {
     if (threadId == null) return;
@@ -2245,20 +2500,129 @@ export default function DimeChatPage({
               className="dc-mobile-menu dc-focusable dc-pressable"
               aria-haspopup="dialog"
               aria-expanded={drawerOpen}
+              aria-label={phone ? "Expand chat history" : undefined}
               onClick={openDrawer}
             >
-              Menu
+              {/* Phones (owner directive 2026-07-29): the "Menu" word goes —
+                  the PanelLeftOpen glyph is the chat-history toggle, matching
+                  the PanelLeftClose inside the drawer. Tablet keeps "Menu". */}
+              {phone ? (
+                <PanelLeftOpen size={22.5} strokeWidth={1.8} aria-hidden="true" />
+              ) : (
+                "Menu"
+              )}
             </button>
-            <span className="dc-mobile-title">
-              <span className="dime-wordmark" aria-label="dime">
-                d
-                <span className="dime-wordmark-i">
-                  ı<span className="dime-coindot" />
+            {/* Phones (owner directive 2026-07-29 r2): the floating nav's
+                active chat pill is the ONE credits display — repeating it
+                here read as a duplicate, so the bar center stays empty and
+                the bar collapses to the toggle's own footprint. Tablet keeps
+                the wordmark title. */}
+            {!phone && (
+              <span className="dc-mobile-title">
+                <span className="dime-wordmark" aria-label="dime">
+                  d
+                  <span className="dime-wordmark-i">
+                    ı<span className="dime-coindot" />
+                  </span>
+                  me
                 </span>
-                me
               </span>
-            </span>
-            <span className="dc-mobile-balance" aria-hidden="true" />
+            )}
+            {/* Phone kebab (owner directive 2026-07-29 r3): chat options at
+                the bar's right edge, opposite the history toggle — New chat,
+                Star, Archive, and an inline Rename drill-in. Reuses the
+                threadMenu state/outside-click wiring (the desktop kebab and
+                this one never render together). */}
+            {phone && chatAccess === "granted" && conversation ? (
+              <div className="dc-mobile-kebab-wrap" ref={threadMenuRef}>
+                <button
+                  type="button"
+                  className="dc-mobile-kebab dc-focusable dc-pressable"
+                  aria-label="Chat options"
+                  aria-haspopup="menu"
+                  aria-expanded={threadMenuOpen}
+                  onClick={() => setThreadMenuOpen(open => !open)}
+                >
+                  <Ellipsis size={20} strokeWidth={1.8} aria-hidden="true" />
+                </button>
+                {threadMenuOpen && (
+                  <div className="dc-thread-menu" role="menu">
+                    {renameDraft != null ? (
+                      <form
+                        className="dc-rename-form"
+                        onSubmit={e => {
+                          e.preventDefault();
+                          commitRename();
+                        }}
+                      >
+                        <input
+                          className="dc-rename-input"
+                          value={renameDraft}
+                          onChange={e => setRenameDraft(e.target.value)}
+                          onKeyDown={e => {
+                            if (e.key === "Escape") setRenameDraft(null);
+                          }}
+                          aria-label="New chat name"
+                          maxLength={80}
+                          autoFocus
+                        />
+                        <button
+                          type="submit"
+                          className="dc-thread-menu-item dc-focusable dc-pressable"
+                        >
+                          Save
+                        </button>
+                      </form>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className="dc-thread-menu-item dc-focusable dc-pressable"
+                          onClick={() => {
+                            setThreadMenuOpen(false);
+                            newChat();
+                          }}
+                        >
+                          New chat
+                        </button>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className="dc-thread-menu-item dc-focusable dc-pressable"
+                          disabled={threadId == null}
+                          onClick={toggleStar}
+                        >
+                          {activeThreadMeta?.starred ? "Unstar" : "Star"}
+                        </button>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className="dc-thread-menu-item dc-focusable dc-pressable"
+                          disabled={threadId == null}
+                          onClick={archiveThread}
+                        >
+                          Archive
+                        </button>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className="dc-thread-menu-item dc-focusable dc-pressable"
+                          disabled={threadId == null}
+                          onClick={() =>
+                            setRenameDraft(activeThreadMeta?.title ?? "")
+                          }
+                        >
+                          Rename
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <span className="dc-mobile-balance" aria-hidden="true" />
+            )}
           </div>
         )}
 
@@ -2270,6 +2634,7 @@ export default function DimeChatPage({
           onClearAllChats={isOwner ? clearAllRecentChats : undefined}
           activeChatId={threadId}
           compact={compact}
+          phone={phone}
           drawerOpen={drawerOpen}
           sidebarRef={sidebarRef}
           onClose={() => closeDrawer(true)}
@@ -2389,7 +2754,10 @@ export default function DimeChatPage({
                   </div>
                 </div>
               )}
-              {chatAccess === "granted" && conversation && threadId != null && (
+              {/* Thread kebab is tablet/desktop chrome (owner directive
+                  2026-07-29): phones drop it — per-chat Delete stays reachable
+                  through the drawer's recent-row Ellipsis menu. */}
+              {chatAccess === "granted" && conversation && threadId != null && !phone && (
                 <div className="dc-thread-actions" ref={threadMenuRef}>
                   <button
                     type="button"

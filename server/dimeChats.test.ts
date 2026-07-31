@@ -21,11 +21,27 @@ const routerSrc = fs.readFileSync(
   "utf8"
 );
 const pageSrc = fs.readFileSync(
-  path.join(import.meta.dirname, "..", "client", "src", "pages", "dime-chat", "DimeChatPage.tsx"),
+  path.join(
+    import.meta.dirname,
+    "..",
+    "client",
+    "src",
+    "pages",
+    "dime-chat",
+    "DimeChatPage.tsx"
+  ),
   "utf8"
 );
 const conversationCssSrc = fs.readFileSync(
-  path.join(import.meta.dirname, "..", "client", "src", "pages", "dime-chat", "conversation.css"),
+  path.join(
+    import.meta.dirname,
+    "..",
+    "client",
+    "src",
+    "pages",
+    "dime-chat",
+    "conversation.css"
+  ),
   "utf8"
 );
 const chatRouteSrc = fs.readFileSync(
@@ -42,11 +58,13 @@ const schemaSrc = fs.readFileSync(
 );
 
 describe("deriveThreadTitle", () => {
-  it("collapses whitespace and passes short titles through", () => {
-    expect(deriveThreadTitle("  best   MLB\nedges today ")).toBe("best MLB edges today");
+  // 2026-07-29 r3: new-thread titles route through the topic-detection engine
+  // (server/dimeChatTitle.ts — its own test file carries the full matrix).
+  it("collapses whitespace and composes a topic title", () => {
+    expect(deriveThreadTitle("  best   MLB\nedges today ")).toBe("MLB Edges — Today");
   });
-  it("truncates long titles with an ellipsis at the cap", () => {
-    const long = "x".repeat(200);
+  it("truncates undetectable long input with an ellipsis under the cap", () => {
+    const long = "z".repeat(200);
     const title = deriveThreadTitle(long);
     expect(title.length).toBeLessThanOrEqual(80);
     expect(title.endsWith("…")).toBe(true);
@@ -55,7 +73,9 @@ describe("deriveThreadTitle", () => {
 
 describe("dimeChats router — security contract", () => {
   it("every procedure is built on appUserProcedure", () => {
-    expect(routerSrc.match(/appUserProcedure/g)?.length).toBeGreaterThanOrEqual(8);
+    expect(routerSrc.match(/appUserProcedure/g)?.length).toBeGreaterThanOrEqual(
+      8
+    );
     expect(routerSrc).not.toMatch(/publicProcedure/);
   });
 
@@ -65,8 +85,12 @@ describe("dimeChats router — security contract", () => {
   });
 
   it("every mutating/reading procedure on a thread goes through getOwnedThread", () => {
-    // get, appendMessages, setStarred, setArchived, softDelete
-    expect(routerSrc.match(/getOwnedThread\(db, input\.threadId, ctx\.appUser\.id\)/g)?.length).toBe(5);
+    // get, appendMessages, rename, setStarred, setArchived, softDelete
+    expect(
+      routerSrc.match(
+        /getOwnedThread\(\s*(?:db|tx),\s*input\.threadId,\s*ctx\.appUser\.id\s*\)/g
+      )?.length
+    ).toBe(6);
   });
 
   it("delete is SOFT — sets deletedAt, never removes rows", () => {
@@ -94,9 +118,15 @@ describe("Dime chat page — owner gate + live identity + ⋯ menu", () => {
     expect(pageSrc).toContain("AI MODEL CHAT COMING SOON");
     expect(pageSrc).toMatch(/\{chatAccess === "denied" && \(/);
     // Composer zone, hero and pills all gate on the granted access state.
-    expect(pageSrc).toMatch(/\{chatAccess === "granted" && \(\s*<div className="dc-composer-zone">/);
-    expect(pageSrc).toMatch(/\{chatAccess === "granted" && !conversation && \(\s*<BrandHero/);
-    expect(pageSrc).toMatch(/\{chatAccess === "granted" && !conversation && \(\s*<PromptPills/);
+    expect(pageSrc).toMatch(
+      /\{chatAccess === "granted" && \(\s*<div className="dc-composer-zone">/
+    );
+    expect(pageSrc).toMatch(
+      /\{chatAccess === "granted" && !conversation && \(\s*<BrandHero/
+    );
+    expect(pageSrc).toMatch(
+      /\{chatAccess === "granted" && !conversation && \(\s*<PromptPills/
+    );
   });
 
   it("the server refuses non-owners before any model or context work", () => {
@@ -121,7 +151,9 @@ describe("Dime chat page — owner gate + live identity + ⋯ menu", () => {
   });
 
   it("lifetime members see no Upgrade/Cancel; the menu buttons act", () => {
-    expect(pageSrc).toMatch(/\{showPlanCtas && \(\s*<div className="dc-menu-cta-row">/);
+    expect(pageSrc).toMatch(
+      /\{showPlanCtas && \(\s*<div className="dc-menu-cta-row">/
+    );
     expect(pageSrc).toMatch(/!isLifetimeMember\(appUser\)/);
     expect(pageSrc).toContain('goTo("/checkout")');
     expect(pageSrc).toContain('goTo("/account")');
@@ -151,7 +183,9 @@ describe("Dime chat page — owner gate + live identity + ⋯ menu", () => {
     expect(pageSrc).toContain("appendMut.mutate(");
     expect(pageSrc).toContain("firstAssistantMessage: assistantText");
     expect(pageSrc).toMatch(/utils\.dimeChats\.list\.invalidate\(\)/);
-    expect(pageSrc).toMatch(/utils\.dimeChats\.get\.fetch\(\{ threadId: id \}\)/);
+    expect(pageSrc).toMatch(
+      /utils\.dimeChats\.get\.fetch\(\{ threadId: id \}\)/
+    );
   });
 
   it("keeps the responsible-gaming notice out of the live log and in a muted page footer", () => {

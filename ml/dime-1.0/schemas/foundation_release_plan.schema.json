@@ -1,0 +1,305 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dime.internal/schemas/foundation_release_plan.schema.json",
+  "title": "Dime Foundation v1 Release Plan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "plan_id",
+    "status",
+    "source_commit",
+    "canonical_record_boundary",
+    "trainer_release_boundary",
+    "route_mixture",
+    "cross_cutting_minimums",
+    "data_factory",
+    "private_release",
+    "known_blockers",
+    "authorization_boundary"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "dime-foundation-release-plan-v1"
+    },
+    "plan_id": {
+      "const": "dime-foundation-v1"
+    },
+    "status": {
+      "const": "INCOMPLETE_NOT_AUTHORIZED"
+    },
+    "source_commit": {
+      "$ref": "#/$defs/commit"
+    },
+    "canonical_record_boundary": {
+      "$ref": "#/$defs/file_binding"
+    },
+    "trainer_release_boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "conversion_contract_status",
+        "conversion_approved"
+      ],
+      "properties": {
+        "schema": {
+          "$ref": "#/$defs/file_binding"
+        },
+        "conversion_contract_status": {
+          "const": "IMPLEMENTED_NOT_EXECUTED"
+        },
+        "conversion_approved": {
+          "const": false
+        }
+      }
+    },
+    "route_mixture": {
+      "const": {
+        "platform": {
+          "total": 300,
+          "train": 270,
+          "validation": 30
+        },
+        "account": {
+          "total": 180,
+          "train": 162,
+          "validation": 18
+        },
+        "educational": {
+          "total": 300,
+          "train": 270,
+          "validation": 30
+        },
+        "bet_explanation": {
+          "total": 300,
+          "train": 270,
+          "validation": 30
+        },
+        "matchup": {
+          "total": 420,
+          "train": 378,
+          "validation": 42
+        },
+        "full_slate": {
+          "total": 180,
+          "train": 162,
+          "validation": 18
+        },
+        "historical": {
+          "total": 240,
+          "train": 216,
+          "validation": 24
+        },
+        "live_data": {
+          "total": 300,
+          "train": 270,
+          "validation": 30
+        },
+        "general_sports": {
+          "total": 180,
+          "train": 162,
+          "validation": 18
+        }
+      }
+    },
+    "cross_cutting_minimums": {
+      "const": {
+        "tool_required": 720,
+        "temporal_or_freshness_sensitive": 600,
+        "missing_or_ambiguous_information": 480,
+        "abstention_or_error_correction": 360,
+        "multi_turn": 360,
+        "adversarial_or_false_premise": 240
+      }
+    },
+    "data_factory": {
+      "const": {
+        "orchestrator": {
+          "platform": "Codex",
+          "agent": "5.6 Sol"
+        },
+        "maximum_records_per_generation_shard": 200,
+        "stages": [
+          "immutable_source_packets",
+          "bounded_specialized_generation",
+          "independent_critique",
+          "automated_integrity",
+          "risk_focused_review"
+        ],
+        "source_packet_classes": [
+          "platform_documentation",
+          "product_and_account_contracts",
+          "tool_schemas",
+          "routing_policies",
+          "timestamped_historical_sports_records",
+          "deterministic_market_math",
+          "failure_catalogs",
+          "behavioral_principles"
+        ],
+        "generator_may_approve_own_record": false,
+        "failed_record_disposition": [
+          "repair",
+          "reject"
+        ],
+        "live_data_policy": "retrieve_validate_or_abstain_never_memorize_current_facts",
+        "quantitative_source_of_truth": "deterministic_code",
+        "private_chain_of_thought_allowed": false,
+        "risk_review_all": [
+          "current_or_live_information",
+          "specific_odds_or_prices",
+          "player_injuries",
+          "tool_failure",
+          "missing_data",
+          "responsible_betting_behavior",
+          "account_access",
+          "high_confidence_recommendations"
+        ],
+        "stratified_review_remaining_categories": true,
+        "ai_authorship_policy": {
+          "current_repository_policy": "GOVERNED_TEACHER_GENERATED",
+          "requested_policy": "GOVERNED_CODEX_GENERATION",
+          "resolution_status": "RESOLVED_BY_DATA_FACTORY_GOVERNANCE_V1"
+        },
+        "governance_contract": {
+          "path": "ml/dime-1.0/configs/foundation_data_factory_governance_v1.json",
+          "sha256": "529c26ad394c79707005b3df17500f7e22474b27ed4212cfede812a5d6c3ffc2"
+        },
+        "governance_schema": {
+          "path": "ml/dime-1.0/schemas/foundation_data_factory_governance.schema.json",
+          "sha256": "a4ec45ac242fb0ed266bae29e9011eae9c1cc243bbbb8860f0b58e2da622c30b"
+        },
+        "strict_json_loader": {
+          "path": "ml/dime-1.0/src/dime_ai/governed_json.py",
+          "sha256": "f2b00c11dc3fe57b6569f802041fe7155d1f31ca5dbf263910742e93b0931d64"
+        },
+        "strict_json_validator": {
+          "path": "ml/dime-1.0/scripts/validate_governed_json.py",
+          "sha256": "01a141b17baf249d4a8458a669aaa791f4cc9d576abfb7a89a8a1d2325954c14"
+        },
+        "source_packet_schema": {
+          "path": "ml/dime-1.0/schemas/foundation_source_packet.schema.json",
+          "sha256": "bb8180b274b536b5322b3f9c223dae2ebbb2c05cab910719b87864b49b2c7f99"
+        },
+        "partition_registry": {
+          "path": "ml/dime-1.0/configs/foundation_partition_registry_v1.json",
+          "sha256": "63f765a2080c078e0bfaec48c27bc1f46a038d7c3ac1c49d518f9bd026cf991e"
+        },
+        "partition_registry_schema": {
+          "path": "ml/dime-1.0/schemas/foundation_partition_registry.schema.json",
+          "sha256": "c53895ca39531c184388e9501a8a91df92d0a08b5c1c3d3ca4674f36337e2868"
+        },
+        "partition_validator": {
+          "path": "ml/dime-1.0/src/dime_ai/foundation_partitioning.py",
+          "sha256": "5b8731ac885fd772ac83868ed05551e2dc230544cb60bbc157d3739692cf63da"
+        },
+        "conversion_implementation": {
+          "path": "ml/dime-1.0/src/dime_ai/foundation_data_factory.py",
+          "sha256": "1b3e06b8b511797b830012f1302c49e2eef1f2f59d00513a6e488e72b78e58fc"
+        },
+        "publication_guard": {
+          "path": "ml/dime-1.0/src/dime_ai/foundation_publication.py",
+          "sha256": "5dac5fc1b9f8c5e092c517c4c6a5853865691515c70abb0248a56e5520d551cf"
+        }
+      }
+    },
+    "private_release": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repo_id",
+        "revision",
+        "dataset_manifest_sha256",
+        "release_checksums_sha256",
+        "approved",
+        "expected_public_evidence"
+      ],
+      "properties": {
+        "repo_id": {
+          "const": "taileredsports/dime-foundation-sft"
+        },
+        "revision": {
+          "type": "null"
+        },
+        "dataset_manifest_sha256": {
+          "type": "null"
+        },
+        "release_checksums_sha256": {
+          "type": "null"
+        },
+        "approved": {
+          "const": false
+        },
+        "expected_public_evidence": {
+          "const": [
+            "release_identity.json",
+            "dataset_manifest.json",
+            "checksums.json",
+            "dataset_card.md",
+            "provenance_report.json",
+            "split_report.json",
+            "leakage_report.json",
+            "coverage_report.json",
+            "rights_report.json",
+            "foundation_fixture.sample.jsonl",
+            "SHA256SUMS"
+          ]
+        }
+      }
+    },
+    "known_blockers": {
+      "const": [
+        "The immutable source-packet registry and bounded production shard manifest do not exist.",
+        "No approved 2,400-record private Foundation release exists.",
+        "The immutable Hugging Face release revision and evidence hashes are null.",
+        "The immutable application-repository release identity contract does not exist.",
+        "The reviewer registry and curriculum remain unapproved.",
+        "Historical sports source-packet rights have not been established."
+      ]
+    },
+    "authorization_boundary": {
+      "const": {
+        "record_generation": false,
+        "private_dataset_publication": false,
+        "foundation_dataset_approval": false,
+        "runpod_invocation": false,
+        "model_download": false,
+        "model_training": false,
+        "benchmark_execution": false,
+        "model_selection": false,
+        "provider_activation": false,
+        "railway_mutation": false,
+        "trace_activation": false,
+        "shadow_traffic": false,
+        "route_activation": false
+      }
+    }
+  },
+  "$defs": {
+    "commit": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "file_binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 3
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    }
+  }
+}

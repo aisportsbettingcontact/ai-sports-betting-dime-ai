@@ -771,7 +771,12 @@ def validate_public_repository_data(project: str | Path) -> dict[str, int]:
 
     root = Path(project).resolve()
     data_root = root / "data"
-    jsonl_paths = sorted(data_root.rglob("*.jsonl"))
+    private_boundaries = frozenset({"hidden", "locked", "private", "provider", "raw"})
+    jsonl_paths = sorted(
+        path
+        for path in data_root.rglob("*.jsonl")
+        if path.relative_to(data_root).parts[0] not in private_boundaries
+    )
     sample_paths = [path for path in jsonl_paths if path.name.endswith(".sample.jsonl")]
     non_sample_paths = [path for path in jsonl_paths if path not in sample_paths]
 

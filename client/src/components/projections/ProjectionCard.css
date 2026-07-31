@@ -27,6 +27,16 @@
 .projection-card--scheduled.projection-card--with-pregame {
   grid-template-areas: "matchup" "pregame" "summary" "markets";
 }
+/* Audit DIME-UI-009 (2026-07-31): below the shell boundary the model edge is
+   the product — it renders ahead of the pitcher panel so the verdict sits in
+   the first card-height instead of below two headshot rows (measured y≈648 of
+   an 844px viewport at 390px wide). Tablet/desktop keep the pregame-first
+   order, where the row grid shows the edge without scrolling. */
+@media (max-width: 767.98px) {
+  .projection-card--scheduled.projection-card--with-pregame {
+    grid-template-areas: "matchup" "summary" "pregame" "markets";
+  }
+}
 /* Pregame detail makes upcoming MLB cards intentionally richer. Once a game
    leaves scheduled state, its card returns to a shorter, quieter scan target. */
 .projection-card--compact {
@@ -170,7 +180,7 @@ html:not([data-theme-mode]) .dmf-root[data-dmf-mode="dark"] .team-logo-box--dark
 .pregame-pitcher__status {
   margin-block-end: var(--space-2xs);
   color: var(--text-secondary, #a6a6a6);
-  font-family: var(--dmf-mono, "IBM Plex Mono", monospace);
+  font-family: var(--dmf-mono, "Familjen Grotesk", system-ui, sans-serif);
   font-size: 0.625rem; /* CL-17 (closure): was 0.55rem/8.8px, below the 10px micro-label floor (MASTER.md READABILITY MANDATE); matches the CL-03 edge-label floor */
   font-weight: 600;
   letter-spacing: 0.08em;
@@ -178,7 +188,7 @@ html:not([data-theme-mode]) .dmf-root[data-dmf-mode="dark"] .team-logo-box--dark
   text-transform: uppercase;
 }
 .pregame-pitcher__status--confirmed { color: #45e0a8; }
-html:not(.dark) .pregame-pitcher__status--confirmed { color: #0fa36b; }
+html:not(.dark) .pregame-pitcher__status--confirmed { color: #0b8557; }
 .pregame-pitcher__status--pending { color: var(--text-secondary, #a6a6a6); }
 .pregame-pitcher__photo {
   display: grid;
@@ -213,7 +223,7 @@ html:not(.dark) .pregame-pitcher__status--confirmed { color: #0fa36b; }
 }
 .pregame-pitcher__fallback {
   align-self: center;
-  font-family: var(--dmf-mono, "IBM Plex Mono", monospace);
+  font-family: var(--dmf-mono, "Familjen Grotesk", system-ui, sans-serif);
   font-size: var(--proj-label);
   font-weight: 700;
 }
@@ -229,11 +239,14 @@ html:not(.dark) .pregame-pitcher__status--confirmed { color: #0fa36b; }
   max-inline-size: 100%;
   margin-block-start: 2px;
   color: var(--text-secondary, #a6a6a6);
-  font-family: var(--dmf-mono, "IBM Plex Mono", monospace);
+  font-family: var(--dmf-mono, "Familjen Grotesk", system-ui, sans-serif);
   font-size: clamp(0.625rem, 2.7cqi, 0.68rem); /* CL-17 (closure): clamp min was 0.55rem/8.8px — resolves below the 10px floor in the ~281-370px band; floored at 0.625rem */
   line-height: 1.3;
   overflow-wrap: anywhere;
 }
+/* Audit DIME-UI-014 (2026-07-31): LINEUPS is a secondary reference lookup, so
+   it no longer takes the card's only solid-mint fill — mint is rationed to the
+   model's edge signal. Quiet raised chip; weight/caps keep it findable. */
 .projection-card .pregame-pitchers__lineups {
   display: inline-flex;
   align-items: center;
@@ -243,31 +256,30 @@ html:not(.dark) .pregame-pitcher__status--confirmed { color: #0fa36b; }
   min-block-size: 44px;
   padding: 0.75rem 1.25rem;
   cursor: pointer;
-  color: #000;
-  background: #45e0a8;
-  border: 1px solid rgba(0, 0, 0, 0.3);
+  color: var(--foreground);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
   border-radius: 12px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28);
-  font-family: var(--dmf-mono, "IBM Plex Mono", monospace);
+  font-family: var(--dmf-mono, "Familjen Grotesk", system-ui, sans-serif);
   font-size: 0.75rem;
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  /* R2-03 (reviewer): motion law is a single 160ms curve; was 300ms. */
+  /* R2-03 (reviewer): motion law is a single 160ms curve; was 300ms.
+     Audit DIME-UI-043: box-shadow left the transition list so the focus ring
+     (outline) appears instantly instead of easing in. */
   transition:
-    box-shadow 160ms cubic-bezier(0.16, 1, 0.3, 1),
+    background 160ms cubic-bezier(0.16, 1, 0.3, 1),
     transform 160ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 .projection-card .pregame-pitchers__lineups:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 3px var(--ring, rgba(69, 224, 168, 0.36));
+  outline: 2px solid var(--ring, rgba(69, 224, 168, 0.36));
+  outline-offset: 2px;
 }
 .projection-card .pregame-pitchers__lineups:active { transform: scale(0.98); }
 @media (hover: hover) and (pointer: fine) {
   .projection-card .pregame-pitchers__lineups:hover {
-    box-shadow:
-      0 14px 28px -12px rgba(0, 0, 0, 0.55),
-      inset 0 1px 0 rgba(255, 255, 255, 0.36);
+    background: var(--row-active);
   }
 }
 
@@ -289,19 +301,36 @@ html:not(.dark) .pregame-pitcher__status--confirmed { color: #0fa36b; }
       font-size: clamp(0.625rem, 2.8cqi, 0.75rem); /* CL-08 (closure): clamp min was 0.5625rem/9px, below the 10px floor */
       white-space: nowrap;
     }
+    /* Audit DIME-UI-004 (2026-07-31): the old absolute-centered overlay left
+       the chip to grid auto-placement in some mounts, wrapping the home
+       pitcher onto a second row (measured diagonal at 390px). Explicit
+       row/column placement is deterministic: both pitchers pin to row 1 and
+       the chip centers over the full row via place-self — no auto-placement,
+       no transform math. */
+    .pregame-pitcher--away { grid-row: 1; }
+    .pregame-pitcher--home { grid-row: 1; }
     .projection-card .pregame-pitchers__lineups {
-      position: absolute;
+      position: relative;
       z-index: 1;
-      inset-block-start: 50%;
-      inset-inline-start: 50%;
+      grid-column: 1 / -1;
+      grid-row: 1;
+      place-self: center;
       min-inline-size: 4rem;
+      /* Compact CTA (owner directive 2026-07-29): the pill sheds its top/
+         bottom whitespace (44px box -> 32px visual). The ::before overlay
+         below restores the 44px effective touch target. */
+      min-block-size: 32px;
+      padding-block: 0.375rem;
       padding-inline: 0.5rem;
       font-size: 0.625rem;
       letter-spacing: 0.04em;
-      transform: translate(-50%, -50%);
     }
-    .projection-card .pregame-pitchers__lineups:active {
-      transform: translate(-50%, -50%) scale(0.98);
+    /* 32px visual + 2x6px invisible extension = 44px WCAG target floor. */
+    .projection-card .pregame-pitchers__lineups::before {
+      content: "";
+      position: absolute;
+      inset-block: -6px;
+      inset-inline: 0;
     }
   }
   /* Narrowest cards (~<=310px, e.g. a 320px viewport): the centered overlay
@@ -309,13 +338,14 @@ html:not(.dark) .pregame-pitcher__status--confirmed { color: #0fa36b; }
      into normal flow below the pitchers so no name is ever occluded. */
   @container projcard (max-width: 310px) {
     .projection-card .pregame-pitchers__lineups {
-      position: static;
-      grid-column: 1 / -1;
+      /* The centered row-1 overlay and two nowrap names can no longer share
+         the row — the chip drops to its own row below the pitchers so no
+         name is ever occluded. */
+      grid-row: 2;
+      place-self: auto;
       justify-self: center;
       margin-block-start: var(--space-2xs);
-      transform: none;
     }
-    .projection-card .pregame-pitchers__lineups:active { transform: scale(0.98); }
   }
 }
 
@@ -431,7 +461,7 @@ html:not(.dark) .pregame-pitcher__status--confirmed { color: #0fa36b; }
 .lineups-dialog__starter-label,
 .lineups-dialog__lineup-status {
   color: var(--text-secondary, #a6a6a6);
-  font-family: var(--dmf-mono, "IBM Plex Mono", monospace);
+  font-family: var(--dmf-mono, "Familjen Grotesk", system-ui, sans-serif);
   font-size: 0.625rem;
   font-weight: 600;
   letter-spacing: 0.08em;
@@ -492,7 +522,7 @@ html:not(.dark) .pregame-pitcher__status--confirmed { color: #0fa36b; }
 }
 .lineups-dialog__number {
   color: var(--text-secondary, #a6a6a6);
-  font-family: var(--dmf-mono, "IBM Plex Mono", monospace);
+  font-family: var(--dmf-mono, "Familjen Grotesk", system-ui, sans-serif);
   font-size: 0.65rem;
   text-align: center;
 }
@@ -505,7 +535,7 @@ html:not(.dark) .pregame-pitcher__status--confirmed { color: #0fa36b; }
 }
 .lineups-dialog__player-meta {
   color: var(--text-secondary, #a6a6a6);
-  font-family: var(--dmf-mono, "IBM Plex Mono", monospace);
+  font-family: var(--dmf-mono, "Familjen Grotesk", system-ui, sans-serif);
   font-size: 0.625rem;
   text-transform: uppercase;
 }
@@ -563,19 +593,20 @@ html:not(.dark) .pregame-pitcher__status--confirmed { color: #0fa36b; }
     box-shadow 160ms cubic-bezier(0.16, 1, 0.3, 1),
     transform 160ms cubic-bezier(0.16, 1, 0.3, 1);
 }
+/* Audit DIME-UI-043: focus indication rides `outline` (not the transitioned
+   box-shadow) so the ring lands the same frame keyboard focus does. */
 .projection-card .summary__next:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 3px var(--ring, rgba(69, 224, 168, 0.36));
+  outline: 2px solid var(--ring, rgba(69, 224, 168, 0.36));
+  outline-offset: 2px;
 }
 .projection-card .summary__next:active { transform: scale(0.98); }
-/* A ranked non-actionable ROI strip remains entirely neutral: the arrow is navigation,
-   not a model signal. Real-edge arrows retain the mint treatment above. */
+/* A ranked non-actionable ROI strip remains entirely neutral: the arrow is a
+   carousel advance, not a model signal. Real-edge arrows retain the mint
+   treatment above. (Audit DIME-UI-044: the old white variant focus ring was
+   dead in the cascade — the unified mint outline above is the one treatment.) */
 .summary-carousel--no-edge .summary__next {
   color: var(--foreground, #fff);
   box-shadow: none;
-}
-.summary-carousel--no-edge .summary__next:focus-visible {
-  box-shadow: 0 0 0 3px var(--foreground, #fff);
 }
 .summary__readout { display: grid; grid-template-columns: max-content minmax(48px, max-content) minmax(48px, max-content); align-items: center; min-block-size: 44px; column-gap: clamp(8px, 1.6cqi, 16px); margin: 0; }
 .summary__item { display: flex; flex-direction: column; justify-content: center; gap: 2px; min-inline-size: max-content; min-block-size: 44px; }
@@ -657,7 +688,7 @@ html:not(.dark) .pregame-pitcher__status--confirmed { color: #0fa36b; }
     box-shadow: 0 0 0 1px var(--border-strong, #000000);
   }
   .projection-card__status--live { letter-spacing: 0.08em; }
-  html:not(.dark) .projection-card__status--live { color: #0fa36b; }
+  html:not(.dark) .projection-card__status--live { color: #0b8557; }
 }
 
 /* ══ Centered summary group — MODEL EDGE | BOOK | MODEL | signal ════════════
@@ -925,7 +956,7 @@ html:not(.dark) .pregame-pitcher__status--confirmed { color: #0fa36b; }
   color: #45e0a8;
 }
 html:not(.dark) .projection-card__markets-eyebrow {
-  color: #0fa36b;
+  color: #0b8557;
 }
 .projection-card__markets-matchup {
   margin: var(--space-2xs) 0 0;

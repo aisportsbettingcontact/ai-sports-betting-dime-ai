@@ -278,16 +278,20 @@ function GameRow({ g }: { g: FeedCardSpec }) {
 }
 
 function SkeletonRow() {
+  // Audit DIME-UI-019: the skeleton mirrors the loaded ProjectionCard anatomy
+  // (matchup header → pregame panel → summary row → markets row) inside the
+  // same card chrome, so resolving data swaps content without reflowing the
+  // card. Bars are percentage-based (container-relative like the loaded type),
+  // and the pulse matches the app's one skeleton treatment (killed globally
+  // under prefers-reduced-motion).
   return (
-    <div className="dmf-game dmf-mk3" aria-hidden="true">
-      <div className="dmf-gbody">
-        <div className="dmf-matchup">
-          <div className="dmf-skel" style={{ width: 90, height: 10 }} />
-          <div className="dmf-skel" style={{ width: 170, height: 18, marginTop: 10 }} />
-          <div className="dmf-skel" style={{ width: 150, height: 18, marginTop: 8 }} />
-          <div className="dmf-skel" style={{ width: 200, height: 9, marginTop: 10 }} />
-        </div>
-      </div>
+    <div className="dmf-skelcard animate-pulse" aria-hidden="true">
+      <div className="dmf-skel" style={{ width: "55%", height: 20, marginInline: "auto" }} />
+      <div className="dmf-skel" style={{ width: "38%", height: 12, marginTop: 8, marginInline: "auto" }} />
+      <div className="dmf-skel" style={{ width: "30%", height: 10, marginTop: 6, marginInline: "auto" }} />
+      <div className="dmf-skel" style={{ width: "100%", height: 132, marginTop: 12, borderRadius: 12 }} />
+      <div className="dmf-skel" style={{ width: "100%", height: 44, marginTop: 12, borderRadius: 10 }} />
+      <div className="dmf-skel" style={{ width: "100%", height: 44, marginTop: 8, borderRadius: 10 }} />
     </div>
   );
 }
@@ -331,6 +335,52 @@ const prettyDate = (iso: string): string =>
     day: "numeric",
     timeZone: "UTC",
   });
+
+/** League logo box, shared by the in-list collapsible header (desktop) and the
+ *  feedhead league bar (mobile). WC emblem is theme-keyed (black FIFA wordmark
+ *  on light, white on dark — CSS swaps by data-dmf-theme; both render in the
+ *  same fixed box). A missing logo file hides itself and the row stays clean
+ *  text. MLB uses the actual current mark (navy/red, owner directive
+ *  2026-07-21) — official mlbstatic league SVG with the bundled recolored mark
+ *  as offline fallback before hiding. */
+function LeagueMark({ league }: { league: "WC" | "MLB" }) {
+  return (
+    <span className={`dmf-lglogo${league === "MLB" ? " dmf-lglogo--mlb" : ""}`} aria-hidden="true">
+      {league === "WC" ? (
+        <>
+          <img
+            className="dmf-lglogo-light"
+            src="/brand/wc26-emblem-on-light.png"
+            alt=""
+            loading="lazy"
+            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+          />
+          <img
+            className="dmf-lglogo-dark"
+            src="/brand/wc26-emblem-on-dark.png"
+            alt=""
+            loading="lazy"
+            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+          />
+        </>
+      ) : (
+        <img
+          src="https://www.mlbstatic.com/team-logos/league-on-dark/1.svg"
+          alt=""
+          loading="lazy"
+          onError={(e) => {
+            const img = e.target as HTMLImageElement;
+            if (img.src.endsWith("/brand/mlb-logo.png")) {
+              img.style.display = "none";
+            } else {
+              img.src = "/brand/mlb-logo.png";
+            }
+          }}
+        />
+      )}
+    </span>
+  );
+}
 
 // ─── Page ────────────────────────────────────────────────────────────────────
 
@@ -393,6 +443,24 @@ export default function DimeModelFeed(props: DimeModelFeedProps) {
   // below in useFeedCards — see mlbRowToCard / wcMatchToCard. The feed is
   // combined (owner directive 2026-07-18): both leagues load for the date.
   const { sections, isLoading, isStale, gamesCount, isError, retry } = useFeedCards(isoDate);
+
+  // League open/closed is CONTROLLED state (owner directive 2026-07-29): on
+  // mobile the league header lives inside the sticky feedhead (the feed's
+  // primary menu bar), physically apart from the <details> it collapses, so
+  // native summary toggling alone can't drive it. Desktop summary clicks and
+  // mobile bar taps both funnel through setLeagueOpen; onToggle keeps state in
+  // sync when the browser flips the DOM first. Leagues default open.
+  const [closedLeagues, setClosedLeagues] = useState<ReadonlySet<FeedSection["key"]>>(
+    () => new Set(),
+  );
+  const setLeagueOpen = (key: FeedSection["key"], open: boolean) =>
+    setClosedLeagues((prev) => {
+      if (prev.has(key) === !open) return prev;
+      const next = new Set(prev);
+      if (open) next.delete(key);
+      else next.add(key);
+      return next;
+    });
 
   // Value event (D1): fires once per (date, gamesCount) the moment a complete,
   // trustworthy projection set renders — loaded, fresh (not stale), non-empty.
@@ -512,6 +580,34 @@ export default function DimeModelFeed(props: DimeModelFeedProps) {
           {/* Combined slate (owner directive 2026-07-18): no sport toggle and
               no slate count — the league headers below own identification;
               the feedhead's bottom border stays as the divider. */}
+          {/* MOBILE (<768px, owner directive 2026-07-29): the league headers
+              join the date inside this sticky feedhead — one grouped primary
+              menu bar with no gap to the floating nav. Each bar toggles its
+              league's <details> below (controlled state); the in-list summary
+              headers are display:none'd on mobile so the bar is the single
+              control. Desktop never shows these (CSS hides .dmf-lgbars). */}
+          {sections.length > 0 && (
+            <div className="dmf-lgbars">
+              {sections.map((section) => {
+                const open = !closedLeagues.has(section.key);
+                return (
+                  <button
+                    key={section.key}
+                    type="button"
+                    className="dmf-lgbar"
+                    aria-expanded={open}
+                    aria-controls={`dmf-league-${section.key}`}
+                    onClick={() => setLeagueOpen(section.key, !open)}
+                  >
+                    <LeagueMark league={section.key} />
+                    <span className="dmf-lgname">{section.label}</span>
+                    <ChevronDown className="dmf-lgchev dmf-lgchev--expand" aria-hidden="true" />
+                    <ChevronUp className="dmf-lgchev dmf-lgchev--collapse" aria-hidden="true" />
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         <div className={`dmf-list${isStale ? " dmf-stale" : ""}`} aria-busy={isStale}>
@@ -545,46 +641,15 @@ export default function DimeModelFeed(props: DimeModelFeedProps) {
             // both render in the same fixed box). A missing logo file hides
             // itself and the header stays clean text.
             sections.map((section) => (
-              <details key={section.key} className="dmf-league" open>
+              <details
+                key={section.key}
+                id={`dmf-league-${section.key}`}
+                className="dmf-league"
+                open={!closedLeagues.has(section.key)}
+                onToggle={(e) => setLeagueOpen(section.key, e.currentTarget.open)}
+              >
                 <summary className="dmf-leaguehead">
-                  <span className={`dmf-lglogo${section.key === "MLB" ? " dmf-lglogo--mlb" : ""}`} aria-hidden="true">
-                    {section.key === "WC" ? (
-                      <>
-                        <img
-                          className="dmf-lglogo-light"
-                          src="/brand/wc26-emblem-on-light.png"
-                          alt=""
-                          loading="lazy"
-                          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-                        />
-                        <img
-                          className="dmf-lglogo-dark"
-                          src="/brand/wc26-emblem-on-dark.png"
-                          alt=""
-                          loading="lazy"
-                          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-                        />
-                      </>
-                    ) : (
-                      // The actual current MLB mark (navy/red, owner directive
-                      // 2026-07-21) — the official mlbstatic league SVG already
-                      // shipped on the splits/tracker surfaces, with the bundled
-                      // recolored mark as offline fallback before hiding.
-                      <img
-                        src="https://www.mlbstatic.com/team-logos/league-on-dark/1.svg"
-                        alt=""
-                        loading="lazy"
-                        onError={(e) => {
-                          const img = e.target as HTMLImageElement;
-                          if (img.src.endsWith("/brand/mlb-logo.png")) {
-                            img.style.display = "none";
-                          } else {
-                            img.src = "/brand/mlb-logo.png";
-                          }
-                        }}
-                      />
-                    )}
-                  </span>
+                  <LeagueMark league={section.key} />
                   <span className="dmf-lgname">{section.label}</span>
                   <ChevronDown className="dmf-lgchev dmf-lgchev--expand" aria-hidden="true" />
                   <ChevronUp className="dmf-lgchev dmf-lgchev--collapse" aria-hidden="true" />
@@ -1317,11 +1382,18 @@ const DMF_CSS = `
    "MAJOR LEAGUE BASEBALL (MLB)" stays one line on 320-375px phones), chevron
    pinned to the right edge outside the centered cluster. The side padding
    reserves the chevron's lane so the cluster never overlaps it. */
-.dmf-leaguehead{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;min-height:44px;padding:2px 32px;position:relative;cursor:pointer;list-style:none;font-family:var(--dmf-mono);font-size:clamp(12px,3.9vw,15px);font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--dmf-t2);border-radius:10px;transition:color var(--dmf-t) var(--dmf-ease),background var(--dmf-t) var(--dmf-ease)}
+.dmf-leaguehead,.dmf-lgbar{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;min-height:44px;padding:2px 32px;position:relative;cursor:pointer;list-style:none;font-family:var(--dmf-mono);font-size:clamp(12px,3.9vw,15px);font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--dmf-t2);border-radius:10px;transition:color var(--dmf-t) var(--dmf-ease),background var(--dmf-t) var(--dmf-ease)}
 .dmf-leaguehead::-webkit-details-marker{display:none}
 .dmf-leaguehead::marker{content:""}
-.dmf-leaguehead:hover{color:var(--dmf-t1)}
-.dmf-leaguehead:focus-visible{outline:none;box-shadow:0 0 0 3px var(--dmf-ring)}
+.dmf-leaguehead:hover,.dmf-lgbar:hover{color:var(--dmf-t1)}
+.dmf-leaguehead:focus-visible,.dmf-lgbar:focus-visible{outline:none;box-shadow:0 0 0 3px var(--dmf-ring)}
+/* Feedhead league bars (owner directive 2026-07-29): mobile-only controls for
+   the league <details> below — hidden here so >=768px keeps the in-list
+   summary headers untouched. Chevron swap keys off aria-expanded (the bar is
+   a button, not a summary, so [open] can't drive it). */
+.dmf-lgbars{display:none}
+.dmf-lgbar[aria-expanded="true"] .dmf-lgchev--expand{display:none}
+.dmf-lgbar[aria-expanded="true"] .dmf-lgchev--collapse{display:inline-block}
 .dmf-lglogo{display:inline-grid;place-items:center;width:30px;height:30px;flex:0 0 30px}
 .dmf-lglogo img{max-width:100%;max-height:100%;object-fit:contain}
 /* WC emblem is theme-keyed: black FIFA wordmark on light, white on dark. */
@@ -1392,6 +1464,10 @@ const DMF_CSS = `
 .dmf-retry:hover{border-color:var(--dmf-border-hover)}
 .dmf-empty p,.dmf-invalid p{margin-top:8px;font-size:14px}
 .dmf-skel{background:color-mix(in srgb, var(--dmf-t1) 8%, transparent);border-radius:6px}
+/* Audit DIME-UI-019: skeleton card shares the loaded card's chrome (tier-1
+   surface, hairline, 16px radius, card padding) so load resolution never
+   changes the card geometry. */
+.dmf-skelcard{background:var(--dmf-card);border:1px solid var(--dmf-border);border-radius:16px;padding:12px 12px 8px}
 
 /* mk7 (WC): matchup header, 4-col market grid, verdict strip */
 .dmf-game.dmf-mk7 .dmf-gbody{grid-template-columns:1fr}
@@ -1476,11 +1552,21 @@ const DMF_CSS = `
   .dmf-root .dmf-wordmark{font-size:42px}
   .dmf-root .dmf-sync{display:none}
   .dmf-root .dmf-scroll{padding-left:16px;padding-right:16px}
-  /* Date picker centered (no slate count — owner directive 2026-07-18; the
-     collapsible league headers below span full width with logo + chevron). */
-  .dmf-root .dmf-feedhead{top:64px;flex-direction:row;flex-wrap:wrap;justify-content:center;align-items:center;gap:10px 12px}
+  /* Grouped primary menu bar (owner directive 2026-07-29): the sticky
+     feedhead holds the centered date picker AND the league header bars as one
+     unit — date row on top, league bar(s) beneath, no gap between them and no
+     gap up to the nav chrome. The in-list summary headers hide; the feedhead
+     bars are the single league control on mobile. */
+  .dmf-root .dmf-feedhead{top:64px;flex-direction:row;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px 12px;padding:10px 0 8px}
   .dmf-root .dmf-datenav{justify-content:center;flex-wrap:nowrap;gap:8px}
   .dmf-root .dmf-datelbl{font-size:13px}
+  .dmf-root .dmf-lgbars{display:flex;flex-direction:column;width:100%;gap:0}
+  .dmf-root .dmf-leaguehead{display:none}
+  .dmf-root .dmf-leaguebody{margin-top:0}
+  /* The feedhead's border is now the divider above the cards; the between-
+     league hairline stays, but the collapsed header row no longer exists in
+     the list so the second league's top spacing tightens. */
+  .dmf-root .dmf-league + .dmf-league{margin-top:0;padding-top:12px}
   /* Verdict micro-labels ride the t3 label tier so Pick/Edge/Grade clear
      4.5:1 on the elevated card ground. */
   .dmf-root .dmf-vl{color:var(--dmf-t3)}

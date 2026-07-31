@@ -162,6 +162,12 @@ export function MobileFloatingNav() {
                 onClick={() => handleTap(tab.id, tab.path, isActive)}
               >
                 {isChat ? (
+                  // The credits readout (directive 2026-07-29) returns when the
+                  // credits system ships REAL balances — the audit pulled the
+                  // hardcoded "3,000 credits" placeholder (DIME-UI-010): a
+                  // fabricated number on a transparency-first product. Until
+                  // then the pill keeps its label in both states; the mint
+                  // fill carries the active treatment (see mobileFloatingNav.css).
                   <>
                     <span className="mfn-chat-text">Chat with</span>
                     <DimeWordmark decorative />

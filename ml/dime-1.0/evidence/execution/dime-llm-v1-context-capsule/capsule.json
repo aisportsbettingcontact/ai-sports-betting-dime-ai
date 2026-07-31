@@ -1,0 +1,326 @@
+{
+  "schema_version": "dime-llm-v1-context-capsule-v1",
+  "repository_sha": "438848a1414bea8225c514c0a92fdfa1b5520999",
+  "production_application_sha": null,
+  "production_backend_sha": null,
+  "capsule_id": "dime-llm-v1-foundation-evaluation-2026-07-31-pr257-reconciled",
+  "verified_at": "2026-07-31T06:50:12Z",
+  "snapshot_semantics": "IMMUTABLE_POINT_IN_TIME_NOT_LIVE_STATUS",
+  "classification": "SANITIZED_AGGREGATE_ONLY",
+  "private_content_counts": {
+    "foundation_records": 0,
+    "semantic_cases": 0,
+    "answer_keys": 0,
+    "credentials": 0
+  },
+  "active_authorizations": [
+    "repository_inspection",
+    "repository_implementation",
+    "local_testing",
+    "sanitized_evidence_creation",
+    "commit",
+    "push",
+    "draft_pull_request"
+  ],
+  "closed_authorizations": [
+    "credential_execution",
+    "model_download",
+    "runpod_inference",
+    "benchmark_execution",
+    "model_training",
+    "model_serving",
+    "railway_mutation",
+    "deployment",
+    "trace_activation",
+    "shadow_traffic",
+    "route_activation"
+  ],
+  "security_hotfix_state": {
+    "status": "BLOCKED_ROOT_TRUST_UNPROVISIONED",
+    "repository_verification_available": true,
+    "root_trust_material_provisioned": false,
+    "credential_execution_authorized": false
+  },
+  "foundation_counts": {
+    "status": "IN_PROGRESS",
+    "verified_authoring_records": 450,
+    "verified_trainer_records": 450,
+    "verified_train_records": 405,
+    "verified_validation_records": 45
+  },
+  "foundation_deficits": {
+    "status": "IN_PROGRESS",
+    "authoring_records": 1950,
+    "trainer_records": 1950,
+    "train_records": 1755,
+    "validation_records": 195
+  },
+  "evaluation_counts": {
+    "status": "PASS",
+    "development_target": 270,
+    "critical_target": 81,
+    "locked_target": 180,
+    "general_regression_target": 120,
+    "verified_total": 651
+  },
+  "evaluation_key_state": "OWNER_MERGE_SCOPE_AUTHORIZED_ZERO_KEYS",
+  "context_compiler_state": "IMPLEMENTED_OFFLINE_NOT_ACTIVATED",
+  "runpod_gate_state": "GOVERNANCE_MERGED_EFFECTIVE_AUTHORIZATION_FALSE",
+  "candidate_a_state": "NOT_STARTED",
+  "candidate_b_state": "NOT_STARTED",
+  "candidate_c_state": "NOT_STARTED",
+  "current_workstream": "FOUNDATION_EVIDENCE_RECONCILIATION",
+  "top_blockers": [
+    "foundation_remaining_records_1950",
+    "credential_execution_root_trust_unprovisioned",
+    "runpod_identity_unverified",
+    "runpod_permissions_unverified",
+    "runpod_gate_1_effective_authorization_false",
+    "model_artifact_not_selected",
+    "model_execution_and_training_not_authorized"
+  ],
+  "next_exact_action": "Merge the exact reviewed cumulative Foundation evidence head without enabling credentials, model execution, training, serving, deployment, tracing, or route activation.",
+  "critical_artifact_hashes": {
+    "existing_model_execution_gates": "45c42b74ad90b17f1231525197220552f64a13208c7033f4781f08fc9ca3a2ee",
+    "base_model_suitability_contract": "dce71facbd7f5cf356642145f2cf3eda244f7272093e982b0cfb0956d6be75f2",
+    "model_artifact_evaluation_contract": "5df817d1ac003cf6485b53c01bbfb03b1be4cb05fde4ea06219fac4a9ba27c19",
+    "training_contract": "35e970a9d3af67402c36c204592454eebd382730c0c3fe1f6ef6ba6ffb44307f",
+    "decoding_contract": "c5c540b795aa217b1b32df9bf445924816d47a542acb313e05dc4a82eecbbbc1",
+    "tool_contract": "56f3c39fd730f9d923efcf837433825d76de4c4acb51d668095d1eb68db4cca5",
+    "prompt": "8ebdbcbdccafca8faaef490a7bda120b7095bdd9d55fe879147b3fd3c04af4e9",
+    "chat_template": "2407ed345ce3013e1e1279d46ea7e4e6e78a9a0696ac226a2f24f697b9504087",
+    "routing_source": "f0ccc880992f6dfcfd91f93733dad4ab0c3b1c55485fb5d41e143051535f17b7",
+    "retrieval_source": "1436a564daa2b101607256fe17a57da6c5599960fa71b96c420b11f2ecc6261d"
+  },
+  "reconciliation": {
+    "pull_request": 257,
+    "source_head": "438848a1414bea8225c514c0a92fdfa1b5520999",
+    "current_main": "90fdf151d2a79fa2c9106753419d93d35f9f81c0",
+    "merge_strategy": "NO_FF_MERGE_SEMANTIC_SUPERSET",
+    "merged_dependencies": {
+      "pr_251": "21f9375455728b604b9e5aca6b75a6439a9e2cff",
+      "pr_252": "62edd3e9af1730676ae0f7a4adfb5a8d600446b8",
+      "pr_253": "cd39402a5321d44b19e85bf1077f48379da6b542",
+      "pr_254": "90fdf151d2a79fa2c9106753419d93d35f9f81c0",
+      "pr_255": "092435b33f3b543f9b509f90fde853fcf7cb857d"
+    }
+  },
+  "production_baseline": {
+    "pull_request": 250,
+    "title": "fix(ops): close shared agent credential boundary bypasses",
+    "state": "MERGED",
+    "draft": false,
+    "base_branch": "main",
+    "base_commit": "b9ba7788749365253a6f725fee2a2a367a3475dd",
+    "head_branch": "agent/credential-boundary-hotfix-v1",
+    "head_commit": "62088bb3d2cf4d27c5f18f9bb67ac294158fe5dd",
+    "merge_commit": "7ed09adb4fcdb9e2d9047e73e34f84c80d865b78",
+    "merged_at": "2026-07-30T19:51:53Z",
+    "source": "github_connector_pr_metadata",
+    "legacy_commit_status_entries_returned": 0
+  },
+  "parallel_tracks": {
+    "track_f": {
+      "pull_request": 251,
+      "title": "feat(dime): add Route-Aware Context Compiler v1",
+      "state": "MERGED",
+      "base_commit": "7ed09adb4fcdb9e2d9047e73e34f84c80d865b78",
+      "head_commit": "9edff5ee4317cdce0b2a79e2fe78d2ff8c7d5916",
+      "merge_commit": "21f9375455728b604b9e5aca6b75a6439a9e2cff",
+      "required_checks": "PASS",
+      "independent_approval": true,
+      "runtime_active": false,
+      "source": "github_connector_pr_metadata"
+    },
+    "track_e": {
+      "pull_request": 252,
+      "title": "feat(dime): govern evaluation answer keys and scorer isolation v1",
+      "state": "MERGED",
+      "head_commit": "1b811e3c188a038e9008fe4d4ea92f92463b0cc2",
+      "merge_commit": "62edd3e9af1730676ae0f7a4adfb5a8d600446b8",
+      "required_checks": "PASS",
+      "independent_approval": true,
+      "answer_key_generation_scope_authorized": true,
+      "answer_keys_present": false,
+      "source": "github_connector_pr_metadata"
+    },
+    "runpod_gate_1": {
+      "pull_request": 253,
+      "title": "feat(dime): prepare RunPod Gate 1 authorization v1",
+      "state": "MERGED_GOVERNANCE_ONLY",
+      "head_commit": "c6eb3402f9574e400b4c5f9736f331ee082aeb33",
+      "merge_commit": "cd39402a5321d44b19e85bf1077f48379da6b542",
+      "checks": {
+        "gitleaks": "PASS",
+        "dime_llm_validation": "PASS",
+        "ci": "PASS",
+        "security_audit": "PASS"
+      },
+      "independent_approval": true,
+      "merged": true,
+      "deployed": false,
+      "effective_authorization": false,
+      "source": "github_connector_pr_metadata"
+    },
+    "credential_execution_closure": {
+      "pull_request": 255,
+      "title": "fix(ops): verify credential executable closure v2",
+      "state": "MERGED_IMPLEMENTATION_ONLY",
+      "head_commit": "52f101b6433298cadd55836e971fe29afba818e0",
+      "merge_commit": "092435b33f3b543f9b509f90fde853fcf7cb857d",
+      "internal_reviewed_checkpoint": "b3194a1799255611b079b3f7a76986129b3c9fa6",
+      "required_checks": "PASS",
+      "independent_approval": true,
+      "merged": true,
+      "deployed": false,
+      "root_trust_provisioned": false,
+      "effective_authorization": false,
+      "source": "github_connector_pr_metadata"
+    },
+    "foundation_evaluation": {
+      "pull_request": 254,
+      "title": "feat(ml): freeze Foundation evaluation artifacts and release evidence",
+      "state": "MERGED",
+      "head_commit": "7767cfdfad1beef1672aebd985898c6ee0b830d5",
+      "merge_commit": "90fdf151d2a79fa2c9106753419d93d35f9f81c0",
+      "required_checks": "PASS",
+      "independent_approval": true,
+      "merged": true,
+      "answer_keys_present": false,
+      "source": "github_connector_pr_metadata"
+    }
+  },
+  "security_p1": {
+    "id": "pr249-final-review-governance-exception",
+    "severity": "P1",
+    "status": "MERGED_WITH_POST_MERGE_GOVERNANCE_EXCEPTION_OPEN",
+    "final_head": "88ac09d52e6f7f727d16ecb2c25c5b694e7f5504",
+    "independent_exact_final_head_approval_recorded": false,
+    "effective_protection_policy_reconciled": false,
+    "artifact": {
+      "path": "docs/governance/2026-07-30-pr249-final-review-exception.md",
+      "sha256": "347aaa59a9b3ada65ea125daafa118266f5f5a0d8101759dc12563d857ab324c"
+    },
+    "closure_blockers": [
+      "independent reviewer approval on the exact corrective final head with zero unresolved threads",
+      "repository protection and active ruleset reconciliation",
+      "evidence of effective settings with no bypass actor",
+      "independent review of the reconciliation evidence"
+    ]
+  },
+  "credential_execution_p1": {
+    "id": "pr250-post-merge-credential-execution-closure",
+    "severity": "P1",
+    "status": "BLOCKED_ROOT_TRUST_UNPROVISIONED",
+    "effective_authorization": "NONE",
+    "root_trust_provisioned": false,
+    "remediation_pull_request": 255,
+    "remediation_head_commit": "52f101b6433298cadd55836e971fe29afba818e0",
+    "internal_reviewed_checkpoint": "b3194a1799255611b079b3f7a76986129b3c9fa6",
+    "required_checks": "PASS",
+    "independent_approval": true,
+    "merged": true,
+    "deployed": false,
+    "closure_tracks": [
+      {
+        "id": "codesign-cryptographic-verify",
+        "status": "IMPLEMENTED_ROOT_PROVISIONING_REQUIRED"
+      },
+      {
+        "id": "full-credential-dependency-closure",
+        "status": "IMPLEMENTED_ROOT_PROVISIONING_REQUIRED"
+      }
+    ],
+    "impact": "credential-bearing execution remains fail-closed until root trust and reviewed browser execution are independently provisioned"
+  },
+  "foundation": {
+    "target_records": 2400,
+    "pilot_records_validated": 20,
+    "pilot_admission": "NOT_ADMITTED",
+    "pilot_reason": "PILOT_ARTIFACT_EXPLICITLY_NOT_RELEASE",
+    "first_live_data_records_admitted": 150,
+    "second_live_data_records_admitted": 150,
+    "total_live_data_records_admitted": 300,
+    "platform_records_admitted": 150,
+    "total_records_admitted": 450,
+    "admitted_split": {
+      "train": 405,
+      "validation": 45
+    },
+    "remaining_records": 1950,
+    "remaining_split": {
+      "train": 1755,
+      "validation": 195
+    },
+    "complete_release": false,
+    "public_evidence": {
+      "path": "ml/dime-1.0/evidence/execution/dime-llm-v1-foundation-003/evidence.json",
+      "sha256": "25839630f0cc017a2d14e792fd8f06e994415c7da796d5211a9c523452f98233",
+      "sha256sums_sha256": "6a43b1c5513fba9c992de6d28b2331ef185a512dacb8014426de7f87a45afd28"
+    }
+  },
+  "semantic_evaluation": {
+    "semantic_only": true,
+    "partition_counts": {
+      "development": 270,
+      "sealed_critical": 81,
+      "locked": 180,
+      "general_regression": 120
+    },
+    "total_cases": 651,
+    "answer_keys": 0,
+    "foundation_records_compared": 450,
+    "evaluation_cross_suite_case_pair_comparisons": 148770,
+    "evaluation_cross_suite_disallowed_overlap": 0,
+    "foundation_to_evaluation_pair_comparisons": 292950,
+    "foundation_to_evaluation_disallowed_overlap": 0,
+    "composite_status": "PASS_COMPOSITE_PROOF_COMPLETE"
+  },
+  "runpod_gate_1": {
+    "credential_status": "CREDENTIAL_NOT_ACCESSED_PERMISSION_UNVERIFIED",
+    "permission_contract": "permission-unverified",
+    "identity_verified": false,
+    "permissions_verified": false,
+    "authorization": "NONE",
+    "effective_authorization": false,
+    "gate_1_baseline_inference_authorized": false,
+    "pull_request": 253,
+    "head_commit": "c6eb3402f9574e400b4c5f9736f331ee082aeb33",
+    "merge_commit": "cd39402a5321d44b19e85bf1077f48379da6b542",
+    "governance_status": "MERGED_BLOCKED_INCOMPLETE_NOT_AUTHORIZED",
+    "config_binding": {
+      "path": "config/dime-agent-access.v1.json",
+      "sha256": "3b48d2bbdfa0bf6fa9c14c0bd56d6d2663e01a6df0e96b26fe6400b233c67419"
+    }
+  },
+  "exact_blockers": [
+    "root or administrator runtime trust is not provisioned",
+    "credential execution remains false",
+    "RunPod identity and permissions remain unverified",
+    "RunPod Gate 1 effective authorization remains false",
+    "1,950 Foundation records remain before the 2,400-record target is complete",
+    "the private Foundation release revision, dataset manifest hash, and release checksum hash are not frozen",
+    "answer-key count remains zero despite the narrow PR #252 owner-merge authorization scope",
+    "the exact selected model artifact and production serving tuple remain unset",
+    "model download, evaluation execution, training, serving, tracing, route activation, deployment, and Railway mutation remain false"
+  ],
+  "model_artifact_decision": {
+    "status": "INCOMPLETE_NOT_AUTHORIZED",
+    "path": "ml/dime-1.0/evidence/decisions/dime-model-artifact-decision-v1/decision.json",
+    "sha256": "031c6c6d4e7efdc3782c264bed566642ddfcafb78041885d4033459c9d653141"
+  },
+  "authorization_boundary": {
+    "credential_execution": false,
+    "provider_execution": false,
+    "model_download": false,
+    "evaluation_execution": false,
+    "benchmark_execution": false,
+    "training": false,
+    "model_serving": false,
+    "publication": false,
+    "deployment": false,
+    "trace_activation": false,
+    "route_activation": false,
+    "railway_mutation": false
+  }
+}

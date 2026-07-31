@@ -164,8 +164,11 @@ describe("Brand law (THREE-COLOR-LAW v2/v3)", () => {
     expect(navCss).toMatch(
       /\.mfn-item\.mfn-chat\[aria-current="page"\] \{[^}]*background: var\(--dime-mint\)/s
     );
+    // 2026-07-29 r2: the active chat pill swaps its content for the credits
+    // readout, so the activation dot is removed there — mint fill + content
+    // swap carry the state, no dot beneath the credits.
     expect(navCss).toMatch(
-      /\.mfn-item\.mfn-chat\[aria-current="page"\]::after \{[^}]*background: #ffffff/s
+      /\.mfn-item\.mfn-chat\[aria-current="page"\]::after \{[^}]*display: none/s
     );
   });
 
@@ -283,8 +286,11 @@ describe("Page integrations under body.dime-floating-nav-active", () => {
     expect(dimeMobileCss).toMatch(
       /body\.dime-floating-nav-active \.dmf-root \.dmf-topbar \{\s*display: none/
     );
+    // 2026-07-29: the sticky feed menu bar pins FLUSH to the nav band — the
+    // 8px CLEARANCE_GAP_PX is subtracted so no transparent slit remains where
+    // scrolling content could peek through between nav and feedhead.
     expect(dimeMobileCss).toMatch(
-      /body\.dime-floating-nav-active \.dmf-root \.dmf-feedhead \{\s*top: var\(--dime-floating-nav-h/
+      /body\.dime-floating-nav-active \.dmf-root \.dmf-feedhead \{\s*top: calc\(var\(--dime-floating-nav-h, 112px\) - 8px\)/
     );
   });
 

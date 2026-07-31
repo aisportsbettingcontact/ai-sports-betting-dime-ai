@@ -436,7 +436,7 @@ const homeMlEdgePP = (!isNaN(bkHomeMlProb) && !isNaN(mdlHomeMlProb))
 // [FIX 2026-06-24] Gate ML edge detection on hasModelData.
 // game.modelAwayML/modelHomeML hold stale values when modelRunAt=null (RL INVALIDATE).
 // Without this gate, awayMlEdgeDetected/homeMlEdgeDetected can be true even when
-// hasModelData=false, causing the ML column to render '—' in neon green (#39FF14).
+// hasModelData=false, causing the ML column to render '—' in the mint edge accent.
 const awayMlEdgeDetected: boolean = hasModelData && !isNaN(awayMlEdgePP) && awayMlEdgePP > ML_EDGE_THRESHOLD_PP;
 const homeMlEdgeDetected: boolean = hasModelData && !isNaN(homeMlEdgePP) && homeMlEdgePP > ML_EDGE_THRESHOLD_PP;
 if (process.env.NODE_ENV === 'development') {
@@ -463,15 +463,15 @@ if (process.env.NODE_ENV === 'development') {
 //
 // BOOK tab active:
 //   book  = white bold full opacity (primary)
-//   model = #39FF14 bold if edge, else white 40% opacity (secondary, always visible)
+//   model = mint bold if edge, else white 40% opacity (secondary, always visible)
 //
 // MODEL tab active (default / reference image):
 //   book  = gray 50% opacity, unbolded (reference, always visible)
-//   model = #39FF14 bold if edge, else white bold full opacity (primary)
+//   model = mint bold if edge, else white bold full opacity (primary)
 //
 // Neither tab (SPLITS/EDGE):
 //   book  = gray 35% opacity, unbolded
-//   model = #39FF14 if edge, else white 40% opacity, unbolded
+//   model = mint if edge, else white 40% opacity, unbolded
 //
 // LOG: [GameCard:OddsStyle] logs active tab + edge flags in dev
 if (process.env.NODE_ENV === 'development') {
@@ -486,12 +486,12 @@ if (process.env.NODE_ENV === 'development') {
 // BOOK LINES tab active (ref image 1):
 //   book  = white BOLD full opacity     (primary)
 //   model = white unbolded 70% opacity  (secondary, visible)
-//   model edge = #39FF14 BOLD            (edge highlight always wins)
+//   model edge = mint BOLD               (edge highlight always wins)
 //
 // MODEL LINES tab active (ref image 2):
 //   book  = white unbolded 70% opacity  (secondary, visible for reference)
 //   model non-edge = light gray BOLD     (primary, not edge)
-//   model edge = #39FF14 BOLD            (edge highlight always wins)
+//   model edge = mint BOLD               (edge highlight always wins)
 //
 // SPLITS / EDGE tabs:
 //   both dimmed for context
@@ -1073,7 +1073,7 @@ return (
              visibility:hidden when not live/final keeps the slot but shows nothing.
              This is the ONLY bulletproof pattern: hold the space unconditionally. */}
         <span
-          className="tabular-nums transition-colors duration-300"
+          className="tabular-nums transition-colors duration-[160ms] ease-[cubic-bezier(0.16,1,0.3,1)]"
           style={{
             flexShrink: 0,
             minWidth: '22px',
@@ -1107,7 +1107,7 @@ return (
              visibility:hidden when not live/final keeps the slot but shows nothing.
              This is the ONLY bulletproof pattern: hold the space unconditionally. */}
         <span
-          className="tabular-nums transition-colors duration-300"
+          className="tabular-nums transition-colors duration-[160ms] ease-[cubic-bezier(0.16,1,0.3,1)]"
           style={{
             flexShrink: 0,
             minWidth: '22px',

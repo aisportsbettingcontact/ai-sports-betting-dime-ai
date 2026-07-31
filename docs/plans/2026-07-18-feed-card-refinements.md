@@ -86,7 +86,7 @@ width, add a `@container projcard` cap (about 4rem) for that range.
 **Verification**
 - `pnpm vitest run client/src/components/projections` passes (flag aria labels unchanged).
 - Static render of the WC fixture at 360px and 393px widths, confirm no horizontal overflow
-  (livelab if a DB-backed dev server is available, otherwise a standalone HTML harness of the
+  (a browser-backed pass if a DB-backed dev server is available, otherwise a standalone HTML harness of the
   built card CSS).
 
 ## Phase 4 — Collapsible white space (`ProjectionCard.css`)

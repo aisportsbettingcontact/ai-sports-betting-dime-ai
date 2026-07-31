@@ -1,0 +1,98 @@
+{
+  "schema_version": "dime-private-evaluation-semantic-generation-v1",
+  "generation_id": "dime-llm-v1-private-semantic-cases-tool-contract-v2",
+  "source_commit": "b9ba7788749365253a6f725fee2a2a367a3475dd",
+  "generated_at_utc": "2026-07-30T16:12:32Z",
+  "generator_revision": "dime-private-evaluation-semantic-generator-v2",
+  "partition_revision": "dime-private-evaluation-partition-v1",
+  "classification": "PRIVATE_EVALUATION_SEMANTIC_CASES",
+  "semantic_only": true,
+  "layers": {
+    "development": {
+      "case_count": 270,
+      "route_count": 30
+    },
+    "sealed_critical": {
+      "case_count": 81,
+      "route_count": 9
+    },
+    "locked": {
+      "case_count": 180,
+      "route_count": 20
+    },
+    "general_regression": {
+      "case_count": 120,
+      "route_count": null
+    }
+  },
+  "product_routes": [
+    "platform",
+    "account",
+    "educational",
+    "bet_explanation",
+    "matchup",
+    "full_slate",
+    "historical",
+    "live_data",
+    "general_sports"
+  ],
+  "general_regression_domains": [
+    "arithmetic",
+    "classification",
+    "comparison",
+    "constraint_following",
+    "counterfactual_reasoning",
+    "date_reasoning",
+    "evidence_synthesis",
+    "logical_consistency",
+    "reading_comprehension",
+    "structured_extraction",
+    "summarization",
+    "uncertainty_calibration"
+  ],
+  "tool_states": [
+    "skipped",
+    "success",
+    "empty",
+    "failure",
+    "timeout",
+    "stale",
+    "malformed",
+    "conflicting",
+    "rejected"
+  ],
+  "source_artifacts": [
+    "ml/dime-1.0/configs/evaluation_identity_plan_v1.json",
+    "ml/dime-1.0/configs/foundation_data_factory_governance_v1.json",
+    "ml/dime-1.0/configs/evaluation_program_v1.yaml",
+    "ml/dime-1.0/prompts/dime_system_v1.md",
+    "ml/dime-1.0/tools/tools.v1.json",
+    "ml/dime-1.0/tools/tool_response_registry.v1.json",
+    "ml/dime-1.0/schemas/tool_response.schema.json",
+    "ml/dime-1.0/schemas/tool_responses/get_game_context.data.schema.json",
+    "ml/dime-1.0/schemas/tool_responses/get_current_odds.data.schema.json",
+    "ml/dime-1.0/schemas/tool_responses/get_odds_history.data.schema.json",
+    "ml/dime-1.0/schemas/tool_responses/get_market_splits.data.schema.json",
+    "ml/dime-1.0/schemas/tool_responses/calculate_market_math.data.schema.json",
+    "ml/dime-1.0/schemas/tool_responses/get_bet_tracker_summary.data.schema.json",
+    "ml/dime-1.0/schemas/tool_responses/run_simulation.data.schema.json"
+  ],
+  "overlap_policy": {
+    "character_shingle_size": 5,
+    "character_jaccard_threshold": 0.92,
+    "token_bigram_jaccard_threshold": 0.86,
+    "scan_public_evaluation_root": "ml/dime-1.0/data/eval",
+    "foundation_private_roots": [
+      "ml/dime-1.0/data/private/foundation",
+      "ml/dime-1.0/data/private/foundation-v1"
+    ]
+  },
+  "privacy_policy": {
+    "contains_gold_answers": false,
+    "contains_private_chain_of_thought": false,
+    "contains_production_data": false,
+    "publication_authorized": false,
+    "required_file_mode": "0600",
+    "required_directory_mode": "0700"
+  }
+}

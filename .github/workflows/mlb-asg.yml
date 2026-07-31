@@ -37,10 +37,11 @@ jobs:
   fire:
     name: POST /api/cron/mlb-asg
     runs-on: ubuntu-latest
+    environment: Production
     steps:
       - name: "[STEP] Preflight — verify required secrets are present"
         env:
-          RAILWAY_APP_URL: ${{ secrets.RAILWAY_APP_URL }}
+          RAILWAY_APP_URL: ${{ vars.RAILWAY_APP_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
           set -euo pipefail
@@ -50,7 +51,7 @@ jobs:
 
       - name: "[STEP] POST /api/cron/mlb-asg (secret never printed)"
         env:
-          RAILWAY_APP_URL: ${{ secrets.RAILWAY_APP_URL }}
+          RAILWAY_APP_URL: ${{ vars.RAILWAY_APP_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
           DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
         run: |

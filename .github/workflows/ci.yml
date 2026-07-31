@@ -18,13 +18,9 @@
 #   3c. build           — production client build + preview-activation scan
 #                         (scripts/verify-preview-production.mjs)
 #
-# Secrets: the env block below documents the FULL set the suite can consume,
-# but as of 2026-07-12 the repository configures only a subset (verified via
-# the Actions secrets API: APP_SESSION_SECRET, CRON_SECRET, JWT_SECRET,
-# RAILWAY_API_TOKEN, RAILWAY_APP_URL, TARGET_DATABASE_URL).
-# Unconfigured names inject empty strings; the suites that need them guard
-# themselves and their skips are declared and machine-checked. Provisioning
-# the remaining secrets turns those probes back on without workflow changes.
+# Pull-request CI is intentionally secretless. Suites requiring a real database
+# run against the isolated MySQL service below; provider credential probes stay
+# skipped and are enforced by the checked-in environment-failure allowlist.
 #
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -42,6 +38,9 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   # ─── Stage 1: Dependency Security Audit ──────────────────────────────────
   security-audit:
@@ -49,17 +48,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: "[INPUT] Checkout repository"
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
 
       - name: "[STEP] Setup Node.js 22"
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: 22
+
+      - name: "[VERIFY] Enforce GitHub Actions security contract"
+        run: node scripts/check-github-actions-security.mjs
 
       # `pnpm audit` calls npm's legacy /-/npm/v1/security/audits[/quick]
       # endpoints, which npm retired 2026-07-15 (410 Gone). The fix landed in
       # pnpm v11.0, but this repo is intentionally pinned to pnpm@10.33.0 (see
-      # the packageManager field — pnpm/action-setup@v4 misparses a sha512
+      # the packageManager field — pnpm/action-setup v4 misparses a sha512
       # hash there, GHSA-379q-355j-w6rj) and pnpm v11 silently stops reading
       # the package.json "pnpm" config block (overrides/patchedDependencies/
       # onlyBuiltDependencies/auditConfig) — a bigger, separate migration.
@@ -72,8 +74,19 @@ jobs:
       # ignore-list, and scripts/check-osv-scan.mjs for the severity gate.
       - name: "[STEP] Install osv-scanner"
         run: |
-          curl -sSL -o /usr/local/bin/osv-scanner "https://github.com/google/osv-scanner/releases/latest/download/osv-scanner_linux_amd64"
-          chmod +x /usr/local/bin/osv-scanner
+          curl \
+            --fail \
+            --silent \
+            --show-error \
+            --location \
+            --proto '=https' \
+            --tlsv1.2 \
+            --output osv-scanner \
+            "https://github.com/google/osv-scanner/releases/download/v2.4.0/osv-scanner_linux_amd64"
+          echo "15314940c10d26af9c6649f150b8a47c1262e8fc7e17b1d1029b0e479e8ed8a0  osv-scanner" \
+            | sha256sum --check --strict -
+          chmod 0755 osv-scanner
+          sudo install -m 0755 osv-scanner /usr/local/bin/osv-scanner
           osv-scanner --version
 
       - name: "[STEP] Run osv-scanner — fail on new HIGH or CRITICAL CVEs"
@@ -85,7 +98,7 @@ jobs:
 
       - name: "[OUTPUT] Upload audit report as artifact"
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: security-audit-report
           path: osv-report.json
@@ -98,14 +111,14 @@ jobs:
     needs: security-audit
     steps:
       - name: "[INPUT] Checkout repository"
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
 
       - name: "[STEP] Setup pnpm"
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1
         # No 'version' key — packageManager in package.json is the single source of truth.
 
       - name: "[STEP] Setup Node.js 22"
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: 22
           cache: pnpm
@@ -142,7 +155,7 @@ jobs:
 
       - name: "[OUTPUT] Upload typecheck report as artifact"
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: typecheck-report
           path: typecheck-report.txt
@@ -154,34 +167,17 @@ jobs:
     runs-on: ubuntu-latest
     needs: typecheck
     env:
-      # Full env surface the suite can consume. NOTE: most of these secrets
-      # are NOT configured in this repository (see header) — unconfigured
-      # names inject empty strings, the affected suites skip themselves, and
-      # the env-gate requires every such skip to be declared.
-      DATABASE_URL: ${{ secrets.DATABASE_URL }}
-      APP_SESSION_SECRET: ${{ secrets.APP_SESSION_SECRET }}
-      PUBLIC_ORIGIN: ${{ secrets.PUBLIC_ORIGIN }}
-      # Non-secret config values
       NODE_ENV: test
-      VSIN_EMAIL: ${{ secrets.VSIN_EMAIL }}
-      VSIN_PASSWORD: ${{ secrets.VSIN_PASSWORD }}
-      KENPOM_EMAIL: ${{ secrets.KENPOM_EMAIL }}
-      KENPOM_PASSWORD: ${{ secrets.KENPOM_PASSWORD }}
-      METABET_API_KEY: ${{ secrets.METABET_API_KEY }}
-      DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
-      DISCORD_CLIENT_ID: ${{ secrets.DISCORD_CLIENT_ID }}
-      DISCORD_CLIENT_SECRET: ${{ secrets.DISCORD_CLIENT_SECRET }}
-      DISCORD_GUILD_ID: ${{ secrets.DISCORD_GUILD_ID }}
     steps:
       - name: "[INPUT] Checkout repository"
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
 
       - name: "[STEP] Setup pnpm"
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1
         # No 'version' key — packageManager in package.json is the single source of truth.
 
       - name: "[STEP] Setup Node.js 22"
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: 22
           cache: pnpm
@@ -204,7 +200,7 @@ jobs:
 
       - name: "[OUTPUT] Upload test + gate reports as artifacts"
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: test-report
           path: |
@@ -241,13 +237,13 @@ jobs:
       NODE_ENV: test
     steps:
       - name: "[INPUT] Checkout repository"
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
 
       - name: "[STEP] Setup pnpm"
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1
 
       - name: "[STEP] Setup Node.js 22"
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: 22
           cache: pnpm
@@ -255,15 +251,11 @@ jobs:
       - name: "[STEP] Install dependencies (frozen lockfile)"
         run: pnpm install --frozen-lockfile
 
-      # Schema comes from `drizzle-kit push` (the current TS schema), NOT
-      # `drizzle-kit migrate`: the checked-in migration history is not
-      # replayable from scratch (0097 and 0104 both CREATE TABLE
-      # wc2026_matches — proven by this job's first run on PR #84). Production
-      # never replays history either; db-push.yml applies increments to the
-      # long-lived database. Recorded in
-      # docs/remediation/2026-07-12-pr70/final-report.md (finding 11).
-      - name: "[STEP] Provision the current schema on the isolated database"
-        run: pnpm exec drizzle-kit push --force
+      # Replays the immutable history on a fresh MySQL 8 database. The guarded
+      # runner parks the canonical wc2026_matches table around the verified
+      # 0104/0107 ESPN naming collision, then restores it before continuing.
+      - name: "[STEP] Replay reconciled migration chain on the isolated database"
+        run: pnpm db:migrate:reconciled
 
       # --no-file-parallelism: the five suites share ONE database and
       # tokenVersion.db.test.ts performs a global mutation
@@ -286,7 +278,7 @@ jobs:
 
       - name: "[OUTPUT] Upload DB test report"
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: db-test-report
           path: db-test-report.txt
@@ -299,13 +291,13 @@ jobs:
     needs: typecheck
     steps:
       - name: "[INPUT] Checkout repository"
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
 
       - name: "[STEP] Setup pnpm"
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1
 
       - name: "[STEP] Setup Node.js 22"
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: 22
           cache: pnpm

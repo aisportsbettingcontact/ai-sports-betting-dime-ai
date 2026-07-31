@@ -15,6 +15,10 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
 from dime_ai.chat_format import attach_tool_catalog, encode_generation_prompt
 from dime_ai.data_validation import read_jsonl
+from dime_ai.platform_knowledge import (
+    load_platform_knowledge,
+    render_platform_knowledge,
+)
 
 MODEL_ID = "meta-llama/Llama-3.1-8B"
 MODEL_REVISION = "d04e592bb4f6aa9cfee91e2e20afa771667e1d4b"
@@ -24,6 +28,15 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--limit", type=int, default=3)
     parser.add_argument("--max-new-tokens", type=int, default=256)
+    parser.add_argument(
+        "--cases",
+        type=Path,
+        default=Path("data/eval/dev.sample.jsonl"),
+        help=(
+            "Visible development case file to generate; use "
+            "platform_grounding_v1.sample.jsonl for the platform slice."
+        ),
+    )
     parser.add_argument(
         "--output",
         type=Path,
@@ -91,8 +104,15 @@ def main() -> None:
         raise SystemExit("HF_TOKEN is not configured.")
 
     project = Path(__file__).resolve().parents[1]
-    cases = read_jsonl(project / "data/eval/dev.sample.jsonl")[: args.limit]
-    system_prompt = (project / "prompts/dime_system_v1.md").read_text().strip()
+    case_path = args.cases if args.cases.is_absolute() else project / args.cases
+    cases = read_jsonl(case_path)[: args.limit]
+    platform_knowledge = load_platform_knowledge(project_root=project)
+    system_prompt = "\n\n".join(
+        [
+            (project / "prompts/dime_system_v1.md").read_text().strip(),
+            render_platform_knowledge(platform_knowledge),
+        ]
+    )
     tool_catalog = json.loads((project / "tools/tools.v1.json").read_text())
     chat_template = (project / "prompts/llama3_dime_chat_template_v1.jinja").read_text()
 
@@ -178,7 +198,10 @@ def main() -> None:
                 "model_id": MODEL_ID,
                 "model_revision": MODEL_REVISION,
                 "control": "untuned-base",
-                "prompt_version": "dime-system-v1",
+                "prompt_version": (
+                    f"dime-system-v1+platform-v{platform_knowledge.document['knowledge_version']}"
+                ),
+                "platform_knowledge_sha256": platform_knowledge.sha256,
                 "first_response": first_response,
                 "response": response,
                 "tool_calls": calls,

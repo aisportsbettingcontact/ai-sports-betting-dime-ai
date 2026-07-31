@@ -891,3 +891,16 @@ def test_public_repository_rejects_unmanifested_non_sample_jsonl(tmp_path) -> No
     (data_dir / "train.public.jsonl").write_text("{}\n", encoding="utf-8")
     with pytest.raises(DataValidationError, match="non-sample public JSONL"):
         validate_public_repository_data(tmp_path)
+
+
+def test_public_repository_boundary_excludes_ignored_private_jsonl(tmp_path) -> None:
+    private_path = tmp_path / "data/private/evaluation-semantic/cases.jsonl"
+    private_path.parent.mkdir(parents=True)
+    private_path.write_text('{"private_semantic_case":true}\n', encoding="utf-8")
+
+    assert validate_public_repository_data(tmp_path) == {
+        "jsonl_files": 0,
+        "sample_files": 0,
+        "sample_records": 0,
+        "non_sample_files": 0,
+    }

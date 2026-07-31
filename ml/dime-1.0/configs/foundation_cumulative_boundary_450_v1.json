@@ -1,0 +1,302 @@
+{
+  "schema_version": "dime-foundation-incremental-boundary-v1",
+  "boundary_id": "dime-foundation-admitted-450-v1",
+  "status": "INCOMPLETE_NOT_AUTHORIZED",
+  "dependency_commit": "35118453e423426fe163f19d17b3fe021251f54a",
+  "target_profile": "dime-foundation-v1-route-mixture",
+  "prior_boundary": {
+    "evidence_id": "dime-llm-v1-foundation-002",
+    "evidence_commit": "35118453e423426fe163f19d17b3fe021251f54a",
+    "private_proof_dependency_commit": "6e6fcc25243070c2849c871f86b4b0e4e3637548",
+    "evidence_path": "evidence/execution/dime-llm-v1-foundation-002/evidence.json",
+    "evidence_sha256": "28ddecf19f4d6b260b27fb431303da130a468e5499509d368bac3468d0d7bf72",
+    "readme_path": "evidence/execution/dime-llm-v1-foundation-002/README.md",
+    "readme_sha256": "6356cec2c749a5b880120dbfaf1a789cff764b950be2df40e2952848bcb19078",
+    "sha256sums_path": "evidence/execution/dime-llm-v1-foundation-002/SHA256SUMS",
+    "sha256sums_sha256": "5439f548d14751eeede6672ac49b0c22f75618d1708a4082d41c53264c7eac23",
+    "schema_path": "schemas/foundation_continuation_evidence.schema.json",
+    "schema_sha256": "85a04e7e1eec21ebb6176833b0fa5f3a3cdc3007c3c9957d622b762e189d68dc",
+    "schema_version": "dime-foundation-continuation-evidence-v1",
+    "artifact_count": 2,
+    "record_count": 300,
+    "split": {"train": 270, "validation": 30},
+    "route_counts": {
+      "platform": 0,
+      "account": 0,
+      "educational": 0,
+      "bet_explanation": 0,
+      "matchup": 0,
+      "full_slate": 0,
+      "historical": 0,
+      "live_data": 300,
+      "general_sports": 0
+    },
+    "semantic_case_count": 651,
+    "semantic_pair_comparisons": 195300,
+    "private_artifacts": [
+      {
+        "artifact_id": "first_live_data_shard",
+        "execution_id": "foundation-live-data-shard-001-accepted-b9ba7788",
+        "report_schema": "dime-foundation-live-data-final-report-v1",
+        "expected_counts": {
+          "accepted_records": 150,
+          "trainer_records": 150,
+          "train": 135,
+          "validation": 15,
+          "approved_originals": 50,
+          "approved_repairs": 100,
+          "resolved_carried_findings": 110
+        },
+        "sha256sums_sha256": "fb280734a43441832fbe5f1948853b6bba0689e41ebec35ce08a70114e80abfa",
+        "authoring_manifest_sha256": "bf1756617d0033c1a755519fe04e0f9e1ff1eedb071aaf31e3d166d6b3760d11",
+        "trainer_manifest_sha256": "05ea7d8c2c9a7439850fa4d69df694aa805a878c51bb2eac468b492945a3c00e",
+        "report_sha256": "14d343bba8b1807ad112ff38cf638df497d5686f35ecfa295290dacc34ee1286",
+        "source_packet_content_inventory_sha256": "010c7e497a9feca62d19fd39c7140f2907a6b5a421a2b9088cbaee406c3276a4"
+      },
+      {
+        "artifact_id": "second_live_data_shard",
+        "execution_id": "foundation-live-data-shard-002-ae039e87",
+        "report_schema": "dime-foundation-live-data-final-report-v1",
+        "expected_counts": {
+          "accepted_records": 150,
+          "trainer_records": 150,
+          "train": 135,
+          "validation": 15,
+          "approved_originals": 150,
+          "approved_repairs": 0,
+          "resolved_carried_findings": 0
+        },
+        "sha256sums_sha256": "fc3d0cd4f1b4dcc47b3a1281a3fabffbaeaad5a82d1f06e26507a4530209673f",
+        "authoring_manifest_sha256": "6deabebf90537f65390af8feef7dd31c1917dd9186cc5095b66b846cf63e2e97",
+        "trainer_manifest_sha256": "dc0f714f1d403a8a887a8c45e54662d69cc2e36294d5a8ca4267fb9c5b95ca84",
+        "report_sha256": "3c25606f077dc5639ee61efe8d59e447c5d21a16832dc0ba8a5c84a2798f586a",
+        "source_packet_content_inventory_sha256": "3ac917eed310f4a85e32e36876269ab3ac1415465cfd2cbc0b21305fe76bd335"
+      }
+    ]
+  },
+  "delta_artifact": {
+    "artifact_id": "platform_shard_003",
+    "execution_id": "foundation-platform-shard-002-9a9642fd",
+    "report_schema": "dime-foundation-platform-final-report-v1",
+    "expected_counts": {
+      "accepted_records": 150,
+      "trainer_records": 150,
+      "train": 135,
+      "validation": 15,
+      "approved_originals": 150,
+      "approved_repairs": 0,
+      "resolved_carried_findings": 0
+    },
+    "route_split_counts": {"platform": {"train": 135, "validation": 15}},
+    "source_packet_count": 4,
+    "source_packet_content_inventory_sha256": "c3d8bfc73ba29fc5592ab90b5422f536ff972108a39f14105181b4361c71ecee",
+    "task_type_count": 18,
+    "prior_task_type_overlap": 0,
+    "tool_requirement_counts": {"prohibited": 150},
+    "coverage_minima": {
+      "temporal_or_freshness_sensitive": 60,
+      "missing_or_ambiguous_information": 36,
+      "abstention_or_error_correction": 45,
+      "multi_turn": 45,
+      "adversarial_or_false_premise": 36
+    },
+    "required_source_snapshot_sha256": [
+      "fa5538cc0fcf9535c5e3062ce46b75f0300a6f691b8815b29e91708ff5b601d4",
+      "4a2fb80533d7f63c15d2d45f080fb81f7f731c18272367ff43ed46ca880c444b"
+    ],
+    "prior_record_count": 300,
+    "delta_to_prior_pair_comparisons": 45000,
+    "delta_to_semantic_pair_comparisons": 97650,
+    "latest_report_path": "cross-shard-report.json",
+    "latest_report_sha256": "d9f3f660aa283d0a190a40a3acf8094dc33ab464457131d0d638bb3644b45073",
+    "partition_registry_sha256": "20e95b7454797a9320865e8d4daf2b0e17941db287eb31421a8150a418843fba",
+    "sha256sums_sha256": "be9f8fb034ba0b97da8d4113d806a0f001c2371d06a8cd25efba218f9529b105",
+    "authoring_manifest_sha256": "f1802b6076c5637e5b3c77b584ffc12e1a2e17ef92d75e3192d00ca857821764",
+    "trainer_manifest_sha256": "ef572308f1e132f7c4ea94a705ac349612c16bf4c03ecf952a0e971ba6031131",
+    "report_sha256": "e3552aa6730e462cda2e9e3f51af82b9117659c3ba523538d76cea2f73d77aac"
+  },
+  "proof_contract": {
+    "contract_version": "dime-foundation-incremental-proof-contract-v1",
+    "compatibility_mode": "BOOTSTRAP_PRIOR_PROOF_SEMANTIC_PRIMITIVES_UNCHANGED_ADDITIVE_VALIDATION_ONLY",
+    "fallback_on_mismatch": "FULL_HISTORICAL_RERUN_REQUIRED",
+    "semantic_parameters": {
+      "foundation_shingle_size": 5,
+      "foundation_jaccard_threshold": 0.92,
+      "evaluation_character_shingle_size": 5,
+      "evaluation_character_jaccard_threshold": 0.92,
+      "evaluation_token_bigram_jaccard_threshold": 0.86
+    },
+    "primitive_ast_sha256": {
+      "canonical_json_bytes": "2067120110379d419b68aa0b6c333528710f7ba3b3aa1c48e004e0583b9708f5",
+      "compare_partitions": "dcabe6079969f2bf91e3887532cd1603167c8096a584b73edaa36b675383a13c",
+      "cross_foundation_comparator": "2a69a7dec617a5008f03f3dc028e3af69c0b769b8eb9a3120019b21dd36a4a38",
+      "development_contamination": "721da7217487cd877f3d8b41e28ded7a27331ede26e42790439bba3ab0c7f778",
+      "evaluation_material": "8af8b8d0e0f7c97954e104030d8fe2432996da030efcd694f990eb4953316b0c",
+      "find_exact_duplicates": "0e546964fa2e8153663306db13a32bdc312de9fd0b9f3e9f9c92615ae0f84a1d",
+      "find_semantic_neighbors": "3b6a63248e43d14692bd32df60064e7025ca76783c3b8f5a846d0d6e6df6b6d7",
+      "foundation_material": "fa4b2cd84955966376b7603367d482227701b423f8d0752581cd799fedb1bad4",
+      "foundation_shingles": "59af8f676efb7d008b86f5e5dca46114b3e08218ecb168600ab782166370e117",
+      "normalized_message_signature": "d8f701a2dde338f7fc3674b112c6135b27ab02234400bdfe09936b23313e16d9",
+      "partition_groups": "828e8a1cf4e571b587d480c87197818be7d7775a06ebe65d11b4ec1eabb21307",
+      "partition_validator": "16df95d98dece1a978cb6cb3af25a872e959973134ecbeb35f5098e687eab6cf",
+      "semantic_case_validator": "f5f57de79436d4af8ba7bd920c8e2f79ca486308de4398a53a1bca169637a225"
+    },
+    "file_sha256": [
+      {"path": "configs/foundation_partition_registry_v1.json", "sha256": "63f765a2080c078e0bfaec48c27bc1f46a038d7c3ac1c49d518f9bd026cf991e"},
+      {"path": "configs/foundation_release_plan_v1.json", "sha256": "adf05bc0820b47ba343da66e4c17e8b246476a272122cb97aceb61d6f4313ec0"},
+      {"path": "src/dime_ai/canonical_json.py", "sha256": "f701dd9e90b598e7b5d0eb06c30f252328441a87fa4d06dc9bcec880861c1598"},
+      {"path": "src/dime_ai/chat_format.py", "sha256": "7761d7dbb5f3cd4587cd690a2637331d25c18800746344419fa8a88a6efc58d6"},
+      {"path": "src/dime_ai/data_validation.py", "sha256": "a009ea239ee7fb848a7c36f408951cd9daa3a9fd0c160015ef20546a6e69fc48"},
+      {"path": "src/dime_ai/foundation_control.py", "sha256": "0a934cfc9d0033ff1a4350df665a3c176e08aad7e357520776dd2915061bf4b9"},
+      {"path": "src/dime_ai/foundation_cumulative_evidence.py", "sha256": "da6df52294614e6abe77e9b3f4cfe641ec9c4ab2eded571dc8e14a53d28a139f"},
+      {"path": "src/dime_ai/foundation_data_factory.py", "sha256": "1b3e06b8b511797b830012f1302c49e2eef1f2f59d00513a6e488e72b78e58fc"},
+      {"path": "src/dime_ai/foundation_dataset.py", "sha256": "167f5c586b6d9627b693c6c76536849e8aef0bf73baa256d5a503663aa7a35ec"},
+      {"path": "src/dime_ai/foundation_execution_evidence.py", "sha256": "366e26f7c287a02aa92fe94907c132d249920efc45b9df88af01b298c93f825e"},
+      {"path": "src/dime_ai/foundation_instrumentation.py", "sha256": "fa45a722d16479950992f8334bb23407ac7bb1e65ce52e55e6474ae568dce7d4"},
+      {"path": "src/dime_ai/foundation_partitioning.py", "sha256": "5b8731ac885fd772ac83868ed05551e2dc230544cb60bbc157d3739692cf63da"},
+      {"path": "src/dime_ai/foundation_private_evaluation_comparison.py", "sha256": "044a8177a99e2118290ecca324c23e325934bbad510a351f5644dd58d520bd6a"},
+      {"path": "src/dime_ai/governed_json.py", "sha256": "f2b00c11dc3fe57b6569f802041fe7155d1f31ca5dbf263910742e93b0931d64"},
+      {"path": "src/dime_ai/private_evaluation_semantics.py", "sha256": "e6d7f55820e872acc8ceca7a10b7cb4273893af1eaaa1b880abba9ab25f4ca72"},
+      {"path": "schemas/foundation_continuation_evidence.schema.json", "sha256": "85a04e7e1eec21ebb6176833b0fa5f3a3cdc3007c3c9957d622b762e189d68dc"},
+      {"path": "schemas/foundation_cumulative_boundary.schema.json", "sha256": "87870f927044d05f1c3df8a1599a2a88e387768aa76e625ee6ef844c12b30914"},
+      {"path": "schemas/foundation_cumulative_evidence.schema.json", "sha256": "b87091aa5a197eaae8c840f01d76cf40b4e459c61aeec2447373fa830e62ea1e"},
+      {"path": "schemas/foundation_partition_registry.schema.json", "sha256": "c53895ca39531c184388e9501a8a91df92d0a08b5c1c3d3ca4674f36337e2868"},
+      {"path": "schemas/foundation_record.schema.json", "sha256": "9b8374f26d45a15e4dbf667373ada9dc4a9b776a64d96875d0ccaea82e3334e9"},
+      {"path": "schemas/foundation_source_packet.schema.json", "sha256": "bb8180b274b536b5322b3f9c223dae2ebbb2c05cab910719b87864b49b2c7f99"},
+      {"path": "schemas/foundation_token_profile.schema.json", "sha256": "c2ea395643d029ddda2f7ba5c687aa66849f75ba78d03259acdea1b077d6f102"},
+      {"path": "schemas/sft_record.schema.json", "sha256": "955f0a773a1eced4154aa159e6a22249810f8cca5047ceb3c589dd566855ab4e"},
+      {"path": "schemas/private_evaluation_semantic_case.schema.json", "sha256": "d73068a5a7875cf0764223fd296ba597039c9b9a18675e26564332daa40b2ff5"}
+    ],
+    "prior_proof_identity": {
+      "evidence_commit": "35118453e423426fe163f19d17b3fe021251f54a",
+      "private_proof_dependency_commit": "6e6fcc25243070c2849c871f86b4b0e4e3637548",
+      "governing_implementations": {
+        "src/dime_ai/foundation_data_factory.py": "1b3e06b8b511797b830012f1302c49e2eef1f2f59d00513a6e488e72b78e58fc",
+        "src/dime_ai/foundation_execution_evidence.py": "c0dc266174c7536fac57af49d746b80cd57ab78e5c121ac2c76566355c9de68c",
+        "src/dime_ai/foundation_partitioning.py": "5b8731ac885fd772ac83868ed05551e2dc230544cb60bbc157d3739692cf63da",
+        "src/dime_ai/foundation_private_evaluation_comparison.py": "d8b03094585796293acfc491562bb51f4d1d538a57d23b0c544728d7342ba628",
+        "src/dime_ai/private_evaluation_semantics.py": "e6d7f55820e872acc8ceca7a10b7cb4273893af1eaaa1b880abba9ab25f4ca72"
+      },
+      "repository_evaluation_policy": "RERUN_CURRENT_CUMULATIVE_NO_HISTORICAL_REUSE"
+    },
+    "semantic_suite_identity": {
+      "generation_id": "dime-llm-v1-private-semantic-cases-tool-contract-v2",
+      "manifest_sha256": "160e89272149034493fa194df735d8e1daf3190bc110849bf76ff6ebd0c8f760",
+      "overlap_report_sha256": "f3becb3c279d00e5832140d1594cff318c0be5d1d626b2c3faf11589f201ba6b",
+      "record_checksums_sha256": "b9211027130d1abf543f4a325a115f32ef39d66c31d014e90fcf91cc9121b8d5",
+      "sha256sums_sha256": "6c85faa068d3884e9a5e02f32b7d7432bee88a6a828de4611b160f8cce27dc34",
+      "source_commit": "b9ba7788749365253a6f725fee2a2a367a3475dd"
+    },
+    "repository_evaluation_identity": {
+      "record_count": 28,
+      "files": [
+        {"path": "data/eval/dev.sample.jsonl", "sha256": "7871caf299457721d2b0c5ebb54e3dc4b120551680412110763767aaddcdb7df"},
+        {"path": "data/eval/platform_grounding_v1.sample.jsonl", "sha256": "8cb453217f286b7c7411aed29c6c25832fbabb26bdf8e384b0a207840b0de931"},
+        {"path": "data/eval/product_route_observability_v1.benchmark.json", "sha256": "b85271e867c531b0472513ce2cb06214632fd8c0ea910efec207a51750e36372"},
+        {"path": "data/eval/provider_selection_v1.supplemental.json", "sha256": "4fc1d3c38753261fe095d49f16b246e83e9ebebd04cd2a26436ffd8e3a6aa0e2"},
+        {"path": "data/eval/runtime_answer_routing_v1.benchmark.json", "sha256": "e7c54e314107ca680767253e3d3cd8b33cc2d90ef02863c6a91dcd7560981167"},
+        {"path": "data/eval/safety_red_team.sample.jsonl", "sha256": "1576397bfe351e9bb9f54ec6abc9f16e8a5e73ca8152b9b8fd74fcb1f7220b09"}
+      ]
+    },
+    "contract_sha256": "490d2809f246a9a759e99cae8b19f5d524242960717c2e7ffe711be9c44b901b"
+  },
+  "quarantines": [
+    {
+      "root_id": "platform_shard_001_incident",
+      "incident_id": "foundation-platform-shard-001-post-termination-race",
+      "receipt_role": "ORIGINAL_SELF_AUTHORED_INCIDENT_RECEIPT",
+      "status": "TAINTED_REJECTED_QUARANTINED",
+      "admitted_records": 0,
+      "receipt_path": "incident-receipt.json",
+      "receipt_sha256": "853a533ac136647ac9e0a252ca8dbdb284407391c13fbcd0708c4fe49f206eef",
+      "sha256sums_sha256": "fe37dd9571c68fb511f3e5ac6f06b553537e7e833679d0fdc440eca4771c1d17",
+      "inventory": {
+        "checksum_failures": 0,
+        "checksum_ledger_byte_count": 88,
+        "checksum_ledger_file_count": 1,
+        "closed_inventory": true,
+        "directory_count": 1,
+        "mode_failures": 0,
+        "payload_byte_count": 2001,
+        "payload_file_count": 1,
+        "sha256sums_sha256": "fe37dd9571c68fb511f3e5ac6f06b553537e7e833679d0fdc440eca4771c1d17",
+        "symlink_count": 0,
+        "total_byte_count": 2089,
+        "total_file_count": 2
+      }
+    },
+    {
+      "root_id": "platform_shard_001_live_audit",
+      "incident_id": "foundation-platform-shard-001-post-termination-race",
+      "receipt_role": "SEPARATE_POINT_IN_TIME_LIVE_PROCESS_AUDIT",
+      "status": "TAINTED_REJECTED_QUARANTINED",
+      "admitted_records": 0,
+      "receipt_path": "quarantine-audit-receipt.json",
+      "receipt_sha256": "46fb0145c1fce90e829a1798f0bfc5b1576c67cc24de822a815f6fff92084ab8",
+      "sha256sums_sha256": "a9ef8095860fbb4a3be5b6aee68538bd21b152a78073107d741f08ee5b659faf",
+      "inventory": {
+        "checksum_failures": 0,
+        "checksum_ledger_byte_count": 96,
+        "checksum_ledger_file_count": 1,
+        "closed_inventory": true,
+        "directory_count": 1,
+        "mode_failures": 0,
+        "payload_byte_count": 1661,
+        "payload_file_count": 1,
+        "sha256sums_sha256": "a9ef8095860fbb4a3be5b6aee68538bd21b152a78073107d741f08ee5b659faf",
+        "symlink_count": 0,
+        "total_byte_count": 1757,
+        "total_file_count": 2
+      }
+    }
+  ],
+  "cumulative": {
+    "artifact_count": 3,
+    "record_count": 450,
+    "split": {"train": 405, "validation": 45},
+    "route_counts": {
+      "platform": 150,
+      "account": 0,
+      "educational": 0,
+      "bet_explanation": 0,
+      "matchup": 0,
+      "full_slate": 0,
+      "historical": 0,
+      "live_data": 300,
+      "general_sports": 0
+    },
+    "semantic_case_count": 651,
+    "prior_semantic_pair_comparisons_reused": 195300,
+    "delta_semantic_pair_comparisons_new": 97650,
+    "cumulative_semantic_pair_comparisons_reconciled": 292950,
+    "remaining_records": 1950,
+    "remaining_split": {"train": 1755, "validation": 195}
+  },
+  "lineage": {
+    "parent_evidence_id": "dime-llm-v1-foundation-002",
+    "parent_state_sha256": "e91195ba0d02092501f7c00dce577f43a89f1b2a5abada7d81c6b73d0f2a4df8",
+    "delta_artifact_id": "platform_shard_003",
+    "delta_identity_sha256": "3a44a8d65e28a3673219770d849ea7b8cc248e842cd9e2d193e28ffd17c89ffb",
+    "prior_record_identity_root_sha256": "e9c8e459816dfb09f9f42b0872edf167db31ee910efdf09b999c360584ce19f4",
+    "delta_record_identity_root_sha256": "6bb911f4b36382b3b2371c3630bf758ceec18f725461ba30ea8b6a75da3ee6e3",
+    "cumulative_record_identity_root_sha256": "cac7179973064d90c859a348243c11db4113722d7d18401c34a5f00b306369c3",
+    "cumulative_state_sha256": "ce6bac1aacfa9a6cbbfbf1ec228ebcbf4688f70b467e4b316b05aabd975d227c",
+    "domain": "dime-foundation-cumulative-state-v1"
+  },
+  "private_content_counts": {
+    "foundation_records": 0,
+    "semantic_cases": 0,
+    "answer_keys": 0,
+    "credentials": 0,
+    "task_text": 0,
+    "record_identifiers": 0
+  },
+  "downstream_authorization": {
+    "publication": false,
+    "training": false,
+    "deployment": false,
+    "route_activation": false,
+    "provider_execution": false,
+    "railway_mutation": false
+  }
+}

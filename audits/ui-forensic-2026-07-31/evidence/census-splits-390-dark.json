@@ -1,0 +1,835 @@
+{
+ "typography": [
+  {
+   "key": "Familjen Grotesk|11px|700|16.5px|0.33px",
+   "count": 56,
+   "sample": "New York (+1.5)",
+   "cls": "SPAN"
+  },
+  {
+   "key": "Familjen Grotesk|10px|700|10px|0.4px",
+   "count": 53,
+   "sample": "67%",
+   "cls": "SPAN"
+  },
+  {
+   "key": "Familjen Grotesk|11px|500|16.5px|0.88px",
+   "count": 45,
+   "sample": "SPREAD",
+   "cls": "bsp-toggle"
+  },
+  {
+   "key": "Familjen Grotesk|11px|600|16.5px|0.55px",
+   "count": 30,
+   "sample": "NYY",
+   "cls": "font-bold"
+  },
+  {
+   "key": "Familjen Grotesk|11px|700|16.5px|0.88px",
+   "count": 28,
+   "sample": "Tickets",
+   "cls": "SPAN"
+  },
+  {
+   "key": "Familjen Grotesk|10px|700|15px|normal",
+   "count": 15,
+   "sample": "2:20 PM ET",
+   "cls": "text-[10px] font-bold"
+  },
+  {
+   "key": "Familjen Grotesk|11.5px|500|17.25px|1.38px",
+   "count": 5,
+   "sample": "Odds & Splits History",
+   "cls": "SPAN"
+  },
+  {
+   "key": "Familjen Grotesk|10.5px|500|15.75px|0.84px",
+   "count": 5,
+   "sample": "SPREAD",
+   "cls": "SPAN"
+  },
+  {
+   "key": "Familjen Grotesk|12px|500|13.8px|0.12px",
+   "count": 3,
+   "sample": "Feed",
+   "cls": "mfn-item"
+  },
+  {
+   "key": "Familjen Grotesk|24px|700|24px|-1.2px",
+   "count": 2,
+   "sample": "dıme",
+   "cls": "mfn-wordmark"
+  },
+  {
+   "key": "Familjen Grotesk|15px|700|15px|-0.75px",
+   "count": 2,
+   "sample": "dıme",
+   "cls": "mfn-wordmark"
+  },
+  {
+   "key": "Familjen Grotesk|14px|700|20px|0.35px",
+   "count": 1,
+   "sample": "TODAY",
+   "cls": "SPAN"
+  },
+  {
+   "key": "Familjen Grotesk|13px|600|19.5px|0.325px",
+   "count": 1,
+   "sample": "MLB",
+   "cls": "bs-pill flex items-center gap-1 px-2.5 py-1.5 roun"
+  },
+  {
+   "key": "Familjen Grotesk|13.65px|700|20.475px|1.365px",
+   "count": 1,
+   "sample": "Friday, July 31, 2026",
+   "cls": "bs-datehdr font-bold tracking-widest uppercase"
+  },
+  {
+   "key": "Familjen Grotesk|14px|700|14px|normal",
+   "count": 1,
+   "sample": "·",
+   "cls": "SPAN"
+  },
+  {
+   "key": "Familjen Grotesk|11px|600|16.5px|0.66px",
+   "count": 1,
+   "sample": "MLB BASEBALL",
+   "cls": "bs-datehdr-sub font-semibold"
+  },
+  {
+   "key": "Familjen Grotesk|16px|400|24px|normal",
+   "count": 1,
+   "sample": "Betting Splits",
+   "cls": "sr-only"
+  },
+  {
+   "key": "Familjen Grotesk|12px|600|13.8px|0.12px",
+   "count": 1,
+   "sample": "Tools",
+   "cls": "mfn-item"
+  },
+  {
+   "key": "Familjen Grotesk|13px|700|13px|0.13px",
+   "count": 1,
+   "sample": "Chat with",
+   "cls": "mfn-chat-text"
+  }
+ ],
+ "distinctFontSizes": [
+  "10px",
+  "10.5px",
+  "11px",
+  "11.5px",
+  "12px",
+  "13px",
+  "13.65px",
+  "14px",
+  "15px",
+  "16px",
+  "24px"
+ ],
+ "distinctFamilies": [
+  "Familjen Grotesk"
+ ],
+ "numericSample": [
+  {
+   "text": "67%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "10px",
+   "weight": "700"
+  },
+  {
+   "text": "33%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "10px",
+   "weight": "700"
+  },
+  {
+   "text": "2%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "10px",
+   "weight": "700"
+  },
+  {
+   "text": "98%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "10px",
+   "weight": "700"
+  },
+  {
+   "text": "49%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "10px",
+   "weight": "700"
+  },
+  {
+   "text": "51%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "10px",
+   "weight": "700"
+  },
+  {
+   "text": "82%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "10px",
+   "weight": "700"
+  },
+  {
+   "text": "18%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "10px",
+   "weight": "700"
+  },
+  {
+   "text": "100%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "10px",
+   "weight": "700"
+  },
+  {
+   "text": "100%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "10px",
+   "weight": "700"
+  },
+  {
+   "text": "25%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "10px",
+   "weight": "700"
+  },
+  {
+   "text": "75%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "10px",
+   "weight": "700"
+  },
+  {
+   "text": "1%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "10px",
+   "weight": "700"
+  },
+  {
+   "text": "99%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "10px",
+   "weight": "700"
+  },
+  {
+   "text": "53%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "10px",
+   "weight": "700"
+  },
+  {
+   "text": "47%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "10px",
+   "weight": "700"
+  },
+  {
+   "text": "1%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "10px",
+   "weight": "700"
+  },
+  {
+   "text": "99%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "10px",
+   "weight": "700"
+  },
+  {
+   "text": "47%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "10px",
+   "weight": "700"
+  },
+  {
+   "text": "53%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "10px",
+   "weight": "700"
+  },
+  {
+   "text": "7%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "10px",
+   "weight": "700"
+  },
+  {
+   "text": "93%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "10px",
+   "weight": "700"
+  },
+  {
+   "text": "64%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "10px",
+   "weight": "700"
+  },
+  {
+   "text": "36%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "10px",
+   "weight": "700"
+  },
+  {
+   "text": "4%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "10px",
+   "weight": "700"
+  },
+  {
+   "text": "96%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "10px",
+   "weight": "700"
+  },
+  {
+   "text": "35%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "10px",
+   "weight": "700"
+  },
+  {
+   "text": "65%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "10px",
+   "weight": "700"
+  },
+  {
+   "text": "73%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "10px",
+   "weight": "700"
+  },
+  {
+   "text": "27%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "10px",
+   "weight": "700"
+  },
+  {
+   "text": "77%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "10px",
+   "weight": "700"
+  },
+  {
+   "text": "23%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "10px",
+   "weight": "700"
+  },
+  {
+   "text": "53%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "10px",
+   "weight": "700"
+  },
+  {
+   "text": "47%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "10px",
+   "weight": "700"
+  },
+  {
+   "text": "6%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "10px",
+   "weight": "700"
+  },
+  {
+   "text": "94%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "10px",
+   "weight": "700"
+  },
+  {
+   "text": "40%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "10px",
+   "weight": "700"
+  },
+  {
+   "text": "60%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "10px",
+   "weight": "700"
+  },
+  {
+   "text": "57%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "10px",
+   "weight": "700"
+  },
+  {
+   "text": "43%",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "10px",
+   "weight": "700"
+  }
+ ],
+ "radii": [
+  [
+   "8px",
+   45
+  ],
+  [
+   "6px",
+   28
+  ],
+  [
+   "4px 0px 0px 4px",
+   25
+  ],
+  [
+   "0px 4px 4px 0px",
+   25
+  ],
+  [
+   "16px",
+   20
+  ],
+  [
+   "999px",
+   5
+  ],
+  [
+   "20px",
+   4
+  ],
+  [
+   "3.35544e+07px",
+   3
+  ],
+  [
+   "4px",
+   3
+  ],
+  [
+   "50%",
+   2
+  ],
+  [
+   "26px",
+   1
+  ],
+  [
+   "24px",
+   1
+  ]
+ ],
+ "shadows": [
+  [
+   "rgba(0, 0, 0, 0.55) 0px 12px 32px 0px",
+   1
+  ],
+  [
+   "rgba(0, 0, 0, 0.5) 0px 4px 14px 0px",
+   1
+  ]
+ ],
+ "mint": {
+  "text": 0,
+  "bg": 30,
+  "border": 0,
+  "samples": [
+   {
+    "tag": "DIV",
+    "cls": "bsp-seg bsp-seg--away transition-all dur",
+    "text": "67%"
+   },
+   {
+    "tag": "DIV",
+    "cls": "bsp-seg bsp-seg--away transition-all dur",
+    "text": "2%"
+   },
+   {
+    "tag": "DIV",
+    "cls": "bsp-seg bsp-seg--away transition-all dur",
+    "text": "49%"
+   },
+   {
+    "tag": "DIV",
+    "cls": "bsp-seg bsp-seg--away transition-all dur",
+    "text": "82%"
+   },
+   {
+    "tag": "DIV",
+    "cls": "bsp-seg bsp-seg--away transition-all dur",
+    "text": "100%"
+   },
+   {
+    "tag": "DIV",
+    "cls": "bsp-seg bsp-seg--away transition-all dur",
+    "text": "100%"
+   },
+   {
+    "tag": "DIV",
+    "cls": "bsp-seg bsp-seg--away transition-all dur",
+    "text": "25%"
+   },
+   {
+    "tag": "DIV",
+    "cls": "bsp-seg bsp-seg--away transition-all dur",
+    "text": "1%"
+   },
+   {
+    "tag": "DIV",
+    "cls": "bsp-seg bsp-seg--away transition-all dur",
+    "text": "53%"
+   },
+   {
+    "tag": "DIV",
+    "cls": "bsp-seg bsp-seg--away transition-all dur",
+    "text": "1%"
+   },
+   {
+    "tag": "DIV",
+    "cls": "bsp-seg bsp-seg--away transition-all dur",
+    "text": "47%"
+   },
+   {
+    "tag": "DIV",
+    "cls": "bsp-seg bsp-seg--away transition-all dur",
+    "text": "7%"
+   },
+   {
+    "tag": "DIV",
+    "cls": "bsp-seg bsp-seg--away transition-all dur",
+    "text": "64%"
+   },
+   {
+    "tag": "DIV",
+    "cls": "bsp-seg bsp-seg--away transition-all dur",
+    "text": "4%"
+   },
+   {
+    "tag": "DIV",
+    "cls": "bsp-seg bsp-seg--away transition-all dur",
+    "text": "35%"
+   },
+   {
+    "tag": "DIV",
+    "cls": "bsp-seg bsp-seg--away transition-all dur",
+    "text": "73%"
+   },
+   {
+    "tag": "DIV",
+    "cls": "bsp-seg bsp-seg--away transition-all dur",
+    "text": "77%"
+   },
+   {
+    "tag": "DIV",
+    "cls": "bsp-seg bsp-seg--away transition-all dur",
+    "text": "53%"
+   },
+   {
+    "tag": "DIV",
+    "cls": "bsp-seg bsp-seg--away transition-all dur",
+    "text": "6%"
+   },
+   {
+    "tag": "DIV",
+    "cls": "bsp-seg bsp-seg--away transition-all dur",
+    "text": "40%"
+   },
+   {
+    "tag": "DIV",
+    "cls": "bsp-seg bsp-seg--away transition-all dur",
+    "text": "57%"
+   },
+   {
+    "tag": "DIV",
+    "cls": "bsp-seg bsp-seg--away transition-all dur",
+    "text": "100%"
+   },
+   {
+    "tag": "DIV",
+    "cls": "bsp-seg bsp-seg--away transition-all dur",
+    "text": "50%"
+   },
+   {
+    "tag": "DIV",
+    "cls": "bsp-seg bsp-seg--away transition-all dur",
+    "text": "97%"
+   },
+   {
+    "tag": "DIV",
+    "cls": "bsp-seg bsp-seg--away transition-all dur",
+    "text": "45%"
+   }
+  ]
+ },
+ "contrastFails": [
+  {
+   "text": "SPREAD",
+   "ratio": 4.12,
+   "need": 4.5,
+   "size": "11px",
+   "color": "rgb(110, 110, 110)",
+   "cls": "bsp-toggle"
+  }
+ ],
+ "contrastFailTotal": 1,
+ "smallTargets": [
+  {
+   "tag": "BUTTON",
+   "cls": "cal-trigger flex items-center gap-1 sm:g",
+   "w": 73,
+   "h": 30,
+   "text": "TODAY"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "bs-pill flex items-center gap-1 px-2.5 p",
+   "w": 65,
+   "h": 34,
+   "text": "MLB"
+  },
+  {
+   "tag": "INPUT",
+   "cls": "flex-1 min-w-0 bg-transparent text-base ",
+   "w": 170,
+   "h": 24,
+   "text": "Search MLB games"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "bsp-toggle",
+   "w": 64,
+   "h": 25,
+   "text": "SPREAD"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "bsp-toggle",
+   "w": 64,
+   "h": 25,
+   "text": "TOTAL"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "bsp-toggle",
+   "w": 69,
+   "h": 25,
+   "text": "MONEYLINE"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "ohp-toggle w-full flex items-center just",
+   "w": 362,
+   "h": 42,
+   "text": "Odds & Splits Histor"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "bsp-toggle",
+   "w": 64,
+   "h": 25,
+   "text": "SPREAD"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "bsp-toggle",
+   "w": 64,
+   "h": 25,
+   "text": "TOTAL"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "bsp-toggle",
+   "w": 69,
+   "h": 25,
+   "text": "MONEYLINE"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "ohp-toggle w-full flex items-center just",
+   "w": 362,
+   "h": 42,
+   "text": "Odds & Splits Histor"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "bsp-toggle",
+   "w": 64,
+   "h": 25,
+   "text": "SPREAD"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "bsp-toggle",
+   "w": 64,
+   "h": 25,
+   "text": "TOTAL"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "bsp-toggle",
+   "w": 69,
+   "h": 25,
+   "text": "MONEYLINE"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "ohp-toggle w-full flex items-center just",
+   "w": 362,
+   "h": 42,
+   "text": "Odds & Splits Histor"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "bsp-toggle",
+   "w": 64,
+   "h": 25,
+   "text": "SPREAD"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "bsp-toggle",
+   "w": 64,
+   "h": 25,
+   "text": "TOTAL"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "bsp-toggle",
+   "w": 69,
+   "h": 25,
+   "text": "MONEYLINE"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "ohp-toggle w-full flex items-center just",
+   "w": 362,
+   "h": 42,
+   "text": "Odds & Splits Histor"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "bsp-toggle",
+   "w": 64,
+   "h": 25,
+   "text": "SPREAD"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "bsp-toggle",
+   "w": 64,
+   "h": 25,
+   "text": "TOTAL"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "bsp-toggle",
+   "w": 69,
+   "h": 25,
+   "text": "MONEYLINE"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "ohp-toggle w-full flex items-center just",
+   "w": 362,
+   "h": 42,
+   "text": "Odds & Splits Histor"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "bsp-toggle",
+   "w": 64,
+   "h": 25,
+   "text": "SPREAD"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "bsp-toggle",
+   "w": 64,
+   "h": 25,
+   "text": "TOTAL"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "bsp-toggle",
+   "w": 69,
+   "h": 25,
+   "text": "MONEYLINE"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "bsp-toggle",
+   "w": 64,
+   "h": 25,
+   "text": "SPREAD"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "bsp-toggle",
+   "w": 64,
+   "h": 25,
+   "text": "TOTAL"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "bsp-toggle",
+   "w": 69,
+   "h": 25,
+   "text": "MONEYLINE"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "bsp-toggle",
+   "w": 64,
+   "h": 25,
+   "text": "SPREAD"
+  }
+ ],
+ "clickableCount": 73,
+ "cardGeometry": [],
+ "unnamedIconButtons": [],
+ "animations": []
+}

@@ -20,21 +20,57 @@ import { Request, Response, NextFunction } from "express";
 
 // Bot / crawler UA patterns (used for landing page only)
 const BOT_PATTERNS = [
-  /googlebot/i, /bingbot/i, /slurp/i, /duckduckbot/i, /baiduspider/i,
-  /yandexbot/i, /facebookexternalhit/i, /twitterbot/i, /linkedinbot/i,
-  /whatsapp/i, /telegrambot/i, /discordbot/i, /slackbot/i, /applebot/i,
-  /semrushbot/i, /ahrefsbot/i, /mj12bot/i, /dotbot/i, /rogerbot/i,
-  /curl\//i, /wget\//i, /python-requests/i, /python-urllib/i,
-  /node-fetch/i, /axios\//i, /go-http-client/i, /java\//i, /okhttp/i,
-  /httpie/i, /insomnia/i, /postman/i,
-  /claude-web/i, /anthropic/i, /gpt-crawler/i, /openai/i,
-  /perplexitybot/i, /claudebot/i, /chatgpt/i, /cohere-ai/i,
-  /ia_archiver/i, /archive\.org/i, /scrapy/i, /heritrix/i, /nutch/i,
-  /spider/i, /crawler/i, /bot\b/i,
+  /googlebot/i,
+  /bingbot/i,
+  /slurp/i,
+  /duckduckbot/i,
+  /baiduspider/i,
+  /yandexbot/i,
+  /facebookexternalhit/i,
+  /twitterbot/i,
+  /linkedinbot/i,
+  /whatsapp/i,
+  /telegrambot/i,
+  /discordbot/i,
+  /slackbot/i,
+  /applebot/i,
+  /semrushbot/i,
+  /ahrefsbot/i,
+  /mj12bot/i,
+  /dotbot/i,
+  /rogerbot/i,
+  /curl\//i,
+  /wget\//i,
+  /python-requests/i,
+  /python-urllib/i,
+  /node-fetch/i,
+  /axios\//i,
+  /go-http-client/i,
+  /java\//i,
+  /okhttp/i,
+  /httpie/i,
+  /insomnia/i,
+  /postman/i,
+  /claude-web/i,
+  /anthropic/i,
+  /gpt-crawler/i,
+  /openai/i,
+  /perplexitybot/i,
+  /claudebot/i,
+  /chatgpt/i,
+  /cohere-ai/i,
+  /ia_archiver/i,
+  /archive\.org/i,
+  /scrapy/i,
+  /heritrix/i,
+  /nutch/i,
+  /spider/i,
+  /crawler/i,
+  /bot\b/i,
 ];
 
 function isBot(ua: string): boolean {
-  return BOT_PATTERNS.some((p) => p.test(ua));
+  return BOT_PATTERNS.some(p => p.test(ua));
 }
 
 // ─── Legal page builders (served to ALL user agents) ───────────────────────
@@ -75,7 +111,7 @@ a:focus-visible,.site-header a:focus-visible{outline:2px solid #45E0A8;outline-o
 <header class="site-header"><a href="/" aria-label="Back to dime home">dıme</a></header>
 <main class="container">
 <h1>Privacy Policy</h1>
-<p class="updated">Last updated: July 7, 2026</p>
+<p class="updated">Last updated: July 28, 2026</p>
 
 <h2>1. Information We Collect</h2>
 <p>When you create an account or use our sports intelligence software, we may collect:</p>
@@ -100,13 +136,14 @@ a:focus-visible,.site-header a:focus-visible{outline:2px solid #45E0A8;outline-o
 <p>Our platform uses artificial intelligence models to generate sports analysis, probability distributions, and market projections. Specifically:</p>
 <ul>
 <li>AI models process publicly available sports data (match statistics, odds, team performance metrics) to generate analytical outputs.</li>
-<li>Your queries to our AI intelligence system may be logged for quality assurance and model improvement purposes.</li>
+<li>Your AI queries, generated responses, bounded platform-context snapshots, and technical generation metadata may be logged for quality assurance, safety review, debugging, and model-improvement evaluation.</li>
+<li>Raw conversation logs are not automatically added to model-training datasets. Any future use of deidentified conversation-derived examples for training requires a separate consent, redaction, human-review, and dataset-approval process.</li>
 <li>AI-generated outputs are probabilistic in nature and do not constitute financial advice, guaranteed outcomes, or endorsements of any wagering activity.</li>
 <li>We do not sell or share your AI interaction data with third parties for advertising purposes.</li>
 </ul>
 
 <h2>4. Data Retention</h2>
-<p>We retain your account data for as long as your account is active. AI query logs are retained for up to 90 days for quality assurance, then anonymized or deleted. Payment records are retained as required by applicable law.</p>
+<p>We retain your account data and user-visible chat history for as long as your account is active or as needed to provide the service. Restricted AI generation traces&mdash;including raw provider output and bounded context snapshots&mdash;are retained for up to 90 days for quality assurance, then anonymized or deleted. Payment records are retained as required by applicable law.</p>
 
 <h2>5. Data Security</h2>
 <p>We implement industry-standard security measures including encrypted connections (TLS), secure authentication (OAuth 2.0), and access controls to protect your personal information.</p>
@@ -115,7 +152,8 @@ a:focus-visible,.site-header a:focus-visible{outline:2px solid #45E0A8;outline-o
 <p>We use the following third-party services that may process your data:</p>
 <ul>
 <li>Stripe &mdash; payment processing</li>
-<li>Anthropic (Claude) &mdash; AI model inference</li>
+<li>RunPod &mdash; private AI model inference infrastructure</li>
+<li>Anthropic (Claude) &mdash; AI model inference when that provider is enabled</li>
 <li>Railway &mdash; application hosting</li>
 <li>Discord &mdash; account authentication</li>
 </ul>
@@ -248,10 +286,12 @@ a:focus-visible,.site-header a:focus-visible{outline:2px solid #45E0A8;outline-o
 // Guarded by server/landingPrerender.test.ts — update both together.
 
 function buildLandingHtml(): string {
-  const title = "dıme — See where price and probability disagree | Sports Betting Intelligence Software";
-  const desc  = "Dime AI compares sportsbook prices against projected probability, movement, volatility, matchup context, and risk flags so every market resolves to Pass, Monitor, or Edge Detected.";
-  const url   = "https://aisportsbettingmodels.com/";
-  const year  = new Date().getFullYear();
+  const title =
+    "dıme — See where price and probability disagree | Sports Betting Intelligence Software";
+  const desc =
+    "Dime AI compares sportsbook prices against projected probability, movement, volatility, matchup context, and risk flags so every market resolves to Pass, Monitor, or Edge Detected.";
+  const url = "https://aisportsbettingmodels.com/";
+  const year = new Date().getFullYear();
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -435,8 +475,12 @@ export function landingPrerenderMiddleware(
 
   const html = buildLandingHtml();
 
-  console.log(`[Prerender][OUTPUT] serving static HTML -- bytes=${html.length}`);
-  console.log("[Prerender][VERIFY] PASS -- static landing HTML sent to crawler");
+  console.log(
+    `[Prerender][OUTPUT] serving static HTML -- bytes=${html.length}`
+  );
+  console.log(
+    "[Prerender][VERIFY] PASS -- static landing HTML sent to crawler"
+  );
 
   res.setHeader("Content-Type", "text/html; charset=utf-8");
   res.setHeader("Cache-Control", "public, max-age=300, s-maxage=600");

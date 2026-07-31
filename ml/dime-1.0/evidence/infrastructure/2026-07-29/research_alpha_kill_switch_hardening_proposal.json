@@ -1,0 +1,60 @@
+{
+  "schemaVersion": "dime-research-alpha-kill-switch-hardening-v1",
+  "proposalId": "research-alpha-kill-switch-hardening-2026-07-29",
+  "createdAt": "2026-07-29T13:00:00Z",
+  "status": "approval_required",
+  "scope": "configuration_only_separate_from_phase1",
+  "observedState": {
+    "featureEnabled": false,
+    "killSwitchEngaged": false,
+    "evidenceArtifact": "ml/dime-1.0/evidence/infrastructure/2026-07-29/railway_phase1_readiness_observation.json"
+  },
+  "targetState": {
+    "featureEnabled": false,
+    "killSwitchEngaged": true
+  },
+  "change": {
+    "environment": "production",
+    "variable": "DIME_RESEARCH_ALPHA_KILL_SWITCH",
+    "requestedValue": "true",
+    "variablesThatMustNotChange": [
+      "DIME_RESEARCH_ALPHA_ENABLED",
+      "DIME_CHAT_TRACE_V1_ENABLED",
+      "DIME_ANSWER_ROUTING_V1_ENABLED",
+      "DIME_RESEARCH_ALPHA_MODEL_REVISION"
+    ]
+  },
+  "verification": [
+    "Research Alpha remains disabled.",
+    "The kill switch is engaged.",
+    "The runtime gate reports inactive because the kill switch is engaged.",
+    "No Dime Chat answer, route, provider, model, trace, or database behavior changes."
+  ],
+  "rollback": {
+    "permittedOnlyFor": "verified_configuration_regression",
+    "action": "Restore the prior kill-switch value after separate approval.",
+    "mustNotEnableFeature": true
+  },
+  "separationRules": {
+    "combineWithPhase1Deployment": false,
+    "combineWithTraceActivation": false,
+    "combineWithRouteActivation": false,
+    "combineWithModelChange": false
+  },
+  "mutationsPerformed": [],
+  "approvals": {
+    "requested": true,
+    "granted": false,
+    "reviewer": null,
+    "reviewedAt": null,
+    "decisionArtifactSha256": null
+  },
+  "authorizationEffect": {
+    "authorizesConfigurationChange": false,
+    "authorizesDeployment": false,
+    "authorizesTraceActivation": false,
+    "authorizesShadow": false,
+    "authorizesRouteActivation": false,
+    "authorizesModelChange": false
+  }
+}

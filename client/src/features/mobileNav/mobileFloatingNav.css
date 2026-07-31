@@ -141,11 +141,14 @@ html.dark .mfn-wrap {
     opacity var(--dime-t) var(--dime-ease);
 }
 
-/* Active destination: raised fill + weight + mint dot — never color alone.
+/* Active destination: inverse-contrast pill + weight + mint dot — never color
+ * alone (directive 2026-07-29): the current page flips to the theme's
+ * inverse ground — white pill/black ink on dark, black pill/white ink on
+ * light. --dime-text-primary/--dime-bg IS that inverse pair in both themes.
  * aria-current="page" is the single source of active semantics AND styling. */
 .mfn-item[aria-current="page"] {
-  background: var(--dime-row-active);
-  color: var(--dime-text-primary);
+  background: var(--dime-text-primary);
+  color: var(--dime-bg);
   font-weight: 600;
 }
 
@@ -159,13 +162,24 @@ html.dark .mfn-wrap {
   height: 4px;
   border-radius: 50%;
   background: var(--dime-mint);
-  /* Brand coin-dot rule: mint dot needs a near-black hairline on light. */
-  box-shadow: var(--dime-coin-keyline);
+  /* Coin-dot rule on the INVERSE pill: light theme puts the dot on the black
+   * pill (no keyline); dark theme puts it on the white pill (near-black
+   * hairline). This is the opposite of --dime-coin-keyline's theme values,
+   * so the shadows are written out per theme below. */
+  box-shadow: none;
 }
 
-/* Hover only on hover-capable devices — no stuck hover states on touch. */
+html.dark .mfn-item[aria-current="page"]:not(.mfn-chat)::after {
+  /* Same near-black hairline the coin-dot rule uses on light grounds —
+   * the token (not raw hex) keeps the X-HEX-EPIDEMIC ratchet at its ceiling. */
+  box-shadow: 0 0 0 1px var(--dime-mint-keyline);
+}
+
+/* Hover only on hover-capable devices — no stuck hover states on touch. The
+ * active destination is excluded: its inverse-contrast fill must not wash
+ * back to the raised grey under the pointer. */
 @media (hover: hover) {
-  .mfn-item:not(.mfn-chat):hover {
+  .mfn-item:not(.mfn-chat):not([aria-current="page"]):hover {
     background: var(--dime-row-active);
     color: var(--dime-text-primary);
   }
@@ -218,6 +232,15 @@ html.dark .mfn-wrap {
   line-height: 1;
 }
 
+/* Credits readout replacing "Chat with dime" while /chat is the active page
+ * (directive 2026-07-29). Inherits the pill's black ink and 700 weight;
+ * tabular numerals so the value doesn't wobble when it later goes live. */
+.mfn-chat-credits {
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 /* Chat's persistent primary emphasis and route-activation are separate
  * concepts: when /chat IS the current route, the pill keeps the exact mint
  * fill and black ink (the generic active rule above must not swap it onto
@@ -229,9 +252,11 @@ html.dark .mfn-wrap {
   font-weight: 700;
 }
 
+/* No activation dot on the active chat pill (directive 2026-07-29 r2): the
+ * pill's content already flips to the credits readout — the dot under it
+ * read as clutter, and mint-fill + content-swap carry the active state. */
 .mfn-item.mfn-chat[aria-current="page"]::after {
-  background: #ffffff;
-  box-shadow: none;
+  display: none;
 }
 
 /* Inline wordmark inside the mint pill: black ink; the coin-dot flips to

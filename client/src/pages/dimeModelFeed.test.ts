@@ -179,7 +179,10 @@ describe("DimeModelFeed — owner rules", () => {
 
   it("three-color law: mint #45E0A8 only (both themes), no neon/gold/legacy-mint", () => {
     expect(src).toContain("#45E0A8");
-    expect(src).not.toContain("#0FA36B");
+    // 0FA36B (3.25:1 on white) is retired; 0B8557 (4.66:1) is the one
+    // sanctioned mint-text-on-light (audit DIME-UI-015 ruling). The old
+    // case-sensitive toContain never fired against lowercase usage.
+    expect(src).not.toMatch(/#0fa36b/i);
     expect(src).not.toMatch(/#39FF14|#FFD700|#FF6B35|#22D3EE|#F87171/i);
   });
 
@@ -302,9 +305,17 @@ describe("DimeModelFeed — combined slate (owner directive 2026-07-18)", () => 
   });
 
   it("league sections are collapsible containers with logo + full name, no counts", () => {
-    // Native details/summary, open by default; chevron affordance pair.
-    expect(src).toMatch(/<details key=\{section\.key\} className="dmf-league" open>/);
+    // Native details/summary, CONTROLLED open state (2026-07-29: the mobile
+    // feedhead league bar toggles the same state from outside the <details>;
+    // leagues still default open). Chevron affordance pair on both controls.
+    expect(src).toMatch(/open=\{!closedLeagues\.has\(section\.key\)\}/);
+    expect(src).toMatch(/onToggle=\{\(e\) => setLeagueOpen\(section\.key, e\.currentTarget\.open\)\}/);
     expect(src).toMatch(/<summary className="dmf-leaguehead">/);
+    // Mobile grouped menu bar: league toggle bars render inside the sticky
+    // feedhead and target their <details> by id.
+    expect(src).toMatch(/className="dmf-lgbar"/);
+    expect(src).toMatch(/aria-controls=\{`dmf-league-\$\{section\.key\}`\}/);
+    expect(src).toMatch(/id=\{`dmf-league-\$\{section\.key\}`\}/);
     expect(src).toMatch(/dmf-lgchev--expand/);
     expect(src).toMatch(/dmf-lgchev--collapse/);
     // No game counts anywhere in the header or feedhead (2026-07-18).
@@ -327,7 +338,8 @@ describe("DimeModelFeed — combined slate (owner directive 2026-07-18)", () => 
     expect(src).toMatch(/:not\(\[data-dmf-theme="light"\]\) \.dmf-lglogo-light\{display:none\}/);
     expect(src).toMatch(/\.dmf-lglogo\{[^}]*width:30px;height:30px/);
     // Header cluster centers within the page; chevron holds the right edge.
-    expect(src).toMatch(/\.dmf-leaguehead\{[^}]*justify-content:center/);
+    // (2026-07-29: the feedhead league bar shares the same rule.)
+    expect(src).toMatch(/\.dmf-leaguehead,\.dmf-lgbar\{[^}]*justify-content:center/);
     expect(src).toMatch(/\.dmf-lgchev\{position:absolute;right:8px/);
   });
 

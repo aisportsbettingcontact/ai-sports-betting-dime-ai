@@ -20,7 +20,7 @@ function FeedCard({
   sport,
   timestamp,
   value,
-  valueColor = "text-[#45E0A8]",
+  valueColor = "text-primary",
 }: {
   type: "edge" | "projection" | "alert" | "update";
   title: string;
@@ -31,7 +31,7 @@ function FeedCard({
   valueColor?: string;
 }) {
   const icons = {
-    edge: <TrendingUp className="w-4 h-4 text-[#45E0A8]" />,
+    edge: <TrendingUp className="w-4 h-4 text-primary" />,
     projection: <Globe className="w-4 h-4 text-white" />,
     alert: <Zap className="w-4 h-4 text-white" />,
     update: <Clock className="w-4 h-4 text-white" />,
@@ -177,7 +177,7 @@ export function MobileFeed() {
               subtitle: `Model: ${modelHomeMl > 0 ? "+" : ""}${modelHomeMl} vs Book: ${bookHomeMl > 0 ? "+" : ""}${bookHomeMl}`,
               sport: "World Cup",
               value: `+${edge}%`,
-              valueColor: "text-[#45E0A8]",
+              valueColor: "text-primary",
             });
           }
         }
@@ -229,7 +229,7 @@ export function MobileFeed() {
               subtitle: `Model: ${modelSpread > 0 ? "+" : ""}${modelSpread.toFixed(1)} vs Book: ${bookSpread > 0 ? "+" : ""}${bookSpread.toFixed(1)}`,
               sport: "MLB",
               value: `${diff.toFixed(1)} pts`,
-              valueColor: diff >= 2 ? "text-[#45E0A8]" : "text-white",
+              valueColor: diff >= 2 ? "text-primary" : "text-white",
             });
           }
         }
@@ -262,7 +262,7 @@ export function MobileFeed() {
               {today} • Real-time model & market signals
             </p>
           </div>
-          <span className="text-[10px] text-[#45E0A8] font-medium px-2 py-0.5 rounded-full bg-black border border-[#45E0A8]">
+          <span className="text-[10px] text-primary font-medium px-2 py-0.5 rounded-full bg-black border border-primary">
             LIVE
           </span>
         </div>

@@ -1,0 +1,60 @@
+{
+  "$schema": "./dime-control-plane-targets.schema.json",
+  "schemaVersion": 1,
+  "kind": "dime-control-plane-targets",
+  "cache": {
+    "ttlSeconds": 300,
+    "lockMaxAgeSeconds": 30,
+    "lockWaitSeconds": 8
+  },
+  "github": {
+    "host": "github.com",
+    "repository": "aisportsbettingcontact/ai-sports-betting-dime-ai",
+    "defaultBranch": "main",
+    "originUrl": "https://github.com/aisportsbettingcontact/ai-sports-betting-dime-ai.git"
+  },
+  "railway": {
+    "workspace": {
+      "id": "fa75c735-e8e5-4d7c-a293-c8c056d95429",
+      "name": "aisportsbettingcontact"
+    },
+    "project": {
+      "id": "8dd7341d-702c-48c7-90df-5c19a4f04913",
+      "name": "stunning-creativity"
+    },
+    "environment": {
+      "id": "787f3113-17ab-47d9-9819-1268aeb09b3e",
+      "name": "production"
+    },
+    "services": {
+      "application": {
+        "id": "a46ea921-5c5d-4225-9254-92f742e95b51",
+        "name": "ai-sports-betting-dime-ai",
+        "expectedRepository": "aisportsbettingcontact/ai-sports-betting-dime-ai",
+        "healthUrl": "https://aisportsbettingmodels.com/health"
+      },
+      "backend": {
+        "id": "3528dc9f-a63b-45e9-94bb-6d1df25d6f3a",
+        "name": "ai-sports-betting-backend",
+        "expectedRepository": "aisportsbettingcontact/ai-sports-betting-dime-ai",
+        "healthUrl": "https://ai-sports-betting-backend-production.up.railway.app/health"
+      },
+      "database": {
+        "id": "a48cf462-136a-4d9b-b427-00504927116a",
+        "name": "MySQL: Dime AI",
+        "expectedImagePrefix": "mysql:"
+      }
+    }
+  },
+  "safety": {
+    "mode": "read-only",
+    "remoteMutationsAuthorized": false,
+    "mutationCommandsExposed": false,
+    "authorizedOperations": [
+      "identity",
+      "topology",
+      "deployment-list",
+      "public-health"
+    ]
+  }
+}

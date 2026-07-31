@@ -1,0 +1,26 @@
+{
+  "schemaVersion": "dime-production-traffic-evidence-v1",
+  "evidenceId": "production-traffic-distribution-2026-07-29",
+  "status": "unavailable",
+  "productionDerived": false,
+  "containsPromptOrResponseText": false,
+  "sanitizationRevision": "dime-sanitized-traffic-record-v1",
+  "populationWindow": null,
+  "sampleCount": 0,
+  "requiredDimensions": [
+    "route",
+    "sport",
+    "league",
+    "message_length",
+    "multi_turn_depth",
+    "tool_requirement",
+    "temporal_class",
+    "entity_ambiguity",
+    "missing_information",
+    "live_vs_historical",
+    "subscriber_vs_public",
+    "platform_support"
+  ],
+  "report": null,
+  "unavailableReason": "Representative sanitized production traffic has not been authorized or supplied."
+}

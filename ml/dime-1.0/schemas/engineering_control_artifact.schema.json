@@ -1,0 +1,700 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dime.internal/schemas/engineering_control_artifact.schema.json",
+  "title": "Dime AI Engineering Control artifact",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "artifact_id",
+    "artifact_type",
+    "created_at_utc",
+    "producer",
+    "evidence",
+    "authorization_effect",
+    "payload"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "dime-engineering-control-artifact-v1"
+    },
+    "artifact_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]{7,127}$"
+    },
+    "artifact_type": {
+      "enum": [
+        "failure_diagnosis",
+        "training_strategy",
+        "architecture_experiment",
+        "scaling_forecast",
+        "evaluation_decision"
+      ]
+    },
+    "created_at_utc": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "producer": {
+      "$ref": "#/$defs/producer"
+    },
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 128,
+      "items": {
+        "$ref": "#/$defs/evidence"
+      }
+    },
+    "authorization_effect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "authorizes_training",
+        "authorizes_locked_evaluation",
+        "authorizes_release",
+        "authorizes_serving",
+        "authorizes_provider_activation"
+      ],
+      "properties": {
+        "authorizes_training": {
+          "const": false
+        },
+        "authorizes_locked_evaluation": {
+          "const": false
+        },
+        "authorizes_release": {
+          "const": false
+        },
+        "authorizes_serving": {
+          "const": false
+        },
+        "authorizes_provider_activation": {
+          "const": false
+        }
+      }
+    },
+    "payload": {
+      "type": "object"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "artifact_type": {
+            "const": "failure_diagnosis"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/failure_diagnosis"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "artifact_type": {
+            "const": "training_strategy"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/training_strategy"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "artifact_type": {
+            "const": "architecture_experiment"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/architecture_experiment"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "artifact_type": {
+            "const": "scaling_forecast"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/scaling_forecast"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "artifact_type": {
+            "const": "evaluation_decision"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "payload": {
+            "$ref": "#/$defs/evaluation_decision"
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "commit": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "nonempty": {
+      "type": "string",
+      "minLength": 8,
+      "maxLength": 2048
+    },
+    "agent": {
+      "enum": [
+        "model_strategy_governor",
+        "failure_diagnosis_agent",
+        "data_and_pretraining_agent",
+        "architecture_research_agent",
+        "scaling_science_agent",
+        "post_training_agent",
+        "training_systems_agent",
+        "evaluation_authority",
+        "release_controller",
+        "developer_platform_agent",
+        "production_learning_agent"
+      ]
+    },
+    "failure_layer": {
+      "enum": [
+        "product_logic",
+        "routing",
+        "retrieval",
+        "tool_use",
+        "context_construction",
+        "data_quality",
+        "reasoning",
+        "knowledge",
+        "instruction_following",
+        "calibration_uncertainty",
+        "model_capacity"
+      ]
+    },
+    "intervention": {
+      "enum": [
+        "runtime_fix",
+        "prompt_or_schema",
+        "retrieval_improvement",
+        "small_adapter",
+        "large_adapter",
+        "continued_pretraining",
+        "new_architecture"
+      ]
+    },
+    "producer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["agent", "principal_id", "source_commit"],
+      "properties": {
+        "agent": {
+          "$ref": "#/$defs/agent"
+        },
+        "principal_id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9._:-]{3,127}$"
+        },
+        "source_commit": {
+          "$ref": "#/$defs/commit"
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "reference", "sha256", "observed_at_utc"],
+      "properties": {
+        "kind": {
+          "enum": [
+            "production_trace",
+            "reproduction",
+            "evaluation",
+            "benchmark",
+            "dataset_audit",
+            "architecture_measurement"
+          ]
+        },
+        "reference": {
+          "type": "string",
+          "minLength": 4,
+          "maxLength": 512
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "observed_at_utc": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "metric": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "value", "sample_size"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{2,63}$"
+        },
+        "value": {
+          "type": "number"
+        },
+        "sample_size": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "failure_diagnosis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "failure_class",
+        "root_cause",
+        "reproduced",
+        "baseline",
+        "deterministic_layers_checked",
+        "smallest_sufficient_intervention",
+        "training_candidate"
+      ],
+      "properties": {
+        "failure_class": {
+          "$ref": "#/$defs/failure_layer"
+        },
+        "root_cause": {
+          "$ref": "#/$defs/nonempty"
+        },
+        "reproduced": {
+          "const": true
+        },
+        "baseline": {
+          "$ref": "#/$defs/metric"
+        },
+        "deterministic_layers_checked": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "product_logic",
+              "routing",
+              "retrieval",
+              "tool_use",
+              "context_construction",
+              "data_quality"
+            ]
+          }
+        },
+        "smallest_sufficient_intervention": {
+          "$ref": "#/$defs/intervention"
+        },
+        "training_candidate": {
+          "type": "boolean"
+        }
+      }
+    },
+    "training_strategy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "failure_artifact_id",
+        "failure_class",
+        "root_cause",
+        "training_necessity",
+        "deterministic_causes_eliminated",
+        "simpler_interventions_rejected",
+        "capability_target",
+        "falsifiable_hypothesis",
+        "training_method",
+        "curriculum",
+        "data_requirements",
+        "expected_gain",
+        "regression_risks",
+        "stop_conditions",
+        "acceptance_thresholds"
+      ],
+      "properties": {
+        "failure_artifact_id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9._-]{7,127}$"
+        },
+        "failure_class": {
+          "$ref": "#/$defs/failure_layer"
+        },
+        "root_cause": {
+          "$ref": "#/$defs/nonempty"
+        },
+        "training_necessity": {
+          "enum": ["required", "conditional", "not_required"]
+        },
+        "deterministic_causes_eliminated": {
+          "type": "boolean"
+        },
+        "simpler_interventions_rejected": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/intervention"
+          }
+        },
+        "capability_target": {
+          "$ref": "#/$defs/nonempty"
+        },
+        "falsifiable_hypothesis": {
+          "type": "string",
+          "minLength": 24,
+          "maxLength": 2048
+        },
+        "training_method": {
+          "$ref": "#/$defs/nonempty"
+        },
+        "curriculum": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "atomic_facts",
+              "single_step_reasoning",
+              "multi_step_reasoning",
+              "tool_use",
+              "conflicting_evidence",
+              "temporal_ambiguity",
+              "incomplete_information",
+              "adversarial_conditions",
+              "production_realistic_conversations"
+            ]
+          }
+        },
+        "data_requirements": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/nonempty"
+          }
+        },
+        "expected_gain": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["metric", "baseline", "target"],
+          "properties": {
+            "metric": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{2,63}$"
+            },
+            "baseline": {
+              "type": "number"
+            },
+            "target": {
+              "type": "number"
+            }
+          }
+        },
+        "regression_risks": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/nonempty"
+          }
+        },
+        "stop_conditions": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/nonempty"
+          }
+        },
+        "acceptance_thresholds": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/nonempty"
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "training_necessity": {
+                "const": "required"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "deterministic_causes_eliminated": {
+                "const": true
+              },
+              "simpler_interventions_rejected": {
+                "minItems": 1
+              },
+              "failure_class": {
+                "enum": [
+                  "tool_use",
+                  "reasoning",
+                  "knowledge",
+                  "instruction_following",
+                  "calibration_uncertainty",
+                  "model_capacity"
+                ]
+              }
+            }
+          }
+        }
+      ]
+    },
+    "architecture_experiment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "failure_artifact_id",
+        "baseline",
+        "competing_approaches",
+        "ablation_plan",
+        "cost_projection",
+        "latency_projection",
+        "backward_compatibility",
+        "rollback_plan"
+      ],
+      "properties": {
+        "failure_artifact_id": {
+          "type": "string",
+          "minLength": 8
+        },
+        "baseline": {
+          "$ref": "#/$defs/metric"
+        },
+        "competing_approaches": {
+          "type": "array",
+          "minItems": 2,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/nonempty"
+          }
+        },
+        "ablation_plan": {
+          "$ref": "#/$defs/nonempty"
+        },
+        "cost_projection": {
+          "$ref": "#/$defs/nonempty"
+        },
+        "latency_projection": {
+          "$ref": "#/$defs/nonempty"
+        },
+        "backward_compatibility": {
+          "$ref": "#/$defs/nonempty"
+        },
+        "rollback_plan": {
+          "$ref": "#/$defs/nonempty"
+        }
+      }
+    },
+    "scaling_forecast": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "intervention",
+        "compute_required",
+        "data_required",
+        "estimated_quality_gain",
+        "estimated_latency_effect",
+        "estimated_inference_cost",
+        "confidence_interval",
+        "break_even_usage",
+        "failure_conditions"
+      ],
+      "properties": {
+        "intervention": {
+          "$ref": "#/$defs/intervention"
+        },
+        "compute_required": {
+          "$ref": "#/$defs/nonempty"
+        },
+        "data_required": {
+          "$ref": "#/$defs/nonempty"
+        },
+        "estimated_quality_gain": {
+          "$ref": "#/$defs/nonempty"
+        },
+        "estimated_latency_effect": {
+          "$ref": "#/$defs/nonempty"
+        },
+        "estimated_inference_cost": {
+          "$ref": "#/$defs/nonempty"
+        },
+        "confidence_interval": {
+          "$ref": "#/$defs/nonempty"
+        },
+        "break_even_usage": {
+          "$ref": "#/$defs/nonempty"
+        },
+        "failure_conditions": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/nonempty"
+          }
+        }
+      }
+    },
+    "efficiency_metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "correctness",
+        "usefulness",
+        "groundedness",
+        "calibration",
+        "reliability",
+        "latency",
+        "cost",
+        "complexity",
+        "regression_risk"
+      ],
+      "properties": {
+        "correctness": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "usefulness": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "groundedness": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "calibration": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "reliability": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "latency": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "cost": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "complexity": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "regression_risk": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
+      }
+    },
+    "evaluation_decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "candidate_id",
+        "builder_principal_id",
+        "evaluator_principal_id",
+        "independence_verified",
+        "baseline",
+        "candidate",
+        "targeted_capability_improved",
+        "zero_tolerance_failures",
+        "regression_limits_passed",
+        "locked_evaluation_passed",
+        "rollback_ready",
+        "verdict"
+      ],
+      "properties": {
+        "candidate_id": {
+          "type": "string",
+          "minLength": 8
+        },
+        "builder_principal_id": {
+          "type": "string",
+          "minLength": 4
+        },
+        "evaluator_principal_id": {
+          "type": "string",
+          "minLength": 4
+        },
+        "independence_verified": {
+          "type": "boolean"
+        },
+        "baseline": {
+          "$ref": "#/$defs/efficiency_metrics"
+        },
+        "candidate": {
+          "$ref": "#/$defs/efficiency_metrics"
+        },
+        "targeted_capability_improved": {
+          "type": "boolean"
+        },
+        "zero_tolerance_failures": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "regression_limits_passed": {
+          "type": "boolean"
+        },
+        "locked_evaluation_passed": {
+          "type": "boolean"
+        },
+        "rollback_ready": {
+          "type": "boolean"
+        },
+        "verdict": {
+          "enum": [
+            "REJECT",
+            "REVISE",
+            "SHADOW",
+            "CANARY",
+            "RELEASE",
+            "ROLLBACK"
+          ]
+        }
+      }
+    }
+  }
+}

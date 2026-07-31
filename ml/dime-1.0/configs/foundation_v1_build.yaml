@@ -32,9 +32,10 @@ source_policy:
   allowed_source_classes:
     - human-authored
     - synthetic
+    - teacher-generated
   contains_user_data: false
   contains_provider_derived_data: false
-  teacher_generated_allowed: false
+  teacher_generated_allowed: true
   unknown_sources_allowed: false
   expired_rights_allowed: false
 

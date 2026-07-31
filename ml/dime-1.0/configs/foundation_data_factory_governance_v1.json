@@ -1,0 +1,73 @@
+{
+  "schema_version": "dime-foundation-data-factory-governance-v1",
+  "status": "PROPOSED_NON_EXECUTING",
+  "authorization_effect": "NONE_UNTIL_OWNER_MERGE_OF_EXACT_REVIEWED_HEAD",
+  "governed_ai_authorship": {
+    "permitted": ["private_foundation_training_records", "private_foundation_validation_records", "private_evaluation_semantic_cases", "private_critique_records", "private_adjudication_records"],
+    "mandatory_controls": ["immutable_source_packets", "record_level_provenance", "independent_critic_identity", "deterministic_quantitative_validation", "rights_validation", "exact_and_semantic_deduplication", "temporal_leakage_detection", "evaluation_contamination_detection", "immutable_release_checksums", "no_private_chain_of_thought"],
+    "prohibited": ["generator_self_approval", "unsupported_factual_generation", "current_fact_memorization", "hidden_answer_key_access", "unreviewed_private_publication", "silent_record_overwrite"]
+  },
+  "critic_independence": {
+    "must_differ": ["actor_id", "prompt_revision", "prompt_sha256", "execution_receipt_sha256", "context_sha256", "responsibility"],
+    "may_match": ["model_id", "model_revision"]
+  },
+  "partitioning": {
+    "assignment_basis": "scenario_family_sha256_mod_10",
+    "assignment_revision": "dime-foundation-partition-v1",
+    "assignment_timing": "before_substantive_prose_generation",
+    "validation_bucket": 0,
+    "bucket_modulus": 10,
+    "group_keys": ["scenario_family_id", "template_family_id", "source_event_id", "conversation_family_id", "quantitative_scenario_id", "entity_set_temporal_bucket"],
+    "registry_path": "ml/dime-1.0/configs/foundation_partition_registry_v1.json",
+    "registry_schema_path": "ml/dime-1.0/schemas/foundation_partition_registry.schema.json",
+    "collection_validator_path": "ml/dime-1.0/src/dime_ai/foundation_partitioning.py"
+  },
+  "source_packets": {
+    "schema_path": "ml/dime-1.0/schemas/foundation_source_packet.schema.json",
+    "immutable_snapshot_required": true,
+    "pending_rights_release_allowed": false,
+    "silent_snapshot_replacement_allowed": false
+  },
+  "tool_states": ["skipped", "success", "empty", "failure", "timeout", "stale", "malformed", "conflicting", "rejected"],
+  "conversion": {
+    "record_count": 2400,
+    "system_tokens_masked": true,
+    "user_tokens_masked": true,
+    "tool_call_tokens_supervised": true,
+    "tool_result_tokens_masked": true,
+    "assistant_tokens_supervised": true,
+    "multi_turn_supported": true,
+    "silent_truncation_rejected": true,
+    "required_result": {"authoring_records": 2400, "trainer_records": 2400, "unconverted_records": 0, "unexpected_extra_records": 0, "pending_rights_records": 0, "conversion_hash_mismatches": 0, "silent_truncations": 0}
+  },
+  "owner_merge_authorization_scope": {
+    "codex_private_record_generation": true,
+    "independent_record_critique": true,
+    "deterministic_record_validation": true,
+    "private_evaluation_case_generation": true,
+    "private_hugging_face_publication_after_release_gate": true
+  },
+  "private_publication_preconditions": {
+    "authoring_records": 2400,
+    "trainer_records": 2400,
+    "unconverted_records": 0,
+    "unexpected_extra_records": 0,
+    "pending_rights_records": 0,
+    "unresolved_material_findings": 0,
+    "exact_duplicates": 0,
+    "cross_split_group_collisions": 0,
+    "evaluation_contamination": 0,
+    "conversion_hash_mismatches": 0,
+    "silent_truncations": 0,
+    "release_checksum_verified": true
+  },
+  "still_not_authorized": {
+    "model_download": false,
+    "runpod_inference": false,
+    "model_training": false,
+    "benchmark_execution": false,
+    "railway_mutation": false,
+    "tracing": false,
+    "route_activation": false
+  }
+}

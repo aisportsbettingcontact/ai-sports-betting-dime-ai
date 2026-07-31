@@ -94,10 +94,13 @@ FOUNDATION_OWNER_DECISION = {
         "runpod_is_authoritative": False,
     },
     "authorship_policy": {
-        "allowed_source_classes": ["human-authored", "synthetic"],
-        "substantive_ai_drafting_allowed": False,
-        "retained_ai_supplied_prose_allowed": False,
+        "allowed_source_classes": ["human-authored", "synthetic", "teacher-generated"],
+        "substantive_ai_drafting_allowed": True,
+        "retained_ai_supplied_prose_allowed": True,
         "synthetic_may_relabel_ai_authored_prose": False,
+        "teacher_generated_records_require_governance_contract": True,
+        "governance_contract_path": "configs/foundation_data_factory_governance_v1.json",
+        "generator_may_approve_own_record": False,
         "non_substantive_ai_assistance": [
             "spelling",
             "formatting",
@@ -288,10 +291,18 @@ def test_static_prompt_template_and_tool_invariants() -> None:
         assert function["parameters"]["additionalProperties"] is False
 
 
-def test_training_tree_is_excluded_from_production_image() -> None:
+def test_training_tree_is_excluded_except_for_pricing_registry() -> None:
     dockerignore = (REPOSITORY / ".dockerignore").read_text(encoding="utf-8").splitlines()
     dockerfile = (REPOSITORY / "Dockerfile").read_text(encoding="utf-8")
-    assert "ml/dime-1.0/" in dockerignore
+    assert "ml/dime-1.0/*" in dockerignore
+    assert "!ml/dime-1.0/configs" in dockerignore
+    assert "ml/dime-1.0/configs/*" in dockerignore
+    assert "!ml/dime-1.0/configs/dime_observability_pricing_v1.json" in dockerignore
+    assert [
+        pattern
+        for pattern in dockerignore
+        if pattern.startswith("!ml/dime-1.0/") and pattern != "!ml/dime-1.0/configs"
+    ] == ["!ml/dime-1.0/configs/dime_observability_pricing_v1.json"]
     assert "ml/dime-1.0" not in dockerfile
 
 
@@ -363,7 +374,7 @@ def test_foundation_v1_owner_decision_is_exact_and_non_authorizing() -> None:
         decision["authorship_policy"]["allowed_source_classes"]
         == source_policy["allowed_source_classes"]
     )
-    assert source_policy["teacher_generated_allowed"] is False
+    assert source_policy["teacher_generated_allowed"] is True
 
     credentials = contract["hugging_face"]["credentials"]
     prohibited = decision["credential_boundary"]["prohibited_existing_credentials"]

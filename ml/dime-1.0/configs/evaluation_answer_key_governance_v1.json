@@ -1,0 +1,249 @@
+{
+  "schema_version": "dime-evaluation-answer-key-governance-v1",
+  "governance_id": "dime-llm-v1-answer-key-and-scorer-isolation",
+  "status": "PROPOSED_NON_EXECUTING",
+  "source_commit": "7ed09adb4fcdb9e2d9047e73e34f84c80d865b78",
+  "authorization_effect": "NONE_UNTIL_OWNER_MERGE_OF_EXACT_REVIEWED_HEAD",
+  "semantic_layers": {
+    "development": {
+      "case_count": 270,
+      "semantic_repo_id": "taileredsports/dime-eval-development-cases",
+      "answer_key_repo_id": "taileredsports/dime-eval-development-keys"
+    },
+    "critical": {
+      "case_count": 81,
+      "semantic_repo_id": "taileredsports/dime-eval-critical-cases",
+      "answer_key_repo_id": "taileredsports/dime-eval-critical-keys"
+    },
+    "locked": {
+      "case_count": 180,
+      "semantic_repo_id": "taileredsports/dime-eval-locked-cases",
+      "answer_key_repo_id": "taileredsports/dime-eval-locked-keys"
+    },
+    "general_regression": {
+      "case_count": 120,
+      "semantic_repo_id": "taileredsports/dime-eval-general-regression-cases",
+      "answer_key_repo_id": "taileredsports/dime-eval-general-regression-keys"
+    }
+  },
+  "artifact_contracts": {
+    "answer_key_record_schema": "ml/dime-1.0/schemas/evaluation_answer_key_record.schema.json",
+    "blinded_output_schema": "ml/dime-1.0/schemas/evaluation_blinded_output.schema.json",
+    "locked_consumption_ledger_schema": "ml/dime-1.0/schemas/evaluation_locked_consumption_ledger.schema.json",
+    "governance_validator": "ml/dime-1.0/src/dime_ai/evaluation_answer_key_governance.py",
+    "static_audit": "ml/dime-1.0/scripts/validate_evaluation_answer_key_governance.py"
+  },
+  "resource_universe": [
+    "private_foundation",
+    "evaluation_semantic_cases",
+    "evaluation_semantic_manifests",
+    "evaluation_answer_keys",
+    "evaluation_answer_key_manifests",
+    "blinded_model_outputs",
+    "evaluation_scores",
+    "locked_consumption_ledger",
+    "model_endpoint"
+  ],
+  "identities": {
+    "training": {
+      "identity_id": "dime-foundation-training-v1",
+      "responsibility": "foundation_training_only",
+      "allowed_read": [
+        "private_foundation"
+      ],
+      "allowed_write": [],
+      "denied_read": [
+        "evaluation_semantic_cases",
+        "evaluation_semantic_manifests",
+        "evaluation_answer_keys",
+        "evaluation_answer_key_manifests",
+        "blinded_model_outputs",
+        "evaluation_scores",
+        "locked_consumption_ledger",
+        "model_endpoint"
+      ],
+      "denied_write": [
+        "private_foundation",
+        "evaluation_semantic_cases",
+        "evaluation_semantic_manifests",
+        "evaluation_answer_keys",
+        "evaluation_answer_key_manifests",
+        "blinded_model_outputs",
+        "evaluation_scores",
+        "locked_consumption_ledger",
+        "model_endpoint"
+      ],
+      "allowed_actions_after_owner_merge": [
+        "use_private_foundation_control_plane"
+      ],
+      "credential_provisioned": false,
+      "model_endpoint_access": "denied"
+    },
+    "model_runner": {
+      "identity_id": "dime-evaluation-model-runner-v1",
+      "responsibility": "semantic_case_inference_and_blinded_output_only",
+      "allowed_read": [
+        "evaluation_semantic_cases",
+        "evaluation_semantic_manifests"
+      ],
+      "allowed_write": [
+        "blinded_model_outputs"
+      ],
+      "denied_read": [
+        "private_foundation",
+        "evaluation_answer_keys",
+        "evaluation_answer_key_manifests",
+        "blinded_model_outputs",
+        "evaluation_scores",
+        "locked_consumption_ledger",
+        "model_endpoint"
+      ],
+      "denied_write": [
+        "private_foundation",
+        "evaluation_semantic_cases",
+        "evaluation_semantic_manifests",
+        "evaluation_answer_keys",
+        "evaluation_answer_key_manifests",
+        "evaluation_scores",
+        "locked_consumption_ledger",
+        "model_endpoint"
+      ],
+      "allowed_actions_after_owner_merge": [
+        "read_semantic_cases",
+        "write_blinded_outputs"
+      ],
+      "credential_provisioned": false,
+      "model_endpoint_access": "separate_benchmark_gate_required"
+    },
+    "scorer": {
+      "identity_id": "dime-evaluation-isolated-scorer-v1",
+      "responsibility": "answer_key_and_blinded_output_scoring_only",
+      "allowed_read": [
+        "evaluation_answer_keys",
+        "evaluation_answer_key_manifests",
+        "blinded_model_outputs"
+      ],
+      "allowed_write": [
+        "evaluation_scores"
+      ],
+      "denied_read": [
+        "private_foundation",
+        "evaluation_semantic_cases",
+        "evaluation_semantic_manifests",
+        "evaluation_scores",
+        "locked_consumption_ledger",
+        "model_endpoint"
+      ],
+      "denied_write": [
+        "private_foundation",
+        "evaluation_semantic_cases",
+        "evaluation_semantic_manifests",
+        "evaluation_answer_keys",
+        "evaluation_answer_key_manifests",
+        "blinded_model_outputs",
+        "locked_consumption_ledger",
+        "model_endpoint"
+      ],
+      "allowed_actions_after_owner_merge": [
+        "read_answer_keys",
+        "read_blinded_outputs",
+        "write_evaluation_scores"
+      ],
+      "credential_provisioned": false,
+      "model_endpoint_access": "denied"
+    },
+    "locked_controller": {
+      "identity_id": "dime-locked-evaluation-controller-v1",
+      "responsibility": "single_use_authorization_and_consumption_ledger_only",
+      "allowed_read": [
+        "evaluation_semantic_manifests",
+        "evaluation_answer_key_manifests",
+        "locked_consumption_ledger"
+      ],
+      "allowed_write": [
+        "locked_consumption_ledger"
+      ],
+      "denied_read": [
+        "private_foundation",
+        "evaluation_semantic_cases",
+        "evaluation_answer_keys",
+        "blinded_model_outputs",
+        "evaluation_scores",
+        "model_endpoint"
+      ],
+      "denied_write": [
+        "private_foundation",
+        "evaluation_semantic_cases",
+        "evaluation_semantic_manifests",
+        "evaluation_answer_keys",
+        "evaluation_answer_key_manifests",
+        "blinded_model_outputs",
+        "evaluation_scores",
+        "model_endpoint"
+      ],
+      "allowed_actions_after_owner_merge": [
+        "enforce_single_use_locked_lease",
+        "append_locked_consumption_receipt"
+      ],
+      "credential_provisioned": false,
+      "model_endpoint_access": "denied"
+    }
+  },
+  "answer_key_lifecycle": {
+    "generation_mode": "offline_private_governed_authorship",
+    "persistent_runtime_generator_identity": false,
+    "semantic_record_sha256_binding_required": true,
+    "semantic_case_content_copy_prohibited": true,
+    "private_repository_required": true,
+    "semantic_and_key_repository_separation_required": true,
+    "record_checksum_manifest_required": true,
+    "provenance_receipt_required": true,
+    "independent_review_required": true,
+    "secret_scan_required": true,
+    "publication_credentials_provisioned": false,
+    "publication_preconditions": [
+      "exact_semantic_revision",
+      "exact_semantic_manifest_sha256",
+      "record_level_semantic_sha256_bindings",
+      "answer_key_record_schema_pass",
+      "independent_review_pass",
+      "record_checksum_manifest_pass",
+      "private_repository_access_policy_pass",
+      "secret_scan_pass"
+    ]
+  },
+  "blinding": {
+    "candidate_provider_identity_in_output": false,
+    "candidate_model_identity_in_output": false,
+    "semantic_case_content_in_output": false,
+    "answer_key_material_in_output": false,
+    "blind_id_required": true,
+    "semantic_record_sha256_required": true,
+    "output_receipt_sha256_required": true
+  },
+  "locked_control": {
+    "maximum_authorized_executions_per_revision": 1,
+    "current_authorized_executions": 0,
+    "execution_authorized": false,
+    "separate_benchmark_execution_gate_required": true,
+    "attempt_consumes_allowance": true,
+    "retry_after_consumption_allowed": false,
+    "append_only_ledger_required": true,
+    "consumption_receipt_required": true,
+    "unconsumed_exact_revision_required": true
+  },
+  "owner_merge_authorization_scope": {
+    "private_answer_key_generation": true,
+    "private_answer_key_publication": true,
+    "training_runner_scorer_separation": true,
+    "locked_consumption_ledger": true
+  },
+  "still_not_authorized": {
+    "model_download": false,
+    "runpod_inference": false,
+    "benchmark_execution": false,
+    "model_training": false,
+    "model_serving": false,
+    "railway_mutation": false
+  }
+}

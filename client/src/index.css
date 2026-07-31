@@ -188,7 +188,11 @@
 
   /* v2 tonal ramp — extra tiers consumed by app components directly */
   --text-secondary: #A6A6A6;    /* 8.6:1 on black */
-  --text-muted: #6E6E6E;        /* 4.1:1 on black */
+  /* Audit DIME-UI-005 (2026-07-31): the old 6E-grey measured 3.6–4.1:1 under
+   * the 10–13px labels that consume this token (tracker bt-label, splits
+   * separators, landing captions) — below WCAG AA 4.5:1 for small text. The
+   * 7E-grey holds 5.2:1 on black, 4.9:1 on tier-1 cards, 4.5:1 on raised. */
+  --text-muted: #7E7E7E;
   --surface-raised: #141414;
   --row-hover: #141414;         /* hover returns (was transparent) */
   --row-active: #1F1F1F;
@@ -307,14 +311,23 @@ html:not(.dark) {
     animation: none !important;
   }
   /* MASTER.md motion law: pulses and spins are disabled under reduced motion.
-   * Tailwind's animate-* utilities have no built-in guard, and 33 animate-pulse
-   * usages across 10 files ran regardless of the preference (audit
-   * D-PULSE-REDUCE). !important is required here to beat the utility layer;
-   * this media block is the single sanctioned place for it. */
+   * Tailwind's animate-* utilities have no built-in guard (43 animate-pulse
+   * usages across 12 files as of the 2026-07-31 forensic audit; originally
+   * 33/10, audit D-PULSE-REDUCE). !important is required here to beat the
+   * utility layer; this media block is the single sanctioned place for it.
+   * The tw-animate-css classes (animate-in/out, accordion, caret) drive every
+   * Radix overlay — dialog, sheet, popover, drawer — and ship no guard of
+   * their own (audit DIME-UI-003), so they are killed here too. */
   .animate-pulse,
   .animate-spin,
   .animate-bounce,
-  .animate-ping {
+  .animate-ping,
+  .animate-in,
+  .animate-out,
+  .animate-accordion-down,
+  .animate-accordion-up,
+  .animate-caret-blink,
+  .prez-game-pulse {
     animation: none !important;
   }
 }
@@ -427,58 +440,11 @@ body.dime-floating-nav-active header.sticky.top-0 {
 ::-webkit-scrollbar-thumb { background: var(--foreground); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--foreground); }
 
-/* ── Fix #9: MLB sub-tab scroll-snap ─────────────────────────────────────── */
-.feed-tabs-scroll::-webkit-scrollbar { display: none; }
-.feed-tabs-scroll { -ms-overflow-style: none; scrollbar-width: none; }
-.feed-tab { scroll-snap-align: start; flex-shrink: 0; }
+/* (Removed 2026-07-31, audit DIME-UI-026/-041: the `.feed-tab` /
+   `.feed-tabs-scroll` block and its three !important breakpoint tiers styled a
+   class no component renders — the legacy query-tab feed page was unrouted in
+   the 2026-07-11 navigation reconstruction.) */
 
-/* ── md: (768px+) tab bar scaling ─────────────────────────────────────────────────────────────────────────────────
- * Scale up tab buttons at tablet width to match the larger sport pill aesthetic.
- * Overrides the inline style padding/font-size with !important to win specificity.
- * padding: 10px 20px (vs 7px 12px mobile — wider horizontal padding for 15px text)
- * font-size: 15px (vs 13px mobile — bumped for full header row typographic consistency)
- *   Math: 6 MLB tabs @ 15px + 20px padding = 640px total ≤ 768px viewport (128px spare)
- *   Scroll mechanism handles any overflow if tab count grows beyond 6.
- * letter-spacing: 0.07em (vs 0.06em mobile — slightly wider for readability)
- * ───────────────────────────────────────────────────────────────────────────────── */
-@media (min-width: 768px) {
-  .feed-tab {
-    padding: 10px 20px !important;
-    font-size: 15px !important;
-    letter-spacing: 0.07em !important;
-  }
-}
-
-/* ── lg: (1024px+) tab bar scaling ────────────────────────────────────────────────────────────────────────────────
- * Complete the mobile→tablet→desktop typographic progression for the feed tab bar.
- * padding: 11px 22px (vs 10px 20px at 768px — wider for 17px text)
- * font-size: 17px (vs 15px at 768px — full desktop scale)
- *   Math: 6 MLB tabs @ 17px Barlow Condensed + 22px h-padding = 718px ≤ 1024px viewport (306px spare)
- *   Scroll mechanism handles any overflow if tab count grows beyond 6.
- * letter-spacing: 0.08em (vs 0.07em at 768px — slightly wider for 17px readability)
- * ───────────────────────────────────────────────────────────────────────────────── */
-@media (min-width: 1024px) {
-  .feed-tab {
-    padding: 11px 22px !important;
-    font-size: 17px !important;
-    letter-spacing: 0.08em !important;
-  }
-}
-/* ── xl: (1280px+) tab bar scaling ────────────────────────────────────────────────────────────────────────────────
- * Complete the 4-tier typographic progression: mobile 13 → tablet 15 → desktop 17 → wide 18.
- * padding: 12px 24px (vs 11px 22px at 1024px — slightly wider for 18px text)
- * font-size: 18px (vs 17px at 1024px — final step in the scale)
- *   Math: 6 MLB tabs @ 18px Barlow Condensed + 24px h-padding = 721px ≤ 1280px viewport (559px spare)
- *   Scroll mechanism handles any overflow if tab count grows beyond 6.
- * letter-spacing: 0.09em (vs 0.08em at 1024px — slightly wider for 18px readability)
- * ───────────────────────────────────────────────────────────────────────────────── */
-@media (min-width: 1280px) {
-  .feed-tab {
-    padding: 12px 24px !important;
-    font-size: 18px !important;
-    letter-spacing: 0.09em !important;
-  }
-}
 /* Hide scrollbar but keep scrollability */
 .scrollbar-hide {
   -ms-overflow-style: none;  /* IE and Edge */

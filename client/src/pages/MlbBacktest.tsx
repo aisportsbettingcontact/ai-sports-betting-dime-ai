@@ -31,7 +31,7 @@ import {
 import {
   Loader2, TrendingUp, TrendingDown, Target, BarChart2,
   Activity, CheckCircle2, XCircle, AlertTriangle, RefreshCw,
-  ChevronUp, ChevronDown, Minus,
+  ChevronUp, ChevronDown, Minus, Check,
 } from "lucide-react";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -83,7 +83,7 @@ function accColor(acc: number): string {
 
 function accBadge(acc: number, sample: number): ReactElement {
   if (sample < 5) return <Badge variant="outline" className="text-xs text-foreground">N/A</Badge>;
-  if (acc >= TARGET_ACCURACY)     return <Badge className="bg-primary text-primary-foreground border-primary text-xs">✓ {pct(acc)}</Badge>;
+  if (acc >= TARGET_ACCURACY)     return <Badge className="bg-primary text-primary-foreground border-primary text-xs gap-1"><Check className="w-3 h-3" /> {pct(acc)}</Badge>;
   if (acc >= BREAKEVEN_ACCURACY)  return <Badge className="bg-background text-foreground border-border text-xs">{pct(acc)}</Badge>;
   return <Badge className="bg-background text-foreground border-border text-xs">{pct(acc)}</Badge>;
 }
@@ -177,7 +177,7 @@ export default function MlbBacktest() {
     <AdminShell active="backtest">
     {/* Theme-aware surface: uses Dime semantic tokens so it follows light/dark
         theme inside the AdminShell chrome (migrated off hardcoded black/white/mint). */}
-    <div className="min-h-[calc(100vh-3.5rem)] bg-background text-foreground p-4 md:p-6 lg:p-8">
+    <div className="min-h-[calc(100dvh-3.5rem)] bg-background text-foreground p-4 md:p-6 lg:p-8">
       {/* ── Header ── */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
         <div>
@@ -415,7 +415,7 @@ export default function MlbBacktest() {
                           ? "bg-primary text-primary-foreground border-primary text-xs"
                           : "bg-background text-foreground border-border text-xs"
                         }>
-                          {t.status === "LIVE" ? `✓ ${pct(t.acc)}` : `~ ${pct(t.acc)}`}
+                          {t.status === "LIVE" ? <><Check className="w-3 h-3" /> {pct(t.acc)}</> : `~ ${pct(t.acc)}`}
                         </Badge>
                       </div>
                       <div className={`text-xs font-mono mb-2 ${t.status === "LIVE" ? "text-primary-foreground" : "text-foreground"}`}>{t.threshold}</div>
@@ -430,7 +430,7 @@ export default function MlbBacktest() {
                   ))}
                 </div>
                 <div className="mt-3 p-3 rounded-lg bg-background border border-border">
-                  <div className="text-xs text-foreground font-semibold mb-1">⚠ Calibration In Progress</div>
+                  <div className="text-xs text-foreground font-semibold mb-1 flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> Calibration In Progress</div>
                   <div className="text-xs text-foreground">
                     <span className="text-foreground font-medium">K-Props:</span> Bias = −0.52 Ks/start (under-projecting). Calibration factors updated: OVER ×1.05, UNDER ×1.03. Re-run model to validate.
                     &nbsp;|&nbsp;

@@ -39,6 +39,7 @@ jobs:
   add-columns:
     name: Add subscription_plans / plan_prices columns
     runs-on: ubuntu-latest
+    environment: Production
     steps:
       - name: Guard — require typed confirmation
         if: ${{ inputs.confirm != 'ADD' }}

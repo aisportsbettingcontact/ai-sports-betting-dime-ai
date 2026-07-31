@@ -41,7 +41,33 @@ import {
   selectDimeChatResponseBudget,
 } from "./_core/dimeChatModel";
 import { getDimeChatContext } from "./_core/dimeChatContext";
+import { handleDimeDeterministicMathResponse } from "./_core/dimeDeterministicMathHandler";
+import {
+  applyDimeAnswerRoute,
+  collectDimeNumericValues,
+  type DimeAnswerEvidence,
+  type DimeAnswerRoute,
+  planDimeAnswerRoute,
+  resolveDimeEvent,
+  validateDimeResponseCompleteness,
+} from "./_core/dimeAnswerRouting";
 import { handleDime1ChatRequest } from "./_core/dime1ChatHandler";
+import {
+  DIME1_BASE_MODEL_REVISION,
+  DIME1_CHAT_TEMPERATURE,
+  DIME1_PROMPT_SOURCE,
+  DIME1_PRODUCT_PROFILE,
+  DIME1_PROFILE_VERSION,
+  DIME1_SYSTEM_PROMPT,
+  DIME_RESEARCH_ALPHA_PROMPT_SOURCE,
+  DIME_RESEARCH_ALPHA_PRODUCT_PROFILE,
+  DIME_RESEARCH_ALPHA_PROFILE_VERSION,
+  DIME_RESEARCH_ALPHA_SYSTEM_PROMPT,
+} from "./_core/dime1Model";
+import {
+  DIME_PLATFORM_KNOWLEDGE_SHA256,
+  DIME_PLATFORM_KNOWLEDGE_VERSION,
+} from "./_core/dimePlatformKnowledge";
 import { resolveDimeResearchAlphaGate } from "./_core/dimeResearchAlpha";
 import { validateDimeResponseText } from "./_core/dimeVerdict";
 import {
@@ -52,6 +78,37 @@ import {
   checkDimeChatRateLimit,
   DIME_CHAT_RATE_LIMIT_WINDOW_MS,
 } from "./dimeChatRateLimit";
+import {
+  DIME_CHAT_TRACE_HEADER,
+  appendDimeChatTraceEvent,
+  beginDimeChatTrace,
+  dimeChatTraceMeta,
+  failDimeChatTrace,
+  finalizeDimeChatTrace,
+  isDimeChatTraceEnabled,
+  parseDimeChatTraceEnvelope,
+  recordDimeChatTraceContext,
+  sendDimeChatTraceJsonError,
+  type ActiveDimeChatTrace,
+  type DimeChatTraceProviderMetadata,
+} from "./dimeChatTrace";
+import {
+  DIME_ENGINEERING_CONTROL_VERSION,
+  getDimeEngineeringControlSummary,
+} from "./_core/dimeEngineeringControl";
+import {
+  assembleDimeContextObservability,
+  dimeContextToolTrace,
+  dimeNoDynamicContextObservability,
+  requireDimeTraceIdentity,
+  type DimeTraceContextObservability,
+} from "./_core/dimeTraceObservability";
+
+const VALIDATION_BLOCKED_RESPONSE =
+  "I can’t verify that betting verdict against grounded Dime data, so I’m blocking it rather than risking a fabricated edge. Please provide the event, market, current line/odds, sportsbook, timestamp, and model projection/version so I can evaluate it safely.";
+
+const DISTRESS_RESPONSE_PREFIX =
+  "I can’t help you chase losses or size another bet from distress.";
 
 // ---------------------------------------------------------------
 // Structured logging
@@ -66,6 +123,109 @@ function dimeLog(
     `[Dime] [${timestamp}] [${requestId}] ${event}`,
     Object.keys(data).length > 0 ? JSON.stringify(data) : ""
   );
+}
+
+function traceProviderMetadata(
+  researchAlphaGate: ReturnType<typeof resolveDimeResearchAlphaGate>,
+  responseBudget: number,
+  answerRoute: DimeAnswerRoute
+): DimeChatTraceProviderMetadata {
+  if (answerRoute.deterministicMath) {
+    return {
+      provider: "dime-deterministic",
+      deploymentTier: "local-runtime",
+      requestedModel: answerRoute.deterministicMath.version,
+      endpointSource: "server-runtime",
+      productProfile: "Dime deterministic betting math",
+      profileVersion: answerRoute.deterministicMath.version,
+      promptSource: "server/_core/dimeEducationalMath.ts",
+      maxTokens: 0,
+      temperature: 0,
+    };
+  }
+  if (researchAlphaGate.active) {
+    return {
+      provider: "dime1-research-alpha",
+      deploymentTier: "research-alpha",
+      requestedModel: researchAlphaGate.model,
+      endpointSource: researchAlphaGate.endpointSource,
+      baseRevision: researchAlphaGate.revision,
+      productProfile: DIME_RESEARCH_ALPHA_PRODUCT_PROFILE,
+      profileVersion: DIME_RESEARCH_ALPHA_PROFILE_VERSION,
+      promptSource: DIME_RESEARCH_ALPHA_PROMPT_SOURCE,
+      systemPrompt: applyDimeAnswerRoute(
+        DIME_RESEARCH_ALPHA_SYSTEM_PROMPT,
+        answerRoute
+      ),
+      platformKnowledgeVersion: DIME_PLATFORM_KNOWLEDGE_VERSION,
+      platformKnowledgeSha256: DIME_PLATFORM_KNOWLEDGE_SHA256,
+      maxTokens: responseBudget,
+      temperature: DIME1_CHAT_TEMPERATURE,
+    };
+  }
+  if (DIME_CHAT_LLM_PROVIDER === "dime1") {
+    return {
+      provider: "dime1",
+      deploymentTier: "production",
+      requestedModel: process.env.DIME_MODEL_VERSION?.trim() || "dime-1.0",
+      endpointSource: process.env.DIME_MODEL_BASE_URL?.trim()
+        ? "explicit"
+        : "runpod",
+      baseRevision: DIME1_BASE_MODEL_REVISION,
+      adapterRevision:
+        process.env.DIME_MODEL_ADAPTER_REVISION?.trim() || undefined,
+      productProfile: DIME1_PRODUCT_PROFILE,
+      profileVersion: DIME1_PROFILE_VERSION,
+      promptSource: DIME1_PROMPT_SOURCE,
+      systemPrompt: applyDimeAnswerRoute(DIME1_SYSTEM_PROMPT, answerRoute),
+      platformKnowledgeVersion: DIME_PLATFORM_KNOWLEDGE_VERSION,
+      platformKnowledgeSha256: DIME_PLATFORM_KNOWLEDGE_SHA256,
+      maxTokens: responseBudget,
+      temperature: DIME1_CHAT_TEMPERATURE,
+    };
+  }
+  if (DIME_CHAT_LLM_PROVIDER === "anthropic") {
+    return {
+      provider: "anthropic",
+      deploymentTier: "production",
+      requestedModel: DIME_CHAT_MODEL,
+      endpointSource: "anthropic-direct",
+      productProfile: DIME_CHAT_PROFILE_METADATA.productProfile,
+      profileVersion: DIME_CHAT_PROFILE_METADATA.profileVersion,
+      promptSource: DIME_CHAT_PROFILE_METADATA.promptSource,
+      systemPrompt: applyDimeAnswerRoute(DIME_CHAT_SYSTEM_PROMPT, answerRoute),
+      blueprintHash: DIME_CHAT_PROFILE_METADATA.blueprintHash,
+      platformKnowledgeVersion: DIME_PLATFORM_KNOWLEDGE_VERSION,
+      platformKnowledgeSha256: DIME_PLATFORM_KNOWLEDGE_SHA256,
+      maxTokens: responseBudget,
+    };
+  }
+  return {
+    provider: "frozen",
+    deploymentTier: "disabled",
+    requestedModel: "no-provider",
+    productProfile: DIME_CHAT_PROFILE_METADATA.productProfile,
+    profileVersion: DIME_CHAT_PROFILE_METADATA.profileVersion,
+    promptSource: "provider-frozen",
+    blueprintHash: DIME_CHAT_PROFILE_METADATA.blueprintHash,
+    platformKnowledgeVersion: DIME_PLATFORM_KNOWLEDGE_VERSION,
+    platformKnowledgeSha256: DIME_PLATFORM_KNOWLEDGE_SHA256,
+    maxTokens: responseBudget,
+  };
+}
+
+function startDimeSse(
+  res: Response,
+  trace?: ActiveDimeChatTrace
+): (payload: Record<string, unknown>) => void {
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache, no-transform");
+  res.setHeader("Connection", "keep-alive");
+  if (trace) res.setHeader(DIME_CHAT_TRACE_HEADER, "1");
+  res.flushHeaders?.();
+  return payload => {
+    res.write(`data: ${JSON.stringify(payload)}\n\n`);
+  };
 }
 
 // ---------------------------------------------------------------
@@ -181,37 +341,7 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
     return;
   }
 
-  // Credentials are only required when the Anthropic provider is live; the
-  // frozen path makes no provider call and must not 500 on missing creds.
-  if (DIME_CHAT_LLM_PROVIDER === "anthropic" && !hasAnthropicCredentials()) {
-    dimeLog("dime.chat.error", requestId, {
-      errorClass: "ConfigurationError",
-      statusCode: 500,
-      detail: "Anthropic credentials not configured",
-    });
-    res.status(500).json({
-      error:
-        "Anthropic credentials are not configured. Set ANTHROPIC_API_KEY (direct) or ANTHROPIC_AUTH_TOKEN + ANTHROPIC_BASE_URL (AI Gateway).",
-    });
-    return;
-  }
-
   const messages = sanitizeDimeChatHistory(req.body?.messages);
-  const requestClass = classifyDimeChatRequest(messages);
-  const responseBudget = selectDimeChatResponseBudget(requestClass);
-
-  dimeLog("dime.chat.request", requestId, {
-    messageCount: messages.length,
-    requestClass,
-    responseBudget,
-    dimeProfile: DIME_CHAT_PROFILE_METADATA.productProfile,
-    profileVersion: DIME_CHAT_PROFILE_METADATA.profileVersion,
-    blueprintHash: DIME_CHAT_PROFILE_METADATA.blueprintHash,
-    promptSource: DIME_CHAT_PROFILE_METADATA.promptSource,
-    lastMessageLength:
-      messages.length > 0 ? messages[messages.length - 1].content.length : 0,
-  });
-
   if (messages.length === 0 || messages[messages.length - 1].role !== "user") {
     dimeLog("dime.chat.error", requestId, {
       errorClass: "ValidationError",
@@ -222,16 +352,304 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
     return;
   }
 
+  const requestClass = classifyDimeChatRequest(messages);
+  const responseBudget = selectDimeChatResponseBudget(requestClass);
+  const classificationStartedAt = Date.now();
+  const answerRoute = planDimeAnswerRoute(
+    messages[messages.length - 1].content
+  );
+  const classificationLatencyMs = Date.now() - classificationStartedAt;
+  const requestProviderMetadata = traceProviderMetadata(
+    researchAlphaGate,
+    responseBudget,
+    answerRoute
+  );
+
+  dimeLog("dime.chat.request", requestId, {
+    messageCount: messages.length,
+    requestClass,
+    responseBudget,
+    answerMode: answerRoute.mode,
+    productRoute: answerRoute.productRoute,
+    answerRoutingVersion: answerRoute.version,
+    classificationLatencyMs,
+    requestedDate: answerRoute.requestedDate,
+    dateSource: answerRoute.dateSource,
+    league: answerRoute.league,
+    retrievalCap: answerRoute.retrievalCap,
+    retrievalBypassed: answerRoute.retrievalBypassed,
+    dimeProfile: requestProviderMetadata.productProfile,
+    profileVersion: requestProviderMetadata.profileVersion,
+    blueprintHash: requestProviderMetadata.blueprintHash,
+    promptSource: requestProviderMetadata.promptSource,
+    platformKnowledgeVersion: requestProviderMetadata.platformKnowledgeVersion,
+    platformKnowledgeSha256: requestProviderMetadata.platformKnowledgeSha256,
+    lastMessageLength: messages[messages.length - 1].content.length,
+  });
+
+  let activeTrace: ActiveDimeChatTrace | undefined;
+  if (isDimeChatTraceEnabled()) {
+    const parsedTrace = parseDimeChatTraceEnvelope(req.body?.trace);
+    if (parsedTrace.kind === "invalid") {
+      dimeLog("dime.chat.trace.invalid", requestId, {
+        errorClass: "ValidationError",
+        statusCode: 400,
+        fields: parsedTrace.issues,
+      });
+      res.status(400).json({
+        error: "Invalid Dime Conversation Trace v1 metadata.",
+      });
+      return;
+    }
+    if (parsedTrace.kind === "valid") {
+      try {
+        const traceResult = await beginDimeChatTrace({
+          requestId,
+          userId: authedUser.userId,
+          envelope: parsedTrace.value,
+          userPrompt: messages.at(-1)?.content ?? "",
+          history: messages,
+          requestClass,
+          responseBudget,
+          provider: requestProviderMetadata,
+          identity: requireDimeTraceIdentity({
+            requestId,
+            modelProvider: requestProviderMetadata.provider,
+            baseModel: requestProviderMetadata.requestedModel,
+            modelRevision:
+              requestProviderMetadata.baseRevision ??
+              requestProviderMetadata.requestedModel,
+            adapterRevision: requestProviderMetadata.adapterRevision ?? null,
+            promptRevision: requestProviderMetadata.profileVersion,
+            route: answerRoute.productRoute,
+            routePolicyRevision:
+              getDimeEngineeringControlSummary().routePolicySha256,
+            controlPlaneRevision: DIME_ENGINEERING_CONTROL_VERSION,
+          }),
+        });
+        if (traceResult.kind === "conflict") {
+          res.status(409).json({ error: traceResult.reason });
+          return;
+        }
+        if (traceResult.kind === "in_progress") {
+          sendDimeChatTraceJsonError(
+            res,
+            409,
+            "This Dime generation is already in progress.",
+            traceResult.trace
+          );
+          return;
+        }
+        if (traceResult.kind === "terminal_error") {
+          sendDimeChatTraceJsonError(
+            res,
+            409,
+            "The prior attempt ended without a response. Use Retry to create a new generation attempt.",
+            traceResult.trace
+          );
+          return;
+        }
+        if (traceResult.kind === "replay") {
+          const sendReplay = startDimeSse(res, traceResult.trace);
+          sendReplay({
+            type: "meta",
+            dataFreshness: traceResult.dataFreshness,
+            replayed: true,
+            evidenceIdentity: "trace_lookup",
+            trace: dimeChatTraceMeta(traceResult.trace),
+          });
+          sendReplay({
+            type: "delta",
+            text: traceResult.servedOutput,
+          });
+          sendReplay({
+            type: "done",
+            stopReason: traceResult.stopReason,
+            trace: dimeChatTraceMeta(
+              traceResult.trace,
+              traceResult.assistantMessageId
+            ),
+          });
+          await appendDimeChatTraceEvent(
+            traceResult.trace,
+            "response_dispatched",
+            {
+              transport: "sse",
+              delivery: "unknown",
+              replayed: true,
+            }
+          ).catch(traceError => {
+            dimeLog("dime.chat.trace.dispatch_event_error", requestId, {
+              errorClass: (traceError as Error)?.constructor?.name ?? "Unknown",
+            });
+          });
+          res.end();
+          return;
+        }
+        activeTrace = traceResult.trace;
+      } catch (traceError) {
+        dimeLog("dime.chat.trace.begin_error", requestId, {
+          errorClass: (traceError as Error)?.constructor?.name ?? "Unknown",
+          statusCode: 503,
+          detail: "No model call was made",
+        });
+        res.status(503).json({
+          error:
+            "Dime could not securely save your prompt. No model call was made.",
+        });
+        return;
+      }
+    }
+  }
+
   const safety = assessDimeResponsibleGamblingSafety(
     messages.at(-1)?.content ?? "unknown"
   );
   if (safety.risk === "distress") {
+    const servedOutput = `${DISTRESS_RESPONSE_PREFIX} ${safety.resourceText} If you want, I can help you step back and review bankroll limits without recommending a wager.`;
+    let assistantMessageId: number | undefined;
+    if (activeTrace) {
+      try {
+        await appendDimeChatTraceEvent(
+          activeTrace,
+          "responsible_gambling_intervention",
+          { reason: safety.reason }
+        );
+        await recordDimeChatTraceContext(activeTrace, {
+          freshness: "none",
+          rowCount: 0,
+          answerMode: answerRoute.mode,
+          productRoute: answerRoute.productRoute,
+          routingVersion: answerRoute.version,
+          dateSource: answerRoute.dateSource,
+          requestedDate: answerRoute.requestedDate,
+          league: answerRoute.league,
+          eventResolution: "not_applicable",
+          groundingStatus: "none",
+          retrievalCandidateCount: 0,
+          retrievalLatencyMs: 0,
+          confidence: 1,
+          observability: dimeNoDynamicContextObservability(
+            classificationLatencyMs
+          ),
+        });
+        const finalized = await finalizeDimeChatTrace(activeTrace, {
+          rawOutput: servedOutput,
+          servedOutput,
+          status: "completed",
+          finishReason: "safety_intervention",
+          actualModel: "responsible-gambling-policy-v1",
+          answerMode: answerRoute.mode,
+          productRoute: answerRoute.productRoute,
+          routingVersion: answerRoute.version,
+          completenessStatus: "not_applicable",
+          groundingStatus: "none",
+          zeroCostRuntime: true,
+          latencyMs: Date.now() - startTime,
+        });
+        assistantMessageId = finalized.assistantMessageId;
+      } catch (traceError) {
+        await failDimeChatTrace(activeTrace, {
+          status: "failed",
+          errorClass: "SafetyPersistenceError",
+          errorCode: "safety_write_failed",
+          latencyMs: Date.now() - startTime,
+        }).catch(() => undefined);
+        dimeLog("dime.chat.trace.safety_error", requestId, {
+          errorClass: (traceError as Error)?.constructor?.name ?? "Unknown",
+        });
+        sendDimeChatTraceJsonError(
+          res,
+          503,
+          "Dime could not securely save the safety response.",
+          activeTrace
+        );
+        return;
+      }
+    }
     dimeLog("dime.chat.safety_intervention", requestId, {
       reason: safety.reason,
     });
-    res.status(200).json({
-      message: `I can’t help you chase losses or size another bet from distress. ${safety.resourceText} If you want, I can help you step back and review bankroll limits without recommending a wager.`,
+    const sendSafety = startDimeSse(res, activeTrace);
+    sendSafety({
+      type: "meta",
+      dataFreshness: "none",
+      answerMode: answerRoute.mode,
+      productRoute: answerRoute.productRoute,
+      answerRoutingVersion: answerRoute.version,
+      eventResolution: "not_applicable",
+      groundingStatus: "none",
+      ...(activeTrace ? { trace: dimeChatTraceMeta(activeTrace) } : {}),
     });
+    sendSafety({ type: "delta", text: servedOutput });
+    sendSafety({
+      type: "done",
+      stopReason: "safety_intervention",
+      ...(activeTrace
+        ? {
+            trace: dimeChatTraceMeta(activeTrace, assistantMessageId),
+          }
+        : {}),
+    });
+    if (activeTrace) {
+      await appendDimeChatTraceEvent(activeTrace, "response_dispatched", {
+        transport: "sse",
+        delivery: "unknown",
+      }).catch(traceError => {
+        dimeLog("dime.chat.trace.dispatch_event_error", requestId, {
+          errorClass: (traceError as Error)?.constructor?.name ?? "Unknown",
+        });
+      });
+    }
+    res.end();
+    return;
+  }
+
+  // Deterministic betting math is resolved before provider configuration,
+  // context retrieval, or provider execution.
+  if (
+    await handleDimeDeterministicMathResponse({
+      res,
+      requestId,
+      startTime,
+      answerRoute,
+      classificationLatencyMs,
+      trace: activeTrace,
+      log: dimeLog,
+      meta: {
+        dimeProfile: requestProviderMetadata.productProfile,
+        profileVersion: requestProviderMetadata.profileVersion,
+        promptSource: requestProviderMetadata.promptSource,
+      },
+    })
+  ) {
+    return;
+  }
+
+  // Credentials are only required when the Anthropic provider is live. A
+  // Trace-v1 prompt is already canonical at this point, so configuration
+  // failures are recorded as terminal attempts without a provider call.
+  if (DIME_CHAT_LLM_PROVIDER === "anthropic" && !hasAnthropicCredentials()) {
+    if (activeTrace) {
+      await failDimeChatTrace(activeTrace, {
+        status: "failed",
+        errorClass: "ConfigurationError",
+        errorCode: "anthropic_not_configured",
+        latencyMs: Date.now() - startTime,
+      }).catch(() => undefined);
+    }
+    dimeLog("dime.chat.error", requestId, {
+      errorClass: "ConfigurationError",
+      statusCode: 500,
+      detail: "Anthropic credentials not configured",
+    });
+    const error =
+      "Anthropic credentials are not configured. Set ANTHROPIC_API_KEY (direct) or ANTHROPIC_AUTH_TOKEN + ANTHROPIC_BASE_URL (AI Gateway).";
+    if (activeTrace) {
+      sendDimeChatTraceJsonError(res, 500, error, activeTrace);
+    } else {
+      res.status(500).json({ error });
+    }
     return;
   }
 
@@ -255,7 +673,13 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
       messages,
       requestClass,
       responseBudget,
+      answerRoute,
+      classificationLatencyMs,
+      systemPrompt:
+        requestProviderMetadata.systemPrompt ??
+        DIME_RESEARCH_ALPHA_SYSTEM_PROMPT,
       deploymentTier: "research-alpha",
+      trace: activeTrace,
     });
     return;
   }
@@ -274,6 +698,10 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
       messages,
       requestClass,
       responseBudget,
+      answerRoute,
+      classificationLatencyMs,
+      systemPrompt: requestProviderMetadata.systemPrompt ?? DIME1_SYSTEM_PROMPT,
+      trace: activeTrace,
     });
     return;
   }
@@ -287,14 +715,62 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
   // below is intentionally left wired for when the provider is switched
   // back on. ---
   if (DIME_CHAT_LLM_PROVIDER !== "anthropic") {
-    res.setHeader("Content-Type", "text/event-stream");
-    res.setHeader("Cache-Control", "no-cache, no-transform");
-    res.setHeader("Connection", "keep-alive");
-    res.flushHeaders?.();
-
-    const sendFrozen = (payload: Record<string, unknown>) => {
-      res.write(`data: ${JSON.stringify(payload)}\n\n`);
-    };
+    let assistantMessageId: number | undefined;
+    if (activeTrace) {
+      try {
+        await recordDimeChatTraceContext(activeTrace, {
+          freshness: "none",
+          rowCount: 0,
+          answerMode: answerRoute.mode,
+          productRoute: answerRoute.productRoute,
+          routingVersion: answerRoute.version,
+          dateSource: answerRoute.dateSource,
+          requestedDate: answerRoute.requestedDate,
+          league: answerRoute.league,
+          eventResolution: "not_applicable",
+          groundingStatus: "none",
+          retrievalCandidateCount: 0,
+          retrievalLatencyMs: 0,
+          confidence: 1,
+          observability: dimeNoDynamicContextObservability(
+            classificationLatencyMs
+          ),
+        });
+        const finalized = await finalizeDimeChatTrace(activeTrace, {
+          rawOutput: DIME_CHAT_FROZEN_NOTICE,
+          servedOutput: DIME_CHAT_FROZEN_NOTICE,
+          status: "completed",
+          finishReason: "provider_frozen",
+          actualModel: "no-provider",
+          answerMode: answerRoute.mode,
+          productRoute: answerRoute.productRoute,
+          routingVersion: answerRoute.version,
+          completenessStatus: "not_applicable",
+          groundingStatus: "none",
+          zeroCostRuntime: true,
+          latencyMs: Date.now() - startTime,
+        });
+        assistantMessageId = finalized.assistantMessageId;
+      } catch (traceError) {
+        await failDimeChatTrace(activeTrace, {
+          status: "failed",
+          errorClass: "FrozenNoticePersistenceError",
+          errorCode: "frozen_notice_write_failed",
+          latencyMs: Date.now() - startTime,
+        }).catch(() => undefined);
+        dimeLog("dime.chat.trace.frozen_error", requestId, {
+          errorClass: (traceError as Error)?.constructor?.name ?? "Unknown",
+        });
+        sendDimeChatTraceJsonError(
+          res,
+          503,
+          "Dime could not securely save this response.",
+          activeTrace
+        );
+        return;
+      }
+    }
+    const sendFrozen = startDimeSse(res, activeTrace);
 
     dimeLog("dime.chat.provider_frozen", requestId, {
       provider: DIME_CHAT_LLM_PROVIDER,
@@ -302,21 +778,94 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
       latencyMs: Date.now() - startTime,
     });
 
-    sendFrozen({ type: "meta", dataFreshness: "none" });
+    sendFrozen({
+      type: "meta",
+      dataFreshness: "none",
+      answerMode: answerRoute.mode,
+      productRoute: answerRoute.productRoute,
+      answerRoutingVersion: answerRoute.version,
+      eventResolution: "not_applicable",
+      groundingStatus: "none",
+      ...(activeTrace ? { trace: dimeChatTraceMeta(activeTrace) } : {}),
+    });
     sendFrozen({ type: "delta", text: DIME_CHAT_FROZEN_NOTICE });
-    sendFrozen({ type: "done", stopReason: "end_turn" });
+    sendFrozen({
+      type: "done",
+      stopReason: "end_turn",
+      ...(activeTrace
+        ? {
+            trace: dimeChatTraceMeta(activeTrace, assistantMessageId),
+          }
+        : {}),
+    });
+    if (activeTrace) {
+      await appendDimeChatTraceEvent(activeTrace, "response_dispatched", {
+        transport: "sse",
+        delivery: "unknown",
+      }).catch(traceError => {
+        dimeLog("dime.chat.trace.dispatch_event_error", requestId, {
+          errorClass: (traceError as Error)?.constructor?.name ?? "Unknown",
+        });
+      });
+    }
     res.end();
     return;
   }
 
-  let dataFreshness: "live" | "none" = "none";
+  let dataFreshness: "live" | "delayed" | "none" = "none";
+  let contextSnapshot: string | undefined;
+  let contextRowCount = 0;
+  let contextEventIds: number[] = [];
+  let contextLookupErrorClass: string | undefined;
+  let contextObservability: DimeTraceContextObservability =
+    dimeNoDynamicContextObservability(classificationLatencyMs);
+  const contextToolStartedAt = new Date();
+  const userNumericValues = collectDimeNumericValues(
+    messages
+      .filter(message => message.role === "user")
+      .map(message => message.content)
+  );
+  let answerEvidence: DimeAnswerEvidence = {
+    route: answerRoute,
+    resolution: resolveDimeEvent([], answerRoute).resolution,
+    freshness: "none",
+    grounding: answerRoute.mode === "platform" ? "catalog_only" : "none",
+    rowCount: 0,
+    retrievalCandidateCount: 0,
+    retrievalLatencyMs: 0,
+    supportedNumericValues: userNumericValues,
+  };
+  const providerMessages = [...messages];
 
   try {
-    const context = await getDimeChatContext();
+    const context = await getDimeChatContext(
+      new Date(),
+      messages.at(-1)?.content ?? "",
+      answerRoute
+    );
     dataFreshness = context.freshness;
+    contextSnapshot = context.context;
+    contextRowCount = context.rowCount;
+    contextEventIds = context.eventIds;
+    contextObservability = assembleDimeContextObservability({
+      classificationMs: classificationLatencyMs,
+      ...context.observability,
+    });
+    answerEvidence = {
+      route: context.route,
+      resolution: context.resolution,
+      freshness: context.freshness,
+      grounding: context.grounding,
+      rowCount: context.rowCount,
+      retrievalCandidateCount: context.retrievalCandidateCount,
+      retrievalLatencyMs: context.retrievalLatencyMs,
+      supportedNumericValues: Array.from(
+        new Set([...context.supportedNumericValues, ...userNumericValues])
+      ),
+    };
 
     if (context.context) {
-      messages.unshift(
+      providerMessages.unshift(
         { role: "user", content: context.context },
         {
           role: "assistant",
@@ -329,24 +878,86 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
     dimeLog("dime.chat.context", requestId, {
       dataFreshness,
       rowCount: context.rowCount,
+      eventIds: context.eventIds,
+      answerMode: context.route.mode,
+      productRoute: context.route.productRoute,
+      eventResolution: context.resolution.kind,
+      groundingStatus: context.grounding,
+      retrievalCandidateCount: context.retrievalCandidateCount,
+      retrievalLatencyMs: context.retrievalLatencyMs,
     });
   } catch (contextErr) {
     dataFreshness = "none";
+    contextLookupErrorClass =
+      (contextErr as Error)?.constructor?.name ?? "Unknown";
+    const contextToolCompletedAt = new Date();
+    contextObservability = {
+      ...dimeNoDynamicContextObservability(
+        classificationLatencyMs,
+        contextToolCompletedAt
+      ),
+      toolCall: dimeContextToolTrace({
+        status: "failed",
+        normalizedArguments: {
+          route: answerRoute.productRoute,
+          league: answerRoute.league ?? null,
+          requestedDate: answerRoute.requestedDate ?? null,
+          retrievalCap: answerRoute.retrievalCap,
+        },
+        startedAt: contextToolStartedAt,
+        completedAt: contextToolCompletedAt,
+        validationResult: "not_run",
+      }),
+    };
     dimeLog("dime.chat.context_error", requestId, {
-      errorClass: (contextErr as Error)?.constructor?.name ?? "Unknown",
+      errorClass: contextLookupErrorClass,
       detail: (contextErr as Error)?.message ?? "Context lookup failed",
     });
   }
 
-  // --- SSE headers ---
-  res.setHeader("Content-Type", "text/event-stream");
-  res.setHeader("Cache-Control", "no-cache, no-transform");
-  res.setHeader("Connection", "keep-alive");
-  res.flushHeaders?.();
+  if (activeTrace) {
+    try {
+      await recordDimeChatTraceContext(activeTrace, {
+        freshness: dataFreshness,
+        rowCount: contextRowCount,
+        eventIds: contextEventIds,
+        context: contextSnapshot,
+        lookupErrorClass: contextLookupErrorClass,
+        answerMode: answerEvidence.route.mode,
+        productRoute: answerEvidence.route.productRoute,
+        routingVersion: answerEvidence.route.version,
+        dateSource: answerEvidence.route.dateSource,
+        requestedDate: answerEvidence.route.requestedDate,
+        league: answerEvidence.route.league,
+        eventResolution: answerEvidence.resolution.kind,
+        groundingStatus: answerEvidence.grounding,
+        retrievalCandidateCount: answerEvidence.retrievalCandidateCount,
+        retrievalLatencyMs: answerEvidence.retrievalLatencyMs,
+        confidence: answerEvidence.resolution.confidence,
+        observability: contextObservability,
+      });
+    } catch (traceError) {
+      await failDimeChatTrace(activeTrace, {
+        status: "failed",
+        errorClass: "TraceContextPersistenceError",
+        errorCode: "trace_context_write_failed",
+        latencyMs: Date.now() - startTime,
+      }).catch(() => undefined);
+      dimeLog("dime.chat.trace.context_error", requestId, {
+        errorClass: (traceError as Error)?.constructor?.name ?? "Unknown",
+      });
+      sendDimeChatTraceJsonError(
+        res,
+        503,
+        "Dime could not securely record this generation. No model call was made.",
+        activeTrace
+      );
+      return;
+    }
+  }
 
-  const send = (payload: Record<string, unknown>) => {
-    res.write(`data: ${JSON.stringify(payload)}\n\n`);
-  };
+  // --- SSE headers ---
+  const send = startDimeSse(res, activeTrace);
 
   // Additive data-freshness declaration for the client DataPill. Older clients
   // ignore unknown frame types.
@@ -357,15 +968,24 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
     profileVersion: DIME_CHAT_PROFILE_METADATA.profileVersion,
     promptSource: DIME_CHAT_PROFILE_METADATA.promptSource,
     blueprintHash: DIME_CHAT_PROFILE_METADATA.blueprintHash,
+    platformKnowledgeVersion: DIME_PLATFORM_KNOWLEDGE_VERSION,
+    platformKnowledgeSha256: DIME_PLATFORM_KNOWLEDGE_SHA256,
     requestClass,
     responseBudget,
+    answerMode: answerRoute.mode,
+    productRoute: answerRoute.productRoute,
+    answerRoutingVersion: answerRoute.version,
+    eventResolution: answerEvidence.resolution.kind,
+    groundingStatus: answerEvidence.grounding,
+    routingConfidence: answerEvidence.resolution.confidence,
+    ...(activeTrace ? { trace: dimeChatTraceMeta(activeTrace) } : {}),
   });
 
   const anthropic = createAnthropicClient();
   const abort = new AbortController();
   let aborted = false;
 
-  req.on("close", () => {
+  res.once("close", () => {
     if (!res.writableEnded) {
       aborted = true;
       abort.abort();
@@ -377,56 +997,218 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
 
   dimeLog("dime.chat.stream.start", requestId, {
     model: DIME_CHAT_MODEL,
-    historyLength: messages.length,
+    historyLength: providerMessages.length,
     requestClass,
     responseBudget,
+    answerMode: answerRoute.mode,
+    productRoute: answerRoute.productRoute,
+    answerRoutingVersion: answerRoute.version,
+    eventResolution: answerEvidence.resolution.kind,
+    groundingStatus: answerEvidence.grounding,
     promptSource: DIME_CHAT_PROFILE_METADATA.promptSource,
     blueprintHash: DIME_CHAT_PROFILE_METADATA.blueprintHash,
   });
 
+  let traceFinalized = false;
   try {
+    const modelStartedAt = Date.now();
     const stream = anthropic.messages.stream(
       {
         model: DIME_CHAT_MODEL,
         max_tokens: responseBudget,
-        system: DIME_CHAT_SYSTEM_PROMPT,
-        messages,
+        system: requestProviderMetadata.systemPrompt ?? DIME_CHAT_SYSTEM_PROMPT,
+        messages: providerMessages,
       },
       { signal: abort.signal }
     );
 
     let output = "";
+    let firstTokenAt: number | undefined;
     stream.on("text", delta => {
+      firstTokenAt ??= Date.now();
       output += delta;
     });
 
     const final = await stream.finalMessage();
+    const modelCompletedAt = Date.now();
+    if (aborted || res.destroyed) {
+      if (activeTrace) {
+        await failDimeChatTrace(activeTrace, {
+          status: "aborted",
+          errorClass: "ClientDisconnected",
+          errorCode: "client_disconnected_before_finalize",
+          latencyMs: Date.now() - startTime,
+        });
+      }
+      return;
+    }
+    const validationStartedAt = Date.now();
     const validation = validateDimeResponseText(output);
     const certaintyViolation = containsProhibitedBettingCertainty(output);
+    const completeness = validateDimeResponseCompleteness(
+      answerEvidence,
+      output
+    );
+    const combinedValidationErrors = [
+      ...validation.errors,
+      ...completeness.errorCodes.map(code => `answer_completeness:${code}`),
+    ];
+    const completenessBlocked = completeness.status === "failed";
+    const servedBlockedOutput =
+      validation.ok && !certaintyViolation && completeness.safeFallback
+        ? completeness.safeFallback
+        : VALIDATION_BLOCKED_RESPONSE;
+    const blockedFinishReason =
+      validation.ok && !certaintyViolation && completeness.safeFallback
+        ? "runtime_answer_fallback"
+        : "validation_blocked";
+    const validationMs = Date.now() - validationStartedAt;
 
     dimeLog("dime.chat.stream.done", requestId, {
       stopReason: final.stop_reason,
       outputCharCount: output.length,
       latencyMs: Date.now() - startTime,
       verificationStatus:
-        validation.ok && !certaintyViolation ? "passed" : "blocked",
-      validationErrors: validation.errors,
+        validation.ok && !certaintyViolation && !completenessBlocked
+          ? "passed"
+          : "blocked",
+      validationErrors: combinedValidationErrors,
       certaintyViolation,
+      completenessStatus: completeness.status,
       usage: final.usage,
     });
 
-    if (!validation.ok || certaintyViolation) {
+    if (!validation.ok || certaintyViolation || completenessBlocked) {
+      let assistantMessageId: number | undefined;
+      if (activeTrace) {
+        const finalized = await finalizeDimeChatTrace(activeTrace, {
+          rawOutput: output,
+          servedOutput: servedBlockedOutput,
+          status: "blocked",
+          finishReason: blockedFinishReason,
+          actualModel: final.model,
+          validationErrors: combinedValidationErrors,
+          certaintyViolation,
+          answerMode: answerRoute.mode,
+          productRoute: answerRoute.productRoute,
+          routingVersion: answerRoute.version,
+          completenessStatus: completeness.status,
+          groundingStatus: answerEvidence.grounding,
+          usage: {
+            promptTokens: final.usage.input_tokens,
+            completionTokens: final.usage.output_tokens,
+            totalTokens: final.usage.input_tokens + final.usage.output_tokens,
+          },
+          modelTimeToFirstTokenMs:
+            firstTokenAt === undefined
+              ? undefined
+              : firstTokenAt - modelStartedAt,
+          modelCompletionMs: modelCompletedAt - modelStartedAt,
+          validationMs,
+          latencyMs: Date.now() - startTime,
+        });
+        assistantMessageId = finalized.assistantMessageId;
+        traceFinalized = true;
+      }
       send({
         type: "delta",
-        text: "I can’t verify that betting verdict against grounded Dime data, so I’m blocking it rather than risking a fabricated edge. Please provide the event, market, current line/odds, sportsbook, timestamp, and model projection/version so I can evaluate it safely.",
+        text: servedBlockedOutput,
       });
-      send({ type: "done", stopReason: "validation_blocked" });
+      send({
+        type: "done",
+        stopReason: blockedFinishReason,
+        completenessStatus: completeness.status,
+        ...(activeTrace
+          ? {
+              trace: dimeChatTraceMeta(activeTrace, assistantMessageId),
+            }
+          : {}),
+      });
+      if (activeTrace) {
+        await appendDimeChatTraceEvent(activeTrace, "response_dispatched", {
+          transport: "sse",
+          delivery: "unknown",
+        }).catch(traceError => {
+          dimeLog("dime.chat.trace.dispatch_event_error", requestId, {
+            errorClass: (traceError as Error)?.constructor?.name ?? "Unknown",
+          });
+        });
+      }
       return;
     }
 
+    let assistantMessageId: number | undefined;
+    if (activeTrace) {
+      const finalized = await finalizeDimeChatTrace(activeTrace, {
+        rawOutput: output,
+        servedOutput: output,
+        status: "completed",
+        finishReason: final.stop_reason,
+        actualModel: final.model,
+        validationErrors: combinedValidationErrors,
+        certaintyViolation,
+        answerMode: answerRoute.mode,
+        productRoute: answerRoute.productRoute,
+        routingVersion: answerRoute.version,
+        completenessStatus: completeness.status,
+        groundingStatus: answerEvidence.grounding,
+        usage: {
+          promptTokens: final.usage.input_tokens,
+          completionTokens: final.usage.output_tokens,
+          totalTokens: final.usage.input_tokens + final.usage.output_tokens,
+        },
+        modelTimeToFirstTokenMs:
+          firstTokenAt === undefined
+            ? undefined
+            : firstTokenAt - modelStartedAt,
+        modelCompletionMs: modelCompletedAt - modelStartedAt,
+        validationMs,
+        latencyMs: Date.now() - startTime,
+      });
+      assistantMessageId = finalized.assistantMessageId;
+      traceFinalized = true;
+    }
     send({ type: "delta", text: output });
-    send({ type: "done", stopReason: final.stop_reason });
+    send({
+      type: "done",
+      stopReason: final.stop_reason,
+      completenessStatus: completeness.status,
+      ...(activeTrace
+        ? {
+            trace: dimeChatTraceMeta(activeTrace, assistantMessageId),
+          }
+        : {}),
+    });
+    if (activeTrace) {
+      await appendDimeChatTraceEvent(activeTrace, "response_dispatched", {
+        transport: "sse",
+        delivery: "unknown",
+      }).catch(traceError => {
+        dimeLog("dime.chat.trace.dispatch_event_error", requestId, {
+          errorClass: (traceError as Error)?.constructor?.name ?? "Unknown",
+        });
+      });
+    }
   } catch (err: unknown) {
+    if (activeTrace && !traceFinalized) {
+      await failDimeChatTrace(activeTrace, {
+        status: aborted ? "aborted" : "failed",
+        errorClass:
+          (err as Error)?.constructor?.name ??
+          (aborted ? "AbortError" : "Unknown"),
+        errorCode:
+          err instanceof Anthropic.APIError
+            ? `http_${err.status}`
+            : aborted
+              ? "client_disconnected"
+              : "generation_failed",
+        latencyMs: Date.now() - startTime,
+      }).catch(traceError => {
+        dimeLog("dime.chat.trace.failure_record_error", requestId, {
+          errorClass: (traceError as Error)?.constructor?.name ?? "Unknown",
+        });
+      });
+    }
     if (!aborted) {
       const isApiError = err instanceof Anthropic.APIError;
       const message = isApiError
@@ -441,7 +1223,11 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
         latencyMs: Date.now() - startTime,
       });
 
-      send({ type: "error", message });
+      send({
+        type: "error",
+        message,
+        ...(activeTrace ? { trace: dimeChatTraceMeta(activeTrace) } : {}),
+      });
     }
   } finally {
     res.end();

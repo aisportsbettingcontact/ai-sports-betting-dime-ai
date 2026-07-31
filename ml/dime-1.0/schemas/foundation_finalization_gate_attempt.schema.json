@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dime.internal/schemas/foundation_finalization_gate_attempt.schema.json",
+  "title": "Dime Foundation Finalization Gate Attempt v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "attempted_at",
+    "pilot_execution_id",
+    "result",
+    "exit_code",
+    "counts",
+    "gates",
+    "finalized_artifacts_written"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "dime-foundation-finalization-gate-attempt-v1"
+    },
+    "attempted_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "pilot_execution_id": {
+      "const": "foundation-pilot-v1-b9ba7788"
+    },
+    "result": {
+      "const": "BLOCKED_EXPECTED"
+    },
+    "exit_code": {
+      "const": 1
+    },
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["records", "trainer_records", "train", "validation"],
+      "properties": {
+        "records": {"const": 12},
+        "trainer_records": {"const": 12},
+        "train": {"const": 11},
+        "validation": {"const": 1}
+      }
+    },
+    "gates": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_failures",
+        "critic_independence_failures",
+        "partition_collisions",
+        "rights_failures",
+        "numeric_errors",
+        "conversion_failures",
+        "silent_truncations",
+        "evaluation_overlap",
+        "unresolved_material_findings",
+        "exact_duplicates",
+        "semantic_duplicate_pairs"
+      ],
+      "properties": {
+        "schema_failures": {"const": 0},
+        "critic_independence_failures": {"const": 8},
+        "partition_collisions": {"const": 0},
+        "rights_failures": {"const": 0},
+        "numeric_errors": {"const": 0},
+        "conversion_failures": {"const": 0},
+        "silent_truncations": {"const": 0},
+        "evaluation_overlap": {"const": 0},
+        "unresolved_material_findings": {"const": 0},
+        "exact_duplicates": {"const": 0},
+        "semantic_duplicate_pairs": {"const": 0}
+      }
+    },
+    "finalized_artifacts_written": {
+      "const": false
+    }
+  }
+}

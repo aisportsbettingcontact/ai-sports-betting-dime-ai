@@ -1,0 +1,428 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dime.local/schemas/foundation_execution_evidence.schema.json",
+  "title": "Dime Foundation execution evidence v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "evidence_id",
+    "created_at",
+    "classification",
+    "private_content_counts",
+    "admission",
+    "foundation_deficits",
+    "semantic_evaluation",
+    "private_inventory_bindings",
+    "findings",
+    "context_capsule"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "dime-foundation-execution-evidence-v1"
+    },
+    "evidence_id": {
+      "const": "dime-llm-v1-foundation-001"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "classification": {
+      "const": "SANITIZED_AGGREGATE_ONLY"
+    },
+    "private_content_counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "foundation_records",
+        "semantic_cases",
+        "answer_keys",
+        "credentials"
+      ],
+      "properties": {
+        "foundation_records": {"const": 0},
+        "semantic_cases": {"const": 0},
+        "answer_keys": {"const": 0},
+        "credentials": {"const": 0}
+      }
+    },
+    "admission": {
+      "type": "object",
+      "required": [
+        "pilot",
+        "first_live_data_shard",
+        "admitted_artifacts",
+        "excluded_artifacts",
+        "admitted_record_count"
+      ],
+      "properties": {
+        "pilot": {
+          "allOf": [
+            {"$ref": "#/$defs/admission"},
+            {
+              "type": "object",
+              "properties": {
+                "decision": {"const": "NOT_ADMITTED"},
+                "record_count": {"const": 20}
+              }
+            }
+          ]
+        },
+        "first_live_data_shard": {
+          "allOf": [
+            {"$ref": "#/$defs/admission"},
+            {
+              "type": "object",
+              "properties": {
+                "decision": {"const": "ADMITTED"},
+                "record_count": {"const": 150}
+              }
+            }
+          ]
+        },
+        "admitted_artifacts": {
+          "const": ["first_live_data_shard"]
+        },
+        "excluded_artifacts": {
+          "const": ["pilot"]
+        },
+        "admitted_record_count": {
+          "const": 150
+        }
+      }
+    },
+    "foundation_deficits": {
+      "type": "object",
+      "required": [
+        "calculation_basis",
+        "target_records",
+        "admitted_records",
+        "remaining_records",
+        "target_split",
+        "admitted_split",
+        "remaining_split",
+        "routes",
+        "complete_release"
+      ],
+      "properties": {
+        "calculation_basis": {"const": "ADMITTED_RECORDS_ONLY"},
+        "target_records": {"const": 2400},
+        "admitted_records": {"const": 150},
+        "remaining_records": {"const": 2250},
+        "target_split": {
+          "const": {"train": 2160, "validation": 240}
+        },
+        "admitted_split": {
+          "const": {"train": 135, "validation": 15}
+        },
+        "remaining_split": {
+          "const": {"train": 2025, "validation": 225}
+        },
+        "routes": {
+          "type": "object",
+          "minProperties": 9,
+          "maxProperties": 9
+        },
+        "complete_release": {"const": false}
+      }
+    },
+    "semantic_evaluation": {
+      "type": "object",
+      "required": [
+        "status",
+        "semantic_only",
+        "case_count",
+        "partition_counts",
+        "answer_key_case_count",
+        "answer_key_artifact_count",
+        "schema_failure_count",
+        "evaluation_cross_suite_non_overlap",
+        "foundation_to_evaluation_non_overlap",
+        "composite_non_overlap"
+      ],
+      "properties": {
+        "status": {"const": "PASS"},
+        "semantic_only": {"const": true},
+        "case_count": {"const": 651},
+        "partition_counts": {
+          "const": {
+            "development": 270,
+            "sealed_critical": 81,
+            "locked": 180,
+            "general_regression": 120
+          }
+        },
+        "answer_key_case_count": {"const": 0},
+        "answer_key_artifact_count": {"const": 0},
+        "schema_failure_count": {"const": 0},
+        "evaluation_cross_suite_non_overlap": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "suite_relationships_evaluated",
+            "cross_suite_case_pair_comparisons",
+            "disallowed_overlap_count",
+            "status"
+          ],
+          "properties": {
+            "suite_relationships_evaluated": {"const": 6},
+            "cross_suite_case_pair_comparisons": {"const": 148770},
+            "disallowed_overlap_count": {"const": 0},
+            "status": {"const": "PASS_ZERO_DISALLOWED_OVERLAP"}
+          }
+        },
+        "foundation_to_evaluation_non_overlap": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "comparisons_completed",
+            "pair_comparisons",
+            "disallowed_overlap_count",
+            "status"
+          ],
+          "properties": {
+            "comparisons_completed": {"const": 4},
+            "pair_comparisons": {"const": 97650},
+            "disallowed_overlap_count": {"const": 0},
+            "status": {"const": "PASS_ZERO_DISALLOWED_OVERLAP"}
+          }
+        },
+        "composite_non_overlap": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "semantic_manifest_release_proof_complete",
+            "semantic_manifest_blocker",
+            "foundation_gap_closed_by_separate_comparison",
+            "status"
+          ],
+          "properties": {
+            "semantic_manifest_release_proof_complete": {"const": false},
+            "semantic_manifest_blocker": {
+              "const": "FOUNDATION_PRIVATE_RECORDS_NOT_AVAILABLE_FOR_FOUR_REQUIRED_COMPARISONS"
+            },
+            "foundation_gap_closed_by_separate_comparison": {"const": true},
+            "status": {"const": "PASS_COMPOSITE_PROOF_COMPLETE"}
+          }
+        }
+      }
+    },
+    "private_inventory_bindings": {
+      "type": "object",
+      "required": [
+        "protected_recovery",
+        "pilot",
+        "pilot_source_packets",
+        "first_live_data_shard",
+        "first_live_data_source_packets",
+        "semantic_r5",
+        "semantic_comparison"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "protected_recovery": {"$ref": "#/$defs/inventory"},
+        "pilot": {"$ref": "#/$defs/inventory"},
+        "pilot_source_packets": {"$ref": "#/$defs/sourcePacketInventory"},
+        "first_live_data_shard": {"$ref": "#/$defs/inventory"},
+        "first_live_data_source_packets": {"$ref": "#/$defs/sourcePacketInventory"},
+        "semantic_r5": {"$ref": "#/$defs/inventory"},
+        "semantic_comparison": {"$ref": "#/$defs/inventory"}
+      }
+    },
+    "findings": {
+      "type": "array",
+      "minItems": 5,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["finding", "status", "impact"],
+        "properties": {
+          "finding": {"type": "string", "minLength": 1},
+          "status": {"const": "CONFIRMED"},
+          "impact": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "context_capsule": {
+      "type": "object",
+      "required": [
+        "repository",
+        "private_source_commit",
+        "release_plan",
+        "governing_implementations",
+        "external_operations",
+        "authorization_boundary"
+      ],
+      "properties": {
+        "repository": {
+          "type": "object",
+          "required": ["branch", "base_commit"],
+          "properties": {
+            "branch": {"const": "agent/foundation-execution-evidence-v1"},
+            "base_commit": {"$ref": "#/$defs/gitSha"}
+          }
+        },
+        "private_source_commit": {"$ref": "#/$defs/gitSha"},
+        "release_plan": {"type": "object"},
+        "governing_implementations": {
+          "type": "object",
+          "minProperties": 4,
+          "additionalProperties": {"$ref": "#/$defs/sha256"}
+        },
+        "external_operations": {"$ref": "#/$defs/zeroOperations"},
+        "authorization_boundary": {
+          "type": "object",
+          "minProperties": 7,
+          "additionalProperties": {"const": false}
+        }
+      }
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "gitSha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "inventory": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "directory_count",
+        "payload_file_count",
+        "payload_byte_count",
+        "checksum_ledger_file_count",
+        "checksum_ledger_byte_count",
+        "total_file_count",
+        "total_byte_count",
+        "sha256sums_sha256",
+        "symlink_count",
+        "mode_failures",
+        "checksum_failures",
+        "closed_inventory"
+      ],
+      "properties": {
+        "directory_count": {"type": "integer", "minimum": 1},
+        "payload_file_count": {"type": "integer", "minimum": 1},
+        "payload_byte_count": {"type": "integer", "minimum": 1},
+        "checksum_ledger_file_count": {"const": 1},
+        "checksum_ledger_byte_count": {"type": "integer", "minimum": 1},
+        "total_file_count": {"type": "integer", "minimum": 2},
+        "total_byte_count": {"type": "integer", "minimum": 2},
+        "sha256sums_sha256": {"$ref": "#/$defs/sha256"},
+        "symlink_count": {"const": 0},
+        "mode_failures": {"const": 0},
+        "checksum_failures": {"const": 0},
+        "closed_inventory": {"const": true}
+      }
+    },
+    "sourcePacketInventory": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "directory_count",
+        "payload_file_count",
+        "payload_byte_count",
+        "content_inventory_sha256",
+        "inventory_origin",
+        "symlink_count",
+        "mode_failures",
+        "mutation_failures",
+        "closed_inventory"
+      ],
+      "properties": {
+        "directory_count": {"const": 1},
+        "payload_file_count": {"type": "integer", "minimum": 1},
+        "payload_byte_count": {"type": "integer", "minimum": 1},
+        "content_inventory_sha256": {"$ref": "#/$defs/sha256"},
+        "inventory_origin": {
+          "const": "COMPUTED_IN_MEMORY_FROM_CLOSED_SOURCE_ROOT"
+        },
+        "symlink_count": {"const": 0},
+        "mode_failures": {"const": 0},
+        "mutation_failures": {"const": 0},
+        "closed_inventory": {"const": true}
+      }
+    },
+    "admission": {
+      "type": "object",
+      "required": [
+        "artifact",
+        "decision",
+        "reason",
+        "record_count",
+        "report_status",
+        "manifest_status",
+        "trainer_manifest_status",
+        "reported_counts",
+        "reported_gates",
+        "per_record_admission",
+        "token_profile",
+        "inventory",
+        "source_packet_inventory",
+        "bindings"
+      ],
+      "properties": {
+        "artifact": {"type": "string"},
+        "decision": {"enum": ["ADMITTED", "NOT_ADMITTED"]},
+        "reason": {"type": "string"},
+        "record_count": {"type": "integer", "minimum": 1},
+        "report_status": {"const": "PASS"},
+        "manifest_status": {"type": "string"},
+        "trainer_manifest_status": {"type": "string"},
+        "reported_counts": {"type": "object"},
+        "reported_gates": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {"const": 0}
+        },
+        "per_record_admission": {
+          "type": "object",
+          "required": [
+            "records_checked",
+            "checks",
+            "failure_counts",
+            "exact_duplicate_groups",
+            "semantic_duplicate_pairs",
+            "route_split_counts",
+            "record_identifiers_disclosed"
+          ],
+          "properties": {
+            "records_checked": {"type": "integer", "minimum": 1},
+            "checks": {
+              "type": "object",
+              "minProperties": 10,
+              "additionalProperties": {"type": "integer", "minimum": 1}
+            },
+            "failure_counts": {
+              "type": "object",
+              "minProperties": 10,
+              "additionalProperties": {"const": 0}
+            },
+            "exact_duplicate_groups": {"const": 0},
+            "semantic_duplicate_pairs": {"const": 0},
+            "route_split_counts": {"type": "object"},
+            "record_identifiers_disclosed": {"const": 0}
+          }
+        },
+        "token_profile": {"type": "object"},
+        "inventory": {"$ref": "#/$defs/inventory"},
+        "source_packet_inventory": {"$ref": "#/$defs/sourcePacketInventory"},
+        "bindings": {
+          "type": "object",
+          "minProperties": 4,
+          "additionalProperties": {"$ref": "#/$defs/sha256"}
+        }
+      }
+    },
+    "zeroOperations": {
+      "type": "object",
+      "minProperties": 8,
+      "additionalProperties": {"const": 0}
+    }
+  }
+}

@@ -41,6 +41,10 @@
   --dime-row-active: #e4e4e4; /* v2: active fill (mint rail still leads) */
   --dime-mint-dim: transparent; /* dim-mint tiles → transparent */
   --dime-mint-border: #45e0a8;
+  /* Ink on constant-mint fills — black in BOTH themes (mint stays raw mint
+   * everywhere, so its ink never flips; same rule as the tracker's
+   * unmapped text-black). */
+  --dime-ink-on-mint: #000000;
   /* bet-loss red exception (Bet Tracker / calendar) */
   --loss-red: #ff3b3b;
   --dime-font-sans: "Familjen Grotesk", system-ui, -apple-system, sans-serif;
@@ -69,8 +73,8 @@ html.dark {
   --dime-text-primary: #ffffff;
   --dime-text-body: #ffffff;
   --dime-text-secondary: #a6a6a6; /* 8.6:1 on black */
-  --dime-text-muted: #6e6e6e; /* 4.1:1 on black */
-  --dime-text-faint: #6e6e6e;
+  --dime-text-muted: #7e7e7e; /* 5.2:1 on black, 4.9:1 on tier-1 cards (audit DIME-UI-005: 10–11px labels consuming this measured 3.9–4.1:1 at the old 6E-grey) */
+  --dime-text-faint: #7e7e7e;
   --dime-ring: #45e0a8;
   --dime-row-hover: #141414; /* v2: hover returns */
   --dime-row-active: #1f1f1f; /* v2: active fill (mint rail still leads) */
@@ -95,7 +99,8 @@ html.dark {
   color: var(--dime-text-muted);
 }
 
-/* MASTER.md motion law: no pulses/transitions under reduced motion. */
+/* MASTER.md motion law: no pulses/transitions under reduced motion.
+ * Reveals fall back to a static cut (opacity change only, no travel). */
 @media (prefers-reduced-motion: reduce) {
   .animate-pulse,
   .animate-in {
@@ -341,139 +346,11 @@ html:not(.dark) .cal-panel {
   box-sizing: border-box;
 }
 
-/* Split bars: one-accent discipline — away side mint, home side raised
- * grey. Side identity comes from the labels, not team paint. */
-.bsp-bar {
-  border-color: var(--dime-border-strong) !important;
-}
-/* Mobile compact bars square off slightly; desktop bars keep their pill. */
-.bsp-bar:not(.bsp-bar--pill) {
-  border-radius: 6px !important;
-}
-.bsp-seg--away {
-  background: var(--dime-mint) !important;
-}
-/* Home side reads as the black track — the pill border + divider carry the
- * edge; the label is full-weight primary text, never white-on-grey. */
-.bsp-seg--home {
-  background: transparent !important;
-}
-.bsp-div {
-  background: var(--dime-border-strong) !important;
-}
-.bsp-seg span {
-  text-shadow: none !important;
-  font-weight: 700 !important;
-}
-.bsp-seg--away span {
-  color: #000000 !important;
-}
-.bsp-seg--home span {
-  color: var(--dime-text-primary) !important;
-}
-.bsp-hdr span {
-  color: var(--dime-text-secondary) !important;
-}
-.bsp-hdr span:nth-child(2) {
-  font-family: var(--dime-font-mono);
-  color: var(--dime-text-secondary) !important;
-  letter-spacing: 0.08em !important;
-}
-
-/* Market toggle: mono micro-labels on the standard pill states. */
-.bsp-toggle {
-  font-family: var(--dime-font-mono) !important;
-  font-size: 10px !important;
-  font-weight: 500 !important;
-  letter-spacing: 0.08em !important;
-  border-radius: 8px !important;
-  border: 1px solid var(--dime-border) !important;
-  background: transparent !important;
-  color: var(--dime-text-secondary) !important;
-}
-.bsp-toggle[data-active="true"] {
-  background: var(--dime-surface-raised) !important;
-  border-color: var(--dime-border-strong) !important;
-  color: var(--dime-text-primary) !important;
-}
-.bsp-toggle:disabled {
-  color: var(--dime-text-muted) !important;
-}
-
-/* Odds & Splits History toggle row: brand curve hover, visible focus. */
-.ohp-toggle {
-  background: transparent;
-  cursor: pointer;
-  transition: background var(--dime-t) var(--dime-ease);
-}
-.ohp-toggle:hover {
-  background: var(--dime-row-hover);
-}
-.ohp-toggle:focus-visible {
-  outline: none;
-  box-shadow: inset 0 0 0 3px var(--dime-ring);
-}
-.bs-pill:focus-visible,
-.bsp-toggle:focus-visible {
-  outline: none !important;
-  box-shadow: 0 0 0 3px var(--dime-ring) !important;
-}
-
-/* One motion curve everywhere (MASTER.md: 160ms, single curve). */
-.bs-page .bs-pill,
-.bs-page .bs-search,
-.bs-page .cal-trigger,
-.bs-page .cal-day,
-.bs-page .gc-star,
-.bsp-seg,
-.bsp-toggle {
-  transition-duration: var(--dime-t) !important;
-  transition-timing-function: var(--dime-ease) !important;
-}
-
-/* Tailwind family remap for the splits surface's satellite panels (user
- * menu, Last-5-Games, Trends): same one-accent discipline as the tracker. */
-.bs-page [class*="text-emerald-"],
-.bs-page [class*="text-green-"] {
-  color: var(--dime-mint-text) !important;
-}
-.bs-page [class*="text-red-"] {
-  color: var(--dime-text-secondary) !important;
-}
-.bs-page [class*="text-yellow-"],
-.bs-page [class*="text-amber-"],
-.bs-page [class*="text-blue-"] {
-  color: var(--dime-text-body) !important;
-}
-.bs-page [class*="bg-emerald-"] {
-  background-color: var(--dime-mint-dim) !important;
-  color: var(--dime-mint-text) !important;
-}
-.bs-page [class*="bg-red-"],
-.bs-page [class*="bg-yellow-"] {
-  background-color: var(--dime-surface-raised) !important;
-  color: var(--dime-text-secondary) !important;
-}
-.bs-page [class*="bg-zinc-7"],
-.bs-page [class*="bg-zinc-8"] {
-  background-color: var(--dime-surface-raised) !important;
-}
-.bs-page .font-mono {
-  font-family: var(--dime-font-mono) !important;
-}
-.bs-page [class*="duration-"] {
-  transition-duration: var(--dime-t) !important;
-  transition-timing-function: var(--dime-ease) !important;
-}
-
-/* Light theme: white-on-dark CDN art needs inversion on light surfaces. */
-html:not(.dark) .bs-page img[style*="invert(1)"] {
-  filter: invert(0.35) !important;
-}
-html:not(.dark) .bs-pill img,
-html:not(.dark) .cal-trigger img {
-  filter: invert(1) !important;
-}
+/* Split bars, market toggle, history toggle row, splits focus/motion-curve
+ * rules, and the interaction layer (disclosure motion, dropdown row states,
+ * press response) live in splits-interactions.css — LAZY, imported by
+ * GameCard.tsx / BettingSplits.tsx. Keep them out of this file: it ships on
+ * the chat critical path, whose bundle budget has near-zero headroom. */
 
 /* ═══ GLOBAL brand mappings — Bet Tracker surface (all widths, themes) ═════
  * BetTracker.tsx / BetTrackerAnalytics.tsx / BetCalendar.tsx consume
@@ -531,8 +408,11 @@ html:not(.dark) .cal-trigger img {
 .bt-page .text-white {
   color: var(--dime-text-primary) !important;
 }
+/* Law v2: "White keylines are now a rationed signature, not the default."
+ * The default hairline is the QUIET border tier; hover steps up to the strong
+ * keyline so affordance survives without the page reading as a white wireframe. */
 .bt-page .border-white {
-  border-color: var(--dime-border-strong) !important;
+  border-color: var(--dime-border) !important;
 }
 .bt-page [class*="hover:border-white"]:hover {
   border-color: var(--dime-border-strong) !important;
@@ -687,6 +567,113 @@ html:not(.dark) .bt-page [class*="bg-black/"] {
   border-radius: 8px;
 }
 
+/* ═══ Bet Tracker component layer — Law v2 tonal hierarchy ═════════════════
+ * Semantic recipes consumed by BetTracker.tsx so hierarchy lives in tokens,
+ * not in per-element utility soup. Three surface tiers (page ground → card →
+ * raised chip), three text tiers (primary → secondary → muted), quiet
+ * hairlines, and the single 160ms brand curve. */
+
+/* Surface tiers */
+.bt-surface {
+  background-color: var(--dime-surface-card);
+}
+.bt-raised {
+  background-color: var(--dime-surface-raised);
+}
+/* Floating surfaces (menus, toasts) — the ONE place Law v2 allows a shadow. */
+.bt-float {
+  background-color: var(--dime-surface-raised);
+  border: 1px solid var(--dime-border);
+  border-radius: 14px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
+}
+html:not(.dark) .bt-float {
+  box-shadow: 0 12px 32px rgba(11, 11, 15, 0.18);
+}
+
+/* MASTER.md micro-label: 10–11px, uppercase, 0.08em tracking, muted tier. */
+.bt-label {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--dime-text-muted);
+}
+
+/* Input recipe: card surface, quiet hairline, mint focus border. Keyboard
+ * focus keeps the unified 2px mint outline from the base layer. */
+.bt-input {
+  background-color: var(--dime-surface-card);
+  border: 1px solid var(--dime-border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 14px;
+  color: var(--dime-text-primary);
+  transition:
+    border-color var(--dime-t) var(--dime-ease),
+    background-color var(--dime-t) var(--dime-ease);
+}
+.bt-input::placeholder {
+  color: var(--dime-text-muted);
+}
+.bt-input:hover:not(:disabled):not(:focus) {
+  border-color: var(--dime-border-strong);
+}
+.bt-input:focus {
+  outline: none;
+  border-color: var(--dime-mint-border);
+}
+.bt-input:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Text tiers (labels/meta demote; values stay primary/mint/red = signal
+ * pops). Declared after .bt-input so the tier wins on combined elements. */
+.bt-dim {
+  color: var(--dime-text-secondary);
+}
+.bt-faint {
+  color: var(--dime-text-muted);
+}
+
+/* Row hover affordance (dropdown rows, day strips) — v2 hover returns. */
+.bt-row-hover {
+  transition: background-color var(--dime-t) var(--dime-ease);
+}
+.bt-row-hover:hover {
+  background-color: var(--dime-row-hover);
+}
+
+/* apple-design §15: numeric data uses tabular figures so columns and stat
+ * rows never jitter as values tick; large numerals track slightly tight. */
+.bt-num {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+.bt-page .font-mono,
+.bt-page input[type="number"] {
+  font-variant-numeric: tabular-nums;
+}
+
+/* apple-design §1/§10: respond on pointer-down. Restrained compressed state
+ * on primary actions only; springs stay out (Motion 2/10, Law v3 is scoped
+ * to the projections product). Collapses to static under reduced motion. */
+@media (prefers-reduced-motion: no-preference) {
+  .bt-press {
+    transition: transform var(--dime-t) var(--dime-ease);
+  }
+  .bt-press:active {
+    transform: scale(0.97);
+  }
+}
+
+/* MASTER.md checklist: every clickable element carries cursor:pointer
+ * (Tailwind 4 preflight defaults buttons to cursor:default). */
+.bt-page :is(button, [role="button"], select, summary):not(:disabled) {
+  cursor: pointer;
+}
+
 /* ═══ Mobile-only layout concerns (<768px) ═════════════════════════════════ */
 @media (max-width: 767px) {
   /* Brand type everywhere on mobile. Pages that already set their own brand
@@ -726,8 +713,13 @@ html:not(.dark) .bt-page [class*="bg-black/"] {
   body.dime-floating-nav-active .dmf-root .dmf-topbar {
     display: none;
   }
+  /* Pin flush to the nav band: --dime-floating-nav-h includes the nav's 8px
+   * CLEARANCE_GAP_PX (MobileFloatingNav.tsx) — subtracting it here closes the
+   * transparent slit where scrolling league headers used to peek through
+   * between the nav chrome and the sticky feed menu bar (owner directive
+   * 2026-07-29). */
   body.dime-floating-nav-active .dmf-root .dmf-feedhead {
-    top: var(--dime-floating-nav-h, 112px);
+    top: calc(var(--dime-floating-nav-h, 112px) - 8px);
   }
   /* The floating nav reserves its own space globally; keep only local
    * breathing room instead of the pre-unification 130px bottom slab. */
