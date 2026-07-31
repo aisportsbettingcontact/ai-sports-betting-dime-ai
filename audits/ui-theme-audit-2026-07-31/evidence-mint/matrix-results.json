@@ -1,0 +1,212 @@
+[
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 5,
+  "name": "v2-subsucc-1440-dark",
+  "path": "/subscribe/success",
+  "width": 1440,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 13,
+  "name": "v2-subcancel-390-dark",
+  "path": "/subscribe/cancel",
+  "width": 390,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 76,
+  "name": "v2-adm-plans-1440-dark",
+  "path": "/admin/plans",
+  "width": 1440,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 1,
+  "blankPage": false,
+  "visibleElements": 104,
+  "name": "v2-adm-publish-1440-dark",
+  "path": "/admin/publish",
+  "width": 1440,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 3,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 196,
+  "name": "v2-adm-users-390-dark",
+  "path": "/admin/users",
+  "width": 390,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 5,
+  "name": "v2-subsucc-1440-light",
+  "path": "/subscribe/success",
+  "width": 1440,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 13,
+  "name": "v2-subcancel-390-light",
+  "path": "/subscribe/cancel",
+  "width": 390,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 76,
+  "name": "v2-adm-plans-1440-light",
+  "path": "/admin/plans",
+  "width": 1440,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 1,
+  "blankPage": false,
+  "visibleElements": 104,
+  "name": "v2-adm-publish-1440-light",
+  "path": "/admin/publish",
+  "width": 1440,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 3,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 196,
+  "name": "v2-adm-users-390-light",
+  "path": "/admin/users",
+  "width": 390,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ }
+]

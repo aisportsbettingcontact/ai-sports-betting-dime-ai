@@ -132,7 +132,7 @@
   --popover: #141414;           /* v2: raised tier — menus/popovers get depth */
   --popover-foreground: #FFFFFF;
 
-  /* Mint is the single accent (was purple #6C63FF). Black ink on mint. */
+  /* Mint is the single accent (was the retired purple). Black ink on mint. */
   --primary: #45E0A8;
   --primary-foreground: #000000;
 
@@ -156,6 +156,9 @@
 
   /* Positive edge = mint; negative/pass = plain ink (no red) */
   --edge-green: #45E0A8;
+  /* Mint as INK (text/icons). Dark: raw mint. Light remaps below — owner law
+   * 2026-07-31: on light surfaces mint exists ONLY as a fill with black ink. */
+  --mint-ink: var(--primary);
   --edge-red: #FFFFFF;
 
   /* Scoped exception: bet-loss indicators (Bet Tracker / calendar) keep red. */
@@ -221,6 +224,7 @@ html:not(.dark) {
   --input: #D9D9D9;
   --ring: #45E0A8;
   --edge-green: #45E0A8;
+  --mint-ink: #0A7C50; /* the one sanctioned mint-ink tone on light (5.2:1 white / 4.9:1 F7-tier) */
   --edge-red: #000000;
   --loss-red: #D92D2D; /* theme audit 2026-07-31: FF3B3B measured 3.3:1 on light; 4.8:1 on white here. Dark keeps FF3B3B (5.9:1 on black). */
   --sidebar: #FFFFFF;
@@ -391,6 +395,21 @@ html:not(.dark) {
   /* Edge color helpers */
   .text-edge-green { color: var(--edge-green); }
   .text-edge-red   { color: var(--edge-red); }
+}
+
+/* Owner law (2026-07-31): raw mint TEXT cannot render on light surfaces —
+   the text-primary utility remaps to the mint-ink tone in light mode. Mint
+   FILLS (bg-primary + black ink) are untouched. Dark-fixed pages (login,
+   WC2026) pin --mint-ink back to raw mint at their roots; the admin area is
+   dark-fixed via AdminShell, so this never applies there. */
+html:not(.dark) .text-primary {
+  color: var(--mint-ink);
+}
+/* Raw mint ink stays legal on BLACK surfaces regardless of the html theme —
+   black-fixed containers (Subscribe result pages, etc.) tag themselves with
+   the bg-black utility and inherit the pin. */
+html:not(.dark) .bg-black {
+  --mint-ink: var(--primary);
 }
 
 /* ── Safe area utility classes ─────────────────────────────────────────────

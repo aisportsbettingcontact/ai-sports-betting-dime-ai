@@ -459,6 +459,27 @@ button.dc-sidebar-row {
     justify-self: end;
   }
 
+  /* ── Keyboard choreography (owner directive 2026-07-31) ──────────────────
+     While the OS keyboard is up, the bar compresses toward the very top so
+     the history toggle and kebab hold the high corners, and the wordmark
+     fades in centered between them. Every value below rides
+     --dc-kb-progress — a critically-damped springSettle driven per frame
+     from the visualViewport handler, retargeted mid-flight on open/close —
+     so a dismiss during the open settle reverses in real time with no jump,
+     and reduced-motion snaps the var instead. Only compositor properties
+     (opacity/transform) animate on the logo; the bar's height ramp is one
+     fixed element. Content geometry is NOT springed: the page container and
+     scroller track the keyboard 1:1 via --dc-visual-height/--dc-kb-inset. */
+  .dc-mobile-bar {
+    height: calc(56px + env(safe-area-inset-top) - 8px * var(--dc-kb-progress, 0));
+  }
+  .dc-kb-logo {
+    pointer-events: none;
+    opacity: var(--dc-kb-progress, 0);
+    transform: translateY(calc((1 - var(--dc-kb-progress, 0)) * 6px))
+      scale(calc(0.92 + 0.08 * var(--dc-kb-progress, 0)));
+  }
+
   .dc-sidebar.dc-drawer {
     position: fixed;
     z-index: 90;

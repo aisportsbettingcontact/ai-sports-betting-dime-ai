@@ -255,6 +255,8 @@ export default function Home() {
         // theme audit 2026-07-31).
         ["--text-secondary" as string]: "#A6A6A6",
         ["--text-muted" as string]: "#7E7E7E",
+        // Raw mint stays legal ink on this always-black page (owner law 2026-07-31).
+        ["--mint-ink" as string]: "#45E0A8",
       }}
     >
 

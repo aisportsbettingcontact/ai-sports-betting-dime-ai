@@ -1,0 +1,128 @@
+[
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 205,
+  "name": "fix2-tracker-320-light",
+  "path": "/bet-tracker",
+  "width": 320,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 205,
+  "name": "fix2-tracker-320-dark",
+  "path": "/bet-tracker",
+  "width": 320,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 205,
+  "name": "fix2-tracker-390-light",
+  "path": "/bet-tracker",
+  "width": 390,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 205,
+  "name": "fix2-tracker-390-dark",
+  "path": "/bet-tracker",
+  "width": 390,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 373,
+  "name": "fix2-tracker-1440-light",
+  "path": "/bet-tracker",
+  "width": 1440,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 373,
+  "name": "fix2-tracker-1440-dark",
+  "path": "/bet-tracker",
+  "width": 1440,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ }
+]

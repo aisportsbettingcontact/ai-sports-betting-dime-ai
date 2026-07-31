@@ -1,0 +1,4416 @@
+[
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 537,
+  "name": "landing-320-dark",
+  "path": "/",
+  "width": 320,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 537,
+  "name": "landing-320-light",
+  "path": "/",
+  "width": 320,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 539,
+  "name": "landing-375-dark",
+  "path": "/",
+  "width": 375,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 539,
+  "name": "landing-375-light",
+  "path": "/",
+  "width": 375,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 539,
+  "name": "landing-390-dark",
+  "path": "/",
+  "width": 390,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 539,
+  "name": "landing-390-light",
+  "path": "/",
+  "width": 390,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 539,
+  "name": "landing-430-dark",
+  "path": "/",
+  "width": 430,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 539,
+  "name": "landing-430-light",
+  "path": "/",
+  "width": 430,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 548,
+  "name": "landing-768-dark",
+  "path": "/",
+  "width": 768,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 548,
+  "name": "landing-768-light",
+  "path": "/",
+  "width": 768,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 552,
+  "name": "landing-834-dark",
+  "path": "/",
+  "width": 834,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 552,
+  "name": "landing-834-light",
+  "path": "/",
+  "width": 834,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 560,
+  "name": "landing-1024-dark",
+  "path": "/",
+  "width": 1024,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 560,
+  "name": "landing-1024-light",
+  "path": "/",
+  "width": 1024,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 572,
+  "name": "landing-1280-dark",
+  "path": "/",
+  "width": 1280,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 572,
+  "name": "landing-1280-light",
+  "path": "/",
+  "width": 1280,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 572,
+  "name": "landing-1440-dark",
+  "path": "/",
+  "width": 1440,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 572,
+  "name": "landing-1440-light",
+  "path": "/",
+  "width": 1440,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 572,
+  "name": "landing-1920-dark",
+  "path": "/",
+  "width": 1920,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 572,
+  "name": "landing-1920-light",
+  "path": "/",
+  "width": 1920,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 1253,
+  "name": "feed-320-dark",
+  "path": "/feed/model/mlb",
+  "width": 320,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 1253,
+  "name": "feed-320-light",
+  "path": "/feed/model/mlb",
+  "width": 320,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 1253,
+  "name": "feed-375-dark",
+  "path": "/feed/model/mlb",
+  "width": 375,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 1253,
+  "name": "feed-375-light",
+  "path": "/feed/model/mlb",
+  "width": 375,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 1253,
+  "name": "feed-390-dark",
+  "path": "/feed/model/mlb",
+  "width": 390,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 1253,
+  "name": "feed-390-light",
+  "path": "/feed/model/mlb",
+  "width": 390,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 1253,
+  "name": "feed-430-dark",
+  "path": "/feed/model/mlb",
+  "width": 430,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 1253,
+  "name": "feed-430-light",
+  "path": "/feed/model/mlb",
+  "width": 430,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 1338,
+  "name": "feed-768-dark",
+  "path": "/feed/model/mlb",
+  "width": 768,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 1338,
+  "name": "feed-768-light",
+  "path": "/feed/model/mlb",
+  "width": 768,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 1338,
+  "name": "feed-834-dark",
+  "path": "/feed/model/mlb",
+  "width": 834,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 1338,
+  "name": "feed-834-light",
+  "path": "/feed/model/mlb",
+  "width": 834,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 1339,
+  "name": "feed-1024-dark",
+  "path": "/feed/model/mlb",
+  "width": 1024,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 1339,
+  "name": "feed-1024-light",
+  "path": "/feed/model/mlb",
+  "width": 1024,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 1339,
+  "name": "feed-1280-dark",
+  "path": "/feed/model/mlb",
+  "width": 1280,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 1339,
+  "name": "feed-1280-light",
+  "path": "/feed/model/mlb",
+  "width": 1280,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 1339,
+  "name": "feed-1440-dark",
+  "path": "/feed/model/mlb",
+  "width": 1440,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 1339,
+  "name": "feed-1440-light",
+  "path": "/feed/model/mlb",
+  "width": 1440,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 1339,
+  "name": "feed-1920-dark",
+  "path": "/feed/model/mlb",
+  "width": 1920,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 1339,
+  "name": "feed-1920-light",
+  "path": "/feed/model/mlb",
+  "width": 1920,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 838,
+  "name": "splits-320-dark",
+  "path": "/betting-splits/mlb",
+  "width": 320,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 838,
+  "name": "splits-320-light",
+  "path": "/betting-splits/mlb",
+  "width": 320,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 838,
+  "name": "splits-375-dark",
+  "path": "/betting-splits/mlb",
+  "width": 375,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 838,
+  "name": "splits-375-light",
+  "path": "/betting-splits/mlb",
+  "width": 375,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 838,
+  "name": "splits-390-dark",
+  "path": "/betting-splits/mlb",
+  "width": 390,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 838,
+  "name": "splits-390-light",
+  "path": "/betting-splits/mlb",
+  "width": 390,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 838,
+  "name": "splits-430-dark",
+  "path": "/betting-splits/mlb",
+  "width": 430,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 838,
+  "name": "splits-430-light",
+  "path": "/betting-splits/mlb",
+  "width": 430,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 1857,
+  "name": "splits-768-dark",
+  "path": "/betting-splits/mlb",
+  "width": 768,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 1857,
+  "name": "splits-768-light",
+  "path": "/betting-splits/mlb",
+  "width": 768,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 1857,
+  "name": "splits-834-dark",
+  "path": "/betting-splits/mlb",
+  "width": 834,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 1857,
+  "name": "splits-834-light",
+  "path": "/betting-splits/mlb",
+  "width": 834,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 1862,
+  "name": "splits-1024-dark",
+  "path": "/betting-splits/mlb",
+  "width": 1024,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 1862,
+  "name": "splits-1024-light",
+  "path": "/betting-splits/mlb",
+  "width": 1024,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 1882,
+  "name": "splits-1280-dark",
+  "path": "/betting-splits/mlb",
+  "width": 1280,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 1882,
+  "name": "splits-1280-light",
+  "path": "/betting-splits/mlb",
+  "width": 1280,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 1872,
+  "name": "splits-1440-dark",
+  "path": "/betting-splits/mlb",
+  "width": 1440,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 1872,
+  "name": "splits-1440-light",
+  "path": "/betting-splits/mlb",
+  "width": 1440,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 1872,
+  "name": "splits-1920-dark",
+  "path": "/betting-splits/mlb",
+  "width": 1920,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 1872,
+  "name": "splits-1920-light",
+  "path": "/betting-splits/mlb",
+  "width": 1920,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 205,
+  "name": "tracker-320-dark",
+  "path": "/bet-tracker",
+  "width": 320,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [
+   {
+    "text": "ALL",
+    "ratio": 1.68,
+    "need": 4.5,
+    "size": "12px",
+    "color": "rgb(69, 224, 168)",
+    "cls": "flex-shrink-0 px-4 py-2.5 text-xs font-b"
+   },
+   {
+    "text": "All-Time",
+    "ratio": 1.68,
+    "need": 4.5,
+    "size": "12px",
+    "color": "rgb(69, 224, 168)",
+    "cls": "flex-shrink-0 flex items-center gap-1 px"
+   },
+   {
+    "text": "Total Bets",
+    "ratio": 4.24,
+    "need": 4.5,
+    "size": "11px",
+    "color": "rgb(118, 118, 118)",
+    "cls": "bt-label leading-tight whitespace-nowrap"
+   },
+   {
+    "text": "0.00u",
+    "ratio": 1.57,
+    "need": 4.5,
+    "size": "18px",
+    "color": "rgb(69, 224, 168)",
+    "cls": "text-lg sm:text-xl lg:text-2xl font-bold"
+   },
+   {
+    "text": "0",
+    "ratio": 3.3,
+    "need": 4.5,
+    "size": "18px",
+    "color": "rgb(255, 59, 59)",
+    "cls": "text-lg sm:text-xl lg:text-2xl font-bold"
+   },
+   {
+    "text": "on $0.00 risked",
+    "ratio": 4.24,
+    "need": 4.5,
+    "size": "11px",
+    "color": "rgb(118, 118, 118)",
+    "cls": "text-[11px] bt-faint leading-tight"
+   },
+   {
+    "text": "BETS",
+    "ratio": 1.68,
+    "need": 4.5,
+    "size": "12px",
+    "color": "rgb(69, 224, 168)",
+    "cls": "px-4 py-2.5 text-xs font-bold tracking-w"
+   }
+  ],
+  "invisibleText": [],
+  "mintTextOnLight": [
+   {
+    "text": "ALL",
+    "cls": "flex-shrink-0 px-4 py-2.5 text-xs font-b"
+   },
+   {
+    "text": "All-Time",
+    "cls": "flex-shrink-0 flex items-center gap-1 px"
+   },
+   {
+    "text": "0.00u",
+    "cls": "text-lg sm:text-xl lg:text-2xl font-bold"
+   },
+   {
+    "text": "0",
+    "cls": "text-lg sm:text-xl lg:text-2xl font-bold"
+   },
+   {
+    "text": "0.0%",
+    "cls": "text-lg sm:text-xl lg:text-2xl font-bold"
+   },
+   {
+    "text": "BETS",
+    "cls": "px-4 py-2.5 text-xs font-bold tracking-w"
+   }
+  ],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 205,
+  "name": "tracker-320-light",
+  "path": "/bet-tracker",
+  "width": 320,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 205,
+  "name": "tracker-375-dark",
+  "path": "/bet-tracker",
+  "width": 375,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [
+   {
+    "text": "ALL",
+    "ratio": 1.68,
+    "need": 4.5,
+    "size": "12px",
+    "color": "rgb(69, 224, 168)",
+    "cls": "flex-shrink-0 px-4 py-2.5 text-xs font-b"
+   },
+   {
+    "text": "All-Time",
+    "ratio": 1.68,
+    "need": 4.5,
+    "size": "12px",
+    "color": "rgb(69, 224, 168)",
+    "cls": "flex-shrink-0 flex items-center gap-1 px"
+   },
+   {
+    "text": "Total Bets",
+    "ratio": 4.24,
+    "need": 4.5,
+    "size": "11px",
+    "color": "rgb(118, 118, 118)",
+    "cls": "bt-label leading-tight whitespace-nowrap"
+   },
+   {
+    "text": "0.00u",
+    "ratio": 1.57,
+    "need": 4.5,
+    "size": "18px",
+    "color": "rgb(69, 224, 168)",
+    "cls": "text-lg sm:text-xl lg:text-2xl font-bold"
+   },
+   {
+    "text": "0",
+    "ratio": 3.3,
+    "need": 4.5,
+    "size": "18px",
+    "color": "rgb(255, 59, 59)",
+    "cls": "text-lg sm:text-xl lg:text-2xl font-bold"
+   },
+   {
+    "text": "on $0.00 risked",
+    "ratio": 4.24,
+    "need": 4.5,
+    "size": "11px",
+    "color": "rgb(118, 118, 118)",
+    "cls": "text-[11px] bt-faint leading-tight"
+   },
+   {
+    "text": "BETS",
+    "ratio": 1.68,
+    "need": 4.5,
+    "size": "12px",
+    "color": "rgb(69, 224, 168)",
+    "cls": "px-4 py-2.5 text-xs font-bold tracking-w"
+   }
+  ],
+  "invisibleText": [],
+  "mintTextOnLight": [
+   {
+    "text": "ALL",
+    "cls": "flex-shrink-0 px-4 py-2.5 text-xs font-b"
+   },
+   {
+    "text": "All-Time",
+    "cls": "flex-shrink-0 flex items-center gap-1 px"
+   },
+   {
+    "text": "0.00u",
+    "cls": "text-lg sm:text-xl lg:text-2xl font-bold"
+   },
+   {
+    "text": "0",
+    "cls": "text-lg sm:text-xl lg:text-2xl font-bold"
+   },
+   {
+    "text": "0.0%",
+    "cls": "text-lg sm:text-xl lg:text-2xl font-bold"
+   },
+   {
+    "text": "BETS",
+    "cls": "px-4 py-2.5 text-xs font-bold tracking-w"
+   }
+  ],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 205,
+  "name": "tracker-375-light",
+  "path": "/bet-tracker",
+  "width": 375,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 205,
+  "name": "tracker-390-dark",
+  "path": "/bet-tracker",
+  "width": 390,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [
+   {
+    "text": "ALL",
+    "ratio": 1.68,
+    "need": 4.5,
+    "size": "12px",
+    "color": "rgb(69, 224, 168)",
+    "cls": "flex-shrink-0 px-4 py-2.5 text-xs font-b"
+   },
+   {
+    "text": "All-Time",
+    "ratio": 1.68,
+    "need": 4.5,
+    "size": "12px",
+    "color": "rgb(69, 224, 168)",
+    "cls": "flex-shrink-0 flex items-center gap-1 px"
+   },
+   {
+    "text": "Total Bets",
+    "ratio": 4.24,
+    "need": 4.5,
+    "size": "11px",
+    "color": "rgb(118, 118, 118)",
+    "cls": "bt-label leading-tight whitespace-nowrap"
+   },
+   {
+    "text": "0.00u",
+    "ratio": 1.57,
+    "need": 4.5,
+    "size": "18px",
+    "color": "rgb(69, 224, 168)",
+    "cls": "text-lg sm:text-xl lg:text-2xl font-bold"
+   },
+   {
+    "text": "0",
+    "ratio": 3.3,
+    "need": 4.5,
+    "size": "18px",
+    "color": "rgb(255, 59, 59)",
+    "cls": "text-lg sm:text-xl lg:text-2xl font-bold"
+   },
+   {
+    "text": "on $0.00 risked",
+    "ratio": 4.24,
+    "need": 4.5,
+    "size": "11px",
+    "color": "rgb(118, 118, 118)",
+    "cls": "text-[11px] bt-faint leading-tight"
+   },
+   {
+    "text": "BETS",
+    "ratio": 1.68,
+    "need": 4.5,
+    "size": "12px",
+    "color": "rgb(69, 224, 168)",
+    "cls": "px-4 py-2.5 text-xs font-bold tracking-w"
+   }
+  ],
+  "invisibleText": [],
+  "mintTextOnLight": [
+   {
+    "text": "ALL",
+    "cls": "flex-shrink-0 px-4 py-2.5 text-xs font-b"
+   },
+   {
+    "text": "All-Time",
+    "cls": "flex-shrink-0 flex items-center gap-1 px"
+   },
+   {
+    "text": "0.00u",
+    "cls": "text-lg sm:text-xl lg:text-2xl font-bold"
+   },
+   {
+    "text": "0",
+    "cls": "text-lg sm:text-xl lg:text-2xl font-bold"
+   },
+   {
+    "text": "0.0%",
+    "cls": "text-lg sm:text-xl lg:text-2xl font-bold"
+   },
+   {
+    "text": "BETS",
+    "cls": "px-4 py-2.5 text-xs font-bold tracking-w"
+   }
+  ],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 205,
+  "name": "tracker-390-light",
+  "path": "/bet-tracker",
+  "width": 390,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 205,
+  "name": "tracker-430-dark",
+  "path": "/bet-tracker",
+  "width": 430,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [
+   {
+    "text": "ALL",
+    "ratio": 1.68,
+    "need": 4.5,
+    "size": "12px",
+    "color": "rgb(69, 224, 168)",
+    "cls": "flex-shrink-0 px-4 py-2.5 text-xs font-b"
+   },
+   {
+    "text": "All-Time",
+    "ratio": 1.68,
+    "need": 4.5,
+    "size": "12px",
+    "color": "rgb(69, 224, 168)",
+    "cls": "flex-shrink-0 flex items-center gap-1 px"
+   },
+   {
+    "text": "Total Bets",
+    "ratio": 4.24,
+    "need": 4.5,
+    "size": "11px",
+    "color": "rgb(118, 118, 118)",
+    "cls": "bt-label leading-tight whitespace-nowrap"
+   },
+   {
+    "text": "0.00u",
+    "ratio": 1.57,
+    "need": 4.5,
+    "size": "18px",
+    "color": "rgb(69, 224, 168)",
+    "cls": "text-lg sm:text-xl lg:text-2xl font-bold"
+   },
+   {
+    "text": "0",
+    "ratio": 3.3,
+    "need": 4.5,
+    "size": "18px",
+    "color": "rgb(255, 59, 59)",
+    "cls": "text-lg sm:text-xl lg:text-2xl font-bold"
+   },
+   {
+    "text": "on $0.00 risked",
+    "ratio": 4.24,
+    "need": 4.5,
+    "size": "11px",
+    "color": "rgb(118, 118, 118)",
+    "cls": "text-[11px] bt-faint leading-tight"
+   },
+   {
+    "text": "BETS",
+    "ratio": 1.68,
+    "need": 4.5,
+    "size": "12px",
+    "color": "rgb(69, 224, 168)",
+    "cls": "px-4 py-2.5 text-xs font-bold tracking-w"
+   }
+  ],
+  "invisibleText": [],
+  "mintTextOnLight": [
+   {
+    "text": "ALL",
+    "cls": "flex-shrink-0 px-4 py-2.5 text-xs font-b"
+   },
+   {
+    "text": "All-Time",
+    "cls": "flex-shrink-0 flex items-center gap-1 px"
+   },
+   {
+    "text": "0.00u",
+    "cls": "text-lg sm:text-xl lg:text-2xl font-bold"
+   },
+   {
+    "text": "0",
+    "cls": "text-lg sm:text-xl lg:text-2xl font-bold"
+   },
+   {
+    "text": "0.0%",
+    "cls": "text-lg sm:text-xl lg:text-2xl font-bold"
+   },
+   {
+    "text": "BETS",
+    "cls": "px-4 py-2.5 text-xs font-bold tracking-w"
+   }
+  ],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 205,
+  "name": "tracker-430-light",
+  "path": "/bet-tracker",
+  "width": 430,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 304,
+  "name": "tracker-768-dark",
+  "path": "/bet-tracker",
+  "width": 768,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [
+   {
+    "text": "ALL",
+    "ratio": 1.68,
+    "need": 4.5,
+    "size": "12px",
+    "color": "rgb(69, 224, 168)",
+    "cls": "flex-shrink-0 px-4 py-2.5 text-xs font-b"
+   },
+   {
+    "text": "All-Time",
+    "ratio": 1.68,
+    "need": 4.5,
+    "size": "12px",
+    "color": "rgb(69, 224, 168)",
+    "cls": "flex-shrink-0 flex items-center gap-1 px"
+   },
+   {
+    "text": "Total Bets",
+    "ratio": 4.24,
+    "need": 4.5,
+    "size": "11px",
+    "color": "rgb(118, 118, 118)",
+    "cls": "bt-label leading-tight whitespace-nowrap"
+   },
+   {
+    "text": "0",
+    "ratio": 1.57,
+    "need": 3,
+    "size": "20px",
+    "color": "rgb(69, 224, 168)",
+    "cls": "text-lg sm:text-xl lg:text-2xl font-bold"
+   },
+   {
+    "text": "on $0.00 risked",
+    "ratio": 4.24,
+    "need": 4.5,
+    "size": "11px",
+    "color": "rgb(118, 118, 118)",
+    "cls": "text-[11px] bt-faint leading-tight"
+   },
+   {
+    "text": "BETS",
+    "ratio": 1.68,
+    "need": 4.5,
+    "size": "12px",
+    "color": "rgb(69, 224, 168)",
+    "cls": "px-4 py-2.5 text-xs font-bold tracking-w"
+   }
+  ],
+  "invisibleText": [],
+  "mintTextOnLight": [
+   {
+    "text": "ALL",
+    "cls": "flex-shrink-0 px-4 py-2.5 text-xs font-b"
+   },
+   {
+    "text": "All-Time",
+    "cls": "flex-shrink-0 flex items-center gap-1 px"
+   },
+   {
+    "text": "0",
+    "cls": "text-lg sm:text-xl lg:text-2xl font-bold"
+   },
+   {
+    "text": "0.0%",
+    "cls": "text-lg sm:text-xl lg:text-2xl font-bold"
+   },
+   {
+    "text": "—",
+    "cls": "text-lg sm:text-xl lg:text-2xl font-bold"
+   },
+   {
+    "text": "—",
+    "cls": "text-lg sm:text-xl lg:text-2xl font-bold"
+   },
+   {
+    "text": "BETS",
+    "cls": "px-4 py-2.5 text-xs font-bold tracking-w"
+   }
+  ],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 304,
+  "name": "tracker-768-light",
+  "path": "/bet-tracker",
+  "width": 768,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 304,
+  "name": "tracker-834-dark",
+  "path": "/bet-tracker",
+  "width": 834,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [
+   {
+    "text": "ALL",
+    "ratio": 1.68,
+    "need": 4.5,
+    "size": "12px",
+    "color": "rgb(69, 224, 168)",
+    "cls": "flex-shrink-0 px-4 py-2.5 text-xs font-b"
+   },
+   {
+    "text": "All-Time",
+    "ratio": 1.68,
+    "need": 4.5,
+    "size": "12px",
+    "color": "rgb(69, 224, 168)",
+    "cls": "flex-shrink-0 flex items-center gap-1 px"
+   },
+   {
+    "text": "Total Bets",
+    "ratio": 4.24,
+    "need": 4.5,
+    "size": "11px",
+    "color": "rgb(118, 118, 118)",
+    "cls": "bt-label leading-tight whitespace-nowrap"
+   },
+   {
+    "text": "0",
+    "ratio": 1.57,
+    "need": 3,
+    "size": "20px",
+    "color": "rgb(69, 224, 168)",
+    "cls": "text-lg sm:text-xl lg:text-2xl font-bold"
+   },
+   {
+    "text": "on $0.00 risked",
+    "ratio": 4.24,
+    "need": 4.5,
+    "size": "11px",
+    "color": "rgb(118, 118, 118)",
+    "cls": "text-[11px] bt-faint leading-tight"
+   },
+   {
+    "text": "BETS",
+    "ratio": 1.68,
+    "need": 4.5,
+    "size": "12px",
+    "color": "rgb(69, 224, 168)",
+    "cls": "px-4 py-2.5 text-xs font-bold tracking-w"
+   }
+  ],
+  "invisibleText": [],
+  "mintTextOnLight": [
+   {
+    "text": "ALL",
+    "cls": "flex-shrink-0 px-4 py-2.5 text-xs font-b"
+   },
+   {
+    "text": "All-Time",
+    "cls": "flex-shrink-0 flex items-center gap-1 px"
+   },
+   {
+    "text": "0",
+    "cls": "text-lg sm:text-xl lg:text-2xl font-bold"
+   },
+   {
+    "text": "0.0%",
+    "cls": "text-lg sm:text-xl lg:text-2xl font-bold"
+   },
+   {
+    "text": "—",
+    "cls": "text-lg sm:text-xl lg:text-2xl font-bold"
+   },
+   {
+    "text": "—",
+    "cls": "text-lg sm:text-xl lg:text-2xl font-bold"
+   },
+   {
+    "text": "BETS",
+    "cls": "px-4 py-2.5 text-xs font-bold tracking-w"
+   }
+  ],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 304,
+  "name": "tracker-834-light",
+  "path": "/bet-tracker",
+  "width": 834,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 305,
+  "name": "tracker-1024-dark",
+  "path": "/bet-tracker",
+  "width": 1024,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [
+   {
+    "text": "ALL",
+    "ratio": 1.68,
+    "need": 4.5,
+    "size": "12px",
+    "color": "rgb(69, 224, 168)",
+    "cls": "flex-shrink-0 px-4 py-2.5 text-xs font-b"
+   },
+   {
+    "text": "All-Time",
+    "ratio": 1.68,
+    "need": 4.5,
+    "size": "12px",
+    "color": "rgb(69, 224, 168)",
+    "cls": "flex-shrink-0 flex items-center gap-1 px"
+   },
+   {
+    "text": "Total Bets",
+    "ratio": 4.24,
+    "need": 4.5,
+    "size": "11px",
+    "color": "rgb(118, 118, 118)",
+    "cls": "bt-label leading-tight whitespace-nowrap"
+   },
+   {
+    "text": "0",
+    "ratio": 1.57,
+    "need": 3,
+    "size": "24px",
+    "color": "rgb(69, 224, 168)",
+    "cls": "text-lg sm:text-xl lg:text-2xl font-bold"
+   },
+   {
+    "text": "on $0.00 risked",
+    "ratio": 4.24,
+    "need": 4.5,
+    "size": "11px",
+    "color": "rgb(118, 118, 118)",
+    "cls": "text-[11px] bt-faint leading-tight"
+   },
+   {
+    "text": "BETS",
+    "ratio": 1.68,
+    "need": 4.5,
+    "size": "12px",
+    "color": "rgb(69, 224, 168)",
+    "cls": "px-4 py-2.5 text-xs font-bold tracking-w"
+   }
+  ],
+  "invisibleText": [],
+  "mintTextOnLight": [
+   {
+    "text": "ALL",
+    "cls": "flex-shrink-0 px-4 py-2.5 text-xs font-b"
+   },
+   {
+    "text": "All-Time",
+    "cls": "flex-shrink-0 flex items-center gap-1 px"
+   },
+   {
+    "text": "0",
+    "cls": "text-lg sm:text-xl lg:text-2xl font-bold"
+   },
+   {
+    "text": "0.0%",
+    "cls": "text-lg sm:text-xl lg:text-2xl font-bold"
+   },
+   {
+    "text": "—",
+    "cls": "text-lg sm:text-xl lg:text-2xl font-bold"
+   },
+   {
+    "text": "—",
+    "cls": "text-lg sm:text-xl lg:text-2xl font-bold"
+   },
+   {
+    "text": "BETS",
+    "cls": "px-4 py-2.5 text-xs font-bold tracking-w"
+   }
+  ],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 305,
+  "name": "tracker-1024-light",
+  "path": "/bet-tracker",
+  "width": 1024,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 373,
+  "name": "tracker-1280-dark",
+  "path": "/bet-tracker",
+  "width": 1280,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [
+   {
+    "text": "ALL",
+    "ratio": 1.68,
+    "need": 4.5,
+    "size": "12.48px",
+    "color": "rgb(69, 224, 168)",
+    "cls": "flex-shrink-0 px-4 py-2.5 text-xs font-b"
+   },
+   {
+    "text": "All-Time",
+    "ratio": 1.68,
+    "need": 4.5,
+    "size": "12.48px",
+    "color": "rgb(69, 224, 168)",
+    "cls": "flex-shrink-0 flex items-center gap-1 px"
+   },
+   {
+    "text": "Total Bets",
+    "ratio": 4.24,
+    "need": 4.5,
+    "size": "11px",
+    "color": "rgb(118, 118, 118)",
+    "cls": "bt-label leading-tight whitespace-nowrap"
+   },
+   {
+    "text": "0",
+    "ratio": 1.57,
+    "need": 3,
+    "size": "24.96px",
+    "color": "rgb(69, 224, 168)",
+    "cls": "text-lg sm:text-xl lg:text-2xl font-bold"
+   },
+   {
+    "text": "on $0.00 risked",
+    "ratio": 4.24,
+    "need": 4.5,
+    "size": "11px",
+    "color": "rgb(118, 118, 118)",
+    "cls": "text-[11px] bt-faint leading-tight"
+   },
+   {
+    "text": "Date",
+    "ratio": 4.24,
+    "need": 4.5,
+    "size": "11px",
+    "color": "rgb(118, 118, 118)",
+    "cls": "bt-label"
+   },
+   {
+    "text": "RECORD",
+    "ratio": 4.24,
+    "need": 4.5,
+    "size": "10px",
+    "color": "rgb(118, 118, 118)",
+    "cls": ""
+   },
+   {
+    "text": "—%",
+    "ratio": 3.3,
+    "need": 4.5,
+    "size": "13px",
+    "color": "rgb(255, 59, 59)",
+    "cls": ""
+   },
+   {
+    "text": "+0.00u",
+    "ratio": 4.35,
+    "need": 4.5,
+    "size": "13px",
+    "color": "rgb(11, 133, 87)",
+    "cls": ""
+   },
+   {
+    "text": "BETS",
+    "ratio": 1.68,
+    "need": 4.5,
+    "size": "12.48px",
+    "color": "rgb(69, 224, 168)",
+    "cls": "px-4 py-2.5 text-xs font-bold tracking-w"
+   }
+  ],
+  "invisibleText": [],
+  "mintTextOnLight": [
+   {
+    "text": "ALL",
+    "cls": "flex-shrink-0 px-4 py-2.5 text-xs font-b"
+   },
+   {
+    "text": "All-Time",
+    "cls": "flex-shrink-0 flex items-center gap-1 px"
+   },
+   {
+    "text": "0",
+    "cls": "text-lg sm:text-xl lg:text-2xl font-bold"
+   },
+   {
+    "text": "0.0%",
+    "cls": "text-lg sm:text-xl lg:text-2xl font-bold"
+   },
+   {
+    "text": "—",
+    "cls": "text-lg sm:text-xl lg:text-2xl font-bold"
+   },
+   {
+    "text": "—",
+    "cls": "text-lg sm:text-xl lg:text-2xl font-bold"
+   },
+   {
+    "text": "BETS",
+    "cls": "px-4 py-2.5 text-xs font-bold tracking-w"
+   }
+  ],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 373,
+  "name": "tracker-1280-light",
+  "path": "/bet-tracker",
+  "width": 1280,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 373,
+  "name": "tracker-1440-dark",
+  "path": "/bet-tracker",
+  "width": 1440,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [
+   {
+    "text": "ALL",
+    "ratio": 1.68,
+    "need": 4.5,
+    "size": "12.84px",
+    "color": "rgb(69, 224, 168)",
+    "cls": "flex-shrink-0 px-4 py-2.5 text-xs font-b"
+   },
+   {
+    "text": "All-Time",
+    "ratio": 1.68,
+    "need": 4.5,
+    "size": "12.84px",
+    "color": "rgb(69, 224, 168)",
+    "cls": "flex-shrink-0 flex items-center gap-1 px"
+   },
+   {
+    "text": "Total Bets",
+    "ratio": 4.24,
+    "need": 4.5,
+    "size": "11px",
+    "color": "rgb(118, 118, 118)",
+    "cls": "bt-label leading-tight whitespace-nowrap"
+   },
+   {
+    "text": "0",
+    "ratio": 1.57,
+    "need": 3,
+    "size": "25.68px",
+    "color": "rgb(69, 224, 168)",
+    "cls": "text-lg sm:text-xl lg:text-2xl font-bold"
+   },
+   {
+    "text": "on $0.00 risked",
+    "ratio": 4.24,
+    "need": 4.5,
+    "size": "11px",
+    "color": "rgb(118, 118, 118)",
+    "cls": "text-[11px] bt-faint leading-tight"
+   },
+   {
+    "text": "Date",
+    "ratio": 4.24,
+    "need": 4.5,
+    "size": "11px",
+    "color": "rgb(118, 118, 118)",
+    "cls": "bt-label"
+   },
+   {
+    "text": "RECORD",
+    "ratio": 4.24,
+    "need": 4.5,
+    "size": "10px",
+    "color": "rgb(118, 118, 118)",
+    "cls": ""
+   },
+   {
+    "text": "—%",
+    "ratio": 3.3,
+    "need": 4.5,
+    "size": "13px",
+    "color": "rgb(255, 59, 59)",
+    "cls": ""
+   },
+   {
+    "text": "+0.00u",
+    "ratio": 4.35,
+    "need": 4.5,
+    "size": "13px",
+    "color": "rgb(11, 133, 87)",
+    "cls": ""
+   },
+   {
+    "text": "BETS",
+    "ratio": 1.68,
+    "need": 4.5,
+    "size": "12.84px",
+    "color": "rgb(69, 224, 168)",
+    "cls": "px-4 py-2.5 text-xs font-bold tracking-w"
+   }
+  ],
+  "invisibleText": [],
+  "mintTextOnLight": [
+   {
+    "text": "ALL",
+    "cls": "flex-shrink-0 px-4 py-2.5 text-xs font-b"
+   },
+   {
+    "text": "All-Time",
+    "cls": "flex-shrink-0 flex items-center gap-1 px"
+   },
+   {
+    "text": "0",
+    "cls": "text-lg sm:text-xl lg:text-2xl font-bold"
+   },
+   {
+    "text": "0.0%",
+    "cls": "text-lg sm:text-xl lg:text-2xl font-bold"
+   },
+   {
+    "text": "—",
+    "cls": "text-lg sm:text-xl lg:text-2xl font-bold"
+   },
+   {
+    "text": "—",
+    "cls": "text-lg sm:text-xl lg:text-2xl font-bold"
+   },
+   {
+    "text": "BETS",
+    "cls": "px-4 py-2.5 text-xs font-bold tracking-w"
+   }
+  ],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 373,
+  "name": "tracker-1440-light",
+  "path": "/bet-tracker",
+  "width": 1440,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 373,
+  "name": "tracker-1920-dark",
+  "path": "/bet-tracker",
+  "width": 1920,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [
+   {
+    "text": "ALL",
+    "ratio": 1.68,
+    "need": 4.5,
+    "size": "13.92px",
+    "color": "rgb(69, 224, 168)",
+    "cls": "flex-shrink-0 px-4 py-2.5 text-xs font-b"
+   },
+   {
+    "text": "All-Time",
+    "ratio": 1.68,
+    "need": 4.5,
+    "size": "13.92px",
+    "color": "rgb(69, 224, 168)",
+    "cls": "flex-shrink-0 flex items-center gap-1 px"
+   },
+   {
+    "text": "Total Bets",
+    "ratio": 4.24,
+    "need": 4.5,
+    "size": "11px",
+    "color": "rgb(118, 118, 118)",
+    "cls": "bt-label leading-tight whitespace-nowrap"
+   },
+   {
+    "text": "0",
+    "ratio": 1.57,
+    "need": 3,
+    "size": "27.84px",
+    "color": "rgb(69, 224, 168)",
+    "cls": "text-lg sm:text-xl lg:text-2xl font-bold"
+   },
+   {
+    "text": "on $0.00 risked",
+    "ratio": 4.24,
+    "need": 4.5,
+    "size": "11px",
+    "color": "rgb(118, 118, 118)",
+    "cls": "text-[11px] bt-faint leading-tight"
+   },
+   {
+    "text": "Date",
+    "ratio": 4.24,
+    "need": 4.5,
+    "size": "11px",
+    "color": "rgb(118, 118, 118)",
+    "cls": "bt-label"
+   },
+   {
+    "text": "RECORD",
+    "ratio": 4.24,
+    "need": 4.5,
+    "size": "10px",
+    "color": "rgb(118, 118, 118)",
+    "cls": ""
+   },
+   {
+    "text": "—%",
+    "ratio": 3.3,
+    "need": 4.5,
+    "size": "13px",
+    "color": "rgb(255, 59, 59)",
+    "cls": ""
+   },
+   {
+    "text": "+0.00u",
+    "ratio": 4.35,
+    "need": 4.5,
+    "size": "13px",
+    "color": "rgb(11, 133, 87)",
+    "cls": ""
+   },
+   {
+    "text": "BETS",
+    "ratio": 1.68,
+    "need": 4.5,
+    "size": "13.92px",
+    "color": "rgb(69, 224, 168)",
+    "cls": "px-4 py-2.5 text-xs font-bold tracking-w"
+   }
+  ],
+  "invisibleText": [],
+  "mintTextOnLight": [
+   {
+    "text": "ALL",
+    "cls": "flex-shrink-0 px-4 py-2.5 text-xs font-b"
+   },
+   {
+    "text": "All-Time",
+    "cls": "flex-shrink-0 flex items-center gap-1 px"
+   },
+   {
+    "text": "0",
+    "cls": "text-lg sm:text-xl lg:text-2xl font-bold"
+   },
+   {
+    "text": "0.0%",
+    "cls": "text-lg sm:text-xl lg:text-2xl font-bold"
+   },
+   {
+    "text": "—",
+    "cls": "text-lg sm:text-xl lg:text-2xl font-bold"
+   },
+   {
+    "text": "—",
+    "cls": "text-lg sm:text-xl lg:text-2xl font-bold"
+   },
+   {
+    "text": "BETS",
+    "cls": "px-4 py-2.5 text-xs font-bold tracking-w"
+   }
+  ],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 373,
+  "name": "tracker-1920-light",
+  "path": "/bet-tracker",
+  "width": 1920,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 62,
+  "name": "chat-320-dark",
+  "path": "/chat?preview=1",
+  "width": 320,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 62,
+  "name": "chat-320-light",
+  "path": "/chat?preview=1",
+  "width": 320,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 62,
+  "name": "chat-375-dark",
+  "path": "/chat?preview=1",
+  "width": 375,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 62,
+  "name": "chat-375-light",
+  "path": "/chat?preview=1",
+  "width": 375,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 62,
+  "name": "chat-390-dark",
+  "path": "/chat?preview=1",
+  "width": 390,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 62,
+  "name": "chat-390-light",
+  "path": "/chat?preview=1",
+  "width": 390,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 62,
+  "name": "chat-430-dark",
+  "path": "/chat?preview=1",
+  "width": 430,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 62,
+  "name": "chat-430-light",
+  "path": "/chat?preview=1",
+  "width": 430,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 93,
+  "name": "chat-768-dark",
+  "path": "/chat?preview=1",
+  "width": 768,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 93,
+  "name": "chat-768-light",
+  "path": "/chat?preview=1",
+  "width": 768,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 93,
+  "name": "chat-834-dark",
+  "path": "/chat?preview=1",
+  "width": 834,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 93,
+  "name": "chat-834-light",
+  "path": "/chat?preview=1",
+  "width": 834,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 94,
+  "name": "chat-1024-dark",
+  "path": "/chat?preview=1",
+  "width": 1024,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 94,
+  "name": "chat-1024-light",
+  "path": "/chat?preview=1",
+  "width": 1024,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 94,
+  "name": "chat-1280-dark",
+  "path": "/chat?preview=1",
+  "width": 1280,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 94,
+  "name": "chat-1280-light",
+  "path": "/chat?preview=1",
+  "width": 1280,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 94,
+  "name": "chat-1440-dark",
+  "path": "/chat?preview=1",
+  "width": 1440,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 94,
+  "name": "chat-1440-light",
+  "path": "/chat?preview=1",
+  "width": 1440,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 94,
+  "name": "chat-1920-dark",
+  "path": "/chat?preview=1",
+  "width": 1920,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 94,
+  "name": "chat-1920-light",
+  "path": "/chat?preview=1",
+  "width": 1920,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 35,
+  "name": "login-390-dark",
+  "path": "/login",
+  "width": 390,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [
+   {
+    "text": "Log in to your account",
+    "ratio": 3,
+    "need": 4.5,
+    "size": "12px",
+    "color": "rgb(89, 89, 89)",
+    "cls": "text-xs text-[color:var(--text-secondary"
+   },
+   {
+    "text": "Username or Email",
+    "ratio": 3,
+    "need": 4.5,
+    "size": "12px",
+    "color": "rgb(89, 89, 89)",
+    "cls": "text-xs font-semibold text-[color:var(--"
+   },
+   {
+    "text": "Forgot password?",
+    "ratio": 3,
+    "need": 4.5,
+    "size": "11px",
+    "color": "rgb(89, 89, 89)",
+    "cls": "text-[11px] text-[color:var(--text-secon"
+   },
+   {
+    "text": "Don't have an account? Sign up",
+    "ratio": 3,
+    "need": 4.5,
+    "size": "12px",
+    "color": "rgb(89, 89, 89)",
+    "cls": "text-center text-xs text-[color:var(--te"
+   },
+   {
+    "text": "By logging in you agree to gam",
+    "ratio": 3,
+    "need": 4.5,
+    "size": "11px",
+    "color": "rgb(89, 89, 89)",
+    "cls": "text-center text-[11px] text-[color:var("
+   }
+  ],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 35,
+  "name": "login-390-light",
+  "path": "/login",
+  "width": 390,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 35,
+  "name": "login-768-dark",
+  "path": "/login",
+  "width": 768,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [
+   {
+    "text": "Log in to your account",
+    "ratio": 3,
+    "need": 4.5,
+    "size": "12px",
+    "color": "rgb(89, 89, 89)",
+    "cls": "text-xs text-[color:var(--text-secondary"
+   },
+   {
+    "text": "Username or Email",
+    "ratio": 3,
+    "need": 4.5,
+    "size": "12px",
+    "color": "rgb(89, 89, 89)",
+    "cls": "text-xs font-semibold text-[color:var(--"
+   },
+   {
+    "text": "Forgot password?",
+    "ratio": 3,
+    "need": 4.5,
+    "size": "11px",
+    "color": "rgb(89, 89, 89)",
+    "cls": "text-[11px] text-[color:var(--text-secon"
+   },
+   {
+    "text": "Don't have an account? Sign up",
+    "ratio": 3,
+    "need": 4.5,
+    "size": "12px",
+    "color": "rgb(89, 89, 89)",
+    "cls": "text-center text-xs text-[color:var(--te"
+   },
+   {
+    "text": "By logging in you agree to gam",
+    "ratio": 3,
+    "need": 4.5,
+    "size": "11px",
+    "color": "rgb(89, 89, 89)",
+    "cls": "text-center text-[11px] text-[color:var("
+   }
+  ],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 35,
+  "name": "login-768-light",
+  "path": "/login",
+  "width": 768,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 76,
+  "name": "login-1440-dark",
+  "path": "/login",
+  "width": 1440,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [
+   {
+    "text": "Dime AI compares sportsbook pr",
+    "ratio": 3,
+    "need": 4.5,
+    "size": "15.84px",
+    "color": "rgb(89, 89, 89)",
+    "cls": "text-[color:var(--text-secondary)] mt-4 "
+   },
+   {
+    "text": "Moneyline, run line, totals, F",
+    "ratio": 3,
+    "need": 4.5,
+    "size": "12.96px",
+    "color": "rgb(89, 89, 89)",
+    "cls": "text-[color:var(--text-secondary)] mt-0."
+   },
+   {
+    "text": "No guaranteed outcomes. For in",
+    "ratio": 3,
+    "need": 4.5,
+    "size": "11.52px",
+    "color": "rgb(89, 89, 89)",
+    "cls": "text-[color:var(--text-secondary)] mt-8"
+   },
+   {
+    "text": "Welcome back. Enter your crede",
+    "ratio": 3,
+    "need": 4.5,
+    "size": "14.98px",
+    "color": "rgb(89, 89, 89)",
+    "cls": "text-[color:var(--text-secondary)] mt-1"
+   },
+   {
+    "text": "Username or Email",
+    "ratio": 3,
+    "need": 4.5,
+    "size": "12.84px",
+    "color": "rgb(89, 89, 89)",
+    "cls": "text-xs font-semibold text-[color:var(--"
+   },
+   {
+    "text": "Forgot password?",
+    "ratio": 3,
+    "need": 4.5,
+    "size": "11px",
+    "color": "rgb(89, 89, 89)",
+    "cls": "text-[11px] text-[color:var(--text-secon"
+   },
+   {
+    "text": "Don't have an account? Sign up",
+    "ratio": 3,
+    "need": 4.5,
+    "size": "12.84px",
+    "color": "rgb(89, 89, 89)",
+    "cls": "text-center text-xs text-[color:var(--te"
+   },
+   {
+    "text": "By logging in you agree to gam",
+    "ratio": 3,
+    "need": 4.5,
+    "size": "11px",
+    "color": "rgb(89, 89, 89)",
+    "cls": "text-center text-[11px] text-[color:var("
+   }
+  ],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 76,
+  "name": "login-1440-light",
+  "path": "/login",
+  "width": 1440,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": null,
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 54,
+  "name": "privacy-390-dark",
+  "path": "/privacy",
+  "width": 390,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": null,
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 54,
+  "name": "privacy-390-light",
+  "path": "/privacy",
+  "width": 390,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": null,
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 54,
+  "name": "privacy-768-dark",
+  "path": "/privacy",
+  "width": 768,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": null,
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 54,
+  "name": "privacy-768-light",
+  "path": "/privacy",
+  "width": 768,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": null,
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 54,
+  "name": "privacy-1440-dark",
+  "path": "/privacy",
+  "width": 1440,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": null,
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 54,
+  "name": "privacy-1440-light",
+  "path": "/privacy",
+  "width": 1440,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": null,
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 53,
+  "name": "terms-390-dark",
+  "path": "/terms",
+  "width": 390,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": null,
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 53,
+  "name": "terms-390-light",
+  "path": "/terms",
+  "width": 390,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": null,
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 53,
+  "name": "terms-768-dark",
+  "path": "/terms",
+  "width": 768,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": null,
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 53,
+  "name": "terms-768-light",
+  "path": "/terms",
+  "width": 768,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": null,
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 53,
+  "name": "terms-1440-dark",
+  "path": "/terms",
+  "width": 1440,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": null,
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 53,
+  "name": "terms-1440-light",
+  "path": "/terms",
+  "width": 1440,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 21,
+  "name": "notfound-390-dark",
+  "path": "/definitely-not-a-route",
+  "width": 390,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 21,
+  "name": "notfound-390-light",
+  "path": "/definitely-not-a-route",
+  "width": 390,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 21,
+  "name": "notfound-768-dark",
+  "path": "/definitely-not-a-route",
+  "width": 768,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 21,
+  "name": "notfound-768-light",
+  "path": "/definitely-not-a-route",
+  "width": 768,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 21,
+  "name": "notfound-1440-dark",
+  "path": "/definitely-not-a-route",
+  "width": 1440,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 21,
+  "name": "notfound-1440-light",
+  "path": "/definitely-not-a-route",
+  "width": 1440,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 46,
+  "name": "checkout-390-dark",
+  "path": "/checkout?plan=pro",
+  "width": 390,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": false,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 46,
+  "name": "checkout-390-light",
+  "path": "/checkout?plan=pro",
+  "width": 390,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": false,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 46,
+  "name": "checkout-768-dark",
+  "path": "/checkout?plan=pro",
+  "width": 768,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": false,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 46,
+  "name": "checkout-768-light",
+  "path": "/checkout?plan=pro",
+  "width": 768,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": false,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 71,
+  "name": "checkout-1440-dark",
+  "path": "/checkout?plan=pro",
+  "width": 1440,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": false,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 71,
+  "name": "checkout-1440-light",
+  "path": "/checkout?plan=pro",
+  "width": 1440,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": false,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 54,
+  "name": "profile-390-dark",
+  "path": "/profile",
+  "width": 390,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 54,
+  "name": "profile-390-light",
+  "path": "/profile",
+  "width": 390,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 41,
+  "name": "profile-768-dark",
+  "path": "/profile",
+  "width": 768,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 41,
+  "name": "profile-768-light",
+  "path": "/profile",
+  "width": 768,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 41,
+  "name": "profile-1440-dark",
+  "path": "/profile",
+  "width": 1440,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 41,
+  "name": "profile-1440-light",
+  "path": "/profile",
+  "width": 1440,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 54,
+  "name": "account-390-dark",
+  "path": "/account",
+  "width": 390,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [
+   {
+    "text": "AI SPORTS BETTING",
+    "ratio": 1.07,
+    "color": "rgb(255, 255, 255)",
+    "cls": "font-black text-white tracking-wider tex"
+   },
+   {
+    "text": "Manage account",
+    "ratio": 1.07,
+    "color": "rgb(255, 255, 255)",
+    "cls": "text-base font-black text-white tracking"
+   },
+   {
+    "text": "@audit-user",
+    "ratio": 1.07,
+    "color": "rgb(255, 255, 255)",
+    "cls": "text-sm font-bold text-white"
+   }
+  ],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 54,
+  "name": "account-390-light",
+  "path": "/account",
+  "width": 390,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 38,
+  "name": "account-768-dark",
+  "path": "/account",
+  "width": 768,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [
+   {
+    "text": "AI SPORTS BETTING",
+    "ratio": 1.07,
+    "color": "rgb(255, 255, 255)",
+    "cls": "font-black text-white tracking-wider tex"
+   },
+   {
+    "text": "Manage account",
+    "ratio": 1.07,
+    "color": "rgb(255, 255, 255)",
+    "cls": "text-base font-black text-white tracking"
+   },
+   {
+    "text": "@audit-user",
+    "ratio": 1.07,
+    "color": "rgb(255, 255, 255)",
+    "cls": "text-sm font-bold text-white"
+   }
+  ],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 38,
+  "name": "account-768-light",
+  "path": "/account",
+  "width": 768,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 38,
+  "name": "account-1440-dark",
+  "path": "/account",
+  "width": 1440,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [
+   {
+    "text": "AI SPORTS BETTING",
+    "ratio": 1.07,
+    "color": "rgb(255, 255, 255)",
+    "cls": "font-black text-white tracking-wider tex"
+   },
+   {
+    "text": "Manage account",
+    "ratio": 1.07,
+    "color": "rgb(255, 255, 255)",
+    "cls": "text-base font-black text-white tracking"
+   },
+   {
+    "text": "@audit-user",
+    "ratio": 1.07,
+    "color": "rgb(255, 255, 255)",
+    "cls": "text-sm font-bold text-white"
+   }
+  ],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 38,
+  "name": "account-1440-light",
+  "path": "/account",
+  "width": 1440,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 194,
+  "name": "wc2026-390-dark",
+  "path": "/wc2026",
+  "width": 390,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 194,
+  "name": "wc2026-390-light",
+  "path": "/wc2026",
+  "width": 390,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 178,
+  "name": "wc2026-768-dark",
+  "path": "/wc2026",
+  "width": 768,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 178,
+  "name": "wc2026-768-light",
+  "path": "/wc2026",
+  "width": 768,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 178,
+  "name": "wc2026-1440-dark",
+  "path": "/wc2026",
+  "width": 1440,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 178,
+  "name": "wc2026-1440-light",
+  "path": "/wc2026",
+  "width": 1440,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 195,
+  "name": "admin-390-dark",
+  "path": "/admin",
+  "width": 390,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 195,
+  "name": "admin-390-light",
+  "path": "/admin",
+  "width": 390,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 182,
+  "name": "admin-768-dark",
+  "path": "/admin",
+  "width": 768,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 182,
+  "name": "admin-768-light",
+  "path": "/admin",
+  "width": 768,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 182,
+  "name": "admin-1440-dark",
+  "path": "/admin",
+  "width": 1440,
+  "theme": "dark",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 182,
+  "name": "admin-1440-light",
+  "path": "/admin",
+  "width": 1440,
+  "theme": "light",
+  "dpr": 2,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 1253,
+  "name": "feed-390-dark-dpr3",
+  "path": "/feed/model/mlb",
+  "width": 390,
+  "theme": "dark",
+  "dpr": 3,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": true,
+   "dataMode": "dark",
+   "bodyBg": "rgb(0, 0, 0)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 1339,
+  "name": "feed-1440-dark-dpr1",
+  "path": "/feed/model/mlb",
+  "width": 1440,
+  "theme": "dark",
+  "dpr": 1,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 1253,
+  "name": "feed-390-light-dpr3",
+  "path": "/feed/model/mlb",
+  "width": 390,
+  "theme": "light",
+  "dpr": 3,
+  "navOk": true,
+  "pageErrors": 0
+ },
+ {
+  "themeApplied": {
+   "htmlDark": false,
+   "dataMode": "light",
+   "bodyBg": "rgb(255, 255, 255)"
+  },
+  "overflowPx": 0,
+  "contrastFails": [],
+  "invisibleText": [],
+  "mintTextOnLight": [],
+  "brokenImages": 0,
+  "blankPage": false,
+  "visibleElements": 1339,
+  "name": "feed-1440-light-dpr1",
+  "path": "/feed/model/mlb",
+  "width": 1440,
+  "theme": "light",
+  "dpr": 1,
+  "navOk": true,
+  "pageErrors": 0
+ }
+]

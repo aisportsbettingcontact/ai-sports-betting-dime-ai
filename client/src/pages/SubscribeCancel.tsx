@@ -16,8 +16,7 @@ export default function SubscribeCancel() {
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center px-4"
-      style={{ background: "#000000" }}
+      className="min-h-screen flex items-center justify-center px-4 bg-black"
     >
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
