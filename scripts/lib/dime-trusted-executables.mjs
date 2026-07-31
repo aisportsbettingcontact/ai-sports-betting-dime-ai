@@ -74,17 +74,26 @@ async function verifyRootOwnedHashPin(name, executableSha256) {
   return "root-owned-immutable-sha256";
 }
 
-async function verifyOnePasswordSigningIdentity(path) {
-  if (process.platform !== "darwin") {
+export const ONE_PASSWORD_DESIGNATED_REQUIREMENT =
+  'identifier "com.1password.op" and anchor apple generic and certificate leaf[subject.OU] = "2BUA8C4S2C"';
+
+export async function verifyOnePasswordSigningIdentity(
+  path,
+  { runner = execFileAsync, platform = process.platform } = {}
+) {
+  invariant(
+    typeof path === "string" && isAbsolute(path),
+    "op signing identity path must be absolute"
+  );
+  if (platform !== "darwin") {
     throw new Error(
       "op execution is blocked: the reviewed macOS signing identity cannot be verified"
     );
   }
-  let output = "";
   try {
-    const result = await execFileAsync(
+    await runner(
       "/usr/bin/codesign",
-      ["-dv", "--verbose=4", path],
+      ["--verify", "--strict", "--verbose=4", path],
       {
         encoding: "utf8",
         timeout: 10_000,
@@ -93,15 +102,35 @@ async function verifyOnePasswordSigningIdentity(path) {
         env: fixedMinimalEnvironment(),
       }
     );
-    output = `${result.stdout ?? ""}\n${result.stderr ?? ""}`;
-  } catch (error) {
-    output = `${error?.stdout ?? ""}\n${error?.stderr ?? ""}`;
+  } catch {
+    throw new Error(
+      "op execution is blocked: cryptographic signature verification failed"
+    );
   }
-  invariant(
-    /^Identifier=com\.1password\.op$/m.test(output) &&
-      /^TeamIdentifier=2BUA8C4S2C$/m.test(output),
-    "op execution is blocked: signing identity mismatch"
-  );
+
+  try {
+    await runner(
+      "/usr/bin/codesign",
+      [
+        "--verify",
+        "--strict",
+        "--verbose=4",
+        `-R=${ONE_PASSWORD_DESIGNATED_REQUIREMENT}`,
+        path,
+      ],
+      {
+        encoding: "utf8",
+        timeout: 10_000,
+        maxBuffer: 64 * 1024,
+        windowsHide: true,
+        env: fixedMinimalEnvironment(),
+      }
+    );
+  } catch {
+    throw new Error(
+      "op execution is blocked: designated signing identity mismatch"
+    );
+  }
   return "developer-team-id:2BUA8C4S2C";
 }
 

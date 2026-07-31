@@ -39,6 +39,28 @@
   "0000000000000000000000000000000000000000000000000000000000000000"
 #endif
 
+#ifndef DIME_AUTH_APPLICATION_DIRECTORY
+#define DIME_AUTH_APPLICATION_DIRECTORY "/dev/null"
+#endif
+
+#ifndef DIME_AUTH_CLOSURE_MANIFEST
+#define DIME_AUTH_CLOSURE_MANIFEST "/dev/null"
+#endif
+
+#ifndef DIME_AUTH_CLOSURE_MANIFEST_SHA256
+#define DIME_AUTH_CLOSURE_MANIFEST_SHA256                                        \
+  "0000000000000000000000000000000000000000000000000000000000000000"
+#endif
+
+#ifndef DIME_AUTH_CLOSURE_PUBLIC_KEY
+#define DIME_AUTH_CLOSURE_PUBLIC_KEY "/dev/null"
+#endif
+
+#ifndef DIME_AUTH_CLOSURE_PUBLIC_KEY_SHA256
+#define DIME_AUTH_CLOSURE_PUBLIC_KEY_SHA256                                      \
+  "0000000000000000000000000000000000000000000000000000000000000000"
+#endif
+
 #ifndef DIME_RAILWAY_EXECUTABLE
 #define DIME_RAILWAY_EXECUTABLE "/usr/bin/false"
 #endif
@@ -136,6 +158,41 @@ static void executable_path(char output[PATH_MAX]) {
     fail_closed("unable to resolve broker executable identity");
 }
 
+static void verify_root_protected_ancestors(const char *path,
+                                            const char *failure_message) {
+  char ancestor[PATH_MAX];
+  if (path == NULL || strlcpy(ancestor, path, sizeof(ancestor)) >=
+                          sizeof(ancestor))
+    fail_closed(failure_message);
+  for (char *cursor = ancestor + 1; *cursor != '\0'; cursor++) {
+    if (*cursor != '/')
+      continue;
+    *cursor = '\0';
+    struct stat state;
+    bool protected =
+        lstat(ancestor, &state) == 0 && S_ISDIR(state.st_mode) &&
+        !S_ISLNK(state.st_mode) && state.st_uid == 0 &&
+        (state.st_mode & 0022) == 0;
+    *cursor = '/';
+    if (!protected)
+      fail_closed(failure_message);
+  }
+}
+
+static void verify_canonical_artifact(const char *path, mode_t expected_mode,
+                                      bool directory,
+                                      const char *failure_message) {
+  struct stat state;
+  char canonical[PATH_MAX];
+  if (path == NULL || path[0] != '/' || realpath(path, canonical) == NULL ||
+      strcmp(path, canonical) != 0 || lstat(path, &state) != 0 ||
+      S_ISLNK(state.st_mode) || state.st_uid != 0 ||
+      (state.st_mode & 07777) != expected_mode ||
+      (directory ? !S_ISDIR(state.st_mode) : !S_ISREG(state.st_mode)))
+    fail_closed(failure_message);
+  verify_root_protected_ancestors(path, failure_message);
+}
+
 static void verify_trusted_provenance(void) {
   struct stat directory_state;
   struct stat provenance_state;
@@ -182,21 +239,50 @@ static void verify_authentication_child(void) {
   char node_hash[65];
   char auth_hash[65];
   char railway_hash[65];
+  char closure_manifest_hash[65];
+  char closure_public_key_hash[65];
+  verify_canonical_artifact(
+      DIME_AUTH_APPLICATION_DIRECTORY, 0555, true,
+      "authentication application directory is not root-owned mode 0555");
+  verify_canonical_artifact(
+      DIME_NODE_EXECUTABLE, 0755, false,
+      "authentication Node executable is not root-owned mode 0755");
+  verify_canonical_artifact(
+      DIME_PRODUCTION_AUTH_SCRIPT, 0444, false,
+      "authentication bundle is not root-owned mode 0444");
+  verify_canonical_artifact(
+      DIME_AUTH_CLOSURE_MANIFEST, 0444, false,
+      "authentication closure manifest is not root-owned mode 0444");
+  verify_canonical_artifact(
+      DIME_AUTH_CLOSURE_PUBLIC_KEY, 0444, false,
+      "authentication closure public key is not root-owned mode 0444");
+  verify_canonical_artifact(
+      DIME_RAILWAY_EXECUTABLE, 0755, false,
+      "Railway executable is not root-owned mode 0755");
   sha256_file(DIME_NODE_EXECUTABLE, node_hash);
   sha256_file(DIME_PRODUCTION_AUTH_SCRIPT, auth_hash);
   sha256_file(DIME_RAILWAY_EXECUTABLE, railway_hash);
+  sha256_file(DIME_AUTH_CLOSURE_MANIFEST, closure_manifest_hash);
+  sha256_file(DIME_AUTH_CLOSURE_PUBLIC_KEY, closure_public_key_hash);
   bool matches =
       is_sha256_hex(DIME_NODE_SHA256) &&
       is_sha256_hex(DIME_PRODUCTION_AUTH_SHA256) &&
       is_sha256_hex(DIME_RAILWAY_SHA256) &&
+      is_sha256_hex(DIME_AUTH_CLOSURE_MANIFEST_SHA256) &&
+      is_sha256_hex(DIME_AUTH_CLOSURE_PUBLIC_KEY_SHA256) &&
       strcmp(node_hash, DIME_NODE_SHA256) == 0 &&
       strcmp(auth_hash, DIME_PRODUCTION_AUTH_SHA256) == 0 &&
-      strcmp(railway_hash, DIME_RAILWAY_SHA256) == 0;
+      strcmp(railway_hash, DIME_RAILWAY_SHA256) == 0 &&
+      strcmp(closure_manifest_hash, DIME_AUTH_CLOSURE_MANIFEST_SHA256) == 0 &&
+      strcmp(closure_public_key_hash, DIME_AUTH_CLOSURE_PUBLIC_KEY_SHA256) == 0;
   secure_zero(node_hash, sizeof(node_hash));
   secure_zero(auth_hash, sizeof(auth_hash));
   secure_zero(railway_hash, sizeof(railway_hash));
+  secure_zero(closure_manifest_hash, sizeof(closure_manifest_hash));
+  secure_zero(closure_public_key_hash, sizeof(closure_public_key_hash));
   if (!matches)
-    fail_closed("authentication child does not match compiled provenance");
+    fail_closed(
+        "authentication executable closure does not match compiled provenance");
 }
 
 static CFStringRef cf_string(const char *value) {
@@ -893,8 +979,67 @@ static void write_all(int descriptor, const char *value, size_t length) {
   }
 }
 
+static void append_authentication_environment(char **environment,
+                                              size_t *environment_count) {
+  const char *allowed[] = {"HOME", "TMPDIR", "USER", "LOGNAME", "LANG",
+                           "LC_ALL"};
+  const size_t allowed_count = sizeof(allowed) / sizeof(allowed[0]);
+  for (size_t index = 0; index < allowed_count; index++)
+    append_environment(environment, environment_count, allowed[index],
+                       getenv(allowed[index]));
+  append_environment(environment, environment_count, "PATH", "/usr/bin:/bin");
+}
+
+static void configure_authentication_child_actions(
+    posix_spawn_file_actions_t *actions, int *action_status) {
+  if (*action_status == 0)
+    *action_status = posix_spawn_file_actions_addchdir_np(
+        actions, DIME_AUTH_APPLICATION_DIRECTORY);
+}
+
+static void verify_authentication_closure_before_credentials(void) {
+  posix_spawn_file_actions_t actions;
+  int action_status = posix_spawn_file_actions_init(&actions);
+  bool actions_initialized = action_status == 0;
+  configure_authentication_child_actions(&actions, &action_status);
+  if (action_status == 0)
+    action_status = posix_spawn_file_actions_addopen(
+        &actions, STDOUT_FILENO, "/dev/null", O_WRONLY, 0);
+  if (action_status != 0) {
+    if (actions_initialized)
+      posix_spawn_file_actions_destroy(&actions);
+    fail_closed("unable to configure authentication closure preflight");
+  }
+
+  char *environment[MAX_CHILD_ENV] = {0};
+  size_t environment_count = 0;
+  append_authentication_environment(environment, &environment_count);
+  append_environment(environment, &environment_count,
+                     "DIME_BUNDLED_PRODUCTION_AUTH", "1");
+  append_environment(environment, &environment_count,
+                     "DIME_AUTH_CLOSURE_PREFLIGHT", "1");
+  environment[environment_count] = NULL;
+  char *arguments[] = {(char *)DIME_NODE_EXECUTABLE,
+                       (char *)DIME_PRODUCTION_AUTH_SCRIPT,
+                       "closure-preflight",
+                       "--broker-active",
+                       NULL};
+  pid_t child = 0;
+  int spawn_status = posix_spawn(&child, DIME_NODE_EXECUTABLE, &actions, NULL,
+                                 arguments, environment);
+  posix_spawn_file_actions_destroy(&actions);
+  for (size_t index = 0; index < environment_count; index++)
+    free(environment[index]);
+  if (spawn_status != 0)
+    fail_closed("unable to execute authentication closure preflight");
+  if (wait_for_child(child) != 0)
+    fail_closed(
+        "authentication closure preflight failed before credential retrieval");
+}
+
 static int execute_platform_auth(const char *role, bool headed) {
   verify_authentication_child();
+  verify_authentication_closure_before_credentials();
   umask(0077);
   size_t raw_length = 0;
   unsigned char *raw = capture_railway_variable_map(&raw_length);
@@ -917,6 +1062,7 @@ static int execute_platform_auth(const char *role, bool headed) {
   posix_spawn_file_actions_t actions;
   int action_status = posix_spawn_file_actions_init(&actions);
   bool actions_initialized = action_status == 0;
+  configure_authentication_child_actions(&actions, &action_status);
   if (action_status == 0)
     action_status =
         posix_spawn_file_actions_adddup2(&actions, input_pipe[0], STDIN_FILENO);
@@ -940,16 +1086,9 @@ static int execute_platform_auth(const char *role, bool headed) {
   snprintf(scope, sizeof(scope), "railway-platform-%s", role);
   char *environment[MAX_CHILD_ENV] = {0};
   size_t environment_count = 0;
-  append_environment(environment, &environment_count, "HOME", getenv("HOME"));
-  append_environment(environment, &environment_count, "TMPDIR",
-                     getenv("TMPDIR"));
-  append_environment(environment, &environment_count, "USER", getenv("USER"));
-  append_environment(environment, &environment_count, "LOGNAME",
-                     getenv("LOGNAME"));
-  append_environment(environment, &environment_count, "LANG", getenv("LANG"));
-  append_environment(environment, &environment_count, "LC_ALL",
-                     getenv("LC_ALL"));
-  append_environment(environment, &environment_count, "PATH", "/usr/bin:/bin");
+  append_authentication_environment(environment, &environment_count);
+  append_environment(environment, &environment_count,
+                     "DIME_BUNDLED_PRODUCTION_AUTH", "1");
   append_environment(environment, &environment_count,
                      "DIME_PLATFORM_CREDENTIAL_SOURCE", scope);
   environment[environment_count] = NULL;

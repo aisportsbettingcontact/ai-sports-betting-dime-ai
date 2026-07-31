@@ -87,31 +87,37 @@ def test_context_capsule_is_an_immutable_closed_snapshot_bound_to_foundation_evi
         "7ed09adb4fcdb9e2d9047e73e34f84c80d865b78"
     )
     assert capsule["parallel_tracks"]["track_f"]["pull_request"] == 251
-    assert capsule["parallel_tracks"]["track_f"]["state"] == "OPEN_DRAFT"
+    assert capsule["parallel_tracks"]["track_f"]["state"] == "MERGED"
     assert capsule["parallel_tracks"]["track_f"]["head_commit"] == (
         "9edff5ee4317cdce0b2a79e2fe78d2ff8c7d5916"
     )
+    assert capsule["parallel_tracks"]["track_f"]["merge_commit"] == (
+        "21f9375455728b604b9e5aca6b75a6439a9e2cff"
+    )
     assert capsule["parallel_tracks"]["track_f"]["required_checks"] == "PASS"
     assert capsule["parallel_tracks"]["track_e"]["pull_request"] == 252
-    assert capsule["parallel_tracks"]["track_e"]["state"] == "OPEN_DRAFT"
+    assert capsule["parallel_tracks"]["track_e"]["state"] == "MERGED"
     assert capsule["parallel_tracks"]["track_e"]["head_commit"] == (
-        "d420b4526b89ca649537180101be5633389e55f6"
+        "1b811e3c188a038e9008fe4d4ea92f92463b0cc2"
+    )
+    assert capsule["parallel_tracks"]["track_e"]["merge_commit"] == (
+        "62edd3e9af1730676ae0f7a4adfb5a8d600446b8"
     )
     assert capsule["parallel_tracks"]["track_e"]["required_checks"] == "PASS"
     assert capsule["parallel_tracks"]["track_e"]["answer_keys_present"] is False
+    assert capsule["parallel_tracks"]["track_e"]["answer_key_generation_scope_authorized"] is True
     assert capsule["parallel_tracks"]["runpod_gate_1"]["pull_request"] == 253
     assert capsule["parallel_tracks"]["runpod_gate_1"]["head_commit"] == (
-        "3e406ac273cafcaf9d85c19b591ca09fb802219e"
+        "c6eb3402f9574e400b4c5f9736f331ee082aeb33"
     )
     assert set(capsule["parallel_tracks"]["runpod_gate_1"]["checks"].values()) == {"PASS"}
     assert capsule["parallel_tracks"]["runpod_gate_1"]["effective_authorization"] is False
-    assert capsule["parallel_tracks"]["runpod_gate_1"]["review_required"] is True
-    assert capsule["parallel_tracks"]["runpod_gate_1"]["independent_approval"] is False
-    assert capsule["parallel_tracks"]["runpod_gate_1"]["merged"] is False
+    assert capsule["parallel_tracks"]["runpod_gate_1"]["independent_approval"] is True
+    assert capsule["parallel_tracks"]["runpod_gate_1"]["merged"] is True
     assert capsule["parallel_tracks"]["runpod_gate_1"]["deployed"] is False
     assert capsule["parallel_tracks"]["credential_execution_closure"]["pull_request"] == 255
     assert capsule["parallel_tracks"]["credential_execution_closure"]["head_commit"] == (
-        "2ca08f7756ecb33485d12bc0464e004f34c0e4c3"
+        "52f101b6433298cadd55836e971fe29afba818e0"
     )
     assert (
         capsule["parallel_tracks"]["credential_execution_closure"]["internal_reviewed_checkpoint"]
@@ -121,16 +127,13 @@ def test_context_capsule_is_an_immutable_closed_snapshot_bound_to_foundation_evi
         capsule["parallel_tracks"]["credential_execution_closure"]["effective_authorization"]
         is False
     )
-    assert capsule["parallel_tracks"]["credential_execution_closure"]["review_required"] is True
+    assert capsule["parallel_tracks"]["credential_execution_closure"]["required_checks"] == "PASS"
     assert (
-        capsule["parallel_tracks"]["credential_execution_closure"]["checks"]["dime_llm_validation"]
-        == "NOT_TRIGGERED_PATH_FILTER"
+        capsule["parallel_tracks"]["credential_execution_closure"]["independent_approval"] is True
     )
-    assert (
-        capsule["parallel_tracks"]["credential_execution_closure"]["checks"]["livelab"]
-        == "NOT_TRIGGERED_PATH_FILTER"
-    )
-    assert capsule["security_p1"]["status"] == "OPEN_REMEDIATION_REQUIRED"
+    assert capsule["parallel_tracks"]["credential_execution_closure"]["merged"] is True
+    assert capsule["parallel_tracks"]["credential_execution_closure"]["deployed"] is False
+    assert capsule["security_p1"]["status"] == ("MERGED_WITH_POST_MERGE_GOVERNANCE_EXCEPTION_OPEN")
     assert capsule["credential_execution_p1"]["status"] == "BLOCKED_ROOT_TRUST_UNPROVISIONED"
     assert capsule["credential_execution_p1"]["root_trust_provisioned"] is False
     assert capsule["runpod_gate_1"]["authorization"] == "NONE"
