@@ -7,6 +7,7 @@
  * admin "Subscription Plans" dashboard.
  */
 import { z } from "zod";
+import { isPlanFeatureKey, PLAN_FEATURE_KEYS } from "../../shared/planFeatures";
 import { TRPCError } from "@trpc/server";
 import { sql, and, eq, isNotNull } from "drizzle-orm";
 import { ownerProcedure } from "./appUsers";
@@ -29,6 +30,7 @@ import {
   deletePlan,
   isProvisioningTestMode,
   getProvisioningStripe,
+  setPlanFeatures,
 } from "../stripe/planProvisioning";
 import { backfillStaticPlans } from "../stripe/backfillPlans";
 
@@ -89,6 +91,14 @@ const restockSchema = z.object({
   restockAmount: z.number().int().min(1).nullable(),
 });
 
+/**
+ * Feature keys are validated against the shared catalog rather than accepted as
+ * free strings, so a typo cannot persist a key the admin picker can never render.
+ */
+const planFeaturesSchema = z
+  .array(z.string().refine(isPlanFeatureKey, { message: "unknown feature key" }))
+  .max(PLAN_FEATURE_KEYS.length);
+
 const newPlanSchema = z.object({
   name: z.string().min(1).max(120),
   description: z.string().max(2000).optional(),
@@ -97,6 +107,7 @@ const newPlanSchema = z.object({
   prices: z.array(priceSchema).min(1).max(12),
   maxSubscribers: z.number().int().min(1).nullable().optional(),
   restock: restockSchema.nullable().optional(),
+  features: planFeaturesSchema.optional(),
 });
 
 export const subscriptionPlansRouter = router({
@@ -113,8 +124,12 @@ export const subscriptionPlansRouter = router({
   create: ownerProcedure.input(newPlanSchema).mutation(async ({ input }) => {
     const tag = "[tRPC][subscriptionPlans.create]";
     console.log(`${tag} [INPUT] name="${input.name}" intervals=${input.prices.length} restock=${input.restock?.autoRestock ?? false}`);
-    const result = await provisionPlan(input);
-    console.log(`${tag} [OUTPUT] slug=${result.slug} product=${result.stripeProductId} default=${result.stripePriceId}`);
+    const { features, ...planInput } = input;
+    const result = await provisionPlan(planInput);
+    if (features && features.length > 0) {
+      await setPlanFeatures(result.planId, features);
+    }
+    console.log(`${tag} [OUTPUT] slug=${result.slug} product=${result.stripeProductId} default=${result.stripePriceId} features=${features?.length ?? 0}`);
     return result;
   }),
 
@@ -177,6 +192,38 @@ export const subscriptionPlansRouter = router({
       const { planId, ...patch } = input;
       await updatePlanMeta(planId, patch);
       return { ok: true };
+    }),
+
+  /**
+   * Edit an existing plan from the admin Edit dialog: metadata + features in one
+   * call, so a single Save cannot half-apply.
+   *
+   * Prices are deliberately NOT editable here — Stripe Prices are immutable once
+   * created, so changing an amount means minting a new Price and retiring the old
+   * one. That is what addInterval/removeInterval/reorderIntervals exist for, and
+   * folding it into a metadata save would silently re-price live subscribers.
+   */
+  update: ownerProcedure
+    .input(
+      z.object({
+        planId: z.number().int().positive(),
+        name: z.string().min(1).max(120).optional(),
+        description: z.string().max(2000).nullable().optional(),
+        maxSubscribers: z.number().int().min(1).nullable().optional(),
+        features: planFeaturesSchema.optional(),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      const tag = "[tRPC][subscriptionPlans.update]";
+      const { planId, features, ...patch } = input;
+      console.log(`${tag} [INPUT] planId=${planId} fields=${Object.keys(patch).join(",") || "(none)"} features=${features ? features.length : "unchanged"}`);
+      if (Object.keys(patch).length > 0) {
+        await updatePlanMeta(planId, patch);
+      }
+      const applied = features !== undefined ? await setPlanFeatures(planId, features) : undefined;
+      console.log(`${tag} [OUTPUT] planId=${planId} features=${applied ? applied.join("|") : "unchanged"}`);
+      console.log(`${tag} [VERIFY] PASS`);
+      return { ok: true as const, planId, features: applied };
     }),
 
   /** Archive a plan — deactivates its Stripe Product + marks the row inactive. */

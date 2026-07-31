@@ -12,12 +12,15 @@
  * in-process (60s TTL) and invalidated by the provisioning service on any write.
  */
 import { getDb } from "../db";
+import { normalizePlanFeatures, type PlanFeatureKey } from "../../shared/planFeatures";
 import { withCircuitBreaker } from "../dbCircuitBreaker";
 import {
   subscriptionPlans,
   planPrices,
+  planFeatures,
   type SubscriptionPlan,
   type PlanPrice,
+  type PlanFeature,
 } from "../../drizzle/schema";
 
 const TAG = "[Stripe][PlanStore]";
@@ -69,6 +72,12 @@ export interface StoredPlan {
   discordRoleId: string | null;
   telegramChatId: string | null;
   livemode: boolean;
+  /**
+   * Selected feature keys in canonical order (see shared/planFeatures.ts).
+   * Sourced from the indexed `plan_features` join table rather than a JSON blob
+   * so "which plans include X?" stays a queryable, indexed lookup.
+   */
+  features: PlanFeatureKey[];
   prices: StoredPrice[];
 }
 
@@ -166,6 +175,13 @@ async function loadAllPlans(): Promise<StoredPlan[]> {
     return await withCircuitBreaker(async () => {
       const planRows = (await db.select().from(subscriptionPlans)) as SubscriptionPlan[];
       const priceRows = (await db.select().from(planPrices)) as PlanPrice[];
+      const featureRows = (await db.select().from(planFeatures)) as PlanFeature[];
+      const featuresByPlan = new Map<number, Array<{ key: string; sortOrder: number }>>();
+      for (const fr of featureRows) {
+        const arr = featuresByPlan.get(fr.planId) ?? [];
+        arr.push({ key: fr.featureKey, sortOrder: fr.sortOrder });
+        featuresByPlan.set(fr.planId, arr);
+      }
       const byPlan = new Map<number, StoredPrice[]>();
       for (const pr of priceRows) {
         const arr = byPlan.get(pr.planId) ?? [];
@@ -189,6 +205,13 @@ async function loadAllPlans(): Promise<StoredPlan[]> {
         discordRoleId: p.discordRoleId ?? null,
         telegramChatId: p.telegramChatId ?? null,
         livemode: p.livemode,
+        // normalize drops any key retired from shared/planFeatures.ts, so a
+        // stale row renders as absent rather than as an unknown chip.
+        features: normalizePlanFeatures(
+          (featuresByPlan.get(p.id) ?? [])
+            .sort((a, b) => a.sortOrder - b.sortOrder)
+            .map((f) => f.key)
+        ),
         prices: (byPlan.get(p.id) ?? []).sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id),
       }));
     });
