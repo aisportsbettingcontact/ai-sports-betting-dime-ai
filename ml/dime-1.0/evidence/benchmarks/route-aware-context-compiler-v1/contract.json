@@ -1,0 +1,83 @@
+{
+  "schema_version": "dime-route-aware-context-compiler-evidence-v1",
+  "baseline_merge_sha": "7ed09adb4fcdb9e2d9047e73e34f84c80d865b78",
+  "status": "PASS_OFFLINE_NOT_ACTIVATED",
+  "implementation": {
+    "compiler_version": "dime-route-aware-context-compiler-v1",
+    "config_path": "ml/dime-1.0/configs/route_context_compiler_v1.json",
+    "schema_path": "ml/dime-1.0/schemas/route_context_compiler_v1.schema.json",
+    "runtime_integration": false
+  },
+  "source_identities": {
+    "server/_core/dimeContextCompiler.ts": "ee5bcc748fe5ac99d49352031b6cd1baa53a8456af8f471cad4c5d93c8feaae3",
+    "server/_core/dimeContextCompiler.test.ts": "5260f8fdbab93f19354b263c31fe6fac8a532c8ac0c792635778551632c2ffcd",
+    "ml/dime-1.0/configs/route_context_compiler_v1.json": "6f05caa5b7f35914ceaff592cc5b52114407612707ce1b869ac891e436a59067",
+    "ml/dime-1.0/schemas/route_context_compiler_v1.schema.json": "c3a91bd7544cc14a487c6b443d0a07445453f037a4dff469d18a12c83d61665d",
+    "ml/dime-1.0/tests/test_route_context_compiler_v1.py": "f9bfa173970490f2f33de653783a914c2039f4228e2760ca78da01acdf579cb0",
+    "docs/runbooks/2026-07-30-dime-route-aware-context-compiler-v1.md": "829c59425283ef3ec192fe38ce5cdcf562f54eef8373d4f90330e70f886ae6ea"
+  },
+  "acceptance": {
+    "critical_fact_recall": 1.0,
+    "route_policy_violations": 0,
+    "duplicate_context_rate_maximum": 0.02,
+    "irrelevant_context_rate_maximum": 0.05,
+    "silent_context_truncations": 0,
+    "token_measurement_status": "STRUCTURAL_ESTIMATE_NOT_MODEL_EXACT"
+  },
+  "verification": {
+    "targeted_typescript_tests": {
+      "status": "PASS",
+      "tests_passed": 20
+    },
+    "typescript_check": {
+      "status": "PASS"
+    },
+    "production_build": {
+      "status": "PASS",
+      "preview_activation_check": "PASS"
+    },
+    "python_schema_tests": {
+      "status": "PASS",
+      "tests_passed": 3
+    },
+    "python_full_regression": {
+      "status": "PASS",
+      "tests_passed": 1107
+    },
+    "python_lint": {
+      "ruff_check": "PASS",
+      "ruff_format_check": "PASS",
+      "files_checked": 145
+    },
+    "unscoped_node_regression": {
+      "status": "ENVIRONMENT_BLOCKED_NOT_A_CODE_ACCEPTANCE_GATE",
+      "tests_passed": 2660,
+      "tests_failed": 65,
+      "tests_skipped": 5,
+      "failure_classes": [
+        "local database unavailable",
+        "service credentials intentionally unavailable",
+        "Playwright or local network binding unavailable in sandbox"
+      ],
+      "credential_bearing_retry_performed": false
+    }
+  },
+  "authorizations": {
+    "runtime_integration": false,
+    "provider_execution": false,
+    "deployment": false,
+    "tracing": false,
+    "shadow_traffic": false,
+    "route_activation": false,
+    "model_download": false,
+    "evaluation_execution": false,
+    "training": false
+  },
+  "sensitive_material": {
+    "credentials": false,
+    "raw_prompts_or_responses": false,
+    "private_foundation_records": false,
+    "answer_keys": false,
+    "production_data": false
+  }
+}
