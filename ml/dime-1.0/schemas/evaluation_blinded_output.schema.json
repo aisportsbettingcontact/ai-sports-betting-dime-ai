@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dime.internal/schemas/evaluation_blinded_output.schema.json",
+  "title": "Dime Private Blinded Evaluation Output v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "output_id",
+    "layer",
+    "semantic_record_sha256",
+    "blind_id",
+    "assistant_output",
+    "tool_trace",
+    "output_receipt_sha256",
+    "generated_at",
+    "privacy"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "dime-private-evaluation-blinded-output-v1"
+    },
+    "output_id": {
+      "type": "string",
+      "pattern": "^dime-output-[a-z0-9][a-z0-9-]{7,95}$"
+    },
+    "layer": {
+      "enum": [
+        "development",
+        "critical",
+        "locked",
+        "general_regression"
+      ]
+    },
+    "semantic_record_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "blind_id": {
+      "type": "string",
+      "pattern": "^blind-[a-f0-9]{32}$"
+    },
+    "assistant_output": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 65536
+    },
+    "tool_trace": {
+      "type": "array",
+      "maxItems": 64,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "tool_name",
+          "state",
+          "arguments_sha256",
+          "result_sha256"
+        ],
+        "properties": {
+          "tool_name": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{1,63}$"
+          },
+          "state": {
+            "enum": [
+              "skipped",
+              "success",
+              "empty",
+              "failure",
+              "timeout",
+              "stale",
+              "malformed",
+              "conflicting",
+              "rejected"
+            ]
+          },
+          "arguments_sha256": {
+            "$ref": "#/$defs/nullable_sha256"
+          },
+          "result_sha256": {
+            "$ref": "#/$defs/nullable_sha256"
+          }
+        }
+      }
+    },
+    "output_receipt_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "privacy": {
+      "const": {
+        "provider_identity_included": false,
+        "model_identity_included": false,
+        "answer_key_material_included": false,
+        "semantic_case_content_included": false
+      }
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "nullable_sha256": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/sha256"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  }
+}

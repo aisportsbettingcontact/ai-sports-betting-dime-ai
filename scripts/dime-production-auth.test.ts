@@ -152,4 +152,16 @@ test("production auth source pins the origin, identity endpoint, selectors, and 
   assert.equal(source.includes('"shell"'), false);
   assert.equal(source.includes('"run"'), false);
   assert.equal(source.includes("console.log(expected.password)"), false);
+  assert.match(source, /verifyAuthenticationClosure/);
+  assert.match(source, /executablePath: browserExecutablePath/);
+  assert.equal(
+    source.includes("channel: manifest.platform.browserChannel"),
+    false
+  );
+  assert.ok(
+    source.indexOf("const closure = await verifyAuthenticationClosure();") <
+      source.indexOf(
+        "const environment = await readPrivateCredentialInput(names);"
+      )
+  );
 });

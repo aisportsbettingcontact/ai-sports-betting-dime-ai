@@ -17,4 +17,3 @@ Requirements:
 - Preserve the original draft and critic evidence; emit a new immutable draft.
 - Keep reasoning private; emit only the repaired record and bound receipt.
 - The repair generator must not critique or approve its repaired record.
-

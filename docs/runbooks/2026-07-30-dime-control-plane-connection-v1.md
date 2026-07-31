@@ -120,6 +120,13 @@ same-user install or ad-hoc signature cannot authorize credential access.
 Candidate generation writes `dime-railway-keychain.candidate` and leaves the
 active broker unchanged. An independently administered promotion must install
 the reviewed candidate and matching root-owned pin as one controlled action.
+For platform authentication, promotion must additionally install the
+root-owned mode-`0555` v2 authentication application, its deterministic bundled
+entrypoint, closed Playwright package tree and exact configuration, plus the
+root-owned Ed25519 public key and signed closure manifest. The broker compiles
+the exact manifest and public-key hashes and runs the signed full-closure
+preflight before Railway variable retrieval. A top-level script hash is not an
+authentication trust boundary.
 Railway CLI subprocesses receive a separate mode-`0700` broker home, preventing
 them from reading or repopulating the user's normal `~/.railway` state.
 `~/.railway/config.json` is retained only as a non-secret CLI configuration
