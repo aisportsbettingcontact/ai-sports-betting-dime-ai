@@ -2,7 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { parse as parseCookieHeader } from "cookie";
-import { publicProcedure, router, stripeProcedure } from "../_core/trpc";
+import { publicProcedure, router, stripeProcedure, csrfOriginCheck } from "../_core/trpc";
 import { getSessionCookieOptions } from "../_core/cookies";
 import { SignJWT, jwtVerify } from "jose";
 import { ENV } from "../_core/env";
@@ -227,7 +227,16 @@ export const appUserProcedure = publicProcedure.use(async ({ ctx, next }) => {
  *   - app_session JWT cookie validation (tokenVersion + expiry checks)
  *   - Stripe HMAC-SHA256 webhook signature verification
  */
-export const stripeAppUserProcedure = stripeProcedure.use(async ({ ctx, next }) => {
+/**
+ * AUTH-003: cookie-authenticated Stripe mutations (createCheckoutSession,
+ * cancelSubscription, reactivateSubscription) are always invoked from our own
+ * pages, so the CSRF origin check belongs here. The base `stripeProcedure` is
+ * origin-exempt for genuinely cross-origin callers; that exemption was never
+ * meant to cover browser-driven mutations carrying the session cookie, which is
+ * `SameSite=None` in production. A missing Origin header is still allowed, so
+ * server-to-server callers are unaffected.
+ */
+export const stripeAppUserProcedure = stripeProcedure.use(csrfOriginCheck).use(async ({ ctx, next }) => {
   const token = getAppCookie(ctx.req);
   if (!token) {
     console.log(`[AppAuth] stripeAppUserProcedure: REJECTED — no app_session cookie`);

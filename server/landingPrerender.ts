@@ -192,7 +192,6 @@ a:focus-visible,.site-header a:focus-visible{outline:2px solid #45E0A8;outline-o
 <li>Your subscription renews automatically unless cancelled before the renewal date.</li>
 <li>Cancellation takes effect at the end of the current billing period. No prorated refunds are issued for partial periods.</li>
 <li>We reserve the right to modify pricing with 30 days advance notice. Existing subscribers retain their current rate until the next renewal cycle after the notice period.</li>
-<li>AI credit allocations (DIME credits) are included with your subscription tier. Unused credits do not roll over between billing periods.</li>
 </ul>
 
 <h2>4. Acceptable Use</h2>
@@ -352,9 +351,9 @@ td b{color:var(--text);font-weight:700}
   <p class="lead">No picks packages. No units sold. Software pricing for disciplined market evaluation.</p>
   <div class="grid">
     <div class="card"><div class="mono">Free Preview</div><div class="price">$0</div><div class="per">On-page demos</div><p>Explore the Market Console and Dime Chat demos on this page.</p></div>
-    <div class="card"><div class="mono">Pro</div><div class="price">$99</div><div class="per">per month &mdash; &asymp;$3.30/day &middot; cancel anytime</div><p>Full projections board, Standard + Pro Analyst chat, 1,000 AI Analyst credits / month.</p><p><a class="cta" style="margin-top:12px" href="/checkout?plan=pro">Start Pro</a></p></div>
-    <div class="card"><div class="mono">Sharp</div><div class="price">$249</div><div class="per">per month &mdash; &asymp;$8.30/day &middot; cancel anytime</div><p>Everything in Pro, MAX Analyst access (monthly cap), 3,000 AI Analyst credits / month.</p><p><a class="cta" style="margin-top:12px" href="/checkout?plan=sharp">Start Sharp</a></p></div>
-    <div class="card"><div class="mono">Operator</div><div class="price">$499</div><div class="per">per month &mdash; &asymp;$16.63/day &middot; cancel anytime</div><p>Everything in Sharp, full MAX Analyst access (no cap), 8,000 AI Analyst credits / month.</p><p><a class="cta" style="margin-top:12px" href="/checkout?plan=operator">Start Operator</a></p></div>
+    <div class="card"><div class="mono">Pro</div><div class="price">$99</div><div class="per">per month &mdash; &asymp;$3.30/day &middot; cancel anytime</div><p>Full projections board, Standard + Pro Analyst chat.</p><p><a class="cta" style="margin-top:12px" href="/checkout?plan=pro">Start Pro</a></p></div>
+    <div class="card"><div class="mono">Sharp</div><div class="price">$249</div><div class="per">per month &mdash; &asymp;$8.30/day &middot; cancel anytime</div><p>Everything in Pro, MAX Analyst access (monthly cap).</p><p><a class="cta" style="margin-top:12px" href="/checkout?plan=sharp">Start Sharp</a></p></div>
+    <div class="card"><div class="mono">Operator</div><div class="price">$499</div><div class="per">per month &mdash; &asymp;$16.63/day &middot; cancel anytime</div><p>Everything in Sharp, full MAX Analyst access (no cap).</p><p><a class="cta" style="margin-top:12px" href="/checkout?plan=operator">Start Operator</a></p></div>
   </div>
   <div class="grid" style="margin-top:20px">
     <div class="card"><div class="mono">Founder</div><div class="price">By application</div><div class="per">Limited</div><p>Controlled access for serious operators. Application reviewed manually.</p></div>

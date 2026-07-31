@@ -1,0 +1,280 @@
+name: DB Stripe hardening (additive, one-shot)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# STRIPE PRODUCTION-HARDENING MIGRATION — ADDITIVE ONLY.
+#
+# RUN THIS BEFORE THE CORRESPONDING CODE DEPLOY. The webhook idempotency ledger,
+# the entitlement audit trail, and the out-of-order guard columns must exist in
+# production before any code that writes them ships, or every Stripe webhook
+# delivery fails on a missing table/column.
+#
+# WHY NOT db-push.yml: production TiDB has drifted from the repo (124 applied
+# migrations vs 121 journal entries) and four schema-declared indexes are absent
+# in production. `drizzle-kit generate` diffs against drizzle's META SNAPSHOTS,
+# which do not describe the live database, so it emits colliding CREATE TABLEs.
+# This workflow therefore follows the db-add-plan-columns.yml precedent: a FIXED
+# (not free-text) set of idempotent statements, applied directly.
+#
+# WHAT IT DOES — all additive:
+#   1. CREATE TABLE IF NOT EXISTS stripe_webhook_events   (idempotency ledger)
+#   2. CREATE TABLE IF NOT EXISTS entitlement_events      (money-event audit)
+#   3. ALTER TABLE app_users ADD COLUMN IF NOT EXISTS
+#        pendingSetupExpiresAt, stripeSubscriptionStatus, lastStripeEventAt
+#   4. CREATE UNIQUE INDEX (guarded) on
+#        app_users.stripeCustomerId, app_users.stripeSubscriptionId,
+#        app_users.pendingStripeSessionId, plan_prices.stripePriceId
+#
+# WHAT IT NEVER DOES: no DROP, no destructive ALTER, no UPDATE/DELETE/INSERT of
+# row data, no user-supplied SQL (so it is not an injection surface — same
+# posture as the read-only db-query.yml).
+#
+# INDEX IDEMPOTENCE: TiDB does not accept `CREATE UNIQUE INDEX IF NOT EXISTS` on
+# all versions (and db-add-plan-columns.yml never needed it — it only added
+# columns). Every unique index here is therefore guarded by a SELECT against
+# information_schema.STATISTICS and created only when absent, so re-running is
+# safe. Each guard ALSO re-verifies 0 duplicate non-NULL values first and aborts
+# rather than letting CREATE UNIQUE INDEX fail mid-flight. All four indexed
+# columns are nullable and MySQL/TiDB permit unlimited NULLs in a unique index.
+#
+# DELIBERATELY OUT OF SCOPE (each needs its own owner-authorized migration):
+#   - Promoting dime_credit_ledger.idx_credit_request to UNIQUE: that requires
+#     DROP INDEX + CREATE UNIQUE INDEX, which is not additive.
+#   - Dropping the now-redundant non-unique plan_prices_stripe_price_id_idx.
+#   - Backfilling the four repo-declared indexes missing in production
+#     (app_users_discord_id_unique, app_users_manual_discord_id_unique,
+#     plan_prices_plan_id_idx, subscription_plans_slug_idx) — their duplicate
+#     counts have not been verified, so creating them here could fail.
+# ─────────────────────────────────────────────────────────────────────────────
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type HARDEN to apply'
+        required: true
+        default: ''
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: db-stripe-hardening
+  cancel-in-progress: false
+
+jobs:
+  harden:
+    name: Apply additive Stripe hardening DDL
+    runs-on: ubuntu-latest
+    steps:
+      - name: Guard — require typed confirmation
+        if: ${{ inputs.confirm != 'HARDEN' }}
+        run: |
+          echo "::error::Type HARDEN in the confirm input to apply."
+          exit 1
+
+      - name: Install MySQL client
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq mysql-client
+
+      - name: Build client config from DATABASE_URL (secret never printed)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          python3 - <<'PY'
+          import os, urllib.parse, stat
+          u = urllib.parse.urlparse(os.environ["DATABASE_URL"])
+          if not u.hostname:
+              raise SystemExit("DATABASE_URL is not a valid mysql:// URL")
+          db = (u.path or "/").lstrip("/")
+          if not db:
+              raise SystemExit("DATABASE_URL has no database name in its path")
+          cnf = (
+              "[client]\n"
+              f"host={u.hostname}\n"
+              f"port={u.port or 4000}\n"
+              f"user={urllib.parse.unquote(u.username or '')}\n"
+              f"password={urllib.parse.unquote(u.password or '')}\n"
+              f"database={db}\n"
+              # TiDB Serverless mandates TLS.
+              "ssl-mode=REQUIRED\n"
+          )
+          with open("client.cnf", "w") as f:
+              f.write(cnf)
+          os.chmod("client.cnf", stat.S_IRUSR | stat.S_IWUSR)  # 600
+          print(f"client.cnf written: host={u.hostname} port={u.port or 4000} db={db} (password omitted)")
+          PY
+
+      - name: BEFORE — current state of the targets
+        run: |
+          set -euo pipefail
+          echo "===== BEFORE: do the new tables exist? ====="
+          mysql --defaults-extra-file=client.cnf -t -e "
+            SELECT table_name FROM information_schema.tables
+            WHERE table_schema = DATABASE()
+              AND table_name IN ('stripe_webhook_events','entitlement_events')
+            ORDER BY table_name;"
+
+          echo "===== BEFORE: which of the 3 app_users columns already exist ====="
+          mysql --defaults-extra-file=client.cnf -t -e "
+            SELECT column_name, column_type, is_nullable FROM information_schema.columns
+            WHERE table_schema = DATABASE() AND table_name = 'app_users'
+              AND column_name IN ('pendingSetupExpiresAt','stripeSubscriptionStatus','lastStripeEventAt')
+            ORDER BY column_name;"
+
+          echo "===== BEFORE: which of the 4 unique indexes already exist ====="
+          mysql --defaults-extra-file=client.cnf -t -e "
+            SELECT table_name, index_name, non_unique FROM information_schema.STATISTICS
+            WHERE table_schema = DATABASE() AND index_name IN (
+              'app_users_stripe_customer_id_unique',
+              'app_users_stripe_subscription_id_unique',
+              'app_users_pending_stripe_session_id_unique',
+              'plan_prices_stripe_price_id_unique')
+            ORDER BY table_name, index_name;"
+
+      - name: Create idempotency + audit tables (IF NOT EXISTS)
+        run: |
+          set -euo pipefail
+
+          echo "===== APPLY: stripe_webhook_events (Stripe event idempotency ledger) ====="
+          mysql --defaults-extra-file=client.cnf -e "
+            CREATE TABLE IF NOT EXISTS stripe_webhook_events (
+              id int NOT NULL AUTO_INCREMENT,
+              stripeEventId varchar(255) NOT NULL,
+              eventType varchar(64) NOT NULL,
+              livemode boolean NOT NULL DEFAULT false,
+              eventCreatedAt bigint NULL,
+              processedAt bigint NOT NULL,
+              status varchar(16) NOT NULL DEFAULT 'processed',
+              PRIMARY KEY (id),
+              UNIQUE KEY stripe_webhook_events_event_id_unique (stripeEventId),
+              KEY stripe_webhook_events_event_type_idx (eventType)
+            );"
+
+          echo "===== APPLY: entitlement_events (durable money-event audit trail) ====="
+          mysql --defaults-extra-file=client.cnf -e "
+            CREATE TABLE IF NOT EXISTS entitlement_events (
+              id int NOT NULL AUTO_INCREMENT,
+              userId int NOT NULL,
+              stripeEventId varchar(255) NULL,
+              eventType varchar(64) NOT NULL,
+              reason varchar(64) NOT NULL,
+              actor varchar(64) NOT NULL DEFAULT 'webhook',
+              beforeHasAccess boolean NULL,
+              afterHasAccess boolean NULL,
+              beforePlanId varchar(64) NULL,
+              afterPlanId varchar(64) NULL,
+              beforeExpiryDate bigint NULL,
+              afterExpiryDate bigint NULL,
+              createdAt bigint NOT NULL,
+              PRIMARY KEY (id),
+              KEY entitlement_events_user_created_idx (userId, createdAt),
+              KEY entitlement_events_stripe_event_id_idx (stripeEventId)
+            );"
+
+      - name: Add app_users hardening columns (idempotent, all nullable)
+        run: |
+          set -euo pipefail
+          echo "===== APPLY: app_users (pending-setup expiry + Stripe status/ordering guard) ====="
+          mysql --defaults-extra-file=client.cnf -e "
+            ALTER TABLE app_users
+              ADD COLUMN IF NOT EXISTS pendingSetupExpiresAt bigint NULL,
+              ADD COLUMN IF NOT EXISTS stripeSubscriptionStatus varchar(32) NULL,
+              ADD COLUMN IF NOT EXISTS lastStripeEventAt bigint NULL;"
+
+      - name: Create unique indexes (guarded — existence + duplicate pre-check)
+        run: |
+          set -euo pipefail
+
+          q() { mysql --defaults-extra-file=client.cnf -N -e "$1"; }
+
+          # ensure_unique_index <table> <index_name> <column>
+          # Creates the unique index only when it is absent, and only after
+          # re-proving there are 0 duplicate non-NULL values. Never drops.
+          ensure_unique_index() {
+            tbl="$1"; idx="$2"; col="$3"
+
+            exists=$(q "SELECT COUNT(*) FROM information_schema.STATISTICS
+                        WHERE table_schema = DATABASE()
+                          AND table_name = '$tbl' AND index_name = '$idx';")
+            if [ "$exists" -gt 0 ]; then
+              echo "SKIP  $tbl.$idx already exists"
+              return 0
+            fi
+
+            dups=$(q "SELECT COUNT(*) FROM (
+                        SELECT $col FROM $tbl WHERE $col IS NOT NULL
+                        GROUP BY $col HAVING COUNT(*) > 1) d;")
+            if [ "$dups" -gt 0 ]; then
+              echo "::error::$tbl.$col has $dups duplicated non-NULL value(s) — refusing to create $idx. Resolve the duplicates first."
+              exit 1
+            fi
+
+            echo "CREATE $tbl.$idx ON ($col)  [0 duplicates verified]"
+            mysql --defaults-extra-file=client.cnf -e "CREATE UNIQUE INDEX $idx ON $tbl ($col);"
+          }
+
+          echo "===== APPLY: Stripe identity uniqueness ====="
+          ensure_unique_index app_users   app_users_stripe_customer_id_unique         stripeCustomerId
+          ensure_unique_index app_users   app_users_stripe_subscription_id_unique     stripeSubscriptionId
+          ensure_unique_index app_users   app_users_pending_stripe_session_id_unique  pendingStripeSessionId
+          ensure_unique_index plan_prices plan_prices_stripe_price_id_unique          stripePriceId
+
+      - name: AFTER — verify everything landed
+        run: |
+          set -euo pipefail
+
+          echo "===== AFTER: tables ====="
+          mysql --defaults-extra-file=client.cnf -t -e "
+            SELECT table_name FROM information_schema.tables
+            WHERE table_schema = DATABASE()
+              AND table_name IN ('stripe_webhook_events','entitlement_events')
+            ORDER BY table_name;"
+
+          echo "===== AFTER: app_users columns ====="
+          mysql --defaults-extra-file=client.cnf -t -e "
+            SELECT column_name, column_type, is_nullable, column_default
+            FROM information_schema.columns
+            WHERE table_schema = DATABASE() AND table_name = 'app_users'
+              AND column_name IN ('pendingSetupExpiresAt','stripeSubscriptionStatus','lastStripeEventAt')
+            ORDER BY column_name;"
+
+          echo "===== AFTER: unique indexes ====="
+          mysql --defaults-extra-file=client.cnf -t -e "
+            SELECT table_name, index_name, column_name, non_unique
+            FROM information_schema.STATISTICS
+            WHERE table_schema = DATABASE() AND index_name IN (
+              'app_users_stripe_customer_id_unique',
+              'app_users_stripe_subscription_id_unique',
+              'app_users_pending_stripe_session_id_unique',
+              'plan_prices_stripe_price_id_unique',
+              'stripe_webhook_events_event_id_unique')
+            ORDER BY table_name, index_name;"
+
+          TABLES=$(mysql --defaults-extra-file=client.cnf -N -e "
+            SELECT COUNT(*) FROM information_schema.tables
+            WHERE table_schema = DATABASE()
+              AND table_name IN ('stripe_webhook_events','entitlement_events');")
+          COLS=$(mysql --defaults-extra-file=client.cnf -N -e "
+            SELECT COUNT(*) FROM information_schema.columns
+            WHERE table_schema = DATABASE() AND table_name = 'app_users'
+              AND column_name IN ('pendingSetupExpiresAt','stripeSubscriptionStatus','lastStripeEventAt');")
+          # Count DISTINCT index names: a composite index has one row per column.
+          IDX=$(mysql --defaults-extra-file=client.cnf -N -e "
+            SELECT COUNT(DISTINCT index_name) FROM information_schema.STATISTICS
+            WHERE table_schema = DATABASE() AND non_unique = 0 AND index_name IN (
+              'app_users_stripe_customer_id_unique',
+              'app_users_stripe_subscription_id_unique',
+              'app_users_pending_stripe_session_id_unique',
+              'plan_prices_stripe_price_id_unique',
+              'stripe_webhook_events_event_id_unique');")
+
+          echo "tables: $TABLES / 2   app_users columns: $COLS / 3   unique indexes: $IDX / 5"
+          if [ "$TABLES" -lt 2 ] || [ "$COLS" -lt 3 ] || [ "$IDX" -lt 5 ]; then
+            echo "::error::Hardening incomplete — tables=$TABLES/2 columns=$COLS/3 uniqueIndexes=$IDX/5."
+            exit 1
+          fi
+          echo "Stripe hardening complete — safe to deploy the corresponding code."
+
+      - name: Cleanup
+        if: always()
+        run: rm -f client.cnf

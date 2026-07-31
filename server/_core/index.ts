@@ -564,13 +564,30 @@ async function startServer() {
       res.status(options.statusCode).json(options.message);
     },
   });
-  // Apply to both direct and batch tRPC calls
-  app.use("/api/trpc/stripe.publicCreateCheckoutSession", stripeCheckoutLimiter);
-  // Embedded (in-domain) checkout variant — same abuse surface, same limiter
-  app.use("/api/trpc/stripe.publicCreateEmbeddedCheckoutSession", stripeCheckoutLimiter);
-  // Identity attach (elements-mode username metadata) — public + hits Stripe API,
-  // same limiter class (per-path buckets via keyGenerator).
-  app.use("/api/trpc/stripe.publicAttachCheckoutIdentity", stripeCheckoutLimiter);
+  // Procedure-aware mounting (AUTH-004).
+  //
+  // These were previously mounted as Express path prefixes
+  // (`app.use("/api/trpc/stripe.publicCreateCheckoutSession", ...)`), which
+  // silently never fired: the client uses httpBatchLink, so a real batched call
+  // arrives as `/api/trpc/stripe.publicCreateCheckoutSession,stripe.publicGetConfig`
+  // and the comma breaks the prefix match. Appending any second procedure was
+  // enough to evade the limiter entirely — including for the rotating-IP probe
+  // abuse it was written for. We now parse the comma-separated procedure list
+  // and apply the limiter whenever ANY segment is rate-limited.
+  const RATE_LIMITED_PROCEDURES = new Set<string>([
+    "stripe.publicCreateCheckoutSession",
+    "stripe.publicCreateEmbeddedCheckoutSession",
+    "stripe.publicAttachCheckoutIdentity",
+    "stripe.getCheckoutSessionUser",
+    "stripe.completeAccountSetup",
+  ]);
+  app.use("/api/trpc", (req, res, next) => {
+    // req.path here is relative to the mount point, e.g. "/a.b,c.d"
+    const procedures = req.path.replace(/^\//, "").split(",").map((p) => p.trim()).filter(Boolean);
+    const hit = procedures.some((p) => RATE_LIMITED_PROCEDURES.has(p));
+    if (!hit) return next();
+    return stripeCheckoutLimiter(req, res, next);
+  });
 
   // ─── Waitlist submit rate limiter (DB-006 remediation) ────────────────────
   // Public form endpoint — 5 submissions per 15 minutes per IP.

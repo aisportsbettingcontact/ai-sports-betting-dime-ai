@@ -26,7 +26,8 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { parse as parseCookieHeader } from "cookie";
 import type { Request } from "express";
-import { router, stripeProcedure } from "../_core/trpc";
+import { router, stripeProcedure, isOriginAllowed, csrfOriginCheck } from "../_core/trpc";
+import { maskEmail as maskEmailForLog } from "../_core/billingAlerts";
 import { stripeAppUserProcedure } from "./appUsers";
 import type Stripe from "stripe";
 import { getStripe } from "../stripe/client";
@@ -44,6 +45,113 @@ import { signAppUserToken, verifyAppUserToken, APP_USER_COOKIE } from "./appUser
 import { getSessionCookieOptions } from "../_core/cookies";
 
 const TAG = "[tRPC][stripe]";
+
+/**
+ * Validate the client-supplied checkout `origin` (AUTH-002).
+ *
+ * This value is interpolated straight into Stripe's success_url / cancel_url /
+ * return_url. Unvalidated, anyone could mint a real checkout.stripe.com session
+ * whose post-payment redirect points at a host they control — and Stripe would
+ * hand them the paying victim's `{CHECKOUT_SESSION_ID}`, which is the bearer
+ * credential the account-setup flow accepts (AUTH-001). Reusing the same
+ * allowlist the CSRF middleware already applies keeps one source of truth.
+ */
+function assertAllowedOrigin(origin: string, procedure: string): string {
+  if (!isOriginAllowed(origin)) {
+    console.error(`${TAG}[${procedure}] [VERIFY] FAIL — rejected non-allowlisted origin="${origin}"`);
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Invalid request origin.",
+    });
+  }
+  return origin;
+}
+
+/**
+ * Stripe idempotency key (CHK-002). Stripe deduplicates create calls carrying
+ * the same key for 24h, so a client retry or a network-level replay reuses the
+ * original object instead of minting a second session/subscription mutation.
+ */
+function idempotencyKey(...parts: Array<string | number | null | undefined>): string {
+  return parts.filter((p) => p != null && p !== "").join(":").slice(0, 255);
+}
+
+/**
+ * Proof-of-payment gate for the post-checkout account-claim flow (AUTH-001).
+ *
+ * Both `getCheckoutSessionUser` and `completeAccountSetup` are unauthenticated
+ * and keyed solely on a Stripe Checkout Session id. Without this check, that id
+ * was a bearer credential: anyone holding one could read the buyer's identity
+ * and then set an arbitrary email + password on the account they had just paid
+ * for, receiving a 90-day session cookie. We now require the session to exist in
+ * Stripe AND to be paid, so a guessed, stale, or fabricated id is worthless.
+ *
+ * Skipped under vitest only: the suite seeds pending rows directly and has no
+ * Stripe credentials. `VITEST` is never set in the Railway runtime.
+ */
+async function assertCheckoutSessionPaid(sessionId: string, procedure: string): Promise<void> {
+  if (process.env.VITEST) {
+    console.log(`${TAG}[${procedure}] [STATE] VITEST — skipping Stripe session verification`);
+    return;
+  }
+  let session: Stripe.Checkout.Session;
+  try {
+    session = await getStripe().checkout.sessions.retrieve(sessionId);
+  } catch (err: unknown) {
+    console.error(`${TAG}[${procedure}] [VERIFY] FAIL — session not retrievable from Stripe: ${err instanceof Error ? err.message : String(err)}`);
+    throw new TRPCError({ code: "BAD_REQUEST", message: "This checkout link is not valid." });
+  }
+  if (session.payment_status !== "paid" && session.payment_status !== "no_payment_required") {
+    console.error(`${TAG}[${procedure}] [VERIFY] FAIL — payment_status=${session.payment_status}`);
+    throw new TRPCError({ code: "BAD_REQUEST", message: "This checkout link is not valid." });
+  }
+}
+
+/**
+ * The setup claim expires (AUTH-001). A pending account used to stay claimable
+ * forever; `pendingSetupExpiresAt` bounds it. NULL means a legacy row created
+ * before this column existed — those fall back to the same TTL measured from
+ * account creation where available, and are otherwise allowed through.
+ */
+function assertSetupClaimFresh(
+  user: { pendingSetupExpiresAt?: number | null },
+  procedure: string,
+): void {
+  const expiresAt = user.pendingSetupExpiresAt ?? null;
+  if (expiresAt != null && Date.now() > expiresAt) {
+    console.warn(`${TAG}[${procedure}] [VERIFY] FAIL — setup claim expired at ${new Date(expiresAt).toISOString()}`);
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "This setup link has expired. Please contact support to finish setting up your account.",
+    });
+  }
+}
+
+/**
+ * Per-session attempt limiter for the unauthenticated claim endpoints. Bounded
+ * map; entries expire with the claim TTL.
+ */
+const setupAttempts = new Map<string, { count: number; firstAt: number }>();
+const SETUP_ATTEMPT_LIMIT = 10;
+const SETUP_ATTEMPT_WINDOW_MS = 15 * 60 * 1000;
+function assertSetupAttemptAllowed(sessionId: string, procedure: string): void {
+  const now = Date.now();
+  if (setupAttempts.size > 5000) {
+    Array.from(setupAttempts.entries()).forEach(([k, v]) => {
+      if (now - v.firstAt > SETUP_ATTEMPT_WINDOW_MS) setupAttempts.delete(k);
+    });
+  }
+  const entry = setupAttempts.get(sessionId);
+  if (!entry || now - entry.firstAt > SETUP_ATTEMPT_WINDOW_MS) {
+    setupAttempts.set(sessionId, { count: 1, firstAt: now });
+    return;
+  }
+  entry.count += 1;
+  if (entry.count > SETUP_ATTEMPT_LIMIT) {
+    console.warn(`${TAG}[${procedure}] [VERIFY] FAIL — too many setup attempts for one session`);
+    throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: "Too many attempts. Please wait and try again." });
+  }
+}
 
 // ─── Input validation ─────────────────────────────────────────────────────────
 
@@ -73,7 +181,7 @@ function getAppSessionToken(req: Request): string | undefined {
  *
  * Same DB-resilient cache fallback as the other app-user middlewares.
  */
-const billingAppUserProcedure = stripeProcedure.use(async ({ ctx, next }) => {
+const billingAppUserProcedure = stripeProcedure.use(csrfOriginCheck).use(async ({ ctx, next }) => {
   const TAGB = "[AppAuth][billingAppUserProcedure]";
   const token = getAppSessionToken(ctx.req);
   if (!token) {
@@ -247,9 +355,10 @@ interface BuildSessionParams {
 }
 
 async function buildStripeCheckoutSession(params: BuildSessionParams) {
-  const { planId, origin, priceRowId, stripeCustomerId, prefillEmail, desiredUsername, userId } = params;
+  const { planId, origin: rawOrigin, priceRowId, stripeCustomerId, prefillEmail, desiredUsername, userId } = params;
+  const origin = assertAllowedOrigin(rawOrigin, "buildStripeCheckoutSession");
 
-  console.log(`${TAG}[buildStripeCheckoutSession] [INPUT] planId=${planId} priceRowId=${priceRowId ?? "(default)"} origin=${origin} userId=${userId ?? "anon"} prefillEmail=${prefillEmail ?? "(none)"} desiredUsername=${desiredUsername ?? "(none)"} stripeCustomerId=${stripeCustomerId ?? "(none)"}`);
+  console.log(`${TAG}[buildStripeCheckoutSession] [INPUT] planId=${planId} priceRowId=${priceRowId ?? "(default)"} origin=${origin} userId=${userId ?? "anon"} prefillEmail=${prefillEmail ? maskEmailForLog(prefillEmail) : "(none)"} desiredUsername=${desiredUsername ?? "(none)"} stripeCustomerId=${stripeCustomerId ?? "(none)"}`);
 
   // ── [STEP 1+2] Resolve price + auto-renewal disclosure ────────────────────
   // Legacy static plans use the exact existing env path; owner-created DB plans
@@ -292,7 +401,7 @@ async function buildStripeCheckoutSession(params: BuildSessionParams) {
     console.log(`${TAG}[buildStripeCheckoutSession] [STATE] reusing existing stripeCustomerId=${stripeCustomerId}`);
     customerParam = { customer: stripeCustomerId };
   } else if (prefillEmail) {
-    console.log(`${TAG}[buildStripeCheckoutSession] [STATE] prefilling customer_email=${prefillEmail}`);
+    console.log(`${TAG}[buildStripeCheckoutSession] [STATE] prefilling customer_email=${maskEmailForLog(prefillEmail)}`);
     customerParam = { customer_email: prefillEmail };
   } else {
     console.log(`${TAG}[buildStripeCheckoutSession] [STATE] no email or customer — Stripe will collect email on checkout page`);
@@ -341,6 +450,10 @@ async function buildStripeCheckoutSession(params: BuildSessionParams) {
       success_url: successUrl,
       cancel_url: cancelUrl,
       billing_address_collection: "auto",
+    }, {
+      // 1-minute bucket: collapses double-clicks and transport retries into one
+      // session, while still letting the same buyer start a fresh checkout later.
+      idempotencyKey: idempotencyKey("checkout", userId ?? "anon", planId, priceRowId ?? "default", Math.floor(Date.now() / 60_000)),
     });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -380,7 +493,8 @@ async function buildStripeCheckoutSession(params: BuildSessionParams) {
 // (sessions.update metadata) before confirm.
 
 async function buildEmbeddedCheckoutSession(params: BuildSessionParams) {
-  const { planId, origin, priceRowId, stripeCustomerId, prefillEmail, desiredUsername, userId } = params;
+  const { planId, origin: rawOrigin, priceRowId, stripeCustomerId, prefillEmail, desiredUsername, userId } = params;
+  const origin = assertAllowedOrigin(rawOrigin, "buildEmbeddedCheckoutSession");
 
   console.log(`${TAG}[buildEmbeddedCheckoutSession] [INPUT] planId=${planId} priceRowId=${priceRowId ?? "(default)"} origin=${origin} userId=${userId ?? "anon"}`);
 
@@ -429,6 +543,8 @@ async function buildEmbeddedCheckoutSession(params: BuildSessionParams) {
       // methods); the session_id lands on the same success page as always.
       return_url: `${origin}/subscribe/success?session_id={CHECKOUT_SESSION_ID}&plan=${planId}`,
       billing_address_collection: "auto",
+    }, {
+      idempotencyKey: idempotencyKey("checkout-embedded", userId ?? "anon", planId, priceRowId ?? "default", Math.floor(Date.now() / 60_000)),
     });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -644,7 +760,7 @@ export const stripeRouter = router({
       const { planId, origin } = input;
       const user = ctx.appUser;
 
-      console.log(`${TAG}[createCheckoutSession] [INPUT] userId=${user.id} email=${user.email} planId=${planId} origin=${origin}`);
+      console.log(`${TAG}[createCheckoutSession] [INPUT] userId=${user.id} email=${user.email ? maskEmailForLog(user.email) : "(none)"} planId=${planId} origin=${origin}`);
 
       // Duplicate-subscription guard: this procedure is only reachable by users
       // who already have access, so creating another subscription on the same
@@ -734,13 +850,18 @@ export const stripeRouter = router({
       }
 
       const stripe = getStripe();
-      const returnUrl = `${input.origin}/account`;
+      // Same allowlist as checkout — the portal return_url is equally
+      // attacker-directable if taken from the client unchecked (AUTH-002).
+      const portalOrigin = assertAllowedOrigin(input.origin, "createPortalSession");
+      const returnUrl = `${portalOrigin}/account`;
 
       let portalSession;
       try {
         portalSession = await stripe.billingPortal.sessions.create({
           customer: user.stripeCustomerId,
           return_url: returnUrl,
+        }, {
+          idempotencyKey: idempotencyKey("portal", user.id, Math.floor(Date.now() / 60_000)),
         });
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
@@ -763,9 +884,11 @@ export const stripeRouter = router({
    * Called by SubscribeSuccess page after redirect from Stripe.
    */
   getCheckoutSessionUser: stripeProcedure
-    .input(z.object({ sessionId: z.string().min(1) }))
+    .input(z.object({ sessionId: z.string().min(1).startsWith("cs_") }))
     .query(async ({ input }) => {
       console.log(`${TAG}[getCheckoutSessionUser] [INPUT] sessionId=${input.sessionId}`);
+      assertSetupAttemptAllowed(input.sessionId, "getCheckoutSessionUser");
+      await assertCheckoutSessionPaid(input.sessionId, "getCheckoutSessionUser");
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
 
@@ -779,6 +902,7 @@ export const stripeRouter = router({
         hasAccess: appUsers.hasAccess,
         stripePlanId: appUsers.stripePlanId,
         expiryDate: appUsers.expiryDate,
+        pendingSetupExpiresAt: appUsers.pendingSetupExpiresAt,
       }).from(appUsers).where(eq(appUsers.pendingStripeSessionId, input.sessionId)).limit(1);
 
       if (!rows.length) {
@@ -787,6 +911,7 @@ export const stripeRouter = router({
       }
 
       const user = rows[0];
+      assertSetupClaimFresh(user, "getCheckoutSessionUser");
       console.log(`${TAG}[getCheckoutSessionUser] [OUTPUT] userId=${user.id} username=${user.username} pendingSetup=${user.pendingSetup}`);
       console.log(`${TAG}[getCheckoutSessionUser] [VERIFY] PASS`);
       return user;
@@ -809,7 +934,11 @@ export const stripeRouter = router({
     }))
     .mutation(async ({ input, ctx }) => {
       const TAG2 = `${TAG}[completeAccountSetup]`;
-      console.log(`${TAG2} [INPUT] sessionId=${input.sessionId} email=${input.email}`);
+      console.log(`${TAG2} [INPUT] sessionId=${input.sessionId} email=${maskEmailForLog(input.email)}`);
+      // Unauthenticated + account-provisioning: gate on attempt rate, then on
+      // proof that this session was actually paid (AUTH-001).
+      assertSetupAttemptAllowed(input.sessionId, "completeAccountSetup");
+      await assertCheckoutSessionPaid(input.sessionId, "completeAccountSetup");
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
 
@@ -821,6 +950,7 @@ export const stripeRouter = router({
         throw new TRPCError({ code: "NOT_FOUND", message: "Account not found. Please contact support." });
       }
       const user = rows[0];
+      assertSetupClaimFresh(user, "completeAccountSetup");
       console.log(`${TAG2} [STATE] Found userId=${user.id} username=${user.username} pendingSetup=${user.pendingSetup}`);
 
       if (!user.pendingSetup) {
@@ -832,7 +962,7 @@ export const stripeRouter = router({
       const emailConflict = await db.select({ id: appUsers.id }).from(appUsers)
         .where(eq(appUsers.email, input.email)).limit(1);
       if (emailConflict.length > 0 && emailConflict[0].id !== user.id) {
-        console.error(`${TAG2} [VERIFY] FAIL — email already in use: ${input.email}`);
+        console.error(`${TAG2} [VERIFY] FAIL — email already in use: ${maskEmailForLog(input.email)}`);
         throw new TRPCError({ code: "CONFLICT", message: "That email address is already in use. Please use a different email." });
       }
 
@@ -852,7 +982,7 @@ export const stripeRouter = router({
 
       invalidateAppUserByIdCache(user.id);
       invalidateCachedAppUser(user.id);
-      console.log(`${TAG2} [OUTPUT] Account setup complete userId=${user.id} email=${input.email}`);
+      console.log(`${TAG2} [OUTPUT] Account setup complete userId=${user.id} email=${maskEmailForLog(input.email)}`);
 
       // [STEP 5] Grant Discord role now that setup is complete
       if (user.hasAccess) {
