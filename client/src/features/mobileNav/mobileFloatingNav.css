@@ -146,6 +146,21 @@ html.dark .mfn-wrap {
  * inverse ground — white pill/black ink on dark, black pill/white ink on
  * light. --dime-text-primary/--dime-bg IS that inverse pair in both themes.
  * aria-current="page" is the single source of active semantics AND styling. */
+/* Keyboard state (directive 2026-07-31): while the OS keyboard is up in chat,
+   the nav recedes — it is unreachable behind the keyboard and its strip is
+   needed by the conversation. Opacity + lift ride the SAME --dc-kb-progress
+   spring the chat bar uses (published on <html> by DimeChatPage), so nav-out
+   and bar-up are one continuous motion in both directions. Hit-testing is
+   dropped via visibility once it has fully receded, so the resting band keeps
+   its solid, fully-interactive contract. */
+.dc-kb-open .mfn-wrap {
+  opacity: calc(1 - var(--dc-kb-progress, 0));
+  transform: translateY(calc(var(--dc-kb-progress, 0) * -100%));
+}
+.dc-kb-open .mfn-wrap[data-kb-hidden="true"] {
+  visibility: hidden;
+}
+
 .mfn-item[aria-current="page"] {
   background: var(--dime-text-primary);
   color: var(--dime-bg);

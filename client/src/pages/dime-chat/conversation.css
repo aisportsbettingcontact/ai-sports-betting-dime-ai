@@ -470,9 +470,9 @@ button.dc-sidebar-row {
      (opacity/transform) animate on the logo; the bar's height ramp is one
      fixed element. Content geometry is NOT springed: the page container and
      scroller track the keyboard 1:1 via --dc-visual-height/--dc-kb-inset. */
-  .dc-mobile-bar {
-    height: calc(56px + env(safe-area-inset-top) - 8px * var(--dc-kb-progress, 0));
-  }
+  /* The bar keeps its full height while the keyboard is up — the rise to the
+     top of the visual viewport comes from the nav-offset collapse below, so
+     compressing here too would double-shrink it and clip the 44px controls. */
   .dc-kb-logo {
     pointer-events: none;
     opacity: var(--dc-kb-progress, 0);
@@ -675,24 +675,49 @@ button.dc-sidebar-row {
      the mobile bar's center wordmark hides and its safe-area padding drops
      (the nav absorbs the inset). */
   @media (max-width: 767px) {
+    /* Keyboard-aware nav offset (owner directive 2026-07-31). While typing,
+       the floating nav is not reachable anyway, so its reserved strip
+       collapses in lockstep with --dc-kb-progress: the chat shell rises to
+       the true top of the visual viewport, putting the history toggle in the
+       high top-left and the kebab in the high top-right. Interpolating the
+       OFFSET (not swapping layouts) means the same spring drives the trip in
+       both directions with no reflow — and reversal mid-flight just retargets.
+       On a real device this was the dominant bug: the 112px strip stayed
+       reserved with the keyboard up, floating the bar mid-screen. */
+    body.dime-floating-nav-active {
+      --dc-nav-offset: calc(
+        var(--dime-floating-nav-h, 112px) * (1 - var(--dc-kb-progress, 0))
+      );
+    }
     body.dime-floating-nav-active .dc-page.dc-page--app {
-      inset: calc(var(--dc-visual-top, 0px) + var(--dime-floating-nav-h, 112px))
+      inset: calc(
+          var(--dc-visual-top, 0px) +
+            var(--dc-nav-offset, var(--dime-floating-nav-h, 112px))
+        )
         0 auto;
       height: calc(
-        var(--dc-visual-height, 100dvh) - var(--dime-floating-nav-h, 112px)
+        var(--dc-visual-height, 100dvh) -
+          var(--dc-nav-offset, var(--dime-floating-nav-h, 112px))
       );
     }
     body.dime-floating-nav-active .dc-app {
       height: calc(
-        var(--dc-visual-height, 100dvh) - var(--dime-floating-nav-h, 112px)
+        var(--dc-visual-height, 100dvh) -
+          var(--dc-nav-offset, var(--dime-floating-nav-h, 112px))
       );
     }
     body.dime-floating-nav-active .dc-mobile-bar {
-      top: calc(var(--dc-visual-top, 0px) + var(--dime-floating-nav-h, 112px));
-      height: 56px;
-      padding-top: 0;
+      top: calc(
+        var(--dc-visual-top, 0px) +
+          var(--dc-nav-offset, var(--dime-floating-nav-h, 112px))
+      );
+      height: calc(56px + env(safe-area-inset-top) * var(--dc-kb-progress, 0));
+      padding-top: calc(env(safe-area-inset-top) * var(--dc-kb-progress, 0));
     }
-    body.dime-floating-nav-active .dc-mobile-bar .dc-mobile-title {
+    /* Nav owns the mark while it is visible; once it recedes for the keyboard
+       the bar's own centered wordmark takes over (both ride one progress var,
+       so the handoff is a single crossfade, never a pop). */
+    body.dime-floating-nav-active .dc-mobile-bar .dc-mobile-title:not(.dc-kb-logo) {
       visibility: hidden; /* keep the 3-col grid; the floating logo is the mark */
     }
     body.dime-floating-nav-active .dc-main {
@@ -972,7 +997,10 @@ button.dc-sidebar-row {
      footprint (0.9x: 44 -> 40px, icon 22.5 -> 20px), nudged up toward the
      nav so the chrome reads as one cluster. */
   body.dime-floating-nav-active .dc-mobile-bar {
-    height: 40px;
+    /* Collapsed band at rest; with the keyboard up the nav is gone, so the
+       bar reclaims full height and the controls sit in the true corners
+       (interpolated, so the growth rides the same spring). */
+    height: calc(40px + 16px * var(--dc-kb-progress, 0));
   }
   body.dime-floating-nav-active .dc-scroller {
     padding-top: calc(40px + 12px);
@@ -980,7 +1008,10 @@ button.dc-sidebar-row {
   .dc-mobile-menu {
     min-width: 40px;
     min-height: 40px;
-    margin-top: -6px;
+    /* The -6px nudge pulls the toggle toward the floating nav above it; once
+       the nav recedes for the keyboard that reference is gone, so the offset
+       unwinds to 0 rather than clipping the button off the viewport top. */
+    margin-top: calc(-6px * (1 - var(--dc-kb-progress, 0)));
   }
   .dc-mobile-menu svg {
     width: 20px;

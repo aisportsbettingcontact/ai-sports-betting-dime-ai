@@ -35,7 +35,7 @@
  * drawer stack (60-100), above page sticky headers (≤40 via DOM order).
  */
 
-import { useLayoutEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { MOBILE_NAV_TABS, type MobileNavTabId } from "./config";
 import { getActiveTabId } from "./activeTab";
@@ -127,8 +127,34 @@ export function MobileFloatingNav() {
     void isActive; // replace-vs-push is handled by the Link `replace` prop
   }
 
+  // Chat publishes --dc-kb-progress + .dc-kb-open on <html> while the OS
+  // keyboard is up; mirror the fully-hidden end state into an attribute so
+  // hit-testing drops without touching the resting band's contract.
+  const [kbHidden, setKbHidden] = useState(false);
+  useEffect(() => {
+    const root = document.documentElement;
+    const read = () => {
+      const open = root.classList.contains("dc-kb-open");
+      const p = parseFloat(
+        getComputedStyle(root).getPropertyValue("--dc-kb-progress") || "0"
+      );
+      setKbHidden(open && p > 0.98);
+    };
+    read();
+    const observer = new MutationObserver(read);
+    observer.observe(root, { attributes: true, attributeFilter: ["class", "style"] });
+    return () => observer.disconnect();
+  }, []);
+
   return (
-    <div className="mfn-wrap" ref={wrapRef} data-testid="mobile-floating-nav">
+    <div
+      className="mfn-wrap"
+      ref={wrapRef}
+      data-testid="mobile-floating-nav"
+      // Fully receded behind the chat keyboard → drop hit-testing (the CSS
+      // opacity/lift ride --dc-kb-progress; this flips only at the ends).
+      data-kb-hidden={kbHidden ? "true" : undefined}
+    >
       <div className="mfn-logo">
         <DimeWordmark />
       </div>
