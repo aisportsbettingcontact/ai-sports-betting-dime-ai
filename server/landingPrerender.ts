@@ -391,9 +391,9 @@ td b{color:var(--text);font-weight:700}
   <p class="lead">No picks packages. No units sold. Software pricing for disciplined market evaluation.</p>
   <div class="grid">
     <div class="card"><div class="mono">Free Preview</div><div class="price">$0</div><div class="per">On-page demos</div><p>Explore the Market Console and Dime Chat demos on this page.</p></div>
-    <div class="card"><div class="mono">Pro</div><div class="price">$99</div><div class="per">per month &mdash; &asymp;$3.30/day &middot; cancel anytime</div><p>Full projections board, Standard + Pro Analyst chat.</p><p><a class="cta" style="margin-top:12px" href="/checkout?plan=pro">Start Pro</a></p></div>
-    <div class="card"><div class="mono">Sharp</div><div class="price">$249</div><div class="per">per month &mdash; &asymp;$8.30/day &middot; cancel anytime</div><p>Everything in Pro, MAX Analyst access (monthly cap).</p><p><a class="cta" style="margin-top:12px" href="/checkout?plan=sharp">Start Sharp</a></p></div>
-    <div class="card"><div class="mono">Operator</div><div class="price">$499</div><div class="per">per month &mdash; &asymp;$16.63/day &middot; cancel anytime</div><p>Everything in Sharp, full MAX Analyst access (no cap).</p><p><a class="cta" style="margin-top:12px" href="/checkout?plan=operator">Start Operator</a></p></div>
+    <div class="card"><div class="mono">Pro</div><div class="price">$99</div><div class="per">per month &mdash; &asymp;$3.30/day &middot; cancel anytime</div><p>Full projections board, Dime Chat on every game priced.</p><p><a class="cta" style="margin-top:12px" href="/checkout?plan=pro">Start Pro</a></p></div>
+    <div class="card"><div class="mono">Sharp</div><div class="price">$249</div><div class="per">per month &mdash; &asymp;$8.30/day &middot; cancel anytime</div><p>Everything in Pro, plus priority access to new model markets.</p><p><a class="cta" style="margin-top:12px" href="/checkout?plan=sharp">Start Sharp</a></p></div>
+    <div class="card"><div class="mono">Operator</div><div class="price">$499</div><div class="per">per month &mdash; &asymp;$16.63/day &middot; cancel anytime</div><p>Everything in Sharp, plus early access to new markets and model releases.</p><p><a class="cta" style="margin-top:12px" href="/checkout?plan=operator">Start Operator</a></p></div>
   </div>
   <div class="grid" style="margin-top:20px">
     <div class="card"><div class="mono">Founder</div><div class="price">By application</div><div class="per">Limited</div><p>Controlled access for serious operators. Application reviewed manually.</p></div>

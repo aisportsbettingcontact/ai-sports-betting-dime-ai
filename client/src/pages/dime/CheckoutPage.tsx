@@ -59,7 +59,9 @@ interface PlanCopy {
   period: string;
   /** "Works out to" per-day line — omitted (empty) for owner-created DB plans. */
   perDay?: string;
-  /** v2 ladder rail rows — legacy plans keep their existing compact rail. */
+  /** v2 ladder rail rows — legacy plans keep their existing compact rail.
+   *  Withheld while the tiered Analyst models are not live: no plan sets it, so
+   *  the "Model access" row does not render. Kept for the day the tiers ship. */
   modelAccess?: string;
   /** Withheld until the credit ledger grants and meters credits (PROD-001). */
   credits?: string;
@@ -94,10 +96,9 @@ const PLAN_COPY: Record<PlanId, PlanCopy> = {
     price: "$99",
     period: "/month",
     perDay: "≈ $3.30 / day",
-    modelAccess: "Standard + Pro Analyst",
     features: [
       "Full AI Model Projections board — every game, priced",
-      "Dime Chat — Standard + Pro Analyst (Sonnet + Opus)",
+      "Dime Chat on any game the model prices",
       "Live edge grades, honest PASS signals",
     ],
     payLabel: "Start Pro — $99/mo",
@@ -111,10 +112,8 @@ const PLAN_COPY: Record<PlanId, PlanCopy> = {
     price: "$249",
     period: "/month",
     perDay: "≈ $8.30 / day",
-    modelAccess: "Pro + MAX (capped)",
     features: [
       "Everything in Pro",
-      "MAX Analyst access — monthly cap",
       "Priority access to new model markets",
     ],
     payLabel: "Start Sharp — $249/mo",
@@ -128,10 +127,8 @@ const PLAN_COPY: Record<PlanId, PlanCopy> = {
     price: "$499",
     period: "/month",
     perDay: "≈ $16.63 / day",
-    modelAccess: "Full MAX",
     features: [
       "Everything in Sharp",
-      "Full MAX Analyst access — no cap",
       "Early access to new markets and model releases",
     ],
     payLabel: "Start Operator — $499/mo",
