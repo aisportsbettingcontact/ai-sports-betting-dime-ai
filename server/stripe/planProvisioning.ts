@@ -19,7 +19,8 @@ import Stripe from "stripe";
 import { eq, and } from "drizzle-orm";
 import { getDb } from "../db";
 import { withCircuitBreaker } from "../dbCircuitBreaker";
-import { subscriptionPlans, planPrices } from "../../drizzle/schema";
+import { normalizePlanFeatures, type PlanFeatureKey } from "../../shared/planFeatures";
+import { subscriptionPlans, planPrices, planFeatures } from "../../drizzle/schema";
 import {
   getPlanBySlug,
   invalidatePlanCache,
@@ -677,6 +678,74 @@ export async function updatePlanMeta(
 }
 
 /**
+ * Replace a plan's feature set (all-or-nothing).
+ *
+ * Stored in the indexed `plan_features` join table rather than a JSON column so
+ * feature membership stays queryable — "which plans include prop projections?"
+ * is an indexed lookup instead of a LIKE over prose.
+ *
+ * Diff-based rather than delete-then-reinsert: re-saving a plan without touching
+ * its features leaves the existing rows (and their ids) untouched, so `createdAt`
+ * keeps meaning "when this feature was added to this plan". The UNIQUE index on
+ * (planId, featureKey) makes the insert side idempotent even under a double
+ * submit.
+ *
+ * Feature keys are Stripe-irrelevant — they describe entitlement copy, not
+ * billing — so nothing is mirrored to the Stripe Product here.
+ */
+export async function setPlanFeatures(
+  planId: number,
+  features: readonly string[],
+): Promise<PlanFeatureKey[]> {
+  const db = await getDb();
+  if (!db) throw new Error("database unavailable");
+
+  // normalize drops unknown keys and enforces canonical order, so a malformed
+  // request cannot persist a key the picker could never render.
+  const desired = normalizePlanFeatures(features);
+
+  const existingRows = (await withCircuitBreaker(async () =>
+    db.select().from(planFeatures).where(eq(planFeatures.planId, planId)),
+  )) as Array<{ id: number; featureKey: string }>;
+  const existing = new Set(existingRows.map((r) => r.featureKey));
+  const desiredSet = new Set<string>(desired);
+
+  const toRemove = existingRows.filter((r) => !desiredSet.has(r.featureKey));
+  const toAdd = desired.filter((k) => !existing.has(k));
+
+  for (const row of toRemove) {
+    await withCircuitBreaker(async () => db.delete(planFeatures).where(eq(planFeatures.id, row.id)));
+  }
+  if (toAdd.length > 0) {
+    const now = Date.now();
+    await withCircuitBreaker(async () =>
+      db.insert(planFeatures).values(
+        toAdd.map((key) => ({
+          planId,
+          featureKey: key,
+          sortOrder: desired.indexOf(key),
+          createdAt: now,
+        })),
+      ),
+    );
+  }
+
+  // Keep stored sortOrder aligned with canonical order for rows that survived,
+  // so the admin list and the marketing surface agree on ordering.
+  for (const row of existingRows) {
+    if (!desiredSet.has(row.featureKey)) continue;
+    const want = desired.indexOf(row.featureKey as PlanFeatureKey);
+    await withCircuitBreaker(async () =>
+      db.update(planFeatures).set({ sortOrder: want }).where(eq(planFeatures.id, row.id)),
+    );
+  }
+
+  invalidatePlanCache();
+  console.log(`${TAG} set features plan=${planId} added=${toAdd.length} removed=${toRemove.length} total=${desired.length}`);
+  return desired;
+}
+
+/**
  * Duplicate a plan: re-provision a fresh Stripe Product + Prices from an existing
  * plan's active intervals and persist a brand-new plan (its own new slug/planID and
  * its own new price IDs) so the copy is fully independent of the original. Promo
@@ -753,6 +822,22 @@ export async function duplicatePlan(
     maxSubscribers: plan.maxSubscribers,
     restock,
   });
+  // Carry the source plan's features onto the copy — a duplicate that silently
+  // lost its feature list would look identical in Stripe but different on the
+  // pricing page.
+  try {
+    const sourceFeatures = (await withCircuitBreaker(async () =>
+      db.select().from(planFeatures).where(eq(planFeatures.planId, planId)),
+    )) as Array<{ featureKey: string; sortOrder: number }>;
+    if (sourceFeatures.length > 0) {
+      await setPlanFeatures(
+        result.planId,
+        sourceFeatures.sort((a, b) => a.sortOrder - b.sortOrder).map((f) => f.featureKey),
+      );
+    }
+  } catch (err) {
+    console.warn(`${TAG} duplicate: feature copy failed — ${(err as Error).message}`);
+  }
   console.log(`${TAG} duplicated plan ${planId} → ${result.slug} (planId=${result.planId})`);
   return result;
 }
@@ -780,6 +865,9 @@ export async function deletePlan(planId: number): Promise<void> {
     }
   }
   await withCircuitBreaker(async () => db.delete(planPrices).where(eq(planPrices.planId, planId)));
+  // No FK cascades exist in this schema, so feature rows must be removed
+  // explicitly or they orphan and resurface if the id is ever reused.
+  await withCircuitBreaker(async () => db.delete(planFeatures).where(eq(planFeatures.planId, planId)));
   await withCircuitBreaker(async () =>
     db.delete(subscriptionPlans).where(eq(subscriptionPlans.id, planId)),
   );

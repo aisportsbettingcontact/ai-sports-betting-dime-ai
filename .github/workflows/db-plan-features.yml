@@ -1,0 +1,259 @@
+name: DB plan features (additive, one-shot)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PLAN FEATURES MIGRATION — ADDITIVE ONLY.
+#
+# RUN THIS BEFORE THE CORRESPONDING CODE DEPLOY. The plan editor writes plan
+# feature rows through `plan_features`; if the table is missing in production,
+# every plan save fails on a missing table.
+#
+# WHY A JOIN TABLE, NOT A JSON COLUMN: feature membership must stay queryable
+# and indexable. "Which plans include player prop projections?" is an indexed
+# equality lookup against plan_features.featureKey; against a JSON blob it
+# degrades to a LIKE over prose that cannot use an index and matches substrings
+# by accident. The stored value is the KEY from shared/planFeatures.ts, never
+# the human label, so marketing can reword a feature without a data migration.
+#
+# WHY NOT db-push.yml: production TiDB has drifted from the repo, and
+# `drizzle-kit generate` diffs against drizzle's META SNAPSHOTS, which do not
+# describe the live database, so it emits colliding CREATE TABLEs. This workflow
+# follows the db-stripe-hardening.yml precedent: a FIXED (not free-text) set of
+# idempotent statements, applied directly.
+#
+# WHAT IT DOES — all additive:
+#   1. CREATE TABLE IF NOT EXISTS plan_features   (plan → feature-key join table)
+#   2. CREATE (guarded) plan_features_plan_feature_unique UNIQUE (planId, featureKey)
+#   3. CREATE (guarded) plan_features_feature_idx        (featureKey)
+#   4. CREATE (guarded) plan_features_plan_sort_idx      (planId, sortOrder)
+#
+# WHAT IT NEVER DOES: no DROP, no destructive ALTER, no UPDATE/DELETE/INSERT of
+# row data, no user-supplied SQL (so it is not an injection surface — same
+# posture as the read-only db-query.yml).
+#
+# INDEX IDEMPOTENCE: TiDB does not accept `CREATE UNIQUE INDEX IF NOT EXISTS` on
+# all versions, so every index here is guarded by a SELECT against
+# information_schema.STATISTICS and created only when absent — re-running is
+# safe. The unique guard ALSO re-verifies 0 duplicate (planId, featureKey) pairs
+# first and aborts rather than letting CREATE UNIQUE INDEX fail mid-flight. The
+# CREATE TABLE already declares all three indexes, so on a fresh database the
+# guards simply report SKIP; they exist for the case where a partially-created
+# table is already present.
+#
+# WHY THE UNIQUE INDEX MATTERS: it is what makes a plan re-save idempotent. The
+# editor upserts the selected feature set without first proving what is already
+# stored, and a double-submit cannot duplicate a chip.
+#
+# DELIBERATELY OUT OF SCOPE (each needs its own owner-authorized migration):
+#   - Backfilling plan_features rows from any legacy free-text feature list:
+#     that is a data write, not DDL, and needs per-plan review.
+#   - Any foreign key to subscription_plans.id: this repo declares NO DB-level
+#     foreign keys; planId is an FK-by-value joined in the application.
+# ─────────────────────────────────────────────────────────────────────────────
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type FEATURES to apply'
+        required: true
+        default: ''
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: db-plan-features
+  cancel-in-progress: false
+
+jobs:
+  plan-features:
+    name: Apply additive plan_features DDL
+    runs-on: ubuntu-latest
+    # Required by scripts/check-github-actions-security.mjs: any workflow that
+    # references a production secret must run inside the protected Production
+    # environment, so applying DDL to the live database goes through the same
+    # approval gate as db-push.yml.
+    environment: Production
+    steps:
+      - name: Guard — require typed confirmation
+        if: ${{ inputs.confirm != 'FEATURES' }}
+        run: |
+          echo "::error::Type FEATURES in the confirm input to apply."
+          exit 1
+
+      - name: Install MySQL client
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq mysql-client
+
+      - name: Build client config from DATABASE_URL (secret never printed)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          python3 - <<'PY'
+          import os, urllib.parse, stat
+          u = urllib.parse.urlparse(os.environ["DATABASE_URL"])
+          if not u.hostname:
+              raise SystemExit("DATABASE_URL is not a valid mysql:// URL")
+          db = (u.path or "/").lstrip("/")
+          if not db:
+              raise SystemExit("DATABASE_URL has no database name in its path")
+          cnf = (
+              "[client]\n"
+              f"host={u.hostname}\n"
+              f"port={u.port or 4000}\n"
+              f"user={urllib.parse.unquote(u.username or '')}\n"
+              f"password={urllib.parse.unquote(u.password or '')}\n"
+              f"database={db}\n"
+              # TiDB Serverless mandates TLS.
+              "ssl-mode=REQUIRED\n"
+          )
+          with open("client.cnf", "w") as f:
+              f.write(cnf)
+          os.chmod("client.cnf", stat.S_IRUSR | stat.S_IWUSR)  # 600
+          print(f"client.cnf written: host={u.hostname} port={u.port or 4000} db={db} (password omitted)")
+          PY
+
+      - name: BEFORE — current state of the targets
+        run: |
+          set -euo pipefail
+          echo "===== BEFORE: does plan_features exist? ====="
+          mysql --defaults-extra-file=client.cnf -t -e "
+            SELECT table_name FROM information_schema.tables
+            WHERE table_schema = DATABASE()
+              AND table_name = 'plan_features';"
+
+          echo "===== BEFORE: plan_features columns ====="
+          mysql --defaults-extra-file=client.cnf -t -e "
+            SELECT column_name, column_type, is_nullable, column_default
+            FROM information_schema.columns
+            WHERE table_schema = DATABASE() AND table_name = 'plan_features'
+            ORDER BY ordinal_position;"
+
+          echo "===== BEFORE: which of the 3 indexes already exist ====="
+          mysql --defaults-extra-file=client.cnf -t -e "
+            SELECT table_name, index_name, non_unique FROM information_schema.STATISTICS
+            WHERE table_schema = DATABASE() AND index_name IN (
+              'plan_features_plan_feature_unique',
+              'plan_features_feature_idx',
+              'plan_features_plan_sort_idx')
+            ORDER BY table_name, index_name;"
+
+      - name: Create plan_features (IF NOT EXISTS)
+        run: |
+          set -euo pipefail
+
+          echo "===== APPLY: plan_features (plan → feature-key join table) ====="
+          mysql --defaults-extra-file=client.cnf -e "
+            CREATE TABLE IF NOT EXISTS plan_features (
+              id int NOT NULL AUTO_INCREMENT,
+              planId int NOT NULL,
+              featureKey varchar(64) NOT NULL,
+              sortOrder int NOT NULL DEFAULT 0,
+              createdAt bigint NOT NULL,
+              PRIMARY KEY (id),
+              UNIQUE KEY plan_features_plan_feature_unique (planId, featureKey),
+              KEY plan_features_feature_idx (featureKey),
+              KEY plan_features_plan_sort_idx (planId, sortOrder)
+            );"
+
+      - name: Create indexes (guarded — existence + duplicate pre-check)
+        run: |
+          set -euo pipefail
+
+          q() { mysql --defaults-extra-file=client.cnf -N -e "$1"; }
+
+          index_exists() {
+            q "SELECT COUNT(*) FROM information_schema.STATISTICS
+                WHERE table_schema = DATABASE()
+                  AND table_name = '$1' AND index_name = '$2';"
+          }
+
+          echo "===== APPLY: plan_features uniqueness (idempotent re-save) ====="
+          if [ "$(index_exists plan_features plan_features_plan_feature_unique)" -gt 0 ]; then
+            echo "SKIP  plan_features.plan_features_plan_feature_unique already exists"
+          else
+            dups=$(q "SELECT COUNT(*) FROM (
+                        SELECT planId, featureKey FROM plan_features
+                        GROUP BY planId, featureKey HAVING COUNT(*) > 1) d;")
+            if [ "$dups" -gt 0 ]; then
+              echo "::error::plan_features has $dups duplicated (planId, featureKey) pair(s) — refusing to create plan_features_plan_feature_unique. Resolve the duplicates first."
+              exit 1
+            fi
+            echo "CREATE plan_features.plan_features_plan_feature_unique ON (planId, featureKey)  [0 duplicates verified]"
+            mysql --defaults-extra-file=client.cnf -e "
+              CREATE UNIQUE INDEX plan_features_plan_feature_unique ON plan_features (planId, featureKey);"
+          fi
+
+          echo "===== APPLY: plan_features lookup indexes ====="
+          if [ "$(index_exists plan_features plan_features_feature_idx)" -gt 0 ]; then
+            echo "SKIP  plan_features.plan_features_feature_idx already exists"
+          else
+            echo "CREATE plan_features.plan_features_feature_idx ON (featureKey)"
+            mysql --defaults-extra-file=client.cnf -e "
+              CREATE INDEX plan_features_feature_idx ON plan_features (featureKey);"
+          fi
+
+          if [ "$(index_exists plan_features plan_features_plan_sort_idx)" -gt 0 ]; then
+            echo "SKIP  plan_features.plan_features_plan_sort_idx already exists"
+          else
+            echo "CREATE plan_features.plan_features_plan_sort_idx ON (planId, sortOrder)"
+            mysql --defaults-extra-file=client.cnf -e "
+              CREATE INDEX plan_features_plan_sort_idx ON plan_features (planId, sortOrder);"
+          fi
+
+      - name: AFTER — verify everything landed
+        run: |
+          set -euo pipefail
+
+          echo "===== AFTER: table ====="
+          mysql --defaults-extra-file=client.cnf -t -e "
+            SELECT table_name FROM information_schema.tables
+            WHERE table_schema = DATABASE()
+              AND table_name = 'plan_features';"
+
+          echo "===== AFTER: columns ====="
+          mysql --defaults-extra-file=client.cnf -t -e "
+            SELECT column_name, column_type, is_nullable, column_default
+            FROM information_schema.columns
+            WHERE table_schema = DATABASE() AND table_name = 'plan_features'
+            ORDER BY ordinal_position;"
+
+          echo "===== AFTER: indexes ====="
+          mysql --defaults-extra-file=client.cnf -t -e "
+            SELECT table_name, index_name, seq_in_index, column_name, non_unique
+            FROM information_schema.STATISTICS
+            WHERE table_schema = DATABASE() AND index_name IN (
+              'plan_features_plan_feature_unique',
+              'plan_features_feature_idx',
+              'plan_features_plan_sort_idx')
+            ORDER BY index_name, seq_in_index;"
+
+          TABLES=$(mysql --defaults-extra-file=client.cnf -N -e "
+            SELECT COUNT(*) FROM information_schema.tables
+            WHERE table_schema = DATABASE() AND table_name = 'plan_features';")
+          COLS=$(mysql --defaults-extra-file=client.cnf -N -e "
+            SELECT COUNT(*) FROM information_schema.columns
+            WHERE table_schema = DATABASE() AND table_name = 'plan_features'
+              AND column_name IN ('id','planId','featureKey','sortOrder','createdAt');")
+          # Count DISTINCT index names: a composite index has one row per column.
+          IDX=$(mysql --defaults-extra-file=client.cnf -N -e "
+            SELECT COUNT(DISTINCT index_name) FROM information_schema.STATISTICS
+            WHERE table_schema = DATABASE() AND index_name IN (
+              'plan_features_plan_feature_unique',
+              'plan_features_feature_idx',
+              'plan_features_plan_sort_idx');")
+          UNIQ=$(mysql --defaults-extra-file=client.cnf -N -e "
+            SELECT COUNT(DISTINCT index_name) FROM information_schema.STATISTICS
+            WHERE table_schema = DATABASE() AND non_unique = 0
+              AND index_name = 'plan_features_plan_feature_unique';")
+
+          echo "table: $TABLES / 1   columns: $COLS / 5   indexes: $IDX / 3   unique: $UNIQ / 1"
+          if [ "$TABLES" -lt 1 ] || [ "$COLS" -lt 5 ] || [ "$IDX" -lt 3 ] || [ "$UNIQ" -lt 1 ]; then
+            echo "::error::plan_features migration incomplete — table=$TABLES/1 columns=$COLS/5 indexes=$IDX/3 unique=$UNIQ/1."
+            exit 1
+          fi
+          echo "plan_features ready — safe to deploy the corresponding code."
+
+      - name: Cleanup
+        if: always()
+        run: rm -f client.cnf

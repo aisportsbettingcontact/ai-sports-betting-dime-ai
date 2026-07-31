@@ -12,6 +12,11 @@
  * Intervals can be drag-reordered (⠿) and hidden/unhidden (eyeball) at any time,
  * on both the create form and existing plan cards.
  *
+ * Every plan also carries a set of feature keys from shared/planFeatures.ts,
+ * picked in the create/edit modals and rendered as chips on the card. Edit
+ * reopens the plan in a pre-filled modal for details + features; pricing stays
+ * on the card because Stripe prices are immutable.
+ *
  * Auth: CLIENT (cosmetic) half of the owner lockdown — the real boundary is the
  * server-verified ownerProcedure on EVERY subscriptionPlans procedure.
  *
@@ -44,14 +49,18 @@ import {
   Paperclip,
   Copy,
   Trash2,
+  Pencil,
+  ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAppAuth } from "@/_core/hooks/useAppAuth";
 import { trpc } from "@/lib/trpc";
 import { AdminShell } from "@/pages/admin/AdminShell";
 import { IntervalPicker } from "@/pages/admin/IntervalPicker";
-import { DEFAULT_INTERVAL } from "@/pages/admin/planTypes";
-import type { StoredPlan, StoredPrice, IntervalValue, PromoType, BillingInterval } from "@/pages/admin/planTypes";
+import { DEFAULT_INTERVAL, buildPlanUpdateInput, planEditDraftFrom, toggleFeatureKey } from "@/pages/admin/planTypes";
+import type { StoredPlan, StoredPrice, IntervalValue, PromoType, BillingInterval, PlanEditDraft } from "@/pages/admin/planTypes";
+import { PLAN_FEATURES, normalizePlanFeatures, planFeatureLabel } from "@shared/planFeatures";
+import type { PlanFeatureKey } from "@shared/planFeatures";
 import { useDialogFocus } from "@/hooks/useDialogFocus";
 
 type PlanWithCount = StoredPlan & { subscriberCount: number };
@@ -341,6 +350,120 @@ function IntervalFields({
   );
 }
 
+// ─── Features multi-select ───────────────────────────────────────────────────
+
+/**
+ * FeaturesPicker — a multi-select menu over shared/planFeatures.ts. Selection is
+ * kept in canonical order (normalizePlanFeatures) at every step, so the value the
+ * form submits is already the order the server stores and the card renders.
+ *
+ * Not a <select multiple>: the options carry helper text, and ctrl-clicking rows
+ * to keep a selection is exactly the interaction the owner would fight with.
+ */
+function FeaturesPicker({ value, onChange }: { value: PlanFeatureKey[]; onChange: (next: PlanFeatureKey[]) => void }) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement | null>(null);
+
+  // Close on an outside click. Escape is handled on the wrapper instead, so it
+  // can be stopped from bubbling up to Modal's window listener (which would
+  // otherwise close the whole dialog on the first Escape).
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [open]);
+
+  return (
+    <div
+      ref={wrapRef}
+      className="relative"
+      onKeyDown={(e) => {
+        if (e.key === "Escape" && open) {
+          e.stopPropagation();
+          setOpen(false);
+        }
+      }}
+    >
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        aria-haspopup="listbox"
+        className={`${inputClass} flex min-h-[42px] cursor-pointer items-center justify-between gap-2 text-left`}
+      >
+        {value.length === 0 ? (
+          <span className="text-muted-foreground">Select features…</span>
+        ) : (
+          <span className="flex flex-wrap gap-1.5">
+            {value.map((key) => (
+              <span
+                key={key}
+                className="inline-flex items-center rounded-full border border-primary px-2 py-0.5 text-[11px] font-medium text-primary"
+              >
+                {planFeatureLabel(key)}
+              </span>
+            ))}
+          </span>
+        )}
+        <ChevronDown
+          className={`h-4 w-4 flex-shrink-0 text-muted-foreground transition-transform duration-150 ${open ? "rotate-180" : ""}`}
+          aria-hidden="true"
+        />
+      </button>
+
+      {open && (
+        <div
+          role="listbox"
+          aria-multiselectable="true"
+          className="absolute z-20 mt-1.5 max-h-72 w-full overflow-y-auto rounded-lg border border-border bg-card p-1 shadow-2xl"
+        >
+          {PLAN_FEATURES.map((feature) => {
+            const selected = value.includes(feature.key);
+            return (
+              <button
+                key={feature.key}
+                type="button"
+                role="option"
+                aria-selected={selected}
+                onClick={() => onChange(toggleFeatureKey(value, feature.key))}
+                className="flex w-full cursor-pointer items-start gap-2.5 rounded-md px-2.5 py-2 text-left transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              >
+                <span
+                  className={`mt-0.5 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border ${
+                    selected ? "border-primary bg-primary text-primary-foreground" : "border-border"
+                  }`}
+                  aria-hidden="true"
+                >
+                  {selected && <Check className="h-3 w-3" />}
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-sm font-medium text-foreground">{feature.label}</span>
+                  <span className="block text-xs leading-relaxed text-muted-foreground">{feature.description}</span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** The Features form row — label + picker + count, shared by every plan modal. */
+function FeaturesField({ value, onChange }: { value: PlanFeatureKey[]; onChange: (next: PlanFeatureKey[]) => void }) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label className={labelClass}>
+        Features <span className="normal-case tracking-normal">({value.length} selected)</span>
+      </label>
+      <FeaturesPicker value={value} onChange={onChange} />
+    </div>
+  );
+}
+
 // ─── Create Plan modal (recurring, multi-interval) ───────────────────────────
 
 function CreatePlanModal({ onClose }: { onClose: () => void }) {
@@ -348,6 +471,7 @@ function CreatePlanModal({ onClose }: { onClose: () => void }) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [intervals, setIntervals] = useState<IntervalDraft[]>([blankInterval()]);
+  const [features, setFeatures] = useState<PlanFeatureKey[]>([]);
   const [limitedQty, setLimitedQty] = useState(false);
   const [availableQty, setAvailableQty] = useState("");
   const [autoRestock, setAutoRestock] = useState(false);
@@ -410,7 +534,14 @@ function CreatePlanModal({ onClose }: { onClose: () => void }) {
         restock = { autoRestock: false, availableQuantity: avail, restockThreshold: null, restockAmount: null };
       }
     }
-    create.mutate({ name: name.trim(), description: description.trim() || undefined, planType: "recurring", prices, restock });
+    create.mutate({
+      name: name.trim(),
+      description: description.trim() || undefined,
+      planType: "recurring",
+      prices,
+      restock,
+      features: normalizePlanFeatures(features),
+    });
   }
 
   return (
@@ -428,6 +559,8 @@ function CreatePlanModal({ onClose }: { onClose: () => void }) {
             <input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What subscribers get." className={inputClass} />
           </div>
         </div>
+
+        <FeaturesField value={features} onChange={setFeatures} />
 
         <div className="flex items-center justify-between">
           <span className={labelClass}>Billing intervals</span>
@@ -549,6 +682,7 @@ function CreatePersonalizedModal({ onClose }: { onClose: () => void }) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState<IntervalDraft>(blankInterval());
+  const [features, setFeatures] = useState<PlanFeatureKey[]>([]);
   const [maxSubs, setMaxSubs] = useState("");
   const [error, setError] = useState<string | null>(null);
 
@@ -582,7 +716,14 @@ function CreatePersonalizedModal({ onClose }: { onClose: () => void }) {
       }
       maxSubscribers = m;
     }
-    create.mutate({ name: name.trim(), description: description.trim() || undefined, planType: "one_time", prices: [built], maxSubscribers });
+    create.mutate({
+      name: name.trim(),
+      description: description.trim() || undefined,
+      planType: "one_time",
+      prices: [built],
+      maxSubscribers,
+      features: normalizePlanFeatures(features),
+    });
   }
 
   return (
@@ -609,6 +750,8 @@ function CreatePersonalizedModal({ onClose }: { onClose: () => void }) {
             <input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What this member gets." className={inputClass} />
           </div>
         </div>
+
+        <FeaturesField value={features} onChange={setFeatures} />
 
         <IntervalFields value={price} onChange={(p) => setPrice((d) => ({ ...d, ...p }))} oneTime />
 
@@ -646,12 +789,160 @@ function CreatePersonalizedModal({ onClose }: { onClose: () => void }) {
   );
 }
 
+// ─── Edit Plan modal (metadata + features) ───────────────────────────────────
+
+/**
+ * EditPlanModal — the create modal's twin, pre-filled from an existing plan.
+ *
+ * Scope is deliberately metadata + features. Pricing is NOT editable here: a
+ * plan's intervals are Stripe prices, which are immutable once created, so they
+ * are managed on the card through addInterval / removeInterval /
+ * setIntervalHidden / reorderIntervals. Inventory (available quantity, restock)
+ * is shown read-only for the same reason — subscriptionPlans.update carries
+ * name, description, maxSubscribers and features only.
+ */
+function EditPlanModal({ plan, onClose }: { plan: StoredPlan; onClose: () => void }) {
+  const utils = trpc.useUtils();
+  const [draft, setDraft] = useState<PlanEditDraft>(() => planEditDraftFrom(plan));
+  const [error, setError] = useState<string | null>(null);
+
+  const update = trpc.subscriptionPlans.update.useMutation({
+    onSuccess: () => {
+      utils.subscriptionPlans.list.invalidate();
+      toast.success("Plan updated", { description: plan.slug });
+      onClose();
+    },
+    onError: (err) => setError(err.message),
+  });
+
+  function patch(p: Partial<PlanEditDraft>) {
+    setDraft((d) => ({ ...d, ...p }));
+  }
+
+  function submit(e: FormEvent) {
+    e.preventDefault();
+    setError(null);
+    const built = buildPlanUpdateInput(plan.id, draft);
+    if (typeof built === "string") {
+      setError(built);
+      return;
+    }
+    update.mutate(built);
+  }
+
+  const readOnlyInput = `${inputClass} font-mono disabled:cursor-not-allowed disabled:opacity-60`;
+
+  return (
+    <Modal title="Edit plan" icon={<Pencil className="h-5 w-5 text-muted-foreground" aria-hidden="true" />} onClose={onClose}>
+      <form onSubmit={submit} className="flex flex-col gap-5">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="flex flex-col gap-1.5">
+            <label className={labelClass}>Name</label>
+            <input value={draft.name} onChange={(e) => patch({ name: e.target.value })} placeholder="Dime Pro" className={inputClass} />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className={labelClass}>
+              Description <span className="normal-case tracking-normal">(optional)</span>
+            </label>
+            <input
+              value={draft.description}
+              onChange={(e) => patch({ description: e.target.value })}
+              placeholder="What subscribers get."
+              className={inputClass}
+            />
+          </div>
+        </div>
+
+        <FeaturesField value={draft.features} onChange={(features) => patch({ features })} />
+
+        <div className="flex flex-col gap-1.5">
+          <label className={labelClass}>
+            Max subscribers <span className="normal-case tracking-normal">(blank = unlimited hard cap)</span>
+          </label>
+          <input
+            type="number"
+            min={1}
+            value={draft.maxSubscribers}
+            onChange={(e) => patch({ maxSubscribers: e.target.value })}
+            placeholder="Unlimited"
+            className={`${inputClass} font-mono sm:max-w-[220px]`}
+          />
+        </div>
+
+        {/* Pricing: read-only pointer back to the card, which owns the interval mutations. */}
+        <div className="rounded-lg border border-border bg-card p-3 sm:p-4">
+          <span className={labelClass}>Pricing options</span>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+            Stripe prices are immutable, so intervals are added, hidden, reordered and removed on the plan card —
+            not here. This form saves plan details and features only.
+          </p>
+        </div>
+
+        {/* Inventory: pre-filled from the plan but not part of the update contract. */}
+        <div className="rounded-lg border border-border bg-card p-3 sm:p-4">
+          <span className="flex items-center gap-1.5 text-sm font-medium text-foreground">
+            <Package className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+            Limited quantity
+            <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+              {draft.limitedQuantity ? "· on" : "· off"}
+            </span>
+          </span>
+          {draft.limitedQuantity ? (
+            <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="flex flex-col gap-1.5">
+                <label className={labelClass}>Available quantity</label>
+                <input type="number" value={draft.availableQuantity} disabled className={readOnlyInput} />
+              </div>
+              <div className="flex items-end">
+                <span className="pb-2.5 text-sm text-muted-foreground">
+                  Auto restock: {draft.autoRestock ? "on" : "off"}
+                </span>
+              </div>
+              {draft.autoRestock && (
+                <>
+                  <div className="flex flex-col gap-1.5">
+                    <label className={labelClass}>Restock when below</label>
+                    <input type="number" value={draft.restockThreshold} disabled className={readOnlyInput} />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className={labelClass}>Reset available to</label>
+                    <input type="number" value={draft.restockAmount} disabled className={readOnlyInput} />
+                  </div>
+                </>
+              )}
+            </div>
+          ) : (
+            <p className="mt-2 text-sm text-muted-foreground">This plan has no quantity cap.</p>
+          )}
+        </div>
+
+        {error && (
+          <p className="text-sm text-muted-foreground" role="alert">
+            {error}
+          </p>
+        )}
+
+        <div className="flex items-center gap-3">
+          <button type="submit" disabled={update.isPending} className={primaryBtn}>
+            {update.isPending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Check className="h-4 w-4" aria-hidden="true" />}
+            {update.isPending ? "Saving…" : "Save changes"}
+          </button>
+          <button type="button" onClick={onClose} className={chipBtn}>
+            Cancel
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
 // ─── Plan card ───────────────────────────────────────────────────────────────
 
 function PlanCard({ plan }: { plan: PlanWithCount }) {
   const utils = trpc.useUtils();
   const invalidate = () => utils.subscriptionPlans.list.invalidate();
   const activePrices = useMemo(() => plan.prices.filter((p) => p.active), [plan.prices]);
+  const features = useMemo(() => normalizePlanFeatures(plan.features), [plan.features]);
   const soldOut = plan.availableQuantity != null && plan.availableQuantity <= 0;
 
   const [adding, setAdding] = useState(false);
@@ -660,6 +951,7 @@ function PlanCard({ plan }: { plan: PlanWithCount }) {
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [confirmArchive, setConfirmArchive] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [editing, setEditing] = useState(false);
 
   const oneTime = plan.planType === "one_time";
 
@@ -734,6 +1026,21 @@ function PlanCard({ plan }: { plan: PlanWithCount }) {
       </div>
 
       {plan.description && <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{plan.description}</p>}
+
+      {/* Features — the plan's entitlements at a glance, no modal required. */}
+      {features.length > 0 && (
+        <ul className="mt-3 flex flex-wrap gap-1.5">
+          {features.map((key) => (
+            <li
+              key={key}
+              className="inline-flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-[11px] text-foreground"
+            >
+              <Check className="h-3 w-3 flex-shrink-0 text-primary" aria-hidden="true" />
+              {planFeatureLabel(key)}
+            </li>
+          ))}
+        </ul>
+      )}
 
       {/* Quantity */}
       {plan.availableQuantity != null && (
@@ -871,6 +1178,12 @@ function PlanCard({ plan }: { plan: PlanWithCount }) {
           </button>
         )}
 
+        {/* Edit — plan details + features (pricing stays on this card). */}
+        <button type="button" onClick={() => setEditing(true)} title="Edit plan details and features" className={chipBtn}>
+          <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
+          Edit
+        </button>
+
         {plan.active ? (
           confirmArchive ? (
             <span className="inline-flex items-center gap-2">
@@ -933,6 +1246,8 @@ function PlanCard({ plan }: { plan: PlanWithCount }) {
           </button>
         )}
       </div>
+
+      {editing && <EditPlanModal plan={plan} onClose={() => setEditing(false)} />}
     </div>
   );
 }
