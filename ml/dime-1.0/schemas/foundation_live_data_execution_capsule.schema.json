@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dime.internal/schemas/foundation_live_data_execution_capsule.schema.json",
+  "title": "Dime Foundation Live Data Execution Capsule v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "execution_id",
+    "created_at",
+    "repository",
+    "pilot_pass",
+    "generator",
+    "critic_state",
+    "targets",
+    "prohibited_operations"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "dime-foundation-live-data-execution-capsule-v1"
+    },
+    "execution_id": {
+      "const": "foundation-live-data-shard-001-b9ba7788"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "repository": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "commit_sha"],
+      "properties": {
+        "name": {
+          "const": "aisportsbettingcontact/ai-sports-betting-dime-ai"
+        },
+        "commit_sha": {
+          "const": "b9ba7788749365253a6f725fee2a2a367a3475dd"
+        }
+      }
+    },
+    "pilot_pass": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["report_path", "report_sha256", "status", "all_required_gates_zero"],
+      "properties": {
+        "report_path": {"type": "string", "minLength": 1},
+        "report_sha256": {"$ref": "#/$defs/sha256"},
+        "status": {"const": "PASS"},
+        "all_required_gates_zero": {"const": true}
+      }
+    },
+    "generator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "actor_id",
+        "model_id",
+        "model_revision",
+        "prompt_revision",
+        "prompt_sha256",
+        "responsibility"
+      ],
+      "properties": {
+        "actor_id": {"const": "codex-foundation-live-data-generator-001"},
+        "model_id": {"const": "gpt-5.6-sol"},
+        "model_revision": {"const": "gpt-5.6-sol-2026-07-30"},
+        "prompt_revision": {"const": "foundation-generation-live-data-shard-v1"},
+        "prompt_sha256": {"$ref": "#/$defs/sha256"},
+        "responsibility": {"const": "generation"}
+      }
+    },
+    "critic_state": {
+      "const": "PENDING_INDEPENDENT_EXECUTION"
+    },
+    "targets": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["drafts", "train", "validation", "accepted_records"],
+      "properties": {
+        "drafts": {"const": 150},
+        "train": {"const": 135},
+        "validation": {"const": 15},
+        "accepted_records": {"const": 0}
+      }
+    },
+    "prohibited_operations": {
+      "type": "array",
+      "uniqueItems": true,
+      "contains": {"const": "self_approval"},
+      "items": {
+        "enum": [
+          "self_approval",
+          "trainer_conversion",
+          "answer_key_generation",
+          "credential_access",
+          "publication",
+          "training",
+          "production_access",
+          "railway",
+          "hugging_face",
+          "runpod"
+        ]
+      }
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  }
+}

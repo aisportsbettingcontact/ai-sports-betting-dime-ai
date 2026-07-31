@@ -151,6 +151,38 @@ def test_conversion_is_deterministic_trainer_valid_and_assistant_only() -> None:
         convert_authoring_record(template)
 
 
+def test_high_risk_conversion_requires_two_bound_review_receipts() -> None:
+    record = template_record()
+    record["trainer_labels"]["risk_tier"] = "high"
+
+    with pytest.raises(ValueError, match="requires two reviewers"):
+        convert_authoring_record(record)
+
+    primary = record["provenance"]["critic"]["actor_id"]
+    record["independent_review"]["review_receipts"] = [
+        {
+            "reviewer_id": primary,
+            "decision_receipt_sha256": "1" * 64,
+        },
+        {
+            "reviewer_id": "codex-second-independent-critic-001",
+            "decision_receipt_sha256": "2" * 64,
+        },
+    ]
+    converted = convert_authoring_record(record)
+    assert converted["quality"]["reviewer_ids"] == [
+        primary,
+        "codex-second-independent-critic-001",
+    ]
+
+    unbound = deepcopy(record)
+    unbound["independent_review"]["review_receipts"][0]["reviewer_id"] = (
+        "codex-unrelated-critic-001"
+    )
+    with pytest.raises(DataFactoryError, match="primary critic must appear"):
+        convert_authoring_record(unbound)
+
+
 def test_structured_tool_state_converts_calls_and_masks_results() -> None:
     record = template_record()
     step = record["expected_tool_trace"][0]

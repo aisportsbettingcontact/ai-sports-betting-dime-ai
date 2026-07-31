@@ -120,9 +120,24 @@ def test_context_capsule_is_complete_compact_and_sanitized() -> None:
     assert validate_context_capsule(capsule) == []
     assert capsule["production_application_sha"] is None
     assert capsule["production_backend_sha"] is None
-    assert capsule["foundation_counts"]["verified_authoring_records"] is None
-    assert capsule["evaluation_key_state"] == "NOT_AUTHORIZED"
-    assert capsule["runpod_gate_state"] == "BLOCKED"
+    assert capsule["snapshot_semantics"] == "IMMUTABLE_POINT_IN_TIME_NOT_LIVE_STATUS"
+    assert capsule["classification"] == "SANITIZED_AGGREGATE_ONLY"
+    assert capsule["foundation_counts"] == {
+        "status": "IN_PROGRESS",
+        "verified_authoring_records": 300,
+        "verified_trainer_records": 300,
+        "verified_train_records": 270,
+        "verified_validation_records": 30,
+    }
+    assert capsule["foundation_deficits"] == {
+        "status": "IN_PROGRESS",
+        "authoring_records": 2100,
+        "trainer_records": 2100,
+        "train_records": 1890,
+        "validation_records": 210,
+    }
+    assert capsule["evaluation_key_state"] == "OWNER_MERGE_SCOPE_AUTHORIZED_ZERO_KEYS"
+    assert capsule["runpod_gate_state"] == ("GOVERNANCE_MERGED_EFFECTIVE_AUTHORIZATION_FALSE")
     assert capsule["candidate_a_state"] == "NOT_STARTED"
     assert capsule["candidate_b_state"] == "NOT_STARTED"
     assert capsule["candidate_c_state"] == "NOT_STARTED"
@@ -154,12 +169,17 @@ def test_static_audit_reports_zero_external_actions() -> None:
 
 
 def test_capsule_and_gate_evidence_are_checksum_pinned() -> None:
-    capsule_line = CAPSULE_CHECKSUMS.read_text(encoding="utf-8").strip()
-    capsule_sha256, capsule_name = capsule_line.split(maxsplit=1)
-    assert capsule_name == "capsule.json"
-    assert hashlib.sha256((CAPSULE_PATH.parent / capsule_name).read_bytes()).hexdigest() == (
-        capsule_sha256
-    )
+    capsule_entries = {}
+    for line in CAPSULE_CHECKSUMS.read_text(encoding="utf-8").splitlines():
+        capsule_sha256, capsule_name = line.split(maxsplit=1)
+        assert capsule_name not in capsule_entries
+        capsule_entries[capsule_name] = capsule_sha256
+    assert set(capsule_entries) == {"README.md", "capsule.json"}
+    for capsule_name, capsule_sha256 in capsule_entries.items():
+        assert (
+            hashlib.sha256((CAPSULE_PATH.parent / capsule_name).read_bytes()).hexdigest()
+            == capsule_sha256
+        )
 
     manifest = load_json(EVIDENCE / "manifest.json")
     assert manifest["contains_credentials"] is False

@@ -5,6 +5,7 @@ from copy import deepcopy
 
 import pytest
 
+import dime_ai.foundation_partitioning as partitioning
 from dime_ai.foundation_partitioning import (
     GROUP_DIMENSIONS,
     PARTITION_REGISTRY_PATH,
@@ -153,6 +154,63 @@ def test_collection_builder_covers_every_non_null_group_and_is_order_independent
         "conversation_family_id",
         "entity_set_temporal_bucket",
     }
+
+
+def test_collection_builder_bounds_registry_validation_for_300_records(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    records = [
+        authoring_record(
+            f"dime-foundation-v1-record-batch-{index:03d}",
+            f"scenario-batch-{index:03d}",
+            "foundation-v1-shard-batch",
+            include_optional=False,
+        )
+        for index in range(300)
+    ]
+    original = partitioning.validate_partition_registry
+    validation_calls = 0
+
+    def counted_validate_partition_registry(registry: object) -> list[str]:
+        nonlocal validation_calls
+        validation_calls += 1
+        return original(registry)
+
+    monkeypatch.setattr(
+        partitioning,
+        "validate_partition_registry",
+        counted_validate_partition_registry,
+    )
+
+    candidate = validate_partition_groups(records)
+
+    assert validation_calls == 2
+    assert len(candidate["assignments"]) == 300 * 3
+    assert original(candidate) == []
+
+
+def test_collection_builder_matches_sequential_freeze_semantics() -> None:
+    records = [
+        authoring_record(
+            f"dime-foundation-v1-record-equivalence-{index:03d}",
+            f"scenario-equivalence-{index:03d}",
+            f"foundation-v1-shard-equivalence-{index % 3}",
+            suffix=f"equivalence-{index:03d}",
+        )
+        for index in range(12)
+    ]
+    batch = validate_partition_groups(records)
+    sequential = load_partition_registry()
+    for record in sorted(records, key=lambda item: item["record_id"]):
+        sequential, split = freeze_partition_assignment(
+            sequential,
+            record_id=record["record_id"],
+            shard_id=record["provenance"]["shard_id"],
+            partition_identity=record["partition_identity"],
+        )
+        assert split == record["split"]
+
+    assert batch == sequential
 
 
 @pytest.mark.parametrize("group_dimension", GROUP_DIMENSIONS)

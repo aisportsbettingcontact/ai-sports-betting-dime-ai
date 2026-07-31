@@ -1,0 +1,171 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dime.internal/schemas/foundation_pilot_report.schema.json",
+  "title": "Dime Foundation Pilot Report v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "execution_id",
+    "generated_at",
+    "source_commit",
+    "status",
+    "counts",
+    "gates",
+    "route_token_report",
+    "artifact_bindings",
+    "automatic_progression"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "dime-foundation-pilot-report-v1"
+    },
+    "execution_id": {
+      "type": "string",
+      "pattern": "^foundation-pilot-[a-z0-9][a-z0-9._-]{7,127}$"
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "source_commit": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "status": {
+      "enum": ["DRAFTS_READY_FOR_INDEPENDENT_CRITIQUE", "PASS", "FAIL"]
+    },
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["records", "trainer_records", "train", "validation"],
+      "properties": {
+        "records": {"type": "integer", "minimum": 0},
+        "trainer_records": {"type": "integer", "minimum": 0},
+        "train": {"type": "integer", "minimum": 0},
+        "validation": {"type": "integer", "minimum": 0}
+      }
+    },
+    "gates": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_failures",
+        "critic_independence_failures",
+        "partition_collisions",
+        "rights_failures",
+        "numeric_errors",
+        "conversion_failures",
+        "silent_truncations",
+        "evaluation_overlap",
+        "unresolved_material_findings",
+        "exact_duplicates",
+        "semantic_duplicate_pairs"
+      ],
+      "properties": {
+        "schema_failures": {"type": "integer", "minimum": 0},
+        "critic_independence_failures": {
+          "type": ["integer", "null"],
+          "minimum": 0
+        },
+        "partition_collisions": {"type": "integer", "minimum": 0},
+        "rights_failures": {"type": "integer", "minimum": 0},
+        "numeric_errors": {"type": "integer", "minimum": 0},
+        "conversion_failures": {
+          "type": ["integer", "null"],
+          "minimum": 0
+        },
+        "silent_truncations": {
+          "type": ["integer", "null"],
+          "minimum": 0
+        },
+        "evaluation_overlap": {"type": "integer", "minimum": 0},
+        "unresolved_material_findings": {
+          "type": ["integer", "null"],
+          "minimum": 0
+        },
+        "exact_duplicates": {"type": "integer", "minimum": 0},
+        "semantic_duplicate_pairs": {"type": "integer", "minimum": 0}
+      }
+    },
+    "route_token_report": {
+      "type": "object"
+    },
+    "artifact_bindings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "execution_context_capsule_sha256",
+        "token_profile_sha256",
+        "context_packet_manifest_sha256",
+        "authoring_manifest_sha256",
+        "trainer_manifest_sha256",
+        "partition_registry_sha256"
+      ],
+      "properties": {
+        "execution_context_capsule_sha256": {"$ref": "#/$defs/sha256"},
+        "token_profile_sha256": {"$ref": "#/$defs/sha256"},
+        "context_packet_manifest_sha256": {"$ref": "#/$defs/sha256"},
+        "authoring_manifest_sha256": {"$ref": "#/$defs/sha256"},
+        "trainer_manifest_sha256": {"$ref": "#/$defs/sha256"},
+        "partition_registry_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "automatic_progression": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "target",
+        "authorized",
+        "status",
+        "reason",
+        "authorization_basis"
+      ],
+      "properties": {
+        "target": {
+          "const": "live_data_150_records_135_train_15_validation"
+        },
+        "authorized": {
+          "type": "boolean"
+        },
+        "status": {
+          "enum": ["AUTHORIZED", "BLOCKED"]
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "authorization_basis": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "source_id",
+            "source_sha256",
+            "condition"
+          ],
+          "properties": {
+            "kind": {
+              "const": "EXPLICIT_USER_REQUEST_ATTACHMENT"
+            },
+            "source_id": {
+              "const": "f6ac81bb-a336-41c3-a653-539ed07c7cb8"
+            },
+            "source_sha256": {
+              "const": "b371b696c203e5fa8e160a11f9b869734361d594de4728b08ab133518dbc5b1f"
+            },
+            "condition": {
+              "const": "PILOT_PASS_WITH_ALL_REQUIRED_GATES_ZERO"
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  }
+}

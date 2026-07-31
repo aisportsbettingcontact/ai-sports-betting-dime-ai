@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dime.internal/schemas/foundation_context_efficiency_report.schema.json",
+  "title": "Dime Foundation Context Efficiency Report v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "token_profile_id",
+    "measurement_scope",
+    "totals",
+    "roles"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "dime-foundation-context-efficiency-report-v1"
+    },
+    "token_profile_id": {
+      "const": "dime-foundation-local-byte-profile-v1"
+    },
+    "measurement_scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "within_packet",
+        "same_record_cross_packet",
+        "cross_record",
+        "unique_cached",
+        "repeated_logical"
+      ],
+      "properties": {
+        "within_packet": {"type": "string", "minLength": 1},
+        "same_record_cross_packet": {"type": "string", "minLength": 1},
+        "cross_record": {"type": "string", "minLength": 1},
+        "unique_cached": {"type": "string", "minLength": 1},
+        "repeated_logical": {"type": "string", "minLength": 1}
+      }
+    },
+    "totals": {"$ref": "#/$defs/metrics"},
+    "roles": {
+      "type": "object",
+      "additionalProperties": {"$ref": "#/$defs/metrics"},
+      "minProperties": 1
+    }
+  },
+  "$defs": {
+    "ratio": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "records",
+        "packets",
+        "logical_unit_occurrences",
+        "unique_content_units",
+        "logical_context_tokens",
+        "unique_cached_context_tokens",
+        "repeated_logical_context_tokens",
+        "within_packet_repeated_context_tokens",
+        "same_record_cross_packet_context_tokens",
+        "cross_record_shared_context_tokens",
+        "unique_cache_ratio",
+        "repeated_logical_context_ratio",
+        "within_packet_redundancy",
+        "cross_record_shared_context_redundancy"
+      ],
+      "properties": {
+        "records": {"type": "integer", "minimum": 1},
+        "packets": {"type": "integer", "minimum": 1},
+        "logical_unit_occurrences": {"type": "integer", "minimum": 1},
+        "unique_content_units": {"type": "integer", "minimum": 1},
+        "logical_context_tokens": {"type": "integer", "minimum": 1},
+        "unique_cached_context_tokens": {"type": "integer", "minimum": 1},
+        "repeated_logical_context_tokens": {"type": "integer", "minimum": 0},
+        "within_packet_repeated_context_tokens": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "same_record_cross_packet_context_tokens": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "cross_record_shared_context_tokens": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unique_cache_ratio": {"$ref": "#/$defs/ratio"},
+        "repeated_logical_context_ratio": {"$ref": "#/$defs/ratio"},
+        "within_packet_redundancy": {"$ref": "#/$defs/ratio"},
+        "cross_record_shared_context_redundancy": {
+          "$ref": "#/$defs/ratio"
+        }
+      }
+    }
+  }
+}

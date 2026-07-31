@@ -15,6 +15,9 @@ experiment identity.
   benchmarks with deterministic local evidence.
 - [`decisions/`](decisions/) contains structured, checksum-pinned decision
   records that remain non-authorizing until their named authority acts.
+- [`execution/`](execution/) contains sanitized, checksum-pinned execution and
+  coordination evidence. Raw records, semantic cases, and answer keys remain
+  outside Git.
 - [`infrastructure/`](infrastructure/) contains sanitized setup and runtime
   verification records.
 - [`manifests/`](manifests/) is reserved for reviewed, sanitized manifest
@@ -28,6 +31,11 @@ traffic stage.
 
 The active Dime LLM training and model-candidate decision is
 [`decisions/dime-model-artifact-decision-v1/`](decisions/dime-model-artifact-decision-v1/).
+The current Foundation pilot, first-shard admission, semantic non-overlap, and
+remaining-deficit evidence is
+[`execution/dime-llm-v1-foundation-001/`](execution/dime-llm-v1-foundation-001/).
+Its coordination baseline is
+[`execution/dime-llm-v1-context-capsule/`](execution/dime-llm-v1-context-capsule/).
 Its starting-model decision gate is
 [`benchmarks/base-model-suitability-v1/`](benchmarks/base-model-suitability-v1/).
 Its frozen A/B/C comparison is

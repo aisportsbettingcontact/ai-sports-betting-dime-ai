@@ -55,7 +55,7 @@
           },
           {
             "path": "ml/dime-1.0/configs/dime_training_contract_v1.json",
-            "sha256": "d5801340dc9cfa4fc5e88201226a7cb06daa8573c10814a2cb4e0ca88961237b"
+            "sha256": "35e970a9d3af67402c36c204592454eebd382730c0c3fe1f6ef6ba6ffb44307f"
           }
         ],
         "container_digest": null
