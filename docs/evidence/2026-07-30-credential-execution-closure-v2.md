@@ -77,7 +77,11 @@ exact manifest-pinned browser executable.
 Candidate generation bundles all repository-local modules. Its esbuild
 metafile must show only `playwright` outside the Node built-in runtime. Two
 independent fixture builds produced identical bundle and application-tree
-hashes.
+hashes. A fresh Node subprocess also generated the closed tree from the
+standard pnpm isolated layout, resolving `playwright-core` through the pinned
+`playwright` package instead of relying on an undeclared repository-root
+dependency. Package sources are resolved before copying, and copies are
+sequential, so failure cleanup cannot race an outstanding package-tree write.
 
 Adversarial coverage rejects:
 
@@ -104,6 +108,7 @@ Adversarial coverage rejects:
 | Performance harness smoke tests                              | PASS — 6 tests with permitted local IPC                                                                    |
 | Native broker strict compile (`clang`, warnings as errors)   | PASS                                                                                                       |
 | Deterministic candidate fixture build                        | PASS — two identical bundle/tree hashes                                                                    |
+| Fresh Node isolated-package candidate build                  | PASS — copied the pinned `playwright-core/package.json` without a repository-root package link             |
 | Local production candidate command                           | Correctly BLOCKED — installed Chrome is user-owned mode `0775` and its strict code-sign verification fails |
 
 The local browser failure was not relaxed or bypassed. A reviewed valid browser
