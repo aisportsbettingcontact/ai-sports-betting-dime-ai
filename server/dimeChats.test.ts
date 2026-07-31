@@ -117,16 +117,16 @@ describe("Dime chat page — owner gate + live identity + ⋯ menu", () => {
   it("non-owners get the coming-soon state and never the composer", () => {
     expect(pageSrc).toContain("AI MODEL CHAT COMING SOON");
     expect(pageSrc).toMatch(/\{chatAccess === "denied" && \(/);
-    // Composer zone, hero and pills all gate on the granted access state.
+    // Composer zone and hero gate on the granted access state. (Suggested-
+    // prompt pills retired 2026-07-31 — the empty state is composer-only, so
+    // no pill block should exist to gate at all.)
     expect(pageSrc).toMatch(
       /\{chatAccess === "granted" && \(\s*<div className="dc-composer-zone">/
     );
     expect(pageSrc).toMatch(
       /\{chatAccess === "granted" && !conversation && \(\s*<BrandHero/
     );
-    expect(pageSrc).toMatch(
-      /\{chatAccess === "granted" && !conversation && \(\s*<PromptPills/
-    );
+    expect(pageSrc).not.toContain("PromptPills");
   });
 
   it("the server refuses non-owners before any model or context work", () => {

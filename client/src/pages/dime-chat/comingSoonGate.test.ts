@@ -259,9 +259,9 @@ describe("non-owner coming-soon gate (Phase 2)", () => {
     expect(chatSource).toMatch(
       /\{chatAccess === "granted" && \(\s*<div className="dc-composer-zone">/
     );
-    expect(chatSource).toMatch(
-      /\{chatAccess === "granted" && !conversation && \(\s*<PromptPills/
-    );
+    // Suggested-prompt pills retired (owner directive 2026-07-31): the empty
+    // state is composer-only on every breakpoint, so no pill block remains.
+    expect(chatSource).not.toContain("PromptPills");
     expect(chatSource).toMatch(/\{chatAccess === "granted" && ghost && \(/);
     expect(chatSource).toMatch(
       /\{chatAccess === "denied" && \(/
