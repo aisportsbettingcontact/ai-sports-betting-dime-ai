@@ -29,6 +29,7 @@ import {
   getAppUserById,
   getAppUserByStripeCustomerId,
   invalidateAppUserByIdCache,
+  isDuplicateKeyError,
 } from "./db";
 import { PLANS, getPlanByPriceId, computeExpiryMs, normalizePlanId } from "./stripe/products";
 import { getPlanBySlug, getPriceById, computeExpiryMsForPrice, defaultPriceOf } from "./stripe/planStore";
@@ -37,7 +38,35 @@ import { syncDiscordRoleForUser } from "./discord/discordRoleSync";
 import { invalidateCachedAppUser } from "./dbCircuitBreaker";
 import { getStripe } from "./stripe/client";
 import { billingAlert } from "./_core/billingAlerts";
+import { isTestModeFulfillmentAllowed, type TestModeFulfillmentVerdict } from "./_core/testModeFulfillment";
 import bcrypt from "bcryptjs";
+
+/**
+ * Test-mode fulfilment gate (see server/_core/testModeFulfillment.ts).
+ *
+ * Memoised: evaluated on the FIRST test-mode event and never re-read, so a
+ * mid-process env mutation cannot flip the verdict between two deliveries of the
+ * same run, and so the banner is printed once per process rather than once per
+ * event. Lazy rather than at module load only because this module is imported by
+ * unit tests that must not inherit an import-time console side effect.
+ *
+ * Production is unaffected: without ALLOW_TEST_MODE_FULFILLMENT=1 the verdict is
+ * `allowed:false`, no banner is printed, and the caller takes the identical
+ * skip-and-return path it always took.
+ */
+let testModeFulfilmentVerdict: TestModeFulfillmentVerdict | null = null;
+function testModeFulfilmentGate(): TestModeFulfillmentVerdict {
+  if (testModeFulfilmentVerdict === null) {
+    testModeFulfilmentVerdict = isTestModeFulfillmentAllowed();
+    if (testModeFulfilmentVerdict.allowed) {
+      console.warn(
+        `[Stripe][Webhook] *** TEST-MODE FULFILMENT ENABLED *** — livemode=false events WILL mutate this database ` +
+        `(reason=${testModeFulfilmentVerdict.reason})`
+      );
+    }
+  }
+  return testModeFulfilmentVerdict;
+}
 
 /**
  * Discord role syncs are deferred until AFTER the webhook has been acknowledged.
@@ -94,9 +123,15 @@ async function claimStripeEvent(event: Stripe.Event): Promise<boolean> {
     });
     return true;
   } catch (err: unknown) {
-    const code = (err as { code?: string })?.code ?? "";
-    const msg = err instanceof Error ? err.message : String(err);
-    if (code === "ER_DUP_ENTRY" || /duplicate/i.test(msg)) return false;
+    // A duplicate is the exactly-once guarantee WORKING — another delivery of
+    // this event already claimed it. It must resolve to `false` (no-op, ack
+    // 200), never rethrow. Detection goes through isDuplicateKeyError because
+    // drizzle wraps the mysql2 error: the wrapper's own `.code` is undefined and
+    // its message is "Failed query: insert into …" with no "duplicate" in it, so
+    // the previous `code === "ER_DUP_ENTRY" || /duplicate/i.test(msg)` test
+    // matched neither and rethrew — answering 5xx and inviting Stripe to
+    // redeliver the very event we had already processed.
+    if (isDuplicateKeyError(err)) return false;
     throw err;
   }
 }
@@ -597,9 +632,19 @@ async function processWebhookEvent(event: Stripe.Event): Promise<void> {
   // for live events, so exercising the sandbox flow still validates plumbing
   // (checkout → price-by-mode → Stripe → webhook delivery → signature) without
   // this branch mutating the prod users table.
+  //
+  // The ONE exception is an explicitly-gated harness environment — Stripe TEST
+  // key + non-production DATABASE_URL + ALLOW_TEST_MODE_FULFILLMENT=1, all three
+  // required (server/_core/testModeFulfillment.ts). Without that opt-in the
+  // behaviour below is byte-identical to what it has always been: log, return,
+  // before the idempotency claim and before any fulfilment branch.
   if (event.livemode === false) {
-    console.log(`${tag} [STATE] Test-mode event (livemode=false) — verified & acknowledged; production fulfillment intentionally skipped`);
-    return;
+    const gate = testModeFulfilmentGate();
+    if (!gate.allowed) {
+      console.log(`${tag} [STATE] Test-mode event (livemode=false) — verified & acknowledged; production fulfillment intentionally skipped`);
+      return;
+    }
+    console.warn(`${tag} [STATE] Test-mode event (livemode=false) — TEST-MODE FULFILMENT ENABLED (${gate.reason}); proceeding into real fulfilment against this database`);
   }
 
   // Exactly-once gate (WBHK-001). Stripe delivers at least once, and this

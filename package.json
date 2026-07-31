@@ -15,6 +15,7 @@
     "format": "prettier --write .",
     "test": "vitest run",
     "test:e2e": "playwright test",
+    "test:stripe-e2e": "node scripts/stripe-e2e.mjs",
     "connection:status": "node scripts/dime-control-plane.mjs status",
     "connection:context": "node scripts/dime-control-plane.mjs context",
     "connection:refresh": "node scripts/dime-control-plane.mjs status --refresh",

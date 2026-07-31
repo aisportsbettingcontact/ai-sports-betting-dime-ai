@@ -1,0 +1,144 @@
+# ─── Stripe end-to-end money-path harness ────────────────────────────────────
+#
+# Runs scripts/stripe-e2e.mjs: a throwaway MySQL 8 container, the full
+# reconciled migration chain, a seeded plan/price/subscriber, `stripe listen`
+# forwarding real test-mode events, and the server booted from source with the
+# test-mode fulfilment gate satisfied. It asserts DATABASE STATE after every
+# step — grant, exactly-once replay, revoke, refund — not log text.
+#
+# WHY THE SCRIPT MANAGES DOCKER INSTEAD OF A `services:` CONTAINER
+# ---------------------------------------------------------------
+# The CI job and a developer's laptop must run the SAME code path. A `services:`
+# block would mean the script needs a "someone else already provisioned MySQL"
+# branch — a second, CI-only path that nothing exercises locally and that drifts
+# silently (wrong port, wrong database name, migrations already applied). Docker
+# is preinstalled on GitHub-hosted ubuntu runners, so letting the script own the
+# container costs nothing and keeps `pnpm test:stripe-e2e` byte-identical here
+# and there. It also means teardown is the script's try/finally in both places.
+#
+# SECRET HANDLING
+# ---------------
+# The harness needs a Stripe TEST secret key (sk_test_/rk_test_), supplied as
+# the STRIPE_TEST_SECRET_KEY repository secret. scripts/stripe-e2e.mjs refuses
+# to start on a live key, and server/_core/testModeFulfillment.ts independently
+# refuses fulfilment unless the key is test-mode AND DATABASE_URL is local — so
+# there is no configuration of this workflow that can reach production data.
+#
+# The repository's Actions security contract
+# (scripts/check-github-actions-security.mjs) routes EVERY non-GITHUB_TOKEN
+# secret through the protected Production environment and requires each
+# reference to be a step-scoped env assignment. That contract is intentionally
+# uniform — it does not carve out "test" secrets, because the checker cannot
+# verify that claim, and a per-secret exception is exactly the hole an
+# actually-production secret would later slip through. So this job declares the
+# environment too. It is an ACCESS-CONTROL declaration, not a statement that
+# this job touches production: it runs entirely against a container it creates
+# and destroys.
+#
+# When the secret is absent (forks, secretless runs), the guard step below
+# reports "not configured" and every later step is skipped, so the job is GREEN
+# rather than red. A missing test credential is not a broken build.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: Stripe E2E
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 04:41 UTC nightly — off the hour, GitHub's cron queue is congested on :00.
+    - cron: "41 4 * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stripe-e2e
+  cancel-in-progress: false
+
+jobs:
+  stripe-e2e:
+    name: Stripe money path (test mode)
+    runs-on: ubuntu-latest
+    environment: Production
+    timeout-minutes: 45
+    steps:
+      - name: "[GUARD] Skip cleanly when the test Stripe key is not configured"
+        id: guard
+        env:
+          STRIPE_TEST_SECRET_KEY: ${{ secrets.STRIPE_TEST_SECRET_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${STRIPE_TEST_SECRET_KEY:-}" ]; then
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::STRIPE_TEST_SECRET_KEY is not configured for this repository."
+            echo "::notice::The Stripe end-to-end harness needs a Stripe TEST secret key"
+            echo "::notice::(sk_test_… or rk_test_…). Skipping — this is not a failure."
+            exit 0
+          fi
+          case "$STRIPE_TEST_SECRET_KEY" in
+            sk_test_*|rk_test_*)
+              echo "enabled=true" >> "$GITHUB_OUTPUT"
+              echo "[PREFLIGHT] Stripe TEST key present (prefix ${STRIPE_TEST_SECRET_KEY:0:8})"
+              ;;
+            *)
+              echo "::error::STRIPE_TEST_SECRET_KEY is not a Stripe TEST key. Refusing to run."
+              exit 1
+              ;;
+          esac
+
+      - name: "[INPUT] Checkout repository"
+        if: steps.guard.outputs.enabled == 'true'
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+
+      - name: "[STEP] Setup pnpm"
+        if: steps.guard.outputs.enabled == 'true'
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1
+        # No 'version' key — packageManager in package.json is the single source of truth.
+
+      - name: "[STEP] Setup Node.js 22"
+        if: steps.guard.outputs.enabled == 'true'
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: "[STEP] Install dependencies (frozen lockfile)"
+        if: steps.guard.outputs.enabled == 'true'
+        run: pnpm install --frozen-lockfile
+
+      - name: "[STEP] Install the Stripe CLI"
+        if: steps.guard.outputs.enabled == 'true'
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --location --proto '=https' --tlsv1.2 \
+            https://packages.stripe.dev/api/security/keypair/stripe-cli-gpg/public \
+            | gpg --dearmor \
+            | sudo tee /usr/share/keyrings/stripe.gpg > /dev/null
+          echo "deb [signed-by=/usr/share/keyrings/stripe.gpg] https://packages.stripe.dev/stripe-cli-debian-local stable main" \
+            | sudo tee /etc/apt/sources.list.d/stripe.list > /dev/null
+          sudo apt-get update
+          sudo apt-get install -y stripe
+          stripe version
+
+      - name: "[VERIFY] Docker daemon is available to the harness"
+        if: steps.guard.outputs.enabled == 'true'
+        run: docker version --format '{{.Server.Version}}'
+
+      # The harness never prints key material: it redacts every child-process
+      # stream and reports keys as an 8-character prefix only.
+      - name: "[VERIFY] Run the Stripe end-to-end money-path harness"
+        if: steps.guard.outputs.enabled == 'true'
+        env:
+          STRIPE_TEST_SECRET_KEY: ${{ secrets.STRIPE_TEST_SECRET_KEY }}
+        run: |
+          pnpm run test:stripe-e2e 2>&1 | tee stripe-e2e-report.txt
+          exit ${PIPESTATUS[0]}
+
+      - name: "[OUTPUT] Upload harness report"
+        if: always() && steps.guard.outputs.enabled == 'true'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: stripe-e2e-report
+          path: stripe-e2e-report.txt
+          retention-days: 30
