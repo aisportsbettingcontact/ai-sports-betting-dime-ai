@@ -1,3 +1,4 @@
+import { isStaleChunkError, attemptStaleChunkReload } from "../_core/staleChunkReload";
 import { AlertTriangle, RotateCcw } from "lucide-react";
 import { Component, ReactNode } from "react";
 
@@ -22,6 +23,12 @@ class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: { componentStack: string }) {
+    // A stale build chunk is not an application fault — the client is simply a
+    // version behind after a deploy. Reload once to pick up the current build
+    // rather than showing a dead screen; the guard inside attemptStaleChunkReload
+    // stops this becoming a loop when the asset is genuinely missing.
+    if (isStaleChunkError(error) && attemptStaleChunkReload()) return;
+
     console.error('[ErrorBoundary] Caught error:', error);
     console.error('[ErrorBoundary] Error message:', error.message);
     console.error('[ErrorBoundary] Component stack:', info.componentStack);
