@@ -2,7 +2,15 @@
   "metric": "chat-critical-path-gzip-bytes",
   "baselineCommit": "b03cea01",
   "baselineBytes": 210762,
-  "allowanceBytes": 8704,
+  "allowanceBytes": 9216,
+  "recalibration8": {
+    "date": "2026-07-31",
+    "allowanceBytesBefore": 8704,
+    "allowanceBytesAfter": 9216,
+    "deltaBytes": 512,
+    "reason": "Production incident fix (PR #276), not feature growth. The SPA catch-all served index.html for any unmatched path including /assets/*.js, so after every deploy a browser holding pre-deploy content-hashed chunk names received 200 text/html for a chunk request, parsed HTML as an ES module and threw 'Failed to fetch dynamically imported module' \u2014 a hard dead screen for anyone with the app already open, invisible to logs and uptime checks because a 200 looks healthy. The fix adds ~455B gzip of ENTRY-GRAPH JS: client/src/_core/staleChunkReload.ts (one regex, a sessionStorage-guarded single reload, and two window listeners) installed from main.tsx and reused by ErrorBoundary, so a stale-chunk failure self-heals instead of rendering the error screen. It must be on the entry graph \u2014 recovery has to be registered before the first lazy route import, and a lazily-loaded recovery module could itself be the stale chunk. The module was already minimised for this budget (regex alternation collapsed, messages shortened) saving ~90B; the residual is irreducible without deleting the fix. main measured 219,257B with only 209B of headroom, so any addition at all breached the ceiling. Allowance raised 512B, matching recalibrations 5-7, leaving a ~266B margin. framer-motion / vendor-motion contribution stays 0 (verified in this same run: 'vendor-motion chunks in path: 0'); any vendor-motion return or further material growth still fails this gate.",
+    "verifiedVendorMotionChunks": 0
+  },
   "recalibration7": {
     "date": "2026-07-29",
     "allowanceBytesBefore": 8192,
@@ -16,7 +24,7 @@
     "allowanceBytesBefore": 7680,
     "allowanceBytesAfter": 8192,
     "deltaBytes": 512,
-    "reason": "The MLB Trends Law-v2 redesign (PR #227: TrendsPage + shared RecentSchedulePanel/SituationalResultsPanel) adds ~185B gzip of diffuse GLOBAL Tailwind utility CSS to the single index.css, which is on every route incl. /chat: the 160ms brand-curve transition utilities (duration-[160ms], ease-[cubic-bezier(0.16,1,0.3,1)], transition-[background-color,color,transform]), active:scale-[0.97] press feedback with motion-reduce guard, tabular-nums, tracking-[0.08em] micro-labels, token-var color/surface utilities (--text-secondary/--text-muted/--surface-raised/--row-hover), and the responsive xl:grid-cols-2/xl:divide-x card grid. ALL Trends JS is behind the lazy TrendsPage/GameCard/BettingSplits routes and NOT on the chat static-import closure — verified. Measured 218,627B vs the 218,442B ceiling (185B over). This is brand-law styling for an explicitly-requested redesign, not decorative growth; allowance raised 512B to clear it with a ~327B margin. framer-motion / vendor-motion contribution stays 0 (verified in the same run: 'vendor-motion chunks in path: 0'); any vendor-motion return or further material growth still fails this gate.",
+    "reason": "The MLB Trends Law-v2 redesign (PR #227: TrendsPage + shared RecentSchedulePanel/SituationalResultsPanel) adds ~185B gzip of diffuse GLOBAL Tailwind utility CSS to the single index.css, which is on every route incl. /chat: the 160ms brand-curve transition utilities (duration-[160ms], ease-[cubic-bezier(0.16,1,0.3,1)], transition-[background-color,color,transform]), active:scale-[0.97] press feedback with motion-reduce guard, tabular-nums, tracking-[0.08em] micro-labels, token-var color/surface utilities (--text-secondary/--text-muted/--surface-raised/--row-hover), and the responsive xl:grid-cols-2/xl:divide-x card grid. ALL Trends JS is behind the lazy TrendsPage/GameCard/BettingSplits routes and NOT on the chat static-import closure \u2014 verified. Measured 218,627B vs the 218,442B ceiling (185B over). This is brand-law styling for an explicitly-requested redesign, not decorative growth; allowance raised 512B to clear it with a ~327B margin. framer-motion / vendor-motion contribution stays 0 (verified in the same run: 'vendor-motion chunks in path: 0'); any vendor-motion return or further material growth still fails this gate.",
     "verifiedVendorMotionChunks": 0
   },
   "recalibration5": {
