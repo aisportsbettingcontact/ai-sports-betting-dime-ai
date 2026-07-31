@@ -281,6 +281,7 @@ def load_accepted_foundation(
     *,
     expected_counts: Mapping[str, int] | None = None,
     expected_execution_id: str | None = None,
+    expected_report_schema: str = "dime-foundation-live-data-final-report-v1",
 ) -> tuple[list[dict[str, Any]], dict[str, Any], dict[str, str]]:
     """Load only an immutable 150-record accepted/trainer PASS artifact."""
 
@@ -303,12 +304,20 @@ def load_accepted_foundation(
         raise FoundationEvaluationComparisonError(
             "Foundation expected execution identity is malformed"
         )
+    if (
+        re.fullmatch(
+            r"dime-foundation-[a-z0-9]+(?:-[a-z0-9]+)*-final-report-v1",
+            expected_report_schema,
+        )
+        is None
+    ):
+        raise FoundationEvaluationComparisonError("Foundation expected report schema is malformed")
     accepted_root = _validate_private_root(root, "accepted Foundation")
     snapshot = _file_snapshot(accepted_root)
     _verify_sha256sums(accepted_root)
     report = _load_json(accepted_root / "final-report.json")
     if (
-        report.get("schema_version") != "dime-foundation-live-data-final-report-v1"
+        report.get("schema_version") != expected_report_schema
         or report.get("status") != "PASS"
         or report.get("counts") != counts
         or (
