@@ -29,97 +29,14 @@ export const HERO = {
   trustMicrocopy: "Analytical software for disciplined market evaluation. No guaranteed outcomes.",
 } as const;
 
-// ─── Dime Market Console (demo data — abstract teams, labeled DEMO) ──────────
+// (The scripted Dime Market Console and its data were removed 2026-07-31 by
+// owner directive — the landing proves the product with the real embedded
+// chat and the live odds-history panel instead. The verdict vocabulary below
+// outlived it: the chat answer cards and StatePill still classify by it.)
 
+/** The three verdicts every market resolves to. */
 export type MarketState = "edge" | "monitor" | "pass";
 
-export interface ConsoleMarket {
-  id: string;
-  tab: string;
-  market: string;
-  sport: string;
-  bookPrice: string;
-  impliedProb: number; // percent
-  dimeProjection: number; // percent
-  edge: string;
-  fairPrice: string;
-  state: MarketState;
-  stateLabel: string;
-  confidence: string;
-  risk: string;
-  movement: { open: string; current: string; note: string };
-  signal: string;
-  status: string;
-  creditCost: number;
-}
-
-export const CONSOLE_MARKETS: ConsoleMarket[] = [
-  {
-    id: "edge",
-    tab: "Team A ML",
-    market: "Team A Moneyline",
-    sport: "MLB",
-    bookPrice: "−115",
-    impliedProb: 53.5,
-    dimeProjection: 58.9,
-    edge: "+5.4%",
-    fairPrice: "−143",
-    state: "edge",
-    stateLabel: "Edge Detected",
-    confidence: "74 / 100",
-    risk: "Medium volatility",
-    movement: { open: "−108", current: "−115", note: "open → current" },
-    signal: "Model price ahead of current market",
-    status: "Monitor movement before close",
-    creditCost: 1,
-  },
-  {
-    id: "monitor",
-    tab: "Team C −4.5",
-    market: "Team C −4.5 Spread",
-    sport: "NBA",
-    bookPrice: "−110",
-    impliedProb: 52.4,
-    dimeProjection: 55.8,
-    edge: "+3.4%",
-    fairPrice: "−126",
-    state: "monitor",
-    stateLabel: "Monitor",
-    confidence: "61 / 100",
-    risk: "Medium volatility",
-    movement: { open: "−105", current: "−110", note: "open → current" },
-    signal: "Edge present but shrinking with movement",
-    status: "Only playable if the price holds or improves",
-    creditCost: 1,
-  },
-  {
-    id: "pass",
-    tab: "Team E O8.5",
-    market: "Team E Over 8.5 Total",
-    sport: "MLB",
-    bookPrice: "−105",
-    impliedProb: 51.2,
-    dimeProjection: 49.6,
-    edge: "−1.6%",
-    fairPrice: "+102",
-    state: "pass",
-    stateLabel: "Pass",
-    confidence: "82 / 100",
-    risk: "Low volatility",
-    movement: { open: "−107", current: "−105", note: "open → current" },
-    signal: "Market efficiently priced, no edge to evaluate",
-    status: "No action. Keep your bankroll.",
-    creditCost: 1,
-  },
-];
-
-export const CONSOLE_SCAN_STEPS = [
-  "Ingesting book prices",
-  "Running 400,000 simulations",
-  "Comparing implied vs projected",
-  "Flagging movement & volatility",
-  "Classifying market",
-] as const;
 
 // ─── Dime Chat demo (scripted, labeled DEMO) ─────────────────────────────────
 
