@@ -48,3 +48,13 @@ c63bb85031c2a3404ae2a4a049dfb02e39777c2d:ml/dime-1.0/evidence/benchmarks/base-mo
 8e75ee77ddc2221055d2a8febec6378d23257dbb:ml/dime-1.0/evidence/governance/evaluation-answer-key-governance-v1/manifest.json:generic-api-key:26
 8e75ee77ddc2221055d2a8febec6378d23257dbb:ml/dime-1.0/evidence/governance/evaluation-answer-key-governance-v1/manifest.json:generic-api-key:27
 8e75ee77ddc2221055d2a8febec6378d23257dbb:ml/dime-1.0/evidence/governance/evaluation-answer-key-governance-v1/manifest.json:generic-api-key:28
+# PR #253 exact Hugging Face model/tokenizer revision identities. The
+# generic-api-key detector matched the two pinned public commit revisions in
+# the config, schema constants, and tests. These exact fingerprints do not
+# suppress the revisions elsewhere or future findings.
+9ace77d832bed675f7c06444c477b164f18e80d7:ml/dime-1.0/tests/test_runpod_gate_1_authorization_v1.py:generic-api-key:52
+9ace77d832bed675f7c06444c477b164f18e80d7:ml/dime-1.0/tests/test_runpod_gate_1_authorization_v1.py:generic-api-key:58
+9ace77d832bed675f7c06444c477b164f18e80d7:ml/dime-1.0/schemas/runpod_gate_1_authorization.schema.json:generic-api-key:69
+9ace77d832bed675f7c06444c477b164f18e80d7:ml/dime-1.0/schemas/runpod_gate_1_authorization.schema.json:generic-api-key:75
+9ace77d832bed675f7c06444c477b164f18e80d7:ml/dime-1.0/configs/runpod_gate_1_authorization_v1.json:generic-api-key:30
+9ace77d832bed675f7c06444c477b164f18e80d7:ml/dime-1.0/configs/runpod_gate_1_authorization_v1.json:generic-api-key:36

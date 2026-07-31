@@ -32,6 +32,7 @@ test("Railway Keychain broker rejects mutation and unpinned targets before crede
     assert.equal(source.includes('strcmp(argv[1], "variable")'), false);
     assert.match(source, /capture_railway_variable_map/);
     assert.match(source, /select_role_credentials/);
+    assert.match(source, /verify_authentication_closure_before_credentials/);
     for (const forbidden of [
       "redeploy",
       "up",
@@ -94,7 +95,7 @@ test("Railway Keychain broker rejects mutation and unpinned targets before crede
 });
 
 test("Railway Keychain source contains no credential-print path", async () => {
-  const [source, installer] = await Promise.all([
+  const [source, installer, provisioner, packageJson] = await Promise.all([
     readFile(
       resolve(REPOSITORY_ROOT, "scripts/dime-railway-keychain.c"),
       "utf8"
@@ -103,6 +104,11 @@ test("Railway Keychain source contains no credential-print path", async () => {
       resolve(REPOSITORY_ROOT, "scripts/install-dime-railway-keychain.mjs"),
       "utf8"
     ),
+    readFile(
+      resolve(REPOSITORY_ROOT, "scripts/provision-dime-credential-trust.mjs"),
+      "utf8"
+    ),
+    readFile(resolve(REPOSITORY_ROOT, "package.json"), "utf8"),
   ]);
   assert.equal(source.includes('printf("%s", credential)'), false);
   assert.equal(source.includes("puts((char *)credential)"), false);
@@ -117,6 +123,19 @@ test("Railway Keychain source contains no credential-print path", async () => {
   assert.match(source, /select_role_credentials/);
   assert.match(
     source,
+    /verify_authentication_child\(\);\s*verify_authentication_closure_before_credentials\(\);\s*umask\(0077\);\s*size_t raw_length/s
+  );
+  assert.match(source, /posix_spawn_file_actions_addchdir_np/);
+  assert.match(source, /DIME_AUTH_APPLICATION_DIRECTORY/);
+  assert.match(source, /DIME_AUTH_CLOSURE_MANIFEST_SHA256/);
+  assert.match(source, /DIME_AUTH_CLOSURE_PUBLIC_KEY_SHA256/);
+  assert.match(source, /"closure-preflight"/);
+  assert.equal(
+    /append_environment\([^;]+,\s*"NODE_(?:PATH|OPTIONS)"/s.test(source),
+    false
+  );
+  assert.match(
+    source,
     /posix_spawn_file_actions_addopen\(\s*&actions,\s*STDERR_FILENO,\s*"\/dev\/null"/
   );
   assert.equal(source.includes('strcmp(argv[1], "variable")'), false);
@@ -126,6 +145,15 @@ test("Railway Keychain source contains no credential-print path", async () => {
   assert.equal(
     installer.includes(
       "await rename(temporaryExecutable, SECURE_RAILWAY_EXECUTABLE)"
+    ),
+    false
+  );
+  assert.match(provisioner, /process\.getuid\(\) === 0/);
+  assert.match(provisioner, /PROVISION_DIME_CREDENTIAL_TRUST_V2/);
+  assert.match(provisioner, /credentialsRead: false/);
+  assert.equal(
+    Object.keys(JSON.parse(packageJson).scripts).some(name =>
+      name.includes("provision")
     ),
     false
   );

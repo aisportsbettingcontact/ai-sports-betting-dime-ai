@@ -1511,7 +1511,11 @@ async function main() {
   throw new Error(`unknown command: ${args.command}`);
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === SCRIPT_PATH) {
+if (
+  process.env.DIME_BUNDLED_PRODUCTION_AUTH !== "1" &&
+  process.argv[1] &&
+  resolve(process.argv[1]) === SCRIPT_PATH
+) {
   main().catch(error => {
     process.stderr.write(
       `Dime agent access failed: ${redactAgentError(error?.message)}\n`
