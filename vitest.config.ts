@@ -18,6 +18,9 @@ export default defineConfig({
   },
   test: {
     environment: "node",
+    // Refuses to run against a production database — several suites INSERT and
+    // DELETE real app_users rows and read DATABASE_URL from the ambient shell.
+    globalSetup: ["./vitest.globalSetup.ts"],
     env: {
       APP_SESSION_SECRET: "vitest-dummy-not-a-secret",
     },

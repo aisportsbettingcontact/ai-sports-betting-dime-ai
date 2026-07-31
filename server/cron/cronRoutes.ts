@@ -32,6 +32,8 @@ import { requireCronSecret } from "./cronAuth";
 import { CronJobRunner } from "./cronRunner";
 import { runVsinRefresh, refreshAllScoresNow, runMlbCycleOnce } from "../vsinAutoRefresh";
 import { runMlbAllStarGameSync } from "../mlbAllStarGameSync";
+import { reconcileStripeSubscriptions, formatReconcileReport } from "../stripe/reconcile";
+import { billingAlert } from "../_core/billingAlerts";
 
 // One runner per job — module-level so the run-lock survives across requests.
 const vsinRunner = new CronJobRunner("vsin-odds", async () => {
@@ -101,6 +103,53 @@ export function registerCronRoutes(app: Express): void {
     }
   });
   console.log(`[Cron] [OUTPUT] Registered POST /api/cron/mlb-asg (job=mlb-asg)`);
+
+  // Stripe ↔ database drift detector (audit OPS-001).
+  //
+  // Webhook delivery is at-least-once but not guaranteed-once-forever: a revoke
+  // lost during an outage, or an endpoint misconfiguration, leaves the database
+  // silently disagreeing with Stripe — and nothing else in this system would
+  // ever notice. This job is the safety net. It is strictly READ-ONLY: it lists
+  // Stripe subscriptions, diffs them against app_users, and reports. It never
+  // writes an entitlement, because auto-healing a drift you do not understand is
+  // how one bad assumption becomes a mass revoke.
+  //
+  // Runs synchronously (like mlb-asg) so the workflow can print the drift table,
+  // and returns 200 even when drift is found — drift is a finding to action, not
+  // a failed job. Only an execution error is a non-2xx.
+  app.post("/api/cron/stripe-reconcile", async (req: Request, res: Response) => {
+    if (!requireCronSecret(req, res, "stripe-reconcile")) return;
+    const maxPagesRaw = req.body?.maxPages ?? req.query?.maxPages;
+    const maxPages = Number.isFinite(Number(maxPagesRaw)) && Number(maxPagesRaw) > 0
+      ? Math.min(Number(maxPagesRaw), 50)
+      : undefined;
+    console.log(`[Cron:stripe-reconcile] [INPUT] POST /api/cron/stripe-reconcile maxPages=${maxPages ?? "default"} at ${new Date().toISOString()}`);
+    try {
+      const report = await reconcileStripeSubscriptions(maxPages ? { maxPages } : undefined);
+      const summary = formatReconcileReport(report);
+      console.log(`[Cron:stripe-reconcile] [OUTPUT]\n${summary}`);
+
+      if (report.drift.length > 0) {
+        void billingAlert("RECONCILE_DRIFT", {
+          driftCount: report.drift.length,
+          checkedStripeSubscriptions: report.checkedStripeSubscriptions,
+          checkedDbUsers: report.checkedDbUsers,
+          truncated: report.truncated,
+          // Bounded sample only — the full report is in the job log.
+          sample: report.drift.slice(0, 10).map((d) => ({ kind: d.kind, userId: d.userId, detail: d.detail })),
+        });
+      }
+
+      console.log(`[Cron:stripe-reconcile] [VERIFY] ${report.drift.length === 0 ? "PASS — no drift" : `DRIFT — ${report.drift.length} row(s)`}`);
+      res.status(200).json({ ok: true, ...report, summary });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`[Cron:stripe-reconcile] [ERROR] ${msg}`);
+      void billingAlert("RECONCILE_DRIFT", { failed: true, detail: msg });
+      res.status(500).json({ ok: false, error: msg });
+    }
+  });
+  console.log(`[Cron] [OUTPUT] Registered POST /api/cron/stripe-reconcile (job=stripe-reconcile)`);
 
   // Observability: read-only run-lock state for all jobs (still secret-guarded so
   // it can't be scraped anonymously). Handy for the CI perf harness and debugging.
