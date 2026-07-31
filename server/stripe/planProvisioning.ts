@@ -300,6 +300,73 @@ export interface NewPlanInput {
   restock?: RestockInput | null;
 }
 
+// ─── TRIALS: where `trialPeriodDays` actually has to be spent (LIFE-004) ─────
+//
+// READ THIS BEFORE ASSUMING A CONFIGURED TRIAL IS LIVE.
+//
+// `plan_prices.trialPeriodDays` is the owner's intent ("this interval starts
+// with N free days"). Persisting it — and even mirroring it onto the Stripe
+// Price below — DOES NOT, ON ITS OWN, GIVE ANYONE A TRIAL. Stripe applies a
+// trial to the SUBSCRIPTION, not to the Price.
+//
+// What the pinned API version (2026-04-22.dahlia / stripe-node 22.1.1) actually
+// offers:
+//
+//   • `Price.recurring.trial_period_days` — ACCEPTED on price creation
+//     (PriceCreateParams.Recurring.trial_period_days). But the field is a
+//     DEFAULT that is only read when a subscription is created with
+//     `trial_from_plan: true`. That flag exists on `subscriptions.create` and
+//     on subscription schedules — it does NOT exist on
+//     `Checkout.SessionCreateParams.SubscriptionData`. This app sells solely
+//     through Checkout Sessions, so the Price field is inert here on its own.
+//     It is still set below: it makes the trial visible in the Stripe
+//     dashboard, keeps the Price object honest about the plan it represents,
+//     and is the value a future `trial_from_plan` path would read.
+//
+//   • `Checkout.SessionCreateParams.SubscriptionData.trial_period_days` — THE
+//     FIELD THAT ACTUALLY CHARGES NOTHING FOR N DAYS. This is the one that must
+//     be sent, and the only one Checkout honours.
+//
+// CONSUMPTION POINT (not owned by this module — server/routers/stripe.ts):
+//   1. `resolveCheckoutPlan()` must carry the resolved interval's trial out
+//      alongside priceId/description/couponId/mode — the StoredPrice it already
+//      reads (`planStore.StoredPrice.trialPeriodDays`) has the value; it is
+//      simply dropped on the floor today.
+//   2. BOTH session builders — `buildStripeCheckoutSession` and
+//      `buildEmbeddedCheckoutSession` — must fold it into their `subscriptionOnly`
+//      block:
+//          subscription_data: {
+//            description,
+//            metadata: { ... },
+//            ...(trialDays != null ? { trial_period_days: trialDays } : {}),
+//          }
+//      Use `checkoutTrialPeriodDays()` below to normalize the value: Stripe
+//      rejects 0 (the minimum is 1), and a trial is meaningless on a one-time
+//      ("Lifetime") price, which checks out in mode:"payment" with no
+//      subscription_data at all.
+//
+// Until step 2 lands, a configured trial is decorative: the buyer is charged
+// immediately.
+
+/**
+ * The `subscription_data.trial_period_days` value for a stored interval, or
+ * `undefined` when no trial applies.
+ *
+ * Pure and exported so the checkout-session builder has ONE place to ask "does
+ * this interval start with a free trial?" and cannot re-derive the rule wrongly.
+ * Returns undefined for a non-recurring ("Lifetime" / one_time) price — such a
+ * checkout runs in mode:"payment" and has no subscription to put a trial on —
+ * and for 0/negative/null days, which Stripe rejects (the minimum is 1).
+ */
+export function checkoutTrialPeriodDays(price: {
+  interval: BillingInterval | null;
+  trialPeriodDays: number | null;
+}): number | undefined {
+  if (!price.interval) return undefined;
+  const days = normTrial(price.trialPeriodDays);
+  return days ?? undefined;
+}
+
 /**
  * Create ONE Stripe Price (+ its optional promo coupon) under a product and
  * persist the plan_prices row. Shared by provisionPlan and addPriceToPlan.
@@ -321,13 +388,22 @@ async function createAndPersistPrice(
   const recurring = opts.planType !== "one_time" && input.interval != null;
   const interval: BillingInterval | null = recurring ? (input.interval as BillingInterval) : null;
   const intervalCount: number | null = recurring ? clampCount(interval as BillingInterval, input.intervalCount ?? 1) : null;
+  // 0 days ≡ no trial (same normalization billingShapeChanged uses), so a form
+  // that defaults the trial box to 0 never sends a bogus `trial_period_days`.
+  const trialDays = recurring ? normTrial(input.trialPeriodDays) : null;
   // sortOrder keeps idempotency keys distinct even for same-amount one-time prices.
   // `idemSalt` distinguishes repeat *reprices* of the same plan: repriceInterval
   // rewrites the replacement row's sortOrder back to the original's, so sortOrder
   // alone can repeat and a flip-flopping edit ($10→$11→$10→$11) would otherwise
   // replay a 24h-old idempotency key and hand back an ARCHIVED Stripe Price.
+  // The trial is part of the key too: it is part of the Price's create params
+  // now, and Stripe REJECTS a replayed key whose parameters differ — adding or
+  // removing a trial on an otherwise identical shape must be a different key.
+  // (Appended only when a trial exists, so keys for untrialled prices are
+  // byte-for-byte what they were before trials were wired up.)
   const idemTag =
     `${slug}-${input.amountCents}-${recurring ? `${interval}${intervalCount}` : "once"}-${opts.sortOrder}` +
+    (trialDays != null ? `-t${trialDays}` : "") +
     (opts.idemSalt ? `-${opts.idemSalt}` : "");
 
   const price = await stripe.prices.create(
@@ -335,7 +411,18 @@ async function createAndPersistPrice(
       product: productId,
       unit_amount: input.amountCents,
       currency,
-      ...(recurring ? { recurring: { interval: interval as BillingInterval, interval_count: intervalCount as number } } : {}),
+      ...(recurring
+        ? {
+            recurring: {
+              interval: interval as BillingInterval,
+              interval_count: intervalCount as number,
+              // Mirrored for dashboard visibility + `trial_from_plan` parity ONLY.
+              // Checkout does NOT read this — see the TRIALS note above; the
+              // trial reaches the buyer via subscription_data.trial_period_days.
+              ...(trialDays != null ? { trial_period_days: trialDays } : {}),
+            },
+          }
+        : {}),
       metadata: { dime_plan_slug: slug },
     },
     { idempotencyKey: `plan-price-${idemTag}` },
@@ -390,7 +477,12 @@ async function db_insert_price(
       currency,
       interval,
       intervalCount,
-      trialPeriodDays: input.trialPeriodDays ?? null,
+      // Normalized (0 ≡ null) so the row agrees with what was sent to Stripe and
+      // with billingShapeChanged, which would otherwise see 0-vs-null churn. The
+      // raw value is otherwise kept as-is — including on a non-recurring price,
+      // where it is inert but harmless; suppressing it here would make every
+      // subsequent save look like a billing-shape change and reprice in a loop.
+      trialPeriodDays: normTrial(input.trialPeriodDays),
       promoType: promo.promoType,
       promoValue: promo.promoValue,
       promoCode: promo.promoCode,
@@ -682,6 +774,235 @@ export function billingShapeChanged(row: BillingShapeRow, input: NewPriceInput):
   return false;
 }
 
+// ─── Payment-link safety net (a reprice ARCHIVES the old Price) ──────────────
+//
+// A Stripe Payment Link binds to a SPECIFIC Price. Archiving that Price does not
+// update the link, disable it, or warn anywhere — the link silently stops
+// working, and nothing in this admin would ever say so. It has already happened
+// in this account twice: two links still point at prices archived by earlier
+// edits. Both links were already deactivated, so no revenue was lost, but the
+// mechanism is proven, and there is now a LIVE one-time payment link that must
+// not be broken.
+//
+// So a reprice looks for links selling the price it is about to archive, and
+// refuses by default when any ACTIVE link would break.
+
+/** Payment Links per page (Stripe's max) and the page cap for one scan. */
+const PAYMENT_LINK_PAGE_SIZE = 100;
+const PAYMENT_LINK_PAGE_CAP = 5;
+
+export interface PaymentLinkRef {
+  id: string;
+  url: string;
+  active: boolean;
+}
+
+/**
+ * A line item's price id. `price` comes back as an expanded Price object on the
+ * expand path and can be a bare id string on others — accept both rather than
+ * assume, because guessing wrong here makes the guard silently find nothing.
+ */
+function lineItemPriceId(item: unknown): string | null {
+  const price = (item as { price?: unknown } | null)?.price;
+  if (typeof price === "string") return price;
+  const id = (price as { id?: unknown } | null)?.id;
+  return typeof id === "string" ? id : null;
+}
+
+/** Does this Payment Link sell `stripePriceId`? */
+async function paymentLinkSellsPrice(
+  stripe: Stripe,
+  link: Stripe.PaymentLink,
+  stripePriceId: string,
+): Promise<boolean> {
+  // `line_items` is only populated when expanded. If it is missing, ask the
+  // dedicated endpoint rather than treating the link as a non-match — a false
+  // "no links reference this" is exactly the failure this guard exists to stop.
+  const items =
+    link.line_items?.data ??
+    (await stripe.paymentLinks.listLineItems(link.id, { limit: PAYMENT_LINK_PAGE_SIZE })).data;
+  return (items ?? []).some((li) => lineItemPriceId(li) === stripePriceId);
+}
+
+/**
+ * Scan Payment Links for ones selling `stripePriceId`, reporting whether the
+ * scan was complete. Bounded at PAYMENT_LINK_PAGE_CAP × PAYMENT_LINK_PAGE_SIZE
+ * links; a cap hit is returned as `truncated` AND logged, never swallowed.
+ */
+async function scanPaymentLinksForPrice(
+  stripePriceId: string,
+): Promise<{ links: PaymentLinkRef[]; truncated: boolean; scanned: number }> {
+  const stripe = getProvisioningStripe();
+  const links: PaymentLinkRef[] = [];
+  let startingAfter: string | undefined;
+  let truncated = false;
+  let scanned = 0;
+
+  for (let page = 0; page < PAYMENT_LINK_PAGE_CAP; page++) {
+    const res = await stripe.paymentLinks.list({
+      limit: PAYMENT_LINK_PAGE_SIZE,
+      expand: ["data.line_items"],
+      ...(startingAfter ? { starting_after: startingAfter } : {}),
+    });
+    const batch = res.data ?? [];
+    for (const link of batch) {
+      scanned += 1;
+      if (await paymentLinkSellsPrice(stripe, link, stripePriceId)) {
+        links.push({ id: link.id, url: link.url, active: link.active === true });
+      }
+    }
+    if (batch.length === 0 || !res.has_more) break;
+    startingAfter = batch[batch.length - 1].id;
+    if (page === PAYMENT_LINK_PAGE_CAP - 1) truncated = true;
+  }
+
+  if (truncated) {
+    console.warn(
+      `${TAG} [PAYMENT-LINK-SCAN] TRUNCATED after ${scanned} link(s) (${PAYMENT_LINK_PAGE_CAP} pages × ${PAYMENT_LINK_PAGE_SIZE}) — ` +
+        `this account has MORE Payment Links than one scan covers, so links beyond that point were NOT checked against ${stripePriceId}. ` +
+        `Treat a "no links found" result as incomplete and verify in the Stripe dashboard.`,
+    );
+  }
+  return { links, truncated, scanned };
+}
+
+/**
+ * Every Payment Link whose line items reference `stripePriceId`, active or not.
+ *
+ * The `active` flag is returned rather than filtered on: an INACTIVE link is
+ * already off and must never block an edit, but the caller still wants to know
+ * it exists. Bounded pagination — see scanPaymentLinksForPrice, which logs
+ * loudly if the scan is truncated.
+ */
+export async function findPaymentLinksForPrice(stripePriceId: string): Promise<PaymentLinkRef[]> {
+  const { links } = await scanPaymentLinksForPrice(stripePriceId);
+  return links;
+}
+
+/**
+ * - `clear`    — checked, nothing ACTIVE sells the price; safe to archive.
+ * - `override` — active links found, but the caller explicitly opted in.
+ * - `failed`   — the Stripe lookup itself errored; guard skipped, edit allowed.
+ * - `skipped`  — nothing is being archived (presentation-only edit).
+ */
+export type PaymentLinkGuardStatus = "clear" | "override" | "failed" | "skipped";
+
+export interface PaymentLinkGuardOutcome {
+  status: PaymentLinkGuardStatus;
+  /** ACTIVE links selling the price — non-empty only when status is "override". */
+  activeLinks: PaymentLinkRef[];
+  /** Inactive links selling the price. Reported, never blocking. */
+  inactiveCount: number;
+  /** True when the scan hit its page cap and may have missed links. */
+  truncated: boolean;
+  /** One-line summary for the caller's [OUTPUT] log. */
+  summary: string;
+}
+
+/** Nothing is being archived, so there is nothing to protect. */
+const PAYMENT_LINK_GUARD_SKIPPED: PaymentLinkGuardOutcome = {
+  status: "skipped",
+  activeLinks: [],
+  inactiveCount: 0,
+  truncated: false,
+  summary: "not checked (no Price archived)",
+};
+
+/**
+ * Decide whether archiving `stripePriceId` is safe given the links that sell it.
+ * THROWS when an ACTIVE link would break and the caller has not opted in.
+ *
+ * Pure (bar logging) and exported so the block/allow rule is unit-testable
+ * without a Stripe account.
+ */
+export function evaluatePaymentLinkGuard(
+  stripePriceId: string,
+  links: PaymentLinkRef[],
+  opts?: { allowBreakingPaymentLinks?: boolean; truncated?: boolean },
+): PaymentLinkGuardOutcome {
+  const truncated = opts?.truncated === true;
+  const active = links.filter((l) => l.active);
+  const inactiveCount = links.length - active.length;
+
+  if (active.length === 0) {
+    return {
+      status: "clear",
+      activeLinks: [],
+      inactiveCount,
+      truncated,
+      summary:
+        `checked, no ACTIVE payment link sells ${stripePriceId}` +
+        (inactiveCount > 0 ? ` (${inactiveCount} inactive link(s) ignored)` : "") +
+        (truncated ? " — SCAN TRUNCATED, result may be incomplete" : ""),
+    };
+  }
+
+  const named = active.map((l) => `${l.id} (${l.url})`).join(", ");
+  if (!opts?.allowBreakingPaymentLinks) {
+    throw new Error(
+      `This edit would archive Stripe Price ${stripePriceId}, which ${active.length} ACTIVE Stripe Payment Link(s) still sell: ${named}. ` +
+        `Archiving the price breaks those links silently — buyers get an error and nothing in this admin would report it. ` +
+        `Point the link(s) at a new price (or deactivate them) first, or re-run this edit with "allow breaking payment links" to proceed anyway.`,
+    );
+  }
+
+  console.warn(
+    `${TAG} [PAYMENT-LINK-OVERRIDE] archiving ${stripePriceId} anyway — ${active.length} ACTIVE Payment Link(s) WILL BREAK: ${named}. ` +
+      `Proceeding only because allowBreakingPaymentLinks was set explicitly. Repoint or retire those links now.`,
+  );
+  return {
+    status: "override",
+    activeLinks: active,
+    inactiveCount,
+    truncated,
+    summary: `OVERRIDE — ${active.length} ACTIVE payment link(s) broken: ${named}`,
+  };
+}
+
+/**
+ * Look up the Payment Links selling `stripePriceId` and apply the guard.
+ *
+ * A Stripe FAILURE HERE IS NOT FATAL. The guard is a safety net, not a
+ * dependency: if the lookup errors (outage, key scope, rate limit) the reprice
+ * continues with a loud warning, because a Stripe hiccup must never make plan
+ * editing impossible. Only a successful lookup that FINDS an active link blocks.
+ */
+export async function guardPaymentLinksBeforeArchive(
+  stripePriceId: string,
+  opts?: { allowBreakingPaymentLinks?: boolean },
+): Promise<PaymentLinkGuardOutcome> {
+  let scan: { links: PaymentLinkRef[]; truncated: boolean };
+  try {
+    scan = await scanPaymentLinksForPrice(stripePriceId);
+  } catch (err) {
+    console.warn(
+      `${TAG} [PAYMENT-LINK-CHECK] FAILED for ${stripePriceId} — ${(err as Error).message}. ` +
+        `Proceeding with the edit: the payment-link guard is a safety net, not a dependency. ` +
+        `Verify by hand in the Stripe dashboard that no live Payment Link sold this price.`,
+    );
+    return {
+      status: "failed",
+      activeLinks: [],
+      inactiveCount: 0,
+      truncated: false,
+      summary: `CHECK FAILED (${(err as Error).message}) — proceeded unguarded`,
+    };
+  }
+  return evaluatePaymentLinkGuard(stripePriceId, scan.links, {
+    allowBreakingPaymentLinks: opts?.allowBreakingPaymentLinks,
+    truncated: scan.truncated,
+  });
+}
+
+export interface RepriceOptions {
+  /**
+   * Proceed even when an ACTIVE Payment Link sells the price being archived.
+   * Downgrades the hard block to a loud `console.warn`. Off by default — the
+   * admin has to say so consciously.
+   */
+  allowBreakingPaymentLinks?: boolean;
+}
+
 export interface RepriceResult {
   /** True when a NEW Stripe Price was minted (billing shape changed). */
   changed: boolean;
@@ -691,6 +1012,8 @@ export interface RepriceResult {
   newStripePriceId: string;
   /** True when the edited interval was the plan's default and the replacement inherited it. */
   carriedDefault: boolean;
+  /** What the payment-link guard did before the old Price was archived. */
+  paymentLinks: PaymentLinkGuardOutcome;
 }
 
 /**
@@ -722,10 +1045,17 @@ export interface RepriceResult {
  * `input` is the interval's FULL desired state, not a sparse patch: an omitted
  * `label`/`trialPeriodDays`/`promo` clears it, exactly as it would on create.
  * `hidden` is the one exception — omitted means "carry the current value".
+ *
+ * PAYMENT-LINK GUARD: a reprice archives the old Stripe Price, which silently
+ * breaks any Stripe Payment Link bound to it. Before ANY Stripe write, active
+ * links selling that price are looked up and the edit is REFUSED by name unless
+ * `opts.allowBreakingPaymentLinks` is set. Inactive links never block, and a
+ * failed lookup never blocks. See guardPaymentLinksBeforeArchive.
  */
 export async function repriceInterval(
   priceId: number,
   input: NewPriceInput,
+  opts?: RepriceOptions,
 ): Promise<RepriceResult> {
   validateAmount(input.amountCents);
   if (input.promo) validatePromo(input.promo, input.amountCents);
@@ -798,8 +1128,20 @@ export async function repriceInterval(
       newPriceRowId: priceId,
       newStripePriceId: target.stripePriceId,
       carriedDefault: target.isDefault,
+      // Nothing is archived on this path, so no Payment Link can break.
+      paymentLinks: PAYMENT_LINK_GUARD_SKIPPED,
     };
   }
+
+  // GUARD — this edit will archive target.stripePriceId, silently breaking any
+  // Payment Link bound to it. Run BEFORE the replacement is minted, not merely
+  // before the archive: a block then leaves the plan completely untouched, with
+  // no orphan Stripe Price to clean up. Throws unless the caller opted in;
+  // never throws on a Stripe lookup failure.
+  const paymentLinks = await guardPaymentLinksBeforeArchive(target.stripePriceId, {
+    allowBreakingPaymentLinks: opts?.allowBreakingPaymentLinks,
+  });
+  console.log(`${TAG} reprice ${priceId}: payment-link guard — ${paymentLinks.summary}`);
 
   console.log(
     `${TAG} reprice ${priceId} plan=${target.planId}: billing shape CHANGED ` +
@@ -852,6 +1194,7 @@ export async function repriceInterval(
     newPriceRowId: created.rowId,
     newStripePriceId: created.priceId,
     carriedDefault: target.isDefault,
+    paymentLinks,
   };
 }
 

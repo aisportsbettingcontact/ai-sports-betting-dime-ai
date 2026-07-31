@@ -149,6 +149,105 @@ async function recordEntitlementEvent(params: {
   }
 }
 
+// ─── Billing-interval (plan_prices) resolution ────────────────────────────────
+/**
+ * The subset of a `{ plan, price }` mapping (getPriceById) this module needs:
+ * the plan_prices ROW ID, which is what app_users.planPriceId stores.
+ */
+type ResolvedPriceRow = { price: { id: number } };
+
+/** Where a resolved planPriceId came from — logged verbatim, never guessed. */
+export type PlanPriceSource = "purchased_price_id" | "line_item_price" | "none";
+
+export interface PlanPriceResolution {
+  /** plan_prices.id, or null when this purchase maps to NO plan_prices row. */
+  planPriceId: number | null;
+  source: PlanPriceSource;
+}
+
+/**
+ * Which billing interval (plan_prices row) a checkout actually bought.
+ *
+ * Same precedence as the plan/expiry resolver above, and deliberately derived
+ * from the SAME resolved rows so the slug and the interval can never disagree:
+ *  1) the price pinned in `metadata.price_id` at checkout (getPriceById), then
+ *  2) the price reverse-mapped from the session's line items.
+ *
+ * null is a real, correct answer — the legacy static plans (monthly/annual/
+ * pro/sharp/operator) live in `server/stripe/products.ts`, not in plan_prices,
+ * so they HAVE no row id. Writing a made-up id would silently attribute those
+ * subscribers to some other plan's interval, which is worse than "unknown".
+ */
+export function resolvePlanPriceId(input: {
+  byPurchasedPrice?: ResolvedPriceRow | null;
+  byLineItemPrice?: ResolvedPriceRow | null;
+}): PlanPriceResolution {
+  if (input.byPurchasedPrice) {
+    return { planPriceId: input.byPurchasedPrice.price.id, source: "purchased_price_id" };
+  }
+  if (input.byLineItemPrice) {
+    return { planPriceId: input.byLineItemPrice.price.id, source: "line_item_price" };
+  }
+  return { planPriceId: null, source: "none" };
+}
+
+export interface RenewalPlanPriceResolution {
+  /**
+   * What the renewal should WRITE. `undefined` means "do not touch the column".
+   * A renewal that cannot map its invoice to a plan_prices row must not null out
+   * a value that is already correct — losing a good id is worse than not
+   * refreshing it, and nothing about a renewal proves the interval changed.
+   */
+  planPriceId: number | undefined;
+  /** What the row will hold afterwards — logged, so a no-op is explainable. */
+  effective: number | null;
+  reason: "invoice_price" | "unresolved_keep_existing";
+}
+
+/**
+ * Keep planPriceId current across renewals. A subscriber repriced onto a new
+ * plan_prices row (an interval edit mints a NEW row and archives the old one)
+ * must end up pointing at the row they are actually billed at now.
+ */
+export function resolveRenewalPlanPriceId(input: {
+  byInvoicePrice?: ResolvedPriceRow | null;
+  current?: number | null;
+}): RenewalPlanPriceResolution {
+  const current = input.current ?? null;
+  if (input.byInvoicePrice) {
+    const id = input.byInvoicePrice.price.id;
+    return { planPriceId: id, effective: id, reason: "invoice_price" };
+  }
+  return { planPriceId: undefined, effective: current, reason: "unresolved_keep_existing" };
+}
+
+/**
+ * The Stripe price id billed on an invoice's first line.
+ *
+ * Two shapes are accepted on purpose: the 2025 API versions moved the price
+ * behind `pricing.price_details.price` (a bare id string), while older/replayed
+ * payloads still carry the expanded `price` object. Reading only one of them
+ * would silently return null for half the traffic — and a null here means "do
+ * not update the interval", so the failure would be invisible.
+ */
+export function extractInvoicePriceId(invoice: unknown): string | null {
+  const line = (invoice as {
+    lines?: {
+      data?: Array<{
+        pricing?: { price_details?: { price?: string | null } | null } | null;
+        price?: { id?: string | null } | string | null;
+      }>;
+    };
+  })?.lines?.data?.[0];
+  if (!line) return null;
+  const fromPricing = line.pricing?.price_details?.price;
+  if (typeof fromPricing === "string" && fromPricing) return fromPricing;
+  const legacy = line.price;
+  if (typeof legacy === "string" && legacy) return legacy;
+  if (legacy && typeof legacy === "object" && typeof legacy.id === "string" && legacy.id) return legacy.id;
+  return null;
+}
+
 // ─── DB helpers ───────────────────────────────────────────────────────────────
 
 /**
@@ -160,6 +259,18 @@ async function grantUserAccess(params: {
   stripeCustomerId: string;
   stripeSubscriptionId: string;
   planId: string;
+  /**
+   * Which plan_prices row (billing interval) this grant is for.
+   *   number    → persist it.
+   *   null      → this purchase maps to NO plan_prices row (legacy static plan);
+   *               clear the column rather than leave a stale interval pointing
+   *               at some other plan's price.
+   *   undefined → caller cannot say; leave whatever is stored untouched.
+   * Nothing wrote this column before, so every paid signup landed with a plan
+   * and a NULL interval — invisible to the app_users_plan_price_idx seek that
+   * answers "who is on this interval?" until someone backfilled by hand.
+   */
+  planPriceId?: number | null;
   expiryMs: number;
   /** Stripe event id for the audit trail; null for non-webhook callers. */
   stripeEventId?: string | null;
@@ -178,13 +289,23 @@ async function grantUserAccess(params: {
 
   const before = await getAppUserById(params.userId);
 
-  console.log(`${tag} [STEP] Granting access userId=${params.userId} planId=${params.planId} expiryMs=${params.expiryMs}`);
+  console.log(`${tag} [STEP] Granting access userId=${params.userId} planId=${params.planId} planPriceId=${params.planPriceId === undefined ? "(unchanged)" : params.planPriceId} expiryMs=${params.expiryMs}`);
   const updateValues: Partial<typeof appUsers.$inferInsert> = {
     hasAccess: true,
     expiryDate: params.expiryMs,
     stripeCustomerId: params.stripeCustomerId,
     stripePlanId: params.planId,
   };
+  // `undefined` is the only value that means "leave it alone" — an explicit
+  // null is a decision (this plan has no plan_prices row) and IS written.
+  if (params.planPriceId !== undefined) {
+    updateValues.planPriceId = params.planPriceId;
+    if (params.planPriceId === null) {
+      console.warn(`${tag} [STATE] planPriceId=null — plan "${params.planId}" has no plan_prices row (legacy static plan); interval recorded as unknown userId=${params.userId}`);
+    }
+  } else {
+    console.log(`${tag} [STATE] No planPriceId provided — leaving existing interval untouched userId=${params.userId}`);
+  }
   // An empty/absent subscription id (e.g. a mode:"payment" session with no
   // subscription attached) must never clobber a real subscriber's existing id.
   if (params.stripeSubscriptionId) {
@@ -202,7 +323,7 @@ async function grantUserAccess(params: {
 
   invalidateAppUserByIdCache(params.userId);
   invalidateCachedAppUser(params.userId);
-  console.log(`${tag} [OUTPUT] Access granted userId=${params.userId} expiry=${new Date(params.expiryMs).toISOString()}`);
+  console.log(`${tag} [OUTPUT] Access granted userId=${params.userId} plan=${params.planId} planPriceId=${params.planPriceId === undefined ? "(unchanged)" : params.planPriceId} expiry=${new Date(params.expiryMs).toISOString()}`);
 
   await recordEntitlementEvent({
     userId: params.userId,
@@ -294,6 +415,13 @@ async function createPendingUserFromCheckout(params: {
   stripeCustomerId: string;
   stripeSubscriptionId: string;
   planId: string;
+  /**
+   * plan_prices row purchased, or null when the plan has none (legacy static
+   * plan). Persisted on the INSERT: this is one of only two code paths that
+   * ever creates an app_users row, so a miss here mints a member the
+   * per-interval queries cannot see until someone backfills by hand.
+   */
+  planPriceId?: number | null;
   expiryMs: number;
   stripeEventId?: string | null;
 }): Promise<number | null> {
@@ -311,7 +439,7 @@ async function createPendingUserFromCheckout(params: {
     username = `${emailPrefix}_${Math.random().toString(36).slice(2, 6)}`;
     console.warn(`${tag} [STATE] Invalid desiredUsername — fallback: ${username}`);
   }
-  console.log(`${tag} [INPUT] sessionId=${params.sessionId} username=${username} email=${params.email} plan=${params.planId}`);
+  console.log(`${tag} [INPUT] sessionId=${params.sessionId} username=${username} email=${params.email} plan=${params.planId} planPriceId=${params.planPriceId ?? "(none)"}`);
 
   // [STEP 2] Check username collision
   const byUsername = await db.select({ id: appUsers.id }).from(appUsers).where(eq(appUsers.username, username)).limit(1);
@@ -369,6 +497,7 @@ async function createPendingUserFromCheckout(params: {
       stripeCustomerId: params.stripeCustomerId,
       stripeSubscriptionId: params.stripeSubscriptionId,
       planId: params.planId,
+      planPriceId: params.planPriceId ?? null,
       expiryMs: params.expiryMs,
       stripeEventId: params.stripeEventId ?? null,
       eventType: "checkout.session.completed",
@@ -394,6 +523,7 @@ async function createPendingUserFromCheckout(params: {
     stripeCustomerId: params.stripeCustomerId,
     stripeSubscriptionId: params.stripeSubscriptionId,
     stripePlanId: params.planId,
+    planPriceId: params.planPriceId ?? null,
     role: "user",
     termsAccepted: false,
     pendingSetup: true,
@@ -423,7 +553,7 @@ async function createPendingUserFromCheckout(params: {
     reason: "PENDING_ACCOUNT_CREATED",
     after: { hasAccess: true, planId: params.planId, expiryDate: params.expiryMs },
   });
-  console.log(`${tag} [OUTPUT] Pending account created userId=${newUserId} username=${username}`);
+  console.log(`${tag} [OUTPUT] Pending account created userId=${newUserId} username=${username} plan=${params.planId} planPriceId=${params.planPriceId ?? "null (no plan_prices row)"}`);
   console.log(`${tag} [STATE] pendingSetup=true — Discord role deferred until account setup`);
   console.log(`${tag} [VERIFY] PASS`);
   return newUserId;
@@ -508,6 +638,10 @@ async function processWebhookEvent(event: Stripe.Event): Promise<void> {
       // resolver still matches.
       let plan: string;
       let expiryMs: number;
+      // The plan_prices row this session actually charged, when the price maps
+      // to one. Captured alongside the slug (never re-derived later) so
+      // app_users.planPriceId records the interval the buyer is billed at.
+      let byLineItemPrice: Awaited<ReturnType<typeof getPriceById>> = null;
       const purchasedPriceId = session.metadata?.price_id?.trim();
       const byPurchasedPrice = purchasedPriceId ? await getPriceById(purchasedPriceId) : null;
       if (byPurchasedPrice) {
@@ -532,6 +666,7 @@ async function processWebhookEvent(event: Stripe.Event): Promise<void> {
             } else if (priceId) {
               const dbMapped = await getPriceById(priceId);
               if (dbMapped) {
+                byLineItemPrice = dbMapped;
                 plan = dbMapped.plan.slug;
                 expiryMs = computeExpiryMsForPrice(dbMapped.price, dbMapped.plan, Date.now()) ?? expiryMs;
                 console.warn(`${tag} [STATE] plan_id absent — resolved DB plan "${plan}" from price=${priceId}`);
@@ -546,6 +681,16 @@ async function processWebhookEvent(event: Stripe.Event): Promise<void> {
           }
         }
       }
+      // Billing interval, from the SAME rows the slug came from. A null here is
+      // reported plainly — legacy static plans have no plan_prices row, and an
+      // invented id would attribute the member to someone else's interval.
+      const { planPriceId, source: planPriceSource } = resolvePlanPriceId({ byPurchasedPrice, byLineItemPrice });
+      if (planPriceId === null) {
+        console.warn(`${tag} [STATE] planPriceId unresolved for plan="${plan}" (no plan_prices row — legacy static plan or unmapped price); persisting NULL`);
+      } else {
+        console.log(`${tag} [STATE] planPriceId=${planPriceId} source=${planPriceSource}`);
+      }
+
       const stripeCustomerId = typeof session.customer === "string" ? session.customer : (session.customer as Stripe.Customer | null)?.id ?? "";
       const stripeSubscriptionId = typeof session.subscription === "string" ? session.subscription : (session.subscription as Stripe.Subscription | null)?.id ?? "";
 
@@ -559,7 +704,7 @@ async function processWebhookEvent(event: Stripe.Event): Promise<void> {
         if (isNaN(userId)) { console.error(`${tag} [VERIFY] FAIL — invalid user_id="${userIdStr}"`); break; }
         console.log(`${tag} [STATE] Existing user path userId=${userId} plan=${plan}`);
         await grantUserAccess({
-          userId, stripeCustomerId, stripeSubscriptionId, planId: plan, expiryMs,
+          userId, stripeCustomerId, stripeSubscriptionId, planId: plan, planPriceId, expiryMs,
           stripeEventId: event.id, eventType: event.type, eventCreatedMs,
         });
         console.log(`${tag} [OUTPUT] Fulfillment complete (existing user) userId=${userId}`);
@@ -592,6 +737,7 @@ async function processWebhookEvent(event: Stripe.Event): Promise<void> {
           stripeCustomerId,
           stripeSubscriptionId,
           planId: plan,
+          planPriceId,
           expiryMs,
           stripeEventId: event.id,
         });
@@ -672,6 +818,10 @@ async function processWebhookEvent(event: Stripe.Event): Promise<void> {
       const { slug: subPlan, expiryMs: subExpiryMs } = await resolvePlanExpiry(sub.metadata?.plan_id);
       const subCustomerId = typeof sub.customer === "string" ? sub.customer : (sub.customer as Stripe.Customer).id;
 
+      // planPriceId is deliberately NOT passed: this branch resolves the plan
+      // from `sub.metadata.plan_id` (a slug), which cannot identify WHICH
+      // interval row was bought. Omitting it leaves the value written by
+      // checkout.session.completed intact instead of overwriting it with a guess.
       await grantUserAccess({
         userId: subUserId,
         stripeCustomerId: subCustomerId,
@@ -801,15 +951,28 @@ async function processWebhookEvent(event: Stripe.Event): Promise<void> {
           const renewExpiry = periodEndSec
             ? periodEndSec * 1000 + RENEWAL_GRACE_MS
             : fallbackExpiry;
+          // Keep the billing interval current: a subscriber repriced onto a new
+          // plan_prices row must end up pointing at the row they are billed at
+          // NOW. When the invoice's price maps to no row the stored value is
+          // left alone — nulling a correct id is strictly worse than a stale
+          // refresh, and a renewal is no evidence the interval changed.
+          const invoicePriceId = extractInvoicePriceId(invoice);
+          const byInvoicePrice = invoicePriceId ? await getPriceById(invoicePriceId) : null;
+          const renewalPrice = resolveRenewalPlanPriceId({
+            byInvoicePrice,
+            current: existingUser.planPriceId ?? null,
+          });
           console.log(
             `${tag} [STATE] Renewal userId=${existingUser.id} plan=${renewPlan} newExpiry=${new Date(renewExpiry).toISOString()}` +
-            ` source=${periodEndSec ? "stripe_period_end+grace" : "plan_window_fallback"}`
+            ` source=${periodEndSec ? "stripe_period_end+grace" : "plan_window_fallback"}` +
+            ` invoicePrice=${invoicePriceId ?? "(none)"} planPriceId=${renewalPrice.effective ?? "null"} (${renewalPrice.reason})`
           );
           await grantUserAccess({
             userId: existingUser.id,
             stripeCustomerId: invoiceCustomerId,
             stripeSubscriptionId: invoiceSubId,
             planId: renewPlan,
+            planPriceId: renewalPrice.planPriceId,
             expiryMs: renewExpiry,
             stripeEventId: event.id,
             eventType: event.type,
