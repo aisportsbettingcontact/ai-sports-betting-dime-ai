@@ -490,7 +490,11 @@ export default function WorldCup2026() {
   const [selectedDate, setSelectedDate] = useState<string>(getDefaultDate);
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div
+      className="min-h-screen bg-black text-white"
+      // Black-fixed surface: raw mint stays legal ink here (owner law 2026-07-31).
+      style={{ ["--mint-ink" as string]: "#45E0A8" }}
+    >
       {/* ── Sticky header ── */}
       {/* <header> (not div): the floating-nav sticky offset targets
           header.sticky.top-0 (index.css) so this re-anchors below the nav. */}

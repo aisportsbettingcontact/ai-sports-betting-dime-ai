@@ -1407,6 +1407,18 @@ export default function DimeChatPage({
   const drawerWidthRef = useRef(DRAWER_FALLBACK_WIDTH);
   const gestureRef = useRef<DrawerGesture | null>(null);
   const viewportFrameRef = useRef<number | null>(null);
+  // ── Keyboard choreography (owner directive 2026-07-31) ────────────────────
+  // The OS keyboard's inset is measured from visualViewport each frame; the
+  // bar morph (compress + centered wordmark) rides a critically-damped
+  // spring on --dc-kb-progress so open/close/reverse mid-flight never jumps,
+  // while the CONTENT geometry tracks the keyboard 1:1 (no spring lag).
+  const kbInsetRef = useRef(0);
+  const kbOpenRef = useRef(false);
+  const kbProgressRef = useRef(0);
+  const kbSpringRef = useRef<SpringSettleHandle | null>(null);
+  const kbFrameRef = useRef<number | null>(null);
+  const kbLastTsRef = useRef<number | null>(null);
+  const [kbOpen, setKbOpen] = useState(false);
   // Authoritative current drawer x (px); replaces framer-motion's MotionValue.
   const dragXRef = useRef(-DRAWER_FALLBACK_WIDTH);
   // rAF id for gesture drag-follow writes (batches pointermove into one paint).
@@ -1517,6 +1529,66 @@ export default function DimeChatPage({
         viewportFrameRef.current = null;
         pageRef.current?.style.setProperty("--dc-visual-height", `${height}px`);
         pageRef.current?.style.setProperty("--dc-visual-top", `${top}px`);
+
+        // Keyboard inset: the strip of layout viewport the OS keyboard eats.
+        const inset = Math.max(0, window.innerHeight - height - top);
+        const prevInset = kbInsetRef.current;
+        kbInsetRef.current = inset;
+        pageRef.current?.style.setProperty("--dc-kb-inset", `${inset}px`);
+
+        // Bubbles ride the keyboard 1:1 (owner directive 2026-07-31): the
+        // page container already shrinks to the visual viewport, so keep the
+        // reader's place — pinned threads re-pin to the newest bubble the
+        // same frame; released threads shift by exactly the inset delta.
+        const delta = inset - prevInset;
+        const scroller = scrollerRef.current;
+        if (scroller && delta !== 0) {
+          programmaticScrollRef.current = true;
+          if (stuckRef.current) scroller.scrollTop = scroller.scrollHeight;
+          else scroller.scrollTop += delta;
+        }
+
+        // Bar choreography: spring --dc-kb-progress toward 1 (open) / 0
+        // (closed). Retarget mid-flight — a dismiss during the open settle
+        // reverses from the current value with velocity carried over.
+        const open = inset > 80;
+        if (open !== kbOpenRef.current) {
+          kbOpenRef.current = open;
+          setKbOpen(open);
+          const target = open ? 1 : 0;
+          const writeProgress = (v: number) => {
+            kbProgressRef.current = v;
+            pageRef.current?.style.setProperty("--dc-kb-progress", String(v));
+          };
+          if (reduceMotion) {
+            kbSpringRef.current?.stop();
+            kbSpringRef.current = null;
+            writeProgress(target);
+          } else if (kbSpringRef.current && !kbSpringRef.current.settled) {
+            kbSpringRef.current.retarget(target);
+          } else {
+            kbSpringRef.current = createSpringSettle({
+              from: kbProgressRef.current,
+              to: target,
+              onUpdate: writeProgress,
+            });
+            kbLastTsRef.current = null;
+            const run = (ts: number) => {
+              const spring = kbSpringRef.current;
+              if (!spring || spring.settled) {
+                kbFrameRef.current = null;
+                kbLastTsRef.current = null;
+                return;
+              }
+              const last = kbLastTsRef.current;
+              kbLastTsRef.current = ts;
+              spring.step(last == null ? 1 / 60 : Math.min((ts - last) / 1000, 1 / 20));
+              kbFrameRef.current = requestAnimationFrame(run);
+            };
+            if (kbFrameRef.current == null)
+              kbFrameRef.current = requestAnimationFrame(run);
+          }
+        }
       });
     };
     schedule();
@@ -1528,8 +1600,12 @@ export default function DimeChatPage({
       if (viewportFrameRef.current != null)
         cancelAnimationFrame(viewportFrameRef.current);
       viewportFrameRef.current = null;
+      kbSpringRef.current?.stop();
+      kbSpringRef.current = null;
+      if (kbFrameRef.current != null) cancelAnimationFrame(kbFrameRef.current);
+      kbFrameRef.current = null;
     };
-  }, [compact]);
+  }, [compact, reduceMotion]);
 
   useLayoutEffect(() => {
     const sidebar = sidebarRef.current;
@@ -2518,6 +2594,24 @@ export default function DimeChatPage({
                 the wordmark title. */}
             {!phone && (
               <span className="dc-mobile-title">
+                <span className="dime-wordmark" aria-label="dime">
+                  d
+                  <span className="dime-wordmark-i">
+                    ı<span className="dime-coindot" />
+                  </span>
+                  me
+                </span>
+              </span>
+            )}
+            {/* Phones, keyboard up (owner directive 2026-07-31, supersedes the
+                r2 empty-center rule for THIS state only): the wordmark fades
+                in centered between the corner controls, riding the same
+                --dc-kb-progress spring as the bar morph. Theme ink comes from
+                the bar's own tokens; the coin-dot stays mint. Always mounted
+                so the reveal/hide never re-layouts — visibility is pure
+                compositor work (opacity/transform). */}
+            {phone && (
+              <span className="dc-mobile-title dc-kb-logo" aria-hidden={!kbOpen}>
                 <span className="dime-wordmark" aria-label="dime">
                   d
                   <span className="dime-wordmark-i">

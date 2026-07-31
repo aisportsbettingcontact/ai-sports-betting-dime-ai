@@ -30,7 +30,7 @@
  * near-zero on body/labels), and full prefers-reduced-motion collapse.
  */
 
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { useLocation } from "wouter";
 import { ArrowLeft, LayoutGrid } from "lucide-react";
 import { ADMIN_NAV, type AdminNavKey } from "./adminNav";
@@ -55,6 +55,23 @@ interface AdminShellProps {
 
 export function AdminShell({ active, children }: AdminShellProps) {
   const [, navigate] = useLocation();
+
+  // The admin area is DARK-FIXED (owner law 2026-07-31, Publish Projections
+  // escalation): the legacy tool bodies are hardcoded dark, so themed chrome
+  // produced a light-strip seam over a black body in light mode. Pin <html>
+  // dark while any admin surface is mounted; restore the user's theme on exit.
+  useEffect(() => {
+    const root = document.documentElement;
+    const hadDark = root.classList.contains("dark");
+    const prevMode = root.dataset.themeMode;
+    root.classList.add("dark");
+    root.dataset.themeMode = "dark";
+    return () => {
+      if (!hadDark) root.classList.remove("dark");
+      if (prevMode !== undefined) root.dataset.themeMode = prevMode;
+      else delete root.dataset.themeMode;
+    };
+  }, []);
 
   return (
     <div className="admin-shell min-h-screen bg-background text-foreground">

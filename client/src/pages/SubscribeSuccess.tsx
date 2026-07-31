@@ -55,8 +55,7 @@ function FeatureList() {
   ];
   return (
     <div
-      className="rounded-xl border border-white p-5 mb-6 text-left"
-      style={{ background: "#000000" }}
+      className="rounded-xl border border-white p-5 mb-6 text-left bg-black"
     >
       <p className="text-[11px] font-bold text-white tracking-widest uppercase mb-3">
         What you now have access to
@@ -160,7 +159,7 @@ export default function SubscribeSuccess() {
   // No session ID
   if (!sessionId) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "#000000" }}>
+      <div className="min-h-screen flex items-center justify-center px-4 bg-black">
         <div className="max-w-md w-full text-center">
           <p className="text-white mb-4">No session ID found. If you just subscribed, please check your email for confirmation.</p>
           <button onClick={() => navigate("/")} className="text-[13px] text-primary hover:underline">Back to home</button>
@@ -172,7 +171,7 @@ export default function SubscribeSuccess() {
   // Loading
   if (isLookingUp) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "#000000" }}>
+      <div className="min-h-screen flex items-center justify-center px-4 bg-black">
         <div className="max-w-md w-full text-center">
           <div className="w-12 h-12 rounded-full border-2 border-transparent border-t-primary animate-spin mx-auto mb-4" />
           <p className="text-white text-sm">Confirming your subscription...</p>
@@ -185,7 +184,7 @@ export default function SubscribeSuccess() {
   // Lookup error
   if (lookupError && !pendingUser) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "#000000" }}>
+      <div className="min-h-screen flex items-center justify-center px-4 bg-black">
         <div className="max-w-md w-full text-center">
           <p className="text-white mb-2 font-semibold">Could not confirm your subscription.</p>
           <p className="text-white text-sm mb-4">Your payment was processed. Please contact support with your order reference below.</p>
@@ -202,7 +201,7 @@ export default function SubscribeSuccess() {
   if (showConfirmation) {
     const username = completedUsername ?? pendingUser?.username ?? null;
     return (
-      <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "#000000" }}>
+      <div className="min-h-screen flex items-center justify-center px-4 bg-black">
         <motion.div
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -255,7 +254,7 @@ export default function SubscribeSuccess() {
 
   // New user — show account setup form
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-12" style={{ background: "#000000" }}>
+    <div className="min-h-screen flex items-center justify-center px-4 py-12 bg-black">
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -286,8 +285,7 @@ export default function SubscribeSuccess() {
 
         <form
           onSubmit={handleSubmit}
-          className="rounded-xl border border-white p-6"
-          style={{ background: "#000000" }}
+          className="rounded-xl border border-white p-6 bg-black"
         >
           <p className="text-[11px] font-bold text-white tracking-widest uppercase mb-5">Create Your Account</p>
 
