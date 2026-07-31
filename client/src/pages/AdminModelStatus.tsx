@@ -23,6 +23,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Check, X } from "lucide-react";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -62,7 +63,7 @@ function StatusBadge({ ok, label }: { ok: boolean; label: string }) {
           : "border-border text-foreground bg-transparent font-mono text-xs"
       }
     >
-      {ok ? "✓" : "✗"} {label}
+      {ok ? <Check className="w-3 h-3" /> : <X className="w-3 h-3" />} {label}
     </Badge>
   );
 }
@@ -262,12 +263,12 @@ function SummaryBar({
       <span className="text-foreground font-mono">
         {sport}: {total} games
       </span>
-      <span className="text-primary font-mono font-semibold">
-        ✓ {modeled} modeled
+      <span className="text-primary font-mono font-semibold inline-flex items-center gap-1">
+        <Check className="w-3.5 h-3.5" /> {modeled} modeled
       </span>
       {unmodeled > 0 && (
-        <span className="text-foreground font-mono font-semibold">
-          ✗ {unmodeled} unmodeled
+        <span className="text-foreground font-mono font-semibold inline-flex items-center gap-1">
+          <X className="w-3.5 h-3.5" /> {unmodeled} unmodeled
         </span>
       )}
       <div className="flex-1 max-w-[200px] h-2 bg-background rounded-full overflow-hidden">

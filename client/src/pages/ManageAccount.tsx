@@ -4,7 +4,7 @@
  * Dedicated account management page for all authenticated users.
  *
  * FEATURES:
- *   - Displays username, email, plan badge (LIFETIME gold | monthly/annual neon green expiry)
+ *   - Displays username, email, plan badge (mint badge for LIFETIME and monthly/annual expiry; grey muted labels)
  *   - Forgot Password — sends reset email via requestPasswordReset
  *   - Update Payment Info — opens Stripe Customer Portal (billing portal)
  *   - Cancel Subscription — cancels at period end via stripe.cancelSubscription
@@ -151,7 +151,7 @@ export default function ManageAccount() {
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
       {/* ── Top bar ── */}
-      <header className="flex items-center gap-3 px-4 py-3 border-b border-border bg-card backdrop-blur-sm sticky top-0 z-10">
+      <header className="flex items-center gap-3 px-4 py-3 border-b border-border bg-card sticky top-0 z-10">
         <button
           type="button"
           onClick={() => setLocation("/feed/model/mlb")}
@@ -347,7 +347,7 @@ export default function ManageAccount() {
 
       {/* ── Cancel Confirmation Dialog ── */}
       {showCancelConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black">
           <div className="w-full max-w-sm bg-card border border-border rounded-2xl p-6 space-y-4 shadow-2xl">
             <div className="flex items-start gap-3">
               <AlertTriangle className="w-5 h-5 text-white flex-shrink-0 mt-0.5" />

@@ -278,16 +278,20 @@ function GameRow({ g }: { g: FeedCardSpec }) {
 }
 
 function SkeletonRow() {
+  // Audit DIME-UI-019: the skeleton mirrors the loaded ProjectionCard anatomy
+  // (matchup header → pregame panel → summary row → markets row) inside the
+  // same card chrome, so resolving data swaps content without reflowing the
+  // card. Bars are percentage-based (container-relative like the loaded type),
+  // and the pulse matches the app's one skeleton treatment (killed globally
+  // under prefers-reduced-motion).
   return (
-    <div className="dmf-game dmf-mk3" aria-hidden="true">
-      <div className="dmf-gbody">
-        <div className="dmf-matchup">
-          <div className="dmf-skel" style={{ width: 90, height: 10 }} />
-          <div className="dmf-skel" style={{ width: 170, height: 18, marginTop: 10 }} />
-          <div className="dmf-skel" style={{ width: 150, height: 18, marginTop: 8 }} />
-          <div className="dmf-skel" style={{ width: 200, height: 9, marginTop: 10 }} />
-        </div>
-      </div>
+    <div className="dmf-skelcard animate-pulse" aria-hidden="true">
+      <div className="dmf-skel" style={{ width: "55%", height: 20, marginInline: "auto" }} />
+      <div className="dmf-skel" style={{ width: "38%", height: 12, marginTop: 8, marginInline: "auto" }} />
+      <div className="dmf-skel" style={{ width: "30%", height: 10, marginTop: 6, marginInline: "auto" }} />
+      <div className="dmf-skel" style={{ width: "100%", height: 132, marginTop: 12, borderRadius: 12 }} />
+      <div className="dmf-skel" style={{ width: "100%", height: 44, marginTop: 12, borderRadius: 10 }} />
+      <div className="dmf-skel" style={{ width: "100%", height: 44, marginTop: 8, borderRadius: 10 }} />
     </div>
   );
 }
@@ -1460,6 +1464,10 @@ const DMF_CSS = `
 .dmf-retry:hover{border-color:var(--dmf-border-hover)}
 .dmf-empty p,.dmf-invalid p{margin-top:8px;font-size:14px}
 .dmf-skel{background:color-mix(in srgb, var(--dmf-t1) 8%, transparent);border-radius:6px}
+/* Audit DIME-UI-019: skeleton card shares the loaded card's chrome (tier-1
+   surface, hairline, 16px radius, card padding) so load resolution never
+   changes the card geometry. */
+.dmf-skelcard{background:var(--dmf-card);border:1px solid var(--dmf-border);border-radius:16px;padding:12px 12px 8px}
 
 /* mk7 (WC): matchup header, 4-col market grid, verdict strip */
 .dmf-game.dmf-mk7 .dmf-gbody{grid-template-columns:1fr}

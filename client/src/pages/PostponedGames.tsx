@@ -140,7 +140,8 @@ function MarkStatusDialog({
             on <span className="text-foreground">{game.gameDate}</span>.
             <br />
             <span className="text-foreground text-xs mt-1 block">
-              ⚠ The MLB score refresh cycle will overwrite this on the next run
+              <AlertTriangle className="w-3 h-3 inline mr-1" aria-hidden="true" />
+              The MLB score refresh cycle will overwrite this on the next run
               unless the API also reflects the change.
             </span>
           </AlertDialogDescription>

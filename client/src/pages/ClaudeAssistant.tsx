@@ -76,7 +76,7 @@ function MessageBubble({ message }: { message: Message }) {
         <div className={`flex items-center gap-2 px-1 ${isUser ? "flex-row-reverse" : "flex-row"}`}>
           <span className="text-[10px] text-foreground">{message.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
           {message.tokens && <span className="text-[10px] text-foreground">{message.tokens.input + message.tokens.output} tokens</span>}
-          <button onClick={handleCopy} className="opacity-0 group-hover:opacity-100 transition-opacity text-foreground hover:text-foreground">
+          <button onClick={handleCopy} className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 focus-within:opacity-100 transition-opacity text-foreground hover:text-foreground">
             {copied ? <Check size={11} className="text-primary" /> : <Copy size={11} />}
           </button>
         </div>
@@ -127,7 +127,7 @@ export default function ClaudeAssistant() {
 
   return (
     <AdminShell active="claude">
-    <div className="flex flex-col h-[calc(100vh-3.5rem)] bg-background font-['Familjen_Grotesk',sans-serif]">
+    <div className="flex flex-col h-[calc(100dvh-3.5rem)] bg-background font-['Familjen_Grotesk',sans-serif]">
       {/* Header */}
       <div className="flex-shrink-0 border-b border-border bg-background py-3">
         <div className="admin-container flex items-center justify-between">

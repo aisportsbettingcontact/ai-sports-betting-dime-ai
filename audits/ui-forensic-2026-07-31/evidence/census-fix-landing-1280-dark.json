@@ -1,0 +1,897 @@
+{
+ "typography": [
+  {
+   "key": "Familjen Grotesk|11px|400|17.05px|0.88px",
+   "count": 73,
+   "sample": "Sports betting intelligence ",
+   "cls": "mono mono--mint"
+  },
+  {
+   "key": "Familjen Grotesk|14px|400|21.7px|normal",
+   "count": 45,
+   "sample": "Monitor movement before clos",
+   "cls": "status"
+  },
+  {
+   "key": "Familjen Grotesk|13.5px|400|20.925px|normal",
+   "count": 20,
+   "sample": "Model price ahead of current",
+   "cls": "insight-bubble"
+  },
+  {
+   "key": "Familjen Grotesk|11px|500|17.05px|0.88px",
+   "count": 18,
+   "sample": "Classification: Edge Detecte",
+   "cls": "state-pill state-pill--edge"
+  },
+  {
+   "key": "Familjen Grotesk|46px|700|47.84px|-1.38px",
+   "count": 18,
+   "sample": "Interrogate the number, not ",
+   "cls": "H2"
+  },
+  {
+   "key": "Familjen Grotesk|17px|400|26.35px|normal",
+   "count": 14,
+   "sample": "Every answer traces back to ",
+   "cls": "P"
+  },
+  {
+   "key": "Familjen Grotesk|15px|400|23.25px|normal",
+   "count": 11,
+   "sample": "No. Dime is a pricing engine",
+   "cls": "P"
+  },
+  {
+   "key": "Familjen Grotesk|15px|600|normal|-0.15px",
+   "count": 10,
+   "sample": "Log in",
+   "cls": "btn btn--ghost"
+  },
+  {
+   "key": "Familjen Grotesk|14.5px|400|22.475px|normal",
+   "count": 10,
+   "sample": "Is there anything on Team C ",
+   "cls": "chat-user"
+  },
+  {
+   "key": "Familjen Grotesk|13px|400|20.15px|normal",
+   "count": 10,
+   "sample": "Book Price",
+   "cls": "TD"
+  },
+  {
+   "key": "Familjen Grotesk|13.5px|500|normal|normal",
+   "count": 8,
+   "sample": "Team A MLMLB · Edge Detected",
+   "cls": "market-tab"
+  },
+  {
+   "key": "Familjen Grotesk|14px|600|21.7px|normal",
+   "count": 7,
+   "sample": "53.5%",
+   "cls": "val num"
+  },
+  {
+   "key": "Familjen Grotesk|14px|500|normal|normal",
+   "count": 6,
+   "sample": "Console",
+   "cls": "A"
+  },
+  {
+   "key": "Familjen Grotesk|13px|600|20.15px|normal",
+   "count": 6,
+   "sample": "−110",
+   "cls": "num"
+  },
+  {
+   "key": "Familjen Grotesk|16.5px|400|25.575px|normal",
+   "count": 6,
+   "sample": "400,000 simulations per game",
+   "cls": "H3"
+  },
+  {
+   "key": "Familjen Grotesk|16px|650|normal|normal",
+   "count": 6,
+   "sample": "+Which sports are covered?",
+   "cls": "SUMMARY"
+  },
+  {
+   "key": "Familjen Grotesk|13px|650|normal|normal",
+   "count": 6,
+   "sample": "+",
+   "cls": "marker"
+  },
+  {
+   "key": "Familjen Grotesk|11px|400|17.05px|1.1px",
+   "count": 5,
+   "sample": "dime.market-console",
+   "cls": "SPAN"
+  },
+  {
+   "key": "Familjen Grotesk|17px|650|26.35px|normal",
+   "count": 5,
+   "sample": "Isn't this just another pick",
+   "cls": "qa-q"
+  },
+  {
+   "key": "Familjen Grotesk|20px|700|31px|-0.4px",
+   "count": 4,
+   "sample": "−115",
+   "cls": "B"
+  },
+  {
+   "key": "Familjen Grotesk|43.52px|700|67.456px|-1.3056px",
+   "count": 4,
+   "sample": "400,000",
+   "cls": "num"
+  },
+  {
+   "key": "Familjen Grotesk|15px|600|normal|normal",
+   "count": 4,
+   "sample": "Open the full chat →",
+   "cls": "A"
+  },
+  {
+   "key": "Familjen Grotesk|30.72px|700|47.616px|-0.9216px",
+   "count": 4,
+   "sample": "$0",
+   "cls": "B"
+  },
+  {
+   "key": "Familjen Grotesk|11px|500|normal|0.88px",
+   "count": 3,
+   "sample": "MLB · Edge Detected",
+   "cls": "SMALL"
+  },
+  {
+   "key": "Familjen Grotesk|12.5px|400|19.375px|normal",
+   "count": 3,
+   "sample": "Player prop volatility scan",
+   "cls": "SPAN"
+  },
+  {
+   "key": "Familjen Grotesk|16.64px|400|25.792px|normal",
+   "count": 3,
+   "sample": "The books price most markets",
+   "cls": "P"
+  },
+  {
+   "key": "Familjen Grotesk|11px|400|17.05px|0.66px",
+   "count": 3,
+   "sample": "≈ $3.30 / day · cancel anyti",
+   "cls": "tier-perday num"
+  },
+  {
+   "key": "Familjen Grotesk|26px|700|26px|-1.3px",
+   "count": 2,
+   "sample": "dıme",
+   "cls": "wordmark"
+  },
+  {
+   "key": "Familjen Grotesk|79.04px|700|80.6208px|-3.5568px",
+   "count": 2,
+   "sample": "See where price and probabil",
+   "cls": "H1"
+  },
+  {
+   "key": "Familjen Grotesk|17px|700|17px|-0.85px",
+   "count": 2,
+   "sample": "dıme",
+   "cls": "wordmark"
+  },
+  {
+   "key": "Familjen Grotesk|14px|700|14px|-0.7px",
+   "count": 2,
+   "sample": "dıme",
+   "cls": "wordmark"
+  },
+  {
+   "key": "Familjen Grotesk|18.72px|400|30.888px|normal",
+   "count": 1,
+   "sample": "Dime AI compares sportsbook ",
+   "cls": "lede"
+  },
+  {
+   "key": "Familjen Grotesk|22px|700|34.1px|-0.44px",
+   "count": 1,
+   "sample": "Team A Moneyline",
+   "cls": "market-name"
+  },
+  {
+   "key": "Familjen Grotesk|13.5px|600|normal|-0.135px",
+   "count": 1,
+   "sample": "↻ Run market scan",
+   "cls": "btn btn--scan"
+  },
+  {
+   "key": "Familjen Grotesk|30px|700|32.4px|-0.6px",
+   "count": 1,
+   "sample": "A system that passes is more",
+   "cls": "H2"
+  },
+  {
+   "key": "Familjen Grotesk|11px|500|17.05px|0.99px",
+   "count": 1,
+   "sample": "Most popular",
+   "cls": "tier-badge tier-badge--mint"
+  },
+  {
+   "key": "Familjen Grotesk|46px|400|71.3px|-1.38px",
+   "count": 1,
+   "sample": "Bet with the math.",
+   "cls": "H2"
+  },
+  {
+   "key": "Familjen Grotesk|16.64px|700|25.792px|normal",
+   "count": 1,
+   "sample": "AI Sports Betting",
+   "cls": "lockup"
+  },
+  {
+   "key": "Familjen Grotesk|12px|400|18.6px|0.72px",
+   "count": 1,
+   "sample": "≈ $3.30 / day",
+   "cls": "price num"
+  },
+  {
+   "key": "Familjen Grotesk|14px|600|normal|-0.14px",
+   "count": 1,
+   "sample": "Start Pro →",
+   "cls": "btn btn--mint"
+  },
+  {
+   "key": "Familjen Grotesk|18px|400|18px|normal",
+   "count": 1,
+   "sample": "×",
+   "cls": "x"
+  }
+ ],
+ "distinctFontSizes": [
+  "11px",
+  "12px",
+  "12.5px",
+  "13px",
+  "13.5px",
+  "14px",
+  "14.5px",
+  "15px",
+  "16px",
+  "16.5px",
+  "16.64px",
+  "17px",
+  "18px",
+  "18.72px",
+  "20px",
+  "22px",
+  "26px",
+  "30px",
+  "30.72px",
+  "43.52px",
+  "46px",
+  "79.04px"
+ ],
+ "distinctFamilies": [
+  "Familjen Grotesk"
+ ],
+ "numericSample": [
+  {
+   "text": "−115",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "20px",
+   "weight": "700"
+  },
+  {
+   "text": "−143",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "20px",
+   "weight": "700"
+  },
+  {
+   "text": "+5.4%",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "20px",
+   "weight": "700"
+  },
+  {
+   "text": "53.5%",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "14px",
+   "weight": "600"
+  },
+  {
+   "text": "58.9%",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "14px",
+   "weight": "600"
+  },
+  {
+   "text": "7",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "43.52px",
+   "weight": "700"
+  },
+  {
+   "text": "−110",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "13px",
+   "weight": "600"
+  },
+  {
+   "text": "52.4%",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "13px",
+   "weight": "600"
+  },
+  {
+   "text": "55.8%",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "13px",
+   "weight": "600"
+  },
+  {
+   "text": "+3.4%",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "13px",
+   "weight": "600"
+  },
+  {
+   "text": "01",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "11px",
+   "weight": "400"
+  },
+  {
+   "text": "02",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "11px",
+   "weight": "400"
+  },
+  {
+   "text": "03",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "11px",
+   "weight": "400"
+  },
+  {
+   "text": "04",
+   "family": "Familjen Grotesk",
+   "fvn": "normal",
+   "size": "11px",
+   "weight": "400"
+  },
+  {
+   "text": "−115",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "14px",
+   "weight": "400"
+  },
+  {
+   "text": "53.5%",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "14px",
+   "weight": "400"
+  },
+  {
+   "text": "58.9%",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "14px",
+   "weight": "400"
+  },
+  {
+   "text": "+5.4%",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "14px",
+   "weight": "400"
+  },
+  {
+   "text": "−110",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "14px",
+   "weight": "400"
+  },
+  {
+   "text": "52.4%",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "14px",
+   "weight": "400"
+  },
+  {
+   "text": "55.8%",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "14px",
+   "weight": "400"
+  },
+  {
+   "text": "+3.4%",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "14px",
+   "weight": "400"
+  },
+  {
+   "text": "−105",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "14px",
+   "weight": "400"
+  },
+  {
+   "text": "51.2%",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "14px",
+   "weight": "400"
+  },
+  {
+   "text": "49.6%",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "14px",
+   "weight": "400"
+  },
+  {
+   "text": "−1.6%",
+   "family": "Familjen Grotesk",
+   "fvn": "tabular-nums",
+   "size": "14px",
+   "weight": "400"
+  }
+ ],
+ "radii": [
+  [
+   "14px",
+   20
+  ],
+  [
+   "16px",
+   14
+  ],
+  [
+   "22px",
+   13
+  ],
+  [
+   "50%",
+   12
+  ],
+  [
+   "12px",
+   11
+  ],
+  [
+   "20px",
+   8
+  ],
+  [
+   "2px",
+   5
+  ],
+  [
+   "3px",
+   4
+  ],
+  [
+   "10px",
+   4
+  ],
+  [
+   "18px",
+   2
+  ],
+  [
+   "4px 12px 12px",
+   2
+  ],
+  [
+   "4px",
+   1
+  ],
+  [
+   "14px 14px 4px",
+   1
+  ],
+  [
+   "4px 14px 14px",
+   1
+  ]
+ ],
+ "shadows": [],
+ "mint": {
+  "text": 31,
+  "bg": 12,
+  "border": 3,
+  "samples": [
+   {
+    "tag": "SPAN",
+    "cls": "mono mono--mint",
+    "text": "Sports betting intel"
+   },
+   {
+    "tag": "EM",
+    "cls": "",
+    "text": "disagree"
+   },
+   {
+    "tag": "A",
+    "cls": "btn btn--mint",
+    "text": "Get access"
+   },
+   {
+    "tag": "SPAN",
+    "cls": "pulse",
+    "text": ""
+   },
+   {
+    "tag": "B",
+    "cls": "",
+    "text": ""
+   },
+   {
+    "tag": "SPAN",
+    "cls": "state-pill state-pill--edge",
+    "text": "Classification: Edge"
+   },
+   {
+    "tag": "SPAN",
+    "cls": "dot",
+    "text": ""
+   },
+   {
+    "tag": "SPAN",
+    "cls": "sr-only",
+    "text": "Classification:"
+   },
+   {
+    "tag": "B",
+    "cls": "signal",
+    "text": "−143"
+   },
+   {
+    "tag": "B",
+    "cls": "signal",
+    "text": "+5.4%"
+   },
+   {
+    "tag": "B",
+    "cls": "",
+    "text": ""
+   },
+   {
+    "tag": "SPAN",
+    "cls": "mono mono--mint",
+    "text": "Dime Chat"
+   },
+   {
+    "tag": "EM",
+    "cls": "",
+    "text": "not the narrative"
+   },
+   {
+    "tag": "BUTTON",
+    "cls": "chip",
+    "text": "Is Team C −4.5 playa"
+   },
+   {
+    "tag": "SPAN",
+    "cls": "pulse",
+    "text": ""
+   },
+   {
+    "tag": "SPAN",
+    "cls": "mono mono--mint",
+    "text": "The problem"
+   },
+   {
+    "tag": "EM",
+    "cls": "",
+    "text": "No decision system"
+   },
+   {
+    "tag": "SPAN",
+    "cls": "mono mono--mint",
+    "text": "The mechanism"
+   },
+   {
+    "tag": "EM",
+    "cls": "",
+    "text": "verdict"
+   },
+   {
+    "tag": "SPAN",
+    "cls": "stepnum",
+    "text": "01"
+   },
+   {
+    "tag": "SPAN",
+    "cls": "stepnum",
+    "text": "02"
+   },
+   {
+    "tag": "SPAN",
+    "cls": "stepnum",
+    "text": "03"
+   },
+   {
+    "tag": "SPAN",
+    "cls": "stepnum",
+    "text": "04"
+   },
+   {
+    "tag": "SPAN",
+    "cls": "mono mono--mint",
+    "text": "Today's market signa"
+   },
+   {
+    "tag": "EM",
+    "cls": "",
+    "text": "Pass"
+   }
+  ]
+ },
+ "contrastFails": [
+  {
+   "text": "+",
+   "ratio": 2.37,
+   "need": 4.5,
+   "size": "13px",
+   "color": "rgb(74, 74, 74)",
+   "cls": "marker"
+  }
+ ],
+ "contrastFailTotal": 6,
+ "smallTargets": [
+  {
+   "tag": "A",
+   "cls": "",
+   "w": 52,
+   "h": 30,
+   "text": "dıme"
+  },
+  {
+   "tag": "A",
+   "cls": "",
+   "w": 49,
+   "h": 17,
+   "text": "Console"
+  },
+  {
+   "tag": "A",
+   "cls": "",
+   "w": 63,
+   "h": 17,
+   "text": "Dime Chat"
+  },
+  {
+   "tag": "A",
+   "cls": "",
+   "w": 79,
+   "h": 17,
+   "text": "How it works"
+  },
+  {
+   "tag": "A",
+   "cls": "",
+   "w": 45,
+   "h": 17,
+   "text": "Signals"
+  },
+  {
+   "tag": "A",
+   "cls": "",
+   "w": 43,
+   "h": 17,
+   "text": "Pricing"
+  },
+  {
+   "tag": "A",
+   "cls": "",
+   "w": 24,
+   "h": 17,
+   "text": "FAQ"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "btn btn--scan",
+   "w": 142,
+   "h": 38,
+   "text": "↻ Run market scan"
+  },
+  {
+   "tag": "A",
+   "cls": "",
+   "w": 59,
+   "h": 17,
+   "text": "Unlock →"
+  },
+  {
+   "tag": "A",
+   "cls": "",
+   "w": 59,
+   "h": 17,
+   "text": "Unlock →"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "chip",
+   "w": 300,
+   "h": 41,
+   "text": "Is Team C −4.5 playa"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "chip",
+   "w": 300,
+   "h": 41,
+   "text": "Show me markets with"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "chip",
+   "w": 300,
+   "h": 41,
+   "text": "Why is this a Pass?"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "chip",
+   "w": 300,
+   "h": 41,
+   "text": "Scan today's MLB tot"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "chip",
+   "w": 300,
+   "h": 41,
+   "text": "Explain the edge wit"
+  },
+  {
+   "tag": "A",
+   "cls": "",
+   "w": 133,
+   "h": 18,
+   "text": "Open the full chat →"
+  },
+  {
+   "tag": "A",
+   "cls": "",
+   "w": 148,
+   "h": 18,
+   "text": "Price tonight's slat"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "sfilter",
+   "w": 50,
+   "h": 40,
+   "text": "All"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "sfilter",
+   "w": 54,
+   "h": 40,
+   "text": "MLB"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "sfilter",
+   "w": 53,
+   "h": 40,
+   "text": "NBA"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "sfilter",
+   "w": 75,
+   "h": 40,
+   "text": "Soccer"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "sfilter",
+   "w": 81,
+   "h": 40,
+   "text": "Spreads"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "sfilter",
+   "w": 71,
+   "h": 40,
+   "text": "Totals"
+  },
+  {
+   "tag": "BUTTON",
+   "cls": "sfilter",
+   "w": 67,
+   "h": 40,
+   "text": "Props"
+  },
+  {
+   "tag": "A",
+   "cls": "state-pill",
+   "w": 145,
+   "h": 27,
+   "text": "Sharp · Unlock →"
+  },
+  {
+   "tag": "A",
+   "cls": "state-pill",
+   "w": 166,
+   "h": 27,
+   "text": "Operator · Unlock →"
+  },
+  {
+   "tag": "A",
+   "cls": "",
+   "w": 135,
+   "h": 18,
+   "text": "See the live board →"
+  },
+  {
+   "tag": "A",
+   "cls": "",
+   "w": 142,
+   "h": 18,
+   "text": "Compare the plans →"
+  },
+  {
+   "tag": "A",
+   "cls": "",
+   "w": 42,
+   "h": 49,
+   "text": "Pricing"
+  },
+  {
+   "tag": "A",
+   "cls": "",
+   "w": 23,
+   "h": 49,
+   "text": "FAQ"
+  }
+ ],
+ "clickableCount": 57,
+ "cardGeometry": [],
+ "unnamedIconButtons": [
+  {
+   "tag": "INPUT",
+   "cls": ""
+  },
+  {
+   "tag": "INPUT",
+   "cls": ""
+  }
+ ],
+ "animations": [
+  {
+   "name": "dlv2-pulse",
+   "state": "running"
+  },
+  {
+   "name": "dlv2-pulse",
+   "state": "running"
+  }
+ ]
+}

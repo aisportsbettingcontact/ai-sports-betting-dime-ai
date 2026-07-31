@@ -4,20 +4,26 @@ import { cva, type VariantProps } from "class-variance-authority";
 
 import { cn } from "@/lib/utils";
 
+/* Audit DIME-UI-006 (2026-07-31): every variant carries press feedback
+ * (motion-safe active scale), a hover treatment, and the brand motion pair
+ * (160ms cubic-bezier(0.16,1,0.3,1)) instead of Tailwind's default
+ * transition-all. Ghost/outline hovers use the quiet secondary fill — the old
+ * hover:bg-accent flooded them mint, and mint is rationed to signal. Two
+ * malformed dangling `dark:` fragments removed. */
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring focus-visible:ring-[3px] aria-invalid:ring-destructive dark:aria-invalid:ring-destructive aria-invalid:border-destructive",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium cursor-pointer transition-[color,background-color,border-color,opacity,box-shadow,transform] duration-[160ms] ease-[cubic-bezier(0.16,1,0.3,1)] motion-safe:active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring focus-visible:ring-[3px] aria-invalid:ring-destructive dark:aria-invalid:ring-destructive aria-invalid:border-destructive",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground",
+        default: "bg-primary text-primary-foreground hover:opacity-85",
         destructive:
-          "bg-destructive text-white focus-visible:ring-destructive dark:focus-visible:ring-destructive dark:bg-destructive",
+          "bg-destructive text-white focus-visible:ring-destructive dark:focus-visible:ring-destructive dark:bg-destructive hover:opacity-85",
         outline:
-          "border bg-transparent shadow-xs hover:bg-accent dark:bg-transparent dark:border-input dark:",
+          "border bg-transparent shadow-xs hover:bg-secondary dark:bg-transparent dark:border-input",
         secondary:
-          "bg-secondary text-secondary-foreground",
+          "bg-secondary text-secondary-foreground hover:opacity-85",
         ghost:
-          "hover:bg-accent dark:",
+          "hover:bg-secondary",
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {

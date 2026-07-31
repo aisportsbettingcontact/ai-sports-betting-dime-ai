@@ -767,7 +767,7 @@ function MergedSplitBar({
                   }}
                 >
                   <span style={{ ...segLabel, textAlign: "center" }}>
-                    100 %
+                    100%
                   </span>
                 </div>
               )}
@@ -783,7 +783,7 @@ function MergedSplitBar({
                   }}
                 >
                   <span style={{ ...segLabel, textAlign: "center" }}>
-                    100 %
+                    100%
                   </span>
                 </div>
               )}
@@ -801,7 +801,7 @@ function MergedSplitBar({
                     }}
                   >
                     <span style={{ ...segLabel, textAlign: "center" }}>
-                      100 %
+                      100%
                     </span>
                   </div>
                   <div
@@ -815,7 +815,7 @@ function MergedSplitBar({
                     }}
                   >
                     <span style={{ ...segLabel, textAlign: "center" }}>
-                      100 %
+                      100%
                     </span>
                   </div>
                 </>
@@ -1251,7 +1251,7 @@ function DesktopMergedPanel({
   // Colors:
   //   Book values: #D3D3D3 (light gray), weight 500
   //   Model non-edge values: #FFFFFF (white), weight 600
-  //   Model edge values: #39FF14 (neon green), weight 700
+  //   Model edge values: mint accent token, weight 700
   const bookCell: React.CSSProperties = {
     fontSize: VAL_FS,
     fontWeight: 500,
@@ -1279,9 +1279,6 @@ function DesktopMergedPanel({
   // Bug fix: !null === true in JS, so !spreadEdgeIsAway and !totalEdgeIsOver are true when direction is null.
   // This caused false green highlights on home spread and under total when direction is undetermined.
   // Require direction to be explicitly false (not just non-true) before applying green.
-  // [VERIFY] spreadEdgeIsAway=null  → away=white, home=white (no edge direction) ✓
-  // [VERIFY] spreadEdgeIsAway=true  → away=green, home=white ✓
-  // [VERIFY] spreadEdgeIsAway=false → away=white, home=green ✓
   const awaySpreadModelStyle = showModel
     ? hasSpreadEdge && spreadEdgeIsAway === true
       ? modelGreen
@@ -1321,7 +1318,7 @@ function DesktopMergedPanel({
   // [FIX 2026-06-24] Gate ML edge detection on hasModelData.
   // modelAwayML/modelHomeML hold stale values when modelRunAt=null (RL INVALIDATE).
   // Without this gate, awayMlPositive/homeMlPositive can be true even when
-  // hasModelData=false, causing ML column to render '—' in neon green (#39FF14).
+  // hasModelData=false, causing ML column to render '—' in the mint edge accent.
   const awayMlPositive =
     hasModelData && !isNaN(awayMlEdgePP) && awayMlEdgePP > EDGE_THRESHOLD_ML;
   const homeMlPositive =
@@ -1696,9 +1693,6 @@ function DesktopMergedPanel({
   // Use authSpreadEdgeIsAway (the single authoritative source) for the edge panel logo.
   // Do NOT re-parse computedSpreadEdge (DB label) here — it can be stale/malformed and
   // would produce a different result than the authoritative value, showing the wrong team logo.
-  // [VERIFY] authSpreadEdgeIsAway=true → away logo shown ✓
-  // [VERIFY] authSpreadEdgeIsAway=false → home logo shown ✓
-  // [VERIFY] authSpreadEdgeIsAway=null → no logo (spreadPass=true, row not rendered) ✓
   const spreadEdgeIsAwayForVerdict = authSpreadEdgeIsAway === true;
   const spreadLogoUrl = spreadEdgeIsAwayForVerdict ? awayLogoUrl : homeLogoUrl;
   const spreadVerdictSlug = spreadEdgeIsAwayForVerdict ? awaySlug : homeSlug;
@@ -2365,7 +2359,7 @@ function OddsCell({
           border: pillBorder,
           minWidth: size === "sm" ? 42 : 48,
           gap: 1,
-          transition: "background 200ms, border 200ms",
+          transition: "background 160ms cubic-bezier(0.16,1,0.3,1), border-color 160ms cubic-bezier(0.16,1,0.3,1)",
         }}
       >
         {/* Orange bookmark badge — top-left corner */}
@@ -2822,9 +2816,6 @@ function OddsLinesPanel({
 
   // Per-cell model style helpers
   // Null-guard: !null === true in JS — require explicit true/false, never rely on truthy/falsy for direction.
-  // [VERIFY] spreadEdgeIsAway=null  → away=white, home=white ✓
-  // [VERIFY] spreadEdgeIsAway=true  → away=green, home=white ✓
-  // [VERIFY] spreadEdgeIsAway=false → away=white, home=green ✓
   const awaySpreadModelStyle = showModel
     ? hasSpreadEdge && spreadEdgeIsAway === true
       ? modelGreen
@@ -2907,7 +2898,7 @@ function OddsLinesPanel({
       {!isDesktopOdds && (
         <div
           className={`grid ${GRID} pb-0.5`}
-          style={{ transition: "grid-template-columns 200ms ease" }}
+          style={{ transition: "grid-template-columns 160ms cubic-bezier(0.16,1,0.3,1)" }}
         >
           <span
             className={`${showModel ? "col-span-2" : ""} text-center font-extrabold uppercase tracking-widest`}
@@ -2938,7 +2929,7 @@ function OddsLinesPanel({
           className={`grid ${GRID} pb-1 mb-0.5`}
           style={{
             borderBottom: "1px solid #FFFFFF",
-            transition: "grid-template-columns 200ms ease",
+            transition: "grid-template-columns 160ms cubic-bezier(0.16,1,0.3,1)",
           }}
         >
           {showModel
@@ -2974,7 +2965,7 @@ function OddsLinesPanel({
       {/* Away row — OddsCell pills for BOOK, plain spans for MODEL */}
       <div
         className={`grid ${GRID} py-2`}
-        style={{ transition: "grid-template-columns 200ms ease" }}
+        style={{ transition: "grid-template-columns 160ms cubic-bezier(0.16,1,0.3,1)" }}
       >
         {/* Away Spread BOOK pill — line and odds SEPARATE for correct visual hierarchy */}
         <OddsCell
@@ -3041,7 +3032,7 @@ function OddsLinesPanel({
       {/* Home row — OddsCell pills for BOOK, plain spans for MODEL */}
       <div
         className={`grid ${GRID} py-2`}
-        style={{ transition: "grid-template-columns 200ms ease" }}
+        style={{ transition: "grid-template-columns 160ms cubic-bezier(0.16,1,0.3,1)" }}
       >
         {/* Home Spread BOOK pill — line and odds SEPARATE for correct visual hierarchy */}
         <OddsCell
@@ -3565,8 +3556,6 @@ function GameCardInner({
   // ── AUTHORITATIVE edge direction — computed ONCE, used by all 3 render paths ─
   // Replaces 3 divergent local computations (desktop IIFE, DesktopMergedPanel, mobile IIFE).
   // Uses edgeLabelIsAway() for NHL/MLB (abbrev-based); line arithmetic for NBA.
-  // [VERIFY] 'COL -1.5 [STRONG EDGE]' → abbr='COL', awayAbbr='SEA' → false (home edge) ✅
-  // [VERIFY] 'SJS +1.5 [STRONG EDGE]' → abbr='SJS', awayAbbr='SJS' → true (away edge) ✅
   // NOTE: awayAbbr / awayDisplayName are defined below in makeCityAbbr — forward-reference safe
   // because this block is inside the component body, evaluated after makeCityAbbr runs.
   // We defer to a lazy getter pattern: define as a function, call after awayAbbr is resolved.
@@ -3624,7 +3613,7 @@ function GameCardInner({
   // invalidated by RL INVALIDATE), BOTH edge direction flags MUST be null.
   // Without this gate, stale model odds fields (left over from a previous run before
   // invalidation) cause authSpreadEdgeIsAway/authTotalEdgeIsOver to be non-null while
-  // hasModelData=false. This renders '—' dashes in neon green (#39FF14) in MobileGameCard
+  // hasModelData=false. This renders '—' dashes in the mint edge accent in MobileGameCard
   // and DesktopMergedPanel — a false edge signal on a game with no valid model output.
   // Root cause: RL INVALIDATE sets modelRunAt=null but leaves model odds fields populated
   // in the DB (they are nulled atomically in the same DB update, but a race condition
@@ -3763,7 +3752,7 @@ function GameCardInner({
                 ? "var(--dime-mint-text, #45E0A8)"
                 : "var(--dime-text-muted, #FFFFFF)",
               opacity: 1,
-              transition: "color 0.15s, transform 0.15s, filter 0.15s",
+              transition: "color 160ms cubic-bezier(0.16,1,0.3,1), transform 160ms cubic-bezier(0.16,1,0.3,1), filter 160ms cubic-bezier(0.16,1,0.3,1)",
               filter: "none",
             }}
             onMouseEnter={e => {
@@ -3932,9 +3921,6 @@ function GameCardInner({
     // Uniform font sizes — same for every team, scale with viewport width only
     // No per-name auto-scaling; no truncation
     // Change F: FINAL loser → fontWeight 400 (unbold city, team name, score); winner stays 700
-    // [VERIFY] isFinal=true, awayWins=true  → awayFontWeight=700, homeFontWeight=400 ✓
-    // [VERIFY] isFinal=true, awayWins=false → awayFontWeight=400, homeFontWeight=700 ✓
-    // [VERIFY] isFinal=false               → both 600 (pregame/live unchanged) ✓
     const awayFontWeight = awayWins ? 700 : isFinal && isDesktop ? 400 : 600;
     const homeFontWeight = homeWins ? 700 : isFinal && isDesktop ? 400 : 600;
     // School name: clamp(12px, 1.0vw, 17px) — reduced by 1pt (was clamp(13px,1.1vw,18px)) — Change E
@@ -4021,7 +4007,7 @@ function GameCardInner({
                   ? "var(--dime-mint-text, #45E0A8)"
                   : "var(--dime-text-muted, #FFFFFF)",
                 opacity: 1,
-                transition: "color 0.15s, transform 0.15s, filter 0.15s",
+                transition: "color 160ms cubic-bezier(0.16,1,0.3,1), transform 160ms cubic-bezier(0.16,1,0.3,1), filter 160ms cubic-bezier(0.16,1,0.3,1)",
                 // Change D: larger glow to match 2× star size on desktop
                 filter: "none",
               }}
@@ -4944,8 +4930,8 @@ function GameCardInner({
                └──────────────────────────────────────────────────────────────┘
                Tabs: BOOK LINES | MODEL LINES | SPLITS | EDGE
                Toggle dimming:
-                 BOOK active  → book values white bold, model #39FF14 40% opacity
-                 MODEL active → book values gray 40% opacity, model #39FF14 bold
+                 BOOK active  → book values white bold, model mint 40% opacity
+                 MODEL active → book values gray 40% opacity, model mint bold
           ──────────────────────────────────────────────────────────────────── */}
             {mode === "full" && (
               <MobileGameCard

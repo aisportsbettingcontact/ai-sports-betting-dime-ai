@@ -249,8 +249,8 @@ function MatchCard({ match }: { match: MatchWithTeams }) {
     <div
       className={cn(
         "rounded-xl border transition-all duration-150",
-        "bg-[#000000] border-white",
-        isLive && "border-[#45E0A8]"
+        "bg-black border-white",
+        isLive && "border-primary"
       )}
     >
       {/* ── Card header: group + kickoff ── */}
@@ -262,7 +262,7 @@ function MatchCard({ match }: { match: MatchWithTeams }) {
             </span>
           )}
           {isLive && (
-            <span className="text-[9px] px-1.5 py-0.5 text-[#45E0A8] border border-[#45E0A8] font-bold rounded animate-pulse">
+            <span className="text-[9px] px-1.5 py-0.5 text-primary border border-primary font-bold rounded animate-pulse">
               LIVE
             </span>
           )}
@@ -396,7 +396,7 @@ function MatchCard({ match }: { match: MatchWithTeams }) {
 
 function MatchCardSkeleton() {
   return (
-    <div className="rounded-xl border border-white bg-[#000000] p-4 space-y-3">
+    <div className="rounded-xl border border-white bg-black p-4 space-y-3">
       <div className="flex justify-between">
         <Skeleton className="h-4 w-24 bg-black" />
         <Skeleton className="h-4 w-16 bg-black" />
@@ -490,11 +490,11 @@ export default function WorldCup2026() {
   const [selectedDate, setSelectedDate] = useState<string>(getDefaultDate);
 
   return (
-    <div className="min-h-screen bg-[#000000] text-white">
+    <div className="min-h-screen bg-black text-white">
       {/* ── Sticky header ── */}
       {/* <header> (not div): the floating-nav sticky offset targets
           header.sticky.top-0 (index.css) so this re-anchors below the nav. */}
-      <header className="sticky top-0 z-40 bg-[#000000] backdrop-blur-sm border-b border-white">
+      <header className="sticky top-0 z-40 bg-black backdrop-blur-sm border-b border-white">
         <div className="max-w-2xl mx-auto px-3 sm:px-4">
           {/* Title row */}
           <div className="flex items-center gap-3 pt-3 pb-2">
@@ -556,7 +556,7 @@ export default function WorldCup2026() {
                     "px-3 py-1.5 rounded-full text-[11px] font-semibold tracking-wide transition-all whitespace-nowrap flex-shrink-0",
                     selectedDate === d
                       ? "bg-transparent text-white border border-white"
-                      : "bg-[#000000] text-white border border-white"
+                      : "bg-black text-white border border-white"
                   )}
                 >
                   {WC_DATE_LABELS[d]}

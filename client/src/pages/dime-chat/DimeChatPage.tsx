@@ -152,11 +152,21 @@ interface ThreadSummary {
   starred: boolean;
 }
 
+/** Today's date in ET, matching the feed's display convention — the design
+ *  reference (D/L:107-109) froze "July 7, 2026" into the third pill, which
+ *  shipped as a permanently stale prompt (audit DIME-UI-028). */
+const PILL_TRENDS_DATE = new Date().toLocaleDateString("en-US", {
+  timeZone: "America/New_York",
+  month: "long",
+  day: "numeric",
+  year: "numeric",
+});
+
 const PILL_LABELS = [
   "World Cup Model Simulations",
   "Player Props with the Most Edge",
-  "Best Trends for MLB July 7, 2026",
-]; // D/L:107-109
+  `Best Trends for MLB ${PILL_TRENDS_DATE}`,
+]; // D/L:107-109 (labels frozen; the date is live per DIME-UI-028)
 
 /** Frozen pill emphasis ORDER differs per theme (extraction-mapping §2.24). */
 const PILL_VARIANTS: Record<Theme, Array<"contrast" | "outline" | "mint">> = {

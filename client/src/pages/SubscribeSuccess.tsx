@@ -163,7 +163,7 @@ export default function SubscribeSuccess() {
       <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "#000000" }}>
         <div className="max-w-md w-full text-center">
           <p className="text-white mb-4">No session ID found. If you just subscribed, please check your email for confirmation.</p>
-          <button onClick={() => navigate("/")} className="text-[13px] text-[#45E0A8] hover:underline">Back to home</button>
+          <button onClick={() => navigate("/")} className="text-[13px] text-primary hover:underline">Back to home</button>
         </div>
       </div>
     );
@@ -174,7 +174,7 @@ export default function SubscribeSuccess() {
     return (
       <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "#000000" }}>
         <div className="max-w-md w-full text-center">
-          <div className="w-12 h-12 rounded-full border-2 border-transparent border-t-[#45E0A8] animate-spin mx-auto mb-4" />
+          <div className="w-12 h-12 rounded-full border-2 border-transparent border-t-primary animate-spin mx-auto mb-4" />
           <p className="text-white text-sm">Confirming your subscription...</p>
           <p className="text-white text-xs mt-2">This usually takes a few seconds.</p>
         </div>
@@ -189,7 +189,7 @@ export default function SubscribeSuccess() {
         <div className="max-w-md w-full text-center">
           <p className="text-white mb-2 font-semibold">Could not confirm your subscription.</p>
           <p className="text-white text-sm mb-4">Your payment was processed. Please contact support with your order reference below.</p>
-          <button onClick={() => navigate("/")} className="mt-4 text-[13px] text-[#45E0A8] hover:underline">Back to home</button>
+          <button onClick={() => navigate("/")} className="mt-4 text-[13px] text-primary hover:underline">Back to home</button>
         </div>
       </div>
     );
@@ -225,7 +225,7 @@ export default function SubscribeSuccess() {
           </motion.div>
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35, duration: 0.4 }}>
             <h1 className="text-3xl font-black text-white mb-2" style={{ letterSpacing: "-0.03em" }}>You're In.</h1>
-            {username && <p className="text-[#45E0A8] font-semibold text-sm mb-1">@{username}</p>}
+            {username && <p className="text-primary font-semibold text-sm mb-1">@{username}</p>}
             <p className="text-white text-base mb-1">
               Your <span className="text-white font-semibold">{planLabel} Plan</span> is now active.
             </p>
@@ -280,7 +280,7 @@ export default function SubscribeSuccess() {
           <h1 className="text-2xl font-black text-white mb-1" style={{ letterSpacing: "-0.03em" }}>Payment Confirmed.</h1>
           <p className="text-white text-sm">Set up your account to access the platform.</p>
           {pendingUser?.pendingUsername && (
-            <p className="text-[#45E0A8] text-sm font-semibold mt-1">@{pendingUser.pendingUsername}</p>
+            <p className="text-primary text-sm font-semibold mt-1">@{pendingUser.pendingUsername}</p>
           )}
         </div>
 
@@ -303,7 +303,7 @@ export default function SubscribeSuccess() {
               // 2026-07-13 audit P0-9: outline-none left this form with zero focus
               // affordance, and the invalid border ternary was a no-op (white both
               // branches). Mint focus ring; invalid = 2px double-weight border.
-              className="w-full px-3.5 py-2.5 rounded-lg text-sm text-white placeholder-white border outline-none transition-all focus-visible:ring-[3px] focus-visible:ring-[#45E0A8]"
+              className="w-full px-3.5 py-2.5 rounded-lg text-sm text-white placeholder-white border outline-none transition-all focus-visible:ring-[3px] focus-visible:ring-primary"
               style={{
                 background: "#000000",
                 borderColor: "#FFFFFF",
@@ -325,7 +325,7 @@ export default function SubscribeSuccess() {
                 onChange={(e) => { setPassword(e.target.value); setFormError(null); }}
                 placeholder="Create a strong password"
                 autoComplete="new-password"
-                className="w-full px-3.5 py-2.5 pr-10 rounded-lg text-sm text-white placeholder-white border outline-none transition-all focus-visible:ring-[3px] focus-visible:ring-[#45E0A8]"
+                className="w-full px-3.5 py-2.5 pr-10 rounded-lg text-sm text-white placeholder-white border outline-none transition-all focus-visible:ring-[3px] focus-visible:ring-primary"
                 style={{
                   background: "#000000",
                   borderColor: "#FFFFFF",
@@ -369,7 +369,7 @@ export default function SubscribeSuccess() {
                         </>
                       )}
                     </svg>
-                    <span className={`text-[11px] ${check.pass ? "text-[#45E0A8]" : "text-white"}`}>{check.label}</span>
+                    <span className={`text-[11px] ${check.pass ? "text-primary" : "text-white"}`}>{check.label}</span>
                   </div>
                 ))}
               </div>

@@ -30,6 +30,7 @@ import {
   Loader2, ChevronLeft, ChevronRight, RefreshCw,
   TrendingUp, CheckCircle2, XCircle, Calendar, CalendarDays,
   FlaskConical, Filter, BarChart3, Target, Activity,
+  Table as TableIcon, ScatterChart as ScatterChartIcon,
 } from "lucide-react";
 import { MLB_BY_ABBREV } from "@shared/mlbTeams";
 
@@ -639,7 +640,7 @@ function BrierHeatmap({ heatmapData, selectedCell, setSelectedCell, drilldownDat
       <div style={{ overflowX: "auto" }}>
         <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "2px", textTransform: "uppercase", color: "var(--foreground)", fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', marginBottom: 10 }}>
           BRIER HEATMAP — {heatmapData.heatmap.length} DATES × 5 MARKETS
-          <span style={{ marginLeft: 8, color: "var(--primary)", fontSize: 10 }}>(avg per date | 🟢 ≤0.15 | 🟡 ≤0.22 | 🔴 &gt;0.22 | — = no data)</span>
+          <span style={{ marginLeft: 8, color: "var(--primary)", fontSize: 10 }}>(avg per date | ≤0.15 | ≤0.22 | &gt;0.22 | — = no data)</span>
         </div>
         <table style={{ borderCollapse: "collapse", fontSize: 11, fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', minWidth: 520 }}>
           <thead>
@@ -1410,7 +1411,8 @@ export default function TheModelResults() {
                       borderRadius: 4, cursor: "pointer", color: fgEdgeTab === t ? "var(--primary-foreground)" : "var(--foreground)",
                       padding: "3px 10px", fontSize: 10, fontWeight: 700,
                       fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', letterSpacing: 1,
-                    }}>{t === "table" ? "📋 TABLE" : "📊 SCATTER"}</button>
+                      display: "inline-flex", alignItems: "center", gap: 4,
+                    }}>{t === "table" ? <><TableIcon size={11} /> TABLE</> : <><ScatterChartIcon size={11} /> SCATTER</>}</button>
                   ))}
                 </div>
               </div>
@@ -1523,7 +1525,8 @@ export default function TheModelResults() {
                       borderRadius: 4, cursor: "pointer", color: f5EdgeTab === t ? "var(--primary-foreground)" : "var(--foreground)",
                       padding: "3px 10px", fontSize: 10, fontWeight: 700,
                       fontFamily: '"Familjen Grotesk", system-ui, -apple-system, sans-serif', letterSpacing: 1,
-                    }}>{t === "table" ? "📋 TABLE" : "📊 SCATTER"}</button>
+                      display: "inline-flex", alignItems: "center", gap: 4,
+                    }}>{t === "table" ? <><TableIcon size={11} /> TABLE</> : <><ScatterChartIcon size={11} /> SCATTER</>}</button>
                   ))}
                 </div>
               </div>

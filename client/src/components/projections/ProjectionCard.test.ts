@@ -538,8 +538,10 @@ describe("ProjectionCard — paginated market popover", () => {
       "max-block-size: min(34rem, var(--radix-popover-content-available-height));"
     );
     expect(popoverCss).toContain("overflow-y: auto;");
+    // Audit DIME-UI-015 ruling: 0B8557 is the canonical mint text on light
+    // (4.66:1 on white); 0FA36B (3.25:1) is retired.
     expect(popoverCss).toMatch(
-      /html:not\(\.dark\) \.projection-card__markets-eyebrow \{\s*color: #0fa36b;/
+      /html:not\(\.dark\) \.projection-card__markets-eyebrow \{\s*color: #0b8557;/
     );
   });
 
@@ -769,8 +771,10 @@ describe("ProjectionCard — Rotowire pregame context", () => {
     expect(cardCss).toMatch(
       /\.pregame-pitcher__photo img\[data-headshot-source="rotowire"\]\s*\{[^}]*object-fit:\s*cover;[^}]*object-position:\s*center;[^}]*transform:\s*scale\(0\.9\);[^}]*transform-origin:\s*center;/,
     );
+    // Audit DIME-UI-014: LINEUPS is a quiet raised chip — mint fill is
+    // rationed to the edge signal, so the chip must NOT carry the raw mint.
     expect(cardCss).toMatch(
-      /\.pregame-pitchers__lineups\s*\{[^}]*min-block-size:\s*44px;[^}]*color:\s*#000;[^}]*background:\s*#45e0a8;[^}]*border-radius:\s*12px;/,
+      /\.pregame-pitchers__lineups\s*\{[^}]*min-block-size:\s*44px;[^}]*color:\s*var\(--foreground\);[^}]*background:\s*var\(--surface-raised\);[^}]*border-radius:\s*12px;/,
     );
     expect(cardCss).toMatch(
       /\.pregame-pitchers__lineups:active\s*\{\s*transform:\s*scale\(0\.98\);\s*\}/,
@@ -793,8 +797,14 @@ describe("ProjectionCard — Rotowire pregame context", () => {
     expect(compactPregame).toMatch(
       /\.pregame-pitcher__name\s*\{[^}]*overflow-wrap:\s*normal;[^}]*white-space:\s*nowrap;/,
     );
+    // Audit DIME-UI-004: explicit grid placement (row 1, full-span, centered)
+    // replaced the absolute overlay whose auto-placement wrapped the home
+    // pitcher onto a diagonal second row at 390px.
     expect(compactPregame).toMatch(
-      /\.pregame-pitchers__lineups\s*\{[^}]*position:\s*absolute;[^}]*min-inline-size:\s*4rem;/,
+      /\.pregame-pitchers__lineups\s*\{[^}]*grid-column:\s*1 \/ -1;[^}]*grid-row:\s*1;[^}]*place-self:\s*center;[^}]*min-inline-size:\s*4rem;/,
+    );
+    expect(compactPregame).toMatch(
+      /\.pregame-pitcher--away\s*\{\s*grid-row:\s*1;\s*\}/,
     );
   });
 

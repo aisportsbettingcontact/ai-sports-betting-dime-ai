@@ -16,7 +16,7 @@ import { trpc } from "@/lib/trpc";
 import { useAppAuth } from "@/_core/hooks/useAppAuth";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Loader2, Send, ChevronLeft, ChevronRight, Eye, EyeOff, Trophy, RefreshCw, Trash2, CheckCheck } from "lucide-react";
+import { Loader2, Send, ChevronLeft, ChevronRight, Eye, EyeOff, Trophy, RefreshCw, Trash2, CheckCheck, Settings } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -299,7 +299,7 @@ function EditableTeamRow({
                 textOverflow: "ellipsis",
               }}
             >
-              🥅 {goalie}
+              {goalie}
             </div>
             {/* RotoWire-style status badge: colored dot + Confirmed/Expected */}
             <div
@@ -709,7 +709,7 @@ function EditableGameCard({ game, onSaved, showDeleteButton = false }: { game: G
       });
       setDirty(false);
       setHasBeenSubmitted(true);
-      toast.success(isFirstSubmit ? "Projections submitted ✓" : "Projections saved");
+      toast.success(isFirstSubmit ? "Projections submitted" : "Projections saved");
       onSaved();
     } catch {
       toast.error(isFirstSubmit ? "Failed to submit projections" : "Failed to save projections");
@@ -723,7 +723,7 @@ function EditableGameCard({ game, onSaved, showDeleteButton = false }: { game: G
     if (dirty) await handleSave();
     try {
       await publishMutation.mutateAsync({ id: game.id, published: !game.publishedToFeed });
-      toast.success(game.publishedToFeed ? "Removed from feed" : "Published to feed ✓");
+      toast.success(game.publishedToFeed ? "Removed from feed" : "Published to feed");
       onSaved();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to update publish status";
@@ -734,7 +734,7 @@ function EditableGameCard({ game, onSaved, showDeleteButton = false }: { game: G
   const handleToggleModelApproval = async () => {
     try {
       await approveModelMutation.mutateAsync({ id: game.id, published: !game.publishedModel });
-      toast.success(game.publishedModel ? "Model projections retracted" : "Model projections approved ✓");
+      toast.success(game.publishedModel ? "Model projections retracted" : "Model projections approved");
       onSaved();
     } catch {
       toast.error("Failed to update model approval status");
@@ -1137,7 +1137,7 @@ function EditableGameCard({ game, onSaved, showDeleteButton = false }: { game: G
                       className="font-medium leading-tight"
                       style={{ fontSize: "clamp(9px, 2.2vw, 11px)", color: "#FFFFFF" }}
                     >
-                      🥅 {game.awayGoalie}
+                      {game.awayGoalie}
                     </span>
                     <div className="flex items-center gap-0.5">
                       <div style={{ width: 6, height: 6, borderRadius: "50%", backgroundColor: game.awayGoalieConfirmed ? "#45E0A8" : "#FFFFFF", flexShrink: 0 }} />
@@ -1221,7 +1221,7 @@ function EditableGameCard({ game, onSaved, showDeleteButton = false }: { game: G
                       className="font-medium leading-tight"
                       style={{ fontSize: "clamp(9px, 2.2vw, 11px)", color: "#FFFFFF" }}
                     >
-                      🥅 {game.homeGoalie}
+                      {game.homeGoalie}
                     </span>
                     <div className="flex items-center gap-0.5">
                       <div style={{ width: 6, height: 6, borderRadius: "50%", backgroundColor: game.homeGoalieConfirmed ? "#45E0A8" : "#FFFFFF", flexShrink: 0 }} />
@@ -1480,10 +1480,10 @@ function EditableGameCard({ game, onSaved, showDeleteButton = false }: { game: G
           {/* Section header */}
           <div className="flex items-center gap-2 mb-2">
             <span
-              className="text-sm font-black uppercase tracking-[0.18em]"
+              className="text-sm font-black uppercase tracking-[0.18em] inline-flex items-center gap-1.5"
               style={{ color: "#45E0A8" }}
             >
-              ⚙ NHL MODEL PROJECTIONS
+              <Settings size={14} /> NHL MODEL PROJECTIONS
             </span>
             <span className="text-xs uppercase tracking-widest" style={{ color: "#45E0A8" }}>
               (auto-generated · read-only)
@@ -1694,7 +1694,7 @@ export default function PublishProjections() {
         `[PublishProjections][PublishAll] ✅ Complete — all ${vars.sport} games published to feed | ` +
         `date: ${vars.gameDate}`
       );
-      toast.success(`✅ All ${vars.sport} games published to feed!`);
+      toast.success(`All ${vars.sport} games published to feed!`);
       refetch();
     },
     onError: (err, vars) => {
@@ -1719,7 +1719,7 @@ export default function PublishProjections() {
       if (data.approved === 0) {
         toast.info("No pending model projections to approve — all are already live or missing model data.");
       } else {
-        toast.success(`Approved ${data.approved} model projection${data.approved === 1 ? '' : 's'} ✔`);
+        toast.success(`Approved ${data.approved} model projection${data.approved === 1 ? '' : 's'}`);
       }
       refetch();
     },
@@ -1757,7 +1757,7 @@ export default function PublishProjections() {
       const oddsMsg = totalUpdated > 0
         ? `${totalUpdated} ${scope} odds updated`
         : `${scope} odds refreshed (no changes)`;
-      toast.success(`✅ ${scope} refresh complete — ${oddsMsg}, scores updated`);
+      toast.success(`${scope} refresh complete — ${oddsMsg}, scores updated`);
       // Invalidate staging queries so the game list re-fetches with fresh data
       utils.games.listStaging.invalidate();
       utils.games.lastRefresh.invalidate();
@@ -2048,7 +2048,6 @@ export default function PublishProjections() {
               : { background: "#000000", color: "#FFFFFF", border: "1px solid #FFFFFF" }
             }
           >
-            <span style={{ fontSize: 14 }}>⚽</span>
             WC 2026
           </button>
         </div>
@@ -2196,7 +2195,7 @@ export default function PublishProjections() {
                 <div className="col-span-2 flex items-center justify-between">
                   <div className="flex flex-col gap-0.5">
                     <span className="uppercase tracking-widest" style={{ color: "#FFFFFF", fontSize: '14px' }}>
-                      🥅 Goalie Watcher
+                      Goalie Watcher
                     </span>
                     <span className="font-mono" style={{ color: lastGoalieCheck?.checkedAt ? "#FFFFFF" : "#FFFFFF", fontSize: '11px' }}>
                       {lastGoalieCheck?.checkedAt
