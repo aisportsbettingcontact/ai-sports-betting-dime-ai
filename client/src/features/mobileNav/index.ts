@@ -34,5 +34,4 @@ export { getActiveTabId } from "./activeTab";
 export { MobileFeed } from "./screens/MobileFeed";
 export { MobileSplits } from "./screens/MobileSplits";
 export { MobileChat } from "./screens/MobileChat";
-export { MobileBetTracker } from "./screens/MobileBetTracker";
 export { MobileProfile } from "./screens/MobileProfile";

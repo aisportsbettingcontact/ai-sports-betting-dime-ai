@@ -47,7 +47,68 @@ export type Timeframe =
 
 export type Market = "ML" | "RL" | "TOTAL";
 export type PickSide = "AWAY" | "HOME" | "OVER" | "UNDER";
-export type GradeResult = "WIN" | "LOSS" | "PUSH" | "PENDING" | "NO_RESULT";
+export type GradeResult = "WIN" | "LOSS" | "PUSH" | "PENDING" | "VOID" | "NO_RESULT";
+
+// ─── Settlement state machine ────────────────────────────────────────────────
+//
+// Every upstream feed reports game status as free text with its own vocabulary.
+// Collapsing that to four states in ONE place is what lets a bet reach a
+// terminal result instead of sitting PENDING forever.
+//
+//   FINAL       → the timeframe can be graded
+//   IN_PROGRESS → started, not finished; try again later
+//   SCHEDULED   → not started; try again later
+//   NO_CONTEST  → the game will never produce a result (postponed, cancelled).
+//                 The bet is VOID: the stake comes back, and it leaves the
+//                 pending pool so the grader stops re-scanning it every cycle.
+//
+// "Completed Early" (rain-shortened but official, MLB reports it as e.g.
+// "Completed Early: Rain") is FINAL — books grade those, and treating it as
+// non-final was leaving legitimately settled games unsettled indefinitely.
+//
+// "Suspended" is IN_PROGRESS on purpose: MLB resumes suspended games, so
+// voiding them would settle bets that are still live.
+
+export type SettlementState = "FINAL" | "IN_PROGRESS" | "SCHEDULED" | "NO_CONTEST";
+
+const NO_CONTEST_SUBSTRINGS = ["postponed", "cancel"] as const;
+const NO_CONTEST_EXACT = ["ppd"] as const;
+const FINAL_SUBSTRINGS = ["final", "game over", "completed early"] as const;
+const FINAL_EXACT = ["off"] as const; // NHL reports a finished game as gameState "OFF"
+const IN_PROGRESS_SUBSTRINGS = [
+  "progress", "live", "warmup", "delayed", "suspended",
+  "manager challenge", "instant replay", "under review",
+  // NOT a bare "review": MLB/ESPN report a not-yet-started game as "Preview",
+  // which contains it. That misread every scheduled game as live and forced the
+  // short (60s) score-cache TTL on slates with nothing in progress.
+] as const;
+const IN_PROGRESS_EXACT = ["in", "crit"] as const; // ESPN "in", NHL "CRIT"
+
+/**
+ * Classify a raw upstream game-state string into a settlement state.
+ * Total function: unknown vocabulary falls back to SCHEDULED (never grade on a
+ * state we do not understand).
+ *
+ * Short codes ("OFF", "IN", "CRIT", "PPD") match exactly rather than by
+ * substring so they cannot fire inside an unrelated word.
+ */
+export function classifyGameState(rawState: string | null | undefined): SettlementState {
+  const s = (rawState ?? "").trim().toLowerCase();
+  if (!s) return "SCHEDULED";
+  // No-contest wins over everything: "Postponed" must never be read as "Final".
+  if (NO_CONTEST_EXACT.includes(s as typeof NO_CONTEST_EXACT[number])) return "NO_CONTEST";
+  if (NO_CONTEST_SUBSTRINGS.some(m => s.includes(m))) return "NO_CONTEST";
+  if (IN_PROGRESS_EXACT.includes(s as typeof IN_PROGRESS_EXACT[number])) return "IN_PROGRESS";
+  if (IN_PROGRESS_SUBSTRINGS.some(m => s.includes(m))) return "IN_PROGRESS";
+  if (FINAL_EXACT.includes(s as typeof FINAL_EXACT[number])) return "FINAL";
+  if (FINAL_SUBSTRINGS.some(m => s.includes(m))) return "FINAL";
+  return "SCHEDULED";
+}
+
+/** True when the game reached a state that can be graded as a completed contest. */
+export function isFinalState(rawState: string | null | undefined): boolean {
+  return classifyGameState(rawState) === "FINAL";
+}
 
 /** Scores for a specific timeframe window */
 export interface TimeframeScore {
@@ -123,13 +184,7 @@ const SCORE_CACHE_TTL_FINAL_MS = 5 * 60 * 1000; //  5 minutes  — all games fin
 
 /** Returns true if any game in the data set is still live (not yet final) */
 function hasLiveGame(data: GameScoreData[]): boolean {
-  return data.some(g => {
-    const s = g.gameState?.toLowerCase() ?? "";
-    // MLB: "In Progress", "Warmup", "Pre-Game"
-    // NHL: "LIVE"
-    // NBA/NCAAM: ESPN "in" state
-    return s.includes("progress") || s === "live" || s === "in" || s === "warmup";
-  });
+  return data.some(g => classifyGameState(g.gameState) === "IN_PROGRESS");
 }
 
 function getCached(key: string): GameScoreData[] | null {
@@ -198,7 +253,9 @@ async function fetchMlbScores(date: string): Promise<GameScoreData[]> {
     // Full game score
     const awayFull = g.teams.away.score ?? 0;
     const homeFull = g.teams.home.score ?? 0;
-    const isFinalFull = gameState === "Final" || gameState === "Game Over";
+    // Includes "Completed Early: <reason>" (rain-shortened but official). Excludes
+    // Postponed/Cancelled, which are handled as NO_CONTEST → VOID in gradeTrackedBet.
+    const isFinalFull = isFinalState(gameState);
 
     // First inning score (sum of inning 1 only)
     const inn1 = innings.find(i => i.num === 1);
@@ -282,7 +339,7 @@ async function fetchNhlScores(date: string): Promise<GameScoreData[]> {
     const awayFull = g.awayTeam.score ?? 0;
     const homeFull = g.homeTeam.score ?? 0;
     const gameState = g.gameState; // "OFF" = final, "LIVE" = in progress, "PRE" = scheduled
-    const isFinalFull = gameState === "OFF" || gameState === "FINAL";
+    const isFinalFull = isFinalState(gameState);
 
     // Fetch period-by-period scores from landing endpoint
     let awayP1 = 0, homeP1 = 0;
@@ -604,8 +661,8 @@ export function findGame(
  *   Tie       → PUSH (only possible in NCAAM OT, NHL regulation tie before OT)
  *
  * RL (Run Line / Puck Line / Spread):
- *   Standard MLB/NHL RL = ±1.5
- *   NBA/NCAAM spread = line stored in `line` field
+ *   The signed spread from the picked side's perspective is REQUIRED — there is
+ *   no default. Missing line → NO_RESULT (the bet stays PENDING with a reason).
  *   AWAY covers → AWAY RL = WIN
  *   HOME covers → HOME RL = WIN
  *   Exact cover → PUSH
@@ -642,6 +699,15 @@ export function gradeBet(
   }
 
   if (market === "RL") {
+    // No default. A missing spread used to fall back to -1.5 for MLB/NHL, which
+    // inverted every underdog run line on a one-run margin, and to 0 for
+    // NBA/NCAAM, which silently graded a spread bet as a moneyline. A bet with
+    // no stored line is un-gradeable, and saying so keeps it PENDING instead of
+    // writing a wrong result.
+    if (line == null) {
+      console.log(`[ScoreGrader][ERROR] gradeBet RL: no line provided → NO_RESULT`);
+      return "NO_RESULT";
+    }
     // RL line convention:
     //   line is stored as a SIGNED value from the pick string.
     //   e.g. "SEA RL -1.5" → line = -1.5 (SEA is favorite, must win by >1.5)
@@ -654,8 +720,7 @@ export function gradeBet(
     // For AWAY pick: awayMargin = awayScore - homeScore; covers if awayMargin + line > 0
     // For HOME pick: homeMargin = homeScore - awayScore; covers if homeMargin + line > 0
     //
-    // Default line for MLB/NHL when not stored: -1.5 (standard favorite RL)
-    const rlLine = line ?? (sport === "MLB" || sport === "NHL" ? -1.5 : 0);
+    const rlLine = line;
 
     const awayMargin = awayScore - homeScore;
     const homeMargin = homeScore - awayScore;
@@ -773,6 +838,24 @@ export async function gradeTrackedBet(input: BetGradeInput): Promise<BetGradeOut
     };
   }
 
+  // ── Terminal no-contest: postponed / cancelled ───────────────────────────────
+  // The game will never produce a result, so the bet is VOID (stake returned).
+  // Before this, such bets sat PENDING forever and were re-graded by every
+  // polling cycle and every nightly sweep, permanently.
+  const settlement = classifyGameState(game.gameState);
+  if (settlement === "NO_CONTEST") {
+    console.log(`[ScoreGrader][OUTPUT] gradeTrackedBet: gameId=${game.gameId} state="${game.gameState}" → NO_CONTEST → VOID`);
+    return {
+      result: "VOID",
+      awayScore: null,
+      homeScore: null,
+      gameState: game.gameState,
+      reason: `Game did not take place (state=${game.gameState}) — bet voided, stake returned`,
+      awayAbbrev: game.awayAbbrev,
+      homeAbbrev: game.homeAbbrev,
+    };
+  }
+
   const tfScore = game.scores[input.timeframe];
   if (!tfScore) {
     console.log(`[ScoreGrader][VERIFY] gradeTrackedBet: FAIL — timeframe ${input.timeframe} not available for sport=${input.sport}`);
@@ -808,7 +891,9 @@ export async function gradeTrackedBet(input: BetGradeInput): Promise<BetGradeOut
       awayScore: tfScore.awayScore,
       homeScore: tfScore.homeScore,
       gameState: game.gameState,
-      reason: "Grading failed — missing line or unsupported market",
+      reason:
+        `Cannot grade ${input.market} ${input.pickSide} — no line stored for this bet. ` +
+        `RL and TOTAL bets require a line; edit the bet to supply one.`,
       awayAbbrev: game.awayAbbrev,
       homeAbbrev: game.homeAbbrev,
     };
