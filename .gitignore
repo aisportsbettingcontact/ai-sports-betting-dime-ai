@@ -161,3 +161,9 @@ osv-report.json
 test-results/
 playwright-report/
 blob-report/
+
+# pi coding agent (.pi/ project config is committed; local package installs and
+# session-sharing workspace are not)
+.pi/npm/
+.pi/git/
+.pi/hf-sessions/

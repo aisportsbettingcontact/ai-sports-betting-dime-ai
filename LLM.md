@@ -1,0 +1,48 @@
+# LLM.md — model policy and routing
+
+Authoritative model policy for every agent runtime in this repo. Summarized in AGENTS.md
+and CLAUDE.md; this file wins on conflict.
+
+## Approved models (current generation only)
+
+| Provider | Model | Context / max out | Use |
+|---|---|---|---|
+| anthropic | `claude-fable-5` | 1M / 128K | Default everywhere |
+| anthropic | `claude-opus-5` | 1M / 128K | Alternate when Fable is unavailable or a second opinion is wanted |
+| openai-codex | `gpt-5.6-sol` | per catalog | When using Codex (subscription auth) |
+
+**We do not use older models in execution.** No claude-opus-4-x, sonnet, haiku, gpt-4/5.x
+below 5.6, etc. If a task seems to want a cheaper model, use Fable 5 anyway — consistency
+beats micro-savings here.
+
+## Enforcement points
+
+| Surface | Mechanism |
+|---|---|
+| pi CLI | `.pi/settings.json`: `defaultProvider: "anthropic"`, `defaultModel: "claude-fable-5"`, `enabledModels: ["claude-fable-5", "claude-opus-5", "gpt-5.6-sol"]` (Ctrl+P cycles only these) |
+| Embedded runtime | `server/_core/piAgent.ts` `PI_AGENT_APPROVED_MODELS`; `resolvePiAgentModel()` throws on anything else unless `DIME_ALLOW_LEGACY_MODELS=1` |
+| Agent SDK runner | `DIME_AGENT_MODEL` env/default = `claude-fable-5` (`server/_core/dimeAgent.ts`) |
+| Claude Code | Session model selection — keep Fable 5/Opus 5 |
+
+## Routing and credentials
+
+All Anthropic traffic — Anthropic SDK (`server/_core/anthropicClient.ts`), Agent SDK
+subprocess (`dimeAgent.ts`), embedded pi-agent-core (`piAgent.ts`), pi CLI, Claude Code —
+routes through an Anthropic-compatible gateway when configured:
+
+- `ANTHROPIC_BASE_URL` — gateway host (overrides api.anthropic.com)
+- `ANTHROPIC_AUTH_TOKEN` — gateway key, sent as `Authorization: Bearer` (wins over API key)
+- `ANTHROPIC_API_KEY` — direct key, sent as `x-api-key` (fallback)
+
+pi-ai resolves these in the same order natively; `resolvePiAgentModel()` applies the
+baseUrl per model. Codex (`gpt-5.6-sol`) authenticates via Codex OAuth (`/login` in pi) or
+`OPENAI_API_KEY` for the plain openai provider. Until Codex auth exists, pi startup prints
+`Warning: No models match pattern "gpt-5.6-sol"` — expected; the pattern activates on
+login. The id is real: verified in pi-ai's `openai-codex` catalog (alongside `gpt-5.6-luna`
+and `gpt-5.6-terra`).
+
+## Frozen surfaces
+
+`DIME_CHAT_LLM_PROVIDER` stays `"frozen"` (ml/dime-1.0 promotion is owner-gated behind
+`ml/dime-1.0/docs/RELEASE_GATES.md`). Model policy here governs agent/harness execution,
+not that promotion decision.
