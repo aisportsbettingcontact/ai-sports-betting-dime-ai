@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { trpc } from "@/lib/trpc";
+import { formatBillingTerm, formatAmount } from "./userManagementPlanDisplay";
 import { useAppAuth } from "@/_core/hooks/useAppAuth";
 import { useLocation } from "wouter";
 import { AdminShell } from "@/pages/admin/AdminShell";
@@ -34,7 +35,7 @@ import { toast } from "sonner";
 import { formatMutationError } from "@/lib/errorUtils";
 import {
   Plus, Pencil, Trash2, Shield, User, Crown, RefreshCw,
-  Eye, EyeOff, ChevronDown, ArrowUp, ArrowDown, ChevronsUpDown, X, LogOut, ShieldAlert, BarChart2, Star,
+  Eye, EyeOff, ChevronDown, ArrowUp, ArrowDown, ChevronsUpDown, X, LogOut, ShieldAlert, BarChart2,
 } from "lucide-react";
 
 type AppUserRow = {
@@ -84,7 +85,8 @@ function formatExpiry(expiryDate: number | null) {
   return `${date} ${time} EST`;
 }
 
-function formatDate(d: Date | null) {
+/** Accepts epoch ms as well as Date — the body already normalises via `new Date(d)`. */
+function formatDate(d: Date | number | null) {
   if (!d) return "Never";
   const dt = new Date(d);
   // [STEP] Build MM/DD/YYYY date string in EST
@@ -93,6 +95,17 @@ function formatDate(d: Date | null) {
   const time = dt.toLocaleTimeString("en-US", { ...EST_OPTS, hour: "2-digit", minute: "2-digit", hour12: true });
   // [OUTPUT] Full format: MM/DD/YYYY HH:MM AM/PM EST
   return `${date} ${time} EST`;
+}
+
+/** Shared external-link glyph for the Stripe dashboard deep links. */
+function ExternalLinkGlyph() {
+  return (
+    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+      <polyline points="15 3 21 3 21 9" />
+      <line x1="10" y1="14" x2="21" y2="3" />
+    </svg>
+  );
 }
 
 type FormState = {
@@ -699,24 +712,46 @@ export default function UserManagement() {
           <p className="mt-1 text-sm text-muted-foreground">Manage access, roles, subscriptions, and connected services.</p>
         </div>
         {/*
-          5 cards: use grid-cols-3 on mobile so layout is 3+2 (no orphan).
-          xs:grid-cols-3 ensures the 3-col layout kicks in at 480px.
-          sm:grid-cols-5 shows all 5 in a single row on tablet+.
+          Billing reality, not just headcount. "Handicappers" was dropped: the
+          role does not exist in this population, so the tile was permanently 0
+          and spent a slot that revenue state needed. 3-col on mobile keeps the
+          6-tile layout as 3+3 with no orphan.
         */}
-        <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 sm:gap-3 mb-4 sm:mb-6">
+        <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 sm:gap-3 mb-4 sm:mb-6">
           {[
-            { label: "Total Accounts", value: rawUsers.length },
-            { label: "Owners", value: rawUsers.filter((u) => u.role === "owner").length },
-            { label: "Admins", value: rawUsers.filter((u) => u.role === "admin").length },
-            { label: "Handicappers", value: rawUsers.filter((u) => u.role === "handicapper").length },
-            { label: "Active Access", value: rawUsers.filter((u) => u.hasAccess).length },
+            { label: "Total Accounts", value: rawUsers.length, hint: "Every account, all roles." },
+            { label: "Owners", value: rawUsers.filter((u) => u.role === "owner").length, hint: "Full administrative authority." },
+            { label: "Admins", value: rawUsers.filter((u) => u.role === "admin").length, hint: "Elevated, not owner." },
+            {
+              label: "Entitled",
+              value: rawUsers.filter((u) => u.entitled).length,
+              hint: "hasAccess AND (no expiry OR not yet expired) — the predicate the server enforces.",
+            },
+            {
+              label: "Paying (Stripe)",
+              value: rawUsers.filter((u) => u.accessSource === "stripe").length,
+              hint: "A Stripe customer exists. The remainder are manual grants.",
+            },
+            {
+              label: "Unentitled Users",
+              value: rawUsers.filter((u) => u.role === "user" && !u.entitled).length,
+              hint: "USER accounts with no working entitlement. Should be 0 — anything else is a dropped payment or a lapsed member.",
+            },
           ].map((stat) => (
-            <Card key={stat.label} className="min-w-0 gap-2 py-4 shadow-sm">
+            <Card key={stat.label} className="min-w-0 gap-2 py-4 shadow-sm" title={stat.hint}>
               <CardHeader className="px-4 pb-0">
                 <CardTitle className="text-xs font-medium text-muted-foreground truncate">{stat.label}</CardTitle>
               </CardHeader>
               <CardContent className="px-4">
-                <div className="text-2xl font-bold tabular-nums truncate">{stat.value}</div>
+                <div
+                  className={`text-2xl font-bold tabular-nums truncate ${
+                    // The only tile whose correct value is zero. Make a non-zero
+                    // count visually distinct so a dropped payment is noticed.
+                    stat.label === "Unentitled Users" && stat.value > 0 ? "text-primary" : ""
+                  }`}
+                >
+                  {stat.value}
+                </div>
               </CardContent>
             </Card>
           ))}
@@ -790,6 +825,7 @@ export default function UserManagement() {
                   <ColFilterDropdown label="LAST SIGN IN" colKey="lastSignIn" options={opts.lastSignIn} state={cols.lastSignIn} onChange={(s) => updateCol("lastSignIn", s)} />
                 </TableHead>
                 <TableHead className="text-foreground font-semibold tracking-wider text-xs">PLAN</TableHead>
+                <TableHead className="text-foreground font-semibold tracking-wider text-xs">BILLING</TableHead>
                 <TableHead className="text-foreground font-semibold tracking-wider text-xs">DISCORD STATUS</TableHead>
                 <TableHead className="text-foreground font-semibold tracking-wider text-xs">DISCORD USERNAME</TableHead>
                 <TableHead className="text-foreground font-semibold tracking-wider text-xs text-right">ACTIONS</TableHead>
@@ -798,14 +834,14 @@ export default function UserManagement() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center py-12 text-foreground">
+                  <TableCell colSpan={13} className="text-center py-12 text-foreground">
                     <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2" />
                     Loading accounts...
                   </TableCell>
                 </TableRow>
               ) : users.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center py-12 text-foreground">
+                  <TableCell colSpan={13} className="text-center py-12 text-foreground">
                     {rawUsers.length === 0 ? "No accounts yet. Create the first one." : "No accounts match the current filters."}
                   </TableCell>
                 </TableRow>
@@ -843,40 +879,103 @@ export default function UserManagement() {
                       </span>
                     </TableCell>
                     <TableCell className="text-foreground text-sm">{formatDate(user.lastSignedIn)}</TableCell>
-                    {/* PLAN column */}
+                    {/* PLAN column — the real SKU from plan_prices.
+                        This used to read `stripePlanId === 'annual' ? ANNUAL : MONTHLY`,
+                        which labelled every lifetime member "MONTHLY" once plan
+                        slugs stopped being the literal strings monthly/annual,
+                        and rendered "—" for anyone without a Stripe customer even
+                        though they were fully entitled. */}
                     <TableCell>
-                      <div className="flex flex-col gap-1">
-                        {user.stripeCustomerId ? (
+                      <div className="flex flex-col gap-1 items-start">
+                        {user.plan ? (
                           <>
-                            {user.stripePlanId ? (
-                              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold tracking-wider border ${
-                                user.stripePlanId === 'annual'
-                                  ? 'bg-card text-foreground border-border'
-                                  : 'bg-card text-foreground border-border'
-                              }`}>
-                                {user.stripePlanId === 'annual' ? <><Star size={12} /> ANNUAL</> : 'MONTHLY'}
-                              </span>
-                            ) : (
-                              <span className="text-[10px] text-foreground">Stripe</span>
-                            )}
-                            {user.pendingSetup && (
-                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wider bg-card text-foreground border border-border">
-                                ⏳ PENDING SETUP
-                              </span>
-                            )}
-                            <a
-                              href={`https://dashboard.stripe.com/customers/${user.stripeCustomerId}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 text-[10px] text-foreground hover:text-foreground transition-colors"
-                              title="View in Stripe Dashboard"
+                            <span className="text-xs font-semibold text-foreground leading-tight">
+                              {user.plan.name}
+                            </span>
+                            <span
+                              className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold tracking-wider border bg-card text-primary border-primary"
+                              title={
+                                user.plan.priceResolved
+                                  ? `Price #${user.plan.priceId} · ${user.plan.stripePriceId ?? "no Stripe price"}`
+                                  : "Resolved by plan slug — this member predates planPriceId"
+                              }
                             >
-                              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-                              Stripe
-                            </a>
+                              {formatBillingTerm(user.plan)}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground font-mono">
+                              {formatAmount(user.plan.amountCents, user.plan.currency)}
+                            </span>
+                            {!user.plan.priceResolved && (
+                              <span className="text-[10px] text-muted-foreground" title="No planPriceId on this account; plan shown from the slug alone.">
+                                slug-only
+                              </span>
+                            )}
                           </>
                         ) : (
-                          <span className="text-[10px] text-foreground">—</span>
+                          <span
+                            className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold tracking-wider border bg-card text-foreground border-border"
+                            title="No plan on this account. Staff accounts legitimately have none; a USER here is unentitled."
+                          >
+                            NO PLAN
+                          </span>
+                        )}
+                        {user.pendingSetup && (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wider bg-card text-foreground border border-border">
+                            ⏳ PENDING SETUP
+                          </span>
+                        )}
+                      </div>
+                    </TableCell>
+                    {/* BILLING column — how the seat is paid for and its live
+                        Stripe state. Separates a paying subscriber from a manual
+                        grant, which entitlement alone cannot distinguish. */}
+                    <TableCell>
+                      <div className="flex flex-col gap-1 items-start">
+                        <span
+                          className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold tracking-wider border ${
+                            user.accessSource === "stripe"
+                              ? "bg-card text-primary border-primary"
+                              : "bg-card text-foreground border-border"
+                          }`}
+                          title={
+                            user.accessSource === "stripe"
+                              ? "A Stripe customer exists for this account."
+                              : "Granted directly in the database — comped, migrated, or a repaired payment."
+                          }
+                        >
+                          {user.accessSource === "stripe" ? "STRIPE" : "MANUAL"}
+                        </span>
+                        {user.stripeSubscriptionStatus && (
+                          <span className="text-[10px] text-muted-foreground font-mono" title="stripeSubscriptionStatus">
+                            {user.stripeSubscriptionStatus}
+                          </span>
+                        )}
+                        {user.stripeCustomerId && (
+                          <a
+                            href={`https://dashboard.stripe.com/customers/${user.stripeCustomerId}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary transition-colors"
+                            title={`Customer ${user.stripeCustomerId}`}
+                          >
+                            <ExternalLinkGlyph /> customer
+                          </a>
+                        )}
+                        {user.stripeSubscriptionId && (
+                          <a
+                            href={`https://dashboard.stripe.com/subscriptions/${user.stripeSubscriptionId}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary transition-colors"
+                            title={`Subscription ${user.stripeSubscriptionId}`}
+                          >
+                            <ExternalLinkGlyph /> subscription
+                          </a>
+                        )}
+                        {user.lastStripeEventAt && (
+                          <span className="text-[10px] text-muted-foreground" title="Last Stripe webhook applied to this account">
+                            evt {formatDate(user.lastStripeEventAt)}
+                          </span>
                         )}
                       </div>
                     </TableCell>
