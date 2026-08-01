@@ -49,7 +49,15 @@ export const appUsers = mysqlTable("app_users", {
   username: varchar("username", { length: 64 }).notNull().unique(),
   passwordHash: varchar("passwordHash", { length: 255 }).notNull(),
   role: mysqlEnum("role", ["owner", "admin", "handicapper", "user"]).default("user").notNull(),
-  hasAccess: boolean("hasAccess").default(true).notNull(),
+  /**
+   * Master access switch. DEFAULT FALSE (flipped 2026-08-01): both live insert
+   * paths (owner createUser, post-payment webhook) set this explicitly, so the
+   * default only ever applies to a FUTURE insert path someone forgets to wire —
+   * and a forgotten path must fail closed (no access until granted), not open.
+   * The old default('1') was vestigial from the invite-only era and made any
+   * bare INSERT a silent lifetime grant (expiryDate NULL = lifetime).
+   */
+  hasAccess: boolean("hasAccess").default(false).notNull(),
   /** NULL means lifetime access; otherwise a UTC timestamp in ms */
   expiryDate: bigint("expiryDate", { mode: "number" }),
   /** Whether the user has accepted the Age & Responsibility notice */
@@ -483,6 +491,75 @@ export const paymentEvents = mysqlTable("payment_events", {
   outcomeIdx: index("payment_events_outcome_idx").on(t.outcome, t.kind),
   eventObjectUnique: uniqueIndex("payment_events_event_object_unique").on(t.stripeEventId, t.objectId),
 }));
+
+/**
+ * subscription_events — append-only record of every subscription lifecycle
+ * transition: creation, plan change, cancel scheduled/reverted, status move,
+ * deletion, renewal, and trial/renewal previews.
+ *
+ * Why it exists (avenues #3/#4/#8, 2026-08-01): plan changes route through the
+ * Stripe Customer Portal — the recommended pattern — which means no in-app code
+ * runs when a member switches plans. The ONLY local trace of any transition was
+ * whatever grantUserAccess happened to overwrite on app_users, which is current
+ * state, not history. "Who downgraded last month", "how many scheduled
+ * cancellations were reverted", and "which subscription did this renewal
+ * extend" were unanswerable without opening Stripe.
+ *
+ * `kind` (what happened to the subscription) is stored separately from
+ * `outcome` (what WE did about it) with a reason — the same rule as
+ * checkout_sessions and payment_events, because collapsing those two facts is
+ * exactly how the original checkout incident stayed hidden.
+ *
+ * from/to price ids are Stripe price ids, not plan_prices row ids: prices are
+ * immutable in Stripe, so the pair pins the exact SKUs either side of a
+ * transition even after a repricing retires the row.
+ */
+export const subscriptionEvents = mysqlTable("subscription_events", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Stripe event id; NULL for app-initiated actions (cancel/reactivate). */
+  stripeEventId: varchar("stripeEventId", { length: 255 }),
+  /** Stripe event type, or a synthetic `app.*` type for in-app actions. */
+  eventType: varchar("eventType", { length: 64 }).notNull(),
+  livemode: boolean("livemode").default(true).notNull(),
+  stripeSubscriptionId: varchar("stripeSubscriptionId", { length: 64 }).notNull(),
+  stripeCustomerId: varchar("stripeCustomerId", { length: 64 }),
+  userId: int("userId"),
+  /** created | plan_changed | cancel_scheduled | cancel_reverted |
+   *  status_changed | updated | deleted | renewed | trial_ending |
+   *  renewal_upcoming | payment_failed */
+  kind: varchar("kind", { length: 24 }).notNull(),
+  /** What we did: recorded | granted | revoked | noop */
+  outcome: varchar("outcome", { length: 16 }).default("recorded").notNull(),
+  outcomeReason: varchar("outcomeReason", { length: 160 }),
+  /** Plan slugs (app_users.stripePlanId vocabulary). */
+  fromPlanId: varchar("fromPlanId", { length: 64 }),
+  toPlanId: varchar("toPlanId", { length: 64 }),
+  /** Stripe price ids — immutable SKU identity either side of the transition. */
+  fromPriceId: varchar("fromPriceId", { length: 64 }),
+  toPriceId: varchar("toPriceId", { length: 64 }),
+  fromInterval: varchar("fromInterval", { length: 16 }),
+  toInterval: varchar("toInterval", { length: 16 }),
+  /** Stripe subscription status after the event. */
+  status: varchar("status", { length: 24 }),
+  cancelAtPeriodEnd: boolean("cancelAtPeriodEnd"),
+  /** End of the billing period this event governs, UTC ms. */
+  periodEnd: bigint("periodEnd", { mode: "number" }),
+  /** webhook | user | owner | system */
+  actor: varchar("actor", { length: 16 }).default("webhook").notNull(),
+  occurredAt: bigint("occurredAt", { mode: "number" }).notNull(),
+  recordedAt: bigint("recordedAt", { mode: "number" }).notNull(),
+}, (t) => ({
+  subOccurredIdx: index("subscription_events_sub_occurred_idx").on(t.stripeSubscriptionId, t.occurredAt),
+  userOccurredIdx: index("subscription_events_user_occurred_idx").on(t.userId, t.occurredAt),
+  kindOccurredIdx: index("subscription_events_kind_occurred_idx").on(t.kind, t.occurredAt),
+  customerIdx: index("subscription_events_customer_idx").on(t.stripeCustomerId),
+  outcomeKindIdx: index("subscription_events_outcome_kind_idx").on(t.outcome, t.kind),
+  /** Redelivery guard. NULL stripeEventId rows (app-initiated) are exempt. */
+  eventKindUnique: uniqueIndex("subscription_events_event_kind_unique").on(t.stripeEventId, t.kind),
+}));
+
+export type SubscriptionEvent = typeof subscriptionEvents.$inferSelect;
+export type InsertSubscriptionEvent = typeof subscriptionEvents.$inferInsert;
 
 export const entitlementEvents = mysqlTable("entitlement_events", {
   id: int("id").autoincrement().primaryKey(),

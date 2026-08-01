@@ -45,7 +45,9 @@ export type BillingAlertKind =
   | "REFUND_RECEIVED"
   | "DISPUTE_OPENED"
   | "CUSTOMER_LINK_CONFLICT"
-  | "PAYMENT_FAILED";
+  | "PAYMENT_FAILED"
+  | "TRIAL_WILL_END"
+  | "DISPUTE_CLOSED";
 
 /**
  * Severity per kind. Drives console.error vs console.warn and the embed colour.
@@ -60,12 +62,17 @@ const SEVERITY: Record<BillingAlertKind, "error" | "warn"> = {
   RECONCILE_DRIFT: "warn",
   REFUND_RECEIVED: "warn",
   DISPUTE_OPENED: "error",
-  // A failed renewal is not an outage — Stripe Smart Retries own recovery and
-  // access is deliberately retained. It is "warn" so it does not sit at the
-  // same level as a lost grant, but it must still reach a human: under a
-  // recurring model this is the earliest signal that a member is churning.
   CUSTOMER_LINK_CONFLICT: "error",
-  PAYMENT_FAILED: "warn",
+  // No-grace policy (2026-08-01): a failed payment now ENDS the membership at
+  // the moment of decline — access revoked, subscription canceled. That is a
+  // churn event and an entitlement change in one, so it sits at "error".
+  PAYMENT_FAILED: "error",
+  // Pre-churn signal: a trial converting (or lapsing) in ~3 days. Routine
+  // business, but the only alert that arrives BEFORE money moves.
+  TRIAL_WILL_END: "warn",
+  // The dispute verdict. Money already moved at dispute.created; this is the
+  // resolution, and a WON dispute needs a human to decide on reinstatement.
+  DISPUTE_CLOSED: "warn",
 };
 
 /** Discord embed colours — same palette family as discordSecurityAlert.ts. */
@@ -78,7 +85,9 @@ const EMBED_COLORS: Record<BillingAlertKind, number> = {
   REFUND_RECEIVED: 0xeb6c33, // orange
   DISPUTE_OPENED: 0xf8312f, // bright red — chargeback clock is running
   CUSTOMER_LINK_CONFLICT: 0xeb6c33, // orange
-  PAYMENT_FAILED: 0xfee75c, // warning yellow — recoverable, but the clock is running
+  PAYMENT_FAILED: 0xf8312f, // bright red — no-grace: the decline ended a membership
+  TRIAL_WILL_END: 0xfee75c, // warning yellow — decision window, not a failure
+  DISPUTE_CLOSED: 0xeb6c33, // orange — verdict in; may need manual reinstatement
 };
 
 // ─── Constants ────────────────────────────────────────────────────────────────

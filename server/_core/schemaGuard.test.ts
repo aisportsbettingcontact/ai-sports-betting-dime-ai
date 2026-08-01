@@ -36,6 +36,15 @@ describe("REQUIRED_COLUMNS", () => {
       expect(Object.keys(REQUIRED_COLUMNS), t).toContain(t);
   });
 
+  it("[RC-4] guards all THREE ledgers — a ledger deployed ahead of its migration ships blind", () => {
+    for (const t of ["checkout_sessions", "payment_events", "subscription_events"])
+      expect(Object.keys(REQUIRED_COLUMNS), t).toContain(t);
+    // The columns the lifecycle queries depend on (from→to plan transition).
+    expect(REQUIRED_COLUMNS.subscription_events).toEqual(
+      expect.arrayContaining(["kind", "outcome", "fromPriceId", "toPriceId", "occurredAt"]),
+    );
+  });
+
   it("[RC-3] includes the columns the webhook idempotency + audit trail depend on", () => {
     expect(REQUIRED_COLUMNS.stripe_webhook_events).toContain("stripeEventId");
     expect(REQUIRED_COLUMNS.entitlement_events).toContain("reason");

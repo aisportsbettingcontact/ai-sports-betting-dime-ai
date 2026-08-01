@@ -18,7 +18,7 @@ import { describe, it, expect } from "vitest";
 import fs from "fs";
 import path from "path";
 
-import { isStaleEvent, PENDING_SETUP_TTL_MS, RENEWAL_GRACE_MS } from "./stripeWebhook";
+import { isStaleEvent, PENDING_SETUP_TTL_MS } from "./stripeWebhook";
 import { computeExpiryMsForPrice, LIFETIME_ACCESS_UNTIL_MS } from "./stripe/planStore";
 
 const ROOT = path.resolve(__dirname, "..");
@@ -83,8 +83,12 @@ describe("stripeWebhook — grace and TTL constants", () => {
     expect(PENDING_SETUP_TTL_MS).toBeLessThanOrEqual(7 * 24 * 60 * 60 * 1000);
   });
 
-  it("[C-2] renewals carry a grace buffer so a 31-day month cannot lock out a paid subscriber (LIFE-002)", () => {
-    expect(RENEWAL_GRACE_MS).toBeGreaterThanOrEqual(24 * 60 * 60 * 1000);
+  it("[C-2] NO grace buffer exists anywhere in the renewal window (owner directive 2026-08-01)", () => {
+    // "No grace periods allowed. Period." — LIFE-002's 48h slack is repealed.
+    // A renewal's expiry is Stripe's billed period end, EXACTLY; the momentary
+    // lapse at the boundary before invoice.paid lands is product intent.
+    expect(WEBHOOK_SRC).not.toMatch(/RENEWAL_GRACE_MS\s*=/);
+    expect(WEBHOOK_SRC).toMatch(/\? periodEndSec \* 1000\n/);
   });
 });
 

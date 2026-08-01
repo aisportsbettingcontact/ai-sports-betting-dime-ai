@@ -29,7 +29,7 @@ the role at login, so a demoted account would otherwise keep its powers until
 the token expired (`server/routers/appUsers.ts`, `resolveOwnerIdentity`).
 
 | Role | Grants |
-|---|---|
+| --- | --- |
 | `owner` | Everything. `ownerProcedure` re-reads the row fresh (no cache) before allowing admin mutations: plan CRUD, user management, cron/debug endpoints. Also the only role that reaches the Dime AI model (`canAccessDimeModel`). |
 | `admin` | Staff tooling via `handicapperProcedure`-class gates. **Not** the owner surfaces — `subscriptionPlans.*` and user management remain owner-only. Does **not** grant Dime AI model access. |
 | `handicapper` | Content/handicapping surfaces only. Currently unused. |
@@ -38,7 +38,7 @@ the token expired (`server/routers/appUsers.ts`, `resolveOwnerIdentity`).
 ### Privileged accounts
 
 | Account | Role |
-|---|---|
+| --- | --- |
 | `@prez` | `owner` |
 | `@ghosty` | `admin` |
 | `@sippi` | `admin` |
@@ -54,7 +54,7 @@ trusting this table — it is a snapshot.
 Entitlement is **separate from role**. Four columns on `app_users` decide it:
 
 | Column | Meaning |
-|---|---|
+| --- | --- |
 | `hasAccess` | Master switch. `false` denies regardless of anything else. |
 | `expiryDate` | UTC ms. **`NULL` means lifetime access** — the schema's documented contract (`drizzle/schema.ts`). A non-null value in the past denies. |
 | `stripePlanId` | The plan **slug**, a foreign key *by value*. |
@@ -78,6 +78,48 @@ Stripe Prices are immutable, so changing an amount mints a *new* price row and
 retires the old one. Storing the id pins exactly what a member is billed at,
 across repricings. Indexed by `app_users_plan_price_idx`, so "who is on this
 interval?" is an index seek.
+
+### The `hasAccess` default fails closed (2026-08-01)
+
+The column default was `'1'` — vestigial from the invite-only era — which,
+combined with `expiryDate NULL = lifetime`, made any bare `INSERT` into
+`app_users` a silent lifetime grant. There is **no public self-signup**: the
+only two insert paths are the owner-gated `createUser` mutation and the
+post-payment Stripe webhook, and both set `hasAccess` explicitly. The default
+was therefore flipped to `'0'` (`db-subscription-events.yml`), so a future
+insert path that forgets the column denies access instead of granting it.
+
+An account CAN legitimately hold `hasAccess=1` with no plan (staff, or a
+comped member mid-provisioning) — but for `role='user'` that state should be
+transient. The **"Access, No Plan"** tile in User Management counts it and
+should read 0; every manual grant/revoke now writes an `entitlement_events`
+row (`actor='owner'`), so "why does this user have access?" is a query, not
+an archaeology dig.
+
+### No-grace billing law (owner directive, 2026-08-01)
+
+**A declined subscription payment ends the membership at the moment of
+failure.** No Smart-Retry ride-out, no buffer. `invoice.payment_failed`
+revokes access and cancels the subscription at Stripe; `past_due` / `unpaid`
+/ `paused` status moves are the belt-and-braces mirror. The revoke is guarded
+by subscription identity — a lifetime (one-off) member never loses their
+entitlement to a different subscription's decline.
+
+**Trials — including free day passes — always auto-renew.** Checkout collects
+the card up front (`payment_method_collection: "always"`); at trial end
+Stripe charges the plan+interval price automatically. A declined conversion
+revokes at the decline; a trial that reaches its end with auto-renew off or
+no payment method cancels at trial expiry
+(`trial_settings.end_behavior.missing_payment_method: "cancel"`).
+`plan_prices.trialPeriodDays` is the authority on which SKU carries a trial.
+
+**There is no buffer anywhere.** `RENEWAL_GRACE_MS` is repealed (owner:
+"No grace periods allowed. Period."): a renewal's expiry is the exact instant
+Stripe billed to, and the legacy static plan windows are exact (monthly 30d,
+annual 365d — matching the DB plans' 1d/7d/30d/365d spec). If the next
+invoice has not been PAID by period end, access lapses at period end and
+returns only when `invoice.paid` arrives; that boundary lapse is product
+intent, not a defect.
 
 ### Slug renames
 

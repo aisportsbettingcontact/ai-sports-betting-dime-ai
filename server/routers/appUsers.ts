@@ -38,6 +38,7 @@ import {
 } from "../../drizzle/schema";
 import { eq, ne, and, isNull, gt, or } from "drizzle-orm";
 import { emitServerEvent } from "../analytics/emitServer";
+import { recordEntitlementEvent } from "../stripe/entitlementLedger";
 
 export const APP_USER_COOKIE = "app_session";
 
@@ -822,6 +823,27 @@ export const appUsersRouter = router({
           planPriceId: input.planPriceId,
         });
         console.log(`[AppAdmin][createUser][OUTPUT] SUCCESS username=${input.username} stripePlanId=${input.stripePlanId ?? "null"} planPriceId=${input.planPriceId ?? "null"}`);
+
+        // [STEP 4] Audit trail (avenues #5/#10). A hand-created account that
+        // starts with access is a manual grant and must be as reconstructable
+        // as a webhook grant — this row is what makes "why does this user have
+        // access with no plan?" answerable from the database (the rudedog
+        // question, 2026-08-01). Best-effort: recordEntitlementEvent never throws.
+        const createdUser = await getAppUserByEmail(input.email.toLowerCase());
+        if (createdUser) {
+          await recordEntitlementEvent({
+            userId: createdUser.id,
+            stripeEventId: null,
+            eventType: "admin.create_user",
+            reason: "manual_create",
+            actor: "owner",
+            after: {
+              hasAccess: input.hasAccess,
+              planId: input.stripePlanId,
+              expiryDate: input.expiryDate ?? null,
+            },
+          });
+        }
         return { success: true };
       }, '[AppAdmin][createUser]').catch((err) => {
         if (err instanceof TRPCError) throw err;
@@ -892,8 +914,17 @@ export const appUsersRouter = router({
         // point of dryRun, and they are also what makes the write auditable.
         // Annotated: getDb()'s handle is loosely typed here, so the row shape
         // would otherwise land as implicit `any` in the map below.
-        const rows: Array<{ id: number; username: string }> = await db
-          .select({ id: appUsersTable.id, username: appUsersTable.username })
+        // hasAccess/plan/expiry ride along as the audit rows' BEFORE state —
+        // captured in the same read that decides membership, so the trail can
+        // never describe a row this query did not actually see.
+        const rows: Array<{ id: number; username: string; hasAccess: boolean; stripePlanId: string | null; expiryDate: number | null }> = await db
+          .select({
+            id: appUsersTable.id,
+            username: appUsersTable.username,
+            hasAccess: appUsersTable.hasAccess,
+            stripePlanId: appUsersTable.stripePlanId,
+            expiryDate: appUsersTable.expiryDate,
+          })
           .from(appUsersTable)
           .where(missingEntitlement);
         const usernames = rows.map((r) => r.username);
@@ -929,6 +960,34 @@ export const appUsersRouter = router({
         for (const r of rows) {
           invalidateAppUserByIdCache(r.id);
           invalidateCachedAppUser(r.id);
+        }
+
+        // [STEP 5] Audit trail (avenues #5/#10): one row per repaired member.
+        // The 2026-07-31 ad-hoc repair left no entitlement_events rows, which
+        // is why "who was backfilled, when, by whom" needed an ops memory
+        // instead of a query. Best-effort and sequential — this is an
+        // owner-run, low-frequency path and recordEntitlementEvent never throws.
+        //
+        // `after` is READ BACK from the row, never asserted from the inputs:
+        // this UPDATE deliberately leaves expiryDate alone, and afterExpiryDate
+        // NULL means LIFETIME in this system — writing the input's shape would
+        // stamp every backfilled member with a lifetime claim their row does
+        // not hold. The read-back also keeps the trail honest when a concurrent
+        // write made the UPDATE skip a matched row (updated < matched): the
+        // row records whatever state the member ACTUALLY ended up in.
+        for (const r of rows) {
+          const fresh = await getAppUserById(r.id).catch(() => null);
+          await recordEntitlementEvent({
+            userId: r.id,
+            stripeEventId: null,
+            eventType: "admin.backfill_entitlement",
+            reason: "backfill",
+            actor: "owner",
+            before: { hasAccess: r.hasAccess, planId: r.stripePlanId, expiryDate: r.expiryDate },
+            after: fresh
+              ? { hasAccess: fresh.hasAccess, planId: fresh.stripePlanId ?? null, expiryDate: fresh.expiryDate ?? null }
+              : { hasAccess: true, planId: input.planSlug, expiryDate: r.expiryDate },
+          });
         }
 
         console.log(`${TAG} [OUTPUT] matched=${rows.length} updated=${updated} planSlug=${input.planSlug} planPriceId=${input.planPriceId} (expiryDate untouched)`);
@@ -993,6 +1052,34 @@ export const appUsersRouter = router({
         console.log(`[AppAdmin][updateUser][STEP] writing fields=${JSON.stringify(Object.keys(updateData))} userId=${id}`);
         await updateAppUser(id, updateData as Parameters<typeof updateAppUser>[1]);
         console.log(`[AppAdmin][updateUser][OUTPUT] SUCCESS userId=${id}`);
+
+        // [STEP 6] Audit trail (avenues #5/#10) — only when an entitlement
+        // field actually moved. Email/username/password edits are identity
+        // maintenance, not entitlement changes, and would bury the trail in
+        // noise. Best-effort: recordEntitlementEvent never throws.
+        const accessChanged = rest.hasAccess !== undefined && rest.hasAccess !== existing.hasAccess;
+        const expiryChanged = rest.expiryDate !== undefined && rest.expiryDate !== (existing.expiryDate ?? null);
+        if (accessChanged || expiryChanged) {
+          await recordEntitlementEvent({
+            userId: id,
+            stripeEventId: null,
+            eventType: "admin.update_user",
+            reason: accessChanged
+              ? (rest.hasAccess ? "manual_grant" : "manual_revoke")
+              : "manual_expiry_change",
+            actor: "owner",
+            before: {
+              hasAccess: existing.hasAccess,
+              planId: existing.stripePlanId ?? null,
+              expiryDate: existing.expiryDate ?? null,
+            },
+            after: {
+              hasAccess: rest.hasAccess ?? existing.hasAccess,
+              planId: existing.stripePlanId ?? null,
+              expiryDate: rest.expiryDate !== undefined ? rest.expiryDate : (existing.expiryDate ?? null),
+            },
+          });
+        }
         return { success: true };
       }, '[AppAdmin][updateUser]').catch((err) => {
         if (err instanceof TRPCError) throw err;

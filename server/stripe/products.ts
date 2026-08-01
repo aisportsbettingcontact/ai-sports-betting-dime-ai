@@ -137,15 +137,20 @@ export function getPlanByPriceId(priceId: string): PlanDefinition | null {
 
 /**
  * Compute the subscription expiry timestamp (UTC ms) for a given plan.
- * Monthly: now + 31 days (buffer for billing cycle variance)
- * Annual:  now + 366 days (buffer for leap year)
+ *
+ * EXACT windows (owner directive 2026-08-01: "No grace periods allowed.
+ * Period."): monthly = 30 days, annual = 365 days — matching the DB plans'
+ * exact interval spec (planStore: 1d=24h, 1w=7d, 1mo=30d, 1yr=365d). The old
+ * 31/366-day "billing cycle variance" padding was a grace period by another
+ * name and is repealed; a renewal re-anchors the window to Stripe's billed
+ * period end, so nothing needs slack.
  */
 export function computeExpiryMs(planId: PlanId): number {
   const now = Date.now();
-  const bufferDays = planId === "annual" ? 366 : 31;
-  const expiryMs = now + bufferDays * 24 * 60 * 60 * 1000;
+  const windowDays = planId === "annual" ? 365 : 30;
+  const expiryMs = now + windowDays * 24 * 60 * 60 * 1000;
   console.log(
-    `${TAG} [STATE] computeExpiryMs planId=${planId} bufferDays=${bufferDays} expiryMs=${expiryMs} (${new Date(expiryMs).toISOString()})`
+    `${TAG} [STATE] computeExpiryMs planId=${planId} windowDays=${windowDays} expiryMs=${expiryMs} (${new Date(expiryMs).toISOString()})`
   );
   return expiryMs;
 }

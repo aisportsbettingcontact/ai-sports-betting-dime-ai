@@ -720,8 +720,11 @@ export default function UserManagement() {
         <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 sm:gap-3 mb-4 sm:mb-6">
           {[
             { label: "Total Accounts", value: rawUsers.length, hint: "Every account, all roles." },
-            { label: "Owners", value: rawUsers.filter((u) => u.role === "owner").length, hint: "Full administrative authority." },
-            { label: "Admins", value: rawUsers.filter((u) => u.role === "admin").length, hint: "Elevated, not owner." },
+            {
+              label: "Staff",
+              value: rawUsers.filter((u) => u.role === "owner" || u.role === "admin").length,
+              hint: "Owner + admins. Merged from two tiles to make room for the metric below that was invisible.",
+            },
             {
               label: "Entitled",
               value: rawUsers.filter((u) => u.entitled).length,
@@ -737,6 +740,20 @@ export default function UserManagement() {
               value: rawUsers.filter((u) => u.role === "user" && !u.entitled).length,
               hint: "USER accounts with no working entitlement. Should be 0 — anything else is a dropped payment or a lapsed member.",
             },
+            {
+              /*
+               * The tile the 2026-08-01 audit proved missing: "Unentitled Users"
+               * mirrors the server's gate (hasAccess + expiry), so a USER row
+               * holding access with NO plan counted as entitled and the board
+               * read all-zeros while an unaccounted grant existed. This is the
+               * other failure mode: access that no plan explains. Should be 0 —
+               * anything else is either an unfinished manual grant (assign the
+               * plan) or access that should not exist (revoke it).
+               */
+              label: "Access, No Plan",
+              value: rawUsers.filter((u) => u.role === "user" && u.entitled && u.stripePlanId == null && u.planPriceId == null).length,
+              hint: "USER accounts that pass the access gate but hold no plan. Should be 0 — assign the plan or revoke the access.",
+            },
           ].map((stat) => (
             <Card key={stat.label} className="min-w-0 gap-2 py-4 shadow-sm" title={stat.hint}>
               <CardHeader className="px-4 pb-0">
@@ -745,9 +762,10 @@ export default function UserManagement() {
               <CardContent className="px-4">
                 <div
                   className={`text-2xl font-bold tabular-nums truncate ${
-                    // The only tile whose correct value is zero. Make a non-zero
-                    // count visually distinct so a dropped payment is noticed.
-                    stat.label === "Unentitled Users" && stat.value > 0 ? "text-primary" : ""
+                    // The two tiles whose correct value is zero. Make a non-zero
+                    // count visually distinct so a dropped payment — or an
+                    // unaccounted grant — is noticed.
+                    (stat.label === "Unentitled Users" || stat.label === "Access, No Plan") && stat.value > 0 ? "text-primary" : ""
                   }`}
                 >
                   {stat.value}

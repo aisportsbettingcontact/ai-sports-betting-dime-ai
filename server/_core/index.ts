@@ -42,7 +42,7 @@ import {
 import { ensureDebugLogsTable } from "./debugLogger";
 import { registerAnalyticsIngestRoute } from "../analytics/ingestRoute";
 import { registerAnalyticsReadRoute } from "../analytics/readRoute";
-import { registerStripeWebhookRoute } from "../stripeWebhook";
+import { registerStripeWebhookRoute, getWebhookLatencyStats } from "../stripeWebhook";
 import { assertSchemaCurrent } from "./schemaGuard";
 import { registerWc2026Heartbeats } from "../wc2026/wc2026Heartbeat";
 import { registerCronRoutes } from "../cron/cronRoutes";
@@ -552,6 +552,10 @@ async function startServer() {
             process.env.BILLING_ALERT_DISCORD_WEBHOOK_URL ?? process.env.DISCORD_BILLING_WEBHOOK_URL
           ),
         },
+        // Webhook-path latency (avenue #11). Reported, never a status-code
+        // input — a slow webhook is an alert condition, not a reason for
+        // Railway to restart the container. In-memory since last boot.
+        stripeWebhook: getWebhookLatencyStats(),
       },
     });
   });

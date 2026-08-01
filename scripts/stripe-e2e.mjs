@@ -1157,6 +1157,273 @@ async function checkSyntheticRevoke() {
       `(reason=${entitlements[0]?.reason} ${entitlements[0]?.beforeHasAccess}→${entitlements[0]?.afterHasAccess})`,
     SYNTHETIC
   );
+  const subRows = await subscriptionRowsFor(event.id);
+  assertThat(
+    "the deletion lands in subscription_events as deleted/revoked",
+    subRows.length === 1 && subRows[0].kind === "deleted" && subRows[0].outcome === "revoked",
+    `subscription_events rows for ${event.id}: ${subRows.length} ` +
+      `(kind=${subRows[0]?.kind} outcome=${subRows[0]?.outcome})`,
+    SYNTHETIC
+  );
+}
+
+/**
+ * Subscription lifecycle ledger (avenues #3/#4/#8). Proves the transitions that
+ * previously left no local trace: a Customer Portal plan switch (which never
+ * touches our API — only customer.subscription.updated with
+ * previous_attributes.items betrays it), a scheduled cancellation, and a
+ * renewal. Each asserts DATABASE STATE in subscription_events, including the
+ * exactly-once guarantee on redelivery.
+ */
+async function subscriptionRowsFor(eventId) {
+  return query(
+    "SELECT kind, outcome, outcomeReason, fromPriceId, toPriceId, cancelAtPeriodEnd, periodEnd, actor FROM subscription_events WHERE stripeEventId = ?",
+    [eventId]
+  );
+}
+
+async function checkSubscriptionLifecycleLedger() {
+  // ── 1. Portal-style plan change ────────────────────────────────────────────
+  const NEW_PRICE = `price_e2e_new_${RUN_ID}`;
+  const planChange = syntheticEvent(
+    "customer.subscription.updated",
+    {
+      id: SEED_SUBSCRIPTION,
+      object: "subscription",
+      status: "active",
+      customer: SEED_CUSTOMER,
+      cancel_at_period_end: false,
+      items: { data: [{ price: { id: NEW_PRICE, recurring: { interval: "year" } } }] },
+      metadata: {},
+    },
+    // previous_attributes rides on event.data next to object — exactly how the
+    // Portal's plan switch arrives, and the ONLY evidence of the old price.
+    {}
+  );
+  planChange.data.previous_attributes = {
+    items: { data: [{ price: { id: SEED_STRIPE_PRICE, recurring: { interval: "month" } } }] },
+  };
+
+  let response = await deliverSigned(planChange, listenState.whsec);
+  await awaitClaim(planChange.id);
+  await sleep(1_500);
+  let rows = await subscriptionRowsFor(planChange.id);
+
+  assertThat(
+    "a Portal-style plan change lands in subscription_events as plan_changed with both price ids",
+    response.status === 200 &&
+      rows.length === 1 &&
+      rows[0].kind === "plan_changed" &&
+      rows[0].fromPriceId === SEED_STRIPE_PRICE &&
+      rows[0].toPriceId === NEW_PRICE,
+    `HTTP ${response.status}; rows=${rows.length} kind=${rows[0]?.kind} ` +
+      `${rows[0]?.fromPriceId}→${rows[0]?.toPriceId}`,
+    SYNTHETIC
+  );
+
+  // Redelivery through the endpoint: absorbed by the stripe_webhook_events
+  // claim BEFORE the ledger is reached — the first line of defence.
+  await deliverSigned(planChange, listenState.whsec);
+  await sleep(1_500);
+  rows = await subscriptionRowsFor(planChange.id);
+  assertThat(
+    "EXACTLY-ONCE: redelivered plan change adds no second subscription_events row (claim guard)",
+    rows.length === 1,
+    `rows for ${planChange.id}: ${rows.length}`,
+    SYNTHETIC
+  );
+
+  // The ledger's OWN unique key, proven at the database — the claim guard
+  // filters endpoint redeliveries, so the (stripeEventId, kind) constraint is
+  // belt-and-braces that an HTTP test can never reach. Assert both halves of
+  // its semantics: a same-key insert is refused, and NULL-eventId rows
+  // (app-initiated actions) are exempt so repeated member actions all record.
+  let dupRefused = false;
+  try {
+    await query(
+      "INSERT INTO subscription_events (stripeEventId, eventType, livemode, stripeSubscriptionId, kind, outcome, actor, occurredAt, recordedAt) VALUES (?, 'customer.subscription.updated', 0, ?, 'plan_changed', 'recorded', 'webhook', ?, ?)",
+      [planChange.id, SEED_SUBSCRIPTION, Date.now(), Date.now()]
+    );
+  } catch (err) {
+    dupRefused = err?.errno === 1062;
+  }
+  assertThat(
+    "EXACTLY-ONCE: the (stripeEventId, kind) unique key itself refuses a duplicate (ER_DUP_ENTRY)",
+    dupRefused,
+    dupRefused ? "duplicate INSERT refused with errno 1062" : "duplicate INSERT was ACCEPTED — unique key missing or wrong",
+    SYNTHETIC
+  );
+  const nullRowsBefore = Number(await scalar("SELECT COUNT(*) FROM subscription_events WHERE stripeEventId IS NULL"));
+  await query(
+    "INSERT INTO subscription_events (stripeEventId, eventType, livemode, stripeSubscriptionId, kind, outcome, actor, occurredAt, recordedAt) VALUES (NULL, 'app.cancel_requested', 0, ?, 'cancel_scheduled', 'recorded', 'user', ?, ?)",
+    [SEED_SUBSCRIPTION, Date.now(), Date.now()]
+  );
+  await query(
+    "INSERT INTO subscription_events (stripeEventId, eventType, livemode, stripeSubscriptionId, kind, outcome, actor, occurredAt, recordedAt) VALUES (NULL, 'app.cancel_requested', 0, ?, 'cancel_scheduled', 'recorded', 'user', ?, ?)",
+    [SEED_SUBSCRIPTION, Date.now(), Date.now()]
+  );
+  const nullRowsAfter = Number(await scalar("SELECT COUNT(*) FROM subscription_events WHERE stripeEventId IS NULL"));
+  assertThat(
+    "app-initiated rows (NULL stripeEventId) are exempt from the unique key — repeated member actions all record",
+    nullRowsAfter === nullRowsBefore + 2,
+    `NULL-eventId rows ${nullRowsBefore} → ${nullRowsAfter} (expected +2)`,
+    SYNTHETIC
+  );
+
+  // ── 2. Scheduled cancellation (the webhook mirror of the in-app mutation) ──
+  const cancelSched = syntheticEvent("customer.subscription.updated", {
+    id: SEED_SUBSCRIPTION,
+    object: "subscription",
+    status: "active",
+    customer: SEED_CUSTOMER,
+    cancel_at_period_end: true,
+    cancel_at: Math.floor(Date.now() / 1000) + 14 * 86400,
+    items: { data: [{ price: { id: NEW_PRICE, recurring: { interval: "year" } } }] },
+    metadata: {},
+  });
+  cancelSched.data.previous_attributes = { cancel_at_period_end: false };
+
+  response = await deliverSigned(cancelSched, listenState.whsec);
+  await awaitClaim(cancelSched.id);
+  await sleep(1_500);
+  rows = await subscriptionRowsFor(cancelSched.id);
+  assertThat(
+    "a scheduled cancellation lands as cancel_scheduled with the period end it dies at",
+    response.status === 200 &&
+      rows.length === 1 &&
+      rows[0].kind === "cancel_scheduled" &&
+      Number(rows[0].cancelAtPeriodEnd) === 1 &&
+      Number(rows[0].periodEnd) > Date.now(),
+    `HTTP ${response.status}; rows=${rows.length} kind=${rows[0]?.kind} ` +
+      `capE=${rows[0]?.cancelAtPeriodEnd} periodEnd=${rows[0]?.periodEnd}`,
+    SYNTHETIC
+  );
+
+  // ── 3. Renewal (invoice.paid, billing_reason=subscription_cycle) ───────────
+  const periodEndSec = Math.floor(Date.now() / 1000) + 30 * 86400;
+  const renewal = syntheticEvent("invoice.paid", {
+    id: `in_e2e_${RUN_ID}`,
+    object: "invoice",
+    customer: SEED_CUSTOMER,
+    billing_reason: "subscription_cycle",
+    amount_paid: 4900,
+    amount_due: 4900,
+    currency: "usd",
+    customer_email: `stripe-e2e+${RUN_ID}@example.invalid`,
+    lines: { data: [{ period: { end: periodEndSec }, price: { id: SEED_STRIPE_PRICE } }] },
+    parent: { subscription_details: { subscription: SEED_SUBSCRIPTION } },
+  });
+
+  response = await deliverSigned(renewal, listenState.whsec);
+  await awaitClaim(renewal.id);
+  await sleep(1_500);
+  rows = await subscriptionRowsFor(renewal.id);
+  const renewedUser = await seededUser();
+  assertThat(
+    "a renewal lands as renewed/granted and the row names the period it bought",
+    response.status === 200 &&
+      rows.length === 1 &&
+      rows[0].kind === "renewed" &&
+      rows[0].outcome === "granted" &&
+      Number(rows[0].periodEnd) === periodEndSec * 1000,
+    `HTTP ${response.status}; rows=${rows.length} kind=${rows[0]?.kind} outcome=${rows[0]?.outcome} ` +
+      `periodEnd=${rows[0]?.periodEnd} (billed to ${periodEndSec * 1000})`,
+    SYNTHETIC
+  );
+  assertThat(
+    "NO-GRACE: the renewal expiry is Stripe's billed period end EXACTLY — zero buffer",
+    Number(renewedUser.expiryDate) === periodEndSec * 1000,
+    `expiryDate=${renewedUser.expiryDate} vs billed period end ${periodEndSec * 1000} ` +
+      `(delta ${Number(renewedUser.expiryDate) - periodEndSec * 1000}ms — must be 0)`,
+    SYNTHETIC
+  );
+}
+
+/**
+ * The avenue-#12 handlers that are DORMANT in production until the owner
+ * subscribes their events on the live endpoint. Proving them here means the
+ * day they are subscribed, they are already known-good — not hoped-good.
+ * None of these change entitlement; each must record its row and leave
+ * app_users untouched.
+ */
+async function checkDormantEventHandlers() {
+  const accessBefore = (await seededUser()).hasAccess;
+
+  // trial_will_end → subscription_events kind=trial_ending, access unchanged.
+  const trial = syntheticEvent("customer.subscription.trial_will_end", {
+    id: SEED_SUBSCRIPTION,
+    object: "subscription",
+    status: "trialing",
+    customer: SEED_CUSTOMER,
+    cancel_at_period_end: false,
+    trial_end: Math.floor(Date.now() / 1000) + 3 * 86400,
+    items: { data: [{ price: { id: SEED_STRIPE_PRICE, recurring: { interval: "month" } } }] },
+  });
+  let response = await deliverSigned(trial, listenState.whsec);
+  await awaitClaim(trial.id);
+  await sleep(1_500);
+  let rows = await subscriptionRowsFor(trial.id);
+  assertThat(
+    "trial_will_end records trial_ending/noop with the trial's end date",
+    response.status === 200 && rows.length === 1 &&
+      rows[0].kind === "trial_ending" && rows[0].outcome === "noop" &&
+      Number(rows[0].periodEnd) > Date.now(),
+    `HTTP ${response.status}; rows=${rows.length} kind=${rows[0]?.kind} outcome=${rows[0]?.outcome} periodEnd=${rows[0]?.periodEnd}`,
+    SYNTHETIC
+  );
+
+  // invoice.upcoming → renewal_upcoming. A PREVIEW: the invoice has no id.
+  const upcoming = syntheticEvent("invoice.upcoming", {
+    id: null,
+    object: "invoice",
+    customer: SEED_CUSTOMER,
+    amount_due: 4900,
+    currency: "usd",
+    period_end: Math.floor(Date.now() / 1000) + 30 * 86400,
+    parent: { subscription_details: { subscription: SEED_SUBSCRIPTION } },
+  });
+  response = await deliverSigned(upcoming, listenState.whsec);
+  await awaitClaim(upcoming.id);
+  await sleep(1_500);
+  rows = await subscriptionRowsFor(upcoming.id);
+  assertThat(
+    "invoice.upcoming records renewal_upcoming/noop despite the preview having no invoice id",
+    response.status === 200 && rows.length === 1 &&
+      rows[0].kind === "renewal_upcoming" && rows[0].outcome === "noop",
+    `HTTP ${response.status}; rows=${rows.length} kind=${rows[0]?.kind} outcome=${rows[0]?.outcome}`,
+    SYNTHETIC
+  );
+
+  // charge.dispute.closed (won) → payment_events row; access deliberately NOT
+  // auto-restored. The charge lookup against Stripe will fail for this fake
+  // ch_ id — the handler must degrade to an unresolved customer, not an error.
+  const dispute = syntheticEvent("charge.dispute.closed", {
+    id: `dp_e2e_${RUN_ID}`,
+    object: "dispute",
+    status: "won",
+    charge: `ch_e2e_nonexistent_${RUN_ID}`,
+    amount: 4900,
+    currency: "usd",
+    reason: "fraudulent",
+  });
+  response = await deliverSigned(dispute, listenState.whsec);
+  await awaitClaim(dispute.id);
+  await sleep(1_500);
+  const payRows = await query(
+    "SELECT kind, outcome, outcomeReason FROM payment_events WHERE stripeEventId = ?",
+    [dispute.id]
+  );
+  const accessAfter = (await seededUser()).hasAccess;
+  assertThat(
+    "dispute.closed(won) records disputed/noop and does NOT auto-restore access",
+    response.status === 200 && payRows.length === 1 &&
+      payRows[0].kind === "disputed" && payRows[0].outcome === "noop" &&
+      /WON/.test(payRows[0].outcomeReason ?? "") &&
+      Number(accessAfter) === Number(accessBefore),
+    `HTTP ${response.status}; rows=${payRows.length} kind=${payRows[0]?.kind} outcome=${payRows[0]?.outcome} ` +
+      `hasAccess ${accessBefore}→${accessAfter}`,
+    SYNTHETIC
+  );
 }
 
 /** Refund. Money went back, so entitlement must follow it (WBHK-004). */
@@ -1205,6 +1472,111 @@ async function checkSyntheticRefund() {
   );
 }
 
+/**
+ * NO-GRACE POLICY (owner directive, 2026-08-01): a declined subscription
+ * payment ends the membership at the moment of failure — no Smart-Retry
+ * window, no expiry-buffer ride-out. Two triggers, both proven here:
+ * invoice.payment_failed (the decline itself) and a past_due status move
+ * (the same fact arriving as a subscription update). The Stripe-side
+ * subscriptions.cancel targets a fake sub id and FAILS — asserting the local
+ * revoke stands regardless is the resilience property that matters.
+ */
+async function checkNoGraceDecline() {
+  // Re-arm: grant + bind the subscription (the refund scenario left 0).
+  await query(
+    "UPDATE app_users SET hasAccess = 1, stripePlanId = ?, stripeSubscriptionId = ?, stripeCustomerId = ?, lastStripeEventAt = NULL WHERE id = ?",
+    [PLAN_SLUG, SEED_SUBSCRIPTION, SEED_CUSTOMER, SEED_USER_ID]
+  );
+
+  const declined = syntheticEvent("invoice.payment_failed", {
+    id: `in_e2e_fail_${RUN_ID}`,
+    object: "invoice",
+    customer: SEED_CUSTOMER,
+    billing_reason: "subscription_cycle",
+    amount_due: 4900,
+    currency: "usd",
+    attempt_count: 1,
+    customer_email: `stripe-e2e+${RUN_ID}@example.invalid`,
+    parent: { subscription_details: { subscription: SEED_SUBSCRIPTION } },
+  });
+  let response = await deliverSigned(declined, listenState.whsec);
+  await awaitClaim(declined.id);
+  const declinedUser = await waitFor(
+    "app_users to show access revoked at the decline",
+    async () => {
+      const row = await seededUser();
+      return row && Number(row.hasAccess) === 0 ? row : null;
+    },
+    { timeoutMs: 30_000, intervalMs: 500 }
+  );
+  await sleep(1_500);
+  const payRows = await query(
+    "SELECT kind, outcome, outcomeReason FROM payment_events WHERE stripeEventId = ?",
+    [declined.id]
+  );
+  const subRows = await subscriptionRowsFor(declined.id);
+  const audit = await entitlementRowsFor(declined.id);
+
+  assertThat(
+    "NO-GRACE: a declined renewal REVOKES access at the moment of failure",
+    response.status === 200 && Number(declinedUser.hasAccess) === 0,
+    `HTTP ${response.status}; app_users.id=${SEED_USER_ID} hasAccess=${declinedUser.hasAccess}`,
+    SYNTHETIC
+  );
+  assertThat(
+    "NO-GRACE: the decline is a revoked money fact AND a payment_failed lifecycle fact",
+    payRows.length === 1 && payRows[0].kind === "failed" && payRows[0].outcome === "revoked" &&
+      subRows.length === 1 && subRows[0].kind === "payment_failed" && subRows[0].outcome === "revoked",
+    `payment_events: ${payRows.length} (${payRows[0]?.kind}/${payRows[0]?.outcome}); ` +
+      `subscription_events: ${subRows.length} (${subRows[0]?.kind}/${subRows[0]?.outcome})`,
+    SYNTHETIC
+  );
+  assertThat(
+    "NO-GRACE: the revoke survives a failed Stripe-side cancel (fake sub id) and is audited",
+    audit.length === 1 && audit[0].reason === "PAYMENT_FAILED_NO_GRACE" &&
+      Number(audit[0].beforeHasAccess) === 1 && Number(audit[0].afterHasAccess) === 0,
+    `entitlement_events for ${declined.id}: ${audit.length} ` +
+      `(reason=${audit[0]?.reason} ${audit[0]?.beforeHasAccess}→${audit[0]?.afterHasAccess})`,
+    SYNTHETIC
+  );
+
+  // ── The same fact arriving as a status move ────────────────────────────────
+  await query(
+    "UPDATE app_users SET hasAccess = 1, stripePlanId = ?, stripeSubscriptionId = ?, lastStripeEventAt = NULL WHERE id = ?",
+    [PLAN_SLUG, SEED_SUBSCRIPTION, SEED_USER_ID]
+  );
+  const pastDue = syntheticEvent("customer.subscription.updated", {
+    id: SEED_SUBSCRIPTION,
+    object: "subscription",
+    status: "past_due",
+    customer: SEED_CUSTOMER,
+    cancel_at_period_end: false,
+    items: { data: [{ price: { id: SEED_STRIPE_PRICE, recurring: { interval: "month" } } }] },
+    metadata: {},
+  });
+  pastDue.data.previous_attributes = { status: "active" };
+  response = await deliverSigned(pastDue, listenState.whsec);
+  await awaitClaim(pastDue.id);
+  const pastDueUser = await waitFor(
+    "app_users to show access revoked on past_due",
+    async () => {
+      const row = await seededUser();
+      return row && Number(row.hasAccess) === 0 ? row : null;
+    },
+    { timeoutMs: 30_000, intervalMs: 500 }
+  );
+  await sleep(1_500);
+  const pdRows = await subscriptionRowsFor(pastDue.id);
+  assertThat(
+    "NO-GRACE: past_due status move REVOKES and records status_changed/revoked",
+    response.status === 200 && Number(pastDueUser.hasAccess) === 0 &&
+      pdRows.length === 1 && pdRows[0].kind === "status_changed" && pdRows[0].outcome === "revoked",
+    `HTTP ${response.status}; hasAccess=${pastDueUser.hasAccess}; ` +
+      `subscription_events: ${pdRows.length} (${pdRows[0]?.kind}/${pdRows[0]?.outcome})`,
+    SYNTHETIC
+  );
+}
+
 async function runBattery() {
   log("[6/6] Battery");
 
@@ -1221,8 +1593,14 @@ async function runBattery() {
   log("    · fulfilment against the seeded subscriber");
   const grant = await checkSyntheticGrant();
   await checkSyntheticExactlyOnce(grant);
+  log("    · subscription lifecycle ledger");
+  await checkSubscriptionLifecycleLedger();
   await checkSyntheticRevoke();
   await checkSyntheticRefund();
+  log("    · dormant avenue-12 handlers");
+  await checkDormantEventHandlers();
+  log("    · no-grace decline policy");
+  await checkNoGraceDecline();
 }
 
 // ─── Teardown ─────────────────────────────────────────────────────────────────

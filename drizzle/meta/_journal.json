@@ -897,6 +897,13 @@
       "when": 1785329272348,
       "tag": "0127_payment_events",
       "breakpoints": true
+    },
+    {
+      "idx": 128,
+      "version": "5",
+      "when": 1785415672348,
+      "tag": "0128_subscription_events",
+      "breakpoints": true
     }
   ]
 }

@@ -60,23 +60,33 @@ describe("failed payments actually reach a human", () => {
   const webhook = read("server/stripeWebhook.ts");
   const alerts = read("server/_core/billingAlerts.ts");
 
+  /** The invoice.payment_failed case body, ended at the next case — the
+   * handler grew under the no-grace policy, so fixed character windows lie. */
+  const failedCase = (() => {
+    const start = webhook.indexOf('case "invoice.payment_failed"');
+    const rest = webhook.slice(start);
+    return rest.slice(0, rest.indexOf('case "payment_intent.succeeded"'));
+  })();
+
   it("PAYMENT_FAILED exists with a severity and a colour", () => {
     // A kind missing from either Record is a TypeScript error, but assert it
     // so the intent is explicit rather than incidental.
     expect(alerts).toMatch(/\| "PAYMENT_FAILED"/);
-    expect(alerts).toMatch(/PAYMENT_FAILED: "warn"/);
+    expect(alerts).toMatch(/PAYMENT_FAILED: "error"/);
     expect(alerts).toMatch(/PAYMENT_FAILED: 0x/);
   });
 
-  it("is warn, not error — a retryable decline is not an outage", () => {
-    // Stripe Smart Retries own recovery and access is deliberately retained.
-    // Filing it as "error" next to a lost grant devalues both.
-    expect(alerts).toMatch(/PAYMENT_FAILED: "warn"/);
+  it("is error, not warn — under the no-grace policy a decline ENDS a membership", () => {
+    // Owner directive 2026-08-01: access is revoked and the subscription
+    // canceled at the moment of failure. That is an entitlement change and a
+    // churn event in one; it sits at the same level as a lost grant because
+    // it IS one, deliberately.
+    expect(alerts).toMatch(/PAYMENT_FAILED: "error"/);
+    expect(alerts).not.toMatch(/PAYMENT_FAILED: "warn"/);
   });
 
   it("fires on a failed renewal", () => {
-    const body = webhook.slice(webhook.indexOf('case "invoice.payment_failed"'));
-    expect(body.slice(0, 2200)).toMatch(/billingAlert\("PAYMENT_FAILED"/);
+    expect(failedCase).toMatch(/billingAlert\("PAYMENT_FAILED"/);
   });
 
   it("fires on a declined payment intent", () => {
@@ -85,9 +95,13 @@ describe("failed payments actually reach a human", () => {
   });
 
   it("records to the ledger BEFORE alerting, so the fact survives a transport failure", () => {
-    const body = webhook.slice(webhook.indexOf('case "invoice.payment_failed"'));
-    const scoped = body.slice(0, 2200);
-    expect(scoped.indexOf("recordPaymentEvent(")).toBeLessThan(scoped.indexOf('billingAlert("PAYMENT_FAILED"'));
+    const money = failedCase.indexOf("recordPaymentEvent(");
+    const lifecycle = failedCase.indexOf("recordSubscriptionEvent(");
+    const alert = failedCase.indexOf('billingAlert("PAYMENT_FAILED"');
+    expect(money).toBeGreaterThan(-1);
+    expect(lifecycle).toBeGreaterThan(-1);
+    expect(money).toBeLessThan(alert);
+    expect(lifecycle).toBeLessThan(alert);
   });
 });
 
