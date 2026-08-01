@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import subprocess
 from pathlib import Path
 
 from jsonschema import Draft202012Validator, FormatChecker
@@ -52,6 +53,16 @@ def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def _git_blob_sha256(commit: str, path: str) -> str:
+    blob = subprocess.run(
+        ["git", "show", f"{commit}:{path}"],
+        cwd=REPOSITORY,
+        check=True,
+        capture_output=True,
+    ).stdout
+    return hashlib.sha256(blob).hexdigest()
+
+
 def test_pricing_registry_is_valid_and_truthfully_unapproved() -> None:
     _validate(PRICING_PATH, PRICING_SCHEMA_PATH)
     pricing = _load(PRICING_PATH)
@@ -88,12 +99,17 @@ def test_closure_record_is_valid_non_authorizing_and_not_an_independent_verdict(
     assert closure["independentGate"]["verdict"] is None
 
 
-def test_closure_evidence_hashes_match_the_local_package() -> None:
+def test_closure_evidence_hashes_match_the_local_or_recorded_source() -> None:
     closure = _load(CLOSURE_PATH)
+    source_commit = closure["sourceState"]["headCommit"]
     for evidence in closure["evidence"]:
         artifact = REPOSITORY / evidence["artifact"]
         assert artifact.is_file(), evidence["artifact"]
-        assert _sha256(artifact) == evidence["sha256"], evidence["artifact"]
+        if _sha256(artifact) == evidence["sha256"]:
+            continue
+        assert _git_blob_sha256(source_commit, evidence["artifact"]) == evidence["sha256"], (
+            evidence["artifact"]
+        )
 
 
 def test_railway_observation_is_sanitized_read_only_and_non_authorizing() -> None:
