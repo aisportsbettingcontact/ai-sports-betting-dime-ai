@@ -39,6 +39,7 @@ import { invalidateCachedAppUser } from "./dbCircuitBreaker";
 import { getStripe } from "./stripe/client";
 import { billingAlert } from "./_core/billingAlerts";
 import { resolveCheckout } from "./stripe/checkoutLedger";
+import { recordPaymentEvent } from "./stripe/paymentLedger";
 import { isTestModeFulfillmentAllowed, type TestModeFulfillmentVerdict } from "./_core/testModeFulfillment";
 import bcrypt from "bcryptjs";
 
@@ -985,7 +986,19 @@ async function processWebhookEvent(event: Stripe.Event): Promise<void> {
         amountRefunded: charge.amount_refunded,
         fullyRefunded,
       });
-      console.log(`${tag} [VERIFY] PASS`);
+            // Money OUT. amount_refunded is carried so revenue math is a single query
+      // rather than a join against Stripe.
+      await recordPaymentEvent({
+        stripeEventId: event.id, eventType: event.type, livemode: event.livemode,
+        objectId: charge.id, objectType: "charge", kind: "refunded",
+        outcome: fullyRefunded ? "revoked" : "noop",
+        outcomeReason: fullyRefunded ? "full refund — access revoked" : "partial refund — access retained",
+        amountCents: charge.amount ?? null, amountRefundedCents: charge.amount_refunded ?? null,
+        currency: charge.currency ?? null, stripeCustomerId: refundCustomerId || null,
+        customerEmail: charge.billing_details?.email ?? null,
+        occurredAt: event.created * 1000,
+      });
+console.log(`${tag} [VERIFY] PASS`);
       break;
     }
 
@@ -1021,12 +1034,26 @@ async function processWebhookEvent(event: Stripe.Event): Promise<void> {
         reason: dispute.reason,
         evidenceDueBy: dispute.evidence_details?.due_by ?? null,
       });
-      console.log(`${tag} [VERIFY] PASS`);
+            // A dispute is money at risk plus a chargeback fee. Recorded so exposure
+      // is queryable without opening the Dashboard.
+      await recordPaymentEvent({
+        stripeEventId: event.id, eventType: event.type, livemode: event.livemode,
+        objectId: dispute.id, objectType: "dispute", kind: "disputed", outcome: "revoked",
+        outcomeReason: `dispute ${dispute.reason ?? "unknown"} — access revoked pending resolution`,
+        amountCents: dispute.amount ?? null, currency: dispute.currency ?? null,
+        stripeCustomerId: disputeCustomerId || null,
+        occurredAt: event.created * 1000,
+      });
+console.log(`${tag} [VERIFY] PASS`);
       break;
     }
 
     case "invoice.paid": {
       const invoice = event.data.object as Stripe.Invoice;
+      // Tracked so the ledger can say whether this renewal actually extended
+      // anyone's access, rather than only that Stripe collected.
+      let renewalUserId: number | null = null;
+      let renewalGranted = false;
       console.log(`${tag} [INPUT] Invoice paid invoice_id=${invoice.id} customer=${invoice.customer} amount=${invoice.amount_paid}`);
       const invoiceCustomerId = typeof invoice.customer === "string" ? invoice.customer : (invoice.customer as Stripe.Customer | null)?.id ?? "";
       if (invoiceCustomerId && invoice.billing_reason === "subscription_cycle") {
@@ -1079,8 +1106,29 @@ async function processWebhookEvent(event: Stripe.Event): Promise<void> {
             eventCreatedMs,
           });
           console.log(`${tag} [OUTPUT] Renewal processed userId=${existingUser.id}`);
+          renewalUserId = existingUser.id;
+          renewalGranted = true;
         }
       }
+      // Recurring revenue. `outcome` distinguishes a renewal that extended
+      // access from one that matched no local user — the latter is money taken
+      // from someone the system does not recognise, which is the recurring-model
+      // equivalent of the dropped checkout.
+      await recordPaymentEvent({
+        stripeEventId: event.id, eventType: event.type, livemode: event.livemode,
+        objectId: invoice.id ?? "unknown", objectType: "invoice", kind: "succeeded",
+        outcome: renewalGranted ? "granted" : "noop",
+        outcomeReason: renewalGranted
+          ? "renewal — access extended"
+          : "invoice paid but no local user matched this customer",
+        amountCents: invoice.amount_paid ?? invoice.amount_due ?? null,
+        currency: invoice.currency ?? null,
+        userId: renewalUserId,
+        stripeCustomerId: invoiceCustomerId || null,
+        stripeInvoiceId: invoice.id ?? null,
+        customerEmail: invoice.customer_email ?? null,
+        occurredAt: event.created * 1000,
+      });
       console.log(`${tag} [VERIFY] PASS`);
       break;
     }
@@ -1089,6 +1137,20 @@ async function processWebhookEvent(event: Stripe.Event): Promise<void> {
       const invoice = event.data.object as Stripe.Invoice;
       console.log(`${tag} [INPUT] Invoice FAILED invoice_id=${invoice.id} customer=${invoice.customer} attempt=${invoice.attempt_count}`);
       console.log(`${tag} [STATE] Access NOT revoked — Stripe retries automatically`);
+      // Not revoking is correct: Stripe Smart Retries own the schedule and a
+      // card can recover. But "correct and invisible" is how a churning member
+      // goes unnoticed for a whole billing cycle, so record the attempt.
+      await recordPaymentEvent({
+        stripeEventId: event.id, eventType: event.type, livemode: event.livemode,
+        objectId: invoice.id ?? "unknown", objectType: "invoice", kind: "failed",
+        outcome: "noop", outcomeReason: "access retained — Stripe retry schedule owns recovery",
+        amountCents: invoice.amount_due ?? null, currency: invoice.currency ?? null,
+        stripeCustomerId: typeof invoice.customer === "string" ? invoice.customer : null,
+        stripeSubscriptionId: (invoice as unknown as { subscription?: string | null }).subscription ?? null,
+        stripeInvoiceId: invoice.id ?? null, customerEmail: invoice.customer_email ?? null,
+        attemptCount: invoice.attempt_count ?? null,
+        occurredAt: event.created * 1000,
+      });
       console.log(`${tag} [VERIFY] PASS`);
       break;
     }
@@ -1096,6 +1158,17 @@ async function processWebhookEvent(event: Stripe.Event): Promise<void> {
     case "payment_intent.succeeded": {
       const pi = event.data.object as Stripe.PaymentIntent;
       console.log(`${tag} [INPUT] PaymentIntent succeeded pi_id=${pi.id} amount=${pi.amount} customer=${pi.customer}`);
+      // Revenue. Recorded even though fulfilment happens on
+      // checkout.session.completed, because this is the only event that
+      // carries the captured amount for a one-off payment.
+      await recordPaymentEvent({
+        stripeEventId: event.id, eventType: event.type, livemode: event.livemode,
+        objectId: pi.id, objectType: "payment_intent", kind: "succeeded", outcome: "recorded",
+        outcomeReason: "captured — entitlement is granted by checkout.session.completed",
+        amountCents: pi.amount_received ?? pi.amount ?? null, currency: pi.currency ?? null,
+        stripeCustomerId: typeof pi.customer === "string" ? pi.customer : null,
+        occurredAt: event.created * 1000,
+      });
       console.log(`${tag} [VERIFY] PASS`);
       break;
     }
@@ -1103,6 +1176,15 @@ async function processWebhookEvent(event: Stripe.Event): Promise<void> {
     case "payment_intent.payment_failed": {
       const pi = event.data.object as Stripe.PaymentIntent;
       console.log(`${tag} [INPUT] PaymentIntent FAILED pi_id=${pi.id} last_error=${pi.last_payment_error?.message}`);
+      await recordPaymentEvent({
+        stripeEventId: event.id, eventType: event.type, livemode: event.livemode,
+        objectId: pi.id, objectType: "payment_intent", kind: "failed", outcome: "recorded",
+        amountCents: pi.amount ?? null, currency: pi.currency ?? null,
+        stripeCustomerId: typeof pi.customer === "string" ? pi.customer : null,
+        failureCode: pi.last_payment_error?.code ?? pi.last_payment_error?.decline_code ?? null,
+        failureMessage: pi.last_payment_error?.message ?? null,
+        occurredAt: event.created * 1000,
+      });
       console.log(`${tag} [VERIFY] PASS`);
       break;
     }
