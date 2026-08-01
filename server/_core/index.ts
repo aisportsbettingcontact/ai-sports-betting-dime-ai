@@ -1112,6 +1112,33 @@ async function startServer() {
       "[DB_KEEPALIVE] Recurring TiDB keep-alive scheduled (every 4 min)"
     );
 
+    // ── Checkout reconciliation ────────────────────────────────────────────
+    // The webhook is a PUSH channel and cannot report its own silence: an
+    // unsubscribed event, an undelivered retry, or a deploy window all leave
+    // the ledger stale with nothing to signal it. This pull sweep is the
+    // backstop, and it is what makes abandonment measurable WITHOUT depending
+    // on `checkout.session.expired` being ticked in the Dashboard.
+    //
+    // Read-only against Stripe; the only writes are to our own ledger. Runs
+    // unref'd so it never holds the process open, and every failure is
+    // swallowed — a reconcile outage must not take the server with it.
+    const runCheckoutReconcile = async () => {
+      try {
+        const { reconcileCheckoutSessions } = await import("../stripe/checkoutReconcile");
+        await reconcileCheckoutSessions();
+      } catch (err) {
+        console.error(
+          `[CheckoutReconcile] [FAIL] sweep failed: ${err instanceof Error ? err.message : String(err)}`
+        );
+      }
+    };
+    // First sweep 60s after boot — late enough that the DB pool is warm, early
+    // enough that a deploy which missed webhooks self-corrects within a minute.
+    setTimeout(runCheckoutReconcile, 60_000).unref();
+    const checkoutReconcileInterval = setInterval(runCheckoutReconcile, 30 * 60 * 1000);
+    checkoutReconcileInterval.unref();
+    console.log("[CheckoutReconcile] Recurring checkout reconcile scheduled (every 30 min)");
+
     // ── Games list cache pre-warm ─────────────────────────────────────────────
     // Pre-warm the games.list cache for all active sports at startup.
     // Without this, the first user after a deploy pays the full DB cost (~150ms).
