@@ -1157,6 +1157,147 @@ async function checkSyntheticRevoke() {
       `(reason=${entitlements[0]?.reason} ${entitlements[0]?.beforeHasAccess}→${entitlements[0]?.afterHasAccess})`,
     SYNTHETIC
   );
+  const subRows = await subscriptionRowsFor(event.id);
+  assertThat(
+    "the deletion lands in subscription_events as deleted/revoked",
+    subRows.length === 1 && subRows[0].kind === "deleted" && subRows[0].outcome === "revoked",
+    `subscription_events rows for ${event.id}: ${subRows.length} ` +
+      `(kind=${subRows[0]?.kind} outcome=${subRows[0]?.outcome})`,
+    SYNTHETIC
+  );
+}
+
+/**
+ * Subscription lifecycle ledger (avenues #3/#4/#8). Proves the transitions that
+ * previously left no local trace: a Customer Portal plan switch (which never
+ * touches our API — only customer.subscription.updated with
+ * previous_attributes.items betrays it), a scheduled cancellation, and a
+ * renewal. Each asserts DATABASE STATE in subscription_events, including the
+ * exactly-once guarantee on redelivery.
+ */
+async function subscriptionRowsFor(eventId) {
+  return query(
+    "SELECT kind, outcome, outcomeReason, fromPriceId, toPriceId, cancelAtPeriodEnd, periodEnd, actor FROM subscription_events WHERE stripeEventId = ?",
+    [eventId]
+  );
+}
+
+async function checkSubscriptionLifecycleLedger() {
+  // ── 1. Portal-style plan change ────────────────────────────────────────────
+  const NEW_PRICE = `price_e2e_new_${RUN_ID}`;
+  const planChange = syntheticEvent(
+    "customer.subscription.updated",
+    {
+      id: SEED_SUBSCRIPTION,
+      object: "subscription",
+      status: "active",
+      customer: SEED_CUSTOMER,
+      cancel_at_period_end: false,
+      items: { data: [{ price: { id: NEW_PRICE, recurring: { interval: "year" } } }] },
+      metadata: {},
+    },
+    // previous_attributes rides on event.data next to object — exactly how the
+    // Portal's plan switch arrives, and the ONLY evidence of the old price.
+    {}
+  );
+  planChange.data.previous_attributes = {
+    items: { data: [{ price: { id: SEED_STRIPE_PRICE, recurring: { interval: "month" } } }] },
+  };
+
+  let response = await deliverSigned(planChange, listenState.whsec);
+  await awaitClaim(planChange.id);
+  await sleep(1_500);
+  let rows = await subscriptionRowsFor(planChange.id);
+
+  assertThat(
+    "a Portal-style plan change lands in subscription_events as plan_changed with both price ids",
+    response.status === 200 &&
+      rows.length === 1 &&
+      rows[0].kind === "plan_changed" &&
+      rows[0].fromPriceId === SEED_STRIPE_PRICE &&
+      rows[0].toPriceId === NEW_PRICE,
+    `HTTP ${response.status}; rows=${rows.length} kind=${rows[0]?.kind} ` +
+      `${rows[0]?.fromPriceId}→${rows[0]?.toPriceId}`,
+    SYNTHETIC
+  );
+
+  // Redelivery: the (stripeEventId, kind) unique key must absorb it.
+  await deliverSigned(planChange, listenState.whsec);
+  await sleep(1_500);
+  rows = await subscriptionRowsFor(planChange.id);
+  assertThat(
+    "EXACTLY-ONCE: redelivered plan change adds no second subscription_events row",
+    rows.length === 1,
+    `rows for ${planChange.id}: ${rows.length}`,
+    SYNTHETIC
+  );
+
+  // ── 2. Scheduled cancellation (the webhook mirror of the in-app mutation) ──
+  const cancelSched = syntheticEvent("customer.subscription.updated", {
+    id: SEED_SUBSCRIPTION,
+    object: "subscription",
+    status: "active",
+    customer: SEED_CUSTOMER,
+    cancel_at_period_end: true,
+    cancel_at: Math.floor(Date.now() / 1000) + 14 * 86400,
+    items: { data: [{ price: { id: NEW_PRICE, recurring: { interval: "year" } } }] },
+    metadata: {},
+  });
+  cancelSched.data.previous_attributes = { cancel_at_period_end: false };
+
+  response = await deliverSigned(cancelSched, listenState.whsec);
+  await awaitClaim(cancelSched.id);
+  await sleep(1_500);
+  rows = await subscriptionRowsFor(cancelSched.id);
+  assertThat(
+    "a scheduled cancellation lands as cancel_scheduled with the period end it dies at",
+    response.status === 200 &&
+      rows.length === 1 &&
+      rows[0].kind === "cancel_scheduled" &&
+      Number(rows[0].cancelAtPeriodEnd) === 1 &&
+      Number(rows[0].periodEnd) > Date.now(),
+    `HTTP ${response.status}; rows=${rows.length} kind=${rows[0]?.kind} ` +
+      `capE=${rows[0]?.cancelAtPeriodEnd} periodEnd=${rows[0]?.periodEnd}`,
+    SYNTHETIC
+  );
+
+  // ── 3. Renewal (invoice.paid, billing_reason=subscription_cycle) ───────────
+  const periodEndSec = Math.floor(Date.now() / 1000) + 30 * 86400;
+  const renewal = syntheticEvent("invoice.paid", {
+    id: `in_e2e_${RUN_ID}`,
+    object: "invoice",
+    customer: SEED_CUSTOMER,
+    billing_reason: "subscription_cycle",
+    amount_paid: 4900,
+    amount_due: 4900,
+    currency: "usd",
+    customer_email: `stripe-e2e+${RUN_ID}@example.invalid`,
+    lines: { data: [{ period: { end: periodEndSec }, price: { id: SEED_STRIPE_PRICE } }] },
+    parent: { subscription_details: { subscription: SEED_SUBSCRIPTION } },
+  });
+
+  response = await deliverSigned(renewal, listenState.whsec);
+  await awaitClaim(renewal.id);
+  await sleep(1_500);
+  rows = await subscriptionRowsFor(renewal.id);
+  const renewedUser = await seededUser();
+  assertThat(
+    "a renewal lands as renewed/granted and the row names the period it bought",
+    response.status === 200 &&
+      rows.length === 1 &&
+      rows[0].kind === "renewed" &&
+      rows[0].outcome === "granted" &&
+      Number(rows[0].periodEnd) >= periodEndSec * 1000,
+    `HTTP ${response.status}; rows=${rows.length} kind=${rows[0]?.kind} outcome=${rows[0]?.outcome} ` +
+      `periodEnd=${rows[0]?.periodEnd} (billed to ${periodEndSec * 1000})`,
+    SYNTHETIC
+  );
+  assertThat(
+    "the renewal actually extended the seeded subscriber past the billed period",
+    Number(renewedUser.expiryDate) >= periodEndSec * 1000,
+    `expiryDate=${renewedUser.expiryDate} vs period end ${periodEndSec * 1000}`,
+    SYNTHETIC
+  );
 }
 
 /** Refund. Money went back, so entitlement must follow it (WBHK-004). */
@@ -1221,6 +1362,8 @@ async function runBattery() {
   log("    · fulfilment against the seeded subscriber");
   const grant = await checkSyntheticGrant();
   await checkSyntheticExactlyOnce(grant);
+  log("    · subscription lifecycle ledger");
+  await checkSubscriptionLifecycleLedger();
   await checkSyntheticRevoke();
   await checkSyntheticRefund();
 }

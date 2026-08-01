@@ -45,7 +45,9 @@ export type BillingAlertKind =
   | "REFUND_RECEIVED"
   | "DISPUTE_OPENED"
   | "CUSTOMER_LINK_CONFLICT"
-  | "PAYMENT_FAILED";
+  | "PAYMENT_FAILED"
+  | "TRIAL_WILL_END"
+  | "DISPUTE_CLOSED";
 
 /**
  * Severity per kind. Drives console.error vs console.warn and the embed colour.
@@ -66,6 +68,12 @@ const SEVERITY: Record<BillingAlertKind, "error" | "warn"> = {
   // recurring model this is the earliest signal that a member is churning.
   CUSTOMER_LINK_CONFLICT: "error",
   PAYMENT_FAILED: "warn",
+  // Pre-churn signal: a trial converting (or lapsing) in ~3 days. Routine
+  // business, but the only alert that arrives BEFORE money moves.
+  TRIAL_WILL_END: "warn",
+  // The dispute verdict. Money already moved at dispute.created; this is the
+  // resolution, and a WON dispute needs a human to decide on reinstatement.
+  DISPUTE_CLOSED: "warn",
 };
 
 /** Discord embed colours — same palette family as discordSecurityAlert.ts. */
@@ -79,6 +87,8 @@ const EMBED_COLORS: Record<BillingAlertKind, number> = {
   DISPUTE_OPENED: 0xf8312f, // bright red — chargeback clock is running
   CUSTOMER_LINK_CONFLICT: 0xeb6c33, // orange
   PAYMENT_FAILED: 0xfee75c, // warning yellow — recoverable, but the clock is running
+  TRIAL_WILL_END: 0xfee75c, // warning yellow — decision window, not a failure
+  DISPUTE_CLOSED: 0xeb6c33, // orange — verdict in; may need manual reinstatement
 };
 
 // ─── Constants ────────────────────────────────────────────────────────────────

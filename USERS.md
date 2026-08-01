@@ -79,6 +79,23 @@ retires the old one. Storing the id pins exactly what a member is billed at,
 across repricings. Indexed by `app_users_plan_price_idx`, so "who is on this
 interval?" is an index seek.
 
+### The `hasAccess` default fails closed (2026-08-01)
+
+The column default was `'1'` — vestigial from the invite-only era — which,
+combined with `expiryDate NULL = lifetime`, made any bare `INSERT` into
+`app_users` a silent lifetime grant. There is **no public self-signup**: the
+only two insert paths are the owner-gated `createUser` mutation and the
+post-payment Stripe webhook, and both set `hasAccess` explicitly. The default
+was therefore flipped to `'0'` (`db-subscription-events.yml`), so a future
+insert path that forgets the column denies access instead of granting it.
+
+An account CAN legitimately hold `hasAccess=1` with no plan (staff, or a
+comped member mid-provisioning) — but for `role='user'` that state should be
+transient. The **"Access, No Plan"** tile in User Management counts it and
+should read 0; every manual grant/revoke now writes an `entitlement_events`
+row (`actor='owner'`), so "why does this user have access?" is a query, not
+an archaeology dig.
+
 ### Slug renames
 
 `subscription_plans.slug` is referenced by value from `app_users.stripePlanId`,

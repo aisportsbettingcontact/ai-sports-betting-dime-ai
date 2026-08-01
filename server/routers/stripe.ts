@@ -32,6 +32,7 @@ import { stripeAppUserProcedure } from "./appUsers";
 import type Stripe from "stripe";
 import { getStripe } from "../stripe/client";
 import { recordCheckoutCreated } from "../stripe/checkoutLedger";
+import { recordSubscriptionEvent, subscriptionPeriodEndMs } from "../stripe/subscriptionLedger";
 import { PLANS, NEW_PLAN_IDS, getPlanByPriceId, computeExpiryMs, type PlanId } from "../stripe/products";
 import { getPlanBySlug, defaultPriceForMode, isSoldOut, type StoredPlan, type StoredPrice } from "../stripe/planStore";
 import { derivePlanStatus } from "../stripe/planStatus";
@@ -1161,6 +1162,26 @@ export const stripeRouter = router({
     // [STEP] Persist cancel_at_period_end flag to DB so frontend can read it without a Stripe API call
     await updateAppUser(user.id, { cancelAtPeriodEnd: true });
     console.log(`${TAG3} [STATE] DB updated cancelAtPeriodEnd=true userId=${user.id}`);
+    // Lifecycle ledger (avenue #4): the member's own request, recorded with
+    // actor='user' and a synthetic app.* type. The webhook's mirror row
+    // (customer.subscription.updated → cancel_scheduled) arrives separately;
+    // having both proves the request round-tripped through Stripe.
+    await recordSubscriptionEvent({
+      stripeEventId: null,
+      eventType: "app.cancel_requested",
+      livemode: sub.livemode ?? true,
+      stripeSubscriptionId: user.stripeSubscriptionId,
+      stripeCustomerId: user.stripeCustomerId ?? null,
+      userId: user.id,
+      kind: "cancel_scheduled",
+      outcome: "recorded",
+      outcomeReason: "member scheduled cancellation — access retained until period end",
+      fromPlanId: user.stripePlanId ?? null,
+      status: sub.status ?? null,
+      cancelAtPeriodEnd: true,
+      periodEnd: subscriptionPeriodEndMs(sub) ?? periodEnd,
+      actor: "user",
+    });
     console.log(`${TAG3} [OUTPUT] cancel_at_period_end=true periodEnd=${new Date(periodEnd).toISOString()}`);
     console.log(`${TAG3} [VERIFY] PASS`);
     return { success: true, cancelAt: periodEnd };
@@ -1194,8 +1215,9 @@ export const stripeRouter = router({
     }
 
     const stripe = getStripe();
+    let reactivatedSub: Stripe.Subscription;
     try {
-      await stripe.subscriptions.update(user.stripeSubscriptionId, {
+      reactivatedSub = await stripe.subscriptions.update(user.stripeSubscriptionId, {
         cancel_at_period_end: false,
       });
       console.log(`${TAG4} [STATE] Stripe cancel_at_period_end=false subId=${user.stripeSubscriptionId}`);
@@ -1211,6 +1233,23 @@ export const stripeRouter = router({
     // [STEP] Clear cancelAtPeriodEnd flag in DB
     await updateAppUser(user.id, { cancelAtPeriodEnd: false });
     console.log(`${TAG4} [STATE] DB updated cancelAtPeriodEnd=false userId=${user.id}`);
+    // Lifecycle ledger (avenue #4): the reversal, actor='user'.
+    await recordSubscriptionEvent({
+      stripeEventId: null,
+      eventType: "app.cancel_reverted",
+      livemode: reactivatedSub.livemode ?? true,
+      stripeSubscriptionId: user.stripeSubscriptionId,
+      stripeCustomerId: user.stripeCustomerId ?? null,
+      userId: user.id,
+      kind: "cancel_reverted",
+      outcome: "recorded",
+      outcomeReason: "member reverted scheduled cancellation — subscription auto-renews again",
+      fromPlanId: user.stripePlanId ?? null,
+      status: reactivatedSub.status ?? null,
+      cancelAtPeriodEnd: false,
+      periodEnd: subscriptionPeriodEndMs(reactivatedSub),
+      actor: "user",
+    });
     console.log(`${TAG4} [OUTPUT] subscription reactivated userId=${user.id}`);
     console.log(`${TAG4} [VERIFY] PASS`);
     return { success: true };

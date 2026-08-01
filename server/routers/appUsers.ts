@@ -38,6 +38,7 @@ import {
 } from "../../drizzle/schema";
 import { eq, ne, and, isNull, gt, or } from "drizzle-orm";
 import { emitServerEvent } from "../analytics/emitServer";
+import { recordEntitlementEvent } from "../stripe/entitlementLedger";
 
 export const APP_USER_COOKIE = "app_session";
 
@@ -822,6 +823,27 @@ export const appUsersRouter = router({
           planPriceId: input.planPriceId,
         });
         console.log(`[AppAdmin][createUser][OUTPUT] SUCCESS username=${input.username} stripePlanId=${input.stripePlanId ?? "null"} planPriceId=${input.planPriceId ?? "null"}`);
+
+        // [STEP 4] Audit trail (avenues #5/#10). A hand-created account that
+        // starts with access is a manual grant and must be as reconstructable
+        // as a webhook grant — this row is what makes "why does this user have
+        // access with no plan?" answerable from the database (the rudedog
+        // question, 2026-08-01). Best-effort: recordEntitlementEvent never throws.
+        const createdUser = await getAppUserByEmail(input.email.toLowerCase());
+        if (createdUser) {
+          await recordEntitlementEvent({
+            userId: createdUser.id,
+            stripeEventId: null,
+            eventType: "admin.create_user",
+            reason: "manual_create",
+            actor: "owner",
+            after: {
+              hasAccess: input.hasAccess,
+              planId: input.stripePlanId,
+              expiryDate: input.expiryDate ?? null,
+            },
+          });
+        }
         return { success: true };
       }, '[AppAdmin][createUser]').catch((err) => {
         if (err instanceof TRPCError) throw err;
@@ -931,6 +953,22 @@ export const appUsersRouter = router({
           invalidateCachedAppUser(r.id);
         }
 
+        // [STEP 5] Audit trail (avenues #5/#10): one row per repaired member.
+        // The 2026-07-31 ad-hoc repair left no entitlement_events rows, which
+        // is why "who was backfilled, when, by whom" needed an ops memory
+        // instead of a query. Best-effort and sequential — this is an
+        // owner-run, low-frequency path and recordEntitlementEvent never throws.
+        for (const r of rows) {
+          await recordEntitlementEvent({
+            userId: r.id,
+            stripeEventId: null,
+            eventType: "admin.backfill_entitlement",
+            reason: "backfill",
+            actor: "owner",
+            after: { hasAccess: true, planId: input.planSlug },
+          });
+        }
+
         console.log(`${TAG} [OUTPUT] matched=${rows.length} updated=${updated} planSlug=${input.planSlug} planPriceId=${input.planPriceId} (expiryDate untouched)`);
         console.log(`${TAG} [VERIFY] ${updated === rows.length ? 'PASS' : `PASS (updated=${updated} differs from matched=${rows.length} — concurrent writes)`}`);
         return { ok: true, matched: rows.length, updated, usernames };
@@ -993,6 +1031,34 @@ export const appUsersRouter = router({
         console.log(`[AppAdmin][updateUser][STEP] writing fields=${JSON.stringify(Object.keys(updateData))} userId=${id}`);
         await updateAppUser(id, updateData as Parameters<typeof updateAppUser>[1]);
         console.log(`[AppAdmin][updateUser][OUTPUT] SUCCESS userId=${id}`);
+
+        // [STEP 6] Audit trail (avenues #5/#10) — only when an entitlement
+        // field actually moved. Email/username/password edits are identity
+        // maintenance, not entitlement changes, and would bury the trail in
+        // noise. Best-effort: recordEntitlementEvent never throws.
+        const accessChanged = rest.hasAccess !== undefined && rest.hasAccess !== existing.hasAccess;
+        const expiryChanged = rest.expiryDate !== undefined && rest.expiryDate !== (existing.expiryDate ?? null);
+        if (accessChanged || expiryChanged) {
+          await recordEntitlementEvent({
+            userId: id,
+            stripeEventId: null,
+            eventType: "admin.update_user",
+            reason: accessChanged
+              ? (rest.hasAccess ? "manual_grant" : "manual_revoke")
+              : "manual_expiry_change",
+            actor: "owner",
+            before: {
+              hasAccess: existing.hasAccess,
+              planId: existing.stripePlanId ?? null,
+              expiryDate: existing.expiryDate ?? null,
+            },
+            after: {
+              hasAccess: rest.hasAccess ?? existing.hasAccess,
+              planId: existing.stripePlanId ?? null,
+              expiryDate: rest.expiryDate !== undefined ? rest.expiryDate : (existing.expiryDate ?? null),
+            },
+          });
+        }
         return { success: true };
       }, '[AppAdmin][updateUser]').catch((err) => {
         if (err instanceof TRPCError) throw err;

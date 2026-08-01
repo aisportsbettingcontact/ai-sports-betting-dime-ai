@@ -61,6 +61,11 @@ export const REQUIRED_COLUMNS: Readonly<Record<string, readonly string[]>> = {
     "id", "stripeEventId", "objectId", "objectType", "kind", "outcome",
     "outcomeReason", "amountCents", "currency", "userId", "occurredAt", "recordedAt",
   ],
+  subscription_events: [
+    "id", "stripeEventId", "eventType", "stripeSubscriptionId", "kind", "outcome",
+    "outcomeReason", "fromPlanId", "toPlanId", "fromPriceId", "toPriceId",
+    "status", "cancelAtPeriodEnd", "periodEnd", "actor", "occurredAt", "recordedAt",
+  ],
 };
 
 export interface SchemaDrift {

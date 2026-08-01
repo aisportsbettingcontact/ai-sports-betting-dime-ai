@@ -23,7 +23,7 @@ import type { Express, Request, Response } from "express";
 import express from "express";
 import type Stripe from "stripe";
 import { eq, and, sql } from "drizzle-orm";
-import { appUsers, stripeWebhookEvents, entitlementEvents } from "../drizzle/schema";
+import { appUsers, stripeWebhookEvents } from "../drizzle/schema";
 import {
   getDb,
   getAppUserById,
@@ -40,6 +40,14 @@ import { getStripe } from "./stripe/client";
 import { billingAlert } from "./_core/billingAlerts";
 import { resolveCheckout } from "./stripe/checkoutLedger";
 import { recordPaymentEvent } from "./stripe/paymentLedger";
+import { recordEntitlementEvent } from "./stripe/entitlementLedger";
+import {
+  recordSubscriptionEvent,
+  classifySubscriptionUpdate,
+  snapshotOfSubscription,
+  snapshotOfPreviousAttributes,
+  subscriptionPeriodEndMs,
+} from "./stripe/subscriptionLedger";
 import { isTestModeFulfillmentAllowed, type TestModeFulfillmentVerdict } from "./_core/testModeFulfillment";
 import bcrypt from "bcryptjs";
 
@@ -149,42 +157,9 @@ export function isStaleEvent(user: { lastStripeEventAt?: number | null } | null 
   return watermark != null && eventCreatedMs < watermark;
 }
 
-/**
- * Append-only audit row for every entitlement change (OPS-002). Best-effort:
- * the audit trail must never be the reason a fulfilment fails, but its absence
- * is logged loudly because reconstructing "why did this user lose access" later
- * depends on it.
- */
-async function recordEntitlementEvent(params: {
-  userId: number;
-  stripeEventId: string | null;
-  eventType: string;
-  reason: string;
-  actor?: string;
-  before?: { hasAccess?: boolean | null; planId?: string | null; expiryDate?: number | null };
-  after?: { hasAccess?: boolean | null; planId?: string | null; expiryDate?: number | null };
-}): Promise<void> {
-  try {
-    const db = await getDb();
-    if (!db) return;
-    await db.insert(entitlementEvents).values({
-      userId: params.userId,
-      stripeEventId: params.stripeEventId,
-      eventType: params.eventType,
-      reason: params.reason,
-      actor: params.actor ?? "webhook",
-      beforeHasAccess: params.before?.hasAccess ?? null,
-      afterHasAccess: params.after?.hasAccess ?? null,
-      beforePlanId: params.before?.planId ?? null,
-      afterPlanId: params.after?.planId ?? null,
-      beforeExpiryDate: params.before?.expiryDate ?? null,
-      afterExpiryDate: params.after?.expiryDate ?? null,
-      createdAt: Date.now(),
-    });
-  } catch (err) {
-    console.error(`[Stripe][Audit] FAILED to record entitlement event userId=${params.userId} reason=${params.reason}: ${err instanceof Error ? err.message : String(err)}`);
-  }
-}
+// recordEntitlementEvent moved to ./stripe/entitlementLedger so the owner-facing
+// admin mutations (createUser / updateUser / backfillEntitlement) write the same
+// append-only audit trail this webhook does. Same behaviour, one writer.
 
 // ─── Billing-interval (plan_prices) resolution ────────────────────────────────
 /**
@@ -867,6 +842,40 @@ async function processWebhookEvent(event: Stripe.Event): Promise<void> {
       console.log(`${tag} [INPUT] Subscription ${action} sub_id=${sub.id} customer=${sub.customer} status=${sub.status}`);
       console.log(`${tag}   metadata=${JSON.stringify(sub.metadata)}`);
 
+      // Lifecycle ledger (avenues #3/#4/#8). Classified ONCE here so every
+      // exit path below records the same transition with its own honest
+      // outcome. For `updated`, previous_attributes carries exactly the fields
+      // that changed — including a Customer Portal plan switch, which never
+      // touches our API and was previously invisible.
+      const subNow = snapshotOfSubscription(sub);
+      const subPrev = snapshotOfPreviousAttributes(
+        (event.data as { previous_attributes?: Record<string, unknown> }).previous_attributes,
+      );
+      const subDiff = event.type === "customer.subscription.created"
+        ? { kind: "created" as const, detail: `status=${sub.status}` }
+        : classifySubscriptionUpdate(subPrev, subNow);
+      const subLedgerCustomerId = typeof sub.customer === "string" ? sub.customer : (sub.customer as Stripe.Customer | null)?.id ?? null;
+      const recordSubLifecycle = (outcome: "recorded" | "granted" | "revoked" | "noop", reason: string, userId?: number | null) =>
+        recordSubscriptionEvent({
+          stripeEventId: event.id,
+          eventType: event.type,
+          livemode: event.livemode,
+          stripeSubscriptionId: sub.id,
+          stripeCustomerId: subLedgerCustomerId,
+          userId: userId ?? null,
+          kind: subDiff.kind,
+          outcome,
+          outcomeReason: `${subDiff.detail}; ${reason}`,
+          fromPriceId: subPrev.priceId ?? null,
+          toPriceId: subNow.priceId ?? null,
+          fromInterval: subPrev.interval ?? null,
+          toInterval: subNow.interval ?? null,
+          status: sub.status,
+          cancelAtPeriodEnd: sub.cancel_at_period_end ?? null,
+          periodEnd: subscriptionPeriodEndMs(sub),
+          occurredAt: eventCreatedMs,
+        });
+
       if (sub.status !== "active" && sub.status !== "trialing") {
         // LIFE-001: past_due / unpaid / paused previously vanished entirely —
         // the user silently rode the expiry buffer and then hard-locked with a
@@ -897,21 +906,29 @@ async function processWebhookEvent(event: Stripe.Event): Promise<void> {
           }
         }
         console.log(`${tag} [STATE] status=${sub.status} — access unchanged, status persisted`);
+        await recordSubLifecycle("noop", `status=${sub.status} persisted; access unchanged — Stripe retries own recovery`);
         break;
       }
 
       const subUserIdStr = sub.metadata?.user_id;
       if (!subUserIdStr) {
-        console.log(`${tag} [STATE] No user_id in sub metadata — access handled by checkout.session.completed`); break;
+        console.log(`${tag} [STATE] No user_id in sub metadata — access handled by checkout.session.completed`);
+        await recordSubLifecycle("noop", "no user_id in metadata — entitlement owned by checkout.session.completed");
+        break;
       }
       const subUserId = parseInt(subUserIdStr, 10);
-      if (isNaN(subUserId)) { console.error(`${tag} [VERIFY] FAIL — invalid user_id in sub metadata`); break; }
+      if (isNaN(subUserId)) {
+        console.error(`${tag} [VERIFY] FAIL — invalid user_id in sub metadata`);
+        await recordSubLifecycle("noop", "invalid user_id in metadata — no local user resolvable");
+        break;
+      }
 
       // Ordering guard: a stale "active" update delivered after a cancellation
       // must not resurrect access (WBHK-003).
       const subUserBefore = await getAppUserById(subUserId);
       if (isStaleEvent(subUserBefore, eventCreatedMs)) {
         console.warn(`${tag} [STATE] Stale event (created=${new Date(eventCreatedMs).toISOString()} < watermark=${new Date(subUserBefore!.lastStripeEventAt!).toISOString()}) — ignoring`);
+        await recordSubLifecycle("noop", "stale event — older than the last applied event for this user (WBHK-003)", subUserId);
         break;
       }
 
@@ -934,6 +951,7 @@ async function processWebhookEvent(event: Stripe.Event): Promise<void> {
         eventCreatedMs,
       });
       console.log(`${tag} [OUTPUT] Subscription ${action} processed userId=${subUserId}`);
+      await recordSubLifecycle("granted", `access granted/extended plan=${subPlan}`, subUserId);
       console.log(`${tag} [VERIFY] PASS`);
       break;
     }
@@ -942,6 +960,10 @@ async function processWebhookEvent(event: Stripe.Event): Promise<void> {
       const sub = event.data.object as Stripe.Subscription;
       console.log(`${tag} [INPUT] Subscription deleted sub_id=${sub.id} customer=${sub.customer}`);
       const customerId = typeof sub.customer === "string" ? sub.customer : (sub.customer as Stripe.Customer).id;
+      // Resolve the member BEFORE revoking so the ledger row can carry the
+      // userId and an honest outcome — 'revoked' only when someone actually
+      // lost access, 'noop' when the customer matched no local account.
+      const deletedUser = await getAppUserByStripeCustomerId(customerId);
       await revokeUserAccessByCustomerId(customerId, {
         stripeEventId: event.id,
         eventType: event.type,
@@ -949,7 +971,95 @@ async function processWebhookEvent(event: Stripe.Event): Promise<void> {
         subscriptionStatus: sub.status,
         eventCreatedMs,
       });
+      await recordSubscriptionEvent({
+        stripeEventId: event.id,
+        eventType: event.type,
+        livemode: event.livemode,
+        stripeSubscriptionId: sub.id,
+        stripeCustomerId: customerId,
+        userId: deletedUser?.id ?? null,
+        kind: "deleted",
+        outcome: deletedUser ? "revoked" : "noop",
+        outcomeReason: deletedUser
+          ? "subscription ended — access revoked"
+          : "subscription ended but no local user matched this customer",
+        fromPlanId: deletedUser?.stripePlanId ?? null,
+        status: sub.status,
+        cancelAtPeriodEnd: sub.cancel_at_period_end ?? null,
+        periodEnd: subscriptionPeriodEndMs(sub),
+        occurredAt: eventCreatedMs,
+      });
       console.log(`${tag} [OUTPUT] Access revoked stripeCustomerId=${customerId}`);
+      console.log(`${tag} [VERIFY] PASS`);
+      break;
+    }
+
+    // ── Recurring-lifecycle signals (avenue #12) ─────────────────────────────
+    // Dormant until the owner subscribes them on the live endpoint — handled
+    // here so the moment they are subscribed, they are recorded and alerted
+    // rather than falling through to the default unhandled branch.
+    case "customer.subscription.trial_will_end": {
+      const sub = event.data.object as Stripe.Subscription;
+      const trialCustomerId = typeof sub.customer === "string" ? sub.customer : (sub.customer as Stripe.Customer | null)?.id ?? null;
+      const trialUser = trialCustomerId ? await getAppUserByStripeCustomerId(trialCustomerId) : null;
+      console.log(`${tag} [INPUT] Trial ending sub_id=${sub.id} customer=${trialCustomerId ?? "(none)"} trial_end=${sub.trial_end ?? "(none)"}`);
+      await recordSubscriptionEvent({
+        stripeEventId: event.id,
+        eventType: event.type,
+        livemode: event.livemode,
+        stripeSubscriptionId: sub.id,
+        stripeCustomerId: trialCustomerId,
+        userId: trialUser?.id ?? null,
+        kind: "trial_ending",
+        outcome: "noop",
+        outcomeReason: "trial ends in ~3 days — no action; first charge follows unless canceled",
+        status: sub.status,
+        cancelAtPeriodEnd: sub.cancel_at_period_end ?? null,
+        periodEnd: sub.trial_end != null ? sub.trial_end * 1000 : subscriptionPeriodEndMs(sub),
+        occurredAt: eventCreatedMs,
+      });
+      // The earliest pre-churn signal there is: a trial about to convert (or
+      // lapse) deserves a human's attention, not just a queryable row.
+      void billingAlert("TRIAL_WILL_END", {
+        subscriptionId: sub.id,
+        customerId: trialCustomerId,
+        userId: trialUser?.id ?? null,
+        username: trialUser?.username ?? null,
+        trialEnd: sub.trial_end != null ? new Date(sub.trial_end * 1000).toISOString() : null,
+      });
+      console.log(`${tag} [VERIFY] PASS`);
+      break;
+    }
+
+    case "invoice.upcoming": {
+      // A PREVIEW — the invoice has no id yet and no money has moved, so this
+      // belongs in the subscription ledger (a lifecycle signal), not the
+      // payment ledger (money facts). Recorded so dunning queries can see a
+      // renewal coming before it either succeeds or fails.
+      const upcoming = event.data.object as Stripe.Invoice;
+      const upCustomerId = typeof upcoming.customer === "string" ? upcoming.customer : (upcoming.customer as Stripe.Customer | null)?.id ?? null;
+      const upSubId = (() => {
+        const s = (upcoming as unknown as { parent?: { subscription_details?: { subscription?: string | Stripe.Subscription } } }).parent?.subscription_details?.subscription
+          ?? (upcoming as unknown as { subscription?: string | Stripe.Subscription }).subscription;
+        return typeof s === "string" ? s : (s as Stripe.Subscription | undefined)?.id ?? null;
+      })();
+      const upUser = upCustomerId ? await getAppUserByStripeCustomerId(upCustomerId) : null;
+      console.log(`${tag} [INPUT] Upcoming invoice customer=${upCustomerId ?? "(none)"} sub=${upSubId ?? "(none)"} amount_due=${upcoming.amount_due}`);
+      await recordSubscriptionEvent({
+        stripeEventId: event.id,
+        eventType: event.type,
+        livemode: event.livemode,
+        stripeSubscriptionId: upSubId ?? "unknown",
+        stripeCustomerId: upCustomerId,
+        userId: upUser?.id ?? null,
+        kind: "renewal_upcoming",
+        outcome: "noop",
+        outcomeReason: `preview — renewal of ${(upcoming.amount_due ?? 0) / 100} ${(upcoming.currency ?? "usd").toUpperCase()} due; no action until invoice.paid/failed`,
+        periodEnd: (upcoming as unknown as { period_end?: number }).period_end != null
+          ? ((upcoming as unknown as { period_end?: number }).period_end as number) * 1000
+          : null,
+        occurredAt: eventCreatedMs,
+      });
       console.log(`${tag} [VERIFY] PASS`);
       break;
     }
@@ -1048,6 +1158,49 @@ console.log(`${tag} [VERIFY] PASS`);
       break;
     }
 
+    case "charge.dispute.closed": {
+      // The other half of the dispute lifecycle (avenue #12). dispute.created
+      // revokes; this records how it ENDED. Access is deliberately NOT
+      // auto-restored on a win — the member was revoked mid-dispute and
+      // whether to reinstate is a policy call with a human in it, so the row
+      // and the alert carry everything needed to make it in one step.
+      const dispute = event.data.object as Stripe.Dispute;
+      const closedChargeId = typeof dispute.charge === "string" ? dispute.charge : (dispute.charge as Stripe.Charge | null)?.id ?? "";
+      let closedCustomerId = "";
+      try {
+        if (closedChargeId) {
+          const ch = await getStripe().charges.retrieve(closedChargeId);
+          closedCustomerId = typeof ch.customer === "string" ? ch.customer : (ch.customer as Stripe.Customer | null)?.id ?? "";
+        }
+      } catch (err) {
+        console.error(`${tag} [STATE] could not resolve customer for closed dispute: ${err instanceof Error ? err.message : String(err)}`);
+      }
+      const won = dispute.status === "won";
+      console.log(`${tag} [INPUT] Dispute closed dispute=${dispute.id} status=${dispute.status} charge=${closedChargeId} customer=${closedCustomerId || "(unresolved)"}`);
+      await recordPaymentEvent({
+        stripeEventId: event.id, eventType: event.type, livemode: event.livemode,
+        objectId: dispute.id, objectType: "dispute", kind: "disputed", outcome: "noop",
+        outcomeReason: won
+          ? "dispute WON — funds returned; access NOT auto-restored, reinstate manually if warranted"
+          : `dispute closed ${dispute.status ?? "unknown"} — funds kept by cardholder; revocation stands`,
+        amountCents: dispute.amount ?? null, currency: dispute.currency ?? null,
+        stripeCustomerId: closedCustomerId || null,
+        occurredAt: event.created * 1000,
+      });
+      void billingAlert("DISPUTE_CLOSED", {
+        disputeId: dispute.id,
+        status: dispute.status,
+        chargeId: closedChargeId || null,
+        customerId: closedCustomerId || null,
+        amount: dispute.amount,
+        note: won
+          ? "Won — funds returned. Access was revoked at dispute.created; reinstate manually if warranted."
+          : "Lost/closed — revocation stands.",
+      });
+      console.log(`${tag} [VERIFY] PASS`);
+      break;
+    }
+
     case "invoice.paid": {
       const invoice = event.data.object as Stripe.Invoice;
       // Tracked so the ledger can say whether this renewal actually extended
@@ -1108,7 +1261,44 @@ console.log(`${tag} [VERIFY] PASS`);
           console.log(`${tag} [OUTPUT] Renewal processed userId=${existingUser.id}`);
           renewalUserId = existingUser.id;
           renewalGranted = true;
+          // Lifecycle ledger (avenue #8): the renewal as a subscription fact —
+          // which subscription, which price, and the exact period it bought.
+          // payment_events (below) carries the money; this carries the life.
+          await recordSubscriptionEvent({
+            stripeEventId: event.id,
+            eventType: event.type,
+            livemode: event.livemode,
+            stripeSubscriptionId: invoiceSubId || "unknown",
+            stripeCustomerId: invoiceCustomerId,
+            userId: existingUser.id,
+            kind: "renewed",
+            outcome: "granted",
+            outcomeReason: `renewal — access extended to ${new Date(renewExpiry).toISOString()}`,
+            fromPlanId: existingUser.stripePlanId ?? null,
+            toPlanId: renewPlan,
+            toPriceId: invoicePriceId ?? null,
+            periodEnd: renewExpiry,
+            occurredAt: eventCreatedMs,
+          });
         }
+      }
+      if (invoiceCustomerId && invoice.billing_reason === "subscription_cycle" && !renewalGranted) {
+        // A renewal that extended nobody is the recurring-model equivalent of
+        // the dropped checkout — record it as a lifecycle fact too.
+        await recordSubscriptionEvent({
+          stripeEventId: event.id,
+          eventType: event.type,
+          livemode: event.livemode,
+          stripeSubscriptionId: (() => {
+            const s = (invoice as unknown as { parent?: { subscription_details?: { subscription?: string | Stripe.Subscription } } }).parent?.subscription_details?.subscription;
+            return typeof s === "string" ? s : (s as Stripe.Subscription | undefined)?.id ?? "unknown";
+          })(),
+          stripeCustomerId: invoiceCustomerId,
+          kind: "renewed",
+          outcome: "noop",
+          outcomeReason: "invoice paid but no local user matched this customer",
+          occurredAt: eventCreatedMs,
+        });
       }
       // Recurring revenue. `outcome` distinguishes a renewal that extended
       // access from one that matched no local user — the latter is money taken
@@ -1213,6 +1403,53 @@ console.log(`${tag} [VERIFY] PASS`);
 }
 
 // ─── Route registration ───────────────────────────────────────────────────────
+// ─── Webhook latency instrumentation (avenue #11) ─────────────────────────────
+/**
+ * In-memory ring of recent processing durations. Answers "is the webhook path
+ * slow?" from /health instead of from a log grep. In-memory is deliberate: a
+ * latency sample is worthless after a restart, and this must add zero DB work
+ * to the very path it measures. Stripe times out delivery at ~10s wall clock;
+ * the budget below alerts well before that.
+ */
+const WEBHOOK_LATENCY_RING_SIZE = 256;
+/** Soft latency budget for one event's processing. Beyond this we log loudly —
+ * it is the leading indicator of Stripe-side delivery timeouts and redeliveries. */
+export const WEBHOOK_LATENCY_BUDGET_MS = 2_000;
+const webhookLatencies: number[] = [];
+let webhookLatencyLastAt: number | null = null;
+let webhookLatencyBreaches = 0;
+
+export function noteWebhookLatency(ms: number, eventType: string): void {
+  webhookLatencies.push(ms);
+  if (webhookLatencies.length > WEBHOOK_LATENCY_RING_SIZE) webhookLatencies.shift();
+  webhookLatencyLastAt = Date.now();
+  if (ms > WEBHOOK_LATENCY_BUDGET_MS) {
+    webhookLatencyBreaches++;
+    console.error(`[Stripe][Webhook] [LATENCY] ${eventType} took ${ms}ms (budget ${WEBHOOK_LATENCY_BUDGET_MS}ms) — approaching Stripe's delivery timeout`);
+  }
+}
+
+/** Percentile over the ring. Exposed for /health; pure math, no I/O. */
+export function getWebhookLatencyStats(): {
+  samples: number; p50Ms: number | null; p95Ms: number | null; maxMs: number | null;
+  budgetMs: number; budgetBreaches: number; lastAt: number | null;
+} {
+  if (webhookLatencies.length === 0) {
+    return { samples: 0, p50Ms: null, p95Ms: null, maxMs: null, budgetMs: WEBHOOK_LATENCY_BUDGET_MS, budgetBreaches: webhookLatencyBreaches, lastAt: webhookLatencyLastAt };
+  }
+  const sorted = [...webhookLatencies].sort((a, b) => a - b);
+  const pick = (p: number) => sorted[Math.min(sorted.length - 1, Math.floor(p * sorted.length))];
+  return {
+    samples: sorted.length,
+    p50Ms: pick(0.5),
+    p95Ms: pick(0.95),
+    maxMs: sorted[sorted.length - 1],
+    budgetMs: WEBHOOK_LATENCY_BUDGET_MS,
+    budgetBreaches: webhookLatencyBreaches,
+    lastAt: webhookLatencyLastAt,
+  };
+}
+
 export function registerStripeWebhookRoute(app: Express): void {
   app.post(
     "/api/stripe/webhook",
@@ -1283,9 +1520,11 @@ export function registerStripeWebhookRoute(app: Express): void {
         "charge.dispute.created",
       ]);
 
+      const processingStartedAt = Date.now();
       if (ACCESS_CHANGING_EVENT_TYPES.has(event.type)) {
         processWebhookEvent(event).then(
           () => {
+            noteWebhookLatency(Date.now() - processingStartedAt, event.type);
             res.status(200).json({ received: true });
             // Outbound Discord calls run only AFTER the acknowledgement, so a
             // slow third party can never push us past Stripe's delivery timeout
@@ -1304,7 +1543,10 @@ export function registerStripeWebhookRoute(app: Express): void {
 
       res.status(200).json({ received: true });
       processWebhookEvent(event)
-        .then(() => flushDeferredRoleSyncs())
+        .then(() => {
+          noteWebhookLatency(Date.now() - processingStartedAt, event.type);
+          return flushDeferredRoleSyncs();
+        })
         .catch((err: unknown) => {
           const msg = err instanceof Error ? err.message : String(err);
           console.error(`${tag} Async processing error for ${event.id}: ${msg}`);
