@@ -150,6 +150,13 @@ test("Railway Keychain source contains no credential-print path", async () => {
   );
   assert.match(provisioner, /process\.getuid\(\) === 0/);
   assert.match(provisioner, /PROVISION_DIME_CREDENTIAL_TRUST_V2/);
+  assert.match(provisioner, /HASH_PINNED_EXECUTABLES/);
+  assert.match(provisioner, /node", "env", "git", "gh", "aws/);
+  assert.match(provisioner, /TRUSTED_RAILWAY_EXECUTABLE/);
+  assert.match(provisioner, /trustedRailway\.path/);
+  assert.match(provisioner, /verifyOnePasswordSigningIdentity/);
+  assert.match(installer, /resolveCredentialExecutableClosure/);
+  assert.match(installer, /executables:\s*\{[\s\S]*railway,/);
   assert.match(provisioner, /credentialsRead: false/);
   assert.equal(
     Object.keys(JSON.parse(packageJson).scripts).some(name =>

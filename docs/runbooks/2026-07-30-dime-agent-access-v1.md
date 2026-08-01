@@ -54,6 +54,10 @@ Execution fails closed unless an independent administrator has provisioned:
 - root-owned mode-`0444` SHA-256 pins beneath
   `/Library/Application Support/DimeAI/trust/executables/` for `node`, `env`,
   `git`, `gh`, and `aws`;
+- a reviewed Railway CLI candidate copied during administrator promotion to
+  `/Library/Application Support/DimeAI/trust/executables/railway-v1` as a
+  root-owned mode-`0755` executable, with its exact reviewed SHA-256 compiled
+  into the broker;
 - the reviewed 1Password CLI signing identity
   `com.1password.op` / Team ID `2BUA8C4S2C`;
 - the root-owned Railway broker pin
@@ -130,7 +134,9 @@ procedure:
 
 1. From a clean checkout of the exact approved merge commit, install the
    lockfile without lifecycle scripts and rerun the focused tests.
-2. As the non-admin runtime account, build both untrusted candidates:
+2. As the non-admin runtime account, install a cryptographically valid
+   1Password CLI and a reviewed Chrome for Testing binary at the fixed
+   application path, then build both untrusted candidates:
 
    ```bash
    pnpm install --frozen-lockfile --ignore-scripts
@@ -138,6 +144,11 @@ procedure:
    pnpm auth:closure:candidate
    pnpm railway:keychain:install
    ```
+
+   Candidate generation verifies the 1Password designated signing identity
+   and captures the exact `node`, `env`, `git`, `gh`, `aws`, Railway, and
+   browser identities. It fails closed before administrator promotion when a
+   binary is missing, writable, unsigned, modified, or identity-mismatched.
 
 3. Independently compare the candidate descriptors, bundle, package
    inventories, browser signature/state, Node identity, broker source, and
@@ -155,7 +166,9 @@ procedure:
      "/var/root/dime-auth-closure-ed25519-private.pem"
    ```
 
-5. From the same independently verified checkout, run the guarded promotion
+5. Ensure the reviewed browser executable and every ancestor beneath
+   `/Applications` are root-owned and non-writable by group or world. From the
+   same independently verified checkout, run the guarded promotion
    with the exact reviewed absolute Node path:
 
    ```bash
@@ -168,10 +181,12 @@ procedure:
 
    The guarded command requires uid 0, the explicit confirmation, a canonical
    root-owned Ed25519 private key, an absent active v2 authentication
-   application, both matching candidates, and exact file hashes. It promotes
-   the root-owned application, writes the signed root-protected manifest and
-   public key, recompiles the broker with their exact hashes, and writes the
-   root-owned broker pin last. It does not read a credential or attempt login.
+   application, both matching candidates, and exact file hashes. It writes
+   root-owned executable pins, copies the exact reviewed Railway CLI bytes to
+   the root-protected trust directory, promotes the root-owned application,
+   writes the signed root-protected manifest and public key, recompiles the
+   broker against the protected Railway copy, and writes the root-owned broker
+   pin last. It does not read a credential or attempt login.
 
 6. Verify the reported hashes and ownership independently. Do not run
    `credential:verify` or `platform:auth:*` merely to test provisioning.

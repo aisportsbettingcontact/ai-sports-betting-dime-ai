@@ -22,7 +22,10 @@ import {
   AUTHENTICATION_ENTRYPOINT,
   collectAuthenticationTree,
 } from "./lib/dime-authentication-closure.mjs";
-import { verifyAbsoluteExecutable } from "./lib/dime-trusted-executables.mjs";
+import {
+  resolveTrustedExecutable,
+  verifyAbsoluteExecutable,
+} from "./lib/dime-trusted-executables.mjs";
 
 const scriptPath = fileURLToPath(import.meta.url);
 const repositoryRoot = resolve(dirname(scriptPath), "..");
@@ -103,6 +106,18 @@ async function selectBrowser(
   );
 }
 
+export async function resolveCredentialExecutableClosure() {
+  const [node, env, git, gh, aws, op] = await Promise.all([
+    resolveTrustedExecutable("node", { skipIndependentTrust: true }),
+    resolveTrustedExecutable("env", { skipIndependentTrust: true }),
+    resolveTrustedExecutable("git", { skipIndependentTrust: true }),
+    resolveTrustedExecutable("gh", { skipIndependentTrust: true }),
+    resolveTrustedExecutable("aws", { skipIndependentTrust: true }),
+    resolveTrustedExecutable("op"),
+  ]);
+  return { node, env, git, gh, aws, op };
+}
+
 function finalPathForCandidate(candidateDirectory, candidatePath) {
   const relativePath = candidatePath.slice(candidateDirectory.length + 1);
   invariant(
@@ -119,6 +134,7 @@ export async function buildAuthenticationClosureCandidate({
   browserAllowedRoots = ["/Applications", "/System/Applications"],
   nodeExecutablePath = process.execPath,
   nodeAllowedRoots = null,
+  credentialExecutables = null,
 } = {}) {
   const temporaryDirectory = `${candidateDirectory}.${process.pid}.tmp`;
   await rm(temporaryDirectory, { recursive: true, force: true });
@@ -249,6 +265,7 @@ export async function buildAuthenticationClosureCandidate({
         node,
         browser,
       },
+      credentialExecutables,
       configuration: [
         finalPathForCandidate(temporaryDirectory, accessConfiguration),
         finalPathForCandidate(temporaryDirectory, platformConfiguration),
@@ -278,7 +295,10 @@ export async function buildAuthenticationClosureCandidate({
 }
 
 async function main() {
-  const candidate = await buildAuthenticationClosureCandidate();
+  const credentialExecutables = await resolveCredentialExecutableClosure();
+  const candidate = await buildAuthenticationClosureCandidate({
+    credentialExecutables,
+  });
   process.stdout.write(
     `${JSON.stringify({
       status: "BLOCKED",
