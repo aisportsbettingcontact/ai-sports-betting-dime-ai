@@ -1350,6 +1350,14 @@ console.log(`${tag} [VERIFY] PASS`);
         currency: invoice.currency ?? null,
         userId: renewalUserId,
         stripeCustomerId: invoiceCustomerId || null,
+        // Link renewal money to its subscription — found missing by the
+        // test-clock simulation: "renewal history for one subscription"
+        // (payment_events_subscription_idx) matched nothing for invoices.
+        stripeSubscriptionId: (() => {
+          const s = (invoice as unknown as { parent?: { subscription_details?: { subscription?: string | Stripe.Subscription } } }).parent?.subscription_details?.subscription
+            ?? (invoice as unknown as { subscription?: string | Stripe.Subscription }).subscription;
+          return typeof s === "string" ? s : (s as Stripe.Subscription | undefined)?.id ?? null;
+        })(),
         stripeInvoiceId: invoice.id ?? null,
         customerEmail: invoice.customer_email ?? null,
         occurredAt: event.created * 1000,

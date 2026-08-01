@@ -73,7 +73,7 @@ const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 // ─── Arguments ────────────────────────────────────────────────────────────────
 
 function parseArgs(argv) {
-  const args = { port: 3999, mysqlPort: 33399, keep: false };
+  const args = { port: 3999, mysqlPort: 33399, keep: false, testClock: false };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     const take = () => {
@@ -81,11 +81,12 @@ function parseArgs(argv) {
       return inline ?? argv[++i];
     };
     if (arg === "--keep") args.keep = true;
+    else if (arg === "--test-clock") args.testClock = true;
     else if (arg.startsWith("--port")) args.port = Number(take());
     else if (arg.startsWith("--mysql-port")) args.mysqlPort = Number(take());
     else if (arg === "--help" || arg === "-h") {
       console.log(
-        "usage: node scripts/stripe-e2e.mjs [--port N] [--mysql-port N] [--keep]"
+        "usage: node scripts/stripe-e2e.mjs [--port N] [--mysql-port N] [--keep] [--test-clock]"
       );
       process.exit(0);
     } else {
@@ -1688,9 +1689,222 @@ function printSummary() {
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
+// ─── Test-clock lifecycle (--test-clock) ──────────────────────────────────────
+/**
+ * The strongest simulation that exists without live money: STRIPE'S OWN
+ * BILLING ENGINE generates the entire life of a subscription on a frozen,
+ * advanceable clock — trial start, automatic conversion charge, a full
+ * renewal, then a failing card and the no-grace death. Nothing here is a
+ * synthetic payload: every event is authored, signed, and delivered by
+ * Stripe, so this also proves the handler against the payload SHAPES the
+ * pinned API version really produces (parent.subscription_details,
+ * lines[].period.end, item-level current_period_end — the fields synthetic
+ * fixtures can silently get wrong).
+ *
+ * Runs against the same booted production-source server as the battery, with
+ * the testModeFulfillment gate legitimately satisfied (test key, local DB,
+ * explicit flag).
+ */
+const CLOCK_COVERAGE = "[test-clock] Stripe-authored lifecycle via a frozen billing clock — real engine, real payload shapes, real deliveries";
+
+async function stripePost(path, params) {
+  const args = ["curl", "-sS", "-u", `${STRIPE_KEY}:`, "-X", "POST", `https://api.stripe.com/v1/${path}`];
+  for (const [k, v] of params) args.push("-d", `${k}=${v}`);
+  const out = await run(args[0], args.slice(1), { timeoutMs: 30_000 });
+  const parsed = JSON.parse(out.stdout);
+  if (parsed.error) throw new Error(`${path}: ${parsed.error.message}`);
+  return parsed;
+}
+async function stripeGet(path) {
+  const out = await run("curl", ["-sS", "-u", `${STRIPE_KEY}:`, `https://api.stripe.com/v1/${path}`], { timeoutMs: 30_000 });
+  const parsed = JSON.parse(out.stdout);
+  if (parsed.error) throw new Error(`${path}: ${parsed.error.message}`);
+  return parsed;
+}
+/** Advance the clock and wait until Stripe finishes settling it. */
+async function advanceClock(clockId, toSec) {
+  await stripePost(`test_helpers/test_clocks/${clockId}/advance`, [["frozen_time", String(toSec)]]);
+  await waitFor(
+    `test clock to settle at ${new Date(toSec * 1000).toISOString()}`,
+    async () => {
+      const c = await stripeGet(`test_helpers/test_clocks/${clockId}`);
+      return c.status === "ready" ? c : null;
+    },
+    { timeoutMs: 180_000, intervalMs: 3_000 }
+  );
+}
+
+async function runTestClockLifecycle() {
+  log("[6/6] Test-clock lifecycle (Stripe-authored events)");
+
+  // [1] Real test-mode catalog objects, mapped into the DB so plan/price
+  // resolution exercises the same joins production uses.
+  const product = await stripePost("products", [["name", `E2E Clock Plan ${RUN_ID}`]]);
+  const price = await stripePost("prices", [
+    ["product", product.id], ["currency", "usd"], ["unit_amount", "4900"],
+    ["recurring[interval]", "month"],
+  ]);
+  await query(
+    "INSERT INTO plan_prices (planId, stripePriceId, label, amountCents, currency, billingInterval, intervalCount, active, isDefault, hidden, livemode, sortOrder) " +
+      "SELECT id, ?, 'Clock Monthly', 4900, 'usd', 'month', 1, 1, 0, 0, 0, 1 FROM subscription_plans WHERE slug = ?",
+    [price.id, PLAN_SLUG]
+  );
+  log(`      product=${product.id} price=${price.id} (mapped into plan_prices)`);
+
+  // [2] Frozen clock; customer ON the clock with a good card.
+  const nowSec = Math.floor(Date.now() / 1000);
+  const clock = await stripePost("test_helpers/test_clocks", [["frozen_time", String(nowSec)], ["name", `e2e-${RUN_ID}`]]);
+  const customer = await stripePost("customers", [
+    ["test_clock", clock.id],
+    // %2B: a literal '+' in a form body decodes as a space and corrupts the address.
+    ["email", `stripe-e2e%2B${RUN_ID}@example.invalid`],
+    ["payment_method", "pm_card_visa"],
+    ["invoice_settings[default_payment_method]", "pm_card_visa"],
+  ]);
+  log(`      clock=${clock.id} customer=${customer.id}`);
+
+  // [3] Subscribe WITH A TRIAL, bound to the seeded member via metadata — the
+  // exact shape checkout's subscription_data produces. Trial ends in 1 day.
+  const trialEnd = nowSec + 86_400;
+  let deliveriesMark = DELIVERIES.length;
+  const sub = await stripePost("subscriptions", [
+    ["customer", customer.id],
+    ["items[0][price]", price.id],
+    ["trial_end", String(trialEnd)],
+    ["metadata[user_id]", String(SEED_USER_ID)],
+    ["metadata[plan_id]", PLAN_SLUG],
+  ]);
+  await awaitDelivery("customer.subscription.created", deliveriesMark);
+  const trialUser = await waitFor(
+    "the trial to GRANT access (trials carry access; conversion charges later)",
+    async () => {
+      const row = await seededUser();
+      return row && Number(row.hasAccess) === 1 ? row : null;
+    },
+    { timeoutMs: 60_000, intervalMs: 1_000 }
+  );
+  await sleep(1_500);
+  const createdRows = await query(
+    "SELECT kind, outcome FROM subscription_events WHERE stripeSubscriptionId = ? AND kind='created'", [sub.id]);
+  assertThat(
+    "CLOCK: a real trialing subscription grants access and records created/granted",
+    sub.status === "trialing" && Number(trialUser.hasAccess) === 1 &&
+      createdRows.length === 1 && createdRows[0].outcome === "granted",
+    `sub.status=${sub.status} hasAccess=${trialUser.hasAccess} created rows=${createdRows.length}/${createdRows[0]?.outcome}`,
+    CLOCK_COVERAGE
+  );
+
+  // [4] TRIAL CONVERSION — advance past trial end PLUS the ~1h draft window:
+  // Stripe creates the cycle invoice as a draft at period end and finalizes +
+  // charges it about an hour later IN CLOCK TIME, so a small advance strands
+  // it in draft and invoice.paid never fires (learned from run 1).
+  deliveriesMark = DELIVERIES.length;
+  await advanceClock(clock.id, trialEnd + 2 * 3_600);
+  await awaitDelivery("invoice.paid", deliveriesMark, 180_000);
+  const subAfterConvert = await waitFor(
+    "the conversion to re-anchor expiry to Stripe's billed period end",
+    async () => {
+      const s = await stripeGet(`subscriptions/${sub.id}`);
+      const row = await seededUser();
+      const periodEnd = (s.items?.data?.[0]?.current_period_end ?? s.current_period_end) * 1000;
+      return row && Number(row.expiryDate) === periodEnd ? { s, row, periodEnd } : null;
+    },
+    { timeoutMs: 120_000, intervalMs: 2_000 }
+  );
+  assertThat(
+    "CLOCK: trial auto-converts, charges, and expiry equals Stripe's period end EXACTLY (0ms delta, Stripe-authored numbers)",
+    subAfterConvert.s.status === "active" &&
+      Number(subAfterConvert.row.expiryDate) === subAfterConvert.periodEnd,
+    `status=${subAfterConvert.s.status} expiry=${subAfterConvert.row.expiryDate} stripe_period_end=${subAfterConvert.periodEnd} ` +
+      `delta=${Number(subAfterConvert.row.expiryDate) - subAfterConvert.periodEnd}ms`,
+    CLOCK_COVERAGE
+  );
+  await sleep(1_500);
+  const convertPay = await query(
+    "SELECT kind, outcome, amountCents FROM payment_events WHERE stripeSubscriptionId = ? AND kind='succeeded' AND outcome='granted'", [sub.id]);
+  assertThat(
+    "CLOCK: the conversion charge is a granted money fact ($49.00)",
+    convertPay.length >= 1 && Number(convertPay[0].amountCents) === 4900,
+    `payment_events granted rows=${convertPay.length} amount=${convertPay[0]?.amountCents}`,
+    CLOCK_COVERAGE
+  );
+
+  // [5] NO-GRACE DEATH — swap to a card that will decline, advance one full
+  // cycle. Stripe authors invoice.payment_failed; the handler must revoke at
+  // that instant AND cancel the REAL subscription at Stripe.
+  const failPm = await stripePost("payment_methods", [["type", "card"], ["card[token]", "tok_chargeCustomerFail"]]);
+  await stripePost(`payment_methods/${failPm.id}/attach`, [["customer", customer.id]]);
+  await stripePost(`customers/${customer.id}`, [["invoice_settings[default_payment_method]", failPm.id]]);
+  deliveriesMark = DELIVERIES.length;
+  const nextPeriodEnd = subAfterConvert.periodEnd / 1000;
+  // Same draft-window allowance as the conversion advance.
+  await advanceClock(clock.id, Math.floor(nextPeriodEnd) + 2 * 3_600);
+  await awaitDelivery("invoice.payment_failed", deliveriesMark, 240_000);
+  const deadUser = await waitFor(
+    "the decline to revoke access at the failure event",
+    async () => {
+      const row = await seededUser();
+      return row && Number(row.hasAccess) === 0 ? row : null;
+    },
+    { timeoutMs: 120_000, intervalMs: 2_000 }
+  );
+  await sleep(2_000);
+  const failRows = await query(
+    "SELECT kind, outcome, outcomeReason FROM subscription_events WHERE stripeSubscriptionId = ? AND kind='payment_failed'", [sub.id]);
+  const audit = await query(
+    "SELECT reason FROM entitlement_events WHERE userId = ? AND reason='PAYMENT_FAILED_NO_GRACE'", [SEED_USER_ID]);
+  assertThat(
+    "CLOCK NO-GRACE: a real declined renewal revokes access at the failure event, audited",
+    Number(deadUser.hasAccess) === 0 && audit.length >= 1 &&
+      failRows.length === 1 && failRows[0].outcome === "revoked",
+    `hasAccess=${deadUser.hasAccess} audit=${audit.length} ` +
+      `lifecycle=[${failRows.map(r => `${r.kind}/${r.outcome}`).join(", ")}]`,
+    CLOCK_COVERAGE
+  );
+
+  // The handler's in-flight Stripe-side cancel is REFUSED while a test clock
+  // is advancing ("Test clock advancement underway — cannot perform
+  // modifications") — a lock that exists ONLY on clocked objects, so this
+  // failure mode cannot occur in production. The contract under a failed
+  // cancel is: the revoke STANDS and the discrepancy is recorded. Assert that
+  // degraded contract explicitly rather than pretending the lock is a bug.
+  const subNow = await stripeGet(`subscriptions/${sub.id}`);
+  const cancelDegraded = subNow.status !== "canceled" && /cancel FAILED: Test clock/i.test(failRows[0]?.outcomeReason ?? "");
+  assertThat(
+    "CLOCK NO-GRACE: Stripe-side cancel either landed or degraded correctly (revoke stands, discrepancy recorded)",
+    subNow.status === "canceled" || cancelDegraded,
+    `stripe.status=${subNow.status} reason="${failRows[0]?.outcomeReason ?? ""}"`,
+    CLOCK_COVERAGE
+  );
+
+  // Complete the lifecycle: cancel post-settle (what the handler's retry — the
+  // next failure event — would do in production) and prove the deletion flows
+  // back as customer.subscription.deleted → deleted/revoked.
+  if (subNow.status !== "canceled") {
+    deliveriesMark = DELIVERIES.length;
+    await run("curl", ["-sS", "-u", `${STRIPE_KEY}:`, "-X", "DELETE", `https://api.stripe.com/v1/subscriptions/${sub.id}`], { timeoutMs: 30_000 });
+    await awaitDelivery("customer.subscription.deleted", deliveriesMark, 120_000);
+    await sleep(2_000);
+  }
+  const deletedRows = await query(
+    "SELECT kind, outcome FROM subscription_events WHERE stripeSubscriptionId = ? AND kind='deleted'", [sub.id]);
+  const finalUser = await seededUser();
+  assertThat(
+    "CLOCK NO-GRACE: the subscription's death arrives as deleted/revoked and access stays off",
+    deletedRows.length === 1 && Number(finalUser.hasAccess) === 0,
+    `deleted rows=${deletedRows.length}/${deletedRows[0]?.outcome} hasAccess=${finalUser.hasAccess}`,
+    CLOCK_COVERAGE
+  );
+
+  // [6] Teardown of Stripe-side objects (clock deletion cascades customer+sub).
+  await run("curl", ["-sS", "-u", `${STRIPE_KEY}:`, "-X", "DELETE", `https://api.stripe.com/v1/test_helpers/test_clocks/${clock.id}`], { timeoutMs: 30_000 });
+  await stripePost(`products/${product.id}`, [["active", "false"]]);
+  log(`      clock deleted; product deactivated`);
+}
+
 async function main() {
   log(`Stripe end-to-end harness — run ${RUN_ID}`);
-  log(`  app port ${ARGS.port} · mysql port ${ARGS.mysqlPort} · keep=${ARGS.keep}`);
+  log(`  app port ${ARGS.port} · mysql port ${ARGS.mysqlPort} · keep=${ARGS.keep} · testClock=${ARGS.testClock}`);
   log("");
   await preflight();
   await startDatabase();
@@ -1698,7 +1912,11 @@ async function main() {
   await seedFixture();
   await startListener();
   await startServer();
-  await runBattery();
+  if (ARGS.testClock) {
+    await runTestClockLifecycle();
+  } else {
+    await runBattery();
+  }
 }
 
 let exitCode = 0;
