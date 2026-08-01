@@ -47,6 +47,7 @@ const candidateProvenancePath = resolve(
   SECURE_RAILWAY_DIRECTORY,
   "dime-railway-keychain.provenance-candidate.json"
 );
+const temporaryCandidateProvenancePath = `${candidateProvenancePath}.${process.pid}.tmp`;
 
 async function sha256File(path) {
   return createHash("sha256")
@@ -149,7 +150,7 @@ async function main() {
     await rename(temporaryExecutable, candidateExecutable);
     const brokerSha256 = await sha256File(candidateExecutable);
     await writeFile(
-      candidateProvenancePath,
+      temporaryCandidateProvenancePath,
       `${JSON.stringify(
         {
           schemaVersion: 1,
@@ -183,13 +184,18 @@ async function main() {
         null,
         2
       )}\n`,
-      { mode: 0o400 }
+      { mode: 0o400, flag: "wx" }
     );
-    await chmod(candidateProvenancePath, 0o400);
+    await chmod(temporaryCandidateProvenancePath, 0o400);
+    await rename(temporaryCandidateProvenancePath, candidateProvenancePath);
   } finally {
-    await unlink(temporaryExecutable).catch(error => {
-      if (error?.code !== "ENOENT") throw error;
-    });
+    await Promise.all(
+      [temporaryExecutable, temporaryCandidateProvenancePath].map(path =>
+        unlink(path).catch(error => {
+          if (error?.code !== "ENOENT") throw error;
+        })
+      )
+    );
   }
   process.stdout.write(
     JSON.stringify({
