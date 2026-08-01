@@ -153,6 +153,15 @@ jobs:
           echo "[OUTPUT] PASS — TypeScript: 0 errors"
           echo "[VERIFY] Full project type-checks clean"
 
+      - name: "[VERIFY] pi harness audit — foundation integrity gate"
+        # Deterministic, no network beyond the checkout, no model calls:
+        # verifies the pi harness foundation end-to-end — context-file suite,
+        # .pi config paths, Claude Code hooks, pi-harness skill, entry points,
+        # embedded model-policy enforcement, gitignore hygiene. The pi CLI
+        # resource-loader layer self-skips in CI (no global pi install).
+        # See scripts/pi-harness-audit.ts.
+        run: pnpm run pi:audit
+
       - name: "[OUTPUT] Upload typecheck report as artifact"
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02

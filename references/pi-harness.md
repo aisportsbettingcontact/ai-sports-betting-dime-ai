@@ -32,6 +32,7 @@ custom routing, add a provider in `~/.pi/agent/models.json`.
 | Theme                | `.pi/themes/dime.json` — brand-law dark theme, mint `#45E0A8` accent, no purple/gold                                                                                                                       | `theme: "dime"` in settings                                                        |
 | System append        | `.pi/APPEND_SYSTEM.md` — skill-triggering rule, model policy, ship law, verification rule injected into every session                                                                                      | auto-loaded                                                                        |
 | Ship entry points    | `pnpm run pi` / `pi:ship [PR#]` / `pi:review` / `pi:rpc` / `pi:json`                                                                                                                                       | package.json scripts                                                               |
+| Integrity gate       | `pnpm pi:audit` — deterministic audit of the whole foundation (context files, .pi paths, hooks, skill, entry points, model policy, gitignore, CLI loader census); runs in CI on every PR (typecheck job)   | scripts/pi-harness-audit.ts                                                        |
 
 See `SKILLS.md` for the corpus map and known duplicate names. Pi has no MCP by design; use
 CLI tools (`gh`, `railway`) via bash. Trade-off accepted deliberately: ~250 skills add

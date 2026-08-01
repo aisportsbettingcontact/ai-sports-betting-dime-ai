@@ -49,6 +49,7 @@
     "pi:review": "pi -p -a \"/review branch\"",
     "pi:rpc": "pi --mode rpc -a",
     "pi:json": "pi --mode json -a",
+    "pi:audit": "tsx scripts/pi-harness-audit.ts",
     "postinstall": "if [ -f requirements.txt ] && command -v pip3 >/dev/null 2>&1; then pip3 install -r requirements.txt -q; else echo '[postinstall] skipping python deps: pip3 unavailable or requirements.txt missing (expected on Railway, which installs via apt in Dockerfile)'; fi"
   },
   "dependencies": {
