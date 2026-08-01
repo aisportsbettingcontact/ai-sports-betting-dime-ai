@@ -914,8 +914,17 @@ export const appUsersRouter = router({
         // point of dryRun, and they are also what makes the write auditable.
         // Annotated: getDb()'s handle is loosely typed here, so the row shape
         // would otherwise land as implicit `any` in the map below.
-        const rows: Array<{ id: number; username: string }> = await db
-          .select({ id: appUsersTable.id, username: appUsersTable.username })
+        // hasAccess/plan/expiry ride along as the audit rows' BEFORE state —
+        // captured in the same read that decides membership, so the trail can
+        // never describe a row this query did not actually see.
+        const rows: Array<{ id: number; username: string; hasAccess: boolean; stripePlanId: string | null; expiryDate: number | null }> = await db
+          .select({
+            id: appUsersTable.id,
+            username: appUsersTable.username,
+            hasAccess: appUsersTable.hasAccess,
+            stripePlanId: appUsersTable.stripePlanId,
+            expiryDate: appUsersTable.expiryDate,
+          })
           .from(appUsersTable)
           .where(missingEntitlement);
         const usernames = rows.map((r) => r.username);
@@ -958,14 +967,26 @@ export const appUsersRouter = router({
         // is why "who was backfilled, when, by whom" needed an ops memory
         // instead of a query. Best-effort and sequential — this is an
         // owner-run, low-frequency path and recordEntitlementEvent never throws.
+        //
+        // `after` is READ BACK from the row, never asserted from the inputs:
+        // this UPDATE deliberately leaves expiryDate alone, and afterExpiryDate
+        // NULL means LIFETIME in this system — writing the input's shape would
+        // stamp every backfilled member with a lifetime claim their row does
+        // not hold. The read-back also keeps the trail honest when a concurrent
+        // write made the UPDATE skip a matched row (updated < matched): the
+        // row records whatever state the member ACTUALLY ended up in.
         for (const r of rows) {
+          const fresh = await getAppUserById(r.id).catch(() => null);
           await recordEntitlementEvent({
             userId: r.id,
             stripeEventId: null,
             eventType: "admin.backfill_entitlement",
             reason: "backfill",
             actor: "owner",
-            after: { hasAccess: true, planId: input.planSlug },
+            before: { hasAccess: r.hasAccess, planId: r.stripePlanId, expiryDate: r.expiryDate },
+            after: fresh
+              ? { hasAccess: fresh.hasAccess, planId: fresh.stripePlanId ?? null, expiryDate: fresh.expiryDate ?? null }
+              : { hasAccess: true, planId: input.planSlug, expiryDate: r.expiryDate },
           });
         }
 

@@ -1001,7 +1001,10 @@ async function processWebhookEvent(event: Stripe.Event): Promise<void> {
     case "customer.subscription.trial_will_end": {
       const sub = event.data.object as Stripe.Subscription;
       const trialCustomerId = typeof sub.customer === "string" ? sub.customer : (sub.customer as Stripe.Customer | null)?.id ?? null;
-      const trialUser = trialCustomerId ? await getAppUserByStripeCustomerId(trialCustomerId) : null;
+      // Non-fatal lookup: this event type is in the ack-first branch (200 sent,
+      // claim retained), so a throw here would drop the row AND the pre-churn
+      // alert with no redelivery. A row with userId=null beats no row.
+      const trialUser = trialCustomerId ? await getAppUserByStripeCustomerId(trialCustomerId).catch(() => null) : null;
       console.log(`${tag} [INPUT] Trial ending sub_id=${sub.id} customer=${trialCustomerId ?? "(none)"} trial_end=${sub.trial_end ?? "(none)"}`);
       await recordSubscriptionEvent({
         stripeEventId: event.id,
@@ -1043,7 +1046,9 @@ async function processWebhookEvent(event: Stripe.Event): Promise<void> {
           ?? (upcoming as unknown as { subscription?: string | Stripe.Subscription }).subscription;
         return typeof s === "string" ? s : (s as Stripe.Subscription | undefined)?.id ?? null;
       })();
-      const upUser = upCustomerId ? await getAppUserByStripeCustomerId(upCustomerId) : null;
+      // Non-fatal for the same reason as trial_will_end above: ack-first event,
+      // no redelivery — a transient DB blip must not cost the lifecycle row.
+      const upUser = upCustomerId ? await getAppUserByStripeCustomerId(upCustomerId).catch(() => null) : null;
       console.log(`${tag} [INPUT] Upcoming invoice customer=${upCustomerId ?? "(none)"} sub=${upSubId ?? "(none)"} amount_due=${upcoming.amount_due}`);
       await recordSubscriptionEvent({
         stripeEventId: event.id,
@@ -1289,8 +1294,13 @@ console.log(`${tag} [VERIFY] PASS`);
           stripeEventId: event.id,
           eventType: event.type,
           livemode: event.livemode,
+          // Same fallback chain as invoice.upcoming: current API shape first,
+          // then the legacy top-level `invoice.subscription`. These noop rows
+          // are the "money taken from someone we don't recognise" query, where
+          // recovery needs the subscription id most — 'unknown' is a last resort.
           stripeSubscriptionId: (() => {
-            const s = (invoice as unknown as { parent?: { subscription_details?: { subscription?: string | Stripe.Subscription } } }).parent?.subscription_details?.subscription;
+            const s = (invoice as unknown as { parent?: { subscription_details?: { subscription?: string | Stripe.Subscription } } }).parent?.subscription_details?.subscription
+              ?? (invoice as unknown as { subscription?: string | Stripe.Subscription }).subscription;
             return typeof s === "string" ? s : (s as Stripe.Subscription | undefined)?.id ?? "unknown";
           })(),
           stripeCustomerId: invoiceCustomerId,
@@ -1532,6 +1542,10 @@ export function registerStripeWebhookRoute(app: Express): void {
             void flushDeferredRoleSyncs();
           },
           (err: unknown) => {
+            // Failures are the slowest, most interesting samples — a DB
+            // timeout that skipped the ring would leave /health's p95
+            // pristine through a processing outage.
+            noteWebhookLatency(Date.now() - processingStartedAt, event.type);
             const msg = err instanceof Error ? err.message : String(err);
             console.error(`${tag} Access-changing processing FAILED for ${event.id} (${event.type}) — responding 5xx so Stripe retries: ${msg}`);
             void billingAlert("WEBHOOK_PROCESSING_FAILURE", { eventId: event.id, eventType: event.type, detail: msg });
@@ -1548,6 +1562,7 @@ export function registerStripeWebhookRoute(app: Express): void {
           return flushDeferredRoleSyncs();
         })
         .catch((err: unknown) => {
+          noteWebhookLatency(Date.now() - processingStartedAt, event.type);
           const msg = err instanceof Error ? err.message : String(err);
           console.error(`${tag} Async processing error for ${event.id}: ${msg}`);
           void billingAlert("WEBHOOK_PROCESSING_FAILURE", { eventId: event.id, eventType: event.type, detail: msg, nonBlocking: true });

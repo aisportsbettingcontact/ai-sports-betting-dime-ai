@@ -105,7 +105,7 @@ export async function recordSubscriptionEvent(input: RecordSubscriptionInput): P
     }
     const now = Date.now();
     await db.insert(subscriptionEvents).values({
-      stripeEventId: input.stripeEventId ?? null,
+      stripeEventId: cap(input.stripeEventId, 255),
       eventType: cap(input.eventType, 64) ?? "unknown",
       livemode: input.livemode,
       stripeSubscriptionId: cap(input.stripeSubscriptionId, 64) ?? "unknown",

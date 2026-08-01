@@ -1221,14 +1221,52 @@ async function checkSubscriptionLifecycleLedger() {
     SYNTHETIC
   );
 
-  // Redelivery: the (stripeEventId, kind) unique key must absorb it.
+  // Redelivery through the endpoint: absorbed by the stripe_webhook_events
+  // claim BEFORE the ledger is reached — the first line of defence.
   await deliverSigned(planChange, listenState.whsec);
   await sleep(1_500);
   rows = await subscriptionRowsFor(planChange.id);
   assertThat(
-    "EXACTLY-ONCE: redelivered plan change adds no second subscription_events row",
+    "EXACTLY-ONCE: redelivered plan change adds no second subscription_events row (claim guard)",
     rows.length === 1,
     `rows for ${planChange.id}: ${rows.length}`,
+    SYNTHETIC
+  );
+
+  // The ledger's OWN unique key, proven at the database — the claim guard
+  // filters endpoint redeliveries, so the (stripeEventId, kind) constraint is
+  // belt-and-braces that an HTTP test can never reach. Assert both halves of
+  // its semantics: a same-key insert is refused, and NULL-eventId rows
+  // (app-initiated actions) are exempt so repeated member actions all record.
+  let dupRefused = false;
+  try {
+    await query(
+      "INSERT INTO subscription_events (stripeEventId, eventType, livemode, stripeSubscriptionId, kind, outcome, actor, occurredAt, recordedAt) VALUES (?, 'customer.subscription.updated', 0, ?, 'plan_changed', 'recorded', 'webhook', ?, ?)",
+      [planChange.id, SEED_SUBSCRIPTION, Date.now(), Date.now()]
+    );
+  } catch (err) {
+    dupRefused = err?.errno === 1062;
+  }
+  assertThat(
+    "EXACTLY-ONCE: the (stripeEventId, kind) unique key itself refuses a duplicate (ER_DUP_ENTRY)",
+    dupRefused,
+    dupRefused ? "duplicate INSERT refused with errno 1062" : "duplicate INSERT was ACCEPTED — unique key missing or wrong",
+    SYNTHETIC
+  );
+  const nullRowsBefore = Number(await scalar("SELECT COUNT(*) FROM subscription_events WHERE stripeEventId IS NULL"));
+  await query(
+    "INSERT INTO subscription_events (stripeEventId, eventType, livemode, stripeSubscriptionId, kind, outcome, actor, occurredAt, recordedAt) VALUES (NULL, 'app.cancel_requested', 0, ?, 'cancel_scheduled', 'recorded', 'user', ?, ?)",
+    [SEED_SUBSCRIPTION, Date.now(), Date.now()]
+  );
+  await query(
+    "INSERT INTO subscription_events (stripeEventId, eventType, livemode, stripeSubscriptionId, kind, outcome, actor, occurredAt, recordedAt) VALUES (NULL, 'app.cancel_requested', 0, ?, 'cancel_scheduled', 'recorded', 'user', ?, ?)",
+    [SEED_SUBSCRIPTION, Date.now(), Date.now()]
+  );
+  const nullRowsAfter = Number(await scalar("SELECT COUNT(*) FROM subscription_events WHERE stripeEventId IS NULL"));
+  assertThat(
+    "app-initiated rows (NULL stripeEventId) are exempt from the unique key — repeated member actions all record",
+    nullRowsAfter === nullRowsBefore + 2,
+    `NULL-eventId rows ${nullRowsBefore} → ${nullRowsAfter} (expected +2)`,
     SYNTHETIC
   );
 
@@ -1300,6 +1338,93 @@ async function checkSubscriptionLifecycleLedger() {
   );
 }
 
+/**
+ * The avenue-#12 handlers that are DORMANT in production until the owner
+ * subscribes their events on the live endpoint. Proving them here means the
+ * day they are subscribed, they are already known-good — not hoped-good.
+ * None of these change entitlement; each must record its row and leave
+ * app_users untouched.
+ */
+async function checkDormantEventHandlers() {
+  const accessBefore = (await seededUser()).hasAccess;
+
+  // trial_will_end → subscription_events kind=trial_ending, access unchanged.
+  const trial = syntheticEvent("customer.subscription.trial_will_end", {
+    id: SEED_SUBSCRIPTION,
+    object: "subscription",
+    status: "trialing",
+    customer: SEED_CUSTOMER,
+    cancel_at_period_end: false,
+    trial_end: Math.floor(Date.now() / 1000) + 3 * 86400,
+    items: { data: [{ price: { id: SEED_STRIPE_PRICE, recurring: { interval: "month" } } }] },
+  });
+  let response = await deliverSigned(trial, listenState.whsec);
+  await awaitClaim(trial.id);
+  await sleep(1_500);
+  let rows = await subscriptionRowsFor(trial.id);
+  assertThat(
+    "trial_will_end records trial_ending/noop with the trial's end date",
+    response.status === 200 && rows.length === 1 &&
+      rows[0].kind === "trial_ending" && rows[0].outcome === "noop" &&
+      Number(rows[0].periodEnd) > Date.now(),
+    `HTTP ${response.status}; rows=${rows.length} kind=${rows[0]?.kind} outcome=${rows[0]?.outcome} periodEnd=${rows[0]?.periodEnd}`,
+    SYNTHETIC
+  );
+
+  // invoice.upcoming → renewal_upcoming. A PREVIEW: the invoice has no id.
+  const upcoming = syntheticEvent("invoice.upcoming", {
+    id: null,
+    object: "invoice",
+    customer: SEED_CUSTOMER,
+    amount_due: 4900,
+    currency: "usd",
+    period_end: Math.floor(Date.now() / 1000) + 30 * 86400,
+    parent: { subscription_details: { subscription: SEED_SUBSCRIPTION } },
+  });
+  response = await deliverSigned(upcoming, listenState.whsec);
+  await awaitClaim(upcoming.id);
+  await sleep(1_500);
+  rows = await subscriptionRowsFor(upcoming.id);
+  assertThat(
+    "invoice.upcoming records renewal_upcoming/noop despite the preview having no invoice id",
+    response.status === 200 && rows.length === 1 &&
+      rows[0].kind === "renewal_upcoming" && rows[0].outcome === "noop",
+    `HTTP ${response.status}; rows=${rows.length} kind=${rows[0]?.kind} outcome=${rows[0]?.outcome}`,
+    SYNTHETIC
+  );
+
+  // charge.dispute.closed (won) → payment_events row; access deliberately NOT
+  // auto-restored. The charge lookup against Stripe will fail for this fake
+  // ch_ id — the handler must degrade to an unresolved customer, not an error.
+  const dispute = syntheticEvent("charge.dispute.closed", {
+    id: `dp_e2e_${RUN_ID}`,
+    object: "dispute",
+    status: "won",
+    charge: `ch_e2e_nonexistent_${RUN_ID}`,
+    amount: 4900,
+    currency: "usd",
+    reason: "fraudulent",
+  });
+  response = await deliverSigned(dispute, listenState.whsec);
+  await awaitClaim(dispute.id);
+  await sleep(1_500);
+  const payRows = await query(
+    "SELECT kind, outcome, outcomeReason FROM payment_events WHERE stripeEventId = ?",
+    [dispute.id]
+  );
+  const accessAfter = (await seededUser()).hasAccess;
+  assertThat(
+    "dispute.closed(won) records disputed/noop and does NOT auto-restore access",
+    response.status === 200 && payRows.length === 1 &&
+      payRows[0].kind === "disputed" && payRows[0].outcome === "noop" &&
+      /WON/.test(payRows[0].outcomeReason ?? "") &&
+      Number(accessAfter) === Number(accessBefore),
+    `HTTP ${response.status}; rows=${payRows.length} kind=${payRows[0]?.kind} outcome=${payRows[0]?.outcome} ` +
+      `hasAccess ${accessBefore}→${accessAfter}`,
+    SYNTHETIC
+  );
+}
+
 /** Refund. Money went back, so entitlement must follow it (WBHK-004). */
 async function checkSyntheticRefund() {
   // Re-grant first so the revoke is an observable 1 → 0 transition rather than
@@ -1366,6 +1491,8 @@ async function runBattery() {
   await checkSubscriptionLifecycleLedger();
   await checkSyntheticRevoke();
   await checkSyntheticRefund();
+  log("    · dormant avenue-12 handlers");
+  await checkDormantEventHandlers();
 }
 
 // ─── Teardown ─────────────────────────────────────────────────────────────────

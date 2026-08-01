@@ -29,7 +29,7 @@ the role at login, so a demoted account would otherwise keep its powers until
 the token expired (`server/routers/appUsers.ts`, `resolveOwnerIdentity`).
 
 | Role | Grants |
-|---|---|
+| --- | --- |
 | `owner` | Everything. `ownerProcedure` re-reads the row fresh (no cache) before allowing admin mutations: plan CRUD, user management, cron/debug endpoints. Also the only role that reaches the Dime AI model (`canAccessDimeModel`). |
 | `admin` | Staff tooling via `handicapperProcedure`-class gates. **Not** the owner surfaces — `subscriptionPlans.*` and user management remain owner-only. Does **not** grant Dime AI model access. |
 | `handicapper` | Content/handicapping surfaces only. Currently unused. |
@@ -38,7 +38,7 @@ the token expired (`server/routers/appUsers.ts`, `resolveOwnerIdentity`).
 ### Privileged accounts
 
 | Account | Role |
-|---|---|
+| --- | --- |
 | `@prez` | `owner` |
 | `@ghosty` | `admin` |
 | `@sippi` | `admin` |
@@ -54,7 +54,7 @@ trusting this table — it is a snapshot.
 Entitlement is **separate from role**. Four columns on `app_users` decide it:
 
 | Column | Meaning |
-|---|---|
+| --- | --- |
 | `hasAccess` | Master switch. `false` denies regardless of anything else. |
 | `expiryDate` | UTC ms. **`NULL` means lifetime access** — the schema's documented contract (`drizzle/schema.ts`). A non-null value in the past denies. |
 | `stripePlanId` | The plan **slug**, a foreign key *by value*. |
