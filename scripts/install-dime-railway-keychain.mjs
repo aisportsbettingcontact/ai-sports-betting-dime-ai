@@ -32,6 +32,7 @@ import { verifyAbsoluteExecutable } from "./lib/dime-trusted-executables.mjs";
 import {
   AUTHENTICATION_CANDIDATE_DESCRIPTOR,
   buildAuthenticationClosureCandidate,
+  resolveCredentialExecutableClosure,
 } from "./build-dime-authentication-closure.mjs";
 
 const execFileAsync = promisify(execFile);
@@ -85,7 +86,10 @@ async function main() {
   await chmod(SECURE_RAILWAY_DIRECTORY, 0o700);
   await mkdir(SECURE_RAILWAY_HOME, { recursive: true, mode: 0o700 });
   await hardenTree(SECURE_RAILWAY_HOME);
-  const authenticationCandidate = await buildAuthenticationClosureCandidate();
+  const credentialExecutables = await resolveCredentialExecutableClosure();
+  const authenticationCandidate = await buildAuthenticationClosureCandidate({
+    credentialExecutables,
+  });
   const [node, railway, sourceSha256, productionAuthSha256] = await Promise.all(
     [
       verifyAbsoluteExecutable(process.execPath, { label: "node" }),
@@ -161,7 +165,7 @@ async function main() {
           },
           executables: {
             node: { path: node.path, sha256: node.sha256 },
-            railway: { path: railway.path, sha256: railway.sha256 },
+            railway,
           },
           authenticationChild: {
             path: AUTHENTICATION_ENTRYPOINT,

@@ -44,6 +44,10 @@ import {
   verifyAuthenticationClosure,
 } from "./lib/dime-authentication-closure.mjs";
 import {
+  EXECUTABLE_TRUST_DIRECTORY,
+  verifyOnePasswordSigningIdentity,
+} from "./lib/dime-trusted-executables.mjs";
+import {
   SECURE_RAILWAY_DIRECTORY,
   SECURE_RAILWAY_EXECUTABLE,
   SECURE_RAILWAY_PROVENANCE,
@@ -62,6 +66,11 @@ const brokerCandidateDescriptorPath = resolve(
   "dime-railway-keychain.provenance-candidate.json"
 );
 const CONFIRMATION = "PROVISION_DIME_CREDENTIAL_TRUST_V2";
+const TRUSTED_RAILWAY_EXECUTABLE = resolve(
+  EXECUTABLE_TRUST_DIRECTORY,
+  "railway-v1"
+);
+const HASH_PINNED_EXECUTABLES = ["node", "env", "git", "gh", "aws"];
 
 function invariant(condition, message) {
   if (!condition) throw new Error(message);
@@ -196,6 +205,119 @@ async function requireRootProtectedExecutable(path, expectedSha256, label) {
   );
 }
 
+async function requireReviewedExecutable(executable, label) {
+  invariant(
+    executable &&
+      typeof executable.path === "string" &&
+      /^[0-9a-f]{64}$/.test(executable.sha256) &&
+      Number.isInteger(executable.uid) &&
+      Number.isInteger(executable.mode),
+    `${label} candidate identity is invalid`
+  );
+  invariant(
+    (await realpath(executable.path)) === executable.path,
+    `${label} path must be canonical`
+  );
+  const state = await lstat(executable.path);
+  invariant(
+    state.isFile() &&
+      !state.isSymbolicLink() &&
+      state.uid === executable.uid &&
+      (state.mode & 0o7777) === executable.mode &&
+      (state.mode & 0o022) === 0 &&
+      (state.mode & 0o111) !== 0 &&
+      (await sha256File(executable.path)) === executable.sha256,
+    `${label} changed after independent candidate review`
+  );
+  return executable;
+}
+
+async function requireAbsent(path, label) {
+  await lstat(path)
+    .then(() => {
+      throw new Error(
+        `${label} already exists; reviewed replacement is required`
+      );
+    })
+    .catch(error => {
+      if (error?.code !== "ENOENT") throw error;
+    });
+}
+
+async function validateCredentialExecutableClosure(candidateDescriptor) {
+  const executables = candidateDescriptor.credentialExecutables;
+  invariant(
+    executables && typeof executables === "object",
+    "credential executable closure is missing"
+  );
+  invariant(
+    HASH_PINNED_EXECUTABLES.every(name => executables[name]),
+    "credential executable closure is incomplete"
+  );
+  invariant(executables.op, "1Password executable identity is missing");
+  await Promise.all(
+    [...HASH_PINNED_EXECUTABLES, "op"].map(name =>
+      requireReviewedExecutable(executables[name], name)
+    )
+  );
+  invariant(
+    executables.node.path === candidateDescriptor.executables.node.path &&
+      executables.node.sha256 === candidateDescriptor.executables.node.sha256,
+    "credential and authentication Node identities differ"
+  );
+  await verifyOnePasswordSigningIdentity(executables.op.path);
+  return executables;
+}
+
+async function requireExecutableTrustTargetsAbsent() {
+  await mkdir(EXECUTABLE_TRUST_DIRECTORY, { recursive: true, mode: 0o755 });
+  await chown(EXECUTABLE_TRUST_DIRECTORY, 0, 0);
+  await chmod(EXECUTABLE_TRUST_DIRECTORY, 0o755);
+  await Promise.all([
+    ...HASH_PINNED_EXECUTABLES.map(name =>
+      requireAbsent(
+        resolve(EXECUTABLE_TRUST_DIRECTORY, `${name}.sha256`),
+        `${name} executable provenance`
+      )
+    ),
+    requireAbsent(TRUSTED_RAILWAY_EXECUTABLE, "trusted Railway executable"),
+  ]);
+}
+
+async function provisionExecutableTrust(executables) {
+  for (const name of HASH_PINNED_EXECUTABLES) {
+    await writeProtectedFile(
+      resolve(EXECUTABLE_TRUST_DIRECTORY, `${name}.sha256`),
+      `${executables[name].sha256}\n`
+    );
+  }
+}
+
+async function provisionTrustedRailwayExecutable(executable) {
+  await requireReviewedExecutable(executable, "Railway executable");
+  const temporary = `${TRUSTED_RAILWAY_EXECUTABLE}.${process.pid}.tmp`;
+  await writeFile(temporary, await readFile(executable.path), {
+    mode: 0o500,
+    flag: "wx",
+  });
+  await chown(temporary, 0, 0);
+  await chmod(temporary, 0o755);
+  invariant(
+    (await sha256File(temporary)) === executable.sha256,
+    "trusted Railway copy differs from reviewed source"
+  );
+  await rename(temporary, TRUSTED_RAILWAY_EXECUTABLE);
+  await requireRootProtectedExecutable(
+    TRUSTED_RAILWAY_EXECUTABLE,
+    executable.sha256,
+    "trusted Railway executable"
+  );
+  return {
+    path: TRUSTED_RAILWAY_EXECUTABLE,
+    sha256: executable.sha256,
+  };
+}
+
 async function writeProtectedFile(path, bytes) {
   const temporary = `${path}.${process.pid}.tmp`;
   await writeFile(temporary, bytes, { mode: 0o400, flag: "wx" });
@@ -238,6 +360,12 @@ async function main() {
       brokerCandidateDescriptor.broker?.sourceSha256,
     "Railway broker source changed after candidate review"
   );
+  const credentialExecutables =
+    await validateCredentialExecutableClosure(candidateDescriptor);
+  await requireReviewedExecutable(
+    brokerCandidateDescriptor.executables.railway,
+    "Railway executable"
+  );
   await Promise.all([
     requireRootProtectedExecutable(
       candidateDescriptor.executables.node.path,
@@ -249,11 +377,7 @@ async function main() {
       candidateDescriptor.executables.browser.sha256,
       "browser executable"
     ),
-    requireRootProtectedExecutable(
-      brokerCandidateDescriptor.executables.railway.path,
-      brokerCandidateDescriptor.executables.railway.sha256,
-      "Railway executable"
-    ),
+    requireReviewedExecutable(credentialExecutables.op, "1Password executable"),
   ]);
   const [candidateState, secureDirectoryState] = await Promise.all([
     lstat(AUTHENTICATION_CANDIDATE_DIRECTORY),
@@ -294,6 +418,12 @@ async function main() {
     .catch(error => {
       if (error?.code !== "ENOENT") throw error;
     });
+
+  await requireExecutableTrustTargetsAbsent();
+  await provisionExecutableTrust(credentialExecutables);
+  const trustedRailway = await provisionTrustedRailwayExecutable(
+    brokerCandidateDescriptor.executables.railway
+  );
 
   const applicationStaging = `${AUTHENTICATION_APPLICATION_DIRECTORY}.${process.pid}.staging`;
   await mkdir(dirname(AUTHENTICATION_APPLICATION_DIRECTORY), {
@@ -352,14 +482,14 @@ async function main() {
     publicKeySha256,
   ] = await Promise.all([
     sha256File(candidateDescriptor.executables.node.path),
-    sha256File(brokerCandidateDescriptor.executables.railway.path),
+    sha256File(trustedRailway.path),
     sha256File(AUTHENTICATION_ENTRYPOINT),
     sha256File(AUTHENTICATION_CLOSURE_MANIFEST),
     sha256File(AUTHENTICATION_CLOSURE_PUBLIC_KEY),
   ]);
   invariant(
     nodeSha256 === candidateDescriptor.executables.node.sha256 &&
-      railwaySha256 === brokerCandidateDescriptor.executables.railway.sha256 &&
+      railwaySha256 === trustedRailway.sha256 &&
       authSha256 === candidateDescriptor.deterministicBundle.sha256,
     "candidate executable identity changed before administrator promotion"
   );
@@ -377,10 +507,7 @@ async function main() {
         candidateDescriptor.executables.node.path
       ),
       compilerString("DIME_NODE_SHA256", nodeSha256),
-      compilerString(
-        "DIME_RAILWAY_EXECUTABLE",
-        brokerCandidateDescriptor.executables.railway.path
-      ),
+      compilerString("DIME_RAILWAY_EXECUTABLE", trustedRailway.path),
       compilerString("DIME_RAILWAY_SHA256", railwaySha256),
       compilerString(
         "DIME_AUTH_APPLICATION_DIRECTORY",
@@ -449,6 +576,8 @@ async function main() {
       authenticationApplication: AUTHENTICATION_APPLICATION_DIRECTORY,
       closureManifest: AUTHENTICATION_CLOSURE_MANIFEST,
       brokerProvenance: SECURE_RAILWAY_PROVENANCE,
+      executableTrustDirectory: EXECUTABLE_TRUST_DIRECTORY,
+      trustedRailwayExecutable: TRUSTED_RAILWAY_EXECUTABLE,
       credentialsRead: false,
       loginAttempted: false,
       providerExecutionAttempted: false,
