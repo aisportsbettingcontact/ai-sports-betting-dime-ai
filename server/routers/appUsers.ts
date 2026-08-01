@@ -30,7 +30,12 @@ import { notifyOwner } from "../_core/notification";
 import { getCachedAppUser, getCachedAppUserEntry, setCachedAppUser, invalidateCachedAppUser } from "../dbCircuitBreaker";
 import { resolveOwnerIdentity } from "../ownerAuth";
 import { getDb } from "../db";
-import { discordInviteTokens, appUsers as appUsersTable } from "../../drizzle/schema";
+import {
+  discordInviteTokens,
+  appUsers as appUsersTable,
+  planPrices,
+  subscriptionPlans,
+} from "../../drizzle/schema";
 import { eq, ne, and, isNull, gt, or } from "drizzle-orm";
 import { emitServerEvent } from "../analytics/emitServer";
 
@@ -272,6 +277,73 @@ export const stripeAppUserProcedure = stripeProcedure.use(csrfOriginCheck).use(a
   }
   return next({ ctx: { ...ctx, appUser: user } });
 });
+
+/**
+ * The billing catalogue, indexed for lookup.
+ *
+ * `plan_prices` is the authority on what a member is actually paying: the plan
+ * slug alone cannot tell you the amount, the currency, or whether the SKU is
+ * recurring or a one-off. A NULL `billingInterval` is the schema's encoding of
+ * "not recurring" — i.e. lifetime — and is what distinguishes a $999.99 lifetime
+ * seat from a $99.99/month one under the same plan.
+ */
+type CataloguePrice = {
+  id: number;
+  stripePriceId: string;
+  amountCents: number;
+  currency: string;
+  billingInterval: string | null;
+  intervalCount: number | null;
+  plan: { slug: string; name: string; planType: string; active: boolean };
+};
+
+async function loadBillingCatalogue(): Promise<{
+  byPriceId: Map<number, CataloguePrice>;
+  byPlanSlug: Map<string, CataloguePrice["plan"]>;
+}> {
+  const byPriceId = new Map<number, CataloguePrice>();
+  const byPlanSlug = new Map<string, CataloguePrice["plan"]>();
+  const db = await getDb();
+  if (!db) return { byPriceId, byPlanSlug };
+
+  try {
+    const rows = await db
+      .select({
+        priceId: planPrices.id,
+        stripePriceId: planPrices.stripePriceId,
+        amountCents: planPrices.amountCents,
+        currency: planPrices.currency,
+        // Drizzle property is `interval`; the DB column is `billingInterval`.
+        billingInterval: planPrices.interval,
+        intervalCount: planPrices.intervalCount,
+        slug: subscriptionPlans.slug,
+        name: subscriptionPlans.name,
+        planType: subscriptionPlans.planType,
+        planActive: subscriptionPlans.active,
+      })
+      .from(planPrices)
+      .innerJoin(subscriptionPlans, eq(subscriptionPlans.id, planPrices.planId));
+
+    for (const r of rows) {
+      const plan = { slug: r.slug, name: r.name, planType: r.planType, active: Boolean(r.planActive) };
+      byPriceId.set(r.priceId, {
+        id: r.priceId,
+        stripePriceId: r.stripePriceId,
+        amountCents: r.amountCents,
+        currency: r.currency,
+        billingInterval: r.billingInterval ?? null,
+        intervalCount: r.intervalCount ?? null,
+        plan,
+      });
+      if (!byPlanSlug.has(r.slug)) byPlanSlug.set(r.slug, plan);
+    }
+  } catch (err) {
+    // Degrade to "no plan detail" rather than failing the whole admin table —
+    // roles, access and Discord state are still worth rendering.
+    console.error(`[AppAdmin][loadBillingCatalogue][FAIL] ${(err as Error)?.message ?? String(err)}`);
+  }
+  return { byPriceId, byPlanSlug };
+}
 
 export const appUsersRouter = router({
   // ─── Auth ──────────────────────────────────────────────────────────────────
@@ -591,27 +663,86 @@ export const appUsersRouter = router({
       console.error(`[AppAdmin][listUsers][FAIL] error=${msg}`);
       throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Failed to load users. Please refresh the page.' });
     }
-    return users.map((u) => ({
-      id: u.id,
-      email: u.email,
-      username: u.username,
-      role: u.role,
-      hasAccess: u.hasAccess,
-      expiryDate: u.expiryDate,
-      createdAt: u.createdAt,
-      lastSignedIn: u.lastSignedIn,
-      termsAccepted: u.termsAccepted,
-      termsAcceptedAt: u.termsAcceptedAt,
-      discordId: u.discordId ?? null,
-      discordUsername: u.discordUsername ?? null,
-      discordConnectedAt: u.discordConnectedAt ?? null,
-      manualDiscordId: u.manualDiscordId ?? null,
-      // Stripe fields
-      stripeCustomerId: u.stripeCustomerId ?? null,
-      stripePlanId: u.stripePlanId ?? null,
-      stripeSubscriptionId: u.stripeSubscriptionId ?? null,
-      pendingSetup: u.pendingSetup ?? false,
-    }));
+
+    // Resolve the billing catalogue ONCE and index it, rather than per user.
+    // Both tables are small (plans × prices), so this is a single extra round
+    // trip regardless of headcount — no N+1.
+    const catalogue = await loadBillingCatalogue();
+
+    const now = Date.now();
+    return users.map((u) => {
+      // Resolve by priceId first: it identifies the exact SKU the member is on,
+      // including which of several prices under the same plan. Fall back to the
+      // plan slug so members provisioned before planPriceId existed still show
+      // their plan instead of rendering as "no plan".
+      const price = u.planPriceId != null ? catalogue.byPriceId.get(u.planPriceId) ?? null : null;
+      const plan = price?.plan ?? (u.stripePlanId ? catalogue.byPlanSlug.get(u.stripePlanId) ?? null : null);
+
+      // The documented entitlement predicate (USERS.md): hasAccess is the master
+      // switch, NULL expiry means lifetime. Computed here so the table cannot
+      // drift from the contract the server enforces.
+      const entitled = Boolean(u.hasAccess) && (u.expiryDate == null || now <= u.expiryDate);
+
+      return {
+        id: u.id,
+        email: u.email,
+        username: u.username,
+        role: u.role,
+        hasAccess: u.hasAccess,
+        expiryDate: u.expiryDate,
+        createdAt: u.createdAt,
+        lastSignedIn: u.lastSignedIn,
+        termsAccepted: u.termsAccepted,
+        termsAcceptedAt: u.termsAcceptedAt,
+        discordId: u.discordId ?? null,
+        discordUsername: u.discordUsername ?? null,
+        discordConnectedAt: u.discordConnectedAt ?? null,
+        manualDiscordId: u.manualDiscordId ?? null,
+
+        // ── Entitlement, resolved ────────────────────────────────────────────
+        entitled,
+        planPriceId: u.planPriceId ?? null,
+        /**
+         * The real SKU. Previously the UI had none of this and inferred the
+         * plan from `stripePlanId === 'annual' ? ANNUAL : MONTHLY`, which
+         * labelled every lifetime member "MONTHLY" once plan slugs stopped
+         * being the literal strings "monthly"/"annual".
+         */
+        plan: plan
+          ? {
+              slug: plan.slug,
+              name: plan.name,
+              planType: plan.planType,
+              active: plan.active,
+              priceId: price?.id ?? null,
+              stripePriceId: price?.stripePriceId ?? null,
+              amountCents: price?.amountCents ?? null,
+              currency: price?.currency ?? null,
+              billingInterval: price?.billingInterval ?? null,
+              intervalCount: price?.intervalCount ?? null,
+              /** No recurring interval on the price === a one-off / lifetime SKU. */
+              isLifetime: price ? price.billingInterval == null : null,
+              priceResolved: price != null,
+            }
+          : null,
+
+        // ── Stripe linkage ───────────────────────────────────────────────────
+        stripeCustomerId: u.stripeCustomerId ?? null,
+        stripePlanId: u.stripePlanId ?? null,
+        stripeSubscriptionId: u.stripeSubscriptionId ?? null,
+        stripeSubscriptionStatus: u.stripeSubscriptionStatus ?? null,
+        pendingStripeSessionId: u.pendingStripeSessionId ?? null,
+        lastStripeEventAt: u.lastStripeEventAt ?? null,
+        pendingSetup: u.pendingSetup ?? false,
+        /**
+         * How this member got access. "stripe" = a Stripe customer exists;
+         * "manual" = granted directly in the database (comped, migrated, or a
+         * repaired drop). Made explicit because the two are indistinguishable
+         * from entitlement alone, and the distinction matters for revenue.
+         */
+        accessSource: u.stripeCustomerId ? ("stripe" as const) : ("manual" as const),
+      };
+    });
   }),
 
   // ─── Sync Discord role for a specific user (owner-only) ───────────────────────
