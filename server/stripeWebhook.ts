@@ -1151,6 +1151,17 @@ console.log(`${tag} [VERIFY] PASS`);
         attemptCount: invoice.attempt_count ?? null,
         occurredAt: event.created * 1000,
       });
+      // Push it. The ledger makes a failed renewal queryable; this makes it
+      // arrive. Under a recurring model this is the earliest churn signal, and
+      // "queryable by someone who thinks to look" is not a signal.
+      void billingAlert("PAYMENT_FAILED", {
+        invoiceId: invoice.id,
+        customerId: typeof invoice.customer === "string" ? invoice.customer : null,
+        email: invoice.customer_email ?? null,
+        amount: invoice.amount_due != null ? `${(invoice.amount_due / 100).toFixed(2)} ${(invoice.currency ?? "usd").toUpperCase()}` : null,
+        attempt: invoice.attempt_count ?? null,
+        note: "Access retained — Stripe retry schedule owns recovery",
+      });
       console.log(`${tag} [VERIFY] PASS`);
       break;
     }
@@ -1184,6 +1195,13 @@ console.log(`${tag} [VERIFY] PASS`);
         failureCode: pi.last_payment_error?.code ?? pi.last_payment_error?.decline_code ?? null,
         failureMessage: pi.last_payment_error?.message ?? null,
         occurredAt: event.created * 1000,
+      });
+      void billingAlert("PAYMENT_FAILED", {
+        paymentIntentId: pi.id,
+        customerId: typeof pi.customer === "string" ? pi.customer : null,
+        amount: pi.amount != null ? `${(pi.amount / 100).toFixed(2)} ${(pi.currency ?? "usd").toUpperCase()}` : null,
+        failureCode: pi.last_payment_error?.code ?? pi.last_payment_error?.decline_code ?? null,
+        detail: pi.last_payment_error?.message ?? null,
       });
       console.log(`${tag} [VERIFY] PASS`);
       break;

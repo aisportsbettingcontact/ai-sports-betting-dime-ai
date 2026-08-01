@@ -44,7 +44,8 @@ export type BillingAlertKind =
   | "RECONCILE_DRIFT"
   | "REFUND_RECEIVED"
   | "DISPUTE_OPENED"
-  | "CUSTOMER_LINK_CONFLICT";
+  | "CUSTOMER_LINK_CONFLICT"
+  | "PAYMENT_FAILED";
 
 /**
  * Severity per kind. Drives console.error vs console.warn and the embed colour.
@@ -59,7 +60,12 @@ const SEVERITY: Record<BillingAlertKind, "error" | "warn"> = {
   RECONCILE_DRIFT: "warn",
   REFUND_RECEIVED: "warn",
   DISPUTE_OPENED: "error",
+  // A failed renewal is not an outage — Stripe Smart Retries own recovery and
+  // access is deliberately retained. It is "warn" so it does not sit at the
+  // same level as a lost grant, but it must still reach a human: under a
+  // recurring model this is the earliest signal that a member is churning.
   CUSTOMER_LINK_CONFLICT: "error",
+  PAYMENT_FAILED: "warn",
 };
 
 /** Discord embed colours — same palette family as discordSecurityAlert.ts. */
@@ -72,6 +78,7 @@ const EMBED_COLORS: Record<BillingAlertKind, number> = {
   REFUND_RECEIVED: 0xeb6c33, // orange
   DISPUTE_OPENED: 0xf8312f, // bright red — chargeback clock is running
   CUSTOMER_LINK_CONFLICT: 0xeb6c33, // orange
+  PAYMENT_FAILED: 0xfee75c, // warning yellow — recoverable, but the clock is running
 };
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -394,6 +401,30 @@ async function postToDiscord(url: string, body: unknown, kind: BillingAlertKind)
  * @param kind   the money-path failure class
  * @param detail arbitrary structured context (ids, statuses, error messages)
  */
+/**
+ * Announce the alert transport once, at boot.
+ *
+ * Previously the "no webhook configured" notice only appeared the first time an
+ * alert actually fired — i.e. at the moment something had already gone wrong,
+ * buried in the same log stream the alert was meant to escape. Saying it at
+ * startup means the gap is visible before it costs anything.
+ */
+export function reportBillingAlertTransport(): void {
+  const url =
+    process.env.BILLING_ALERT_DISCORD_WEBHOOK_URL ??
+    process.env.DISCORD_BILLING_WEBHOOK_URL ??
+    "";
+  if (url) {
+    console.log(`${TAG} [VERIFY] PASS — billing alerts will be delivered to Discord`);
+    return;
+  }
+  console.warn(
+    `${TAG} [WARN] BILLING_ALERT_DISCORD_WEBHOOK_URL is NOT set — billing alerts are CONSOLE-ONLY. ` +
+      `Failed renewals, refunds, disputes and webhook failures will be logged but will reach nobody. ` +
+      `Set it in Railway to receive them.`
+  );
+}
+
 export async function billingAlert(
   kind: BillingAlertKind,
   detail: Record<string, unknown>,
