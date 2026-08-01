@@ -1,0 +1,99 @@
+# Bet grading — GitHub Actions timer for tracked-bet settlement.
+#
+# Fires POST /api/cron/bet-grade (today + yesterday) every 10 minutes, and
+# POST /api/cron/bet-grade-sweep (every PENDING bet, all dates) once nightly.
+#
+# Why this workflow exists: settlement previously ran ONLY inside the in-process
+# scheduler, which sits behind DISABLE_BACKGROUND_JOBS. Setting that flag to cut
+# Railway credits would have stopped bet grading with no error and no fallback —
+# bets would simply never leave PENDING. Both endpoints are shared-secret authed,
+# respond 200 immediately, and run under a single-flight run-lock, so firing them
+# alongside the in-process scheduler is safe (whichever gets there first wins;
+# the other no-ops on an empty PENDING set).
+#
+# Required repo configuration (Production environment):
+#   RAILWAY_APP_URL (repo variable) — e.g. https://your-app.up.railway.app  (no trailing slash)
+#   CRON_SECRET (repo secret)      — must match the CRON_SECRET env var set in Railway → Variables
+#
+# Note: GitHub cron is UTC and best-effort (runs can be delayed minutes under
+# platform load). 08:15 UTC ≈ 00:15 / 01:15 PT depending on DST, which is after
+# the last West-Coast game of the night has gone final.
+name: Cron — bet grading
+
+on:
+  schedule:
+    - cron: "*/10 * * * *" # incremental: today + yesterday
+    - cron: "15 8 * * *" # nightly catch-all sweep, all dates
+  workflow_dispatch:
+    inputs:
+      sweep:
+        description: "Run the all-dates sweep instead of the incremental cycle"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cron-bet-grade
+  cancel-in-progress: false
+
+jobs:
+  fire:
+    name: Trigger bet grading
+    runs-on: ubuntu-latest
+    # Required by the Actions security contract (scripts/check-github-actions-security.mjs):
+    # any workflow referencing a production secret must run in the protected
+    # Production environment. Matches cron-scores.yml / cron-vsin-odds.yml.
+    environment: Production
+    steps:
+      - name: "[STEP] Preflight — verify required secrets are present"
+        env:
+          RAILWAY_APP_URL: ${{ vars.RAILWAY_APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -euo pipefail
+          if [ -z "${RAILWAY_APP_URL:-}" ]; then
+            echo "::error::RAILWAY_APP_URL variable is not set"; exit 1
+          fi
+          if [ -z "${CRON_SECRET:-}" ]; then
+            echo "::error::CRON_SECRET secret is not set"; exit 1
+          fi
+          echo "[PREFLIGHT] app url + secret present"
+
+      - name: "[STEP] Resolve which endpoint this run should hit"
+        id: route
+        env:
+          SCHEDULE: ${{ github.event.schedule }}
+          MANUAL_SWEEP: ${{ github.event.inputs.sweep }}
+        run: |
+          set -euo pipefail
+          if [ "${SCHEDULE:-}" = "15 8 * * *" ] || [ "${MANUAL_SWEEP:-false}" = "true" ]; then
+            echo "job=bet-grade-sweep" >> "$GITHUB_OUTPUT"
+          else
+            echo "job=bet-grade" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: "[STEP] POST /api/cron/${{ steps.route.outputs.job }} (secret never printed)"
+        env:
+          RAILWAY_APP_URL: ${{ vars.RAILWAY_APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          JOB: ${{ steps.route.outputs.job }}
+        run: |
+          set -euo pipefail
+          URL="${RAILWAY_APP_URL%/}/api/cron/${JOB}"
+          echo "[INPUT] POST $URL at $(date -u +%FT%TZ)"
+          BODY_FILE="$(mktemp)"
+          CODE=$(curl -sS -o "$BODY_FILE" -w '%{http_code}' \
+            --max-time 60 --retry 2 --retry-delay 5 --retry-connrefused \
+            -X POST "$URL" \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            -H "Content-Type: application/json" \
+            -H "User-Agent: gh-actions-cron/${JOB}")
+          echo "[OUTPUT] HTTP $CODE"
+          echo "[OUTPUT] body: $(cat "$BODY_FILE")"
+          if [ "$CODE" -lt 200 ] || [ "$CODE" -ge 300 ]; then
+            echo "::error::${JOB} trigger failed with HTTP $CODE"
+            exit 1
+          fi
+          echo "[VERIFY] PASS — ${JOB} accepted (HTTP $CODE)"
