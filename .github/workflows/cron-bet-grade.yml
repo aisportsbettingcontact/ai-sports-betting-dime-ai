@@ -12,8 +12,8 @@
 # the other no-ops on an empty PENDING set).
 #
 # Required repo configuration (Production environment):
-#   vars.RAILWAY_APP_URL    — e.g. https://your-app.up.railway.app  (no trailing slash)
-#   secrets.CRON_SECRET     — must match the CRON_SECRET env var set in Railway → Variables
+#   RAILWAY_APP_URL (repo variable) — e.g. https://your-app.up.railway.app  (no trailing slash)
+#   CRON_SECRET (repo secret)      — must match the CRON_SECRET env var set in Railway → Variables
 #
 # Note: GitHub cron is UTC and best-effort (runs can be delayed minutes under
 # platform load). 08:15 UTC ≈ 00:15 / 01:15 PT depending on DST, which is after
