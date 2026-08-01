@@ -3,14 +3,14 @@
 Every way an agent executes against this repo, and which files configure each. Deep pi
 runbook: `references/pi-harness.md`.
 
-| Harness | Runtime | Context it loads | Config files |
-|---|---|---|---|
-| Claude Code | CLI / desktop / cloud | `CLAUDE.md`, `.claude/skills/`, plugins, `.claude/commands/` | `.claude/settings.json`, `.mcp.json`, `.claude/scripts/bootstrap-plugins.sh` (SessionStart hook) |
-| pi (interactive) | global `@earendil-works/pi-coding-agent` | `AGENTS.md` (not CLAUDE.md — first match wins), all skill trees + packages, `.claude/commands/` as `/templates`, `.pi/APPEND_SYSTEM.md` | `.pi/settings.json` (skills, prompts, packages, model policy, dime theme), `.pi/extensions/dime-guard.ts` (law enforcement at the tool layer), `~/.pi/agent/trust.json` |
-| pi (headless) | `pi -p` / `--mode json` / `--mode rpc` | same, with `-a`/`--approve` for project trust | same |
-| Embedded pi runtime | `@earendil-works/pi-agent-core` + `pi-ai` in the Express server | system prompt supplied by caller | `server/_core/piAgent.ts` (`createPiAgent`/`runPiAgent`) |
-| Agent SDK runner | `@anthropic-ai/claude-agent-sdk` subprocess | Claude Code context | `server/_core/dimeAgent.ts` (`runDimeAgent`) |
-| Codex | OpenAI Codex CLI/cloud | `AGENTS.md` (native), `CODEX.md` | `CODEX.md`; model `gpt-5.6-sol` per LLM.md |
+| Harness             | Runtime                                                         | Context it loads                                                                                                                        | Config files                                                                                                                                                            |
+| ------------------- | --------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Claude Code         | CLI / desktop / cloud                                           | `CLAUDE.md`, `.claude/skills/`, plugins, `.claude/commands/`                                                                            | `.claude/settings.json`, `.mcp.json`, `.claude/scripts/bootstrap-plugins.sh` (SessionStart hook)                                                                        |
+| pi (interactive)    | global `@earendil-works/pi-coding-agent`                        | `AGENTS.md` (not CLAUDE.md — first match wins), all skill trees + packages, `.claude/commands/` as `/templates`, `.pi/APPEND_SYSTEM.md` | `.pi/settings.json` (skills, prompts, packages, model policy, dime theme), `.pi/extensions/dime-guard.ts` (law enforcement at the tool layer), `~/.pi/agent/trust.json` |
+| pi (headless)       | `pi -p` / `--mode json` / `--mode rpc`                          | same, with `-a`/`--approve` for project trust                                                                                           | same                                                                                                                                                                    |
+| Embedded pi runtime | `@earendil-works/pi-agent-core` + `pi-ai` in the Express server | system prompt supplied by caller                                                                                                        | `server/_core/piAgent.ts` (`createPiAgent`/`runPiAgent`)                                                                                                                |
+| Agent SDK runner    | `@anthropic-ai/claude-agent-sdk` subprocess                     | Claude Code context                                                                                                                     | `server/_core/dimeAgent.ts` (`runDimeAgent`)                                                                                                                            |
+| Codex               | OpenAI Codex CLI/cloud                                          | `AGENTS.md` (native), `CODEX.md`                                                                                                        | `CODEX.md`; model `gpt-5.6-sol` per LLM.md                                                                                                                              |
 
 ## Choosing a runtime
 

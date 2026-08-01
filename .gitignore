@@ -127,6 +127,8 @@ __pycache__/
 
 # Claude skills symlinks (local tooling, not for deployment)
 .claude/skills/*
+# pi-harness is real repo content (execution-routing skill), not a symlink
+!.claude/skills/pi-harness/
 
 # Audit notes, DB dumps, and run artifacts (non-sensitive but bulky)
 audit-notes/

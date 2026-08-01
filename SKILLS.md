@@ -7,17 +7,17 @@ collection contains; this file covers where they live and how they load and trig
 
 ## Sources
 
-| Source | Count | Claude Code | pi |
-|---|---|---|---|
-| `.claude/skills/` (flat: uipro, taste, phuryn PM, emil, anthropic, repo-specific…) | 99 | native | `.pi/settings.json` `skills` (7 older uipro dirs excluded — superseded below) |
-| `.claude/plugins-vendored/ui-ux-pro-max-skill/.claude/skills/` | 7 | plugin | settings (v2.11.0, newer than flat copies: 84 styles / 192 palettes / 74 fonts). Path must point INSIDE the plugin — pi skips dot-directories (`.claude/`) when recursing |
-| `.claude/plugins-vendored/pm-skills/` (deanpeters) | 70 | plugins (55 enabled) | settings (all 70) |
-| `.claude/plugins-vendored/dime-vendored/` (superpowers 14, mcp-server-dev, figma) | 31 | plugins | settings |
-| `.claude/plugins-vendored/railway-skills/` | 1 | plugin | settings |
-| `.agents/skills/` (universal: frontend-design, stripe-best-practices, architect-*, advertising) | 16 | native | auto-discovered |
-| Package `git:github.com/badlogic/pi-skills` (web search, browser automation, Google APIs, transcription) | ~8 | — | `.pi/settings.json` `packages` → `.pi/git/` |
-| Package `git:github.com/anthropics/skills` (docx/pdf/pptx/xlsx, web artifacts) | ~15 | — | same |
-| `.claude/plugins-vendored/taste-skill/` | 13 | plugin | *skipped — exact duplicates of the flat copies* |
+| Source                                                                                                   | Count | Claude Code          | pi                                                                                                                                                                        |
+| -------------------------------------------------------------------------------------------------------- | ----- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `.claude/skills/` (flat: uipro, taste, phuryn PM, emil, anthropic, repo-specific…)                       | 99    | native               | `.pi/settings.json` `skills` (7 older uipro dirs excluded — superseded below)                                                                                             |
+| `.claude/plugins-vendored/ui-ux-pro-max-skill/.claude/skills/`                                           | 7     | plugin               | settings (v2.11.0, newer than flat copies: 84 styles / 192 palettes / 74 fonts). Path must point INSIDE the plugin — pi skips dot-directories (`.claude/`) when recursing |
+| `.claude/plugins-vendored/pm-skills/` (deanpeters)                                                       | 70    | plugins (55 enabled) | settings (all 70)                                                                                                                                                         |
+| `.claude/plugins-vendored/dime-vendored/` (superpowers 14, mcp-server-dev, figma)                        | 31    | plugins              | settings                                                                                                                                                                  |
+| `.claude/plugins-vendored/railway-skills/`                                                               | 1     | plugin               | settings                                                                                                                                                                  |
+| `.agents/skills/` (universal: frontend-design, stripe-best-practices, architect-\*, advertising)         | 16    | native               | auto-discovered                                                                                                                                                           |
+| Package `git:github.com/badlogic/pi-skills` (web search, browser automation, Google APIs, transcription) | ~8    | —                    | `.pi/settings.json` `packages` → `.pi/git/`                                                                                                                               |
+| Package `git:github.com/anthropics/skills` (docx/pdf/pptx/xlsx, web artifacts)                           | ~15   | —                    | same                                                                                                                                                                      |
+| `.claude/plugins-vendored/taste-skill/`                                                                  | 13    | plugin               | _skipped — exact duplicates of the flat copies_                                                                                                                           |
 
 Known duplicate names: 5 phuryn/deanpeters collisions (`ansoff-matrix`,
 `customer-journey-map`, `opportunity-solution-tree`, `porters-five-forces`,

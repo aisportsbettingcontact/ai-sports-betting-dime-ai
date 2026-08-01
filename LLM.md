@@ -5,11 +5,11 @@ and CLAUDE.md; this file wins on conflict.
 
 ## Approved models (current generation only)
 
-| Provider | Model | Context / max out | Use |
-|---|---|---|---|
-| anthropic | `claude-fable-5` | 1M / 128K | Default everywhere |
-| anthropic | `claude-opus-5` | 1M / 128K | Alternate when Fable is unavailable or a second opinion is wanted |
-| openai-codex | `gpt-5.6-sol` | per catalog | When using Codex (subscription auth) |
+| Provider     | Model            | Context / max out | Use                                                               |
+| ------------ | ---------------- | ----------------- | ----------------------------------------------------------------- |
+| anthropic    | `claude-fable-5` | 1M / 128K         | Default everywhere                                                |
+| anthropic    | `claude-opus-5`  | 1M / 128K         | Alternate when Fable is unavailable or a second opinion is wanted |
+| openai-codex | `gpt-5.6-sol`    | per catalog       | When using Codex (subscription auth)                              |
 
 **We do not use older models in execution.** No claude-opus-4-x, sonnet, haiku, gpt-4/5.x
 below 5.6, etc. If a task seems to want a cheaper model, use Fable 5 anyway — consistency
@@ -17,17 +17,31 @@ beats micro-savings here.
 
 ## Enforcement points
 
-| Surface | Mechanism |
-|---|---|
-| pi CLI | `.pi/settings.json`: `defaultProvider: "anthropic"`, `defaultModel: "claude-fable-5"`, `enabledModels: ["claude-fable-5", "claude-opus-5", "gpt-5.6-sol"]` (Ctrl+P cycles only these) |
-| Embedded runtime | `server/_core/piAgent.ts` `PI_AGENT_APPROVED_MODELS`; `resolvePiAgentModel()` throws on anything else unless `DIME_ALLOW_LEGACY_MODELS=1` |
-| Agent SDK runner | `DIME_AGENT_MODEL` env/default = `claude-fable-5` (`server/_core/dimeAgent.ts`) |
-| Claude Code | Session model selection — keep Fable 5/Opus 5 |
+| Surface          | Mechanism                                                                                                                                                                             |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| pi CLI           | `.pi/settings.json`: `defaultProvider: "anthropic"`, `defaultModel: "claude-fable-5"`, `enabledModels: ["claude-fable-5", "claude-opus-5", "gpt-5.6-sol"]` (Ctrl+P cycles only these) |
+| Embedded runtime | `server/_core/piAgent.ts` `PI_AGENT_APPROVED_MODELS`; `resolvePiAgentModel()` throws on anything else unless `DIME_ALLOW_LEGACY_MODELS=1`                                             |
+| Agent SDK runner | `DIME_AGENT_MODEL` env/default = `claude-fable-5` (`server/_core/dimeAgent.ts`)                                                                                                       |
+| Claude Code      | Session model selection — keep Fable 5/Opus 5                                                                                                                                         |
 
-## Routing and credentials
+## Auth model: subscription-first (IMPORTANT)
 
-All Anthropic traffic — Anthropic SDK (`server/_core/anthropicClient.ts`), Agent SDK
-subprocess (`dimeAgent.ts`), embedded pi-agent-core (`piAgent.ts`), pi CLI, Claude Code —
+**Interactive execution runs on Claude subscription auth, not the Anthropic API.**
+Claude Code (VS Code extension + Desktop) is the primary harness and authenticates via
+the user's Claude Pro/Max subscription. The pi CLI does the same: `/login` → Anthropic
+(Claude Pro/Max). No `ANTHROPIC_API_KEY` is required for any interactive work, and an
+empty API balance must never block it.
+
+API credentials are needed only for the non-interactive surfaces:
+
+- server runtimes in production — `runPiChat`/`runPiAgent` (piAgent.ts),
+  `runDimeAgent` (dimeAgent.ts), `createAnthropicClient` callers
+- headless pipelines — `pi -p` in CI, `pi-share-hf` LLM review
+
+## Routing and credentials (API surfaces only)
+
+Anthropic API traffic — Anthropic SDK (`server/_core/anthropicClient.ts`), Agent SDK
+subprocess (`dimeAgent.ts`), embedded pi-agent-core (`piAgent.ts`), headless pi —
 routes through an Anthropic-compatible gateway when configured:
 
 - `ANTHROPIC_BASE_URL` — gateway host (overrides api.anthropic.com)

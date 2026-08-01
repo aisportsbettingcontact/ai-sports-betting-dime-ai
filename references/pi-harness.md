@@ -20,18 +20,18 @@ custom routing, add a provider in `~/.pi/agent/models.json`.
 
 ## What pi picks up in this repo
 
-| Layer | Source | Mechanism |
-|---|---|---|
-| Context | `AGENTS.md` (root) — pi loads it INSTEAD of CLAUDE.md (first-match per dir) | auto-loaded from cwd + parents |
-| Skills (universal) | `.agents/skills/` — 16 skills | auto-discovered |
-| Skills (full corpus) | `.claude/skills/` (99, minus 7 superseded uipro flats), vendored `ui-ux-pro-max-skill` (7, v2.11.0), `pm-skills` (70), `dime-vendored` (31: superpowers/mcp-server-dev/figma), `railway-skills` (1) | `skills` array in `.pi/settings.json` (paths relative to `.pi/`; `!path` excludes) |
-| Skills (packages) | `git:github.com/badlogic/pi-skills`, `git:github.com/anthropics/skills` | `packages` array — auto-installed to `.pi/git/` on trust |
-| Prompt templates | all 27 `.claude/commands/*.md` (same `$ARGUMENTS` syntax) + pi-native `/review` in `.pi/prompts/` | `prompts` array + auto-discovery |
-| Model policy | `defaultModel: claude-fable-5`, `enabledModels: [claude-fable-5, claude-opus-5, gpt-5.6-sol]` | `.pi/settings.json`; policy law in `LLM.md` |
-| Extension | `.pi/extensions/dime-guard.ts` — blocks destructive git (force push, reset --hard, clean -fd, checkout ., --no-verify), writes to `design-bundle/uploads/` and `.env*`; warns on `drizzle/**` (schema law) | auto-discovered; hot-reload with `/reload` |
-| Theme | `.pi/themes/dime.json` — brand-law dark theme, mint `#45E0A8` accent, no purple/gold | `theme: "dime"` in settings |
-| System append | `.pi/APPEND_SYSTEM.md` — skill-triggering rule, model policy, ship law, verification rule injected into every session | auto-loaded |
-| Ship entry points | `pnpm run pi` / `pi:ship [PR#]` / `pi:review` / `pi:rpc` / `pi:json` | package.json scripts |
+| Layer                | Source                                                                                                                                                                                                     | Mechanism                                                                          |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| Context              | `AGENTS.md` (root) — pi loads it INSTEAD of CLAUDE.md (first-match per dir)                                                                                                                                | auto-loaded from cwd + parents                                                     |
+| Skills (universal)   | `.agents/skills/` — 16 skills                                                                                                                                                                              | auto-discovered                                                                    |
+| Skills (full corpus) | `.claude/skills/` (99, minus 7 superseded uipro flats), vendored `ui-ux-pro-max-skill` (7, v2.11.0), `pm-skills` (70), `dime-vendored` (31: superpowers/mcp-server-dev/figma), `railway-skills` (1)        | `skills` array in `.pi/settings.json` (paths relative to `.pi/`; `!path` excludes) |
+| Skills (packages)    | `git:github.com/badlogic/pi-skills`, `git:github.com/anthropics/skills`                                                                                                                                    | `packages` array — auto-installed to `.pi/git/` on trust                           |
+| Prompt templates     | all 27 `.claude/commands/*.md` (same `$ARGUMENTS` syntax) + pi-native `/review` in `.pi/prompts/`                                                                                                          | `prompts` array + auto-discovery                                                   |
+| Model policy         | `defaultModel: claude-fable-5`, `enabledModels: [claude-fable-5, claude-opus-5, gpt-5.6-sol]`                                                                                                              | `.pi/settings.json`; policy law in `LLM.md`                                        |
+| Extension            | `.pi/extensions/dime-guard.ts` — blocks destructive git (force push, reset --hard, clean -fd, checkout ., --no-verify), writes to `design-bundle/uploads/` and `.env*`; warns on `drizzle/**` (schema law) | auto-discovered; hot-reload with `/reload`                                         |
+| Theme                | `.pi/themes/dime.json` — brand-law dark theme, mint `#45E0A8` accent, no purple/gold                                                                                                                       | `theme: "dime"` in settings                                                        |
+| System append        | `.pi/APPEND_SYSTEM.md` — skill-triggering rule, model policy, ship law, verification rule injected into every session                                                                                      | auto-loaded                                                                        |
+| Ship entry points    | `pnpm run pi` / `pi:ship [PR#]` / `pi:review` / `pi:rpc` / `pi:json`                                                                                                                                       | package.json scripts                                                               |
 
 See `SKILLS.md` for the corpus map and known duplicate names. Pi has no MCP by design; use
 CLI tools (`gh`, `railway`) via bash. Trade-off accepted deliberately: ~250 skills add
@@ -65,12 +65,12 @@ same agent stack in-process — the counterpart to `server/_core/dimeAgent.ts` (
 SDK, which spawns Claude Code as a subprocess). Integration module:
 `server/_core/piAgent.ts`.
 
-| Export | Use |
-|---|---|
-| `createPiAgent({systemPrompt, model?, tools?, thinkingLevel?, sessionId?})` | Stateful `Agent` — `subscribe()` to `message_update` text deltas for SSE, `steer()`/`followUp()` queues, `abort()` |
-| `runPiAgent({prompt, ...})` | Run-to-completion; returns `{result, isError, numTurns, totalCostUsd, durationMs}` — same shape as `runDimeAgent()` so call sites can swap runtimes |
-| `resolvePiAgentModel(ref?)` | Catalog model with gateway `baseUrl` override; accepts bare Anthropic id or `provider/id` (e.g. `openai-codex/gpt-5.6-sol`) |
-| `PI_AGENT_APPROVED_MODELS` | Current-generation allowlist (LLM.md); `resolvePiAgentModel` throws outside it unless `DIME_ALLOW_LEGACY_MODELS=1` |
+| Export                                                                      | Use                                                                                                                                                 |
+| --------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `createPiAgent({systemPrompt, model?, tools?, thinkingLevel?, sessionId?})` | Stateful `Agent` — `subscribe()` to `message_update` text deltas for SSE, `steer()`/`followUp()` queues, `abort()`                                  |
+| `runPiAgent({prompt, ...})`                                                 | Run-to-completion; returns `{result, isError, numTurns, totalCostUsd, durationMs}` — same shape as `runDimeAgent()` so call sites can swap runtimes |
+| `resolvePiAgentModel(ref?)`                                                 | Catalog model with gateway `baseUrl` override; accepts bare Anthropic id or `provider/id` (e.g. `openai-codex/gpt-5.6-sol`)                         |
+| `PI_AGENT_APPROVED_MODELS`                                                  | Current-generation allowlist (LLM.md); `resolvePiAgentModel` throws outside it unless `DIME_ALLOW_LEGACY_MODELS=1`                                  |
 
 Routing/auth: pi-ai's Anthropic provider reads `ANTHROPIC_AUTH_TOKEN` (Bearer) before
 `ANTHROPIC_API_KEY` — the same order as `anthropicClient.ts` — and
