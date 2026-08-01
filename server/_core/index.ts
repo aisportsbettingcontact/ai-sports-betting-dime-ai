@@ -53,6 +53,7 @@ import { jwtVerify } from "jose";
 import { parse as parseCookieHeader } from "cookie";
 import { ENV } from "./env";
 import { reportBillingAlertTransport } from "./billingAlerts";
+import { getDiscordBotHealth } from "../discord/bot";
 import { invalidateAppUserByIdCache, lookupAppUserByIdFresh } from "../db";
 import { getCachedAppUserEntry, setCachedAppUser } from "../dbCircuitBreaker";
 import { resolveOwnerIdentity } from "../ownerAuth";
@@ -512,12 +513,45 @@ async function startServer() {
     console.log(
       `[HEALTH_CHECK] GET /health | ip=${ip} db.state=${circuit.state} dbOk=${dbOk}`
     );
+    // Integration state is REPORTED but deliberately does NOT drive the status
+    // code. Railway probes this endpoint: returning 503 because Discord's
+    // gateway is reconnecting would restart the container, killing the very
+    // supervisor that recovers it — an outage manufactured by its own monitor.
+    // Only the database, which the app genuinely cannot serve without, decides
+    // 200 vs 503.
+    const bot = getDiscordBotHealth();
     res.status(dbOk ? 200 : 503).json({
       status: dbOk ? "ok" : "degraded",
       ts: Date.now(),
       db: {
         state: circuit.state,
         consecutiveFailures: circuit.consecutiveFailures,
+      },
+      integrations: {
+        // Answers "is the bot up?" in one request instead of inferring it from
+        // the absence of a log line — the exact question that was unanswerable
+        // when a schedule backfill flooded the boot window.
+        discord: {
+          supervising: bot.supervising,
+          connected: bot.connected,
+          consecutiveFailures: bot.consecutiveFailures,
+          totalConnects: bot.totalConnects,
+          totalReconnects: bot.totalReconnects,
+          lastReadyAt: bot.lastReadyAt,
+          lastFailureAt: bot.lastFailureAt,
+          // Bounded: a Stripe/Discord error string is not a secret, but it is
+          // attacker-visible on a public probe, so cap it rather than echo it.
+          lastFailureReason: bot.lastFailureReason ? String(bot.lastFailureReason).slice(0, 120) : null,
+          retryQueued: bot.retryQueued,
+          uptimeMs: bot.connected && bot.lastReadyAt ? Date.now() - bot.lastReadyAt : null,
+        },
+        billingAlerts: {
+          // "Can a failed renewal actually reach a human?" Boolean only — the
+          // webhook URL itself is a secret and must never appear here.
+          configured: Boolean(
+            process.env.BILLING_ALERT_DISCORD_WEBHOOK_URL ?? process.env.DISCORD_BILLING_WEBHOOK_URL
+          ),
+        },
       },
     });
   });
