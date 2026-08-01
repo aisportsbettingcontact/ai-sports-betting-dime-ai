@@ -68,6 +68,24 @@ async function hardenCandidateTree(path) {
   await chmod(path, 0o400);
 }
 
+async function reopenCandidateDirectories(path) {
+  const state = await lstat(path).catch(error => {
+    if (error?.code === "ENOENT") return null;
+    throw error;
+  });
+  if (!state || state.isSymbolicLink() || !state.isDirectory()) return;
+  await chmod(path, 0o700);
+  const names = (await readdir(path)).sort();
+  for (const name of names) {
+    await reopenCandidateDirectories(resolve(path, name));
+  }
+}
+
+async function removeUntrustedCandidateTree(path) {
+  await reopenCandidateDirectories(path);
+  await rm(path, { recursive: true, force: true });
+}
+
 async function resolvePackageRoot(name, packageRequire = require) {
   const packageJson = await realpath(
     packageRequire.resolve(`${name}/package.json`)
@@ -137,7 +155,9 @@ export async function buildAuthenticationClosureCandidate({
   credentialExecutables = null,
 } = {}) {
   const temporaryDirectory = `${candidateDirectory}.${process.pid}.tmp`;
-  await rm(temporaryDirectory, { recursive: true, force: true });
+  const temporaryDescriptor = `${descriptorPath}.${process.pid}.tmp`;
+  await removeUntrustedCandidateTree(temporaryDirectory);
+  await rm(temporaryDescriptor, { force: true });
   await mkdir(resolve(temporaryDirectory, "scripts"), {
     recursive: true,
     mode: 0o700,
@@ -279,17 +299,31 @@ export async function buildAuthenticationClosureCandidate({
       credentialTransport: "PRIVATE_STDIN_PIPE_ONLY",
       credentialExecution: "BLOCKED_PENDING_INDEPENDENT_ADMIN_PROVENANCE",
     };
-    await chmod(temporaryDirectory, 0o700);
-    await rm(candidateDirectory, { recursive: true, force: true });
-    await rename(temporaryDirectory, candidateDirectory);
     await mkdir(dirname(descriptorPath), { recursive: true, mode: 0o700 });
-    await writeFile(descriptorPath, `${JSON.stringify(candidate, null, 2)}\n`, {
-      mode: 0o400,
-    });
-    await chmod(descriptorPath, 0o400);
+    await writeFile(
+      temporaryDescriptor,
+      `${JSON.stringify(candidate, null, 2)}\n`,
+      {
+        flag: "wx",
+        mode: 0o600,
+      }
+    );
+    await chmod(temporaryDescriptor, 0o400);
+    await chmod(temporaryDirectory, 0o700);
+    await removeUntrustedCandidateTree(candidateDirectory);
+    await rename(temporaryDirectory, candidateDirectory);
+    await rename(temporaryDescriptor, descriptorPath);
     return candidate;
   } catch (error) {
-    await rm(temporaryDirectory, { recursive: true, force: true });
+    try {
+      await removeUntrustedCandidateTree(temporaryDirectory);
+      await rm(temporaryDescriptor, { force: true });
+    } catch (cleanupError) {
+      throw new AggregateError(
+        [error, cleanupError],
+        "authentication closure candidate build and cleanup both failed"
+      );
+    }
     throw error;
   }
 }
