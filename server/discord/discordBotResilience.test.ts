@@ -143,3 +143,37 @@ describe("backoff", () => {
     });
   });
 });
+
+describe("watchdog must not become the outage — the livelock regression", () => {
+  it("never tears down on a single un-ready probe", () => {
+    // v1 used the 60s probe interval AS the teardown threshold and destroyed
+    // the client on the first un-ready probe. In production a handshake that
+    // had not finished within 60s was killed and restarted, each rebuild
+    // issuing a fresh IDENTIFY, so it could never complete. The backstop
+    // became the cause: attempts 1..5+ with no ClientReady, ever.
+    expect(botCode).toMatch(/WATCHDOG_GRACE_MS/);
+    const grace = /WATCHDOG_GRACE_MS = ([\d_]+)/.exec(botCode);
+    expect(grace, "grace constant missing").toBeTruthy();
+    const graceMs = Number(grace![1].replace(/_/g, ""));
+    const probe = Number(/WATCHDOG_INTERVAL_MS = ([\d_]+)/.exec(botCode)![1].replace(/_/g, ""));
+    // The teardown threshold must be strictly longer than the probe cadence,
+    // otherwise the first probe is still the teardown.
+    expect(graceMs).toBeGreaterThan(probe);
+    expect(graceMs).toBeGreaterThanOrEqual(300_000);
+  });
+
+  it("leaves an in-flight handshake alone", () => {
+    // Interrupting Connecting/Identifying/Resuming burns an IDENTIFY and
+    // restarts the clock — the mechanism of the livelock.
+    expect(botCode).toMatch(/TRANSITIONAL_STATUSES/);
+    for (const st of ["Connecting", "Reconnecting", "Identifying", "Resuming", "Nearly", "WaitingForGuilds"]) {
+      expect(botCode, `${st} must be treated as in-flight`).toContain(`Status.${st}`);
+    }
+    expect(botCode).toMatch(/TRANSITIONAL_STATUSES\.has\(status\)/);
+  });
+
+  it("resets the grace clock once the gateway is healthy", () => {
+    // Otherwise a long-lived healthy client would eventually be torn down.
+    expect(botCode).toMatch(/unreadySince = null/);
+  });
+});
