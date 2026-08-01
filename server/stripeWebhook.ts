@@ -103,13 +103,14 @@ async function flushDeferredRoleSyncs(): Promise<void> {
  */
 export const PENDING_SETUP_TTL_MS = 72 * 60 * 60 * 1000;
 
-/**
- * Slack added to a renewal's entitlement window. Stripe bills on calendar
- * months (28–31 days) while the DB plan windows are exact day counts, so an
- * unbuffered expiry locked paying subscribers out for up to a day before the
- * renewal invoice fired (LIFE-002). It also covers webhook delivery lag.
- */
-export const RENEWAL_GRACE_MS = 2 * 24 * 60 * 60 * 1000;
+// RENEWAL_GRACE_MS is GONE (owner directive, 2026-08-01): "No grace periods
+// allowed. Period." A renewal's entitlement ends at the exact instant Stripe
+// billed to — expiry = the invoice line's period end, nothing added. The 48h
+// slack that previously absorbed calendar-month drift and webhook lag
+// (LIFE-002) is repealed as policy: if the next invoice has not been PAID by
+// period end, access lapses at period end and returns only when invoice.paid
+// arrives. That momentary lapse at the boundary is the product's intent, not
+// a defect — do not reintroduce a buffer here.
 
 /**
  * Claim an event id (WBHK-001). Returns false when this event was already
@@ -1249,15 +1250,15 @@ console.log(`${tag} [VERIFY] PASS`);
           // Anchor the entitlement window to the period Stripe actually billed,
           // not to when this webhook happened to arrive (WBHK-006). Deriving it
           // from Date.now() drifted a little every cycle and let a replayed or
-          // late invoice extend access for free. The grace buffer absorbs the
-          // gap between an exact 30-day window and a 31-day calendar month,
-          // which was locking paid subscribers out for a day (LIFE-002).
+          // late invoice extend access for free. NO buffer is added (owner
+          // directive 2026-08-01, repealing LIFE-002's 48h slack): the paid
+          // window ends at the exact second Stripe billed to.
           const periodEndSec =
             (invoice as unknown as { lines?: { data?: Array<{ period?: { end?: number } }> } }).lines?.data?.[0]?.period?.end ??
             (invoice as unknown as { period_end?: number }).period_end ??
             null;
           const renewExpiry = periodEndSec
-            ? periodEndSec * 1000 + RENEWAL_GRACE_MS
+            ? periodEndSec * 1000
             : fallbackExpiry;
           // Keep the billing interval current: a subscriber repriced onto a new
           // plan_prices row must end up pointing at the row they are billed at
@@ -1272,7 +1273,7 @@ console.log(`${tag} [VERIFY] PASS`);
           });
           console.log(
             `${tag} [STATE] Renewal userId=${existingUser.id} plan=${renewPlan} newExpiry=${new Date(renewExpiry).toISOString()}` +
-            ` source=${periodEndSec ? "stripe_period_end+grace" : "plan_window_fallback"}` +
+            ` source=${periodEndSec ? "stripe_period_end_exact" : "plan_window_fallback"}` +
             ` invoicePrice=${invoicePriceId ?? "(none)"} planPriceId=${renewalPrice.effective ?? "null"} (${renewalPrice.reason})`
           );
           await grantUserAccess({

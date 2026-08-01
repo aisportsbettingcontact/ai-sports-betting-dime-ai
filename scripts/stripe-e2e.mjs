@@ -1325,15 +1325,16 @@ async function checkSubscriptionLifecycleLedger() {
       rows.length === 1 &&
       rows[0].kind === "renewed" &&
       rows[0].outcome === "granted" &&
-      Number(rows[0].periodEnd) >= periodEndSec * 1000,
+      Number(rows[0].periodEnd) === periodEndSec * 1000,
     `HTTP ${response.status}; rows=${rows.length} kind=${rows[0]?.kind} outcome=${rows[0]?.outcome} ` +
       `periodEnd=${rows[0]?.periodEnd} (billed to ${periodEndSec * 1000})`,
     SYNTHETIC
   );
   assertThat(
-    "the renewal actually extended the seeded subscriber past the billed period",
-    Number(renewedUser.expiryDate) >= periodEndSec * 1000,
-    `expiryDate=${renewedUser.expiryDate} vs period end ${periodEndSec * 1000}`,
+    "NO-GRACE: the renewal expiry is Stripe's billed period end EXACTLY — zero buffer",
+    Number(renewedUser.expiryDate) === periodEndSec * 1000,
+    `expiryDate=${renewedUser.expiryDate} vs billed period end ${periodEndSec * 1000} ` +
+      `(delta ${Number(renewedUser.expiryDate) - periodEndSec * 1000}ms — must be 0)`,
     SYNTHETIC
   );
 }

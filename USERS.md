@@ -113,10 +113,13 @@ no payment method cancels at trial expiry
 (`trial_settings.end_behavior.missing_payment_method: "cancel"`).
 `plan_prices.trialPeriodDays` is the authority on which SKU carries a trial.
 
-The 48h `RENEWAL_GRACE_MS` buffer survives this law deliberately: it extends
-**successfully paid** windows to absorb 30-day-billing vs 31-day-calendar
-drift (LIFE-002). A decliner can never shelter under it — `hasAccess=0` gates
-before expiry is ever consulted.
+**There is no buffer anywhere.** `RENEWAL_GRACE_MS` is repealed (owner:
+"No grace periods allowed. Period."): a renewal's expiry is the exact instant
+Stripe billed to, and the legacy static plan windows are exact (monthly 30d,
+annual 365d — matching the DB plans' 1d/7d/30d/365d spec). If the next
+invoice has not been PAID by period end, access lapses at period end and
+returns only when `invoice.paid` arrives; that boundary lapse is product
+intent, not a defect.
 
 ### Slug renames
 
