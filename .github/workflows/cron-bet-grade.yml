@@ -11,9 +11,9 @@
 # alongside the in-process scheduler is safe (whichever gets there first wins;
 # the other no-ops on an empty PENDING set).
 #
-# Required repo secrets:
-#   RAILWAY_APP_URL — e.g. https://your-app.up.railway.app  (no trailing slash)
-#   CRON_SECRET     — must match the CRON_SECRET env var set in Railway → Variables
+# Required repo configuration (Production environment):
+#   vars.RAILWAY_APP_URL    — e.g. https://your-app.up.railway.app  (no trailing slash)
+#   secrets.CRON_SECRET     — must match the CRON_SECRET env var set in Railway → Variables
 #
 # Note: GitHub cron is UTC and best-effort (runs can be delayed minutes under
 # platform load). 08:15 UTC ≈ 00:15 / 01:15 PT depending on DST, which is after
@@ -42,20 +42,24 @@ jobs:
   fire:
     name: Trigger bet grading
     runs-on: ubuntu-latest
+    # Required by the Actions security contract (scripts/check-github-actions-security.mjs):
+    # any workflow referencing a production secret must run in the protected
+    # Production environment. Matches cron-scores.yml / cron-vsin-odds.yml.
+    environment: Production
     steps:
       - name: "[STEP] Preflight — verify required secrets are present"
         env:
-          RAILWAY_APP_URL: ${{ secrets.RAILWAY_APP_URL }}
+          RAILWAY_APP_URL: ${{ vars.RAILWAY_APP_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
           set -euo pipefail
           if [ -z "${RAILWAY_APP_URL:-}" ]; then
-            echo "::error::RAILWAY_APP_URL secret is not set"; exit 1
+            echo "::error::RAILWAY_APP_URL variable is not set"; exit 1
           fi
           if [ -z "${CRON_SECRET:-}" ]; then
             echo "::error::CRON_SECRET secret is not set"; exit 1
           fi
-          echo "[PREFLIGHT] secrets present"
+          echo "[PREFLIGHT] app url + secret present"
 
       - name: "[STEP] Resolve which endpoint this run should hit"
         id: route
@@ -72,7 +76,7 @@ jobs:
 
       - name: "[STEP] POST /api/cron/${{ steps.route.outputs.job }} (secret never printed)"
         env:
-          RAILWAY_APP_URL: ${{ secrets.RAILWAY_APP_URL }}
+          RAILWAY_APP_URL: ${{ vars.RAILWAY_APP_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
           JOB: ${{ steps.route.outputs.job }}
         run: |
