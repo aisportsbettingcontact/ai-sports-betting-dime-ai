@@ -52,6 +52,7 @@ import { registerDimeWC2026Route } from "../dime-wc2026.route";
 import { jwtVerify } from "jose";
 import { parse as parseCookieHeader } from "cookie";
 import { ENV } from "./env";
+import { reportBillingAlertTransport } from "./billingAlerts";
 import { invalidateAppUserByIdCache, lookupAppUserByIdFresh } from "../db";
 import { getCachedAppUserEntry, setCachedAppUser } from "../dbCircuitBreaker";
 import { resolveOwnerIdentity } from "../ownerAuth";
@@ -965,6 +966,9 @@ async function startServer() {
     assertSchemaCurrent().catch((err: unknown) =>
       console.warn(`[SchemaGuard] check failed to run: ${err instanceof Error ? err.message : String(err)}`)
     );
+    // Say at boot whether billing alerts can actually reach a human, rather
+    // than discovering it the first time something goes wrong.
+    reportBillingAlertTransport();
     // Ensure debug_logs table exists — idempotent, non-fatal
     ensureDebugLogsTable().catch((err: unknown) =>
       console.warn(

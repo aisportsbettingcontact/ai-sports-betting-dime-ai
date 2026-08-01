@@ -41,6 +41,26 @@ export const REQUIRED_COLUMNS: Readonly<Record<string, readonly string[]>> = {
   plan_features: ["id", "planId", "featureKey", "sortOrder"],
   stripe_webhook_events: ["id", "stripeEventId", "eventType", "processedAt"],
   entitlement_events: ["id", "userId", "eventType", "reason", "createdAt"],
+  // Ledger tables. Both fail SOFT by design — recordCheckoutCreated and
+  // recordPaymentEvent swallow their own errors so a missing table can never
+  // 5xx a webhook and trigger Stripe to redeliver an already-fulfilled event.
+  //
+  // That safety property has a cost: when the migration is skipped, the code
+  // ships blind and says nothing. It happened on BOTH ledger deploys, because
+  // merging triggers the Railway deploy automatically and the migration
+  // workflow has to be run BEFORE the merge, not after. SchemaGuard reported
+  // PASS each time — it only knew about app_users and the billing catalogue.
+  //
+  // Declaring them here makes the omission loud at boot instead of silent
+  // until the first payment.
+  checkout_sessions: [
+    "id", "stripeSessionId", "status", "fulfillment", "fulfillmentReason",
+    "userId", "planId", "amountCents", "customerEmail", "createdAt",
+  ],
+  payment_events: [
+    "id", "stripeEventId", "objectId", "objectType", "kind", "outcome",
+    "outcomeReason", "amountCents", "currency", "userId", "occurredAt", "recordedAt",
+  ],
 };
 
 export interface SchemaDrift {
@@ -62,8 +82,24 @@ export async function detectSchemaDrift(
   )) as unknown as Array<Array<{ t: string; c: string }>>;
   const flat = (Array.isArray(rows[0]) ? rows[0] : (rows as unknown as Array<{ t: string; c: string }>)) ?? [];
 
+  return compareSchema(flat, required);
+}
+
+/**
+ * The pure comparison, split out from the DB read so it can be tested.
+ *
+ * Worth testing directly: this is the code that decides whether a skipped
+ * migration is announced or ignored, and it reported PASS through BOTH ledger
+ * deploys — not because the logic was wrong, but because the tables were never
+ * declared. A test that can construct "every table but this one" is the only
+ * way to prove the absence is now caught.
+ */
+export function compareSchema(
+  presentRows: ReadonlyArray<{ t: string; c: string }>,
+  required: Readonly<Record<string, readonly string[]>> = REQUIRED_COLUMNS,
+): SchemaDrift[] {
   const present = new Map<string, Set<string>>();
-  for (const r of flat) {
+  for (const r of presentRows) {
     const t = String(r.t), c = String(r.c);
     if (!present.has(t)) present.set(t, new Set());
     present.get(t)!.add(c);
