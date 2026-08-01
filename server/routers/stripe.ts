@@ -31,6 +31,7 @@ import { maskEmail as maskEmailForLog } from "../_core/billingAlerts";
 import { stripeAppUserProcedure } from "./appUsers";
 import type Stripe from "stripe";
 import { getStripe } from "../stripe/client";
+import { recordCheckoutCreated } from "../stripe/checkoutLedger";
 import { PLANS, NEW_PLAN_IDS, getPlanByPriceId, computeExpiryMs, type PlanId } from "../stripe/products";
 import { getPlanBySlug, defaultPriceForMode, isSoldOut, type StoredPlan, type StoredPrice } from "../stripe/planStore";
 import { derivePlanStatus } from "../stripe/planStatus";
@@ -450,6 +451,19 @@ async function buildStripeCheckoutSession(params: BuildSessionParams) {
       success_url: successUrl,
       cancel_url: cancelUrl,
       billing_address_collection: "auto",
+      // ── ALWAYS create a Customer ────────────────────────────────────────
+      // mode:"subscription" creates one implicitly; mode:"payment" does NOT.
+      // Its default is customer_creation:"if_required", which for a plain card
+      // payment creates nothing, so session.customer arrives NULL at the
+      // webhook — which then cannot bind the payment to an account.
+      //
+      // This is not hypothetical: both live one-time payments taken through
+      // this integration arrived with customer=null and granted nothing. The
+      // buyers had to be provisioned by hand. Forcing customer creation makes
+      // that failure mode structurally impossible for every future checkout.
+      // Only valid in payment mode AND only when no `customer` is already
+      // supplied — Stripe rejects the combination outright.
+      ...(mode === "payment" && !stripeCustomerId ? { customer_creation: "always" as const } : {}),
     }, {
       // 1-minute bucket: collapses double-clicks and transport retries into one
       // session, while still letting the same buyer start a fresh checkout later.
@@ -472,6 +486,27 @@ async function buildStripeCheckoutSession(params: BuildSessionParams) {
       message: "Checkout session created but no URL returned.",
     });
   }
+
+  // ── [STEP 7] Record the attempt BEFORE the buyer leaves ────────────────────
+  // Awaited deliberately: the row must exist before Stripe can deliver
+  // checkout.session.completed, otherwise the webhook's write-back races an
+  // absent row. recordCheckoutCreated never throws, so a ledger outage cannot
+  // stop a buyer from paying.
+  await recordCheckoutCreated({
+    stripeSessionId: session.id,
+    livemode: session.livemode ?? true,
+    mode,
+    userId: userId ?? null,
+    planId,
+    planPriceId: priceRowId ?? null,
+    stripePriceId,
+    amountCents: session.amount_total ?? null,
+    currency: session.currency ?? null,
+    desiredUsername: desiredUsername ?? null,
+    customerEmail: prefillEmail ?? null,
+    stripeCustomerId: stripeCustomerId ?? null,
+    origin: successUrl,
+  });
 
   console.log(`${TAG}[buildStripeCheckoutSession] [OUTPUT] session_id=${session.id} url=${session.url.substring(0, 60)}...`);
   console.log(`${TAG}[buildStripeCheckoutSession] [VERIFY] PASS — checkout session created successfully`);
@@ -562,6 +597,23 @@ async function buildEmbeddedCheckoutSession(params: BuildSessionParams) {
       message: "Checkout session created but no client secret returned.",
     });
   }
+
+  // Same ledger contract as the redirect flow — the embedded surface is the
+  // one anonymous buyers actually use, so leaving it unrecorded would keep the
+  // exact population that got dropped invisible.
+  await recordCheckoutCreated({
+    stripeSessionId: session.id,
+    livemode: session.livemode ?? true,
+    mode,
+    userId: userId ?? null,
+    planId,
+    planPriceId: priceRowId ?? null,
+    stripePriceId,
+    amountCents: session.amount_total ?? null,
+    currency: session.currency ?? null,
+    customerEmail: prefillEmail ?? null,
+    origin: "embedded",
+  });
 
   console.log(`${TAG}[buildEmbeddedCheckoutSession] [OUTPUT] session_id=${session.id} — embedded client_secret issued`);
   return { sessionId: session.id, clientSecret: session.client_secret };
