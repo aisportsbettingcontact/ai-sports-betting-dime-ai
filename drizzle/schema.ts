@@ -436,6 +436,54 @@ export const checkoutSessions = mysqlTable("checkout_sessions", {
   emailIdx: index("checkout_sessions_email_idx").on(t.customerEmail),
 }));
 
+/**
+ * Payment ledger — every money movement, recorded locally.
+ *
+ * Before this, the money existed only inside Stripe. `entitlement_events` said
+ * access changed and `checkout_sessions` said a checkout resolved, but no row
+ * anywhere carried an AMOUNT — so "what did we collect", "which renewals
+ * failed" and "how much is in dispute" all required opening Stripe.
+ *
+ * `outcome` is separate from `kind` for the same reason it is on
+ * checkout_sessions: what Stripe did and what WE did about it are different
+ * facts, and collapsing them is how a silent drop hides.
+ */
+export const paymentEvents = mysqlTable("payment_events", {
+  id: int("id").autoincrement().primaryKey(),
+  stripeEventId: varchar("stripeEventId", { length: 255 }).notNull(),
+  eventType: varchar("eventType", { length: 64 }).notNull(),
+  livemode: boolean("livemode").default(true).notNull(),
+  /** The Stripe money object (pi_/in_/ch_/dp_). */
+  objectId: varchar("objectId", { length: 64 }).notNull(),
+  objectType: varchar("objectType", { length: 32 }).notNull(),
+  /** succeeded | failed | refunded | disputed | uncollectible */
+  kind: varchar("kind", { length: 24 }).notNull(),
+  /** What we did: recorded | granted | revoked | noop */
+  outcome: varchar("outcome", { length: 16 }).default("recorded").notNull(),
+  outcomeReason: varchar("outcomeReason", { length: 160 }),
+  amountCents: int("amountCents"),
+  currency: varchar("currency", { length: 8 }),
+  amountRefundedCents: int("amountRefundedCents"),
+  userId: int("userId"),
+  stripeCustomerId: varchar("stripeCustomerId", { length: 64 }),
+  stripeSubscriptionId: varchar("stripeSubscriptionId", { length: 64 }),
+  stripeInvoiceId: varchar("stripeInvoiceId", { length: 64 }),
+  customerEmail: varchar("customerEmail", { length: 255 }),
+  failureCode: varchar("failureCode", { length: 64 }),
+  failureMessage: varchar("failureMessage", { length: 255 }),
+  attemptCount: int("attemptCount"),
+  occurredAt: bigint("occurredAt", { mode: "number" }).notNull(),
+  recordedAt: bigint("recordedAt", { mode: "number" }).notNull(),
+}, (t) => ({
+  kindOccurredIdx: index("payment_events_kind_occurred_idx").on(t.kind, t.occurredAt),
+  userIdx: index("payment_events_user_idx").on(t.userId, t.occurredAt),
+  customerIdx: index("payment_events_customer_idx").on(t.stripeCustomerId),
+  subscriptionIdx: index("payment_events_subscription_idx").on(t.stripeSubscriptionId),
+  invoiceIdx: index("payment_events_invoice_idx").on(t.stripeInvoiceId),
+  outcomeIdx: index("payment_events_outcome_idx").on(t.outcome, t.kind),
+  eventObjectUnique: uniqueIndex("payment_events_event_object_unique").on(t.stripeEventId, t.objectId),
+}));
+
 export const entitlementEvents = mysqlTable("entitlement_events", {
   id: int("id").autoincrement().primaryKey(),
   /** app_users.id whose entitlement changed (joined in app; no DB-level FK). */
