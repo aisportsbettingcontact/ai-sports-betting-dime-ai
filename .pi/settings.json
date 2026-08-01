@@ -1,0 +1,31 @@
+{
+  "theme": "dime",
+  "defaultProvider": "anthropic",
+  "defaultModel": "claude-fable-5",
+  "enabledModels": [
+    "claude-fable-5",
+    "claude-opus-5",
+    "gpt-5.6-sol"
+  ],
+  "skills": [
+    "../.claude/skills",
+    "!../.claude/skills/ui-ux-pro-max",
+    "!../.claude/skills/design",
+    "!../.claude/skills/design-system",
+    "!../.claude/skills/ui-styling",
+    "!../.claude/skills/brand",
+    "!../.claude/skills/banner-design",
+    "!../.claude/skills/slides",
+    "../.claude/plugins-vendored/ui-ux-pro-max-skill/.claude/skills",
+    "../.claude/plugins-vendored/pm-skills",
+    "../.claude/plugins-vendored/dime-vendored",
+    "../.claude/plugins-vendored/railway-skills"
+  ],
+  "prompts": [
+    "../.claude/commands"
+  ],
+  "packages": [
+    "git:github.com/badlogic/pi-skills",
+    "git:github.com/anthropics/skills"
+  ]
+}

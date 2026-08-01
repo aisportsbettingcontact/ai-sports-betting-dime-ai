@@ -3,6 +3,20 @@
 AI Sports Betting platform (React + tRPC + Drizzle/MySQL + Express) undergoing a rebrand to
 **Dime AI**. This file maps the project's skill arsenal and the rules that govern it.
 
+Harness-neutral companions (Claude Code loads this file; pi/Codex load `AGENTS.md` instead):
+`AGENTS.md` (universal context root), `HARNESS.md` (agent runtimes + wiring), `SKILLS.md`
+(full skill corpus + triggering), `LLM.md` (model policy: Fable 5 / Opus 5 / Codex
+`gpt-5.6-sol`, no older models — authoritative), `CODEX.md`. Keep them in sync with this
+file; on conflict about models, LLM.md wins.
+
+**Execution protocol — Claude Code primary.** Claude Code (VS Code extension + Desktop,
+subscription auth — never the API for interactive work) is the primary harness; the pi
+foundation is called, cached, and triggered on every prompt: this file + the SessionStart
+hooks load per session, `.claude/scripts/prompt-capsule.sh` (UserPromptSubmit hook)
+injects the execution capsule into EVERY prompt, and the `pi-harness` skill
+(`.claude/skills/pi-harness/`) routes shipping/review/agent tasks through `pnpm pi:*`
+and the embedded runtimes. Auth law: LLM.md "Auth model: subscription-first".
+
 ## Skill arsenal — structure
 
 | Layer                                    | Location                                                                                                          | Contents                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
@@ -26,6 +40,7 @@ AI Sports Betting platform (React + tRPC + Drizzle/MySQL + Express) undergoing a
 | Repo-specific verification               | `.claude/skills/` (1)                                                                                             | intended-vs-implemented (audit the gap between documented intent and actual code)                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | Design handoff                           | plugin `figma@knowledge-work-plugins`                                                                             | figma/mcp-server-guide (pinned 07316dd) — read design files, components, and tokens; translate Figma designs into code                                                                                                                                                                                                                                                                                                                                                                                            |
 | Deployment                               | plugin `railway@railway-skills`                                                                                   | railwayapp/railway-skills — `use-railway` skill + hosted MCP server for services, environments, deployments, logs, and troubleshooting. Pair with `references/railway-deploy.md` (deploy law below)                                                                                                                                                                                                                                                                                                               |
+| Secondary harness                        | `.pi/` + global `@earendil-works/pi-coding-agent`; embedded runtime `server/_core/piAgent.ts`                     | pi coding agent wired to this repo: loads `AGENTS.md` + all skill trees + `.claude/commands/` as templates via `.pi/settings.json`; dime-guard extension, dime theme, model policy. pi-agent-core embeds the same stack in-process (createPiAgent/runPiChat/runPiAgent, gateway-routed). Runbook: `references/pi-harness.md`                                                                                                                                                                                      |
 
 Plugin config lives in `.claude/settings.json` (`extraKnownMarketplaces` + `enabledPlugins`, 61
 plugins across 6 marketplaces). `skills-lock.json` pins the npx-installed sources.
@@ -171,8 +186,11 @@ Useful CLI: `python3 .claude/skills/ui-ux-pro-max/scripts/search.py "<query>" [-
 - Chat page: `client/src/pages/DimeChat.tsx` (`/chat`, SSE via `POST /api/dime/chat`) — keep the
   streaming core when reskinning
 - Claude traffic routing — the Anthropic SDK (`server/_core/anthropicClient.ts`), Agent SDK
-  (`server/_core/dimeAgent.ts`), and Claude Code CLI all route through an Anthropic-compatible
-  gateway via `ANTHROPIC_BASE_URL` + `ANTHROPIC_AUTH_TOKEN`
+  (`server/_core/dimeAgent.ts`), embedded pi-agent-core runtime (`server/_core/piAgent.ts`),
+  and Claude Code CLI all route through an Anthropic-compatible gateway via
+  `ANTHROPIC_BASE_URL` + `ANTHROPIC_AUTH_TOKEN`. dimeAgent spawns Claude Code as a
+  subprocess with built-in tools; piAgent runs in-process with app-defined `AgentTool`s and
+  streamed events — pick per task, both expose the same result shape
 - `ml/dime-1.0/README.md` — canonical governed Dime 1.0 development foundation: QLoRA/SFT
   post-training and evaluation from pinned `meta-llama/Llama-3.1-8B` Base. It owns reviewed
   prompts, schemas, synthetic public fixtures, CPU validation, and release gates; it does not

@@ -63,3 +63,57 @@ Operating rules:
 - Before any separately authorized remote mutation, bypass the cache and
   perform a fresh, operation-specific preflight. Do not add mutation behavior
   to either shared access script.
+
+---
+
+# Universal harness context (pi, Codex, other AGENTS.md-aware agents)
+
+AI Sports Betting platform (React + tRPC + Drizzle/MySQL + Express) rebranding to **Dime AI**.
+Claude Code loads CLAUDE.md (the full skill-arsenal map) instead of this file; the two must
+not conflict — when they appear to, CLAUDE.md wins and this file has drifted: fix it.
+
+Companion files: [HARNESS.md](HARNESS.md) (which agent runtimes exist and their config),
+[SKILLS.md](SKILLS.md) (every skill source and how skills trigger), [LLM.md](LLM.md) (model
+policy and routing), [CODEX.md](CODEX.md) (Codex specifics).
+
+## Model policy (summary — LLM.md is authoritative)
+
+Current-generation models only: **claude-fable-5** (default) or **claude-opus-5** for
+Anthropic; **gpt-5.6-sol** for Codex. Never select older models. Enforced in
+`.pi/settings.json` (`defaultModel`, `enabledModels`) and `server/_core/piAgent.ts`
+(`PI_AGENT_APPROVED_MODELS`).
+
+## Skills (summary — SKILLS.md is authoritative)
+
+227 skills and 33 prompt templates are wired into pi (audited; see SKILLS.md). If a skill
+plausibly applies to the current task, invoke it before acting — skills encode process
+(TDD, debugging, verification, planning), design taste, brand law, PM method, and
+repo-specific verification (`verify`, `livelab`, `intended-vs-implemented`). In pi:
+`/skill:<name>` or let the model auto-trigger from `<available_skills>`; prompt templates
+from `.claude/commands/` are `/<name>`.
+
+## Laws (non-negotiable)
+
+1. **Dime brand law** — for any UI work, `design-system/dime-ai/MASTER.md` (+
+   `design-system/dime-ai/pages/*.md` overrides) is authoritative: one-accent mint `#45E0A8`
+   (`#0FA36B` for mint text on light), Familjen Grotesk + IBM Plex Mono, 160ms motion, no
+   gradients/purple/neon-green/gold. Skill/generator output never overrides these tokens.
+2. **Deploy law** — Railway is the sole host and auto-deploys every push to `main`: a merge
+   to `main` IS a production deploy. Schema changes require the manual `db-push.yml`
+   workflow BEFORE dependent code deploys. Runbook: `references/railway-deploy.md`.
+3. **Data contracts** — the projections feed contracts in
+   `design-system/dime-ai/pages/ai-model-projections.md` and
+   `dime-ai/DIME-FEED-MIGRATION-DRAFT.md` must not be violated.
+4. **Frozen chat provider** — `DIME_CHAT_LLM_PROVIDER` changes only by explicit
+   owner-authorized code change (see `server/_core/dimeChatModel.ts`); the `dime1` path
+   stays gated behind `ml/dime-1.0/docs/RELEASE_GATES.md`.
+
+## Repo conventions
+
+- TypeScript strict; `npx tsc --noEmit` must pass (CI uses `NODE_OPTIONS=--max-old-space-size=6144`).
+- Package manager is **pnpm** (`pnpm add --ignore-scripts`); npm crashes on this tree.
+- Vitest needs CI secrets (`DATABASE_URL` etc.) — DB-dependent tests fail locally without them.
+- Never commit secrets. `dime-ai/design-bundle/uploads/` is personal reference material — do
+  not redistribute or ship it.
+- Sports-betting product: keep responsible-gaming language (21+, 1-800-GAMBLER) on marketing
+  surfaces.

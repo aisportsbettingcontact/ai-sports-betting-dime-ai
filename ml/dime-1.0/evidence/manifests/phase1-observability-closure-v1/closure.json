@@ -119,7 +119,7 @@
     },
     {
       "artifact": "drizzle/schema.ts",
-      "sha256": "74a534921f2a6b6130d029c0fdc2cdab3173f71890fd637071a5e8b072ca8b15",
+      "sha256": "24a283954c435c38602151e49d4c85375dc43caaf17d3e2b3a51379e45ccdfa3",
       "classification": "schema"
     },
     {
@@ -139,7 +139,7 @@
     },
     {
       "artifact": "server/_core/dimeEvidenceLifecycleMigration.test.ts",
-      "sha256": "5dd4f38c88b40fc7f1df9bb0c1ed3a5ec1900bc5227ef910bc2fb7d402c00518",
+      "sha256": "bd85ac191137879e6991a2dd69fd22d4fb5dbb0bdbd432297333d70b9c7f9f73",
       "classification": "verification"
     },
     {

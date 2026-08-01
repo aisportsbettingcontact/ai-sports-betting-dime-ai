@@ -44,11 +44,18 @@
     "db:migrate:production:plan": "JOURNAL_PROFILE=railway-production-v1 node scripts/reconciled-migrate.mjs",
     "db:migrate:production:apply": "JOURNAL_PROFILE=railway-production-v1 MODE=apply CONFIRM=RECONCILE node scripts/reconciled-migrate.mjs",
     "db:migrate:reconciled": "MODE=apply CONFIRM=RECONCILE node scripts/reconciled-migrate.mjs",
+    "pi": "pi -a",
+    "pi:ship": "pi -a --name ship /ship",
+    "pi:review": "pi -p -a \"/review branch\"",
+    "pi:rpc": "pi --mode rpc -a",
+    "pi:json": "pi --mode json -a",
     "postinstall": "if [ -f requirements.txt ] && command -v pip3 >/dev/null 2>&1; then pip3 install -r requirements.txt -q; else echo '[postinstall] skipping python deps: pip3 unavailable or requirements.txt missing (expected on Railway, which installs via apt in Dockerfile)'; fi"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.3.205",
     "@anthropic-ai/sdk": "^0.104.1",
+    "@earendil-works/pi-agent-core": "^0.83.0",
+    "@earendil-works/pi-ai": "^0.83.0",
     "@aws-sdk/client-s3": "^3.1029.0",
     "@aws-sdk/s3-request-presigner": "^3.1029.0",
     "@radix-ui/react-accordion": "^1.2.12",
