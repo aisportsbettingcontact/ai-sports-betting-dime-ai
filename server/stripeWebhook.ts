@@ -38,6 +38,7 @@ import { syncDiscordRoleForUser } from "./discord/discordRoleSync";
 import { invalidateCachedAppUser } from "./dbCircuitBreaker";
 import { getStripe } from "./stripe/client";
 import { billingAlert } from "./_core/billingAlerts";
+import { resolveCheckout } from "./stripe/checkoutLedger";
 import { isTestModeFulfillmentAllowed, type TestModeFulfillmentVerdict } from "./_core/testModeFulfillment";
 import bcrypt from "bcryptjs";
 
@@ -660,6 +661,22 @@ async function processWebhookEvent(event: Stripe.Event): Promise<void> {
   const eventCreatedMs = event.created * 1000;
 
   switch (event.type) {
+    case "checkout.session.expired": {
+      // Abandonment. Not a failure, but without it the ledger would show a
+      // permanently 'created' row and conversion could never be computed.
+      const session = event.data.object as Stripe.Checkout.Session;
+      console.log(`${tag} [INPUT] Checkout expired session_id=${session.id}`);
+      await resolveCheckout({
+        stripeSessionId: session.id,
+        status: "expired",
+        fulfillment: "skipped",
+        reason: "session expired without payment",
+        customerEmail: session.customer_details?.email ?? null,
+      });
+      console.log(`${tag} [VERIFY] PASS`);
+      break;
+    }
+
     case "checkout.session.completed": {
       const session = event.data.object as Stripe.Checkout.Session;
       console.log(`${tag} [INPUT] session_id=${session.id} customer=${session.customer} payment_status=${session.payment_status}`);
@@ -667,7 +684,11 @@ async function processWebhookEvent(event: Stripe.Event): Promise<void> {
       console.log(`${tag}   metadata=${JSON.stringify(session.metadata)}`);
 
       if (session.payment_status !== "paid" && session.payment_status !== "no_payment_required") {
-        console.warn(`${tag} [STATE] payment_status=${session.payment_status} — skipping`); break;
+        console.warn(`${tag} [STATE] payment_status=${session.payment_status} — skipping`);
+        await resolveCheckout({ stripeSessionId: session.id, status: "completed", fulfillment: "skipped",
+          reason: `payment_status=${session.payment_status}`, paymentStatus: session.payment_status ?? null,
+          customerEmail: session.customer_details?.email ?? null });
+        break;
       }
 
       // Plan + expiry resolution, MOST PRECISE FIRST:
@@ -739,14 +760,32 @@ async function processWebhookEvent(event: Stripe.Event): Promise<void> {
       const stripeCustomerId = typeof session.customer === "string" ? session.customer : (session.customer as Stripe.Customer | null)?.id ?? "";
       const stripeSubscriptionId = typeof session.subscription === "string" ? session.subscription : (session.subscription as Stripe.Subscription | null)?.id ?? "";
 
-      if (!stripeCustomerId) { console.error(`${tag} [VERIFY] FAIL — no stripeCustomerId`); break; }
+      if (!stripeCustomerId) {
+        // THE incident: mode:"payment" without customer_creation:"always"
+        // yields session.customer=null, so the payment can bind to no account.
+        // Checkout now forces customer creation, but record the drop rather
+        // than only logging it — this row is what makes it queryable.
+        console.error(`${tag} [VERIFY] FAIL — no stripeCustomerId`);
+        await resolveCheckout({ stripeSessionId: session.id, status: "completed", fulfillment: "dropped",
+          reason: "no stripeCustomerId on session (customer_creation not set?)",
+          customerEmail: session.customer_details?.email ?? null,
+          paymentStatus: session.payment_status ?? null,
+          amountCents: session.amount_total ?? null, currency: session.currency ?? null });
+        break;
+      }
 
       const userIdStr = session.client_reference_id ?? session.metadata?.user_id;
 
       if (userIdStr) {
         // EXISTING USER PATH
         const userId = parseInt(userIdStr, 10);
-        if (isNaN(userId)) { console.error(`${tag} [VERIFY] FAIL — invalid user_id="${userIdStr}"`); break; }
+        if (isNaN(userId)) {
+          console.error(`${tag} [VERIFY] FAIL — invalid user_id="${userIdStr}"`);
+          await resolveCheckout({ stripeSessionId: session.id, status: "completed", fulfillment: "dropped",
+            reason: `invalid user_id="${userIdStr}"`, stripeCustomerId,
+            customerEmail: session.customer_details?.email ?? null });
+          break;
+        }
         console.log(`${tag} [STATE] Existing user path userId=${userId} plan=${plan}`);
         await grantUserAccess({
           userId, stripeCustomerId, stripeSubscriptionId, planId: plan, planPriceId, expiryMs,
@@ -801,6 +840,21 @@ async function processWebhookEvent(event: Stripe.Event): Promise<void> {
       } catch (err) {
         console.warn(`${tag} [STATE] quantity update failed (non-fatal): ${err instanceof Error ? err.message : String(err)}`);
       }
+      // Reaching here means access was actually granted. Recorded so that
+      // "took money" and "granted access" are separately queryable rather than
+      // both collapsing into status='processed' on the event ledger.
+      await resolveCheckout({
+        stripeSessionId: session.id,
+        status: "completed",
+        fulfillment: "fulfilled",
+        stripeCustomerId,
+        stripeSubscriptionId: stripeSubscriptionId || null,
+        stripePaymentIntentId: typeof session.payment_intent === "string" ? session.payment_intent : null,
+        customerEmail: session.customer_details?.email ?? null,
+        paymentStatus: session.payment_status ?? null,
+        amountCents: session.amount_total ?? null,
+        currency: session.currency ?? null,
+      });
       console.log(`${tag} [VERIFY] PASS`);
       break;
     }

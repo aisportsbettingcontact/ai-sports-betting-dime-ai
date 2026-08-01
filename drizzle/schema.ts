@@ -383,6 +383,59 @@ export type InsertStripeWebhookEvent = typeof stripeWebhookEvents.$inferInsert;
  * rotate, this table does not. `actor` distinguishes automated Stripe webhook
  * changes from manual owner/admin grants. Rows are never updated or deleted.
  */
+/**
+ * Checkout attempt ledger — one row per Stripe Checkout Session.
+ *
+ * Written BEFORE the buyer is redirected to Stripe, then resolved by the
+ * webhook. Prior to this, a checkout existed only inside Stripe; the sole local
+ * trace was `app_users.pendingStripeSessionId`, set only for logged-in buyers,
+ * so an anonymous purchase left nothing behind and an abandoned one left
+ * nothing at all.
+ *
+ * `status` and `fulfillment` are deliberately independent. A session can be
+ * status='completed' (Stripe captured the money) while fulfillment='dropped'
+ * (we granted no access). Those two being indistinguishable is precisely what
+ * hid two live dropped payments.
+ */
+export const checkoutSessions = mysqlTable("checkout_sessions", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Stripe `cs_...` id. UNIQUE — makes the webhook write-back an idempotent upsert. */
+  stripeSessionId: varchar("stripeSessionId", { length: 255 }).notNull().unique(),
+  livemode: boolean("livemode").default(true).notNull(),
+  /** "subscription" | "payment" */
+  mode: varchar("mode", { length: 16 }).notNull(),
+  /** Stripe-side lifecycle: created | completed | expired */
+  status: varchar("status", { length: 16 }).default("created").notNull(),
+  /** Our side: pending | fulfilled | dropped | skipped */
+  fulfillment: varchar("fulfillment", { length: 16 }).default("pending").notNull(),
+  /** Why not fulfilled. NULL once fulfilled. */
+  fulfillmentReason: varchar("fulfillmentReason", { length: 120 }),
+  /** NULL for anonymous checkout — the case that used to be unrecoverable. */
+  userId: int("userId"),
+  planId: varchar("planId", { length: 64 }),
+  planPriceId: int("planPriceId"),
+  stripePriceId: varchar("stripePriceId", { length: 64 }),
+  amountCents: int("amountCents"),
+  currency: varchar("currency", { length: 8 }),
+  desiredUsername: varchar("desiredUsername", { length: 64 }),
+  customerEmail: varchar("customerEmail", { length: 255 }),
+  stripeCustomerId: varchar("stripeCustomerId", { length: 64 }),
+  stripeSubscriptionId: varchar("stripeSubscriptionId", { length: 64 }),
+  stripePaymentIntentId: varchar("stripePaymentIntentId", { length: 64 }),
+  paymentStatus: varchar("paymentStatus", { length: 32 }),
+  origin: varchar("origin", { length: 255 }),
+  createdAt: bigint("createdAt", { mode: "number" }).notNull(),
+  completedAt: bigint("completedAt", { mode: "number" }),
+  resolvedAt: bigint("resolvedAt", { mode: "number" }),
+}, (t) => ({
+  fulfillmentIdx: index("checkout_sessions_fulfillment_idx").on(t.fulfillment, t.status),
+  statusCreatedIdx: index("checkout_sessions_status_created_idx").on(t.status, t.createdAt),
+  userIdx: index("checkout_sessions_user_idx").on(t.userId),
+  customerIdx: index("checkout_sessions_customer_idx").on(t.stripeCustomerId),
+  planIdx: index("checkout_sessions_plan_idx").on(t.planId),
+  emailIdx: index("checkout_sessions_email_idx").on(t.customerEmail),
+}));
+
 export const entitlementEvents = mysqlTable("entitlement_events", {
   id: int("id").autoincrement().primaryKey(),
   /** app_users.id whose entitlement changed (joined in app; no DB-level FK). */
