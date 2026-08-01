@@ -475,3 +475,72 @@ test("authentication bundle generation is deterministic and closes local imports
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test("authentication candidate can be rebuilt at the same hardened path", async () => {
+  const unresolvedRoot = await mkdtemp(
+    resolve(tmpdir(), "dime-auth-candidate-rebuild-")
+  );
+  const root = await realpath(unresolvedRoot);
+  const browser = resolve(root, "reviewed-browser");
+  const node = resolve(root, "reviewed-node");
+  const candidateDirectory = resolve(root, "reused.candidate");
+  const descriptorPath = resolve(root, "reused.descriptor.json");
+  const staleTemporaryDirectory = `${candidateDirectory}.${process.pid}.tmp`;
+  const stalePlaywrightDirectory = resolve(
+    staleTemporaryDirectory,
+    "node_modules/playwright"
+  );
+  await writeFile(browser, "#!/bin/sh\nexit 0\n", { mode: 0o555 });
+  await copyFile(process.execPath, node);
+  await chmod(browser, 0o555);
+  await chmod(node, 0o555);
+  await mkdir(stalePlaywrightDirectory, { recursive: true, mode: 0o700 });
+  await writeFile(resolve(stalePlaywrightDirectory, "stale"), "stale\n", {
+    mode: 0o400,
+  });
+  await chmod(stalePlaywrightDirectory, 0o500);
+  await chmod(resolve(staleTemporaryDirectory, "node_modules"), 0o500);
+  await chmod(staleTemporaryDirectory, 0o700);
+  await writeFile(`${descriptorPath}.${process.pid}.tmp`, "stale\n", {
+    mode: 0o400,
+  });
+  try {
+    const first = await buildAuthenticationClosureCandidate({
+      candidateDirectory,
+      descriptorPath,
+      browserCandidatePaths: [browser],
+      browserAllowedRoots: [root],
+      nodeExecutablePath: node,
+      nodeAllowedRoots: [root],
+    });
+    const second = await buildAuthenticationClosureCandidate({
+      candidateDirectory,
+      descriptorPath,
+      browserCandidatePaths: [browser],
+      browserAllowedRoots: [root],
+      nodeExecutablePath: node,
+      nodeAllowedRoots: [root],
+    });
+    assert.equal(
+      second.deterministicBundle.sha256,
+      first.deterministicBundle.sha256
+    );
+    assert.equal(
+      second.application.candidateInventory.treeSha256,
+      first.application.candidateInventory.treeSha256
+    );
+    assert.equal((await lstat(candidateDirectory)).isDirectory(), true);
+    assert.equal((await lstat(descriptorPath)).mode & 0o777, 0o400);
+    assert.equal(
+      await lstat(`${candidateDirectory}.${process.pid}.tmp`).catch(() => null),
+      null
+    );
+    assert.equal(
+      await lstat(`${descriptorPath}.${process.pid}.tmp`).catch(() => null),
+      null
+    );
+  } finally {
+    await makeWritable(root);
+    await rm(root, { recursive: true, force: true });
+  }
+});
