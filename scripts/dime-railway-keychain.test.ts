@@ -142,6 +142,15 @@ test("Railway Keychain source contains no credential-print path", async () => {
   assert.equal(source.includes("dime-railway-credential-filter"), false);
   assert.match(installer, /dime-railway-keychain\.candidate/);
   assert.match(installer, /activeBrokerUnchanged: true/);
+  assert.match(installer, /temporaryCandidateProvenancePath/);
+  assert.match(
+    installer,
+    /rename\(temporaryCandidateProvenancePath, candidateProvenancePath\)/
+  );
+  assert.equal(
+    /writeFile\(\s*candidateProvenancePath,/s.test(installer),
+    false
+  );
   assert.equal(
     installer.includes(
       "await rename(temporaryExecutable, SECURE_RAILWAY_EXECUTABLE)"
