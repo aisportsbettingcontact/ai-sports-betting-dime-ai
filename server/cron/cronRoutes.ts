@@ -32,6 +32,7 @@ import { requireCronSecret } from "./cronAuth";
 import { CronJobRunner } from "./cronRunner";
 import { runVsinRefresh, refreshAllScoresNow, runMlbCycleOnce } from "../vsinAutoRefresh";
 import { runMlbAllStarGameSync } from "../mlbAllStarGameSync";
+import { runBetGradeCycle, gradeAllPendingAllDates } from "../betAutoGradeScheduler";
 import { reconcileStripeSubscriptions, formatReconcileReport } from "../stripe/reconcile";
 import { billingAlert } from "../_core/billingAlerts";
 
@@ -50,6 +51,25 @@ const scoresRunner = new CronJobRunner("scores", async () => {
 // run-lock below preserves the single-flight/overlap protection the interval relied on.
 const mlbCycleRunner = new CronJobRunner("mlb-cycle", async () => {
   await runMlbCycleOnce();
+});
+
+// Bet grading — settles PENDING tracked bets for today + yesterday.
+//
+// Why this exists: grading lived ONLY inside the in-process scheduler, which
+// sits behind the DISABLE_BACKGROUND_JOBS kill switch. Flipping that flag to cut
+// Railway credits would have stopped bet settlement entirely, silently — no
+// error, bets simply never leave PENDING. This endpoint gives grading the same
+// cron-triggered path the other data-freshness jobs already have, under the same
+// single-flight run-lock.
+const betGradeRunner = new CronJobRunner("bet-grade", async () => {
+  await runBetGradeCycle("cron_bet_grade");
+});
+
+// Nightly catch-all — every PENDING bet across every date, not just today and
+// yesterday. Picks up anything the incremental cycle missed (late finals,
+// upstream feed outages, bets logged for older dates).
+const betGradeSweepRunner = new CronJobRunner("bet-grade-sweep", async () => {
+  await gradeAllPendingAllDates("cron_bet_grade_sweep");
 });
 
 /** Wire a POST endpoint that auth-guards, triggers the runner, responds 200. */
@@ -83,6 +103,8 @@ export function registerCronRoutes(app: Express): void {
   mountJob(app, "/api/cron/vsin-odds", "vsin-odds", vsinRunner);
   mountJob(app, "/api/cron/scores", "scores", scoresRunner);
   mountJob(app, "/api/cron/mlb-cycle", "mlb-cycle", mlbCycleRunner);
+  mountJob(app, "/api/cron/bet-grade", "bet-grade", betGradeRunner);
+  mountJob(app, "/api/cron/bet-grade-sweep", "bet-grade-sweep", betGradeSweepRunner);
 
   // MLB All-Star Game (AL vs NL) seed/refresh. Unlike the fire-and-forget jobs
   // above, this runs synchronously and returns the book-vs-model tail + audit so
@@ -161,6 +183,8 @@ export function registerCronRoutes(app: Express): void {
         "vsin-odds": vsinRunner.state,
         scores: scoresRunner.state,
         "mlb-cycle": mlbCycleRunner.state,
+        "bet-grade": betGradeRunner.state,
+        "bet-grade-sweep": betGradeSweepRunner.state,
       },
     });
   });

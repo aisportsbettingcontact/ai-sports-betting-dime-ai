@@ -2274,11 +2274,12 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
   }, [authLoading, appUser, navigate, previewMode]);
 
   const role = appUser?.role ?? (previewMode ? "owner" : "user");
-  // [2026-07-18 owner directive] Bet Tracker is owner-only access — the only
-  // owner-gated surfaces are User Management, Testimonials, Dime AI Chat, and
-  // Bet Tracker. Admin/handicapper accounts now see the coming-soon screen
-  // (the server keeps its documented multi-role bet-entry contract).
-  const canAccess = role === "owner";
+  // [2026-07-31] Bet Tracker is open to every authenticated subscriber, each
+  // seeing ONLY their own bets. Owner/admin additionally get the handicapper
+  // selector and the LOGS tab. This mirrors the server: every procedure runs on
+  // appUserProcedure and resolves its scope through resolveViewUserId, which
+  // only ever returns another user's id for owner/admin.
+  const canAccess = !!appUser;
   const isOwnerOrAdmin = role === "owner" || role === "admin";
   // Preview mode never grants protected data access. With no authenticated
   // app user, queries stay disabled and the real empty-state chrome is shown.
@@ -2338,6 +2339,8 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
     isOwnerOrAdmin && targetUserId && targetUserId !== appUser?.id
       ? targetUserId
       : undefined;
+  /** True when an owner/admin is looking at another user's tracker. */
+  const isViewingOtherUser = effectiveUserId !== undefined;
 
   // ── Sport / filter state ──────────────────────────────────────────────────
   const [activeSport, setActiveSport] = useState<SportOrAll>("ALL");
@@ -2776,9 +2779,12 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
 
   const utils = trpc.useUtils();
   const invalidate = useCallback(() => {
-    // Invalidate both query variants
-    utils.betTracker.listWithStats.invalidate();
+    // The bet list AND the calendar. getCalendarData was previously left out,
+    // and it runs staleTime:Infinity for past months — so after adding or
+    // grading a bet the calendar kept showing the pre-change month while the
+    // table beside it showed the new one.
     utils.betTracker.listWithStatsPaginated.invalidate();
+    utils.betTracker.getCalendarData.invalidate();
   }, [utils]);
   const invalidateLogs = useCallback(() => {
     utils.betTracker.getLogs.invalidate();
@@ -3114,6 +3120,11 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
 
   useEffect(() => {
     if (!canAccess) return;
+    // autoGrade is self-scoped on the server — it settles ctx.appUser's bets and
+    // takes no targetUserId. Firing it while an owner/admin views SOMEONE ELSE's
+    // tracker graded the viewer's own bets and showed a "GRADING…" indicator over
+    // rows it never touched. Those rows settle via the server scheduler.
+    if (isViewingOtherUser) return;
 
     const pendingBets = enrichedBets.filter(b => b.result === "PENDING");
     if (pendingBets.length === 0) {
@@ -3166,21 +3177,25 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
       }
     }
 
-    // ── 30s POLL: safety net for any missed transitions or late-graded games ──
-    // Reduced from 60s → 30s so results appear within half a minute at most.
+    // ── Backstop poll: safety net for missed transitions / late-graded games ──
+    // Raised 30s → 120s. Responsiveness comes from the two triggers above (mount
+    // fire + non-Final→Final transition), and the server grades every 5 minutes
+    // during game hours plus /api/cron/bet-grade. At 30s this loop mostly
+    // re-scanned an unresolvable backlog: every tick re-graded every PENDING bet
+    // across all dates, including ones whose game will never produce a result.
     const interval = setInterval(() => {
       if (!autoGradeMut.isPending) {
         if (IS_DEV)
           console.log(
-            `[BetTracker][STEP] autoGrade: 30s poll — grading ${pendingBets.length} PENDING bets`
+            `[BetTracker][STEP] autoGrade: backstop poll — grading ${pendingBets.length} PENDING bets`
           );
         autoGradeMut.mutate({});
       }
-    }, 30_000);
+    }, 120_000);
 
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enrichedBets, linescoreQuery.data, canAccess]);
+  }, [enrichedBets, linescoreQuery.data, canAccess, isViewingOtherUser]);
 
   // ── Game selection ────────────────────────────────────────────────────────
   const slateGames = (slateQuery.data ?? []) as SlateGame[];
@@ -3710,9 +3725,13 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
   const canDirectEditMap = useMemo(() => {
     const map = new Map<number, boolean>();
     for (const bet of enrichedBets) {
-      const betOwnerIsHandicapper =
-        bet.userId === appUser?.id && role === "handicapper";
-      map.set(bet.id, isOwnerOrAdmin || !betOwnerIsHandicapper);
+      // Handicapper bets are immutable after creation — their owner must file an
+      // edit request instead. Everyone else edits their own bets directly, and
+      // owner/admin edit what the server lets them. Mirrors
+      // betTrackerCore.decideBetMutation; the server is still the authority.
+      const isOwnBet = bet.userId === appUser?.id;
+      const mustRequest = role === "handicapper";
+      map.set(bet.id, isOwnerOrAdmin || (isOwnBet && !mustRequest));
     }
     return map;
   }, [enrichedBets, appUser?.id, role, isOwnerOrAdmin]);
