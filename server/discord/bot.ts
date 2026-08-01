@@ -54,7 +54,32 @@ const MAX_BACKOFF_MS = 300_000; //  5m — ceiling for transient failures
  */
 const AUTH_RETRY_MS = 900_000; // 15m
 const JITTER_FACTOR = 0.3; // ±30%, so instances never retry in lockstep
-const WATCHDOG_INTERVAL_MS = 60_000; // 1m
+const WATCHDOG_INTERVAL_MS = 60_000; // 1m — probe cadence, NOT the teardown threshold
+/**
+ * How long a client may sit un-ready before the watchdog tears it down.
+ *
+ * MUST be comfortably longer than a real gateway handshake. The first version
+ * used the 60s probe interval as the threshold and destroyed the client on the
+ * FIRST un-ready probe, which livelocked in production: a handshake that had
+ * not finished within 60s was killed and restarted, each rebuild issuing a
+ * fresh IDENTIFY, so it could never complete and the bot never came up. The
+ * watchdog was supposed to be the backstop for permanent death, and instead it
+ * became the cause.
+ */
+const WATCHDOG_GRACE_MS = 300_000; // 5m
+
+/**
+ * Statuses that mean "a handshake is in flight — leave it alone".
+ * Tearing down mid-handshake is what produced the identify storm.
+ */
+const TRANSITIONAL_STATUSES = new Set<number>([
+  Status.Connecting,
+  Status.Reconnecting,
+  Status.Identifying,
+  Status.Resuming,
+  Status.Nearly,
+  Status.WaitingForGuilds,
+]);
 
 /**
  * Close codes meaning "this configuration cannot work as-is". NOT terminal —
@@ -77,6 +102,8 @@ let lastFailureReason: string | null = null;
 let retryTimer: NodeJS.Timeout | null = null;
 let watchdogTimer: NodeJS.Timeout | null = null;
 let shuttingDown = false;
+/** When the gateway first went un-ready. NULL while healthy. Drives the grace window. */
+let unreadySince: number | null = null;
 
 /** Exponential backoff with jitter, capped. */
 export function calcBackoffMs(failures: number): number {
@@ -147,6 +174,7 @@ async function connect(): Promise<void> {
 
   client.on(Events.ClientReady, (ready) => {
     consecutiveFailures = 0;
+    unreadySince = null;
     totalConnects += 1;
     if (totalConnects > 1) totalReconnects += 1;
     lastReadyAt = Date.now();
@@ -211,10 +239,39 @@ function startWatchdog(): void {
   if (watchdogTimer) return;
   watchdogTimer = setInterval(() => {
     if (shuttingDown || !supervising) return;
-    if (isConnected()) return;
     if (retryTimer) return; // recovery already queued
-    const status = botClient ? `status=${botClient.ws.status}` : "no client";
-    console.warn(`[DiscordBot] [WATCHDOG] Gateway not ready (${status}) — forcing reconnect`);
+
+    if (isConnected()) {
+      unreadySince = null; // healthy — reset the grace clock
+      return;
+    }
+
+    // discord.js drives its own reconnect and resume. Interrupting a handshake
+    // in progress is strictly harmful: it burns an IDENTIFY and restarts the
+    // clock, which is precisely how this livelocked.
+    const status = botClient?.ws.status;
+    if (status != null && TRANSITIONAL_STATUSES.has(status)) {
+      console.log(`[DiscordBot] [WATCHDOG] handshake in progress (status=${status}) — not interfering`);
+      return;
+    }
+
+    // Un-ready and idle. Start (or continue) the grace clock rather than
+    // tearing down on a single probe.
+    const now = Date.now();
+    unreadySince ??= now;
+    const stalledFor = now - unreadySince;
+    if (stalledFor < WATCHDOG_GRACE_MS) {
+      console.log(
+        `[DiscordBot] [WATCHDOG] not ready (status=${status ?? "no client"}) for ${Math.round(stalledFor / 1000)}s ` +
+          `— waiting up to ${WATCHDOG_GRACE_MS / 1000}s before forcing a rebuild`
+      );
+      return;
+    }
+
+    console.warn(
+      `[DiscordBot] [WATCHDOG] stalled ${Math.round(stalledFor / 1000)}s at status=${status ?? "no client"} — forcing reconnect`
+    );
+    unreadySince = null;
     consecutiveFailures += 1;
     scheduleReconnect(calcBackoffMs(consecutiveFailures), "watchdog");
   }, WATCHDOG_INTERVAL_MS);
