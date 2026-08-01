@@ -96,6 +96,28 @@ should read 0; every manual grant/revoke now writes an `entitlement_events`
 row (`actor='owner'`), so "why does this user have access?" is a query, not
 an archaeology dig.
 
+### No-grace billing law (owner directive, 2026-08-01)
+
+**A declined subscription payment ends the membership at the moment of
+failure.** No Smart-Retry ride-out, no buffer. `invoice.payment_failed`
+revokes access and cancels the subscription at Stripe; `past_due` / `unpaid`
+/ `paused` status moves are the belt-and-braces mirror. The revoke is guarded
+by subscription identity — a lifetime (one-off) member never loses their
+entitlement to a different subscription's decline.
+
+**Trials — including free day passes — always auto-renew.** Checkout collects
+the card up front (`payment_method_collection: "always"`); at trial end
+Stripe charges the plan+interval price automatically. A declined conversion
+revokes at the decline; a trial that reaches its end with auto-renew off or
+no payment method cancels at trial expiry
+(`trial_settings.end_behavior.missing_payment_method: "cancel"`).
+`plan_prices.trialPeriodDays` is the authority on which SKU carries a trial.
+
+The 48h `RENEWAL_GRACE_MS` buffer survives this law deliberately: it extends
+**successfully paid** windows to absorb 30-day-billing vs 31-day-calendar
+drift (LIFE-002). A decliner can never shelter under it — `hasAccess=0` gates
+before expiry is ever consulted.
+
 ### Slug renames
 
 `subscription_plans.slug` is referenced by value from `app_users.stripePlanId`,

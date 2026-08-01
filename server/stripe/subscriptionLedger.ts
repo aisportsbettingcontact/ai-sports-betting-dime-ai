@@ -40,7 +40,8 @@ export type SubscriptionKind =
   | "deleted"
   | "renewed"
   | "trial_ending"
-  | "renewal_upcoming";
+  | "renewal_upcoming"
+  | "payment_failed";
 
 /** What WE did in response — deliberately the same vocabulary as payment_events. */
 export type SubscriptionOutcome = "recorded" | "granted" | "revoked" | "noop";

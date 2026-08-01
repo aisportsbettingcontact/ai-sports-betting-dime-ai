@@ -306,7 +306,7 @@ type CheckoutMode = "subscription" | "payment";
 async function resolveCheckoutPlan(
   slug: string,
   priceId?: number,
-): Promise<{ priceId: string; description: string; couponId: string | null; mode: CheckoutMode }> {
+): Promise<{ priceId: string; description: string; couponId: string | null; mode: CheckoutMode; trialPeriodDays: number | null }> {
   if (Object.prototype.hasOwnProperty.call(PLANS, slug)) {
     const planId = slug as PlanId;
     let staticPriceId: string;
@@ -315,7 +315,7 @@ async function resolveCheckoutPlan(
     } catch {
       throw priceResolutionError(planId);
     }
-    return { priceId: staticPriceId, description: subscriptionDescription(planId), couponId: null, mode: "subscription" };
+    return { priceId: staticPriceId, description: subscriptionDescription(planId), couponId: null, mode: "subscription", trialPeriodDays: null };
   }
   const plan = await getPlanBySlug(slug);
   if (!plan || !plan.active) {
@@ -334,7 +334,56 @@ async function resolveCheckoutPlan(
   // → a single payment.
   const mode: CheckoutMode = price.interval ? "subscription" : "payment";
   // A per-interval promo is applied as a Stripe coupon on the session.
-  return { priceId: price.stripePriceId, description: dbPlanDescription(plan, price), couponId: price.stripeCouponId, mode };
+  return {
+    priceId: price.stripePriceId,
+    description: dbPlanDescription(plan, price),
+    couponId: price.stripeCouponId,
+    mode,
+    // Trials only exist on recurring prices; a one_time "day pass" is a paid
+    // pass, and a FREE day pass is a trial on a recurring price.
+    trialPeriodDays: mode === "subscription" ? (price.trialPeriodDays ?? null) : null,
+  };
+}
+
+/**
+ * Subscription-only checkout params, shared by both builders (hosted +
+ * embedded) so the auto-renewal LAW cannot drift between them:
+ *
+ *   NO-GRACE POLICY (owner directive, 2026-08-01). Trials — including free
+ *   day passes — ALWAYS auto-renew: the card is collected up front
+ *   (`payment_method_collection: "always"`, replacing "if_required", which
+ *   let a trial start with no card and nothing to charge at conversion), and
+ *   a trial that somehow reaches its end without a payment method CANCELS at
+ *   trial expiry (`trial_settings.end_behavior.missing_payment_method`)
+ *   rather than pausing or invoicing into thin air. A declined conversion or
+ *   renewal is handled by the webhook: access is revoked and the subscription
+ *   canceled at the moment of failure — see invoice.payment_failed.
+ *
+ * `trial_period_days` is driven by the plan_prices row, making the DB the
+ * authority on which SKU carries a trial — previously the column existed but
+ * nothing applied it at checkout.
+ */
+function subscriptionCheckoutParams(
+  mode: CheckoutMode,
+  description: string,
+  planId: string,
+  userId: number | null | undefined,
+  trialPeriodDays: number | null,
+): Stripe.Checkout.SessionCreateParams {
+  if (mode !== "subscription") return {};
+  return {
+    payment_method_collection: "always",
+    subscription_data: {
+      description,
+      metadata: { ...(userId != null ? { user_id: String(userId) } : {}), plan_id: planId },
+      ...(trialPeriodDays && trialPeriodDays > 0
+        ? {
+            trial_period_days: trialPeriodDays,
+            trial_settings: { end_behavior: { missing_payment_method: "cancel" as const } },
+          }
+        : {}),
+    },
+  };
 }
 
 // ─── Shared checkout session builder ─────────────────────────────────────────
@@ -367,26 +416,17 @@ async function buildStripeCheckoutSession(params: BuildSessionParams) {
   // resolve the requested interval's (or default) mode-matched price. Throws a
   // clean PRECONDITION_FAILED if the plan isn't sellable (unknown / inactive /
   // wrong Stripe mode).
-  const { priceId: stripePriceId, description, couponId, mode } = await resolveCheckoutPlan(planId, priceRowId ?? undefined);
-  console.log(`${TAG}[buildStripeCheckoutSession] [STATE] planId=${planId} priceId=${stripePriceId} mode=${mode}${couponId ? ` coupon=${couponId}` : ""}`);
+  const { priceId: stripePriceId, description, couponId, mode, trialPeriodDays } = await resolveCheckoutPlan(planId, priceRowId ?? undefined);
+  console.log(`${TAG}[buildStripeCheckoutSession] [STATE] planId=${planId} priceId=${stripePriceId} mode=${mode}${couponId ? ` coupon=${couponId}` : ""}${trialPeriodDays ? ` trialDays=${trialPeriodDays}` : ""}`);
   // A per-interval promo is auto-applied as a coupon. Stripe forbids combining
   // `discounts` with `allow_promotion_codes`, so choose one: the baked-in coupon
   // when the interval has a promo, else let the customer enter a code.
   const discountParam: Stripe.Checkout.SessionCreateParams = couponId
     ? { discounts: [{ coupon: couponId }] }
     : { allow_promotion_codes: true };
-  // Subscription-only params apply solely to recurring plans; a one_time
-  // (single-payment) plan uses mode:"payment" and omits subscription_data.
-  const subscriptionOnly: Stripe.Checkout.SessionCreateParams =
-    mode === "subscription"
-      ? {
-          payment_method_collection: "if_required",
-          subscription_data: {
-            description,
-            metadata: { ...(userId != null ? { user_id: String(userId) } : {}), plan_id: planId },
-          },
-        }
-      : {};
+  // Subscription-only params — shared builder enforces the no-grace /
+  // always-auto-renew law (card up front, trial cancels without one).
+  const subscriptionOnly = subscriptionCheckoutParams(mode, description, planId, userId, trialPeriodDays);
 
   // ── [STEP 3] Build success and cancel URLs ─────────────────────────────────
   const successUrl = `${origin}/subscribe/success?session_id={CHECKOUT_SESSION_ID}&plan=${planId}`;
@@ -534,23 +574,14 @@ async function buildEmbeddedCheckoutSession(params: BuildSessionParams) {
 
   console.log(`${TAG}[buildEmbeddedCheckoutSession] [INPUT] planId=${planId} priceRowId=${priceRowId ?? "(default)"} origin=${origin} userId=${userId ?? "anon"}`);
 
-  const { priceId: stripePriceId, description, couponId, mode } = await resolveCheckoutPlan(planId, priceRowId ?? undefined);
-  console.log(`${TAG}[buildEmbeddedCheckoutSession] [STATE] planId=${planId} priceId=${stripePriceId} mode=${mode}${couponId ? ` coupon=${couponId}` : ""}`);
+  const { priceId: stripePriceId, description, couponId, mode, trialPeriodDays } = await resolveCheckoutPlan(planId, priceRowId ?? undefined);
+  console.log(`${TAG}[buildEmbeddedCheckoutSession] [STATE] planId=${planId} priceId=${stripePriceId} mode=${mode}${couponId ? ` coupon=${couponId}` : ""}${trialPeriodDays ? ` trialDays=${trialPeriodDays}` : ""}`);
   // See buildStripeCheckoutSession: baked-in coupon XOR customer-entered code.
   const discountParam: Stripe.Checkout.SessionCreateParams = couponId
     ? { discounts: [{ coupon: couponId }] }
     : { allow_promotion_codes: true };
-  // Subscription-only params — omitted for one_time (mode:"payment") plans.
-  const subscriptionOnly: Stripe.Checkout.SessionCreateParams =
-    mode === "subscription"
-      ? {
-          payment_method_collection: "if_required",
-          subscription_data: {
-            description,
-            metadata: { ...(userId != null ? { user_id: String(userId) } : {}), plan_id: planId },
-          },
-        }
-      : {};
+  // Shared builder — same no-grace / always-auto-renew law as the hosted flow.
+  const subscriptionOnly = subscriptionCheckoutParams(mode, description, planId, userId, trialPeriodDays);
 
   let customerParam: { customer: string } | { customer_email: string } | Record<string, never> = {};
   if (stripeCustomerId) customerParam = { customer: stripeCustomerId };

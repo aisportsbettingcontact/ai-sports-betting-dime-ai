@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS `subscription_events` (
 	`userId` int,
 	-- 'created' | 'plan_changed' | 'cancel_scheduled' | 'cancel_reverted' |
 	-- 'status_changed' | 'updated' | 'deleted' | 'renewed' | 'trial_ending' |
-	-- 'renewal_upcoming'
+	-- 'renewal_upcoming' | 'payment_failed'
 	`kind` varchar(24) NOT NULL,
 	-- What WE did: 'recorded' | 'granted' | 'revoked' | 'noop'
 	`outcome` varchar(16) NOT NULL DEFAULT 'recorded',

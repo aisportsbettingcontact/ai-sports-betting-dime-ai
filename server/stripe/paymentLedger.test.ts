@@ -47,12 +47,21 @@ describe("every money movement is recorded", () => {
 });
 
 describe("outcome is independent of what Stripe did", () => {
-  it("a failed renewal is recorded as noop, not as a revoke", () => {
-    // Revoking on the first failure would cut off a member whose card recovers
-    // on Stripe's retry. Recording it as a no-op keeps the fact without the harm.
+  it("a failed renewal REVOKES at the decline (no-grace policy) — noop only when no member matches", () => {
+    // Owner directive 2026-08-01: no grace periods on decline. The handler
+    // must revoke at the moment of failure AND cancel the subscription at
+    // Stripe, with 'noop' reserved for declines that match no revocable
+    // member. The subscription guard is load-bearing: a lifetime (one-off)
+    // member must never lose their entitlement to a different subscription's
+    // decline.
     const body = webhook.slice(webhook.indexOf('case "invoice.payment_failed"'));
-    expect(body.slice(0, 1400)).toMatch(/outcome: "noop"/);
-    expect(body.slice(0, 1400)).toMatch(/Stripe retry schedule owns recovery/);
+    const caseBody = body.slice(0, body.indexOf('case "payment_intent.succeeded"'));
+    expect(caseBody).toMatch(/PAYMENT_FAILED_NO_GRACE/);
+    expect(caseBody).toMatch(/outcome: revoked \? "revoked" : "noop"/);
+    expect(caseBody).toMatch(/subscriptions\.cancel/);
+    expect(caseBody).toMatch(/subscriptionMatches/);
+    // The revoke is conditional — a blind customer-wide revoke must not exist.
+    expect(caseBody).toMatch(/failedUser\.hasAccess && subscriptionMatches/);
   });
 
   it("a paid invoice that matches no local user is a noop, not a grant", () => {

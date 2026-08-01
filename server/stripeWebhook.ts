@@ -877,20 +877,44 @@ async function processWebhookEvent(event: Stripe.Event): Promise<void> {
         });
 
       if (sub.status !== "active" && sub.status !== "trialing") {
-        // LIFE-001: past_due / unpaid / paused previously vanished entirely —
-        // the user silently rode the expiry buffer and then hard-locked with a
-        // generic error. Persist the raw status so the billing UI can surface a
-        // payment problem and reconciliation can see it. Access is deliberately
-        // unchanged: Stripe is still retrying, and revocation stays tied to
-        // customer.subscription.deleted.
+        // NO-GRACE POLICY (owner directive, 2026-08-01 — rewrites LIFE-001's
+        // "persist and wait"): statuses that mean "payment owed and not
+        // collected" END the membership now, not at subscription.deleted.
+        //   past_due / unpaid — a charge failed; invoice.payment_failed is the
+        //     primary revoke trigger, this is the belt-and-braces mirror for
+        //     deliveries that arrive as a status move.
+        //   paused — a trial ended without a payment method; the trial is over
+        //     and nothing was charged, so access ends at expiry.
+        //   incomplete / incomplete_expired — the INITIAL payment never
+        //     completed; no access was ever granted, so only the status is
+        //     persisted.
         const statusCustomerId = typeof sub.customer === "string" ? sub.customer : (sub.customer as Stripe.Customer | null)?.id ?? "";
+        const REVOKING_STATUSES = new Set(["past_due", "unpaid", "paused"]);
         if (statusCustomerId) {
+          const su = await getAppUserByStripeCustomerId(statusCustomerId);
+          // Same subscription guard as invoice.payment_failed: never let a
+          // subscription's status move destroy a lifetime member's separate
+          // one-off entitlement.
+          const statusSubMatches = !!su?.stripeSubscriptionId && su.stripeSubscriptionId === sub.id;
+          if (su && su.hasAccess && statusSubMatches && REVOKING_STATUSES.has(sub.status)) {
+            await revokeUserAccessByCustomerId(statusCustomerId, {
+              stripeEventId: event.id,
+              eventType: event.type,
+              reason: `STATUS_${sub.status.toUpperCase()}_NO_GRACE`,
+              subscriptionStatus: sub.status,
+              eventCreatedMs,
+            });
+            console.log(`${tag} [OUTPUT] status=${sub.status} — access revoked (no-grace policy)`);
+            await recordSubLifecycle("revoked", `status=${sub.status} — membership ended under no-grace policy`, su.id);
+            break;
+          }
+          // Non-revoking path: persist the raw status so the billing UI and
+          // reconciliation can see it.
           const statusDb = await getDb();
           if (statusDb) {
             await statusDb.update(appUsers)
               .set({ stripeSubscriptionStatus: sub.status, lastStripeEventAt: eventCreatedMs })
               .where(eq(appUsers.stripeCustomerId, statusCustomerId));
-            const su = await getAppUserByStripeCustomerId(statusCustomerId);
             if (su) {
               invalidateAppUserByIdCache(su.id);
               invalidateCachedAppUser(su.id);
@@ -905,8 +929,8 @@ async function processWebhookEvent(event: Stripe.Event): Promise<void> {
             }
           }
         }
-        console.log(`${tag} [STATE] status=${sub.status} — access unchanged, status persisted`);
-        await recordSubLifecycle("noop", `status=${sub.status} persisted; access unchanged — Stripe retries own recovery`);
+        console.log(`${tag} [STATE] status=${sub.status} — no revocable member on this subscription; status persisted`);
+        await recordSubLifecycle("noop", `status=${sub.status} persisted; no revocable member on this subscription`);
         break;
       }
 
@@ -1334,33 +1358,103 @@ console.log(`${tag} [VERIFY] PASS`);
     }
 
     case "invoice.payment_failed": {
+      // NO-GRACE POLICY (owner directive, 2026-08-01): a declined subscription
+      // payment — renewal OR trial conversion — ends the membership at the
+      // moment of failure. No Smart-Retry window, no expiry-buffer ride-out.
+      // Two acts, in this order:
+      //   1. revoke access locally (the very second),
+      //   2. cancel the subscription at Stripe, so Stripe stops retrying and
+      //      the authoritative customer.subscription.deleted follows.
+      // This event type is in ACCESS_CHANGING_EVENT_TYPES: a failure here 5xxs
+      // so Stripe redelivers — a dropped revoke may not be lost.
       const invoice = event.data.object as Stripe.Invoice;
-      console.log(`${tag} [INPUT] Invoice FAILED invoice_id=${invoice.id} customer=${invoice.customer} attempt=${invoice.attempt_count}`);
-      console.log(`${tag} [STATE] Access NOT revoked — Stripe retries automatically`);
-      // Not revoking is correct: Stripe Smart Retries own the schedule and a
-      // card can recover. But "correct and invisible" is how a churning member
-      // goes unnoticed for a whole billing cycle, so record the attempt.
+      const failedCustomerId = typeof invoice.customer === "string" ? invoice.customer : (invoice.customer as Stripe.Customer | null)?.id ?? "";
+      const failedSubId = (() => {
+        const s = (invoice as unknown as { parent?: { subscription_details?: { subscription?: string | Stripe.Subscription } } }).parent?.subscription_details?.subscription
+          ?? (invoice as unknown as { subscription?: string | Stripe.Subscription }).subscription;
+        return typeof s === "string" ? s : (s as Stripe.Subscription | undefined)?.id ?? "";
+      })();
+      console.log(`${tag} [INPUT] Invoice FAILED invoice_id=${invoice.id} customer=${failedCustomerId || "(none)"} sub=${failedSubId || "(none)"} attempt=${invoice.attempt_count}`);
+
+      // Revoke ONLY the member whose SUBSCRIPTION failed. Guarding on the
+      // subscription protects the one state a blind customer-wide revoke would
+      // destroy: a lifetime (one-off) member whose separate subscription
+      // experiment declines must not lose the lifetime access they paid for.
+      const failedUser = failedCustomerId ? await getAppUserByStripeCustomerId(failedCustomerId) : null;
+      const subscriptionMatches =
+        !!failedUser?.stripeSubscriptionId &&
+        (failedSubId === "" || failedUser.stripeSubscriptionId === failedSubId);
+      let revoked = false;
+      if (failedUser && failedUser.hasAccess && subscriptionMatches) {
+        await revokeUserAccessByCustomerId(failedCustomerId, {
+          stripeEventId: event.id,
+          eventType: event.type,
+          reason: "PAYMENT_FAILED_NO_GRACE",
+          eventCreatedMs,
+        });
+        revoked = true;
+        console.log(`${tag} [OUTPUT] Access revoked at decline userId=${failedUser.id} (no-grace policy)`);
+      } else {
+        console.log(`${tag} [STATE] No revoke: ${!failedUser ? "no local user" : !failedUser.hasAccess ? "already without access" : "invoice subscription does not match the member's subscription"}`);
+      }
+
+      // Cancel at Stripe so the subscription cannot silently recover on a
+      // retry after we already ended the membership. Best-effort: if this
+      // call fails the revoke above still stands, subscription.deleted (or
+      // the next failed retry's redelivery) converges the Stripe side, and
+      // the alert below carries the discrepancy to a human.
+      let stripeCancelState = "skipped — no subscription id on invoice";
+      if (failedSubId && revoked) {
+        try {
+          await getStripe().subscriptions.cancel(failedSubId);
+          stripeCancelState = "canceled";
+          console.log(`${tag} [STATE] Stripe subscription canceled subId=${failedSubId}`);
+        } catch (err) {
+          stripeCancelState = `cancel FAILED: ${err instanceof Error ? err.message : String(err)}`;
+          console.error(`${tag} [STATE] Stripe-side cancel failed subId=${failedSubId}: ${stripeCancelState}`);
+        }
+      }
+
       await recordPaymentEvent({
         stripeEventId: event.id, eventType: event.type, livemode: event.livemode,
         objectId: invoice.id ?? "unknown", objectType: "invoice", kind: "failed",
-        outcome: "noop", outcomeReason: "access retained — Stripe retry schedule owns recovery",
+        outcome: revoked ? "revoked" : "noop",
+        outcomeReason: revoked
+          ? "no-grace policy — access revoked at decline; subscription canceled"
+          : "decline matched no revocable member (no user / no access / different subscription)",
         amountCents: invoice.amount_due ?? null, currency: invoice.currency ?? null,
-        stripeCustomerId: typeof invoice.customer === "string" ? invoice.customer : null,
-        stripeSubscriptionId: (invoice as unknown as { subscription?: string | null }).subscription ?? null,
+        userId: failedUser?.id ?? null,
+        stripeCustomerId: failedCustomerId || null,
+        stripeSubscriptionId: failedSubId || null,
         stripeInvoiceId: invoice.id ?? null, customerEmail: invoice.customer_email ?? null,
         attemptCount: invoice.attempt_count ?? null,
         occurredAt: event.created * 1000,
       });
-      // Push it. The ledger makes a failed renewal queryable; this makes it
-      // arrive. Under a recurring model this is the earliest churn signal, and
-      // "queryable by someone who thinks to look" is not a signal.
+      await recordSubscriptionEvent({
+        stripeEventId: event.id,
+        eventType: event.type,
+        livemode: event.livemode,
+        stripeSubscriptionId: failedSubId || "unknown",
+        stripeCustomerId: failedCustomerId || null,
+        userId: failedUser?.id ?? null,
+        kind: "payment_failed",
+        outcome: revoked ? "revoked" : "noop",
+        outcomeReason: revoked
+          ? `no-grace policy — membership ended at decline (stripe: ${stripeCancelState})`
+          : "decline matched no revocable member",
+        fromPlanId: failedUser?.stripePlanId ?? null,
+        occurredAt: eventCreatedMs,
+      });
       void billingAlert("PAYMENT_FAILED", {
         invoiceId: invoice.id,
-        customerId: typeof invoice.customer === "string" ? invoice.customer : null,
+        customerId: failedCustomerId || null,
+        userId: failedUser?.id ?? null,
         email: invoice.customer_email ?? null,
         amount: invoice.amount_due != null ? `${(invoice.amount_due / 100).toFixed(2)} ${(invoice.currency ?? "usd").toUpperCase()}` : null,
         attempt: invoice.attempt_count ?? null,
-        note: "Access retained — Stripe retry schedule owns recovery",
+        note: revoked
+          ? `No-grace policy: access revoked and subscription canceled at decline (stripe: ${stripeCancelState})`
+          : "Decline matched no revocable member — no action taken",
       });
       console.log(`${tag} [VERIFY] PASS`);
       break;
@@ -1523,6 +1617,9 @@ export function registerStripeWebhookRoute(app: Express): void {
       const ACCESS_CHANGING_EVENT_TYPES = new Set<string>([
         "checkout.session.completed",
         "invoice.paid",
+        // No-grace policy: a decline REVOKES at the moment of failure, so a
+        // dropped delivery of this event is a member left with unpaid access.
+        "invoice.payment_failed",
         "customer.subscription.created",
         "customer.subscription.updated",
         "customer.subscription.deleted",

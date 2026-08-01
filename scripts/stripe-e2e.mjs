@@ -1471,6 +1471,111 @@ async function checkSyntheticRefund() {
   );
 }
 
+/**
+ * NO-GRACE POLICY (owner directive, 2026-08-01): a declined subscription
+ * payment ends the membership at the moment of failure — no Smart-Retry
+ * window, no expiry-buffer ride-out. Two triggers, both proven here:
+ * invoice.payment_failed (the decline itself) and a past_due status move
+ * (the same fact arriving as a subscription update). The Stripe-side
+ * subscriptions.cancel targets a fake sub id and FAILS — asserting the local
+ * revoke stands regardless is the resilience property that matters.
+ */
+async function checkNoGraceDecline() {
+  // Re-arm: grant + bind the subscription (the refund scenario left 0).
+  await query(
+    "UPDATE app_users SET hasAccess = 1, stripePlanId = ?, stripeSubscriptionId = ?, stripeCustomerId = ?, lastStripeEventAt = NULL WHERE id = ?",
+    [PLAN_SLUG, SEED_SUBSCRIPTION, SEED_CUSTOMER, SEED_USER_ID]
+  );
+
+  const declined = syntheticEvent("invoice.payment_failed", {
+    id: `in_e2e_fail_${RUN_ID}`,
+    object: "invoice",
+    customer: SEED_CUSTOMER,
+    billing_reason: "subscription_cycle",
+    amount_due: 4900,
+    currency: "usd",
+    attempt_count: 1,
+    customer_email: `stripe-e2e+${RUN_ID}@example.invalid`,
+    parent: { subscription_details: { subscription: SEED_SUBSCRIPTION } },
+  });
+  let response = await deliverSigned(declined, listenState.whsec);
+  await awaitClaim(declined.id);
+  const declinedUser = await waitFor(
+    "app_users to show access revoked at the decline",
+    async () => {
+      const row = await seededUser();
+      return row && Number(row.hasAccess) === 0 ? row : null;
+    },
+    { timeoutMs: 30_000, intervalMs: 500 }
+  );
+  await sleep(1_500);
+  const payRows = await query(
+    "SELECT kind, outcome, outcomeReason FROM payment_events WHERE stripeEventId = ?",
+    [declined.id]
+  );
+  const subRows = await subscriptionRowsFor(declined.id);
+  const audit = await entitlementRowsFor(declined.id);
+
+  assertThat(
+    "NO-GRACE: a declined renewal REVOKES access at the moment of failure",
+    response.status === 200 && Number(declinedUser.hasAccess) === 0,
+    `HTTP ${response.status}; app_users.id=${SEED_USER_ID} hasAccess=${declinedUser.hasAccess}`,
+    SYNTHETIC
+  );
+  assertThat(
+    "NO-GRACE: the decline is a revoked money fact AND a payment_failed lifecycle fact",
+    payRows.length === 1 && payRows[0].kind === "failed" && payRows[0].outcome === "revoked" &&
+      subRows.length === 1 && subRows[0].kind === "payment_failed" && subRows[0].outcome === "revoked",
+    `payment_events: ${payRows.length} (${payRows[0]?.kind}/${payRows[0]?.outcome}); ` +
+      `subscription_events: ${subRows.length} (${subRows[0]?.kind}/${subRows[0]?.outcome})`,
+    SYNTHETIC
+  );
+  assertThat(
+    "NO-GRACE: the revoke survives a failed Stripe-side cancel (fake sub id) and is audited",
+    audit.length === 1 && audit[0].reason === "PAYMENT_FAILED_NO_GRACE" &&
+      Number(audit[0].beforeHasAccess) === 1 && Number(audit[0].afterHasAccess) === 0,
+    `entitlement_events for ${declined.id}: ${audit.length} ` +
+      `(reason=${audit[0]?.reason} ${audit[0]?.beforeHasAccess}→${audit[0]?.afterHasAccess})`,
+    SYNTHETIC
+  );
+
+  // ── The same fact arriving as a status move ────────────────────────────────
+  await query(
+    "UPDATE app_users SET hasAccess = 1, stripePlanId = ?, stripeSubscriptionId = ?, lastStripeEventAt = NULL WHERE id = ?",
+    [PLAN_SLUG, SEED_SUBSCRIPTION, SEED_USER_ID]
+  );
+  const pastDue = syntheticEvent("customer.subscription.updated", {
+    id: SEED_SUBSCRIPTION,
+    object: "subscription",
+    status: "past_due",
+    customer: SEED_CUSTOMER,
+    cancel_at_period_end: false,
+    items: { data: [{ price: { id: SEED_STRIPE_PRICE, recurring: { interval: "month" } } }] },
+    metadata: {},
+  });
+  pastDue.data.previous_attributes = { status: "active" };
+  response = await deliverSigned(pastDue, listenState.whsec);
+  await awaitClaim(pastDue.id);
+  const pastDueUser = await waitFor(
+    "app_users to show access revoked on past_due",
+    async () => {
+      const row = await seededUser();
+      return row && Number(row.hasAccess) === 0 ? row : null;
+    },
+    { timeoutMs: 30_000, intervalMs: 500 }
+  );
+  await sleep(1_500);
+  const pdRows = await subscriptionRowsFor(pastDue.id);
+  assertThat(
+    "NO-GRACE: past_due status move REVOKES and records status_changed/revoked",
+    response.status === 200 && Number(pastDueUser.hasAccess) === 0 &&
+      pdRows.length === 1 && pdRows[0].kind === "status_changed" && pdRows[0].outcome === "revoked",
+    `HTTP ${response.status}; hasAccess=${pastDueUser.hasAccess}; ` +
+      `subscription_events: ${pdRows.length} (${pdRows[0]?.kind}/${pdRows[0]?.outcome})`,
+    SYNTHETIC
+  );
+}
+
 async function runBattery() {
   log("[6/6] Battery");
 
@@ -1493,6 +1598,8 @@ async function runBattery() {
   await checkSyntheticRefund();
   log("    · dormant avenue-12 handlers");
   await checkDormantEventHandlers();
+  log("    · no-grace decline policy");
+  await checkNoGraceDecline();
 }
 
 // ─── Teardown ─────────────────────────────────────────────────────────────────

@@ -525,7 +525,8 @@ export const subscriptionEvents = mysqlTable("subscription_events", {
   stripeCustomerId: varchar("stripeCustomerId", { length: 64 }),
   userId: int("userId"),
   /** created | plan_changed | cancel_scheduled | cancel_reverted |
-   *  status_changed | updated | deleted | renewed | trial_ending | renewal_upcoming */
+   *  status_changed | updated | deleted | renewed | trial_ending |
+   *  renewal_upcoming | payment_failed */
   kind: varchar("kind", { length: 24 }).notNull(),
   /** What we did: recorded | granted | revoked | noop */
   outcome: varchar("outcome", { length: 16 }).default("recorded").notNull(),
