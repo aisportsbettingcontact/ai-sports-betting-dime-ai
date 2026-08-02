@@ -1,9 +1,17 @@
 {
-  "$comment": "Canonical QM skill-pack configuration for this repository (references/qm-harness.md). QM admins import the repo URL with exactly this config; scripts/qm-pack-verify.ts validates the corpus against it in pi:audit and CI so pack ingestion can never break silently. Excludes: the 7 flat uipro copies are superseded by the vendored v2.11.0 plugin build (same dedup as .pi/settings.json), and the flat frontend-design duplicate yields to the canonical .agents/skills copy.",
+  "$comment": "Canonical QM skill-pack configuration for this repository (references/qm-harness.md). QM admins import the repo URL with exactly this config; scripts/qm-pack-verify.ts validates the corpus against it \u2014 using QM's own glob semantics (patterns match the skill DIRECTORY, not the SKILL.md path; cross-validated against qm src/skills/ingest.ts planIngest) \u2014 in pi:audit and CI. Excludes: 7 flat uipro copies superseded by the vendored v2.11.0 build, plus the flat frontend-design duplicate (the .agents/skills copy is canonical); each appears in exact-dir AND dir/** form to cover nested skill dirs.",
   "url": "https://github.com/aisportsbettingcontact/ai-sports-betting-dime-ai",
   "config": {
     "skillGlobs": [".agents/skills/**", ".claude/skills/**"],
     "exclude": [
+      ".claude/skills/ui-ux-pro-max",
+      ".claude/skills/design",
+      ".claude/skills/design-system",
+      ".claude/skills/ui-styling",
+      ".claude/skills/brand",
+      ".claude/skills/banner-design",
+      ".claude/skills/slides",
+      ".claude/skills/frontend-design",
       ".claude/skills/ui-ux-pro-max/**",
       ".claude/skills/design/**",
       ".claude/skills/design-system/**",

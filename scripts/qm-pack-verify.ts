@@ -37,9 +37,30 @@ export interface QmPackReport {
 }
 
 function globToPrefix(glob: string): string {
-  // The pack config uses directory-prefix globs ("dir/**"). Keep the
-  // contract that simple on purpose — the verifier enforces it.
   return glob.endsWith("/**") ? glob.slice(0, -3) : glob;
+}
+
+/**
+ * QM's glob semantics, ported verbatim from yc-software/qm
+ * src/skills/ingest.ts (globToRegExp/matchesAny): patterns match the skill
+ * DIRECTORY path, not the SKILL.md file path. Cross-validated against QM's
+ * own planIngest — keep this in lockstep with upstream.
+ */
+function qmGlobToRegExp(glob: string): RegExp {
+  const re = glob
+    .split("**")
+    .map(seg =>
+      seg
+        .split("*")
+        .map(s => s.replace(/[.+?^${}()|[\]\\]/g, "\\$&"))
+        .join("[^/]*")
+    )
+    .join(".*");
+  return new RegExp(`^${re}$`);
+}
+
+function qmMatchesAny(dirPath: string, globs: string[] | undefined): boolean {
+  return !!globs && globs.some(g => qmGlobToRegExp(g).test(dirPath));
 }
 
 function walkSkillFiles(dir: string, out: string[]): void {
@@ -89,17 +110,29 @@ export function verifyQmPack(repoRoot: string = root): QmPackReport {
   }
   const globs = pack.config?.skillGlobs ?? [];
   if (globs.length === 0) failures.push("qm.pack.json has no skillGlobs");
-  const excludes = (pack.config?.exclude ?? []).map(globToPrefix);
-  for (const glob of [...globs, ...(pack.config?.exclude ?? [])]) {
+  const excludeGlobs = pack.config?.exclude ?? [];
+  for (const glob of globs) {
     if (!glob.endsWith("/**")) {
       failures.push(
-        `pack glob "${glob}" must be a directory-prefix glob (dir/**)`
+        `skillGlob "${glob}" must be a directory-prefix glob (dir/**)`
       );
     }
   }
-  for (const prefix of excludes) {
+  // Exclude liveness: every exclude must reference an existing directory
+  // (dead excludes silently re-include superseded skills).
+  for (const prefix of new Set(excludeGlobs.map(globToPrefix))) {
     if (!existsSync(path.join(repoRoot, prefix))) {
       failures.push(`pack exclude "${prefix}" points at a missing directory`);
+    }
+  }
+  // QM matches globs against the skill DIRECTORY (verified against qm's
+  // planIngest): an exclude written only as "dir/**" never matches the dir
+  // itself. Require the exact-dir form for every excluded skill root.
+  for (const prefix of new Set(excludeGlobs.map(globToPrefix))) {
+    if (!excludeGlobs.includes(prefix)) {
+      failures.push(
+        `exclude "${prefix}/**" needs its exact-dir companion "${prefix}" (QM matches skill dirs, not file paths)`
+      );
     }
   }
 
@@ -107,9 +140,14 @@ export function verifyQmPack(repoRoot: string = root): QmPackReport {
   for (const glob of globs) {
     walkSkillFiles(path.join(repoRoot, globToPrefix(glob)), files);
   }
+  // Selection mirrors QM's planIngest exactly: match the skill dir against
+  // skillGlobs and exclude with QM's own glob semantics.
   const selected = files.filter(file => {
     const rel = path.relative(repoRoot, file).split(path.sep).join("/");
-    return !excludes.some(prefix => rel.startsWith(`${prefix}/`));
+    const skillDir = rel.slice(0, rel.lastIndexOf("/"));
+    return (
+      qmMatchesAny(skillDir, globs) && !qmMatchesAny(skillDir, excludeGlobs)
+    );
   });
 
   if (selected.length < 90) {
