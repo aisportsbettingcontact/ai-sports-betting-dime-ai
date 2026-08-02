@@ -1,5 +1,10 @@
 # pi Review — manual, cost-controlled headless review through the pi harness.
 #
+# ⏸ PAUSED (owner directive 2026-08-01, LLM.md "API credit budget"): this
+# workflow is disabled_manually — API credits are reserved for Dime Chat work
+# and pi-share-hf reviews. Re-enable only on explicit owner say-so:
+#   gh workflow enable pi-review.yml
+#
 # Runs `pi -p "/review branch"` on the dispatched ref with the full project
 # wiring (227 skills, dime-guard, repo conventions from AGENTS.md). Uses the
 # ANTHROPIC_API_KEY repo secret — the only surface where that key lives, per
