@@ -546,7 +546,7 @@ describe("Dime Conversation Trace v1 persistence contract", () => {
     expect(deterministicIdx).toBeGreaterThan(-1);
     expect(deterministicIdx).toBeLessThan(
       routeSource.indexOf(
-        '(DIME_CHAT_LLM_PROVIDER === "anthropic" || DIME_CHAT_LLM_PROVIDER === "pi") && !hasAnthropicCredentials()'
+        'DIME_CHAT_LLM_PROVIDER === "anthropic" && !hasAnthropicCredentials()'
       )
     );
     expect(deterministicIdx).toBeLessThan(

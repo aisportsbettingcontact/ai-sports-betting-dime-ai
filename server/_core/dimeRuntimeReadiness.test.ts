@@ -46,7 +46,7 @@ describe("Dime Chat Runtime Readiness v1", () => {
       version: DIME_RUNTIME_READINESS_VERSION,
       generatedAt: NOW.toISOString(),
       state: "limited",
-      mode: "pi",
+      mode: "anthropic",
       capabilities: {
         generativeLaneConfigured: false,
         deterministicResponsesConfigured: true,
@@ -177,7 +177,7 @@ describe("Dime Chat Runtime Readiness v1", () => {
   it("formats bounded startup telemetry without raw configuration", () => {
     const readiness = getDimeRuntimeReadiness({ env: {}, now: NOW });
     expect(formatDimeRuntimeReadinessLog(readiness)).toBe(
-      "[DIME_RUNTIME] version=dime-chat-runtime-readiness-v1 state=limited mode=pi routing=on trace=off issues=trace_disabled,anthropic_credentials_missing"
+      "[DIME_RUNTIME] version=dime-chat-runtime-readiness-v1 state=limited mode=anthropic routing=on trace=off issues=trace_disabled,anthropic_credentials_missing"
     );
   });
 });

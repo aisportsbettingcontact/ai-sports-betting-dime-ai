@@ -49,8 +49,8 @@ describe("provider registry", () => {
     expect(dime1).toBe("dime1");
   });
 
-  it('serves via the embedded pi runtime while Dime 1.0 remains non-release work (owner unfreeze, 2026-08-01)', () => {
-    expect(DIME_CHAT_LLM_PROVIDER).toBe("pi");
+  it("ships on the anthropic path while the Dime 1.0 foundation remains non-release work (owner unfreeze, 2026-08-01)", () => {
+    expect(DIME_CHAT_LLM_PROVIDER).toBe("anthropic");
   });
 
   it("pins the exact Llama 3.1 Base foundation identity", () => {
@@ -83,7 +83,7 @@ describe("POST /api/dime/chat — dime1 branch wiring", () => {
     alphaIdx
   );
   const freezeIdx = routeSrc.indexOf(
-    'if (DIME_CHAT_LLM_PROVIDER !== "anthropic" && DIME_CHAT_LLM_PROVIDER !== "pi")',
+    'if (DIME_CHAT_LLM_PROVIDER !== "anthropic")',
     dime1Idx
   );
 
