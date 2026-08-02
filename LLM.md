@@ -38,6 +38,21 @@ API credentials are needed only for the non-interactive surfaces:
   `runDimeAgent` (dimeAgent.ts), `createAnthropicClient` callers
 - headless pipelines — `pi -p` in CI, `pi-share-hf` LLM review
 
+## API credit budget (owner directive, 2026-08-01)
+
+The funded `ANTHROPIC_API_KEY` balance is spent ONLY on:
+
+1. **Dime AI Chat** — testing, auditing, training, deployment, or execution of the
+   chat surface (`runPiChat`, `dime-chat.route.ts`, and their verification), and
+2. **pi-share-hf LLM reviews** of collected sessions.
+
+Everything else uses subscription auth or a model-free path (`pi:audit`, tsc,
+vitest). **Unattended/CI model calls are paused**: the `pi Review` workflow is
+`disabled_manually` — re-enable (`gh workflow enable pi-review.yml`) only on
+explicit owner say-so. Before any action that would bill the key, state which
+bucket it falls in; if neither, don't spend. Maximize intent: one reasoned call
+beats ambient automation.
+
 ## Routing and credentials (API surfaces only)
 
 Anthropic API traffic — Anthropic SDK (`server/_core/anthropicClient.ts`), Agent SDK
