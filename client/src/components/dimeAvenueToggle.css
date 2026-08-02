@@ -1,0 +1,119 @@
+/**
+ * DimeAvenueToggle — chat avenue segmented control.
+ * Element language: floating-nav pill idiom (20px radius family, Familjen
+ * Grotesk, 160ms brand motion — MASTER.md). Colors are owner-directed
+ * (2026-08-01) and intentionally invert per theme:
+ *   inactive · light theme: black bg / bold white text
+ *   inactive · dark theme:  white bg / bold black text
+ *   active   · both themes: mint #45E0A8 / bold black text
+ * Dark styling is the default (standalone dark surfaces like the mobile
+ * shell carry no theme class); .theme-light overrides invert the inactive
+ * segments.
+ */
+
+.dime-avenue-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 20px;
+  font-family: "Familjen Grotesk", sans-serif;
+}
+
+.dime-avenue-segment {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+  min-height: 30px;
+  padding: 5px 12px;
+  border-radius: 16px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  transition:
+    background-color 160ms ease,
+    color 160ms ease;
+  /* Inactive default = dark theme: white bg, bold black text. */
+  background: #ffffff;
+  color: #000000;
+}
+
+.theme-light .dime-avenue-segment {
+  /* Inactive, light theme: black bg, bold white text. */
+  background: #000000;
+  color: #ffffff;
+}
+
+.dime-avenue-segment.is-active,
+.theme-light .dime-avenue-segment.is-active {
+  /* Active, both themes: mint, bold black text. */
+  background: #45e0a8;
+  color: #000000;
+}
+
+/* Keyboard focus: ring idiom from the chat surface; on the mint fill add a
+   black separation ring so the focus stays visible (law-legal: black+mint). */
+.dime-avenue-segment:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(69, 224, 168, 0.55);
+}
+.dime-avenue-segment.is-active:focus-visible {
+  box-shadow:
+    0 0 0 2px #000000,
+    0 0 0 5px rgba(69, 224, 168, 0.55);
+}
+
+/* Narrow widths: compact labels (never two-line segments). The full label
+   spans hide below 640px; compact spans show. */
+.dime-avenue-label-compact {
+  display: none;
+}
+@media (max-width: 639px) {
+  .dime-avenue-label-full {
+    display: none;
+  }
+  .dime-avenue-label-compact {
+    display: inline;
+  }
+  .dime-avenue-segment {
+    padding: 5px 9px;
+    font-size: 10px;
+  }
+}
+
+/* Very narrow phones: tighten further instead of wrapping. */
+@media (max-width: 379px) {
+  .dime-avenue-toggle {
+    gap: 3px;
+  }
+  .dime-avenue-segment {
+    padding: 4px 7px;
+    letter-spacing: 0.02em;
+  }
+}
+
+/* Placement helpers. */
+/* Compact bar (tablet/phone): center the toggle between the corner controls. */
+.dime-avenue-toggle--bar {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100% - 112px); /* clear the corner controls */
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.dime-avenue-toggle--bar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Desktop: slim centered strip at the top of the chat pane. */
+.dc-avenue-bar {
+  display: flex;
+  justify-content: center;
+  padding: 12px 16px 0;
+}

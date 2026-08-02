@@ -57,6 +57,13 @@ import {
   type SpringSettleHandle,
 } from "@/lib/springSettle";
 import {
+  applyDimeAvenueScope,
+  loadDimeChatAvenue,
+  saveDimeChatAvenue,
+  type DimeChatAvenue,
+} from "@/lib/dimeChatAvenue";
+import { DimeAvenueToggle } from "@/components/DimeAvenueToggle";
+import {
   deriveTierLabel,
   displaySidebarName,
   formatExpiryLine,
@@ -464,7 +471,9 @@ function DimeSidebar({
       className={`dc-sidebar${compact ? " dc-drawer" : ""}${rail ? " dc-sidebar--rail" : ""}`}
       role={compact && drawerOpen ? "dialog" : undefined}
       aria-modal={compact && drawerOpen ? true : undefined}
-      aria-label={compact ? (phone ? "Chat history" : "Dime navigation") : undefined}
+      aria-label={
+        compact ? (phone ? "Chat history" : "Dime navigation") : undefined
+      }
       aria-hidden={compact && !drawerOpen ? true : undefined}
     >
       <div className="dc-sidebar-head">
@@ -488,7 +497,11 @@ function DimeSidebar({
                 (owner directive 2026-07-29) — the matched collapse glyph reads
                 as the same control; tablet keeps the frozen ×. */}
             {phone ? (
-              <PanelLeftClose size={22.5} strokeWidth={1.8} aria-hidden="true" />
+              <PanelLeftClose
+                size={22.5}
+                strokeWidth={1.8}
+                aria-hidden="true"
+              />
             ) : (
               "×"
             )}
@@ -571,55 +584,57 @@ function DimeSidebar({
             pill nav owns every other destination, so repeating them here would
             put two primary navs on one screen. Tablet/desktop keep the full
             row set. */}
-        {(phone ? NAV_ROWS.filter(row => row.pane === "chat") : NAV_ROWS).map(row => {
-          const href = row.href();
-          const active = row.pane === activePane;
-          const RowIcon = row.icon;
-          return href === "#" ? (
-            <button
-              key={row.label}
-              type="button"
-              className="dc-sidebar-row dc-nav-disabled"
-              aria-disabled="true"
-              title={rail ? row.label : undefined}
-            >
-              <RowIcon
-                className="dc-nav-ico"
-                size={22.5}
-                strokeWidth={1.8}
-                aria-hidden="true"
-              />
-              <span className="dc-sidebar-text">{row.label}</span>
-            </button>
-          ) : (
-            <Link
-              key={row.label}
-              href={href}
-              className={`dc-sidebar-row${active ? " is-active" : ""}`}
-              aria-current={active ? "page" : undefined}
-              title={rail ? row.label : undefined}
-              onClick={(event: ReactMouseEvent) => {
-                if (row.pane === "chat") {
-                  event.preventDefault();
-                  onNewChat();
-                  onShellNavigate?.(href);
-                } else if (onShellNavigate) {
-                  event.preventDefault();
-                  onShellNavigate(href);
-                }
-                onNavigate();
-              }}
-            >
-              <RowIcon
-                className="dc-nav-ico"
-                size={22.5}
-                strokeWidth={1.8}
-                aria-hidden="true"
-              />
-              <span className="dc-sidebar-text">{row.label}</span>
-            </Link>
-          );
-        })}
+        {(phone ? NAV_ROWS.filter(row => row.pane === "chat") : NAV_ROWS).map(
+          row => {
+            const href = row.href();
+            const active = row.pane === activePane;
+            const RowIcon = row.icon;
+            return href === "#" ? (
+              <button
+                key={row.label}
+                type="button"
+                className="dc-sidebar-row dc-nav-disabled"
+                aria-disabled="true"
+                title={rail ? row.label : undefined}
+              >
+                <RowIcon
+                  className="dc-nav-ico"
+                  size={22.5}
+                  strokeWidth={1.8}
+                  aria-hidden="true"
+                />
+                <span className="dc-sidebar-text">{row.label}</span>
+              </button>
+            ) : (
+              <Link
+                key={row.label}
+                href={href}
+                className={`dc-sidebar-row${active ? " is-active" : ""}`}
+                aria-current={active ? "page" : undefined}
+                title={rail ? row.label : undefined}
+                onClick={(event: ReactMouseEvent) => {
+                  if (row.pane === "chat") {
+                    event.preventDefault();
+                    onNewChat();
+                    onShellNavigate?.(href);
+                  } else if (onShellNavigate) {
+                    event.preventDefault();
+                    onShellNavigate(href);
+                  }
+                  onNavigate();
+                }}
+              >
+                <RowIcon
+                  className="dc-nav-ico"
+                  size={22.5}
+                  strokeWidth={1.8}
+                  aria-hidden="true"
+                />
+                <span className="dc-sidebar-text">{row.label}</span>
+              </Link>
+            );
+          }
+        )}
       </nav>
       {recentChats.length > 0 ? (
         <>
@@ -1293,12 +1308,12 @@ export default function DimeChatPage({
   const chatAccess: "granted" | "pending" | "denied" = demoMode
     ? "granted"
     : previewMode
-    ? "granted"
-    : authLoading
-      ? "pending"
-      : isOwner
-        ? "granted"
-        : "denied";
+      ? "granted"
+      : authLoading
+        ? "pending"
+        : isOwner
+          ? "granted"
+          : "denied";
 
   // History reads/writes need a real authenticated owner session — previewMode
   // grants the visual surface only, never the tRPC history calls.
@@ -1366,6 +1381,18 @@ export default function DimeChatPage({
   );
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerMoving, setDrawerMoving] = useState(false);
+  // Avenue toggle (owner directive 2026-08-01): every outgoing message is
+  // scoped to the active data avenue — projections / splits / line movement.
+  // The ref feeds runStream/submit without widening their dependency lists.
+  const [avenue, setAvenueState] = useState<DimeChatAvenue>(() =>
+    loadDimeChatAvenue()
+  );
+  const avenueRef = useRef(avenue);
+  const setAvenue = useCallback((next: DimeChatAvenue) => {
+    avenueRef.current = next;
+    setAvenueState(next);
+    saveDimeChatAvenue(next);
+  }, []);
 
   const pageRef = useRef<HTMLDivElement>(null);
   const composerRef = useRef<HTMLFormElement>(null);
@@ -1525,7 +1552,10 @@ export default function DimeChatPage({
         pageRef.current?.style.setProperty("--dc-kb-inset", `${inset}px`);
         // Also on <html>: the floating nav and body-level chrome live outside
         // .dc-page and must read the same keyboard state.
-        document.documentElement.style.setProperty("--dc-kb-inset", `${inset}px`);
+        document.documentElement.style.setProperty(
+          "--dc-kb-inset",
+          `${inset}px`
+        );
 
         // Bubbles ride the keyboard 1:1 (owner directive 2026-07-31): the
         // page container already shrinks to the visual viewport, so keep the
@@ -1550,7 +1580,10 @@ export default function DimeChatPage({
           const writeProgress = (v: number) => {
             kbProgressRef.current = v;
             pageRef.current?.style.setProperty("--dc-kb-progress", String(v));
-            document.documentElement.style.setProperty("--dc-kb-progress", String(v));
+            document.documentElement.style.setProperty(
+              "--dc-kb-progress",
+              String(v)
+            );
           };
           document.documentElement.classList.toggle("dc-kb-open", open);
           if (reduceMotion) {
@@ -1575,7 +1608,9 @@ export default function DimeChatPage({
               }
               const last = kbLastTsRef.current;
               kbLastTsRef.current = ts;
-              spring.step(last == null ? 1 / 60 : Math.min((ts - last) / 1000, 1 / 20));
+              spring.step(
+                last == null ? 1 / 60 : Math.min((ts - last) / 1000, 1 / 20)
+              );
               kbFrameRef.current = requestAnimationFrame(run);
             };
             if (kbFrameRef.current == null)
@@ -1612,13 +1647,16 @@ export default function DimeChatPage({
     const startSettle = () => {
       settleUntil = performance.now() + 420; // covers the slowest iOS slide
       lastHeight = -1;
-      if (settleFrame == null) settleFrame = requestAnimationFrame(settleSample);
+      if (settleFrame == null)
+        settleFrame = requestAnimationFrame(settleSample);
     };
     const onFocusIn = (e: FocusEvent) => {
       const t = e.target as HTMLElement | null;
       if (
         t &&
-        (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)
+        (t.tagName === "INPUT" ||
+          t.tagName === "TEXTAREA" ||
+          t.isContentEditable)
       )
         startSettle();
     };
@@ -1990,6 +2028,10 @@ export default function DimeChatPage({
           body: JSON.stringify({
             messages: history,
             trace: traceRequest,
+            // Forward-compatible native scoping channel (owner directive
+            // 2026-08-01): ignored by the server today, honored by the
+            // upcoming per-avenue retrievers.
+            avenue: avenueRef.current,
           }),
         });
 
@@ -2191,6 +2233,10 @@ export default function DimeChatPage({
         demoReplay(trimmed);
         return;
       }
+      // Avenue scoping (owner directive 2026-08-01): the visible scope suffix
+      // rides the text channel (transparency — the bubble shows exactly what
+      // was sent); the body-level `avenue` field rides alongside in runStream.
+      const scoped = applyDimeAvenueScope(trimmed, avenueRef.current);
       startDimeChatTrace((traceTools, traceLoad) => {
         // D3 analytics (inert until an island registers the emitter).
         emitAction("chat_message_sent", {
@@ -2204,7 +2250,7 @@ export default function DimeChatPage({
           },
         });
 
-        pendingUserTextRef.current = trimmed;
+        pendingUserTextRef.current = scoped;
         const wasHome = state.messages.length === 0;
         if (wasHome) captureComposerPresentation();
         if (wasHome && !reduceMotion) {
@@ -2237,9 +2283,9 @@ export default function DimeChatPage({
         activeClientTraceRef.current = activeTrace;
         const history = [
           ...state.messages.map(({ role, content }) => ({ role, content })),
-          { role: "user" as const, content: trimmed },
+          { role: "user" as const, content: scoped },
         ];
-        dispatch({ type: "append_user", id: userId, text: trimmed });
+        dispatch({ type: "append_user", id: userId, text: scoped });
         dispatch({ type: "open_assistant", id: assistantId });
         void runStream(
           history,
@@ -2672,26 +2718,26 @@ export default function DimeChatPage({
                   the PanelLeftOpen glyph is the chat-history toggle, matching
                   the PanelLeftClose inside the drawer. Tablet keeps "Menu". */}
               {phone ? (
-                <PanelLeftOpen size={22.5} strokeWidth={1.8} aria-hidden="true" />
+                <PanelLeftOpen
+                  size={22.5}
+                  strokeWidth={1.8}
+                  aria-hidden="true"
+                />
               ) : (
                 "Menu"
               )}
             </button>
-            {/* Phones (owner directive 2026-07-29 r2): the floating nav's
-                active chat pill is the ONE credits display — repeating it
-                here read as a duplicate, so the bar center stays empty and
-                the bar collapses to the toggle's own footprint. Tablet keeps
-                the wordmark title. */}
-            {!phone && (
-              <span className="dc-mobile-title">
-                <span className="dime-wordmark" aria-label="dime">
-                  d
-                  <span className="dime-wordmark-i">
-                    ı<span className="dime-coindot" />
-                  </span>
-                  me
-                </span>
-              </span>
+            {/* Avenue toggle (owner directive 2026-08-01, supersedes the
+                2026-07-29 r2 empty-center rule and the tablet wordmark):
+                the bar center carries the 3-segment data-avenue control on
+                tablet and phone. Phones hand the center back to the kb
+                wordmark while the keyboard is up (the r3/07-31 morph). */}
+            {chatAccess === "granted" && (!phone || !kbOpen) && (
+              <DimeAvenueToggle
+                value={avenue}
+                onChange={setAvenue}
+                className="dime-avenue-toggle--bar"
+              />
             )}
             {/* Phones, keyboard up (owner directive 2026-07-31, supersedes the
                 r2 empty-center rule for THIS state only): the wordmark fades
@@ -2701,7 +2747,10 @@ export default function DimeChatPage({
                 so the reveal/hide never re-layouts — visibility is pure
                 compositor work (opacity/transform). */}
             {phone && (
-              <span className="dc-mobile-title dc-kb-logo" aria-hidden={!kbOpen}>
+              <span
+                className="dc-mobile-title dc-kb-logo"
+                aria-hidden={!kbOpen}
+              >
                 <span className="dime-wordmark" aria-label="dime">
                   d
                   <span className="dime-wordmark-i">
@@ -2922,6 +2971,14 @@ export default function DimeChatPage({
                   Dime Chat
                 </h1>
               )}
+              {/* Desktop avenue toggle (owner directive 2026-08-01): top
+                  middle of the chat pane. Compact widths render it in the
+                  mobile bar instead. */}
+              {!compact && chatAccess === "granted" && (
+                <div className="dc-avenue-bar">
+                  <DimeAvenueToggle value={avenue} onChange={setAvenue} />
+                </div>
+              )}
               {chatAccess === "denied" && (
                 // Non-owner state (plan Phase 2.1): wordmark + coming-soon
                 // copy only. No hero, no composer, no pills. Sidebar/nav
@@ -2940,48 +2997,51 @@ export default function DimeChatPage({
               {/* Thread kebab is tablet/desktop chrome (owner directive
                   2026-07-29): phones drop it — per-chat Delete stays reachable
                   through the drawer's recent-row Ellipsis menu. */}
-              {chatAccess === "granted" && conversation && threadId != null && !phone && (
-                <div className="dc-thread-actions" ref={threadMenuRef}>
-                  <button
-                    type="button"
-                    className="dc-thread-menu-trigger dc-focusable dc-pressable"
-                    aria-label="Chat settings"
-                    aria-haspopup="menu"
-                    aria-expanded={threadMenuOpen}
-                    onClick={() => setThreadMenuOpen(open => !open)}
-                  >
-                    ⋯
-                  </button>
-                  {threadMenuOpen && (
-                    <div className="dc-thread-menu" role="menu">
-                      <button
-                        type="button"
-                        role="menuitem"
-                        className="dc-thread-menu-item dc-focusable dc-pressable"
-                        onClick={toggleStar}
-                      >
-                        {activeThreadMeta?.starred ? "Unstar" : "Star"}
-                      </button>
-                      <button
-                        type="button"
-                        role="menuitem"
-                        className="dc-thread-menu-item dc-focusable dc-pressable"
-                        onClick={archiveThread}
-                      >
-                        Archive
-                      </button>
-                      <button
-                        type="button"
-                        role="menuitem"
-                        className="dc-thread-menu-item dc-thread-menu-item--danger dc-focusable dc-pressable"
-                        onClick={deleteThread}
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
+              {chatAccess === "granted" &&
+                conversation &&
+                threadId != null &&
+                !phone && (
+                  <div className="dc-thread-actions" ref={threadMenuRef}>
+                    <button
+                      type="button"
+                      className="dc-thread-menu-trigger dc-focusable dc-pressable"
+                      aria-label="Chat settings"
+                      aria-haspopup="menu"
+                      aria-expanded={threadMenuOpen}
+                      onClick={() => setThreadMenuOpen(open => !open)}
+                    >
+                      ⋯
+                    </button>
+                    {threadMenuOpen && (
+                      <div className="dc-thread-menu" role="menu">
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className="dc-thread-menu-item dc-focusable dc-pressable"
+                          onClick={toggleStar}
+                        >
+                          {activeThreadMeta?.starred ? "Unstar" : "Star"}
+                        </button>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className="dc-thread-menu-item dc-focusable dc-pressable"
+                          onClick={archiveThread}
+                        >
+                          Archive
+                        </button>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className="dc-thread-menu-item dc-thread-menu-item--danger dc-focusable dc-pressable"
+                          onClick={deleteThread}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
               {chatAccess === "granted" && conversation && (
                 <div
                   className="dc-scroller"
