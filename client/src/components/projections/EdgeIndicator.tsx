@@ -61,7 +61,7 @@ export function EdgeIndicator({ insight, className }: EdgeIndicatorProps) {
       role="group"
       aria-label={`Edge: ${insight.sideLabel}, ${edge}, best price ${insight.bookPrice}`}
     >
-      <TrendingUp size={14} aria-hidden="true" style={{ color: "var(--brand-mint-foreground)" }} />
+      <TrendingUp size={14} aria-hidden="true" />{/* color owned by EdgeIndicator.css — no inline style, so PASS neutralization needs no !important */}
       <span className="edge-indicator__label">Edge</span>
       <strong className="edge-indicator__value">{edge}</strong>
     </div>

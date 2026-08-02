@@ -30,6 +30,14 @@ const appSrc = fs.readFileSync(
   path.join(import.meta.dirname, "..", "App.tsx"),
   "utf8",
 );
+// 2026-08-02 responsive rebuild: the feed stylesheet moved out of the TSX
+// template string into a real stylesheet. CSS contracts assert against it;
+// `flatCss` collapses whitespace so formatting churn can't break a law test.
+const css = fs.readFileSync(
+  path.join(import.meta.dirname, "dimeModelFeed.css"),
+  "utf8",
+);
+const flatCss = css.replace(/\s+/g, " ");
 
 const EMBEDDED_SERIALIZATION_EXCLUSIONS = Object.freeze([
   "external shell wrapper",
@@ -155,14 +163,19 @@ describe("DimeModelFeed — owner rules", () => {
   it("RULE 2/4: team crests resolved for both MLB (registry) and WC (flagUrl)", () => {
     expect(src).toMatch(/MLB_BY_ABBREV\.get\(awayAbbr\)/);
     expect(src).toMatch(/m\.awayTeam\?\.flagUrl \?\? fifaFlagUrl\(awayCode\)/);
-    // Market rows and verdict pick carry the crest.
-    expect(src).toMatch(/<Crest c=\{r\.crest\} size=\{14\}/);
-    expect(src).toMatch(/<Crest c=\{v\.crest\} size=\{18\}/);
+    // Crest specs attach to both teams and to market rows/footers; rendering
+    // moved to the shared ProjectionCard tree (TeamLogoMark / MarketTable) —
+    // the dead in-page <Crest> render tree was removed 2026-08-02.
+    expect(src).toMatch(/crest: awayCrest/);
+    expect(src).toMatch(/crest: homeCrest/);
   });
 
   it("RULE 2 zero-diff: embedding does not branch or alter crest/flag rendering", () => {
-    expect(src.match(/function Crest\(/g)).toHaveLength(1);
-    expect(src.match(/<Crest c=\{/g)).toHaveLength(4);
+    // The pre-ProjectionCard render tree (Crest/GameRow/MarketCol/TeamRow) is
+    // gone — crest rendering lives in the shared card components, which have
+    // no embed awareness at all.
+    expect(src).not.toMatch(/function Crest\(/);
+    expect(src).not.toMatch(/<Crest /);
     expect(src).not.toMatch(/embeddedInShell[^\n]*(?:crest|flag)|(?:crest|flag)[^\n]*embeddedInShell/i);
   });
 
@@ -177,13 +190,19 @@ describe("DimeModelFeed — owner rules", () => {
     expect(src).toMatch(/\[\.\.\.\(hasAdvMarket \? \[toAdv\] : \[\]\), winner \?\? ml, draw, total, spread, dblChc, btts\]/);
   });
 
-  it("three-color law: mint #45E0A8 only (both themes), no neon/gold/legacy-mint", () => {
-    expect(src).toContain("#45E0A8");
+  it("three-color law: mint via --brand-mint token only (both themes), no neon/gold/legacy-mint", () => {
+    // 2026-08-02: mint is consumed through the shared token; raw #45E0A8
+    // literals are allowed only as var() fallbacks in the stylesheet.
+    expect(flatCss).toContain("var(--brand-mint");
+    expect(css).not.toMatch(/(?<!var\(--brand-mint,\s?)#45e0a8/i);
     // 0FA36B (3.25:1 on white) is retired; 0A7C50 is the one sanctioned
-    // mint-text-on-light (DIME-UI-015 + theme audit 2026-07-31). The old
-    // case-sensitive toContain never fired against lowercase usage.
-    expect(src).not.toMatch(/#0fa36b/i);
-    expect(src).not.toMatch(/#39FF14|#FFD700|#FF6B35|#22D3EE|#F87171/i);
+    // mint-text-on-light (DIME-UI-015 + theme audit 2026-07-31).
+    for (const text of [src, css]) {
+      expect(text).not.toMatch(/#0fa36b/i);
+      expect(text).not.toMatch(/#39FF14|#FFD700|#FF6B35|#22D3EE|#F87171/i);
+    }
+    // The TSX carries no color literals at all — color is CSS-owned.
+    expect(src).not.toMatch(/#[0-9a-f]{6}\b/i);
   });
 
   it("round-aware WC stage label (Quarterfinal on Jul 9-13 window)", () => {
@@ -334,40 +353,44 @@ describe("DimeModelFeed — combined slate (owner directive 2026-07-18)", () => 
     expect(src).toMatch(/img\.src = "\/brand\/mlb-logo\.png"/);
     // CSS swaps variants by theme; both render inside the fixed 30px box
     // (1.25x scale, owner directive 2026-07-18).
-    expect(src).toMatch(/data-dmf-theme="light"\] \.dmf-lglogo-dark\{display:none\}/);
-    expect(src).toMatch(/:not\(\[data-dmf-theme="light"\]\) \.dmf-lglogo-light\{display:none\}/);
-    expect(src).toMatch(/\.dmf-lglogo\{[^}]*width:30px;height:30px/);
+    expect(flatCss).toMatch(/data-dmf-theme="light"\] \.dmf-lglogo-dark \{ display: none; \}/);
+    expect(flatCss).toMatch(/:not\(\[data-dmf-theme="light"\]\) \.dmf-lglogo-light \{ display: none; \}/);
+    expect(flatCss).toMatch(/\.dmf-lglogo \{[^}]*width: 30px; height: 30px/);
     // Header cluster centers within the page; chevron holds the right edge.
     // (2026-07-29: the feedhead league bar shares the same rule.)
-    expect(src).toMatch(/\.dmf-leaguehead,\.dmf-lgbar\{[^}]*justify-content:center/);
-    expect(src).toMatch(/\.dmf-lgchev\{position:absolute;right:8px/);
+    expect(flatCss).toMatch(/\.dmf-leaguehead, \.dmf-lgbar \{[^}]*justify-content: center/);
+    expect(flatCss).toMatch(/\.dmf-lgchev \{ position: absolute; right: 8px/);
   });
 
   it("desktop emphasis pass (owner directive 2026-07-21)", () => {
-    // 5x centered shell page title tracked by the sticky feedhead offset.
-    expect(src).toMatch(/\.dc-shell-external-scroll \.dmf-topbar\{height:96px;justify-content:center\}/);
-    expect(src).toMatch(/\.dc-shell-external-scroll \.dmf-toptitle\{font-size:min\(70px/);
-    // top:96px keeps tracking the title band (Round 4 Wave 3, item 6 adds the
-    // header-rhythm properties in the SAME rule — see the dedicated describe
-    // block below for the full 24/32px contract).
-    expect(src).toMatch(/\.dc-shell-external-scroll \.dmf-feedhead\{top:96px;/);
+    // 5x centered shell page title on the fixed 96px band, tracked by the
+    // sticky feedhead through the ONE shared offset variable. The title is
+    // container-sized (6cqi, 70px cap) — copy-agnostic, no character-count
+    // divisor (2026-08-02 rebuild).
+    expect(flatCss).toMatch(/\.dc-shell-external-scroll \.dmf-root \{ --dmf-topbar-h: 96px; \}/);
+    expect(flatCss).toMatch(/\.dc-shell-external-scroll \.dmf-topbar \{ justify-content: center; \}/);
+    expect(flatCss).toMatch(/\.dc-shell-external-scroll \.dmf-toptitle \{ font-size: clamp\(1\.5rem, 6cqi, 4\.375rem\); line-height: 1;[^}]*white-space: nowrap/);
+    expect(flatCss).not.toMatch(/10\.8/); // the copy-tuned divisor is retired
     // 2x MLB league logo box; responsive game columns are covered below.
-    expect(src).toMatch(/\.dmf-lglogo--mlb\{width:60px;height:60px/);
+    expect(flatCss).toMatch(/\.dmf-lglogo--mlb \{ width: 60px; height: 60px/);
   });
 
-  it("lays out projection games 1-up on mobile, 2-up on tablet, and 3-up on desktop", () => {
-    expect(src).toMatch(
-      /\.dmf-leaguebody\{display:grid;grid-template-columns:minmax\(0,1fr\);align-items:start;gap:12px;margin-top:12px\}/,
+  it("lays out projection games with CONTENT-driven columns (container queries only)", () => {
+    expect(flatCss).toMatch(
+      /\.dmf-leaguebody \{ display: grid; grid-template-columns: minmax\(0, 1fr\); align-items: start; gap: 12px; margin-top: 12px; \}/,
     );
-    expect(src).toMatch(
-      /@media \(min-width:768px\)\{\s*\.dmf-leaguebody\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)\}/,
+    // 2-up and 3-up both key off the league body's own width — 2 readable
+    // >=305px cards + 12px gap = 622px; 3 + 2 gaps = 940px (FEED-CL01a,
+    // generalized 2026-08-02). A viewport media query recreates the
+    // ~194px-card crest-overhang band inside the app shell and must never
+    // return.
+    expect(flatCss).toMatch(
+      /@container dmf-league \(min-width: 622px\) \{ \.dmf-leaguebody \{ grid-template-columns: repeat\(2, minmax\(0, 1fr\)\); align-items: stretch; \} \}/,
     );
-    // FEED-CL01a: 3-up keys off the league body's own width (container query),
-    // never the window — a viewport media query recreates the ~194px-card
-    // crest-overhang band inside the app shell.
-    expect(src).toMatch(
-      /@container dmf-league \(min-width:940px\)\{\s*\.dmf-leaguebody\{grid-template-columns:repeat\(3,minmax\(0,1fr\)\);align-items:stretch\}/,
+    expect(flatCss).toMatch(
+      /@container dmf-league \(min-width: 940px\) \{ \.dmf-leaguebody \{ grid-template-columns: repeat\(3, minmax\(0, 1fr\)\); align-items: stretch; \} \}/,
     );
+    expect(css).not.toMatch(/@media[^{]*\{[^{]*\.dmf-leaguebody \{ grid-template-columns/);
   });
 
   it("stadium display drops a trailing parenthetical (2026-07-18)", () => {
@@ -388,11 +411,13 @@ describe("DimeModelFeed — combined slate (owner directive 2026-07-18)", () => 
 describe("DimeModelFeed — header rhythm (Round 4 Wave 3, item 6)", () => {
   it("shell-desktop date nav centers under the title band with the 24/32px rhythm", () => {
     // 24px title-band -> date-nav (padding-top); date text scales 15 -> 17px;
-    // the row centers instead of sitting left-aligned under the 5x title.
-    expect(src).toMatch(
-      /\.dc-shell-external-scroll \.dmf-feedhead\{top:96px;justify-content:center;padding-top:24px;padding-bottom:10px;margin-bottom:16px\}/,
+    // the row centers instead of sitting left-aligned under the 5x title. The
+    // sticky offset itself flows from --dmf-topbar-h (96px in the shell) —
+    // one variable, no per-rule top literals (2026-08-02 rebuild).
+    expect(flatCss).toMatch(
+      /\.dc-shell-external-scroll \.dmf-feedhead \{ justify-content: center; padding-top: 24px; padding-bottom: 10px; margin-bottom: 16px; \}/,
     );
-    expect(src).toMatch(/\.dc-shell-external-scroll \.dmf-datelbl\{font-size:17px\}/);
+    expect(flatCss).toMatch(/\.dc-shell-external-scroll \.dmf-datelbl \{ font-size: 17px; \}/);
   });
 
   it("the 32px date-nav -> league header gap is padding-bottom + margin-bottom + the pre-existing .dmf-list top padding", () => {
@@ -400,29 +425,30 @@ describe("DimeModelFeed — header rhythm (Round 4 Wave 3, item 6)", () => {
     // untouched by item 6) = 32px of space, matching the law's fixed rhythm
     // step; the feedhead's pre-existing 1px divider border sits between the
     // padding and margin (33px edge-to-edge — divider, not rhythm).
-    expect(src).toMatch(/padding-bottom:10px;margin-bottom:16px/);
-    expect(src).toMatch(/\.dmf-list\{display:flex;flex-direction:column;gap:12px;padding-top:6px;/);
+    expect(flatCss).toMatch(/padding-bottom: 10px; margin-bottom: 16px/);
+    expect(flatCss).toMatch(/\.dmf-list \{ display: flex; flex-direction: column; gap: 12px; padding-top: 6px;/);
   });
 
   it("is scoped to the shell wrapper inside the single >=1024px block only (item 8 scoping)", () => {
-    const desktopBlockStart = src.indexOf("@media (min-width:1024px){");
-    const desktopBlockEnd = src.indexOf("@media (prefers-reduced-motion: reduce){", desktopBlockStart);
+    const desktopBlockStart = css.indexOf("@media (min-width: 1024px) {");
+    const desktopBlockEnd = css.indexOf("@media (prefers-reduced-motion: reduce) {", desktopBlockStart);
     expect(desktopBlockStart).toBeGreaterThan(-1);
     expect(desktopBlockEnd).toBeGreaterThan(desktopBlockStart);
-    const desktopBlock = src.slice(desktopBlockStart, desktopBlockEnd);
-    expect(desktopBlock).toContain(".dc-shell-external-scroll .dmf-feedhead{top:96px;justify-content:center");
-    expect(desktopBlock).toContain(".dc-shell-external-scroll .dmf-datelbl{font-size:17px}");
+    const desktopBlock = css.slice(desktopBlockStart, desktopBlockEnd).replace(/\s+/g, " ");
+    expect(desktopBlock).toContain(".dc-shell-external-scroll .dmf-root { --dmf-topbar-h: 96px; }");
+    expect(desktopBlock).toContain(".dc-shell-external-scroll .dmf-feedhead { justify-content: center");
+    expect(desktopBlock).toContain(".dc-shell-external-scroll .dmf-datelbl { font-size: 17px; }");
     // Not duplicated anywhere else in the stylesheet (standalone /feed and
     // <1024px keep the shipped compact layout — no rhythm override leaks out).
-    const outside = src.slice(0, desktopBlockStart) + src.slice(desktopBlockEnd);
-    expect(outside).not.toMatch(/dmf-datelbl\{font-size:17px\}/);
-    expect(outside).not.toMatch(/dmf-feedhead\{[^}]*padding-top:24px/);
+    const outside = (css.slice(0, desktopBlockStart) + css.slice(desktopBlockEnd)).replace(/\s+/g, " ");
+    expect(outside).not.toMatch(/dmf-datelbl \{ font-size: 17px; \}/);
+    expect(outside).not.toMatch(/dmf-feedhead \{[^}]*padding-top: 24px/);
   });
 
-  it("<1024px and standalone keep the shipped 15px date label and 16/10px feedhead padding untouched", () => {
-    const base = src.slice(0, src.indexOf("@media (min-width:1024px){"));
-    expect(base).toMatch(/\.dmf-feedhead\{position:sticky;top:46px;z-index:10;padding:16px 0 10px;/);
-    expect(base).toMatch(/\.dmf-datelbl\{font-size:15px;font-weight:700;/);
+  it("<1024px and standalone keep the 15px date label, 16/10px feedhead padding, and the var-driven sticky offset", () => {
+    const base = css.slice(0, css.indexOf("@media (min-width: 1024px) {")).replace(/\s+/g, " ");
+    expect(base).toMatch(/\.dmf-feedhead \{ position: sticky; top: var\(--dmf-topbar-h\); z-index: 10; padding: 16px 0 10px;/);
+    expect(base).toMatch(/\.dmf-datelbl \{ font-size: 15px; font-weight: 700;/);
   });
 });
 
