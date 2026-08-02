@@ -11,6 +11,7 @@ runbook: `references/pi-harness.md`.
 | Embedded pi runtime | `@earendil-works/pi-agent-core` + `pi-ai` in the Express server | system prompt supplied by caller                                                                                                        | `server/_core/piAgent.ts` (`createPiAgent`/`runPiAgent`)                                                                                                                |
 | Agent SDK runner    | `@anthropic-ai/claude-agent-sdk` subprocess                     | Claude Code context                                                                                                                     | `server/_core/dimeAgent.ts` (`runDimeAgent`)                                                                                                                            |
 | Codex               | OpenAI Codex CLI/cloud                                          | `AGENTS.md` (native), `CODEX.md`                                                                                                        | `CODEX.md`; model `gpt-5.6-sol` per LLM.md                                                                                                                              |
+| QM (multiplayer)    | yc-software/qm — Slack + web org workspaces over Pi/Claude Code | skill pack imported from this repo (SKILLS.md config); sandbox clones get the full in-repo wiring                                       | deployment directory via `qm init` (docker/fly/aws — owner-gated); runbook `references/qm-harness.md`; reference clone `~/src/qm`                                       |
 
 ## Choosing a runtime
 
@@ -23,6 +24,9 @@ runbook: `references/pi-harness.md`.
 - **Process integration from non-Node tooling** → `pi --mode rpc` (LF-delimited JSONL).
 - **SDK scripting** → `@earendil-works/pi-coding-agent` `createAgentSession()` (full
   coding-agent session: tools, skills, sessions) or bare `pi-agent-core` for custom loops.
+- **Org-wide multiplayer work** (Slack channels, per-person scopes, crons, shared
+  skills, web apps) → QM (`references/qm-harness.md`) — this repo feeds it as a skill
+  pack and as a sandbox checkout; deployment is owner-gated.
 
 ## Invariants across harnesses
 
@@ -33,10 +37,11 @@ agent runs.
 
 ## Production chat
 
-`POST /api/dime/chat` executes through pi: `DIME_CHAT_LLM_PROVIDER = "pi"` serves chat via
-the embedded pi-agent-core runtime (`runPiChat` in `server/_core/piAgent.ts`) with
-claude-fable-5 — same validation, budgets, cost metering, and SSE contract as the retained
-`"anthropic"` direct-SDK path. `"dime1"` stays gated behind `ml/dime-1.0` release gates.
+`POST /api/dime/chat` is live on `DIME_CHAT_LLM_PROVIDER = "anthropic"` (owner unfreeze
+2026-08-01): claude-fable-5 through the preserved direct-SDK path — validation, budgets,
+cost metering, and the meta→delta→done SSE contract. `"pi"` (embedded `runPiChat`) is
+reserved pending the ml/dime-1.0 evidence re-freeze; `"dime1"` stays gated behind
+`ml/dime-1.0` release gates. Law: LLM.md "Dime Chat provider".
 
 ## Session sharing
 
