@@ -5,10 +5,13 @@
  * (2026-08-01) and intentionally invert per theme:
  *   inactive · light theme: black bg / bold white text
  *   inactive · dark theme:  white bg / bold black text
- *   active   · both themes: mint #45E0A8 / bold black text
- * Dark styling is the default (standalone dark surfaces like the mobile
- * shell carry no theme class); .theme-light overrides invert the inactive
- * segments.
+ *   active   · both themes: mint / bold black text
+ * Fully tokenized (X-HEX-EPIDEMIC ratchet: new files ship with zero hex
+ * literals): the inactive pair rides --dime-text-primary/--dime-bg — the
+ * documented inverse pair in both themes (see mobileFloatingNav.css) — and
+ * the active fill is --dime-mint with the `black` keyword for its
+ * theme-invariant ink. Tokens are global (styles/dime-mobile.css via
+ * main.tsx) and track html.dark, the same source as the chat theme.
  */
 
 .dime-avenue-toggle {
@@ -38,34 +41,28 @@
   transition:
     background-color 160ms ease,
     color 160ms ease;
-  /* Inactive default = dark theme: white bg, bold black text. */
-  background: #ffffff;
-  color: #000000;
+  /* Inactive: the theme-inverse pair — light: black bg / white ink;
+     dark: white bg / black ink. */
+  background: var(--dime-text-primary);
+  color: var(--dime-bg);
 }
 
-.theme-light .dime-avenue-segment {
-  /* Inactive, light theme: black bg, bold white text. */
-  background: #000000;
-  color: #ffffff;
+.dime-avenue-segment.is-active {
+  /* Active, both themes: mint fill, bold black ink. */
+  background: var(--dime-mint);
+  color: black;
 }
 
-.dime-avenue-segment.is-active,
-.theme-light .dime-avenue-segment.is-active {
-  /* Active, both themes: mint, bold black text. */
-  background: #45e0a8;
-  color: #000000;
-}
-
-/* Keyboard focus: ring idiom from the chat surface; on the mint fill add a
-   black separation ring so the focus stays visible (law-legal: black+mint). */
+/* Keyboard focus: mint ring; on the mint fill add a black separation ring
+   so focus stays visible (law-legal: black + mint only). */
 .dime-avenue-segment:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(69, 224, 168, 0.55);
+  box-shadow: 0 0 0 3px var(--dime-mint);
 }
 .dime-avenue-segment.is-active:focus-visible {
   box-shadow:
-    0 0 0 2px #000000,
-    0 0 0 5px rgba(69, 224, 168, 0.55);
+    0 0 0 2px black,
+    0 0 0 5px var(--dime-mint);
 }
 
 /* Narrow widths: compact labels (never two-line segments). The full label

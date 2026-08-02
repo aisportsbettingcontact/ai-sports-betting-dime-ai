@@ -7,7 +7,7 @@
  * and intentionally invert per theme:
  *   • inactive — light mode: black bg / bold white text;
  *               dark mode: white bg / bold black text;
- *   • active  — mint #45E0A8 / bold black text in both modes.
+ *   • active  — the mint token (--dime-mint) / bold black text in both modes.
  *
  * Accessibility: tablist/tab semantics with roving tabindex and arrow-key
  * navigation. Labels compress (PROJECTIONS / SPLITS / ODDS + LINES) at
