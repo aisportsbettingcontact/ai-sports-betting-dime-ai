@@ -1,0 +1,721 @@
+{
+  "desktop-1512-dark-anon": {
+    "url": "https://aisportsbettingmodels.com/feed/model/mlb-08-02-2026?theme=dark",
+    "dump": {
+      "title": "Log in — dıme",
+      "htmlClass": "dark",
+      "bodyClass": "",
+      "docScrollW": 1512,
+      "docClientW": 1512,
+      "themeAttr": null,
+      "bg": "rgb(0, 0, 0)",
+      "fonts": [
+        "\"Familjen Grotesk\", system-ui, -apple-system, \"Segoe UI\", sans-serif",
+        "\"Familjen Grotesk\", sans-serif",
+        "\"GG Sans\", \"Familjen Grotesk\", system-ui, -apple-system, sans-serif",
+        "\"Familjen Grotesk\", -apple-system, \"system-ui\", \"Segoe UI\", sans-serif"
+      ],
+      "classes": {},
+      "landmarks": [
+        {
+          "tag": "SECTION",
+          "cls": "",
+          "text": "",
+          "box": {
+            "x": 0,
+            "y": 0,
+            "w": 1512,
+            "h": 0
+          }
+        },
+        {
+          "tag": "H1",
+          "cls": "font-bold text-white leading-[1.05]",
+          "text": "See where priceand probabilitydisagree.",
+          "box": {
+            "x": 60,
+            "y": 191,
+            "w": 634,
+            "h": 167
+          }
+        },
+        {
+          "tag": "H1",
+          "cls": "text-lg font-bold text-white tracking-tight",
+          "text": "dıme",
+          "box": {
+            "x": 0,
+            "y": 0,
+            "w": 0,
+            "h": 0
+          }
+        },
+        {
+          "tag": "H2",
+          "cls": "font-bold text-white",
+          "text": "Log in",
+          "box": {
+            "x": 894,
+            "y": 135,
+            "w": 480,
+            "h": 50
+          }
+        },
+        {
+          "tag": "SECTION",
+          "cls": "js-ready",
+          "text": "Sports betting intelligence software\n      See where price and probability disag",
+          "box": {
+            "x": 0,
+            "y": 0,
+            "w": 0,
+            "h": 0
+          }
+        },
+        {
+          "tag": "H1",
+          "cls": "",
+          "text": "See where price and probability disagree.",
+          "box": {
+            "x": 0,
+            "y": 0,
+            "w": 0,
+            "h": 0
+          }
+        }
+      ]
+    },
+    "consoleMsgs": [],
+    "failedReqs": []
+  },
+  "desktop-1512-dark-shell": {
+    "url": "https://aisportsbettingmodels.com/feed/model/mlb-08-02-2026?theme=dark",
+    "dump": {
+      "title": "dıme — See where price and probability disagree | AI Sports Betting Models",
+      "htmlClass": "dark",
+      "bodyClass": "",
+      "docScrollW": 1512,
+      "docClientW": 1512,
+      "themeAttr": null,
+      "bg": "rgb(0, 0, 0)",
+      "fonts": [
+        "\"Familjen Grotesk\", system-ui, -apple-system, \"Segoe UI\", sans-serif",
+        "\"Familjen Grotesk\", sans-serif",
+        "\"Familjen Grotesk\", system-ui, -apple-system, sans-serif",
+        "\"Familjen Grotesk\", -apple-system, \"system-ui\", \"Segoe UI\", sans-serif"
+      ],
+      "classes": {
+        "dc-page": 1,
+        "dc-page--app": 1,
+        "dc-app": 1,
+        "dc-sidebar": 1,
+        "dc-sidebar-head": 1,
+        "dc-sidebar-title": 1,
+        "dc-sidebar-actions": 1,
+        "dc-icon-btn": 2,
+        "dc-hv2": 2,
+        "dc-pressable": 5,
+        "dc-focusable": 5,
+        "dc-nav-group": 1,
+        "dc-sidebar-row": 7,
+        "dc-nav-ico": 6,
+        "dc-sidebar-text": 6,
+        "dc-nav-disabled": 1,
+        "dc-sidebar-spacer": 1,
+        "dc-profile-row": 1,
+        "dc-avatar-btn": 1,
+        "dc-avatar": 1,
+        "dc-profile-id": 1,
+        "dc-profile-name": 1,
+        "dc-profile-tier": 1,
+        "dc-settings-trigger": 1,
+        "dc-settings-btn": 1,
+        "dc-shell-stack": 1,
+        "dc-main": 1,
+        "dc-shell-chat-layer": 1,
+        "dc-shell-pane--inactive": 1,
+        "dc-shell-sr-only": 2,
+        "dc-avenue-bar": 1,
+        "dc-hero": 1,
+        "dc-hero-word": 1,
+        "dc-hero-i": 1,
+        "dc-hero-dot": 1,
+        "dc-composer-zone": 1,
+        "dc-composer": 1,
+        "dc-composer-plus": 1,
+        "dc-composer-input": 1,
+        "dc-send": 1,
+        "dc-hv3": 1,
+        "dc-send-chevron": 1,
+        "dc-send-rect": 2,
+        "dc-chat-footer": 1,
+        "dc-shell-external-layer": 1,
+        "dc-shell-external-scroll": 1,
+        "dmf-root": 1,
+        "dmf-topbar": 1,
+        "dmf-toptitle": 1,
+        "dmf-sync": 1,
+        "dmf-scroll": 1,
+        "dmf-feedhead": 1,
+        "dmf-datenav": 1,
+        "dmf-sq": 2,
+        "dmf-datelbl": 1,
+        "dmf-lgbars": 1,
+        "dmf-lgbar": 1,
+        "dmf-lglogo": 2,
+        "dmf-lglogo--mlb": 2,
+        "dmf-lgname": 2,
+        "dmf-lgchev": 4,
+        "dmf-lgchev--expand": 2,
+        "dmf-lgchev--collapse": 2,
+        "dmf-list": 1,
+        "dmf-league": 1,
+        "dmf-leaguehead": 1,
+        "dmf-leaguebody": 1,
+        "projection-card": 15,
+        "projection-card--scheduled": 15,
+        "projection-card--with-pregame": 15,
+        "matchup": 15,
+        "matchup__grid": 15,
+        "matchup__team": 30,
+        "matchup__team--away": 15,
+        "matchup__center": 15,
+        "matchup__line": 15,
+        "matchup__at": 15,
+        "matchup__team--home": 15,
+        "matchup__below": 15,
+        "matchup__context": 15,
+        "matchup__time": 15,
+        "summary-carousel": 9,
+        "summary-carousel--edge": 8,
+        "summary-carousel__track": 9,
+        "summary-carousel__slide": 24,
+        "summary": 30,
+        "summary--priced": 30,
+        "summary__viewport": 30,
+        "summary__group": 30,
+        "summary__readout": 30,
+        "summary__item": 90,
+        "summary__item--edge": 30,
+        "summary__pick": 30,
+        "summary__item--book": 30,
+        "summary__item--model": 30,
+        "summary__signal": 30,
+        "edge-indicator": 27,
+        "summary__edge": 30,
+        "edge-indicator__label": 27,
+        "edge-indicator__value": 27,
+        "summary__next": 24,
+        "projection-card__markets": 15,
+        "projection-card__markets-toggle": 15,
+        "projection-card__markets-icon": 15,
+        "projection-card--pass": 1,
+        "summary-carousel--no-edge": 1,
+        "edge-indicator--none": 3,
+        "edge-indicator__roi": 3
+      },
+      "landmarks": [
+        {
+          "tag": "SECTION",
+          "cls": "",
+          "text": "",
+          "box": {
+            "x": 0,
+            "y": 0,
+            "w": 1512,
+            "h": 0
+          }
+        },
+        {
+          "tag": "NAV",
+          "cls": "dc-nav-group",
+          "text": "New ChatAI Model ProjectionsBetting Splits + Odds HistoryTrendsProp ProjectionsB",
+          "box": {
+            "x": 14,
+            "y": 140,
+            "w": 352,
+            "h": 286
+          }
+        },
+        {
+          "tag": "H1",
+          "cls": "dc-shell-sr-only",
+          "text": "Dime Chat",
+          "box": {
+            "x": 986,
+            "y": 409,
+            "w": 1,
+            "h": 1
+          }
+        },
+        {
+          "tag": "DIV",
+          "cls": "dime-avenue-toggle",
+          "text": "AI MODEL PROJECTIONSPROJECTIONSBETTING SPLITSSPLITSODDS + LINE MOVEMENTODDS + LI",
+          "box": {
+            "x": 772,
+            "y": 298,
+            "w": 429,
+            "h": 36
+          }
+        },
+        {
+          "tag": "SECTION",
+          "cls": "dc-shell-external-layer",
+          "text": "AI Model Projections\n.dmf-root{\n  /* THREE-COLOR LAW — dark: black ground, white",
+          "box": {
+            "x": 381,
+            "y": 0,
+            "w": 1131,
+            "h": 827
+          }
+        },
+        {
+          "tag": "H1",
+          "cls": "dc-shell-sr-only",
+          "text": "AI Model Projections",
+          "box": {
+            "x": 380,
+            "y": -1,
+            "w": 1,
+            "h": 1
+          }
+        },
+        {
+          "tag": "DETAILS",
+          "cls": "dmf-league",
+          "text": "Major League Baseball (MLB)Phillies @ OriolesOriole Park at Camden Yards1:35 PM ",
+          "box": {
+            "x": 421,
+            "y": 181,
+            "w": 1045,
+            "h": 2595
+          }
+        },
+        {
+          "tag": "SECTION",
+          "cls": "pregame-pitchers",
+          "text": "ConfirmedZWZack WheelerW–L / ERA pendingLineupsConfirmedKBKyle BradishW–L / ERA ",
+          "box": {
+            "x": 448,
+            "y": 384,
+            "w": 286,
+            "h": 159
+          }
+        },
+        {
+          "tag": "SECTION",
+          "cls": "summary-carousel summary-carousel--edge",
+          "text": "Model edgeOrioles MLBook+118Model-112Edge+7.0%Model edgeOrioles +1.5Book-149Mode",
+          "box": {
+            "x": 448,
+            "y": 560,
+            "w": 286,
+            "h": 120
+          }
+        },
+        {
+          "tag": "SECTION",
+          "cls": "pregame-pitchers",
+          "text": "ConfirmedCCCade CavalliW–L / ERA pendingLineupsConfirmedMPMartin PerezW–L / ERA ",
+          "box": {
+            "x": 800,
+            "y": 384,
+            "w": 286,
+            "h": 159
+          }
+        },
+        {
+          "tag": "SECTION",
+          "cls": "pregame-pitchers",
+          "text": "ConfirmedMLMatthew LiberatoreW–L / ERA pendingLineupsConfirmedMSMax ScherzerW–L ",
+          "box": {
+            "x": 1153,
+            "y": 384,
+            "w": 286,
+            "h": 159
+          }
+        },
+        {
+          "tag": "SECTION",
+          "cls": "pregame-pitchers",
+          "text": "ConfirmedMKMitch KellerW–L / ERA pendingLineupsConfirmedCBChase BurnsW–L / ERA p",
+          "box": {
+            "x": 448,
+            "y": 891,
+            "w": 286,
+            "h": 144
+          }
+        },
+        {
+          "tag": "SECTION",
+          "cls": "pregame-pitchers",
+          "text": "ConfirmedAKAnthony KayW–L / ERA pendingLineupsConfirmedGJGriffin JaxW–L / ERA pe",
+          "box": {
+            "x": 800,
+            "y": 891,
+            "w": 286,
+            "h": 144
+          }
+        },
+        {
+          "tag": "SECTION",
+          "cls": "summary-carousel summary-carousel--no-edge",
+          "text": "Model edgeWhite Sox MLBook+129Model+127ROI +5.5%Model edgeRays -1.5Book+144Model",
+          "box": {
+            "x": 800,
+            "y": 1052,
+            "w": 286,
+            "h": 135
+          }
+        },
+        {
+          "tag": "SECTION",
+          "cls": "pregame-pitchers",
+          "text": "ConfirmedSASandy AlcantaraW–L / ERA pendingLineupsConfirmedRSRobert StockW–L / E",
+          "box": {
+            "x": 1153,
+            "y": 891,
+            "w": 286,
+            "h": 159
+          }
+        },
+        {
+          "tag": "SECTION",
+          "cls": "summary-carousel summary-carousel--edge",
+          "text": "Model edgeUnder 8.5Book-103Model-183Edge+13.9%Model edgeMets MLBook+104Model-129",
+          "box": {
+            "x": 1153,
+            "y": 1067,
+            "w": 286,
+            "h": 120
+          }
+        },
+        {
+          "tag": "SECTION",
+          "cls": "pregame-pitchers",
+          "text": "ConfirmedMKMerrill KellyW–L / ERA pendingLineupsConfirmedGWGavin WilliamsW–L / E",
+          "box": {
+            "x": 448,
+            "y": 1397,
+            "w": 286,
+            "h": 159
+          }
+        },
+        {
+          "tag": "SECTION",
+          "cls": "summary-carousel summary-carousel--edge",
+          "text": "Model edgeUnder 8Book-108Model-151Edge+8.2%Model edgeGuardians -1.5Book+141Model",
+          "box": {
+            "x": 448,
+            "y": 1573,
+            "w": 286,
+            "h": 120
+          }
+        },
+        {
+          "tag": "SECTION",
+          "cls": "pregame-pitchers",
+          "text": "ConfirmedKRKumar RockerW–L / ERA pendingLineupsConfirmedPLPeter LambertW–L / ERA",
+          "box": {
+            "x": 800,
+            "y": 1397,
+            "w": 286,
+            "h": 159
+          }
+        },
+        {
+          "tag": "SECTION",
+          "cls": "summary-carousel summary-carousel--edge",
+          "text": "Model edgeUnder 8.5Book+100Model-134Edge+7.3%Model edgeAstros -1.5Book+162Model+",
+          "box": {
+            "x": 800,
+            "y": 1573,
+            "w": 286,
+            "h": 120
+          }
+        },
+        {
+          "tag": "SECTION",
+          "cls": "pregame-pitchers",
+          "text": "ConfirmedGCGerrit ColeW–L / ERA pendingLineupsConfirmedCRColin ReaW–L / ERA pend",
+          "box": {
+            "x": 1153,
+            "y": 1397,
+            "w": 286,
+            "h": 144
+          }
+        },
+        {
+          "tag": "SECTION",
+          "cls": "summary-carousel summary-carousel--edge",
+          "text": "Model edgeOver 6.5Book-111Model-167Edge+9.9%Model edgeCubs MLBook+108Model-106Ed",
+          "box": {
+            "x": 1153,
+            "y": 1558,
+            "w": 286,
+            "h": 135
+          }
+        },
+        {
+          "tag": "SECTION",
+          "cls": "pregame-pitchers",
+          "text": "ConfirmedSLSeth LugoW–L / ERA pendingLineupsConfirmedKFKyle FreelandW–L / ERA pe",
+          "box": {
+            "x": 448,
+            "y": 1903,
+            "w": 286,
+            "h": 159
+          }
+        },
+        {
+          "tag": "SECTION",
+          "cls": "summary-carousel summary-carousel--edge",
+          "text": "Model edgeUnder 12Book-104Model-144Edge+8.0%Model edgeRoyals -1.5Book+149Model+1",
+          "box": {
+            "x": 448,
+            "y": 2079,
+            "w": 286,
+            "h": 120
+          }
+        },
+        {
+          "tag": "SECTION",
+          "cls": "pregame-pitchers",
+          "text": "ConfirmedJMJacob MisiorowskiW–L / ERA pendingLineupsConfirmedWUWalbert UrenaW–L ",
+          "box": {
+            "x": 800,
+            "y": 1903,
+            "w": 286,
+            "h": 159
+          }
+        },
+        {
+          "tag": "SECTION",
+          "cls": "summary-carousel summary-carousel--edge",
+          "text": "Model edgeAngels MLBook+195Model+110Edge+13.7%Model edgeAngels +1.5Book+113Model",
+          "box": {
+            "x": 800,
+            "y": 2079,
+            "w": 286,
+            "h": 120
+          }
+        },
+        {
+          "tag": "SECTION",
+          "cls": "pregame-pitchers",
+          "text": "ConfirmedKMKeider MonteroW–L / ERA pendingLineupsConfirmedGJGage JumpW–L / ERA p",
+          "box": {
+            "x": 1153,
+            "y": 1903,
+            "w": 286,
+            "h": 159
+          }
+        },
+        {
+          "tag": "SECTION",
+          "cls": "pregame-pitchers",
+          "text": "ConfirmedLRLanden RouppW–L / ERA pendingLineupsConfirmedMKMichael KingW–L / ERA ",
+          "box": {
+            "x": 448,
+            "y": 2409,
+            "w": 286,
+            "h": 159
+          }
+        },
+        {
+          "tag": "SECTION",
+          "cls": "pregame-pitchers",
+          "text": "ConfirmedTBTaj BradleyW–L / ERA pendingLineupsConfirmedGKGeorge KirbyW–L / ERA p",
+          "box": {
+            "x": 800,
+            "y": 2409,
+            "w": 286,
+            "h": 159
+          }
+        },
+        {
+          "tag": "SECTION",
+          "cls": "pregame-pitchers",
+          "text": "ConfirmedJBJake BennettW–L / ERA pendingLineupsConfirmedESEmmet SheehanW–L / ERA",
+          "box": {
+            "x": 1153,
+            "y": 2409,
+            "w": 286,
+            "h": 159
+          }
+        },
+        {
+          "tag": "SECTION",
+          "cls": "summary-carousel summary-carousel--edge",
+          "text": "Model edgeUnder 9Book-115Model-172Edge+9.7%Model edgeRed Sox MLBook+135Model+119",
+          "box": {
+            "x": 1153,
+            "y": 2585,
+            "w": 286,
+            "h": 120
+          }
+        },
+        {
+          "tag": "SECTION",
+          "cls": "js-ready",
+          "text": "Sports betting intelligence software\n      See where price and probability disag",
+          "box": {
+            "x": 0,
+            "y": 0,
+            "w": 0,
+            "h": 0
+          }
+        },
+        {
+          "tag": "H1",
+          "cls": "",
+          "text": "See where price and probability disagree.",
+          "box": {
+            "x": 0,
+            "y": 0,
+            "w": 0,
+            "h": 0
+          }
+        }
+      ]
+    },
+    "consoleMsgs": [
+      {
+        "type": "error",
+        "text": "Failed to load resource: the server responded with a status of 401 ()"
+      },
+      {
+        "type": "error",
+        "text": "[API Mutation Error] TRPCClientError: Not authenticated\n    at qe.from (https://aisportsbettingmodels.com/assets/vendor-trpc-CTAPJTuA.js:1:54206)\n    at https://aisportsbettingmodels.com/assets/vendor-trpc-CTAPJTuA.js:1:59350"
+      },
+      {
+        "type": "error",
+        "text": "[API Mutation Error] TRPCClientError: Not authenticated\n    at qe.from (https://aisportsbettingmodels.com/assets/vendor-trpc-CTAPJTuA.js:1:54206)\n    at https://aisportsbettingmodels.com/assets/vendor-trpc-CTAPJTuA.js:1:59350"
+      },
+      {
+        "type": "error",
+        "text": "[API Mutation Error] TRPCClientError: Not authenticated\n    at qe.from (https://aisportsbettingmodels.com/assets/vendor-trpc-CTAPJTuA.js:1:54206)\n    at https://aisportsbettingmodels.com/assets/vendor-trpc-CTAPJTuA.js:1:59350"
+      },
+      {
+        "type": "error",
+        "text": "Failed to load resource: the server responded with a status of 401 ()"
+      },
+      {
+        "type": "error",
+        "text": "[API Mutation Error] TRPCClientError: Not authenticated\n    at qe.from (https://aisportsbettingmodels.com/assets/vendor-trpc-CTAPJTuA.js:1:54206)\n    at https://aisportsbettingmodels.com/assets/vendor-trpc-CTAPJTuA.js:1:59350"
+      },
+      {
+        "type": "error",
+        "text": "Failed to load resource: the server responded with a status of 401 ()"
+      },
+      {
+        "type": "error",
+        "text": "[API Mutation Error] TRPCClientError: Not authenticated\n    at qe.from (https://aisportsbettingmodels.com/assets/vendor-trpc-CTAPJTuA.js:1:54206)\n    at https://aisportsbettingmodels.com/assets/vendor-trpc-CTAPJTuA.js:1:59350"
+      }
+    ],
+    "failedReqs": [
+      {
+        "url": "https://aisportsbettingmodels.com/api/trpc/metrics.openSession,analytics.track,metrics.sessionHeartbeat?batch=1",
+        "status": 401
+      },
+      {
+        "url": "https://aisportsbettingmodels.com/api/trpc/analytics.track?batch=1",
+        "status": 401
+      },
+      {
+        "url": "https://aisportsbettingmodels.com/api/trpc/analytics.track?batch=1",
+        "status": 401
+      }
+    ]
+  },
+  "mobile-390-light-anon": {
+    "url": "https://aisportsbettingmodels.com/feed/model/mlb-08-02-2026?theme=light",
+    "dump": {
+      "title": "Log in — dıme",
+      "htmlClass": "dark",
+      "bodyClass": "",
+      "docScrollW": 390,
+      "docClientW": 390,
+      "themeAttr": null,
+      "bg": "rgb(0, 0, 0)",
+      "fonts": [
+        "\"Familjen Grotesk\", system-ui, -apple-system, sans-serif",
+        "\"Familjen Grotesk\", sans-serif",
+        "\"GG Sans\", \"Familjen Grotesk\", system-ui, -apple-system, sans-serif",
+        "\"Familjen Grotesk\", -apple-system, \"system-ui\", \"Segoe UI\", sans-serif"
+      ],
+      "classes": {},
+      "landmarks": [
+        {
+          "tag": "SECTION",
+          "cls": "",
+          "text": "",
+          "box": {
+            "x": 0,
+            "y": 0,
+            "w": 390,
+            "h": 0
+          }
+        },
+        {
+          "tag": "H1",
+          "cls": "font-bold text-white leading-[1.05]",
+          "text": "See where priceand probabilitydisagree.",
+          "box": {
+            "x": 0,
+            "y": 0,
+            "w": 0,
+            "h": 0
+          }
+        },
+        {
+          "tag": "H1",
+          "cls": "text-lg font-bold text-white tracking-tight",
+          "text": "dıme",
+          "box": {
+            "x": 139,
+            "y": 178,
+            "w": 111,
+            "h": 28
+          }
+        },
+        {
+          "tag": "H2",
+          "cls": "font-bold text-white",
+          "text": "Log in",
+          "box": {
+            "x": 0,
+            "y": 0,
+            "w": 0,
+            "h": 0
+          }
+        },
+        {
+          "tag": "SECTION",
+          "cls": "js-ready",
+          "text": "Sports betting intelligence software\n      See where price and probability disag",
+          "box": {
+            "x": 0,
+            "y": 0,
+            "w": 0,
+            "h": 0
+          }
+        },
+        {
+          "tag": "H1",
+          "cls": "",
+          "text": "See where price and probability disagree.",
+          "box": {
+            "x": 0,
+            "y": 0,
+            "w": 0,
+            "h": 0
+          }
+        }
+      ]
+    },
+    "consoleMsgs": [],
+    "failedReqs": []
+  }
+}
