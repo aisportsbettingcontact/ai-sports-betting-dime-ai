@@ -123,6 +123,14 @@ candidate that clears accessibility. Measured contrast of white text on each:
 
 Token layer: `client/src/index.css` (`--brand-mint-*`, `--elev-*`).
 
+**2026-08-02 amendment — one mint token.** `--brand-mint: #45E0A8` (index.css) is the
+single source for the brand mint; the v3 tint/border derive from it via `color-mix`.
+Components consume `var(--brand-mint)` (fills/rails/icons) or `var(--mint-ink)`
+(theme-correct mint TEXT: raw mint on dark, `#0A7C50` on light). Raw `#45E0A8`
+literals are legal only as `var()` fallbacks. Also enforced the mint-rationing rule on
+the feed's CONFIRMED pitcher labels (data freshness, not signal → foreground ink + 700
+weight, no mint).
+
 ---
 
 ## Law v2 — Tonal Amendment (2026-07-13, owner-approved)

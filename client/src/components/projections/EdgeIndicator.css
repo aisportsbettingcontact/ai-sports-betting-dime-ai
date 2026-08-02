@@ -15,9 +15,12 @@
   color: var(--brand-mint-foreground);
   background: var(--brand-mint-surface);
   border: 1px solid var(--brand-mint-border);
-  border-inline-start: 4px solid #45e0a8; /* the one mint rail */
+  border-inline-start: 4px solid var(--brand-mint, #45e0a8); /* the one mint rail */
   box-shadow: var(--elev-1);
 }
+/* The trend icon strokes with currentColor; owned here (not inline) so PASS
+   neutralization works through the plain cascade. */
+.edge-indicator > svg { color: var(--brand-mint-foreground); }
 
 .edge-indicator__label {
   font-size: var(--proj-meta);

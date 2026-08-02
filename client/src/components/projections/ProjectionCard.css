@@ -10,7 +10,14 @@
   min-inline-size: 0;
   gap: var(--space-md);
   grid-template-areas: "head" "matchup" "summary" "markets";
-  padding: var(--space-lg);
+  /* Fluid card padding (2026-08-02): 14px in the narrowest panes → 24px
+     (--space-lg parity) in wide ones. NOTE: cqi on the card element resolves
+     against the ANCESTOR container (`dmf-league`, the league body) — a
+     container cannot size itself from its own width — so this tightens
+     phone-width panes smoothly while multi-column desktop bodies keep the
+     shipped 24px. Card-width-driven interior spacing lives on the projcard
+     tiers below (they select descendants, where projcard applies). */
+  padding: clamp(0.875rem, 0.5rem + 2.5cqi, 1.5rem);
   /* Card ends near the popover trigger row (owner directive 2026-07-18). */
   padding-block-end: var(--space-sm);
   background: var(--card, #0a0a0a);
@@ -57,13 +64,13 @@
 .projection-card--compact.projection-card--pass { opacity: 0.72; }
 .projection-card__head { grid-area: head; display: flex; align-items: center; justify-content: flex-end; gap: var(--space-sm); }
 .projection-card__status { font-size: var(--proj-meta); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-secondary, #a6a6a6); }
-.projection-card__status--live { color: #45e0a8; } /* live = signal */
+.projection-card__status--live { color: var(--mint-ink, #45e0a8); } /* live = signal; --mint-ink is theme-correct mint text (raw mint dark / #0A7C50 light) */
 
 /* Live indicator dot (Round 4 Wave 1, item 4 / page law "Live state"): pulsing
    7px mint dot ahead of the LIVE label. `display: none` by default keeps
    mobile (<768px) pixel-identical — the dot only activates at the tablet+
    breakpoint below (item 8 scoping: items 2/3/4 apply desktop+tablet only). */
-.projection-card__live-dot { display: none; width: 7px; height: 7px; margin-inline-end: 6px; border-radius: 50%; background: #45e0a8; vertical-align: middle; }
+.projection-card__live-dot { display: none; width: 7px; height: 7px; margin-inline-end: 6px; border-radius: 50%; background: var(--brand-mint, #45e0a8); vertical-align: middle; }
 @keyframes projection-card-live-pulse { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
 
 /* ── Matchup (owner directive 2026-07-17: matchup line · ballpark · first pitch) ── */
@@ -93,8 +100,10 @@
 .matchup__line { font-size: var(--proj-team); font-weight: 700; letter-spacing: -0.01em; text-wrap: balance; }
 /* CL-05a (closure audit): --text-muted (3.88:1) fails 4.5:1 at 20px/400; the "@"
    separator must stay legible. --text-secondary (8.6:1 dark / 7.0:1 light) keeps it
-   subordinate to the team names while meeting contrast. */
-.matchup__at { color: var(--text-secondary, #a6a6a6); font-weight: 400; }
+   subordinate to the team names while meeting contrast. 2026-08-02 (page law
+   "@ separator"): also SMALLER than the names — 0.8em of the matchup line —
+   so subordination is carried by size as well as weight/color. */
+.matchup__at { color: var(--text-secondary, #a6a6a6); font-weight: 400; font-size: 0.8em; }
 /* Line 2 — ballpark / stage context. Line 3 — venue only when context lacks it. */
 .matchup__context { font-size: var(--proj-label); color: var(--text-secondary, #a6a6a6); max-inline-size: 100%; }
 /* FEED-CONTRAST sweep: --text-muted (4.1:1 dark) fails WCAG-AA 4.5:1 at every
@@ -186,8 +195,11 @@ html:not([data-theme-mode]) .dmf-root[data-dmf-mode="dark"] .team-logo-box--dark
   line-height: 1;
   text-transform: uppercase;
 }
-.pregame-pitcher__status--confirmed { color: #45e0a8; }
-html:not(.dark) .pregame-pitcher__status--confirmed { color: #0a7c50; }
+/* 2026-08-02 (mint-rationing law): CONFIRMED is a data-freshness state, not a
+   model signal — it no longer takes mint (up to 30 mint labels per slate were
+   outnumbering the actual edge chips). Emphasis via ink + weight instead;
+   EXPECTED/pending stays quiet secondary. */
+.pregame-pitcher__status--confirmed { color: var(--foreground, #fff); font-weight: 700; }
 .pregame-pitcher__status--pending { color: var(--text-secondary, #a6a6a6); }
 .pregame-pitcher__photo {
   display: grid;
@@ -284,8 +296,10 @@ html:not(.dark) .pregame-pitcher__status--confirmed { color: #0a7c50; }
 
 /* Compact cards keep both complete pitcher names on one line. The outer
    pitcher tracks stay equal while only the inter-track spacing, CTA footprint,
-   and responsive name type contract together. */
-@media (max-width: 1023.98px) {
+   and responsive name type contract together. 2026-08-02: driven purely by
+   CARD width — the old <=1023.98px media wrapper left desktop 3-across cards
+   (the narrowest cards in the product) wrapping "Matthew Liberatore" onto two
+   lines while phones one-lined it. */
   @container projcard (max-width: 520px) {
     .pregame-pitchers {
       position: relative;
@@ -299,6 +313,10 @@ html:not(.dark) .pregame-pitcher__status--confirmed { color: #0a7c50; }
       overflow-wrap: normal;
       font-size: clamp(0.625rem, 2.8cqi, 0.75rem); /* CL-08 (closure): clamp min was 0.5625rem/9px, below the 10px floor */
       white-space: nowrap;
+      /* Text-zoom backstop (same rationale as the markets-toggle label):
+         ellipsis before overflow when browser text scaling outgrows the lane. */
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     /* Audit DIME-UI-004 (2026-07-31): the old absolute-centered overlay left
        the chip to grid auto-placement in some mounts, wrapping the home
@@ -346,12 +364,12 @@ html:not(.dark) .pregame-pitcher__status--confirmed { color: #0a7c50; }
       margin-block-start: var(--space-2xs);
     }
   }
-}
 
-/* At the 1024px three-across boundary, the persistent app rail leaves each
-   card deliberately narrow. Preserve the centered three-track anatomy while
-   reducing only its optical footprint; all interactive targets stay 44px. */
-@media (min-width: 1024px) {
+/* Deep-narrow defensive tier (<=280px cards). Under the content-driven grid
+   (2-up >=622px container, 3-up >=940px) no multi-column card can resolve
+   below ~305px, so this tier is a backstop for extreme hosts, not a live
+   band. Container-scoped since 2026-08-02 (was desktop-media-scoped, which
+   the container grid made meaningless). All interactive targets stay 44px. */
   @container projcard (max-width: 280px) {
     /* CL-01 (closure): at the narrowest 3-col card (~194px) the matchup grid's `auto`
        center track took the full text max-content (~122px) and starved the side logo
@@ -381,8 +399,9 @@ html:not(.dark) .pregame-pitcher__status--confirmed { color: #0a7c50; }
     .pregame-pitcher__stats { font-size: 0.625rem; } /* CL-17: was 0.5rem/8px */
     /* CL-01 (closure): let the dense odds readout shrink instead of holding rigid
        max-content columns that pack past the card edge. `overflow-x:auto` on the viewport
-       remains the escape valve; shrinkable columns reduce in-band overlap. */
-    .summary__group { grid-template-columns: minmax(0, max-content) minmax(0, max-content); }
+       remains the escape valve; shrinkable columns reduce in-band overlap.
+       (2026-08-02: single column — the group is the fixed two-row grid here.) */
+    .summary__group { grid-template-columns: minmax(0, auto); }
     .summary__readout { grid-template-columns: minmax(0, max-content) minmax(40px, max-content) minmax(40px, max-content); }
     .projection-card .pregame-pitchers__lineups {
       min-inline-size: 44px;
@@ -391,7 +410,6 @@ html:not(.dark) .pregame-pitcher__status--confirmed { color: #0a7c50; }
       letter-spacing: 0.02em;
     }
   }
-}
 
 /* The dialog is portalled, so all dimensions are viewport-based rather than
    projection-card container queries. It stacks both teams on phones and moves
@@ -565,13 +583,19 @@ html:not(.dark) .pregame-pitcher__status--confirmed { color: #0a7c50; }
 .summary__viewport { display: grid; justify-content: safe center; justify-items: safe center; inline-size: 100%; min-inline-size: 0; overflow-x: auto; overscroll-behavior-inline: contain; scrollbar-width: none; }
 .summary__viewport::-webkit-scrollbar { display: none; }
 .summary__viewport:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--ring, rgba(69, 224, 168, 0.36)); border-radius: 8px; }
-/* FEED-EDGE-ROW-CLIP: the group used to be a rigid max-content two-track grid
-   (readout | signal) that the scrollport clipped at the card edge with its
-   scrollbar hidden — overflow with no affordance. Wrapping flex keeps the
-   one-line layout whenever it fits and drops the signal onto a second centered
-   line when it doesn't, so no fact is ever clipped; the scrollport stays as
-   the final escape valve for content that can't shrink. */
-.summary__group { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; column-gap: clamp(8px, 1.6cqi, 16px); row-gap: var(--space-2xs); inline-size: auto; min-inline-size: 0; max-inline-size: 100%; }
+/* FEED-EDGE-ROW-CLIP v2 (2026-08-02 responsive rebuild, supersedes the
+   content-dependent flex-wrap): summary anatomy is DETERMINED BY CARD WIDTH,
+   never by content, so every card at a given width renders the same shape
+   (page law "uniform summary anatomy" — the old wrap let one long pick drop
+   its chip to a second line while row-mates stayed on one, breaking the
+   Round-4 item-5 cross-card alignment).
+   - Wide cards (>520px): ONE centered line, nowrap; the hidden-scrollbar
+     summary viewport remains the escape valve for content that cannot fit,
+     so nothing ever clips and the card/page never gain overflow.
+   - Narrow cards (<=520px): EVERY card uses the same fixed two-row grid —
+     facts row first, signal row (chip + next control) centered beneath
+     (see the 520 tier below). */
+.summary__group { display: flex; flex-wrap: nowrap; justify-content: center; align-items: center; column-gap: clamp(8px, 1.6cqi, 16px); row-gap: var(--space-2xs); inline-size: auto; min-inline-size: 0; max-inline-size: 100%; }
 .summary__edge { flex: none; }
 .summary__signal { display: inline-flex; flex: none; flex-wrap: nowrap; align-items: center; justify-content: center; gap: var(--space-xs); min-inline-size: max-content; min-block-size: 44px; }
 .projection-card .summary__next {
@@ -582,7 +606,7 @@ html:not(.dark) .pregame-pitcher__status--confirmed { color: #0a7c50; }
   flex: none;
   padding: 0;
   cursor: pointer;
-  color: #45e0a8;
+  color: var(--brand-mint, #45e0a8);
   background: transparent;
   border: 1px solid var(--foreground, #fff);
   border-radius: 10px;
@@ -652,22 +676,22 @@ html:not(.dark) .pregame-pitcher__status--confirmed { color: #0a7c50; }
      above) — but this rule neutralizes stray mint anyway if that invariant
      is ever broken by a future change to gameInsight.ts/edgeUtils.ts.
      Defense-in-depth, not a substitute for the structural guarantee. */
+  /* 2026-08-02: importance flags removed — the two-class selectors already
+     out-rank every one-class signal rule they guard against, and the chip's
+     icon color moved from an inline style into EdgeIndicator.css, so plain
+     cascade order is sufficient. PASS meaning is unchanged. */
   .projection-card--pass .market-table__model--signal,
   .projection-card--pass .market-table__result--edge,
   .projection-card__markets-popover--pass .market-table__model--signal,
   .projection-card__markets-popover--pass .market-table__result--edge,
   .projection-card--pass .edge-indicator {
-    color: var(--text-secondary, #a6a6a6) !important;
-    background: transparent !important;
-    border-color: var(--border, #262626) !important;
-    box-shadow: none !important;
+    color: var(--text-secondary, #a6a6a6);
+    background: transparent;
+    border-color: var(--border, #262626);
+    box-shadow: none;
   }
-  /* The edge chip's recommendation icon sets its mint color as an inline
-     style (EdgeIndicator.tsx) and lucide icons stroke with currentColor, so
-     the ancestor rule above never reaches it — the svg needs its own
-     !important declaration (author !important beats non-important inline). */
   .projection-card--pass .edge-indicator svg {
-    color: var(--text-secondary, #a6a6a6) !important;
+    color: var(--text-secondary, #a6a6a6);
   }
 
   /* Item 4 — live indicator: activate the pulsing mint dot (display:none by
@@ -687,7 +711,7 @@ html:not(.dark) .pregame-pitcher__status--confirmed { color: #0a7c50; }
     box-shadow: 0 0 0 1px var(--border-strong, #000000);
   }
   .projection-card__status--live { letter-spacing: 0.08em; }
-  html:not(.dark) .projection-card__status--live { color: #0a7c50; }
+  /* (light-theme color now flows from --mint-ink on the base rule) */
 }
 
 /* ══ Centered summary group — MODEL EDGE | BOOK | MODEL | signal ════════════
@@ -702,9 +726,18 @@ html:not(.dark) .pregame-pitcher__status--confirmed { color: #0a7c50; }
   font-variant-numeric: tabular-nums;
 }
 
-/* Tight cards preserve the one-row contract and reduce only spacing/type.
-   The 44px pagination target and every complete value remain intact. */
+/* Tight cards (<=520px card width — narrow phones AND narrow desktop grid
+   columns alike) switch every card to the SAME two-row anatomy: the readout
+   facts on row 1, the signal (chip + 44px next control) centered on row 2.
+   Deterministic by width — no card ever wraps while a row-mate doesn't.
+   Spacing/type reduce; the 44px targets and every complete value remain. */
 @container projcard (max-width: 520px) {
+  .summary__group {
+    display: grid;
+    grid-template-columns: minmax(0, auto);
+    justify-items: center;
+    row-gap: var(--space-3xs);
+  }
   .summary__group,
   .summary__readout {
     column-gap: 4px;
@@ -745,16 +778,16 @@ html:not(.dark) .pregame-pitcher__status--confirmed { color: #0a7c50; }
   .summary__signal .edge-indicator__roi { font-size: 0.6875rem; }
 }
 
-/* Mobile/tablet cards use identical fact and signal lanes across real-edge,
-   ROI-only, and single-edge variants. Longer localized picks may expand the
-   first lane and use the existing local summary scrollport. */
-@media (max-width: 1023.98px) {
-  @container projcard (max-width: 520px) {
-    .summary__readout {
-      grid-template-columns: minmax(4.625rem, max-content) 2.125rem 2.125rem;
-    }
-    .summary__signal { min-inline-size: 8.125rem; }
+/* Tight cards use identical fact and signal lanes across real-edge, ROI-only,
+   and single-edge variants — at EVERY viewport (2026-08-02: the old
+   <=1023.98px media wrapper exempted narrow desktop grid columns, exactly
+   where cards are narrowest). Longer localized picks may expand the first
+   lane and use the existing local summary scrollport. */
+@container projcard (max-width: 520px) {
+  .summary__readout {
+    grid-template-columns: minmax(4.625rem, max-content) 2.125rem 2.125rem;
   }
+  .summary__signal { min-inline-size: 8.125rem; }
 }
 
 /* ══ Round 4 Wave 2 — item 1: scheduled equal-height rows, pinned market trigger
@@ -780,17 +813,21 @@ html:not(.dark) .pregame-pitcher__status--confirmed { color: #0a7c50; }
    their richer scheduled row-mates do not re-expand them. For scheduled cards,
    the tallest card's own `1fr` summary row resolves to exactly the space
    `auto` would have used — nothing forces it taller than its own content. */
-@media (min-width: 1024px) {
-  .projection-card { grid-template-rows: auto auto 1fr auto; }
-  .projection-card--scheduled { grid-template-rows: auto 1fr auto; }
-  .projection-card--scheduled.projection-card--with-pregame {
-    grid-template-rows: auto auto 1fr auto;
-  }
-  .projection-card--compact {
-    grid-template-rows: auto auto auto auto;
-  }
-  .summary-carousel { align-content: center; }
+/* 2026-08-02: unconditional (was >=1024px media). The league grid stretches
+   row-mates at EVERY multi-column width now (2-up and 3-up are both
+   container-driven), so the 1fr summary row + bottom-pinned trigger must
+   engage wherever stretching can occur. In a single-column row the card is
+   its own track — 1fr resolves to the summary's natural height, so mobile
+   renders byte-identically to the old `auto` rows. */
+.projection-card { grid-template-rows: auto auto 1fr auto; }
+.projection-card--scheduled { grid-template-rows: auto 1fr auto; }
+.projection-card--scheduled.projection-card--with-pregame {
+  grid-template-rows: auto auto 1fr auto;
 }
+.projection-card--compact {
+  grid-template-rows: auto auto auto auto;
+}
+.summary-carousel { align-content: center; }
 
 /* ── Summary carousel (owner directive 2026-07-23) ──
    A game with 2+ real edges cycles them in a ranked swipe strip: native
@@ -870,6 +907,19 @@ html:not(.dark) .pregame-pitcher__status--confirmed { color: #0a7c50; }
 }
 .projection-card__markets-toggle > span {
   min-inline-size: 0;
+  /* One line at EVERY card width (2026-08-02): the label sizes from the card
+     container with a 10px floor, so "View full AI model projections" never
+     wraps — not on phones, not in narrow desktop grid columns. */
+  white-space: nowrap;
+  font-size: clamp(0.625rem, 0.3rem + 1.8cqi, 0.9375rem);
+  line-height: 1.2;
+  letter-spacing: 0.05em;
+  /* Text-zoom backstop: the rem floor grows under browser text scaling
+     (correctly), so at 200% zoom the complete label may physically exceed the
+     lane — ellipsis then, never a second line and never card overflow. The
+     accessible name stays the full label. */
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .projection-card__markets-toggle:focus-visible {
   outline: none;
@@ -886,20 +936,12 @@ html:not(.dark) .pregame-pitcher__status--confirmed { color: #0a7c50; }
   color: currentColor;
 }
 .projection-card__markets-toggle[data-state="open"] .projection-card__markets-icon {
-  color: #45e0a8;
+  color: var(--brand-mint, #45e0a8);
 }
-@media (max-width: 1023.98px) {
-  @container projcard (max-width: 520px) {
-    .projection-card__markets-toggle {
-      gap: 4px;
-      padding-inline: 4px;
-    }
-    .projection-card__markets-toggle > span {
-      font-size: 0.625rem;
-      line-height: 1.2;
-      letter-spacing: 0.05em;
-      white-space: nowrap;
-    }
+@container projcard (max-width: 520px) {
+  .projection-card__markets-toggle {
+    gap: 4px;
+    padding-inline: 4px;
   }
 }
 
@@ -952,10 +994,7 @@ html:not(.dark) .pregame-pitcher__status--confirmed { color: #0a7c50; }
 }
 .projection-card__markets-eyebrow {
   margin: 0;
-  color: #45e0a8;
-}
-html:not(.dark) .projection-card__markets-eyebrow {
-  color: #0a7c50;
+  color: var(--mint-ink, #45e0a8); /* theme-correct mint text token */
 }
 .projection-card__markets-matchup {
   margin: var(--space-2xs) 0 0;
