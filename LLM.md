@@ -23,6 +23,7 @@ beats micro-savings here.
 | Embedded runtime | `server/_core/piAgent.ts` `PI_AGENT_APPROVED_MODELS`; `resolvePiAgentModel()` throws on anything else unless `DIME_ALLOW_LEGACY_MODELS=1`                                             |
 | Agent SDK runner | `DIME_AGENT_MODEL` env/default = `claude-fable-5` (`server/_core/dimeAgent.ts`)                                                                                                       |
 | Claude Code      | Session model selection — keep Fable 5/Opus 5                                                                                                                                         |
+| QM workspaces    | Same law — subscription-class or QM-provisioned credentials only; the funded Dime Chat key is never wired into QM (`references/qm-harness.md`)                                        |
 
 ## Auth model: subscription-first (IMPORTANT)
 

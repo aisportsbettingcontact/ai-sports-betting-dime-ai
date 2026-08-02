@@ -22,7 +22,10 @@ import { existsSync, readFileSync, statSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { PI_AGENT_APPROVED_MODELS, resolvePiAgentModel } from "../server/_core/piAgent";
+import {
+  PI_AGENT_APPROVED_MODELS,
+  resolvePiAgentModel,
+} from "../server/_core/piAgent";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 let failures = 0;
@@ -36,11 +39,18 @@ function check(name: string, ok: boolean, detail = ""): void {
 }
 
 /** Run a layer; any uncaught throw becomes a FAIL instead of aborting the audit. */
-async function layer(name: string, fn: () => void | Promise<void>): Promise<void> {
+async function layer(
+  name: string,
+  fn: () => void | Promise<void>
+): Promise<void> {
   try {
     await fn();
   } catch (err) {
-    check(`${name} (layer crashed)`, false, err instanceof Error ? err.message : String(err));
+    check(
+      `${name} (layer crashed)`,
+      false,
+      err instanceof Error ? err.message : String(err)
+    );
   }
 }
 
@@ -51,12 +61,31 @@ function fileHas(rel: string, needle: string): boolean {
 
 // 1. Context-file suite
 await layer("context", () => {
-  for (const f of ["CLAUDE.md", "AGENTS.md", "SKILLS.md", "HARNESS.md", "LLM.md", "CODEX.md", "references/pi-harness.md"]) {
+  for (const f of [
+    "CLAUDE.md",
+    "AGENTS.md",
+    "SKILLS.md",
+    "HARNESS.md",
+    "LLM.md",
+    "CODEX.md",
+    "references/pi-harness.md",
+    "references/qm-harness.md",
+  ]) {
     check(`context:${f}`, existsSync(path.join(root, f)));
   }
-  check("context:CLAUDE links companions", fileHas("CLAUDE.md", "HARNESS.md") && fileHas("CLAUDE.md", "LLM.md"));
-  check("context:AGENTS carries laws inline", fileHas("AGENTS.md", "design-system/dime-ai/MASTER.md") && fileHas("AGENTS.md", "db-push.yml"));
-  check("context:LLM subscription-first law", fileHas("LLM.md", "subscription-first"));
+  check(
+    "context:CLAUDE links companions",
+    fileHas("CLAUDE.md", "HARNESS.md") && fileHas("CLAUDE.md", "LLM.md")
+  );
+  check(
+    "context:AGENTS carries laws inline",
+    fileHas("AGENTS.md", "design-system/dime-ai/MASTER.md") &&
+      fileHas("AGENTS.md", "db-push.yml")
+  );
+  check(
+    "context:LLM subscription-first law",
+    fileHas("LLM.md", "subscription-first")
+  );
 });
 
 // 2. .pi project config
@@ -80,65 +109,131 @@ await layer(".pi", () => {
   check(".pi:settings.json parses", parsed);
   if (!parsed) return;
 
-  check(".pi:defaultModel is claude-fable-5", settings.defaultModel === "claude-fable-5");
+  check(
+    ".pi:defaultModel is claude-fable-5",
+    settings.defaultModel === "claude-fable-5"
+  );
   check(
     ".pi:enabledModels match LLM.md",
-    JSON.stringify(settings.enabledModels) === JSON.stringify(["claude-fable-5", "claude-opus-5", "gpt-5.6-sol"]),
+    JSON.stringify(settings.enabledModels) ===
+      JSON.stringify(["claude-fable-5", "claude-opus-5", "gpt-5.6-sol"])
   );
   check(".pi:theme dime selected", settings.theme === "dime");
   const entries = [...(settings.skills ?? []), ...(settings.prompts ?? [])];
-  const plainEntries = entries.filter((e) => !e.startsWith("!"));
-  const negatedEntries = entries.filter((e) => e.startsWith("!")).map((e) => e.slice(1));
-  const missing = plainEntries.filter((e) => !existsSync(path.resolve(root, ".pi", e)));
-  check(".pi:all skill/prompt paths resolve", missing.length === 0, missing.join(", ") || `${plainEntries.length} paths`);
+  const plainEntries = entries.filter(e => !e.startsWith("!"));
+  const negatedEntries = entries
+    .filter(e => e.startsWith("!"))
+    .map(e => e.slice(1));
+  const missing = plainEntries.filter(
+    e => !existsSync(path.resolve(root, ".pi", e))
+  );
+  check(
+    ".pi:all skill/prompt paths resolve",
+    missing.length === 0,
+    missing.join(", ") || `${plainEntries.length} paths`
+  );
   // A dead negation means a superseded skill silently re-enters the corpus.
-  const deadNegations = negatedEntries.filter((e) => !existsSync(path.resolve(root, ".pi", e)));
-  check(".pi:all negation targets exist", deadNegations.length === 0, deadNegations.join(", ") || `${negatedEntries.length} negations`);
-  check(".pi:packages recorded", (settings.packages ?? []).length >= 2, (settings.packages ?? []).join(", "));
-  check(".pi:dime-guard extension", fileHas(".pi/extensions/dime-guard.ts", "tool_call"));
-  check(".pi:APPEND_SYSTEM injects laws", fileHas(".pi/APPEND_SYSTEM.md", "db-push.yml"));
-  const theme = JSON.parse(readFileSync(path.join(root, ".pi/themes/dime.json"), "utf8")) as {
+  const deadNegations = negatedEntries.filter(
+    e => !existsSync(path.resolve(root, ".pi", e))
+  );
+  check(
+    ".pi:all negation targets exist",
+    deadNegations.length === 0,
+    deadNegations.join(", ") || `${negatedEntries.length} negations`
+  );
+  check(
+    ".pi:packages recorded",
+    (settings.packages ?? []).length >= 2,
+    (settings.packages ?? []).join(", ")
+  );
+  check(
+    ".pi:dime-guard extension",
+    fileHas(".pi/extensions/dime-guard.ts", "tool_call")
+  );
+  check(
+    ".pi:APPEND_SYSTEM injects laws",
+    fileHas(".pi/APPEND_SYSTEM.md", "db-push.yml")
+  );
+  const theme = JSON.parse(
+    readFileSync(path.join(root, ".pi/themes/dime.json"), "utf8")
+  ) as {
     name: string;
     vars: Record<string, unknown>;
   };
-  check(".pi:theme brand accent", theme.name === "dime" && theme.vars.accent === "#45E0A8");
+  check(
+    ".pi:theme brand accent",
+    theme.name === "dime" && theme.vars.accent === "#45E0A8"
+  );
 });
 
 // 3. Claude Code hooks
 await layer("hooks", () => {
-  const claudeSettings = JSON.parse(readFileSync(path.join(root, ".claude/settings.json"), "utf8")) as {
+  const claudeSettings = JSON.parse(
+    readFileSync(path.join(root, ".claude/settings.json"), "utf8")
+  ) as {
     hooks?: Record<string, Array<{ hooks: Array<{ command: string }> }>>;
   };
   const hookCommands = Object.values(claudeSettings.hooks ?? {})
     .flat()
-    .flatMap((h) => h.hooks.map((x) => x.command));
-  check("hooks:UserPromptSubmit capsule registered", hookCommands.some((c) => c.includes("prompt-capsule.sh")));
-  check("hooks:SessionStart bootstrap registered", hookCommands.some((c) => c.includes("bootstrap-plugins.sh")));
-  for (const script of [".claude/scripts/prompt-capsule.sh", ".claude/scripts/bootstrap-plugins.sh"]) {
+    .flatMap(h => h.hooks.map(x => x.command));
+  check(
+    "hooks:UserPromptSubmit capsule registered",
+    hookCommands.some(c => c.includes("prompt-capsule.sh"))
+  );
+  check(
+    "hooks:SessionStart bootstrap registered",
+    hookCommands.some(c => c.includes("bootstrap-plugins.sh"))
+  );
+  for (const script of [
+    ".claude/scripts/prompt-capsule.sh",
+    ".claude/scripts/bootstrap-plugins.sh",
+  ]) {
     const p = path.join(root, script);
     const executable = existsSync(p) && (statSync(p).mode & 0o111) !== 0;
     check(`hooks:${path.basename(script)} executable`, executable);
   }
-  const capsule = execFileSync(path.join(root, ".claude/scripts/prompt-capsule.sh"), { encoding: "utf8" });
-  check("hooks:capsule emits execution law", capsule.includes("LLM.md") && capsule.includes("pi:ship"));
+  const capsule = execFileSync(
+    path.join(root, ".claude/scripts/prompt-capsule.sh"),
+    { encoding: "utf8" }
+  );
+  check(
+    "hooks:capsule emits execution law",
+    capsule.includes("LLM.md") && capsule.includes("pi:ship")
+  );
 });
 
 // 4. pi-harness skill
 await layer("skill", () => {
-  check("skill:pi-harness present", fileHas(".claude/skills/pi-harness/SKILL.md", "name: pi-harness"));
+  check(
+    "skill:pi-harness present",
+    fileHas(".claude/skills/pi-harness/SKILL.md", "name: pi-harness")
+  );
 });
 
 // 5. package.json entry points
 await layer("pkg", () => {
-  const pkg = JSON.parse(readFileSync(path.join(root, "package.json"), "utf8")) as {
+  const pkg = JSON.parse(
+    readFileSync(path.join(root, "package.json"), "utf8")
+  ) as {
     scripts: Record<string, string>;
     dependencies: Record<string, string>;
   };
-  for (const s of ["pi", "pi:ship", "pi:review", "pi:rpc", "pi:json", "pi:audit"]) {
+  for (const s of [
+    "pi",
+    "pi:ship",
+    "pi:review",
+    "pi:rpc",
+    "pi:json",
+    "pi:audit",
+  ]) {
     check(`pkg:script ${s}`, typeof pkg.scripts[s] === "string");
   }
   for (const d of ["@earendil-works/pi-agent-core", "@earendil-works/pi-ai"]) {
-    check(`pkg:dep ${d}`, typeof pkg.dependencies[d] === "string", pkg.dependencies[d]);
+    check(
+      `pkg:dep ${d}`,
+      typeof pkg.dependencies[d] === "string",
+      pkg.dependencies[d]
+    );
   }
 });
 
@@ -147,7 +242,11 @@ await layer("policy", () => {
   check(
     "policy:approved set matches LLM.md",
     JSON.stringify([...PI_AGENT_APPROVED_MODELS]) ===
-      JSON.stringify(["anthropic/claude-fable-5", "anthropic/claude-opus-5", "openai-codex/gpt-5.6-sol"]),
+      JSON.stringify([
+        "anthropic/claude-fable-5",
+        "anthropic/claude-opus-5",
+        "openai-codex/gpt-5.6-sol",
+      ])
   );
   for (const ref of PI_AGENT_APPROVED_MODELS) {
     let ok = false;
@@ -184,7 +283,10 @@ await layer("git", () => {
   check("git:.pi/npm ignored", ignored(".pi/npm/x"));
   check("git:.pi/git ignored", ignored(".pi/git/x"));
   check("git:.pi/hf-sessions ignored", ignored(".pi/hf-sessions/x"));
-  check("git:pi-harness skill tracked", !ignored(".claude/skills/pi-harness/SKILL.md"));
+  check(
+    "git:pi-harness skill tracked",
+    !ignored(".claude/skills/pi-harness/SKILL.md")
+  );
 });
 
 // 8. pi CLI resource loader (skipped when no global pi install exists, e.g. CI)
@@ -192,7 +294,9 @@ function findPiCliDir(): { dir?: string; attempted: string[] } {
   const attempted: string[] = [];
   // Primary: wherever the global npm root actually is (nvm, hostedtoolcache, brew…).
   try {
-    const globalRoot = execFileSync("npm", ["root", "-g"], { encoding: "utf8" }).trim();
+    const globalRoot = execFileSync("npm", ["root", "-g"], {
+      encoding: "utf8",
+    }).trim();
     const candidate = path.join(globalRoot, "@earendil-works/pi-coding-agent");
     attempted.push(candidate);
     if (existsSync(candidate)) return { dir: candidate, attempted };
@@ -203,7 +307,10 @@ function findPiCliDir(): { dir?: string; attempted: string[] } {
   try {
     const bin = execFileSync("which", ["pi"], { encoding: "utf8" }).trim();
     if (bin) {
-      const candidate = path.resolve(path.dirname(bin), "../lib/node_modules/@earendil-works/pi-coding-agent");
+      const candidate = path.resolve(
+        path.dirname(bin),
+        "../lib/node_modules/@earendil-works/pi-coding-agent"
+      );
       attempted.push(candidate);
       if (existsSync(candidate)) return { dir: candidate, attempted };
     }
@@ -216,28 +323,69 @@ function findPiCliDir(): { dir?: string; attempted: string[] } {
 const { dir: piDir, attempted } = findPiCliDir();
 if (piDir) {
   await layer("loader", async () => {
-    const { DefaultResourceLoader } = await import(path.join(piDir, "dist/core/resource-loader.js"));
-    const { SettingsManager } = await import(path.join(piDir, "dist/core/settings-manager.js"));
-    const settingsManager = SettingsManager.create(root, path.join(os.homedir(), ".pi/agent"));
+    const { DefaultResourceLoader } = await import(
+      path.join(piDir, "dist/core/resource-loader.js")
+    );
+    const { SettingsManager } = await import(
+      path.join(piDir, "dist/core/settings-manager.js")
+    );
+    const settingsManager = SettingsManager.create(
+      root,
+      path.join(os.homedir(), ".pi/agent")
+    );
     settingsManager.setProjectTrusted(true);
-    const loader = new DefaultResourceLoader({ cwd: root, agentDir: path.join(os.homedir(), ".pi/agent"), settingsManager });
+    const loader = new DefaultResourceLoader({
+      cwd: root,
+      agentDir: path.join(os.homedir(), ".pi/agent"),
+      settingsManager,
+    });
     await loader.reload();
     const { skills, diagnostics } = loader.getSkills();
     const prompts = loader.getPrompts().prompts;
     const themes = loader.getThemes().themes as Array<{ name: string }>;
     const ext = loader.getExtensions();
     const names = skills.map((s: { name: string }) => s.name);
-    check("loader:skill corpus ≥ 200", skills.length >= 200, `${skills.length} skills`);
-    check("loader:prompt templates ≥ 30", prompts.length >= 30, `${prompts.length} templates`);
-    check("loader:no duplicate skill names", new Set(names).size === names.length);
-    check("loader:no diagnostics errors", diagnostics.filter((d: { type: string }) => d.type === "error").length === 0);
-    check("loader:dime theme loads", themes.some((t) => t.name === "dime"));
-    check("loader:dime-guard loads with 0 errors", ext.extensions.length >= 1 && ext.errors.length === 0);
-    check("loader:APPEND_SYSTEM injected", loader.getAppendSystemPrompt().join("\n").includes("db-push.yml"));
+    check(
+      "loader:skill corpus ≥ 200",
+      skills.length >= 200,
+      `${skills.length} skills`
+    );
+    check(
+      "loader:prompt templates ≥ 30",
+      prompts.length >= 30,
+      `${prompts.length} templates`
+    );
+    check(
+      "loader:no duplicate skill names",
+      new Set(names).size === names.length
+    );
+    check(
+      "loader:no diagnostics errors",
+      diagnostics.filter((d: { type: string }) => d.type === "error").length ===
+        0
+    );
+    check(
+      "loader:dime theme loads",
+      themes.some(t => t.name === "dime")
+    );
+    check(
+      "loader:dime-guard loads with 0 errors",
+      ext.extensions.length >= 1 && ext.errors.length === 0
+    );
+    check(
+      "loader:APPEND_SYSTEM injected",
+      loader.getAppendSystemPrompt().join("\n").includes("db-push.yml")
+    );
   });
 } else {
-  console.log(`SKIP loader:* — global pi CLI not found (attempted: ${attempted.join(" | ")})`);
+  console.log(
+    `SKIP loader:* — global pi CLI not found (attempted: ${attempted.join(" | ")})`
+  );
 }
 
-console.log(failures === 0 ? "\npi harness audit: ALL PASS" : `\npi harness audit: ${failures} FAILURE(S)`);
+console.log(
+  failures === 0
+    ? "\npi harness audit: ALL PASS"
+    : `\npi harness audit: ${failures} FAILURE(S)`
+);
 process.exit(failures === 0 ? 0 : 1);
