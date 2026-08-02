@@ -39,14 +39,14 @@ describe("Dime Chat Runtime Readiness v1", () => {
     expect(routerSource).not.toContain("appUserProcedure");
   });
 
-  it("reports the default frozen runtime as deterministic-only and limited", () => {
+  it("reports the default pi runtime without credentials as deterministic-only and limited", () => {
     const readiness = getDimeRuntimeReadiness({ env: {}, now: NOW });
 
     expect(readiness).toMatchObject({
       version: DIME_RUNTIME_READINESS_VERSION,
       generatedAt: NOW.toISOString(),
       state: "limited",
-      mode: "frozen",
+      mode: "pi",
       capabilities: {
         generativeLaneConfigured: false,
         deterministicResponsesConfigured: true,
@@ -69,7 +69,10 @@ describe("Dime Chat Runtime Readiness v1", () => {
         reason: "kill_switch_engaged_or_unset",
       },
     });
-    expect(readiness.issues).toEqual(["provider_frozen", "trace_disabled"]);
+    expect(readiness.issues).toEqual([
+      "trace_disabled",
+      "anthropic_credentials_missing",
+    ]);
   });
 
   it("reports offline when both provider generation and deterministic routing are off", () => {
@@ -174,7 +177,7 @@ describe("Dime Chat Runtime Readiness v1", () => {
   it("formats bounded startup telemetry without raw configuration", () => {
     const readiness = getDimeRuntimeReadiness({ env: {}, now: NOW });
     expect(formatDimeRuntimeReadinessLog(readiness)).toBe(
-      "[DIME_RUNTIME] version=dime-chat-runtime-readiness-v1 state=limited mode=frozen routing=on trace=off issues=provider_frozen,trace_disabled"
+      "[DIME_RUNTIME] version=dime-chat-runtime-readiness-v1 state=limited mode=pi routing=on trace=off issues=trace_disabled,anthropic_credentials_missing"
     );
   });
 });

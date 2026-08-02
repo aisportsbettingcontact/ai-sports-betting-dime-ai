@@ -41,6 +41,7 @@ import {
   selectDimeChatResponseBudget,
 } from "./_core/dimeChatModel";
 import { getDimeChatContext } from "./_core/dimeChatContext";
+import { runPiChat } from "./_core/piAgent";
 import { handleDimeDeterministicMathResponse } from "./_core/dimeDeterministicMathHandler";
 import {
   applyDimeAnswerRoute,
@@ -182,6 +183,22 @@ function traceProviderMetadata(
       platformKnowledgeSha256: DIME_PLATFORM_KNOWLEDGE_SHA256,
       maxTokens: responseBudget,
       temperature: DIME1_CHAT_TEMPERATURE,
+    };
+  }
+  if (DIME_CHAT_LLM_PROVIDER === "pi") {
+    return {
+      provider: "pi",
+      deploymentTier: "production",
+      requestedModel: DIME_CHAT_MODEL,
+      endpointSource: "pi-agent-core",
+      productProfile: DIME_CHAT_PROFILE_METADATA.productProfile,
+      profileVersion: DIME_CHAT_PROFILE_METADATA.profileVersion,
+      promptSource: DIME_CHAT_PROFILE_METADATA.promptSource,
+      systemPrompt: applyDimeAnswerRoute(DIME_CHAT_SYSTEM_PROMPT, answerRoute),
+      blueprintHash: DIME_CHAT_PROFILE_METADATA.blueprintHash,
+      platformKnowledgeVersion: DIME_PLATFORM_KNOWLEDGE_VERSION,
+      platformKnowledgeSha256: DIME_PLATFORM_KNOWLEDGE_SHA256,
+      maxTokens: responseBudget,
     };
   }
   if (DIME_CHAT_LLM_PROVIDER === "anthropic") {
@@ -626,10 +643,12 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
     return;
   }
 
-  // Credentials are only required when the Anthropic provider is live. A
-  // Trace-v1 prompt is already canonical at this point, so configuration
-  // failures are recorded as terminal attempts without a provider call.
-  if (DIME_CHAT_LLM_PROVIDER === "anthropic" && !hasAnthropicCredentials()) {
+  // Credentials are only required when a live Claude-backed provider is
+  // active ("anthropic" direct SDK, or "pi" embedded runtime — both resolve
+  // the same env credentials). A Trace-v1 prompt is already canonical at
+  // this point, so configuration failures are recorded as terminal attempts
+  // without a provider call.
+  if ((DIME_CHAT_LLM_PROVIDER === "anthropic" || DIME_CHAT_LLM_PROVIDER === "pi") && !hasAnthropicCredentials()) {
     if (activeTrace) {
       await failDimeChatTrace(activeTrace, {
         status: "failed",
@@ -706,15 +725,15 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
     return;
   }
 
-  // --- PROVIDER FREEZE (2026-07-12): while DIME_CHAT_LLM_PROVIDER is
-  // "frozen", the Dime Chat interface must not use the Anthropic API to
-  // respond. Short-circuit here — before context building, before
+  // --- PROVIDER FREEZE (2026-07-12; ended 2026-08-01 by owner direction —
+  // provider is now "pi"): while DIME_CHAT_LLM_PROVIDER is "frozen", the
+  // Dime Chat interface must not use the Anthropic API to respond.
+  // Short-circuit here — before context building, before
   // createAnthropicClient(), before any messages.stream() call — and answer
   // with a hardcoded notice over the same SSE frame contract the client
-  // already parses (meta → delta → done). The entire Claude streaming path
-  // below is intentionally left wired for when the provider is switched
-  // back on. ---
-  if (DIME_CHAT_LLM_PROVIDER !== "anthropic") {
+  // already parses (meta → delta → done). The live streaming paths below
+  // ("anthropic" direct SDK, "pi" embedded runtime) stay wired either way. ---
+  if (DIME_CHAT_LLM_PROVIDER !== "anthropic" && DIME_CHAT_LLM_PROVIDER !== "pi") {
     let assistantMessageId: number | undefined;
     if (activeTrace) {
       try {
@@ -981,7 +1000,6 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
     ...(activeTrace ? { trace: dimeChatTraceMeta(activeTrace) } : {}),
   });
 
-  const anthropic = createAnthropicClient();
   const abort = new AbortController();
   let aborted = false;
 
@@ -1012,24 +1030,54 @@ dimeChatRouter.post("/chat", async (req: Request, res: Response) => {
   let traceFinalized = false;
   try {
     const modelStartedAt = Date.now();
-    const stream = anthropic.messages.stream(
-      {
-        model: DIME_CHAT_MODEL,
-        max_tokens: responseBudget,
-        system: requestProviderMetadata.systemPrompt ?? DIME_CHAT_SYSTEM_PROMPT,
-        messages: providerMessages,
-      },
-      { signal: abort.signal }
-    );
-
     let output = "";
     let firstTokenAt: number | undefined;
-    stream.on("text", delta => {
-      firstTokenAt ??= Date.now();
-      output += delta;
-    });
+    let final: {
+      stop_reason: string | null;
+      model: string;
+      usage: { input_tokens: number; output_tokens: number };
+    };
 
-    const final = await stream.finalMessage();
+    if (DIME_CHAT_LLM_PROVIDER === "pi") {
+      // Embedded pi-agent-core runtime — same model, prompt, budget, and
+      // gateway routing as the direct-SDK path (server/_core/piAgent.ts).
+      const piResult = await runPiChat({
+        systemPrompt:
+          requestProviderMetadata.systemPrompt ?? DIME_CHAT_SYSTEM_PROMPT,
+        history: providerMessages,
+        model: DIME_CHAT_MODEL,
+        maxTokens: responseBudget,
+        signal: abort.signal,
+        sessionId: requestId,
+      });
+      output = piResult.text;
+      final = {
+        stop_reason: piResult.stopReason,
+        model: piResult.model,
+        usage: {
+          input_tokens: piResult.usage.inputTokens ?? 0,
+          output_tokens: piResult.usage.outputTokens ?? 0,
+        },
+      };
+    } else {
+      const anthropic = createAnthropicClient();
+      const stream = anthropic.messages.stream(
+        {
+          model: DIME_CHAT_MODEL,
+          max_tokens: responseBudget,
+          system: requestProviderMetadata.systemPrompt ?? DIME_CHAT_SYSTEM_PROMPT,
+          messages: providerMessages,
+        },
+        { signal: abort.signal }
+      );
+
+      stream.on("text", delta => {
+        firstTokenAt ??= Date.now();
+        output += delta;
+      });
+
+      final = await stream.finalMessage();
+    }
     const modelCompletedAt = Date.now();
     if (aborted || res.destroyed) {
       if (activeTrace) {

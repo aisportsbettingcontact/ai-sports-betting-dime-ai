@@ -27,6 +27,13 @@ export const DIME_CHAT_CONTEXT_TOKEN_BUDGET = 36_000;
  *               turn. All Claude routing/wiring below the switch stays intact
  *               per product direction — nothing is removed.
  * "anthropic" — restores the original Claude streaming path unchanged.
+ * "pi"        — serves chat through the embedded pi-agent-core runtime
+ *               (server/_core/piAgent.ts runPiChat) with the same model,
+ *               system prompt, token budgets, validation, trace
+ *               observability, and SSE contract as the "anthropic" path.
+ *               Activated by owner direction 2026-08-01 ("wire production
+ *               chat through pi"), ending the 2026-07-12 freeze. Model
+ *               policy per LLM.md (claude-fable-5).
  * "dime1"    — reserved future integration for the governed Dime 1.0
  *               post-training foundation based on the pinned Llama 3.1 8B
  *               Base model. The client and handler remain inactive scaffolds.
@@ -42,8 +49,8 @@ export const DIME_CHAT_CONTEXT_TOKEN_BUDGET = 36_000;
  * (POST /api/dime/chat) — other Claude surfaces are not governed by this
  * switch.
  */
-export type DimeChatLlmProvider = "anthropic" | "dime1" | "frozen";
-export const DIME_CHAT_LLM_PROVIDER: DimeChatLlmProvider = "frozen";
+export type DimeChatLlmProvider = "anthropic" | "pi" | "dime1" | "frozen";
+export const DIME_CHAT_LLM_PROVIDER: DimeChatLlmProvider = "pi";
 
 /** Hardcoded assistant reply streamed while the provider is frozen. */
 export const DIME_CHAT_FROZEN_NOTICE =

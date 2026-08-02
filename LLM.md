@@ -70,8 +70,11 @@ baseUrl per model. Codex (`gpt-5.6-sol`) authenticates via Codex OAuth (`/login`
 login. The id is real: verified in pi-ai's `openai-codex` catalog (alongside `gpt-5.6-luna`
 and `gpt-5.6-terra`).
 
-## Frozen surfaces
+## Dime Chat provider
 
-`DIME_CHAT_LLM_PROVIDER` stays `"frozen"` (ml/dime-1.0 promotion is owner-gated behind
-`ml/dime-1.0/docs/RELEASE_GATES.md`). Model policy here governs agent/harness execution,
-not that promotion decision.
+`DIME_CHAT_LLM_PROVIDER` is `"pi"` (owner-authorized unfreeze, 2026-08-01): production
+chat serves through the embedded pi-agent-core runtime (`runPiChat`, claude-fable-5) on
+the server's API credentials — a sanctioned credit bucket. The value is pinned by
+`server/dimeChatProviderFreeze.test.ts` and `ml/dime-1.0/tests/test_repository_contract.py`,
+so any silent change fails CI. The `"dime1"` provider remains inactive: its promotion is
+owner-gated behind `ml/dime-1.0/docs/RELEASE_GATES.md` and has no trained checkpoint.
