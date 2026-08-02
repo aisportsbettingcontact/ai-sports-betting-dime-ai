@@ -103,6 +103,7 @@ export type MobileNavEvent =
   | "mobile_chat_state_loaded"
   | "mobile_chat_preview_action_clicked"
   | "mobile_chat_preview_action_blocked"
+  | "mobile_chat_avenue_selected"
   | "mobile_bet_tracker_data_fetch_started"
   | "mobile_bet_tracker_data_fetch_completed"
   | "mobile_bet_tracker_data_fetch_failed"
