@@ -9,17 +9,20 @@ import {
 /**
  * Dime Chat provider contract tests.
  *
- * History: frozen 2026-07-12 ("no Anthropic API use, keep all Claude wiring"),
- * unfrozen 2026-08-01 by explicit owner direction onto the embedded
- * pi-agent-core runtime (provider "pi"). These tests pin the CURRENT
- * contract with the same rigor the freeze tests pinned the old one:
- *   1. the active provider is exactly "pi" — any silent change fails CI;
- *   2. the frozen short-circuit machinery is preserved (switching back to
- *      "frozen" restores the no-provider-call notice unchanged);
- *   3. the pi serving path exists and shares the anthropic path's
- *      credential guard, budget, and system prompt;
- *   4. the full direct-SDK Claude streaming path remains present so
- *      flipping to "anthropic" restores it unchanged.
+ * History: frozen 2026-07-12 ("no Anthropic API use, keep all Claude wiring
+ * intact"); unfrozen 2026-08-01 by explicit owner direction back onto the
+ * preserved "anthropic" streaming path — the exact restore the freeze was
+ * designed for, requiring zero route changes (the route file is hash-pinned
+ * by ml/dime-1.0 evaluation evidence). The "pi" embedded-runtime provider is
+ * reserved and gated on that evidence being re-frozen (see dimeChatModel.ts).
+ *
+ * These tests pin the CURRENT contract with the same rigor the freeze tests
+ * pinned the old one:
+ *   1. the active provider is exactly "anthropic" — any silent change fails CI;
+ *   2. the frozen short-circuit machinery is preserved unchanged, so
+ *      re-freezing remains a one-constant revert;
+ *   3. the full Claude streaming path is live and precedes nothing it
+ *      shouldn't (freeze branch still guards non-live providers first).
  * Scope is the Dime Chat interface only — other Claude surfaces (wc2026,
  * claudeRouter) are intentionally not governed by this switch.
  */
@@ -37,9 +40,9 @@ const claudeRouterSrc = fs.readFileSync(
   "utf8"
 );
 
-describe("provider switch — pi state (owner-authorized unfreeze, 2026-08-01)", () => {
-  it('the Dime Chat provider is exactly "pi"', () => {
-    expect(DIME_CHAT_LLM_PROVIDER).toBe("pi");
+describe("provider switch — anthropic live state (owner-authorized unfreeze, 2026-08-01)", () => {
+  it('the Dime Chat provider is exactly "anthropic"', () => {
+    expect(DIME_CHAT_LLM_PROVIDER).toBe("anthropic");
   });
 
   it("retains the hardcoded frozen notice for any future re-freeze", () => {
@@ -48,23 +51,21 @@ describe("provider switch — pi state (owner-authorized unfreeze, 2026-08-01)",
   });
 });
 
-describe("POST /api/dime/chat — frozen short-circuit preserved ahead of live paths", () => {
+describe("POST /api/dime/chat — frozen machinery preserved ahead of the live path", () => {
   const freezeIdx = routeSrc.indexOf(
-    'if (DIME_CHAT_LLM_PROVIDER !== "anthropic" && DIME_CHAT_LLM_PROVIDER !== "pi")'
+    'if (DIME_CHAT_LLM_PROVIDER !== "anthropic")'
   );
   const contextIdx = routeSrc.indexOf("getDimeChatContext(", freezeIdx);
   const clientIdx = routeSrc.indexOf(
     "const anthropic = createAnthropicClient()"
   );
   const streamIdx = routeSrc.indexOf("anthropic.messages.stream");
-  const piCallIdx = routeSrc.indexOf("await runPiChat({");
 
-  it("the frozen branch exists and precedes context building and every provider call", () => {
+  it("the frozen branch exists and precedes context building and every Anthropic call", () => {
     expect(freezeIdx).toBeGreaterThan(-1);
     expect(contextIdx).toBeGreaterThan(freezeIdx);
     expect(clientIdx).toBeGreaterThan(freezeIdx);
     expect(streamIdx).toBeGreaterThan(freezeIdx);
-    expect(piCallIdx).toBeGreaterThan(freezeIdx);
   });
 
   it("the frozen branch streams the hardcoded notice and terminates the response", () => {
@@ -77,44 +78,22 @@ describe("POST /api/dime/chat — frozen short-circuit preserved ahead of live p
     expect(branch).toContain('type: "done"');
     expect(branch).toContain('stopReason: "end_turn"');
     expect(branch).toMatch(/res\.end\(\);\s*return;/);
-    // No provider call sites inside the frozen branch itself.
+    // No Anthropic call sites inside the frozen branch itself (the guard's
+    // "anthropic" string literal is the provider name, not a call).
     expect(branch).not.toMatch(
-      /createAnthropicClient|hasAnthropicCredentials|messages\.stream|Anthropic\.|runPiChat/
+      /createAnthropicClient|hasAnthropicCredentials|messages\.stream|Anthropic\./
     );
   });
 
-  it("demands Anthropic credentials for both live providers, not while frozen", () => {
+  it("demands Anthropic credentials on the live path", () => {
     expect(routeSrc).toContain(
-      '(DIME_CHAT_LLM_PROVIDER === "anthropic" || DIME_CHAT_LLM_PROVIDER === "pi") && !hasAnthropicCredentials()'
+      'DIME_CHAT_LLM_PROVIDER === "anthropic" && !hasAnthropicCredentials()'
     );
   });
 });
 
-describe("pi serving path — embedded runtime wired with parity", () => {
-  it("imports and calls runPiChat from the embedded pi runtime", () => {
-    expect(routeSrc).toContain(
-      'import { runPiChat } from "./_core/piAgent"'
-    );
-    expect(routeSrc).toContain("await runPiChat({");
-  });
-
-  it("the pi path shares the anthropic path's prompt, budget, and abort wiring", () => {
-    const piBlock = routeSrc.slice(
-      routeSrc.indexOf("await runPiChat({"),
-      routeSrc.indexOf("} else {", routeSrc.indexOf("await runPiChat({"))
-    );
-    expect(piBlock).toContain(
-      "requestProviderMetadata.systemPrompt ?? DIME_CHAT_SYSTEM_PROMPT"
-    );
-    expect(piBlock).toContain("history: providerMessages");
-    expect(piBlock).toContain("model: DIME_CHAT_MODEL");
-    expect(piBlock).toContain("maxTokens: responseBudget");
-    expect(piBlock).toContain("signal: abort.signal");
-  });
-});
-
-describe("Claude wiring is preserved, not removed", () => {
-  it("the full Anthropic streaming path is still present in the route", () => {
+describe("Claude wiring is live, complete, and scoped", () => {
+  it("the full Anthropic streaming path is present in the route", () => {
     expect(routeSrc).toMatch(
       /import \{[\s\S]*?createAnthropicClient,[\s\S]*?hasAnthropicCredentials,[\s\S]*?\} from "\.\/_core\/anthropicClient"/
     );

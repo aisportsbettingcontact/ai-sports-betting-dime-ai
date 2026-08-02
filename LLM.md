@@ -72,9 +72,16 @@ and `gpt-5.6-terra`).
 
 ## Dime Chat provider
 
-`DIME_CHAT_LLM_PROVIDER` is `"pi"` (owner-authorized unfreeze, 2026-08-01): production
-chat serves through the embedded pi-agent-core runtime (`runPiChat`, claude-fable-5) on
-the server's API credentials — a sanctioned credit bucket. The value is pinned by
+`DIME_CHAT_LLM_PROVIDER` is `"anthropic"` (owner-authorized unfreeze, 2026-08-01):
+production chat serves live claude-fable-5 completions through the preserved direct-SDK
+path on the server's API credentials — a sanctioned credit bucket. This was the
+zero-route-change restore the 2026-07-12 freeze was designed for. The value is pinned by
 `server/dimeChatProviderFreeze.test.ts` and `ml/dime-1.0/tests/test_repository_contract.py`,
-so any silent change fails CI. The `"dime1"` provider remains inactive: its promotion is
-owner-gated behind `ml/dime-1.0/docs/RELEASE_GATES.md` and has no trained checkpoint.
+so any silent change fails CI.
+
+Reserved values: `"pi"` (embedded pi-agent-core serving via `runPiChat`) is gated on the
+ml/dime-1.0 program re-freezing its evaluation evidence — provider-selection-v1 and
+model-artifact-evaluation-v1 hash-pin `server/dime-chat.route.ts`, and those pins cascade
+into the model-artifact decision and RunPod gate-1 attestations, which record executed
+audits and cannot be honestly re-pinned without re-running them. `"dime1"` remains
+inactive behind `ml/dime-1.0/docs/RELEASE_GATES.md` (no trained checkpoint).
