@@ -22,6 +22,7 @@ import { existsSync, readFileSync, statSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { verifyQmPack } from "./qm-pack-verify";
 import {
   PI_AGENT_APPROVED_MODELS,
   resolvePiAgentModel,
@@ -225,6 +226,7 @@ await layer("pkg", () => {
     "pi:rpc",
     "pi:json",
     "pi:audit",
+    "qm:pack:verify",
   ]) {
     check(`pkg:script ${s}`, typeof pkg.scripts[s] === "string");
   }
@@ -382,6 +384,19 @@ if (piDir) {
     `SKIP loader:* — global pi CLI not found (attempted: ${attempted.join(" | ")})`
   );
 }
+
+// 9. QM skill pack — one corpus, two consumers (qm.pack.json contract)
+await layer("qm-pack", () => {
+  const report = verifyQmPack(root);
+  for (const failure of report.failures) {
+    check(`qm-pack:${failure.slice(0, 100)}`, false);
+  }
+  check(
+    "qm-pack:corpus verifies for QM ingest",
+    report.failures.length === 0,
+    `${report.skillCount} skills, ${report.names.length} unique names`
+  );
+});
 
 console.log(
   failures === 0

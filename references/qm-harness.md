@@ -98,9 +98,22 @@ Alternative for deep customization: a **private fork** (`<org>/qm-private`) seed
 mirror-pushing `yc-software/qm`, with everything org-specific under
 `deploy/layers/<org>/` and core kept identical to upstream.
 
+## Skill-pack contract (automated)
+
+`qm.pack.json` at the repo root is the machine-readable pack config — QM admins import
+the repo URL with exactly that config. `pnpm qm:pack:verify`
+(`scripts/qm-pack-verify.ts`) validates the corpus against it deterministically —
+frontmatter completeness, post-exclude name uniqueness (verified: 107 skills, 107
+unique names), glob shape — and runs inside `pnpm pi:audit` (its qm-pack layer) and
+therefore in CI on every PR. One corpus, two consumers, one gate. `/qm` (a
+`.claude/commands` template, so it loads in Claude Code AND pi) routes QM work through
+this runbook and the contract.
+
 ## Local evaluation
 
-The source repo carries `npm run dev-instance` (+ `:status` / `:down`) for a local
-instance and `local/Dockerfile` for the sandbox image; `npm install --ignore-scripts`
-then the dev-instance scripts are the bring-up path. Requires Postgres; see
-`docs/getting-started.md` and `deployment.md` in the clone.
+The source repo carries `npm run dev-instance` (+ `:status` / `:down`) and
+`local/Dockerfile`. Verified 2026-08-01: the supervisor runs from a fresh clone
+(`npm install --ignore-scripts`, 0 vulnerabilities) but waits on a configured pool app —
+local instances need a `poolN.env` (deployment env incl. secrets), which is the same
+owner-gate as the model-provider key. See `docs/getting-started.md` and
+`deployment.md` in the clone.
