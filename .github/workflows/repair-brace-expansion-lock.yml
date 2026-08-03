@@ -1,0 +1,102 @@
+name: Repair brace-expansion lockfile
+
+on:
+  push:
+    branches:
+      - agent/dime-v1-release-candidate-v1
+    paths:
+      - .github/workflows/repair-brace-expansion-lock.yml
+
+concurrency:
+  group: repair-brace-expansion-lock
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    if: >-
+      github.repository == 'aisportsbettingcontact/ai-sports-betting-dime-ai' &&
+      github.ref == 'refs/heads/agent/dime-v1-release-candidate-v1'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: "[INPUT] Checkout repair branch"
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: agent/dime-v1-release-candidate-v1
+          fetch-depth: 0
+
+      - name: "[STEP] Setup pnpm"
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1
+
+      - name: "[STEP] Setup Node.js 22"
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: "[STEP] Raise the compatible 1.x security floor"
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = 'package.json';
+          const pkg = JSON.parse(fs.readFileSync(path, 'utf8'));
+          const current = pkg.pnpm?.overrides?.['brace-expansion'];
+          const expected = new Set([
+            '>=1.1.16 <2.0.0',
+            '>=1.1.18 <2.0.0',
+          ]);
+          if (!expected.has(current)) {
+            throw new Error(`Unexpected brace-expansion override: ${String(current)}`);
+          }
+          pkg.pnpm.overrides['brace-expansion'] = '>=1.1.18 <2.0.0';
+          fs.writeFileSync(path, `${JSON.stringify(pkg, null, 2)}\n`);
+          NODE
+
+      - name: "[STEP] Regenerate the frozen lockfile"
+        run: pnpm install --lockfile-only --ignore-scripts
+
+      - name: "[VERIFY] Lockfile and CommonJS compatibility"
+        shell: bash
+        run: |
+          grep -F "brace-expansion: '>=1.1.18 <2.0.0'" pnpm-lock.yaml
+          grep -F 'brace-expansion@1.1.18:' pnpm-lock.yaml
+          if grep -Fq 'brace-expansion@1.1.16:' pnpm-lock.yaml; then
+            echo 'Stale brace-expansion@1.1.16 snapshot remains' >&2
+            exit 1
+          fi
+          pnpm install --frozen-lockfile --ignore-scripts
+          node <<'NODE'
+          const expand = require('./node_modules/.pnpm/brace-expansion@1.1.18/node_modules/brace-expansion');
+          if (typeof expand !== 'function') {
+            throw new TypeError(`brace-expansion must remain callable; got ${typeof expand}`);
+          }
+          const expanded = expand('file-{a,b}.txt');
+          if (JSON.stringify(expanded) !== JSON.stringify(['file-a.txt', 'file-b.txt'])) {
+            throw new Error(`Unexpected expansion output: ${JSON.stringify(expanded)}`);
+          }
+          const minimatchModule = require('./node_modules/.pnpm/minimatch@3.1.5/node_modules/minimatch');
+          const minimatch = typeof minimatchModule === 'function'
+            ? minimatchModule
+            : minimatchModule.minimatch;
+          if (typeof minimatch !== 'function' || !minimatch('file-a.txt', 'file-{a,b}.txt')) {
+            throw new Error('minimatch@3.1.5 compatibility verification failed');
+          }
+          console.log('[VERIFY] brace-expansion@1.1.18 is callable and minimatch-compatible');
+          NODE
+
+      - name: "[OUTPUT] Commit repaired dependency state"
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add package.json pnpm-lock.yaml
+          git diff --cached --check
+          if git diff --cached --quiet; then
+            echo 'No dependency repair was produced' >&2
+            exit 1
+          fi
+          git commit -m 'fix(security): upgrade brace-expansion to 1.1.18'
+          git push origin HEAD:agent/dime-v1-release-candidate-v1
