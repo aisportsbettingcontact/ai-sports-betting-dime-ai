@@ -463,7 +463,7 @@ export default function MlbBacktest() {
                     <Tooltip
                       contentStyle={{ backgroundColor: "#000000", border: "1px solid #FFFFFF", borderRadius: 8 }}
                       labelStyle={{ color: "#FFFFFF", fontSize: 12 }}
-                      formatter={(v: number) => [`${(v * 100).toFixed(1)}%`, "Accuracy"]}
+                      formatter={v => [`${(Number(v) * 100).toFixed(1)}%`, "Accuracy"]}
                     />
                     <ReferenceLine y={TARGET_ACCURACY}    stroke="#45E0A8" strokeDasharray="4 4" label={{ value: "70% Target", fill: "#45E0A8", fontSize: 10 }} />
                     <ReferenceLine y={BREAKEVEN_ACCURACY} stroke="#FFFFFF" strokeDasharray="4 4" label={{ value: "52.4% BEP", fill: "#FFFFFF", fontSize: 10 }} />
@@ -514,8 +514,8 @@ export default function MlbBacktest() {
                     <Tooltip
                       contentStyle={{ backgroundColor: "#000000", border: "1px solid #FFFFFF", borderRadius: 8 }}
                       labelStyle={{ color: "#FFFFFF", fontSize: 12 }}
-                      formatter={(v: number, name: string) => [
-                        name === "cumulativeRoi" ? `${(v * 100).toFixed(1)}%` : `${(v * 100).toFixed(1)}%`,
+                      formatter={(v, name) => [
+                        name === "cumulativeRoi" ? `${(Number(v) * 100).toFixed(1)}%` : `${(Number(v) * 100).toFixed(1)}%`,
                         name === "cumulativeRoi" ? "Cumulative ROI" : "Daily Accuracy",
                       ]}
                     />
@@ -594,8 +594,8 @@ export default function MlbBacktest() {
                       <Tooltip
                         contentStyle={{ backgroundColor: "#000000", border: "1px solid #FFFFFF", borderRadius: 8 }}
                         labelStyle={{ color: "#FFFFFF", fontSize: 12 }}
-                        formatter={(v: number, name: string) => [
-                          `${(v * 100).toFixed(1)}%`,
+                        formatter={(v, name) => [
+                          `${(Number(v) * 100).toFixed(1)}%`,
                           name === "accuracy" ? "Win Rate" : "Count",
                         ]}
                       />
@@ -747,8 +747,8 @@ function KPropsPanel({ data }: { data: {
             <YAxis tickFormatter={v => `${(v * 100).toFixed(0)}%`} tick={{ fill: "#FFFFFF", fontSize: 10 }} domain={[0, 1]} />
             <Tooltip
               contentStyle={{ backgroundColor: "#000000", border: "1px solid #FFFFFF", borderRadius: 8 }}
-              formatter={(v: number, name: string) => [
-                name === "accuracy" ? `${(v * 100).toFixed(1)}%` : v,
+              formatter={(v, name) => [
+                name === "accuracy" ? `${(Number(v) * 100).toFixed(1)}%` : Number(v),
                 name === "accuracy" ? "Win Rate" : "Count",
               ]}
             />
@@ -856,7 +856,7 @@ function HrPropsPanel({ data }: { data: {
             <YAxis tickFormatter={v => `${(v * 100).toFixed(0)}%`} tick={{ fill: "#FFFFFF", fontSize: 10 }} domain={[0, 1]} />
             <Tooltip
               contentStyle={{ backgroundColor: "#000000", border: "1px solid #FFFFFF", borderRadius: 8 }}
-              formatter={(v: number) => [`${(v * 100).toFixed(1)}%`, "Win Rate"]}
+              formatter={v => [`${(Number(v) * 100).toFixed(1)}%`, "Win Rate"]}
             />
             <ReferenceLine y={TARGET_ACCURACY}    stroke="#45E0A8" strokeDasharray="4 4" />
             <ReferenceLine y={BREAKEVEN_ACCURACY} stroke="#FFFFFF" strokeDasharray="4 4" />
