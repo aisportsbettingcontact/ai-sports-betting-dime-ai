@@ -14,16 +14,20 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
 const DESTRUCTIVE_GIT = [
+  // --force-with-lease is blocked too: intentionally strict — no agent
+  // force-pushes of any variant in this repo (AGENTS.md).
   /git\s+push\b[^\n]*(--force\b|-f\b)/,
+  /git\s+push\b[^\n]*\s\+\S+/, // refspec force-push: git push origin +main
   /git\s+reset\s+--hard\b/,
   /git\s+clean\s+-[a-z]*f/,
-  /git\s+checkout\s+\.(\s|$)/,
+  /git\s+checkout\s+(--\s+)?\.(\s|$)/,
+  /git\s+restore\b(?![^\n]*--staged)[^\n]*\s\.(\s|$)/, // git restore [--source=...] .
   /git\s+commit\b[^\n]*--no-verify\b/,
 ];
 
 const PROTECTED_WRITE_PATTERNS = [
   { re: /dime-ai\/design-bundle\/uploads\//, why: "personal reference material — never modify or redistribute (CLAUDE.md)" },
-  { re: /(^|\/)\.env(\.|$)/, why: "environment/secret files are managed by hand, never by agents" },
+  { re: /(^|\/)\.env(rc)?(\.|$)|\.env$/, why: "environment/secret files are managed by hand, never by agents" },
 ];
 
 const SCHEMA_RE = /(^|\/)drizzle\//;

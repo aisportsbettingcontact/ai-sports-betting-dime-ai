@@ -7,15 +7,22 @@ import {
 } from "./_core/dimeChatModel";
 
 /**
- * Dime Chat provider freeze — contract tests (2026-07-12).
+ * Dime Chat provider contract tests.
  *
- * Requirement: the Dime Chat interface (POST /api/dime/chat) must not use the
- * Anthropic API when responding, WITHOUT removing any routing or wiring to
- * the Claude models. These tests pin both halves:
- *   1. the route short-circuits before any Anthropic client/stream call while
- *      DIME_CHAT_LLM_PROVIDER is "frozen", and
- *   2. the full Claude streaming path remains present in the source so
- *      flipping the provider back to "anthropic" restores it unchanged.
+ * History: frozen 2026-07-12 ("no Anthropic API use, keep all Claude wiring
+ * intact"); unfrozen 2026-08-01 by explicit owner direction back onto the
+ * preserved "anthropic" streaming path — the exact restore the freeze was
+ * designed for, requiring zero route changes (the route file is hash-pinned
+ * by ml/dime-1.0 evaluation evidence). The "pi" embedded-runtime provider is
+ * reserved and gated on that evidence being re-frozen (see dimeChatModel.ts).
+ *
+ * These tests pin the CURRENT contract with the same rigor the freeze tests
+ * pinned the old one:
+ *   1. the active provider is exactly "anthropic" — any silent change fails CI;
+ *   2. the frozen short-circuit machinery is preserved unchanged, so
+ *      re-freezing remains a one-constant revert;
+ *   3. the full Claude streaming path is live and precedes nothing it
+ *      shouldn't (freeze branch still guards non-live providers first).
  * Scope is the Dime Chat interface only — other Claude surfaces (wc2026,
  * claudeRouter) are intentionally not governed by this switch.
  */
@@ -33,18 +40,18 @@ const claudeRouterSrc = fs.readFileSync(
   "utf8"
 );
 
-describe("provider switch — frozen state", () => {
-  it("the Dime Chat provider is frozen (no LLM in use)", () => {
-    expect(DIME_CHAT_LLM_PROVIDER).toBe("frozen");
+describe("provider switch — anthropic live state (owner-authorized unfreeze, 2026-08-01)", () => {
+  it('the Dime Chat provider is exactly "anthropic"', () => {
+    expect(DIME_CHAT_LLM_PROVIDER).toBe("anthropic");
   });
 
-  it("exposes a non-empty hardcoded notice for frozen responses", () => {
+  it("retains the hardcoded frozen notice for any future re-freeze", () => {
     expect(DIME_CHAT_FROZEN_NOTICE.length).toBeGreaterThan(0);
     expect(DIME_CHAT_FROZEN_NOTICE).toContain("temporarily offline");
   });
 });
 
-describe("POST /api/dime/chat — freeze short-circuits before Anthropic", () => {
+describe("POST /api/dime/chat — frozen machinery preserved ahead of the live path", () => {
   const freezeIdx = routeSrc.indexOf(
     'if (DIME_CHAT_LLM_PROVIDER !== "anthropic")'
   );
@@ -78,15 +85,15 @@ describe("POST /api/dime/chat — freeze short-circuits before Anthropic", () =>
     );
   });
 
-  it("does not demand Anthropic credentials while frozen", () => {
+  it("demands Anthropic credentials on the live path", () => {
     expect(routeSrc).toContain(
       'DIME_CHAT_LLM_PROVIDER === "anthropic" && !hasAnthropicCredentials()'
     );
   });
 });
 
-describe("Claude wiring is preserved, not removed", () => {
-  it("the full Anthropic streaming path is still present in the route", () => {
+describe("Claude wiring is live, complete, and scoped", () => {
+  it("the full Anthropic streaming path is present in the route", () => {
     expect(routeSrc).toMatch(
       /import \{[\s\S]*?createAnthropicClient,[\s\S]*?hasAnthropicCredentials,[\s\S]*?\} from "\.\/_core\/anthropicClient"/
     );
@@ -101,7 +108,7 @@ describe("Claude wiring is preserved, not removed", () => {
     );
   });
 
-  it("the freeze is scoped to the Dime Chat interface only", () => {
+  it("the provider switch is scoped to the Dime Chat interface only", () => {
     expect(wc2026Src).not.toContain("DIME_CHAT_LLM_PROVIDER");
     expect(claudeRouterSrc).not.toContain("DIME_CHAT_LLM_PROVIDER");
   });

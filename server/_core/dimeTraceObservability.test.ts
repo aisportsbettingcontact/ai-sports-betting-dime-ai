@@ -272,11 +272,11 @@ describe("Dime Phase 1 timestamp, cost, and completeness contracts", () => {
       attestation: {
         pathConfigured: false,
         registryStatus: "not_configured",
-        activeProvider: "frozen",
-        activeModel: "no-provider",
-        activeModelRevision: "no-provider",
-        deploymentTier: "disabled",
-        zeroCostRuntime: true,
+        activeProvider: "anthropic",
+        activeModel: "claude-fable-5",
+        activeModelRevision: "claude-fable-5",
+        deploymentTier: "production",
+        zeroCostRuntime: false,
         exactMatchAvailable: false,
       },
     });

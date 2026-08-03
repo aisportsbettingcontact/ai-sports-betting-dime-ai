@@ -50,6 +50,7 @@
     "pi:rpc": "pi --mode rpc -a",
     "pi:json": "pi --mode json -a",
     "pi:audit": "tsx scripts/pi-harness-audit.ts",
+    "qm:pack:verify": "tsx scripts/qm-pack-verify.ts",
     "postinstall": "if [ -f requirements.txt ] && command -v pip3 >/dev/null 2>&1; then pip3 install -r requirements.txt -q; else echo '[postinstall] skipping python deps: pip3 unavailable or requirements.txt missing (expected on Railway, which installs via apt in Dockerfile)'; fi"
   },
   "dependencies": {
@@ -181,7 +182,7 @@
     "overrides": {
       "tailwindcss>nanoid": "3.3.7",
       "postcss": ">=8.5.12 <9.0.0",
-      "brace-expansion": ">=1.1.16 <2.0.0",
+      "brace-expansion": ">=1.1.18 <2.0.0",
       "js-yaml": ">=4.3.0 <5.0.0",
       "discord.js>undici": "6.28.0",
       "@discordjs/rest>undici": "6.28.0",
@@ -191,7 +192,9 @@
       "fast-xml-builder": ">=1.1.7 <2.0.0",
       "form-data": ">=4.0.6 <5.0.0",
       "uuid": ">=11.1.1 <12.0.0",
-      "ws": ">=8.20.1 <9.0.0"
+      "ws": ">=8.20.1 <9.0.0",
+      "fast-uri": ">=3.1.5 <4.0.0",
+      "ip-address": ">=10.3.1 <11.0.0"
     },
     "auditConfig": {
       "ignoreCves": [

@@ -23,6 +23,7 @@ beats micro-savings here.
 | Embedded runtime | `server/_core/piAgent.ts` `PI_AGENT_APPROVED_MODELS`; `resolvePiAgentModel()` throws on anything else unless `DIME_ALLOW_LEGACY_MODELS=1`                                             |
 | Agent SDK runner | `DIME_AGENT_MODEL` env/default = `claude-fable-5` (`server/_core/dimeAgent.ts`)                                                                                                       |
 | Claude Code      | Session model selection — keep Fable 5/Opus 5                                                                                                                                         |
+| QM workspaces    | Same law — subscription-class or QM-provisioned credentials only; the funded Dime Chat key is never wired into QM (`references/qm-harness.md`)                                        |
 
 ## Auth model: subscription-first (IMPORTANT)
 
@@ -37,6 +38,21 @@ API credentials are needed only for the non-interactive surfaces:
 - server runtimes in production — `runPiChat`/`runPiAgent` (piAgent.ts),
   `runDimeAgent` (dimeAgent.ts), `createAnthropicClient` callers
 - headless pipelines — `pi -p` in CI, `pi-share-hf` LLM review
+
+## API credit budget (owner directive, 2026-08-01)
+
+The funded `ANTHROPIC_API_KEY` balance is spent ONLY on:
+
+1. **Dime AI Chat** — testing, auditing, training, deployment, or execution of the
+   chat surface (`runPiChat`, `dime-chat.route.ts`, and their verification), and
+2. **pi-share-hf LLM reviews** of collected sessions.
+
+Everything else uses subscription auth or a model-free path (`pi:audit`, tsc,
+vitest). **Unattended/CI model calls are paused**: the `pi Review` workflow is
+`disabled_manually` — re-enable (`gh workflow enable pi-review.yml`) only on
+explicit owner say-so. Before any action that would bill the key, state which
+bucket it falls in; if neither, don't spend. Maximize intent: one reasoned call
+beats ambient automation.
 
 ## Routing and credentials (API surfaces only)
 
@@ -55,8 +71,18 @@ baseUrl per model. Codex (`gpt-5.6-sol`) authenticates via Codex OAuth (`/login`
 login. The id is real: verified in pi-ai's `openai-codex` catalog (alongside `gpt-5.6-luna`
 and `gpt-5.6-terra`).
 
-## Frozen surfaces
+## Dime Chat provider
 
-`DIME_CHAT_LLM_PROVIDER` stays `"frozen"` (ml/dime-1.0 promotion is owner-gated behind
-`ml/dime-1.0/docs/RELEASE_GATES.md`). Model policy here governs agent/harness execution,
-not that promotion decision.
+`DIME_CHAT_LLM_PROVIDER` is `"anthropic"` (owner-authorized unfreeze, 2026-08-01):
+production chat serves live claude-fable-5 completions through the preserved direct-SDK
+path on the server's API credentials — a sanctioned credit bucket. This was the
+zero-route-change restore the 2026-07-12 freeze was designed for. The value is pinned by
+`server/dimeChatProviderFreeze.test.ts` and `ml/dime-1.0/tests/test_repository_contract.py`,
+so any silent change fails CI.
+
+Reserved values: `"pi"` (embedded pi-agent-core serving via `runPiChat`) is gated on the
+ml/dime-1.0 program re-freezing its evaluation evidence — provider-selection-v1 and
+model-artifact-evaluation-v1 hash-pin `server/dime-chat.route.ts`, and those pins cascade
+into the model-artifact decision and RunPod gate-1 attestations, which record executed
+audits and cannot be honestly re-pinned without re-running them. `"dime1"` remains
+inactive behind `ml/dime-1.0/docs/RELEASE_GATES.md` (no trained checkpoint).

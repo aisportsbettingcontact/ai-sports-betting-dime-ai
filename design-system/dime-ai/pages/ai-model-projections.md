@@ -169,21 +169,28 @@ Desktop (>=1024px) only — tablet/mobile keep their shipped layouts:
 
 ### Owner Directives — 2026-07-23 (responsive feed density)
 
-- **Games per row:** mobile (<768px) renders 1, tablet (768–1023px) renders
-  2, and desktop (>=1024px) renders 3 inside each league section. Cards keep
-  their container-driven internal reflow.
+> **AMENDED 2026-08-02 (responsive rebuild):** column count is now fully
+> CONTENT-driven from the league body's own width (`dmf-league` container
+> queries only — FEED-CL01a generalized). Card readability floor is ~305px:
+> **2-up engages at >=622px** of league-body width (2×305 + 12px gap) and
+> **3-up at >=940px** (3×305 + 2×12). No viewport media query may ever set a
+> column rule — the old `min-width:768px` 2-up media rule is retired, and the
+> earlier "~1230px shell window / sidebar ≈250px" numbers are obsolete (the
+> shipped shell sidebar is ~381px; container math makes sidebar width
+> irrelevant). Every multi-column row **stretches** so scheduled row-mates
+> align; each summary centers within surplus height and the
+> "VIEW FULL AI MODEL PROJECTIONS" trigger stays pinned to the bottom.
+> Live/final/postponed cards opt out with `align-self: start`, keeping their
+> intentionally compact natural height beside richer upcoming cards.
+> Historical (superseded) text follows for provenance.
+
+- **Games per row (superseded):** mobile (<768px) rendered 1, tablet
+  (768–1023px) rendered 2, and desktop (>=1024px) rendered 3 inside each
+  league section. Cards keep their container-driven internal reflow.
 - **Amendment (UI/UX resolution, FEED-CL01a):** the desktop 3-across promotion
   is content-aware — it engages only when the league body itself affords
   >=940px (every card >=~305px usable width), via a `dmf-league` container
-  query. Standalone /feed still promotes at ~1024px viewport; inside the app
-  shell (sidebar ≈250px) rows stay 2-across until roughly a 1230px window,
-  eliminating the ~194px-card crest-overhang band. A viewport media query must
-  never reintroduce the 3-across rule.
-- Tablet rows stay start-aligned so each card keeps its natural height.
-  Desktop rows stretch for scheduled cards; each summary centers within surplus height and
-  the "VIEW FULL AI MODEL PROJECTIONS" popover trigger stays pinned to the bottom.
-  Live/final/postponed cards opt out with `align-self: start`, keeping their
-  intentionally compact natural height beside richer upcoming cards.
+  query. A viewport media query must never reintroduce a column rule.
 
 ### Owner Directives — 2026-07-23 (Rotowire probable pitchers + lineups)
 
@@ -262,6 +269,51 @@ Desktop (>=1024px) only — tablet/mobile keep their shipped layouts:
   `prefers-reduced-motion` collapses smooth scrolling. A game with one edge
   or one scorable no-edge candidate keeps the plain single summary with no
   arrow; a game with no scorable candidate shows the unavailable-data copy.
+
+### Owner Directives — 2026-08-02 (responsive rebuild — container-driven law)
+
+- **Summary anatomy is width-deterministic (supersedes the 2026-07-24
+  "single-line group at every breakpoint" clause AND the code-side
+  FEED-EDGE-ROW-CLIP content-wrap that silently replaced it).** At card widths
+  >520px the `MODEL EDGE | BOOK | MODEL | signal` group renders as ONE
+  centered nowrap line, with the hidden-scrollbar summary viewport as the
+  escape valve. At card widths <=520px EVERY card uses the same fixed two-row
+  grid: facts row first, signal row (chip + 44px next control) centered
+  beneath. Content may never decide wrapping — one long pick must not drop
+  its chip while row-mates stay on one line. Values never clip, picks are
+  never abbreviated, and the page never scrolls horizontally.
+- **The markets trigger stays on one line at every card width** (extends the
+  2026-07-23 mobile/tablet clause to all surfaces): the label sizes from the
+  card container (cqi) with a 10px floor.
+- **Pitcher names stay complete and on one line at every viewport** (extends
+  the 2026-07-23 clause): the compact-name contract keys off CARD width
+  (`projcard` container), never the viewport, so narrow desktop grid columns
+  behave exactly like phones. The <=310px-card tier still drops LINEUPS to
+  its own centered row rather than occluding a name.
+- **League header at the 320px floor:** reduce type (15 → 12px), tracking,
+  logo box (30 → 24px), and chevron lane before any truncation; the
+  `.dmf-lgname` ellipsis is a last resort, not the plan.
+- **Shell title sizing is copy-agnostic:** `clamp(1.5rem, 6cqi, 4.375rem)` on
+  the pane container — the retired `(100cqi − 80px)/10.8` divisor (tuned to
+  the literal string "AI Model Projections") must not return. Band stays a
+  fixed 96px; title centers, never wraps.
+- **One sticky-chrome offset:** `--dmf-topbar-h` (owned by
+  `pages/dimeModelFeed.css`) is the single source of truth for topbar height
+  and feedhead top — 46px + safe-area base, 64px + safe-area mobile, 96px in
+  the shell, or the floating nav's published clearance
+  (`--dime-floating-nav-h − --dime-floating-nav-gap`) when the nav is
+  mounted. Competing 46/64/96/112/−8 literals are retired; the 130px mobile
+  bottom slab is gone (24px + home-indicator safe-area everywhere).
+- **CONFIRMED pitcher labels are not mint** (mint-rationing enforcement):
+  confirmation is data freshness, not model signal — foreground ink + 700
+  weight carries the emphasis. EXPECTED/pending stays quiet secondary.
+- **Mint is consumed via tokens only:** `--brand-mint` (index.css) is the one
+  source; raw `#45E0A8` literals are legal only as `var()` fallbacks.
+  Theme-correct mint TEXT uses `--mint-ink` (raw mint dark / `#0A7C50`
+  light).
+- **The feed stylesheet is a real stylesheet** (`pages/dimeModelFeed.css`) —
+  the inline `DMF_CSS` template string and the dead pre-ProjectionCard render
+  tree (GameRow/MarketCol/TeamRow/Crest + the `.dmf-game` CSS) are removed.
 
 ---
 
