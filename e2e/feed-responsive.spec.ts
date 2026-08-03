@@ -32,6 +32,9 @@ import { test, expect, type Page } from "@playwright/test";
 import { spawn, execSync, type ChildProcess } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import http from "node:http";
+import https from "node:https";
+import os from "node:os";
 
 const REPO_ROOT = process.cwd();
 const PREFERRED_PORT = 5311;
@@ -41,7 +44,64 @@ const DATE_SLUG = "mlb-07-23-2026";
 const FEED_PATH = `/feed/model/${DATE_SLUG}`;
 
 let serverProcess: ChildProcess | null = null;
+let tlsProxy: https.Server | null = null;
 let baseURL = "";
+
+/**
+ * HTTPS front for the app server — the harness must be prod-shaped.
+ *
+ * The production server sends CSP `upgrade-insecure-requests` (correct and
+ * inert on the real HTTPS origin). Served over plain HTTP loopback instead,
+ * WebKit — unlike Chromium/Firefox, which exempt loopback — upgrades every
+ * subresource to https://, where nothing listens, and the app never boots.
+ * An earlier repair intercepted those upgraded requests with Playwright
+ * route-fulfill, but feeding module scripts through interception broke a
+ * fragile lazy-mount path in the minified bundle (WebKit-only, deterministic
+ * at mobile widths, NOT reproducible against the real origin — verified live).
+ *
+ * A real TLS reverse proxy removes the artifact entirely: every engine loads
+ * the built artifact over genuine HTTPS exactly like production, the CSP
+ * directive is a natural no-op, and no app asset is ever intercepted.
+ * The self-signed cert is minted per-run; contexts trust it via the config's
+ * `ignoreHTTPSErrors`.
+ */
+async function startTlsProxy(appPort: number): Promise<number> {
+  const certDir = fs.mkdtempSync(path.join(os.tmpdir(), "feed-responsive-tls-"));
+  const keyPath = path.join(certDir, "tls.key");
+  const crtPath = path.join(certDir, "tls.crt");
+  execSync(
+    `openssl req -x509 -newkey rsa:2048 -keyout "${keyPath}" -out "${crtPath}" ` +
+      `-days 2 -nodes -subj "/CN=127.0.0.1" -addext "subjectAltName=IP:127.0.0.1"`,
+    { stdio: "ignore" },
+  );
+  tlsProxy = https.createServer(
+    { key: fs.readFileSync(keyPath), cert: fs.readFileSync(crtPath) },
+    (req, res) => {
+      const upstream = http.request(
+        {
+          host: "127.0.0.1",
+          port: appPort,
+          path: req.url,
+          method: req.method,
+          headers: { ...req.headers, host: `127.0.0.1:${appPort}` },
+        },
+        (ur) => {
+          res.writeHead(ur.statusCode ?? 502, ur.headers);
+          ur.pipe(res);
+        },
+      );
+      upstream.on("error", () => {
+        res.writeHead(502);
+        res.end("tls proxy upstream error");
+      });
+      req.pipe(upstream);
+    },
+  );
+  await new Promise<void>((resolve) => tlsProxy!.listen(0, "127.0.0.1", resolve));
+  const address = tlsProxy.address();
+  if (address === null || typeof address === "string") throw new Error("tls proxy failed to bind");
+  return address.port;
+}
 
 function waitForServerReady(proc: ChildProcess, timeoutMs: number): Promise<number> {
   return new Promise((resolve, reject) => {
@@ -83,10 +143,12 @@ test.beforeAll(async () => {
     stdio: ["ignore", "pipe", "pipe"],
   });
   const boundPort = await waitForServerReady(serverProcess, 60_000);
-  baseURL = `http://localhost:${boundPort}`;
+  const tlsPort = await startTlsProxy(boundPort);
+  baseURL = `https://127.0.0.1:${tlsPort}`;
 });
 
 test.afterAll(async () => {
+  tlsProxy?.close();
   if (serverProcess && !serverProcess.killed) serverProcess.kill("SIGTERM");
 });
 
