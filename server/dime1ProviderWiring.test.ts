@@ -49,8 +49,8 @@ describe("provider registry", () => {
     expect(dime1).toBe("dime1");
   });
 
-  it("ships frozen while the Dime 1.0 foundation remains non-release work", () => {
-    expect(DIME_CHAT_LLM_PROVIDER).toBe("frozen");
+  it("ships on the anthropic path while the Dime 1.0 foundation remains non-release work (owner unfreeze, 2026-08-01)", () => {
+    expect(DIME_CHAT_LLM_PROVIDER).toBe("anthropic");
   });
 
   it("pins the exact Llama 3.1 Base foundation identity", () => {

@@ -44,6 +44,15 @@ is acceptable.
 Dime brand law (`design-system/dime-ai/MASTER.md`) beats every skill's palette/font/motion
 suggestions. Process skills govern how, not what. User/owner direction beats both.
 
+## Importing into QM
+
+QM (references/qm-harness.md) imports this repo as a **skill pack** — same Agent Skills
+standard, scanned for `SKILL.md`. Canonical pack config: git URL of this repo with
+`skillGlobs: [".agents/skills/**", ".claude/skills/**"]` and the 7 superseded flat uipro
+dirs excluded (the same dedup `.pi/settings.json` applies). Private repo ⇒ the pack
+credential's path allow-list must cover `/aisportsbettingcontact/`. QM audits pack
+commits and handles name collisions at ingest.
+
 ## Adding skills
 
 Drop a `<name>/SKILL.md` dir in `.agents/skills/` (all harnesses pick it up) or

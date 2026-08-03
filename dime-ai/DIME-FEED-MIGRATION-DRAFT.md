@@ -148,8 +148,12 @@ future pane over the nightly-trends data.
 3. F5/NRFI/team-HR data comes on the `games.list` row — no separate endpoint; K props / HR props /
    lineups are separate batched-by-gameIds queries.
 4. Responses are per-sport null-stripped (`stripSportNullFields`) — don't assume all schema columns.
-5. Feed data is public; only `favorites.*` and `mlbSchedule.getLast5ForMatchup` need the
-   `app_session` cookie.
+5. Feed data is public *at the tRPC layer*; only `favorites.*` and
+   `mlbSchedule.getLast5ForMatchup` need the `app_session` cookie.
+   *(2026-08-02 clarification: the `/feed/model/*` SURFACE is login-gated —
+   `RequireAuth` in App.tsx redirects anonymous visitors to `/login`. That is a
+   product-gating decision layered above this data contract; the procedures
+   themselves remain `publicProcedure` as documented.)*
 6. 60s polling on `games.list` is the live-update mechanism — keep `placeholderData: prev`.
 
 ## 5. Risks / open questions (for review before implementation)

@@ -28,7 +28,8 @@ export type DimeRuntimeMode =
   | "frozen"
   | "research-alpha"
   | "dime1"
-  | "anthropic";
+  | "anthropic"
+  | "pi";
 
 export type DimeRuntimeConfigurationState =
   | "configured"
@@ -145,7 +146,8 @@ export function getDimeRuntimeReadiness(
     (provider === "dime1" &&
       endpoint !== null &&
       endpointCredentialConfigured) ||
-    (provider === "anthropic" && anthropicCredentialConfigured);
+    ((provider === "anthropic" || provider === "pi") &&
+      anthropicCredentialConfigured);
 
   const issues: DimeRuntimeIssueCode[] = [];
   if (!alphaGate.active && provider === "frozen")
@@ -164,7 +166,11 @@ export function getDimeRuntimeReadiness(
   ) {
     issues.push("dime_endpoint_credential_missing");
   }
-  if (provider === "anthropic" && !anthropicCredentialConfigured) {
+  if (
+    !alphaGate.active &&
+    (provider === "anthropic" || provider === "pi") &&
+    !anthropicCredentialConfigured
+  ) {
     issues.push("anthropic_credentials_missing");
   }
 

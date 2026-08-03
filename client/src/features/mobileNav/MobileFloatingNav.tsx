@@ -44,7 +44,9 @@ import "./mobileFloatingNav.css";
 
 /** Published on <html>; consumed by body clearance + sticky-chrome offsets. */
 export const NAV_CLEARANCE_VAR = "--dime-floating-nav-h";
-/** Breathing room between the floating assembly and page content. */
+/** Breathing room between the floating assembly and page content. Mirrored as
+ *  the CSS token --dime-floating-nav-gap (mobileFloatingNav.css) so sticky
+ *  consumers can subtract it without hard-coding this constant. */
 const CLEARANCE_GAP_PX = 8;
 
 /** Brand wordmark: lowercase "dıme", dotless ı (U+0131) + coin-dot. */
