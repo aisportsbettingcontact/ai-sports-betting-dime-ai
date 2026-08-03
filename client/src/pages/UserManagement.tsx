@@ -990,11 +990,6 @@ export default function UserManagement() {
                             <ExternalLinkGlyph /> subscription
                           </a>
                         )}
-                        {user.lastStripeEventAt && (
-                          <span className="text-[10px] text-muted-foreground" title="Last Stripe webhook applied to this account">
-                            evt {formatDate(user.lastStripeEventAt)}
-                          </span>
-                        )}
                       </div>
                     </TableCell>
                     {/* DISCORD STATUS column */}
