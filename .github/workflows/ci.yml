@@ -48,7 +48,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: "[INPUT] Checkout repository"
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
       - name: "[STEP] Setup Node.js 22"
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
@@ -111,7 +111,7 @@ jobs:
     needs: security-audit
     steps:
       - name: "[INPUT] Checkout repository"
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
       - name: "[STEP] Setup pnpm"
         uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271
@@ -179,7 +179,7 @@ jobs:
       NODE_ENV: test
     steps:
       - name: "[INPUT] Checkout repository"
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
       - name: "[STEP] Setup pnpm"
         uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271
@@ -246,7 +246,7 @@ jobs:
       NODE_ENV: test
     steps:
       - name: "[INPUT] Checkout repository"
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
       - name: "[STEP] Setup pnpm"
         uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271
@@ -300,7 +300,7 @@ jobs:
     needs: typecheck
     steps:
       - name: "[INPUT] Checkout repository"
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
       - name: "[STEP] Setup pnpm"
         uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271
