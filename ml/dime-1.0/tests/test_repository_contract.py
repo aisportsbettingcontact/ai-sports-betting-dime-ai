@@ -211,12 +211,18 @@ def walk_json_values(value: object) -> list[object]:
     return [value]
 
 
-def test_provider_is_frozen_and_model_identity_is_pinned() -> None:
+def test_provider_is_pinned_and_model_identity_is_pinned() -> None:
+    """The chat provider is pinned to the exact active value so any silent
+    change fails CI. Frozen 2026-07-12; unfrozen back onto the preserved
+    "anthropic" path by owner-authorized PR 2026-08-01 (the zero-route-change
+    restore the freeze was designed for). The "pi" embedded-runtime value is
+    reserved pending an evidence re-freeze; "dime1" remains inactive behind
+    docs/RELEASE_GATES.md."""
     provider_source = (SERVER_CORE / "dimeChatModel.ts").read_text(encoding="utf-8")
     model_source = (SERVER_CORE / "dime1Model.ts").read_text(encoding="utf-8")
 
     assert re.search(
-        r'export const DIME_CHAT_LLM_PROVIDER: DimeChatLlmProvider = "frozen";',
+        r'export const DIME_CHAT_LLM_PROVIDER: DimeChatLlmProvider = "anthropic";',
         provider_source,
     )
     assert f'export const DIME1_BASE_MODEL = "{MODEL_ID}";' in model_source
