@@ -34,6 +34,11 @@ export default defineConfig({
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
+    // The spec fronts the built app server with a per-run self-signed TLS
+    // proxy so the CSP `upgrade-insecure-requests` directive behaves exactly
+    // as it does on the production origin in every engine (WebKit upgrades
+    // loopback subresources; Chromium/Firefox exempt them). Trust that cert.
+    ignoreHTTPSErrors: true,
   },
   projects: [
     {
