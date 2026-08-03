@@ -57,6 +57,24 @@ regexes = [
 #    template, it must be caught.
 #  - No stopwords — stopwords match anywhere in the secret and are too blunt.
 
+# The Foundation SFT records bind source snapshots by SHA-256. Because the
+# metadata field name ends in "key", the default generic-api-key rule treats
+# each digest as a credential. Suppress only the exact non-secret match shape
+# in the two approved public dataset files; all other findings remain active.
+[[rules]]
+id = "generic-api-key"
+
+  [[rules.allowlists]]
+  description = "Approved Foundation SFT source-snapshot SHA-256 identifiers"
+  condition = "AND"
+  regexTarget = "match"
+  paths = [
+    '''^ml/dime-1\.0/data/sft/(train|validation)\.APPROVED\.jsonl$''',
+  ]
+  regexes = [
+    '''^source_snapshot_partition_key":"[0-9a-f]{64}"$''',
+  ]
+
 # Default gitleaks rules do NOT catch passworded connection URIs (verified
 # empirically 2026-07-09: mysql://user:pass@host passed a default scan).
 [[rules]]
