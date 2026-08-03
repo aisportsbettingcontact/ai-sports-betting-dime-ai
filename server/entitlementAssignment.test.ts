@@ -140,7 +140,16 @@ describe("wiring contract — the resolved id must actually be persisted", () =>
   });
 
   it("[WR-5] admin createUser passes both entitlement fields through to the INSERT", () => {
-    expect(APPUSERS_SRC).toMatch(/stripePlanId: input\.stripePlanId,\s*\n\s*planPriceId: input\.planPriceId,/);
+    // Since Create Account v2 the slug is the DERIVED `stripePlanId` local
+    // (resolved from planPriceId via deriveEntitlementFromPrice — see
+    // adminAccountProvisioning.test.ts), not the raw input. The interval id is
+    // still the client's planPriceId, verbatim.
+    expect(APPUSERS_SRC).toMatch(/stripePlanId,\s*\n\s*planPriceId: input\.planPriceId,/);
+    const createBlock = APPUSERS_SRC.slice(
+      APPUSERS_SRC.indexOf("createUser: ownerProcedure"),
+      APPUSERS_SRC.indexOf("backfillEntitlement:"),
+    );
+    expect(createBlock).toContain("deriveEntitlementFromPrice(");
   });
 });
 
