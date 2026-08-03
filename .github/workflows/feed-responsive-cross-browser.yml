@@ -1,25 +1,11 @@
 name: Feed Responsive Cross-Browser
 
+# Push-scoped by design: the path filter limits execution to responsive-feed
+# changes, while branch pushes let a newly introduced workflow validate itself
+# before it exists on the default branch. Avoiding a simultaneous pull_request
+# trigger also prevents duplicate engine matrices for same-repository PRs.
 on:
-  pull_request:
-    branches: [main]
-    paths:
-      - "client/src/pages/DimeModelFeed.tsx"
-      - "client/src/pages/dimeModelFeed.css"
-      - "client/src/components/projections/**"
-      - "client/src/features/mobileNav/**"
-      - "client/src/styles/dime-mobile.css"
-      - "client/src/index.css"
-      - "e2e/feed-responsive.spec.ts"
-      - "playwright.feed-responsive.config.ts"
-      - "design-system/dime-ai/pages/ai-model-projections.md"
-      - "design-system/dime-ai/MASTER.md"
-      - "dime-ai/THREE-COLOR-LAW.md"
-      - "package.json"
-      - "pnpm-lock.yaml"
-      - ".github/workflows/feed-responsive-cross-browser.yml"
   push:
-    branches: [main]
     paths:
       - "client/src/pages/DimeModelFeed.tsx"
       - "client/src/pages/dimeModelFeed.css"
