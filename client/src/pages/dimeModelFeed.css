@@ -1,0 +1,254 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   DimeModelFeed — feed chrome + league grid stylesheet.
+
+   Extracted from the DMF_CSS template string in DimeModelFeed.tsx
+   (2026-08-02 responsive rebuild). Card internals live in
+   components/projections/ProjectionCard.css; this file owns the page chrome
+   (topbar, sticky feedhead, league sections) and the league card grid.
+
+   Layout is CONTAINER-driven end to end:
+   - `.dmf-root` is the `dmf` container (page chrome scales by pane width —
+     the shell pane and the standalone page share every rule).
+   - `.dmf-league` is the `dmf-league` container; the 1/2/3-across grid is
+     derived ONLY from the width the league body actually has, so a sidebar
+     of any width can never desync a viewport threshold (FEED-CL01a root
+     cause, generalized). Column math: cards are readable at >=305px
+     (FEED-CL01a); 2-up needs 2x305+12 gap = 622px, 3-up needs
+     3x305+2x12 = 939 → 940px.
+
+   Sticky chrome has ONE source of truth: `--dmf-topbar-h`, owned here.
+   Every sticky offset (topbar height, feedhead top) reads it; the mobile
+   floating nav swaps it to its own published clearance
+   (--dime-floating-nav-h − --dime-floating-nav-gap, both owned by
+   features/mobileNav). No competing 46/64/96/112 literals remain.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.dmf-root {
+  /* THREE-COLOR LAW — dark: black ground, white ink/borders, mint the one accent */
+  --dmf-page: #000000;
+  --dmf-border: #ffffff;
+  --dmf-border-hi: #ffffff;
+  --dmf-border-hover: #ffffff;
+  --dmf-t1: #ffffff;
+  --dmf-t2: #ffffff;
+  --dmf-t3: #ffffff;
+  --dmf-t4: #ffffff;
+  --dmf-card-hi: #000000;
+  --dmf-mint: var(--brand-mint, #45e0a8);
+  --dmf-ring: var(--brand-mint, #45e0a8);
+  --dmf-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --dmf-t: 160ms;
+  --dmf-mono: "Familjen Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --dmf-sans: "Familjen Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+  /* Sticky chrome contract — the ONE offset every sticky element reads. */
+  --dmf-topbar-h: calc(46px + env(safe-area-inset-top, 0px));
+  /* Fluid page gutter: 16px at phone widths → 40px on wide desktop. The card
+     grid does NOT depend on this value (container queries measure the league
+     body itself), so tuning it can never desync a column threshold. */
+  --dmf-gutter: clamp(16px, 2.6vw, 40px);
+  background: var(--dmf-page);
+  color: var(--dmf-t1);
+  font-family: var(--dmf-sans);
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  container-type: inline-size;
+  container-name: dmf;
+  -webkit-font-smoothing: antialiased;
+}
+.dmf-root[data-dmf-theme="light"] {
+  /* THREE-COLOR LAW — light: white ground, black ink/borders, mint the one accent */
+  --dmf-page: #ffffff;
+  --dmf-border: #000000;
+  --dmf-border-hi: #000000;
+  --dmf-border-hover: #000000;
+  --dmf-t1: #000000;
+  --dmf-t2: #000000;
+  --dmf-t3: #000000;
+  --dmf-t4: #000000;
+  --dmf-card-hi: #ffffff;
+}
+/* SUPERSEDED (2026-07-24, PR #198, D-BG-SEAM — owner-approved): the feed
+   carried its own [data-dmf-mode="system"] neutral-grey palette (exact values
+   in git history). System followed Dark everywhere after that, and the mode
+   itself was retired 2026-07-31 (two modes only: Dark and Light). Do not
+   reintroduce. */
+.dmf-root * { box-sizing: border-box; }
+.dmf-root :where(button) { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; touch-action: manipulation; }
+.dmf-root :where(a) { touch-action: manipulation; }
+.dmf-root :is(button, [tabindex]):focus-visible { outline: none; box-shadow: 0 0 0 3px var(--dmf-ring); border-radius: 8px; }
+.dmf-micro { font-family: var(--dmf-mono); font-size: 10px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--dmf-t3); }
+
+/* ── Topbar (standalone chrome; hidden under the mobile floating nav) ── */
+.dmf-topbar { display: flex; align-items: center; gap: 14px; height: var(--dmf-topbar-h); padding: env(safe-area-inset-top, 0px) var(--dmf-gutter) 0; background: var(--dmf-page); border-bottom: 1px solid var(--dmf-border); position: sticky; top: 0; z-index: 20; }
+.dmf-wordmark { font-size: 21px; font-weight: 700; letter-spacing: -0.05em; line-height: 1; }
+.dmf-i { position: relative; display: inline-block; }
+.dmf-coindot { position: absolute; width: 0.2em; height: 0.2em; border-radius: 50%; background: var(--brand-mint, #45e0a8); left: calc(50% + 0.03em); top: 0.02em; transform: translateX(-50%); }
+.dmf-root[data-dmf-theme="light"] .dmf-coindot { box-shadow: 0 0 0 1px #000000; }
+.dmf-topsep { width: 1px; height: 18px; background: var(--dmf-border-hi); }
+.dmf-toptitle { margin: 0; font-size: 14px; font-weight: 600; color: var(--dmf-t2); }
+.dmf-sync { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+.dmf-nav { display: flex; align-items: center; gap: 4px; }
+.dmf-navlink { font-family: var(--dmf-mono); font-size: 10px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--dmf-t3); text-decoration: none; padding: 6px 8px; border-radius: 8px; position: relative; transition: color var(--dmf-t) var(--dmf-ease); }
+.dmf-navlink::after { content: ""; position: absolute; inset: -8px -2px; }
+.dmf-navlink:hover { color: var(--dmf-t1); }
+
+/* ── Scroll region (document scroll — no inner overflow, or the sticky slate
+   header could never stick) ── */
+.dmf-scroll { flex: 1; padding: 0 var(--dmf-gutter) 60px; position: relative; }
+.dmf-feedhead { position: sticky; top: var(--dmf-topbar-h); z-index: 10; padding: 16px 0 10px; background: var(--dmf-page); border-bottom: 1px solid var(--dmf-border); margin-bottom: 10px; display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+.dmf-datenav { display: flex; align-items: center; gap: 12px; }
+.dmf-sq { width: 28px; height: 28px; border-radius: 8px; border: 1px solid var(--dmf-border-hi); color: var(--dmf-t2); display: grid; place-items: center; position: relative; transition: border-color var(--dmf-t) var(--dmf-ease), color var(--dmf-t) var(--dmf-ease); }
+.dmf-sq::after { content: ""; position: absolute; inset: -9px; } /* CL-04 (closure): 28px + 2x9px = 46px effective hit-area, clears the 44px target-size floor with margin */
+.dmf-sq:hover { border-color: var(--dmf-border-hover); color: var(--dmf-t1); }
+.dmf-sq:active { background: var(--dmf-card-hi); }
+.dmf-datelbl { font-size: 15px; font-weight: 700; letter-spacing: -0.005em; white-space: nowrap; }
+.dmf-list { display: flex; flex-direction: column; gap: 12px; padding-top: 6px; transition: opacity var(--dmf-t) var(--dmf-ease); }
+.dmf-list.dmf-stale { opacity: 0.45; pointer-events: none; }
+
+/* ── League sections (owner directive 2026-07-18): combined slate grouped by
+   league — World Cup on top, MLB beneath — each a COLLAPSIBLE container
+   (native details/summary, open by default). Header row spans the container:
+   official league logo (fixed 30px box) + the spelled-out league name,
+   centered as a cluster; chevron at the right edge. No game counts. ── */
+.dmf-league { display: block; container: dmf-league / inline-size; }
+.dmf-league + .dmf-league { margin-top: 10px; padding-top: 16px; border-top: 1px solid var(--dmf-border); }
+.dmf-leaguehead,
+.dmf-lgbar { display: flex; align-items: center; justify-content: center; gap: 12px; width: 100%; min-height: 44px; padding: 2px 32px; position: relative; cursor: pointer; list-style: none; font-family: var(--dmf-mono); font-size: clamp(12px, 2.6vw + 4px, 15px); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--dmf-t2); border-radius: 10px; transition: color var(--dmf-t) var(--dmf-ease), background var(--dmf-t) var(--dmf-ease); }
+/* ^ fluid slope measured against the longest label ("MAJOR LEAGUE BASEBALL
+   (MLB)"): the old 3.9vw slope hit its 15px cap with ZERO slack at 390px and
+   clipped in the 384-389px band; 2.6vw+4px keeps >=10px of slack at every
+   width above the 383.98px reduction tier below. */
+.dmf-leaguehead::-webkit-details-marker { display: none; }
+.dmf-leaguehead::marker { content: ""; }
+.dmf-leaguehead:hover,
+.dmf-lgbar:hover { color: var(--dmf-t1); }
+.dmf-leaguehead:focus-visible,
+.dmf-lgbar:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--dmf-ring); }
+/* Feedhead league bars (owner directive 2026-07-29): mobile-only controls for
+   the league <details> below. Chevron swap keys off aria-expanded. */
+.dmf-lgbars { display: none; }
+.dmf-lgbar[aria-expanded="true"] .dmf-lgchev--expand { display: none; }
+.dmf-lgbar[aria-expanded="true"] .dmf-lgchev--collapse { display: inline-block; }
+.dmf-lglogo { display: inline-grid; place-items: center; width: 30px; height: 30px; flex: 0 0 30px; }
+.dmf-lglogo img { max-width: 100%; max-height: 100%; object-fit: contain; }
+/* WC emblem is theme-keyed: black FIFA wordmark on light, white on dark. */
+.dmf-root[data-dmf-theme="light"] .dmf-lglogo-dark { display: none; }
+.dmf-root:not([data-dmf-theme="light"]) .dmf-lglogo-light { display: none; }
+.dmf-lgname { flex: 0 1 auto; min-width: 0; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dmf-lgchev { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; color: var(--dmf-t3); }
+.dmf-lgchev--collapse { display: none; }
+.dmf-league[open] .dmf-lgchev--expand { display: none; }
+.dmf-league[open] .dmf-lgchev--collapse { display: inline-block; }
+
+/* Full league name on narrow phones (page law: reduce type and spacing
+   before truncation): tighter tracking, slimmer chevron lane, smaller logo
+   box — the ellipsis on .dmf-lgname is the last resort, not the plan.
+   Bound measured: at 390px the full name fits untouched; at 384-375px the
+   fluid 3.9vw size clips by a few px, so the reduction engages at <384. */
+@media (max-width: 383.98px) {
+  .dmf-leaguehead,
+  .dmf-lgbar { gap: 8px; padding: 2px 26px; font-size: 12px; letter-spacing: 0.02em; }
+  .dmf-lglogo { width: 24px; height: 24px; flex: 0 0 24px; }
+  .dmf-lgchev { right: 4px; width: 18px; height: 18px; }
+}
+
+/* ── The league card grid — CONTENT-driven columns ──
+   Derived only from the league body's own width (container `dmf-league`):
+   1-up until two readable (>=305px) cards + the 12px gap fit, 2-up until
+   three fit, 3-up beyond. Works identically inside the app shell (whatever
+   the sidebar's width) and standalone; a viewport media query must never
+   reintroduce a column rule here (FEED-CL01a). Multi-column rows stretch so
+   scheduled row-mates align; compact lifecycle cards opt out via their own
+   align-self (ProjectionCard.css). */
+.dmf-leaguebody { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: 12px; margin-top: 12px; }
+@container dmf-league (min-width: 622px) {
+  .dmf-leaguebody { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; }
+}
+@container dmf-league (min-width: 940px) {
+  .dmf-leaguebody { grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: stretch; }
+}
+
+/* ── Empty / error / skeleton states ── */
+.dmf-empty,
+.dmf-invalid { padding: 60px 0; text-align: center; color: var(--dmf-t3); }
+.dmf-retry { margin-top: 16px; min-height: 44px; padding: 0 22px; border-radius: 22px; border: 1px solid var(--dmf-border); background: transparent; color: var(--dmf-t1); font: 600 13px var(--dmf-sans); cursor: pointer; transition: border-color 160ms var(--dmf-ease); }
+.dmf-retry:hover { border-color: var(--dmf-border-hover); }
+.dmf-empty p,
+.dmf-invalid p { margin-top: 8px; font-size: 14px; }
+.dmf-skel { background: color-mix(in srgb, var(--dmf-t1) 8%, transparent); border-radius: 6px; }
+/* Audit DIME-UI-019: skeleton card shares the loaded card's chrome so load
+   resolution never changes the card geometry. */
+.dmf-skelcard { background: var(--dmf-page); border: 1px solid var(--dmf-border); border-radius: 16px; padding: 12px 12px 8px; }
+
+/* ── Narrow-pane chrome (container `dmf` = the pane, shell or standalone) ── */
+@container dmf (max-width: 520px) {
+  .dmf-toptitle,
+  .dmf-topsep { display: none; }
+}
+@container dmf (max-width: 440px) {
+  /* 320-360px: keep the date row inside the viewport without shrinking the
+     28px arrows (their ::after keeps the effective hit area at 44px+). */
+  .dmf-datenav { flex-wrap: wrap; gap: 8px; }
+  .dmf-datelbl { font-size: 13.5px; }
+  .dmf-feedhead { gap: 10px; }
+}
+
+/* ── MOBILE (<768px): the floating nav owns navigation; page chrome centers
+   on one axis (owner directives 2026-07-17/18/29). ── */
+@media (max-width: 767px) {
+  .dmf-root { --dmf-topbar-h: calc(64px + env(safe-area-inset-top, 0px)); }
+  .dmf-root .dmf-nav { display: none; }
+  /* Wordmark centered at 2x; the sync spacer hides so the mark truly centers. */
+  .dmf-root .dmf-topbar { justify-content: center; }
+  .dmf-root .dmf-wordmark { font-size: 42px; }
+  .dmf-root .dmf-sync { display: none; }
+  .dmf-root .dmf-scroll { padding-bottom: max(24px, env(safe-area-inset-bottom, 0px)); }
+  /* Grouped primary menu bar (owner directive 2026-07-29): the sticky
+     feedhead holds the centered date picker AND the league header bars as
+     one unit; the in-list summary headers hide. */
+  .dmf-root .dmf-feedhead { flex-direction: row; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px 12px; padding: 10px 0 8px; }
+  .dmf-root .dmf-datenav { justify-content: center; flex-wrap: nowrap; gap: 8px; }
+  .dmf-root .dmf-datelbl { font-size: 13px; }
+  .dmf-root .dmf-lgbars { display: flex; flex-direction: column; width: 100%; gap: 0; }
+  .dmf-root .dmf-leaguehead { display: none; }
+  .dmf-root .dmf-leaguebody { margin-top: 0; }
+  .dmf-root .dmf-league + .dmf-league { margin-top: 0; padding-top: 12px; }
+}
+
+/* ── Mobile floating-nav integration (one Dime identity per page): while the
+   nav is mounted it owns the brand chrome and the sticky offset. It publishes
+   its measured clearance as --dime-floating-nav-h (+ its constant breathing
+   gap as --dime-floating-nav-gap) — the feed just re-points its one offset
+   variable at it. ── */
+body.dime-floating-nav-active .dmf-root { --dmf-topbar-h: calc(var(--dime-floating-nav-h, 112px) - var(--dime-floating-nav-gap, 8px)); }
+body.dime-floating-nav-active .dmf-root .dmf-topbar { display: none; }
+
+/* ── DESKTOP (>=1024px) shell emphasis (owner directives 2026-07-21/23):
+   inside the app shell the page title centers at up to 70px on a fixed 96px
+   band; the sticky feedhead tracks it via the shared offset variable. The
+   title is sized from the PANE container (cqi) with a hard 70px cap and is
+   copy-agnostic: 6cqi leaves >35% slack against the glyph width of any
+   comparable title, so no character-count divisor is needed. Date-nav rhythm
+   (Round 4 item 6): 24px title-band → date row; 10px + 16px + the list's 6px
+   = 32px down to the league header (the feedhead's 1px border between them
+   makes the edge-to-edge distance 33px). Standalone /feed keeps the compact
+   wordmark row. */
+@media (min-width: 1024px) {
+  .dc-shell-external-scroll .dmf-root { --dmf-topbar-h: 96px; }
+  .dc-shell-external-scroll .dmf-topbar { justify-content: center; }
+  .dc-shell-external-scroll .dmf-toptitle { font-size: clamp(1.5rem, 6cqi, 4.375rem); line-height: 1; letter-spacing: -0.02em; white-space: nowrap; }
+  .dc-shell-external-scroll .dmf-sync { display: none; }
+  .dc-shell-external-scroll .dmf-feedhead { justify-content: center; padding-top: 24px; padding-bottom: 10px; margin-bottom: 16px; }
+  .dc-shell-external-scroll .dmf-datelbl { font-size: 17px; }
+  .dmf-lglogo--mlb { width: 60px; height: 60px; flex: 0 0 60px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dmf-root * { transition: none !important; }
+}
+@media (prefers-contrast: more) {
+  .dmf-root { --dmf-border: #ffffff; --dmf-border-hi: #ffffff; --dmf-t3: #ffffff; --dmf-t4: #ffffff; }
+  .dmf-root[data-dmf-theme="light"] { --dmf-border: #000000; --dmf-border-hi: #000000; --dmf-t3: #000000; --dmf-t4: #000000; }
+}

@@ -270,6 +270,9 @@ html:not(.dark) {
    stay flat, mint stays the one hue. Full rules in dime-ai/THREE-COLOR-LAW.md §v3.
    Contrast verified: light fg #09251C on tint 14.6:1; dark fg #DFF9EF on tint 14.8:1. */
 :root {
+  /* The one brand mint (2026-08-02): every component consumes this token —
+     raw #45E0A8 literals outside this block are a law violation. */
+  --brand-mint: #45E0A8;
   /* dark-theme defaults (solid fallbacks; color-mix upgrade below) */
   --brand-mint-surface: #0B241B;
   --brand-mint-border: #298665;
@@ -291,8 +294,8 @@ html:not(.dark) {
 /* Modern-CSS upgrade: derive the tint/border from the live mint via color-mix.
    Falls back to the solid hexes above on engines without color-mix. */
 @supports (color: color-mix(in srgb, red, red)) {
-  :root { --brand-mint-surface: color-mix(in srgb, #45E0A8 16%, #000000); --brand-mint-border: color-mix(in srgb, #45E0A8 60%, #000000); }
-  html:not(.dark) { --brand-mint-surface: color-mix(in srgb, #45E0A8 18%, #FFFFFF); --brand-mint-border: color-mix(in srgb, #45E0A8 68%, #000000); }
+  :root { --brand-mint-surface: color-mix(in srgb, var(--brand-mint) 16%, #000000); --brand-mint-border: color-mix(in srgb, var(--brand-mint) 60%, #000000); }
+  html:not(.dark) { --brand-mint-surface: color-mix(in srgb, var(--brand-mint) 18%, #FFFFFF); --brand-mint-border: color-mix(in srgb, var(--brand-mint) 68%, #000000); }
 }
 
 /* ═══ Animated theme transition (View Transitions API) ════════════════════════

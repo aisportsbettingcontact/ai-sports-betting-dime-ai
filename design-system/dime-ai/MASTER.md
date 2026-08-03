@@ -228,7 +228,11 @@ Shadows are minimal — surfaces separate by background tier + 1px borders, not 
 **Style:** Dark-first data product. Quiet surfaces, one signal color, mono micro-labels,
 tight numeric hierarchy. Light mode is a token swap, never a redesign.
 
-**Page shell:** 264px fixed sidebar (`--surface-sidebar`, 1px right border) + main pane.
+**Page shell:** sidebar (`--surface-sidebar`, 1px right border) + main pane. *(2026-08-02
+note: the original 264px sidebar spec is stale — the shipped shell sidebar measures ~381px
+border-box after the 2026-07-21 ×1.75 sidebar text directive. Feed layout no longer depends
+on sidebar width at all: columns derive from container queries on the league body — see
+`pages/ai-model-projections.md` §2026-08-02.)*
 Top bar: pill tabs (Chat / Slate / Bet Tracker) + context info right-aligned.
 Sidebar order: brand header → nav rows → Recent Chats (scroll) → profile row (top border).
 

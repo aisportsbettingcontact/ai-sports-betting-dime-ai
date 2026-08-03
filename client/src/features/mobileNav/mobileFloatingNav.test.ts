@@ -282,16 +282,24 @@ describe("Old navigation retirement", () => {
 });
 
 describe("Page integrations under body.dime-floating-nav-active", () => {
-  it("feed: wordmark topbar hides and the sticky feedhead re-anchors", () => {
-    expect(dimeMobileCss).toMatch(
-      /body\.dime-floating-nav-active \.dmf-root \.dmf-topbar \{\s*display: none/
+  it("feed: wordmark topbar hides and the sticky offset re-points at the nav's published clearance", () => {
+    // 2026-08-02: the feed owns ONE sticky offset variable (--dmf-topbar-h,
+    // pages/dimeModelFeed.css). Under the floating nav it re-points at the
+    // nav's published clearance minus the tokenized breathing gap — no
+    // hard-coded 8px literal duplicating CLEARANCE_GAP_PX.
+    const feedCss = read("..", "..", "pages", "dimeModelFeed.css");
+    expect(feedCss).toMatch(
+      /body\.dime-floating-nav-active \.dmf-root \{ --dmf-topbar-h: calc\(var\(--dime-floating-nav-h, 112px\) - var\(--dime-floating-nav-gap, 8px\)\); \}/
     );
-    // 2026-07-29: the sticky feed menu bar pins FLUSH to the nav band — the
-    // 8px CLEARANCE_GAP_PX is subtracted so no transparent slit remains where
-    // scrolling content could peek through between nav and feedhead.
-    expect(dimeMobileCss).toMatch(
-      /body\.dime-floating-nav-active \.dmf-root \.dmf-feedhead \{\s*top: calc\(var\(--dime-floating-nav-h, 112px\) - 8px\)/
+    expect(feedCss).toMatch(
+      /body\.dime-floating-nav-active \.dmf-root \.dmf-topbar \{ display: none; \}/
     );
+    // The gap token itself is owned by the nav's stylesheet, mirroring
+    // CLEARANCE_GAP_PX (MobileFloatingNav.tsx).
+    expect(navCss).toMatch(/:root \{ --dime-floating-nav-gap: 8px; \}/);
+    // No stale feed integration rules remain in dime-mobile.css.
+    expect(dimeMobileCss).not.toMatch(/\.dmf-topbar \{\s*display: none/);
+    expect(dimeMobileCss).not.toMatch(/\.dmf-feedhead \{\s*top: calc/);
   });
 
   it("splits: the brand-only header row hides (one Dime identity per page)", () => {

@@ -535,12 +535,14 @@ describe("ProjectionCard — paginated market popover", () => {
       "max-block-size: min(34rem, var(--radix-popover-content-available-height));"
     );
     expect(popoverCss).toContain("overflow-y: auto;");
-    // Audit DIME-UI-015 + theme audit 2026-07-31: 0A7C50 is the canonical mint
-    // text on light (5.2:1 white, 4.9:1 on F7-tier cards); 0FA36B and 0B8557
-    // are retired.
+    // Audit DIME-UI-015 + theme audit 2026-07-31 (tokenized 2026-08-02): the
+    // eyebrow consumes --mint-ink, the app's theme-correct mint-text token
+    // (raw mint dark / #0A7C50 light — defined in index.css). No per-theme
+    // literal override remains here.
     expect(popoverCss).toMatch(
-      /html:not\(\.dark\) \.projection-card__markets-eyebrow \{\s*color: #0a7c50;/
+      /\.projection-card__markets-eyebrow \{[^}]*color: var\(--mint-ink, #45e0a8\);/
     );
+    expect(popoverCss).not.toMatch(/#0a7c50/i);
   });
 
   it("renders no empty popover trigger when a game has no markets", () => {
@@ -779,15 +781,18 @@ describe("ProjectionCard — Rotowire pregame context", () => {
     );
   });
 
-  it("keeps complete pitcher names on one line in equal mobile/tablet tracks", () => {
+  it("keeps complete pitcher names on one line in equal tracks at EVERY viewport (container-driven)", () => {
     expect(cardCss).toMatch(
       /\.pregame-pitcher__name\s*\{[^}]*overflow-wrap:\s*anywhere;/,
     );
     const compactPregame = cardCss.slice(
       cardCss.indexOf("Compact cards keep both complete pitcher names"),
-      cardCss.indexOf("At the 1024px three-across boundary"),
+      cardCss.indexOf("Deep-narrow defensive tier"),
     );
-    expect(compactPregame).toContain("@media (max-width: 1023.98px)");
+    // 2026-08-02: card-width-driven only — the old <=1023.98px media wrapper
+    // exempted desktop 3-across cards (the narrowest in the product), which
+    // wrapped "Matthew Liberatore" onto two lines while phones one-lined it.
+    expect(compactPregame).not.toContain("@media (max-width: 1023.98px)");
     expect(compactPregame).toContain("@container projcard (max-width: 520px)");
     expect(compactPregame).toMatch(
       /\.pregame-pitchers\s*\{[^}]*position:\s*relative;[^}]*grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\);/,
@@ -806,16 +811,21 @@ describe("ProjectionCard — Rotowire pregame context", () => {
     );
   });
 
-  it("preserves the wrapping three-track fallback for 1024px desktop cards", () => {
-    const desktopPregame = cardCss.slice(
-      cardCss.indexOf("At the 1024px three-across boundary"),
+  it("the deep-narrow (<=280px card) tier is a pure container tier — no viewport media", () => {
+    const deepNarrow = cardCss.slice(
+      cardCss.indexOf("Deep-narrow defensive tier"),
       cardCss.indexOf("The dialog is portalled"),
     );
-    expect(desktopPregame).toContain("@media (min-width: 1024px)");
-    expect(desktopPregame).toMatch(
+    // 2026-08-02: the old @media(min-width:1024px) wrapper is gone — under
+    // the content-driven grid no multi-column card can resolve below ~305px,
+    // so this tier is a container-scoped backstop for extreme hosts.
+    expect(deepNarrow).not.toContain("@media (min-width: 1024px)");
+    expect(deepNarrow).toContain("@container projcard (max-width: 280px)");
+    expect(deepNarrow).toMatch(
       /\.pregame-pitchers\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\) 3rem minmax\(0, 1fr\);[^}]*gap:\s*2px;/,
     );
-    expect(desktopPregame).not.toContain("white-space: nowrap");
+    // Its summary group stays the single-column two-row anatomy.
+    expect(deepNarrow).toMatch(/\.summary__group \{ grid-template-columns: minmax\(0, auto\); \}/);
   });
 
   it("never renders stale pregame data after a game becomes live, final, or postponed", () => {
@@ -851,40 +861,42 @@ describe("ProjectionCard — Rotowire pregame context", () => {
  *  numeric contract itself; the rendered pixels are verified separately by the visual smoke
  *  screenshots (equal row heights, pinned trigger, aligned columns), not by this harness. */
 describe("ProjectionCard — equal-height rows & pinned market trigger (Round 4 Wave 2, item 1)", () => {
-  it("the responsive league grid is 2-across on tablet and 3-across with stretched row-mates only where the league body affords >=940px", () => {
-    const responsiveGridBlock = feedSrc.slice(
-      feedSrc.indexOf("TABLET (768-1023px)"),
-      feedSrc.indexOf("@media (prefers-reduced-motion: reduce){", feedSrc.indexOf("TABLET (768-1023px)")),
+  it("the league grid is CONTENT-driven: 2-up at >=622px and 3-up at >=940px of league-body width, container queries only", () => {
+    const feedCss = fs.readFileSync(
+      path.join(import.meta.dirname, "..", "..", "pages", "dimeModelFeed.css"),
+      "utf8",
     );
-    expect(responsiveGridBlock).toMatch(
-      /@media \(min-width:768px\)\{\s*\.dmf-leaguebody\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)\}/,
+    const flatFeedCss = feedCss.replace(/\s+/g, " ");
+    expect(flatFeedCss).toMatch(
+      /@container dmf-league \(min-width: 622px\) \{ \.dmf-leaguebody \{ grid-template-columns: repeat\(2, minmax\(0, 1fr\)\); align-items: stretch; \} \}/,
     );
-    // FEED-CL01a regression guard: 3-across must key off the league body's own
-    // width (container query), never the window — a viewport media query here
+    // FEED-CL01a regression guard (generalized 2026-08-02): every column rule
+    // keys off the league body's own width — a viewport media query here
     // recreates the ~194px-card crest-overhang band inside the app shell.
-    expect(responsiveGridBlock).toMatch(
-      /@container dmf-league \(min-width:940px\)\{\s*\.dmf-leaguebody\{grid-template-columns:repeat\(3,minmax\(0,1fr\)\);align-items:stretch\}/,
+    expect(flatFeedCss).toMatch(
+      /@container dmf-league \(min-width: 940px\) \{ \.dmf-leaguebody \{ grid-template-columns: repeat\(3, minmax\(0, 1fr\)\); align-items: stretch; \} \}/,
     );
-    expect(feedSrc).toContain(".dmf-league{display:block;container:dmf-league/inline-size}");
-    expect(responsiveGridBlock).not.toMatch(
-      /@media[^{]*\{[^@]*\.dmf-leaguebody\{grid-template-columns:repeat\(3/,
-    );
+    expect(flatFeedCss).toContain(".dmf-league { display: block; container: dmf-league / inline-size; }");
+    expect(feedCss).not.toMatch(/@media[^{]*\{[^{]*\.dmf-leaguebody \{ grid-template-columns/);
   });
 
-  it("the law doc records the 1/2/3 responsive density contract and desktop stretch behavior", () => {
+  it("the law doc records the content-driven density contract and multi-column stretch behavior", () => {
     const section = lawDoc.slice(
       lawDoc.indexOf("Owner Directives — 2026-07-23 (responsive feed density)"),
       lawDoc.indexOf("Owner Directives — 2026-07-18 (edge labeling"),
     );
-    expect(section).toContain("mobile (<768px) renders 1");
-    expect(section).toContain("tablet (768–1023px) renders");
-    expect(section).toContain("desktop (>=1024px) renders 3");
-    expect(section).toContain("Desktop rows stretch");
+    expect(section).toContain("622px");
+    expect(section).toContain("940px");
+    expect(section).toContain("container");
+    expect(section).toContain("stretch");
   });
 
-  it("desktop->=1024px CSS gives the card a flexible summary row so surplus height centers there, trigger pinned last", () => {
+  it("the card carries a flexible summary row so surplus height centers there, trigger pinned last — at every viewport", () => {
     const item1 = cssBlock(cardCss, "Round 4 Wave 2 — item 1", "── Summary carousel");
-    expect(item1).toContain("@media (min-width: 1024px)");
+    // 2026-08-02: unconditional (was >=1024px-only) — the container grid
+    // stretches row-mates at every multi-column width; in a 1-up row the 1fr
+    // resolves to natural height, so mobile is unchanged.
+    expect(item1).not.toContain("@media (min-width: 1024px)");
     // grid-template-areas order is head/matchup/summary/markets (scheduled drops head) —
     // the row-track list must line up 1:1: fixed, fixed, 1fr (surplus absorber), fixed (pinned last).
     expect(item1).toMatch(/\.projection-card\s*\{\s*grid-template-rows:\s*auto auto 1fr auto;\s*\}/);
@@ -893,7 +905,7 @@ describe("ProjectionCard — equal-height rows & pinned market trigger (Round 4 
     expect(item1).toMatch(/\.summary-carousel\s*\{\s*align-content:\s*center;\s*\}/);
   });
 
-  it("item 1's grid-template-rows rule is NOT present outside the >=1024px block (desktop-only, item 8 scoping)", () => {
+  it("item 1's grid-template-rows contract is declared exactly once (in the item-1 section)", () => {
     const beforeItem1 = cardCss.slice(0, cardCss.indexOf("Round 4 Wave 2 — item 1"));
     expect(beforeItem1).not.toMatch(/grid-template-rows:\s*auto auto 1fr auto/);
   });
@@ -920,7 +932,7 @@ describe("ProjectionCard — centered single-row summary group", () => {
     expect(render(mlbFixture())).toContain("summary__viewport");
     expect(render(mlbFixture())).toContain("summary__group");
     expect(cardCss).toMatch(
-      /\.summary__group\s*\{[^}]*display:\s*flex;[^}]*flex-wrap:\s*wrap;[^}]*justify-content:\s*center;/,
+      /\.summary__group\s*\{[^}]*display:\s*flex;[^}]*flex-wrap:\s*nowrap;[^}]*justify-content:\s*center;/,
     );
     expect(cardCss).toMatch(
       /\.summary__readout\s*\{[^}]*display:\s*grid;[^}]*grid-template-columns:\s*max-content minmax\(48px, max-content\) minmax\(48px, max-content\);/,
@@ -937,18 +949,25 @@ describe("ProjectionCard — centered single-row summary group", () => {
     expect(cardCss).toContain(".summary__item--message { grid-column: 1 / -1; justify-self: center; }");
   });
 
-  it("never clamps facts: the signal lane wraps before anything clips, overflow stays local", () => {
+  it("never clamps facts: anatomy is width-deterministic, overflow stays local (FEED-EDGE-ROW-CLIP v2)", () => {
     expect(cardCss).toMatch(
       /\.summary__viewport\s*\{[^}]*inline-size:\s*100%;[^}]*min-inline-size:\s*0;[^}]*overflow-x:\s*auto;/,
     );
     expect(render(mlbFixture())).toContain('role="region"');
     expect(render(mlbFixture())).toContain('aria-label="Model projection summary"');
     expect(render(mlbFixture())).toContain('tabindex="0"');
-    // FEED-EDGE-ROW-CLIP regression guard: the group must be allowed to wrap
-    // and must never exceed the card (max-inline-size caps it); a rigid
-    // max-content group re-clips the edge row behind a hidden scrollbar.
+    // FEED-EDGE-ROW-CLIP v2 (2026-08-02) regression guard: the group is
+    // nowrap on wide cards (scrollport = escape valve) and a FIXED two-row
+    // grid on tight (<=520px) cards — content-driven wrapping must never
+    // return, because it let one long pick drop its chip while row-mates
+    // stayed on one line (mixed anatomy in a single grid row).
     expect(cardCss).toMatch(
-      /\.summary__group\s*\{[^}]*flex-wrap:\s*wrap;[^}]*max-inline-size:\s*100%;/,
+      /\.summary__group\s*\{[^}]*flex-wrap:\s*nowrap;[^}]*max-inline-size:\s*100%;/,
+    );
+    expect(cardCss).not.toMatch(/flex-wrap:\s*wrap/);
+    const tight = cssBlock(cardCss, "Tight cards (<=520px card width", "Tight cards use identical fact");
+    expect(tight.replace(/\s+/g, " ")).toContain(
+      ".summary__group { display: grid; grid-template-columns: minmax(0, auto); justify-items: center;",
     );
     expect(cardCss).toMatch(
       /\.summary__signal\s*\{[^}]*flex-wrap:\s*nowrap;[^}]*min-inline-size:\s*max-content;/,
@@ -956,7 +975,7 @@ describe("ProjectionCard — centered single-row summary group", () => {
     expect(cardCss).toMatch(/\.summary__item\s*\{[^}]*min-inline-size:\s*max-content;/);
   });
 
-  it("tight cards reduce spacing and type without changing the single-row structure", () => {
+  it("tight cards reduce spacing/type and switch to the fixed two-row anatomy", () => {
     const centered = cssBlock(cardCss, "Centered summary group", "Round 4 Wave 2 — item 1");
     expect(centered).toContain("@container projcard (max-width: 520px)");
     expect(centered).toMatch(/\.summary__group,\s*\n\s*\.summary__readout\s*\{\s*column-gap:\s*4px;/);
@@ -979,9 +998,11 @@ describe("ProjectionCard — centered single-row summary group", () => {
     );
   });
 
-  it("gives mobile/tablet cards stable horizontal fact and signal lanes", () => {
+  it("gives tight cards stable horizontal fact and signal lanes at every viewport", () => {
     const centered = cssBlock(cardCss, "Centered summary group", "Round 4 Wave 2 — item 1");
-    expect(centered).toContain("@media (max-width: 1023.98px)");
+    // 2026-08-02: lane stability is container-driven — no viewport media may
+    // exempt narrow desktop grid columns from the fixed lanes.
+    expect(centered).not.toContain("@media (max-width: 1023.98px)");
     expect(centered).toMatch(
       /\.summary__readout\s*\{\s*grid-template-columns:\s*minmax\(4\.625rem, max-content\) 2\.125rem 2\.125rem;/,
     );
@@ -990,7 +1011,7 @@ describe("ProjectionCard — centered single-row summary group", () => {
 
   it("the multi-edge next control is mint with a theme foreground border and 44px target", () => {
     expect(cardCss).toMatch(
-      /\.summary__next\s*\{[^}]*inline-size:\s*44px;[^}]*block-size:\s*44px;[^}]*color:\s*#45e0a8;[^}]*border:\s*1px solid var\(--foreground, #fff\);/,
+      /\.summary__next\s*\{[^}]*inline-size:\s*44px;[^}]*block-size:\s*44px;[^}]*color:\s*var\(--brand-mint, #45e0a8\);[^}]*border:\s*1px solid var\(--foreground, #fff\);/,
     );
   });
 
@@ -1082,18 +1103,22 @@ describe("ProjectionCard — market-trigger hover (Round 4 Wave 3, item 7)", () 
     expect(render(mlbFixture())).not.toContain("<summary");
   });
 
-  it("keeps the complete trigger label on one line and reduces only compact-card spacing/type", () => {
+  it("keeps the complete trigger label on one line at EVERY card width (container-scaled type)", () => {
+    // 2026-08-02: the base span rule owns the one-line contract — nowrap plus
+    // cqi-scaled type with a 10px floor — so no width can wrap
+    // "View full AI model projections" (the old desktop 3-across band wrapped
+    // it to two lines on every card).
+    expect(cardCss).toMatch(
+      /\.projection-card__markets-toggle > span\s*\{[^}]*white-space:\s*nowrap;\s*font-size:\s*clamp\(0\.625rem, 0\.3rem \+ 1\.8cqi, 0\.9375rem\);/,
+    );
     const compactToggle = cardCss.slice(
       cardCss.indexOf(".projection-card__markets-toggle[data-state=\"open\"] .projection-card__markets-icon"),
       cardCss.indexOf("Round 4 Wave 3 — item 7"),
     );
-    expect(compactToggle).toContain("@media (max-width: 1023.98px)");
+    expect(compactToggle).not.toContain("@media (max-width: 1023.98px)");
     expect(compactToggle).toContain("@container projcard (max-width: 520px)");
     expect(compactToggle).toMatch(
       /\.projection-card__markets-toggle\s*\{[^}]*gap:\s*4px;[^}]*padding-inline:\s*4px;/,
-    );
-    expect(compactToggle).toMatch(
-      /\.projection-card__markets-toggle > span\s*\{[^}]*font-size:\s*0\.625rem;[^}]*white-space:\s*nowrap;/,
     );
   });
 
@@ -1111,18 +1136,27 @@ describe("ProjectionCard — defensive PASS-mint backstop (Round 4 Wave 3 fold-i
     expect(backstop).toContain(".projection-card__markets-popover--pass .market-table__model--signal,");
     expect(backstop).toContain(".projection-card__markets-popover--pass .market-table__result--edge,");
     expect(backstop).toContain(".projection-card--pass .edge-indicator {");
-    expect(backstop).toMatch(/color: var\(--text-secondary, #a6a6a6\) !important;/);
-    expect(backstop).toMatch(/background: transparent !important;/);
+    // 2026-08-02: plain declarations — the two-class selectors out-rank every
+    // one-class signal rule, and no inline style remains to fight, so the
+    // !important cascade was retired without changing PASS meaning.
+    expect(backstop).toMatch(/color: var\(--text-secondary, #a6a6a6\);/);
+    expect(backstop).toMatch(/background: transparent;/);
+    expect(backstop).not.toContain("!important");
   });
 
-  it("covers the edge chip's inline-styled icon (author !important beats inline; review fix)", () => {
-    // EdgeIndicator.tsx sets the recommendation icon's mint color as an
-    // inline style, which the ancestor backstop rule can never reach — the
-    // svg needs its own !important declaration.
+  it("covers the edge chip's icon through the plain cascade (icon color is CSS-owned, not inline)", () => {
+    // EdgeIndicator owns the icon color in its stylesheet (no inline style in
+    // the TSX), so the higher-specificity PASS rule wins without !important.
+    const edgeIndicatorSrc = fs.readFileSync(
+      path.join(import.meta.dirname, "EdgeIndicator.tsx"),
+      "utf8",
+    );
+    expect(edgeIndicatorSrc).not.toMatch(/style=\{\{/);
+    expect(edgeIndicatorCss).toMatch(/\.edge-indicator > svg \{ color: var\(--brand-mint-foreground\); \}/);
     const backstop = cssBlock(cardCss, "Defensive PASS backstop (Round 4, from the W1 review", "Item 4 — live indicator");
     expect(backstop).toContain(".projection-card--pass .edge-indicator svg {");
     const svgRule = backstop.slice(backstop.indexOf(".projection-card--pass .edge-indicator svg {"));
-    expect(svgRule).toMatch(/color: var\(--text-secondary, #a6a6a6\) !important;/);
+    expect(svgRule).toMatch(/color: var\(--text-secondary, #a6a6a6\);/);
   });
 
   it("is scoped inside the same >=768px block as the rest of items 2-4 (item 8 scoping)", () => {

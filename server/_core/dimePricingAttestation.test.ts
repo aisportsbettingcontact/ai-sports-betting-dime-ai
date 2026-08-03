@@ -85,25 +85,36 @@ describe("Dime pricing attestation", () => {
     }
   });
 
-  it("reports the exact frozen runtime as disabled and zero-cost", () => {
+  it("reports the live anthropic runtime as production and metered (owner unfreeze, 2026-08-01)", () => {
     expect(resolveDimeRuntimePricingIdentity({})).toEqual({
+      provider: "anthropic",
+      model: "claude-fable-5",
+      modelRevision: "claude-fable-5",
+      deploymentTier: "production",
+      currency: "USD",
+      zeroCostRuntime: false,
+    });
+    expect(getDimePricingAttestation({ env: {} })).toMatchObject({
+      version: DIME_PRICING_ATTESTATION_VERSION,
+      pathConfigured: false,
+      registryStatus: "not_configured",
+      activeProvider: "anthropic",
+      activeModel: "claude-fable-5",
+      activeModelRevision: "claude-fable-5",
+      deploymentTier: "production",
+      zeroCostRuntime: false,
+      exactMatchAvailable: false,
+    });
+  });
+
+  it("still reports an explicitly frozen runtime as disabled and zero-cost", () => {
+    expect(resolveDimeRuntimePricingIdentity({}, "frozen")).toEqual({
       provider: "frozen",
       model: "no-provider",
       modelRevision: "no-provider",
       deploymentTier: "disabled",
       currency: "USD",
       zeroCostRuntime: true,
-    });
-    expect(getDimePricingAttestation({ env: {} })).toMatchObject({
-      version: DIME_PRICING_ATTESTATION_VERSION,
-      pathConfigured: false,
-      registryStatus: "not_configured",
-      activeProvider: "frozen",
-      activeModel: "no-provider",
-      activeModelRevision: "no-provider",
-      deploymentTier: "disabled",
-      zeroCostRuntime: true,
-      exactMatchAvailable: false,
     });
   });
 
@@ -197,7 +208,7 @@ describe("Dime pricing attestation", () => {
       },
     });
     const log = formatDimePricingAttestationLog(attestation);
-    expect(log).toContain("provider=frozen");
+    expect(log).toContain("provider=anthropic");
     expect(log).toContain("registry_status=not_configured");
     expect(log).not.toContain(secret);
     expect(JSON.stringify(attestation)).not.toContain(secret);

@@ -4,6 +4,13 @@
  * THREE-COLOR-LAW: solid fills only; alpha lives exclusively in box-shadow
  * (the floating-surface/menu shadow tier). No gradients, no backdrop blur. */
 
+/* The constant breathing gap MobileFloatingNav.tsx bakes into its published
+ * clearance (--dime-floating-nav-h = measured height + CLEARANCE_GAP_PX).
+ * Published as a token so consumers that must sit flush against the nav band
+ * (the feed's sticky menu bar) can subtract it without hard-coding the JS
+ * constant: calc(var(--dime-floating-nav-h) - var(--dime-floating-nav-gap)). */
+:root { --dime-floating-nav-gap: 8px; }
+
 .mfn-wrap {
   /* Menu shadow — the Law's floating-surface tier (light value; html.dark
    * overrides below). The Chat pill carries a tighter lift of the same tier. */

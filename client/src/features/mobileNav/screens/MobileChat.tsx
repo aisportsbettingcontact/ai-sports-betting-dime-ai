@@ -6,15 +6,15 @@
  * Click behavior: toast "Coming soon in test mode" + log.
  */
 import { useEffect, useState } from "react";
-import {
-  MessageSquare,
-  Zap,
-  TrendingUp,
-  BarChart3,
-  Brain,
-} from "lucide-react";
+import { MessageSquare, Zap, TrendingUp, BarChart3, Brain } from "lucide-react";
 import { toast } from "sonner";
 import { mobileNavLogger } from "../logger";
+import { DimeAvenueToggle } from "@/components/DimeAvenueToggle";
+import {
+  loadDimeChatAvenue,
+  saveDimeChatAvenue,
+  type DimeChatAvenue,
+} from "@/lib/dimeChatAvenue";
 
 // ─── AI Action Pricing (Blueprint-defined) ──────────────────────────────────
 const AI_ACTIONS = [
@@ -47,6 +47,18 @@ const AI_ACTIONS = [
 
 export function MobileChat() {
   const [creditState] = useState<"planned" | "not_initialized">("planned");
+  // Avenue toggle (owner directive 2026-08-01): shares persistence with the
+  // live chat surface so the selection follows the user across surfaces.
+  const [avenue, setAvenue] = useState<DimeChatAvenue>(() =>
+    loadDimeChatAvenue()
+  );
+  const selectAvenue = (next: DimeChatAvenue) => {
+    setAvenue(next);
+    saveDimeChatAvenue(next);
+    mobileNavLogger.log("mobile_chat_avenue_selected", "chat", {
+      avenue: next,
+    });
+  };
 
   useEffect(() => {
     mobileNavLogger.log("mobile_chat_state_loaded", "chat", {
@@ -102,6 +114,12 @@ export function MobileChat() {
           <div className="flex items-center gap-1.5 bg-black px-2 py-1 rounded">
             <span className="text-[10px] text-white font-medium">Preview</span>
           </div>
+        </div>
+        {/* Avenue toggle — top middle of the chat header (owner directive
+            2026-08-01). Dark surface: inactive segments white/black text,
+            active mint/black. */}
+        <div className="flex justify-center mt-2.5">
+          <DimeAvenueToggle value={avenue} onChange={selectAvenue} />
         </div>
       </header>
 

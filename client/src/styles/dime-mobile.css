@@ -716,26 +716,10 @@ html:not(.dark) .bt-float {
    * wordmark chrome hides while it is present ("one Dime identity per page").
    * Signed-out users (no nav) keep today's page chrome untouched. */
 
-  /* Feed: the mobile topbar's only content is the centered wordmark (nav +
-   * sync are display:none <768px) — hide the whole bar and re-anchor the
-   * sticky feedhead below the floating nav. These selectors out-specify the
-   * component's inline DMF_CSS (.dmf-root .dmf-feedhead). */
-  body.dime-floating-nav-active .dmf-root .dmf-topbar {
-    display: none;
-  }
-  /* Pin flush to the nav band: --dime-floating-nav-h includes the nav's 8px
-   * CLEARANCE_GAP_PX (MobileFloatingNav.tsx) — subtracting it here closes the
-   * transparent slit where scrolling league headers used to peek through
-   * between the nav chrome and the sticky feed menu bar (owner directive
-   * 2026-07-29). */
-  body.dime-floating-nav-active .dmf-root .dmf-feedhead {
-    top: calc(var(--dime-floating-nav-h, 112px) - 8px);
-  }
-  /* The floating nav reserves its own space globally; keep only local
-   * breathing room instead of the pre-unification 130px bottom slab. */
-  body.dime-floating-nav-active .dmf-scroll {
-    padding-bottom: 24px;
-  }
+  /* Feed ↔ floating-nav integration moved to pages/dimeModelFeed.css
+   * (2026-08-02): the feed owns ONE sticky offset variable (--dmf-topbar-h)
+   * and re-points it at the nav's published clearance
+   * (--dime-floating-nav-h − --dime-floating-nav-gap). No feed rules here. */
 
   /* Splits: the header's row 1 is brand-only — the floating logo replaces it.
    * (The header's sticky offset comes from the generic header.sticky.top-0
@@ -744,15 +728,8 @@ html:not(.dark) .bt-float {
     display: none;
   }
 
-  /* Notch/status-bar safe area on the sticky feed chrome (signed-out users —
-   * with the floating nav the topbar is hidden and the nav owns the inset). */
-  .dmf-root .dmf-topbar {
-    height: calc(46px + env(safe-area-inset-top, 0px));
-    padding-top: env(safe-area-inset-top, 0px);
-  }
-  .dmf-root .dmf-feedhead {
-    top: calc(46px + env(safe-area-inset-top, 0px));
-  }
+  /* (Feed safe-area handling moved into pages/dimeModelFeed.css — the shared
+   * --dmf-topbar-h offset already includes env(safe-area-inset-top).) */
 
   /* ── Splits: phone layout ─────────────────────────────────────────────── */
   .bs-header {
