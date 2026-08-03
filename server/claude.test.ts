@@ -11,7 +11,10 @@ async function* mockStream() {
   yield { type: "content_block_delta", delta: { type: "text_delta", text: "streaming " } };
   yield { type: "content_block_delta", delta: { type: "text_delta", text: "response" } };
 }
-vi.mock("@anthropic-ai/sdk", () => ({ default: vi.fn().mockImplementation(() => ({ messages: { create: mockCreate, stream: vi.fn().mockImplementation(mockStream) } })) }));
+// vitest 4: mock implementations used with `new` must be constructable —
+// arrow implementations lost `new` support. A `function` returning an
+// object yields that object under `new` (same instances as before).
+vi.mock("@anthropic-ai/sdk", () => ({ default: vi.fn(function () { return { messages: { create: mockCreate, stream: vi.fn().mockImplementation(mockStream) } }; }) }));
 
 describe("Claude Fable 5 Integration", () => {
   // Presence-probe only — the rest of this suite is fully mocked and keeps running in CI.

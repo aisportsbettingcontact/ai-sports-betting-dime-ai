@@ -25,7 +25,8 @@ const { stripeStub } = vi.hoisted(() => ({
     },
   },
 }));
-vi.mock("stripe", () => ({ default: vi.fn(() => stripeStub) }));
+// vitest 4: `new Stripe()` needs a constructable mock (arrows lost `new` support).
+vi.mock("stripe", () => ({ default: vi.fn(function () { return stripeStub; }) }));
 vi.mock("../db", () => ({ getDb: vi.fn(async () => null) }));
 vi.mock("../dbCircuitBreaker", () => ({ withCircuitBreaker: vi.fn((fn: () => unknown) => fn()) }));
 vi.mock("./planStore", async (importOriginal) => {
