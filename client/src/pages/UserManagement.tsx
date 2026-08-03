@@ -116,6 +116,14 @@ type FormState = {
   hasAccess: boolean;
   expiryType: "lifetime" | "custom";
   expiryDateStr: string;
+  /** subscription_plans.slug, "" = no plan (comped/admin account). */
+  planSlug: string;
+  /** plan_prices.id as a Select string value, "" = none chosen yet. */
+  planPriceId: string;
+  /** Discord snowflake (17-20 digits), optional — immediate connect on create. */
+  discordId: string;
+  /** Mint a single-use 7-day claim link and show it in the success toast. */
+  sendInvite: boolean;
 };
 
 const defaultForm: FormState = {
@@ -126,7 +134,20 @@ const defaultForm: FormState = {
   hasAccess: true,
   expiryType: "lifetime",
   expiryDateStr: "",
+  planSlug: "",
+  planPriceId: "",
+  discordId: "",
+  sendInvite: true,
 };
+
+/** "Lifetime — $999.99" / "Monthly — $99.99" style labels for interval options. */
+function intervalOptionLabel(price: { label: string | null; interval: string | null; intervalCount: number | null; amountCents: number }): string {
+  const base = price.label?.trim()
+    || (price.interval == null
+      ? "Lifetime"
+      : (price.intervalCount && price.intervalCount > 1 ? `Every ${price.intervalCount} ${price.interval}s` : { day: "Daily", week: "Weekly", month: "Monthly", year: "Yearly" }[price.interval] ?? price.interval));
+  return `${base} — $${(price.amountCents / 100).toFixed(2)}`;
+}
 
 // ── Column filter/sort types ──────────────────────────────────────────────────
 type SortDir = "asc" | "desc" | null;
@@ -329,14 +350,23 @@ export default function UserManagement() {
     enabled: appUser?.role === "owner",
   });
 
+  // Success handling (claim-link toast, Discord chain) lives in handleCreate so
+  // it can use values captured BEFORE the form resets.
   const createMutation = trpc.appUsers.createUser.useMutation({
     onSuccess: () => {
       utils.appUsers.listUsers.invalidate();
       setShowCreate(false);
       setForm(defaultForm);
-      toast.success(`Account created — @${form.username} has been added.`);
     },
     onError: (e) => toast.error(formatMutationError(e)),
+  });
+
+  // Live catalog for the Plan/Interval dropdowns — same source of truth the
+  // checkout and webhook use, so the modal cannot offer an interval that does
+  // not exist on the selected plan.
+  const plansQuery = trpc.subscriptionPlans.list.useQuery(undefined, {
+    enabled: appUser?.role === "owner",
+    staleTime: 15_000,
   });
 
   const updateMutation = trpc.appUsers.updateUser.useMutation({
@@ -522,6 +552,7 @@ export default function UserManagement() {
 
   function openEdit(user: AppUserRow) {
     setForm({
+      ...defaultForm,
       email: user.email,
       username: user.username,
       password: "",
@@ -541,15 +572,70 @@ export default function UserManagement() {
     return new Date(form.expiryDateStr).getTime();
   }
 
-  function handleCreate() {
-    createMutation.mutate({
-      email: form.email,
-      username: form.username.replace(/^@/, ""),
-      password: form.password,
-      role: form.role,
-      hasAccess: form.hasAccess,
-      expiryDate: buildExpiryDate(),
-    });
+  async function handleCreate() {
+    // Capture before onSuccess resets the form.
+    const username = form.username.replace(/^@/, "");
+    const discordId = form.discordId.trim();
+    const hasPlan = form.planSlug !== "";
+
+    if (hasPlan && !form.planPriceId) {
+      toast.error("Pick an interval for the selected plan.");
+      return;
+    }
+    if (discordId && !/^\d{17,20}$/.test(discordId)) {
+      toast.error("Discord ID must be a 17-20 digit snowflake (e.g. 123456789012345678).");
+      return;
+    }
+
+    let created: Awaited<ReturnType<typeof createMutation.mutateAsync>>;
+    try {
+      created = await createMutation.mutateAsync({
+        email: form.email,
+        username,
+        password: form.password || undefined,
+        role: form.role,
+        hasAccess: form.hasAccess,
+        // With a plan, expiry is DERIVED server-side from the interval.
+        expiryDate: hasPlan ? null : buildExpiryDate(),
+        planPriceId: hasPlan ? Number(form.planPriceId) : null,
+        generateClaimLink: form.sendInvite,
+        origin: window.location.origin,
+      });
+    } catch {
+      return; // onError already toasted
+    }
+
+    if (created.claimUrl) {
+      const url = created.claimUrl;
+      toast.success(`Account created — @${username} has been added.`, {
+        description: `Invite link (single-use, valid 7 days): ${url}`,
+        duration: 60_000,
+        action: {
+          label: "Copy link",
+          onClick: () => {
+            navigator.clipboard.writeText(url).then(
+              () => toast.success("Invite link copied."),
+              () => toast.error("Failed to copy. Please copy manually."),
+            );
+          },
+        },
+      });
+    } else {
+      toast.success(`Account created — @${username} has been added.`);
+    }
+
+    // Discord connect + role sync chain — reuses the exact owner mutations the
+    // table row actions use. A failure here never undoes the account: the row
+    // stays repairable from the DISCORD column as always.
+    if (discordId && created.userId) {
+      try {
+        await setManualDiscordIdMutation.mutateAsync({ userId: created.userId, discordId });
+        await syncDiscordRoleMutation.mutateAsync({ userId: created.userId });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        toast.warning(`@${username} was created, but Discord connect needs attention: ${msg}`, { duration: 20_000 });
+      }
+    }
   }
 
   function handleUpdate() {
@@ -1217,7 +1303,11 @@ export default function UserManagement() {
             </div>
             <div className="space-y-1.5">
               <Label className="text-foreground text-xs tracking-wider">
-                {editUser ? "NEW PASSWORD (leave blank to keep current)" : "PASSWORD"}
+                {editUser
+                  ? "NEW PASSWORD (leave blank to keep current)"
+                  : form.sendInvite
+                    ? "PASSWORD (optional — member sets their own via invite link)"
+                    : "PASSWORD"}
               </Label>
               <div className="relative">
                 <Input
@@ -1270,26 +1360,107 @@ export default function UserManagement() {
                 </div>
               </div>
             </div>
-            <div className="space-y-1.5">
-              <Label className="text-foreground text-xs tracking-wider">EXPIRY DATE</Label>
-              <Select value={form.expiryType} onValueChange={(v) => setForm((f) => ({ ...f, expiryType: v as "lifetime" | "custom" }))}>
-                <SelectTrigger className="bg-card border-border text-foreground">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-card border-border">
-                  <SelectItem value="lifetime">Lifetime Access</SelectItem>
-                  <SelectItem value="custom">Custom Date</SelectItem>
-                </SelectContent>
-              </Select>
-              {form.expiryType === "custom" && (
-                <Input
-                  type="datetime-local"
-                  value={form.expiryDateStr}
-                  onChange={(e) => setForm((f) => ({ ...f, expiryDateStr: e.target.value }))}
-                  className="bg-card border-border text-foreground mt-2"
-                />
-              )}
-            </div>
+            {!editUser && (
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-foreground text-xs tracking-wider">PLAN</Label>
+                  <Select
+                    value={form.planSlug === "" ? "none" : form.planSlug}
+                    onValueChange={(v) => {
+                      const slug = v === "none" ? "" : v;
+                      const plan = (plansQuery.data ?? []).find((p) => p.slug === slug);
+                      const actives = (plan?.prices ?? []).filter((pr) => pr.active);
+                      // Auto-select the plan's default (or only) interval.
+                      const preset = actives.find((pr) => pr.isDefault) ?? (actives.length === 1 ? actives[0] : null);
+                      setForm((f) => ({ ...f, planSlug: slug, planPriceId: preset ? String(preset.id) : "" }));
+                    }}
+                  >
+                    <SelectTrigger className="bg-card border-border text-foreground">
+                      <SelectValue placeholder="No plan" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-card border-border">
+                      <SelectItem value="none">No plan</SelectItem>
+                      {(plansQuery.data ?? []).filter((p) => p.active).map((p) => (
+                        <SelectItem key={p.slug} value={p.slug}>{p.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {form.planSlug !== "" && (
+                  <div className="space-y-1.5">
+                    <Label className="text-foreground text-xs tracking-wider">INTERVAL</Label>
+                    <Select
+                      value={form.planPriceId}
+                      onValueChange={(v) => setForm((f) => ({ ...f, planPriceId: v }))}
+                    >
+                      <SelectTrigger className="bg-card border-border text-foreground">
+                        <SelectValue placeholder="Select interval" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-card border-border">
+                        {((plansQuery.data ?? []).find((p) => p.slug === form.planSlug)?.prices ?? [])
+                          .filter((pr) => pr.active)
+                          .map((pr) => (
+                            <SelectItem key={pr.id} value={String(pr.id)}>
+                              {intervalOptionLabel(pr)}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-[10px] text-muted-foreground">
+                      Expiry is set automatically from the interval.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+            {(editUser || form.planSlug === "") && (
+              <div className="space-y-1.5">
+                <Label className="text-foreground text-xs tracking-wider">EXPIRY DATE</Label>
+                <Select value={form.expiryType} onValueChange={(v) => setForm((f) => ({ ...f, expiryType: v as "lifetime" | "custom" }))}>
+                  <SelectTrigger className="bg-card border-border text-foreground">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-card border-border">
+                    <SelectItem value="lifetime">Lifetime Access</SelectItem>
+                    <SelectItem value="custom">Custom Date</SelectItem>
+                  </SelectContent>
+                </Select>
+                {form.expiryType === "custom" && (
+                  <Input
+                    type="datetime-local"
+                    value={form.expiryDateStr}
+                    onChange={(e) => setForm((f) => ({ ...f, expiryDateStr: e.target.value }))}
+                    className="bg-card border-border text-foreground mt-2"
+                  />
+                )}
+              </div>
+            )}
+            {!editUser && (
+              <>
+                <div className="space-y-1.5">
+                  <Label className="text-foreground text-xs tracking-wider">DISCORD USER ID (OPTIONAL)</Label>
+                  <Input
+                    value={form.discordId}
+                    onChange={(e) => setForm((f) => ({ ...f, discordId: e.target.value }))}
+                    placeholder="17-20 digit ID, e.g. 123456789012345678"
+                    inputMode="numeric"
+                    className="bg-card border-border text-foreground placeholder:text-foreground"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-foreground text-xs tracking-wider">INVITE LINK</Label>
+                  <div className="flex items-center gap-2 h-10 px-3 bg-card border border-border rounded-md">
+                    <Switch
+                      checked={form.sendInvite}
+                      onCheckedChange={(v) => setForm((f) => ({ ...f, sendInvite: v }))}
+                    />
+                    <span className="text-sm text-foreground">
+                      {form.sendInvite ? "Generate one-time setup link to send the member" : "No invite link"}
+                    </span>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
           <DialogFooter className="gap-2">
             <Button

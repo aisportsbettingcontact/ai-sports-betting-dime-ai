@@ -44,6 +44,13 @@ export default function ResetPassword() {
   const rawToken = params.get("token") ?? "";
   const uidStr = params.get("uid") ?? "";
   const uid = parseInt(uidStr, 10);
+  /**
+   * welcome=1 — owner-sent claim link for a freshly created member
+   * (appUsers.createUser generateClaimLink). Same token mechanics as a reset;
+   * only the copy changes so a first-time member isn't told they "forgot" a
+   * password they never had.
+   */
+  const isWelcome = params.get("welcome") === "1";
 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -131,9 +138,11 @@ export default function ResetPassword() {
       <div className="min-h-screen bg-black flex items-center justify-center p-4">
         <div className="w-full max-w-md bg-black border border-white rounded-xl p-8 text-center">
           <CheckCircle2 className="w-12 h-12 text-[#45E0A8] mx-auto mb-4" />
-          <h1 className="text-xl font-bold text-white mb-2">Password reset</h1>
+          <h1 className="text-xl font-bold text-white mb-2">{isWelcome ? "You're all set" : "Password reset"}</h1>
           <p className="text-white text-sm mb-2">
-            Your password has been updated. All existing sessions have been logged out.
+            {isWelcome
+              ? "Your password is saved and your account is active."
+              : "Your password has been updated. All existing sessions have been logged out."}
           </p>
           <p className="text-white text-xs">Redirecting to log in…</p>
         </div>
@@ -152,8 +161,8 @@ export default function ResetPassword() {
             <KeyRound className="w-5 h-5 text-[#45E0A8]" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-white">Reset password</h1>
-            <p className="text-white text-xs">Enter your new password below</p>
+            <h1 className="text-xl font-bold text-white">{isWelcome ? "Welcome — set your password" : "Reset password"}</h1>
+            <p className="text-white text-xs">{isWelcome ? "Your account is ready. Choose a password to start using it." : "Enter your new password below"}</p>
           </div>
         </div>
 
@@ -271,6 +280,8 @@ export default function ResetPassword() {
                 <Loader2 className="w-4 h-4 animate-spin" />
                 Resetting...
               </span>
+            ) : isWelcome ? (
+              "Set password & continue"
             ) : (
               "Reset password"
             )}

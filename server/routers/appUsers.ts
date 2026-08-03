@@ -39,6 +39,13 @@ import {
 import { eq, ne, and, isNull, gt, or } from "drizzle-orm";
 import { emitServerEvent } from "../analytics/emitServer";
 import { recordEntitlementEvent } from "../stripe/entitlementLedger";
+import { listAllPlans } from "../stripe/planStore";
+import {
+  buildClaimUrl,
+  deriveEntitlementFromPrice,
+  mintClaimToken,
+  resolveCreationPassword,
+} from "../adminAccountProvisioning";
 
 export const APP_USER_COOKIE = "app_session";
 
@@ -770,10 +777,23 @@ export const appUsersRouter = router({
     .input(z.object({
       email: z.string().email(),
       username: z.string().min(2).max(64).regex(/^[a-zA-Z0-9_]+$/, "Username can only contain letters, numbers, and underscores"),
-      password: z.string().min(8),
+      /**
+       * Optional ONLY when generateClaimLink is true (resolveCreationPassword
+       * enforces the rule): the member then sets their own password through the
+       * claim link and the row holds a CSPRNG throwaway until they do.
+       */
+      password: z.string().min(8).optional(),
       role: z.enum(["owner", "admin", "handicapper", "user"]).default("user"),
       hasAccess: z.boolean().default(true),
-      expiryDate: z.number().nullable().default(null), // null = lifetime
+      expiryDate: z.number().nullable().default(null), // null = lifetime; IGNORED when planPriceId is set (derived instead)
+      /**
+       * Mint a single-use, 7-day claim link (reset-token columns, sha256 at
+       * rest) returned as `claimUrl` for the owner to send to the member.
+       * `origin` scopes the URL to the site the admin is on (same pattern as
+       * requestPasswordReset) — required when generateClaimLink is true.
+       */
+      generateClaimLink: z.boolean().default(false),
+      origin: z.string().url().optional(),
       /**
        * Entitlement assignment, both optional and both defaulting to NULL.
        *
@@ -790,7 +810,29 @@ export const appUsersRouter = router({
       planPriceId: z.number().int().positive().nullable().default(null),
     }))
     .mutation(async ({ input }) => {
-      console.log(`[AppAdmin][createUser][INPUT] email=${input.email} username=${input.username} role=${input.role} stripePlanId=${input.stripePlanId ?? "(none)"} planPriceId=${input.planPriceId ?? "(none)"}`);
+      console.log(`[AppAdmin][createUser][INPUT] email=${input.email} username=${input.username} role=${input.role} stripePlanId=${input.stripePlanId ?? "(none)"} planPriceId=${input.planPriceId ?? "(none)"} generateClaimLink=${input.generateClaimLink}`);
+
+      // ── [STEP 0] Resolve entitlement + password BEFORE any DB write ────────
+      // planPriceId is the single client-sent fact; slug and expiry are derived
+      // server-side through the SAME computeExpiryMsForPrice the webhook uses,
+      // so the modal cannot submit a plan/expiry combination the catalog does
+      // not define. Legacy calls without planPriceId keep verbatim behaviour.
+      let stripePlanId = input.stripePlanId;
+      let expiryDate = input.expiryDate;
+      if (input.planPriceId != null) {
+        const derived = deriveEntitlementFromPrice(await listAllPlans(), input.planPriceId, Date.now());
+        if (!derived.ok) throw new TRPCError({ code: "BAD_REQUEST", message: derived.error });
+        stripePlanId = derived.entitlement.stripePlanId;
+        expiryDate = derived.entitlement.expiryDate;
+        console.log(`[AppAdmin][createUser][STATE] derived stripePlanId=${stripePlanId} expiryDate=${expiryDate ?? "null (lifetime)"}`);
+      }
+
+      const pw = resolveCreationPassword({ password: input.password, generateClaimLink: input.generateClaimLink });
+      if (!pw.ok) throw new TRPCError({ code: "BAD_REQUEST", message: pw.error });
+      if (input.generateClaimLink && !input.origin) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "origin is required to build the claim link." });
+      }
+
       // ── retryOnce: automatically retry on TiDB cold-start transient errors ──
       return retryOnce(async () => {
         // [STEP 1] Parallel uniqueness checks — run concurrently to halve DB round-trips
@@ -803,8 +845,8 @@ export const appUsersRouter = router({
         if (existingUsername) throw new TRPCError({ code: "CONFLICT", message: "Username already taken" });
 
         // [STEP 2] Hash password with cost=10 (OWASP-compliant, ~110ms vs ~250ms for cost=12)
-        console.log(`[AppAdmin][createUser][STEP] hashing password cost=10`);
-        const passwordHash = await bcrypt.hash(input.password, 10);
+        console.log(`[AppAdmin][createUser][STEP] hashing password cost=10 generated=${pw.generated}`);
+        const passwordHash = await bcrypt.hash(pw.password, 10);
         console.log(`[AppAdmin][createUser][STATE] password hash OK`);
 
         // [STEP 3] Insert new user
@@ -815,14 +857,14 @@ export const appUsersRouter = router({
           passwordHash,
           role: input.role,
           hasAccess: input.hasAccess,
-          expiryDate: input.expiryDate ?? undefined,
+          expiryDate: expiryDate ?? undefined,
           // Written verbatim — null included. This is one of only two paths that
           // INSERT into app_users (the other is the Stripe webhook), so what is
           // omitted here can only be repaired by a backfill.
-          stripePlanId: input.stripePlanId,
+          stripePlanId,
           planPriceId: input.planPriceId,
         });
-        console.log(`[AppAdmin][createUser][OUTPUT] SUCCESS username=${input.username} stripePlanId=${input.stripePlanId ?? "null"} planPriceId=${input.planPriceId ?? "null"}`);
+        console.log(`[AppAdmin][createUser][OUTPUT] SUCCESS username=${input.username} stripePlanId=${stripePlanId ?? "null"} planPriceId=${input.planPriceId ?? "null"}`);
 
         // [STEP 4] Audit trail (avenues #5/#10). A hand-created account that
         // starts with access is a manual grant and must be as reconstructable
@@ -839,12 +881,32 @@ export const appUsersRouter = router({
             actor: "owner",
             after: {
               hasAccess: input.hasAccess,
-              planId: input.stripePlanId,
-              expiryDate: input.expiryDate ?? null,
+              planId: stripePlanId,
+              expiryDate: expiryDate ?? null,
             },
           });
         }
-        return { success: true };
+
+        // [STEP 5] Claim link — single-use, 7-day, consumed by the existing
+        // resetPassword mutation (only the sha256 hash is stored). Minted after
+        // the insert so a token can never exist for an account that does not.
+        let claimUrl: string | null = null;
+        if (input.generateClaimLink && createdUser && input.origin) {
+          const claim = mintClaimToken(Date.now());
+          await updateAppUser(createdUser.id, {
+            passwordResetToken: claim.tokenHash,
+            passwordResetExpiresAt: claim.expiresAt,
+          });
+          claimUrl = buildClaimUrl(input.origin, createdUser.id, claim.rawToken);
+          console.log(`[AppAdmin][createUser][STATE] claim link minted userId=${createdUser.id} expiresAt=${new Date(claim.expiresAt).toISOString()}`);
+        }
+
+        return {
+          success: true,
+          userId: createdUser?.id ?? null,
+          claimUrl,
+          entitlement: { stripePlanId: stripePlanId ?? null, planPriceId: input.planPriceId ?? null, expiryDate: expiryDate ?? null },
+        };
       }, '[AppAdmin][createUser]').catch((err) => {
         if (err instanceof TRPCError) throw err;
         const msg = (err as Error)?.message ?? String(err);
