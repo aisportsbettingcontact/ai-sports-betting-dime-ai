@@ -53,6 +53,22 @@ export function formatMutationError(error: unknown): string {
     return "Server temporarily unavailable. Please try again in a moment.";
   }
 
+  // [CHECK 1.5] Zod issue array — tRPC input validation failures arrive as the
+  // RAW JSON.stringify of the issue list (e.g. '[ { "code": "too_small", ... } ]').
+  // Surface the human `message` fields only; never show backend JSON to users.
+  if (msg.trimStart().startsWith("[")) {
+    try {
+      const issues = JSON.parse(msg) as Array<{ message?: string; path?: Array<string | number> }>;
+      if (Array.isArray(issues) && issues.length > 0 && issues.every((i) => typeof i?.message === "string")) {
+        return issues
+          .map((i) => (i.path?.length ? `${String(i.path[i.path.length - 1])}: ${i.message}` : String(i.message)))
+          .join(" · ");
+      }
+    } catch {
+      /* not JSON — fall through to the checks below */
+    }
+  }
+
   // [CHECK 2] Network failure — fetch itself failed (no response received)
   if (
     msg === "Failed to fetch" ||

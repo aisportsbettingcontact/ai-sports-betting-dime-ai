@@ -36,6 +36,7 @@ import { formatMutationError } from "@/lib/errorUtils";
 import {
   Plus, Pencil, Trash2, Shield, User, Crown, RefreshCw,
   Eye, EyeOff, ChevronDown, ArrowUp, ArrowDown, ChevronsUpDown, X, LogOut, ShieldAlert, BarChart2,
+  CheckCircle2, AlertCircle, Copy,
 } from "lucide-react";
 
 type AppUserRow = {
@@ -322,6 +323,17 @@ export default function UserManagement() {
   const [, navigate] = useLocation();
   const [showCreate, setShowCreate] = useState(false);
   const [editUser, setEditUser] = useState<AppUserRow | null>(null);
+  /**
+   * Post-create panel shown INSIDE the dialog (owner request 2026-08-03: the
+   * invite link lives in the popup, not a bottom toast). Non-null flips the
+   * Create dialog from the form to the success panel.
+   */
+  const [createdResult, setCreatedResult] = useState<{
+    username: string;
+    claimUrl: string | null;
+    discord: { state: "none" | "connecting" | "connected" | "failed"; detail?: string };
+  } | null>(null);
+  const [claimLinkCopied, setClaimLinkCopied] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<AppUserRow | null>(null);
   const [form, setForm] = useState<FormState>(defaultForm);
   const [showPassword, setShowPassword] = useState(false);
@@ -353,10 +365,10 @@ export default function UserManagement() {
   // Success handling (claim-link toast, Discord chain) lives in handleCreate so
   // it can use values captured BEFORE the form resets.
   const createMutation = trpc.appUsers.createUser.useMutation({
+    // The dialog STAYS OPEN on success and flips to the invite panel
+    // (createdResult) — the invite link lives in the popup, not a toast.
     onSuccess: () => {
       utils.appUsers.listUsers.invalidate();
-      setShowCreate(false);
-      setForm(defaultForm);
     },
     onError: (e) => toast.error(formatMutationError(e)),
   });
@@ -605,37 +617,45 @@ export default function UserManagement() {
       return; // onError already toasted
     }
 
-    if (created.claimUrl) {
-      const url = created.claimUrl;
-      toast.success(`Account created — @${username} has been added.`, {
-        description: `Invite link (single-use, valid 7 days): ${url}`,
-        duration: 60_000,
-        action: {
-          label: "Copy link",
-          onClick: () => {
-            navigator.clipboard.writeText(url).then(
-              () => toast.success("Invite link copied."),
-              () => toast.error("Failed to copy. Please copy manually."),
-            );
-          },
-        },
-      });
-    } else {
-      toast.success(`Account created — @${username} has been added.`);
-    }
+    // Flip the dialog to the invite panel — the link stays in the popup.
+    setClaimLinkCopied(false);
+    setCreatedResult({
+      username,
+      claimUrl: created.claimUrl ?? null,
+      discord: { state: discordId ? "connecting" : "none" },
+    });
 
     // Discord connect + role sync chain — reuses the exact owner mutations the
     // table row actions use. A failure here never undoes the account: the row
-    // stays repairable from the DISCORD column as always.
+    // stays repairable from the DISCORD column as always, and the outcome is
+    // reported in the panel (humanized — never raw backend JSON).
     if (discordId && created.userId) {
       try {
         await setManualDiscordIdMutation.mutateAsync({ userId: created.userId, discordId });
         await syncDiscordRoleMutation.mutateAsync({ userId: created.userId });
+        setCreatedResult((r) => (r ? { ...r, discord: { state: "connected" } } : r));
       } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        toast.warning(`@${username} was created, but Discord connect needs attention: ${msg}`, { duration: 20_000 });
+        setCreatedResult((r) => (r ? { ...r, discord: { state: "failed", detail: formatMutationError(err) } } : r));
       }
     }
+  }
+
+  /** Close the create dialog from the invite panel (Done / X / backdrop). */
+  function closeCreateDialog() {
+    setShowCreate(false);
+    setEditUser(null);
+    setCreatedResult(null);
+    setClaimLinkCopied(false);
+    setForm(defaultForm);
+  }
+
+  function copyInviteLink() {
+    const url = createdResult?.claimUrl;
+    if (!url) return;
+    navigator.clipboard.writeText(url).then(
+      () => setClaimLinkCopied(true),
+      () => toast.error("Failed to copy. Please select the link and copy manually."),
+    );
   }
 
   function handleUpdate() {
@@ -1271,14 +1291,79 @@ export default function UserManagement() {
 
       {/* Create / Edit Dialog */}
       <Dialog open={showCreate || !!editUser} onOpenChange={(open) => {
-        if (!open) { setShowCreate(false); setEditUser(null); }
+        if (!open) closeCreateDialog();
       }}>
         <DialogContent className="bg-card border-border text-foreground max-w-md">
           <DialogHeader>
             <DialogTitle className="tracking-wider">
-              {editUser ? "EDIT ACCOUNT" : "CREATE ACCOUNT"}
+              {editUser ? "EDIT ACCOUNT" : createdResult ? "ACCOUNT CREATED" : "CREATE ACCOUNT"}
             </DialogTitle>
           </DialogHeader>
+          {!editUser && createdResult ? (
+            <>
+              <div className="space-y-4 py-2">
+                <div className="flex items-center gap-2 text-primary">
+                  <CheckCircle2 className="w-5 h-5" />
+                  <span className="font-semibold text-foreground">@{createdResult.username} has been added</span>
+                </div>
+                {createdResult.claimUrl ? (
+                  <div className="space-y-1.5">
+                    <Label className="text-foreground text-xs tracking-wider">
+                      INVITE LINK — SINGLE-USE, VALID 7 DAYS
+                    </Label>
+                    <div className="flex gap-2">
+                      <Input
+                        readOnly
+                        value={createdResult.claimUrl}
+                        onFocus={(e) => e.currentTarget.select()}
+                        className="bg-card border-border text-foreground font-mono text-xs"
+                      />
+                      <Button type="button" onClick={copyInviteLink} className="shrink-0">
+                        <Copy className="w-3.5 h-3.5 mr-1.5" />
+                        {claimLinkCopied ? "Copied" : "Copy"}
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Send this to the member — they set their own password and are signed in.
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    No invite link was generated (invite toggle was off).
+                  </p>
+                )}
+                {createdResult.discord.state !== "none" && (
+                  <div className="flex items-start gap-2 text-sm">
+                    {createdResult.discord.state === "connecting" && (
+                      <>
+                        <RefreshCw className="w-4 h-4 mt-0.5 animate-spin text-muted-foreground" />
+                        <span className="text-muted-foreground">Connecting Discord…</span>
+                      </>
+                    )}
+                    {createdResult.discord.state === "connected" && (
+                      <>
+                        <CheckCircle2 className="w-4 h-4 mt-0.5 text-primary" />
+                        <span className="text-foreground">Discord connected and role synced.</span>
+                      </>
+                    )}
+                    {createdResult.discord.state === "failed" && (
+                      <>
+                        <AlertCircle className="w-4 h-4 mt-0.5 text-foreground" />
+                        <span className="text-foreground">
+                          Discord connect needs attention: {createdResult.discord.detail ?? "unknown error"}.
+                          You can retry from the DISCORD column.
+                        </span>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+              <DialogFooter className="gap-2">
+                <Button onClick={closeCreateDialog}>Done</Button>
+              </DialogFooter>
+            </>
+          ) : (
+            <>
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
               <Label className="text-foreground text-xs tracking-wider">EMAIL</Label>
@@ -1465,7 +1550,7 @@ export default function UserManagement() {
           <DialogFooter className="gap-2">
             <Button
               variant="outline"
-              onClick={() => { setShowCreate(false); setEditUser(null); }}
+              onClick={closeCreateDialog}
               className="border-border text-foreground hover:text-foreground"
             >
               Cancel
@@ -1479,6 +1564,8 @@ export default function UserManagement() {
               ) : editUser ? "Save Changes" : "Create Account"}
             </Button>
           </DialogFooter>
+            </>
+          )}
         </DialogContent>
       </Dialog>
 
