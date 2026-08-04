@@ -45,6 +45,7 @@ import { fetchAnSlate, resolveLogoUrl } from "../actionNetwork";
 import { gradePendingForUser, gradeAllPendingForDate } from "../betAutoGradeScheduler";
 import {
   buildStatsCacheKey,
+  buildStatsFingerprint,
   getStatsCache,
   setStatsCache,
   invalidateStatsCacheForUser,
@@ -1098,8 +1099,26 @@ export const betTrackerRouter = router({
 
       const db = await getDb();
 
+      // Fingerprint the row set the stats will be computed from, so a cached
+      // block written by ANOTHER replica can be detected as stale. One narrow
+      // indexed aggregate; the alternative is trusting per-process invalidation,
+      // which silently breaks the moment numReplicas > 1.
+      const [fp] = await db
+        .select({
+          rowCount: sql<number>`COUNT(*)`,
+          maxUpdated: sql<string | null>`MAX(${trackedBets.updatedAt})`,
+          idChecksum: sql<number | null>`SUM(${trackedBets.id})`,
+        })
+        .from(trackedBets)
+        .where(and(...baseConditions));
+      const fingerprint = buildStatsFingerprint({
+        rowCount: Number(fp?.rowCount ?? 0),
+        maxUpdated: fp?.maxUpdated ? String(fp.maxUpdated) : null,
+        idChecksum: fp?.idChecksum != null ? Number(fp.idChecksum) : null,
+      });
+
       const statsCacheKey = buildStatsCacheKey(userId, { ...input, unitSize });
-      const cachedStats = getStatsCache<BetStats>(statsCacheKey);
+      const cachedStats = getStatsCache<BetStats>(statsCacheKey, fingerprint);
 
       const pageQuery = db.select().from(trackedBets)
         .where(and(...listConditions))
@@ -1121,7 +1140,7 @@ export const betTrackerRouter = router({
         ]);
         pageRows = page;
         stats = aggregateStats(statRows as StatRow[], unitSize);
-        setStatsCache(statsCacheKey, stats, isHistorical);
+        setStatsCache(statsCacheKey, stats, isHistorical, fingerprint);
       }
 
       // ── Cursor for the next page ───────────────────────────────────────────────

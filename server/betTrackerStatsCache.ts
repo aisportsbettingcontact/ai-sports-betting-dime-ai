@@ -16,6 +16,8 @@
 interface StatsCacheEntry {
   stats: unknown;
   expiresAt: number;
+  /** Fingerprint of the underlying rows when these stats were computed. */
+  fingerprint: string;
 }
 
 const statsCache = new Map<string, StatsCacheEntry>();
@@ -54,19 +56,46 @@ export function buildStatsCacheKey(userId: number, input: StatsCacheKeyInput | u
   });
 }
 
-export function getStatsCache<T = unknown>(key: string): T | null {
+/**
+ * Read a cached stats block, but ONLY if the underlying rows are unchanged.
+ *
+ * WHY A FINGERPRINT AND NOT JUST INVALIDATION
+ *
+ * This cache is per-process, and so is `invalidateStatsCacheForUser`. With one
+ * replica that is sound. With two, a write served by replica A invalidates
+ * A's map and leaves B's entry intact, so a user who lands on B sees stale W/L
+ * and ROI for up to the full TTL — with nothing logged and nothing to notice.
+ * `numReplicas` is a dashboard setting, so scaling up (a routine, safe-looking
+ * operation) would silently start serving wrong money numbers.
+ *
+ * The caller passes a cheap fingerprint of the rows the stats were computed
+ * from. A mismatch means someone else changed the data, whatever process they
+ * were on, so the entry is dropped and recomputed. In-process invalidation is
+ * kept as a fast path; correctness no longer depends on it.
+ */
+export function getStatsCache<T = unknown>(key: string, fingerprint: string): T | null {
   const entry = statsCache.get(key);
   if (!entry) return null;
   if (Date.now() > entry.expiresAt) {
     statsCache.delete(key);
     return null;
   }
+  if (entry.fingerprint !== fingerprint) {
+    // Written by another replica, or by a path that could not reach this map.
+    statsCache.delete(key);
+    return null;
+  }
   return entry.stats as T;
 }
 
-export function setStatsCache(key: string, stats: unknown, isHistorical: boolean): void {
+export function setStatsCache(
+  key: string,
+  stats: unknown,
+  isHistorical: boolean,
+  fingerprint: string,
+): void {
   const ttl = isHistorical ? TTL_HISTORICAL_MS : TTL_LIVE_MS;
-  statsCache.set(key, { stats, expiresAt: Date.now() + ttl });
+  statsCache.set(key, { stats, expiresAt: Date.now() + ttl, fingerprint });
   if (statsCache.size > MAX_ENTRIES) {
     const now = Date.now();
     for (const [k, v] of Array.from(statsCache.entries())) {
@@ -107,4 +136,25 @@ export function clearStatsCache(): void {
 /** Current entry count. Test-only helper. */
 export function statsCacheSize(): number {
   return statsCache.size;
+}
+
+/**
+ * Build the fingerprint string from a cheap row-set summary.
+ *
+ * The three components together detect every mutation that can change a stats
+ * block:
+ *   rowCount   — inserts and deletes
+ *   maxUpdated — updates (grading, edits); `updatedAt` has ON UPDATE CURRENT_TIMESTAMP
+ *   idChecksum — a delete plus an insert inside the same second, which would
+ *                otherwise leave rowCount and maxUpdated unchanged
+ *
+ * Cheap by construction: one narrow aggregate over an indexed userId, versus
+ * the full-history scan it protects.
+ */
+export function buildStatsFingerprint(parts: {
+  rowCount: number;
+  maxUpdated: string | null;
+  idChecksum: number | null;
+}): string {
+  return `${parts.rowCount}:${parts.maxUpdated ?? "-"}:${parts.idChecksum ?? 0}`;
 }
