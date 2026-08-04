@@ -82,9 +82,15 @@ export default function ResetPassword(props: {
   const resetPassword = trpc.appUsers.resetPassword.useMutation({
     onSuccess: () => {
       setSuccess(true);
-      console.log("[ResetPassword] Password reset successful | uid=%s", uid);
-      toast.success("Password updated. Log in with your new password.");
-      setTimeout(() => navigate("/login"), 2500);
+      console.log("[ResetPassword] Password reset successful | uid=%s (auto-logged-in)", uid);
+      // The mutation sets the app_session cookie (auto-login), so the member
+      // is signed in the moment their password saves. Welcome claims stay on
+      // the success screen for the Connect Discord CTA; ordinary resets head
+      // straight into the app.
+      if (!isWelcome) {
+        toast.success("Password updated — you're signed in.");
+        setTimeout(() => navigate("/feed"), 2000);
+      }
     },
     onError: (err) => {
       console.error("[ResetPassword] Reset error:", err.message);
@@ -149,10 +155,31 @@ export default function ResetPassword(props: {
           <h1 className="text-xl font-bold text-white mb-2">{isWelcome ? "You're all set" : "Password reset"}</h1>
           <p className="text-white text-sm mb-2">
             {isWelcome
-              ? "Your password is saved and your account is active."
+              ? "Your password is saved, your account is active, and you're signed in."
               : "Your password has been updated. All existing sessions have been logged out."}
           </p>
-          <p className="text-white text-xs">Redirecting to log in…</p>
+          {isWelcome ? (
+            <div className="mt-5 space-y-3">
+              {/* Server-side OAuth entry — requires the session cookie the reset
+                mutation just set. The callback links Discord and role sync
+                assigns every entitled role automatically. */}
+              <Button
+                onClick={() => { window.location.href = "/api/auth/discord/connect"; }}
+                className="w-full"
+              >
+                Connect Discord — get your member roles
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => navigate("/feed")}
+                className="w-full border-white text-white"
+              >
+                Enter the Platform
+              </Button>
+            </div>
+          ) : (
+            <p className="text-white text-xs">Taking you to the platform…</p>
+          )}
         </div>
       </div>
     );
