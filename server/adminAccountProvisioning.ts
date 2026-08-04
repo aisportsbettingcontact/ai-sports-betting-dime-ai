@@ -16,6 +16,7 @@
  * boundary convention as planStatus.ts / entitlementAssignment.test.ts.
  */
 import crypto from "crypto";
+import { buildInviteCode } from "../shared/inviteCode";
 import {
   computeExpiryMsForPrice,
   LIFETIME_ACCESS_UNTIL_MS,
@@ -100,7 +101,14 @@ export function deriveEntitlementFromPrice(
 // ─── Claim link ───────────────────────────────────────────────────────────────
 
 export interface ClaimToken {
-  /** Goes in the URL, never stored. 64 hex chars = 256 bits CSPRNG. */
+  /**
+   * Goes in the URL, never stored. 16 CSPRNG bytes as 22 base64url chars —
+   * 128 bits of entropy, which for a sha256-hashed-at-rest, single-use,
+   * 7-day token is far beyond guessable; the shorter alphabet exists purely
+   * so invite links stay send-able (owner request 2026-08-03). Long-form
+   * 64-hex reset tokens remain valid — the consumer hashes whatever string
+   * it is handed.
+   */
   rawToken: string;
   /** sha256(rawToken) — what app_users.passwordResetToken stores. */
   tokenHash: string;
@@ -109,19 +117,19 @@ export interface ClaimToken {
 }
 
 export function mintClaimToken(nowMs: number): ClaimToken {
-  const rawToken = crypto.randomBytes(32).toString("hex");
+  const rawToken = crypto.randomBytes(16).toString("base64url");
   const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
   return { rawToken, tokenHash, expiresAt: nowMs + CLAIM_LINK_TTL_MS };
 }
 
 /**
- * Same page + params the reset email builds (`/reset-password?token&uid`);
- * `welcome=1` lets the page greet a first-time member instead of implying a
- * forgotten password. Unknown params are ignored by the existing page, so this
- * is forward-compatible even before the page learns the flag.
+ * Compact form: `/invite/<uid base36>.<token>` (shared/inviteCode.ts codec).
+ * The route itself implies the first-time "welcome" treatment, and the same
+ * resetPassword mutation consumes the token — /reset-password links already
+ * in the wild are untouched.
  */
 export function buildClaimUrl(origin: string, userId: number, rawToken: string): string {
-  return `${origin.replace(/\/$/, "")}/reset-password?token=${rawToken}&uid=${userId}&welcome=1`;
+  return `${origin.replace(/\/$/, "")}/invite/${buildInviteCode(userId, rawToken)}`;
 }
 
 // ─── Password policy at creation ─────────────────────────────────────────────
