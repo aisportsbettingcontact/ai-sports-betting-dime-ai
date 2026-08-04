@@ -2666,6 +2666,29 @@ export const trackedBets = mysqlTable("tracked_bets", {
   line: decimal("line", { precision: 6, scale: 1 }),
   /** American odds, e.g. -125, +145, -110 */
   odds: int("odds").notNull(),
+  /**
+   * For a parlay: the ticket price EXACTLY as the user entered it, before any
+   * leg was dropped. NULL for straight bets.
+   *
+   * This exists to make settlement idempotent. Grading re-runs every 30
+   * minutes; if repricing worked by mutating `odds` in place, each sweep would
+   * divide the price again and a pushed leg would decay the ticket toward
+   * nothing. Every reprice is instead computed fresh from this value and the
+   * CURRENT set of dropped legs, so running it twice changes nothing and a leg
+   * corrected from PUSH back to WIN restores the original price.
+   *
+   * It is also what preserves a correlated (SGP) or boosted price, which is
+   * not the product of its legs and therefore cannot be rebuilt from them.
+   */
+  originalOdds: int("originalOdds"),
+  /**
+   * Number of legs on a parlay; 0 for a straight bet.
+   *
+   * Denormalized on purpose: every list and stats read would otherwise need a
+   * join or a subquery against tracked_bet_legs just to tell the two kinds of
+   * row apart, on a path that is already latency-bound.
+   */
+  legCount: int("legCount").notNull().default(0),
   /** Risk amount in dollars (decimal, 2 decimal places) */
   risk: decimal("risk", { precision: 10, scale: 2 }).notNull(),
   /** To-win amount in dollars (auto-calculated: risk * (100/|odds|) for fav, risk * (odds/100) for dog) */
@@ -2762,6 +2785,80 @@ export const trackedBets = mysqlTable("tracked_bets", {
 
 export type TrackedBet = typeof trackedBets.$inferSelect;
 export type InsertTrackedBet = typeof trackedBets.$inferInsert;
+
+// ─── Parlay legs ──────────────────────────────────────────────────────────────
+/**
+ * The legs of a parlay ticket. One row per selection; the parent row in
+ * `tracked_bets` carries the single stake and the ticket price.
+ *
+ * A leg is deliberately shaped like a bet minus the money: it has everything
+ * `gradeTrackedBet` needs (sport, date, teams, market, pickSide, line,
+ * timeframe, anGameId, gameNumber) and nothing about stake, because the
+ * contract puts one stake on the ticket and none on the legs.
+ *
+ * Straight bets have no rows here at all — `tracked_bets.legCount` is 0 and
+ * every existing row keeps behaving exactly as before.
+ */
+export const trackedBetLegs = mysqlTable("tracked_bet_legs", {
+  id: int("id").autoincrement().primaryKey(),
+  /** FK to tracked_bets.id — the parlay ticket this leg belongs to. */
+  betId: int("betId").notNull(),
+  /** Display order within the ticket, 0-based. Pricing itself is order-free. */
+  legIndex: int("legIndex").notNull(),
+  /** Sport: MLB | NBA | NHL | NCAAM | NFL */
+  sport: varchar("sport", { length: 16 }).notNull().default("MLB"),
+  /** Game date in YYYY-MM-DD format */
+  gameDate: varchar("gameDate", { length: 20 }).notNull(),
+  awayTeam: varchar("awayTeam", { length: 128 }),
+  homeTeam: varchar("homeTeam", { length: 128 }),
+  /** Action Network game id, for the same game resolution straight bets use. */
+  anGameId: int("anGameId"),
+  /** Doubleheader discriminator, 1 or 2. */
+  gameNumber: int("gameNumber").default(1),
+  /** Market: ML | RL | TOTAL — the same vocabulary straight bets use. */
+  market: mysqlEnum("market", ["ML", "RL", "TOTAL"]).notNull().default("ML"),
+  pickSide: mysqlEnum("pickSide", ["AWAY", "HOME", "OVER", "UNDER"]),
+  /** Timeframe, which is also where NRFI/YRFI live. */
+  timeframe: mysqlEnum("timeframe", [
+    "FULL_GAME", "FIRST_5", "FIRST_INNING", "NRFI", "YRFI",
+    "REGULATION", "FIRST_PERIOD", "FIRST_HALF", "FIRST_QUARTER",
+  ]).notNull().default("FULL_GAME"),
+  /** Line for RL/TOTAL legs. NULL for ML, required for the other two. */
+  line: decimal("line", { precision: 6, scale: 1 }),
+  /**
+   * The leg's own American price.
+   *
+   * Not decoration: repricing a ticket after a push divides this leg's decimal
+   * price out of the ticket price, so a wrong value here mis-pays the ticket.
+   */
+  odds: int("odds").notNull(),
+  /** Human-readable label, e.g. "NYY ML" or "OVER 8.5". */
+  pick: varchar("pick", { length: 255 }).notNull(),
+  /**
+   * The leg's own outcome. PUSH/VOID mean the leg is dropped and the ticket
+   * reprices; they do not settle the ticket by themselves.
+   */
+  result: mysqlEnum("result", ["PENDING", "WIN", "LOSS", "PUSH", "VOID"])
+    .notNull()
+    .default("PENDING"),
+  /** Final scores for the graded timeframe, for audit. */
+  awayScore: varchar("awayScore", { length: 16 }),
+  homeScore: varchar("homeScore", { length: 16 }),
+  createdAt: timestamp("createdAt").notNull().defaultNow(),
+  updatedAt: timestamp("updatedAt").notNull().defaultNow().onUpdateNow(),
+}, (t) => ({
+  /** Load every leg of a ticket — the join behind reads and settlement. */
+  idxLegBet: index("idx_tbl_bet").on(t.betId, t.legIndex),
+  /**
+   * The grading sweep's query: open legs for a given sport/date across all
+   * tickets. Mirrors idx_tb_result_date on the parent for the same reason —
+   * without it the sweep reads every open leg in the table each cycle.
+   */
+  idxLegResultDate: index("idx_tbl_result_date").on(t.result, t.gameDate),
+}));
+
+export type TrackedBetLeg = typeof trackedBetLegs.$inferSelect;
+export type InsertTrackedBetLeg = typeof trackedBetLegs.$inferInsert;
 
 // ─── Bet Edit Requests (porter/hank immutable bets — request changes via this table) ──
 /**
