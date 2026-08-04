@@ -29,6 +29,9 @@ import {
 } from "react";
 import { keepPreviousData } from "@tanstack/react-query";
 import { useLocation } from "wouter";
+import ParlayBuilder, { suggestPrice, type DraftLeg } from "../components/ParlayBuilder";
+import ParlayLegList from "../components/ParlayLegList";
+import { MAX_PARLAY_LEGS } from "@shared/parlayPricing";
 import { trpc } from "@/lib/trpc";
 import { useAppAuth } from "@/_core/hooks/useAppAuth";
 import { useAnalytics, useTrackAction } from "@/lib/analytics";
@@ -76,6 +79,8 @@ type EnrichedBet = TrackedBet & {
   gameTime: string | null;
   startUtc: string | null;
   gameStatus: string | null;
+  /** Selections on a parlay ticket, in display order. Empty for a straight bet. */
+  legs?: import("../components/ParlayLegList").ParlayLegView[];
 };
 
 /** Per-inning linescore entry returned by getLinescores */
@@ -1754,6 +1759,16 @@ const BetCard = memo(function BetCard({
 
         {/* Linescore removed per user request */}
 
+        {/* Parlay legs — which leg decided the ticket, and why the payout moved. */}
+        {(bet.legCount ?? 0) > 0 && (
+          <ParlayLegList
+            legs={(bet.legs ?? []) as never}
+            ticketResult={bet.result}
+            odds={bet.odds}
+            originalOdds={bet.originalOdds ?? null}
+          />
+        )}
+
         {/* Notes */}
         {bet.notes && (
           <div className="text-sm bt-dim bt-raised rounded-lg px-3 py-1.5 italic">
@@ -2510,6 +2525,14 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
     stillPending: number;
   } | null>(null);
   // ── Mobile collapsible sections ───────────────────────────────────────────
+  // Parlay entry. `entryMode` swaps the Add Bet card between producing a bet
+  // and producing a LEG; the rest of the form is identical either way, which is
+  // the point — a leg is a bet without the money.
+  const [entryMode, setEntryMode] = useState<"SINGLE" | "PARLAY">("SINGLE");
+  const [draftLegs, setDraftLegs] = useState<DraftLeg[]>([]);
+  const [ticketOdds, setTicketOdds] = useState("");
+  const [parlayError, setParlayError] = useState<string | null>(null);
+
   // Add Bet form: collapsed by default on mobile
   const [addBetOpen, setAddBetOpen] = useState(false);
   // Per-date expanded state: Set of date strings that are currently expanded
@@ -3108,6 +3131,132 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
     },
     onSettled: () => invalidate(),
   });
+  const createParlayMut = trpc.betTracker.createParlay.useMutation({
+    onSuccess: () => {
+      setDraftLegs([]);
+      setTicketOdds("");
+      setParlayError(null);
+      invalidate();
+    },
+    onError: (e) => setParlayError(e.message),
+  });
+
+  /**
+   * Turn the current Add Bet form into a leg.
+   *
+   * Reuses the same validation the single-bet path uses for the fields it
+   * shares — a leg with no line on an RL/TOTAL can never settle, so it is
+   * rejected here rather than stranding the whole ticket later.
+   */
+  const handleAddLeg = useCallback(() => {
+    setParlayError(null);
+    if (!formGame) { setParlayError("Pick a game first."); return; }
+    if (draftLegs.length >= MAX_PARLAY_LEGS) {
+      setParlayError(`A parlay can have at most ${MAX_PARLAY_LEGS} legs.`);
+      return;
+    }
+    const oddsNum = parseInt(formOdds, 10);
+    if (!Number.isFinite(oddsNum) || Math.abs(oddsNum) < 100) {
+      setParlayError("Enter the leg's odds (American, +100 or -100 at minimum).");
+      return;
+    }
+
+    // Line derivation is deliberately identical to the single-bet path,
+    // including the signed run-line convention: HOME on a favourite is -1.5 and
+    // the grader needs that sign (an earlier Math.abs() here graded SEA -1.5
+    // winning by 1 as a WIN). A leg that resolved its line differently from a
+    // straight bet would grade differently, which is the whole risk.
+    let legMarket = formMarket;
+    let legPickSide = formPickSide;
+    let legLine: number | null = null;
+
+    if (formTimeframe === "NRFI") {
+      legMarket = "TOTAL"; legPickSide = "UNDER"; legLine = 0.5;
+    } else if (formTimeframe === "YRFI") {
+      legMarket = "TOTAL"; legPickSide = "OVER"; legLine = 0.5;
+    } else if (formGame.odds) {
+      const lv = getPickLine(formGame.odds, legMarket, legPickSide);
+      if (lv !== null && lv !== undefined) legLine = lv;
+    }
+
+    const customLineNum = formCustomLine.trim() !== "" ? parseFloat(formCustomLine) : undefined;
+    if ((legMarket === "RL" || legMarket === "TOTAL") &&
+        customLineNum !== undefined && !isNaN(customLineNum)) {
+      legLine = customLineNum;
+    }
+
+    // Reject here rather than stranding the ticket: an RL/TOTAL leg with no
+    // line can never settle, so the whole parlay would sit PENDING forever.
+    if ((legMarket === "RL" || legMarket === "TOTAL") && legLine === null) {
+      setParlayError(`A ${legMarket} leg needs a line — pick a game with odds or enter a custom line.`);
+      return;
+    }
+
+    const label =
+      formTimeframe === "NRFI" || formTimeframe === "YRFI"
+        ? formTimeframe
+        : legMarket === "ML"
+          ? `${legPickSide === "AWAY" ? formGame.awayTeam : formGame.homeTeam} ML`
+          : `${legPickSide} ${legLine ?? ""}`.trim();
+
+    setDraftLegs(prev => [...prev, {
+      anGameId:   formGame.id,
+      gameNumber: formGame.gameNumber,
+      sport:      formSport,
+      gameDate:   (formDate || "").slice(0, 10),
+      awayTeam:   formGame.awayTeam,
+      homeTeam:   formGame.homeTeam,
+      market:     legMarket,
+      pickSide:   legPickSide,
+      timeframe:  formTimeframe,
+      line:       legLine,
+      odds:       oddsNum,
+      label,
+    }]);
+
+    // Clear only the per-leg fields; the date and slate stay put so the next
+    // leg is a couple of taps away.
+    setFormGame(null);
+    setFormOdds("");
+    setFormCustomLine("");
+  }, [formGame, draftLegs.length, formOdds, formTimeframe, formMarket, formPickSide,
+      formCustomLine, formSport, formDate]);
+
+  const handleSubmitParlay = useCallback(async () => {
+    setParlayError(null);
+    const oddsNum = parseInt(ticketOdds, 10);
+    const riskNumRaw = parseFloat(formRisk);
+    if (!Number.isFinite(riskNumRaw) || riskNumRaw <= 0) {
+      setParlayError("Enter a stake."); return;
+    }
+    const riskDollars = stakeMode === "U" ? riskNumRaw * unitSize : riskNumRaw;
+    const riskUnitsVal = stakeMode === "U" ? riskNumRaw : (unitSize > 0 ? riskNumRaw / unitSize : riskNumRaw);
+    try {
+      await createParlayMut.mutateAsync({
+        legs: draftLegs.map(l => ({
+          anGameId:   l.anGameId,
+          gameNumber: l.gameNumber,
+          sport:      l.sport as never,
+          gameDate:   l.gameDate,
+          awayTeam:   l.awayTeam,
+          homeTeam:   l.homeTeam,
+          market:     l.market,
+          pickSide:   l.pickSide,
+          timeframe:  l.timeframe as never,
+          line:       l.line,
+          odds:       l.odds,
+        })),
+        odds:      oddsNum,
+        risk:      riskDollars,
+        riskUnits: parseFloat(riskUnitsVal.toFixed(4)),
+        wagerType: formWagerType,
+        notes:     formNotes || undefined,
+      });
+    } catch {
+      /* surfaced by onError */
+    }
+  }, [ticketOdds, formRisk, stakeMode, unitSize, draftLegs, formWagerType, formNotes, createParlayMut]);
+
   const updateMut = trpc.betTracker.update.useMutation({
     // ── Optimistic update: apply result/notes change immediately ──
     onMutate: async updated => {
@@ -4543,6 +4692,34 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                   addBetOpen ? "block" : "hidden"
                 } xl:block`}
               >
+                {/* MODE — single bet or parlay ticket. The fields below are
+                    identical either way; only what they produce changes. */}
+                <div
+                  role="tablist"
+                  aria-label="Bet type"
+                  className="grid grid-cols-2 gap-1 rounded-[10px] p-1"
+                  style={{ background: "var(--dime-surface-card)", border: "1px solid var(--dime-border)" }}
+                >
+                  {(["SINGLE", "PARLAY"] as const).map(mode => (
+                    <button
+                      key={mode}
+                      type="button"
+                      role="tab"
+                      aria-selected={entryMode === mode}
+                      onClick={() => { setEntryMode(mode); setParlayError(null); }}
+                      className="bt-press rounded-md py-1.5 text-[11px] font-bold tracking-widest transition-colors"
+                      style={
+                        entryMode === mode
+                          ? { background: "var(--dime-mint)", color: "var(--dime-ink-on-mint)" }
+                          : { color: "var(--dime-text-muted)" }
+                      }
+                    >
+                      {mode}
+                      {mode === "PARLAY" && draftLegs.length > 0 ? ` (${draftLegs.length})` : ""}
+                    </button>
+                  ))}
+                </div>
+
                 {/* DATE */}
                 <div className="flex flex-col gap-1">
                   <label
@@ -4852,15 +5029,44 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                   </div>
                 )}
 
-                {/* Submit */}
-                <button
-                  type="button"
-                  onClick={handleSubmit}
-                  disabled={createMut.isPending || !formGame}
-                  className="w-full bg-primary hover:opacity-85 bt-press disabled:opacity-40 disabled:cursor-not-allowed text-black font-bold py-3 rounded-xl text-sm tracking-wider transition-all"
-                >
-                  {createMut.isPending ? "Saving…" : "TRACK BET"}
-                </button>
+                {/* Submit — a bet in SINGLE mode, a leg in PARLAY mode. */}
+                {entryMode === "SINGLE" ? (
+                  <button
+                    type="button"
+                    onClick={handleSubmit}
+                    disabled={createMut.isPending || !formGame}
+                    className="w-full bg-primary hover:opacity-85 bt-press disabled:opacity-40 disabled:cursor-not-allowed text-black font-bold py-3 rounded-xl text-sm tracking-wider transition-all"
+                  >
+                    {createMut.isPending ? "Saving…" : "TRACK BET"}
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={handleAddLeg}
+                      disabled={!formGame || draftLegs.length >= MAX_PARLAY_LEGS}
+                      className="bt-press w-full rounded-xl py-3 text-sm font-bold tracking-wider transition-all disabled:cursor-not-allowed disabled:opacity-40"
+                      style={{ border: "1px solid var(--dime-mint)", color: "var(--dime-mint)" }}
+                    >
+                      + ADD LEG
+                    </button>
+
+                    <div className="h-px w-full" style={{ background: "var(--dime-border)" }} />
+
+                    <ParlayBuilder
+                      legs={draftLegs}
+                      onRemoveLeg={i => setDraftLegs(prev => prev.filter((_, k) => k !== i))}
+                      ticketOdds={ticketOdds}
+                      onTicketOddsChange={setTicketOdds}
+                      risk={parseFloat(formRisk) || 0}
+                      stakeMode={stakeMode}
+                      unitSize={unitSize}
+                      onSubmit={handleSubmitParlay}
+                      isPending={createParlayMut.isPending}
+                      error={parlayError}
+                    />
+                  </>
+                )}
               </div>
               {/* end Add Bet body */}
             </div>
