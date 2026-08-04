@@ -1530,7 +1530,7 @@ export const appUsersRouter = router({
       token: z.string().min(20).max(64).regex(/^[0-9a-zA-Z_-]+$/, "Invalid token format"),
       password: z.string().min(8, "Password must be at least 8 characters"),
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       console.log(`[PasswordReset] resetPassword | uid=${input.uid}`);
 
       // [STEP] Load user
@@ -1573,11 +1573,23 @@ export const appUsersRouter = router({
         passwordResetExpiresAt: null,
       });
       // Invalidate all existing sessions by incrementing tokenVersion
-      await incrementTokenVersion(input.uid);
+      const newTokenVersion = await incrementTokenVersion(input.uid);
       invalidateCachedAppUser(input.uid);
 
-      console.log(`[PasswordReset] [OUTPUT] success | uid=${input.uid} username=${user.username} sessionsInvalidated=true`);
-      return { success: true };
+      // [STEP] Auto-login: possession of the single-use token + a fresh
+      // password is the same trust basis completeAccountSetup already logs in
+      // on. Signed with the NEW tokenVersion (old sessions stay dead). This is
+      // what makes the invite claim seamless: set password → signed in → the
+      // "Connect Discord" CTA on the welcome screen works immediately.
+      const token = await signAppUserToken(input.uid, user.role, newTokenVersion);
+      const cookieOptions = getSessionCookieOptions(ctx.req);
+      ctx.res.cookie(APP_USER_COOKIE, token, {
+        ...cookieOptions,
+        maxAge: 90 * 24 * 60 * 60 * 1000, // 90 days — same as completeAccountSetup
+      });
+
+      console.log(`[PasswordReset] [OUTPUT] success | uid=${input.uid} username=${user.username} sessionsInvalidated=true autoLoggedIn=true`);
+      return { success: true, autoLoggedIn: true };
     }),
   // ─── Manual Discord ID Pre-Registration ─────────────────────────────────────
   /*
