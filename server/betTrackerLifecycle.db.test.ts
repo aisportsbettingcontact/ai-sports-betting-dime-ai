@@ -128,6 +128,9 @@ function parlayInput(gameDate: string, anBase: number) {
     ],
     odds: +595,
     risk: 50,
+    // Required for a non-privileged caller — see the note on the straight-bet
+    // fixture. $50 at a $100 unit is 0.5u.
+    riskUnits: 0.5,
   };
 }
 
@@ -406,7 +409,10 @@ describe.skipIf(SKIP_DB_SUITE)("betTracker lifecycle — deletion, isolation and
     const bet = await caller.betTracker.create({
       anGameId: 8802501, sport: "MLB", gameDate: D_FILTER,
       awayTeam: "NYM", homeTeam: "ATL", market: "ML", pickSide: "AWAY",
-      odds: -115, risk: 100,
+      // riskUnits is REQUIRED for a non-privileged role: subscribers track in
+      // units, and a bet with no unit basis is dollar-denominated by
+      // definition. This caller is "user", so it must supply one.
+      odds: -115, risk: 100, riskUnits: 1,
     });
     const straightId = (bet as { id: number }).id;
     createdBetIds.add(straightId);
