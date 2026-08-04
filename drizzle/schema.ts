@@ -2716,27 +2716,6 @@ export const trackedBets = mysqlTable("tracked_bets", {
   idxUserResult:    index("idx_tb_user_result").on(t.userId, t.result),
   /** Composite for userId + result + gameDate — optimal for pending-bet auto-grade queries */
   idxUserResultDate: index("idx_tb_user_result_date").on(t.userId, t.result, t.gameDate),
-  /**
-   * The grading engine's hottest query: `WHERE result='PENDING' AND gameDate=?`
-   * across ALL users, run by every polling cycle and every cron firing.
-   *
-   * Every existing composite leads with userId, which this query does not filter
-   * on, so TiDB was falling back to idx_tb_result(result) and then filtering the
-   * date in a Selection — i.e. reading every PENDING row in the table on every
-   * cycle. Harmless at 4 pending rows (measured 2026-08-03); cost grows linearly
-   * with the pending backlog, which is exactly what spikes on a slate day or
-   * after an upstream feed outage.
-   */
-  idxResultDate: index("idx_tb_result_date").on(t.result, t.gameDate),
-  /**
-   * The create-path idempotency guard, which matches on
-   * (userId, anGameId, gameNumber, market, pickSide, odds) within a 30s window.
-   * It was resolving through idx_tb_user_id(userId) alone and filtering the rest
-   * in a Selection — a full scan of that user's history on every insert (278
-   * rows for the heaviest tracker). Leading with userId+anGameId collapses that
-   * to the handful of rows for one game.
-   */
-  idxUserGame: index("idx_tb_user_game").on(t.userId, t.anGameId, t.gameNumber),
 }));
 
 export type TrackedBet = typeof trackedBets.$inferSelect;
