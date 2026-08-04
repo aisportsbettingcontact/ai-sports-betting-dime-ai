@@ -636,14 +636,40 @@ export function findGame(
     }
   }
 
-  // Fallback: try partial match (first 2-3 chars) for edge cases
-  for (const g of games) {
+  // Fallback: prefix match for feed-vocabulary drift the alias table has not
+  // caught up with (e.g. a provider renaming a franchise mid-season).
+  //
+  // This fallback decides where money goes, so it must never GUESS. A 2-char
+  // prefix is ambiguous across real MLB abbreviations — AT (ATH/ATL), LA
+  // (LAA/LAD), MI (MIA/MIL/MIN), NY (NYM/NYY) — and same-city teams frequently
+  // play on the same date. The previous version returned the FIRST prefix hit,
+  // so a bet on NYM@LAA could silently grade against NYY@LAD: a real result,
+  // for the wrong game, indistinguishable from a correct one afterwards.
+  //
+  // Now: collect every candidate, and only accept a UNIQUE one. Ambiguity
+  // returns null, which leaves the bet PENDING with a logged reason — a visible
+  // non-event instead of an invisible wrong answer.
+  const candidates = games.filter(g => {
     const ga = normalizeAbbrev(g.awayAbbrev);
     const gh = normalizeAbbrev(g.homeAbbrev);
-    if (ga.startsWith(normAway.slice(0, 2)) && gh.startsWith(normHome.slice(0, 2))) {
-      console.log(`[ScoreGrader][VERIFY] findGame: PARTIAL MATCH — gameId=${g.gameId} ${ga}@${gh} (searched ${normAway}@${normHome})`);
-      return g;
-    }
+    return ga.startsWith(normAway.slice(0, 2)) && gh.startsWith(normHome.slice(0, 2));
+  });
+
+  if (candidates.length === 1) {
+    const g = candidates[0];
+    console.log(`[ScoreGrader][VERIFY] findGame: UNIQUE PREFIX MATCH — gameId=${g.gameId} ${normalizeAbbrev(g.awayAbbrev)}@${normalizeAbbrev(g.homeAbbrev)} (searched ${normAway}@${normHome})`);
+    return g;
+  }
+  if (candidates.length > 1) {
+    const shown = candidates
+      .map(g => `${normalizeAbbrev(g.awayAbbrev)}@${normalizeAbbrev(g.homeAbbrev)}(${g.gameId})`)
+      .join(", ");
+    console.log(
+      `[ScoreGrader][ERROR] findGame: AMBIGUOUS prefix match for ${normAway}@${normHome} — ` +
+      `${candidates.length} candidates [${shown}]. Refusing to guess; bet stays PENDING. ` +
+      `Add the correct mapping to ABBREV_ALIASES.`
+    );
+    return null;
   }
 
   console.log(`[ScoreGrader][VERIFY] findGame: NO MATCH for ${normAway}@${normHome}`);
