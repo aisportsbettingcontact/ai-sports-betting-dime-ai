@@ -18,6 +18,13 @@
  *
  * The resolution behavior below is retained for a future owner-authorized
  * integration. It is unreachable while DIME_CHAT_LLM_PROVIDER is "frozen".
+ *
+ * STATUS 2026-08-04 (owner decision): Dime Chat is API-based (provider
+ * "anthropic"); the custom-model lane is DORMANT — PR #289 (dataset freeze)
+ * closed with its branch preserved, the RunPod serving endpoint is
+ * decommissioned, and RUNPOD_* / DIME_RESEARCH_ALPHA_* variables were
+ * removed from production. This scaffold stays retained-but-dormant; any
+ * revival remains gated by ml/dime-1.0/docs/RELEASE_GATES.md.
  */
 
 import { DIME1_DEFAULT_SERVED_MODEL } from "./dime1Model";

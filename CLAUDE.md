@@ -198,6 +198,10 @@ Useful CLI: `python3 .claude/skills/ui-ux-pro-max/scripts/search.py "<query>" [-
   contain a production-trained checkpoint or active endpoint. Server wiring remains a frozen
   future scaffold in `server/_core/dime1*.ts`. `DIME_CHAT_LLM_PROVIDER` must stay `"frozen"`
   until a separate owner-authorized promotion PR satisfies `ml/dime-1.0/docs/RELEASE_GATES.md`.
+  **2026-08-04 (owner decision):** Dime Chat is API-based (`DIME_CHAT_LLM_PROVIDER: "anthropic"`);
+  the ML lane is DORMANT — PR #289 closed (branch `agent/dime-v1-release-candidate-v1` preserves
+  the checksummed dataset candidate), the RunPod endpoint decommissioned, its production env vars
+  removed, and `dime-llm-validation.yml` triggers slimmed to the `ml/` tree only.
 
 ## Deploy law (IMPORTANT)
 
