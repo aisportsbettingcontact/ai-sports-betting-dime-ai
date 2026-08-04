@@ -35,6 +35,26 @@ const allowlist = {
   ],
 };
 
+/**
+ * An entry whose test accepts EITHER credential — the shape that exposed the
+ * gate reading "or" as "and".
+ */
+const anyOfAllowlist = {
+  entries: [
+    {
+      id: "server/claude.test.ts::Claude > Anthropic credentials are set",
+      requiredEnvAnyOf: ["ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN"],
+    },
+  ],
+  expectedCiSkips: [],
+};
+
+const claudeCase = {
+  file: "server/claude.test.ts",
+  suite: "Claude",
+  title: "Anthropic credentials are set",
+} as const;
+
 const vsinCase = {
   file: "server/vsinCredentials.test.ts",
   suite: "VSiN credentials",
@@ -221,5 +241,84 @@ describe("environment-failure gate", () => {
     });
     expect(dependabotResult.ok).toBe(true);
     expect(dependabotResult.profile).toBe("local");
+  });
+
+  describe("any-of credentials", () => {
+    it("REGRESSION: a passing test is NOT stale when one alternative is set", () => {
+      // The gate used to flag this on every local run: the test passes on the
+      // API key alone, the entry listed both variables, and missingEnv treated
+      // the absent one as proof the entry was obsolete. The resulting FAIL line
+      // appeared on every run and trained people to ignore the gate.
+      const result = evaluateResults({
+        results: vitestJson([{ ...claudeCase, status: "passed" }]),
+        allowlist: anyOfAllowlist,
+        profile: "local",
+        env: { ANTHROPIC_API_KEY: "sk-test" },   // token absent, key present
+        rootDir: "/repo",
+      });
+      expect(result.problems.filter(p => p.kind === "stale-entry")).toEqual([]);
+      expect(result.ok).toBe(true);
+    });
+
+    it("is not stale on the other alternative either", () => {
+      const result = evaluateResults({
+        results: vitestJson([{ ...claudeCase, status: "passed" }]),
+        allowlist: anyOfAllowlist,
+        profile: "local",
+        env: { ANTHROPIC_AUTH_TOKEN: "tok-test" },
+        rootDir: "/repo",
+      });
+      expect(result.problems.filter(p => p.kind === "stale-entry")).toEqual([]);
+    });
+
+    it("IS stale when the test passes with NEITHER alternative set", () => {
+      // Then the entry genuinely no longer describes an environment-bound
+      // failure, and the gate should still say so.
+      const result = evaluateResults({
+        results: vitestJson([{ ...claudeCase, status: "passed" }]),
+        allowlist: anyOfAllowlist,
+        profile: "local",
+        env: {},
+        rootDir: "/repo",
+      });
+      expect(result.problems.some(p => p.kind === "stale-entry")).toBe(true);
+    });
+
+    it("a FAILURE with neither alternative set is environment-explained", () => {
+      const result = evaluateResults({
+        results: vitestJson([{ ...claudeCase, status: "failed" }]),
+        allowlist: anyOfAllowlist,
+        profile: "local",
+        env: {},
+        rootDir: "/repo",
+      });
+      expect(result.summary.environmentBound).toBe(1);
+      expect(result.ok).toBe(true);
+    });
+
+    it("REGRESSION: a FAILURE while an alternative IS set is a real failure", () => {
+      // The environment cannot explain it, so the gate must not absolve it.
+      const result = evaluateResults({
+        results: vitestJson([{ ...claudeCase, status: "failed" }]),
+        allowlist: anyOfAllowlist,
+        profile: "local",
+        env: { ANTHROPIC_API_KEY: "sk-test" },
+        rootDir: "/repo",
+      });
+      expect(result.problems.some(p => p.kind === "real-failure-despite-env")).toBe(true);
+      expect(result.ok).toBe(false);
+    });
+
+    it("all-of entries are unchanged by the any-of support", () => {
+      const result = evaluateResults({
+        results: vitestJson([{ ...vsinCase, status: "failed" }]),
+        allowlist,
+        profile: "local",
+        env: {},
+        rootDir: "/repo",
+      });
+      expect(result.summary.environmentBound).toBe(1);
+      expect(result.ok).toBe(true);
+    });
   });
 });

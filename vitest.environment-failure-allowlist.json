@@ -26,10 +26,11 @@
     },
     {
       "id": "server/claude.test.ts::Claude Fable 5 Integration > Anthropic credentials are set (API key or AI Gateway auth token)",
-      "requiredEnv": [
+      "requiredEnvAnyOf": [
         "ANTHROPIC_API_KEY",
         "ANTHROPIC_AUTH_TOKEN"
-      ]
+      ],
+      "note": "live Anthropic credential probe; the test accepts EITHER variable, so the entry is any-of \u2014 declaring both as requiredEnv made the gate report a stale entry whenever exactly one was set"
     },
     {
       "id": "server/discord.bot.token.test.ts::Discord Bot Token Validation > DISCORD_BOT_TOKEN is accepted by Discord REST API (/users/@me)",
