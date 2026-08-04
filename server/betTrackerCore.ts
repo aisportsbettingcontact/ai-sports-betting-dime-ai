@@ -162,6 +162,39 @@ export function decideResultOverride(actorRole: string): MutationDecision {
   };
 }
 
+/**
+ * May this role denominate a bet in DOLLARS, or units only?
+ *
+ * Unit size is a client-side setting (localStorage `bt_unitSize`), never
+ * persisted or verified server-side, so a dollar figure a subscriber types is
+ * an unverifiable claim. Displayed as currency it reads as a real bankroll —
+ * which is exactly the material used to tout a record, and it would attach
+ * fabricated dollar totals to Dime's own surfaces.
+ *
+ * Units are self-relative: "+4.2u" says how well someone bet without asserting
+ * a sum of money anyone could be misled by. So subscribers track in units, and
+ * dollars are reserved for owner/admin — the roles whose figures are the
+ * product's own and are accountable.
+ *
+ * Dollar entry returns for everyone once bets are book-synced, where the
+ * amount comes from the sportsbook rather than a text field.
+ */
+export function decideStakeDenomination(role: string): {
+  unitsOnly: boolean;
+  reason: string;
+} {
+  if (isPrivilegedRole(role)) {
+    return { unitsOnly: false, reason: "owner/admin may track in dollars or units" };
+  }
+  return {
+    unitsOnly: true,
+    reason:
+      "Bets are tracked in units. A dollar amount typed into a form cannot be " +
+      "verified, and unit sizing keeps every record comparable. Dollar amounts " +
+      "return for book-synced bets.",
+  };
+}
+
 // ─── 2. Stake math ────────────────────────────────────────────────────────────
 
 /** Compute the to-win amount from American odds and a risk amount. */

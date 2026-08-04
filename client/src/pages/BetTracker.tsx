@@ -2582,16 +2582,31 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
 
   const toWinNum = parseFloat(formToWin);
 
-  const riskLabel = stakeMode === "$" ? "Risk $" : "Risk (U)";
-  const toWinLabel = stakeMode === "$" ? "To Win $" : "To Win (U)";
+  /**
+   * Subscribers track in UNITS ONLY.
+   *
+   * Unit size lives in localStorage and is never verified server-side, so a
+   * dollar figure typed into this form is an unverifiable claim. Rendered as
+   * currency it reads as a real bankroll — the raw material for touting a
+   * record, and it would put fabricated dollar totals on Dime's own surfaces.
+   *
+   * Read through `effectiveStakeMode` everywhere rather than `stakeMode`, so a
+   * value persisted before this shipped cannot resurrect dollar display. The
+   * server refuses dollar-denominated writes independently; this is the UI half.
+   */
+  const effectiveStakeMode: StakeMode = isOwnerOrAdmin ? stakeMode : "U";
+  const canUseDollars = isOwnerOrAdmin;
+
+  const riskLabel = effectiveStakeMode === "$" ? "Risk $" : "Risk (U)";
+  const toWinLabel = effectiveStakeMode === "$" ? "To Win $" : "To Win (U)";
 
   function fmtToWin(n: number): string {
-    if (stakeMode === "$") return fmtDollar(n);
+    if (effectiveStakeMode === "$") return fmtDollar(n);
     return fmtUnits(n);
   }
 
   function fmtStake(n: number): string {
-    if (stakeMode === "$") return fmtDollar(n);
+    if (effectiveStakeMode === "$") return fmtDollar(n);
     return fmtUnits(unitSize > 0 ? n / unitSize : n);
   }
 
@@ -3250,8 +3265,8 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
       setParlayError("Enter a stake."); return;
     }
     const unitSizeSafe = unitSize > 0 ? unitSize : 100;
-    const riskDollars = stakeMode === "U" ? riskNumRaw * unitSizeSafe : riskNumRaw;
-    const riskUnitsVal = stakeMode === "U" ? riskNumRaw : riskNumRaw / unitSizeSafe;
+    const riskDollars = effectiveStakeMode === "U" ? riskNumRaw * unitSizeSafe : riskNumRaw;
+    const riskUnitsVal = effectiveStakeMode === "U" ? riskNumRaw : riskNumRaw / unitSizeSafe;
     // Derived from the SAME rounded ticket price the user is looking at, so
     // the stored units cannot disagree with the odds on the card.
     const toWinDollars = calcParlayToWin(riskDollars, oddsNum);
@@ -3287,7 +3302,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
     } catch {
       /* surfaced by onError */
     }
-  }, [ticketOdds, formRisk, stakeMode, unitSize, draftLegs, formWagerType, formNotes, createParlayMut]);
+  }, [ticketOdds, formRisk, effectiveStakeMode, unitSize, draftLegs, formWagerType, formNotes, createParlayMut]);
 
   const updateMut = trpc.betTracker.update.useMutation({
     // ── Optimistic update: apply result/notes change immediately ──
@@ -3626,19 +3641,19 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
     }
     if (isNaN(riskNum) || riskNum <= 0) {
       setFormError(
-        `Enter a valid ${stakeMode === "U" ? "unit" : "dollar"} amount.`
+        `Enter a valid ${effectiveStakeMode === "U" ? "unit" : "dollar"} amount.`
       );
       isSubmittingRef.current = false;
       return;
     }
 
-    const riskDollars = stakeMode === "U" ? riskNum * unitSize : riskNum;
+    const riskDollars = effectiveStakeMode === "U" ? riskNum * unitSize : riskNum;
     const toWinFinal =
       !isNaN(toWinNum) && toWinNum > 0
-        ? stakeMode === "U"
+        ? effectiveStakeMode === "U"
           ? toWinNum * unitSize
           : toWinNum
-        : stakeMode === "U"
+        : effectiveStakeMode === "U"
           ? (autoToWin ?? 0) * unitSize
           : (autoToWin ?? calcToWin(oddsNum, riskNum));
 
@@ -3686,19 +3701,19 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
 
     // Compute unit-denominated values for accurate bySize analytics
     const riskUnitsVal =
-      stakeMode === "U"
+      effectiveStakeMode === "U"
         ? riskNum
         : unitSize > 0
           ? riskDollars / unitSize
           : riskDollars;
     const toWinFinalU =
       !isNaN(toWinNum) && toWinNum > 0
-        ? stakeMode === "U"
+        ? effectiveStakeMode === "U"
           ? toWinNum
           : unitSize > 0
             ? toWinFinal / unitSize
             : toWinFinal
-        : stakeMode === "U"
+        : effectiveStakeMode === "U"
           ? (autoToWin ?? 0)
           : unitSize > 0
             ? toWinFinal / unitSize
@@ -4166,25 +4181,30 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
           </div>
 
           <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
-            {/* $ / Units toggle */}
+            {/* $ / Units toggle — owner/admin only. Subscribers are units-only,
+                so the control is absent rather than disabled: a greyed-out
+                dollar button still advertises a mode that is not coming back
+                until bets are book-synced. */}
+            {canUseDollars && (
             <div className="flex items-center bt-raised border border-white rounded-lg p-0.5">
               <button
                 type="button"
                 onClick={() => setStakeMode("$")}
-                className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-bold transition-all ${stakeMode === "$" ? "bg-primary text-black" : "bt-dim hover:text-white"}`}
+                className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-bold transition-all ${effectiveStakeMode === "$" ? "bg-primary text-black" : "bt-dim hover:text-white"}`}
               >
                 <DollarSign size={10} />$
               </button>
               <button
                 type="button"
                 onClick={() => setStakeMode("U")}
-                className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-bold transition-all ${stakeMode === "U" ? "bg-primary text-black" : "bt-dim hover:text-white"}`}
+                className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-bold transition-all ${effectiveStakeMode === "U" ? "bg-primary text-black" : "bt-dim hover:text-white"}`}
               >
                 <Hash size={10} />U
               </button>
             </div>
+            )}
             {/* Unit size (only in U mode) — narrower on mobile */}
-            {stakeMode === "U" && (
+            {effectiveStakeMode === "U" && (
               <div className="flex items-center gap-1">
                 <span className="text-xs bt-dim hidden xs:inline">
                   1u=$
@@ -4368,7 +4388,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                 label="ROI%"
                 value={`${stats.roi.toFixed(1)}%`}
                 color={stats.roi >= 0 ? "text-primary" : "text-[color:var(--bt-red)]"}
-                sub={`on ${stakeMode === "$" ? fmtDollar(stats.totalRisk * unitSize) : fmtUnits(stats.totalRisk)} risked`}
+                sub={`on ${effectiveStakeMode === "$" ? fmtDollar(stats.totalRisk * unitSize) : fmtUnits(stats.totalRisk)} risked`}
               />
             </div>
             <div className="min-w-[110px]">
@@ -4423,7 +4443,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
               label="ROI%"
               value={`${stats.roi.toFixed(1)}%`}
               color={stats.roi >= 0 ? "text-primary" : "text-[color:var(--bt-red)]"}
-              sub={`on ${stakeMode === "$" ? fmtDollar(stats.totalRisk * unitSize) : fmtUnits(stats.totalRisk)} risked`}
+              sub={`on ${effectiveStakeMode === "$" ? fmtDollar(stats.totalRisk * unitSize) : fmtUnits(stats.totalRisk)} risked`}
             />
           </div>
         </div>
@@ -4968,13 +4988,13 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                       id="bt-form-risk"
                       type="number"
                       aria-label={
-                        stakeMode === "$" ? "Risk amount in dollars" : "Risk amount in units"
+                        effectiveStakeMode === "$" ? "Risk amount in dollars" : "Risk amount in units"
                       }
                       value={formRisk}
                       onChange={e => setFormRisk(e.target.value)}
-                      placeholder={stakeMode === "U" ? "2" : "200"}
+                      placeholder={effectiveStakeMode === "U" ? "2" : "200"}
                       min={0}
-                      step={stakeMode === "U" ? "0.5" : "10"}
+                      step={effectiveStakeMode === "U" ? "0.5" : "10"}
                       className="w-full bt-input"
                     />
                   </div>
@@ -5004,7 +5024,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                       id="bt-form-to-win"
                       type="number"
                       aria-label={
-                        stakeMode === "$" ? "To win amount in dollars" : "To win amount in units"
+                        effectiveStakeMode === "$" ? "To win amount in dollars" : "To win amount in units"
                       }
                       value={formToWin}
                       onChange={e => {
@@ -5013,7 +5033,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                       }}
                       placeholder={autoToWin !== null ? String(autoToWin) : "0"}
                       min={0}
-                      step={stakeMode === "U" ? "0.5" : "10"}
+                      step={effectiveStakeMode === "U" ? "0.5" : "10"}
                       className={`w-full bt-input ${
                         formToWinManual
                           ? "!border-primary !text-primary"
@@ -5027,7 +5047,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                 {/* Unit math explainer — single bet only; the parlay shows its
                     own stake summary beneath the ticket price. */}
                 {entryMode === "SINGLE" &&
-                  stakeMode === "U" &&
+                  effectiveStakeMode === "U" &&
                   !isNaN(toWinNum) &&
                   toWinNum > 0 &&
                   riskNum > 0 && (
@@ -5104,7 +5124,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                       onTicketOddsManualChange={setTicketOddsManual}
                       risk={formRisk}
                       onRiskChange={setFormRisk}
-                      stakeMode={stakeMode}
+                      stakeMode={effectiveStakeMode}
                       unitSize={unitSize}
                       onSubmit={handleSubmitParlay}
                       isPending={createParlayMut.isPending}
@@ -5392,7 +5412,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                                   <BetCard
                                     key={bet.id}
                                     bet={bet}
-                                    stakeMode={stakeMode}
+                                    stakeMode={effectiveStakeMode}
                                     unitSize={unitSize}
                                     onResult={handleResult}
                                     onDelete={handleDeleteOpen}

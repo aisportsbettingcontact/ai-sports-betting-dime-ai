@@ -59,6 +59,7 @@ import {
   decideBetMutation,
   decidePrivilegedAccess,
   decideResultOverride,
+  decideStakeDenomination,
   decodeCursor,
   derivePickLabel,
   effectiveLine,
@@ -153,6 +154,22 @@ function resolveToWinUnits(
   const unitSize = risk / riskUnits;
   if (!Number.isFinite(unitSize) || unitSize <= 0) return null;
   return (toWin / unitSize).toFixed(4);
+}
+
+/**
+ * Enforce the unit-only rule at the write boundary.
+ *
+ * The UI hides dollar entry for subscribers, but a UI restriction is cosmetic:
+ * this procedure is reachable by any authenticated subscriber. A bet that
+ * arrives with no riskUnits is dollar-denominated by definition — there is no
+ * unit basis to render it in — so it is refused here.
+ */
+function assertUnitDenomination(role: string, riskUnits: number | undefined, what: string): void {
+  const rule = decideStakeDenomination(role);
+  if (!rule.unitsOnly) return;
+  if (riskUnits != null && riskUnits > 0) return;
+  console.log(`[BetTracker][ERROR] ${what}: role=${role} submitted no riskUnits — units are required`);
+  throw new TRPCError({ code: "BAD_REQUEST", message: rule.reason });
 }
 
 /** Throw the tRPC error a core decision describes, or fall through. */
@@ -296,6 +313,8 @@ export const betTrackerRouter = router({
     }))
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.appUser.id;
+
+      assertUnitDenomination(ctx.appUser.role, input.riskUnits, "create");
 
       // Refuse a combination the grader cannot settle, for the same reason the
       // RL/TOTAL line invariant is enforced here: a bet with no code path does
@@ -624,6 +643,8 @@ export const betTrackerRouter = router({
     }))
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.appUser.id;
+
+      assertUnitDenomination(ctx.appUser.role, input.riskUnits, "createParlay");
 
       // Every leg, before anything is written. A ticket is all-or-nothing, so a
       // single ungradeable leg holds the whole thing open indefinitely.
