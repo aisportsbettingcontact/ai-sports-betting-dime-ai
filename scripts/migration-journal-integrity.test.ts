@@ -30,7 +30,7 @@ const repositoryJournal = JSON.parse(
   readFileSync("drizzle/meta/_journal.json", "utf8")
 );
 const manifest = JSON.parse(
-  readFileSync("drizzle/meta/production_legacy_journal.json", "utf8")
+  readFileSync("drizzle/profiles/production_legacy_journal.json", "utf8")
 ) as LegacyManifest;
 const migrationFiles = readMigrationFiles({ migrationsFolder: "./drizzle" });
 const tagByWhen = new Map(
