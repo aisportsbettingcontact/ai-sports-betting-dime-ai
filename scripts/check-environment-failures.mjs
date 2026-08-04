@@ -109,8 +109,30 @@ export function evaluateResults({
     });
   }
 
-  const missingEnv = (entry) =>
-    (entry.requiredEnv ?? []).filter((name) => !env[name]);
+  /**
+   * Variables the entry declares but the environment does not supply.
+   *
+   * `requiredEnv` is ALL-OF: every name must be present or the failure is
+   * environment-explained. `requiredEnvAnyOf` is ANY-OF, for a test that
+   * accepts alternatives — `server/claude.test.ts` passes on either
+   * ANTHROPIC_API_KEY or ANTHROPIC_AUTH_TOKEN, and listing both under
+   * requiredEnv made the gate report a stale entry on every local run whenever
+   * exactly one was set. The test was behaving correctly; the gate was reading
+   * "or" as "and", and the noise trained people to ignore a FAIL line from the
+   * one check that catches real regressions.
+   */
+  const missingEnv = (entry) => {
+    const missingAll = (entry.requiredEnv ?? []).filter((name) => !env[name]);
+    const anyOf = entry.requiredEnvAnyOf ?? [];
+    const anyOfSatisfied = anyOf.length === 0 || anyOf.some((name) => !!env[name]);
+    return anyOfSatisfied ? missingAll : [...missingAll, ...anyOf];
+  };
+
+  /** Every variable an entry declares, in either mode. */
+  const declaredEnv = (entry) => [
+    ...(entry.requiredEnv ?? []),
+    ...(entry.requiredEnvAnyOf ?? []),
+  ];
 
   if (effectiveProfile === "local") {
     for (const [id, status] of statusById) {
@@ -124,7 +146,7 @@ export function evaluateResults({
         });
         continue;
       }
-      const required = entry.requiredEnv ?? [];
+      const required = declaredEnv(entry);
       if (required.length > 0 && missingEnv(entry).length === 0) {
         problems.push({
           kind: "real-failure-despite-env",
@@ -135,7 +157,7 @@ export function evaluateResults({
     }
     for (const entry of entries) {
       const status = statusById.get(entry.id);
-      const required = entry.requiredEnv ?? [];
+      const required = declaredEnv(entry);
       if (status === undefined) {
         problems.push({
           kind: "not-executed",
