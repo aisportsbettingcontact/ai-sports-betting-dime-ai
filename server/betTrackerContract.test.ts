@@ -102,6 +102,60 @@ describe("cache invalidation targets the bet owner", () => {
   });
 });
 
+describe("admin reach and result integrity", () => {
+  it("the account picker is driven by bet ownership, not by role", () => {
+    // Filtering to owner/admin/handicapper left four role=user accounts holding
+    // 17 bets unreachable — admins could see 39% of tracked bets and none
+    // belonging to a real user.
+    const idx = router.indexOf("listHandicappers: appUserProcedure");
+    const body = router.slice(idx, idx + 1400);
+    expect(body).toMatch(/innerJoin\(trackedBets/);
+    expect(body).not.toMatch(/inArray\(appUsers\.role/);
+  });
+
+  it("a result change is gated and logged", () => {
+    const idx = router.indexOf("  update: appUserProcedure");
+    const end = router.indexOf("\n  /**", idx);
+    const body = router.slice(idx, end === -1 ? router.length : end);
+    expect(body).toMatch(/decideResultOverride/);
+    expect(body).toMatch(/RESULT_OVERRIDE/);
+    // Only a genuine change is an override — resending the same value is not.
+    expect(body).toMatch(/input\.result !== existing\.result/);
+  });
+});
+
+describe("grading concurrency", () => {
+  it("both cron entry points hold the same process mutex as the pollers", () => {
+    // runBetGradeCycle used to call gradeAllPendingForDate directly while
+    // CronJobRunner held only its own lock, so a GitHub-triggered grade and the
+    // 5-minute in-process poll could grade the same rows concurrently.
+    expect(scheduler).toMatch(/function withGradingLock/);
+    expect(scheduler).toMatch(/withGradingLock\("runBetGradeCycle"/);
+    expect(scheduler).toMatch(/withGradingLock\("runBetGradeSweep"/);
+    expect(cronRoutes).toMatch(/runBetGradeSweep\(/);
+    expect(cronRoutes).not.toMatch(/gradeAllPendingAllDates\(/);
+  });
+
+  it("the nightly in-process sweep does NOT double-take the lock", () => {
+    // It sets isGrading itself before calling gradeAllPendingAllDates; routing
+    // it through withGradingLock as well would make it skip itself every night.
+    const idx = scheduler.indexOf("async function runNightlySweep");
+    const body = scheduler.slice(idx, idx + 1200);
+    expect(body).toMatch(/gradeAllPendingAllDates\(/);
+    expect(body).not.toMatch(/withGradingLock/);
+  });
+});
+
+describe("indexes for the hot paths", () => {
+  const schema = read("drizzle/schema.ts");
+  it("covers the grader's all-users pending-by-date query", () => {
+    expect(schema).toMatch(/idx_tb_result_date"\)\.on\(t\.result, t\.gameDate\)/);
+  });
+  it("covers the create-path idempotency guard", () => {
+    expect(schema).toMatch(/idx_tb_user_game"\)\.on\(t\.userId, t\.anGameId, t\.gameNumber\)/);
+  });
+});
+
 describe("grading has a cron path", () => {
   it("bet-grade endpoints are mounted", () => {
     expect(cronRoutes).toMatch(/\/api\/cron\/bet-grade["']/);
@@ -152,6 +206,28 @@ describe("client", () => {
     // autoGrade is self-scoped server-side, so firing it here graded the
     // viewer's own bets while showing progress over someone else's rows.
     expect(clientPage).toMatch(/if \(isViewingOtherUser\) return;/);
+  });
+
+  it("REGRESSION: edit/delete route by the handicapper rule, not by owner/admin", () => {
+    // Opening the page to subscribers without changing these two gates swept
+    // every regular user into the handicapper edit-request queue — a queue only
+    // owner/admin can see. Production proof (2026-08-03): perky (role=user)
+    // filed DELETE request 120001, it sat unanswerable, and the user worked
+    // around it by hand-marking bet 390003 PUSH.
+    expect(clientPage).toMatch(/const mustRequestChanges = role === "handicapper";/);
+    expect(clientPage).toMatch(/setDeleteIsRequest\(mustRequestChanges\)/);
+    expect(clientPage).toMatch(/setEditIsRequest\(mustRequestChanges\)/);
+    expect(clientPage).not.toMatch(/setDeleteIsRequest\(!isOwnerOrAdmin\)/);
+    expect(clientPage).not.toMatch(/setEditIsRequest\(!isOwnerOrAdmin\)/);
+  });
+
+  it("the direct-edit map uses the same predicate as the dialogs", () => {
+    // One rule, one name — the previous split let the card affordance and the
+    // dialog disagree about the same bet.
+    const idx = clientPage.indexOf("const canDirectEditMap");
+    const body = clientPage.slice(idx, idx + 700);
+    expect(body).toMatch(/mustRequestChanges/);
+    expect(body).not.toMatch(/role === "handicapper"/);
   });
 
   it("the dead mobile bet tracker screen is gone", () => {

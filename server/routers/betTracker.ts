@@ -54,6 +54,7 @@ import {
   calcToWin,
   decideBetMutation,
   decidePrivilegedAccess,
+  decideResultOverride,
   decodeCursor,
   derivePickLabel,
   effectiveLine,
@@ -142,21 +143,33 @@ function resolveScope(ctx: { appUser: { id: number; role: string } }, targetUser
 export const betTrackerRouter = router({
 
   /**
-   * listHandicappers — OWNER/ADMIN only: list all handicapper accounts.
-   * Used by the BetTracker handicapper selector dropdown.
-   * Returns all users with role owner/admin/handicapper so the selector
-   * can show all accounts including prez (owner) and sippi (owner).
+   * listHandicappers — OWNER/ADMIN only: the accounts the tracker selector can
+   * switch to.
+   *
+   * Scoped to accounts that ACTUALLY HAVE BETS, across every role.
+   *
+   * It used to filter `role IN (owner, admin, handicapper)`, which made sense
+   * when the tracker was staff-only. Once the page opened to subscribers the
+   * filter became the thing standing between an admin and the people using the
+   * feature: on 2026-08-03 four `role=user` accounts held 17 bets and not one
+   * was reachable, so admins could see 39% of tracked bets and none belonging to
+   * a real user. The server already permitted the read (resolveViewUserId lets
+   * owner/admin target anyone) — only the picker was blind.
+   *
+   * Driving the list off bet ownership rather than role also keeps it short and
+   * self-maintaining: a new subscriber shows up the moment they log a bet, and
+   * accounts that never use the tracker never clutter it.
    */
   listHandicappers: appUserProcedure
     .query(async ({ ctx }) => {
       assertDecision(decidePrivilegedAccess(ctx.appUser.role, "list other users"));
       const db = await getDb();
       const rows = await db
-        .select({ id: appUsers.id, username: appUsers.username, role: appUsers.role })
+        .selectDistinct({ id: appUsers.id, username: appUsers.username, role: appUsers.role })
         .from(appUsers)
-        .where(inArray(appUsers.role, ["owner", "admin", "handicapper"]))
+        .innerJoin(trackedBets, eq(trackedBets.userId, appUsers.id))
         .orderBy(appUsers.id);
-      console.log(`[BetTracker][OUTPUT] listHandicappers: ${rows.length} handicappers returned`);
+      console.log(`[BetTracker][OUTPUT] listHandicappers: ${rows.length} accounts with bets returned`);
       return rows;
     }),
 
@@ -361,7 +374,22 @@ export const betTrackerRouter = router({
       if (input.market     !== undefined) patch.market     = input.market;
       if (input.pickSide   !== undefined) patch.pickSide   = input.pickSide;
       if (input.notes      !== undefined) patch.notes      = input.notes;
-      if (input.result     !== undefined) patch.result     = input.result;
+      // Hand-written results are owner/admin only — see decideResultOverride.
+      // A no-op "change" (same value resent by a form that round-trips every
+      // field) is not an override and must not be rejected.
+      if (input.result !== undefined && input.result !== existing.result) {
+        assertDecision(decideResultOverride(role));
+        // Structured, greppable audit line. The engine always persists scores
+        // alongside a result, so a manual override is the only way a row ends up
+        // graded with none — this is the record of who did it and when.
+        console.log(
+          `[BetTracker][RESULT_OVERRIDE] betId=${input.id} ownedBy=${existing.userId} ` +
+          `by=${userId}(${role}) ${existing.result} -> ${input.result} ` +
+          `storedScore=${existing.awayScore ?? "null"}-${existing.homeScore ?? "null"} ` +
+          `at=${new Date().toISOString()}`
+        );
+        patch.result = input.result;
+      }
       if (input.wagerType  !== undefined) patch.wagerType  = input.wagerType;
 
       const newMarket   = (input.market   ?? existing.market)   as typeof MARKETS[number];

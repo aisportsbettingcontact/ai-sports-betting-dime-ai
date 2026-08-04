@@ -2281,6 +2281,20 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
   // only ever returns another user's id for owner/admin.
   const canAccess = !!appUser;
   const isOwnerOrAdmin = role === "owner" || role === "admin";
+  /**
+   * The edit-request workflow exists for ONE reason: handicapper bets are
+   * immutable after creation, so their owner has to ask an owner/admin to change
+   * them. Everyone else — owner, admin, and regular subscribers — acts directly
+   * on their own bets, which is exactly what the server allows
+   * (betTrackerCore.decideBetMutation).
+   *
+   * This used to be `!isOwnerOrAdmin`, which swept regular users into the
+   * handicapper flow the moment the page was opened to them. Their requests
+   * landed in a queue only owner/admin can see, so the request was invisible and
+   * unanswerable — and at least one user worked around it by manually marking a
+   * mistaken bet PUSH (bet 390003, "settled" 2h11m before first pitch).
+   */
+  const mustRequestChanges = role === "handicapper";
   // Preview mode never grants protected data access. With no authenticated
   // app user, queries stay disabled and the real empty-state chrome is shown.
   const canLoadProtectedData = canAccess && !!appUser;
@@ -3555,11 +3569,11 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
   const handleDeleteOpen = useCallback(
     (id: number) => {
       setDeleteId(id);
-      setDeleteIsRequest(!isOwnerOrAdmin);
+      setDeleteIsRequest(mustRequestChanges);
       setDeleteRequestReason("");
       // eslint-disable-next-line react-hooks/exhaustive-deps
     },
-    [isOwnerOrAdmin]
+    [mustRequestChanges]
   );
 
   const handleEditOpen = useCallback(
@@ -3567,11 +3581,11 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
       setEditBet(b as EnrichedBet);
       setEditNotes(b.notes ?? "");
       setEditResult(b.result as Result);
-      setEditIsRequest(!isOwnerOrAdmin);
+      setEditIsRequest(mustRequestChanges);
       setEditRequestReason("");
       // eslint-disable-next-line react-hooks/exhaustive-deps
     },
-    [isOwnerOrAdmin]
+    [mustRequestChanges]
   );
 
   // ── Stats ─────────────────────────────────────────────────────────────────
@@ -3730,11 +3744,10 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
       // owner/admin edit what the server lets them. Mirrors
       // betTrackerCore.decideBetMutation; the server is still the authority.
       const isOwnBet = bet.userId === appUser?.id;
-      const mustRequest = role === "handicapper";
-      map.set(bet.id, isOwnerOrAdmin || (isOwnBet && !mustRequest));
+      map.set(bet.id, isOwnerOrAdmin || (isOwnBet && !mustRequestChanges));
     }
     return map;
-  }, [enrichedBets, appUser?.id, role, isOwnerOrAdmin]);
+  }, [enrichedBets, appUser?.id, mustRequestChanges, isOwnerOrAdmin]);
 
   // Now it runs only when betsWithSeparators changes (i.e. when bet data updates).
   type DaySectionItem = {
