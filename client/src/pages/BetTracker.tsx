@@ -2112,11 +2112,65 @@ const SEASON_START_DATES: Record<string, string> = {
 
 // ── Verified Bets Drawer sub-component ──────────────────────────────────────
 function VerifiedBetsDrawer({
-  pts,
+  sport,
+  dateFrom,
+  dateTo,
+  targetUserId,
+  unitSize,
 }: {
-  pts: import("../components/BetTrackerAnalytics").EquityPoint[];
+  sport?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  targetUserId?: number;
+  unitSize: number;
 }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
+
+  // This drawer used to render `stats.equityCurve`, which carried one entry per
+  // settled bet. That array is now thinned for transport (see
+  // downsampleEquityCurve), so reading a ledger out of it would quietly show a
+  // sample while the header still promised every pick. It pages the bets
+  // themselves instead — and only once opened, so the rows cost nothing to
+  // anyone who never expands it.
+  const ledger = trpc.betTracker.listWithStatsPaginated.useInfiniteQuery(
+    {
+      sport: sport === "ALL" ? undefined : (sport as never),
+      dateFrom,
+      dateTo,
+      settledOnly: true,
+      targetUserId,
+      unitSize: unitSize > 0 ? unitSize : 100,
+      limit: 100,
+    },
+    {
+      enabled: drawerOpen,
+      staleTime: 60_000,
+      refetchOnWindowFocus: false,
+      retry: 1,
+      getNextPageParam: lastPage => lastPage.nextCursor ?? undefined,
+    },
+  );
+
+  const size = unitSize > 0 ? unitSize : 100;
+  const pts = useMemo(
+    () =>
+      (ledger.data?.pages ?? []).flatMap(page =>
+        page.bets.map(b => {
+          const units = b.riskUnits != null ? Number(b.riskUnits) : Number(b.risk) / size;
+          const won = b.toWinUnits != null ? Number(b.toWinUnits) : Number(b.toWin) / size;
+          return {
+            date: b.gameDate,
+            label: b.pick,
+            pick: b.pick,
+            odds: b.odds,
+            units: parseFloat(units.toFixed(2)),
+            pl: parseFloat((b.result === "WIN" ? won : -units).toFixed(2)),
+            result: b.result,
+          };
+        }),
+      ),
+    [ledger.data, size],
+  );
   return (
     <div className="mt-3 border-t border-white">
       <button
@@ -2252,6 +2306,33 @@ function VerifiedBetsDrawer({
               })}
             </tbody>
           </table>
+          {ledger.isLoading && (
+            <div
+              className="px-3 py-3 text-center text-xs"
+              style={{ color: "var(--bt-text-faint, #FFFFFF)" }}
+            >
+              Loading picks…
+            </div>
+          )}
+          {ledger.isError && (
+            <div
+              className="px-3 py-3 text-center text-xs"
+              style={{ color: "var(--bt-red, #FF3B3B)" }}
+            >
+              Could not load picks.
+            </div>
+          )}
+          {ledger.hasNextPage && (
+            <button
+              type="button"
+              onClick={() => ledger.fetchNextPage()}
+              disabled={ledger.isFetchingNextPage}
+              className="w-full px-3 py-2 text-xs font-bold tracking-widest uppercase transition-colors disabled:opacity-50"
+              style={{ color: "var(--bt-green, #45E0A8)" }}
+            >
+              {ledger.isFetchingNextPage ? "Loading…" : "Load more"}
+            </button>
+          )}
         </div>
       )}
     </div>
@@ -4408,7 +4489,13 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
 
               {/* ── Verified Bets Drawer ── */}
               {dateRange === "SEASON" && (
-                <VerifiedBetsDrawer pts={stats.equityCurve ?? []} />
+                <VerifiedBetsDrawer
+                  sport={activeSport}
+                  dateFrom={dateFrom}
+                  dateTo={dateTo}
+                  targetUserId={effectiveUserId}
+                  unitSize={unitSize}
+                />
               )}
             </div>
           </div>
