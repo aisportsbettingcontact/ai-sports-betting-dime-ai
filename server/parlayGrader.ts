@@ -397,11 +397,24 @@ export async function settleTickets(betIds: number[], summary: ParlayGradeSummar
       const risk = Number(ticket.risk);
       const patch: Record<string, unknown> = { result: settlement.result };
 
-      if (settlement.odds != null) {
-        patch.odds = settlement.odds;
-        // toWin follows the repriced odds, so the ticket never displays one
-        // price while paying another. Units track it for the same reason.
-        const toWin = calcParlayToWin(risk, settlement.odds);
+      // Only touch the payout when the PRICE ACTUALLY MOVED.
+      //
+      // `createParlay` accepts a `toWin`, so a ticket can legitimately carry a
+      // payout that is not what its odds imply — a boosted or promotional
+      // price where the book pays more than the arithmetic. Recomputing on
+      // every settlement destroyed that: a ticket with no dropped legs settles
+      // WIN at unchanged odds, and the old code still overwrote the user's
+      // figure with calcParlayToWin(). The number they recorded from their own
+      // bet slip silently became a different number, with no edit and no log.
+      //
+      // When a leg IS dropped the payout must follow the reduced price, or the
+      // ticket would display one price while paying another. That case still
+      // recomputes.
+      const priceMoved = settlement.odds != null && settlement.odds !== ticket.odds;
+      if (settlement.odds != null) patch.odds = settlement.odds;
+
+      if (priceMoved) {
+        const toWin = calcParlayToWin(risk, settlement.odds!);
         patch.toWin = toWin.toFixed(2);
         // toWinUnits has to move with the price or unit P&L keeps paying the
         // original odds. When it cannot be recomputed (no riskUnits, or a
@@ -412,6 +425,10 @@ export async function settleTickets(betIds: number[], summary: ParlayGradeSummar
         const unitSize = Number.isFinite(units) && units > 0 ? risk / units : NaN;
         patch.toWinUnits =
           Number.isFinite(unitSize) && unitSize > 0 ? (toWin / unitSize).toFixed(2) : null;
+        console.log(
+          `${TAG}[STATE] ticket ${ticket.id} repriced ${ticket.odds} -> ${settlement.odds}; ` +
+          `payout ${ticket.toWin} -> ${patch.toWin}`,
+        );
       }
 
       await db.update(trackedBets).set(patch).where(eq(trackedBets.id, ticket.id));
