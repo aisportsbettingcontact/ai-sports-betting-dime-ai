@@ -1,5 +1,6 @@
 /**
  * Dime 1.0 chat handler — frozen future "dime1" integration scaffold.
+ * (Dormant per the 2026-08-04 API decision — see dime1Client.ts STATUS note.)
  * ---------------------------------------------------------------
  * Lives in its own module (not inline in dime-chat.route.ts) so the route
  * keeps a single context/stream call site for the provider-freeze contract
