@@ -224,6 +224,151 @@ export function toUnits(
   return dollarAmt / size;
 }
 
+/**
+ * The pair law: a row's unit payout is its dollar payout scaled by the same
+ * ratio as its stake — toWinUnits = toWin × riskUnits / risk — so the payout
+ * multiple is identical in both denominations. It needs no external unit size;
+ * proportionality is internal to the row.
+ *
+ * 4dp because the column is DECIMAL(12,4); scale 2 lost real money (the $68.50
+ * payout at a $100 unit stored as 0.69u — see drizzle/schema.ts and migration
+ * 0132). Null when there is no unit basis (or a degenerate one): the read path
+ * then falls back to dollars ÷ the viewer's unit size, which is honest about
+ * being derived, whereas a stale or truncated figure is silently wrong.
+ */
+export function deriveToWinUnits(
+  risk: number,
+  toWin: number,
+  riskUnits: number | string | null | undefined,
+): string | null {
+  const units =
+    typeof riskUnits === "string"
+      ? (riskUnits === "" ? NaN : parseFloat(riskUnits))
+      : riskUnits;
+  if (units == null || !Number.isFinite(units) || units <= 0) return null;
+  if (!Number.isFinite(risk) || risk <= 0 || !Number.isFinite(toWin)) return null;
+  return ((toWin * units) / risk).toFixed(4);
+}
+
+export interface StakePatchInput {
+  actorRole: string;
+  /** The row's current stake quad, as DECIMAL strings off the driver. */
+  existing: { risk: string; toWin: string; riskUnits: string | null; toWinUnits: string | null };
+  /** The FINAL odds for the row (patched value if the caller sent one). */
+  odds: number;
+  oddsChanged: boolean;
+  /** Dollar restatements — privileged roles only. */
+  risk?: number;
+  toWin?: number;
+  /** Unit restatements — any role. */
+  riskUnits?: number;
+  toWinUnits?: number;
+}
+
+export type StakePatchResult =
+  | { ok: true; fields: { risk?: string; toWin?: string; riskUnits?: string; toWinUnits?: string | null } }
+  | { ok: false; message: string };
+
+/**
+ * The ONE implementation of a stake-touching update. Every path that mutates
+ * an existing bet's stake (betTracker.update, reviewEditRequest) resolves the
+ * final quad here, so the laws cannot drift between call sites:
+ *
+ *   THE GATE     decideStakeDenomination: units-only roles may not state
+ *                dollar figures. The UI hides them; this is the boundary.
+ *   THE SIZE LAW the row's implied unit size (risk / riskUnits) holds constant
+ *                across its life, unless the caller restates the basis by
+ *                sending risk AND riskUnits together.
+ *   THE PAIR LAW toWinUnits = toWin × riskUnits / risk, always (deriveToWinUnits).
+ *
+ * Directionality: whichever denomination the caller states is stored verbatim
+ * and the other side is derived. A stake restatement scales the payout
+ * PROPORTIONALLY (toWin × riskNew / riskOld) rather than recomputing from the
+ * odds: for an arithmetic price the two are identical (calcToWin is linear in
+ * risk), and for a boosted price proportional scaling preserves the boost
+ * where calcToWin would silently regress the payout to the arithmetic number.
+ * Only an odds change recomputes from the odds — restating the price is
+ * restating the arithmetic.
+ */
+export function resolveStakePatch(input: StakePatchInput): StakePatchResult {
+  const rule = decideStakeDenomination(input.actorRole);
+  if (rule.unitsOnly && (input.risk !== undefined || input.toWin !== undefined)) {
+    return { ok: false, message: rule.reason };
+  }
+
+  const curRisk  = parseFloat(input.existing.risk);
+  const curToWin = parseFloat(input.existing.toWin);
+  const curUnits = input.existing.riskUnits != null ? parseFloat(input.existing.riskUnits) : null;
+  const heldSize =
+    curUnits != null && Number.isFinite(curUnits) && curUnits > 0 && curRisk > 0
+      ? curRisk / curUnits
+      : null;
+
+  // ── Risk side: what the caller stated verbatim, and what follows from it ──
+  let nextRisk  = curRisk;
+  let nextUnits = curUnits;
+  let riskTouched = false;
+  if (input.risk !== undefined && input.riskUnits !== undefined) {
+    // A new basis: both figures are the caller's, the size is whatever they imply.
+    nextRisk = input.risk;
+    nextUnits = input.riskUnits;
+    riskTouched = true;
+  } else if (input.riskUnits !== undefined) {
+    nextUnits = input.riskUnits;
+    riskTouched = true;
+    // Dollars follow at the held size; a legacy row with no size keeps its
+    // dollars and simply gains the unit basis, anchored to them.
+    if (heldSize != null) nextRisk = input.riskUnits * heldSize;
+  } else if (input.risk !== undefined) {
+    nextRisk = input.risk;
+    riskTouched = true;
+    if (heldSize != null) nextUnits = input.risk / heldSize;
+  }
+  const riskDollarsChanged = riskTouched && nextRisk !== curRisk;
+
+  // ── Payout side ───────────────────────────────────────────────────────────
+  const sizeAfter =
+    nextUnits != null && Number.isFinite(nextUnits) && nextUnits > 0 && nextRisk > 0
+      ? nextRisk / nextUnits
+      : null;
+  let nextToWin: number | null = null;
+  if (input.toWin !== undefined) {
+    nextToWin = input.toWin; // a boosted/promotional price, verbatim
+  } else if (input.toWinUnits !== undefined) {
+    if (sizeAfter == null) {
+      return { ok: false, message: "This bet has no unit basis to derive a dollar payout from — restate riskUnits first." };
+    }
+    nextToWin = input.toWinUnits * sizeAfter;
+  } else if (input.oddsChanged) {
+    nextToWin = calcToWin(input.odds, nextRisk);
+  } else if (riskDollarsChanged && curRisk > 0) {
+    nextToWin = (curToWin * nextRisk) / curRisk;
+  }
+
+  if (!riskTouched && nextToWin == null) return { ok: true, fields: {} };
+
+  const fields: { risk?: string; toWin?: string; riskUnits?: string; toWinUnits?: string | null } = {};
+  if (riskTouched) {
+    fields.risk = nextRisk.toFixed(2);
+    if (nextUnits != null && Number.isFinite(nextUnits) && nextUnits > 0) {
+      fields.riskUnits = nextUnits.toFixed(4);
+    }
+  }
+  if (nextToWin != null) fields.toWin = nextToWin.toFixed(2);
+
+  // The pair law binds the FINAL quad regardless of which side moved.
+  const finalRisk  = riskTouched ? nextRisk : curRisk;
+  const finalToWin = nextToWin != null ? nextToWin : curToWin;
+  if (input.toWinUnits !== undefined) {
+    fields.toWinUnits = input.toWinUnits.toFixed(4); // stated verbatim
+  } else if (riskTouched || nextToWin != null) {
+    // Unpaired rows derive nothing — never invent a unit figure without a basis.
+    const derived = deriveToWinUnits(finalRisk, finalToWin, nextUnits);
+    if (derived != null) fields.toWinUnits = derived;
+  }
+  return { ok: true, fields };
+}
+
 export const UNIT_BUCKET_ORDER = ["10U", "5U", "4U", "3U", "2U", "1U", "<1U"] as const;
 
 /**
