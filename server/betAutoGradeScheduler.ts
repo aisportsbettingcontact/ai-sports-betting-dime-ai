@@ -32,7 +32,12 @@
  */
 
 import { getDb } from "./db";
-import { gradeParlaysForDate } from "./parlayGrader";
+import {
+  gradeParlaysForDate,
+  gradeAllParlaysAllDates,
+  gradeParlaysForUser,
+  findStuckLegs,
+} from "./parlayGrader";
 import { trackedBets, type TrackedBet } from "../drizzle/schema";
 import { eq, and, sql } from "drizzle-orm";
 import {
@@ -257,6 +262,18 @@ export async function gradePendingForUser(
 
   const pending = await db.select().from(trackedBets).where(and(...conditions));
   const scope = filter.gameDate ?? "ALL";
+
+  // The user's parlays settle here too. The conditions above exclude tickets
+  // (legCount=0) because they are not straight bets — but excluding them and
+  // then doing nothing for legs meant this button could be pressed forever
+  // without ever settling a ticket. Runs before the early return, since a user
+  // can easily have an open ticket and no open straight bets.
+  try {
+    await gradeParlaysForUser(userId, trigger);
+  } catch (err) {
+    console.log(`[BetAutoGrade][ERROR] gradeParlaysForUser failed for ${userId}: ${(err as Error).message}`);
+  }
+
   if (pending.length === 0) return emptySummary(scope);
   console.log(`[BetAutoGrade][INPUT] gradePendingForUser: userId=${userId} trigger=${trigger} pending=${pending.length}`);
   return gradePendingRows(pending as TrackedBet[], scope, trigger);
@@ -275,6 +292,15 @@ async function gradeAllPendingAllDates(trigger: string): Promise<void> {
   const pending = await db.select().from(trackedBets).where(
     and(eq(trackedBets.result, "PENDING"), eq(trackedBets.legCount, 0))
   );
+
+  // Legs get the same catch-all, and BEFORE the straight-bet early return —
+  // a slate with zero pending straight bets can still hold a stranded leg, and
+  // returning early would skip it for the same reason the two-day window did.
+  try {
+    await gradeAllParlaysAllDates(trigger);
+  } catch (err) {
+    console.log(`[BetAutoGrade][ERROR] gradeAllParlaysAllDates failed: ${(err as Error).message}`);
+  }
 
   if (pending.length === 0) {
     console.log(`[BetAutoGrade][STATE] gradeAllPendingAllDates: 0 PENDING bets — nothing to grade`);
@@ -594,6 +620,28 @@ export async function checkStuckBets(): Promise<StuckBet[]> {
     const msg = describeStuckBets(list);
     if (msg) void gradingAlert("STUCK_BETS", msg);
     else console.log(`[BetAutoGrade][VERIFY] stuck-bet check: none beyond ${STUCK_THRESHOLD_HOURS}h`);
+
+    // Parlay legs are invisible to the query above: a ticket is dated by its
+    // LAST leg, so a leg stranded on an early date sits inside the parent's
+    // window for the whole life of the ticket and never trips this alarm.
+    try {
+      const stuckLegs = await findStuckLegs(STUCK_THRESHOLD_HOURS);
+      if (stuckLegs.length > 0) {
+        const sample = stuckLegs.slice(0, 5)
+          .map(l => `leg ${l.legId} of ticket #${l.betId} ${l.awayTeam ?? "?"}@${l.homeTeam ?? "?"} ${l.gameDate} (${Math.floor(l.hoursPending)}h)`)
+          .join("\n");
+        void gradingAlert(
+          "STUCK_BETS",
+          `${stuckLegs.length} parlay leg(s) still PENDING more than ${STUCK_THRESHOLD_HOURS}h after their game date, ` +
+          `holding their tickets open.\n\n${sample}`,
+        );
+      } else {
+        console.log(`[BetAutoGrade][VERIFY] stuck-leg check: none beyond ${STUCK_THRESHOLD_HOURS}h`);
+      }
+    } catch (err) {
+      console.warn(`[BetAutoGrade][WARN] stuck-leg check failed: ${(err as Error).message}`);
+    }
+
     return list;
   } catch (err) {
     console.warn(`[BetAutoGrade][WARN] stuck-bet check failed: ${(err as Error).message}`);
@@ -616,9 +664,21 @@ export async function runBetGradeCycle(trigger: string): Promise<
     // this safe to run every cycle.
     for (const d of [dateStr, yesterday]) {
       try {
-        await gradeParlaysForDate(d, trigger);
+        const p = await gradeParlaysForDate(d, trigger);
+        // The summary used to be discarded, so a parlay sweep could raise
+        // errors on every cycle in complete silence while straight-bet errors
+        // alarmed normally.
+        const errMsg = describeGradingErrors({
+          date: `${d} (parlay legs)`,
+          total: p.legsExamined,
+          graded: p.legsSettled,
+          errors: p.errors,
+          details: p.details,
+        });
+        if (errMsg) void gradingAlert("GRADING_ERRORS", errMsg);
       } catch (err) {
         console.log(`[BetAutoGrade][ERROR] parlay sweep failed for ${d}: ${(err as Error).message}`);
+        void gradingAlert("GRADING_ERRORS", `Parlay leg sweep threw for ${d}: ${(err as Error).message}`);
       }
     }
     await checkStuckBets();
