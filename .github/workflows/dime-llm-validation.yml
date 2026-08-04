@@ -3,33 +3,25 @@ name: Dime LLM Validation
 on:
   push:
     branches: [main]
+    # Slimmed 2026-08-04 (owner decision: Dime Chat is API-based; ML lane
+    # dormant — #289 closed, RunPod decommissioned). This job validates ONLY
+    # the ml/ tree (working-directory: ml/dime-1.0), so it now triggers only
+    # when that dormant tree or its shared schemas are actually touched —
+    # not on every chat-server PR (~3min per run saved).
     paths:
       - "ml/dime-1.0/**"
       - "shared/dime/**"
-      - "server/_core/dime1*.ts"
-      - "server/_core/dimeChatContext*.ts"
-      - "server/_core/dimeChatModel.ts"
-      - "server/_core/dimePlatformKnowledge*.ts"
-      - "server/dime-chat.route.ts"
-      - "server/dimeChatTrace.ts"
-      - "server/dime1ProviderWiring.test.ts"
-      - "CLAUDE.md"
-      - ".dockerignore"
       - ".github/workflows/dime-llm-validation.yml"
   pull_request:
     branches: [main]
+    # Slimmed 2026-08-04 (owner decision: Dime Chat is API-based; ML lane
+    # dormant — #289 closed, RunPod decommissioned). This job validates ONLY
+    # the ml/ tree (working-directory: ml/dime-1.0), so it now triggers only
+    # when that dormant tree or its shared schemas are actually touched —
+    # not on every chat-server PR (~3min per run saved).
     paths:
       - "ml/dime-1.0/**"
       - "shared/dime/**"
-      - "server/_core/dime1*.ts"
-      - "server/_core/dimeChatContext*.ts"
-      - "server/_core/dimeChatModel.ts"
-      - "server/_core/dimePlatformKnowledge*.ts"
-      - "server/dime-chat.route.ts"
-      - "server/dimeChatTrace.ts"
-      - "server/dime1ProviderWiring.test.ts"
-      - "CLAUDE.md"
-      - ".dockerignore"
       - ".github/workflows/dime-llm-validation.yml"
 
 permissions:
