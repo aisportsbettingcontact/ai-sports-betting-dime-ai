@@ -138,9 +138,12 @@ describe("settlement never destroys a human decision", () => {
   });
 
   it("REGRESSION: toWinUnits is cleared rather than left stale when unrecomputable", () => {
-    // A stale unit figure keeps paying the ORIGINAL odds in unit P&L. Null
-    // makes aggregateStats fall back to dollars/unitSize, which is correct.
-    expect(grader).toMatch(/patch\.toWinUnits =[\s\S]{0,160}: null;/);
+    // A stale unit figure keeps paying the ORIGINAL odds in unit P&L. The
+    // shared pair law returns null when there is no unit basis (asserted in
+    // stakeReconciliation.test.ts), so assigning its result IS the clearing —
+    // what this scan must keep catching is a reprice that never assigns
+    // patch.toWinUnits at all.
+    expect(grader).toMatch(/patch\.toWinUnits = deriveToWinUnits\(/);
   });
 });
 
