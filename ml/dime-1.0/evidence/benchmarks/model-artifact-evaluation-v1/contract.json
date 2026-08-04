@@ -126,7 +126,7 @@
     },
     "tool_handler_source": {
       "path": "server/_core/dime1ChatHandler.ts",
-      "sha256": "7c2b5ed2818f816fa040190a2857bbda8e99c2d7dae63914c8d5284b456922fd"
+      "sha256": "7f287ebf5013b37aa294b425dfc9e2e288f6deb32635d7711a2832572c8d2bf7"
     },
     "route_source": {
       "path": "server/dime-chat.route.ts",
