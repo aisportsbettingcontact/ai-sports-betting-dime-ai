@@ -29,7 +29,7 @@ import {
   type PickSide as GraderPickSide,
 } from "./scoreGrader";
 import { settleParlay, calcParlayToWin, type ParlayLeg } from "./parlayCore";
-import { effectiveLine, type BetResult, type Market, type PickSide, type Timeframe } from "./betTrackerCore";
+import { deriveToWinUnits, effectiveLine, type BetResult, type Market, type PickSide, type Timeframe } from "./betTrackerCore";
 import { invalidateStatsCacheForUser } from "./betTrackerStatsCache";
 
 const TAG = "[ParlayGrade]";
@@ -420,11 +420,10 @@ export async function settleTickets(betIds: number[], summary: ParlayGradeSummar
         // original odds. When it cannot be recomputed (no riskUnits, or a
         // degenerate unit size) it is cleared rather than left stale —
         // aggregateStats falls back to dollars/unitSize, which is right,
-        // whereas a stale figure is silently wrong.
-        const units = ticket.riskUnits != null ? Number(ticket.riskUnits) : NaN;
-        const unitSize = Number.isFinite(units) && units > 0 ? risk / units : NaN;
-        patch.toWinUnits =
-          Number.isFinite(unitSize) && unitSize > 0 ? (toWin / unitSize).toFixed(2) : null;
+        // whereas a stale figure is silently wrong. The shared pair law keeps
+        // this at scale 4 — the local copy rounded to 2dp, reintroducing the
+        // exact loss migration 0132 widened the column to prevent.
+        patch.toWinUnits = deriveToWinUnits(risk, toWin, ticket.riskUnits);
         console.log(
           `${TAG}[STATE] ticket ${ticket.id} repriced ${ticket.odds} -> ${settlement.odds}; ` +
           `payout ${ticket.toWin} -> ${patch.toWin}`,
