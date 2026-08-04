@@ -115,9 +115,9 @@ describe("deriveEntitlementFromPrice", () => {
 });
 
 describe("mintClaimToken", () => {
-  it("mints a 64-hex raw token whose sha256 is what gets stored, with a 7-day TTL", () => {
+  it("mints a 22-char base64url token (128-bit CSPRNG) whose sha256 is what gets stored, 7-day TTL", () => {
     const t = mintClaimToken(NOW);
-    expect(t.rawToken).toMatch(/^[0-9a-f]{64}$/);
+    expect(t.rawToken).toMatch(/^[0-9a-zA-Z_-]{22}$/);
     expect(t.tokenHash).toBe(crypto.createHash("sha256").update(t.rawToken).digest("hex"));
     expect(t.expiresAt).toBe(NOW + CLAIM_LINK_TTL_MS);
     expect(CLAIM_LINK_TTL_MS).toBe(7 * DAY);
@@ -129,10 +129,18 @@ describe("mintClaimToken", () => {
 });
 
 describe("buildClaimUrl", () => {
-  it("targets the existing reset page with uid + token + welcome flag", () => {
-    expect(buildClaimUrl("https://aisportsbettingmodels.com/", 1650001, "abc")).toBe(
-      "https://aisportsbettingmodels.com/reset-password?token=abc&uid=1650001&welcome=1"
+  it("builds the compact /invite/<base36 uid>.<token> form (codec in shared/inviteCode.ts)", () => {
+    expect(buildClaimUrl("https://aisportsbettingmodels.com/", 1650001, "invite_token_fixture-0")).toBe(
+      "https://aisportsbettingmodels.com/invite/zd5d.invite_token_fixture-0"
     );
+  });
+
+  it("stays parseable by the client codec end-to-end", async () => {
+    const { parseInviteCode } = await import("../shared/inviteCode");
+    const t = mintClaimToken(NOW);
+    const url = new URL(buildClaimUrl("https://aisportsbettingmodels.com", 1680001, t.rawToken));
+    const code = url.pathname.replace("/invite/", "");
+    expect(parseInviteCode(code)).toEqual({ uid: 1680001, token: t.rawToken });
   });
 });
 

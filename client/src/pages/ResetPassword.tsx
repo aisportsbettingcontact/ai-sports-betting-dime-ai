@@ -36,21 +36,27 @@ const suppressInvalid = (e: React.InvalidEvent<HTMLInputElement>) => {
   }
 };
 
-export default function ResetPassword() {
+export default function ResetPassword(props: {
+  /** Overrides for the /invite/:code route — otherwise URL params are used. */
+  tokenOverride?: string;
+  uidOverride?: number;
+  welcomeOverride?: boolean;
+} = {}) {
   const [, navigate] = useLocation();
 
   // Parse URL params
   const params = new URLSearchParams(window.location.search);
-  const rawToken = params.get("token") ?? "";
+  const rawToken = props.tokenOverride ?? params.get("token") ?? "";
   const uidStr = params.get("uid") ?? "";
-  const uid = parseInt(uidStr, 10);
+  const uid = props.uidOverride ?? parseInt(uidStr, 10);
   /**
-   * welcome=1 — owner-sent claim link for a freshly created member
-   * (appUsers.createUser generateClaimLink). Same token mechanics as a reset;
-   * only the copy changes so a first-time member isn't told they "forgot" a
-   * password they never had.
+   * welcome — owner-sent claim link for a freshly created member
+   * (appUsers.createUser generateClaimLink), arriving either as the compact
+   * /invite/:code route (override) or legacy ?welcome=1. Same token mechanics
+   * as a reset; only the copy changes so a first-time member isn't told they
+   * "forgot" a password they never had.
    */
-  const isWelcome = params.get("welcome") === "1";
+  const isWelcome = props.welcomeOverride ?? params.get("welcome") === "1";
 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -59,10 +65,12 @@ export default function ResetPassword() {
   const [success, setSuccess] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
 
-  // Validate URL params on mount
+  // Validate URL params on mount. Two token eras: legacy 64-hex reset tokens
+  // and compact 22-char base64url invite tokens — mirror of the server's zod.
   const paramsValid =
-    rawToken.length === 64 &&
-    /^[0-9a-fA-F]+$/.test(rawToken) &&
+    rawToken.length >= 20 &&
+    rawToken.length <= 64 &&
+    /^[0-9a-zA-Z_-]+$/.test(rawToken) &&
     !isNaN(uid) &&
     uid > 0;
 

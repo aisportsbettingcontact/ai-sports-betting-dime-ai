@@ -1,6 +1,7 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Route, Switch, Redirect, useLocation } from "wouter";
+import { parseInviteCode } from "@shared/inviteCode";
 import { lazy, Suspense, useEffect } from "react";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { RequireAuth } from "./components/RequireAuth";
@@ -256,7 +257,24 @@ function Router() {
           audit 2026-07-10). The v2 grid on the landing page is canonical. */}
         <Route path="/pricing">{() => <Redirect to="/#pricing" />}</Route>
         {/* Password reset — public, accessed via reset link */}
-        <Route path="/reset-password" component={ResetPassword} />
+        <Route path="/reset-password">{() => <ResetPassword />}</Route>
+        {/* Compact invite link — /invite/<uid base36>.<token> (shared/inviteCode.ts).
+          Same single-use token + resetPassword consumer as /reset-password; the
+          route itself implies the first-time "welcome" treatment. An unparseable
+          code falls through with empty overrides, landing on the page's own
+          invalid-link state. */}
+        <Route path="/invite/:code">
+          {(params) => {
+            const parsed = parseInviteCode(params.code ?? "");
+            return (
+              <ResetPassword
+                tokenOverride={parsed?.token ?? ""}
+                uidOverride={parsed?.uid ?? 0}
+                welcomeOverride
+              />
+            );
+          }}
+        </Route>
         {/* Dime AI landing v1 test hook retired — v2 shipped at the root, and the
           old page still marketed the de-marketed annual plan. */}
         <Route path="/landingpage">{() => <Redirect to="/" />}</Route>

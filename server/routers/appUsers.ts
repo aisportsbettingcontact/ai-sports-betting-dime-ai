@@ -1522,7 +1522,12 @@ export const appUsersRouter = router({
   resetPassword: publicProcedure
     .input(z.object({
       uid: z.number().int().positive(),
-      token: z.string().length(64).regex(/^[0-9a-f]+$/i, "Invalid token format"),
+      /**
+       * Two token eras, one consumer: legacy 64-hex reset tokens and compact
+       * 22-char base64url invite tokens (adminAccountProvisioning.mintClaimToken).
+       * Validation is format-only — authenticity is the sha256 comparison below.
+       */
+      token: z.string().min(20).max(64).regex(/^[0-9a-zA-Z_-]+$/, "Invalid token format"),
       password: z.string().min(8, "Password must be at least 8 characters"),
     }))
     .mutation(async ({ input }) => {
