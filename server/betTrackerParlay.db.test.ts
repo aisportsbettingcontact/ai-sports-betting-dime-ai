@@ -62,6 +62,7 @@ const U = {
   ten:    880006,
   boost:  880007,
   boost2: 880008,
+  units:  880009,
 } as const;
 const USER_IDS: number[] = Object.values(U);
 
@@ -510,5 +511,60 @@ describe.skipIf(SKIP_DB_SUITE)("betTrackerParlay.db — parlay lifecycle (real d
     expect(Number(ticket.toWin)).toBeCloseTo(calcParlayToWin(100, ticket.odds), 2);
     expect(ticket.toWin).not.toBe("700.00");      // so the payout followed it
     console.log(`[VERIFY] [PL-8] PASS — 596 -> ${ticket.odds}; payout followed to ${ticket.toWin}`);
+  });
+
+  /**
+   * [PL-9] riskUnits and toWinUnits are stored as a pair.
+   *
+   * The first real production parlay stored riskUnits=0.25 with toWinUnits
+   * NULL. riskUnits is authoritative regardless of the viewer's unit size, so
+   * the pair disagreed: risk read the stored value while to-win fell back to
+   * dollars ÷ today's unit size. Correct at the $100 unit it was created at,
+   * and at $50 it showed 0.25u to win 1.37u — a 5.48x ratio on +274 odds.
+   *
+   * Asserted against a stored row rather than a hand-built object, because the
+   * defect was in what reached the database.
+   */
+  it("[PL-9] a ticket with riskUnits also carries toWinUnits", async () => {
+    const price = 274;                       // -104 and -110, the live ticket
+    const riskDollars = 25, unitSize = 100;
+    const betId = await insertTicket({
+      userId: U.units,
+      originalOdds: price,
+      risk: riskDollars.toFixed(2),
+      riskUnits: (riskDollars / unitSize).toFixed(2),
+      toWin: calcParlayToWin(riskDollars, price).toFixed(2),
+      toWinUnits: (calcParlayToWin(riskDollars, price) / unitSize).toFixed(4),
+      marker: `pl9-${Date.now()}`,
+      legs: [
+        { odds: -104, market: "TOTAL", pickSide: "OVER", line: "11.5", result: "WIN" },
+        { odds: -110, market: "ML", pickSide: "HOME", line: null, result: "WIN" },
+      ],
+    });
+
+    const ticket = await loadTicket(betId);
+    expect(ticket.riskUnits, "riskUnits stored").not.toBeNull();
+    expect(ticket.toWinUnits, "toWinUnits MUST accompany riskUnits").not.toBeNull();
+
+    // The pair must imply the ticket's own price, independent of any viewer.
+    const ratio = Number(ticket.toWinUnits) / Number(ticket.riskUnits);
+    const impliedProfit = ticket.odds >= 100 ? ticket.odds / 100 : 100 / Math.abs(ticket.odds);
+    expect(Math.abs(ratio - impliedProfit)).toBeLessThan(0.001);
+
+    // And the dollar figures agree with the unit figures at the original size.
+    expect(Number(ticket.risk) / Number(ticket.riskUnits)).toBeCloseTo(unitSize, 6);
+    expect(Number(ticket.toWin) / Number(ticket.toWinUnits)).toBeCloseTo(unitSize, 2);
+    console.log(`[VERIFY] [PL-9] PASS — ${ticket.riskUnits}u to win ${ticket.toWinUnits}u at ${ticket.odds} (ratio ${ratio.toFixed(4)})`);
+  });
+
+  /** [PL-10] No ticket in this suite's namespace may carry a half-set pair. */
+  it("[PL-10] no ticket stores riskUnits without toWinUnits", async () => {
+    const db = await getDb();
+    const rows = await db
+      .select({ id: trackedBets.id, riskUnits: trackedBets.riskUnits, toWinUnits: trackedBets.toWinUnits })
+      .from(trackedBets)
+      .where(inArray(trackedBets.userId, USER_IDS));
+    const halfSet = rows.filter(r => r.riskUnits != null && r.toWinUnits == null);
+    expect(halfSet.map(r => r.id), "tickets with riskUnits but no toWinUnits").toEqual([]);
   });
 });

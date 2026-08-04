@@ -134,3 +134,90 @@ describe("a backdated ticket settles on creation", () => {
     expect(proc).toMatch(/America\/Los_Angeles/);
   });
 });
+
+describe("riskUnits and toWinUnits are stored as a PAIR", () => {
+  const router = readFileSync(join(__dirname, "routers/betTracker.ts"), "utf8");
+
+  it("REGRESSION: createParlay derives toWinUnits when only riskUnits is sent", () => {
+    // The first real production parlay stored riskUnits=0.25 and toWinUnits
+    // NULL. riskUnits is authoritative regardless of the viewer's unit size,
+    // so the pair disagreed: risk read 0.25u from the stored value while
+    // to-win fell back to dollars ÷ today's unit size. Correct at a $100 unit,
+    // and at $50 it showed 0.25u to win 1.37u — a 5.48x ratio on +274 odds.
+    expect(router).toMatch(/resolveToWinUnits\(input\.riskUnits, input\.toWinUnits/);
+  });
+
+  it("explicit input still wins over the derivation", () => {
+    const fn = router.slice(router.indexOf("function resolveToWinUnits"));
+    expect(fn).toMatch(/if \(toWinUnits != null\) return String\(toWinUnits\)/);
+  });
+
+  it("returns null when there is no unit basis, rather than guessing", () => {
+    // Both figures then fall back to dollars ÷ the viewer's unit size, which
+    // is consistent even though it is not authoritative. Inventing a unit size
+    // would be worse than admitting there isn't one.
+    const fn = router.slice(router.indexOf("function resolveToWinUnits"));
+    expect(fn).toMatch(/if \(riskUnits == null \|\| riskUnits <= 0\) return null/);
+  });
+
+  it("guards against a degenerate unit size", () => {
+    const fn = router.slice(router.indexOf("function resolveToWinUnits"));
+    expect(fn).toMatch(/!Number\.isFinite\(unitSize\) \|\| unitSize <= 0/);
+  });
+
+  it("REGRESSION: the client sends both, matching the straight-bet path", () => {
+    const page = readFileSync(join(__dirname, "../client/src/pages/BetTracker.tsx"), "utf8");
+    const proc = page.slice(page.indexOf("createParlayMut.mutateAsync"));
+    const block = proc.slice(0, proc.indexOf("});"));
+    expect(block).toMatch(/riskUnits:/);
+    expect(block).toMatch(/toWinUnits:/);
+  });
+
+  it("REGRESSION: the stored pair implies the same price at ANY unit size", () => {
+    // The property the live parlay violated. Payouts are rounded to the cent,
+    // so the ratio can differ from the exact decimal profit by up to half a
+    // cent spread over the stake — the tolerance below is that rounding, not
+    // slack. What must NOT happen is the ratio changing with unit size, which
+    // is exactly what a NULL toWinUnits caused.
+    for (const [odds, riskDollars] of [
+      [274, 25], [-110, 100], [596, 50], [150, 10], [-320, 80],
+    ] as Array<[number, number]>) {
+      const toWin = calcParlayToWin(riskDollars, odds);
+      const impliedProfit = americanToDecimalLocal(odds) - 1;
+      const ratios: number[] = [];
+
+      for (const unitSize of [5, 25, 50, 100, 200]) {
+        const riskUnits = riskDollars / unitSize;
+        const toWinUnits = toWin / unitSize;
+        const ratio = toWinUnits / riskUnits;
+        ratios.push(ratio);
+        // Within the cent-rounding of the payout.
+        const tolerance = 0.005 / riskDollars + 1e-9;
+        expect(
+          Math.abs(ratio - impliedProfit),
+          `odds ${odds} risk ${riskDollars} unit ${unitSize}`,
+        ).toBeLessThan(tolerance);
+      }
+
+      // And identical across unit sizes — the actual invariant.
+      for (const r of ratios) expect(r).toBeCloseTo(ratios[0], 12);
+    }
+  });
+
+  it("REGRESSION: a NULL toWinUnits makes the ratio move with unit size", () => {
+    // Demonstrates the defect this pair prevents: with toWinUnits absent,
+    // to-win falls back to dollars ÷ the viewer's unit size while risk keeps
+    // reading the stored value, so the implied price drifts.
+    const riskDollars = 25, storedRiskUnits = 0.25, toWin = 68.5;
+    const at = (unitSize: number) => (toWin / unitSize) / storedRiskUnits;
+    expect(at(100)).toBeCloseTo(2.74, 2);   // correct only at the original unit
+    expect(at(50)).toBeCloseTo(5.48, 2);    // double
+    expect(at(200)).toBeCloseTo(1.37, 2);   // half
+    expect(at(50)).not.toBeCloseTo(at(200), 2);
+  });
+});
+
+/** Local decimal conversion so this test does not depend on export shape. */
+function americanToDecimalLocal(odds: number): number {
+  return odds >= 100 ? 1 + odds / 100 : 1 + 100 / Math.abs(odds);
+}

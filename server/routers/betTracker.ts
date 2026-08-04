@@ -132,6 +132,29 @@ const STAT_COLUMNS = {
   legCount:   trackedBets.legCount,
 } as const;
 
+
+/**
+ * The unit-denominated payout to store alongside `riskUnits`.
+ *
+ * Explicit input wins. Otherwise it is derived from the unit size the caller
+ * implied (risk ÷ riskUnits) so the stored pair always agrees with the price.
+ * Null only when there is no unit basis at all — `aggregateStats` then falls
+ * back to dollars ÷ the viewer's unit size for BOTH figures, which is
+ * consistent even if it is not authoritative.
+ */
+function resolveToWinUnits(
+  riskUnits: number | undefined,
+  toWinUnits: number | undefined,
+  risk: number,
+  toWin: number,
+): string | null {
+  if (toWinUnits != null) return String(toWinUnits);
+  if (riskUnits == null || riskUnits <= 0) return null;
+  const unitSize = risk / riskUnits;
+  if (!Number.isFinite(unitSize) || unitSize <= 0) return null;
+  return (toWin / unitSize).toFixed(4);
+}
+
 /** Throw the tRPC error a core decision describes, or fall through. */
 function assertDecision(d: { allowed: boolean; code?: string; message?: string }): void {
   if (d.allowed) return;
@@ -703,7 +726,20 @@ export const betTrackerRouter = router({
         risk:       String(input.risk),
         toWin:      toWin.toFixed(2),
         riskUnits:  input.riskUnits  != null ? String(input.riskUnits)  : null,
-        toWinUnits: input.toWinUnits != null ? String(input.toWinUnits) : null,
+        // Derive toWinUnits when the caller gives riskUnits but not this.
+        //
+        // The two are a pair: riskUnits is authoritative regardless of the
+        // viewer's current unit size, so storing one without the other leaves
+        // risk reading from the stored value while to-win falls back to
+        // dollars ÷ today's unit size. The first real parlay landed exactly
+        // that way — correct at a $100 unit, and at any other unit showing a
+        // payout ratio the odds never implied.
+        //
+        // Fixed on the client too, but derived here as well: this procedure is
+        // reachable by any subscriber, and a defect that depends on the caller
+        // sending the right field will come back the moment another caller
+        // appears.
+        toWinUnits: resolveToWinUnits(input.riskUnits, input.toWinUnits, input.risk, toWin),
         wagerType:  input.wagerType,
         book:       input.book,
         notes:      input.notes,

@@ -31,7 +31,7 @@ import { keepPreviousData } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import ParlayBuilder, { suggestPrice, type DraftLeg } from "../components/ParlayBuilder";
 import ParlayLegList from "../components/ParlayLegList";
-import { MAX_PARLAY_LEGS } from "@shared/parlayPricing";
+import { MAX_PARLAY_LEGS, calcParlayToWin } from "@shared/parlayPricing";
 import { trpc } from "@/lib/trpc";
 import { useAppAuth } from "@/_core/hooks/useAppAuth";
 import { useAnalytics, useTrackAction } from "@/lib/analytics";
@@ -3249,8 +3249,12 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
     if (!Number.isFinite(riskNumRaw) || riskNumRaw <= 0) {
       setParlayError("Enter a stake."); return;
     }
-    const riskDollars = stakeMode === "U" ? riskNumRaw * unitSize : riskNumRaw;
-    const riskUnitsVal = stakeMode === "U" ? riskNumRaw : (unitSize > 0 ? riskNumRaw / unitSize : riskNumRaw);
+    const unitSizeSafe = unitSize > 0 ? unitSize : 100;
+    const riskDollars = stakeMode === "U" ? riskNumRaw * unitSizeSafe : riskNumRaw;
+    const riskUnitsVal = stakeMode === "U" ? riskNumRaw : riskNumRaw / unitSizeSafe;
+    // Derived from the SAME rounded ticket price the user is looking at, so
+    // the stored units cannot disagree with the odds on the card.
+    const toWinDollars = calcParlayToWin(riskDollars, oddsNum);
     try {
       await createParlayMut.mutateAsync({
         legs: draftLegs.map(l => ({
@@ -3269,6 +3273,14 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
         odds:      oddsNum,
         risk:      riskDollars,
         riskUnits: parseFloat(riskUnitsVal.toFixed(4)),
+        // Both unit figures or neither. riskUnits is authoritative regardless
+        // of the viewer's current unit size, so storing it WITHOUT toWinUnits
+        // leaves the pair inconsistent: risk reads from the stored value while
+        // to-win falls back to dollars ÷ whatever the unit size happens to be
+        // today. The first real parlay shipped that way — correct at a $100
+        // unit and wrong at any other, showing a payout ratio the odds never
+        // implied. The straight-bet path above has always sent both.
+        toWinUnits: parseFloat((toWinDollars / unitSizeSafe).toFixed(4)),
         wagerType: formWagerType,
         notes:     formNotes || undefined,
       });
