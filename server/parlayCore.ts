@@ -49,6 +49,7 @@ import {
   americanToDecimal,
   decimalToAmerican,
   combineLegOdds,
+  divideLegsOut,
   calcParlayToWin,
   validateParlayLegs,
   type ParlayValidation,
@@ -58,6 +59,7 @@ import {
 // so there is exactly one implementation of the price arithmetic.
 export {
   MAX_PARLAY_LEGS,
+  divideLegsOut,
   MIN_PARLAY_LEGS,
   americanToDecimal,
   decimalToAmerican,
@@ -182,14 +184,10 @@ export function settleParlay(legs: ParlayLeg[], originalOdds: number): ParlaySet
  */
 export function repriceParlay(originalOdds: number, droppedLegOdds: number[]): number {
   if (droppedLegOdds.length === 0) return originalOdds;
-  const dropped = droppedLegOdds.reduce((acc, o) => acc * americanToDecimal(o), 1);
-  const remaining = americanToDecimal(originalOdds) / dropped;
-  if (remaining <= 1) {
-    throw new Error(
-      `repriceParlay: dropping those legs leaves no payout (decimal ${remaining.toFixed(4)})`,
-    );
-  }
-  return decimalToAmerican(remaining);
+  // Exact fraction arithmetic — settlement must not lose a point to IEEE-754.
+  // See shared/parlayPricing.ts: a +115/+130 pair is exactly +394.5, and in
+  // floating point it prices one point low.
+  return divideLegsOut(originalOdds, droppedLegOdds);
 }
 
 

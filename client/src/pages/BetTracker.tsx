@@ -2531,6 +2531,16 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
   const [entryMode, setEntryMode] = useState<"SINGLE" | "PARLAY">("SINGLE");
   const [draftLegs, setDraftLegs] = useState<DraftLeg[]>([]);
   const [ticketOdds, setTicketOdds] = useState("");
+  /**
+   * True once the user types a ticket price of their own.
+   *
+   * The price recomputes in real time as legs are added, but a correlated
+   * same-game price or a boost is deliberately NOT the product of its legs —
+   * the contract allows both — so once the user states their book's price, the
+   * recompute must never overwrite it. Same dirty-field pattern the single-bet
+   * to-win already uses (formToWinManual).
+   */
+  const [ticketOddsManual, setTicketOddsManual] = useState(false);
   const [parlayError, setParlayError] = useState<string | null>(null);
 
   // Add Bet form: collapsed by default on mobile
@@ -3135,6 +3145,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
     onSuccess: () => {
       setDraftLegs([]);
       setTicketOdds("");
+      setTicketOddsManual(false);
       setParlayError(null);
       invalidate();
     },
@@ -3148,6 +3159,15 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
    * shares — a leg with no line on an RL/TOTAL can never settle, so it is
    * rejected here rather than stranding the whole ticket later.
    */
+  // Ticket price follows the legs in real time. Recomputed from the SAME
+  // shared implementation the server prices with, so what the user is quoted
+  // here and what settles later cannot diverge.
+  useEffect(() => {
+    if (ticketOddsManual) return;
+    const suggested = suggestPrice(draftLegs);
+    setTicketOdds(suggested != null ? String(suggested) : "");
+  }, [draftLegs, ticketOddsManual]);
+
   const handleAddLeg = useCallback(() => {
     setParlayError(null);
     if (!formGame) { setParlayError("Pick a game first."); return; }
@@ -4901,14 +4921,18 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                     </div>
                   )}
 
-                {/* ODDS + RISK + TO WIN */}
-                <div className="grid grid-cols-3 gap-3">
+                {/* ODDS (+ RISK + TO WIN on a single bet only).
+                    A parlay leg carries a PRICE and nothing else — the stake is
+                    on the ticket, entered once at the bottom. Showing a risk box
+                    per leg invited the reading that each leg is separately
+                    staked, which is not what a parlay is. */}
+                <div className={entryMode === "PARLAY" ? "grid grid-cols-1 gap-3" : "grid grid-cols-3 gap-3"}>
                   <div className="flex flex-col gap-1">
                     <label
                       htmlFor="bt-form-odds"
                       className="bt-label"
                     >
-                      Odds
+                      {entryMode === "PARLAY" ? "Leg odds" : "Odds"}
                     </label>
                     <input
                       id="bt-form-odds"
@@ -4920,6 +4944,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                       className="w-full bt-input"
                     />
                   </div>
+                  {entryMode === "SINGLE" && (
                   <div className="flex flex-col gap-1">
                     <label
                       htmlFor="bt-form-risk"
@@ -4941,6 +4966,8 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                       className="w-full bt-input"
                     />
                   </div>
+                  )}
+                  {entryMode === "SINGLE" && (
                   <div className="flex flex-col gap-1">
                     <label
                       htmlFor="bt-form-to-win"
@@ -4982,10 +5009,13 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                       }`}
                     />
                   </div>
+                  )}
                 </div>
 
-                {/* Unit math explainer */}
-                {stakeMode === "U" &&
+                {/* Unit math explainer — single bet only; the parlay shows its
+                    own stake summary beneath the ticket price. */}
+                {entryMode === "SINGLE" &&
+                  stakeMode === "U" &&
                   !isNaN(toWinNum) &&
                   toWinNum > 0 &&
                   riskNum > 0 && (
@@ -5058,7 +5088,10 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                       onRemoveLeg={i => setDraftLegs(prev => prev.filter((_, k) => k !== i))}
                       ticketOdds={ticketOdds}
                       onTicketOddsChange={setTicketOdds}
-                      risk={parseFloat(formRisk) || 0}
+                      ticketOddsManual={ticketOddsManual}
+                      onTicketOddsManualChange={setTicketOddsManual}
+                      risk={formRisk}
+                      onRiskChange={setFormRisk}
                       stakeMode={stakeMode}
                       unitSize={unitSize}
                       onSubmit={handleSubmitParlay}

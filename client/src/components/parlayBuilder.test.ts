@@ -53,17 +53,30 @@ describe("suggestPrice", () => {
   });
 });
 
-describe("the suggested price never overrides the user's book", () => {
-  it("the input is free text, and the suggestion is opt-in", () => {
+describe("the ticket price calculates live, and never overwrites the user's", () => {
+  it("REGRESSION: the price recomputes in real time from the legs", () => {
+    // The page owns the recompute so it can react to every add and remove.
+    const page = readFileSync(join(__dirname, "../pages/BetTracker.tsx"), "utf8");
+    expect(page).toMatch(/useEffect\(\(\) => \{[\s\S]{0,200}suggestPrice\(draftLegs\)/);
+    expect(page).toMatch(/\}, \[draftLegs, ticketOddsManual\]\)/);
+  });
+
+  it("REGRESSION: a price the user typed is never clobbered by the recompute", () => {
     // A correlated same-game price or a boost is deliberately NOT the product
-    // of its legs, and the contract allows both. Auto-filling would silently
-    // replace the price the user actually got.
-    expect(builder).toMatch(/USE \{fmtOdds\(suggested\)\}/);
-    expect(builder).toMatch(/value=\{ticketOdds\}/);
+    // of its legs, and the contract allows both. Once the user states their
+    // book's number, the live recompute must stand down.
+    const page = readFileSync(join(__dirname, "../pages/BetTracker.tsx"), "utf8");
+    expect(page).toMatch(/if \(ticketOddsManual\) return;/);
+    expect(builder).toMatch(/onTicketOddsManualChange\(true\)/);
+  });
+
+  it("offers a way back to the calculated price", () => {
+    expect(builder).toMatch(/use calculated \{fmtOdds\(suggested\)\}/);
+    expect(builder).toMatch(/onTicketOddsManualChange\(false\)/);
   });
 
   it("says plainly that the entered price is what settles", () => {
-    expect(builder).toMatch(/entered price is what settles/i);
+    expect(builder).toMatch(/price you enter is what settles|entered price is what settles|that price is what settles/i);
   });
 
   it("blocks submit on a price outside American range", () => {
@@ -75,6 +88,31 @@ describe("the suggested price never overrides the user's book", () => {
     expect(MAX_PARLAY_LEGS).toBe(10);
     expect(builder).toMatch(/legs\.length >= MIN_PARLAY_LEGS/);
     expect(builder).toMatch(/legs\.length >= MAX_PARLAY_LEGS/);
+  });
+});
+
+describe("the stake is on the TICKET, not the legs", () => {
+  it("REGRESSION: the builder owns a single risk input", () => {
+    // A risk box beside each leg invited the reading that legs are separately
+    // staked. A parlay has one stake.
+    expect(builder).toMatch(/id="bt-parlay-risk"/);
+    expect(builder).toMatch(/One stake on the whole ticket/);
+  });
+
+  it("REGRESSION: the leg form hides risk and to-win in parlay mode", () => {
+    const page = readFileSync(join(__dirname, "../pages/BetTracker.tsx"), "utf8");
+    expect(page).toMatch(/entryMode === "PARLAY" \? "grid grid-cols-1 gap-3"/);
+    expect(page).toMatch(/\{entryMode === "SINGLE" && \(/);
+  });
+
+  it("the leg field is labelled as a leg price", () => {
+    const page = readFileSync(join(__dirname, "../pages/BetTracker.tsx"), "utf8");
+    expect(page).toMatch(/entryMode === "PARLAY" \? "Leg odds" : "Odds"/);
+  });
+
+  it("submit requires a stake", () => {
+    expect(builder).toMatch(/riskValid/);
+    expect(builder).toMatch(/canSubmit = enough && oddsValid && riskValid/);
   });
 });
 
