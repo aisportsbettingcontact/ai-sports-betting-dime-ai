@@ -451,6 +451,86 @@ export interface EquityPoint {
   isSpecial?: boolean;
 }
 
+/**
+ * Ceiling on equity points returned to the client.
+ *
+ * The curve is one point per settled bet, so it grows without bound. Measured
+ * on a real MySQL (scripts/bench-bet-stats.mts): at 50,000 bets the stats block
+ * is 4,045 KB of which the curve is 3,992 KB — 99%. Every other figure
+ * (scalars plus all seven breakdowns) totals 53 KB and stays flat, because it
+ * is keyed by month/sport/market rather than by bet.
+ *
+ * 750 points across a chart under ~900 CSS px is already sub-pixel. Anything
+ * beyond it is bytes the client pays for and cannot draw.
+ */
+export const EQUITY_CURVE_MAX_POINTS = 750;
+
+/**
+ * Bound the equity curve for transport while keeping the curve's *shape* and
+ * every point the rest of the stats block refers to.
+ *
+ * Two rules make this safe to render:
+ *
+ *   1. Mandatory points always survive — the first, the last, and every point
+ *      flagged `isSpecial` (the all-time high and the max-drawdown trough).
+ *      Those carry chart markers keyed by betId; dropping one would leave a
+ *      marker pointing at a bet absent from the series.
+ *   2. Within each bucket the *extreme* is kept, not the mean or the first.
+ *      An equity curve is read for its peaks and troughs, so averaging would
+ *      flatten precisely the features a bettor is looking for.
+ *
+ * Scalars are NOT derived from this result. `ath`, `maxDrawdown`,
+ * `longestWinStreak`, `currentRunUnits` and the day records are all computed
+ * over the complete series in `aggregateStats` before any thinning, so the
+ * headline numbers stay exact no matter how aggressively the curve is thinned.
+ */
+export function downsampleEquityCurve(
+  curve: EquityPoint[],
+  maxPoints: number = EQUITY_CURVE_MAX_POINTS,
+): EquityPoint[] {
+  if (maxPoints < 2) throw new Error("downsampleEquityCurve: maxPoints must be >= 2");
+  if (curve.length <= maxPoints) return curve;
+
+  const mandatory = new Set<number>([0, curve.length - 1]);
+  for (let i = 0; i < curve.length; i++) {
+    if (curve[i].isSpecial) mandatory.add(i);
+  }
+
+  // If the anchors alone fill the budget, return exactly those. The curve is
+  // then sparse but every referenced point is still present.
+  const budget = maxPoints - mandatory.size;
+  if (budget <= 0) return Array.from(mandatory).sort((a, b) => a - b).map(i => curve[i]);
+
+  const optional: number[] = [];
+  for (let i = 0; i < curve.length; i++) {
+    if (!mandatory.has(i)) optional.push(i);
+  }
+
+  // One representative per bucket: the point furthest from the running mean of
+  // the bucket, which is the local peak or trough.
+  const chosen = new Set<number>(mandatory);
+  const bucketSize = optional.length / budget;
+  for (let b = 0; b < budget; b++) {
+    const start = Math.floor(b * bucketSize);
+    const end = Math.min(Math.floor((b + 1) * bucketSize), optional.length);
+    if (start >= end) continue;
+
+    let mean = 0;
+    for (let i = start; i < end; i++) mean += curve[optional[i]].cumPL;
+    mean /= end - start;
+
+    let bestIdx = optional[start];
+    let bestDev = -1;
+    for (let i = start; i < end; i++) {
+      const dev = Math.abs(curve[optional[i]].cumPL - mean);
+      if (dev > bestDev) { bestDev = dev; bestIdx = optional[i]; }
+    }
+    chosen.add(bestIdx);
+  }
+
+  return Array.from(chosen).sort((a, b) => a - b).map(i => curve[i]);
+}
+
 export interface BetStats {
   totalBets: number;
   wins: number;
@@ -475,6 +555,8 @@ export interface BetStats {
   byTimeframe: BreakdownEntry[];
   byWagerType: BreakdownEntry[];
   equityCurve: EquityPoint[];
+  /** Points in the complete curve before thinning; equals equityCurve.length when untouched. */
+  equityCurveTotal?: number;
   biggestDayDate: string;
   biggestDayUnits: number;
   longestWinStreak: number;

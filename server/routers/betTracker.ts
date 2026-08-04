@@ -52,6 +52,7 @@ import {
 } from "../betTrackerStatsCache";
 import {
   aggregateStats,
+  downsampleEquityCurve,
   calcToWin,
   decideBetMutation,
   decidePrivilegedAccess,
@@ -1059,6 +1060,13 @@ export const betTrackerRouter = router({
       dateFrom:     z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
       dateTo:       z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
       result:       z.enum(RESULTS).optional(),
+      /**
+       * Restrict the LIST to settled bets (WIN/LOSS) without touching stats.
+       * Backs the "Every pick tracked" drawer, which used to be fed from
+       * stats.equityCurve; that array is now thinned for transport, so reading
+       * a bet ledger out of it would silently under-report.
+       */
+      settledOnly:  z.boolean().optional(),
       targetUserId: z.number().int().positive().optional(),
       unitSize:     z.number().positive().optional(),
       limit:        z.number().int().min(1).max(200).default(50),
@@ -1087,6 +1095,7 @@ export const betTrackerRouter = router({
       // the table to "losses".
       const listConditions = [...baseConditions];
       if (input?.result) listConditions.push(eq(trackedBets.result, input.result));
+      if (input?.settledOnly) listConditions.push(inArray(trackedBets.result, ["WIN", "LOSS"]));
 
       if (cursor) {
         listConditions.push(
@@ -1145,7 +1154,23 @@ export const betTrackerRouter = router({
             .orderBy(asc(trackedBets.gameDate), asc(trackedBets.id)),
         ]);
         pageRows = page;
-        stats = aggregateStats(statRows as StatRow[], unitSize);
+        const full = aggregateStats(statRows as StatRow[], unitSize);
+
+        // Bound the curve BEFORE caching, so a heavy account cannot pin a
+        // multi-megabyte array in the process cache. Every headline figure was
+        // already computed over the complete series inside aggregateStats.
+        const curveTotal = full.equityCurve.length;
+        stats = {
+          ...full,
+          equityCurve: downsampleEquityCurve(full.equityCurve),
+          equityCurveTotal: curveTotal,
+        };
+        if (curveTotal > stats.equityCurve.length) {
+          console.log(
+            `[BetTracker][STATE] listWithStatsPaginated: equity curve thinned ` +
+            `${curveTotal} -> ${stats.equityCurve.length} pts for user=${userId}`,
+          );
+        }
         setStatsCache(statsCacheKey, stats, isHistorical, fingerprint);
       }
 
