@@ -72,6 +72,7 @@ import {
   type StatRow,
   type Timeframe as CoreTimeframe,
 } from "../betTrackerCore";
+import { checkGradingSupport } from "@shared/gradingSupport";
 import {
   MIN_PARLAY_LEGS,
   MAX_PARLAY_LEGS,
@@ -271,6 +272,17 @@ export const betTrackerRouter = router({
     }))
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.appUser.id;
+
+      // Refuse a combination the grader cannot settle, for the same reason the
+      // RL/TOTAL line invariant is enforced here: a bet with no code path does
+      // not fail loudly, it sits PENDING until the 36h stuck alarm. NFL was
+      // accepted by this form and absent from the grader entirely.
+      const support = checkGradingSupport(input.sport, input.timeframe);
+      if (!support.ok) {
+        console.log(`[BetTracker][ERROR] create: userId=${userId} ungradeable ${input.sport}/${input.timeframe} — ${support.message}`);
+        throw new TRPCError({ code: "BAD_REQUEST", message: support.message });
+      }
+
       const toWin  = input.toWin ?? calcToWin(input.odds, input.risk);
       const pick   = derivePickLabel(input.pickSide, input.market, input.awayTeam, input.homeTeam, input.timeframe);
 
@@ -588,6 +600,17 @@ export const betTrackerRouter = router({
     }))
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.appUser.id;
+
+      // Every leg, before anything is written. A ticket is all-or-nothing, so a
+      // single ungradeable leg holds the whole thing open indefinitely.
+      for (let i = 0; i < input.legs.length; i++) {
+        const leg = input.legs[i];
+        const legSupport = checkGradingSupport(leg.sport, leg.timeframe);
+        if (!legSupport.ok) {
+          console.log(`[BetTracker][ERROR] createParlay: userId=${userId} leg ${i + 1} ungradeable ${leg.sport}/${leg.timeframe}`);
+          throw new TRPCError({ code: "BAD_REQUEST", message: `Leg ${i + 1}: ${legSupport.message}` });
+        }
+      }
 
       const validation = validateParlayLegs(
         input.legs.map(l => ({ odds: l.odds, market: l.market, line: l.line ?? null })),

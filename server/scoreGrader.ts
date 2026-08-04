@@ -32,7 +32,7 @@
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type Sport = "MLB" | "NHL" | "NBA" | "NCAAM";
+export type Sport = "MLB" | "NHL" | "NBA" | "NCAAM" | "NFL";
 
 export type Timeframe =
   | "FULL_GAME"
@@ -490,6 +490,96 @@ async function fetchNbaScores(date: string): Promise<GameScoreData[]> {
 
 // ─── NCAAM Score Fetcher ──────────────────────────────────────────────────────
 
+/**
+ * NFL scores from the ESPN scoreboard — same envelope as NBA/NCAAM.
+ *
+ * `linescores` is [Q1, Q2, Q3, Q4, OT...]. That trailing OT entry is why
+ * REGULATION exists here and not just for NHL: a game tied after four quarters
+ * is decided in overtime, so the regulation result and the final result are
+ * genuinely different bets.
+ *
+ * Real example (2025-11-09, ATL@IND): final 25-31, quarters 7/7/3/8 and
+ * 13/0/0/12 with 0 and 6 in OT. Regulation was 25-25 — a PUSH on the moneyline
+ * where the full game was an IND win.
+ */
+async function fetchNflScores(date: string): Promise<GameScoreData[]> {
+  const dateStr = date.replace(/-/g, ""); // YYYYMMDD
+  const url = `https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?dates=${dateStr}`;
+  console.log(`[ScoreGrader][STEP] NFL fetch: GET ${url}`);
+
+  const res = await fetch(url);
+  if (!res.ok) {
+    console.log(`[ScoreGrader][ERROR] NFL fetch failed: status=${res.status}`);
+    return [];
+  }
+  const json = await res.json() as {
+    events?: Array<{
+      id: string;
+      competitions: Array<{
+        status: { type: { description: string; completed: boolean } };
+        competitors: Array<{
+          homeAway: string;
+          team: { abbreviation: string };
+          score: string;
+          linescores?: Array<{ value: number }>;
+        }>;
+      }>;
+    }>
+  };
+
+  const events = json.events ?? [];
+  console.log(`[ScoreGrader][STATE] NFL: ${events.length} games found for date=${date}`);
+
+  return events.map(e => {
+    const comp = e.competitions[0];
+    const status = comp.status.type.description;
+    const isFinalFull = comp.status.type.completed;
+
+    const homeComp = comp.competitors.find(c => c.homeAway === "home")!;
+    const awayComp = comp.competitors.find(c => c.homeAway === "away")!;
+
+    const awayFull = parseFloat(awayComp.score ?? "0") || 0;
+    const homeFull = parseFloat(homeComp.score ?? "0") || 0;
+
+    const awayQs = (awayComp.linescores ?? []).map(l => l.value);
+    const homeQs = (homeComp.linescores ?? []).map(l => l.value);
+
+    const sum = (qs: number[], from: number, to: number): number =>
+      qs.slice(from, to).reduce((a, b) => a + (b ?? 0), 0);
+
+    const awayQ1 = awayQs[0] ?? 0;
+    const homeQ1 = homeQs[0] ?? 0;
+    const isFinalQ1 = isFinalFull || awayQs.length > 1;
+
+    const awayH1 = sum(awayQs, 0, 2);
+    const homeH1 = sum(homeQs, 0, 2);
+    const isFinalH1 = isFinalFull || awayQs.length > 2;
+
+    // Regulation is the first FOUR quarters only. Anything beyond index 3 is
+    // overtime and must not count, which is the entire point of the timeframe.
+    const awayReg = sum(awayQs, 0, 4);
+    const homeReg = sum(homeQs, 0, 4);
+    const isFinalReg = isFinalFull || awayQs.length > 4;
+
+    console.log(`[ScoreGrader][STATE] NFL game=${e.id} ${awayComp.team.abbreviation}@${homeComp.team.abbreviation} state=${status} full=${awayFull}-${homeFull} reg=${awayReg}-${homeReg} h1=${awayH1}-${homeH1} q1=${awayQ1}-${homeQ1}`);
+
+    return {
+      sport: "NFL" as Sport,
+      gameId: e.id,
+      startTime: "",
+      awayAbbrev: awayComp.team.abbreviation,
+      homeAbbrev: homeComp.team.abbreviation,
+      gameState: status,
+      scores: {
+        FULL_GAME:     { awayScore: awayFull, homeScore: homeFull, isFinal: isFinalFull, label: "Full Game" },
+        REGULATION:    { awayScore: awayReg,  homeScore: homeReg,  isFinal: isFinalReg,  label: "Regulation" },
+        FIRST_HALF:    { awayScore: awayH1,   homeScore: homeH1,   isFinal: isFinalH1,   label: "1st Half" },
+        FIRST_QUARTER: { awayScore: awayQ1,   homeScore: homeQ1,   isFinal: isFinalQ1,   label: "1st Quarter" },
+      },
+    };
+  });
+}
+
 async function fetchNcaamScores(date: string): Promise<GameScoreData[]> {
   const dateStr = date.replace(/-/g, "");
   const url = `https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/scoreboard?dates=${dateStr}&limit=200`;
@@ -570,6 +660,7 @@ export async function fetchScores(sport: Sport, date: string): Promise<GameScore
     case "NHL":   data = await fetchNhlScores(date);   break;
     case "NBA":   data = await fetchNbaScores(date);   break;
     case "NCAAM": data = await fetchNcaamScores(date); break;
+    case "NFL":   data = await fetchNflScores(date);   break;
     default:
       console.log(`[ScoreGrader][ERROR] Unknown sport: ${sport}`);
   }
