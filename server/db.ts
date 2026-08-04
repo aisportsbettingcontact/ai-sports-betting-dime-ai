@@ -1,5 +1,11 @@
 import { and, desc, eq, gte, inArray, isNotNull, isNull, lte, ne, or, sql } from "drizzle-orm";
 import {
+  APP_USER_DEPENDENT_TABLES,
+  AppUserHasDataError,
+  describeDeletionBlock,
+  type DependentCounts,
+} from "./appUserDeletion";
+import {
   METRIC_DEFINITION_VERSION,
   REPORTING_TIMEZONE,
   ACTIVE_USER_DEFINITION_V1,
@@ -744,7 +750,55 @@ export async function updateAppUser(id: number, data: Partial<InsertAppUser>) {
   invalidateCachedAppUser(id);
 }
 
+/**
+ * Count every row across the schema that points at this app_users.id.
+ * See APP_USER_DEPENDENT_TABLES for why the list is explicit rather than
+ * derived from foreign keys: there are no foreign keys on app_users.
+ */
+export async function countAppUserDependents(id: number): Promise<DependentCounts> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const counts: DependentCounts = {};
+  await withCircuitBreaker(async () => {
+    for (const { table, column, label } of APP_USER_DEPENDENT_TABLES) {
+      try {
+        const rows = await db.execute(
+          sql.raw(`SELECT COUNT(*) AS n FROM \`${table}\` WHERE \`${column}\` = ${Number(id)}`)
+        );
+        const first = (rows as unknown as Array<Array<{ n: number }>>)[0]?.[0]
+          ?? (rows as unknown as Array<{ n: number }>)[0];
+        const n = Number((first as { n: number } | undefined)?.n ?? 0);
+        if (n > 0) counts[label] = (counts[label] ?? 0) + n;
+      } catch (err) {
+        // A table that does not exist in this environment is not a dependency.
+        // Anything else is: fail closed rather than under-report and orphan.
+        const msg = (err as Error)?.message ?? String(err);
+        if (!/doesn't exist|Unknown table|no such table/i.test(msg)) throw err;
+      }
+    }
+  });
+  return counts;
+}
+
+/**
+ * Hard-delete an app_users row.
+ *
+ * REFUSES when anything references the account. `app_users` has no foreign keys
+ * and no soft-delete column, so an unguarded delete strands the user's rows —
+ * they keep counting toward global totals while becoming unattributable. That
+ * is not hypothetical: it is how account 60002 left 278 verified bets, a login
+ * session and an owner-reviewed edit request behind.
+ *
+ * To retire an account that owns data, disable it (hasAccess = false) instead.
+ */
 export async function deleteAppUser(id: number) {
+  const counts = await countAppUserDependents(id);
+  const block = describeDeletionBlock(id, counts);
+  if (block) {
+    console.log(`[AppAdmin] deleteAppUser: REFUSED userId=${id} — ${JSON.stringify(counts)}`);
+    throw new AppUserHasDataError(id, counts, block);
+  }
+
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   await withCircuitBreaker(async () => {

@@ -1,4 +1,5 @@
 import { TRPCError } from "@trpc/server";
+import { AppUserHasDataError } from "../appUserDeletion";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { parse as parseCookieHeader } from "cookie";
@@ -1163,6 +1164,12 @@ export const appUsersRouter = router({
       try {
         await deleteAppUser(input.id);
       } catch (err) {
+        // Refusal, not a fault: the account owns rows that nothing would clean
+        // up. See appUserDeletion.ts — this is the guard that stops another
+        // 60002 (278 verified bets stranded by a hard delete).
+        if (err instanceof AppUserHasDataError) {
+          throw new TRPCError({ code: "CONFLICT", message: err.message });
+        }
         const msg = (err as Error)?.message ?? String(err);
         console.error(`[AppAdmin] deleteUser: DB error for userId=${input.id}: ${msg}`);
         if (msg.includes('Circuit is OPEN') || msg.includes('Database not available') || msg.includes('timed out')) {
