@@ -44,6 +44,7 @@ import { trackedBetLegs,
 import { eq, and, desc, inArray, asc, gte, lte, lt, or, sql } from "drizzle-orm";
 import { fetchAnSlate, resolveLogoUrl } from "../actionNetwork";
 import { gradePendingForUser, gradeAllPendingForDate } from "../betAutoGradeScheduler";
+import { gradeParlaysForUser } from "../parlayGrader";
 import {
   buildStatsCacheKey,
   buildStatsFingerprint,
@@ -745,6 +746,35 @@ export const betTrackerRouter = router({
         await db.delete(trackedBets).where(eq(trackedBets.id, betId));
         console.log(`[BetTracker][ERROR] createParlay: leg insert failed for ticket ${betId} — rolled back: ${(err as Error).message}`);
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Could not save the parlay legs. Nothing was saved." });
+      }
+
+      // ── Auto-grade-on-create ──────────────────────────────────────────────────
+      // Parity with `create`, which settles a backdated bet immediately rather
+      // than leaving it for the next sweep. Without this a ticket logged for
+      // games already played sat PENDING until the sweep reached it — the
+      // straight-bet path resolved instantly while the parlay path did not,
+      // for no reason a user could see.
+      //
+      // Keyed on the EARLIEST leg, not the ticket's gameDate: the ticket is
+      // dated by its LAST leg (so the stuck alarm does not fire early), so a
+      // ticket with one played game and one tomorrow would otherwise look
+      // entirely in the future and skip grading its settleable leg.
+      const earliestLeg = input.legs.reduce(
+        (min, l) => (l.gameDate < min ? l.gameDate : min),
+        input.legs[0].gameDate,
+      );
+      const todayPtParlay = new Date().toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });
+      if (earliestLeg < todayPtParlay) {
+        try {
+          const summary = await gradeParlaysForUser(userId, "createParlay");
+          console.log(
+            `[BetTracker][STATE] createParlay: autoGradeOnCreate — legsSettled=${summary.legsSettled} ` +
+            `ticketsSettled=${summary.ticketsSettled} earliestLeg=${earliestLeg}`,
+          );
+        } catch (gradeErr) {
+          // Never fail the create because grading failed; the sweep retries.
+          console.error(`[BetTracker][ERROR] createParlay: autoGradeOnCreate FAILED for ticket ${betId} — ${String(gradeErr)}`);
+        }
       }
 
       invalidateStatsCacheForUser(userId);

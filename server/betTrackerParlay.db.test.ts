@@ -49,7 +49,7 @@ const SKIP_DB_SUITE = process.env.DB_TESTS !== "1";
 import { getDb } from "./db";
 import { trackedBets, trackedBetLegs } from "../drizzle/schema";
 import { emptyParlaySummary, settleTickets } from "./parlayGrader";
-import { MAX_PARLAY_LEGS, combineLegOdds } from "./parlayCore";
+import { MAX_PARLAY_LEGS, combineLegOdds, calcParlayToWin } from "./parlayCore";
 
 // ── Reserved namespace ────────────────────────────────────────────────────────
 /** Reserved for this suite alone (880001-880099); other suites own other ranges. */
@@ -60,6 +60,8 @@ const U = {
   loss:   880004,
   void:   880005,
   ten:    880006,
+  boost:  880007,
+  boost2: 880008,
 } as const;
 const USER_IDS: number[] = Object.values(U);
 
@@ -440,5 +442,73 @@ describe.skipIf(SKIP_DB_SUITE)("betTrackerParlay.db — parlay lifecycle (real d
     expect(ticket.originalOdds).toBe(1900);
     expect(Number(ticket.toWin)).toBe(450);
     console.log(`[VERIFY] [PL-6] PASS — 10-leg ticket settled ${ticket.result} at ${ticket.odds} from originalOdds=${ticket.originalOdds}`);
+  });
+
+
+  // ── [PL-7,8] A boosted payout ───────────────────────────────────────────────
+
+  /**
+   * `createParlay` accepts a `toWin`, so a ticket can carry a payout its odds
+   * do not imply — a boost where the book pays more than the arithmetic.
+   * Settlement recomputed toWin from odds on EVERY write, including a WIN with
+   * no dropped legs where the price never moved, silently replacing the number
+   * the user copied off their own bet slip. No edit, no log line.
+   */
+  it("[PL-7] a WIN with no dropped legs leaves a boosted payout untouched", async () => {
+    const price = combineLegOdds([-110, -110]);            // +264
+    const boosted = "700.00";                               // the book paid more than +264 implies
+    expect(boosted).not.toBe(calcParlayToWin(100, price).toFixed(2));
+
+    const betId = await insertTicket({
+      userId: U.boost,
+      originalOdds: price,
+      risk: "100.00",
+      toWin: boosted,
+      marker: `pl7-${Date.now()}`,
+      legs: [
+        { odds: -110, market: "ML", pickSide: "AWAY", line: null, result: "WIN" },
+        { odds: -110, market: "ML", pickSide: "HOME", line: null, result: "WIN" },
+      ],
+    });
+
+    await fold(betId);
+
+    const ticket = await loadTicket(betId);
+    expect(ticket.result).toBe("WIN");
+    expect(ticket.odds).toBe(price);              // nothing dropped, so nothing repriced
+    expect(ticket.toWin).toBe(boosted);           // and therefore nothing overwritten
+    console.log(`[VERIFY] [PL-7] PASS — payout ${ticket.toWin} survived settlement at unchanged odds ${ticket.odds}`);
+  });
+
+  /**
+   * The opposite failure must not be traded for the first: when a leg IS
+   * dropped the payout has to follow the reduced price, or the ticket displays
+   * one number and pays another.
+   */
+  it("[PL-8] a pushed leg still reprices the payout on a boosted ticket", async () => {
+    const betId = await insertTicket({
+      userId: U.boost2,
+      originalOdds: 596,
+      risk: "100.00",
+      toWin: "700.00",
+      marker: `pl8-${Date.now()}`,
+      legs: [
+        { odds: -110, market: "ML", pickSide: "AWAY", line: null, result: "WIN" },
+        { odds: -110, market: "ML", pickSide: "HOME", line: null, result: "WIN" },
+        { odds: -110, market: "ML", pickSide: "AWAY", line: null, result: "PUSH" },
+      ],
+    });
+
+    await fold(betId);
+
+    const ticket = await loadTicket(betId);
+    expect(ticket.result).toBe("WIN");
+    // +265, not the +264 two -110s multiply to: repricing divides the dropped
+    // leg out of the ENTERED price, carrying the rounding of 595.79 -> 596.
+    expect(ticket.odds).toBe(265);
+    expect(ticket.odds).not.toBe(596);            // the price moved
+    expect(Number(ticket.toWin)).toBeCloseTo(calcParlayToWin(100, ticket.odds), 2);
+    expect(ticket.toWin).not.toBe("700.00");      // so the payout followed it
+    console.log(`[VERIFY] [PL-8] PASS — 596 -> ${ticket.odds}; payout followed to ${ticket.toWin}`);
   });
 });
