@@ -512,7 +512,15 @@ export const betTrackerRouter = router({
         patch.toWin = String(calcToWin(newOdds, newRisk));
         console.log(`[BetTracker][STATE] update: recalculated toWin=${patch.toWin} (odds=${newOdds} risk=${newRisk})`);
       }
-      if (input.odds !== undefined) patch.odds = input.odds;
+      if (input.odds !== undefined) {
+        patch.odds = input.odds;
+        // On a parlay, originalOdds is the basis every reprice divides from.
+        // Moving `odds` alone would leave the grader dividing from the OLD
+        // price, so the next sweep would silently revert the correction and
+        // pay the wrong number. A user editing the ticket price is restating
+        // what the book gave them, so the basis moves with it.
+        if (existing.legCount > 0) patch.originalOdds = input.odds;
+      }
 
       if (Object.keys(patch).length === 0) {
         console.log(`[BetTracker][OUTPUT] update: no-op — no fields changed for betId=${input.id}`);
@@ -629,9 +637,32 @@ export const betTrackerRouter = router({
           sql`${trackedBets.createdAt} >= UTC_TIMESTAMP() - INTERVAL 30 SECOND`,
         ))
         .limit(1);
+
+      // Shape alone is not identity. Two genuinely different tickets can share
+      // (legCount, odds, risk) — the same stake on the same price across a
+      // different set of games is an ordinary thing to do, and a shape-only
+      // guard would silently discard the second one and hand back the first.
+      // Compare the actual selections before calling it a duplicate.
       if (dupe) {
-        console.log(`[BetTracker][OUTPUT] createParlay: duplicate within 30s — returning existing ticket ${dupe.id}`);
-        return { id: dupe.id, duplicate: true as const };
+        const existingLegs = await db
+          .select({
+            anGameId: trackedBetLegs.anGameId,
+            market:   trackedBetLegs.market,
+            pickSide: trackedBetLegs.pickSide,
+            odds:     trackedBetLegs.odds,
+          })
+          .from(trackedBetLegs)
+          .where(eq(trackedBetLegs.betId, dupe.id))
+          .orderBy(asc(trackedBetLegs.legIndex));
+
+        const fingerprint = (ls: Array<{ anGameId: number | null; market: string | null; pickSide: string | null; odds: number }>) =>
+          ls.map(l => `${l.anGameId}:${l.market}:${l.pickSide}:${l.odds}`).sort().join("|");
+
+        if (fingerprint(existingLegs) === fingerprint(input.legs)) {
+          console.log(`[BetTracker][OUTPUT] createParlay: duplicate within 30s — returning existing ticket ${dupe.id}`);
+          return { id: dupe.id, duplicate: true as const };
+        }
+        console.log(`[BetTracker][STATE] createParlay: same shape as ticket ${dupe.id} but different legs — creating a new ticket`);
       }
 
       const [inserted] = await db.insert(trackedBets).values({
@@ -657,25 +688,41 @@ export const betTrackerRouter = router({
 
       const betId = inserted.id;
 
-      await db.insert(trackedBetLegs).values(
-        input.legs.map((l, i) => ({
-          betId,
-          legIndex:   i,
-          sport:      l.sport,
-          gameDate:   l.gameDate,
-          awayTeam:   l.awayTeam,
-          homeTeam:   l.homeTeam,
-          anGameId:   l.anGameId,
-          gameNumber: l.gameNumber,
-          market:     l.market,
-          pickSide:   l.pickSide,
-          timeframe:  l.timeframe,
-          line:       l.line != null ? String(l.line) : null,
-          odds:       l.odds,
-          pick:       derivePickLabel(l.pickSide, l.market, l.awayTeam, l.homeTeam, l.timeframe),
-          result:     "PENDING" as const,
-        })),
-      );
+      // If the legs fail to insert, the ticket must not survive. A parent with
+      // legCount=N and zero leg rows can never settle: the grader finds no legs,
+      // logs an error, and leaves it PENDING forever — a bet the user can see,
+      // that counts as open risk, and that nothing can ever resolve.
+      //
+      // MySQL DDL-free inserts here are two statements rather than one
+      // transaction because the surrounding code path is not transactional and
+      // drizzle's mysql2 driver would need a dedicated connection; compensating
+      // is equivalent for this shape and does not change the connection model.
+      try {
+        await db.insert(trackedBetLegs).values(
+          input.legs.map((l, i) => ({
+            betId,
+            legIndex:   i,
+            sport:      l.sport,
+            gameDate:   l.gameDate,
+            awayTeam:   l.awayTeam,
+            homeTeam:   l.homeTeam,
+            anGameId:   l.anGameId,
+            gameNumber: l.gameNumber,
+            market:     l.market,
+            pickSide:   l.pickSide,
+            timeframe:  l.timeframe,
+            line:       l.line != null ? String(l.line) : null,
+            odds:       l.odds,
+            pick:       derivePickLabel(l.pickSide, l.market, l.awayTeam, l.homeTeam, l.timeframe),
+            result:     "PENDING" as const,
+          })),
+        );
+      } catch (err) {
+        await db.delete(trackedBetLegs).where(eq(trackedBetLegs.betId, betId));
+        await db.delete(trackedBets).where(eq(trackedBets.id, betId));
+        console.log(`[BetTracker][ERROR] createParlay: leg insert failed for ticket ${betId} — rolled back: ${(err as Error).message}`);
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Could not save the parlay legs. Nothing was saved." });
+      }
 
       invalidateStatsCacheForUser(userId);
       console.log(`[BetTracker][OUTPUT] createParlay: SUCCESS — ticket ${betId} with ${input.legs.length} legs for userId=${userId}`);
@@ -832,8 +879,14 @@ export const betTrackerRouter = router({
 
       if (input.action === "APPROVE") {
         if (req.requestType === "DELETE") {
+          // Cascade legs here as well. The `delete` mutation cascades, but this
+          // is a SECOND path to the same outcome and it did not — a ticket
+          // removed through the handicapper request queue left its legs behind,
+          // still PENDING, so the sweep kept grading them and re-folding a
+          // ticket that no longer existed.
+          await db.delete(trackedBetLegs).where(eq(trackedBetLegs.betId, req.betId));
           await db.delete(trackedBets).where(eq(trackedBets.id, req.betId));
-          console.log(`[BetTracker][STATE] reviewEditRequest: APPROVED DELETE — betId=${req.betId} deleted`);
+          console.log(`[BetTracker][STATE] reviewEditRequest: APPROVED DELETE — betId=${req.betId} deleted (legs cascaded)`);
         } else if (req.requestType === "EDIT" && req.proposedChanges) {
           // Apply proposed changes
           let changes: Record<string, unknown> = {};
