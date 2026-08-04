@@ -1106,14 +1106,20 @@ export const betTrackerRouter = router({
       const [fp] = await db
         .select({
           rowCount: sql<number>`COUNT(*)`,
-          maxUpdated: sql<string | null>`MAX(${trackedBets.updatedAt})`,
+          // UNIX_TIMESTAMP, not the raw column: mysql2 returns a DATETIME as a JS Date,
+          // and String(Date) renders the process's locale and offset
+          // ("Tue Aug 04 2026 06:11:02 GMT-0700 (Pacific Daylight Time)"). Two
+          // replicas in different zones would then compute different fingerprints
+          // for identical rows — every read a miss, defeating the cache in exactly
+          // the multi-replica case it was built for. An epoch integer has no zone.
+          maxUpdated: sql<number | null>`UNIX_TIMESTAMP(MAX(${trackedBets.updatedAt}))`,
           idChecksum: sql<number | null>`SUM(${trackedBets.id})`,
         })
         .from(trackedBets)
         .where(and(...baseConditions));
       const fingerprint = buildStatsFingerprint({
         rowCount: Number(fp?.rowCount ?? 0),
-        maxUpdated: fp?.maxUpdated ? String(fp.maxUpdated) : null,
+        maxUpdated: fp?.maxUpdated != null ? String(Number(fp.maxUpdated)) : null,
         idChecksum: fp?.idChecksum != null ? Number(fp.idChecksum) : null,
       });
 

@@ -15,7 +15,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
 const ROOT = join(__dirname, "..");
@@ -242,6 +242,62 @@ describe("stats cache is replica-safe", () => {
     const idx = cache.indexOf("entry.fingerprint !== fingerprint");
     expect(idx).toBeGreaterThan(-1);
     expect(cache.slice(idx, idx + 160)).toMatch(/statsCache\.delete\(key\)/);
+  });
+});
+
+describe("soft delete is real, not decorative", () => {
+  const db = read("server/db.ts");
+
+  it("EVERY account-resolution path excludes retired accounts", () => {
+    // A deletedAt column that auth ignores is decoration. All four lookups must
+    // filter it, or a "deleted" account still logs in.
+    const guarded = (db.match(/isNull\(appUsers\.deletedAt\)/g) ?? []).length;
+    expect(guarded, "expected id, fresh-id, email and username lookups all guarded")
+      .toBeGreaterThanOrEqual(4);
+  });
+
+  it("retiring is the default; hard delete is opt-in", () => {
+    const router = read("server/routers/appUsers.ts");
+    expect(router).toMatch(/hard: z\.boolean\(\)/);
+    expect(router).toMatch(/await softDeleteAppUser\(input\.id\)/);
+  });
+
+  it("hard delete still refuses to strand data", () => {
+    // Soft delete does not remove the guard — it removes the reason the guard
+    // felt obstructive, because "retire instead" now preserves the history.
+    expect(db).toMatch(/AppUserHasDataError/);
+    expect(db).toMatch(/describeDeletionBlock/);
+  });
+
+  it("a retired account can be restored", () => {
+    expect(db).toMatch(/export async function restoreAppUser/);
+  });
+
+  it("ships as a migration, not just a schema edit", () => {
+    const sql = readdirSync(join(ROOT, "drizzle")).filter(f => f.endsWith(".sql"));
+    const carries = sql.some(f =>
+      readFileSync(join(ROOT, "drizzle", f), "utf8").includes("ADD `deletedAt`"));
+    expect(carries, "no migration adds app_users.deletedAt").toBe(true);
+  });
+});
+
+describe("stats fingerprint is timezone-independent", () => {
+  it("REGRESSION: uses an epoch integer, not a driver Date", () => {
+    // mysql2 returns DATETIME as a JS Date; String(Date) renders the process
+    // locale and offset ("… GMT-0700 (Pacific Daylight Time)"). Two replicas in
+    // different zones would compute different fingerprints for identical rows —
+    // every read a miss, defeating the cache in the exact multi-replica case it
+    // exists for. Found validating #330 against production.
+    expect(router).toMatch(/UNIX_TIMESTAMP\(MAX\(/);
+    expect(router).not.toMatch(/maxUpdated: sql<string \| null>`MAX\(/);
+  });
+
+  it("has a covering index so it is actually cheap", () => {
+    // #330 claimed "a narrow indexed aggregate"; EXPLAIN showed
+    // IndexRangeScan + TableRowIDScan — it read the same rows as the scan it
+    // avoids. userId+updatedAt+id makes it index-only.
+    expect(read("drizzle/schema.ts"))
+      .toMatch(/idx_tb_user_fingerprint"\)\.on\(t\.userId, t\.updatedAt, t\.id\)/);
   });
 });
 

@@ -60,6 +60,22 @@ export const appUsers = mysqlTable("app_users", {
   hasAccess: boolean("hasAccess").default(false).notNull(),
   /** NULL means lifetime access; otherwise a UTC timestamp in ms */
   expiryDate: bigint("expiryDate", { mode: "number" }),
+  /**
+   * Soft delete. NULL = live account; a timestamp = retired.
+   *
+   * `app_users` has no foreign keys pointing at it (all 56 FKs in this schema
+   * are in the World Cup tables) and `deleteAppUser` was a bare DELETE, so
+   * removing an account stranded everything it owned. That is not theoretical:
+   * account 60002 left 278 verified bets, a login session and an owner-reviewed
+   * edit request behind, invisible in the picker for months while still
+   * counting toward global totals.
+   *
+   * Retiring an account is now a flag, so history stays attributed and the
+   * operation is reversible. EVERY account-resolution path must exclude
+   * soft-deleted rows or this column is decorative — see getAppUserById,
+   * lookupAppUserByIdFresh, getAppUserByEmail, getAppUserByUsername.
+   */
+  deletedAt: bigint("deletedAt", { mode: "number" }),
   /** Whether the user has accepted the Age & Responsibility notice */
   termsAccepted: boolean("termsAccepted").default(false).notNull(),
   /** UTC timestamp (ms) when the user accepted the terms; NULL if not yet accepted */
@@ -2731,6 +2747,17 @@ export const trackedBets = mysqlTable("tracked_bets", {
    * a full scan of that user's history on every insert.
    */
   idxUserGame: index("idx_tb_user_game").on(t.userId, t.anGameId, t.gameNumber),
+  /**
+   * Covering index for the stats-cache fingerprint
+   * (COUNT(*), MAX(updatedAt), SUM(id) WHERE userId = ?).
+   *
+   * Validating #330 against production showed the fingerprint resolving through
+   * idx_tb_user_id(userId) and then doing a TableRowIDScan — it read the same
+   * rows as the scan it exists to avoid. Leading with userId and carrying
+   * updatedAt and id makes it an index-only scan, which is what the cache
+   * design assumed.
+   */
+  idxUserFingerprint: index("idx_tb_user_fingerprint").on(t.userId, t.updatedAt, t.id),
 }));
 
 export type TrackedBet = typeof trackedBets.$inferSelect;
