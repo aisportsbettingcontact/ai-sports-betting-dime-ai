@@ -146,18 +146,31 @@ describe("grading concurrency", () => {
   });
 });
 
-describe("this PR carries no schema change", () => {
-  // The two hot-path indexes (idx_tb_result_date, idx_tb_user_game) were pulled
-  // out deliberately. The migration pipeline cannot currently deliver them:
-  // `drizzle-kit generate` silently no-ops on a malformed meta file, and the
-  // reconciler has six pending migrations whose unguarded
-  // `ALTER TABLE app_users ADD ...` statements target columns that already exist
-  // in production. See the follow-up issue. Nothing here depends on those
-  // indexes for correctness — they are pure query optimisation.
-  it("leaves tracked_bets indexes untouched", () => {
-    const schema = read("drizzle/schema.ts");
-    expect(schema).not.toMatch(/idx_tb_result_date/);
-    expect(schema).not.toMatch(/idx_tb_user_game/);
+describe("indexes for the hot paths", () => {
+  const schema = read("drizzle/schema.ts");
+
+  it("covers the grader's all-users pending-by-date query", () => {
+    // WHERE result='PENDING' AND gameDate=? runs on every polling cycle and
+    // every cron firing. Every other composite leads with userId, which this
+    // query does not filter on, so TiDB read every PENDING row each cycle.
+    expect(schema).toMatch(/idx_tb_result_date"\)\.on\(t\.result, t\.gameDate\)/);
+  });
+
+  it("covers the create-path idempotency guard", () => {
+    // The guard matches (userId, anGameId, gameNumber, market, pickSide, odds);
+    // leading with userId+anGameId collapses a whole-history scan to one game.
+    expect(schema).toMatch(/idx_tb_user_game"\)\.on\(t\.userId, t\.anGameId, t\.gameNumber\)/);
+  });
+
+  it("ships as a migration, not just a schema edit", () => {
+    // A schema.ts change with no migration is invisible to the database. This
+    // is the pairing db-push exists to enforce, and could not be relied on
+    // until the generate pipeline was repaired.
+    const { readdirSync } = require("node:fs") as typeof import("node:fs");
+    const sql = readdirSync(join(ROOT, "drizzle")).filter(f => f.endsWith(".sql"));
+    const carries = sql.some(f =>
+      readFileSync(join(ROOT, "drizzle", f), "utf8").includes("idx_tb_result_date"));
+    expect(carries, "no migration file creates idx_tb_result_date").toBe(true);
   });
 });
 

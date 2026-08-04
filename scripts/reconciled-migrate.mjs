@@ -66,7 +66,7 @@ const journal = JSON.parse(
   readFileSync("./drizzle/meta/_journal.json", "utf8")
 );
 const legacyJournal = JSON.parse(
-  readFileSync("./drizzle/meta/production_legacy_journal.json", "utf8")
+  readFileSync("./drizzle/profiles/production_legacy_journal.json", "utf8")
 );
 const snapshot0108 = JSON.parse(
   readFileSync("./drizzle/meta/0108_snapshot.json", "utf8")

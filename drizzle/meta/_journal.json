@@ -904,6 +904,13 @@
       "when": 1785415672348,
       "tag": "0128_subscription_events",
       "breakpoints": true
+    },
+    {
+      "idx": 129,
+      "version": "5",
+      "when": 1785825233944,
+      "tag": "0129_bitter_karma",
+      "breakpoints": true
     }
   ]
 }

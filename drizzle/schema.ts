@@ -2716,6 +2716,21 @@ export const trackedBets = mysqlTable("tracked_bets", {
   idxUserResult:    index("idx_tb_user_result").on(t.userId, t.result),
   /** Composite for userId + result + gameDate — optimal for pending-bet auto-grade queries */
   idxUserResultDate: index("idx_tb_user_result_date").on(t.userId, t.result, t.gameDate),
+  /**
+   * The grading engine's hottest query — `WHERE result='PENDING' AND gameDate=?`
+   * across ALL users, run by every polling cycle and every cron firing. Every
+   * other composite leads with userId, which this query does not filter on, so
+   * TiDB fell back to idx_tb_result(result) and filtered the date in a
+   * Selection: it read every PENDING row in the table, every cycle.
+   */
+  idxResultDate: index("idx_tb_result_date").on(t.result, t.gameDate),
+  /**
+   * The create-path idempotency guard, which matches on
+   * (userId, anGameId, gameNumber, market, pickSide, odds) inside a 30s window.
+   * It resolved through idx_tb_user_id(userId) alone and filtered the rest —
+   * a full scan of that user's history on every insert.
+   */
+  idxUserGame: index("idx_tb_user_game").on(t.userId, t.anGameId, t.gameNumber),
 }));
 
 export type TrackedBet = typeof trackedBets.$inferSelect;
