@@ -11,7 +11,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { classifyGameState, isFinalState, gradeBet, type TimeframeScore } from "./scoreGrader";
+import { classifyGameState, isFinalState, gradeBet, findGame, type TimeframeScore, type GameScoreData } from "./scoreGrader";
 
 const score = (away: number, home: number): TimeframeScore => ({
   awayScore: away,
@@ -167,5 +167,50 @@ describe("gradeBet — TOTAL", () => {
   it("grades a zero total (NRFI)", () => {
     expect(gradeBet(score(0, 0), "TOTAL", "UNDER", 0.5, "MLB")).toBe("WIN");
     expect(gradeBet(score(0, 1), "TOTAL", "UNDER", 0.5, "MLB")).toBe("LOSS");
+  });
+});
+
+// ─── Game matching — the fallback must never guess ────────────────────────────
+
+const game = (away: string, home: string, id: string): GameScoreData => ({
+  sport: "MLB", gameId: id, startTime: "", awayAbbrev: away, homeAbbrev: home,
+  gameState: "Final", scores: {},
+});
+
+describe("findGame — ambiguity must not resolve to a guess", () => {
+  it("matches exactly when the abbreviations agree", () => {
+    const games = [game("SF", "TEX", "1"), game("TOR", "HOU", "2")];
+    expect(findGame(games, "SF", "TEX")?.gameId).toBe("1");
+  });
+
+  it("resolves the AZ/ARI alias in both directions", () => {
+    expect(findGame([game("SD", "AZ", "1")], "SD", "ARI")?.gameId).toBe("1");
+    expect(findGame([game("SD", "ARI", "1")], "SD", "AZ")?.gameId).toBe("1");
+  });
+
+  it("accepts a UNIQUE prefix match for vocabulary drift", () => {
+    // Feed renamed the home side; only one candidate shares the prefix.
+    expect(findGame([game("SF", "TEXAS", "9")], "SF", "TEX")?.gameId).toBe("9");
+  });
+
+  it("REGRESSION: refuses when a 2-char prefix is ambiguous", () => {
+    // NYM@LAA vs NYY@LAD both match on NY.. / LA.. . The old fallback returned
+    // the first hit, so a bet could be graded against the WRONG GAME and look
+    // entirely legitimate afterwards. Same-city pairs play on the same date
+    // constantly, so this was reachable.
+    const slate = [game("NYY", "LAD", "1"), game("NYM", "LAA", "2")];
+    // Force the prefix path with an abbreviation the feed does not carry.
+    expect(findGame(slate, "NY", "LA")).toBeNull();
+  });
+
+  it("REGRESSION: refuses across the other real collision groups", () => {
+    for (const [a, b] of [["ATH", "ATL"], ["MIA", "MIL"], ["NYM", "NYY"], ["LAA", "LAD"]]) {
+      const slate = [game("SF", a, "1"), game("SF", b, "2")];
+      expect(findGame(slate, "SF", b.slice(0, 2)), `${a}/${b}`).toBeNull();
+    }
+  });
+
+  it("returns null when nothing matches at all", () => {
+    expect(findGame([game("SF", "TEX", "1")], "BOS", "NYY")).toBeNull();
   });
 });

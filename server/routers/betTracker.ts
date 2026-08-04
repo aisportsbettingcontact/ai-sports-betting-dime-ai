@@ -139,6 +139,39 @@ function resolveScope(ctx: { appUser: { id: number; role: string } }, targetUser
   return res.userId;
 }
 
+/**
+ * Same as resolveScope, but additionally proves the target account exists.
+ *
+ * `resolveViewUserId` answers "may this caller read that id?", not "is that id
+ * real". An owner/admin could therefore query any integer and receive a
+ * confident, well-formed empty tracker — indistinguishable from a real user who
+ * has never placed a bet. That is a silent-wrong-answer shape: it turns a typo
+ * into plausible data, and it read as "this user has no bets" for the whole
+ * period account 60002 existed only as orphaned rows.
+ *
+ * Self-scoped reads skip the lookup entirely — the caller is authenticated, so
+ * their own existence is not in question and this costs nothing on the hot path.
+ */
+async function resolveScopeChecked(
+  ctx: { appUser: { id: number; role: string } },
+  targetUserId?: number,
+): Promise<number> {
+  const userId = resolveScope(ctx, targetUserId);
+  if (userId === ctx.appUser.id) return userId;
+
+  const db = await getDb();
+  const [target] = await db
+    .select({ id: appUsers.id })
+    .from(appUsers)
+    .where(eq(appUsers.id, userId))
+    .limit(1);
+  if (!target) {
+    console.log(`[BetTracker][ERROR] scope: NOT_FOUND — viewer=${ctx.appUser.id} target=${userId} does not exist`);
+    throw new TRPCError({ code: "NOT_FOUND", message: `No account with id ${userId}` });
+  }
+  return userId;
+}
+
 // ─── Router ───────────────────────────────────────────────────────────────────
 
 export const betTrackerRouter = router({
@@ -238,7 +271,25 @@ export const betTrackerRouter = router({
       // ── Idempotency guard: prevent duplicate bets from double-tap / network retry ──
       // If an identical bet (same user, game, market, pickSide, odds) was inserted in
       // the last 30 seconds, return the existing bet ID instead of creating a new row.
-      const thirtySecondsAgo = new Date(Date.now() - 30_000);
+      //
+      // The 30-second bound is computed BY THE DATABASE, not in Node.
+      //
+      // It used to be `new Date(Date.now() - 30_000)`, which mysql2 serialises
+      // using the Node process's local timezone and the server then compares
+      // against a column stored in the DB's timezone. Both are "SYSTEM", so the
+      // guard was only correct while those two happened to agree. Measured on a
+      // PDT workstation against the UTC production DB, that same predicate
+      // matched rows up to SEVEN HOURS old — a 30-second duplicate guard
+      // silently becomes a multi-hour one, swallowing legitimate re-entries
+      // (exactly the correction pattern seen in bets 390003/390004 and
+      // 420001/420002). Nothing in the container pins TZ, so the agreement was
+      // luck rather than design.
+      //
+      // `UTC_TIMESTAMP() - INTERVAL 30 SECOND` is evaluated server-side against
+      // the same clock that wrote `createdAt`, so no timezone conversion happens
+      // anywhere and the window is exactly 30 seconds regardless of where the
+      // Node process runs.
+      const idempotencyWindow = sql`${trackedBets.createdAt} >= UTC_TIMESTAMP() - INTERVAL 30 SECOND`;
       const [existing] = await db
         .select({ id: trackedBets.id })
         .from(trackedBets)
@@ -250,7 +301,7 @@ export const betTrackerRouter = router({
             eq(trackedBets.market,    input.market),
             eq(trackedBets.pickSide,  input.pickSide),
             eq(trackedBets.odds,      input.odds),
-            gte(trackedBets.createdAt, thirtySecondsAgo),
+            idempotencyWindow,
           )
         )
         .limit(1);
@@ -1017,7 +1068,7 @@ export const betTrackerRouter = router({
       isHistorical: z.boolean().optional(),
     }).optional())
     .query(async ({ ctx, input }) => {
-      const userId = resolveScope(ctx, input?.targetUserId);
+      const userId = await resolveScopeChecked(ctx, input?.targetUserId);
       const unitSize     = input?.unitSize ?? 100;
       const limit        = input?.limit    ?? 50;
       const isHistorical = input?.isHistorical ?? false;
@@ -1172,7 +1223,7 @@ export const betTrackerRouter = router({
       unitSize:     z.number().positive().optional(),
     }))
     .query(async ({ ctx, input }) => {
-      const userId = resolveScope(ctx, input.targetUserId);
+      const userId = await resolveScopeChecked(ctx, input.targetUserId);
       const unitSize = input.unitSize ?? 100;
       const dateFrom = `${input.yearMonth}-01`;
       // Last day of month: go to first day of next month then subtract 1 day
