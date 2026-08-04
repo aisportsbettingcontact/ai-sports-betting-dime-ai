@@ -15,6 +15,7 @@ import {
   calcUnitBucket,
   decideBetMutation,
   decidePrivilegedAccess,
+  decideResultOverride,
   decodeCursor,
   derivePickLabel,
   effectiveLine,
@@ -23,6 +24,7 @@ import {
   resolveLineForUpdate,
   resolveViewUserId,
   toUnits,
+  UNIT_BUCKET_ORDER,
   type Market,
   type PickSide,
   type Role,
@@ -84,6 +86,30 @@ describe("resolveViewUserId — every role × every target", () => {
   it("rejects an unknown role rather than defaulting it open", () => {
     const res = resolveViewUserId({ role: "superuser", viewerId: SELF, targetUserId: OTHER });
     expect(res.ok).toBe(false);
+  });
+});
+
+describe("decideResultOverride — hand-written results are owner/admin only", () => {
+  it("permits owner and admin", () => {
+    expect(decideResultOverride("owner").allowed).toBe(true);
+    expect(decideResultOverride("admin").allowed).toBe(true);
+  });
+
+  it("REGRESSION: refuses a regular user and a handicapper", () => {
+    // Production evidence (2026-08-03): five rows carried a W/L/PUSH with NULL
+    // scores, and bet 390003 was hand-marked PUSH 2h11m BEFORE first pitch. The
+    // grading engine always persists scores with a result, so only a manual
+    // override can produce that — and it let a user rewrite their own record.
+    for (const role of ["user", "handicapper", ""]) {
+      const d = decideResultOverride(role);
+      expect(d.allowed, `role=${role}`).toBe(false);
+      if (!d.allowed) expect(d.message).toMatch(/grading engine/i);
+    }
+  });
+
+  it("points the blocked user at the action they actually want", () => {
+    const d = decideResultOverride("user");
+    if (!d.allowed) expect(d.message).toMatch(/edit or delete/i);
   });
 });
 
@@ -221,10 +247,36 @@ describe("calcUnitBucket", () => {
     expect(calcUnitBucket({ odds: 120, risk: 250, toWin: 300, riskUnits: null, toWinUnits: null, unitSize: 50 })).toBe("5U");
   });
 
+  it("REGRESSION: a sub-unit stake gets its own bucket, not a rounded-up 1U", () => {
+    // A $1.10 stake at $100/unit is 0.011 units. Math.round sent that to 0 and
+    // the bucket chain then labelled it "1U" — a 110x overstatement sitting
+    // beside genuine 1U plays in the BY UNIT SIZE breakdown. Four such rows
+    // existed on 2026-08-03, the smallest 0.01U.
+    const b = (u: number) =>
+      calcUnitBucket({ odds: 110, risk: u, toWin: u, riskUnits: u, toWinUnits: u, unitSize: 100 });
+    expect(b(0.01)).toBe("<1U");
+    expect(b(0.05)).toBe("<1U");
+    expect(b(0.4)).toBe("<1U");
+    expect(b(0.49)).toBe("<1U");
+    // 0.5 and up still round into the real buckets, unchanged.
+    expect(b(0.5)).toBe("1U");
+    expect(b(0.9)).toBe("1U");
+  });
+
+  it("the legacy-dollar path also reaches the sub-unit bucket", () => {
+    // The exact production shape: risk=$1.10, unitSize=$100, no stored units.
+    expect(calcUnitBucket({
+      odds: 110, risk: 1.1, toWin: 1, riskUnits: null, toWinUnits: null, unitSize: 100,
+    })).toBe("<1U");
+  });
+
+  it("sub-unit sorts last in the bucket order", () => {
+    expect(UNIT_BUCKET_ORDER[UNIT_BUCKET_ORDER.length - 1]).toBe("<1U");
+  });
+
   it("maps every bucket boundary", () => {
     const bucket = (u: number) =>
       calcUnitBucket({ odds: 110, risk: u, toWin: u, riskUnits: u, toWinUnits: u, unitSize: 100 });
-    expect(bucket(0.4)).toBe("1U");
     expect(bucket(1)).toBe("1U");
     expect(bucket(2)).toBe("2U");
     expect(bucket(3)).toBe("3U");
@@ -509,13 +561,14 @@ describe("aggregateStats", () => {
     expect(s.longestWinStreak).toBe(3);
   });
 
-  it("orders unit-size buckets largest-first, not alphabetically", () => {
+  it("orders unit-size buckets largest-first, with sub-unit last", () => {
     const s = aggregateStats([
       row({ odds: 110, riskUnits: "1", toWinUnits: "1" }),
+      row({ odds: 110, riskUnits: "0.01", toWinUnits: "0.01" }),
       row({ odds: 110, riskUnits: "10", toWinUnits: "10" }),
       row({ odds: 110, riskUnits: "3", toWinUnits: "3" }),
     ], 100);
-    expect(s.bySize.map(e => e.key)).toEqual(["10U", "3U", "1U"]);
+    expect(s.bySize.map(e => e.key)).toEqual(["10U", "3U", "1U", "<1U"]);
   });
 
   it("breaks down across all seven dimensions", () => {

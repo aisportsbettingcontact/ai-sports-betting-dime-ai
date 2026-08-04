@@ -32,7 +32,7 @@ import { requireCronSecret } from "./cronAuth";
 import { CronJobRunner } from "./cronRunner";
 import { runVsinRefresh, refreshAllScoresNow, runMlbCycleOnce } from "../vsinAutoRefresh";
 import { runMlbAllStarGameSync } from "../mlbAllStarGameSync";
-import { runBetGradeCycle, gradeAllPendingAllDates } from "../betAutoGradeScheduler";
+import { runBetGradeCycle, runBetGradeSweep } from "../betAutoGradeScheduler";
 import { reconcileStripeSubscriptions, formatReconcileReport } from "../stripe/reconcile";
 import { billingAlert } from "../_core/billingAlerts";
 
@@ -69,7 +69,7 @@ const betGradeRunner = new CronJobRunner("bet-grade", async () => {
 // yesterday. Picks up anything the incremental cycle missed (late finals,
 // upstream feed outages, bets logged for older dates).
 const betGradeSweepRunner = new CronJobRunner("bet-grade-sweep", async () => {
-  await gradeAllPendingAllDates("cron_bet_grade_sweep");
+  await runBetGradeSweep("cron_bet_grade_sweep");
 });
 
 /** Wire a POST endpoint that auth-guards, triggers the runner, responds 200. */

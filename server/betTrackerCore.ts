@@ -132,6 +132,36 @@ export function decidePrivilegedAccess(role: string, what: string): MutationDeci
   return { allowed: false, code: "FORBIDDEN", message: `Owner or Admin required to ${what}` };
 }
 
+/**
+ * Decide whether an actor may hand-write a bet's `result`.
+ *
+ * Results are supposed to come from the grading engine, which is deterministic
+ * and independently verified (471/471 agreement against the official MLB feed
+ * over the 2026 season, audited 2026-08-03). A self-service result field is a
+ * different thing entirely: it lets someone rewrite their own W/L record with no
+ * score, no reviewer and no history.
+ *
+ * That was not hypothetical. Five rows carry a W/L/PUSH with NULL scores, and
+ * bet 390003 was hand-marked PUSH at 21:53:31Z for a game whose first pitch was
+ * 00:05Z the next day — 2h11m later. The engine cannot produce that; only a
+ * manual override can.
+ *
+ * Owner/admin keep the override because bets the grader genuinely cannot resolve
+ * (game never found, abandoned fixture) still need a human endpoint. Everyone
+ * else corrects a mistake by editing or deleting the bet, which they can now do
+ * directly.
+ */
+export function decideResultOverride(actorRole: string): MutationDecision {
+  if (isPrivilegedRole(actorRole)) return { allowed: true };
+  return {
+    allowed: false,
+    code: "FORBIDDEN",
+    message:
+      "Results are set by the grading engine. Edit or delete the bet instead, " +
+      "or ask an admin if a game cannot be graded.",
+  };
+}
+
 // ─── 2. Stake math ────────────────────────────────────────────────────────────
 
 /** Compute the to-win amount from American odds and a risk amount. */
@@ -161,7 +191,7 @@ export function toUnits(
   return dollarAmt / size;
 }
 
-export const UNIT_BUCKET_ORDER = ["10U", "5U", "4U", "3U", "2U", "1U"] as const;
+export const UNIT_BUCKET_ORDER = ["10U", "5U", "4U", "3U", "2U", "1U", "<1U"] as const;
 
 /**
  * Bucket a bet by the number of units it represents.
@@ -187,6 +217,13 @@ export function calcUnitBucket(args: {
   const unitCount = odds > 0
     ? toUnits(risk, riskUnits, unitSize)
     : toUnits(toWin, toWinUnits, unitSize);
+
+  // Sub-unit stakes get their own bucket instead of being rounded up into "1U".
+  // Rounding hid real mis-entries: a $1.10 stake at $100/unit is 0.011 units,
+  // which Math.round sent to 0 and the old chain then labelled "1U" — a 110x
+  // overstatement sitting in the BY UNIT SIZE breakdown next to genuine 1U
+  // plays. Four such rows existed on 2026-08-03, the smallest 0.01U.
+  if (unitCount < 0.5) return "<1U";
 
   const u = Math.round(unitCount);
   if (u >= 10) return "10U";

@@ -279,7 +279,35 @@ async function gradeAllPendingAllDates(trigger: string): Promise<void> {
 let livePollingInterval:     ReturnType<typeof setInterval> | null = null; // 5-min live window
 let standardPollingInterval: ReturnType<typeof setInterval> | null = null; // 15-min standard window
 let nightlySweepInterval:    ReturnType<typeof setInterval> | null = null; // 1-min nightly check
-let isGrading = false; // Mutex: prevent concurrent grade runs
+/**
+ * THE grading mutex for this process.
+ *
+ * Every path that settles bets in bulk must hold it: the in-process pollers, the
+ * nightly sweep, AND the cron endpoints. The cron path used to bypass it —
+ * `runBetGradeCycle` called `gradeAllPendingForDate` directly while
+ * `CronJobRunner` held only its own independent lock — so a GitHub-triggered
+ * grade and the 5-minute in-process poll could select the same PENDING rows and
+ * grade them concurrently. Idempotent in outcome, but it doubled upstream score
+ * fetches and interleaved writes on the same rows.
+ */
+let isGrading = false;
+
+/** Run `work` under the grading mutex, or skip if a grade is already running. */
+async function withGradingLock<T>(
+  label: string,
+  work: () => Promise<T>,
+): Promise<T | { skipped: true }> {
+  if (isGrading) {
+    console.log(`[BetAutoGrade][STEP] ${label}: SKIP — grade already in progress`);
+    return { skipped: true };
+  }
+  isGrading = true;
+  try {
+    return await work();
+  } finally {
+    isGrading = false;
+  }
+}
 /** The night (PT date) whose sweep has already completed. Guards against re-running. */
 let lastSweptNight: string | null = null;
 
@@ -511,13 +539,31 @@ export { gradeAllPendingForDate, gradeAllPendingAllDates };
  * endpoint calls; it is the same work the 5/15-minute in-process pollers do,
  * without the time-window gating (the cron schedule IS the gate).
  */
-export async function runBetGradeCycle(trigger: string): Promise<{
-  today: GradeSummary;
-  yesterday: GradeSummary;
-}> {
-  const { dateStr } = nowPst();
-  const yesterday = yesterdayPst();
-  const todaySummary = await gradeAllPendingForDate(dateStr, trigger);
-  const yesterdaySummary = await gradeAllPendingForDate(yesterday, `${trigger}_yesterday`);
-  return { today: todaySummary, yesterday: yesterdaySummary };
+export async function runBetGradeCycle(trigger: string): Promise<
+  { today: GradeSummary; yesterday: GradeSummary } | { skipped: true }
+> {
+  // Holds the SAME process mutex as the in-process pollers. Without it a
+  // GitHub-triggered grade could run concurrently with the 5-minute poll.
+  return withGradingLock("runBetGradeCycle", async () => {
+    const { dateStr } = nowPst();
+    const yesterday = yesterdayPst();
+    const todaySummary = await gradeAllPendingForDate(dateStr, trigger);
+    const yesterdaySummary = await gradeAllPendingForDate(yesterday, `${trigger}_yesterday`);
+    return { today: todaySummary, yesterday: yesterdaySummary };
+  });
+}
+
+/**
+ * Cron entry point for the all-dates sweep.
+ *
+ * Wraps `gradeAllPendingAllDates` in the grading mutex. The nightly in-process
+ * sweep must NOT use this — it already holds the lock before it calls
+ * `gradeAllPendingAllDates`, and taking it twice would make it skip itself.
+ */
+export async function runBetGradeSweep(trigger: string): Promise<{ skipped: boolean }> {
+  const out = await withGradingLock("runBetGradeSweep", async () => {
+    await gradeAllPendingAllDates(trigger);
+    return { skipped: false };
+  });
+  return "skipped" in out ? { skipped: true } : out;
 }

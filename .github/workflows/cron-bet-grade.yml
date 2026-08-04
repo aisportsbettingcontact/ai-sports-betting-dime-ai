@@ -15,14 +15,29 @@
 #   RAILWAY_APP_URL (repo variable) — e.g. https://your-app.up.railway.app  (no trailing slash)
 #   CRON_SECRET (repo secret)      — must match the CRON_SECRET env var set in Railway → Variables
 #
-# Note: GitHub cron is UTC and best-effort (runs can be delayed minutes under
-# platform load). 08:15 UTC ≈ 00:15 / 01:15 PT depending on DST, which is after
-# the last West-Coast game of the night has gone final.
+# CADENCE REALITY (measured 2026-08-03): this was */10, and GitHub delivered a
+# ~93-minute median interval — 42 runs in 65 hours instead of the ~390 a
+# 10-minute schedule implies. GitHub deprioritises high-frequency cron on shared
+# runners and silently drops firings; asking for */10 does not buy */10, it just
+# makes the schedule look more reliable than it is. Asking for */30 sets an
+# honest expectation and does not change what actually gets delivered.
+#
+# So size this correctly: settlement responsiveness comes from the IN-PROCESS
+# scheduler (5-minute polling in the live game window, which is what produces the
+# observed ~minutes-after-final settlement). This workflow is a BACKSTOP for the
+# case where DISABLE_BACKGROUND_JOBS turns those pollers off. In that mode
+# settlement granularity degrades to whatever GitHub delivers — plan on 1-3
+# hours, not 10 minutes. If sub-hour settlement is ever required without the
+# in-process scheduler, this needs a real scheduler, not GitHub cron.
+#
+# Note: GitHub cron is UTC and best-effort. 08:15 UTC ≈ 00:15 / 01:15 PT
+# depending on DST, which is after the last West-Coast game of the night has
+# gone final.
 name: Cron — bet grading
 
 on:
   schedule:
-    - cron: "*/10 * * * *" # incremental: today + yesterday
+    - cron: "*/30 * * * *" # incremental: today + yesterday
     - cron: "15 8 * * *" # nightly catch-all sweep, all dates
   workflow_dispatch:
     inputs:
