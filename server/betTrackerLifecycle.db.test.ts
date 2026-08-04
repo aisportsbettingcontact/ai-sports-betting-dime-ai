@@ -500,4 +500,74 @@ describe.skipIf(SKIP_DB_SUITE)("betTracker lifecycle — deletion, isolation and
     expect(settled.bets.some(b => b.id === pagerParlayId)).toBe(false); // PENDING ticket
     expect(all.bets.some(b => b.id === pagerParlayId)).toBe(true);
   });
+
+  // ── Stake denomination under UPDATE (the write boundary, end to end) ────────
+  //
+  // The unit matrix lives in stakeReconciliation.test.ts; these five prove the
+  // wiring against the real database: the gate fires inside the tRPC procedure,
+  // and what MySQL hands back is the reconciled quad at DECIMAL(10,2)/(12,4).
+
+  const D_DEN = "2126-03-09";
+
+  /** A straight bet through the real create path: 1u at a $100 unit, +120. */
+  async function denBet(caller: Awaited<ReturnType<typeof callerFor>>, anGameId: number) {
+    const bet = await caller.betTracker.create({
+      anGameId, sport: "MLB", gameDate: D_DEN,
+      awayTeam: "NYM", homeTeam: "ATL", market: "ML", pickSide: "AWAY",
+      odds: 120, risk: 100, riskUnits: 1,
+    });
+    const id = (bet as { id: number }).id;
+    createdBetIds.add(id);
+    return { bet: bet as Record<string, unknown>, id };
+  }
+
+  it("[DEN-1] a subscriber cannot restate a bet in dollars", async () => {
+    const caller = await callerFor(U_FILTER, "user");
+    const { id } = await denBet(caller, 8802801);
+    await expect(caller.betTracker.update({ id, risk: 5000 }))
+      .rejects.toMatchObject({ code: "BAD_REQUEST" });
+    await expect(caller.betTracker.update({ id, toWin: 9999 }))
+      .rejects.toMatchObject({ code: "BAD_REQUEST" });
+    // …and the row is untouched: the gate fired before anything was written.
+    const db = await getDb();
+    const [row] = await db!.select().from(trackedBets).where(eq(trackedBets.id, id));
+    expect(row).toMatchObject({ risk: "100.00", toWin: "120.00" });
+  });
+
+  it("[DEN-2] a unit restatement moves the dollars at the row's own unit size", async () => {
+    const caller = await callerFor(U_FILTER, "user");
+    const { id } = await denBet(caller, 8802802);
+    const updated = await caller.betTracker.update({ id, riskUnits: 2.5 });
+    expect(updated).toMatchObject({
+      risk: "250.00", riskUnits: "2.5000", toWin: "300.00", toWinUnits: "3.0000",
+    });
+  });
+
+  it("[DEN-3] an odds edit moves BOTH payout figures — no stale toWinUnits", async () => {
+    const caller = await callerFor(U_FILTER, "user");
+    const { id } = await denBet(caller, 8802803);
+    const updated = await caller.betTracker.update({ id, odds: -110 });
+    expect(updated).toMatchObject({ odds: -110, toWin: "90.91", toWinUnits: "0.9091" });
+  });
+
+  it("[DEN-4] straight create derives toWinUnits when the client omits it", async () => {
+    const caller = await callerFor(U_FILTER, "user");
+    const bet = await caller.betTracker.create({
+      anGameId: 8802804, sport: "MLB", gameDate: D_DEN,
+      awayTeam: "NYM", homeTeam: "ATL", market: "ML", pickSide: "AWAY",
+      odds: -110, risk: 100, riskUnits: 2, // no toWinUnits sent
+    });
+    createdBetIds.add((bet as { id: number }).id);
+    // calcToWin(-110, 100) = 90.91; the pair law: 90.91 × 2 / 100 = 1.8182.
+    expect(bet).toMatchObject({ toWin: "90.91", toWinUnits: "1.8182" });
+  });
+
+  it("[DEN-5] an owner dollar restatement keeps the pair coherent", async () => {
+    const caller = await callerFor(U_OWNER, "owner");
+    const { id } = await denBet(caller, 8802805);
+    const updated = await caller.betTracker.update({ id, risk: 250 });
+    expect(updated).toMatchObject({
+      risk: "250.00", riskUnits: "2.5000", toWin: "300.00", toWinUnits: "3.0000",
+    });
+  });
 });
