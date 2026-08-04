@@ -12,9 +12,11 @@
 #                         suite must be declared (with a reason) in
 #                         vitest.environment-failure-allowlist.json, enforced
 #                         by scripts/check-environment-failures.mjs
-#   3b. db-tests        — the five real-database suites against an isolated
+#   3b. db-tests        — the ten real-database suites against an isolated
 #                         MySQL service container (no repository secrets
-#                         required; the container is job-local)
+#                         required; the container is job-local). The list of
+#                         files is hardcoded; server/dbSuiteRegistration.test.ts
+#                         fails if a *.db.test.ts in the tree is missing from it
 #   3c. build           — production client build + preview-activation scan
 #                         (scripts/verify-preview-production.mjs)
 #
@@ -219,10 +221,18 @@ jobs:
           retention-days: 30
 
   # ─── Stage 3b: Real-database suites (isolated MySQL service) ──────────────
-  # These five suites cover login cookies, registration, password reset,
-  # Stripe account setup auto-login, and tokenVersion force-logout. They are
-  # guarded by SKIP_DB_IN_CI, so they skip in the secretless job above and run
-  # here against a job-local MySQL container — no repository secrets involved.
+  # These ten suites cover login cookies, registration, password reset, Stripe
+  # account setup auto-login, tokenVersion force-logout, MLB doubleheader
+  # identity, and the four bet-tracker suites (parlay round-trip and repricing,
+  # parlay recovery, ticket lifecycle/isolation/paging, stats). They are guarded
+  # by SKIP_DB_IN_CI, so they skip in the secretless job above and run here
+  # against a job-local MySQL container — no repository secrets involved.
+  #
+  # The file list in the step below is hardcoded, which is a known trap: a new
+  # *.db.test.ts that nobody adds to it never runs and CI stays green. That is
+  # why server/dbSuiteRegistration.test.ts globs server/*.db.test.ts and fails
+  # when one is missing here. Do not "fix" a failure of that test by deleting
+  # it — add the suite to the list and update the count in the step name.
   db-tests:
     name: DB Tests
     runs-on: ubuntu-latest
@@ -273,7 +283,7 @@ jobs:
       # parallel workers. Proven by this job's second run on PR #84:
       # register [ER-1] got "Session invalidated" (jwt.tv=1 db.tv=2) instead
       # of CONFLICT while the tokenVersion suite logged "affected 17 users".
-      - name: "[STEP] Run the six real-database suites"
+      - name: "[STEP] Run the ten real-database suites"
         run: |
           pnpm exec vitest run --no-file-parallelism \
             server/appUsers.login.test.ts \
@@ -282,6 +292,10 @@ jobs:
             server/passwordReset.test.ts \
             server/tokenVersion.db.test.ts \
             server/mlbDoubleheader.db.test.ts \
+            server/betTrackerParlay.db.test.ts \
+            server/betTrackerParlayRecovery.db.test.ts \
+            server/betTrackerLifecycle.db.test.ts \
+            server/betTrackerStats.db.test.ts \
             --reporter=verbose 2>&1 | tee db-test-report.txt
           exit ${PIPESTATUS[0]}
 
