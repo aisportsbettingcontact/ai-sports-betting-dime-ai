@@ -425,7 +425,11 @@ describe.skipIf(SKIP_DB_SUITE)("betTrackerStats.db — stats computed from real 
     // Scale is preserved on the wire, trailing zeros and all.
     expect(loss.risk).toBe("250.00");
     expect(typeof loss.riskUnits).toBe("string");
-    expect(loss.riskUnits).toBe("1.00");
+    // Unit columns are decimal(12,4) — widened from (8,2) because a stake
+    // small relative to the unit size lost real money to rounding (0.685 units
+    // stored as 0.69, implying $69.00 on a $68.50 payout). mysql2 returns the
+    // full declared scale, so the string carries four places.
+    expect(loss.riskUnits).toBe("1.0000");
     // A nullable DECIMAL comes back as null, not "" or "0.00".
     expect(win.riskUnits).toBeNull();
     expect(win.toWinUnits).toBeNull();

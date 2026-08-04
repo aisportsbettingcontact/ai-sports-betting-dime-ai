@@ -2697,12 +2697,22 @@ export const trackedBets = mysqlTable("tracked_bets", {
    * Risk amount expressed in units (e.g. 3.0 for a 3U play).
    * Stored at creation time so analytics can bucket correctly regardless of the user's unit size setting.
    */
-  riskUnits: decimal("riskUnits", { precision: 8, scale: 2 }),
+  /**
+   * Risk in units. scale 4, not 2.
+   *
+   * At scale 2 a stake small relative to the unit size loses real money to
+   * rounding: the first production parlay risked $25 at a $100 unit and paid
+   * $68.50, whose unit value 0.685 stored as 0.69 — implying $69.00. Five live
+   * bets sit under 0.10 units where that error is proportionally largest.
+   * Dollars are already scale 2; units divide dollars, so they need more.
+   */
+  riskUnits: decimal("riskUnits", { precision: 12, scale: 4 }),
   /**
    * To-win amount expressed in units (e.g. 5.0 for a 5U to-win play).
    * Stored at creation time for accurate bySize analytics.
    */
-  toWinUnits: decimal("toWinUnits", { precision: 8, scale: 2 }),
+  /** To-win in units. scale 4 for the same reason as riskUnits. */
+  toWinUnits: decimal("toWinUnits", { precision: 12, scale: 4 }),
   /** Sportsbook name, e.g. "DK NJ", "FanDuel NJ", "Caesars NJ" */
   book: varchar("book", { length: 64 }),
   /** Optional free-text notes */
