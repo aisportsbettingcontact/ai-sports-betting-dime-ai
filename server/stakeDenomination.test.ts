@@ -128,3 +128,42 @@ describe("the client half", () => {
     expect(page).toMatch(/effectiveStakeMode === "U" \? riskNumRaw \* unitSizeSafe : riskNumRaw/);
   });
 });
+
+describe("every write path resolves the stake quad through the core", () => {
+  it("REGRESSION: update routes stake fields through resolveStakePatch", () => {
+    // The de-sync this closes: update recomputed dollar toWin on an odds/risk
+    // change and left riskUnits/toWinUnits frozen — a unit P&L paying the old
+    // odds forever, and no denomination gate at all.
+    expect(router).toMatch(/resolveStakePatch\(\{/);
+    expect(router).not.toMatch(/patch\.toWin = String\(calcToWin/);
+  });
+
+  it("REGRESSION: update accepts unit restatements", () => {
+    const updateBlock = router.slice(router.indexOf("update: appUserProcedure"), router.indexOf("createParlay:"));
+    expect(updateBlock).toMatch(/riskUnits:\s*z\.number\(\)\.positive\(\)\.optional\(\)/);
+    expect(updateBlock).toMatch(/toWinUnits:\s*z\.number\(\)\.positive\(\)\.optional\(\)/);
+  });
+
+  it("REGRESSION: straight create derives toWinUnits like createParlay does", () => {
+    // Without this a subscriber straight bet stored riskUnits with a NULL
+    // toWinUnits, and stats read it back mixed-basis: risk in stored units,
+    // toWin in dollars ÷ the viewer's CURRENT unit size.
+    const createBlock = router.slice(router.indexOf("create: appUserProcedure"), router.indexOf("update: appUserProcedure"));
+    expect(createBlock).toMatch(/toWinUnits: resolveToWinUnits\(input\.riskUnits, input\.toWinUnits, input\.risk, toWin\)/);
+  });
+
+  it("REGRESSION (migration 0132): the parlay reprice keeps unit scale 4 via the shared law", () => {
+    const grader = code("parlayGrader.ts");
+    expect(grader).toMatch(/deriveToWinUnits\(/);
+    expect(grader).not.toMatch(/toWinUnits[^\n]*\n[^\n]*toFixed\(2\)/);
+  });
+
+  it("REGRESSION: approved edit requests reconcile stake fields, never raw-write them", () => {
+    // proposedChanges is caller-supplied JSON. odds/risk/toWin used to be
+    // spread into the SQL update untyped and unreconciled.
+    const block = router.slice(router.indexOf("reviewEditRequest"), router.indexOf("getLogs"));
+    expect(block).toMatch(/resolveStakePatch\(/);
+    expect(block).toMatch(/Number\.isFinite/);
+    expect(block).not.toMatch(/const allowed = \["odds", "risk", "toWin"/);
+  });
+});

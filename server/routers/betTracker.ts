@@ -66,6 +66,7 @@ import {
   encodeCursor,
   marketRequiresLine,
   resolveLineForUpdate,
+  resolveStakePatch,
   resolveViewUserId,
   toUnits as coreToUnits,
   type BetStats,
@@ -396,7 +397,10 @@ export const betTrackerRouter = router({
         risk:       String(input.risk),
         toWin:      String(toWin),
         riskUnits:  input.riskUnits !== undefined ? String(input.riskUnits) : null,
-        toWinUnits: input.toWinUnits !== undefined ? String(input.toWinUnits) : null,
+        // Derived when the client omits it, exactly as createParlay does. A row
+        // with riskUnits but NULL toWinUnits reads back mixed-basis: risk in
+        // stored units, toWin in dollars ÷ the viewer's CURRENT unit size.
+        toWinUnits: resolveToWinUnits(input.riskUnits, input.toWinUnits, input.risk, toWin),
         book:       null,
         line:       input.line !== undefined ? String(input.line) : null,
         customLine: input.customLine !== undefined ? String(input.customLine) : null,
@@ -453,6 +457,10 @@ export const betTrackerRouter = router({
       odds:       z.number().int().min(-10000).max(10000).optional(),
       risk:       z.number().positive().max(1_000_000).optional(),
       toWin:      z.number().positive().optional(),
+      // Unit restatements — the only stake denomination units-only roles may
+      // send. Dollars follow at the row's held unit size (betTrackerCore).
+      riskUnits:  z.number().positive().optional(),
+      toWinUnits: z.number().positive().optional(),
       notes:      z.string().max(2000).optional(),
       result:     z.enum(RESULTS).optional(),
       wagerType:  z.enum(WAGER_TYPES).optional(),
@@ -557,15 +565,34 @@ export const betTrackerRouter = router({
         console.log(`[BetTracker][STATE] update: re-derived pick="${patch.pick}" betType="${patch.betType}"`);
       }
 
-      // Recalculate toWin if odds or risk changed
+      // ── Stake reconciliation — ONE implementation, in betTrackerCore ────────
+      // The gate (units-only roles may not state dollars), the size law (the
+      // row's implied unit size holds constant) and the pair law (toWinUnits
+      // tracks toWin proportionally) all live in resolveStakePatch, shared
+      // with reviewEditRequest so the two write paths cannot drift.
       const newOdds = input.odds ?? existing.odds;
-      const newRisk = input.risk !== undefined ? input.risk : parseFloat(existing.risk);
-      if (input.risk !== undefined) patch.risk = String(input.risk);
-      if (input.toWin !== undefined) {
-        patch.toWin = String(input.toWin);
-      } else if (input.odds !== undefined || input.risk !== undefined) {
-        patch.toWin = String(calcToWin(newOdds, newRisk));
-        console.log(`[BetTracker][STATE] update: recalculated toWin=${patch.toWin} (odds=${newOdds} risk=${newRisk})`);
+      const stake = resolveStakePatch({
+        actorRole: role,
+        existing: {
+          risk:       existing.risk,
+          toWin:      existing.toWin,
+          riskUnits:  existing.riskUnits,
+          toWinUnits: existing.toWinUnits,
+        },
+        odds: newOdds,
+        oddsChanged: input.odds !== undefined && input.odds !== existing.odds,
+        risk:       input.risk,
+        toWin:      input.toWin,
+        riskUnits:  input.riskUnits,
+        toWinUnits: input.toWinUnits,
+      });
+      if (!stake.ok) {
+        console.log(`[BetTracker][ERROR] update: betId=${input.id} role=${role} stake refused — ${stake.message}`);
+        throw new TRPCError({ code: "BAD_REQUEST", message: stake.message });
+      }
+      if (Object.keys(stake.fields).length > 0) {
+        Object.assign(patch, stake.fields);
+        console.log(`[BetTracker][STATE] update: stake reconciled — ${JSON.stringify(stake.fields)}`);
       }
       if (input.odds !== undefined) {
         patch.odds = input.odds;
@@ -1006,12 +1033,48 @@ export const betTrackerRouter = router({
             console.warn(`[BetTracker][WARN] reviewEditRequest: could not parse proposedChanges for requestId=${input.requestId}`);
           }
           if (Object.keys(changes).length > 0) {
-            // Sanitize: only allow safe fields
-            const allowed = ["odds", "risk", "toWin", "notes", "result", "wagerType", "customLine", "line", "timeframe", "market", "pickSide"];
+            // Sanitize: non-stake fields pass through as before. Stake fields go
+            // through the SAME reconciliation as betTracker.update — an approved
+            // request is still a write, and odds/risk/toWin used to be spread
+            // into the SQL update untyped, unreconciled, with no gate.
+            const passthrough = ["notes", "result", "wagerType", "customLine", "line", "timeframe", "market", "pickSide"];
             const safe: Record<string, unknown> = {};
-            for (const k of allowed) {
+            for (const k of passthrough) {
               if (k in changes) safe[k] = changes[k];
             }
+
+            // Stake fields: parse defensively (proposedChanges is caller-supplied
+            // JSON), then resolve the final quad through the core.
+            const num = (v: unknown): number | undefined => {
+              if (v === undefined || v === null) return undefined;
+              const n = typeof v === "number" ? v : parseFloat(String(v));
+              return Number.isFinite(n) && n > 0 ? n : undefined;
+            };
+            const reqOddsRaw = changes["odds"];
+            const reqOddsNum = typeof reqOddsRaw === "number" ? reqOddsRaw : reqOddsRaw != null ? parseFloat(String(reqOddsRaw)) : NaN;
+            const reqOdds = Number.isFinite(reqOddsNum) ? Math.trunc(reqOddsNum) : undefined;
+            const stake = resolveStakePatch({
+              actorRole: role, // the reviewer is owner/admin — dollar fields permitted
+              existing: { risk: bet.risk, toWin: bet.toWin, riskUnits: bet.riskUnits, toWinUnits: bet.toWinUnits },
+              odds: reqOdds ?? bet.odds,
+              oddsChanged: reqOdds !== undefined && reqOdds !== bet.odds,
+              risk:       num(changes["risk"]),
+              toWin:      num(changes["toWin"]),
+              riskUnits:  num(changes["riskUnits"]),
+              toWinUnits: num(changes["toWinUnits"]),
+            });
+            if (!stake.ok) {
+              console.log(`[BetTracker][ERROR] reviewEditRequest: stake changes refused for betId=${req.betId} — ${stake.message}`);
+              throw new TRPCError({ code: "BAD_REQUEST", message: stake.message });
+            }
+            Object.assign(safe, stake.fields);
+            if (reqOdds !== undefined && reqOdds !== bet.odds) {
+              safe["odds"] = reqOdds;
+              // Same basis rule as update: a parlay's reprice divides from
+              // originalOdds, so a restated ticket price moves the basis too.
+              if ((bet.legCount ?? 0) > 0) safe["originalOdds"] = reqOdds;
+            }
+
             if (Object.keys(safe).length > 0) {
               await db.update(trackedBets).set(safe).where(eq(trackedBets.id, req.betId));
               console.log(`[BetTracker][STATE] reviewEditRequest: APPROVED EDIT — betId=${req.betId} fields=${Object.keys(safe).join(",")}`);
