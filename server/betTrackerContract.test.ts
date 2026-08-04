@@ -146,13 +146,18 @@ describe("grading concurrency", () => {
   });
 });
 
-describe("indexes for the hot paths", () => {
-  const schema = read("drizzle/schema.ts");
-  it("covers the grader's all-users pending-by-date query", () => {
-    expect(schema).toMatch(/idx_tb_result_date"\)\.on\(t\.result, t\.gameDate\)/);
-  });
-  it("covers the create-path idempotency guard", () => {
-    expect(schema).toMatch(/idx_tb_user_game"\)\.on\(t\.userId, t\.anGameId, t\.gameNumber\)/);
+describe("this PR carries no schema change", () => {
+  // The two hot-path indexes (idx_tb_result_date, idx_tb_user_game) were pulled
+  // out deliberately. The migration pipeline cannot currently deliver them:
+  // `drizzle-kit generate` silently no-ops on a malformed meta file, and the
+  // reconciler has six pending migrations whose unguarded
+  // `ALTER TABLE app_users ADD ...` statements target columns that already exist
+  // in production. See the follow-up issue. Nothing here depends on those
+  // indexes for correctness — they are pure query optimisation.
+  it("leaves tracked_bets indexes untouched", () => {
+    const schema = read("drizzle/schema.ts");
+    expect(schema).not.toMatch(/idx_tb_result_date/);
+    expect(schema).not.toMatch(/idx_tb_user_game/);
   });
 });
 
