@@ -561,7 +561,7 @@ export async function lookupAppUserByIdFresh(id: number): Promise<AppUserLookupR
 
   try {
     const rows = await withCircuitBreaker(async () =>
-      db.select().from(appUsers).where(eq(appUsers.id, id)).limit(1)
+      db.select().from(appUsers).where(and(eq(appUsers.id, id), isNull(appUsers.deletedAt))).limit(1)
     );
     const user = rows[0];
     if (!user) return { status: "not_found" };
@@ -662,7 +662,7 @@ export async function getAppUserById(id: number) {
   if (!db) return null;
   try {
     const result = await withCircuitBreaker(async () => {
-      const rows = await db.select().from(appUsers).where(eq(appUsers.id, id)).limit(1);
+      const rows = await db.select().from(appUsers).where(and(eq(appUsers.id, id), isNull(appUsers.deletedAt))).limit(1);
       return rows[0] ?? null;
     });
     // Cache result (including null = user not found)
@@ -717,7 +717,7 @@ export async function getAppUserByEmail(email: string) {
   if (!db) return null;
   try {
     return await withCircuitBreaker(async () => {
-      const rows = await db.select().from(appUsers).where(eq(appUsers.email, email)).limit(1);
+      const rows = await db.select().from(appUsers).where(and(eq(appUsers.email, email), isNull(appUsers.deletedAt))).limit(1);
       return rows[0] ?? null;
     });
   } catch {
@@ -730,7 +730,7 @@ export async function getAppUserByUsername(username: string) {
   if (!db) return null;
   try {
     return await withCircuitBreaker(async () => {
-      const rows = await db.select().from(appUsers).where(eq(appUsers.username, username)).limit(1);
+      const rows = await db.select().from(appUsers).where(and(eq(appUsers.username, username), isNull(appUsers.deletedAt))).limit(1);
       return rows[0] ?? null;
     });
   } catch {
@@ -781,15 +781,48 @@ export async function countAppUserDependents(id: number): Promise<DependentCount
 }
 
 /**
- * Hard-delete an app_users row.
+ * Retire an account without destroying anything it owns.
  *
- * REFUSES when anything references the account. `app_users` has no foreign keys
- * and no soft-delete column, so an unguarded delete strands the user's rows —
- * they keep counting toward global totals while becoming unattributable. That
- * is not hypothetical: it is how account 60002 left 278 verified bets, a login
- * session and an owner-reviewed edit request behind.
+ * THE DEFAULT, and what the admin UI should call. Sets `deletedAt`, which every
+ * account-resolution path excludes, so the account can no longer authenticate,
+ * cannot be found by email or username, and disappears from the app — while its
+ * bets, sessions and edit requests stay intact and attributed.
  *
- * To retire an account that owns data, disable it (hasAccess = false) instead.
+ * This is the operation that was missing when account 60002 was removed. A hard
+ * DELETE stranded 278 verified bets; this would have been a flag flip, fully
+ * reversible.
+ */
+export async function softDeleteAppUser(id: number): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await withCircuitBreaker(async () => {
+    await db.update(appUsers).set({ deletedAt: Date.now() }).where(eq(appUsers.id, id));
+  });
+  invalidateAppUserByIdCache(id);
+  invalidateCachedAppUser(id);
+  console.log(`[AppAdmin] softDeleteAppUser: userId=${id} retired (data preserved)`);
+}
+
+/** Undo a soft delete. */
+export async function restoreAppUser(id: number): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await withCircuitBreaker(async () => {
+    await db.update(appUsers).set({ deletedAt: null }).where(eq(appUsers.id, id));
+  });
+  invalidateAppUserByIdCache(id);
+  invalidateCachedAppUser(id);
+  console.log(`[AppAdmin] restoreAppUser: userId=${id} restored`);
+}
+
+/**
+ * Permanently remove an app_users row. Rarely what you want.
+ *
+ * Still REFUSES when anything references the account, because nothing would
+ * clean those rows up. With soft delete available, that refusal is no longer an
+ * obstacle — it just means "retire it instead", which preserves the history.
+ * Reserve this for accounts that own nothing, or for a genuine erasure request
+ * where the dependent rows have already been dealt with deliberately.
  */
 export async function deleteAppUser(id: number) {
   const counts = await countAppUserDependents(id);

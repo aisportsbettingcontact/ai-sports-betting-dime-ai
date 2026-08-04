@@ -20,6 +20,7 @@ import {
   getAppUserByUsername,
   updateAppUser,
   deleteAppUser,
+  softDeleteAppUser,
   updateAppUserLastSignedIn,
   incrementTokenVersion,
   incrementAllTokenVersions,
@@ -1156,13 +1157,29 @@ export const appUsersRouter = router({
     }),
 
   deleteUser: ownerProcedure
-    .input(z.object({ id: z.number().int().positive() }))
+    .input(z.object({
+      id: z.number().int().positive(),
+      /**
+       * Permanently remove the row instead of retiring it. Refused when the
+       * account owns anything, since nothing would clean those rows up.
+       * Default (false) sets deletedAt: the account stops existing to the app,
+       * its history stays attributed, and the action is reversible.
+       */
+      hard: z.boolean().optional().default(false),
+    }))
     .mutation(async ({ ctx, input }) => {
       if (input.id === ctx.appUser.id) {
         throw new TRPCError({ code: "BAD_REQUEST", message: "Cannot delete your own account" });
       }
       try {
-        await deleteAppUser(input.id);
+        // Retire by default. A hard delete is opt-in and still refuses to strand
+        // data — with soft delete available that refusal costs nothing, because
+        // "retire it instead" is now a real option that keeps the history.
+        if (input.hard) {
+          await deleteAppUser(input.id);
+        } else {
+          await softDeleteAppUser(input.id);
+        }
       } catch (err) {
         // Refusal, not a fault: the account owns rows that nothing would clean
         // up. See appUserDeletion.ts — this is the guard that stops another
