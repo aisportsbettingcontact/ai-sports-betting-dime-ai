@@ -62,7 +62,10 @@ export default function ParlayBuilder({
   onRemoveLeg,
   ticketOdds,
   onTicketOddsChange,
+  ticketOddsManual,
+  onTicketOddsManualChange,
   risk,
+  onRiskChange,
   stakeMode,
   unitSize,
   onSubmit,
@@ -73,7 +76,10 @@ export default function ParlayBuilder({
   onRemoveLeg: (index: number) => void;
   ticketOdds: string;
   onTicketOddsChange: (v: string) => void;
-  risk: number;
+  ticketOddsManual: boolean;
+  onTicketOddsManualChange: (v: boolean) => void;
+  risk: string;
+  onRiskChange: (v: string) => void;
   stakeMode: "$" | "U";
   unitSize: number;
   onSubmit: () => void;
@@ -84,12 +90,14 @@ export default function ParlayBuilder({
   const parsedOdds = parseInt(ticketOdds, 10);
   const oddsValid = Number.isFinite(parsedOdds) && Math.abs(parsedOdds) >= 100;
 
-  const riskDollars = stakeMode === "U" ? risk * unitSize : risk;
-  const toWin = oddsValid ? calcParlayToWin(riskDollars, parsedOdds) : null;
+  const riskNum = parseFloat(risk);
+  const riskValid = Number.isFinite(riskNum) && riskNum > 0;
+  const riskDollars = stakeMode === "U" ? riskNum * unitSize : riskNum;
+  const toWin = oddsValid && riskValid ? calcParlayToWin(riskDollars, parsedOdds) : null;
 
   const enough = legs.length >= MIN_PARLAY_LEGS;
   const full = legs.length >= MAX_PARLAY_LEGS;
-  const canSubmit = enough && oddsValid && risk > 0 && !isPending;
+  const canSubmit = enough && oddsValid && riskValid && !isPending;
 
   const fmtStake = (dollars: number): string =>
     stakeMode === "$"
@@ -160,41 +168,66 @@ export default function ParlayBuilder({
 
       {/* ── Ticket price ──────────────────────────────────────────────────── */}
       <div className="flex flex-col gap-1">
-        <label htmlFor="bt-parlay-odds" className="bt-label">
-          Ticket odds
-        </label>
-        <div className="flex items-center gap-2">
-          <input
-            id="bt-parlay-odds"
-            inputMode="numeric"
-            value={ticketOdds}
-            onChange={e => onTicketOddsChange(e.target.value)}
-            placeholder={suggested != null ? fmtOdds(suggested) : "+264"}
-            className="bt-input bt-num w-full"
-          />
-          {suggested != null && parsedOdds !== suggested && (
+        <div className="flex items-center justify-between">
+          <label htmlFor="bt-parlay-odds" className="bt-label">
+            Ticket odds
+          </label>
+          {ticketOddsManual && suggested != null && (
             <button
               type="button"
-              onClick={() => onTicketOddsChange(String(suggested))}
-              className="bt-press shrink-0 rounded-[10px] px-2.5 py-2 text-[11px] font-semibold tracking-wider transition-colors"
-              style={{
-                color: "var(--dime-mint-on-light, var(--dime-mint))",
-                border: "1px solid var(--dime-border)",
-              }}
+              onClick={() => onTicketOddsManualChange(false)}
+              className="bt-press text-[11px] underline"
+              style={{ color: "var(--dime-mint)" }}
             >
-              USE {fmtOdds(suggested)}
+              use calculated {fmtOdds(suggested)}
             </button>
           )}
         </div>
+        <input
+          id="bt-parlay-odds"
+          inputMode="numeric"
+          value={ticketOdds}
+          onChange={e => {
+            onTicketOddsChange(e.target.value);
+            onTicketOddsManualChange(true);
+          }}
+          placeholder={enough ? "" : "add two legs"}
+          className="bt-input bt-num w-full"
+          style={ticketOddsManual ? { borderColor: "var(--dime-mint-border)" } : undefined}
+        />
         <span className="bt-faint text-[11px]">
-          {suggested != null
-            ? `These legs multiply to ${fmtOdds(suggested)}. Enter what your book actually paid — same-game and boosted tickets price differently, and the entered price is what settles.`
-            : "Add at least two legs to see a suggested price."}
+          {!enough
+            ? `A parlay needs at least ${MIN_PARLAY_LEGS} legs.`
+            : ticketOddsManual
+              ? "Using your price. Same-game and boosted tickets price differently from the legs, and the price you enter is what settles."
+              : `Calculated from ${legs.length} legs. Edit it if your book quoted something else — that price is what settles.`}
+        </span>
+      </div>
+
+      {/* ── Stake — ONE per ticket, not per leg ───────────────────────────── */}
+      <div className="flex flex-col gap-1">
+        <label htmlFor="bt-parlay-risk" className="bt-label">
+          {stakeMode === "U" ? "Risk (U)" : "Risk ($)"}
+        </label>
+        <input
+          id="bt-parlay-risk"
+          type="number"
+          inputMode="decimal"
+          value={risk}
+          onChange={e => onRiskChange(e.target.value)}
+          placeholder={stakeMode === "U" ? "2" : "200"}
+          min={0}
+          step={stakeMode === "U" ? "0.5" : "10"}
+          aria-label={stakeMode === "U" ? "Risk amount in units for the whole ticket" : "Risk amount in dollars for the whole ticket"}
+          className="bt-input bt-num w-full"
+        />
+        <span className="bt-faint text-[11px]">
+          One stake on the whole ticket — legs are not staked separately.
         </span>
       </div>
 
       {/* ── Payout ────────────────────────────────────────────────────────── */}
-      {toWin != null && risk > 0 && (
+      {toWin != null && (
         <div
           className="flex items-center justify-between rounded-[10px] px-3 py-2 text-[13px]"
           style={{
@@ -210,15 +243,13 @@ export default function ParlayBuilder({
       )}
 
       {/* ── Why submit is blocked ─────────────────────────────────────────── */}
-      {!enough && legs.length > 0 && (
-        <span className="bt-faint text-[11px]">
-          A parlay needs at least {MIN_PARLAY_LEGS} legs.
-        </span>
-      )}
       {enough && !oddsValid && ticketOdds.trim() !== "" && (
         <span className="bt-faint text-[11px]">
-          Odds must be American, at least +100 or -100.
+          Odds must be American — at least +100 or -100.
         </span>
+      )}
+      {enough && oddsValid && !riskValid && (
+        <span className="bt-faint text-[11px]">Enter a stake for the ticket.</span>
       )}
 
       {error && (
