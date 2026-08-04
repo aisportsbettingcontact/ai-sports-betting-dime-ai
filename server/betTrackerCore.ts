@@ -424,6 +424,14 @@ export interface StatRow {
   toWin: string;
   riskUnits: string | null;
   toWinUnits: string | null;
+  /**
+   * Legs on a parlay ticket; 0 or absent for a straight bet.
+   *
+   * Needed here because the `byType` breakdown keys on `market`, which a
+   * parlay parent carries as the column default "ML". Without this a ticket
+   * would be filed under moneyline and the PARLAY row would never appear.
+   */
+  legCount?: number | null;
 }
 
 export interface BreakdownEntry {
@@ -647,7 +655,10 @@ export function aggregateStats(rows: StatRow[], unitSize: number): BetStats {
       case "VOID": voids++; break;
     }
 
-    bkApply(byTypeMap, bet.market ?? bet.betType ?? "ML", res, riskU, toWinU);
+    // A parlay is its own type. Its `market` column holds the schema default
+    // "ML", so keying on market alone would file every ticket under moneyline.
+    const typeKey = (bet.legCount ?? 0) > 0 ? "PARLAY" : (bet.market ?? bet.betType ?? "ML");
+    bkApply(byTypeMap, typeKey, res, riskU, toWinU);
     bkApply(bySizeMap, calcUnitBucket({
       odds: bet.odds,
       risk: riskDollar,

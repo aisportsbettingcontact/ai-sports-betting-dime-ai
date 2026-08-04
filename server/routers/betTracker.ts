@@ -39,7 +39,8 @@ import { router } from "../_core/trpc";
 import { appUserProcedure } from "./appUsers";
 import { TRPCError } from "@trpc/server";
 import { getDb } from "../db";
-import { trackedBets, appUsers, betEditRequests } from "../../drizzle/schema";
+import { trackedBetLegs,
+  trackedBets, appUsers, betEditRequests } from "../../drizzle/schema";
 import { eq, and, desc, inArray, asc, gte, lte, lt, or, sql } from "drizzle-orm";
 import { fetchAnSlate, resolveLogoUrl } from "../actionNetwork";
 import { gradePendingForUser, gradeAllPendingForDate } from "../betAutoGradeScheduler";
@@ -71,6 +72,13 @@ import {
   type StatRow,
   type Timeframe as CoreTimeframe,
 } from "../betTrackerCore";
+import {
+  MIN_PARLAY_LEGS,
+  MAX_PARLAY_LEGS,
+  americanToDecimal,
+  calcParlayToWin,
+  validateParlayLegs,
+} from "../parlayCore";
 
 // Re-exported for the scheduler's historical import path and for tests that
 // assert cache behaviour through the router's public surface.
@@ -118,6 +126,8 @@ const STAT_COLUMNS = {
   toWin:      trackedBets.toWin,
   riskUnits:  trackedBets.riskUnits,
   toWinUnits: trackedBets.toWinUnits,
+  /** Distinguishes a parlay ticket from a straight bet in the byType breakdown. */
+  legCount:   trackedBets.legCount,
 } as const;
 
 /** Throw the tRPC error a core decision describes, or fall through. */
@@ -524,6 +534,154 @@ export const betTrackerRouter = router({
    * delete — remove a bet by id.
    * Access: see betTrackerCore.decideBetMutation.
    */
+  /**
+   * createParlay — add a parlay ticket and its legs.
+   *
+   * Deliberately NOT folded into `create`. That mutation is built around a
+   * single game: it requires one anGameId, derives one pick label from one
+   * pair of teams, and guards duplicates on (user, game, market, pickSide,
+   * odds). A ticket has none of those things, so overloading it would mean
+   * making every one of those fields conditional on a mode flag — on the write
+   * path that 205 live straight bets depend on. A separate procedure keeps
+   * that path byte-for-byte unchanged.
+   *
+   * THE TICKET PRICE IS WHAT THE USER ENTERED. It is stored twice: `odds` is
+   * the live price and moves when a leg pushes, `originalOdds` never moves.
+   * Repricing always divides from `originalOdds`, so settlement is idempotent
+   * under a grading loop that re-runs every 30 minutes, and a correlated (SGP)
+   * or boosted price is preserved rather than rebuilt from its legs.
+   */
+  createParlay: appUserProcedure
+    .input(z.object({
+      legs: z.array(z.object({
+        anGameId:   z.number().int().positive(),
+        gameNumber: z.number().int().min(1).max(2).default(1),
+        sport:      z.enum(SPORTS).default("MLB"),
+        gameDate:   z.string()
+          .transform(v => (v || "").slice(0, 10))
+          .pipe(z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "gameDate must be YYYY-MM-DD")),
+        awayTeam:   z.string().min(1).max(128),
+        homeTeam:   z.string().min(1).max(128),
+        market:     z.enum(MARKETS),
+        pickSide:   z.enum(PICK_SIDES),
+        timeframe:  z.enum(TIMEFRAMES).default("FULL_GAME"),
+        line:       z.number().nullable().optional(),
+        odds:       z.number().int(),
+      })).min(MIN_PARLAY_LEGS).max(MAX_PARLAY_LEGS),
+      /** The ticket price as the book quoted it. */
+      odds:       z.number().int(),
+      risk:       z.number().positive(),
+      toWin:      z.number().optional(),
+      riskUnits:  z.number().positive().optional(),
+      toWinUnits: z.number().positive().optional(),
+      wagerType:  z.enum(WAGER_TYPES).default("PREGAME"),
+      book:       z.string().max(64).optional(),
+      notes:      z.string().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.appUser.id;
+
+      const validation = validateParlayLegs(
+        input.legs.map(l => ({ odds: l.odds, market: l.market, line: l.line ?? null })),
+      );
+      if (!validation.ok) {
+        console.log(`[BetTracker][ERROR] createParlay: userId=${userId} ${validation.message}`);
+        throw new TRPCError({ code: "BAD_REQUEST", message: validation.message });
+      }
+      try {
+        americanToDecimal(input.odds);
+      } catch {
+        throw new TRPCError({ code: "BAD_REQUEST", message: `${input.odds} is not a valid American price` });
+      }
+
+      const toWin = input.toWin ?? calcParlayToWin(input.risk, input.odds);
+
+      // The ticket cannot settle before its LAST leg does. Dating the parent
+      // any earlier would make the stuck-bet alarm fire on a ticket that is
+      // simply waiting for a game that has not been played yet.
+      const gameDate = input.legs.reduce((max, l) => (l.gameDate > max ? l.gameDate : max), input.legs[0].gameDate);
+
+      // Sport is display/filter metadata on the parent; grading is driven by
+      // each leg's own sport. A mixed-sport ticket files under its first leg.
+      const sports = new Set(input.legs.map(l => l.sport));
+      const sport = sports.size === 1 ? input.legs[0].sport : input.legs[0].sport;
+
+      const pick = `${input.legs.length}-leg parlay`;
+
+      console.log(
+        `[BetTracker][INPUT] createParlay: userId=${userId} legs=${input.legs.length} odds=${input.odds} ` +
+        `risk=${input.risk} toWin=${toWin} gameDate=${gameDate} sport=${sport} mixedSport=${sports.size > 1}`,
+      );
+
+      const db = await getDb();
+
+      // Idempotency guard, same 30-second DB-side window the straight-bet path
+      // uses and for the same reason (double-tap, network retry). Keyed on the
+      // ticket's own shape since there is no single game to key on.
+      const [dupe] = await db
+        .select({ id: trackedBets.id })
+        .from(trackedBets)
+        .where(and(
+          eq(trackedBets.userId, userId),
+          eq(trackedBets.legCount, input.legs.length),
+          eq(trackedBets.odds, input.odds),
+          eq(trackedBets.risk, String(input.risk)),
+          sql`${trackedBets.createdAt} >= UTC_TIMESTAMP() - INTERVAL 30 SECOND`,
+        ))
+        .limit(1);
+      if (dupe) {
+        console.log(`[BetTracker][OUTPUT] createParlay: duplicate within 30s — returning existing ticket ${dupe.id}`);
+        return { id: dupe.id, duplicate: true as const };
+      }
+
+      const [inserted] = await db.insert(trackedBets).values({
+        userId,
+        sport,
+        gameDate,
+        betType:    "PARLAY",
+        market:     "ML",       // column is NOT NULL; byType keys off legCount
+        timeframe:  "FULL_GAME",
+        pick,
+        odds:         input.odds,
+        originalOdds: input.odds,
+        legCount:     input.legs.length,
+        risk:       String(input.risk),
+        toWin:      toWin.toFixed(2),
+        riskUnits:  input.riskUnits  != null ? String(input.riskUnits)  : null,
+        toWinUnits: input.toWinUnits != null ? String(input.toWinUnits) : null,
+        wagerType:  input.wagerType,
+        book:       input.book,
+        notes:      input.notes,
+        result:     "PENDING",
+      }).$returningId();
+
+      const betId = inserted.id;
+
+      await db.insert(trackedBetLegs).values(
+        input.legs.map((l, i) => ({
+          betId,
+          legIndex:   i,
+          sport:      l.sport,
+          gameDate:   l.gameDate,
+          awayTeam:   l.awayTeam,
+          homeTeam:   l.homeTeam,
+          anGameId:   l.anGameId,
+          gameNumber: l.gameNumber,
+          market:     l.market,
+          pickSide:   l.pickSide,
+          timeframe:  l.timeframe,
+          line:       l.line != null ? String(l.line) : null,
+          odds:       l.odds,
+          pick:       derivePickLabel(l.pickSide, l.market, l.awayTeam, l.homeTeam, l.timeframe),
+          result:     "PENDING" as const,
+        })),
+      );
+
+      invalidateStatsCacheForUser(userId);
+      console.log(`[BetTracker][OUTPUT] createParlay: SUCCESS — ticket ${betId} with ${input.legs.length} legs for userId=${userId}`);
+      return { id: betId, duplicate: false as const };
+    }),
+
   delete: appUserProcedure
     .input(z.object({ id: z.number().int().positive() }))
     .mutation(async ({ ctx, input }) => {
@@ -553,8 +711,17 @@ export const betTrackerRouter = router({
         action: "delete",
       }));
 
+      // Legs first. There is no FK between the two tables (the schema uses none
+      // anywhere), so nothing at the database level would stop a deleted ticket
+      // from leaving its legs behind — and an orphaned leg is still PENDING, so
+      // the parlay sweep would keep grading it and re-folding a ticket that no
+      // longer exists.
+      if (existing.legCount > 0) {
+        await db.delete(trackedBetLegs).where(eq(trackedBetLegs.betId, input.id));
+        console.log(`[BetTracker][STATE] delete: removed ${existing.legCount} leg(s) for ticket ${input.id}`);
+      }
       await db.delete(trackedBets).where(eq(trackedBets.id, input.id));
-      console.log(`[BetTracker][OUTPUT] delete: SUCCESS — betId=${input.id} ownedBy=${existing.userId} deletedBy=${userId} role=${role}`);
+      console.log(`[BetTracker][OUTPUT] delete: SUCCESS — betId=${input.id} ownedBy=${existing.userId} deletedBy=${userId} role=${role} legs=${existing.legCount}`);
       // Invalidate the OWNER's cache (see the same note on update).
       invalidateStatsCacheForUser(existing.userId);
       if (existing.userId !== userId) invalidateStatsCacheForUser(userId);
@@ -1181,6 +1348,27 @@ export const betTrackerRouter = router({
         ? encodeCursor({ gameDate: rows[rows.length - 1].gameDate, id: rows[rows.length - 1].id })
         : null;
 
+      // ── Attach parlay legs ─────────────────────────────────────────────────────
+      // One batched query for the whole page rather than one per ticket. A
+      // round trip against TiDB costs ~80ms regardless of how much it returns,
+      // so N+1 here would dominate the entire read. Straight-bet pages skip it
+      // entirely — legCount is 0, so there is nothing to look up.
+      const parlayIds = rows.filter(r => r.legCount > 0).map(r => r.id);
+      const legsByBet = new Map<number, Array<typeof trackedBetLegs.$inferSelect>>();
+      if (parlayIds.length > 0) {
+        const legRows = await db
+          .select()
+          .from(trackedBetLegs)
+          .where(inArray(trackedBetLegs.betId, parlayIds))
+          .orderBy(asc(trackedBetLegs.betId), asc(trackedBetLegs.legIndex));
+        for (const l of legRows) {
+          const list = legsByBet.get(l.betId);
+          if (list) list.push(l);
+          else legsByBet.set(l.betId, [l]);
+        }
+        console.log(`[BetTracker][STATE] listWithStatsPaginated: attached legs for ${parlayIds.length} parlay(s)`);
+      }
+
       // ── Enrich page rows with logos / live slate data ──────────────────────────
       // Historical pages skip the Action Network round trip entirely; past dates
       // resolve logos from the in-memory team map (O(1), no HTTP).
@@ -1224,6 +1412,8 @@ export const betTrackerRouter = router({
           gameTime:     slate?.gameTime     ?? null,
           startUtc:     slate?.startUtc     ?? null,
           gameStatus:   slate?.status       ?? null,
+          /** Selections on a parlay ticket, in display order. Empty for a straight bet. */
+          legs: legsByBet.get(row.id) ?? [],
         };
       });
 
