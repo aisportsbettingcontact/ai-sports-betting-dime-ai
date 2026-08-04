@@ -218,6 +218,9 @@ describe("safety hardening", () => {
     expect(scheduler).toMatch(/checkStuckBets/);
     // notifyOwner is a no-op; the alarm must not be routed through it.
     expect(code("server/betGradingHealth.ts")).not.toMatch(/notifyOwner/);
+  });
+});
+
 describe("stats cache is replica-safe", () => {
   it("every cache read is validated against a row fingerprint", () => {
     // Cache and invalidation are both per-process. With numReplicas > 1 a write
