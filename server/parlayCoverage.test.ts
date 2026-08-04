@@ -102,14 +102,25 @@ describe("a stranded leg is alarmed, not silent", () => {
   it("REGRESSION: parlay grading errors reach gradingAlert", () => {
     // The ParlayGradeSummary was discarded, so a sweep could raise errors on
     // every cycle in silence while straight-bet errors alarmed normally.
-    const cycle = sched.slice(sched.indexOf("runBetGradeCycle"));
-    expect(cycle).toMatch(/describeGradingErrors\(/);
-    expect(cycle).toMatch(/gradingAlert\(\s*"GRADING_ERRORS"/);
+    //
+    // Asserted against the sweep's own function rather than a particular
+    // caller: the alarm moved when the sweep moved, and pinning it to a call
+    // site is the very coupling that caused the poller miss.
+    const fn = sched.slice(
+      sched.indexOf("async function gradeAllPendingForDate"),
+      sched.indexOf("export async function gradePendingForUser"),
+    );
+    expect(fn).toMatch(/describeGradingErrors\(/);
+    expect(fn).toMatch(/gradingAlert\(\s*"GRADING_ERRORS"/);
+    expect(fn).toMatch(/parlay legs/);
   });
 
   it("a thrown sweep also alarms rather than only logging", () => {
-    const cycle = sched.slice(sched.indexOf("runBetGradeCycle"));
-    expect(cycle).toMatch(/parlay sweep threw|Parlay leg sweep threw/i);
+    const fn = sched.slice(
+      sched.indexOf("async function gradeAllPendingForDate"),
+      sched.indexOf("export async function gradePendingForUser"),
+    );
+    expect(fn).toMatch(/parlay sweep (failed|threw)|Parlay leg sweep threw/i);
   });
 });
 
@@ -168,5 +179,46 @@ describe("createParlay cannot leave a ticket that can never settle", () => {
     const proc = router.slice(router.indexOf("createParlay:"), router.indexOf("delete: appUserProcedure"));
     expect(proc).toMatch(/fingerprint\(/);
     expect(proc).toMatch(/anGameId/);
+  });
+});
+
+describe("every grading trigger sweeps legs — no call site can forget", () => {
+  it("REGRESSION: the sweep lives in gradeAllPendingForDate, not in its callers", () => {
+    // It was originally wired into runBetGradeCycle only, so the GitHub cron
+    // path swept legs while the 5-minute live poller, the 15-minute standard
+    // poller and the startup grade did not. All four grade the same dates.
+    // Wiring it per-call-site is what caused that miss, twice.
+    const fn = sched.slice(
+      sched.indexOf("async function gradeAllPendingForDate"),
+      sched.indexOf("export async function gradePendingForUser"),
+    );
+    expect(fn).toMatch(/await gradeParlaysForDate\(date, trigger\)/);
+  });
+
+  it("REGRESSION: it runs before the zero-straight-bets early return", () => {
+    // A date with no pending straight bets can still hold open legs.
+    const fn = sched.slice(sched.indexOf("async function gradeAllPendingForDate"));
+    const sweep = fn.indexOf("gradeParlaysForDate");
+    const early = fn.indexOf("0 PENDING bets for date");
+    expect(sweep).toBeGreaterThan(-1);
+    expect(sweep).toBeLessThan(early);
+  });
+
+  it("REGRESSION: every in-process poller now reaches legs transitively", () => {
+    // Each of these calls gradeAllPendingForDate, which now sweeps.
+    const callers = (sched.match(/await gradeAllPendingForDate\(/g) ?? []).length;
+    expect(callers).toBeGreaterThanOrEqual(4); // live poll, standard poll, startup, cron
+  });
+
+  it("runBetGradeCycle does not sweep the same dates twice", () => {
+    // Double-sweeping would double the score-feed calls for no benefit, since
+    // re-folding an unchanged ticket is a no-op.
+    const cycle = sched.slice(sched.indexOf("export async function runBetGradeCycle"));
+    const end = cycle.indexOf("export async function runBetGradeSweep");
+    expect(cycle.slice(0, end)).not.toMatch(/await gradeParlaysForDate\(/);
+  });
+
+  it("there is exactly one date-scoped leg sweep call site", () => {
+    expect((sched.match(/await gradeParlaysForDate\(/g) ?? []).length).toBe(1);
   });
 });

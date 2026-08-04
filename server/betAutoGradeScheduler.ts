@@ -216,9 +216,41 @@ async function gradePendingRows(rows: TrackedBet[], date: string, trigger: strin
   return summary;
 }
 
-/** Grade all PENDING bets for a specific date, across every user. */
+/**
+ * Grade all PENDING bets for a specific date, across every user.
+ *
+ * The parlay leg sweep lives HERE, not in the callers, and that placement is
+ * the point. It was originally wired into runBetGradeCycle only — which meant
+ * the GitHub cron path swept legs while the 5-minute live poller, the
+ * 15-minute standard poller and the startup grade did not. All four grade the
+ * same dates; three of them silently skipped parlays, so a ticket depended on
+ * cron firing (measured in this repo at a ~93-minute median, with dropped
+ * firings) or on the nightly sweep.
+ *
+ * Wiring the sweep at each call site is what caused that, twice. Putting it in
+ * the one function every date-scoped path already funnels through means a new
+ * caller cannot forget it.
+ */
 async function gradeAllPendingForDate(date: string, trigger: string): Promise<GradeSummary> {
   const db = await getDb();
+
+  // Runs BEFORE the straight-bet work and regardless of its outcome: a date
+  // with zero pending straight bets can still hold open parlay legs, and the
+  // early return below would skip them.
+  try {
+    const p = await gradeParlaysForDate(date, trigger);
+    const parlayErrMsg = describeGradingErrors({
+      date: `${date} (parlay legs)`,
+      total: p.legsExamined,
+      graded: p.legsSettled,
+      errors: p.errors,
+      details: p.details,
+    });
+    if (parlayErrMsg) void gradingAlert("GRADING_ERRORS", parlayErrMsg);
+  } catch (err) {
+    console.log(`[BetAutoGrade][ERROR] parlay sweep failed for ${date}: ${(err as Error).message}`);
+    void gradingAlert("GRADING_ERRORS", `Parlay leg sweep threw for ${date}: ${(err as Error).message}`);
+  }
   // legCount=0 excludes parlay parents. A ticket has no anGameId and no single
   // pickSide, so gradePendingRows would resolve it to no game and log a
   // NO_MATCH every cycle; worse, its gameDate is the LAST leg's date, so it is
@@ -662,25 +694,9 @@ export async function runBetGradeCycle(trigger: string): Promise<
     // Parlay legs settle on their own dates, so they are swept over the same
     // window. Re-folding an unchanged ticket is a no-op, which is what makes
     // this safe to run every cycle.
-    for (const d of [dateStr, yesterday]) {
-      try {
-        const p = await gradeParlaysForDate(d, trigger);
-        // The summary used to be discarded, so a parlay sweep could raise
-        // errors on every cycle in complete silence while straight-bet errors
-        // alarmed normally.
-        const errMsg = describeGradingErrors({
-          date: `${d} (parlay legs)`,
-          total: p.legsExamined,
-          graded: p.legsSettled,
-          errors: p.errors,
-          details: p.details,
-        });
-        if (errMsg) void gradingAlert("GRADING_ERRORS", errMsg);
-      } catch (err) {
-        console.log(`[BetAutoGrade][ERROR] parlay sweep failed for ${d}: ${(err as Error).message}`);
-        void gradingAlert("GRADING_ERRORS", `Parlay leg sweep threw for ${d}: ${(err as Error).message}`);
-      }
-    }
+    // No parlay loop here: gradeAllPendingForDate above already swept the legs
+    // for both dates. Sweeping again would double the score-feed calls for no
+    // benefit, since re-folding an unchanged ticket is a no-op.
     await checkStuckBets();
     return { today: todaySummary, yesterday: yesterdaySummary };
   });

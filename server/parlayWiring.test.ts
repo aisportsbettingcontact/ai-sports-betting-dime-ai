@@ -43,11 +43,19 @@ describe("parlay parents never reach the straight-bet grader", () => {
     expect(scheduler).toMatch(/gradeParlaysForDate\(/);
   });
 
-  it("a failing parlay sweep cannot take down the straight-bet cycle", () => {
+  it("a failing parlay sweep cannot take down the straight-bet grade", () => {
     // The sweep is wrapped, because a parlay bug must not stop 205 straight
     // bets from settling.
-    const cycle = scheduler.slice(scheduler.indexOf("runBetGradeCycle"));
-    expect(cycle).toMatch(/try\s*\{[\s\S]*?gradeParlaysForDate[\s\S]*?catch/);
+    //
+    // Asserted where the sweep actually lives. It moved out of runBetGradeCycle
+    // into gradeAllPendingForDate so that the in-process pollers reach it too;
+    // pinning this to a caller is the coupling that let those pollers be
+    // missed in the first place.
+    const fn = scheduler.slice(
+      scheduler.indexOf("async function gradeAllPendingForDate"),
+      scheduler.indexOf("export async function gradePendingForUser"),
+    );
+    expect(fn).toMatch(/try\s*\{[\s\S]*?gradeParlaysForDate[\s\S]*?catch/);
   });
 });
 
