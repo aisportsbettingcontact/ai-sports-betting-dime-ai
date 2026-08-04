@@ -93,7 +93,10 @@ function mockDateAt1300UTC(isoDate: string): Date {
   const mockNow = new Date(`${isoDate}T13:00:00.000Z`);
   const RealDate = globalThis.Date;
 
-  vi.spyOn(globalThis, "Date").mockImplementation((...args: unknown[]) => {
+  // vitest 4: `new Date()` through the spy requires a constructable
+  // implementation — arrows lost `new` support. `function` + explicit return
+  // preserves both call and construct paths.
+  vi.spyOn(globalThis, "Date").mockImplementation(function (...args: unknown[]) {
     if (args.length === 0) return mockNow;
     // @ts-expect-error — allow Date constructor with args
     return new RealDate(...args);

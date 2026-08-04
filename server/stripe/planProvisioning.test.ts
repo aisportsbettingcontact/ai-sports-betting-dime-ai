@@ -12,12 +12,13 @@ const h = vi.hoisted(() => {
 });
 
 vi.mock("stripe", () => ({
-  default: vi.fn(() => ({
+  // vitest 4: `new Stripe()` needs a constructable mock (arrows lost `new` support).
+  default: vi.fn(function () { return {
     products: { create: h.productsCreate, update: h.productsUpdate },
     prices: { create: h.pricesCreate },
     coupons: { create: h.couponsCreate },
     promotionCodes: { create: h.promotionCodesCreate },
-  })),
+  }; }),
 }));
 vi.mock("../db", () => ({
   getDb: vi.fn(async () => ({
