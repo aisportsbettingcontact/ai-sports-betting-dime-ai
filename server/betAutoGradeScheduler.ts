@@ -32,6 +32,7 @@
  */
 
 import { getDb } from "./db";
+import { gradeParlaysForDate } from "./parlayGrader";
 import { trackedBets, type TrackedBet } from "../drizzle/schema";
 import { eq, and, sql } from "drizzle-orm";
 import {
@@ -213,8 +214,17 @@ async function gradePendingRows(rows: TrackedBet[], date: string, trigger: strin
 /** Grade all PENDING bets for a specific date, across every user. */
 async function gradeAllPendingForDate(date: string, trigger: string): Promise<GradeSummary> {
   const db = await getDb();
+  // legCount=0 excludes parlay parents. A ticket has no anGameId and no single
+  // pickSide, so gradePendingRows would resolve it to no game and log a
+  // NO_MATCH every cycle; worse, its gameDate is the LAST leg's date, so it is
+  // not even due when its earlier legs are. Tickets settle from their legs, in
+  // gradeParlaysForDate.
   const pending = await db.select().from(trackedBets).where(
-    and(eq(trackedBets.result, "PENDING"), eq(trackedBets.gameDate, date))
+    and(
+      eq(trackedBets.result, "PENDING"),
+      eq(trackedBets.gameDate, date),
+      eq(trackedBets.legCount, 0),
+    )
   );
   if (pending.length === 0) {
     console.log(`[BetAutoGrade][STATE] gradeAllPendingForDate: 0 PENDING bets for date=${date} — skipping`);
@@ -235,7 +245,13 @@ export async function gradePendingForUser(
   trigger: string,
 ): Promise<GradeSummary> {
   const db = await getDb();
-  const conditions = [eq(trackedBets.userId, userId), eq(trackedBets.result, "PENDING")];
+  // legCount=0 for the same reason as gradeAllPendingForDate: tickets settle
+  // from their legs, not as straight bets.
+  const conditions = [
+    eq(trackedBets.userId, userId),
+    eq(trackedBets.result, "PENDING"),
+    eq(trackedBets.legCount, 0),
+  ];
   if (filter.sport) conditions.push(eq(trackedBets.sport, filter.sport as TrackedBet["sport"]));
   if (filter.gameDate) conditions.push(eq(trackedBets.gameDate, filter.gameDate));
 
@@ -256,7 +272,9 @@ async function gradeAllPendingAllDates(trigger: string): Promise<void> {
   const db = await getDb();
 
   // Fetch all PENDING bets regardless of date
-  const pending = await db.select().from(trackedBets).where(eq(trackedBets.result, "PENDING"));
+  const pending = await db.select().from(trackedBets).where(
+    and(eq(trackedBets.result, "PENDING"), eq(trackedBets.legCount, 0))
+  );
 
   if (pending.length === 0) {
     console.log(`[BetAutoGrade][STATE] gradeAllPendingAllDates: 0 PENDING bets — nothing to grade`);
@@ -593,6 +611,16 @@ export async function runBetGradeCycle(trigger: string): Promise<
     const yesterday = yesterdayPst();
     const todaySummary = await gradeAllPendingForDate(dateStr, trigger);
     const yesterdaySummary = await gradeAllPendingForDate(yesterday, `${trigger}_yesterday`);
+    // Parlay legs settle on their own dates, so they are swept over the same
+    // window. Re-folding an unchanged ticket is a no-op, which is what makes
+    // this safe to run every cycle.
+    for (const d of [dateStr, yesterday]) {
+      try {
+        await gradeParlaysForDate(d, trigger);
+      } catch (err) {
+        console.log(`[BetAutoGrade][ERROR] parlay sweep failed for ${d}: ${(err as Error).message}`);
+      }
+    }
     await checkStuckBets();
     return { today: todaySummary, yesterday: yesterdaySummary };
   });
