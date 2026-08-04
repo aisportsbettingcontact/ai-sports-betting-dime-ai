@@ -32,6 +32,11 @@ import { useLocation } from "wouter";
 import ParlayBuilder, { suggestPrice, type DraftLeg } from "../components/ParlayBuilder";
 import ParlayLegList from "../components/ParlayLegList";
 import { MAX_PARLAY_LEGS, calcParlayToWin } from "@shared/parlayPricing";
+import {
+  todayEst, todayPt, subtractDays, fmtDate,
+  calcToWin, fmtOdds, fmtDollar, fmtUnits,
+  getPickOdds, getPickLine, resultColor,
+} from "./betTrackerDisplay";
 import { trpc } from "@/lib/trpc";
 import { useAppAuth } from "@/_core/hooks/useAppAuth";
 import { useAnalytics, useTrackAction } from "@/lib/analytics";
@@ -210,68 +215,14 @@ const RESULTS = ["PENDING", "WIN", "LOSS", "PUSH", "VOID"] as const;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function todayEst(): string {
-  return new Date().toLocaleDateString("en-CA", {
-    timeZone: "America/New_York",
-  });
-}
-/** Today in UTC-8 (Pacific Time) as YYYY-MM-DD */
-function todayPt(): string {
-  return new Date().toLocaleDateString("en-CA", {
-    timeZone: "America/Los_Angeles",
-  });
-}
-/** Subtract N days from a YYYY-MM-DD string, return YYYY-MM-DD */
-function subtractDays(dateStr: string, days: number): string {
-  const d = new Date(dateStr + "T12:00:00Z");
-  d.setUTCDate(d.getUTCDate() - days);
-  return d.toISOString().slice(0, 10);
-}
 
-function calcToWin(odds: number, risk: number): number {
-  if (!odds || !risk || risk <= 0) return 0;
-  if (odds >= 100) return parseFloat((risk * (odds / 100)).toFixed(4));
-  return parseFloat((risk * (100 / Math.abs(odds))).toFixed(4));
-}
 
-function fmtOdds(o: number): string {
-  return o >= 0 ? `+${o}` : `${o}`;
-}
 
-function fmtDollar(n: number): string {
-  const abs = Math.abs(n);
-  const str = abs.toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-  return n < 0 ? `-$${str}` : `$${str}`;
-}
 
-function fmtUnits(n: number): string {
-  const abs = Math.abs(n);
-  const str = abs.toFixed(2);
-  return n < 0 ? `-${str}u` : `${str}u`;
-}
 
-function fmtDate(d: string): string {
-  const [y, m, day] = d.split("-");
-  return `${m}/${day}/${y}`;
-}
 
 /* Law v2: WIN = mint, LOSS = scoped --loss-red; every no-signal state
  * (PUSH / PENDING / VOID) de-emphasizes to the secondary grey tier. */
-function resultColor(r: Result): string {
-  switch (r) {
-    case "WIN":
-      return "text-primary";
-    case "LOSS":
-      return "text-[color:var(--bt-red)]";
-    case "PUSH":
-    case "PENDING":
-    case "VOID":
-      return "bt-dim";
-  }
-}
 
 function resultBg(r: Result): string {
   switch (r) {
@@ -378,47 +329,7 @@ function resolveNickname(
   return abbrev.toUpperCase();
 }
 
-function getPickOdds(
-  odds: GameOdds | null,
-  market: Market,
-  pickSide: PickSide
-): number | null {
-  if (!odds) return null;
-  switch (market) {
-    case "ML":
-      return pickSide === "AWAY"
-        ? (odds.awayMl?.odds ?? null)
-        : (odds.homeMl?.odds ?? null);
-    case "RL":
-      return pickSide === "AWAY"
-        ? (odds.awayRl?.odds ?? null)
-        : (odds.homeRl?.odds ?? null);
-    case "TOTAL":
-      return pickSide === "OVER"
-        ? (odds.over?.odds ?? null)
-        : (odds.under?.odds ?? null);
-  }
-}
 
-function getPickLine(
-  odds: GameOdds | null,
-  market: Market,
-  pickSide: PickSide
-): number | null {
-  if (!odds) return null;
-  switch (market) {
-    case "RL":
-      return pickSide === "AWAY"
-        ? (odds.awayRl?.value ?? null)
-        : (odds.homeRl?.value ?? null);
-    case "TOTAL":
-      return pickSide === "OVER"
-        ? (odds.over?.value ?? null)
-        : (odds.under?.value ?? null);
-    default:
-      return null;
-  }
-}
 
 /** Format a local start time from a UTC ISO string */
 function fmtStartTime(utcStr: string | null, gameTime: string | null): string {
