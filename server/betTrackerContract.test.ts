@@ -174,6 +174,30 @@ describe("indexes for the hot paths", () => {
   });
 });
 
+describe("stats cache is replica-safe", () => {
+  it("every cache read is validated against a row fingerprint", () => {
+    // Cache and invalidation are both per-process. With numReplicas > 1 a write
+    // on replica A leaves B's entry intact and B serves stale W/L until TTL.
+    expect(router).toMatch(/buildStatsFingerprint\(/);
+    expect(router).toMatch(/getStatsCache<BetStats>\(statsCacheKey, fingerprint\)/);
+    expect(router).not.toMatch(/getStatsCache<BetStats>\(statsCacheKey\)/);
+  });
+
+  it("the fingerprint covers inserts, updates AND same-second churn", () => {
+    const cache = read("server/betTrackerStatsCache.ts");
+    expect(cache).toMatch(/rowCount/);
+    expect(cache).toMatch(/maxUpdated/);
+    expect(cache).toMatch(/idChecksum/);
+  });
+
+  it("a fingerprint mismatch evicts rather than returning stale data", () => {
+    const cache = read("server/betTrackerStatsCache.ts");
+    const idx = cache.indexOf("entry.fingerprint !== fingerprint");
+    expect(idx).toBeGreaterThan(-1);
+    expect(cache.slice(idx, idx + 160)).toMatch(/statsCache\.delete\(key\)/);
+  });
+});
+
 describe("grading has a cron path", () => {
   it("bet-grade endpoints are mounted", () => {
     expect(cronRoutes).toMatch(/\/api\/cron\/bet-grade["']/);
