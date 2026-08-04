@@ -33,7 +33,7 @@
 
 import { getDb } from "./db";
 import { trackedBets, type TrackedBet } from "../drizzle/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import {
   gradeTrackedBet,
   fetchScores,
@@ -44,6 +44,14 @@ import {
 } from "./scoreGrader";
 import { invalidateStatsCacheForUser } from "./betTrackerStatsCache";
 import { effectiveLine } from "./betTrackerCore";
+import {
+  describeGradingErrors,
+  describeNoMatch,
+  describeStuckBets,
+  gradingAlert,
+  STUCK_THRESHOLD_HOURS,
+  type StuckBet,
+} from "./betGradingHealth";
 
 // ─── PST/PDT helpers ─────────────────────────────────────────────────────────
 
@@ -186,6 +194,13 @@ async function gradePendingRows(rows: TrackedBet[], date: string, trigger: strin
   }
 
   for (const uid of Array.from(gradedUserIds)) invalidateStatsCacheForUser(uid);
+
+  // Health signals. Never allowed to affect the grading outcome — a broken
+  // webhook must not break settlement, so both are fire-and-forget.
+  const errMsg = describeGradingErrors(summary);
+  if (errMsg) void gradingAlert("GRADING_ERRORS", errMsg);
+  const noMatchMsg = describeNoMatch(summary.details);
+  if (noMatchMsg) void gradingAlert("NO_MATCH", noMatchMsg);
 
   console.log(
     `[BetAutoGrade][OUTPUT] gradePendingRows: trigger=${trigger} scope=${date} total=${summary.total} ` +
@@ -539,6 +554,35 @@ export { gradeAllPendingForDate, gradeAllPendingAllDates };
  * endpoint calls; it is the same work the 5/15-minute in-process pollers do,
  * without the time-window gating (the cron schedule IS the gate).
  */
+/**
+ * Look for bets that should have settled by now and alarm if any exist.
+ *
+ * Runs after a grading cycle, so anything still PENDING here has just had its
+ * chance. Read-only; failure is swallowed.
+ */
+export async function checkStuckBets(): Promise<StuckBet[]> {
+  try {
+    const db = await getDb();
+    const rows = await db.execute(sql`
+      SELECT id, userId, sport, gameDate, awayTeam, homeTeam,
+             TIMESTAMPDIFF(HOUR, CONCAT(gameDate, ' 00:00:00'), UTC_TIMESTAMP()) AS hoursPending
+      FROM tracked_bets
+      WHERE result = 'PENDING'
+        AND TIMESTAMPDIFF(HOUR, CONCAT(gameDate, ' 00:00:00'), UTC_TIMESTAMP()) >= ${STUCK_THRESHOLD_HOURS}
+      ORDER BY hoursPending DESC
+      LIMIT 200
+    `);
+    const list = ((rows as unknown as Array<Array<Record<string, unknown>>>)[0] ?? []) as unknown as StuckBet[];
+    const msg = describeStuckBets(list);
+    if (msg) void gradingAlert("STUCK_BETS", msg);
+    else console.log(`[BetAutoGrade][VERIFY] stuck-bet check: none beyond ${STUCK_THRESHOLD_HOURS}h`);
+    return list;
+  } catch (err) {
+    console.warn(`[BetAutoGrade][WARN] stuck-bet check failed: ${(err as Error).message}`);
+    return [];
+  }
+}
+
 export async function runBetGradeCycle(trigger: string): Promise<
   { today: GradeSummary; yesterday: GradeSummary } | { skipped: true }
 > {
@@ -549,6 +593,7 @@ export async function runBetGradeCycle(trigger: string): Promise<
     const yesterday = yesterdayPst();
     const todaySummary = await gradeAllPendingForDate(dateStr, trigger);
     const yesterdaySummary = await gradeAllPendingForDate(yesterday, `${trigger}_yesterday`);
+    await checkStuckBets();
     return { today: todaySummary, yesterday: yesterdaySummary };
   });
 }

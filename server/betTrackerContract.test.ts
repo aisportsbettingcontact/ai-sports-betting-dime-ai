@@ -21,6 +21,19 @@ import { join } from "node:path";
 const ROOT = join(__dirname, "..");
 const read = (p: string): string => readFileSync(join(ROOT, p), "utf8");
 
+/**
+ * Strip comments before asserting on code.
+ *
+ * These tests grep source text, and this file's own explanations quote the very
+ * patterns they forbid ("it used to be `new Date(Date.now() - 30_000)`"). Left
+ * unstripped, a correct fix fails its own test because the comment describing
+ * it still contains the string.
+ */
+const code = (p: string): string =>
+  read(p)
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/^\s*\/\/.*$/gm, "");
+
 const router = read("server/routers/betTracker.ts");
 const scheduler = read("server/betAutoGradeScheduler.ts");
 const cronRoutes = read("server/cron/cronRoutes.ts");
@@ -45,10 +58,10 @@ describe("access model", () => {
     expect(router).toMatch(/function resolveScope/);
   });
 
-  it("every read that accepts targetUserId routes it through resolveScope", () => {
+  it("every read that accepts targetUserId resolves scope AND proves the target exists", () => {
     const targetUserIdReads = (router.match(/targetUserId: z\.number\(\)/g) ?? []).length;
-    const scopeCalls = (router.match(/resolveScope\(ctx, input/g) ?? []).length;
-    expect(scopeCalls).toBeGreaterThanOrEqual(targetUserIdReads);
+    const checked = (router.match(/resolveScopeChecked\(ctx, input/g) ?? []).length;
+    expect(checked).toBeGreaterThanOrEqual(targetUserIdReads);
   });
 
   it("owner/admin-only procedures assert privileged access", () => {
@@ -171,6 +184,40 @@ describe("indexes for the hot paths", () => {
     const carries = sql.some(f =>
       readFileSync(join(ROOT, "drizzle", f), "utf8").includes("idx_tb_result_date"));
     expect(carries, "no migration file creates idx_tb_result_date").toBe(true);
+  });
+});
+
+describe("safety hardening", () => {
+  it("the idempotency window is computed by the database, not by Node", () => {
+    // `new Date(Date.now() - 30_000)` is serialised in the Node process's local
+    // timezone and compared against a column in the DB's timezone. Both are
+    // SYSTEM, so the 30s guard was correct only while they agreed — measured at
+    // SEVEN HOURS on a PDT host against the UTC production DB.
+    const routerCode = code("server/routers/betTracker.ts");
+    expect(routerCode).toMatch(/UTC_TIMESTAMP\(\) - INTERVAL 30 SECOND/);
+    expect(routerCode).not.toMatch(/thirtySecondsAgo/);
+    expect(routerCode).not.toMatch(/new Date\(Date\.now\(\) - 30_000\)/);
+  });
+
+  it("cross-user reads prove the target account exists", () => {
+    // resolveViewUserId answers "may you read this id", not "is it real". An
+    // owner/admin could query any integer and get a confident empty tracker.
+    expect(router).toMatch(/async function resolveScopeChecked/);
+    const crossUser = (router.match(/resolveScopeChecked\(ctx, input/g) ?? []).length;
+    expect(crossUser).toBeGreaterThanOrEqual(2);
+    expect(code("server/routers/betTracker.ts")).not.toMatch(/const userId = resolveScope\(ctx, input/);
+  });
+
+  it("the container clock is pinned so nothing can depend on ambient TZ", () => {
+    expect(read("Dockerfile")).toMatch(/^ENV TZ=UTC$/m);
+  });
+
+  it("grading failure raises an alarm instead of staying silent", () => {
+    expect(scheduler).toMatch(/gradingAlert\("GRADING_ERRORS"/);
+    expect(scheduler).toMatch(/gradingAlert\("NO_MATCH"/);
+    expect(scheduler).toMatch(/checkStuckBets/);
+    // notifyOwner is a no-op; the alarm must not be routed through it.
+    expect(code("server/betGradingHealth.ts")).not.toMatch(/notifyOwner/);
   });
 });
 

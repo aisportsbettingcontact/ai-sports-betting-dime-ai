@@ -7,6 +7,15 @@
 # `spawn /usr/bin/python3 ENOENT` failure on Railway (see server/cron/cronRoutes.ts).
 FROM node:22-bookworm-slim
 
+# Pin the container clock to UTC. Nothing should DEPEND on this — the code that
+# used to (the bet-tracker idempotency guard) now does its time arithmetic
+# database-side with UTC_TIMESTAMP(). This is defence in depth: it removes the
+# whole class of "works because the Node TZ and the DB TZ happen to agree",
+# which on a PDT workstation turned a 30-second duplicate window into a
+# seven-hour one. Debian resolves TZ from /etc/localtime; tzdata ships in the
+# base image.
+ENV TZ=UTC
+
 # apt python packages land in /usr/lib/python3/dist-packages, which Debian's system
 # python3 already searches by default (no PYTHONPATH override needed — see
 # mlbModelRunner.ts's spawn env construction). Third-party imports across
