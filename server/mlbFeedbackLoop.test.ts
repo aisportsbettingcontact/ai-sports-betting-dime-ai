@@ -21,7 +21,10 @@ import { describe, it, expect } from "vitest";
  * Worst prediction:   p=0, o=1 → BS=1
  * Coin flip:          p=0.5, o=1 → BS=0.25
  */
-function computeBrierScore(predictedProb: number, actualOutcome: 0 | 1): number {
+function computeBrierScore(
+  predictedProb: number,
+  actualOutcome: 0 | 1
+): number {
   return parseFloat(((predictedProb - actualOutcome) ** 2).toFixed(6));
 }
 
@@ -104,25 +107,25 @@ describe("f5_share Drift Detection", () => {
   });
 
   it("no drift: rolling=0.5700 (delta=+0.0082, within threshold) → driftDetected=false", () => {
-    const result = detectDrift(0.5700);
+    const result = detectDrift(0.57);
     expect(result.driftDetected).toBe(false);
     expect(result.direction).toBe("NONE");
   });
 
   it("no drift: rolling=0.5500 (delta=-0.0118, within threshold) → driftDetected=false", () => {
-    const result = detectDrift(0.5500);
+    const result = detectDrift(0.55);
     expect(result.driftDetected).toBe(false);
   });
 
   it("drift OVER: rolling=0.5820 (delta=+0.0202) → driftDetected=true, direction=OVER", () => {
-    const result = detectDrift(0.5820);
+    const result = detectDrift(0.582);
     expect(result.driftDetected).toBe(true);
     expect(result.direction).toBe("OVER");
     expect(result.delta).toBeGreaterThan(DRIFT_THRESHOLD);
   });
 
   it("drift UNDER: rolling=0.5400 (delta=-0.0218) → driftDetected=true, direction=UNDER", () => {
-    const result = detectDrift(0.5400);
+    const result = detectDrift(0.54);
     expect(result.driftDetected).toBe(true);
     expect(result.direction).toBe("UNDER");
     expect(result.delta).toBeLessThan(-DRIFT_THRESHOLD);
@@ -146,7 +149,7 @@ describe("f5_share Drift Detection", () => {
   });
 
   it("extreme drift UNDER: rolling=0.50 → driftDetected=true", () => {
-    const result = detectDrift(0.50);
+    const result = detectDrift(0.5);
     expect(result.driftDetected).toBe(true);
     expect(result.direction).toBe("UNDER");
   });
@@ -154,7 +157,10 @@ describe("f5_share Drift Detection", () => {
 
 // ─── f5_share Computation Tests ──────────────────────────────────────────────
 
-function computeF5Share(actualF5Total: number, actualFgTotal: number): number | null {
+function computeF5Share(
+  actualF5Total: number,
+  actualFgTotal: number
+): number | null {
   if (actualFgTotal <= 0) return null;
   return parseFloat((actualF5Total / actualFgTotal).toFixed(6));
 }
@@ -182,7 +188,12 @@ describe("f5_share Per-Game Computation", () => {
 
   it("share is always in [0, 1] for valid inputs", () => {
     const cases: [number, number][] = [
-      [2, 5], [4, 7], [5, 9], [6, 10], [7, 12], [3, 6],
+      [2, 5],
+      [4, 7],
+      [5, 9],
+      [6, 10],
+      [7, 12],
+      [3, 6],
     ];
     for (const [f5, fg] of cases) {
       const share = computeF5Share(f5, fg);
@@ -205,7 +216,10 @@ interface IngestionSummary {
   errors: number;
 }
 
-function validateIngestionSummary(summary: IngestionSummary): { valid: boolean; reason?: string } {
+function validateIngestionSummary(summary: IngestionSummary): {
+  valid: boolean;
+  reason?: string;
+} {
   const totalAccountedFor =
     summary.written +
     summary.skippedAlreadyIngested +

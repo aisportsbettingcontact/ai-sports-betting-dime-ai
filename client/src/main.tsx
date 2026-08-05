@@ -1,5 +1,5 @@
 import { trpc } from "@/lib/trpc";
-import { UNAUTHED_ERR_MSG } from '@shared/const';
+import { UNAUTHED_ERR_MSG } from "@shared/const";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { httpBatchLink, TRPCClientError } from "@trpc/client";
 import { createRoot } from "react-dom/client";
@@ -27,7 +27,7 @@ const queryClient = new QueryClient({
       // Retry up to 2 times for transient network errors (Failed to fetch)
       // with exponential backoff: 1s, 2s. Avoids 30s+ spinners on slow connections.
       retry: 2,
-      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
+      retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 5000),
       // Show stale data while refetching (no spinner flash on navigation)
       refetchOnWindowFocus: false,
     },
@@ -68,10 +68,12 @@ const redirectToLoginIfUnauthorized = (error: unknown) => {
   // version bump). Toast is deduped — only one fires per page load.
   if (!_sessionExpiredToastShown) {
     _sessionExpiredToastShown = true;
-    console.log("[Auth] [OUTPUT] UNAUTHORIZED detected — showing session-expired toast before redirect");
+    console.log(
+      "[Auth] [OUTPUT] UNAUTHORIZED detected — showing session-expired toast before redirect"
+    );
     toast.error("Your session has expired. Please log in again.", {
-      id: "session-expired",       // prevents duplicate toasts from stacking
-      duration: 5000,              // 5 s — enough to read before redirect
+      id: "session-expired", // prevents duplicate toasts from stacking
+      duration: 5000, // 5 s — enough to read before redirect
       description: "You have been logged out. Redirecting to log in…",
     });
   }
@@ -81,9 +83,10 @@ const redirectToLoginIfUnauthorized = (error: unknown) => {
   // so signing back in returns the user to where their session expired.
   setTimeout(() => {
     const rp = window.location.pathname + window.location.search;
-    window.location.href = rp === "/" || rp === "/login"
-      ? "/login"
-      : `/login?returnPath=${encodeURIComponent(rp)}`;
+    window.location.href =
+      rp === "/" || rp === "/login"
+        ? "/login"
+        : `/login?returnPath=${encodeURIComponent(rp)}`;
   }, 1500);
 };
 
@@ -126,7 +129,8 @@ const OPTIONAL_AUTH_PATHS = new Set([
 function isOptionalAuthQuery(queryKey: readonly unknown[]): boolean {
   // tRPC v11 key shape: ["trpc", ["procedure", "name"], inputHash]
   const pathPart = queryKey[1];
-  if (Array.isArray(pathPart)) return OPTIONAL_AUTH_PATHS.has(pathPart.join(","));
+  if (Array.isArray(pathPart))
+    return OPTIONAL_AUTH_PATHS.has(pathPart.join(","));
   return false;
 }
 
@@ -135,16 +139,19 @@ queryClient.getQueryCache().subscribe(event => {
     const error = event.query.state.error;
     redirectToLoginIfUnauthorized(error);
     // Suppress UNAUTHORIZED console errors for optional auth-gated queries to reduce noise.
-    const isUnauthorized = error instanceof TRPCClientError && error.message === UNAUTHED_ERR_MSG;
+    const isUnauthorized =
+      error instanceof TRPCClientError && error.message === UNAUTHED_ERR_MSG;
     if (isOptionalAuthQuery(event.query.queryKey) && isUnauthorized) return; // suppress
     // Suppress transient network errors (Failed to fetch) — these are browser-level
     // connection blips that auto-retry. Logging them causes false-positive error reports.
-    const isNetworkBlip = error instanceof TRPCClientError && error.message === "Failed to fetch";
+    const isNetworkBlip =
+      error instanceof TRPCClientError && error.message === "Failed to fetch";
     if (isNetworkBlip) return;
     // Suppress rate-limit errors — handled by resilientFetch (client throttle)
     // or surfaced by the caller (server 429 envelope). Match the stable error
     // code, not message wording, so server-emitted TOO_MANY_REQUESTS is covered.
-    const isRateLimit = error instanceof TRPCClientError &&
+    const isRateLimit =
+      error instanceof TRPCClientError &&
       (error.data?.code === "TOO_MANY_REQUESTS" ||
         error.message.includes("temporarily busy") ||
         error.message.includes("temporarily unavailable"));
@@ -159,7 +166,8 @@ queryClient.getMutationCache().subscribe(event => {
     redirectToLoginIfUnauthorized(error);
     // Suppress rate-limit errors — match the stable code so server-emitted
     // TOO_MANY_REQUESTS (429 envelope) is covered, not just the client throttle.
-    const isRateLimit = error instanceof TRPCClientError &&
+    const isRateLimit =
+      error instanceof TRPCClientError &&
       (error.data?.code === "TOO_MANY_REQUESTS" ||
         error.message.includes("temporarily busy") ||
         error.message.includes("temporarily unavailable"));

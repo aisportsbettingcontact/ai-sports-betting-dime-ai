@@ -57,10 +57,18 @@ function logPhase(phase: number, total: number, table: string) {
   console.log(`${TAG} [${"═".repeat(60)}]`);
 }
 
-function logInput(msg: string) { console.log(`${TAG} [INPUT]  ${msg}`); }
-function logStep(msg: string)  { console.log(`${TAG} [STEP]   ${msg}`); }
-function logState(msg: string) { console.log(`${TAG} [STATE]  ${msg}`); }
-function logOutput(msg: string){ console.log(`${TAG} [OUTPUT] ${msg}`); }
+function logInput(msg: string) {
+  console.log(`${TAG} [INPUT]  ${msg}`);
+}
+function logStep(msg: string) {
+  console.log(`${TAG} [STEP]   ${msg}`);
+}
+function logState(msg: string) {
+  console.log(`${TAG} [STATE]  ${msg}`);
+}
+function logOutput(msg: string) {
+  console.log(`${TAG} [OUTPUT] ${msg}`);
+}
 function logVerify(pass: boolean, msg: string) {
   console.log(`${TAG} [VERIFY] ${pass ? "✓ PASS" : "✗ FAIL"} — ${msg}`);
 }
@@ -82,7 +90,9 @@ function safeDecimal(v: string | number | null | undefined): string | null {
   return isNaN(n) ? null : n.toFixed(3);
 }
 
-function now(): number { return Date.now(); }
+function now(): number {
+  return Date.now();
+}
 
 // ─── Result type ──────────────────────────────────────────────────────────────
 
@@ -124,17 +134,25 @@ export async function ingestEspnMatchData(
   };
 
   console.log(`\n${TAG} ${"▓".repeat(70)}`);
-  console.log(`${TAG} ESPN DB INGEST — espnMatchId=${espnMatchId} dryRun=${dryRun}`);
-  console.log(`${TAG} scrapedAt=${data.scrapedAt} scrapeDurationMs=${data.scrapeDurationMs}`);
+  console.log(
+    `${TAG} ESPN DB INGEST — espnMatchId=${espnMatchId} dryRun=${dryRun}`
+  );
+  console.log(
+    `${TAG} scrapedAt=${data.scrapedAt} scrapeDurationMs=${data.scrapeDurationMs}`
+  );
   console.log(`${TAG} ${"▓".repeat(70)}\n`);
 
   // ─── PHASE 1: wc2026_espn_matches ─────────────────────────────────────────
   logPhase(1, 9, "wc2026_espn_matches");
   try {
     const gs = data.gameStrip;
-    logInput(`gameStrip: ${gs.homeTeam.abbrev} vs ${gs.awayTeam.abbrev} | ${gs.status}`);
+    logInput(
+      `gameStrip: ${gs.homeTeam.abbrev} vs ${gs.awayTeam.abbrev} | ${gs.status}`
+    );
 
-    const matchDateUtc = gs.dateTimeUTC ? new Date(gs.dateTimeUTC).getTime() : now();
+    const matchDateUtc = gs.dateTimeUTC
+      ? new Date(gs.dateTimeUTC).getTime()
+      : now();
 
     // ── Midnight Rule ─────────────────────────────────────────────────────────
     // Game date  = PT date (Pacific Time) — the calendar date at the venue.
@@ -144,17 +162,38 @@ export async function ingestEspnMatchData(
     // If ET time is 00:00 (midnight), the PT date is the correct game date
     // (one day earlier than the UTC date), which is what we store.
     const _kickoffDt = new Date(matchDateUtc);
-    const matchGameDate = _kickoffDt.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' }); // YYYY-MM-DD in PT
-    const _etH = parseInt(_kickoffDt.toLocaleString('en-US', { timeZone: 'America/New_York', hour: '2-digit', hour12: false }), 10);
-    const _etM = parseInt(_kickoffDt.toLocaleString('en-US', { timeZone: 'America/New_York', minute: '2-digit' }), 10);
-    const matchKickoffEt = `${String(isNaN(_etH) ? 0 : _etH).padStart(2,'0')}:${String(isNaN(_etM) ? 0 : _etM).padStart(2,'0')}`;
-    const _isMidnight = matchKickoffEt === '00:00';
+    const matchGameDate = _kickoffDt.toLocaleDateString("en-CA", {
+      timeZone: "America/Los_Angeles",
+    }); // YYYY-MM-DD in PT
+    const _etH = parseInt(
+      _kickoffDt.toLocaleString("en-US", {
+        timeZone: "America/New_York",
+        hour: "2-digit",
+        hour12: false,
+      }),
+      10
+    );
+    const _etM = parseInt(
+      _kickoffDt.toLocaleString("en-US", {
+        timeZone: "America/New_York",
+        minute: "2-digit",
+      }),
+      10
+    );
+    const matchKickoffEt = `${String(isNaN(_etH) ? 0 : _etH).padStart(2, "0")}:${String(isNaN(_etM) ? 0 : _etM).padStart(2, "0")}`;
+    const _isMidnight = matchKickoffEt === "00:00";
 
-    logState(`matchDateUtc=${matchDateUtc} matchGameDate(PT)=${matchGameDate} matchKickoffEt=${matchKickoffEt} midnight=${_isMidnight}`);
-    logState(`[MIDNIGHT_RULE] UTC=${_kickoffDt.toISOString()} → PT_date=${matchGameDate} ET_time=${matchKickoffEt}${_isMidnight ? ' ← MIDNIGHT RULE APPLIED' : ''}`);
+    logState(
+      `matchDateUtc=${matchDateUtc} matchGameDate(PT)=${matchGameDate} matchKickoffEt=${matchKickoffEt} midnight=${_isMidnight}`
+    );
+    logState(
+      `[MIDNIGHT_RULE] UTC=${_kickoffDt.toISOString()} → PT_date=${matchGameDate} ET_time=${matchKickoffEt}${_isMidnight ? " ← MIDNIGHT RULE APPLIED" : ""}`
+    );
     logState(`venue="${gs.venue}" attendance=${gs.attendance}`);
     logState(`homeScore=${gs.homeTeam.score} awayScore=${gs.awayTeam.score}`);
-    logState(`homeFormation=${data.lineups.home.formation} awayFormation=${data.lineups.away.formation}`);
+    logState(
+      `homeFormation=${data.lineups.home.formation} awayFormation=${data.lineups.away.formation}`
+    );
 
     const row = {
       espnMatchId,
@@ -199,22 +238,44 @@ export async function ingestEspnMatchData(
       updatedAt: now(),
     };
 
-    logStep(`Upserting wc2026_espn_matches espnMatchId=${espnMatchId} matchRound=${row.matchRound}`);
+    logStep(
+      `Upserting wc2026_espn_matches espnMatchId=${espnMatchId} matchRound=${row.matchRound}`
+    );
     if (!dryRun) {
-      await db.insert(wc2026EspnMatches).values(row).onDuplicateKeyUpdate({
-        set: { ...row, updatedAt: now() },
-      });
+      await db
+        .insert(wc2026EspnMatches)
+        .values(row)
+        .onDuplicateKeyUpdate({
+          set: { ...row, updatedAt: now() },
+        });
     }
 
-    const pass = !!row.homeTeamAbbrev && !!row.awayTeamAbbrev && !!row.matchDateUtc;
-    logOutput(`1 row upserted — ${gs.homeTeam.abbrev} ${gs.homeTeam.score}-${gs.awayTeam.score} ${gs.awayTeam.abbrev}`);
-    logVerify(pass, `homeTeamAbbrev="${row.homeTeamAbbrev}" awayTeamAbbrev="${row.awayTeamAbbrev}" matchDateUtc=${row.matchDateUtc}`);
-    result.phases.push({ phase: 1, table: "wc2026_espn_matches", rowsWritten: 1, pass });
+    const pass =
+      !!row.homeTeamAbbrev && !!row.awayTeamAbbrev && !!row.matchDateUtc;
+    logOutput(
+      `1 row upserted — ${gs.homeTeam.abbrev} ${gs.homeTeam.score}-${gs.awayTeam.score} ${gs.awayTeam.abbrev}`
+    );
+    logVerify(
+      pass,
+      `homeTeamAbbrev="${row.homeTeamAbbrev}" awayTeamAbbrev="${row.awayTeamAbbrev}" matchDateUtc=${row.matchDateUtc}`
+    );
+    result.phases.push({
+      phase: 1,
+      table: "wc2026_espn_matches",
+      rowsWritten: 1,
+      pass,
+    });
     result.totalRowsWritten += 1;
   } catch (err) {
     const msg = `Phase 1 failed: ${err instanceof Error ? err.message : String(err)}`;
     logError(msg, err);
-    result.phases.push({ phase: 1, table: "wc2026_espn_matches", rowsWritten: 0, pass: false, error: msg });
+    result.phases.push({
+      phase: 1,
+      table: "wc2026_espn_matches",
+      rowsWritten: 0,
+      pass: false,
+      error: msg,
+    });
     result.errors.push(msg);
   }
 
@@ -222,7 +283,9 @@ export async function ingestEspnMatchData(
   logPhase(3, 9, "wc2026_espn_team_stats");
   try {
     const ts = data.teamStats;
-    logInput(`teamStats: ${ts.homeAbbrev} vs ${ts.awayAbbrev} — ${ts.stats.length} rows`);
+    logInput(
+      `teamStats: ${ts.homeAbbrev} vs ${ts.awayAbbrev} — ${ts.stats.length} rows`
+    );
 
     // Map by stat name (case-insensitive)
     const statMap: Record<string, { home: string; away: string }> = {};
@@ -230,7 +293,8 @@ export async function ingestEspnMatchData(
       statMap[s.name.toLowerCase()] = { home: s.homeValue, away: s.awayValue };
     }
 
-    const get = (key: string) => statMap[key.toLowerCase()] ?? { home: "", away: "" };
+    const get = (key: string) =>
+      statMap[key.toLowerCase()] ?? { home: "", away: "" };
 
     const possession = get("possession");
     const sog = get("shots on goal");
@@ -242,9 +306,15 @@ export async function ingestEspnMatchData(
     const saves = get("saves");
 
     logState(`possession: ${possession.home} / ${possession.away}`);
-    logState(`SoG: ${sog.home} / ${sog.away} | shots: ${shots.home} / ${shots.away}`);
-    logState(`fouls: ${fouls.home} / ${fouls.away} | YC: ${yc.home} / ${yc.away} | RC: ${rc.home} / ${rc.away}`);
-    logState(`corners: ${corners.home} / ${corners.away} | saves: ${saves.home} / ${saves.away}`);
+    logState(
+      `SoG: ${sog.home} / ${sog.away} | shots: ${shots.home} / ${shots.away}`
+    );
+    logState(
+      `fouls: ${fouls.home} / ${fouls.away} | YC: ${yc.home} / ${yc.away} | RC: ${rc.home} / ${rc.away}`
+    );
+    logState(
+      `corners: ${corners.home} / ${corners.away} | saves: ${saves.home} / ${saves.away}`
+    );
 
     const row = {
       espnMatchId,
@@ -273,24 +343,51 @@ export async function ingestEspnMatchData(
 
     logStep(`Upserting wc2026_espn_team_stats espnMatchId=${espnMatchId}`);
     if (!dryRun) {
-      await db.insert(wc2026EspnTeamStats).values(row).onDuplicateKeyUpdate({
-        set: { ...row, updatedAt: now() },
-      });
+      await db
+        .insert(wc2026EspnTeamStats)
+        .values(row)
+        .onDuplicateKeyUpdate({
+          set: { ...row, updatedAt: now() },
+        });
     }
 
-    const pass = ts.stats.length >= 8 && !!row.possession && row.shotsOnGoal !== null;
+    const pass =
+      ts.stats.length >= 8 && !!row.possession && row.shotsOnGoal !== null;
     logOutput(`1 row upserted — ${ts.stats.length} stats mapped`);
-    logVerify(ts.stats.length >= 8, `TEAM_STATS ROW COUNT: ${ts.stats.length} (expected exactly 8)`);
-    logVerify(!!row.possession, `POSSESSION: home=${row.possession} away=${row.possessionAway}`);
-    logVerify(row.shotsOnGoal !== null, `SHOTS_ON_GOAL: home=${row.shotsOnGoal} away=${row.shotsOnGoalAway}`);
-    logVerify(row.cornerKicks !== null, `CORNER_KICKS: home=${row.cornerKicks} away=${row.cornerKicksAway}`);
+    logVerify(
+      ts.stats.length >= 8,
+      `TEAM_STATS ROW COUNT: ${ts.stats.length} (expected exactly 8)`
+    );
+    logVerify(
+      !!row.possession,
+      `POSSESSION: home=${row.possession} away=${row.possessionAway}`
+    );
+    logVerify(
+      row.shotsOnGoal !== null,
+      `SHOTS_ON_GOAL: home=${row.shotsOnGoal} away=${row.shotsOnGoalAway}`
+    );
+    logVerify(
+      row.cornerKicks !== null,
+      `CORNER_KICKS: home=${row.cornerKicks} away=${row.cornerKicksAway}`
+    );
     logVerify(pass, `All 8 tmStatsGrph rows mapped and verified`);
-    result.phases.push({ phase: 3, table: "wc2026_espn_team_stats", rowsWritten: 1, pass });
+    result.phases.push({
+      phase: 3,
+      table: "wc2026_espn_team_stats",
+      rowsWritten: 1,
+      pass,
+    });
     result.totalRowsWritten += 1;
   } catch (err) {
     const msg = `Phase 3 failed: ${err instanceof Error ? err.message : String(err)}`;
     logError(msg, err);
-    result.phases.push({ phase: 3, table: "wc2026_espn_team_stats", rowsWritten: 0, pass: false, error: msg });
+    result.phases.push({
+      phase: 3,
+      table: "wc2026_espn_team_stats",
+      rowsWritten: 0,
+      pass: false,
+      error: msg,
+    });
     result.errors.push(msg);
   }
 
@@ -306,15 +403,33 @@ export async function ingestEspnMatchData(
     const d = data.duels;
     const f = data.fouls;
 
-    logInput(`shots(6) + passes(8) + attack(6) + xG(4) + GK(5) + defense(4) + duels(3) + fouls(4) = 40 cols`);
-    logState(`shots: SoG=${s.homeShotsOnGoal}/${s.awayShotsOnGoal} total=${s.homeShots}/${s.awayShots} blocked=${s.homeShotsBlocked}/${s.awayShotsBlocked}`);
-    logState(`passes: accurate=${p.homeAccuratePasses}/${p.awayAccuratePasses} pct=${p.homePassAccuracyPct}/${p.awayPassAccuracyPct} total=${p.homePasses}/${p.awayPasses}`);
-    logState(`attack: bigChances=${a.homeBigChancesCreated}/${a.awayBigChancesCreated} corners=${a.homeCornersWon}/${a.awayCornersWon}`);
-    logState(`xG: ${eg.homeTeamXG}/${eg.awayTeamXG} openPlay=${eg.homeTeamXGOpenPlay}/${eg.awayTeamXGOpenPlay}`);
-    logState(`defense: tackles=${def.homeTackles}/${def.awayTackles} interceptions=${def.homeInterceptions}/${def.awayInterceptions}`);
-    logState(`defense: clearances=${def.homeClearances}/${def.awayClearances} recoveries=${def.homeRecoveries}/${def.awayRecoveries}`);
-    logState(`duels: won=${d.homeDuelsWon}/${d.awayDuelsWon} total=${d.homeDuels}/${d.awayDuels} aerials=${d.homeAerialsWon}/${d.awayAerialsWon}`);
-    logState(`fouls: committed=${f.homeFoulsCommitted}/${f.awayFoulsCommitted} offsides=${f.homeOffsides}/${f.awayOffsides}`);
+    logInput(
+      `shots(6) + passes(8) + attack(6) + xG(4) + GK(5) + defense(4) + duels(3) + fouls(4) = 40 cols`
+    );
+    logState(
+      `shots: SoG=${s.homeShotsOnGoal}/${s.awayShotsOnGoal} total=${s.homeShots}/${s.awayShots} blocked=${s.homeShotsBlocked}/${s.awayShotsBlocked}`
+    );
+    logState(
+      `passes: accurate=${p.homeAccuratePasses}/${p.awayAccuratePasses} pct=${p.homePassAccuracyPct}/${p.awayPassAccuracyPct} total=${p.homePasses}/${p.awayPasses}`
+    );
+    logState(
+      `attack: bigChances=${a.homeBigChancesCreated}/${a.awayBigChancesCreated} corners=${a.homeCornersWon}/${a.awayCornersWon}`
+    );
+    logState(
+      `xG: ${eg.homeTeamXG}/${eg.awayTeamXG} openPlay=${eg.homeTeamXGOpenPlay}/${eg.awayTeamXGOpenPlay}`
+    );
+    logState(
+      `defense: tackles=${def.homeTackles}/${def.awayTackles} interceptions=${def.homeInterceptions}/${def.awayInterceptions}`
+    );
+    logState(
+      `defense: clearances=${def.homeClearances}/${def.awayClearances} recoveries=${def.homeRecoveries}/${def.awayRecoveries}`
+    );
+    logState(
+      `duels: won=${d.homeDuelsWon}/${d.awayDuelsWon} total=${d.homeDuels}/${d.awayDuels} aerials=${d.homeAerialsWon}/${d.awayAerialsWon}`
+    );
+    logState(
+      `fouls: committed=${f.homeFoulsCommitted}/${f.awayFoulsCommitted} offsides=${f.homeOffsides}/${f.awayOffsides}`
+    );
 
     const row = {
       espnMatchId,
@@ -426,29 +541,55 @@ export async function ingestEspnMatchData(
 
     logStep(`Upserting wc2026_espn_match_stats espnMatchId=${espnMatchId}`);
     if (!dryRun) {
-      await db.insert(wc2026EspnMatchStats).values(row).onDuplicateKeyUpdate({
-        set: { ...row, updatedAt: now() },
-      });
+      await db
+        .insert(wc2026EspnMatchStats)
+        .values(row)
+        .onDuplicateKeyUpdate({
+          set: { ...row, updatedAt: now() },
+        });
     }
 
     // Verify gates: defense section must have all 4 fields
-    const defensePass = (row.homeTackles !== null || row.homeInterceptions !== null ||
-                         row.homeClearances !== null || row.homeRecoveries !== null);
+    const defensePass =
+      row.homeTackles !== null ||
+      row.homeInterceptions !== null ||
+      row.homeClearances !== null ||
+      row.homeRecoveries !== null;
     const shotsPass = row.homeShotsOnGoal !== null;
     const passesPass = row.homePasses !== null;
     const pass = defensePass && shotsPass && passesPass;
 
     logOutput(`1 row upserted — 40 stat columns`);
-    logVerify(shotsPass, `SHOTS: SoG=${row.homeShotsOnGoal}/${row.awayShotsOnGoal}`);
-    logVerify(passesPass, `PASSES: total=${row.homePasses}/${row.awayPasses} pct=${row.homePassAccuracyPct}/${row.awayPassAccuracyPct}`);
-    logVerify(defensePass, `DEFENSE: tackles=${row.homeTackles}/${row.awayTackles} interceptions=${row.homeInterceptions}/${row.awayInterceptions} clearances=${row.homeClearances}/${row.awayClearances} recoveries=${row.homeRecoveries}/${row.awayRecoveries}`);
+    logVerify(
+      shotsPass,
+      `SHOTS: SoG=${row.homeShotsOnGoal}/${row.awayShotsOnGoal}`
+    );
+    logVerify(
+      passesPass,
+      `PASSES: total=${row.homePasses}/${row.awayPasses} pct=${row.homePassAccuracyPct}/${row.awayPassAccuracyPct}`
+    );
+    logVerify(
+      defensePass,
+      `DEFENSE: tackles=${row.homeTackles}/${row.awayTackles} interceptions=${row.homeInterceptions}/${row.awayInterceptions} clearances=${row.homeClearances}/${row.awayClearances} recoveries=${row.homeRecoveries}/${row.awayRecoveries}`
+    );
     logVerify(pass, `All 8 stat sections populated`);
-    result.phases.push({ phase: 4, table: "wc2026_espn_match_stats", rowsWritten: 1, pass });
+    result.phases.push({
+      phase: 4,
+      table: "wc2026_espn_match_stats",
+      rowsWritten: 1,
+      pass,
+    });
     result.totalRowsWritten += 1;
   } catch (err) {
     const msg = `Phase 4 failed: ${err instanceof Error ? err.message : String(err)}`;
     logError(msg, err);
-    result.phases.push({ phase: 4, table: "wc2026_espn_match_stats", rowsWritten: 0, pass: false, error: msg });
+    result.phases.push({
+      phase: 4,
+      table: "wc2026_espn_match_stats",
+      rowsWritten: 0,
+      pass: false,
+      error: msg,
+    });
     result.errors.push(msg);
   }
 
@@ -458,7 +599,9 @@ export async function ingestEspnMatchData(
     const eg = data.expectedGoals;
     logInput(`xG team totals + ${eg.perPlayer.length} per-player entries`);
     logState(`homeXG=${eg.homeTeamXG} awayXG=${eg.awayTeamXG}`);
-    logState(`homeXGOpenPlay=${eg.homeTeamXGOpenPlay} awayXGOpenPlay=${eg.awayTeamXGOpenPlay}`);
+    logState(
+      `homeXGOpenPlay=${eg.homeTeamXGOpenPlay} awayXGOpenPlay=${eg.awayTeamXGOpenPlay}`
+    );
     logState(`homeXGOT=${eg.homeTeamXGOT} awayXGOT=${eg.awayTeamXGOT}`);
     logState(`homeXA=${eg.homeTeamXA} awayXA=${eg.awayTeamXA}`);
 
@@ -484,20 +627,40 @@ export async function ingestEspnMatchData(
 
     logStep(`Upserting wc2026_espn_expected_goals espnMatchId=${espnMatchId}`);
     if (!dryRun) {
-      await db.insert(wc2026EspnExpectedGoals).values(row).onDuplicateKeyUpdate({
-        set: { ...row, updatedAt: now() },
-      });
+      await db
+        .insert(wc2026EspnExpectedGoals)
+        .values(row)
+        .onDuplicateKeyUpdate({
+          set: { ...row, updatedAt: now() },
+        });
     }
 
-    const pass = row.homeXG !== null && row.awayXG !== null && eg.perPlayer.length > 0;
-    logOutput(`1 row upserted — ${eg.perPlayer.length} per-player xG entries in JSON`);
-    logVerify(pass, `homeXG=${row.homeXG} awayXG=${row.awayXG} perPlayer=${eg.perPlayer.length}`);
-    result.phases.push({ phase: 5, table: "wc2026_espn_expected_goals", rowsWritten: 1, pass });
+    const pass =
+      row.homeXG !== null && row.awayXG !== null && eg.perPlayer.length > 0;
+    logOutput(
+      `1 row upserted — ${eg.perPlayer.length} per-player xG entries in JSON`
+    );
+    logVerify(
+      pass,
+      `homeXG=${row.homeXG} awayXG=${row.awayXG} perPlayer=${eg.perPlayer.length}`
+    );
+    result.phases.push({
+      phase: 5,
+      table: "wc2026_espn_expected_goals",
+      rowsWritten: 1,
+      pass,
+    });
     result.totalRowsWritten += 1;
   } catch (err) {
     const msg = `Phase 5 failed: ${err instanceof Error ? err.message : String(err)}`;
     logError(msg, err);
-    result.phases.push({ phase: 5, table: "wc2026_espn_expected_goals", rowsWritten: 0, pass: false, error: msg });
+    result.phases.push({
+      phase: 5,
+      table: "wc2026_espn_expected_goals",
+      rowsWritten: 0,
+      pass: false,
+      error: msg,
+    });
     result.errors.push(msg);
   }
 
@@ -505,17 +668,29 @@ export async function ingestEspnMatchData(
   logPhase(6, 9, "wc2026_espn_shot_map");
   try {
     const shots = data.shotMap.shots;
-    logInput(`${shots.length} shots — home=${data.shotMap.homeShots} away=${data.shotMap.awayShots}`);
+    logInput(
+      `${shots.length} shots — home=${data.shotMap.homeShots} away=${data.shotMap.awayShots}`
+    );
 
     if (shots.length === 0) {
       logStep("No shots in shot map — skipping");
-      logVerify(true, "0 shots (valid for 0-0 match or pre-match) — skip is valid");
-      result.phases.push({ phase: 6, table: "wc2026_espn_shot_map", rowsWritten: 0, pass: true });
+      logVerify(
+        true,
+        "0 shots (valid for 0-0 match or pre-match) — skip is valid"
+      );
+      result.phases.push({
+        phase: 6,
+        table: "wc2026_espn_shot_map",
+        rowsWritten: 0,
+        pass: true,
+      });
     } else {
       // DELETE existing shots for this match then re-INSERT (shots can change mid-match)
       logStep(`Deleting existing shots for espnMatchId=${espnMatchId}`);
       if (!dryRun) {
-        await db.execute(sql`DELETE FROM wc2026_espn_shot_map WHERE espn_match_id = ${espnMatchId}`);
+        await db.execute(
+          sql`DELETE FROM wc2026_espn_shot_map WHERE espn_match_id = ${espnMatchId}`
+        );
       }
 
       const rows = shots.map((shot, idx) => ({
@@ -533,12 +708,16 @@ export async function ingestEspnMatchData(
         clock: shot.clock || null,
         iconType: shot.iconType || null,
         isOwnGoal: shot.isOwnGoal ? 1 : 0,
-        fieldStartX: shot.fieldStartX !== null ? String(shot.fieldStartX) : null,
-        fieldStartY: shot.fieldStartY !== null ? String(shot.fieldStartY) : null,
+        fieldStartX:
+          shot.fieldStartX !== null ? String(shot.fieldStartX) : null,
+        fieldStartY:
+          shot.fieldStartY !== null ? String(shot.fieldStartY) : null,
         fieldEndX: shot.fieldEndX !== null ? String(shot.fieldEndX) : null,
         fieldEndY: shot.fieldEndY !== null ? String(shot.fieldEndY) : null,
-        goalPositionY: shot.goalPositionY !== null ? String(shot.goalPositionY) : null,
-        goalPositionZ: shot.goalPositionZ !== null ? String(shot.goalPositionZ) : null,
+        goalPositionY:
+          shot.goalPositionY !== null ? String(shot.goalPositionY) : null,
+        goalPositionZ:
+          shot.goalPositionZ !== null ? String(shot.goalPositionZ) : null,
         xG: safeDecimal(shot.xG),
         xGOT: safeDecimal(shot.xGOT),
         distance: shot.distance || null,
@@ -561,21 +740,39 @@ export async function ingestEspnMatchData(
 
       // Verify: count goals in shot map vs game strip
       const goalsInMap = shots.filter(s => s.iconType === "goal").length;
-      const expectedGoals = (data.gameStrip.homeTeam.score ?? 0) + (data.gameStrip.awayTeam.score ?? 0);
+      const expectedGoals =
+        (data.gameStrip.homeTeam.score ?? 0) +
+        (data.gameStrip.awayTeam.score ?? 0);
       const pass = rows.length > 0;
 
       logOutput(`${rows.length} shot rows inserted`);
-      logVerify(pass, `${rows.length} shots | goals in map=${goalsInMap} vs scoreGoals=${expectedGoals}`);
+      logVerify(
+        pass,
+        `${rows.length} shots | goals in map=${goalsInMap} vs scoreGoals=${expectedGoals}`
+      );
       if (goalsInMap !== expectedGoals) {
-        logState(`NOTE: goal count mismatch (own goals or penalty shootout may cause discrepancy)`);
+        logState(
+          `NOTE: goal count mismatch (own goals or penalty shootout may cause discrepancy)`
+        );
       }
-      result.phases.push({ phase: 6, table: "wc2026_espn_shot_map", rowsWritten: rows.length, pass });
+      result.phases.push({
+        phase: 6,
+        table: "wc2026_espn_shot_map",
+        rowsWritten: rows.length,
+        pass,
+      });
       result.totalRowsWritten += rows.length;
     }
   } catch (err) {
     const msg = `Phase 6 failed: ${err instanceof Error ? err.message : String(err)}`;
     logError(msg, err);
-    result.phases.push({ phase: 6, table: "wc2026_espn_shot_map", rowsWritten: 0, pass: false, error: msg });
+    result.phases.push({
+      phase: 6,
+      table: "wc2026_espn_shot_map",
+      rowsWritten: 0,
+      pass: false,
+      error: msg,
+    });
     result.errors.push(msg);
   }
 
@@ -595,33 +792,56 @@ export async function ingestEspnMatchData(
       ];
       for (const lp of allLineupPlayers) {
         if (lp.athleteId && lp.stats) {
-          lineupStatsByAthleteId[lp.athleteId] = lp.stats as Record<string, string>;
+          lineupStatsByAthleteId[lp.athleteId] = lp.stats as Record<
+            string,
+            string
+          >;
         }
       }
     }
-    logState(`Lineup stats lookup built for ${Object.keys(lineupStatsByAthleteId).length} athletes`);
+    logState(
+      `Lineup stats lookup built for ${Object.keys(lineupStatsByAthleteId).length} athletes`
+    );
 
     const allPlayers: Array<{
       teamAbbrev: string;
       teamId: string;
       teamName: string;
       isHome: boolean;
-      player: typeof bx.homeTeam.outfieldPlayers[0];
+      player: (typeof bx.homeTeam.outfieldPlayers)[0];
       isGk: boolean;
       gkStats?: typeof bx.homeTeam.goalkeeper;
     }> = [];
 
     // Outfield players — home
     for (const p of bx.homeTeam.outfieldPlayers) {
-      allPlayers.push({ teamAbbrev: bx.homeTeam.teamAbbrev, teamId: bx.homeTeam.teamId, teamName: bx.homeTeam.teamName, isHome: true, player: p, isGk: false });
+      allPlayers.push({
+        teamAbbrev: bx.homeTeam.teamAbbrev,
+        teamId: bx.homeTeam.teamId,
+        teamName: bx.homeTeam.teamName,
+        isHome: true,
+        player: p,
+        isGk: false,
+      });
     }
     // Outfield players — away
     for (const p of bx.awayTeam.outfieldPlayers) {
-      allPlayers.push({ teamAbbrev: bx.awayTeam.teamAbbrev, teamId: bx.awayTeam.teamId, teamName: bx.awayTeam.teamName, isHome: false, player: p, isGk: false });
+      allPlayers.push({
+        teamAbbrev: bx.awayTeam.teamAbbrev,
+        teamId: bx.awayTeam.teamId,
+        teamName: bx.awayTeam.teamName,
+        isHome: false,
+        player: p,
+        isGk: false,
+      });
     }
 
-    logInput(`${bx.homeTeam.outfieldPlayers.length} home outfield + ${bx.awayTeam.outfieldPlayers.length} away outfield players`);
-    logInput(`GK: home=${bx.homeTeam.goalkeeper?.name ?? "none"} away=${bx.awayTeam.goalkeeper?.name ?? "none"}`);
+    logInput(
+      `${bx.homeTeam.outfieldPlayers.length} home outfield + ${bx.awayTeam.outfieldPlayers.length} away outfield players`
+    );
+    logInput(
+      `GK: home=${bx.homeTeam.goalkeeper?.name ?? "none"} away=${bx.awayTeam.goalkeeper?.name ?? "none"}`
+    );
 
     let rowsWritten = 0;
     let statNonNullCount = 0;
@@ -633,14 +853,14 @@ export async function ingestEspnMatchData(
 
       // ── CRITICAL: Use abbreviated schema column names (tch, g, a, sog, shot, bcc, dint, duelw)
       // Drizzle silently ignores unknown keys — long names like 'touches' would write NULL
-      const tch  = safeInt(stats["TCH"]);
-      const g    = safeInt(stats["G"]);
-      const a    = safeInt(stats["A"]);
-      const xG   = safeDecimal(stats["xG"]);
-      const xA   = safeDecimal(stats["xA"]);
-      const sog  = safeInt(stats["SOG"]);
+      const tch = safeInt(stats["TCH"]);
+      const g = safeInt(stats["G"]);
+      const a = safeInt(stats["A"]);
+      const xG = safeDecimal(stats["xG"]);
+      const xA = safeDecimal(stats["xA"]);
+      const sog = safeInt(stats["SOG"]);
       const shot = safeInt(stats["SHOT"]);
-      const bcc  = safeInt(stats["BCC"]);
+      const bcc = safeInt(stats["BCC"]);
       const dint = safeInt(stats["DINT"]);
       const duelw = safeInt(stats["DUELW"]);
 
@@ -671,58 +891,73 @@ export async function ingestEspnMatchData(
         dint,
         duelw,
         // ── GK STATS (null for outfield) ──────────────────────────────────────
-        ga:    null,
-        sv:    null,
-        soga:  null,
-        xGC:   null,
+        ga: null,
+        sv: null,
+        soga: null,
+        xGC: null,
         xGOTC: null,
-        gp:    null,
-        bcs:   null,
-        clr:   null,
-        cc:    null,
-        ks:    null,
+        gp: null,
+        bcs: null,
+        clr: null,
+        cc: null,
+        ks: null,
         // ── LINEUP-DERIVED STATS (from lineUps[].playersMap[].stats) ──────────
-        appearances:    safeInt(luStats["appearances"] ?? luStats["AP"]),
+        appearances: safeInt(luStats["appearances"] ?? luStats["AP"]),
         foulsCommitted: safeInt(luStats["foulsCommitted"] ?? luStats["FC"]),
-        foulsSuffered:  safeInt(luStats["foulsSuffered"] ?? luStats["FS"]),
-        ownGoals:       safeInt(luStats["ownGoals"] ?? luStats["OG"]),
-        redCards:       safeInt(luStats["redCards"] ?? luStats["RC"]),
-        subIns:         safeInt(luStats["subIns"] ?? luStats["SI"]),
-        yellowCards:    safeInt(luStats["yellowCards"] ?? luStats["YC"]),
-        offsides:       safeInt(luStats["offsides"] ?? luStats["OF"]),
-        shotsFaced:     null,  // GK only
+        foulsSuffered: safeInt(luStats["foulsSuffered"] ?? luStats["FS"]),
+        ownGoals: safeInt(luStats["ownGoals"] ?? luStats["OG"]),
+        redCards: safeInt(luStats["redCards"] ?? luStats["RC"]),
+        subIns: safeInt(luStats["subIns"] ?? luStats["SI"]),
+        yellowCards: safeInt(luStats["yellowCards"] ?? luStats["YC"]),
+        offsides: safeInt(luStats["offsides"] ?? luStats["OF"]),
+        shotsFaced: null, // GK only
         createdAt: now(),
         updatedAt: now(),
       };
 
       if (!dryRun) {
-        await db.insert(wc2026EspnPlayerStats).values(row).onDuplicateKeyUpdate({
-          set: { ...row, updatedAt: now() },
-        });
+        await db
+          .insert(wc2026EspnPlayerStats)
+          .values(row)
+          .onDuplicateKeyUpdate({
+            set: { ...row, updatedAt: now() },
+          });
       }
       rowsWritten++;
     }
 
     // Goalkeepers
     for (const [isHome, gkData, teamAbbrev, teamId, teamName] of [
-      [true, bx.homeTeam.goalkeeper, bx.homeTeam.teamAbbrev, bx.homeTeam.teamId, bx.homeTeam.teamName],
-      [false, bx.awayTeam.goalkeeper, bx.awayTeam.teamAbbrev, bx.awayTeam.teamId, bx.awayTeam.teamName],
+      [
+        true,
+        bx.homeTeam.goalkeeper,
+        bx.homeTeam.teamAbbrev,
+        bx.homeTeam.teamId,
+        bx.homeTeam.teamName,
+      ],
+      [
+        false,
+        bx.awayTeam.goalkeeper,
+        bx.awayTeam.teamAbbrev,
+        bx.awayTeam.teamId,
+        bx.awayTeam.teamName,
+      ],
     ] as const) {
       if (!gkData) continue;
       const stats = gkData.stats ?? {};
       const luStats = lineupStatsByAthleteId[gkData.athleteId] ?? {};
 
       // ── CRITICAL: Use abbreviated schema column names (ga, sv, soga, xGC, xGOTC, gp, bcs, clr, cc, ks)
-      const ga    = safeInt(stats["GA"]);
-      const sv    = safeInt(stats["SV"]);
-      const soga  = safeInt(stats["SOGA"]);
-      const xGC   = safeDecimal(stats["xGC"]);
+      const ga = safeInt(stats["GA"]);
+      const sv = safeInt(stats["SV"]);
+      const soga = safeInt(stats["SOGA"]);
+      const xGC = safeDecimal(stats["xGC"]);
       const xGOTC = safeDecimal(stats["xGOTC"]);
-      const gp    = safeDecimal(stats["GP"]);
-      const bcs   = safeInt(stats["BCS"]);
-      const clr   = safeInt(stats["CLR"]);
-      const cc    = safeInt(stats["CC"]);
-      const ks    = safeInt(stats["KS"]);
+      const gp = safeDecimal(stats["GP"]);
+      const bcs = safeInt(stats["BCS"]);
+      const clr = safeInt(stats["CLR"]);
+      const cc = safeInt(stats["CC"]);
+      const ks = safeInt(stats["KS"]);
 
       if (sv !== null || ga !== null) statNonNullCount++;
 
@@ -740,15 +975,15 @@ export async function ingestEspnMatchData(
         positionGroup: "Goalkeepers",
         isGoalkeeper: 1,
         // ── OUTFIELD STATS (null for GK) ──────────────────────────────────────
-        tch:   null,
-        g:     null,
-        a:     null,
-        xG:    null,
-        xA:    null,
-        sog:   null,
-        shot:  null,
-        bcc:   null,
-        dint:  null,
+        tch: null,
+        g: null,
+        a: null,
+        xG: null,
+        xA: null,
+        sog: null,
+        shot: null,
+        bcc: null,
+        dint: null,
         duelw: null,
         // ── GK STATS (abbreviated schema column names) ────────────────────────
         ga,
@@ -762,38 +997,63 @@ export async function ingestEspnMatchData(
         cc,
         ks,
         // ── LINEUP-DERIVED STATS ──────────────────────────────────────────────
-        appearances:    safeInt(luStats["appearances"] ?? luStats["AP"]),
+        appearances: safeInt(luStats["appearances"] ?? luStats["AP"]),
         foulsCommitted: safeInt(luStats["foulsCommitted"] ?? luStats["FC"]),
-        foulsSuffered:  safeInt(luStats["foulsSuffered"] ?? luStats["FS"]),
-        ownGoals:       safeInt(luStats["ownGoals"] ?? luStats["OG"]),
-        redCards:       safeInt(luStats["redCards"] ?? luStats["RC"]),
-        subIns:         safeInt(luStats["subIns"] ?? luStats["SI"]),
-        yellowCards:    safeInt(luStats["yellowCards"] ?? luStats["YC"]),
-        offsides:       safeInt(luStats["offsides"] ?? luStats["OF"]),
-        shotsFaced:     safeInt(luStats["shotsFaced"] ?? luStats["SF"]),
+        foulsSuffered: safeInt(luStats["foulsSuffered"] ?? luStats["FS"]),
+        ownGoals: safeInt(luStats["ownGoals"] ?? luStats["OG"]),
+        redCards: safeInt(luStats["redCards"] ?? luStats["RC"]),
+        subIns: safeInt(luStats["subIns"] ?? luStats["SI"]),
+        yellowCards: safeInt(luStats["yellowCards"] ?? luStats["YC"]),
+        offsides: safeInt(luStats["offsides"] ?? luStats["OF"]),
+        shotsFaced: safeInt(luStats["shotsFaced"] ?? luStats["SF"]),
         createdAt: now(),
         updatedAt: now(),
       };
 
       if (!dryRun) {
-        await db.insert(wc2026EspnPlayerStats).values(row).onDuplicateKeyUpdate({
-          set: { ...row, updatedAt: now() },
-        });
+        await db
+          .insert(wc2026EspnPlayerStats)
+          .values(row)
+          .onDuplicateKeyUpdate({
+            set: { ...row, updatedAt: now() },
+          });
       }
       rowsWritten++;
     }
 
     const pass = rowsWritten >= 20 && statNonNullCount >= 10; // minimum 20 players, at least 10 with non-null stats
-    logOutput(`${rowsWritten} player rows upserted | ${statNonNullCount} with non-null stat values`);
-    logVerify(rowsWritten >= 20, `PLAYER COUNT: ${rowsWritten} rows (expected ≥20)`);
-    logVerify(statNonNullCount >= 10, `STAT COVERAGE: ${statNonNullCount} players have non-null tch/g/sog/sv/ga values (expected ≥10)`);
-    logVerify(pass, `Phase 7 complete | statCols=${bx.statColumns.length} gkCols=${bx.gkStatColumns.length}`);
-    result.phases.push({ phase: 7, table: "wc2026_espn_player_stats", rowsWritten, pass });
+    logOutput(
+      `${rowsWritten} player rows upserted | ${statNonNullCount} with non-null stat values`
+    );
+    logVerify(
+      rowsWritten >= 20,
+      `PLAYER COUNT: ${rowsWritten} rows (expected ≥20)`
+    );
+    logVerify(
+      statNonNullCount >= 10,
+      `STAT COVERAGE: ${statNonNullCount} players have non-null tch/g/sog/sv/ga values (expected ≥10)`
+    );
+    logVerify(
+      pass,
+      `Phase 7 complete | statCols=${bx.statColumns.length} gkCols=${bx.gkStatColumns.length}`
+    );
+    result.phases.push({
+      phase: 7,
+      table: "wc2026_espn_player_stats",
+      rowsWritten,
+      pass,
+    });
     result.totalRowsWritten += rowsWritten;
   } catch (err) {
     const msg = `Phase 7 failed: ${err instanceof Error ? err.message : String(err)}`;
     logError(msg, err);
-    result.phases.push({ phase: 7, table: "wc2026_espn_player_stats", rowsWritten: 0, pass: false, error: msg });
+    result.phases.push({
+      phase: 7,
+      table: "wc2026_espn_player_stats",
+      rowsWritten: 0,
+      pass: false,
+      error: msg,
+    });
     result.errors.push(msg);
   }
 
@@ -804,19 +1064,31 @@ export async function ingestEspnMatchData(
     const allEntries: Array<{
       lineup: typeof lineups.home;
       isHome: boolean;
-      player: typeof lineups.home.starters[0];
+      player: (typeof lineups.home.starters)[0];
       role: "starter" | "substitute" | "unused";
     }> = [];
 
-    for (const [isHome, lineup] of [[true, lineups.home], [false, lineups.away]] as const) {
-      for (const p of lineup.starters)    allEntries.push({ lineup, isHome, player: p, role: "starter" });
-      for (const p of lineup.substitutes) allEntries.push({ lineup, isHome, player: p, role: "substitute" });
-      for (const p of lineup.unused)      allEntries.push({ lineup, isHome, player: p, role: "unused" });
+    for (const [isHome, lineup] of [
+      [true, lineups.home],
+      [false, lineups.away],
+    ] as const) {
+      for (const p of lineup.starters)
+        allEntries.push({ lineup, isHome, player: p, role: "starter" });
+      for (const p of lineup.substitutes)
+        allEntries.push({ lineup, isHome, player: p, role: "substitute" });
+      for (const p of lineup.unused)
+        allEntries.push({ lineup, isHome, player: p, role: "unused" });
     }
 
-    logInput(`home: ${lineups.home.starters.length} starters + ${lineups.home.substitutes.length} subs + ${lineups.home.unused.length} unused`);
-    logInput(`away: ${lineups.away.starters.length} starters + ${lineups.away.substitutes.length} subs + ${lineups.away.unused.length} unused`);
-    logState(`homeFormation=${lineups.home.formation} awayFormation=${lineups.away.formation}`);
+    logInput(
+      `home: ${lineups.home.starters.length} starters + ${lineups.home.substitutes.length} subs + ${lineups.home.unused.length} unused`
+    );
+    logInput(
+      `away: ${lineups.away.starters.length} starters + ${lineups.away.substitutes.length} subs + ${lineups.away.unused.length} unused`
+    );
+    logState(
+      `homeFormation=${lineups.home.formation} awayFormation=${lineups.away.formation}`
+    );
 
     let rowsWritten = 0;
     for (const entry of allEntries) {
@@ -841,30 +1113,47 @@ export async function ingestEspnMatchData(
       };
 
       if (!dryRun) {
-        await db.insert(wc2026EspnLineups).values(row).onDuplicateKeyUpdate({
-          set: {
-            matchRound: row.matchRound,
-            teamAbbrev: row.teamAbbrev,
-            formation: row.formation,
-            isHome: row.isHome,
-            jersey: row.jersey,
-            formationPlace: row.formationPlace,
-            role: row.role,
-          },
-        });
+        await db
+          .insert(wc2026EspnLineups)
+          .values(row)
+          .onDuplicateKeyUpdate({
+            set: {
+              matchRound: row.matchRound,
+              teamAbbrev: row.teamAbbrev,
+              formation: row.formation,
+              isHome: row.isHome,
+              jersey: row.jersey,
+              formationPlace: row.formationPlace,
+              role: row.role,
+            },
+          });
       }
       rowsWritten++;
     }
 
     const pass = rowsWritten >= 22; // minimum 22 starters
     logOutput(`${rowsWritten} lineup rows upserted`);
-    logVerify(pass, `${rowsWritten} players (expected ≥22) | homeFormation=${lineups.home.formation} awayFormation=${lineups.away.formation}`);
-    result.phases.push({ phase: 8, table: "wc2026_espn_lineups", rowsWritten, pass });
+    logVerify(
+      pass,
+      `${rowsWritten} players (expected ≥22) | homeFormation=${lineups.home.formation} awayFormation=${lineups.away.formation}`
+    );
+    result.phases.push({
+      phase: 8,
+      table: "wc2026_espn_lineups",
+      rowsWritten,
+      pass,
+    });
     result.totalRowsWritten += rowsWritten;
   } catch (err) {
     const msg = `Phase 8 failed: ${err instanceof Error ? err.message : String(err)}`;
     logError(msg, err);
-    result.phases.push({ phase: 8, table: "wc2026_espn_lineups", rowsWritten: 0, pass: false, error: msg });
+    result.phases.push({
+      phase: 8,
+      table: "wc2026_espn_lineups",
+      rowsWritten: 0,
+      pass: false,
+      error: msg,
+    });
     result.errors.push(msg);
   }
 
@@ -879,13 +1168,35 @@ export async function ingestEspnMatchData(
       if (!entry.abbreviation || !entry.displayName) continue;
 
       // Determine category from known GK-only abbreviations
-      const GK_ONLY = new Set(["GA", "SV", "SOGA", "xGC", "xGOTC", "GP", "BCS", "CLR", "CC", "KS"]);
-      const OUTFIELD_ONLY = new Set(["TCH", "G", "A", "xG", "xA", "SOG", "SHOT", "BCC", "DINT", "DUELW"]);
+      const GK_ONLY = new Set([
+        "GA",
+        "SV",
+        "SOGA",
+        "xGC",
+        "xGOTC",
+        "GP",
+        "BCS",
+        "CLR",
+        "CC",
+        "KS",
+      ]);
+      const OUTFIELD_ONLY = new Set([
+        "TCH",
+        "G",
+        "A",
+        "xG",
+        "xA",
+        "SOG",
+        "SHOT",
+        "BCC",
+        "DINT",
+        "DUELW",
+      ]);
       const category = GK_ONLY.has(entry.abbreviation)
         ? "goalkeeper"
         : OUTFIELD_ONLY.has(entry.abbreviation)
-        ? "outfield"
-        : "both";
+          ? "outfield"
+          : "both";
 
       const row = {
         abbreviation: entry.abbreviation,
@@ -898,9 +1209,16 @@ export async function ingestEspnMatchData(
       };
 
       if (!dryRun) {
-        await db.insert(wc2026EspnGlossary).values(row).onDuplicateKeyUpdate({
-          set: { displayName: row.displayName, category: row.category, updatedAt: now() },
-        });
+        await db
+          .insert(wc2026EspnGlossary)
+          .values(row)
+          .onDuplicateKeyUpdate({
+            set: {
+              displayName: row.displayName,
+              category: row.category,
+              updatedAt: now(),
+            },
+          });
       }
       rowsWritten++;
     }
@@ -908,12 +1226,23 @@ export async function ingestEspnMatchData(
     const pass = rowsWritten >= 10;
     logOutput(`${rowsWritten} glossary entries upserted`);
     logVerify(pass, `${rowsWritten} entries (expected ≥10 of 20 confirmed)`);
-    result.phases.push({ phase: 9, table: "wc2026_espn_glossary", rowsWritten, pass });
+    result.phases.push({
+      phase: 9,
+      table: "wc2026_espn_glossary",
+      rowsWritten,
+      pass,
+    });
     result.totalRowsWritten += rowsWritten;
   } catch (err) {
     const msg = `Phase 9 failed: ${err instanceof Error ? err.message : String(err)}`;
     logError(msg, err);
-    result.phases.push({ phase: 9, table: "wc2026_espn_glossary", rowsWritten: 0, pass: false, error: msg });
+    result.phases.push({
+      phase: 9,
+      table: "wc2026_espn_glossary",
+      rowsWritten: 0,
+      pass: false,
+      error: msg,
+    });
     result.errors.push(msg);
   }
 
@@ -927,10 +1256,14 @@ export async function ingestEspnMatchData(
   console.log(`${TAG} ${"─".repeat(70)}`);
   for (const phase of result.phases) {
     const status = phase.pass ? "✓ PASS" : "✗ FAIL";
-    console.log(`${TAG}   Phase ${phase.phase}/9 [${status}] ${phase.table} — ${phase.rowsWritten} rows${phase.error ? ` | ERROR: ${phase.error}` : ""}`);
+    console.log(
+      `${TAG}   Phase ${phase.phase}/9 [${status}] ${phase.table} — ${phase.rowsWritten} rows${phase.error ? ` | ERROR: ${phase.error}` : ""}`
+    );
   }
   console.log(`${TAG} ${"─".repeat(70)}`);
-  console.log(`${TAG} RESULT: ${passCount}/9 phases PASS | ${result.totalRowsWritten} total rows | ${result.durationMs}ms`);
+  console.log(
+    `${TAG} RESULT: ${passCount}/9 phases PASS | ${result.totalRowsWritten} total rows | ${result.durationMs}ms`
+  );
   console.log(`${TAG} SUCCESS: ${result.success}`);
   if (result.errors.length > 0) {
     console.log(`${TAG} ERRORS: ${result.errors.join(" | ")}`);
@@ -949,6 +1282,8 @@ export async function scrapeAndIngest(
   const { scrapeEspnMatchPage } = await import("./espnPageScraper");
   console.log(`${TAG} [SCRAPE] Starting scrape for espnMatchId=${gameId}`);
   const data = await scrapeEspnMatchPage(gameId);
-  console.log(`${TAG} [SCRAPE] Complete — ${data.scrapeDurationMs}ms | pages=${data.pagesLoaded.join(",")} | seasonSlug=${data.seasonSlug} | seasonName=${data.seasonName}`);
+  console.log(
+    `${TAG} [SCRAPE] Complete — ${data.scrapeDurationMs}ms | pages=${data.pagesLoaded.join(",")} | seasonSlug=${data.seasonSlug} | seasonName=${data.seasonName}`
+  );
   return ingestEspnMatchData(data, opts);
 }

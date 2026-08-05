@@ -54,7 +54,9 @@ export default function UserActivity() {
   // behind the route-level RequireOwner wrapper.
   useEffect(() => {
     if (!loading && (!appUser || appUser.role !== "owner")) {
-      console.warn(`[UserActivity] Unauthorized: user=${appUser?.username ?? "unauthenticated"} role=${appUser?.role ?? "none"} → redirecting to /feed/model/mlb`);
+      console.warn(
+        `[UserActivity] Unauthorized: user=${appUser?.username ?? "unauthenticated"} role=${appUser?.role ?? "none"} → redirecting to /feed/model/mlb`
+      );
       navigate("/feed/model/mlb");
     }
   }, [loading, appUser, navigate]);
@@ -64,7 +66,9 @@ export default function UserActivity() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center gap-3">
         <RefreshCw className="w-5 h-5 text-foreground animate-spin" />
-        <span className="text-sm text-foreground">{loading ? "Authenticating..." : "Redirecting..."}</span>
+        <span className="text-sm text-foreground">
+          {loading ? "Authenticating..." : "Redirecting..."}
+        </span>
       </div>
     );
   }
@@ -75,18 +79,22 @@ export default function UserActivity() {
         <div className="flex-1 admin-container py-6 sm:py-8">
           {/* Page header */}
           <div className="mb-6">
-            <h1 className="text-3xl font-bold tracking-tight sm:text-4xl" style={{ letterSpacing: "-0.02em" }}>
+            <h1
+              className="text-3xl font-bold tracking-tight sm:text-4xl"
+              style={{ letterSpacing: "-0.02em" }}
+            >
               User Activity
             </h1>
             <p className="mt-2 text-sm sm:text-base text-muted-foreground max-w-2xl leading-relaxed">
-              Customer profiling infrastructure — who's active, who your power users are, which
-              features earn their time, where they fall off, and whether they come back.
+              Customer profiling infrastructure — who's active, who your power
+              users are, which features earn their time, where they fall off,
+              and whether they come back.
             </p>
           </div>
 
           {/* Tab bar — mono labels, one-accent mint active state, 160ms motion. */}
           <div className="flex flex-wrap gap-1 border-b border-border mb-6 sm:mb-8 overflow-x-auto">
-            {TABS.map((t) => (
+            {TABS.map(t => (
               <button
                 key={t.key}
                 onClick={() => setTab(t.key)}

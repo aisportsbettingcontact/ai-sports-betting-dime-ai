@@ -61,10 +61,12 @@
  */
 
 /** Hosts that are always safe: loopback and in-container service names. */
-export const LOCAL_HOST_PATTERN = /^(localhost|127\.0\.0\.1|::1|0\.0\.0\.0|host\.docker\.internal|mysql|db)$/i;
+export const LOCAL_HOST_PATTERN =
+  /^(localhost|127\.0\.0\.1|::1|0\.0\.0\.0|host\.docker\.internal|mysql|db)$/i;
 
 /** Managed-database hostnames that are never a fulfilment-test target. */
-export const MANAGED_HOST_PATTERN = /(tidbcloud\.com|rds\.amazonaws\.com|\.render\.com|\.railway\.app|planetscale|\bprod\b|\.prod\.)/i;
+export const MANAGED_HOST_PATTERN =
+  /(tidbcloud\.com|rds\.amazonaws\.com|\.render\.com|\.railway\.app|planetscale|\bprod\b|\.prod\.)/i;
 
 /** A Stripe TEST secret/restricted key. Live keys use `sk_live_` / `rk_live_`. */
 export const TEST_STRIPE_KEY_PATTERN = /^(sk|rk)_test_/;
@@ -86,9 +88,16 @@ export interface HostVerdict {
  * fulfilment runs against whatever default connection the process later
  * resolves — an unknown target, which is not something to guess about.
  */
-export function assessFulfillmentDatabaseUrl(raw: string | undefined): HostVerdict {
+export function assessFulfillmentDatabaseUrl(
+  raw: string | undefined
+): HostVerdict {
   if (!raw || raw.trim() === "") {
-    return { allowed: false, host: null, reason: "DATABASE_URL is not set — refusing to fulfil against an unknown database" };
+    return {
+      allowed: false,
+      host: null,
+      reason:
+        "DATABASE_URL is not set — refusing to fulfil against an unknown database",
+    };
   }
   let host: string | null = null;
   try {
@@ -98,18 +107,34 @@ export function assessFulfillmentDatabaseUrl(raw: string | undefined): HostVerdi
     host = (new URL(raw).hostname || "").replace(/^\[(.*)\]$/, "$1") || null;
   } catch {
     // An unparseable DSN is not something to guess about.
-    return { allowed: false, host: null, reason: "DATABASE_URL is not a parseable URL" };
+    return {
+      allowed: false,
+      host: null,
+      reason: "DATABASE_URL is not a parseable URL",
+    };
   }
   if (!host) {
-    return { allowed: false, host: null, reason: "DATABASE_URL has no hostname" };
+    return {
+      allowed: false,
+      host: null,
+      reason: "DATABASE_URL has no hostname",
+    };
   }
   if (LOCAL_HOST_PATTERN.test(host)) {
     return { allowed: true, host, reason: `local database host "${host}"` };
   }
   if (MANAGED_HOST_PATTERN.test(host)) {
-    return { allowed: false, host, reason: `DATABASE_URL host "${host}" is a managed/production database host` };
+    return {
+      allowed: false,
+      host,
+      reason: `DATABASE_URL host "${host}" is a managed/production database host`,
+    };
   }
-  return { allowed: false, host, reason: `DATABASE_URL host "${host}" is a non-local database host` };
+  return {
+    allowed: false,
+    host,
+    reason: `DATABASE_URL host "${host}" is a non-local database host`,
+  };
 }
 
 export interface TestModeFulfillmentVerdict {
@@ -125,7 +150,7 @@ export interface TestModeFulfillmentVerdict {
  * Default answer is `false`. Every branch below is a refusal except the last.
  */
 export function isTestModeFulfillmentAllowed(
-  env: NodeJS.ProcessEnv | Record<string, string | undefined> = process.env,
+  env: NodeJS.ProcessEnv | Record<string, string | undefined> = process.env
 ): TestModeFulfillmentVerdict {
   // (a) Explicit opt-in. Anything other than exactly "1" is off.
   const flag = env.ALLOW_TEST_MODE_FULFILLMENT;
@@ -143,7 +168,8 @@ export function isTestModeFulfillmentAllowed(
   if (!key) {
     return {
       allowed: false,
-      reason: "STRIPE_SECRET_KEY is not set — cannot prove this process is in Stripe TEST mode",
+      reason:
+        "STRIPE_SECRET_KEY is not set — cannot prove this process is in Stripe TEST mode",
     };
   }
   if (!TEST_STRIPE_KEY_PATTERN.test(key)) {
@@ -161,7 +187,10 @@ export function isTestModeFulfillmentAllowed(
   // (c) Database blast radius.
   const db = assessFulfillmentDatabaseUrl(env.DATABASE_URL);
   if (!db.allowed) {
-    return { allowed: false, reason: `${db.reason} — test-mode fulfilment refuses to write there` };
+    return {
+      allowed: false,
+      reason: `${db.reason} — test-mode fulfilment refuses to write there`,
+    };
   }
 
   return {

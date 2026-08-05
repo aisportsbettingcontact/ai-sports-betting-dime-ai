@@ -39,7 +39,9 @@ const nonEmptyString = (value: unknown): string | null =>
  * Treat scraper JSON as untrusted at the UI boundary: malformed rows are
  * ignored, orders are normalized, and at most the nine MLB lineup spots render.
  */
-export function parseRotowireBattingOrder(raw: string | null | undefined): ProjectionLineupPlayer[] {
+export function parseRotowireBattingOrder(
+  raw: string | null | undefined
+): ProjectionLineupPlayer[] {
   if (!raw) return [];
 
   let decoded: unknown;
@@ -56,7 +58,8 @@ export function parseRotowireBattingOrder(raw: string | null | undefined): Proje
       const row = entry as Record<string, unknown>;
       const battingOrder = finiteInteger(row.battingOrder);
       const name = nonEmptyString(row.name);
-      if (battingOrder == null || battingOrder < 1 || battingOrder > 9 || !name) return null;
+      if (battingOrder == null || battingOrder < 1 || battingOrder > 9 || !name)
+        return null;
 
       return {
         battingOrder,
@@ -78,7 +81,7 @@ function pitcher(
   seasonStats: string | null | undefined,
   rotowireId: number | null | undefined,
   mlbamId: number | null | undefined,
-  confirmed: boolean | null | undefined,
+  confirmed: boolean | null | undefined
 ): ProjectionPitcher {
   return {
     name: nonEmptyString(name),
@@ -96,7 +99,7 @@ function pitcher(
  * disappearing or shifting when the next 60-second poll arrives.
  */
 export function mlbLineupToProjectionPregame(
-  row: MlbLineupLike | null | undefined,
+  row: MlbLineupLike | null | undefined
 ): ProjectionPregameLineups {
   return {
     source: "Rotowire",
@@ -108,7 +111,7 @@ export function mlbLineupToProjectionPregame(
         row?.awayPitcherEra,
         row?.awayPitcherRotowireId,
         row?.awayPitcherMlbamId,
-        row?.awayPitcherConfirmed,
+        row?.awayPitcherConfirmed
       ),
       battingOrder: parseRotowireBattingOrder(row?.awayLineup),
       confirmed: row?.awayLineupConfirmed === true,
@@ -120,7 +123,7 @@ export function mlbLineupToProjectionPregame(
         row?.homePitcherEra,
         row?.homePitcherRotowireId,
         row?.homePitcherMlbamId,
-        row?.homePitcherConfirmed,
+        row?.homePitcherConfirmed
       ),
       battingOrder: parseRotowireBattingOrder(row?.homeLineup),
       confirmed: row?.homeLineupConfirmed === true,

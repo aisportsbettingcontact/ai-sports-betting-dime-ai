@@ -38,32 +38,46 @@ describe("createPortalSession — moved off the access-gated procedure", () => {
   });
 
   it("is NOT bound to stripeAppUserProcedure anymore", () => {
-    expect(source).not.toMatch(/createPortalSession:\s*stripeAppUserProcedure\b/);
+    expect(source).not.toMatch(
+      /createPortalSession:\s*stripeAppUserProcedure\b/
+    );
   });
 
   it("the binding carries a comment explaining why (lapsed/expired callers are the whole point)", () => {
-    const declIdx = source.search(/createPortalSession:\s*billingAppUserProcedure\b/);
+    const declIdx = source.search(
+      /createPortalSession:\s*billingAppUserProcedure\b/
+    );
     expect(declIdx).toBeGreaterThan(-1);
     const precedingComment = source.slice(Math.max(0, declIdx - 1200), declIdx);
-    expect(precedingComment).toMatch(/billingAppUserProcedure, not stripeAppUserProcedure/);
+    expect(precedingComment).toMatch(
+      /billingAppUserProcedure, not stripeAppUserProcedure/
+    );
     expect(precedingComment).toMatch(/lapsed|expired|revoked/i);
-    expect(precedingComment).toMatch(/reactivateSubscription stays on stripeAppUserProcedure/);
+    expect(precedingComment).toMatch(
+      /reactivateSubscription stays on stripeAppUserProcedure/
+    );
   });
 });
 
 describe("reactivateSubscription and cancelSubscription — still stripeAppUserProcedure-bound", () => {
   it("reactivateSubscription is untouched — its own cancel_scheduled-only guard makes the access gate correct for its only reachable caller", () => {
-    expect(source).toMatch(/reactivateSubscription:\s*stripeAppUserProcedure\.mutation/);
+    expect(source).toMatch(
+      /reactivateSubscription:\s*stripeAppUserProcedure\.mutation/
+    );
   });
 
   it("cancelSubscription is untouched — only reachable while hasAccess=true (an active plan), so the gate never misfires for it", () => {
-    expect(source).toMatch(/cancelSubscription:\s*stripeAppUserProcedure\.mutation/);
+    expect(source).toMatch(
+      /cancelSubscription:\s*stripeAppUserProcedure\.mutation/
+    );
   });
 });
 
 describe("billingAppUserProcedure — the middleware createPortalSession now shares with the read-only billing-data procedures", () => {
   it("is defined once, built on stripeProcedure, and its body skips the hasAccess/expiry checks by design", () => {
-    const defIdx = source.indexOf("const billingAppUserProcedure = stripeProcedure.use(");
+    const defIdx = source.indexOf(
+      "const billingAppUserProcedure = stripeProcedure.use("
+    );
     expect(defIdx).toBeGreaterThan(-1);
     const defEnd = source.indexOf("\n});", defIdx);
     const body = source.slice(defIdx, defEnd);
@@ -72,19 +86,30 @@ describe("billingAppUserProcedure — the middleware createPortalSession now sha
   });
 
   it("still requires a valid app_session cookie + JWT + tokenVersion match (session validity is not dropped, only the access gate)", () => {
-    const defIdx = source.indexOf("const billingAppUserProcedure = stripeProcedure.use(");
+    const defIdx = source.indexOf(
+      "const billingAppUserProcedure = stripeProcedure.use("
+    );
     expect(defIdx).toBeGreaterThan(-1);
     const defEnd = source.indexOf("\n});", defIdx);
     const body = source.slice(defIdx, defEnd);
     expect(body).toContain("getAppSessionToken(ctx.req)");
     expect(body).toContain("verifyAppUserToken(token)");
-    expect(body).toMatch(/payload\.tv !== null && payload\.tv !== user\.tokenVersion/);
+    expect(body).toMatch(
+      /payload\.tv !== null && payload\.tv !== user\.tokenVersion/
+    );
   });
 
   it("getPlanStatus/getInvoices/getPaymentMethods/getBillingInfo all share this same procedure", () => {
-    for (const name of ["getPlanStatus", "getInvoices", "getPaymentMethods", "getBillingInfo"]) {
+    for (const name of [
+      "getPlanStatus",
+      "getInvoices",
+      "getPaymentMethods",
+      "getBillingInfo",
+    ]) {
       const re = new RegExp(`${name}:\\s*billingAppUserProcedure\\b`);
-      expect(source, `${name} should be billingAppUserProcedure-bound`).toMatch(re);
+      expect(source, `${name} should be billingAppUserProcedure-bound`).toMatch(
+        re
+      );
     }
   });
 });

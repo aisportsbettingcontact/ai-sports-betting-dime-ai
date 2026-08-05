@@ -13,7 +13,10 @@
  */
 import type { ReactNode } from "react";
 import { MINT, mintAlpha } from "@/pages/admin/chartTheme";
-import { type PointLike, METRIC_STATE_LABEL } from "@/pages/admin/profilingTypes";
+import {
+  type PointLike,
+  METRIC_STATE_LABEL,
+} from "@/pages/admin/profilingTypes";
 
 /** Tiny static sparkline — mint line over a faint mint area. Non-scaling stroke. */
 function Sparkline({ data }: { data: number[] }) {
@@ -30,14 +33,29 @@ function Sparkline({ data }: { data: number[] }) {
     const y = pad + (h - pad * 2) * (1 - (v - min) / span);
     return [x, y] as const;
   });
-  const line = pts.map(([x, y], i) => `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
+  const line = pts
+    .map(([x, y], i) => `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`)
+    .join(" ");
   const first = pts[0];
   const last = pts[pts.length - 1];
   const area = `${line} L${last[0].toFixed(1)},${h - pad} L${first[0].toFixed(1)},${h - pad} Z`;
   return (
-    <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="mt-2 h-8 w-full" aria-hidden="true">
+    <svg
+      viewBox={`0 0 ${w} ${h}`}
+      preserveAspectRatio="none"
+      className="mt-2 h-8 w-full"
+      aria-hidden="true"
+    >
       <path d={area} fill={mintAlpha(0.12)} />
-      <path d={line} fill="none" stroke={MINT} strokeWidth={1.5} vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" />
+      <path
+        d={line}
+        fill="none"
+        stroke={MINT}
+        strokeWidth={1.5}
+        vectorEffect="non-scaling-stroke"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
@@ -64,7 +82,7 @@ export default function StatTile({
   sublabel,
   point,
   loading,
-  format = (v) => v.toLocaleString(),
+  format = v => v.toLocaleString(),
   highlight,
   series,
   delta,
@@ -72,8 +90,10 @@ export default function StatTile({
 }: StatTileProps) {
   const renderValue = (): ReactNode => {
     if (value !== undefined) return value;
-    if (loading || !point) return <span className="text-muted-foreground">—</span>;
-    if (point.state === "ok" && point.value !== null) return format(point.value);
+    if (loading || !point)
+      return <span className="text-muted-foreground">—</span>;
+    if (point.state === "ok" && point.value !== null)
+      return format(point.value);
     return (
       <span className="text-muted-foreground" title={point.reason ?? undefined}>
         {METRIC_STATE_LABEL[point.state] ?? "—"}
@@ -107,10 +127,14 @@ export default function StatTile({
 
       <div className="mt-2 flex items-center gap-2 min-w-0">
         {sublabel && (
-          <div className="text-xs sm:text-sm text-muted-foreground leading-relaxed truncate min-w-0">{sublabel}</div>
+          <div className="text-xs sm:text-sm text-muted-foreground leading-relaxed truncate min-w-0">
+            {sublabel}
+          </div>
         )}
         {delta && (
-          <span className={`ml-auto shrink-0 text-[11px] font-mono tabular-nums ${deltaClass}`}>
+          <span
+            className={`ml-auto shrink-0 text-[11px] font-mono tabular-nums ${deltaClass}`}
+          >
             {delta.text}
           </span>
         )}

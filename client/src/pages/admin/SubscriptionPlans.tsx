@@ -79,7 +79,11 @@ import type {
   BillingInterval,
   PlanEditDraft,
 } from "@/pages/admin/planTypes";
-import { PLAN_FEATURES, normalizePlanFeatures, planFeatureLabel } from "@shared/planFeatures";
+import {
+  PLAN_FEATURES,
+  normalizePlanFeatures,
+  planFeatureLabel,
+} from "@shared/planFeatures";
 import type { PlanFeatureKey } from "@shared/planFeatures";
 import { useDialogFocus } from "@/hooks/useDialogFocus";
 
@@ -119,9 +123,14 @@ interface PricePayload {
 }
 
 /** Validate + convert one interval draft to a mutation payload, or an error string. */
-function buildPricePayload(iv: IntervalDraft, label: string, recurring: boolean): PricePayload | string {
+function buildPricePayload(
+  iv: IntervalDraft,
+  label: string,
+  recurring: boolean
+): PricePayload | string {
   const amountCents = Math.round(parseFloat(iv.price) * 100);
-  if (Number.isNaN(amountCents) || amountCents < 50) return `${label}: enter a price of at least $0.50.`;
+  if (Number.isNaN(amountCents) || amountCents < 50)
+    return `${label}: enter a price of at least $0.50.`;
 
   const payload: PricePayload = { amountCents };
 
@@ -133,7 +142,8 @@ function buildPricePayload(iv: IntervalDraft, label: string, recurring: boolean)
     payload.intervalCount = iv.interval.intervalCount;
     if (iv.trialDays.trim()) {
       const t = parseInt(iv.trialDays, 10);
-      if (Number.isNaN(t) || t < 0) return `${label}: free trial days must be 0 or more.`;
+      if (Number.isNaN(t) || t < 0)
+        return `${label}: free trial days must be 0 or more.`;
       payload.trialPeriodDays = t;
     }
   }
@@ -144,11 +154,14 @@ function buildPricePayload(iv: IntervalDraft, label: string, recurring: boolean)
     let value: number;
     if (iv.promoType === "percent") {
       value = parseInt(raw, 10);
-      if (Number.isNaN(value) || value < 1 || value > 100) return `${label}: percent promo must be 1–100.`;
+      if (Number.isNaN(value) || value < 1 || value > 100)
+        return `${label}: percent promo must be 1–100.`;
     } else {
       value = Math.round(parseFloat(raw) * 100);
-      if (Number.isNaN(value) || value < 1) return `${label}: enter a valid discount amount.`;
-      if (value >= amountCents) return `${label}: discount must be less than the price.`;
+      if (Number.isNaN(value) || value < 1)
+        return `${label}: enter a valid discount amount.`;
+      if (value >= amountCents)
+        return `${label}: discount must be less than the price.`;
     }
     const code = iv.promoCode.trim();
     if (code && !/^[A-Za-z0-9_-]{2,64}$/.test(code)) {
@@ -175,26 +188,36 @@ const money = (cents: number) => `$${(cents / 100).toFixed(2)}`;
 
 function per(price: StoredPrice): string {
   if (!price.interval) return " one-time";
-  const count = price.intervalCount && price.intervalCount > 1 ? `${price.intervalCount} ` : "";
+  const count =
+    price.intervalCount && price.intervalCount > 1
+      ? `${price.intervalCount} `
+      : "";
   return ` / ${count}${price.interval}`;
 }
 
 function discountedCents(price: StoredPrice): number | null {
   if (!price.promoType || price.promoValue == null) return null;
-  if (price.promoType === "percent") return Math.max(0, Math.round(price.amountCents * (1 - price.promoValue / 100)));
+  if (price.promoType === "percent")
+    return Math.max(
+      0,
+      Math.round(price.amountCents * (1 - price.promoValue / 100))
+    );
   return Math.max(0, price.amountCents - price.promoValue);
 }
 
 function promoLabel(price: StoredPrice): string | null {
   if (!price.promoType || price.promoValue == null) return null;
-  return price.promoType === "percent" ? `${price.promoValue}% off` : `${money(price.promoValue)} off`;
+  return price.promoType === "percent"
+    ? `${price.promoValue}% off`
+    : `${money(price.promoValue)} off`;
 }
 
 // ─── Shared styling ──────────────────────────────────────────────────────────
 
 const inputClass =
   "w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground outline-none transition-colors duration-150 focus:border-primary focus-visible:ring-2 focus-visible:ring-primary/40";
-const labelClass = "font-mono text-[11px] uppercase tracking-wider text-muted-foreground";
+const labelClass =
+  "font-mono text-[11px] uppercase tracking-wider text-muted-foreground";
 const chipBtn =
   "inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-border px-2.5 py-1 text-xs font-medium text-foreground transition-colors duration-150 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50";
 const primaryBtn =
@@ -202,7 +225,17 @@ const primaryBtn =
 
 // ─── Modal ───────────────────────────────────────────────────────────────────
 
-function Modal({ title, icon, onClose, children }: { title: string; icon: ReactNode; onClose: () => void; children: ReactNode }) {
+function Modal({
+  title,
+  icon,
+  onClose,
+  children,
+}: {
+  title: string;
+  icon: ReactNode;
+  onClose: () => void;
+  children: ReactNode;
+}) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -228,7 +261,7 @@ function Modal({ title, icon, onClose, children }: { title: string; icon: ReactN
     >
       <div
         className="my-4 w-full max-w-3xl rounded-xl border border-border bg-card shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
+        onClick={e => e.stopPropagation()}
       >
         <div className="sticky top-0 z-10 flex items-center justify-between rounded-t-xl border-b border-border bg-card px-5 py-4">
           <h2 className="flex items-center gap-2 text-lg font-semibold tracking-tight">
@@ -271,12 +304,13 @@ function IntervalFields({
       {displayLabel && (
         <div className="flex flex-col gap-1.5">
           <label className={labelClass}>
-            Label <span className="normal-case tracking-normal">(optional)</span>
+            Label{" "}
+            <span className="normal-case tracking-normal">(optional)</span>
           </label>
           <input
             type="text"
             value={displayLabel.value}
-            onChange={(e) => displayLabel.onChange(e.target.value)}
+            onChange={e => displayLabel.onChange(e.target.value)}
             placeholder="Most popular"
             className={inputClass}
           />
@@ -289,7 +323,7 @@ function IntervalFields({
           type="text"
           inputMode="decimal"
           value={value.price}
-          onChange={(e) => onChange({ price: e.target.value })}
+          onChange={e => onChange({ price: e.target.value })}
           placeholder="99.00"
           className={`${inputClass} font-mono`}
         />
@@ -299,18 +333,22 @@ function IntervalFields({
         <>
           <div className="flex flex-col gap-1.5">
             <label className={labelClass}>Billing interval</label>
-            <IntervalPicker value={value.interval} onChange={(interval) => onChange({ interval })} />
+            <IntervalPicker
+              value={value.interval}
+              onChange={interval => onChange({ interval })}
+            />
           </div>
           {!lifetime && (
             <div className="flex flex-col gap-1.5">
               <label className={labelClass}>
-                Free trial days <span className="normal-case tracking-normal">(optional)</span>
+                Free trial days{" "}
+                <span className="normal-case tracking-normal">(optional)</span>
               </label>
               <input
                 type="number"
                 min={0}
                 value={value.trialDays}
-                onChange={(e) => onChange({ trialDays: e.target.value })}
+                onChange={e => onChange({ trialDays: e.target.value })}
                 placeholder="0"
                 className={`${inputClass} font-mono`}
               />
@@ -326,7 +364,9 @@ function IntervalFields({
           onClick={() => onChange({ promoOn: !value.promoOn })}
           aria-pressed={value.promoOn}
           className={`inline-flex h-[42px] items-center justify-center gap-2 rounded-lg border px-3 text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
-            value.promoOn ? "border-primary text-primary" : "border-border text-muted-foreground hover:bg-muted"
+            value.promoOn
+              ? "border-primary text-primary"
+              : "border-border text-muted-foreground hover:bg-muted"
           }`}
         >
           <Tag className="h-4 w-4" aria-hidden="true" />
@@ -339,14 +379,16 @@ function IntervalFields({
           <div className="flex flex-col gap-1.5">
             <label className={labelClass}>Discount type</label>
             <div className="inline-flex rounded-lg border border-border p-1">
-              {(["percent", "amount"] as const).map((t) => (
+              {(["percent", "amount"] as const).map(t => (
                 <button
                   key={t}
                   type="button"
                   onClick={() => onChange({ promoType: t })}
                   aria-pressed={value.promoType === t}
                   className={`flex-1 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors duration-150 ${
-                    value.promoType === t ? "bg-[var(--row-active)] text-foreground" : "text-muted-foreground hover:text-foreground"
+                    value.promoType === t
+                      ? "bg-[var(--row-active)] text-foreground"
+                      : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
                   {t === "percent" ? "% off" : "$ off"}
@@ -355,24 +397,29 @@ function IntervalFields({
             </div>
           </div>
           <div className="flex flex-col gap-1.5">
-            <label className={labelClass}>{value.promoType === "percent" ? "Percent (1–100)" : "Amount off (USD)"}</label>
+            <label className={labelClass}>
+              {value.promoType === "percent"
+                ? "Percent (1–100)"
+                : "Amount off (USD)"}
+            </label>
             <input
               type="text"
               inputMode="decimal"
               value={value.promoValue}
-              onChange={(e) => onChange({ promoValue: e.target.value })}
+              onChange={e => onChange({ promoValue: e.target.value })}
               placeholder={value.promoType === "percent" ? "50" : "25.00"}
               className={`${inputClass} font-mono`}
             />
           </div>
           <div className="flex flex-col gap-1.5">
             <label className={labelClass}>
-              Code <span className="normal-case tracking-normal">(optional)</span>
+              Code{" "}
+              <span className="normal-case tracking-normal">(optional)</span>
             </label>
             <input
               type="text"
               value={value.promoCode}
-              onChange={(e) => onChange({ promoCode: e.target.value })}
+              onChange={e => onChange({ promoCode: e.target.value })}
               placeholder="LAUNCH50"
               className={`${inputClass} font-mono`}
             />
@@ -393,7 +440,13 @@ function IntervalFields({
  * Not a <select multiple>: the options carry helper text, and ctrl-clicking rows
  * to keep a selection is exactly the interaction the owner would fight with.
  */
-function FeaturesPicker({ value, onChange }: { value: PlanFeatureKey[]; onChange: (next: PlanFeatureKey[]) => void }) {
+function FeaturesPicker({
+  value,
+  onChange,
+}: {
+  value: PlanFeatureKey[];
+  onChange: (next: PlanFeatureKey[]) => void;
+}) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement | null>(null);
 
@@ -403,7 +456,8 @@ function FeaturesPicker({ value, onChange }: { value: PlanFeatureKey[]; onChange
   useEffect(() => {
     if (!open) return;
     const onDown = (e: MouseEvent) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node))
+        setOpen(false);
     };
     document.addEventListener("mousedown", onDown);
     return () => document.removeEventListener("mousedown", onDown);
@@ -413,7 +467,7 @@ function FeaturesPicker({ value, onChange }: { value: PlanFeatureKey[]; onChange
     <div
       ref={wrapRef}
       className="relative"
-      onKeyDown={(e) => {
+      onKeyDown={e => {
         if (e.key === "Escape" && open) {
           e.stopPropagation();
           setOpen(false);
@@ -422,7 +476,7 @@ function FeaturesPicker({ value, onChange }: { value: PlanFeatureKey[]; onChange
     >
       <button
         type="button"
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => setOpen(o => !o)}
         aria-expanded={open}
         aria-haspopup="listbox"
         className={`${inputClass} flex min-h-[42px] cursor-pointer items-center justify-between gap-2 text-left`}
@@ -431,7 +485,7 @@ function FeaturesPicker({ value, onChange }: { value: PlanFeatureKey[]; onChange
           <span className="text-muted-foreground">Select features…</span>
         ) : (
           <span className="flex flex-wrap gap-1.5">
-            {value.map((key) => (
+            {value.map(key => (
               <span
                 key={key}
                 className="inline-flex items-center rounded-full border border-primary px-2 py-0.5 text-[11px] font-medium text-primary"
@@ -453,7 +507,7 @@ function FeaturesPicker({ value, onChange }: { value: PlanFeatureKey[]; onChange
           aria-multiselectable="true"
           className="absolute z-20 mt-1.5 max-h-72 w-full overflow-y-auto rounded-lg border border-border bg-card p-1 shadow-2xl"
         >
-          {PLAN_FEATURES.map((feature) => {
+          {PLAN_FEATURES.map(feature => {
             const selected = value.includes(feature.key);
             return (
               <button
@@ -466,15 +520,21 @@ function FeaturesPicker({ value, onChange }: { value: PlanFeatureKey[]; onChange
               >
                 <span
                   className={`mt-0.5 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border ${
-                    selected ? "border-primary bg-primary text-primary-foreground" : "border-border"
+                    selected
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border"
                   }`}
                   aria-hidden="true"
                 >
                   {selected && <Check className="h-3 w-3" />}
                 </span>
                 <span className="min-w-0">
-                  <span className="block text-sm font-medium text-foreground">{feature.label}</span>
-                  <span className="block text-xs leading-relaxed text-muted-foreground">{feature.description}</span>
+                  <span className="block text-sm font-medium text-foreground">
+                    {feature.label}
+                  </span>
+                  <span className="block text-xs leading-relaxed text-muted-foreground">
+                    {feature.description}
+                  </span>
                 </span>
               </button>
             );
@@ -486,11 +546,20 @@ function FeaturesPicker({ value, onChange }: { value: PlanFeatureKey[]; onChange
 }
 
 /** The Features form row — label + picker + count, shared by every plan modal. */
-function FeaturesField({ value, onChange }: { value: PlanFeatureKey[]; onChange: (next: PlanFeatureKey[]) => void }) {
+function FeaturesField({
+  value,
+  onChange,
+}: {
+  value: PlanFeatureKey[];
+  onChange: (next: PlanFeatureKey[]) => void;
+}) {
   return (
     <div className="flex flex-col gap-1.5">
       <label className={labelClass}>
-        Features <span className="normal-case tracking-normal">({value.length} selected)</span>
+        Features{" "}
+        <span className="normal-case tracking-normal">
+          ({value.length} selected)
+        </span>
       </label>
       <FeaturesPicker value={value} onChange={onChange} />
     </div>
@@ -503,7 +572,9 @@ function CreatePlanModal({ onClose }: { onClose: () => void }) {
   const utils = trpc.useUtils();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [intervals, setIntervals] = useState<IntervalDraft[]>([blankInterval()]);
+  const [intervals, setIntervals] = useState<IntervalDraft[]>([
+    blankInterval(),
+  ]);
   const [features, setFeatures] = useState<PlanFeatureKey[]>([]);
   const [limitedQty, setLimitedQty] = useState(false);
   const [availableQty, setAvailableQty] = useState("");
@@ -514,16 +585,18 @@ function CreatePlanModal({ onClose }: { onClose: () => void }) {
   const [dragIndex, setDragIndex] = useState<number | null>(null);
 
   const create = trpc.subscriptionPlans.create.useMutation({
-    onSuccess: (r) => {
+    onSuccess: r => {
       utils.subscriptionPlans.list.invalidate();
-      toast.success("Plan created", { description: `${r.slug} · ${r.stripeProductId}` });
+      toast.success("Plan created", {
+        description: `${r.slug} · ${r.stripeProductId}`,
+      });
       onClose();
     },
-    onError: (err) => setError(err.message),
+    onError: err => setError(err.message),
   });
 
   function patch(key: string, p: Partial<IntervalDraft>) {
-    setIntervals((rows) => rows.map((r) => (r.key === key ? { ...r, ...p } : r)));
+    setIntervals(rows => rows.map(r => (r.key === key ? { ...r, ...p } : r)));
   }
 
   function submit(e: FormEvent) {
@@ -542,9 +615,12 @@ function CreatePlanModal({ onClose }: { onClose: () => void }) {
       }
       prices.push(built);
     }
-    let restock:
-      | { autoRestock: boolean; availableQuantity: number | null; restockThreshold: number | null; restockAmount: number | null }
-      | null = null;
+    let restock: {
+      autoRestock: boolean;
+      availableQuantity: number | null;
+      restockThreshold: number | null;
+      restockAmount: number | null;
+    } | null = null;
     if (limitedQty) {
       const avail = parseInt(availableQty, 10);
       if (Number.isNaN(avail) || avail < 0) {
@@ -562,9 +638,19 @@ function CreatePlanModal({ onClose }: { onClose: () => void }) {
           setError("Restock amount must be 1 or more.");
           return;
         }
-        restock = { autoRestock: true, availableQuantity: avail, restockThreshold: thr, restockAmount: amt };
+        restock = {
+          autoRestock: true,
+          availableQuantity: avail,
+          restockThreshold: thr,
+          restockAmount: amt,
+        };
       } else {
-        restock = { autoRestock: false, availableQuantity: avail, restockThreshold: null, restockAmount: null };
+        restock = {
+          autoRestock: false,
+          availableQuantity: avail,
+          restockThreshold: null,
+          restockAmount: null,
+        };
       }
     }
     create.mutate({
@@ -578,18 +664,38 @@ function CreatePlanModal({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <Modal title="Create a plan" icon={<CreditCard className="h-5 w-5 text-muted-foreground" aria-hidden="true" />} onClose={onClose}>
+    <Modal
+      title="Create a plan"
+      icon={
+        <CreditCard
+          className="h-5 w-5 text-muted-foreground"
+          aria-hidden="true"
+        />
+      }
+      onClose={onClose}
+    >
       <form onSubmit={submit} className="flex flex-col gap-5">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-1.5">
             <label className={labelClass}>Name</label>
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Dime Pro" className={inputClass} />
+            <input
+              value={name}
+              onChange={e => setName(e.target.value)}
+              placeholder="Dime Pro"
+              className={inputClass}
+            />
           </div>
           <div className="flex flex-col gap-1.5">
             <label className={labelClass}>
-              Description <span className="normal-case tracking-normal">(optional)</span>
+              Description{" "}
+              <span className="normal-case tracking-normal">(optional)</span>
             </label>
-            <input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What subscribers get." className={inputClass} />
+            <input
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              placeholder="What subscribers get."
+              className={inputClass}
+            />
           </div>
         </div>
 
@@ -597,7 +703,11 @@ function CreatePlanModal({ onClose }: { onClose: () => void }) {
 
         <div className="flex items-center justify-between">
           <span className={labelClass}>Billing intervals</span>
-          <button type="button" onClick={() => setIntervals((r) => [...r, blankInterval()])} className={chipBtn}>
+          <button
+            type="button"
+            onClick={() => setIntervals(r => [...r, blankInterval()])}
+            className={chipBtn}
+          >
             <Plus className="h-3.5 w-3.5" aria-hidden="true" />
             Add interval
           </button>
@@ -612,7 +722,8 @@ function CreatePlanModal({ onClose }: { onClose: () => void }) {
               onDragOver={(e: DragEvent) => e.preventDefault()}
               onDrop={(e: DragEvent) => {
                 e.preventDefault();
-                if (dragIndex != null && dragIndex !== i) setIntervals((r) => moveItem(r, dragIndex, i));
+                if (dragIndex != null && dragIndex !== i)
+                  setIntervals(r => moveItem(r, dragIndex, i));
                 setDragIndex(null);
               }}
               onDragEnd={() => setDragIndex(null)}
@@ -622,31 +733,52 @@ function CreatePlanModal({ onClose }: { onClose: () => void }) {
             >
               <div className="mb-3 flex items-center justify-between">
                 <span className="flex items-center gap-2">
-                  <GripVertical className="h-4 w-4 cursor-grab text-muted-foreground active:cursor-grabbing" aria-hidden="true" />
-                  <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">Interval {i + 1}</span>
+                  <GripVertical
+                    className="h-4 w-4 cursor-grab text-muted-foreground active:cursor-grabbing"
+                    aria-hidden="true"
+                  />
+                  <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+                    Interval {i + 1}
+                  </span>
                 </span>
                 <span className="flex items-center gap-1">
                   <button
                     type="button"
                     onClick={() => patch(iv.key, { hidden: !iv.hidden })}
                     aria-pressed={iv.hidden}
-                    title={iv.hidden ? "Hidden from customers — click to show" : "Visible — click to hide"}
+                    title={
+                      iv.hidden
+                        ? "Hidden from customers — click to show"
+                        : "Visible — click to hide"
+                    }
                     className="cursor-pointer rounded-md p-1.5 text-muted-foreground transition-colors duration-150 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                   >
-                    {iv.hidden ? <EyeOff className="h-4 w-4" aria-hidden="true" /> : <Eye className="h-4 w-4" aria-hidden="true" />}
+                    {iv.hidden ? (
+                      <EyeOff className="h-4 w-4" aria-hidden="true" />
+                    ) : (
+                      <Eye className="h-4 w-4" aria-hidden="true" />
+                    )}
                   </button>
                   <button
                     type="button"
-                    onClick={() => setIntervals((r) => (r.length > 1 ? r.filter((x) => x.key !== iv.key) : r))}
+                    onClick={() =>
+                      setIntervals(r =>
+                        r.length > 1 ? r.filter(x => x.key !== iv.key) : r
+                      )
+                    }
                     disabled={intervals.length === 1}
                     className="cursor-pointer rounded-md p-1.5 text-muted-foreground transition-colors duration-150 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-40"
-                    title={intervals.length === 1 ? "A plan needs at least one interval" : "Remove interval"}
+                    title={
+                      intervals.length === 1
+                        ? "A plan needs at least one interval"
+                        : "Remove interval"
+                    }
                   >
                     <X className="h-4 w-4" aria-hidden="true" />
                   </button>
                 </span>
               </div>
-              <IntervalFields value={iv} onChange={(p) => patch(iv.key, p)} />
+              <IntervalFields value={iv} onChange={p => patch(iv.key, p)} />
             </div>
           ))}
         </div>
@@ -654,9 +786,17 @@ function CreatePlanModal({ onClose }: { onClose: () => void }) {
         {/* Limited quantity / FOMO */}
         <div className="rounded-lg border border-border bg-card p-3 sm:p-4">
           <label className="flex cursor-pointer items-center gap-2.5">
-            <input type="checkbox" checked={limitedQty} onChange={(e) => setLimitedQty(e.target.checked)} className="h-4 w-4 accent-[var(--primary)]" />
+            <input
+              type="checkbox"
+              checked={limitedQty}
+              onChange={e => setLimitedQty(e.target.checked)}
+              className="h-4 w-4 accent-[var(--primary)]"
+            />
             <span className="flex items-center gap-1.5 text-sm font-medium text-foreground">
-              <Package className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+              <Package
+                className="h-4 w-4 text-muted-foreground"
+                aria-hidden="true"
+              />
               Limited quantity
             </span>
           </label>
@@ -664,11 +804,23 @@ function CreatePlanModal({ onClose }: { onClose: () => void }) {
             <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
               <div className="flex flex-col gap-1.5">
                 <label className={labelClass}>Available quantity</label>
-                <input type="number" min={0} value={availableQty} onChange={(e) => setAvailableQty(e.target.value)} placeholder="5" className={`${inputClass} font-mono`} />
+                <input
+                  type="number"
+                  min={0}
+                  value={availableQty}
+                  onChange={e => setAvailableQty(e.target.value)}
+                  placeholder="5"
+                  className={`${inputClass} font-mono`}
+                />
               </div>
               <div className="flex items-end">
                 <label className="flex cursor-pointer items-center gap-2.5 pb-2.5">
-                  <input type="checkbox" checked={autoRestock} onChange={(e) => setAutoRestock(e.target.checked)} className="h-4 w-4 accent-[var(--primary)]" />
+                  <input
+                    type="checkbox"
+                    checked={autoRestock}
+                    onChange={e => setAutoRestock(e.target.checked)}
+                    className="h-4 w-4 accent-[var(--primary)]"
+                  />
                   <span className="text-sm text-foreground">Auto restock</span>
                 </label>
               </div>
@@ -676,11 +828,25 @@ function CreatePlanModal({ onClose }: { onClose: () => void }) {
                 <>
                   <div className="flex flex-col gap-1.5">
                     <label className={labelClass}>Restock when below</label>
-                    <input type="number" min={0} value={restockThreshold} onChange={(e) => setRestockThreshold(e.target.value)} placeholder="2" className={`${inputClass} font-mono`} />
+                    <input
+                      type="number"
+                      min={0}
+                      value={restockThreshold}
+                      onChange={e => setRestockThreshold(e.target.value)}
+                      placeholder="2"
+                      className={`${inputClass} font-mono`}
+                    />
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label className={labelClass}>Reset available to</label>
-                    <input type="number" min={1} value={restockAmount} onChange={(e) => setRestockAmount(e.target.value)} placeholder="3" className={`${inputClass} font-mono`} />
+                    <input
+                      type="number"
+                      min={1}
+                      value={restockAmount}
+                      onChange={e => setRestockAmount(e.target.value)}
+                      placeholder="3"
+                      className={`${inputClass} font-mono`}
+                    />
                   </div>
                 </>
               )}
@@ -695,8 +861,16 @@ function CreatePlanModal({ onClose }: { onClose: () => void }) {
         )}
 
         <div className="flex items-center gap-3">
-          <button type="submit" disabled={create.isPending} className={primaryBtn}>
-            {create.isPending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Plus className="h-4 w-4" aria-hidden="true" />}
+          <button
+            type="submit"
+            disabled={create.isPending}
+            className={primaryBtn}
+          >
+            {create.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+            ) : (
+              <Plus className="h-4 w-4" aria-hidden="true" />
+            )}
             {create.isPending ? "Creating…" : "Create plan"}
           </button>
           <button type="button" onClick={onClose} className={chipBtn}>
@@ -720,12 +894,14 @@ function CreatePersonalizedModal({ onClose }: { onClose: () => void }) {
   const [error, setError] = useState<string | null>(null);
 
   const create = trpc.subscriptionPlans.create.useMutation({
-    onSuccess: (r) => {
+    onSuccess: r => {
       utils.subscriptionPlans.list.invalidate();
-      toast.success("Personalized membership created", { description: `${r.slug} · ${r.stripeProductId}` });
+      toast.success("Personalized membership created", {
+        description: `${r.slug} · ${r.stripeProductId}`,
+      });
       onClose();
     },
-    onError: (err) => setError(err.message),
+    onError: err => setError(err.message),
   });
 
   function submit(e: FormEvent) {
@@ -744,7 +920,9 @@ function CreatePersonalizedModal({ onClose }: { onClose: () => void }) {
     if (maxSubs.trim()) {
       const m = parseInt(maxSubs, 10);
       if (Number.isNaN(m) || m < 1) {
-        setError("Max subscribers must be 1 or more (leave blank for unlimited).");
+        setError(
+          "Max subscribers must be 1 or more (leave blank for unlimited)."
+        );
         return;
       }
       maxSubscribers = m;
@@ -767,36 +945,55 @@ function CreatePersonalizedModal({ onClose }: { onClose: () => void }) {
     >
       <form onSubmit={submit} className="flex flex-col gap-5">
         <p className="text-sm text-muted-foreground">
-          A one-time membership — a single payment grants lifetime access. Cap the number of members with Max
-          Subscribers (a personalized, limited offer).
+          A one-time membership — a single payment grants lifetime access. Cap
+          the number of members with Max Subscribers (a personalized, limited
+          offer).
         </p>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-1.5">
             <label className={labelClass}>Name</label>
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Founding Member" className={inputClass} />
+            <input
+              value={name}
+              onChange={e => setName(e.target.value)}
+              placeholder="Founding Member"
+              className={inputClass}
+            />
           </div>
           <div className="flex flex-col gap-1.5">
             <label className={labelClass}>
-              Description <span className="normal-case tracking-normal">(optional)</span>
+              Description{" "}
+              <span className="normal-case tracking-normal">(optional)</span>
             </label>
-            <input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What this member gets." className={inputClass} />
+            <input
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              placeholder="What this member gets."
+              className={inputClass}
+            />
           </div>
         </div>
 
         <FeaturesField value={features} onChange={setFeatures} />
 
-        <IntervalFields value={price} onChange={(p) => setPrice((d) => ({ ...d, ...p }))} oneTime />
+        <IntervalFields
+          value={price}
+          onChange={p => setPrice(d => ({ ...d, ...p }))}
+          oneTime
+        />
 
         <div className="flex flex-col gap-1.5">
           <label className={labelClass}>
-            Max subscribers <span className="normal-case tracking-normal">(blank = unlimited hard cap)</span>
+            Max subscribers{" "}
+            <span className="normal-case tracking-normal">
+              (blank = unlimited hard cap)
+            </span>
           </label>
           <input
             type="number"
             min={1}
             value={maxSubs}
-            onChange={(e) => setMaxSubs(e.target.value)}
+            onChange={e => setMaxSubs(e.target.value)}
             placeholder="Unlimited"
             className={`${inputClass} font-mono sm:max-w-[220px]`}
           />
@@ -809,8 +1006,16 @@ function CreatePersonalizedModal({ onClose }: { onClose: () => void }) {
         )}
 
         <div className="flex items-center gap-3">
-          <button type="submit" disabled={create.isPending} className={primaryBtn}>
-            {create.isPending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Sparkles className="h-4 w-4" aria-hidden="true" />}
+          <button
+            type="submit"
+            disabled={create.isPending}
+            className={primaryBtn}
+          >
+            {create.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+            ) : (
+              <Sparkles className="h-4 w-4" aria-hidden="true" />
+            )}
             {create.isPending ? "Creating…" : "Create membership"}
           </button>
           <button type="button" onClick={onClose} className={chipBtn}>
@@ -851,10 +1056,18 @@ function errText(err: unknown): string {
  * interval is validated up front, and a failure after that is attributed to the
  * row it came from instead of aborting the rest of the edit.
  */
-function EditPlanModal({ plan, onClose }: { plan: StoredPlan; onClose: () => void }) {
+function EditPlanModal({
+  plan,
+  onClose,
+}: {
+  plan: StoredPlan;
+  onClose: () => void;
+}) {
   const utils = trpc.useUtils();
   const invalidate = () => utils.subscriptionPlans.list.invalidate();
-  const [draft, setDraft] = useState<PlanEditDraft>(() => planEditDraftFrom(plan));
+  const [draft, setDraft] = useState<PlanEditDraft>(() =>
+    planEditDraftFrom(plan)
+  );
   const [removedPriceIds, setRemovedPriceIds] = useState<number[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
@@ -862,43 +1075,70 @@ function EditPlanModal({ plan, onClose }: { plan: StoredPlan; onClose: () => voi
 
   const oneTime = plan.planType === "one_time";
   /** The prices as the modal opened on them — buildIntervalUpdateInput's anchor. */
-  const priceById = useMemo(() => new Map(plan.prices.map((p) => [p.id, p])), [plan.prices]);
+  const priceById = useMemo(
+    () => new Map(plan.prices.map(p => [p.id, p])),
+    [plan.prices]
+  );
   /** Opening order of the live intervals; a reorder only ships when it differs. */
-  const openingOrder = useMemo(() => plan.prices.filter((p) => p.active).map((p) => p.id), [plan.prices]);
+  const openingOrder = useMemo(
+    () => plan.prices.filter(p => p.active).map(p => p.id),
+    [plan.prices]
+  );
 
   // No onError handlers: submit drives these with mutateAsync so it can attribute
   // each failure to its row. onSuccess invalidates the list, as the create and
   // archive mutations do.
-  const update = trpc.subscriptionPlans.update.useMutation({ onSuccess: invalidate });
-  const updateInterval = trpc.subscriptionPlans.updateInterval.useMutation({ onSuccess: invalidate });
-  const addInterval = trpc.subscriptionPlans.addInterval.useMutation({ onSuccess: invalidate });
-  const removeInterval = trpc.subscriptionPlans.removeInterval.useMutation({ onSuccess: invalidate });
-  const reorder = trpc.subscriptionPlans.reorderIntervals.useMutation({ onSuccess: invalidate });
+  const update = trpc.subscriptionPlans.update.useMutation({
+    onSuccess: invalidate,
+  });
+  const updateInterval = trpc.subscriptionPlans.updateInterval.useMutation({
+    onSuccess: invalidate,
+  });
+  const addInterval = trpc.subscriptionPlans.addInterval.useMutation({
+    onSuccess: invalidate,
+  });
+  const removeInterval = trpc.subscriptionPlans.removeInterval.useMutation({
+    onSuccess: invalidate,
+  });
+  const reorder = trpc.subscriptionPlans.reorderIntervals.useMutation({
+    onSuccess: invalidate,
+  });
 
   function patch(p: Partial<PlanEditDraft>) {
-    setDraft((d) => ({ ...d, ...p }));
+    setDraft(d => ({ ...d, ...p }));
   }
 
   function patchInterval(key: string, p: Partial<IntervalEditDraft>) {
-    setDraft((d) => ({ ...d, intervals: d.intervals.map((iv) => (iv.key === key ? { ...iv, ...p } : iv)) }));
+    setDraft(d => ({
+      ...d,
+      intervals: d.intervals.map(iv => (iv.key === key ? { ...iv, ...p } : iv)),
+    }));
   }
 
   /** Remove a row from the form; an existing price is retired on save. */
   function removeRow(iv: IntervalEditDraft) {
     if (draft.intervals.length <= 1) return;
-    setDraft((d) => ({ ...d, intervals: removeIntervalDraft(d.intervals, iv.key) }));
-    if (iv.priceId != null) setRemovedPriceIds((ids) => [...ids, iv.priceId as number]);
+    setDraft(d => ({
+      ...d,
+      intervals: removeIntervalDraft(d.intervals, iv.key),
+    }));
+    if (iv.priceId != null)
+      setRemovedPriceIds(ids => [...ids, iv.priceId as number]);
   }
 
   function dropAt(index: number) {
     if (dragIndex != null && dragIndex !== index) {
-      setDraft((d) => ({ ...d, intervals: moveItem(d.intervals, dragIndex, index) }));
+      setDraft(d => ({
+        ...d,
+        intervals: moveItem(d.intervals, dragIndex, index),
+      }));
     }
     setDragIndex(null);
   }
 
   /** The name an error message uses for a row — its label, else its position. */
-  const rowLabel = (iv: IntervalEditDraft, i: number) => iv.label.trim() || `Interval ${i + 1}`;
+  const rowLabel = (iv: IntervalEditDraft, i: number) =>
+    iv.label.trim() || `Interval ${i + 1}`;
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -925,7 +1165,9 @@ function EditPlanModal({ plan, onClose }: { plan: StoredPlan; onClose: () => voi
       }
       const price = priceById.get(iv.priceId);
       if (!price) {
-        invalid.push(`${label}: this interval is no longer on the plan — reopen the dialog.`);
+        invalid.push(
+          `${label}: this interval is no longer on the plan — reopen the dialog.`
+        );
         return;
       }
       const input = buildIntervalUpdateInput(price, iv, label);
@@ -977,11 +1219,21 @@ function EditPlanModal({ plan, onClose }: { plan: StoredPlan; onClose: () => voi
 
     // Reorder only the rows that still have a Stripe price, and only when the
     // admin actually dragged them out of the order the dialog opened in.
-    const keptOrder = draft.intervals.flatMap((iv) => (iv.priceId == null ? [] : [iv.priceId]));
-    const expectedOrder = openingOrder.filter((id) => !removedPriceIds.includes(id));
-    if (keptOrder.length > 1 && keptOrder.join(",") !== expectedOrder.join(",")) {
+    const keptOrder = draft.intervals.flatMap(iv =>
+      iv.priceId == null ? [] : [iv.priceId]
+    );
+    const expectedOrder = openingOrder.filter(
+      id => !removedPriceIds.includes(id)
+    );
+    if (
+      keptOrder.length > 1 &&
+      keptOrder.join(",") !== expectedOrder.join(",")
+    ) {
       try {
-        await reorder.mutateAsync({ planId: plan.id, orderedPriceIds: keptOrder });
+        await reorder.mutateAsync({
+          planId: plan.id,
+          orderedPriceIds: keptOrder,
+        });
       } catch (err) {
         failed.push(`Reordering intervals: ${errText(err)}`);
       }
@@ -1009,37 +1261,55 @@ function EditPlanModal({ plan, onClose }: { plan: StoredPlan; onClose: () => voi
   }
 
   return (
-    <Modal title="Edit plan" icon={<Pencil className="h-5 w-5 text-muted-foreground" aria-hidden="true" />} onClose={onClose}>
+    <Modal
+      title="Edit plan"
+      icon={
+        <Pencil className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
+      }
+      onClose={onClose}
+    >
       <form onSubmit={submit} className="flex flex-col gap-5">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-1.5">
             <label className={labelClass}>Name</label>
-            <input value={draft.name} onChange={(e) => patch({ name: e.target.value })} placeholder="Dime Pro" className={inputClass} />
+            <input
+              value={draft.name}
+              onChange={e => patch({ name: e.target.value })}
+              placeholder="Dime Pro"
+              className={inputClass}
+            />
           </div>
           <div className="flex flex-col gap-1.5">
             <label className={labelClass}>
-              Description <span className="normal-case tracking-normal">(optional)</span>
+              Description{" "}
+              <span className="normal-case tracking-normal">(optional)</span>
             </label>
             <input
               value={draft.description}
-              onChange={(e) => patch({ description: e.target.value })}
+              onChange={e => patch({ description: e.target.value })}
               placeholder="What subscribers get."
               className={inputClass}
             />
           </div>
         </div>
 
-        <FeaturesField value={draft.features} onChange={(features) => patch({ features })} />
+        <FeaturesField
+          value={draft.features}
+          onChange={features => patch({ features })}
+        />
 
         <div className="flex flex-col gap-1.5">
           <label className={labelClass}>
-            Max subscribers <span className="normal-case tracking-normal">(blank = unlimited hard cap)</span>
+            Max subscribers{" "}
+            <span className="normal-case tracking-normal">
+              (blank = unlimited hard cap)
+            </span>
           </label>
           <input
             type="number"
             min={1}
             value={draft.maxSubscribers}
-            onChange={(e) => patch({ maxSubscribers: e.target.value })}
+            onChange={e => patch({ maxSubscribers: e.target.value })}
             placeholder="Unlimited"
             className={`${inputClass} font-mono sm:max-w-[220px]`}
           />
@@ -1051,7 +1321,12 @@ function EditPlanModal({ plan, onClose }: { plan: StoredPlan; onClose: () => voi
             <span className={labelClass}>Pricing options</span>
             <button
               type="button"
-              onClick={() => setDraft((d) => ({ ...d, intervals: [...d.intervals, blankEditInterval()] }))}
+              onClick={() =>
+                setDraft(d => ({
+                  ...d,
+                  intervals: [...d.intervals, blankEditInterval()],
+                }))
+              }
               className={chipBtn}
             >
               <Plus className="h-3.5 w-3.5" aria-hidden="true" />
@@ -1060,10 +1335,14 @@ function EditPlanModal({ plan, onClose }: { plan: StoredPlan; onClose: () => voi
           </div>
 
           <p className="rounded-lg border border-border bg-card px-3 py-2.5 text-xs leading-relaxed text-muted-foreground">
-            <span className="font-semibold text-foreground">Stripe prices can’t be edited.</span> Changing an amount,
-            currency, cadence or interval count creates a new Stripe price and retires the old one — everyone already
-            subscribed keeps the price they bought until you migrate them. Label, trial, promo, visibility and the
-            default flag change in place.
+            <span className="font-semibold text-foreground">
+              Stripe prices can’t be edited.
+            </span>{" "}
+            Changing an amount, currency, cadence or interval count creates a
+            new Stripe price and retires the old one — everyone already
+            subscribed keeps the price they bought until you migrate them.
+            Label, trial, promo, visibility and the default flag change in
+            place.
           </p>
 
           <div className="flex flex-col gap-4">
@@ -1084,7 +1363,10 @@ function EditPlanModal({ plan, onClose }: { plan: StoredPlan; onClose: () => voi
               >
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                   <span className="flex items-center gap-2">
-                    <GripVertical className="h-4 w-4 cursor-grab text-muted-foreground active:cursor-grabbing" aria-hidden="true" />
+                    <GripVertical
+                      className="h-4 w-4 cursor-grab text-muted-foreground active:cursor-grabbing"
+                      aria-hidden="true"
+                    />
                     <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
                       Interval {i + 1}
                     </span>
@@ -1111,25 +1393,47 @@ function EditPlanModal({ plan, onClose }: { plan: StoredPlan; onClose: () => voi
                         name={`default-interval-${plan.id}`}
                         checked={iv.isDefault}
                         disabled={iv.priceId == null}
-                        onChange={() => setDraft((d) => ({ ...d, intervals: setDefaultIntervalKey(d.intervals, iv.key) }))}
+                        onChange={() =>
+                          setDraft(d => ({
+                            ...d,
+                            intervals: setDefaultIntervalKey(
+                              d.intervals,
+                              iv.key
+                            ),
+                          }))
+                        }
                         className="h-3.5 w-3.5 accent-[var(--primary)]"
                       />
                       Default
                     </label>
                     <button
                       type="button"
-                      onClick={() => patchInterval(iv.key, { hidden: !iv.hidden })}
+                      onClick={() =>
+                        patchInterval(iv.key, { hidden: !iv.hidden })
+                      }
                       aria-pressed={iv.hidden}
-                      title={iv.hidden ? "Hidden from customers — click to show" : "Visible — click to hide"}
+                      title={
+                        iv.hidden
+                          ? "Hidden from customers — click to show"
+                          : "Visible — click to hide"
+                      }
                       className="cursor-pointer rounded-md p-1.5 text-muted-foreground transition-colors duration-150 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                     >
-                      {iv.hidden ? <EyeOff className="h-4 w-4" aria-hidden="true" /> : <Eye className="h-4 w-4" aria-hidden="true" />}
+                      {iv.hidden ? (
+                        <EyeOff className="h-4 w-4" aria-hidden="true" />
+                      ) : (
+                        <Eye className="h-4 w-4" aria-hidden="true" />
+                      )}
                     </button>
                     <button
                       type="button"
                       onClick={() => removeRow(iv)}
                       disabled={draft.intervals.length === 1}
-                      title={draft.intervals.length === 1 ? "A plan needs at least one interval" : "Remove interval"}
+                      title={
+                        draft.intervals.length === 1
+                          ? "A plan needs at least one interval"
+                          : "Remove interval"
+                      }
                       aria-label="Remove interval"
                       className="cursor-pointer rounded-md p-1.5 text-muted-foreground transition-colors duration-150 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-40"
                     >
@@ -1139,9 +1443,12 @@ function EditPlanModal({ plan, onClose }: { plan: StoredPlan; onClose: () => voi
                 </div>
                 <IntervalFields
                   value={iv}
-                  onChange={(p) => patchInterval(iv.key, p)}
+                  onChange={p => patchInterval(iv.key, p)}
                   oneTime={oneTime}
-                  displayLabel={{ value: iv.label, onChange: (label) => patchInterval(iv.key, { label }) }}
+                  displayLabel={{
+                    value: iv.label,
+                    onChange: label => patchInterval(iv.key, { label }),
+                  }}
                 />
               </div>
             ))}
@@ -1154,11 +1461,14 @@ function EditPlanModal({ plan, onClose }: { plan: StoredPlan; onClose: () => voi
             <input
               type="checkbox"
               checked={draft.limitedQuantity}
-              onChange={(e) => patch({ limitedQuantity: e.target.checked })}
+              onChange={e => patch({ limitedQuantity: e.target.checked })}
               className="h-4 w-4 accent-[var(--primary)]"
             />
             <span className="flex items-center gap-1.5 text-sm font-medium text-foreground">
-              <Package className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+              <Package
+                className="h-4 w-4 text-muted-foreground"
+                aria-hidden="true"
+              />
               Limited quantity
             </span>
           </label>
@@ -1170,7 +1480,7 @@ function EditPlanModal({ plan, onClose }: { plan: StoredPlan; onClose: () => voi
                   type="number"
                   min={0}
                   value={draft.availableQuantity}
-                  onChange={(e) => patch({ availableQuantity: e.target.value })}
+                  onChange={e => patch({ availableQuantity: e.target.value })}
                   placeholder="5"
                   className={`${inputClass} font-mono`}
                 />
@@ -1180,7 +1490,7 @@ function EditPlanModal({ plan, onClose }: { plan: StoredPlan; onClose: () => voi
                   <input
                     type="checkbox"
                     checked={draft.autoRestock}
-                    onChange={(e) => patch({ autoRestock: e.target.checked })}
+                    onChange={e => patch({ autoRestock: e.target.checked })}
                     className="h-4 w-4 accent-[var(--primary)]"
                   />
                   <span className="text-sm text-foreground">Auto restock</span>
@@ -1194,7 +1504,9 @@ function EditPlanModal({ plan, onClose }: { plan: StoredPlan; onClose: () => voi
                       type="number"
                       min={0}
                       value={draft.restockThreshold}
-                      onChange={(e) => patch({ restockThreshold: e.target.value })}
+                      onChange={e =>
+                        patch({ restockThreshold: e.target.value })
+                      }
                       placeholder="2"
                       className={`${inputClass} font-mono`}
                     />
@@ -1205,7 +1517,7 @@ function EditPlanModal({ plan, onClose }: { plan: StoredPlan; onClose: () => voi
                       type="number"
                       min={1}
                       value={draft.restockAmount}
-                      onChange={(e) => patch({ restockAmount: e.target.value })}
+                      onChange={e => patch({ restockAmount: e.target.value })}
                       placeholder="3"
                       className={`${inputClass} font-mono`}
                     />
@@ -1214,13 +1526,15 @@ function EditPlanModal({ plan, onClose }: { plan: StoredPlan; onClose: () => voi
               )}
             </div>
           ) : (
-            <p className="mt-2 text-sm text-muted-foreground">No quantity cap — unlimited spots.</p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              No quantity cap — unlimited spots.
+            </p>
           )}
         </div>
 
         {errors.length > 0 && (
           <ul className="flex flex-col gap-1" role="alert">
-            {errors.map((message) => (
+            {errors.map(message => (
               <li key={message} className="text-sm text-muted-foreground">
                 {message}
               </li>
@@ -1230,7 +1544,11 @@ function EditPlanModal({ plan, onClose }: { plan: StoredPlan; onClose: () => voi
 
         <div className="flex items-center gap-3">
           <button type="submit" disabled={saving} className={primaryBtn}>
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Check className="h-4 w-4" aria-hidden="true" />}
+            {saving ? (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+            ) : (
+              <Check className="h-4 w-4" aria-hidden="true" />
+            )}
             {saving ? "Saving…" : "Save changes"}
           </button>
           <button type="button" onClick={onClose} className={chipBtn}>
@@ -1247,8 +1565,14 @@ function EditPlanModal({ plan, onClose }: { plan: StoredPlan; onClose: () => voi
 function PlanCard({ plan }: { plan: PlanWithCount }) {
   const utils = trpc.useUtils();
   const invalidate = () => utils.subscriptionPlans.list.invalidate();
-  const activePrices = useMemo(() => plan.prices.filter((p) => p.active), [plan.prices]);
-  const features = useMemo(() => normalizePlanFeatures(plan.features), [plan.features]);
+  const activePrices = useMemo(
+    () => plan.prices.filter(p => p.active),
+    [plan.prices]
+  );
+  const features = useMemo(
+    () => normalizePlanFeatures(plan.features),
+    [plan.features]
+  );
   const soldOut = plan.availableQuantity != null && plan.availableQuantity <= 0;
 
   const [adding, setAdding] = useState(false);
@@ -1261,23 +1585,72 @@ function PlanCard({ plan }: { plan: PlanWithCount }) {
 
   const oneTime = plan.planType === "one_time";
 
-  const archive = trpc.subscriptionPlans.archive.useMutation({ onSuccess: () => { invalidate(); setConfirmArchive(false); toast.success("Plan archived"); }, onError: (e) => toast.error("Archive failed", { description: e.message }) });
-  const unarchive = trpc.subscriptionPlans.unarchive.useMutation({ onSuccess: () => { invalidate(); toast.success("Plan restored"); }, onError: (e) => toast.error("Restore failed", { description: e.message }) });
-  const duplicate = trpc.subscriptionPlans.duplicate.useMutation({ onSuccess: (r) => { invalidate(); toast.success("Plan duplicated", { description: r.slug }); }, onError: (e) => toast.error("Duplicate failed", { description: e.message }) });
-  const del = trpc.subscriptionPlans.delete.useMutation({ onSuccess: () => { invalidate(); setConfirmDelete(false); toast.success("Plan deleted"); }, onError: (e) => toast.error("Delete failed", { description: e.message }) });
-  const addInterval = trpc.subscriptionPlans.addInterval.useMutation({ onSuccess: () => { invalidate(); setAdding(false); setDraft(blankInterval()); toast.success("Interval added"); }, onError: (e) => toast.error("Add failed", { description: e.message }) });
-  const removeInterval = trpc.subscriptionPlans.removeInterval.useMutation({ onSuccess: invalidate, onError: (e) => toast.error("Remove failed", { description: e.message }) });
-  const setHidden = trpc.subscriptionPlans.setIntervalHidden.useMutation({ onSuccess: invalidate, onError: (e) => toast.error("Update failed", { description: e.message }) });
-  const reorder = trpc.subscriptionPlans.reorderIntervals.useMutation({ onSuccess: invalidate, onError: (e) => toast.error("Reorder failed", { description: e.message }) });
-  const testCheckout = trpc.subscriptionPlans.createTestCheckoutSession.useMutation({
-    onSuccess: ({ url }) => { window.open(url, "_blank", "noopener,noreferrer"); toast.success("Test checkout opened"); },
-    onError: (e) => toast.error("Test checkout failed", { description: e.message }),
+  const archive = trpc.subscriptionPlans.archive.useMutation({
+    onSuccess: () => {
+      invalidate();
+      setConfirmArchive(false);
+      toast.success("Plan archived");
+    },
+    onError: e => toast.error("Archive failed", { description: e.message }),
   });
+  const unarchive = trpc.subscriptionPlans.unarchive.useMutation({
+    onSuccess: () => {
+      invalidate();
+      toast.success("Plan restored");
+    },
+    onError: e => toast.error("Restore failed", { description: e.message }),
+  });
+  const duplicate = trpc.subscriptionPlans.duplicate.useMutation({
+    onSuccess: r => {
+      invalidate();
+      toast.success("Plan duplicated", { description: r.slug });
+    },
+    onError: e => toast.error("Duplicate failed", { description: e.message }),
+  });
+  const del = trpc.subscriptionPlans.delete.useMutation({
+    onSuccess: () => {
+      invalidate();
+      setConfirmDelete(false);
+      toast.success("Plan deleted");
+    },
+    onError: e => toast.error("Delete failed", { description: e.message }),
+  });
+  const addInterval = trpc.subscriptionPlans.addInterval.useMutation({
+    onSuccess: () => {
+      invalidate();
+      setAdding(false);
+      setDraft(blankInterval());
+      toast.success("Interval added");
+    },
+    onError: e => toast.error("Add failed", { description: e.message }),
+  });
+  const removeInterval = trpc.subscriptionPlans.removeInterval.useMutation({
+    onSuccess: invalidate,
+    onError: e => toast.error("Remove failed", { description: e.message }),
+  });
+  const setHidden = trpc.subscriptionPlans.setIntervalHidden.useMutation({
+    onSuccess: invalidate,
+    onError: e => toast.error("Update failed", { description: e.message }),
+  });
+  const reorder = trpc.subscriptionPlans.reorderIntervals.useMutation({
+    onSuccess: invalidate,
+    onError: e => toast.error("Reorder failed", { description: e.message }),
+  });
+  const testCheckout =
+    trpc.subscriptionPlans.createTestCheckoutSession.useMutation({
+      onSuccess: ({ url }) => {
+        window.open(url, "_blank", "noopener,noreferrer");
+        toast.success("Test checkout opened");
+      },
+      onError: e =>
+        toast.error("Test checkout failed", { description: e.message }),
+    });
 
   /** Copy a public per-interval checkout link to send to a prospective customer. */
   function copyCheckoutLink(price: StoredPrice) {
     const url = `${window.location.origin}/checkout?plan=${encodeURIComponent(plan.slug)}&price=${price.id}`;
-    const done = () => toast.success("Checkout link copied", { description: url });
+    const done = () =>
+      toast.success("Checkout link copied", { description: url });
     const fail = () => toast.error("Could not copy link", { description: url });
     if (navigator.clipboard?.writeText) {
       navigator.clipboard.writeText(url).then(done, fail);
@@ -1301,7 +1674,7 @@ function PlanCard({ plan }: { plan: PlanWithCount }) {
       setDragIndex(null);
       return;
     }
-    const reordered = moveItem(activePrices, dragIndex, index).map((p) => p.id);
+    const reordered = moveItem(activePrices, dragIndex, index).map(p => p.id);
     reorder.mutate({ planId: plan.id, orderedPriceIds: reordered });
     setDragIndex(null);
   }
@@ -1311,10 +1684,13 @@ function PlanCard({ plan }: { plan: PlanWithCount }) {
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h3 className="text-base font-bold uppercase tracking-tight text-foreground">{plan.name}</h3>
+          <h3 className="text-base font-bold uppercase tracking-tight text-foreground">
+            {plan.name}
+          </h3>
           <span className="mt-1 flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
             <Users className="h-3.5 w-3.5" aria-hidden="true" />
-            {plan.subscriberCount.toLocaleString()} subscriber{plan.subscriberCount === 1 ? "" : "s"}
+            {plan.subscriberCount.toLocaleString()} subscriber
+            {plan.subscriberCount === 1 ? "" : "s"}
           </span>
         </div>
         <div className="flex flex-shrink-0 items-center gap-1.5">
@@ -1331,17 +1707,24 @@ function PlanCard({ plan }: { plan: PlanWithCount }) {
         </div>
       </div>
 
-      {plan.description && <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{plan.description}</p>}
+      {plan.description && (
+        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+          {plan.description}
+        </p>
+      )}
 
       {/* Features — the plan's entitlements at a glance, no modal required. */}
       {features.length > 0 && (
         <ul className="mt-3 flex flex-wrap gap-1.5">
-          {features.map((key) => (
+          {features.map(key => (
             <li
               key={key}
               className="inline-flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-[11px] text-foreground"
             >
-              <Check className="h-3 w-3 flex-shrink-0 text-primary" aria-hidden="true" />
+              <Check
+                className="h-3 w-3 flex-shrink-0 text-primary"
+                aria-hidden="true"
+              />
               {planFeatureLabel(key)}
             </li>
           ))}
@@ -1354,7 +1737,9 @@ function PlanCard({ plan }: { plan: PlanWithCount }) {
           <span className={soldOut ? "text-muted-foreground" : "text-primary"}>
             {soldOut ? "Sold out" : `${plan.availableQuantity} spots left`}
           </span>
-          {plan.autoRestock && <span className="text-primary"> ↻ auto-restock</span>}
+          {plan.autoRestock && (
+            <span className="text-primary"> ↻ auto-restock</span>
+          )}
         </p>
       )}
 
@@ -1363,7 +1748,11 @@ function PlanCard({ plan }: { plan: PlanWithCount }) {
         <div className="mb-2 flex items-center justify-between">
           <span className={labelClass}>Pricing options</span>
           {plan.active && (
-            <button type="button" onClick={() => setAdding((a) => !a)} className={chipBtn}>
+            <button
+              type="button"
+              onClick={() => setAdding(a => !a)}
+              className={chipBtn}
+            >
               <Plus className="h-3.5 w-3.5" aria-hidden="true" />
               Add
             </button>
@@ -1377,7 +1766,10 @@ function PlanCard({ plan }: { plan: PlanWithCount }) {
               draggable={plan.active && activePrices.length > 1}
               onDragStart={() => setDragIndex(i)}
               onDragOver={(e: DragEvent) => e.preventDefault()}
-              onDrop={(e: DragEvent) => { e.preventDefault(); dropAt(i); }}
+              onDrop={(e: DragEvent) => {
+                e.preventDefault();
+                dropAt(i);
+              }}
               onDragEnd={() => setDragIndex(null)}
               className={`flex items-center justify-between gap-2 rounded-lg border border-border bg-card px-3 py-2.5 ${
                 price.hidden ? "opacity-50" : ""
@@ -1385,27 +1777,37 @@ function PlanCard({ plan }: { plan: PlanWithCount }) {
             >
               <div className="flex min-w-0 items-center gap-2">
                 {plan.active && activePrices.length > 1 && (
-                  <GripVertical className="h-4 w-4 flex-shrink-0 cursor-grab text-muted-foreground active:cursor-grabbing" aria-hidden="true" />
+                  <GripVertical
+                    className="h-4 w-4 flex-shrink-0 cursor-grab text-muted-foreground active:cursor-grabbing"
+                    aria-hidden="true"
+                  />
                 )}
                 <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
                   <span className="font-mono text-sm font-semibold text-foreground">
                     {money(price.amountCents)}
-                    <span className="font-normal text-muted-foreground">{per(price)}</span>
+                    <span className="font-normal text-muted-foreground">
+                      {per(price)}
+                    </span>
                   </span>
                   {price.isDefault && (
                     <span className="rounded-full border border-border px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
                       Default
                     </span>
                   )}
-                  {price.trialPeriodDays != null && price.trialPeriodDays > 0 && (
-                    <span className="font-mono text-[11px] text-muted-foreground">{price.trialPeriodDays}d trial</span>
-                  )}
+                  {price.trialPeriodDays != null &&
+                    price.trialPeriodDays > 0 && (
+                      <span className="font-mono text-[11px] text-muted-foreground">
+                        {price.trialPeriodDays}d trial
+                      </span>
+                    )}
                   {promoLabel(price) && (
                     <span className="inline-flex items-center gap-1 rounded-full border border-primary px-1.5 py-0.5 font-mono text-[10px] text-primary">
                       <Tag className="h-3 w-3" aria-hidden="true" />
                       {promoLabel(price)}
                       {price.promoCode ? ` · ${price.promoCode}` : ""}
-                      {discountedCents(price) != null ? ` → ${money(discountedCents(price)!)}` : ""}
+                      {discountedCents(price) != null
+                        ? ` → ${money(discountedCents(price)!)}`
+                        : ""}
                     </span>
                   )}
                 </div>
@@ -1423,17 +1825,34 @@ function PlanCard({ plan }: { plan: PlanWithCount }) {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setHidden.mutate({ priceId: price.id, hidden: !price.hidden })}
-                    title={price.hidden ? "Hidden — click to show" : "Visible — click to hide"}
+                    onClick={() =>
+                      setHidden.mutate({
+                        priceId: price.id,
+                        hidden: !price.hidden,
+                      })
+                    }
+                    title={
+                      price.hidden
+                        ? "Hidden — click to show"
+                        : "Visible — click to hide"
+                    }
                     className="cursor-pointer rounded-md p-1.5 text-muted-foreground transition-colors duration-150 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                   >
-                    {price.hidden ? <EyeOff className="h-4 w-4" aria-hidden="true" /> : <Eye className="h-4 w-4" aria-hidden="true" />}
+                    {price.hidden ? (
+                      <EyeOff className="h-4 w-4" aria-hidden="true" />
+                    ) : (
+                      <Eye className="h-4 w-4" aria-hidden="true" />
+                    )}
                   </button>
                   <button
                     type="button"
                     onClick={() => removeInterval.mutate({ priceId: price.id })}
                     disabled={activePrices.length === 1}
-                    title={activePrices.length === 1 ? "Archive the plan to remove its last interval" : "Remove interval"}
+                    title={
+                      activePrices.length === 1
+                        ? "Archive the plan to remove its last interval"
+                        : "Remove interval"
+                    }
                     className="cursor-pointer rounded-md p-1.5 text-muted-foreground transition-colors duration-150 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     <X className="h-4 w-4" aria-hidden="true" />
@@ -1446,7 +1865,11 @@ function PlanCard({ plan }: { plan: PlanWithCount }) {
 
         {adding && (
           <div className="mt-3 rounded-lg border border-border bg-card p-3">
-            <IntervalFields value={draft} onChange={(p) => setDraft((d) => ({ ...d, ...p }))} oneTime={oneTime} />
+            <IntervalFields
+              value={draft}
+              onChange={p => setDraft(d => ({ ...d, ...p }))}
+              oneTime={oneTime}
+            />
             {addError && (
               <p className="mt-3 text-sm text-muted-foreground" role="alert">
                 {addError}
@@ -1459,10 +1882,19 @@ function PlanCard({ plan }: { plan: PlanWithCount }) {
                 disabled={addInterval.isPending}
                 className="inline-flex cursor-pointer items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground transition-opacity duration-150 hover:opacity-85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50"
               >
-                {addInterval.isPending && <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />}
+                {addInterval.isPending && (
+                  <Loader2
+                    className="h-3 w-3 animate-spin"
+                    aria-hidden="true"
+                  />
+                )}
                 Add
               </button>
-              <button type="button" onClick={() => setAdding(false)} className={chipBtn}>
+              <button
+                type="button"
+                onClick={() => setAdding(false)}
+                className={chipBtn}
+              >
                 Cancel
               </button>
             </div>
@@ -1475,17 +1907,34 @@ function PlanCard({ plan }: { plan: PlanWithCount }) {
         {!plan.livemode && plan.active && (
           <button
             type="button"
-            onClick={() => testCheckout.mutate({ slug: plan.slug, origin: window.location.origin })}
+            onClick={() =>
+              testCheckout.mutate({
+                slug: plan.slug,
+                origin: window.location.origin,
+              })
+            }
             disabled={testCheckout.isPending}
             className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-primary px-2.5 py-1.5 text-xs font-medium text-primary transition-colors duration-150 hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50"
           >
-            {testCheckout.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : <FlaskConical className="h-3.5 w-3.5" aria-hidden="true" />}
+            {testCheckout.isPending ? (
+              <Loader2
+                className="h-3.5 w-3.5 animate-spin"
+                aria-hidden="true"
+              />
+            ) : (
+              <FlaskConical className="h-3.5 w-3.5" aria-hidden="true" />
+            )}
             Test checkout
           </button>
         )}
 
         {/* Edit — every field on the plan, pricing included. */}
-        <button type="button" onClick={() => setEditing(true)} title="Edit details, features, pricing and inventory" className={chipBtn}>
+        <button
+          type="button"
+          onClick={() => setEditing(true)}
+          title="Edit details, features, pricing and inventory"
+          className={chipBtn}
+        >
           <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
           Edit
         </button>
@@ -1494,7 +1943,11 @@ function PlanCard({ plan }: { plan: PlanWithCount }) {
           confirmArchive ? (
             <span className="inline-flex items-center gap-2">
               <span className="text-xs text-muted-foreground">Archive?</span>
-              <button type="button" onClick={() => setConfirmArchive(false)} className={chipBtn}>
+              <button
+                type="button"
+                onClick={() => setConfirmArchive(false)}
+                className={chipBtn}
+              >
                 Cancel
               </button>
               <button
@@ -1504,34 +1957,70 @@ function PlanCard({ plan }: { plan: PlanWithCount }) {
                 style={{ backgroundColor: "var(--dime-danger, #E5484D)" }}
                 className="inline-flex cursor-pointer items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-semibold text-white transition-opacity duration-150 hover:opacity-85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50"
               >
-                {archive.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />}
+                {archive.isPending && (
+                  <Loader2
+                    className="h-3.5 w-3.5 animate-spin"
+                    aria-hidden="true"
+                  />
+                )}
                 Archive
               </button>
             </span>
           ) : (
-            <button type="button" onClick={() => setConfirmArchive(true)} className={chipBtn}>
+            <button
+              type="button"
+              onClick={() => setConfirmArchive(true)}
+              className={chipBtn}
+            >
               <Archive className="h-3.5 w-3.5" aria-hidden="true" />
               Archive
             </button>
           )
         ) : (
-          <button type="button" onClick={() => unarchive.mutate({ planId: plan.id })} disabled={unarchive.isPending} className={chipBtn}>
-            {unarchive.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : <ArchiveRestore className="h-3.5 w-3.5" aria-hidden="true" />}
+          <button
+            type="button"
+            onClick={() => unarchive.mutate({ planId: plan.id })}
+            disabled={unarchive.isPending}
+            className={chipBtn}
+          >
+            {unarchive.isPending ? (
+              <Loader2
+                className="h-3.5 w-3.5 animate-spin"
+                aria-hidden="true"
+              />
+            ) : (
+              <ArchiveRestore className="h-3.5 w-3.5" aria-hidden="true" />
+            )}
             Unarchive
           </button>
         )}
 
         {/* Duplicate — provisions an independent copy (new plan/price IDs). */}
-        <button type="button" onClick={() => duplicate.mutate({ planId: plan.id })} disabled={duplicate.isPending} className={chipBtn}>
-          {duplicate.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : <Copy className="h-3.5 w-3.5" aria-hidden="true" />}
+        <button
+          type="button"
+          onClick={() => duplicate.mutate({ planId: plan.id })}
+          disabled={duplicate.isPending}
+          className={chipBtn}
+        >
+          {duplicate.isPending ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+          ) : (
+            <Copy className="h-3.5 w-3.5" aria-hidden="true" />
+          )}
           Duplicate
         </button>
 
         {/* Delete — permanently removes the plan (confirm first). */}
         {confirmDelete ? (
           <span className="inline-flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">Delete permanently?</span>
-            <button type="button" onClick={() => setConfirmDelete(false)} className={chipBtn}>
+            <span className="text-xs text-muted-foreground">
+              Delete permanently?
+            </span>
+            <button
+              type="button"
+              onClick={() => setConfirmDelete(false)}
+              className={chipBtn}
+            >
               Cancel
             </button>
             <button
@@ -1541,19 +2030,31 @@ function PlanCard({ plan }: { plan: PlanWithCount }) {
               style={{ backgroundColor: "var(--dime-danger, #E5484D)" }}
               className="inline-flex cursor-pointer items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-semibold text-white transition-opacity duration-150 hover:opacity-85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50"
             >
-              {del.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />}
+              {del.isPending && (
+                <Loader2
+                  className="h-3.5 w-3.5 animate-spin"
+                  aria-hidden="true"
+                />
+              )}
               Delete
             </button>
           </span>
         ) : (
-          <button type="button" onClick={() => setConfirmDelete(true)} title="Permanently delete this plan" className={chipBtn}>
+          <button
+            type="button"
+            onClick={() => setConfirmDelete(true)}
+            title="Permanently delete this plan"
+            className={chipBtn}
+          >
             <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
             Delete
           </button>
         )}
       </div>
 
-      {editing && <EditPlanModal plan={plan} onClose={() => setEditing(false)} />}
+      {editing && (
+        <EditPlanModal plan={plan} onClose={() => setEditing(false)} />
+      )}
     </div>
   );
 }
@@ -1575,21 +2076,29 @@ export default function SubscriptionPlans() {
   const [tab, setTab] = useState<"active" | "archived">("active");
   const [modal, setModal] = useState<null | "plan" | "personalized">(null);
 
-  const testModeQuery = trpc.subscriptionPlans.testMode.useQuery(undefined, { enabled: isOwner, staleTime: 60_000 });
-  const listQuery = trpc.subscriptionPlans.list.useQuery(undefined, { enabled: isOwner, staleTime: 15_000 });
+  const testModeQuery = trpc.subscriptionPlans.testMode.useQuery(undefined, {
+    enabled: isOwner,
+    staleTime: 60_000,
+  });
+  const listQuery = trpc.subscriptionPlans.list.useQuery(undefined, {
+    enabled: isOwner,
+    staleTime: 15_000,
+  });
 
   if (loading || (!loading && (!appUser || appUser.role !== "owner"))) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center gap-3">
         <RefreshCw className="w-5 h-5 text-foreground animate-spin" />
-        <span className="text-sm text-foreground">{loading ? "Authenticating..." : "Redirecting..."}</span>
+        <span className="text-sm text-foreground">
+          {loading ? "Authenticating..." : "Redirecting..."}
+        </span>
       </div>
     );
   }
 
   const testMode = testModeQuery.data?.testMode === true;
   const plans: PlanWithCount[] = (listQuery.data ?? []) as PlanWithCount[];
-  const shown = plans.filter((p) => (tab === "active" ? p.active : !p.active));
+  const shown = plans.filter(p => (tab === "active" ? p.active : !p.active));
 
   return (
     <AdminShell active="plans">
@@ -1599,7 +2108,10 @@ export default function SubscriptionPlans() {
           <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <div className="flex items-center gap-3">
-                <h1 className="text-3xl font-bold tracking-tight sm:text-4xl" style={{ letterSpacing: "-0.02em" }}>
+                <h1
+                  className="text-3xl font-bold tracking-tight sm:text-4xl"
+                  style={{ letterSpacing: "-0.02em" }}
+                >
                   Subscription Plans
                 </h1>
                 {testMode && (
@@ -1607,7 +2119,10 @@ export default function SubscriptionPlans() {
                     className="inline-flex items-center gap-1.5 rounded-full border border-primary px-2.5 py-1 font-mono text-[11px] font-medium uppercase tracking-wider text-primary"
                     title="Plans are provisioned in the Stripe sandbox, not the live account."
                   >
-                    <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden="true" />
+                    <span
+                      className="h-1.5 w-1.5 rounded-full bg-primary"
+                      aria-hidden="true"
+                    />
                     Sandbox / Test Mode
                   </span>
                 )}
@@ -1626,7 +2141,11 @@ export default function SubscriptionPlans() {
                 <Sparkles className="h-4 w-4 text-primary" aria-hidden="true" />
                 Create Personalized Subscription
               </button>
-              <button type="button" onClick={() => setModal("plan")} className={primaryBtn}>
+              <button
+                type="button"
+                onClick={() => setModal("plan")}
+                className={primaryBtn}
+              >
                 <Plus className="h-4 w-4" aria-hidden="true" />
                 Create Plan
               </button>
@@ -1635,20 +2154,27 @@ export default function SubscriptionPlans() {
 
           {/* Tabs */}
           <div className="mb-6 flex items-center gap-1 border-b border-border">
-            {(["active", "archived"] as const).map((t) => (
+            {(["active", "archived"] as const).map(t => (
               <button
                 key={t}
                 type="button"
                 onClick={() => setTab(t)}
                 aria-current={tab === t ? "page" : undefined}
                 className={`-mb-px cursor-pointer border-b-2 px-3 py-2 text-sm font-medium transition-colors duration-150 focus-visible:outline-none ${
-                  tab === t ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"
+                  tab === t
+                    ? "border-primary text-foreground"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
                 }`}
               >
                 {t === "active" ? "Active Plans" : "Archived plans"}
               </button>
             ))}
-            {listQuery.isFetching && <RefreshCw className="ml-2 h-3.5 w-3.5 animate-spin text-muted-foreground" aria-hidden="true" />}
+            {listQuery.isFetching && (
+              <RefreshCw
+                className="ml-2 h-3.5 w-3.5 animate-spin text-muted-foreground"
+                aria-hidden="true"
+              />
+            )}
           </div>
 
           {/* Cards */}
@@ -1660,17 +2186,23 @@ export default function SubscriptionPlans() {
           ) : listQuery.isError ? (
             <div className="flex flex-col items-center gap-3 py-16 text-sm text-muted-foreground">
               <span>Failed to load plans: {listQuery.error.message}</span>
-              <button type="button" onClick={() => listQuery.refetch()} className={chipBtn}>
+              <button
+                type="button"
+                onClick={() => listQuery.refetch()}
+                className={chipBtn}
+              >
                 Retry
               </button>
             </div>
           ) : shown.length === 0 ? (
             <div className="py-16 text-center text-sm text-muted-foreground">
-              {tab === "active" ? "No active plans yet — create your first above." : "No archived plans."}
+              {tab === "active"
+                ? "No active plans yet — create your first above."
+                : "No archived plans."}
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-              {shown.map((plan) => (
+              {shown.map(plan => (
                 <PlanCard key={plan.id} plan={plan} />
               ))}
             </div>
@@ -1679,7 +2211,9 @@ export default function SubscriptionPlans() {
       </div>
 
       {modal === "plan" && <CreatePlanModal onClose={() => setModal(null)} />}
-      {modal === "personalized" && <CreatePersonalizedModal onClose={() => setModal(null)} />}
+      {modal === "personalized" && (
+        <CreatePersonalizedModal onClose={() => setModal(null)} />
+      )}
     </AdminShell>
   );
 }

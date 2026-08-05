@@ -25,17 +25,10 @@ export const DIME_RUNTIME_READINESS_VERSION =
   "dime-chat-runtime-readiness-v1" as const;
 
 export type DimeRuntimeMode =
-  | "frozen"
-  | "research-alpha"
-  | "dime1"
-  | "anthropic"
-  | "pi";
+  "frozen" | "research-alpha" | "dime1" | "anthropic" | "pi";
 
 export type DimeRuntimeConfigurationState =
-  | "configured"
-  | "incomplete"
-  | "limited"
-  | "offline";
+  "configured" | "incomplete" | "limited" | "offline";
 
 export type DimeRuntimeIssueCode =
   | "provider_frozen"

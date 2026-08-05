@@ -43,7 +43,9 @@ describe("isPrezAccount — photo exclusivity (plan A2)", () => {
 
 describe("isLifetimeMember — Upgrade/Cancel visibility", () => {
   it("no expiry date means lifetime (repo convention: null = lifetime)", () => {
-    expect(isLifetimeMember(user({ role: "user", expiryDate: null }))).toBe(true);
+    expect(isLifetimeMember(user({ role: "user", expiryDate: null }))).toBe(
+      true
+    );
   });
 
   it("the explicit 'lifetime' plan id is lifetime even with an expiry set", () => {
@@ -73,13 +75,19 @@ describe("deriveTierLabel", () => {
 
   it("mirrors Profile.tsx plan labels for subscribers", () => {
     expect(
-      deriveTierLabel(user({ role: "user", expiryDate: 1, stripePlanId: "annual" }))
+      deriveTierLabel(
+        user({ role: "user", expiryDate: 1, stripePlanId: "annual" })
+      )
     ).toBe("Annual");
     expect(
-      deriveTierLabel(user({ role: "user", expiryDate: 1, stripePlanId: "monthly" }))
+      deriveTierLabel(
+        user({ role: "user", expiryDate: 1, stripePlanId: "monthly" })
+      )
     ).toBe("Monthly");
     expect(
-      deriveTierLabel(user({ role: "user", expiryDate: 1, stripePlanId: "pro" }))
+      deriveTierLabel(
+        user({ role: "user", expiryDate: 1, stripePlanId: "pro" })
+      )
     ).toBe("Pro");
     expect(deriveTierLabel(user({ role: "user" }))).toBe("Lifetime");
     expect(

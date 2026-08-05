@@ -29,7 +29,9 @@ describe("formatMutationError — complete error mapping", () => {
     const result = formatMutationError(err);
     console.log(`[INPUT] error.message="${err.message}"`);
     console.log(`[OUTPUT] formatMutationError="${result}"`);
-    expect(result).toBe("The request took too long. Please try again in a moment.");
+    expect(result).toBe(
+      "The request took too long. Please try again in a moment."
+    );
     console.log("[VERIFY] PASS");
   });
 
@@ -38,14 +40,20 @@ describe("formatMutationError — complete error mapping", () => {
     const result = formatMutationError(err);
     console.log(`[INPUT] error.message="${err.message}"`);
     console.log(`[OUTPUT] formatMutationError="${result}"`);
-    expect(result).toBe("The request took too long. Please try again in a moment.");
+    expect(result).toBe(
+      "The request took too long. Please try again in a moment."
+    );
     console.log("[VERIFY] PASS");
   });
 
   it("[VERIFY] CHECK 5: 'Database temporarily unavailable' → DB-specific message", () => {
-    const err = new Error("Database temporarily unavailable. Please try again in a moment.");
+    const err = new Error(
+      "Database temporarily unavailable. Please try again in a moment."
+    );
     const result = formatMutationError(err);
-    expect(result).toBe("Database temporarily unavailable. Please try again in a moment.");
+    expect(result).toBe(
+      "Database temporarily unavailable. Please try again in a moment."
+    );
     console.log("[VERIFY] PASS");
   });
 
@@ -57,9 +65,13 @@ describe("formatMutationError — complete error mapping", () => {
   });
 
   it("[VERIFY] CHECK 1: JSON parse error (server error HTML) → generic unavailable message", () => {
-    const err = new Error("Unexpected token 'S', 'Service Unavailable' is not valid JSON");
+    const err = new Error(
+      "Unexpected token 'S', 'Service Unavailable' is not valid JSON"
+    );
     const result = formatMutationError(err);
-    expect(result).toBe("Server temporarily unavailable. Please try again in a moment.");
+    expect(result).toBe(
+      "Server temporarily unavailable. Please try again in a moment."
+    );
     console.log("[VERIFY] PASS");
   });
 
@@ -98,21 +110,27 @@ describe("bcrypt cost factor timing", () => {
 // ── [TEST GROUP 3] Circuit breaker — TIMEOUT IS NOT A FAILURE ────────────────
 describe("circuit breaker — timeout does NOT open circuit (critical fix)", () => {
   it("[VERIFY] Fast operation succeeds normally", async () => {
-    const { withCircuitBreaker, getCircuitStatus } = await import("../server/dbCircuitBreaker");
+    const { withCircuitBreaker, getCircuitStatus } =
+      await import("../server/dbCircuitBreaker");
     const result = await withCircuitBreaker(async () => {
       await new Promise(resolve => setTimeout(resolve, 10));
       return "ok";
     });
     const status = getCircuitStatus();
-    console.log(`[OUTPUT] result="${result}" state=${status.state} consecutiveFailures=${status.consecutiveFailures}`);
+    console.log(
+      `[OUTPUT] result="${result}" state=${status.state} consecutiveFailures=${status.consecutiveFailures}`
+    );
     expect(result).toBe("ok");
     expect(status.state).toBe("CLOSED");
     expect(status.consecutiveFailures).toBe(0);
-    console.log("[VERIFY] PASS — fast operation succeeds, circuit stays CLOSED");
+    console.log(
+      "[VERIFY] PASS — fast operation succeeds, circuit stays CLOSED"
+    );
   });
 
   it("[VERIFY] Timeout fires but circuit stays CLOSED (timeout ≠ failure)", async () => {
-    const { withCircuitBreaker, getCircuitStatus } = await import("../server/dbCircuitBreaker");
+    const { withCircuitBreaker, getCircuitStatus } =
+      await import("../server/dbCircuitBreaker");
     const statusBefore = getCircuitStatus();
     const failuresBefore = statusBefore.consecutiveFailures;
 
@@ -126,19 +144,24 @@ describe("circuit breaker — timeout does NOT open circuit (critical fix)", () 
       const msg = (err as Error).message;
       const status = getCircuitStatus();
       console.log(`[INPUT] simulated query=9000ms (exceeds 8s timeout)`);
-      console.log(`[OUTPUT] error="${msg}" state=${status.state} consecutiveFailures=${status.consecutiveFailures} totalTimeouts=${status.totalTimeouts}`);
+      console.log(
+        `[OUTPUT] error="${msg}" state=${status.state} consecutiveFailures=${status.consecutiveFailures} totalTimeouts=${status.totalTimeouts}`
+      );
       // KEY ASSERTION: circuit must still be CLOSED after a timeout
       expect(status.state).toBe("CLOSED");
       // KEY ASSERTION: consecutiveFailures must NOT have increased
       expect(status.consecutiveFailures).toBe(failuresBefore);
       // Timeout counter should have incremented
       expect(status.totalTimeouts).toBeGreaterThan(0);
-      console.log("[VERIFY] PASS — timeout fired but circuit remains CLOSED (timeout ≠ failure)");
+      console.log(
+        "[VERIFY] PASS — timeout fired but circuit remains CLOSED (timeout ≠ failure)"
+      );
     }
   }, 12_000);
 
   it("[VERIFY] Multiple timeouts do NOT open the circuit", async () => {
-    const { withCircuitBreaker, getCircuitStatus } = await import("../server/dbCircuitBreaker");
+    const { withCircuitBreaker, getCircuitStatus } =
+      await import("../server/dbCircuitBreaker");
     const statusBefore = getCircuitStatus();
     const failuresBefore = statusBefore.consecutiveFailures;
 
@@ -156,18 +179,23 @@ describe("circuit breaker — timeout does NOT open circuit (critical fix)", () 
 
     const status = getCircuitStatus();
     console.log(`[INPUT] 3 consecutive timeouts`);
-    console.log(`[OUTPUT] state=${status.state} consecutiveFailures=${status.consecutiveFailures} totalTimeouts=${status.totalTimeouts}`);
+    console.log(
+      `[OUTPUT] state=${status.state} consecutiveFailures=${status.consecutiveFailures} totalTimeouts=${status.totalTimeouts}`
+    );
     // KEY ASSERTION: circuit must still be CLOSED after 3 timeouts
     expect(status.state).toBe("CLOSED");
     // KEY ASSERTION: consecutiveFailures must NOT have increased
     expect(status.consecutiveFailures).toBe(failuresBefore);
     // 3 timeouts should be recorded
     expect(status.totalTimeouts).toBeGreaterThanOrEqual(3);
-    console.log("[VERIFY] PASS — 3 consecutive timeouts did NOT open the circuit");
+    console.log(
+      "[VERIFY] PASS — 3 consecutive timeouts did NOT open the circuit"
+    );
   }, 35_000);
 
   it("[VERIFY] TRUE DB error (ECONNREFUSED) increments consecutiveFailures", async () => {
-    const { withCircuitBreaker, getCircuitStatus } = await import("../server/dbCircuitBreaker");
+    const { withCircuitBreaker, getCircuitStatus } =
+      await import("../server/dbCircuitBreaker");
     const statusBefore = getCircuitStatus();
     const failuresBefore = statusBefore.consecutiveFailures;
 
@@ -182,14 +210,19 @@ describe("circuit breaker — timeout does NOT open circuit (critical fix)", () 
 
     const status = getCircuitStatus();
     console.log(`[INPUT] ECONNREFUSED error`);
-    console.log(`[OUTPUT] state=${status.state} consecutiveFailures=${status.consecutiveFailures}`);
+    console.log(
+      `[OUTPUT] state=${status.state} consecutiveFailures=${status.consecutiveFailures}`
+    );
     // TRUE DB error SHOULD increment consecutiveFailures
     expect(status.consecutiveFailures).toBe(failuresBefore + 1);
-    console.log("[VERIFY] PASS — ECONNREFUSED correctly increments consecutiveFailures");
+    console.log(
+      "[VERIFY] PASS — ECONNREFUSED correctly increments consecutiveFailures"
+    );
   });
 
   it("[VERIFY] Application error (SQL constraint) does NOT affect circuit state", async () => {
-    const { withCircuitBreaker, getCircuitStatus } = await import("../server/dbCircuitBreaker");
+    const { withCircuitBreaker, getCircuitStatus } =
+      await import("../server/dbCircuitBreaker");
     const statusBefore = getCircuitStatus();
     const failuresBefore = statusBefore.consecutiveFailures;
 
@@ -203,10 +236,14 @@ describe("circuit breaker — timeout does NOT open circuit (critical fix)", () 
 
     const status = getCircuitStatus();
     console.log(`[INPUT] SQL constraint violation`);
-    console.log(`[OUTPUT] state=${status.state} consecutiveFailures=${status.consecutiveFailures}`);
+    console.log(
+      `[OUTPUT] state=${status.state} consecutiveFailures=${status.consecutiveFailures}`
+    );
     // Application error should NOT increment consecutiveFailures
     expect(status.consecutiveFailures).toBe(failuresBefore);
-    console.log("[VERIFY] PASS — SQL constraint error did not affect circuit state");
+    console.log(
+      "[VERIFY] PASS — SQL constraint error did not affect circuit state"
+    );
   });
 
   it("[VERIFY] Worst-case updateUser timing with new 8s timeout: 3×8s + 0.11s < 25s request timeout", () => {
@@ -215,12 +252,24 @@ describe("circuit breaker — timeout does NOT open circuit (critical fix)", () 
     const requestTimeoutMs = 25_000;
 
     // Worst case: read(8s) + parallel_uniqueness(8s) + bcrypt(0.11s) + write(8s)
-    const worstCaseMs = circuitBreakerTimeoutMs + circuitBreakerTimeoutMs + bcryptCost10Ms + circuitBreakerTimeoutMs;
-    console.log(`[INPUT] circuitBreakerTimeout=${circuitBreakerTimeoutMs}ms bcryptCost10=${bcryptCost10Ms}ms`);
-    console.log(`[STATE] worstCase = read(${circuitBreakerTimeoutMs}) + parallel_uniqueness(${circuitBreakerTimeoutMs}) + bcrypt(${bcryptCost10Ms}) + write(${circuitBreakerTimeoutMs})`);
-    console.log(`[OUTPUT] worstCaseMs=${worstCaseMs}ms requestTimeoutMs=${requestTimeoutMs}ms`);
+    const worstCaseMs =
+      circuitBreakerTimeoutMs +
+      circuitBreakerTimeoutMs +
+      bcryptCost10Ms +
+      circuitBreakerTimeoutMs;
+    console.log(
+      `[INPUT] circuitBreakerTimeout=${circuitBreakerTimeoutMs}ms bcryptCost10=${bcryptCost10Ms}ms`
+    );
+    console.log(
+      `[STATE] worstCase = read(${circuitBreakerTimeoutMs}) + parallel_uniqueness(${circuitBreakerTimeoutMs}) + bcrypt(${bcryptCost10Ms}) + write(${circuitBreakerTimeoutMs})`
+    );
+    console.log(
+      `[OUTPUT] worstCaseMs=${worstCaseMs}ms requestTimeoutMs=${requestTimeoutMs}ms`
+    );
     expect(worstCaseMs).toBeLessThan(requestTimeoutMs);
     const safetyMarginMs = requestTimeoutMs - worstCaseMs;
-    console.log(`[VERIFY] PASS — worstCase=${worstCaseMs}ms < requestTimeout=${requestTimeoutMs}ms (safety margin: ${safetyMarginMs}ms)`);
+    console.log(
+      `[VERIFY] PASS — worstCase=${worstCaseMs}ms < requestTimeout=${requestTimeoutMs}ms (safety margin: ${safetyMarginMs}ms)`
+    );
   });
 });

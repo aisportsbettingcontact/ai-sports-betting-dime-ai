@@ -58,10 +58,21 @@ export function formatMutationError(error: unknown): string {
   // Surface the human `message` fields only; never show backend JSON to users.
   if (msg.trimStart().startsWith("[")) {
     try {
-      const issues = JSON.parse(msg) as Array<{ message?: string; path?: Array<string | number> }>;
-      if (Array.isArray(issues) && issues.length > 0 && issues.every((i) => typeof i?.message === "string")) {
+      const issues = JSON.parse(msg) as Array<{
+        message?: string;
+        path?: Array<string | number>;
+      }>;
+      if (
+        Array.isArray(issues) &&
+        issues.length > 0 &&
+        issues.every(i => typeof i?.message === "string")
+      ) {
         return issues
-          .map((i) => (i.path?.length ? `${String(i.path[i.path.length - 1])}: ${i.message}` : String(i.message)))
+          .map(i =>
+            i.path?.length
+              ? `${String(i.path[i.path.length - 1])}: ${i.message}`
+              : String(i.message)
+          )
           .join(" · ");
       }
     } catch {
@@ -79,7 +90,11 @@ export function formatMutationError(error: unknown): string {
   }
 
   // [CHECK 3] Session expired — exact matches only
-  if (msg === "Please login (10001)" || msg === "Not authenticated" || msg === "Invalid session") {
+  if (
+    msg === "Please login (10001)" ||
+    msg === "Not authenticated" ||
+    msg === "Invalid session"
+  ) {
     return "Session expired. Please sign in again.";
   }
 
@@ -99,28 +114,28 @@ export function formatMutationError(error: unknown): string {
 
   // [CHECK 5] DB/circuit breaker errors — pass through specific message from server
   if (
-    msg.includes('Database temporarily unavailable') ||
-    msg.includes('Circuit is OPEN') ||
-    msg.includes('Database not available')
+    msg.includes("Database temporarily unavailable") ||
+    msg.includes("Circuit is OPEN") ||
+    msg.includes("Database not available")
   ) {
-    return 'Database temporarily unavailable. Please try again in a moment.';
+    return "Database temporarily unavailable. Please try again in a moment.";
   }
 
   // [CHECK 6] Request timeout — server-side 25s timeout fired
   if (
-    msg.includes('Request timed out') ||
-    msg.includes('timed out after') ||
-    msg.includes('ETIMEDOUT')
+    msg.includes("Request timed out") ||
+    msg.includes("timed out after") ||
+    msg.includes("ETIMEDOUT")
   ) {
-    return 'The request took too long. Please try again in a moment.';
+    return "The request took too long. Please try again in a moment.";
   }
 
   // [CHECK 7] Pass through specific server messages that are already user-friendly
   // (e.g. "Failed to update account. Please try again." from updateUser catch block)
   if (
-    msg.includes('Failed to update') ||
-    msg.includes('Failed to delete') ||
-    msg.includes('Failed to create')
+    msg.includes("Failed to update") ||
+    msg.includes("Failed to delete") ||
+    msg.includes("Failed to create")
   ) {
     return msg;
   }
@@ -129,7 +144,10 @@ export function formatMutationError(error: unknown): string {
   // Server-side INTERNAL_SERVER_ERROR messages are already descriptive and actionable
   // (e.g. "Discord Bot token is expired or revoked. Please regenerate it...").
   // Replacing them with a generic message would hide critical diagnostic information.
-  if (msg === "Internal server error" || msg.includes("INTERNAL_SERVER_ERROR")) {
+  if (
+    msg === "Internal server error" ||
+    msg.includes("INTERNAL_SERVER_ERROR")
+  ) {
     return "An unexpected server error occurred. Please try again.";
   }
 

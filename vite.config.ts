@@ -38,36 +38,42 @@ export default defineConfig({
           // ────────────────────────────────────────────────────────────────────────────────
 
           // ── Vendor: React core — always needed, cache-stable ──────────────
-          if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/')) {
-            return 'vendor-react';
+          if (
+            id.includes("node_modules/react/") ||
+            id.includes("node_modules/react-dom/")
+          ) {
+            return "vendor-react";
           }
           // ── Vendor: tRPC + React Query — always needed for auth ────────────
           if (
-            id.includes('@trpc/') ||
-            id.includes('@tanstack/react-query') ||
-            id.includes('superjson')
+            id.includes("@trpc/") ||
+            id.includes("@tanstack/react-query") ||
+            id.includes("superjson")
           ) {
-            return 'vendor-trpc';
+            return "vendor-trpc";
           }
           // ── Recharts — 406KB, only used in admin pages + BetTracker ─────────
           // Isolated so it does NOT pull into the main feed bundle.
-          if (id.includes('recharts') || id.includes('node_modules/recharts')) {
-            return 'vendor-recharts';
+          if (id.includes("recharts") || id.includes("node_modules/recharts")) {
+            return "vendor-recharts";
           }
           // ── Vendor: Framer Motion — only needed after route loads ──────────
-          if (id.includes('framer-motion')) {
-            return 'vendor-motion';
+          if (id.includes("framer-motion")) {
+            return "vendor-motion";
           }
           // ── Vendor: Radix UI + shadcn — UI primitives ─────────────────────
-          if (id.includes('@radix-ui/')) {
-            return 'vendor-radix';
+          if (id.includes("@radix-ui/")) {
+            return "vendor-radix";
           }
           // ── Vendor: sonner + wouter — used by App.tsx critical path ──────────────
           // These are tiny libs that must be in a stable, named chunk so they
           // don't get merged into a large shared chunk that also contains
           // page-level code (which would pull that page into the critical path).
-          if (id.includes('node_modules/sonner') || id.includes('node_modules/wouter')) {
-            return 'vendor-ui';
+          if (
+            id.includes("node_modules/sonner") ||
+            id.includes("node_modules/wouter")
+          ) {
+            return "vendor-ui";
           }
           // NOTE: pages/ModelResults and pages/SecurityEvents are NOT assigned here.
           // Vite will auto-split them into their own chunks, keeping shared code

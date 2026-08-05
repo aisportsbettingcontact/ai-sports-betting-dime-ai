@@ -21,7 +21,6 @@ export const MAX_PARLAY_LEGS = 10;
 /** Contract: a parlay is only a parlay with at least two legs. */
 export const MIN_PARLAY_LEGS = 2;
 
-
 // ─── Exact arithmetic ─────────────────────────────────────────────────────────
 
 /**
@@ -44,7 +43,10 @@ const ONE = BigInt(1);
 const TWO = BigInt(2);
 const HUNDRED = BigInt(100);
 
-interface Frac { n: bigint; d: bigint }
+interface Frac {
+  n: bigint;
+  d: bigint;
+}
 
 function gcd(a: bigint, b: bigint): bigint {
   while (b) [a, b] = [b, a % b];
@@ -52,18 +54,24 @@ function gcd(a: bigint, b: bigint): bigint {
 }
 
 function frac(n: bigint, d: bigint): Frac {
-  if (d < ZERO) { n = -n; d = -d; }
+  if (d < ZERO) {
+    n = -n;
+    d = -d;
+  }
   const g = gcd(n < ZERO ? -n : n, d);
   return { n: n / g, d: d / g };
 }
 
 /** American odds as an exact decimal-odds fraction (total return per unit). */
 function decimalFrac(odds: number): Frac {
-  if (!Number.isFinite(odds)) throw new Error(`decimalFrac: not a number (${odds})`);
+  if (!Number.isFinite(odds))
+    throw new Error(`decimalFrac: not a number (${odds})`);
   const o = BigInt(Math.trunc(odds));
-  if (odds >= 100) return frac(HUNDRED + o, HUNDRED);        // 1 + odds/100
-  if (odds <= -100) return frac(-o + HUNDRED, -o);        // 1 + 100/|odds|
-  throw new Error(`decimalFrac: ${odds} is not a valid American price (|odds| >= 100)`);
+  if (odds >= 100) return frac(HUNDRED + o, HUNDRED); // 1 + odds/100
+  if (odds <= -100) return frac(-o + HUNDRED, -o); // 1 + 100/|odds|
+  throw new Error(
+    `decimalFrac: ${odds} is not a valid American price (|odds| >= 100)`
+  );
 }
 
 /** Round a positive rational half away from zero. */
@@ -73,9 +81,11 @@ function roundFrac(n: bigint, d: bigint): bigint {
 
 /** Exact decimal-odds fraction back to a whole-number American price. */
 function fracToAmerican(f: Frac): number {
-  const profitN = f.n - f.d;                            // (dec - 1) as profitN/d
+  const profitN = f.n - f.d; // (dec - 1) as profitN/d
   if (profitN <= ZERO) {
-    throw new Error(`fracToAmerican: ${Number(f.n) / Number(f.d)} is not a payout above 1.0`);
+    throw new Error(
+      `fracToAmerican: ${Number(f.n) / Number(f.d)} is not a payout above 1.0`
+    );
   }
   // dec >= 2  <=>  profit >= 1  <=>  profitN >= d
   if (profitN >= f.d) return Number(roundFrac(profitN * HUNDRED, f.d));
@@ -92,10 +102,13 @@ function fracToAmerican(f: Frac): number {
  * a price; reject it instead of silently returning a payout nobody agreed to.
  */
 export function americanToDecimal(odds: number): number {
-  if (!Number.isFinite(odds)) throw new Error(`americanToDecimal: not a number (${odds})`);
+  if (!Number.isFinite(odds))
+    throw new Error(`americanToDecimal: not a number (${odds})`);
   if (odds >= 100) return 1 + odds / 100;
   if (odds <= -100) return 1 + 100 / Math.abs(odds);
-  throw new Error(`americanToDecimal: ${odds} is not a valid American price (|odds| >= 100)`);
+  throw new Error(
+    `americanToDecimal: ${odds} is not a valid American price (|odds| >= 100)`
+  );
 }
 
 /**
@@ -127,7 +140,10 @@ export function combineLegOdds(legOdds: number[]): number {
  * Settlement's counterpart to combineLegOdds, and exact for the same reason:
  * this is the number a repriced ticket actually pays.
  */
-export function divideLegsOut(originalOdds: number, droppedLegOdds: number[]): number {
+export function divideLegsOut(
+  originalOdds: number,
+  droppedLegOdds: number[]
+): number {
   const original = decimalFrac(originalOdds);
   const dropped = droppedLegOdds
     .map(decimalFrac)
@@ -136,12 +152,11 @@ export function divideLegsOut(originalOdds: number, droppedLegOdds: number[]): n
   const remaining = frac(original.n * dropped.d, original.d * dropped.n);
   if (remaining.n <= remaining.d) {
     throw new Error(
-      `divideLegsOut: dropping those legs leaves no payout (decimal ${Number(remaining.n) / Number(remaining.d)})`,
+      `divideLegsOut: dropping those legs leaves no payout (decimal ${Number(remaining.n) / Number(remaining.d)})`
     );
   }
   return fracToAmerican(remaining);
 }
-
 
 // ─── Validation ───────────────────────────────────────────────────────────────
 
@@ -162,25 +177,37 @@ export type ParlayValidation = { ok: true } | { ok: false; message: string };
  * rejected is a ticket that is structurally unsettleable.
  */
 export function validateParlayLegs(
-  legs: Array<{ odds: number; market: PricingMarket; line: number | null }>,
+  legs: Array<{ odds: number; market: PricingMarket; line: number | null }>
 ): ParlayValidation {
   if (legs.length < MIN_PARLAY_LEGS) {
-    return { ok: false, message: `A parlay needs at least ${MIN_PARLAY_LEGS} legs` };
+    return {
+      ok: false,
+      message: `A parlay needs at least ${MIN_PARLAY_LEGS} legs`,
+    };
   }
   if (legs.length > MAX_PARLAY_LEGS) {
-    return { ok: false, message: `A parlay can have at most ${MAX_PARLAY_LEGS} legs` };
+    return {
+      ok: false,
+      message: `A parlay can have at most ${MAX_PARLAY_LEGS} legs`,
+    };
   }
   for (let i = 0; i < legs.length; i++) {
     const leg = legs[i];
     try {
       americanToDecimal(leg.odds);
     } catch {
-      return { ok: false, message: `Leg ${i + 1}: ${leg.odds} is not a valid American price` };
+      return {
+        ok: false,
+        message: `Leg ${i + 1}: ${leg.odds} is not a valid American price`,
+      };
     }
     // RL and TOTAL are graded against a number; without one the leg can never
     // settle, which would strand the whole ticket on PENDING forever.
     if ((leg.market === "RL" || leg.market === "TOTAL") && leg.line == null) {
-      return { ok: false, message: `Leg ${i + 1}: a ${leg.market} leg needs a line` };
+      return {
+        ok: false,
+        message: `Leg ${i + 1}: a ${leg.market} leg needs a line`,
+      };
     }
   }
   return { ok: true };

@@ -14,7 +14,12 @@ import {
   type MatchableDbGame,
   type MlbLiveGame,
 } from "./mlbScoreRefresh";
-import { G1_GAMEPK, G2_GAMEPK, G1_START_UTC, G2_START_UTC } from "./mlbDoubleheaderFixtures";
+import {
+  G1_GAMEPK,
+  G2_GAMEPK,
+  G1_START_UTC,
+  G2_START_UTC,
+} from "./mlbDoubleheaderFixtures";
 
 function liveGame(overrides: Partial<MlbLiveGame>): MlbLiveGame {
   return {
@@ -54,14 +59,31 @@ function dbRow(overrides: Partial<MatchableDbGame>): MatchableDbGame {
   };
 }
 
-const apiG1 = () => liveGame({ gamePk: G1_GAMEPK, gameNumber: 1, startUtc: G1_START_UTC, gameStatus: "live" });
-const apiG2 = () => liveGame({ gamePk: G2_GAMEPK, gameNumber: 2, startUtc: G2_START_UTC });
+const apiG1 = () =>
+  liveGame({
+    gamePk: G1_GAMEPK,
+    gameNumber: 1,
+    startUtc: G1_START_UTC,
+    gameStatus: "live",
+  });
+const apiG2 = () =>
+  liveGame({ gamePk: G2_GAMEPK, gameNumber: 2, startUtc: G2_START_UTC });
 
 describe("matchMlbLiveGamesToDbRows — doubleheader safety", () => {
   it("matches both DH games to their own rows via gamePk (canonical identity)", () => {
     const rows = [
-      dbRow({ id: 11, mlbGamePk: G1_GAMEPK, gameNumber: 1, startTimeEst: "1:35 PM" }),
-      dbRow({ id: 12, mlbGamePk: G2_GAMEPK, gameNumber: 2, startTimeEst: "7:10 PM" }),
+      dbRow({
+        id: 11,
+        mlbGamePk: G1_GAMEPK,
+        gameNumber: 1,
+        startTimeEst: "1:35 PM",
+      }),
+      dbRow({
+        id: 12,
+        mlbGamePk: G2_GAMEPK,
+        gameNumber: 2,
+        startTimeEst: "7:10 PM",
+      }),
     ];
     const { matches } = matchMlbLiveGamesToDbRows([apiG1(), apiG2()], rows);
     expect(matches[0].dbGame?.id).toBe(11);
@@ -73,7 +95,10 @@ describe("matchMlbLiveGamesToDbRows — doubleheader safety", () => {
   it("never lets two API games claim the same DB row (incident regression)", () => {
     // Pre-fix defect shape: one DB row for the matchup, two API games.
     const rows = [dbRow({ id: 21, mlbGamePk: null, startTimeEst: "7:10 PM" })];
-    const { matches, warnings } = matchMlbLiveGamesToDbRows([apiG1(), apiG2()], rows);
+    const { matches, warnings } = matchMlbLiveGamesToDbRows(
+      [apiG1(), apiG2()],
+      rows
+    );
     const matched = matches.filter(m => m.dbGame !== null);
     expect(matched).toHaveLength(1);
     // The 7:10 row belongs to the 7:10 game — NOT to whichever came first.
@@ -103,18 +128,33 @@ describe("matchMlbLiveGamesToDbRows — doubleheader safety", () => {
       dbRow({ id: 41, gameNumber: 1, startTimeEst: "7:10 PM" }),
       dbRow({ id: 42, gameNumber: 1, startTimeEst: "1:35 PM" }),
     ];
-    const { matches, warnings } = matchMlbLiveGamesToDbRows([apiG2(), apiG1()], rows);
+    const { matches, warnings } = matchMlbLiveGamesToDbRows(
+      [apiG2(), apiG1()],
+      rows
+    );
     const byPk = new Map(matches.map(m => [m.apiGame.gamePk, m]));
     expect(byPk.get(G1_GAMEPK)?.dbGame?.id).toBe(42);
     expect(byPk.get(G2_GAMEPK)?.dbGame?.id).toBe(41);
-    expect(warnings.some(w => w.includes("doubleheader fallback match"))).toBe(true);
+    expect(warnings.some(w => w.includes("doubleheader fallback match"))).toBe(
+      true
+    );
   });
 
   it("single game with team fallback still matches (non-DH behavior unchanged)", () => {
-    const rows = [dbRow({ id: 51, awayTeam: "NYY", homeTeam: "DET", startTimeEst: "6:40 PM" })];
+    const rows = [
+      dbRow({
+        id: 51,
+        awayTeam: "NYY",
+        homeTeam: "DET",
+        startTimeEst: "6:40 PM",
+      }),
+    ];
     const api = liveGame({
-      gamePk: 900201, awayAbbrev: "NYY", homeAbbrev: "DET",
-      doubleHeader: "N", startUtc: "2026-07-17T22:40:00Z",
+      gamePk: 900201,
+      awayAbbrev: "NYY",
+      homeAbbrev: "DET",
+      doubleHeader: "N",
+      startUtc: "2026-07-17T22:40:00Z",
     });
     const { matches, warnings } = matchMlbLiveGamesToDbRows([api], rows);
     expect(matches[0].dbGame?.id).toBe(51);
@@ -149,7 +189,8 @@ describe("matchMlbLiveGamesToDbRows — doubleheader safety", () => {
     ];
     const forward = matchMlbLiveGamesToDbRows([apiG1(), apiG2()], rows).matches;
     const reverse = matchMlbLiveGamesToDbRows([apiG2(), apiG1()], rows).matches;
-    const pick = (ms: typeof forward, pk: number) => ms.find(m => m.apiGame.gamePk === pk)?.dbGame?.id;
+    const pick = (ms: typeof forward, pk: number) =>
+      ms.find(m => m.apiGame.gamePk === pk)?.dbGame?.id;
     expect(pick(forward, G1_GAMEPK)).toBe(pick(reverse, G1_GAMEPK));
     expect(pick(forward, G2_GAMEPK)).toBe(pick(reverse, G2_GAMEPK));
   });

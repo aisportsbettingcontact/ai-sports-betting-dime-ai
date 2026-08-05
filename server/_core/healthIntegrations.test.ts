@@ -14,12 +14,21 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const src = readFileSync(resolve(__dirname, "index.ts"), "utf8");
-const health = src.slice(src.indexOf('app.get("/health"'), src.indexOf('app.get("/api/db-status"'));
+const health = src.slice(
+  src.indexOf('app.get("/health"'),
+  src.indexOf('app.get("/api/db-status"')
+);
 
 describe("/health exposes integration state", () => {
   it("reports the Discord bot", () => {
     expect(health).toMatch(/getDiscordBotHealth\(\)/);
-    for (const f of ["connected", "consecutiveFailures", "totalReconnects", "lastReadyAt", "retryQueued"]) {
+    for (const f of [
+      "connected",
+      "consecutiveFailures",
+      "totalReconnects",
+      "lastReadyAt",
+      "retryQueued",
+    ]) {
       expect(health, `${f} missing`).toContain(f);
     }
   });

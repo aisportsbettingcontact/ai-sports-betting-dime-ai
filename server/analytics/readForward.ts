@@ -9,11 +9,12 @@ import { disabledOverview, type AnalyticsOverview } from "./read";
 const TAG = "[analytics][readForward]";
 
 export async function forwardOverviewRead(
-  fetchImpl: typeof fetch = fetch,
+  fetchImpl: typeof fetch = fetch
 ): Promise<AnalyticsOverview> {
   const base = getBackendUrl();
   const secret = getIngestSecret();
-  if (!base || !secret) return disabledOverview("analytics backend not configured");
+  if (!base || !secret)
+    return disabledOverview("analytics backend not configured");
   try {
     const res = await fetchImpl(`${base}/api/internal/analytics/overview`, {
       method: "GET",
@@ -26,6 +27,9 @@ export async function forwardOverviewRead(
     return (await res.json()) as AnalyticsOverview;
   } catch (err) {
     console.warn(`${TAG} read failed: ${(err as Error).message}`);
-    return { ...disabledOverview("analytics backend unreachable"), state: "error" };
+    return {
+      ...disabledOverview("analytics backend unreachable"),
+      state: "error",
+    };
   }
 }

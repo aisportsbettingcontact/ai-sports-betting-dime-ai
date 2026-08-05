@@ -7,38 +7,39 @@ import { CountryFlag } from "./CountryFlag";
  * empty letterboxing created by a square <img>. The fallback keeps a square
  * ratio for non-MLB assets whose intrinsic dimensions are not known here.
  */
-const MLB_LOGO_DIMENSIONS: Readonly<Record<string, readonly [number, number]>> = {
-  LAA: [112, 150],
-  ARI: [190, 150],
-  BAL: [159, 150],
-  BOS: [108, 150],
-  CHC: [150, 150],
-  CIN: [213, 150],
-  CLE: [98, 150],
-  COL: [139, 150],
-  DET: [103, 150],
-  HOU: [150, 150],
-  KC: [160, 150],
-  LAD: [115, 150],
-  WSH: [150, 150],
-  NYM: [119, 150],
-  ATH: [181, 150],
-  PIT: [107, 150],
-  SD: [120, 150],
-  SEA: [94, 150],
-  SF: [108, 150],
-  STL: [120, 150],
-  TB: [170, 150],
-  TEX: [132, 150],
-  TOR: [174, 150],
-  MIN: [153, 150],
-  PHI: [117, 150],
-  ATL: [160, 150],
-  CWS: [107, 150],
-  MIA: [159, 150],
-  NYY: [144, 150],
-  MIL: [137, 150],
-};
+const MLB_LOGO_DIMENSIONS: Readonly<Record<string, readonly [number, number]>> =
+  {
+    LAA: [112, 150],
+    ARI: [190, 150],
+    BAL: [159, 150],
+    BOS: [108, 150],
+    CHC: [150, 150],
+    CIN: [213, 150],
+    CLE: [98, 150],
+    COL: [139, 150],
+    DET: [103, 150],
+    HOU: [150, 150],
+    KC: [160, 150],
+    LAD: [115, 150],
+    WSH: [150, 150],
+    NYM: [119, 150],
+    ATH: [181, 150],
+    PIT: [107, 150],
+    SD: [120, 150],
+    SEA: [94, 150],
+    SF: [108, 150],
+    STL: [120, 150],
+    TB: [170, 150],
+    TEX: [132, 150],
+    TOR: [174, 150],
+    MIN: [153, 150],
+    PHI: [117, 150],
+    ATL: [160, 150],
+    CWS: [107, 150],
+    MIA: [159, 150],
+    NYY: [144, 150],
+    MIL: [137, 150],
+  };
 
 /** Marks whose darkest artwork disappears into the grey System and black Dark
  * surfaces. The white alpha outline is deliberately opt-in; bright/colorful
@@ -92,7 +93,10 @@ export function TeamLogoMark({ team }: { team: ProjectionTeam }) {
   }
   return (
     <span className="team-logo-box team-logo-box--mono" aria-hidden="true">
-      <span className="team-logo team-logo--mono" style={{ background: team.color || "#333" }}>
+      <span
+        className="team-logo team-logo--mono"
+        style={{ background: team.color || "#333" }}
+      >
         {team.abbr.slice(0, 2)}
       </span>
     </span>

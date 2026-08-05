@@ -1,0 +1,75 @@
+# 11-artifact-attestation — build provenance for the production image.
+#
+# ADAPTATION (docs/verification/AUDIT.md §6): Railway rebuilds from source on
+# merge and does not consume this artifact. The attestation therefore proves
+# WHAT the verified source builds into (SLSA-style provenance bound to the
+# exact merge SHA + image digest + SBOM), giving the audit trail an
+# independently verifiable record. Promotion-by-digest (deploy the attested
+# image itself) is the documented end-state and requires switching the
+# Railway service to image deploys — owner decision, ROLLOUT.md.
+#
+# Runs on merge_group + main pushes (the SHAs that actually ship) and on PRs
+# in verify-only mode (attestations require id-token, which fork PRs lack).
+name: 11-artifact-attestation
+
+on:
+  pull_request:
+  merge_group:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  attest:
+    name: 11-artifact-attestation
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+      packages: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
+
+      - name: "[STEP] Build image (same Dockerfile Railway builds)"
+        id: build
+        run: |
+          docker build -t ghcr.io/${{ github.repository }}/verify:${{ github.sha }} .
+          echo "image=ghcr.io/${{ github.repository }}/verify:${{ github.sha }}" >> "$GITHUB_OUTPUT"
+
+      - name: "[STEP] Push to GHCR (merge/main only — digests must be registry-real to attest)"
+        id: push
+        if: github.event_name != 'pull_request'
+        env:
+          GH_ACTOR: ${{ github.actor }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "$GH_TOKEN" | docker login ghcr.io -u "$GH_ACTOR" --password-stdin
+          docker push "${{ steps.build.outputs.image }}"
+          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' "${{ steps.build.outputs.image }}" | cut -d@ -f2)
+          echo "digest=$DIGEST" >> "$GITHUB_OUTPUT"
+
+      - name: "[STEP] Attest build provenance (SLSA build-level pattern)"
+        if: github.event_name != 'pull_request'
+        uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
+        with:
+          subject-name: ghcr.io/${{ github.repository }}/verify
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true
+
+      - name: "[GATE] Verify the attestation we just created (deploy precondition drill)"
+        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh attestation verify \
+            oci://ghcr.io/${{ github.repository }}/verify@${{ steps.push.outputs.digest }} \
+            --repo "${{ github.repository }}"
+
+      - name: "[GATE] PR mode — build must succeed; attestation deferred to merge"
+        if: github.event_name == 'pull_request'
+        run: echo "image built from PR SHA ${{ github.sha }}; provenance is attested on the merge SHA"

@@ -23,9 +23,13 @@ export const metricsRouter = router({
   /** Owner-only: DAU / WAU / MAU / avg session duration */
   getSessionMetrics: ownerProcedure.query(async () => {
     const tag = "[tRPC][metrics.getSessionMetrics]";
-    console.log(`${tag} [STEP] Fetching session metrics (DAU/WAU/MAU/avgDuration)`);
+    console.log(
+      `${tag} [STEP] Fetching session metrics (DAU/WAU/MAU/avgDuration)`
+    );
     const result = await getSessionMetrics();
-    console.log(`${tag} [OUTPUT] dau=${result.dau.state}:${result.dau.value} wau=${result.wau.state}:${result.wau.value} mau=${result.mau.state}:${result.mau.value} avgDur=${result.avgSessionDurationMs.state}:${result.avgSessionDurationMs.value}`);
+    console.log(
+      `${tag} [OUTPUT] dau=${result.dau.state}:${result.dau.value} wau=${result.wau.state}:${result.wau.value} mau=${result.mau.state}:${result.mau.value} avgDur=${result.avgSessionDurationMs.state}:${result.avgSessionDurationMs.value}`
+    );
     return result;
   }),
 
@@ -34,7 +38,9 @@ export const metricsRouter = router({
     const tag = "[tRPC][metrics.getDurationHistogram]";
     console.log(`${tag} [STEP] Fetching session duration histogram`);
     const result = await getDurationHistogram();
-    console.log(`${tag} [OUTPUT] under5m=${result.under5m} m5to30=${result.m5to30} m30to120=${result.m30to120} h2to4=${result.h2to4} total=${result.total}`);
+    console.log(
+      `${tag} [OUTPUT] under5m=${result.under5m} m5to30=${result.m5to30} m30to120=${result.m30to120} h2to4=${result.h2to4} total=${result.total}`
+    );
     return result;
   }),
 
@@ -43,7 +49,9 @@ export const metricsRouter = router({
     const tag = "[tRPC][metrics.getMemberMetrics]";
     console.log(`${tag} [STEP] Fetching member metrics`);
     const result = await getMemberMetrics();
-    console.log(`${tag} [OUTPUT] total=${result.totalMembers} lifetime=${result.lifetime} recurring=${result.recurringPaid} noAccess=${result.noAccess} discord=${result.discordConnected}`);
+    console.log(
+      `${tag} [OUTPUT] total=${result.totalMembers} lifetime=${result.lifetime} recurring=${result.recurringPaid} noAccess=${result.noAccess} discord=${result.discordConnected}`
+    );
     return result;
   }),
 

@@ -17,29 +17,39 @@ import {
 } from "./betGradingHealth";
 
 const bet = (over: Partial<StuckBet> = {}): StuckBet => ({
-  id: 1, userId: 14, sport: "MLB", gameDate: "2026-08-01",
-  awayTeam: "SF", homeTeam: "TEX", hoursPending: 40, ...over,
+  id: 1,
+  userId: 14,
+  sport: "MLB",
+  gameDate: "2026-08-01",
+  awayTeam: "SF",
+  homeTeam: "TEX",
+  hoursPending: 40,
+  ...over,
 });
 
 describe("describeStuckBets", () => {
   it("stays silent when nothing is overdue", () => {
     expect(describeStuckBets([])).toBeNull();
     expect(describeStuckBets([bet({ hoursPending: 2 })])).toBeNull();
-    expect(describeStuckBets([bet({ hoursPending: STUCK_THRESHOLD_HOURS - 0.5 })])).toBeNull();
+    expect(
+      describeStuckBets([bet({ hoursPending: STUCK_THRESHOLD_HOURS - 0.5 })])
+    ).toBeNull();
   });
 
   it("fires exactly at the threshold, not a moment before", () => {
-    expect(describeStuckBets([bet({ hoursPending: STUCK_THRESHOLD_HOURS })])).not.toBeNull();
+    expect(
+      describeStuckBets([bet({ hoursPending: STUCK_THRESHOLD_HOURS })])
+    ).not.toBeNull();
   });
 
   it("ignores bets that are merely pending and reports only the overdue ones", () => {
     const msg = describeStuckBets([
-      bet({ id: 1, hoursPending: 3 }),      // tonight's slate — normal
+      bet({ id: 1, hoursPending: 3 }), // tonight's slate — normal
       bet({ id: 2, hoursPending: 50 }),
       bet({ id: 3, hoursPending: 80 }),
     ])!;
     expect(msg).toContain("2 bet(s)");
-    expect(msg).toContain("#3");            // oldest surfaced
+    expect(msg).toContain("#3"); // oldest surfaced
     expect(msg).toContain("80h");
   });
 
@@ -68,12 +78,22 @@ describe("describeStuckBets", () => {
 
 describe("describeGradingErrors", () => {
   it("is silent on a clean cycle", () => {
-    expect(describeGradingErrors({ date: "2026-08-01", total: 10, graded: 10, errors: 0 })).toBeNull();
+    expect(
+      describeGradingErrors({
+        date: "2026-08-01",
+        total: 10,
+        graded: 10,
+        errors: 0,
+      })
+    ).toBeNull();
   });
 
   it("reports the ratio and the underlying reasons", () => {
     const msg = describeGradingErrors({
-      date: "2026-08-01", total: 10, graded: 7, errors: 3,
+      date: "2026-08-01",
+      total: 10,
+      graded: 7,
+      errors: 3,
       details: [
         { betId: 1, result: "ERROR", reason: "fetch failed" },
         { betId: 2, result: "WIN", reason: "graded fine" },
@@ -83,19 +103,27 @@ describe("describeGradingErrors", () => {
     expect(msg).toContain("3 of 10");
     expect(msg).toContain("7 settled successfully");
     expect(msg).toContain("#1: fetch failed");
-    expect(msg).not.toContain("graded fine");   // successes are not errors
+    expect(msg).not.toContain("graded fine"); // successes are not errors
   });
 });
 
 describe("describeNoMatch — the early warning", () => {
-  const d = (betId: number, reason: string) => ({ betId, result: "PENDING", reason });
+  const d = (betId: number, reason: string) => ({
+    betId,
+    result: "PENDING",
+    reason,
+  });
 
   it("tolerates isolated misses (a postponed fixture is not an outage)", () => {
-    expect(describeNoMatch([d(1, "Game X@Y not found in MLB scores for 2026-08-01")])).toBeNull();
-    expect(describeNoMatch([
-      d(1, "Game X@Y not found in MLB scores for 2026-08-01"),
-      d(2, "Game A@B not found in MLB scores for 2026-08-01"),
-    ])).toBeNull();
+    expect(
+      describeNoMatch([d(1, "Game X@Y not found in MLB scores for 2026-08-01")])
+    ).toBeNull();
+    expect(
+      describeNoMatch([
+        d(1, "Game X@Y not found in MLB scores for 2026-08-01"),
+        d(2, "Game A@B not found in MLB scores for 2026-08-01"),
+      ])
+    ).toBeNull();
   });
 
   it("fires on a cluster — that is vocabulary drift, not bad luck", () => {
@@ -120,11 +148,13 @@ describe("describeNoMatch — the early warning", () => {
   });
 
   it("ignores ordinary pending reasons", () => {
-    expect(describeNoMatch([
-      d(1, "Game in progress or not yet started (state=In Progress)"),
-      d(2, "Game in progress or not yet started (state=Pre-Game)"),
-      d(3, "Game in progress or not yet started (state=Scheduled)"),
-    ])).toBeNull();
+    expect(
+      describeNoMatch([
+        d(1, "Game in progress or not yet started (state=In Progress)"),
+        d(2, "Game in progress or not yet started (state=Pre-Game)"),
+        d(3, "Game in progress or not yet started (state=Scheduled)"),
+      ])
+    ).toBeNull();
   });
 });
 

@@ -61,9 +61,13 @@ export const PLAN_FEATURES = [
 export type PlanFeatureKey = (typeof PLAN_FEATURES)[number]["key"];
 
 /** Canonical ordering — also the default sortOrder when a plan is saved. */
-export const PLAN_FEATURE_KEYS: readonly PlanFeatureKey[] = PLAN_FEATURES.map((f) => f.key);
+export const PLAN_FEATURE_KEYS: readonly PlanFeatureKey[] = PLAN_FEATURES.map(
+  f => f.key
+);
 
-const FEATURE_BY_KEY = new Map<string, PlanFeatureDefinition>(PLAN_FEATURES.map((f) => [f.key, f]));
+const FEATURE_BY_KEY = new Map<string, PlanFeatureDefinition>(
+  PLAN_FEATURES.map(f => [f.key, f])
+);
 
 export function isPlanFeatureKey(value: unknown): value is PlanFeatureKey {
   return typeof value === "string" && FEATURE_BY_KEY.has(value);
@@ -74,7 +78,9 @@ export function planFeatureLabel(key: string): string {
   return FEATURE_BY_KEY.get(key)?.label ?? key;
 }
 
-export function planFeatureDefinition(key: string): PlanFeatureDefinition | undefined {
+export function planFeatureDefinition(
+  key: string
+): PlanFeatureDefinition | undefined {
   return FEATURE_BY_KEY.get(key);
 }
 
@@ -83,9 +89,11 @@ export function planFeatureDefinition(key: string): PlanFeatureDefinition | unde
  * Unknown keys are dropped rather than persisted — the picker can only emit
  * known keys, so anything else is a malformed request.
  */
-export function normalizePlanFeatures(input: readonly string[] | null | undefined): PlanFeatureKey[] {
+export function normalizePlanFeatures(
+  input: readonly string[] | null | undefined
+): PlanFeatureKey[] {
   if (!input) return [];
   const seen = new Set<PlanFeatureKey>();
   for (const raw of input) if (isPlanFeatureKey(raw)) seen.add(raw);
-  return PLAN_FEATURE_KEYS.filter((k) => seen.has(k));
+  return PLAN_FEATURE_KEYS.filter(k => seen.has(k));
 }

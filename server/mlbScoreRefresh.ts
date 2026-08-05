@@ -50,7 +50,13 @@
 import { eq } from "drizzle-orm";
 import { games } from "../drizzle/schema";
 import { MLB_BY_ABBREV, MLB_BY_ID } from "../shared/mlbTeams";
-import { getDb, listGamesByDate, updateNcaaStartTime, updateBookOdds, getMlbLineupsByGameIds } from "./db";
+import {
+  getDb,
+  listGamesByDate,
+  updateNcaaStartTime,
+  updateBookOdds,
+  getMlbLineupsByGameIds,
+} from "./db";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -274,7 +280,8 @@ function buildMlbGameClock(
   linescore: MlbApiLinescore | undefined,
   totalInnings: number | null
 ): string | null {
-  if (status === "upcoming" || status === "postponed" || status === "suspended") return null;
+  if (status === "upcoming" || status === "postponed" || status === "suspended")
+    return null;
 
   if (status === "final") {
     if (totalInnings != null && totalInnings > 9) {
@@ -286,7 +293,8 @@ function buildMlbGameClock(
   // Live game
   if (!linescore) return "Live";
 
-  const inning = linescore.currentInningOrdinal ?? String(linescore.currentInning ?? "?");
+  const inning =
+    linescore.currentInningOrdinal ?? String(linescore.currentInning ?? "?");
   const half = linescore.inningHalf ?? "";
 
   if (half === "Top") return `Top ${inning}`;
@@ -302,7 +310,9 @@ function buildMlbGameClock(
  * Counts the total number of innings played from the linescore innings array.
  * Returns null if no innings data is available.
  */
-function countTotalInnings(linescore: MlbApiLinescore | undefined): number | null {
+function countTotalInnings(
+  linescore: MlbApiLinescore | undefined
+): number | null {
   if (!linescore?.innings || linescore.innings.length === 0) return null;
   return linescore.innings.length;
 }
@@ -314,8 +324,8 @@ function countTotalInnings(linescore: MlbApiLinescore | undefined): number | nul
  */
 function normalizeAbbrev(apiAbbrev: string): string {
   const MAP: Record<string, string> = {
-    AZ: "ARI",   // Diamondbacks: API uses AZ, we use ARI
-    OAK: "ATH",  // Athletics: relocated to Sacramento, we use ATH
+    AZ: "ARI", // Diamondbacks: API uses AZ, we use ARI
+    OAK: "ATH", // Athletics: relocated to Sacramento, we use ATH
   };
   return MAP[apiAbbrev] ?? apiAbbrev;
 }
@@ -328,7 +338,9 @@ function normalizeAbbrev(apiAbbrev: string): string {
  * @param dateStr - Date in YYYY-MM-DD format (ET/local date)
  * @returns Array of MlbLiveGame objects for all games on that date
  */
-export async function fetchMlbLiveScores(dateStr: string): Promise<MlbLiveGame[]> {
+export async function fetchMlbLiveScores(
+  dateStr: string
+): Promise<MlbLiveGame[]> {
   const url =
     `${MLB_STATS_API_BASE}/schedule` +
     `?sportId=1` +
@@ -338,7 +350,7 @@ export async function fetchMlbLiveScores(dateStr: string): Promise<MlbLiveGame[]
 
   console.log(
     `[MLBScoreRefresh] ► Fetching MLB Stats API for ${dateStr}` +
-    ` | URL: ${url}`
+      ` | URL: ${url}`
   );
 
   const fetchStart = Date.now();
@@ -352,12 +364,12 @@ export async function fetchMlbLiveScores(dateStr: string): Promise<MlbLiveGame[]
   }
 
   const data = (await resp.json()) as MlbApiScheduleResponse;
-  const dateEntry = data.dates?.find((d) => d.date === dateStr);
+  const dateEntry = data.dates?.find(d => d.date === dateStr);
   const apiGames: MlbApiGame[] = dateEntry?.games ?? [];
 
   console.log(
     `[MLBScoreRefresh] API response: ${apiGames.length} games for ${dateStr}` +
-    ` (HTTP ${resp.status}, ${fetchMs}ms)`
+      ` (HTTP ${resp.status}, ${fetchMs}ms)`
   );
 
   const results: MlbLiveGame[] = [];
@@ -373,8 +385,10 @@ export async function fetchMlbLiveScores(dateStr: string): Promise<MlbLiveGame[]
     const homeTeamEntry = MLB_BY_ID.get(homeTeamId);
 
     // Fallback: if ID lookup fails, try abbreviation field (future-proofing)
-    const rawAwayAbbrev = g.teams.away.team.abbreviation ?? awayTeamEntry?.abbrev ?? "";
-    const rawHomeAbbrev = g.teams.home.team.abbreviation ?? homeTeamEntry?.abbrev ?? "";
+    const rawAwayAbbrev =
+      g.teams.away.team.abbreviation ?? awayTeamEntry?.abbrev ?? "";
+    const rawHomeAbbrev =
+      g.teams.home.team.abbreviation ?? homeTeamEntry?.abbrev ?? "";
     const awayAbbrev = awayTeamEntry?.abbrev ?? normalizeAbbrev(rawAwayAbbrev);
     const homeAbbrev = homeTeamEntry?.abbrev ?? normalizeAbbrev(rawHomeAbbrev);
 
@@ -385,9 +399,9 @@ export async function fetchMlbLiveScores(dateStr: string): Promise<MlbLiveGame[]
     if (!awayTeam || !homeTeam) {
       console.warn(
         `[MLBScoreRefresh] SKIP gamePk=${g.gamePk}: unknown team(s)` +
-        ` away: id=${awayTeamId} name="${g.teams.away.team.name}" abbrev="${awayAbbrev}" (${awayTeam ? "✓" : "✗"})` +
-        ` home: id=${homeTeamId} name="${g.teams.home.team.name}" abbrev="${homeAbbrev}" (${homeTeam ? "✓" : "✗"})` +
-        ` — add to MLB_TEAMS in mlbTeams.ts if this is a valid MLB team`
+          ` away: id=${awayTeamId} name="${g.teams.away.team.name}" abbrev="${awayAbbrev}" (${awayTeam ? "✓" : "✗"})` +
+          ` home: id=${homeTeamId} name="${g.teams.home.team.name}" abbrev="${homeAbbrev}" (${homeTeam ? "✓" : "✗"})` +
+          ` — add to MLB_TEAMS in mlbTeams.ts if this is a valid MLB team`
       );
       skippedUnknownTeam++;
       continue;
@@ -415,9 +429,13 @@ export async function fetchMlbLiveScores(dateStr: string): Promise<MlbLiveGame[]
     // NOTE: The schedule endpoint hydrates probable pitchers under teams.away.probablePitcher,
     // NOT under a top-level probablePitchers field (that's only in the live game feed).
     const awayProbablePitcher =
-      g.teams.away.probablePitcher?.fullName ?? g.probablePitchers?.away?.fullName ?? null;
+      g.teams.away.probablePitcher?.fullName ??
+      g.probablePitchers?.away?.fullName ??
+      null;
     const homeProbablePitcher =
-      g.teams.home.probablePitcher?.fullName ?? g.probablePitchers?.home?.fullName ?? null;
+      g.teams.home.probablePitcher?.fullName ??
+      g.probablePitchers?.home?.fullName ??
+      null;
     const winningPitcher = g.decisions?.winner?.fullName ?? null;
     const losingPitcher = g.decisions?.loser?.fullName ?? null;
 
@@ -428,7 +446,11 @@ export async function fetchMlbLiveScores(dateStr: string): Promise<MlbLiveGame[]
     let homeF5Runs: number | null = null;
     let nrfiResult: "NRFI" | "YRFI" | null = null;
 
-    if (gameStatus === "final" && linescore?.innings && linescore.innings.length >= 5) {
+    if (
+      gameStatus === "final" &&
+      linescore?.innings &&
+      linescore.innings.length >= 5
+    ) {
       // F5 = sum of innings 1–5 (array indices 0–4)
       awayF5Runs = linescore.innings
         .slice(0, 5)
@@ -438,26 +460,34 @@ export async function fetchMlbLiveScores(dateStr: string): Promise<MlbLiveGame[]
         .reduce((sum, inn) => sum + (inn.home?.runs ?? 0), 0);
       console.log(
         `[MLBScoreRefresh] F5 computed: gamePk=${g.gamePk} ${awayAbbrev}@${homeAbbrev}` +
-        ` | awayF5=${awayF5Runs} homeF5=${homeF5Runs}` +
-        ` | innings_available=${linescore.innings.length}`
+          ` | awayF5=${awayF5Runs} homeF5=${homeF5Runs}` +
+          ` | innings_available=${linescore.innings.length}`
       );
-    } else if (gameStatus === "final" && linescore?.innings && linescore.innings.length < 5) {
+    } else if (
+      gameStatus === "final" &&
+      linescore?.innings &&
+      linescore.innings.length < 5
+    ) {
       console.warn(
         `[MLBScoreRefresh] F5 SKIP: gamePk=${g.gamePk} ${awayAbbrev}@${homeAbbrev}` +
-        ` — only ${linescore.innings.length} innings in linescore (need ≥5 for F5)`
+          ` — only ${linescore.innings.length} innings in linescore (need ≥5 for F5)`
       );
     }
 
     // ── NRFI: 1st inning both teams scored 0 runs ─────────────────────────────
     // Requires at least 1 inning of data. For final games only.
-    if (gameStatus === "final" && linescore?.innings && linescore.innings.length >= 1) {
+    if (
+      gameStatus === "final" &&
+      linescore?.innings &&
+      linescore.innings.length >= 1
+    ) {
       const inn1 = linescore.innings[0];
       const inn1Away = inn1.away?.runs ?? 0;
       const inn1Home = inn1.home?.runs ?? 0;
-      nrfiResult = (inn1Away === 0 && inn1Home === 0) ? "NRFI" : "YRFI";
+      nrfiResult = inn1Away === 0 && inn1Home === 0 ? "NRFI" : "YRFI";
       console.log(
         `[MLBScoreRefresh] NRFI computed: gamePk=${g.gamePk} ${awayAbbrev}@${homeAbbrev}` +
-        ` | inn1Away=${inn1Away} inn1Home=${inn1Home} → ${nrfiResult}`
+          ` | inn1Away=${inn1Away} inn1Home=${inn1Home} → ${nrfiResult}`
       );
     }
 
@@ -467,7 +497,10 @@ export async function fetchMlbLiveScores(dateStr: string): Promise<MlbLiveGame[]
       homeAbbrev,
       startUtc: g.gameDate ?? "",
       doubleHeader: g.doubleHeader ?? "N",
-      gameNumber: typeof g.gameNumber === "number" && g.gameNumber >= 1 ? g.gameNumber : 1,
+      gameNumber:
+        typeof g.gameNumber === "number" && g.gameNumber >= 1
+          ? g.gameNumber
+          : 1,
       awayRuns,
       homeRuns,
       gameStatus,
@@ -495,21 +528,21 @@ export async function fetchMlbLiveScores(dateStr: string): Promise<MlbLiveGame[]
       gameStatus === "final" && winningPitcher
         ? ` | W: ${winningPitcher}, L: ${losingPitcher ?? "?"}`
         : awayProbablePitcher
-        ? ` | SP: ${awayProbablePitcher} vs ${homeProbablePitcher ?? "TBD"}`
-        : "";
+          ? ` | SP: ${awayProbablePitcher} vs ${homeProbablePitcher ?? "TBD"}`
+          : "";
 
     console.log(
       `[MLBScoreRefresh] gamePk=${g.gamePk} ${awayAbbrev}@${homeAbbrev}` +
-      ` | status=${gameStatus} (${abstractState}/${detailedState})` +
-      ` | clock=${gameClock ?? "—"}` +
-      ` | score=${scoreStr}` +
-      pitcherStr
+        ` | status=${gameStatus} (${abstractState}/${detailedState})` +
+        ` | clock=${gameClock ?? "—"}` +
+        ` | score=${scoreStr}` +
+        pitcherStr
     );
 
     if (!linescore && gameStatus !== "upcoming") {
       console.warn(
         `[MLBScoreRefresh] WARNING: gamePk=${g.gamePk} ${awayAbbrev}@${homeAbbrev}` +
-        ` has status=${gameStatus} but NO linescore in API response`
+          ` has status=${gameStatus} but NO linescore in API response`
       );
       skippedNoLinescore++;
     }
@@ -517,10 +550,10 @@ export async function fetchMlbLiveScores(dateStr: string): Promise<MlbLiveGame[]
 
   console.log(
     `[MLBScoreRefresh] ✅ Parsed ${results.length} games` +
-    ` (${results.filter((g) => g.gameStatus === "live").length} live,` +
-    ` ${results.filter((g) => g.gameStatus === "final").length} final,` +
-    ` ${results.filter((g) => g.gameStatus === "upcoming").length} upcoming)` +
-    ` | skipped: ${skippedUnknownTeam} unknown teams, ${skippedNoLinescore} no linescore`
+      ` (${results.filter(g => g.gameStatus === "live").length} live,` +
+      ` ${results.filter(g => g.gameStatus === "final").length} final,` +
+      ` ${results.filter(g => g.gameStatus === "upcoming").length} upcoming)` +
+      ` | skipped: ${skippedUnknownTeam} unknown teams, ${skippedNoLinescore} no linescore`
   );
 
   return results;
@@ -558,7 +591,10 @@ function utcToEstMinutes(utcIso: string): number | null {
   const d = new Date(utcIso);
   if (isNaN(d.getTime())) return null;
   const s = d.toLocaleTimeString("en-US", {
-    timeZone: "America/New_York", hour12: false, hour: "2-digit", minute: "2-digit",
+    timeZone: "America/New_York",
+    hour12: false,
+    hour: "2-digit",
+    minute: "2-digit",
   });
   const m = /^(\d{1,2}):(\d{2})/.exec(s);
   if (!m) return null;
@@ -593,7 +629,9 @@ export function matchMlbLiveGamesToDbRows<R extends MatchableDbGame>(
     if (r.mlbGamePk == null) continue;
     const pk = Number(r.mlbGamePk);
     if (byPk.has(pk)) {
-      warnings.push(`DB rows id=${byPk.get(pk)!.id} and id=${r.id} share mlbGamePk=${pk}`);
+      warnings.push(
+        `DB rows id=${byPk.get(pk)!.id} and id=${r.id} share mlbGamePk=${pk}`
+      );
       continue;
     }
     byPk.set(pk, r);
@@ -616,14 +654,16 @@ export function matchMlbLiveGamesToDbRows<R extends MatchableDbGame>(
   for (const g of unmatched) {
     const key = `${g.awayAbbrev}@${g.homeAbbrev}`;
     const arr = byMatchup.get(key);
-    if (arr) arr.push(g); else byMatchup.set(key, [g]);
+    if (arr) arr.push(g);
+    else byMatchup.set(key, [g]);
   }
 
   // Array.from: tsconfig targets ES5 (no downlevelIteration) — direct Map iteration is TS2802
   for (const [key, group] of Array.from(byMatchup.entries())) {
-    const candidates = () => dbGames.filter(
-      r => !claimed.has(r.id) && `${r.awayTeam}@${r.homeTeam}` === key
-    );
+    const candidates = () =>
+      dbGames.filter(
+        r => !claimed.has(r.id) && `${r.awayTeam}@${r.homeTeam}` === key
+      );
 
     // Pass 2: gameNumber alignment — ONLY when the DB rows genuinely encode
     // doubleheader numbering (≥2 rows with pairwise-distinct gameNumbers).
@@ -633,13 +673,20 @@ export function matchMlbLiveGamesToDbRows<R extends MatchableDbGame>(
     const initialCandidates = candidates();
     const numbersAreSignal =
       initialCandidates.length >= 2 &&
-      new Set(initialCandidates.map(r => r.gameNumber ?? 1)).size === initialCandidates.length;
+      new Set(initialCandidates.map(r => r.gameNumber ?? 1)).size ===
+        initialCandidates.length;
     if (numbersAreSignal) {
       for (const g of group) {
-        const rows = candidates().filter(r => (r.gameNumber ?? 1) === g.gameNumber);
+        const rows = candidates().filter(
+          r => (r.gameNumber ?? 1) === g.gameNumber
+        );
         if (rows.length === 1) {
           claimed.add(rows[0].id);
-          results.set(g.gamePk, { apiGame: g, dbGame: rows[0], matchMethod: "teams+gameNumber" });
+          results.set(g.gamePk, {
+            apiGame: g,
+            dbGame: rows[0],
+            matchMethod: "teams+gameNumber",
+          });
         }
       }
     }
@@ -651,11 +698,15 @@ export function matchMlbLiveGamesToDbRows<R extends MatchableDbGame>(
       const gMin = utcToEstMinutes(g.startUtc);
       for (const row of candidates()) {
         const rMin = estTimeToMinutes(row.startTimeEst);
-        const dist = gMin != null && rMin != null ? Math.abs(gMin - rMin) : 24 * 60;
+        const dist =
+          gMin != null && rMin != null ? Math.abs(gMin - rMin) : 24 * 60;
         pairs.push({ dist, g, row });
       }
     }
-    pairs.sort((a, b) => (a.dist - b.dist) || (a.g.gamePk - b.g.gamePk) || (a.row.id - b.row.id));
+    pairs.sort(
+      (a, b) =>
+        a.dist - b.dist || a.g.gamePk - b.g.gamePk || a.row.id - b.row.id
+    );
     for (const p of pairs) {
       if (results.has(p.g.gamePk) || claimed.has(p.row.id)) continue;
       claimed.add(p.row.id);
@@ -673,7 +724,12 @@ export function matchMlbLiveGamesToDbRows<R extends MatchableDbGame>(
   }
 
   const matches: Array<MlbScoreMatch<R>> = apiGames.map(
-    g => results.get(g.gamePk) ?? { apiGame: g, dbGame: null, matchMethod: "none" as const }
+    g =>
+      results.get(g.gamePk) ?? {
+        apiGame: g,
+        dbGame: null,
+        matchMethod: "none" as const,
+      }
   );
 
   // Cardinality invariant: no DB row may serve two API games (claim set makes
@@ -682,8 +738,13 @@ export function matchMlbLiveGamesToDbRows<R extends MatchableDbGame>(
   if (missing.length > 0) {
     warnings.push(
       `${missing.length} API game(s) have no DB row: ` +
-      missing.map(m => `gamePk=${m.apiGame.gamePk} ${m.apiGame.awayAbbrev}@${m.apiGame.homeAbbrev} G${m.apiGame.gameNumber}`).join(", ") +
-      ` — schedule sync should have inserted these (doubleheader-loss class)`
+        missing
+          .map(
+            m =>
+              `gamePk=${m.apiGame.gamePk} ${m.apiGame.awayAbbrev}@${m.apiGame.homeAbbrev} G${m.apiGame.gameNumber}`
+          )
+          .join(", ") +
+        ` — schedule sync should have inserted these (doubleheader-loss class)`
     );
   }
   return { matches, warnings };
@@ -722,24 +783,39 @@ export async function refreshMlbScores(dateStr: string): Promise<{
   } catch (err) {
     const msg = `${tag} ❌ API fetch failed: ${err instanceof Error ? err.message : String(err)}`;
     console.error(msg);
-    return { updated: 0, unchanged: 0, noMatch: 0, errors: [msg], newlyFinalGamePks: [] };
+    return {
+      updated: 0,
+      unchanged: 0,
+      noMatch: 0,
+      errors: [msg],
+      newlyFinalGamePks: [],
+    };
   }
 
   if (apiGames.length === 0) {
     console.log(`${tag} No MLB games from API — nothing to update`);
-    return { updated: 0, unchanged: 0, noMatch: 0, errors: [], newlyFinalGamePks: [] };
+    return {
+      updated: 0,
+      unchanged: 0,
+      noMatch: 0,
+      errors: [],
+      newlyFinalGamePks: [],
+    };
   }
 
   // Fetch all MLB games for this date from our DB
   const dbGames = await listGamesByDate(dateStr, "MLB");
   console.log(
     `${tag} DB has ${dbGames.length} MLB games for ${dateStr}` +
-    ` | API returned ${apiGames.length} games`
+      ` | API returned ${apiGames.length} games`
   );
 
   // DOUBLEHEADER-SAFE matching (claim-based; a DB row serves at most one API game).
   // Replaces the single-slot `away@home` map that collapsed doubleheaders.
-  const { matches, warnings: matchWarnings } = matchMlbLiveGamesToDbRows(apiGames, dbGames);
+  const { matches, warnings: matchWarnings } = matchMlbLiveGamesToDbRows(
+    apiGames,
+    dbGames
+  );
   for (const w of matchWarnings) console.warn(`${tag} [MATCH] ${w}`);
 
   let updated = 0;
@@ -758,8 +834,8 @@ export async function refreshMlbScores(dateStr: string): Promise<{
       if (!dbGame) {
         console.warn(
           `${tag} NO_MATCH: gamePk=${apiGame.gamePk} ${apiGame.awayAbbrev}@${apiGame.homeAbbrev} G${apiGame.gameNumber}` +
-          ` | status=${apiGame.gameStatus} | score=${apiGame.awayRuns ?? "?"}-${apiGame.homeRuns ?? "?"}` +
-          ` | DB has: [${dbGames.map((g) => `${g.awayTeam}@${g.homeTeam}#${g.gameNumber ?? 1}`).join(", ")}]`
+            ` | status=${apiGame.gameStatus} | score=${apiGame.awayRuns ?? "?"}-${apiGame.homeRuns ?? "?"}` +
+            ` | DB has: [${dbGames.map(g => `${g.awayTeam}@${g.homeTeam}#${g.gameNumber ?? 1}`).join(", ")}]`
         );
         noMatch++;
         continue;
@@ -768,11 +844,11 @@ export async function refreshMlbScores(dateStr: string): Promise<{
       // Determine what has changed
       const statusChanged = dbGame.gameStatus !== apiGame.gameStatus;
       // Track games that just transitioned to 'final' for immediate backtest trigger
-      if (statusChanged && apiGame.gameStatus === 'final') {
+      if (statusChanged && apiGame.gameStatus === "final") {
         newlyFinalGamePks.push(apiGame.gamePk);
         console.log(
           `${tag} 🏁 NEWLY_FINAL: gamePk=${apiGame.gamePk} ${apiGame.awayAbbrev}@${apiGame.homeAbbrev}` +
-          ` — will trigger immediate K-Props backtest`
+            ` — will trigger immediate K-Props backtest`
         );
       }
       const scoresChanged =
@@ -789,14 +865,17 @@ export async function refreshMlbScores(dateStr: string): Promise<{
         dbGame.homeStartingPitcher !== apiGame.homeProbablePitcher;
 
       const hasChanges =
-        statusChanged || scoresChanged || clockChanged ||
-        awayPitcherChanged || homePitcherChanged;
+        statusChanged ||
+        scoresChanged ||
+        clockChanged ||
+        awayPitcherChanged ||
+        homePitcherChanged;
 
       if (!hasChanges) {
         console.log(
           `${tag} UNCHANGED [${matchMethod}]: ${apiGame.awayAbbrev}@${apiGame.homeAbbrev}` +
-          ` | status=${apiGame.gameStatus} score=${apiGame.awayRuns ?? "?"}-${apiGame.homeRuns ?? "?"}` +
-          ` clock=${apiGame.gameClock ?? "—"}`
+            ` | status=${apiGame.gameStatus} score=${apiGame.awayRuns ?? "?"}-${apiGame.homeRuns ?? "?"}` +
+            ` clock=${apiGame.gameClock ?? "—"}`
         );
         unchanged++;
         continue;
@@ -804,16 +883,29 @@ export async function refreshMlbScores(dateStr: string): Promise<{
 
       // Log what changed
       const changes: string[] = [];
-      if (statusChanged) changes.push(`status: ${dbGame.gameStatus} → ${apiGame.gameStatus}`);
-      if (scoresChanged) changes.push(`score: ${dbGame.awayScore ?? "?"}-${dbGame.homeScore ?? "?"} → ${apiGame.awayRuns ?? "?"}-${apiGame.homeRuns ?? "?"}`);
-      if (clockChanged) changes.push(`clock: "${dbGame.gameClock ?? "—"}" → "${apiGame.gameClock ?? "—"}"`);
-      if (awayPitcherChanged) changes.push(`awayPitcher: "${dbGame.awayStartingPitcher ?? "—"}" → "${apiGame.awayProbablePitcher}"`);
-      if (homePitcherChanged) changes.push(`homePitcher: "${dbGame.homeStartingPitcher ?? "—"}" → "${apiGame.homeProbablePitcher}"`);
+      if (statusChanged)
+        changes.push(`status: ${dbGame.gameStatus} → ${apiGame.gameStatus}`);
+      if (scoresChanged)
+        changes.push(
+          `score: ${dbGame.awayScore ?? "?"}-${dbGame.homeScore ?? "?"} → ${apiGame.awayRuns ?? "?"}-${apiGame.homeRuns ?? "?"}`
+        );
+      if (clockChanged)
+        changes.push(
+          `clock: "${dbGame.gameClock ?? "—"}" → "${apiGame.gameClock ?? "—"}"`
+        );
+      if (awayPitcherChanged)
+        changes.push(
+          `awayPitcher: "${dbGame.awayStartingPitcher ?? "—"}" → "${apiGame.awayProbablePitcher}"`
+        );
+      if (homePitcherChanged)
+        changes.push(
+          `homePitcher: "${dbGame.homeStartingPitcher ?? "—"}" → "${apiGame.homeProbablePitcher}"`
+        );
 
       console.log(
         `${tag} UPDATE [${matchMethod}]: ${apiGame.awayAbbrev}@${apiGame.homeAbbrev}` +
-        ` (DB id=${dbGame.id}, gamePk=${apiGame.gamePk})` +
-        ` | ${changes.join(" | ")}`
+          ` (DB id=${dbGame.id}, gamePk=${apiGame.gamePk})` +
+          ` | ${changes.join(" | ")}`
       );
 
       // Write to DB using the existing updateNcaaStartTime helper
@@ -831,7 +923,11 @@ export async function refreshMlbScores(dateStr: string): Promise<{
       // These columns are consumed by mlbMultiMarketBacktest.ts for WIN/LOSS grading.
       // Only write when the game is final AND we have valid score data.
       // Uses a separate direct DB update to keep updateNcaaStartTime sport-agnostic.
-      if (apiGame.gameStatus === "final" && apiGame.awayRuns !== null && apiGame.homeRuns !== null) {
+      if (
+        apiGame.gameStatus === "final" &&
+        apiGame.awayRuns !== null &&
+        apiGame.homeRuns !== null
+      ) {
         const db = await getDb();
         if (db) {
           // Build the update payload — only include F5/NRFI when computed
@@ -882,20 +978,20 @@ export async function refreshMlbScores(dateStr: string): Promise<{
           if (fgMatch && f5Match && nrfiMatch) {
             console.log(
               `${tag} [VERIFY PASS] id=${dbGame.id} ${apiGame.awayAbbrev}@${apiGame.homeAbbrev}` +
-              ` | actualFG=${verify.actualAwayScore}-${verify.actualHomeScore}` +
-              ` | actualF5=${verify.actualF5AwayScore ?? "null"}-${verify.actualF5HomeScore ?? "null"}` +
-              ` | nrfi=${verify.nrfiActualResult ?? "null"}`
+                ` | actualFG=${verify.actualAwayScore}-${verify.actualHomeScore}` +
+                ` | actualF5=${verify.actualF5AwayScore ?? "null"}-${verify.actualF5HomeScore ?? "null"}` +
+                ` | nrfi=${verify.nrfiActualResult ?? "null"}`
             );
           } else {
             console.error(
               `${tag} [VERIFY FAIL] id=${dbGame.id} ${apiGame.awayAbbrev}@${apiGame.homeAbbrev}` +
-              ` | fgMatch=${fgMatch} f5Match=${f5Match} nrfiMatch=${nrfiMatch}` +
-              ` | expected FG=${apiGame.awayRuns}-${apiGame.homeRuns}` +
-              ` F5=${apiGame.awayF5Runs ?? "null"}-${apiGame.homeF5Runs ?? "null"}` +
-              ` nrfi=${apiGame.nrfiResult ?? "null"}` +
-              ` | got FG=${verify.actualAwayScore}-${verify.actualHomeScore}` +
-              ` F5=${verify.actualF5AwayScore ?? "null"}-${verify.actualF5HomeScore ?? "null"}` +
-              ` nrfi=${verify.nrfiActualResult ?? "null"}`
+                ` | fgMatch=${fgMatch} f5Match=${f5Match} nrfiMatch=${nrfiMatch}` +
+                ` | expected FG=${apiGame.awayRuns}-${apiGame.homeRuns}` +
+                ` F5=${apiGame.awayF5Runs ?? "null"}-${apiGame.homeF5Runs ?? "null"}` +
+                ` nrfi=${apiGame.nrfiResult ?? "null"}` +
+                ` | got FG=${verify.actualAwayScore}-${verify.actualHomeScore}` +
+                ` F5=${verify.actualF5AwayScore ?? "null"}-${verify.actualF5HomeScore ?? "null"}` +
+                ` nrfi=${verify.nrfiActualResult ?? "null"}`
             );
           }
         }
@@ -915,12 +1011,13 @@ export async function refreshMlbScores(dateStr: string): Promise<{
           // If mlb_lineups has a different pitcher name, skip the API overwrite
           if (
             lineupRow?.awayPitcherName &&
-            lineupRow.awayPitcherName.trim().toLowerCase() !== apiGame.awayProbablePitcher.trim().toLowerCase()
+            lineupRow.awayPitcherName.trim().toLowerCase() !==
+              apiGame.awayProbablePitcher.trim().toLowerCase()
           ) {
             console.warn(
               `${tag} [PITCHER_OVERRIDE] id=${dbGame.id} ${apiGame.awayAbbrev}@${apiGame.homeAbbrev}` +
-              ` | API awayPitcher="${apiGame.awayProbablePitcher}" BLOCKED by Rotowire lineup` +
-              ` awayPitcher="${lineupRow.awayPitcherName}" — keeping Rotowire value`
+                ` | API awayPitcher="${apiGame.awayProbablePitcher}" BLOCKED by Rotowire lineup` +
+                ` awayPitcher="${lineupRow.awayPitcherName}" — keeping Rotowire value`
             );
           } else {
             pitcherUpdate.awayStartingPitcher = apiGame.awayProbablePitcher;
@@ -931,12 +1028,13 @@ export async function refreshMlbScores(dateStr: string): Promise<{
           // If mlb_lineups has a different pitcher name, skip the API overwrite
           if (
             lineupRow?.homePitcherName &&
-            lineupRow.homePitcherName.trim().toLowerCase() !== apiGame.homeProbablePitcher.trim().toLowerCase()
+            lineupRow.homePitcherName.trim().toLowerCase() !==
+              apiGame.homeProbablePitcher.trim().toLowerCase()
           ) {
             console.warn(
               `${tag} [PITCHER_OVERRIDE] id=${dbGame.id} ${apiGame.awayAbbrev}@${apiGame.homeAbbrev}` +
-              ` | API homePitcher="${apiGame.homeProbablePitcher}" BLOCKED by Rotowire lineup` +
-              ` homePitcher="${lineupRow.homePitcherName}" — keeping Rotowire value`
+                ` | API homePitcher="${apiGame.homeProbablePitcher}" BLOCKED by Rotowire lineup` +
+                ` homePitcher="${lineupRow.homePitcherName}" — keeping Rotowire value`
             );
           } else {
             pitcherUpdate.homeStartingPitcher = apiGame.homeProbablePitcher;
@@ -961,9 +1059,9 @@ export async function refreshMlbScores(dateStr: string): Promise<{
 
   console.log(
     `${tag} ✅ DONE — updated=${updated} unchanged=${unchanged}` +
-    ` noMatch=${noMatch} errors=${errors.length}` +
-    ` | live=${apiGames.filter((g) => g.gameStatus === "live").length}` +
-    ` final=${apiGames.filter((g) => g.gameStatus === "final").length}`
+      ` noMatch=${noMatch} errors=${errors.length}` +
+      ` | live=${apiGames.filter(g => g.gameStatus === "live").length}` +
+      ` final=${apiGames.filter(g => g.gameStatus === "final").length}`
   );
   // Boundary cardinality check: every provider game should have a DB row once
   // syncMlbSchedule (MLB cycle Step 0.5) has run. A persistent nonzero noMatch
@@ -971,7 +1069,7 @@ export async function refreshMlbScores(dateStr: string): Promise<{
   if (noMatch > 0) {
     console.error(
       `${tag} [CARDINALITY] ❌ ${noMatch}/${apiGames.length} provider games have no DB row — ` +
-      `feed is missing events (run syncMlbSchedule / check reconciliation alerts)`
+        `feed is missing events (run syncMlbSchedule / check reconciliation alerts)`
     );
   }
   console.log(`${tag} ════════════════════════════════════════════`);

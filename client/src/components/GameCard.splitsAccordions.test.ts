@@ -27,7 +27,9 @@ describe("splits-surface accordion gating (Last 5 + Trends live on the Trends ta
     );
     // No `mode === 'splits' &&` clause may gate the panels back in.
     expect(src).not.toMatch(
-      new RegExp(`mode === ${Q}splits${Q} &&[\\s\\S]{0,400}<RecentSchedulePanel`)
+      new RegExp(
+        `mode === ${Q}splits${Q} &&[\\s\\S]{0,400}<RecentSchedulePanel`
+      )
     );
   });
 

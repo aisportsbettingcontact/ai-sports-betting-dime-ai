@@ -14,11 +14,23 @@ function parseEtTime(timeEt: string): number | null {
 function etOffsetMinutes(atUtc: Date): number {
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: "America/New_York",
-    year: "numeric", month: "2-digit", day: "2-digit",
-    hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
   }).formatToParts(atUtc);
-  const get = (t: string) => Number(parts.find((p) => p.type === t)?.value);
-  const asUtc = Date.UTC(get("year"), get("month") - 1, get("day"), get("hour") % 24, get("minute"), get("second"));
+  const get = (t: string) => Number(parts.find(p => p.type === t)?.value);
+  const asUtc = Date.UTC(
+    get("year"),
+    get("month") - 1,
+    get("day"),
+    get("hour") % 24,
+    get("minute"),
+    get("second")
+  );
   return Math.round((asUtc - atUtc.getTime()) / 60000);
 }
 
@@ -33,7 +45,9 @@ export function etKickoffToUtc(dateIso: string, timeEt: string): Date | null {
   const [y, mo, d] = dateIso.split("-").map(Number);
   if (!y || !mo || !d) return null;
   // First guess: treat the wall time as if ET == UTC, then correct by the real offset.
-  const guess = new Date(Date.UTC(y, mo - 1, d, Math.floor(minutes / 60), minutes % 60));
+  const guess = new Date(
+    Date.UTC(y, mo - 1, d, Math.floor(minutes / 60), minutes % 60)
+  );
   const corrected = new Date(guess.getTime() - etOffsetMinutes(guess) * 60000);
   // One refinement pass handles instants that cross a DST boundary between guess and answer.
   return new Date(guess.getTime() - etOffsetMinutes(corrected) * 60000);

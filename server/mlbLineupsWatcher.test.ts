@@ -268,7 +268,7 @@ describe("Trigger case invariants", () => {
       { battingOrder: 2, name: "Juan Soto" },
     ]);
     const lineup2 = JSON.stringify([
-      { battingOrder: 1, name: "Juan Soto" },  // order swapped
+      { battingOrder: 1, name: "Juan Soto" }, // order swapped
       { battingOrder: 2, name: "Aaron Judge" },
     ]);
     const oldHash = computeLineupHash("Cole", "Bieber", lineup1, null);

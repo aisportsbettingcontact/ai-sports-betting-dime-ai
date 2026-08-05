@@ -1,0 +1,116 @@
+# 09-artifact-build-and-smoke — build the REAL production image inside the PR
+# (Dockerfile + .dockerignore, exactly as Railway does), scan it, boot it
+# ephemerally with the crash-guard (dead DB), and drive the actual smoke suite
+# against the running container.
+#
+# This is the gate that would have caught the 2026-08-05 production build
+# failure (dockerignore excluded scripts/data JSONs the server bundle imports)
+# at PR time instead of on the Railway builder.
+#
+# AI_SURFACE smoke coverage: the suite asserts the chat route's pre-stream
+# auth gate (structured 401 JSON), tRPC envelope conformance, and prerender
+# behavior. Model-endpoint reachability is NOT exercised here — CI model calls
+# are paused by owner law (docs/verification/AUDIT.md §6); the runtime
+# readiness tests (dimeRuntimeReadiness.test.ts) cover wiring deterministically.
+name: 09-artifact-build-and-smoke
+
+on:
+  pull_request:
+  merge_group:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  artifact:
+    name: 09-artifact-build-and-smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
+
+      - name: "[STEP] Build the production image exactly as Railway does"
+        run: |
+          docker build -t dime-pr:${{ github.sha }} .
+          docker image inspect dime-pr:${{ github.sha }} --format 'digest-less local build: {{.Id}}' | tee image-id.txt
+
+      - name: "[STEP] Trivy SARIF for the security tab (non-gating pass)"
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: dime-pr:${{ github.sha }}
+          format: sarif
+          output: trivy.sarif
+          severity: CRITICAL,HIGH
+          exit-code: "0"
+          ignore-unfixed: true
+          scanners: vuln,secret,misconfig
+
+      - name: "[GATE] Trivy blocking gate — CRITICAL fixable only, human-readable verdict"
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: dime-pr:${{ github.sha }}
+          format: table
+          # CRITICAL-only blocking at launch; HIGH graduates after first-scan
+          # triage (ROLLOUT.md Wave 2) — the nightly tier scans HIGH+MEDIUM
+          severity: CRITICAL
+          exit-code: "1"
+          ignore-unfixed: true
+          scanners: vuln,secret,misconfig
+          skip-setup-trivy: true
+
+      - uses: github/codeql-action/upload-sarif@c4dd10e44af883a891fe31ced449bcb4a6728b9b # v3
+        if: always()
+        with:
+          sarif_file: trivy.sarif
+          category: trivy-image
+
+      - name: "[STEP] SBOM (SPDX) for the built image"
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0
+        with:
+          image: dime-pr:${{ github.sha }}
+          format: spdx-json
+          output-file: sbom.spdx.json
+          upload-artifact: false
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: image-sbom
+          path: sbom.spdx.json
+          if-no-files-found: error
+
+      - name: "[STEP] Ephemeral boot — crash-guard holds with a dead DB, /health serves"
+        run: |
+          docker run -d --name dime-smoke -p 3910:3000 \
+            -e NODE_ENV=production -e PORT=3000 \
+            -e APP_SESSION_SECRET="$(head -c 48 /dev/zero | base64)" \
+            -e DATABASE_URL="mysql://u:p@127.0.0.1:3306/db" \
+            -e PUBLIC_ORIGIN="https://ai-sports-betting-dime-ai-production.up.railway.app" \
+            -e DISABLE_BACKGROUND_JOBS=1 \
+            dime-pr:${{ github.sha }}
+          for i in $(seq 1 40); do
+            if curl -sf http://127.0.0.1:3910/health >/dev/null; then echo "up after ${i} polls"; break; fi
+            if [ "$i" = "40" ]; then echo "::error::container never became healthy"; docker logs dime-smoke | tail -50; exit 1; fi
+            sleep 3
+          done
+
+      - name: "[GATE] Full smoke suite against the running container"
+        run: node scripts/smoke-deploy.mjs http://127.0.0.1:3910
+
+      - name: "[GATE] Synthetic critical transaction — checkout page + Stripe CSP + auth gates"
+        run: |
+          # deterministic critical-path probes beyond the smoke suite:
+          # 1. structured 401 (not 500, not HTML) from the chat SSE gate
+          CODE=$(curl -s -o /tmp/chat.json -w '%{http_code}' -X POST http://127.0.0.1:3910/api/dime/chat \
+            -H 'content-type: application/json' -d '{"messages":[{"role":"user","content":"x"}]}')
+          [ "$CODE" = "401" ] || { echo "::error::chat gate returned $CODE"; exit 1; }
+          node -e "const b=require('/tmp/chat.json'); if(!b.error) process.exit(1)"
+          # 2. logs/metrics initialized: the server printed its listen line
+          docker logs dime-smoke 2>&1 | grep -q "Server listening" || { echo "::error::no listen line in logs"; exit 1; }
+
+      - name: "[STEP] Destroy ephemeral environment"
+        if: always()
+        run: docker rm -f dime-smoke || true

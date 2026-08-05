@@ -9,7 +9,13 @@
  *
  * NEVER print, log, or persist DATABASE_URL. Every query here is a SELECT/EXPLAIN — no writes.
  */
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import mysql from "mysql2/promise";
@@ -60,8 +66,8 @@ interface SeasonDataset {
 
 function discoverDatasetSeasons(): number[] {
   return readdirSync(DATA_DIR)
-    .filter((f) => /^games-\d{4}\.json$/.test(f))
-    .map((f) => parseInt(f.slice("games-".length, "games-".length + 4), 10))
+    .filter(f => /^games-\d{4}\.json$/.test(f))
+    .map(f => parseInt(f.slice("games-".length, "games-".length + 4), 10))
     .sort((a, b) => a - b);
 }
 
@@ -69,8 +75,12 @@ function loadSeasonDataset(season: number): SeasonDataset {
   const path = join(DATA_DIR, `games-${season}.json`);
   const arr = JSON.parse(readFileSync(path, "utf8")) as any[];
   const finals: DatasetGame[] = arr
-    .filter((g) => g.codedState === "F")
-    .map((g) => ({ gamePk: g.gamePk, awayScore: g.awayScore, homeScore: g.homeScore }));
+    .filter(g => g.codedState === "F")
+    .map(g => ({
+      gamePk: g.gamePk,
+      awayScore: g.awayScore,
+      homeScore: g.homeScore,
+    }));
   return { season, finals };
 }
 
@@ -91,19 +101,32 @@ interface CheckGroup {
 
 const groups: CheckGroup[] = [];
 
-function record(group: number, name: string, pass: boolean, details: unknown): void {
+function record(
+  group: number,
+  name: string,
+  pass: boolean,
+  details: unknown
+): void {
   groups.push({ group, name, pass, details });
   console.log(`${TAG} ${pass ? "PASS" : "FAIL"} [group ${group}] ${name}`);
 }
 
 // ─── group 1: games count per season vs dataset finals, incl. grand total ─────────────────────
 
-async function checkGamesCount(pool: mysql.Pool, seasons: number[]): Promise<void> {
-  const [rows] = await pool.query("SELECT season, COUNT(*) n FROM mlb_games GROUP BY season");
+async function checkGamesCount(
+  pool: mysql.Pool,
+  seasons: number[]
+): Promise<void> {
+  const [rows] = await pool.query(
+    "SELECT season, COUNT(*) n FROM mlb_games GROUP BY season"
+  );
   const dbBySeason = new Map<number, number>();
   for (const r of rows as any[]) dbBySeason.set(Number(r.season), Number(r.n));
 
-  const perSeason: Record<string, { dataset: number; db: number; ok: boolean }> = {};
+  const perSeason: Record<
+    string,
+    { dataset: number; db: number; ok: boolean }
+  > = {};
   let datasetGrandTotal = 0;
   let ok = true;
   for (const season of seasons) {
@@ -124,19 +147,30 @@ async function checkGamesCount(pool: mysql.Pool, seasons: number[]): Promise<voi
     dbGrandTotal === datasetGrandTotal && dbGrandTotal >= EXPECTED_GRAND_TOTAL;
   if (!grandTotalOk) ok = false;
 
-  record(1, "mlb_games count per season == dataset finals; grand total == dataset", ok, {
-    perSeason,
-    datasetGrandTotal,
-    dbGrandTotal,
-    expectedGrandTotal: EXPECTED_GRAND_TOTAL,
-  });
+  record(
+    1,
+    "mlb_games count per season == dataset finals; grand total == dataset",
+    ok,
+    {
+      perSeason,
+      datasetGrandTotal,
+      dbGrandTotal,
+      expectedGrandTotal: EXPECTED_GRAND_TOTAL,
+    }
+  );
 }
 
 // ─── group 2: manifest vs DB counts for plays/pitches/boxscores/officials ─────────────────────
 
-async function checkManifestCounts(pool: mysql.Pool, seasons: number[]): Promise<void> {
+async function checkManifestCounts(
+  pool: mysql.Pool,
+  seasons: number[]
+): Promise<void> {
   const checks = [
-    { key: "pitches", sql: `SELECT COUNT(*) n FROM mlb_pitches WHERE season = ?` },
+    {
+      key: "pitches",
+      sql: `SELECT COUNT(*) n FROM mlb_pitches WHERE season = ?`,
+    },
     {
       key: "plays",
       sql: `SELECT COUNT(*) n FROM mlb_plays p JOIN mlb_games g ON g.game_pk = p.game_pk WHERE g.season = ?`,
@@ -155,7 +189,10 @@ async function checkManifestCounts(pool: mysql.Pool, seasons: number[]): Promise
     },
   ];
 
-  const perSeason: Record<string, Record<string, { manifest: number; db: number; ok: boolean } | "skipped">> = {};
+  const perSeason: Record<
+    string,
+    Record<string, { manifest: number; db: number; ok: boolean } | "skipped">
+  > = {};
   let ok = true;
   let anyManifest = false;
   for (const season of seasons) {
@@ -166,7 +203,10 @@ async function checkManifestCounts(pool: mysql.Pool, seasons: number[]): Promise
       continue;
     }
     anyManifest = true;
-    const seasonDetail: Record<string, { manifest: number; db: number; ok: boolean }> = {};
+    const seasonDetail: Record<
+      string,
+      { manifest: number; db: number; ok: boolean }
+    > = {};
     for (const c of checks) {
       const [rows] = await pool.query(c.sql, [season]);
       const db = Number((rows as any)[0].n);
@@ -180,7 +220,9 @@ async function checkManifestCounts(pool: mysql.Pool, seasons: number[]): Promise
 
   record(2, "manifest vs DB counts (plays/pitches/boxscores/officials)", ok, {
     perSeason,
-    note: anyManifest ? undefined : "no season manifests found — nothing to check",
+    note: anyManifest
+      ? undefined
+      : "no season manifests found — nothing to check",
   });
 }
 
@@ -231,16 +273,26 @@ async function checkOrphans(pool: mysql.Pool): Promise<void> {
 
 // ─── group 4: score cross-foot ──────────────────────────────────────────────────────────────
 
-async function checkScoreCrossFoot(pool: mysql.Pool, seasons: number[], rng: () => number): Promise<void> {
-  const perSeasonSum: Record<string, { dataset: number; db: number; ok: boolean }> = {};
+async function checkScoreCrossFoot(
+  pool: mysql.Pool,
+  seasons: number[],
+  rng: () => number
+): Promise<void> {
+  const perSeasonSum: Record<
+    string,
+    { dataset: number; db: number; ok: boolean }
+  > = {};
   let ok = true;
 
   for (const season of seasons) {
     const { finals } = loadSeasonDataset(season);
-    const datasetSum = finals.reduce((acc, g) => acc + (g.awayScore ?? 0) + (g.homeScore ?? 0), 0);
+    const datasetSum = finals.reduce(
+      (acc, g) => acc + (g.awayScore ?? 0) + (g.homeScore ?? 0),
+      0
+    );
     const [rows] = await pool.query(
       `SELECT COALESCE(SUM(away_score + home_score), 0) n FROM mlb_games WHERE season = ?`,
-      [season],
+      [season]
     );
     const dbSum = Number((rows as any)[0].n);
     const seasonOk = dbSum === datasetSum;
@@ -249,7 +301,11 @@ async function checkScoreCrossFoot(pool: mysql.Pool, seasons: number[], rng: () 
   }
 
   // sampled 50 games/season: final score == MAX(cumulative play score) from mlb_plays
-  const sampledMismatches: { season: number; gamePk: number; reason: string }[] = [];
+  const sampledMismatches: {
+    season: number;
+    gamePk: number;
+    reason: string;
+  }[] = [];
   let sampledChecked = 0;
   for (const season of seasons) {
     const { finals } = loadSeasonDataset(season);
@@ -258,23 +314,30 @@ async function checkScoreCrossFoot(pool: mysql.Pool, seasons: number[], rng: () 
     for (const g of picked) {
       const [rows] = await pool.query(
         `SELECT away_score, home_score FROM mlb_games WHERE game_pk = ?`,
-        [g.gamePk],
+        [g.gamePk]
       );
       const gameRow = (rows as any[])[0];
       if (!gameRow) continue; // not loaded yet — not a failure, just nothing to sample
       sampledChecked++;
       const [playRows] = await pool.query(
         `SELECT MAX(away_score) a, MAX(home_score) h FROM mlb_plays WHERE game_pk = ?`,
-        [g.gamePk],
+        [g.gamePk]
       );
       const pr = (playRows as any[])[0];
       const maxAway = pr?.a === null ? null : Number(pr?.a);
       const maxHome = pr?.h === null ? null : Number(pr?.h);
       if (maxAway === null || maxHome === null) {
-        sampledMismatches.push({ season, gamePk: g.gamePk, reason: "no plays loaded for game" });
+        sampledMismatches.push({
+          season,
+          gamePk: g.gamePk,
+          reason: "no plays loaded for game",
+        });
         continue;
       }
-      if (Number(gameRow.away_score) !== maxAway || Number(gameRow.home_score) !== maxHome) {
+      if (
+        Number(gameRow.away_score) !== maxAway ||
+        Number(gameRow.home_score) !== maxHome
+      ) {
         sampledMismatches.push({
           season,
           gamePk: g.gamePk,
@@ -286,19 +349,28 @@ async function checkScoreCrossFoot(pool: mysql.Pool, seasons: number[], rng: () 
   const sampledOk = sampledMismatches.length === 0;
   if (!sampledOk) ok = false;
 
-  record(4, "score cross-foot (season sums + sampled 50/season max-play-score)", ok, {
-    perSeasonSum,
-    sampledChecked,
-    sampledMismatches,
-  });
+  record(
+    4,
+    "score cross-foot (season sums + sampled 50/season max-play-score)",
+    ok,
+    {
+      perSeasonSum,
+      sampledChecked,
+      sampledMismatches,
+    }
+  );
 }
 
 // ─── group 5: seeded era sample (25/season) ────────────────────────────────────────────────
 
-async function checkEraSamples(pool: mysql.Pool, seasons: number[], rng: () => number): Promise<void> {
+async function checkEraSamples(
+  pool: mysql.Pool,
+  seasons: number[],
+  rng: () => number
+): Promise<void> {
   // 5a. pitch play_id uniqueness — global
   const [uniqRows] = await pool.query(
-    `SELECT COUNT(*) total, COUNT(DISTINCT play_id) distinctCount FROM mlb_pitches`,
+    `SELECT COUNT(*) total, COUNT(DISTINCT play_id) distinctCount FROM mlb_pitches`
   );
   const uniqRow = (uniqRows as any[])[0];
   const total = Number(uniqRow.total);
@@ -308,23 +380,34 @@ async function checkEraSamples(pool: mysql.Pool, seasons: number[], rng: () => n
   // 5b + 5c: sampled 25/season — season denorm matches game season, no zero-filled tracking
   // values where feed had NULL (checked directly against DB nulls for pre-2008 pitches, since
   // "feed had NULL" is exactly what the transform preserves as SQL NULL by construction).
-  const seasonDenormMismatches: { season: number; playId: string; gameSeason: number }[] = [];
+  const seasonDenormMismatches: {
+    season: number;
+    playId: string;
+    gameSeason: number;
+  }[] = [];
   let denormChecked = 0;
   for (const season of seasons) {
-    const [pkRows] = await pool.query(`SELECT play_id FROM mlb_pitches WHERE season = ? ORDER BY play_id LIMIT 5000`, [season]);
-    const playIds = (pkRows as any[]).map((r) => r.play_id as string);
+    const [pkRows] = await pool.query(
+      `SELECT play_id FROM mlb_pitches WHERE season = ? ORDER BY play_id LIMIT 5000`,
+      [season]
+    );
+    const playIds = (pkRows as any[]).map(r => r.play_id as string);
     if (playIds.length === 0) continue;
     const picked = sample(playIds, 25, rng);
     for (const playId of picked) {
       const [rows] = await pool.query(
         `SELECT pt.season pitchSeason, g.season gameSeason FROM mlb_pitches pt JOIN mlb_games g ON g.game_pk = pt.game_pk WHERE pt.play_id = ?`,
-        [playId],
+        [playId]
       );
       const r = (rows as any[])[0];
       if (!r) continue;
       denormChecked++;
       if (Number(r.pitchSeason) !== Number(r.gameSeason)) {
-        seasonDenormMismatches.push({ season, playId, gameSeason: Number(r.gameSeason) });
+        seasonDenormMismatches.push({
+          season,
+          playId,
+          gameSeason: Number(r.gameSeason),
+        });
       }
     }
   }
@@ -341,31 +424,52 @@ async function checkEraSamples(pool: mysql.Pool, seasons: number[], rng: () => n
     "break_length",
   ];
   const [preRows] = await pool.query(
-    `SELECT play_id, ${trackingCols.join(", ")} FROM mlb_pitches WHERE season < 2008 ORDER BY play_id LIMIT 2000`,
+    `SELECT play_id, ${trackingCols.join(", ")} FROM mlb_pitches WHERE season < 2008 ORDER BY play_id LIMIT 2000`
   );
   const preSampleAll = preRows as any[];
   const preSample = sample(preSampleAll, 5, rng);
-  const nullPreservationFindings: { playId: string; nonNullTrackingCols: string[] }[] = [];
+  const nullPreservationFindings: {
+    playId: string;
+    nonNullTrackingCols: string[];
+  }[] = [];
   for (const row of preSample) {
-    const nonNull = trackingCols.filter((c) => row[c] !== null && row[c] !== undefined);
+    const nonNull = trackingCols.filter(
+      c => row[c] !== null && row[c] !== undefined
+    );
     // Not a hard failure by itself (a pre-2008 pitch could legitimately have some tracking data
     // in rare backfilled cases) — but zero-fill (value === 0 where legacy systems used to
     // zero-fill) is the specific defect this check guards against; NULL is fine, 0 is not.
-    const zeroFilled = trackingCols.filter((c) => row[c] !== null && Number(row[c]) === 0);
+    const zeroFilled = trackingCols.filter(
+      c => row[c] !== null && Number(row[c]) === 0
+    );
     if (zeroFilled.length > 0) {
-      nullPreservationFindings.push({ playId: row.play_id, nonNullTrackingCols: zeroFilled });
+      nullPreservationFindings.push({
+        playId: row.play_id,
+        nonNullTrackingCols: zeroFilled,
+      });
     }
   }
 
-  const ok = uniquenessOk && seasonDenormMismatches.length === 0 && nullPreservationFindings.length === 0;
-  record(5, "seeded era sample (play_id uniqueness, season denorm, NULL preservation)", ok, {
-    playIdUniqueness: { total, distinctCount, ok: uniquenessOk },
-    seasonDenorm: { checked: denormChecked, mismatches: seasonDenormMismatches },
-    nullPreservation: {
-      pre2008SampleSize: preSample.length,
-      zeroFilledFindings: nullPreservationFindings,
-    },
-  });
+  const ok =
+    uniquenessOk &&
+    seasonDenormMismatches.length === 0 &&
+    nullPreservationFindings.length === 0;
+  record(
+    5,
+    "seeded era sample (play_id uniqueness, season denorm, NULL preservation)",
+    ok,
+    {
+      playIdUniqueness: { total, distinctCount, ok: uniquenessOk },
+      seasonDenorm: {
+        checked: denormChecked,
+        mismatches: seasonDenormMismatches,
+      },
+      nullPreservation: {
+        pre2008SampleSize: preSample.length,
+        zeroFilledFindings: nullPreservationFindings,
+      },
+    }
+  );
 }
 
 // ─── group 6: perf smoke — EXPLAIN uses indexes ────────────────────────────────────────────
@@ -377,16 +481,22 @@ interface ExplainCheck {
   expectedIndexSubstring: string;
 }
 
-function explainIndicatesIndexUse(rows: any[], expectedIndexSubstring: string): { usesIndex: boolean; raw: any[] } {
+function explainIndicatesIndexUse(
+  rows: any[],
+  expectedIndexSubstring: string
+): { usesIndex: boolean; raw: any[] } {
   const text = JSON.stringify(rows);
   // TiDB EXPLAIN: `access object` column contains "index:<name>(...)" when an index is used, and
   // rows are tagged e.g. "TableFullScan" when none is. MySQL EXPLAIN (fallback shape): a non-null
   // `key` column. Support both shapes defensively.
-  const mysqlKeyPresent = rows.some((r) => r.key !== undefined && r.key !== null);
+  const mysqlKeyPresent = rows.some(r => r.key !== undefined && r.key !== null);
   const hasFullScan = /TableFullScan/i.test(text);
   const hasExpectedIndex = text.includes(expectedIndexSubstring);
-  const hasAnyIndexScan = /IndexRangeScan|IndexLookUp|IndexFullScan/i.test(text);
-  const usesIndex = mysqlKeyPresent || hasExpectedIndex || (hasAnyIndexScan && !hasFullScan);
+  const hasAnyIndexScan = /IndexRangeScan|IndexLookUp|IndexFullScan/i.test(
+    text
+  );
+  const usesIndex =
+    mysqlKeyPresent || hasExpectedIndex || (hasAnyIndexScan && !hasFullScan);
   return { usesIndex, raw: rows };
 }
 
@@ -416,11 +526,19 @@ async function checkExplainSmoke(pool: mysql.Pool): Promise<void> {
   let ok = true;
   for (const c of checks) {
     const [rows] = await pool.query(`EXPLAIN ${c.sql}`, c.params);
-    const { usesIndex, raw } = explainIndicatesIndexUse(rows as any[], c.expectedIndexSubstring);
+    const { usesIndex, raw } = explainIndicatesIndexUse(
+      rows as any[],
+      c.expectedIndexSubstring
+    );
     if (!usesIndex) ok = false;
     details[c.name] = { usesIndex, plan: raw };
   }
-  record(6, "EXPLAIN smoke — team schedule + pitcher season pitches use indexes", ok, details);
+  record(
+    6,
+    "EXPLAIN smoke — team schedule + pitcher season pitches use indexes",
+    ok,
+    details
+  );
 }
 
 // ─── main ───────────────────────────────────────────────────────────────────────────────────
@@ -457,7 +575,7 @@ async function main(): Promise<void> {
     await pool.end();
   }
 
-  const overallPass = groups.every((g) => g.pass);
+  const overallPass = groups.every(g => g.pass);
   const report = {
     generatedAt: new Date().toISOString(),
     overallPass,
@@ -471,7 +589,7 @@ async function main(): Promise<void> {
   if (!overallPass) process.exit(1);
 }
 
-main().catch((err) => {
+main().catch(err => {
   console.error(`${TAG} FATAL:`, err?.message ?? err);
   process.exit(1);
 });

@@ -97,11 +97,15 @@ function cap(v: string | null | undefined, max: number): string | null {
  * because a member scheduling, reverting, and re-scheduling a cancellation is
  * three real acts, not one deduplicated one.
  */
-export async function recordSubscriptionEvent(input: RecordSubscriptionInput): Promise<boolean> {
+export async function recordSubscriptionEvent(
+  input: RecordSubscriptionInput
+): Promise<boolean> {
   try {
     const db = await getDb();
     if (!db) {
-      console.warn(`${TAG} [WARN] no database — ${input.eventType}/${input.stripeSubscriptionId} not recorded`);
+      console.warn(
+        `${TAG} [WARN] no database — ${input.eventType}/${input.stripeSubscriptionId} not recorded`
+      );
       return false;
     }
     const now = Date.now();
@@ -131,7 +135,10 @@ export async function recordSubscriptionEvent(input: RecordSubscriptionInput): P
 
     // Transitions that end or shrink a membership surface at error level so
     // they are visible without a query; routine bookkeeping stays quiet.
-    const loud = input.kind === "deleted" || input.kind === "cancel_scheduled" || input.outcome === "noop";
+    const loud =
+      input.kind === "deleted" ||
+      input.kind === "cancel_scheduled" ||
+      input.outcome === "noop";
     const move =
       input.fromPriceId || input.toPriceId
         ? ` ${input.fromPriceId ?? "(none)"}→${input.toPriceId ?? "(none)"}`
@@ -146,10 +153,14 @@ export async function recordSubscriptionEvent(input: RecordSubscriptionInput): P
     // A redelivery of an already-recorded transition is the idempotency
     // guarantee working — never an error.
     if (isDuplicateKeyError(err)) {
-      console.log(`${TAG} [STATE] ${input.eventType}/${input.stripeSubscriptionId} already recorded — idempotent no-op`);
+      console.log(
+        `${TAG} [STATE] ${input.eventType}/${input.stripeSubscriptionId} already recorded — idempotent no-op`
+      );
       return true;
     }
-    console.error(`${TAG} [FAIL] could not record ${input.eventType}/${input.stripeSubscriptionId}: ${(err as Error)?.message ?? err}`);
+    console.error(
+      `${TAG} [FAIL] could not record ${input.eventType}/${input.stripeSubscriptionId}: ${(err as Error)?.message ?? err}`
+    );
     return false;
   }
 }
@@ -166,12 +177,21 @@ export type SubscriptionSnapshot = {
 };
 
 export type SubscriptionDiff = {
-  kind: Extract<SubscriptionKind, "plan_changed" | "cancel_scheduled" | "cancel_reverted" | "status_changed" | "updated">;
+  kind: Extract<
+    SubscriptionKind,
+    | "plan_changed"
+    | "cancel_scheduled"
+    | "cancel_reverted"
+    | "status_changed"
+    | "updated"
+  >;
   detail: string;
 };
 
 /** Pull the comparable fields out of a live Stripe subscription object. */
-export function snapshotOfSubscription(sub: Stripe.Subscription): SubscriptionSnapshot {
+export function snapshotOfSubscription(
+  sub: Stripe.Subscription
+): SubscriptionSnapshot {
   const item = sub.items?.data?.[0];
   return {
     priceId: item?.price?.id ?? null,
@@ -183,15 +203,26 @@ export function snapshotOfSubscription(sub: Stripe.Subscription): SubscriptionSn
 
 /** Pull the comparable fields out of `event.data.previous_attributes`. Sparse:
  * a field Stripe did not report as changed comes back undefined. */
-export function snapshotOfPreviousAttributes(prev: Record<string, unknown> | undefined | null): SubscriptionSnapshot {
+export function snapshotOfPreviousAttributes(
+  prev: Record<string, unknown> | undefined | null
+): SubscriptionSnapshot {
   if (!prev) return {};
   const out: SubscriptionSnapshot = {};
-  const items = prev["items"] as { data?: Array<{ price?: { id?: string; recurring?: { interval?: string } } }> } | undefined;
+  const items = prev["items"] as
+    | {
+        data?: Array<{
+          price?: { id?: string; recurring?: { interval?: string } };
+        }>;
+      }
+    | undefined;
   const prevPrice = items?.data?.[0]?.price;
   if (prevPrice?.id !== undefined) out.priceId = prevPrice.id ?? null;
-  if (prevPrice?.recurring?.interval !== undefined) out.interval = prevPrice.recurring.interval ?? null;
-  if (prev["status"] !== undefined) out.status = (prev["status"] as string) ?? null;
-  if (prev["cancel_at_period_end"] !== undefined) out.cancelAtPeriodEnd = Boolean(prev["cancel_at_period_end"]);
+  if (prevPrice?.recurring?.interval !== undefined)
+    out.interval = prevPrice.recurring.interval ?? null;
+  if (prev["status"] !== undefined)
+    out.status = (prev["status"] as string) ?? null;
+  if (prev["cancel_at_period_end"] !== undefined)
+    out.cancelAtPeriodEnd = Boolean(prev["cancel_at_period_end"]);
   return out;
 }
 
@@ -209,17 +240,29 @@ export function snapshotOfPreviousAttributes(prev: Record<string, unknown> | und
  * customer.subscription.updated with `previous_attributes.items`, which lands
  * here as kind='plan_changed' with both price ids.
  */
-export function classifySubscriptionUpdate(prev: SubscriptionSnapshot, current: SubscriptionSnapshot): SubscriptionDiff {
+export function classifySubscriptionUpdate(
+  prev: SubscriptionSnapshot,
+  current: SubscriptionSnapshot
+): SubscriptionDiff {
   if (prev.priceId !== undefined && prev.priceId !== current.priceId) {
     return {
       kind: "plan_changed",
       detail: `price ${prev.priceId ?? "(none)"} → ${current.priceId ?? "(none)"}`,
     };
   }
-  if (prev.cancelAtPeriodEnd !== undefined && prev.cancelAtPeriodEnd !== current.cancelAtPeriodEnd) {
+  if (
+    prev.cancelAtPeriodEnd !== undefined &&
+    prev.cancelAtPeriodEnd !== current.cancelAtPeriodEnd
+  ) {
     return current.cancelAtPeriodEnd
-      ? { kind: "cancel_scheduled", detail: "cancel_at_period_end false → true" }
-      : { kind: "cancel_reverted", detail: "cancel_at_period_end true → false" };
+      ? {
+          kind: "cancel_scheduled",
+          detail: "cancel_at_period_end false → true",
+        }
+      : {
+          kind: "cancel_reverted",
+          detail: "cancel_at_period_end true → false",
+        };
   }
   if (prev.status !== undefined && prev.status !== current.status) {
     return {
@@ -235,11 +278,17 @@ export function classifySubscriptionUpdate(prev: SubscriptionSnapshot, current: 
  * `current_period_end` from the subscription onto its items (the same shape
  * drift cancelSubscription already handles).
  */
-export function subscriptionPeriodEndMs(sub: Stripe.Subscription): number | null {
-  const itemEnd = (sub.items?.data?.[0] as unknown as { current_period_end?: number } | undefined)?.current_period_end;
-  const raw = (sub as unknown as { cancel_at?: number | null }).cancel_at
-    ?? itemEnd
-    ?? (sub as unknown as { current_period_end?: number }).current_period_end
-    ?? null;
+export function subscriptionPeriodEndMs(
+  sub: Stripe.Subscription
+): number | null {
+  const itemEnd = (
+    sub.items?.data?.[0] as unknown as
+      { current_period_end?: number } | undefined
+  )?.current_period_end;
+  const raw =
+    (sub as unknown as { cancel_at?: number | null }).cancel_at ??
+    itemEnd ??
+    (sub as unknown as { current_period_end?: number }).current_period_end ??
+    null;
   return raw != null ? raw * 1000 : null;
 }

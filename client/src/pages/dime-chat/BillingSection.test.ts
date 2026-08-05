@@ -62,10 +62,18 @@ describe("data layer — Step 3's four procedures, consumed verbatim", () => {
     expect(tableIdx).toBeGreaterThan(planCardIdx);
     expect(pmIdx).toBeGreaterThan(tableIdx);
     expect(infoIdx).toBeGreaterThan(pmIdx);
-    expect(source.indexOf("getPlanStatus.useQuery()", planCardIdx)).toBeGreaterThan(planCardIdx);
-    expect(source.indexOf("getInvoices.useQuery()", tableIdx)).toBeGreaterThan(tableIdx);
-    expect(source.indexOf("getPaymentMethods.useQuery()", pmIdx)).toBeGreaterThan(pmIdx);
-    expect(source.indexOf("getBillingInfo.useQuery()", infoIdx)).toBeGreaterThan(infoIdx);
+    expect(
+      source.indexOf("getPlanStatus.useQuery()", planCardIdx)
+    ).toBeGreaterThan(planCardIdx);
+    expect(source.indexOf("getInvoices.useQuery()", tableIdx)).toBeGreaterThan(
+      tableIdx
+    );
+    expect(
+      source.indexOf("getPaymentMethods.useQuery()", pmIdx)
+    ).toBeGreaterThan(pmIdx);
+    expect(
+      source.indexOf("getBillingInfo.useQuery()", infoIdx)
+    ).toBeGreaterThan(infoIdx);
   });
 
   it("owner accounts never even mount the four data-query components — BillingSection early-returns the owner stub before rendering any of them", () => {
@@ -82,9 +90,7 @@ describe("reuses the existing checkout / portal / cancel / reactivate contracts"
   });
 
   it("'Manage in Stripe' is the createPortalSession escape hatch", () => {
-    expect(source).toMatch(
-      /trpc\.stripe\.createPortalSession\.useMutation/
-    );
+    expect(source).toMatch(/trpc\.stripe\.createPortalSession\.useMutation/);
     expect(source).toContain("Manage in Stripe");
   });
 
@@ -96,7 +102,9 @@ describe("reuses the existing checkout / portal / cancel / reactivate contracts"
 
 describe("plan card — state-driven branches (owner's literal templates)", () => {
   it("active: 'Current Plan — {planLabel} · Renews {date}'", () => {
-    expect(source).toContain("`Current Plan — ${status.planLabel} · Renews ${dateStr}`");
+    expect(source).toContain(
+      "`Current Plan — ${status.planLabel} · Renews ${dateStr}`"
+    );
   });
 
   it("cancel_scheduled: 'Access until {date}'", () => {
@@ -111,7 +119,9 @@ describe("plan card — state-driven branches (owner's literal templates)", () =
     const noneCaseIdx = source.indexOf('case "none":');
     expect(noneCaseIdx).toBeGreaterThan(-1);
     expect(source).toContain("No plan on file");
-    expect(source).toContain("You don't have a plan on file. Subscribe to unlock full access.");
+    expect(source).toContain(
+      "You don't have a plan on file. Subscribe to unlock full access."
+    );
   });
 
   it("Renew shows ONLY for cancel_scheduled (the only state reactivateSubscription's own body accepts); expired's CTA is Upgrade, not a Renew that always errors; Cancel shows only for active", () => {
@@ -174,7 +184,10 @@ describe("cancel flow — verbatim owner copy + the app's one destructive-red ex
   it("documents the destructive-only, owner-directed exception to the no-red rule", () => {
     const tokenDeclIdx = cssSource.indexOf("--dime-danger: #E5484D");
     expect(tokenDeclIdx).toBeGreaterThan(-1);
-    const nearbyComment = cssSource.slice(Math.max(0, tokenDeclIdx - 900), tokenDeclIdx);
+    const nearbyComment = cssSource.slice(
+      Math.max(0, tokenDeclIdx - 900),
+      tokenDeclIdx
+    );
     expect(nearbyComment).toMatch(/owner-directed/i);
     expect(nearbyComment).toMatch(/destructive/i);
   });
@@ -187,7 +200,7 @@ describe("cancel flow — verbatim owner copy + the app's one destructive-red ex
 });
 
 describe("cancel confirm — alertdialog focus management (a11y)", () => {
-  it("keeps role=\"alertdialog\" on the confirm panel", () => {
+  it('keeps role="alertdialog" on the confirm panel', () => {
     const panelIdx = source.indexOf("function CancelConfirm(");
     expect(panelIdx).toBeGreaterThan(-1);
     const divIdx = source.indexOf("<div", panelIdx);
@@ -204,7 +217,10 @@ describe("cancel confirm — alertdialog focus management (a11y)", () => {
     expect(keepRefDeclIdx).toBeGreaterThan(panelIdx);
     const effectIdx = source.indexOf("useEffect(() => {", keepRefDeclIdx);
     expect(effectIdx).toBeGreaterThan(keepRefDeclIdx);
-    const focusCallIdx = source.indexOf("keepButtonRef.current?.focus();", effectIdx);
+    const focusCallIdx = source.indexOf(
+      "keepButtonRef.current?.focus();",
+      effectIdx
+    );
     expect(focusCallIdx).toBeGreaterThan(effectIdx);
     // The ref is actually attached to the "Keep plan" button, not just declared.
     const keepButtonIdx = source.indexOf(">\n          Keep plan", panelIdx);
@@ -228,13 +244,26 @@ describe("cancel confirm — alertdialog focus management (a11y)", () => {
       "const cancelTriggerRef = useRef<HTMLButtonElement | null>(null);"
     );
     expect(cancelTriggerDeclIdx).toBeGreaterThan(-1);
-    expect(source).toMatch(/<PlanCard[\s\S]*?cancelTriggerRef=\{cancelTriggerRef\}[\s\S]*?\/>/);
-    expect(source).toMatch(/<CancelConfirm[\s\S]*?triggerRef=\{cancelTriggerRef\}[\s\S]*?\/>/);
+    expect(source).toMatch(
+      /<PlanCard[\s\S]*?cancelTriggerRef=\{cancelTriggerRef\}[\s\S]*?\/>/
+    );
+    expect(source).toMatch(
+      /<CancelConfirm[\s\S]*?triggerRef=\{cancelTriggerRef\}[\s\S]*?\/>/
+    );
     // PlanCard attaches it to the actual Cancel trigger button, not just receives it.
     const planCardIdx = source.indexOf("function PlanCard(");
-    const cancelButtonIdx = source.indexOf(">\n            Cancel\n", planCardIdx);
-    const cancelButtonBlockStart = source.lastIndexOf("<button", cancelButtonIdx);
-    const cancelButtonBlock = source.slice(cancelButtonBlockStart, cancelButtonIdx);
+    const cancelButtonIdx = source.indexOf(
+      ">\n            Cancel\n",
+      planCardIdx
+    );
+    const cancelButtonBlockStart = source.lastIndexOf(
+      "<button",
+      cancelButtonIdx
+    );
+    const cancelButtonBlock = source.slice(
+      cancelButtonBlockStart,
+      cancelButtonIdx
+    );
     expect(cancelButtonBlock).toContain("ref={cancelTriggerRef}");
   });
 });
@@ -259,7 +288,9 @@ describe("payment methods — brand + masked digits + expiry + default badge", (
     expect(source).toMatch(/•••• \{pm\.last4\}/);
     expect(source).toMatch(/pm\.expMonth/);
     expect(source).toMatch(/pm\.expYear/);
-    expect(source).toMatch(/pm\.isDefault && <span className="dc-sm-pm-default">Default<\/span>/);
+    expect(source).toMatch(
+      /pm\.isDefault && <span className="dc-sm-pm-default">Default<\/span>/
+    );
   });
 });
 
@@ -316,7 +347,9 @@ describe("Apple discipline — restrained motion, no layout jumps", () => {
   });
 
   it("wide table content scrolls in its own container, never the page", () => {
-    expect(cssSource).toMatch(/\.dc-sm-bill-table-wrap \{[^}]*overflow-x: auto/);
+    expect(cssSource).toMatch(
+      /\.dc-sm-bill-table-wrap \{[^}]*overflow-x: auto/
+    );
   });
 
   it("no shimmer/pulse animation on the loading skeleton (motion dial 2/10 reserves motion for live/typing only)", () => {

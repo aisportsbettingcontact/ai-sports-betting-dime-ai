@@ -14,11 +14,26 @@ export function toRoutePattern(pathname: string): string {
   for (let i = 0; i < parts.length; i++) {
     const seg = parts[i];
     const prev = out[out.length - 1];
-    if (DATE_RE.test(seg)) { out.push(":date"); continue; }
-    if (SPORTS.has(seg.toLowerCase()) && (prev === "model" || prev === "betting-splits")) { out.push(":sport"); continue; }
-    if (prev === "team") { out.push(":slug"); continue; }
+    if (DATE_RE.test(seg)) {
+      out.push(":date");
+      continue;
+    }
+    if (
+      SPORTS.has(seg.toLowerCase()) &&
+      (prev === "model" || prev === "betting-splits")
+    ) {
+      out.push(":sport");
+      continue;
+    }
+    if (prev === "team") {
+      out.push(":slug");
+      continue;
+    }
     // Bare numeric / long opaque trailing segment ⇒ :id.
-    if (/^\d+$/.test(seg) || /^[0-9a-f]{16,}$/i.test(seg)) { out.push(":id"); continue; }
+    if (/^\d+$/.test(seg) || /^[0-9a-f]{16,}$/i.test(seg)) {
+      out.push(":id");
+      continue;
+    }
     out.push(seg);
   }
   return "/" + out.join("/");

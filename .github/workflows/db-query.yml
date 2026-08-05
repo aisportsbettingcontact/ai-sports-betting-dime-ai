@@ -65,9 +65,11 @@ jobs:
           PY
 
       - name: "[STEP] Run query"
+        env:
+          QUERY_MODE: ${{ github.event.inputs.mode }}
         run: |
           set -euo pipefail
-          MODE="${{ github.event.inputs.mode }}"
+          MODE="$QUERY_MODE"
 
           if [ "$MODE" = "summary" ]; then
             echo "===== $DB_SCHEMA: summary ====="

@@ -51,18 +51,18 @@ export default function SegmentsPanel() {
   const segments: SegmentSlice[] = data?.segments ?? [];
 
   // Resolve each slice's display label once (SEGMENT_LABEL is authoritative).
-  const labeled = segments.map((s) => ({
+  const labeled = segments.map(s => ({
     key: s.key,
     label: SEGMENT_LABEL[s.key] ?? s.label,
     users: s.users,
   }));
 
   const totalUsers = labeled.reduce((sum, s) => sum + s.users, 0);
-  const maxUsers = Math.max(...labeled.map((s) => s.users), 1);
+  const maxUsers = Math.max(...labeled.map(s => s.users), 1);
 
   // Only segments with real users draw a slice; a measured-but-empty feed falls
   // through to the "No segmented users yet." placeholder rather than a bare ring.
-  const nonZeroSegments = labeled.filter((s) => s.users > 0);
+  const nonZeroSegments = labeled.filter(s => s.users > 0);
   const ramp = mintRamp(nonZeroSegments.length);
 
   const chartConfig: ChartConfig = {};
@@ -117,7 +117,9 @@ export default function SegmentsPanel() {
                         <Cell key={s.key} fill={ramp[i]} />
                       ))}
                     </Pie>
-                    <ChartTooltip content={<ChartTooltipContent nameKey="label" />} />
+                    <ChartTooltip
+                      content={<ChartTooltipContent nameKey="label" />}
+                    />
                   </PieChart>
                 </ChartContainer>
                 {/* Center overlay — tabular total (default sans) + mono micro-label. */}
@@ -143,7 +145,7 @@ export default function SegmentsPanel() {
 
             {/* 2 — RANKED LIST: all 7 (zeros honest), share of total. */}
             <div className="flex flex-col justify-center gap-1 w-full min-w-0">
-              {labeled.map((s) => {
+              {labeled.map(s => {
                 const share =
                   totalUsers > 0 ? Math.round((s.users / totalUsers) * 100) : 0;
                 const width =

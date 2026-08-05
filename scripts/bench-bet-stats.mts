@@ -47,13 +47,16 @@
  *   4. pnpm tsx scripts/bench-bet-stats.mts
  */
 import { createConnection } from "mysql2/promise";
-import { aggregateStats, downsampleEquityCurve } from "../server/betTrackerCore";
+import {
+  aggregateStats,
+  downsampleEquityCurve,
+} from "../server/betTrackerCore";
 
 const URI = process.env.BENCH_DATABASE_URL;
 if (!URI) {
   console.error(
     "BENCH_DATABASE_URL is required. Point it at a throwaway database — this " +
-    "script DROPS and recreates `tracked_bets`. See the header for a one-liner.",
+      "script DROPS and recreates `tracked_bets`. See the header for a one-liner."
   );
   process.exit(1);
 }
@@ -76,27 +79,49 @@ const DDL = `CREATE TABLE IF NOT EXISTS tracked_bets (
 
 /** Deterministic PRNG so every scale sees the same shape of data. */
 let seed = 42;
-const rnd = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296);
+const rnd = () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296;
 const choose = <T,>(a: readonly T[]): T => a[Math.floor(rnd() * a.length)];
 
 const SPORTS = ["MLB", "NBA", "NHL", "NFL"] as const;
 const MARKETS = ["ML", "RL", "TOTAL"] as const;
 const TIMEFRAMES = ["FULL_GAME", "FIRST_5", "NRFI", "YRFI"] as const;
-const RESULTS = ["WIN", "WIN", "LOSS", "LOSS", "PUSH", "VOID", "PENDING"] as const;
+const RESULTS = [
+  "WIN",
+  "WIN",
+  "LOSS",
+  "LOSS",
+  "PUSH",
+  "VOID",
+  "PENDING",
+] as const;
 
 function synth(n: number): unknown[][] {
   const out: unknown[][] = [];
   const start = Date.UTC(2020, 0, 1);
   for (let i = 0; i < n; i++) {
     const d = new Date(start + Math.floor(i / 4) * 86_400_000);
-    const odds = rnd() < 0.5 ? -(100 + Math.floor(rnd() * 200)) : 100 + Math.floor(rnd() * 300);
+    const odds =
+      rnd() < 0.5
+        ? -(100 + Math.floor(rnd() * 200))
+        : 100 + Math.floor(rnd() * 300);
     const riskUnits = Math.round((0.5 + rnd() * 4) * 100) / 100;
     const risk = riskUnits * 100;
     const toWin = odds > 0 ? risk * (odds / 100) : risk * (100 / -odds);
     out.push([
-      USER, choose(SPORTS), d.toISOString().slice(0, 10), "ML", `Pick ${i}`, odds,
-      risk.toFixed(2), toWin.toFixed(2), choose(RESULTS), choose(TIMEFRAMES),
-      choose(MARKETS), "PREGAME", riskUnits.toFixed(2), (toWin / 100).toFixed(2),
+      USER,
+      choose(SPORTS),
+      d.toISOString().slice(0, 10),
+      "ML",
+      `Pick ${i}`,
+      odds,
+      risk.toFixed(2),
+      toWin.toFixed(2),
+      choose(RESULTS),
+      choose(TIMEFRAMES),
+      choose(MARKETS),
+      "PREGAME",
+      riskUnits.toFixed(2),
+      (toWin / 100).toFixed(2),
     ]);
   }
   return out;
@@ -107,14 +132,19 @@ const SELECT = `SELECT id, gameDate, result, sport, market, betType, timeframe,
   FROM tracked_bets WHERE userId = ? ORDER BY gameDate ASC, id ASC`;
 
 const elapsed = (t: bigint) => Number(process.hrtime.bigint() - t) / 1e6;
-const median = (a: number[]) => a.slice().sort((x, y) => x - y)[Math.floor(a.length / 2)];
+const median = (a: number[]) =>
+  a.slice().sort((x, y) => x - y)[Math.floor(a.length / 2)];
 
 const c = await createConnection({ uri: URI, connectTimeout: 20_000 });
 await c.query("DROP TABLE IF EXISTS tracked_bets");
 await c.query(DDL);
 
-console.log("rows    | query+transfer | JS aggregate | equity pts | payload | thinned payload");
-console.log("--------|----------------|--------------|------------|---------|----------------");
+console.log(
+  "rows    | query+transfer | JS aggregate | equity pts | payload | thinned payload"
+);
+console.log(
+  "--------|----------------|--------------|------------|---------|----------------"
+);
 
 for (const n of SCALES) {
   await c.query("DELETE FROM tracked_bets");
@@ -123,12 +153,13 @@ for (const n of SCALES) {
     await c.query(
       `INSERT INTO tracked_bets (userId,sport,gameDate,betType,pick,odds,risk,toWin,
         result,timeframe,market,wagerType,riskUnits,toWinUnits) VALUES ?`,
-      [data.slice(i, i + 1_000)],
+      [data.slice(i, i + 1_000)]
     );
   }
   await c.query("ANALYZE TABLE tracked_bets");
 
-  const qs: number[] = [], as: number[] = [];
+  const qs: number[] = [],
+    as: number[] = [];
   let stats!: ReturnType<typeof aggregateStats>;
   for (let r = 0; r < 5; r++) {
     const t0 = process.hrtime.bigint();
@@ -147,10 +178,10 @@ for (const n of SCALES) {
 
   console.log(
     `${String(n).padStart(7)} | ${(median(qs).toFixed(1) + "ms").padStart(14)} | ` +
-    `${(median(as).toFixed(1) + "ms").padStart(12)} | ` +
-    `${String(stats.equityCurve.length).padStart(10)} | ` +
-    `${((full / 1024).toFixed(0) + "KB").padStart(7)} | ` +
-    `${((thinned / 1024).toFixed(0) + "KB").padStart(14)}`,
+      `${(median(as).toFixed(1) + "ms").padStart(12)} | ` +
+      `${String(stats.equityCurve.length).padStart(10)} | ` +
+      `${((full / 1024).toFixed(0) + "KB").padStart(7)} | ` +
+      `${((thinned / 1024).toFixed(0) + "KB").padStart(14)}`
   );
 }
 

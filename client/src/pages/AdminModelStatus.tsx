@@ -45,12 +45,14 @@ function fmtScore(v: number | string | null | undefined): string {
 
 function fmtTs(v: Date | string | null | undefined): string {
   if (!v) return "—";
-  return new Date(v).toLocaleTimeString("en-US", {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    timeZone: "America/New_York",
-  }) + " ET";
+  return (
+    new Date(v).toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      timeZone: "America/New_York",
+    }) + " ET"
+  );
 }
 
 function StatusBadge({ ok, label }: { ok: boolean; label: string }) {
@@ -106,25 +108,27 @@ function MlbStatusTable({ games, dates }: { games: any[]; dates: string[] }) {
               awayConf && homeConf
                 ? "CONFIRMED"
                 : awayConf || homeConf
-                ? "PARTIAL"
-                : lu
-                ? "EXPECTED"
-                : "NONE";
+                  ? "PARTIAL"
+                  : lu
+                    ? "EXPECTED"
+                    : "NONE";
             const lineupColor =
               lineupStatus === "CONFIRMED"
                 ? "text-primary"
                 : lineupStatus === "PARTIAL"
-                ? "text-foreground"
-                : lineupStatus === "EXPECTED"
-                ? "text-foreground"
-                : "text-foreground";
+                  ? "text-foreground"
+                  : lineupStatus === "EXPECTED"
+                    ? "text-foreground"
+                    : "text-foreground";
 
             return (
               <tr
                 key={g.id}
                 className="border-b border-border transition-colors"
               >
-                <td className="py-2 px-3 text-foreground whitespace-nowrap">{g.gameDate}</td>
+                <td className="py-2 px-3 text-foreground whitespace-nowrap">
+                  {g.gameDate}
+                </td>
                 <td className="py-2 px-3 text-foreground font-semibold whitespace-nowrap">
                   {g.awayTeam} @ {g.homeTeam}
                 </td>
@@ -134,7 +138,9 @@ function MlbStatusTable({ games, dates }: { games: any[]; dates: string[] }) {
                 <td className="py-2 px-3 text-foreground whitespace-nowrap max-w-[120px] truncate">
                   {lu?.homePitcherName ?? g.homeStartingPitcher ?? "—"}
                 </td>
-                <td className={`py-2 px-3 whitespace-nowrap font-semibold ${lineupColor}`}>
+                <td
+                  className={`py-2 px-3 whitespace-nowrap font-semibold ${lineupColor}`}
+                >
                   {lineupStatus}
                 </td>
                 <td className="py-2 px-3 text-foreground whitespace-nowrap">
@@ -198,11 +204,10 @@ function NhlStatusTable({ games, dates }: { games: any[]; dates: string[] }) {
         </thead>
         <tbody>
           {games.map((g: any) => (
-            <tr
-              key={g.id}
-              className="border-b border-border transition-colors"
-            >
-              <td className="py-2 px-3 text-foreground whitespace-nowrap">{g.gameDate}</td>
+            <tr key={g.id} className="border-b border-border transition-colors">
+              <td className="py-2 px-3 text-foreground whitespace-nowrap">
+                {g.gameDate}
+              </td>
               <td className="py-2 px-3 text-foreground font-semibold whitespace-nowrap">
                 {g.awayTeam} @ {g.homeTeam}
               </td>
@@ -213,7 +218,10 @@ function NhlStatusTable({ games, dates }: { games: any[]; dates: string[] }) {
                 {g.homeGoalie ?? "—"}
               </td>
               <td className="py-2 px-3 whitespace-nowrap">
-                <StatusBadge ok={g.bothGoalies} label={g.bothGoalies ? "BOTH" : "MISSING"} />
+                <StatusBadge
+                  ok={g.bothGoalies}
+                  label={g.bothGoalies ? "BOTH" : "MISSING"}
+                />
               </td>
               <td className="py-2 px-3 text-foreground whitespace-nowrap">
                 {fmtScore(g.modelAwayScore)}
@@ -314,7 +322,9 @@ export default function AdminModelStatus() {
   // ── Owner-only auth guard — MUST be useEffect, never render body ────────────
   useEffect(() => {
     if (!authLoading && (!appUser || !isOwner)) {
-      console.warn(`[AdminModelStatus] Unauthorized: user=${appUser?.username ?? "unauthenticated"} isOwner=${isOwner} → redirecting to /`);
+      console.warn(
+        `[AdminModelStatus] Unauthorized: user=${appUser?.username ?? "unauthenticated"} isOwner=${isOwner} → redirecting to /`
+      );
       navigate("/");
     }
   }, [authLoading, appUser, isOwner, navigate]);
@@ -324,7 +334,9 @@ export default function AdminModelStatus() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center gap-3">
         <div className="w-5 h-5 border-2 border-border border-t-border rounded-full animate-spin" />
-        <span className="text-foreground text-sm">{authLoading ? "Verifying access..." : "Redirecting..."}</span>
+        <span className="text-foreground text-sm">
+          {authLoading ? "Verifying access..." : "Redirecting..."}
+        </span>
       </div>
     );
   }
@@ -332,7 +344,7 @@ export default function AdminModelStatus() {
   const handleRefresh = () => {
     mlbQuery.refetch();
     nhlQuery.refetch();
-    setRefreshKey((k) => k + 1);
+    setRefreshKey(k => k + 1);
   };
 
   const mlbData = mlbQuery.data;
@@ -346,135 +358,136 @@ export default function AdminModelStatus() {
 
   return (
     <AdminShell active="model-status">
-    <div className="bg-background text-foreground p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">
-            Model Pipeline Status
-          </h1>
-          <p className="text-foreground text-sm mt-1">
-            Today + Tomorrow · Auto-refreshes every 30s · Last updated: {lastUpdated} ET
-          </p>
+      <div className="bg-background text-foreground p-6">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+              Model Pipeline Status
+            </h1>
+            <p className="text-foreground text-sm mt-1">
+              Today + Tomorrow · Auto-refreshes every 30s · Last updated:{" "}
+              {lastUpdated} ET
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+            className="border-border text-foreground font-mono text-xs"
+          >
+            ↻ Refresh Now
+          </Button>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleRefresh}
-          className="border-border text-foreground font-mono text-xs"
-        >
-          ↻ Refresh Now
-        </Button>
-      </div>
 
-      {/* Summary bars */}
-      <div className="mb-4 space-y-1">
-        {mlbData && (
-          <SummaryBar
-            sport="MLB"
-            total={mlbData.total}
-            modeled={mlbData.modeled}
-            unmodeled={mlbData.unmodeled}
-          />
-        )}
-        {nhlData && (
-          <SummaryBar
-            sport="NHL"
-            total={nhlData.total}
-            modeled={nhlData.modeled}
-            unmodeled={nhlData.unmodeled}
-          />
-        )}
-      </div>
+        {/* Summary bars */}
+        <div className="mb-4 space-y-1">
+          {mlbData && (
+            <SummaryBar
+              sport="MLB"
+              total={mlbData.total}
+              modeled={mlbData.modeled}
+              unmodeled={mlbData.unmodeled}
+            />
+          )}
+          {nhlData && (
+            <SummaryBar
+              sport="NHL"
+              total={nhlData.total}
+              modeled={nhlData.modeled}
+              unmodeled={nhlData.unmodeled}
+            />
+          )}
+        </div>
 
-      {/* Tabs */}
-      <Tabs value={tab} onValueChange={(v) => setTab(v as "mlb" | "nhl")}>
-        <TabsList className="bg-background border border-border mb-4">
-          <TabsTrigger
-            value="mlb"
-            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-foreground font-mono text-xs"
-          >
-            MLB{" "}
-            {mlbData && (
-              <span
-                className={`ml-2 font-semibold ${
-                  mlbData.unmodeled > 0 ? "text-foreground" : "text-primary"
-                }`}
-              >
-                {mlbData.modeled}/{mlbData.total}
-              </span>
-            )}
-          </TabsTrigger>
-          <TabsTrigger
-            value="nhl"
-            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-foreground font-mono text-xs"
-          >
-            NHL{" "}
-            {nhlData && (
-              <span
-                className={`ml-2 font-semibold ${
-                  nhlData.unmodeled > 0 ? "text-foreground" : "text-primary"
-                }`}
-              >
-                {nhlData.modeled}/{nhlData.total}
-              </span>
-            )}
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="mlb">
-          <Card className="bg-background border-border">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-mono text-foreground">
-                MLB Games — Today + Tomorrow
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              {mlbQuery.isLoading ? (
-                <div className="text-center text-foreground py-8 text-sm font-mono">
-                  Loading MLB pipeline status…
-                </div>
-              ) : mlbQuery.isError ? (
-                <div className="text-center text-foreground py-8 text-sm font-mono">
-                  Error loading MLB status: {mlbQuery.error?.message}
-                </div>
-              ) : (
-                <MlbStatusTable
-                  games={(mlbData?.games ?? []) as any[]}
-                  dates={mlbData?.dates ?? []}
-                />
+        {/* Tabs */}
+        <Tabs value={tab} onValueChange={v => setTab(v as "mlb" | "nhl")}>
+          <TabsList className="bg-background border border-border mb-4">
+            <TabsTrigger
+              value="mlb"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-foreground font-mono text-xs"
+            >
+              MLB{" "}
+              {mlbData && (
+                <span
+                  className={`ml-2 font-semibold ${
+                    mlbData.unmodeled > 0 ? "text-foreground" : "text-primary"
+                  }`}
+                >
+                  {mlbData.modeled}/{mlbData.total}
+                </span>
               )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="nhl">
-          <Card className="bg-background border-border">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-mono text-foreground">
-                NHL Games — Today + Tomorrow
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              {nhlQuery.isLoading ? (
-                <div className="text-center text-foreground py-8 text-sm font-mono">
-                  Loading NHL pipeline status…
-                </div>
-              ) : nhlQuery.isError ? (
-                <div className="text-center text-foreground py-8 text-sm font-mono">
-                  Error loading NHL status: {nhlQuery.error?.message}
-                </div>
-              ) : (
-                <NhlStatusTable
-                  games={(nhlData?.games ?? []) as any[]}
-                  dates={nhlData?.dates ?? []}
-                />
+            </TabsTrigger>
+            <TabsTrigger
+              value="nhl"
+              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-foreground font-mono text-xs"
+            >
+              NHL{" "}
+              {nhlData && (
+                <span
+                  className={`ml-2 font-semibold ${
+                    nhlData.unmodeled > 0 ? "text-foreground" : "text-primary"
+                  }`}
+                >
+                  {nhlData.modeled}/{nhlData.total}
+                </span>
               )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-    </div>
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="mlb">
+            <Card className="bg-background border-border">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-mono text-foreground">
+                  MLB Games — Today + Tomorrow
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                {mlbQuery.isLoading ? (
+                  <div className="text-center text-foreground py-8 text-sm font-mono">
+                    Loading MLB pipeline status…
+                  </div>
+                ) : mlbQuery.isError ? (
+                  <div className="text-center text-foreground py-8 text-sm font-mono">
+                    Error loading MLB status: {mlbQuery.error?.message}
+                  </div>
+                ) : (
+                  <MlbStatusTable
+                    games={(mlbData?.games ?? []) as any[]}
+                    dates={mlbData?.dates ?? []}
+                  />
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="nhl">
+            <Card className="bg-background border-border">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-mono text-foreground">
+                  NHL Games — Today + Tomorrow
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                {nhlQuery.isLoading ? (
+                  <div className="text-center text-foreground py-8 text-sm font-mono">
+                    Loading NHL pipeline status…
+                  </div>
+                ) : nhlQuery.isError ? (
+                  <div className="text-center text-foreground py-8 text-sm font-mono">
+                    Error loading NHL status: {nhlQuery.error?.message}
+                  </div>
+                ) : (
+                  <NhlStatusTable
+                    games={(nhlData?.games ?? []) as any[]}
+                    dates={nhlData?.dates ?? []}
+                  />
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
     </AdminShell>
   );
 }

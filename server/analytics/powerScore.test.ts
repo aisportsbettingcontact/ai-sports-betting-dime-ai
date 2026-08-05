@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { computePowerScore, deriveTier, POWER_WEIGHTS, type PowerScoreInput } from "./powerScore";
+import {
+  computePowerScore,
+  deriveTier,
+  POWER_WEIGHTS,
+  type PowerScoreInput,
+} from "./powerScore";
 
 const base: PowerScoreInput = {
   daysSinceLastActive: 0,
@@ -34,8 +39,20 @@ describe("computePowerScore", () => {
     expect(tier).toBe("power");
   });
   it("is monotonic in value events (more value ⇒ ≥ score)", () => {
-    const lo = computePowerScore({ ...base, daysSinceLastActive: 1, valueEvents: 2, sessions: 1, activeDays: 2 }).score;
-    const hi = computePowerScore({ ...base, daysSinceLastActive: 1, valueEvents: 40, sessions: 1, activeDays: 2 }).score;
+    const lo = computePowerScore({
+      ...base,
+      daysSinceLastActive: 1,
+      valueEvents: 2,
+      sessions: 1,
+      activeDays: 2,
+    }).score;
+    const hi = computePowerScore({
+      ...base,
+      daysSinceLastActive: 1,
+      valueEvents: 40,
+      sessions: 1,
+      activeDays: 2,
+    }).score;
     expect(hi).toBeGreaterThanOrEqual(lo);
   });
   it("clamps out-of-range inputs (never > 100, never negative)", () => {

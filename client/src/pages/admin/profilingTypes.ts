@@ -42,7 +42,11 @@ export interface DailyPoint {
 }
 
 /** Structural shape of a server MetricPoint (no cross-boundary import). */
-export type PointLike = { state: string; value: number | null; reason: string | null };
+export type PointLike = {
+  state: string;
+  value: number | null;
+  reason: string | null;
+};
 
 /** Data-state labels for a MetricPoint / overview state — never a fabricated 0. */
 export const METRIC_STATE_LABEL: Record<string, string> = {
@@ -129,8 +133,17 @@ export function fmtAgo(ts: number): string {
  * inline style + whether the numeral should flip dark for contrast on high steps.
  * value is 0–100 (or null = not measured).
  */
-export function heatStyle(value: number | null): { style: CSSProperties; darkText: boolean; measured: boolean } {
-  if (value == null) return { style: { background: "transparent" }, darkText: false, measured: false };
+export function heatStyle(value: number | null): {
+  style: CSSProperties;
+  darkText: boolean;
+  measured: boolean;
+} {
+  if (value == null)
+    return {
+      style: { background: "transparent" },
+      darkText: false,
+      measured: false,
+    };
   const v = Math.max(0, Math.min(100, value));
   let alpha = 0;
   if (v <= 20) alpha = 0;
@@ -139,7 +152,9 @@ export function heatStyle(value: number | null): { style: CSSProperties; darkTex
   else if (v <= 80) alpha = 0.46;
   else alpha = 0.7;
   return {
-    style: { background: alpha === 0 ? "transparent" : `rgba(69,224,168,${alpha})` },
+    style: {
+      background: alpha === 0 ? "transparent" : `rgba(69,224,168,${alpha})`,
+    },
     darkText: alpha >= 0.46,
     measured: true,
   };

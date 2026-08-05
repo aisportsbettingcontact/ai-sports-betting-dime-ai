@@ -6,9 +6,13 @@ export interface DimeSafetyAssessment {
   resourceText?: string;
 }
 
-const distressPattern = /\b(chasing|chase losses|borrow(?:ing)? to bet|rent money|can't stop|cannot stop|unaffordable|lost everything|kill myself|self-harm|suicide)\b/i;
+const distressPattern =
+  /\b(chasing|chase losses|borrow(?:ing)? to bet|rent money|can't stop|cannot stop|unaffordable|lost everything|kill myself|self-harm|suicide)\b/i;
 
-export function assessDimeResponsibleGamblingSafety(text: string, jurisdiction: DimeJurisdiction = "unknown"): DimeSafetyAssessment {
+export function assessDimeResponsibleGamblingSafety(
+  text: string,
+  jurisdiction: DimeJurisdiction = "unknown"
+): DimeSafetyAssessment {
   if (!distressPattern.test(text)) return { risk: "none" };
   return {
     risk: "distress",
@@ -21,5 +25,7 @@ export function assessDimeResponsibleGamblingSafety(text: string, jurisdiction: 
 }
 
 export function containsProhibitedBettingCertainty(text: string): boolean {
-  return /\b(lock|free money|guaranteed|risk[- ]?free|can't lose|sure thing)\b/i.test(text);
+  return /\b(lock|free money|guaranteed|risk[- ]?free|can't lose|sure thing)\b/i.test(
+    text
+  );
 }

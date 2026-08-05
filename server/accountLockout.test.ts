@@ -23,7 +23,9 @@ const T0 = 1_000_000_000_000;
 
 describe("isLockedOut", () => {
   it("is locked while lockedUntil is in the future", () => {
-    expect(isLockedOut({ ...fresh, lockedUntil: T0 + 60_000 }, T0, CFG)).toBe(true);
+    expect(isLockedOut({ ...fresh, lockedUntil: T0 + 60_000 }, T0, CFG)).toBe(
+      true
+    );
   });
   it("is NOT locked once the cooldown has expired (auto-recovery)", () => {
     expect(isLockedOut({ ...fresh, lockedUntil: T0 - 1 }, T0, CFG)).toBe(false);
@@ -33,7 +35,10 @@ describe("isLockedOut", () => {
   });
   it("is never locked when the kill-switch is on", () => {
     expect(
-      isLockedOut({ ...fresh, lockedUntil: T0 + 60_000 }, T0, { ...CFG, disabled: true })
+      isLockedOut({ ...fresh, lockedUntil: T0 + 60_000 }, T0, {
+        ...CFG,
+        disabled: true,
+      })
     ).toBe(false);
   });
 });
@@ -41,7 +46,11 @@ describe("isLockedOut", () => {
 describe("recordFailure", () => {
   it("starts a fresh window on the first failure", () => {
     const { next, justLocked } = recordFailure(fresh, T0, CFG);
-    expect(next).toEqual({ failedLoginCount: 1, firstFailedLoginAt: T0, lockedUntil: null });
+    expect(next).toEqual({
+      failedLoginCount: 1,
+      firstFailedLoginAt: T0,
+      lockedUntil: null,
+    });
     expect(justLocked).toBe(false);
   });
 
@@ -86,7 +95,10 @@ describe("recordFailure", () => {
   });
 
   it("is a no-op when the kill-switch is on", () => {
-    const { next, justLocked } = recordFailure(fresh, T0, { ...CFG, disabled: true });
+    const { next, justLocked } = recordFailure(fresh, T0, {
+      ...CFG,
+      disabled: true,
+    });
     expect(next).toEqual(fresh);
     expect(justLocked).toBe(false);
   });
@@ -95,7 +107,11 @@ describe("recordFailure", () => {
     // windowMs (60min) > cooldownMs (15min): at unlock the count is still ≥
     // threshold and the window still 'active'. The first post-cooldown failure
     // must reset to count=1, NOT re-cross the threshold and re-lock.
-    const cfg: AccountLockoutConfig = { ...CFG, windowMs: 60 * 60_000, cooldownMs: 15 * 60_000 };
+    const cfg: AccountLockoutConfig = {
+      ...CFG,
+      windowMs: 60 * 60_000,
+      cooldownMs: 15 * 60_000,
+    };
     const expiredLock: AccountLockoutState = {
       failedLoginCount: 10,
       firstFailedLoginAt: T0,
@@ -135,7 +151,12 @@ describe("accountLockoutConfig", () => {
       ACCOUNT_LOCKOUT_COOLDOWN_MS: "1800000",
       ACCOUNT_LOCKOUT_DISABLED: "1",
     });
-    expect(c).toEqual({ threshold: 5, windowMs: 600000, cooldownMs: 1800000, disabled: true });
+    expect(c).toEqual({
+      threshold: 5,
+      windowMs: 600000,
+      cooldownMs: 1800000,
+      disabled: true,
+    });
   });
   it("ignores non-numeric / zero overrides and keeps the safe default", () => {
     const c = accountLockoutConfig({ ACCOUNT_LOCKOUT_THRESHOLD: "abc" });

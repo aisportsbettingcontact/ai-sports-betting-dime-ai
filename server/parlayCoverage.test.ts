@@ -18,7 +18,9 @@ import { join } from "node:path";
 const read = (p: string) => readFileSync(join(__dirname, p), "utf8");
 /** Comments stripped, so prose describing a fix cannot satisfy an assertion. */
 const code = (p: string) =>
-  read(p).replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  read(p)
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/^\s*\/\/.*$/gm, "");
 
 const grader = code("parlayGrader.ts");
 const sched = code("betAutoGradeScheduler.ts");
@@ -43,7 +45,9 @@ describe("legs have every recovery path straight bets have", () => {
 
   it("REGRESSION: it runs BEFORE the zero-straight-bets early return", () => {
     // A slate with no pending straight bets can still hold a stranded leg.
-    const fn = sched.slice(sched.indexOf("async function gradeAllPendingAllDates"));
+    const fn = sched.slice(
+      sched.indexOf("async function gradeAllPendingAllDates")
+    );
     const sweepPos = fn.indexOf("gradeAllParlaysAllDates");
     const returnPos = fn.indexOf("0 PENDING bets");
     expect(sweepPos).toBeGreaterThan(-1);
@@ -54,7 +58,9 @@ describe("legs have every recovery path straight bets have", () => {
     // A ticket whose legs are ALL terminal only settles as a side effect of a
     // leg being graded. One failed settleTickets call would strand it forever.
     const fn = grader.slice(grader.indexOf("gradeAllParlaysAllDates"));
-    expect(fn).toMatch(/eq\(trackedBets\.result,\s*"PENDING"\)[\s\S]{0,80}gt\(trackedBets\.legCount,\s*0\)/);
+    expect(fn).toMatch(
+      /eq\(trackedBets\.result,\s*"PENDING"\)[\s\S]{0,80}gt\(trackedBets\.legCount,\s*0\)/
+    );
   });
 
   it("REGRESSION: the interactive path settles a user's parlays", () => {
@@ -65,15 +71,23 @@ describe("legs have every recovery path straight bets have", () => {
   });
 
   it("the interactive parlay path runs before its own early return too", () => {
-    const fn = sched.slice(sched.indexOf("export async function gradePendingForUser"));
+    const fn = sched.slice(
+      sched.indexOf("export async function gradePendingForUser")
+    );
     const parlayPos = fn.indexOf("gradeParlaysForUser");
-    const returnPos = fn.indexOf("if (pending.length === 0) return emptySummary(scope)");
+    const returnPos = fn.indexOf(
+      "if (pending.length === 0) return emptySummary(scope)"
+    );
     expect(parlayPos).toBeGreaterThan(-1);
     expect(parlayPos).toBeLessThan(returnPos);
   });
 
   it("every leg entry point is failure-isolated from straight-bet grading", () => {
-    for (const call of ["gradeAllParlaysAllDates", "gradeParlaysForUser", "gradeParlaysForDate"]) {
+    for (const call of [
+      "gradeAllParlaysAllDates",
+      "gradeParlaysForUser",
+      "gradeParlaysForDate",
+    ]) {
       const i = sched.indexOf(`await ${call}(`);
       expect(i, `${call} is called`).toBeGreaterThan(-1);
       // A try opens before the call and a catch follows it.
@@ -108,7 +122,7 @@ describe("a stranded leg is alarmed, not silent", () => {
     // site is the very coupling that caused the poller miss.
     const fn = sched.slice(
       sched.indexOf("async function gradeAllPendingForDate"),
-      sched.indexOf("export async function gradePendingForUser"),
+      sched.indexOf("export async function gradePendingForUser")
     );
     expect(fn).toMatch(/describeGradingErrors\(/);
     expect(fn).toMatch(/gradingAlert\(\s*"GRADING_ERRORS"/);
@@ -118,7 +132,7 @@ describe("a stranded leg is alarmed, not silent", () => {
   it("a thrown sweep also alarms rather than only logging", () => {
     const fn = sched.slice(
       sched.indexOf("async function gradeAllPendingForDate"),
-      sched.indexOf("export async function gradePendingForUser"),
+      sched.indexOf("export async function gradePendingForUser")
     );
     expect(fn).toMatch(/parlay sweep (failed|threw)|Parlay leg sweep threw/i);
   });
@@ -128,13 +142,17 @@ describe("settlement never destroys a human decision", () => {
   it("REGRESSION: a settled ticket is never walked back to PENDING", () => {
     // An owner may hand-set a result the grader cannot reach. A sweep that
     // reverted it would undo the correction every 30 minutes, forever.
-    expect(grader).toMatch(/settlement\.result === "PENDING" && ticket\.result !== "PENDING"/);
+    expect(grader).toMatch(
+      /settlement\.result === "PENDING" && ticket\.result !== "PENDING"/
+    );
   });
 
   it("REGRESSION: editing a parlay's price moves originalOdds with it", () => {
     // originalOdds is the basis every reprice divides from. Moving odds alone
     // leaves the grader dividing from the OLD price and silently reverting.
-    expect(router).toMatch(/if \(existing\.legCount > 0\) patch\.originalOdds = input\.odds;/);
+    expect(router).toMatch(
+      /if \(existing\.legCount > 0\) patch\.originalOdds = input\.odds;/
+    );
   });
 
   it("REGRESSION: toWinUnits is cleared rather than left stale when unrecomputable", () => {
@@ -170,7 +188,10 @@ describe("createParlay cannot leave a ticket that can never settle", () => {
   it("REGRESSION: a failed leg insert rolls the ticket back", () => {
     // legCount=N with zero legs can never settle: the grader finds no legs and
     // leaves it PENDING forever — visible to the user, counted as open risk.
-    const proc = router.slice(router.indexOf("createParlay:"), router.indexOf("delete: appUserProcedure"));
+    const proc = router.slice(
+      router.indexOf("createParlay:"),
+      router.indexOf("delete: appUserProcedure")
+    );
     expect(proc).toMatch(/catch[\s\S]{0,300}delete\(trackedBets\)/);
     expect(proc).toMatch(/Nothing was saved/);
   });
@@ -179,7 +200,10 @@ describe("createParlay cannot leave a ticket that can never settle", () => {
     // Two different tickets can share (legCount, odds, risk) — the same stake
     // at the same price on a different set of games. A shape-only guard would
     // discard the second and hand back the first.
-    const proc = router.slice(router.indexOf("createParlay:"), router.indexOf("delete: appUserProcedure"));
+    const proc = router.slice(
+      router.indexOf("createParlay:"),
+      router.indexOf("delete: appUserProcedure")
+    );
     expect(proc).toMatch(/fingerprint\(/);
     expect(proc).toMatch(/anGameId/);
   });
@@ -193,14 +217,16 @@ describe("every grading trigger sweeps legs — no call site can forget", () => 
     // Wiring it per-call-site is what caused that miss, twice.
     const fn = sched.slice(
       sched.indexOf("async function gradeAllPendingForDate"),
-      sched.indexOf("export async function gradePendingForUser"),
+      sched.indexOf("export async function gradePendingForUser")
     );
     expect(fn).toMatch(/await gradeParlaysForDate\(date, trigger\)/);
   });
 
   it("REGRESSION: it runs before the zero-straight-bets early return", () => {
     // A date with no pending straight bets can still hold open legs.
-    const fn = sched.slice(sched.indexOf("async function gradeAllPendingForDate"));
+    const fn = sched.slice(
+      sched.indexOf("async function gradeAllPendingForDate")
+    );
     const sweep = fn.indexOf("gradeParlaysForDate");
     const early = fn.indexOf("0 PENDING bets for date");
     expect(sweep).toBeGreaterThan(-1);
@@ -209,14 +235,17 @@ describe("every grading trigger sweeps legs — no call site can forget", () => 
 
   it("REGRESSION: every in-process poller now reaches legs transitively", () => {
     // Each of these calls gradeAllPendingForDate, which now sweeps.
-    const callers = (sched.match(/await gradeAllPendingForDate\(/g) ?? []).length;
+    const callers = (sched.match(/await gradeAllPendingForDate\(/g) ?? [])
+      .length;
     expect(callers).toBeGreaterThanOrEqual(4); // live poll, standard poll, startup, cron
   });
 
   it("runBetGradeCycle does not sweep the same dates twice", () => {
     // Double-sweeping would double the score-feed calls for no benefit, since
     // re-folding an unchanged ticket is a no-op.
-    const cycle = sched.slice(sched.indexOf("export async function runBetGradeCycle"));
+    const cycle = sched.slice(
+      sched.indexOf("export async function runBetGradeCycle")
+    );
     const end = cycle.indexOf("export async function runBetGradeSweep");
     expect(cycle.slice(0, end)).not.toMatch(/await gradeParlaysForDate\(/);
   });

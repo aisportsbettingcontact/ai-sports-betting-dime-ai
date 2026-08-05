@@ -1,0 +1,77 @@
+# 10-ai-eval-critical — deterministic AI-behavior gates (AI_SURFACE=true).
+#
+# CONSTRAINT (owner law, LLM.md "API credit budget"): CI must not spend model
+# tokens. This required check therefore hard-gates every DETERMINISTIC
+# assertion in the mission list — schema validity, tool-name/parameter
+# conformance, unauthorized-tool refusal, budget accounting, provider pin,
+# prompt integrity, trace/audit emission — via the existing AI-contract test
+# suites, which validate these properties without a live model call.
+# Promptfoo model-calling evals (baseline-vs-candidate distributions,
+# judge-from-different-family) are configured in promptfooconfig.yaml and run
+# ONLY via workflow_dispatch until the owner lifts the credit pause
+# (docs/verification/ROLLOUT.md).
+name: 10-ai-eval-critical
+
+on:
+  pull_request:
+  merge_group:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deterministic:
+    name: 10-ai-eval-critical
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
+      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: "[GATE] Provider pin + model access + runtime wiring (no unauthorized providers)"
+        run: |
+          env -u DATABASE_URL npx vitest run \
+            server/dimeChatProviderFreeze.test.ts \
+            server/dime1ProviderWiring.test.ts \
+            server/dimeModelAccess.test.ts \
+            server/_core/dimeRuntimeReadiness.test.ts \
+            server/_core/dimeChatModel.test.ts
+
+      - name: "[GATE] Agent env isolation — secrets can never reach the model subprocess"
+        run: env -u DATABASE_URL npx vitest run server/_core/dimeAgent.env.test.ts
+
+      - name: "[GATE] Verdict schemas + tool contracts — model output cannot bypass validation"
+        run: |
+          env -u DATABASE_URL npx vitest run \
+            server/_core/dimeAnswerRouting.test.ts \
+            server/_core/dime1AnswerRouting.integration.test.ts \
+            server/_core/dimeChatContext.test.ts \
+            server/_core/dimePlatformKnowledge.test.ts
+
+      - name: "[GATE] Trace/audit emission + pricing attestation"
+        run: |
+          env -u DATABASE_URL npx vitest run \
+            server/dimeChatTrace.test.ts \
+            server/_core/dimeTraceObservability.test.ts \
+            server/_core/dimePricingAttestation.test.ts
+
+      - name: "[GATE] Prompt integrity — system prompts carry their pinned contracts"
+        run: |
+          # prompt-content assertions live in dimeChatModel.test.ts (above);
+          # here: the platform-knowledge catalog hashes cleanly (the hash is
+          # embedded into runtime prompts + Trace events)
+          node -e '
+            const { createHash } = require("node:crypto");
+            const fs = require("node:fs");
+            const raw = fs.readFileSync("shared/dime/platform_knowledge_v1.json");
+            JSON.parse(raw); // must be valid JSON
+            console.log("platform_knowledge sha256:", createHash("sha256").update(raw).digest("hex"));
+          '

@@ -53,9 +53,11 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           PI_SKIP_VERSION_CHECK: "1"
           PI_TELEMETRY: "0"
+        env:
+          REVIEW_INSTRUCTIONS: ${{ inputs.instructions }}
         run: |
           echo "[INPUT] pi $(pi --version) reviewing ${GITHUB_REF_NAME}"
-          pi -p -a "/review branch ${{ inputs.instructions }}" | tee pi-review-report.md
+          pi -p -a "/review branch ${REVIEW_INSTRUCTIONS}" | tee pi-review-report.md
           echo "[OUTPUT] review complete"
 
       - name: "[OUTPUT] Upload review report as artifact"

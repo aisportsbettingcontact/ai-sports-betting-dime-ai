@@ -27,7 +27,7 @@ function initials(name: string | null): string {
     .split(/\s+/)
     .filter(Boolean)
     .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
+    .map(part => part[0]?.toUpperCase())
     .join("");
 }
 
@@ -43,14 +43,20 @@ function PitcherHeadshot({
       ? { kind: "mlb" as const, url: mlbHeadshotUrl(pitcher.mlbamId) }
       : null,
     pitcher.rotowireId
-      ? { kind: "rotowire" as const, url: rotowireHeadshotUrl(pitcher.rotowireId) }
+      ? {
+          kind: "rotowire" as const,
+          url: rotowireHeadshotUrl(pitcher.rotowireId),
+        }
       : null,
   ].filter((source): source is NonNullable<typeof source> => source != null);
   const [sourceIndex, setSourceIndex] = useState(0);
   const currentSource = sources[sourceIndex];
 
   return (
-    <span className={`pregame-pitcher__photo ${className}`.trim()} aria-hidden="true">
+    <span
+      className={`pregame-pitcher__photo ${className}`.trim()}
+      aria-hidden="true"
+    >
       {currentSource ? (
         <img
           src={currentSource.url}
@@ -60,10 +66,12 @@ function PitcherHeadshot({
           height={80}
           loading="lazy"
           decoding="async"
-          onError={() => setSourceIndex((index) => index + 1)}
+          onError={() => setSourceIndex(index => index + 1)}
         />
       ) : (
-        <span className="pregame-pitcher__fallback">{initials(pitcher.name)}</span>
+        <span className="pregame-pitcher__fallback">
+          {initials(pitcher.name)}
+        </span>
       )}
     </span>
   );
@@ -89,14 +97,18 @@ function PitcherPreview({
   const status = pitcherStatus(pitcher);
   return (
     <div className={`pregame-pitcher pregame-pitcher--${side}`}>
-      <span className={`pregame-pitcher__status pregame-pitcher__status--${status.toLowerCase()}`}>
+      <span
+        className={`pregame-pitcher__status pregame-pitcher__status--${status.toLowerCase()}`}
+      >
         {status}
       </span>
       <PitcherHeadshot
         key={`${pitcher.mlbamId ?? "x"}-${pitcher.rotowireId ?? "x"}-${pitcher.name ?? "tbd"}`}
         pitcher={pitcher}
       />
-      <strong className="pregame-pitcher__name">{pitcher.name ?? "Pitcher TBD"}</strong>
+      <strong className="pregame-pitcher__name">
+        {pitcher.name ?? "Pitcher TBD"}
+      </strong>
       <span className="pregame-pitcher__stats">
         {pitcher.seasonStats ?? "W–L / ERA pending"}
       </span>
@@ -106,12 +118,14 @@ function PitcherPreview({
 
 function LineupRows({ players }: { players: ProjectionLineupPlayer[] }) {
   if (players.length === 0) {
-    return <p className="lineups-dialog__pending">Batting order not posted yet.</p>;
+    return (
+      <p className="lineups-dialog__pending">Batting order not posted yet.</p>
+    );
   }
 
   return (
     <ol className="lineups-dialog__order" aria-label="Batting order">
-      {players.map((player) => (
+      {players.map(player => (
         <li
           className="lineups-dialog__player"
           key={`${player.mlbamId ?? player.rotowireId ?? "player"}-${player.battingOrder}-${player.name}`}
@@ -139,14 +153,19 @@ function TeamLineupColumn({
 }) {
   const starterStatus = pitcherStatus(lineup.pitcher);
   return (
-    <section className="lineups-dialog__team" aria-labelledby={`lineup-team-${side}-${team.abbr}`}>
+    <section
+      className="lineups-dialog__team"
+      aria-labelledby={`lineup-team-${side}-${team.abbr}`}
+    >
       <header className="lineups-dialog__team-head">
         <TeamLogoMark team={team} />
         <div>
           <span className="lineups-dialog__side">{side}</span>
           <h3 id={`lineup-team-${side}-${team.abbr}`}>{team.name}</h3>
         </div>
-        <span className="lineups-dialog__lineup-status">{lineupStatus(lineup)}</span>
+        <span className="lineups-dialog__lineup-status">
+          {lineupStatus(lineup)}
+        </span>
       </header>
 
       <div className="lineups-dialog__starter">
@@ -156,7 +175,9 @@ function TeamLineupColumn({
           className="pregame-pitcher__photo--dialog"
         />
         <div className="lineups-dialog__starter-copy">
-          <span className="lineups-dialog__starter-label">{starterStatus} starting pitcher</span>
+          <span className="lineups-dialog__starter-label">
+            {starterStatus} starting pitcher
+          </span>
           <strong>{lineup.pitcher.name ?? "Pitcher TBD"}</strong>
           <span>
             {lineup.pitcher.seasonStats ?? "W–L / ERA pending"}
@@ -197,9 +218,14 @@ export function MlbPregamePanel({
             removed (owner directive 2026-07-31) and this is Radix's documented
             opt-out, so the dialog stays warning-free with the title alone as
             its accessible name. */}
-        <DialogContent className="projection-lineups-dialog" aria-describedby={undefined}>
+        <DialogContent
+          className="projection-lineups-dialog"
+          aria-describedby={undefined}
+        >
           <DialogHeader className="projection-lineups-dialog__header">
-            <DialogTitle>{away.name} at {home.name} lineups</DialogTitle>
+            <DialogTitle>
+              {away.name} at {home.name} lineups
+            </DialogTitle>
           </DialogHeader>
 
           <div className="lineups-dialog__teams">

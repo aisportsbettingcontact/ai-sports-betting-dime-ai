@@ -44,12 +44,21 @@ beforeAll(async () => {
   process.env.BILLING_ALERT_DISCORD_WEBHOOK_URL = `http://127.0.0.1:${PORT}/hook`;
 });
 
-afterAll(() => { server?.close(); });
+afterAll(() => {
+  server?.close();
+});
 
 const stuckMessage = () =>
   describeStuckBets([
-    { id: 4242, userId: 1, sport: "MLB", gameDate: "2026-08-01",
-      awayTeam: "NYY", homeTeam: "BOS", hoursPending: 61 },
+    {
+      id: 4242,
+      userId: 1,
+      sport: "MLB",
+      gameDate: "2026-08-01",
+      awayTeam: "NYY",
+      homeTeam: "BOS",
+      hoursPending: 61,
+    },
   ]);
 
 describe("a stuck bet is described in terms an operator can act on", () => {
@@ -61,10 +70,19 @@ describe("a stuck bet is described in terms an operator can act on", () => {
   });
 
   it("stays quiet below the threshold", () => {
-    expect(describeStuckBets([
-      { id: 1, userId: 1, sport: "MLB", gameDate: "2026-08-04",
-        awayTeam: "A", homeTeam: "B", hoursPending: 2 },
-    ])).toBeNull();
+    expect(
+      describeStuckBets([
+        {
+          id: 1,
+          userId: 1,
+          sport: "MLB",
+          gameDate: "2026-08-04",
+          awayTeam: "A",
+          homeTeam: "B",
+          hoursPending: 2,
+        },
+      ])
+    ).toBeNull();
   });
 });
 
@@ -83,7 +101,7 @@ describe("gradingAlert delivers over the webhook", () => {
     const e = r.body.embeds[0];
     expect(e.title).toContain("STUCK_BETS");
     expect(e.description).toContain("#4242");
-    expect(e.color).toBe(0xed4245);            // the red token, not an arbitrary hue
+    expect(e.color).toBe(0xed4245); // the red token, not an arbitrary hue
     expect(e.footer?.text).toContain("Dime AI");
     expect(e.timestamp).toBeTruthy();
   });
@@ -118,11 +136,18 @@ describe("gradingAlert delivers over the webhook", () => {
 
 describe("the other two alarm kinds", () => {
   it("grading errors fire, and silence means clean", () => {
-    expect(describeGradingErrors({
-      date: "2026-08-04", total: 10, graded: 7, errors: 3,
-      details: [{ betId: 1, result: "ERROR", reason: "feed timeout" }],
-    })).toContain("3 of 10");
-    expect(describeGradingErrors({ date: "d", total: 5, graded: 5, errors: 0 })).toBeNull();
+    expect(
+      describeGradingErrors({
+        date: "2026-08-04",
+        total: 10,
+        graded: 7,
+        errors: 3,
+        details: [{ betId: 1, result: "ERROR", reason: "feed timeout" }],
+      })
+    ).toContain("3 of 10");
+    expect(
+      describeGradingErrors({ date: "d", total: 5, graded: 5, errors: 0 })
+    ).toBeNull();
   });
 
   it("no-match fires at the drift threshold, not on a single postponement", () => {

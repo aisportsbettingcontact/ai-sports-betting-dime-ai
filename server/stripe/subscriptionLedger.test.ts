@@ -15,7 +15,9 @@ import {
   type SubscriptionSnapshot,
 } from "./subscriptionLedger";
 
-const now = (over: Partial<SubscriptionSnapshot> = {}): SubscriptionSnapshot => ({
+const now = (
+  over: Partial<SubscriptionSnapshot> = {}
+): SubscriptionSnapshot => ({
   priceId: "price_new",
   interval: "month",
   status: "active",
@@ -25,7 +27,10 @@ const now = (over: Partial<SubscriptionSnapshot> = {}): SubscriptionSnapshot => 
 
 describe("classifySubscriptionUpdate", () => {
   it("[CL-1] a Customer Portal plan switch classifies as plan_changed with both price ids", () => {
-    const prev: SubscriptionSnapshot = { priceId: "price_old", interval: "month" };
+    const prev: SubscriptionSnapshot = {
+      priceId: "price_old",
+      interval: "month",
+    };
     const d = classifySubscriptionUpdate(prev, now());
     expect(d.kind).toBe("plan_changed");
     expect(d.detail).toContain("price_old");
@@ -33,12 +38,25 @@ describe("classifySubscriptionUpdate", () => {
   });
 
   it("[CL-2] cancel_at_period_end false→true is cancel_scheduled; true→false is cancel_reverted", () => {
-    expect(classifySubscriptionUpdate({ cancelAtPeriodEnd: false }, now({ cancelAtPeriodEnd: true })).kind).toBe("cancel_scheduled");
-    expect(classifySubscriptionUpdate({ cancelAtPeriodEnd: true }, now({ cancelAtPeriodEnd: false })).kind).toBe("cancel_reverted");
+    expect(
+      classifySubscriptionUpdate(
+        { cancelAtPeriodEnd: false },
+        now({ cancelAtPeriodEnd: true })
+      ).kind
+    ).toBe("cancel_scheduled");
+    expect(
+      classifySubscriptionUpdate(
+        { cancelAtPeriodEnd: true },
+        now({ cancelAtPeriodEnd: false })
+      ).kind
+    ).toBe("cancel_reverted");
   });
 
   it("[CL-3] a bare status move (active→past_due) is status_changed", () => {
-    const d = classifySubscriptionUpdate({ status: "active" }, now({ status: "past_due" }));
+    const d = classifySubscriptionUpdate(
+      { status: "active" },
+      now({ status: "past_due" })
+    );
     expect(d.kind).toBe("status_changed");
     expect(d.detail).toContain("past_due");
   });
@@ -47,8 +65,15 @@ describe("classifySubscriptionUpdate", () => {
     // Stripe can report several changed fields in one event. The ledger names
     // the transition a human cares about most; the detail string keeps nothing
     // hidden because the row also stores status and cancelAtPeriodEnd.
-    const prev: SubscriptionSnapshot = { priceId: "price_old", status: "trialing", cancelAtPeriodEnd: false };
-    const d = classifySubscriptionUpdate(prev, now({ status: "active", cancelAtPeriodEnd: true }));
+    const prev: SubscriptionSnapshot = {
+      priceId: "price_old",
+      status: "trialing",
+      cancelAtPeriodEnd: false,
+    };
+    const d = classifySubscriptionUpdate(
+      prev,
+      now({ status: "active", cancelAtPeriodEnd: true })
+    );
     expect(d.kind).toBe("plan_changed");
   });
 
@@ -62,7 +87,10 @@ describe("classifySubscriptionUpdate", () => {
   it("[CL-6] undefined prev fields NEVER classify — absence of evidence is not a transition", () => {
     // prev.priceId undefined means Stripe did NOT report the price as changed;
     // comparing undefined !== 'price_new' must not fabricate a plan_changed.
-    const d = classifySubscriptionUpdate({ status: "active" }, now({ status: "active" }));
+    const d = classifySubscriptionUpdate(
+      { status: "active" },
+      now({ status: "active" })
+    );
     expect(d.kind).toBe("updated");
   });
 });
@@ -70,7 +98,9 @@ describe("classifySubscriptionUpdate", () => {
 describe("snapshotOfPreviousAttributes", () => {
   it("[SN-1] extracts the old price and interval from a sparse items partial", () => {
     const s = snapshotOfPreviousAttributes({
-      items: { data: [{ price: { id: "price_old", recurring: { interval: "year" } } }] },
+      items: {
+        data: [{ price: { id: "price_old", recurring: { interval: "year" } } }],
+      },
     });
     expect(s.priceId).toBe("price_old");
     expect(s.interval).toBe("year");

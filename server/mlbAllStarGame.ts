@@ -101,10 +101,15 @@ export interface AsgBook {
  */
 export function bookFromAnGame(g: AnGameOdds): AsgBook {
   const dkComplete =
-    g.dkAwaySpread != null && g.dkAwaySpreadOdds != null &&
-    g.dkHomeSpread != null && g.dkHomeSpreadOdds != null &&
-    g.dkTotal != null && g.dkOverOdds != null && g.dkUnderOdds != null &&
-    g.dkAwayML != null && g.dkHomeML != null;
+    g.dkAwaySpread != null &&
+    g.dkAwaySpreadOdds != null &&
+    g.dkHomeSpread != null &&
+    g.dkHomeSpreadOdds != null &&
+    g.dkTotal != null &&
+    g.dkOverOdds != null &&
+    g.dkUnderOdds != null &&
+    g.dkAwayML != null &&
+    g.dkHomeML != null;
 
   if (dkComplete) {
     return {
@@ -161,7 +166,8 @@ export interface AsgModel {
  */
 export function computeAsgModel(book: AsgBook): AsgModel {
   // Run line — pick the rung by the book's away (AL) spread direction.
-  const awaySpreadNum = book.awaySpread != null ? parseFloat(book.awaySpread) : 1.5;
+  const awaySpreadNum =
+    book.awaySpread != null ? parseFloat(book.awaySpread) : 1.5;
   const rlKey = awaySpreadNum < 0 ? "-1.5" : "+1.5";
   const rl = MODEL.runLine[rlKey];
   const awayModelSpread = rlKey;
@@ -169,7 +175,9 @@ export function computeAsgModel(book: AsgBook): AsgModel {
 
   // Total — pick the rung by the book's total line (nearest ladder key).
   const totalNum = book.total != null ? parseFloat(book.total) : 8;
-  const tKey = MODEL.total[String(totalNum)] ? String(totalNum) : nearestKey(totalNum, Object.keys(MODEL.total));
+  const tKey = MODEL.total[String(totalNum)]
+    ? String(totalNum)
+    : nearestKey(totalNum, Object.keys(MODEL.total));
   const tot = MODEL.total[tKey];
   const modelTotal = book.total ?? tKey;
 
@@ -197,7 +205,10 @@ export function computeAsgModel(book: AsgBook): AsgModel {
 /** Locate the ASG in an AN MLB slate (by AN event id, then by AL/NL slug pair). */
 export function findAsgInSlate(anGames: AnGameOdds[]): AnGameOdds | undefined {
   return (
-    anGames.find((g) => g.gameId === MLB_ASG.anGameId) ??
-    anGames.find((g) => g.awayUrlSlug === MLB_ASG.awaySlug && g.homeUrlSlug === MLB_ASG.homeSlug)
+    anGames.find(g => g.gameId === MLB_ASG.anGameId) ??
+    anGames.find(
+      g =>
+        g.awayUrlSlug === MLB_ASG.awaySlug && g.homeUrlSlug === MLB_ASG.homeSlug
+    )
   );
 }

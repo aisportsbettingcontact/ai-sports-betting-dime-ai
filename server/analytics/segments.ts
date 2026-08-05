@@ -69,10 +69,12 @@ export const SEGMENT_ORDER: SegmentKey[] = [
 export function classifySegment(f: UserFacts): SegmentKey {
   // Lapsed or empty first — a stale/no-value account is never a "power" anything.
   if (f.daysSinceLastActive > 14) return "lurker_at_risk";
-  if (f.valueEvents === 0 && f.actionEvents <= 1 && f.sessions > 0) return "lurker_at_risk";
+  if (f.valueEvents === 0 && f.actionEvents <= 1 && f.sessions > 0)
+    return "lurker_at_risk";
 
   // Power: broad + valuable + frequent.
-  if (f.distinctSurfaces >= 3 && f.valueEvents >= 8 && f.activeDays >= 6) return "whale";
+  if (f.distinctSurfaces >= 3 && f.valueEvents >= 8 && f.activeDays >= 6)
+    return "whale";
 
   // Splits consumer who never commits.
   if (f.splitsActions >= 6 && f.valueEvents === 0) return "splits_scanner";

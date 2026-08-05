@@ -29,7 +29,10 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = join(HERE, "..", "..");
 const AUDITS_DIR = join(REPO, "docs", "audits");
 const REPORT_PATH = join(AUDITS_DIR, "2026-07-28-mlb-merge-report.md");
-const UNMATCHED_PLAYERS_CSV = join(AUDITS_DIR, "2026-07-28-unmatched-legacy-players.csv");
+const UNMATCHED_PLAYERS_CSV = join(
+  AUDITS_DIR,
+  "2026-07-28-unmatched-legacy-players.csv"
+);
 
 const DRY_RUN = process.argv.includes("--dry-run");
 
@@ -49,9 +52,19 @@ function sortedPairKey(a: number, b: number): string {
 /** First-seen-wins accumulator for a mlbamId -> value crosswalk harvest, with conflict tracking. */
 class HarvestMap<V> {
   readonly first = new Map<number, { value: V; source: string }>();
-  readonly conflicts: { mlbamId: number; firstValue: V; firstSource: string; laterValue: V; laterSource: string }[] = [];
+  readonly conflicts: {
+    mlbamId: number;
+    firstValue: V;
+    firstSource: string;
+    laterValue: V;
+    laterSource: string;
+  }[] = [];
 
-  see(mlbamId: number | null | undefined, value: V | null | undefined, source: string): void {
+  see(
+    mlbamId: number | null | undefined,
+    value: V | null | undefined,
+    source: string
+  ): void {
     if (mlbamId === null || mlbamId === undefined) return;
     if (value === null || value === undefined || value === "") return;
     const existing = this.first.get(mlbamId);
@@ -75,12 +88,23 @@ interface ColumnMergeStats {
   label: string;
   updated: number;
   alreadyConsistent: number;
-  conflicts: { key: string; existing: unknown; attempted: unknown; source?: string }[];
+  conflicts: {
+    key: string;
+    existing: unknown;
+    attempted: unknown;
+    source?: string;
+  }[];
   unmatchedTargets: { mlbamIdOrKey: unknown; reason: string }[];
 }
 
 function newStats(label: string): ColumnMergeStats {
-  return { label, updated: 0, alreadyConsistent: 0, conflicts: [], unmatchedTargets: [] };
+  return {
+    label,
+    updated: 0,
+    alreadyConsistent: 0,
+    conflicts: [],
+    unmatchedTargets: [],
+  };
 }
 
 async function main(): Promise<void> {
@@ -110,32 +134,42 @@ async function main(): Promise<void> {
   const reportLines: string[] = [];
   reportLines.push(`# MLB Canonical Database — Task 5 Crosswalk Merge Report`);
   reportLines.push("");
-  reportLines.push(`**Generated:** ${new Date().toISOString()} (${DRY_RUN ? "DRY-RUN" : "REAL RUN"})`);
+  reportLines.push(
+    `**Generated:** ${new Date().toISOString()} (${DRY_RUN ? "DRY-RUN" : "REAL RUN"})`
+  );
   reportLines.push("");
   reportLines.push(
     `Ground truth: \`.superpowers/sdd/task-5-brief.md\`, ` +
-      `\`docs/audits/2026-07-28-mlb-column-disposition.md\`, \`docs/audits/2026-07-28-mlb-reconciliation.md\`.`,
+      `\`docs/audits/2026-07-28-mlb-column-disposition.md\`, \`docs/audits/2026-07-28-mlb-reconciliation.md\`.`
   );
   reportLines.push("");
 
   try {
     // ─── 1. mlb_teams → mlb_franchises ─────────────────────────────────────────────────────
     const teamsResult = await mergeTeamsToFranchises(pool);
-    appendCrosswalkSection(reportLines, "1. `mlb_teams` → `mlb_franchises`", teamsResult);
+    appendCrosswalkSection(
+      reportLines,
+      "1. `mlb_teams` → `mlb_franchises`",
+      teamsResult
+    );
 
     // ─── 2. mlb_players → mlb_people.br_id ─────────────────────────────────────────────────
     const playersResult = await mergePlayersToPeople(pool);
-    appendCrosswalkSection(reportLines, "2. `mlb_players` → `mlb_people.br_id`", playersResult.stats);
+    appendCrosswalkSection(
+      reportLines,
+      "2. `mlb_players` → `mlb_people.br_id`",
+      playersResult.stats
+    );
     reportLines.push(
       `Null-\`mlbamId\` legacy rows: **${playersResult.nullMlbamIdRows.length}**. ` +
-        `\`mlbamId\`-present-but-no-matching-\`mlb_people\`-row: **${playersResult.noPeopleMatchRows.length}**.`,
+        `\`mlbamId\`-present-but-no-matching-\`mlb_people\`-row: **${playersResult.noPeopleMatchRows.length}**.`
     );
     reportLines.push("");
     if (playersResult.unmatchedForCsv.length > 0) {
       writeUnmatchedPlayersCsv(playersResult.unmatchedForCsv);
       reportLines.push(
         `Unmatched legacy players (${playersResult.unmatchedForCsv.length}) written to ` +
-          `\`docs/audits/2026-07-28-unmatched-legacy-players.csv\`.`,
+          `\`docs/audits/2026-07-28-unmatched-legacy-players.csv\`.`
       );
     } else {
       reportLines.push(`No unmatched legacy players — CSV not written.`);
@@ -144,44 +178,76 @@ async function main(): Promise<void> {
 
     // ─── 3. harvest crosswalks (rotowire_id / an_player_id / retrosheet_id) ───────────────
     const harvestResult = await mergeHarvestCrosswalks(pool);
-    reportLines.push(`## 3. Harvest crosswalks → \`mlb_people\` (rotowire_id / an_player_id / retrosheet_id)`);
+    reportLines.push(
+      `## 3. Harvest crosswalks → \`mlb_people\` (rotowire_id / an_player_id / retrosheet_id)`
+    );
     reportLines.push("");
     reportLines.push(
       `First-seen-wins scan order: \`mlb_lineups\` (id ASC; per row: away pitcher, home pitcher, ` +
         `away lineup batters in array order, home lineup batters in array order) → \`mlb_hr_props\` ` +
-        `(id ASC, an_player_id) → \`mlb_strikeout_props\` (id ASC, an_player_id then retrosheet_id).`,
+        `(id ASC, an_player_id) → \`mlb_strikeout_props\` (id ASC, an_player_id then retrosheet_id).`
     );
     reportLines.push("");
-    appendCrosswalkSection(reportLines, "3a. `rotowire_id`", harvestResult.rotowire.stats);
-    reportLines.push(`Harvest-source conflicts (same mlbamId, different rotowireId seen later): **${harvestResult.rotowire.harvestConflicts.length}**.`);
+    appendCrosswalkSection(
+      reportLines,
+      "3a. `rotowire_id`",
+      harvestResult.rotowire.stats
+    );
+    reportLines.push(
+      `Harvest-source conflicts (same mlbamId, different rotowireId seen later): **${harvestResult.rotowire.harvestConflicts.length}**.`
+    );
     if (harvestResult.rotowire.harvestConflicts.length > 0) {
       reportLines.push("");
-      reportLines.push(`| mlbamId | first value | first source | later value | later source |`);
+      reportLines.push(
+        `| mlbamId | first value | first source | later value | later source |`
+      );
       reportLines.push(`|---|---|---|---|---|`);
       for (const c of harvestResult.rotowire.harvestConflicts) {
-        reportLines.push(`| ${c.mlbamId} | ${c.firstValue} | ${c.firstSource} | ${c.laterValue} | ${c.laterSource} |`);
+        reportLines.push(
+          `| ${c.mlbamId} | ${c.firstValue} | ${c.firstSource} | ${c.laterValue} | ${c.laterSource} |`
+        );
       }
     }
     reportLines.push("");
-    appendCrosswalkSection(reportLines, "3b. `an_player_id`", harvestResult.anPlayer.stats);
-    reportLines.push(`Harvest-source conflicts: **${harvestResult.anPlayer.harvestConflicts.length}**.`);
+    appendCrosswalkSection(
+      reportLines,
+      "3b. `an_player_id`",
+      harvestResult.anPlayer.stats
+    );
+    reportLines.push(
+      `Harvest-source conflicts: **${harvestResult.anPlayer.harvestConflicts.length}**.`
+    );
     if (harvestResult.anPlayer.harvestConflicts.length > 0) {
       reportLines.push("");
-      reportLines.push(`| mlbamId | first value | first source | later value | later source |`);
+      reportLines.push(
+        `| mlbamId | first value | first source | later value | later source |`
+      );
       reportLines.push(`|---|---|---|---|---|`);
       for (const c of harvestResult.anPlayer.harvestConflicts) {
-        reportLines.push(`| ${c.mlbamId} | ${c.firstValue} | ${c.firstSource} | ${c.laterValue} | ${c.laterSource} |`);
+        reportLines.push(
+          `| ${c.mlbamId} | ${c.firstValue} | ${c.firstSource} | ${c.laterValue} | ${c.laterSource} |`
+        );
       }
     }
     reportLines.push("");
-    appendCrosswalkSection(reportLines, "3c. `retrosheet_id`", harvestResult.retrosheet.stats);
-    reportLines.push(`Harvest-source conflicts: **${harvestResult.retrosheet.harvestConflicts.length}**.`);
+    appendCrosswalkSection(
+      reportLines,
+      "3c. `retrosheet_id`",
+      harvestResult.retrosheet.stats
+    );
+    reportLines.push(
+      `Harvest-source conflicts: **${harvestResult.retrosheet.harvestConflicts.length}**.`
+    );
     if (harvestResult.retrosheet.harvestConflicts.length > 0) {
       reportLines.push("");
-      reportLines.push(`| mlbamId | first value | first source | later value | later source |`);
+      reportLines.push(
+        `| mlbamId | first value | first source | later value | later source |`
+      );
       reportLines.push(`|---|---|---|---|---|`);
       for (const c of harvestResult.retrosheet.harvestConflicts) {
-        reportLines.push(`| ${c.mlbamId} | ${c.firstValue} | ${c.firstSource} | ${c.laterValue} | ${c.laterSource} |`);
+        reportLines.push(
+          `| ${c.mlbamId} | ${c.firstValue} | ${c.firstSource} | ${c.laterValue} | ${c.laterSource} |`
+        );
       }
     }
     reportLines.push("");
@@ -193,23 +259,43 @@ async function main(): Promise<void> {
     reportLines.push(`| Metric | Count |`);
     reportLines.push(`|---|---:|`);
     reportLines.push(`| Total rows | ${scheduleResult.totalRows} |`);
-    reportLines.push(`| Spring training (out of scope) | ${scheduleResult.springTraining} |`);
+    reportLines.push(
+      `| Spring training (out of scope) | ${scheduleResult.springTraining} |`
+    );
     reportLines.push(`| Cancelled | ${scheduleResult.cancelled} |`);
-    reportLines.push(`| No AN-slug crosswalk | ${scheduleResult.noSlugCrosswalk} |`);
+    reportLines.push(
+      `| No AN-slug crosswalk | ${scheduleResult.noSlugCrosswalk} |`
+    );
     reportLines.push(`| Eligible | ${scheduleResult.eligible} |`);
-    reportLines.push(`| Matched — direct orientation | ${scheduleResult.directMatches} |`);
-    reportLines.push(`| Matched — swap orientation | ${scheduleResult.swapMatches} |`);
-    reportLines.push(`| Total matched | ${scheduleResult.directMatches + scheduleResult.swapMatches} |`);
-    reportLines.push(`| Already had non-null gamePk (skipped, idempotency) | ${scheduleResult.alreadySet} |`);
-    reportLines.push(`| **Newly updated this run** | **${scheduleResult.updated}** |`);
-    reportLines.push(`| Conflicts (existing gamePk differs from computed match) | ${scheduleResult.conflicts.length} |`);
-    reportLines.push(`| Truly unmatched | ${scheduleResult.unmatched.length} |`);
+    reportLines.push(
+      `| Matched — direct orientation | ${scheduleResult.directMatches} |`
+    );
+    reportLines.push(
+      `| Matched — swap orientation | ${scheduleResult.swapMatches} |`
+    );
+    reportLines.push(
+      `| Total matched | ${scheduleResult.directMatches + scheduleResult.swapMatches} |`
+    );
+    reportLines.push(
+      `| Already had non-null gamePk (skipped, idempotency) | ${scheduleResult.alreadySet} |`
+    );
+    reportLines.push(
+      `| **Newly updated this run** | **${scheduleResult.updated}** |`
+    );
+    reportLines.push(
+      `| Conflicts (existing gamePk differs from computed match) | ${scheduleResult.conflicts.length} |`
+    );
+    reportLines.push(
+      `| Truly unmatched | ${scheduleResult.unmatched.length} |`
+    );
     reportLines.push("");
     reportLines.push(`### Orientation stats by season`);
     reportLines.push("");
     reportLines.push(`| Season | Direct | Swap |`);
     reportLines.push(`|---|---:|---:|`);
-    for (const season of Object.keys(scheduleResult.orientationBySeason).sort()) {
+    for (const season of Object.keys(
+      scheduleResult.orientationBySeason
+    ).sort()) {
       const s = scheduleResult.orientationBySeason[season];
       reportLines.push(`| ${season} | ${s.direct} | ${s.swap} |`);
     }
@@ -217,21 +303,27 @@ async function main(): Promise<void> {
     if (scheduleResult.conflicts.length > 0) {
       reportLines.push(`### Conflicts (${scheduleResult.conflicts.length})`);
       reportLines.push("");
-      reportLines.push(`| id | anGameId | gameDate | existing gamePk | computed gamePk |`);
+      reportLines.push(
+        `| id | anGameId | gameDate | existing gamePk | computed gamePk |`
+      );
       reportLines.push(`|---|---|---|---|---|`);
       for (const c of scheduleResult.conflicts) {
-        reportLines.push(`| ${c.id} | ${c.anGameId} | ${c.gameDate} | ${c.existing} | ${c.computed} |`);
+        reportLines.push(
+          `| ${c.id} | ${c.anGameId} | ${c.gameDate} | ${c.existing} | ${c.computed} |`
+        );
       }
       reportLines.push("");
     }
     reportLines.push(`### Unmatched (${scheduleResult.unmatched.length})`);
     reportLines.push("");
     if (scheduleResult.unmatched.length > 0) {
-      reportLines.push(`| id | anGameId | gameDate | awaySlug | homeSlug | gameStatus | reason |`);
+      reportLines.push(
+        `| id | anGameId | gameDate | awaySlug | homeSlug | gameStatus | reason |`
+      );
       reportLines.push(`|---|---|---|---|---|---|---|`);
       for (const u of scheduleResult.unmatched) {
         reportLines.push(
-          `| ${u.id} | ${u.anGameId} | ${u.gameDate} | ${u.awaySlug} | ${u.homeSlug} | ${u.gameStatus} | ${u.reason} |`,
+          `| ${u.id} | ${u.anGameId} | ${u.gameDate} | ${u.awaySlug} | ${u.homeSlug} | ${u.gameStatus} | ${u.reason} |`
         );
       }
     } else {
@@ -244,19 +336,29 @@ async function main(): Promise<void> {
     writeFileSync(REPORT_PATH, reportLines.join("\n") + "\n");
     console.log(`${TAG} report written: ${REPORT_PATH}`);
 
-    console.log(`${TAG} complete (${DRY_RUN ? "dry-run — no writes performed" : "real run"}).`);
+    console.log(
+      `${TAG} complete (${DRY_RUN ? "dry-run — no writes performed" : "real run"}).`
+    );
   } finally {
     await pool.end();
   }
 }
 
-function appendCrosswalkSection(lines: string[], title: string, stats: ColumnMergeStats[]): void {
+function appendCrosswalkSection(
+  lines: string[],
+  title: string,
+  stats: ColumnMergeStats[]
+): void {
   lines.push(`## ${title}`);
   lines.push("");
-  lines.push(`| Column | Updated | Already consistent | Conflicts | Unmatched targets |`);
+  lines.push(
+    `| Column | Updated | Already consistent | Conflicts | Unmatched targets |`
+  );
   lines.push(`|---|---:|---:|---:|---:|`);
   for (const s of stats) {
-    lines.push(`| ${s.label} | ${s.updated} | ${s.alreadyConsistent} | ${s.conflicts.length} | ${s.unmatchedTargets.length} |`);
+    lines.push(
+      `| ${s.label} | ${s.updated} | ${s.alreadyConsistent} | ${s.conflicts.length} | ${s.unmatchedTargets.length} |`
+    );
   }
   lines.push("");
   for (const s of stats) {
@@ -266,12 +368,16 @@ function appendCrosswalkSection(lines: string[], title: string, stats: ColumnMer
       lines.push(`| key | existing | attempted | source |`);
       lines.push(`|---|---|---|---|`);
       for (const c of s.conflicts) {
-        lines.push(`| ${c.key} | ${c.existing} | ${c.attempted} | ${c.source ?? ""} |`);
+        lines.push(
+          `| ${c.key} | ${c.existing} | ${c.attempted} | ${c.source ?? ""} |`
+        );
       }
       lines.push("");
     }
     if (s.unmatchedTargets.length > 0) {
-      lines.push(`**${s.label} unmatched targets (${s.unmatchedTargets.length}):**`);
+      lines.push(
+        `**${s.label} unmatched targets (${s.unmatchedTargets.length}):**`
+      );
       lines.push("");
       lines.push(`| key | reason |`);
       lines.push(`|---|---|`);
@@ -309,7 +415,11 @@ interface FranchiseRow {
   name: string | null;
 }
 
-const TEAM_CROSSWALK_COLS: { legacy: keyof LegacyTeamRow; canonical: keyof FranchiseRow; label: string }[] = [
+const TEAM_CROSSWALK_COLS: {
+  legacy: keyof LegacyTeamRow;
+  canonical: keyof FranchiseRow;
+  label: string;
+}[] = [
   { legacy: "dbSlug", canonical: "db_slug", label: "db_slug" },
   { legacy: "mlbCode", canonical: "mlb_code", label: "mlb_code" },
   { legacy: "abbrev", canonical: "abbrev", label: "abbrev" },
@@ -320,18 +430,22 @@ const TEAM_CROSSWALK_COLS: { legacy: keyof LegacyTeamRow; canonical: keyof Franc
   { legacy: "name", canonical: "name", label: "name" },
 ];
 
-async function mergeTeamsToFranchises(pool: mysql.Pool): Promise<ColumnMergeStats[]> {
+async function mergeTeamsToFranchises(
+  pool: mysql.Pool
+): Promise<ColumnMergeStats[]> {
   const [teamRows] = await pool.query<mysql.RowDataPacket[]>(
-    `SELECT mlbId, dbSlug, mlbCode, abbrev, vsinSlug, anSlug, anLogoSlug, brAbbrev, name FROM mlb_teams`,
+    `SELECT mlbId, dbSlug, mlbCode, abbrev, vsinSlug, anSlug, anLogoSlug, brAbbrev, name FROM mlb_teams`
   );
   const [franchiseRows] = await pool.query<mysql.RowDataPacket[]>(
-    `SELECT team_id, db_slug, mlb_code, abbrev, vsin_slug, an_slug, an_logo_slug, br_abbrev, name FROM mlb_franchises`,
+    `SELECT team_id, db_slug, mlb_code, abbrev, vsin_slug, an_slug, an_logo_slug, br_abbrev, name FROM mlb_franchises`
   );
   const franchisesById = new Map<number, FranchiseRow>();
-  for (const r of franchiseRows as unknown as FranchiseRow[]) franchisesById.set(r.team_id, r);
+  for (const r of franchiseRows as unknown as FranchiseRow[])
+    franchisesById.set(r.team_id, r);
 
   const statsByCol = new Map<string, ColumnMergeStats>();
-  for (const c of TEAM_CROSSWALK_COLS) statsByCol.set(c.label, newStats(c.label));
+  for (const c of TEAM_CROSSWALK_COLS)
+    statsByCol.set(c.label, newStats(c.label));
   const nullMlbIdStats = newStats("mlbId null (finding)");
   const noFranchiseStats = newStats("mlbId not found in mlb_franchises");
 
@@ -339,7 +453,10 @@ async function mergeTeamsToFranchises(pool: mysql.Pool): Promise<ColumnMergeStat
 
   for (const t of teamRows as unknown as LegacyTeamRow[]) {
     if (t.mlbId === null || t.mlbId === undefined) {
-      nullMlbIdStats.unmatchedTargets.push({ mlbamIdOrKey: JSON.stringify(t), reason: "mlb_teams.mlbId is NULL" });
+      nullMlbIdStats.unmatchedTargets.push({
+        mlbamIdOrKey: JSON.stringify(t),
+        reason: "mlb_teams.mlbId is NULL",
+      });
       continue;
     }
     const franchise = franchisesById.get(t.mlbId);
@@ -356,7 +473,8 @@ async function mergeTeamsToFranchises(pool: mysql.Pool): Promise<ColumnMergeStat
       const legacyVal = t[c.legacy];
       const canonicalVal = franchise[c.canonical];
       const stats = statsByCol.get(c.label)!;
-      if (legacyVal === null || legacyVal === undefined || legacyVal === "") continue;
+      if (legacyVal === null || legacyVal === undefined || legacyVal === "")
+        continue;
       if (canonicalVal === null || canonicalVal === undefined) {
         stats.updated++;
         sets.push(`${c.canonical} = ?`);
@@ -364,7 +482,11 @@ async function mergeTeamsToFranchises(pool: mysql.Pool): Promise<ColumnMergeStat
       } else if (canonicalVal === legacyVal) {
         stats.alreadyConsistent++;
       } else {
-        stats.conflicts.push({ key: `team_id=${t.mlbId}`, existing: canonicalVal, attempted: legacyVal });
+        stats.conflicts.push({
+          key: `team_id=${t.mlbId}`,
+          existing: canonicalVal,
+          attempted: legacyVal,
+        });
       }
     }
     if (sets.length > 0) updates.push({ teamId: t.mlbId, sets, values });
@@ -372,12 +494,15 @@ async function mergeTeamsToFranchises(pool: mysql.Pool): Promise<ColumnMergeStat
 
   if (!DRY_RUN) {
     for (const u of updates) {
-      await pool.query(`UPDATE mlb_franchises SET ${u.sets.join(", ")} WHERE team_id = ?`, [...u.values, u.teamId]);
+      await pool.query(
+        `UPDATE mlb_franchises SET ${u.sets.join(", ")} WHERE team_id = ?`,
+        [...u.values, u.teamId]
+      );
     }
   }
 
   console.log(
-    `${TAG} [1/4] mlb_teams->mlb_franchises: ${updates.length} rows would update ${updates.reduce((n, u) => n + u.sets.length, 0)} cells`,
+    `${TAG} [1/4] mlb_teams->mlb_franchises: ${updates.length} rows would update ${updates.reduce((n, u) => n + u.sets.length, 0)} cells`
   );
 
   return [...statsByCol.values(), nullMlbIdStats, noFranchiseStats];
@@ -398,10 +523,17 @@ async function mergePlayersToPeople(pool: mysql.Pool): Promise<{
   noPeopleMatchRows: LegacyPlayerRow[];
   unmatchedForCsv: (LegacyPlayerRow & { reason: string })[];
 }> {
-  const [playerRows] = await pool.query<mysql.RowDataPacket[]>(`SELECT id, brId, mlbamId, name FROM mlb_players`);
-  const [peopleRows] = await pool.query<mysql.RowDataPacket[]>(`SELECT mlbam_id, br_id FROM mlb_people`);
+  const [playerRows] = await pool.query<mysql.RowDataPacket[]>(
+    `SELECT id, brId, mlbamId, name FROM mlb_players`
+  );
+  const [peopleRows] = await pool.query<mysql.RowDataPacket[]>(
+    `SELECT mlbam_id, br_id FROM mlb_people`
+  );
   const peopleById = new Map<number, { br_id: string | null }>();
-  for (const r of peopleRows as unknown as { mlbam_id: number; br_id: string | null }[]) {
+  for (const r of peopleRows as unknown as {
+    mlbam_id: number;
+    br_id: string | null;
+  }[]) {
     peopleById.set(r.mlbam_id, { br_id: r.br_id });
   }
 
@@ -431,24 +563,42 @@ async function mergePlayersToPeople(pool: mysql.Pool): Promise<{
     } else if (person.br_id === p.brId) {
       stats.alreadyConsistent++;
     } else {
-      stats.conflicts.push({ key: `mlbamId=${p.mlbamId}`, existing: person.br_id, attempted: p.brId });
+      stats.conflicts.push({
+        key: `mlbamId=${p.mlbamId}`,
+        existing: person.br_id,
+        attempted: p.brId,
+      });
     }
   }
 
   if (!DRY_RUN) {
     for (const u of updates) {
-      await pool.query(`UPDATE mlb_people SET br_id = ? WHERE mlbam_id = ? AND br_id IS NULL`, [u.brId, u.mlbamId]);
+      await pool.query(
+        `UPDATE mlb_people SET br_id = ? WHERE mlbam_id = ? AND br_id IS NULL`,
+        [u.brId, u.mlbamId]
+      );
     }
   }
 
-  console.log(`${TAG} [2/4] mlb_players->mlb_people.br_id: ${updates.length} rows would update`);
+  console.log(
+    `${TAG} [2/4] mlb_players->mlb_people.br_id: ${updates.length} rows would update`
+  );
 
-  return { stats: [stats], nullMlbamIdRows, noPeopleMatchRows, unmatchedForCsv };
+  return {
+    stats: [stats],
+    nullMlbamIdRows,
+    noPeopleMatchRows,
+    unmatchedForCsv,
+  };
 }
 
-function writeUnmatchedPlayersCsv(rows: (LegacyPlayerRow & { reason: string })[]): void {
+function writeUnmatchedPlayersCsv(
+  rows: (LegacyPlayerRow & { reason: string })[]
+): void {
   const header = "id,brId,mlbamId,name,reason";
-  const lines = rows.map((r) => [r.id, r.brId, r.mlbamId ?? "", r.name, r.reason].map(csvEscape).join(","));
+  const lines = rows.map(r =>
+    [r.id, r.brId, r.mlbamId ?? "", r.name, r.reason].map(csvEscape).join(",")
+  );
   mkdirSync(AUDITS_DIR, { recursive: true });
   writeFileSync(UNMATCHED_PLAYERS_CSV, [header, ...lines].join("\n") + "\n");
 }
@@ -475,9 +625,18 @@ function parseLineupJson(text: string | null): LineupPlayerJson[] {
 }
 
 async function mergeHarvestCrosswalks(pool: mysql.Pool): Promise<{
-  rotowire: { stats: ColumnMergeStats[]; harvestConflicts: HarvestMap<number>["conflicts"] };
-  anPlayer: { stats: ColumnMergeStats[]; harvestConflicts: HarvestMap<number>["conflicts"] };
-  retrosheet: { stats: ColumnMergeStats[]; harvestConflicts: HarvestMap<string>["conflicts"] };
+  rotowire: {
+    stats: ColumnMergeStats[];
+    harvestConflicts: HarvestMap<number>["conflicts"];
+  };
+  anPlayer: {
+    stats: ColumnMergeStats[];
+    harvestConflicts: HarvestMap<number>["conflicts"];
+  };
+  retrosheet: {
+    stats: ColumnMergeStats[];
+    harvestConflicts: HarvestMap<string>["conflicts"];
+  };
 }> {
   const rotowireHarvest = new HarvestMap<number>();
   const anPlayerHarvest = new HarvestMap<number>();
@@ -487,7 +646,7 @@ async function mergeHarvestCrosswalks(pool: mysql.Pool): Promise<{
   const [lineupRows] = await pool.query<mysql.RowDataPacket[]>(
     `SELECT id, awayPitcherMlbamId, awayPitcherRotowireId, homePitcherMlbamId, homePitcherRotowireId,
             awayLineup, homeLineup
-     FROM mlb_lineups ORDER BY id ASC`,
+     FROM mlb_lineups ORDER BY id ASC`
   );
   for (const r of lineupRows as unknown as {
     id: number;
@@ -498,25 +657,49 @@ async function mergeHarvestCrosswalks(pool: mysql.Pool): Promise<{
     awayLineup: string | null;
     homeLineup: string | null;
   }[]) {
-    rotowireHarvest.see(r.awayPitcherMlbamId, r.awayPitcherRotowireId, `mlb_lineups#${r.id}.awayPitcher`);
-    rotowireHarvest.see(r.homePitcherMlbamId, r.homePitcherRotowireId, `mlb_lineups#${r.id}.homePitcher`);
+    rotowireHarvest.see(
+      r.awayPitcherMlbamId,
+      r.awayPitcherRotowireId,
+      `mlb_lineups#${r.id}.awayPitcher`
+    );
+    rotowireHarvest.see(
+      r.homePitcherMlbamId,
+      r.homePitcherRotowireId,
+      `mlb_lineups#${r.id}.homePitcher`
+    );
     const awayBatters = parseLineupJson(r.awayLineup);
-    awayBatters.forEach((b, i) => rotowireHarvest.see(b.mlbamId, b.rotowireId, `mlb_lineups#${r.id}.awayLineup[${i}]`));
+    awayBatters.forEach((b, i) =>
+      rotowireHarvest.see(
+        b.mlbamId,
+        b.rotowireId,
+        `mlb_lineups#${r.id}.awayLineup[${i}]`
+      )
+    );
     const homeBatters = parseLineupJson(r.homeLineup);
-    homeBatters.forEach((b, i) => rotowireHarvest.see(b.mlbamId, b.rotowireId, `mlb_lineups#${r.id}.homeLineup[${i}]`));
+    homeBatters.forEach((b, i) =>
+      rotowireHarvest.see(
+        b.mlbamId,
+        b.rotowireId,
+        `mlb_lineups#${r.id}.homeLineup[${i}]`
+      )
+    );
   }
 
   // mlb_hr_props: (mlbamId, anPlayerId)
   const [hrRows] = await pool.query<mysql.RowDataPacket[]>(
-    `SELECT id, mlbamId, anPlayerId FROM mlb_hr_props ORDER BY id ASC`,
+    `SELECT id, mlbamId, anPlayerId FROM mlb_hr_props ORDER BY id ASC`
   );
-  for (const r of hrRows as unknown as { id: number; mlbamId: number | null; anPlayerId: number | null }[]) {
+  for (const r of hrRows as unknown as {
+    id: number;
+    mlbamId: number | null;
+    anPlayerId: number | null;
+  }[]) {
     anPlayerHarvest.see(r.mlbamId, r.anPlayerId, `mlb_hr_props#${r.id}`);
   }
 
   // mlb_strikeout_props: (mlbamId, anPlayerId) and (mlbamId, retrosheetId)
   const [koRows] = await pool.query<mysql.RowDataPacket[]>(
-    `SELECT id, mlbamId, anPlayerId, retrosheetId FROM mlb_strikeout_props ORDER BY id ASC`,
+    `SELECT id, mlbamId, anPlayerId, retrosheetId FROM mlb_strikeout_props ORDER BY id ASC`
   );
   for (const r of koRows as unknown as {
     id: number;
@@ -525,15 +708,23 @@ async function mergeHarvestCrosswalks(pool: mysql.Pool): Promise<{
     retrosheetId: string | null;
   }[]) {
     anPlayerHarvest.see(r.mlbamId, r.anPlayerId, `mlb_strikeout_props#${r.id}`);
-    retrosheetHarvest.see(r.mlbamId, r.retrosheetId, `mlb_strikeout_props#${r.id}`);
+    retrosheetHarvest.see(
+      r.mlbamId,
+      r.retrosheetId,
+      `mlb_strikeout_props#${r.id}`
+    );
   }
 
   const [peopleRows] = await pool.query<mysql.RowDataPacket[]>(
-    `SELECT mlbam_id, rotowire_id, an_player_id, retrosheet_id FROM mlb_people`,
+    `SELECT mlbam_id, rotowire_id, an_player_id, retrosheet_id FROM mlb_people`
   );
   const peopleById = new Map<
     number,
-    { rotowire_id: number | null; an_player_id: number | null; retrosheet_id: string | null }
+    {
+      rotowire_id: number | null;
+      an_player_id: number | null;
+      retrosheet_id: string | null;
+    }
   >();
   for (const r of peopleRows as unknown as {
     mlbam_id: number;
@@ -541,20 +732,27 @@ async function mergeHarvestCrosswalks(pool: mysql.Pool): Promise<{
     an_player_id: number | null;
     retrosheet_id: string | null;
   }[]) {
-    peopleById.set(r.mlbam_id, { rotowire_id: r.rotowire_id, an_player_id: r.an_player_id, retrosheet_id: r.retrosheet_id });
+    peopleById.set(r.mlbam_id, {
+      rotowire_id: r.rotowire_id,
+      an_player_id: r.an_player_id,
+      retrosheet_id: r.retrosheet_id,
+    });
   }
 
   async function applyHarvest<V>(
     harvest: HarvestMap<V>,
     column: "rotowire_id" | "an_player_id" | "retrosheet_id",
-    label: string,
+    label: string
   ): Promise<ColumnMergeStats> {
     const stats = newStats(label);
     const updates: { mlbamId: number; value: V }[] = [];
     for (const [mlbamId, entry] of harvest.first) {
       const person = peopleById.get(mlbamId);
       if (!person) {
-        stats.unmatchedTargets.push({ mlbamIdOrKey: mlbamId, reason: "mlbamId not in mlb_people" });
+        stats.unmatchedTargets.push({
+          mlbamIdOrKey: mlbamId,
+          reason: "mlbamId not in mlb_people",
+        });
         continue;
       }
       const existing = person[column];
@@ -574,24 +772,47 @@ async function mergeHarvestCrosswalks(pool: mysql.Pool): Promise<{
     }
     if (!DRY_RUN) {
       for (const u of updates) {
-        await pool.query(`UPDATE mlb_people SET ${column} = ? WHERE mlbam_id = ? AND ${column} IS NULL`, [
-          u.value,
-          u.mlbamId,
-        ]);
+        await pool.query(
+          `UPDATE mlb_people SET ${column} = ? WHERE mlbam_id = ? AND ${column} IS NULL`,
+          [u.value, u.mlbamId]
+        );
       }
     }
-    console.log(`${TAG} [3/4] harvest ${column}: ${updates.length} rows would update`);
+    console.log(
+      `${TAG} [3/4] harvest ${column}: ${updates.length} rows would update`
+    );
     return stats;
   }
 
-  const rotowireStats = await applyHarvest(rotowireHarvest, "rotowire_id", "rotowire_id");
-  const anPlayerStats = await applyHarvest(anPlayerHarvest, "an_player_id", "an_player_id");
-  const retrosheetStats = await applyHarvest(retrosheetHarvest, "retrosheet_id", "retrosheet_id");
+  const rotowireStats = await applyHarvest(
+    rotowireHarvest,
+    "rotowire_id",
+    "rotowire_id"
+  );
+  const anPlayerStats = await applyHarvest(
+    anPlayerHarvest,
+    "an_player_id",
+    "an_player_id"
+  );
+  const retrosheetStats = await applyHarvest(
+    retrosheetHarvest,
+    "retrosheet_id",
+    "retrosheet_id"
+  );
 
   return {
-    rotowire: { stats: [rotowireStats], harvestConflicts: rotowireHarvest.conflicts },
-    anPlayer: { stats: [anPlayerStats], harvestConflicts: anPlayerHarvest.conflicts },
-    retrosheet: { stats: [retrosheetStats], harvestConflicts: retrosheetHarvest.conflicts },
+    rotowire: {
+      stats: [rotowireStats],
+      harvestConflicts: rotowireHarvest.conflicts,
+    },
+    anPlayer: {
+      stats: [anPlayerStats],
+      harvestConflicts: anPlayerHarvest.conflicts,
+    },
+    retrosheet: {
+      stats: [retrosheetStats],
+      harvestConflicts: retrosheetHarvest.conflicts,
+    },
   };
 }
 
@@ -628,24 +849,41 @@ async function mergeScheduleHistoryGamePk(pool: mysql.Pool): Promise<{
   swapMatches: number;
   alreadySet: number;
   updated: number;
-  conflicts: { id: number; anGameId: number; gameDate: string; existing: number; computed: number }[];
-  unmatched: { id: number; anGameId: number; gameDate: string; awaySlug: string; homeSlug: string; gameStatus: string; reason: string }[];
+  conflicts: {
+    id: number;
+    anGameId: number;
+    gameDate: string;
+    existing: number;
+    computed: number;
+  }[];
+  unmatched: {
+    id: number;
+    anGameId: number;
+    gameDate: string;
+    awaySlug: string;
+    homeSlug: string;
+    gameStatus: string;
+    reason: string;
+  }[];
   orientationBySeason: Record<string, { direct: number; swap: number }>;
 }> {
   // AN-slug -> statsapi mlbId crosswalk (verified clean 30/30 in reconciliation)
-  const [teamRows] = await pool.query<mysql.RowDataPacket[]>(`SELECT anSlug, mlbId FROM mlb_teams`);
+  const [teamRows] = await pool.query<mysql.RowDataPacket[]>(
+    `SELECT anSlug, mlbId FROM mlb_teams`
+  );
   const slugToMlbId = new Map<string, number>();
-  for (const r of teamRows as unknown as { anSlug: string; mlbId: number }[]) slugToMlbId.set(r.anSlug, r.mlbId);
+  for (const r of teamRows as unknown as { anSlug: string; mlbId: number }[])
+    slugToMlbId.set(r.anSlug, r.mlbId);
 
   const [schRowsRaw] = await pool.query<mysql.RowDataPacket[]>(
     `SELECT id, anGameId, gameDate, startTimeUtc, gameStatus, game_type, gamePk, awaySlug, homeSlug
-     FROM mlb_schedule_history`,
+     FROM mlb_schedule_history`
   );
   const schRows = schRowsRaw as unknown as ScheduleRow[];
 
   const [gameRowsRaw] = await pool.query<mysql.RowDataPacket[]>(
     `SELECT game_pk, official_date, game_datetime_utc, game_number, away_team_id, home_team_id
-     FROM mlb_games WHERE game_type != 'S'`,
+     FROM mlb_games WHERE game_type != 'S'`
   );
   const gameRows = gameRowsRaw as unknown as GameRow[];
 
@@ -664,7 +902,10 @@ async function mergeScheduleHistoryGamePk(pool: mysql.Pool): Promise<{
   let springTraining = 0;
   let cancelled = 0;
   let noSlugCrosswalk = 0;
-  const eligibleRows: (ScheduleRow & { awayMlbId: number; homeMlbId: number })[] = [];
+  const eligibleRows: (ScheduleRow & {
+    awayMlbId: number;
+    homeMlbId: number;
+  })[] = [];
 
   for (const s of schRows) {
     if (s.game_type === "spring_training") {
@@ -685,21 +926,32 @@ async function mergeScheduleHistoryGamePk(pool: mysql.Pool): Promise<{
   }
 
   // Group eligible schedule rows by (gameDate, sorted team pair), sorted by startTimeUtc asc (tie: id asc)
-  const schByKey = new Map<string, (ScheduleRow & { awayMlbId: number; homeMlbId: number })[]>();
+  const schByKey = new Map<
+    string,
+    (ScheduleRow & { awayMlbId: number; homeMlbId: number })[]
+  >();
   for (const s of eligibleRows) {
     const key = `${s.gameDate}|${sortedPairKey(s.awayMlbId, s.homeMlbId)}`;
     if (!schByKey.has(key)) schByKey.set(key, []);
     schByKey.get(key)!.push(s);
   }
   for (const list of schByKey.values()) {
-    list.sort((a, b) => a.startTimeUtc.localeCompare(b.startTimeUtc) || a.id - b.id);
+    list.sort(
+      (a, b) => a.startTimeUtc.localeCompare(b.startTimeUtc) || a.id - b.id
+    );
   }
 
   let directMatches = 0;
   let swapMatches = 0;
   let alreadySet = 0;
   let updated = 0;
-  const conflicts: { id: number; anGameId: number; gameDate: string; existing: number; computed: number }[] = [];
+  const conflicts: {
+    id: number;
+    anGameId: number;
+    gameDate: string;
+    existing: number;
+    computed: number;
+  }[] = [];
   const unmatched: {
     id: number;
     anGameId: number;
@@ -709,7 +961,8 @@ async function mergeScheduleHistoryGamePk(pool: mysql.Pool): Promise<{
     gameStatus: string;
     reason: string;
   }[] = [];
-  const orientationBySeason: Record<string, { direct: number; swap: number }> = {};
+  const orientationBySeason: Record<string, { direct: number; swap: number }> =
+    {};
   const updates: { id: number; gamePk: number }[] = [];
 
   for (const [key, schGroup] of schByKey) {
@@ -724,7 +977,8 @@ async function mergeScheduleHistoryGamePk(pool: mysql.Pool): Promise<{
           awaySlug: s.awaySlug,
           homeSlug: s.homeSlug,
           gameStatus: s.gameStatus,
-          reason: "no corresponding mlb_games row (postponed/never re-tracked or genuinely missing)",
+          reason:
+            "no corresponding mlb_games row (postponed/never re-tracked or genuinely missing)",
         });
         continue;
       }
@@ -733,7 +987,8 @@ async function mergeScheduleHistoryGamePk(pool: mysql.Pool): Promise<{
       if (orientation === "direct") directMatches++;
       else swapMatches++;
       const season = s.gameDate.slice(0, 4);
-      if (!orientationBySeason[season]) orientationBySeason[season] = { direct: 0, swap: 0 };
+      if (!orientationBySeason[season])
+        orientationBySeason[season] = { direct: 0, swap: 0 };
       orientationBySeason[season][orientation]++;
 
       if (s.gamePk === null || s.gamePk === undefined) {
@@ -742,21 +997,29 @@ async function mergeScheduleHistoryGamePk(pool: mysql.Pool): Promise<{
       } else if (s.gamePk === g.game_pk) {
         alreadySet++;
       } else {
-        conflicts.push({ id: s.id, anGameId: s.anGameId, gameDate: s.gameDate, existing: s.gamePk, computed: g.game_pk });
+        conflicts.push({
+          id: s.id,
+          anGameId: s.anGameId,
+          gameDate: s.gameDate,
+          existing: s.gamePk,
+          computed: g.game_pk,
+        });
       }
     }
   }
 
   if (!DRY_RUN) {
     for (const u of updates) {
-      await pool.query(`UPDATE mlb_schedule_history SET gamePk = ? WHERE id = ? AND gamePk IS NULL`, [
-        u.gamePk,
-        u.id,
-      ]);
+      await pool.query(
+        `UPDATE mlb_schedule_history SET gamePk = ? WHERE id = ? AND gamePk IS NULL`,
+        [u.gamePk, u.id]
+      );
     }
   }
 
-  console.log(`${TAG} [4/4] mlb_schedule_history.gamePk: ${updates.length} rows would update`);
+  console.log(
+    `${TAG} [4/4] mlb_schedule_history.gamePk: ${updates.length} rows would update`
+  );
 
   return {
     totalRows,
@@ -774,7 +1037,7 @@ async function mergeScheduleHistoryGamePk(pool: mysql.Pool): Promise<{
   };
 }
 
-main().catch((err) => {
+main().catch(err => {
   console.error(`${TAG} FATAL:`, err?.message ?? err);
   process.exit(1);
 });

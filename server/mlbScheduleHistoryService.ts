@@ -262,7 +262,9 @@ export async function fetchMlbScheduleForDate(
   );
 
   if (games.length === 0) {
-    console.log(`${TAG}[FETCH] No games for date=${dateStr} — off-day or pre/post-season`);
+    console.log(
+      `${TAG}[FETCH] No games for date=${dateStr} — off-day or pre/post-season`
+    );
     return [];
   }
 
@@ -284,13 +286,13 @@ export async function fetchMlbScheduleForDate(
 
     if (game.away_team_id && game.home_team_id) {
       // Authoritative path: match by team id
-      awayTeam = teams.find((t) => t.id === game.away_team_id);
-      homeTeam = teams.find((t) => t.id === game.home_team_id);
+      awayTeam = teams.find(t => t.id === game.away_team_id);
+      homeTeam = teams.find(t => t.id === game.home_team_id);
       if (!awayTeam || !homeTeam) {
         // Fallback: ids didn't match any team entry — use positional as last resort
         console.warn(
           `${TAG}[WARN] Game id=${game.id} — away_team_id=${game.away_team_id} home_team_id=${game.home_team_id}` +
-          ` did not match any teams[] entry (ids: ${teams.map(t=>t.id).join(',')}) — falling back to teams[0]/[1]`
+            ` did not match any teams[] entry (ids: ${teams.map(t => t.id).join(",")}) — falling back to teams[0]/[1]`
         );
         awayTeam = teams[0];
         homeTeam = teams[1];
@@ -299,8 +301,8 @@ export async function fetchMlbScheduleForDate(
         if (teams[0]?.id !== game.away_team_id) {
           console.log(
             `${TAG}[FIX] Game id=${game.id} — teams[] order mismatch corrected:` +
-            ` teams[0]=${teams[0]?.abbr}(id=${teams[0]?.id}) but away_team_id=${game.away_team_id}` +
-            ` → AWAY=${awayTeam.abbr} HOME=${homeTeam.abbr}`
+              ` teams[0]=${teams[0]?.abbr}(id=${teams[0]?.id}) but away_team_id=${game.away_team_id}` +
+              ` → AWAY=${awayTeam.abbr} HOME=${homeTeam.abbr}`
           );
         }
       }
@@ -334,10 +336,10 @@ export async function fetchMlbScheduleForDate(
     // Book 68 (DK NJ) disappears retroactively for completed games after ~2 days.
     // We walk the fallback chain and use the first book that has ml_away populated.
     const oddsList = game.odds ?? [];
-    let dk: typeof oddsList[0] | null = null;
+    let dk: (typeof oddsList)[0] | null = null;
     let usedBookId: number | null = null;
     for (const bookId of BOOK_FALLBACK_CHAIN) {
-      const candidate = oddsList.find((o) => o.book_id === bookId);
+      const candidate = oddsList.find(o => o.book_id === bookId);
       if (candidate && candidate.ml_away != null) {
         dk = candidate;
         usedBookId = bookId;
@@ -347,7 +349,7 @@ export async function fetchMlbScheduleForDate(
     if (usedBookId !== null && usedBookId !== DK_NJ_BOOK_ID) {
       console.log(
         `${TAG}[ODDS_FALLBACK] ${awayAbbr}@${homeAbbr} — DK NJ (68) absent, using book_id=${usedBookId} as fallback` +
-        ` | ml_away=${dk?.ml_away} ml_home=${dk?.ml_home} spread=${dk?.spread_away} total=${dk?.total}`
+          ` | ml_away=${dk?.ml_away} ml_home=${dk?.ml_home} spread=${dk?.spread_away} total=${dk?.total}`
       );
     }
 
@@ -367,14 +369,15 @@ export async function fetchMlbScheduleForDate(
     const underOdds = dk?.under ?? null;
 
     const hasDk = dk != null;
-    const hasFullOdds = spreadAway != null && mlAway != null && totalLine != null;
+    const hasFullOdds =
+      spreadAway != null && mlAway != null && totalLine != null;
 
     if (!hasDk) {
       skippedNoDk++;
-      const availableBooks = oddsList.map((o) => o.book_id).join(",") || "none";
+      const availableBooks = oddsList.map(o => o.book_id).join(",") || "none";
       console.log(
         `${TAG}[ODDS] ${gameLabel} — No usable odds in fallback chain [${BOOK_FALLBACK_CHAIN.join(",")}]` +
-        ` (status=${game.status}) | available books: ${availableBooks} — storing without odds`
+          ` (status=${game.status}) | available books: ${availableBooks} — storing without odds`
       );
     } else if (!hasFullOdds) {
       console.log(
@@ -386,17 +389,21 @@ export async function fetchMlbScheduleForDate(
 
     // ── Extract final scores ──────────────────────────────────────────────────
     const bs = game.boxscore;
-    const awayScore = bs?.total_away_points != null ? Number(bs.total_away_points) : null;
-    const homeScore = bs?.total_home_points != null ? Number(bs.total_home_points) : null;
+    const awayScore =
+      bs?.total_away_points != null ? Number(bs.total_away_points) : null;
+    const homeScore =
+      bs?.total_home_points != null ? Number(bs.total_home_points) : null;
     const isComplete = game.status === "complete";
 
     // ── Derive result columns (only for complete games with scores) ───────────
-    const awayRunLineCovered =
-      isComplete ? deriveAwayRunLineCovered(awayScore, homeScore, spreadAway) : null;
+    const awayRunLineCovered = isComplete
+      ? deriveAwayRunLineCovered(awayScore, homeScore, spreadAway)
+      : null;
     const homeRunLineCovered =
       isComplete && awayRunLineCovered != null ? !awayRunLineCovered : null;
-    const totalResult =
-      isComplete ? deriveTotalResult(awayScore, homeScore, totalLine) : null;
+    const totalResult = isComplete
+      ? deriveTotalResult(awayScore, homeScore, totalLine)
+      : null;
     const awayWon =
       isComplete && awayScore != null && homeScore != null
         ? awayScore > homeScore
@@ -408,16 +415,16 @@ export async function fetchMlbScheduleForDate(
     // ── Log this game ─────────────────────────────────────────────────────────
     console.log(
       `${TAG}[GAME] ${gameLabel}` +
-      ` | date=${gameDateEst} status=${game.status}` +
-      ` | score=${awayScore ?? "?"}–${homeScore ?? "?"}` +
-      ` | RL=${fmtLine(spreadAway) ?? "—"}(${fmtOdds(spreadAwayLine) ?? "—"})` +
-      ` ML=${fmtOdds(mlAway) ?? "—"}/${fmtOdds(mlHome) ?? "—"}` +
-      ` TOT=${totalLine ?? "—"}(O:${fmtOdds(overOdds) ?? "—"} U:${fmtOdds(underOdds) ?? "—"})` +
-      (isComplete
-        ? ` | result: ${awayWon ? awayAbbr + " W" : homeAbbr + " W"}` +
-          ` ATS=${awayRunLineCovered != null ? (awayRunLineCovered ? awayAbbr + " COV" : homeAbbr + " COV") : "—"}` +
-          ` O/U=${totalResult ?? "—"}`
-        : "")
+        ` | date=${gameDateEst} status=${game.status}` +
+        ` | score=${awayScore ?? "?"}–${homeScore ?? "?"}` +
+        ` | RL=${fmtLine(spreadAway) ?? "—"}(${fmtOdds(spreadAwayLine) ?? "—"})` +
+        ` ML=${fmtOdds(mlAway) ?? "—"}/${fmtOdds(mlHome) ?? "—"}` +
+        ` TOT=${totalLine ?? "—"}(O:${fmtOdds(overOdds) ?? "—"} U:${fmtOdds(underOdds) ?? "—"})` +
+        (isComplete
+          ? ` | result: ${awayWon ? awayAbbr + " W" : homeAbbr + " W"}` +
+            ` ATS=${awayRunLineCovered != null ? (awayRunLineCovered ? awayAbbr + " COV" : homeAbbr + " COV") : "—"}` +
+            ` O/U=${totalResult ?? "—"}`
+          : "")
     );
 
     results.push({
@@ -457,8 +464,8 @@ export async function fetchMlbScheduleForDate(
 
   console.log(
     `${TAG}[FETCH] date=${dateStr} processed ${games.length} games:` +
-    ` ${results.length} valid | ${gamesWithFullOdds} with full odds` +
-    ` | ${skippedNoDk} without DK odds | ${skippedNoTeam} skipped (no team data)`
+      ` ${results.length} valid | ${gamesWithFullOdds} with full odds` +
+      ` | ${skippedNoDk} without DK odds | ${skippedNoTeam} skipped (no team data)`
   );
 
   return results;
@@ -481,7 +488,9 @@ export async function upsertMlbScheduleHistory(
     return 0;
   }
 
-  console.log(`${TAG}[UPSERT] Upserting ${records.length} records into mlb_schedule_history`);
+  console.log(
+    `${TAG}[UPSERT] Upserting ${records.length} records into mlb_schedule_history`
+  );
 
   const db = await getDb();
 
@@ -496,23 +505,23 @@ export async function upsertMlbScheduleHistory(
       .values(batch)
       .onDuplicateKeyUpdate({
         set: {
-          gameStatus: sql`VALUES(${sql.raw('gameStatus')})`,
-          awayScore: sql`VALUES(${sql.raw('awayScore')})`,
-          homeScore: sql`VALUES(${sql.raw('homeScore')})`,
-          awayWon: sql`VALUES(${sql.raw('awayWon')})`,
-          dkAwayRunLine: sql`VALUES(${sql.raw('dkAwayRunLine')})`,
-          dkHomeRunLine: sql`VALUES(${sql.raw('dkHomeRunLine')})`,
-          dkAwayRunLineOdds: sql`VALUES(${sql.raw('dkAwayRunLineOdds')})`,
-          dkHomeRunLineOdds: sql`VALUES(${sql.raw('dkHomeRunLineOdds')})`,
-          awayRunLineCovered: sql`VALUES(${sql.raw('awayRunLineCovered')})`,
-          homeRunLineCovered: sql`VALUES(${sql.raw('homeRunLineCovered')})`,
-          dkAwayML: sql`VALUES(${sql.raw('dkAwayML')})`,
-          dkHomeML: sql`VALUES(${sql.raw('dkHomeML')})`,
-          dkTotal: sql`VALUES(${sql.raw('dkTotal')})`,
-          dkOverOdds: sql`VALUES(${sql.raw('dkOverOdds')})`,
-          dkUnderOdds: sql`VALUES(${sql.raw('dkUnderOdds')})`,
-          totalResult: sql`VALUES(${sql.raw('totalResult')})`,
-          lastRefreshedAt: sql`VALUES(${sql.raw('lastRefreshedAt')})`,
+          gameStatus: sql`VALUES(${sql.raw("gameStatus")})`,
+          awayScore: sql`VALUES(${sql.raw("awayScore")})`,
+          homeScore: sql`VALUES(${sql.raw("homeScore")})`,
+          awayWon: sql`VALUES(${sql.raw("awayWon")})`,
+          dkAwayRunLine: sql`VALUES(${sql.raw("dkAwayRunLine")})`,
+          dkHomeRunLine: sql`VALUES(${sql.raw("dkHomeRunLine")})`,
+          dkAwayRunLineOdds: sql`VALUES(${sql.raw("dkAwayRunLineOdds")})`,
+          dkHomeRunLineOdds: sql`VALUES(${sql.raw("dkHomeRunLineOdds")})`,
+          awayRunLineCovered: sql`VALUES(${sql.raw("awayRunLineCovered")})`,
+          homeRunLineCovered: sql`VALUES(${sql.raw("homeRunLineCovered")})`,
+          dkAwayML: sql`VALUES(${sql.raw("dkAwayML")})`,
+          dkHomeML: sql`VALUES(${sql.raw("dkHomeML")})`,
+          dkTotal: sql`VALUES(${sql.raw("dkTotal")})`,
+          dkOverOdds: sql`VALUES(${sql.raw("dkOverOdds")})`,
+          dkUnderOdds: sql`VALUES(${sql.raw("dkUnderOdds")})`,
+          totalResult: sql`VALUES(${sql.raw("totalResult")})`,
+          lastRefreshedAt: sql`VALUES(${sql.raw("lastRefreshedAt")})`,
         },
       });
     totalUpserted += batch.length;
@@ -582,9 +591,7 @@ export async function refreshMlbScheduleLastNDays(
   days = 7,
   delayMs = 400
 ): Promise<MlbScheduleRefreshResult[]> {
-  console.log(
-    `${TAG}[ROLLING] Starting rolling refresh for last ${days} days`
-  );
+  console.log(`${TAG}[ROLLING] Starting rolling refresh for last ${days} days`);
 
   const results: MlbScheduleRefreshResult[] = [];
   const today = new Date();
@@ -598,7 +605,7 @@ export async function refreshMlbScheduleLastNDays(
     results.push(result);
 
     if (i < days - 1) {
-      await new Promise((r) => setTimeout(r, delayMs));
+      await new Promise(r => setTimeout(r, delayMs));
     }
   }
 
@@ -608,7 +615,7 @@ export async function refreshMlbScheduleLastNDays(
 
   console.log(
     `${TAG}[ROLLING] Complete — ${days} days processed` +
-    ` | totalFetched=${totalFetched} totalUpserted=${totalUpserted} errors=${totalErrors}`
+      ` | totalFetched=${totalFetched} totalUpserted=${totalUpserted} errors=${totalErrors}`
   );
 
   return results;
@@ -655,9 +662,7 @@ export async function backfillMlbScheduleHistory(
   console.log(
     `${TAG}[BACKFILL] ═══════════════════════════════════════════════════════`
   );
-  console.log(
-    `${TAG}[BACKFILL] Starting full historical backfill`
-  );
+  console.log(`${TAG}[BACKFILL] Starting full historical backfill`);
   console.log(
     `${TAG}[BACKFILL] Date range: ${startDate} → ${endDate ?? "today"}`
   );
@@ -670,11 +675,9 @@ export async function backfillMlbScheduleHistory(
     cursor.setDate(cursor.getDate() + 1);
   }
 
+  console.log(`${TAG}[BACKFILL] Total dates to process: ${allDates.length}`);
   console.log(
-    `${TAG}[BACKFILL] Total dates to process: ${allDates.length}`
-  );
-  console.log(
-    `${TAG}[BACKFILL] Estimated time at ${delayMs}ms delay: ~${Math.ceil(allDates.length * delayMs / 60000)} minutes`
+    `${TAG}[BACKFILL] Estimated time at ${delayMs}ms delay: ~${Math.ceil((allDates.length * delayMs) / 60000)} minutes`
   );
   console.log(
     `${TAG}[BACKFILL] ═══════════════════════════════════════════════════════`
@@ -719,14 +722,14 @@ export async function backfillMlbScheduleHistory(
     if ((i + 1) % 50 === 0 || i === allDates.length - 1) {
       console.log(
         `${TAG}[BACKFILL] ── Milestone [${i + 1}/${allDates.length}] ──` +
-        ` totalFetched=${totalFetched} totalUpserted=${totalUpserted}` +
-        ` datesWithGames=${datesWithGames} errors=${totalErrors}`
+          ` totalFetched=${totalFetched} totalUpserted=${totalUpserted}` +
+          ` datesWithGames=${datesWithGames} errors=${totalErrors}`
       );
     }
 
     // Delay between requests to avoid rate limiting
     if (i < allDates.length - 1) {
-      await new Promise((r) => setTimeout(r, delayMs));
+      await new Promise(r => setTimeout(r, delayMs));
     }
   }
 
@@ -768,13 +771,10 @@ export async function backfillMlbScheduleHistory(
  * @param teamSlug - AN url_slug, e.g. "arizona-diamondbacks"
  * @param limit    - Number of games to return (default: 5 for Last 5 panel)
  */
-export async function getLastNGamesForTeam(
-  teamSlug: string,
-  limit = 5
-) {
+export async function getLastNGamesForTeam(teamSlug: string, limit = 5) {
   console.log(
     `${TAG}[getLastNGamesForTeam] [INPUT] teamSlug="${teamSlug}" limit=${limit}` +
-    ` | seasonFilter=gte(${SEASON_2026_START})`
+      ` | seasonFilter=gte(${SEASON_2026_START})`
   );
 
   const db = await getDb();
@@ -802,19 +802,19 @@ export async function getLastNGamesForTeam(
 
   console.log(
     `${TAG}[getLastNGamesForTeam] [OUTPUT] team="${teamSlug}"` +
-    ` → ${teamGames.length} 2026 completed games returned (limit=${limit})`
+      ` → ${teamGames.length} 2026 completed games returned (limit=${limit})`
   );
 
   if (teamGames.length > 0) {
     console.log(
       `${TAG}[getLastNGamesForTeam] [STATE]` +
-      ` mostRecent=${teamGames[0].gameDate}` +
-      ` oldest=${teamGames[teamGames.length - 1].gameDate}`
+        ` mostRecent=${teamGames[0].gameDate}` +
+        ` oldest=${teamGames[teamGames.length - 1].gameDate}`
     );
   } else {
     console.log(
       `${TAG}[getLastNGamesForTeam] [VERIFY] WARN — 0 2026 completed games for team="${teamSlug}"` +
-      ` | seasonStart=${SEASON_2026_START} — DB may not yet have 2026 data for this team`
+        ` | seasonStart=${SEASON_2026_START} — DB may not yet have 2026 data for this team`
     );
   }
 
@@ -830,7 +830,7 @@ export async function getLastNGamesForTeam(
 export async function getFullScheduleForTeam(teamSlug: string) {
   console.log(
     `${TAG}[getFullScheduleForTeam] [INPUT] teamSlug="${teamSlug}"` +
-    ` | seasonFilter=gte(${SEASON_2026_START})`
+      ` | seasonFilter=gte(${SEASON_2026_START})`
   );
 
   const db = await getDb();
@@ -854,25 +854,27 @@ export async function getFullScheduleForTeam(teamSlug: string) {
 
   const teamGames = rows as MlbScheduleHistoryRow[];
 
-  const completed  = teamGames.filter((r) => r.gameStatus === "complete").length;
-  const scheduled  = teamGames.filter((r) => r.gameStatus === "scheduled").length;
-  const inprogress = teamGames.filter((r) => r.gameStatus === "inprogress").length;
+  const completed = teamGames.filter(r => r.gameStatus === "complete").length;
+  const scheduled = teamGames.filter(r => r.gameStatus === "scheduled").length;
+  const inprogress = teamGames.filter(
+    r => r.gameStatus === "inprogress"
+  ).length;
 
   console.log(
     `${TAG}[getFullScheduleForTeam] [OUTPUT] team="${teamSlug}"` +
-    ` → ${teamGames.length} 2026 games` +
-    ` | complete=${completed} scheduled=${scheduled} inprogress=${inprogress}`
+      ` → ${teamGames.length} 2026 games` +
+      ` | complete=${completed} scheduled=${scheduled} inprogress=${inprogress}`
   );
 
   if (teamGames.length > 0) {
     console.log(
       `${TAG}[getFullScheduleForTeam] [STATE]` +
-      ` dateRange: ${teamGames[teamGames.length - 1].gameDate} → ${teamGames[0].gameDate}`
+        ` dateRange: ${teamGames[teamGames.length - 1].gameDate} → ${teamGames[0].gameDate}`
     );
   } else {
     console.log(
       `${TAG}[getFullScheduleForTeam] [VERIFY] WARN — 0 2026 games for team="${teamSlug}"` +
-      ` | seasonStart=${SEASON_2026_START} — check that 2026 backfill has run`
+        ` | seasonStart=${SEASON_2026_START} — check that 2026 backfill has run`
     );
   }
 
@@ -898,7 +900,7 @@ export async function getLast5ForMatchup(awaySlug: string, homeSlug: string) {
 
   console.log(
     `${TAG}[QUERY] Last 5 results — away="${awaySlug}": ${awayLast5.length} games` +
-    ` | home="${homeSlug}": ${homeLast5.length} games`
+      ` | home="${homeSlug}": ${homeLast5.length} games`
   );
 
   return { awayLast5, homeLast5 };
@@ -921,7 +923,7 @@ export async function getMlbH2HGames(
 ): Promise<MlbScheduleHistoryRow[]> {
   console.log(
     `${TAG}[getMlbH2HGames] [INPUT] slugA="${slugA}" slugB="${slugB}"` +
-    ` limit=${limit} | lookbackFloor=${H2H_LOOKBACK_START}`
+      ` limit=${limit} | lookbackFloor=${H2H_LOOKBACK_START}`
   );
 
   const db = await getDb();
@@ -956,7 +958,7 @@ export async function getMlbH2HGames(
 
   console.log(
     `${TAG}[getMlbH2HGames] [OUTPUT] "${slugA}" vs "${slugB}"` +
-    ` → ${h2h.length} H2H games returned (limit=${limit})`
+      ` → ${h2h.length} H2H games returned (limit=${limit})`
   );
 
   if (h2h.length > 0) {
@@ -964,15 +966,15 @@ export async function getMlbH2HGames(
     const oldest = h2h[h2h.length - 1];
     console.log(
       `${TAG}[getMlbH2HGames] [STATE]` +
-      ` mostRecent=${latest.gameDate}` +
-      ` (${latest.awayAbbr}@${latest.homeAbbr} ${latest.awayScore ?? "?"}\u2013${latest.homeScore ?? "?"})` +
-      ` | oldest=${oldest.gameDate}` +
-      ` | gamesFound=${h2h.length}/${limit} requested`
+        ` mostRecent=${latest.gameDate}` +
+        ` (${latest.awayAbbr}@${latest.homeAbbr} ${latest.awayScore ?? "?"}\u2013${latest.homeScore ?? "?"})` +
+        ` | oldest=${oldest.gameDate}` +
+        ` | gamesFound=${h2h.length}/${limit} requested`
     );
   } else {
     console.log(
       `${TAG}[getMlbH2HGames] [VERIFY] WARN — 0 H2H games found between "${slugA}" and "${slugB}"` +
-      ` since ${H2H_LOOKBACK_START} — teams may not have played each other in DB date range`
+        ` since ${H2H_LOOKBACK_START} — teams may not have played each other in DB date range`
     );
   }
 
@@ -994,7 +996,7 @@ export async function getMlbH2HGames(
 export async function getMlbSituationalStats(teamSlug: string, limit = 162) {
   console.log(
     `${TAG}[getMlbSituationalStats] [INPUT] team="${teamSlug}" limit=${limit}` +
-    ` | seasonFilter=gte(${SEASON_2026_START})`
+      ` | seasonFilter=gte(${SEASON_2026_START})`
   );
 
   const db = await getDb();
@@ -1022,13 +1024,13 @@ export async function getMlbSituationalStats(teamSlug: string, limit = 162) {
 
   console.log(
     `${TAG}[getMlbSituationalStats] [STATE] team="${teamSlug}"` +
-    ` → ${teamGames.length} 2026 completed games fetched from DB`
+      ` → ${teamGames.length} 2026 completed games fetched from DB`
   );
 
   if (teamGames.length === 0) {
     console.log(
       `${TAG}[getMlbSituationalStats] [VERIFY] WARN — 0 2026 completed games for team="${teamSlug}"` +
-      ` | seasonStart=${SEASON_2026_START} — all situational records will be 0-0`
+        ` | seasonStart=${SEASON_2026_START} — all situational records will be 0-0`
     );
   }
 
@@ -1061,7 +1063,8 @@ export async function getMlbSituationalStats(teamSlug: string, limit = 162) {
     games: MlbScheduleHistoryRow[],
     wonFn: (g: MlbScheduleHistoryRow) => boolean | null
   ) => {
-    let wins = 0, losses = 0;
+    let wins = 0,
+      losses = 0;
     for (const g of games) {
       const won = wonFn(g);
       if (won === true) wins++;
@@ -1071,7 +1074,8 @@ export async function getMlbSituationalStats(teamSlug: string, limit = 162) {
   };
 
   const computeAtsRecord = (games: MlbScheduleHistoryRow[]) => {
-    let wins = 0, losses = 0;
+    let wins = 0,
+      losses = 0;
     for (const g of games) {
       const cov = teamCovered(g);
       if (cov === true) wins++;
@@ -1081,7 +1085,9 @@ export async function getMlbSituationalStats(teamSlug: string, limit = 162) {
   };
 
   const computeOuRecord = (games: MlbScheduleHistoryRow[]) => {
-    let wins = 0, losses = 0, pushes = 0;
+    let wins = 0,
+      losses = 0,
+      pushes = 0;
     for (const g of games) {
       if (g.totalResult === "OVER") wins++;
       else if (g.totalResult === "UNDER") losses++;
@@ -1092,17 +1098,17 @@ export async function getMlbSituationalStats(teamSlug: string, limit = 162) {
 
   const last10 = teamGames.slice(0, 10);
   const homeGames = teamGames.filter(wasHome);
-  const awayGames = teamGames.filter((g) => !wasHome(g));
+  const awayGames = teamGames.filter(g => !wasHome(g));
   // Exclude null-ML games from both fav and dog pools (no odds = unclassifiable)
-  const favGames = teamGames.filter((g) => wasFavoriteOrNull(g) === true);
-  const dogGames = teamGames.filter((g) => wasFavoriteOrNull(g) === false);
-  const noOddsGames = teamGames.filter((g) => wasFavoriteOrNull(g) === null);
+  const favGames = teamGames.filter(g => wasFavoriteOrNull(g) === true);
+  const dogGames = teamGames.filter(g => wasFavoriteOrNull(g) === false);
+  const noOddsGames = teamGames.filter(g => wasFavoriteOrNull(g) === null);
 
   if (noOddsGames.length > 0) {
     console.log(
       `${TAG}[getMlbSituationalStats] [VERIFY] WARN — ${noOddsGames.length} games have no ML odds` +
-      ` for team="${teamSlug}" — excluded from fav/dog classification` +
-      ` | games: ${noOddsGames.map(g => `${g.awayAbbr}@${g.homeAbbr}(${g.gameDate})`).join(", ")}`
+        ` for team="${teamSlug}" — excluded from fav/dog classification` +
+        ` | games: ${noOddsGames.map(g => `${g.awayAbbr}@${g.homeAbbr}(${g.gameDate})`).join(", ")}`
     );
   }
 
@@ -1137,34 +1143,34 @@ export async function getMlbSituationalStats(teamSlug: string, limit = 162) {
   // ── Comprehensive output log ───────────────────────────────────────────────────────────────────────
   console.log(
     `${TAG}[getMlbSituationalStats] [OUTPUT] team="${teamSlug}" 2026 season` +
-    ` | analyzed=${teamGames.length} games` +
-    ` | home=${homeGames.length} away=${awayGames.length}` +
-    ` | fav=${favGames.length} dog=${dogGames.length} last10=${last10.length}`
+      ` | analyzed=${teamGames.length} games` +
+      ` | home=${homeGames.length} away=${awayGames.length}` +
+      ` | fav=${favGames.length} dog=${dogGames.length} last10=${last10.length}`
   );
   console.log(
     `${TAG}[getMlbSituationalStats] [OUTPUT] ML:` +
-    ` overall=${stats.ml.overall.wins}-${stats.ml.overall.losses}` +
-    ` last10=${stats.ml.last10.wins}-${stats.ml.last10.losses}` +
-    ` home=${stats.ml.home.wins}-${stats.ml.home.losses}` +
-    ` away=${stats.ml.away.wins}-${stats.ml.away.losses}` +
-    ` fav=${stats.ml.favorite.wins}-${stats.ml.favorite.losses}` +
-    ` dog=${stats.ml.underdog.wins}-${stats.ml.underdog.losses}`
+      ` overall=${stats.ml.overall.wins}-${stats.ml.overall.losses}` +
+      ` last10=${stats.ml.last10.wins}-${stats.ml.last10.losses}` +
+      ` home=${stats.ml.home.wins}-${stats.ml.home.losses}` +
+      ` away=${stats.ml.away.wins}-${stats.ml.away.losses}` +
+      ` fav=${stats.ml.favorite.wins}-${stats.ml.favorite.losses}` +
+      ` dog=${stats.ml.underdog.wins}-${stats.ml.underdog.losses}`
   );
   console.log(
     `${TAG}[getMlbSituationalStats] [OUTPUT] ATS:` +
-    ` overall=${stats.spread.overall.wins}-${stats.spread.overall.losses}` +
-    ` last10=${stats.spread.last10.wins}-${stats.spread.last10.losses}` +
-    ` home=${stats.spread.home.wins}-${stats.spread.home.losses}` +
-    ` away=${stats.spread.away.wins}-${stats.spread.away.losses}` +
-    ` fav=${stats.spread.favorite.wins}-${stats.spread.favorite.losses}` +
-    ` dog=${stats.spread.underdog.wins}-${stats.spread.underdog.losses}`
+      ` overall=${stats.spread.overall.wins}-${stats.spread.overall.losses}` +
+      ` last10=${stats.spread.last10.wins}-${stats.spread.last10.losses}` +
+      ` home=${stats.spread.home.wins}-${stats.spread.home.losses}` +
+      ` away=${stats.spread.away.wins}-${stats.spread.away.losses}` +
+      ` fav=${stats.spread.favorite.wins}-${stats.spread.favorite.losses}` +
+      ` dog=${stats.spread.underdog.wins}-${stats.spread.underdog.losses}`
   );
   console.log(
     `${TAG}[getMlbSituationalStats] [OUTPUT] O/U:` +
-    ` overall=${stats.total.overall.wins}O-${stats.total.overall.losses}U-${stats.total.overall.pushes}P` +
-    ` last10=${stats.total.last10.wins}O-${stats.total.last10.losses}U-${stats.total.last10.pushes}P` +
-    ` home=${stats.total.home.wins}O-${stats.total.home.losses}U` +
-    ` away=${stats.total.away.wins}O-${stats.total.away.losses}U`
+      ` overall=${stats.total.overall.wins}O-${stats.total.overall.losses}U-${stats.total.overall.pushes}P` +
+      ` last10=${stats.total.last10.wins}O-${stats.total.last10.losses}U-${stats.total.last10.pushes}P` +
+      ` home=${stats.total.home.wins}O-${stats.total.home.losses}U` +
+      ` away=${stats.total.away.wins}O-${stats.total.away.losses}U`
   );
 
   // ── Sanity check: ML wins + losses should not exceed gamesAnalyzed ──────────
@@ -1172,12 +1178,12 @@ export async function getMlbSituationalStats(teamSlug: string, limit = 162) {
   if (mlTotal > teamGames.length) {
     console.error(
       `${TAG}[getMlbSituationalStats] [VERIFY] FAIL — ML wins+losses (${mlTotal}) > gamesAnalyzed (${teamGames.length})` +
-      ` — data integrity issue`
+        ` — data integrity issue`
     );
   } else {
     console.log(
       `${TAG}[getMlbSituationalStats] [VERIFY] PASS — ML total=${mlTotal} ≤ gamesAnalyzed=${teamGames.length}` +
-      ` | null/pending games=${teamGames.length - mlTotal}`
+        ` | null/pending games=${teamGames.length - mlTotal}`
     );
   }
 
@@ -1221,7 +1227,9 @@ export async function captureClosingLines(): Promise<{
   const todayStr = formatAnDate(new Date());
   const url = `${AN_V1_BASE}?period=game&bookIds=${DK_NJ_BOOK_ID}&date=${todayStr}`;
 
-  console.log(`${CTAG}[FETCH] Requesting AN v1 API | date=${todayStr} | URL: ${url}`);
+  console.log(
+    `${CTAG}[FETCH] Requesting AN v1 API | date=${todayStr} | URL: ${url}`
+  );
 
   let games: AnV1Game[] = [];
   try {
@@ -1230,16 +1238,24 @@ export async function captureClosingLines(): Promise<{
       timeout: 15_000,
     });
     games = res.data.games ?? [];
-    console.log(`${CTAG}[FETCH] AN v1 returned ${games.length} games for date=${todayStr}`);
+    console.log(
+      `${CTAG}[FETCH] AN v1 returned ${games.length} games for date=${todayStr}`
+    );
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error(`${CTAG}[FETCH] AN v1 API request FAILED: ${msg}`);
-    return { scanned: 0, locked: 0, alreadyLocked: 0, noOdds: 0, errors: [msg] };
+    return {
+      scanned: 0,
+      locked: 0,
+      alreadyLocked: 0,
+      noOdds: 0,
+      errors: [msg],
+    };
   }
 
   // ── Step 2: Filter to inprogress games only ──────────────────────────────
   const inProgressGames = games.filter(
-    (g) => g.status === "inprogress" || g.real_status === "inprogress"
+    g => g.status === "inprogress" || g.real_status === "inprogress"
   );
 
   console.log(
@@ -1271,7 +1287,9 @@ export async function captureClosingLines(): Promise<{
         .limit(1);
 
       if (rows.length === 0) {
-        console.log(`${CTAG}[SKIP] ${gameLabel} — not found in DB (not yet ingested)`);
+        console.log(
+          `${CTAG}[SKIP] ${gameLabel} — not found in DB (not yet ingested)`
+        );
         continue;
       }
 
@@ -1289,49 +1307,52 @@ export async function captureClosingLines(): Promise<{
 
       // ── Extract current DK NJ odds ───────────────────────────────────────
       const oddsList = game.odds ?? [];
-      const dk = oddsList.find((o) => o.book_id === DK_NJ_BOOK_ID) ?? null;
+      const dk = oddsList.find(o => o.book_id === DK_NJ_BOOK_ID) ?? null;
 
       if (!dk) {
-        console.log(`${CTAG}[SKIP] ${matchLabel} — no DK NJ odds entry in API response`);
+        console.log(
+          `${CTAG}[SKIP] ${matchLabel} — no DK NJ odds entry in API response`
+        );
         noOdds++;
         continue;
       }
 
-      const closingAwayRL   = dk.spread_away ?? null;
-      const closingHomeRL   = dk.spread_home ?? null;
+      const closingAwayRL = dk.spread_away ?? null;
+      const closingHomeRL = dk.spread_home ?? null;
       const closingAwayRLOdds = dk.spread_away_line ?? null;
       const closingHomeRLOdds = dk.spread_home_line ?? null;
-      const closingAwayML   = dk.ml_away ?? null;
-      const closingHomeML   = dk.ml_home ?? null;
-      const closingTotal    = dk.total ?? null;
+      const closingAwayML = dk.ml_away ?? null;
+      const closingHomeML = dk.ml_home ?? null;
+      const closingTotal = dk.total ?? null;
       const closingOverOdds = dk.over ?? null;
       const closingUnderOdds = dk.under ?? null;
 
-      const hasFullClosing = closingAwayRL != null && closingAwayML != null && closingTotal != null;
+      const hasFullClosing =
+        closingAwayRL != null && closingAwayML != null && closingTotal != null;
 
       console.log(
         `${CTAG}[LOCK] ${matchLabel}` +
-        ` | RL=${fmtLine(closingAwayRL) ?? "—"}(${fmtOdds(closingAwayRLOdds) ?? "—"})` +
-        ` ML=${fmtOdds(closingAwayML) ?? "—"}/${fmtOdds(closingHomeML) ?? "—"}` +
-        ` TOT=${closingTotal ?? "—"}(O:${fmtOdds(closingOverOdds) ?? "—"} U:${fmtOdds(closingUnderOdds) ?? "—"})` +
-        ` | fullOdds=${hasFullClosing}`
+          ` | RL=${fmtLine(closingAwayRL) ?? "—"}(${fmtOdds(closingAwayRLOdds) ?? "—"})` +
+          ` ML=${fmtOdds(closingAwayML) ?? "—"}/${fmtOdds(closingHomeML) ?? "—"}` +
+          ` TOT=${closingTotal ?? "—"}(O:${fmtOdds(closingOverOdds) ?? "—"} U:${fmtOdds(closingUnderOdds) ?? "—"})` +
+          ` | fullOdds=${hasFullClosing}`
       );
 
       // ── Write closing lines to DB ────────────────────────────────────────
       await db
         .update(mlbScheduleHistory)
         .set({
-          dkClosingAwayRunLine:     fmtLine(closingAwayRL),
-          dkClosingHomeRunLine:     fmtLine(closingHomeRL),
+          dkClosingAwayRunLine: fmtLine(closingAwayRL),
+          dkClosingHomeRunLine: fmtLine(closingHomeRL),
           dkClosingAwayRunLineOdds: fmtOdds(closingAwayRLOdds),
           dkClosingHomeRunLineOdds: fmtOdds(closingHomeRLOdds),
-          dkClosingAwayML:          fmtOdds(closingAwayML),
-          dkClosingHomeML:          fmtOdds(closingHomeML),
-          dkClosingTotal:           closingTotal != null ? String(closingTotal) : null,
-          dkClosingOverOdds:        fmtOdds(closingOverOdds),
-          dkClosingUnderOdds:       fmtOdds(closingUnderOdds),
-          closingLineLockedAt:      now,
-          lastRefreshedAt:          now,
+          dkClosingAwayML: fmtOdds(closingAwayML),
+          dkClosingHomeML: fmtOdds(closingHomeML),
+          dkClosingTotal: closingTotal != null ? String(closingTotal) : null,
+          dkClosingOverOdds: fmtOdds(closingOverOdds),
+          dkClosingUnderOdds: fmtOdds(closingUnderOdds),
+          closingLineLockedAt: now,
+          lastRefreshedAt: now,
         })
         .where(eq(mlbScheduleHistory.anGameId, game.id));
 
@@ -1339,7 +1360,6 @@ export async function captureClosingLines(): Promise<{
         `${CTAG}[LOCK] ${matchLabel} — closing lines LOCKED at utcMs=${now}`
       );
       locked++;
-
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       console.error(`${CTAG}[ERROR] ${gameLabel} — ${msg}`);
@@ -1350,8 +1370,8 @@ export async function captureClosingLines(): Promise<{
   // ── Step 4: Final verification log ──────────────────────────────────────
   console.log(
     `${CTAG}[VERIFY] ${locked > 0 ? "✅ PASS" : "ℹ️  INFO"} — ` +
-    `scanned=${inProgressGames.length} locked=${locked} alreadyLocked=${alreadyLocked} ` +
-    `noOdds=${noOdds} errors=${errors.length}`
+      `scanned=${inProgressGames.length} locked=${locked} alreadyLocked=${alreadyLocked} ` +
+      `noOdds=${noOdds} errors=${errors.length}`
   );
 
   return {

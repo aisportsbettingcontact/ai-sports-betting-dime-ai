@@ -7,7 +7,10 @@ import path from "node:path";
  * vitest runs in node env, so these pin the render rules by source shape:
  * never a fabricated zero; membership reconciled, not overlapping totals.
  */
-const src = fs.readFileSync(path.join(import.meta.dirname, "MetricsPanel.tsx"), "utf8");
+const src = fs.readFileSync(
+  path.join(import.meta.dirname, "MetricsPanel.tsx"),
+  "utf8"
+);
 
 describe("MetricsPanel — honest data-states", () => {
   it("renders data-state labels ('Not measured') instead of fabricated zeros", () => {

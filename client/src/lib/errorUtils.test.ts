@@ -23,10 +23,12 @@ describe("formatMutationError — zod issue arrays", () => {
         },
       ],
       null,
-      2,
+      2
     );
     const out = formatMutationError(new Error(raw));
-    expect(out).toBe("token: Too small: expected string to have >=20 characters");
+    expect(out).toBe(
+      "token: Too small: expected string to have >=20 characters"
+    );
     expect(out).not.toContain("{");
     expect(out).not.toContain("origin");
   });
@@ -37,17 +39,19 @@ describe("formatMutationError — zod issue arrays", () => {
       { path: ["password"], message: "Password must be at least 8 characters" },
     ]);
     expect(formatMutationError(new Error(raw))).toBe(
-      "email: Invalid email address · password: Password must be at least 8 characters",
+      "email: Invalid email address · password: Password must be at least 8 characters"
     );
   });
 
   it("leaves non-JSON bracket-leading messages alone", () => {
-    expect(formatMutationError(new Error("[Stripe] payment failed"))).toContain("payment failed");
+    expect(formatMutationError(new Error("[Stripe] payment failed"))).toContain(
+      "payment failed"
+    );
   });
 
   it("leaves ordinary server messages untouched", () => {
-    expect(formatMutationError(new Error("Invalid or expired reset link."))).toBe(
-      "Invalid or expired reset link.",
-    );
+    expect(
+      formatMutationError(new Error("Invalid or expired reset link."))
+    ).toBe("Invalid or expired reset link.");
   });
 });

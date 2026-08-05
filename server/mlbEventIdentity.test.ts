@@ -55,7 +55,8 @@ function applyPlan(
     if (u.set.mlbGamePk !== undefined) row.mlbGamePk = u.set.mlbGamePk;
     if (u.set.gameStatus !== undefined) row.gameStatus = u.set.gameStatus;
     if (u.set.venue !== undefined) row.venue = u.set.venue;
-    if (u.set.rescheduledFrom !== undefined) row.rescheduledFrom = u.set.rescheduledFrom;
+    if (u.set.rescheduledFrom !== undefined)
+      row.rescheduledFrom = u.set.rescheduledFrom;
   }
   for (const ins of plan.inserts) {
     out.push({
@@ -94,8 +95,11 @@ describe("2026-07-17 TB@BOS incident reproduction", () => {
     expect(plan.collisions).toEqual([]);
     const dbAfter = applyPlan(dbBefore, plan);
     const feedAfter = dbAfter.filter(
-      r => r.gameDate === "2026-07-17" && r.gameStatus !== "postponed" &&
-           r.awayTeam === "TB" && r.homeTeam === "BOS"
+      r =>
+        r.gameDate === "2026-07-17" &&
+        r.gameStatus !== "postponed" &&
+        r.awayTeam === "TB" &&
+        r.homeTeam === "BOS"
     );
     expect(feedAfter).toHaveLength(2);
     const times = feedAfter.map(r => r.startTimeEst).sort();
@@ -125,9 +129,14 @@ describe("2026-07-17 TB@BOS incident reproduction", () => {
 
 describe("unit: event identity preservation", () => {
   it("1. two games with same teams+date but distinct provider IDs are both preserved", () => {
-    const plan = planMlbScheduleSync([raysRedSoxGame1(), raysRedSoxGame2()], []);
+    const plan = planMlbScheduleSync(
+      [raysRedSoxGame1(), raysRedSoxGame2()],
+      []
+    );
     expect(plan.inserts).toHaveLength(2);
-    expect(new Set(plan.inserts.map(i => i.gamePk))).toEqual(new Set([G1_GAMEPK, G2_GAMEPK]));
+    expect(new Set(plan.inserts.map(i => i.gamePk))).toEqual(
+      new Set([G1_GAMEPK, G2_GAMEPK])
+    );
     expect(plan.collisions).toEqual([]);
   });
 
@@ -143,7 +152,9 @@ describe("unit: event identity preservation", () => {
     expect(plan.updates[0].gamePk).toBe(G1_GAMEPK);
     expect(plan.updates[0].set.startTimeEst).toBe("2:05 PM");
     const after = applyPlan(db, plan);
-    expect(after.find(r => r.mlbGamePk === G2_GAMEPK)?.startTimeEst).toBe("7:10 PM"); // sibling untouched
+    expect(after.find(r => r.mlbGamePk === G2_GAMEPK)?.startTimeEst).toBe(
+      "7:10 PM"
+    ); // sibling untouched
   });
 
   it("3. re-ingesting both games is idempotent — no duplicates, no changes", () => {
@@ -156,7 +167,10 @@ describe("unit: event identity preservation", () => {
   });
 
   it("4. game 1 and game 2 retain distinct identities and gameNumbers", () => {
-    const group = classifyDoubleheaderGroup([raysRedSoxGame1(), raysRedSoxGame2()]);
+    const group = classifyDoubleheaderGroup([
+      raysRedSoxGame1(),
+      raysRedSoxGame2(),
+    ]);
     expect(group.resolvedGameNumbers.get(G1_GAMEPK)).toBe(1);
     expect(group.resolvedGameNumbers.get(G2_GAMEPK)).toBe(2);
     expect(group.gamePks).toEqual([G1_GAMEPK, G2_GAMEPK]);
@@ -178,13 +192,21 @@ describe("unit: event identity preservation", () => {
     ];
     const sorted = [...sameTime].sort(compareProviderGames);
     expect(sorted.map(g => g.gamePk)).toEqual([G1_GAMEPK, 900999]);
-    const chrono = [raysRedSoxGame2(), raysRedSoxGame1()].sort(compareProviderGames);
+    const chrono = [raysRedSoxGame2(), raysRedSoxGame1()].sort(
+      compareProviderGames
+    );
     expect(chrono[0].gamePk).toBe(G1_GAMEPK);
   });
 
   it("7. missing doubleheader metadata never deletes the second event", () => {
-    const g1 = raysRedSoxGame1({ doubleHeader: undefined, gameNumber: undefined });
-    const g2 = raysRedSoxGame2({ doubleHeader: undefined, gameNumber: undefined });
+    const g1 = raysRedSoxGame1({
+      doubleHeader: undefined,
+      gameNumber: undefined,
+    });
+    const g2 = raysRedSoxGame2({
+      doubleHeader: undefined,
+      gameNumber: undefined,
+    });
     const plan = planMlbScheduleSync([g1, g2], []);
     expect(plan.inserts).toHaveLength(2);
     expect(plan.collisions).toEqual([]);
@@ -202,19 +224,33 @@ describe("unit: event identity preservation", () => {
       raysRedSoxGame2({ doubleHeader: "S" }),
     ]);
     expect(group.gamePks).toHaveLength(2);
-    expect(group.warnings.some(w => w.includes("conflicting doubleheader flags"))).toBe(true);
+    expect(
+      group.warnings.some(w => w.includes("conflicting doubleheader flags"))
+    ).toBe(true);
     const plan = planMlbScheduleSync(
-      [raysRedSoxGame1({ doubleHeader: "N" }), raysRedSoxGame2({ doubleHeader: "S" })],
+      [
+        raysRedSoxGame1({ doubleHeader: "N" }),
+        raysRedSoxGame2({ doubleHeader: "S" }),
+      ],
       []
     );
-    expect(plan.warnings.some(w => w.includes("conflicting doubleheader flags"))).toBe(true);
+    expect(
+      plan.warnings.some(w => w.includes("conflicting doubleheader flags"))
+    ).toBe(true);
     expect(plan.inserts).toHaveLength(2);
   });
 
   it("9. reversed home/away orientation does not collide with the doubleheader", () => {
     // Hypothetical BOS@TB game the same date is a DIFFERENT group and never collides.
-    const reversed = raysRedSoxGame1({ gamePk: 900555, awayAbbrev: "BOS", homeAbbrev: "TB" });
-    const plan = planMlbScheduleSync([raysRedSoxGame1(), raysRedSoxGame2(), reversed], []);
+    const reversed = raysRedSoxGame1({
+      gamePk: 900555,
+      awayAbbrev: "BOS",
+      homeAbbrev: "TB",
+    });
+    const plan = planMlbScheduleSync(
+      [raysRedSoxGame1(), raysRedSoxGame2(), reversed],
+      []
+    );
     expect(plan.inserts).toHaveLength(3);
     expect(plan.collisions).toEqual([]);
     const groups = classifySlate([raysRedSoxGame1(), reversed]);
@@ -244,7 +280,10 @@ describe("status and scheduling", () => {
   it("32. rescheduled games preserve original-date metadata through classification", () => {
     const g1 = raysRedSoxGame1();
     expect(g1.rescheduledFrom).toBe("2026-05-09");
-    const plan = planMlbScheduleSync([g1, raysRedSoxGame2()], [postponedMay9Row()]);
+    const plan = planMlbScheduleSync(
+      [g1, raysRedSoxGame2()],
+      [postponedMay9Row()]
+    );
     // The May 9 postponed row is never claimed/deleted by the July 17 events.
     expect(plan.updates.every(u => u.rowId !== 5091)).toBe(true);
     expect(plan.inserts).toHaveLength(2);
@@ -254,39 +293,67 @@ describe("status and scheduling", () => {
     expect(mapProviderStatus("Live", "Delayed: Rain")).toBe("live");
     expect(mapProviderStatus("Live", "Suspended: Rain")).toBe("suspended");
     const plan = planMlbScheduleSync(
-      [raysRedSoxGame1({ abstractGameState: "Live", detailedState: "Suspended: Rain" }), raysRedSoxGame2()],
+      [
+        raysRedSoxGame1({
+          abstractGameState: "Live",
+          detailedState: "Suspended: Rain",
+        }),
+        raysRedSoxGame2(),
+      ],
       []
     );
     expect(plan.inserts).toHaveLength(2);
-    expect(plan.inserts.find(i => i.gamePk === G1_GAMEPK)?.gameStatus).toBe("suspended");
+    expect(plan.inserts.find(i => i.gamePk === G1_GAMEPK)?.gameStatus).toBe(
+      "suspended"
+    );
   });
 
   it("35. cancelling one game never deletes the sibling", () => {
-    const db = applyPlan([], planMlbScheduleSync([raysRedSoxGame1(), raysRedSoxGame2()], []));
+    const db = applyPlan(
+      [],
+      planMlbScheduleSync([raysRedSoxGame1(), raysRedSoxGame2()], [])
+    );
     const plan = planMlbScheduleSync(
       [raysRedSoxGame1({ detailedState: "Cancelled" }), raysRedSoxGame2()],
       db
     );
     const after = applyPlan(db, plan);
     expect(after).toHaveLength(2);
-    expect(after.find(r => r.mlbGamePk === G1_GAMEPK)?.gameStatus).toBe("postponed");
-    expect(after.find(r => r.mlbGamePk === G2_GAMEPK)?.gameStatus).toBe("upcoming");
+    expect(after.find(r => r.mlbGamePk === G1_GAMEPK)?.gameStatus).toBe(
+      "postponed"
+    );
+    expect(after.find(r => r.mlbGamePk === G2_GAMEPK)?.gameStatus).toBe(
+      "upcoming"
+    );
   });
 
   it("36. completed games remain correctly associated", () => {
-    const db = applyPlan([], planMlbScheduleSync([raysRedSoxGame1(), raysRedSoxGame2()], []));
+    const db = applyPlan(
+      [],
+      planMlbScheduleSync([raysRedSoxGame1(), raysRedSoxGame2()], [])
+    );
     const plan = planMlbScheduleSync(
-      [raysRedSoxGame1({ abstractGameState: "Final", detailedState: "Final" }), raysRedSoxGame2()],
+      [
+        raysRedSoxGame1({ abstractGameState: "Final", detailedState: "Final" }),
+        raysRedSoxGame2(),
+      ],
       db
     );
     const after = applyPlan(db, plan);
-    expect(after.find(r => r.mlbGamePk === G1_GAMEPK)?.gameStatus).toBe("final");
-    expect(after.find(r => r.mlbGamePk === G2_GAMEPK)?.gameStatus).toBe("upcoming");
+    expect(after.find(r => r.mlbGamePk === G1_GAMEPK)?.gameStatus).toBe(
+      "final"
+    );
+    expect(after.find(r => r.mlbGamePk === G2_GAMEPK)?.gameStatus).toBe(
+      "upcoming"
+    );
   });
 
   it("37. start-time changes update in place — no duplicates", () => {
     const db = applyPlan([], planMlbScheduleSync([raysRedSoxGame1()], []));
-    const plan = planMlbScheduleSync([raysRedSoxGame1({ startUtc: "2026-07-17T18:35:00Z" })], db);
+    const plan = planMlbScheduleSync(
+      [raysRedSoxGame1({ startUtc: "2026-07-17T18:35:00Z" })],
+      db
+    );
     expect(plan.inserts).toHaveLength(0);
     expect(plan.updates).toHaveLength(1);
     expect(applyPlan(db, plan)).toHaveLength(1);
@@ -306,8 +373,11 @@ describe("status and scheduling", () => {
   it("39. a game crossing UTC midnight stays on its official (venue-local) schedule date", () => {
     // 10:10 PM ET on 2026-07-17 == 02:10 UTC on 2026-07-18
     const late = controlSingleGame({
-      gamePk: 900301, awayAbbrev: "LAD", homeAbbrev: "SF",
-      officialDate: "2026-07-17", startUtc: "2026-07-18T02:10:00Z",
+      gamePk: 900301,
+      awayAbbrev: "LAD",
+      homeAbbrev: "SF",
+      officialDate: "2026-07-17",
+      startUtc: "2026-07-18T02:10:00Z",
     });
     const plan = planMlbScheduleSync([late], []);
     expect(plan.inserts[0].gameDate).toBe("2026-07-17"); // NOT 2026-07-18
@@ -317,18 +387,30 @@ describe("status and scheduling", () => {
   it("40. daylight-saving boundaries do not create collisions", () => {
     // Fall-back day: 2026-11-01 in America/New_York.
     const d1 = controlSingleGame({
-      gamePk: 900401, awayAbbrev: "TB", homeAbbrev: "BOS",
-      officialDate: "2026-11-01", startUtc: "2026-11-01T17:35:00Z", doubleHeader: "S", gameNumber: 1,
+      gamePk: 900401,
+      awayAbbrev: "TB",
+      homeAbbrev: "BOS",
+      officialDate: "2026-11-01",
+      startUtc: "2026-11-01T17:35:00Z",
+      doubleHeader: "S",
+      gameNumber: 1,
     });
     const d2 = controlSingleGame({
-      gamePk: 900402, awayAbbrev: "TB", homeAbbrev: "BOS",
-      officialDate: "2026-11-01", startUtc: "2026-11-01T23:10:00Z", doubleHeader: "S", gameNumber: 2,
+      gamePk: 900402,
+      awayAbbrev: "TB",
+      homeAbbrev: "BOS",
+      officialDate: "2026-11-01",
+      startUtc: "2026-11-01T23:10:00Z",
+      doubleHeader: "S",
+      gameNumber: 2,
     });
     const plan = planMlbScheduleSync([d1, d2], []);
     expect(plan.inserts).toHaveLength(2);
     expect(plan.collisions).toEqual([]);
     // EST after fall-back: 17:35 UTC = 12:35 PM EST
-    expect(plan.inserts.find(i => i.gamePk === 900401)?.startTimeEst).toBe("12:35 PM");
+    expect(plan.inserts.find(i => i.gamePk === 900401)?.startTimeEst).toBe(
+      "12:35 PM"
+    );
   });
 });
 
@@ -348,7 +430,9 @@ describe("robustness", () => {
     const plan = planMlbScheduleSync(doubled, []);
     expect(plan.counts.providerDistinct).toBe(3);
     expect(plan.inserts).toHaveLength(3);
-    expect(plan.warnings.some(w => w.includes("duplicate provider delivery"))).toBe(true);
+    expect(
+      plan.warnings.some(w => w.includes("duplicate provider delivery"))
+    ).toBe(true);
   });
 
   it("43. a partial provider response never deletes existing rows (plan is additive)", () => {
@@ -374,7 +458,9 @@ describe("robustness", () => {
     db = applyPlan(db, planMlbScheduleSync(incidentSlate(), db), 97000);
     const tbbos = db.filter(r => r.awayTeam === "TB" && r.homeTeam === "BOS");
     expect(tbbos).toHaveLength(2);
-    expect(new Set(tbbos.map(r => r.mlbGamePk))).toEqual(new Set([G1_GAMEPK, G2_GAMEPK]));
+    expect(new Set(tbbos.map(r => r.mlbGamePk))).toEqual(
+      new Set([G1_GAMEPK, G2_GAMEPK])
+    );
   });
 
   it("status regression guard: a stale snapshot cannot downgrade terminal state", () => {
@@ -386,12 +472,23 @@ describe("robustness", () => {
     expect(isStatusRegression("live", "final")).toBe(false);
     expect(isStatusRegression("postponed", "final")).toBe(false); // resumed/completed allowed
 
-    const db = applyPlan([], planMlbScheduleSync(
-      [raysRedSoxGame1({ abstractGameState: "Final", detailedState: "Final" })], []
-    ));
+    const db = applyPlan(
+      [],
+      planMlbScheduleSync(
+        [
+          raysRedSoxGame1({
+            abstractGameState: "Final",
+            detailedState: "Final",
+          }),
+        ],
+        []
+      )
+    );
     const stale = planMlbScheduleSync([raysRedSoxGame1()], db); // Preview/Scheduled snapshot
     expect(stale.updates.every(u => u.set.gameStatus === undefined)).toBe(true);
-    expect(stale.warnings.some(w => w.includes("status regression blocked"))).toBe(true);
+    expect(
+      stale.warnings.some(w => w.includes("status regression blocked"))
+    ).toBe(true);
   });
 
   it("timezone helper: UTC instants render as correct Eastern wall times (DST-aware)", () => {
@@ -412,7 +509,10 @@ describe("follow-up hardening: live production findings", () => {
     const may9 = postponedMay9Row(); // pk 900100, gameDate 2026-05-09, status postponed
     const evening = preSeededEveningRowWithPk();
     const makeupSamePk = raysRedSoxGame1({ gamePk: 900100 }); // provider kept the pk
-    const plan = planMlbScheduleSync([makeupSamePk, raysRedSoxGame2()], [may9, evening]);
+    const plan = planMlbScheduleSync(
+      [makeupSamePk, raysRedSoxGame2()],
+      [may9, evening]
+    );
 
     expect(plan.inserts).toHaveLength(0);
     expect(plan.collisions).toEqual([]);
@@ -426,27 +526,37 @@ describe("follow-up hardening: live production findings", () => {
     // The date move RESOLVES the postponement — this exact transition needed
     // a manual UPDATE in production on 2026-07-17.
     expect(move?.set.gameStatus).toBe("upcoming");
-    expect(plan.warnings.some(w => w.includes("moved 2026-05-09 → 2026-07-17"))).toBe(true);
+    expect(
+      plan.warnings.some(w => w.includes("moved 2026-05-09 → 2026-07-17"))
+    ).toBe(true);
 
     const after = applyPlan([may9, evening], plan);
     const jul17 = after.filter(r => r.gameDate === "2026-07-17");
     expect(jul17).toHaveLength(2);
-    expect(new Set(jul17.map(r => r.mlbGamePk))).toEqual(new Set([900100, G2_GAMEPK]));
+    expect(new Set(jul17.map(r => r.mlbGamePk))).toEqual(
+      new Set([900100, G2_GAMEPK])
+    );
     expect(new Set(jul17.map(r => r.gameNumber))).toEqual(new Set([1, 2]));
   });
 
   it("without a date move, postponed→upcoming remains a blocked regression (guard intact)", () => {
-    const db = applyPlan([], planMlbScheduleSync(
-      [raysRedSoxGame1({ detailedState: "Postponed" })], []
-    ));
+    const db = applyPlan(
+      [],
+      planMlbScheduleSync([raysRedSoxGame1({ detailedState: "Postponed" })], [])
+    );
     expect(db[0].gameStatus).toBe("postponed");
     const stale = planMlbScheduleSync([raysRedSoxGame1()], db); // same date, Scheduled snapshot
     expect(stale.updates.every(u => u.set.gameStatus === undefined)).toBe(true);
-    expect(stale.warnings.some(w => w.includes("status regression blocked"))).toBe(true);
+    expect(
+      stale.warnings.some(w => w.includes("status regression blocked"))
+    ).toBe(true);
   });
 
   it("a partial payload with only one DH sibling cannot renumber or unflag the stamped row", () => {
-    const db = applyPlan([], planMlbScheduleSync([raysRedSoxGame1(), raysRedSoxGame2()], []));
+    const db = applyPlan(
+      [],
+      planMlbScheduleSync([raysRedSoxGame1(), raysRedSoxGame2()], [])
+    );
     // Payload delivers ONLY game 2 (solo group resolves to gameNumber 1 —
     // which must NOT be applied to the stamped G2 row), with no DH flag.
     const plan = planMlbScheduleSync(
@@ -468,10 +578,21 @@ describe("follow-up hardening: live production findings", () => {
     // Provider inverts the numbering/times of two stamped rows: the paired
     // updates are mutually blocking on games_matchup_unique, so the apply
     // layer parks and re-applies — it needs each row's intended final number.
-    const db = applyPlan([], planMlbScheduleSync([raysRedSoxGame1(), raysRedSoxGame2()], []));
+    const db = applyPlan(
+      [],
+      planMlbScheduleSync([raysRedSoxGame1(), raysRedSoxGame2()], [])
+    );
     const inverted = [
-      raysRedSoxGame1({ startUtc: G2_START_UTC, gameNumber: 2, dayNight: "night" }),
-      raysRedSoxGame2({ startUtc: G1_START_UTC, gameNumber: 1, dayNight: "day" }),
+      raysRedSoxGame1({
+        startUtc: G2_START_UTC,
+        gameNumber: 2,
+        dayNight: "night",
+      }),
+      raysRedSoxGame2({
+        startUtc: G1_START_UTC,
+        gameNumber: 1,
+        dayNight: "day",
+      }),
     ];
     const plan = planMlbScheduleSync(inverted, db);
     expect(plan.collisions).toEqual([]);
@@ -492,14 +613,21 @@ describe("generated doubleheader invariant (seeded, deterministic)", () => {
       const { slate, distinctPks } = generateSlateCase(seed);
       const plan = planMlbScheduleSync(slate, []);
       const accounted =
-        plan.counts.matchedByGamePk + plan.counts.adoptedLegacyRows +
-        plan.counts.inserts + plan.counts.unchanged;
+        plan.counts.matchedByGamePk +
+        plan.counts.adoptedLegacyRows +
+        plan.counts.inserts +
+        plan.counts.unchanged;
       // Invariant: every distinct valid event accounted for, none lost.
       expect(plan.collisions, `seed=${seed} collisions`).toEqual([]);
-      expect(accounted + plan.counts.rejected, `seed=${seed} accounting`).toBe(distinctPks.length);
+      expect(accounted + plan.counts.rejected, `seed=${seed} accounting`).toBe(
+        distinctPks.length
+      );
 
       const db = applyPlan([], plan);
-      expect(new Set(db.map(r => r.mlbGamePk)).size, `seed=${seed} distinct rows`).toBe(plan.inserts.length);
+      expect(
+        new Set(db.map(r => r.mlbGamePk)).size,
+        `seed=${seed} distinct rows`
+      ).toBe(plan.inserts.length);
 
       // Replay idempotence: same slate again → no inserts, no collisions.
       const replay = planMlbScheduleSync(slate, db);
@@ -512,8 +640,12 @@ describe("generated doubleheader invariant (seeded, deterministic)", () => {
       expect(reversedPlan.collisions).toEqual([]);
 
       // Storage keys (gameDate:away:home:gameNumber) are unique across the applied DB.
-      const keys = db.map(r => `${r.gameDate}:${r.awayTeam}:${r.homeTeam}:${r.gameNumber}`);
-      expect(new Set(keys).size, `seed=${seed} unique storage keys`).toBe(keys.length);
+      const keys = db.map(
+        r => `${r.gameDate}:${r.awayTeam}:${r.homeTeam}:${r.gameNumber}`
+      );
+      expect(new Set(keys).size, `seed=${seed} unique storage keys`).toBe(
+        keys.length
+      );
     }
   });
 
@@ -522,7 +654,9 @@ describe("generated doubleheader invariant (seeded, deterministic)", () => {
       const { slate } = generateSlateCase(seed);
       for (const group of classifySlate(slate).values()) {
         const nums = [...group.resolvedGameNumbers.values()];
-        expect(new Set(nums).size, `seed=${seed} group=${group.groupId}`).toBe(nums.length);
+        expect(new Set(nums).size, `seed=${seed} group=${group.groupId}`).toBe(
+          nums.length
+        );
         expect(group.gamePks.length).toBe(nums.length);
       }
     }

@@ -39,7 +39,11 @@ const HARD_DENY = {
   SOME_RANDOM_VAR: "not-allowlisted-either",
 } as const;
 
-const ANTHROPIC_KEYS = ["ANTHROPIC_BASE_URL", "ANTHROPIC_AUTH_TOKEN", "ANTHROPIC_API_KEY"];
+const ANTHROPIC_KEYS = [
+  "ANTHROPIC_BASE_URL",
+  "ANTHROPIC_AUTH_TOKEN",
+  "ANTHROPIC_API_KEY",
+];
 
 let savedEnv: NodeJS.ProcessEnv;
 
@@ -63,7 +67,10 @@ describe("agentEnv allowlist", () => {
     process.env.ANTHROPIC_AUTH_TOKEN = "gw-token";
     const env = agentEnv();
     for (const key of Object.keys(HARD_DENY)) {
-      expect(env, `${key} must not reach the Claude Code subprocess`).not.toHaveProperty(key);
+      expect(
+        env,
+        `${key} must not reach the Claude Code subprocess`
+      ).not.toHaveProperty(key);
     }
   });
 

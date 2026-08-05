@@ -104,19 +104,29 @@ async function runDailyRefresh(): Promise<void> {
   const today = todayEstAnDate();
   const yesterday = yesterdayEstAnDate();
 
-  debugLog(SRC, "info", `${TAG}[STEP] Daily refresh starting — today=${today} yesterday=${yesterday}`);
+  debugLog(
+    SRC,
+    "info",
+    `${TAG}[STEP] Daily refresh starting — today=${today} yesterday=${yesterday}`
+  );
 
   // Refresh today
   try {
     const todayResult = await refreshMlbScheduleForDate(today);
-    debugLog(SRC, "info",
+    debugLog(
+      SRC,
+      "info",
       `${TAG}[OUTPUT] Today (${today}):` +
-      ` fetched=${todayResult.fetched}` +
-      ` upserted=${todayResult.upserted}` +
-      ` errors=${todayResult.errors.length}`
+        ` fetched=${todayResult.fetched}` +
+        ` upserted=${todayResult.upserted}` +
+        ` errors=${todayResult.errors.length}`
     );
     if (todayResult.errors.length > 0) {
-      debugLog(SRC, "warn", `${TAG}[WARN] Today errors: ${JSON.stringify(todayResult.errors.slice(0, 3))}`);
+      debugLog(
+        SRC,
+        "warn",
+        `${TAG}[WARN] Today errors: ${JSON.stringify(todayResult.errors.slice(0, 3))}`
+      );
     }
   } catch (err) {
     console.error(`${TAG}[ERROR] Failed to refresh today (${today}):`, err);
@@ -125,20 +135,33 @@ async function runDailyRefresh(): Promise<void> {
   // Refresh yesterday (catch late-finishing games and final scores)
   try {
     const yestResult = await refreshMlbScheduleForDate(yesterday);
-    debugLog(SRC, "info",
+    debugLog(
+      SRC,
+      "info",
       `${TAG}[OUTPUT] Yesterday (${yesterday}):` +
-      ` fetched=${yestResult.fetched}` +
-      ` upserted=${yestResult.upserted}` +
-      ` errors=${yestResult.errors.length}`
+        ` fetched=${yestResult.fetched}` +
+        ` upserted=${yestResult.upserted}` +
+        ` errors=${yestResult.errors.length}`
     );
     if (yestResult.errors.length > 0) {
-      debugLog(SRC, "warn", `${TAG}[WARN] Yesterday errors: ${JSON.stringify(yestResult.errors.slice(0, 3))}`);
+      debugLog(
+        SRC,
+        "warn",
+        `${TAG}[WARN] Yesterday errors: ${JSON.stringify(yestResult.errors.slice(0, 3))}`
+      );
     }
   } catch (err) {
-    console.error(`${TAG}[ERROR] Failed to refresh yesterday (${yesterday}):`, err);
+    console.error(
+      `${TAG}[ERROR] Failed to refresh yesterday (${yesterday}):`,
+      err
+    );
   }
 
-  debugLog(SRC, "info", `${TAG}[VERIFY] Daily refresh complete — today=${today} yesterday=${yesterday}`);
+  debugLog(
+    SRC,
+    "info",
+    `${TAG}[VERIFY] Daily refresh complete — today=${today} yesterday=${yesterday}`
+  );
 }
 
 // ─── Startup Backfill ─────────────────────────────────────────────────────────
@@ -152,28 +175,44 @@ async function runDailyRefresh(): Promise<void> {
  * Runs once immediately, non-blocking.
  */
 async function runStartupBackfill(): Promise<void> {
-  debugLog(SRC, "info", `${TAG}[STEP] Startup backfill — last 60 days from AN DK NJ v1 API`);
-  const boundaryStr = MLB_SEASON_BOUNDARIES.map(s => `${s.season}: ${s.openingDay} → ${s.postseasonEnd ?? "ongoing"}`).join(", ");
+  debugLog(
+    SRC,
+    "info",
+    `${TAG}[STEP] Startup backfill — last 60 days from AN DK NJ v1 API`
+  );
+  const boundaryStr = MLB_SEASON_BOUNDARIES.map(
+    s => `${s.season}: ${s.openingDay} → ${s.postseasonEnd ?? "ongoing"}`
+  ).join(", ");
   debugLog(SRC, "info", `${TAG}[INPUT] Season boundaries: ${boundaryStr}`);
 
   try {
     const results = await refreshMlbScheduleLastNDays(60);
-    const totalFetched  = results.reduce((sum, r) => sum + r.fetched,  0);
+    const totalFetched = results.reduce((sum, r) => sum + r.fetched, 0);
     const totalUpserted = results.reduce((sum, r) => sum + r.upserted, 0);
-    const totalErrors   = results.reduce((sum, r) => sum + r.errors.length, 0);
+    const totalErrors = results.reduce((sum, r) => sum + r.errors.length, 0);
 
-    debugLog(SRC, "info",
+    debugLog(
+      SRC,
+      "info",
       `${TAG}[OUTPUT] Startup backfill complete:` +
-      ` dates=${results.length}` +
-      ` totalFetched=${totalFetched}` +
-      ` totalUpserted=${totalUpserted}` +
-      ` totalErrors=${totalErrors}`
+        ` dates=${results.length}` +
+        ` totalFetched=${totalFetched}` +
+        ` totalUpserted=${totalUpserted}` +
+        ` totalErrors=${totalErrors}`
     );
 
     if (totalErrors > 0) {
-      debugLog(SRC, "warn", `${TAG}[WARN] Backfill had ${totalErrors} errors — check logs above`);
+      debugLog(
+        SRC,
+        "warn",
+        `${TAG}[WARN] Backfill had ${totalErrors} errors — check logs above`
+      );
     } else {
-      debugLog(SRC, "info", `${TAG}[VERIFY] PASS — startup backfill completed with 0 errors`);
+      debugLog(
+        SRC,
+        "info",
+        `${TAG}[VERIFY] PASS — startup backfill completed with 0 errors`
+      );
     }
   } catch (err) {
     console.error(`${TAG}[ERROR] Startup backfill failed (non-fatal):`, err);
@@ -182,12 +221,23 @@ async function runStartupBackfill(): Promise<void> {
   // After the 60-day backfill, immediately run a daily refresh for today + yesterday.
   // This ensures game scores and statuses are current regardless of when the server
   // was restarted relative to the 4-hour scheduled refresh window.
-  debugLog(SRC, "info", `${TAG}[STEP] Post-startup daily refresh — today + yesterday`);
+  debugLog(
+    SRC,
+    "info",
+    `${TAG}[STEP] Post-startup daily refresh — today + yesterday`
+  );
   try {
     await runDailyRefresh();
-    debugLog(SRC, "info", `${TAG}[VERIFY] PASS — post-startup daily refresh complete`);
+    debugLog(
+      SRC,
+      "info",
+      `${TAG}[VERIFY] PASS — post-startup daily refresh complete`
+    );
   } catch (err) {
-    console.error(`${TAG}[ERROR] Post-startup daily refresh failed (non-fatal):`, err);
+    console.error(
+      `${TAG}[ERROR] Post-startup daily refresh failed (non-fatal):`,
+      err
+    );
   }
 }
 
@@ -206,7 +256,9 @@ async function runStartupBackfill(): Promise<void> {
  */
 export function startMlbScheduleHistoryScheduler(): void {
   console.log(`${TAG}[STEP] Initializing MLB schedule history scheduler`);
-  console.log(`${TAG}[INPUT] Data source: Action Network v1 API, DK NJ book_id=68`);
+  console.log(
+    `${TAG}[INPUT] Data source: Action Network v1 API, DK NJ book_id=68`
+  );
 
   // 1. Startup backfill — runs immediately, non-blocking
   setImmediate(async () => {
@@ -220,14 +272,18 @@ export function startMlbScheduleHistoryScheduler(): void {
 
   console.log(
     `${TAG}[STEP] First scheduled refresh at ${nextRun.toISOString()}` +
-    ` (in ${Math.round(msToFirst6am / 1000 / 60)} min)` +
-    ` — then every 4 hours`
+      ` (in ${Math.round(msToFirst6am / 1000 / 60)} min)` +
+      ` — then every 4 hours`
   );
 
   setTimeout(async () => {
     // First run at 6 AM EST
     const hourEst = currentHourEst();
-    debugLog(SRC, "info", `${TAG}[STEP] Scheduled refresh triggered at EST hour=${hourEst}`);
+    debugLog(
+      SRC,
+      "info",
+      `${TAG}[STEP] Scheduled refresh triggered at EST hour=${hourEst}`
+    );
     await runDailyRefresh();
 
     // Repeat every 4 hours
@@ -235,7 +291,11 @@ export function startMlbScheduleHistoryScheduler(): void {
       const h = currentHourEst();
       // Only run between 6 AM and 11:59 PM EST (skip overnight hours 0–5)
       if (h >= 6) {
-        debugLog(SRC, "info", `${TAG}[STEP] Interval refresh triggered at EST hour=${h}`);
+        debugLog(
+          SRC,
+          "info",
+          `${TAG}[STEP] Interval refresh triggered at EST hour=${h}`
+        );
         await runDailyRefresh();
       }
       // Silent skip during overnight hours — no log noise
@@ -260,22 +320,33 @@ export function startMlbScheduleHistoryScheduler(): void {
       // Silent skip — no log noise during off-hours
       return;
     }
-    debugLog(SRC, "info", `${TAG}[MlbClosingLine][STEP] 5-min tick — EST hour=${h} — running captureClosingLines`);
+    debugLog(
+      SRC,
+      "info",
+      `${TAG}[MlbClosingLine][STEP] 5-min tick — EST hour=${h} — running captureClosingLines`
+    );
     try {
       const result = await captureClosingLines();
       if (result.locked > 0) {
-        debugLog(SRC, "info",
+        debugLog(
+          SRC,
+          "info",
           `${TAG}[MlbClosingLine][OUTPUT] Locked ${result.locked} closing lines` +
-          ` | alreadyLocked=${result.alreadyLocked} noOdds=${result.noOdds} errors=${result.errors.length}`
+            ` | alreadyLocked=${result.alreadyLocked} noOdds=${result.noOdds} errors=${result.errors.length}`
         );
       }
       if (result.errors.length > 0) {
-        debugLog(SRC, "warn",
+        debugLog(
+          SRC,
+          "warn",
           `${TAG}[MlbClosingLine][WARN] ${result.errors.length} errors during capture: ${JSON.stringify(result.errors.slice(0, 3))}`
         );
       }
     } catch (err) {
-      console.error(`${TAG}[MlbClosingLine][ERROR] captureClosingLines threw:`, err);
+      console.error(
+        `${TAG}[MlbClosingLine][ERROR] captureClosingLines threw:`,
+        err
+      );
     }
   }, CLOSING_INTERVAL_MS);
 }

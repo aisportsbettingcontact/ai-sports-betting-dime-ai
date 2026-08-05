@@ -61,8 +61,10 @@ export interface VsinSplitsGame {
 }
 
 // ── The ONLY two URLs used for VSIN betting splits ───────────────────────────
-const VSIN_TODAY_URL    = "https://data.vsin.com/betting-splits/?source=DK&view=today";
-const VSIN_TOMORROW_URL = "https://data.vsin.com/betting-splits/?source=DK&view=tomorrow";
+const VSIN_TODAY_URL =
+  "https://data.vsin.com/betting-splits/?source=DK&view=today";
+const VSIN_TOMORROW_URL =
+  "https://data.vsin.com/betting-splits/?source=DK&view=tomorrow";
 
 const HEADERS = {
   "User-Agent":
@@ -127,9 +129,13 @@ function parseAllSpTables(
     // Fallback: check for legacy freezetable format
     const legacyTable = $("table.freezetable");
     if (legacyTable.length) {
-      console.warn(`${logTag} ⚠️  Found legacy freezetable — VSiN may have reverted to old format. Scraper update required.`);
+      console.warn(
+        `${logTag} ⚠️  Found legacy freezetable — VSiN may have reverted to old format. Scraper update required.`
+      );
     } else {
-      console.error(`${logTag} ❌ No sp-table or freezetable found — page structure unknown`);
+      console.error(
+        `${logTag} ❌ No sp-table or freezetable found — page structure unknown`
+      );
     }
     return [];
   }
@@ -139,22 +145,32 @@ function parseAllSpTables(
 
   tables.each((_i, table) => {
     const sportHeader = $(table).find("th.sp-sport-name").text().trim();
-    const blockSport = sportHeader.includes("NBA") ? "NBA"
-      : sportHeader.includes("MLB") ? "MLB"
-      : sportHeader.includes("NHL") ? "NHL"
-      : sportHeader.includes("CBB") || sportHeader.includes("College") ? "CBB"
-      : null;
+    const blockSport = sportHeader.includes("NBA")
+      ? "NBA"
+      : sportHeader.includes("MLB")
+        ? "MLB"
+        : sportHeader.includes("NHL")
+          ? "NHL"
+          : sportHeader.includes("CBB") || sportHeader.includes("College")
+            ? "CBB"
+            : null;
 
     const blockTag = `${logTag}[${blockSport ?? "UNKNOWN"}]`;
-    console.log(`${blockTag} Parsing block (header: "${sportHeader.substring(0, 60)}")`);
+    console.log(
+      `${blockTag} Parsing block (header: "${sportHeader.substring(0, 60)}")`
+    );
 
     // Collect sp-row rows (skip header rows)
     const gameRows: cheerio.Cheerio<any>[] = [];
-    $(table).find("tr.sp-row").each((_j, row) => {
-      gameRows.push($(row));
-    });
+    $(table)
+      .find("tr.sp-row")
+      .each((_j, row) => {
+        gameRows.push($(row));
+      });
 
-    console.log(`${blockTag} Found ${gameRows.length} sp-row rows (${Math.floor(gameRows.length / 2)} games)`);
+    console.log(
+      `${blockTag} Found ${gameRows.length} sp-row rows (${Math.floor(gameRows.length / 2)} games)`
+    );
 
     let processed = 0;
     let skipped = 0;
@@ -164,7 +180,8 @@ function parseAllSpTables(
       const homeRow = gameRows[i + 1];
 
       // Extract game ID
-      const gameId = awayRow.find("button[data-gamecode]").attr("data-gamecode") ?? "";
+      const gameId =
+        awayRow.find("button[data-gamecode]").attr("data-gamecode") ?? "";
       if (!gameId) {
         console.warn(`${blockTag} Row pair ${i}: no data-gamecode, skipping`);
         skipped++;
@@ -174,7 +191,9 @@ function parseAllSpTables(
       // Detect sport from game ID
       const sport = detectSportFromGameId(gameId);
       if (!sport) {
-        console.warn(`${blockTag} Game ${gameId}: unrecognized sport code, skipping`);
+        console.warn(
+          `${blockTag} Game ${gameId}: unrecognized sport code, skipping`
+        );
         skipped++;
         continue;
       }
@@ -189,7 +208,9 @@ function parseAllSpTables(
       const homeLink = homeRow.find("a.sp-team-link").first();
 
       if (!awayLink.length || !homeLink.length) {
-        console.warn(`${blockTag} Game ${gameId}: missing sp-team-link, skipping`);
+        console.warn(
+          `${blockTag} Game ${gameId}: missing sp-team-link, skipping`
+        );
         skipped++;
         continue;
       }
@@ -200,7 +221,9 @@ function parseAllSpTables(
       const homeVsinSlug = extractVsinSlug(homeLink.attr("href") ?? "");
 
       if (!awayVsinSlug || !homeVsinSlug) {
-        console.warn(`${blockTag} Game ${gameId}: empty slug (away="${awayVsinSlug}" home="${homeVsinSlug}"), skipping`);
+        console.warn(
+          `${blockTag} Game ${gameId}: empty slug (away="${awayVsinSlug}" home="${homeVsinSlug}"), skipping`
+        );
         skipped++;
         continue;
       }
@@ -208,7 +231,9 @@ function parseAllSpTables(
       // Validate column count
       const awayTds = awayRow.find("td");
       if (awayTds.length < 11) {
-        console.warn(`${blockTag} Game ${gameId}: expected 11 tds, got ${awayTds.length}, skipping`);
+        console.warn(
+          `${blockTag} Game ${gameId}: expected 11 tds, got ${awayTds.length}, skipping`
+        );
         skipped++;
         continue;
       }
@@ -218,32 +243,40 @@ function parseAllSpTables(
       // td[6]=total_handle%,  td[7]=total_bets%
       // td[9]=ml_handle%,     td[10]=ml_bets%
       const spreadAwayMoneyPct = extractPctFromTd($, awayTds.eq(3));
-      const spreadAwayBetsPct  = extractPctFromTd($, awayTds.eq(4));
-      const totalOverMoneyPct  = extractPctFromTd($, awayTds.eq(6));
-      const totalOverBetsPct   = extractPctFromTd($, awayTds.eq(7));
-      const mlAwayMoneyPct     = extractPctFromTd($, awayTds.eq(9));
-      const mlAwayBetsPct      = extractPctFromTd($, awayTds.eq(10));
+      const spreadAwayBetsPct = extractPctFromTd($, awayTds.eq(4));
+      const totalOverMoneyPct = extractPctFromTd($, awayTds.eq(6));
+      const totalOverBetsPct = extractPctFromTd($, awayTds.eq(7));
+      const mlAwayMoneyPct = extractPctFromTd($, awayTds.eq(9));
+      const mlAwayBetsPct = extractPctFromTd($, awayTds.eq(10));
 
       console.log(
         `${blockTag} ✅ ${gameId} | ${sport} | ${awayName} @ ${homeName}` +
-        ` | Spread: ${spreadAwayMoneyPct ?? "—"}%H ${spreadAwayBetsPct ?? "—"}%B` +
-        ` | Total: ${totalOverMoneyPct ?? "—"}%H ${totalOverBetsPct ?? "—"}%B` +
-        ` | ML: ${mlAwayMoneyPct ?? "—"}%H ${mlAwayBetsPct ?? "—"}%B`
+          ` | Spread: ${spreadAwayMoneyPct ?? "—"}%H ${spreadAwayBetsPct ?? "—"}%B` +
+          ` | Total: ${totalOverMoneyPct ?? "—"}%H ${totalOverBetsPct ?? "—"}%B` +
+          ` | ML: ${mlAwayMoneyPct ?? "—"}%H ${mlAwayBetsPct ?? "—"}%B`
       );
 
       allResults.push({
-        gameId, sport,
-        awayVsinSlug, homeVsinSlug,
-        awayName, homeName,
-        spreadAwayMoneyPct, spreadAwayBetsPct,
-        totalOverMoneyPct, totalOverBetsPct,
-        mlAwayMoneyPct, mlAwayBetsPct,
+        gameId,
+        sport,
+        awayVsinSlug,
+        homeVsinSlug,
+        awayName,
+        homeName,
+        spreadAwayMoneyPct,
+        spreadAwayBetsPct,
+        totalOverMoneyPct,
+        totalOverBetsPct,
+        mlAwayMoneyPct,
+        mlAwayBetsPct,
       });
 
       processed++;
     }
 
-    console.log(`${blockTag} Parsed ${processed} games, skipped ${skipped} pairs`);
+    console.log(
+      `${blockTag} Parsed ${processed} games, skipped ${skipped} pairs`
+    );
   });
 
   return allResults;
@@ -301,14 +334,19 @@ export async function scrapeVsinBettingSplitsBothDays(
     scrapeVsinBettingSplits("tomorrow", filterSport),
   ]);
 
-  const todayGames   = todayResult.status   === "fulfilled" ? todayResult.value   : [];
-  const tomorrowGames = tomorrowResult.status === "fulfilled" ? tomorrowResult.value : [];
+  const todayGames =
+    todayResult.status === "fulfilled" ? todayResult.value : [];
+  const tomorrowGames =
+    tomorrowResult.status === "fulfilled" ? tomorrowResult.value : [];
 
   if (todayResult.status === "rejected") {
     console.error(`${logTag} ❌ view=today fetch failed:`, todayResult.reason);
   }
   if (tomorrowResult.status === "rejected") {
-    console.error(`${logTag} ❌ view=tomorrow fetch failed:`, tomorrowResult.reason);
+    console.error(
+      `${logTag} ❌ view=tomorrow fetch failed:`,
+      tomorrowResult.reason
+    );
   }
 
   // Deduplicate: today takes priority over tomorrow
@@ -327,10 +365,13 @@ export async function scrapeVsinBettingSplitsBothDays(
   }
 
   // Health check: warn if both views returned 0 games for the filtered sport
-  if (merged.length === 0 && (todayGames.length > 0 || tomorrowGames.length > 0)) {
+  if (
+    merged.length === 0 &&
+    (todayGames.length > 0 || tomorrowGames.length > 0)
+  ) {
     console.warn(
       `${logTag} ⚠️  WARN: today=${todayGames.length} tomorrow=${tomorrowGames.length} but merged=0 ` +
-      `— sport filter "${filterSport}" may not match any game codes on these pages`
+        `— sport filter "${filterSport}" may not match any game codes on these pages`
     );
   }
 

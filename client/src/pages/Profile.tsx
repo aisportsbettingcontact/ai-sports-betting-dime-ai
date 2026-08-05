@@ -71,7 +71,7 @@ export default function Profile() {
       await utils.appUsers.me.invalidate();
       window.location.href = "/";
     },
-    onError: (err) => {
+    onError: err => {
       profileLog("profile.logout.error", { error: err.message });
       toast.error("Logout failed. Please try again.");
     },
@@ -83,7 +83,7 @@ export default function Profile() {
       profileLog("profile.reset_password.click", { userId: appUser?.id });
       toast.success("Password reset email sent. Check your inbox.");
     },
-    onError: (err) => {
+    onError: err => {
       profileLog("profile.load.error", {
         errorClass: "PasswordResetError",
         detail: err.message,
@@ -182,7 +182,11 @@ export default function Profile() {
       {/* ------- Identity ------- */}
       <header className="pf-hero">
         <span className="pf-wordmark" aria-label="dime">
-          d<span className="pf-wordmark-i">ı<span className="pf-coindot" /></span>me
+          d
+          <span className="pf-wordmark-i">
+            ı<span className="pf-coindot" />
+          </span>
+          me
         </span>
         <h1 className="pf-username">{displayUsername}</h1>
         <div className="pf-plan">
@@ -200,9 +204,7 @@ export default function Profile() {
           <div className="pf-card">
             <div className="pf-row">
               <span className="pf-row-key">Discord</span>
-              <span className="pf-row-value">
-                @{appUser.discordUsername}
-              </span>
+              <span className="pf-row-value">@{appUser.discordUsername}</span>
             </div>
           </div>
         </section>

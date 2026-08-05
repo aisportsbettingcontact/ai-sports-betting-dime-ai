@@ -27,9 +27,10 @@ interface IntervalPickerProps {
 function optionFor(value: IntervalValue): IntervalOption {
   return (
     INTERVAL_OPTIONS.find(
-      (o) => o.interval === value.interval && o.intervalCount === value.intervalCount,
+      o =>
+        o.interval === value.interval && o.intervalCount === value.intervalCount
     ) ??
-    INTERVAL_OPTIONS.find((o) => o.label === "Monthly") ??
+    INTERVAL_OPTIONS.find(o => o.label === "Monthly") ??
     INTERVAL_OPTIONS[0]
   );
 }
@@ -41,13 +42,17 @@ export function IntervalPicker({ value, onChange, id }: IntervalPickerProps) {
     <select
       id={id}
       value={selected.label}
-      onChange={(e) => {
-        const next = INTERVAL_OPTIONS.find((o) => o.label === e.target.value);
-        if (next) onChange({ interval: next.interval, intervalCount: next.intervalCount });
+      onChange={e => {
+        const next = INTERVAL_OPTIONS.find(o => o.label === e.target.value);
+        if (next)
+          onChange({
+            interval: next.interval,
+            intervalCount: next.intervalCount,
+          });
       }}
       className="w-full cursor-pointer rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground outline-none transition-colors duration-150 focus:border-primary focus-visible:ring-2 focus-visible:ring-primary/40"
     >
-      {INTERVAL_OPTIONS.map((o) => (
+      {INTERVAL_OPTIONS.map(o => (
         <option key={o.label} value={o.label}>
           {o.label}
         </option>

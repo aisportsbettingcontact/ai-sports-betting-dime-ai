@@ -32,16 +32,28 @@ function row(overrides: Record<string, unknown>): MlbRowInput {
     venue: "Fenway Park",
     doubleHeader: "S",
     gameNumber: 2,
-    awayML: null, homeML: null,
-    awayRunLine: null, homeRunLine: null,
-    awayRunLineOdds: null, homeRunLineOdds: null,
-    bookTotal: null, overOdds: null, underOdds: null,
-    modelAwayML: null, modelHomeML: null,
-    modelAwayWinPct: null, modelHomeWinPct: null,
-    modelTotal: null, modelOverRate: null, modelUnderRate: null,
-    modelOverOdds: null, modelUnderOdds: null,
-    awayModelSpread: null, homeModelSpread: null,
-    modelAwaySpreadOdds: null, modelHomeSpreadOdds: null,
+    awayML: null,
+    homeML: null,
+    awayRunLine: null,
+    homeRunLine: null,
+    awayRunLineOdds: null,
+    homeRunLineOdds: null,
+    bookTotal: null,
+    overOdds: null,
+    underOdds: null,
+    modelAwayML: null,
+    modelHomeML: null,
+    modelAwayWinPct: null,
+    modelHomeWinPct: null,
+    modelTotal: null,
+    modelOverRate: null,
+    modelUnderRate: null,
+    modelOverOdds: null,
+    modelUnderOdds: null,
+    awayModelSpread: null,
+    homeModelSpread: null,
+    modelAwaySpreadOdds: null,
+    modelHomeSpreadOdds: null,
     ...overrides,
   } as unknown as MlbRowInput;
 }
@@ -87,7 +99,9 @@ describe("MLB doubleheader client rendering identity", () => {
       return h * 60 + parseInt(m[2], 10);
     };
     const sorted = [g2Row(), g1Row()].sort(
-      (a, b) => timeToMinutes(a.startTimeEst as string) - timeToMinutes(b.startTimeEst as string)
+      (a, b) =>
+        timeToMinutes(a.startTimeEst as string) -
+        timeToMinutes(b.startTimeEst as string)
     );
     expect(sorted).toHaveLength(2);
     expect(sorted[0].startTimeEst).toBe("1:35 PM");
@@ -113,21 +127,25 @@ describe("MLB Rotowire pregame binding", () => {
         homePitcherName: "Garrett Crochet",
         homePitcherEra: "10-4 · 2.67 ERA",
         homePitcherConfirmed: false,
-      },
+      }
     );
     expect(enriched.sourceGameId).toBe(7201);
     expect(enriched.status).toBe("scheduled");
     expect(enriched.pregameLineups?.away.pitcher.name).toBe("Shane Baz");
     expect(enriched.pregameLineups?.away.pitcher.confirmed).toBe(true);
-    expect(enriched.pregameLineups?.home.pitcher.seasonStats).toBe("10-4 · 2.67 ERA");
+    expect(enriched.pregameLineups?.home.pitcher.seasonStats).toBe(
+      "10-4 · 2.67 ERA"
+    );
 
-    const fallback = mlbRowToCard(row({
-      id: 7202,
-      awayStartingPitcher: "Ryan Pepiot",
-      homeStartingPitcher: "Brayan Bello",
-      awayPitcherConfirmed: false,
-      homePitcherConfirmed: true,
-    }));
+    const fallback = mlbRowToCard(
+      row({
+        id: 7202,
+        awayStartingPitcher: "Ryan Pepiot",
+        homeStartingPitcher: "Brayan Bello",
+        awayPitcherConfirmed: false,
+        homePitcherConfirmed: true,
+      })
+    );
     expect(fallback.pregameLineups?.away.pitcher.name).toBe("Ryan Pepiot");
     expect(fallback.pregameLineups?.home.pitcher.name).toBe("Brayan Bello");
     expect(fallback.pregameLineups?.home.pitcher.confirmed).toBe(true);
@@ -141,8 +159,11 @@ describe("MLB Rotowire pregame binding", () => {
       ["suspended", "postponed"],
     ] as const) {
       const card = mlbRowToCard(
-        row({ gameStatus: rawStatus, awayScore: rawStatus === "final" ? 2 : null }),
-        { awayPitcherName: "Must Not Render" },
+        row({
+          gameStatus: rawStatus,
+          awayScore: rawStatus === "final" ? 2 : null,
+        }),
+        { awayPitcherName: "Must Not Render" }
       );
       expect(card.status).toBe(expectedStatus);
       expect(card.pregameLineups).toBeUndefined();

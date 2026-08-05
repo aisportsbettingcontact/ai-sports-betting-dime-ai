@@ -37,10 +37,15 @@ export interface RoleRegistry {
 
 /** env key DIME_AI_SHARP → plan slug "dime-sharp". */
 export function planSlugForEnvKey(envKey: string): string {
-  return `dime-${envKey.replace(/^DIME_AI_/, "").toLowerCase().replace(/_/g, "-")}`;
+  return `dime-${envKey
+    .replace(/^DIME_AI_/, "")
+    .toLowerCase()
+    .replace(/_/g, "-")}`;
 }
 
-export function parseRoleRegistry(env: Record<string, string | undefined>): RoleRegistry {
+export function parseRoleRegistry(
+  env: Record<string, string | undefined>
+): RoleRegistry {
   const snowflake = (v: string | undefined): string | null =>
     v && SNOWFLAKE_RE.test(v.trim()) ? v.trim() : null;
 
@@ -56,7 +61,11 @@ export function parseRoleRegistry(env: Record<string, string | undefined>): Role
     if (id) planRoleIds[planSlugForEnvKey(key)] = id;
   }
 
-  return { baselineRoleIds, teamRoleId: snowflake(env.DIME_AI_TEAM), planRoleIds };
+  return {
+    baselineRoleIds,
+    teamRoleId: snowflake(env.DIME_AI_TEAM),
+    planRoleIds,
+  };
 }
 
 /** The only role IDs sync is allowed to add or remove. */
@@ -90,7 +99,7 @@ export function computeDesiredRoleIds(
   user: RoleMapUser,
   registry: RoleRegistry,
   nowMs: number,
-  entitledOverride?: boolean,
+  entitledOverride?: boolean
 ): Set<string> {
   const rowEntitled =
     user.hasAccess === true &&
@@ -101,7 +110,9 @@ export function computeDesiredRoleIds(
   if (!entitled) return new Set();
 
   const desired = new Set(registry.baselineRoleIds);
-  const planRole = user.stripePlanId ? registry.planRoleIds[user.stripePlanId] : undefined;
+  const planRole = user.stripePlanId
+    ? registry.planRoleIds[user.stripePlanId]
+    : undefined;
   if (planRole) desired.add(planRole);
   if ((user.role === "owner" || user.role === "admin") && registry.teamRoleId) {
     desired.add(registry.teamRoleId);

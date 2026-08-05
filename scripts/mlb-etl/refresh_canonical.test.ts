@@ -13,7 +13,10 @@
 import { describe, expect, it } from "vitest";
 import { computeMissingGames, type DatasetGame } from "./refresh_canonical.mts";
 
-function game(gamePk: number, overrides: Partial<DatasetGame> = {}): DatasetGame {
+function game(
+  gamePk: number,
+  overrides: Partial<DatasetGame> = {}
+): DatasetGame {
   return {
     gamePk,
     officialDate: "2026-07-28",
@@ -35,13 +38,13 @@ describe("computeMissingGames", () => {
     const finals = [game(1), game(2), game(3)];
     const dbPks = new Set([1, 3]);
     const missing = computeMissingGames(finals, dbPks);
-    expect(missing.map((g) => g.gamePk)).toEqual([2]);
+    expect(missing.map(g => g.gamePk)).toEqual([2]);
   });
 
   it("treats an empty DB set as everything missing (cold DB / first run)", () => {
     const finals = [game(10), game(11)];
     const missing = computeMissingGames(finals, new Set());
-    expect(missing.map((g) => g.gamePk)).toEqual([10, 11]);
+    expect(missing.map(g => g.gamePk)).toEqual([10, 11]);
   });
 
   it("returns an empty array (not an error) when there are no finals at all", () => {

@@ -58,13 +58,16 @@ function normalizeName(name: string): string {
 
 // ─── MLB Stats API: fetch box score batting HR results ────────────────────────
 
-async function fetchGameBatterHrs(gamePk: number): Promise<Map<string, number>> {
+async function fetchGameBatterHrs(
+  gamePk: number
+): Promise<Map<string, number>> {
   const url = `${MLB_STATS_BASE}/game/${gamePk}/boxscore`;
   console.log(`${TAG} [STEP] Fetching box score for gamePk=${gamePk}`);
 
   const res = await fetch(url, {
     headers: {
-      "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+      "User-Agent":
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
       Accept: "application/json",
     },
     signal: AbortSignal.timeout(15000),
@@ -74,10 +77,28 @@ async function fetchGameBatterHrs(gamePk: number): Promise<Map<string, number>> 
     throw new Error(`HTTP ${res.status} for gamePk=${gamePk}`);
   }
 
-  const data = await res.json() as {
+  const data = (await res.json()) as {
     teams?: {
-      away?: { batters?: number[]; players?: Record<string, { person?: { fullName?: string }; stats?: { batting?: { homeRuns?: number } } }> };
-      home?: { batters?: number[]; players?: Record<string, { person?: { fullName?: string }; stats?: { batting?: { homeRuns?: number } } }> };
+      away?: {
+        batters?: number[];
+        players?: Record<
+          string,
+          {
+            person?: { fullName?: string };
+            stats?: { batting?: { homeRuns?: number } };
+          }
+        >;
+      };
+      home?: {
+        batters?: number[];
+        players?: Record<
+          string,
+          {
+            person?: { fullName?: string };
+            stats?: { batting?: { homeRuns?: number } };
+          }
+        >;
+      };
     };
   };
 
@@ -109,14 +130,21 @@ async function fetchGameBatterHrs(gamePk: number): Promise<Map<string, number>> 
  * Fetch actual HR results for all completed games on a given date
  * and update mlb_hr_props.actualHr + backtestResult.
  */
-export async function fetchAndStoreActualHrResults(gameDate: string): Promise<HrBacktestResult> {
-  console.log(`\n${TAG} ============================================================`);
+export async function fetchAndStoreActualHrResults(
+  gameDate: string
+): Promise<HrBacktestResult> {
+  console.log(
+    `\n${TAG} ============================================================`
+  );
   console.log(`${TAG} [INPUT] date=${gameDate}`);
 
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  let gamesProcessed = 0, propsUpdated = 0, propsSkipped = 0, errors = 0;
+  let gamesProcessed = 0,
+    propsUpdated = 0,
+    propsSkipped = 0,
+    errors = 0;
 
   // ── Step 1: Find HR Props rows with null actualHr for Final games ─────────
   const pendingRows = await db
@@ -133,24 +161,35 @@ export async function fetchAndStoreActualHrResults(gameDate: string): Promise<Hr
     })
     .from(mlbHrProps)
     .innerJoin(games, eq(mlbHrProps.gameId, games.id))
-    .where(
-      and(
-        eq(games.gameDate, gameDate),
-        isNull(mlbHrProps.actualHr),
-      )
-    );
+    .where(and(eq(games.gameDate, gameDate), isNull(mlbHrProps.actualHr)));
 
   // Filter to only Final/Game Over games
-  const finalRows = (pendingRows as Array<typeof pendingRows[0]>).filter((r: typeof pendingRows[0]) => {
-    const status = (r.gameStatus ?? "").toLowerCase();
-    return status.includes("final") || status.includes("game over") || status.includes("completed");
-  });
+  const finalRows = (pendingRows as Array<(typeof pendingRows)[0]>).filter(
+    (r: (typeof pendingRows)[0]) => {
+      const status = (r.gameStatus ?? "").toLowerCase();
+      return (
+        status.includes("final") ||
+        status.includes("game over") ||
+        status.includes("completed")
+      );
+    }
+  );
 
-  console.log(`${TAG} [STATE] Found ${pendingRows.length} pending HR props | ${finalRows.length} in Final games`);
+  console.log(
+    `${TAG} [STATE] Found ${pendingRows.length} pending HR props | ${finalRows.length} in Final games`
+  );
 
   if (finalRows.length === 0) {
-    console.log(`${TAG} [STATE] No pending HR props in Final games — nothing to backtest`);
-    return { date: gameDate, gamesProcessed: 0, propsUpdated: 0, propsSkipped: 0, errors: 0 };
+    console.log(
+      `${TAG} [STATE] No pending HR props in Final games — nothing to backtest`
+    );
+    return {
+      date: gameDate,
+      gamesProcessed: 0,
+      propsUpdated: 0,
+      propsSkipped: 0,
+      errors: 0,
+    };
   }
 
   // ── Step 2: Group by game ─────────────────────────────────────────────────
@@ -183,7 +222,9 @@ export async function fetchAndStoreActualHrResults(gameDate: string): Promise<Hr
         const actualHr = hrMap.get(playerNorm);
 
         if (actualHr === undefined) {
-          console.log(`${TAG} [SKIP] ${prop.playerName} (gameId=${gameId}): not found in box score`);
+          console.log(
+            `${TAG} [SKIP] ${prop.playerName} (gameId=${gameId}): not found in box score`
+          );
           propsSkipped++;
           continue;
         }
@@ -191,7 +232,8 @@ export async function fetchAndStoreActualHrResults(gameDate: string): Promise<Hr
         // Compute backtest result
         const hitHr = actualHr >= 1;
         const verdict = prop.verdict ?? "PASS";
-        const modelPHr = prop.modelPHr !== null ? parseFloat(prop.modelPHr) : null;
+        const modelPHr =
+          prop.modelPHr !== null ? parseFloat(prop.modelPHr) : null;
 
         let backtestResult: string;
         let modelCorrect: number | null = null;
@@ -217,7 +259,9 @@ export async function fetchAndStoreActualHrResults(gameDate: string): Promise<Hr
         }
         // Validation: modelCorrect must always be 0 or 1 for graded entries
         if (backtestResult !== "NO_ACTION" && modelCorrect === null) {
-          console.error(`${TAG} [VERIFY FAIL] id=${prop.id} ${prop.playerName}: modelCorrect is null for graded entry verdict=${verdict} backtestResult=${backtestResult}`);
+          console.error(
+            `${TAG} [VERIFY FAIL] id=${prop.id} ${prop.playerName}: modelCorrect is null for graded entry verdict=${verdict} backtestResult=${backtestResult}`
+          );
           modelCorrect = 0; // Safe fallback — treat as incorrect rather than corrupt
         }
 
@@ -233,8 +277,15 @@ export async function fetchAndStoreActualHrResults(gameDate: string): Promise<Hr
           .where(eq(mlbHrProps.id, prop.id));
 
         propsUpdated++;
-        const resultStr = backtestResult === "WIN" ? "✅ WIN" : backtestResult === "LOSS" ? "❌ LOSS" : "⏭ NO_ACTION";
-        console.log(`${TAG} [OUTPUT] ${prop.playerName}: actualHr=${actualHr} verdict=${verdict} → ${resultStr}`);
+        const resultStr =
+          backtestResult === "WIN"
+            ? "✅ WIN"
+            : backtestResult === "LOSS"
+              ? "❌ LOSS"
+              : "⏭ NO_ACTION";
+        console.log(
+          `${TAG} [OUTPUT] ${prop.playerName}: actualHr=${actualHr} verdict=${verdict} → ${resultStr}`
+        );
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -246,7 +297,7 @@ export async function fetchAndStoreActualHrResults(gameDate: string): Promise<Hr
 
   // ── Step 4: Calibration summary ───────────────────────────────────────────
   try {
-    const [summary] = await db.execute(`
+    const [summary] = (await db.execute(`
       SELECT
         COUNT(*) as total,
         SUM(actualHr IS NOT NULL) as completed,
@@ -257,10 +308,22 @@ export async function fetchAndStoreActualHrResults(gameDate: string): Promise<Hr
       FROM mlb_hr_props hp
       JOIN games g ON g.id = hp.gameId
       WHERE g.gameDate = '${gameDate}'
-    `) as [Array<{ total: number; completed: number; hrHits: number; wins: number; losses: number; noAction: number }>];
+    `)) as [
+      Array<{
+        total: number;
+        completed: number;
+        hrHits: number;
+        wins: number;
+        losses: number;
+        noAction: number;
+      }>,
+    ];
 
     const s = summary[0];
-    const acc = (s.wins + s.losses) > 0 ? ((s.wins / (s.wins + s.losses)) * 100).toFixed(1) : "N/A";
+    const acc =
+      s.wins + s.losses > 0
+        ? ((s.wins / (s.wins + s.losses)) * 100).toFixed(1)
+        : "N/A";
     console.log(`\n${TAG} ─── CALIBRATION SUMMARY (${gameDate}) ───`);
     console.log(`${TAG}   Total props:    ${s.total}`);
     console.log(`${TAG}   Completed:      ${s.completed}`);
@@ -273,10 +336,18 @@ export async function fetchAndStoreActualHrResults(gameDate: string): Promise<Hr
     console.warn(`${TAG} [WARN] Calibration summary failed: ${err}`);
   }
 
-  console.log(`\n${TAG} ============================================================`);
-  console.log(`${TAG} [OUTPUT] date=${gameDate} gamesProcessed=${gamesProcessed} propsUpdated=${propsUpdated} propsSkipped=${propsSkipped} errors=${errors}`);
-  console.log(`${TAG} [VERIFY] ${errors === 0 ? "PASS" : "WARN"} — ${errors} errors`);
-  console.log(`${TAG} ============================================================\n`);
+  console.log(
+    `\n${TAG} ============================================================`
+  );
+  console.log(
+    `${TAG} [OUTPUT] date=${gameDate} gamesProcessed=${gamesProcessed} propsUpdated=${propsUpdated} propsSkipped=${propsSkipped} errors=${errors}`
+  );
+  console.log(
+    `${TAG} [VERIFY] ${errors === 0 ? "PASS" : "WARN"} — ${errors} errors`
+  );
+  console.log(
+    `${TAG} ============================================================\n`
+  );
 
   return { date: gameDate, gamesProcessed, propsUpdated, propsSkipped, errors };
 }

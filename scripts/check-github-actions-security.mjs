@@ -7,6 +7,24 @@ import { fileURLToPath } from "node:url";
 const SHA_PIN = /^[0-9a-f]{40}$/;
 const DOCKER_DIGEST_PIN = /@sha256:[0-9a-f]{64}$/;
 const WRITE_EXCEPTION = "auto-merge-dependabot.yml";
+// Per-workflow approved WRITE scopes (verification framework, 2026-08-05).
+// Fail-closed: any write not listed here for its exact workflow filename is
+// rejected. Justifications:
+//   security-events — SARIF upload to the code-scanning tab (CodeQL action)
+//   id-token        — OIDC for scorecard publish / artifact attestation
+//   attestations    — actions/attest-build-provenance (SLSA provenance)
+//   packages        — push the verification image digest to GHCR (11 only)
+const WRITE_APPROVALS = new Map([
+  ["auto-merge-dependabot.yml", new Set(["contents", "pull-requests"])],
+  ["02-codeql.yml", new Set(["security-events"])],
+  ["05-workflow-security.yml", new Set(["security-events"])],
+  ["09-artifact-build-and-smoke.yml", new Set(["security-events"])],
+  [
+    "11-artifact-attestation.yml",
+    new Set(["id-token", "attestations", "packages"]),
+  ],
+  ["12-nightly-verification.yml", new Set(["security-events", "id-token"])],
+]);
 const PERMISSION_SCOPES = new Set([
   "actions",
   "attestations",
@@ -82,10 +100,7 @@ function inspectPermissions(name, source, failures) {
     );
     return;
   }
-  const allowedWrites =
-    name === WRITE_EXCEPTION
-      ? new Set(["contents", "pull-requests"])
-      : new Set();
+  const allowedWrites = WRITE_APPROVALS.get(name) ?? new Set();
   for (const block of blocks) {
     for (const value of block.values) {
       const normalized = String(value.access).toLowerCase();
@@ -107,7 +122,9 @@ function inspectPermissions(name, source, failures) {
       }
       if (
         normalized === "write" &&
-        (block.indent !== 0 || !allowedWrites.has(value.scope))
+        // approved writes may live at job level (least privilege); the
+        // dependabot exception keeps its stricter top-level exact-match below
+        !allowedWrites.has(value.scope)
       ) {
         failures.push(
           `${name}:${value.line}: unapproved write permission ${value.scope}`

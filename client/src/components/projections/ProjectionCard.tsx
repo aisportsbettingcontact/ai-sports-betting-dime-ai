@@ -29,7 +29,7 @@ import "./ProjectionCard.css";
  *  decision engine, at most one side per market. */
 export function rankedEdges(game: ProjectionGame): MarketInsight[] {
   const seen = new Set<string>();
-  return rankMarkets(game.markets.flatMap((m) => m.sides)).filter((m) => {
+  return rankMarkets(game.markets.flatMap(m => m.sides)).filter(m => {
     if (m.recommendation === "NO_EDGE" || seen.has(m.marketKey)) return false;
     seen.add(m.marketKey);
     return true;
@@ -45,8 +45,8 @@ export function rankedEdges(game: ProjectionGame): MarketInsight[] {
  */
 export function rankedNoEdgeCandidates(game: ProjectionGame): MarketInsight[] {
   const seen = new Set<string>();
-  return rankMarkets(game.markets.flatMap((m) => m.sides))
-    .filter((insight) => insight.recommendation === "NO_EDGE")
+  return rankMarkets(game.markets.flatMap(m => m.sides))
+    .filter(insight => insight.recommendation === "NO_EDGE")
     .sort((a, b) => {
       const aRoi = a.roiPct ?? Number.NEGATIVE_INFINITY;
       const bRoi = b.roiPct ?? Number.NEGATIVE_INFINITY;
@@ -56,7 +56,7 @@ export function rankedNoEdgeCandidates(game: ProjectionGame): MarketInsight[] {
       const marketOrder = a.marketKey.localeCompare(b.marketKey);
       return marketOrder || a.sideLabel.localeCompare(b.sideLabel);
     })
-    .filter((insight) => {
+    .filter(insight => {
       if (seen.has(insight.marketKey)) return false;
       seen.add(insight.marketKey);
       return true;
@@ -75,9 +75,11 @@ export function ProjectionCard({
   onOpen?: () => void;
 }) {
   const edges = rankedEdges(game);
-  const fallbackCandidates = edges.length === 0 ? rankedNoEdgeCandidates(game) : [];
+  const fallbackCandidates =
+    edges.length === 0 ? rankedNoEdgeCandidates(game) : [];
   const displayInsights = edges.length > 0 ? edges : fallbackCandidates;
-  const showsNoEdgeRanking = edges.length === 0 && fallbackCandidates.length > 0;
+  const showsNoEdgeRanking =
+    edges.length === 0 && fallbackCandidates.length > 0;
   // Whole-card PASS state (Round 4 Wave 1, item 3 / page law "PASS games"):
   // no market on this game clears the WATCH/BET threshold. The fallback
   // candidates remain recommendation=NO_EDGE, so their richer readout can
@@ -89,7 +91,8 @@ export function ProjectionCard({
   // may still quiet the whole card independently of PASS.
   const isPass = game.status !== "live" && edges.length === 0;
   const isCompact = game.status !== "scheduled";
-  const showPregame = game.status === "scheduled" && game.pregameLineups != null;
+  const showPregame =
+    game.status === "scheduled" && game.pregameLineups != null;
 
   return (
     <article
@@ -98,7 +101,9 @@ export function ProjectionCard({
     >
       {game.status !== "scheduled" && (
         <header className="projection-card__head">
-          <span className={`projection-card__status projection-card__status--${game.status}`}>
+          <span
+            className={`projection-card__status projection-card__status--${game.status}`}
+          >
             {/* Live indicator (owner directive / page law "Live state"): pulsing
                 7px mint dot ahead of the mono-styled status text. Desktop/tablet
                 only (Round 4 Wave 1 scoping, item 8) — see ProjectionCard.css. */}

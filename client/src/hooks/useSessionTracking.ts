@@ -45,13 +45,22 @@ interface MinimalLockManager {
   request(
     name: string,
     options: { mode: "exclusive" | "shared" },
-    callback: LockGrantedCallback,
+    callback: LockGrantedCallback
   ): Promise<void>;
 }
 
-const INPUT_EVENTS = ["mousemove", "keydown", "pointerdown", "scroll", "touchstart"] as const;
+const INPUT_EVENTS = [
+  "mousemove",
+  "keydown",
+  "pointerdown",
+  "scroll",
+  "touchstart",
+] as const;
 
-export function useSessionTracking(enabled: boolean, onSessionOpen?: () => void): void {
+export function useSessionTracking(
+  enabled: boolean,
+  onSessionOpen?: () => void
+): void {
   const openMutation = trpc.metrics.openSession.useMutation();
   const heartbeatMutation = trpc.metrics.sessionHeartbeat.useMutation();
   const closeMutation = trpc.metrics.closeSession.useMutation();
@@ -69,7 +78,8 @@ export function useSessionTracking(enabled: boolean, onSessionOpen?: () => void)
 
   useEffect(() => {
     if (!enabled) return;
-    if (typeof window === "undefined" || typeof document === "undefined") return;
+    if (typeof window === "undefined" || typeof document === "undefined")
+      return;
 
     let isLeader = false;
     let started = false;
@@ -77,9 +87,22 @@ export function useSessionTracking(enabled: boolean, onSessionOpen?: () => void)
     let releaseLock: (() => void) | null = null;
     let lastInput = Date.now();
 
-    const markInput = () => { lastInput = Date.now(); };
-    const open = () => { if (!started) { started = true; openRef.current(); onOpenRef.current?.(); } };
-    const close = () => { if (started) { started = false; closeRef.current(); } };
+    const markInput = () => {
+      lastInput = Date.now();
+    };
+    const open = () => {
+      if (!started) {
+        started = true;
+        openRef.current();
+        onOpenRef.current?.();
+      }
+    };
+    const close = () => {
+      if (started) {
+        started = false;
+        closeRef.current();
+      }
+    };
     const beat = () => {
       if (
         shouldHeartbeat({
@@ -104,16 +127,22 @@ export function useSessionTracking(enabled: boolean, onSessionOpen?: () => void)
     // without it fall back to a best-effort localStorage claim (renewed each
     // interval; a stale claim is taken over), which dedupes the common
     // multi-tab case without Web Locks' exactness.
-    const locks = (navigator as unknown as { locks?: MinimalLockManager }).locks;
+    const locks = (navigator as unknown as { locks?: MinimalLockManager })
+      .locks;
     if (locks && typeof locks.request === "function") {
       locks
-        .request(SESSION_LOCK, { mode: "exclusive" }, () =>
-          new Promise<void>((resolve) => {
-            releaseLock = resolve;
-            startLeading();
-          }),
+        .request(
+          SESSION_LOCK,
+          { mode: "exclusive" },
+          () =>
+            new Promise<void>(resolve => {
+              releaseLock = resolve;
+              startLeading();
+            })
         )
-        .catch(() => { /* lock request aborted on unmount — nothing to do */ });
+        .catch(() => {
+          /* lock request aborted on unmount — nothing to do */
+        });
     } else {
       const myId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
       const CLAIM_TTL_MS = HEARTBEAT_INTERVAL_MS * 2.5;
@@ -131,8 +160,13 @@ export function useSessionTracking(enabled: boolean, onSessionOpen?: () => void)
         const stale = !c || Date.now() - c.ts > CLAIM_TTL_MS;
         if (isLeader || stale || c?.id === myId) {
           try {
-            window.localStorage.setItem(SESSION_LOCK, JSON.stringify({ id: myId, ts: Date.now() }));
-          } catch { /* storage unavailable — degrade to this-tab-leads */ }
+            window.localStorage.setItem(
+              SESSION_LOCK,
+              JSON.stringify({ id: myId, ts: Date.now() })
+            );
+          } catch {
+            /* storage unavailable — degrade to this-tab-leads */
+          }
           if (!isLeader && readClaim()?.id === myId) startLeading();
         }
       };
@@ -141,21 +175,28 @@ export function useSessionTracking(enabled: boolean, onSessionOpen?: () => void)
       releaseLock = () => {
         if (claimTimer) window.clearInterval(claimTimer);
         try {
-          if (readClaim()?.id === myId) window.localStorage.removeItem(SESSION_LOCK);
-        } catch { /* ignore */ }
+          if (readClaim()?.id === myId)
+            window.localStorage.removeItem(SESSION_LOCK);
+        } catch {
+          /* ignore */
+        }
       };
     }
 
     const onPageHide = () => close();
     // bfcache restore: pagehide closed the session; re-open it if we still lead.
-    const onPageShow = (e: PageTransitionEvent) => { if (e.persisted && isLeader) open(); };
-    INPUT_EVENTS.forEach((ev) => window.addEventListener(ev, markInput, { passive: true }));
+    const onPageShow = (e: PageTransitionEvent) => {
+      if (e.persisted && isLeader) open();
+    };
+    INPUT_EVENTS.forEach(ev =>
+      window.addEventListener(ev, markInput, { passive: true })
+    );
     window.addEventListener("pagehide", onPageHide);
     window.addEventListener("pageshow", onPageShow);
 
     return () => {
       if (intervalId) window.clearInterval(intervalId);
-      INPUT_EVENTS.forEach((ev) => window.removeEventListener(ev, markInput));
+      INPUT_EVENTS.forEach(ev => window.removeEventListener(ev, markInput));
       window.removeEventListener("pagehide", onPageHide);
       window.removeEventListener("pageshow", onPageShow);
       close(); // logout / unmount closes the session (server computes engaged duration)

@@ -36,7 +36,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, CheckCircle2, AlertCircle, ClipboardPaste } from "lucide-react";
+import {
+  Loader2,
+  CheckCircle2,
+  AlertCircle,
+  ClipboardPaste,
+} from "lucide-react";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -63,7 +68,7 @@ export default function IngestAnOdds() {
   const [sport, setSport] = useState<"NBA" | "NHL">("NBA");
 
   const ingestMutation = trpc.games.ingestAnHtml.useMutation({
-    onSuccess: (data) => {
+    onSuccess: data => {
       if (data.errors.length > 0) {
         toast.warning(
           `Ingested ${data.updated} games — ${data.skipped} skipped. See details below.`
@@ -72,7 +77,7 @@ export default function IngestAnOdds() {
         toast.success(`Successfully ingested odds for ${data.updated} games!`);
       }
     },
-    onError: (err) => {
+    onError: err => {
       toast.error(`Ingestion failed: ${err.message}`);
     },
   });
@@ -80,7 +85,9 @@ export default function IngestAnOdds() {
   // Auth guard — MUST be useEffect, never render body (render-phase navigate crashes React 19)
   useEffect(() => {
     if (!authLoading && (!appUser || !isOwner)) {
-      console.warn(`[IngestAnOdds] Unauthorized: user=${appUser?.username ?? "unauthenticated"} isOwner=${isOwner} → redirecting`);
+      console.warn(
+        `[IngestAnOdds] Unauthorized: user=${appUser?.username ?? "unauthenticated"} isOwner=${isOwner} → redirecting`
+      );
       navigate(appUser ? "/feed/model/mlb" : "/");
     }
   }, [authLoading, appUser, isOwner, navigate]);
@@ -106,7 +113,9 @@ export default function IngestAnOdds() {
         {/* Page header */}
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Ingest AN Odds</h1>
+            <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+              Ingest AN Odds
+            </h1>
             <p className="mt-1 text-sm text-muted-foreground">
               Action Network — All Markets (Open + DK NJ)
             </p>
@@ -138,15 +147,21 @@ export default function IngestAnOdds() {
                 </a>
               </li>
               <li>
-                Select <strong>All Markets</strong> from the market type dropdown
+                Select <strong>All Markets</strong> from the market type
+                dropdown
               </li>
               <li>
-                Right-click the odds table → <strong>Inspect</strong> → select the{" "}
-                <code className="bg-muted px-1 rounded text-xs">&lt;tbody&gt;</code> element →{" "}
-                <strong>Copy → Copy outerHTML</strong>
+                Right-click the odds table → <strong>Inspect</strong> → select
+                the{" "}
+                <code className="bg-muted px-1 rounded text-xs">
+                  &lt;tbody&gt;
+                </code>{" "}
+                element → <strong>Copy → Copy outerHTML</strong>
               </li>
               <li>Paste the HTML into the textarea below</li>
-              <li>Confirm the date and sport, then click <strong>Ingest</strong></li>
+              <li>
+                Confirm the date and sport, then click <strong>Ingest</strong>
+              </li>
             </ol>
           </CardContent>
         </Card>
@@ -161,7 +176,7 @@ export default function IngestAnOdds() {
               id="gameDate"
               type="date"
               value={gameDate}
-              onChange={(e) => setGameDate(e.target.value)}
+              onChange={e => setGameDate(e.target.value)}
               className="font-mono text-sm"
             />
           </div>
@@ -169,7 +184,7 @@ export default function IngestAnOdds() {
             <Label className="text-sm font-medium">Sport</Label>
             <Select
               value={sport}
-              onValueChange={(v) => setSport(v as "NBA" | "NHL")}
+              onValueChange={v => setSport(v as "NBA" | "NHL")}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -191,7 +206,7 @@ export default function IngestAnOdds() {
             id="html-paste"
             placeholder="Paste the Action Network All Markets <tbody> HTML here..."
             value={html}
-            onChange={(e) => setHtml(e.target.value)}
+            onChange={e => setHtml(e.target.value)}
             className="font-mono text-xs min-h-[200px] resize-y bg-muted border-border"
           />
           {html && (
@@ -284,7 +299,10 @@ export default function IngestAnOdds() {
                   </p>
                   <div className="bg-muted rounded p-2 space-y-0.5 max-h-32 overflow-y-auto">
                     {result.warnings.map((w, i) => (
-                      <p key={i} className="text-xs font-mono text-muted-foreground">
+                      <p
+                        key={i}
+                        className="text-xs font-mono text-muted-foreground"
+                      >
                         {w}
                       </p>
                     ))}

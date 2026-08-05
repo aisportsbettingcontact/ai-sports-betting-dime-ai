@@ -24,24 +24,36 @@ import path from "path";
 const repoRoot = path.resolve(import.meta.dirname, "..", "..");
 const heartbeatSrc = fs.readFileSync(
   path.join(repoRoot, "server", "wc2026", "wc2026Heartbeat.ts"),
-  "utf8",
+  "utf8"
 );
 const engineSrc = fs.readFileSync(
   path.join(repoRoot, "server", "wc2026", "v27_jul18_engine.mjs"),
-  "utf8",
+  "utf8"
 );
-const pkg = JSON.parse(fs.readFileSync(path.join(repoRoot, "package.json"), "utf8"));
+const pkg = JSON.parse(
+  fs.readFileSync(path.join(repoRoot, "package.json"), "utf8")
+);
 const buildServer: string = pkg.scripts?.["build:server"] ?? "";
 
 describe("WC2026 owner-triggered engine/audit/backfill endpoints", () => {
   it("registers the three owner-triggered routes", () => {
-    expect(heartbeatSrc).toMatch(/app\.post\("\/api\/scheduled\/wc2026-engine",\s*handleWc2026Engine\)/);
-    expect(heartbeatSrc).toMatch(/app\.post\("\/api\/scheduled\/wc2026-audit",\s*handleWc2026Audit\)/);
-    expect(heartbeatSrc).toMatch(/app\.post\("\/api\/scheduled\/wc2026-espn-backfill",\s*handleWc2026EspnBackfill\)/);
+    expect(heartbeatSrc).toMatch(
+      /app\.post\("\/api\/scheduled\/wc2026-engine",\s*handleWc2026Engine\)/
+    );
+    expect(heartbeatSrc).toMatch(
+      /app\.post\("\/api\/scheduled\/wc2026-audit",\s*handleWc2026Audit\)/
+    );
+    expect(heartbeatSrc).toMatch(
+      /app\.post\("\/api\/scheduled\/wc2026-espn-backfill",\s*handleWc2026EspnBackfill\)/
+    );
   });
 
   it("guards every handler behind the cron secret", () => {
-    for (const name of ["wc2026-engine", "wc2026-audit", "wc2026-espn-backfill"]) {
+    for (const name of [
+      "wc2026-engine",
+      "wc2026-audit",
+      "wc2026-espn-backfill",
+    ]) {
       expect(heartbeatSrc).toContain(`requireCronSecret(req, res, "${name}")`);
     }
   });
@@ -55,25 +67,43 @@ describe("WC2026 owner-triggered engine/audit/backfill endpoints", () => {
   });
 
   it("build:server copies the active (v27) engine, audit engine, and the audit JSON into dist", () => {
-    expect(buildServer).toContain("cp server/wc2026/v27_jul18_engine.mjs dist/v27_jul18_engine.mjs");
-    expect(buildServer).toContain("cp server/wc2026/wc2026AuditEngine.mjs dist/wc2026AuditEngine.mjs");
-    expect(buildServer).toContain("cp server/wc2026/groupStageGameIds.json dist/groupStageGameIds.json");
+    expect(buildServer).toContain(
+      "cp server/wc2026/v27_jul18_engine.mjs dist/v27_jul18_engine.mjs"
+    );
+    expect(buildServer).toContain(
+      "cp server/wc2026/wc2026AuditEngine.mjs dist/wc2026AuditEngine.mjs"
+    );
+    expect(buildServer).toContain(
+      "cp server/wc2026/groupStageGameIds.json dist/groupStageGameIds.json"
+    );
   });
 
   it("the spawned files exist to be copied", () => {
-    for (const f of ["v27_jul18_engine.mjs", "wc2026AuditEngine.mjs", "groupStageGameIds.json"]) {
-      expect(fs.existsSync(path.join(repoRoot, "server", "wc2026", f))).toBe(true);
+    for (const f of [
+      "v27_jul18_engine.mjs",
+      "wc2026AuditEngine.mjs",
+      "groupStageGameIds.json",
+    ]) {
+      expect(fs.existsSync(path.join(repoRoot, "server", "wc2026", f))).toBe(
+        true
+      );
     }
   });
 
   it("v27 engine targets the 3rd-place match (FRA home vs ENG away, ESPN 760516) and the Final (ESP home vs ARG away, ESPN 760517)", () => {
-    expect(engineSrc).toMatch(/fid:'wc26-3rd-103',\s*home:'FRA',\s*away:'ENG',\s*espnId:'760516'/);
+    expect(engineSrc).toMatch(
+      /fid:'wc26-3rd-103',\s*home:'FRA',\s*away:'ENG',\s*espnId:'760516'/
+    );
     expect(engineSrc).toMatch(/beId:'b9l0F3Bj',\s*beSlug:'france-england'/);
-    expect(engineSrc).toMatch(/fid:'wc26-final-104',\s*home:'ESP',\s*away:'ARG',\s*espnId:'760517'/);
+    expect(engineSrc).toMatch(
+      /fid:'wc26-final-104',\s*home:'ESP',\s*away:'ARG',\s*espnId:'760517'/
+    );
     expect(engineSrc).toMatch(/beId:'UgbUKPmT',\s*beSlug:'spain-argentina'/);
     // No stale SF-102 projection targeting left behind from the v26 clone (the
     // SF appears only as a BACKTEST entry, never as a projection/book target).
-    expect(engineSrc).not.toMatch(/fid:'wc26-sf-102',\s*home:'ENG',\s*away:'ARG',\s*espnId/);
+    expect(engineSrc).not.toMatch(
+      /fid:'wc26-sf-102',\s*home:'ENG',\s*away:'ARG',\s*espnId/
+    );
     expect(engineSrc).not.toMatch(/beId:'pKVyGJbD'/);
   });
 
@@ -94,36 +124,56 @@ describe("WC2026 owner-triggered engine/audit/backfill endpoints", () => {
     // the model still computes model_*_to_advance (win outright via ET+pens).
     expect(engineSrc).toMatch(/BOOK COMPLETENESS GUARD/);
     expect(engineSrc).toMatch(/JUL18_BOOK not filled from probe/);
-    expect(engineSrc).toMatch(/const missing = required\.filter\(k => book\[k\] == null\)/);
+    expect(engineSrc).toMatch(
+      /const missing = required\.filter\(k => book\[k\] == null\)/
+    );
     expect(engineSrc).toMatch(/no to-advance book lines \(expected/);
     expect(engineSrc).not.toMatch(/to-advance book lines missing/);
   });
 
   it("carries the scraped bet365 book for both matches (probe run 29622399287) with no market left null", () => {
     // 3rd-103 (b9l0F3Bj): all six markets clean, AH primary -1.5, OU primary 3.5.
-    expect(engineSrc).toMatch(/bookHomeMl: -118, bookDraw: 300, bookAwayMl: 290/);
+    expect(engineSrc).toMatch(
+      /bookHomeMl: -118, bookDraw: 300, bookAwayMl: 290/
+    );
     expect(engineSrc).toMatch(/bookSpread: -1\.5, bookTotal: 3\.5/);
     expect(engineSrc).toMatch(/bookOver: 110, bookUnder: -137/);
     expect(engineSrc).toMatch(/bookBttsY: -227, bookBttsN: 163/);
-    expect(engineSrc).toMatch(/bookHomeWD: -400, bookAwayWD: -110, bookNoDraw: -455/);
-    expect(engineSrc).toMatch(/bookHomeSpreadOdds: 210, bookAwaySpreadOdds: -286/);
+    expect(engineSrc).toMatch(
+      /bookHomeWD: -400, bookAwayWD: -110, bookNoDraw: -455/
+    );
+    expect(engineSrc).toMatch(
+      /bookHomeSpreadOdds: 210, bookAwaySpreadOdds: -286/
+    );
     // final-104 (UgbUKPmT): five clean markets + the scraped -0.75 AH line
     // (primary-rule selection found no passing line; jul15-precedent fallback).
-    expect(engineSrc).toMatch(/bookHomeMl: 125, bookDraw: 200, bookAwayMl: 260/);
+    expect(engineSrc).toMatch(
+      /bookHomeMl: 125, bookDraw: 200, bookAwayMl: 260/
+    );
     expect(engineSrc).toMatch(/bookSpread: -0\.75, bookTotal: 2\.5/);
     expect(engineSrc).toMatch(/bookOver: 120, bookUnder: -149/);
     expect(engineSrc).toMatch(/bookBttsY: -110, bookBttsN: -110/);
-    expect(engineSrc).toMatch(/bookHomeWD: -345, bookAwayWD: -161, bookNoDraw: -278/);
-    expect(engineSrc).toMatch(/bookHomeSpreadOdds: 168, bookAwaySpreadOdds: -222/);
+    expect(engineSrc).toMatch(
+      /bookHomeWD: -345, bookAwayWD: -161, bookNoDraw: -278/
+    );
+    expect(engineSrc).toMatch(
+      /bookHomeSpreadOdds: 168, bookAwaySpreadOdds: -222/
+    );
     // No BetExplorer market left null after the fill (adv is intentionally null).
     expect(engineSrc).not.toMatch(/bookHomeMl: null/);
     expect(engineSrc).not.toMatch(/bookTotal: null/);
   });
 
   it("grows the backtest with the QF/SF results and their frozen books", () => {
-    expect(engineSrc).toMatch(/fid:'wc26-qf-099', home:'NOR', away:'ENG', homeScore:1, awayScore:2/);
-    expect(engineSrc).toMatch(/fid:'wc26-sf-101', home:'FRA', away:'ESP', homeScore:0, awayScore:2/);
-    expect(engineSrc).toMatch(/fid:'wc26-sf-102', home:'ENG', away:'ARG', homeScore:1, awayScore:2/);
+    expect(engineSrc).toMatch(
+      /fid:'wc26-qf-099', home:'NOR', away:'ENG', homeScore:1, awayScore:2/
+    );
+    expect(engineSrc).toMatch(
+      /fid:'wc26-sf-101', home:'FRA', away:'ESP', homeScore:0, awayScore:2/
+    );
+    expect(engineSrc).toMatch(
+      /fid:'wc26-sf-102', home:'ENG', away:'ARG', homeScore:1, awayScore:2/
+    );
     // Frozen books present for every added backtest fid.
     expect(engineSrc).toMatch(/'wc26-qf-099': \{ bookHomeMl:300/);
     expect(engineSrc).toMatch(/'wc26-sf-101': \{ bookHomeMl:135/);
@@ -133,23 +183,35 @@ describe("WC2026 owner-triggered engine/audit/backfill endpoints", () => {
   it("writes model Double Chance into wc2026_model_projections (feed reads DC from there, not wc2026MatchOdds)", () => {
     expect(engineSrc).toMatch(/dc_1x_odds,\s*dc_x2_odds,\s*no_draw_home_odds/);
     expect(engineSrc).toMatch(/dc_1x_odds=VALUES\(dc_1x_odds\)/);
-    expect(engineSrc).toMatch(/markets\.mlHomeWD,\s*markets\.mlAwayWD,\s*markets\.mlNoDraw,\s*\n\s*markets\.spreadLine/);
+    expect(engineSrc).toMatch(
+      /markets\.mlHomeWD,\s*markets\.mlAwayWD,\s*markets\.mlNoDraw,\s*\n\s*markets\.spreadLine/
+    );
   });
 
   it("repairs both venues from owner-provided cities via wc2026_venues lookup (no hardcoded slugs)", () => {
     // 3rd-103 = Hard Rock, Miami Gardens FL; final-104 = MetLife, East Rutherford NJ.
     expect(engineSrc).toMatch(/venueCityLike:'Miami', seedDatePT:'2026-07-18'/);
-    expect(engineSrc).toMatch(/venueCityLike:'Rutherford', seedDatePT:'2026-07-19'/);
-    expect(engineSrc).toMatch(/SELECT venue_id, city FROM wc2026_venues WHERE LOWER\(city\) LIKE/);
-    expect(engineSrc).toMatch(/UPDATE wc2026_matches SET venue_id = \? WHERE match_id = \?/);
+    expect(engineSrc).toMatch(
+      /venueCityLike:'Rutherford', seedDatePT:'2026-07-19'/
+    );
+    expect(engineSrc).toMatch(
+      /SELECT venue_id, city FROM wc2026_venues WHERE LOWER\(city\) LIKE/
+    );
+    expect(engineSrc).toMatch(
+      /UPDATE wc2026_matches SET venue_id = \? WHERE match_id = \?/
+    );
     // City-lookup only — the venue_id written must come from the venues row.
     expect(engineSrc).not.toMatch(/venue_id = 'miami-gardens'/);
   });
 
   it("orientation guard: hard-fails on internal ML/DC book inconsistency, WARNs (not fails) on genuine model-market divergence", () => {
     expect(engineSrc).toMatch(/ORIENTATION GUARD/);
-    expect(engineSrc).toMatch(/const bookFav = book\.bookHomeMl <= book\.bookAwayMl/);
-    expect(engineSrc).toMatch(/const dcFav = book\.bookHomeWD <= book\.bookAwayWD/);
+    expect(engineSrc).toMatch(
+      /const bookFav = book\.bookHomeMl <= book\.bookAwayMl/
+    );
+    expect(engineSrc).toMatch(
+      /const dcFav = book\.bookHomeWD <= book\.bookAwayWD/
+    );
     expect(engineSrc).toMatch(/book INTERNALLY inconsistent/);
     expect(engineSrc).toMatch(/MODEL DIVERGES FROM MARKET/);
     // The v26 model-vs-book hard-fail heuristic must be gone — a legitimate
@@ -160,33 +222,47 @@ describe("WC2026 owner-triggered engine/audit/backfill endpoints", () => {
   });
 
   it("computes model totals at the BOOK's primary O/U line (not hardcoded 2.5)", () => {
-    expect(engineSrc).toMatch(/deriveAllMarkets\(joint, lambdaH, lambdaA, spreadLine, totalLine = 2\.5\)/);
+    expect(engineSrc).toMatch(
+      /deriveAllMarkets\(joint, lambdaH, lambdaA, spreadLine, totalLine = 2\.5\)/
+    );
     expect(engineSrc).toMatch(/if \(h\+a>totalLine\) pOver\+=p/);
-    expect(engineSrc).toMatch(/deriveAllMarkets\(joint, lH\.lambda, lA\.lambda, spreadLine, book\.bookTotal\)/);
+    expect(engineSrc).toMatch(
+      /deriveAllMarkets\(joint, lH\.lambda, lA\.lambda, spreadLine, book\.bookTotal\)/
+    );
   });
 
   it("asserts the live wc2026_matches orientation before writing", () => {
     expect(engineSrc).toMatch(/LIVE ORIENTATION ASSERTION/);
-    expect(engineSrc).toMatch(/SELECT home_team_id, away_team_id FROM wc2026_matches WHERE match_id = \?/);
+    expect(engineSrc).toMatch(
+      /SELECT home_team_id, away_team_id FROM wc2026_matches WHERE match_id = \?/
+    );
     expect(engineSrc).toMatch(/orientation flip; refusing to model\/write/);
   });
 
   it("buckets both matches on their PT kickoff-days with the non-destructive match_date repair", () => {
     expect(engineSrc).toMatch(/seedDatePT:'2026-07-18'/);
     expect(engineSrc).toMatch(/seedDatePT:'2026-07-19'/);
-    expect(engineSrc).toMatch(/UPDATE wc2026_matches SET match_date = \? WHERE match_id = \? AND DATE\(match_date\) <> \?/);
+    expect(engineSrc).toMatch(
+      /UPDATE wc2026_matches SET match_date = \? WHERE match_id = \? AND DATE\(match_date\) <> \?/
+    );
   });
 
   it("audits both new rows for NULLs after the write", () => {
-    expect(engineSrc).toMatch(/WHERE match_id IN \('wc26-3rd-103','wc26-final-104'\)/);
+    expect(engineSrc).toMatch(
+      /WHERE match_id IN \('wc26-3rd-103','wc26-final-104'\)/
+    );
   });
 
   it("bracket scraper Phase D seeds match_date on the PT kickoff-day, not the UTC day", () => {
     const scraperSrc = fs.readFileSync(
       path.join(repoRoot, "server", "wc2026", "wc2026BracketScraper.mjs"),
-      "utf8",
+      "utf8"
     );
-    expect(scraperSrc).toMatch(/toLocaleDateString\("en-CA", \{ timeZone: "America\/Los_Angeles" \}\)/);
-    expect(scraperSrc).not.toMatch(/const espnDateStr = espnDate\.toISOString\(\)\.slice\(0, 10\)/);
+    expect(scraperSrc).toMatch(
+      /toLocaleDateString\("en-CA", \{ timeZone: "America\/Los_Angeles" \}\)/
+    );
+    expect(scraperSrc).not.toMatch(
+      /const espnDateStr = espnDate\.toISOString\(\)\.slice\(0, 10\)/
+    );
   });
 });

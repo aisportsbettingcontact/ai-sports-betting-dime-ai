@@ -35,9 +35,21 @@ const FIFA_COUNTRIES: Record<string, CountryEntry> = {
   ESP: { iso2: "ES", name: "Spain" },
   FRA: { iso2: "FR", name: "France" },
   GER: { iso2: "DE", name: "Germany" },
-  ENG: { iso2: null, name: "England", flag: "🏴\u{E0067}\u{E0062}\u{E0065}\u{E006E}\u{E0067}\u{E007F}" },
-  SCO: { iso2: null, name: "Scotland", flag: "🏴\u{E0067}\u{E0062}\u{E0073}\u{E0063}\u{E0074}\u{E007F}" },
-  WAL: { iso2: null, name: "Wales", flag: "🏴\u{E0067}\u{E0062}\u{E0077}\u{E006C}\u{E0073}\u{E007F}" },
+  ENG: {
+    iso2: null,
+    name: "England",
+    flag: "🏴\u{E0067}\u{E0062}\u{E0065}\u{E006E}\u{E0067}\u{E007F}",
+  },
+  SCO: {
+    iso2: null,
+    name: "Scotland",
+    flag: "🏴\u{E0067}\u{E0062}\u{E0073}\u{E0063}\u{E0074}\u{E007F}",
+  },
+  WAL: {
+    iso2: null,
+    name: "Wales",
+    flag: "🏴\u{E0067}\u{E0062}\u{E0077}\u{E006C}\u{E0073}\u{E007F}",
+  },
   NIR: { iso2: "GB", name: "Northern Ireland" }, // no standard emoji flag → union flag
   IRL: { iso2: "IE", name: "Ireland" },
   POR: { iso2: "PT", name: "Portugal" },
@@ -211,11 +223,16 @@ export function flagEmojiFromIso2(iso2: string): string {
   const cc = iso2.trim().toUpperCase();
   if (!/^[A-Z]{2}$/.test(cc)) return NEUTRAL_FLAG;
   const A = 0x1f1e6; // regional indicator "A"
-  return String.fromCodePoint(A + (cc.charCodeAt(0) - 65), A + (cc.charCodeAt(1) - 65));
+  return String.fromCodePoint(
+    A + (cc.charCodeAt(0) - 65),
+    A + (cc.charCodeAt(1) - 65)
+  );
 }
 
 /** ISO 3166-1 alpha-2 for a FIFA code, or null for non-ISO members / unknowns. */
-export function iso2ForFifa(fifaCode: string | null | undefined): string | null {
+export function iso2ForFifa(
+  fifaCode: string | null | undefined
+): string | null {
   if (!fifaCode) return null;
   return FIFA_COUNTRIES[fifaCode.trim().toUpperCase()]?.iso2 ?? null;
 }
@@ -236,7 +253,7 @@ export function countryFlag(fifaCode: string | null | undefined): string {
  */
 export function countryName(
   fifaCode: string | null | undefined,
-  fallbackName?: string | null,
+  fallbackName?: string | null
 ): string {
   const code = fifaCode?.trim().toUpperCase();
   const entry = code ? FIFA_COUNTRIES[code] : undefined;
@@ -262,7 +279,7 @@ export interface CountryIdentity {
 }
 export function countryIdentity(
   fifaCode: string | null | undefined,
-  fallbackName?: string | null,
+  fallbackName?: string | null
 ): CountryIdentity {
   return {
     iso2: iso2ForFifa(fifaCode),

@@ -32,7 +32,7 @@ export const RATE_LIMIT_PATTERNS = [
 
 export function isRateLimitBody(text: string): boolean {
   const lower = text.toLowerCase().trim();
-  return RATE_LIMIT_PATTERNS.some((p) => lower.includes(p));
+  return RATE_LIMIT_PATTERNS.some(p => lower.includes(p));
 }
 
 /**
@@ -73,7 +73,9 @@ function extractServerMessage(bodyText: string): string | null {
  */
 export function synthesizeRateLimitResponse(bodyText: string): Response {
   const serverMsg = extractServerMessage(bodyText);
-  const message = serverMsg ?? "The server is temporarily busy. Please wait a moment and try again.";
+  const message =
+    serverMsg ??
+    "The server is temporarily busy. Please wait a moment and try again.";
   const errorBody = JSON.stringify([
     {
       error: {
@@ -85,25 +87,39 @@ export function synthesizeRateLimitResponse(bodyText: string): Response {
       },
     },
   ]);
-  return new Response(errorBody, { status: 429, headers: { "Content-Type": "application/json" } });
+  return new Response(errorBody, {
+    status: 429,
+    headers: { "Content-Type": "application/json" },
+  });
 }
 
 /** Synthesize a generic tRPC error envelope for an unexpected non-JSON response. */
-export function synthesizeGenericErrorResponse(status: number, bodyText: string): Response {
+export function synthesizeGenericErrorResponse(
+  status: number,
+  bodyText: string
+): Response {
   const message =
-    extractServerMessage(bodyText) ?? "An unexpected server error occurred. Please refresh and try again.";
+    extractServerMessage(bodyText) ??
+    "An unexpected server error occurred. Please refresh and try again.";
   const errorBody = JSON.stringify([
     {
       error: {
         json: {
           message,
           code: -32603, // INTERNAL_SERVER_ERROR
-          data: { code: "INTERNAL_SERVER_ERROR", httpStatus: status || 500, path: null },
+          data: {
+            code: "INTERNAL_SERVER_ERROR",
+            httpStatus: status || 500,
+            path: null,
+          },
         },
       },
     },
   ]);
-  return new Response(errorBody, { status: status || 500, headers: { "Content-Type": "application/json" } });
+  return new Response(errorBody, {
+    status: status || 500,
+    headers: { "Content-Type": "application/json" },
+  });
 }
 
 export interface ResilientFetchDeps {
@@ -129,14 +145,19 @@ function defaultNotify(kind: "retry" | "final", message?: string): void {
       _rateLimitToastShown = false;
     }, 30_000);
   } else {
-    toast.error(message ?? "Server is temporarily unavailable. Please try again in a minute.", {
-      id: "rate-limit-final",
-      duration: 8000,
-    });
+    toast.error(
+      message ??
+        "Server is temporarily unavailable. Please try again in a minute.",
+      {
+        id: "rate-limit-final",
+        duration: 8000,
+      }
+    );
   }
 }
 
-const realSleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+const realSleep = (ms: number) =>
+  new Promise<void>(resolve => setTimeout(resolve, ms));
 
 const MAX_RETRIES = 3;
 const BACKOFF_MS = [1000, 2000, 4000];
@@ -145,13 +166,16 @@ export async function resilientFetch(
   input: RequestInfo | URL,
   init?: RequestInit,
   attempt = 0,
-  deps: ResilientFetchDeps = {},
+  deps: ResilientFetchDeps = {}
 ): Promise<Response> {
   const doFetch = deps.fetchImpl ?? globalThis.fetch;
   const sleep = deps.sleep ?? realSleep;
   const notify = deps.notify ?? defaultNotify;
 
-  const response = await doFetch(input, { ...(init ?? {}), credentials: "include" });
+  const response = await doFetch(input, {
+    ...(init ?? {}),
+    credentials: "include",
+  });
 
   const contentType = response.headers.get("content-type") ?? "";
   const isJson = contentType.includes("application/json");
@@ -173,7 +197,8 @@ export async function resilientFetch(
     if (bodyText && isTrpcBatchBody(bodyText)) return response;
   }
 
-  const isRateLimit = response.status === 429 || (!!bodyText && isRateLimitBody(bodyText));
+  const isRateLimit =
+    response.status === 429 || (!!bodyText && isRateLimitBody(bodyText));
 
   if (isRateLimit) {
     console.warn(
@@ -181,7 +206,7 @@ export async function resilientFetch(
         ` | attempt=${attempt + 1}/${MAX_RETRIES}` +
         ` | status=${response.status}` +
         ` | contentType="${contentType}"` +
-        ` | body="${bodyText.slice(0, 100)}"`,
+        ` | body="${bodyText.slice(0, 100)}"`
     );
     notify("retry", extractServerMessage(bodyText) ?? undefined);
 
@@ -191,7 +216,9 @@ export async function resilientFetch(
       return resilientFetch(input, init, attempt + 1, deps);
     }
 
-    console.error(`[ResilientFetch] Max retries (${MAX_RETRIES}) exhausted — synthesizing rate-limit error.`);
+    console.error(
+      `[ResilientFetch] Max retries (${MAX_RETRIES}) exhausted — synthesizing rate-limit error.`
+    );
     notify("final", extractServerMessage(bodyText) ?? undefined);
     return synthesizeRateLimitResponse(bodyText);
   }
@@ -205,7 +232,7 @@ export async function resilientFetch(
     `[ResilientFetch] Unexpected non-JSON response` +
       ` | status=${response.status}` +
       ` | contentType="${contentType}"` +
-      ` | body="${bodyText.slice(0, 200)}"`,
+      ` | body="${bodyText.slice(0, 200)}"`
   );
   return synthesizeGenericErrorResponse(response.status, bodyText);
 }

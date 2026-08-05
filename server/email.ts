@@ -32,11 +32,17 @@ function getTransporter() {
   const appPassword = process.env.GMAIL_APP_PASSWORD;
 
   if (!appPassword) {
-    console.error(`${TAG} [VERIFY] FAIL — GMAIL_APP_PASSWORD env var is not set`);
-    throw new Error("GMAIL_APP_PASSWORD is not configured. Email delivery is unavailable.");
+    console.error(
+      `${TAG} [VERIFY] FAIL — GMAIL_APP_PASSWORD env var is not set`
+    );
+    throw new Error(
+      "GMAIL_APP_PASSWORD is not configured. Email delivery is unavailable."
+    );
   }
 
-  console.log(`${TAG} [STATE] Creating Gmail SMTP transporter for ${FROM_EMAIL}`);
+  console.log(
+    `${TAG} [STATE] Creating Gmail SMTP transporter for ${FROM_EMAIL}`
+  );
 
   return nodemailer.createTransport({
     host: "smtp.gmail.com",
@@ -123,7 +129,9 @@ export async function sendPasswordResetEmail(opts: {
   expiresAt: Date;
 }): Promise<void> {
   const TAG = "[Email][sendPasswordResetEmail]";
-  console.log(`${TAG} [INPUT] to=${opts.toEmail} username=${opts.username} expiresAt=${opts.expiresAt.toISOString()}`);
+  console.log(
+    `${TAG} [INPUT] to=${opts.toEmail} username=${opts.username} expiresAt=${opts.expiresAt.toISOString()}`
+  );
 
   const expiryStr = opts.expiresAt.toLocaleString("en-US", {
     month: "short",
@@ -181,7 +189,9 @@ export async function sendPasswordResetEmail(opts: {
       html,
       text: `Reset your Dime AI password\n\nHi @${opts.username},\n\nClick the link below to reset your password (expires ${expiryStr} ET):\n${opts.resetUrl}\n\nIf you did not request this, ignore this email.\n\n— Dime AI`,
     });
-    console.log(`${TAG} [OUTPUT] Email sent messageId=${info.messageId} to=${opts.toEmail}`);
+    console.log(
+      `${TAG} [OUTPUT] Email sent messageId=${info.messageId} to=${opts.toEmail}`
+    );
     console.log(`${TAG} [VERIFY] PASS`);
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -199,7 +209,9 @@ export async function sendWelcomeEmail(opts: {
   expiryDate: Date | null;
 }): Promise<void> {
   const TAG = "[Email][sendWelcomeEmail]";
-  console.log(`${TAG} [INPUT] to=${opts.toEmail} username=${opts.username} plan=${opts.planLabel}`);
+  console.log(
+    `${TAG} [INPUT] to=${opts.toEmail} username=${opts.username} plan=${opts.planLabel}`
+  );
 
   const expiryLine = opts.expiryDate
     ? `<p style="font-size:12px;color:#FFFFFF;margin:0 0 0;">
@@ -255,12 +267,16 @@ export async function sendWelcomeEmail(opts: {
       html,
       text: `Welcome to Dime AI!\n\nHi @${opts.username},\n\nYour ${opts.planLabel} is now active.\n\nEnter the platform: https://aisportsbettingmodels.com/feed/model/mlb\n\n— Dime AI`,
     });
-    console.log(`${TAG} [OUTPUT] Welcome email sent messageId=${info.messageId} to=${opts.toEmail}`);
+    console.log(
+      `${TAG} [OUTPUT] Welcome email sent messageId=${info.messageId} to=${opts.toEmail}`
+    );
     console.log(`${TAG} [VERIFY] PASS`);
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error(`${TAG} [VERIFY] FAIL — SMTP error: ${msg}`);
     // Welcome email failure is non-fatal — log but don't throw
-    console.warn(`${TAG} [STATE] Welcome email failed but account creation proceeds`);
+    console.warn(
+      `${TAG} [STATE] Welcome email failed but account creation proceeds`
+    );
   }
 }

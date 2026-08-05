@@ -48,7 +48,10 @@ describe("GoalieWatcher - goalie name normalization", () => {
     return parts[parts.length - 1].toLowerCase();
   }
 
-  function isSameGoalie(a: string | null | undefined, b: string | null | undefined): boolean {
+  function isSameGoalie(
+    a: string | null | undefined,
+    b: string | null | undefined
+  ): boolean {
     if (!a && !b) return true;
     if (!a || !b) return false;
     return normalizeGoalieName(a) === normalizeGoalieName(b);
@@ -79,7 +82,11 @@ describe("GoalieWatcher - goalie name normalization", () => {
 });
 
 describe("GoalieWatcher - change type detection", () => {
-  function getChangeType(dbName: string | null, newName: string, nameChanged: boolean): "scratch" | "confirmation" | "new" {
+  function getChangeType(
+    dbName: string | null,
+    newName: string,
+    nameChanged: boolean
+  ): "scratch" | "confirmation" | "new" {
     return !dbName ? "new" : nameChanged ? "scratch" : "confirmation";
   }
 

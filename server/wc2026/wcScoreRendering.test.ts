@@ -32,7 +32,10 @@ function computeShowScores(
   return (isLive || isHT || isFinal) && hasScores;
 }
 
-function computeIsExtraTimeHT(status: string, matchMinute: string | null): boolean {
+function computeIsExtraTimeHT(
+  status: string,
+  matchMinute: string | null
+): boolean {
   const isHT = status === "HT";
   return isHT && matchMinute === "ETHT";
 }
@@ -41,7 +44,12 @@ function computeScoreColors(
   status: string,
   homeScore: number | null,
   awayScore: number | null
-): { homeColor: string; awayColor: string; homeBold: number; awayBold: number } {
+): {
+  homeColor: string;
+  awayColor: string;
+  homeBold: number;
+  awayBold: number;
+} {
   const isFinal = status === "FT";
   const showScores = computeShowScores(status, homeScore, awayScore);
   const homeScoreNum = homeScore ?? 0;
@@ -49,10 +57,14 @@ function computeScoreColors(
   const homeWins = showScores && homeScoreNum > awayScoreNum;
   const awayWins = showScores && awayScoreNum > homeScoreNum;
   const homeColor = showScores
-    ? (isFinal && homeWins ? "#39FF14" : "rgba(255,255,255,0.95)")
+    ? isFinal && homeWins
+      ? "#39FF14"
+      : "rgba(255,255,255,0.95)"
     : "rgba(251,191,36,0.75)";
   const awayColor = showScores
-    ? (isFinal && awayWins ? "#39FF14" : "rgba(255,255,255,0.95)")
+    ? isFinal && awayWins
+      ? "#39FF14"
+      : "rgba(255,255,255,0.95)"
     : "rgba(251,191,36,0.75)";
   const homeBold = showScores && homeWins ? 700 : 400;
   const awayBold = showScores && awayWins ? 700 : 400;
@@ -63,7 +75,10 @@ function computeScoreColors(
 
 type ScraperStatus = "FT" | "HT" | "LIVE" | "SCHEDULED";
 
-function resolveScraperStatus(rawStatus: string): { status: ScraperStatus; minute: string | null } {
+function resolveScraperStatus(rawStatus: string): {
+  status: ScraperStatus;
+  minute: string | null;
+} {
   if (rawStatus === "FT" || rawStatus === "AET" || rawStatus === "AP") {
     return { status: "FT", minute: null };
   } else if (rawStatus === "HT") {
@@ -131,7 +146,11 @@ describe("WcScorePanel — isExtraTimeHT detection", () => {
 
 describe("WcScorePanel — score color logic", () => {
   it("[VERIFY] FT: home wins → homeColor=#39FF14, awayColor=white", () => {
-    const { homeColor, awayColor, homeBold, awayBold } = computeScoreColors("FT", 2, 1);
+    const { homeColor, awayColor, homeBold, awayBold } = computeScoreColors(
+      "FT",
+      2,
+      1
+    );
     expect(homeColor).toBe("#39FF14");
     expect(awayColor).toBe("rgba(255,255,255,0.95)");
     expect(homeBold).toBe(700);
@@ -139,7 +158,11 @@ describe("WcScorePanel — score color logic", () => {
   });
 
   it("[VERIFY] FT: away wins → awayColor=#39FF14, homeColor=white", () => {
-    const { homeColor, awayColor, homeBold, awayBold } = computeScoreColors("FT", 0, 2);
+    const { homeColor, awayColor, homeBold, awayBold } = computeScoreColors(
+      "FT",
+      0,
+      2
+    );
     expect(awayColor).toBe("#39FF14");
     expect(homeColor).toBe("rgba(255,255,255,0.95)");
     expect(awayBold).toBe(700);
@@ -159,13 +182,21 @@ describe("WcScorePanel — score color logic", () => {
   });
 
   it("[VERIFY] SCHEDULED: amber color (no real scores)", () => {
-    const { homeColor, awayColor } = computeScoreColors("SCHEDULED", null, null);
+    const { homeColor, awayColor } = computeScoreColors(
+      "SCHEDULED",
+      null,
+      null
+    );
     expect(homeColor).toBe("rgba(251,191,36,0.75)");
     expect(awayColor).toBe("rgba(251,191,36,0.75)");
   });
 
   it("[VERIFY] NED/MAR current state: LIVE 1-1 → white/white, no winner", () => {
-    const { homeColor, awayColor, homeBold, awayBold } = computeScoreColors("LIVE", 1, 1);
+    const { homeColor, awayColor, homeBold, awayBold } = computeScoreColors(
+      "LIVE",
+      1,
+      1
+    );
     expect(homeColor).toBe("rgba(255,255,255,0.95)");
     expect(awayColor).toBe("rgba(255,255,255,0.95)");
     expect(homeBold).toBe(400);
@@ -242,7 +273,13 @@ describe("DB state validation — NED/MAR wc26-r32-076", () => {
     expect(correctedState.matchMinute).toBe("ETHT");
     expect(correctedState.advancingTeamId).toBeNull();
     // showScores for this state
-    expect(computeShowScores(correctedState.status, correctedState.homeScore, correctedState.awayScore)).toBe(true);
+    expect(
+      computeShowScores(
+        correctedState.status,
+        correctedState.homeScore,
+        correctedState.awayScore
+      )
+    ).toBe(true);
   });
 
   it("[VERIFY] Previous incorrect DB state would have hidden scores", () => {
@@ -251,7 +288,13 @@ describe("DB state validation — NED/MAR wc26-r32-076", () => {
     // The real failure was the WRONG score (0-2 vs actual 1-1)
     const incorrectState = { status: "FT", homeScore: 0, awayScore: 2 };
     // showScores would have been true, but the SCORE VALUES were wrong
-    expect(computeShowScores(incorrectState.status, incorrectState.homeScore, incorrectState.awayScore)).toBe(true);
+    expect(
+      computeShowScores(
+        incorrectState.status,
+        incorrectState.homeScore,
+        incorrectState.awayScore
+      )
+    ).toBe(true);
     // The score values were wrong — 0 and 2 instead of 1 and 1
     expect(incorrectState.homeScore).not.toBe(1);
     expect(incorrectState.awayScore).not.toBe(1);

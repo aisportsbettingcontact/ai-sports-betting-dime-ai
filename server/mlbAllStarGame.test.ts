@@ -7,7 +7,11 @@ import {
   computeAsgModel,
   type AsgBook,
 } from "./mlbAllStarGame";
-import { MLB_VALID_ABBREVS, MLB_BY_ABBREV, getMlbTeamByAnSlug } from "../shared/mlbTeams";
+import {
+  MLB_VALID_ABBREVS,
+  MLB_BY_ABBREV,
+  getMlbTeamByAnSlug,
+} from "../shared/mlbTeams";
 
 /**
  * Guards for the MLB All-Star Game (AL vs NL) on the projections feed. The engine
@@ -18,10 +22,15 @@ import { MLB_VALID_ABBREVS, MLB_BY_ABBREV, getMlbTeamByAnSlug } from "../shared/
  */
 
 const book = (over: Partial<AsgBook> = {}): AsgBook => ({
-  awayML: "+110", homeML: "-135",
-  awaySpread: "+1.5", awaySpreadOdds: "-180",
-  homeSpread: "-1.5", homeSpreadOdds: "+145",
-  total: "8", overOdds: "-115", underOdds: "-105",
+  awayML: "+110",
+  homeML: "-135",
+  awaySpread: "+1.5",
+  awaySpreadOdds: "-180",
+  homeSpread: "-1.5",
+  homeSpreadOdds: "+145",
+  total: "8",
+  overOdds: "-115",
+  underOdds: "-105",
   source: "dk",
   ...over,
 });
@@ -105,7 +114,7 @@ describe("AL/NL pseudo-team registration", () => {
 describe("mlb-asg write endpoint", () => {
   const cronRoutesSrc = fs.readFileSync(
     path.join(import.meta.dirname, "cron", "cronRoutes.ts"),
-    "utf8",
+    "utf8"
   );
 
   it("registers POST /api/cron/mlb-asg guarded by the cron secret", () => {

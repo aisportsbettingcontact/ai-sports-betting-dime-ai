@@ -28,14 +28,18 @@ export interface CollectedMetrics {
 export async function collectBrowserMetricsInPage(): Promise<CollectedMetrics> {
   if (
     typeof PerformanceObserver === "undefined" ||
-    !PerformanceObserver.supportedEntryTypes.includes("largest-contentful-paint")
+    !PerformanceObserver.supportedEntryTypes.includes(
+      "largest-contentful-paint"
+    )
   ) {
-    throw new Error("PERF_LCP_UNSUPPORTED: largest-contentful-paint is unavailable");
+    throw new Error(
+      "PERF_LCP_UNSUPPORTED: largest-contentful-paint is unavailable"
+    );
   }
 
   let lcpMs = 0;
-  await new Promise<void>((resolve) => {
-    const observer = new PerformanceObserver((list) => {
+  await new Promise<void>(resolve => {
+    const observer = new PerformanceObserver(list => {
       for (const entry of list.getEntries()) {
         lcpMs = Math.max(1, Math.round(entry.startTime));
       }
@@ -54,14 +58,22 @@ export async function collectBrowserMetricsInPage(): Promise<CollectedMetrics> {
   });
 
   if (!Number.isFinite(lcpMs) || lcpMs <= 0) {
-    throw new Error("PERF_LCP_MISSING: no valid largest-contentful-paint candidate");
+    throw new Error(
+      "PERF_LCP_MISSING: no valid largest-contentful-paint candidate"
+    );
   }
 
-  const nav = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined;
+  const nav = performance.getEntriesByType("navigation")[0] as
+    PerformanceNavigationTiming | undefined;
   const paints = performance.getEntriesByType("paint");
-  const fcp = paints.find((p) => p.name === "first-contentful-paint");
-  const resources = performance.getEntriesByType("resource") as PerformanceResourceTiming[];
-  const resourceBytes = resources.reduce((sum, r) => sum + (r.transferSize || 0), 0);
+  const fcp = paints.find(p => p.name === "first-contentful-paint");
+  const resources = performance.getEntriesByType(
+    "resource"
+  ) as PerformanceResourceTiming[];
+  const resourceBytes = resources.reduce(
+    (sum, r) => sum + (r.transferSize || 0),
+    0
+  );
   const navBytes = nav?.transferSize || 0;
 
   return {

@@ -20,7 +20,9 @@ import { describe, it, expect } from "vitest";
 /** American odds → break-even probability (0-1 scale) */
 function americanBreakEven(odds: number): number | null {
   if (isNaN(odds)) return null;
-  return odds < 0 ? Math.abs(odds) / (Math.abs(odds) + 100) : 100 / (odds + 100);
+  return odds < 0
+    ? Math.abs(odds) / (Math.abs(odds) + 100)
+    : 100 / (odds + 100);
 }
 
 /**
@@ -32,26 +34,27 @@ function americanBreakEven(odds: number): number | null {
 function computeMlbRlEdge(
   awayAbbr: string,
   homeAbbr: string,
-  awayRlCoverPct: number,   // 0-100 scale (from Python model)
-  homeRlCoverPct: number,   // 0-100 scale (from Python model)
-  bkAwayRlOdds: number,     // American odds (e.g. -182, +151)
-  bkHomeRlOdds: number,     // American odds (e.g. +151, -184)
-  safeAwayRunLine: string,  // sign-enforced RL label e.g. "+1.5" or "-1.5"
-  safeHomeRunLine: string,  // sign-enforced RL label e.g. "-1.5" or "+1.5"
+  awayRlCoverPct: number, // 0-100 scale (from Python model)
+  homeRlCoverPct: number, // 0-100 scale (from Python model)
+  bkAwayRlOdds: number, // American odds (e.g. -182, +151)
+  bkHomeRlOdds: number, // American odds (e.g. +151, -184)
+  safeAwayRunLine: string, // sign-enforced RL label e.g. "+1.5" or "-1.5"
+  safeHomeRunLine: string // sign-enforced RL label e.g. "-1.5" or "+1.5"
 ): { spreadDiff: string | null; spreadEdge: string | null } {
   const bkAwayBreakEven = americanBreakEven(bkAwayRlOdds);
   const bkHomeBreakEven = americanBreakEven(bkHomeRlOdds);
   if (bkAwayBreakEven === null || bkHomeBreakEven === null) {
     return { spreadDiff: null, spreadEdge: null };
   }
-  const edgeAway = (awayRlCoverPct / 100) - bkAwayBreakEven;
-  const edgeHome = (homeRlCoverPct / 100) - bkHomeBreakEven;
+  const edgeAway = awayRlCoverPct / 100 - bkAwayBreakEven;
+  const edgeHome = homeRlCoverPct / 100 - bkHomeBreakEven;
   const bestEdge = Math.max(edgeAway, edgeHome);
   const spreadDiff = String(Math.round(bestEdge * 1000) / 10);
   if (bestEdge > 0) {
-    const spreadEdge = edgeAway >= edgeHome
-      ? `${awayAbbr} ${safeAwayRunLine} [EDGE]`
-      : `${homeAbbr} ${safeHomeRunLine} [EDGE]`;
+    const spreadEdge =
+      edgeAway >= edgeHome
+        ? `${awayAbbr} ${safeAwayRunLine} [EDGE]`
+        : `${homeAbbr} ${safeHomeRunLine} [EDGE]`;
     return { spreadDiff, spreadEdge };
   }
   return { spreadDiff, spreadEdge: null };
@@ -66,21 +69,35 @@ function syncModelTotal(bookTotal: number | null): string | null {
 /** RL sign guard: awayModelSpread sign MUST match awayBookSpread sign */
 function enforceRlSignGuard(
   pythonAwayRunLine: string,
-  bookAwaySpread: number,
+  bookAwaySpread: number
 ): { safeAwayRunLine: string; safeHomeRunLine: string; corrected: boolean } {
   const modelNum = parseFloat(pythonAwayRunLine);
   if (isNaN(modelNum) || isNaN(bookAwaySpread) || bookAwaySpread === 0) {
-    return { safeAwayRunLine: pythonAwayRunLine, safeHomeRunLine: String(-modelNum), corrected: false };
+    return {
+      safeAwayRunLine: pythonAwayRunLine,
+      safeHomeRunLine: String(-modelNum),
+      corrected: false,
+    };
   }
-  const bookSign  = bookAwaySpread >= 0 ? 1 : -1;
+  const bookSign = bookAwaySpread >= 0 ? 1 : -1;
   const modelSign = modelNum >= 0 ? 1 : -1;
   if (bookSign !== modelSign) {
-    const correctedAway = bookSign > 0 ? Math.abs(modelNum) : -Math.abs(modelNum);
+    const correctedAway =
+      bookSign > 0 ? Math.abs(modelNum) : -Math.abs(modelNum);
     const correctedHome = -correctedAway;
-    const fmt = (n: number) => n >= 0 ? `+${n.toFixed(1)}` : `${n.toFixed(1)}`;
-    return { safeAwayRunLine: fmt(correctedAway), safeHomeRunLine: fmt(correctedHome), corrected: true };
+    const fmt = (n: number) =>
+      n >= 0 ? `+${n.toFixed(1)}` : `${n.toFixed(1)}`;
+    return {
+      safeAwayRunLine: fmt(correctedAway),
+      safeHomeRunLine: fmt(correctedHome),
+      corrected: true,
+    };
   }
-  return { safeAwayRunLine: pythonAwayRunLine, safeHomeRunLine: String(-modelNum), corrected: false };
+  return {
+    safeAwayRunLine: pythonAwayRunLine,
+    safeHomeRunLine: String(-modelNum),
+    corrected: false,
+  };
 }
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
@@ -121,13 +138,14 @@ describe("MLB RL Edge Detection — computeMlbRlEdge", () => {
     // ATH@BAL: ATH is away favorite (-1.5), book RL odds: ATH -1.5 (-182), BAL +1.5 (+151)
     // Model: ATH covers -1.5 at 68% (book break-even = 182/282 ≈ 64.5%) → edge = +3.5pp
     const result = computeMlbRlEdge(
-      "ATH", "BAL",
-      68.0,   // awayRlCoverPct (ATH covers -1.5)
-      32.0,   // homeRlCoverPct (BAL covers +1.5)
-      -182,   // bkAwayRlOdds (ATH -1.5 at -182)
-      151,    // bkHomeRlOdds (BAL +1.5 at +151)
+      "ATH",
+      "BAL",
+      68.0, // awayRlCoverPct (ATH covers -1.5)
+      32.0, // homeRlCoverPct (BAL covers +1.5)
+      -182, // bkAwayRlOdds (ATH -1.5 at -182)
+      151, // bkHomeRlOdds (BAL +1.5 at +151)
       "-1.5", // safeAwayRunLine
-      "+1.5", // safeHomeRunLine
+      "+1.5" // safeHomeRunLine
     );
     expect(result.spreadEdge).toBe("ATH -1.5 [EDGE]");
     expect(parseFloat(result.spreadDiff!)).toBeGreaterThan(0);
@@ -137,13 +155,14 @@ describe("MLB RL Edge Detection — computeMlbRlEdge", () => {
     // LAA@TOR: LAA is away underdog (+1.5), book RL odds: LAA +1.5 (-161), TOR -1.5 (+135)
     // Model: TOR covers -1.5 at 60% (book break-even = 100/235 ≈ 42.6%) → home edge
     const result = computeMlbRlEdge(
-      "LAA", "TOR",
-      40.0,   // awayRlCoverPct (LAA covers +1.5)
-      60.0,   // homeRlCoverPct (TOR covers -1.5)
-      -161,   // bkAwayRlOdds (LAA +1.5 at -161)
-      135,    // bkHomeRlOdds (TOR -1.5 at +135)
+      "LAA",
+      "TOR",
+      40.0, // awayRlCoverPct (LAA covers +1.5)
+      60.0, // homeRlCoverPct (TOR covers -1.5)
+      -161, // bkAwayRlOdds (LAA +1.5 at -161)
+      135, // bkHomeRlOdds (TOR -1.5 at +135)
       "+1.5", // safeAwayRunLine
-      "-1.5", // safeHomeRunLine
+      "-1.5" // safeHomeRunLine
     );
     expect(result.spreadEdge).toBe("TOR -1.5 [EDGE]");
     expect(parseFloat(result.spreadDiff!)).toBeGreaterThan(0);
@@ -154,13 +173,14 @@ describe("MLB RL Edge Detection — computeMlbRlEdge", () => {
     // BAL covers +1.5 at only 35% (book break-even at -161 ≈ 61.7%) → home no edge
     // Use -161 for home so BAL break-even is 161/261 ≈ 61.7% > 35%
     const result = computeMlbRlEdge(
-      "ATH", "BAL",
-      60.0,   // awayRlCoverPct — BELOW break-even (64.5%)
-      35.0,   // homeRlCoverPct — BELOW break-even (61.7%)
-      -182,   // bkAwayRlOdds (ATH -1.5 at -182, break-even = 64.5%)
-      -161,   // bkHomeRlOdds (BAL +1.5 at -161, break-even = 61.7%)
+      "ATH",
+      "BAL",
+      60.0, // awayRlCoverPct — BELOW break-even (64.5%)
+      35.0, // homeRlCoverPct — BELOW break-even (61.7%)
+      -182, // bkAwayRlOdds (ATH -1.5 at -182, break-even = 64.5%)
+      -161, // bkHomeRlOdds (BAL +1.5 at -161, break-even = 61.7%)
       "-1.5",
-      "+1.5",
+      "+1.5"
     );
     expect(result.spreadEdge).toBeNull();
     expect(parseFloat(result.spreadDiff!)).toBeLessThanOrEqual(0);
@@ -169,8 +189,14 @@ describe("MLB RL Edge Detection — computeMlbRlEdge", () => {
   it("spreadDiff is in percentage points (pp), not decimal fraction", () => {
     // 3.5pp edge should be stored as "3.5" not "0.035"
     const result = computeMlbRlEdge(
-      "ATH", "BAL",
-      68.0, 32.0, -182, 151, "-1.5", "+1.5",
+      "ATH",
+      "BAL",
+      68.0,
+      32.0,
+      -182,
+      151,
+      "-1.5",
+      "+1.5"
     );
     const diff = parseFloat(result.spreadDiff!);
     // Should be in pp range (1-20), not decimal range (0.01-0.20)
@@ -180,8 +206,14 @@ describe("MLB RL Edge Detection — computeMlbRlEdge", () => {
 
   it("returns null spreadDiff when book RL odds are NaN", () => {
     const result = computeMlbRlEdge(
-      "ATH", "BAL",
-      68.0, 32.0, NaN, NaN, "-1.5", "+1.5",
+      "ATH",
+      "BAL",
+      68.0,
+      32.0,
+      NaN,
+      NaN,
+      "-1.5",
+      "+1.5"
     );
     expect(result.spreadDiff).toBeNull();
     expect(result.spreadEdge).toBeNull();
@@ -191,8 +223,14 @@ describe("MLB RL Edge Detection — computeMlbRlEdge", () => {
     // edgeLabelIsAway() checks if the label starts with the away abbreviation
     // Format: "ABBR ±1.5 [EDGE]" — abbr is the first token
     const result = computeMlbRlEdge(
-      "NYM", "ARI",
-      67.0, 33.0, -182, 151, "-1.5", "+1.5",
+      "NYM",
+      "ARI",
+      67.0,
+      33.0,
+      -182,
+      151,
+      "-1.5",
+      "+1.5"
     );
     expect(result.spreadEdge).toBe("NYM -1.5 [EDGE]");
     // Verify the format: first token is the team abbreviation
@@ -230,11 +268,13 @@ describe("Total Line Matching — syncModelTotal", () => {
     // which triggers a false OVER edge. The fix: always sync modelTotal=bookTotal.
     const bookTotal = 9.5;
     const staleModelTotal = 8.5;
-    const totalDiff = Math.round(Math.abs(staleModelTotal - bookTotal) * 10) / 10;
+    const totalDiff =
+      Math.round(Math.abs(staleModelTotal - bookTotal) * 10) / 10;
     expect(totalDiff).toBe(1.0); // This is the bug — should be 0
     // After fix: modelTotal is always synced to bookTotal via updateAnOdds and updateBookOdds
     const syncedModelTotal = parseFloat(syncModelTotal(bookTotal)!);
-    const fixedTotalDiff = Math.round(Math.abs(syncedModelTotal - bookTotal) * 10) / 10;
+    const fixedTotalDiff =
+      Math.round(Math.abs(syncedModelTotal - bookTotal) * 10) / 10;
     expect(fixedTotalDiff).toBe(0); // Fixed
   });
 });
@@ -275,7 +315,7 @@ describe("RL Sign Guard — enforceRlSignGuard", () => {
       { python: "-1.5", book: -1.5 },
       { python: "+1.5", book: 1.5 },
       { python: "+1.5", book: -1.5 }, // flip case
-      { python: "-1.5", book: 1.5 },  // flip case
+      { python: "-1.5", book: 1.5 }, // flip case
     ];
     for (const c of cases) {
       const result = enforceRlSignGuard(c.python, c.book);
@@ -291,16 +331,18 @@ describe("GameCard spreadDiff path — MLB uses game.spreadDiff", () => {
   it("line arithmetic always yields 0 for matching ±1.5 signs", () => {
     // This documents WHY line arithmetic is wrong for MLB RL
     const awayModelSpread = -1.5; // ATH is away fav
-    const awayBookSpread  = -1.5; // book also has ATH as fav
-    const lineArithmeticDiff = Math.round(Math.abs(awayModelSpread - awayBookSpread) * 10) / 10;
+    const awayBookSpread = -1.5; // book also has ATH as fav
+    const lineArithmeticDiff =
+      Math.round(Math.abs(awayModelSpread - awayBookSpread) * 10) / 10;
     expect(lineArithmeticDiff).toBe(0); // Always 0 → no edge ever shown → BUG
   });
 
   it("line arithmetic yields 3.0 for inverted signs (false edge)", () => {
     // Inverted signs (sign guard failure) produce a false 3.0pp edge
     const awayModelSpread = +1.5; // WRONG — should be -1.5
-    const awayBookSpread  = -1.5;
-    const lineArithmeticDiff = Math.round(Math.abs(awayModelSpread - awayBookSpread) * 10) / 10;
+    const awayBookSpread = -1.5;
+    const lineArithmeticDiff =
+      Math.round(Math.abs(awayModelSpread - awayBookSpread) * 10) / 10;
     expect(lineArithmeticDiff).toBe(3.0); // False edge — sign guard prevents this
   });
 
@@ -310,7 +352,7 @@ describe("GameCard spreadDiff path — MLB uses game.spreadDiff", () => {
     const gameSpreadDiff = "3.5"; // written by mlbModelRunner
     const spreadDiff = parseFloat(gameSpreadDiff);
     expect(spreadDiff).toBeGreaterThan(0); // Edge exists
-    expect(spreadDiff).toBeLessThan(20);   // Sane range
+    expect(spreadDiff).toBeLessThan(20); // Sane range
   });
 });
 
@@ -318,21 +360,21 @@ describe("Edge detection consistency — book vs model cross-reference", () => {
   it("OVER edge: modelTotal > bookTotal → authTotalEdgeIsOver=true", () => {
     // This path is for NBA (no model odds). For MLB/NHL, model odds take priority.
     const modelTotal = 9.0;
-    const bookTotal  = 8.5;
+    const bookTotal = 8.5;
     const isOver = modelTotal > bookTotal;
     expect(isOver).toBe(true);
   });
 
   it("UNDER edge: modelTotal < bookTotal → authTotalEdgeIsOver=false", () => {
     const modelTotal = 8.0;
-    const bookTotal  = 8.5;
+    const bookTotal = 8.5;
     const isOver = modelTotal > bookTotal;
     expect(isOver).toBe(false);
   });
 
   it("NO edge: modelTotal === bookTotal → totalDiff=0 → PASS", () => {
     const modelTotal = 9.5;
-    const bookTotal  = 9.5;
+    const bookTotal = 9.5;
     const totalDiff = Math.round(Math.abs(modelTotal - bookTotal) * 10) / 10;
     expect(totalDiff).toBe(0); // No edge
   });
@@ -344,13 +386,14 @@ describe("Edge detection consistency — book vs model cross-reference", () => {
     //   model over prob = 110/210 ≈ 52.38%
     //   book no-vig over prob = (118/218) / ((118/218) + (102/202)) ≈ 51.74%
     //   52.38% > 51.74% → model MORE confident in OVER → OVER edge
-    const modelOverOdds = -110;  // model fair odds at book's total line
-    const bkOverOdds    = -118;  // book over odds
-    const bkUnderOdds   = -102;  // book under odds
+    const modelOverOdds = -110; // model fair odds at book's total line
+    const bkOverOdds = -118; // book over odds
+    const bkUnderOdds = -102; // book under odds
 
     // americanToImplied: negative odds → |odds|/(|odds|+100), positive → 100/(odds+100)
-    const modelOverProb = Math.abs(modelOverOdds) / (Math.abs(modelOverOdds) + 100);
-    const rawBkOver  = Math.abs(bkOverOdds)  / (Math.abs(bkOverOdds)  + 100);
+    const modelOverProb =
+      Math.abs(modelOverOdds) / (Math.abs(modelOverOdds) + 100);
+    const rawBkOver = Math.abs(bkOverOdds) / (Math.abs(bkOverOdds) + 100);
     const rawBkUnder = Math.abs(bkUnderOdds) / (Math.abs(bkUnderOdds) + 100);
     const vigTotal = rawBkOver + rawBkUnder;
     const bookNoVigOverProb = rawBkOver / vigTotal;

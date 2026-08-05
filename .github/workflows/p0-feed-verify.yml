@@ -23,7 +23,7 @@ on:
         required: false
         type: string
       input_json:
-        description: "Ad-hoc: JSON input for the procedure (e.g. {\"sport\":\"MLB\"} or null)"
+        description: 'Ad-hoc: JSON input for the procedure (e.g. {"sport":"MLB"} or null)'
         required: false
         default: "null"
         type: string

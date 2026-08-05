@@ -61,7 +61,7 @@ function initials(u: UserProfileRow): string {
   if (parts.length === 0) return "?";
   return parts
     .slice(0, 2)
-    .map((p) => p[0])
+    .map(p => p[0])
     .join("")
     .toUpperCase();
 }
@@ -243,11 +243,12 @@ export default function UserProfileDrawer({ user, onClose }: Props) {
                 Surface affinity
               </span>
               <span className="text-xs sm:text-sm font-mono text-foreground">
-                {u.distinctSurfaces} <span className="text-muted-foreground">/ 4</span>
+                {u.distinctSurfaces}{" "}
+                <span className="text-muted-foreground">/ 4</span>
               </span>
             </div>
             <div className="flex items-center gap-1.5">
-              {[0, 1, 2, 3].map((i) => (
+              {[0, 1, 2, 3].map(i => (
                 <span
                   key={i}
                   className={`h-1.5 flex-1 rounded-full ${
@@ -264,8 +265,11 @@ export default function UserProfileDrawer({ user, onClose }: Props) {
               Activity
             </div>
             <div className="space-y-1.5">
-              {stats.map((s) => (
-                <div key={s.label} className="flex items-center justify-between gap-2">
+              {stats.map(s => (
+                <div
+                  key={s.label}
+                  className="flex items-center justify-between gap-2"
+                >
                   <span className="text-xs sm:text-sm text-muted-foreground">
                     {s.label}
                   </span>

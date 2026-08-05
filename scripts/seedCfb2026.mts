@@ -22,16 +22,26 @@ const DIR = join(dirname(fileURLToPath(import.meta.url)), "data", "cfb-2026");
 
 const load = (f: string) => JSON.parse(readFileSync(join(DIR, f), "utf8"));
 const chunk = <T,>(arr: T[], n: number): T[][] =>
-  Array.from({ length: Math.ceil(arr.length / n) }, (_, i) => arr.slice(i * n, (i + 1) * n));
+  Array.from({ length: Math.ceil(arr.length / n) }, (_, i) =>
+    arr.slice(i * n, (i + 1) * n)
+  );
 
 async function main() {
   const teams = load("teams.json");
   const games = load("games.json");
   const players = load("players.json");
   const manifest = load("manifest.json");
-  console.log(`${TAG}[INPUT] teams=${teams.length} games=${games.length} players=${players.length}`);
-  if (teams.length !== manifest.counts.teams || games.length !== manifest.counts.games || players.length !== manifest.counts.players) {
-    throw new Error(`${TAG} seed files disagree with manifest — refusing to load`);
+  console.log(
+    `${TAG}[INPUT] teams=${teams.length} games=${games.length} players=${players.length}`
+  );
+  if (
+    teams.length !== manifest.counts.teams ||
+    games.length !== manifest.counts.games ||
+    players.length !== manifest.counts.players
+  ) {
+    throw new Error(
+      `${TAG} seed files disagree with manifest — refusing to load`
+    );
   }
   if (DRY_RUN) {
     console.log(`${TAG}[STEP] dry-run: inputs validated, skipping DB writes`);
@@ -120,7 +130,9 @@ async function main() {
   const [tc] = await db.select({ n: sql<number>`count(*)` }).from(cfbTeams);
   const [gc] = await db.select({ n: sql<number>`count(*)` }).from(cfbGames);
   const [pc] = await db.select({ n: sql<number>`count(*)` }).from(cfbPlayers);
-  console.log(`${TAG}[VERIFY] db counts: teams=${tc.n} games=${gc.n} players=${pc.n}`);
+  console.log(
+    `${TAG}[VERIFY] db counts: teams=${tc.n} games=${gc.n} players=${pc.n}`
+  );
   if (Number(tc.n) < 138 || Number(gc.n) < 902 || Number(pc.n) < 14933) {
     throw new Error(`${TAG} post-load verification FAILED`);
   }
@@ -129,7 +141,7 @@ async function main() {
 
 main()
   .then(() => process.exit(0))
-  .catch((err) => {
+  .catch(err => {
     console.error(`${TAG}[ERROR]`, err);
     process.exit(1);
   });

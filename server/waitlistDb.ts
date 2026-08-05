@@ -14,7 +14,11 @@
 import { and, asc, desc, eq, gte, like, lte, or, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
-import { waitlist, type WaitlistRow, type InsertWaitlist } from "../drizzle/schema";
+import {
+  waitlist,
+  type WaitlistRow,
+  type InsertWaitlist,
+} from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
 // ─── DB connection (dedicated pool for waitlist module) ───────────────────────
@@ -61,24 +65,26 @@ export interface WaitlistStats {
 // ─── submitWaitlist ───────────────────────────────────────────────────────────
 
 export async function submitWaitlist(input: {
-  email:          string;
-  fullName?:      string;
-  whyText?:       string;
-  unitSizeMin?:   number;
-  unitSizeMax?:   number;
+  email: string;
+  fullName?: string;
+  whyText?: string;
+  unitSizeMin?: number;
+  unitSizeMax?: number;
   step2Completed?: boolean;
-  ipAddress?:     string;
-  userAgent?:     string;
-  utmSource?:     string;
-  utmMedium?:     string;
-  utmCampaign?:   string;
+  ipAddress?: string;
+  userAgent?: string;
+  utmSource?: string;
+  utmMedium?: string;
+  utmCampaign?: string;
 }): Promise<{ ok: true; id: number } | { ok: false; reason: "duplicate" }> {
   const db = getDb();
   const now = Date.now();
   const normalizedEmail = input.email.toLowerCase().trim();
 
   console.log(`[WaitlistDB][STEP] submitWaitlist — email=${normalizedEmail}`);
-  console.log(`[WaitlistDB][INPUT] fullName=${input.fullName ?? "(none)"} whyText=${input.whyText ? "(set)" : "(none)"} unitSize=${input.unitSizeMin ?? "?"}-${input.unitSizeMax ?? "?"} step2=${input.step2Completed ?? false} ip=${input.ipAddress ?? "(none)"} utmSource=${input.utmSource ?? "(none)"}`);
+  console.log(
+    `[WaitlistDB][INPUT] fullName=${input.fullName ?? "(none)"} whyText=${input.whyText ? "(set)" : "(none)"} unitSize=${input.unitSizeMin ?? "?"}-${input.unitSizeMax ?? "?"} step2=${input.step2Completed ?? false} ip=${input.ipAddress ?? "(none)"} utmSource=${input.utmSource ?? "(none)"}`
+  );
 
   // ── Duplicate check ──────────────────────────────────────────────────────
   const existing = await db
@@ -88,41 +94,49 @@ export async function submitWaitlist(input: {
     .limit(1);
 
   if (existing.length > 0) {
-    console.log(`[WaitlistDB][VERIFY] FAIL — duplicate email=${normalizedEmail} existingId=${existing[0].id} existingStatus=${existing[0].status}`);
+    console.log(
+      `[WaitlistDB][VERIFY] FAIL — duplicate email=${normalizedEmail} existingId=${existing[0].id} existingStatus=${existing[0].status}`
+    );
     return { ok: false, reason: "duplicate" };
   }
 
   // ── Insert ───────────────────────────────────────────────────────────────
   const row: InsertWaitlist = {
-    email:          normalizedEmail,
-    fullName:       input.fullName?.trim() || null,
-    whyText:        input.whyText?.trim() || null,
-    unitSizeMin:    input.unitSizeMin ?? null,
-    unitSizeMax:    input.unitSizeMax ?? null,
+    email: normalizedEmail,
+    fullName: input.fullName?.trim() || null,
+    whyText: input.whyText?.trim() || null,
+    unitSizeMin: input.unitSizeMin ?? null,
+    unitSizeMax: input.unitSizeMax ?? null,
     step2Completed: input.step2Completed ?? false,
-    status:         "pending",
-    ipAddress:   input.ipAddress ?? null,
-    userAgent:   input.userAgent?.slice(0, 512) ?? null,
-    utmSource:   input.utmSource ?? null,
-    utmMedium:   input.utmMedium ?? null,
+    status: "pending",
+    ipAddress: input.ipAddress ?? null,
+    userAgent: input.userAgent?.slice(0, 512) ?? null,
+    utmSource: input.utmSource ?? null,
+    utmMedium: input.utmMedium ?? null,
     utmCampaign: input.utmCampaign ?? null,
-    createdAt:   now,
-    updatedAt:   now,
+    createdAt: now,
+    updatedAt: now,
   };
 
   const result = await db.insert(waitlist).values(row);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const insertId: number = (result[0] as any).insertId ?? 0;
 
-  console.log(`[WaitlistDB][OUTPUT] submitWaitlist — INSERTED id=${insertId} email=${normalizedEmail} ts=${now}`);
-  console.log(`[WaitlistDB][VERIFY] PASS — waitlist entry created id=${insertId}`);
+  console.log(
+    `[WaitlistDB][OUTPUT] submitWaitlist — INSERTED id=${insertId} email=${normalizedEmail} ts=${now}`
+  );
+  console.log(
+    `[WaitlistDB][VERIFY] PASS — waitlist entry created id=${insertId}`
+  );
 
   return { ok: true, id: insertId };
 }
 
 // ─── listWaitlist ─────────────────────────────────────────────────────────────
 
-export async function listWaitlist(filters: WaitlistFilters = {}): Promise<WaitlistListResult> {
+export async function listWaitlist(
+  filters: WaitlistFilters = {}
+): Promise<WaitlistListResult> {
   const db = getDb();
   const {
     status = "all",
@@ -135,7 +149,9 @@ export async function listWaitlist(filters: WaitlistFilters = {}): Promise<Waitl
     sortDir = "desc",
   } = filters;
 
-  console.log(`[WaitlistDB][STEP] listWaitlist — status=${status} search=${search ?? "(none)"} limit=${limit} offset=${offset} sortBy=${sortBy} sortDir=${sortDir}`);
+  console.log(
+    `[WaitlistDB][STEP] listWaitlist — status=${status} search=${search ?? "(none)"} limit=${limit} offset=${offset} sortBy=${sortBy} sortDir=${sortDir}`
+  );
 
   // ── Build WHERE conditions ───────────────────────────────────────────────
   const conditions: ReturnType<typeof eq>[] = [];
@@ -149,7 +165,7 @@ export async function listWaitlist(filters: WaitlistFilters = {}): Promise<Waitl
     conditions.push(
       or(
         like(waitlist.email, pattern),
-        like(waitlist.fullName, pattern),
+        like(waitlist.fullName, pattern)
       ) as ReturnType<typeof eq>
     );
   }
@@ -174,9 +190,11 @@ export async function listWaitlist(filters: WaitlistFilters = {}): Promise<Waitl
 
   // ── Data query ───────────────────────────────────────────────────────────
   const orderCol =
-    sortBy === "email"  ? waitlist.email  :
-    sortBy === "status" ? waitlist.status :
-    waitlist.createdAt;
+    sortBy === "email"
+      ? waitlist.email
+      : sortBy === "status"
+        ? waitlist.status
+        : waitlist.createdAt;
 
   const orderFn = sortDir === "asc" ? asc(orderCol) : desc(orderCol);
 
@@ -188,7 +206,9 @@ export async function listWaitlist(filters: WaitlistFilters = {}): Promise<Waitl
     .limit(limit)
     .offset(offset);
 
-  console.log(`[WaitlistDB][OUTPUT] listWaitlist — total=${total} returned=${rows.length} offset=${offset}`);
+  console.log(
+    `[WaitlistDB][OUTPUT] listWaitlist — total=${total} returned=${rows.length} offset=${offset}`
+  );
   console.log(`[WaitlistDB][VERIFY] PASS — listWaitlist complete`);
 
   return { rows, total };
@@ -211,7 +231,9 @@ export async function getWaitlistById(id: number): Promise<WaitlistRow | null> {
     return null;
   }
 
-  console.log(`[WaitlistDB][VERIFY] PASS — id=${id} found email=${rows[0].email}`);
+  console.log(
+    `[WaitlistDB][VERIFY] PASS — id=${id} found email=${rows[0].email}`
+  );
   return rows[0];
 }
 
@@ -226,12 +248,18 @@ export async function updateWaitlistStatus(input: {
   const db = getDb();
   const now = Date.now();
 
-  console.log(`[WaitlistDB][STEP] updateWaitlistStatus — id=${input.id} newStatus=${input.status} reviewedBy=${input.reviewedBy}`);
-  console.log(`[WaitlistDB][INPUT] adminNote=${input.adminNote ? `"${input.adminNote.slice(0, 80)}"` : "(none)"}`);
+  console.log(
+    `[WaitlistDB][STEP] updateWaitlistStatus — id=${input.id} newStatus=${input.status} reviewedBy=${input.reviewedBy}`
+  );
+  console.log(
+    `[WaitlistDB][INPUT] adminNote=${input.adminNote ? `"${input.adminNote.slice(0, 80)}"` : "(none)"}`
+  );
 
   const existing = await getWaitlistById(input.id);
   if (!existing) {
-    console.log(`[WaitlistDB][ERROR] updateWaitlistStatus — id=${input.id} not found`);
+    console.log(
+      `[WaitlistDB][ERROR] updateWaitlistStatus — id=${input.id} not found`
+    );
     throw new Error(`Waitlist entry id=${input.id} not found`);
   }
 
@@ -240,18 +268,24 @@ export async function updateWaitlistStatus(input: {
   await db
     .update(waitlist)
     .set({
-      status:     input.status,
-      adminNote:  input.adminNote !== undefined ? input.adminNote.slice(0, 1024) : existing.adminNote,
+      status: input.status,
+      adminNote:
+        input.adminNote !== undefined
+          ? input.adminNote.slice(0, 1024)
+          : existing.adminNote,
       reviewedAt: now,
       reviewedBy: input.reviewedBy,
-      updatedAt:  now,
+      updatedAt: now,
     })
     .where(eq(waitlist.id, input.id));
 
   const updated = await getWaitlistById(input.id);
-  if (!updated) throw new Error(`[WaitlistDB] Post-update fetch failed for id=${input.id}`);
+  if (!updated)
+    throw new Error(`[WaitlistDB] Post-update fetch failed for id=${input.id}`);
 
-  console.log(`[WaitlistDB][OUTPUT] updateWaitlistStatus — id=${input.id} email=${updated.email} ${prevStatus} → ${updated.status} reviewedAt=${now}`);
+  console.log(
+    `[WaitlistDB][OUTPUT] updateWaitlistStatus — id=${input.id} email=${updated.email} ${prevStatus} → ${updated.status} reviewedAt=${now}`
+  );
   console.log(`[WaitlistDB][VERIFY] PASS — status updated`);
 
   return updated;
@@ -267,28 +301,39 @@ export async function bulkUpdateWaitlistStatus(input: {
   const db = getDb();
   const now = Date.now();
 
-  console.log(`[WaitlistDB][STEP] bulkUpdateWaitlistStatus — count=${input.ids.length} newStatus=${input.status} reviewedBy=${input.reviewedBy}`);
+  console.log(
+    `[WaitlistDB][STEP] bulkUpdateWaitlistStatus — count=${input.ids.length} newStatus=${input.status} reviewedBy=${input.reviewedBy}`
+  );
 
   if (input.ids.length === 0) {
     console.log(`[WaitlistDB][VERIFY] PASS — no ids provided, 0 rows updated`);
     return 0;
   }
 
-  const validIds = input.ids.filter((id) => Number.isInteger(id) && id > 0);
+  const validIds = input.ids.filter(id => Number.isInteger(id) && id > 0);
   if (validIds.length !== input.ids.length) {
-    console.log(`[WaitlistDB][ERROR] bulkUpdateWaitlistStatus — ${input.ids.length - validIds.length} invalid ids filtered out`);
+    console.log(
+      `[WaitlistDB][ERROR] bulkUpdateWaitlistStatus — ${input.ids.length - validIds.length} invalid ids filtered out`
+    );
   }
 
   let updated = 0;
   for (const id of validIds) {
     await db
       .update(waitlist)
-      .set({ status: input.status, reviewedAt: now, reviewedBy: input.reviewedBy, updatedAt: now })
+      .set({
+        status: input.status,
+        reviewedAt: now,
+        reviewedBy: input.reviewedBy,
+        updatedAt: now,
+      })
       .where(eq(waitlist.id, id));
     updated++;
   }
 
-  console.log(`[WaitlistDB][OUTPUT] bulkUpdateWaitlistStatus — updated=${updated}/${validIds.length} status=${input.status}`);
+  console.log(
+    `[WaitlistDB][OUTPUT] bulkUpdateWaitlistStatus — updated=${updated}/${validIds.length} status=${input.status}`
+  );
   console.log(`[WaitlistDB][VERIFY] PASS — bulk update complete`);
 
   return updated;
@@ -302,13 +347,17 @@ export async function deleteWaitlistEntry(id: number): Promise<boolean> {
 
   const existing = await getWaitlistById(id);
   if (!existing) {
-    console.log(`[WaitlistDB][VERIFY] FAIL — id=${id} not found, nothing deleted`);
+    console.log(
+      `[WaitlistDB][VERIFY] FAIL — id=${id} not found, nothing deleted`
+    );
     return false;
   }
 
   await db.delete(waitlist).where(eq(waitlist.id, id));
 
-  console.log(`[WaitlistDB][OUTPUT] deleteWaitlistEntry — DELETED id=${id} email=${existing.email}`);
+  console.log(
+    `[WaitlistDB][OUTPUT] deleteWaitlistEntry — DELETED id=${id} email=${existing.email}`
+  );
   console.log(`[WaitlistDB][VERIFY] PASS — entry deleted`);
 
   return true;
@@ -330,12 +379,14 @@ export async function getWaitlistStats(): Promise<WaitlistStats> {
   for (const row of result) {
     const n = Number(row.count);
     stats.total += n;
-    if (row.status === "pending")  stats.pending  = n;
+    if (row.status === "pending") stats.pending = n;
     if (row.status === "approved") stats.approved = n;
-    if (row.status === "denied")   stats.denied   = n;
+    if (row.status === "denied") stats.denied = n;
   }
 
-  console.log(`[WaitlistDB][OUTPUT] getWaitlistStats — total=${stats.total} pending=${stats.pending} approved=${stats.approved} denied=${stats.denied}`);
+  console.log(
+    `[WaitlistDB][OUTPUT] getWaitlistStats — total=${stats.total} pending=${stats.pending} approved=${stats.approved} denied=${stats.denied}`
+  );
   console.log(`[WaitlistDB][VERIFY] PASS — stats computed`);
 
   return stats;
@@ -343,9 +394,13 @@ export async function getWaitlistStats(): Promise<WaitlistStats> {
 
 // ─── exportWaitlistCsv ────────────────────────────────────────────────────────
 
-export async function exportWaitlistCsv(status?: WaitlistStatus | "all"): Promise<string> {
+export async function exportWaitlistCsv(
+  status?: WaitlistStatus | "all"
+): Promise<string> {
   const db = getDb();
-  console.log(`[WaitlistDB][STEP] exportWaitlistCsv — status=${status ?? "all"}`);
+  console.log(
+    `[WaitlistDB][STEP] exportWaitlistCsv — status=${status ?? "all"}`
+  );
 
   const whereClause =
     status && status !== "all" ? eq(waitlist.status, status) : undefined;
@@ -357,10 +412,22 @@ export async function exportWaitlistCsv(status?: WaitlistStatus | "all"): Promis
     .orderBy(asc(waitlist.createdAt));
 
   const headers = [
-    "id", "email", "fullName", "status",
-    "whyText", "unitSizeMin", "unitSizeMax", "step2Completed",
-    "adminNote", "ipAddress", "utmSource", "utmMedium", "utmCampaign",
-    "reviewedAt", "createdAt", "updatedAt",
+    "id",
+    "email",
+    "fullName",
+    "status",
+    "whyText",
+    "unitSizeMin",
+    "unitSizeMax",
+    "step2Completed",
+    "adminNote",
+    "ipAddress",
+    "utmSource",
+    "utmMedium",
+    "utmCampaign",
+    "reviewedAt",
+    "createdAt",
+    "updatedAt",
   ];
 
   const escape = (v: unknown): string => {
@@ -374,12 +441,24 @@ export async function exportWaitlistCsv(status?: WaitlistStatus | "all"): Promis
 
   const lines = [
     headers.join(","),
-    ...rows.map((r) =>
+    ...rows.map(r =>
       [
-        r.id, r.email, r.fullName, r.status,
-        r.whyText, r.unitSizeMin, r.unitSizeMax, r.step2Completed,
-        r.adminNote, r.ipAddress, r.utmSource, r.utmMedium, r.utmCampaign,
-        r.reviewedAt, r.createdAt, r.updatedAt,
+        r.id,
+        r.email,
+        r.fullName,
+        r.status,
+        r.whyText,
+        r.unitSizeMin,
+        r.unitSizeMax,
+        r.step2Completed,
+        r.adminNote,
+        r.ipAddress,
+        r.utmSource,
+        r.utmMedium,
+        r.utmCampaign,
+        r.reviewedAt,
+        r.createdAt,
+        r.updatedAt,
       ]
         .map(escape)
         .join(",")
@@ -388,7 +467,9 @@ export async function exportWaitlistCsv(status?: WaitlistStatus | "all"): Promis
 
   const csv = "\uFEFF" + lines.join("\n");
 
-  console.log(`[WaitlistDB][OUTPUT] exportWaitlistCsv — rows=${rows.length} bytes=${csv.length}`);
+  console.log(
+    `[WaitlistDB][OUTPUT] exportWaitlistCsv — rows=${rows.length} bytes=${csv.length}`
+  );
   console.log(`[WaitlistDB][VERIFY] PASS — CSV generated`);
 
   return csv;
@@ -405,10 +486,10 @@ export async function exportWaitlistCsv(status?: WaitlistStatus | "all"): Promis
  *   { ok: false, reason: "not_found" } — no row with that email
  */
 export async function enrichStep2(input: {
-  email:          string;
-  fullName?:      string;
-  whyText?:       string;
-  unitSize?:      number;
+  email: string;
+  fullName?: string;
+  whyText?: string;
+  unitSize?: number;
   step2Completed: boolean;
 }): Promise<{ ok: true } | { ok: false; reason: "not_found" }> {
   const db = getDb();
@@ -416,26 +497,36 @@ export async function enrichStep2(input: {
   const now = Date.now();
 
   console.log(`[WaitlistDB][STEP] enrichStep2 — email=${normalizedEmail}`);
-  console.log(`[WaitlistDB][INPUT] fullName=${input.fullName ?? "(none)"} whyText=${input.whyText ? "(set, len=" + input.whyText.length + ")" : "(none)"} unitSize=${input.unitSize ?? "(none)"} step2=${input.step2Completed}`);
+  console.log(
+    `[WaitlistDB][INPUT] fullName=${input.fullName ?? "(none)"} whyText=${input.whyText ? "(set, len=" + input.whyText.length + ")" : "(none)"} unitSize=${input.unitSize ?? "(none)"} step2=${input.step2Completed}`
+  );
 
   // ── Verify the row exists ─────────────────────────────────────────────────
   const existing = await db
-    .select({ id: waitlist.id, email: waitlist.email, step2Completed: waitlist.step2Completed })
+    .select({
+      id: waitlist.id,
+      email: waitlist.email,
+      step2Completed: waitlist.step2Completed,
+    })
     .from(waitlist)
     .where(eq(waitlist.email, normalizedEmail))
     .limit(1);
 
   if (existing.length === 0) {
-    console.log(`[WaitlistDB][VERIFY] FAIL — enrichStep2 email=${normalizedEmail} not found in waitlist`);
+    console.log(
+      `[WaitlistDB][VERIFY] FAIL — enrichStep2 email=${normalizedEmail} not found in waitlist`
+    );
     return { ok: false, reason: "not_found" };
   }
 
   const rowId = existing[0].id;
-  console.log(`[WaitlistDB][STATE] found id=${rowId} email=${normalizedEmail} previousStep2=${existing[0].step2Completed}`);
+  console.log(
+    `[WaitlistDB][STATE] found id=${rowId} email=${normalizedEmail} previousStep2=${existing[0].step2Completed}`
+  );
 
   // ── Build the update payload (only set non-empty values) ──────────────────
   const updatePayload: Partial<InsertWaitlist> = {
-    updatedAt:      now,
+    updatedAt: now,
     step2Completed: input.step2Completed,
   };
 
@@ -451,15 +542,16 @@ export async function enrichStep2(input: {
     updatePayload.unitSizeMax = input.unitSize;
   }
 
-  console.log(`[WaitlistDB][STATE] enrichStep2 updatePayload keys=[${Object.keys(updatePayload).join(", ")}]`);
+  console.log(
+    `[WaitlistDB][STATE] enrichStep2 updatePayload keys=[${Object.keys(updatePayload).join(", ")}]`
+  );
 
   // ── Execute the UPDATE ────────────────────────────────────────────────────
-  await db
-    .update(waitlist)
-    .set(updatePayload)
-    .where(eq(waitlist.id, rowId));
+  await db.update(waitlist).set(updatePayload).where(eq(waitlist.id, rowId));
 
-  console.log(`[WaitlistDB][OUTPUT] enrichStep2 — UPDATED id=${rowId} email=${normalizedEmail} ts=${now}`);
+  console.log(
+    `[WaitlistDB][OUTPUT] enrichStep2 — UPDATED id=${rowId} email=${normalizedEmail} ts=${now}`
+  );
   console.log(`[WaitlistDB][VERIFY] PASS — step2 enrichment saved`);
 
   return { ok: true };

@@ -16,9 +16,7 @@
  */
 
 export type DimeChatAvenue =
-  | "model_projections"
-  | "betting_splits"
-  | "odds_line_movement";
+  "model_projections" | "betting_splits" | "odds_line_movement";
 
 export interface DimeChatAvenueMeta {
   id: DimeChatAvenue;

@@ -1,0 +1,35 @@
+# 06-dependency-review — blocks PRs introducing known-vulnerable packages
+# (critical/high) or forbidden licenses (policy: docs/verification/LICENSES.md).
+name: 06-dependency-review
+
+on:
+  pull_request:
+  merge_group:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dependency-review:
+    name: 06-dependency-review
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
+
+      - uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48 # v4
+        # merge_group has no base/head pair; the action only supports PRs.
+        if: github.event_name == 'pull_request'
+        with:
+          fail-on-severity: high
+          allow-licenses: >-
+            MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC, 0BSD, Unlicense,
+            CC0-1.0, CC-BY-4.0, Python-2.0, BlueOak-1.0.0, Zlib
+          comment-summary-in-pr: on-failure
+
+      - name: merge_group pass-through
+        if: github.event_name != 'pull_request'
+        run: echo "dependency review runs on the PR; merge_group inherits the PR verdict"

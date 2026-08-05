@@ -30,10 +30,20 @@ const NST_NAME_TO_ABBREV: Map<string, string> = new Map(
 );
 
 const NST_ABBREV_OVERRIDES: Record<string, string> = {
-  "VGK": "VGK", "NJD": "NJD", "SJS": "SJS", "LAK": "LAK",
-  "TBL": "TBL", "CBJ": "CBJ", "PHX": "ARI", "ARI": "ARI",
-  "SEA": "SEA", "UTA": "UTA",
-  "N.J": "NJD", "S.J": "SJS", "T.B": "TBL", "L.A": "LAK",
+  VGK: "VGK",
+  NJD: "NJD",
+  SJS: "SJS",
+  LAK: "LAK",
+  TBL: "TBL",
+  CBJ: "CBJ",
+  PHX: "ARI",
+  ARI: "ARI",
+  SEA: "SEA",
+  UTA: "UTA",
+  "N.J": "NJD",
+  "S.J": "SJS",
+  "T.B": "TBL",
+  "L.A": "LAK",
 };
 
 function normalizeAbbrev(raw: string): string {
@@ -134,11 +144,26 @@ describe("NhlTeamStats type", () => {
     // These fields should not exist on NhlTeamStats
     // TypeScript enforces this at compile time; this runtime check documents the intent
     const stats = {
-      abbrev: "BOS", name: "BOS", gp: 60,
-      xGF_pct: 52.3, xGA_pct: 47.7, CF_pct: 53.1, SCF_pct: 51.8, HDCF_pct: 54.2,
-      SH_pct: 10.2, SV_pct: 91.8, GF: 180, GA: 155,
-      xGF_60: 2.85, xGA_60: 2.41, HDCF_60: 1.12, HDCA_60: 0.91,
-      SCF_60: 26.4, SCA_60: 23.8, CF_60: 57.2, CA_60: 51.3,
+      abbrev: "BOS",
+      name: "BOS",
+      gp: 60,
+      xGF_pct: 52.3,
+      xGA_pct: 47.7,
+      CF_pct: 53.1,
+      SCF_pct: 51.8,
+      HDCF_pct: 54.2,
+      SH_pct: 10.2,
+      SV_pct: 91.8,
+      GF: 180,
+      GA: 155,
+      xGF_60: 2.85,
+      xGA_60: 2.41,
+      HDCF_60: 1.12,
+      HDCA_60: 0.91,
+      SCF_60: 26.4,
+      SCA_60: 23.8,
+      CF_60: 57.2,
+      CA_60: 51.3,
     } as NhlTeamStats;
 
     // These should be undefined (not in the type)

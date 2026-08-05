@@ -33,3 +33,122 @@ pnpm-lock.yaml
 # OS files
 .DS_Store
 Thumbs.db
+
+# ─── Format-gate scope law (2026-08-05, PR #362 graduation) ─────────────────
+# The blocking format gate covers shipped code: client/, server/, shared/,
+# scripts/ (code, not data), .github/, and root config. Everything below is
+# excluded for a concrete reason, not convenience. Prettier 3 also respects
+# .gitignore, so untracked/derived trees are already out.
+
+# Immutable-by-law and checksum-pinned artifacts:
+# - drizzle/: applied migration SQL is immutable (journal checksums); meta
+#   snapshots 0108/0122/0132 are consumer-pinned byte-for-byte.
+# - platform_knowledge_v1.json: its SHA-256 is written into runtime prompts
+#   and Trace events; reformatting changes the hash.
+# - ml/: governed manifests + SHA256SUMS evidence closures.
+# - patches/: pnpm patch contents are hash-checked at install.
+drizzle/
+shared/dime/platform_knowledge_v1.json
+ml/
+patches/
+
+# Vendored / pinned upstream trees — formatting breaks provenance against
+# the pinned upstream commits recorded in CLAUDE.md / skills-lock.json.
+.claude/
+.agents/
+.pi/
+
+# Design law and pixel-verified reference material (design-federation owns
+# these surfaces; MASTER.md and reference pages are verified artifacts).
+design-system/
+dime-ai/
+
+# Records, evidence, and runbooks — append-only history, not shipped code.
+docs/
+audits/
+references/
+os/
+
+# Harness-synced instruction files (CLAUDE.md/AGENTS.md/SKILLS.md/… must stay
+# byte-synced across harnesses; reformatting one creates sync drift).
+/*.md
+
+# Data corpora (tracked datasets imported or served verbatim — churn without
+# meaning; code under scripts/ stays in scope).
+scripts/data/
+
+# Source-shape-pinned files (law tests read these as text and assert on their
+# literal byte-shape: brand law, admin lockdown, Stripe ledger contracts,
+# parlay wiring, mobile-nav geometry, wc2026 engines, routing-evidence module
+# hashes). Reformatting them fails the law suites; they stay at their verified
+# shape until the owning test is made formatting-robust.
+client/src/components/ParlayBuilder.tsx
+client/src/components/ParlayLegList.tsx
+client/src/components/projections/CountryFlag.css
+client/src/components/projections/EdgeIndicator.css
+client/src/components/projections/EdgeIndicator.tsx
+client/src/components/projections/ProjectionCard.css
+client/src/components/projections/SummaryCarousel.tsx
+client/src/features/mobileNav/MobileFloatingNav.tsx
+client/src/features/mobileNav/mobileFloatingNav.css
+client/src/index.css
+client/src/pages/BetTracker.tsx
+client/src/pages/DimeModelFeed.tsx
+client/src/pages/admin/AdminShell.tsx
+client/src/pages/admin/MetricsPanel.tsx
+client/src/pages/admin/adminNav.ts
+client/src/pages/dime-chat/BillingSection.tsx
+client/src/pages/dime-chat/SettingsModal.tsx
+client/src/pages/dime-chat/conversation.css
+client/src/pages/dime/landing/landing-v2.css
+client/src/pages/dimeModelFeed.css
+server/_core/dimeAnswerRouting.ts
+server/_core/vite.ts
+server/betAutoGradeScheduler.ts
+server/betGradingHealth.ts
+server/betTrackerStatsCache.ts
+server/cron/cronRoutes.ts
+server/db.ts
+server/discord/discordRoleSync.ts
+server/parlayGrader.ts
+server/routers.ts
+server/routers/appUsers.ts
+server/routers/betTracker.ts
+server/routers/stripe.ts
+server/scoreGrader.ts
+server/stripe/checkoutLedger.ts
+server/stripe/paymentLedger.ts
+server/stripeWebhook.ts
+server/wc2026/groupStageGameIds.json
+server/wc2026/v27_jul18_engine.mjs
+server/wc2026/wc2026AuditEngine.mjs
+server/wc2026/wc2026BracketScraper.mjs
+server/wc2026/wc2026Heartbeat.ts
+
+# Governed-evidence pin (ml/ closure.json byte-pins this file's SHA-256 —
+# gate 08 re-verifies it; formatting breaks the pinned hash):
+server/_core/dimeEvidenceLifecycleMigration.test.ts
+
+# CodeQL alert-carrying lines (2026-08-05): these files hold PRE-EXISTING
+# code-scanning alerts; formatting moved those lines into the PR diff and
+# code scanning attributed all 59 as "new". They stay at main's shape so the
+# alerts remain tracked on main's backlog, not laundered through a format
+# diff. Format each one together with its alert fix.
+client/src/pages/dimeModelFeed.test.ts
+scripts/exportUsersToStripe.mjs
+scripts/smoke-deploy.mjs
+server/_core/dime1Client.ts
+server/_core/dimeChatModel.ts
+server/_core/index.ts
+server/_core/storageProxy.ts
+server/_core/trpc.ts
+server/cron/cronAuth.ts
+server/discord/discordSecurityAlert.ts
+server/discordAuth.ts
+server/discordInvite.test.ts
+server/discordInvite.ts
+server/discordLogin.ts
+server/stripe/paymentLinkGuard.test.ts
+server/wc2026/espnLogger.ts
+server/wc2026/fifaLiveScraper.ts
+server/wc2026/wc2026Ingester.ts

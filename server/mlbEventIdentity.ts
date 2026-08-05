@@ -60,11 +60,11 @@ export interface MlbProviderGame {
 // ─── Doubleheader detection ───────────────────────────────────────────────────
 
 export type DoubleheaderConfidence =
-  | "EXPLICIT"          // provider labels the games as a doubleheader (flag Y/S on ≥1 sibling)
-  | "CORROBORATED"      // no flag, but ≥2 independent fields agree (gameNumbers, dayNight, reschedule link)
-  | "POSSIBLE"          // distinct same-day games exist, provider metadata incomplete
-  | "NOT_DOUBLEHEADER"  // a single game (or zero) for the matchup+date
-  | "UNKNOWN";          // insufficient evidence (e.g. malformed group)
+  | "EXPLICIT" // provider labels the games as a doubleheader (flag Y/S on ≥1 sibling)
+  | "CORROBORATED" // no flag, but ≥2 independent fields agree (gameNumbers, dayNight, reschedule link)
+  | "POSSIBLE" // distinct same-day games exist, provider metadata incomplete
+  | "NOT_DOUBLEHEADER" // a single game (or zero) for the matchup+date
+  | "UNKNOWN"; // insufficient evidence (e.g. malformed group)
 
 export interface DoubleheaderGroup {
   /** Stable group id: officialDate + ordered team pair. Grouping only — never an event identity. */
@@ -82,12 +82,19 @@ export interface DoubleheaderGroup {
 }
 
 /** Grouping key for sibling association (NOT identity). */
-export function doubleheaderGroupId(officialDate: string, awayAbbrev: string, homeAbbrev: string): string {
+export function doubleheaderGroupId(
+  officialDate: string,
+  awayAbbrev: string,
+  homeAbbrev: string
+): string {
   return `${officialDate}:${awayAbbrev}@${homeAbbrev}`;
 }
 
 /** Deterministic chronological order: startUtc, then gamePk as a stable tie-breaker. */
-export function compareProviderGames(a: MlbProviderGame, b: MlbProviderGame): number {
+export function compareProviderGames(
+  a: MlbProviderGame,
+  b: MlbProviderGame
+): number {
   if (a.startUtc < b.startUtc) return -1;
   if (a.startUtc > b.startUtc) return 1;
   return a.gamePk - b.gamePk;
@@ -106,19 +113,31 @@ function isValidFlag(flag: unknown): flag is MlbDoubleHeaderFlag {
  *  - Missing/conflicting provider metadata lowers confidence and adds a
  *    warning; it never removes an event.
  */
-export function classifyDoubleheaderGroup(group: MlbProviderGame[]): DoubleheaderGroup {
+export function classifyDoubleheaderGroup(
+  group: MlbProviderGame[]
+): DoubleheaderGroup {
   const sorted = [...group].sort(compareProviderGames);
   const first = sorted[0];
   const groupId = first
-    ? doubleheaderGroupId(first.officialDate, first.awayAbbrev, first.homeAbbrev)
+    ? doubleheaderGroupId(
+        first.officialDate,
+        first.awayAbbrev,
+        first.homeAbbrev
+      )
     : "empty";
   const warnings: string[] = [];
   const resolved = new Map<number, number>();
 
   if (sorted.length === 0) {
     return {
-      groupId, officialDate: "", awayAbbrev: "", homeAbbrev: "",
-      confidence: "UNKNOWN", gamePks: [], resolvedGameNumbers: resolved, warnings: ["empty group"],
+      groupId,
+      officialDate: "",
+      awayAbbrev: "",
+      homeAbbrev: "",
+      confidence: "UNKNOWN",
+      gamePks: [],
+      resolvedGameNumbers: resolved,
+      warnings: ["empty group"],
     };
   }
 
@@ -126,10 +145,16 @@ export function classifyDoubleheaderGroup(group: MlbProviderGame[]): Doubleheade
   const providerNumbers = sorted.map(g => g.gameNumber);
   const providerNumbersUsable =
     sorted.length > 1 &&
-    providerNumbers.every(n => typeof n === "number" && n >= 1 && n <= sorted.length) &&
+    providerNumbers.every(
+      n => typeof n === "number" && n >= 1 && n <= sorted.length
+    ) &&
     new Set(providerNumbers).size === sorted.length;
 
-  if (sorted.length > 1 && !providerNumbersUsable && providerNumbers.some(n => n !== undefined)) {
+  if (
+    sorted.length > 1 &&
+    !providerNumbersUsable &&
+    providerNumbers.some(n => n !== undefined)
+  ) {
     warnings.push(
       `provider gameNumbers inconsistent for ${groupId}: [${providerNumbers.map(n => n ?? "∅").join(",")}] — falling back to chronological order`
     );
@@ -163,8 +188,8 @@ export function classifyDoubleheaderGroup(group: MlbProviderGame[]): Doubleheade
       let signals = 0;
       if (providerNumbersUsable) signals++;
       const dayNights = new Set(sorted.map(g => g.dayNight).filter(Boolean));
-      if (dayNights.size > 1) signals++;                       // day + night designations
-      if (sorted.some(g => g.rescheduledFrom)) signals++;      // makeup-game linkage
+      if (dayNights.size > 1) signals++; // day + night designations
+      if (sorted.some(g => g.rescheduledFrom)) signals++; // makeup-game linkage
       if (anyDenies) {
         warnings.push(
           `provider flags say N but ${sorted.length} distinct gamePks share ${groupId} — flag ignored, events preserved`
@@ -182,7 +207,11 @@ export function classifyDoubleheaderGroup(group: MlbProviderGame[]): Doubleheade
     confidence,
     gamePks: sorted
       .slice()
-      .sort((a, b) => (resolved.get(a.gamePk)! - resolved.get(b.gamePk)!) || (a.gamePk - b.gamePk))
+      .sort(
+        (a, b) =>
+          resolved.get(a.gamePk)! - resolved.get(b.gamePk)! ||
+          a.gamePk - b.gamePk
+      )
       .map(g => g.gamePk),
     resolvedGameNumbers: resolved,
     warnings,
@@ -190,16 +219,20 @@ export function classifyDoubleheaderGroup(group: MlbProviderGame[]): Doubleheade
 }
 
 /** Group a slate by (officialDate, matchup) and classify every group. */
-export function classifySlate(slate: MlbProviderGame[]): Map<string, DoubleheaderGroup> {
+export function classifySlate(
+  slate: MlbProviderGame[]
+): Map<string, DoubleheaderGroup> {
   const byGroup = new Map<string, MlbProviderGame[]>();
   for (const g of slate) {
     const key = doubleheaderGroupId(g.officialDate, g.awayAbbrev, g.homeAbbrev);
     const arr = byGroup.get(key);
-    if (arr) arr.push(g); else byGroup.set(key, [g]);
+    if (arr) arr.push(g);
+    else byGroup.set(key, [g]);
   }
   const out = new Map<string, DoubleheaderGroup>();
   // Array.from: tsconfig targets ES5 (no downlevelIteration) — direct Map iteration is TS2802
-  for (const [key, group] of Array.from(byGroup.entries())) out.set(key, classifyDoubleheaderGroup(group));
+  for (const [key, group] of Array.from(byGroup.entries()))
+    out.set(key, classifyDoubleheaderGroup(group));
   return out;
 }
 
@@ -298,7 +331,12 @@ export function mapProviderStatus(
   detailedState: string
 ): "upcoming" | "live" | "final" | "postponed" | "suspended" {
   const detail = detailedState.toLowerCase();
-  if (detail.includes("postponed") || detail.includes("cancelled") || detail.includes("canceled")) return "postponed";
+  if (
+    detail.includes("postponed") ||
+    detail.includes("cancelled") ||
+    detail.includes("canceled")
+  )
+    return "postponed";
   if (detail.includes("suspended")) return "suspended";
   if (abstractGameState === "Final") return "final";
   if (abstractGameState === "Live") return "live";
@@ -324,9 +362,14 @@ export function utcToEasternTimeString(utcIso: string): string {
  */
 export function isStatusRegression(current: string, incoming: string): boolean {
   if (current === incoming) return false;
-  if (current === "final") return incoming === "live" || incoming === "upcoming";
+  if (current === "final")
+    return incoming === "live" || incoming === "upcoming";
   if (current === "live") return incoming === "upcoming";
-  if ((current === "postponed" || current === "suspended") && incoming === "upcoming") return true;
+  if (
+    (current === "postponed" || current === "suspended") &&
+    incoming === "upcoming"
+  )
+    return true;
   return false;
 }
 
@@ -355,11 +398,17 @@ export function planMlbScheduleSync(
       continue;
     }
     if (!g.officialDate || !/^\d{4}-\d{2}-\d{2}$/.test(g.officialDate)) {
-      rejected.push({ gamePk: g.gamePk, reason: `invalid officialDate "${g.officialDate}"` });
+      rejected.push({
+        gamePk: g.gamePk,
+        reason: `invalid officialDate "${g.officialDate}"`,
+      });
       continue;
     }
     if (!g.awayAbbrev || !g.homeAbbrev) {
-      rejected.push({ gamePk: g.gamePk, reason: "unresolvable team abbreviation" });
+      rejected.push({
+        gamePk: g.gamePk,
+        reason: "unresolvable team abbreviation",
+      });
       continue;
     }
     valid.push(g);
@@ -369,7 +418,9 @@ export function planMlbScheduleSync(
   const byPk = new Map<number, MlbProviderGame>();
   for (const g of valid) {
     if (byPk.has(g.gamePk)) {
-      warnings.push(`duplicate provider delivery for gamePk=${g.gamePk} — kept one copy (idempotent)`);
+      warnings.push(
+        `duplicate provider delivery for gamePk=${g.gamePk} — kept one copy (idempotent)`
+      );
     }
     byPk.set(g.gamePk, g); // last delivery wins within one payload
   }
@@ -379,7 +430,9 @@ export function planMlbScheduleSync(
   const groups = classifySlate(slate);
   for (const grp of Array.from(groups.values())) warnings.push(...grp.warnings);
   const resolvedNumber = (g: MlbProviderGame): number => {
-    const grp = groups.get(doubleheaderGroupId(g.officialDate, g.awayAbbrev, g.homeAbbrev));
+    const grp = groups.get(
+      doubleheaderGroupId(g.officialDate, g.awayAbbrev, g.homeAbbrev)
+    );
     return grp?.resolvedGameNumbers.get(g.gamePk) ?? g.gameNumber ?? 1;
   };
 
@@ -402,7 +455,8 @@ export function planMlbScheduleSync(
     if (r.mlbGamePk != null) continue;
     const key = `${r.gameDate}:${r.awayTeam}@${r.homeTeam}`;
     const arr = legacyByMatchup.get(key);
-    if (arr) arr.push(r); else legacyByMatchup.set(key, [r]);
+    if (arr) arr.push(r);
+    else legacyByMatchup.set(key, [r]);
   }
 
   // ── 4b. Legacy adoption pairing: closest start time wins ──────────────────
@@ -425,15 +479,21 @@ export function planMlbScheduleSync(
     const pairs: Array<{ dist: number; gamePk: number; row: DbGameRow }> = [];
     for (const g of slate) {
       if (rowByPk.has(g.gamePk)) continue; // identity match takes precedence
-      const legacy = legacyByMatchup.get(`${g.officialDate}:${g.awayAbbrev}@${g.homeAbbrev}`) ?? [];
+      const legacy =
+        legacyByMatchup.get(
+          `${g.officialDate}:${g.awayAbbrev}@${g.homeAbbrev}`
+        ) ?? [];
       const gMin = timeToMinutes(utcToEasternTimeString(g.startUtc));
       for (const row of legacy) {
         const rMin = timeToMinutes(row.startTimeEst);
-        const dist = gMin != null && rMin != null ? Math.abs(gMin - rMin) : 24 * 60;
+        const dist =
+          gMin != null && rMin != null ? Math.abs(gMin - rMin) : 24 * 60;
         pairs.push({ dist, gamePk: g.gamePk, row });
       }
     }
-    pairs.sort((a, b) => (a.dist - b.dist) || (a.gamePk - b.gamePk) || (a.row.id - b.row.id));
+    pairs.sort(
+      (a, b) => a.dist - b.dist || a.gamePk - b.gamePk || a.row.id - b.row.id
+    );
     const takenRows = new Set<number>();
     for (const p of pairs) {
       if (adoptionByPk.has(p.gamePk) || takenRows.has(p.row.id)) continue;
@@ -450,7 +510,10 @@ export function planMlbScheduleSync(
   const storageKeyOwner = new Map<string, number>();
   for (const r of mlbRows) {
     if (r.mlbGamePk != null) {
-      storageKeyOwner.set(`${r.gameDate}:${r.awayTeam}:${r.homeTeam}:${r.gameNumber ?? 1}`, r.mlbGamePk);
+      storageKeyOwner.set(
+        `${r.gameDate}:${r.awayTeam}:${r.homeTeam}:${r.gameNumber ?? 1}`,
+        r.mlbGamePk
+      );
     }
   }
 
@@ -459,12 +522,16 @@ export function planMlbScheduleSync(
   let unchanged = 0;
 
   for (const g of slate) {
-    const grp = groups.get(doubleheaderGroupId(g.officialDate, g.awayAbbrev, g.homeAbbrev));
+    const grp = groups.get(
+      doubleheaderGroupId(g.officialDate, g.awayAbbrev, g.homeAbbrev)
+    );
     const confidence = grp?.confidence ?? "UNKNOWN";
     const gameNumber = resolvedNumber(g);
     const dhFlag = isValidFlag(g.doubleHeader)
       ? g.doubleHeader
-      : (grp && grp.gamePks.length > 1 ? "S" : "N");
+      : grp && grp.gamePks.length > 1
+        ? "S"
+        : "N";
     const status = mapProviderStatus(g.abstractGameState, g.detailedState);
     const startTimeEst = utcToEasternTimeString(g.startUtc);
 
@@ -485,11 +552,15 @@ export function planMlbScheduleSync(
       if (claimedRowIds.has(row.id)) {
         // Should be unreachable (rowByPk is 1:1 and legacy candidates are claim-filtered),
         // but guard anyway: NEVER let two provider events share one row.
-        collisions.push({ gamePk: g.gamePk, reason: `row id=${row.id} already claimed by another provider event` });
+        collisions.push({
+          gamePk: g.gamePk,
+          reason: `row id=${row.id} already claimed by another provider event`,
+        });
         continue;
       }
       claimedRowIds.add(row.id);
-      if (!adopts) matchedByGamePk++; else adoptedLegacyRows++;
+      if (!adopts) matchedByGamePk++;
+      else adoptedLegacyRows++;
 
       const set: SyncFieldUpdate = {};
       if (row.startTimeEst !== startTimeEst) set.startTimeEst = startTimeEst;
@@ -512,17 +583,25 @@ export function planMlbScheduleSync(
       const keepStoredNumber =
         soloGroup &&
         row.gameDate === g.officialDate &&
-        row.gameNumber != null && row.gameNumber >= 1 && row.gameNumber <= 2 &&
+        row.gameNumber != null &&
+        row.gameNumber >= 1 &&
+        row.gameNumber <= 2 &&
         row.gameNumber !== gameNumber;
-      const effectiveGameNumber = keepStoredNumber ? (row.gameNumber as number) : gameNumber;
-      if ((row.gameNumber ?? 1) !== effectiveGameNumber) set.gameNumber = effectiveGameNumber;
+      const effectiveGameNumber = keepStoredNumber
+        ? (row.gameNumber as number)
+        : gameNumber;
+      if ((row.gameNumber ?? 1) !== effectiveGameNumber)
+        set.gameNumber = effectiveGameNumber;
       // Same partial-payload protection for the DH flag: a solo group with no
       // provider flag must not downgrade a stored Y/S to N.
       const effectiveDhFlag =
-        soloGroup && !isValidFlag(g.doubleHeader) && (row.doubleHeader === "S" || row.doubleHeader === "Y")
+        soloGroup &&
+        !isValidFlag(g.doubleHeader) &&
+        (row.doubleHeader === "S" || row.doubleHeader === "Y")
           ? row.doubleHeader
           : dhFlag;
-      if ((row.doubleHeader ?? "N") !== effectiveDhFlag) set.doubleHeader = effectiveDhFlag;
+      if ((row.doubleHeader ?? "N") !== effectiveDhFlag)
+        set.doubleHeader = effectiveDhFlag;
       if (row.mlbGamePk !== g.gamePk) set.mlbGamePk = g.gamePk;
       // A schedule-date move resolves a postponement: the 'postponed' state
       // belonged to the OLD date, and the provider now schedules this same
@@ -530,10 +609,13 @@ export function planMlbScheduleSync(
       // transition there, not a stale-snapshot regression (2026-07-17: the
       // relocated May 9 row had to become 'upcoming' to re-enter the feed).
       const dateMoveResolvesPostponement =
-        set.gameDate !== undefined && row.gameStatus === "postponed" && status === "upcoming";
+        set.gameDate !== undefined &&
+        row.gameStatus === "postponed" &&
+        status === "upcoming";
       if (
         row.gameStatus !== status &&
-        (!isStatusRegression(row.gameStatus, status) || dateMoveResolvesPostponement)
+        (!isStatusRegression(row.gameStatus, status) ||
+          dateMoveResolvesPostponement)
       ) {
         set.gameStatus = status;
       } else if (row.gameStatus !== status) {
@@ -541,8 +623,12 @@ export function planMlbScheduleSync(
           `status regression blocked for gamePk=${g.gamePk}: ${row.gameStatus} → ${status} (stale snapshot?)`
         );
       }
-      if (g.venueName && (row.venue ?? null) !== g.venueName) set.venue = g.venueName;
-      if (g.rescheduledFrom && (row.rescheduledFrom ?? null) !== g.rescheduledFrom) {
+      if (g.venueName && (row.venue ?? null) !== g.venueName)
+        set.venue = g.venueName;
+      if (
+        g.rescheduledFrom &&
+        (row.rescheduledFrom ?? null) !== g.rescheduledFrom
+      ) {
         set.rescheduledFrom = g.rescheduledFrom;
       }
 
@@ -550,12 +636,19 @@ export function planMlbScheduleSync(
         unchanged++;
       } else {
         updates.push({
-          rowId: row.id, gamePk: g.gamePk, adoptsLegacyRow: adopts, set,
-          finalGameNumber: effectiveGameNumber, dhConfidence: confidence,
+          rowId: row.id,
+          gamePk: g.gamePk,
+          adoptsLegacyRow: adopts,
+          set,
+          finalGameNumber: effectiveGameNumber,
+          dhConfidence: confidence,
         });
       }
       // Update storage-key occupancy to reflect the planned gameNumber.
-      storageKeyOwner.set(`${g.officialDate}:${g.awayAbbrev}:${g.homeAbbrev}:${effectiveGameNumber}`, g.gamePk);
+      storageKeyOwner.set(
+        `${g.officialDate}:${g.awayAbbrev}:${g.homeAbbrev}:${effectiveGameNumber}`,
+        g.gamePk
+      );
       continue;
     }
 
@@ -597,7 +690,8 @@ export function planMlbScheduleSync(
   };
 
   // ── 6. Cardinality self-check: every distinct event must be accounted for ──
-  const accounted = matchedByGamePk + adoptedLegacyRows + inserts.length + collisions.length;
+  const accounted =
+    matchedByGamePk + adoptedLegacyRows + inserts.length + collisions.length;
   if (accounted !== slate.length) {
     collisions.push({
       gamePk: -1,
@@ -605,5 +699,13 @@ export function planMlbScheduleSync(
     });
   }
 
-  return { inserts, updates, rejected, warnings, collisions, counts, groups: Array.from(groups.values()) };
+  return {
+    inserts,
+    updates,
+    rejected,
+    warnings,
+    collisions,
+    counts,
+    groups: Array.from(groups.values()),
+  };
 }

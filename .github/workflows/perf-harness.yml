@@ -71,9 +71,11 @@ jobs:
       - name: "[STEP] Run perf harness"
         env:
           PERF_TARGET_URL: ${{ vars.RAILWAY_APP_URL }}
+        env:
+          UPDATE_BASELINE: ${{ github.event.inputs.update_baseline }}
         run: |
           set -euo pipefail
-          if [ "${{ github.event.inputs.update_baseline }}" = "true" ]; then
+          if [ "$UPDATE_BASELINE" = "true" ]; then
             pnpm exec tsx perf/harness.ts --update-baseline
           else
             pnpm exec tsx perf/harness.ts

@@ -17,7 +17,9 @@ import {
 describe("describeDeletionBlock", () => {
   it("allows deletion when the account owns nothing", () => {
     expect(describeDeletionBlock(42, {})).toBeNull();
-    expect(describeDeletionBlock(42, { "tracked bets": 0, "login sessions": 0 })).toBeNull();
+    expect(
+      describeDeletionBlock(42, { "tracked bets": 0, "login sessions": 0 })
+    ).toBeNull();
   });
 
   it("REGRESSION: refuses the exact shape that orphaned account 60002", () => {
@@ -28,7 +30,7 @@ describe("describeDeletionBlock", () => {
     });
     expect(msg).not.toBeNull();
     expect(msg).toContain("Cannot delete user 60002");
-    expect(msg).toContain("280 rows");          // 278 + 1 + 1
+    expect(msg).toContain("280 rows"); // 278 + 1 + 1
     expect(msg).toContain("278 tracked bets");
   });
 
@@ -57,11 +59,15 @@ describe("describeDeletionBlock", () => {
   it("blocks on a single stranded row, not just large accounts", () => {
     // user_sessions already orphans 1050001; user_favorite_games orphans
     // 150003 and 180002. Small residue is still residue.
-    expect(describeDeletionBlock(1050001, { "login sessions": 1 })).not.toBeNull();
+    expect(
+      describeDeletionBlock(1050001, { "login sessions": 1 })
+    ).not.toBeNull();
   });
 
   it("uses singular phrasing for one row", () => {
-    expect(describeDeletionBlock(7, { "login sessions": 1 })).toContain("1 row reference");
+    expect(describeDeletionBlock(7, { "login sessions": 1 })).toContain(
+      "1 row reference"
+    );
   });
 });
 

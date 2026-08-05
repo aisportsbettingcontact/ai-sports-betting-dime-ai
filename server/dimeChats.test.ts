@@ -61,7 +61,9 @@ describe("deriveThreadTitle", () => {
   // 2026-07-29 r3: new-thread titles route through the topic-detection engine
   // (server/dimeChatTitle.ts — its own test file carries the full matrix).
   it("collapses whitespace and composes a topic title", () => {
-    expect(deriveThreadTitle("  best   MLB\nedges today ")).toBe("MLB Edges — Today");
+    expect(deriveThreadTitle("  best   MLB\nedges today ")).toBe(
+      "MLB Edges — Today"
+    );
   });
   it("truncates undetectable long input with an ellipsis under the cap", () => {
     const long = "z".repeat(200);

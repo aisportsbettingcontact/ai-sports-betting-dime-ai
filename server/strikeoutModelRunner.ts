@@ -35,14 +35,14 @@ const TIMEOUT_MS = 120_000; // 2-minute hard timeout
 
 export interface StrikeoutRunnerInput {
   gameId: number;
-  gameDate: string;          // YYYY-MM-DD
-  awayTeam: string;          // e.g. "NYY"
-  homeTeam: string;          // e.g. "SFN"
-  awayPitcherRsId: string;   // retrosheet ID e.g. "friem001"
-  homePitcherRsId: string;   // retrosheet ID e.g. "webbl001"
-  playsPath: string;         // absolute path to Retrosheet plays CSV
-  statcastPath: string;      // absolute path to statcast JSON
-  crosswalkPath: string;     // absolute path to crosswalk CSV
+  gameDate: string; // YYYY-MM-DD
+  awayTeam: string; // e.g. "NYY"
+  homeTeam: string; // e.g. "SFN"
+  awayPitcherRsId: string; // retrosheet ID e.g. "friem001"
+  homePitcherRsId: string; // retrosheet ID e.g. "webbl001"
+  playsPath: string; // absolute path to Retrosheet plays CSV
+  statcastPath: string; // absolute path to statcast JSON
+  crosswalkPath: string; // absolute path to crosswalk CSV
   // Optional market lines for the away pitcher
   awayMarketLine?: number;
   awayMarketOverOdds?: string;
@@ -69,12 +69,20 @@ export async function runStrikeoutModel(
   input: StrikeoutRunnerInput
 ): Promise<StrikeoutRunnerResult> {
   const {
-    gameId, gameDate, awayTeam, homeTeam,
-    awayPitcherRsId, homePitcherRsId,
-    playsPath, statcastPath, crosswalkPath,
+    gameId,
+    gameDate,
+    awayTeam,
+    homeTeam,
+    awayPitcherRsId,
+    homePitcherRsId,
+    playsPath,
+    statcastPath,
+    crosswalkPath,
   } = input;
 
-  console.log(`${TAG} Starting model for game ${gameId} (${awayTeam}@${homeTeam} ${gameDate})`);
+  console.log(
+    `${TAG} Starting model for game ${gameId} (${awayTeam}@${homeTeam} ${gameDate})`
+  );
   console.log(`${TAG}   away pitcher: ${awayPitcherRsId}`);
   console.log(`${TAG}   home pitcher: ${homePitcherRsId}`);
   console.log(`${TAG}   plays: ${playsPath}`);
@@ -82,7 +90,11 @@ export async function runStrikeoutModel(
   console.log(`${TAG}   crosswalk: ${crosswalkPath}`);
 
   // Verify input files exist
-  for (const [label, p] of [["plays", playsPath], ["statcast", statcastPath], ["crosswalk", crosswalkPath]] as [string, string][]) {
+  for (const [label, p] of [
+    ["plays", playsPath],
+    ["statcast", statcastPath],
+    ["crosswalk", crosswalkPath],
+  ] as [string, string][]) {
     try {
       await fs.access(p);
       console.log(`${TAG}   ✓ ${label} file exists`);
@@ -102,26 +114,58 @@ export async function runStrikeoutModel(
   // Build CLI args
   const args: string[] = [
     MODEL_SCRIPT,
-    "--plays", playsPath,
-    "--statcast", statcastPath,
-    "--crosswalk", crosswalkPath,
-    "--game-date", gameDate,
-    "--away-team", awayTeam,
-    "--home-team", homeTeam,
-    "--away-pitcher", awayPitcherRsId,
-    "--home-pitcher", homePitcherRsId,
-    "--output", htmlOut,
-    "--json-output", jsonOut,
+    "--plays",
+    playsPath,
+    "--statcast",
+    statcastPath,
+    "--crosswalk",
+    crosswalkPath,
+    "--game-date",
+    gameDate,
+    "--away-team",
+    awayTeam,
+    "--home-team",
+    homeTeam,
+    "--away-pitcher",
+    awayPitcherRsId,
+    "--home-pitcher",
+    homePitcherRsId,
+    "--output",
+    htmlOut,
+    "--json-output",
+    jsonOut,
   ];
 
   // Add market lines if provided
-  if (input.awayMarketLine != null && input.awayMarketOverOdds && input.awayMarketUnderOdds) {
-    args.push("--away-market", String(input.awayMarketLine), input.awayMarketOverOdds, input.awayMarketUnderOdds);
-    console.log(`${TAG}   away market: ${input.awayMarketLine} ${input.awayMarketOverOdds}/${input.awayMarketUnderOdds}`);
+  if (
+    input.awayMarketLine != null &&
+    input.awayMarketOverOdds &&
+    input.awayMarketUnderOdds
+  ) {
+    args.push(
+      "--away-market",
+      String(input.awayMarketLine),
+      input.awayMarketOverOdds,
+      input.awayMarketUnderOdds
+    );
+    console.log(
+      `${TAG}   away market: ${input.awayMarketLine} ${input.awayMarketOverOdds}/${input.awayMarketUnderOdds}`
+    );
   }
-  if (input.homeMarketLine != null && input.homeMarketOverOdds && input.homeMarketUnderOdds) {
-    args.push("--home-market", String(input.homeMarketLine), input.homeMarketOverOdds, input.homeMarketUnderOdds);
-    console.log(`${TAG}   home market: ${input.homeMarketLine} ${input.homeMarketOverOdds}/${input.homeMarketUnderOdds}`);
+  if (
+    input.homeMarketLine != null &&
+    input.homeMarketOverOdds &&
+    input.homeMarketUnderOdds
+  ) {
+    args.push(
+      "--home-market",
+      String(input.homeMarketLine),
+      input.homeMarketOverOdds,
+      input.homeMarketUnderOdds
+    );
+    console.log(
+      `${TAG}   home market: ${input.homeMarketLine} ${input.homeMarketOverOdds}/${input.homeMarketUnderOdds}`
+    );
   }
 
   console.log(`${TAG}   CMD: ${PYTHON} ${args.join(" ")}`);
@@ -181,8 +225,12 @@ export async function runStrikeoutModel(
   }
 
   // Log key projection values
-  console.log(`${TAG}   ✓ ${awayProj.pitcherName} (away): kProj=${awayProj.kProj} line=${awayProj.kLine} pOver=${awayProj.pOver} verdict=${awayProj.verdict}`);
-  console.log(`${TAG}   ✓ ${homeProj.pitcherName} (home): kProj=${homeProj.kProj} line=${homeProj.kLine} pOver=${homeProj.pOver} verdict=${homeProj.verdict}`);
+  console.log(
+    `${TAG}   ✓ ${awayProj.pitcherName} (away): kProj=${awayProj.kProj} line=${awayProj.kLine} pOver=${awayProj.pOver} verdict=${awayProj.verdict}`
+  );
+  console.log(
+    `${TAG}   ✓ ${homeProj.pitcherName} (home): kProj=${homeProj.kProj} line=${homeProj.kLine} pOver=${homeProj.pOver} verdict=${homeProj.verdict}`
+  );
 
   // Upsert both rows to DB
   const now = Date.now();
@@ -213,14 +261,24 @@ export async function runStrikeoutModel(
       bestEdge: proj.bestEdge != null ? String(proj.bestEdge) : undefined,
       bestSide: proj.bestSide as string | undefined,
       bestMlStr: proj.bestMlStr as string | undefined,
-      signalBreakdown: proj.signalBreakdown ? JSON.stringify(proj.signalBreakdown) : undefined,
-      matchupRows: proj.matchupRows ? JSON.stringify(proj.matchupRows) : undefined,
-      distribution: proj.distribution ? JSON.stringify(proj.distribution) : undefined,
-      inningBreakdown: proj.inningBreakdown ? JSON.stringify(proj.inningBreakdown) : undefined,
+      signalBreakdown: proj.signalBreakdown
+        ? JSON.stringify(proj.signalBreakdown)
+        : undefined,
+      matchupRows: proj.matchupRows
+        ? JSON.stringify(proj.matchupRows)
+        : undefined,
+      distribution: proj.distribution
+        ? JSON.stringify(proj.distribution)
+        : undefined,
+      inningBreakdown: proj.inningBreakdown
+        ? JSON.stringify(proj.inningBreakdown)
+        : undefined,
       modelRunAt: now,
     };
     await upsertStrikeoutProp(row);
-    console.log(`${TAG}   ✓ DB upsert: gameId=${gameId} side=${row.side} pitcher=${row.pitcherName}`);
+    console.log(
+      `${TAG}   ✓ DB upsert: gameId=${gameId} side=${row.side} pitcher=${row.pitcherName}`
+    );
   }
 
   // Clean up temp files

@@ -21,10 +21,18 @@ describe("deriveActiveUserPoint", () => {
     expect(p.reason).toBeTruthy();
   });
   it("is a valid ok(0) once at least one engaged session exists", () => {
-    expect(deriveActiveUserPoint(0, 5)).toEqual({ state: "ok", value: 0, reason: null });
+    expect(deriveActiveUserPoint(0, 5)).toEqual({
+      state: "ok",
+      value: 0,
+      reason: null,
+    });
   });
   it("returns ok(n) for a positive window count", () => {
-    expect(deriveActiveUserPoint(3, 5)).toEqual({ state: "ok", value: 3, reason: null });
+    expect(deriveActiveUserPoint(3, 5)).toEqual({
+      state: "ok",
+      value: 3,
+      reason: null,
+    });
   });
 });
 
@@ -35,7 +43,11 @@ describe("deriveAvgDurationPoint", () => {
     expect(p.value).toBeNull();
   });
   it("returns ok(avg) when closed sessions exist", () => {
-    expect(deriveAvgDurationPoint(1234, 2)).toEqual({ state: "ok", value: 1234, reason: null });
+    expect(deriveAvgDurationPoint(1234, 2)).toEqual({
+      state: "ok",
+      value: 1234,
+      reason: null,
+    });
   });
 });
 

@@ -32,28 +32,31 @@ import * as cheerio from "cheerio";
 
 export interface NhlStartingGoalie {
   name: string;
-  confirmed: boolean;   // true = confirmed starter, false = projected/expected
-  team: string;         // NHL abbreviation (e.g. "BOS")
+  confirmed: boolean; // true = confirmed starter, false = projected/expected
+  team: string; // NHL abbreviation (e.g. "BOS")
 }
 
 export interface NhlLineupGame {
-  awayTeam: string;     // NHL abbreviation (e.g. "BOS")
-  homeTeam: string;     // NHL abbreviation (e.g. "TOR")
+  awayTeam: string; // NHL abbreviation (e.g. "BOS")
+  homeTeam: string; // NHL abbreviation (e.g. "TOR")
   awayGoalie: NhlStartingGoalie | null;
   homeGoalie: NhlStartingGoalie | null;
-  gameTime: string;     // e.g. "7:00 PM ET"
+  gameTime: string; // e.g. "7:00 PM ET"
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-const ROTOWIRE_LINEUPS_URL_TODAY    = "https://www.rotowire.com/hockey/nhl-lineups.php";
-const ROTOWIRE_LINEUPS_URL_TOMORROW = "https://www.rotowire.com/hockey/nhl-lineups.php?date=tomorrow";
+const ROTOWIRE_LINEUPS_URL_TODAY =
+  "https://www.rotowire.com/hockey/nhl-lineups.php";
+const ROTOWIRE_LINEUPS_URL_TOMORROW =
+  "https://www.rotowire.com/hockey/nhl-lineups.php?date=tomorrow";
 
 const FETCH_HEADERS = {
-  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-  "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+  "User-Agent":
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+  Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
   "Accept-Language": "en-US,en;q=0.9",
-  "Referer": "https://www.rotowire.com/",
+  Referer: "https://www.rotowire.com/",
 };
 
 // ─── Scraper ─────────────────────────────────────────────────────────────────
@@ -63,33 +66,51 @@ const FETCH_HEADERS = {
  * @param date - 'today' (default) or 'tomorrow'
  * Returns a list of games with away/home starting goalies.
  */
-export async function scrapeNhlStartingGoalies(date: 'today' | 'tomorrow' = 'today'): Promise<NhlLineupGame[]> {
-  const url = date === 'tomorrow' ? ROTOWIRE_LINEUPS_URL_TOMORROW : ROTOWIRE_LINEUPS_URL_TODAY;
-  console.log(`[RotoWireScraper] ► Fetching NHL lineups from RotoWire (${date.toUpperCase()})...`);
+export async function scrapeNhlStartingGoalies(
+  date: "today" | "tomorrow" = "today"
+): Promise<NhlLineupGame[]> {
+  const url =
+    date === "tomorrow"
+      ? ROTOWIRE_LINEUPS_URL_TOMORROW
+      : ROTOWIRE_LINEUPS_URL_TODAY;
+  console.log(
+    `[RotoWireScraper] ► Fetching NHL lineups from RotoWire (${date.toUpperCase()})...`
+  );
   console.log(`[RotoWireScraper]   URL: ${url}`);
 
   const resp = await fetch(url, { headers: FETCH_HEADERS });
   if (!resp.ok) {
-    throw new Error(`[RotoWireScraper] Fetch failed: HTTP ${resp.status} ${resp.statusText}`);
+    throw new Error(
+      `[RotoWireScraper] Fetch failed: HTTP ${resp.status} ${resp.statusText}`
+    );
   }
   const html = await resp.text();
   console.log(`[RotoWireScraper]   Received ${html.length} bytes`);
 
   const games = parseRotoWireLineups(html);
-  console.log(`[RotoWireScraper] ✅ Scraped ${games.length} ${date.toUpperCase()} games`);
+  console.log(
+    `[RotoWireScraper] ✅ Scraped ${games.length} ${date.toUpperCase()} games`
+  );
   return games;
 }
 
 /**
  * Scrape both today's and tomorrow's NHL lineups in parallel.
  */
-export async function scrapeNhlStartingGoaliesBoth(): Promise<{ today: NhlLineupGame[]; tomorrow: NhlLineupGame[] }> {
-  console.log('[RotoWireScraper] ► Fetching NHL lineups for TODAY + TOMORROW in parallel...');
+export async function scrapeNhlStartingGoaliesBoth(): Promise<{
+  today: NhlLineupGame[];
+  tomorrow: NhlLineupGame[];
+}> {
+  console.log(
+    "[RotoWireScraper] ► Fetching NHL lineups for TODAY + TOMORROW in parallel..."
+  );
   const [today, tomorrow] = await Promise.all([
-    scrapeNhlStartingGoalies('today'),
-    scrapeNhlStartingGoalies('tomorrow'),
+    scrapeNhlStartingGoalies("today"),
+    scrapeNhlStartingGoalies("tomorrow"),
   ]);
-  console.log(`[RotoWireScraper] ✅ TODAY: ${today.length} games | TOMORROW: ${tomorrow.length} games`);
+  console.log(
+    `[RotoWireScraper] ✅ TODAY: ${today.length} games | TOMORROW: ${tomorrow.length} games`
+  );
   return { today, tomorrow };
 }
 
@@ -108,11 +129,21 @@ export function parseRotoWireLineups(html: string): NhlLineupGame[] {
     const $box = $(box);
 
     // ── Team abbreviations ────────────────────────────────────────────────
-    const awayAbbr = $box.find(".lineup__team.is-visit .lineup__abbr").first().text().trim();
-    const homeAbbr = $box.find(".lineup__team.is-home .lineup__abbr").first().text().trim();
+    const awayAbbr = $box
+      .find(".lineup__team.is-visit .lineup__abbr")
+      .first()
+      .text()
+      .trim();
+    const homeAbbr = $box
+      .find(".lineup__team.is-home .lineup__abbr")
+      .first()
+      .text()
+      .trim();
 
     if (!awayAbbr || !homeAbbr) {
-      console.warn("[RotoWireScraper]   Skipping box — could not find team abbrevs");
+      console.warn(
+        "[RotoWireScraper]   Skipping box — could not find team abbrevs"
+      );
       continue;
     }
 
@@ -134,12 +165,14 @@ export function parseRotoWireLineups(html: string): NhlLineupGame[] {
 
     console.log(
       `[RotoWireScraper]   ${awayAbbr} @ ${homeAbbr} | ` +
-      `Away G: ${awayGoalie?.name ?? "TBD"} (${awayGoalie?.confirmed ? "CONFIRMED" : "EXPECTED"}) | ` +
-      `Home G: ${homeGoalie?.name ?? "TBD"} (${homeGoalie?.confirmed ? "CONFIRMED" : "EXPECTED"})`
+        `Away G: ${awayGoalie?.name ?? "TBD"} (${awayGoalie?.confirmed ? "CONFIRMED" : "EXPECTED"}) | ` +
+        `Home G: ${homeGoalie?.name ?? "TBD"} (${homeGoalie?.confirmed ? "CONFIRMED" : "EXPECTED"})`
     );
   }
 
-  console.log(`[RotoWireScraper] ✅ Scraped ${games.length} games with goalie data`);
+  console.log(
+    `[RotoWireScraper] ✅ Scraped ${games.length} games with goalie data`
+  );
   return games;
 }
 
@@ -172,12 +205,13 @@ function extractGoalie(
 
   // Status: look for .is-confirmed or .is-expected class
   const hasConfirmed = $highlight.find(".is-confirmed").length > 0;
-  const hasExpected  = $highlight.find(".is-expected").length > 0;
+  const hasExpected = $highlight.find(".is-expected").length > 0;
 
   // Also check text content for "Confirmed" / "Expected" / "Projected"
   const statusText = $highlight.text().toLowerCase();
   const textConfirmed = statusText.includes("confirmed");
-  const textExpected  = statusText.includes("expected") || statusText.includes("projected");
+  const textExpected =
+    statusText.includes("expected") || statusText.includes("projected");
 
   const confirmed = hasConfirmed || (textConfirmed && !hasExpected);
 
@@ -197,7 +231,8 @@ export function matchGoalieName(
   if (!rotoName) return null;
 
   // Try exact match first
-  const exact = nstGoalieMap.get(rotoName) ?? nstGoalieMap.get(rotoName.toLowerCase());
+  const exact =
+    nstGoalieMap.get(rotoName) ?? nstGoalieMap.get(rotoName.toLowerCase());
   if (exact) return exact;
 
   // Try last name match
@@ -209,7 +244,9 @@ export function matchGoalieName(
     const keyParts = key.split(/\s+/);
     const keyLastName = keyParts[keyParts.length - 1].toLowerCase();
     if (keyLastName === lastName) {
-      console.log(`[RotoWireScraper]   Goalie fuzzy match: "${rotoName}" → "${stats.name}"`);
+      console.log(
+        `[RotoWireScraper]   Goalie fuzzy match: "${rotoName}" → "${stats.name}"`
+      );
       return stats;
     }
   }
@@ -224,7 +261,9 @@ export function matchGoalieName(
         const keyInitial = keyParts[0][0].toLowerCase();
         const keyLastName = keyParts[keyParts.length - 1].toLowerCase();
         if (keyInitial === initial && keyLastName === lastName) {
-          console.log(`[RotoWireScraper]   Goalie initial match: "${rotoName}" → "${stats.name}"`);
+          console.log(
+            `[RotoWireScraper]   Goalie initial match: "${rotoName}" → "${stats.name}"`
+          );
           return stats;
         }
       }

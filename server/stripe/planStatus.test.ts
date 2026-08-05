@@ -36,7 +36,10 @@ describe("derivePlanStatus", () => {
 
   it("returns cancel_scheduled when cancelAtPeriodEnd is true but access has not lapsed", () => {
     const expiry = NOW + 15 * 24 * 60 * 60 * 1000;
-    const result = derivePlanStatus(user({ cancelAtPeriodEnd: true, expiryDate: expiry }), NOW);
+    const result = derivePlanStatus(
+      user({ cancelAtPeriodEnd: true, expiryDate: expiry }),
+      NOW
+    );
     expect(result).toEqual({
       state: "cancel_scheduled",
       planId: "pro",
@@ -58,7 +61,10 @@ describe("derivePlanStatus", () => {
 
   it("returns expired even when cancelAtPeriodEnd is still true (expiry check wins)", () => {
     const expiry = NOW - 24 * 60 * 60 * 1000; // one day in the past
-    const result = derivePlanStatus(user({ cancelAtPeriodEnd: true, expiryDate: expiry }), NOW);
+    const result = derivePlanStatus(
+      user({ cancelAtPeriodEnd: true, expiryDate: expiry }),
+      NOW
+    );
     expect(result.state).toBe("expired");
     expect(result.governingDate).toBe(expiry);
   });
@@ -68,17 +74,32 @@ describe("derivePlanStatus", () => {
       user({ stripeCustomerId: null, stripePlanId: null, expiryDate: null }),
       NOW
     );
-    expect(result).toEqual({ state: "none", planId: null, planLabel: null, governingDate: null });
+    expect(result).toEqual({
+      state: "none",
+      planId: null,
+      planLabel: null,
+      governingDate: null,
+    });
   });
 
   it("returns none when stripePlanId is missing even if a customer id exists", () => {
     const result = derivePlanStatus(user({ stripePlanId: null }), NOW);
-    expect(result).toEqual({ state: "none", planId: null, planLabel: null, governingDate: null });
+    expect(result).toEqual({
+      state: "none",
+      planId: null,
+      planLabel: null,
+      governingDate: null,
+    });
   });
 
   it("returns none when stripeCustomerId is missing even if a stale planId lingers", () => {
     const result = derivePlanStatus(user({ stripeCustomerId: null }), NOW);
-    expect(result).toEqual({ state: "none", planId: null, planLabel: null, governingDate: null });
+    expect(result).toEqual({
+      state: "none",
+      planId: null,
+      planLabel: null,
+      governingDate: null,
+    });
   });
 
   it("edge: expiry exactly equal to now is NOT expired (strict > boundary)", () => {
@@ -88,7 +109,10 @@ describe("derivePlanStatus", () => {
   });
 
   it("edge: expiry exactly equal to now with cancelAtPeriodEnd is cancel_scheduled, not expired", () => {
-    const result = derivePlanStatus(user({ expiryDate: NOW, cancelAtPeriodEnd: true }), NOW);
+    const result = derivePlanStatus(
+      user({ expiryDate: NOW, cancelAtPeriodEnd: true }),
+      NOW
+    );
     expect(result.state).toBe("cancel_scheduled");
     expect(result.governingDate).toBe(NOW);
   });
@@ -104,7 +128,10 @@ describe("derivePlanStatus", () => {
   });
 
   it("normalizes an unrecognized legacy stripePlanId instead of throwing", () => {
-    const result = derivePlanStatus(user({ stripePlanId: "legacy-plan-xyz" }), NOW);
+    const result = derivePlanStatus(
+      user({ stripePlanId: "legacy-plan-xyz" }),
+      NOW
+    );
     expect(result.state).toBe("active");
     expect(result.planId).toBe("monthly"); // normalizePlanId's documented fallback
   });
@@ -117,7 +144,10 @@ describe("derivePlanStatus", () => {
 
   it("returns expired when hasAccess is revoked even with a future expiry and live planId (would otherwise be active)", () => {
     const expiry = NOW + 30 * 24 * 60 * 60 * 1000;
-    const result = derivePlanStatus(user({ hasAccess: false, expiryDate: expiry }), NOW);
+    const result = derivePlanStatus(
+      user({ hasAccess: false, expiryDate: expiry }),
+      NOW
+    );
     expect(result).toEqual({
       state: "expired",
       planId: "pro",

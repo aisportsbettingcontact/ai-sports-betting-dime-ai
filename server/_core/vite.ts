@@ -3,8 +3,6 @@ import fs from "fs";
 import { type Server } from "http";
 import { nanoid } from "nanoid";
 import path from "path";
-import { createServer as createViteServer } from "vite";
-import viteConfig from "../../vite.config";
 import { landingPrerenderMiddleware } from "../landingPrerender";
 
 /**
@@ -27,6 +25,21 @@ const NO_CACHE_HEADERS = {
 };
 
 export async function setupVite(app: Express, server: Server) {
+  // Dev-only lazy loading. vite and vite.config are devDependencies, and the
+  // production image ships prod deps only (multi-stage Dockerfile) — a static
+  // import here fails ESM linking at boot with ERR_MODULE_NOT_FOUND before a
+  // single route mounts. "vite" stays a literal dynamic import (esbuild's
+  // --packages=external keeps it dynamic in the bundle); the config specifier
+  // is a variable so esbuild cannot inline vite.config — whose own imports
+  // are dev-only plugins — into the production bundle.
+  const { createServer: createViteServer } = await import("vite");
+  const viteConfigSpecifier = "../../vite.config";
+  const viteConfig = (
+    (await import(viteConfigSpecifier)) as {
+      default: Record<string, unknown>;
+    }
+  ).default;
+
   const serverOptions = {
     middlewareMode: true,
     hmr: { server },

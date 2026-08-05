@@ -1,4 +1,10 @@
-import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 
 type Theme = "light" | "dark";
 
@@ -54,7 +60,8 @@ export function resolveInitialMode(reads: {
   if (modeStored === "light" || modeStored === "dark") return modeStored;
   if (modeStored === "system") return "dark";
   if (legacyStored === "light" || legacyStored === "dark") return legacyStored;
-  if (legacyFeedStored === "light" || legacyFeedStored === "dark") return legacyFeedStored;
+  if (legacyFeedStored === "light" || legacyFeedStored === "dark")
+    return legacyFeedStored;
   return "dark";
 }
 
@@ -146,23 +153,20 @@ export function ThemeProvider({
   // A user-initiated mode change: animate the root crossfade, toggling the
   // class synchronously inside the transition so old/new snapshots are
   // correct.
-  const updateMode = useCallback(
-    (next: ThemeMode) => {
-      const nextResolved: Theme = resolveTheme(next);
-      runThemeTransition(() => {
-        const root = document.documentElement;
-        root.classList.toggle("dark", nextResolved === "dark");
-        root.dataset.themeMode = next;
-        setModeState(next);
-      });
-    },
-    [],
-  );
+  const updateMode = useCallback((next: ThemeMode) => {
+    const nextResolved: Theme = resolveTheme(next);
+    runThemeTransition(() => {
+      const root = document.documentElement;
+      root.classList.toggle("dark", nextResolved === "dark");
+      root.dataset.themeMode = next;
+      setModeState(next);
+    });
+  }, []);
 
   // Narrower alias kept for existing callers.
   const updateTheme = useCallback(
     (next: Theme) => updateMode(next),
-    [updateMode],
+    [updateMode]
   );
 
   const toggleTheme = switchable

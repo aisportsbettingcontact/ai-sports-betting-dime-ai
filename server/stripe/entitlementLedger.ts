@@ -51,6 +51,8 @@ export async function recordEntitlementEvent(params: {
       createdAt: Date.now(),
     });
   } catch (err) {
-    console.error(`[Stripe][Audit] FAILED to record entitlement event userId=${params.userId} reason=${params.reason}: ${err instanceof Error ? err.message : String(err)}`);
+    console.error(
+      `[Stripe][Audit] FAILED to record entitlement event userId=${params.userId} reason=${params.reason}: ${err instanceof Error ? err.message : String(err)}`
+    );
   }
 }

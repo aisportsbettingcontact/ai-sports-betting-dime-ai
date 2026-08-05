@@ -41,7 +41,6 @@ export default function ChatDemo() {
           <div className="dc-demo-embed dc-demo-embed--hero">
             <DimeChatPage demoMode demoTheme="light" />
           </div>
-
         </div>
       </div>
     </section>

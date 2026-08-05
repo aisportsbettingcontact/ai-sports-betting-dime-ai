@@ -19,7 +19,12 @@ export interface ClientDeviceContext {
 
 /** Bucket a viewport width at the product's real breakpoints (768 = device boundary). */
 export function getViewportClass(width?: number): ViewportClass {
-  const w = typeof width === "number" ? width : (typeof window !== "undefined" ? window.innerWidth : 1024);
+  const w =
+    typeof width === "number"
+      ? width
+      : typeof window !== "undefined"
+        ? window.innerWidth
+        : 1024;
   if (w < 480) return "xs";
   if (w < 768) return "sm";
   if (w < 1024) return "md";
@@ -28,8 +33,13 @@ export function getViewportClass(width?: number): ViewportClass {
 }
 
 function mm(query: string): boolean {
-  try { return typeof window !== "undefined" && !!window.matchMedia?.(query).matches; }
-  catch { return false; }
+  try {
+    return (
+      typeof window !== "undefined" && !!window.matchMedia?.(query).matches
+    );
+  } catch {
+    return false;
+  }
 }
 
 function getOrientation(): "portrait" | "landscape" {
@@ -44,10 +54,15 @@ function getPointerType(): "fine" | "coarse" | "none" {
 
 function getIsTouch(): boolean {
   try {
-    if (typeof navigator !== "undefined" && typeof navigator.maxTouchPoints === "number") {
+    if (
+      typeof navigator !== "undefined" &&
+      typeof navigator.maxTouchPoints === "number"
+    ) {
       return navigator.maxTouchPoints > 0;
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   return mm("(pointer: coarse)");
 }
 
@@ -57,15 +72,24 @@ function getIsStandalone(): boolean {
 
 function getConnectionClass(): ClientDeviceContext["connectionClass"] {
   try {
-    const eff = (navigator as unknown as { connection?: { effectiveType?: string } }).connection?.effectiveType;
-    if (eff === "slow-2g" || eff === "2g" || eff === "3g" || eff === "4g") return eff;
-  } catch { /* ignore */ }
+    const eff = (
+      navigator as unknown as { connection?: { effectiveType?: string } }
+    ).connection?.effectiveType;
+    if (eff === "slow-2g" || eff === "2g" || eff === "3g" || eff === "4g")
+      return eff;
+  } catch {
+    /* ignore */
+  }
   return "unknown";
 }
 
 /** /m/* ⇒ mobile shell; small viewport on a desktop route ⇒ responsive; else desktop shell. */
-export function getAppSurface(pathname: string, vc: ViewportClass): ClientDeviceContext["appSurface"] {
-  if (pathname.startsWith("/m/") || pathname === "/m") return "web-mobile-shell";
+export function getAppSurface(
+  pathname: string,
+  vc: ViewportClass
+): ClientDeviceContext["appSurface"] {
+  if (pathname.startsWith("/m/") || pathname === "/m")
+    return "web-mobile-shell";
   if (vc === "xs" || vc === "sm") return "web-responsive";
   return "web-desktop-shell";
 }
@@ -73,7 +97,8 @@ export function getAppSurface(pathname: string, vc: ViewportClass): ClientDevice
 /** Build the full client device block. Never throws. */
 export function buildClientDeviceContext(): ClientDeviceContext {
   const viewportClass = getViewportClass();
-  const pathname = typeof window !== "undefined" ? window.location.pathname : "/";
+  const pathname =
+    typeof window !== "undefined" ? window.location.pathname : "/";
   return {
     viewportClass,
     orientation: getOrientation(),

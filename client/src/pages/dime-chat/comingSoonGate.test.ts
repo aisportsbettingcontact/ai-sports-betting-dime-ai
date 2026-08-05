@@ -118,7 +118,9 @@ describe("live settings menu (Phase 1.3)", () => {
     expect(chatSource).toMatch(
       /const showPlanCtas = !!appUser && !isOwner && !isLifetimeMember\(appUser\)/
     );
-    expect(chatSource).toMatch(/\{showPlanCtas && \(\s*<div className="dc-menu-cta-row">/);
+    expect(chatSource).toMatch(
+      /\{showPlanCtas && \(\s*<div className="dc-menu-cta-row">/
+    );
   });
 });
 
@@ -186,7 +188,9 @@ describe("account popover v2 (Round 3 Step 1, owner directive 2026-07-22)", () =
     expect(chatSource).toMatch(/role="radiogroup"/);
     expect(chatSource).toMatch(/role="radio"/);
     expect(chatSource).toMatch(/aria-checked=\{themeMode === optMode\}/);
-    expect(chatSource).toMatch(/onClick=\{\(\) => setThemeMode\?\.\(optMode\)\}/);
+    expect(chatSource).toMatch(
+      /onClick=\{\(\) => setThemeMode\?\.\(optMode\)\}/
+    );
     expect(chatSource).toMatch(/THEME_MODE_OPTIONS\.map/);
   });
 
@@ -211,9 +215,15 @@ describe("account popover v2 (Round 3 Step 1, owner directive 2026-07-22)", () =
     expect(chatSource).toMatch(/onOpenSettings\?\.\(\)/);
     // It closes the popover but never calls goTo/navigate.
     const settingsBtnIdx = chatSource.indexOf("<SettingsIcon");
-    const settingsHandlerStart = chatSource.lastIndexOf("onClick={() => {", settingsBtnIdx);
+    const settingsHandlerStart = chatSource.lastIndexOf(
+      "onClick={() => {",
+      settingsBtnIdx
+    );
     const settingsHandlerEnd = chatSource.indexOf("}}", settingsHandlerStart);
-    const settingsHandlerBody = chatSource.slice(settingsHandlerStart, settingsHandlerEnd);
+    const settingsHandlerBody = chatSource.slice(
+      settingsHandlerStart,
+      settingsHandlerEnd
+    );
     expect(settingsHandlerBody).toContain("setMenuOpen(false)");
     expect(settingsHandlerBody).not.toMatch(/goTo\(/);
   });
@@ -241,7 +251,9 @@ describe("non-owner coming-soon gate (Phase 2)", () => {
       /const chatAccess: "granted" \| "pending" \| "denied" = demoMode\s*\? "granted"\s*: previewMode\s*\? "granted"\s*: authLoading\s*\? "pending"\s*: isOwner\s*\? "granted"\s*: "denied"/
     );
     // demoMode must never open history reads/writes.
-    expect(chatSource).toMatch(/const historyReady = !demoMode && !!appUser && isOwner;/);
+    expect(chatSource).toMatch(
+      /const historyReady = !demoMode && !!appUser && isOwner;/
+    );
   });
 
   it("renders the wordmark + exact copy for denied users", () => {
@@ -268,9 +280,7 @@ describe("non-owner coming-soon gate (Phase 2)", () => {
     // state is composer-only on every breakpoint, so no pill block remains.
     expect(chatSource).not.toContain("PromptPills");
     expect(chatSource).toMatch(/\{chatAccess === "granted" && ghost && \(/);
-    expect(chatSource).toMatch(
-      /\{chatAccess === "denied" && \(/
-    );
+    expect(chatSource).toMatch(/\{chatAccess === "denied" && \(/);
   });
 
   it("gates submit() and retry() before any dispatch or stream", () => {

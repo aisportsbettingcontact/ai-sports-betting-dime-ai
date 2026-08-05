@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { mintAlpha, mintRamp, fmtCompact, fmtDayTick, MINT_RGB } from "./chartTheme";
+import {
+  mintAlpha,
+  mintRamp,
+  fmtCompact,
+  fmtDayTick,
+  MINT_RGB,
+} from "./chartTheme";
 
 describe("mintAlpha", () => {
   it("renders the mint triple at the given alpha", () => {
@@ -14,8 +20,9 @@ describe("mintRamp — single-hue ordinal ramp (Dime: never rainbow)", () => {
     expect(mintRamp(7)).toHaveLength(7);
   });
   it("is strictly descending in opacity (strongest first)", () => {
-    const alphas = mintRamp(5).map((s) => Number(/,\s*([\d.]+)\)$/.exec(s)![1]));
-    for (let i = 1; i < alphas.length; i++) expect(alphas[i]).toBeLessThan(alphas[i - 1]);
+    const alphas = mintRamp(5).map(s => Number(/,\s*([\d.]+)\)$/.exec(s)![1]));
+    for (let i = 1; i < alphas.length; i++)
+      expect(alphas[i]).toBeLessThan(alphas[i - 1]);
   });
   it("stays on the single mint hue for every step", () => {
     for (const c of mintRamp(7)) expect(c).toContain(MINT_RGB);

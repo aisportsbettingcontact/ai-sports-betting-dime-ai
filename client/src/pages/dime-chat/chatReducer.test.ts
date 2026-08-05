@@ -5,11 +5,7 @@
  * empty-assistant-row removal on hard failure).
  */
 import { describe, expect, it } from "vitest";
-import {
-  chatReducer,
-  initialChatState,
-  type ChatState,
-} from "./chatReducer";
+import { chatReducer, initialChatState, type ChatState } from "./chatReducer";
 
 function opened(text = "What's the edge tonight?"): ChatState {
   let s = chatReducer(initialChatState, {
@@ -91,15 +87,23 @@ describe("chatReducer", () => {
     expect(s.messages).toHaveLength(1);
     expect(s.messages[0].role).toBe("user");
     expect(s.error).toBe(
-      "Dime couldn't reach the model. Your message is saved above.",
+      "Dime couldn't reach the model. Your message is saved above."
     );
     expect(s.streaming).toBe(false);
   });
 
   it("stream_error mid-stream keeps the partial text and marks it interrupted", () => {
     let s = opened();
-    s = chatReducer(s, { type: "stream_delta", id: "a1", text: "Partial read" });
-    s = chatReducer(s, { type: "stream_error", id: "a1", message: "Model error (529)." });
+    s = chatReducer(s, {
+      type: "stream_delta",
+      id: "a1",
+      text: "Partial read",
+    });
+    s = chatReducer(s, {
+      type: "stream_error",
+      id: "a1",
+      message: "Model error (529).",
+    });
     expect(s.messages[1].content).toBe("Partial read");
     expect(s.messages[1].status).toBe("interrupted");
     expect(s.error).toBeNull(); // footnote notice, not the error card
@@ -115,7 +119,11 @@ describe("chatReducer", () => {
 
   it("stream_abort mid-stream keeps the partial text and marks it stopped", () => {
     let s = opened();
-    s = chatReducer(s, { type: "stream_delta", id: "a1", text: "Ran 10,000 sims" });
+    s = chatReducer(s, {
+      type: "stream_delta",
+      id: "a1",
+      text: "Ran 10,000 sims",
+    });
     s = chatReducer(s, { type: "stream_abort", id: "a1" });
     expect(s.messages[1].status).toBe("stopped");
     expect(s.messages[1].content).toBe("Ran 10,000 sims");

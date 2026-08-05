@@ -87,10 +87,13 @@ function fmtEst(epochMs: number): string {
     minute: "2-digit",
     hour12: true,
   });
-  const tzAbbr = new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/New_York",
-    timeZoneName: "short",
-  }).formatToParts(d).find(p => p.type === "timeZoneName")?.value ?? "ET";
+  const tzAbbr =
+    new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/New_York",
+      timeZoneName: "short",
+    })
+      .formatToParts(d)
+      .find(p => p.type === "timeZoneName")?.value ?? "ET";
   return `${datePart}, ${timePart} ${tzAbbr}`;
 }
 
@@ -169,7 +172,10 @@ describe("Active hours window (3am–midnight PST)", () => {
 
 // ─── 5. Spread formatting ─────────────────────────────────────────────────────
 
-function fmtSpread(value: string | null | undefined, odds: string | null | undefined): string {
+function fmtSpread(
+  value: string | null | undefined,
+  odds: string | null | undefined
+): string {
   if (!value) return "—";
   const v = parseFloat(value);
   const sign = v > 0 ? "+" : "";

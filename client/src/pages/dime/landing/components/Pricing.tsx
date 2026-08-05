@@ -19,7 +19,12 @@
  */
 
 import { Link } from "wouter";
-import { LANDING_MODE, PRICING_HEAD, TIERS, type Tier } from "../landing-content";
+import {
+  LANDING_MODE,
+  PRICING_HEAD,
+  TIERS,
+  type Tier,
+} from "../landing-content";
 import { SectionHead } from "./shared";
 import { trpc } from "@/lib/trpc";
 
@@ -38,9 +43,12 @@ function TierCard({ tier }: { tier: Tier }) {
   );
 
   const monthly =
-    data?.prices.find(p => p.interval === "month" && p.intervalCount === 1) ?? null;
+    data?.prices.find(p => p.interval === "month" && p.intervalCount === 1) ??
+    null;
   const monthlyCents = monthly?.amountCents ?? null;
-  const fallbackCents = Math.round(parseFloat(tier.price.replace("$", "")) * 100);
+  const fallbackCents = Math.round(
+    parseFloat(tier.price.replace("$", "")) * 100
+  );
   const shownCents = monthlyCents ?? fallbackCents;
   const perDay = money(Math.round(shownCents / DAYS_PER_MONTH));
 
@@ -91,7 +99,11 @@ export default function Pricing() {
     <section className="sec sec--pricing" id="pricing" aria-label="Pricing">
       <div className="wrap">
         <div className="sec-body">
-          <SectionHead center headline={PRICING_HEAD.headline} sub={PRICING_HEAD.sub} />
+          <SectionHead
+            center
+            headline={PRICING_HEAD.headline}
+            sub={PRICING_HEAD.sub}
+          />
 
           <div className="tier-grid">
             {TIERS.map(tier => (

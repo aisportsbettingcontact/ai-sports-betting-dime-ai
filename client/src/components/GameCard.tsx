@@ -766,9 +766,7 @@ function MergedSplitBar({
                     borderRadius: "9999px",
                   }}
                 >
-                  <span style={{ ...segLabel, textAlign: "center" }}>
-                    100%
-                  </span>
+                  <span style={{ ...segLabel, textAlign: "center" }}>100%</span>
                 </div>
               )}
               {isHomeFull && !isAwayFull && (
@@ -782,9 +780,7 @@ function MergedSplitBar({
                     borderRadius: "9999px",
                   }}
                 >
-                  <span style={{ ...segLabel, textAlign: "center" }}>
-                    100%
-                  </span>
+                  <span style={{ ...segLabel, textAlign: "center" }}>100%</span>
                 </div>
               )}
               {/* Both-full fallback: split 50/50 with both labels (data anomaly guard) */}
@@ -1603,7 +1599,10 @@ function DesktopMergedPanel({
           <span className="text-center" style={colHdrStyle("#FFFFFF")}>
             BOOK
           </span>
-          <span className="text-center" style={colHdrStyle("var(--dime-mint-text, #45E0A8)")}>
+          <span
+            className="text-center"
+            style={colHdrStyle("var(--dime-mint-text, #45E0A8)")}
+          >
             MODEL
           </span>
 
@@ -2311,7 +2310,11 @@ function OddsCell({
     : isEdge
       ? "1px solid var(--dime-mint-border, #45E0A8)"
       : "1px solid transparent";
-  const mainColor = isEdge ? "var(--dime-mint-text, #45E0A8)" : isBook ? "#FFFFFF" : "#FFFFFF"; // 2026-08-05 token law
+  const mainColor = isEdge
+    ? "var(--dime-mint-text, #45E0A8)"
+    : isBook
+      ? "#FFFFFF"
+      : "#FFFFFF"; // 2026-08-05 token law
   const mainWeight = isEdge ? 800 : isBook ? 700 : 700;
   // Model cells: juice is always neon green (edge = full, non-edge = 60%); book cells: muted gray
   // 2026-08-05 token law: mint text is theme-correct
@@ -2360,7 +2363,8 @@ function OddsCell({
           border: pillBorder,
           minWidth: size === "sm" ? 42 : 48,
           gap: 1,
-          transition: "background 160ms cubic-bezier(0.16,1,0.3,1), border-color 160ms cubic-bezier(0.16,1,0.3,1)",
+          transition:
+            "background 160ms cubic-bezier(0.16,1,0.3,1), border-color 160ms cubic-bezier(0.16,1,0.3,1)",
         }}
       >
         {/* Orange bookmark badge — top-left corner */}
@@ -2384,7 +2388,10 @@ function OddsCell({
               xmlns="http://www.w3.org/2000/svg"
               style={{ width: "100%", height: "100%" }}
             >
-              <path d="M0 0 H15 V20 L7.5 14 L0 20 Z" fill="var(--dime-mint, #45E0A8)" />
+              <path
+                d="M0 0 H15 V20 L7.5 14 L0 20 Z"
+                fill="var(--dime-mint, #45E0A8)"
+              />
               <text
                 x="7.5"
                 y="10"
@@ -2899,7 +2906,10 @@ function OddsLinesPanel({
       {!isDesktopOdds && (
         <div
           className={`grid ${GRID} pb-0.5`}
-          style={{ transition: "grid-template-columns 160ms cubic-bezier(0.16,1,0.3,1)" }}
+          style={{
+            transition:
+              "grid-template-columns 160ms cubic-bezier(0.16,1,0.3,1)",
+          }}
         >
           <span
             className={`${showModel ? "col-span-2" : ""} text-center font-extrabold uppercase tracking-widest`}
@@ -2930,7 +2940,8 @@ function OddsLinesPanel({
           className={`grid ${GRID} pb-1 mb-0.5`}
           style={{
             borderBottom: "1px solid #FFFFFF",
-            transition: "grid-template-columns 160ms cubic-bezier(0.16,1,0.3,1)",
+            transition:
+              "grid-template-columns 160ms cubic-bezier(0.16,1,0.3,1)",
           }}
         >
           {showModel
@@ -2941,7 +2952,10 @@ function OddsLinesPanel({
                     className="text-center font-bold uppercase tracking-widest"
                     style={{
                       fontSize: "clamp(11px, 0.95vw, 14px)",
-                      color: lbl === "Model" ? "var(--dime-mint-text, #45E0A8)" : "#FFFFFF", // 2026-08-05 token law
+                      color:
+                        lbl === "Model"
+                          ? "var(--dime-mint-text, #45E0A8)"
+                          : "#FFFFFF", // 2026-08-05 token law
                     }}
                   >
                     {lbl}
@@ -2966,7 +2980,9 @@ function OddsLinesPanel({
       {/* Away row — OddsCell pills for BOOK, plain spans for MODEL */}
       <div
         className={`grid ${GRID} py-2`}
-        style={{ transition: "grid-template-columns 160ms cubic-bezier(0.16,1,0.3,1)" }}
+        style={{
+          transition: "grid-template-columns 160ms cubic-bezier(0.16,1,0.3,1)",
+        }}
       >
         {/* Away Spread BOOK pill — line and odds SEPARATE for correct visual hierarchy */}
         <OddsCell
@@ -3033,7 +3049,9 @@ function OddsLinesPanel({
       {/* Home row — OddsCell pills for BOOK, plain spans for MODEL */}
       <div
         className={`grid ${GRID} py-2`}
-        style={{ transition: "grid-template-columns 160ms cubic-bezier(0.16,1,0.3,1)" }}
+        style={{
+          transition: "grid-template-columns 160ms cubic-bezier(0.16,1,0.3,1)",
+        }}
       >
         {/* Home Spread BOOK pill — line and odds SEPARATE for correct visual hierarchy */}
         <OddsCell
@@ -3753,7 +3771,8 @@ function GameCardInner({
                 ? "var(--dime-mint-text, #45E0A8)"
                 : "var(--dime-text-muted, #FFFFFF)",
               opacity: 1,
-              transition: "color 160ms cubic-bezier(0.16,1,0.3,1), transform 160ms cubic-bezier(0.16,1,0.3,1), filter 160ms cubic-bezier(0.16,1,0.3,1)",
+              transition:
+                "color 160ms cubic-bezier(0.16,1,0.3,1), transform 160ms cubic-bezier(0.16,1,0.3,1), filter 160ms cubic-bezier(0.16,1,0.3,1)",
               filter: "none",
             }}
             onMouseEnter={e => {
@@ -3798,7 +3817,8 @@ function GameCardInner({
               <span
                 className="rounded-full animate-pulse inline-block"
                 style={{
-                  width: "7px" /* 2026-08-05: MASTER live-indicator spec (was w-1 = 4px) */,
+                  width:
+                    "7px" /* 2026-08-05: MASTER live-indicator spec (was w-1 = 4px) */,
                   height: "7px",
                   background: "var(--dime-mint, #45E0A8)",
                 }}
@@ -4012,7 +4032,8 @@ function GameCardInner({
                   ? "var(--dime-mint-text, #45E0A8)"
                   : "var(--dime-text-muted, #FFFFFF)",
                 opacity: 1,
-                transition: "color 160ms cubic-bezier(0.16,1,0.3,1), transform 160ms cubic-bezier(0.16,1,0.3,1), filter 160ms cubic-bezier(0.16,1,0.3,1)",
+                transition:
+                  "color 160ms cubic-bezier(0.16,1,0.3,1), transform 160ms cubic-bezier(0.16,1,0.3,1), filter 160ms cubic-bezier(0.16,1,0.3,1)",
                 // Change D: larger glow to match 2× star size on desktop
                 filter: "none",
               }}
@@ -4097,7 +4118,8 @@ function GameCardInner({
                   <span
                     className="rounded-full animate-pulse inline-block flex-shrink-0"
                     style={{
-                      width: "7px", /* 2026-08-05: MASTER live-indicator spec (was 5px) */
+                      width:
+                        "7px" /* 2026-08-05: MASTER live-indicator spec (was 5px) */,
                       height: "7px",
                       background: "var(--dime-mint, #45E0A8)",
                     }}

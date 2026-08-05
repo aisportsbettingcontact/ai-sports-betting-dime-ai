@@ -80,7 +80,8 @@ export function unknown(reason: string): MetricPoint {
 
 const NO_ENGAGED_SESSIONS_REASON =
   "No foreground sessions recorded yet — session instrumentation was newly wired into the live app; DAU/WAU/MAU require heartbeat-bearing session data.";
-const DB_UNAVAILABLE_REASON = "Analytics database unavailable — metric could not be measured.";
+const DB_UNAVAILABLE_REASON =
+  "Analytics database unavailable — metric could not be measured.";
 const NO_CLOSED_SESSIONS_REASON =
   "No valid closed foreground sessions in the last 30 days — average engaged duration cannot be measured.";
 
@@ -91,16 +92,17 @@ const NO_CLOSED_SESSIONS_REASON =
  */
 export function deriveActiveUserPoint(
   windowCount: number,
-  totalEngagedSessionsEver: number,
+  totalEngagedSessionsEver: number
 ): MetricPoint {
-  if (totalEngagedSessionsEver <= 0) return notMeasured(NO_ENGAGED_SESSIONS_REASON);
+  if (totalEngagedSessionsEver <= 0)
+    return notMeasured(NO_ENGAGED_SESSIONS_REASON);
   return ok(windowCount);
 }
 
 /** Average engaged duration. No closed sessions ⇒ not measured (never 00:00:00). */
 export function deriveAvgDurationPoint(
   avgMs: number,
-  closedSessionCount: number,
+  closedSessionCount: number
 ): MetricPoint {
   if (closedSessionCount <= 0) return notMeasured(NO_CLOSED_SESSIONS_REASON);
   return ok(avgMs);
@@ -140,7 +142,7 @@ export function reconcileMembership(
   totalUsers: number,
   payingActive: number,
   lifetime: number,
-  discordConnected: number,
+  discordConnected: number
 ): MembershipBreakdown {
   const safeTotal = Math.max(0, totalUsers);
   const safePaying = Math.min(Math.max(0, payingActive), safeTotal);

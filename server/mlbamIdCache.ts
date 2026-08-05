@@ -55,7 +55,9 @@ export async function getMlbamIdMap(): Promise<Map<string, number>> {
 
   // Return cached map if still fresh
   if (cachedMap !== null && now - cacheBuiltAt < CACHE_TTL_MS) {
-    console.log(`${TAG} [CACHE HIT] ${cachedMap.size} players (age=${Math.round((now - cacheBuiltAt) / 1000)}s)`);
+    console.log(
+      `${TAG} [CACHE HIT] ${cachedMap.size} players (age=${Math.round((now - cacheBuiltAt) / 1000)}s)`
+    );
     return cachedMap;
   }
 
@@ -66,11 +68,15 @@ export async function getMlbamIdMap(): Promise<Map<string, number>> {
     const url = `https://statsapi.mlb.com/api/v1/sports/1/players?season=2026&gameType=R`;
     const res = await fetch(url, { signal: AbortSignal.timeout(15_000) });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json() as { people?: Array<{ id: number; fullName: string }> };
+    const data = (await res.json()) as {
+      people?: Array<{ id: number; fullName: string }>;
+    };
     for (const p of data.people ?? []) {
       map.set(normalizeMlbamName(p.fullName), p.id);
     }
-    console.log(`${TAG} [OUTPUT] Loaded ${map.size} players from MLB Stats API (season=2026)`);
+    console.log(
+      `${TAG} [OUTPUT] Loaded ${map.size} players from MLB Stats API (season=2026)`
+    );
     cachedMap = map;
     cacheBuiltAt = now;
   } catch (err) {
@@ -78,7 +84,9 @@ export async function getMlbamIdMap(): Promise<Map<string, number>> {
     console.error(`${TAG} [ERROR] MLB Stats API fetch failed: ${msg}`);
     // Return stale cache if available, otherwise empty map
     if (cachedMap !== null) {
-      console.warn(`${TAG} [FALLBACK] Returning stale cache (${cachedMap.size} players, age=${Math.round((now - cacheBuiltAt) / 1000)}s)`);
+      console.warn(
+        `${TAG} [FALLBACK] Returning stale cache (${cachedMap.size} players, age=${Math.round((now - cacheBuiltAt) / 1000)}s)`
+      );
       return cachedMap;
     }
   }
@@ -98,7 +106,11 @@ export function invalidateMlbamIdCache(): void {
 /**
  * Returns cache health stats for monitoring.
  */
-export function getMlbamIdCacheStats(): { size: number; ageSeconds: number; fresh: boolean } {
+export function getMlbamIdCacheStats(): {
+  size: number;
+  ageSeconds: number;
+  fresh: boolean;
+} {
   const now = Date.now();
   return {
     size: cachedMap?.size ?? 0,

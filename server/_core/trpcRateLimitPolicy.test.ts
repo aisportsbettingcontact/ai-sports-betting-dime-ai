@@ -42,8 +42,12 @@ describe("parseTrpcProcedureList", () => {
     // procedure. If the classifier reads the raw path, `appUsers.logi%6E`
     // classifies as nothing → no limiter → yet tRPC runs appUsers.login. Decode
     // first so the classifier sees exactly what tRPC routes on.
-    expect(parseTrpcProcedureList("/appUsers.logi%6E")).toEqual(["appUsers.login"]);
-    expect(parseTrpcProcedureList("/appUsers%2Elogin")).toEqual(["appUsers.login"]);
+    expect(parseTrpcProcedureList("/appUsers.logi%6E")).toEqual([
+      "appUsers.login",
+    ]);
+    expect(parseTrpcProcedureList("/appUsers%2Elogin")).toEqual([
+      "appUsers.login",
+    ]);
     // %2C is an encoded comma → must split into two procedures
     expect(parseTrpcProcedureList("/appUsers.login%2Cx")).toEqual([
       "appUsers.login",
@@ -60,19 +64,21 @@ describe("parseTrpcProcedureList", () => {
 
 describe("classifyTrpcProcedures — URL-encoding evasion is closed", () => {
   it("classifies percent-encoded rate-limited procedures by their decoded name", () => {
-    expect(classifyTrpcProcedures(parseTrpcProcedureList("/appUsers.logi%6E"))).toBe(
-      "auth"
-    );
     expect(
-      classifyTrpcProcedures(parseTrpcProcedureList("/stripe.publicCreateCheckoutSessio%6E"))
+      classifyTrpcProcedures(parseTrpcProcedureList("/appUsers.logi%6E"))
+    ).toBe("auth");
+    expect(
+      classifyTrpcProcedures(
+        parseTrpcProcedureList("/stripe.publicCreateCheckoutSessio%6E")
+      )
     ).toBe("stripe_checkout");
-    expect(classifyTrpcProcedures(parseTrpcProcedureList("/waitlist.submi%74"))).toBe(
-      "waitlist"
-    );
+    expect(
+      classifyTrpcProcedures(parseTrpcProcedureList("/waitlist.submi%74"))
+    ).toBe("waitlist");
     // encoded-comma batch-split evasion: login%2Cx → [login, x] → auth
-    expect(classifyTrpcProcedures(parseTrpcProcedureList("/appUsers.login%2Cx"))).toBe(
-      "auth"
-    );
+    expect(
+      classifyTrpcProcedures(parseTrpcProcedureList("/appUsers.login%2Cx"))
+    ).toBe("auth");
   });
 });
 
@@ -114,7 +120,9 @@ describe("classifyTrpcProcedures", () => {
 
   it("returns null for unclassified procedures", () => {
     expect(classifyTrpcProcedures(["appUsers.me"])).toBeNull();
-    expect(classifyTrpcProcedures(["appUsers.me", "someOther.thing"])).toBeNull();
+    expect(
+      classifyTrpcProcedures(["appUsers.me", "someOther.thing"])
+    ).toBeNull();
     expect(classifyTrpcProcedures([])).toBeNull();
   });
 
@@ -279,10 +287,16 @@ describe("clientIpKey", () => {
     // edge hop (152.233.x.x) rotates per connection. Keying on req.ip lands on
     // that rotating hop; the true client is the leftmost entry.
     const a = clientIpKey(
-      req({ headers: { "x-forwarded-for": "99.168.78.109, 152.233.40.1" }, ip: "152.233.40.1" })
+      req({
+        headers: { "x-forwarded-for": "99.168.78.109, 152.233.40.1" },
+        ip: "152.233.40.1",
+      })
     );
     const b = clientIpKey(
-      req({ headers: { "x-forwarded-for": "99.168.78.109, 152.233.47.68" }, ip: "152.233.47.68" })
+      req({
+        headers: { "x-forwarded-for": "99.168.78.109, 152.233.47.68" },
+        ip: "152.233.47.68",
+      })
     );
     // Same client, different edge hop → SAME key (the bug this fixes).
     expect(a).toBe(b);
@@ -290,8 +304,12 @@ describe("clientIpKey", () => {
   });
 
   it("distinguishes different true clients sharing one edge hop", () => {
-    const a = clientIpKey(req({ headers: { "x-forwarded-for": "1.1.1.1, 152.233.40.1" } }));
-    const b = clientIpKey(req({ headers: { "x-forwarded-for": "2.2.2.2, 152.233.40.1" } }));
+    const a = clientIpKey(
+      req({ headers: { "x-forwarded-for": "1.1.1.1, 152.233.40.1" } })
+    );
+    const b = clientIpKey(
+      req({ headers: { "x-forwarded-for": "2.2.2.2, 152.233.40.1" } })
+    );
     expect(a).not.toBe(b);
   });
 
@@ -301,7 +319,12 @@ describe("clientIpKey", () => {
 
   it("normalizes IPv6 to its /56 prefix (ipKeyGenerator), never throwing", () => {
     const key = clientIpKey(
-      req({ headers: { "x-forwarded-for": "2001:db8:abcd:1234:5678:9abc:def0:1, 152.233.40.1" } })
+      req({
+        headers: {
+          "x-forwarded-for":
+            "2001:db8:abcd:1234:5678:9abc:def0:1, 152.233.40.1",
+        },
+      })
     );
     expect(typeof key).toBe("string");
     expect(key.length).toBeGreaterThan(0);
@@ -311,7 +334,9 @@ describe("clientIpKey", () => {
 describe("resolveClientIp", () => {
   it("returns the leftmost XFF entry (true client) unnormalized", () => {
     expect(
-      resolveClientIp(req({ headers: { "x-forwarded-for": "99.1.2.3, 152.233.40.1" } }))
+      resolveClientIp(
+        req({ headers: { "x-forwarded-for": "99.1.2.3, 152.233.40.1" } })
+      )
     ).toBe("99.1.2.3");
   });
   it("falls back to req.ip when no XFF", () => {
@@ -340,7 +365,12 @@ describe("isReservedOrInternalIp — the XFF-sanitization canary", () => {
     }
   });
   it("does NOT flag ordinary public clients or loopback (self-ping)", () => {
-    for (const ip of ["47.152.160.175", "8.8.8.8", "152.233.40.1", "2001:db8::1"]) {
+    for (const ip of [
+      "47.152.160.175",
+      "8.8.8.8",
+      "152.233.40.1",
+      "2001:db8::1",
+    ]) {
       expect(isReservedOrInternalIp(ip)).toBe(false);
     }
     // loopback is intentionally NOT flagged — the app's own keep-alive/self
@@ -358,12 +388,21 @@ describe("isReservedOrInternalIp — the XFF-sanitization canary", () => {
 describe("isTrpcRequest", () => {
   it("detects tRPC by originalUrl regardless of mount-relative path", () => {
     expect(
-      isTrpcRequest(req({ originalUrl: "/api/trpc/games.list?batch=1", path: "/games.list" }))
+      isTrpcRequest(
+        req({
+          originalUrl: "/api/trpc/games.list?batch=1",
+          path: "/games.list",
+        })
+      )
     ).toBe(true);
-    expect(isTrpcRequest(req({ originalUrl: "/api/discord-auth", path: "/api/discord-auth" }))).toBe(
+    expect(
+      isTrpcRequest(
+        req({ originalUrl: "/api/discord-auth", path: "/api/discord-auth" })
+      )
+    ).toBe(false);
+    expect(isTrpcRequest(req({ originalUrl: "/feed", path: "/feed" }))).toBe(
       false
     );
-    expect(isTrpcRequest(req({ originalUrl: "/feed", path: "/feed" }))).toBe(false);
   });
 });
 
@@ -401,7 +440,10 @@ describe("sendRateLimitResponse", () => {
   it("sends a tRPC envelope array at 429 for tRPC batch requests", () => {
     const res = resStub();
     sendRateLimitResponse(
-      req({ originalUrl: "/api/trpc/appUsers.login,appUsers.me?batch=1", path: "/appUsers.login,appUsers.me" }),
+      req({
+        originalUrl: "/api/trpc/appUsers.login,appUsers.me?batch=1",
+        path: "/appUsers.login,appUsers.me",
+      }),
       res,
       "Too many login attempts."
     );

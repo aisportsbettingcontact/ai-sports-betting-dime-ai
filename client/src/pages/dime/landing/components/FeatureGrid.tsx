@@ -10,8 +10,11 @@ export default function FeatureGrid() {
         <div className="sec-body">
           {/* Eyebrow dropped: the headline carries this section (taste budget). */}
           <SectionHead headline={FEATURES.headline} />
-          <div className="feat-grid" style={{ marginTop: "clamp(24px, 4vw, 40px)" }}>
-            {FEATURES.items.map((f) => (
+          <div
+            className="feat-grid"
+            style={{ marginTop: "clamp(24px, 4vw, 40px)" }}
+          >
+            {FEATURES.items.map(f => (
               <div className="feat" key={f.title}>
                 <h3>{f.title}</h3>
                 <p>{f.copy}</p>

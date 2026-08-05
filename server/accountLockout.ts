@@ -102,7 +102,8 @@ export function recordFailure(
   const failedLoginCount = windowActive ? effective.failedLoginCount + 1 : 1;
   const firstFailedLoginAt = windowActive ? effective.firstFailedLoginAt : now;
 
-  const wasLocked = effective.lockedUntil != null && effective.lockedUntil > now;
+  const wasLocked =
+    effective.lockedUntil != null && effective.lockedUntil > now;
   const crosses = failedLoginCount >= config.threshold;
   const lockedUntil = crosses
     ? now + config.cooldownMs

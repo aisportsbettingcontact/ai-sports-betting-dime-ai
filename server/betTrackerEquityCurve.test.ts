@@ -91,8 +91,8 @@ describe("downsampleEquityCurve", () => {
     // The ATH and max-drawdown markers are keyed by betId. If thinning drops
     // one, the chart references a bet that is not in the series it was handed.
     const c = curveWithExtremes(20_000);
-    c[7_777].isSpecial = true;   // stand-in for the all-time high
-    c[15_004].isSpecial = true;  // stand-in for the max-drawdown trough
+    c[7_777].isSpecial = true; // stand-in for the all-time high
+    c[15_004].isSpecial = true; // stand-in for the max-drawdown trough
     const out = downsampleEquityCurve(c, 750);
     const kept = new Set(out.map(p => p.betId));
     expect(kept.has(7_777)).toBe(true);
@@ -104,7 +104,9 @@ describe("downsampleEquityCurve", () => {
     for (let i = 0; i < 1_000; i += 2) c[i].isSpecial = true;
     const out = downsampleEquityCurve(c, 10);
     // Every special point survives; the cap yields to correctness.
-    expect(out.every((p, i) => i === 0 || p.betId > out[i - 1].betId)).toBe(true);
+    expect(out.every((p, i) => i === 0 || p.betId > out[i - 1].betId)).toBe(
+      true
+    );
     expect(out.filter(p => p.isSpecial).length).toBe(500);
   });
 
@@ -119,7 +121,9 @@ describe("downsampleEquityCurve", () => {
   });
 
   it("rejects a nonsensical cap rather than returning a degenerate curve", () => {
-    expect(() => downsampleEquityCurve(curveWithExtremes(10), 1)).toThrow(/maxPoints/);
+    expect(() => downsampleEquityCurve(curveWithExtremes(10), 1)).toThrow(
+      /maxPoints/
+    );
   });
 
   it("handles an empty curve", () => {

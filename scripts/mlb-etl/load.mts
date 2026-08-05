@@ -24,7 +24,13 @@
  *
  * NEVER print, log, or persist DATABASE_URL.
  */
-import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
+import {
+  appendFileSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+} from "node:fs";
 import { createReadStream } from "node:fs";
 import { createInterface } from "node:readline";
 import { dirname, join } from "node:path";
@@ -308,11 +314,11 @@ const SEASON_TABLES: TableSpec[] = [
 // ─── helpers ──────────────────────────────────────────────────────────────
 
 function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 function toRow(spec: TableSpec, obj: Record<string, unknown>): unknown[] {
-  return spec.columns.map((c) => {
+  return spec.columns.map(c => {
     let v = obj[c.name];
     if (v === undefined) v = null;
     if (v === null) return null;
@@ -324,14 +330,17 @@ function toRow(spec: TableSpec, obj: Record<string, unknown>): unknown[] {
 
 function appendLoadLog(entry: Record<string, unknown>): void {
   mkdirSync(dirname(LOAD_LOG), { recursive: true });
-  appendFileSync(LOAD_LOG, JSON.stringify({ ts: new Date().toISOString(), ...entry }) + "\n");
+  appendFileSync(
+    LOAD_LOG,
+    JSON.stringify({ ts: new Date().toISOString(), ...entry }) + "\n"
+  );
 }
 
 function discoverSeasons(): number[] {
   if (!existsSync(ETL_OUT)) return [];
   return readdirSync(ETL_OUT, { withFileTypes: true })
-    .filter((d) => d.isDirectory() && /^\d{4}$/.test(d.name))
-    .map((d) => parseInt(d.name, 10))
+    .filter(d => d.isDirectory() && /^\d{4}$/.test(d.name))
+    .map(d => parseInt(d.name, 10))
     .sort((a, b) => a - b);
 }
 
@@ -344,14 +353,18 @@ async function upsertBatch(
   pool: mysql.Pool,
   spec: TableSpec,
   rows: unknown[][],
-  state: { batchSize: number },
+  state: { batchSize: number }
 ): Promise<number> {
   if (rows.length === 0) return 0;
 
-  const nonPkCols = spec.columns.filter((c) => !spec.pk.includes(c.name));
-  const colNames = spec.columns.map((c) => c.name).join(", ");
-  const placeholders = rows.map(() => `(${spec.columns.map(() => "?").join(",")})`).join(",");
-  const updateClause = nonPkCols.map((c) => `${c.name}=VALUES(${c.name})`).join(", ");
+  const nonPkCols = spec.columns.filter(c => !spec.pk.includes(c.name));
+  const colNames = spec.columns.map(c => c.name).join(", ");
+  const placeholders = rows
+    .map(() => `(${spec.columns.map(() => "?").join(",")})`)
+    .join(",");
+  const updateClause = nonPkCols
+    .map(c => `${c.name}=VALUES(${c.name})`)
+    .join(", ");
   const sql = `INSERT INTO ${spec.name} (${colNames}) VALUES ${placeholders} ON DUPLICATE KEY UPDATE ${updateClause}`;
   const flat = rows.flat();
 
@@ -361,9 +374,12 @@ async function upsertBatch(
       return (result as mysql.ResultSetHeader).affectedRows ?? 0;
     } catch (err: any) {
       if (err?.code === "ER_NET_PACKET_TOO_LARGE" && rows.length > 1) {
-        state.batchSize = Math.max(MIN_BATCH_SIZE, Math.floor(state.batchSize / 2));
+        state.batchSize = Math.max(
+          MIN_BATCH_SIZE,
+          Math.floor(state.batchSize / 2)
+        );
         console.warn(
-          `${TAG} ER_NET_PACKET_TOO_LARGE on ${spec.name} (${rows.length} rows) — halving batch size to ${state.batchSize} and retrying`,
+          `${TAG} ER_NET_PACKET_TOO_LARGE on ${spec.name} (${rows.length} rows) — halving batch size to ${state.batchSize} and retrying`
         );
         const mid = Math.ceil(rows.length / 2);
         const a = await upsertBatch(pool, spec, rows.slice(0, mid), state);
@@ -373,7 +389,7 @@ async function upsertBatch(
       if (attempt === RETRY_BACKOFFS_MS.length) throw err;
       const backoff = RETRY_BACKOFFS_MS[attempt];
       console.error(
-        `${TAG} batch upsert failed for ${spec.name} (attempt ${attempt + 1}/${RETRY_BACKOFFS_MS.length + 1}): ${err?.code ?? err?.message ?? err} — retrying in ${backoff}ms`,
+        `${TAG} batch upsert failed for ${spec.name} (attempt ${attempt + 1}/${RETRY_BACKOFFS_MS.length + 1}): ${err?.code ?? err?.message ?? err} — retrying in ${backoff}ms`
       );
       await sleep(backoff);
     }
@@ -387,11 +403,13 @@ async function loadTable(
   spec: TableSpec,
   filePath: string,
   season: number | null,
-  collectGamePks?: number[],
+  collectGamePks?: number[]
 ): Promise<boolean> {
   const label = season !== null ? `season=${season}` : "dims";
   if (!existsSync(filePath)) {
-    console.log(`${TAG} skip ${spec.name} (${label}) — file not found: ${filePath}`);
+    console.log(
+      `${TAG} skip ${spec.name} (${label}) — file not found: ${filePath}`
+    );
     return false;
   }
 
@@ -403,13 +421,17 @@ async function loadTable(
   let rowsAffected = 0;
   let lastProgressAt = 0;
 
-  const rl = createInterface({ input: createReadStream(filePath, { encoding: "utf8" }), crlfDelay: Infinity });
+  const rl = createInterface({
+    input: createReadStream(filePath, { encoding: "utf8" }),
+    crlfDelay: Infinity,
+  });
   for await (const line of rl) {
     const trimmed = line.trim();
     if (!trimmed) continue;
     const obj = JSON.parse(trimmed);
     buffer.push(toRow(spec, obj));
-    if (collectGamePks && typeof obj.game_pk === "number") collectGamePks.push(obj.game_pk);
+    if (collectGamePks && typeof obj.game_pk === "number")
+      collectGamePks.push(obj.game_pk);
     rowsRead++;
 
     if (buffer.length >= state.batchSize) {
@@ -417,7 +439,9 @@ async function loadTable(
       buffer = [];
     }
     if (rowsRead - lastProgressAt >= PROGRESS_EVERY) {
-      console.log(`${TAG}[PROGRESS] ${spec.name} ${label} rows_read=${rowsRead}`);
+      console.log(
+        `${TAG}[PROGRESS] ${spec.name} ${label} rows_read=${rowsRead}`
+      );
       lastProgressAt = rowsRead;
     }
   }
@@ -426,8 +450,16 @@ async function loadTable(
   }
 
   const ms = Date.now() - start;
-  console.log(`${TAG}[DONE] ${spec.name} ${label} rows_read=${rowsRead} rows_affected=${rowsAffected} ms=${ms}`);
-  appendLoadLog({ season: season ?? "dims", table: spec.name, rows_read: rowsRead, rows_affected: rowsAffected, ms });
+  console.log(
+    `${TAG}[DONE] ${spec.name} ${label} rows_read=${rowsRead} rows_affected=${rowsAffected} ms=${ms}`
+  );
+  appendLoadLog({
+    season: season ?? "dims",
+    table: spec.name,
+    rows_read: rowsRead,
+    rows_affected: rowsAffected,
+    ms,
+  });
   return true;
 }
 
@@ -481,10 +513,16 @@ const SANITY_CHECKS: SanityCheckDef[] = [
 /** Reconciles the tables loaded *this run* for `season` against the season's manifest.json.
  * Only checks tables actually touched this invocation (respects --table). Aborts the process
  * (nonzero exit) on any mismatch. */
-async function sanityCheckSeason(pool: mysql.Pool, season: number, loadedTables: Set<string>): Promise<void> {
+async function sanityCheckSeason(
+  pool: mysql.Pool,
+  season: number,
+  loadedTables: Set<string>
+): Promise<void> {
   const manifestPath = join(ETL_OUT, String(season), "manifest.json");
   if (!existsSync(manifestPath)) {
-    console.warn(`${TAG}[SANITY] season=${season} — no manifest.json found, skipping sanity check`);
+    console.warn(
+      `${TAG}[SANITY] season=${season} — no manifest.json found, skipping sanity check`
+    );
     return;
   }
   const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
@@ -497,12 +535,14 @@ async function sanityCheckSeason(pool: mysql.Pool, season: number, loadedTables:
     const actual = Number((rows as any)[0].n);
     const ok = actual === expected;
     console.log(
-      `${TAG}[SANITY] season=${season} table=${check.table} expected=${expected} actual=${actual} ${ok ? "OK" : "MISMATCH"}`,
+      `${TAG}[SANITY] season=${season} table=${check.table} expected=${expected} actual=${actual} ${ok ? "OK" : "MISMATCH"}`
     );
     if (!ok) allOk = false;
   }
   if (!allOk) {
-    console.error(`${TAG} sanity check FAILED for season ${season} — aborting.`);
+    console.error(
+      `${TAG} sanity check FAILED for season ${season} — aborting.`
+    );
     process.exit(1);
   }
 }
@@ -525,18 +565,20 @@ async function deltaSanityCheckSeason(
   pool: mysql.Pool,
   season: number,
   loadedTables: Set<string>,
-  loadedGamePks: number[],
+  loadedGamePks: number[]
 ): Promise<void> {
   const manifestPath = join(ETL_OUT, String(season), "manifest.json");
   if (!existsSync(manifestPath)) {
-    console.warn(`${TAG}[DELTA-SANITY] season=${season} — no manifest.json found, skipping delta sanity check`);
+    console.warn(
+      `${TAG}[DELTA-SANITY] season=${season} — no manifest.json found, skipping delta sanity check`
+    );
     return;
   }
   const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
 
   if (loadedGamePks.length === 0) {
     console.warn(
-      `${TAG}[DELTA-SANITY] season=${season} — mlb_games was not loaded this run, no gamePks to scope delta checks to; skipping`,
+      `${TAG}[DELTA-SANITY] season=${season} — mlb_games was not loaded this run, no gamePks to scope delta checks to; skipping`
     );
     return;
   }
@@ -545,19 +587,25 @@ async function deltaSanityCheckSeason(
 
   if (loadedTables.has("mlb_games")) {
     const expected = manifest.games;
-    const [rows] = await pool.query(`SELECT COUNT(*) n FROM mlb_games WHERE season = ?`, [season]);
+    const [rows] = await pool.query(
+      `SELECT COUNT(*) n FROM mlb_games WHERE season = ?`,
+      [season]
+    );
     const actual = Number((rows as any)[0].n);
     const ok = actual >= expected;
     console.log(
-      `${TAG}[DELTA-SANITY] season=${season} table=mlb_games mode=season>=manifest expected>=${expected} actual=${actual} ${ok ? "OK" : "MISMATCH"}`,
+      `${TAG}[DELTA-SANITY] season=${season} table=mlb_games mode=season>=manifest expected>=${expected} actual=${actual} ${ok ? "OK" : "MISMATCH"}`
     );
     if (!ok) allOk = false;
 
-    const [existsRows] = await pool.query(`SELECT COUNT(*) n FROM mlb_games WHERE game_pk IN (?)`, [loadedGamePks]);
+    const [existsRows] = await pool.query(
+      `SELECT COUNT(*) n FROM mlb_games WHERE game_pk IN (?)`,
+      [loadedGamePks]
+    );
     const existsCount = Number((existsRows as any)[0].n);
     const existsOk = existsCount === loadedGamePks.length;
     console.log(
-      `${TAG}[DELTA-SANITY] season=${season} check=all_delta_gamepks_present expected=${loadedGamePks.length} actual=${existsCount} ${existsOk ? "OK" : "MISMATCH"}`,
+      `${TAG}[DELTA-SANITY] season=${season} check=all_delta_gamepks_present expected=${loadedGamePks.length} actual=${existsCount} ${existsOk ? "OK" : "MISMATCH"}`
     );
     if (!existsOk) allOk = false;
   }
@@ -570,18 +618,24 @@ async function deltaSanityCheckSeason(
     const actual = Number((rows as any)[0].n);
     const ok = actual === expected;
     console.log(
-      `${TAG}[DELTA-SANITY] season=${season} table=${check.table} scope=delta_gamepks expected=${expected} actual=${actual} ${ok ? "OK" : "MISMATCH"}`,
+      `${TAG}[DELTA-SANITY] season=${season} table=${check.table} scope=delta_gamepks expected=${expected} actual=${actual} ${ok ? "OK" : "MISMATCH"}`
     );
     if (!ok) allOk = false;
   }
 
   if (!allOk) {
-    console.error(`${TAG} delta sanity check FAILED for season ${season} — aborting.`);
+    console.error(
+      `${TAG} delta sanity check FAILED for season ${season} — aborting.`
+    );
     process.exit(1);
   }
 }
 
-function parseArgs(argv: string[]): { seasons: number[]; tableFilter: string | null; delta: boolean } {
+function parseArgs(argv: string[]): {
+  seasons: number[];
+  tableFilter: string | null;
+  delta: boolean;
+} {
   const all = argv.includes("--all");
   const seasonIdx = argv.indexOf("--season");
   const season = seasonIdx >= 0 ? parseInt(argv[seasonIdx + 1], 10) : null;
@@ -590,13 +644,17 @@ function parseArgs(argv: string[]): { seasons: number[]; tableFilter: string | n
   const delta = argv.includes("--delta");
 
   if (!all && season === null) {
-    console.error(`${TAG} usage: load.mts (--season YYYY | --all) [--table TABLE_NAME] [--delta]`);
+    console.error(
+      `${TAG} usage: load.mts (--season YYYY | --all) [--table TABLE_NAME] [--delta]`
+    );
     process.exit(1);
   }
   if (tableFilter) {
-    const known = [...DIM_TABLES, ...SEASON_TABLES].map((t) => t.name);
+    const known = [...DIM_TABLES, ...SEASON_TABLES].map(t => t.name);
     if (!known.includes(tableFilter)) {
-      console.error(`${TAG} unknown --table ${tableFilter}; known: ${known.join(", ")}`);
+      console.error(
+        `${TAG} unknown --table ${tableFilter}; known: ${known.join(", ")}`
+      );
       process.exit(1);
     }
   }
@@ -617,7 +675,9 @@ async function main(): Promise<void> {
   }
 
   const { seasons, tableFilter, delta } = parseArgs(process.argv.slice(2));
-  console.log(`${TAG} seasons=${seasons.join(",")} table=${tableFilter ?? "(all)"} delta=${delta}`);
+  console.log(
+    `${TAG} seasons=${seasons.join(",")} table=${tableFilter ?? "(all)"} delta=${delta}`
+  );
 
   const pool = mysql.createPool({
     uri: dbUrl,
@@ -647,14 +707,20 @@ async function main(): Promise<void> {
       for (const t of SEASON_TABLES) {
         if (tableFilter && t.name !== tableFilter) continue;
         const file = join(ETL_OUT, String(season), `${t.name}.ndjson`);
-        const collect = delta && t.name === "mlb_games" ? loadedGamePks : undefined;
+        const collect =
+          delta && t.name === "mlb_games" ? loadedGamePks : undefined;
         const loaded = await loadTable(pool, t, file, season, collect);
         if (loaded) loadedTables.add(t.name);
       }
 
       if (loadedTables.size > 0) {
         if (delta) {
-          await deltaSanityCheckSeason(pool, season, loadedTables, loadedGamePks);
+          await deltaSanityCheckSeason(
+            pool,
+            season,
+            loadedTables,
+            loadedGamePks
+          );
         } else {
           await sanityCheckSeason(pool, season, loadedTables);
         }
@@ -666,7 +732,7 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((err) => {
+main().catch(err => {
   console.error(`${TAG} FATAL:`, err?.message ?? err);
   process.exit(1);
 });

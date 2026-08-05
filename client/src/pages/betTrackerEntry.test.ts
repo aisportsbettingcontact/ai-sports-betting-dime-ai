@@ -19,19 +19,25 @@ import {
 describe("decideEntrySource — the live/pregame matrix", () => {
   it("scheduled + PREGAME: autofill, chip PRE, LIVE not yet selectable", () => {
     expect(decideEntrySource("scheduled", "PREGAME")).toEqual({
-      autofill: true, liveSelectable: false, sourceLabel: "PRE",
+      autofill: true,
+      liveSelectable: false,
+      sourceLabel: "PRE",
     });
   });
 
   it("scheduled + LIVE is not a real state: no autofill, LIVE not selectable", () => {
     expect(decideEntrySource("scheduled", "LIVE")).toEqual({
-      autofill: false, liveSelectable: false, sourceLabel: null,
+      autofill: false,
+      liveSelectable: false,
+      sourceLabel: null,
     });
   });
 
   it("in_progress + LIVE: autofill the live lines, chip LIVE", () => {
     expect(decideEntrySource("in_progress", "LIVE")).toEqual({
-      autofill: true, liveSelectable: true, sourceLabel: "LIVE",
+      autofill: true,
+      liveSelectable: true,
+      sourceLabel: "LIVE",
     });
   });
 
@@ -40,25 +46,33 @@ describe("decideEntrySource — the live/pregame matrix", () => {
     // into a wager the user is recording as pregame mislabels live prices as
     // pregame prices — the exact separation this module exists to enforce.
     expect(decideEntrySource("in_progress", "PREGAME")).toEqual({
-      autofill: false, liveSelectable: true, sourceLabel: null,
+      autofill: false,
+      liveSelectable: true,
+      sourceLabel: null,
     });
   });
 
   it("complete + PREGAME: autofill closing lines for backfill", () => {
     expect(decideEntrySource("complete", "PREGAME")).toEqual({
-      autofill: true, liveSelectable: true, sourceLabel: "PRE",
+      autofill: true,
+      liveSelectable: true,
+      sourceLabel: "PRE",
     });
   });
 
   it("complete + LIVE: manual only — the feed has no live line anymore", () => {
     expect(decideEntrySource("complete", "LIVE")).toEqual({
-      autofill: false, liveSelectable: true, sourceLabel: null,
+      autofill: false,
+      liveSelectable: true,
+      sourceLabel: null,
     });
   });
 
   it("an unknown status fails safe as scheduled", () => {
     expect(decideEntrySource("weird_new_status", "PREGAME")).toEqual({
-      autofill: true, liveSelectable: false, sourceLabel: "PRE",
+      autofill: true,
+      liveSelectable: false,
+      sourceLabel: "PRE",
     });
     expect(decideEntrySource("weird_new_status", "LIVE").autofill).toBe(false);
   });
@@ -108,7 +122,10 @@ describe("deriveTicketWagerType — the ticket label comes from its legs", () =>
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-const builder = readFileSync(join(__dirname, "../components/ParlayBuilder.tsx"), "utf8");
+const builder = readFileSync(
+  join(__dirname, "../components/ParlayBuilder.tsx"),
+  "utf8"
+);
 const page = readFileSync(join(__dirname, "BetTracker.tsx"), "utf8");
 
 describe("the builder's copy and cells", () => {

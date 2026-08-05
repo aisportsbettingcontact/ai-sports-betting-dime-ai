@@ -75,7 +75,10 @@ import path from "node:path";
 // Playwright always runs with cwd = repo root (see every sibling e2e/*.spec.ts,
 // which use plain repo-relative paths for the same reason).
 const REPO_ROOT = process.cwd();
-const EVIDENCE_DIR = path.join(REPO_ROOT, "docs/evidence/2026-07-23-feed-desktop-polish");
+const EVIDENCE_DIR = path.join(
+  REPO_ROOT,
+  "docs/evidence/2026-07-23-feed-desktop-polish"
+);
 const PREFERRED_PORT = 5301;
 const SESSION_SECRET = "testsecret";
 const GAME_DATE = "2026-07-23";
@@ -90,11 +93,18 @@ let baseURL = "";
  *  (findAvailablePort in server/_core/index.ts auto-bumps past the preferred
  *  port if busy — parsing the log line is the only way to know the real
  *  port, so this spec never has to pre-verify port availability itself). */
-function waitForServerReady(proc: ChildProcess, timeoutMs: number): Promise<number> {
+function waitForServerReady(
+  proc: ChildProcess,
+  timeoutMs: number
+): Promise<number> {
   return new Promise((resolve, reject) => {
     let buffer = "";
     const timer = setTimeout(() => {
-      reject(new Error(`prod server did not report ready within ${timeoutMs}ms. Output so far:\n${buffer}`));
+      reject(
+        new Error(
+          `prod server did not report ready within ${timeoutMs}ms. Output so far:\n${buffer}`
+        )
+      );
     }, timeoutMs);
     const onData = (chunk: Buffer) => {
       buffer += chunk.toString();
@@ -109,11 +119,13 @@ function waitForServerReady(proc: ChildProcess, timeoutMs: number): Promise<numb
     proc.stderr?.on("data", (chunk: Buffer) => {
       buffer += chunk.toString();
     });
-    proc.on("exit", (code) => {
+    proc.on("exit", code => {
       clearTimeout(timer);
-      reject(new Error(`prod server exited early (code ${code}). Output:\n${buffer}`));
+      reject(
+        new Error(`prod server exited early (code ${code}). Output:\n${buffer}`)
+      );
     });
-    proc.on("error", (err) => {
+    proc.on("error", err => {
       clearTimeout(timer);
       reject(err);
     });
@@ -186,18 +198,31 @@ function mlbRow(overrides: Record<string, unknown>) {
     venue: "Fenway Park",
     doubleHeader: "N",
     gameNumber: 1,
-    awayML: null, homeML: null,
-    awayRunLine: null, homeRunLine: null,
-    awayRunLineOdds: null, homeRunLineOdds: null,
-    awayBookSpread: null, homeBookSpread: null,
-    bookTotal: null, overOdds: null, underOdds: null,
+    awayML: null,
+    homeML: null,
+    awayRunLine: null,
+    homeRunLine: null,
+    awayRunLineOdds: null,
+    homeRunLineOdds: null,
+    awayBookSpread: null,
+    homeBookSpread: null,
+    bookTotal: null,
+    overOdds: null,
+    underOdds: null,
     modelRunAt: "2026-07-23T10:00:00Z",
-    modelAwayML: null, modelHomeML: null,
-    modelAwayWinPct: null, modelHomeWinPct: null,
-    modelTotal: null, modelOverRate: null, modelUnderRate: null,
-    modelOverOdds: null, modelUnderOdds: null,
-    modelAwaySpreadOdds: null, modelHomeSpreadOdds: null,
-    modelAwayPLOdds: null, modelHomePLOdds: null,
+    modelAwayML: null,
+    modelHomeML: null,
+    modelAwayWinPct: null,
+    modelHomeWinPct: null,
+    modelTotal: null,
+    modelOverRate: null,
+    modelUnderRate: null,
+    modelOverOdds: null,
+    modelUnderOdds: null,
+    modelAwaySpreadOdds: null,
+    modelHomeSpreadOdds: null,
+    modelAwayPLOdds: null,
+    modelHomePLOdds: null,
     ...overrides,
   };
 }
@@ -211,14 +236,23 @@ const PASS_GAME = mlbRow({
   homeTeam: "TEX",
   startTimeEst: "6:05 PM",
   venue: "Globe Life Field",
-  awayML: 130, homeML: -150,
-  modelAwayML: 128, modelHomeML: -148,
-  modelAwayWinPct: 42.5, modelHomeWinPct: 57.5,
-  awayRunLine: 1.5, homeRunLine: -1.5,
-  awayRunLineOdds: -110, homeRunLineOdds: -110,
-  modelAwaySpreadOdds: -112, modelHomeSpreadOdds: -108,
-  bookTotal: 8, overOdds: -110, underOdds: -110,
-  modelOverOdds: -112, modelUnderOdds: -108,
+  awayML: 130,
+  homeML: -150,
+  modelAwayML: 128,
+  modelHomeML: -148,
+  modelAwayWinPct: 42.5,
+  modelHomeWinPct: 57.5,
+  awayRunLine: 1.5,
+  homeRunLine: -1.5,
+  awayRunLineOdds: -110,
+  homeRunLineOdds: -110,
+  modelAwaySpreadOdds: -112,
+  modelHomeSpreadOdds: -108,
+  bookTotal: 8,
+  overOdds: -110,
+  underOdds: -110,
+  modelOverOdds: -112,
+  modelUnderOdds: -108,
 });
 
 // LIVE, two real edges (moneyline + total; run line dead-even stays out) ->
@@ -234,14 +268,23 @@ const LIVE_EDGE_GAME = mlbRow({
   gameClock: "5th",
   awayScore: 3,
   homeScore: 2,
-  awayML: -110, homeML: -105,
-  modelAwayML: -145, modelHomeML: 125,
-  modelAwayWinPct: 59.2, modelHomeWinPct: 40.8,
-  awayRunLine: 1.5, homeRunLine: -1.5,
-  awayRunLineOdds: -165, homeRunLineOdds: 145,
-  modelAwaySpreadOdds: -170, modelHomeSpreadOdds: 150,
-  bookTotal: 7.5, overOdds: -108, underOdds: -112,
-  modelOverOdds: -108, modelUnderOdds: -140,
+  awayML: -110,
+  homeML: -105,
+  modelAwayML: -145,
+  modelHomeML: 125,
+  modelAwayWinPct: 59.2,
+  modelHomeWinPct: 40.8,
+  awayRunLine: 1.5,
+  homeRunLine: -1.5,
+  awayRunLineOdds: -165,
+  homeRunLineOdds: 145,
+  modelAwaySpreadOdds: -170,
+  modelHomeSpreadOdds: 150,
+  bookTotal: 7.5,
+  overOdds: -108,
+  underOdds: -112,
+  modelOverOdds: -108,
+  modelUnderOdds: -140,
 });
 
 // Scheduled, ONE real edge (Total, "Under 7") -> plain summary (odds carried
@@ -252,20 +295,25 @@ const SCHEDULED_EDGE_GAME = mlbRow({
   homeTeam: "SEA",
   startTimeEst: "9:10 PM",
   venue: "T-Mobile Park",
-  bookTotal: 7, overOdds: -108, underOdds: -112,
-  modelOverOdds: 118, modelUnderOdds: -136,
+  bookTotal: 7,
+  overOdds: -108,
+  underOdds: -112,
+  modelOverOdds: 118,
+  modelUnderOdds: -136,
 });
 
 function battingOrder(names: string[]) {
   const positions = ["CF", "SS", "RF", "1B", "DH", "3B", "LF", "2B", "C"];
-  return JSON.stringify(names.map((name, index) => ({
-    battingOrder: index + 1,
-    position: positions[index],
-    name,
-    bats: index % 3 === 0 ? "L" : "R",
-    rotowireId: 10_000 + index,
-    mlbamId: 600_000 + index,
-  })));
+  return JSON.stringify(
+    names.map((name, index) => ({
+      battingOrder: index + 1,
+      position: positions[index],
+      name,
+      bats: index % 3 === 0 ? "L" : "R",
+      rotowireId: 10_000 + index,
+      mlbamId: 600_000 + index,
+    }))
+  );
 }
 
 function lineupRow(overrides: Record<string, unknown>) {
@@ -309,12 +357,26 @@ const LINEUPS_BY_GAME_ID = {
     homePitcherMlbamId: 594798,
     homePitcherConfirmed: true,
     awayLineup: battingOrder([
-      "Lawrence Butler", "Jacob Wilson", "Brent Rooker", "Tyler Soderstrom",
-      "Shea Langeliers", "Zack Gelof", "Max Schuemann", "JJ Bleday", "Nick Allen",
+      "Lawrence Butler",
+      "Jacob Wilson",
+      "Brent Rooker",
+      "Tyler Soderstrom",
+      "Shea Langeliers",
+      "Zack Gelof",
+      "Max Schuemann",
+      "JJ Bleday",
+      "Nick Allen",
     ]),
     homeLineup: battingOrder([
-      "Marcus Semien", "Corey Seager", "Josh Jung", "Adolis García",
-      "Wyatt Langford", "Joc Pederson", "Jonah Heim", "Ezequiel Duran", "Leody Taveras",
+      "Marcus Semien",
+      "Corey Seager",
+      "Josh Jung",
+      "Adolis García",
+      "Wyatt Langford",
+      "Joc Pederson",
+      "Jonah Heim",
+      "Ezequiel Duran",
+      "Leody Taveras",
     ]),
     awayLineupConfirmed: false,
     homeLineupConfirmed: true,
@@ -334,12 +396,26 @@ const LINEUPS_BY_GAME_ID = {
     homePitcherMlbamId: 669923,
     homePitcherConfirmed: false,
     awayLineup: battingOrder([
-      "Jung Hoo Lee", "Heliot Ramos", "Matt Chapman", "Rafael Devers",
-      "Willy Adames", "Mike Yastrzemski", "Patrick Bailey", "Casey Schmitt", "Tyler Fitzgerald",
+      "Jung Hoo Lee",
+      "Heliot Ramos",
+      "Matt Chapman",
+      "Rafael Devers",
+      "Willy Adames",
+      "Mike Yastrzemski",
+      "Patrick Bailey",
+      "Casey Schmitt",
+      "Tyler Fitzgerald",
     ]),
     homeLineup: battingOrder([
-      "J.P. Crawford", "Julio Rodríguez", "Cal Raleigh", "Randy Arozarena",
-      "Luke Raley", "Jorge Polanco", "Mitch Garver", "Cole Young", "Dominic Canzone",
+      "J.P. Crawford",
+      "Julio Rodríguez",
+      "Cal Raleigh",
+      "Randy Arozarena",
+      "Luke Raley",
+      "Jorge Polanco",
+      "Mitch Garver",
+      "Cole Young",
+      "Dominic Canzone",
     ]),
     awayLineupConfirmed: true,
     homeLineupConfirmed: false,
@@ -388,16 +464,24 @@ const ROTOWIRE_PORTRAIT_SVG = `
 `;
 
 async function stubApi(page: Page) {
-  await page.route("**/api/trpc/**", (route) => {
+  await page.route("**/api/trpc/**", route => {
     const url = new URL(route.request().url());
-    const ops = decodeURIComponent(url.pathname.replace(/^.*\/api\/trpc\//, "")).split(",");
-    const body = ops.map((op) => {
-      if (op === "appUsers.me") return { result: { data: { json: STUB_USER } } };
+    const ops = decodeURIComponent(
+      url.pathname.replace(/^.*\/api\/trpc\//, "")
+    ).split(",");
+    const body = ops.map(op => {
+      if (op === "appUsers.me")
+        return { result: { data: { json: STUB_USER } } };
       if (op === "games.list")
-        return { result: { data: { json: [PASS_GAME, LIVE_EDGE_GAME, SCHEDULED_EDGE_GAME] } } };
+        return {
+          result: {
+            data: { json: [PASS_GAME, LIVE_EDGE_GAME, SCHEDULED_EDGE_GAME] },
+          },
+        };
       if (op === "games.mlbLineups")
         return { result: { data: { json: LINEUPS_BY_GAME_ID } } };
-      if (op === "wc2026.matchesByDate") return { result: { data: { json: [] } } };
+      if (op === "wc2026.matchesByDate")
+        return { result: { data: { json: [] } } };
       return {
         error: {
           json: {
@@ -408,23 +492,37 @@ async function stubApi(page: Page) {
         },
       };
     });
-    return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(body),
+    });
   });
   // Non-tRPC API surfaces (SSE chat, uploads) — fail fast instead of hanging,
   // matching the established pattern in every sibling spec.
-  await page.route("**/api/dime/**", (route) => route.fulfill({ status: 500, body: "stubbed offline (e2e)" }));
-  await page.route("https://www.mlbstatic.com/**", (route) =>
+  await page.route("**/api/dime/**", route =>
+    route.fulfill({ status: 500, body: "stubbed offline (e2e)" })
+  );
+  await page.route("https://www.mlbstatic.com/**", route =>
     route.fulfill({
       status: 200,
       contentType: "image/svg+xml",
       body: deterministicTeamLogo(route.request().url()),
-    }),
+    })
   );
-  await page.route("https://img.mlbstatic.com/**", (route) =>
-    route.fulfill({ status: 200, contentType: "image/svg+xml", body: MLB_PORTRAIT_SVG }),
+  await page.route("https://img.mlbstatic.com/**", route =>
+    route.fulfill({
+      status: 200,
+      contentType: "image/svg+xml",
+      body: MLB_PORTRAIT_SVG,
+    })
   );
-  await page.route("https://www.rotowire.com/images/photos/**", (route) =>
-    route.fulfill({ status: 200, contentType: "image/svg+xml", body: ROTOWIRE_PORTRAIT_SVG }),
+  await page.route("https://www.rotowire.com/images/photos/**", route =>
+    route.fulfill({
+      status: 200,
+      contentType: "image/svg+xml",
+      body: ROTOWIRE_PORTRAIT_SVG,
+    })
   );
 }
 
@@ -436,12 +534,12 @@ async function gotoShellFeed(
   width: number,
   height = 1400,
   colorScheme: "dark" | "light" = "dark",
-  themeMode: "light" | "dark" | "system" = colorScheme,
+  themeMode: "light" | "dark" | "system" = colorScheme
 ) {
   await stubApi(page);
   await page.emulateMedia({ colorScheme });
   await page.setViewportSize({ width, height });
-  await page.addInitScript((mode) => {
+  await page.addInitScript(mode => {
     localStorage.setItem("dime-theme", mode);
   }, themeMode);
   await page.goto(`${baseURL}${SHELL_FEED_PATH}`);
@@ -451,8 +549,14 @@ async function gotoShellFeed(
 }
 
 async function assertNoHorizontalOverflow(page: Page, label: string) {
-  const overflow = await page.evaluate(() => document.scrollingElement!.scrollWidth - document.scrollingElement!.clientWidth);
-  expect(overflow, `${label}: horizontal page overflow px`).toBeLessThanOrEqual(1);
+  const overflow = await page.evaluate(
+    () =>
+      document.scrollingElement!.scrollWidth -
+      document.scrollingElement!.clientWidth
+  );
+  expect(overflow, `${label}: horizontal page overflow px`).toBeLessThanOrEqual(
+    1
+  );
 }
 
 function cardByAriaLabel(page: Page, label: string): Locator {
@@ -475,9 +579,10 @@ async function summaryOffsets(card: Locator) {
   const group = summary.locator(".summary__group");
   const viewportBox = await viewport.boundingBox();
   const groupBox = await group.boundingBox();
-  if (!viewportBox || !groupBox) throw new Error("summary group bounding box missing");
+  if (!viewportBox || !groupBox)
+    throw new Error("summary group bounding box missing");
   const edgeBox = await summary.locator(".summary__edge").boundingBox();
-  const viewportMetrics = await viewport.evaluate((el) => ({
+  const viewportMetrics = await viewport.evaluate(el => ({
     clientWidth: el.clientWidth,
     scrollWidth: el.scrollWidth,
   }));
@@ -492,12 +597,12 @@ async function summaryOffsets(card: Locator) {
 
 async function assertSingleLineFits(text: Locator, label: string) {
   await expect(text, `${label}: text is visible`).toBeVisible();
-  const geometry = await text.evaluate((element) => {
+  const geometry = await text.evaluate(element => {
     const range = document.createRange();
     range.selectNodeContents(element);
     const lineTops = Array.from(range.getClientRects())
-      .filter((rect) => rect.width > 0 && rect.height > 0)
-      .map((rect) => Math.round(rect.top * 10) / 10);
+      .filter(rect => rect.width > 0 && rect.height > 0)
+      .map(rect => Math.round(rect.top * 10) / 10);
     return {
       clientWidth: element.clientWidth,
       scrollWidth: element.scrollWidth,
@@ -505,47 +610,57 @@ async function assertSingleLineFits(text: Locator, label: string) {
       whiteSpace: getComputedStyle(element).whiteSpace,
     };
   });
-  expect(geometry.whiteSpace, `${label}: explicit one-line contract`).toBe("nowrap");
+  expect(geometry.whiteSpace, `${label}: explicit one-line contract`).toBe(
+    "nowrap"
+  );
   expect(geometry.lineCount, `${label}: rendered text line count`).toBe(1);
   expect(
     geometry.scrollWidth - geometry.clientWidth,
-    `${label}: complete text fits without clipping`,
+    `${label}: complete text fits without clipping`
   ).toBeLessThanOrEqual(1);
 }
 
 async function assertCompactPregameContract(
   card: Locator,
   label: string,
-  requiresSingleLine = true,
+  requiresSingleLine = true
 ) {
   const names = card.locator(".pregame-pitcher__name");
-  await expect(names, `${label}: both probable pitcher names render`).toHaveCount(2);
+  await expect(
+    names,
+    `${label}: both probable pitcher names render`
+  ).toHaveCount(2);
   for (let index = 0; index < 2; index += 1) {
     const name = names.nth(index);
     if (requiresSingleLine) {
       await assertSingleLineFits(name, `${label}: pitcher ${index + 1} name`);
     } else {
-      await expect(name, `${label}: pitcher ${index + 1} name is visible`).toBeVisible();
-      const containment = await name.evaluate((element) => ({
+      await expect(
+        name,
+        `${label}: pitcher ${index + 1} name is visible`
+      ).toBeVisible();
+      const containment = await name.evaluate(element => ({
         clientWidth: element.clientWidth,
         scrollWidth: element.scrollWidth,
         whiteSpace: getComputedStyle(element).whiteSpace,
       }));
       expect(
         containment.scrollWidth - containment.clientWidth,
-        `${label}: pitcher ${index + 1} wraps without horizontal clipping`,
+        `${label}: pitcher ${index + 1} wraps without horizontal clipping`
       ).toBeLessThanOrEqual(1);
       expect(
         containment.whiteSpace,
-        `${label}: desktop fallback remains wrappable`,
+        `${label}: desktop fallback remains wrappable`
       ).not.toBe("nowrap");
     }
   }
 
-  const geometry = await card.locator(".pregame-pitchers").evaluate((panel) => {
-    const button = panel.querySelector<HTMLElement>(".pregame-pitchers__lineups");
+  const geometry = await card.locator(".pregame-pitchers").evaluate(panel => {
+    const button = panel.querySelector<HTMLElement>(
+      ".pregame-pitchers__lineups"
+    );
     const pitcherNames = Array.from(
-      panel.querySelectorAll<HTMLElement>(".pregame-pitcher__name"),
+      panel.querySelectorAll<HTMLElement>(".pregame-pitcher__name")
     );
     if (!button || pitcherNames.length !== 2) {
       throw new Error("compact pregame contract nodes missing");
@@ -565,34 +680,44 @@ async function assertCompactPregameContract(
       panel: box(panel),
       button: box(button),
       names: pitcherNames.map(box),
-      tracks: pitcherNames.map((name) => box(name.closest<HTMLElement>(".pregame-pitcher")!)),
+      tracks: pitcherNames.map(name =>
+        box(name.closest<HTMLElement>(".pregame-pitcher")!)
+      ),
     };
   });
   expect(
     Math.abs(
       (geometry.button.left + geometry.button.right) / 2 -
-        (geometry.panel.left + geometry.panel.right) / 2,
+        (geometry.panel.left + geometry.panel.right) / 2
     ),
-    `${label}: LINEUPS remains precisely centered`,
+    `${label}: LINEUPS remains precisely centered`
   ).toBeLessThanOrEqual(1);
-  expect(geometry.button.width, `${label}: LINEUPS target width`).toBeGreaterThanOrEqual(44);
-  expect(geometry.button.height, `${label}: LINEUPS target height`).toBeGreaterThanOrEqual(44);
+  expect(
+    geometry.button.width,
+    `${label}: LINEUPS target width`
+  ).toBeGreaterThanOrEqual(44);
+  expect(
+    geometry.button.height,
+    `${label}: LINEUPS target height`
+  ).toBeGreaterThanOrEqual(44);
   expect(
     geometry.names[0].right,
-    `${label}: pitcher names remain in separate equal tracks`,
+    `${label}: pitcher names remain in separate equal tracks`
   ).toBeLessThanOrEqual(geometry.names[1].left);
   for (const [index, name] of geometry.names.entries()) {
     const track = geometry.tracks[index];
-    expect(name.left, `${label}: pitcher ${index + 1} name starts inside its track`).toBeGreaterThanOrEqual(
-      track.left - 1,
-    );
-    expect(name.right, `${label}: pitcher ${index + 1} name ends inside its track`).toBeLessThanOrEqual(
-      track.right + 1,
-    );
+    expect(
+      name.left,
+      `${label}: pitcher ${index + 1} name starts inside its track`
+    ).toBeGreaterThanOrEqual(track.left - 1);
+    expect(
+      name.right,
+      `${label}: pitcher ${index + 1} name ends inside its track`
+    ).toBeLessThanOrEqual(track.right + 1);
   }
   const overlaps = (
     a: { left: number; right: number; top: number; bottom: number },
-    b: { left: number; right: number; top: number; bottom: number },
+    b: { left: number; right: number; top: number; bottom: number }
   ) =>
     a.left < b.right &&
     a.right > b.left &&
@@ -601,7 +726,7 @@ async function assertCompactPregameContract(
   for (const [index, name] of geometry.names.entries()) {
     expect(
       overlaps(name, geometry.button),
-      `${label}: pitcher ${index + 1} name never overlaps LINEUPS`,
+      `${label}: pitcher ${index + 1} name never overlaps LINEUPS`
     ).toBe(false);
   }
 }
@@ -609,20 +734,30 @@ async function assertCompactPregameContract(
 async function assertCompactSummaryContract(
   card: Locator,
   label: string,
-  expectsArrow: boolean,
+  expectsArrow: boolean
 ) {
   const summary = card.locator(".summary").first();
-  await expect(summary.locator(".summary__edge"), `${label}: edge/ROI pill is visible`).toBeVisible();
+  await expect(
+    summary.locator(".summary__edge"),
+    `${label}: edge/ROI pill is visible`
+  ).toBeVisible();
   const activeArrow = summary.locator('.summary__next[tabindex="0"]');
   if (expectsArrow) {
-    await expect(activeArrow, `${label}: pagination arrow is visible`).toBeVisible();
+    await expect(
+      activeArrow,
+      `${label}: pagination arrow is visible`
+    ).toBeVisible();
   } else {
-    await expect(activeArrow, `${label}: one-edge summary has no pagination arrow`).toHaveCount(0);
+    await expect(
+      activeArrow,
+      `${label}: one-edge summary has no pagination arrow`
+    ).toHaveCount(0);
   }
-  const geometry = await summary.evaluate((summaryElement) => {
+  const geometry = await summary.evaluate(summaryElement => {
     const query = (selector: string) => {
       const element = summaryElement.querySelector<HTMLElement>(selector);
-      if (!element) throw new Error(`compact summary node missing: ${selector}`);
+      if (!element)
+        throw new Error(`compact summary node missing: ${selector}`);
       return element;
     };
     const viewport = query(".summary__viewport");
@@ -634,7 +769,9 @@ async function assertCompactSummaryContract(
       query(".summary__signal"),
     ];
     const pill = query(".summary__edge");
-    const arrow = summaryElement.querySelector<HTMLElement>('.summary__next[tabindex="0"]');
+    const arrow = summaryElement.querySelector<HTMLElement>(
+      '.summary__next[tabindex="0"]'
+    );
     const box = (element: HTMLElement) => {
       const rect = element.getBoundingClientRect();
       return {
@@ -647,7 +784,7 @@ async function assertCompactSummaryContract(
       };
     };
     const partBoxes = parts.map(box);
-    const centers = partBoxes.map((part) => (part.top + part.bottom) / 2);
+    const centers = partBoxes.map(part => (part.top + part.bottom) / 2);
     return {
       viewport: box(viewport),
       group: box(group),
@@ -656,87 +793,128 @@ async function assertCompactSummaryContract(
       arrow: arrow ? box(arrow) : null,
       centerSpread: Math.max(...centers) - Math.min(...centers),
       heightSpread:
-        Math.max(...partBoxes.map((part) => part.height)) -
-        Math.min(...partBoxes.map((part) => part.height)),
-      gaps: partBoxes.slice(1).map((part, index) => part.left - partBoxes[index].right),
+        Math.max(...partBoxes.map(part => part.height)) -
+        Math.min(...partBoxes.map(part => part.height)),
+      gaps: partBoxes
+        .slice(1)
+        .map((part, index) => part.left - partBoxes[index].right),
       labelFontSizes: parts
         .slice(0, 3)
-        .map((part) => getComputedStyle(part.querySelector<HTMLElement>("dt")!).fontSize),
-      clippedParts: parts.filter((part) => part.scrollWidth > part.clientWidth + 1).length,
+        .map(
+          part =>
+            getComputedStyle(part.querySelector<HTMLElement>("dt")!).fontSize
+        ),
+      clippedParts: parts.filter(
+        part => part.scrollWidth > part.clientWidth + 1
+      ).length,
       viewportClientWidth: viewport.clientWidth,
       viewportScrollWidth: viewport.scrollWidth,
       groupWhiteSpace: getComputedStyle(group).whiteSpace,
     };
   });
 
-  expect(geometry.groupWhiteSpace, `${label}: summary is one intrinsic row`).toBe("nowrap");
-  expect(geometry.centerSpread, `${label}: every section shares one centerline`).toBeLessThanOrEqual(1);
-  expect(geometry.heightSpread, `${label}: every section uses the same 44px lane`).toBeLessThanOrEqual(1);
-  expect(geometry.clippedParts, `${label}: no summary section clamps its contents`).toBe(0);
-  expect(new Set(geometry.labelFontSizes).size, `${label}: fact labels scale uniformly`).toBe(1);
+  expect(
+    geometry.groupWhiteSpace,
+    `${label}: summary is one intrinsic row`
+  ).toBe("nowrap");
+  expect(
+    geometry.centerSpread,
+    `${label}: every section shares one centerline`
+  ).toBeLessThanOrEqual(1);
+  expect(
+    geometry.heightSpread,
+    `${label}: every section uses the same 44px lane`
+  ).toBeLessThanOrEqual(1);
+  expect(
+    geometry.clippedParts,
+    `${label}: no summary section clamps its contents`
+  ).toBe(0);
+  expect(
+    new Set(geometry.labelFontSizes).size,
+    `${label}: fact labels scale uniformly`
+  ).toBe(1);
   for (const [index, gap] of geometry.gaps.entries()) {
-    expect(gap, `${label}: section gap ${index + 1} is non-overlapping`).toBeGreaterThanOrEqual(3);
+    expect(
+      gap,
+      `${label}: section gap ${index + 1} is non-overlapping`
+    ).toBeGreaterThanOrEqual(3);
   }
   if (geometry.group.width <= geometry.viewport.width + 1) {
     expect(
       geometry.viewportScrollWidth - geometry.viewportClientWidth,
-      `${label}: fitting compact summary is initially visible`,
+      `${label}: fitting compact summary is initially visible`
     ).toBeLessThanOrEqual(1);
-    expect(geometry.group.left, `${label}: group starts inside viewport`).toBeGreaterThanOrEqual(
-      geometry.viewport.left - 1,
-    );
-    expect(geometry.group.right, `${label}: group ends inside viewport`).toBeLessThanOrEqual(
-      geometry.viewport.right + 1,
-    );
+    expect(
+      geometry.group.left,
+      `${label}: group starts inside viewport`
+    ).toBeGreaterThanOrEqual(geometry.viewport.left - 1);
+    expect(
+      geometry.group.right,
+      `${label}: group ends inside viewport`
+    ).toBeLessThanOrEqual(geometry.viewport.right + 1);
     expect(
       Math.abs(
         (geometry.group.left + geometry.group.right) / 2 -
-          (geometry.viewport.left + geometry.viewport.right) / 2,
+          (geometry.viewport.left + geometry.viewport.right) / 2
       ),
-      `${label}: complete facts + signal group is centered`,
+      `${label}: complete facts + signal group is centered`
     ).toBeLessThanOrEqual(1);
   } else {
     expect(
       geometry.viewportScrollWidth,
-      `${label}: exceptional long content stays reachable in the local scrollport`,
+      `${label}: exceptional long content stays reachable in the local scrollport`
     ).toBeGreaterThanOrEqual(Math.ceil(geometry.group.width) - 1);
   }
   if (expectsArrow) {
-    expect(geometry.arrow, `${label}: active pagination arrow exists`).not.toBeNull();
-    expect(geometry.arrow!.width, `${label}: arrow target width`).toBeGreaterThanOrEqual(44);
-    expect(geometry.arrow!.height, `${label}: arrow target height`).toBeGreaterThanOrEqual(44);
-    expect(geometry.arrow!.left, `${label}: arrow starts inside viewport`).toBeGreaterThanOrEqual(
-      geometry.viewport.left - 1,
-    );
-    expect(geometry.arrow!.right, `${label}: arrow ends inside viewport`).toBeLessThanOrEqual(
-      geometry.viewport.right + 1,
-    );
+    expect(
+      geometry.arrow,
+      `${label}: active pagination arrow exists`
+    ).not.toBeNull();
+    expect(
+      geometry.arrow!.width,
+      `${label}: arrow target width`
+    ).toBeGreaterThanOrEqual(44);
+    expect(
+      geometry.arrow!.height,
+      `${label}: arrow target height`
+    ).toBeGreaterThanOrEqual(44);
+    expect(
+      geometry.arrow!.left,
+      `${label}: arrow starts inside viewport`
+    ).toBeGreaterThanOrEqual(geometry.viewport.left - 1);
+    expect(
+      geometry.arrow!.right,
+      `${label}: arrow ends inside viewport`
+    ).toBeLessThanOrEqual(geometry.viewport.right + 1);
   } else {
-    expect(geometry.arrow, `${label}: one-edge summary has no pagination arrow`).toBeNull();
+    expect(
+      geometry.arrow,
+      `${label}: one-edge summary has no pagination arrow`
+    ).toBeNull();
   }
   return geometry;
 }
 
 function assertUniformCompactSummaryTracks(
   geometries: Array<Awaited<ReturnType<typeof assertCompactSummaryContract>>>,
-  label: string,
+  label: string
 ) {
-  const relativeTracks = geometries.map((geometry) =>
-    geometry.parts.map((part) => ({
+  const relativeTracks = geometries.map(geometry =>
+    geometry.parts.map(part => ({
       left: part.left - geometry.group.left,
       width: part.width,
-    })),
+    }))
   );
   const baseline = relativeTracks[0];
   for (const [cardIndex, tracks] of relativeTracks.slice(1).entries()) {
     for (const [trackIndex, track] of tracks.entries()) {
       expect(
         Math.abs(track.left - baseline[trackIndex].left),
-        `${label}: card ${cardIndex + 2} track ${trackIndex + 1} starts uniformly`,
+        `${label}: card ${cardIndex + 2} track ${trackIndex + 1} starts uniformly`
       ).toBeLessThanOrEqual(1);
       expect(
         Math.abs(track.width - baseline[trackIndex].width),
-        `${label}: card ${cardIndex + 2} track ${trackIndex + 1} scales uniformly`,
+        `${label}: card ${cardIndex + 2} track ${trackIndex + 1} scales uniformly`
       ).toBeLessThanOrEqual(1);
     }
   }
@@ -746,10 +924,13 @@ async function assertCompactTriggerContract(card: Locator, label: string) {
   const trigger = card.locator(".projection-card__markets-toggle");
   const triggerText = trigger.locator(":scope > span");
   await assertSingleLineFits(triggerText, `${label}: projection trigger`);
-  const geometry = await trigger.evaluate((button) => {
+  const geometry = await trigger.evaluate(button => {
     const text = button.querySelector<HTMLElement>(":scope > span");
-    const icon = button.querySelector<HTMLElement>(".projection-card__markets-icon");
-    if (!text || !icon) throw new Error("projection trigger contract nodes missing");
+    const icon = button.querySelector<HTMLElement>(
+      ".projection-card__markets-icon"
+    );
+    if (!text || !icon)
+      throw new Error("projection trigger contract nodes missing");
     const buttonRect = button.getBoundingClientRect();
     const textRect = text.getBoundingClientRect();
     const iconRect = icon.getBoundingClientRect();
@@ -760,9 +941,10 @@ async function assertCompactTriggerContract(card: Locator, label: string) {
     };
   });
   expect(geometry.text.left).toBeGreaterThanOrEqual(geometry.button.left - 1);
-  expect(geometry.text.right, `${label}: trigger label does not overlap icon`).toBeLessThanOrEqual(
-    geometry.icon.left,
-  );
+  expect(
+    geometry.text.right,
+    `${label}: trigger label does not overlap icon`
+  ).toBeLessThanOrEqual(geometry.icon.left);
   expect(geometry.icon.right).toBeLessThanOrEqual(geometry.button.right + 1);
 }
 
@@ -771,7 +953,9 @@ async function assertCompactTriggerContract(card: Locator, label: string) {
 const DESKTOP_WIDTHS = [1920, 1440, 1280, 1024] as const;
 
 for (const width of DESKTOP_WIDTHS) {
-  test(`shell feed desktop ${width}px: items 1-7 all active`, async ({ page }) => {
+  test(`shell feed desktop ${width}px: items 1-7 all active`, async ({
+    page,
+  }) => {
     await gotoShellFeed(page, width);
     await assertNoHorizontalOverflow(page, `shell-${width}`);
 
@@ -783,51 +967,74 @@ for (const width of DESKTOP_WIDTHS) {
     await expect(scheduledCard).toBeVisible();
 
     if (width === 1920) {
-      const rootAppearance = await page.locator(".dmf-root").evaluate((el) => ({
+      const rootAppearance = await page.locator(".dmf-root").evaluate(el => ({
         background: getComputedStyle(el).backgroundColor,
         mode: el.getAttribute("data-dmf-mode"),
       }));
       expect(rootAppearance.mode).toBe("dark");
-      expect(rootAppearance.background, "explicit Dark keeps the pure-black ground").toBe(
-        "rgb(0, 0, 0)",
-      );
+      expect(
+        rootAppearance.background,
+        "explicit Dark keeps the pure-black ground"
+      ).toBe("rgb(0, 0, 0)");
 
-      const logoGeometry = await liveCard.locator(".team-logo-box").evaluateAll((boxes) =>
-        boxes.map((box) => {
-          const image = box.querySelector("img");
-          if (!image) throw new Error("team logo image missing");
-          const wrapperRect = box.getBoundingClientRect();
-          const imageRect = image.getBoundingClientRect();
-          return {
-            wrapperWidth: wrapperRect.width,
-            wrapperHeight: wrapperRect.height,
-            imageWidth: imageRect.width,
-            imageHeight: imageRect.height,
-            centerY: wrapperRect.y + wrapperRect.height / 2,
-            filter: getComputedStyle(image).filter,
-          };
-        }),
-      );
+      const logoGeometry = await liveCard
+        .locator(".team-logo-box")
+        .evaluateAll(boxes =>
+          boxes.map(box => {
+            const image = box.querySelector("img");
+            if (!image) throw new Error("team logo image missing");
+            const wrapperRect = box.getBoundingClientRect();
+            const imageRect = image.getBoundingClientRect();
+            return {
+              wrapperWidth: wrapperRect.width,
+              wrapperHeight: wrapperRect.height,
+              imageWidth: imageRect.width,
+              imageHeight: imageRect.height,
+              centerY: wrapperRect.y + wrapperRect.height / 2,
+              filter: getComputedStyle(image).filter,
+            };
+          })
+        );
       expect(logoGeometry).toHaveLength(2);
-      expect(Math.abs(logoGeometry[0].imageHeight - logoGeometry[1].imageHeight)).toBeLessThanOrEqual(0.5);
-      expect(logoGeometry[0].imageWidth).not.toBeCloseTo(logoGeometry[1].imageWidth, 0);
+      expect(
+        Math.abs(logoGeometry[0].imageHeight - logoGeometry[1].imageHeight)
+      ).toBeLessThanOrEqual(0.5);
+      expect(logoGeometry[0].imageWidth).not.toBeCloseTo(
+        logoGeometry[1].imageWidth,
+        0
+      );
       for (const logo of logoGeometry) {
-        expect(Math.abs(logo.wrapperWidth - logo.imageWidth), "wrapper hugs visible logo width").toBeLessThanOrEqual(0.5);
-        expect(Math.abs(logo.wrapperHeight - logo.imageHeight), "wrapper hugs visible logo height").toBeLessThanOrEqual(0.5);
+        expect(
+          Math.abs(logo.wrapperWidth - logo.imageWidth),
+          "wrapper hugs visible logo width"
+        ).toBeLessThanOrEqual(0.5);
+        expect(
+          Math.abs(logo.wrapperHeight - logo.imageHeight),
+          "wrapper hugs visible logo height"
+        ).toBeLessThanOrEqual(0.5);
       }
-      expect(Math.abs(logoGeometry[0].centerY - logoGeometry[1].centerY), "team marks share one centerline").toBeLessThanOrEqual(0.5);
-      expect(logoGeometry[1].filter, "Yankees receives only the 0.2px alpha keyline on Dark").toBe(THIN_LOGO_FILTER);
+      expect(
+        Math.abs(logoGeometry[0].centerY - logoGeometry[1].centerY),
+        "team marks share one centerline"
+      ).toBeLessThanOrEqual(0.5);
+      expect(
+        logoGeometry[1].filter,
+        "Yankees receives only the 0.2px alpha keyline on Dark"
+      ).toBe(THIN_LOGO_FILTER);
       const unaffectedLogoFilters = await scheduledCard
         .locator(".team-logo")
-        .evaluateAll((logos) => logos.map((logo) => getComputedStyle(logo).filter));
-      expect(unaffectedLogoFilters, "bright Giants/Mariners marks keep their original artwork").toEqual(["none", "none"]);
+        .evaluateAll(logos => logos.map(logo => getComputedStyle(logo).filter));
+      expect(
+        unaffectedLogoFilters,
+        "bright Giants/Mariners marks keep their original artwork"
+      ).toEqual(["none", "none"]);
 
       const passArrowColor = await passCard
         .locator(".summary-carousel--no-edge .summary__next")
         .first()
-        .evaluate((el) => getComputedStyle(el).color);
+        .evaluate(el => getComputedStyle(el).color);
       expect(passArrowColor, "No-edge pagination is neutral, never mint").toBe(
-        "rgb(255, 255, 255)",
+        "rgb(255, 255, 255)"
       );
 
       for (const [cardLabel, card] of [
@@ -835,56 +1042,84 @@ for (const width of DESKTOP_WIDTHS) {
         ["PASS", passCard],
         ["SCHEDULED", scheduledCard],
       ] as const) {
-        const geometry = await card.locator(".summary").first().evaluate((summary) => {
-          const pick = summary.querySelector<HTMLElement>(".summary__pick");
-          const edge = summary.querySelector<HTMLElement>(".summary__item--edge");
-          const book = summary.querySelector<HTMLElement>(".summary__item--book");
-          const model = summary.querySelector<HTMLElement>(".summary__item--model");
-          const signal = summary.querySelector<HTMLElement>(".summary__signal");
-          const viewport = summary.querySelector<HTMLElement>(".summary__viewport");
-          const group = summary.querySelector<HTMLElement>(".summary__group");
-          if (!pick || !edge || !book || !model || !signal || !viewport || !group) {
-            throw new Error("summary geometry node missing");
-          }
-          const pickStyle = getComputedStyle(pick);
-          const pickRange = document.createRange();
-          pickRange.selectNodeContents(pick);
-          return {
-            groupDisplay: getComputedStyle(group).display,
-            whiteSpace: pickStyle.whiteSpace,
-            pickHeight: pick.getBoundingClientRect().height,
-            lineCount: Array.from(pickRange.getClientRects()).filter(
-              (rect) => rect.width > 0 && rect.height > 0,
-            ).length,
-            edge: edge.getBoundingClientRect().toJSON(),
-            book: book.getBoundingClientRect().toJSON(),
-            model: model.getBoundingClientRect().toJSON(),
-            signal: signal.getBoundingClientRect().toJSON(),
-            viewport: viewport.getBoundingClientRect().toJSON(),
-            group: group.getBoundingClientRect().toJSON(),
-            viewportClientWidth: viewport.clientWidth,
-            viewportScrollWidth: viewport.scrollWidth,
-            clippedFacts: [pick, book, model, signal].filter(
-              (el) => el.scrollWidth > el.clientWidth + 1,
-            ).length,
-          };
-        });
+        const geometry = await card
+          .locator(".summary")
+          .first()
+          .evaluate(summary => {
+            const pick = summary.querySelector<HTMLElement>(".summary__pick");
+            const edge = summary.querySelector<HTMLElement>(
+              ".summary__item--edge"
+            );
+            const book = summary.querySelector<HTMLElement>(
+              ".summary__item--book"
+            );
+            const model = summary.querySelector<HTMLElement>(
+              ".summary__item--model"
+            );
+            const signal =
+              summary.querySelector<HTMLElement>(".summary__signal");
+            const viewport =
+              summary.querySelector<HTMLElement>(".summary__viewport");
+            const group = summary.querySelector<HTMLElement>(".summary__group");
+            if (
+              !pick ||
+              !edge ||
+              !book ||
+              !model ||
+              !signal ||
+              !viewport ||
+              !group
+            ) {
+              throw new Error("summary geometry node missing");
+            }
+            const pickStyle = getComputedStyle(pick);
+            const pickRange = document.createRange();
+            pickRange.selectNodeContents(pick);
+            return {
+              groupDisplay: getComputedStyle(group).display,
+              whiteSpace: pickStyle.whiteSpace,
+              pickHeight: pick.getBoundingClientRect().height,
+              lineCount: Array.from(pickRange.getClientRects()).filter(
+                rect => rect.width > 0 && rect.height > 0
+              ).length,
+              edge: edge.getBoundingClientRect().toJSON(),
+              book: book.getBoundingClientRect().toJSON(),
+              model: model.getBoundingClientRect().toJSON(),
+              signal: signal.getBoundingClientRect().toJSON(),
+              viewport: viewport.getBoundingClientRect().toJSON(),
+              group: group.getBoundingClientRect().toJSON(),
+              viewportClientWidth: viewport.clientWidth,
+              viewportScrollWidth: viewport.scrollWidth,
+              clippedFacts: [pick, book, model, signal].filter(
+                el => el.scrollWidth > el.clientWidth + 1
+              ).length,
+            };
+          });
         expect(geometry.whiteSpace).toBe("nowrap");
         expect(geometry.lineCount, "MODEL EDGE stays on one line").toBe(1);
-        expect(geometry.clippedFacts, `${cardLabel} facts are never clamped`).toBe(0);
+        expect(
+          geometry.clippedFacts,
+          `${cardLabel} facts are never clamped`
+        ).toBe(0);
         const overlaps = (
           a: { left: number; right: number; top: number; bottom: number },
-          b: { left: number; right: number; top: number; bottom: number },
+          b: { left: number; right: number; top: number; bottom: number }
         ) =>
           a.left < b.right &&
           a.right > b.left &&
           a.top < b.bottom &&
           a.bottom > b.top;
-        expect(overlaps(geometry.edge, geometry.book), `${cardLabel} MODEL EDGE does not overlap BOOK`).toBe(false);
-        expect(overlaps(geometry.book, geometry.model), `${cardLabel} BOOK does not overlap MODEL`).toBe(false);
+        expect(
+          overlaps(geometry.edge, geometry.book),
+          `${cardLabel} MODEL EDGE does not overlap BOOK`
+        ).toBe(false);
+        expect(
+          overlaps(geometry.book, geometry.model),
+          `${cardLabel} BOOK does not overlap MODEL`
+        ).toBe(false);
         expect(
           overlaps(geometry.model, geometry.signal),
-          `${cardLabel} MODEL does not overlap the signal: ${JSON.stringify(geometry)}`,
+          `${cardLabel} MODEL does not overlap the signal: ${JSON.stringify(geometry)}`
         ).toBe(false);
         expect(geometry.groupDisplay).toBe("grid");
         expect(geometry.edge.right).toBeLessThanOrEqual(geometry.book.left);
@@ -894,22 +1129,24 @@ for (const width of DESKTOP_WIDTHS) {
           Math.abs(
             geometry.group.left +
               geometry.group.width / 2 -
-              (geometry.viewport.left + geometry.viewport.width / 2),
+              (geometry.viewport.left + geometry.viewport.width / 2)
           ),
-          `${cardLabel} summary facts and signal are centered as one group: ${JSON.stringify({
-            viewport: geometry.viewport,
-            group: geometry.group,
-            edge: geometry.edge,
-            book: geometry.book,
-            model: geometry.model,
-            signal: geometry.signal,
-            clientWidth: geometry.viewportClientWidth,
-            scrollWidth: geometry.viewportScrollWidth,
-          })}`,
+          `${cardLabel} summary facts and signal are centered as one group: ${JSON.stringify(
+            {
+              viewport: geometry.viewport,
+              group: geometry.group,
+              edge: geometry.edge,
+              book: geometry.book,
+              model: geometry.model,
+              signal: geometry.signal,
+              clientWidth: geometry.viewportClientWidth,
+              scrollWidth: geometry.viewportScrollWidth,
+            }
+          )}`
         ).toBeLessThanOrEqual(1);
         expect(
           geometry.viewportScrollWidth - geometry.viewportClientWidth,
-          `${cardLabel} 1920px summary group fits without local overflow`,
+          `${cardLabel} 1920px summary group fits without local overflow`
         ).toBeLessThanOrEqual(1);
       }
     }
@@ -924,78 +1161,125 @@ for (const width of DESKTOP_WIDTHS) {
       await expect(passRoiBadge).toHaveText(/^ROI [+\u2212]\d+\.\d%$/);
       await expect(passRoiBadge).not.toContainText("No edge");
       await expect(passRoiBadge).toHaveAccessibleName(
-        /No actionable edge: .*; no-vig ROI [+\u2212]\d+\.\d%/,
+        /No actionable edge: .*; no-vig ROI [+\u2212]\d+\.\d%/
       );
       await expect(passRoiBadge.locator("svg")).toHaveCount(0);
-      const passRoiStyle = await passRoiBadge.evaluate((el) => {
+      const passRoiStyle = await passRoiBadge.evaluate(el => {
         const cs = getComputedStyle(el);
-        return { color: cs.color, background: cs.backgroundColor, shadow: cs.boxShadow };
+        return {
+          color: cs.color,
+          background: cs.backgroundColor,
+          shadow: cs.boxShadow,
+        };
       });
-      expect(passRoiStyle.color, "non-actionable ROI stays neutral grey").toBe("rgb(166, 166, 166)");
+      expect(passRoiStyle.color, "non-actionable ROI stays neutral grey").toBe(
+        "rgb(166, 166, 166)"
+      );
       expect(passRoiStyle.background).toBe("rgba(0, 0, 0, 0)");
       expect(passRoiStyle.shadow).toBe("none");
     }
     const liveBox = await liveCard.boundingBox();
     const passBox = await passCard.boundingBox();
     const scheduledBox = await scheduledCard.boundingBox();
-    if (!liveBox || !passBox || !scheduledBox) throw new Error("card bounding boxes missing");
-    expect(passBox.x, "desktop column 2 sits to the right of column 1").toBeGreaterThan(liveBox.x + liveBox.width);
-    expect(scheduledBox.x, "desktop column 3 sits to the right of column 2").toBeGreaterThan(passBox.x + passBox.width);
-    expect(Math.abs(passBox.y - liveBox.y), "desktop columns 1 and 2 share one row").toBeLessThanOrEqual(1);
-    expect(Math.abs(scheduledBox.y - liveBox.y), "desktop columns 1 and 3 share one row").toBeLessThanOrEqual(1);
+    if (!liveBox || !passBox || !scheduledBox)
+      throw new Error("card bounding boxes missing");
+    expect(
+      passBox.x,
+      "desktop column 2 sits to the right of column 1"
+    ).toBeGreaterThan(liveBox.x + liveBox.width);
+    expect(
+      scheduledBox.x,
+      "desktop column 3 sits to the right of column 2"
+    ).toBeGreaterThan(passBox.x + passBox.width);
+    expect(
+      Math.abs(passBox.y - liveBox.y),
+      "desktop columns 1 and 2 share one row"
+    ).toBeLessThanOrEqual(1);
+    expect(
+      Math.abs(scheduledBox.y - liveBox.y),
+      "desktop columns 1 and 3 share one row"
+    ).toBeLessThanOrEqual(1);
 
     // The full fact + signal group stays on one row. If a narrow card cannot
     // physically contain that intrinsic width, only its local viewport scrolls.
-    const liveSummaryStyle = await liveCard.locator(".summary").first().evaluate((el) => {
-      const viewport = el.querySelector<HTMLElement>(".summary__viewport");
-      const group = el.querySelector<HTMLElement>(".summary__group");
-      if (!viewport || !group) throw new Error("summary viewport/group missing");
-      return {
-        width: el.getBoundingClientRect().width,
-        viewportWidth: viewport.clientWidth,
-        viewportScrollWidth: viewport.scrollWidth,
-        groupWidth: group.getBoundingClientRect().width,
-      };
-    });
+    const liveSummaryStyle = await liveCard
+      .locator(".summary")
+      .first()
+      .evaluate(el => {
+        const viewport = el.querySelector<HTMLElement>(".summary__viewport");
+        const group = el.querySelector<HTMLElement>(".summary__group");
+        if (!viewport || !group)
+          throw new Error("summary viewport/group missing");
+        return {
+          width: el.getBoundingClientRect().width,
+          viewportWidth: viewport.clientWidth,
+          viewportScrollWidth: viewport.scrollWidth,
+          groupWidth: group.getBoundingClientRect().width,
+        };
+      });
     if (width === 1920) {
       expect(
         liveSummaryStyle.viewportScrollWidth - liveSummaryStyle.viewportWidth,
-        "1920px desktop keeps all summary facts in one centered strip without local scroll",
+        "1920px desktop keeps all summary facts in one centered strip without local scroll"
       ).toBeLessThanOrEqual(1);
     }
 
     expect(
       liveBox.height,
-      `compact LIVE (${liveBox.height}) is shorter than scheduled PASS (${passBox.height})`,
+      `compact LIVE (${liveBox.height}) is shorter than scheduled PASS (${passBox.height})`
     ).toBeLessThan(passBox.height - 20);
     expect(
       Math.abs(passBox.height - scheduledBox.height),
-      "scheduled row-mates still stretch to equal height",
+      "scheduled row-mates still stretch to equal height"
     ).toBeLessThanOrEqual(1);
 
-    const liveToggle = await liveCard.locator(".projection-card__markets-toggle").boundingBox();
-    const passToggle = await passCard.locator(".projection-card__markets-toggle").boundingBox();
-    const scheduledToggle = await scheduledCard.locator(".projection-card__markets-toggle").boundingBox();
-    if (!liveToggle || !passToggle || !scheduledToggle) throw new Error("markets-toggle bounding boxes missing");
+    const liveToggle = await liveCard
+      .locator(".projection-card__markets-toggle")
+      .boundingBox();
+    const passToggle = await passCard
+      .locator(".projection-card__markets-toggle")
+      .boundingBox();
+    const scheduledToggle = await scheduledCard
+      .locator(".projection-card__markets-toggle")
+      .boundingBox();
+    if (!liveToggle || !passToggle || !scheduledToggle)
+      throw new Error("markets-toggle bounding boxes missing");
     expect(
-      Math.abs(scheduledToggle.y + scheduledToggle.height - (passToggle.y + passToggle.height)),
-      "market-trigger bottom edges align across scheduled row-mates",
+      Math.abs(
+        scheduledToggle.y +
+          scheduledToggle.height -
+          (passToggle.y + passToggle.height)
+      ),
+      "market-trigger bottom edges align across scheduled row-mates"
     ).toBeLessThanOrEqual(1);
     // Pinned to the card's own bottom edge (padding-block-end: --space-sm =
     // 12px) — not floating mid-card.
-    const passGap = passBox.y + passBox.height - (passToggle.y + passToggle.height);
-    expect(passGap, `PASS market trigger sits ~12px above its own card bottom (measured ${passGap})`).toBeGreaterThanOrEqual(6);
+    const passGap =
+      passBox.y + passBox.height - (passToggle.y + passToggle.height);
+    expect(
+      passGap,
+      `PASS market trigger sits ~12px above its own card bottom (measured ${passGap})`
+    ).toBeGreaterThanOrEqual(6);
     expect(passGap).toBeLessThanOrEqual(20);
 
     // ── Item 2: unified 24px/700 matchup score (LIVE card has scores) ──
-    const scoreFontSize = await liveCard.locator(".matchup__score").first().evaluate((el) => getComputedStyle(el).fontSize);
+    const scoreFontSize = await liveCard
+      .locator(".matchup__score")
+      .first()
+      .evaluate(el => getComputedStyle(el).fontSize);
     expect(scoreFontSize, "matchup__score computed font-size").toBe("24px");
 
     // ── Item 3: PASS-card law — opacity 0.82 ──
-    const passOpacity = await passCard.evaluate((el) => getComputedStyle(el).opacity);
+    const passOpacity = await passCard.evaluate(
+      el => getComputedStyle(el).opacity
+    );
     expect(passOpacity, "PASS card computed opacity").toBe("0.82");
-    const liveOpacity = await liveCard.evaluate((el) => getComputedStyle(el).opacity);
-    expect(liveOpacity, "live card uses the lifecycle-diminished opacity").toBe("0.72");
+    const liveOpacity = await liveCard.evaluate(
+      el => getComputedStyle(el).opacity
+    );
+    expect(liveOpacity, "live card uses the lifecycle-diminished opacity").toBe(
+      "0.72"
+    );
 
     // Upcoming-only probable pitchers: both scheduled cards render the stable
     // Rotowire section; the live card never carries stale pregame data.
@@ -1006,7 +1290,7 @@ for (const width of DESKTOP_WIDTHS) {
     await expect(lineupsButton).toBeVisible();
     await expect(scheduledCard.getByText("Logan Webb")).toBeVisible();
     await expect(scheduledCard.getByText("7-4 · 3.21 ERA")).toBeVisible();
-    const lineupsStyle = await lineupsButton.evaluate((el) => {
+    const lineupsStyle = await lineupsButton.evaluate(el => {
       const cs = getComputedStyle(el);
       return {
         background: cs.backgroundColor,
@@ -1015,37 +1299,51 @@ for (const width of DESKTOP_WIDTHS) {
         minHeight: cs.minHeight,
       };
     });
-    expect(lineupsStyle.background, "LINEUPS uses Dime mint").toBe("rgb(69, 224, 168)");
+    expect(lineupsStyle.background, "LINEUPS uses Dime mint").toBe(
+      "rgb(69, 224, 168)"
+    );
     expect(lineupsStyle.color, "LINEUPS uses black text").toBe("rgb(0, 0, 0)");
-    expect(Number(lineupsStyle.fontWeight), "LINEUPS label is bold").toBeGreaterThanOrEqual(700);
-    expect(parseFloat(lineupsStyle.minHeight), "LINEUPS target is at least 44px").toBeGreaterThanOrEqual(44);
+    expect(
+      Number(lineupsStyle.fontWeight),
+      "LINEUPS label is bold"
+    ).toBeGreaterThanOrEqual(700);
+    expect(
+      parseFloat(lineupsStyle.minHeight),
+      "LINEUPS target is at least 44px"
+    ).toBeGreaterThanOrEqual(44);
     if (width === 1024) {
       await assertCompactPregameContract(
         passCard,
         "1024px desktop PASS pregame",
-        false,
+        false
       );
       await assertCompactPregameContract(
         scheduledCard,
         "1024px desktop SCHEDULED pregame",
-        false,
+        false
       );
     }
 
-    const headshotFrame = scheduledCard.locator(".pregame-pitcher__photo").first();
+    const headshotFrame = scheduledCard
+      .locator(".pregame-pitcher__photo")
+      .first();
     const headshot = headshotFrame.locator("img");
-    await expect.poll(
-      () => headshot.evaluate((image) => image.naturalWidth),
-      { message: "deterministic 2:3 pitcher portrait loads" },
-    ).toBe(180);
+    await expect
+      .poll(() => headshot.evaluate(image => image.naturalWidth), {
+        message: "deterministic 2:3 pitcher portrait loads",
+      })
+      .toBe(180);
     const headshotFrameBox = await headshotFrame.boundingBox();
     const headshotBox = await headshot.boundingBox();
-    if (!headshotFrameBox || !headshotBox) throw new Error("pitcher headshot geometry missing");
-    const headshotGeometry = await headshot.evaluate((image) => {
+    if (!headshotFrameBox || !headshotBox)
+      throw new Error("pitcher headshot geometry missing");
+    const headshotGeometry = await headshot.evaluate(image => {
       const style = getComputedStyle(image);
       const frame = image.parentElement;
       return {
-        frameBorderTop: frame ? parseFloat(getComputedStyle(frame).borderTopWidth) : 0,
+        frameBorderTop: frame
+          ? parseFloat(getComputedStyle(frame).borderTopWidth)
+          : 0,
         naturalWidth: image.naturalWidth,
         naturalHeight: image.naturalHeight,
         objectFit: style.objectFit,
@@ -1063,39 +1361,42 @@ for (const width of DESKTOP_WIDTHS) {
     });
     expect(
       headshotBox.width / headshotGeometry.untransformedWidth,
-      "pitcher portrait uses the calibrated 82% scale",
+      "pitcher portrait uses the calibrated 82% scale"
     ).toBeCloseTo(0.82, 2);
     expect(
       headshotBox.height / headshotBox.width,
-      "pitcher portrait preserves MLB's native 2:3 aspect ratio",
+      "pitcher portrait preserves MLB's native 2:3 aspect ratio"
     ).toBeCloseTo(1.5, 2);
     expect(
       Math.abs(
-        headshotBox.x
-        + headshotBox.width / 2
-        - (headshotFrameBox.x + headshotFrameBox.width / 2),
+        headshotBox.x +
+          headshotBox.width / 2 -
+          (headshotFrameBox.x + headshotFrameBox.width / 2)
       ),
-      "pitcher portrait is horizontally centered to subpixel precision",
+      "pitcher portrait is horizontally centered to subpixel precision"
     ).toBeLessThanOrEqual(0.5);
     expect(
       Math.abs(
-        headshotBox.y - (headshotFrameBox.y + headshotGeometry.frameBorderTop),
+        headshotBox.y - (headshotFrameBox.y + headshotGeometry.frameBorderTop)
       ),
-      "pitcher portrait starts at the frame's inner top instead of the bottom",
+      "pitcher portrait starts at the frame's inner top instead of the bottom"
     ).toBeLessThanOrEqual(0.5);
 
     const rotowireFrame = passCard.locator(".pregame-pitcher__photo").first();
-    const rotowireHeadshot = rotowireFrame.locator('img[data-headshot-source="rotowire"]');
-    await expect.poll(
-      () => rotowireHeadshot.evaluate((image) => image.naturalWidth),
-      { message: "deterministic square RotoWire portrait loads" },
-    ).toBe(250);
+    const rotowireHeadshot = rotowireFrame.locator(
+      'img[data-headshot-source="rotowire"]'
+    );
+    await expect
+      .poll(() => rotowireHeadshot.evaluate(image => image.naturalWidth), {
+        message: "deterministic square RotoWire portrait loads",
+      })
+      .toBe(250);
     const rotowireFrameBox = await rotowireFrame.boundingBox();
     const rotowireHeadshotBox = await rotowireHeadshot.boundingBox();
     if (!rotowireFrameBox || !rotowireHeadshotBox) {
       throw new Error("RotoWire fallback geometry missing");
     }
-    const rotowireGeometry = await rotowireHeadshot.evaluate((image) => {
+    const rotowireGeometry = await rotowireHeadshot.evaluate(image => {
       const style = getComputedStyle(image);
       return {
         naturalWidth: image.naturalWidth,
@@ -1115,45 +1416,48 @@ for (const width of DESKTOP_WIDTHS) {
     });
     expect(
       rotowireHeadshotBox.width / rotowireGeometry.untransformedWidth,
-      "square RotoWire fallback uses its source-specific 90% scale",
+      "square RotoWire fallback uses its source-specific 90% scale"
     ).toBeCloseTo(0.9, 2);
     expect(
       Math.abs(
-        rotowireHeadshotBox.x
-        + rotowireHeadshotBox.width / 2
-        - (rotowireFrameBox.x + rotowireFrameBox.width / 2),
+        rotowireHeadshotBox.x +
+          rotowireHeadshotBox.width / 2 -
+          (rotowireFrameBox.x + rotowireFrameBox.width / 2)
       ),
-      "square RotoWire fallback is horizontally centered",
+      "square RotoWire fallback is horizontally centered"
     ).toBeLessThanOrEqual(0.5);
     expect(
       Math.abs(
-        rotowireHeadshotBox.y
-        + rotowireHeadshotBox.height / 2
-        - (rotowireFrameBox.y + rotowireFrameBox.height / 2),
+        rotowireHeadshotBox.y +
+          rotowireHeadshotBox.height / 2 -
+          (rotowireFrameBox.y + rotowireFrameBox.height / 2)
       ),
-      "square RotoWire fallback is vertically centered",
+      "square RotoWire fallback is vertically centered"
     ).toBeLessThanOrEqual(0.5);
 
-    const matchupCenter = await scheduledCard.locator(".matchup__center").boundingBox();
+    const matchupCenter = await scheduledCard
+      .locator(".matchup__center")
+      .boundingBox();
     const matchupLogos = scheduledCard.locator(".matchup .team-logo-box");
     const awayLogo = await matchupLogos.nth(0).boundingBox();
     const homeLogo = await matchupLogos.nth(1).boundingBox();
-    if (!matchupCenter || !awayLogo || !homeLogo) throw new Error("matchup logo geometry missing");
+    if (!matchupCenter || !awayLogo || !homeLogo)
+      throw new Error("matchup logo geometry missing");
     expect(
       matchupCenter.x - (awayLogo.x + awayLogo.width),
-      "away logo sits beside the away team name",
+      "away logo sits beside the away team name"
     ).toBeGreaterThanOrEqual(0);
     expect(
       matchupCenter.x - (awayLogo.x + awayLogo.width),
-      "away logo-to-name gap stays compact",
+      "away logo-to-name gap stays compact"
     ).toBeLessThanOrEqual(12);
     expect(
       homeLogo.x - (matchupCenter.x + matchupCenter.width),
-      "home logo sits beside the home team name",
+      "home logo sits beside the home team name"
     ).toBeGreaterThanOrEqual(0);
     expect(
       homeLogo.x - (matchupCenter.x + matchupCenter.width),
-      "home logo-to-name gap stays compact",
+      "home logo-to-name gap stays compact"
     ).toBeLessThanOrEqual(12);
 
     const nextEdge = liveCard.locator('.summary__next[tabindex="0"]');
@@ -1161,14 +1465,26 @@ for (const width of DESKTOP_WIDTHS) {
     await expect(nextEdge).toHaveAccessibleName(/View next model edge:/);
     await expect(liveCard.locator(".summary-carousel__nav")).toHaveCount(0);
     const activeTrack = liveCard.locator(".summary-carousel__track");
-    const initialTrackScroll = await activeTrack.evaluate((el) => el.scrollLeft);
-    expect(initialTrackScroll, "the strongest edge starts flush at carousel page 1").toBeLessThanOrEqual(1);
-    const nextEdgeStyle = await nextEdge.evaluate((el) => {
+    const initialTrackScroll = await activeTrack.evaluate(el => el.scrollLeft);
+    expect(
+      initialTrackScroll,
+      "the strongest edge starts flush at carousel page 1"
+    ).toBeLessThanOrEqual(1);
+    const nextEdgeStyle = await nextEdge.evaluate(el => {
       const cs = getComputedStyle(el);
-      return { border: cs.borderColor, color: cs.color, width: cs.width, height: cs.height };
+      return {
+        border: cs.borderColor,
+        color: cs.color,
+        width: cs.width,
+        height: cs.height,
+      };
     });
-    expect(nextEdgeStyle.border, "dark/system arrow border is white").toBe("rgb(255, 255, 255)");
-    expect(nextEdgeStyle.color, "next-edge arrow is mint").toBe("rgb(69, 224, 168)");
+    expect(nextEdgeStyle.border, "dark/system arrow border is white").toBe(
+      "rgb(255, 255, 255)"
+    );
+    expect(nextEdgeStyle.color, "next-edge arrow is mint").toBe(
+      "rgb(69, 224, 168)"
+    );
     expect(parseFloat(nextEdgeStyle.width)).toBeGreaterThanOrEqual(44);
     expect(parseFloat(nextEdgeStyle.height)).toBeGreaterThanOrEqual(44);
     const activeSummary = liveCard.locator(".summary").first();
@@ -1176,8 +1492,12 @@ for (const width of DESKTOP_WIDTHS) {
     const activeSummaryBox = await activeSummary.boundingBox();
     const activeViewportBox = await activeViewport.boundingBox();
     const activeTrackBox = await activeTrack.boundingBox();
-    const activeEdgeBox = await activeSummary.locator(".summary__item--edge").boundingBox();
-    const signalBox = await activeSummary.locator(".summary__signal").boundingBox();
+    const activeEdgeBox = await activeSummary
+      .locator(".summary__item--edge")
+      .boundingBox();
+    const signalBox = await activeSummary
+      .locator(".summary__signal")
+      .boundingBox();
     const nextEdgeBox = await nextEdge.boundingBox();
     if (
       !activeSummaryBox ||
@@ -1189,23 +1509,24 @@ for (const width of DESKTOP_WIDTHS) {
     ) {
       throw new Error("active edge signal geometry missing");
     }
-    expect(activeSummaryBox.x, "visible summary starts inside the carousel viewport").toBeGreaterThanOrEqual(
-      activeTrackBox.x - 1,
-    );
+    expect(
+      activeSummaryBox.x,
+      "visible summary starts inside the carousel viewport"
+    ).toBeGreaterThanOrEqual(activeTrackBox.x - 1);
     expect(
       activeSummaryBox.x + activeSummaryBox.width,
-      "visible summary ends inside the carousel viewport",
+      "visible summary ends inside the carousel viewport"
     ).toBeLessThanOrEqual(activeTrackBox.x + activeTrackBox.width + 1);
     expect(activeViewportBox.x).toBeGreaterThanOrEqual(activeTrackBox.x - 1);
     expect(activeViewportBox.x + activeViewportBox.width).toBeLessThanOrEqual(
-      activeTrackBox.x + activeTrackBox.width + 1,
+      activeTrackBox.x + activeTrackBox.width + 1
     );
     const localOverflow = await activeViewport.evaluate(
-      el => el.scrollWidth - el.clientWidth,
+      el => el.scrollWidth - el.clientWidth
     );
     expect(
       activeEdgeBox.x,
-      "MODEL EDGE starts inside the local summary viewport",
+      "MODEL EDGE starts inside the local summary viewport"
     ).toBeGreaterThanOrEqual(activeViewportBox.x - 1);
     if (localOverflow <= 1) {
       for (const [label, box] of [
@@ -1214,14 +1535,18 @@ for (const width of DESKTOP_WIDTHS) {
       ] as const) {
         expect(
           box.x + box.width,
-          `${label} fits when the centered summary has no local overflow`,
-        ).toBeLessThanOrEqual(activeViewportBox.x + activeViewportBox.width + 1);
+          `${label} fits when the centered summary has no local overflow`
+        ).toBeLessThanOrEqual(
+          activeViewportBox.x + activeViewportBox.width + 1
+        );
       }
     } else {
       await activeViewport.evaluate(el => {
         el.scrollLeft = el.scrollWidth;
       });
-      const scrolledSignalBox = await activeSummary.locator(".summary__signal").boundingBox();
+      const scrolledSignalBox = await activeSummary
+        .locator(".summary__signal")
+        .boundingBox();
       const scrolledArrowBox = await nextEdge.boundingBox();
       if (!scrolledSignalBox || !scrolledArrowBox) {
         throw new Error("scrolled edge signal geometry missing");
@@ -1232,12 +1557,14 @@ for (const width of DESKTOP_WIDTHS) {
       ] as const) {
         expect(
           box.x,
-          `${label} is reachable from the keyboard-focusable local viewport`,
+          `${label} is reachable from the keyboard-focusable local viewport`
         ).toBeGreaterThanOrEqual(activeViewportBox.x - 1);
         expect(
           box.x + box.width,
-          `${label} is fully visible at the local viewport's scroll end`,
-        ).toBeLessThanOrEqual(activeViewportBox.x + activeViewportBox.width + 1);
+          `${label} is fully visible at the local viewport's scroll end`
+        ).toBeLessThanOrEqual(
+          activeViewportBox.x + activeViewportBox.width + 1
+        );
       }
       await activeViewport.evaluate(el => {
         el.scrollLeft = 0;
@@ -1246,22 +1573,30 @@ for (const width of DESKTOP_WIDTHS) {
     if (width === 1280) {
       const track = liveCard.locator(".summary-carousel__track");
       await nextEdge.click();
-      await expect.poll(() =>
-        track.evaluate((el) => Math.round(el.scrollLeft / el.clientWidth)),
-      ).toBe(1);
+      await expect
+        .poll(() =>
+          track.evaluate(el => Math.round(el.scrollLeft / el.clientWidth))
+        )
+        .toBe(1);
       const wrappedEdge = liveCard.locator('.summary__next[tabindex="0"]');
       await expect(wrappedEdge).toBeFocused();
       await wrappedEdge.click();
-      await expect.poll(() =>
-        track.evaluate((el) => Math.round(el.scrollLeft / el.clientWidth)),
-      ).toBe(0);
-      await expect(liveCard.locator('.summary__next[tabindex="0"]')).toBeFocused();
+      await expect
+        .poll(() =>
+          track.evaluate(el => Math.round(el.scrollLeft / el.clientWidth))
+        )
+        .toBe(0);
+      await expect(
+        liveCard.locator('.summary__next[tabindex="0"]')
+      ).toBeFocused();
     }
 
     // ── Item 4: live dot visible on the live-game card ──
     const liveDot = liveCard.locator(".projection-card__live-dot");
     await expect(liveDot).toHaveCount(1);
-    const dotDisplay = await liveDot.evaluate((el) => getComputedStyle(el).display);
+    const dotDisplay = await liveDot.evaluate(
+      el => getComputedStyle(el).display
+    );
     expect(dotDisplay, "live dot computed display").not.toBe("none");
     const dotBox = await liveDot.boundingBox();
     expect(dotBox, "live dot has a real bounding box").not.toBeNull();
@@ -1272,29 +1607,49 @@ for (const width of DESKTOP_WIDTHS) {
     const topbar = page.locator(".dc-shell-external-scroll .dmf-topbar");
     const feedhead = page.locator(".dc-shell-external-scroll .dmf-feedhead");
     const datelbl = page.locator(".dc-shell-external-scroll .dmf-datelbl");
-    const topbarHeight = await topbar.evaluate((el) => getComputedStyle(el).height);
+    const topbarHeight = await topbar.evaluate(
+      el => getComputedStyle(el).height
+    );
     expect(topbarHeight, "shell topbar height (96px title band)").toBe("96px");
-    const feedheadStyle = await feedhead.evaluate((el) => {
+    const feedheadStyle = await feedhead.evaluate(el => {
       const cs = getComputedStyle(el);
-      return { top: cs.top, paddingTop: cs.paddingTop, paddingBottom: cs.paddingBottom, marginBottom: cs.marginBottom };
+      return {
+        top: cs.top,
+        paddingTop: cs.paddingTop,
+        paddingBottom: cs.paddingBottom,
+        marginBottom: cs.marginBottom,
+      };
     });
-    expect(feedheadStyle.top, "feedhead sticky offset tracks the 96px band").toBe("96px");
-    expect(feedheadStyle.paddingTop, "feedhead padding-top (title band -> date-nav gap)").toBe("24px");
+    expect(
+      feedheadStyle.top,
+      "feedhead sticky offset tracks the 96px band"
+    ).toBe("96px");
+    expect(
+      feedheadStyle.paddingTop,
+      "feedhead padding-top (title band -> date-nav gap)"
+    ).toBe("24px");
     expect(feedheadStyle.paddingBottom).toBe("10px");
     expect(feedheadStyle.marginBottom).toBe("16px");
-    const datelblFontSize = await datelbl.evaluate((el) => getComputedStyle(el).fontSize);
+    const datelblFontSize = await datelbl.evaluate(
+      el => getComputedStyle(el).fontSize
+    );
     expect(datelblFontSize, "date label font-size").toBe("17px");
 
     // Centered directly under the title band: date-nav's horizontal center
     // matches the title's horizontal center.
-    const titleBox = await page.locator(".dc-shell-external-scroll .dmf-toptitle").boundingBox();
-    const datenavBox = await page.locator(".dc-shell-external-scroll .dmf-datenav").boundingBox();
-    if (!titleBox || !datenavBox) throw new Error("title/date-nav bounding boxes missing");
+    const titleBox = await page
+      .locator(".dc-shell-external-scroll .dmf-toptitle")
+      .boundingBox();
+    const datenavBox = await page
+      .locator(".dc-shell-external-scroll .dmf-datenav")
+      .boundingBox();
+    if (!titleBox || !datenavBox)
+      throw new Error("title/date-nav bounding boxes missing");
     const titleCenter = titleBox.x + titleBox.width / 2;
     const datenavCenter = datenavBox.x + datenavBox.width / 2;
     expect(
       Math.abs(titleCenter - datenavCenter),
-      `date-nav centered under the title band (title center ${titleCenter}, date-nav center ${datenavCenter})`,
+      `date-nav centered under the title band (title center ${titleCenter}, date-nav center ${datenavCenter})`
     ).toBeLessThanOrEqual(4);
 
     // Fixed rhythm to the league header: date-nav's OWN bottom edge (the
@@ -1303,31 +1658,51 @@ for (const width of DESKTOP_WIDTHS) {
     // margin-bottom(16) + .dmf-list's untouched padding-top(6) = 33px
     // edge-to-edge (the annotation in ai-model-projections.md item 6: "32px
     // of space" + the 1px border the space doesn't itself count).
-    const leagueHeadBox = await page.locator(".dmf-leaguehead").first().boundingBox();
+    const leagueHeadBox = await page
+      .locator(".dmf-leaguehead")
+      .first()
+      .boundingBox();
     if (!leagueHeadBox) throw new Error("league-head bounding box missing");
     const gap = leagueHeadBox.y - (datenavBox.y + datenavBox.height);
-    expect(gap, `date-nav-to-league-header rhythm gap (measured ${gap}, law = 33px edge-to-edge)`).toBeGreaterThanOrEqual(31);
+    expect(
+      gap,
+      `date-nav-to-league-header rhythm gap (measured ${gap}, law = 33px edge-to-edge)`
+    ).toBeGreaterThanOrEqual(31);
     expect(gap).toBeLessThanOrEqual(35);
 
     // ── Item 7: market-trigger hover — shell row-hover fill on the 160ms curve ──
     const toggle = passCard.locator(".projection-card__markets-toggle");
-    const bgBefore = await toggle.evaluate((el) => getComputedStyle(el).backgroundColor);
-    const duration = await toggle.evaluate((el) => getComputedStyle(el).transitionDuration);
+    const bgBefore = await toggle.evaluate(
+      el => getComputedStyle(el).backgroundColor
+    );
+    const duration = await toggle.evaluate(
+      el => getComputedStyle(el).transitionDuration
+    );
     expect(duration, "160ms brand curve on the toggle").toContain("0.16s");
     await toggle.hover();
     await page.waitForTimeout(250);
-    const bgAfter = await toggle.evaluate((el) => getComputedStyle(el).backgroundColor);
-    expect(bgAfter, "hover background differs from resting state").not.toBe(bgBefore);
-    expect(bgAfter, "hover fill matches --row-hover dark fallback #141414").toBe("rgb(20, 20, 20)");
+    const bgAfter = await toggle.evaluate(
+      el => getComputedStyle(el).backgroundColor
+    );
+    expect(bgAfter, "hover background differs from resting state").not.toBe(
+      bgBefore
+    );
+    expect(
+      bgAfter,
+      "hover fill matches --row-hover dark fallback #141414"
+    ).toBe("rgb(20, 20, 20)");
     await page.mouse.move(0, 0);
 
-    await page.screenshot({ path: `${EVIDENCE_DIR}/shell-${width}.png`, fullPage: true });
+    await page.screenshot({
+      path: `${EVIDENCE_DIR}/shell-${width}.png`,
+      fullPage: true,
+    });
 
     // ── Centered summary group: all facts + signal travel as one intrinsic,
     // single-line unit. Impossible widths are contained by the local viewport. ──
     const shellScrollOverflow = await page
       .locator(".dc-shell-external-scroll")
-      .evaluate((el) => el.scrollWidth - el.clientWidth);
+      .evaluate(el => el.scrollWidth - el.clientWidth);
     const liveOffsets = await summaryOffsets(liveCard);
     const passOffsets = await summaryOffsets(passCard);
     const scheduledOffsets = await summaryOffsets(scheduledCard);
@@ -1335,11 +1710,14 @@ for (const width of DESKTOP_WIDTHS) {
       shellScrollOverflow,
       `shell scroll pane horizontal overflow px (summary widths: ` +
         `LIVE .summary width=${liveOffsets.summaryBox.width} PASS=${passOffsets.summaryBox.width} SCHEDULED=${scheduledOffsets.summaryBox.width}, ` +
-        `intrinsic groups remain locally contained)`,
+        `intrinsic groups remain locally contained)`
     ).toBeLessThanOrEqual(1);
     expect(liveOffsets.edgeX, "edge chip present on LIVE").not.toBeNull();
     expect(passOffsets.edgeX, "ROI badge present on PASS").not.toBeNull();
-    expect(scheduledOffsets.edgeX, "edge chip present on SCHEDULED").not.toBeNull();
+    expect(
+      scheduledOffsets.edgeX,
+      "edge chip present on SCHEDULED"
+    ).not.toBeNull();
     for (const [label, offsets] of [
       ["LIVE", liveOffsets],
       ["PASS", passOffsets],
@@ -1350,13 +1728,13 @@ for (const width of DESKTOP_WIDTHS) {
           Math.abs(
             offsets.groupBox.x +
               offsets.groupBox.width / 2 -
-              (offsets.viewportBox.x + offsets.viewportBox.width / 2),
+              (offsets.viewportBox.x + offsets.viewportBox.width / 2)
           ),
-          `${label} facts and signal are centered together`,
+          `${label} facts and signal are centered together`
         ).toBeLessThanOrEqual(1);
       }
       expect(offsets.viewportMetrics.scrollWidth).toBeGreaterThanOrEqual(
-        Math.ceil(offsets.groupBox.width) - 1,
+        Math.ceil(offsets.groupBox.width) - 1
       );
     }
 
@@ -1570,14 +1948,18 @@ for (const width of DESKTOP_WIDTHS) {
       await expect(lineupsDialog.getByText("George Kirby")).toBeVisible();
       await expect(lineupsDialog.getByText("Confirmed lineup")).toBeVisible();
       await expect(lineupsDialog.getByText("Expected lineup")).toBeVisible();
-      await expect(lineupsDialog.locator(".lineups-dialog__player")).toHaveCount(18);
+      await expect(
+        lineupsDialog.locator(".lineups-dialog__player")
+      ).toHaveCount(18);
       const teamColumns = lineupsDialog.locator(".lineups-dialog__team");
       const awayColumn = await teamColumns.nth(0).boundingBox();
       const homeColumn = await teamColumns.nth(1).boundingBox();
-      if (!awayColumn || !homeColumn) throw new Error("lineup team columns missing");
-      expect(homeColumn.x, "desktop lineup teams render side-by-side").toBeGreaterThan(
-        awayColumn.x + awayColumn.width - 2,
-      );
+      if (!awayColumn || !homeColumn)
+        throw new Error("lineup team columns missing");
+      expect(
+        homeColumn.x,
+        "desktop lineup teams render side-by-side"
+      ).toBeGreaterThan(awayColumn.x + awayColumn.width - 2);
       await page.keyboard.press("Escape");
       await expect(lineupsDialog).toHaveCount(0);
       await expect(lineupsTrigger).toBeFocused();
@@ -1585,7 +1967,9 @@ for (const width of DESKTOP_WIDTHS) {
   });
 }
 
-test("shell feed tablet 900px: items 2,3,4,5,7 active; items 1,6 inert", async ({ page }) => {
+test("shell feed tablet 900px: items 2,3,4,5,7 active; items 1,6 inert", async ({
+  page,
+}) => {
   await gotoShellFeed(page, 900);
   await assertNoHorizontalOverflow(page, "shell-900");
 
@@ -1598,27 +1982,54 @@ test("shell feed tablet 900px: items 2,3,4,5,7 active; items 1,6 inert", async (
   const liveBox = await liveCard.boundingBox();
   const passBox = await passCard.boundingBox();
   const scheduledBox = await scheduledCard.boundingBox();
-  if (!liveBox || !passBox || !scheduledBox) throw new Error("card bounding boxes missing");
-  expect(passBox.height, "scheduled PASS is taller than compact LIVE on tablet").toBeGreaterThan(liveBox.height + 20);
-  expect(passBox.x, "two columns: PASS sits to the right of LIVE").toBeGreaterThan(liveBox.x + liveBox.width);
-  expect(Math.abs(passBox.y - liveBox.y), "two columns: PASS and LIVE share the same row").toBeLessThanOrEqual(1);
-  expect(Math.abs(scheduledBox.x - liveBox.x), "tablet row 2 returns to column 1").toBeLessThanOrEqual(1);
-  expect(scheduledBox.y, "tablet row 2 sits below the taller row-1 card").toBeGreaterThan(passBox.y + passBox.height);
+  if (!liveBox || !passBox || !scheduledBox)
+    throw new Error("card bounding boxes missing");
+  expect(
+    passBox.height,
+    "scheduled PASS is taller than compact LIVE on tablet"
+  ).toBeGreaterThan(liveBox.height + 20);
+  expect(
+    passBox.x,
+    "two columns: PASS sits to the right of LIVE"
+  ).toBeGreaterThan(liveBox.x + liveBox.width);
+  expect(
+    Math.abs(passBox.y - liveBox.y),
+    "two columns: PASS and LIVE share the same row"
+  ).toBeLessThanOrEqual(1);
+  expect(
+    Math.abs(scheduledBox.x - liveBox.x),
+    "tablet row 2 returns to column 1"
+  ).toBeLessThanOrEqual(1);
+  expect(
+    scheduledBox.y,
+    "tablet row 2 sits below the taller row-1 card"
+  ).toBeGreaterThan(passBox.y + passBox.height);
 
   // ── Item 2 active: 24px matchup score ──
-  const scoreFontSize = await liveCard.locator(".matchup__score").first().evaluate((el) => getComputedStyle(el).fontSize);
-  expect(scoreFontSize, "matchup__score computed font-size at tablet").toBe("24px");
+  const scoreFontSize = await liveCard
+    .locator(".matchup__score")
+    .first()
+    .evaluate(el => getComputedStyle(el).fontSize);
+  expect(scoreFontSize, "matchup__score computed font-size at tablet").toBe(
+    "24px"
+  );
 
   // ── Item 3 active: PASS opacity 0.82 ──
-  const passOpacity = await passCard.evaluate((el) => getComputedStyle(el).opacity);
+  const passOpacity = await passCard.evaluate(
+    el => getComputedStyle(el).opacity
+  );
   expect(passOpacity, "PASS card computed opacity at tablet").toBe("0.82");
-  const liveOpacity = await liveCard.evaluate((el) => getComputedStyle(el).opacity);
+  const liveOpacity = await liveCard.evaluate(
+    el => getComputedStyle(el).opacity
+  );
   expect(liveOpacity, "LIVE lifecycle opacity at tablet").toBe("0.72");
   await expect(liveCard.locator(".pregame-pitchers")).toHaveCount(0);
   await expect(passCard.locator(".pregame-pitchers")).toBeVisible();
 
   // ── Item 4 active: live dot visible ──
-  const dotDisplay = await liveCard.locator(".projection-card__live-dot").evaluate((el) => getComputedStyle(el).display);
+  const dotDisplay = await liveCard
+    .locator(".projection-card__live-dot")
+    .evaluate(el => getComputedStyle(el).display);
   expect(dotDisplay, "live dot computed display at tablet").not.toBe("none");
 
   // Compact-theme + content geometry contracts: the exact same 0.2px
@@ -1627,14 +2038,19 @@ test("shell feed tablet 900px: items 2,3,4,5,7 active; items 1,6 inert", async (
   const tabletYankeesFilter = await liveCard
     .locator(".team-logo-box--dark-outline .team-logo")
     .last()
-    .evaluate((el) => getComputedStyle(el).filter);
-  expect(tabletYankeesFilter, "Dark tablet keeps the exact 0.2px Yankees keyline").toBe(
-    THIN_LOGO_FILTER,
-  );
+    .evaluate(el => getComputedStyle(el).filter);
+  expect(
+    tabletYankeesFilter,
+    "Dark tablet keeps the exact 0.2px Yankees keyline"
+  ).toBe(THIN_LOGO_FILTER);
   const tabletSummaryGeometry = [
     await assertCompactSummaryContract(liveCard, "tablet LIVE summary", true),
     await assertCompactSummaryContract(passCard, "tablet PASS summary", true),
-    await assertCompactSummaryContract(scheduledCard, "tablet SCHEDULED summary", false),
+    await assertCompactSummaryContract(
+      scheduledCard,
+      "tablet SCHEDULED summary",
+      false
+    ),
   ];
   assertUniformCompactSummaryTracks(tabletSummaryGeometry, "tablet summaries");
   await assertCompactPregameContract(passCard, "tablet PASS pregame");
@@ -1645,21 +2061,35 @@ test("shell feed tablet 900px: items 2,3,4,5,7 active; items 1,6 inert", async (
   // ── Item 6 inert: compact chrome, NOT the 96px/17px shell rhythm ──
   const feedhead = page.locator(".dc-shell-external-scroll .dmf-feedhead");
   const datelbl = page.locator(".dc-shell-external-scroll .dmf-datelbl");
-  const feedheadTop = await feedhead.evaluate((el) => getComputedStyle(el).top);
-  expect(feedheadTop, "feedhead top stays compact (46px) below 1024px, even inside the shell").toBe("46px");
-  const datelblFontSize = await datelbl.evaluate((el) => getComputedStyle(el).fontSize);
+  const feedheadTop = await feedhead.evaluate(el => getComputedStyle(el).top);
+  expect(
+    feedheadTop,
+    "feedhead top stays compact (46px) below 1024px, even inside the shell"
+  ).toBe("46px");
+  const datelblFontSize = await datelbl.evaluate(
+    el => getComputedStyle(el).fontSize
+  );
   expect(datelblFontSize, "date label stays 15px below 1024px").toBe("15px");
 
   // ── Item 7 active: hover fill still applies (min-width:768 clears) ──
   const toggle = passCard.locator(".projection-card__markets-toggle");
-  const bgBefore = await toggle.evaluate((el) => getComputedStyle(el).backgroundColor);
+  const bgBefore = await toggle.evaluate(
+    el => getComputedStyle(el).backgroundColor
+  );
   await toggle.hover();
   await page.waitForTimeout(250);
-  const bgAfter = await toggle.evaluate((el) => getComputedStyle(el).backgroundColor);
-  expect(bgAfter, "hover fill still applies at tablet width").not.toBe(bgBefore);
+  const bgAfter = await toggle.evaluate(
+    el => getComputedStyle(el).backgroundColor
+  );
+  expect(bgAfter, "hover fill still applies at tablet width").not.toBe(
+    bgBefore
+  );
   await page.mouse.move(0, 0);
 
-  await page.screenshot({ path: `${EVIDENCE_DIR}/shell-900.png`, fullPage: true });
+  await page.screenshot({
+    path: `${EVIDENCE_DIR}/shell-900.png`,
+    fullPage: true,
+  });
 });
 
 test("shell feed mobile 375px: legacy desktop rules stay inert and the centered summary stays safe", async ({
@@ -1677,36 +2107,65 @@ test("shell feed mobile 375px: legacy desktop rules stay inert and the centered 
   const liveBox = await liveCard.boundingBox();
   const passBox = await passCard.boundingBox();
   if (!liveBox || !passBox) throw new Error("card bounding boxes missing");
-  expect(passBox.height, "scheduled PASS is taller than compact LIVE on mobile").toBeGreaterThan(liveBox.height + 20);
-  expect(Math.abs(passBox.x - liveBox.x), "mobile cards share the single grid column").toBeLessThanOrEqual(1);
-  expect(passBox.y, "mobile card 2 sits below card 1").toBeGreaterThan(liveBox.y + liveBox.height);
+  expect(
+    passBox.height,
+    "scheduled PASS is taller than compact LIVE on mobile"
+  ).toBeGreaterThan(liveBox.height + 20);
+  expect(
+    Math.abs(passBox.x - liveBox.x),
+    "mobile cards share the single grid column"
+  ).toBeLessThanOrEqual(1);
+  expect(passBox.y, "mobile card 2 sits below card 1").toBeGreaterThan(
+    liveBox.y + liveBox.height
+  );
 
   // Item 2 inert: fluid clamp, not the pinned 24px.
-  const scoreFontSize = await liveCard.locator(".matchup__score").first().evaluate((el) => getComputedStyle(el).fontSize);
-  expect(scoreFontSize, "matchup__score is NOT pinned to 24px on mobile").not.toBe("24px");
+  const scoreFontSize = await liveCard
+    .locator(".matchup__score")
+    .first()
+    .evaluate(el => getComputedStyle(el).fontSize);
+  expect(
+    scoreFontSize,
+    "matchup__score is NOT pinned to 24px on mobile"
+  ).not.toBe("24px");
   expect(parseFloat(scoreFontSize)).toBeLessThan(24);
 
   // Item 3 inert: no forced opacity.
-  const passOpacity = await passCard.evaluate((el) => getComputedStyle(el).opacity);
-  expect(passOpacity, "PASS card opacity is NOT forced to 0.82 on mobile").toBe("1");
-  const liveOpacity = await liveCard.evaluate((el) => getComputedStyle(el).opacity);
-  expect(liveOpacity, "compact LIVE opacity applies at every breakpoint").toBe("0.72");
+  const passOpacity = await passCard.evaluate(
+    el => getComputedStyle(el).opacity
+  );
+  expect(passOpacity, "PASS card opacity is NOT forced to 0.82 on mobile").toBe(
+    "1"
+  );
+  const liveOpacity = await liveCard.evaluate(
+    el => getComputedStyle(el).opacity
+  );
+  expect(liveOpacity, "compact LIVE opacity applies at every breakpoint").toBe(
+    "0.72"
+  );
 
   // Item 4 inert: live dot display:none (base rule, unconditional below 768px).
-  const dotDisplay = await liveCard.locator(".projection-card__live-dot").evaluate((el) => getComputedStyle(el).display);
+  const dotDisplay = await liveCard
+    .locator(".projection-card__live-dot")
+    .evaluate(el => getComputedStyle(el).display);
   expect(dotDisplay, "live dot is display:none on mobile").toBe("none");
 
   const mobileYankeesFilter = await liveCard
     .locator(".team-logo-box--dark-outline .team-logo")
     .last()
-    .evaluate((el) => getComputedStyle(el).filter);
-  expect(mobileYankeesFilter, "Dark mobile keeps the exact 0.2px Yankees keyline").toBe(
-    THIN_LOGO_FILTER,
-  );
+    .evaluate(el => getComputedStyle(el).filter);
+  expect(
+    mobileYankeesFilter,
+    "Dark mobile keeps the exact 0.2px Yankees keyline"
+  ).toBe(THIN_LOGO_FILTER);
   const mobileSummaryGeometry = [
     await assertCompactSummaryContract(liveCard, "mobile LIVE summary", true),
     await assertCompactSummaryContract(passCard, "mobile PASS summary", true),
-    await assertCompactSummaryContract(scheduledCard, "mobile SCHEDULED summary", false),
+    await assertCompactSummaryContract(
+      scheduledCard,
+      "mobile SCHEDULED summary",
+      false
+    ),
   ];
   assertUniformCompactSummaryTracks(mobileSummaryGeometry, "mobile summaries");
   await assertCompactPregameContract(passCard, "mobile PASS pregame");
@@ -1718,20 +2177,36 @@ test("shell feed mobile 375px: legacy desktop rules stay inert and the centered 
   // pair, unaffected by any round-4 rule (round-4 introduces no card-padding
   // override at any breakpoint, so this is a byte-identity check via the
   // card's own computed padding-block-end).
-  const paddingBottom = await passCard.evaluate((el) => getComputedStyle(el).paddingBottom);
-  expect(paddingBottom, "card padding-block-end is the base 12px (--space-sm), untouched by round 4").toBe("12px");
+  const paddingBottom = await passCard.evaluate(
+    el => getComputedStyle(el).paddingBottom
+  );
+  expect(
+    paddingBottom,
+    "card padding-block-end is the base 12px (--space-sm), untouched by round 4"
+  ).toBe("12px");
 
   // Item 7 inert: hovering the toggle produces NO fill change (gated on
   // min-width:768px — headless Chromium reports (hover:hover)=true by
   // default, so this genuinely isolates the width gate, not hover capability).
   const toggle = passCard.locator(".projection-card__markets-toggle");
-  const bgBefore = await toggle.evaluate((el) => getComputedStyle(el).backgroundColor);
+  const bgBefore = await toggle.evaluate(
+    el => getComputedStyle(el).backgroundColor
+  );
   await toggle.hover();
   await page.waitForTimeout(250);
-  const bgAfter = await toggle.evaluate((el) => getComputedStyle(el).backgroundColor);
-  expect(bgAfter, "no hover transition/fill on the toggle below 768px").toBe(bgBefore);
-  const duration = await toggle.evaluate((el) => getComputedStyle(el).transitionDuration);
-  expect(duration, "no visible transition duration on the toggle below 768px").not.toContain("0.16s");
+  const bgAfter = await toggle.evaluate(
+    el => getComputedStyle(el).backgroundColor
+  );
+  expect(bgAfter, "no hover transition/fill on the toggle below 768px").toBe(
+    bgBefore
+  );
+  const duration = await toggle.evaluate(
+    el => getComputedStyle(el).transitionDuration
+  );
+  expect(
+    duration,
+    "no visible transition duration on the toggle below 768px"
+  ).not.toContain("0.16s");
 
   // The popover remains viewport-contained and paginates all three MLB
   // markets without resizing the mobile card or changing the feed URL.
@@ -1847,25 +2322,34 @@ test("shell feed mobile 375px: legacy desktop rules stay inert and the centered 
         .map(animation => animation.finished.catch(() => undefined))
     );
   });
-  await expect(lineupsDialog.locator(".lineups-dialog__player")).toHaveCount(18);
+  await expect(lineupsDialog.locator(".lineups-dialog__player")).toHaveCount(
+    18
+  );
   const dialogBox = await lineupsDialog.boundingBox();
   if (!dialogBox) throw new Error("mobile lineups dialog bounding box missing");
   expect(dialogBox.x).toBeGreaterThanOrEqual(8);
   expect(dialogBox.x + dialogBox.width).toBeLessThanOrEqual(375 - 8);
   expect(dialogBox.y).toBeGreaterThanOrEqual(8);
   expect(dialogBox.y + dialogBox.height).toBeLessThanOrEqual(667 - 8);
-  const mobileTeamsLayout = await lineupsDialog.locator(".lineups-dialog__teams").evaluate((element) => {
-    const style = getComputedStyle(element);
-    return {
-      columns: style.gridTemplateColumns.split(" ").length,
-      clientHeight: element.clientHeight,
-      scrollHeight: element.scrollHeight,
-      overflowY: style.overflowY,
-    };
-  });
-  expect(mobileTeamsLayout.columns, "mobile lineup teams stack in one column").toBe(1);
+  const mobileTeamsLayout = await lineupsDialog
+    .locator(".lineups-dialog__teams")
+    .evaluate(element => {
+      const style = getComputedStyle(element);
+      return {
+        columns: style.gridTemplateColumns.split(" ").length,
+        clientHeight: element.clientHeight,
+        scrollHeight: element.scrollHeight,
+        overflowY: style.overflowY,
+      };
+    });
+  expect(
+    mobileTeamsLayout.columns,
+    "mobile lineup teams stack in one column"
+  ).toBe(1);
   expect(mobileTeamsLayout.overflowY).toBe("auto");
-  expect(mobileTeamsLayout.scrollHeight).toBeGreaterThan(mobileTeamsLayout.clientHeight);
+  expect(mobileTeamsLayout.scrollHeight).toBeGreaterThan(
+    mobileTeamsLayout.clientHeight
+  );
   const dialogClose = lineupsDialog.getByRole("button", { name: "Close" });
   const closeBox = await dialogClose.boundingBox();
   if (!closeBox) throw new Error("lineups dialog close control missing");
@@ -1881,37 +2365,49 @@ test("shell feed mobile 375px: legacy desktop rules stay inert and the centered 
   });
 });
 
-test("light theme: the next-edge control keeps a black border and mint arrow", async ({ page }) => {
+test("light theme: the next-edge control keeps a black border and mint arrow", async ({
+  page,
+}) => {
   await gotoShellFeed(page, 900, 900, "light");
   const liveCard = cardByAriaLabel(page, "Dodgers at Yankees");
   const nextEdge = liveCard.locator('.summary__next[tabindex="0"]');
   await expect(nextEdge).toBeVisible();
-  const colors = await nextEdge.evaluate((el) => {
+  const colors = await nextEdge.evaluate(el => {
     const cs = getComputedStyle(el);
     return { border: cs.borderColor, color: cs.color };
   });
-  expect(colors.border, "light-theme arrow border is black").toBe("rgb(0, 0, 0)");
-  expect(colors.color, "light-theme arrow remains Dime mint").toBe("rgb(69, 224, 168)");
+  expect(colors.border, "light-theme arrow border is black").toBe(
+    "rgb(0, 0, 0)"
+  );
+  expect(colors.color, "light-theme arrow remains Dime mint").toBe(
+    "rgb(69, 224, 168)"
+  );
   const yankeesFilter = await liveCard
     .locator(".team-logo-box--dark-outline .team-logo")
     .last()
-    .evaluate((el) => getComputedStyle(el).filter);
-  expect(yankeesFilter, "Light keeps the original Yankees artwork without a white outline").toBe("none");
+    .evaluate(el => getComputedStyle(el).filter);
+  expect(
+    yankeesFilter,
+    "Light keeps the original Yankees artwork without a white outline"
+  ).toBe("none");
   await assertNoHorizontalOverflow(page, "shell-900-light");
 });
 
-test("retired 'system' selection migrates to Dark (two-mode system, 2026-07-31)", async ({ page }) => {
+test("retired 'system' selection migrates to Dark (two-mode system, 2026-07-31)", async ({
+  page,
+}) => {
   // OS prefers light AND the stored value is the retired "system" mode — the
   // app must resolve to explicit Dark: dark ink, pure-black Law-v2 surfaces,
   // and the persisted mode rewritten to "dark".
   await gotoShellFeed(page, 900, 900, "light", "system");
   const root = page.locator(".dmf-root");
   await expect(root).toHaveAttribute("data-dmf-mode", "dark");
-  const palette = await root.evaluate((el) => {
+  const palette = await root.evaluate(el => {
     const cs = getComputedStyle(el);
     return {
       page: cs.backgroundColor,
-      card: getComputedStyle(el.querySelector(".projection-card")!).backgroundColor,
+      card: getComputedStyle(el.querySelector(".projection-card")!)
+        .backgroundColor,
       htmlMode: document.documentElement.dataset.themeMode,
       htmlDark: document.documentElement.classList.contains("dark"),
       contrastTheme: el.getAttribute("data-dmf-theme"),
@@ -1921,15 +2417,24 @@ test("retired 'system' selection migrates to Dark (two-mode system, 2026-07-31)"
   expect(palette.htmlMode).toBe("dark");
   expect(palette.htmlDark, "migrated mode uses dark ink").toBe(true);
   expect(palette.contrastTheme).toBe("dark");
-  expect(palette.page, "migrated page is Law-v2 pure black").toBe("rgb(0, 0, 0)");
-  expect(palette.card, "migrated cards use the tier-1 surface").toBe("rgb(10, 10, 10)");
-  expect(palette.persisted, "the retired value is rewritten on first load").toBe("dark");
+  expect(palette.page, "migrated page is Law-v2 pure black").toBe(
+    "rgb(0, 0, 0)"
+  );
+  expect(palette.card, "migrated cards use the tier-1 surface").toBe(
+    "rgb(10, 10, 10)"
+  );
+  expect(
+    palette.persisted,
+    "the retired value is rewritten on first load"
+  ).toBe("dark");
 
   const yankeesFilter = await cardByAriaLabel(page, "Dodgers at Yankees")
     .locator(".team-logo-box--dark-outline .team-logo")
     .last()
-    .evaluate((el) => getComputedStyle(el).filter);
-  expect(yankeesFilter, "Dark keeps the 0.2px dark-logo keyline").toBe(THIN_LOGO_FILTER);
+    .evaluate(el => getComputedStyle(el).filter);
+  expect(yankeesFilter, "Dark keeps the 0.2px dark-logo keyline").toBe(
+    THIN_LOGO_FILTER
+  );
   await assertNoHorizontalOverflow(page, "shell-900-migrated-dark");
 });
 
@@ -1952,7 +2457,9 @@ test("retired 'system' selection migrates to Dark (two-mode system, 2026-07-31)"
 // client/src or server file is touched, and the real CSS media query
 // (`@media (min-width:1024px)`) still evaluates against the REAL 1440px
 // viewport exactly as a real browser would.
-test("standalone /feed at 1440px: item-6 rhythm absent (no shell ancestor)", async ({ page }) => {
+test("standalone /feed at 1440px: item-6 rhythm absent (no shell ancestor)", async ({
+  page,
+}) => {
   await stubApi(page);
   await page.emulateMedia({ colorScheme: "dark" });
   await page.addInitScript(() => {
@@ -1987,12 +2494,27 @@ test("standalone /feed at 1440px: item-6 rhythm absent (no shell ancestor)", asy
   await expect(page.locator(".dc-shell-external-scroll")).toHaveCount(0);
   await expect(page.locator(".dmf-wordmark")).toBeVisible();
 
-  const topbarHeight = await page.locator(".dmf-topbar").evaluate((el) => getComputedStyle(el).height);
-  expect(topbarHeight, "standalone topbar stays compact (46px), NOT the shell's 96px band").toBe("46px");
-  const feedheadTop = await page.locator(".dmf-feedhead").evaluate((el) => getComputedStyle(el).top);
+  const topbarHeight = await page
+    .locator(".dmf-topbar")
+    .evaluate(el => getComputedStyle(el).height);
+  expect(
+    topbarHeight,
+    "standalone topbar stays compact (46px), NOT the shell's 96px band"
+  ).toBe("46px");
+  const feedheadTop = await page
+    .locator(".dmf-feedhead")
+    .evaluate(el => getComputedStyle(el).top);
   expect(feedheadTop, "standalone feedhead top stays 46px").toBe("46px");
-  const datelblFontSize = await page.locator(".dmf-datelbl").evaluate((el) => getComputedStyle(el).fontSize);
-  expect(datelblFontSize, "standalone date label stays 15px, NOT the shell's 17px").toBe("15px");
+  const datelblFontSize = await page
+    .locator(".dmf-datelbl")
+    .evaluate(el => getComputedStyle(el).fontSize);
+  expect(
+    datelblFontSize,
+    "standalone date label stays 15px, NOT the shell's 17px"
+  ).toBe("15px");
 
-  await page.screenshot({ path: `${EVIDENCE_DIR}/standalone-1440.png`, fullPage: true });
+  await page.screenshot({
+    path: `${EVIDENCE_DIR}/standalone-1440.png`,
+    fullPage: true,
+  });
 });

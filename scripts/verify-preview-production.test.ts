@@ -29,14 +29,17 @@ describe("verify-preview-production scanner", () => {
       "index.html": "<div>app</div>",
     });
     const result = scanDist(root);
-    expect(result.loadBearing.every((t: { matches: string[] }) => t.matches.length === 0)).toBe(
-      true
-    );
+    expect(
+      result.loadBearing.every(
+        (t: { matches: string[] }) => t.matches.length === 0
+      )
+    ).toBe(true);
   });
 
   it("negative control: detects an injected activation canary", () => {
     const root = fixtureDist({
-      "assets/index-abc.js": 'x&&console.debug("__DIME_PREVIEW_GATE_ACTIVE__");',
+      "assets/index-abc.js":
+        'x&&console.debug("__DIME_PREVIEW_GATE_ACTIVE__");',
     });
     const result = scanDist(root);
     const canary = result.loadBearing.find(
@@ -47,11 +50,14 @@ describe("verify-preview-production scanner", () => {
 
   it("negative control: detects a runtime preview query check", () => {
     const root = fixtureDist({
-      "assets/chunk.js": 'if(new URLSearchParams(s).get("preview")==="1"){enable()}',
+      "assets/chunk.js":
+        'if(new URLSearchParams(s).get("preview")==="1"){enable()}',
     });
     const result = scanDist(root);
     expect(
-      result.loadBearing.some((t: { matches: string[] }) => t.matches.length > 0)
+      result.loadBearing.some(
+        (t: { matches: string[] }) => t.matches.length > 0
+      )
     ).toBe(true);
   });
 
@@ -75,9 +81,11 @@ describe("verify-preview-production scanner", () => {
       "assets/index-abc.js": 'a.searchParams.set("preview","1")',
     });
     const result = scanDist(root);
-    expect(result.loadBearing.every((t: { matches: string[] }) => t.matches.length === 0)).toBe(
-      true
-    );
+    expect(
+      result.loadBearing.every(
+        (t: { matches: string[] }) => t.matches.length === 0
+      )
+    ).toBe(true);
     expect(
       result.advisory.some((t: { matches: string[] }) => t.matches.length > 0)
     ).toBe(true);

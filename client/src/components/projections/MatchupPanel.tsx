@@ -28,17 +28,25 @@ export function MatchupPanel({ game }: { game: ProjectionGame }) {
       <div className="matchup__grid">
         <div className="matchup__team matchup__team--away">
           <TeamLogoMark team={away} />
-          {showScore && <span className="matchup__score score-value">{away.score}</span>}
+          {showScore && (
+            <span className="matchup__score score-value">{away.score}</span>
+          )}
         </div>
 
         <div className="matchup__center">
           <span className="matchup__line" title={`${away.name} @ ${home.name}`}>
-            {away.name} <span className="matchup__at" aria-hidden="true">@</span> {home.name}
+            {away.name}{" "}
+            <span className="matchup__at" aria-hidden="true">
+              @
+            </span>{" "}
+            {home.name}
           </span>
         </div>
 
         <div className="matchup__team matchup__team--home">
-          {showScore && <span className="matchup__score score-value">{home.score}</span>}
+          {showScore && (
+            <span className="matchup__score score-value">{home.score}</span>
+          )}
           <TeamLogoMark team={home} />
         </div>
 
@@ -48,9 +56,18 @@ export function MatchupPanel({ game }: { game: ProjectionGame }) {
         {(matchupContext || showVenue || startTime) && (
           <div className="matchup__below">
             {matchupContext && (
-              <span className="matchup__context ds-truncate" title={matchupContext}>{matchupContext}</span>
+              <span
+                className="matchup__context ds-truncate"
+                title={matchupContext}
+              >
+                {matchupContext}
+              </span>
             )}
-            {showVenue && <span className="matchup__venue ds-truncate" title={venue}>{venue}</span>}
+            {showVenue && (
+              <span className="matchup__venue ds-truncate" title={venue}>
+                {venue}
+              </span>
+            )}
             {startTime && <span className="matchup__time">{startTime}</span>}
           </div>
         )}

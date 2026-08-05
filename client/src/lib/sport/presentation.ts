@@ -23,7 +23,8 @@ import { countryIdentity, isRawCountryCode } from "./countries";
 
 // ─── The sport universe ──────────────────────────────────────────────────────
 
-export type Sport = "MLB" | "NFL" | "NBA" | "NHL" | "NCAAF" | "NCAAM" | "SOCCER";
+export type Sport =
+  "MLB" | "NFL" | "NBA" | "NHL" | "NCAAF" | "NCAAM" | "SOCCER";
 export type EventStatus = "scheduled" | "live" | "final" | "postponed";
 export type EventRole = "home" | "away";
 export type ParticipantKind = "team" | "country";
@@ -126,7 +127,7 @@ export function assertNever(x: never): never {
  */
 export function formatDoubleChanceSelection(
   selection: DoubleChanceSelection,
-  event: Pick<SportPresentationModel, "homeParticipant" | "awayParticipant">,
+  event: Pick<SportPresentationModel, "homeParticipant" | "awayParticipant">
 ): string {
   switch (selection) {
     case "HOME_OR_DRAW":
@@ -185,7 +186,10 @@ export interface AdapterContext {
   competition?: string;
 }
 
-export type SportAdapter = (raw: FeedEventLike, ctx?: AdapterContext) => SportPresentationModel;
+export type SportAdapter = (
+  raw: FeedEventLike,
+  ctx?: AdapterContext
+) => SportPresentationModel;
 
 // ─── Shared building blocks ──────────────────────────────────────────────────
 
@@ -210,17 +214,22 @@ function venueOf(raw: FeedEventLike): string | undefined {
 
 /** First pitch / kickoff in ET. Final and postponed cards carry a status label,
  *  not a start time, so the matchup block's last line stays off. */
-function startTimeOf(raw: FeedEventLike, status: EventStatus): string | undefined {
-  return status === "final" || status === "postponed" ? undefined : raw.timeLabel || undefined;
+function startTimeOf(
+  raw: FeedEventLike,
+  status: EventStatus
+): string | undefined {
+  return status === "final" || status === "postponed"
+    ? undefined
+    : raw.timeLabel || undefined;
 }
 
 /** Spelled-out market titles (owner directive 2026-07-18): no abbreviated
  *  headers above the market tables. Unlisted titles pass through verbatim. */
 const MARKET_DISPLAY_LABELS: Record<string, string> = {
-  "ml": "Moneyline",
+  ml: "Moneyline",
   "to adv": "To Advance",
   "dbl chc": "Double Chance",
-  "btts": "Both Teams to Score",
+  btts: "Both Teams to Score",
 };
 function marketDisplayLabel(title: string): string {
   return MARKET_DISPLAY_LABELS[title.trim().toLowerCase()] ?? title;
@@ -232,15 +241,18 @@ function marketDisplayLabel(title: string): string {
  *  ("ESP ML · +3.1%" → "Spain ML · +3.1%"). */
 function footOf(
   m: FeedMarketLike,
-  selections: MarketSelectionModel[],
+  selections: MarketSelectionModel[]
 ): { resultLabel?: string; resultIsEdge?: boolean } {
   const label = m.foot.label?.trim();
   if (!label) return {};
   if (!m.foot.edge) return { resultLabel: label, resultIsEdge: false };
-  const idx = m.rows.findIndex((r) => label.startsWith(r.label.trim()));
+  const idx = m.rows.findIndex(r => label.startsWith(r.label.trim()));
   const tail = /·\s*\+[\d.]+%\s*$/.exec(label)?.[0];
   if (idx >= 0 && tail && selections[idx]) {
-    return { resultLabel: `${selections[idx].label} ${tail}`, resultIsEdge: true };
+    return {
+      resultLabel: `${selections[idx].label} ${tail}`,
+      resultIsEdge: true,
+    };
   }
   return { resultLabel: label, resultIsEdge: true };
 }
@@ -258,7 +270,9 @@ function sidesFromMarket(m: MarketPresentationModel): MarketSideInput[] {
   }));
 }
 
-function projectionOf(markets: MarketPresentationModel[]): ProjectionSummaryModel {
+function projectionOf(
+  markets: MarketPresentationModel[]
+): ProjectionSummaryModel {
   const sides = markets.flatMap(sidesFromMarket);
   return { primary: primaryInsight(sides), ranked: rankMarkets(sides) };
 }
@@ -292,7 +306,11 @@ function teamRoleFor(idx: number, label: string): SelectionRole {
 
 /** Replace a leading team-code token ("NYY +1.5") with the participant's name
  *  ("Yankees +1.5"). Labels that don't lead with a known code pass through. */
-function teamDeCode(label: string, away: Participant, home: Participant): string {
+function teamDeCode(
+  label: string,
+  away: Participant,
+  home: Participant
+): string {
   const first = label.trim().split(/\s+/)[0];
   if (first && first === away.id) return label.replace(first, away.displayName);
   if (first && first === home.id) return label.replace(first, home.displayName);
@@ -305,7 +323,12 @@ function teamDeCode(label: string, away: Participant, home: Participant): string
  *  carousel ("Yankees ML", never a bare "Yankees") — run/puck-line and spread
  *  rows spell the team name and keep their line ("Yankees +1.5"), and total
  *  rows spell Over/Under ("Under 9"). Unrecognized labels pass through. */
-function teamSideLabel(title: string, rawLabel: string, away: Participant, home: Participant): string {
+function teamSideLabel(
+  title: string,
+  rawLabel: string,
+  away: Participant,
+  home: Participant
+): string {
   const t = title.trim().toLowerCase();
   const label = rawLabel.trim();
   if (t === "ml" || t === "moneyline") {
@@ -316,15 +339,21 @@ function teamSideLabel(title: string, rawLabel: string, away: Participant, home:
     const head = label.split(/\s+/)[0]?.toUpperCase();
     const tail = numTail(label);
     if (head === "O" || head === "OVER") return tail ? `Over ${tail}` : "Over";
-    if (head === "U" || head === "UNDER") return tail ? `Under ${tail}` : "Under";
+    if (head === "U" || head === "UNDER")
+      return tail ? `Under ${tail}` : "Under";
     return label;
   }
-  if (/^(run ?line|puck ?line|spread)$/.test(t)) return teamDeCode(label, away, home);
+  if (/^(run ?line|puck ?line|spread)$/.test(t))
+    return teamDeCode(label, away, home);
   return rawLabel;
 }
 
-function teamMarkets(raw: FeedEventLike, away: Participant, home: Participant): MarketPresentationModel[] {
-  return raw.markets.map((m) => {
+function teamMarkets(
+  raw: FeedEventLike,
+  away: Participant,
+  home: Participant
+): MarketPresentationModel[] {
+  return raw.markets.map(m => {
     const key = m.title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
     const selections: MarketSelectionModel[] = m.rows.map((row, i) => ({
       id: `${key}-${i}`,
@@ -333,11 +362,19 @@ function teamMarkets(raw: FeedEventLike, away: Participant, home: Participant): 
       bookPrice: parseAmerican(row.book),
       modelPrice: parseAmerican(row.model),
     }));
-    return { key, label: marketDisplayLabel(m.title), selections, ...footOf(m, selections) };
+    return {
+      key,
+      label: marketDisplayLabel(m.title),
+      selections,
+      ...footOf(m, selections),
+    };
   });
 }
 
-function createTeamPresentation(sport: Sport, competition: string): SportAdapter {
+function createTeamPresentation(
+  sport: Sport,
+  competition: string
+): SportAdapter {
   return (raw, ctx) => {
     const awayParticipant = teamParticipant(raw.away, "away");
     const homeParticipant = teamParticipant(raw.home, "home");
@@ -406,11 +443,14 @@ function soccerMarket(
   m: FeedMarketLike,
   away: Participant,
   home: Participant,
-  event: Pick<SportPresentationModel, "homeParticipant" | "awayParticipant">,
+  event: Pick<SportPresentationModel, "homeParticipant" | "awayParticipant">
 ): MarketPresentationModel {
   // Key from the full title (tag included, so tagged and untagged variants
   // stay distinct); trim edge hyphens left by trailing symbols like ")".
-  const key = m.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  const key = m.title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
   // "(90 Min)" scope tag (owner directive 2026-07-18): when a card carries a
   // match-WINNER market, its 90-minute-scoped markets say so in their headers.
   // The tag is display-only — strip it before matching the market shape so
@@ -418,15 +458,22 @@ function soccerMarket(
   // it to the spelled-out display label ("Double Chance (90 Min)").
   const rawTitle = m.title.trim();
   const tag90 = /\s*\(90 min\)$/i.test(rawTitle);
-  const baseTitle = tag90 ? rawTitle.replace(/\s*\(90 min\)$/i, "").trim() : rawTitle;
-  const displayLabel = tag90 ? `${marketDisplayLabel(baseTitle)} (90 Min)` : marketDisplayLabel(baseTitle);
+  const baseTitle = tag90
+    ? rawTitle.replace(/\s*\(90 min\)$/i, "").trim()
+    : rawTitle;
+  const displayLabel = tag90
+    ? `${marketDisplayLabel(baseTitle)} (90 Min)`
+    : marketDisplayLabel(baseTitle);
   const title = baseTitle.toLowerCase();
-  const price = (row: FeedRowLike) => ({ bookPrice: parseAmerican(row.book), modelPrice: parseAmerican(row.model) });
+  const price = (row: FeedRowLike) => ({
+    bookPrice: parseAmerican(row.book),
+    modelPrice: parseAmerican(row.model),
+  });
   const sel = (
     i: number,
     role: SelectionRole,
     label: string,
-    participant?: Participant,
+    participant?: Participant
   ): MarketSelectionModel => ({
     id: `${key}-${i}`,
     role,
@@ -441,8 +488,18 @@ function soccerMarket(
     case "dbl chc":
       // Row 0 = HOME WD, row 1 = AWAY WD (feed contract) → resolve via identity.
       selections = [
-        sel(0, "home_or_draw", formatDoubleChanceSelection("HOME_OR_DRAW", event), home),
-        sel(1, "away_or_draw", formatDoubleChanceSelection("AWAY_OR_DRAW", event), away),
+        sel(
+          0,
+          "home_or_draw",
+          formatDoubleChanceSelection("HOME_OR_DRAW", event),
+          home
+        ),
+        sel(
+          1,
+          "away_or_draw",
+          formatDoubleChanceSelection("AWAY_OR_DRAW", event),
+          away
+        ),
       ];
       break;
     case "draw":
@@ -463,7 +520,12 @@ function soccerMarket(
       // Flag + "<Country> ML" per row (owner directive 2026-07-18).
       selections = m.rows.map((row, i) => {
         const participant = i === 0 ? away : home;
-        return sel(i, i === 0 ? "away" : "home", `${participant.displayName} ML`, participant);
+        return sel(
+          i,
+          i === 0 ? "away" : "home",
+          `${participant.displayName} ML`,
+          participant
+        );
       });
       break;
     // Winner-scope markets (owner directive 2026-07-18): graded on whoever
@@ -474,13 +536,23 @@ function soccerMarket(
     case "world cup 3rd place":
       selections = m.rows.map((row, i) => {
         const participant = i === 0 ? away : home;
-        return sel(i, i === 0 ? "away" : "home", `${participant.displayName} 3rd Place`, participant);
+        return sel(
+          i,
+          i === 0 ? "away" : "home",
+          `${participant.displayName} 3rd Place`,
+          participant
+        );
       });
       break;
     case "to win the world cup":
       selections = m.rows.map((row, i) => {
         const participant = i === 0 ? away : home;
-        return sel(i, i === 0 ? "away" : "home", `${participant.displayName} to Win WC`, participant);
+        return sel(
+          i,
+          i === 0 ? "away" : "home",
+          `${participant.displayName} to Win WC`,
+          participant
+        );
       });
       break;
     case "to adv":
@@ -488,8 +560,14 @@ function soccerMarket(
     default:
       // away top / home bottom (feed contract); de-code any leading FIFA token.
       selections = m.rows.map((row, i) => {
-        const participant = i === 0 ? away : i === m.rows.length - 1 ? home : undefined;
-        return sel(i, i === 0 ? "away" : "home", deCode(row.label, away, home), participant);
+        const participant =
+          i === 0 ? away : i === m.rows.length - 1 ? home : undefined;
+        return sel(
+          i,
+          i === 0 ? "away" : "home",
+          deCode(row.label, away, home),
+          participant
+        );
       });
       break;
   }
@@ -500,7 +578,9 @@ export const createSoccerPresentation: SportAdapter = (raw, ctx) => {
   const awayParticipant = countryParticipant(raw.away, "away");
   const homeParticipant = countryParticipant(raw.home, "home");
   const evt = { homeParticipant, awayParticipant };
-  const markets = raw.markets.map((m) => soccerMarket(m, awayParticipant, homeParticipant, evt));
+  const markets = raw.markets.map(m =>
+    soccerMarket(m, awayParticipant, homeParticipant, evt)
+  );
   const status = statusOf(raw);
   return {
     eventId: raw.id,
@@ -531,6 +611,10 @@ export const sportAdapters: Record<Sport, SportAdapter> = {
 };
 
 /** Adapt any supported event by sport key. */
-export function toPresentation(sport: Sport, raw: FeedEventLike, ctx?: AdapterContext): SportPresentationModel {
+export function toPresentation(
+  sport: Sport,
+  raw: FeedEventLike,
+  ctx?: AdapterContext
+): SportPresentationModel {
   return sportAdapters[sport](raw, ctx);
 }

@@ -15,14 +15,11 @@ import { NHL_BY_DB_SLUG, getNhlTeamByAnSlug } from "../shared/nhlTeams";
  * Inline the rest-days computation logic from nhlHockeyRefScraper.ts
  * so we can test it without HTTP calls.
  */
-function computeRestDays(
-  gameDates: string[],
-  targetDateStr: string
-): number {
+function computeRestDays(gameDates: string[], targetDateStr: string): number {
   const target = new Date(targetDateStr + "T00:00:00Z");
   const prior = gameDates
-    .map((d) => new Date(d + "T00:00:00Z"))
-    .filter((d) => d < target)
+    .map(d => new Date(d + "T00:00:00Z"))
+    .filter(d => d < target)
     .sort((a, b) => b.getTime() - a.getTime());
 
   if (prior.length === 0) return 3; // default when no prior game found

@@ -8,13 +8,15 @@ import { deriveThreadTitle, sanitizeThreadTitle } from "./dimeChatTitle";
 
 describe("deriveThreadTitle — league + topic + date composition", () => {
   it("titles the canonical schedule ask league-topic-date", () => {
-    expect(deriveThreadTitle("What is the MLB schedule for July 29, 2026?")).toBe(
-      "MLB Schedule — Jul 29",
-    );
+    expect(
+      deriveThreadTitle("What is the MLB schedule for July 29, 2026?")
+    ).toBe("MLB Schedule — Jul 29");
   });
 
   it("abbreviated month and ordinal day both parse", () => {
-    expect(deriveThreadTitle("mlb schedule sept 3rd")).toBe("MLB Schedule — Sep 3");
+    expect(deriveThreadTitle("mlb schedule sept 3rd")).toBe(
+      "MLB Schedule — Sep 3"
+    );
   });
 
   it("slash dates parse with sanity guards", () => {
@@ -25,7 +27,9 @@ describe("deriveThreadTitle — league + topic + date composition", () => {
 
   it("relative dates: tonight beats today; tomorrow stands alone", () => {
     expect(deriveThreadTitle("best bets tonight")).toBe("Best Bets — Tonight");
-    expect(deriveThreadTitle("any games tomorrow?")).toBe("Schedule — Tomorrow");
+    expect(deriveThreadTitle("any games tomorrow?")).toBe(
+      "Schedule — Tomorrow"
+    );
   });
 
   it("league alone / topic alone / league+date all compose", () => {
@@ -43,7 +47,9 @@ describe("deriveThreadTitle — league + topic + date composition", () => {
 
 describe("deriveThreadTitle — topic precedence", () => {
   it("'best bets' beats the generic odds/lines vocabulary", () => {
-    expect(deriveThreadTitle("best bets and odds for mlb")).toBe("MLB Best Bets");
+    expect(deriveThreadTitle("best bets and odds for mlb")).toBe(
+      "MLB Best Bets"
+    );
   });
 
   it("'ml' is Moneyline but never fires inside 'mlb'", () => {
@@ -59,10 +65,10 @@ describe("deriveThreadTitle — topic precedence", () => {
 describe("deriveThreadTitle — teams and matchups", () => {
   it("two teams mirror the user's separator form", () => {
     expect(deriveThreadTitle("phillies @ marlins props")).toBe(
-      "Phillies @ Marlins Props",
+      "Phillies @ Marlins Props"
     );
     expect(deriveThreadTitle("who wins phillies vs marlins")).toBe(
-      "Phillies vs Marlins",
+      "Phillies vs Marlins"
     );
   });
 
@@ -74,25 +80,25 @@ describe("deriveThreadTitle — teams and matchups", () => {
 
   it("multiword nicknames resolve (Red Sox, D-backs)", () => {
     expect(deriveThreadTitle("red sox vs white sox totals")).toBe(
-      "Red Sox vs White Sox Totals",
+      "Red Sox vs White Sox Totals"
     );
     expect(deriveThreadTitle("dbacks spread?")).toBe("D-backs Spread");
   });
 
   it("teams appear in text order, capped at two", () => {
     expect(deriveThreadTitle("mets, braves, and phillies news")).toBe(
-      "Mets vs Braves",
+      "Mets vs Braves"
     );
   });
 });
 
 describe("deriveThreadTitle — fallback cleanup", () => {
   it("strips layered question/command scaffolding", () => {
-    expect(deriveThreadTitle("Hey dime, can you tell me your data sources?")).toBe(
-      "Your data sources",
-    );
+    expect(
+      deriveThreadTitle("Hey dime, can you tell me your data sources?")
+    ).toBe("Your data sources");
     expect(deriveThreadTitle("what can Dime AI currently help me with?")).toBe(
-      "Dime AI currently help me with",
+      "Dime AI currently help me with"
     );
   });
 
@@ -106,7 +112,7 @@ describe("deriveThreadTitle — fallback cleanup", () => {
     // Deliberately vocabulary-neutral text — no league/topic/team/date words,
     // so this exercises the pure fallback path.
     const t = deriveThreadTitle(
-      "explain the difference between correlation and causation in simple terms for a beginner audience",
+      "explain the difference between correlation and causation in simple terms for a beginner audience"
     );
     expect(t.length).toBeLessThanOrEqual(48);
     expect(t.endsWith("…")).toBe(true);
@@ -115,7 +121,9 @@ describe("deriveThreadTitle — fallback cleanup", () => {
   });
 
   it("whitespace collapses before anything else", () => {
-    expect(deriveThreadTitle("  bankroll\n\nadvice   please ")).toBe("Bankroll");
+    expect(deriveThreadTitle("  bankroll\n\nadvice   please ")).toBe(
+      "Bankroll"
+    );
   });
 });
 
@@ -140,7 +148,7 @@ describe("sanitizeThreadTitle — rename path", () => {
 
   it("never applies topic detection to a rename", () => {
     expect(sanitizeThreadTitle("what is the mlb schedule for july 29")).toBe(
-      "what is the mlb schedule for july 29",
+      "what is the mlb schedule for july 29"
     );
   });
 });

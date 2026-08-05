@@ -10,12 +10,26 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { suggestPrice, type DraftLeg } from "./ParlayBuilder";
-import { MAX_PARLAY_LEGS, MIN_PARLAY_LEGS, combineLegOdds } from "@shared/parlayPricing";
+import {
+  MAX_PARLAY_LEGS,
+  MIN_PARLAY_LEGS,
+  combineLegOdds,
+} from "@shared/parlayPricing";
 
 const leg = (odds: number, over: Partial<DraftLeg> = {}): DraftLeg => ({
-  anGameId: 1, gameNumber: 1, sport: "MLB", gameDate: "2026-08-04",
-  awayTeam: "NYY", homeTeam: "BOS", market: "ML", pickSide: "AWAY",
-  timeframe: "FULL_GAME", line: null, odds, label: "NYY ML", ...over,
+  anGameId: 1,
+  gameNumber: 1,
+  sport: "MLB",
+  gameDate: "2026-08-04",
+  awayTeam: "NYY",
+  homeTeam: "BOS",
+  market: "ML",
+  pickSide: "AWAY",
+  timeframe: "FULL_GAME",
+  line: null,
+  odds,
+  label: "NYY ML",
+  ...over,
 });
 
 const read = (p: string) => readFileSync(join(__dirname, p), "utf8");
@@ -56,8 +70,13 @@ describe("suggestPrice", () => {
 describe("the ticket price calculates live, and never overwrites the user's", () => {
   it("REGRESSION: the price recomputes in real time from the legs", () => {
     // The page owns the recompute so it can react to every add and remove.
-    const page = readFileSync(join(__dirname, "../pages/BetTracker.tsx"), "utf8");
-    expect(page).toMatch(/useEffect\(\(\) => \{[\s\S]{0,200}suggestPrice\(draftLegs\)/);
+    const page = readFileSync(
+      join(__dirname, "../pages/BetTracker.tsx"),
+      "utf8"
+    );
+    expect(page).toMatch(
+      /useEffect\(\(\) => \{[\s\S]{0,200}suggestPrice\(draftLegs\)/
+    );
     expect(page).toMatch(/\}, \[draftLegs, ticketOddsManual\]\)/);
   });
 
@@ -65,7 +84,10 @@ describe("the ticket price calculates live, and never overwrites the user's", ()
     // A correlated same-game price or a boost is deliberately NOT the product
     // of its legs, and the contract allows both. Once the user states their
     // book's number, the live recompute must stand down.
-    const page = readFileSync(join(__dirname, "../pages/BetTracker.tsx"), "utf8");
+    const page = readFileSync(
+      join(__dirname, "../pages/BetTracker.tsx"),
+      "utf8"
+    );
     expect(page).toMatch(/if \(ticketOddsManual\) return;/);
     expect(builder).toMatch(/onTicketOddsManualChange\(true\)/);
   });
@@ -105,13 +127,19 @@ describe("the stake is on the TICKET, not the legs", () => {
   });
 
   it("REGRESSION: the leg form hides risk and to-win in parlay mode", () => {
-    const page = readFileSync(join(__dirname, "../pages/BetTracker.tsx"), "utf8");
+    const page = readFileSync(
+      join(__dirname, "../pages/BetTracker.tsx"),
+      "utf8"
+    );
     expect(page).toMatch(/entryMode === "PARLAY" \? "grid grid-cols-1 gap-3"/);
     expect(page).toMatch(/\{entryMode === "STRAIGHT" && \(/);
   });
 
   it("the leg field is labelled as a leg price", () => {
-    const page = readFileSync(join(__dirname, "../pages/BetTracker.tsx"), "utf8");
+    const page = readFileSync(
+      join(__dirname, "../pages/BetTracker.tsx"),
+      "utf8"
+    );
     expect(page).toMatch(/entryMode === "PARLAY" \? "Leg odds" : "Odds"/);
   });
 
@@ -143,7 +171,9 @@ describe("Dime brand law", () => {
 
   it("uses no gradients", () => {
     for (const [name, src] of Object.entries(files)) {
-      expect(src, name).not.toMatch(/linear-gradient|radial-gradient|bg-gradient/);
+      expect(src, name).not.toMatch(
+        /linear-gradient|radial-gradient|bg-gradient/
+      );
     }
   });
 
@@ -154,7 +184,10 @@ describe("Dime brand law", () => {
     // law it is enforcing.
     const NEON_GREEN = ["39", "FF", "14"].join("");
     const GOLD = ["FF", "D7", "00"].join("");
-    const forbidden = new RegExp(`${NEON_GREEN}|${GOLD}|purple|violet|gold\\b`, "i");
+    const forbidden = new RegExp(
+      `${NEON_GREEN}|${GOLD}|purple|violet|gold\\b`,
+      "i"
+    );
     for (const [name, src] of Object.entries(files)) {
       expect(src, name).not.toMatch(forbidden);
     }
@@ -182,7 +215,10 @@ describe("Dime brand law", () => {
 describe("accessibility", () => {
   it("the mode switch is a labelled tablist", () => {
     // Asserted in the page that renders it.
-    const page = readFileSync(join(__dirname, "../pages/BetTracker.tsx"), "utf8");
+    const page = readFileSync(
+      join(__dirname, "../pages/BetTracker.tsx"),
+      "utf8"
+    );
     expect(page).toMatch(/role="tablist"/);
     expect(page).toMatch(/aria-label="Bet type"/);
     expect(page).toMatch(/aria-selected=\{entryMode === mode\}/);

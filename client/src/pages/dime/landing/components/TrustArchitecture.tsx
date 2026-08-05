@@ -8,11 +8,16 @@ export default function TrustArchitecture() {
       <div className="wrap">
         <div className="sec-body">
           <div className="trust-module">
-            <span className="mono mono--mint" style={{ display: "block", marginBottom: 12 }}>{TRUST.eyebrow}</span>
+            <span
+              className="mono mono--mint"
+              style={{ display: "block", marginBottom: 12 }}
+            >
+              {TRUST.eyebrow}
+            </span>
             <h2>{TRUST.moduleHeadline}</h2>
             <p>{TRUST.moduleCopy}</p>
             <ul className="trust-list">
-              {TRUST.principles.map((p) => (
+              {TRUST.principles.map(p => (
                 <li key={p}>{p}</li>
               ))}
             </ul>

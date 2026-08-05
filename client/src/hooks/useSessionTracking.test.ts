@@ -6,19 +6,37 @@ import { shouldHeartbeat, IDLE_THRESHOLD_MS } from "./useSessionTracking";
 /** Pure engagement rule — foreground + not idle + leader. */
 describe("shouldHeartbeat", () => {
   it("beats when leader + visible + active", () => {
-    expect(shouldHeartbeat({ isLeader: true, visible: true, msSinceInput: 0 })).toBe(true);
+    expect(
+      shouldHeartbeat({ isLeader: true, visible: true, msSinceInput: 0 })
+    ).toBe(true);
   });
   it("does not beat when this tab is not the leader (duplicate-tab protection)", () => {
-    expect(shouldHeartbeat({ isLeader: false, visible: true, msSinceInput: 0 })).toBe(false);
+    expect(
+      shouldHeartbeat({ isLeader: false, visible: true, msSinceInput: 0 })
+    ).toBe(false);
   });
   it("does not beat when the tab is hidden/backgrounded", () => {
-    expect(shouldHeartbeat({ isLeader: true, visible: false, msSinceInput: 0 })).toBe(false);
+    expect(
+      shouldHeartbeat({ isLeader: true, visible: false, msSinceInput: 0 })
+    ).toBe(false);
   });
   it("does not beat once idle beyond the threshold", () => {
-    expect(shouldHeartbeat({ isLeader: true, visible: true, msSinceInput: IDLE_THRESHOLD_MS + 1 })).toBe(false);
+    expect(
+      shouldHeartbeat({
+        isLeader: true,
+        visible: true,
+        msSinceInput: IDLE_THRESHOLD_MS + 1,
+      })
+    ).toBe(false);
   });
   it("still beats just under the idle threshold", () => {
-    expect(shouldHeartbeat({ isLeader: true, visible: true, msSinceInput: IDLE_THRESHOLD_MS - 1 })).toBe(true);
+    expect(
+      shouldHeartbeat({
+        isLeader: true,
+        visible: true,
+        msSinceInput: IDLE_THRESHOLD_MS - 1,
+      })
+    ).toBe(true);
   });
 });
 
@@ -26,7 +44,10 @@ describe("shouldHeartbeat", () => {
  * Source-contract for the hook wiring (the repo's client vitest runs in node
  * env, so DOM behavior is pinned by source shape rather than a jsdom mount).
  */
-const src = fs.readFileSync(path.join(import.meta.dirname, "useSessionTracking.ts"), "utf8");
+const src = fs.readFileSync(
+  path.join(import.meta.dirname, "useSessionTracking.ts"),
+  "utf8"
+);
 
 describe("useSessionTracking wiring (source contract)", () => {
   it("drives the full session lifecycle via the metrics procedures", () => {
@@ -58,10 +79,13 @@ describe("useSessionTracking wiring (source contract)", () => {
 });
 
 /** Source-contract for the session_started analytics wiring. */
-const hook = fs.readFileSync(path.join(import.meta.dirname, "useSessionTracking.ts"), "utf8");
+const hook = fs.readFileSync(
+  path.join(import.meta.dirname, "useSessionTracking.ts"),
+  "utf8"
+);
 const tracker = fs.readFileSync(
   path.join(import.meta.dirname, "..", "components", "SessionTracker.tsx"),
-  "utf8",
+  "utf8"
 );
 
 describe("session_started wiring", () => {

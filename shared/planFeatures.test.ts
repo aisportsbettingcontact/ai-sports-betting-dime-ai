@@ -14,7 +14,7 @@ import {
 
 describe("plan feature catalog", () => {
   it("[CAT-1] exposes exactly the seven requested features, in order", () => {
-    expect(PLAN_FEATURES.map((f) => f.label)).toEqual([
+    expect(PLAN_FEATURES.map(f => f.label)).toEqual([
       "Dime AI Model Projections",
       "Daily Lineups",
       "Betting Splits",
@@ -69,16 +69,29 @@ describe("planFeatureLabel", () => {
 
 describe("normalizePlanFeatures", () => {
   it("[NRM-1] returns canonical order regardless of input order", () => {
-    expect(normalizePlanFeatures(["early_access_features", "daily_lineups", "ai_model_projections"]))
-      .toEqual(["ai_model_projections", "daily_lineups", "early_access_features"]);
+    expect(
+      normalizePlanFeatures([
+        "early_access_features",
+        "daily_lineups",
+        "ai_model_projections",
+      ])
+    ).toEqual([
+      "ai_model_projections",
+      "daily_lineups",
+      "early_access_features",
+    ]);
   });
 
   it("[NRM-2] de-duplicates", () => {
-    expect(normalizePlanFeatures(["betting_splits", "betting_splits"])).toEqual(["betting_splits"]);
+    expect(normalizePlanFeatures(["betting_splits", "betting_splits"])).toEqual(
+      ["betting_splits"]
+    );
   });
 
   it("[NRM-3] drops unknown keys rather than persisting them", () => {
-    expect(normalizePlanFeatures(["betting_splits", "bogus", ""])).toEqual(["betting_splits"]);
+    expect(normalizePlanFeatures(["betting_splits", "bogus", ""])).toEqual([
+      "betting_splits",
+    ]);
   });
 
   it("[NRM-4] handles null/undefined/empty as no features", () => {
@@ -88,7 +101,10 @@ describe("normalizePlanFeatures", () => {
   });
 
   it("[NRM-5] is idempotent", () => {
-    const once = normalizePlanFeatures(["player_prop_projections", "daily_lineups"]);
+    const once = normalizePlanFeatures([
+      "player_prop_projections",
+      "daily_lineups",
+    ]);
     expect(normalizePlanFeatures(once)).toEqual(once);
   });
 });

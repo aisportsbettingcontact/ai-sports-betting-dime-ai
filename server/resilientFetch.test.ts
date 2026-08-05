@@ -22,20 +22,27 @@ function isRateLimitBody(text: string): boolean {
   return RATE_LIMIT_PATTERNS.some(p => lower.includes(p));
 }
 
-function synthesizeRateLimitResponse(bodyText: string): { status: number; contentType: string; body: string } {
-  const errorBody = JSON.stringify([{
-    error: {
-      json: {
-        message: "The server is temporarily busy. Please wait a moment and try again.",
-        code: -32600,
-        data: {
-          code: "TOO_MANY_REQUESTS",
-          httpStatus: 429,
-          path: null,
+function synthesizeRateLimitResponse(bodyText: string): {
+  status: number;
+  contentType: string;
+  body: string;
+} {
+  const errorBody = JSON.stringify([
+    {
+      error: {
+        json: {
+          message:
+            "The server is temporarily busy. Please wait a moment and try again.",
+          code: -32600,
+          data: {
+            code: "TOO_MANY_REQUESTS",
+            httpStatus: 429,
+            path: null,
+          },
         },
       },
     },
-  }]);
+  ]);
   return { status: 429, contentType: "application/json", body: errorBody };
 }
 

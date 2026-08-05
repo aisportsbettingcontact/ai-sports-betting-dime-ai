@@ -17,7 +17,11 @@ import { describe, it, expect } from "vitest";
 import { driverErrorCode, isSchemaError, isDuplicateKeyError } from "./db";
 
 /** Reproduces drizzle-orm's DrizzleQueryError: no own `.code`, driver on `.cause`. */
-function drizzleWrapped(driverCode: string, errno: number, sqlText: string): Error {
+function drizzleWrapped(
+  driverCode: string,
+  errno: number,
+  sqlText: string
+): Error {
   const driver = Object.assign(new Error(`${driverCode}: driver message`), {
     code: driverCode,
     errno,
@@ -29,12 +33,22 @@ function drizzleWrapped(driverCode: string, errno: number, sqlText: string): Err
   return wrapper;
 }
 
-const WRAPPED_DUP = drizzleWrapped("ER_DUP_ENTRY", 1062, "insert into `stripe_webhook_events` (…) values (?, ?)");
-const WRAPPED_BAD_FIELD = drizzleWrapped("ER_BAD_FIELD_ERROR", 1054, "select `id`, `planPriceId` from `app_users`");
+const WRAPPED_DUP = drizzleWrapped(
+  "ER_DUP_ENTRY",
+  1062,
+  "insert into `stripe_webhook_events` (…) values (?, ?)"
+);
+const WRAPPED_BAD_FIELD = drizzleWrapped(
+  "ER_BAD_FIELD_ERROR",
+  1054,
+  "select `id`, `planPriceId` from `app_users`"
+);
 
 describe("driverErrorCode", () => {
   it("finds the code on a bare mysql2 error", () => {
-    expect(driverErrorCode(Object.assign(new Error("x"), { code: "ER_DUP_ENTRY" }))).toBe("ER_DUP_ENTRY");
+    expect(
+      driverErrorCode(Object.assign(new Error("x"), { code: "ER_DUP_ENTRY" }))
+    ).toBe("ER_DUP_ENTRY");
   });
 
   it("finds the code THROUGH drizzle's wrapper, where the wrapper has none", () => {
@@ -49,7 +63,14 @@ describe("driverErrorCode", () => {
   });
 
   it("returns null rather than throwing on junk", () => {
-    for (const junk of [null, undefined, "string", 42, {}, new Error("no code")]) {
+    for (const junk of [
+      null,
+      undefined,
+      "string",
+      42,
+      {},
+      new Error("no code"),
+    ]) {
       expect(driverErrorCode(junk)).toBeNull();
     }
   });
@@ -67,19 +88,31 @@ describe("isDuplicateKeyError", () => {
   });
 
   it("is true for a bare duplicate", () => {
-    expect(isDuplicateKeyError(Object.assign(new Error("dup"), { code: "ER_DUP_ENTRY" }))).toBe(true);
+    expect(
+      isDuplicateKeyError(
+        Object.assign(new Error("dup"), { code: "ER_DUP_ENTRY" })
+      )
+    ).toBe(true);
   });
 
   it("falls back to errno 1062 when the string code is stripped", () => {
-    const wrapper = new Error("Failed query: insert …") as Error & { cause?: unknown };
+    const wrapper = new Error("Failed query: insert …") as Error & {
+      cause?: unknown;
+    };
     wrapper.cause = Object.assign(new Error("dup"), { errno: 1062 });
     expect(isDuplicateKeyError(wrapper)).toBe(true);
   });
 
   it("does NOT swallow unrelated failures — those must still rethrow", () => {
     expect(isDuplicateKeyError(WRAPPED_BAD_FIELD)).toBe(false);
-    expect(isDuplicateKeyError(Object.assign(new Error("gone"), { code: "ECONNRESET" }))).toBe(false);
-    expect(isDuplicateKeyError(new Error("Failed query: insert into x"))).toBe(false);
+    expect(
+      isDuplicateKeyError(
+        Object.assign(new Error("gone"), { code: "ECONNRESET" })
+      )
+    ).toBe(false);
+    expect(isDuplicateKeyError(new Error("Failed query: insert into x"))).toBe(
+      false
+    );
     expect(isDuplicateKeyError(null)).toBe(false);
   });
 
@@ -95,13 +128,23 @@ describe("isSchemaError", () => {
   });
 
   it("covers the rest of the schema-drift codes through the wrapper", () => {
-    for (const code of ["ER_NO_SUCH_TABLE", "ER_PARSE_ERROR", "ER_WRONG_FIELD_SPEC", "ER_BAD_TABLE_ERROR"]) {
+    for (const code of [
+      "ER_NO_SUCH_TABLE",
+      "ER_PARSE_ERROR",
+      "ER_WRONG_FIELD_SPEC",
+      "ER_BAD_TABLE_ERROR",
+    ]) {
       expect(isSchemaError(drizzleWrapped(code, 1146, "select 1"))).toBe(true);
     }
   });
 
   it("still treats transient faults as fail-soft, not schema drift", () => {
-    for (const code of ["ECONNRESET", "ETIMEDOUT", "PROTOCOL_CONNECTION_LOST", "ER_DUP_ENTRY"]) {
+    for (const code of [
+      "ECONNRESET",
+      "ETIMEDOUT",
+      "PROTOCOL_CONNECTION_LOST",
+      "ER_DUP_ENTRY",
+    ]) {
       expect(isSchemaError(drizzleWrapped(code, 0, "select 1"))).toBe(false);
     }
     expect(isSchemaError(null)).toBe(false);

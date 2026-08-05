@@ -7,12 +7,7 @@ export const DIME_CONTEXT_TOKEN_MEASUREMENT_STATUS =
   "STRUCTURAL_ESTIMATE_NOT_MODEL_EXACT" as const;
 
 export type DimeContextFreshnessState =
-  | "static"
-  | "current"
-  | "stale"
-  | "missing"
-  | "conflicting"
-  | "unknown";
+  "static" | "current" | "stale" | "missing" | "conflicting" | "unknown";
 
 export type DimeContextFactClass =
   | "event_identity"

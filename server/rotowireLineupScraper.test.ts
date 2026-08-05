@@ -13,7 +13,7 @@ import {
 function lineupGame(
   startTime: string,
   awayPitcherName = "Away Starter",
-  homePitcherName = "Home Starter",
+  homePitcherName = "Home Starter"
 ): RotoLineupGame {
   return {
     awayAbbrev: "TB",
@@ -42,7 +42,9 @@ function lineupGame(
   };
 }
 
-function dbGame(overrides: Partial<MatchableLineupDbGame>): MatchableLineupDbGame {
+function dbGame(
+  overrides: Partial<MatchableLineupDbGame>
+): MatchableLineupDbGame {
   return {
     id: 1,
     awayTeam: "TB",
@@ -85,9 +87,15 @@ describe("Rotowire lineup event matching", () => {
     ];
 
     const { matches } = matchRotowireLineupsToDbRows([late, early], rows);
-    expect(matches.find(match => match.lineupGame === early)?.dbGame?.id).toBe(11);
-    expect(matches.find(match => match.lineupGame === late)?.dbGame?.id).toBe(12);
-    expect(matches.every(match => match.matchMethod === "teams+gameNumber")).toBe(true);
+    expect(matches.find(match => match.lineupGame === early)?.dbGame?.id).toBe(
+      11
+    );
+    expect(matches.find(match => match.lineupGame === late)?.dbGame?.id).toBe(
+      12
+    );
+    expect(
+      matches.every(match => match.matchMethod === "teams+gameNumber")
+    ).toBe(true);
     expect(new Set(matches.map(match => match.dbGame?.id)).size).toBe(2);
   });
 
@@ -100,9 +108,15 @@ describe("Rotowire lineup event matching", () => {
     ];
 
     const { matches } = matchRotowireLineupsToDbRows([late, early], rows);
-    expect(matches.find(match => match.lineupGame === early)?.dbGame?.id).toBe(21);
-    expect(matches.find(match => match.lineupGame === late)?.dbGame?.id).toBe(22);
-    expect(matches.every(match => match.matchMethod === "teams+time")).toBe(true);
+    expect(matches.find(match => match.lineupGame === early)?.dbGame?.id).toBe(
+      21
+    );
+    expect(matches.find(match => match.lineupGame === late)?.dbGame?.id).toBe(
+      22
+    );
+    expect(matches.every(match => match.matchMethod === "teams+time")).toBe(
+      true
+    );
   });
 
   it("never lets two Rotowire cards claim one DB event", () => {
@@ -110,14 +124,18 @@ describe("Rotowire lineup event matching", () => {
     const late = lineupGame("7:10 PM ET", "Late Away", "Late Home");
     const { matches, warnings } = matchRotowireLineupsToDbRows(
       [early, late],
-      [dbGame({ id: 31, gameNumber: 2, startTimeEst: "7:10 PM" })],
+      [dbGame({ id: 31, gameNumber: 2, startTimeEst: "7:10 PM" })]
     );
 
     const claimed = matches.filter(match => match.dbGame);
     expect(claimed).toHaveLength(1);
     expect(claimed[0].lineupGame).toBe(late);
-    expect(matches.find(match => match.lineupGame === early)?.dbGame).toBeNull();
-    expect(warnings.some(warning => warning.includes("no unclaimed DB event"))).toBe(true);
+    expect(
+      matches.find(match => match.lineupGame === early)?.dbGame
+    ).toBeNull();
+    expect(
+      warnings.some(warning => warning.includes("no unclaimed DB event"))
+    ).toBe(true);
   });
 
   it("uses time rather than assuming a lone doubleheader card is game one", () => {
@@ -140,9 +158,14 @@ describe("Rotowire lineup event matching", () => {
       dbGame({ id: 52, gameNumber: 2, startTimeEst: "TBD" }),
     ];
 
-    const { matches, warnings } = matchRotowireLineupsToDbRows([first, second], rows);
+    const { matches, warnings } = matchRotowireLineupsToDbRows(
+      [first, second],
+      rows
+    );
     expect(matches.every(match => match.dbGame === null)).toBe(true);
-    expect(warnings.some(warning => warning.includes("2 Rotowire card(s)"))).toBe(true);
+    expect(
+      warnings.some(warning => warning.includes("2 Rotowire card(s)"))
+    ).toBe(true);
   });
 
   it("skips duplicate Rotowire times instead of using pitcher identity as an order", () => {
@@ -183,7 +206,7 @@ describe("Rotowire lineup event matching", () => {
     const game = lineupGame("TBD");
     const { matches } = matchRotowireLineupsToDbRows(
       [game],
-      [dbGame({ id: 61, startTimeEst: "TBD" })],
+      [dbGame({ id: 61, startTimeEst: "TBD" })]
     );
 
     expect(matches[0].dbGame?.id).toBe(61);
@@ -193,7 +216,11 @@ describe("Rotowire lineup event matching", () => {
   it("preserves both cards in a same-day doubleheader when combining slates", () => {
     const early = lineupGame("1:35 PM ET", "Early Away", "Early Home");
     const late = lineupGame("7:10 PM ET", "Late Away", "Late Home");
-    const duplicateTomorrowCard = lineupGame("7:10 PM ET", "Late Away", "Late Home");
+    const duplicateTomorrowCard = lineupGame(
+      "7:10 PM ET",
+      "Late Away",
+      "Late Home"
+    );
     const otherTomorrowGame = {
       ...lineupGame("8:10 PM ET"),
       awayAbbrev: "NYY",
@@ -202,9 +229,14 @@ describe("Rotowire lineup event matching", () => {
 
     const combined = combineRotowireLineupSlates(
       [early, late],
-      [duplicateTomorrowCard, otherTomorrowGame],
+      [duplicateTomorrowCard, otherTomorrowGame]
     );
-    expect(combined).toEqual([early, late, duplicateTomorrowCard, otherTomorrowGame]);
+    expect(combined).toEqual([
+      early,
+      late,
+      duplicateTomorrowCard,
+      otherTomorrowGame,
+    ]);
   });
 });
 
@@ -232,10 +264,21 @@ describe("Rotowire pitcher metadata integrity", () => {
 
     const parsed = parseLineupHtml(html, "today", "[test]");
     expect(parsed.games).toHaveLength(1);
-    expect(parsed.games[0].awayPitcher).toMatchObject({ hand: null, era: null });
-    expect(parsed.games[0].homePitcher).toMatchObject({ hand: null, era: null });
+    expect(parsed.games[0].awayPitcher).toMatchObject({
+      hand: null,
+      era: null,
+    });
+    expect(parsed.games[0].homePitcher).toMatchObject({
+      hand: null,
+      era: null,
+    });
 
-    const payload = buildMlbLineupPayload(parsed.games[0], 77, 123456, () => null);
+    const payload = buildMlbLineupPayload(
+      parsed.games[0],
+      77,
+      123456,
+      () => null
+    );
     expect(payload.awayPitcherHand).toBeNull();
     expect(payload.awayPitcherEra).toBeNull();
     expect(payload.homePitcherHand).toBeNull();
@@ -318,11 +361,15 @@ describe("Rotowire player identity and lineup status", () => {
       rotowireId: 13788,
       confirmed: true,
     });
-    expect(game.awayLineup.map((player) => [player.name, player.rotowireId])).toEqual([
+    expect(
+      game.awayLineup.map(player => [player.name, player.rotowireId])
+    ).toEqual([
       ["Ronald Acuña Jr.", 14106],
       ["Tyler O'Neill", 11620],
     ]);
-    expect(game.homeLineup.map((player) => [player.name, player.rotowireId])).toEqual([
+    expect(
+      game.homeLineup.map(player => [player.name, player.rotowireId])
+    ).toEqual([
       ["Lars Nootbaar", 14358],
       ["F. Fallback", 777],
     ]);
@@ -345,11 +392,8 @@ describe("Rotowire player identity and lineup status", () => {
       ["Tyler O'Neill", 641933],
       ["Lars Nootbaar", 663457],
     ]);
-    const payload = buildMlbLineupPayload(
-      game,
-      901,
-      123456,
-      (name) => (name ? (mlbamByName.get(name) ?? null) : null),
+    const payload = buildMlbLineupPayload(game, 901, 123456, name =>
+      name ? (mlbamByName.get(name) ?? null) : null
     );
     expect(payload).toMatchObject({
       awayPitcherName: "Eduardo Rodriguez",

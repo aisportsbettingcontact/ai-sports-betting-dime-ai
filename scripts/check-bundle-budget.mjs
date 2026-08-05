@@ -56,7 +56,10 @@ import path from "node:path";
 import zlib from "node:zlib";
 import { fileURLToPath } from "node:url";
 
-const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const REPO_ROOT = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  ".."
+);
 const BUDGET_CONFIG_PATH = path.join(REPO_ROOT, "bundle-budget.json");
 const REPORT_PATH = path.join(REPO_ROOT, "bundle-budget-report.json");
 
@@ -230,7 +233,9 @@ function main() {
   console.log(
     `[bundle-budget] metric: ${config.metric} (baseline ${config.baselineCommit} = ${formatBytes(config.baselineBytes)}B, +${formatBytes(config.allowanceBytes)}B allowance)`
   );
-  console.log(`[bundle-budget] file                                         raw B   gzip B`);
+  console.log(
+    `[bundle-budget] file                                         raw B   gzip B`
+  );
   for (const f of files) {
     console.log(
       `[bundle-budget] ${f.path.padEnd(44)} ${String(f.rawBytes).padStart(8)} ${String(f.gzipBytes).padStart(8)}`
@@ -269,6 +274,9 @@ function main() {
   );
 }
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
+if (
+  process.argv[1] &&
+  fileURLToPath(import.meta.url) === path.resolve(process.argv[1])
+) {
   main();
 }

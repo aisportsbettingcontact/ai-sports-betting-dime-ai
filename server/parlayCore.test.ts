@@ -26,7 +26,12 @@ import {
 } from "./parlayCore";
 import type { BetResult } from "./betTrackerCore";
 
-const leg = (i: number, result: BetResult, odds = -110, over: Partial<ParlayLeg> = {}): ParlayLeg => ({
+const leg = (
+  i: number,
+  result: BetResult,
+  odds = -110,
+  over: Partial<ParlayLeg> = {}
+): ParlayLeg => ({
   legIndex: i,
   sport: "MLB",
   gameDate: "2026-08-04",
@@ -89,7 +94,9 @@ describe("combineLegOdds", () => {
   });
 
   it("is order-independent", () => {
-    expect(combineLegOdds([-110, 150, -200])).toBe(combineLegOdds([-200, -110, 150]));
+    expect(combineLegOdds([-110, 150, -200])).toBe(
+      combineLegOdds([-200, -110, 150])
+    );
   });
 });
 
@@ -111,7 +118,10 @@ describe("settleParlay — the settlement state machine", () => {
   it("REGRESSION: LOSS even while other legs are still pending", () => {
     // A lost leg is terminal. Reporting PENDING here would overstate open risk
     // on the user's page and delay the ticket showing as settled.
-    const s = settleParlay([leg(0, "LOSS"), leg(1, "PENDING"), leg(2, "PENDING")], 595);
+    const s = settleParlay(
+      [leg(0, "LOSS"), leg(1, "PENDING"), leg(2, "PENDING")],
+      595
+    );
     expect(s.result).toBe("LOSS");
     expect(s.reason).toMatch(/cannot rescue/);
   });
@@ -130,7 +140,9 @@ describe("settleParlay — the settlement state machine", () => {
   });
 
   it("VOID when every leg is a mix of PUSH and VOID", () => {
-    expect(settleParlay([leg(0, "PUSH"), leg(1, "VOID")], 264).result).toBe("VOID");
+    expect(settleParlay([leg(0, "PUSH"), leg(1, "VOID")], 264).result).toBe(
+      "VOID"
+    );
   });
 
   it("drops a pushed leg and reprices the rest", () => {
@@ -146,7 +158,7 @@ describe("settleParlay — the settlement state machine", () => {
   it("a single surviving winner pays that leg's own price", () => {
     const s = settleParlay(
       [leg(0, "WIN", 150), leg(1, "PUSH", -110), leg(2, "PUSH", -110)],
-      combineLegOdds([150, -110, -110]),
+      combineLegOdds([150, -110, -110])
     );
     expect(s.result).toBe("WIN");
     expect(s.odds).toBe(150);
@@ -162,7 +174,9 @@ describe("settleParlay — the settlement state machine", () => {
   });
 
   it("handles a full ten-leg ticket", () => {
-    const legs = Array.from({ length: MAX_PARLAY_LEGS }, (_, i) => leg(i, "WIN"));
+    const legs = Array.from({ length: MAX_PARLAY_LEGS }, (_, i) =>
+      leg(i, "WIN")
+    );
     const price = combineLegOdds(legs.map(l => l.odds));
     const s = settleParlay(legs, price);
     expect(s.result).toBe("WIN");
@@ -186,7 +200,9 @@ describe("repriceParlay — idempotent by construction", () => {
 
   it("is order-independent across dropped legs", () => {
     const price = combineLegOdds([-110, 150, -200, 120]);
-    expect(repriceParlay(price, [150, -200])).toBe(repriceParlay(price, [-200, 150]));
+    expect(repriceParlay(price, [150, -200])).toBe(
+      repriceParlay(price, [-200, 150])
+    );
   });
 
   it("restores the original price if a leg stops being dropped", () => {
@@ -202,7 +218,9 @@ describe("repriceParlay — idempotent by construction", () => {
     const out = repriceParlay(entered, [-110]);
     const rebuiltFromLegs = combineLegOdds([-110, -110]);
     expect(out).not.toBe(rebuiltFromLegs);
-    expect(out).toBe(decimalToAmerican(americanToDecimal(400) / americanToDecimal(-110)));
+    expect(out).toBe(
+      decimalToAmerican(americanToDecimal(400) / americanToDecimal(-110))
+    );
   });
 
   it("refuses to produce a price that pays nothing", () => {
@@ -240,29 +258,43 @@ describe("validateParlayLegs", () => {
 
   it(`rejects more than ${MAX_PARLAY_LEGS} legs`, () => {
     const legs = Array.from({ length: MAX_PARLAY_LEGS + 1 }, () => ml());
-    expect(validateParlayLegs(legs)).toMatchObject({ ok: false, message: /at most 10/ });
+    expect(validateParlayLegs(legs)).toMatchObject({
+      ok: false,
+      message: /at most 10/,
+    });
   });
 
   it(`accepts exactly ${MAX_PARLAY_LEGS} legs`, () => {
-    expect(validateParlayLegs(Array.from({ length: MAX_PARLAY_LEGS }, () => ml()))).toEqual({ ok: true });
+    expect(
+      validateParlayLegs(Array.from({ length: MAX_PARLAY_LEGS }, () => ml()))
+    ).toEqual({ ok: true });
   });
 
   it("rejects an unparseable price", () => {
-    expect(validateParlayLegs([ml(0), ml()])).toMatchObject({ ok: false, message: /Leg 1/ });
+    expect(validateParlayLegs([ml(0), ml()])).toMatchObject({
+      ok: false,
+      message: /Leg 1/,
+    });
   });
 
   it("REGRESSION: rejects RL/TOTAL legs with no line", () => {
     // Without a line these can never settle, so the whole ticket would sit
     // PENDING forever and eventually trip the stuck-bet alarm.
-    expect(validateParlayLegs([{ odds: -110, market: "TOTAL", line: null }, ml()]))
-      .toMatchObject({ ok: false, message: /needs a line/ });
-    expect(validateParlayLegs([{ odds: -110, market: "RL", line: null }, ml()]))
-      .toMatchObject({ ok: false, message: /needs a line/ });
+    expect(
+      validateParlayLegs([{ odds: -110, market: "TOTAL", line: null }, ml()])
+    ).toMatchObject({ ok: false, message: /needs a line/ });
+    expect(
+      validateParlayLegs([{ odds: -110, market: "RL", line: null }, ml()])
+    ).toMatchObject({ ok: false, message: /needs a line/ });
   });
 
   it("accepts RL/TOTAL legs that carry a line, including 0", () => {
-    expect(validateParlayLegs([{ odds: -110, market: "TOTAL", line: 8.5 }, ml()])).toEqual({ ok: true });
-    expect(validateParlayLegs([{ odds: -110, market: "RL", line: 0 }, ml()])).toEqual({ ok: true });
+    expect(
+      validateParlayLegs([{ odds: -110, market: "TOTAL", line: 8.5 }, ml()])
+    ).toEqual({ ok: true });
+    expect(
+      validateParlayLegs([{ odds: -110, market: "RL", line: 0 }, ml()])
+    ).toEqual({ ok: true });
   });
 
   it("ALLOWS same-game legs — the contract puts no correlation restriction on SGPs", () => {
@@ -278,14 +310,24 @@ describe("validateParlayLegs", () => {
 describe("describeLeg", () => {
   it("labels the markets the product actually has", () => {
     expect(describeLeg(leg(0, "WIN"))).toBe("AWAY ML NYY@BOS");
-    expect(describeLeg(leg(0, "WIN", -110, { market: "TOTAL", pickSide: "OVER", line: 8.5 })))
-      .toBe("OVER 8.5 NYY@BOS");
-    expect(describeLeg(leg(0, "WIN", -110, { market: "RL", pickSide: "HOME", line: -1.5 })))
-      .toBe("HOME -1.5 NYY@BOS");
+    expect(
+      describeLeg(
+        leg(0, "WIN", -110, { market: "TOTAL", pickSide: "OVER", line: 8.5 })
+      )
+    ).toBe("OVER 8.5 NYY@BOS");
+    expect(
+      describeLeg(
+        leg(0, "WIN", -110, { market: "RL", pickSide: "HOME", line: -1.5 })
+      )
+    ).toBe("HOME -1.5 NYY@BOS");
   });
 
   it("labels NRFI/YRFI by timeframe, since they are not separate markets", () => {
-    expect(describeLeg(leg(0, "WIN", -110, { timeframe: "NRFI" }))).toBe("NRFI NYY@BOS");
-    expect(describeLeg(leg(0, "WIN", -110, { timeframe: "YRFI" }))).toBe("YRFI NYY@BOS");
+    expect(describeLeg(leg(0, "WIN", -110, { timeframe: "NRFI" }))).toBe(
+      "NRFI NYY@BOS"
+    );
+    expect(describeLeg(leg(0, "WIN", -110, { timeframe: "YRFI" }))).toBe(
+      "YRFI NYY@BOS"
+    );
   });
 });

@@ -45,11 +45,15 @@ export default function Nav() {
   return (
     <nav className="nav" aria-label="Main">
       <div className="wrap nav-inner">
-        <a href="#top" aria-label="dime home" style={{ textDecoration: "none" }}>
+        <a
+          href="#top"
+          aria-label="dime home"
+          style={{ textDecoration: "none" }}
+        >
           <Wordmark />
         </a>
         <div className="nav-links">
-          {SECTIONS.map((s) => (
+          {SECTIONS.map(s => (
             <a key={s.href} href={s.href}>
               {s.label}
             </a>
@@ -62,17 +66,38 @@ export default function Nav() {
           aria-label="Page sections"
           aria-haspopup="menu"
           aria-expanded={menuOpen}
-          onClick={() => setMenuOpen((v) => !v)}
+          onClick={() => setMenuOpen(v => !v)}
         >
           {/* three-line glyph, brand-kit stroke style — SVG, not emoji */}
-          <svg width="18" height="14" viewBox="0 0 18 14" fill="none" aria-hidden="true">
-            <path d="M1 1h16M1 7h16M1 13h16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          <svg
+            width="18"
+            height="14"
+            viewBox="0 0 18 14"
+            fill="none"
+            aria-hidden="true"
+          >
+            <path
+              d="M1 1h16M1 7h16M1 13h16"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+            />
           </svg>
         </button>
         {menuOpen && (
-          <div ref={menuRef} className="nav-menu" role="menu" aria-label="Page sections">
-            {SECTIONS.map((s) => (
-              <a key={s.href} href={s.href} role="menuitem" onClick={() => setMenuOpen(false)}>
+          <div
+            ref={menuRef}
+            className="nav-menu"
+            role="menu"
+            aria-label="Page sections"
+          >
+            {SECTIONS.map(s => (
+              <a
+                key={s.href}
+                href={s.href}
+                role="menuitem"
+                onClick={() => setMenuOpen(false)}
+              >
                 {s.label}
               </a>
             ))}

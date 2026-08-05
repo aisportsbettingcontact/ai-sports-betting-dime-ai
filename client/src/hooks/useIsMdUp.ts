@@ -6,20 +6,20 @@
  * sidebar shell owns navigation and the splits surface shows all three markets
  * together; below it the compact single-market layout applies.
  */
-import { useState, useEffect } from 'react';
-import { DIME_SHELL_MIN_WIDTH_PX } from '@/pages/dime-shell/breakpoints';
+import { useState, useEffect } from "react";
+import { DIME_SHELL_MIN_WIDTH_PX } from "@/pages/dime-shell/breakpoints";
 
 let listeners: ((v: boolean) => void)[] = [];
 let currentValue =
-  typeof window !== 'undefined'
+  typeof window !== "undefined"
     ? window.innerWidth >= DIME_SHELL_MIN_WIDTH_PX
     : false;
 
-if (typeof window !== 'undefined') {
+if (typeof window !== "undefined") {
   const mql = window.matchMedia(`(min-width: ${DIME_SHELL_MIN_WIDTH_PX}px)`);
-  mql.addEventListener('change', (e) => {
+  mql.addEventListener("change", e => {
     currentValue = e.matches;
-    listeners.forEach((fn) => fn(currentValue));
+    listeners.forEach(fn => fn(currentValue));
   });
 }
 
@@ -30,7 +30,7 @@ export function useIsMdUp(): boolean {
     setIsMdUp(currentValue);
     listeners.push(setIsMdUp);
     return () => {
-      listeners = listeners.filter((fn) => fn !== setIsMdUp);
+      listeners = listeners.filter(fn => fn !== setIsMdUp);
     };
   }, []);
 

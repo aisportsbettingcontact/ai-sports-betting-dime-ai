@@ -22,10 +22,7 @@ import { ipKeyGenerator } from "express-rate-limit";
  */
 
 export type TrpcLimiterClass =
-  | "auth"
-  | "stripe_checkout"
-  | "waitlist"
-  | "public_feed";
+  "auth" | "stripe_checkout" | "waitlist" | "public_feed";
 
 /**
  * Strictest-first: a mixed batch takes the most sensitive class present.
@@ -44,9 +41,8 @@ const CLASS_PRIORITY: readonly TrpcLimiterClass[] = [
  * a limiter defect must degrade to "allow", never to a 5xx outage. Auth and
  * checkout fail CLOSED (a limiter fault there blocks, not passes).
  */
-const FAIL_OPEN_CLASSES: ReadonlySet<TrpcLimiterClass> = new Set<TrpcLimiterClass>([
-  "public_feed",
-]);
+const FAIL_OPEN_CLASSES: ReadonlySet<TrpcLimiterClass> =
+  new Set<TrpcLimiterClass>(["public_feed"]);
 
 export const TRPC_PROCEDURE_CLASSES: ReadonlyMap<string, TrpcLimiterClass> =
   new Map([
@@ -164,9 +160,7 @@ export function isReservedOrInternalIp(ip: string): boolean {
 }
 
 /** True when the request targets a tRPC procedure (stable across mount depth). */
-export function isTrpcRequest(
-  req: Pick<Request, "originalUrl">
-): boolean {
+export function isTrpcRequest(req: Pick<Request, "originalUrl">): boolean {
   return (req.originalUrl ?? "").startsWith("/api/trpc");
 }
 

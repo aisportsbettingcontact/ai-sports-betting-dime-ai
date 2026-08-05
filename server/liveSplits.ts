@@ -15,7 +15,10 @@
  *      so the client never depends on reaching the MLB CDN directly
  */
 
-import { scrapeVsinMlbBettingSplits, type VsinSplitsGame } from "./vsinBettingSplitsScraper";
+import {
+  scrapeVsinMlbBettingSplits,
+  type VsinSplitsGame,
+} from "./vsinBettingSplitsScraper";
 import { getMlbTeamByVsinSlug, MLB_BY_ABBREV } from "../shared/mlbTeams";
 import { listGamesByDate } from "./db";
 
@@ -81,13 +84,18 @@ async function fetchLogoAsDataUri(url: string): Promise<string | null> {
     logoCache.set(url, dataUri);
     return dataUri;
   } catch (err) {
-    console.warn(`[LiveSplits] Logo fetch error: ${url} —`, err instanceof Error ? err.message : err);
+    console.warn(
+      `[LiveSplits] Logo fetch error: ${url} —`,
+      err instanceof Error ? err.message : err
+    );
     return null;
   }
 }
 
 /** Fetch logos for every resolved team in the rows, in parallel, deduped by abbrev. */
-async function fetchLogos(rows: LiveSplitRow[]): Promise<Record<string, string>> {
+async function fetchLogos(
+  rows: LiveSplitRow[]
+): Promise<Record<string, string>> {
   const wanted = new Map<string, string>(); // abbrev → logoUrl
   for (const row of rows) {
     for (const abbrev of [row.awayAbbrev, row.homeAbbrev]) {
@@ -103,7 +111,9 @@ async function fetchLogos(rows: LiveSplitRow[]): Promise<Record<string, string>>
       if (dataUri) logos[abbrev] = dataUri;
     })
   );
-  console.log(`[LiveSplits] Logos resolved: ${Object.keys(logos).length}/${wanted.size} teams`);
+  console.log(
+    `[LiveSplits] Logos resolved: ${Object.keys(logos).length}/${wanted.size} teams`
+  );
   return logos;
 }
 
@@ -113,13 +123,13 @@ function gameDateFromVsinId(gameId: string): string {
 }
 
 function buildBaseRows(games: VsinSplitsGame[]): LiveSplitRow[] {
-  return games.map((g) => {
+  return games.map(g => {
     const awayTeam = getMlbTeamByVsinSlug(g.awayVsinSlug);
     const homeTeam = getMlbTeamByVsinSlug(g.homeVsinSlug);
     if (!awayTeam || !homeTeam) {
       console.warn(
         `[LiveSplits] UNRESOLVED VSiN slug: "${g.awayVsinSlug}" @ "${g.homeVsinSlug}" ` +
-        `— awayResolved=${!!awayTeam} homeResolved=${!!homeTeam}`
+          `— awayResolved=${!!awayTeam} homeResolved=${!!homeTeam}`
       );
     }
     return {
@@ -153,31 +163,38 @@ function buildBaseRows(games: VsinSplitsGame[]): LiveSplitRow[] {
  * line fields when swapped. Non-fatal: on DB failure rows keep null lines.
  */
 async function joinDbLines(rows: LiveSplitRow[]): Promise<void> {
-  const dates = Array.from(new Set(rows.map((r) => r.gameDate)));
+  const dates = Array.from(new Set(rows.map(r => r.gameDate)));
   for (const date of dates) {
     let dbGames;
     try {
       dbGames = await listGamesByDate(date, "MLB");
     } catch (err) {
-      console.warn(`[LiveSplits] DB join skipped for ${date} (non-fatal):`, err);
+      console.warn(
+        `[LiveSplits] DB join skipped for ${date} (non-fatal):`,
+        err
+      );
       continue;
     }
     for (const row of rows) {
       if (row.gameDate !== date || !row.awayAbbrev || !row.homeAbbrev) continue;
       const direct = dbGames.find(
-        (g) => g.awayTeam === row.awayAbbrev && g.homeTeam === row.homeAbbrev
+        g => g.awayTeam === row.awayAbbrev && g.homeTeam === row.homeAbbrev
       );
       const swapped = direct
         ? undefined
-        : dbGames.find((g) => g.awayTeam === row.homeAbbrev && g.homeTeam === row.awayAbbrev);
+        : dbGames.find(
+            g => g.awayTeam === row.homeAbbrev && g.homeTeam === row.awayAbbrev
+          );
       const dbGame = direct ?? swapped;
       if (!dbGame) continue;
       row.dbGameId = dbGame.id;
       row.startTimeEst = dbGame.startTimeEst ?? null;
       // Orient lines to VSiN's away team: if the DB has teams reversed,
       // the DB *home* line is VSiN's away line.
-      row.awayBookSpread = (direct ? dbGame.awayBookSpread : dbGame.homeBookSpread) ?? null;
-      row.homeBookSpread = (direct ? dbGame.homeBookSpread : dbGame.awayBookSpread) ?? null;
+      row.awayBookSpread =
+        (direct ? dbGame.awayBookSpread : dbGame.homeBookSpread) ?? null;
+      row.homeBookSpread =
+        (direct ? dbGame.homeBookSpread : dbGame.awayBookSpread) ?? null;
       row.awayML = (direct ? dbGame.awayML : dbGame.homeML) ?? null;
       row.homeML = (direct ? dbGame.homeML : dbGame.awayML) ?? null;
       row.bookTotal = dbGame.bookTotal ?? null;
@@ -200,19 +217,36 @@ async function fetchPayload(): Promise<CachePayload> {
 export async function getLiveMlbSplits(): Promise<LiveSplitsResult> {
   const now = Date.now();
   if (cache && now - cache.at < CACHE_TTL_MS) {
-    return { fetchedAt: new Date(cache.at).toISOString(), fromCache: true, ...cache.payload };
+    return {
+      fetchedAt: new Date(cache.at).toISOString(),
+      fromCache: true,
+      ...cache.payload,
+    };
   }
   if (!inflight) {
-    inflight = fetchPayload().finally(() => { inflight = null; });
+    inflight = fetchPayload().finally(() => {
+      inflight = null;
+    });
   }
   try {
     const payload = await inflight;
     cache = { at: Date.now(), payload };
-    return { fetchedAt: new Date(cache.at).toISOString(), fromCache: false, ...payload };
+    return {
+      fetchedAt: new Date(cache.at).toISOString(),
+      fromCache: false,
+      ...payload,
+    };
   } catch (err) {
     if (cache) {
-      console.warn("[LiveSplits] Scrape failed — serving stale cache (non-fatal):", err);
-      return { fetchedAt: new Date(cache.at).toISOString(), fromCache: true, ...cache.payload };
+      console.warn(
+        "[LiveSplits] Scrape failed — serving stale cache (non-fatal):",
+        err
+      );
+      return {
+        fetchedAt: new Date(cache.at).toISOString(),
+        fromCache: true,
+        ...cache.payload,
+      };
     }
     throw err;
   }

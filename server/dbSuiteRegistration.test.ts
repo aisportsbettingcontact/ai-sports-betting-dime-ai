@@ -44,7 +44,11 @@ import { join } from "node:path";
 
 const SERVER_DIR = __dirname;
 const CI_WORKFLOW = join(SERVER_DIR, "..", ".github", "workflows", "ci.yml");
-const ALLOWLIST = join(SERVER_DIR, "..", "vitest.environment-failure-allowlist.json");
+const ALLOWLIST = join(
+  SERVER_DIR,
+  "..",
+  "vitest.environment-failure-allowlist.json"
+);
 
 /** Every real-database suite present in the tree. */
 function discoveredSuites(): string[] {
@@ -66,14 +70,18 @@ function dbStepBlock(ci: string): string {
   const start = ci.indexOf("--no-file-parallelism");
   const end = ci.indexOf("--reporter=verbose", start);
   if (start < 0 || end < 0) {
-    throw new Error("ci.yml no longer has a --no-file-parallelism DB step; this guard is blind");
+    throw new Error(
+      "ci.yml no longer has a --no-file-parallelism DB step; this guard is blind"
+    );
   }
   return ci.slice(start, end);
 }
 
 /** The suite files ci.yml actually names in its DB Tests step. */
 function registeredSuites(ci: string): string[] {
-  return Array.from(dbStepBlock(ci).matchAll(/server\/([A-Za-z0-9_.-]+\.db\.test\.ts)/g))
+  return Array.from(
+    dbStepBlock(ci).matchAll(/server\/([A-Za-z0-9_.-]+\.db\.test\.ts)/g)
+  )
     .map(m => m[1])
     .filter((v, i, a) => a.indexOf(v) === i)
     .sort();
@@ -98,7 +106,7 @@ describe("real-database suites are registered in CI", () => {
     expect(
       missing,
       `these suites exist but CI never runs them: ${missing.join(", ")}. ` +
-      `Add them to the DB Tests step in .github/workflows/ci.yml.`,
+        `Add them to the DB Tests step in .github/workflows/ci.yml.`
     ).toEqual([]);
   });
 
@@ -108,7 +116,7 @@ describe("real-database suites are registered in CI", () => {
     const ghosts = registered.filter(f => !found.includes(f));
     expect(
       ghosts,
-      `ci.yml runs files that no longer exist: ${ghosts.join(", ")}`,
+      `ci.yml runs files that no longer exist: ${ghosts.join(", ")}`
     ).toEqual([]);
   });
 
@@ -116,7 +124,10 @@ describe("real-database suites are registered in CI", () => {
     // The obvious implementation — search the whole file for `server/*.db.test.ts`
     // — would call a suite registered because ci.yml mentions it in a comment,
     // while the step that actually runs files never names it.
-    const doctored = ci.replace("# ─── Stage 3b:", "# ─── Stage 3b: server/neverRuns.db.test.ts");
+    const doctored = ci.replace(
+      "# ─── Stage 3b:",
+      "# ─── Stage 3b: server/neverRuns.db.test.ts"
+    );
     expect(registeredSuites(doctored)).not.toContain("neverRuns.db.test.ts");
   });
 
@@ -129,18 +140,32 @@ describe("real-database suites are registered in CI", () => {
     // A stale count is the first sign someone added a file without reading the
     // step around it.
     const WORDS: Record<number, string> = {
-      6: "six", 7: "seven", 8: "eight", 9: "nine", 10: "ten",
-      11: "eleven", 12: "twelve", 13: "thirteen", 14: "fourteen", 15: "fifteen",
+      6: "six",
+      7: "seven",
+      8: "eight",
+      9: "nine",
+      10: "ten",
+      11: "eleven",
+      12: "twelve",
+      13: "thirteen",
+      14: "fourteen",
+      15: "fifteen",
     };
     const step = ci.match(/Run the (\w+) real-database suites/);
-    expect(step, "the DB Tests step should say how many suites it runs").not.toBeNull();
+    expect(
+      step,
+      "the DB Tests step should say how many suites it runs"
+    ).not.toBeNull();
 
     // Count every suite the step names, .db.test.ts or not — four of the ten
     // are plain *.test.ts files that happen to need the database.
     const named = Array.from(
-      dbStepBlock(ci).matchAll(/server\/[A-Za-z0-9_.-]+\.test\.ts/g),
+      dbStepBlock(ci).matchAll(/server\/[A-Za-z0-9_.-]+\.test\.ts/g)
     ).length;
-    expect(WORDS[named], `no word for ${named}; extend the WORDS map`).toBeDefined();
+    expect(
+      WORDS[named],
+      `no word for ${named}; extend the WORDS map`
+    ).toBeDefined();
     expect(step![1]).toBe(WORDS[named]);
   });
 });
@@ -162,7 +187,7 @@ describe("suites cannot collide on one shared database", () => {
     for (const f of suites) {
       const src = readFileSync(join(SERVER_DIR, f), "utf8");
       const unscoped = Array.from(src.matchAll(/\.delete\(/g)).filter(
-        m => !src.slice(m.index!, m.index! + 240).includes(".where"),
+        m => !src.slice(m.index!, m.index! + 240).includes(".where")
       );
       expect(unscoped.length, `${f} deletes without a where clause`).toBe(0);
     }
@@ -182,7 +207,7 @@ describe("suites cannot collide on one shared database", () => {
           .filter(n => {
             const re = new RegExp(`(userId|USER[A-Z_]*)\\s*[:=]\\s*${n}\\b`);
             return re.test(src);
-          }),
+          })
       );
       ranges.set(f, ids);
     }
@@ -192,7 +217,10 @@ describe("suites cannot collide on one shared database", () => {
         const a = ranges.get(files[i])!;
         const b = ranges.get(files[j])!;
         const shared = [...a].filter(x => b.has(x));
-        expect(shared, `${files[i]} and ${files[j]} both use userId ${shared.join(", ")}`).toEqual([]);
+        expect(
+          shared,
+          `${files[i]} and ${files[j]} both use userId ${shared.join(", ")}`
+        ).toEqual([]);
       }
     }
   });

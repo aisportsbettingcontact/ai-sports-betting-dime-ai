@@ -3,19 +3,37 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, viewport-fit=cover" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, minimum-scale=1.0, viewport-fit=cover"
+    />
     <title>dıme — See where price and probability disagree</title>
-    <meta name="description" content="Dime AI compares sportsbook prices against projected probability, movement, volatility, matchup context, and risk flags so every market resolves to Pass, Monitor, or Edge Detected." />
+    <meta
+      name="description"
+      content="Dime AI compares sportsbook prices against projected probability, movement, volatility, matchup context, and risk flags so every market resolves to Pass, Monitor, or Edge Detected."
+    />
     <!-- Social cards (Open Graph + Twitter). No raster og:image asset exists yet:
          summary card renders title+description. Add a 1200x630 image in a follow-up. -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Dime AI" />
-    <meta property="og:title" content="dıme — See where price and probability disagree" />
-    <meta property="og:description" content="Dime AI compares sportsbook prices against projected probability so every market resolves to Pass, Monitor, or Edge Detected. 21+." />
+    <meta
+      property="og:title"
+      content="dıme — See where price and probability disagree"
+    />
+    <meta
+      property="og:description"
+      content="Dime AI compares sportsbook prices against projected probability so every market resolves to Pass, Monitor, or Edge Detected. 21+."
+    />
     <meta property="og:url" content="https://aisportsbettingmodels.com/" />
     <meta name="twitter:card" content="summary" />
-    <meta name="twitter:title" content="dıme — See where price and probability disagree" />
-    <meta name="twitter:description" content="Sportsbook prices vs model probability. Pass, Monitor, or Edge Detected. 21+." />
+    <meta
+      name="twitter:title"
+      content="dıme — See where price and probability disagree"
+    />
+    <meta
+      name="twitter:description"
+      content="Sportsbook prices vs model probability. Pass, Monitor, or Edge Detected. 21+."
+    />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <!-- Dime brand fonts load first with display=swap: the landing (/) renders in
@@ -38,32 +56,40 @@
          brand face rather than blocking text. The host is allowlisted in the
          CSP fontSrc directive (server/_core/index.ts) — without that entry the
          browser refuses these fetches and logs 4 errors per page view. -->
-    <link rel="preconnect" href="https://d2xsxph8kpxj0f.cloudfront.net" crossorigin />
+    <link
+      rel="preconnect"
+      href="https://d2xsxph8kpxj0f.cloudfront.net"
+      crossorigin
+    />
     <style>
       @font-face {
-        font-family: 'GG Sans';
-        src: url('https://d2xsxph8kpxj0f.cloudfront.net/310519663397752079/MW3FicTy7ae3qrm8dx8Lua/ggsans-normal-400_4f9ee2e1.woff2') format('woff2');
+        font-family: "GG Sans";
+        src: url("https://d2xsxph8kpxj0f.cloudfront.net/310519663397752079/MW3FicTy7ae3qrm8dx8Lua/ggsans-normal-400_4f9ee2e1.woff2")
+          format("woff2");
         font-weight: 400;
         font-style: normal;
         font-display: swap;
       }
       @font-face {
-        font-family: 'GG Sans';
-        src: url('https://d2xsxph8kpxj0f.cloudfront.net/310519663397752079/MW3FicTy7ae3qrm8dx8Lua/ggsans-normal-500_32c749e5.woff2') format('woff2');
+        font-family: "GG Sans";
+        src: url("https://d2xsxph8kpxj0f.cloudfront.net/310519663397752079/MW3FicTy7ae3qrm8dx8Lua/ggsans-normal-500_32c749e5.woff2")
+          format("woff2");
         font-weight: 500;
         font-style: normal;
         font-display: swap;
       }
       @font-face {
-        font-family: 'GG Sans';
-        src: url('https://d2xsxph8kpxj0f.cloudfront.net/310519663397752079/MW3FicTy7ae3qrm8dx8Lua/ggsans-normal-600_328a863d.woff2') format('woff2');
+        font-family: "GG Sans";
+        src: url("https://d2xsxph8kpxj0f.cloudfront.net/310519663397752079/MW3FicTy7ae3qrm8dx8Lua/ggsans-normal-600_328a863d.woff2")
+          format("woff2");
         font-weight: 600;
         font-style: normal;
         font-display: swap;
       }
       @font-face {
-        font-family: 'GG Sans';
-        src: url('https://d2xsxph8kpxj0f.cloudfront.net/310519663397752079/MW3FicTy7ae3qrm8dx8Lua/ggsans-normal-700_0f62247a.woff2') format('woff2');
+        font-family: "GG Sans";
+        src: url("https://d2xsxph8kpxj0f.cloudfront.net/310519663397752079/MW3FicTy7ae3qrm8dx8Lua/ggsans-normal-700_0f62247a.woff2")
+          format("woff2");
         font-weight: 700;
         font-style: normal;
         font-display: swap;
@@ -118,14 +144,19 @@
         animation: shell-logo-pulse 2.2s ease-in-out infinite;
       }
       @keyframes shell-logo-pulse {
-        0%, 100% { filter: none; }
-        50%       { filter: none; }
+        0%,
+        100% {
+          filter: none;
+        }
+        50% {
+          filter: none;
+        }
       }
       /* Progress bar track */
       .html-shell-bar-track {
         width: 160px;
         height: 3px;
-        background: #FFFFFF;
+        background: #ffffff;
         border-radius: 99px;
         overflow: hidden;
         margin-bottom: 12px;
@@ -135,21 +166,30 @@
         height: 100%;
         width: 45%;
         border-radius: 99px;
-        background: #45E0A8;
+        background: #45e0a8;
         box-shadow: none;
         animation: shell-bar-slide 1.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
       }
       @keyframes shell-bar-slide {
-        0%   { transform: translateX(-100%); }
-        100% { transform: translateX(400%); }
+        0% {
+          transform: translateX(-100%);
+        }
+        100% {
+          transform: translateX(400%);
+        }
       }
       /* "Loading..." label */
       .html-shell-label {
-        font-family: "Familjen Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-family:
+          "Familjen Grotesk",
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
         font-size: 12px;
         font-weight: 500;
         letter-spacing: 0.08em;
-        color: #FFFFFF;
+        color: #ffffff;
         text-transform: uppercase;
       }
     </style>
@@ -190,7 +230,12 @@
     <style>
       /* SEO static content: shown by default, hidden when JS runs */
       #seo-static-content {
-        font-family: "Familjen Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-family:
+          "Familjen Grotesk",
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
         background-color: #000000;
         color: #ffffff;
         padding: 48px 24px 64px;
@@ -206,7 +251,7 @@
         font-weight: 600;
         letter-spacing: 0.12em;
         text-transform: uppercase;
-        color: #45E0A8;
+        color: #45e0a8;
         margin-bottom: 16px;
       }
       #seo-static-content h1 {
@@ -219,14 +264,14 @@
       #seo-static-content .seo-subtitle {
         font-size: clamp(15px, 2.5vw, 18px);
         font-weight: 400;
-        color: #FFFFFF;
+        color: #ffffff;
         line-height: 1.6;
         margin-bottom: 32px;
         max-width: 640px;
       }
       #seo-static-content .seo-cta {
         display: inline-block;
-        background: #45E0A8;
+        background: #45e0a8;
         color: #000000;
         font-size: 15px;
         font-weight: 700;
@@ -238,15 +283,15 @@
       #seo-static-content .seo-body {
         font-size: 15px;
         line-height: 1.7;
-        color: #FFFFFF;
+        color: #ffffff;
         margin-bottom: 32px;
         max-width: 720px;
       }
       #seo-static-content .seo-disclaimer {
         font-size: 12px;
         line-height: 1.6;
-        color: #FFFFFF;
-        border-top: 1px solid #FFFFFF;
+        color: #ffffff;
+        border-top: 1px solid #ffffff;
         padding-top: 24px;
         max-width: 720px;
       }
@@ -254,23 +299,41 @@
     </style>
     <noscript>
       <style>
-        #html-loading-shell { display: none !important; }
-        #seo-static-content { display: block !important; }
-        #seo-static-content.js-ready { display: block !important; }
+        #html-loading-shell {
+          display: none !important;
+        }
+        #seo-static-content {
+          display: block !important;
+        }
+        #seo-static-content.js-ready {
+          display: block !important;
+        }
       </style>
     </noscript>
-    <section id="seo-static-content" aria-label="dıme — Sports Betting Intelligence Software">
+    <section
+      id="seo-static-content"
+      aria-label="dıme — Sports Betting Intelligence Software"
+    >
       <p class="seo-eyebrow">Sports betting intelligence software</p>
       <h1>See where price and probability disagree.</h1>
       <p class="seo-subtitle">
-        Dime AI compares sportsbook prices against projected probability, movement, volatility, matchup context, and risk flags so every market resolves to Pass, Monitor, or Edge Detected.
+        Dime AI compares sportsbook prices against projected probability,
+        movement, volatility, matchup context, and risk flags so every market
+        resolves to Pass, Monitor, or Edge Detected.
       </p>
       <a class="seo-cta" href="/checkout?plan=pro">Get Access</a>
       <p class="seo-body">
-        Dime AI runs 400,000 simulations per game to project probability for every market, strips the book's margin for a no-vig baseline, and classifies each market as Pass, Monitor, or Edge Detected. Outputs are Brier-scored against closing prices. Pass is a first-class output — most markets are efficiently priced, and the software says so.
+        Dime AI runs 400,000 simulations per game to project probability for
+        every market, strips the book's margin for a no-vig baseline, and
+        classifies each market as Pass, Monitor, or Edge Detected. Outputs are
+        Brier-scored against closing prices. Pass is a first-class output — most
+        markets are efficiently priced, and the software says so.
       </p>
       <p class="seo-disclaimer">
-        21+ only. Sports betting involves risk. Dime AI does not guarantee profits or outcomes — analytical software for informational purposes only. Bet responsibly and within your means. Gambling problem? Call 1-800-GAMBLER.
+        21+ only. Sports betting involves risk. Dime AI does not guarantee
+        profits or outcomes — analytical software for informational purposes
+        only. Bet responsibly and within your means. Gambling problem? Call
+        1-800-GAMBLER.
       </p>
     </section>
     <script>
@@ -278,11 +341,11 @@
       // Also hide immediately on non-root paths (e.g. /feed, /login) since the SEO section is
       // only relevant for the public homepage at /.
       // This runs synchronously before React mounts, preventing any flash.
-      (function() {
-        var seo = document.getElementById('seo-static-content');
+      (function () {
+        var seo = document.getElementById("seo-static-content");
         if (!seo) return;
         // Always hide when JS runs — React renders the real LandingPage or the correct route page
-        seo.classList.add('js-ready');
+        seo.classList.add("js-ready");
       })();
     </script>
     <script>
@@ -296,18 +359,18 @@
       //   - That element has non-zero dimensions (not just a React comment node)
       //
       // This prevents premature dismissal on React's internal fiber nodes.
-      (function() {
-        var shell = document.getElementById('html-loading-shell');
-        var root  = document.getElementById('root');
+      (function () {
+        var shell = document.getElementById("html-loading-shell");
+        var root = document.getElementById("root");
         if (!shell || !root) return;
 
         var dismissed = false;
         function dismiss() {
           if (dismissed) return;
           dismissed = true;
-          shell.classList.add('hidden');
+          shell.classList.add("hidden");
           // Remove from DOM after fade completes (200ms transition)
-          setTimeout(function() {
+          setTimeout(function () {
             if (shell.parentNode) shell.parentNode.removeChild(shell);
           }, 250);
           obs.disconnect();
@@ -315,21 +378,24 @@
 
         function hasVisibleContent() {
           // Check if #root has any element descendants with actual content
-          var allEls = root.querySelectorAll('*');
+          var allEls = root.querySelectorAll("*");
           for (var i = 0; i < allEls.length; i++) {
             var el = allEls[i];
             // Skip script/style/meta tags
             var tag = el.tagName;
-            if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'META') continue;
+            if (tag === "SCRIPT" || tag === "STYLE" || tag === "META") continue;
             // Any real element with content = ready
-            if (el.children.length > 0 || (el.textContent && el.textContent.trim().length > 0)) {
+            if (
+              el.children.length > 0 ||
+              (el.textContent && el.textContent.trim().length > 0)
+            ) {
               return true;
             }
           }
           return false;
         }
 
-        var obs = new MutationObserver(function(mutations) {
+        var obs = new MutationObserver(function (mutations) {
           // Check on every mutation if real content has appeared
           if (hasVisibleContent()) {
             dismiss();
@@ -339,13 +405,19 @@
         // subtree:true catches deeply nested React renders
         // childList:true catches element additions/removals
         // characterData:true catches text node changes (React text renders)
-        obs.observe(root, { childList: true, subtree: true, characterData: true });
+        obs.observe(root, {
+          childList: true,
+          subtree: true,
+          characterData: true,
+        });
 
         // Safety: force-dismiss after 8s regardless of content state
         // This prevents the shell from blocking the UI if something goes wrong
-        setTimeout(function() {
+        setTimeout(function () {
           if (!dismissed) {
-            console.warn('[HTML Shell] Force-dismissed after 8s safety timeout');
+            console.warn(
+              "[HTML Shell] Force-dismissed after 8s safety timeout"
+            );
             dismiss();
           }
         }, 8000);
@@ -354,86 +426,86 @@
     <script type="module" src="/src/main.tsx"></script>
     <!-- Structured data: SoftwareApplication + FAQ schema -->
     <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "SoftwareApplication",
-      "name": "Dime AI",
-      "applicationCategory": "SportsApplication",
-      "operatingSystem": "Web",
-      "description": "Dime AI compares sportsbook prices against projected probability so every market resolves to Pass, Monitor, or Edge Detected.",
-      "url": "https://aisportsbettingmodels.com",
-      "offers": [
-        {
-          "@type": "Offer",
-          "name": "Pro Monthly",
-          "price": "99",
-          "priceCurrency": "USD",
-          "billingIncrement": "P1M"
-        },
-        {
-          "@type": "Offer",
-          "name": "Sharp Monthly",
-          "price": "249",
-          "priceCurrency": "USD",
-          "billingIncrement": "P1M"
-        },
-        {
-          "@type": "Offer",
-          "name": "Operator Monthly",
-          "price": "499",
-          "priceCurrency": "USD",
-          "billingIncrement": "P1M"
-        }
-      ]
-    }
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "Dime AI",
+        "applicationCategory": "SportsApplication",
+        "operatingSystem": "Web",
+        "description": "Dime AI compares sportsbook prices against projected probability so every market resolves to Pass, Monitor, or Edge Detected.",
+        "url": "https://aisportsbettingmodels.com",
+        "offers": [
+          {
+            "@type": "Offer",
+            "name": "Pro Monthly",
+            "price": "99",
+            "priceCurrency": "USD",
+            "billingIncrement": "P1M"
+          },
+          {
+            "@type": "Offer",
+            "name": "Sharp Monthly",
+            "price": "249",
+            "priceCurrency": "USD",
+            "billingIncrement": "P1M"
+          },
+          {
+            "@type": "Offer",
+            "name": "Operator Monthly",
+            "price": "499",
+            "priceCurrency": "USD",
+            "billingIncrement": "P1M"
+          }
+        ]
+      }
     </script>
     <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "FAQPage",
-      "mainEntity": [
-        {
-          "@type": "Question",
-          "name": "Is this a picks service?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "No. Dime is analytical software that prices sportsbook markets against model probability from 400,000 simulations per game and classifies each market as Pass, Monitor, or Edge Detected. What you do with a classification is your decision."
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Is this a picks service?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No. Dime is analytical software that prices sportsbook markets against model probability from 400,000 simulations per game and classifies each market as Pass, Monitor, or Edge Detected. What you do with a classification is your decision."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What sports are covered?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Currently MLB baseball and World Cup 2026. Additional sports are in development."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What is the difference between the Pro, Sharp and Operator plans?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "All paid plans include the full projections board and Dime Chat. Pro is $99/month. Sharp is $249/month with capped MAX Analyst access. Operator is $499/month with full MAX Analyst access. There are no tiers of picks — every plan runs the same engine."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Can I cancel anytime?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. Cancel anytime from your account settings. No contracts, no cancellation fees."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Does this guarantee I will win?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No. Nothing guarantees winning in sports betting. Dime provides model-driven market pricing to make your evaluation sharper — most markets are priced efficiently and the most common verdict is Pass. Sports betting involves risk. Past model performance does not guarantee future results. 21+."
+            }
           }
-        },
-        {
-          "@type": "Question",
-          "name": "What sports are covered?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "Currently MLB baseball and World Cup 2026. Additional sports are in development."
-          }
-        },
-        {
-          "@type": "Question",
-          "name": "What is the difference between the Pro, Sharp and Operator plans?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "All paid plans include the full projections board and Dime Chat. Pro is $99/month. Sharp is $249/month with capped MAX Analyst access. Operator is $499/month with full MAX Analyst access. There are no tiers of picks — every plan runs the same engine."
-          }
-        },
-        {
-          "@type": "Question",
-          "name": "Can I cancel anytime?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "Yes. Cancel anytime from your account settings. No contracts, no cancellation fees."
-          }
-        },
-        {
-          "@type": "Question",
-          "name": "Does this guarantee I will win?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "No. Nothing guarantees winning in sports betting. Dime provides model-driven market pricing to make your evaluation sharper — most markets are priced efficiently and the most common verdict is Pass. Sports betting involves risk. Past model performance does not guarantee future results. 21+."
-          }
-        }
-      ]
-    }
+        ]
+      }
     </script>
   </body>
 </html>

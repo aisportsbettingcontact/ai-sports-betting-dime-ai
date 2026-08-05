@@ -2,11 +2,16 @@ import { describe, it, expect } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
 
-const src = fs.readFileSync(path.join(import.meta.dirname, "readRoute.ts"), "utf8");
+const src = fs.readFileSync(
+  path.join(import.meta.dirname, "readRoute.ts"),
+  "utf8"
+);
 
 describe("analytics read route", () => {
   it("serves GET /api/internal/analytics/overview", () => {
-    expect(src).toMatch(/app\.get\(\s*["'`]\/api\/internal\/analytics\/overview/);
+    expect(src).toMatch(
+      /app\.get\(\s*["'`]\/api\/internal\/analytics\/overview/
+    );
   });
   it("404s unless store role and 401s on secret mismatch", () => {
     expect(src).toMatch(/isAnalyticsStore/);

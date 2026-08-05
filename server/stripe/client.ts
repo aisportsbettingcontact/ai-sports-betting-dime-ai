@@ -31,8 +31,8 @@ export function getStripe(): Stripe {
   const keyMode = secretKey.startsWith("sk_live_")
     ? "LIVE"
     : secretKey.startsWith("sk_test_")
-    ? "TEST"
-    : "UNKNOWN";
+      ? "TEST"
+      : "UNKNOWN";
 
   console.log(`${TAG} [STEP] Initialising Stripe SDK`);
   console.log(`${TAG}   key_mode=${keyMode}`);

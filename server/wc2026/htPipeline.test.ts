@@ -30,10 +30,10 @@
  * ═══════════════════════════════════════════════════════════════════════════════
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from "vitest";
 
 // ─── Type definitions (mirrors fifaLiveScraper.ts) ────────────────────────────
-type StatusType = 'LIVE' | 'HT' | 'FT' | 'SCHEDULED';
+type StatusType = "LIVE" | "HT" | "FT" | "SCHEDULED";
 
 interface ResolvedStatus {
   status: StatusType;
@@ -45,29 +45,32 @@ interface ResolvedStatus {
 function normalizeMinute(raw: string): ResolvedStatus {
   const injuryMidApostrophe = raw.match(/^(\d+)'\+(\d+)'$/);
   if (injuryMidApostrophe) {
-    return { status: 'LIVE', minute: `${injuryMidApostrophe[1]}+${injuryMidApostrophe[2]}` };
+    return {
+      status: "LIVE",
+      minute: `${injuryMidApostrophe[1]}+${injuryMidApostrophe[2]}`,
+    };
   }
   const injuryLegacy = raw.match(/^(\d+)\+(\d+)'$/);
   if (injuryLegacy) {
-    return { status: 'LIVE', minute: `${injuryLegacy[1]}+${injuryLegacy[2]}` };
+    return { status: "LIVE", minute: `${injuryLegacy[1]}+${injuryLegacy[2]}` };
   }
   const regularMinute = raw.match(/^(\d+)'$/);
   if (regularMinute) {
-    return { status: 'LIVE', minute: regularMinute[1] };
+    return { status: "LIVE", minute: regularMinute[1] };
   }
   const bareMinute = raw.match(/^(\d+)$/);
   if (bareMinute) {
-    return { status: 'LIVE', minute: bareMinute[1] };
+    return { status: "LIVE", minute: bareMinute[1] };
   }
-  return { status: 'SCHEDULED', minute: null };
+  return { status: "SCHEDULED", minute: null };
 }
 
 function resolveStatus(rawStatus: string): ResolvedStatus {
-  if (rawStatus === 'FT' || rawStatus === 'AET' || rawStatus === 'AP') {
-    return { status: 'FT', minute: null };
+  if (rawStatus === "FT" || rawStatus === "AET" || rawStatus === "AP") {
+    return { status: "FT", minute: null };
   }
-  if (rawStatus === 'HT') {
-    return { status: 'HT', minute: null };
+  if (rawStatus === "HT") {
+    return { status: "HT", minute: null };
   }
   return normalizeMinute(rawStatus);
 }
@@ -80,28 +83,43 @@ interface MatchStatus {
 }
 
 function deriveScorePanelState(match: MatchStatus) {
-  const isLive = match.status === 'LIVE';
-  const isHT = match.status === 'HT';
-  const isFinal = match.status === 'FT';
+  const isLive = match.status === "LIVE";
+  const isHT = match.status === "HT";
+  const isFinal = match.status === "FT";
   const isScheduled = !isLive && !isHT && !isFinal;
   const matchMinute = match.matchMinute ?? null;
   const showBadge = isLive || isHT || isFinal;
-  const badgeType: 'HT' | 'LIVE' | 'FINAL' | 'TIME' = isHT ? 'HT' : isLive ? 'LIVE' : isFinal ? 'FINAL' : 'TIME';
-  const badgeColor = isHT ? '#FBbf24' : '#39FF14';
+  const badgeType: "HT" | "LIVE" | "FINAL" | "TIME" = isHT
+    ? "HT"
+    : isLive
+      ? "LIVE"
+      : isFinal
+        ? "FINAL"
+        : "TIME";
+  const badgeColor = isHT ? "#FBbf24" : "#39FF14";
   const badgePulse = isLive; // HT has static dot, LIVE has animate-pulse
   const showMinute = isLive && matchMinute !== null;
   const showAdvancingTeam = isFinal && match.advancingTeamId !== null;
   const showScheduledTime = isScheduled;
 
   return {
-    isLive, isHT, isFinal, isScheduled,
-    matchMinute, showBadge, badgeType, badgeColor,
-    badgePulse, showMinute, showAdvancingTeam, showScheduledTime,
+    isLive,
+    isHT,
+    isFinal,
+    isScheduled,
+    matchMinute,
+    showBadge,
+    badgeType,
+    badgeColor,
+    badgePulse,
+    showMinute,
+    showAdvancingTeam,
+    showScheduledTime,
   };
 }
 
 // ─── DB enum validation ───────────────────────────────────────────────────────
-const VALID_STATUS_VALUES: StatusType[] = ['SCHEDULED', 'LIVE', 'HT', 'FT'];
+const VALID_STATUS_VALUES: StatusType[] = ["SCHEDULED", "LIVE", "HT", "FT"];
 
 function isValidDbStatus(value: string): value is StatusType {
   return VALID_STATUS_VALUES.includes(value as StatusType);
@@ -109,122 +127,119 @@ function isValidDbStatus(value: string): value is StatusType {
 
 // ─── TESTS ────────────────────────────────────────────────────────────────────
 
-describe('HT Pipeline — Layer 1: FIFA HTML → Scraper (resolveStatus)', () => {
-
+describe("HT Pipeline — Layer 1: FIFA HTML → Scraper (resolveStatus)", () => {
   it('[CRITICAL] "HT" → { status: "HT", minute: null }', () => {
-    const result = resolveStatus('HT');
-    expect(result.status).toBe('HT');
+    const result = resolveStatus("HT");
+    expect(result.status).toBe("HT");
     expect(result.minute).toBeNull();
   });
 
   it('"HT" is NOT treated as LIVE', () => {
-    const result = resolveStatus('HT');
-    expect(result.status).not.toBe('LIVE');
+    const result = resolveStatus("HT");
+    expect(result.status).not.toBe("LIVE");
   });
 
   it('"HT" is NOT treated as FT', () => {
-    const result = resolveStatus('HT');
-    expect(result.status).not.toBe('FT');
+    const result = resolveStatus("HT");
+    expect(result.status).not.toBe("FT");
   });
 
   it('"HT" is NOT treated as SCHEDULED', () => {
-    const result = resolveStatus('HT');
-    expect(result.status).not.toBe('SCHEDULED');
+    const result = resolveStatus("HT");
+    expect(result.status).not.toBe("SCHEDULED");
   });
 
   it('"HT" has null minute (no game clock during halftime)', () => {
-    const result = resolveStatus('HT');
+    const result = resolveStatus("HT");
     expect(result.minute).toBeNull();
   });
 
   it('HT is correctly distinguished from "45\'" (end of first half minute)', () => {
-    const htResult = resolveStatus('HT');
+    const htResult = resolveStatus("HT");
     const minuteResult = resolveStatus("45'");
-    expect(htResult.status).toBe('HT');
-    expect(minuteResult.status).toBe('LIVE');
+    expect(htResult.status).toBe("HT");
+    expect(minuteResult.status).toBe("LIVE");
     expect(htResult.minute).toBeNull();
-    expect(minuteResult.minute).toBe('45');
+    expect(minuteResult.minute).toBe("45");
   });
 
-  it('HT is correctly distinguished from "45\'+2\'" (injury time before HT)', () => {
-    const htResult = resolveStatus('HT');
+  it("HT is correctly distinguished from \"45'+2'\" (injury time before HT)", () => {
+    const htResult = resolveStatus("HT");
     const injuryResult = resolveStatus("45'+2'");
-    expect(htResult.status).toBe('HT');
-    expect(injuryResult.status).toBe('LIVE');
+    expect(htResult.status).toBe("HT");
+    expect(injuryResult.status).toBe("LIVE");
     expect(htResult.minute).toBeNull();
-    expect(injuryResult.minute).toBe('45+2');
+    expect(injuryResult.minute).toBe("45+2");
   });
 
-  it('Priority: FT is checked BEFORE HT (FT wins if both somehow present)', () => {
+  it("Priority: FT is checked BEFORE HT (FT wins if both somehow present)", () => {
     // FT variants are checked first in resolveStatus
-    expect(resolveStatus('FT').status).toBe('FT');
-    expect(resolveStatus('AET').status).toBe('FT');
-    expect(resolveStatus('AP').status).toBe('FT');
+    expect(resolveStatus("FT").status).toBe("FT");
+    expect(resolveStatus("AET").status).toBe("FT");
+    expect(resolveStatus("AP").status).toBe("FT");
     // HT is checked second
-    expect(resolveStatus('HT').status).toBe('HT');
+    expect(resolveStatus("HT").status).toBe("HT");
   });
 
   it('Case sensitivity: "ht" (lowercase) is NOT matched as HT → falls to SCHEDULED', () => {
     // FIFA always sends uppercase "HT" — lowercase should not match
-    const result = resolveStatus('ht');
-    expect(result.status).toBe('SCHEDULED');
+    const result = resolveStatus("ht");
+    expect(result.status).toBe("SCHEDULED");
   });
 
   it('Whitespace: " HT " (with spaces) is NOT matched as HT', () => {
     // The scraper trims rawStatus before calling resolveStatus
     // This test confirms the pure function requires exact match
-    const result = resolveStatus(' HT ');
-    expect(result.status).toBe('SCHEDULED');
+    const result = resolveStatus(" HT ");
+    expect(result.status).toBe("SCHEDULED");
   });
 
   it('Trimmed "HT" (as scraper delivers it after .trim()) → { status: "HT", minute: null }', () => {
-    const rawFromHtml = '  HT  ';
+    const rawFromHtml = "  HT  ";
     const trimmed = rawFromHtml.trim(); // scraper calls .trim() on rawStatus
     const result = resolveStatus(trimmed);
-    expect(result.status).toBe('HT');
+    expect(result.status).toBe("HT");
     expect(result.minute).toBeNull();
   });
 });
 
-describe('HT Pipeline — Layer 2: DB Enum Validation', () => {
-
+describe("HT Pipeline — Layer 2: DB Enum Validation", () => {
   it('"HT" is a valid DB status enum value', () => {
-    expect(isValidDbStatus('HT')).toBe(true);
+    expect(isValidDbStatus("HT")).toBe(true);
   });
 
   it('"SCHEDULED" is a valid DB status enum value', () => {
-    expect(isValidDbStatus('SCHEDULED')).toBe(true);
+    expect(isValidDbStatus("SCHEDULED")).toBe(true);
   });
 
   it('"LIVE" is a valid DB status enum value', () => {
-    expect(isValidDbStatus('LIVE')).toBe(true);
+    expect(isValidDbStatus("LIVE")).toBe(true);
   });
 
   it('"FT" is a valid DB status enum value', () => {
-    expect(isValidDbStatus('FT')).toBe(true);
+    expect(isValidDbStatus("FT")).toBe(true);
   });
 
-  it('DB enum has exactly 4 values: SCHEDULED, LIVE, HT, FT', () => {
+  it("DB enum has exactly 4 values: SCHEDULED, LIVE, HT, FT", () => {
     expect(VALID_STATUS_VALUES).toHaveLength(4);
-    expect(VALID_STATUS_VALUES).toContain('SCHEDULED');
-    expect(VALID_STATUS_VALUES).toContain('LIVE');
-    expect(VALID_STATUS_VALUES).toContain('HT');
-    expect(VALID_STATUS_VALUES).toContain('FT');
+    expect(VALID_STATUS_VALUES).toContain("SCHEDULED");
+    expect(VALID_STATUS_VALUES).toContain("LIVE");
+    expect(VALID_STATUS_VALUES).toContain("HT");
+    expect(VALID_STATUS_VALUES).toContain("FT");
   });
 
   it('"AET" is NOT a valid DB status (maps to FT before storage)', () => {
-    expect(isValidDbStatus('AET')).toBe(false);
+    expect(isValidDbStatus("AET")).toBe(false);
   });
 
   it('"AP" is NOT a valid DB status (maps to FT before storage)', () => {
-    expect(isValidDbStatus('AP')).toBe(false);
+    expect(isValidDbStatus("AP")).toBe(false);
   });
 });
 
-describe('HT Pipeline — Layer 4: WcScorePanel State Derivation', () => {
-
+describe("HT Pipeline — Layer 4: WcScorePanel State Derivation", () => {
   const htMatch: MatchStatus = {
-    status: 'HT',
+    status: "HT",
     matchMinute: null,
     advancingTeamId: null,
   };
@@ -256,72 +271,83 @@ describe('HT Pipeline — Layer 4: WcScorePanel State Derivation', () => {
 
   it('badgeType = "HT" when status = "HT"', () => {
     const state = deriveScorePanelState(htMatch);
-    expect(state.badgeType).toBe('HT');
+    expect(state.badgeType).toBe("HT");
   });
 
   it('[CRITICAL] badgeColor = "#FBbf24" (amber) for HT — NOT green (#39FF14)', () => {
     const state = deriveScorePanelState(htMatch);
-    expect(state.badgeColor).toBe('#FBbf24');
-    expect(state.badgeColor).not.toBe('#39FF14');
+    expect(state.badgeColor).toBe("#FBbf24");
+    expect(state.badgeColor).not.toBe("#39FF14");
   });
 
-  it('[CRITICAL] badgePulse = false for HT (static dot, NOT animate-pulse)', () => {
+  it("[CRITICAL] badgePulse = false for HT (static dot, NOT animate-pulse)", () => {
     const state = deriveScorePanelState(htMatch);
     expect(state.badgePulse).toBe(false);
   });
 
-  it('showMinute = false for HT (no game clock during halftime)', () => {
+  it("showMinute = false for HT (no game clock during halftime)", () => {
     const state = deriveScorePanelState(htMatch);
     expect(state.showMinute).toBe(false);
   });
 
-  it('showAdvancingTeam = false for HT (match not over yet)', () => {
+  it("showAdvancingTeam = false for HT (match not over yet)", () => {
     const state = deriveScorePanelState(htMatch);
     expect(state.showAdvancingTeam).toBe(false);
   });
 
-  it('showScheduledTime = false for HT (HT card must NOT show kickoff time)', () => {
+  it("showScheduledTime = false for HT (HT card must NOT show kickoff time)", () => {
     const state = deriveScorePanelState(htMatch);
     expect(state.showScheduledTime).toBe(false);
   });
 });
 
-describe('HT Pipeline — Layer 5: Badge Render Logic', () => {
-
+describe("HT Pipeline — Layer 5: Badge Render Logic", () => {
   it('HT badge text is exactly "HT" (no minute suffix)', () => {
-    const status: StatusType = 'HT';
+    const status: StatusType = "HT";
     const matchMinute: string | null = null;
-    const isHT = status === 'HT';
-    const isLive = status === 'LIVE';
-    const badgeText = isHT ? 'HT' : isLive ? `LIVE${matchMinute ? ` ${matchMinute}'` : ''}` : 'FINAL';
-    expect(badgeText).toBe('HT');
+    const isHT = status === "HT";
+    const isLive = status === "LIVE";
+    const badgeText = isHT
+      ? "HT"
+      : isLive
+        ? `LIVE${matchMinute ? ` ${matchMinute}'` : ""}`
+        : "FINAL";
+    expect(badgeText).toBe("HT");
   });
 
-  it('HT badge text does NOT include a minute even if matchMinute is somehow set', () => {
+  it("HT badge text does NOT include a minute even if matchMinute is somehow set", () => {
     // matchMinute should always be null for HT, but defensive test
-    const status: StatusType = 'HT';
-    const matchMinute: string | null = '45'; // edge case: minute set during HT
-    const isHT = status === 'HT';
-    const isLive = status === 'LIVE';
+    const status: StatusType = "HT";
+    const matchMinute: string | null = "45"; // edge case: minute set during HT
+    const isHT = status === "HT";
+    const isLive = status === "LIVE";
     // HT branch ignores matchMinute — badge is always just "HT"
-    const badgeText = isHT ? 'HT' : isLive ? `LIVE${matchMinute ? ` ${matchMinute}'` : ''}` : 'FINAL';
-    expect(badgeText).toBe('HT');
-    expect(badgeText).not.toContain('45');
+    const badgeText = isHT
+      ? "HT"
+      : isLive
+        ? `LIVE${matchMinute ? ` ${matchMinute}'` : ""}`
+        : "FINAL";
+    expect(badgeText).toBe("HT");
+    expect(badgeText).not.toContain("45");
   });
 
-  it('LIVE badge at 45+2\' (injury time before HT) shows correct minute', () => {
-    const status: StatusType = 'LIVE';
-    const matchMinute: string | null = '45+2';
-    const isHT = status === 'HT';
-    const isLive = status === 'LIVE';
-    const badgeText = isHT ? 'HT' : isLive ? `LIVE${matchMinute ? ` ${matchMinute}'` : ''}` : 'FINAL';
+  it("LIVE badge at 45+2' (injury time before HT) shows correct minute", () => {
+    const status: StatusType = "LIVE";
+    const matchMinute: string | null = "45+2";
+    const isHT = status === "HT";
+    const isLive = status === "LIVE";
+    const badgeText = isHT
+      ? "HT"
+      : isLive
+        ? `LIVE${matchMinute ? ` ${matchMinute}'` : ""}`
+        : "FINAL";
     expect(badgeText).toBe("LIVE 45+2'");
   });
 
-  it('Badge color contrast: HT amber (#FBbf24) is visually distinct from LIVE green (#39FF14)', () => {
+  it("Badge color contrast: HT amber (#FBbf24) is visually distinct from LIVE green (#39FF14)", () => {
     // Verify the two colors are different hex values
-    const HT_COLOR = '#FBbf24';
-    const LIVE_COLOR = '#39FF14';
+    const HT_COLOR = "#FBbf24";
+    const LIVE_COLOR = "#39FF14";
     expect(HT_COLOR).not.toBe(LIVE_COLOR);
     // Both are bright/saturated for dark background visibility
     expect(HT_COLOR.toUpperCase()).toMatch(/^#[0-9A-F]{6}$/);
@@ -329,8 +355,7 @@ describe('HT Pipeline — Layer 5: Badge Render Logic', () => {
   });
 });
 
-describe('HT Pipeline — Layer 6: State Machine Transitions', () => {
-
+describe("HT Pipeline — Layer 6: State Machine Transitions", () => {
   /**
    * Valid FIFA match state machine:
    *   SCHEDULED → LIVE → HT → LIVE → FT
@@ -338,99 +363,98 @@ describe('HT Pipeline — Layer 6: State Machine Transitions', () => {
    *   SCHEDULED → FT (direct, e.g., walkover or data update)
    */
 
-  it('SCHEDULED → LIVE is a valid transition', () => {
-    const from: StatusType = 'SCHEDULED';
-    const to: StatusType = 'LIVE';
+  it("SCHEDULED → LIVE is a valid transition", () => {
+    const from: StatusType = "SCHEDULED";
+    const to: StatusType = "LIVE";
     const validTransitions: Record<StatusType, StatusType[]> = {
-      SCHEDULED: ['LIVE', 'FT'],
-      LIVE: ['HT', 'FT'],
-      HT: ['LIVE'],
+      SCHEDULED: ["LIVE", "FT"],
+      LIVE: ["HT", "FT"],
+      HT: ["LIVE"],
       FT: [],
     };
     expect(validTransitions[from]).toContain(to);
   });
 
-  it('LIVE → HT is a valid transition (end of first half)', () => {
-    const from: StatusType = 'LIVE';
-    const to: StatusType = 'HT';
+  it("LIVE → HT is a valid transition (end of first half)", () => {
+    const from: StatusType = "LIVE";
+    const to: StatusType = "HT";
     const validTransitions: Record<StatusType, StatusType[]> = {
-      SCHEDULED: ['LIVE', 'FT'],
-      LIVE: ['HT', 'FT'],
-      HT: ['LIVE'],
+      SCHEDULED: ["LIVE", "FT"],
+      LIVE: ["HT", "FT"],
+      HT: ["LIVE"],
       FT: [],
     };
     expect(validTransitions[from]).toContain(to);
   });
 
-  it('HT → LIVE is a valid transition (second half kickoff)', () => {
-    const from: StatusType = 'HT';
-    const to: StatusType = 'LIVE';
+  it("HT → LIVE is a valid transition (second half kickoff)", () => {
+    const from: StatusType = "HT";
+    const to: StatusType = "LIVE";
     const validTransitions: Record<StatusType, StatusType[]> = {
-      SCHEDULED: ['LIVE', 'FT'],
-      LIVE: ['HT', 'FT'],
-      HT: ['LIVE'],
+      SCHEDULED: ["LIVE", "FT"],
+      LIVE: ["HT", "FT"],
+      HT: ["LIVE"],
       FT: [],
     };
     expect(validTransitions[from]).toContain(to);
   });
 
-  it('LIVE → FT is a valid transition (end of second half)', () => {
-    const from: StatusType = 'LIVE';
-    const to: StatusType = 'FT';
+  it("LIVE → FT is a valid transition (end of second half)", () => {
+    const from: StatusType = "LIVE";
+    const to: StatusType = "FT";
     const validTransitions: Record<StatusType, StatusType[]> = {
-      SCHEDULED: ['LIVE', 'FT'],
-      LIVE: ['HT', 'FT'],
-      HT: ['LIVE'],
+      SCHEDULED: ["LIVE", "FT"],
+      LIVE: ["HT", "FT"],
+      HT: ["LIVE"],
       FT: [],
     };
     expect(validTransitions[from]).toContain(to);
   });
 
-  it('FT → any is NOT a valid transition (terminal state)', () => {
-    const from: StatusType = 'FT';
+  it("FT → any is NOT a valid transition (terminal state)", () => {
+    const from: StatusType = "FT";
     const validTransitions: Record<StatusType, StatusType[]> = {
-      SCHEDULED: ['LIVE', 'FT'],
-      LIVE: ['HT', 'FT'],
-      HT: ['LIVE'],
+      SCHEDULED: ["LIVE", "FT"],
+      LIVE: ["HT", "FT"],
+      HT: ["LIVE"],
       FT: [],
     };
     expect(validTransitions[from]).toHaveLength(0);
   });
 
-  it('HT → FT is NOT a valid direct transition (must go through LIVE first)', () => {
-    const from: StatusType = 'HT';
+  it("HT → FT is NOT a valid direct transition (must go through LIVE first)", () => {
+    const from: StatusType = "HT";
     const validTransitions: Record<StatusType, StatusType[]> = {
-      SCHEDULED: ['LIVE', 'FT'],
-      LIVE: ['HT', 'FT'],
-      HT: ['LIVE'],
+      SCHEDULED: ["LIVE", "FT"],
+      LIVE: ["HT", "FT"],
+      HT: ["LIVE"],
       FT: [],
     };
-    expect(validTransitions[from]).not.toContain('FT');
+    expect(validTransitions[from]).not.toContain("FT");
   });
 
-  it('Full match lifecycle: SCHEDULED → LIVE → HT → LIVE → FT produces correct badge sequence', () => {
-    const lifecycle: StatusType[] = ['SCHEDULED', 'LIVE', 'HT', 'LIVE', 'FT'];
-    const expectedBadges = ['TIME', 'LIVE', 'HT', 'LIVE', 'FINAL'];
+  it("Full match lifecycle: SCHEDULED → LIVE → HT → LIVE → FT produces correct badge sequence", () => {
+    const lifecycle: StatusType[] = ["SCHEDULED", "LIVE", "HT", "LIVE", "FT"];
+    const expectedBadges = ["TIME", "LIVE", "HT", "LIVE", "FINAL"];
 
     const actualBadges = lifecycle.map(status => {
-      const isHT = status === 'HT';
-      const isLive = status === 'LIVE';
-      const isFinal = status === 'FT';
+      const isHT = status === "HT";
+      const isLive = status === "LIVE";
+      const isFinal = status === "FT";
       const isScheduled = !isLive && !isHT && !isFinal;
-      return isHT ? 'HT' : isLive ? 'LIVE' : isFinal ? 'FINAL' : 'TIME';
+      return isHT ? "HT" : isLive ? "LIVE" : isFinal ? "FINAL" : "TIME";
     });
 
     expect(actualBadges).toEqual(expectedBadges);
   });
 });
 
-describe('HT Pipeline — Integration: NED vs MAR Actual Match Scenario', () => {
-
-  it('Scenario: NED/MAR at 45\'+2\' (injury time before HT) → LIVE badge with "45+2\'"', () => {
+describe("HT Pipeline — Integration: NED vs MAR Actual Match Scenario", () => {
+  it("Scenario: NED/MAR at 45'+2' (injury time before HT) → LIVE badge with \"45+2'\"", () => {
     const rawStatus = "45'+2'";
     const resolved = resolveStatus(rawStatus);
-    expect(resolved.status).toBe('LIVE');
-    expect(resolved.minute).toBe('45+2');
+    expect(resolved.status).toBe("LIVE");
+    expect(resolved.minute).toBe("45+2");
 
     const state = deriveScorePanelState({
       status: resolved.status,
@@ -439,15 +463,15 @@ describe('HT Pipeline — Integration: NED vs MAR Actual Match Scenario', () => 
     });
     expect(state.isLive).toBe(true);
     expect(state.isHT).toBe(false);
-    expect(state.badgeType).toBe('LIVE');
+    expect(state.badgeType).toBe("LIVE");
     expect(state.showMinute).toBe(true);
-    expect(state.badgeColor).toBe('#39FF14');
+    expect(state.badgeColor).toBe("#39FF14");
   });
 
-  it('Scenario: NED/MAR at HT (halftime) → amber HT badge, no minute', () => {
-    const rawStatus = 'HT';
+  it("Scenario: NED/MAR at HT (halftime) → amber HT badge, no minute", () => {
+    const rawStatus = "HT";
     const resolved = resolveStatus(rawStatus);
-    expect(resolved.status).toBe('HT');
+    expect(resolved.status).toBe("HT");
     expect(resolved.minute).toBeNull();
 
     const state = deriveScorePanelState({
@@ -457,19 +481,19 @@ describe('HT Pipeline — Integration: NED vs MAR Actual Match Scenario', () => 
     });
     expect(state.isHT).toBe(true);
     expect(state.isLive).toBe(false);
-    expect(state.badgeType).toBe('HT');
-    expect(state.badgeColor).toBe('#FBbf24');
+    expect(state.badgeType).toBe("HT");
+    expect(state.badgeColor).toBe("#FBbf24");
     expect(state.badgePulse).toBe(false);
     expect(state.showMinute).toBe(false);
     expect(state.showScheduledTime).toBe(false);
     expect(state.showAdvancingTeam).toBe(false);
   });
 
-  it('Scenario: NED/MAR at 60\' (second half) → LIVE badge with "60\'"', () => {
+  it("Scenario: NED/MAR at 60' (second half) → LIVE badge with \"60'\"", () => {
     const rawStatus = "60'";
     const resolved = resolveStatus(rawStatus);
-    expect(resolved.status).toBe('LIVE');
-    expect(resolved.minute).toBe('60');
+    expect(resolved.status).toBe("LIVE");
+    expect(resolved.minute).toBe("60");
 
     const state = deriveScorePanelState({
       status: resolved.status,
@@ -481,20 +505,20 @@ describe('HT Pipeline — Integration: NED vs MAR Actual Match Scenario', () => 
     expect(state.showMinute).toBe(true);
   });
 
-  it('Scenario: NED/MAR at FT (final whistle) → FINAL badge, no minute, advancing team shown', () => {
-    const rawStatus = 'FT';
+  it("Scenario: NED/MAR at FT (final whistle) → FINAL badge, no minute, advancing team shown", () => {
+    const rawStatus = "FT";
     const resolved = resolveStatus(rawStatus);
-    expect(resolved.status).toBe('FT');
+    expect(resolved.status).toBe("FT");
     expect(resolved.minute).toBeNull();
 
     const state = deriveScorePanelState({
       status: resolved.status,
       matchMinute: resolved.minute,
-      advancingTeamId: 'NED', // hypothetical winner
+      advancingTeamId: "NED", // hypothetical winner
     });
     expect(state.isFinal).toBe(true);
     expect(state.isHT).toBe(false);
-    expect(state.badgeType).toBe('FINAL');
+    expect(state.badgeType).toBe("FINAL");
     expect(state.showAdvancingTeam).toBe(true);
     expect(state.showMinute).toBe(false);
   });

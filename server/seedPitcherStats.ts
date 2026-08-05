@@ -129,7 +129,9 @@ async function fetchMlbPitchingStats(): Promise<PitcherRecord[]> {
     throw new Error(`MLB Stats API HTTP ${resp.status}: ${resp.statusText}`);
   }
 
-  const data = await resp.json() as { stats: Array<{ splits: MlbApiStat[] }> };
+  const data = (await resp.json()) as {
+    stats: Array<{ splits: MlbApiStat[] }>;
+  };
   const splits: MlbApiStat[] = data.stats?.[0]?.splits ?? [];
 
   console.log(`[STATE] Total pitchers returned by API: ${splits.length}`);
@@ -178,7 +180,9 @@ async function fetchMlbPitchingStats(): Promise<PitcherRecord[]> {
  * Upsert pitcher stats into the mlb_pitcher_stats table.
  * Uses (mlbamId, teamAbbrev) as the upsert key.
  */
-async function upsertPitcherStats(records: PitcherRecord[]): Promise<{ inserted: number; updated: number; errors: number }> {
+async function upsertPitcherStats(
+  records: PitcherRecord[]
+): Promise<{ inserted: number; updated: number; errors: number }> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
@@ -244,7 +248,10 @@ async function upsertPitcherStats(records: PitcherRecord[]): Promise<{ inserted:
         inserted++;
       }
     } catch (err) {
-      console.error(`[ERROR] Failed to upsert ${rec.fullName} (${rec.teamAbbrev}):`, err);
+      console.error(
+        `[ERROR] Failed to upsert ${rec.fullName} (${rec.teamAbbrev}):`,
+        err
+      );
       errors++;
     }
   }
@@ -256,21 +263,32 @@ async function upsertPitcherStats(records: PitcherRecord[]): Promise<{ inserted:
  * Main entry point: fetch + upsert all pitcher stats.
  * Returns summary stats for logging.
  */
-export async function seedPitcherStats(): Promise<{ total: number; inserted: number; updated: number; errors: number }> {
+export async function seedPitcherStats(): Promise<{
+  total: number;
+  inserted: number;
+  updated: number;
+  errors: number;
+}> {
   console.log("[INPUT] Starting pitcher stats seed/refresh for 2026 season");
 
   const records = await fetchMlbPitchingStats();
 
   if (records.length === 0) {
-    console.warn("[VERIFY] FAIL — No pitcher records fetched. MLB Stats API may be unavailable or season not started.");
+    console.warn(
+      "[VERIFY] FAIL — No pitcher records fetched. MLB Stats API may be unavailable or season not started."
+    );
     return { total: 0, inserted: 0, updated: 0, errors: 0 };
   }
 
-  console.log(`[STEP] Upserting ${records.length} pitcher records into mlb_pitcher_stats...`);
+  console.log(
+    `[STEP] Upserting ${records.length} pitcher records into mlb_pitcher_stats...`
+  );
   const { inserted, updated, errors } = await upsertPitcherStats(records);
 
   const total = records.length;
-  console.log(`[OUTPUT] Pitcher stats upsert complete: total=${total} inserted=${inserted} updated=${updated} errors=${errors}`);
+  console.log(
+    `[OUTPUT] Pitcher stats upsert complete: total=${total} inserted=${inserted} updated=${updated} errors=${errors}`
+  );
   console.log(`[VERIFY] ${errors === 0 ? "PASS" : "FAIL"} — ${errors} errors`);
 
   return { total, inserted, updated, errors };
@@ -284,11 +302,11 @@ export async function seedPitcherStats(): Promise<{ total: number; inserted: num
 // kills the production server (observed as an instant crash at Railway boot).
 if (process.argv[1]?.endsWith("seedPitcherStats.ts")) {
   seedPitcherStats()
-    .then((result) => {
+    .then(result => {
       console.log("[DONE]", result);
       process.exit(0);
     })
-    .catch((err) => {
+    .catch(err => {
       console.error("[FATAL]", err);
       process.exit(1);
     });

@@ -14,7 +14,12 @@
 import { describe, it, expect } from "vitest";
 import { formatBillingTerm, formatAmount } from "./userManagementPlanDisplay";
 
-const LIFETIME = { billingInterval: null, intervalCount: null, isLifetime: true, priceResolved: true };
+const LIFETIME = {
+  billingInterval: null,
+  intervalCount: null,
+  isLifetime: true,
+  priceResolved: true,
+};
 
 describe("formatBillingTerm", () => {
   it("calls the real production SKU LIFETIME, not MONTHLY — the regression", () => {
@@ -22,21 +27,63 @@ describe("formatBillingTerm", () => {
   });
 
   it("names recurring intervals", () => {
-    expect(formatBillingTerm({ billingInterval: "month", intervalCount: 1, isLifetime: false, priceResolved: true })).toBe("MONTHLY");
-    expect(formatBillingTerm({ billingInterval: "year", intervalCount: 1, isLifetime: false, priceResolved: true })).toBe("YEARLY");
-    expect(formatBillingTerm({ billingInterval: "week", intervalCount: 1, isLifetime: false, priceResolved: true })).toBe("WEEKLY");
+    expect(
+      formatBillingTerm({
+        billingInterval: "month",
+        intervalCount: 1,
+        isLifetime: false,
+        priceResolved: true,
+      })
+    ).toBe("MONTHLY");
+    expect(
+      formatBillingTerm({
+        billingInterval: "year",
+        intervalCount: 1,
+        isLifetime: false,
+        priceResolved: true,
+      })
+    ).toBe("YEARLY");
+    expect(
+      formatBillingTerm({
+        billingInterval: "week",
+        intervalCount: 1,
+        isLifetime: false,
+        priceResolved: true,
+      })
+    ).toBe("WEEKLY");
   });
 
   it("renders DAILY rather than the naive DAYLY", () => {
-    expect(formatBillingTerm({ billingInterval: "day", intervalCount: 1, isLifetime: false, priceResolved: true })).toBe("DAILY");
+    expect(
+      formatBillingTerm({
+        billingInterval: "day",
+        intervalCount: 1,
+        isLifetime: false,
+        priceResolved: true,
+      })
+    ).toBe("DAILY");
   });
 
   it("handles multi-interval prices", () => {
-    expect(formatBillingTerm({ billingInterval: "month", intervalCount: 3, isLifetime: false, priceResolved: true })).toBe("EVERY 3 MONTHS");
+    expect(
+      formatBillingTerm({
+        billingInterval: "month",
+        intervalCount: 3,
+        isLifetime: false,
+        priceResolved: true,
+      })
+    ).toBe("EVERY 3 MONTHS");
   });
 
   it("admits when the plan came from the slug alone rather than inventing a term", () => {
-    expect(formatBillingTerm({ billingInterval: null, intervalCount: null, isLifetime: null, priceResolved: false })).toBe("PLAN ONLY");
+    expect(
+      formatBillingTerm({
+        billingInterval: null,
+        intervalCount: null,
+        isLifetime: null,
+        priceResolved: false,
+      })
+    ).toBe("PLAN ONLY");
   });
 });
 

@@ -17,7 +17,10 @@ import { getPlanBySlug, invalidatePlanCache } from "./planStore";
 
 const TAG = "[Stripe][Backfill]";
 
-export async function backfillStaticPlans(): Promise<{ inserted: number; skipped: number }> {
+export async function backfillStaticPlans(): Promise<{
+  inserted: number;
+  skipped: number;
+}> {
   const db = await getDb();
   if (!db) {
     console.warn(`${TAG} no DB available — skipping`);
@@ -27,7 +30,9 @@ export async function backfillStaticPlans(): Promise<{ inserted: number; skipped
   let inserted = 0;
   let skipped = 0;
 
-  for (const [slug, def] of Object.entries(PLANS) as Array<[PlanId, (typeof PLANS)[PlanId]]>) {
+  for (const [slug, def] of Object.entries(PLANS) as Array<
+    [PlanId, (typeof PLANS)[PlanId]]
+  >) {
     if (await getPlanBySlug(slug)) {
       skipped++;
       continue;
@@ -38,7 +43,9 @@ export async function backfillStaticPlans(): Promise<{ inserted: number; skipped
     try {
       priceId = def.priceId();
     } catch {
-      console.warn(`${TAG} ${slug}: price env unset — skip (create it from the dashboard later)`);
+      console.warn(
+        `${TAG} ${slug}: price env unset — skip (create it from the dashboard later)`
+      );
       skipped++;
       continue;
     }

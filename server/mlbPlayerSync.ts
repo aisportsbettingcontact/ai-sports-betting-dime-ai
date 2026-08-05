@@ -55,12 +55,16 @@ interface MlbApiResponse {
 
 async function buildTeamLookup(): Promise<Map<number, string>> {
   const db = await getDb();
-  const teams = await db.select({ mlbId: mlbTeams.mlbId, brAbbrev: mlbTeams.brAbbrev }).from(mlbTeams);
+  const teams = await db
+    .select({ mlbId: mlbTeams.mlbId, brAbbrev: mlbTeams.brAbbrev })
+    .from(mlbTeams);
   const map = new Map<number, string>();
   for (const t of teams) {
     map.set(t.mlbId, t.brAbbrev);
   }
-  console.log(`${TAG} Team lookup built — ${map.size} MLB teams loaded from DB`);
+  console.log(
+    `${TAG} Team lookup built — ${map.size} MLB teams loaded from DB`
+  );
   return map;
 }
 
@@ -68,7 +72,9 @@ async function buildTeamLookup(): Promise<Map<number, string>> {
 
 async function fetchActivePlayers(season: number): Promise<MlbApiPlayer[]> {
   const url = `${MLB_STATS_API}?season=${season}&gameType=R`;
-  console.log(`${TAG} Fetching active players from MLB Stats API — season=${season}`);
+  console.log(
+    `${TAG} Fetching active players from MLB Stats API — season=${season}`
+  );
   console.log(`${TAG} URL: ${url}`);
 
   const controller = new AbortController();
@@ -85,12 +91,16 @@ async function fetchActivePlayers(season: number): Promise<MlbApiPlayer[]> {
   }
 
   if (!resp.ok) {
-    throw new Error(`MLB Stats API returned HTTP ${resp.status} ${resp.statusText}`);
+    throw new Error(
+      `MLB Stats API returned HTTP ${resp.status} ${resp.statusText}`
+    );
   }
 
   const data = (await resp.json()) as MlbApiResponse;
   const players = data.people ?? [];
-  console.log(`${TAG} API response received — ${players.length} players returned`);
+  console.log(
+    `${TAG} API response received — ${players.length} players returned`
+  );
   return players;
 }
 
@@ -101,7 +111,9 @@ export async function runMlbPlayerSync(): Promise<void> {
   const season = new Date().getFullYear();
 
   console.log(`${TAG} ─────────────────────────────────────────────`);
-  console.log(`${TAG} Sync started at ${new Date().toISOString()} (season=${season})`);
+  console.log(
+    `${TAG} Sync started at ${new Date().toISOString()} (season=${season})`
+  );
 
   const stats = {
     fetched: 0,
@@ -118,7 +130,9 @@ export async function runMlbPlayerSync(): Promise<void> {
     teamLookup = await buildTeamLookup();
   } catch (err) {
     console.error(`${TAG} ✕ Failed to load team lookup from DB:`, err);
-    console.error(`${TAG} Sync aborted — cannot resolve team abbreviations without team table`);
+    console.error(
+      `${TAG} Sync aborted — cannot resolve team abbreviations without team table`
+    );
     return;
   }
 
@@ -135,7 +149,9 @@ export async function runMlbPlayerSync(): Promise<void> {
   stats.fetched = apiPlayers.length;
 
   if (stats.fetched === 0) {
-    console.warn(`${TAG} ⚠ API returned 0 players — this is unexpected for season=${season}. Aborting to avoid mass-deactivation.`);
+    console.warn(
+      `${TAG} ⚠ API returned 0 players — this is unexpected for season=${season}. Aborting to avoid mass-deactivation.`
+    );
     return;
   }
 
@@ -169,7 +185,9 @@ export async function runMlbPlayerSync(): Promise<void> {
         isActive: mlbPlayers.isActive,
       })
       .from(mlbPlayers);
-    console.log(`${TAG} DB snapshot loaded — ${dbPlayerList.length} existing player records`);
+    console.log(
+      `${TAG} DB snapshot loaded — ${dbPlayerList.length} existing player records`
+    );
   } catch (err) {
     console.error(`${TAG} ✕ Failed to load existing players from DB:`, err);
     console.error(`${TAG} Sync aborted`);
@@ -198,7 +216,9 @@ export async function runMlbPlayerSync(): Promise<void> {
     const name = ap.fullName;
 
     if (!brAbbrev && teamId) {
-      console.warn(`${TAG} ⚠ Unknown MLB team ID ${teamId} for player "${name}" (mlbamId=${mlbamId}) — not in mlb_teams table`);
+      console.warn(
+        `${TAG} ⚠ Unknown MLB team ID ${teamId} for player "${name}" (mlbamId=${mlbamId}) — not in mlb_teams table`
+      );
     }
 
     const existing = dbByMlbamId.get(mlbamId);
@@ -220,10 +240,15 @@ export async function runMlbPlayerSync(): Promise<void> {
           isActive: true,
           lastSyncedAt: Date.now(),
         });
-        console.log(`${TAG} ✓ inserted  mlbamId=${mlbamId} brId=${syntheticBrId} name="${name}" team=${brAbbrev ?? "?"} pos=${position ?? "?"}`);
+        console.log(
+          `${TAG} ✓ inserted  mlbamId=${mlbamId} brId=${syntheticBrId} name="${name}" team=${brAbbrev ?? "?"} pos=${position ?? "?"}`
+        );
         stats.inserted++;
       } catch (err) {
-        console.error(`${TAG} ✕ insert failed for mlbamId=${mlbamId} name="${name}":`, (err as Error).message);
+        console.error(
+          `${TAG} ✕ insert failed for mlbamId=${mlbamId} name="${name}":`,
+          (err as Error).message
+        );
         stats.errors++;
       }
       continue;
@@ -241,9 +266,11 @@ export async function runMlbPlayerSync(): Promise<void> {
     if (existing.throws !== throwsVal)
       changes.throws = { from: existing.throws, to: throwsVal };
     if (existing.currentTeamBrAbbrev !== brAbbrev)
-      changes.currentTeamBrAbbrev = { from: existing.currentTeamBrAbbrev, to: brAbbrev };
-    if (!existing.isActive)
-      changes.isActive = { from: false, to: true }; // reactivate if back on roster
+      changes.currentTeamBrAbbrev = {
+        from: existing.currentTeamBrAbbrev,
+        to: brAbbrev,
+      };
+    if (!existing.isActive) changes.isActive = { from: false, to: true }; // reactivate if back on roster
 
     if (Object.keys(changes).length === 0) {
       stats.skipped++;
@@ -251,7 +278,10 @@ export async function runMlbPlayerSync(): Promise<void> {
     }
 
     const changeDesc = Object.entries(changes)
-      .map(([field, { from, to }]) => `${field}: ${JSON.stringify(from)} → ${JSON.stringify(to)}`)
+      .map(
+        ([field, { from, to }]) =>
+          `${field}: ${JSON.stringify(from)} → ${JSON.stringify(to)}`
+      )
       .join(", ");
 
     try {
@@ -267,10 +297,15 @@ export async function runMlbPlayerSync(): Promise<void> {
           lastSyncedAt: Date.now(),
         })
         .where(eq(mlbPlayers.id, existing.id));
-      console.log(`${TAG} ↻ updated   mlbamId=${mlbamId} brId=${existing.brId} name="${name}" — ${changeDesc}`);
+      console.log(
+        `${TAG} ↻ updated   mlbamId=${mlbamId} brId=${existing.brId} name="${name}" — ${changeDesc}`
+      );
       stats.updated++;
     } catch (err) {
-      console.error(`${TAG} ✕ update failed for mlbamId=${mlbamId} brId=${existing.brId}:`, (err as Error).message);
+      console.error(
+        `${TAG} ✕ update failed for mlbamId=${mlbamId} brId=${existing.brId}:`,
+        (err as Error).message
+      );
       stats.errors++;
     }
   }
@@ -279,21 +314,28 @@ export async function runMlbPlayerSync(): Promise<void> {
   // Players who were active in DB but not returned by the API today —
   // released, 60-day IL, retired, or optioned to minors.
   const toDeactivate = dbPlayerList.filter(
-    (p) => p.isActive && p.mlbamId != null && !seenMlbamIds.has(p.mlbamId!)
+    p => p.isActive && p.mlbamId != null && !seenMlbamIds.has(p.mlbamId!)
   );
 
   if (toDeactivate.length > 0) {
-    console.log(`${TAG} Deactivating ${toDeactivate.length} players absent from API response…`);
+    console.log(
+      `${TAG} Deactivating ${toDeactivate.length} players absent from API response…`
+    );
     for (const p of toDeactivate) {
       try {
         await db
           .update(mlbPlayers)
           .set({ isActive: false, lastSyncedAt: Date.now() })
           .where(eq(mlbPlayers.id, p.id));
-        console.log(`${TAG} ✗ deactivated mlbamId=${p.mlbamId ?? "?"} brId=${p.brId} name="${p.name}" (was team=${p.currentTeamBrAbbrev ?? "?"})`);
+        console.log(
+          `${TAG} ✗ deactivated mlbamId=${p.mlbamId ?? "?"} brId=${p.brId} name="${p.name}" (was team=${p.currentTeamBrAbbrev ?? "?"})`
+        );
         stats.deactivated++;
       } catch (err) {
-        console.error(`${TAG} ✕ deactivate failed for brId=${p.brId}:`, (err as Error).message);
+        console.error(
+          `${TAG} ✕ deactivate failed for brId=${p.brId}:`,
+          (err as Error).message
+        );
         stats.errors++;
       }
     }
@@ -301,11 +343,16 @@ export async function runMlbPlayerSync(): Promise<void> {
 
   // ── Step 6: Summary ───────────────────────────────────────────────────────
   const elapsedMs = Date.now() - startMs;
-  const status = stats.errors === 0 ? "✓ SUCCESS" : `⚠ COMPLETED WITH ${stats.errors} ERROR(S)`;
+  const status =
+    stats.errors === 0
+      ? "✓ SUCCESS"
+      : `⚠ COMPLETED WITH ${stats.errors} ERROR(S)`;
 
   console.log(`${TAG} ─────────────────────────────────────────────`);
   console.log(`${TAG} ${status} in ${elapsedMs}ms`);
-  console.log(`${TAG} fetched=${stats.fetched} inserted=${stats.inserted} updated=${stats.updated} deactivated=${stats.deactivated} skipped=${stats.skipped} errors=${stats.errors}`);
+  console.log(
+    `${TAG} fetched=${stats.fetched} inserted=${stats.inserted} updated=${stats.updated} deactivated=${stats.deactivated} skipped=${stats.skipped} errors=${stats.errors}`
+  );
   console.log(`${TAG} ─────────────────────────────────────────────`);
 }
 
@@ -317,12 +364,17 @@ export async function runMlbPlayerSync(): Promise<void> {
  */
 function msUntilNext0800Utc(): number {
   const now = new Date();
-  const target = new Date(Date.UTC(
-    now.getUTCFullYear(),
-    now.getUTCMonth(),
-    now.getUTCDate(),
-    8, 0, 0, 0  // 08:00:00.000 UTC
-  ));
+  const target = new Date(
+    Date.UTC(
+      now.getUTCFullYear(),
+      now.getUTCMonth(),
+      now.getUTCDate(),
+      8,
+      0,
+      0,
+      0 // 08:00:00.000 UTC
+    )
+  );
 
   let ms = target.getTime() - now.getTime();
   if (ms <= 0) {
@@ -344,7 +396,7 @@ export function startMlbPlayerSyncScheduler(): void {
 
   console.log(
     `${TAG} Scheduler registered — next sync at ${nextRun.toISOString()} UTC ` +
-    `(in ${Math.round(msToFirst / 1000 / 60)} min)`
+      `(in ${Math.round(msToFirst / 1000 / 60)} min)`
   );
 
   setTimeout(async () => {
@@ -355,12 +407,15 @@ export function startMlbPlayerSyncScheduler(): void {
     }
 
     // Repeat every 24 hours after the first run
-    setInterval(async () => {
-      try {
-        await runMlbPlayerSync();
-      } catch (err) {
-        console.error(`${TAG} ✕ Unhandled error in sync run:`, err);
-      }
-    }, 24 * 60 * 60 * 1000);
+    setInterval(
+      async () => {
+        try {
+          await runMlbPlayerSync();
+        } catch (err) {
+          console.error(`${TAG} ✕ Unhandled error in sync run:`, err);
+        }
+      },
+      24 * 60 * 60 * 1000
+    );
   }, msToFirst);
 }

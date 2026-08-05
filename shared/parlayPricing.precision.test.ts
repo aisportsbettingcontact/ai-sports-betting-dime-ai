@@ -41,8 +41,8 @@ const mul = (a: Rat, b: Rat): Rat => rat(a.n * b.n, a.d * b.d);
 function exactDecimal(odds: number): Rat {
   const o = BigInt(Math.trunc(odds));
   return odds >= 100
-    ? rat(100n + o, 100n)                 // 1 + odds/100
-    : rat(-o + 100n, -o);                 // 1 + 100/|odds|
+    ? rat(100n + o, 100n) // 1 + odds/100
+    : rat(-o + 100n, -o); // 1 + 100/|odds|
 }
 
 /**
@@ -70,17 +70,17 @@ function roundDiv(n: bigint, d: bigint): bigint {
 // ─── Book prices that actually occur ─────────────────────────────────────────
 
 const BOOK_PRICES = [
-  -1000, -800, -650, -500, -400, -350, -320, -300, -275, -250, -225, -200,
-  -190, -183, -175, -165, -155, -150, -145, -140, -135, -130, -125, -120,
-  -115, -112, -110, -108, -105, -102, -100,
-  100, 102, 105, 108, 110, 115, 120, 125, 130, 135, 140, 145, 150, 155, 165,
-  168, 175, 185, 200, 225, 250, 275, 300, 350, 400, 500, 650, 800, 1000, 1500,
+  -1000, -800, -650, -500, -400, -350, -320, -300, -275, -250, -225, -200, -190,
+  -183, -175, -165, -155, -150, -145, -140, -135, -130, -125, -120, -115, -112,
+  -110, -108, -105, -102, -100, 100, 102, 105, 108, 110, 115, 120, 125, 130,
+  135, 140, 145, 150, 155, 165, 168, 175, 185, 200, 225, 250, 275, 300, 350,
+  400, 500, 650, 800, 1000, 1500,
 ];
 
 /** Deterministic PRNG so a failure is reproducible. */
 let seed = 20260804;
-const rnd = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296);
-const pick = <T,>(a: readonly T[]): T => a[Math.floor(rnd() * a.length)];
+const rnd = () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296;
+const pick = <T>(a: readonly T[]): T => a[Math.floor(rnd() * a.length)];
 
 describe("the price matches exact rational arithmetic", () => {
   it("every single book price round-trips through decimal without drift", () => {
@@ -102,7 +102,7 @@ describe("the price matches exact rational arithmetic", () => {
         const want = exactCombine(legs);
         if (got !== want) {
           throw new Error(
-            `MISMATCH at ${n} legs [${legs.join(", ")}] — float ${got}, exact ${want}`,
+            `MISMATCH at ${n} legs [${legs.join(", ")}] — float ${got}, exact ${want}`
           );
         }
         checked++;

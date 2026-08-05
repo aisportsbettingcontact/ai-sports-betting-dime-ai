@@ -45,7 +45,7 @@ export const ADVISORY_TOKENS = [
 const SCAN_EXTENSIONS = new Set([".css", ".html", ".js", ".map"]);
 
 function collectFiles(directory) {
-  return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+  return fs.readdirSync(directory, { withFileTypes: true }).flatMap(entry => {
     const entryPath = path.join(directory, entry.name);
     if (entry.isDirectory()) return collectFiles(entryPath);
     return SCAN_EXTENSIONS.has(path.extname(entry.name)) ? [entryPath] : [];
@@ -60,7 +60,7 @@ export function scanDist(outputRoot) {
   // Source maps JSON-escape their embedded sources, so a raw-text scan would
   // miss `get(\"preview\")`. Decode sourcesContent and scan the decoded text
   // alongside the raw file.
-  const contentOf = (file) => {
+  const contentOf = file => {
     const raw = fs.readFileSync(file, "utf8");
     if (path.extname(file) !== ".map") return raw;
     try {
@@ -71,18 +71,18 @@ export function scanDist(outputRoot) {
       return raw;
     }
   };
-  const findToken = (token) =>
+  const findToken = token =>
     files
-      .filter((file) => contentOf(file).includes(token))
-      .map((file) => path.relative(outputRoot, file));
+      .filter(file => contentOf(file).includes(token))
+      .map(file => path.relative(outputRoot, file));
 
   return {
     files: files.length,
-    loadBearing: LOAD_BEARING_TOKENS.map((token) => ({
+    loadBearing: LOAD_BEARING_TOKENS.map(token => ({
       token,
       matches: findToken(token),
     })),
-    advisory: ADVISORY_TOKENS.map((token) => ({
+    advisory: ADVISORY_TOKENS.map(token => ({
       token,
       matches: findToken(token),
     })),
@@ -126,6 +126,9 @@ function main() {
   );
 }
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
+if (
+  process.argv[1] &&
+  fileURLToPath(import.meta.url) === path.resolve(process.argv[1])
+) {
   main();
 }

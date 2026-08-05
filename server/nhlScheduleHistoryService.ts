@@ -113,14 +113,14 @@ function findPreGameOutcome(
   criteria: { side?: string; teamId?: number }
 ): AnV2Outcome | null {
   if (!outcomes?.length) return null;
-  const preGame = outcomes.filter((o) => !o.is_live);
+  const preGame = outcomes.filter(o => !o.is_live);
   if (!preGame.length) return null;
 
   if (criteria.side) {
-    return preGame.find((o) => o.side === criteria.side) ?? null;
+    return preGame.find(o => o.side === criteria.side) ?? null;
   }
   if (criteria.teamId != null) {
-    return preGame.find((o) => o.team_id === criteria.teamId) ?? null;
+    return preGame.find(o => o.team_id === criteria.teamId) ?? null;
   }
   return null;
 }
@@ -160,7 +160,8 @@ function deriveAwayPuckLineCovered(
   homeScore: number | null,
   awayPuckLine: number | null
 ): boolean | null {
-  if (awayScore == null || homeScore == null || awayPuckLine == null) return null;
+  if (awayScore == null || homeScore == null || awayPuckLine == null)
+    return null;
   return awayScore + awayPuckLine > homeScore;
 }
 
@@ -205,7 +206,9 @@ export async function fetchNhlScheduleForDate(
     response = res.data;
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error(`${TAG}[FETCH] AN API request FAILED for date=${dateStr}: ${msg}`);
+    console.error(
+      `${TAG}[FETCH] AN API request FAILED for date=${dateStr}: ${msg}`
+    );
     throw new Error(`AN API fetch failed for date=${dateStr}: ${msg}`);
   }
 
@@ -220,13 +223,13 @@ export async function fetchNhlScheduleForDate(
 
   for (const game of games) {
     const teams = game.teams ?? [];
-    const awayTeam = teams.find((t) => t.id === game.away_team_id);
-    const homeTeam = teams.find((t) => t.id === game.home_team_id);
+    const awayTeam = teams.find(t => t.id === game.away_team_id);
+    const homeTeam = teams.find(t => t.id === game.home_team_id);
 
     if (!awayTeam || !homeTeam) {
       console.warn(
         `${TAG}[SKIP] Game id=${game.id} — missing team data` +
-        ` (away_id=${game.away_team_id}, home_id=${game.home_team_id})`
+          ` (away_id=${game.away_team_id}, home_id=${game.home_team_id})`
       );
       skippedNoTeam++;
       continue;
@@ -238,12 +241,16 @@ export async function fetchNhlScheduleForDate(
     const dkMarket = game.markets?.[String(DK_NJ_BOOK_ID)]?.event;
 
     // NHL: spread = puck line (±1.5)
-    const dkPuckAway  = findPreGameOutcome(dkMarket?.spread,    { side: "away" });
-    const dkPuckHome  = findPreGameOutcome(dkMarket?.spread,    { side: "home" });
-    const dkTotalOver = findPreGameOutcome(dkMarket?.total,     { side: "over" });
-    const dkTotalUnder= findPreGameOutcome(dkMarket?.total,     { side: "under" });
-    const dkMlAway    = findPreGameOutcome(dkMarket?.moneyline, { teamId: game.away_team_id });
-    const dkMlHome    = findPreGameOutcome(dkMarket?.moneyline, { teamId: game.home_team_id });
+    const dkPuckAway = findPreGameOutcome(dkMarket?.spread, { side: "away" });
+    const dkPuckHome = findPreGameOutcome(dkMarket?.spread, { side: "home" });
+    const dkTotalOver = findPreGameOutcome(dkMarket?.total, { side: "over" });
+    const dkTotalUnder = findPreGameOutcome(dkMarket?.total, { side: "under" });
+    const dkMlAway = findPreGameOutcome(dkMarket?.moneyline, {
+      teamId: game.away_team_id,
+    });
+    const dkMlHome = findPreGameOutcome(dkMarket?.moneyline, {
+      teamId: game.home_team_id,
+    });
 
     const hasDk = !!(dkPuckAway || dkTotalOver || dkMlAway);
     if (!hasDk) {
@@ -262,17 +269,22 @@ export async function fetchNhlScheduleForDate(
     const isComplete = game.status === "complete";
 
     // ── Puck line and total values ────────────────────────────────────────────
-    const awayPuckLineVal = dkPuckAway?.value  != null ? Number(dkPuckAway.value)  : null;
-    const homePuckLineVal = dkPuckHome?.value  != null ? Number(dkPuckHome.value)  : null;
-    const totalVal        = dkTotalOver?.value != null ? Number(dkTotalOver.value) : null;
+    const awayPuckLineVal =
+      dkPuckAway?.value != null ? Number(dkPuckAway.value) : null;
+    const homePuckLineVal =
+      dkPuckHome?.value != null ? Number(dkPuckHome.value) : null;
+    const totalVal =
+      dkTotalOver?.value != null ? Number(dkTotalOver.value) : null;
 
     // ── Derive result columns (only for complete games with scores) ───────────
-    const awayPuckLineCovered =
-      isComplete ? deriveAwayPuckLineCovered(awayScore, homeScore, awayPuckLineVal) : null;
+    const awayPuckLineCovered = isComplete
+      ? deriveAwayPuckLineCovered(awayScore, homeScore, awayPuckLineVal)
+      : null;
     const homePuckLineCovered =
       isComplete && awayPuckLineCovered != null ? !awayPuckLineCovered : null;
-    const totalResult =
-      isComplete ? deriveTotalResult(awayScore, homeScore, totalVal) : null;
+    const totalResult = isComplete
+      ? deriveTotalResult(awayScore, homeScore, totalVal)
+      : null;
     const awayWon =
       isComplete && awayScore != null && homeScore != null
         ? awayScore > homeScore
@@ -283,53 +295,53 @@ export async function fetchNhlScheduleForDate(
 
     console.log(
       `${TAG}[GAME] ${gameLabel} | date=${gameDateEst} status=${game.status}` +
-      ` | score=${awayScore ?? "?"}–${homeScore ?? "?"}` +
-      ` | DK puck=${awayPuckLineVal != null ? (awayPuckLineVal > 0 ? "+" : "") + awayPuckLineVal : "—"}` +
-      `(${fmtOdds(dkPuckAway?.odds) ?? "—"})` +
-      ` total=${totalVal ?? "—"}(${fmtOdds(dkTotalOver?.odds) ?? "—"})` +
-      ` ML=${fmtOdds(dkMlAway?.odds) ?? "—"}/${fmtOdds(dkMlHome?.odds) ?? "—"}` +
-      (isComplete
-        ? ` | puck_cov=${awayPuckLineCovered ?? "—"} total=${totalResult ?? "—"} awayWon=${awayWon ?? "—"}`
-        : "")
+        ` | score=${awayScore ?? "?"}–${homeScore ?? "?"}` +
+        ` | DK puck=${awayPuckLineVal != null ? (awayPuckLineVal > 0 ? "+" : "") + awayPuckLineVal : "—"}` +
+        `(${fmtOdds(dkPuckAway?.odds) ?? "—"})` +
+        ` total=${totalVal ?? "—"}(${fmtOdds(dkTotalOver?.odds) ?? "—"})` +
+        ` ML=${fmtOdds(dkMlAway?.odds) ?? "—"}/${fmtOdds(dkMlHome?.odds) ?? "—"}` +
+        (isComplete
+          ? ` | puck_cov=${awayPuckLineCovered ?? "—"} total=${totalResult ?? "—"} awayWon=${awayWon ?? "—"}`
+          : "")
     );
 
     results.push({
-      anGameId:            game.id,
-      gameDate:            gameDateEst,
-      startTimeUtc:        game.start_time,
-      gameStatus:          game.status,
-      awaySlug:            awayTeam.url_slug,
-      awayAbbr:            awayTeam.abbr,
-      awayName:            awayTeam.full_name,
-      awayTeamId:          game.away_team_id,
-      awayScore:           awayScore,
-      homeSlug:            homeTeam.url_slug,
-      homeAbbr:            homeTeam.abbr,
-      homeName:            homeTeam.full_name,
-      homeTeamId:          game.home_team_id,
-      homeScore:           homeScore,
-      dkAwayPuckLine:      awayPuckLineVal != null ? String(awayPuckLineVal) : null,
-      dkAwayPuckLineOdds:  fmtOdds(dkPuckAway?.odds),
-      dkHomePuckLine:      homePuckLineVal != null ? String(homePuckLineVal) : null,
-      dkHomePuckLineOdds:  fmtOdds(dkPuckHome?.odds),
-      dkTotal:             totalVal != null ? String(totalVal) : null,
-      dkOverOdds:          fmtOdds(dkTotalOver?.odds),
-      dkUnderOdds:         fmtOdds(dkTotalUnder?.odds),
-      dkAwayML:            fmtOdds(dkMlAway?.odds),
-      dkHomeML:            fmtOdds(dkMlHome?.odds),
+      anGameId: game.id,
+      gameDate: gameDateEst,
+      startTimeUtc: game.start_time,
+      gameStatus: game.status,
+      awaySlug: awayTeam.url_slug,
+      awayAbbr: awayTeam.abbr,
+      awayName: awayTeam.full_name,
+      awayTeamId: game.away_team_id,
+      awayScore: awayScore,
+      homeSlug: homeTeam.url_slug,
+      homeAbbr: homeTeam.abbr,
+      homeName: homeTeam.full_name,
+      homeTeamId: game.home_team_id,
+      homeScore: homeScore,
+      dkAwayPuckLine: awayPuckLineVal != null ? String(awayPuckLineVal) : null,
+      dkAwayPuckLineOdds: fmtOdds(dkPuckAway?.odds),
+      dkHomePuckLine: homePuckLineVal != null ? String(homePuckLineVal) : null,
+      dkHomePuckLineOdds: fmtOdds(dkPuckHome?.odds),
+      dkTotal: totalVal != null ? String(totalVal) : null,
+      dkOverOdds: fmtOdds(dkTotalOver?.odds),
+      dkUnderOdds: fmtOdds(dkTotalUnder?.odds),
+      dkAwayML: fmtOdds(dkMlAway?.odds),
+      dkHomeML: fmtOdds(dkMlHome?.odds),
       awayPuckLineCovered: awayPuckLineCovered,
       homePuckLineCovered: homePuckLineCovered,
-      totalResult:         totalResult,
-      awayWon:             awayWon,
-      lastRefreshedAt:     Date.now(),
+      totalResult: totalResult,
+      awayWon: awayWon,
+      lastRefreshedAt: Date.now(),
     });
   }
 
   console.log(
     `${TAG}[FETCH] date=${dateStr} — parsed ${results.length} games` +
-    ` | ${results.filter((g) => g.dkAwayPuckLine != null).length} with DK NJ puck line` +
-    ` | ${skippedNoDk} without DK odds` +
-    ` | ${skippedNoTeam} skipped (no team data)`
+      ` | ${results.filter(g => g.dkAwayPuckLine != null).length} with DK NJ puck line` +
+      ` | ${skippedNoDk} without DK odds` +
+      ` | ${skippedNoTeam} skipped (no team data)`
   );
 
   return results;
@@ -361,23 +373,23 @@ export async function upsertNhlScheduleHistory(
         .values(row)
         .onDuplicateKeyUpdate({
           set: {
-            gameStatus:          row.gameStatus,
-            awayScore:           row.awayScore,
-            homeScore:           row.homeScore,
-            dkAwayPuckLine:      row.dkAwayPuckLine,
-            dkAwayPuckLineOdds:  row.dkAwayPuckLineOdds,
-            dkHomePuckLine:      row.dkHomePuckLine,
-            dkHomePuckLineOdds:  row.dkHomePuckLineOdds,
-            dkTotal:             row.dkTotal,
-            dkOverOdds:          row.dkOverOdds,
-            dkUnderOdds:         row.dkUnderOdds,
-            dkAwayML:            row.dkAwayML,
-            dkHomeML:            row.dkHomeML,
+            gameStatus: row.gameStatus,
+            awayScore: row.awayScore,
+            homeScore: row.homeScore,
+            dkAwayPuckLine: row.dkAwayPuckLine,
+            dkAwayPuckLineOdds: row.dkAwayPuckLineOdds,
+            dkHomePuckLine: row.dkHomePuckLine,
+            dkHomePuckLineOdds: row.dkHomePuckLineOdds,
+            dkTotal: row.dkTotal,
+            dkOverOdds: row.dkOverOdds,
+            dkUnderOdds: row.dkUnderOdds,
+            dkAwayML: row.dkAwayML,
+            dkHomeML: row.dkHomeML,
             awayPuckLineCovered: row.awayPuckLineCovered,
             homePuckLineCovered: row.homePuckLineCovered,
-            totalResult:         row.totalResult,
-            awayWon:             row.awayWon,
-            lastRefreshedAt:     row.lastRefreshedAt,
+            totalResult: row.totalResult,
+            awayWon: row.awayWon,
+            lastRefreshedAt: row.lastRefreshedAt,
           },
         });
       upserted++;
@@ -415,7 +427,13 @@ export async function refreshNhlScheduleForDate(
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error(`${TAG}[REFRESH] Fetch failed for date=${dateStr}: ${msg}`);
-    return { date: dateStr, fetched: 0, upserted: 0, skipped: 0, errors: [msg] };
+    return {
+      date: dateStr,
+      fetched: 0,
+      upserted: 0,
+      skipped: 0,
+      errors: [msg],
+    };
   }
 
   const { upserted, errors } = await upsertNhlScheduleHistory(rows);
@@ -430,8 +448,8 @@ export async function refreshNhlScheduleForDate(
 
   console.log(
     `${TAG}[REFRESH] ════ DONE date=${dateStr}` +
-    ` | fetched=${result.fetched} upserted=${result.upserted}` +
-    ` skipped=${result.skipped} errors=${result.errors.length} ════`
+      ` | fetched=${result.fetched} upserted=${result.upserted}` +
+      ` skipped=${result.skipped} errors=${result.errors.length} ════`
   );
 
   return result;
@@ -444,9 +462,7 @@ export async function refreshNhlScheduleForDate(
 export async function backfillNhlScheduleHistory(
   daysBack = 30
 ): Promise<NhlScheduleRefreshResult[]> {
-  console.log(
-    `${TAG}[BACKFILL] ════ Starting ${daysBack}-day backfill ════`
-  );
+  console.log(`${TAG}[BACKFILL] ════ Starting ${daysBack}-day backfill ════`);
 
   const results: NhlScheduleRefreshResult[] = [];
   const now = new Date();
@@ -462,23 +478,29 @@ export async function backfillNhlScheduleHistory(
 
       // Brief pause between requests to be respectful to the AN API
       if (i < daysBack) {
-        await new Promise((resolve) => setTimeout(resolve, 200));
+        await new Promise(resolve => setTimeout(resolve, 200));
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       console.error(`${TAG}[BACKFILL] ERROR on date=${dateStr}: ${msg}`);
-      results.push({ date: dateStr, fetched: 0, upserted: 0, skipped: 0, errors: [msg] });
+      results.push({
+        date: dateStr,
+        fetched: 0,
+        upserted: 0,
+        skipped: 0,
+        errors: [msg],
+      });
     }
   }
 
-  const totalFetched  = results.reduce((s, r) => s + r.fetched, 0);
+  const totalFetched = results.reduce((s, r) => s + r.fetched, 0);
   const totalUpserted = results.reduce((s, r) => s + r.upserted, 0);
-  const totalErrors   = results.reduce((s, r) => s + r.errors.length, 0);
+  const totalErrors = results.reduce((s, r) => s + r.errors.length, 0);
 
   console.log(
     `${TAG}[BACKFILL] ════ COMPLETE — ${daysBack} days` +
-    ` | totalFetched=${totalFetched} totalUpserted=${totalUpserted}` +
-    ` totalErrors=${totalErrors} ════`
+      ` | totalFetched=${totalFetched} totalUpserted=${totalUpserted}` +
+      ` totalErrors=${totalErrors} ════`
   );
 
   return results;
@@ -511,13 +533,13 @@ export async function getNhlLastNGamesForTeam(
     .limit(300);
 
   const teamGames = (rows as NhlScheduleHistoryRow[])
-    .filter((r) => r.awaySlug === teamSlug || r.homeSlug === teamSlug)
+    .filter(r => r.awaySlug === teamSlug || r.homeSlug === teamSlug)
     .sort((a, b) => b.gameDate.localeCompare(a.gameDate))
     .slice(0, limit);
 
   console.log(
     `${TAG}[QUERY] Found ${teamGames.length} completed games for team="${teamSlug}"` +
-    ` (searched ${rows.length} total complete games)`
+      ` (searched ${rows.length} total complete games)`
   );
 
   return teamGames;
@@ -544,7 +566,7 @@ export async function getNhlFullScheduleForTeam(
     .limit(500);
 
   const teamGames = (rows as NhlScheduleHistoryRow[])
-    .filter((r) => r.awaySlug === teamSlug || r.homeSlug === teamSlug)
+    .filter(r => r.awaySlug === teamSlug || r.homeSlug === teamSlug)
     .sort((a, b) => b.gameDate.localeCompare(a.gameDate));
 
   console.log(
@@ -564,7 +586,10 @@ export async function getNhlFullScheduleForTeam(
 export async function getNhlLast5ForMatchup(
   awaySlug: string,
   homeSlug: string
-): Promise<{ awayLast5: NhlScheduleHistoryRow[]; homeLast5: NhlScheduleHistoryRow[] }> {
+): Promise<{
+  awayLast5: NhlScheduleHistoryRow[];
+  homeLast5: NhlScheduleHistoryRow[];
+}> {
   console.log(
     `${TAG}[QUERY] Fetching Last 5 for matchup: away="${awaySlug}" vs home="${homeSlug}"`
   );
@@ -576,7 +601,7 @@ export async function getNhlLast5ForMatchup(
 
   console.log(
     `${TAG}[QUERY] Last 5 results — away="${awaySlug}": ${awayLast5.length} games` +
-    ` | home="${homeSlug}": ${homeLast5.length} games`
+      ` | home="${homeSlug}": ${homeLast5.length} games`
   );
 
   return { awayLast5, homeLast5 };
@@ -603,7 +628,7 @@ export async function getNhlSituationalStats(teamSlug: string, limit = 82) {
     .limit(500);
 
   const teamGames = (rows as NhlScheduleHistoryRow[])
-    .filter((r) => r.awaySlug === teamSlug || r.homeSlug === teamSlug)
+    .filter(r => r.awaySlug === teamSlug || r.homeSlug === teamSlug)
     .sort((a, b) => b.gameDate.localeCompare(a.gameDate))
     .slice(0, limit);
 
@@ -627,8 +652,12 @@ export async function getNhlSituationalStats(teamSlug: string, limit = 82) {
 
   const wasHome = (g: NhlScheduleHistoryRow): boolean => !isAway(g);
 
-  const computeRecord = (games: NhlScheduleHistoryRow[], wonFn: (g: NhlScheduleHistoryRow) => boolean | null) => {
-    let w = 0, l = 0;
+  const computeRecord = (
+    games: NhlScheduleHistoryRow[],
+    wonFn: (g: NhlScheduleHistoryRow) => boolean | null
+  ) => {
+    let w = 0,
+      l = 0;
     for (const g of games) {
       const won = wonFn(g);
       if (won === true) w++;
@@ -638,7 +667,8 @@ export async function getNhlSituationalStats(teamSlug: string, limit = 82) {
   };
 
   const computeAtsRecord = (games: NhlScheduleHistoryRow[]) => {
-    let w = 0, l = 0;
+    let w = 0,
+      l = 0;
     for (const g of games) {
       const cov = teamCovered(g);
       if (cov === true) w++;
@@ -648,7 +678,9 @@ export async function getNhlSituationalStats(teamSlug: string, limit = 82) {
   };
 
   const computeOuRecord = (games: NhlScheduleHistoryRow[]) => {
-    let over = 0, under = 0, push = 0;
+    let over = 0,
+      under = 0,
+      push = 0;
     for (const g of games) {
       if (g.totalResult === "OVER") over++;
       else if (g.totalResult === "UNDER") under++;
@@ -659,32 +691,32 @@ export async function getNhlSituationalStats(teamSlug: string, limit = 82) {
 
   const last10 = teamGames.slice(0, 10);
   const homeGames = teamGames.filter(wasHome);
-  const awayGames = teamGames.filter((g) => !wasHome(g));
-  const favGames  = teamGames.filter(wasFavorite);
-  const dogGames  = teamGames.filter((g) => !wasFavorite(g));
+  const awayGames = teamGames.filter(g => !wasHome(g));
+  const favGames = teamGames.filter(wasFavorite);
+  const dogGames = teamGames.filter(g => !wasFavorite(g));
 
   const stats = {
     ml: {
-      overall:  computeRecord(teamGames, teamWon),
-      last10:   computeRecord(last10, teamWon),
-      home:     computeRecord(homeGames, teamWon),
-      away:     computeRecord(awayGames, teamWon),
+      overall: computeRecord(teamGames, teamWon),
+      last10: computeRecord(last10, teamWon),
+      home: computeRecord(homeGames, teamWon),
+      away: computeRecord(awayGames, teamWon),
       favorite: computeRecord(favGames, teamWon),
       underdog: computeRecord(dogGames, teamWon),
     },
     spread: {
-      overall:  computeAtsRecord(teamGames),
-      last10:   computeAtsRecord(last10),
-      home:     computeAtsRecord(homeGames),
-      away:     computeAtsRecord(awayGames),
+      overall: computeAtsRecord(teamGames),
+      last10: computeAtsRecord(last10),
+      home: computeAtsRecord(homeGames),
+      away: computeAtsRecord(awayGames),
       favorite: computeAtsRecord(favGames),
       underdog: computeAtsRecord(dogGames),
     },
     total: {
-      overall:  computeOuRecord(teamGames),
-      last10:   computeOuRecord(last10),
-      home:     computeOuRecord(homeGames),
-      away:     computeOuRecord(awayGames),
+      overall: computeOuRecord(teamGames),
+      last10: computeOuRecord(last10),
+      home: computeOuRecord(homeGames),
+      away: computeOuRecord(awayGames),
       favorite: computeOuRecord(favGames),
       underdog: computeOuRecord(dogGames),
     },
@@ -693,9 +725,9 @@ export async function getNhlSituationalStats(teamSlug: string, limit = 82) {
 
   console.log(
     `${TAG}[SITUATIONAL] team="${teamSlug}" analyzed=${teamGames.length} games` +
-    ` | ML overall=${stats.ml.overall.w}-${stats.ml.overall.l}` +
-    ` | ATS overall=${stats.spread.overall.w}-${stats.spread.overall.l}` +
-    ` | O/U overall=${stats.total.overall.over}-${stats.total.overall.under}`
+      ` | ML overall=${stats.ml.overall.w}-${stats.ml.overall.l}` +
+      ` | ATS overall=${stats.spread.overall.w}-${stats.spread.overall.l}` +
+      ` | O/U overall=${stats.total.overall.over}-${stats.total.overall.under}`
   );
 
   return stats;

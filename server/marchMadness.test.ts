@@ -4,7 +4,10 @@
  * Unit tests for the 2026 March Madness teams allowlist and isMarchMadnessGame helper.
  */
 import { describe, it, expect } from "vitest";
-import { MARCH_MADNESS_DB_SLUGS, isMarchMadnessGame } from "../shared/marchMadnessTeams";
+import {
+  MARCH_MADNESS_DB_SLUGS,
+  isMarchMadnessGame,
+} from "../shared/marchMadnessTeams";
 
 describe("MARCH_MADNESS_DB_SLUGS", () => {
   it("should contain exactly 68 unique teams", () => {
@@ -26,17 +29,17 @@ describe("MARCH_MADNESS_DB_SLUGS", () => {
   });
 
   it("should include all 1-seeds", () => {
-    expect(MARCH_MADNESS_DB_SLUGS.has("duke")).toBe(true);       // East 1
-    expect(MARCH_MADNESS_DB_SLUGS.has("florida")).toBe(true);    // South 1
-    expect(MARCH_MADNESS_DB_SLUGS.has("arizona")).toBe(true);    // West 1
-    expect(MARCH_MADNESS_DB_SLUGS.has("michigan")).toBe(true);   // Midwest 1
+    expect(MARCH_MADNESS_DB_SLUGS.has("duke")).toBe(true); // East 1
+    expect(MARCH_MADNESS_DB_SLUGS.has("florida")).toBe(true); // South 1
+    expect(MARCH_MADNESS_DB_SLUGS.has("arizona")).toBe(true); // West 1
+    expect(MARCH_MADNESS_DB_SLUGS.has("michigan")).toBe(true); // Midwest 1
   });
 
   it("should include all 2-seeds", () => {
-    expect(MARCH_MADNESS_DB_SLUGS.has("connecticut")).toBe(true);  // East 2
-    expect(MARCH_MADNESS_DB_SLUGS.has("houston")).toBe(true);      // South 2
-    expect(MARCH_MADNESS_DB_SLUGS.has("purdue")).toBe(true);       // West 2
-    expect(MARCH_MADNESS_DB_SLUGS.has("iowa_st")).toBe(true);      // Midwest 2
+    expect(MARCH_MADNESS_DB_SLUGS.has("connecticut")).toBe(true); // East 2
+    expect(MARCH_MADNESS_DB_SLUGS.has("houston")).toBe(true); // South 2
+    expect(MARCH_MADNESS_DB_SLUGS.has("purdue")).toBe(true); // West 2
+    expect(MARCH_MADNESS_DB_SLUGS.has("iowa_st")).toBe(true); // Midwest 2
   });
 
   it("should NOT include non-March Madness NCAAM teams", () => {

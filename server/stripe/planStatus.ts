@@ -15,7 +15,8 @@ import { PLANS, normalizePlanId, type PlanId } from "./products";
 
 const TAG = "[Stripe][PlanStatus]";
 
-export type PlanStatusState = "active" | "cancel_scheduled" | "expired" | "none";
+export type PlanStatusState =
+  "active" | "cancel_scheduled" | "expired" | "none";
 
 export interface PlanStatus {
   state: PlanStatusState;
@@ -37,7 +38,11 @@ export interface PlanStatus {
 /** Only the columns derivePlanStatus needs — keeps unit tests light. */
 export type PlanStatusUser = Pick<
   AppUser,
-  "stripeCustomerId" | "stripePlanId" | "expiryDate" | "cancelAtPeriodEnd" | "hasAccess"
+  | "stripeCustomerId"
+  | "stripePlanId"
+  | "expiryDate"
+  | "cancelAtPeriodEnd"
+  | "hasAccess"
 >;
 
 /**
@@ -53,11 +58,21 @@ export type PlanStatusUser = Pick<
  *          now  — ms epoch, defaults to Date.now() (pass explicitly in tests)
  * [OUTPUT] PlanStatus — never throws, never hits the network.
  */
-export function derivePlanStatus(user: PlanStatusUser, now: number = Date.now()): PlanStatus {
+export function derivePlanStatus(
+  user: PlanStatusUser,
+  now: number = Date.now()
+): PlanStatus {
   // ── [STEP 1] No Stripe customer or no plan on file → nothing to report ──────
   if (!user.stripeCustomerId || !user.stripePlanId) {
-    console.log(`${TAG}[derivePlanStatus] [OUTPUT] state=none (no stripeCustomerId/stripePlanId)`);
-    return { state: "none", planId: null, planLabel: null, governingDate: null };
+    console.log(
+      `${TAG}[derivePlanStatus] [OUTPUT] state=none (no stripeCustomerId/stripePlanId)`
+    );
+    return {
+      state: "none",
+      planId: null,
+      planLabel: null,
+      governingDate: null,
+    };
   }
 
   const planId = normalizePlanId(user.stripePlanId);
@@ -66,7 +81,9 @@ export function derivePlanStatus(user: PlanStatusUser, now: number = Date.now())
 
   // ── [STEP 2] Past expiry — strictly greater than, matching appUserProcedure ─
   if (governingDate !== null && now > governingDate) {
-    console.log(`${TAG}[derivePlanStatus] [OUTPUT] state=expired planId=${planId} governingDate=${governingDate}`);
+    console.log(
+      `${TAG}[derivePlanStatus] [OUTPUT] state=expired planId=${planId} governingDate=${governingDate}`
+    );
     return { state: "expired", planId, planLabel, governingDate };
   }
 
@@ -79,17 +96,23 @@ export function derivePlanStatus(user: PlanStatusUser, now: number = Date.now())
   // renew/checkout remains available (this does not touch the "none" path —
   // webhook revocation already nulls stripePlanId, landing on "none" above).
   if (!user.hasAccess) {
-    console.log(`${TAG}[derivePlanStatus] [OUTPUT] state=expired planId=${planId} governingDate=${governingDate} (hasAccess=false)`);
+    console.log(
+      `${TAG}[derivePlanStatus] [OUTPUT] state=expired planId=${planId} governingDate=${governingDate} (hasAccess=false)`
+    );
     return { state: "expired", planId, planLabel, governingDate };
   }
 
   // ── [STEP 3] Still within the paid period but set to lapse ──────────────────
   if (user.cancelAtPeriodEnd) {
-    console.log(`${TAG}[derivePlanStatus] [OUTPUT] state=cancel_scheduled planId=${planId} governingDate=${governingDate}`);
+    console.log(
+      `${TAG}[derivePlanStatus] [OUTPUT] state=cancel_scheduled planId=${planId} governingDate=${governingDate}`
+    );
     return { state: "cancel_scheduled", planId, planLabel, governingDate };
   }
 
   // ── [STEP 4] Active and set to auto-renew ────────────────────────────────────
-  console.log(`${TAG}[derivePlanStatus] [OUTPUT] state=active planId=${planId} governingDate=${governingDate}`);
+  console.log(
+    `${TAG}[derivePlanStatus] [OUTPUT] state=active planId=${planId} governingDate=${governingDate}`
+  );
   return { state: "active", planId, planLabel, governingDate };
 }

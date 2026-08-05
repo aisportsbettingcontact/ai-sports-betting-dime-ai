@@ -87,7 +87,10 @@ interface UserLite {
 const LIVE_STATUSES: ReadonlySet<string> = new Set(["active", "trialing"]);
 
 /** Stripe statuses that mean "this customer should NOT have access". */
-const DEAD_STATUSES: ReadonlySet<string> = new Set(["canceled", "incomplete_expired"]);
+const DEAD_STATUSES: ReadonlySet<string> = new Set([
+  "canceled",
+  "incomplete_expired",
+]);
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -95,7 +98,11 @@ const DEAD_STATUSES: ReadonlySet<string> = new Set(["canceled", "incomplete_expi
 function customerIdOf(sub: Stripe.Subscription): string | null {
   const c: unknown = sub.customer;
   if (typeof c === "string") return c.length > 0 ? c : null;
-  if (c && typeof c === "object" && typeof (c as { id?: unknown }).id === "string") {
+  if (
+    c &&
+    typeof c === "object" &&
+    typeof (c as { id?: unknown }).id === "string"
+  ) {
     return (c as { id: string }).id;
   }
   return null;
@@ -122,7 +129,7 @@ function errMsg(err: unknown): string {
  * this is logged loudly and propagated into the report; it is never a silent cap.
  */
 async function listAllSubscriptions(
-  maxPages: number,
+  maxPages: number
 ): Promise<{ subs: SubLite[]; truncated: boolean; pagesFetched: number }> {
   const stripe = getStripe();
   const subs: SubLite[] = [];
@@ -131,19 +138,27 @@ async function listAllSubscriptions(
   let truncated = false;
 
   for (let page = 0; page < maxPages; page += 1) {
-    const params: Stripe.SubscriptionListParams = { limit: PAGE_SIZE, status: "all" };
+    const params: Stripe.SubscriptionListParams = {
+      limit: PAGE_SIZE,
+      status: "all",
+    };
     if (startingAfter) params.starting_after = startingAfter;
 
-    const res: Stripe.ApiList<Stripe.Subscription> = await stripe.subscriptions.list(params);
+    const res: Stripe.ApiList<Stripe.Subscription> =
+      await stripe.subscriptions.list(params);
     pagesFetched += 1;
 
     for (const sub of res.data) {
-      subs.push({ id: sub.id, status: sub.status, customerId: customerIdOf(sub) });
+      subs.push({
+        id: sub.id,
+        status: sub.status,
+        customerId: customerIdOf(sub),
+      });
     }
 
     console.log(
       `${TAG} [STEP] Fetched Stripe page ${pagesFetched}/${maxPages}` +
-        ` rows=${res.data.length} running_total=${subs.length} has_more=${res.has_more}`,
+        ` rows=${res.data.length} running_total=${subs.length} has_more=${res.has_more}`
     );
 
     if (!res.has_more) break;
@@ -163,7 +178,7 @@ async function listAllSubscriptions(
         ` (maxPages=${maxPages}, fetched=${subs.length} subscriptions).` +
         ` Absence-based checks (DB_SUB_NOT_IN_STRIPE, SUBSCRIPTION_ID_MISMATCH) are SKIPPED` +
         ` for this run because unseen pages would produce false positives.` +
-        ` Raise maxPages to scan the full account.`,
+        ` Raise maxPages to scan the full account.`
     );
   }
 
@@ -196,7 +211,9 @@ async function loadStripeLinkedUsers(): Promise<UserLite[]> {
     .where(isNotNull(appUsers.stripeCustomerId));
 
   const list = Array.isArray(rows) ? (rows as UserLite[]) : [];
-  console.log(`${TAG} [STEP] Loaded app_users with stripeCustomerId: rows=${list.length}`);
+  console.log(
+    `${TAG} [STEP] Loaded app_users with stripeCustomerId: rows=${list.length}`
+  );
   return list;
 }
 
@@ -214,22 +231,25 @@ async function loadStripeLinkedUsers(): Promise<UserLite[]> {
  * key, no database), because a silently empty report reads as "no drift" and
  * that is the one wrong answer this module must never give.
  */
-export async function reconcileStripeSubscriptions(
-  opts?: { maxPages?: number },
-): Promise<ReconcileReport> {
+export async function reconcileStripeSubscriptions(opts?: {
+  maxPages?: number;
+}): Promise<ReconcileReport> {
   const ranAtMs = Date.now();
   const maxPages = Math.max(1, opts?.maxPages ?? DEFAULT_MAX_PAGES);
   const drift: ReconcileDriftRow[] = [];
 
-  console.log(`${TAG} [STEP] Starting READ-ONLY reconcile | maxPages=${maxPages}`);
+  console.log(
+    `${TAG} [STEP] Starting READ-ONLY reconcile | maxPages=${maxPages}`
+  );
 
   // ── Step 1: read both sides ────────────────────────────────────────────────
-  const { subs, truncated, pagesFetched } = await listAllSubscriptions(maxPages);
+  const { subs, truncated, pagesFetched } =
+    await listAllSubscriptions(maxPages);
   const users = await loadStripeLinkedUsers();
 
   console.log(
     `${TAG} [STATE] Inputs loaded | stripeSubscriptions=${subs.length}` +
-      ` pages=${pagesFetched} dbUsers=${users.length} truncated=${truncated}`,
+      ` pages=${pagesFetched} dbUsers=${users.length} truncated=${truncated}`
   );
 
   // ── Step 2: index both sides ───────────────────────────────────────────────
@@ -290,7 +310,7 @@ export async function reconcileStripeSubscriptions(
       }
     } catch (err: unknown) {
       console.error(
-        `${TAG} [STATE] Skipping customer=${customerId} — check failed: ${errMsg(err)}`,
+        `${TAG} [STATE] Skipping customer=${customerId} — check failed: ${errMsg(err)}`
       );
     }
   }
@@ -305,8 +325,8 @@ export async function reconcileStripeSubscriptions(
       if (usersByCustomer.get(customerId)?.id !== user.id) continue;
 
       const custSubs = subsByCustomer.get(customerId) ?? [];
-      const live = custSubs.filter((s) => LIVE_STATUSES.has(s.status));
-      const dead = custSubs.filter((s) => DEAD_STATUSES.has(s.status));
+      const live = custSubs.filter(s => LIVE_STATUSES.has(s.status));
+      const dead = custSubs.filter(s => DEAD_STATUSES.has(s.status));
       const expired = isExpired(user.expiryDate, ranAtMs);
 
       // 4a. Paying customer locked out.
@@ -317,7 +337,7 @@ export async function reconcileStripeSubscriptions(
           stripeCustomerId: customerId,
           stripeSubscriptionId: live[0]?.id ?? user.stripeSubscriptionId,
           detail:
-            `Stripe status=${live.map((s) => s.status).join(",")} but DB` +
+            `Stripe status=${live.map(s => s.status).join(",")} but DB` +
             ` hasAccess=${user.hasAccess}` +
             ` expiryDate=${user.expiryDate === null ? "lifetime" : new Date(user.expiryDate).toISOString()}` +
             `${expired ? " (EXPIRED)" : ""}` +
@@ -334,7 +354,7 @@ export async function reconcileStripeSubscriptions(
           stripeCustomerId: customerId,
           stripeSubscriptionId: dead[0]?.id ?? user.stripeSubscriptionId,
           detail:
-            `Stripe status=${dead.map((s) => s.status).join(",")} with no active/trialing` +
+            `Stripe status=${dead.map(s => s.status).join(",")} with no active/trialing` +
             ` subscription, but DB hasAccess=true` +
             ` expiryDate=${user.expiryDate === null ? "lifetime" : new Date(user.expiryDate).toISOString()}` +
             ` plan=${user.stripePlanId ?? "none"} — LOST REVOKE (access given away)` +
@@ -361,7 +381,7 @@ export async function reconcileStripeSubscriptions(
               ` (hasAccess=${user.hasAccess}, plan=${user.stripePlanId ?? "none"}) —` +
               ` stale or deleted subscription reference`,
           });
-        } else if (!custSubs.some((s) => s.id === dbSubId)) {
+        } else if (!custSubs.some(s => s.id === dbSubId)) {
           drift.push({
             kind: "SUBSCRIPTION_ID_MISMATCH",
             userId: user.id,
@@ -369,9 +389,9 @@ export async function reconcileStripeSubscriptions(
             stripeSubscriptionId: dbSubId,
             detail:
               `DB stripeSubscriptionId exists in Stripe but belongs to a different customer;` +
-              ` this customer's subscriptions are [${custSubs.map((s) => `${s.id}:${s.status}`).join(", ") || "none"}]`,
+              ` this customer's subscriptions are [${custSubs.map(s => `${s.id}:${s.status}`).join(", ") || "none"}]`,
           });
-        } else if (live.length > 0 && !live.some((s) => s.id === dbSubId)) {
+        } else if (live.length > 0 && !live.some(s => s.id === dbSubId)) {
           drift.push({
             kind: "SUBSCRIPTION_ID_MISMATCH",
             userId: user.id,
@@ -379,7 +399,7 @@ export async function reconcileStripeSubscriptions(
             stripeSubscriptionId: dbSubId,
             detail:
               `DB points at a non-live subscription while the customer has a live one;` +
-              ` db=${dbSubId} live=[${live.map((s) => `${s.id}:${s.status}`).join(", ")}]`,
+              ` db=${dbSubId} live=[${live.map(s => `${s.id}:${s.status}`).join(", ")}]`,
           });
         }
       } else if (live.length > 0) {
@@ -390,12 +410,14 @@ export async function reconcileStripeSubscriptions(
           stripeSubscriptionId: null,
           detail:
             `DB stripeSubscriptionId is NULL but the customer has a live subscription in Stripe:` +
-            ` [${live.map((s) => `${s.id}:${s.status}`).join(", ")}]`,
+            ` [${live.map(s => `${s.id}:${s.status}`).join(", ")}]`,
         });
       }
     } catch (err: unknown) {
       // Never let one bad row abort the scan.
-      console.error(`${TAG} [STATE] Skipping userId=${user.id} — check failed: ${errMsg(err)}`);
+      console.error(
+        `${TAG} [STATE] Skipping userId=${user.id} — check failed: ${errMsg(err)}`
+      );
     }
   }
 
@@ -409,7 +431,8 @@ export async function reconcileStripeSubscriptions(
 
   // ── Step 5: report ─────────────────────────────────────────────────────────
   const byKind = new Map<string, number>();
-  for (const row of drift) byKind.set(row.kind, (byKind.get(row.kind) ?? 0) + 1);
+  for (const row of drift)
+    byKind.set(row.kind, (byKind.get(row.kind) ?? 0) + 1);
   const kindSummary =
     Array.from(byKind.entries())
       .map(([k, n]) => `${k}=${n}`)
@@ -418,14 +441,18 @@ export async function reconcileStripeSubscriptions(
   console.log(
     `${TAG} [OUTPUT] Reconcile complete | stripeSubs=${report.checkedStripeSubscriptions}` +
       ` dbUsers=${report.checkedDbUsers} drift=${drift.length} truncated=${truncated}` +
-      ` durationMs=${Date.now() - ranAtMs}`,
+      ` durationMs=${Date.now() - ranAtMs}`
   );
   console.log(`${TAG} [OUTPUT] Drift by kind: ${kindSummary}`);
 
   if (drift.length === 0) {
-    console.log(`${TAG} [VERIFY] ✓ Stripe and database agree across all scanned rows`);
+    console.log(
+      `${TAG} [VERIFY] ✓ Stripe and database agree across all scanned rows`
+    );
   } else {
-    console.warn(`${TAG} [VERIFY] ✗ ${drift.length} drift row(s) detected — see summary below`);
+    console.warn(
+      `${TAG} [VERIFY] ✗ ${drift.length} drift row(s) detected — see summary below`
+    );
     console.warn(formatReconcileReport(report));
   }
 
@@ -451,7 +478,9 @@ export function formatReconcileReport(r: ReconcileReport): string {
       ` | stripeSubs=${r.checkedStripeSubscriptions}` +
       ` dbUsers=${r.checkedDbUsers}` +
       ` drift=${r.drift.length}` +
-      (r.truncated ? " | TRUNCATED (page bound hit — absence checks skipped)" : ""),
+      (r.truncated
+        ? " | TRUNCATED (page bound hit — absence checks skipped)"
+        : "")
   );
 
   if (r.drift.length === 0) {
@@ -475,7 +504,7 @@ export function formatReconcileReport(r: ReconcileReport): string {
         ` user=${row.userId ?? "-"}` +
         ` cus=${row.stripeCustomerId ?? "-"}` +
         ` sub=${row.stripeSubscriptionId ?? "-"}` +
-        ` :: ${row.detail}`,
+        ` :: ${row.detail}`
     );
     shown += 1;
   }

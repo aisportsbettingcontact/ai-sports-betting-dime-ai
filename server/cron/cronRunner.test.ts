@@ -23,7 +23,10 @@ import { CronJobRunner } from "./cronRunner";
 function deferred<T>() {
   let resolve!: (v: T) => void;
   let reject!: (e: unknown) => void;
-  const promise = new Promise<T>((res, rej) => { resolve = res; reject = rej; });
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
   return { promise, resolve, reject };
 }
 
@@ -33,7 +36,9 @@ describe("CronJobRunner", () => {
   it("starts the job on first trigger and reports running state", () => {
     const d = deferred<void>();
     const work = vi.fn(() => d.promise);
-    const runner = new CronJobRunner("test-job", work, { now: clock("2026-07-09T00:00:00.000Z") });
+    const runner = new CronJobRunner("test-job", work, {
+      now: clock("2026-07-09T00:00:00.000Z"),
+    });
 
     const r = runner.trigger();
     expect(r.started).toBe(true);
@@ -48,7 +53,9 @@ describe("CronJobRunner", () => {
   it("skips a concurrent trigger without invoking work a second time", () => {
     const d = deferred<void>();
     const work = vi.fn(() => d.promise);
-    const runner = new CronJobRunner("test-job", work, { now: clock("2026-07-09T00:00:00.000Z") });
+    const runner = new CronJobRunner("test-job", work, {
+      now: clock("2026-07-09T00:00:00.000Z"),
+    });
 
     runner.trigger();
     const second = runner.trigger();
@@ -63,7 +70,9 @@ describe("CronJobRunner", () => {
   it("releases the lock and records success when work resolves", async () => {
     const d = deferred<void>();
     const work = vi.fn(() => d.promise);
-    const runner = new CronJobRunner("test-job", work, { now: clock("2026-07-09T00:00:00.000Z") });
+    const runner = new CronJobRunner("test-job", work, {
+      now: clock("2026-07-09T00:00:00.000Z"),
+    });
 
     runner.trigger();
     d.resolve();
@@ -81,7 +90,9 @@ describe("CronJobRunner", () => {
   it("captures a rejected work() as a failed result and releases the lock", async () => {
     const d = deferred<void>();
     const work = vi.fn(() => d.promise);
-    const runner = new CronJobRunner("test-job", work, { now: clock("2026-07-09T00:00:00.000Z") });
+    const runner = new CronJobRunner("test-job", work, {
+      now: clock("2026-07-09T00:00:00.000Z"),
+    });
 
     runner.trigger();
     d.reject(new Error("boom"));

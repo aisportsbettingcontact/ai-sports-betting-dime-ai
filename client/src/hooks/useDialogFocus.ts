@@ -8,7 +8,9 @@ const FOCUSABLE_SELECTOR =
  *  outside any inert subtree — focusing a hidden/inert element silently no-ops
  *  and strands focus on document.body (see SettingsModal.tsx's isReachable). */
 function isReachable(el: HTMLElement | null): el is HTMLElement {
-  return !!el && el.isConnected && el.offsetParent !== null && !el.closest("[inert]");
+  return (
+    !!el && el.isConnected && el.offsetParent !== null && !el.closest("[inert]")
+  );
 }
 
 /**
@@ -22,7 +24,7 @@ export function useDialogFocus(
   open: boolean,
   onClose: () => void,
   dialogRef: RefObject<HTMLElement | null>,
-  { handleEscape = false }: { handleEscape?: boolean } = {},
+  { handleEscape = false }: { handleEscape?: boolean } = {}
 ): void {
   // Latest onClose without re-arming the trap on every parent render.
   const onCloseRef = useRef(onClose);
@@ -46,7 +48,7 @@ export function useDialogFocus(
       }
       if (event.key !== "Tab" || !dialogRef.current) return;
       const els = Array.from(
-        dialogRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
+        dialogRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
       );
       if (els.length === 0) return;
       const first = els[0];

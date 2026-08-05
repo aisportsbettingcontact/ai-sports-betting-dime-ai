@@ -38,21 +38,30 @@ describe("buildClientEnvelope", () => {
 
 describe("action_performed envelope (D3)", () => {
   it("carries eventName action_performed + the curated action_name", () => {
-    const e = buildClientEnvelope("action_performed", { actionName: "chat_message_sent" });
+    const e = buildClientEnvelope("action_performed", {
+      actionName: "chat_message_sent",
+    });
     expect(e.eventName).toBe("action_performed");
     expect(e.actionName).toBe("chat_message_sent");
   });
   it("still attaches the device block + route to an action event", () => {
-    const e = buildClientEnvelope("action_performed", { actionName: "feed_filtered" });
-    expect(["xs","sm","md","lg","xl"]).toContain(e.viewportClass);
+    const e = buildClientEnvelope("action_performed", {
+      actionName: "feed_filtered",
+    });
+    expect(["xs", "sm", "md", "lg", "xl"]).toContain(e.viewportClass);
     expect(typeof e.route).toBe("string");
   });
   it("omits actionName when not provided", () => {
-    expect(buildClientEnvelope("screen_viewed")).not.toHaveProperty("actionName");
+    expect(buildClientEnvelope("screen_viewed")).not.toHaveProperty(
+      "actionName"
+    );
   });
 });
 
-const src = fs.readFileSync(path.join(import.meta.dirname, "analytics.ts"), "utf8");
+const src = fs.readFileSync(
+  path.join(import.meta.dirname, "analytics.ts"),
+  "utf8"
+);
 describe("useAnalytics wiring (source contract)", () => {
   it("posts to the same-origin tRPC analytics.track — never a private host", () => {
     expect(src).toMatch(/trpc\.analytics\.track\.useMutation/);
@@ -67,14 +76,20 @@ describe("useAnalytics wiring (source contract)", () => {
 describe("device block on the envelope", () => {
   it("attaches coarse device signals + a route pattern to every event", () => {
     const e = buildClientEnvelope("screen_viewed");
-    expect(["xs","sm","md","lg","xl"]).toContain(e.viewportClass);
+    expect(["xs", "sm", "md", "lg", "xl"]).toContain(e.viewportClass);
     expect(typeof e.isTouch).toBe("boolean");
-    expect(["web-desktop-shell","web-mobile-shell","web-responsive"]).toContain(e.appSurface);
+    expect([
+      "web-desktop-shell",
+      "web-mobile-shell",
+      "web-responsive",
+    ]).toContain(e.appSurface);
     expect(typeof e.route).toBe("string");
     // Never a fingerprint / raw UA.
     expect(e).not.toHaveProperty("userAgent");
   });
   it("still supports the value events", () => {
-    expect(buildClientEnvelope("chat_response_completed").eventName).toBe("chat_response_completed");
+    expect(buildClientEnvelope("chat_response_completed").eventName).toBe(
+      "chat_response_completed"
+    );
   });
 });

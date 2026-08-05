@@ -27,7 +27,11 @@
  */
 
 import { getDb } from "./db";
-import { mlbGameBacktest, mlbStrikeoutProps, mlbHrProps } from "../drizzle/schema";
+import {
+  mlbGameBacktest,
+  mlbStrikeoutProps,
+  mlbHrProps,
+} from "../drizzle/schema";
 import { and, eq, sql, isNotNull } from "drizzle-orm";
 import {
   auditLog,
@@ -41,48 +45,48 @@ import {
 
 export interface CalibrationBucket {
   /** Bucket label e.g. "0.50–0.60" */
-  label:         string;
-  minProb:       number;
-  maxProb:       number;
+  label: string;
+  minProb: number;
+  maxProb: number;
   /** Number of rows in this bucket */
-  count:         number;
+  count: number;
   /** Average model probability in this bucket */
-  avgModelProb:  number;
+  avgModelProb: number;
   /** Actual win rate in this bucket */
   actualWinRate: number;
   /** |avgModelProb - actualWinRate| */
   calibrationError: number;
   /** Weighted contribution to ECE */
-  eceContribution:  number;
+  eceContribution: number;
 }
 
 export interface CalibrationAuditResult {
-  market:           ApprovedMarket;
-  timeframe:        string;
-  dateMin:          string | null;
-  dateMax:          string | null;
-  sampleSize:       number;
+  market: ApprovedMarket;
+  timeframe: string;
+  dateMin: string | null;
+  dateMax: string | null;
+  sampleSize: number;
   /** Expected Calibration Error [0,1] — lower is better */
-  ece:              number;
+  ece: number;
   /** Maximum Calibration Error across buckets */
-  mce:              number;
+  mce: number;
   /** Overall Brier Score */
-  brierScore:       number | null;
+  brierScore: number | null;
   /** Overall Log Loss */
-  logLoss:          number | null;
+  logLoss: number | null;
   /** avg model prob - avg actual win rate (positive = overconfident) */
-  calibrationBias:  number;
+  calibrationBias: number;
   /** Classification: OVERCONFIDENT | UNDERCONFIDENT | WELL_CALIBRATED */
   biasClassification: "OVERCONFIDENT" | "UNDERCONFIDENT" | "WELL_CALIBRATED";
   /** Reliability diagram data */
-  buckets:          CalibrationBucket[];
+  buckets: CalibrationBucket[];
   /** Platt scaling factor recommendation (null if not needed) */
   plattScaleFactor: number | null;
   /** Whether calibration passes publication gate */
   calibrationPasses: boolean;
   /** Reason for pass/fail */
   calibrationReason: string;
-  generatedAt:      number;
+  generatedAt: number;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -96,15 +100,15 @@ const BRIER_THRESHOLD = 0.25;
 // ─── Fetch Rows ───────────────────────────────────────────────────────────────
 
 interface CalibrationRow {
-  gameDate:  string;
+  gameDate: string;
   modelProb: number;
-  result:    string;
+  result: string;
 }
 
 async function fetchCalibrationRows(
   market: ApprovedMarket,
   startDate?: string,
-  endDate?: string,
+  endDate?: string
 ): Promise<CalibrationRow[]> {
   const db = await getDb();
 
@@ -112,26 +116,31 @@ async function fetchCalibrationRows(
     eq(mlbGameBacktest.market, market),
     isNotNull(mlbGameBacktest.modelProb),
   ];
-  if (startDate) conditions.push(sql`${mlbGameBacktest.gameDate} >= ${startDate}`);
-  if (endDate)   conditions.push(sql`${mlbGameBacktest.gameDate} <= ${endDate}`);
+  if (startDate)
+    conditions.push(sql`${mlbGameBacktest.gameDate} >= ${startDate}`);
+  if (endDate) conditions.push(sql`${mlbGameBacktest.gameDate} <= ${endDate}`);
 
   const rows = await db
     .select({
-      gameDate:  mlbGameBacktest.gameDate,
+      gameDate: mlbGameBacktest.gameDate,
       modelProb: mlbGameBacktest.modelProb,
-      result:    mlbGameBacktest.result,
+      result: mlbGameBacktest.result,
     })
     .from(mlbGameBacktest)
     .where(and(...conditions));
 
-  type RawRow = { gameDate: string | null; modelProb: unknown; result: string | null };
+  type RawRow = {
+    gameDate: string | null;
+    modelProb: unknown;
+    result: string | null;
+  };
   return (rows as RawRow[])
     .filter((r: RawRow) => r.result === "WIN" || r.result === "LOSS")
     .filter((r: RawRow) => r.modelProb !== null)
     .map((r: RawRow) => ({
-      gameDate:  r.gameDate ?? "",
+      gameDate: r.gameDate ?? "",
       modelProb: parseFloat(String(r.modelProb)),
-      result:    r.result!,
+      result: r.result!,
     }));
 }
 
@@ -139,20 +148,35 @@ async function fetchCalibrationRows(
 
 export function computeCalibration(
   rows: CalibrationRow[],
-  market: ApprovedMarket,
+  market: ApprovedMarket
 ): Omit<CalibrationAuditResult, "generatedAt"> {
   const timeframe = MARKET_TIMEFRAME[market];
 
   if (rows.length === 0) {
-    auditLog("WARN", market.toUpperCase(), timeframe, "CALIBRATION", "NO_DATA",
+    auditLog(
+      "WARN",
+      market.toUpperCase(),
+      timeframe,
+      "CALIBRATION",
+      "NO_DATA",
       `No graded rows available for calibration audit`,
-      { records_checked: 0, failed: 1, impact: "calibration_skipped", action: "collect_more_data" });
+      {
+        records_checked: 0,
+        failed: 1,
+        impact: "calibration_skipped",
+        action: "collect_more_data",
+      }
+    );
     return {
-      market, timeframe,
-      dateMin: null, dateMax: null,
+      market,
+      timeframe,
+      dateMin: null,
+      dateMax: null,
       sampleSize: 0,
-      ece: 0, mce: 0,
-      brierScore: null, logLoss: null,
+      ece: 0,
+      mce: 0,
+      brierScore: null,
+      logLoss: null,
       calibrationBias: 0,
       biasClassification: "WELL_CALIBRATED",
       buckets: [],
@@ -162,15 +186,20 @@ export function computeCalibration(
     };
   }
 
-  const dates = rows.map(r => r.gameDate).filter(Boolean).sort();
-  const probs    = rows.map(r => r.modelProb);
-  const outcomes = rows.map(r => r.result === "WIN" ? 1 : 0);
+  const dates = rows
+    .map(r => r.gameDate)
+    .filter(Boolean)
+    .sort();
+  const probs = rows.map(r => r.modelProb);
+  const outcomes = rows.map(r => (r.result === "WIN" ? 1 : 0));
 
   // Overall metrics
   const bs = brierScore(probs, outcomes);
   const ll = logLoss(probs, outcomes);
-  const avgModelProb  = probs.reduce((a, b) => a + b, 0) / probs.length;
-  const avgActualRate = (outcomes as number[]).reduce((a: number, b: number) => a + b, 0) / outcomes.length;
+  const avgModelProb = probs.reduce((a, b) => a + b, 0) / probs.length;
+  const avgActualRate =
+    (outcomes as number[]).reduce((a: number, b: number) => a + b, 0) /
+    outcomes.length;
   const bias = parseFloat((avgModelProb - avgActualRate).toFixed(6));
 
   // Build calibration buckets
@@ -180,69 +209,93 @@ export function computeCalibration(
     const maxP = (i + 1) / BUCKET_COUNT;
     const label = `${(minP * 100).toFixed(0)}%–${(maxP * 100).toFixed(0)}%`;
 
-    const bucketRows = rows.filter(r =>
-      r.modelProb >= minP && (i === BUCKET_COUNT - 1 ? r.modelProb <= maxP : r.modelProb < maxP)
+    const bucketRows = rows.filter(
+      r =>
+        r.modelProb >= minP &&
+        (i === BUCKET_COUNT - 1 ? r.modelProb <= maxP : r.modelProb < maxP)
     );
 
     if (bucketRows.length === 0) continue;
 
-    const bucketProbs    = bucketRows.map(r => r.modelProb);
-    const bucketOutcomes = bucketRows.map(r => r.result === "WIN" ? 1 : 0);
-    const avgBucketProb  = bucketProbs.reduce((a, b) => a + b, 0) / bucketProbs.length;
-    const actualRate     = (bucketOutcomes as number[]).reduce((a: number, b: number) => a + b, 0) / bucketOutcomes.length;
-    const calError       = Math.abs(avgBucketProb - actualRate);
-    const eceContrib     = (bucketRows.length / rows.length) * calError;
+    const bucketProbs = bucketRows.map(r => r.modelProb);
+    const bucketOutcomes = bucketRows.map(r => (r.result === "WIN" ? 1 : 0));
+    const avgBucketProb =
+      bucketProbs.reduce((a, b) => a + b, 0) / bucketProbs.length;
+    const actualRate =
+      (bucketOutcomes as number[]).reduce((a: number, b: number) => a + b, 0) /
+      bucketOutcomes.length;
+    const calError = Math.abs(avgBucketProb - actualRate);
+    const eceContrib = (bucketRows.length / rows.length) * calError;
 
     buckets.push({
-      label, minProb: minP, maxProb: maxP,
-      count:            bucketRows.length,
-      avgModelProb:     parseFloat(avgBucketProb.toFixed(6)),
-      actualWinRate:    parseFloat(actualRate.toFixed(6)),
+      label,
+      minProb: minP,
+      maxProb: maxP,
+      count: bucketRows.length,
+      avgModelProb: parseFloat(avgBucketProb.toFixed(6)),
+      actualWinRate: parseFloat(actualRate.toFixed(6)),
       calibrationError: parseFloat(calError.toFixed(6)),
-      eceContribution:  parseFloat(eceContrib.toFixed(6)),
+      eceContribution: parseFloat(eceContrib.toFixed(6)),
     });
   }
 
   // ECE: weighted sum of calibration errors (only buckets with enough samples)
   const eligibleBuckets = buckets.filter(b => b.count >= MIN_BUCKET_SAMPLES);
-  const totalEligible   = eligibleBuckets.reduce((s, b) => s + b.count, 0);
-  const ece = totalEligible > 0
-    ? parseFloat(eligibleBuckets.reduce((s, b) =>
-        s + (b.count / totalEligible) * b.calibrationError, 0).toFixed(6))
-    : 0;
-  const mce = buckets.length > 0
-    ? parseFloat(Math.max(...buckets.map(b => b.calibrationError)).toFixed(6))
-    : 0;
+  const totalEligible = eligibleBuckets.reduce((s, b) => s + b.count, 0);
+  const ece =
+    totalEligible > 0
+      ? parseFloat(
+          eligibleBuckets
+            .reduce(
+              (s, b) => s + (b.count / totalEligible) * b.calibrationError,
+              0
+            )
+            .toFixed(6)
+        )
+      : 0;
+  const mce =
+    buckets.length > 0
+      ? parseFloat(Math.max(...buckets.map(b => b.calibrationError)).toFixed(6))
+      : 0;
 
   // Bias classification
   const biasClassification: CalibrationAuditResult["biasClassification"] =
-    Math.abs(bias) < BIAS_THRESHOLD ? "WELL_CALIBRATED"
-    : bias > 0 ? "OVERCONFIDENT"
-    : "UNDERCONFIDENT";
+    Math.abs(bias) < BIAS_THRESHOLD
+      ? "WELL_CALIBRATED"
+      : bias > 0
+        ? "OVERCONFIDENT"
+        : "UNDERCONFIDENT";
 
   // Platt scaling factor: if overconfident, scale down model probs
   // Platt factor = avgActualRate / avgModelProb (multiplicative)
-  const plattScaleFactor = Math.abs(bias) >= BIAS_THRESHOLD && avgModelProb > 0
-    ? parseFloat((avgActualRate / avgModelProb).toFixed(4))
-    : null;
+  const plattScaleFactor =
+    Math.abs(bias) >= BIAS_THRESHOLD && avgModelProb > 0
+      ? parseFloat((avgActualRate / avgModelProb).toFixed(4))
+      : null;
 
   // Publication gate
-  const ecePasses    = ece < ECE_THRESHOLD;
-  const biasPasses   = Math.abs(bias) < BIAS_THRESHOLD;
-  const brierPasses  = bs < BRIER_THRESHOLD;
+  const ecePasses = ece < ECE_THRESHOLD;
+  const biasPasses = Math.abs(bias) < BIAS_THRESHOLD;
+  const brierPasses = bs < BRIER_THRESHOLD;
   const calibrationPasses = ecePasses && biasPasses && brierPasses;
 
   const reasons: string[] = [];
-  if (!ecePasses)   reasons.push(`ECE=${ece.toFixed(4)} ≥ threshold ${ECE_THRESHOLD}`);
-  if (!biasPasses)  reasons.push(`bias=${bias.toFixed(4)} ≥ threshold ±${BIAS_THRESHOLD}`);
-  if (!brierPasses) reasons.push(`Brier=${bs.toFixed(4)} ≥ threshold ${BRIER_THRESHOLD}`);
+  if (!ecePasses)
+    reasons.push(`ECE=${ece.toFixed(4)} ≥ threshold ${ECE_THRESHOLD}`);
+  if (!biasPasses)
+    reasons.push(`bias=${bias.toFixed(4)} ≥ threshold ±${BIAS_THRESHOLD}`);
+  if (!brierPasses)
+    reasons.push(`Brier=${bs.toFixed(4)} ≥ threshold ${BRIER_THRESHOLD}`);
   const calibrationReason = calibrationPasses
     ? `PASS: ECE=${ece.toFixed(4)} bias=${bias.toFixed(4)} Brier=${bs.toFixed(4)} n=${rows.length}`
     : `FAIL: ${reasons.join("; ")}`;
 
   auditLog(
     calibrationPasses ? "INFO" : "WARN",
-    market.toUpperCase(), timeframe, "CALIBRATION", "AUDIT_RESULT",
+    market.toUpperCase(),
+    timeframe,
+    "CALIBRATION",
+    "AUDIT_RESULT",
     calibrationReason,
     {
       records_checked: rows.length,
@@ -250,17 +303,24 @@ export function computeCalibration(
       failed: calibrationPasses ? 0 : rows.length,
       date_min: dates[0] ?? undefined,
       date_max: dates[dates.length - 1] ?? undefined,
-      impact: calibrationPasses ? "none" : `${market}_calibration_needs_recalibration`,
-      action: plattScaleFactor !== null ? `apply_platt_scale_factor=${plattScaleFactor}` : "none",
+      impact: calibrationPasses
+        ? "none"
+        : `${market}_calibration_needs_recalibration`,
+      action:
+        plattScaleFactor !== null
+          ? `apply_platt_scale_factor=${plattScaleFactor}`
+          : "none",
     }
   );
 
   return {
-    market, timeframe,
+    market,
+    timeframe,
     dateMin: dates[0] ?? null,
     dateMax: dates[dates.length - 1] ?? null,
     sampleSize: rows.length,
-    ece, mce,
+    ece,
+    mce,
     brierScore: bs,
     logLoss: ll,
     calibrationBias: bias,
@@ -277,11 +337,17 @@ export function computeCalibration(
 export async function runCalibrationAudit(
   market: ApprovedMarket,
   startDate?: string,
-  endDate?: string,
+  endDate?: string
 ): Promise<CalibrationAuditResult> {
-  auditLog("INFO", market.toUpperCase(), MARKET_TIMEFRAME[market], "CALIBRATION", "AUDIT_START",
+  auditLog(
+    "INFO",
+    market.toUpperCase(),
+    MARKET_TIMEFRAME[market],
+    "CALIBRATION",
+    "AUDIT_START",
     `Starting calibration audit for ${market}`,
-    { date_min: startDate, date_max: endDate });
+    { date_min: startDate, date_max: endDate }
+  );
 
   const rows = await fetchCalibrationRows(market, startDate, endDate);
   const result = computeCalibration(rows, market);
@@ -293,11 +359,17 @@ export async function runCalibrationAudit(
 export async function runCalibrationAuditAllMarkets(
   markets: ApprovedMarket[],
   startDate?: string,
-  endDate?: string,
+  endDate?: string
 ): Promise<CalibrationAuditResult[]> {
-  auditLog("INFO", "ALL_MARKETS", "ALL_TIMEFRAMES", "CALIBRATION", "BATCH_START",
+  auditLog(
+    "INFO",
+    "ALL_MARKETS",
+    "ALL_TIMEFRAMES",
+    "CALIBRATION",
+    "BATCH_START",
     `Starting calibration audit for ${markets.length} markets`,
-    { records_checked: markets.length });
+    { records_checked: markets.length }
+  );
 
   const results: CalibrationAuditResult[] = [];
   for (const market of markets) {
@@ -306,16 +378,26 @@ export async function runCalibrationAuditAllMarkets(
   }
 
   const passCount = results.filter(r => r.calibrationPasses).length;
-  const failCount = results.filter(r => !r.calibrationPasses && r.sampleSize > 0).length;
+  const failCount = results.filter(
+    r => !r.calibrationPasses && r.sampleSize > 0
+  ).length;
   const noDataCount = results.filter(r => r.sampleSize === 0).length;
 
-  auditLog("INFO", "ALL_MARKETS", "ALL_TIMEFRAMES", "CALIBRATION", "BATCH_COMPLETE",
+  auditLog(
+    "INFO",
+    "ALL_MARKETS",
+    "ALL_TIMEFRAMES",
+    "CALIBRATION",
+    "BATCH_COMPLETE",
     `Calibration audit complete: ${passCount} PASS | ${failCount} FAIL | ${noDataCount} NO_DATA`,
     {
       records_checked: markets.length,
       passed: passCount,
       failed: failCount,
-      impact: failCount > 0 ? "some_markets_need_recalibration" : "all_markets_calibrated",
+      impact:
+        failCount > 0
+          ? "some_markets_need_recalibration"
+          : "all_markets_calibrated",
       action: failCount > 0 ? "apply_platt_scaling_or_retrain" : "none",
     }
   );
@@ -326,23 +408,31 @@ export async function runCalibrationAuditAllMarkets(
 // ─── Recalibration Recommendation ────────────────────────────────────────────
 
 export interface RecalibrationRecommendation {
-  market:           ApprovedMarket;
-  currentBias:      number;
+  market: ApprovedMarket;
+  currentBias: number;
   plattScaleFactor: number | null;
-  recommendation:   "APPLY_PLATT_SCALING" | "RETRAIN_MODEL" | "NO_ACTION_REQUIRED";
-  reason:           string;
-  sampleSize:       number;
+  recommendation:
+    "APPLY_PLATT_SCALING" | "RETRAIN_MODEL" | "NO_ACTION_REQUIRED";
+  reason: string;
+  sampleSize: number;
   priorVersionPreserved: boolean;
 }
 
 export function buildRecalibrationRecommendation(
-  audit: CalibrationAuditResult,
+  audit: CalibrationAuditResult
 ): RecalibrationRecommendation {
-  const { market, calibrationBias, plattScaleFactor, sampleSize, calibrationPasses } = audit;
+  const {
+    market,
+    calibrationBias,
+    plattScaleFactor,
+    sampleSize,
+    calibrationPasses,
+  } = audit;
 
   if (calibrationPasses) {
     return {
-      market, currentBias: calibrationBias,
+      market,
+      currentBias: calibrationBias,
       plattScaleFactor: null,
       recommendation: "NO_ACTION_REQUIRED",
       reason: `Calibration within acceptable bounds: ECE=${audit.ece.toFixed(4)} bias=${calibrationBias.toFixed(4)}`,
@@ -353,7 +443,8 @@ export function buildRecalibrationRecommendation(
 
   if (sampleSize < 50) {
     return {
-      market, currentBias: calibrationBias,
+      market,
+      currentBias: calibrationBias,
       plattScaleFactor: null,
       recommendation: "NO_ACTION_REQUIRED",
       reason: `Insufficient sample size (${sampleSize} < 50) — recalibration deferred until more data available`,
@@ -362,9 +453,10 @@ export function buildRecalibrationRecommendation(
     };
   }
 
-  if (plattScaleFactor !== null && Math.abs(calibrationBias) < 0.10) {
+  if (plattScaleFactor !== null && Math.abs(calibrationBias) < 0.1) {
     return {
-      market, currentBias: calibrationBias,
+      market,
+      currentBias: calibrationBias,
       plattScaleFactor,
       recommendation: "APPLY_PLATT_SCALING",
       reason: `Systematic bias detected: ${calibrationBias > 0 ? "OVERCONFIDENT" : "UNDERCONFIDENT"} by ${Math.abs(calibrationBias * 100).toFixed(1)}pp — apply Platt scale factor ${plattScaleFactor}`,
@@ -374,7 +466,8 @@ export function buildRecalibrationRecommendation(
   }
 
   return {
-    market, currentBias: calibrationBias,
+    market,
+    currentBias: calibrationBias,
     plattScaleFactor,
     recommendation: "RETRAIN_MODEL",
     reason: `Large calibration error: ECE=${audit.ece.toFixed(4)} bias=${calibrationBias.toFixed(4)} — Platt scaling insufficient, model retraining required`,

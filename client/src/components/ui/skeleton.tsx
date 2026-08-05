@@ -9,7 +9,7 @@ function Skeleton({ className, ...props }: React.ComponentProps<"div">) {
       // scaffolding, never signal: bordered frames in the theme ink, pulsing.
       className={cn(
         "animate-pulse rounded-md border border-border bg-transparent",
-        className,
+        className
       )}
       {...props}
     />

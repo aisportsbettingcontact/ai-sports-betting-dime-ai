@@ -49,7 +49,10 @@ export interface PerfEvaluation {
 /**
  * Evaluate a set of samples against budgets + baseline. Deterministic and pure.
  */
-export function evaluatePerfRun(samples: PerfSample[], config: PerfBudget): PerfEvaluation {
+export function evaluatePerfRun(
+  samples: PerfSample[],
+  config: PerfBudget
+): PerfEvaluation {
   const violations: PerfViolation[] = [];
   let checked = 0;
 

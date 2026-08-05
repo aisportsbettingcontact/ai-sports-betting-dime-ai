@@ -1,0 +1,138 @@
+# 01-pr-proof-contract — the authoritative definition of "verified".
+#
+# Fail-closed by construction: no continue-on-error, frozen installs only,
+# zero-tests-collected fails (env-gate marks collection errors "never
+# excusable"), and the proof artifact is emitted only when every step passed.
+#
+# Division of labor with ci.yml (documented in docs/verification/AUDIT.md):
+# DB-bound suites and the reconciled-migration replay stay in ci.yml's
+# "DB Tests" (isolated database). This contract covers install-integrity,
+# types, the gated unit/integration suite, the production build + its two
+# gates, and emits proof-contract.json binding SHAs, lockfile hashes, and
+# artifact digests for the audit trail (Layer 5 attestations reference it).
+name: 01-pr-proof-contract
+
+on:
+  pull_request:
+  merge_group:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: proof-${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  proof:
+    name: 01-pr-proof-contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
+
+      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v4
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: "[STEP] Frozen install — mutable dependency installs are forbidden"
+        run: pnpm install --frozen-lockfile
+
+      - name: "[STEP] Static types (strict)"
+        run: NODE_OPTIONS=--max-old-space-size=6144 npx tsc --noEmit
+
+      - name: "[STEP] Playwright chromium — perf/harness.smoke.test.ts runs it (mirrors ci.yml)"
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: "[STEP] Gated vitest — env-gate fails on zero-collected / unexcused skips"
+        run: |
+          (npx vitest run --reporter=default --reporter=json --outputFile=vitest-results.json || true)
+          node scripts/check-environment-failures.mjs --profile=ci --actor="$GITHUB_ACTOR" \
+            --input=vitest-results.json --report=env-gate-report.json
+          PASSED=$(node -e "const r=require('./vitest-results.json');console.log(r.numPassedTests)")
+          if [ "$PASSED" -lt 1000 ]; then
+            echo "::error::Only $PASSED tests passed — collection collapse; failing closed"; exit 1
+          fi
+          echo "TESTS_PASSED=$PASSED" >> "$GITHUB_ENV"
+
+      - name: "[STEP] Production build + preview-production gate + bundle budget"
+        run: |
+          pnpm run build
+          node scripts/check-bundle-budget.mjs dist/public
+
+      - name: "[STEP] Emit proof-contract.json"
+        run: |
+          node - <<'EOF'
+          const { execSync } = require("node:child_process");
+          const { createHash } = require("node:crypto");
+          const fs = require("node:fs");
+          const sha256 = (p) => createHash("sha256").update(fs.readFileSync(p)).digest("hex");
+          const sh = (c) => execSync(c, { encoding: "utf8" }).trim();
+          // dist digest: deterministic tar of the built artifact tree
+          execSync("tar --sort=name --mtime='UTC 2020-01-01' -cf /tmp/dist.tar dist");
+          const proof = {
+            schema_version: "1.0",
+            commit_sha: process.env.GITHUB_SHA,
+            head_sha: process.env.PR_HEAD_SHA || process.env.GITHUB_SHA,
+            tree_sha: sh("git rev-parse HEAD^{tree}"),
+            workflow_sha: process.env.GITHUB_WORKFLOW_SHA,
+            run_id: process.env.GITHUB_RUN_ID,
+            runtime_versions: {
+              node: sh("node --version"),
+              pnpm: sh("pnpm --version"),
+              typescript: require("typescript/package.json").version,
+              vitest: require("vitest/package.json").version,
+            },
+            dependency_lock_hashes: {
+              "pnpm-lock.yaml": sha256("pnpm-lock.yaml"),
+              "ml/dime-1.0/uv.lock": sha256("ml/dime-1.0/uv.lock"),
+            },
+            artifact_digests: {
+              "dist.tar": sha256("/tmp/dist.tar"),
+              "dist/index.js": sha256("dist/index.js"),
+            },
+            checks: [
+              { name: "frozen-install", outcome: "passed" },
+              { name: "tsc", outcome: "passed" },
+              { name: "vitest-gated", outcome: "passed", tests_passed: Number(process.env.TESTS_PASSED) },
+              { name: "build+preview-gate+bundle-budget", outcome: "passed" },
+            ],
+            outcome: "passed",
+          };
+          fs.writeFileSync("proof-contract.json", JSON.stringify(proof, null, 2));
+          console.log(JSON.stringify(proof, null, 2));
+          EOF
+        env:
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: proof-contract
+          path: proof-contract.json
+          if-no-files-found: error
+
+  format-check:
+    # Graduated 2026-08-05: the format-all commit landed (576 files) with the
+    # scope law recorded in .prettierignore (immutable/checksummed/vendored
+    # trees excluded for cause). Green is the only acceptable state; ruleset
+    # membership follows ROLLOUT.md waves.
+    name: format-check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
+      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: npx prettier --check .

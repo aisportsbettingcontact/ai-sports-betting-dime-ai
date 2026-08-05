@@ -101,6 +101,9 @@ export async function ensureDebugLogsTable(): Promise<void> {
     console.log("[DebugLogger] debug_logs table ready");
   } catch (err) {
     // Non-fatal — app continues without debug logging if table creation fails
-    console.warn("[DebugLogger] Failed to create debug_logs table (non-fatal):", err);
+    console.warn(
+      "[DebugLogger] Failed to create debug_logs table (non-fatal):",
+      err
+    );
   }
 }

@@ -158,7 +158,7 @@ export async function fetchANKProps(dateStr: string): Promise<ANKPropsResult> {
   );
 
   // ── Build lookup maps ──────────────────────────────────────────────────────
-  const playerMap = new Map<number, ANPlayer>(data.players.map((p) => [p.id, p]));
+  const playerMap = new Map<number, ANPlayer>(data.players.map(p => [p.id, p]));
   const teamToGame = new Map<number, ANGame>();
   const gameMap = new Map<number, ANGame>();
 

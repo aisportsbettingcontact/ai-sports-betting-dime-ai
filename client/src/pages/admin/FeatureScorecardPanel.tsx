@@ -31,7 +31,10 @@ import {
 import { MINT } from "@/pages/admin/chartTheme";
 
 /** The four measured axes, in grid-column order. stickiness is P2 (always null). */
-const METRICS: Array<{ key: "adoption" | "engagement" | "stickiness" | "valueLinkage"; head: string }> = [
+const METRICS: Array<{
+  key: "adoption" | "engagement" | "stickiness" | "valueLinkage";
+  head: string;
+}> = [
   { key: "adoption", head: "Adopt" },
   { key: "engagement", head: "Engage" },
   { key: "stickiness", head: "Sticky" },
@@ -43,7 +46,9 @@ const REACH_THRESHOLD = 35;
 const VALUE_THRESHOLD = 45;
 
 function verdictChipClass(verdict: FeatureScore["verdict"]): string {
-  return verdict === "keep" ? "border-primary/50 text-primary" : "border-border text-muted-foreground";
+  return verdict === "keep"
+    ? "border-primary/50 text-primary"
+    : "border-border text-muted-foreground";
 }
 
 function HeatCell({ value }: { value: number | null }) {
@@ -54,7 +59,10 @@ function HeatCell({ value }: { value: number | null }) {
       style={h.style}
     >
       {h.measured ? (
-        <span className={h.darkText ? "" : "text-foreground"} style={h.darkText ? { color: "#04150E" } : undefined}>
+        <span
+          className={h.darkText ? "" : "text-foreground"}
+          style={h.darkText ? { color: "#04150E" } : undefined}
+        >
           {value}
         </span>
       ) : (
@@ -73,14 +81,16 @@ interface PlacedPoint extends FeatureScore {
 
 /** Fan coincident surfaces apart so their dots + labels never overlap. */
 function placePoints(scorecard: FeatureScore[]): PlacedPoint[] {
-  const keyOf = (p: FeatureScore) => `${Math.round(p.adoption / 3)}:${Math.round(p.valueLinkage / 3)}`;
+  const keyOf = (p: FeatureScore) =>
+    `${Math.round(p.adoption / 3)}:${Math.round(p.valueLinkage / 3)}`;
   const counts = new Map<string, number>();
-  for (const p of scorecard) counts.set(keyOf(p), (counts.get(keyOf(p)) ?? 0) + 1);
+  for (const p of scorecard)
+    counts.set(keyOf(p), (counts.get(keyOf(p)) ?? 0) + 1);
   const seen = new Map<string, number>();
-  return scorecard.map((p) => {
+  return scorecard.map(p => {
     const k = keyOf(p);
     const n = counts.get(k) ?? 1;
-    const idx = (seen.get(k) ?? 0);
+    const idx = seen.get(k) ?? 0;
     seen.set(k, idx + 1);
     let dx = 0;
     let dy = 0;
@@ -101,10 +111,12 @@ export default function FeatureScorecardPanel() {
 
   const notOk = !!data && data.state !== "ok";
   const raw: FeatureScore[] = data?.featureScorecard ?? [];
-  const scorecard: FeatureScore[] = SURFACE_ORDER.map((s) => raw.find((r) => r.surface === s)).filter(
-    (r): r is FeatureScore => !!r,
+  const scorecard: FeatureScore[] = SURFACE_ORDER.map(s =>
+    raw.find(r => r.surface === s)
+  ).filter((r): r is FeatureScore => !!r);
+  const ranked: FeatureScore[] = [...scorecard].sort(
+    (a, b) => b.composite - a.composite
   );
-  const ranked: FeatureScore[] = [...scorecard].sort((a, b) => b.composite - a.composite);
   const placed = placePoints(scorecard);
 
   return (
@@ -118,18 +130,22 @@ export default function FeatureScorecardPanel() {
               {METRIC_STATE_LABEL[data!.state] ?? "Not measured"}
             </div>
             <div className="text-xs sm:text-sm text-muted-foreground mt-1.5 max-w-md mx-auto leading-relaxed">
-              {data!.reason ?? "The feature-scorecard pipeline has produced no data yet."}
+              {data!.reason ??
+                "The feature-scorecard pipeline has produced no data yet."}
             </div>
           </div>
         ) : scorecard.length === 0 ? (
           !isLoading && (
-            <div className="text-xs sm:text-sm text-muted-foreground py-4 text-center">No scored surfaces yet.</div>
+            <div className="text-xs sm:text-sm text-muted-foreground py-4 text-center">
+              No scored surfaces yet.
+            </div>
           )
         ) : (
           <>
             <div className="text-xs sm:text-sm text-muted-foreground mt-2 mb-4 leading-relaxed">
-              Per-surface strength on the measured axes (0–100), and the reach × retained-value quadrant
-              that says whether to keep, invest in, fix, or cut each surface.
+              Per-surface strength on the measured axes (0–100), and the reach ×
+              retained-value quadrant that says whether to keep, invest in, fix,
+              or cut each surface.
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -139,9 +155,15 @@ export default function FeatureScorecardPanel() {
                   Strength by axis
                 </div>
                 <div className="overflow-x-auto">
-                  <div className="grid gap-1.5" style={{ gridTemplateColumns: "96px repeat(4,1fr)", minWidth: 420 }}>
+                  <div
+                    className="grid gap-1.5"
+                    style={{
+                      gridTemplateColumns: "96px repeat(4,1fr)",
+                      minWidth: 420,
+                    }}
+                  >
                     <div />
-                    {METRICS.map((m) => (
+                    {METRICS.map(m => (
                       <div
                         key={m.key}
                         className="flex items-center justify-center text-[11px] font-mono uppercase tracking-wider text-muted-foreground pb-1"
@@ -149,7 +171,7 @@ export default function FeatureScorecardPanel() {
                         {m.head}
                       </div>
                     ))}
-                    {scorecard.map((row) => (
+                    {scorecard.map(row => (
                       <Fragment key={row.surface}>
                         <div className="h-14 flex items-center min-w-0 pr-2">
                           <span className="text-sm sm:text-base font-semibold text-foreground truncate">
@@ -176,7 +198,10 @@ export default function FeatureScorecardPanel() {
                   <div className="flex items-center shrink-0">
                     <span
                       className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground whitespace-nowrap"
-                      style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
+                      style={{
+                        writingMode: "vertical-rl",
+                        transform: "rotate(180deg)",
+                      }}
                     >
                       retained value →
                     </span>
@@ -214,7 +239,7 @@ export default function FeatureScorecardPanel() {
                         </span>
 
                         {/* Surfaces — fanned so coincident dots never overlap. */}
-                        {placed.map((p) => {
+                        {placed.map(p => {
                           const labelLeft = p.adoption >= 60;
                           return (
                             <div
@@ -224,7 +249,9 @@ export default function FeatureScorecardPanel() {
                                 left: `${p.adoption}%`,
                                 top: `${100 - p.valueLinkage}%`,
                                 transform: `translate(calc(-50% + ${p.dx}px), calc(-50% + ${p.dy}px))`,
-                                flexDirection: labelLeft ? "row-reverse" : "row",
+                                flexDirection: labelLeft
+                                  ? "row-reverse"
+                                  : "row",
                               }}
                               title={`${p.label}: reach ${p.adoption} · retained value ${p.valueLinkage} → ${VERDICT_LABEL[p.verdict]}`}
                             >
@@ -255,10 +282,13 @@ export default function FeatureScorecardPanel() {
                 Composite ranking
               </div>
               <div className="space-y-2">
-                {ranked.map((row) => {
+                {ranked.map(row => {
                   const width = Math.max(0, Math.min(100, row.composite));
                   return (
-                    <div key={row.surface} className="flex items-center gap-3 sm:gap-4">
+                    <div
+                      key={row.surface}
+                      className="flex items-center gap-3 sm:gap-4"
+                    >
                       <span className="w-16 sm:w-20 shrink-0 text-sm font-semibold text-foreground truncate">
                         {SURFACE_LABEL[row.surface] ?? row.surface}
                       </span>
@@ -283,8 +313,9 @@ export default function FeatureScorecardPanel() {
             </div>
 
             <div className="text-xs sm:text-sm text-muted-foreground mt-4 leading-relaxed">
-              Thresholds: reach ≥ {REACH_THRESHOLD}% and retained value ≥ {VALUE_THRESHOLD}% → KEEP.
-              Stickiness lands in P2; composite is over the measured axes.
+              Thresholds: reach ≥ {REACH_THRESHOLD}% and retained value ≥{" "}
+              {VALUE_THRESHOLD}% → KEEP. Stickiness lands in P2; composite is
+              over the measured axes.
             </div>
           </>
         )}

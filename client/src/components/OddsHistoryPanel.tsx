@@ -380,7 +380,8 @@ function TeamHeader({
 // (never muted/faint); values = Familjen Grotesk 600–700 (MASTER.md: "mono is
 // for labels, not values").
 
-const FONT_TH = "clamp(11px, 0.85vw, 11.5px)"; /* 2026-08-05: the 10px floor sat below the type system's 11px caption floor through ~1350px viewports */
+const FONT_TH =
+  "clamp(11px, 0.85vw, 11.5px)"; /* 2026-08-05: the 10px floor sat below the type system's 11px caption floor through ~1350px viewports */
 const FONT_TD = "clamp(12.5px, 1vw, 14px)";
 
 const TH: React.CSSProperties = {

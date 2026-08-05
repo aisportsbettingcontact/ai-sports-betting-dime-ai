@@ -46,7 +46,7 @@ export default function Hero() {
       {/* Instrument strip — whitelisted numbers only */}
       <section className="strip" aria-label="Key numbers">
         <div className="wrap strip-grid">
-          {STATS.map((s) => (
+          {STATS.map(s => (
             <div className="readout" key={s.label}>
               <div className="row">
                 <b className="num">{s.value}</b>

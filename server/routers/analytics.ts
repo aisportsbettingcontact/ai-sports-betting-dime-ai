@@ -15,7 +15,11 @@ import { isTestUser, getAnalyticsRole } from "../analytics/config";
 import { deriveDeviceFromUA, reconcileDeviceType } from "../analytics/device";
 import { sanitizeRoutePattern } from "../analytics/routePattern";
 import { dispatchStoredEvent } from "../analytics/dispatch";
-import { getAnalyticsOverview, disabledOverview, type AnalyticsOverview } from "../analytics/read";
+import {
+  getAnalyticsOverview,
+  disabledOverview,
+  type AnalyticsOverview,
+} from "../analytics/read";
 import { forwardOverviewRead } from "../analytics/readForward";
 import { isStaffRole } from "../analytics/metricDefinitions";
 import { getAppUsersByIds } from "../db";
@@ -27,18 +31,29 @@ import type { StoredEvent } from "../analytics/store";
  * — PII is never persisted in the analytics store. Best-effort: any failure just
  * leaves the rows pseudonymous. Never throws.
  */
-async function enrichTopUsers(o: AnalyticsOverview): Promise<AnalyticsOverview> {
+async function enrichTopUsers(
+  o: AnalyticsOverview
+): Promise<AnalyticsOverview> {
   if (!o.topUsers?.length) return o;
   try {
-    const ids = o.topUsers.map((u) => u.sourceUserId).filter((n) => Number.isFinite(n) && n > 0);
+    const ids = o.topUsers
+      .map(u => u.sourceUserId)
+      .filter(n => Number.isFinite(n) && n > 0);
     const users = await getAppUsersByIds(ids);
     if (!users.length) return o;
-    const byId = new Map(users.map((u) => [u.id, u]));
+    const byId = new Map(users.map(u => [u.id, u]));
     return {
       ...o,
-      topUsers: o.topUsers.map((u) => {
+      topUsers: o.topUsers.map(u => {
         const m = byId.get(u.sourceUserId);
-        return m ? { ...u, username: m.username, discordUsername: m.discordUsername, role: m.role } : u;
+        return m
+          ? {
+              ...u,
+              username: m.username,
+              discordUsername: m.discordUsername,
+              role: m.role,
+            }
+          : u;
       }),
     };
   } catch {
@@ -47,44 +62,51 @@ async function enrichTopUsers(o: AnalyticsOverview): Promise<AnalyticsOverview> 
 }
 
 export const analyticsRouter = router({
-  track: appUserProcedure.input(trackInputSchema).mutation(async ({ ctx, input }) => {
-    const ua = ctx.req?.headers?.["user-agent"];
-    const uaDevice = deriveDeviceFromUA(Array.isArray(ua) ? ua[0] : ua);
-    const reconciled = reconcileDeviceType(uaDevice.deviceType, uaDevice.osFamily, input.pointerType, input.viewportClass);
-    const event: StoredEvent = {
-      eventId: input.eventId,
-      eventName: input.eventName,
-      schemaVersion: input.schemaVersion,
-      definitionVersion: 1,
-      sourceUserId: ctx.appUser.id,
-      sessionId: input.sessionId ?? null,
-      tabId: input.tabId ?? null,
-      featureId: input.featureId ?? null,
-      actionName: input.actionName ?? null,
-      route: sanitizeRoutePattern(input.route),
-      surface: input.surface,
-      outcome: input.outcome ?? null,
-      deviceType: reconciled.deviceType,
-      osFamily: uaDevice.osFamily,
-      browserFamily: uaDevice.browserFamily,
-      appSurface: input.appSurface ?? null,
-      viewportClass: input.viewportClass ?? null,
-      orientation: input.orientation ?? null,
-      isTouch: input.isTouch ?? null,
-      isStandalone: input.isStandalone ?? null,
-      connectionClass: input.connectionClass ?? null,
-      occurredAtUtc: input.occurredAtUtc,
-      environment: process.env.NODE_ENV ?? "production",
-      appVersion: process.env.RAILWAY_GIT_COMMIT_SHA ?? null,
-      // Exclude staff (owner/admin) AND canary test ids from real metrics — write-time.
-      isTest: isTestUser(ctx.appUser.id) || isStaffRole(ctx.appUser.role),
-      props: reconciled.conflict
-        ? { ...(sanitizeProps(input.props) ?? {}), device_conflict: true }
-        : sanitizeProps(input.props),
-    };
-    const r = await dispatchStoredEvent(event);
-    return { ok: true as const, routed: r.routed };
-  }),
+  track: appUserProcedure
+    .input(trackInputSchema)
+    .mutation(async ({ ctx, input }) => {
+      const ua = ctx.req?.headers?.["user-agent"];
+      const uaDevice = deriveDeviceFromUA(Array.isArray(ua) ? ua[0] : ua);
+      const reconciled = reconcileDeviceType(
+        uaDevice.deviceType,
+        uaDevice.osFamily,
+        input.pointerType,
+        input.viewportClass
+      );
+      const event: StoredEvent = {
+        eventId: input.eventId,
+        eventName: input.eventName,
+        schemaVersion: input.schemaVersion,
+        definitionVersion: 1,
+        sourceUserId: ctx.appUser.id,
+        sessionId: input.sessionId ?? null,
+        tabId: input.tabId ?? null,
+        featureId: input.featureId ?? null,
+        actionName: input.actionName ?? null,
+        route: sanitizeRoutePattern(input.route),
+        surface: input.surface,
+        outcome: input.outcome ?? null,
+        deviceType: reconciled.deviceType,
+        osFamily: uaDevice.osFamily,
+        browserFamily: uaDevice.browserFamily,
+        appSurface: input.appSurface ?? null,
+        viewportClass: input.viewportClass ?? null,
+        orientation: input.orientation ?? null,
+        isTouch: input.isTouch ?? null,
+        isStandalone: input.isStandalone ?? null,
+        connectionClass: input.connectionClass ?? null,
+        occurredAtUtc: input.occurredAtUtc,
+        environment: process.env.NODE_ENV ?? "production",
+        appVersion: process.env.RAILWAY_GIT_COMMIT_SHA ?? null,
+        // Exclude staff (owner/admin) AND canary test ids from real metrics — write-time.
+        isTest: isTestUser(ctx.appUser.id) || isStaffRole(ctx.appUser.role),
+        props: reconciled.conflict
+          ? { ...(sanitizeProps(input.props) ?? {}), device_conflict: true }
+          : sanitizeProps(input.props),
+      };
+      const r = await dispatchStoredEvent(event);
+      return { ok: true as const, routed: r.routed };
+    }),
 
   // Owner-only device-aware overview. Role-routes: forwarder proxies to the back
   // office, store queries MySQL: Dime AI, disabled returns honest not_measured.

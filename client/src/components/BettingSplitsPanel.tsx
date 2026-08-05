@@ -1219,11 +1219,7 @@ export function BettingSplitsPanel({
           >
             {(["spread", "total", "ml"] as MobileMarket[]).map(m => {
               const label =
-                m === "spread"
-                  ? "SPREAD"
-                  : m === "total"
-                    ? "TOTAL"
-                    : "ML"; // 2026-08-05: "MONEYLINE" clipped to "MONEYLIN" at 375-390 (equal-thirds row); ML is the surface's own abbr (history badge vocabulary)
+                m === "spread" ? "SPREAD" : m === "total" ? "TOTAL" : "ML"; // 2026-08-05: "MONEYLINE" clipped to "MONEYLIN" at 375-390 (equal-thirds row); ML is the surface's own abbr (history badge vocabulary)
               const isActive = m === activeMarket;
               const isAvailable = availableMarkets.includes(m);
               return (

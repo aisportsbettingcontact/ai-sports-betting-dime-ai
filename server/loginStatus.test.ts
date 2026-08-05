@@ -85,10 +85,14 @@ describe("checkLoginRateLimit", () => {
 
   it("returns allowed=false and a valid lockoutUntil when at max failures", () => {
     const now = Date.now();
-    console.log(`[INPUT] ${LOGIN_RATE_MAX_FAILURES} failures injected at t=now`);
+    console.log(
+      `[INPUT] ${LOGIN_RATE_MAX_FAILURES} failures injected at t=now`
+    );
     injectFailures(TEST_IP, LOGIN_RATE_MAX_FAILURES);
     const result = checkLoginRateLimit(TEST_IP);
-    console.log(`[OUTPUT] ${JSON.stringify({ ...result, lockoutUntil: result.lockoutUntil ? new Date(result.lockoutUntil).toISOString() : null })}`);
+    console.log(
+      `[OUTPUT] ${JSON.stringify({ ...result, lockoutUntil: result.lockoutUntil ? new Date(result.lockoutUntil).toISOString() : null })}`
+    );
     expect(result.allowed).toBe(false);
     expect(result.remainingAttempts).toBe(0);
     expect(result.lockoutUntil).not.toBeNull();
@@ -100,7 +104,9 @@ describe("checkLoginRateLimit", () => {
 
   it("allows requests again after the window expires (expired timestamps pruned)", () => {
     const expiredAge = LOGIN_RATE_WINDOW_MS + 1000;
-    console.log(`[INPUT] ${LOGIN_RATE_MAX_FAILURES} failures injected ${expiredAge}ms ago (expired)`);
+    console.log(
+      `[INPUT] ${LOGIN_RATE_MAX_FAILURES} failures injected ${expiredAge}ms ago (expired)`
+    );
     injectFailures(TEST_IP, LOGIN_RATE_MAX_FAILURES, expiredAge);
     const result = checkLoginRateLimit(TEST_IP);
     console.log(`[OUTPUT] ${JSON.stringify(result)}`);
@@ -162,7 +168,9 @@ describe("appUsers.getLoginStatus", () => {
     const caller = appRouter.createCaller(createContext(TEST_IP));
     const result = await caller.appUsers.getLoginStatus();
     console.log(`[OUTPUT] ${JSON.stringify(result)}`);
-    expect(result.remainingAttempts).toBe(LOGIN_RATE_MAX_FAILURES - failureCount);
+    expect(result.remainingAttempts).toBe(
+      LOGIN_RATE_MAX_FAILURES - failureCount
+    );
     expect(result.isLockedOut).toBe(false);
     expect(result.lockoutUntil).toBeNull();
     console.log("[VERIFY] PASS");
@@ -170,11 +178,15 @@ describe("appUsers.getLoginStatus", () => {
 
   it("returns isLockedOut=true and valid lockoutUntil when at max failures", async () => {
     const now = Date.now();
-    console.log(`[INPUT] ${LOGIN_RATE_MAX_FAILURES} failures injected for ${TEST_IP}`);
+    console.log(
+      `[INPUT] ${LOGIN_RATE_MAX_FAILURES} failures injected for ${TEST_IP}`
+    );
     injectFailures(TEST_IP, LOGIN_RATE_MAX_FAILURES);
     const caller = appRouter.createCaller(createContext(TEST_IP));
     const result = await caller.appUsers.getLoginStatus();
-    console.log(`[OUTPUT] ${JSON.stringify({ ...result, lockoutUntil: result.lockoutUntil ? new Date(result.lockoutUntil).toISOString() : null })}`);
+    console.log(
+      `[OUTPUT] ${JSON.stringify({ ...result, lockoutUntil: result.lockoutUntil ? new Date(result.lockoutUntil).toISOString() : null })}`
+    );
     expect(result.isLockedOut).toBe(true);
     expect(result.remainingAttempts).toBe(0);
     expect(result.lockoutUntil).not.toBeNull();
@@ -185,14 +197,18 @@ describe("appUsers.getLoginStatus", () => {
 
   it("does NOT consume an attempt when called (read-only)", async () => {
     const failureCount = 3;
-    console.log(`[INPUT] ${failureCount} failures, calling getLoginStatus 5 times`);
+    console.log(
+      `[INPUT] ${failureCount} failures, calling getLoginStatus 5 times`
+    );
     injectFailures(TEST_IP, failureCount);
     const caller = appRouter.createCaller(createContext(TEST_IP));
     for (let i = 0; i < 5; i++) {
       await caller.appUsers.getLoginStatus();
     }
     const entry = loginRateMap.get(TEST_IP);
-    console.log(`[STATE] failTimestamps.length after 5 calls: ${entry?.failTimestamps.length}`);
+    console.log(
+      `[STATE] failTimestamps.length after 5 calls: ${entry?.failTimestamps.length}`
+    );
     expect(entry?.failTimestamps.length).toBe(failureCount);
     console.log("[VERIFY] PASS — getLoginStatus is read-only");
   });

@@ -260,14 +260,21 @@ export const dimeChatsRouter = router({
     .input(
       z.object({
         threadId: z.number().int().positive(),
-        title: z.string().min(1).max(TITLE_MAX * 2),
-      }),
+        title: z
+          .string()
+          .min(1)
+          .max(TITLE_MAX * 2),
+      })
     )
     .mutation(async ({ ctx, input }) => {
       const db = await requireDb();
       const thread = await getOwnedThread(db, input.threadId, ctx.appUser.id);
       const title = sanitizeThreadTitle(input.title);
-      if (!title) throw new TRPCError({ code: "BAD_REQUEST", message: "Title required." });
+      if (!title)
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Title required.",
+        });
       await db
         .update(dimeChatThreads)
         .set({ title, updatedAt: new Date() })

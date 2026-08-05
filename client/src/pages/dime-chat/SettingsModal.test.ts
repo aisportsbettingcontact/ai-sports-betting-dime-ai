@@ -70,7 +70,9 @@ describe("dialog semantics", () => {
       dialogIdx
     );
     expect(panelOnClick).toBeGreaterThan(dialogIdx);
-    expect(modalSource).not.toMatch(/onMouseDown=\{event => event\.stopPropagation\(\)\}/);
+    expect(modalSource).not.toMatch(
+      /onMouseDown=\{event => event\.stopPropagation\(\)\}/
+    );
   });
 
   it("closes on Escape", () => {
@@ -90,9 +92,7 @@ describe("dialog semantics", () => {
   });
 
   it("locks body scroll while open and restores it on close", () => {
-    expect(modalSource).toMatch(
-      /document\.body\.style\.overflow = "hidden"/
-    );
+    expect(modalSource).toMatch(/document\.body\.style\.overflow = "hidden"/);
     expect(modalSource).toMatch(
       /document\.body\.style\.overflow = previousOverflow/
     );
@@ -155,7 +155,9 @@ describe("left nav — sections + Log Out", () => {
   });
 
   it("switching sections never mutates outside the nav's own state", () => {
-    expect(modalSource).toMatch(/const \[section, setSection\] = useState<SettingsSection>\("account"\)/);
+    expect(modalSource).toMatch(
+      /const \[section, setSection\] = useState<SettingsSection>\("account"\)/
+    );
     expect(modalSource).toMatch(/onClick=\{\(\) => setSection\("account"\)\}/);
     expect(modalSource).toMatch(/onClick=\{\(\) => setSection\("billing"\)\}/);
   });
@@ -257,9 +259,7 @@ describe("motion — the one frozen 160ms curve", () => {
 
 describe("DimeChatPage.tsx — mounts the modal and wires Step 1's hook", () => {
   it("imports SettingsModal", () => {
-    expect(chatSource).toMatch(
-      /import SettingsModal from "\.\/SettingsModal"/
-    );
+    expect(chatSource).toMatch(/import SettingsModal from "\.\/SettingsModal"/);
   });
 
   it("Settings row's onOpenSettings now actually opens the modal", () => {
@@ -280,7 +280,9 @@ describe("DimeChatPage.tsx — mounts the modal and wires Step 1's hook", () => 
     const wireEnd = chatSource.indexOf("}}", wireIdx);
     expect(wireEnd).toBeGreaterThan(wireIdx);
     const wireBody = chatSource.slice(wireIdx, wireEnd);
-    expect(wireBody).toMatch(/if \(compact && drawerOpen\) closeDrawer\(false\);/);
+    expect(wireBody).toMatch(
+      /if \(compact && drawerOpen\) closeDrawer\(false\);/
+    );
     const closeIdx = wireBody.indexOf("closeDrawer(false)");
     const openIdx = wireBody.indexOf("setSettingsOpen(true)");
     expect(closeIdx).toBeGreaterThan(-1);

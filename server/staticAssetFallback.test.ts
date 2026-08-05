@@ -29,14 +29,27 @@ describe("static asset fallback", () => {
     // The exact path from the incident.
     expect(asset.test("/assets/Home-BjN98xuQ.js")).toBe(true);
     expect(ext.test("/assets/Home-BjN98xuQ.js")).toBe(true);
-    for (const p of ["/assets/index-abc123.css", "/logo.svg", "/fonts/x.woff2", "/sw.js"])
+    for (const p of [
+      "/assets/index-abc123.css",
+      "/logo.svg",
+      "/fonts/x.woff2",
+      "/sw.js",
+    ])
       expect(asset.test(p) || ext.test(p), p).toBe(true);
     // SPA routes must still boot the shell — a 404 here would break deep links.
-    for (const p of ["/admin/users", "/login", "/checkout", "/", "/subscribe/success"])
+    for (const p of [
+      "/admin/users",
+      "/login",
+      "/checkout",
+      "/",
+      "/subscribe/success",
+    ])
       expect(asset.test(p) || ext.test(p), p).toBe(false);
   });
 
   it("[SA-3] SPA routes still receive the no-store shell", () => {
-    expect(SRC).toMatch(/res\.set\(\{ \.\.\.NO_CACHE_HEADERS \}\);[\s\S]{0,120}sendFile/);
+    expect(SRC).toMatch(
+      /res\.set\(\{ \.\.\.NO_CACHE_HEADERS \}\);[\s\S]{0,120}sendFile/
+    );
   });
 });

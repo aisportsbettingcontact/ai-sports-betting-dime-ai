@@ -23,10 +23,17 @@
 import { query, type Options } from "@anthropic-ai/claude-agent-sdk";
 import { resolveAnthropicConfig } from "./anthropicClient";
 
-export const DIME_AGENT_MODEL = process.env.DIME_AGENT_MODEL || "claude-fable-5";
+export const DIME_AGENT_MODEL =
+  process.env.DIME_AGENT_MODEL || "claude-fable-5";
 
 /** Read-only tool set — safe default for analysis/research tasks. */
-export const DIME_AGENT_READONLY_TOOLS = ["Read", "Glob", "Grep", "WebSearch", "WebFetch"];
+export const DIME_AGENT_READONLY_TOOLS = [
+  "Read",
+  "Glob",
+  "Grep",
+  "WebSearch",
+  "WebFetch",
+];
 
 /**
  * Vars the Claude Code subprocess may inherit from the parent — process
@@ -118,7 +125,10 @@ export async function runDimeAgent({
   })) {
     if (message.type === "result") {
       return {
-        result: message.subtype === "success" ? message.result : `Agent error: ${message.subtype}`,
+        result:
+          message.subtype === "success"
+            ? message.result
+            : `Agent error: ${message.subtype}`,
         isError: message.is_error,
         numTurns: message.num_turns,
         totalCostUsd: message.total_cost_usd,

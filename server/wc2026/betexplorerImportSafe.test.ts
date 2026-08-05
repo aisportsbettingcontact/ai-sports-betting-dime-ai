@@ -21,15 +21,21 @@ import path from "path";
 const repoRoot = path.resolve(import.meta.dirname, "..", "..");
 const scraperSrc = fs.readFileSync(
   path.join(repoRoot, "server", "wc2026", "betexplorer_scraper.py"),
-  "utf8",
+  "utf8"
 );
 
 describe("BetExplorer scraper import safety", () => {
   it("guards the module-level DEBUG_DUMP_DIR.mkdir so import never crashes off /home/ubuntu", () => {
     // The bare, unguarded form must be gone.
-    expect(scraperSrc).not.toMatch(/^DEBUG_DUMP_DIR\.mkdir\(exist_ok=True\)\s*$/m);
+    expect(scraperSrc).not.toMatch(
+      /^DEBUG_DUMP_DIR\.mkdir\(exist_ok=True\)\s*$/m
+    );
     // The guarded form: parents=True + a try/except that swallows OSError.
-    expect(scraperSrc).toMatch(/DEBUG_DUMP_DIR\.mkdir\(parents=True,\s*exist_ok=True\)/);
-    expect(scraperSrc).toMatch(/try:[\s\S]*DEBUG_DUMP_DIR\.mkdir[\s\S]*except OSError:/);
+    expect(scraperSrc).toMatch(
+      /DEBUG_DUMP_DIR\.mkdir\(parents=True,\s*exist_ok=True\)/
+    );
+    expect(scraperSrc).toMatch(
+      /try:[\s\S]*DEBUG_DUMP_DIR\.mkdir[\s\S]*except OSError:/
+    );
   });
 });

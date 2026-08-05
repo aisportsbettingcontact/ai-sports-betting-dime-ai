@@ -9,39 +9,51 @@
  */
 import type { Express, Request, Response } from "express";
 import { getIngestSecret, isAnalyticsStore, secretsMatch } from "./config";
-import { ensureAnalyticsSchema, insertAnalyticsEvent, type StoredEvent } from "./store";
+import {
+  ensureAnalyticsSchema,
+  insertAnalyticsEvent,
+  type StoredEvent,
+} from "./store";
 
 const TAG = "[analytics][ingest]";
 let schemaEnsured = false;
 
 export function registerAnalyticsIngestRoute(app: Express): void {
-  app.post("/api/internal/analytics/ingest", async (req: Request, res: Response) => {
-    // Only the back office serves this; the web (forwarder) never does.
-    if (!isAnalyticsStore()) {
-      res.status(404).json({ ok: false });
-      return;
-    }
-    const secret = getIngestSecret();
-    if (!secret || !secretsMatch(req.header("x-analytics-secret"), secret)) {
-      res.status(401).json({ ok: false, error: "unauthorized" });
-      return;
-    }
-    try {
-      if (!schemaEnsured) {
-        await ensureAnalyticsSchema();
-        schemaEnsured = true;
-      }
-      const e = req.body as StoredEvent;
-      if (!e?.eventId || !e?.eventName || typeof e?.sourceUserId !== "number" || typeof e?.occurredAtUtc !== "number") {
-        res.status(400).json({ ok: false, error: "bad_event" });
+  app.post(
+    "/api/internal/analytics/ingest",
+    async (req: Request, res: Response) => {
+      // Only the back office serves this; the web (forwarder) never does.
+      if (!isAnalyticsStore()) {
+        res.status(404).json({ ok: false });
         return;
       }
-      const r = await insertAnalyticsEvent(e);
-      res.status(202).json({ ok: true, deduped: r.deduped });
-    } catch (err) {
-      console.error(`${TAG} ${(err as Error).message}`);
-      res.status(500).json({ ok: false });
+      const secret = getIngestSecret();
+      if (!secret || !secretsMatch(req.header("x-analytics-secret"), secret)) {
+        res.status(401).json({ ok: false, error: "unauthorized" });
+        return;
+      }
+      try {
+        if (!schemaEnsured) {
+          await ensureAnalyticsSchema();
+          schemaEnsured = true;
+        }
+        const e = req.body as StoredEvent;
+        if (
+          !e?.eventId ||
+          !e?.eventName ||
+          typeof e?.sourceUserId !== "number" ||
+          typeof e?.occurredAtUtc !== "number"
+        ) {
+          res.status(400).json({ ok: false, error: "bad_event" });
+          return;
+        }
+        const r = await insertAnalyticsEvent(e);
+        res.status(202).json({ ok: true, deduped: r.deduped });
+      } catch (err) {
+        console.error(`${TAG} ${(err as Error).message}`);
+        res.status(500).json({ ok: false });
+      }
     }
-  });
+  );
   console.log(`${TAG} route registered (store-role gated)`);
 }

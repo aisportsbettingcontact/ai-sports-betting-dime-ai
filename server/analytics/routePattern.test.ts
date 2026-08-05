@@ -7,8 +7,12 @@ describe("server toRoutePattern (defense-in-depth)", () => {
     expect(toRoutePattern("/betting-splits")).toBe("/betting-splits");
   });
   it("collapses sport + date segments", () => {
-    expect(toRoutePattern("/feed/model/mlb/2026-07-23")).toBe("/feed/model/:sport/:date");
-    expect(toRoutePattern("/mlb/team/new-york-yankees")).toBe("/mlb/team/:slug");
+    expect(toRoutePattern("/feed/model/mlb/2026-07-23")).toBe(
+      "/feed/model/:sport/:date"
+    );
+    expect(toRoutePattern("/mlb/team/new-york-yankees")).toBe(
+      "/mlb/team/:slug"
+    );
   });
   it("collapses numeric ids and opaque tokens a raw client could inject", () => {
     expect(toRoutePattern("/account/98217")).toBe("/account/:id");
@@ -24,7 +28,9 @@ describe("sanitizeRoutePattern", () => {
     expect(sanitizeRoutePattern("")).toBeNull();
   });
   it("re-collapses a client-sent raw path (never trusts the client's pattern)", () => {
-    expect(sanitizeRoutePattern("/feed/model/nba/2026-01-02")).toBe("/feed/model/:sport/:date");
+    expect(sanitizeRoutePattern("/feed/model/nba/2026-01-02")).toBe(
+      "/feed/model/:sport/:date"
+    );
     expect(sanitizeRoutePattern("/account/12345")).toBe("/account/:id");
   });
   it("bounds the result to the store column width (96)", () => {

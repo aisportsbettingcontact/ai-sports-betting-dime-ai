@@ -67,9 +67,9 @@ describe("drizzle/meta hygiene", () => {
     expect(
       stray,
       "Files in drizzle/meta/ that drizzle-kit will try to parse as snapshots. " +
-      "Any of these makes `drizzle-kit generate` abort with exit code 0, which " +
-      "silently disarms `pnpm db:push`. Put non-drizzle files somewhere else " +
-      "(the legacy-journal manifest lives in drizzle/profiles/).",
+        "Any of these makes `drizzle-kit generate` abort with exit code 0, which " +
+        "silently disarms `pnpm db:push`. Put non-drizzle files somewhere else " +
+        "(the legacy-journal manifest lives in drizzle/profiles/)."
     ).toEqual([]);
   });
 
@@ -87,7 +87,9 @@ describe("drizzle/meta hygiene", () => {
     // and silently change which snapshot the next diff runs against.
     const snapshots = entries.filter(e => /_snapshot\.json$/.test(e));
     for (const s of snapshots) {
-      expect(s, `${s} must be zero-padded to 4 digits`).toMatch(/^\d{4}_snapshot\.json$/);
+      expect(s, `${s} must be zero-padded to 4 digits`).toMatch(
+        /^\d{4}_snapshot\.json$/
+      );
     }
   });
 
@@ -98,11 +100,16 @@ describe("drizzle/meta hygiene", () => {
   });
 
   it("the latest journal entry's snapshot is present (drizzle-kit diffs against it)", () => {
-    const journal = JSON.parse(readFileSync(join(META, "_journal.json"), "utf8")) as {
+    const journal = JSON.parse(
+      readFileSync(join(META, "_journal.json"), "utf8")
+    ) as {
       entries: Array<{ idx: number }>;
     };
     const lastIdx = Math.max(...journal.entries.map(e => e.idx));
     const latest = `${String(lastIdx).padStart(4, "0")}_snapshot.json`;
-    expect(entries, `${latest} is the base for the next drizzle-kit generate diff`).toContain(latest);
+    expect(
+      entries,
+      `${latest} is the base for the next drizzle-kit generate diff`
+    ).toContain(latest);
   });
 });
