@@ -68,8 +68,10 @@ Claude Code hooks. No new service, no new vendor, no new daemon, no schema chang
   **`Secret Scan (gitleaks)` is NOT required** (gap F6.10) — do not assume it gates.
 - Any UI inherits `design-system/dime-ai/MASTER.md`.
 - Every claim in every artifact carries VERIFIED / INFERRED / UNKNOWN.
-- Both Railway services build with **RAILPACK**, not the Dockerfile (P2) — do not assume Dockerfile
-  semantics apply.
+- **Both Railway services build with the Dockerfile** [VERIFIED 2026-08-05 from the build log of live
+  deployment `4b55b680`]. The `RAILPACK` value in the service config is stale persisted dashboard
+  state that `railway.json` overrides at deploy time. `/usr/bin/python3` and all five Python model
+  runners are present in the runtime image. See `os/audits/2026-08-05-builder-resolution.md`.
 
 ---
 
@@ -140,7 +142,7 @@ criteria, verification commands, the doctrine section it satisfies, and its ruli
 |---|---|---|---|
 | [015](issues/ISSUE-015-d15-diagnostic.md) | Run the 17-failure-mode diagnostic; schedule its recurrence | M | HOLE D |
 | [016](issues/ISSUE-016-level4-rescore-instrument.md) | Make the D1 rescore repeatable and signable | M | criterion 1 |
-| [017](issues/ISSUE-017-railpack-builder-incident.md) | Resolve RAILPACK-vs-Dockerfile; file the incident | S | P2 |
+| ~~[017](issues/ISSUE-017-railpack-builder-incident.md)~~ | ~~Resolve RAILPACK-vs-Dockerfile~~ **CLOSED 2026-08-05 — premise refuted; the Dockerfile is the builder** | S | — |
 
 ---
 
