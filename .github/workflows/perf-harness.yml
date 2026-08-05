@@ -71,7 +71,6 @@ jobs:
       - name: "[STEP] Run perf harness"
         env:
           PERF_TARGET_URL: ${{ vars.RAILWAY_APP_URL }}
-        env:
           UPDATE_BASELINE: ${{ github.event.inputs.update_baseline }}
         run: |
           set -euo pipefail

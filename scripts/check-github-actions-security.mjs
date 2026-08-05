@@ -180,6 +180,59 @@ function inspectActionReferences(name, source, failures) {
   return count;
 }
 
+// Duplicate mapping keys make GitHub reject the whole workflow file at push
+// time — the workflow silently dies and every push logs a phantom failure run
+// (2026-08-05: three hardened workflows shipped duplicate `env:` blocks;
+// zizmor and this checker both parsed leniently and missed it). This is a
+// dependency-free block-scope scanner for the plain block-style YAML that
+// workflows use: it tracks a stack of (indent, seen-keys) mapping scopes,
+// treats `- ` list items as fresh scopes, and skips block-scalar bodies
+// (`run: |` / `>` content must not be scanned).
+function inspectDuplicateKeys(name, source, failures) {
+  const stack = []; // { indent, keys:Set }
+  let blockScalarIndent = null; // inside `key: |` body while line indent > this
+  const lines = source.split("\n");
+  for (let index = 0; index < lines.length; index++) {
+    const raw = lines[index];
+    if (!raw.trim() || raw.trimStart().startsWith("#")) continue;
+    const indentMatch = raw.match(/^(\s*)/);
+    let indent = indentMatch[1].length;
+    if (blockScalarIndent !== null) {
+      if (indent > blockScalarIndent) continue; // still inside the scalar body
+      blockScalarIndent = null;
+    }
+    let rest = raw.slice(indent);
+    // Each `- ` opens a nested scope for the list item's own mapping.
+    while (rest.startsWith("- ")) {
+      indent += 2;
+      rest = rest.slice(2);
+      while (stack.length && stack[stack.length - 1].indent >= indent) {
+        stack.pop();
+      }
+      stack.push({ indent, keys: new Set() });
+    }
+    const key = rest.match(/^([A-Za-z_][\w.-]*):(\s|$)/);
+    if (!key) continue;
+    while (stack.length && stack[stack.length - 1].indent > indent) {
+      stack.pop();
+    }
+    let scope = stack[stack.length - 1];
+    if (!scope || scope.indent < indent) {
+      scope = { indent, keys: new Set() };
+      stack.push(scope);
+    }
+    if (scope.keys.has(key[1])) {
+      failures.push(
+        `${name}:${index + 1}: duplicate mapping key '${key[1]}' — GitHub rejects the workflow file and it silently stops running`
+      );
+    }
+    scope.keys.add(key[1]);
+    if (/:\s*[|>][+-]?\s*(#.*)?$/.test(rest)) {
+      blockScalarIndent = indent;
+    }
+  }
+}
+
 export async function scanActionsSecurity(
   repositoryRoot,
   { enforceRepositoryContracts = true } = {}
@@ -200,6 +253,7 @@ export async function scanActionsSecurity(
   for (const path of workflowPaths) {
     const name = relative(workflowsDirectory, path);
     const source = await readFile(path, "utf8");
+    inspectDuplicateKeys(name, source, failures);
     inspectPermissions(name, source, failures);
     actionReferences += inspectActionReferences(name, source, failures);
     const jobBlocks = source.split(/(?=^  [A-Za-z0-9_-]+:\s*$)/gm);

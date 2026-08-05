@@ -64,6 +64,7 @@ jobs:
         env:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           PR_TITLE: ${{ github.event.pull_request.title }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "[STEP] Enabling auto-merge (squash) for PR #${PR_NUMBER}..."
           gh pr merge "$PR_NUMBER" \
@@ -72,9 +73,7 @@ jobs:
             --subject "chore(deps): ${PR_TITLE}" \
             --body "Auto-merged by Dependabot auto-merge workflow. Patch-level update. All CI checks passed."
           echo "[OUTPUT] Auto-merge enabled — will merge once CI passes"
-          echo "[VERIFY] PASS — PR #${{ github.event.pull_request.number }} queued for auto-merge"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          echo "[VERIFY] PASS — PR #${PR_NUMBER} queued for auto-merge"
 
       # ── Step 4: Log skip reason for non-patch updates ─────────────────────
       - name: Skip non-patch update
