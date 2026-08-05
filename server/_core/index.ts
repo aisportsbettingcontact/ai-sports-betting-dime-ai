@@ -24,6 +24,7 @@ import {
   shouldFailHealthForSchema,
   startSchemaProbeInterval,
 } from "./schemaHealthGate";
+import { isAnalyticsStore } from "../analytics/config";
 import helmet from "helmet";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerStorageProxy } from "./storageProxy";
@@ -1329,6 +1330,10 @@ async function startServer() {
     // unref'd so it never holds the process open, and every failure is
     // swallowed — a reconcile outage must not take the server with it.
     const runCheckoutReconcile = async () => {
+      // Skip on the analytics-store instance — its DB has no checkout_sessions
+      // table (it owns analytics_events, not the app schema), so a sweep there
+      // only logs ER_NO_SUCH_TABLE noise. See server/analytics/config.ts.
+      if (isAnalyticsStore()) return;
       try {
         const { reconcileCheckoutSessions } = await import("../stripe/checkoutReconcile");
         await reconcileCheckoutSessions();
@@ -1351,6 +1356,10 @@ async function startServer() {
     // With this, the cache is hot before any user hits the server.
     // Non-fatal: if DB is unavailable, the first user request will populate the cache.
     setTimeout(() => {
+      // Skip on the analytics-store instance — its DB has no `games` table, so
+      // pre-warming the feed cache there only logs ER_NO_SUCH_TABLE noise and
+      // warms nothing a client will read (the store serves no feed traffic).
+      if (isAnalyticsStore()) return;
       // Compute the effective feed date using the same isBeforeCutoff logic as the client (todayUTC()).
       // The client sends { sport, gameDate: todayUTC() } — we MUST pre-warm THAT exact cache key.
       // Without this, the startup pre-warm populates MLB:ROLLING but the client requests MLB:2026-05-16,
@@ -1427,6 +1436,9 @@ async function startServer() {
     // clients immediately see the new day's games without waiting for the 60s TTL.
     // We schedule a one-shot invalidation to fire at the next 11:00 UTC boundary.
     const scheduleNextCutoffInvalidation = () => {
+      // Skip on the analytics-store instance — it has no `games` table and
+      // serves no feed, so the boundary re-warm would only log ER_NO_SUCH_TABLE.
+      if (isAnalyticsStore()) return;
       const nowMs = Date.now();
       const nowUtc = new Date(nowMs);
       const CUTOFF_HOUR = 11;
@@ -1540,8 +1552,16 @@ async function startServer() {
   // previous healthy deploy) instead of silently breaking auth (#370). Bounded
   // so a slow/unreachable DB never blocks startup; a periodic re-probe catches a
   // mismatch that appears later or a boot probe that timed out.
-  await runBootSchemaProbe();
-  startSchemaProbeInterval();
+  //
+  // Skip on the analytics-store instance: it does not own app_users (its DB has
+  // analytics_events), so the probe there is meaningless and would re-log
+  // ER_NO_SUCH_TABLE every interval. With the probe skipped the verdict stays
+  // "unknown", so /health stays 200 — the gate only guards the app-owning
+  // instances (forwarder/disabled), which is exactly its intended scope.
+  if (!isAnalyticsStore()) {
+    await runBootSchemaProbe();
+    startSchemaProbeInterval();
+  }
 
   console.log(
     `[SERVER_STARTUP] Calling server.listen(${port}) — host omitted for dual-stack bind with IPv4 fallback ...`
