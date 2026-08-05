@@ -1,6 +1,7 @@
 node_modules
 dist
 .git
+.github
 .env
 .env.*
 !.env.example
@@ -19,5 +20,47 @@ ml/dime-1.0/configs/*
 # Local tooling / scratch
 .claude
 .agents
+.pi
 *.log
 ui-ux_log.txt
+.tmp-*
+vitest-results*.json
+
+# Agent/credential/ops tooling never ships. The ONE script the image build
+# needs is the preview-production gate that `pnpm run build` calls — allowlist
+# exactly that file (it imports node builtins only; widen the allowlist only
+# if a build-time script gains a local helper).
+scripts/**
+!scripts/verify-preview-production.mjs
+
+# Access/incident/session logs and root one-off strays — must not ship
+USERS.md
+INCIDENTS.md
+todo.md
+wc2026modeling.txt
+T4_EXECUTION_NOTES.md
+dime-ai-sol-iteration.md
+dime-mlb-doubleheader-20260717-*
+llm-blueprint
+llm-blueprint.md
+prez-ai-skills-directory.md
+audit_espn_vs_db*.mjs
+wc_correct_dk_june19.mjs
+wc_rescrape_june19.mjs
+wc_sim_router.cjs
+analyze_bundle.py
+find_inline.py
+
+# Root markdown is docs/ops, never build input (CLAUDE.md, AGENTS.md, LLM.md, …).
+# dockerignore globs don't cross "/" so this matches root-level .md only.
+*.md
+
+# Doc/evidence/dev-only trees not needed at build or runtime
+docs
+audits
+audit-notes
+references
+e2e
+perf
+analytics-backend
+archive

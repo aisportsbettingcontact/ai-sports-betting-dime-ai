@@ -14,6 +14,11 @@
  *   ANTHROPIC_API_KEY    — must be EMPTY when using the gateway token;
  *                          Claude Code checks it first and it would win.
  *
+ * agentEnv() is an explicit ALLOWLIST, not a process.env spread. The
+ * subprocess can be granted Bash via allowedTools, and every var in its
+ * env is readable from there — so server secrets (DATABASE_URL, Stripe,
+ * Discord, VSIN/KenPom, session/JWT, cron tokens, …) must never reach
+ * the Claude Code subprocess.
  */
 import { query, type Options } from "@anthropic-ai/claude-agent-sdk";
 import { resolveAnthropicConfig } from "./anthropicClient";
@@ -24,12 +29,39 @@ export const DIME_AGENT_MODEL = process.env.DIME_AGENT_MODEL || "claude-fable-5"
 export const DIME_AGENT_READONLY_TOOLS = ["Read", "Glob", "Grep", "WebSearch", "WebFetch"];
 
 /**
- * Environment for the Claude Code subprocess, mirroring the server's
- * credential resolution (see anthropicClient.ts).
+ * Vars the Claude Code subprocess may inherit from the parent — process
+ * and runtime basics only, copied only when set. Everything else in
+ * process.env (secrets included) stays behind. XDG_CACHE_HOME /
+ * XDG_CONFIG_HOME are deliberately absent: add one only if the Agent SDK
+ * demonstrably fails to start without it.
+ */
+const AGENT_ENV_ALLOWLIST = [
+  "PATH",
+  "HOME",
+  "USER",
+  "TMPDIR",
+  "TMP",
+  "TEMP",
+  "LANG",
+  "LC_ALL",
+  "TZ",
+  "NODE_ENV",
+  // Model pin for the child (model is also passed via query() options).
+  "DIME_AGENT_MODEL",
+] as const;
+
+/**
+ * Environment for the Claude Code subprocess: the allowlisted basics
+ * above plus Anthropic routing, mirroring the server's credential
+ * resolution (see anthropicClient.ts). Never a process.env spread.
  */
 export function agentEnv(): NonNullable<Options["env"]> {
   const { apiKey, authToken, baseURL } = resolveAnthropicConfig();
-  const env: NonNullable<Options["env"]> = { ...process.env };
+  const env: NonNullable<Options["env"]> = {};
+  for (const key of AGENT_ENV_ALLOWLIST) {
+    const value = process.env[key];
+    if (value !== undefined) env[key] = value;
+  }
   if (baseURL) env.ANTHROPIC_BASE_URL = baseURL;
   if (authToken) {
     env.ANTHROPIC_AUTH_TOKEN = authToken;
