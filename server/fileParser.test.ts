@@ -25,7 +25,9 @@ describe("detectSportFromFilename", () => {
 
 describe("detectDateFromFilename", () => {
   it("parses MM-DD-YYYY from filename", () => {
-    expect(detectDateFromFilename("NCAAMModel-03-02-2026.csv")).toBe("2026-03-02");
+    expect(detectDateFromFilename("NCAAMModel-03-02-2026.csv")).toBe(
+      "2026-03-02"
+    );
   });
   it("returns null for no date", () => {
     expect(detectDateFromFilename("model.csv")).toBeNull();

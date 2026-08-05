@@ -32,27 +32,58 @@
       this mirrors the frozen environment, it does not restyle anything.
    -------------------------------------------------------------------------- */
 
-.dc-page, .dc-page *, .dc-page *::before, .dc-page *::after { box-sizing: content-box; } /* frozen UA default environment — F1 */
+.dc-page,
+.dc-page *,
+.dc-page *::before,
+.dc-page *::after {
+  box-sizing: content-box;
+} /* frozen UA default environment — F1 */
 /* Line-height resets on the page ROOT only (R1): the frozen environment is UA
    `normal` at the root with children INHERITING explicit ancestor values
    (e.g. .dc-hero's line-height: 1 into its spans). A blanket descendant rule
    would pin children to `normal` and defeat that inheritance. */
-.dc-page { line-height: normal; } /* frozen UA default environment — F2/R1 */
+.dc-page {
+  line-height: normal;
+} /* frozen UA default environment — F2/R1 */
 /* UA stylesheets give form controls border-box by default (html.css) — the
    frozen <button>/<input> elements rendered border-box; restore that too. */
-.dc-page button, .dc-page input, .dc-page select, .dc-page textarea { box-sizing: border-box; } /* frozen UA default environment — F1 */
+.dc-page button,
+.dc-page input,
+.dc-page select,
+.dc-page textarea {
+  box-sizing: border-box;
+} /* frozen UA default environment — F1 */
 
 /* ----------------------------------------------------------------------------
    1. TOKENS — verbatim from D:18-20 = L:18-20
    -------------------------------------------------------------------------- */
 
 /* Dime semantic color tokens: --mint is the primary brand accent; --mint-on-light is the contrast-safe mint for text on light surfaces. */ /* D/L:17 */
-:root { --mint: #45E0A8; --mint-on-light: #000000; } /* D/L:18 */
+:root {
+  --mint: #45e0a8;
+  --mint-on-light: #000000;
+} /* D/L:18 */
 
 /* Law v2 tonal amendment: secondary text becomes a real grey tier, hover fills
    return. Mint stays the only hue. (Superseded the collapsed D/L:19-20 values.) */
-.theme-dark { --text-primary: #FFFFFF; --text-secondary: #A6A6A6; --row-hover: #141414; --row-active: #1F1F1F; --accent: #45E0A8; --ring: #45E0A8; --shadow-menu: 0 12px 32px rgba(0,0,0,0.55); }
-.theme-light { --text-primary: #000000; --text-secondary: #595959; --row-hover: #EFEFEF; --row-active: #E4E4E4; --accent: #45E0A8; --ring: #45E0A8; --shadow-menu: 0 12px 32px rgba(11,11,15,0.18); }
+.theme-dark {
+  --text-primary: #ffffff;
+  --text-secondary: #a6a6a6;
+  --row-hover: #141414;
+  --row-active: #1f1f1f;
+  --accent: #45e0a8;
+  --ring: #45e0a8;
+  --shadow-menu: 0 12px 32px rgba(0, 0, 0, 0.55);
+}
+.theme-light {
+  --text-primary: #000000;
+  --text-secondary: #595959;
+  --row-hover: #efefef;
+  --row-active: #e4e4e4;
+  --accent: #45e0a8;
+  --ring: #45e0a8;
+  --shadow-menu: 0 12px 32px rgba(11, 11, 15, 0.18);
+}
 
 /* ----------------------------------------------------------------------------
    2. FROZEN STYLE-BLOCK RULES — declarations verbatim, frozen selector kept,
@@ -61,71 +92,263 @@
 
 /* Links — frozen selector is bare `a` (D/L:13-14); re-expressed on a class to
    avoid restyling every anchor in the app. Values verbatim. */
-.dc-link { color: #45E0A8; text-decoration: none; } /* D/L:13 */
-.dc-link:hover { color: #45E0A8; } /* D/L:14 — state rule */
+.dc-link {
+  color: #45e0a8;
+  text-decoration: none;
+} /* D/L:13 */
+.dc-link:hover {
+  color: #45e0a8;
+} /* D/L:14 — state rule */
 
 /* Account menu visibility — D/L:15-16 */
-.settings-menu, .dc-settings-menu { display: none; } /* D/L:15 */
-.settings-menu.open, .dc-settings-menu.open { display: flex; } /* D/L:16 — state rule */
+.settings-menu,
+.dc-settings-menu {
+  display: none;
+} /* D/L:15 */
+.settings-menu.open,
+.dc-settings-menu.open {
+  display: flex;
+} /* D/L:16 — state rule */
 
 /* Sidebar row system — D/L:21-28. Frozen instances (D/L:57-62, 66-71) all add
    inline `font-size: 13px;` — folded in here (identical on all 12 instances). */
-.sidebar-row, .dc-sidebar-row { position: relative; display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; color: var(--text-secondary); text-decoration: none; cursor: pointer; transition: background 160ms cubic-bezier(0.16,1,0.3,1), color 160ms cubic-bezier(0.16,1,0.3,1), transform 160ms cubic-bezier(0.16,1,0.3,1), box-shadow 160ms cubic-bezier(0.16,1,0.3,1); font-size: 22.75px; } /* D/L:21 + inline D/L:57-62,66-71 — owner directive 2026-07-21: text ×1.75 / icons ×1.25 */
-.sidebar-row::before, .dc-sidebar-row::before { content: ""; position: absolute; left: -6px; top: 50%; width: 3px; height: 18px; border-radius: 999px; background: var(--accent); opacity: 0; transform: translateY(-50%) scaleY(0.7); transition: opacity 160ms cubic-bezier(0.16,1,0.3,1), transform 160ms cubic-bezier(0.16,1,0.3,1); } /* D/L:22 */
-.sidebar-row:hover, .dc-sidebar-row:hover { background: var(--row-hover); color: var(--text-primary); } /* D/L:23 — state rule */
-.sidebar-row:focus-visible, .dc-sidebar-row:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--ring); } /* D/L:24 — state rule */
-.sidebar-row.is-active, .sidebar-row[data-active="true"], .sidebar-row[aria-current="page"],
-.dc-sidebar-row.is-active, .dc-sidebar-row[data-active="true"], .dc-sidebar-row[aria-current="page"] { background: var(--row-active); color: var(--text-primary); font-weight: 600; } /* D/L:25 — state rule */
-.sidebar-row.is-active::before, .sidebar-row[data-active="true"]::before, .sidebar-row[aria-current="page"]::before,
-.dc-sidebar-row.is-active::before, .dc-sidebar-row[data-active="true"]::before, .dc-sidebar-row[aria-current="page"]::before { opacity: 1; transform: translateY(-50%) scaleY(1); } /* D/L:26 — state rule */
-.sidebar-row.is-active .sidebar-icon, .sidebar-row[data-active="true"] .sidebar-icon, .sidebar-row[aria-current="page"] .sidebar-icon,
-.dc-sidebar-row.is-active .dc-sidebar-icon, .dc-sidebar-row[data-active="true"] .dc-sidebar-icon, .dc-sidebar-row[aria-current="page"] .dc-sidebar-icon { color: var(--accent); } /* D/L:27 — state rule */
-@media (prefers-reduced-motion: reduce) { .sidebar-row, .sidebar-row::before, .settings-btn, .dc-sidebar-row, .dc-sidebar-row::before, .dc-settings-btn { transition: none; } } /* D/L:28 — state rule */
+.sidebar-row,
+.dc-sidebar-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background 160ms cubic-bezier(0.16, 1, 0.3, 1),
+    color 160ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 160ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 160ms cubic-bezier(0.16, 1, 0.3, 1);
+  font-size: 22.75px;
+} /* D/L:21 + inline D/L:57-62,66-71 — owner directive 2026-07-21: text ×1.75 / icons ×1.25 */
+.sidebar-row::before,
+.dc-sidebar-row::before {
+  content: "";
+  position: absolute;
+  left: -6px;
+  top: 50%;
+  width: 3px;
+  height: 18px;
+  border-radius: 999px;
+  background: var(--accent);
+  opacity: 0;
+  transform: translateY(-50%) scaleY(0.7);
+  transition:
+    opacity 160ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 160ms cubic-bezier(0.16, 1, 0.3, 1);
+} /* D/L:22 */
+.sidebar-row:hover,
+.dc-sidebar-row:hover {
+  background: var(--row-hover);
+  color: var(--text-primary);
+} /* D/L:23 — state rule */
+.sidebar-row:focus-visible,
+.dc-sidebar-row:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--ring);
+} /* D/L:24 — state rule */
+.sidebar-row.is-active,
+.sidebar-row[data-active="true"],
+.sidebar-row[aria-current="page"],
+.dc-sidebar-row.is-active,
+.dc-sidebar-row[data-active="true"],
+.dc-sidebar-row[aria-current="page"] {
+  background: var(--row-active);
+  color: var(--text-primary);
+  font-weight: 600;
+} /* D/L:25 — state rule */
+.sidebar-row.is-active::before,
+.sidebar-row[data-active="true"]::before,
+.sidebar-row[aria-current="page"]::before,
+.dc-sidebar-row.is-active::before,
+.dc-sidebar-row[data-active="true"]::before,
+.dc-sidebar-row[aria-current="page"]::before {
+  opacity: 1;
+  transform: translateY(-50%) scaleY(1);
+} /* D/L:26 — state rule */
+.sidebar-row.is-active .sidebar-icon,
+.sidebar-row[data-active="true"] .sidebar-icon,
+.sidebar-row[aria-current="page"] .sidebar-icon,
+.dc-sidebar-row.is-active .dc-sidebar-icon,
+.dc-sidebar-row[data-active="true"] .dc-sidebar-icon,
+.dc-sidebar-row[aria-current="page"] .dc-sidebar-icon {
+  color: var(--accent);
+} /* D/L:27 — state rule */
+@media (prefers-reduced-motion: reduce) {
+  .sidebar-row,
+  .sidebar-row::before,
+  .settings-btn,
+  .dc-sidebar-row,
+  .dc-sidebar-row::before,
+  .dc-settings-btn {
+    transition: none;
+  }
+} /* D/L:28 — state rule */
 
 /* Placeholders — D/L:29-30. Three-Color mapping: placeholder ink follows the
    theme's text color (white on the dark composer, black on the light composer).
    2026-07-13 audit P0 fix: the unconditional #FFFFFF made "Ask dime anything…"
    white-on-white (invisible) in light mode, where the composer fill is #FFFFFF. */
-.composer-input::placeholder, .dc-composer-input::placeholder { color: #FFFFFF; } /* D/L:29 */
-.theme-light .composer-input::placeholder, .theme-light .dc-composer-input::placeholder { color: #000000; } /* audit P0-2 */
-.theme-light-placeholder::placeholder, .dc-theme-light-placeholder::placeholder { color: #FFFFFF; } /* D/L:30 */
-.theme-light .theme-light-placeholder::placeholder, .theme-light .dc-theme-light-placeholder::placeholder { color: #000000; } /* audit P0-2 */
+.composer-input::placeholder,
+.dc-composer-input::placeholder {
+  color: #ffffff;
+} /* D/L:29 */
+.theme-light .composer-input::placeholder,
+.theme-light .dc-composer-input::placeholder {
+  color: #000000;
+} /* audit P0-2 */
+.theme-light-placeholder::placeholder,
+.dc-theme-light-placeholder::placeholder {
+  color: #ffffff;
+} /* D/L:30 */
+.theme-light .theme-light-placeholder::placeholder,
+.theme-light .dc-theme-light-placeholder::placeholder {
+  color: #000000;
+} /* audit P0-2 */
 
 /* Typing indicator — D/L:31-34 (keyframes name verbatim; no clash with
    dime-chat.css's `dime-pulse`). */
-@keyframes dimeTyping { 0%, 80%, 100% { opacity: 0.25; } 40% { opacity: 1; } } /* D/L:31 */
-.typing-dot, .dc-typing-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: currentColor; animation: dimeTyping 1s infinite; } /* D/L:32 */
-.typing-dot:nth-child(2), .dc-typing-dot:nth-child(2) { animation-delay: 0.2s; } /* D/L:33 — state rule */
-.typing-dot:nth-child(3), .dc-typing-dot:nth-child(3) { animation-delay: 0.4s; } /* D/L:34 — state rule */
+@keyframes dimeTyping {
+  0%,
+  80%,
+  100% {
+    opacity: 0.25;
+  }
+  40% {
+    opacity: 1;
+  }
+} /* D/L:31 */
+.typing-dot,
+.dc-typing-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: dimeTyping 1s infinite;
+} /* D/L:32 */
+.typing-dot:nth-child(2),
+.dc-typing-dot:nth-child(2) {
+  animation-delay: 0.2s;
+} /* D/L:33 — state rule */
+.typing-dot:nth-child(3),
+.dc-typing-dot:nth-child(3) {
+  animation-delay: 0.4s;
+} /* D/L:34 — state rule */
 
 /* Recent-chat row actions — D/L:35-39 (vocabulary; not instantiated in home markup) */
-.row-actions, .dc-row-actions { margin-left: auto; display: none; align-items: center; gap: 2px; flex-shrink: 0; } /* D/L:35 */
-.sidebar-row:hover .row-actions, .sidebar-row.is-active .row-actions, .sidebar-row[data-active="true"] .row-actions,
-.dc-sidebar-row:hover .dc-row-actions, .dc-sidebar-row.is-active .dc-row-actions, .dc-sidebar-row[data-active="true"] .dc-row-actions { display: flex; } /* D/L:36 — state rule */
-.row-btn, .dc-row-btn { background: none; border: none; padding: 0 3px; font-size: 13px; line-height: 1; color: inherit; opacity: 0.65; cursor: pointer; font-family: inherit; } /* D/L:37 */
-.row-btn:hover, .dc-row-btn:hover { opacity: 1; } /* D/L:38 — state rule */
-.row-btn.starred, .dc-row-btn.starred { color: #45E0A8; opacity: 1; } /* D/L:39 — state rule */
+.row-actions,
+.dc-row-actions {
+  margin-left: auto;
+  display: none;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+} /* D/L:35 */
+.sidebar-row:hover .row-actions,
+.sidebar-row.is-active .row-actions,
+.sidebar-row[data-active="true"] .row-actions,
+.dc-sidebar-row:hover .dc-row-actions,
+.dc-sidebar-row.is-active .dc-row-actions,
+.dc-sidebar-row[data-active="true"] .dc-row-actions {
+  display: flex;
+} /* D/L:36 — state rule */
+.row-btn,
+.dc-row-btn {
+  background: none;
+  border: none;
+  padding: 0 3px;
+  font-size: 13px;
+  line-height: 1;
+  color: inherit;
+  opacity: 0.65;
+  cursor: pointer;
+  font-family: inherit;
+} /* D/L:37 */
+.row-btn:hover,
+.dc-row-btn:hover {
+  opacity: 1;
+} /* D/L:38 — state rule */
+.row-btn.starred,
+.dc-row-btn.starred {
+  color: #45e0a8;
+  opacity: 1;
+} /* D/L:39 — state rule */
 
 /* Sidebar text/icon helpers — D/L:40-41 */
-.sidebar-text, .dc-sidebar-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } /* D/L:40 */
-.sidebar-icon, .dc-sidebar-icon { width: 17.5px; display: inline-flex; justify-content: center; } /* D/L:41 — owner directive 2026-07-21: text ×1.75 / icons ×1.25 */
+.sidebar-text,
+.dc-sidebar-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+} /* D/L:40 */
+.sidebar-icon,
+.dc-sidebar-icon {
+  width: 17.5px;
+  display: inline-flex;
+  justify-content: center;
+} /* D/L:41 — owner directive 2026-07-21: text ×1.75 / icons ×1.25 */
 
 /* Settings (gear) button — D/L:42-44 + inline D/L:94 + svg stroke attr */
-.settings-btn, .dc-settings-btn { border-radius: 8px; transition: transform 160ms cubic-bezier(0.16,1,0.3,1), stroke 160ms; } /* D/L:42 */
-.profile-row:hover .settings-btn, .settings-btn:hover,
-.dc-profile-row:hover .dc-settings-btn, .dc-settings-btn:hover { transform: rotate(18deg); } /* D/L:43 — state rule */
-.settings-btn:focus-visible, .dc-settings-btn:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--ring); } /* D/L:44 — state rule */
-.dc-settings-btn { margin-left: auto; flex-shrink: 0; cursor: pointer; } /* inline D:94 = L:94 */
-.theme-dark .dc-settings-btn { stroke: #FFFFFF; } /* svg stroke attr D:94 */
-.theme-light .dc-settings-btn { stroke: #000000; } /* svg stroke attr L:94 */
+.settings-btn,
+.dc-settings-btn {
+  border-radius: 8px;
+  transition:
+    transform 160ms cubic-bezier(0.16, 1, 0.3, 1),
+    stroke 160ms;
+} /* D/L:42 */
+.profile-row:hover .settings-btn,
+.settings-btn:hover,
+.dc-profile-row:hover .dc-settings-btn,
+.dc-settings-btn:hover {
+  transform: rotate(18deg);
+} /* D/L:43 — state rule */
+.settings-btn:focus-visible,
+.dc-settings-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--ring);
+} /* D/L:44 — state rule */
+.dc-settings-btn {
+  margin-left: auto;
+  flex-shrink: 0;
+  cursor: pointer;
+} /* inline D:94 = L:94 */
+.theme-dark .dc-settings-btn {
+  stroke: #ffffff;
+} /* svg stroke attr D:94 */
+.theme-light .dc-settings-btn {
+  stroke: #000000;
+} /* svg stroke attr L:94 */
 /* svg attrs both files (D/L:94): viewBox 0 0 24 24, width/height 17,
    fill="none", stroke-width 1.8, stroke-linecap/linejoin round */
 
 /* Hover utilities — D/L:47-49 (hv2 fill differs per file; theme-scoped merge) */
-.hv1:hover, .dc-hv1:hover { opacity: 0.85 !important; } /* D:47 = L:47 — state rule */
-.theme-dark .hv2:hover, .theme-dark .dc-hv2:hover { background: var(--row-hover) !important; } /* v2: hover returns (was transparent) */
-.theme-light .hv2:hover, .theme-light .dc-hv2:hover { background: var(--row-hover) !important; } /* v2: hover returns (was transparent) */
-.hv3:hover, .dc-hv3:hover { opacity: 0.7 !important; } /* D:49 = L:49 — state rule */
+.hv1:hover,
+.dc-hv1:hover {
+  opacity: 0.85 !important;
+} /* D:47 = L:47 — state rule */
+.theme-dark .hv2:hover,
+.theme-dark .dc-hv2:hover {
+  background: var(--row-hover) !important;
+} /* v2: hover returns (was transparent) */
+.theme-light .hv2:hover,
+.theme-light .dc-hv2:hover {
+  background: var(--row-hover) !important;
+} /* v2: hover returns (was transparent) */
+.hv3:hover,
+.dc-hv3:hover {
+  opacity: 0.7 !important;
+} /* D:49 = L:49 — state rule */
 
 /* ----------------------------------------------------------------------------
    3. PAGE / FRAME — inline + body rule (D/L:46, 53)
@@ -133,169 +356,549 @@
 
 /* Frozen page body (line 46). Frozen line 12 (`body { background: #101014 }`)
    is a superseded leftover, identical in both files — not emitted. */
-.dc-page { margin: 0; display: flex; justify-content: center; font-family: 'Familjen Grotesk', sans-serif; } /* D:46 = L:46 (shared decls) */
-.theme-dark.dc-page, .theme-dark .dc-page { background: #000000; } /* D:46 */
-.theme-light.dc-page, .theme-light .dc-page { background: #FFFFFF; } /* L:46 */
+.dc-page {
+  margin: 0;
+  display: flex;
+  justify-content: center;
+  font-family: "Familjen Grotesk", sans-serif;
+} /* D:46 = L:46 (shared decls) */
+.theme-dark.dc-page,
+.theme-dark .dc-page {
+  background: #000000;
+} /* D:46 */
+.theme-light.dc-page,
+.theme-light .dc-page {
+  background: #ffffff;
+} /* L:46 */
 
 /* Demo canvas frame — D/L:53. 1600x900 are the frozen mock dimensions. */
-.dc-frame { width: 1600px; display: flex; height: 900px; border: 1px solid #FFFFFF; border-radius: 12px; overflow: hidden; } /* D:53 = L:53 — border #24242E identical in BOTH themes */
-.theme-dark .dc-frame { background: #000000; } /* D:53 */
-.theme-light .dc-frame { background: #FFFFFF; } /* L:53 */
+.dc-frame {
+  width: 1600px;
+  display: flex;
+  height: 900px;
+  border: 1px solid #ffffff;
+  border-radius: 12px;
+  overflow: hidden;
+} /* D:53 = L:53 — border #24242E identical in BOTH themes */
+.theme-dark .dc-frame {
+  background: #000000;
+} /* D:53 */
+.theme-light .dc-frame {
+  background: #ffffff;
+} /* L:53 */
 
 /* ----------------------------------------------------------------------------
    4. SIDEBAR — inline vocabulary (D/L:54-75)
    -------------------------------------------------------------------------- */
 
-.dc-sidebar { width: 352px; flex-shrink: 0; display: flex; flex-direction: column; padding: 20px 14px; } /* D:54 = L:54 (shared decls) — owner directive 2026-07-21: text ×1.75 / icons ×1.25; width refit — longest label "Betting Splits + Odds History" scrollWidth 270px @ 22.75px + icon 22.5 + gap 10 + row padding 20 + sidebar padding 28 = 350.5, rounded up to next multiple of 8 = 352 */
-.theme-dark .dc-sidebar, .theme-dark.dc-sidebar { background: #000000; border-right: 1px solid #FFFFFF; } /* D:54 */
-.theme-light .dc-sidebar, .theme-light.dc-sidebar { background: #FFFFFF; border-right: 1px solid #000000; } /* L:54 */
+.dc-sidebar {
+  width: 352px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 20px 14px;
+} /* D:54 = L:54 (shared decls) — owner directive 2026-07-21: text ×1.75 / icons ×1.25; width refit — longest label "Betting Splits + Odds History" scrollWidth 270px @ 22.75px + icon 22.5 + gap 10 + row padding 20 + sidebar padding 28 = 350.5, rounded up to next multiple of 8 = 352 */
+.theme-dark .dc-sidebar,
+.theme-dark.dc-sidebar {
+  background: #000000;
+  border-right: 1px solid #ffffff;
+} /* D:54 */
+.theme-light .dc-sidebar,
+.theme-light.dc-sidebar {
+  background: #ffffff;
+  border-right: 1px solid #000000;
+} /* L:54 */
 
-.dc-sidebar-title { padding: 0 8px 20px; font-size: 20px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.15; text-align: center; } /* D:55 = L:55 (shared decls) */
-.theme-dark .dc-sidebar-title { color: #FFFFFF; } /* D:55 */
-.theme-light .dc-sidebar-title { color: #000000; } /* L:55 */
+.dc-sidebar-title {
+  padding: 0 8px 20px;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  text-align: center;
+} /* D:55 = L:55 (shared decls) */
+.theme-dark .dc-sidebar-title {
+  color: #ffffff;
+} /* D:55 */
+.theme-light .dc-sidebar-title {
+  color: #000000;
+} /* L:55 */
 
-.dc-nav-group { display: flex; flex-direction: column; gap: 2px; } /* D:56 = L:56 */
+.dc-nav-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+} /* D:56 = L:56 */
 
-.dc-recents-label { font-size: 19.25px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 22px 10px 8px; } /* D:64 = L:64 (shared decls) — owner directive 2026-07-21: text ×1.75 / icons ×1.25 */
-.theme-dark .dc-recents-label { color: #FFFFFF; } /* D:64 */
-.theme-light .dc-recents-label { color: #000000; } /* L:64 */
+.dc-recents-label {
+  font-size: 19.25px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 22px 10px 8px;
+} /* D:64 = L:64 (shared decls) — owner directive 2026-07-21: text ×1.75 / icons ×1.25 */
+.theme-dark .dc-recents-label {
+  color: #ffffff;
+} /* D:64 */
+.theme-light .dc-recents-label {
+  color: #000000;
+} /* L:64 */
 
-.dc-recent-list { display: flex; flex-direction: column; gap: 2px; flex: 1; overflow: visible; } /* D:65 = L:65 */
+.dc-recent-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  overflow: visible;
+} /* D:65 = L:65 */
 
 /* Profile row — applied WITH .dc-sidebar-row (frozen: class="profile-row sidebar-row") */
-.profile-row, .dc-profile-row { position: relative; margin-top: 8px; padding: 10px 8px; border-top-left-radius: 0; border-top-right-radius: 0; font-size: 22.75px; } /* D:73 = L:73 (shared decls) — owner directive 2026-07-21: text ×1.75 / icons ×1.25 */
-.theme-dark .dc-profile-row, .theme-dark .profile-row { border-top: 1px solid #FFFFFF; } /* D:73 */
-.theme-light .dc-profile-row, .theme-light .profile-row { border-top: 1px solid #000000; } /* L:73 */
+.profile-row,
+.dc-profile-row {
+  position: relative;
+  margin-top: 8px;
+  padding: 10px 8px;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  font-size: 22.75px;
+} /* D:73 = L:73 (shared decls) — owner directive 2026-07-21: text ×1.75 / icons ×1.25 */
+.theme-dark .dc-profile-row,
+.theme-dark .profile-row {
+  border-top: 1px solid #ffffff;
+} /* D:73 */
+.theme-light .dc-profile-row,
+.theme-light .profile-row {
+  border-top: 1px solid #000000;
+} /* L:73 */
 
-.dc-avatar { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; } /* D:74 = L:74 */
-.dc-avatar--menu { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; } /* D:78 = L:78 */
+.dc-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  object-fit: cover;
+} /* D:74 = L:74 */
+.dc-avatar--menu {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  object-fit: cover;
+} /* D:78 = L:78 */
 
-.dc-profile-id { display: flex; flex-direction: column; } /* D:75 = L:75 (wrapper) */
-.dc-profile-name { font-size: 21px; font-weight: 700; letter-spacing: 0.02em; } /* D:75 = L:75 (shared decls) — owner directive 2026-07-21: text ×1.75 / icons ×1.25 */
-.theme-dark .dc-profile-name { color: #FFFFFF; } /* D:75 */
-.theme-light .dc-profile-name { color: #000000; } /* L:75 */
-.dc-profile-tier { font-size: 19.25px; } /* D:75 = L:75 (shared decls) — owner directive 2026-07-21: text ×1.75 / icons ×1.25 */
-.theme-dark .dc-profile-tier { color: #FFFFFF; } /* D:75 */
-.theme-light .dc-profile-tier { color: #000000; } /* L:75 */
+.dc-profile-id {
+  display: flex;
+  flex-direction: column;
+} /* D:75 = L:75 (wrapper) */
+.dc-profile-name {
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+} /* D:75 = L:75 (shared decls) — owner directive 2026-07-21: text ×1.75 / icons ×1.25 */
+.theme-dark .dc-profile-name {
+  color: #ffffff;
+} /* D:75 */
+.theme-light .dc-profile-name {
+  color: #000000;
+} /* L:75 */
+.dc-profile-tier {
+  font-size: 19.25px;
+} /* D:75 = L:75 (shared decls) — owner directive 2026-07-21: text ×1.75 / icons ×1.25 */
+.theme-dark .dc-profile-tier {
+  color: #ffffff;
+} /* D:75 */
+.theme-light .dc-profile-tier {
+  color: #000000;
+} /* L:75 */
 
 /* ----------------------------------------------------------------------------
    5. ACCOUNT / SETTINGS MENU — inline vocabulary (D/L:76-92)
       (.dc-settings-menu display none/flex.open comes from §2, D/L:15-16)
    -------------------------------------------------------------------------- */
 
-.dc-settings-menu, .settings-menu { position: absolute; left: 4px; bottom: calc(100% + 10px); width: 268px; border-radius: 14px; padding: 10px; flex-direction: column; gap: 2px; z-index: 9; cursor: default; } /* D:76 = L:76 (shared decls) */
+.dc-settings-menu,
+.settings-menu {
+  position: absolute;
+  left: 4px;
+  bottom: calc(100% + 10px);
+  width: 268px;
+  border-radius: 14px;
+  padding: 10px;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 9;
+  cursor: default;
+} /* D:76 = L:76 (shared decls) */
 /* v2: floating menus get a raised surface + one sanctioned shadow so they read
    as floating over content (was flat #000/#FFF with a 1px line only). */
-.theme-dark .dc-settings-menu, .theme-dark .settings-menu { background: #141414; border: 1px solid #262626; box-shadow: var(--shadow-menu); } /* D:76 */
-.theme-light .dc-settings-menu, .theme-light .settings-menu { background: #FFFFFF; border: 1px solid #D9D9D9; box-shadow: var(--shadow-menu); } /* L:76 */
+.theme-dark .dc-settings-menu,
+.theme-dark .settings-menu {
+  background: #141414;
+  border: 1px solid #262626;
+  box-shadow: var(--shadow-menu);
+} /* D:76 */
+.theme-light .dc-settings-menu,
+.theme-light .settings-menu {
+  background: #ffffff;
+  border: 1px solid #d9d9d9;
+  box-shadow: var(--shadow-menu);
+} /* L:76 */
 
-.dc-menu-header { display: flex; align-items: center; gap: 10px; padding: 8px 10px; } /* D:77 = L:77 */
-.dc-menu-id { display: flex; flex-direction: column; gap: 1px; } /* D:79 = L:79 */
-.dc-menu-handle-row { display: flex; align-items: center; gap: 6px; } /* D:80 = L:80 */
-.dc-menu-handle { font-size: 13px; font-weight: 700; } /* D:80 = L:80 (shared decls) */
-.theme-dark .dc-menu-handle { color: #FFFFFF; } /* D:80 */
-.theme-light .dc-menu-handle { color: #000000; } /* L:80 */
-.dc-badge-pro { font-size: 9px; font-weight: 700; letter-spacing: 0.06em; color: #000000; background: #45E0A8; padding: 2px 6px; border-radius: 8px; } /* D:80 = L:80 — identical both themes */
-.dc-menu-expiry { font-size: 11px; color: #FFFFFF; } /* D:81 = L:81 — identical both themes */
+.dc-menu-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+} /* D:77 = L:77 */
+.dc-menu-id {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+} /* D:79 = L:79 */
+.dc-menu-handle-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+} /* D:80 = L:80 */
+.dc-menu-handle {
+  font-size: 13px;
+  font-weight: 700;
+} /* D:80 = L:80 (shared decls) */
+.theme-dark .dc-menu-handle {
+  color: #ffffff;
+} /* D:80 */
+.theme-light .dc-menu-handle {
+  color: #000000;
+} /* L:80 */
+.dc-badge-pro {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #000000;
+  background: #45e0a8;
+  padding: 2px 6px;
+  border-radius: 8px;
+} /* D:80 = L:80 — identical both themes */
+.dc-menu-expiry {
+  font-size: 11px;
+  color: #ffffff;
+} /* D:81 = L:81 — identical both themes */
 
-.dc-menu-cta-row { display: flex; gap: 8px; padding: 6px 10px 10px; } /* D:84 = L:84 */
+.dc-menu-cta-row {
+  display: flex;
+  gap: 8px;
+  padding: 6px 10px 10px;
+} /* D:84 = L:84 */
 /* hover = .dc-hv1 (frozen markup: class="hv1") */
-.dc-btn-upgrade { flex: 1; text-align: center; padding: 8px 4px; border-radius: 16px; background: #45E0A8; font-size: 12px; font-weight: 700; color: #000000; cursor: pointer; } /* D:85 = L:85 — identical both themes */
+.dc-btn-upgrade {
+  flex: 1;
+  text-align: center;
+  padding: 8px 4px;
+  border-radius: 16px;
+  background: #45e0a8;
+  font-size: 12px;
+  font-weight: 700;
+  color: #000000;
+  cursor: pointer;
+} /* D:85 = L:85 — identical both themes */
 /* hover = .dc-hv2 (frozen markup: class="hv2") */
-.dc-btn-cancel { text-align: center; padding: 8px 10px; border-radius: 16px; font-size: 12px; font-weight: 600; cursor: pointer; } /* D:86 = L:86 (shared decls) */
-.theme-dark .dc-btn-cancel { border: 1px solid #FFFFFF; color: #FFFFFF; } /* D:86 */
-.theme-light .dc-btn-cancel { border: 1px solid #000000; color: #000000; } /* L:86 */
+.dc-btn-cancel {
+  text-align: center;
+  padding: 8px 10px;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+} /* D:86 = L:86 (shared decls) */
+.theme-dark .dc-btn-cancel {
+  border: 1px solid #ffffff;
+  color: #ffffff;
+} /* D:86 */
+.theme-light .dc-btn-cancel {
+  border: 1px solid #000000;
+  color: #000000;
+} /* L:86 */
 
-.dc-menu-divider { height: 1px; margin: 0 2px; } /* D:88,91 = L:88,91 (shared decls) */
-.theme-dark .dc-menu-divider { background: #FFFFFF; } /* D:88,91 */
-.theme-light .dc-menu-divider { background: #000000; } /* L:88,91 */
+.dc-menu-divider {
+  height: 1px;
+  margin: 0 2px;
+} /* D:88,91 = L:88,91 (shared decls) */
+.theme-dark .dc-menu-divider {
+  background: #ffffff;
+} /* D:88,91 */
+.theme-light .dc-menu-divider {
+  background: #000000;
+} /* L:88,91 */
 
 /* hover = .dc-hv2 (frozen markup: class="hv2") */
-.dc-menu-item { padding: 9px 10px; border-radius: 8px; font-size: 13px; cursor: pointer; } /* D:89,90,92 = L:89,90,92 (shared decls) */
-.theme-dark .dc-menu-item { color: #FFFFFF; } /* D:89,90,92 */
-.theme-light .dc-menu-item { color: #000000; } /* L:89,90,92 */
-.dc-menu-item--strong { font-weight: 600; } /* D:92 = L:92 ("Log Out") */
+.dc-menu-item {
+  padding: 9px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+} /* D:89,90,92 = L:89,90,92 (shared decls) */
+.theme-dark .dc-menu-item {
+  color: #ffffff;
+} /* D:89,90,92 */
+.theme-light .dc-menu-item {
+  color: #000000;
+} /* L:89,90,92 */
+.dc-menu-item--strong {
+  font-weight: 600;
+} /* D:92 = L:92 ("Log Out") */
 
-.dc-menu-accent { font-weight: 600; } /* D:90 = L:90 (shared decl) */
-.theme-dark .dc-menu-accent { color: #45E0A8; } /* D:90 (literal) */
-.theme-light .dc-menu-accent { color: var(--mint-on-light); } /* L:90 — the only frozen use of --mint-on-light */
+.dc-menu-accent {
+  font-weight: 600;
+} /* D:90 = L:90 (shared decl) */
+.theme-dark .dc-menu-accent {
+  color: #45e0a8;
+} /* D:90 (literal) */
+.theme-light .dc-menu-accent {
+  color: var(--mint-on-light);
+} /* L:90 — the only frozen use of --mint-on-light */
 
 /* ----------------------------------------------------------------------------
    6. MAIN COLUMN: HERO + COMPOSER + PILLS — inline vocabulary (D/L:97-109)
    -------------------------------------------------------------------------- */
 
-.dc-main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 40px; padding: 40px; } /* D:97 = L:97 (markup class "home-main") */
+.dc-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 40px;
+  padding: 40px;
+} /* D:97 = L:97 (markup class "home-main") */
 
 /* Wordmark hero "dıme" (markup class "brand-hero"; the i is dotless U+0131) */
-.dc-hero { font-size: 64px; font-weight: 700; letter-spacing: -0.05em; line-height: 1; display: flex; align-items: baseline; } /* D:98 = L:98 (shared decls) */
-.theme-dark .dc-hero { color: #FFFFFF; } /* D:98 */
-.theme-light .dc-hero { color: #000000; } /* L:98 */
-.dc-hero-word { display: inline-flex; align-items: baseline; } /* D:98 = L:98 (inner span) */
-.dc-hero-i { position: relative; display: inline-block; } /* D:98 = L:98 (the "ı" span) */
-.dc-hero-dot { position: absolute; left: calc(50% + 0.03em); top: 0.05em; transform: translateX(-50%); width: 0.20em; height: 0.20em; border-radius: 50%; background: #45E0A8; } /* D:98 = L:98 (shared decls) */
-.theme-light .dc-hero-dot { border: 1px solid #000000; box-sizing: border-box; } /* L:98 ONLY — dark dot has no border */
+.dc-hero {
+  font-size: 64px;
+  font-weight: 700;
+  letter-spacing: -0.05em;
+  line-height: 1;
+  display: flex;
+  align-items: baseline;
+} /* D:98 = L:98 (shared decls) */
+.theme-dark .dc-hero {
+  color: #ffffff;
+} /* D:98 */
+.theme-light .dc-hero {
+  color: #000000;
+} /* L:98 */
+.dc-hero-word {
+  display: inline-flex;
+  align-items: baseline;
+} /* D:98 = L:98 (inner span) */
+.dc-hero-i {
+  position: relative;
+  display: inline-block;
+} /* D:98 = L:98 (the "ı" span) */
+.dc-hero-dot {
+  position: absolute;
+  left: calc(50% + 0.03em);
+  top: 0.05em;
+  transform: translateX(-50%);
+  width: 0.2em;
+  height: 0.2em;
+  border-radius: 50%;
+  background: #45e0a8;
+} /* D:98 = L:98 (shared decls) */
+.theme-light .dc-hero-dot {
+  border: 1px solid #000000;
+  box-sizing: border-box;
+} /* L:98 ONLY — dark dot has no border */
 
 /* Composer */
-.dc-composer { width: 680px; display: flex; align-items: center; gap: 10px; border-radius: 26px; padding: 9px 9px 9px 20px; } /* D:99 = L:99 (shared decls) */
-.theme-dark .dc-composer { background: #000000; border: 1px solid #FFFFFF; } /* D:99 — no box-shadow in dark */
-.theme-light .dc-composer { background: #FFFFFF; border: 1px solid #000000; box-shadow: none; } /* L:99 */
+.dc-composer {
+  width: 680px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-radius: 26px;
+  padding: 9px 9px 9px 20px;
+} /* D:99 = L:99 (shared decls) */
+.theme-dark .dc-composer {
+  background: #000000;
+  border: 1px solid #ffffff;
+} /* D:99 — no box-shadow in dark */
+.theme-light .dc-composer {
+  background: #ffffff;
+  border: 1px solid #000000;
+  box-shadow: none;
+} /* L:99 */
 
-.dc-composer-plus { font-size: 18px; font-weight: 500; } /* D:100 = L:100 (shared decls; glyph is ＋ U+FF0B) */
-.theme-dark .dc-composer-plus { color: #FFFFFF; } /* D:100 */
-.theme-light .dc-composer-plus { color: #000000; } /* L:100 */
+.dc-composer-plus {
+  font-size: 18px;
+  font-weight: 500;
+} /* D:100 = L:100 (shared decls; glyph is ＋ U+FF0B) */
+.theme-dark .dc-composer-plus {
+  color: #ffffff;
+} /* D:100 */
+.theme-light .dc-composer-plus {
+  color: #000000;
+} /* L:100 */
 
-.dc-composer-input { flex: 1; min-width: 0; font-size: 14px; background: transparent; border: none; outline: none; font-family: inherit; } /* D:101 = L:101 (shared decls; placeholder "Ask dime anything…") */
-.theme-dark .dc-composer-input { color: #FFFFFF; } /* D:101 */
-.theme-light .dc-composer-input { color: #000000; } /* L:101 */
+.dc-composer-input {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: inherit;
+} /* D:101 = L:101 (shared decls; placeholder "Ask dime anything…") */
+.theme-dark .dc-composer-input {
+  color: #ffffff;
+} /* D:101 */
+.theme-light .dc-composer-input {
+  color: #000000;
+} /* L:101 */
 /* ::placeholder → §2 (D/L:29-30) */
 
 /* Send button (aria-label="Submit prompt"); hover = .dc-hv3 (frozen: class="hv3") */
-.dc-send { width: 36px; height: 36px; flex-shrink: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; } /* D:102 = L:102 (shared decls) */
-.theme-dark .dc-send { background: #FFFFFF; border: 0.5px solid #000000; } /* D:102 */
-.theme-light .dc-send { background: #000000; border: 0.5px solid #FFFFFF; } /* L:102 */
+.dc-send {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+} /* D:102 = L:102 (shared decls) */
+.theme-dark .dc-send {
+  background: #ffffff;
+  border: 0.5px solid #000000;
+} /* D:102 */
+.theme-light .dc-send {
+  background: #000000;
+  border: 0.5px solid #ffffff;
+} /* L:102 */
 /* Send glyph svg (D/L:103): viewBox 0 0 512 512, width/height 20;
    chevron path d="M96 140 L248 256 L96 372" stroke-width 64 linecap square fill none;
    rects x330 y228 w150 h56 and x377 y181 w56 h150 */
-.theme-dark .dc-send-chevron { stroke: #000000; } /* D:103 */
-.theme-light .dc-send-chevron { stroke: #45E0A8; } /* L:103 */
-.theme-dark .dc-send-rect { fill: #45E0A8; } /* D:103 */
-.theme-light .dc-send-rect { fill: #FFFFFF; } /* L:103 */
+.theme-dark .dc-send-chevron {
+  stroke: #000000;
+} /* D:103 */
+.theme-light .dc-send-chevron {
+  stroke: #45e0a8;
+} /* L:103 */
+.theme-dark .dc-send-rect {
+  fill: #45e0a8;
+} /* D:103 */
+.theme-light .dc-send-rect {
+  fill: #ffffff;
+} /* L:103 */
 
 /* Suggestion pills (markup class "prompt-pills"); hover = .dc-hv1 on every pill.
    NOTE frozen emphasis ORDER differs per theme:
    dark  (D:107-109) = [contrast, outline, mint]
    light (L:107-109) = [mint, outline, contrast]                              */
-.dc-pills { display: flex; align-items: center; gap: 10px; } /* D:106 = L:106 */
+.dc-pills {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+} /* D:106 = L:106 */
 
-.dc-pill { display: flex; align-items: center; gap: 10px; height: 36px; box-sizing: border-box; padding: 0 6px 0 16px; justify-content: center; border-radius: 20px; font-size: 13px; font-weight: 600; cursor: pointer; } /* shared decls of all 6 pills, D/L:107-109 */
+.dc-pill {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 36px;
+  box-sizing: border-box;
+  padding: 0 6px 0 16px;
+  justify-content: center;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+} /* shared decls of all 6 pills, D/L:107-109 */
 
-.dc-pill--mint { background: #45E0A8; color: #000000; } /* D:109 = L:107 — identical both themes */
-.theme-dark .dc-pill--outline { background: #000000; border: 1px solid #FFFFFF; color: #FFFFFF; } /* D:108 */
-.theme-light .dc-pill--outline { background: #FFFFFF; border: 1px solid #000000; color: #000000; } /* L:108 */
-.theme-dark .dc-pill--contrast { background: #FFFFFF; color: #000000; } /* D:107 */
-.theme-light .dc-pill--contrast { background: #000000; color: #FFFFFF; } /* L:109 */
+.dc-pill--mint {
+  background: #45e0a8;
+  color: #000000;
+} /* D:109 = L:107 — identical both themes */
+.theme-dark .dc-pill--outline {
+  background: #000000;
+  border: 1px solid #ffffff;
+  color: #ffffff;
+} /* D:108 */
+.theme-light .dc-pill--outline {
+  background: #ffffff;
+  border: 1px solid #000000;
+  color: #000000;
+} /* L:108 */
+.theme-dark .dc-pill--contrast {
+  background: #ffffff;
+  color: #000000;
+} /* D:107 */
+.theme-light .dc-pill--contrast {
+  background: #000000;
+  color: #ffffff;
+} /* L:109 */
 
 /* Pill icon circle (inner span of every pill; svg viewBox 0 0 512 512, 13x13,
    same chevron+rects geometry as the send glyph). Variant follows its pill. */
-.dc-pill-icon { width: 24px; height: 24px; flex-shrink: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; } /* shared decls of all 6 icon circles, D/L:107-109 */
+.dc-pill-icon {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+} /* shared decls of all 6 icon circles, D/L:107-109 */
 
-.dc-pill-icon--on-mint { background: #000000; } /* D:109 = L:107 — no border on the mint pill's icon circle in either theme */
-.dc-pill-icon--on-mint .dc-pill-chevron { stroke: #FFFFFF; } /* D:109 = L:107 */
-.dc-pill-icon--on-mint .dc-pill-rect { fill: #45E0A8; } /* D:109 = L:107 */
+.dc-pill-icon--on-mint {
+  background: #000000;
+} /* D:109 = L:107 — no border on the mint pill's icon circle in either theme */
+.dc-pill-icon--on-mint .dc-pill-chevron {
+  stroke: #ffffff;
+} /* D:109 = L:107 */
+.dc-pill-icon--on-mint .dc-pill-rect {
+  fill: #45e0a8;
+} /* D:109 = L:107 */
 
-.theme-dark .dc-pill-icon--on-outline { background: #FFFFFF; border: 0.5px solid #000000; } /* D:108 */
-.theme-dark .dc-pill-icon--on-outline .dc-pill-chevron { stroke: #000000; } /* D:108 */
-.theme-dark .dc-pill-icon--on-outline .dc-pill-rect { fill: #45E0A8; } /* D:108 */
-.theme-light .dc-pill-icon--on-outline { background: #000000; border: 0.5px solid #FFFFFF; } /* L:108 */
-.theme-light .dc-pill-icon--on-outline .dc-pill-chevron { stroke: #45E0A8; } /* L:108 */
-.theme-light .dc-pill-icon--on-outline .dc-pill-rect { fill: #FFFFFF; } /* L:108 */
+.theme-dark .dc-pill-icon--on-outline {
+  background: #ffffff;
+  border: 0.5px solid #000000;
+} /* D:108 */
+.theme-dark .dc-pill-icon--on-outline .dc-pill-chevron {
+  stroke: #000000;
+} /* D:108 */
+.theme-dark .dc-pill-icon--on-outline .dc-pill-rect {
+  fill: #45e0a8;
+} /* D:108 */
+.theme-light .dc-pill-icon--on-outline {
+  background: #000000;
+  border: 0.5px solid #ffffff;
+} /* L:108 */
+.theme-light .dc-pill-icon--on-outline .dc-pill-chevron {
+  stroke: #45e0a8;
+} /* L:108 */
+.theme-light .dc-pill-icon--on-outline .dc-pill-rect {
+  fill: #ffffff;
+} /* L:108 */
 
-.theme-dark .dc-pill-icon--on-contrast { background: #000000; border: 0.5px solid #FFFFFF; } /* D:107 */
-.theme-dark .dc-pill-icon--on-contrast .dc-pill-chevron { stroke: #45E0A8; } /* D:107 */
-.theme-dark .dc-pill-icon--on-contrast .dc-pill-rect { fill: #FFFFFF; } /* D:107 */
-.theme-light .dc-pill-icon--on-contrast { background: #FFFFFF; border: 0.5px solid #000000; } /* L:109 */
-.theme-light .dc-pill-icon--on-contrast .dc-pill-chevron { stroke: #000000; } /* L:109 */
-.theme-light .dc-pill-icon--on-contrast .dc-pill-rect { fill: #45E0A8; } /* L:109 */
+.theme-dark .dc-pill-icon--on-contrast {
+  background: #000000;
+  border: 0.5px solid #ffffff;
+} /* D:107 */
+.theme-dark .dc-pill-icon--on-contrast .dc-pill-chevron {
+  stroke: #45e0a8;
+} /* D:107 */
+.theme-dark .dc-pill-icon--on-contrast .dc-pill-rect {
+  fill: #ffffff;
+} /* D:107 */
+.theme-light .dc-pill-icon--on-contrast {
+  background: #ffffff;
+  border: 0.5px solid #000000;
+} /* L:109 */
+.theme-light .dc-pill-icon--on-contrast .dc-pill-chevron {
+  stroke: #000000;
+} /* L:109 */
+.theme-light .dc-pill-icon--on-contrast .dc-pill-rect {
+  fill: #45e0a8;
+} /* L:109 */
 
 /* ----------------------------------------------------------------------------
    FONTS (D/L:7-9): Google Fonts —

@@ -44,8 +44,13 @@ function deviceOf(ua: string): DeviceType {
 /** Coarse device/os/browser families from the UA. Never throws. */
 export function deriveDeviceFromUA(ua: string | undefined | null): UaDevice {
   const s = (ua ?? "").toString();
-  if (!s) return { deviceType: "desktop", osFamily: "other", browserFamily: "other" };
-  return { deviceType: deviceOf(s), osFamily: osOf(s), browserFamily: browserOf(s) };
+  if (!s)
+    return { deviceType: "desktop", osFamily: "other", browserFamily: "other" };
+  return {
+    deviceType: deviceOf(s),
+    osFamily: osOf(s),
+    browserFamily: browserOf(s),
+  };
 }
 
 /**
@@ -65,12 +70,13 @@ export function reconcileDeviceType(
   uaDevice: DeviceType,
   osFamily: string,
   clientPointerType?: string | null,
-  clientViewportClass?: string | null,
+  clientViewportClass?: string | null
 ): { deviceType: DeviceType; conflict: boolean } {
   if (uaDevice === "desktop" && clientPointerType === "coarse") {
     // iPadOS-as-Mac: reclassify. Other desktop-UA touch devices: flag only.
     if (osFamily === "macos") {
-      const phone = clientViewportClass === "xs" || clientViewportClass === "sm";
+      const phone =
+        clientViewportClass === "xs" || clientViewportClass === "sm";
       return { deviceType: phone ? "mobile" : "tablet", conflict: true };
     }
     return { deviceType: uaDevice, conflict: true };

@@ -56,7 +56,8 @@ let _aliases: Map<string, string> = new Map(); // alias → team_id
 
 async function ensureCache(): Promise<void> {
   const now = Date.now();
-  if (_cacheBuiltAt && now - _cacheBuiltAt < CACHE_TTL_MS && _teams.length > 0) return;
+  if (_cacheBuiltAt && now - _cacheBuiltAt < CACHE_TTL_MS && _teams.length > 0)
+    return;
 
   const db = await getDb();
 
@@ -75,7 +76,12 @@ async function ensureCache(): Promise<void> {
     normSlug: normalizeStr(t.slug),
   }));
 
-  _aliases = new Map(aliases.map((a: typeof wc2026TeamAliases.$inferSelect) => [a.alias.toLowerCase(), a.teamId]));
+  _aliases = new Map(
+    aliases.map((a: typeof wc2026TeamAliases.$inferSelect) => [
+      a.alias.toLowerCase(),
+      a.teamId,
+    ])
+  );
   _cacheBuiltAt = now;
 
   console.log(
@@ -105,13 +111,15 @@ export async function resolveWcTeam(rawName: string): Promise<string | null> {
   // Step 1: Exact alias match
   const aliasMatch = _aliases.get(cacheKey);
   if (aliasMatch) {
-    console.log(`[ResolveWcTeam] [STEP] Resolved via alias: "${rawName}" → "${aliasMatch}"`);
+    console.log(
+      `[ResolveWcTeam] [STEP] Resolved via alias: "${rawName}" → "${aliasMatch}"`
+    );
     _cache.set(cacheKey, aliasMatch);
     return aliasMatch;
   }
 
   // Step 2: Exact canonical name match
-  const exactName = _teams.find((t) => t.name.toLowerCase() === cacheKey);
+  const exactName = _teams.find(t => t.name.toLowerCase() === cacheKey);
   if (exactName) {
     console.log(
       `[ResolveWcTeam] [STEP] Resolved via exact name: "${rawName}" → "${exactName.teamId}"`
@@ -121,7 +129,9 @@ export async function resolveWcTeam(rawName: string): Promise<string | null> {
   }
 
   // Step 3: FIFA code match (3-letter abbr from Rotowire/AN)
-  const codeMatch = _teams.find((t) => t.normCode === norm || t.normCode === cacheKey);
+  const codeMatch = _teams.find(
+    t => t.normCode === norm || t.normCode === cacheKey
+  );
   if (codeMatch) {
     console.log(
       `[ResolveWcTeam] [STEP] Resolved via FIFA code: "${rawName}" → "${codeMatch.teamId}"`
@@ -131,7 +141,7 @@ export async function resolveWcTeam(rawName: string): Promise<string | null> {
   }
 
   // Step 4: Slug match
-  const slugMatch = _teams.find((t) => t.normSlug === norm);
+  const slugMatch = _teams.find(t => t.normSlug === norm);
   if (slugMatch) {
     console.log(
       `[ResolveWcTeam] [STEP] Resolved via slug: "${rawName}" → "${slugMatch.teamId}"`
@@ -141,7 +151,7 @@ export async function resolveWcTeam(rawName: string): Promise<string | null> {
   }
 
   // Step 5: Normalized fuzzy match on canonical name
-  const fuzzyMatch = _teams.find((t) => t.normName === norm);
+  const fuzzyMatch = _teams.find(t => t.normName === norm);
   if (fuzzyMatch) {
     console.log(
       `[ResolveWcTeam] [STEP] Resolved via fuzzy norm: "${rawName}" → "${fuzzyMatch.teamId}"`
@@ -152,7 +162,7 @@ export async function resolveWcTeam(rawName: string): Promise<string | null> {
 
   // Step 6: Partial match (rawName contains canonical name or vice versa)
   const partialMatch = _teams.find(
-    (t) => norm.includes(t.normName) || t.normName.includes(norm)
+    t => norm.includes(t.normName) || t.normName.includes(norm)
   );
   if (partialMatch) {
     console.log(

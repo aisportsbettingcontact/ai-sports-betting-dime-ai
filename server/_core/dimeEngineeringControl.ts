@@ -99,10 +99,7 @@ export interface DimeRoutePolicy {
 }
 
 export type DimeLegacyAnswerMode =
-  | "platform"
-  | "matchup"
-  | "slate"
-  | "educational";
+  "platform" | "matchup" | "slate" | "educational";
 
 export const DIME_ROUTE_POLICIES: Readonly<
   Record<DimeProductRoute, DimeRoutePolicy>

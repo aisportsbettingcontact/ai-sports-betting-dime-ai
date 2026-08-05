@@ -11,7 +11,7 @@ import { insertAnalyticsEvent, type StoredEvent } from "./store";
 const TAG = "[analytics][dispatch]";
 
 export async function dispatchStoredEvent(
-  event: StoredEvent,
+  event: StoredEvent
 ): Promise<{ routed: "forwarded" | "stored" | "disabled" | "error" }> {
   const role = getAnalyticsRole();
   try {

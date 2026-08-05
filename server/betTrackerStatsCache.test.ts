@@ -22,8 +22,11 @@ import {
 } from "./betTrackerStatsCache";
 
 const KEY = buildStatsCacheKey(14, { sport: "MLB", unitSize: 100 });
-const FP = (rowCount: number, maxUpdated: string | null, idChecksum: number | null) =>
-  buildStatsFingerprint({ rowCount, maxUpdated, idChecksum });
+const FP = (
+  rowCount: number,
+  maxUpdated: string | null,
+  idChecksum: number | null
+) => buildStatsFingerprint({ rowCount, maxUpdated, idChecksum });
 
 const BASE = FP(10, "2026-08-01 12:00:00", 550);
 
@@ -105,18 +108,23 @@ describe("cache key", () => {
     // Including either would fragment the cache into entries holding identical
     // values, since stats are computed over the unfiltered set regardless of
     // which page or result filter the table is showing.
-    const withResult = buildStatsCacheKey(14, { sport: "MLB", unitSize: 100 } as never);
+    const withResult = buildStatsCacheKey(14, {
+      sport: "MLB",
+      unitSize: 100,
+    } as never);
     const plain = buildStatsCacheKey(14, { sport: "MLB", unitSize: 100 });
     expect(withResult).toBe(plain);
   });
 
   it("separates users, so one tracker can never serve another's numbers", () => {
-    expect(buildStatsCacheKey(14, { unitSize: 100 }))
-      .not.toBe(buildStatsCacheKey(15, { unitSize: 100 }));
+    expect(buildStatsCacheKey(14, { unitSize: 100 })).not.toBe(
+      buildStatsCacheKey(15, { unitSize: 100 })
+    );
   });
 
   it("separates unit sizes, which rescale every figure", () => {
-    expect(buildStatsCacheKey(14, { unitSize: 100 }))
-      .not.toBe(buildStatsCacheKey(14, { unitSize: 50 }));
+    expect(buildStatsCacheKey(14, { unitSize: 100 })).not.toBe(
+      buildStatsCacheKey(14, { unitSize: 50 })
+    );
   });
 });

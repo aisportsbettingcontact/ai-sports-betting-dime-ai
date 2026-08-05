@@ -16,7 +16,8 @@ import { fmtCompact } from "@/pages/admin/chartTheme";
 import { type PointLike } from "@/pages/admin/profilingTypes";
 
 /** Mean of a numeric slice (0 when empty). */
-const mean = (xs: number[]): number => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
+const mean = (xs: number[]): number =>
+  xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0;
 
 export default function OverviewHeaderPanel() {
   const { data, isLoading } = trpc.analytics.overview.useQuery(undefined, {
@@ -25,7 +26,7 @@ export default function OverviewHeaderPanel() {
 
   const measured = !!data && data.state === "ok";
   const daily = data?.dailyActivity ?? [];
-  const activeSeries = daily.map((d) => d.activeUsers);
+  const activeSeries = daily.map(d => d.activeUsers);
 
   // Honest week-over-week delta on active users: mean of the last 7 measured days
   // vs the prior 7. Only when we actually have ≥14 days of series. A zero-day is a
@@ -46,7 +47,9 @@ export default function OverviewHeaderPanel() {
   // Power + Core tier headcount among the ranked users — rendered through the same
   // honest-state path (synthetic MetricPoint) so it degrades to "Not measured" too.
   const topUsers = data?.topUsers ?? [];
-  const powerCount = topUsers.filter((u) => u.tier === "power" || u.tier === "core").length;
+  const powerCount = topUsers.filter(
+    u => u.tier === "power" || u.tier === "core"
+  ).length;
   const powerPoint: PointLike = {
     state: data?.state ?? "not_measured",
     value: measured ? powerCount : null,
@@ -55,7 +58,11 @@ export default function OverviewHeaderPanel() {
 
   return (
     <div className="mb-6 space-y-3">
-      <SectionHeader title="Platform pulse" meta="last 24h · 7d · 30d" loading={isLoading} />
+      <SectionHeader
+        title="Platform pulse"
+        meta="last 24h · 7d · 30d"
+        loading={isLoading}
+      />
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
         <StatTile
           label="Daily active"
@@ -67,11 +74,41 @@ export default function OverviewHeaderPanel() {
           series={activeSeries.length >= 2 ? activeSeries : undefined}
           delta={delta}
         />
-        <StatTile label="Weekly active" sublabel="≥1 value event · 7d" point={data?.wau} loading={isLoading} format={fmtCompact} />
-        <StatTile label="Monthly active" sublabel="≥1 value event · 30d" point={data?.mau} loading={isLoading} format={fmtCompact} />
-        <StatTile label="Value events" sublabel="Qualifying · all time" point={data?.valueEventsTotal} loading={isLoading} format={fmtCompact} />
-        <StatTile label="Total actions" sublabel="Curated · all time" point={data?.totalActions} loading={isLoading} format={fmtCompact} />
-        <StatTile label="Power users" sublabel="Power + Core tier" point={powerPoint} loading={isLoading} format={fmtCompact} />
+        <StatTile
+          label="Weekly active"
+          sublabel="≥1 value event · 7d"
+          point={data?.wau}
+          loading={isLoading}
+          format={fmtCompact}
+        />
+        <StatTile
+          label="Monthly active"
+          sublabel="≥1 value event · 30d"
+          point={data?.mau}
+          loading={isLoading}
+          format={fmtCompact}
+        />
+        <StatTile
+          label="Value events"
+          sublabel="Qualifying · all time"
+          point={data?.valueEventsTotal}
+          loading={isLoading}
+          format={fmtCompact}
+        />
+        <StatTile
+          label="Total actions"
+          sublabel="Curated · all time"
+          point={data?.totalActions}
+          loading={isLoading}
+          format={fmtCompact}
+        />
+        <StatTile
+          label="Power users"
+          sublabel="Power + Core tier"
+          point={powerPoint}
+          loading={isLoading}
+          format={fmtCompact}
+        />
       </div>
     </div>
   );

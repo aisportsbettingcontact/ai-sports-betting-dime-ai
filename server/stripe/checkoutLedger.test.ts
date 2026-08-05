@@ -17,7 +17,8 @@ import { resolve } from "node:path";
 
 const repoRoot = resolve(__dirname, "../..");
 const read = (p: string) => readFileSync(resolve(repoRoot, p), "utf8");
-const stripDocs = (src: string) => src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+const stripDocs = (src: string) =>
+  src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
 
 const routerSrc = read("server/routers/stripe.ts");
 const routerCode = stripDocs(routerSrc);
@@ -37,7 +38,9 @@ describe("customer_creation — the root cause of the dropped payments", () => {
     // Stripe rejects customer_creation alongside an explicit `customer`, and
     // rejects it outright in subscription mode. Getting this wrong turns a
     // silent drop into a hard checkout failure — strictly worse.
-    expect(routerCode).toMatch(/mode === "payment" && !stripeCustomerId \? \{ customer_creation: "always"/);
+    expect(routerCode).toMatch(
+      /mode === "payment" && !stripeCustomerId \? \{ customer_creation: "always"/
+    );
   });
 
   it("still never passes payment_method_types", () => {
@@ -62,7 +65,9 @@ describe("every checkout is recorded before the buyer leaves", () => {
 
 describe("every webhook exit path resolves the checkout", () => {
   it("records a DROP when the session carries no customer", () => {
-    expect(webhookCode).toMatch(/fulfillment: "dropped"[\s\S]{0,200}no stripeCustomerId/);
+    expect(webhookCode).toMatch(
+      /fulfillment: "dropped"[\s\S]{0,200}no stripeCustomerId/
+    );
   });
 
   it("records a DROP on an unparseable user_id", () => {
@@ -70,7 +75,9 @@ describe("every webhook exit path resolves the checkout", () => {
   });
 
   it("records a SKIP when payment_status is not paid", () => {
-    expect(webhookCode).toMatch(/fulfillment: "skipped"[\s\S]{0,120}payment_status=/);
+    expect(webhookCode).toMatch(
+      /fulfillment: "skipped"[\s\S]{0,120}payment_status=/
+    );
   });
 
   it("records FULFILLED only after access is actually granted", () => {
@@ -110,7 +117,9 @@ describe("schema — queryable by the questions that matter", () => {
     // Composite (fulfillment, status) — leading column is fulfillment so the
     // "dropped" scan is an index lookup rather than a table scan. Verified by
     // EXPLAIN against MySQL 8: type=ref, key=checkout_sessions_fulfillment_idx.
-    expect(migration).toMatch(/CREATE INDEX `checkout_sessions_fulfillment_idx`[^;]*\(`fulfillment`\s*,\s*`status`\)/);
+    expect(migration).toMatch(
+      /CREATE INDEX `checkout_sessions_fulfillment_idx`[^;]*\(`fulfillment`\s*,\s*`status`\)/
+    );
   });
 
   it("indexes the funnel, the member, the customer, the plan and the email", () => {
@@ -134,9 +143,15 @@ describe("schema — queryable by the questions that matter", () => {
   });
 
   it("is declared in the drizzle schema and in the journal", () => {
-    expect(schema).toMatch(/checkoutSessions = mysqlTable\("checkout_sessions"/);
+    expect(schema).toMatch(
+      /checkoutSessions = mysqlTable\("checkout_sessions"/
+    );
     const journal = JSON.parse(read("drizzle/meta/_journal.json"));
-    expect(journal.entries.some((e: { tag: string }) => e.tag === "0126_checkout_sessions")).toBe(true);
+    expect(
+      journal.entries.some(
+        (e: { tag: string }) => e.tag === "0126_checkout_sessions"
+      )
+    ).toBe(true);
   });
 });
 
@@ -150,6 +165,8 @@ describe("ledger must never break the money path", () => {
 
   it("treats a duplicate insert as an idempotent no-op", () => {
     // Stripe's idempotency key can return the SAME session for a double-click.
-    expect(read("server/stripe/checkoutLedger.ts")).toMatch(/duplicate\|ER_DUP_ENTRY/);
+    expect(read("server/stripe/checkoutLedger.ts")).toMatch(
+      /duplicate\|ER_DUP_ENTRY/
+    );
   });
 });

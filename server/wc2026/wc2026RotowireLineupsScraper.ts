@@ -50,12 +50,15 @@ export async function scrapeWc2026Lineups(): Promise<{
   errors: string[];
 }> {
   const scrapedAt = new Date();
-  console.log(`[WC2026Lineups] [INPUT] url=${RW_URL} ts=${scrapedAt.toISOString()}`);
+  console.log(
+    `[WC2026Lineups] [INPUT] url=${RW_URL} ts=${scrapedAt.toISOString()}`
+  );
 
   let html: string;
   try {
     const res = await fetch(RW_URL, { headers: RW_HEADERS });
-    if (!res.ok) throw new Error(`Rotowire HTTP ${res.status}: ${res.statusText}`);
+    if (!res.ok)
+      throw new Error(`Rotowire HTTP ${res.status}: ${res.statusText}`);
     html = await res.text();
   } catch (err) {
     const msg = `[WC2026Lineups] [VERIFY] FAIL — fetch error: ${String(err)}`;
@@ -68,7 +71,9 @@ export async function scrapeWc2026Lineups(): Promise<{
   console.log(`[WC2026Lineups] [STEP] Found ${cards.length} lineup cards`);
 
   if (cards.length === 0) {
-    console.log("[WC2026Lineups] [OUTPUT] No lineup cards found — no WC2026 games today");
+    console.log(
+      "[WC2026Lineups] [OUTPUT] No lineup cards found — no WC2026 games today"
+    );
     return { rowsWritten: 0, gamesProcessed: 0, errors: [] };
   }
 
@@ -81,8 +86,16 @@ export async function scrapeWc2026Lineups(): Promise<{
     const card = $(cardEl);
 
     // ─── Extract team abbreviations ──────────────────────────────────────────
-    const homeAbbr = card.find("div.lineup__team.is-home div.lineup__abbr").first().text().trim();
-    const awayAbbr = card.find("div.lineup__team.is-visit div.lineup__abbr").first().text().trim();
+    const homeAbbr = card
+      .find("div.lineup__team.is-home div.lineup__abbr")
+      .first()
+      .text()
+      .trim();
+    const awayAbbr = card
+      .find("div.lineup__team.is-visit div.lineup__abbr")
+      .first()
+      .text()
+      .trim();
 
     console.log(
       `[WC2026Lineups] [STEP] Card: homeAbbr="${homeAbbr}" awayAbbr="${awayAbbr}"`
@@ -123,9 +136,7 @@ export async function scrapeWc2026Lineups(): Promise<{
     console.log(`[WC2026Lineups] [STATE] Matched match_id=${matchId}`);
 
     // ─── Delete stale lineup rows for this match ────────────────────────────
-    await db
-      .delete(wc2026Lineups)
-      .where(eq(wc2026Lineups.matchId, matchId));
+    await db.delete(wc2026Lineups).where(eq(wc2026Lineups.matchId, matchId));
 
     // ─── Extract players from both lineup__main sections ─────────────────────
     // Card has two div.lineup__main: [0]=home, [1]=visit (away)
@@ -136,12 +147,21 @@ export async function scrapeWc2026Lineups(): Promise<{
       { teamId: resolvedAway, label: "away" },
     ];
 
-    for (let sectionIdx = 0; sectionIdx < Math.min(mainSections.length, 2); sectionIdx++) {
+    for (
+      let sectionIdx = 0;
+      sectionIdx < Math.min(mainSections.length, 2);
+      sectionIdx++
+    ) {
       const section = $(mainSections[sectionIdx]);
       const { teamId, label } = teamOrder[sectionIdx];
 
       // Determine if confirmed
-      const statusText = section.find("div.lineup__status").first().text().trim().toLowerCase();
+      const statusText = section
+        .find("div.lineup__status")
+        .first()
+        .text()
+        .trim()
+        .toLowerCase();
       const isConfirmed = statusText.includes("confirmed");
 
       console.log(
@@ -164,9 +184,13 @@ export async function scrapeWc2026Lineups(): Promise<{
         if (!li.hasClass("lineup__player")) continue;
 
         const isStarter = !hitMiddle;
-        const position = li.find("div.lineup__pos").first().text().trim() || "UNK";
-        const playerName = li.find("a[title]").attr("title")?.trim() ?? li.find("a").first().text().trim();
-        const injuryStatus = li.find("span.lineup__inj").first().text().trim() || null;
+        const position =
+          li.find("div.lineup__pos").first().text().trim() || "UNK";
+        const playerName =
+          li.find("a[title]").attr("title")?.trim() ??
+          li.find("a").first().text().trim();
+        const injuryStatus =
+          li.find("span.lineup__inj").first().text().trim() || null;
 
         if (!playerName) continue;
 

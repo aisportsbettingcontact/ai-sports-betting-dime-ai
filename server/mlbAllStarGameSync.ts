@@ -79,9 +79,13 @@ function bookFromRow(row: typeof games.$inferSelect): AsgBook {
   return {
     awayML: row.awayML ?? null,
     homeML: row.homeML ?? null,
-    awaySpread: row.awayRunLine ?? (row.awayBookSpread != null ? String(row.awayBookSpread) : null),
+    awaySpread:
+      row.awayRunLine ??
+      (row.awayBookSpread != null ? String(row.awayBookSpread) : null),
     awaySpreadOdds: row.awayRunLineOdds ?? row.awaySpreadOdds ?? null,
-    homeSpread: row.homeRunLine ?? (row.homeBookSpread != null ? String(row.homeBookSpread) : null),
+    homeSpread:
+      row.homeRunLine ??
+      (row.homeBookSpread != null ? String(row.homeBookSpread) : null),
     homeSpreadOdds: row.homeRunLineOdds ?? row.homeSpreadOdds ?? null,
     total: row.bookTotal != null ? String(row.bookTotal) : null,
     overOdds: row.overOdds ?? null,
@@ -91,10 +95,17 @@ function bookFromRow(row: typeof games.$inferSelect): AsgBook {
 }
 
 /** Audit the written state — all critical columns non-null, orientation, valid teams. */
-function auditRow(row: typeof games.$inferSelect): { pass: boolean; checks: AsgAuditCheck[] } {
+function auditRow(row: typeof games.$inferSelect): {
+  pass: boolean;
+  checks: AsgAuditCheck[];
+} {
   const checks: AsgAuditCheck[] = [];
   const nn = (name: string, v: unknown) =>
-    checks.push({ name, ok: v != null && v !== "", detail: v == null ? "NULL" : String(v) });
+    checks.push({
+      name,
+      ok: v != null && v !== "",
+      detail: v == null ? "NULL" : String(v),
+    });
 
   checks.push({
     name: "orientation AL@NL",
@@ -103,11 +114,24 @@ function auditRow(row: typeof games.$inferSelect): { pass: boolean; checks: AsgA
   });
   checks.push({
     name: "isValidGame (AL/NL registered)",
-    ok: MLB_VALID_ABBREVS.has(row.awayTeam) && MLB_VALID_ABBREVS.has(row.homeTeam),
+    ok:
+      MLB_VALID_ABBREVS.has(row.awayTeam) &&
+      MLB_VALID_ABBREVS.has(row.homeTeam),
   });
-  checks.push({ name: "sport=MLB", ok: row.sport === "MLB", detail: row.sport });
-  checks.push({ name: "no starting pitchers (model-runner safe)", ok: !row.awayStartingPitcher && !row.homeStartingPitcher });
-  checks.push({ name: "modelRunAt set (card shows model)", ok: row.modelRunAt != null, detail: String(row.modelRunAt) });
+  checks.push({
+    name: "sport=MLB",
+    ok: row.sport === "MLB",
+    detail: row.sport,
+  });
+  checks.push({
+    name: "no starting pitchers (model-runner safe)",
+    ok: !row.awayStartingPitcher && !row.homeStartingPitcher,
+  });
+  checks.push({
+    name: "modelRunAt set (card shows model)",
+    ok: row.modelRunAt != null,
+    detail: String(row.modelRunAt),
+  });
   checks.push({ name: "publishedToFeed", ok: row.publishedToFeed === true });
   checks.push({ name: "publishedModel", ok: row.publishedModel === true });
   // Book (live)
@@ -131,7 +155,7 @@ function auditRow(row: typeof games.$inferSelect): { pass: boolean; checks: AsgA
   nn("model modelOverOdds", row.modelOverOdds);
   nn("model modelUnderOdds", row.modelUnderOdds);
 
-  return { pass: checks.every((c) => c.ok), checks };
+  return { pass: checks.every(c => c.ok), checks };
 }
 
 /**
@@ -139,18 +163,30 @@ function auditRow(row: typeof games.$inferSelect): { pass: boolean; checks: AsgA
  * (if needed), refreshes the book via the production path, writes the model, and
  * audits.
  */
-export async function runMlbAllStarGameSync(opts: { dryRun: boolean }): Promise<AsgSyncResult> {
+export async function runMlbAllStarGameSync(opts: {
+  dryRun: boolean;
+}): Promise<AsgSyncResult> {
   const say = (s: string) => console.log(`${TAG} ${s}`);
 
   // 1. Scrape AN + locate the ASG + assert orientation.
   const anGames = await fetchActionNetworkOdds("mlb", MLB_ASG.gameDate);
   const asg = findAsgInSlate(anGames);
-  if (!asg) throw new Error(`${TAG} ASG (anId=${MLB_ASG.anGameId}) not found in AN slate (${anGames.length} games) for ${MLB_ASG.gameDate}`);
-  const orientationOk = asg.awayUrlSlug === MLB_ASG.awaySlug && asg.homeUrlSlug === MLB_ASG.homeSlug;
-  if (!orientationOk) throw new Error(`${TAG} orientation mismatch: AN away=${asg.awayUrlSlug} home=${asg.homeUrlSlug} (expected ${MLB_ASG.awaySlug}@${MLB_ASG.homeSlug})`);
+  if (!asg)
+    throw new Error(
+      `${TAG} ASG (anId=${MLB_ASG.anGameId}) not found in AN slate (${anGames.length} games) for ${MLB_ASG.gameDate}`
+    );
+  const orientationOk =
+    asg.awayUrlSlug === MLB_ASG.awaySlug &&
+    asg.homeUrlSlug === MLB_ASG.homeSlug;
+  if (!orientationOk)
+    throw new Error(
+      `${TAG} orientation mismatch: AN away=${asg.awayUrlSlug} home=${asg.homeUrlSlug} (expected ${MLB_ASG.awaySlug}@${MLB_ASG.homeSlug})`
+    );
 
   const scrapedBook = bookFromAnGame(asg);
-  say(`AN scrape ok: source=${scrapedBook.source} | AL ML ${scrapedBook.awayML} / NL ML ${scrapedBook.homeML} | AL ${scrapedBook.awaySpread}(${scrapedBook.awaySpreadOdds}) / NL ${scrapedBook.homeSpread}(${scrapedBook.homeSpreadOdds}) | Tot ${scrapedBook.total} O${scrapedBook.overOdds}/U${scrapedBook.underOdds}`);
+  say(
+    `AN scrape ok: source=${scrapedBook.source} | AL ML ${scrapedBook.awayML} / NL ML ${scrapedBook.homeML} | AL ${scrapedBook.awaySpread}(${scrapedBook.awaySpreadOdds}) / NL ${scrapedBook.homeSpread}(${scrapedBook.homeSpreadOdds}) | Tot ${scrapedBook.total} O${scrapedBook.overOdds}/U${scrapedBook.underOdds}`
+  );
 
   // ── Dry run: compute against the scrape, write nothing. ──────────────────────
   if (opts.dryRun) {
@@ -158,9 +194,15 @@ export async function runMlbAllStarGameSync(opts: { dryRun: boolean }): Promise<
     const tail = buildTail(scrapedBook, model);
     say(`DRY RUN — nothing written.\n${tail}`);
     return {
-      dryRun: true, wrote: false, gameId: null, orientationOk,
-      bookSource: scrapedBook.source, book: scrapedBook, model,
-      audit: { pass: true, checks: [{ name: "dry-run (no write)", ok: true }] }, tail,
+      dryRun: true,
+      wrote: false,
+      gameId: null,
+      orientationOk,
+      bookSource: scrapedBook.source,
+      book: scrapedBook,
+      model,
+      audit: { pass: true, checks: [{ name: "dry-run (no write)", ok: true }] },
+      tail,
     };
   }
 
@@ -169,12 +211,17 @@ export async function runMlbAllStarGameSync(opts: { dryRun: boolean }): Promise<
 
   // 2. Ensure the games row exists (identity only; pitchers stay null).
   const findRow = () =>
-    db.select().from(games).where(and(
-      eq(games.gameDate, MLB_ASG.gameDate),
-      eq(games.sport, "MLB"),
-      eq(games.awayTeam, MLB_ASG.awayAbbr),
-      eq(games.homeTeam, MLB_ASG.homeAbbr),
-    ));
+    db
+      .select()
+      .from(games)
+      .where(
+        and(
+          eq(games.gameDate, MLB_ASG.gameDate),
+          eq(games.sport, "MLB"),
+          eq(games.awayTeam, MLB_ASG.awayAbbr),
+          eq(games.homeTeam, MLB_ASG.homeAbbr)
+        )
+      );
 
   let rows = await findRow();
   if (rows.length === 0) {
@@ -199,50 +246,70 @@ export async function runMlbAllStarGameSync(opts: { dryRun: boolean }): Promise<
 
   // 3. Refresh the BOOK via the production AN path (same code as every MLB game).
   const refresh = await refreshAnApiOdds(MLB_ASG.gameDate, ["mlb"], "manual");
-  say(`refreshAnApiOdds: updated=${refresh.updated} skipped=${refresh.skipped} frozen=${refresh.frozen} errors=${refresh.errors.length}`);
+  say(
+    `refreshAnApiOdds: updated=${refresh.updated} skipped=${refresh.skipped} frozen=${refresh.frozen} errors=${refresh.errors.length}`
+  );
 
   // 4. Read the freshly-written book + select the model rungs matching it.
-  const afterRefresh = await db.select().from(games).where(eq(games.id, gameId));
+  const afterRefresh = await db
+    .select()
+    .from(games)
+    .where(eq(games.id, gameId));
   const rowBook = bookFromRow(afterRefresh[0]);
   const model = computeAsgModel(rowBook);
-  say(`rung selection: run-line ${model.runLineRung} (book away spread ${rowBook.awaySpread}); total ${model.totalRung} (book total ${rowBook.total})`);
+  say(
+    `rung selection: run-line ${model.runLineRung} (book away spread ${rowBook.awaySpread}); total ${model.totalRung} (book total ${rowBook.total})`
+  );
 
   // 5. Write ONLY the model columns + freshness/publish flags.
   const now = Date.now();
-  await db.update(games).set({
-    modelAwayML: model.modelAwayML,
-    modelHomeML: model.modelHomeML,
-    modelAwayWinPct: model.modelAwayWinPct,
-    modelHomeWinPct: model.modelHomeWinPct,
-    awayModelSpread: model.awayModelSpread,
-    homeModelSpread: model.homeModelSpread,
-    modelAwaySpreadOdds: model.modelAwaySpreadOdds,
-    modelHomeSpreadOdds: model.modelHomeSpreadOdds,
-    modelAwayPLCoverPct: model.modelAwayPLCoverPct,
-    modelHomePLCoverPct: model.modelHomePLCoverPct,
-    modelTotal: model.modelTotal,
-    modelOverOdds: model.modelOverOdds,
-    modelUnderOdds: model.modelUnderOdds,
-    modelOverRate: model.modelOverRate,
-    modelUnderRate: model.modelUnderRate,
-    modelRunAt: now,
-    publishedToFeed: true,
-    publishedModel: true,
-  }).where(eq(games.id, gameId));
+  await db
+    .update(games)
+    .set({
+      modelAwayML: model.modelAwayML,
+      modelHomeML: model.modelHomeML,
+      modelAwayWinPct: model.modelAwayWinPct,
+      modelHomeWinPct: model.modelHomeWinPct,
+      awayModelSpread: model.awayModelSpread,
+      homeModelSpread: model.homeModelSpread,
+      modelAwaySpreadOdds: model.modelAwaySpreadOdds,
+      modelHomeSpreadOdds: model.modelHomeSpreadOdds,
+      modelAwayPLCoverPct: model.modelAwayPLCoverPct,
+      modelHomePLCoverPct: model.modelHomePLCoverPct,
+      modelTotal: model.modelTotal,
+      modelOverOdds: model.modelOverOdds,
+      modelUnderOdds: model.modelUnderOdds,
+      modelOverRate: model.modelOverRate,
+      modelUnderRate: model.modelUnderRate,
+      modelRunAt: now,
+      publishedToFeed: true,
+      publishedModel: true,
+    })
+    .where(eq(games.id, gameId));
   say(`model written id=${gameId} modelRunAt=${now}`);
 
   // 6. Audit the final state.
   const finalRows = await db.select().from(games).where(eq(games.id, gameId));
   const audit = auditRow(finalRows[0]);
   const tail = buildTail(bookFromRow(finalRows[0]), model);
-  say(`AUDIT ${audit.pass ? "PASS" : "FAIL"} — ${audit.checks.filter((c) => c.ok).length}/${audit.checks.length} checks ok`);
+  say(
+    `AUDIT ${audit.pass ? "PASS" : "FAIL"} — ${audit.checks.filter(c => c.ok).length}/${audit.checks.length} checks ok`
+  );
   if (!audit.pass) {
-    for (const c of audit.checks.filter((c) => !c.ok)) say(`  ✗ ${c.name}${c.detail ? ` (${c.detail})` : ""}`);
+    for (const c of audit.checks.filter(c => !c.ok))
+      say(`  ✗ ${c.name}${c.detail ? ` (${c.detail})` : ""}`);
   }
   say(`\n${tail}`);
 
   return {
-    dryRun: false, wrote: true, gameId, orientationOk,
-    bookSource: rowBook.source, book: rowBook, model, audit, tail,
+    dryRun: false,
+    wrote: true,
+    gameId,
+    orientationOk,
+    bookSource: rowBook.source,
+    book: rowBook,
+    model,
+    audit,
+    tail,
   };
 }

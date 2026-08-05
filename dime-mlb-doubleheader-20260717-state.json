@@ -17,7 +17,9 @@
   },
   "first_loss_boundary": "persistence: no runtime path inserted a post-seed MLB game into `games`; the 1:35 PM makeup event never materialized as a row (mlbScoreRefresh dropped it as NO_MATCH every cycle); secondary collapse hazards: matchup-keyed unique index with default gameNumber=1 upsert swallow, single-slot away@home matching maps",
   "root_cause": "event identity was matchup-derived (gameDate+teams+gameNumber with gameNumber defaulting to 1) and the pipeline had no provider->DB schedule reconciliation, so a second same-matchup event could neither be inserted nor addressed",
-  "fix_commits": ["pending final commit on claude/mlb-doubleheader-handling-khphfa"],
+  "fix_commits": [
+    "pending final commit on claude/mlb-doubleheader-handling-khphfa"
+  ],
   "validation": {
     "new_unit_tests": "47/47 pass (identity 30, matcher 7, normalize 6, client 4)",
     "generated_invariant": "250 seeded slates + 100 group-uniqueness seeds pass",

@@ -217,8 +217,7 @@ export type DimeChatTraceRoutingMetadata = z.infer<
   typeof traceRoutingMetadataSchema
 >;
 
-export interface DimeChatTraceContextInput
-  extends DimeChatTraceRoutingMetadata {
+export interface DimeChatTraceContextInput extends DimeChatTraceRoutingMetadata {
   freshness: "live" | "delayed" | "none";
   rowCount: number;
   eventIds?: number[];
@@ -227,8 +226,7 @@ export interface DimeChatTraceContextInput
   observability: DimeTraceContextObservability;
 }
 
-export interface FinalizeDimeChatTraceInput
-  extends DimeChatTraceRoutingMetadata {
+export interface FinalizeDimeChatTraceInput extends DimeChatTraceRoutingMetadata {
   rawOutput: string;
   servedOutput: string;
   status: "completed" | "blocked";

@@ -129,7 +129,8 @@ async function stubApi(page: Page) {
       url.pathname.replace(/^.*\/api\/trpc\//, "")
     ).split(",");
     const body = ops.map(op => {
-      if (op === "appUsers.me") return { result: { data: { json: STUB_USER } } };
+      if (op === "appUsers.me")
+        return { result: { data: { json: STUB_USER } } };
       // Answered regardless of the requested gameDate input (stubbed at the
       // procedure level, not the date level) — the harness must stay
       // date-independent even if 11:00 UTC rollover logic asks for a
@@ -139,7 +140,11 @@ async function stubApi(page: Page) {
         return {
           result: {
             data: {
-              json: { effectiveDate: TODAY_ISO, utcHour: 18, isBeforeCutoff: false },
+              json: {
+                effectiveDate: TODAY_ISO,
+                utcHour: 18,
+                isBeforeCutoff: false,
+              },
             },
           },
         };
@@ -218,9 +223,11 @@ for (const width of WIDTHS) {
             const gapLeft = d.left - r.right; // label left of divider
             const gapRight = r.left - d.right; // label right of divider
             const crosses = r.left < d.right && r.right > d.left;
-            if (crosses)
-              bad.push(`divider-cross: "${el.textContent}"`);
-            else if (Math.max(gapLeft, gapRight) < 8 && Math.min(gapLeft, gapRight) > -9999)
+            if (crosses) bad.push(`divider-cross: "${el.textContent}"`);
+            else if (
+              Math.max(gapLeft, gapRight) < 8 &&
+              Math.min(gapLeft, gapRight) > -9999
+            )
               bad.push(
                 `divider-clearance<8px: "${el.textContent}" gap=${Math.max(gapLeft, gapRight).toFixed(1)}`
               );

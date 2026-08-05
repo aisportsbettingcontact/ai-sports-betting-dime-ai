@@ -31,7 +31,10 @@
  */
 
 import { getDb } from "./db";
-import { mlbScheduleHistory, type MlbScheduleHistoryRow } from "../drizzle/schema";
+import {
+  mlbScheduleHistory,
+  type MlbScheduleHistoryRow,
+} from "../drizzle/schema";
 import { eq, and, or, desc, gte } from "drizzle-orm";
 import { refreshMlbScheduleForDate } from "./mlbScheduleHistoryService";
 import { notifyOwner } from "./_core/notification";
@@ -112,7 +115,10 @@ function boolVal(v: unknown): boolean | null {
   return null;
 }
 
-function recomputeAwayWon(awayScore: number | null, homeScore: number | null): boolean | null {
+function recomputeAwayWon(
+  awayScore: number | null,
+  homeScore: number | null
+): boolean | null {
   if (awayScore == null || homeScore == null) return null;
   if (awayScore === homeScore) return null; // tie — impossible in MLB
   return awayScore > homeScore;
@@ -123,7 +129,8 @@ function recomputeAwayRunLineCovered(
   homeScore: number | null,
   dkAwayRunLine: string | null
 ): boolean | null {
-  if (awayScore == null || homeScore == null || dkAwayRunLine == null) return null;
+  if (awayScore == null || homeScore == null || dkAwayRunLine == null)
+    return null;
   const spread = parseFloat(dkAwayRunLine);
   if (isNaN(spread)) return null;
   const margin = awayScore + spread - homeScore;
@@ -193,7 +200,9 @@ async function validateAllTeams(): Promise<TeamValidationResult[]> {
     }
 
     // L1: Null-odds check
-    const nullOdds = rows.filter((g: MlbScheduleHistoryRow) => g.dkAwayML == null);
+    const nullOdds = rows.filter(
+      (g: MlbScheduleHistoryRow) => g.dkAwayML == null
+    );
     if (nullOdds.length > 0) {
       const msg = `${nullOdds.length} games have NULL dkAwayML`;
       issues.push(`[L1] ${msg}`);
@@ -218,12 +227,18 @@ async function validateAllTeams(): Promise<TeamValidationResult[]> {
         g.homeScore,
         g.dkAwayRunLine
       );
-      const expectedOu = recomputeTotalResult(g.awayScore, g.homeScore, g.dkTotal ? String(g.dkTotal) : null);
+      const expectedOu = recomputeTotalResult(
+        g.awayScore,
+        g.homeScore,
+        g.dkTotal ? String(g.dkTotal) : null
+      );
 
       if (expectedAwayWon !== null && storedAwayWon !== expectedAwayWon) {
         const msg = `${gameLabel}: awayWon stored=${storedAwayWon} expected=${expectedAwayWon} (score=${g.awayScore}-${g.homeScore})`;
         issues.push(`[L2] ${msg}`);
-        console.error(`${TAG}[VALIDATE][${abbr}][FAIL] awayWon mismatch: ${msg}`);
+        console.error(
+          `${TAG}[VALIDATE][${abbr}][FAIL] awayWon mismatch: ${msg}`
+        );
       }
 
       if (g.dkAwayRunLine != null && expectedAwayCov !== storedAwayCov) {
@@ -243,13 +258,19 @@ async function validateAllTeams(): Promise<TeamValidationResult[]> {
       if (expectedAwayCov !== null && storedHomeCov !== !storedAwayCov) {
         const msg = `${gameLabel}: homeRunLineCovered=${storedHomeCov} should be inverse of awayRunLineCovered=${storedAwayCov}`;
         issues.push(`[L2] ${msg}`);
-        console.error(`${TAG}[VALIDATE][${abbr}][FAIL] RL inverse mismatch: ${msg}`);
+        console.error(
+          `${TAG}[VALIDATE][${abbr}][FAIL] RL inverse mismatch: ${msg}`
+        );
       }
     }
 
     // L3: Home/Away designation consistency
-    const homeCount = rows.filter((g: MlbScheduleHistoryRow) => g.homeSlug === slug).length;
-    const awayCount = rows.filter((g: MlbScheduleHistoryRow) => g.awaySlug === slug).length;
+    const homeCount = rows.filter(
+      (g: MlbScheduleHistoryRow) => g.homeSlug === slug
+    ).length;
+    const awayCount = rows.filter(
+      (g: MlbScheduleHistoryRow) => g.awaySlug === slug
+    ).length;
     if (homeCount + awayCount !== rows.length) {
       const msg = `home(${homeCount}) + away(${awayCount}) = ${homeCount + awayCount} ≠ total(${rows.length})`;
       issues.push(`[L3] ${msg}`);
@@ -277,8 +298,8 @@ async function validateAllTeams(): Promise<TeamValidationResult[]> {
     if (pass) {
       console.log(
         `${TAG}[VALIDATE][${abbr}][VERIFY] PASS — games=${rows.length}` +
-        ` home=${homeCount} away=${awayCount}` +
-        ` ML=${mlWins}-${mlLosses}`
+          ` home=${homeCount} away=${awayCount}` +
+          ` ML=${mlWins}-${mlLosses}`
       );
     } else {
       console.error(
@@ -311,14 +332,20 @@ export async function runMlbNightlyTrendsRefresh(
   const today = todayEstAnDate();
   const target = targetDateStr ?? yesterday;
 
-  console.log(`${TAG}[STEP] ════════════════════════════════════════════════════`);
+  console.log(
+    `${TAG}[STEP] ════════════════════════════════════════════════════`
+  );
   console.log(`${TAG}[STEP] MLB Nightly TRENDS Refresh — runId=${runId}`);
-  console.log(`${TAG}[INPUT] target=${target} yesterday=${yesterday} today=${today}`);
+  console.log(
+    `${TAG}[INPUT] target=${target} yesterday=${yesterday} today=${today}`
+  );
   console.log(
     `${TAG}[INPUT] EST time: ${nowEst().toISOString()}` +
-    ` | hour=${currentHourEst()} min=${currentMinuteEst()}`
+      ` | hour=${currentHourEst()} min=${currentMinuteEst()}`
   );
-  console.log(`${TAG}[STEP] ════════════════════════════════════════════════════`);
+  console.log(
+    `${TAG}[STEP] ════════════════════════════════════════════════════`
+  );
 
   // ── Step 1: Ingest yesterday + today ────────────────────────────────────────
   console.log(`${TAG}[STEP] Phase 1 — Ingesting games from AN API`);
@@ -329,7 +356,12 @@ export async function runMlbNightlyTrendsRefresh(
   // Always also ingest yesterday if target is today (belt-and-suspenders)
   if (target === today && yesterday !== today) datesToIngest.push(yesterday);
 
-  const ingestResults: Array<{ date: string; fetched: number; upserted: number; errors: string[] }> = [];
+  const ingestResults: Array<{
+    date: string;
+    fetched: number;
+    upserted: number;
+    errors: string[];
+  }> = [];
 
   for (const dateStr of datesToIngest) {
     console.log(`${TAG}[STEP] Ingesting date=${dateStr}`);
@@ -338,9 +370,9 @@ export async function runMlbNightlyTrendsRefresh(
       ingestResults.push(result);
       console.log(
         `${TAG}[OUTPUT] date=${dateStr}` +
-        ` fetched=${result.fetched}` +
-        ` upserted=${result.upserted}` +
-        ` errors=${result.errors.length}`
+          ` fetched=${result.fetched}` +
+          ` upserted=${result.upserted}` +
+          ` errors=${result.errors.length}`
       );
       if (result.errors.length > 0) {
         console.warn(
@@ -350,41 +382,62 @@ export async function runMlbNightlyTrendsRefresh(
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.error(`${TAG}[ERROR] Ingestion failed for date=${dateStr}: ${msg}`);
-      ingestResults.push({ date: dateStr, fetched: 0, upserted: 0, errors: [msg] });
+      console.error(
+        `${TAG}[ERROR] Ingestion failed for date=${dateStr}: ${msg}`
+      );
+      ingestResults.push({
+        date: dateStr,
+        fetched: 0,
+        upserted: 0,
+        errors: [msg],
+      });
     }
     // Rate-limit: 400ms between API calls
-    await new Promise((r) => setTimeout(r, 400));
+    await new Promise(r => setTimeout(r, 400));
   }
 
   const totalFetched = ingestResults.reduce((s, r) => s + r.fetched, 0);
   const totalUpserted = ingestResults.reduce((s, r) => s + r.upserted, 0);
-  const totalIngestErrors = ingestResults.reduce((s, r) => s + r.errors.length, 0);
+  const totalIngestErrors = ingestResults.reduce(
+    (s, r) => s + r.errors.length,
+    0
+  );
 
   console.log(
     `${TAG}[OUTPUT] Phase 1 complete:` +
-    ` dates=${datesToIngest.length}` +
-    ` totalFetched=${totalFetched}` +
-    ` totalUpserted=${totalUpserted}` +
-    ` totalErrors=${totalIngestErrors}`
+      ` dates=${datesToIngest.length}` +
+      ` totalFetched=${totalFetched}` +
+      ` totalUpserted=${totalUpserted}` +
+      ` totalErrors=${totalIngestErrors}`
   );
 
   if (totalIngestErrors === 0) {
-    console.log(`${TAG}[VERIFY] PASS — Phase 1 ingestion completed with 0 errors`);
+    console.log(
+      `${TAG}[VERIFY] PASS — Phase 1 ingestion completed with 0 errors`
+    );
   } else {
-    console.warn(`${TAG}[VERIFY] WARN — Phase 1 had ${totalIngestErrors} ingestion errors`);
+    console.warn(
+      `${TAG}[VERIFY] WARN — Phase 1 had ${totalIngestErrors} ingestion errors`
+    );
   }
 
   // ── Step 2: 30-team cross-validation ────────────────────────────────────────
-  console.log(`${TAG}[STEP] Phase 2 — 30-team cross-validation (all 3 markets × 6 situations)`);
+  console.log(
+    `${TAG}[STEP] Phase 2 — 30-team cross-validation (all 3 markets × 6 situations)`
+  );
 
   const validationResults = await validateAllTeams();
 
-  const passCount = validationResults.filter((r) => r.pass).length;
-  const failCount = validationResults.filter((r) => !r.pass && r.games > 0).length;
-  const noDataCount = validationResults.filter((r) => r.games === 0).length;
+  const passCount = validationResults.filter(r => r.pass).length;
+  const failCount = validationResults.filter(
+    r => !r.pass && r.games > 0
+  ).length;
+  const noDataCount = validationResults.filter(r => r.games === 0).length;
   const totalGames = validationResults.reduce((s, r) => s + r.games, 0);
-  const totalIssues = validationResults.reduce((s, r) => s + r.issues.length, 0);
+  const totalIssues = validationResults.reduce(
+    (s, r) => s + r.issues.length,
+    0
+  );
 
   console.log(`${TAG}[OUTPUT] Phase 2 complete:`);
   console.log(`${TAG}[OUTPUT]   Teams audited: ${validationResults.length}/30`);
@@ -395,7 +448,7 @@ export async function runMlbNightlyTrendsRefresh(
   console.log(`${TAG}[OUTPUT]   Total issues:  ${totalIssues}`);
 
   // Log failed teams
-  const failedTeams = validationResults.filter((r) => !r.pass && r.games > 0);
+  const failedTeams = validationResults.filter(r => !r.pass && r.games > 0);
   for (const t of failedTeams) {
     console.error(`${TAG}[FAIL] ${t.abbr}: ${t.issues.length} issues`);
     for (const iss of t.issues) {
@@ -403,7 +456,7 @@ export async function runMlbNightlyTrendsRefresh(
     }
   }
 
-  const noDataTeams = validationResults.filter((r) => r.games === 0);
+  const noDataTeams = validationResults.filter(r => r.games === 0);
   for (const t of noDataTeams) {
     console.error(`${TAG}[FAIL] ${t.abbr}: ZERO games in DB`);
   }
@@ -415,16 +468,19 @@ export async function runMlbNightlyTrendsRefresh(
   } else {
     console.error(
       `${TAG}[VERIFY] FAIL — ${totalIssues} issues across ${failCount} teams` +
-      (noDataCount > 0 ? ` | ${noDataCount} teams missing` : "")
+        (noDataCount > 0 ? ` | ${noDataCount} teams missing` : "")
     );
   }
 
   // ── Step 3: Owner notification ───────────────────────────────────────────────
   console.log(`${TAG}[STEP] Phase 3 — Sending owner notification`);
 
-  const overallStatus = totalIssues === 0 && noDataCount === 0 ? "✅ PASS" : "❌ FAIL";
-  const failedList = failedTeams.map((t) => `${t.abbr}(${t.issues.length})`).join(", ");
-  const noDataList = noDataTeams.map((t) => t.abbr).join(", ");
+  const overallStatus =
+    totalIssues === 0 && noDataCount === 0 ? "✅ PASS" : "❌ FAIL";
+  const failedList = failedTeams
+    .map(t => `${t.abbr}(${t.issues.length})`)
+    .join(", ");
+  const noDataList = noDataTeams.map(t => t.abbr).join(", ");
 
   const notifTitle = `MLB TRENDS Nightly Refresh — ${overallStatus}`;
   const notifContent = [
@@ -433,7 +489,8 @@ export async function runMlbNightlyTrendsRefresh(
     ``,
     `── Ingestion ──`,
     ...ingestResults.map(
-      (r) => `  ${r.date}: fetched=${r.fetched} upserted=${r.upserted} errors=${r.errors.length}`
+      r =>
+        `  ${r.date}: fetched=${r.fetched} upserted=${r.upserted} errors=${r.errors.length}`
     ),
     ``,
     `── Validation ──`,
@@ -445,24 +502,33 @@ export async function runMlbNightlyTrendsRefresh(
   ].join("\n");
 
   try {
-    const sent = await notifyOwner({ title: notifTitle, content: notifContent });
+    const sent = await notifyOwner({
+      title: notifTitle,
+      content: notifContent,
+    });
     if (sent) {
       console.log(`${TAG}[OUTPUT] Owner notification sent successfully`);
     } else {
-      console.warn(`${TAG}[WARN] Owner notification returned false (service unavailable)`);
+      console.warn(
+        `${TAG}[WARN] Owner notification returned false (service unavailable)`
+      );
     }
   } catch (err) {
     // Non-fatal — notification failure must never block the refresh
     console.warn(`${TAG}[WARN] Owner notification threw (non-fatal):`, err);
   }
 
-  console.log(`${TAG}[STEP] ════════════════════════════════════════════════════`);
+  console.log(
+    `${TAG}[STEP] ════════════════════════════════════════════════════`
+  );
   console.log(
     `${TAG}[STEP] Nightly refresh complete — runId=${runId}` +
-    ` status=${overallStatus}` +
-    ` duration=${((Date.now() - runId) / 1000).toFixed(1)}s`
+      ` status=${overallStatus}` +
+      ` duration=${((Date.now() - runId) / 1000).toFixed(1)}s`
   );
-  console.log(`${TAG}[STEP] ════════════════════════════════════════════════════`);
+  console.log(
+    `${TAG}[STEP] ════════════════════════════════════════════════════`
+  );
 }
 
 // ─── Scheduler ────────────────────────────────────────────────────────────────
@@ -478,12 +544,12 @@ export async function runMlbNightlyTrendsRefresh(
  * picks up), runs the refresh immediately to catch any missed data.
  */
 export function startMlbNightlyTrendsScheduler(): void {
-  const TARGET_HOUR = 2;    // 2 AM EST
+  const TARGET_HOUR = 2; // 2 AM EST
   const TARGET_MINUTE = 59; // :59 — 2:59 AM EST = 11:59 PM PST
 
   console.log(
     `${TAG}[STEP] Initializing nightly TRENDS scheduler` +
-    ` — fires at ${TARGET_HOUR}:${String(TARGET_MINUTE).padStart(2, "0")} EST (11:59 PM PST) nightly`
+      ` — fires at ${TARGET_HOUR}:${String(TARGET_MINUTE).padStart(2, "0")} EST (11:59 PM PST) nightly`
   );
 
   // ── Startup check: did we miss last night's run? ───────────────────────────
@@ -493,7 +559,7 @@ export function startMlbNightlyTrendsScheduler(): void {
   if (hourEst >= 3 && hourEst < 6) {
     console.log(
       `${TAG}[STEP] Server started at EST hour=${hourEst} — in post-nightly window` +
-      ` — running startup catch-up refresh immediately`
+        ` — running startup catch-up refresh immediately`
     );
     setImmediate(async () => {
       console.log(`${TAG}[STEP] Startup catch-up refresh triggered`);
@@ -502,7 +568,7 @@ export function startMlbNightlyTrendsScheduler(): void {
   } else {
     console.log(
       `${TAG}[STEP] Server started at EST hour=${hourEst}` +
-      ` — no startup catch-up needed (outside 3–6 AM window)`
+        ` — no startup catch-up needed (outside 3–6 AM window)`
     );
   }
 
@@ -513,7 +579,7 @@ export function startMlbNightlyTrendsScheduler(): void {
 
     console.log(
       `${TAG}[STEP] Next nightly refresh scheduled at ${nextRun.toISOString()}` +
-      ` (in ${Math.round(msToNext / 1000 / 60)} min)`
+        ` (in ${Math.round(msToNext / 1000 / 60)} min)`
     );
 
     setTimeout(async () => {

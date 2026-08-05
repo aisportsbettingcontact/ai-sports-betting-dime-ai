@@ -10,12 +10,16 @@ import { describe, it, expect } from "vitest";
 import { INTERVAL_OPTIONS } from "./IntervalPicker";
 
 function optionFor(label: string) {
-  return INTERVAL_OPTIONS.find((o) => o.label === label);
+  return INTERVAL_OPTIONS.find(o => o.label === label);
 }
 
 describe("INTERVAL_OPTIONS", () => {
   it("maps Daily → { day, 1 }", () => {
-    expect(optionFor("Daily")).toEqual({ label: "Daily", interval: "day", intervalCount: 1 });
+    expect(optionFor("Daily")).toEqual({
+      label: "Daily",
+      interval: "day",
+      intervalCount: 1,
+    });
   });
 
   it("maps 'Every 2 weeks' → { day, 14 } (weeks are encoded as 14 days for Stripe)", () => {
@@ -27,7 +31,11 @@ describe("INTERVAL_OPTIONS", () => {
   });
 
   it("maps Monthly → { month, 1 }", () => {
-    expect(optionFor("Monthly")).toEqual({ label: "Monthly", interval: "month", intervalCount: 1 });
+    expect(optionFor("Monthly")).toEqual({
+      label: "Monthly",
+      interval: "month",
+      intervalCount: 1,
+    });
   });
 
   it("maps Quarterly → { month, 3 }", () => {
@@ -39,14 +47,22 @@ describe("INTERVAL_OPTIONS", () => {
   });
 
   it("maps Annual → { year, 1 }", () => {
-    expect(optionFor("Annual")).toEqual({ label: "Annual", interval: "year", intervalCount: 1 });
+    expect(optionFor("Annual")).toEqual({
+      label: "Annual",
+      interval: "year",
+      intervalCount: 1,
+    });
   });
 
   it("maps Lifetime → { lifetime, 1 } (one-time, no cadence)", () => {
-    expect(optionFor("Lifetime")).toEqual({ label: "Lifetime", interval: "lifetime", intervalCount: 1 });
+    expect(optionFor("Lifetime")).toEqual({
+      label: "Lifetime",
+      interval: "lifetime",
+      intervalCount: 1,
+    });
   });
 
   it("includes 'Monthly' as the default cadence", () => {
-    expect(INTERVAL_OPTIONS.some((o) => o.label === "Monthly")).toBe(true);
+    expect(INTERVAL_OPTIONS.some(o => o.label === "Monthly")).toBe(true);
   });
 });

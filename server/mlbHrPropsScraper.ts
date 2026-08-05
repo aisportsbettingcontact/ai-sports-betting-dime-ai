@@ -70,13 +70,15 @@ interface ScrapeResult {
 
 // ── DB helpers ────────────────────────────────────────────────────────────────
 
-async function getGamesForDate(dateStr: string): Promise<Array<{
-  id: number;
-  awayTeam: string;
-  homeTeam: string;
-  gameDate: string;
-  gameNumber: number;
-}>> {
+async function getGamesForDate(dateStr: string): Promise<
+  Array<{
+    id: number;
+    awayTeam: string;
+    homeTeam: string;
+    gameDate: string;
+    gameNumber: number;
+  }>
+> {
   log(`[STEP 1] Querying DB for games on ${dateStr}`);
   const db = await getDb();
   const rows = await db
@@ -88,17 +90,14 @@ async function getGamesForDate(dateStr: string): Promise<Array<{
       gameNumber: games.gameNumber,
     })
     .from(games)
-    .where(
-      and(
-        eq(games.gameDate, dateStr),
-        eq(games.sport, "MLB")
-      )
-    );
+    .where(and(eq(games.gameDate, dateStr), eq(games.sport, "MLB")));
   log(`[STATE] Found ${rows.length} MLB games for ${dateStr}`);
   return rows as any[];
 }
 
-async function getLineupsForGames(gameIds: number[]): Promise<Map<number, any>> {
+async function getLineupsForGames(
+  gameIds: number[]
+): Promise<Map<number, any>> {
   log(`[STEP 2] Fetching Rotowire lineups for ${gameIds.length} games`);
   if (gameIds.length === 0) return new Map();
 
@@ -109,13 +108,20 @@ async function getLineupsForGames(gameIds: number[]): Promise<Map<number, any>> 
     .where(
       gameIds.length === 1
         ? eq(mlbLineups.gameId, gameIds[0])
-        : sql`${mlbLineups.gameId} IN (${sql.join(gameIds.map((id) => sql`${id}`), sql`, `)})`
+        : sql`${mlbLineups.gameId} IN (${sql.join(
+            gameIds.map(id => sql`${id}`),
+            sql`, `
+          )})`
     );
 
   const lineupMap = new Map<number, any>();
   for (const row of rows) {
-    const awayLineup = row.awayLineup ? JSON.parse(row.awayLineup as string) : [];
-    const homeLineup = row.homeLineup ? JSON.parse(row.homeLineup as string) : [];
+    const awayLineup = row.awayLineup
+      ? JSON.parse(row.awayLineup as string)
+      : [];
+    const homeLineup = row.homeLineup
+      ? JSON.parse(row.homeLineup as string)
+      : [];
     lineupMap.set(row.gameId, {
       awayLineup,
       homeLineup,
@@ -143,7 +149,9 @@ async function runHrPropsPython(
   });
 
   log(`[STEP 3] Spawning ActionNetworkHRPropsAPI.py`);
-  log(`[STATE] dbGameMap entries=${Object.keys(dbGameMap).length} | lineupMap entries=${Object.keys(lineupMap).length}`);
+  log(
+    `[STATE] dbGameMap entries=${Object.keys(dbGameMap).length} | lineupMap entries=${Object.keys(lineupMap).length}`
+  );
 
   return new Promise((resolve, reject) => {
     const proc = spawn("python3.11", [scriptPath], {
@@ -169,17 +177,19 @@ async function runHrPropsPython(
       }
     });
 
-    proc.on("close", (code) => {
+    proc.on("close", code => {
       if (code !== 0) {
         logErr(`Python process exited with code ${code}`);
         logErr(`STDERR tail: ${stderr.slice(-500)}`);
-        reject(new Error(`ActionNetworkHRPropsAPI.py exited with code ${code}`));
+        reject(
+          new Error(`ActionNetworkHRPropsAPI.py exited with code ${code}`)
+        );
         return;
       }
 
       // Extract the JSON array from stdout (last non-empty line)
       const lines = stdout.trim().split("\n").filter(Boolean);
-      const jsonLine = lines.findLast((l) => l.startsWith("["));
+      const jsonLine = lines.findLast(l => l.startsWith("["));
       if (!jsonLine) {
         logErr("No JSON array found in Python stdout");
         logErr(`STDOUT tail: ${stdout.slice(-500)}`);
@@ -198,7 +208,7 @@ async function runHrPropsPython(
       }
     });
 
-    proc.on("error", (err) => {
+    proc.on("error", err => {
       logErr(`Failed to spawn Python process: ${err.message}`);
       reject(err);
     });
@@ -225,11 +235,11 @@ async function upsertHrProps(records: HrPropRecord[]): Promise<{
     const batch = records.slice(i, i + BATCH_SIZE);
     try {
       for (const rec of batch) {
-      const db = await getDb();
-      // Determine side: 'away' or 'home' based on playerTeam vs matchup
-      const side = rec.playerTeam === rec.awayTeam ? 'away' : 'home';
-      await db
-        .insert(mlbHrProps)
+        const db = await getDb();
+        // Determine side: 'away' or 'home' based on playerTeam vs matchup
+        const side = rec.playerTeam === rec.awayTeam ? "away" : "home";
+        await db
+          .insert(mlbHrProps)
           .values({
             gameId: rec.gameId,
             side,
@@ -237,15 +247,35 @@ async function upsertHrProps(records: HrPropRecord[]): Promise<{
             anPlayerId: rec.anPlayerId,
             teamAbbrev: rec.playerTeam,
             bookLine: rec.overLine.toString(),
-            consensusOverOdds: rec.overOdds != null ? (rec.overOdds >= 0 ? `+${rec.overOdds}` : `${rec.overOdds}`) : null,
-            consensusUnderOdds: rec.underOdds != null ? (rec.underOdds >= 0 ? `+${rec.underOdds}` : `${rec.underOdds}`) : null,
+            consensusOverOdds:
+              rec.overOdds != null
+                ? rec.overOdds >= 0
+                  ? `+${rec.overOdds}`
+                  : `${rec.overOdds}`
+                : null,
+            consensusUnderOdds:
+              rec.underOdds != null
+                ? rec.underOdds >= 0
+                  ? `+${rec.underOdds}`
+                  : `${rec.underOdds}`
+                : null,
             anNoVigOverPct: rec.impliedOverProb?.toString() ?? null,
           } as any)
           .onDuplicateKeyUpdate({
             set: {
               teamAbbrev: rec.playerTeam,
-              consensusOverOdds: rec.overOdds != null ? (rec.overOdds >= 0 ? `+${rec.overOdds}` : `${rec.overOdds}`) : null,
-              consensusUnderOdds: rec.underOdds != null ? (rec.underOdds >= 0 ? `+${rec.underOdds}` : `${rec.underOdds}`) : null,
+              consensusOverOdds:
+                rec.overOdds != null
+                  ? rec.overOdds >= 0
+                    ? `+${rec.overOdds}`
+                    : `${rec.overOdds}`
+                  : null,
+              consensusUnderOdds:
+                rec.underOdds != null
+                  ? rec.underOdds >= 0
+                    ? `+${rec.underOdds}`
+                    : `${rec.underOdds}`
+                  : null,
               anNoVigOverPct: rec.impliedOverProb?.toString() ?? null,
             } as any,
           });
@@ -257,13 +287,17 @@ async function upsertHrProps(records: HrPropRecord[]): Promise<{
     }
   }
 
-  log(`[OUTPUT] DB upsert complete: inserted/updated=${inserted} errors=${errors}`);
+  log(
+    `[OUTPUT] DB upsert complete: inserted/updated=${inserted} errors=${errors}`
+  );
   return { inserted, updated, errors };
 }
 
 // ── Main export ───────────────────────────────────────────────────────────────
 
-export async function scrapeHrPropsForDate(dateStr: string): Promise<ScrapeResult> {
+export async function scrapeHrPropsForDate(
+  dateStr: string
+): Promise<ScrapeResult> {
   log(`=== MLB HR Props Scrape: ${dateStr} ===`);
 
   // Step 1: Get all games for date
@@ -290,7 +324,7 @@ export async function scrapeHrPropsForDate(dateStr: string): Promise<ScrapeResul
   }
 
   // Step 3: Get lineups for all games
-  const gameIds = gameRows.map((g) => g.id);
+  const gameIds = gameRows.map(g => g.id);
   const lineupMap = await getLineupsForGames(gameIds);
 
   // Convert Map to plain object for JSON serialization
@@ -318,7 +352,9 @@ export async function scrapeHrPropsForDate(dateStr: string): Promise<ScrapeResul
   }
 
   if (records.length === 0) {
-    log(`[VERIFY] No HR prop records returned — AN may not have posted props yet`);
+    log(
+      `[VERIFY] No HR prop records returned — AN may not have posted props yet`
+    );
     return {
       date: dateStr,
       inserted: 0,
@@ -334,7 +370,10 @@ export async function scrapeHrPropsForDate(dateStr: string): Promise<ScrapeResul
   const { inserted, updated, errors } = await upsertHrProps(records);
 
   // Build per-game breakdown for audit
-  const gameBreakdown = new Map<number, { matchup: string; players: number; lineupConfirmed: number }>();
+  const gameBreakdown = new Map<
+    number,
+    { matchup: string; players: number; lineupConfirmed: number }
+  >();
   for (const rec of records) {
     const existing = gameBreakdown.get(rec.gameId) ?? {
       matchup: `${rec.awayTeam}@${rec.homeTeam}`,
@@ -346,7 +385,10 @@ export async function scrapeHrPropsForDate(dateStr: string): Promise<ScrapeResul
     gameBreakdown.set(rec.gameId, existing);
   }
 
-  const entries: [number, { matchup: string; players: number; lineupConfirmed: number }][] = [];
+  const entries: [
+    number,
+    { matchup: string; players: number; lineupConfirmed: number },
+  ][] = [];
   gameBreakdown.forEach((data, gameId) => entries.push([gameId, data]));
   const breakdown = entries.map(([gameId, data]) => ({
     gameId,
@@ -360,7 +402,9 @@ export async function scrapeHrPropsForDate(dateStr: string): Promise<ScrapeResul
   log(`[VERIFY] DB upsert: inserted/updated=${inserted} errors=${errors}`);
   log(`[VERIFY] Games breakdown:`);
   for (const b of breakdown) {
-    log(`[VERIFY]   ${b.matchup} (id=${b.gameId}): ${b.players} players | ${b.lineupConfirmed} lineup-confirmed`);
+    log(
+      `[VERIFY]   ${b.matchup} (id=${b.gameId}): ${b.players} players | ${b.lineupConfirmed} lineup-confirmed`
+    );
   }
 
   return {

@@ -163,7 +163,8 @@ const CHECKS = [];
 
 function record(name, status, detail, coverage) {
   CHECKS.push({ name, status, detail, coverage: coverage ?? "" });
-  const icon = status === "PASS" ? "PASS" : status === "PARTIAL" ? "PART" : "FAIL";
+  const icon =
+    status === "PASS" ? "PASS" : status === "PARTIAL" ? "PART" : "FAIL";
   log(`  [${icon}] ${name} — ${detail}`);
 }
 
@@ -258,7 +259,11 @@ async function killTracked(child) {
   signalTracked(child, "SIGKILL");
 }
 
-async function waitFor(description, predicate, { timeoutMs = 60_000, intervalMs = 500 } = {}) {
+async function waitFor(
+  description,
+  predicate,
+  { timeoutMs = 60_000, intervalMs = 500 } = {}
+) {
   const deadline = Date.now() + timeoutMs;
   let lastError = "";
   while (Date.now() < deadline) {
@@ -295,9 +300,12 @@ let STRIPE_KEY = "";
  */
 async function resolveStripeTestKey() {
   const fromEnv = (process.env.STRIPE_TEST_SECRET_KEY ?? "").trim();
-  if (fromEnv) return { key: fromEnv, source: "STRIPE_TEST_SECRET_KEY env var" };
+  if (fromEnv)
+    return { key: fromEnv, source: "STRIPE_TEST_SECRET_KEY env var" };
 
-  const listed = await run("stripe", ["config", "--list"], { timeoutMs: 20_000 });
+  const listed = await run("stripe", ["config", "--list"], {
+    timeoutMs: 20_000,
+  });
   const fromConfig = stripAnsi(listed.stdout).match(
     /test_mode_api_key\s*=\s*['"]?((?:sk|rk)_[A-Za-z0-9_]+)['"]?/
   );
@@ -355,9 +363,14 @@ function consumeListenOutput(chunk, state) {
       remember(state.whsec);
     }
     if (/\bReady!/i.test(line)) state.ready = true;
-    const delivered = line.match(/-->\s+([a-zA-Z0-9_.]+)\s+\[(evt_[A-Za-z0-9]+)\]/);
-    if (delivered) DELIVERIES.push({ type: delivered[1], eventId: delivered[2] });
-    const answered = line.match(/\[(\d{3})\]\s+POST\s+\S+\s+\[(evt_[A-Za-z0-9]+)\]/);
+    const delivered = line.match(
+      /-->\s+([a-zA-Z0-9_.]+)\s+\[(evt_[A-Za-z0-9]+)\]/
+    );
+    if (delivered)
+      DELIVERIES.push({ type: delivered[1], eventId: delivered[2] });
+    const answered = line.match(
+      /\[(\d{3})\]\s+POST\s+\S+\s+\[(evt_[A-Za-z0-9]+)\]/
+    );
     if (answered) {
       const list = RESPONSES.get(answered[2]) ?? [];
       list.push(Number(answered[1]));
@@ -450,7 +463,10 @@ async function duplicateLedgerEventIds() {
   const rows = await query(
     "SELECT stripeEventId, COUNT(*) c FROM stripe_webhook_events GROUP BY stripeEventId HAVING COUNT(*) > 1"
   );
-  return rows.map(row => ({ stripeEventId: row.stripeEventId, c: Number(row.c) }));
+  return rows.map(row => ({
+    stripeEventId: row.stripeEventId,
+    c: Number(row.c),
+  }));
 }
 
 async function entitlementRowsFor(eventId) {
@@ -479,9 +495,13 @@ async function seededUser() {
 async function preflight() {
   log("[1/6] Preflight");
 
-  const docker = await run("docker", ["version", "--format", "{{.Server.Version}}"], {
-    timeoutMs: 30_000,
-  });
+  const docker = await run(
+    "docker",
+    ["version", "--format", "{{.Server.Version}}"],
+    {
+      timeoutMs: 30_000,
+    }
+  );
   if (docker.code !== 0) {
     throw new Error(
       "docker is unavailable (`docker version` failed). This harness creates its own throwaway " +
@@ -544,11 +564,16 @@ async function startDatabase() {
   const created = await run(
     "docker",
     [
-      "run", "--detach",
-      "--name", CONTAINER,
-      "--publish", `127.0.0.1:${ARGS.mysqlPort}:3306`,
-      "--env", "MYSQL_ALLOW_EMPTY_PASSWORD=1",
-      "--env", `MYSQL_DATABASE=${DB_NAME}`,
+      "run",
+      "--detach",
+      "--name",
+      CONTAINER,
+      "--publish",
+      `127.0.0.1:${ARGS.mysqlPort}:3306`,
+      "--env",
+      "MYSQL_ALLOW_EMPTY_PASSWORD=1",
+      "--env",
+      `MYSQL_DATABASE=${DB_NAME}`,
       "mysql:8",
     ],
     { timeoutMs: 300_000 }
@@ -566,7 +591,15 @@ async function startDatabase() {
     async () => {
       const ping = await run(
         "docker",
-        ["exec", CONTAINER, "mysqladmin", "ping", "-h", "127.0.0.1", "--silent"],
+        [
+          "exec",
+          CONTAINER,
+          "mysqladmin",
+          "ping",
+          "-h",
+          "127.0.0.1",
+          "--silent",
+        ],
         { timeoutMs: 15_000 }
       );
       return ping.code === 0;
@@ -576,7 +609,8 @@ async function startDatabase() {
 
   db = await waitFor(
     "a MySQL connection from the host",
-    async () => mysql.createConnection({ uri: DATABASE_URL, multipleStatements: false }),
+    async () =>
+      mysql.createConnection({ uri: DATABASE_URL, multipleStatements: false }),
     { timeoutMs: 120_000, intervalMs: 2_000 }
   );
   log("      mysqladmin ping OK; host connection established");
@@ -604,11 +638,16 @@ async function replayMigrations() {
     readFileSync(resolve(REPO_ROOT, "drizzle/meta/_journal.json"), "utf8")
   );
   const newest = journal.entries[journal.entries.length - 1];
-  const applied = Number(await scalar("SELECT COUNT(*) FROM `__drizzle_migrations`"));
+  const applied = Number(
+    await scalar("SELECT COUNT(*) FROM `__drizzle_migrations`")
+  );
   const newestApplied = Number(
     await scalar("SELECT MAX(created_at) FROM `__drizzle_migrations`")
   );
-  if (applied !== journal.entries.length || newestApplied !== Number(newest.when)) {
+  if (
+    applied !== journal.entries.length ||
+    newestApplied !== Number(newest.when)
+  ) {
     throw new Error(
       `migration chain did not reach the newest journal tag: applied=${applied} ` +
         `expected=${journal.entries.length}; newest_created_at=${newestApplied} ` +
@@ -626,7 +665,9 @@ async function seedFixture() {
     [PLAN_SLUG, "Stripe E2E Harness Plan", "Created by scripts/stripe-e2e.mjs"]
   );
   const planId = Number(
-    await scalar("SELECT id FROM subscription_plans WHERE slug = ?", [PLAN_SLUG])
+    await scalar("SELECT id FROM subscription_plans WHERE slug = ?", [
+      PLAN_SLUG,
+    ])
   );
 
   await query(
@@ -636,7 +677,9 @@ async function seedFixture() {
     [planId, SEED_STRIPE_PRICE]
   );
   SEED_PRICE_ID = Number(
-    await scalar("SELECT id FROM plan_prices WHERE stripePriceId = ?", [SEED_STRIPE_PRICE])
+    await scalar("SELECT id FROM plan_prices WHERE stripePriceId = ?", [
+      SEED_STRIPE_PRICE,
+    ])
   );
 
   // An EXISTING subscriber: hasAccess=0 so a grant is an observable transition,
@@ -651,7 +694,9 @@ async function seedFixture() {
     ]
   );
   SEED_USER_ID = Number(
-    await scalar("SELECT id FROM app_users WHERE username = ?", [`stripe_e2e_${RUN_ID}`])
+    await scalar("SELECT id FROM app_users WHERE username = ?", [
+      `stripe_e2e_${RUN_ID}`,
+    ])
   );
   log(
     `      plan=${PLAN_SLUG}(id=${planId}) price=${SEED_PRICE_ID} subscriber=app_users.id=${SEED_USER_ID}`
@@ -672,10 +717,15 @@ async function startListener() {
     ["listen", "--api-key", STRIPE_KEY, "--forward-to", WEBHOOK_URL],
     process.env
   );
-  listenChild.stdout.on("data", chunk => consumeListenOutput(chunk, listenState));
-  listenChild.stderr.on("data", chunk => consumeListenOutput(chunk, listenState));
+  listenChild.stdout.on("data", chunk =>
+    consumeListenOutput(chunk, listenState)
+  );
+  listenChild.stderr.on("data", chunk =>
+    consumeListenOutput(chunk, listenState)
+  );
   listenChild.on("close", code => {
-    if (code !== 0 && code !== null) log(`      [stripe listen exited ${code}]`);
+    if (code !== 0 && code !== null)
+      log(`      [stripe listen exited ${code}]`);
   });
 
   await waitFor(
@@ -684,7 +734,9 @@ async function startListener() {
     { timeoutMs: 90_000, intervalMs: 500 }
   );
   // Printed as a shape, never as a value.
-  log(`      listener ready; signing secret acquired (whsec_… ${listenState.whsec.length} chars)`);
+  log(
+    `      listener ready; signing secret acquired (whsec_… ${listenState.whsec.length} chars)`
+  );
 }
 
 async function startServer() {
@@ -756,7 +808,9 @@ async function startServer() {
         redact(serverTail.slice(-40).join("\n"))
     );
   }
-  log(`      server healthy on :${ARGS.port} (test-mode fulfilment gate satisfied)`);
+  log(
+    `      server healthy on :${ARGS.port} (test-mode fulfilment gate satisfied)`
+  );
 }
 
 // ─── Stage 6: the battery ─────────────────────────────────────────────────────
@@ -830,7 +884,9 @@ async function checkForgedSignature() {
 async function checkMissingSignature() {
   const before = await ledgerTotal();
   const response = await postWebhook(
-    JSON.stringify(syntheticEvent("checkout.session.completed", { id: "cs_nosig" })),
+    JSON.stringify(
+      syntheticEvent("checkout.session.completed", { id: "cs_nosig" })
+    ),
     null
   );
   assertThat(
@@ -856,7 +912,9 @@ async function checkMissingSignature() {
  */
 async function checkRealTrigger(eventType) {
   const fromIndex = DELIVERIES.length;
-  const triggered = await stripe(["trigger", eventType], { timeoutMs: 120_000 });
+  const triggered = await stripe(["trigger", eventType], {
+    timeoutMs: 120_000,
+  });
   if (triggered.code !== 0) {
     record(
       `real \`stripe trigger ${eventType}\``,
@@ -908,8 +966,8 @@ async function checkRealTrigger(eventType) {
     ok ? "PARTIAL" : "FAIL",
     ok
       ? `${eventId} claimed exactly once (status=processed, livemode=0) and answered ${statuses.join("/")} — ` +
-        "Stripe's canned fixture carries no metadata mapping it to the seeded subscriber, so entitlement " +
-        "state is NOT asserted here"
+          "Stripe's canned fixture carries no metadata mapping it to the seeded subscriber, so entitlement " +
+          "state is NOT asserted here"
       : `${eventId}: ledgerRows=${rows.length} status=${rows[0]?.status} livemode=${rows[0]?.livemode} http=[${statuses.join(",")}]`,
     PLUMBING
   );
@@ -937,7 +995,9 @@ async function checkResendExactlyOnce(eventId) {
   const entitlementsBefore = await entitlementRowsFor(eventId);
   const userBefore = JSON.stringify(await seededUser());
 
-  const resend = await stripe(["events", "resend", eventId], { timeoutMs: 90_000 });
+  const resend = await stripe(["events", "resend", eventId], {
+    timeoutMs: 90_000,
+  });
   const resentByCli = resend.code === 0;
 
   let replayStatus = null;
@@ -977,7 +1037,8 @@ async function checkResendExactlyOnce(eventId) {
   );
   assertThat(
     "replayed real event produced no new side effects",
-    entitlementsAfter.length === entitlementsBefore.length && userAfter === userBefore,
+    entitlementsAfter.length === entitlementsBefore.length &&
+      userAfter === userBefore,
     `entitlement_events ${entitlementsBefore.length} → ${entitlementsAfter.length}; ` +
       `app_users row ${userAfter === userBefore ? "unchanged" : "MUTATED"}`,
     PLUMBING
@@ -998,8 +1059,8 @@ async function checkResendExactlyOnce(eventId) {
     dupes.length === 0,
     dupes.length === 0
       ? `every stripeEventId across all ${ledgerAfter} claimed events is unique ` +
-        `(total moved ${ledgerBefore} → ${ledgerAfter} during the replay window — ` +
-        `unrelated cascade siblings from \`stripe trigger\`, not redeliveries)`
+          `(total moved ${ledgerBefore} → ${ledgerAfter} during the replay window — ` +
+          `unrelated cascade siblings from \`stripe trigger\`, not redeliveries)`
       : `DUPLICATED: ${dupes.map(d => `${d.stripeEventId}×${d.c}`).join(", ")}`,
     PLUMBING
   );
@@ -1161,7 +1222,9 @@ async function checkSyntheticRevoke() {
   const subRows = await subscriptionRowsFor(event.id);
   assertThat(
     "the deletion lands in subscription_events as deleted/revoked",
-    subRows.length === 1 && subRows[0].kind === "deleted" && subRows[0].outcome === "revoked",
+    subRows.length === 1 &&
+      subRows[0].kind === "deleted" &&
+      subRows[0].outcome === "revoked",
     `subscription_events rows for ${event.id}: ${subRows.length} ` +
       `(kind=${subRows[0]?.kind} outcome=${subRows[0]?.outcome})`,
     SYNTHETIC
@@ -1194,7 +1257,9 @@ async function checkSubscriptionLifecycleLedger() {
       status: "active",
       customer: SEED_CUSTOMER,
       cancel_at_period_end: false,
-      items: { data: [{ price: { id: NEW_PRICE, recurring: { interval: "year" } } }] },
+      items: {
+        data: [{ price: { id: NEW_PRICE, recurring: { interval: "year" } } }],
+      },
       metadata: {},
     },
     // previous_attributes rides on event.data next to object — exactly how the
@@ -1202,7 +1267,11 @@ async function checkSubscriptionLifecycleLedger() {
     {}
   );
   planChange.data.previous_attributes = {
-    items: { data: [{ price: { id: SEED_STRIPE_PRICE, recurring: { interval: "month" } } }] },
+    items: {
+      data: [
+        { price: { id: SEED_STRIPE_PRICE, recurring: { interval: "month" } } },
+      ],
+    },
   };
 
   let response = await deliverSigned(planChange, listenState.whsec);
@@ -1251,19 +1320,29 @@ async function checkSubscriptionLifecycleLedger() {
   assertThat(
     "EXACTLY-ONCE: the (stripeEventId, kind) unique key itself refuses a duplicate (ER_DUP_ENTRY)",
     dupRefused,
-    dupRefused ? "duplicate INSERT refused with errno 1062" : "duplicate INSERT was ACCEPTED — unique key missing or wrong",
+    dupRefused
+      ? "duplicate INSERT refused with errno 1062"
+      : "duplicate INSERT was ACCEPTED — unique key missing or wrong",
     SYNTHETIC
   );
-  const nullRowsBefore = Number(await scalar("SELECT COUNT(*) FROM subscription_events WHERE stripeEventId IS NULL"));
-  await query(
-    "INSERT INTO subscription_events (stripeEventId, eventType, livemode, stripeSubscriptionId, kind, outcome, actor, occurredAt, recordedAt) VALUES (NULL, 'app.cancel_requested', 0, ?, 'cancel_scheduled', 'recorded', 'user', ?, ?)",
-    [SEED_SUBSCRIPTION, Date.now(), Date.now()]
+  const nullRowsBefore = Number(
+    await scalar(
+      "SELECT COUNT(*) FROM subscription_events WHERE stripeEventId IS NULL"
+    )
   );
   await query(
     "INSERT INTO subscription_events (stripeEventId, eventType, livemode, stripeSubscriptionId, kind, outcome, actor, occurredAt, recordedAt) VALUES (NULL, 'app.cancel_requested', 0, ?, 'cancel_scheduled', 'recorded', 'user', ?, ?)",
     [SEED_SUBSCRIPTION, Date.now(), Date.now()]
   );
-  const nullRowsAfter = Number(await scalar("SELECT COUNT(*) FROM subscription_events WHERE stripeEventId IS NULL"));
+  await query(
+    "INSERT INTO subscription_events (stripeEventId, eventType, livemode, stripeSubscriptionId, kind, outcome, actor, occurredAt, recordedAt) VALUES (NULL, 'app.cancel_requested', 0, ?, 'cancel_scheduled', 'recorded', 'user', ?, ?)",
+    [SEED_SUBSCRIPTION, Date.now(), Date.now()]
+  );
+  const nullRowsAfter = Number(
+    await scalar(
+      "SELECT COUNT(*) FROM subscription_events WHERE stripeEventId IS NULL"
+    )
+  );
   assertThat(
     "app-initiated rows (NULL stripeEventId) are exempt from the unique key — repeated member actions all record",
     nullRowsAfter === nullRowsBefore + 2,
@@ -1279,7 +1358,9 @@ async function checkSubscriptionLifecycleLedger() {
     customer: SEED_CUSTOMER,
     cancel_at_period_end: true,
     cancel_at: Math.floor(Date.now() / 1000) + 14 * 86400,
-    items: { data: [{ price: { id: NEW_PRICE, recurring: { interval: "year" } } }] },
+    items: {
+      data: [{ price: { id: NEW_PRICE, recurring: { interval: "year" } } }],
+    },
     metadata: {},
   });
   cancelSched.data.previous_attributes = { cancel_at_period_end: false };
@@ -1311,7 +1392,11 @@ async function checkSubscriptionLifecycleLedger() {
     amount_due: 4900,
     currency: "usd",
     customer_email: `stripe-e2e+${RUN_ID}@example.invalid`,
-    lines: { data: [{ period: { end: periodEndSec }, price: { id: SEED_STRIPE_PRICE } }] },
+    lines: {
+      data: [
+        { period: { end: periodEndSec }, price: { id: SEED_STRIPE_PRICE } },
+      ],
+    },
     parent: { subscription_details: { subscription: SEED_SUBSCRIPTION } },
   });
 
@@ -1358,7 +1443,11 @@ async function checkDormantEventHandlers() {
     customer: SEED_CUSTOMER,
     cancel_at_period_end: false,
     trial_end: Math.floor(Date.now() / 1000) + 3 * 86400,
-    items: { data: [{ price: { id: SEED_STRIPE_PRICE, recurring: { interval: "month" } } }] },
+    items: {
+      data: [
+        { price: { id: SEED_STRIPE_PRICE, recurring: { interval: "month" } } },
+      ],
+    },
   });
   let response = await deliverSigned(trial, listenState.whsec);
   await awaitClaim(trial.id);
@@ -1366,8 +1455,10 @@ async function checkDormantEventHandlers() {
   let rows = await subscriptionRowsFor(trial.id);
   assertThat(
     "trial_will_end records trial_ending/noop with the trial's end date",
-    response.status === 200 && rows.length === 1 &&
-      rows[0].kind === "trial_ending" && rows[0].outcome === "noop" &&
+    response.status === 200 &&
+      rows.length === 1 &&
+      rows[0].kind === "trial_ending" &&
+      rows[0].outcome === "noop" &&
       Number(rows[0].periodEnd) > Date.now(),
     `HTTP ${response.status}; rows=${rows.length} kind=${rows[0]?.kind} outcome=${rows[0]?.outcome} periodEnd=${rows[0]?.periodEnd}`,
     SYNTHETIC
@@ -1389,8 +1480,10 @@ async function checkDormantEventHandlers() {
   rows = await subscriptionRowsFor(upcoming.id);
   assertThat(
     "invoice.upcoming records renewal_upcoming/noop despite the preview having no invoice id",
-    response.status === 200 && rows.length === 1 &&
-      rows[0].kind === "renewal_upcoming" && rows[0].outcome === "noop",
+    response.status === 200 &&
+      rows.length === 1 &&
+      rows[0].kind === "renewal_upcoming" &&
+      rows[0].outcome === "noop",
     `HTTP ${response.status}; rows=${rows.length} kind=${rows[0]?.kind} outcome=${rows[0]?.outcome}`,
     SYNTHETIC
   );
@@ -1417,8 +1510,10 @@ async function checkDormantEventHandlers() {
   const accessAfter = (await seededUser()).hasAccess;
   assertThat(
     "dispute.closed(won) records disputed/noop and does NOT auto-restore access",
-    response.status === 200 && payRows.length === 1 &&
-      payRows[0].kind === "disputed" && payRows[0].outcome === "noop" &&
+    response.status === 200 &&
+      payRows.length === 1 &&
+      payRows[0].kind === "disputed" &&
+      payRows[0].outcome === "noop" &&
       /WON/.test(payRows[0].outcomeReason ?? "") &&
       Number(accessAfter) === Number(accessBefore),
     `HTTP ${response.status}; rows=${payRows.length} kind=${payRows[0]?.kind} outcome=${payRows[0]?.outcome} ` +
@@ -1526,16 +1621,22 @@ async function checkNoGraceDecline() {
   );
   assertThat(
     "NO-GRACE: the decline is a revoked money fact AND a payment_failed lifecycle fact",
-    payRows.length === 1 && payRows[0].kind === "failed" && payRows[0].outcome === "revoked" &&
-      subRows.length === 1 && subRows[0].kind === "payment_failed" && subRows[0].outcome === "revoked",
+    payRows.length === 1 &&
+      payRows[0].kind === "failed" &&
+      payRows[0].outcome === "revoked" &&
+      subRows.length === 1 &&
+      subRows[0].kind === "payment_failed" &&
+      subRows[0].outcome === "revoked",
     `payment_events: ${payRows.length} (${payRows[0]?.kind}/${payRows[0]?.outcome}); ` +
       `subscription_events: ${subRows.length} (${subRows[0]?.kind}/${subRows[0]?.outcome})`,
     SYNTHETIC
   );
   assertThat(
     "NO-GRACE: the revoke survives a failed Stripe-side cancel (fake sub id) and is audited",
-    audit.length === 1 && audit[0].reason === "PAYMENT_FAILED_NO_GRACE" &&
-      Number(audit[0].beforeHasAccess) === 1 && Number(audit[0].afterHasAccess) === 0,
+    audit.length === 1 &&
+      audit[0].reason === "PAYMENT_FAILED_NO_GRACE" &&
+      Number(audit[0].beforeHasAccess) === 1 &&
+      Number(audit[0].afterHasAccess) === 0,
     `entitlement_events for ${declined.id}: ${audit.length} ` +
       `(reason=${audit[0]?.reason} ${audit[0]?.beforeHasAccess}→${audit[0]?.afterHasAccess})`,
     SYNTHETIC
@@ -1552,7 +1653,11 @@ async function checkNoGraceDecline() {
     status: "past_due",
     customer: SEED_CUSTOMER,
     cancel_at_period_end: false,
-    items: { data: [{ price: { id: SEED_STRIPE_PRICE, recurring: { interval: "month" } } }] },
+    items: {
+      data: [
+        { price: { id: SEED_STRIPE_PRICE, recurring: { interval: "month" } } },
+      ],
+    },
     metadata: {},
   });
   pastDue.data.previous_attributes = { status: "active" };
@@ -1570,8 +1675,11 @@ async function checkNoGraceDecline() {
   const pdRows = await subscriptionRowsFor(pastDue.id);
   assertThat(
     "NO-GRACE: past_due status move REVOKES and records status_changed/revoked",
-    response.status === 200 && Number(pastDueUser.hasAccess) === 0 &&
-      pdRows.length === 1 && pdRows[0].kind === "status_changed" && pdRows[0].outcome === "revoked",
+    response.status === 200 &&
+      Number(pastDueUser.hasAccess) === 0 &&
+      pdRows.length === 1 &&
+      pdRows[0].kind === "status_changed" &&
+      pdRows[0].outcome === "revoked",
     `HTTP ${response.status}; hasAccess=${pastDueUser.hasAccess}; ` +
       `subscription_events: ${pdRows.length} (${pdRows[0]?.kind}/${pdRows[0]?.outcome})`,
     SYNTHETIC
@@ -1615,10 +1723,14 @@ async function teardown() {
   if (ARGS.keep) {
     log("");
     log("--keep: leaving everything running.");
-    log(`  server pid       ${serverChild?.pid ?? "(not started)"} on :${ARGS.port}`);
+    log(
+      `  server pid       ${serverChild?.pid ?? "(not started)"} on :${ARGS.port}`
+    );
     log(`  stripe listen pid ${listenChild?.pid ?? "(not started)"}`);
     log(`  database         ${DATABASE_URL}`);
-    log(`  stop it all      kill ${[serverChild?.pid, listenChild?.pid].filter(Boolean).join(" ")}; docker rm -f ${CONTAINER}`);
+    log(
+      `  stop it all      kill ${[serverChild?.pid, listenChild?.pid].filter(Boolean).join(" ")}; docker rm -f ${CONTAINER}`
+    );
     return;
   }
 
@@ -1635,7 +1747,9 @@ async function teardown() {
     log("      no container was created — nothing to remove");
     return;
   }
-  const removed = await run("docker", ["rm", "-f", CONTAINER], { timeoutMs: 120_000 });
+  const removed = await run("docker", ["rm", "-f", CONTAINER], {
+    timeoutMs: 120_000,
+  });
   log(
     removed.code === 0
       ? `      removed container ${CONTAINER}`
@@ -1666,10 +1780,18 @@ function printSummary() {
   );
   if (partial.length > 0) {
     log("");
-    log(" PARTIAL means the check proved delivery + exactly-once claiming but could NOT");
-    log(" assert entitlement state, because Stripe's canned trigger fixtures carry none");
-    log(" of this application's metadata. Those transitions are proven separately by the");
-    log(" [synthetic] checks above — read the coverage line on each row, not the count.");
+    log(
+      " PARTIAL means the check proved delivery + exactly-once claiming but could NOT"
+    );
+    log(
+      " assert entitlement state, because Stripe's canned trigger fixtures carry none"
+    );
+    log(
+      " of this application's metadata. Those transitions are proven separately by the"
+    );
+    log(
+      " [synthetic] checks above — read the coverage line on each row, not the count."
+    );
   }
   if (failed.length > 0) {
     // A failing check is only actionable with the server's own account of what
@@ -1680,7 +1802,9 @@ function printSummary() {
     const interesting = serverTail.filter(line =>
       /FAILED|Error|error|5xx|Duplicate|stack|at\s+\w+\s+\(/.test(line)
     );
-    const shown = (interesting.length > 0 ? interesting : serverTail).slice(-25);
+    const shown = (interesting.length > 0 ? interesting : serverTail).slice(
+      -25
+    );
     for (const line of shown) log("   " + line);
   }
   log("═".repeat(78));
@@ -1705,10 +1829,19 @@ function printSummary() {
  * the testModeFulfillment gate legitimately satisfied (test key, local DB,
  * explicit flag).
  */
-const CLOCK_COVERAGE = "[test-clock] Stripe-authored lifecycle via a frozen billing clock — real engine, real payload shapes, real deliveries";
+const CLOCK_COVERAGE =
+  "[test-clock] Stripe-authored lifecycle via a frozen billing clock — real engine, real payload shapes, real deliveries";
 
 async function stripePost(path, params) {
-  const args = ["curl", "-sS", "-u", `${STRIPE_KEY}:`, "-X", "POST", `https://api.stripe.com/v1/${path}`];
+  const args = [
+    "curl",
+    "-sS",
+    "-u",
+    `${STRIPE_KEY}:`,
+    "-X",
+    "POST",
+    `https://api.stripe.com/v1/${path}`,
+  ];
   for (const [k, v] of params) args.push("-d", `${k}=${v}`);
   const out = await run(args[0], args.slice(1), { timeoutMs: 30_000 });
   const parsed = JSON.parse(out.stdout);
@@ -1716,14 +1849,20 @@ async function stripePost(path, params) {
   return parsed;
 }
 async function stripeGet(path) {
-  const out = await run("curl", ["-sS", "-u", `${STRIPE_KEY}:`, `https://api.stripe.com/v1/${path}`], { timeoutMs: 30_000 });
+  const out = await run(
+    "curl",
+    ["-sS", "-u", `${STRIPE_KEY}:`, `https://api.stripe.com/v1/${path}`],
+    { timeoutMs: 30_000 }
+  );
   const parsed = JSON.parse(out.stdout);
   if (parsed.error) throw new Error(`${path}: ${parsed.error.message}`);
   return parsed;
 }
 /** Advance the clock and wait until Stripe finishes settling it. */
 async function advanceClock(clockId, toSec) {
-  await stripePost(`test_helpers/test_clocks/${clockId}/advance`, [["frozen_time", String(toSec)]]);
+  await stripePost(`test_helpers/test_clocks/${clockId}/advance`, [
+    ["frozen_time", String(toSec)],
+  ]);
   await waitFor(
     `test clock to settle at ${new Date(toSec * 1000).toISOString()}`,
     async () => {
@@ -1739,9 +1878,13 @@ async function runTestClockLifecycle() {
 
   // [1] Real test-mode catalog objects, mapped into the DB so plan/price
   // resolution exercises the same joins production uses.
-  const product = await stripePost("products", [["name", `E2E Clock Plan ${RUN_ID}`]]);
+  const product = await stripePost("products", [
+    ["name", `E2E Clock Plan ${RUN_ID}`],
+  ]);
   const price = await stripePost("prices", [
-    ["product", product.id], ["currency", "usd"], ["unit_amount", "4900"],
+    ["product", product.id],
+    ["currency", "usd"],
+    ["unit_amount", "4900"],
     ["recurring[interval]", "month"],
   ]);
   await query(
@@ -1749,11 +1892,16 @@ async function runTestClockLifecycle() {
       "SELECT id, ?, 'Clock Monthly', 4900, 'usd', 'month', 1, 1, 0, 0, 0, 1 FROM subscription_plans WHERE slug = ?",
     [price.id, PLAN_SLUG]
   );
-  log(`      product=${product.id} price=${price.id} (mapped into plan_prices)`);
+  log(
+    `      product=${product.id} price=${price.id} (mapped into plan_prices)`
+  );
 
   // [2] Frozen clock; customer ON the clock with a good card.
   const nowSec = Math.floor(Date.now() / 1000);
-  const clock = await stripePost("test_helpers/test_clocks", [["frozen_time", String(nowSec)], ["name", `e2e-${RUN_ID}`]]);
+  const clock = await stripePost("test_helpers/test_clocks", [
+    ["frozen_time", String(nowSec)],
+    ["name", `e2e-${RUN_ID}`],
+  ]);
   const customer = await stripePost("customers", [
     ["test_clock", clock.id],
     // %2B: a literal '+' in a form body decodes as a space and corrupts the address.
@@ -1785,11 +1933,15 @@ async function runTestClockLifecycle() {
   );
   await sleep(1_500);
   const createdRows = await query(
-    "SELECT kind, outcome FROM subscription_events WHERE stripeSubscriptionId = ? AND kind='created'", [sub.id]);
+    "SELECT kind, outcome FROM subscription_events WHERE stripeSubscriptionId = ? AND kind='created'",
+    [sub.id]
+  );
   assertThat(
     "CLOCK: a real trialing subscription grants access and records created/granted",
-    sub.status === "trialing" && Number(trialUser.hasAccess) === 1 &&
-      createdRows.length === 1 && createdRows[0].outcome === "granted",
+    sub.status === "trialing" &&
+      Number(trialUser.hasAccess) === 1 &&
+      createdRows.length === 1 &&
+      createdRows[0].outcome === "granted",
     `sub.status=${sub.status} hasAccess=${trialUser.hasAccess} created rows=${createdRows.length}/${createdRows[0]?.outcome}`,
     CLOCK_COVERAGE
   );
@@ -1806,8 +1958,11 @@ async function runTestClockLifecycle() {
     async () => {
       const s = await stripeGet(`subscriptions/${sub.id}`);
       const row = await seededUser();
-      const periodEnd = (s.items?.data?.[0]?.current_period_end ?? s.current_period_end) * 1000;
-      return row && Number(row.expiryDate) === periodEnd ? { s, row, periodEnd } : null;
+      const periodEnd =
+        (s.items?.data?.[0]?.current_period_end ?? s.current_period_end) * 1000;
+      return row && Number(row.expiryDate) === periodEnd
+        ? { s, row, periodEnd }
+        : null;
     },
     { timeoutMs: 120_000, intervalMs: 2_000 }
   );
@@ -1821,7 +1976,9 @@ async function runTestClockLifecycle() {
   );
   await sleep(1_500);
   const convertPay = await query(
-    "SELECT kind, outcome, amountCents FROM payment_events WHERE stripeSubscriptionId = ? AND kind='succeeded' AND outcome='granted'", [sub.id]);
+    "SELECT kind, outcome, amountCents FROM payment_events WHERE stripeSubscriptionId = ? AND kind='succeeded' AND outcome='granted'",
+    [sub.id]
+  );
   assertThat(
     "CLOCK: the conversion charge is a granted money fact ($49.00)",
     convertPay.length >= 1 && Number(convertPay[0].amountCents) === 4900,
@@ -1832,9 +1989,16 @@ async function runTestClockLifecycle() {
   // [5] NO-GRACE DEATH — swap to a card that will decline, advance one full
   // cycle. Stripe authors invoice.payment_failed; the handler must revoke at
   // that instant AND cancel the REAL subscription at Stripe.
-  const failPm = await stripePost("payment_methods", [["type", "card"], ["card[token]", "tok_chargeCustomerFail"]]);
-  await stripePost(`payment_methods/${failPm.id}/attach`, [["customer", customer.id]]);
-  await stripePost(`customers/${customer.id}`, [["invoice_settings[default_payment_method]", failPm.id]]);
+  const failPm = await stripePost("payment_methods", [
+    ["type", "card"],
+    ["card[token]", "tok_chargeCustomerFail"],
+  ]);
+  await stripePost(`payment_methods/${failPm.id}/attach`, [
+    ["customer", customer.id],
+  ]);
+  await stripePost(`customers/${customer.id}`, [
+    ["invoice_settings[default_payment_method]", failPm.id],
+  ]);
   deliveriesMark = DELIVERIES.length;
   const nextPeriodEnd = subAfterConvert.periodEnd / 1000;
   // Same draft-window allowance as the conversion advance.
@@ -1850,13 +2014,19 @@ async function runTestClockLifecycle() {
   );
   await sleep(2_000);
   const failRows = await query(
-    "SELECT kind, outcome, outcomeReason FROM subscription_events WHERE stripeSubscriptionId = ? AND kind='payment_failed'", [sub.id]);
+    "SELECT kind, outcome, outcomeReason FROM subscription_events WHERE stripeSubscriptionId = ? AND kind='payment_failed'",
+    [sub.id]
+  );
   const audit = await query(
-    "SELECT reason FROM entitlement_events WHERE userId = ? AND reason='PAYMENT_FAILED_NO_GRACE'", [SEED_USER_ID]);
+    "SELECT reason FROM entitlement_events WHERE userId = ? AND reason='PAYMENT_FAILED_NO_GRACE'",
+    [SEED_USER_ID]
+  );
   assertThat(
     "CLOCK NO-GRACE: a real declined renewal revokes access at the failure event, audited",
-    Number(deadUser.hasAccess) === 0 && audit.length >= 1 &&
-      failRows.length === 1 && failRows[0].outcome === "revoked",
+    Number(deadUser.hasAccess) === 0 &&
+      audit.length >= 1 &&
+      failRows.length === 1 &&
+      failRows[0].outcome === "revoked",
     `hasAccess=${deadUser.hasAccess} audit=${audit.length} ` +
       `lifecycle=[${failRows.map(r => `${r.kind}/${r.outcome}`).join(", ")}]`,
     CLOCK_COVERAGE
@@ -1869,7 +2039,9 @@ async function runTestClockLifecycle() {
   // cancel is: the revoke STANDS and the discrepancy is recorded. Assert that
   // degraded contract explicitly rather than pretending the lock is a bug.
   const subNow = await stripeGet(`subscriptions/${sub.id}`);
-  const cancelDegraded = subNow.status !== "canceled" && /cancel FAILED: Test clock/i.test(failRows[0]?.outcomeReason ?? "");
+  const cancelDegraded =
+    subNow.status !== "canceled" &&
+    /cancel FAILED: Test clock/i.test(failRows[0]?.outcomeReason ?? "");
   assertThat(
     "CLOCK NO-GRACE: Stripe-side cancel either landed or degraded correctly (revoke stands, discrepancy recorded)",
     subNow.status === "canceled" || cancelDegraded,
@@ -1882,12 +2054,29 @@ async function runTestClockLifecycle() {
   // back as customer.subscription.deleted → deleted/revoked.
   if (subNow.status !== "canceled") {
     deliveriesMark = DELIVERIES.length;
-    await run("curl", ["-sS", "-u", `${STRIPE_KEY}:`, "-X", "DELETE", `https://api.stripe.com/v1/subscriptions/${sub.id}`], { timeoutMs: 30_000 });
-    await awaitDelivery("customer.subscription.deleted", deliveriesMark, 120_000);
+    await run(
+      "curl",
+      [
+        "-sS",
+        "-u",
+        `${STRIPE_KEY}:`,
+        "-X",
+        "DELETE",
+        `https://api.stripe.com/v1/subscriptions/${sub.id}`,
+      ],
+      { timeoutMs: 30_000 }
+    );
+    await awaitDelivery(
+      "customer.subscription.deleted",
+      deliveriesMark,
+      120_000
+    );
     await sleep(2_000);
   }
   const deletedRows = await query(
-    "SELECT kind, outcome FROM subscription_events WHERE stripeSubscriptionId = ? AND kind='deleted'", [sub.id]);
+    "SELECT kind, outcome FROM subscription_events WHERE stripeSubscriptionId = ? AND kind='deleted'",
+    [sub.id]
+  );
   const finalUser = await seededUser();
   assertThat(
     "CLOCK NO-GRACE: the subscription's death arrives as deleted/revoked and access stays off",
@@ -1897,14 +2086,27 @@ async function runTestClockLifecycle() {
   );
 
   // [6] Teardown of Stripe-side objects (clock deletion cascades customer+sub).
-  await run("curl", ["-sS", "-u", `${STRIPE_KEY}:`, "-X", "DELETE", `https://api.stripe.com/v1/test_helpers/test_clocks/${clock.id}`], { timeoutMs: 30_000 });
+  await run(
+    "curl",
+    [
+      "-sS",
+      "-u",
+      `${STRIPE_KEY}:`,
+      "-X",
+      "DELETE",
+      `https://api.stripe.com/v1/test_helpers/test_clocks/${clock.id}`,
+    ],
+    { timeoutMs: 30_000 }
+  );
   await stripePost(`products/${product.id}`, [["active", "false"]]);
   log(`      clock deleted; product deactivated`);
 }
 
 async function main() {
   log(`Stripe end-to-end harness — run ${RUN_ID}`);
-  log(`  app port ${ARGS.port} · mysql port ${ARGS.mysqlPort} · keep=${ARGS.keep} · testClock=${ARGS.testClock}`);
+  log(
+    `  app port ${ARGS.port} · mysql port ${ARGS.mysqlPort} · keep=${ARGS.keep} · testClock=${ARGS.testClock}`
+  );
   log("");
   await preflight();
   await startDatabase();
@@ -1924,7 +2126,12 @@ try {
   await main();
 } catch (error) {
   fail(error?.message ?? String(error));
-  record("harness completed", "FAIL", `aborted: ${error?.message ?? error}`, "");
+  record(
+    "harness completed",
+    "FAIL",
+    `aborted: ${error?.message ?? error}`,
+    ""
+  );
   if (serverTail.length > 0) {
     log("");
     log("last server output:");

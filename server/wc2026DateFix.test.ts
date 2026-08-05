@@ -37,7 +37,6 @@ function getRawUtcDate(nowMs: number): string {
 // ─── Test cases ───────────────────────────────────────────────────────────────
 
 describe("WC2026 Date Scheduling Fix", () => {
-
   // ── June 18 at 16:00 UTC (noon EDT) — normal daytime match ─────────────────
   it("June 18 at 16:00 UTC → effective date = June 18 (after cutoff)", () => {
     const ts = Date.UTC(2026, 5, 18, 16, 0, 0); // June 18, 16:00 UTC
@@ -53,13 +52,13 @@ describe("WC2026 Date Scheduling Fix", () => {
     const ts = Date.UTC(2026, 5, 19, 1, 30, 0); // June 19, 01:30 UTC
     const effective = getEffectiveFeedDate(ts);
     const raw = getRawUtcDate(ts);
-    
+
     // [FIX] effective date should be June 18 (match_date in DB)
     expect(effective).toBe("2026-06-18");
-    
+
     // [BUG] raw UTC date would be June 19 — causing the match to be missed
     expect(raw).toBe("2026-06-19");
-    
+
     // Confirm the fix resolves the mismatch
     expect(effective).not.toBe(raw);
   });
@@ -71,10 +70,10 @@ describe("WC2026 Date Scheduling Fix", () => {
     const ts = Date.UTC(2026, 5, 12, 2, 30, 0); // June 12, 02:30 UTC
     const effective = getEffectiveFeedDate(ts);
     const raw = getRawUtcDate(ts);
-    
+
     // [FIX] effective date should be June 11 (match_date in DB)
     expect(effective).toBe("2026-06-11");
-    
+
     // [BUG] raw UTC date would be June 12 — causing the match to be missed
     expect(raw).toBe("2026-06-12");
   });
@@ -100,13 +99,24 @@ describe("WC2026 Date Scheduling Fix", () => {
   });
 
   // ── Verify all 4 June 18 matches are accessible at various times ───────────
-  const june18MatchDates = ["2026-06-18", "2026-06-18", "2026-06-18", "2026-06-18"];
+  const june18MatchDates = [
+    "2026-06-18",
+    "2026-06-18",
+    "2026-06-18",
+    "2026-06-18",
+  ];
   const testTimes = [
     { label: "16:00 UTC (noon EDT)", ts: Date.UTC(2026, 5, 18, 16, 0, 0) },
     { label: "19:00 UTC (3 PM EDT)", ts: Date.UTC(2026, 5, 18, 19, 0, 0) },
     { label: "22:00 UTC (6 PM EDT)", ts: Date.UTC(2026, 5, 18, 22, 0, 0) },
-    { label: "01:30 UTC next day (9:30 PM EDT)", ts: Date.UTC(2026, 5, 19, 1, 30, 0) },
-    { label: "03:00 UTC next day (11 PM EDT)", ts: Date.UTC(2026, 5, 19, 3, 0, 0) },
+    {
+      label: "01:30 UTC next day (9:30 PM EDT)",
+      ts: Date.UTC(2026, 5, 19, 1, 30, 0),
+    },
+    {
+      label: "03:00 UTC next day (11 PM EDT)",
+      ts: Date.UTC(2026, 5, 19, 3, 0, 0),
+    },
   ];
 
   for (const { label, ts } of testTimes) {

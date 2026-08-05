@@ -6,9 +6,13 @@ vi.mock("../db", () => ({ getDb: vi.fn() }));
 vi.mock("../dbCircuitBreaker", () => ({
   withCircuitBreaker: vi.fn((fn: () => unknown) => fn()),
 }));
-vi.mock("./planStore", async (importOriginal) => {
+vi.mock("./planStore", async importOriginal => {
   const actual = await importOriginal<typeof import("./planStore")>();
-  return { ...actual, getPlanBySlug: vi.fn(async () => null), invalidatePlanCache: vi.fn() };
+  return {
+    ...actual,
+    getPlanBySlug: vi.fn(async () => null),
+    invalidatePlanCache: vi.fn(),
+  };
 });
 
 import { backfillStaticPlans } from "./backfillPlans";
@@ -54,11 +58,13 @@ describe("backfillStaticPlans", () => {
 
     // monthly + annual import (hardcoded fallback price IDs); pro/sharp/operator skip.
     expect(result).toEqual({ inserted: 2, skipped: 3 });
-    const planRows = inserts.filter((v) => "slug" in v);
-    const priceRows = inserts.filter((v) => "stripePriceId" in v);
-    expect(planRows.map((v) => v.slug).sort()).toEqual(["annual", "monthly"]);
+    const planRows = inserts.filter(v => "slug" in v);
+    const priceRows = inserts.filter(v => "stripePriceId" in v);
+    expect(planRows.map(v => v.slug).sort()).toEqual(["annual", "monthly"]);
     expect(priceRows).toHaveLength(2);
-    expect(priceRows.every((v) => v.isDefault === true && v.active === true)).toBe(true);
+    expect(
+      priceRows.every(v => v.isDefault === true && v.active === true)
+    ).toBe(true);
   });
 
   it("is idempotent — inserts nothing when every plan already exists", async () => {

@@ -30,8 +30,13 @@ PR time) and `11-artifact-attestation`.
 
 - `07-coverage-patch`: run advisory ≥ 2 weeks; confirm the v8 line-mapping
   produces < 5% disputed uncovered-line reports, then require.
-- `format-check`: land one `prettier --write .` commit (316 files), then
-  require. Do it in a quiet window — it touches everything.
+- `format-check`: DONE 2026-08-05 (owner-directed, ahead of wave) — format-all
+  commit landed (576 files) with the scope law in `.prettierignore`: immutable
+  (drizzle), checksummed (platform_knowledge, ml manifests, patches), vendored
+  (.claude/.agents/.pi), design-law (design-system, dime-ai), records (docs,
+  audits, references), harness-synced root *.md, data corpora, and 42
+  source-shape-pinned files that law tests byte-assert (their pins verified
+  green post-format). Gate is green; ruleset membership still follows Wave 1+.
 - `mutation-diff` (nightly full already): after 2 clean nightly runs, add a
   diff-scoped advisory PR job; graduate a break-threshold on
   parlay/betTracker/pricing modules only.

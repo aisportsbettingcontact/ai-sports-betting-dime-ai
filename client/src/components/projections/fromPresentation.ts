@@ -52,7 +52,9 @@ function marketToProjection(m: MarketPresentationModel): ProjectionMarket {
   };
 }
 
-export function presentationToProjectionGame(model: SportPresentationModel): ProjectionGame {
+export function presentationToProjectionGame(
+  model: SportPresentationModel
+): ProjectionGame {
   const status: GameStatus = model.status; // scheduled | live | final all valid
   return {
     id: model.eventId,

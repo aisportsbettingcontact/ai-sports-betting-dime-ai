@@ -74,7 +74,9 @@ const zodTestEventInput = z.object({
    * Which event type to fire a test embed for.
    * Defaults to all three if not specified.
    */
-  eventType: z.enum(["CSRF_BLOCK", "RATE_LIMIT", "AUTH_FAIL", "ALL"]).default("ALL"),
+  eventType: z
+    .enum(["CSRF_BLOCK", "RATE_LIMIT", "AUTH_FAIL", "ALL"])
+    .default("ALL"),
 });
 
 // ─── Router ───────────────────────────────────────────────────────────────────
@@ -90,31 +92,29 @@ export const securityRouter = router({
      * [OUTPUT] SecurityEventRow[]
      * [VERIFY] Row count logged with filter context
      */
-    list: ownerProcedure
-      .input(zodListInput)
-      .query(async ({ input }) => {
-        const tag = "[tRPC][security.events.list]";
-        console.log(
-          `${tag} [INPUT] limit=${input.limit} type=${input.eventType ?? "ALL"}` +
+    list: ownerProcedure.input(zodListInput).query(async ({ input }) => {
+      const tag = "[tRPC][security.events.list]";
+      console.log(
+        `${tag} [INPUT] limit=${input.limit} type=${input.eventType ?? "ALL"}` +
           ` sinceMs=${input.sinceMs ?? "none"}`
-        );
+      );
 
-        const rows = await getSecurityEvents({
-          limit: input.limit,
-          eventType: input.eventType,
-          sinceMs: input.sinceMs,
-        });
+      const rows = await getSecurityEvents({
+        limit: input.limit,
+        eventType: input.eventType,
+        sinceMs: input.sinceMs,
+      });
 
-        console.log(
-          `${tag} [OUTPUT] Returned ${rows.length} rows` +
+      console.log(
+        `${tag} [OUTPUT] Returned ${rows.length} rows` +
           ` | type=${input.eventType ?? "ALL"} limit=${input.limit}`
-        );
-        console.log(
-          `${tag} [VERIFY] ${rows.length > 0 ? "PASS" : "PASS (empty — no events recorded yet)"}`
-        );
+      );
+      console.log(
+        `${tag} [VERIFY] ${rows.length > 0 ? "PASS" : "PASS (empty — no events recorded yet)"}`
+      );
 
-        return rows;
-      }),
+      return rows;
+    }),
 
     /**
      * Get 24h rolling window counts grouped by event type — owner-only.
@@ -125,29 +125,27 @@ export const securityRouter = router({
      * [OUTPUT] { CSRF_BLOCK, RATE_LIMIT, AUTH_FAIL, total }
      * [VERIFY] Total count logged
      */
-    counts: ownerProcedure
-      .input(zodCountsInput)
-      .query(async ({ input }) => {
-        const tag = "[tRPC][security.events.counts]";
-        const sinceMs = input.sinceMs ?? (Date.now() - 24 * 60 * 60 * 1000);
-        console.log(
-          `${tag} [INPUT] sinceMs=${sinceMs} (${new Date(sinceMs).toISOString()})`
-        );
+    counts: ownerProcedure.input(zodCountsInput).query(async ({ input }) => {
+      const tag = "[tRPC][security.events.counts]";
+      const sinceMs = input.sinceMs ?? Date.now() - 24 * 60 * 60 * 1000;
+      console.log(
+        `${tag} [INPUT] sinceMs=${sinceMs} (${new Date(sinceMs).toISOString()})`
+      );
 
-        const counts = await getSecurityEventCounts(sinceMs);
+      const counts = await getSecurityEventCounts(sinceMs);
 
-        console.log(
-          `${tag} [OUTPUT] total=${counts.total}` +
+      console.log(
+        `${tag} [OUTPUT] total=${counts.total}` +
           ` CSRF_BLOCK=${counts.CSRF_BLOCK}` +
           ` RATE_LIMIT=${counts.RATE_LIMIT}` +
           ` AUTH_FAIL=${counts.AUTH_FAIL}`
-        );
-        console.log(
-          `${tag} [VERIFY] ${counts.total >= 0 ? "PASS" : "FAIL — negative count"}`
-        );
+      );
+      console.log(
+        `${tag} [VERIFY] ${counts.total >= 0 ? "PASS" : "FAIL — negative count"}`
+      );
 
-        return counts;
-      }),
+      return counts;
+    }),
 
     /**
      * Prune security events older than retentionDays — owner-only.
@@ -158,27 +156,22 @@ export const securityRouter = router({
      * [OUTPUT] { deleted: number }
      * [VERIFY] Deleted count logged
      */
-    prune: ownerProcedure
-      .input(zodPruneInput)
-      .mutation(async ({ input }) => {
-        const tag = "[tRPC][security.events.prune]";
-        console.log(
-          `${tag} [INPUT] retentionDays=${input.retentionDays}`
-        );
+    prune: ownerProcedure.input(zodPruneInput).mutation(async ({ input }) => {
+      const tag = "[tRPC][security.events.prune]";
+      console.log(`${tag} [INPUT] retentionDays=${input.retentionDays}`);
 
-        const deleted = await pruneSecurityEvents(input.retentionDays);
+      const deleted = await pruneSecurityEvents(input.retentionDays);
 
-        console.log(
-          `${tag} [OUTPUT] Pruned ${deleted} rows older than ${input.retentionDays} days`
-        );
-        console.log(
-          `${tag} [VERIFY] ${deleted >= 0 ? "PASS" : "FAIL — negative deleted count"}`
-        );
+      console.log(
+        `${tag} [OUTPUT] Pruned ${deleted} rows older than ${input.retentionDays} days`
+      );
+      console.log(
+        `${tag} [VERIFY] ${deleted >= 0 ? "PASS" : "FAIL — negative deleted count"}`
+      );
 
-        return { deleted };
-      }),
+      return { deleted };
+    }),
   }),
-
 
   test: router({
     /**
@@ -202,12 +195,13 @@ export const securityRouter = router({
       .mutation(async ({ input }) => {
         const tag = "[tRPC][security.test.fireEvent]";
         const testIp = "127.0.0.1";
-        const testUa = "Mozilla/5.0 (Test) SecurityMonitor/1.0 — Owner-initiated test";
+        const testUa =
+          "Mozilla/5.0 (Test) SecurityMonitor/1.0 — Owner-initiated test";
         const now = Date.now();
 
         console.log(
           `${tag} [INPUT] eventType=${input.eventType}` +
-          ` | This is a manual test — synthetic payloads will be posted to the Discord security channel`
+            ` | This is a manual test — synthetic payloads will be posted to the Discord security channel`
         );
 
         // Define test payloads for each event type
@@ -244,9 +238,10 @@ export const securityRouter = router({
           },
         };
 
-        const typesToFire = input.eventType === "ALL"
-          ? (["CSRF_BLOCK", "RATE_LIMIT", "AUTH_FAIL"] as const)
-          : ([input.eventType] as const);
+        const typesToFire =
+          input.eventType === "ALL"
+            ? (["CSRF_BLOCK", "RATE_LIMIT", "AUTH_FAIL"] as const)
+            : ([input.eventType] as const);
 
         const fired: string[] = [];
 
@@ -256,9 +251,11 @@ export const securityRouter = router({
 
           console.log(
             `${tag} [STEP] Firing test ${type} embed (${i + 1}/${typesToFire.length})` +
-            ` | IP=${testIp} path="${payload.path}"` +
-            (payload.blockedOrigin ? ` blockedOrigin="${payload.blockedOrigin}"` : "") +
-            (payload.context ? ` context="${payload.context}"` : "")
+              ` | IP=${testIp} path="${payload.path}"` +
+              (payload.blockedOrigin
+                ? ` blockedOrigin="${payload.blockedOrigin}"`
+                : "") +
+              (payload.context ? ` context="${payload.context}"` : "")
           );
 
           // Bypass the dedup guard for test events by using a unique IP suffix
@@ -276,7 +273,9 @@ export const securityRouter = router({
             );
           } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : String(err);
-            console.error(`${tag} [ERROR] Failed to dispatch ${type} test embed: ${msg}`);
+            console.error(
+              `${tag} [ERROR] Failed to dispatch ${type} test embed: ${msg}`
+            );
           }
 
           // 1.5-second delay between embeds to avoid Discord rate limits
@@ -285,16 +284,17 @@ export const securityRouter = router({
           }
         }
 
-        const timestamp = new Date(now).toLocaleString("en-US", {
-          timeZone: "America/New_York",
-          month: "short",
-          day: "numeric",
-          year: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-          second: "2-digit",
-          hour12: false,
-        }) + " EST";
+        const timestamp =
+          new Date(now).toLocaleString("en-US", {
+            timeZone: "America/New_York",
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+            hour12: false,
+          }) + " EST";
 
         console.log(
           `${tag} [OUTPUT] Test complete | fired=${fired.join(", ")} | timestamp=${timestamp}`
@@ -321,30 +321,32 @@ export const securityRouter = router({
      * [OUTPUT] { threatLevel, counts, topIps, timestamp }
      * [VERIFY] Threat level and counts logged
      */
-    fireDigest: ownerProcedure
-      .mutation(async () => {
-        const tag = "[tRPC][security.test.fireDigest]";
-        const now = Date.now();
+    fireDigest: ownerProcedure.mutation(async () => {
+      const tag = "[tRPC][security.test.fireDigest]";
+      const now = Date.now();
 
-        console.log(
-          `${tag} [INPUT] Manual digest trigger requested by owner` +
+      console.log(
+        `${tag} [INPUT] Manual digest trigger requested by owner` +
           ` | time=${new Date(now).toISOString()}`
-        );
-        console.log(
-          `${tag} [STEP] Calling triggerSecurityDigestNow() — will query last 24h of events` +
+      );
+      console.log(
+        `${tag} [STEP] Calling triggerSecurityDigestNow() — will query last 24h of events` +
           ` and post digest embed to Discord security channel`
+      );
+
+      let result: Awaited<ReturnType<typeof triggerSecurityDigestNow>>;
+      try {
+        result = await triggerSecurityDigestNow();
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error(
+          `${tag} [ERROR] triggerSecurityDigestNow() threw: ${msg}`
         );
+        throw new Error(`Digest trigger failed: ${msg}`);
+      }
 
-        let result: Awaited<ReturnType<typeof triggerSecurityDigestNow>>;
-        try {
-          result = await triggerSecurityDigestNow();
-        } catch (err: unknown) {
-          const msg = err instanceof Error ? err.message : String(err);
-          console.error(`${tag} [ERROR] triggerSecurityDigestNow() threw: ${msg}`);
-          throw new Error(`Digest trigger failed: ${msg}`);
-        }
-
-        const timestamp = new Date(now).toLocaleString("en-US", {
+      const timestamp =
+        new Date(now).toLocaleString("en-US", {
           timeZone: "America/New_York",
           month: "short",
           day: "numeric",
@@ -355,25 +357,25 @@ export const securityRouter = router({
           hour12: false,
         }) + " EST";
 
-        console.log(
-          `${tag} [OUTPUT] Digest triggered | threatLevel=${result.threatLevel}` +
+      console.log(
+        `${tag} [OUTPUT] Digest triggered | threatLevel=${result.threatLevel}` +
           ` total=${result.counts.total}` +
           ` CSRF_BLOCK=${result.counts.CSRF_BLOCK}` +
           ` RATE_LIMIT=${result.counts.RATE_LIMIT}` +
           ` AUTH_FAIL=${result.counts.AUTH_FAIL}` +
           ` topIps=${result.topIps.map(({ ip, count }) => `${ip}(${count})`).join(", ") || "none"}`
-        );
-        console.log(
-          `${tag} [VERIFY] PASS — digest embed dispatched to Discord security channel`
-        );
+      );
+      console.log(
+        `${tag} [VERIFY] PASS — digest embed dispatched to Discord security channel`
+      );
 
-        return {
-          threatLevel: result.threatLevel,
-          counts: result.counts,
-          topIps: result.topIps,
-          timestamp,
-          message: `Digest posted to Discord security channel. Threat level: ${result.threatLevel} — ${result.counts.total} event${result.counts.total !== 1 ? "s" : ""} in the last 24 hours.`,
-        };
-      }),
+      return {
+        threatLevel: result.threatLevel,
+        counts: result.counts,
+        topIps: result.topIps,
+        timestamp,
+        message: `Digest posted to Discord security channel. Threat level: ${result.threatLevel} — ${result.counts.total} event${result.counts.total !== 1 ? "s" : ""} in the last 24 hours.`,
+      };
+    }),
   }),
 });

@@ -130,7 +130,11 @@ function fmtTotal(total: string | null): string {
 }
 
 /** Resolve logo URL for a team slug based on sport */
-function resolveLogoUrl(slug: string, sport: Sport, teamId?: number): string | undefined {
+function resolveLogoUrl(
+  slug: string,
+  sport: Sport,
+  teamId?: number
+): string | undefined {
   if (sport === "MLB") {
     const t = MLB_BY_AN_SLUG.get(slug);
     if (t?.logoUrl) return t.logoUrl;
@@ -155,18 +159,30 @@ function spreadLabel(sport: Sport): string {
 }
 
 /** Get the spread value for a game from the perspective of a team */
-function getMySpread(game: ScheduleGame, isAway: boolean, sport: Sport): string | null | undefined {
+function getMySpread(
+  game: ScheduleGame,
+  isAway: boolean,
+  sport: Sport
+): string | null | undefined {
   if (sport === "MLB") return isAway ? game.dkAwayRunLine : game.dkHomeRunLine;
   if (sport === "NBA") return isAway ? game.dkAwaySpread : game.dkHomeSpread;
-  if (sport === "NHL") return isAway ? game.dkAwayPuckLine : game.dkHomePuckLine;
+  if (sport === "NHL")
+    return isAway ? game.dkAwayPuckLine : game.dkHomePuckLine;
   return null;
 }
 
 /** Get whether the team covered the spread */
-function getMyCovered(game: ScheduleGame, isAway: boolean, sport: Sport): boolean | null | undefined {
-  if (sport === "MLB") return isAway ? game.awayRunLineCovered : game.homeRunLineCovered;
-  if (sport === "NBA") return isAway ? game.awaySpreadCovered : game.homeSpreadCovered;
-  if (sport === "NHL") return isAway ? game.awayPuckLineCovered : game.homePuckLineCovered;
+function getMyCovered(
+  game: ScheduleGame,
+  isAway: boolean,
+  sport: Sport
+): boolean | null | undefined {
+  if (sport === "MLB")
+    return isAway ? game.awayRunLineCovered : game.homeRunLineCovered;
+  if (sport === "NBA")
+    return isAway ? game.awaySpreadCovered : game.homeSpreadCovered;
+  if (sport === "NHL")
+    return isAway ? game.awayPuckLineCovered : game.homePuckLineCovered;
   return null;
 }
 
@@ -185,15 +201,14 @@ function ResultBadge({
   size?: "sm" | "xs";
 }) {
   const cls = {
-    win:     "bg-[#45E0A8] text-black",
-    loss:    "bg-[var(--surface-raised)] text-[var(--text-secondary)]",
-    push:    "border border-border text-[var(--text-secondary)]",
+    win: "bg-[#45E0A8] text-black",
+    loss: "bg-[var(--surface-raised)] text-[var(--text-secondary)]",
+    push: "border border-border text-[var(--text-secondary)]",
     neutral: "border border-border text-[var(--text-muted)]",
   }[variant];
 
-  const sizeClass = size === "xs"
-    ? "w-6 h-6 text-[11px]"
-    : "w-7 h-7 text-[12px]";
+  const sizeClass =
+    size === "xs" ? "w-6 h-6 text-[11px]" : "w-7 h-7 text-[12px]";
 
   return (
     <span
@@ -245,10 +260,13 @@ function OuBadge({
   result: string | null;
 }) {
   const ouVariant: "win" | "loss" | "push" | "neutral" =
-    result === "OVER" ? "win"
-    : result === "UNDER" ? "loss"
-    : result === "PUSH" ? "push"
-    : "neutral";
+    result === "OVER"
+      ? "win"
+      : result === "UNDER"
+        ? "loss"
+        : result === "PUSH"
+          ? "push"
+          : "neutral";
 
   const label = result === "OVER" ? "O" : result === "UNDER" ? "U" : "—";
 
@@ -264,7 +282,13 @@ function OuBadge({
 
 // ─── Table header cell ───────────────────────────────────────────────────────
 
-function Th({ children, first = false }: { children: React.ReactNode; first?: boolean }) {
+function Th({
+  children,
+  first = false,
+}: {
+  children: React.ReactNode;
+  first?: boolean;
+}) {
   return (
     <th
       scope="col"
@@ -292,31 +316,28 @@ function GameRow({
   const isAway = game.awaySlug === teamSlug;
 
   // Opponent info
-  const oppSlug   = isAway ? game.homeSlug   : game.awaySlug;
-  const oppAbbr   = isAway ? game.homeAbbr   : game.awayAbbr;
+  const oppSlug = isAway ? game.homeSlug : game.awaySlug;
+  const oppAbbr = isAway ? game.homeAbbr : game.awayAbbr;
   const oppTeamId = isAway ? game.homeTeamId : game.awayTeamId;
-  const oppLogo   = resolveLogoUrl(oppSlug, sport, oppTeamId);
+  const oppLogo = resolveLogoUrl(oppSlug, sport, oppTeamId);
 
   // Scores
-  const myScore  = isAway ? game.awayScore : game.homeScore;
+  const myScore = isAway ? game.awayScore : game.homeScore;
   const oppScore = isAway ? game.homeScore : game.awayScore;
 
   // W/L
-  const myWon = game.awayWon != null
-    ? (isAway ? game.awayWon : !game.awayWon)
-    : null;
+  const myWon =
+    game.awayWon != null ? (isAway ? game.awayWon : !game.awayWon) : null;
 
   const wlVariant: "win" | "loss" | "neutral" =
     myWon === true ? "win" : myWon === false ? "loss" : "neutral";
 
   // Score string: "W 9-1" or "L 3-7"
   const scoreStr =
-    myScore != null && oppScore != null
-      ? `${myScore}-${oppScore}`
-      : "—";
+    myScore != null && oppScore != null ? `${myScore}-${oppScore}` : "—";
 
   // Spread
-  const mySpread  = getMySpread(game, isAway, sport);
+  const mySpread = getMySpread(game, isAway, sport);
   const myCovered = getMyCovered(game, isAway, sport);
 
   return (
@@ -344,7 +365,9 @@ function GameRow({
               alt=""
               loading="lazy"
               className="w-6 h-6 object-contain flex-shrink-0"
-              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+              onError={e => {
+                (e.target as HTMLImageElement).style.display = "none";
+              }}
             />
           ) : (
             <div className="w-6 h-6 rounded-full bg-[var(--surface-raised)] flex-shrink-0" />
@@ -418,7 +441,9 @@ function TeamScheduleTable({
   if (games.length === 0) {
     return (
       <div className="px-4 py-6 text-center">
-        <p className="text-[13px] font-semibold text-foreground">No completed games found.</p>
+        <p className="text-[13px] font-semibold text-foreground">
+          No completed games found.
+        </p>
         <p className="text-[12px] text-[var(--text-muted)] mt-1">
           Data populates automatically each day via the DK NJ schedule refresh.
         </p>
@@ -439,8 +464,13 @@ function TeamScheduleTable({
           </tr>
         </thead>
         <tbody>
-          {games.map((g) => (
-            <GameRow key={g.anGameId} game={g} teamSlug={teamSlug} sport={sport} />
+          {games.map(g => (
+            <GameRow
+              key={g.anGameId}
+              game={g}
+              teamSlug={teamSlug}
+              sport={sport}
+            />
           ))}
         </tbody>
       </table>
@@ -455,13 +485,7 @@ function TeamScheduleTable({
 // perspective (the team that was actually away in that specific game — which may
 // be either awaySlug or homeSlug depending on who hosted that game).
 
-function H2HRow({
-  game,
-  sport,
-}: {
-  game: ScheduleGame;
-  sport: Sport;
-}) {
+function H2HRow({ game, sport }: { game: ScheduleGame; sport: Sport }) {
   // Resolve logos for the actual away/home teams in this specific game
   const awayLogo = resolveLogoUrl(game.awaySlug, sport, game.awayTeamId);
   const homeLogo = resolveLogoUrl(game.homeSlug, sport, game.homeTeamId);
@@ -480,18 +504,24 @@ function H2HRow({
       : "—";
 
   // ATS — shown from the actual away team's perspective for this game
-  const awaySpread  = getMySpread(game, true, sport);
+  const awaySpread = getMySpread(game, true, sport);
   const awayCovered = getMyCovered(game, true, sport);
 
   // O/U
   const ouVariant: "win" | "loss" | "push" | "neutral" =
-    game.totalResult === "OVER" ? "win"
-    : game.totalResult === "UNDER" ? "loss"
-    : game.totalResult === "PUSH" ? "push"
-    : "neutral";
-  const ouLabel = game.totalResult === "OVER" ? "O"
-    : game.totalResult === "UNDER" ? "U"
-    : "—";
+    game.totalResult === "OVER"
+      ? "win"
+      : game.totalResult === "UNDER"
+        ? "loss"
+        : game.totalResult === "PUSH"
+          ? "push"
+          : "neutral";
+  const ouLabel =
+    game.totalResult === "OVER"
+      ? "O"
+      : game.totalResult === "UNDER"
+        ? "U"
+        : "—";
 
   return (
     <tr
@@ -522,14 +552,20 @@ function H2HRow({
                 alt=""
                 loading="lazy"
                 className="w-5 h-5 object-contain flex-shrink-0"
-                onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                onError={e => {
+                  (e.target as HTMLImageElement).style.display = "none";
+                }}
               />
             ) : null}
-            <span className="text-[12px] font-mono font-semibold text-foreground">{game.awayAbbr}</span>
+            <span className="text-[12px] font-mono font-semibold text-foreground">
+              {game.awayAbbr}
+            </span>
           </div>
 
           {/* @ separator */}
-          <span className="text-[12px] font-mono text-[var(--text-muted)]">@</span>
+          <span className="text-[12px] font-mono text-[var(--text-muted)]">
+            @
+          </span>
 
           {/* Home team */}
           <div className="flex items-center gap-1">
@@ -539,10 +575,14 @@ function H2HRow({
                 alt=""
                 loading="lazy"
                 className="w-5 h-5 object-contain flex-shrink-0"
-                onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                onError={e => {
+                  (e.target as HTMLImageElement).style.display = "none";
+                }}
               />
             ) : null}
-            <span className="text-[12px] font-mono font-semibold text-foreground">{game.homeAbbr}</span>
+            <span className="text-[12px] font-mono font-semibold text-foreground">
+              {game.homeAbbr}
+            </span>
             <ResultBadge
               label={awayWon === false ? "W" : awayWon === true ? "L" : "—"}
               variant={homeVariant}
@@ -596,7 +636,9 @@ function H2HSection({
   if (error) {
     return (
       <div className="px-4 py-4 text-center">
-        <p className="text-[12px] text-[var(--text-muted)]">Failed to load H2H history.</p>
+        <p className="text-[12px] text-[var(--text-muted)]">
+          Failed to load H2H history.
+        </p>
       </div>
     );
   }
@@ -615,24 +657,30 @@ function H2HSection({
   }
 
   // Compute H2H summary: wins for each team
-  const awayTeamWins = games.filter((g) =>
-    (g.awaySlug === awaySlug && g.awayWon === true) ||
-    (g.homeSlug === awaySlug && g.awayWon === false)
+  const awayTeamWins = games.filter(
+    g =>
+      (g.awaySlug === awaySlug && g.awayWon === true) ||
+      (g.homeSlug === awaySlug && g.awayWon === false)
   ).length;
-  const homeTeamWins = games.filter((g) =>
-    (g.awaySlug === homeSlug && g.awayWon === true) ||
-    (g.homeSlug === homeSlug && g.awayWon === false)
+  const homeTeamWins = games.filter(
+    g =>
+      (g.awaySlug === homeSlug && g.awayWon === true) ||
+      (g.homeSlug === homeSlug && g.awayWon === false)
   ).length;
 
   return (
     <div>
       {/* H2H summary header — mint W counts are signal */}
       <div className="flex items-center justify-center gap-3 px-3 py-2 border-b border-border">
-        <span className="text-[13px] font-mono font-bold tabular-nums text-[#45E0A8]">{awayTeamWins}W</span>
+        <span className="text-[13px] font-mono font-bold tabular-nums text-[#45E0A8]">
+          {awayTeamWins}W
+        </span>
         <span className="text-[11px] font-mono uppercase tracking-[0.08em] text-[var(--text-muted)]">
           Last {games.length}
         </span>
-        <span className="text-[13px] font-mono font-bold tabular-nums text-[#45E0A8]">{homeTeamWins}W</span>
+        <span className="text-[13px] font-mono font-bold tabular-nums text-[#45E0A8]">
+          {homeTeamWins}W
+        </span>
       </div>
 
       <div className="overflow-x-auto">
@@ -647,7 +695,7 @@ function H2HSection({
             </tr>
           </thead>
           <tbody>
-            {games.map((g) => (
+            {games.map(g => (
               <H2HRow key={g.anGameId} game={g} sport={sport} />
             ))}
           </tbody>
@@ -687,51 +735,68 @@ export default function RecentSchedulePanel({
   // ── MLB query ────────────────────────────────────────────────────────────────────
   const mlbQuery = trpc.mlbSchedule.getLast5ForMatchup.useQuery(
     { awaySlug, homeSlug },
-    { enabled: isDataEnabled && sport === "MLB", staleTime: 5 * 60 * 1000, retry: 1 }
+    {
+      enabled: isDataEnabled && sport === "MLB",
+      staleTime: 5 * 60 * 1000,
+      retry: 1,
+    }
   );
 
   // ── MLB H2H query ───────────────────────────────────────────────────────────────
   // H2H: last 5 games between these two teams (2023+ lookback floor)
   const mlbH2HQuery = trpc.mlbSchedule.getH2HGames.useQuery(
     { slugA: awaySlug, slugB: homeSlug, limit: 5 },
-    { enabled: isDataEnabled && sport === "MLB", staleTime: 5 * 60 * 1000, retry: 1 }
+    {
+      enabled: isDataEnabled && sport === "MLB",
+      staleTime: 5 * 60 * 1000,
+      retry: 1,
+    }
   );
 
   // ── NBA query ────────────────────────────────────────────────────────────────────
   const nbaQuery = trpc.nbaSchedule.getLast5ForMatchup.useQuery(
     { awaySlug, homeSlug },
-    { enabled: isDataEnabled && sport === "NBA", staleTime: 5 * 60 * 1000, retry: 1 }
+    {
+      enabled: isDataEnabled && sport === "NBA",
+      staleTime: 5 * 60 * 1000,
+      retry: 1,
+    }
   );
 
   // ── NHL query ────────────────────────────────────────────────────────────────────
   const nhlQuery = trpc.nhlSchedule.getLast5ForMatchup.useQuery(
     { awaySlug, homeSlug },
-    { enabled: isDataEnabled && sport === "NHL", staleTime: 5 * 60 * 1000, retry: 1 }
+    {
+      enabled: isDataEnabled && sport === "NHL",
+      staleTime: 5 * 60 * 1000,
+      retry: 1,
+    }
   );
 
   const activeQuery =
-    sport === "MLB" ? mlbQuery
-    : sport === "NBA" ? nbaQuery
-    : nhlQuery;
+    sport === "MLB" ? mlbQuery : sport === "NBA" ? nbaQuery : nhlQuery;
 
   const awayLast5 = (activeQuery.data?.awayLast5 ?? []) as ScheduleGame[];
   const homeLast5 = (activeQuery.data?.homeLast5 ?? []) as ScheduleGame[];
 
   // H2H games — MLB only for now (NBA/NHL H2H procedures to be added later)
-  const h2hGames = sport === "MLB"
-    ? ((mlbH2HQuery.data?.games ?? []) as ScheduleGame[])
-    : [];
+  const h2hGames =
+    sport === "MLB" ? ((mlbH2HQuery.data?.games ?? []) as ScheduleGame[]) : [];
   const h2hLoading = sport === "MLB" ? mlbH2HQuery.isLoading : false;
   const h2hError = sport === "MLB" ? mlbH2HQuery.error : null;
 
   const isLoading = activeQuery.isLoading;
-  const isFetching = activeQuery.isFetching || (sport === "MLB" && mlbH2HQuery.isFetching);
+  const isFetching =
+    activeQuery.isFetching || (sport === "MLB" && mlbH2HQuery.isFetching);
   const error = activeQuery.error;
 
-  const sportRoutePrefix = sport === "MLB" ? "mlb" : sport === "NBA" ? "nba" : "nhl";
+  const sportRoutePrefix =
+    sport === "MLB" ? "mlb" : sport === "NBA" ? "nba" : "nhl";
 
-  const handleAwayLogoClick = () => navigate(`/${sportRoutePrefix}/team/${awaySlug}`);
-  const handleHomeLogoClick = () => navigate(`/${sportRoutePrefix}/team/${homeSlug}`);
+  const handleAwayLogoClick = () =>
+    navigate(`/${sportRoutePrefix}/team/${awaySlug}`);
+  const handleHomeLogoClick = () =>
+    navigate(`/${sportRoutePrefix}/team/${homeSlug}`);
 
   const awayLogo = awayLogoUrl ?? resolveLogoUrl(awaySlug, sport);
   const homeLogo = homeLogoUrl ?? resolveLogoUrl(homeSlug, sport);
@@ -755,7 +820,8 @@ export default function RecentSchedulePanel({
     "active:scale-[0.97] motion-reduce:transform-none"
   );
   const tabActive = "bg-[var(--surface-raised)] text-foreground";
-  const tabIdle = "text-[var(--text-muted)] hover:text-foreground hover:bg-[var(--row-hover)]";
+  const tabIdle =
+    "text-[var(--text-muted)] hover:text-foreground hover:bg-[var(--row-hover)]";
 
   return (
     <div
@@ -772,7 +838,9 @@ export default function RecentSchedulePanel({
     >
       {/* ── Collapsible Header ─────────────────────────────────────────────── */}
       {hideHeader ? null : collapsible ? (
-        <button type="button" onClick={() => setIsExpanded((v) => !v)}
+        <button
+          type="button"
+          onClick={() => setIsExpanded(v => !v)}
           aria-expanded={isExpanded}
           className={cn(
             "w-full box-border flex items-center justify-between px-3 py-2 cursor-pointer",
@@ -787,10 +855,11 @@ export default function RecentSchedulePanel({
             {isFetching && (
               <RefreshCw className="w-3 h-3 text-[var(--text-muted)] animate-spin" />
             )}
-            {isExpanded
-              ? <ChevronUp className="w-3.5 h-3.5 text-[var(--text-muted)]" />
-              : <ChevronDown className="w-3.5 h-3.5 text-[var(--text-muted)]" />
-            }
+            {isExpanded ? (
+              <ChevronUp className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+            ) : (
+              <ChevronDown className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+            )}
           </div>
         </button>
       ) : (
@@ -808,7 +877,12 @@ export default function RecentSchedulePanel({
 
       {/* ── Collapsible Body ───────────────────────────────────────────────── */}
       {isExpanded && (
-        <div className={cn("flex-1 flex flex-col", !hideHeader && "border-t border-border")}>
+        <div
+          className={cn(
+            "flex-1 flex flex-col",
+            !hideHeader && "border-t border-border"
+          )}
+        >
           {/* ── Team Tab Selector ─────────────────────────────────────────── */}
           <div
             role="tablist"
@@ -816,8 +890,12 @@ export default function RecentSchedulePanel({
             className="flex items-center gap-1 px-3 py-2 border-b border-border"
           >
             {/* Away tab */}
-            <button type="button" onClick={() => setTab("away")}
-              role="tab" aria-selected={tab === "away"} onKeyDown={onTabKeyDown}
+            <button
+              type="button"
+              onClick={() => setTab("away")}
+              role="tab"
+              aria-selected={tab === "away"}
+              onKeyDown={onTabKeyDown}
               className={cn(tabBase, tab === "away" ? tabActive : tabIdle)}
             >
               {awayLogo && (
@@ -826,23 +904,33 @@ export default function RecentSchedulePanel({
                   alt=""
                   loading="lazy"
                   className="w-5 h-5 object-contain flex-shrink-0"
-                  onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                  onError={e => {
+                    (e.target as HTMLImageElement).style.display = "none";
+                  }}
                 />
               )}
               <span className="truncate">{awayName}</span>
             </button>
 
             {/* H2H tab */}
-            <button type="button" onClick={() => setTab("h2h")}
-              role="tab" aria-selected={tab === "h2h"} onKeyDown={onTabKeyDown}
+            <button
+              type="button"
+              onClick={() => setTab("h2h")}
+              role="tab"
+              aria-selected={tab === "h2h"}
+              onKeyDown={onTabKeyDown}
               className={cn(tabBase, tab === "h2h" ? tabActive : tabIdle)}
             >
               <span className="truncate">Head-to-Head</span>
             </button>
 
             {/* Home tab */}
-            <button type="button" onClick={() => setTab("home")}
-              role="tab" aria-selected={tab === "home"} onKeyDown={onTabKeyDown}
+            <button
+              type="button"
+              onClick={() => setTab("home")}
+              role="tab"
+              aria-selected={tab === "home"}
+              onKeyDown={onTabKeyDown}
               className={cn(tabBase, tab === "home" ? tabActive : tabIdle)}
             >
               {homeLogo && (
@@ -851,7 +939,9 @@ export default function RecentSchedulePanel({
                   alt=""
                   loading="lazy"
                   className="w-5 h-5 object-contain flex-shrink-0"
-                  onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                  onError={e => {
+                    (e.target as HTMLImageElement).style.display = "none";
+                  }}
                 />
               )}
               <span className="truncate">{homeName}</span>
@@ -864,9 +954,15 @@ export default function RecentSchedulePanel({
           {/* ── Error ─────────────────────────────────────────────────────── */}
           {error && !isLoading && (
             <div className="px-4 py-4 text-center">
-              <p className="text-[13px] font-semibold text-foreground">Couldn't load schedule</p>
-              <p className="text-[12px] text-[var(--text-muted)] mt-1">{error.message}</p>
-              <button type="button" onClick={() => activeQuery.refetch()}
+              <p className="text-[13px] font-semibold text-foreground">
+                Couldn't load schedule
+              </p>
+              <p className="text-[12px] text-[var(--text-muted)] mt-1">
+                {error.message}
+              </p>
+              <button
+                type="button"
+                onClick={() => activeQuery.refetch()}
                 className={cn(
                   "mt-2 px-3 py-1.5 rounded-full border border-border text-[12px] font-semibold",
                   "text-[var(--text-secondary)] cursor-pointer",
@@ -883,7 +979,11 @@ export default function RecentSchedulePanel({
           {!isLoading && !error && (
             <>
               {tab === "away" && (
-                <TeamScheduleTable games={awayLast5} teamSlug={awaySlug} sport={sport} />
+                <TeamScheduleTable
+                  games={awayLast5}
+                  teamSlug={awaySlug}
+                  sport={sport}
+                />
               )}
               {tab === "h2h" && (
                 <H2HSection
@@ -896,7 +996,11 @@ export default function RecentSchedulePanel({
                 />
               )}
               {tab === "home" && (
-                <TeamScheduleTable games={homeLast5} teamSlug={homeSlug} sport={sport} />
+                <TeamScheduleTable
+                  games={homeLast5}
+                  teamSlug={homeSlug}
+                  sport={sport}
+                />
               )}
             </>
           )}
@@ -904,7 +1008,9 @@ export default function RecentSchedulePanel({
           {/* ── Team schedule click-through links (pinned to panel foot) ──── */}
           {!isLoading && !error && (
             <div className="mt-auto flex items-center justify-between gap-2 px-3 py-2 border-t border-border">
-              <button type="button" onClick={handleAwayLogoClick}
+              <button
+                type="button"
+                onClick={handleAwayLogoClick}
                 className={cn(
                   "flex items-center gap-1.5 min-w-0 text-[12px] font-medium cursor-pointer",
                   "text-[var(--text-muted)] transition-colors duration-[160ms] ease-[cubic-bezier(0.16,1,0.3,1)]",
@@ -912,11 +1018,18 @@ export default function RecentSchedulePanel({
                 )}
               >
                 {awayLogo && (
-                  <img src={awayLogo} alt="" loading="lazy" className="w-5 h-5 object-contain flex-shrink-0" />
+                  <img
+                    src={awayLogo}
+                    alt=""
+                    loading="lazy"
+                    className="w-5 h-5 object-contain flex-shrink-0"
+                  />
                 )}
                 <span className="truncate">{awayAbbr} full schedule →</span>
               </button>
-              <button type="button" onClick={handleHomeLogoClick}
+              <button
+                type="button"
+                onClick={handleHomeLogoClick}
                 className={cn(
                   "flex items-center gap-1.5 min-w-0 text-[12px] font-medium cursor-pointer",
                   "text-[var(--text-muted)] transition-colors duration-[160ms] ease-[cubic-bezier(0.16,1,0.3,1)]",
@@ -925,7 +1038,12 @@ export default function RecentSchedulePanel({
               >
                 <span className="truncate">{homeAbbr} full schedule →</span>
                 {homeLogo && (
-                  <img src={homeLogo} alt="" loading="lazy" className="w-5 h-5 object-contain flex-shrink-0" />
+                  <img
+                    src={homeLogo}
+                    alt=""
+                    loading="lazy"
+                    className="w-5 h-5 object-contain flex-shrink-0"
+                  />
                 )}
               </button>
             </div>

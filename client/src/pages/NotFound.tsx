@@ -21,8 +21,15 @@ export default function NotFound() {
         <CardContent className="pt-8 pb-8 text-center">
           <div className="flex justify-center mb-6">
             <div className="relative">
-              <div className="absolute inset-0 rounded-full animate-pulse" style={{ background: "var(--brand-mint-surface)" }} />
-              <AlertCircle className="relative h-16 w-16" style={{ color: "var(--primary)" }} aria-hidden="true" />
+              <div
+                className="absolute inset-0 rounded-full animate-pulse"
+                style={{ background: "var(--brand-mint-surface)" }}
+              />
+              <AlertCircle
+                className="relative h-16 w-16"
+                style={{ color: "var(--primary)" }}
+                aria-hidden="true"
+              />
             </div>
           </div>
 

@@ -41,20 +41,36 @@ export function mintRamp(n: number): string[] {
   if (n <= 1) return [mintAlpha(0.92)];
   const top = 0.92;
   const bottom = 0.18;
-  return Array.from({ length: n }, (_, i) => mintAlpha(top - (i * (top - bottom)) / (n - 1)));
+  return Array.from({ length: n }, (_, i) =>
+    mintAlpha(top - (i * (top - bottom)) / (n - 1))
+  );
 }
 
 /** Compact integer formatter — 1234 → "1.2k", 2_400_000 → "2.4M". */
 export function fmtCompact(n: number): string {
   if (!Number.isFinite(n)) return "—";
   const abs = Math.abs(n);
-  if (abs >= 1_000_000) return `${(n / 1_000_000).toFixed(abs >= 10_000_000 ? 0 : 1)}M`;
+  if (abs >= 1_000_000)
+    return `${(n / 1_000_000).toFixed(abs >= 10_000_000 ? 0 : 1)}M`;
   if (abs >= 1_000) return `${(n / 1_000).toFixed(abs >= 10_000 ? 0 : 1)}k`;
   return String(Math.round(n));
 }
 
 /** Shorten an ISO date (YYYY-MM-DD) to a compact axis tick, e.g. "Jul 3". */
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const MONTHS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
 export function fmtDayTick(iso: string): string {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
   if (!m) return iso;
@@ -92,7 +108,10 @@ export function usePrefersReducedMotion(): boolean {
 }
 
 /** Recharts animation props gated on reduced-motion. Short + subtle (Dime 2/10). */
-export function chartAnim(reduced: boolean): { isAnimationActive: boolean; animationDuration: number } {
+export function chartAnim(reduced: boolean): {
+  isAnimationActive: boolean;
+  animationDuration: number;
+} {
   return { isAnimationActive: !reduced, animationDuration: reduced ? 0 : 320 };
 }
 

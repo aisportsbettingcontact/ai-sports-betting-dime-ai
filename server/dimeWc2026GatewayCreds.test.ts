@@ -16,7 +16,7 @@ import path from "path";
 
 const routeSrc = fs.readFileSync(
   path.join(import.meta.dirname, "dime-wc2026.route.ts"),
-  "utf8",
+  "utf8"
 );
 
 describe("WC2026 route Anthropic credentials", () => {

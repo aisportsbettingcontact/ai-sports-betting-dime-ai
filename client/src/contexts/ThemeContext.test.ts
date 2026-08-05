@@ -132,7 +132,9 @@ const contextSource = fs.readFileSync(
 
 describe("ThemeProvider wiring — source contract (no jsdom in this suite)", () => {
   it('has no "system" branch anywhere in the provider besides the stored-value migration', () => {
-    expect(contextSource).toMatch(/if \(modeStored === "system"\) return "dark";/);
+    expect(contextSource).toMatch(
+      /if \(modeStored === "system"\) return "dark";/
+    );
     // the old three-mode resolution must be gone
     expect(contextSource).not.toMatch(/mode === "system" \? "dark" : mode/);
     expect(contextSource).not.toContain('"system" | Theme');
@@ -164,7 +166,9 @@ describe("ThemeProvider wiring — source contract (no jsdom in this suite)", ()
   });
 
   it("setMode resolves through the same View Transitions crossfade as setTheme", () => {
-    const updateModeIdx = contextSource.indexOf("const updateMode = useCallback(");
+    const updateModeIdx = contextSource.indexOf(
+      "const updateMode = useCallback("
+    );
     const runTransitionIdx = contextSource.indexOf(
       "runThemeTransition(",
       updateModeIdx

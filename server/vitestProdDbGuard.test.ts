@@ -19,7 +19,9 @@ describe("production-database test guard", () => {
   });
 
   it("[PROD] refuses the real TiDB Cloud production host", () => {
-    const v = assessDatabaseUrl("mysql://u:p@gateway01.us-east-1.prod.aws.tidbcloud.com:4000/db");
+    const v = assessDatabaseUrl(
+      "mysql://u:p@gateway01.us-east-1.prod.aws.tidbcloud.com:4000/db"
+    );
     expect(v.allowed).toBe(false);
     expect(v.host).toBe("gateway01.us-east-1.prod.aws.tidbcloud.com");
   });
@@ -40,7 +42,9 @@ describe("production-database test guard", () => {
   });
 
   it("[FAIL-CLOSED] refuses an unknown remote host rather than assuming it is safe", () => {
-    expect(assessDatabaseUrl("mysql://u:p@db.somewhere.example:3306/db").allowed).toBe(false);
+    expect(
+      assessDatabaseUrl("mysql://u:p@db.somewhere.example:3306/db").allowed
+    ).toBe(false);
   });
 
   it("[FAIL-CLOSED] refuses an unparseable DSN instead of guessing", () => {

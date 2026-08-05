@@ -5,7 +5,8 @@ type FatalProcess = {
   exit(code: number): never | void;
 };
 
-type FatalServer = Pick<Server, "close"> & Partial<Pick<Server, "closeAllConnections">>;
+type FatalServer = Pick<Server, "close"> &
+  Partial<Pick<Server, "closeAllConnections">>;
 
 type InstallFatalErrorHandlerOptions = {
   processTarget?: FatalProcess;
@@ -28,20 +29,23 @@ export function installFatalErrorHandler({
 }: InstallFatalErrorHandlerOptions): void {
   let shuttingDown = false;
 
-  processTarget.once("uncaughtException", (error) => {
+  processTarget.once("uncaughtException", error => {
     if (shuttingDown) return;
     shuttingDown = true;
     logger.error("[FATAL] Uncaught exception — shutting down safely", error);
 
     const forceExit = schedule(() => {
-      logger.error(`[FATAL] Graceful shutdown exceeded ${graceMs}ms — forcing exit`);
+      logger.error(
+        `[FATAL] Graceful shutdown exceeded ${graceMs}ms — forcing exit`
+      );
       server.closeAllConnections?.();
       processTarget.exit(1);
     }, graceMs);
     forceExit.unref?.();
 
     server.close((closeError?: Error) => {
-      if (closeError) logger.error("[FATAL] HTTP server close failed", closeError);
+      if (closeError)
+        logger.error("[FATAL] HTTP server close failed", closeError);
       clearTimeout(forceExit);
       processTarget.exit(1);
     });

@@ -38,7 +38,9 @@ const botSrc = readFileSync(resolve(repoRoot, "server/discord/bot.ts"), "utf8");
  * source would fail on that documentation — which is exactly what happened when
  * these tests were first written. Assert against code.
  */
-const botCode = botSrc.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+const botCode = botSrc
+  .replace(/\/\*[\s\S]*?\*\//g, "")
+  .replace(/\/\/.*$/gm, "");
 
 /** Majors proven to round-trip their own response headers through Headers(). */
 const WORKING_UNDICI_MAJORS = [6, 7];
@@ -70,7 +72,10 @@ describe("undici resolution — the root cause", () => {
     // Reverting to the previously-pinned 6.24.1 would trade an outage for a CVE.
     for (const key of ["discord.js>undici", "@discordjs/rest>undici"]) {
       const [maj, min] = overrides[key].split(".").map(Number);
-      expect(maj === 6 ? min >= 27 : min >= 28, `${key}=${overrides[key]} is below the patched floor`).toBe(true);
+      expect(
+        maj === 6 ? min >= 27 : min >= 28,
+        `${key}=${overrides[key]} is below the patched floor`
+      ).toBe(true);
     }
   });
 
@@ -132,7 +137,9 @@ describe("backoff", () => {
     for (const n of [1, 5, 10, 50, 1000]) {
       const d = calcBackoffMs(n);
       expect(d).toBeGreaterThanOrEqual(1_000);
-      expect(d, `attempt ${n} exceeded the ceiling`).toBeLessThanOrEqual(300_000 * 1.3);
+      expect(d, `attempt ${n} exceeded the ceiling`).toBeLessThanOrEqual(
+        300_000 * 1.3
+      );
     }
   });
 
@@ -155,7 +162,9 @@ describe("watchdog must not become the outage — the livelock regression", () =
     const grace = /WATCHDOG_GRACE_MS = ([\d_]+)/.exec(botCode);
     expect(grace, "grace constant missing").toBeTruthy();
     const graceMs = Number(grace![1].replace(/_/g, ""));
-    const probe = Number(/WATCHDOG_INTERVAL_MS = ([\d_]+)/.exec(botCode)![1].replace(/_/g, ""));
+    const probe = Number(
+      /WATCHDOG_INTERVAL_MS = ([\d_]+)/.exec(botCode)![1].replace(/_/g, "")
+    );
     // The teardown threshold must be strictly longer than the probe cadence,
     // otherwise the first probe is still the teardown.
     expect(graceMs).toBeGreaterThan(probe);
@@ -166,8 +175,17 @@ describe("watchdog must not become the outage — the livelock regression", () =
     // Interrupting Connecting/Identifying/Resuming burns an IDENTIFY and
     // restarts the clock — the mechanism of the livelock.
     expect(botCode).toMatch(/TRANSITIONAL_STATUSES/);
-    for (const st of ["Connecting", "Reconnecting", "Identifying", "Resuming", "Nearly", "WaitingForGuilds"]) {
-      expect(botCode, `${st} must be treated as in-flight`).toContain(`Status.${st}`);
+    for (const st of [
+      "Connecting",
+      "Reconnecting",
+      "Identifying",
+      "Resuming",
+      "Nearly",
+      "WaitingForGuilds",
+    ]) {
+      expect(botCode, `${st} must be treated as in-flight`).toContain(
+        `Status.${st}`
+      );
     }
     expect(botCode).toMatch(/TRANSITIONAL_STATUSES\.has\(status\)/);
   });

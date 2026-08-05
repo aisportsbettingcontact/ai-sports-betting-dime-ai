@@ -2,7 +2,10 @@ import { describe, it, expect } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
 
-const src = fs.readFileSync(path.join(import.meta.dirname, "DeviceActivityPanel.tsx"), "utf8");
+const src = fs.readFileSync(
+  path.join(import.meta.dirname, "DeviceActivityPanel.tsx"),
+  "utf8"
+);
 
 describe("DeviceActivityPanel (source contract)", () => {
   it("reads the owner-gated overview query", () => {

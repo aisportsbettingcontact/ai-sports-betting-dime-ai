@@ -21,7 +21,9 @@ import { classifySession } from "./checkoutReconcile";
 describe("classifySession — open sessions are left alone", () => {
   it("returns null while the buyer may still be paying", () => {
     // Resolving an open session would mark a live checkout as failed.
-    expect(classifySession({ status: "open", payment_status: "unpaid" })).toBeNull();
+    expect(
+      classifySession({ status: "open", payment_status: "unpaid" })
+    ).toBeNull();
   });
 
   it("returns null for an unknown status rather than guessing", () => {
@@ -36,14 +38,18 @@ describe("classifySession — the incident case", () => {
     expect(v).toEqual({
       status: "completed",
       fulfillment: "dropped",
-      reason: "complete+paid in Stripe but never fulfilled locally (reconciled)",
+      reason:
+        "complete+paid in Stripe but never fulfilled locally (reconciled)",
     });
   });
 
   it("treats no_payment_required (100% coupon) as paid, not as a drop", () => {
     // A fully-discounted checkout is legitimate revenue-zero access. Calling it
     // dropped would raise a false alarm on every comp.
-    const v = classifySession({ status: "complete", payment_status: "no_payment_required" });
+    const v = classifySession({
+      status: "complete",
+      payment_status: "no_payment_required",
+    });
     expect(v?.fulfillment).toBe("dropped"); // still needs fulfilment...
     expect(v?.status).toBe("completed");
   });
@@ -133,7 +139,9 @@ describe("pre-ledger sessions must never be judged — the false-alarm guard", (
     // as dropped when most had been provisioned by hand. Nine false alarms on
     // day one teaches everyone to ignore the signal.
     expect(src).toMatch(/createdMs < LEDGER_EPOCH_MS/);
-    expect(src).toMatch(/predates the checkout ledger — outcome unknown, not judged/);
+    expect(src).toMatch(
+      /predates the checkout ledger — outcome unknown, not judged/
+    );
   });
 
   it("still counts them as back-filled so the history is not lost", () => {

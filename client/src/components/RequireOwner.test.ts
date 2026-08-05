@@ -56,12 +56,16 @@ describe("RequireOwner — no-flash gate", () => {
 
   it("never redirects while loading — only after auth has resolved", () => {
     const effectStart = source.indexOf("useEffect(() => {");
-    const effectEnd = source.indexOf("}, [loading, isOwner, appUser, navigate]);");
+    const effectEnd = source.indexOf(
+      "}, [loading, isOwner, appUser, navigate]);"
+    );
     const effectBody = source.slice(effectStart, effectEnd);
     expect(effectStart).toBeGreaterThan(-1);
     expect(effectEnd).toBeGreaterThan(effectStart);
     // First line of the effect must bail out on loading before anything else.
-    expect(effectBody).toMatch(/if \(loading\) return;[\s\S]*if \(isOwner\) return;/);
+    expect(effectBody).toMatch(
+      /if \(loading\) return;[\s\S]*if \(isOwner\) return;/
+    );
   });
 
   it("redirects non-owners to /chat with replace (never push), so Back cannot re-land on the admin URL", () => {

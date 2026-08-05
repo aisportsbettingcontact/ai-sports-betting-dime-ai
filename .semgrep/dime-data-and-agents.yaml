@@ -33,7 +33,7 @@ rules:
           - pattern: console.error(..., process.env.$SECRET, ...)
       - metavariable-regex:
           metavariable: $SECRET
-          regex: '.*(SECRET|TOKEN|PASSWORD|API_KEY|DATABASE_URL).*'
+          regex: ".*(SECRET|TOKEN|PASSWORD|API_KEY|DATABASE_URL).*"
 
   - id: dime-model-output-to-execution
     languages: [typescript]
@@ -51,7 +51,7 @@ rules:
           - pattern: spawn($MODELOUT, ...)
       - metavariable-regex:
           metavariable: $MODELOUT
-          regex: '.*(completion|response|message|content|modelOut|llm).*'
+          regex: ".*(completion|response|message|content|modelOut|llm).*"
 
   - id: dime-test-mock-imported-by-prod
     languages: [typescript]

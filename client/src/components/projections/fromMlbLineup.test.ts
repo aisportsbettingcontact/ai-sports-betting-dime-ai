@@ -14,17 +14,28 @@ describe("parseRotowireBattingOrder", () => {
       rotowireId: 1000 + index,
       mlbamId: 2000 + index,
     }));
-    rows.push({ battingOrder: 3, position: "SS", name: "", bats: "L", rotowireId: 1, mlbamId: 2 });
+    rows.push({
+      battingOrder: 3,
+      position: "SS",
+      name: "",
+      bats: "L",
+      rotowireId: 1,
+      mlbamId: 2,
+    });
 
     const parsed = parseRotowireBattingOrder(JSON.stringify(rows));
     expect(parsed).toHaveLength(9);
-    expect(parsed.map((player) => player.battingOrder)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
-    expect(parsed.every((player) => player.name.length > 0)).toBe(true);
+    expect(parsed.map(player => player.battingOrder)).toEqual([
+      1, 2, 3, 4, 5, 6, 7, 8, 9,
+    ]);
+    expect(parsed.every(player => player.name.length > 0)).toBe(true);
   });
 
   it("returns an empty order for malformed or non-array payloads", () => {
     expect(parseRotowireBattingOrder("{not-json")).toEqual([]);
-    expect(parseRotowireBattingOrder(JSON.stringify({ battingOrder: 1 }))).toEqual([]);
+    expect(
+      parseRotowireBattingOrder(JSON.stringify({ battingOrder: 1 }))
+    ).toEqual([]);
     expect(parseRotowireBattingOrder(null)).toEqual([]);
   });
 });
@@ -44,7 +55,14 @@ describe("mlbLineupToProjectionPregame", () => {
       homePitcherEra: "8-5 · 3.62 ERA",
       homePitcherConfirmed: false,
       awayLineup: JSON.stringify([
-        { battingOrder: 1, position: "CF", name: "Jung Hoo Lee", bats: "L", rotowireId: 1, mlbamId: 808982 },
+        {
+          battingOrder: 1,
+          position: "CF",
+          name: "Jung Hoo Lee",
+          bats: "L",
+          rotowireId: 1,
+          mlbamId: 808982,
+        },
       ]),
       awayLineupConfirmed: true,
       homeLineup: "[]",

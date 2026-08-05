@@ -8,9 +8,13 @@ export default function ObjectionHandling() {
     <section className="sec" id="answers" aria-label="Straight answers">
       <div className="wrap">
         <div className="sec-body">
-          <SectionHead eyebrow={OBJECTIONS.eyebrow} headline={OBJECTIONS.headline} sub={OBJECTIONS.sub} />
+          <SectionHead
+            eyebrow={OBJECTIONS.eyebrow}
+            headline={OBJECTIONS.headline}
+            sub={OBJECTIONS.sub}
+          />
           <div style={{ marginTop: "clamp(20px, 3vw, 32px)" }}>
-            {OBJECTIONS.items.map((item) => (
+            {OBJECTIONS.items.map(item => (
               <div className="qa" key={item.stamp}>
                 <span className="qa-q">{item.q}</span>
                 <p>{item.a}</p>

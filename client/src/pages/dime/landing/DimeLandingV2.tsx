@@ -58,8 +58,13 @@ export default function DimeLandingV2() {
     const raf = requestAnimationFrame(() => {
       const el = document.getElementById(id);
       if (!el) return;
-      const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      el.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+      const reduce = window.matchMedia(
+        "(prefers-reduced-motion: reduce)"
+      ).matches;
+      el.scrollIntoView({
+        behavior: reduce ? "auto" : "smooth",
+        block: "start",
+      });
     });
     return () => cancelAnimationFrame(raf);
   }, []);
@@ -68,7 +73,7 @@ export default function DimeLandingV2() {
     <div className="dlv2">
       <Nav />
       <main>
-        <Hero />           {/* includes Dime Market Console + stats strip */}
+        <Hero /> {/* includes Dime Market Console + stats strip */}
         <Suspense fallback={<div className="sec-reserve" aria-hidden="true" />}>
           <ChatDemo />
         </Suspense>

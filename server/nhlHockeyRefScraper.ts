@@ -32,7 +32,8 @@ export interface NhlRestDays {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const HR_SCHEDULE_URL = "https://www.hockey-reference.com/leagues/NHL_2026_games.html";
+const HR_SCHEDULE_URL =
+  "https://www.hockey-reference.com/leagues/NHL_2026_games.html";
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6 hours
 
 const HR_HEADERS = {
@@ -51,7 +52,7 @@ const HR_HEADERS = {
  * Special case: Utah Mammoth (new team 2025-26) — HR uses "Utah Mammoth".
  */
 const HR_NAME_TO_DB_SLUG = new Map<string, string>(
-  NHL_TEAMS.map((t) => [t.name, t.dbSlug])
+  NHL_TEAMS.map(t => [t.name, t.dbSlug])
 );
 
 // Also map by city+nickname variants in case HR uses slightly different names
@@ -96,7 +97,8 @@ function parseScheduleHtml(html: string): Map<string, string[]> {
 
     // Visitor team name
     const visitorCell = $row.find('[data-stat="visitor_team_name"]');
-    const visitorName = visitorCell.find("a").text().trim() || visitorCell.text().trim();
+    const visitorName =
+      visitorCell.find("a").text().trim() || visitorCell.text().trim();
 
     // Home team name
     const homeCell = $row.find('[data-stat="home_team_name"]');
@@ -130,8 +132,13 @@ function parseScheduleHtml(html: string): Map<string, string[]> {
   });
 
   const teamCount = gameDatesByTeam.size;
-  const totalGames = Array.from(gameDatesByTeam.values()).reduce((s, d) => s + d.length, 0);
-  console.log(`[HockeyRef] Parsed schedule: ${teamCount} teams, ${totalGames} team-game entries`);
+  const totalGames = Array.from(gameDatesByTeam.values()).reduce(
+    (s, d) => s + d.length,
+    0
+  );
+  console.log(
+    `[HockeyRef] Parsed schedule: ${teamCount} teams, ${totalGames} team-game entries`
+  );
 
   return gameDatesByTeam;
 }
@@ -190,7 +197,7 @@ export async function computeNhlRestDays(
     const getRestDays = (dbSlug: string): number => {
       const dates = gameDatesByTeam.get(dbSlug) ?? [];
       // Find all dates strictly before the game date
-      const priorDates = dates.filter((d) => d < gameDate);
+      const priorDates = dates.filter(d => d < gameDate);
       if (priorDates.length === 0) {
         // No prior games found — start of season or new team
         return 3;
@@ -211,13 +218,15 @@ export async function computeNhlRestDays(
 
     console.log(
       `[HockeyRef] Rest days for ${awayDbSlug} @ ${homeDbSlug} on ${gameDate}: ` +
-      `away=${awayRestDays}d, home=${homeRestDays}d`
+        `away=${awayRestDays}d, home=${homeRestDays}d`
     );
 
     return { awayRestDays, homeRestDays };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.warn(`[HockeyRef] Failed to compute rest days: ${msg} — defaulting to 2`);
+    console.warn(
+      `[HockeyRef] Failed to compute rest days: ${msg} — defaulting to 2`
+    );
     return { awayRestDays: 2, homeRestDays: 2 };
   }
 }

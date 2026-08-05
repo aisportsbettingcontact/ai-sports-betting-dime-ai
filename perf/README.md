@@ -33,14 +33,14 @@ CI.
 Headless Chromium (Playwright) loads each route in `perf/harness.ts` and records,
 per route (lower is better):
 
-| Metric | Meaning |
-|---|---|
-| `ttfbMs` | responseStart − requestStart (server + network) |
-| `domContentLoaded` | DOMContentLoaded relative to nav start |
-| `loadMs` | load event relative to nav start |
-| `fcpMs` | first-contentful-paint |
-| `lcpMs` | largest-contentful-paint |
-| `transferBytes` | Σ transfer size of the navigation + all resources |
+| Metric             | Meaning                                           |
+| ------------------ | ------------------------------------------------- |
+| `ttfbMs`           | responseStart − requestStart (server + network)   |
+| `domContentLoaded` | DOMContentLoaded relative to nav start            |
+| `loadMs`           | load event relative to nav start                  |
+| `fcpMs`            | first-contentful-paint                            |
+| `lcpMs`            | largest-contentful-paint                          |
+| `transferBytes`    | Σ transfer size of the navigation + all resources |
 
 `GET /health` is probed for status + latency (informational — not budgeted, so a
 DB circuit-breaker flap doesn't fail the perf gate).

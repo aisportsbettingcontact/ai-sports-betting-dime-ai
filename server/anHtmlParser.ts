@@ -127,13 +127,19 @@ function findDkColumnIndex(api: CheerioAPI, rows: El[]): number {
       if (hasDK) counts[ci] = (counts[ci] || 0) + 1;
     });
   }
-  const entries = Object.entries(counts).sort((a, b) => Number(b[1]) - Number(a[1]));
+  const entries = Object.entries(counts).sort(
+    (a, b) => Number(b[1]) - Number(a[1])
+  );
   if (entries.length) {
-    console.warn(`[AnHtmlParser] No header row found — using data-row DK logo scan, best column: ${entries[0][0]}`);
+    console.warn(
+      `[AnHtmlParser] No header row found — using data-row DK logo scan, best column: ${entries[0][0]}`
+    );
     return Number(entries[0][0]);
   }
 
-  console.warn("[AnHtmlParser] Could not find DK NJ column — using fallback index 8");
+  console.warn(
+    "[AnHtmlParser] Could not find DK NJ column — using fallback index 8"
+  );
   return 8; // updated fallback based on known NCAAB structure
 }
 
@@ -154,8 +160,8 @@ const SPORT_LINK_PATTERNS: Record<AnSport, string> = {
 // NBA/NHL: 11 (7 books + Open + Game info + Best Odds + 1 extra)
 const MIN_CELLS_BY_SPORT: Record<AnSport, number> = {
   ncaab: 10, // use 10 as floor to be safe (actual is 12)
-  nba: 9,    // use 9 as floor to be safe (actual is 11)
-  nhl: 9,    // use 9 as floor to be safe (actual is 11)
+  nba: 9, // use 9 as floor to be safe (actual is 11)
+  nhl: 9, // use 9 as floor to be safe (actual is 11)
 };
 
 function classifyRow(api: CheerioAPI, row: El, sport: AnSport): RowType {
@@ -168,7 +174,9 @@ function classifyRow(api: CheerioAPI, row: El, sport: AnSport): RowType {
   if (hasLink) return "SPREAD";
 
   const openCells = api(row).find(".best-odds__open-cell").toArray();
-  const openTexts = openCells.map((c: El) => api(c).children("div").first().text().trim());
+  const openTexts = openCells.map((c: El) =>
+    api(c).children("div").first().text().trim()
+  );
 
   if (openTexts.some((t: string) => /^[ou]/i.test(t))) return "TOTAL";
   if (openTexts.some((t: string) => /^[+-]\d{3}/.test(t))) return "ML";
@@ -179,7 +187,10 @@ function classifyRow(api: CheerioAPI, row: El, sport: AnSport): RowType {
  * Parse the Open column cell (column index 1).
  * Contains two .best-odds__open-cell elements (away/home or over/under).
  */
-function parseOpenCell(api: CheerioAPI, cell: El): { away: AnOddsEntry | null; home: AnOddsEntry | null } {
+function parseOpenCell(
+  api: CheerioAPI,
+  cell: El
+): { away: AnOddsEntry | null; home: AnOddsEntry | null } {
   const openCells = api(cell).find(".best-odds__open-cell").toArray();
   if (openCells.length < 2) return { away: null, home: null };
 
@@ -187,7 +198,9 @@ function parseOpenCell(api: CheerioAPI, cell: El): { away: AnOddsEntry | null; h
     const $el = api(el);
     const allDivs = $el.children("div").toArray();
     const secondary = $el.find(".best-odds__open-cell-secondary");
-    const lineDiv = allDivs.find((d: El) => !api(d).hasClass("best-odds__open-cell-secondary"));
+    const lineDiv = allDivs.find(
+      (d: El) => !api(d).hasClass("best-odds__open-cell-secondary")
+    );
     const line = lineDiv ? api(lineDiv).text().trim() : "";
     const juice = secondary.find("div").first().text().trim();
     if (!line) return null;
@@ -205,7 +218,10 @@ function parseOpenCell(api: CheerioAPI, cell: El): { away: AnOddsEntry | null; h
  * Best-odds cells have an extra SVG bookmark icon span (filtered out).
  * Book logo spans (picture elements) are also filtered out.
  */
-function parseBookCell(api: CheerioAPI, cell: El): { away: AnOddsEntry | null; home: AnOddsEntry | null } {
+function parseBookCell(
+  api: CheerioAPI,
+  cell: El
+): { away: AnOddsEntry | null; home: AnOddsEntry | null } {
   const wrappers = api(cell).find(".best-odds__odds-container > div").toArray();
   if (wrappers.length < 2) return { away: null, home: null };
 
@@ -219,7 +235,10 @@ function parseBookCell(api: CheerioAPI, cell: El): { away: AnOddsEntry | null; h
     const spans = oddsDiv
       .find("span")
       .toArray()
-      .filter((s: El) => api(s).find("svg").length === 0 && api(s).find("picture").length === 0);
+      .filter(
+        (s: El) =>
+          api(s).find("svg").length === 0 && api(s).find("picture").length === 0
+      );
 
     const texts = spans
       .map((s: El) => api(s).text().trim())
@@ -244,7 +263,10 @@ function parseBookCell(api: CheerioAPI, cell: El): { away: AnOddsEntry | null; h
  * @param sport  Sport identifier: "ncaab" | "nba" | "nhl" (default: "ncaab")
  * @returns      Parsed game odds with open lines and DK NJ lines for all markets
  */
-export function parseAnAllMarketsHtml(html: string, sport: AnSport = "ncaab"): AnParseResult {
+export function parseAnAllMarketsHtml(
+  html: string,
+  sport: AnSport = "ncaab"
+): AnParseResult {
   const warnings: string[] = [];
 
   // Wrap in <table> so cheerio correctly parses <tr>/<td> elements
@@ -252,13 +274,17 @@ export function parseAnAllMarketsHtml(html: string, sport: AnSport = "ncaab"): A
   const rows = $("tr").toArray();
 
   if (!rows.length) {
-    warnings.push("No <tr> rows found — ensure you paste the full <tbody> HTML from the AN best-odds page");
+    warnings.push(
+      "No <tr> rows found — ensure you paste the full <tbody> HTML from the AN best-odds page"
+    );
     return { games: [], dkColumnIndex: -1, warnings };
   }
 
   const dkColumnIndex = findDkColumnIndex($, rows);
   if (dkColumnIndex < 0) {
-    warnings.push("Could not find DK NJ column — no 'DK' logo found in any cell. Using fallback index 9.");
+    warnings.push(
+      "Could not find DK NJ column — no 'DK' logo found in any cell. Using fallback index 9."
+    );
   }
 
   const games: AnParsedGame[] = [];
@@ -294,10 +320,12 @@ export function parseAnAllMarketsHtml(html: string, sport: AnSport = "ncaab"): A
         ? $(teamDivs[1]).find(".game-info__team--mobile").first().text().trim()
         : "";
       const awayLogo = teamDivs[0]
-        ? $(teamDivs[0]).find("img.game-info__team-icon").first().attr("src") || ""
+        ? $(teamDivs[0]).find("img.game-info__team-icon").first().attr("src") ||
+          ""
         : "";
       const homeLogo = teamDivs[1]
-        ? $(teamDivs[1]).find("img.game-info__team-icon").first().attr("src") || ""
+        ? $(teamDivs[1]).find("img.game-info__team-icon").first().attr("src") ||
+          ""
         : "";
 
       const rotDivs = $(row).find(".game-info__rot-number div").toArray();
@@ -307,7 +335,9 @@ export function parseAnAllMarketsHtml(html: string, sport: AnSport = "ncaab"): A
       // ── Parse spread row odds ──
       const openSpread = parseOpenCell($, cells[1]);
       const dkSpread =
-        dkColumnIndex >= 0 ? parseBookCell($, cells[dkColumnIndex]) : { away: null, home: null };
+        dkColumnIndex >= 0
+          ? parseBookCell($, cells[dkColumnIndex])
+          : { away: null, home: null };
 
       currentGame = {
         anGameId,
@@ -338,7 +368,9 @@ export function parseAnAllMarketsHtml(html: string, sport: AnSport = "ncaab"): A
       // ── Parse total row: "away" slot = over, "home" slot = under ──
       const openTotal = parseOpenCell($, cells[1]);
       const dkTotal =
-        dkColumnIndex >= 0 ? parseBookCell($, cells[dkColumnIndex]) : { away: null, home: null };
+        dkColumnIndex >= 0
+          ? parseBookCell($, cells[dkColumnIndex])
+          : { away: null, home: null };
       currentGame.openOver = openTotal.away;
       currentGame.openUnder = openTotal.home;
       currentGame.dkOver = dkTotal.away;
@@ -347,14 +379,20 @@ export function parseAnAllMarketsHtml(html: string, sport: AnSport = "ncaab"): A
       // ── Parse moneyline row ──
       const openML = parseOpenCell($, cells[1]);
       const dkML =
-        dkColumnIndex >= 0 ? parseBookCell($, cells[dkColumnIndex]) : { away: null, home: null };
+        dkColumnIndex >= 0
+          ? parseBookCell($, cells[dkColumnIndex])
+          : { away: null, home: null };
       currentGame.openAwayML = openML.away;
       currentGame.openHomeML = openML.home;
       currentGame.dkAwayML = dkML.away;
       currentGame.dkHomeML = dkML.home;
     }
     // SEPARATOR rows: reset currentGame after a complete group (spread + total + ML)
-    else if (type === "SEPARATOR" && currentGame && currentGame.openAwayML !== null) {
+    else if (
+      type === "SEPARATOR" &&
+      currentGame &&
+      currentGame.openAwayML !== null
+    ) {
       currentGame = null;
     }
   }

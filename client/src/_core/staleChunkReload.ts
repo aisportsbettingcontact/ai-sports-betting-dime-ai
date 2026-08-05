@@ -30,20 +30,30 @@ const STALE =
 
 function store(): Storage | undefined {
   // Safari private mode throws on access.
-  try { return typeof window !== "undefined" ? window.sessionStorage : undefined; } catch { return undefined; }
+  try {
+    return typeof window !== "undefined" ? window.sessionStorage : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 export function isStaleChunkError(error: unknown): boolean {
   const m =
-    error instanceof Error ? error.message
-    : typeof error === "string" ? error
-    : error && typeof error === "object" && "message" in error ? String((error as { message: unknown }).message)
-    : "";
+    error instanceof Error
+      ? error.message
+      : typeof error === "string"
+        ? error
+        : error && typeof error === "object" && "message" in error
+          ? String((error as { message: unknown }).message)
+          : "";
   return m ? STALE.test(m) : false;
 }
 
 /** True when a recovery reload already happened inside the guard window. */
-export function reloadAlreadyAttempted(now: number = Date.now(), s: Storage | undefined = store()): boolean {
+export function reloadAlreadyAttempted(
+  now: number = Date.now(),
+  s: Storage | undefined = store()
+): boolean {
   const at = Number(s?.getItem(KEY));
   return Number.isFinite(at) && at > 0 && now - at < WINDOW_MS;
 }
@@ -54,7 +64,11 @@ export function attemptStaleChunkReload(now: number = Date.now()): boolean {
     console.error("[StaleChunk] already reloaded — surfacing error");
     return false;
   }
-  try { store()?.setItem(KEY, String(now)); } catch { /* storage unavailable; still reload once */ }
+  try {
+    store()?.setItem(KEY, String(now));
+  } catch {
+    /* storage unavailable; still reload once */
+  }
   console.warn("[StaleChunk] stale build chunk — reloading");
   if (typeof window !== "undefined") window.location.reload();
   return true;
@@ -63,6 +77,10 @@ export function attemptStaleChunkReload(now: number = Date.now()): boolean {
 /** Vite fires `vite:preloadError` for failed chunk preloads; rejections catch the import itself. */
 export function installStaleChunkRecovery(): void {
   if (typeof window === "undefined") return;
-  window.addEventListener("vite:preloadError", (e) => { if (attemptStaleChunkReload()) e.preventDefault(); });
-  window.addEventListener("unhandledrejection", (e) => { if (isStaleChunkError(e.reason)) attemptStaleChunkReload(); });
+  window.addEventListener("vite:preloadError", e => {
+    if (attemptStaleChunkReload()) e.preventDefault();
+  });
+  window.addEventListener("unhandledrejection", e => {
+    if (isStaleChunkError(e.reason)) attemptStaleChunkReload();
+  });
 }

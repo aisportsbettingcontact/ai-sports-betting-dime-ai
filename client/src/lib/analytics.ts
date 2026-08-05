@@ -14,7 +14,10 @@
  */
 import { useCallback } from "react";
 import { trpc } from "@/lib/trpc";
-import { buildClientDeviceContext, type ClientDeviceContext } from "@/lib/deviceContext";
+import {
+  buildClientDeviceContext,
+  type ClientDeviceContext,
+} from "@/lib/deviceContext";
 import { toRoutePattern } from "@/lib/routePattern";
 
 export type QualifyingEventName =
@@ -46,7 +49,8 @@ export type ActionName =
   | "search_performed"
   | "results_viewed"
   | "referral_landed";
-export type FeatureEventName = "feature_opened" | "feature_completed" | "feature_failed";
+export type FeatureEventName =
+  "feature_opened" | "feature_completed" | "feature_failed";
 export type AnalyticsEventName =
   | QualifyingEventName
   | "session_started"
@@ -105,9 +109,13 @@ export interface ClientEnvelope extends ClientDeviceContext {
 }
 
 /** Pure: build the non-authoritative client envelope (server overrides identity). */
-export function buildClientEnvelope(eventName: AnalyticsEventName, opts: TrackOptions = {}): ClientEnvelope {
+export function buildClientEnvelope(
+  eventName: AnalyticsEventName,
+  opts: TrackOptions = {}
+): ClientEnvelope {
   const device = buildClientDeviceContext();
-  const pathname = typeof window !== "undefined" ? window.location.pathname : "/";
+  const pathname =
+    typeof window !== "undefined" ? window.location.pathname : "/";
   return {
     ...device,
     eventId: newEventId(),
@@ -129,8 +137,16 @@ export function buildClientEnvelope(eventName: AnalyticsEventName, opts: TrackOp
  * Returns a stable `track(eventName, opts)` for value events. Fire-and-forget;
  * never throws; server-gated (inert until the pipeline is enabled).
  */
-export function useAnalytics(): (eventName: AnalyticsEventName, opts?: TrackOptions) => void {
-  const mutation = trpc.analytics.track.useMutation({ retry: false, onError: () => { /* swallow — analytics never breaks the product */ } });
+export function useAnalytics(): (
+  eventName: AnalyticsEventName,
+  opts?: TrackOptions
+) => void {
+  const mutation = trpc.analytics.track.useMutation({
+    retry: false,
+    onError: () => {
+      /* swallow — analytics never breaks the product */
+    },
+  });
   // Depend on the stable `mutate` (not the whole mutation object, which is a new
   // ref each render) so `track` keeps a stable identity and consumer effects
   // don't re-run on every render.
@@ -143,7 +159,7 @@ export function useAnalytics(): (eventName: AnalyticsEventName, opts?: TrackOpti
         /* fire-and-forget */
       }
     },
-    [mutate],
+    [mutate]
   );
 }
 
@@ -154,12 +170,15 @@ export function useAnalytics(): (eventName: AnalyticsEventName, opts?: TrackOpti
  * points on LAZY surfaces (feed/splits/tracker); critical-path chat uses the
  * bridge's `emitAction` instead so this module stays out of the chat chunk.
  */
-export function useTrackAction(): (actionName: ActionName, opts?: Omit<TrackOptions, "actionName">) => void {
+export function useTrackAction(): (
+  actionName: ActionName,
+  opts?: Omit<TrackOptions, "actionName">
+) => void {
   const track = useAnalytics();
   return useCallback(
     (actionName: ActionName, opts: Omit<TrackOptions, "actionName"> = {}) => {
       track("action_performed", { ...opts, actionName });
     },
-    [track],
+    [track]
   );
 }

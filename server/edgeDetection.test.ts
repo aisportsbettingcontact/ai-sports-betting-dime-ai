@@ -9,8 +9,13 @@
  * Tests are pure logic tests — no DOM rendering required.
  */
 
-import { describe, it, expect } from 'vitest';
-import { americanToImplied, calculateEdge, calculateRoi, getEdgeColor } from '../client/src/lib/edgeUtils';
+import { describe, it, expect } from "vitest";
+import {
+  americanToImplied,
+  calculateEdge,
+  calculateRoi,
+  getEdgeColor,
+} from "../client/src/lib/edgeUtils";
 
 // ─── Helpers mirroring GameCard.tsx logic ────────────────────────────────────
 
@@ -22,121 +27,122 @@ function awaySpreadModelStyle(
   showModel: boolean,
   hasSpreadEdge: boolean,
   spreadEdgeIsAway: boolean | null
-): 'green' | 'white' | 'dim' {
-  if (!showModel) return 'dim';
-  return hasSpreadEdge && spreadEdgeIsAway === true ? 'green' : 'white';
+): "green" | "white" | "dim" {
+  if (!showModel) return "dim";
+  return hasSpreadEdge && spreadEdgeIsAway === true ? "green" : "white";
 }
 
 function homeSpreadModelStyle(
   showModel: boolean,
   hasSpreadEdge: boolean,
   spreadEdgeIsAway: boolean | null
-): 'green' | 'white' | 'dim' {
-  if (!showModel) return 'dim';
-  return hasSpreadEdge && spreadEdgeIsAway === false ? 'green' : 'white';
+): "green" | "white" | "dim" {
+  if (!showModel) return "dim";
+  return hasSpreadEdge && spreadEdgeIsAway === false ? "green" : "white";
 }
 
 function overTotalModelStyle(
   showModel: boolean,
   hasTotalEdge: boolean,
   totalEdgeIsOver: boolean | null
-): 'green' | 'white' | 'dim' {
-  if (!showModel) return 'dim';
-  return hasTotalEdge && totalEdgeIsOver === true ? 'green' : 'white';
+): "green" | "white" | "dim" {
+  if (!showModel) return "dim";
+  return hasTotalEdge && totalEdgeIsOver === true ? "green" : "white";
 }
 
 function underTotalModelStyle(
   showModel: boolean,
   hasTotalEdge: boolean,
   totalEdgeIsOver: boolean | null
-): 'green' | 'white' | 'dim' {
-  if (!showModel) return 'dim';
-  return hasTotalEdge && totalEdgeIsOver === false ? 'green' : 'white';
+): "green" | "white" | "dim" {
+  if (!showModel) return "dim";
+  return hasTotalEdge && totalEdgeIsOver === false ? "green" : "white";
 }
 
 /**
  * Mirrors spreadEdgeIsAwayForVerdict from GameCard.tsx (post-fix).
  * Uses authSpreadEdgeIsAway === true (explicit boolean check, not truthy).
  */
-function spreadEdgeIsAwayForVerdict(authSpreadEdgeIsAway: boolean | null): boolean {
+function spreadEdgeIsAwayForVerdict(
+  authSpreadEdgeIsAway: boolean | null
+): boolean {
   return authSpreadEdgeIsAway === true;
 }
 
 // ─── Fix 1: Null-guard on model styles ───────────────────────────────────────
 
-describe('Fix 1: Null-guard on model styles — !null must NOT produce green', () => {
-
-  describe('awaySpreadModelStyle', () => {
-    it('[VERIFY] spreadEdgeIsAway=null → away=white (no edge direction)', () => {
-      expect(awaySpreadModelStyle(true, false, null)).toBe('white');
+describe("Fix 1: Null-guard on model styles — !null must NOT produce green", () => {
+  describe("awaySpreadModelStyle", () => {
+    it("[VERIFY] spreadEdgeIsAway=null → away=white (no edge direction)", () => {
+      expect(awaySpreadModelStyle(true, false, null)).toBe("white");
     });
-    it('[VERIFY] spreadEdgeIsAway=true → away=green', () => {
-      expect(awaySpreadModelStyle(true, true, true)).toBe('green');
+    it("[VERIFY] spreadEdgeIsAway=true → away=green", () => {
+      expect(awaySpreadModelStyle(true, true, true)).toBe("green");
     });
-    it('[VERIFY] spreadEdgeIsAway=false → away=white', () => {
-      expect(awaySpreadModelStyle(true, true, false)).toBe('white');
+    it("[VERIFY] spreadEdgeIsAway=false → away=white", () => {
+      expect(awaySpreadModelStyle(true, true, false)).toBe("white");
     });
-    it('[VERIFY] showModel=false → away=dim regardless of direction', () => {
-      expect(awaySpreadModelStyle(false, true, true)).toBe('dim');
-      expect(awaySpreadModelStyle(false, true, false)).toBe('dim');
-      expect(awaySpreadModelStyle(false, true, null)).toBe('dim');
+    it("[VERIFY] showModel=false → away=dim regardless of direction", () => {
+      expect(awaySpreadModelStyle(false, true, true)).toBe("dim");
+      expect(awaySpreadModelStyle(false, true, false)).toBe("dim");
+      expect(awaySpreadModelStyle(false, true, null)).toBe("dim");
     });
   });
 
-  describe('homeSpreadModelStyle', () => {
-    it('[CRITICAL] spreadEdgeIsAway=null → home=white (was incorrectly green before fix)', () => {
+  describe("homeSpreadModelStyle", () => {
+    it("[CRITICAL] spreadEdgeIsAway=null → home=white (was incorrectly green before fix)", () => {
       // Pre-fix: hasSpreadEdge && !null === hasSpreadEdge && true === green (BUG)
       // Post-fix: hasSpreadEdge && null === false === white (CORRECT)
-      expect(homeSpreadModelStyle(true, true, null)).toBe('white');
+      expect(homeSpreadModelStyle(true, true, null)).toBe("white");
     });
-    it('[VERIFY] spreadEdgeIsAway=false → home=green', () => {
-      expect(homeSpreadModelStyle(true, true, false)).toBe('green');
+    it("[VERIFY] spreadEdgeIsAway=false → home=green", () => {
+      expect(homeSpreadModelStyle(true, true, false)).toBe("green");
     });
-    it('[VERIFY] spreadEdgeIsAway=true → home=white', () => {
-      expect(homeSpreadModelStyle(true, true, true)).toBe('white');
+    it("[VERIFY] spreadEdgeIsAway=true → home=white", () => {
+      expect(homeSpreadModelStyle(true, true, true)).toBe("white");
     });
-    it('[VERIFY] showModel=false → home=dim regardless of direction', () => {
-      expect(homeSpreadModelStyle(false, true, null)).toBe('dim');
-    });
-  });
-
-  describe('overTotalModelStyle', () => {
-    it('[VERIFY] totalEdgeIsOver=null → over=white', () => {
-      expect(overTotalModelStyle(true, false, null)).toBe('white');
-    });
-    it('[VERIFY] totalEdgeIsOver=true → over=green', () => {
-      expect(overTotalModelStyle(true, true, true)).toBe('green');
-    });
-    it('[VERIFY] totalEdgeIsOver=false → over=white', () => {
-      expect(overTotalModelStyle(true, true, false)).toBe('white');
+    it("[VERIFY] showModel=false → home=dim regardless of direction", () => {
+      expect(homeSpreadModelStyle(false, true, null)).toBe("dim");
     });
   });
 
-  describe('underTotalModelStyle', () => {
-    it('[CRITICAL] totalEdgeIsOver=null → under=white (was incorrectly green before fix)', () => {
+  describe("overTotalModelStyle", () => {
+    it("[VERIFY] totalEdgeIsOver=null → over=white", () => {
+      expect(overTotalModelStyle(true, false, null)).toBe("white");
+    });
+    it("[VERIFY] totalEdgeIsOver=true → over=green", () => {
+      expect(overTotalModelStyle(true, true, true)).toBe("green");
+    });
+    it("[VERIFY] totalEdgeIsOver=false → over=white", () => {
+      expect(overTotalModelStyle(true, true, false)).toBe("white");
+    });
+  });
+
+  describe("underTotalModelStyle", () => {
+    it("[CRITICAL] totalEdgeIsOver=null → under=white (was incorrectly green before fix)", () => {
       // Pre-fix: hasTotalEdge && !null === hasTotalEdge && true === green (BUG)
       // Post-fix: hasTotalEdge && null === false === white (CORRECT)
-      expect(underTotalModelStyle(true, true, null)).toBe('white');
+      expect(underTotalModelStyle(true, true, null)).toBe("white");
     });
-    it('[VERIFY] totalEdgeIsOver=false → under=green', () => {
-      expect(underTotalModelStyle(true, true, false)).toBe('green');
+    it("[VERIFY] totalEdgeIsOver=false → under=green", () => {
+      expect(underTotalModelStyle(true, true, false)).toBe("green");
     });
-    it('[VERIFY] totalEdgeIsOver=true → under=white', () => {
-      expect(underTotalModelStyle(true, true, true)).toBe('white');
+    it("[VERIFY] totalEdgeIsOver=true → under=white", () => {
+      expect(underTotalModelStyle(true, true, true)).toBe("white");
     });
   });
 });
 
 // ─── Fix 2: spreadEdgeIsAwayForVerdict uses authSpreadEdgeIsAway ──────────────
 
-describe('Fix 2: spreadEdgeIsAwayForVerdict uses authoritative value', () => {
-  it('[VERIFY] authSpreadEdgeIsAway=true → verdict shows away team logo', () => {
+describe("Fix 2: spreadEdgeIsAwayForVerdict uses authoritative value", () => {
+  it("[VERIFY] authSpreadEdgeIsAway=true → verdict shows away team logo", () => {
     expect(spreadEdgeIsAwayForVerdict(true)).toBe(true);
   });
-  it('[VERIFY] authSpreadEdgeIsAway=false → verdict shows home team logo', () => {
+  it("[VERIFY] authSpreadEdgeIsAway=false → verdict shows home team logo", () => {
     expect(spreadEdgeIsAwayForVerdict(false)).toBe(false);
   });
-  it('[VERIFY] authSpreadEdgeIsAway=null → verdict defaults to home (spreadPass=true, row not rendered)', () => {
+  it("[VERIFY] authSpreadEdgeIsAway=null → verdict defaults to home (spreadPass=true, row not rendered)", () => {
     // When null, spreadPass=true so the verdict row is not rendered.
     // The function returns false (home) but this value is never used.
     expect(spreadEdgeIsAwayForVerdict(null)).toBe(false);
@@ -145,43 +151,43 @@ describe('Fix 2: spreadEdgeIsAwayForVerdict uses authoritative value', () => {
 
 // ─── Fix 3: Edge column width uniformity ─────────────────────────────────────
 
-describe('Fix 3: Edge column width is uniform across showModel states', () => {
-  const CANONICAL_WIDTH = 'clamp(180px,15vw,240px)';
+describe("Fix 3: Edge column width is uniform across showModel states", () => {
+  const CANONICAL_WIDTH = "clamp(180px,15vw,240px)";
 
-  it('[VERIFY] showModel=true edge column uses canonical width', () => {
+  it("[VERIFY] showModel=true edge column uses canonical width", () => {
     // The canonical width string must be identical in both branches
     const showModelTrueWidth = CANONICAL_WIDTH;
-    expect(showModelTrueWidth).toBe('clamp(180px,15vw,240px)');
+    expect(showModelTrueWidth).toBe("clamp(180px,15vw,240px)");
   });
 
-  it('[VERIFY] showModel=false placeholder uses canonical width', () => {
+  it("[VERIFY] showModel=false placeholder uses canonical width", () => {
     const showModelFalsePlaceholderWidth = CANONICAL_WIDTH;
-    expect(showModelFalsePlaceholderWidth).toBe('clamp(180px,15vw,240px)');
+    expect(showModelFalsePlaceholderWidth).toBe("clamp(180px,15vw,240px)");
   });
 
-  it('[VERIFY] Both widths are identical — no layout shift on toggle', () => {
-    const showModelTrue  = 'clamp(180px,15vw,240px)';
-    const showModelFalse = 'clamp(180px,15vw,240px)';
+  it("[VERIFY] Both widths are identical — no layout shift on toggle", () => {
+    const showModelTrue = "clamp(180px,15vw,240px)";
+    const showModelFalse = "clamp(180px,15vw,240px)";
     expect(showModelTrue).toBe(showModelFalse);
   });
 });
 
 // ─── edgeUtils: Core calculation functions ───────────────────────────────────
 
-describe('edgeUtils: americanToImplied', () => {
-  it('[VERIFY] +100 → 0.5 (even money)', () => {
+describe("edgeUtils: americanToImplied", () => {
+  it("[VERIFY] +100 → 0.5 (even money)", () => {
     expect(americanToImplied(100)).toBeCloseTo(0.5, 4);
   });
-  it('[VERIFY] -110 → ~0.5238 (standard vig)', () => {
+  it("[VERIFY] -110 → ~0.5238 (standard vig)", () => {
     expect(americanToImplied(-110)).toBeCloseTo(0.5238, 3);
   });
-  it('[VERIFY] -200 → ~0.6667 (heavy favorite)', () => {
+  it("[VERIFY] -200 → ~0.6667 (heavy favorite)", () => {
     expect(americanToImplied(-200)).toBeCloseTo(0.6667, 3);
   });
-  it('[VERIFY] +200 → ~0.3333 (heavy underdog)', () => {
+  it("[VERIFY] +200 → ~0.3333 (heavy underdog)", () => {
     expect(americanToImplied(+200)).toBeCloseTo(0.3333, 3);
   });
-  it('[VERIFY] NaN input → NaN output', () => {
+  it("[VERIFY] NaN input → NaN output", () => {
     expect(americanToImplied(NaN)).toBeNaN();
   });
 });
@@ -189,46 +195,46 @@ describe('edgeUtils: americanToImplied', () => {
 // calculateEdge(bookOdds, modelOdds) = (modelImplied - bookImplied) * 100
 // model=-105 implied=0.5122, book=-110 implied=0.5238 → edge = (0.5122-0.5238)*100 = -1.16pp (NEGATIVE)
 // model=-115 implied=0.5349, book=-110 implied=0.5238 → edge = (0.5349-0.5238)*100 = +1.11pp (POSITIVE)
-describe('edgeUtils: calculateEdge', () => {
-  it('[VERIFY] book=-110, model=-115 → positive edge (model gives higher implied prob)', () => {
+describe("edgeUtils: calculateEdge", () => {
+  it("[VERIFY] book=-110, model=-115 → positive edge (model gives higher implied prob)", () => {
     // model=-115 implied ~0.535 > book=-110 implied ~0.524 → positive
     const edge = calculateEdge(-110, -115);
     expect(edge).toBeGreaterThan(0);
   });
-  it('[VERIFY] book=-110, model=-105 → negative edge (model gives lower implied prob)', () => {
+  it("[VERIFY] book=-110, model=-105 → negative edge (model gives lower implied prob)", () => {
     // model=-105 implied ~0.512 < book=-110 implied ~0.524 → negative
     const edge = calculateEdge(-110, -105);
     expect(edge).toBeLessThan(0);
   });
-  it('[VERIFY] book=-110, model=-110 → zero edge (identical)', () => {
+  it("[VERIFY] book=-110, model=-110 → zero edge (identical)", () => {
     const edge = calculateEdge(-110, -110);
     expect(edge).toBeCloseTo(0, 4);
   });
-  it('[VERIFY] NaN inputs → NaN output', () => {
+  it("[VERIFY] NaN inputs → NaN output", () => {
     expect(calculateEdge(NaN, -110)).toBeNaN();
     expect(calculateEdge(-110, NaN)).toBeNaN();
   });
 });
 
 // calculateRoi(modelML, bookML, bookOppML) — all American odds
-describe('edgeUtils: calculateRoi', () => {
-  it('[VERIFY] model=-105, book=-110, opp=+100 → positive ROI (model is sharper)', () => {
+describe("edgeUtils: calculateRoi", () => {
+  it("[VERIFY] model=-105, book=-110, opp=+100 → positive ROI (model is sharper)", () => {
     const roi = calculateRoi(-105, -110, 100);
     expect(roi).toBeGreaterThan(0);
   });
-  it('[VERIFY] model=-110, book=-110, opp=+110 → ROI=0 (identical model and symmetric book)', () => {
+  it("[VERIFY] model=-110, book=-110, opp=+110 → ROI=0 (identical model and symmetric book)", () => {
     // Symmetric book: -110 vs +110 → implied(-110)=0.5238, implied(+110)=0.4762
     // vigTotal = 0.5238+0.4762 = 1.0 (no vig) → bookNoVigProb = 0.5238
     // ROI = (0.5238/0.5238 - 1)*100 = 0.0 exactly
     const roi = calculateRoi(-110, -110, 110);
     expect(roi).toBeCloseTo(0, 4);
   });
-  it('[VERIFY] model=+105, book=-110, opp=+100 → negative ROI (model gives lower implied prob than book)', () => {
+  it("[VERIFY] model=+105, book=-110, opp=+100 → negative ROI (model gives lower implied prob than book)", () => {
     // model=+105 implied ~0.488, book=-110 no-vig ~0.524 → model < book → negative ROI
     const roi = calculateRoi(105, -110, 100);
     expect(roi).toBeLessThan(0);
   });
-  it('[VERIFY] NaN input → NaN output', () => {
+  it("[VERIFY] NaN input → NaN output", () => {
     expect(calculateRoi(NaN, -110, 100)).toBeNaN();
   });
 });
@@ -237,28 +243,28 @@ describe('edgeUtils: calculateRoi', () => {
 // the ONE signal color (all tiers >= 2.5pp), everything else stays in the
 // grey text tiers, and FADE is grey, never red. Values are --dime-* CSS vars
 // with legacy fallbacks so non-tokenized contexts stay readable.
-describe('edgeUtils: getEdgeColor', () => {
-  const MINT = 'var(--dime-mint-text, #45E0A8)';
-  const GREY = 'var(--dime-text-secondary, #FFFFFF)';
-  const FAINT = 'var(--dime-text-faint, #FFFFFF)';
+describe("edgeUtils: getEdgeColor", () => {
+  const MINT = "var(--dime-mint-text, #45E0A8)";
+  const GREY = "var(--dime-text-secondary, #FFFFFF)";
+  const FAINT = "var(--dime-text-faint, #FFFFFF)";
 
-  it('[VERIFY] all signal tiers (>= 2.5pp: PLAYABLE/STRONG/ELITE) → mint', () => {
+  it("[VERIFY] all signal tiers (>= 2.5pp: PLAYABLE/STRONG/ELITE) → mint", () => {
     expect(getEdgeColor(2.5)).toBe(MINT);
     expect(getEdgeColor(3)).toBe(MINT);
     expect(getEdgeColor(5)).toBe(MINT);
     expect(getEdgeColor(8)).toBe(MINT);
     expect(getEdgeColor(10)).toBe(MINT);
   });
-  it('[VERIFY] edge >= 0.5 and < 2.5 (SMALL) → grey secondary', () => {
+  it("[VERIFY] edge >= 0.5 and < 2.5 (SMALL) → grey secondary", () => {
     expect(getEdgeColor(1.5)).toBe(GREY);
   });
-  it('[VERIFY] edge >= -1 and < 0.5 (NEUTRAL) → grey faint', () => {
+  it("[VERIFY] edge >= -1 and < 0.5 (NEUTRAL) → grey faint", () => {
     expect(getEdgeColor(0)).toBe(FAINT);
   });
-  it('[VERIFY] edge < -1 (FADE) → grey, never red', () => {
+  it("[VERIFY] edge < -1 (FADE) → grey, never red", () => {
     expect(getEdgeColor(-2)).toBe(GREY);
   });
-  it('[VERIFY] NaN → grey faint', () => {
+  it("[VERIFY] NaN → grey faint", () => {
     expect(getEdgeColor(NaN)).toBe(FAINT);
   });
 });
@@ -273,11 +279,10 @@ describe('edgeUtils: getEdgeColor', () => {
 //   MIL RL: book=+149 model=+134  → model 42.74% > book 40.16%  → EDGE ✓
 //   SF  RL: book=-181 model=-134  → model 57.26% < book 64.41%  → NO EDGE ✓
 
-describe('Option B: edge detection — modelImplied > bookImplied (raw vs raw, same side)', () => {
-
+describe("Option B: edge detection — modelImplied > bookImplied (raw vs raw, same side)", () => {
   // ── calculateEdge(bookOdds, modelOdds) returns (modelImplied - bookImplied) * 100 ──
 
-  it('[VERIFY] u7.5 book=-123 model=-116 → edgePP < 0 (NO EDGE: model less confident)', () => {
+  it("[VERIFY] u7.5 book=-123 model=-116 → edgePP < 0 (NO EDGE: model less confident)", () => {
     // modelImplied(-116) = 116/216 = 53.70%
     // bookImplied(-123)  = 123/223 = 55.16%
     // edgePP = (53.70 - 55.16) = -1.45pp → negative → no edge
@@ -286,12 +291,12 @@ describe('Option B: edge detection — modelImplied > bookImplied (raw vs raw, s
     expect(edge).toBeCloseTo(-1.45, 1);
   });
 
-  it('[VERIFY] MIL ML book=-149 model=-149 → edgePP = 0 (NO EDGE: identical odds)', () => {
+  it("[VERIFY] MIL ML book=-149 model=-149 → edgePP = 0 (NO EDGE: identical odds)", () => {
     const edge = calculateEdge(-149, -149);
     expect(edge).toBeCloseTo(0, 4);
   });
 
-  it('[VERIFY] MIL RL book=+149 model=+134 → edgePP > 0 (EDGE: model more confident)', () => {
+  it("[VERIFY] MIL RL book=+149 model=+134 → edgePP > 0 (EDGE: model more confident)", () => {
     // modelImplied(+134) = 100/234 = 42.74%
     // bookImplied(+149)  = 100/249 = 40.16%
     // edgePP = (42.74 - 40.16) = +2.57pp → positive → edge ✓
@@ -300,7 +305,7 @@ describe('Option B: edge detection — modelImplied > bookImplied (raw vs raw, s
     expect(edge).toBeCloseTo(2.57, 1);
   });
 
-  it('[VERIFY] SF RL book=-181 model=-134 → edgePP < 0 (NO EDGE: model less confident)', () => {
+  it("[VERIFY] SF RL book=-181 model=-134 → edgePP < 0 (NO EDGE: model less confident)", () => {
     // modelImplied(-134) = 134/234 = 57.26%
     // bookImplied(-181)  = 181/281 = 64.41%
     // edgePP = (57.26 - 64.41) = -7.15pp → negative → no edge
@@ -309,7 +314,7 @@ describe('Option B: edge detection — modelImplied > bookImplied (raw vs raw, s
     expect(edge).toBeCloseTo(-7.15, 1);
   });
 
-  it('[VERIFY] u7.5 book=-123 model=-128 → edgePP > 0 (EDGE: model more confident)', () => {
+  it("[VERIFY] u7.5 book=-123 model=-128 → edgePP > 0 (EDGE: model more confident)", () => {
     // modelImplied(-128) = 128/228 = 56.14%
     // bookImplied(-123)  = 123/223 = 55.16%
     // edgePP = +0.98pp → positive → edge ✓
@@ -318,7 +323,7 @@ describe('Option B: edge detection — modelImplied > bookImplied (raw vs raw, s
     expect(edge).toBeCloseTo(0.98, 1);
   });
 
-  it('[VERIFY] MIL ML book=-149 model=-155 → edgePP > 0 (EDGE: model more confident)', () => {
+  it("[VERIFY] MIL ML book=-149 model=-155 → edgePP > 0 (EDGE: model more confident)", () => {
     // modelImplied(-155) = 155/255 = 60.78%
     // bookImplied(-149)  = 149/249 = 59.84%
     // edgePP = +0.94pp → positive → edge ✓
@@ -329,7 +334,7 @@ describe('Option B: edge detection — modelImplied > bookImplied (raw vs raw, s
 
   // ── ROI formula: only meaningful when edge IS detected (modelImplied > bookImplied) ──
 
-  it('[VERIFY] MIL RL ROI: model=+134 book=+149 opp=-181 → ROI ≈ +11.28%', () => {
+  it("[VERIFY] MIL RL ROI: model=+134 book=+149 opp=-181 → ROI ≈ +11.28%", () => {
     // modelImplied(+134) = 100/234 = 0.42735
     // bookNoVig(+149) = 0.40161 / (0.40161 + 0.64413) = 0.40161 / 1.04574 = 0.38405
     // ROI = (0.42735 / 0.38405 - 1) * 100 = +11.28%
@@ -338,34 +343,34 @@ describe('Option B: edge detection — modelImplied > bookImplied (raw vs raw, s
     expect(roi).toBeCloseTo(11.28, 1);
   });
 
-  it('[VERIFY] u7.5 NO EDGE: calculateRoi still returns a value but edge detection blocks display', () => {
+  it("[VERIFY] u7.5 NO EDGE: calculateRoi still returns a value but edge detection blocks display", () => {
     // ROI can be positive even when Option B says no edge (model=-116 < book=-123).
     // The edge detection gate (calculateEdge < 0) prevents this from being shown.
     const edgePP = calculateEdge(-123, -116);
     const roi = calculateRoi(-116, -123, 102);
-    expect(edgePP).toBeLessThan(0);  // Option B: no edge
-    expect(roi).toBeGreaterThan(0);  // ROI formula still positive (but gated by edge detection)
+    expect(edgePP).toBeLessThan(0); // Option B: no edge
+    expect(roi).toBeGreaterThan(0); // ROI formula still positive (but gated by edge detection)
     // This confirms the edge detection gate is REQUIRED — ROI alone is insufficient.
   });
 
   // ── americanToImplied precision ──────────────────────────────────────────────
 
-  it('[VERIFY] americanToImplied(-116) = 116/216 ≈ 0.537037', () => {
+  it("[VERIFY] americanToImplied(-116) = 116/216 ≈ 0.537037", () => {
     expect(americanToImplied(-116)).toBeCloseTo(116 / 216, 6);
   });
-  it('[VERIFY] americanToImplied(-123) = 123/223 ≈ 0.551570', () => {
+  it("[VERIFY] americanToImplied(-123) = 123/223 ≈ 0.551570", () => {
     expect(americanToImplied(-123)).toBeCloseTo(123 / 223, 6);
   });
-  it('[VERIFY] americanToImplied(+134) = 100/234 ≈ 0.427350', () => {
+  it("[VERIFY] americanToImplied(+134) = 100/234 ≈ 0.427350", () => {
     expect(americanToImplied(134)).toBeCloseTo(100 / 234, 6);
   });
-  it('[VERIFY] americanToImplied(+149) = 100/249 ≈ 0.401606', () => {
+  it("[VERIFY] americanToImplied(+149) = 100/249 ≈ 0.401606", () => {
     expect(americanToImplied(149)).toBeCloseTo(100 / 249, 6);
   });
-  it('[VERIFY] americanToImplied(-149) = 149/249 ≈ 0.598394', () => {
+  it("[VERIFY] americanToImplied(-149) = 149/249 ≈ 0.598394", () => {
     expect(americanToImplied(-149)).toBeCloseTo(149 / 249, 6);
   });
-  it('[VERIFY] americanToImplied(-181) = 181/281 ≈ 0.644128', () => {
+  it("[VERIFY] americanToImplied(-181) = 181/281 ≈ 0.644128", () => {
     expect(americanToImplied(-181)).toBeCloseTo(181 / 281, 6);
   });
 
@@ -382,16 +387,20 @@ describe('Option B: edge detection — modelImplied > bookImplied (raw vs raw, s
     bkUnderOdds: number | null
   ): boolean | null {
     if (bkOverOdds === null || bkUnderOdds === null) return null;
-    const rawBkOver  = americanToImplied(bkOverOdds);
+    const rawBkOver = americanToImplied(bkOverOdds);
     const rawBkUnder = americanToImplied(bkUnderOdds);
-    const overEdge  = mdlOverOdds  !== null ? americanToImplied(mdlOverOdds)  > rawBkOver  : false;
-    const underEdge = mdlUnderOdds !== null ? americanToImplied(mdlUnderOdds) > rawBkUnder : false;
-    if (overEdge  && !underEdge) return true;
-    if (underEdge && !overEdge)  return false;
+    const overEdge =
+      mdlOverOdds !== null ? americanToImplied(mdlOverOdds) > rawBkOver : false;
+    const underEdge =
+      mdlUnderOdds !== null
+        ? americanToImplied(mdlUnderOdds) > rawBkUnder
+        : false;
+    if (overEdge && !underEdge) return true;
+    if (underEdge && !overEdge) return false;
     return null; // both or neither → fall through to Tier 2
   }
 
-  it('[VERIFY] Tier1: u7.5 book=+102/-123 model=-116/+116 → true (OVER edge: model more confident in OVER)', () => {
+  it("[VERIFY] Tier1: u7.5 book=+102/-123 model=-116/+116 → true (OVER edge: model more confident in OVER)", () => {
     // authTotalEdgeIsOverTier1(mdlOverOdds, mdlUnderOdds, bkOverOdds, bkUnderOdds)
     // mdlOverOdds=-116 → mdlOverImp = 116/216 = 53.70%
     // bkOverOdds=+102  → bkOverImp  = 100/202 = 49.50%
@@ -408,7 +417,7 @@ describe('Option B: edge detection — modelImplied > bookImplied (raw vs raw, s
     expect(result).toBe(true);
   });
 
-  it('[VERIFY] Tier1: u7.5 book=+102/-123 model=+116/-116 → null (no edge: model less confident on both sides)', () => {
+  it("[VERIFY] Tier1: u7.5 book=+102/-123 model=+116/-116 → null (no edge: model less confident on both sides)", () => {
     // When model is LESS confident in OVER AND LESS confident in UNDER:
     // authTotalEdgeIsOverTier1(mdlOverOdds, mdlUnderOdds, bkOverOdds, bkUnderOdds)
     // mdlOverOdds=+116 → mdlOverImp = 100/216 = 46.30%
@@ -428,7 +437,7 @@ describe('Option B: edge detection — modelImplied > bookImplied (raw vs raw, s
     expect(result).toBeNull();
   });
 
-  it('[VERIFY] Tier1: model=-128/+128 book=-123/+102 → false (UNDER edge)', () => {
+  it("[VERIFY] Tier1: model=-128/+128 book=-123/+102 → false (UNDER edge)", () => {
     // UNDER: model 128/228=56.14% > book 123/223=55.16% → under edge ✓
     // OVER:  model 100/228=43.86% < book 100/202=49.50% → no over edge
     // underEdge && !overEdge → return false (UNDER)
@@ -437,7 +446,7 @@ describe('Option B: edge detection — modelImplied > bookImplied (raw vs raw, s
     expect(result).toBe(false);
   });
 
-  it('[VERIFY] Tier1: book=+115/-135 model=-120/+100 → true (OVER edge)', () => {
+  it("[VERIFY] Tier1: book=+115/-135 model=-120/+100 → true (OVER edge)", () => {
     // OVER:  model implied(-120)=120/220=54.55% > book implied(+115)=100/215=46.51% → OVER edge ✓
     // UNDER: model implied(+100)=100/200=50.00% < book implied(-135)=135/235=57.45% → no under edge
     // overEdge && !underEdge → return true (OVER)
@@ -446,7 +455,7 @@ describe('Option B: edge detection — modelImplied > bookImplied (raw vs raw, s
     expect(result).toBe(true);
   });
 
-  it('[VERIFY] Tier1: both edges impossible for fair-priced model (complementary probabilities)', () => {
+  it("[VERIFY] Tier1: both edges impossible for fair-priced model (complementary probabilities)", () => {
     // For a model with zero vig (symmetric odds), if model is more confident in OVER,
     // it is necessarily LESS confident in UNDER. Both edges cannot coexist.
     // Proof: model=-120/+120 (symmetric, zero vig)

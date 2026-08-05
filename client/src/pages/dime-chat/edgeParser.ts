@@ -69,7 +69,7 @@ function partialOpenSuffixLength(text: string): number {
 
 export function parseAssistantContent(
   content: string,
-  streamDone: boolean,
+  streamDone: boolean
 ): Segment[] {
   const segments: Segment[] = [];
   const pushText = (text: string) => {
@@ -88,7 +88,10 @@ export function parseAssistantContent(
         const partial = partialOpenSuffixLength(tail);
         if (partial > 0) {
           pushText(tail.slice(0, tail.length - partial));
-          segments.push({ kind: "pending", raw: tail.slice(tail.length - partial) });
+          segments.push({
+            kind: "pending",
+            raw: tail.slice(tail.length - partial),
+          });
           return segments;
         }
       }

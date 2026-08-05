@@ -239,15 +239,21 @@ async function stubApi(page: Page) {
       url.pathname.replace(/^.*\/api\/trpc\//, "")
     ).split(",");
     const body = ops.map(op => {
-      if (op === "appUsers.me") return { result: { data: { json: STUB_USER } } };
+      if (op === "appUsers.me")
+        return { result: { data: { json: STUB_USER } } };
       // Answered regardless of the requested gameDate input (procedure-level
       // stub, not date-level) — date-independent even across a rollover.
-      if (op === "games.list") return { result: { data: { json: GAMES_LIST } } };
+      if (op === "games.list")
+        return { result: { data: { json: GAMES_LIST } } };
       if (op === "games.getCurrentDate")
         return {
           result: {
             data: {
-              json: { effectiveDate: TODAY_ISO, utcHour: 18, isBeforeCutoff: false },
+              json: {
+                effectiveDate: TODAY_ISO,
+                utcHour: 18,
+                isBeforeCutoff: false,
+              },
             },
           },
         };
@@ -334,16 +340,24 @@ for (const width of WIDTHS) {
         });
       });
     });
-    expect(rowGeometry.length, "at least one trends game row rendered").toBeGreaterThan(0);
+    expect(
+      rowGeometry.length,
+      "at least one trends game row rendered"
+    ).toBeGreaterThan(0);
     for (const cols of rowGeometry) {
       expect(cols.length, "exactly 2 panel columns per row").toBe(2);
       const [left, right] = cols;
       expect(left.width, "left column has visible width").toBeGreaterThan(0);
       expect(left.height, "left column has visible height").toBeGreaterThan(0);
       expect(right.width, "right column has visible width").toBeGreaterThan(0);
-      expect(right.height, "right column has visible height").toBeGreaterThan(0);
-      const overlapsVertically = left.top < right.bottom && right.top < left.bottom;
-      expect(overlapsVertically, "columns share the same row vertically").toBe(true);
+      expect(right.height, "right column has visible height").toBeGreaterThan(
+        0
+      );
+      const overlapsVertically =
+        left.top < right.bottom && right.top < left.bottom;
+      expect(overlapsVertically, "columns share the same row vertically").toBe(
+        true
+      );
       expect(
         left.right,
         `left column right (${left.right}) must not pass right column left (${right.left})`
@@ -356,7 +370,10 @@ for (const width of WIDTHS) {
         "[data-trends-game-row] svg.lucide-chevron-down, [data-trends-game-row] svg.lucide-chevron-up"
       )
       .count();
-    expect(chevronCount, "no chevron toggle svgs inside any trends game row").toBe(0);
+    expect(
+      chevronCount,
+      "no chevron toggle svgs inside any trends game row"
+    ).toBe(0);
 
     const contentVisibility = await page.evaluate(() => {
       return Array.from(
@@ -398,12 +415,26 @@ for (const width of WIDTHS) {
       });
     });
     for (const c of contentVisibility) {
-      expect(c.tableRowCount, "Last-5 panel rendered table rows").toBeGreaterThan(0);
+      expect(
+        c.tableRowCount,
+        "Last-5 panel rendered table rows"
+      ).toBeGreaterThan(0);
       expect(c.anyTableRowVisible, "Last-5 table rows are visible").toBe(true);
-      expect(c.overallLabelCount, "Trends panel rendered its Overall Record row").toBeGreaterThan(0);
-      expect(c.anyLabelVisible, "Trends 'Overall Record' label is visible").toBe(true);
-      expect(c.recordBarCount, "Trends panel rendered W-L record bars").toBeGreaterThan(0);
-      expect(c.anyRecordBarVisible, "Trends record bars are visible").toBe(true);
+      expect(
+        c.overallLabelCount,
+        "Trends panel rendered its Overall Record row"
+      ).toBeGreaterThan(0);
+      expect(
+        c.anyLabelVisible,
+        "Trends 'Overall Record' label is visible"
+      ).toBe(true);
+      expect(
+        c.recordBarCount,
+        "Trends panel rendered W-L record bars"
+      ).toBeGreaterThan(0);
+      expect(c.anyRecordBarVisible, "Trends record bars are visible").toBe(
+        true
+      );
     }
 
     // ── Contract 3: true chronological order + correct AM/PM text ──────
@@ -425,16 +456,18 @@ for (const width of WIDTHS) {
       order[0].matchupText,
       "first row is the New York Yankees @ Boston Red Sox matchup"
     ).toMatch(/New York Yankees @ Boston Red Sox/);
-    expect(order[0].timeText, "first row renders the 11:35 AM time correctly").toMatch(
-      /11:35\s*AM/i
-    );
+    expect(
+      order[0].timeText,
+      "first row renders the 11:35 AM time correctly"
+    ).toMatch(/11:35\s*AM/i);
     expect(
       order[1].matchupText,
       "second row is the Los Angeles Dodgers @ San Francisco Giants matchup"
     ).toMatch(/Los Angeles Dodgers @ San Francisco Giants/);
-    expect(order[1].timeText, "second row renders the 6:40 PM time correctly").toMatch(
-      /6:40\s*PM/i
-    );
+    expect(
+      order[1].timeText,
+      "second row renders the 6:40 PM time correctly"
+    ).toMatch(/6:40\s*PM/i);
     expect(
       order[0].top,
       "11:35 AM row renders above the 6:40 PM row"
@@ -456,7 +489,9 @@ for (const width of WIDTHS) {
           if (r.width === 0 || r.height === 0) return;
           if (r.right > window.innerWidth + 1) {
             const cls = el.getAttribute("class") ?? "(no class)";
-            bad.push(`${el.tagName}.${cls}: right=${r.right.toFixed(1)} viewport=${window.innerWidth}`);
+            bad.push(
+              `${el.tagName}.${cls}: right=${r.right.toFixed(1)} viewport=${window.innerWidth}`
+            );
           }
         });
       return bad;
@@ -469,7 +504,9 @@ for (const width of WIDTHS) {
         .locator(".dc-sidebar-row")
         .first()
         .evaluate(el => getComputedStyle(el).fontSize);
-      expect(sidebarRowFontSize, "computed font-size of .dc-sidebar-row").toBe("22.75px");
+      expect(sidebarRowFontSize, "computed font-size of .dc-sidebar-row").toBe(
+        "22.75px"
+      );
 
       const trendsRow = page.locator(".dc-nav-group .dc-sidebar-row").filter({
         has: page.locator(".dc-sidebar-text", { hasText: /^Trends$/ }),
@@ -485,7 +522,9 @@ for (const width of WIDTHS) {
       const longestLabel = page.getByText("Betting Splits + Odds History", {
         exact: true,
       });
-      await expect(longestLabel, "exactly one longest-label span").toHaveCount(1);
+      await expect(longestLabel, "exactly one longest-label span").toHaveCount(
+        1
+      );
       const truncation = await longestLabel.evaluate(el => ({
         scrollWidth: el.scrollWidth,
         clientWidth: el.clientWidth,
@@ -496,8 +535,12 @@ for (const width of WIDTHS) {
       ).toBeLessThanOrEqual(truncation.clientWidth);
 
       const profileGeometry = await page.evaluate(() => {
-        const sidebar = document.querySelector(".dc-sidebar") as HTMLElement | null;
-        const profile = document.querySelector(".dc-profile-row") as HTMLElement | null;
+        const sidebar = document.querySelector(
+          ".dc-sidebar"
+        ) as HTMLElement | null;
+        const profile = document.querySelector(
+          ".dc-profile-row"
+        ) as HTMLElement | null;
         if (!sidebar || !profile) return null;
         const sidebarRect = sidebar.getBoundingClientRect();
         const paddingBottom = parseFloat(
@@ -515,7 +558,10 @@ for (const width of WIDTHS) {
           delta: Math.abs(contentBottom - profileBottom),
         };
       });
-      expect(profileGeometry, "sidebar and profile row both present").not.toBeNull();
+      expect(
+        profileGeometry,
+        "sidebar and profile row both present"
+      ).not.toBeNull();
       expect(
         profileGeometry!.delta,
         `profile row bottom within 2px of sidebar content-box bottom (delta=${profileGeometry?.delta})`

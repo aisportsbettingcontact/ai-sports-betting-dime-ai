@@ -60,7 +60,10 @@ export interface UpsertKPropsResult {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function normalizeName(name: string): string {
-  return name.toLowerCase().trim().replace(/[^a-z\s]/g, "");
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z\s]/g, "");
 }
 
 function getLastName(name: string): string {
@@ -125,16 +128,27 @@ export async function upsertKPropsFromAN(
     .from(games)
     .where(and(eq(games.gameDate, gameDate), eq(games.sport, "MLB")));
 
-  console.log(`${TAG}[STATE] Found ${dbGames.length} MLB games in DB for ${gameDate}`);
+  console.log(
+    `${TAG}[STATE] Found ${dbGames.length} MLB games in DB for ${gameDate}`
+  );
 
   // Build lookup: "AWAY@HOME" → game row
-  const gameByMatchup = new Map<string, { id: number; awayTeam: string; homeTeam: string }>();
-  for (const g of dbGames as Array<{ id: number; awayTeam: string; homeTeam: string }>) {
+  const gameByMatchup = new Map<
+    string,
+    { id: number; awayTeam: string; homeTeam: string }
+  >();
+  for (const g of dbGames as Array<{
+    id: number;
+    awayTeam: string;
+    homeTeam: string;
+  }>) {
     gameByMatchup.set(`${g.awayTeam}@${g.homeTeam}`, g);
   }
 
   // ── Step 2: Load existing K-Props rows for this date ────────────────────
-  const gameIds = (dbGames as Array<{ id: number; awayTeam: string; homeTeam: string }>).map((g) => g.id);
+  const gameIds = (
+    dbGames as Array<{ id: number; awayTeam: string; homeTeam: string }>
+  ).map(g => g.id);
   const existingRows =
     gameIds.length > 0
       ? await db
@@ -148,10 +162,12 @@ export async function upsertKPropsFromAN(
           .where(inArray(mlbStrikeoutProps.gameId, gameIds))
       : [];
 
-  console.log(`${TAG}[STATE] Found ${existingRows.length} existing K-Props rows`);
+  console.log(
+    `${TAG}[STATE] Found ${existingRows.length} existing K-Props rows`
+  );
 
   // Build lookup: "gameId:side" → existing row
-  const existingByKey = new Map<string, typeof existingRows[0]>();
+  const existingByKey = new Map<string, (typeof existingRows)[0]>();
   for (const row of existingRows) {
     existingByKey.set(`${row.gameId}:${row.side}`, row);
   }
@@ -176,10 +192,14 @@ export async function upsertKPropsFromAN(
     const dbTeam = mapTeamAbbr(anProp.teamAbbr);
 
     // Find the matching DB game: pitcher's team is either away or home
-    let matchedGame: typeof dbGames[0] | undefined;
+    let matchedGame: (typeof dbGames)[0] | undefined;
     let side: "away" | "home" | undefined;
 
-    for (const g of dbGames as Array<{ id: number; awayTeam: string; homeTeam: string }>) {
+    for (const g of dbGames as Array<{
+      id: number;
+      awayTeam: string;
+      homeTeam: string;
+    }>) {
       if (g.awayTeam === dbTeam) {
         matchedGame = g;
         side = "away";
@@ -213,11 +233,14 @@ export async function upsertKPropsFromAN(
     const existingRow = existingByKey.get(key);
 
     const bookLine = anProp.line !== null ? String(anProp.line) : null;
-    const bookOverOdds = anProp.overOdds !== null ? String(Math.round(anProp.overOdds)) : null;
-    const bookUnderOdds = anProp.underOdds !== null ? String(Math.round(anProp.underOdds)) : null;
+    const bookOverOdds =
+      anProp.overOdds !== null ? String(Math.round(anProp.overOdds)) : null;
+    const bookUnderOdds =
+      anProp.underOdds !== null ? String(Math.round(anProp.underOdds)) : null;
     const anNoVigOverPct =
       anProp.noVigOverPct !== null ? anProp.noVigOverPct.toFixed(4) : null;
-    const anPlayerId = anProp.anPlayerId !== null ? Number(anProp.anPlayerId) : null;
+    const anPlayerId =
+      anProp.anPlayerId !== null ? Number(anProp.anPlayerId) : null;
 
     try {
       if (existingRow) {
@@ -275,7 +298,8 @@ export async function upsertKPropsFromAN(
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       const cause = (err as { cause?: unknown })?.cause;
-      const causeMsg = cause instanceof Error ? ` | cause: ${cause.message}` : "";
+      const causeMsg =
+        cause instanceof Error ? ` | cause: ${cause.message}` : "";
       console.error(
         `${TAG}[ERROR] Failed to upsert ${anProp.pitcherName} (${side}): ${msg}${causeMsg}`
       );
@@ -340,8 +364,8 @@ export async function updateKPropsFromAN(
   };
 
   // Build a map of existing rows by normalized pitcher name
-  const rowsByName = new Map<string, typeof existingRows[0]>();
-  const rowsByLastName = new Map<string, typeof existingRows[0]>();
+  const rowsByName = new Map<string, (typeof existingRows)[0]>();
+  const rowsByLastName = new Map<string, (typeof existingRows)[0]>();
   for (const row of existingRows) {
     rowsByName.set(normalizeName(row.pitcherName), row);
     rowsByLastName.set(getLastName(row.pitcherName), row);
@@ -375,14 +399,20 @@ export async function updateKPropsFromAN(
         `[KPropsDB][WARN] No DB row found for AN pitcher: ${anName} (normalized: ${anNameNorm})`
       );
       result.notFound++;
-      result.details.push({ pitcherName: anName, anLine: anProp.line, matched: false });
+      result.details.push({
+        pitcherName: anName,
+        anLine: anProp.line,
+        matched: false,
+      });
       continue;
     }
 
     // Find the AN prop for this pitcher (one entry per pitcher with both odds)
     const anPropFull =
-      anResult.props.find((p) => normalizeName(p.pitcherName) === anNameNorm) ??
-      anResult.props.find((p) => getLastName(p.pitcherName) === getLastName(anName));
+      anResult.props.find(p => normalizeName(p.pitcherName) === anNameNorm) ??
+      anResult.props.find(
+        p => getLastName(p.pitcherName) === getLastName(anName)
+      );
 
     if (!anPropFull) {
       result.notFound++;
@@ -397,7 +427,7 @@ export async function updateKPropsFromAN(
 
     // Update all rows for this pitcher (both OVER and UNDER sides)
     const matchingRows = existingRows.filter(
-      (r: typeof existingRows[0]) =>
+      (r: (typeof existingRows)[0]) =>
         normalizeName(r.pitcherName) === anNameNorm ||
         getLastName(r.pitcherName) === getLastName(anName)
     );
@@ -411,7 +441,8 @@ export async function updateKPropsFromAN(
             bookLine: line.toString(),
             bookOverOdds: overOdds !== null ? String(overOdds) : null,
             bookUnderOdds: underOdds !== null ? String(underOdds) : null,
-            anNoVigOverPct: noVigOverPct !== null ? noVigOverPct.toFixed(4) : null,
+            anNoVigOverPct:
+              noVigOverPct !== null ? noVigOverPct.toFixed(4) : null,
             anPlayerId: anPlayerId !== null ? Number(anPlayerId) : null,
           })
           .where(eq(mlbStrikeoutProps.id, row.id));
@@ -423,8 +454,11 @@ export async function updateKPropsFromAN(
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
         const cause = (err as { cause?: unknown })?.cause;
-        const causeMsg = cause instanceof Error ? ` | cause: ${cause.message}` : "";
-        console.error(`[KPropsDB][ERROR] Failed to update row ${row.id}: ${msg}${causeMsg}`);
+        const causeMsg =
+          cause instanceof Error ? ` | cause: ${cause.message}` : "";
+        console.error(
+          `[KPropsDB][ERROR] Failed to update row ${row.id}: ${msg}${causeMsg}`
+        );
         result.errors++;
       }
     }

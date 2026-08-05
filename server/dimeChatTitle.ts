@@ -43,13 +43,19 @@ const LEAGUE_PATTERNS: ReadonlyArray<readonly [RegExp, string]> = [
 /** Ordered by specificity: "best bets" must beat the generic "odds"/"lines". */
 const TOPIC_PATTERNS: ReadonlyArray<readonly [RegExp, string]> = [
   [/\b(?:best|top) (?:bets?|picks?|plays?)\b|\block of the day\b/, "Best Bets"],
-  [/\bschedules?\b|\bslate\b|\bgames? (?:on|today|tonight|tomorrow)\b|\bwho(?:'s| is| are)? play/, "Schedule"],
+  [
+    /\bschedules?\b|\bslate\b|\bgames? (?:on|today|tonight|tomorrow)\b|\bwho(?:'s| is| are)? play/,
+    "Schedule",
+  ],
   [/\b(?:same[ -]?game )?parlays?\b|\bsgp\b/, "Parlay"],
   [/\bprops?\b/, "Props"],
   [/\bprojections?\b|\bmodel\b/, "Projections"],
   [/\bsplits?\b|\bpublic (?:money|betting)\b/, "Betting Splits"],
   [/\btrends?\b/, "Trends"],
-  [/\blineups?\b|\bstarting pitchers?\b|\bbatting order\b|\bprobables?\b/, "Lineups"],
+  [
+    /\blineups?\b|\bstarting pitchers?\b|\bbatting order\b|\bprobables?\b/,
+    "Lineups",
+  ],
   [/\binjur(?:y|ies|ed)\b/, "Injuries"],
   [/\bedges?\b/, "Edges"],
   [/\bspreads?\b|\bagainst the spread\b|\bats\b/, "Spread"],
@@ -97,15 +103,25 @@ const MLB_TEAM_PATTERNS: ReadonlyArray<readonly [RegExp, string]> = [
 ];
 
 const MONTH_LABELS: Readonly<Record<string, string>> = {
-  jan: "Jan", feb: "Feb", mar: "Mar", apr: "Apr", may: "May", jun: "Jun",
-  jul: "Jul", aug: "Aug", sep: "Sep", oct: "Oct", nov: "Nov", dec: "Dec",
+  jan: "Jan",
+  feb: "Feb",
+  mar: "Mar",
+  apr: "Apr",
+  may: "May",
+  jun: "Jun",
+  jul: "Jul",
+  aug: "Aug",
+  sep: "Sep",
+  oct: "Oct",
+  nov: "Nov",
+  dec: "Dec",
 };
 
 /* ── Detectors ──────────────────────────────────────────────────────────── */
 
 function firstMatch(
   lower: string,
-  patterns: ReadonlyArray<readonly [RegExp, string]>,
+  patterns: ReadonlyArray<readonly [RegExp, string]>
 ): string | null {
   for (const [re, label] of patterns) if (re.test(lower)) return label;
   return null;
@@ -119,13 +135,13 @@ function detectTeams(lower: string): string[] {
     if (m) hits.push({ index: m.index, label });
   }
   hits.sort((a, b) => a.index - b.index);
-  return hits.slice(0, 2).map((h) => h.label);
+  return hits.slice(0, 2).map(h => h.label);
 }
 
 function detectDate(lower: string): string | null {
   const monthDay =
     /\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+(\d{1,2})(?:st|nd|rd|th)?\b/.exec(
-      lower,
+      lower
     );
   if (monthDay) {
     const day = Number(monthDay[2]);
@@ -187,14 +203,20 @@ function truncateAtWord(text: string, max: number): string {
 /* ── Public API ─────────────────────────────────────────────────────────── */
 
 /** Whitespace-collapse + hard truncation only — for user-chosen titles. */
-export function sanitizeThreadTitle(text: string, max: number = TITLE_MAX): string {
+export function sanitizeThreadTitle(
+  text: string,
+  max: number = TITLE_MAX
+): string {
   const collapsed = text.replace(/\s+/g, " ").trim();
   if (collapsed.length <= max) return collapsed;
   return `${collapsed.slice(0, max - 1).trimEnd()}…`;
 }
 
 /** Topic-detected title for a NEW thread, from its first user message. */
-export function deriveThreadTitle(text: string, max: number = TITLE_MAX): string {
+export function deriveThreadTitle(
+  text: string,
+  max: number = TITLE_MAX
+): string {
   const collapsed = text.replace(/\s+/g, " ").trim();
   if (collapsed === "") return "New Chat";
   const lower = collapsed.toLowerCase();
@@ -216,7 +238,8 @@ export function deriveThreadTitle(text: string, max: number = TITLE_MAX): string
   if (core && topic) composed = `${core} ${topic}`;
   else if (core && date) composed = `${core} — ${date}`;
   else if (core) composed = core;
-  else if (league && topic) composed = date ? `${league} ${topic} — ${date}` : `${league} ${topic}`;
+  else if (league && topic)
+    composed = date ? `${league} ${topic} — ${date}` : `${league} ${topic}`;
   else if (topic) composed = date ? `${topic} — ${date}` : topic;
   else if (league) composed = date ? `${league} — ${date}` : league;
 

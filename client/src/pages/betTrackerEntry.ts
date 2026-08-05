@@ -16,7 +16,10 @@
 export type WagerType = "PREGAME" | "LIVE";
 export type GameStatus = "scheduled" | "in_progress" | "complete" | string;
 
-export function decideEntrySource(status: GameStatus, wagerType: WagerType): {
+export function decideEntrySource(
+  status: GameStatus,
+  wagerType: WagerType
+): {
   /** May odds/lines fill from the slate for this (game, wager type)? */
   autofill: boolean;
   /** May LIVE be chosen for this game at all? */
@@ -49,9 +52,10 @@ export function defaultWagerType(status: GameStatus): WagerType {
 /** One ticket is placed at one moment: pregame and live legs cannot share it. */
 export function checkLegCoherence(
   existing: WagerType[],
-  adding: WagerType,
+  adding: WagerType
 ): { ok: true } | { ok: false; message: string } {
-  if (existing.length === 0 || existing.every(w => w === adding)) return { ok: true };
+  if (existing.length === 0 || existing.every(w => w === adding))
+    return { ok: true };
   return {
     ok: false,
     message:

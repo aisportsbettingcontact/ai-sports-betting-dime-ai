@@ -75,11 +75,11 @@ describe("hex-literal ceiling ratchet (X-HEX-EPIDEMIC)", () => {
         .filter(([file, n]) => n > (prev[file] ?? 0))
         .map(
           ([file, n]) =>
-            `${file}: ${n} > previous ceiling ${prev[file] ?? 0} — remove the new raw hex first (use law tokens); raising a ceiling requires an owner-approved law exception, not regeneration`,
+            `${file}: ${n} > previous ceiling ${prev[file] ?? 0} — remove the new raw hex first (use law tokens); raising a ceiling requires an owner-approved law exception, not regeneration`
         );
       expect(raised).toEqual([]);
       const sorted = Object.fromEntries(
-        Object.entries(counts).sort(([a], [b]) => a.localeCompare(b)),
+        Object.entries(counts).sort(([a], [b]) => a.localeCompare(b))
       );
       fs.writeFileSync(FIXTURE, JSON.stringify(sorted, null, 2) + "\n");
       expect(fs.existsSync(FIXTURE)).toBe(true);
@@ -88,7 +88,7 @@ describe("hex-literal ceiling ratchet (X-HEX-EPIDEMIC)", () => {
   }
 
   const ceilings: Record<string, number> = JSON.parse(
-    fs.readFileSync(FIXTURE, "utf8"),
+    fs.readFileSync(FIXTURE, "utf8")
   );
 
   it("no file exceeds its recorded hex-literal ceiling (new files: ceiling 0)", () => {
@@ -96,18 +96,18 @@ describe("hex-literal ceiling ratchet (X-HEX-EPIDEMIC)", () => {
       .filter(([file, n]) => n > (ceilings[file] ?? 0))
       .map(
         ([file, n]) =>
-          `${file}: ${n} > ceiling ${ceilings[file] ?? 0} — remove the new raw hex (use law tokens); ceilings only ratchet DOWN`,
+          `${file}: ${n} > ceiling ${ceilings[file] ?? 0} — remove the new raw hex (use law tokens); ceilings only ratchet DOWN`
       );
     expect(offenders).toEqual([]);
   });
 
   it("no zombie allowances: every fixture entry's file still exists", () => {
     const zombies = Object.keys(ceilings).filter(
-      (file) => !fs.existsSync(path.join(ROOT, file)),
+      file => !fs.existsSync(path.join(ROOT, file))
     );
     expect(
       zombies,
-      `Deleted files still hold ceilings — regenerate the fixture: ${zombies.join(", ")}`,
+      `Deleted files still hold ceilings — regenerate the fixture: ${zombies.join(", ")}`
     ).toEqual([]);
   });
 });

@@ -113,7 +113,9 @@ describe("Admin Dashboard route guard composition", () => {
       expect(routeStart, `route ${route} should exist`).toBeGreaterThan(-1);
       const routeEnd = appSource.indexOf("</Route>", routeStart);
       const routeBlock = appSource.slice(routeStart, routeEnd);
-      expect(routeBlock, `route ${route} must be RequireOwner-gated`).toContain("<RequireOwner>");
+      expect(routeBlock, `route ${route} must be RequireOwner-gated`).toContain(
+        "<RequireOwner>"
+      );
     }
   });
 

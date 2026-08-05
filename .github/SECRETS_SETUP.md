@@ -13,11 +13,11 @@ This document lists every secret required by the CI/CD workflows in `.github/wor
 
 ## Required Secrets
 
-| Secret Name | Description | Format | Required By |
-|---|---|---|---|
-| `DATABASE_URL` | MySQL/TiDB connection string | `mysql://user:pass@host:port/dbname` | `ci.yml` (test stage) |
-| `APP_SESSION_SECRET` | Session cookie signing secret | Min 44 chars, random string | `ci.yml` (test stage) |
-| `PUBLIC_ORIGIN` | Production base URL (no trailing slash) | `https://aisportsbettingmodels.com` | `ci.yml` (test stage) |
+| Secret Name          | Description                             | Format                               | Required By           |
+| -------------------- | --------------------------------------- | ------------------------------------ | --------------------- |
+| `DATABASE_URL`       | MySQL/TiDB connection string            | `mysql://user:pass@host:port/dbname` | `ci.yml` (test stage) |
+| `APP_SESSION_SECRET` | Session cookie signing secret           | Min 44 chars, random string          | `ci.yml` (test stage) |
+| `PUBLIC_ORIGIN`      | Production base URL (no trailing slash) | `https://aisportsbettingmodels.com`  | `ci.yml` (test stage) |
 
 ---
 
@@ -36,16 +36,16 @@ If a secret is missing or malformed, the test will fail with a specific message 
 
 ## Optional Secrets (for full feature coverage)
 
-| Secret Name | Description | Used By |
-|---|---|---|
-| `DISCORD_BOT_TOKEN` | Discord bot token | Discord integration |
-| `DISCORD_CLIENT_ID` | Discord OAuth client ID | Discord login |
-| `DISCORD_CLIENT_SECRET` | Discord OAuth client secret | Discord login |
-| `KENPOM_EMAIL` | KenPom login email | NCAA model data |
-| `KENPOM_PASSWORD` | KenPom login password | NCAA model data |
-| `VSIN_EMAIL` | VSiN login email | Odds refresh pipeline |
-| `VSIN_PASSWORD` | VSiN login password | Odds refresh pipeline |
-| `METABET_API_KEY` | MetaBet API key | Odds data |
+| Secret Name             | Description                 | Used By               |
+| ----------------------- | --------------------------- | --------------------- |
+| `DISCORD_BOT_TOKEN`     | Discord bot token           | Discord integration   |
+| `DISCORD_CLIENT_ID`     | Discord OAuth client ID     | Discord login         |
+| `DISCORD_CLIENT_SECRET` | Discord OAuth client secret | Discord login         |
+| `KENPOM_EMAIL`          | KenPom login email          | NCAA model data       |
+| `KENPOM_PASSWORD`       | KenPom login password       | NCAA model data       |
+| `VSIN_EMAIL`            | VSiN login email            | Odds refresh pipeline |
+| `VSIN_PASSWORD`         | VSiN login password         | Odds refresh pipeline |
+| `METABET_API_KEY`       | MetaBet API key             | Odds data             |
 
 ---
 

@@ -24,7 +24,9 @@ export function buildInviteCode(userId: number, rawToken: string): string {
   return `${userId.toString(36)}.${rawToken}`;
 }
 
-export function parseInviteCode(code: string): { uid: number; token: string } | null {
+export function parseInviteCode(
+  code: string
+): { uid: number; token: string } | null {
   const m = CODE_RE.exec(code.trim());
   if (!m) return null;
   const uid = parseInt(m[1], 36);

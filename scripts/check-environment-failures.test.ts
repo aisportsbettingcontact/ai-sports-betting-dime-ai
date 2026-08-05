@@ -14,7 +14,7 @@ function vitestJson(
   return {
     testResults: [...byFile.entries()].map(([file, assertions]) => ({
       name: `/repo/${file}`,
-      assertionResults: assertions.map((a) => ({
+      assertionResults: assertions.map(a => ({
         ancestorTitles: [a.suite],
         title: a.title,
         status: a.status,
@@ -253,7 +253,7 @@ describe("environment-failure gate", () => {
         results: vitestJson([{ ...claudeCase, status: "passed" }]),
         allowlist: anyOfAllowlist,
         profile: "local",
-        env: { ANTHROPIC_API_KEY: "sk-test" },   // token absent, key present
+        env: { ANTHROPIC_API_KEY: "sk-test" }, // token absent, key present
         rootDir: "/repo",
       });
       expect(result.problems.filter(p => p.kind === "stale-entry")).toEqual([]);
@@ -305,7 +305,9 @@ describe("environment-failure gate", () => {
         env: { ANTHROPIC_API_KEY: "sk-test" },
         rootDir: "/repo",
       });
-      expect(result.problems.some(p => p.kind === "real-failure-despite-env")).toBe(true);
+      expect(
+        result.problems.some(p => p.kind === "real-failure-despite-env")
+      ).toBe(true);
       expect(result.ok).toBe(false);
     });
 

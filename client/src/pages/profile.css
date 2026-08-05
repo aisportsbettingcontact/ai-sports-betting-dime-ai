@@ -223,8 +223,13 @@ body.dime-floating-nav-active .pf-hero {
 }
 
 @keyframes pf-pulse {
-  0%, 100% { opacity: 0.4; }
-  50% { opacity: 0.8; }
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 0.8;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

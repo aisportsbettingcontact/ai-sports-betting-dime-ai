@@ -43,7 +43,10 @@ import {
 import { ensureDebugLogsTable } from "./debugLogger";
 import { registerAnalyticsIngestRoute } from "../analytics/ingestRoute";
 import { registerAnalyticsReadRoute } from "../analytics/readRoute";
-import { registerStripeWebhookRoute, getWebhookLatencyStats } from "../stripeWebhook";
+import {
+  registerStripeWebhookRoute,
+  getWebhookLatencyStats,
+} from "../stripeWebhook";
 import { assertSchemaCurrent } from "./schemaGuard";
 import { registerWc2026Heartbeats } from "../wc2026/wc2026Heartbeat";
 import { registerCronRoutes } from "../cron/cronRoutes";
@@ -85,8 +88,7 @@ import {
 // endpoint.
 // Returns "unauthenticated" (→401) vs "forbidden" (→403) vs an authorized userId.
 type OwnerAuthResult =
-  | { ok: true; userId: number }
-  | { ok: false; status: 401 | 403 };
+  { ok: true; userId: number } | { ok: false; status: 401 | 403 };
 
 async function authenticateOwnerRequest(
   req: express.Request
@@ -145,11 +147,7 @@ function fireRateLimitEvent(
   path: string,
   method: string,
   limitType:
-    | "global"
-    | "auth"
-    | "trpc_auth"
-    | "stripe_checkout"
-    | "waitlist_submit",
+    "global" | "auth" | "trpc_auth" | "stripe_checkout" | "waitlist_submit",
   ua: string | null
 ) {
   const now = Date.now();
@@ -545,15 +543,21 @@ async function startServer() {
           lastFailureAt: bot.lastFailureAt,
           // Bounded: a Stripe/Discord error string is not a secret, but it is
           // attacker-visible on a public probe, so cap it rather than echo it.
-          lastFailureReason: bot.lastFailureReason ? String(bot.lastFailureReason).slice(0, 120) : null,
+          lastFailureReason: bot.lastFailureReason
+            ? String(bot.lastFailureReason).slice(0, 120)
+            : null,
           retryQueued: bot.retryQueued,
-          uptimeMs: bot.connected && bot.lastReadyAt ? Date.now() - bot.lastReadyAt : null,
+          uptimeMs:
+            bot.connected && bot.lastReadyAt
+              ? Date.now() - bot.lastReadyAt
+              : null,
         },
         billingAlerts: {
           // "Can a failed renewal actually reach a human?" Boolean only — the
           // webhook URL itself is a secret and must never appear here.
           configured: Boolean(
-            process.env.BILLING_ALERT_DISCORD_WEBHOOK_URL ?? process.env.DISCORD_BILLING_WEBHOOK_URL
+            process.env.BILLING_ALERT_DISCORD_WEBHOOK_URL ??
+            process.env.DISCORD_BILLING_WEBHOOK_URL
           ),
         },
         // Webhook-path latency (avenue #11). Reported, never a status-code
@@ -1002,7 +1006,9 @@ async function startServer() {
     // Warn-only by default (SCHEMA_GUARD_FATAL=1 to fail closed) so a check
     // failure can never crash-loop the service it is meant to protect.
     assertSchemaCurrent().catch((err: unknown) =>
-      console.warn(`[SchemaGuard] check failed to run: ${err instanceof Error ? err.message : String(err)}`)
+      console.warn(
+        `[SchemaGuard] check failed to run: ${err instanceof Error ? err.message : String(err)}`
+      )
     );
     // Say at boot whether billing alerts can actually reach a human, rather
     // than discovering it the first time something goes wrong.
@@ -1166,7 +1172,8 @@ async function startServer() {
     // swallowed — a reconcile outage must not take the server with it.
     const runCheckoutReconcile = async () => {
       try {
-        const { reconcileCheckoutSessions } = await import("../stripe/checkoutReconcile");
+        const { reconcileCheckoutSessions } =
+          await import("../stripe/checkoutReconcile");
         await reconcileCheckoutSessions();
       } catch (err) {
         console.error(
@@ -1177,9 +1184,14 @@ async function startServer() {
     // First sweep 60s after boot — late enough that the DB pool is warm, early
     // enough that a deploy which missed webhooks self-corrects within a minute.
     setTimeout(runCheckoutReconcile, 60_000).unref();
-    const checkoutReconcileInterval = setInterval(runCheckoutReconcile, 30 * 60 * 1000);
+    const checkoutReconcileInterval = setInterval(
+      runCheckoutReconcile,
+      30 * 60 * 1000
+    );
     checkoutReconcileInterval.unref();
-    console.log("[CheckoutReconcile] Recurring checkout reconcile scheduled (every 30 min)");
+    console.log(
+      "[CheckoutReconcile] Recurring checkout reconcile scheduled (every 30 min)"
+    );
 
     // ── Games list cache pre-warm ─────────────────────────────────────────────
     // Pre-warm the games.list cache for all active sports at startup.

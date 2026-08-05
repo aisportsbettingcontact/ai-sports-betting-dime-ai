@@ -50,7 +50,9 @@ describe("AdminShell — shared admin chrome", () => {
   it("is registry-driven — maps ADMIN_NAV and links the /admin dashboard hub", () => {
     // The nav is now sourced from the shared ADMIN_NAV registry (adminNav.ts)
     // rather than a hard-coded 3-tab literal, so every admin tool is reachable.
-    expect(shellSource).toMatch(/import \{ ADMIN_NAV, type AdminNavKey \} from "\.\/adminNav";/);
+    expect(shellSource).toMatch(
+      /import \{ ADMIN_NAV, type AdminNavKey \} from "\.\/adminNav";/
+    );
     expect(shellSource).toMatch(/ADMIN_NAV\.map\(\(tab\) =>/);
     // Dashboard hub affordance → /admin.
     expect(shellSource).toMatch(/navigate\("\/admin"\)/);
@@ -58,11 +60,23 @@ describe("AdminShell — shared admin chrome", () => {
   });
 
   it("adminNav registry covers all admin routes with real paths", () => {
-    const navSource = fs.readFileSync(path.join(import.meta.dirname, "adminNav.ts"), "utf8");
+    const navSource = fs.readFileSync(
+      path.join(import.meta.dirname, "adminNav.ts"),
+      "utf8"
+    );
     for (const p of [
-      "/admin/users", "/admin/activity", "/admin/waitlist", "/admin/publish",
-      "/admin/model-results", "/admin/backtest", "/admin/model-status", "/admin/f5-edge",
-      "/admin/ingest-an", "/admin/postponed-games", "/admin/security", "/admin/claude",
+      "/admin/users",
+      "/admin/activity",
+      "/admin/waitlist",
+      "/admin/publish",
+      "/admin/model-results",
+      "/admin/backtest",
+      "/admin/model-status",
+      "/admin/f5-edge",
+      "/admin/ingest-an",
+      "/admin/postponed-games",
+      "/admin/security",
+      "/admin/claude",
     ]) {
       expect(navSource).toContain(`path: "${p}"`);
     }
@@ -72,7 +86,9 @@ describe("AdminShell — shared admin chrome", () => {
     expect(shellSource).toMatch(
       /const BACK_TO_APP_PATH = "\/feed\/model\/mlb";/
     );
-    expect(shellSource).toMatch(/onClick=\{\(\) => navigate\(BACK_TO_APP_PATH\)\}/);
+    expect(shellSource).toMatch(
+      /onClick=\{\(\) => navigate\(BACK_TO_APP_PATH\)\}/
+    );
     expect(shellSource).toMatch(/aria-label="Back to app"/);
   });
 
@@ -119,7 +135,7 @@ describe("AdminShell — shared admin chrome", () => {
 });
 
 describe("UserManagement renders inside AdminShell", () => {
-  it("imports AdminShell and wraps the authenticated render in it, active=\"users\"", () => {
+  it('imports AdminShell and wraps the authenticated render in it, active="users"', () => {
     expect(userMgmtSource).toMatch(
       /import \{ AdminShell \} from "@\/pages\/admin\/AdminShell";/
     );
@@ -130,7 +146,7 @@ describe("UserManagement renders inside AdminShell", () => {
   it("does not wrap the loading/redirecting screens in AdminShell (no chrome flash pre-auth)", () => {
     const shellIdx = userMgmtSource.indexOf('<AdminShell active="users">');
     const loadingGuardIdx = userMgmtSource.indexOf(
-      "if (loading || (!loading && (!appUser || appUser.role !== \"owner\")))"
+      'if (loading || (!loading && (!appUser || appUser.role !== "owner")))'
     );
     expect(shellIdx).toBeGreaterThan(-1);
     expect(loadingGuardIdx).toBeGreaterThan(-1);
@@ -146,7 +162,7 @@ describe("UserManagement renders inside AdminShell", () => {
 });
 
 describe("PublishProjections renders inside AdminShell", () => {
-  it("imports AdminShell and wraps the authenticated render in it, active=\"publish\"", () => {
+  it('imports AdminShell and wraps the authenticated render in it, active="publish"', () => {
     expect(publishSource).toMatch(
       /import \{ AdminShell \} from "@\/pages\/admin\/AdminShell";/
     );
@@ -157,7 +173,9 @@ describe("PublishProjections renders inside AdminShell", () => {
   it("does not wrap the loading/redirecting screens in AdminShell (no chrome flash pre-auth)", () => {
     const shellIdx = publishSource.indexOf('<AdminShell active="publish">');
     const loadingGuardIdx = publishSource.indexOf("if (authLoading) {");
-    const redirectGuardIdx = publishSource.indexOf("if (!isOwner) return null;");
+    const redirectGuardIdx = publishSource.indexOf(
+      "if (!isOwner) return null;"
+    );
     expect(shellIdx).toBeGreaterThan(-1);
     expect(loadingGuardIdx).toBeGreaterThan(-1);
     expect(redirectGuardIdx).toBeGreaterThan(-1);
@@ -173,7 +191,7 @@ describe("PublishProjections renders inside AdminShell", () => {
 });
 
 describe("UserActivity renders inside AdminShell", () => {
-  it("imports AdminShell and wraps the authenticated render in it, active=\"activity\"", () => {
+  it('imports AdminShell and wraps the authenticated render in it, active="activity"', () => {
     expect(userActivitySource).toMatch(
       /import \{ AdminShell \} from "@\/pages\/admin\/AdminShell";/
     );

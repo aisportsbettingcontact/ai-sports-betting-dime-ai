@@ -30,7 +30,11 @@ import { useVisibility } from "@/hooks/useVisibility";
 import { useIsMdUp } from "@/hooks/useIsMdUp";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
-import { formatGameTime, timeToMinutes, formatDateHeader } from "@/lib/gameUtils";
+import {
+  formatGameTime,
+  timeToMinutes,
+  formatDateHeader,
+} from "@/lib/gameUtils";
 import { MLB_BY_ABBREV } from "@shared/mlbTeams";
 
 /** Minimal structural slice of a games.list row this page reads. */
@@ -99,9 +103,15 @@ function TrendsGameSection({ game }: { game: TrendsGameRow }) {
         </span>
         {!isMdUp &&
           (expanded ? (
-            <ChevronUp className="w-4 h-4 text-[var(--text-muted)]" aria-hidden="true" />
+            <ChevronUp
+              className="w-4 h-4 text-[var(--text-muted)]"
+              aria-hidden="true"
+            />
           ) : (
-            <ChevronDown className="w-4 h-4 text-[var(--text-muted)]" aria-hidden="true" />
+            <ChevronDown
+              className="w-4 h-4 text-[var(--text-muted)]"
+              aria-hidden="true"
+            />
           ))}
       </div>
     </>
@@ -226,7 +236,10 @@ function GameCardSkeleton() {
       </div>
       <div className="px-4 py-4 space-y-3">
         {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="h-8 rounded bg-[var(--surface-raised)] animate-pulse" />
+          <div
+            key={i}
+            className="h-8 rounded bg-[var(--surface-raised)] animate-pulse"
+          />
         ))}
       </div>
     </div>
@@ -257,7 +270,12 @@ export default function TrendsPage() {
     { sport: "MLB" },
     { staleTime: 5 * 60 * 1000, refetchOnWindowFocus: false }
   );
-  const { data: games, isLoading, isError, refetch } = trpc.games.list.useQuery(
+  const {
+    data: games,
+    isLoading,
+    isError,
+    refetch,
+  } = trpc.games.list.useQuery(
     { sport: "MLB", gameDate: selectedDate },
     { refetchOnWindowFocus: false, staleTime: 60 * 1000 }
   );
@@ -347,7 +365,10 @@ export default function TrendsPage() {
           </div>
         ) : sortedGames.length === 0 ? (
           <div className="mx-3 md:mx-4 rounded-2xl border border-border bg-card flex flex-col items-center justify-center py-20 px-4 text-center">
-            <CalendarX2 className="w-7 h-7 text-[var(--text-muted)] mb-3" aria-hidden="true" />
+            <CalendarX2
+              className="w-7 h-7 text-[var(--text-muted)] mb-3"
+              aria-hidden="true"
+            />
             <p className="text-[15px] font-semibold text-foreground mb-1">
               No MLB games on this date
             </p>

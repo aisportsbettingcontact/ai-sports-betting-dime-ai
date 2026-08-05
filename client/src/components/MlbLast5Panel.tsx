@@ -118,9 +118,9 @@ function Chip({
   variant: "win" | "loss" | "push" | "neutral";
 }) {
   const cls = {
-    win:     "bg-black text-[#45E0A8] border-[#45E0A8]",
-    loss:    "bg-black text-white border-white",
-    push:    "bg-black text-white border-white",
+    win: "bg-black text-[#45E0A8] border-[#45E0A8]",
+    loss: "bg-black text-white border-white",
+    push: "bg-black text-white border-white",
     neutral: "bg-black text-white border-white",
   }[variant];
   return (
@@ -137,36 +137,32 @@ function Chip({
 
 // ─── Single Game Row ──────────────────────────────────────────────────────────
 
-function GameRow({
-  game,
-  teamSlug,
-}: {
-  game: ScheduleGame;
-  teamSlug: string;
-}) {
+function GameRow({ game, teamSlug }: { game: ScheduleGame; teamSlug: string }) {
   const isAway = game.awaySlug === teamSlug;
 
   // Opponent
-  const oppSlug    = isAway ? game.homeSlug  : game.awaySlug;
-  const oppAbbr    = isAway ? game.homeAbbr  : game.awayAbbr;
-  const oppTeamId  = isAway ? game.homeTeamId : game.awayTeamId;
-  const oppTeam    = MLB_BY_AN_SLUG.get(oppSlug);
-  const oppLogo    = oppTeam?.logoUrl ?? `https://www.mlbstatic.com/team-logos/${oppTeamId}.svg`;
+  const oppSlug = isAway ? game.homeSlug : game.awaySlug;
+  const oppAbbr = isAway ? game.homeAbbr : game.awayAbbr;
+  const oppTeamId = isAway ? game.homeTeamId : game.awayTeamId;
+  const oppTeam = MLB_BY_AN_SLUG.get(oppSlug);
+  const oppLogo =
+    oppTeam?.logoUrl ?? `https://www.mlbstatic.com/team-logos/${oppTeamId}.svg`;
 
   // Scores
-  const myScore  = isAway ? game.awayScore  : game.homeScore;
-  const oppScore = isAway ? game.homeScore  : game.awayScore;
+  const myScore = isAway ? game.awayScore : game.homeScore;
+  const oppScore = isAway ? game.homeScore : game.awayScore;
 
   // Odds (this team's perspective)
-  const myRunLine     = isAway ? game.dkAwayRunLine     : game.dkHomeRunLine;
-  const myRunLineOdds = isAway ? game.dkAwayRunLineOdds : game.dkHomeRunLineOdds;
-  const myML          = isAway ? game.dkAwayML          : game.dkHomeML;
-  const myCovered     = isAway ? game.awayRunLineCovered : game.homeRunLineCovered;
+  const myRunLine = isAway ? game.dkAwayRunLine : game.dkHomeRunLine;
+  const myRunLineOdds = isAway
+    ? game.dkAwayRunLineOdds
+    : game.dkHomeRunLineOdds;
+  const myML = isAway ? game.dkAwayML : game.dkHomeML;
+  const myCovered = isAway ? game.awayRunLineCovered : game.homeRunLineCovered;
 
   // W/L
-  const myWon = game.awayWon != null
-    ? (isAway ? game.awayWon : !game.awayWon)
-    : null;
+  const myWon =
+    game.awayWon != null ? (isAway ? game.awayWon : !game.awayWon) : null;
 
   // Chips
   const wlVariant: "win" | "loss" | "neutral" =
@@ -174,15 +170,16 @@ function GameRow({
   const covVariant: "win" | "loss" | "neutral" =
     myCovered === true ? "win" : myCovered === false ? "loss" : "neutral";
   const ouVariant: "win" | "loss" | "push" | "neutral" =
-    game.totalResult === "OVER" ? "win"
-    : game.totalResult === "UNDER" ? "loss"
-    : game.totalResult === "PUSH" ? "push"
-    : "neutral";
+    game.totalResult === "OVER"
+      ? "win"
+      : game.totalResult === "UNDER"
+        ? "loss"
+        : game.totalResult === "PUSH"
+          ? "push"
+          : "neutral";
 
   const scoreStr =
-    myScore != null && oppScore != null
-      ? `${myScore}-${oppScore}`
-      : "—";
+    myScore != null && oppScore != null ? `${myScore}-${oppScore}` : "—";
 
   return (
     <tr className="border-b border-white transition-colors">
@@ -196,9 +193,7 @@ function GameRow({
         <span
           className={cn(
             "text-[8px] font-bold font-mono px-1 py-0.5 rounded",
-            isAway
-              ? "bg-black text-white"
-              : "bg-black text-white"
+            isAway ? "bg-black text-white" : "bg-black text-white"
           )}
         >
           {isAway ? "A" : "H"}
@@ -212,7 +207,7 @@ function GameRow({
             src={oppLogo}
             alt={oppAbbr}
             className="w-5 h-5 object-contain flex-shrink-0"
-            onError={(e) => {
+            onError={e => {
               (e.target as HTMLImageElement).style.display = "none";
             }}
           />
@@ -230,8 +225,8 @@ function GameRow({
             myWon === true
               ? "text-[#45E0A8]"
               : myWon === false
-              ? "text-white"
-              : "text-white"
+                ? "text-white"
+                : "text-white"
           )}
         >
           {scoreStr}
@@ -270,10 +265,7 @@ function GameRow({
 
       {/* O/U */}
       <td className="px-1 py-1.5 text-center">
-        <Chip
-          label={game.totalResult ?? "—"}
-          variant={ouVariant}
-        />
+        <Chip label={game.totalResult ?? "—"} variant={ouVariant} />
       </td>
 
       {/* Moneyline */}
@@ -308,7 +300,9 @@ function TeamSection({
     <div className="flex-1 min-w-0">
       {/* Team header */}
       <div className="flex items-center gap-2 px-3 py-2 border-b border-white">
-        <button type="button" onClick={onLogoClick}
+        <button
+          type="button"
+          onClick={onLogoClick}
           className="flex-shrink-0 group relative"
           title={`View ${teamName} full schedule`}
         >
@@ -317,7 +311,7 @@ function TeamSection({
               src={resolvedLogo}
               alt={teamName}
               className="w-7 h-7 object-contain transition-transform group-hover:scale-110"
-              onError={(e) => {
+              onError={e => {
                 (e.target as HTMLImageElement).style.display = "none";
               }}
             />
@@ -335,28 +329,52 @@ function TeamSection({
       {/* Table */}
       {games.length === 0 ? (
         <div className="px-3 py-4 text-center">
-          <p className="text-sm text-white font-mono">No completed games found.</p>
-          <p className="text-sm text-white font-mono mt-0.5">Run a schedule backfill to populate data.</p>
+          <p className="text-sm text-white font-mono">
+            No completed games found.
+          </p>
+          <p className="text-sm text-white font-mono mt-0.5">
+            Run a schedule backfill to populate data.
+          </p>
         </div>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full min-w-[480px]">
             <thead>
               <tr className="border-b border-white">
-                <th className="px-2 py-1 text-[8px] font-bold text-white font-mono tracking-widest text-left">DATE</th>
-                <th className="px-1 py-1 text-[8px] font-bold text-white font-mono tracking-widest text-center">H/A</th>
-                <th className="px-2 py-1 text-[8px] font-bold text-white font-mono tracking-widest text-left">OPP</th>
-                <th className="px-2 py-1 text-[8px] font-bold text-white font-mono tracking-widest text-center">SCORE</th>
-                <th className="px-1 py-1 text-[8px] font-bold text-white font-mono tracking-widest text-center">W/L</th>
-                <th className="px-2 py-1 text-[8px] font-bold text-white font-mono tracking-widest text-left">RUN LINE</th>
-                <th className="px-1 py-1 text-[8px] font-bold text-white font-mono tracking-widest text-center">COV</th>
-                <th className="px-2 py-1 text-[8px] font-bold text-white font-mono tracking-widest text-center">TOTAL</th>
-                <th className="px-1 py-1 text-[8px] font-bold text-white font-mono tracking-widest text-center">O/U</th>
-                <th className="px-2 py-1 text-[8px] font-bold text-white font-mono tracking-widest text-center">ML</th>
+                <th className="px-2 py-1 text-[8px] font-bold text-white font-mono tracking-widest text-left">
+                  DATE
+                </th>
+                <th className="px-1 py-1 text-[8px] font-bold text-white font-mono tracking-widest text-center">
+                  H/A
+                </th>
+                <th className="px-2 py-1 text-[8px] font-bold text-white font-mono tracking-widest text-left">
+                  OPP
+                </th>
+                <th className="px-2 py-1 text-[8px] font-bold text-white font-mono tracking-widest text-center">
+                  SCORE
+                </th>
+                <th className="px-1 py-1 text-[8px] font-bold text-white font-mono tracking-widest text-center">
+                  W/L
+                </th>
+                <th className="px-2 py-1 text-[8px] font-bold text-white font-mono tracking-widest text-left">
+                  RUN LINE
+                </th>
+                <th className="px-1 py-1 text-[8px] font-bold text-white font-mono tracking-widest text-center">
+                  COV
+                </th>
+                <th className="px-2 py-1 text-[8px] font-bold text-white font-mono tracking-widest text-center">
+                  TOTAL
+                </th>
+                <th className="px-1 py-1 text-[8px] font-bold text-white font-mono tracking-widest text-center">
+                  O/U
+                </th>
+                <th className="px-2 py-1 text-[8px] font-bold text-white font-mono tracking-widest text-center">
+                  ML
+                </th>
               </tr>
             </thead>
             <tbody>
-              {games.map((g) => (
+              {games.map(g => (
                 <GameRow key={g.anGameId} game={g} teamSlug={teamSlug} />
               ))}
             </tbody>
@@ -389,7 +407,7 @@ export default function MlbLast5Panel({
       { awaySlug, homeSlug },
       {
         enabled,
-        staleTime: 4 * 60 * 1000,       // 4 min — matches refresh interval
+        staleTime: 4 * 60 * 1000, // 4 min — matches refresh interval
         refetchInterval: 4 * 60 * 1000, // auto-poll every 4 min (keeps pace with schedule history scheduler)
         retry: 1,
       }
@@ -411,7 +429,9 @@ export default function MlbLast5Panel({
       }}
     >
       {/* ── Collapsible Header ────────────────────────────────────────────── */}
-      <button type="button" onClick={() => setIsExpanded((v) => !v)}
+      <button
+        type="button"
+        onClick={() => setIsExpanded(v => !v)}
         className="w-full flex items-center justify-between px-3 py-2 transition-colors"
       >
         <div className="flex items-center gap-2">
@@ -453,7 +473,9 @@ export default function MlbLast5Panel({
               <p className="text-sm text-white font-mono">
                 Error: {error.message}
               </p>
-              <button type="button" onClick={() => refetch()}
+              <button
+                type="button"
+                onClick={() => refetch()}
                 className="text-xs text-white font-mono mt-1 hover:underline"
               >
                 Retry
@@ -482,8 +504,6 @@ export default function MlbLast5Panel({
               />
             </div>
           )}
-
-
         </div>
       )}
     </div>

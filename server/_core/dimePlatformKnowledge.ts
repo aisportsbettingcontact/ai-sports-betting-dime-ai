@@ -3,10 +3,7 @@ import platformKnowledgeJson from "../../shared/dime/platform_knowledge_v1.json"
 
 export type DimePlatformFeatureAvailability = "live" | "not_available";
 export type DimePlatformAccessScope =
-  | "public"
-  | "authenticated"
-  | "owner"
-  | "none";
+  "public" | "authenticated" | "owner" | "none";
 
 export interface DimePlatformFeature {
   id: string;

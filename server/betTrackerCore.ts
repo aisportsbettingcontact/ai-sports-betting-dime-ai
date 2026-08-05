@@ -23,8 +23,15 @@ export type BetResult = "PENDING" | "WIN" | "LOSS" | "PUSH" | "VOID";
 export type Market = "ML" | "RL" | "TOTAL";
 export type PickSide = "AWAY" | "HOME" | "OVER" | "UNDER";
 export type Timeframe =
-  | "FULL_GAME" | "FIRST_5" | "FIRST_INNING" | "NRFI" | "YRFI"
-  | "REGULATION" | "FIRST_PERIOD" | "FIRST_HALF" | "FIRST_QUARTER";
+  | "FULL_GAME"
+  | "FIRST_5"
+  | "FIRST_INNING"
+  | "NRFI"
+  | "YRFI"
+  | "REGULATION"
+  | "FIRST_PERIOD"
+  | "FIRST_HALF"
+  | "FIRST_QUARTER";
 
 /** Roles permitted to read and act on another user's bets. */
 const PRIVILEGED_ROLES: readonly Role[] = ["owner", "admin"] as const;
@@ -70,8 +77,7 @@ export function resolveViewUserId(args: {
 }
 
 export type MutationDecision =
-  | { allowed: true }
-  | { allowed: false; code: "FORBIDDEN"; message: string };
+  { allowed: true } | { allowed: false; code: "FORBIDDEN"; message: string };
 
 /**
  * Decide whether an actor may directly edit or delete a specific bet.
@@ -127,9 +133,16 @@ export function decideBetMutation(args: {
 }
 
 /** Owner/admin-only procedures (listHandicappers, getLogs, reviewEditRequest, …). */
-export function decidePrivilegedAccess(role: string, what: string): MutationDecision {
+export function decidePrivilegedAccess(
+  role: string,
+  what: string
+): MutationDecision {
   if (isPrivilegedRole(role)) return { allowed: true };
-  return { allowed: false, code: "FORBIDDEN", message: `Owner or Admin required to ${what}` };
+  return {
+    allowed: false,
+    code: "FORBIDDEN",
+    message: `Owner or Admin required to ${what}`,
+  };
 }
 
 /**
@@ -184,7 +197,10 @@ export function decideStakeDenomination(role: string): {
   reason: string;
 } {
   if (isPrivilegedRole(role)) {
-    return { unitsOnly: false, reason: "owner/admin may track in dollars or units" };
+    return {
+      unitsOnly: false,
+      reason: "owner/admin may track in dollars or units",
+    };
   }
   return {
     unitsOnly: true,
@@ -214,10 +230,11 @@ export function calcToWin(odds: number, risk: number): number {
 export function toUnits(
   dollarAmt: number,
   storedUnits: string | number | null | undefined,
-  unitSize: number,
+  unitSize: number
 ): number {
   if (storedUnits != null && storedUnits !== "") {
-    const v = typeof storedUnits === "number" ? storedUnits : parseFloat(storedUnits);
+    const v =
+      typeof storedUnits === "number" ? storedUnits : parseFloat(storedUnits);
     if (Number.isFinite(v) && v > 0) return v;
   }
   const size = unitSize > 0 ? unitSize : 1;
@@ -239,21 +256,29 @@ export function toUnits(
 export function deriveToWinUnits(
   risk: number,
   toWin: number,
-  riskUnits: number | string | null | undefined,
+  riskUnits: number | string | null | undefined
 ): string | null {
   const units =
     typeof riskUnits === "string"
-      ? (riskUnits === "" ? NaN : parseFloat(riskUnits))
+      ? riskUnits === ""
+        ? NaN
+        : parseFloat(riskUnits)
       : riskUnits;
   if (units == null || !Number.isFinite(units) || units <= 0) return null;
-  if (!Number.isFinite(risk) || risk <= 0 || !Number.isFinite(toWin)) return null;
+  if (!Number.isFinite(risk) || risk <= 0 || !Number.isFinite(toWin))
+    return null;
   return ((toWin * units) / risk).toFixed(4);
 }
 
 export interface StakePatchInput {
   actorRole: string;
   /** The row's current stake quad, as DECIMAL strings off the driver. */
-  existing: { risk: string; toWin: string; riskUnits: string | null; toWinUnits: string | null };
+  existing: {
+    risk: string;
+    toWin: string;
+    riskUnits: string | null;
+    toWinUnits: string | null;
+  };
   /** The FINAL odds for the row (patched value if the caller sent one). */
   odds: number;
   oddsChanged: boolean;
@@ -266,7 +291,15 @@ export interface StakePatchInput {
 }
 
 export type StakePatchResult =
-  | { ok: true; fields: { risk?: string; toWin?: string; riskUnits?: string; toWinUnits?: string | null } }
+  | {
+      ok: true;
+      fields: {
+        risk?: string;
+        toWin?: string;
+        riskUnits?: string;
+        toWinUnits?: string | null;
+      };
+    }
   | { ok: false; message: string };
 
 /**
@@ -292,20 +325,26 @@ export type StakePatchResult =
  */
 export function resolveStakePatch(input: StakePatchInput): StakePatchResult {
   const rule = decideStakeDenomination(input.actorRole);
-  if (rule.unitsOnly && (input.risk !== undefined || input.toWin !== undefined)) {
+  if (
+    rule.unitsOnly &&
+    (input.risk !== undefined || input.toWin !== undefined)
+  ) {
     return { ok: false, message: rule.reason };
   }
 
-  const curRisk  = parseFloat(input.existing.risk);
+  const curRisk = parseFloat(input.existing.risk);
   const curToWin = parseFloat(input.existing.toWin);
-  const curUnits = input.existing.riskUnits != null ? parseFloat(input.existing.riskUnits) : null;
+  const curUnits =
+    input.existing.riskUnits != null
+      ? parseFloat(input.existing.riskUnits)
+      : null;
   const heldSize =
     curUnits != null && Number.isFinite(curUnits) && curUnits > 0 && curRisk > 0
       ? curRisk / curUnits
       : null;
 
   // ── Risk side: what the caller stated verbatim, and what follows from it ──
-  let nextRisk  = curRisk;
+  let nextRisk = curRisk;
   let nextUnits = curUnits;
   let riskTouched = false;
   if (input.risk !== undefined && input.riskUnits !== undefined) {
@@ -328,7 +367,10 @@ export function resolveStakePatch(input: StakePatchInput): StakePatchResult {
 
   // ── Payout side ───────────────────────────────────────────────────────────
   const sizeAfter =
-    nextUnits != null && Number.isFinite(nextUnits) && nextUnits > 0 && nextRisk > 0
+    nextUnits != null &&
+    Number.isFinite(nextUnits) &&
+    nextUnits > 0 &&
+    nextRisk > 0
       ? nextRisk / nextUnits
       : null;
   let nextToWin: number | null = null;
@@ -336,7 +378,11 @@ export function resolveStakePatch(input: StakePatchInput): StakePatchResult {
     nextToWin = input.toWin; // a boosted/promotional price, verbatim
   } else if (input.toWinUnits !== undefined) {
     if (sizeAfter == null) {
-      return { ok: false, message: "This bet has no unit basis to derive a dollar payout from — restate riskUnits first." };
+      return {
+        ok: false,
+        message:
+          "This bet has no unit basis to derive a dollar payout from — restate riskUnits first.",
+      };
     }
     nextToWin = input.toWinUnits * sizeAfter;
   } else if (input.oddsChanged) {
@@ -347,7 +393,12 @@ export function resolveStakePatch(input: StakePatchInput): StakePatchResult {
 
   if (!riskTouched && nextToWin == null) return { ok: true, fields: {} };
 
-  const fields: { risk?: string; toWin?: string; riskUnits?: string; toWinUnits?: string | null } = {};
+  const fields: {
+    risk?: string;
+    toWin?: string;
+    riskUnits?: string;
+    toWinUnits?: string | null;
+  } = {};
   if (riskTouched) {
     fields.risk = nextRisk.toFixed(2);
     if (nextUnits != null && Number.isFinite(nextUnits) && nextUnits > 0) {
@@ -357,7 +408,7 @@ export function resolveStakePatch(input: StakePatchInput): StakePatchResult {
   if (nextToWin != null) fields.toWin = nextToWin.toFixed(2);
 
   // The pair law binds the FINAL quad regardless of which side moved.
-  const finalRisk  = riskTouched ? nextRisk : curRisk;
+  const finalRisk = riskTouched ? nextRisk : curRisk;
   const finalToWin = nextToWin != null ? nextToWin : curToWin;
   if (input.toWinUnits !== undefined) {
     fields.toWinUnits = input.toWinUnits.toFixed(4); // stated verbatim
@@ -369,7 +420,15 @@ export function resolveStakePatch(input: StakePatchInput): StakePatchResult {
   return { ok: true, fields };
 }
 
-export const UNIT_BUCKET_ORDER = ["10U", "5U", "4U", "3U", "2U", "1U", "<1U"] as const;
+export const UNIT_BUCKET_ORDER = [
+  "10U",
+  "5U",
+  "4U",
+  "3U",
+  "2U",
+  "1U",
+  "<1U",
+] as const;
 
 /**
  * Bucket a bet by the number of units it represents.
@@ -392,9 +451,10 @@ export function calcUnitBucket(args: {
   unitSize: number;
 }): string {
   const { odds, risk, toWin, riskUnits, toWinUnits, unitSize } = args;
-  const unitCount = odds > 0
-    ? toUnits(risk, riskUnits, unitSize)
-    : toUnits(toWin, toWinUnits, unitSize);
+  const unitCount =
+    odds > 0
+      ? toUnits(risk, riskUnits, unitSize)
+      : toUnits(toWin, toWinUnits, unitSize);
 
   // Sub-unit stakes get their own bucket instead of being rounded up into "1U".
   // Rounding hid real mis-entries: a $1.10 stake at $100/unit is 0.011 units,
@@ -418,7 +478,7 @@ export function derivePickLabel(
   market: Market,
   awayTeam: string,
   homeTeam: string,
-  timeframe?: Timeframe,
+  timeframe?: Timeframe
 ): string {
   if (timeframe === "NRFI") return "NRFI";
   if (timeframe === "YRFI") return "YRFI";
@@ -452,7 +512,7 @@ export function marketRequiresLine(market: Market): boolean {
 /** The effective line used for grading: an explicit custom line wins over the book line. */
 export function effectiveLine(
   line: number | string | null | undefined,
-  customLine: number | string | null | undefined,
+  customLine: number | string | null | undefined
 ): number | null {
   const pick = (v: number | string | null | undefined): number | null => {
     if (v == null || v === "") return null;
@@ -463,7 +523,12 @@ export function effectiveLine(
 }
 
 export type LineResolution =
-  | { ok: true; line: number | null; customLine: number | null; flipped: boolean }
+  | {
+      ok: true;
+      line: number | null;
+      customLine: number | null;
+      flipped: boolean;
+    }
   | { ok: false; code: "BAD_REQUEST"; message: string };
 
 /**
@@ -484,8 +549,14 @@ export function resolveLineForUpdate(args: {
   nextCustomLine?: number | null;
 }): LineResolution {
   const {
-    prevMarket, nextMarket, prevPickSide, nextPickSide,
-    prevLine, prevCustomLine, nextLine, nextCustomLine,
+    prevMarket,
+    nextMarket,
+    prevPickSide,
+    nextPickSide,
+    prevLine,
+    prevCustomLine,
+    nextLine,
+    nextCustomLine,
   } = args;
 
   const num = (v: number | string | null | undefined): number | null => {
@@ -514,19 +585,32 @@ export function resolveLineForUpdate(args: {
         message: `Changing market to ${nextMarket} requires a new line — the stored ${prevMarket} line cannot be reused`,
       };
     }
-    return { ok: true, line: suppliedLine, customLine: suppliedCustom, flipped: false };
+    return {
+      ok: true,
+      line: suppliedLine,
+      customLine: suppliedCustom,
+      flipped: false,
+    };
   }
 
   // Market unchanged. An explicitly supplied line always wins.
   if (anySupplied) {
-    if (marketRequiresLine(nextMarket) && effectiveLine(suppliedLine, suppliedCustom) === null) {
+    if (
+      marketRequiresLine(nextMarket) &&
+      effectiveLine(suppliedLine, suppliedCustom) === null
+    ) {
       return {
         ok: false,
         code: "BAD_REQUEST",
         message: `${nextMarket} bets require a line`,
       };
     }
-    return { ok: true, line: suppliedLine, customLine: suppliedCustom, flipped: false };
+    return {
+      ok: true,
+      line: suppliedLine,
+      customLine: suppliedCustom,
+      flipped: false,
+    };
   }
 
   const keptLine = num(prevLine);
@@ -559,7 +643,10 @@ export function resolveLineForUpdate(args: {
 // self-describing in logs; decode is total (a malformed cursor restarts from the
 // first page rather than throwing).
 
-export interface BetCursor { gameDate: string; id: number }
+export interface BetCursor {
+  gameDate: string;
+  id: number;
+}
 
 export function encodeCursor(c: BetCursor): string {
   return JSON.stringify({ gameDate: c.gameDate, id: c.id });
@@ -672,9 +759,10 @@ export const EQUITY_CURVE_MAX_POINTS = 750;
  */
 export function downsampleEquityCurve(
   curve: EquityPoint[],
-  maxPoints: number = EQUITY_CURVE_MAX_POINTS,
+  maxPoints: number = EQUITY_CURVE_MAX_POINTS
 ): EquityPoint[] {
-  if (maxPoints < 2) throw new Error("downsampleEquityCurve: maxPoints must be >= 2");
+  if (maxPoints < 2)
+    throw new Error("downsampleEquityCurve: maxPoints must be >= 2");
   if (curve.length <= maxPoints) return curve;
 
   const mandatory = new Set<number>([0, curve.length - 1]);
@@ -685,7 +773,10 @@ export function downsampleEquityCurve(
   // If the anchors alone fill the budget, return exactly those. The curve is
   // then sparse but every referenced point is still present.
   const budget = maxPoints - mandatory.size;
-  if (budget <= 0) return Array.from(mandatory).sort((a, b) => a - b).map(i => curve[i]);
+  if (budget <= 0)
+    return Array.from(mandatory)
+      .sort((a, b) => a - b)
+      .map(i => curve[i]);
 
   const optional: number[] = [];
   for (let i = 0; i < curve.length; i++) {
@@ -709,12 +800,17 @@ export function downsampleEquityCurve(
     let bestDev = -1;
     for (let i = start; i < end; i++) {
       const dev = Math.abs(curve[optional[i]].cumPL - mean);
-      if (dev > bestDev) { bestDev = dev; bestIdx = optional[i]; }
+      if (dev > bestDev) {
+        bestDev = dev;
+        bestIdx = optional[i];
+      }
     }
     chosen.add(bestIdx);
   }
 
-  return Array.from(chosen).sort((a, b) => a - b).map(i => curve[i]);
+  return Array.from(chosen)
+    .sort((a, b) => a - b)
+    .map(i => curve[i]);
 }
 
 export interface BetStats {
@@ -757,8 +853,12 @@ export interface BetStats {
 const round2 = (n: number): number => parseFloat(n.toFixed(2));
 
 interface BkEntry {
-  wins: number; losses: number; pushes: number;
-  risk: number; won: number; lost: number;
+  wins: number;
+  losses: number;
+  pushes: number;
+  risk: number;
+  won: number;
+  lost: number;
 }
 
 /**
@@ -783,9 +883,16 @@ interface BkEntry {
 export function aggregateStats(rows: StatRow[], unitSize: number): BetStats {
   const size = unitSize > 0 ? unitSize : 100;
 
-  let wins = 0, losses = 0, pushes = 0, pending = 0, voids = 0;
-  let totalRisk = 0, totalWon = 0, totalLost = 0;
-  let bestWin = 0, worstLoss = 0;
+  let wins = 0,
+    losses = 0,
+    pushes = 0,
+    pending = 0,
+    voids = 0;
+  let totalRisk = 0,
+    totalWon = 0,
+    totalLost = 0;
+  let bestWin = 0,
+    worstLoss = 0;
 
   const byTypeMap = new Map<string, BkEntry>();
   const bySizeMap = new Map<string, BkEntry>();
@@ -800,16 +907,37 @@ export function aggregateStats(rows: StatRow[], unitSize: number): BetStats {
 
   const equityCurve: EquityPoint[] = [];
   let cumPL = 0;
-  let longestWinStreak = 0, currentWinStreak = 0;
-  let ath = 0, athBetId = -1;
-  let peakForDrawdown = 0, maxDrawdown = 0, maxDrawdownBetId = -1;
+  let longestWinStreak = 0,
+    currentWinStreak = 0;
+  let ath = 0,
+    athBetId = -1;
+  let peakForDrawdown = 0,
+    maxDrawdown = 0,
+    maxDrawdownBetId = -1;
 
-  const bkApply = (map: Map<string, BkEntry>, key: string, result: string, riskU: number, toWinU: number): void => {
+  const bkApply = (
+    map: Map<string, BkEntry>,
+    key: string,
+    result: string,
+    riskU: number,
+    toWinU: number
+  ): void => {
     let e = map.get(key);
-    if (!e) { e = { wins: 0, losses: 0, pushes: 0, risk: 0, won: 0, lost: 0 }; map.set(key, e); }
-    if (result === "WIN") { e.wins++; e.risk += riskU; e.won += toWinU; }
-    else if (result === "LOSS") { e.losses++; e.risk += riskU; e.lost += riskU; }
-    else if (result === "PUSH") { e.pushes++; }
+    if (!e) {
+      e = { wins: 0, losses: 0, pushes: 0, risk: 0, won: 0, lost: 0 };
+      map.set(key, e);
+    }
+    if (result === "WIN") {
+      e.wins++;
+      e.risk += riskU;
+      e.won += toWinU;
+    } else if (result === "LOSS") {
+      e.losses++;
+      e.risk += riskU;
+      e.lost += riskU;
+    } else if (result === "PUSH") {
+      e.pushes++;
+    }
   };
 
   for (const bet of rows) {
@@ -821,30 +949,47 @@ export function aggregateStats(rows: StatRow[], unitSize: number): BetStats {
 
     switch (res) {
       case "WIN":
-        wins++; totalRisk += riskU; totalWon += toWinU;
+        wins++;
+        totalRisk += riskU;
+        totalWon += toWinU;
         if (toWinU > bestWin) bestWin = toWinU;
         break;
       case "LOSS":
-        losses++; totalRisk += riskU; totalLost += riskU;
+        losses++;
+        totalRisk += riskU;
+        totalLost += riskU;
         if (riskU > worstLoss) worstLoss = riskU;
         break;
-      case "PUSH": pushes++; break;
-      case "PENDING": pending++; break;
-      case "VOID": voids++; break;
+      case "PUSH":
+        pushes++;
+        break;
+      case "PENDING":
+        pending++;
+        break;
+      case "VOID":
+        voids++;
+        break;
     }
 
     // A parlay is its own type. Its `market` column holds the schema default
     // "ML", so keying on market alone would file every ticket under moneyline.
-    const typeKey = (bet.legCount ?? 0) > 0 ? "PARLAY" : (bet.market ?? bet.betType ?? "ML");
+    const typeKey =
+      (bet.legCount ?? 0) > 0 ? "PARLAY" : (bet.market ?? bet.betType ?? "ML");
     bkApply(byTypeMap, typeKey, res, riskU, toWinU);
-    bkApply(bySizeMap, calcUnitBucket({
-      odds: bet.odds,
-      risk: riskDollar,
-      toWin: toWinDollar,
-      riskUnits: bet.riskUnits,
-      toWinUnits: bet.toWinUnits,
-      unitSize: size,
-    }), res, riskU, toWinU);
+    bkApply(
+      bySizeMap,
+      calcUnitBucket({
+        odds: bet.odds,
+        risk: riskDollar,
+        toWin: toWinDollar,
+        riskUnits: bet.riskUnits,
+        toWinUnits: bet.toWinUnits,
+        unitSize: size,
+      }),
+      res,
+      riskU,
+      toWinU
+    );
     bkApply(byMonthMap, bet.gameDate.substring(0, 7), res, riskU, toWinU);
     bkApply(bySportMap, bet.sport, res, riskU, toWinU);
     bkApply(byResultMap, res, res, riskU, toWinU);
@@ -856,7 +1001,8 @@ export function aggregateStats(rows: StatRow[], unitSize: number): BetStats {
     const pl = res === "WIN" ? toWinU : -riskU;
     dayPLMap.set(bet.gameDate, (dayPLMap.get(bet.gameDate) ?? 0) + pl);
     const worst = dayWorstBet.get(bet.gameDate);
-    if (!worst || pl < worst.pl) dayWorstBet.set(bet.gameDate, { pl, betId: bet.id });
+    if (!worst || pl < worst.pl)
+      dayWorstBet.set(bet.gameDate, { pl, betId: bet.id });
 
     cumPL += pl;
     const cp = round2(cumPL);
@@ -872,51 +1018,73 @@ export function aggregateStats(rows: StatRow[], unitSize: number): BetStats {
       units: round2(riskU),
     });
 
-    if (cp > ath) { ath = cp; athBetId = bet.id; }
+    if (cp > ath) {
+      ath = cp;
+      athBetId = bet.id;
+    }
     if (cp > peakForDrawdown) peakForDrawdown = cp;
     const drawdown = peakForDrawdown - cp;
-    if (drawdown > maxDrawdown) { maxDrawdown = drawdown; maxDrawdownBetId = bet.id; }
+    if (drawdown > maxDrawdown) {
+      maxDrawdown = drawdown;
+      maxDrawdownBetId = bet.id;
+    }
 
     if (res === "WIN") {
       currentWinStreak++;
-      if (currentWinStreak > longestWinStreak) longestWinStreak = currentWinStreak;
+      if (currentWinStreak > longestWinStreak)
+        longestWinStreak = currentWinStreak;
     } else {
       currentWinStreak = 0;
     }
   }
 
   const finalize = (map: Map<string, BkEntry>): BreakdownEntry[] =>
-    Array.from(map.entries()).map(([key, e]) => {
-      const np = e.won - e.lost;
-      return {
-        key,
-        wins: e.wins,
-        losses: e.losses,
-        pushes: e.pushes,
-        totalRisk: round2(e.risk),
-        netProfit: round2(np),
-        roi: e.risk > 0 ? parseFloat(((np / e.risk) * 100).toFixed(2)) : 0,
-        dollarNetProfit: round2(np * size),
-      };
-    }).sort((a, b) => a.key.localeCompare(b.key));
+    Array.from(map.entries())
+      .map(([key, e]) => {
+        const np = e.won - e.lost;
+        return {
+          key,
+          wins: e.wins,
+          losses: e.losses,
+          pushes: e.pushes,
+          totalRisk: round2(e.risk),
+          netProfit: round2(np),
+          roi: e.risk > 0 ? parseFloat(((np / e.risk) * 100).toFixed(2)) : 0,
+          dollarNetProfit: round2(np * size),
+        };
+      })
+      .sort((a, b) => a.key.localeCompare(b.key));
 
   const bySize = finalize(bySizeMap).sort((a, b) => {
-    const ai = UNIT_BUCKET_ORDER.indexOf(a.key as typeof UNIT_BUCKET_ORDER[number]);
-    const bi = UNIT_BUCKET_ORDER.indexOf(b.key as typeof UNIT_BUCKET_ORDER[number]);
+    const ai = UNIT_BUCKET_ORDER.indexOf(
+      a.key as (typeof UNIT_BUCKET_ORDER)[number]
+    );
+    const bi = UNIT_BUCKET_ORDER.indexOf(
+      b.key as (typeof UNIT_BUCKET_ORDER)[number]
+    );
     return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
   });
 
-  let biggestDayDate = "", biggestDayUnits = 0;
-  let worstDayDate = "", worstDayUnits = 0;
+  let biggestDayDate = "",
+    biggestDayUnits = 0;
+  let worstDayDate = "",
+    worstDayUnits = 0;
   dayPLMap.forEach((pl, date) => {
-    if (pl > biggestDayUnits) { biggestDayUnits = pl; biggestDayDate = date; }
-    if (pl < worstDayUnits) { worstDayUnits = pl; worstDayDate = date; }
+    if (pl > biggestDayUnits) {
+      biggestDayUnits = pl;
+      biggestDayDate = date;
+    }
+    if (pl < worstDayUnits) {
+      worstDayUnits = pl;
+      worstDayDate = date;
+    }
   });
 
   // Current run: gain since the most recent trough. Walk back from the final
   // point while the curve is non-increasing in reverse (i.e. non-decreasing
   // forward); the point where that stops is the trough the run started from.
-  let currentRunUnits = 0, currentRunSince = "";
+  let currentRunUnits = 0,
+    currentRunSince = "";
   if (equityCurve.length > 0) {
     const finalCum = equityCurve[equityCurve.length - 1].cumPL;
     let troughPL = finalCum;
@@ -934,7 +1102,9 @@ export function aggregateStats(rows: StatRow[], unitSize: number): BetStats {
   const specialBetIds = new Set<number>();
   if (athBetId >= 0) specialBetIds.add(athBetId);
   if (maxDrawdownBetId >= 0) specialBetIds.add(maxDrawdownBetId);
-  const worstDayEntry = worstDayDate ? dayWorstBet.get(worstDayDate) : undefined;
+  const worstDayEntry = worstDayDate
+    ? dayWorstBet.get(worstDayDate)
+    : undefined;
   if (worstDayEntry) specialBetIds.add(worstDayEntry.betId);
   for (const pt of equityCurve) {
     if (specialBetIds.has(pt.betId)) pt.isSpecial = true;
@@ -944,14 +1114,21 @@ export function aggregateStats(rows: StatRow[], unitSize: number): BetStats {
 
   return {
     totalBets: rows.length,
-    wins, losses, pushes, pending, voids,
+    wins,
+    losses,
+    pushes,
+    pending,
+    voids,
     gradedBets: wins + losses + pushes,
     totalRisk: round2(totalRisk),
     totalWon: round2(totalWon),
     totalLost: round2(totalLost),
     netProfit: round2(netProfit),
     dollarNetProfit: round2(netProfit * size),
-    roi: totalRisk > 0 ? parseFloat(((netProfit / totalRisk) * 100).toFixed(2)) : 0,
+    roi:
+      totalRisk > 0
+        ? parseFloat(((netProfit / totalRisk) * 100).toFixed(2))
+        : 0,
     bestWin: round2(bestWin),
     worstLoss: round2(worstLoss),
     byType: finalize(byTypeMap),

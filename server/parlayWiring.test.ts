@@ -22,7 +22,9 @@ import { aggregateStats, type StatRow } from "./betTrackerCore";
 const read = (p: string) => readFileSync(join(__dirname, p), "utf8");
 /** Source with comments stripped, so a comment mentioning a pattern can't satisfy an assertion. */
 const code = (p: string) =>
-  read(p).replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  read(p)
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/^\s*\/\/.*$/gm, "");
 
 const scheduler = code("betAutoGradeScheduler.ts");
 const router = code("routers/betTracker.ts");
@@ -33,7 +35,8 @@ describe("parlay parents never reach the straight-bet grader", () => {
     // A ticket has no anGameId and no single pickSide. Fed to gradePendingRows
     // it resolves to no game and logs NO_MATCH every cycle — which is also how
     // real feed drift presents, so it would poison that alarm with noise.
-    const selections = scheduler.match(/eq\(trackedBets\.result,\s*"PENDING"\)/g) ?? [];
+    const selections =
+      scheduler.match(/eq\(trackedBets\.result,\s*"PENDING"\)/g) ?? [];
     const guards = scheduler.match(/eq\(trackedBets\.legCount,\s*0\)/g) ?? [];
     expect(selections.length).toBeGreaterThanOrEqual(3);
     expect(guards.length).toBe(selections.length);
@@ -53,7 +56,7 @@ describe("parlay parents never reach the straight-bet grader", () => {
     // missed in the first place.
     const fn = scheduler.slice(
       scheduler.indexOf("async function gradeAllPendingForDate"),
-      scheduler.indexOf("export async function gradePendingForUser"),
+      scheduler.indexOf("export async function gradePendingForUser")
     );
     expect(fn).toMatch(/try\s*\{[\s\S]*?gradeParlaysForDate[\s\S]*?catch/);
   });
@@ -83,7 +86,9 @@ describe("deleting a ticket deletes its legs", () => {
   it("REGRESSION: delete cascades to trackedBetLegs", () => {
     // No FK exists between the tables. An orphaned leg stays PENDING, so the
     // sweep would keep grading it and re-folding a ticket that is gone.
-    expect(router).toMatch(/delete\(trackedBetLegs\)[\s\S]{0,120}trackedBetLegs\.betId/);
+    expect(router).toMatch(
+      /delete\(trackedBetLegs\)[\s\S]{0,120}trackedBetLegs\.betId/
+    );
   });
 
   it("cascades before deleting the parent", () => {
@@ -120,7 +125,10 @@ describe("createParlay does not disturb the straight-bet write path", () => {
   });
 
   it("validates legs before writing anything", () => {
-    const proc = router.slice(router.indexOf("createParlay:"), router.indexOf("delete: appUserProcedure"));
+    const proc = router.slice(
+      router.indexOf("createParlay:"),
+      router.indexOf("delete: appUserProcedure")
+    );
     const validatePos = proc.indexOf("validateParlayLegs");
     const insertPos = proc.indexOf("db.insert(trackedBets)");
     expect(validatePos).toBeGreaterThan(-1);
@@ -142,10 +150,21 @@ describe("legs reach the client without an N+1", () => {
 
 describe("stats file a parlay as PARLAY, not moneyline", () => {
   const row = (over: Partial<StatRow>): StatRow => ({
-    id: 1, gameDate: "2026-08-04", result: "WIN", sport: "MLB",
-    market: "ML", betType: "ML", timeframe: "FULL_GAME", wagerType: "PREGAME",
-    pick: "p", odds: -110, risk: "100.00", toWin: "90.91",
-    riskUnits: "1.00", toWinUnits: "0.91", ...over,
+    id: 1,
+    gameDate: "2026-08-04",
+    result: "WIN",
+    sport: "MLB",
+    market: "ML",
+    betType: "ML",
+    timeframe: "FULL_GAME",
+    wagerType: "PREGAME",
+    pick: "p",
+    odds: -110,
+    risk: "100.00",
+    toWin: "90.91",
+    riskUnits: "1.00",
+    toWinUnits: "0.91",
+    ...over,
   });
 
   it("REGRESSION: a ticket does not file under ML", () => {
@@ -154,7 +173,7 @@ describe("stats file a parlay as PARLAY, not moneyline", () => {
     // the moneyline row.
     const stats = aggregateStats(
       [row({ id: 1, betType: "PARLAY", legCount: 3 })],
-      100,
+      100
     );
     const keys = stats.byType.map(b => b.key);
     expect(keys).toContain("PARLAY");
@@ -168,8 +187,11 @@ describe("stats file a parlay as PARLAY, not moneyline", () => {
 
   it("separates the two when both are present", () => {
     const stats = aggregateStats(
-      [row({ id: 1, legCount: 0 }), row({ id: 2, betType: "PARLAY", legCount: 4 })],
-      100,
+      [
+        row({ id: 1, legCount: 0 }),
+        row({ id: 2, betType: "PARLAY", legCount: 4 }),
+      ],
+      100
     );
     expect(stats.byType.map(b => b.key).sort()).toEqual(["ML", "PARLAY"]);
   });
@@ -181,7 +203,17 @@ describe("stats file a parlay as PARLAY, not moneyline", () => {
   });
 
   it("counts the ticket's single stake once, not once per leg", () => {
-    const stats = aggregateStats([row({ betType: "PARLAY", legCount: 5, riskUnits: "2.00", toWinUnits: "12.00" })], 100);
+    const stats = aggregateStats(
+      [
+        row({
+          betType: "PARLAY",
+          legCount: 5,
+          riskUnits: "2.00",
+          toWinUnits: "12.00",
+        }),
+      ],
+      100
+    );
     expect(stats.wins).toBe(1);
     expect(stats.totalRisk).toBeCloseTo(2, 2);
     expect(stats.netProfit).toBeCloseTo(12, 2);

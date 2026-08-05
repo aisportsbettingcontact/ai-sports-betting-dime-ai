@@ -106,8 +106,7 @@ export interface DimeChatBlueprintFailed {
 }
 
 export type DimeChatBlueprintResult =
-  | DimeChatBlueprintLoaded
-  | DimeChatBlueprintFailed;
+  DimeChatBlueprintLoaded | DimeChatBlueprintFailed;
 
 export interface DimeChatProfileMetadata {
   productProfile: typeof DIME_CHAT_PRODUCT_PROFILE;
@@ -425,9 +424,7 @@ export function loadDimeChatBlueprint(
 
 export function resolveDimeChatSystemPrompt(
   blueprint:
-    | string
-    | DimeChatBlueprintResult
-    | null = DIME_CHAT_BLUEPRINT_RESULT
+    string | DimeChatBlueprintResult | null = DIME_CHAT_BLUEPRINT_RESULT
 ): string {
   const content =
     typeof blueprint === "string"
@@ -545,11 +542,7 @@ export function sanitizeDimeChatHistory(
 }
 
 export type DimeChatRequestClass =
-  | "simple"
-  | "standard"
-  | "deep"
-  | "slate_scan"
-  | "structured_only";
+  "simple" | "standard" | "deep" | "slate_scan" | "structured_only";
 
 export function classifyDimeChatRequest(
   messages: DimeChatMessage[]

@@ -18,7 +18,9 @@
 
 const base = (process.argv[2] ?? "").replace(/\/$/, "");
 if (!/^https?:\/\//.test(base)) {
-  console.error("Usage: node scripts/smoke-deploy.mjs <https://deployed-origin>");
+  console.error(
+    "Usage: node scripts/smoke-deploy.mjs <https://deployed-origin>"
+  );
   process.exit(2);
 }
 
@@ -31,7 +33,12 @@ async function check(name, fn) {
     results.push({ name, ok: true, ms: Date.now() - started, detail });
     console.log(`  ✅ ${name} (${Date.now() - started}ms) ${detail ?? ""}`);
   } catch (err) {
-    results.push({ name, ok: false, ms: Date.now() - started, detail: err.message });
+    results.push({
+      name,
+      ok: false,
+      ms: Date.now() - started,
+      detail: err.message,
+    });
     console.log(`  ❌ ${name} (${Date.now() - started}ms) — ${err.message}`);
   }
 }
@@ -55,7 +62,10 @@ await check("GET / → 200 HTML shell", async () => {
   const type = res.headers.get("content-type") ?? "";
   expect(type.includes("text/html"), `content-type ${type}`);
   indexHtml = await res.text();
-  expect(indexHtml.includes("<div id=\"root\""), "no #root div — not the SPA shell");
+  expect(
+    indexHtml.includes('<div id="root"'),
+    "no #root div — not the SPA shell"
+  );
 });
 
 await check("hashed asset → 200 + long-lived cache", async () => {
@@ -68,64 +78,121 @@ await check("hashed asset → 200 + long-lived cache", async () => {
   return m[0];
 });
 
-await check("GET /api/trpc/<bogus> → tRPC JSON error (API mounted)", async () => {
-  const res = await fetch(`${base}/api/trpc/smokeTest.doesNotExist`);
-  const type = res.headers.get("content-type") ?? "";
-  expect(type.includes("application/json"), `content-type ${type} — SPA fallback answered; /api proxy or mount is broken`);
-  expect(res.status < 500, `status ${res.status} — upstream/gateway error, not a tRPC response`);
-  const body = await res.json();
-  const isTrpcShape = Array.isArray(body) ? body[0]?.error : body?.error;
-  expect(isTrpcShape, `not a tRPC error envelope: ${JSON.stringify(body).slice(0, 80)}`);
-  return `status ${res.status}`;
-});
+await check(
+  "GET /api/trpc/<bogus> → tRPC JSON error (API mounted)",
+  async () => {
+    const res = await fetch(`${base}/api/trpc/smokeTest.doesNotExist`);
+    const type = res.headers.get("content-type") ?? "";
+    expect(
+      type.includes("application/json"),
+      `content-type ${type} — SPA fallback answered; /api proxy or mount is broken`
+    );
+    expect(
+      res.status < 500,
+      `status ${res.status} — upstream/gateway error, not a tRPC response`
+    );
+    const body = await res.json();
+    const isTrpcShape = Array.isArray(body) ? body[0]?.error : body?.error;
+    expect(
+      isTrpcShape,
+      `not a tRPC error envelope: ${JSON.stringify(body).slice(0, 80)}`
+    );
+    return `status ${res.status}`;
+  }
+);
 
-await check("POST /api/dime/chat unauthenticated → 401 JSON (auth gate)", async () => {
-  const res = await fetch(`${base}/api/dime/chat`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ messages: [{ role: "user", content: "smoke" }] }),
-  });
-  expect(res.status === 401, `status ${res.status} — expected the pre-stream auth gate`);
-  const body = await res.json();
-  expect(body?.error, "401 without JSON error body");
-});
+await check(
+  "POST /api/dime/chat unauthenticated → 401 JSON (auth gate)",
+  async () => {
+    const res = await fetch(`${base}/api/dime/chat`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ messages: [{ role: "user", content: "smoke" }] }),
+    });
+    expect(
+      res.status === 401,
+      `status ${res.status} — expected the pre-stream auth gate`
+    );
+    const body = await res.json();
+    expect(body?.error, "401 without JSON error body");
+  }
+);
 
-await check("bot UA on / → v2 SEO content (prerender or shell block)", async () => {
-  const res = await fetch(`${base}/`, { headers: { "user-agent": "Googlebot/2.1 (+http://www.google.com/bot.html)" } });
-  expect(res.status === 200, `status ${res.status}`);
-  const html = await res.text();
-  // Express origins (Railway) serve the full prerender snapshot (X-Prerender: 1).
-  // If a static host ever serves index.html directly, bots get the SPA shell
-  // whose noscript SEO block must carry the v2 copy. Either way: v2 positioning
-  // present, no forbidden neon.
-  const surface = res.headers.get("x-prerender") === "1" ? "prerender snapshot" : "SPA shell SEO block";
-  expect(html.includes("See where price and probability"), `v2 copy missing from bot-served HTML (${surface})`);
-  expect(!/39FF14/i.test(html), `forbidden neon #39FF14 present (${surface}, brand law)`);
-  return surface;
-});
+await check(
+  "bot UA on / → v2 SEO content (prerender or shell block)",
+  async () => {
+    const res = await fetch(`${base}/`, {
+      headers: {
+        "user-agent": "Googlebot/2.1 (+http://www.google.com/bot.html)",
+      },
+    });
+    expect(res.status === 200, `status ${res.status}`);
+    const html = await res.text();
+    // Express origins (Railway) serve the full prerender snapshot (X-Prerender: 1).
+    // If a static host ever serves index.html directly, bots get the SPA shell
+    // whose noscript SEO block must carry the v2 copy. Either way: v2 positioning
+    // present, no forbidden neon.
+    const surface =
+      res.headers.get("x-prerender") === "1"
+        ? "prerender snapshot"
+        : "SPA shell SEO block";
+    expect(
+      html.includes("See where price and probability"),
+      `v2 copy missing from bot-served HTML (${surface})`
+    );
+    expect(
+      !/39FF14/i.test(html),
+      `forbidden neon #39FF14 present (${surface}, brand law)`
+    );
+    return surface;
+  }
+);
 
-await check("vendored /dime-storage asset → 200 image (no external storage dependency)", async () => {
-  const res = await fetch(`${base}/dime-storage/mlb-logo_50fd8568.png`, { redirect: "follow" });
-  expect(res.status === 200, `status ${res.status}`);
-  const type = res.headers.get("content-type") ?? "";
-  expect(type.startsWith("image/"), `content-type ${type} — storage proxy failed instead of serving the vendored file`);
-});
+await check(
+  "vendored /dime-storage asset → 200 image (no external storage dependency)",
+  async () => {
+    const res = await fetch(`${base}/dime-storage/mlb-logo_50fd8568.png`, {
+      redirect: "follow",
+    });
+    expect(res.status === 200, `status ${res.status}`);
+    const type = res.headers.get("content-type") ?? "";
+    expect(
+      type.startsWith("image/"),
+      `content-type ${type} — storage proxy failed instead of serving the vendored file`
+    );
+  }
+);
 
-await check("checkout CSP allows Stripe Embedded (script-src js.stripe.com + frame-src checkout.stripe.com)", async () => {
-  const res = await fetch(`${base}/checkout?plan=monthly`, { headers: { "user-agent": "Mozilla/5.0 Chrome/126" } });
-  const csp = res.headers.get("content-security-policy") ?? "";
-  // Railway (Express + helmet) always sets a CSP header. A missing header means
-  // the origin isn't serving through helmet — a real regression, not a lenient
-  // pass: without Stripe allowances embedded checkout breaks with "Failed to
-  // load Stripe.js" (live incident 2026-07-10).
-  expect(csp, "no CSP header — helmet not applied on the checkout route");
-  const scriptSrc = csp.split(";").find((d) => d.trim().startsWith("script-src")) ?? "";
-  const frameSrc = csp.split(";").find((d) => d.trim().startsWith("frame-src")) ?? "";
-  expect(scriptSrc.includes("js.stripe.com"), `script-src blocks Stripe.js: "${scriptSrc.trim()}"`);
-  expect(frameSrc.includes("checkout.stripe.com"), `frame-src blocks the checkout iframe: "${frameSrc.trim()}"`);
-  return "CSP allows Stripe";
-});
+await check(
+  "checkout CSP allows Stripe Embedded (script-src js.stripe.com + frame-src checkout.stripe.com)",
+  async () => {
+    const res = await fetch(`${base}/checkout?plan=monthly`, {
+      headers: { "user-agent": "Mozilla/5.0 Chrome/126" },
+    });
+    const csp = res.headers.get("content-security-policy") ?? "";
+    // Railway (Express + helmet) always sets a CSP header. A missing header means
+    // the origin isn't serving through helmet — a real regression, not a lenient
+    // pass: without Stripe allowances embedded checkout breaks with "Failed to
+    // load Stripe.js" (live incident 2026-07-10).
+    expect(csp, "no CSP header — helmet not applied on the checkout route");
+    const scriptSrc =
+      csp.split(";").find(d => d.trim().startsWith("script-src")) ?? "";
+    const frameSrc =
+      csp.split(";").find(d => d.trim().startsWith("frame-src")) ?? "";
+    expect(
+      scriptSrc.includes("js.stripe.com"),
+      `script-src blocks Stripe.js: "${scriptSrc.trim()}"`
+    );
+    expect(
+      frameSrc.includes("checkout.stripe.com"),
+      `frame-src blocks the checkout iframe: "${frameSrc.trim()}"`
+    );
+    return "CSP allows Stripe";
+  }
+);
 
-const failed = results.filter((r) => !r.ok);
-console.log(`\n${results.length - failed.length}/${results.length} checks passed`);
+const failed = results.filter(r => !r.ok);
+console.log(
+  `\n${results.length - failed.length}/${results.length} checks passed`
+);
 process.exit(failed.length === 0 ? 0 : 1);

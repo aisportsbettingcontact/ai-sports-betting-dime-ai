@@ -13,12 +13,14 @@ import {
 
 describe("deriveChatTitle", () => {
   it("returns short prompts unchanged", () => {
-    expect(deriveChatTitle("Any NRFI angles today?")).toBe("Any NRFI angles today?");
+    expect(deriveChatTitle("Any NRFI angles today?")).toBe(
+      "Any NRFI angles today?"
+    );
   });
 
   it("collapses internal whitespace and trims the ends", () => {
     expect(deriveChatTitle("  Will Messi   score\n\ntonight?  ")).toBe(
-      "Will Messi score tonight?",
+      "Will Messi score tonight?"
     );
   });
 
@@ -59,7 +61,7 @@ describe("session recents store", () => {
     addSessionRecent("first question about the slate");
     addSessionRecent("second question about player props");
     const recents = getSessionRecents();
-    expect(recents.map((r) => r.title)).toEqual([
+    expect(recents.map(r => r.title)).toEqual([
       "second question about player props",
       "first question about the slate",
     ]);

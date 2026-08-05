@@ -23,7 +23,7 @@ describe("installFatalErrorHandler", () => {
     expect(processTarget.exit).toHaveBeenCalledWith(1);
     expect(logger.error).toHaveBeenCalledWith(
       "[FATAL] Uncaught exception — shutting down safely",
-      expect.objectContaining({ message: "boom" }),
+      expect.objectContaining({ message: "boom" })
     );
   });
 

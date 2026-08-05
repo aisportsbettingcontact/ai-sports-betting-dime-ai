@@ -59,7 +59,7 @@ const DDL: string[] = [
 function guard(op: string): void {
   if (!isAnalyticsStore()) {
     throw new Error(
-      `${TAG} ${op} refused — this instance is not the analytics store (guard against writing analytics to a non-dedicated DB such as TiDB)`,
+      `${TAG} ${op} refused — this instance is not the analytics store (guard against writing analytics to a non-dedicated DB such as TiDB)`
     );
   }
 }
@@ -109,7 +109,9 @@ export interface StoredEvent {
  * Insert one event idempotently (unique event_id ⇒ re-delivery is a no-op).
  * `received_at` is stamped server-side. Store-role only.
  */
-export async function insertAnalyticsEvent(e: StoredEvent): Promise<{ ok: true; deduped: boolean }> {
+export async function insertAnalyticsEvent(
+  e: StoredEvent
+): Promise<{ ok: true; deduped: boolean }> {
   guard("insertAnalyticsEvent");
   const db = await getDb();
   if (!db) throw new Error(`${TAG} database unavailable`);
@@ -131,7 +133,10 @@ export async function insertAnalyticsEvent(e: StoredEvent): Promise<{ ok: true; 
   `);
   // mysql2 ResultSetHeader: affectedRows 0 = duplicate ignored, 1 = inserted.
   // Defensive extraction across driver/drizzle result shapes.
-  const header = Array.isArray(result) ? (result[0] as { affectedRows?: number }) : (result as { affectedRows?: number });
-  const affected = typeof header?.affectedRows === "number" ? header.affectedRows : 1;
+  const header = Array.isArray(result)
+    ? (result[0] as { affectedRows?: number })
+    : (result as { affectedRows?: number });
+  const affected =
+    typeof header?.affectedRows === "number" ? header.affectedRows : 1;
   return { ok: true, deduped: affected === 0 };
 }

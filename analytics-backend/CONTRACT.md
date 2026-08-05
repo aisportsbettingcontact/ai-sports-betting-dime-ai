@@ -18,12 +18,12 @@ and staff/test/internal/bot activity.
 
 ## 2. Candidate qualifying events (VERIFY against the product before freezing)
 
-| event_name | qualifies_active | completion condition |
-|---|---|---|
-| `projection_evaluation_viewed` | yes | a complete, trustworthy projection (all required fields, valid edge or supported `No Edge`, fresh) is rendered to the user |
-| `chat_response_completed` | yes | a Dime Chat response finishes successfully and is available |
-| `tracker_entry_saved` | yes | a released Bet Tracker save/evaluate workflow completes |
-| `session_segment` | **no** | foreground engagement interval — continuity only, never qualifies |
+| event_name                     | qualifies_active | completion condition                                                                                                       |
+| ------------------------------ | ---------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `projection_evaluation_viewed` | yes              | a complete, trustworthy projection (all required fields, valid edge or supported `No Edge`, fresh) is rendered to the user |
+| `chat_response_completed`      | yes              | a Dime Chat response finishes successfully and is available                                                                |
+| `tracker_entry_saved`          | yes              | a released Bet Tracker save/evaluate workflow completes                                                                    |
+| `session_segment`              | **no**           | foreground engagement interval — continuity only, never qualifies                                                          |
 
 Names are past-tense `lower_snake_case`. Each is a row in `analytics_event_definitions`
 (event_name, schema_version, definition_version, surface, qualifies_active,

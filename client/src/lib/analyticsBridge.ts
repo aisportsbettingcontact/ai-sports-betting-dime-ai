@@ -31,7 +31,10 @@ export function unregisterAnalyticsEmit(fn: EmitFn): void {
 }
 
 /** Emit from critical-path code. No-op until an emitter is registered; never throws. */
-export function emitEvent(eventName: AnalyticsEventName, opts?: TrackOptions): void {
+export function emitEvent(
+  eventName: AnalyticsEventName,
+  opts?: TrackOptions
+): void {
   try {
     emitImpl?.(eventName, opts);
   } catch {
@@ -43,7 +46,10 @@ export function emitEvent(eventName: AnalyticsEventName, opts?: TrackOptions): v
  * Emit a curated `action_performed` from critical-path code (chat). Mirrors
  * `emitEvent`; no-op until an emitter is registered; never throws.
  */
-export function emitAction(actionName: ActionName, opts?: Omit<TrackOptions, "actionName">): void {
+export function emitAction(
+  actionName: ActionName,
+  opts?: Omit<TrackOptions, "actionName">
+): void {
   try {
     emitImpl?.("action_performed", { ...opts, actionName });
   } catch {

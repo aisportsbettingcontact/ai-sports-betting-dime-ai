@@ -118,8 +118,12 @@ export interface ParlaySettlement {
  *   3. ANY leg PENDING → PENDING. Nothing is decided yet.
  *   4. Otherwise every surviving leg WON → WIN at the repriced odds.
  */
-export function settleParlay(legs: ParlayLeg[], originalOdds: number): ParlaySettlement {
-  if (legs.length === 0) throw new Error("settleParlay: a parlay must have legs");
+export function settleParlay(
+  legs: ParlayLeg[],
+  originalOdds: number
+): ParlaySettlement {
+  if (legs.length === 0)
+    throw new Error("settleParlay: a parlay must have legs");
 
   const lost = legs.filter(l => l.result === "LOSS");
   const dropped = legs.filter(l => isDropped(l.result));
@@ -134,7 +138,9 @@ export function settleParlay(legs: ParlayLeg[], originalOdds: number): ParlaySet
       droppedLegs: dropped.length,
       reason:
         `leg ${lost[0].legIndex + 1} lost (${describeLeg(lost[0])})` +
-        (pending.length > 0 ? ` — ${pending.length} leg(s) still open but cannot rescue the ticket` : ""),
+        (pending.length > 0
+          ? ` — ${pending.length} leg(s) still open but cannot rescue the ticket`
+          : ""),
     };
   }
 
@@ -158,7 +164,10 @@ export function settleParlay(legs: ParlayLeg[], originalOdds: number): ParlaySet
     };
   }
 
-  const odds = repriceParlay(originalOdds, dropped.map(l => l.odds));
+  const odds = repriceParlay(
+    originalOdds,
+    dropped.map(l => l.odds)
+  );
   return {
     result: "WIN",
     odds,
@@ -182,7 +191,10 @@ export function settleParlay(legs: ParlayLeg[], originalOdds: number): ParlaySet
  * the ticket has no value left and the caller should VOID it rather than book
  * a negative price.
  */
-export function repriceParlay(originalOdds: number, droppedLegOdds: number[]): number {
+export function repriceParlay(
+  originalOdds: number,
+  droppedLegOdds: number[]
+): number {
   if (droppedLegOdds.length === 0) return originalOdds;
   // Exact fraction arithmetic — settlement must not lose a point to IEEE-754.
   // See shared/parlayPricing.ts: a +115/+130 pair is exactly +394.5, and in
@@ -190,12 +202,18 @@ export function repriceParlay(originalOdds: number, droppedLegOdds: number[]): n
   return divideLegsOut(originalOdds, droppedLegOdds);
 }
 
-
 /** Short human label for a leg, used in grading reasons. */
-export function describeLeg(leg: Pick<ParlayLeg, "awayTeam" | "homeTeam" | "market" | "pickSide" | "line" | "timeframe">): string {
+export function describeLeg(
+  leg: Pick<
+    ParlayLeg,
+    "awayTeam" | "homeTeam" | "market" | "pickSide" | "line" | "timeframe"
+  >
+): string {
   const game = `${leg.awayTeam}@${leg.homeTeam}`;
-  if (leg.timeframe === "NRFI" || leg.timeframe === "YRFI") return `${leg.timeframe} ${game}`;
-  if (leg.market === "TOTAL") return `${leg.pickSide} ${leg.line ?? "?"} ${game}`;
+  if (leg.timeframe === "NRFI" || leg.timeframe === "YRFI")
+    return `${leg.timeframe} ${game}`;
+  if (leg.market === "TOTAL")
+    return `${leg.pickSide} ${leg.line ?? "?"} ${game}`;
   if (leg.market === "RL") return `${leg.pickSide} ${leg.line ?? "?"} ${game}`;
   return `${leg.pickSide} ML ${game}`;
 }

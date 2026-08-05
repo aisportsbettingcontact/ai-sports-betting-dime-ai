@@ -76,18 +76,31 @@ export function classifySession(s: {
   status?: string | null;
   payment_status?: string | null;
   customer?: unknown;
-}): { status: "created" | "completed" | "expired"; fulfillment: "pending" | "fulfilled" | "dropped" | "skipped"; reason: string | null } | null {
+}): {
+  status: "created" | "completed" | "expired";
+  fulfillment: "pending" | "fulfilled" | "dropped" | "skipped";
+  reason: string | null;
+} | null {
   // Still open — nothing to resolve yet. Leaving it 'created' is correct.
   if (s.status === "open") return null;
 
   if (s.status === "expired") {
-    return { status: "expired", fulfillment: "skipped", reason: "session expired without payment (reconciled)" };
+    return {
+      status: "expired",
+      fulfillment: "skipped",
+      reason: "session expired without payment (reconciled)",
+    };
   }
 
   if (s.status === "complete") {
-    const paid = s.payment_status === "paid" || s.payment_status === "no_payment_required";
+    const paid =
+      s.payment_status === "paid" || s.payment_status === "no_payment_required";
     if (!paid) {
-      return { status: "completed", fulfillment: "skipped", reason: `payment_status=${s.payment_status} (reconciled)` };
+      return {
+        status: "completed",
+        fulfillment: "skipped",
+        reason: `payment_status=${s.payment_status} (reconciled)`,
+      };
     }
     // Complete AND paid, but our ledger never recorded a fulfilment. Either the
     // webhook never arrived or the handler bailed. Either way: money taken,
@@ -95,25 +108,30 @@ export function classifySession(s: {
     return {
       status: "completed",
       fulfillment: "dropped",
-      reason: "complete+paid in Stripe but never fulfilled locally (reconciled)",
+      reason:
+        "complete+paid in Stripe but never fulfilled locally (reconciled)",
     };
   }
 
   return null; // unknown status — do not guess
 }
 
-async function listRecentSessions(maxPages: number, sinceMs: number): Promise<{ sessions: Stripe.Checkout.Session[]; truncated: boolean }> {
+async function listRecentSessions(
+  maxPages: number,
+  sinceMs: number
+): Promise<{ sessions: Stripe.Checkout.Session[]; truncated: boolean }> {
   const stripe = getStripe();
   const out: Stripe.Checkout.Session[] = [];
   let startingAfter: string | undefined;
   let pages = 0;
 
   while (pages < maxPages) {
-    const page: Stripe.ApiList<Stripe.Checkout.Session> = await stripe.checkout.sessions.list({
-      limit: 100,
-      created: { gte: Math.floor(sinceMs / 1000) },
-      ...(startingAfter ? { starting_after: startingAfter } : {}),
-    });
+    const page: Stripe.ApiList<Stripe.Checkout.Session> =
+      await stripe.checkout.sessions.list({
+        limit: 100,
+        created: { gte: Math.floor(sinceMs / 1000) },
+        ...(startingAfter ? { starting_after: startingAfter } : {}),
+      });
     out.push(...page.data);
     pages += 1;
     if (!page.has_more || page.data.length === 0) {
@@ -142,13 +160,18 @@ export async function reconcileCheckoutSessions(opts?: {
   const dryRun = opts?.dryRun ?? false;
 
   const db = await getDb();
-  if (!db) throw new Error(`${TAG} database unavailable — refusing to report an empty sweep as clean`);
+  if (!db)
+    throw new Error(
+      `${TAG} database unavailable — refusing to report an empty sweep as clean`
+    );
 
   const since = Date.now() - lookbackMs;
   const { sessions, truncated } = await listRecentSessions(maxPages, since);
-  console.log(`${TAG} [STATE] scanned ${sessions.length} Stripe sessions since ${new Date(since).toISOString()} truncated=${truncated}`);
+  console.log(
+    `${TAG} [STATE] scanned ${sessions.length} Stripe sessions since ${new Date(since).toISOString()} truncated=${truncated}`
+  );
 
-  const ids = sessions.map((s) => s.id);
+  const ids = sessions.map(s => s.id);
   const existing = ids.length
     ? await db
         .select({
@@ -159,9 +182,13 @@ export async function reconcileCheckoutSessions(opts?: {
         .from(checkoutSessions)
         .where(inArray(checkoutSessions.stripeSessionId, ids))
     : [];
-  type LocalRow = { stripeSessionId: string; status: string; fulfillment: string };
+  type LocalRow = {
+    stripeSessionId: string;
+    status: string;
+    fulfillment: string;
+  };
   const local = new Map<string, LocalRow>(
-    (existing as LocalRow[]).map((r) => [r.stripeSessionId, r] as const)
+    (existing as LocalRow[]).map(r => [r.stripeSessionId, r] as const)
   );
 
   const out: ReconcileOutcome = {
@@ -187,7 +214,9 @@ export async function reconcileCheckoutSessions(opts?: {
       if (!have && createdMs < LEDGER_EPOCH_MS) {
         out.backfilled += 1;
         if (dryRun) {
-          console.log(`${TAG} [DRY] would back-fill pre-ledger ${s.id} as skipped/unknown`);
+          console.log(
+            `${TAG} [DRY] would back-fill pre-ledger ${s.id} as skipped/unknown`
+          );
           continue;
         }
         await resolveCheckout({
@@ -211,7 +240,11 @@ export async function reconcileCheckoutSessions(opts?: {
         out.alreadyConsistent += 1;
         continue;
       }
-      if (have && have.status === want.status && have.fulfillment === want.fulfillment) {
+      if (
+        have &&
+        have.status === want.status &&
+        have.fulfillment === want.fulfillment
+      ) {
         out.alreadyConsistent += 1;
         continue;
       }
@@ -225,7 +258,9 @@ export async function reconcileCheckoutSessions(opts?: {
       if (!have) out.backfilled += 1;
 
       if (dryRun) {
-        console.log(`${TAG} [DRY] would set ${s.id} -> ${want.status}/${want.fulfillment} (${want.reason})`);
+        console.log(
+          `${TAG} [DRY] would set ${s.id} -> ${want.status}/${want.fulfillment} (${want.reason})`
+        );
         continue;
       }
 
@@ -235,16 +270,23 @@ export async function reconcileCheckoutSessions(opts?: {
         fulfillment: want.fulfillment,
         reason: want.reason,
         customerEmail: s.customer_details?.email ?? null,
-        stripeCustomerId: typeof s.customer === "string" ? s.customer : (s.customer as Stripe.Customer | null)?.id ?? null,
-        stripeSubscriptionId: typeof s.subscription === "string" ? s.subscription : null,
-        stripePaymentIntentId: typeof s.payment_intent === "string" ? s.payment_intent : null,
+        stripeCustomerId:
+          typeof s.customer === "string"
+            ? s.customer
+            : ((s.customer as Stripe.Customer | null)?.id ?? null),
+        stripeSubscriptionId:
+          typeof s.subscription === "string" ? s.subscription : null,
+        stripePaymentIntentId:
+          typeof s.payment_intent === "string" ? s.payment_intent : null,
         paymentStatus: s.payment_status ?? null,
         amountCents: s.amount_total ?? null,
         currency: s.currency ?? null,
       });
     } catch (err) {
       // One malformed session must not abort the sweep.
-      console.error(`${TAG} [FAIL] session ${s.id}: ${(err as Error)?.message ?? err}`);
+      console.error(
+        `${TAG} [FAIL] session ${s.id}: ${(err as Error)?.message ?? err}`
+      );
     }
   }
 
@@ -252,7 +294,9 @@ export async function reconcileCheckoutSessions(opts?: {
   console[level](
     `${TAG} [VERIFY] scanned=${out.scanned} unfulfilled=${out.unfulfilled} expired=${out.expiredResolved} ` +
       `backfilled=${out.backfilled} consistent=${out.alreadyConsistent} truncated=${out.truncated}` +
-      (out.unfulfilled > 0 ? ` — MONEY TAKEN WITHOUT ACCESS: ${out.unfulfilledIds.join(", ")}` : "")
+      (out.unfulfilled > 0
+        ? ` — MONEY TAKEN WITHOUT ACCESS: ${out.unfulfilledIds.join(", ")}`
+        : "")
   );
   return out;
 }

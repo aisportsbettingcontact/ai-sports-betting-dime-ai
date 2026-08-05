@@ -109,7 +109,9 @@ function buildAllowedOrigins(): Set<string> {
     const extra = raw.trim().replace(/\/$/, "").toLowerCase();
     if (extra) {
       origins.add(extra);
-      console.log(`[CSRF] Allowed origin (ADDITIONAL_ALLOWED_ORIGINS): ${extra}`);
+      console.log(
+        `[CSRF] Allowed origin (ADDITIONAL_ALLOWED_ORIGINS): ${extra}`
+      );
     }
   }
 
@@ -130,8 +132,8 @@ function buildAllowedOrigins(): Set<string> {
   if (origins.size === 0) {
     console.warn(
       "[CSRF] WARNING: PUBLIC_ORIGIN is not set and NODE_ENV is not development. " +
-      "CSRF Origin check will log warnings but NOT block requests until PUBLIC_ORIGIN is configured. " +
-      "Set PUBLIC_ORIGIN=https://aisportsbettingmodels.com in production secrets immediately."
+        "CSRF Origin check will log warnings but NOT block requests until PUBLIC_ORIGIN is configured. " +
+        "Set PUBLIC_ORIGIN=https://aisportsbettingmodels.com in production secrets immediately."
     );
   }
 
@@ -149,12 +151,16 @@ const ALLOWED_ORIGINS = buildAllowedOrigins();
 // mutations. Never list a bare shared-hosting suffix like ".up.railway.app" —
 // anyone can deploy there. Scope suffixes to a segment
 // only your team controls (project/team slug).
-const ALLOWED_ORIGIN_SUFFIXES: string[] = (process.env.ALLOWED_ORIGIN_SUFFIXES ?? "")
+const ALLOWED_ORIGIN_SUFFIXES: string[] = (
+  process.env.ALLOWED_ORIGIN_SUFFIXES ?? ""
+)
   .split(",")
-  .map((s) => s.trim().toLowerCase())
+  .map(s => s.trim().toLowerCase())
   .filter(Boolean);
 if (ALLOWED_ORIGIN_SUFFIXES.length > 0) {
-  console.log(`[CSRF] Allowed origin suffixes: ${ALLOWED_ORIGIN_SUFFIXES.join(", ")}`);
+  console.log(
+    `[CSRF] Allowed origin suffixes: ${ALLOWED_ORIGIN_SUFFIXES.join(", ")}`
+  );
 }
 
 /**
@@ -182,9 +188,11 @@ export function isOriginAllowed(origin: string | undefined): boolean {
   // https-only; see ALLOWED_ORIGIN_SUFFIXES above for the CSRF scoping rules.
   if (
     normalized.startsWith("https://") &&
-    ALLOWED_ORIGIN_SUFFIXES.some((suffix) => normalized.endsWith(suffix))
+    ALLOWED_ORIGIN_SUFFIXES.some(suffix => normalized.endsWith(suffix))
   ) {
-    console.log(`[CSRF] Allowed origin (ALLOWED_ORIGIN_SUFFIXES): ${normalized}`);
+    console.log(
+      `[CSRF] Allowed origin (ALLOWED_ORIGIN_SUFFIXES): ${normalized}`
+    );
     return true;
   }
 
@@ -262,7 +270,7 @@ async function fireCsrfBlockAlert(
   if (!ENV.isProduction) {
     console.log(
       `[CSRF] Alert suppressed — not in production (dev environment). ` +
-      `IP=${ip} Origin="${origin}" path=${path}`
+        `IP=${ip} Origin="${origin}" path=${path}`
     );
     return;
   }
@@ -302,7 +310,9 @@ async function fireCsrfBlockAlert(
     occurredAt: eventOccurredAt,
   }).catch((err: unknown) => {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error(`[CSRF] DB persist error (non-critical) | IP=${ip} | error="${msg}"`);
+    console.error(
+      `[CSRF] DB persist error (non-critical) | IP=${ip} | error="${msg}"`
+    );
   });
 
   // [STEP] Post structured embed to 🗒️-𝗦𝗘𝗖𝗨𝗥𝗜𝗧𝗬-𝗘𝗩𝗘𝗡𝗧𝗦 Discord channel (async, non-blocking)
@@ -315,7 +325,9 @@ async function fireCsrfBlockAlert(
     occurredAt: eventOccurredAt,
   }).catch((err: unknown) => {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error(`[CSRF] Discord alert error (non-critical) | IP=${ip} | error="${msg}"`);
+    console.error(
+      `[CSRF] Discord alert error (non-critical) | IP=${ip} | error="${msg}"`
+    );
   });
 
   console.log(
@@ -381,9 +393,9 @@ export const csrfOriginCheck = t.middleware(async ({ ctx, next, path }) => {
   // [STATE] Log every mutation attempt with full context
   console.log(
     `[CSRF] ${method} /api/trpc/${path}` +
-    ` | IP=${ip}` +
-    ` | Origin=${origin ?? "NOT_SET"}` +
-    ` | isProduction=${ENV.isProduction}`
+      ` | IP=${ip}` +
+      ` | Origin=${origin ?? "NOT_SET"}` +
+      ` | isProduction=${ENV.isProduction}`
   );
 
   const allowed = isOriginAllowed(origin);
@@ -392,11 +404,11 @@ export const csrfOriginCheck = t.middleware(async ({ ctx, next, path }) => {
     // [OUTPUT] BLOCKED — origin not in allowed set
     console.warn(
       `[CSRF] BLOCKED — Origin mismatch` +
-      ` | path=${path}` +
-      ` | IP=${ip}` +
-      ` | Origin="${origin}"` +
-      ` | allowedOrigins=[${Array.from(ALLOWED_ORIGINS).join(", ")}]` +
-      ` | This may indicate a CSRF attack or misconfigured client`
+        ` | path=${path}` +
+        ` | IP=${ip}` +
+        ` | Origin="${origin}"` +
+        ` | allowedOrigins=[${Array.from(ALLOWED_ORIGINS).join(", ")}]` +
+        ` | This may indicate a CSRF attack or misconfigured client`
     );
 
     // [STEP] Fire owner alert async — non-blocking, rate-limited per IP per 10 min.
@@ -418,9 +430,7 @@ export const csrfOriginCheck = t.middleware(async ({ ctx, next, path }) => {
   // [VERIFY] PASS — origin is allowed
   if (origin) {
     // Only log when Origin is present (server-to-server has no Origin, no need to log)
-    console.log(
-      `[CSRF] PASS — origin="${origin}" path=${path} IP=${ip}`
-    );
+    console.log(`[CSRF] PASS — origin="${origin}" path=${path} IP=${ip}`);
   }
 
   return next();
@@ -459,9 +469,9 @@ const logStripeRequest = t.middleware(async ({ ctx, next, path }) => {
   const method = req.method?.toUpperCase() ?? "UNKNOWN";
   console.log(
     `[Stripe] ${method} /api/trpc/${path}` +
-    ` | IP=${ip}` +
-    ` | Origin=${origin}` +
-    ` | CSRF_EXEMPT=true`
+      ` | IP=${ip}` +
+      ` | Origin=${origin}` +
+      ` | CSRF_EXEMPT=true`
   );
   return next();
 });

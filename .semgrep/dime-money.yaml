@@ -17,7 +17,7 @@ rules:
           regex: '.*\.(0|[0-9])+.*'
       - metavariable-regex:
           metavariable: $C
-          regex: '.*[Cc]ents.*'
+          regex: ".*[Cc]ents.*"
     paths:
       include:
         - server/stripe/

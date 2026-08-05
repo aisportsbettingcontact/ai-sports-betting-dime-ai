@@ -29,12 +29,20 @@ import { fileURLToPath } from "url";
 import path from "path";
 import { chromium, type Browser } from "playwright";
 import { collectBrowserMetricsInPage } from "./browserMetrics";
-import { evaluatePerfRun, type PerfSample, type PerfBudget } from "./regression";
+import {
+  evaluatePerfRun,
+  type PerfSample,
+  type PerfBudget,
+} from "./regression";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const BASELINE_PATH = path.join(HERE, "baseline.json");
 const RESULTS_PATH = path.join(HERE, "..", "perf-results.json");
-const BASELINE_CANDIDATE_PATH = path.join(HERE, "..", "perf-baseline-candidate.json");
+const BASELINE_CANDIDATE_PATH = path.join(
+  HERE,
+  "..",
+  "perf-baseline-candidate.json"
+);
 
 /** Routes to measure. Keep small — each adds ~a few s of CI wall-clock. */
 const ROUTES = ["/", "/landingpage-v2", "/checkout?plan=monthly"];
@@ -43,7 +51,11 @@ function log(line: string): void {
   console.log(line);
 }
 
-async function collectRoute(browser: Browser, base: string, route: string): Promise<PerfSample> {
+async function collectRoute(
+  browser: Browser,
+  base: string,
+  route: string
+): Promise<PerfSample> {
   const url = `${base.replace(/\/$/, "")}${route}`;
   log(`[INPUT] measuring ${url}`);
   const context = await browser.newContext();
@@ -58,8 +70,8 @@ async function collectRoute(browser: Browser, base: string, route: string): Prom
 
     log(
       `[OUTPUT] ${route} ttfb=${metrics.ttfbMs}ms dcl=${metrics.domContentLoaded}ms ` +
-      `load=${metrics.loadMs}ms fcp=${metrics.fcpMs}ms lcp=${metrics.lcpMs}ms ` +
-      `weight=${(metrics.transferBytes / 1024).toFixed(0)}KB`
+        `load=${metrics.loadMs}ms fcp=${metrics.fcpMs}ms lcp=${metrics.lcpMs}ms ` +
+        `weight=${(metrics.transferBytes / 1024).toFixed(0)}KB`
     );
     return { route, metrics: metrics as unknown as Record<string, number> };
   } finally {
@@ -72,7 +84,9 @@ async function probeHealth(base: string): Promise<void> {
   const started = Date.now();
   try {
     const res = await fetch(url, { method: "GET" });
-    log(`[VERIFY] GET /health → HTTP ${res.status} in ${Date.now() - started}ms`);
+    log(
+      `[VERIFY] GET /health → HTTP ${res.status} in ${Date.now() - started}ms`
+    );
   } catch (err) {
     log(`[VERIFY] GET /health → ERROR ${(err as Error).message}`);
   }
@@ -110,23 +124,31 @@ async function main(): Promise<void> {
     await browser.close();
   }
 
-  writeFileSync(RESULTS_PATH, JSON.stringify({ target: base, samples }, null, 2));
+  writeFileSync(
+    RESULTS_PATH,
+    JSON.stringify({ target: base, samples }, null, 2)
+  );
   log(`[STEP] wrote raw metrics → ${RESULTS_PATH}`);
 
   if (updateBaseline) {
     const nextBaseline: Record<string, Record<string, number>> = {};
     for (const s of samples) nextBaseline[s.route] = s.metrics;
     const updated: PerfBudget = { ...config, baseline: nextBaseline };
-    writeFileSync(BASELINE_CANDIDATE_PATH, JSON.stringify(updated, null, 2) + "\n");
+    writeFileSync(
+      BASELINE_CANDIDATE_PATH,
+      JSON.stringify(updated, null, 2) + "\n"
+    );
     log(
       `[OUTPUT] baseline candidate generated → ${BASELINE_CANDIDATE_PATH} ` +
-      `(committed baseline unchanged)`
+        `(committed baseline unchanged)`
     );
     return;
   }
 
   const evaluation = evaluatePerfRun(samples, config);
-  log(`[STEP] evaluated ${evaluation.checked} metric gates across ${samples.length} routes`);
+  log(
+    `[STEP] evaluated ${evaluation.checked} metric gates across ${samples.length} routes`
+  );
   if (evaluation.pass) {
     log(`[VERIFY] PASS — all routes within budget and regression tolerance`);
     return;
@@ -138,7 +160,7 @@ async function main(): Promise<void> {
   process.exit(1);
 }
 
-main().catch((err) => {
+main().catch(err => {
   log(`[FAIL] perf harness crashed: ${(err as Error).stack ?? err}`);
   process.exit(1);
 });

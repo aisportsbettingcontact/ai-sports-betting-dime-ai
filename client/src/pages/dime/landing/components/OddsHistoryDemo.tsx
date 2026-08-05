@@ -56,7 +56,6 @@ export default function OddsHistoryDemo() {
               demo
             />
           </div>
-
         </div>
       </div>
     </section>

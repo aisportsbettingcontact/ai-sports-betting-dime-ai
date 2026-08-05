@@ -40,34 +40,48 @@
  */
 
 // ─── Grade Values ─────────────────────────────────────────────────────────────
-export type GradeValue = "WIN" | "LOSS" | "PUSH" | "VOID" | "QUARANTINED" | "UNGRADED";
+export type GradeValue =
+  "WIN" | "LOSS" | "PUSH" | "VOID" | "QUARANTINED" | "UNGRADED";
 
 // ─── Market / Timeframe Labels ────────────────────────────────────────────────
 export type ApprovedMarket =
-  | "fg_ml_home" | "fg_ml_away"
-  | "fg_rl_home" | "fg_rl_away"
-  | "fg_over"    | "fg_under"
-  | "f5_ml_home" | "f5_ml_away"
-  | "f5_rl_home" | "f5_rl_away"
-  | "f5_over"    | "f5_under"
-  | "nrfi"       | "yrfi"
-  | "k_prop"     | "hr_prop";
+  | "fg_ml_home"
+  | "fg_ml_away"
+  | "fg_rl_home"
+  | "fg_rl_away"
+  | "fg_over"
+  | "fg_under"
+  | "f5_ml_home"
+  | "f5_ml_away"
+  | "f5_rl_home"
+  | "f5_rl_away"
+  | "f5_over"
+  | "f5_under"
+  | "nrfi"
+  | "yrfi"
+  | "k_prop"
+  | "hr_prop";
 
 export type ApprovedTimeframe =
-  | "FULL_GAME"
-  | "FIRST_5"
-  | "FIRST_INNING"
-  | "PLAYER_GAME";
+  "FULL_GAME" | "FIRST_5" | "FIRST_INNING" | "PLAYER_GAME";
 
 export const MARKET_TIMEFRAME: Record<ApprovedMarket, ApprovedTimeframe> = {
-  fg_ml_home: "FULL_GAME", fg_ml_away: "FULL_GAME",
-  fg_rl_home: "FULL_GAME", fg_rl_away: "FULL_GAME",
-  fg_over:    "FULL_GAME", fg_under:   "FULL_GAME",
-  f5_ml_home: "FIRST_5",  f5_ml_away: "FIRST_5",
-  f5_rl_home: "FIRST_5",  f5_rl_away: "FIRST_5",
-  f5_over:    "FIRST_5",  f5_under:   "FIRST_5",
-  nrfi:       "FIRST_INNING", yrfi: "FIRST_INNING",
-  k_prop:     "PLAYER_GAME",  hr_prop: "PLAYER_GAME",
+  fg_ml_home: "FULL_GAME",
+  fg_ml_away: "FULL_GAME",
+  fg_rl_home: "FULL_GAME",
+  fg_rl_away: "FULL_GAME",
+  fg_over: "FULL_GAME",
+  fg_under: "FULL_GAME",
+  f5_ml_home: "FIRST_5",
+  f5_ml_away: "FIRST_5",
+  f5_rl_home: "FIRST_5",
+  f5_rl_away: "FIRST_5",
+  f5_over: "FIRST_5",
+  f5_under: "FIRST_5",
+  nrfi: "FIRST_INNING",
+  yrfi: "FIRST_INNING",
+  k_prop: "PLAYER_GAME",
+  hr_prop: "PLAYER_GAME",
 };
 
 // ─── Grading Input / Output Types ─────────────────────────────────────────────
@@ -185,7 +199,7 @@ export function auditLog(
     date_max?: string;
     impact?: string;
     action?: string;
-  } = {},
+  } = {}
 ): void {
   const parts = [
     `[${level}][${TAG}][${market}][${timeframe}][${module}][${check}]`,
@@ -197,8 +211,8 @@ export function auditLog(
   ];
   if (counts.date_min) parts.push(`| date_min=${counts.date_min}`);
   if (counts.date_max) parts.push(`| date_max=${counts.date_max}`);
-  if (counts.impact)   parts.push(`| impact=${counts.impact}`);
-  if (counts.action)   parts.push(`| action=${counts.action}`);
+  if (counts.impact) parts.push(`| impact=${counts.impact}`);
+  if (counts.action) parts.push(`| action=${counts.action}`);
   console.log(parts.join(" "));
 }
 
@@ -250,7 +264,10 @@ export function marketHold(ml1: number, ml2: number): number {
  * Edge = modelProb - bookNoVigProb.
  * Positive edge = model thinks it's more likely than the market implies.
  */
-export function calcEdge(modelProb: number, bookNoVigProb: number | null): number | null {
+export function calcEdge(
+  modelProb: number,
+  bookNoVigProb: number | null
+): number | null {
   if (bookNoVigProb === null) return null;
   return parseFloat((modelProb - bookNoVigProb).toFixed(6));
 }
@@ -259,7 +276,10 @@ export function calcEdge(modelProb: number, bookNoVigProb: number | null): numbe
  * Expected Value = edge * (1/bookNoVigProb - 1) * 100.
  * Represents expected profit per $100 wagered.
  */
-export function calcEV(modelProb: number, bookOdds: number | null): number | null {
+export function calcEV(
+  modelProb: number,
+  bookOdds: number | null
+): number | null {
   if (bookOdds === null) return null;
   const bookP = mlToProb(bookOdds);
   if (bookP <= 0) return null;
@@ -274,7 +294,10 @@ export function calcEV(modelProb: number, bookOdds: number | null): number | nul
  * PUSH → 0
  * VOID → 0 (stake returned, not counted in ROI denominator)
  */
-export function calcProfitLoss(grade: GradeValue, bookOdds: number | null): number | null {
+export function calcProfitLoss(
+  grade: GradeValue,
+  bookOdds: number | null
+): number | null {
   if (grade === "QUARANTINED" || grade === "UNGRADED") return null;
   if (grade === "VOID" || grade === "PUSH") return 0;
   if (bookOdds === null) return null;
@@ -304,7 +327,10 @@ export function calcRoi(wins: number, losses: number, avgOdds = -110): number {
  */
 export function brierScore(probs: number[], outcomes: number[]): number {
   if (probs.length !== outcomes.length || probs.length === 0) return 0;
-  const sum = probs.reduce((acc, p, i) => acc + Math.pow(p - outcomes[i], 2), 0);
+  const sum = probs.reduce(
+    (acc, p, i) => acc + Math.pow(p - outcomes[i], 2),
+    0
+  );
   return parseFloat((sum / probs.length).toFixed(6));
 }
 
@@ -330,7 +356,7 @@ export function logLoss(probs: number[], outcomes: number[]): number {
 export function calcCLV(
   modelProb: number,
   closingOdds: number | null,
-  closingOddsOpposite: number | null,
+  closingOddsOpposite: number | null
 ): number | null {
   if (closingOdds === null || closingOddsOpposite === null) return null;
   const closingNoVig = noVigProb(closingOdds, closingOddsOpposite);
@@ -345,13 +371,14 @@ export function calcCLV(
 export function wilsonCI(
   k: number,
   n: number,
-  z = 1.96,
+  z = 1.96
 ): { lower: number; upper: number; center: number } {
   if (n === 0) return { lower: 0, upper: 1, center: 0 };
   const p = k / n;
-  const denom = 1 + z * z / n;
-  const center = (p + z * z / (2 * n)) / denom;
-  const margin = (z * Math.sqrt(p * (1 - p) / n + z * z / (4 * n * n))) / denom;
+  const denom = 1 + (z * z) / n;
+  const center = (p + (z * z) / (2 * n)) / denom;
+  const margin =
+    (z * Math.sqrt((p * (1 - p)) / n + (z * z) / (4 * n * n))) / denom;
   return {
     lower: parseFloat(Math.max(0, center - margin).toFixed(6)),
     upper: parseFloat(Math.min(1, center + margin).toFixed(6)),
@@ -371,12 +398,14 @@ export function wilsonCI(
  */
 export function parseGameStartUtcMs(
   gameDate: string,
-  startTimeEst: string | null | undefined,
+  startTimeEst: string | null | undefined
 ): number | null {
-  if (!startTimeEst || startTimeEst === "TBD" || startTimeEst === "") return null;
+  if (!startTimeEst || startTimeEst === "TBD" || startTimeEst === "")
+    return null;
   // Normalize: "7:10 PM" or "7:10PM" or "19:10"
   const normalized = startTimeEst.trim().toUpperCase();
-  let hours = 0, minutes = 0;
+  let hours = 0,
+    minutes = 0;
   const ampmMatch = normalized.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/);
   const militaryMatch = normalized.match(/^(\d{1,2}):(\d{2})$/);
   if (ampmMatch) {
@@ -410,7 +439,7 @@ export function checkLeakage(
   modelRunAt: number | null,
   gameStartUtcMs: number | null,
   gameDate: string,
-  startTimeEst: string | null | undefined,
+  startTimeEst: string | null | undefined
 ): { safe: boolean; reason: string | null } {
   // Derive gameStartUtcMs from date + time if not provided
   const startMs = gameStartUtcMs ?? parseGameStartUtcMs(gameDate, startTimeEst);
@@ -418,14 +447,16 @@ export function checkLeakage(
   if (modelRunAt === null || modelRunAt === undefined) {
     return {
       safe: false,
-      reason: "MISSING_PREDICTION_TIMESTAMP: modelRunAt is null — cannot verify pre-game prediction",
+      reason:
+        "MISSING_PREDICTION_TIMESTAMP: modelRunAt is null — cannot verify pre-game prediction",
     };
   }
   if (startMs === null) {
     // Time is TBD — we cannot verify. Mark as WARN but allow through with flag.
     return {
       safe: true,
-      reason: "UNVERIFIABLE_GAME_TIME: startTimeEst is TBD — leakage check skipped",
+      reason:
+        "UNVERIFIABLE_GAME_TIME: startTimeEst is TBD — leakage check skipped",
     };
   }
   if (modelRunAt >= startMs) {
@@ -441,8 +472,10 @@ export function checkLeakage(
 // ─── VOID / QUARANTINE Helpers ─────────────────────────────────────────────────
 
 function makeVoid(input: GradingInput, reason: string): GradingOutput {
-  const bookNoVig = (input.bookOdds !== null && input.bookOddsOpposite !== null)
-    ? noVigProb(input.bookOdds, input.bookOddsOpposite) : null;
+  const bookNoVig =
+    input.bookOdds !== null && input.bookOddsOpposite !== null
+      ? noVigProb(input.bookOdds, input.bookOddsOpposite)
+      : null;
   return {
     market: input.market,
     timeframe: MARKET_TIMEFRAME[input.market],
@@ -457,7 +490,11 @@ function makeVoid(input: GradingInput, reason: string): GradingOutput {
     modelProb: input.modelProb,
     edge: calcEdge(input.modelProb, bookNoVig),
     ev: calcEV(input.modelProb, input.bookOdds),
-    clv: calcCLV(input.modelProb, input.closingOdds ?? null, input.closingOddsOpposite ?? null),
+    clv: calcCLV(
+      input.modelProb,
+      input.closingOdds ?? null,
+      input.closingOddsOpposite ?? null
+    ),
     grade: "VOID",
     profitLoss: 0,
     roi: null,
@@ -478,8 +515,10 @@ function makeVoid(input: GradingInput, reason: string): GradingOutput {
 }
 
 function makeQuarantined(input: GradingInput, reason: string): GradingOutput {
-  const bookNoVig = (input.bookOdds !== null && input.bookOddsOpposite !== null)
-    ? noVigProb(input.bookOdds, input.bookOddsOpposite) : null;
+  const bookNoVig =
+    input.bookOdds !== null && input.bookOddsOpposite !== null
+      ? noVigProb(input.bookOdds, input.bookOddsOpposite)
+      : null;
   return {
     market: input.market,
     timeframe: MARKET_TIMEFRAME[input.market],
@@ -515,8 +554,10 @@ function makeQuarantined(input: GradingInput, reason: string): GradingOutput {
 }
 
 function makeUngraded(input: GradingInput, reason: string): GradingOutput {
-  const bookNoVig = (input.bookOdds !== null && input.bookOddsOpposite !== null)
-    ? noVigProb(input.bookOdds, input.bookOddsOpposite) : null;
+  const bookNoVig =
+    input.bookOdds !== null && input.bookOddsOpposite !== null
+      ? noVigProb(input.bookOdds, input.bookOddsOpposite)
+      : null;
   return {
     market: input.market,
     timeframe: MARKET_TIMEFRAME[input.market],
@@ -531,7 +572,11 @@ function makeUngraded(input: GradingInput, reason: string): GradingOutput {
     modelProb: input.modelProb,
     edge: calcEdge(input.modelProb, bookNoVig),
     ev: calcEV(input.modelProb, input.bookOdds),
-    clv: calcCLV(input.modelProb, input.closingOdds ?? null, input.closingOddsOpposite ?? null),
+    clv: calcCLV(
+      input.modelProb,
+      input.closingOdds ?? null,
+      input.closingOddsOpposite ?? null
+    ),
     grade: "UNGRADED",
     profitLoss: null,
     roi: null,
@@ -556,10 +601,14 @@ function buildOutput(
   grade: GradeValue,
   bookNoVig: number | null,
   notes: string,
-  leakageSafe = true,
+  leakageSafe = true
 ): GradingOutput {
   const pl = calcProfitLoss(grade, input.bookOdds);
-  const clv = calcCLV(input.modelProb, input.closingOdds ?? null, input.closingOddsOpposite ?? null);
+  const clv = calcCLV(
+    input.modelProb,
+    input.closingOdds ?? null,
+    input.closingOddsOpposite ?? null
+  );
   return {
     market: input.market,
     timeframe: MARKET_TIMEFRAME[input.market],
@@ -602,29 +651,71 @@ function buildOutput(
  */
 function preflight(input: GradingInput): GradingOutput | null {
   const mkt = input.market.toUpperCase();
-  const tf  = MARKET_TIMEFRAME[input.market];
+  const tf = MARKET_TIMEFRAME[input.market];
 
   // 1. Probability bounds
   if (input.modelProb < 0 || input.modelProb > 1) {
-    auditLog("ERROR", mkt, tf, "GRADING", "PROB_BOUNDS",
+    auditLog(
+      "ERROR",
+      mkt,
+      tf,
+      "GRADING",
+      "PROB_BOUNDS",
       `Model probability out of bounds: ${input.modelProb}`,
-      { records_checked: 1, failed: 1, quarantined: 1,
-        impact: `${mkt}_grading_quarantined`, action: "quarantine_row" });
-    return makeQuarantined(input, `INVALID_PROBABILITY: modelProb=${input.modelProb} out of [0,1]`);
+      {
+        records_checked: 1,
+        failed: 1,
+        quarantined: 1,
+        impact: `${mkt}_grading_quarantined`,
+        action: "quarantine_row",
+      }
+    );
+    return makeQuarantined(
+      input,
+      `INVALID_PROBABILITY: modelProb=${input.modelProb} out of [0,1]`
+    );
   }
 
   // 2. Postponed / suspended → VOID
   if (input.actualValue.isPostponed) {
-    auditLog("INFO", mkt, tf, "GRADING", "POSTPONED_VOID",
+    auditLog(
+      "INFO",
+      mkt,
+      tf,
+      "GRADING",
+      "POSTPONED_VOID",
       `Game ${input.gameId} is postponed — grading VOID`,
-      { records_checked: 1, passed: 1, impact: "void_no_roi_impact", action: "void_row" });
-    return makeVoid(input, "GAME_POSTPONED: official postponement — bet voided, stake returned");
+      {
+        records_checked: 1,
+        passed: 1,
+        impact: "void_no_roi_impact",
+        action: "void_row",
+      }
+    );
+    return makeVoid(
+      input,
+      "GAME_POSTPONED: official postponement — bet voided, stake returned"
+    );
   }
   if (input.actualValue.isSuspended) {
-    auditLog("WARN", mkt, tf, "GRADING", "SUSPENDED_VOID",
+    auditLog(
+      "WARN",
+      mkt,
+      tf,
+      "GRADING",
+      "SUSPENDED_VOID",
       `Game ${input.gameId} is suspended — grading VOID pending completion`,
-      { records_checked: 1, passed: 1, impact: "void_pending_completion", action: "void_row" });
-    return makeVoid(input, "GAME_SUSPENDED: game not completed — grading VOID until official completion");
+      {
+        records_checked: 1,
+        passed: 1,
+        impact: "void_pending_completion",
+        action: "void_row",
+      }
+    );
+    return makeVoid(
+      input,
+      "GAME_SUSPENDED: game not completed — grading VOID until official completion"
+    );
   }
 
   // 3. Leakage guard
@@ -632,23 +723,51 @@ function preflight(input: GradingInput): GradingOutput | null {
     input.modelRunAt,
     input.gameStartUtcMs,
     input.gameDate,
-    undefined,
+    undefined
   );
   if (!leakage.safe) {
-    auditLog("CRITICAL", mkt, tf, "LEAKAGE", "PREDICTION_AFTER_START",
+    auditLog(
+      "CRITICAL",
+      mkt,
+      tf,
+      "LEAKAGE",
+      "PREDICTION_AFTER_START",
       `Leakage detected for game ${input.gameId}: ${leakage.reason}`,
-      { records_checked: 1, failed: 1, quarantined: 1,
-        impact: `${mkt}_publication_blocked`, action: "quarantine_row" });
+      {
+        records_checked: 1,
+        failed: 1,
+        quarantined: 1,
+        impact: `${mkt}_publication_blocked`,
+        action: "quarantine_row",
+      }
+    );
     return makeQuarantined(input, leakage.reason!);
   }
 
   // 4. Player prop: playerId required
-  if ((input.market === "k_prop" || input.market === "hr_prop") && !input.playerId) {
-    auditLog("ERROR", mkt, tf, "GRADING", "MISSING_PLAYER_ID",
+  if (
+    (input.market === "k_prop" || input.market === "hr_prop") &&
+    !input.playerId
+  ) {
+    auditLog(
+      "ERROR",
+      mkt,
+      tf,
+      "GRADING",
+      "MISSING_PLAYER_ID",
       `Player ID missing for ${input.market} prop — game ${input.gameId}`,
-      { records_checked: 1, failed: 1, quarantined: 1,
-        impact: "prop_grading_quarantined", action: "quarantine_row" });
-    return makeQuarantined(input, "MISSING_PLAYER_ID: playerId required for player props");
+      {
+        records_checked: 1,
+        failed: 1,
+        quarantined: 1,
+        impact: "prop_grading_quarantined",
+        action: "quarantine_row",
+      }
+    );
+    return makeQuarantined(
+      input,
+      "MISSING_PLAYER_ID: playerId required for player props"
+    );
   }
 
   return null; // all checks passed
@@ -667,13 +786,22 @@ export function gradeFgMl(input: GradingInput): GradingOutput {
   if (pre) return pre;
 
   const { fgAwayRuns, fgHomeRuns } = input.actualValue;
-  if (fgAwayRuns === null || fgAwayRuns === undefined ||
-      fgHomeRuns === null || fgHomeRuns === undefined) {
-    return makeUngraded(input, "MISSING_FINAL_SCORE: fgAwayRuns or fgHomeRuns is null");
+  if (
+    fgAwayRuns === null ||
+    fgAwayRuns === undefined ||
+    fgHomeRuns === null ||
+    fgHomeRuns === undefined
+  ) {
+    return makeUngraded(
+      input,
+      "MISSING_FINAL_SCORE: fgAwayRuns or fgHomeRuns is null"
+    );
   }
 
-  const bookNoVig = (input.bookOdds !== null && input.bookOddsOpposite !== null)
-    ? noVigProb(input.bookOdds, input.bookOddsOpposite) : null;
+  const bookNoVig =
+    input.bookOdds !== null && input.bookOddsOpposite !== null
+      ? noVigProb(input.bookOdds, input.bookOddsOpposite)
+      : null;
 
   // Two-way ML: extra innings always produce a winner
   const homeWon = fgHomeRuns > fgAwayRuns;
@@ -681,7 +809,10 @@ export function gradeFgMl(input: GradingInput): GradingOutput {
   // Tie after 9 is impossible in MLB (extra innings continue until winner)
   // But guard against data error
   if (fgHomeRuns === fgAwayRuns) {
-    return makeQuarantined(input, `INVALID_FINAL_SCORE: tie score ${fgAwayRuns}-${fgHomeRuns} in full game ML — extra innings should resolve`);
+    return makeQuarantined(
+      input,
+      `INVALID_FINAL_SCORE: tie score ${fgAwayRuns}-${fgHomeRuns} in full game ML — extra innings should resolve`
+    );
   }
 
   let grade: GradeValue;
@@ -690,12 +821,22 @@ export function gradeFgMl(input: GradingInput): GradingOutput {
   } else if (input.modelSide === "away") {
     grade = awayWon ? "WIN" : "LOSS";
   } else {
-    return makeQuarantined(input, `INVALID_MODEL_SIDE: '${input.modelSide}' not 'home' or 'away'`);
+    return makeQuarantined(
+      input,
+      `INVALID_MODEL_SIDE: '${input.modelSide}' not 'home' or 'away'`
+    );
   }
 
   const notes = `FG ML ${input.modelSide}: score=${fgAwayRuns}-${fgHomeRuns} homeWon=${homeWon} grade=${grade}`;
-  auditLog("INFO", "FG_ML", "FULL_GAME", "GRADING", "FINAL_SCORE_MATCH",
-    notes, { records_checked: 1, passed: 1 });
+  auditLog(
+    "INFO",
+    "FG_ML",
+    "FULL_GAME",
+    "GRADING",
+    "FINAL_SCORE_MATCH",
+    notes,
+    { records_checked: 1, passed: 1 }
+  );
   return buildOutput(input, grade, bookNoVig, notes);
 }
 
@@ -710,16 +851,25 @@ export function gradeFgRl(input: GradingInput): GradingOutput {
   if (pre) return pre;
 
   const { fgAwayRuns, fgHomeRuns } = input.actualValue;
-  if (fgAwayRuns === null || fgAwayRuns === undefined ||
-      fgHomeRuns === null || fgHomeRuns === undefined) {
-    return makeUngraded(input, "MISSING_FINAL_SCORE: fgAwayRuns or fgHomeRuns is null");
+  if (
+    fgAwayRuns === null ||
+    fgAwayRuns === undefined ||
+    fgHomeRuns === null ||
+    fgHomeRuns === undefined
+  ) {
+    return makeUngraded(
+      input,
+      "MISSING_FINAL_SCORE: fgAwayRuns or fgHomeRuns is null"
+    );
   }
   if (input.bookLine === null) {
     return makeUngraded(input, "MISSING_RUN_LINE: bookLine is null");
   }
 
-  const bookNoVig = (input.bookOdds !== null && input.bookOddsOpposite !== null)
-    ? noVigProb(input.bookOdds, input.bookOddsOpposite) : null;
+  const bookNoVig =
+    input.bookOdds !== null && input.bookOddsOpposite !== null
+      ? noVigProb(input.bookOdds, input.bookOddsOpposite)
+      : null;
 
   const margin = fgHomeRuns - fgAwayRuns; // positive = home wins by margin
   const line = input.bookLine; // e.g. -1.5 for home, +1.5 for away
@@ -736,12 +886,17 @@ export function gradeFgRl(input: GradingInput): GradingOutput {
     const isPush = margin === Math.abs(line);
     grade = isPush ? "PUSH" : awayCovers ? "WIN" : "LOSS";
   } else {
-    return makeQuarantined(input, `INVALID_MODEL_SIDE: '${input.modelSide}' not recognized for FG RL`);
+    return makeQuarantined(
+      input,
+      `INVALID_MODEL_SIDE: '${input.modelSide}' not recognized for FG RL`
+    );
   }
 
   const notes = `FG RL ${input.modelSide}: score=${fgAwayRuns}-${fgHomeRuns} margin=${margin} line=${line} grade=${grade}`;
-  auditLog("INFO", "FG_RL", "FULL_GAME", "GRADING", "RUN_LINE_MATCH",
-    notes, { records_checked: 1, passed: 1 });
+  auditLog("INFO", "FG_RL", "FULL_GAME", "GRADING", "RUN_LINE_MATCH", notes, {
+    records_checked: 1,
+    passed: 1,
+  });
   return buildOutput(input, grade, bookNoVig, notes);
 }
 
@@ -755,19 +910,28 @@ export function gradeFgTotal(input: GradingInput): GradingOutput {
   if (pre) return pre;
 
   const { fgAwayRuns, fgHomeRuns } = input.actualValue;
-  if (fgAwayRuns === null || fgAwayRuns === undefined ||
-      fgHomeRuns === null || fgHomeRuns === undefined) {
-    return makeUngraded(input, "MISSING_FINAL_SCORE: fgAwayRuns or fgHomeRuns is null");
+  if (
+    fgAwayRuns === null ||
+    fgAwayRuns === undefined ||
+    fgHomeRuns === null ||
+    fgHomeRuns === undefined
+  ) {
+    return makeUngraded(
+      input,
+      "MISSING_FINAL_SCORE: fgAwayRuns or fgHomeRuns is null"
+    );
   }
   if (input.bookLine === null) {
     return makeUngraded(input, "MISSING_TOTAL_LINE: bookLine is null");
   }
 
-  const bookNoVig = (input.bookOdds !== null && input.bookOddsOpposite !== null)
-    ? noVigProb(input.bookOdds, input.bookOddsOpposite) : null;
+  const bookNoVig =
+    input.bookOdds !== null && input.bookOddsOpposite !== null
+      ? noVigProb(input.bookOdds, input.bookOddsOpposite)
+      : null;
 
   const total = fgAwayRuns + fgHomeRuns;
-  const line  = input.bookLine;
+  const line = input.bookLine;
 
   let grade: GradeValue;
   if (input.modelSide === "over") {
@@ -775,12 +939,17 @@ export function gradeFgTotal(input: GradingInput): GradingOutput {
   } else if (input.modelSide === "under") {
     grade = total < line ? "WIN" : total === line ? "PUSH" : "LOSS";
   } else {
-    return makeQuarantined(input, `INVALID_MODEL_SIDE: '${input.modelSide}' not 'over' or 'under'`);
+    return makeQuarantined(
+      input,
+      `INVALID_MODEL_SIDE: '${input.modelSide}' not 'over' or 'under'`
+    );
   }
 
   const notes = `FG Total ${input.modelSide}: total=${total} line=${line} grade=${grade}`;
-  auditLog("INFO", "FG_TOTAL", "FULL_GAME", "GRADING", "TOTAL_MATCH",
-    notes, { records_checked: 1, passed: 1 });
+  auditLog("INFO", "FG_TOTAL", "FULL_GAME", "GRADING", "TOTAL_MATCH", notes, {
+    records_checked: 1,
+    passed: 1,
+  });
   return buildOutput(input, grade, bookNoVig, notes);
 }
 
@@ -795,30 +964,53 @@ export function gradeF5Ml(input: GradingInput): GradingOutput {
   if (pre) return pre;
 
   const { f5AwayRuns, f5HomeRuns } = input.actualValue;
-  if (f5AwayRuns === null || f5AwayRuns === undefined ||
-      f5HomeRuns === null || f5HomeRuns === undefined) {
-    return makeUngraded(input, "MISSING_F5_SCORE: f5AwayRuns or f5HomeRuns is null");
+  if (
+    f5AwayRuns === null ||
+    f5AwayRuns === undefined ||
+    f5HomeRuns === null ||
+    f5HomeRuns === undefined
+  ) {
+    return makeUngraded(
+      input,
+      "MISSING_F5_SCORE: f5AwayRuns or f5HomeRuns is null"
+    );
   }
 
   // Guard: reject if full game score was accidentally supplied
   const { fgAwayRuns, fgHomeRuns } = input.actualValue;
-  if (fgAwayRuns !== undefined && fgHomeRuns !== undefined &&
-      fgAwayRuns !== null && fgHomeRuns !== null) {
+  if (
+    fgAwayRuns !== undefined &&
+    fgHomeRuns !== undefined &&
+    fgAwayRuns !== null &&
+    fgHomeRuns !== null
+  ) {
     if (f5AwayRuns === fgAwayRuns && f5HomeRuns === fgHomeRuns) {
       // Suspicious: F5 score equals FG score — may be data error
-      auditLog("WARN", "F5_ML", "FIRST_5", "DATA", "F5_EQUALS_FG",
+      auditLog(
+        "WARN",
+        "F5_ML",
+        "FIRST_5",
+        "DATA",
+        "F5_EQUALS_FG",
         `F5 score equals FG score for game ${input.gameId} — possible data error`,
-        { records_checked: 1, failed: 1,
-          impact: "f5_ml_grading_suspect", action: "flag_for_review" });
+        {
+          records_checked: 1,
+          failed: 1,
+          impact: "f5_ml_grading_suspect",
+          action: "flag_for_review",
+        }
+      );
     }
   }
 
-  const bookNoVig = (input.bookOdds !== null && input.bookOddsOpposite !== null)
-    ? noVigProb(input.bookOdds, input.bookOddsOpposite) : null;
+  const bookNoVig =
+    input.bookOdds !== null && input.bookOddsOpposite !== null
+      ? noVigProb(input.bookOdds, input.bookOddsOpposite)
+      : null;
 
   const homeLeads = f5HomeRuns > f5AwayRuns;
   const awayLeads = f5AwayRuns > f5HomeRuns;
-  const tied      = f5HomeRuns === f5AwayRuns;
+  const tied = f5HomeRuns === f5AwayRuns;
 
   let grade: GradeValue;
   if (input.modelSide === "home") {
@@ -826,12 +1018,17 @@ export function gradeF5Ml(input: GradingInput): GradingOutput {
   } else if (input.modelSide === "away") {
     grade = tied ? "PUSH" : awayLeads ? "WIN" : "LOSS";
   } else {
-    return makeQuarantined(input, `INVALID_MODEL_SIDE: '${input.modelSide}' not 'home' or 'away'`);
+    return makeQuarantined(
+      input,
+      `INVALID_MODEL_SIDE: '${input.modelSide}' not 'home' or 'away'`
+    );
   }
 
   const notes = `F5 ML ${input.modelSide}: f5=${f5AwayRuns}-${f5HomeRuns} tied=${tied} grade=${grade}`;
-  auditLog("INFO", "F5_ML", "FIRST_5", "GRADING", "F5_SCORE_MATCH",
-    notes, { records_checked: 1, passed: 1 });
+  auditLog("INFO", "F5_ML", "FIRST_5", "GRADING", "F5_SCORE_MATCH", notes, {
+    records_checked: 1,
+    passed: 1,
+  });
   return buildOutput(input, grade, bookNoVig, notes);
 }
 
@@ -845,16 +1042,25 @@ export function gradeF5Rl(input: GradingInput): GradingOutput {
   if (pre) return pre;
 
   const { f5AwayRuns, f5HomeRuns } = input.actualValue;
-  if (f5AwayRuns === null || f5AwayRuns === undefined ||
-      f5HomeRuns === null || f5HomeRuns === undefined) {
-    return makeUngraded(input, "MISSING_F5_SCORE: f5AwayRuns or f5HomeRuns is null");
+  if (
+    f5AwayRuns === null ||
+    f5AwayRuns === undefined ||
+    f5HomeRuns === null ||
+    f5HomeRuns === undefined
+  ) {
+    return makeUngraded(
+      input,
+      "MISSING_F5_SCORE: f5AwayRuns or f5HomeRuns is null"
+    );
   }
   if (input.bookLine === null) {
     return makeUngraded(input, "MISSING_F5_RUN_LINE: bookLine is null");
   }
 
-  const bookNoVig = (input.bookOdds !== null && input.bookOddsOpposite !== null)
-    ? noVigProb(input.bookOdds, input.bookOddsOpposite) : null;
+  const bookNoVig =
+    input.bookOdds !== null && input.bookOddsOpposite !== null
+      ? noVigProb(input.bookOdds, input.bookOddsOpposite)
+      : null;
 
   const f5Margin = f5HomeRuns - f5AwayRuns;
   const line = input.bookLine; // e.g. -0.5 for home, +0.5 for away
@@ -871,12 +1077,17 @@ export function gradeF5Rl(input: GradingInput): GradingOutput {
     const isPush = f5Margin === Math.abs(line) && line !== 0.5;
     grade = isPush ? "PUSH" : awayCovers ? "WIN" : "LOSS";
   } else {
-    return makeQuarantined(input, `INVALID_MODEL_SIDE: '${input.modelSide}' not recognized for F5 RL`);
+    return makeQuarantined(
+      input,
+      `INVALID_MODEL_SIDE: '${input.modelSide}' not recognized for F5 RL`
+    );
   }
 
   const notes = `F5 RL ${input.modelSide}: f5=${f5AwayRuns}-${f5HomeRuns} margin=${f5Margin} line=${line} grade=${grade}`;
-  auditLog("INFO", "F5_RL", "FIRST_5", "GRADING", "F5_RL_MATCH",
-    notes, { records_checked: 1, passed: 1 });
+  auditLog("INFO", "F5_RL", "FIRST_5", "GRADING", "F5_RL_MATCH", notes, {
+    records_checked: 1,
+    passed: 1,
+  });
   return buildOutput(input, grade, bookNoVig, notes);
 }
 
@@ -889,19 +1100,28 @@ export function gradeF5Total(input: GradingInput): GradingOutput {
   if (pre) return pre;
 
   const { f5AwayRuns, f5HomeRuns } = input.actualValue;
-  if (f5AwayRuns === null || f5AwayRuns === undefined ||
-      f5HomeRuns === null || f5HomeRuns === undefined) {
-    return makeUngraded(input, "MISSING_F5_SCORE: f5AwayRuns or f5HomeRuns is null");
+  if (
+    f5AwayRuns === null ||
+    f5AwayRuns === undefined ||
+    f5HomeRuns === null ||
+    f5HomeRuns === undefined
+  ) {
+    return makeUngraded(
+      input,
+      "MISSING_F5_SCORE: f5AwayRuns or f5HomeRuns is null"
+    );
   }
   if (input.bookLine === null) {
     return makeUngraded(input, "MISSING_F5_TOTAL_LINE: bookLine is null");
   }
 
-  const bookNoVig = (input.bookOdds !== null && input.bookOddsOpposite !== null)
-    ? noVigProb(input.bookOdds, input.bookOddsOpposite) : null;
+  const bookNoVig =
+    input.bookOdds !== null && input.bookOddsOpposite !== null
+      ? noVigProb(input.bookOdds, input.bookOddsOpposite)
+      : null;
 
   const f5Total = f5AwayRuns + f5HomeRuns;
-  const line    = input.bookLine;
+  const line = input.bookLine;
 
   let grade: GradeValue;
   if (input.modelSide === "over") {
@@ -909,12 +1129,17 @@ export function gradeF5Total(input: GradingInput): GradingOutput {
   } else if (input.modelSide === "under") {
     grade = f5Total < line ? "WIN" : f5Total === line ? "PUSH" : "LOSS";
   } else {
-    return makeQuarantined(input, `INVALID_MODEL_SIDE: '${input.modelSide}' not 'over' or 'under'`);
+    return makeQuarantined(
+      input,
+      `INVALID_MODEL_SIDE: '${input.modelSide}' not 'over' or 'under'`
+    );
   }
 
   const notes = `F5 Total ${input.modelSide}: f5Total=${f5Total} line=${line} grade=${grade}`;
-  auditLog("INFO", "F5_TOTAL", "FIRST_5", "GRADING", "F5_TOTAL_MATCH",
-    notes, { records_checked: 1, passed: 1 });
+  auditLog("INFO", "F5_TOTAL", "FIRST_5", "GRADING", "F5_TOTAL_MATCH", notes, {
+    records_checked: 1,
+    passed: 1,
+  });
   return buildOutput(input, grade, bookNoVig, notes);
 }
 
@@ -932,13 +1157,22 @@ export function gradeYrfi(input: GradingInput): GradingOutput {
     return makeUngraded(input, "MISSING_NRFI_RESULT: nrfiActualResult is null");
   }
 
-  const bookNoVig = (input.bookOdds !== null && input.bookOddsOpposite !== null)
-    ? noVigProb(input.bookOdds, input.bookOddsOpposite) : null;
+  const bookNoVig =
+    input.bookOdds !== null && input.bookOddsOpposite !== null
+      ? noVigProb(input.bookOdds, input.bookOddsOpposite)
+      : null;
 
   const grade: GradeValue = nrfiResult === "YRFI" ? "WIN" : "LOSS";
   const notes = `YRFI: actual=${nrfiResult} grade=${grade}`;
-  auditLog("INFO", "YRFI", "FIRST_INNING", "GRADING", "NRFI_RESULT_MATCH",
-    notes, { records_checked: 1, passed: 1 });
+  auditLog(
+    "INFO",
+    "YRFI",
+    "FIRST_INNING",
+    "GRADING",
+    "NRFI_RESULT_MATCH",
+    notes,
+    { records_checked: 1, passed: 1 }
+  );
   return buildOutput(input, grade, bookNoVig, notes);
 }
 
@@ -955,13 +1189,22 @@ export function gradeNrfi(input: GradingInput): GradingOutput {
     return makeUngraded(input, "MISSING_NRFI_RESULT: nrfiActualResult is null");
   }
 
-  const bookNoVig = (input.bookOdds !== null && input.bookOddsOpposite !== null)
-    ? noVigProb(input.bookOdds, input.bookOddsOpposite) : null;
+  const bookNoVig =
+    input.bookOdds !== null && input.bookOddsOpposite !== null
+      ? noVigProb(input.bookOdds, input.bookOddsOpposite)
+      : null;
 
   const grade: GradeValue = nrfiResult === "NRFI" ? "WIN" : "LOSS";
   const notes = `NRFI: actual=${nrfiResult} grade=${grade}`;
-  auditLog("INFO", "NRFI", "FIRST_INNING", "GRADING", "NRFI_RESULT_MATCH",
-    notes, { records_checked: 1, passed: 1 });
+  auditLog(
+    "INFO",
+    "NRFI",
+    "FIRST_INNING",
+    "GRADING",
+    "NRFI_RESULT_MATCH",
+    notes,
+    { records_checked: 1, passed: 1 }
+  );
   return buildOutput(input, grade, bookNoVig, notes);
 }
 
@@ -978,18 +1221,26 @@ export function gradeKProp(input: GradingInput): GradingOutput {
 
   // Pitcher did not appear (scratched, did not start)
   if (didNotAppear) {
-    return makeVoid(input, "PITCHER_DID_NOT_APPEAR: prop voided — pitcher scratched or did not start");
+    return makeVoid(
+      input,
+      "PITCHER_DID_NOT_APPEAR: prop voided — pitcher scratched or did not start"
+    );
   }
 
   if (actualKs === null || actualKs === undefined) {
-    return makeUngraded(input, "MISSING_ACTUAL_KS: actualKs is null — result not yet available");
+    return makeUngraded(
+      input,
+      "MISSING_ACTUAL_KS: actualKs is null — result not yet available"
+    );
   }
   if (input.bookLine === null) {
     return makeUngraded(input, "MISSING_K_PROP_LINE: bookLine is null");
   }
 
-  const bookNoVig = (input.bookOdds !== null && input.bookOddsOpposite !== null)
-    ? noVigProb(input.bookOdds, input.bookOddsOpposite) : null;
+  const bookNoVig =
+    input.bookOdds !== null && input.bookOddsOpposite !== null
+      ? noVigProb(input.bookOdds, input.bookOddsOpposite)
+      : null;
 
   const line = input.bookLine;
   let grade: GradeValue;
@@ -998,12 +1249,17 @@ export function gradeKProp(input: GradingInput): GradingOutput {
   } else if (input.modelSide === "under") {
     grade = actualKs < line ? "WIN" : actualKs === line ? "PUSH" : "LOSS";
   } else {
-    return makeQuarantined(input, `INVALID_MODEL_SIDE: '${input.modelSide}' not 'over' or 'under' for K-Prop`);
+    return makeQuarantined(
+      input,
+      `INVALID_MODEL_SIDE: '${input.modelSide}' not 'over' or 'under' for K-Prop`
+    );
   }
 
   const notes = `K-Prop ${input.playerName ?? "unknown"} ${input.modelSide}: actual=${actualKs} line=${line} grade=${grade}`;
-  auditLog("INFO", "K_PROP", "PLAYER_GAME", "GRADING", "K_PROP_MATCH",
-    notes, { records_checked: 1, passed: 1 });
+  auditLog("INFO", "K_PROP", "PLAYER_GAME", "GRADING", "K_PROP_MATCH", notes, {
+    records_checked: 1,
+    passed: 1,
+  });
   return buildOutput(input, grade, bookNoVig, notes);
 }
 
@@ -1021,15 +1277,23 @@ export function gradeHrProp(input: GradingInput): GradingOutput {
 
   // Batter did not appear
   if (didNotAppear) {
-    return makeVoid(input, "BATTER_DID_NOT_APPEAR: prop voided — batter did not appear in game");
+    return makeVoid(
+      input,
+      "BATTER_DID_NOT_APPEAR: prop voided — batter did not appear in game"
+    );
   }
 
   if (actualHr === null || actualHr === undefined) {
-    return makeUngraded(input, "MISSING_ACTUAL_HR: actualHr is null — result not yet available");
+    return makeUngraded(
+      input,
+      "MISSING_ACTUAL_HR: actualHr is null — result not yet available"
+    );
   }
 
-  const bookNoVig = (input.bookOdds !== null && input.bookOddsOpposite !== null)
-    ? noVigProb(input.bookOdds, input.bookOddsOpposite) : null;
+  const bookNoVig =
+    input.bookOdds !== null && input.bookOddsOpposite !== null
+      ? noVigProb(input.bookOdds, input.bookOddsOpposite)
+      : null;
 
   const hitHr = actualHr >= 1;
   let grade: GradeValue;
@@ -1038,12 +1302,22 @@ export function gradeHrProp(input: GradingInput): GradingOutput {
   } else if (input.modelSide === "under") {
     grade = !hitHr ? "WIN" : "LOSS";
   } else {
-    return makeQuarantined(input, `INVALID_MODEL_SIDE: '${input.modelSide}' not 'over' or 'under' for HR-Prop`);
+    return makeQuarantined(
+      input,
+      `INVALID_MODEL_SIDE: '${input.modelSide}' not 'over' or 'under' for HR-Prop`
+    );
   }
 
   const notes = `HR-Prop ${input.playerName ?? "unknown"} ${input.modelSide}: actual=${actualHr} HR hitHr=${hitHr} grade=${grade}`;
-  auditLog("INFO", "HR_PROP", "PLAYER_GAME", "GRADING", "HR_PROP_MATCH",
-    notes, { records_checked: 1, passed: 1 });
+  auditLog(
+    "INFO",
+    "HR_PROP",
+    "PLAYER_GAME",
+    "GRADING",
+    "HR_PROP_MATCH",
+    notes,
+    { records_checked: 1, passed: 1 }
+  );
   return buildOutput(input, grade, bookNoVig, notes);
 }
 
@@ -1083,8 +1357,10 @@ export function gradeMarket(input: GradingInput): GradingOutput {
       return gradeHrProp(input);
     default:
       // TypeScript exhaustiveness guard
-      return makeQuarantined(input as GradingInput,
-        `OUT_OF_SCOPE_MARKET: '${(input as GradingInput).market}' is not an approved market`);
+      return makeQuarantined(
+        input as GradingInput,
+        `OUT_OF_SCOPE_MARKET: '${(input as GradingInput).market}' is not an approved market`
+      );
   }
 }
 
@@ -1111,7 +1387,9 @@ export interface BatchGradingSummary {
   leakageViolationCount: number;
 }
 
-export function summarizeBatch(outputs: GradingOutput[]): BatchGradingSummary[] {
+export function summarizeBatch(
+  outputs: GradingOutput[]
+): BatchGradingSummary[] {
   const byMarket = new Map<string, GradingOutput[]>();
   for (const o of outputs) {
     const key = o.market;
@@ -1120,45 +1398,78 @@ export function summarizeBatch(outputs: GradingOutput[]): BatchGradingSummary[] 
   }
 
   const summaries: BatchGradingSummary[] = [];
-  Array.from(byMarket.entries()).forEach(([market, rows]: [string, GradingOutput[]]) => {
-    const wins     = rows.filter((r: GradingOutput) => r.grade === "WIN").length;
-    const losses   = rows.filter((r: GradingOutput) => r.grade === "LOSS").length;
-    const pushes   = rows.filter((r: GradingOutput) => r.grade === "PUSH").length;
-    const voids    = rows.filter((r: GradingOutput) => r.grade === "VOID").length;
-    const qCount   = rows.filter((r: GradingOutput) => r.grade === "QUARANTINED").length;
-    const ungraded = rows.filter((r: GradingOutput) => r.grade === "UNGRADED").length;
-    const graded   = wins + losses;
-    const acc      = graded > 0 ? wins / graded : 0;
-    const roi      = calcRoi(wins, losses);
+  Array.from(byMarket.entries()).forEach(
+    ([market, rows]: [string, GradingOutput[]]) => {
+      const wins = rows.filter((r: GradingOutput) => r.grade === "WIN").length;
+      const losses = rows.filter(
+        (r: GradingOutput) => r.grade === "LOSS"
+      ).length;
+      const pushes = rows.filter(
+        (r: GradingOutput) => r.grade === "PUSH"
+      ).length;
+      const voids = rows.filter(
+        (r: GradingOutput) => r.grade === "VOID"
+      ).length;
+      const qCount = rows.filter(
+        (r: GradingOutput) => r.grade === "QUARANTINED"
+      ).length;
+      const ungraded = rows.filter(
+        (r: GradingOutput) => r.grade === "UNGRADED"
+      ).length;
+      const graded = wins + losses;
+      const acc = graded > 0 ? wins / graded : 0;
+      const roi = calcRoi(wins, losses);
 
-    const edgeRows = rows.filter((r: GradingOutput) => r.edge !== null);
-    const avgEdge  = edgeRows.length > 0
-      ? edgeRows.reduce((s: number, r: GradingOutput) => s + r.edge!, 0) / edgeRows.length : 0;
-    const avgModelProb = rows.length > 0
-      ? rows.reduce((s: number, r: GradingOutput) => s + r.modelProb, 0) / rows.length : 0;
-    const nvRows = rows.filter((r: GradingOutput) => r.bookNoVigProb !== null);
-    const avgBookNoVigProb = nvRows.length > 0
-      ? nvRows.reduce((s: number, r: GradingOutput) => s + r.bookNoVigProb!, 0) / nvRows.length : 0;
+      const edgeRows = rows.filter((r: GradingOutput) => r.edge !== null);
+      const avgEdge =
+        edgeRows.length > 0
+          ? edgeRows.reduce((s: number, r: GradingOutput) => s + r.edge!, 0) /
+            edgeRows.length
+          : 0;
+      const avgModelProb =
+        rows.length > 0
+          ? rows.reduce((s: number, r: GradingOutput) => s + r.modelProb, 0) /
+            rows.length
+          : 0;
+      const nvRows = rows.filter(
+        (r: GradingOutput) => r.bookNoVigProb !== null
+      );
+      const avgBookNoVigProb =
+        nvRows.length > 0
+          ? nvRows.reduce(
+              (s: number, r: GradingOutput) => s + r.bookNoVigProb!,
+              0
+            ) / nvRows.length
+          : 0;
 
-    const dates = rows.map((r: GradingOutput) => r.gameDate).filter(Boolean).sort();
+      const dates = rows
+        .map((r: GradingOutput) => r.gameDate)
+        .filter(Boolean)
+        .sort();
 
-    summaries.push({
-      market,
-      timeframe: MARKET_TIMEFRAME[market as ApprovedMarket] ?? "UNKNOWN",
-      recordsChecked: rows.length,
-      wins, losses, pushes, voids,
-      quarantined: qCount,
-      ungraded,
-      accuracy: parseFloat(acc.toFixed(6)),
-      roi: parseFloat(roi.toFixed(6)),
-      avgEdge: parseFloat(avgEdge.toFixed(6)),
-      avgModelProb: parseFloat(avgModelProb.toFixed(6)),
-      avgBookNoVigProb: parseFloat(avgBookNoVigProb.toFixed(6)),
-      dateMin: dates[0] ?? null,
-      dateMax: dates[dates.length - 1] ?? null,
-      leakageSafeCount: rows.filter((r: GradingOutput) => r.leakageSafe).length,
-      leakageViolationCount: rows.filter((r: GradingOutput) => !r.leakageSafe).length,
-    });
-  });
+      summaries.push({
+        market,
+        timeframe: MARKET_TIMEFRAME[market as ApprovedMarket] ?? "UNKNOWN",
+        recordsChecked: rows.length,
+        wins,
+        losses,
+        pushes,
+        voids,
+        quarantined: qCount,
+        ungraded,
+        accuracy: parseFloat(acc.toFixed(6)),
+        roi: parseFloat(roi.toFixed(6)),
+        avgEdge: parseFloat(avgEdge.toFixed(6)),
+        avgModelProb: parseFloat(avgModelProb.toFixed(6)),
+        avgBookNoVigProb: parseFloat(avgBookNoVigProb.toFixed(6)),
+        dateMin: dates[0] ?? null,
+        dateMax: dates[dates.length - 1] ?? null,
+        leakageSafeCount: rows.filter((r: GradingOutput) => r.leakageSafe)
+          .length,
+        leakageViolationCount: rows.filter((r: GradingOutput) => !r.leakageSafe)
+          .length,
+      });
+    }
+  );
   return summaries;
 }

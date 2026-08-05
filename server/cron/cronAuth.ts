@@ -26,8 +26,7 @@ import { timingSafeEqual } from "crypto";
 import type { Request, Response } from "express";
 
 export type CronAuthResult =
-  | { ok: true }
-  | { ok: false; status: 401 | 503; error: string };
+  { ok: true } | { ok: false; status: 401 | 503; error: string };
 
 interface HeadersBag {
   headers: Record<string, string | string[] | undefined>;
@@ -88,12 +87,16 @@ export function verifyCronSecret(req: HeadersBag): CronAuthResult {
  * writes the status + JSON error and returns false; on success returns true so the
  * caller proceeds. Logs every rejection for the "advanced logging" mandate.
  */
-export function requireCronSecret(req: Request, res: Response, jobLabel: string): boolean {
+export function requireCronSecret(
+  req: Request,
+  res: Response,
+  jobLabel: string
+): boolean {
   const result = verifyCronSecret(req as unknown as HeadersBag);
   if (!result.ok) {
     console.warn(
       `[Cron:${jobLabel}] [AUTH] REJECT status=${result.status} reason=${result.error} ` +
-      `ip=${req.ip ?? "?"} ua="${(req.headers["user-agent"] as string | undefined)?.slice(0, 80) ?? "?"}"`
+        `ip=${req.ip ?? "?"} ua="${(req.headers["user-agent"] as string | undefined)?.slice(0, 80) ?? "?"}"`
     );
     res.status(result.status).json({ ok: false, error: result.error });
     return false;

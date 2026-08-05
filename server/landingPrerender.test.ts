@@ -13,19 +13,36 @@ import type { Request, Response, NextFunction } from "express";
 import { landingPrerenderMiddleware } from "./landingPrerender";
 
 function runMiddleware(path: string, ua: string, method = "GET") {
-  const req = { method, path, headers: { "user-agent": ua } } as unknown as Request;
-  const sent: { html?: string; status?: number; headers: Record<string, string> } = { headers: {} };
+  const req = {
+    method,
+    path,
+    headers: { "user-agent": ua },
+  } as unknown as Request;
+  const sent: {
+    html?: string;
+    status?: number;
+    headers: Record<string, string>;
+  } = { headers: {} };
   const res = {
-    setHeader: (k: string, v: string) => { sent.headers[k.toLowerCase()] = v; },
-    status: (code: number) => { sent.status = code; return res; },
-    send: (body: string) => { sent.html = body; return res; },
+    setHeader: (k: string, v: string) => {
+      sent.headers[k.toLowerCase()] = v;
+    },
+    status: (code: number) => {
+      sent.status = code;
+      return res;
+    },
+    send: (body: string) => {
+      sent.html = body;
+      return res;
+    },
   } as unknown as Response;
   const next = vi.fn() as NextFunction;
   landingPrerenderMiddleware(req, res, next);
   return { sent, next };
 }
 
-const BOT_UA = "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)";
+const BOT_UA =
+  "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)";
 const BROWSER_UA =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36";
 

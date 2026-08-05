@@ -1,4 +1,10 @@
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdtempSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import zlib from "node:zlib";
@@ -53,7 +59,7 @@ describe("extractEntryGraph", () => {
 });
 
 describe("extractStaticImportSpecifiers", () => {
-  it("finds `from\"./x.js\"` and bare `import\"./x.js\"` forms", () => {
+  it('finds `from"./x.js"` and bare `import"./x.js"` forms', () => {
     const js = 'import a from"./vendor-a.js";import"./vendor-b.js";const x=1;';
     expect(extractStaticImportSpecifiers(js)).toEqual([
       "./vendor-a.js",
@@ -87,7 +93,9 @@ describe("findChatRouteChunks", () => {
       "assets/DimeAppShell-XYZ123.js": "export {};",
       "assets/other-chunk.js": "",
     });
-    expect(findChatRouteChunks(root)).toEqual(["assets/DimeAppShell-XYZ123.js"]);
+    expect(findChatRouteChunks(root)).toEqual([
+      "assets/DimeAppShell-XYZ123.js",
+    ]);
   });
 
   it("returns an empty list when no chunk exists", () => {
@@ -99,7 +107,8 @@ describe("findChatRouteChunks", () => {
 describe("walkBundleClosure", () => {
   it("follows static imports but stops at dynamic import() boundaries", () => {
     const root = fixtureDist({
-      "assets/entry.js": 'import a from"./vendor-a.js";const lazy=()=>import("./lazy.js");',
+      "assets/entry.js":
+        'import a from"./vendor-a.js";const lazy=()=>import("./lazy.js");',
       "assets/vendor-a.js": "export const a=1;",
       "assets/lazy.js": "export const z=1;",
     });
@@ -203,14 +212,18 @@ describe("computeBundleBudget", () => {
     const withMotion = fixtureDist({
       "index.html": `<script type="module" src="/assets/index-AAA.js"></script>`,
       "assets/index-AAA.js": "export {};",
-      "assets/DimeChat-XYZ.js": 'from"./index-AAA.js";from"./vendor-motion-QQQ.js"',
-      "assets/vendor-motion-QQQ.js": "export const heavy=" + "1".repeat(1000) + ";",
+      "assets/DimeChat-XYZ.js":
+        'from"./index-AAA.js";from"./vendor-motion-QQQ.js"',
+      "assets/vendor-motion-QQQ.js":
+        "export const heavy=" + "1".repeat(1000) + ";",
     });
 
     const clean = computeBundleBudget(withoutMotion);
     const regressed = computeBundleBudget(withMotion);
     expect(clean.vendorMotionFiles).toEqual([]);
-    expect(regressed.vendorMotionFiles).toEqual(["assets/vendor-motion-QQQ.js"]);
+    expect(regressed.vendorMotionFiles).toEqual([
+      "assets/vendor-motion-QQQ.js",
+    ]);
     expect(regressed.totalGzipBytes).toBeGreaterThan(clean.totalGzipBytes);
   });
 });

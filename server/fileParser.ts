@@ -22,7 +22,11 @@ import { BY_DB_SLUG } from "../shared/ncaamTeams";
  * upload pipeline can surface them as validation errors.
  */
 function normalizeTeamSlug(raw: string): string {
-  const slug = raw.trim().toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "");
+  const slug = raw
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "_")
+    .replace(/[^a-z0-9_]/g, "");
   // If it's in the registry, return the canonical dbSlug (handles any minor case/spacing drift)
   const team = BY_DB_SLUG.get(slug);
   return team ? team.dbSlug : slug;
@@ -107,7 +111,7 @@ function parseTime(v: unknown): string {
 export function formatTeamName(raw: string): string {
   return raw
     .split("_")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(" ");
 }
 
@@ -196,15 +200,19 @@ export function parseXlsxBuffer(
     const colMap = buildColMap(headerRow);
 
     if (!colMap) {
-      console.log(`[XLSX Parser] Skipping sheet "${sheetName}" — missing required headers`);
+      console.log(
+        `[XLSX Parser] Skipping sheet "${sheetName}" — missing required headers`
+      );
       continue;
     }
 
-    console.log(`[XLSX Parser] Processing sheet "${sheetName}" (${rawRows.length - 1} data rows)`);
+    console.log(
+      `[XLSX Parser] Processing sheet "${sheetName}" (${rawRows.length - 1} data rows)`
+    );
 
     for (let i = 1; i < rawRows.length; i++) {
       const row = rawRows[i] as unknown[];
-      if (!row || row.every((v) => v === null || v === "")) continue;
+      if (!row || row.every(v => v === null || v === "")) continue;
 
       const game = parseDataRow(row, colMap, fileId, sport);
       if (game) allGames.push(game);
@@ -243,7 +251,7 @@ export function parseCsvBuffer(
   const content = buffer.toString("utf-8");
   const lines = content
     .split("\n")
-    .map((l) => l.trim())
+    .map(l => l.trim())
     .filter(Boolean);
 
   if (lines.length < 2) return [];

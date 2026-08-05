@@ -11,7 +11,7 @@ const TAG = "[analytics][forward]";
 
 export async function forwardEvent(
   event: StoredEvent,
-  fetchImpl: typeof fetch = fetch,
+  fetchImpl: typeof fetch = fetch
 ): Promise<{ ok: boolean; reason?: string }> {
   const base = getBackendUrl();
   const secret = getIngestSecret();
@@ -22,7 +22,10 @@ export async function forwardEvent(
   try {
     const res = await fetchImpl(`${base}/api/internal/analytics/ingest`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "x-analytics-secret": secret },
+      headers: {
+        "Content-Type": "application/json",
+        "x-analytics-secret": secret,
+      },
       body: JSON.stringify(event),
     });
     if (!res.ok) console.warn(`${TAG} back office returned ${res.status}`);

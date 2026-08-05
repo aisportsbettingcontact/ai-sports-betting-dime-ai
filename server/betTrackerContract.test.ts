@@ -44,7 +44,10 @@ describe("access model", () => {
     const procedures = router.match(/^ {2}(\w+): (\w+Procedure)$/gm) ?? [];
     expect(procedures.length).toBeGreaterThan(8);
     const wrong = procedures.filter(p => !p.includes("appUserProcedure"));
-    expect(wrong, `procedures not on appUserProcedure: ${wrong.join(", ")}`).toEqual([]);
+    expect(
+      wrong,
+      `procedures not on appUserProcedure: ${wrong.join(", ")}`
+    ).toEqual([]);
   });
 
   it("no procedure imports handicapperProcedure any more", () => {
@@ -59,17 +62,27 @@ describe("access model", () => {
   });
 
   it("every read that accepts targetUserId resolves scope AND proves the target exists", () => {
-    const targetUserIdReads = (router.match(/targetUserId: z\.number\(\)/g) ?? []).length;
-    const checked = (router.match(/resolveScopeChecked\(ctx, input/g) ?? []).length;
+    const targetUserIdReads = (
+      router.match(/targetUserId: z\.number\(\)/g) ?? []
+    ).length;
+    const checked = (router.match(/resolveScopeChecked\(ctx, input/g) ?? [])
+      .length;
     expect(checked).toBeGreaterThanOrEqual(targetUserIdReads);
   });
 
   it("owner/admin-only procedures assert privileged access", () => {
-    for (const proc of ["listHandicappers", "getLogs", "reviewEditRequest", "autoGradeAll"]) {
+    for (const proc of [
+      "listHandicappers",
+      "getLogs",
+      "reviewEditRequest",
+      "autoGradeAll",
+    ]) {
       const idx = router.indexOf(`  ${proc}: appUserProcedure`);
       expect(idx, `${proc} missing`).toBeGreaterThan(-1);
       const body = router.slice(idx, idx + 2000);
-      expect(body, `${proc} must gate on decidePrivilegedAccess`).toMatch(/decidePrivilegedAccess/);
+      expect(body, `${proc} must gate on decidePrivilegedAccess`).toMatch(
+        /decidePrivilegedAccess/
+      );
     }
   });
 });
@@ -77,7 +90,9 @@ describe("access model", () => {
 describe("single implementation", () => {
   it("the dead duplicate read procedures are gone", () => {
     for (const dead of ["  list: ", "  getStats: ", "  listWithStats: "]) {
-      expect(router.includes(dead), `${dead.trim()} should be deleted`).toBe(false);
+      expect(router.includes(dead), `${dead.trim()} should be deleted`).toBe(
+        false
+      );
     }
   });
 
@@ -105,8 +120,9 @@ describe("cache invalidation targets the bet owner", () => {
       const idx = router.indexOf(`  ${proc}: appUserProcedure`);
       const end = router.indexOf("\n  /**", idx);
       const body = router.slice(idx, end === -1 ? router.length : end);
-      expect(body, `${proc} must invalidate the bet owner's cache`)
-        .toMatch(/invalidateStatsCacheForUser\(existing\.userId\)/);
+      expect(body, `${proc} must invalidate the bet owner's cache`).toMatch(
+        /invalidateStatsCacheForUser\(existing\.userId\)/
+      );
     });
   }
 
@@ -166,13 +182,17 @@ describe("indexes for the hot paths", () => {
     // WHERE result='PENDING' AND gameDate=? runs on every polling cycle and
     // every cron firing. Every other composite leads with userId, which this
     // query does not filter on, so TiDB read every PENDING row each cycle.
-    expect(schema).toMatch(/idx_tb_result_date"\)\.on\(t\.result, t\.gameDate\)/);
+    expect(schema).toMatch(
+      /idx_tb_result_date"\)\.on\(t\.result, t\.gameDate\)/
+    );
   });
 
   it("covers the create-path idempotency guard", () => {
     // The guard matches (userId, anGameId, gameNumber, market, pickSide, odds);
     // leading with userId+anGameId collapses a whole-history scan to one game.
-    expect(schema).toMatch(/idx_tb_user_game"\)\.on\(t\.userId, t\.anGameId, t\.gameNumber\)/);
+    expect(schema).toMatch(
+      /idx_tb_user_game"\)\.on\(t\.userId, t\.anGameId, t\.gameNumber\)/
+    );
   });
 
   it("ships as a migration, not just a schema edit", () => {
@@ -180,9 +200,14 @@ describe("indexes for the hot paths", () => {
     // is the pairing db-push exists to enforce, and could not be relied on
     // until the generate pipeline was repaired.
     const { readdirSync } = require("node:fs") as typeof import("node:fs");
-    const sql = readdirSync(join(ROOT, "drizzle")).filter(f => f.endsWith(".sql"));
+    const sql = readdirSync(join(ROOT, "drizzle")).filter(f =>
+      f.endsWith(".sql")
+    );
     const carries = sql.some(f =>
-      readFileSync(join(ROOT, "drizzle", f), "utf8").includes("idx_tb_result_date"));
+      readFileSync(join(ROOT, "drizzle", f), "utf8").includes(
+        "idx_tb_result_date"
+      )
+    );
     expect(carries, "no migration file creates idx_tb_result_date").toBe(true);
   });
 });
@@ -203,9 +228,12 @@ describe("safety hardening", () => {
     // resolveViewUserId answers "may you read this id", not "is it real". An
     // owner/admin could query any integer and get a confident empty tracker.
     expect(router).toMatch(/async function resolveScopeChecked/);
-    const crossUser = (router.match(/resolveScopeChecked\(ctx, input/g) ?? []).length;
+    const crossUser = (router.match(/resolveScopeChecked\(ctx, input/g) ?? [])
+      .length;
     expect(crossUser).toBeGreaterThanOrEqual(2);
-    expect(code("server/routers/betTracker.ts")).not.toMatch(/const userId = resolveScope\(ctx, input/);
+    expect(code("server/routers/betTracker.ts")).not.toMatch(
+      /const userId = resolveScope\(ctx, input/
+    );
   });
 
   it("the container clock is pinned so nothing can depend on ambient TZ", () => {
@@ -226,7 +254,9 @@ describe("stats cache is replica-safe", () => {
     // Cache and invalidation are both per-process. With numReplicas > 1 a write
     // on replica A leaves B's entry intact and B serves stale W/L until TTL.
     expect(router).toMatch(/buildStatsFingerprint\(/);
-    expect(router).toMatch(/getStatsCache<BetStats>\(statsCacheKey, fingerprint\)/);
+    expect(router).toMatch(
+      /getStatsCache<BetStats>\(statsCacheKey, fingerprint\)/
+    );
     expect(router).not.toMatch(/getStatsCache<BetStats>\(statsCacheKey\)/);
   });
 
@@ -252,8 +282,10 @@ describe("soft delete is real, not decorative", () => {
     // A deletedAt column that auth ignores is decoration. All four lookups must
     // filter it, or a "deleted" account still logs in.
     const guarded = (db.match(/isNull\(appUsers\.deletedAt\)/g) ?? []).length;
-    expect(guarded, "expected id, fresh-id, email and username lookups all guarded")
-      .toBeGreaterThanOrEqual(4);
+    expect(
+      guarded,
+      "expected id, fresh-id, email and username lookups all guarded"
+    ).toBeGreaterThanOrEqual(4);
   });
 
   it("retiring is the default; hard delete is opt-in", () => {
@@ -274,9 +306,12 @@ describe("soft delete is real, not decorative", () => {
   });
 
   it("ships as a migration, not just a schema edit", () => {
-    const sql = readdirSync(join(ROOT, "drizzle")).filter(f => f.endsWith(".sql"));
+    const sql = readdirSync(join(ROOT, "drizzle")).filter(f =>
+      f.endsWith(".sql")
+    );
     const carries = sql.some(f =>
-      readFileSync(join(ROOT, "drizzle", f), "utf8").includes("ADD `deletedAt`"));
+      readFileSync(join(ROOT, "drizzle", f), "utf8").includes("ADD `deletedAt`")
+    );
     expect(carries, "no migration adds app_users.deletedAt").toBe(true);
   });
 });
@@ -296,8 +331,9 @@ describe("stats fingerprint is timezone-independent", () => {
     // #330 claimed "a narrow indexed aggregate"; EXPLAIN showed
     // IndexRangeScan + TableRowIDScan — it read the same rows as the scan it
     // avoids. userId+updatedAt+id makes it index-only.
-    expect(read("drizzle/schema.ts"))
-      .toMatch(/idx_tb_user_fingerprint"\)\.on\(t\.userId, t\.updatedAt, t\.id\)/);
+    expect(read("drizzle/schema.ts")).toMatch(
+      /idx_tb_user_fingerprint"\)\.on\(t\.userId, t\.updatedAt, t\.id\)/
+    );
   });
 });
 
@@ -342,7 +378,11 @@ describe("client", () => {
   });
 
   it("no client code references the deleted procedures", () => {
-    for (const dead of ["betTracker.listWithStats.", "betTracker.getStats", "betTracker.list."]) {
+    for (const dead of [
+      "betTracker.listWithStats.",
+      "betTracker.getStats",
+      "betTracker.list.",
+    ]) {
       expect(clientPage.includes(dead), `${dead} should be gone`).toBe(false);
     }
   });
@@ -359,7 +399,9 @@ describe("client", () => {
     // owner/admin can see. Production proof (2026-08-03): perky (role=user)
     // filed DELETE request 120001, it sat unanswerable, and the user worked
     // around it by hand-marking bet 390003 PUSH.
-    expect(clientPage).toMatch(/const mustRequestChanges = role === "handicapper";/);
+    expect(clientPage).toMatch(
+      /const mustRequestChanges = role === "handicapper";/
+    );
     expect(clientPage).toMatch(/setDeleteIsRequest\(mustRequestChanges\)/);
     expect(clientPage).toMatch(/setEditIsRequest\(mustRequestChanges\)/);
     expect(clientPage).not.toMatch(/setDeleteIsRequest\(!isOwnerOrAdmin\)/);
@@ -376,7 +418,13 @@ describe("client", () => {
   });
 
   it("the dead mobile bet tracker screen is gone", () => {
-    expect(existsSync(join(ROOT, "client/src/features/mobileNav/screens/MobileBetTracker.tsx"))).toBe(false);
-    expect(read("client/src/features/mobileNav/index.ts")).not.toMatch(/MobileBetTracker/);
+    expect(
+      existsSync(
+        join(ROOT, "client/src/features/mobileNav/screens/MobileBetTracker.tsx")
+      )
+    ).toBe(false);
+    expect(read("client/src/features/mobileNav/index.ts")).not.toMatch(
+      /MobileBetTracker/
+    );
   });
 });

@@ -61,10 +61,10 @@ const FEED_GAME_TYPES = new Set(["R", "F", "D", "L", "W"]);
 interface RawScheduleGame {
   gamePk: number;
   gameType?: string;
-  gameDate: string;        // UTC ISO instant
-  officialDate?: string;   // venue-local schedule date "YYYY-MM-DD"
+  gameDate: string; // UTC ISO instant
+  officialDate?: string; // venue-local schedule date "YYYY-MM-DD"
   rescheduledFrom?: string;
-  doubleHeader?: string;   // "N" | "Y" | "S"
+  doubleHeader?: string; // "N" | "Y" | "S"
   gameNumber?: number;
   seriesGameNumber?: number;
   dayNight?: string;
@@ -102,7 +102,11 @@ export interface MlbScheduleSyncResult {
   collisions: MlbScheduleSyncPlan["collisions"];
   warnings: string[];
   /** Doubleheader groups observed this run (classification for observability). */
-  doubleheaders: Array<{ groupId: string; confidence: string; gamePks: number[] }>;
+  doubleheaders: Array<{
+    groupId: string;
+    confidence: string;
+    gamePks: number[];
+  }>;
   /** Provider→DB reconciliation: distinct provider events vs rows present after apply. */
   reconcile: { expected: number; present: number; missingGamePks: number[] };
   ok: boolean;
@@ -119,9 +123,13 @@ export function todayEasternDate(offsetDays = 0): string {
 /** Normalize one raw schedule game to a canonical provider event (or a rejection). */
 export function normalizeRawScheduleGame(
   g: RawScheduleGame
-): { event: MlbProviderGame } | { rejection: { gamePk: number | null; reason: string } } {
-  const gamePk = typeof g.gamePk === "number" && Number.isFinite(g.gamePk) ? g.gamePk : null;
-  if (gamePk === null) return { rejection: { gamePk: null, reason: "missing gamePk" } };
+):
+  | { event: MlbProviderGame }
+  | { rejection: { gamePk: number | null; reason: string } } {
+  const gamePk =
+    typeof g.gamePk === "number" && Number.isFinite(g.gamePk) ? g.gamePk : null;
+  if (gamePk === null)
+    return { rejection: { gamePk: null, reason: "missing gamePk" } };
 
   const gameType = g.gameType ?? "R";
   if (!FEED_GAME_TYPES.has(gameType)) {
@@ -146,7 +154,9 @@ export function normalizeRawScheduleGame(
   const officialDate =
     g.officialDate && /^\d{4}-\d{2}-\d{2}$/.test(g.officialDate)
       ? g.officialDate
-      : new Date(g.gameDate).toLocaleDateString("en-CA", { timeZone: "America/New_York" });
+      : new Date(g.gameDate).toLocaleDateString("en-CA", {
+          timeZone: "America/New_York",
+        });
 
   return {
     event: {
@@ -171,18 +181,28 @@ export function normalizeRawScheduleGame(
 export async function fetchMlbScheduleWindow(
   startDate: string,
   endDate: string
-): Promise<{ fetched: number; events: MlbProviderGame[]; rejected: Array<{ gamePk: number | null; reason: string }> }> {
-  const url =
-    `${MLB_STATS_API_BASE}/schedule?sportId=1&startDate=${startDate}&endDate=${endDate}&language=en`;
+): Promise<{
+  fetched: number;
+  events: MlbProviderGame[];
+  rejected: Array<{ gamePk: number | null; reason: string }>;
+}> {
+  const url = `${MLB_STATS_API_BASE}/schedule?sportId=1&startDate=${startDate}&endDate=${endDate}&language=en`;
   console.log(`${TAG}[INPUT] window ${startDate} → ${endDate}`);
   console.log(`${TAG}[STEP] GET ${url}`);
 
-  const resp = await fetch(url, { headers: FETCH_HEADERS, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
-  if (!resp.ok) throw new Error(`statsapi schedule HTTP ${resp.status} for ${startDate}→${endDate}`);
+  const resp = await fetch(url, {
+    headers: FETCH_HEADERS,
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+  });
+  if (!resp.ok)
+    throw new Error(
+      `statsapi schedule HTTP ${resp.status} for ${startDate}→${endDate}`
+    );
   const data = (await resp.json()) as RawScheduleResponse;
 
   const raw: RawScheduleGame[] = [];
-  for (const dateEntry of data.dates ?? []) for (const g of dateEntry.games ?? []) raw.push(g);
+  for (const dateEntry of data.dates ?? [])
+    for (const g of dateEntry.games ?? []) raw.push(g);
 
   const events: MlbProviderGame[] = [];
   const rejected: Array<{ gamePk: number | null; reason: string }> = [];
@@ -191,10 +211,14 @@ export async function fetchMlbScheduleWindow(
     if ("event" in result) events.push(result.event);
     else {
       rejected.push(result.rejection);
-      console.log(`${TAG}[STATE] REJECT gamePk=${result.rejection.gamePk ?? "∅"}: ${result.rejection.reason}`);
+      console.log(
+        `${TAG}[STATE] REJECT gamePk=${result.rejection.gamePk ?? "∅"}: ${result.rejection.reason}`
+      );
     }
   }
-  console.log(`${TAG}[STATE] fetched=${raw.length} parsed=${events.length} rejected=${rejected.length}`);
+  console.log(
+    `${TAG}[STATE] fetched=${raw.length} parsed=${events.length} rejected=${rejected.length}`
+  );
   return { fetched: raw.length, events, rejected };
 }
 
@@ -209,7 +233,11 @@ export async function fetchMlbScheduleWindow(
 export async function applyMlbScheduleSyncPlan(
   db: NonNullable<Awaited<ReturnType<typeof getDb>>>,
   plan: MlbScheduleSyncPlan
-): Promise<{ inserted: number; updated: number; applyErrors: Array<{ gamePk: number; error: string }> }> {
+): Promise<{
+  inserted: number;
+  updated: number;
+  applyErrors: Array<{ gamePk: number; error: string }>;
+}> {
   const applyErrors: Array<{ gamePk: number; error: string }> = [];
   let inserted = 0;
   let updated = 0;
@@ -234,16 +262,20 @@ export async function applyMlbScheduleSyncPlan(
       updated++;
       console.log(
         `${TAG}[STEP] UPDATE id=${upd.rowId} gamePk=${upd.gamePk}${upd.adoptsLegacyRow ? " (adopted legacy row)" : ""} ` +
-        `set=${JSON.stringify(upd.set)}`
+          `set=${JSON.stringify(upd.set)}`
       );
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       if (upd.set.gameNumber !== undefined || upd.set.gameDate !== undefined) {
-        console.warn(`${TAG}[STATE] UPDATE deferred id=${upd.rowId} gamePk=${upd.gamePk} (two-phase renumber): ${msg}`);
+        console.warn(
+          `${TAG}[STATE] UPDATE deferred id=${upd.rowId} gamePk=${upd.gamePk} (two-phase renumber): ${msg}`
+        );
         deferredUpdates.push(upd);
       } else {
         applyErrors.push({ gamePk: upd.gamePk, error: msg });
-        console.error(`${TAG}[ERROR] UPDATE failed id=${upd.rowId} gamePk=${upd.gamePk}: ${msg}`);
+        console.error(
+          `${TAG}[ERROR] UPDATE failed id=${upd.rowId} gamePk=${upd.gamePk}: ${msg}`
+        );
       }
     }
   }
@@ -253,28 +285,45 @@ export async function applyMlbScheduleSyncPlan(
     let park = -1;
     for (const upd of deferredUpdates) {
       try {
-        await db.update(games).set({ gameNumber: park-- }).where(eq(games.id, upd.rowId));
-        console.log(`${TAG}[STEP] PARK id=${upd.rowId} gameNumber=${park + 1} (renumber staging)`);
+        await db
+          .update(games)
+          .set({ gameNumber: park-- })
+          .where(eq(games.id, upd.rowId));
+        console.log(
+          `${TAG}[STEP] PARK id=${upd.rowId} gameNumber=${park + 1} (renumber staging)`
+        );
       } catch (err) {
-        console.warn(`${TAG}[STATE] PARK failed id=${upd.rowId} (continuing):`, err instanceof Error ? err.message : err);
+        console.warn(
+          `${TAG}[STATE] PARK failed id=${upd.rowId} (continuing):`,
+          err instanceof Error ? err.message : err
+        );
       }
     }
     // Phase B: re-apply the original updates in full, always restoring the
     // intended final gameNumber (the park in Phase A overwrote it).
     for (const upd of deferredUpdates) {
       try {
-        await db.update(games).set({ ...upd.set, gameNumber: upd.finalGameNumber }).where(eq(games.id, upd.rowId));
+        await db
+          .update(games)
+          .set({ ...upd.set, gameNumber: upd.finalGameNumber })
+          .where(eq(games.id, upd.rowId));
         updated++;
-        console.log(`${TAG}[STEP] UPDATE (two-phase) id=${upd.rowId} gamePk=${upd.gamePk} set=${JSON.stringify(upd.set)}`);
+        console.log(
+          `${TAG}[STEP] UPDATE (two-phase) id=${upd.rowId} gamePk=${upd.gamePk} set=${JSON.stringify(upd.set)}`
+        );
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         applyErrors.push({ gamePk: upd.gamePk, error: msg });
-        console.error(`${TAG}[ERROR] UPDATE failed (two-phase) id=${upd.rowId} gamePk=${upd.gamePk}: ${msg}`);
+        console.error(
+          `${TAG}[ERROR] UPDATE failed (two-phase) id=${upd.rowId} gamePk=${upd.gamePk}: ${msg}`
+        );
       }
     }
   }
 
-  const insertOnce = async (ins: MlbScheduleSyncPlan["inserts"][number]): Promise<true | string> => {
+  const insertOnce = async (
+    ins: MlbScheduleSyncPlan["inserts"][number]
+  ): Promise<true | string> => {
     try {
       await db.insert(games).values({
         fileId: 0,
@@ -305,10 +354,12 @@ export async function applyMlbScheduleSyncPlan(
       inserted++;
       console.log(
         `${TAG}[STEP] INSERT gamePk=${ins.gamePk} ${ins.awayTeam}@${ins.homeTeam} ${ins.gameDate} ` +
-        `G${ins.gameNumber} DH=${ins.doubleHeader} ${ins.startTimeEst} status=${ins.gameStatus} (${ins.dhConfidence})`
+          `G${ins.gameNumber} DH=${ins.doubleHeader} ${ins.startTimeEst} status=${ins.gameStatus} (${ins.dhConfidence})`
       );
     } else {
-      console.warn(`${TAG}[STATE] INSERT deferred gamePk=${ins.gamePk} G${ins.gameNumber} (will retry once): ${result}`);
+      console.warn(
+        `${TAG}[STATE] INSERT deferred gamePk=${ins.gamePk} G${ins.gameNumber} (will retry once): ${result}`
+      );
       retryQueue.push(ins);
     }
   }
@@ -318,10 +369,14 @@ export async function applyMlbScheduleSyncPlan(
     const result = await insertOnce(ins);
     if (result === true) {
       inserted++;
-      console.log(`${TAG}[STEP] INSERT (retry) gamePk=${ins.gamePk} ${ins.awayTeam}@${ins.homeTeam} G${ins.gameNumber}`);
+      console.log(
+        `${TAG}[STEP] INSERT (retry) gamePk=${ins.gamePk} ${ins.awayTeam}@${ins.homeTeam} G${ins.gameNumber}`
+      );
     } else {
       applyErrors.push({ gamePk: ins.gamePk, error: result });
-      console.error(`${TAG}[ERROR] INSERT failed gamePk=${ins.gamePk} ${ins.awayTeam}@${ins.homeTeam} G${ins.gameNumber}: ${result}`);
+      console.error(
+        `${TAG}[ERROR] INSERT failed gamePk=${ins.gamePk} ${ins.awayTeam}@${ins.homeTeam} G${ins.gameNumber}: ${result}`
+      );
     }
   }
 
@@ -342,7 +397,9 @@ export async function syncMlbSchedule(opts?: {
   const start = opts?.startDate ?? todayEasternDate(-1); // include yesterday: pre-11:00-UTC feed still shows it
   const end = opts?.endDate ?? todayEasternDate(7);
   const runId = `mlbsync-${start.replace(/-/g, "")}-${Date.now().toString(36)}`;
-  console.log(`${TAG}[INPUT] runId=${runId} source=${opts?.source ?? "manual"} window=${start}→${end}`);
+  console.log(
+    `${TAG}[INPUT] runId=${runId} source=${opts?.source ?? "manual"} window=${start}→${end}`
+  );
 
   const db = await getDb();
   if (!db) {
@@ -355,7 +412,10 @@ export async function syncMlbSchedule(opts?: {
   try {
     fetched = await fetchMlbScheduleWindow(start, end);
   } catch (err) {
-    console.error(`${TAG}[ERROR] provider fetch failed (sync skipped, nothing lost — additive-only):`, err instanceof Error ? err.message : err);
+    console.error(
+      `${TAG}[ERROR] provider fetch failed (sync skipped, nothing lost — additive-only):`,
+      err instanceof Error ? err.message : err
+    );
     return null;
   }
 
@@ -376,7 +436,13 @@ export async function syncMlbSchedule(opts?: {
       rescheduledFrom: games.rescheduledFrom,
     })
     .from(games)
-    .where(and(eq(games.sport, "MLB"), gte(games.gameDate, start), lte(games.gameDate, end)));
+    .where(
+      and(
+        eq(games.sport, "MLB"),
+        gte(games.gameDate, start),
+        lte(games.gameDate, end)
+      )
+    );
 
   // ── Date-unbounded identity lookup ─────────────────────────────────────────
   // A provider event's row may live OUTSIDE the window when the provider moved
@@ -386,36 +452,51 @@ export async function syncMlbSchedule(opts?: {
   // planned an INSERT that bounced off games_mlb_gamepk_unique every cycle.
   // Fetching every row whose pk appears in the provider slate lets the planner
   // relocate the row (gameDate move) instead.
-  const providerPksInSlate = Array.from(new Set(fetched.events.map(e => e.gamePk)));
-  const pkRows = providerPksInSlate.length > 0
-    ? await db
-        .select({
-          id: games.id,
-          gameDate: games.gameDate,
-          startTimeEst: games.startTimeEst,
-          awayTeam: games.awayTeam,
-          homeTeam: games.homeTeam,
-          sport: games.sport,
-          mlbGamePk: games.mlbGamePk,
-          gameNumber: games.gameNumber,
-          doubleHeader: games.doubleHeader,
-          gameStatus: games.gameStatus,
-          venue: games.venue,
-          rescheduledFrom: games.rescheduledFrom,
-        })
-        .from(games)
-        .where(and(eq(games.sport, "MLB"), inArray(games.mlbGamePk, providerPksInSlate)))
-    : [];
+  const providerPksInSlate = Array.from(
+    new Set(fetched.events.map(e => e.gamePk))
+  );
+  const pkRows =
+    providerPksInSlate.length > 0
+      ? await db
+          .select({
+            id: games.id,
+            gameDate: games.gameDate,
+            startTimeEst: games.startTimeEst,
+            awayTeam: games.awayTeam,
+            homeTeam: games.homeTeam,
+            sport: games.sport,
+            mlbGamePk: games.mlbGamePk,
+            gameNumber: games.gameNumber,
+            doubleHeader: games.doubleHeader,
+            gameStatus: games.gameStatus,
+            venue: games.venue,
+            rescheduledFrom: games.rescheduledFrom,
+          })
+          .from(games)
+          .where(
+            and(
+              eq(games.sport, "MLB"),
+              inArray(games.mlbGamePk, providerPksInSlate)
+            )
+          )
+      : [];
 
   const seenRowIds = new Set<number>();
   const dbRows: DbGameRow[] = [];
   for (const r of [...rows, ...pkRows]) {
     if (seenRowIds.has(r.id)) continue;
     seenRowIds.add(r.id);
-    dbRows.push({ ...r, mlbGamePk: r.mlbGamePk != null ? Number(r.mlbGamePk) : null });
+    dbRows.push({
+      ...r,
+      mlbGamePk: r.mlbGamePk != null ? Number(r.mlbGamePk) : null,
+    });
   }
-  const outOfWindow = pkRows.filter((r: typeof pkRows[number]) => r.gameDate < start || r.gameDate > end).length;
-  console.log(`${TAG}[STATE] db rows: ${dbRows.length} (window=${rows.length}, out-of-window pk matches=${outOfWindow})`);
+  const outOfWindow = pkRows.filter(
+    (r: (typeof pkRows)[number]) => r.gameDate < start || r.gameDate > end
+  ).length;
+  console.log(
+    `${TAG}[STATE] db rows: ${dbRows.length} (window=${rows.length}, out-of-window pk matches=${outOfWindow})`
+  );
 
   // ── Plan (pure) ────────────────────────────────────────────────────────────
   const plan = planMlbScheduleSync(fetched.events, dbRows);
@@ -424,13 +505,16 @@ export async function syncMlbSchedule(opts?: {
     if (grp.gamePks.length > 1) {
       console.log(
         `${TAG}[DH] ${grp.groupId} confidence=${grp.confidence} games=[${grp.gamePks.join(",")}] ` +
-        `numbers=[${grp.gamePks.map(pk => grp.resolvedGameNumbers.get(pk)).join(",")}]`
+          `numbers=[${grp.gamePks.map(pk => grp.resolvedGameNumbers.get(pk)).join(",")}]`
       );
     }
   }
 
   // ── Apply ──────────────────────────────────────────────────────────────────
-  const { applyErrors, inserted, updated } = await applyMlbScheduleSyncPlan(db, plan);
+  const { applyErrors, inserted, updated } = await applyMlbScheduleSyncPlan(
+    db,
+    plan
+  );
   if (inserted > 0 || updated > 0) invalidateGamesCache();
 
   // ── Reconcile: every distinct provider event must now exist in the DB ──────
@@ -440,14 +524,21 @@ export async function syncMlbSchedule(opts?: {
     const present = await db
       .select({ mlbGamePk: games.mlbGamePk })
       .from(games)
-      .where(and(eq(games.sport, "MLB"), inArray(games.mlbGamePk, providerPks)));
+      .where(
+        and(eq(games.sport, "MLB"), inArray(games.mlbGamePk, providerPks))
+      );
     presentPks = new Set(
-      present.map((r: { mlbGamePk: number | null }) => Number(r.mlbGamePk)).filter((n: number) => Number.isFinite(n))
+      present
+        .map((r: { mlbGamePk: number | null }) => Number(r.mlbGamePk))
+        .filter((n: number) => Number.isFinite(n))
     );
   }
   const missingGamePks = providerPks.filter(pk => !presentPks.has(pk));
 
-  const ok = missingGamePks.length === 0 && plan.collisions.length === 0 && applyErrors.length === 0;
+  const ok =
+    missingGamePks.length === 0 &&
+    plan.collisions.length === 0 &&
+    applyErrors.length === 0;
   const result: MlbScheduleSyncResult = {
     runId,
     window: { start, end },
@@ -463,36 +554,57 @@ export async function syncMlbSchedule(opts?: {
     warnings: plan.warnings,
     doubleheaders: plan.groups
       .filter(g => g.gamePks.length > 1)
-      .map(g => ({ groupId: g.groupId, confidence: g.confidence, gamePks: g.gamePks })),
-    reconcile: { expected: providerPks.length, present: presentPks.size, missingGamePks },
+      .map(g => ({
+        groupId: g.groupId,
+        confidence: g.confidence,
+        gamePks: g.gamePks,
+      })),
+    reconcile: {
+      expected: providerPks.length,
+      present: presentPks.size,
+      missingGamePks,
+    },
     ok,
   };
 
   console.log(
     `${TAG}[OUTPUT] runId=${runId} fetched=${result.fetched} parsed=${result.parsed} ` +
-    `rejected=${result.rejected.length} inserted=${inserted} updated=${updated} unchanged=${result.unchanged} ` +
-    `adopted=${result.adoptedLegacyRows} dhGroups=${result.doubleheaders.length}`
+      `rejected=${result.rejected.length} inserted=${inserted} updated=${updated} unchanged=${result.unchanged} ` +
+      `adopted=${result.adoptedLegacyRows} dhGroups=${result.doubleheaders.length}`
   );
   console.log(
     `${TAG}[RECONCILE] provider distinct=${result.reconcile.expected} present in DB=${result.reconcile.present} ` +
-    `missing=[${missingGamePks.join(",")}]`
+      `missing=[${missingGamePks.join(",")}]`
   );
-  console.log(`${TAG}[VERIFY] ${ok ? "PASS" : "FAIL"} — collisions=${plan.collisions.length} applyErrors=${applyErrors.length} missing=${missingGamePks.length}`);
+  console.log(
+    `${TAG}[VERIFY] ${ok ? "PASS" : "FAIL"} — collisions=${plan.collisions.length} applyErrors=${applyErrors.length} missing=${missingGamePks.length}`
+  );
 
   // ── Alert on any event loss — this must never be silent again ──────────────
   if (!ok) {
     const detail =
-      (missingGamePks.length ? `missing gamePks after sync: [${missingGamePks.join(", ")}]\n` : "") +
-      (plan.collisions.length ? `identity collisions: ${plan.collisions.map(c => `${c.gamePk}: ${c.reason}`).join("; ")}\n` : "") +
-      (applyErrors.length ? `apply errors: ${applyErrors.map(e => `${e.gamePk}: ${e.error}`).join("; ")}` : "");
-    console.error(`${TAG}[RECONCILE] ❌ EVENT LOSS OR COLLISION DETECTED (runId=${runId})\n${detail}`);
+      (missingGamePks.length
+        ? `missing gamePks after sync: [${missingGamePks.join(", ")}]\n`
+        : "") +
+      (plan.collisions.length
+        ? `identity collisions: ${plan.collisions.map(c => `${c.gamePk}: ${c.reason}`).join("; ")}\n`
+        : "") +
+      (applyErrors.length
+        ? `apply errors: ${applyErrors.map(e => `${e.gamePk}: ${e.error}`).join("; ")}`
+        : "");
+    console.error(
+      `${TAG}[RECONCILE] ❌ EVENT LOSS OR COLLISION DETECTED (runId=${runId})\n${detail}`
+    );
     try {
       await notifyOwner({
         title: `⚠️ MLB schedule sync lost events (${runId})`,
         content: `Window ${start}→${end}\n${detail}\nThe feed may be missing games (doubleheader-class incident). Re-run syncMlbSchedule after fixing.`,
       });
     } catch (notifErr) {
-      console.warn(`${TAG}[STATE] owner notification failed (non-fatal):`, notifErr instanceof Error ? notifErr.message : notifErr);
+      console.warn(
+        `${TAG}[STATE] owner notification failed (non-fatal):`,
+        notifErr instanceof Error ? notifErr.message : notifErr
+      );
     }
   }
 

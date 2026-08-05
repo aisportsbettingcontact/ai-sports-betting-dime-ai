@@ -66,7 +66,9 @@ describe("classifyTrpcProcedures", () => {
 
   it("returns null for unclassified procedures", () => {
     expect(classifyTrpcProcedures(["games.list"])).toBeNull();
-    expect(classifyTrpcProcedures(["games.list", "wc2026.matchesByDate"])).toBeNull();
+    expect(
+      classifyTrpcProcedures(["games.list", "wc2026.matchesByDate"])
+    ).toBeNull();
     expect(classifyTrpcProcedures([])).toBeNull();
   });
 

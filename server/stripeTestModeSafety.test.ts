@@ -29,11 +29,11 @@ import { isTestModeFulfillmentAllowed } from "./_core/testModeFulfillment";
 
 const routerSrc = fs.readFileSync(
   path.join(import.meta.dirname, "routers", "subscriptionPlans.ts"),
-  "utf8",
+  "utf8"
 );
 const webhookSrc = fs.readFileSync(
   path.join(import.meta.dirname, "stripeWebhook.ts"),
-  "utf8",
+  "utf8"
 );
 
 describe("createTestCheckoutSession — owner-only, test-mode-only, test-price-only", () => {
@@ -86,7 +86,7 @@ describe("webhook — test-mode events never touch production data", () => {
 
   it("skipping fulfillment is the DEFAULT — the guard body returns before anything else", () => {
     expect(guardBlock).toMatch(
-      /if\s*\(!gate\.allowed\)\s*\{[\s\S]{0,400}?production fulfillment intentionally skipped[\s\S]{0,80}?return;\s*\}/,
+      /if\s*\(!gate\.allowed\)\s*\{[\s\S]{0,400}?production fulfillment intentionally skipped[\s\S]{0,80}?return;\s*\}/
     );
   });
 
@@ -110,7 +110,7 @@ describe("webhook — test-mode events never touch production data", () => {
         // committed file trips push protection and the gitleaks gate.
         STRIPE_SECRET_KEY: ["sk", "live", "abc123"].join("_"),
         DATABASE_URL: "mysql://root@127.0.0.1:3306/dime_test",
-      }).allowed,
+      }).allowed
     ).toBe(false);
   });
 

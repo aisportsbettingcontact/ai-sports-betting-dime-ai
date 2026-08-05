@@ -85,7 +85,7 @@ export default function RetentionPanel() {
   // weeks no cohort can reach yet (denom === 0) are dropped — only measured weeks
   // are plotted, so the curve never dips to a misleading zero at the tail.
   const curve = useMemo<CurvePoint[]>(() => {
-    const points: CurvePoint[] = WEEKS.map((w) => {
+    const points: CurvePoint[] = WEEKS.map(w => {
       let numer = 0;
       let denom = 0;
       for (const c of cohorts) {
@@ -95,7 +95,10 @@ export default function RetentionPanel() {
           denom += c.size;
         }
       }
-      return { week: `W${w}`, retention: denom > 0 ? Math.round(numer / denom) : null };
+      return {
+        week: `W${w}`,
+        retention: denom > 0 ? Math.round(numer / denom) : null,
+      };
     });
     while (points.length > 0 && points[points.length - 1].retention == null) {
       points.pop();
@@ -103,7 +106,7 @@ export default function RetentionPanel() {
     return points;
   }, [cohorts]);
 
-  const measuredWeeks = curve.filter((p) => p.retention != null).length;
+  const measuredWeeks = curve.filter(p => p.retention != null).length;
 
   return (
     <div className="mb-6 space-y-3">
@@ -111,9 +114,12 @@ export default function RetentionPanel() {
 
       {notOk ? (
         <div className="bg-card border border-border rounded-xl px-4 sm:px-6 py-4 sm:py-5 text-center">
-          <div className="text-sm font-semibold text-muted-foreground">Not measured</div>
+          <div className="text-sm font-semibold text-muted-foreground">
+            Not measured
+          </div>
           <div className="text-xs sm:text-sm text-muted-foreground mt-1 max-w-md mx-auto leading-relaxed">
-            {data!.reason ?? "The retention pipeline has produced no cohorts yet."}
+            {data!.reason ??
+              "The retention pipeline has produced no cohorts yet."}
           </div>
         </div>
       ) : cohorts.length === 0 ? (
@@ -127,9 +133,19 @@ export default function RetentionPanel() {
           {measuredWeeks >= 2 ? (
             /* Decay curve — average retention across all cohorts, W0…Wn. */
             <div className="bg-card border border-border rounded-xl px-4 sm:px-6 py-4 sm:py-5">
-              <ChartContainer config={CURVE_CONFIG} className="h-[240px] sm:h-[280px] w-full">
-                <LineChart data={curve} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
-                  <CartesianGrid vertical={false} stroke={GRID_COLOR} strokeOpacity={0.5} />
+              <ChartContainer
+                config={CURVE_CONFIG}
+                className="h-[240px] sm:h-[280px] w-full"
+              >
+                <LineChart
+                  data={curve}
+                  margin={{ top: 8, right: 8, bottom: 0, left: 0 }}
+                >
+                  <CartesianGrid
+                    vertical={false}
+                    stroke={GRID_COLOR}
+                    strokeOpacity={0.5}
+                  />
                   <XAxis
                     dataKey="week"
                     tick={AXIS_TICK}
@@ -145,7 +161,10 @@ export default function RetentionPanel() {
                     axisLine={false}
                     tickFormatter={(v: number) => `${v}%`}
                   />
-                  <ChartTooltip content={<ChartTooltipContent />} cursor={{ stroke: GRID_COLOR }} />
+                  <ChartTooltip
+                    content={<ChartTooltipContent />}
+                    cursor={{ stroke: GRID_COLOR }}
+                  />
                   <Line
                     dataKey="retention"
                     type="monotone"
@@ -157,8 +176,8 @@ export default function RetentionPanel() {
                 </LineChart>
               </ChartContainer>
               <p className="mt-3 text-xs sm:text-sm text-muted-foreground leading-relaxed">
-                Average weekly retention across all cohorts (size-weighted). W0 = each cohort's
-                first active week.
+                Average weekly retention across all cohorts (size-weighted). W0
+                = each cohort's first active week.
               </p>
             </div>
           ) : (
@@ -174,9 +193,12 @@ export default function RetentionPanel() {
             <div className="overflow-x-auto">
               <div className="space-y-1" style={{ minWidth: 720 }}>
                 {/* Header row: blank gutter, then W0…W7. */}
-                <div className="grid gap-1 items-end" style={{ gridTemplateColumns: GRID_COLS }}>
+                <div
+                  className="grid gap-1 items-end"
+                  style={{ gridTemplateColumns: GRID_COLS }}
+                >
                   <div className="sticky left-0 z-10 bg-card" />
-                  {WEEKS.map((w) => (
+                  {WEEKS.map(w => (
                     <div
                       key={w}
                       className="text-center text-[11px] font-mono uppercase tracking-wider text-muted-foreground pb-1"
@@ -187,7 +209,7 @@ export default function RetentionPanel() {
                 </div>
 
                 {/* One row per cohort, newest first. */}
-                {cohorts.map((c) => {
+                {cohorts.map(c => {
                   const lowN = c.size < 5;
                   return (
                     <div
@@ -198,13 +220,18 @@ export default function RetentionPanel() {
                       <div className="sticky left-0 z-10 bg-card pr-2 min-w-0">
                         <div className="text-sm font-mono text-foreground truncate">
                           {c.cohortWeek}
-                          {lowN && <span className="text-muted-foreground"> · low n</span>}
+                          {lowN && (
+                            <span className="text-muted-foreground">
+                              {" "}
+                              · low n
+                            </span>
+                          )}
                         </div>
                         <div className="text-xs font-mono text-muted-foreground leading-tight">
                           n={c.size}
                         </div>
                       </div>
-                      {WEEKS.map((w) => (
+                      {WEEKS.map(w => (
                         <Cell key={w} value={c.retention[w] ?? null} />
                       ))}
                     </div>
@@ -214,9 +241,9 @@ export default function RetentionPanel() {
             </div>
 
             <p className="mt-3 text-xs sm:text-sm text-muted-foreground leading-relaxed">
-              W0 = each cohort's first active week; retention = % of that cohort active in later
-              weeks (windowed to the last 8 weeks). Blank cells (—) are future or unreachable
-              weeks, not zero.
+              W0 = each cohort's first active week; retention = % of that cohort
+              active in later weeks (windowed to the last 8 weeks). Blank cells
+              (—) are future or unreachable weeks, not zero.
             </p>
           </div>
         </>

@@ -766,9 +766,7 @@ function MergedSplitBar({
                     borderRadius: "9999px",
                   }}
                 >
-                  <span style={{ ...segLabel, textAlign: "center" }}>
-                    100%
-                  </span>
+                  <span style={{ ...segLabel, textAlign: "center" }}>100%</span>
                 </div>
               )}
               {isHomeFull && !isAwayFull && (
@@ -782,9 +780,7 @@ function MergedSplitBar({
                     borderRadius: "9999px",
                   }}
                 >
-                  <span style={{ ...segLabel, textAlign: "center" }}>
-                    100%
-                  </span>
+                  <span style={{ ...segLabel, textAlign: "center" }}>100%</span>
                 </div>
               )}
               {/* Both-full fallback: split 50/50 with both labels (data anomaly guard) */}
@@ -2359,7 +2355,8 @@ function OddsCell({
           border: pillBorder,
           minWidth: size === "sm" ? 42 : 48,
           gap: 1,
-          transition: "background 160ms cubic-bezier(0.16,1,0.3,1), border-color 160ms cubic-bezier(0.16,1,0.3,1)",
+          transition:
+            "background 160ms cubic-bezier(0.16,1,0.3,1), border-color 160ms cubic-bezier(0.16,1,0.3,1)",
         }}
       >
         {/* Orange bookmark badge — top-left corner */}
@@ -2898,7 +2895,10 @@ function OddsLinesPanel({
       {!isDesktopOdds && (
         <div
           className={`grid ${GRID} pb-0.5`}
-          style={{ transition: "grid-template-columns 160ms cubic-bezier(0.16,1,0.3,1)" }}
+          style={{
+            transition:
+              "grid-template-columns 160ms cubic-bezier(0.16,1,0.3,1)",
+          }}
         >
           <span
             className={`${showModel ? "col-span-2" : ""} text-center font-extrabold uppercase tracking-widest`}
@@ -2929,7 +2929,8 @@ function OddsLinesPanel({
           className={`grid ${GRID} pb-1 mb-0.5`}
           style={{
             borderBottom: "1px solid #FFFFFF",
-            transition: "grid-template-columns 160ms cubic-bezier(0.16,1,0.3,1)",
+            transition:
+              "grid-template-columns 160ms cubic-bezier(0.16,1,0.3,1)",
           }}
         >
           {showModel
@@ -2965,7 +2966,9 @@ function OddsLinesPanel({
       {/* Away row — OddsCell pills for BOOK, plain spans for MODEL */}
       <div
         className={`grid ${GRID} py-2`}
-        style={{ transition: "grid-template-columns 160ms cubic-bezier(0.16,1,0.3,1)" }}
+        style={{
+          transition: "grid-template-columns 160ms cubic-bezier(0.16,1,0.3,1)",
+        }}
       >
         {/* Away Spread BOOK pill — line and odds SEPARATE for correct visual hierarchy */}
         <OddsCell
@@ -3032,7 +3035,9 @@ function OddsLinesPanel({
       {/* Home row — OddsCell pills for BOOK, plain spans for MODEL */}
       <div
         className={`grid ${GRID} py-2`}
-        style={{ transition: "grid-template-columns 160ms cubic-bezier(0.16,1,0.3,1)" }}
+        style={{
+          transition: "grid-template-columns 160ms cubic-bezier(0.16,1,0.3,1)",
+        }}
       >
         {/* Home Spread BOOK pill — line and odds SEPARATE for correct visual hierarchy */}
         <OddsCell
@@ -3752,7 +3757,8 @@ function GameCardInner({
                 ? "var(--dime-mint-text, #45E0A8)"
                 : "var(--dime-text-muted, #FFFFFF)",
               opacity: 1,
-              transition: "color 160ms cubic-bezier(0.16,1,0.3,1), transform 160ms cubic-bezier(0.16,1,0.3,1), filter 160ms cubic-bezier(0.16,1,0.3,1)",
+              transition:
+                "color 160ms cubic-bezier(0.16,1,0.3,1), transform 160ms cubic-bezier(0.16,1,0.3,1), filter 160ms cubic-bezier(0.16,1,0.3,1)",
               filter: "none",
             }}
             onMouseEnter={e => {
@@ -4007,7 +4013,8 @@ function GameCardInner({
                   ? "var(--dime-mint-text, #45E0A8)"
                   : "var(--dime-text-muted, #FFFFFF)",
                 opacity: 1,
-                transition: "color 160ms cubic-bezier(0.16,1,0.3,1), transform 160ms cubic-bezier(0.16,1,0.3,1), filter 160ms cubic-bezier(0.16,1,0.3,1)",
+                transition:
+                  "color 160ms cubic-bezier(0.16,1,0.3,1), transform 160ms cubic-bezier(0.16,1,0.3,1), filter 160ms cubic-bezier(0.16,1,0.3,1)",
                 // Change D: larger glow to match 2× star size on desktop
                 filter: "none",
               }}

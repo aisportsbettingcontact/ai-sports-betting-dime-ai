@@ -103,7 +103,8 @@ function fmtRecord(rec: SituationalRecord | undefined): string {
   if (!rec) return "—";
   const total = rec.wins + rec.losses + (rec.pushes ?? 0);
   if (total === 0) return "—";
-  if (rec.pushes && rec.pushes > 0) return `${rec.wins}-${rec.losses}-${rec.pushes}`;
+  if (rec.pushes && rec.pushes > 0)
+    return `${rec.wins}-${rec.losses}-${rec.pushes}`;
   return `${rec.wins}-${rec.losses}`;
 }
 
@@ -122,7 +123,12 @@ function winPct(rec: SituationalRecord | undefined): number {
 function fmtPct(pct: number): string {
   if (pct < 0) return "";
   if (pct >= 0.9995) return "1.000";
-  return "." + Math.round(pct * 1000).toString().padStart(3, "0");
+  return (
+    "." +
+    Math.round(pct * 1000)
+      .toString()
+      .padStart(3, "0")
+  );
 }
 
 type BarTone = "lead" | "trail" | "even" | "empty";
@@ -132,7 +138,10 @@ type BarTone = "lead" | "trail" | "even" | "empty";
  * The better win% side is the mint signal; the trailing side is a tonal grey
  * tier (never red — negative states are grey per brand law).
  */
-function comparativeTones(leftPct: number, rightPct: number): [BarTone, BarTone] {
+function comparativeTones(
+  leftPct: number,
+  rightPct: number
+): [BarTone, BarTone] {
   const noLeft = leftPct < 0;
   const noRight = rightPct < 0;
 
@@ -211,7 +220,10 @@ function RecordRow({
   awayName: string;
   homeName: string;
 }) {
-  const [awayTone, homeTone] = comparativeTones(winPct(awayRec), winPct(homeRec));
+  const [awayTone, homeTone] = comparativeTones(
+    winPct(awayRec),
+    winPct(homeRec)
+  );
 
   return (
     <div className="mb-2.5 last:mb-0">
@@ -219,8 +231,18 @@ function RecordRow({
         {label}
       </div>
       <div className="flex gap-1.5">
-        <RecordBar rec={awayRec} tone={awayTone} teamName={awayName} label={label} />
-        <RecordBar rec={homeRec} tone={homeTone} teamName={homeName} label={label} />
+        <RecordBar
+          rec={awayRec}
+          tone={awayTone}
+          teamName={awayName}
+          label={label}
+        />
+        <RecordBar
+          rec={homeRec}
+          tone={homeTone}
+          teamName={homeName}
+          label={label}
+        />
       </div>
     </div>
   );
@@ -276,7 +298,7 @@ function StatsSection({
     { teamSlug: awaySlug },
     {
       enabled: (enabled ?? true) && sport === "MLB",
-      staleTime: 4 * 60 * 1000,       // 4 min — matches schedule history refresh cadence
+      staleTime: 4 * 60 * 1000, // 4 min — matches schedule history refresh cadence
       refetchInterval: 4 * 60 * 1000, // auto-poll every 4 min for real-time record updates
       retry: 1,
     }
@@ -294,32 +316,52 @@ function StatsSection({
   // ── NBA query ────────────────────────────────────────────────────────────
   const nbaAwayQuery = trpc.nbaSchedule.getSituationalStats.useQuery(
     { teamSlug: awaySlug },
-    { enabled: (enabled ?? true) && sport === "NBA", staleTime: 5 * 60 * 1000, retry: 1 }
+    {
+      enabled: (enabled ?? true) && sport === "NBA",
+      staleTime: 5 * 60 * 1000,
+      retry: 1,
+    }
   );
   const nbaHomeQuery = trpc.nbaSchedule.getSituationalStats.useQuery(
     { teamSlug: homeSlug },
-    { enabled: (enabled ?? true) && sport === "NBA", staleTime: 5 * 60 * 1000, retry: 1 }
+    {
+      enabled: (enabled ?? true) && sport === "NBA",
+      staleTime: 5 * 60 * 1000,
+      retry: 1,
+    }
   );
   // ── NHL query ───────────────────────────────────────────────────────────────────────────
   // SECURITY: include enabled prop to respect parent auth gate
   const nhlAwayQuery = trpc.nhlSchedule.getSituationalStats.useQuery(
     { teamSlug: awaySlug },
-    { enabled: (enabled ?? true) && sport === "NHL", staleTime: 5 * 60 * 1000, retry: 1 }
+    {
+      enabled: (enabled ?? true) && sport === "NHL",
+      staleTime: 5 * 60 * 1000,
+      retry: 1,
+    }
   );
   const nhlHomeQuery = trpc.nhlSchedule.getSituationalStats.useQuery(
     { teamSlug: homeSlug },
-    { enabled: (enabled ?? true) && sport === "NHL", staleTime: 5 * 60 * 1000, retry: 1 }
+    {
+      enabled: (enabled ?? true) && sport === "NHL",
+      staleTime: 5 * 60 * 1000,
+      retry: 1,
+    }
   );
 
   const awayQuery =
-    sport === "MLB" ? mlbAwayQuery
-    : sport === "NBA" ? nbaAwayQuery
-    : nhlAwayQuery;
+    sport === "MLB"
+      ? mlbAwayQuery
+      : sport === "NBA"
+        ? nbaAwayQuery
+        : nhlAwayQuery;
 
   const homeQuery =
-    sport === "MLB" ? mlbHomeQuery
-    : sport === "NBA" ? nbaHomeQuery
-    : nhlHomeQuery;
+    sport === "MLB"
+      ? mlbHomeQuery
+      : sport === "NBA"
+        ? nbaHomeQuery
+        : nhlHomeQuery;
 
   const isLoading = awayQuery.isLoading || homeQuery.isLoading;
   const error = awayQuery.error ?? homeQuery.error;
@@ -340,7 +382,9 @@ function StatsSection({
         <p className="text-[13px] font-semibold text-foreground">
           Couldn't load trends
         </p>
-        <p className="mt-1 text-[12px] text-[var(--text-muted)]">{error.message}</p>
+        <p className="mt-1 text-[12px] text-[var(--text-muted)]">
+          {error.message}
+        </p>
       </div>
     );
   }
@@ -361,7 +405,9 @@ function StatsSection({
               alt=""
               loading="lazy"
               className="w-7 h-7 object-contain flex-shrink-0"
-              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+              onError={e => {
+                (e.target as HTMLImageElement).style.display = "none";
+              }}
             />
           )}
           <span className="text-[13px] font-bold text-foreground uppercase tracking-wide truncate">
@@ -376,7 +422,9 @@ function StatsSection({
               alt=""
               loading="lazy"
               className="w-7 h-7 object-contain flex-shrink-0"
-              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+              onError={e => {
+                (e.target as HTMLImageElement).style.display = "none";
+              }}
             />
           )}
           <span className="text-[13px] font-bold text-foreground uppercase tracking-wide truncate text-right">
@@ -480,24 +528,26 @@ export default function SituationalResultsPanel({
   const sLabel = spreadTabLabel(sport);
 
   const tabs: { key: SitTab; label: string }[] = [
-    { key: "ml",     label: "Moneyline" },
-    { key: "total",  label: "Total"     },
-    { key: "spread", label: sLabel      },
+    { key: "ml", label: "Moneyline" },
+    { key: "total", label: "Total" },
+    { key: "spread", label: sLabel },
   ];
 
   const onTabKeyDown = (e: KeyboardEvent<HTMLButtonElement>) => {
     if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
     e.preventDefault();
     const i = tabs.findIndex(t => t.key === tab);
-    const next = e.key === "ArrowRight"
-      ? tabs[(i + 1) % tabs.length]
-      : tabs[(i - 1 + tabs.length) % tabs.length];
+    const next =
+      e.key === "ArrowRight"
+        ? tabs[(i + 1) % tabs.length]
+        : tabs[(i - 1 + tabs.length) % tabs.length];
     setTab(next.key);
   };
 
   // Suppress unused-variable warnings for abbr props (kept in interface for
   // backward compat with GameCard which passes them)
-  void awayAbbr; void homeAbbr;
+  void awayAbbr;
+  void homeAbbr;
 
   return (
     <div
@@ -514,7 +564,9 @@ export default function SituationalResultsPanel({
     >
       {/* ── Collapsible Header ─────────────────────────────────────────────── */}
       {hideHeader ? null : collapsible ? (
-        <button type="button" onClick={() => setIsExpanded((v) => !v)}
+        <button
+          type="button"
+          onClick={() => setIsExpanded(v => !v)}
           aria-expanded={isExpanded}
           className={cn(
             "w-full box-border flex items-center justify-between px-3 py-2 cursor-pointer",
@@ -526,10 +578,11 @@ export default function SituationalResultsPanel({
             Trends
           </span>
           <div className="flex items-center gap-1">
-            {isExpanded
-              ? <ChevronUp className="w-3.5 h-3.5 text-[var(--text-muted)]" />
-              : <ChevronDown className="w-3.5 h-3.5 text-[var(--text-muted)]" />
-            }
+            {isExpanded ? (
+              <ChevronUp className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+            ) : (
+              <ChevronDown className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+            )}
           </div>
         </button>
       ) : (
@@ -544,15 +597,22 @@ export default function SituationalResultsPanel({
 
       {/* ── Collapsible Body ───────────────────────────────────────────────── */}
       {isExpanded && (
-        <div className={cn("flex-1 flex flex-col", !hideHeader && "border-t border-border")}>
+        <div
+          className={cn(
+            "flex-1 flex flex-col",
+            !hideHeader && "border-t border-border"
+          )}
+        >
           {/* ── Tab selector ─────────────────────────────────────────────── */}
           <div
             role="tablist"
             aria-label="Trend market"
             className="flex items-center gap-1 px-3 py-2 border-b border-border"
           >
-            {tabs.map((t) => (
-              <button type="button" key={t.key}
+            {tabs.map(t => (
+              <button
+                type="button"
+                key={t.key}
                 role="tab"
                 aria-selected={tab === t.key}
                 onClick={() => setTab(t.key)}

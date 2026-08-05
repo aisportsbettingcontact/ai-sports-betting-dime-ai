@@ -57,7 +57,7 @@ export class CronJobRunner {
   ) {
     this.now = opts.now ?? (() => new Date().toISOString());
     this.monotonic = opts.monotonic ?? (() => Date.now());
-    this.log = opts.log ?? ((line) => console.log(line));
+    this.log = opts.log ?? (line => console.log(line));
   }
 
   get state(): CronRunnerState {
@@ -111,12 +111,14 @@ export class CronJobRunner {
       } catch (err) {
         const elapsedMs = this.monotonic() - startMs;
         const message = err instanceof Error ? err.message : String(err);
-        this.log(`[Cron:${this.name}] [FAIL] error="${message}" elapsed=${elapsedMs}ms`);
+        this.log(
+          `[Cron:${this.name}] [FAIL] error="${message}" elapsed=${elapsedMs}ms`
+        );
         return { ok: false, elapsedMs, error: message };
       } finally {
         this.isRunning = false;
       }
-    })().then((result) => {
+    })().then(result => {
       this.lastResult = result;
       this.inFlight = null;
       return result;

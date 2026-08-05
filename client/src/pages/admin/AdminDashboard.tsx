@@ -24,14 +24,16 @@ export default function AdminDashboard() {
         <div className="admin-container py-4 sm:py-6">
           {/* Page header — mirrors the other admin surfaces' treatment */}
           <div className="mb-6">
-            <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Admin Dashboard</h1>
+            <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+              Admin Dashboard
+            </h1>
             <p className="mt-1 text-sm text-muted-foreground">
               Every admin tool, in one place.
             </p>
           </div>
 
           <div className="space-y-6">
-            {ADMIN_GROUPS.map((group) => (
+            {ADMIN_GROUPS.map(group => (
               <section key={group}>
                 <div className="mb-2 flex items-center gap-2">
                   <span className="text-xs font-semibold uppercase tracking-[0.15em] text-foreground">
@@ -41,7 +43,7 @@ export default function AdminDashboard() {
                 </div>
 
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3 lg:grid-cols-3">
-                  {adminItemsByGroup(group).map((item) => {
+                  {adminItemsByGroup(group).map(item => {
                     const Icon = item.icon;
                     return (
                       <button

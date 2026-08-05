@@ -13,7 +13,13 @@ import { isAnalyticsStore } from "./config";
 import { QUALIFYING_EVENTS } from "./events";
 import { ok, notMeasured, type MetricPoint } from "./metricDefinitions";
 import { computePowerScore } from "./powerScore";
-import { classifySegment, SEGMENT_ORDER, SEGMENT_LABELS, type SegmentKey, type UserFacts } from "./segments";
+import {
+  classifySegment,
+  SEGMENT_ORDER,
+  SEGMENT_LABELS,
+  type SegmentKey,
+  type UserFacts,
+} from "./segments";
 
 const TAG = "[analytics][read]";
 const DAY = 24 * 60 * 60 * 1000;
@@ -136,8 +142,16 @@ export interface AnalyticsOverview {
   deviceMix: DeviceSlice[];
 }
 
-export function overviewWindows(asOf: number): { dayFrom: number; weekFrom: number; monthFrom: number } {
-  return { dayFrom: asOf - DAY, weekFrom: asOf - 7 * DAY, monthFrom: asOf - 30 * DAY };
+export function overviewWindows(asOf: number): {
+  dayFrom: number;
+  weekFrom: number;
+  monthFrom: number;
+} {
+  return {
+    dayFrom: asOf - DAY,
+    weekFrom: asOf - 7 * DAY,
+    monthFrom: asOf - 30 * DAY,
+  };
 }
 
 const NO_DATA =
@@ -174,7 +188,9 @@ export function disabledOverview(reason: string): AnalyticsOverview {
  * across that tuple shape and a `{ rows }` shape.
  */
 export function rowsOf(result: unknown): Array<Record<string, unknown>> {
-  const r = Array.isArray(result) ? result[0] : (result as { rows?: unknown[] })?.rows;
+  const r = Array.isArray(result)
+    ? result[0]
+    : (result as { rows?: unknown[] })?.rows;
   return Array.isArray(r) ? (r as Array<Record<string, unknown>>) : [];
 }
 
@@ -185,7 +201,8 @@ export function numAt(result: unknown, key = "n"): number {
 }
 
 /** Coerce a single row value to a number (mysql2 returns COUNT/SUM as strings). */
-const toNum = (v: unknown): number => (typeof v === "number" ? v : Number(v ?? 0) || 0);
+const toNum = (v: unknown): number =>
+  typeof v === "number" ? v : Number(v ?? 0) || 0;
 
 /**
  * Feature-strength scorecard, computed purely from per-user facts (no extra SQL).
@@ -196,14 +213,34 @@ const toNum = (v: unknown): number => (typeof v === "number" ? v : Number(v ?? 0
  */
 export function computeScorecard(facts: readonly UserFacts[]): FeatureScore[] {
   const total = facts.length || 1;
-  const defs: Array<{ surface: string; used: (f: UserFacts) => boolean; events: (f: UserFacts) => number }> = [
-    { surface: "feed", used: (f) => f.feedActions > 0, events: (f) => f.feedActions },
-    { surface: "chat", used: (f) => f.chatActions > 0, events: (f) => f.chatActions },
-    { surface: "splits", used: (f) => f.splitsActions > 0, events: (f) => f.splitsActions },
-    { surface: "tracker", used: (f) => f.trackerValue > 0, events: (f) => f.trackerValue },
+  const defs: Array<{
+    surface: string;
+    used: (f: UserFacts) => boolean;
+    events: (f: UserFacts) => number;
+  }> = [
+    {
+      surface: "feed",
+      used: f => f.feedActions > 0,
+      events: f => f.feedActions,
+    },
+    {
+      surface: "chat",
+      used: f => f.chatActions > 0,
+      events: f => f.chatActions,
+    },
+    {
+      surface: "splits",
+      used: f => f.splitsActions > 0,
+      events: f => f.splitsActions,
+    },
+    {
+      surface: "tracker",
+      used: f => f.trackerValue > 0,
+      events: f => f.trackerValue,
+    },
   ];
   // Raw intensity per surface (events / surface-user) for min-max normalization.
-  const raw = defs.map((d) => {
+  const raw = defs.map(d => {
     const users = facts.filter(d.used);
     const ev = users.reduce((s, f) => s + d.events(f), 0);
     return users.length ? ev / users.length : 0;
@@ -214,10 +251,12 @@ export function computeScorecard(facts: readonly UserFacts[]): FeatureScore[] {
     const n = users.length;
     const adoption = Math.round((n / total) * 100);
     const engagement = Math.round((raw[i] / maxRaw) * 100);
-    const valueUsers = users.filter((f) => f.valueEvents > 0).length;
+    const valueUsers = users.filter(f => f.valueEvents > 0).length;
     const valueLinkage = n ? Math.round((valueUsers / n) * 100) : 0;
     // Composite over the three measured axes (stickiness reserved for P2), weights renormalized.
-    const composite = Math.round((0.25 * adoption + 0.2 * engagement + 0.3 * valueLinkage) / 0.75);
+    const composite = Math.round(
+      (0.25 * adoption + 0.2 * engagement + 0.3 * valueLinkage) / 0.75
+    );
     const reachHigh = adoption >= 35;
     const valueHigh = valueLinkage >= 45;
     const verdict: FeatureScore["verdict"] = valueHigh
@@ -227,7 +266,15 @@ export function computeScorecard(facts: readonly UserFacts[]): FeatureScore[] {
       : reachHigh
         ? "fix"
         : "cut";
-    return { surface: d.surface, adoption, engagement, stickiness: null, valueLinkage, composite, verdict };
+    return {
+      surface: d.surface,
+      adoption,
+      engagement,
+      stickiness: null,
+      valueLinkage,
+      composite,
+      verdict,
+    };
   });
 }
 
@@ -240,8 +287,8 @@ export async function getAnalyticsOverview(): Promise<AnalyticsOverview> {
   const { dayFrom, weekFrom, monthFrom } = overviewWindows(asOf);
   const names = QUALIFYING_EVENTS as readonly string[];
   const nameList = sql.join(
-    names.map((n) => sql`${n}`),
-    sql`, `,
+    names.map(n => sql`${n}`),
+    sql`, `
   );
   try {
     const db = await getDb();
@@ -264,7 +311,7 @@ export async function getAnalyticsOverview(): Promise<AnalyticsOverview> {
     const total = numAt(totalR);
 
     const freshR = await db.execute(
-      sql`SELECT MAX(occurred_at_utc) AS n FROM analytics_events WHERE is_test = 0`,
+      sql`SELECT MAX(occurred_at_utc) AS n FROM analytics_events WHERE is_test = 0`
     );
     const lastEventAt = numAt(freshR) || null;
 
@@ -275,7 +322,7 @@ export async function getAnalyticsOverview(): Promise<AnalyticsOverview> {
              SUM(CASE WHEN event_name = 'action_performed' THEN 1 ELSE 0 END) AS actions
       FROM analytics_events WHERE is_test = 0
       GROUP BY COALESCE(device_type, 'unknown')`);
-    const deviceMix: DeviceSlice[] = rowsOf(mixR).map((r) => ({
+    const deviceMix: DeviceSlice[] = rowsOf(mixR).map(r => ({
       deviceType: String(r.device_type ?? "unknown"),
       users: Number(r.users ?? 0) || 0,
       valueEvents: Number(r.value_events ?? 0) || 0,
@@ -297,7 +344,7 @@ export async function getAnalyticsOverview(): Promise<AnalyticsOverview> {
       SELECT action_name AS name, COUNT(*) AS n FROM analytics_events
       WHERE is_test = 0 AND event_name = 'action_performed' AND action_name IS NOT NULL
       GROUP BY action_name ORDER BY n DESC LIMIT 5`);
-    const topActions: ActionCount[] = rowsOf(topActionsR).map((r) => ({
+    const topActions: ActionCount[] = rowsOf(topActionsR).map(r => ({
       name: String(r.name ?? "unknown"),
       count: Number(r.n ?? 0) || 0,
     }));
@@ -326,7 +373,7 @@ export async function getAnalyticsOverview(): Promise<AnalyticsOverview> {
       WHERE is_test = 0 AND occurred_at_utc >= ${monthFrom}
       GROUP BY source_user_id
       LIMIT ${USER_SCAN_CAP}`);
-    const scanned = rowsOf(usersR).map((r) => {
+    const scanned = rowsOf(usersR).map(r => {
       const lastActive = toNum(r.last_active);
       const facts: UserFacts = {
         daysSinceLastActive: Math.max(0, Math.floor((asOf - lastActive) / DAY)),
@@ -341,33 +388,54 @@ export async function getAnalyticsOverview(): Promise<AnalyticsOverview> {
         trackerValue: toNum(r.tracker_value),
       };
       const { score, tier } = computePowerScore(facts);
-      return { uid: toNum(r.uid), lastActive, facts, score, tier, segment: classifySegment(facts) };
+      return {
+        uid: toNum(r.uid),
+        lastActive,
+        facts,
+        score,
+        tier,
+        segment: classifySegment(facts),
+      };
     });
 
     // Segment distribution.
     const segCounts = new Map<SegmentKey, number>();
-    for (const u of scanned) segCounts.set(u.segment, (segCounts.get(u.segment) ?? 0) + 1);
-    const segments: SegmentSlice[] = SEGMENT_ORDER.map((k) => ({
+    for (const u of scanned)
+      segCounts.set(u.segment, (segCounts.get(u.segment) ?? 0) + 1);
+    const segments: SegmentSlice[] = SEGMENT_ORDER.map(k => ({
       key: k,
       label: SEGMENT_LABELS[k],
       users: segCounts.get(k) ?? 0,
     }));
 
     // Lifecycle funnel (threshold counts over the window).
-    const cnt = (pred: (f: UserFacts) => boolean): number => scanned.filter((u) => pred(u.facts)).length;
+    const cnt = (pred: (f: UserFacts) => boolean): number =>
+      scanned.filter(u => pred(u.facts)).length;
     const funnel: FunnelStage[] = [
-      { key: "discover", label: "Discover", users: cnt((f) => f.sessions > 0) },
-      { key: "activate", label: "Activate", users: cnt((f) => f.valueEvents >= 1) },
-      { key: "habituate", label: "Habituate", users: cnt((f) => f.activeDays >= 3) },
-      { key: "value", label: "Value", users: cnt((f) => f.valueEvents >= 4 && f.distinctSurfaces >= 2) },
-      { key: "retain", label: "Retain", users: cnt((f) => f.activeDays >= 12) },
+      { key: "discover", label: "Discover", users: cnt(f => f.sessions > 0) },
+      {
+        key: "activate",
+        label: "Activate",
+        users: cnt(f => f.valueEvents >= 1),
+      },
+      {
+        key: "habituate",
+        label: "Habituate",
+        users: cnt(f => f.activeDays >= 3),
+      },
+      {
+        key: "value",
+        label: "Value",
+        users: cnt(f => f.valueEvents >= 4 && f.distinctSurfaces >= 2),
+      },
+      { key: "retain", label: "Retain", users: cnt(f => f.activeDays >= 12) },
     ];
 
-    const featureScorecard = computeScorecard(scanned.map((u) => u.facts));
+    const featureScorecard = computeScorecard(scanned.map(u => u.facts));
 
     // Top-N power users (identity joined later on the web).
     const topUsers: UserProfileRow[] = scanned
-      .map((u) => ({
+      .map(u => ({
         sourceUserId: u.uid,
         score: u.score,
         tier: u.tier,
@@ -412,18 +480,26 @@ export async function getAnalyticsOverview(): Promise<AnalyticsOverview> {
     });
     const retention: RetentionCohort[] = Array.from(cohortUsers.keys())
       .sort((a, b) => b - a)
-      .map((cw) => {
+      .map(cw => {
         const uids = cohortUsers.get(cw) ?? [];
         const row: Array<number | null> = [];
         for (let w = 0; w < RETENTION_WEEKS; w++) {
           if (cw + w > nowWeek) {
             row.push(null);
           } else {
-            const active = uids.filter((uid) => weeksByUser.get(uid)?.has(cw + w)).length;
-            row.push(uids.length ? Math.round((active / uids.length) * 100) : 0);
+            const active = uids.filter(uid =>
+              weeksByUser.get(uid)?.has(cw + w)
+            ).length;
+            row.push(
+              uids.length ? Math.round((active / uids.length) * 100) : 0
+            );
           }
         }
-        return { cohortWeek: new Date(cw * WEEK).toISOString().slice(0, 10), size: uids.length, retention: row };
+        return {
+          cohortWeek: new Date(cw * WEEK).toISOString().slice(0, 10),
+          size: uids.length,
+          retention: row,
+        };
       });
 
     // Daily activity trend (30-day window) — continuous + zero-filled so the
@@ -438,7 +514,10 @@ export async function getAnalyticsOverview(): Promise<AnalyticsOverview> {
       GROUP BY FLOOR(occurred_at_utc / ${DAY})`);
     const byDay = new Map<number, { users: number; valueEvents: number }>();
     for (const r of rowsOf(dailyR)) {
-      byDay.set(toNum(r.day_idx), { users: toNum(r.users), valueEvents: toNum(r.value_events) });
+      byDay.set(toNum(r.day_idx), {
+        users: toNum(r.users),
+        valueEvents: toNum(r.value_events),
+      });
     }
     const startDayIdx = Math.floor(monthFrom / DAY);
     const endDayIdx = Math.floor((asOf - 1) / DAY);
@@ -477,6 +556,9 @@ export async function getAnalyticsOverview(): Promise<AnalyticsOverview> {
     };
   } catch (err) {
     console.warn(`${TAG} overview failed: ${(err as Error).message}`);
-    return { ...disabledOverview("analytics overview query failed"), state: "error" };
+    return {
+      ...disabledOverview("analytics overview query failed"),
+      state: "error",
+    };
   }
 }

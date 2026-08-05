@@ -4,7 +4,10 @@
   "timezone": "America/Los_Angeles",
   "schedule": ["before 6am on monday"],
   "minimumReleaseAge": "14 days",
-  "lockFileMaintenance": { "enabled": true, "schedule": ["before 6am on monday"] },
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 6am on monday"]
+  },
   "rangeStrategy": "bump",
   "postUpdateOptions": ["pnpmDedupe"],
   "packageRules": [
@@ -23,7 +26,15 @@
     },
     {
       "description": "Security-critical runtime deps get their own PRs, never grouped",
-      "matchPackageNames": ["express", "jose", "mysql2", "helmet", "stripe", "@anthropic-ai/sdk", "@anthropic-ai/claude-agent-sdk"],
+      "matchPackageNames": [
+        "express",
+        "jose",
+        "mysql2",
+        "helmet",
+        "stripe",
+        "@anthropic-ai/sdk",
+        "@anthropic-ai/claude-agent-sdk"
+      ],
       "groupName": null,
       "automerge": false
     },

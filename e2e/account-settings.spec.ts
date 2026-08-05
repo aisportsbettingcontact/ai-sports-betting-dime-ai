@@ -158,7 +158,10 @@ const BILLING_INFO = {
 const CANCEL_CONFIRM_COPY =
   "If you cancel, you'll keep full access to your plan features until the end of your billing period.";
 
-async function stubApi(page: Page, user: typeof OWNER_USER | typeof NON_OWNER_USER) {
+async function stubApi(
+  page: Page,
+  user: typeof OWNER_USER | typeof NON_OWNER_USER
+) {
   await page.route("**/api/trpc/**", route => {
     const url = new URL(route.request().url());
     const ops = decodeURIComponent(
@@ -202,7 +205,9 @@ async function assertNoHorizontalOverflow(page: Page, label: string) {
     const el = document.scrollingElement!;
     return el.scrollWidth - el.clientWidth;
   });
-  expect(overflow, `${label}: horizontal page overflow px`).toBeLessThanOrEqual(1);
+  expect(overflow, `${label}: horizontal page overflow px`).toBeLessThanOrEqual(
+    1
+  );
 }
 
 /** Opens the account popover via the profile row's gear trigger
@@ -229,20 +234,35 @@ for (const width of WIDTHS) {
     await openPopover(page);
 
     const menu = page.locator(".dc-settings-menu.open");
-    const rowCount = await menu.locator(".dc-menu-header, .dc-menu-item").count();
-    expect(rowCount, "owner popover row count (header + Theme/Settings/Admin/LogOut)").toBe(5);
+    const rowCount = await menu
+      .locator(".dc-menu-header, .dc-menu-item")
+      .count();
+    expect(
+      rowCount,
+      "owner popover row count (header + Theme/Settings/Admin/LogOut)"
+    ).toBe(5);
 
-    await expect(menu.getByRole("menuitem", { name: "Admin Dashboard" })).toBeVisible();
+    await expect(
+      menu.getByRole("menuitem", { name: "Admin Dashboard" })
+    ).toBeVisible();
     await expect(menu.getByRole("menuitem", { name: "Theme" })).toBeVisible();
-    await expect(menu.getByRole("menuitem", { name: "Settings" })).toBeVisible();
+    await expect(
+      menu.getByRole("menuitem", { name: "Settings" })
+    ).toBeVisible();
     await expect(menu.getByRole("menuitem", { name: "Log Out" })).toBeVisible();
 
     const menuText = await menu.innerText();
-    expect(menuText, "no frozen 'Edit Profile' row").not.toContain("Edit Profile");
-    expect(menuText, "no frozen 'Discord Connected' row").not.toContain("Discord Connected");
+    expect(menuText, "no frozen 'Edit Profile' row").not.toContain(
+      "Edit Profile"
+    );
+    expect(menuText, "no frozen 'Discord Connected' row").not.toContain(
+      "Discord Connected"
+    );
 
     await assertNoHorizontalOverflow(page, "popover-owner");
-    await page.screenshot({ path: `${EVIDENCE_DIR}/popover-owner-${width}.png` });
+    await page.screenshot({
+      path: `${EVIDENCE_DIR}/popover-owner-${width}.png`,
+    });
   });
 
   test(`popover: NON-OWNER sees exactly 4 rows, no Admin row, no legacy rows [${width}px]`, async ({
@@ -254,23 +274,36 @@ for (const width of WIDTHS) {
     await openPopover(page);
 
     const menu = page.locator(".dc-settings-menu.open");
-    const rowCount = await menu.locator(".dc-menu-header, .dc-menu-item").count();
-    expect(rowCount, "non-owner popover row count (header + Theme/Settings/LogOut)").toBe(4);
+    const rowCount = await menu
+      .locator(".dc-menu-header, .dc-menu-item")
+      .count();
+    expect(
+      rowCount,
+      "non-owner popover row count (header + Theme/Settings/LogOut)"
+    ).toBe(4);
 
     await expect(
       menu.getByRole("menuitem", { name: "Admin Dashboard" }),
       "Admin Dashboard row absent for a non-owner"
     ).toHaveCount(0);
     await expect(menu.getByRole("menuitem", { name: "Theme" })).toBeVisible();
-    await expect(menu.getByRole("menuitem", { name: "Settings" })).toBeVisible();
+    await expect(
+      menu.getByRole("menuitem", { name: "Settings" })
+    ).toBeVisible();
     await expect(menu.getByRole("menuitem", { name: "Log Out" })).toBeVisible();
 
     const menuText = await menu.innerText();
-    expect(menuText, "no frozen 'Edit Profile' row").not.toContain("Edit Profile");
-    expect(menuText, "no frozen 'Discord Connected' row").not.toContain("Discord Connected");
+    expect(menuText, "no frozen 'Edit Profile' row").not.toContain(
+      "Edit Profile"
+    );
+    expect(menuText, "no frozen 'Discord Connected' row").not.toContain(
+      "Discord Connected"
+    );
 
     await assertNoHorizontalOverflow(page, "popover-non-owner");
-    await page.screenshot({ path: `${EVIDENCE_DIR}/popover-non-owner-${width}.png` });
+    await page.screenshot({
+      path: `${EVIDENCE_DIR}/popover-non-owner-${width}.png`,
+    });
   });
 
   // ── Contract 2: Theme slide-out + persistence ─────────────────────────────
@@ -320,19 +353,28 @@ for (const width of WIDTHS) {
     await expect(radios.nth(1)).toHaveAttribute("aria-checked", "true");
     await expect(page.locator("html")).not.toHaveClass(/dark/);
 
-    const storedBefore = await page.evaluate(() => localStorage.getItem("dime-theme"));
-    expect(storedBefore, "localStorage['dime-theme'] === 'light' before reload").toBe("light");
+    const storedBefore = await page.evaluate(() =>
+      localStorage.getItem("dime-theme")
+    );
+    expect(
+      storedBefore,
+      "localStorage['dime-theme'] === 'light' before reload"
+    ).toBe("light");
 
     await page.reload();
     await page.waitForSelector(".dc-settings-trigger");
 
-    await expect(page.locator("html"), "root class stays light after reload").not.toHaveClass(
-      /dark/
+    await expect(
+      page.locator("html"),
+      "root class stays light after reload"
+    ).not.toHaveClass(/dark/);
+    const storedAfter = await page.evaluate(() =>
+      localStorage.getItem("dime-theme")
     );
-    const storedAfter = await page.evaluate(() => localStorage.getItem("dime-theme"));
-    expect(storedAfter, "localStorage['dime-theme'] persists 'light' across reload").toBe(
-      "light"
-    );
+    expect(
+      storedAfter,
+      "localStorage['dime-theme'] persists 'light' across reload"
+    ).toBe("light");
 
     await assertNoHorizontalOverflow(page, "theme-after-reload");
   });
@@ -353,7 +395,9 @@ for (const width of WIDTHS) {
     await expect(dialog).toHaveAttribute("aria-labelledby", "dc-sm-title");
 
     await assertNoHorizontalOverflow(page, "modal-account");
-    await page.screenshot({ path: `${EVIDENCE_DIR}/modal-account-${width}.png` });
+    await page.screenshot({
+      path: `${EVIDENCE_DIR}/modal-account-${width}.png`,
+    });
 
     await page.keyboard.press("Escape");
     await expect(dialog, "Esc closes the dialog").toHaveCount(0);
@@ -382,20 +426,24 @@ for (const width of WIDTHS) {
     await expect(headline).toContainText("Current Plan");
     await expect(headline).toContainText("Sharp");
 
-    expect(INVOICES.length, "fixture invoice count is within the 24-row cap").toBeLessThanOrEqual(
-      24
-    );
+    expect(
+      INVOICES.length,
+      "fixture invoice count is within the 24-row cap"
+    ).toBeLessThanOrEqual(24);
     const invoiceRows = page.locator(".dc-sm-table tbody tr");
-    await expect(invoiceRows, "invoice rows match the fixture count").toHaveCount(
-      INVOICES.length
-    );
+    await expect(
+      invoiceRows,
+      "invoice rows match the fixture count"
+    ).toHaveCount(INVOICES.length);
 
     const pmList = page.locator(".dc-sm-pm-list");
     await expect(pmList).toContainText("••••");
     await expect(pmList).toContainText(PAYMENT_METHODS[0].last4);
 
     await assertNoHorizontalOverflow(page, "modal-billing");
-    await page.screenshot({ path: `${EVIDENCE_DIR}/modal-billing-${width}.png` });
+    await page.screenshot({
+      path: `${EVIDENCE_DIR}/modal-billing-${width}.png`,
+    });
 
     await page.getByRole("button", { name: "Cancel", exact: true }).click();
 
@@ -403,16 +451,25 @@ for (const width of WIDTHS) {
     await expect(confirm).toBeVisible();
     await expect(confirm).toHaveAttribute("role", "alertdialog");
     const confirmText = await confirm.innerText();
-    expect(confirmText, "verbatim owner cancel-confirm copy").toContain(CANCEL_CONFIRM_COPY);
+    expect(confirmText, "verbatim owner cancel-confirm copy").toContain(
+      CANCEL_CONFIRM_COPY
+    );
 
-    const cancelPlanBtn = page.getByRole("button", { name: "Cancel plan", exact: true });
-    const bg = await cancelPlanBtn.evaluate(el => getComputedStyle(el).backgroundColor);
+    const cancelPlanBtn = page.getByRole("button", {
+      name: "Cancel plan",
+      exact: true,
+    });
+    const bg = await cancelPlanBtn.evaluate(
+      el => getComputedStyle(el).backgroundColor
+    );
     expect(bg, "Cancel plan button background is --dime-danger #E5484D").toBe(
       "rgb(229, 72, 77)"
     );
 
     await assertNoHorizontalOverflow(page, "cancel-confirm");
-    await page.screenshot({ path: `${EVIDENCE_DIR}/cancel-confirm-${width}.png` });
+    await page.screenshot({
+      path: `${EVIDENCE_DIR}/cancel-confirm-${width}.png`,
+    });
 
     await page.getByRole("button", { name: "Keep plan", exact: true }).click();
     await expect(confirm, "Keep plan closes the confirm").toHaveCount(0);
@@ -440,12 +497,14 @@ for (const width of WIDTHS) {
       ).toHaveCount(0);
 
       const bodyText = await page.locator("body").innerText();
-      expect(bodyText, `${path}: no "User Management" text leaked`).not.toContain(
-        "User Management"
-      );
-      expect(bodyText, `${path}: no "Publish Projections" text leaked`).not.toContain(
-        "Publish Projections"
-      );
+      expect(
+        bodyText,
+        `${path}: no "User Management" text leaked`
+      ).not.toContain("User Management");
+      expect(
+        bodyText,
+        `${path}: no "Publish Projections" text leaked`
+      ).not.toContain("Publish Projections");
 
       await assertNoHorizontalOverflow(page, `admin-redirect-${path}`);
     }
@@ -462,9 +521,10 @@ for (const width of WIDTHS) {
 
     for (const path of ["/admin/users", "/admin/publish"] as const) {
       await page.goto(path);
-      await expect(page.locator(".admin-shell"), `${path}: AdminShell renders for owner`).toBeVisible(
-        { timeout: 10000 }
-      );
+      await expect(
+        page.locator(".admin-shell"),
+        `${path}: AdminShell renders for owner`
+      ).toBeVisible({ timeout: 10000 });
 
       const tabs = page.getByRole("tab");
       await expect(tabs, `${path}: exactly two admin tabs`).toHaveCount(2);
@@ -474,7 +534,9 @@ for (const width of WIDTHS) {
       await assertNoHorizontalOverflow(page, `admin-owner-${path}`);
 
       if (path === "/admin/users") {
-        await page.screenshot({ path: `${EVIDENCE_DIR}/admin-users-owner-${width}.png` });
+        await page.screenshot({
+          path: `${EVIDENCE_DIR}/admin-users-owner-${width}.png`,
+        });
       }
     }
   });

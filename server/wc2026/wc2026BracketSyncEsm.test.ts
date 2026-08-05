@@ -20,30 +20,38 @@ import path from "path";
 const repoRoot = path.resolve(import.meta.dirname, "..", "..");
 const heartbeatSrc = fs.readFileSync(
   path.join(repoRoot, "server", "wc2026", "wc2026Heartbeat.ts"),
-  "utf8",
+  "utf8"
 );
-const pkg = JSON.parse(fs.readFileSync(path.join(repoRoot, "package.json"), "utf8"));
+const pkg = JSON.parse(
+  fs.readFileSync(path.join(repoRoot, "package.json"), "utf8")
+);
 
 describe("WC2026 bracket-sync ESM safety", () => {
   it("derives __dirname from import.meta.url (ESM-safe)", () => {
     expect(heartbeatSrc).toMatch(/fileURLToPath\(import\.meta\.url\)/);
-    expect(heartbeatSrc).toMatch(/const __dirname\s*=\s*dirname\(fileURLToPath\(import\.meta\.url\)\)/);
+    expect(heartbeatSrc).toMatch(
+      /const __dirname\s*=\s*dirname\(fileURLToPath\(import\.meta\.url\)\)/
+    );
   });
 
   it("still spawns the bracket scraper by filename (path resolved via __dirname)", () => {
-    expect(heartbeatSrc).toMatch(/join\(__dirname,\s*"wc2026BracketScraper\.mjs"\)/);
+    expect(heartbeatSrc).toMatch(
+      /join\(__dirname,\s*"wc2026BracketScraper\.mjs"\)/
+    );
   });
 
   it("build:server copies the bracket scraper into dist", () => {
     const buildServer = pkg.scripts?.["build:server"] ?? "";
     expect(buildServer).toContain(
-      "cp server/wc2026/wc2026BracketScraper.mjs dist/wc2026BracketScraper.mjs",
+      "cp server/wc2026/wc2026BracketScraper.mjs dist/wc2026BracketScraper.mjs"
     );
   });
 
   it("the bracket scraper file exists to be copied", () => {
     expect(
-      fs.existsSync(path.join(repoRoot, "server", "wc2026", "wc2026BracketScraper.mjs")),
+      fs.existsSync(
+        path.join(repoRoot, "server", "wc2026", "wc2026BracketScraper.mjs")
+      )
     ).toBe(true);
   });
 });

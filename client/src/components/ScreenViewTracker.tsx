@@ -22,7 +22,10 @@ export default function ScreenViewTracker() {
     if (prev.current === route) return;
     const from = prev.current;
     prev.current = route;
-    track("screen_viewed", { route, ...(from ? { props: { from_route: from } } : {}) });
+    track("screen_viewed", {
+      route,
+      ...(from ? { props: { from_route: from } } : {}),
+    });
   }, [location, appUser, track]);
 
   return null;

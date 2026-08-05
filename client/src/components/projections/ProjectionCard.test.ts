@@ -5,10 +5,7 @@ import fs from "fs";
 import path from "path";
 import { MarketTable } from "./MarketTable";
 import { TeamLogoMark } from "./TeamLogoMark";
-import {
-  ProjectionCard,
-  rankedNoEdgeCandidates,
-} from "./ProjectionCard";
+import { ProjectionCard, rankedNoEdgeCandidates } from "./ProjectionCard";
 import {
   marketPaginationItems,
   projectionMarketPage,
@@ -20,27 +17,47 @@ import type { ProjectionGame } from "./types";
  *  raw so these assertions pin the actual rules the visual smoke screenshots
  *  verify, without a browser/CSSOM in this vitest environment (same pattern
  *  as the W1 DOM-only harness note below). */
-const cardCss = fs.readFileSync(path.join(import.meta.dirname, "ProjectionCard.css"), "utf8");
-const edgeIndicatorCss = fs.readFileSync(path.join(import.meta.dirname, "EdgeIndicator.css"), "utf8");
-const summaryCarouselSrc = fs.readFileSync(path.join(import.meta.dirname, "SummaryCarousel.tsx"), "utf8");
+const cardCss = fs.readFileSync(
+  path.join(import.meta.dirname, "ProjectionCard.css"),
+  "utf8"
+);
+const edgeIndicatorCss = fs.readFileSync(
+  path.join(import.meta.dirname, "EdgeIndicator.css"),
+  "utf8"
+);
+const summaryCarouselSrc = fs.readFileSync(
+  path.join(import.meta.dirname, "SummaryCarousel.tsx"),
+  "utf8"
+);
 const marketPopoverSrc = fs.readFileSync(
   path.join(import.meta.dirname, "ProjectionMarketsPopover.tsx"),
-  "utf8",
+  "utf8"
 );
 const feedSrc = fs.readFileSync(
   path.join(import.meta.dirname, "..", "..", "pages", "DimeModelFeed.tsx"),
-  "utf8",
+  "utf8"
 );
 const lawDoc = fs.readFileSync(
-  path.join(import.meta.dirname, "..", "..", "..", "..", "design-system", "dime-ai", "pages", "ai-model-projections.md"),
-  "utf8",
+  path.join(
+    import.meta.dirname,
+    "..",
+    "..",
+    "..",
+    "..",
+    "design-system",
+    "dime-ai",
+    "pages",
+    "ai-model-projections.md"
+  ),
+  "utf8"
 );
 
 /** Slice the CSS source between two heading comments (exclusive of the second). */
 function cssBlock(src: string, startMarker: string, endMarker: string): string {
   const start = src.indexOf(startMarker);
   const end = src.indexOf(endMarker, start);
-  if (start < 0 || end < 0) throw new Error(`CSS anchors changed: "${startMarker}" / "${endMarker}"`);
+  if (start < 0 || end < 0)
+    throw new Error(`CSS anchors changed: "${startMarker}" / "${endMarker}"`);
   return src.slice(start, end);
 }
 
@@ -54,7 +71,7 @@ describe("TeamLogoMark — whitespace-free optical sizing and dark contrast", ()
           logo: `https://www.mlbstatic.com/team-logos/${abbr}.svg`,
           color: null,
         },
-      }),
+      })
     );
 
   it("preserves official non-square aspect metadata instead of forcing a square image", () => {
@@ -62,8 +79,12 @@ describe("TeamLogoMark — whitespace-free optical sizing and dark contrast", ()
     const reds = renderLogo("CIN");
     expect(yankees).toContain('width="144" height="150"');
     expect(reds).toContain('width="213" height="150"');
-    expect(cardCss).toMatch(/\.team-logo-box\s*\{[^}]*inline-size:\s*auto;[^}]*block-size:\s*clamp/);
-    expect(cardCss).toMatch(/\.team-logo\s*\{[^}]*inline-size:\s*auto;[^}]*block-size:\s*100%;/);
+    expect(cardCss).toMatch(
+      /\.team-logo-box\s*\{[^}]*inline-size:\s*auto;[^}]*block-size:\s*clamp/
+    );
+    expect(cardCss).toMatch(
+      /\.team-logo\s*\{[^}]*inline-size:\s*auto;[^}]*block-size:\s*100%;/
+    );
     expect(cardCss).toContain(".team-logo-box--mono { aspect-ratio: 1; }");
   });
 
@@ -71,26 +92,30 @@ describe("TeamLogoMark — whitespace-free optical sizing and dark contrast", ()
     expect(renderLogo("NYY")).toContain("team-logo-box--dark-outline");
     expect(renderLogo("CHC")).not.toContain("team-logo-box--dark-outline");
     expect(cardCss).toContain(
-      'html[data-theme-mode="dark"] .team-logo-box--dark-outline .team-logo',
+      'html[data-theme-mode="dark"] .team-logo-box--dark-outline .team-logo'
     );
     expect(cardCss).toContain(
-      'html:not([data-theme-mode]) .dmf-root[data-dmf-mode="dark"] .team-logo-box--dark-outline .team-logo',
+      'html:not([data-theme-mode]) .dmf-root[data-dmf-mode="dark"] .team-logo-box--dark-outline .team-logo'
     );
     // the retired "system" mode must not resurface in selectors
     expect(cardCss).not.toContain('data-theme-mode="system"');
     expect(cardCss).not.toContain('data-dmf-mode="system"');
     expect(cardCss).not.toContain(
-      'html[data-theme-mode="light"] .team-logo-box--dark-outline .team-logo',
+      'html[data-theme-mode="light"] .team-logo-box--dark-outline .team-logo'
     );
     expect(cardCss).not.toContain(
-      '.dmf-root[data-dmf-mode="light"] .team-logo-box--dark-outline .team-logo',
+      '.dmf-root[data-dmf-mode="light"] .team-logo-box--dark-outline .team-logo'
     );
     const outlineRule = cardCss.slice(
-      cardCss.indexOf('html[data-theme-mode="dark"] .team-logo-box--dark-outline'),
-      cardCss.indexOf(".team-logo-box--mono"),
+      cardCss.indexOf(
+        'html[data-theme-mode="dark"] .team-logo-box--dark-outline'
+      ),
+      cardCss.indexOf(".team-logo-box--mono")
     );
     expect(countOccurrences(outlineRule, "drop-shadow(")).toBe(1);
-    expect(outlineRule).toContain("drop-shadow(0 0 0.2px rgba(255, 255, 255, 0.92))");
+    expect(outlineRule).toContain(
+      "drop-shadow(0 0 0.2px rgba(255, 255, 255, 0.92))"
+    );
     expect(outlineRule).not.toMatch(/drop-shadow\([^)]*1px/);
   });
 });
@@ -104,7 +129,11 @@ describe("TeamLogoMark — whitespace-free optical sizing and dark contrast", ()
  * existing vitest `client/src/**​/*.test.ts` include and needs no JSX runtime.
  */
 
-const country = (name: string, abbr: string, flag: string): ProjectionGame["away"] => ({
+const country = (
+  name: string,
+  abbr: string,
+  flag: string
+): ProjectionGame["away"] => ({
   abbr,
   name,
   kind: "country",
@@ -147,7 +176,10 @@ function wcFixture(): ProjectionGame {
       {
         key: "ml",
         label: "Moneyline",
-        sides: [side("ml", "Moneyline", "Spain"), side("ml", "Moneyline", "France")],
+        sides: [
+          side("ml", "Moneyline", "Spain"),
+          side("ml", "Moneyline", "France"),
+        ],
       },
     ],
   };
@@ -156,8 +188,13 @@ function wcFixture(): ProjectionGame {
 /** The Giants @ Mariners card from the directive screenshot: U 7 carries a
  *  real edge (book -112, model -136) so the summary readout renders. */
 function mlbFixture(): ProjectionGame {
-  const team = (abbr: string, name: string): ProjectionGame["away"] =>
-    ({ abbr, name, logo: null, color: "#333333", score: null });
+  const team = (abbr: string, name: string): ProjectionGame["away"] => ({
+    abbr,
+    name,
+    logo: null,
+    color: "#333333",
+    score: null,
+  });
   return {
     id: "sf-sea",
     league: "MLB",
@@ -195,8 +232,22 @@ function mlbFixture(): ProjectionGame {
         key: "total",
         label: "Total",
         sides: [
-          { marketKey: "total", marketLabel: "Total", sideLabel: "O 7", bookPrice: -108, bookOppPrice: -112, modelPrice: 118 },
-          { marketKey: "total", marketLabel: "Total", sideLabel: "U 7", bookPrice: -112, bookOppPrice: -108, modelPrice: -136 },
+          {
+            marketKey: "total",
+            marketLabel: "Total",
+            sideLabel: "O 7",
+            bookPrice: -108,
+            bookOppPrice: -112,
+            modelPrice: 118,
+          },
+          {
+            marketKey: "total",
+            marketLabel: "Total",
+            sideLabel: "U 7",
+            bookPrice: -112,
+            bookOppPrice: -108,
+            modelPrice: -136,
+          },
         ],
       },
       {
@@ -323,7 +374,12 @@ describe("ProjectionCard — no corner league label (owner directive 2026-07-18)
   });
 
   it("live/final cards keep the status header without a league label", () => {
-    const html = render({ ...wcFixture(), status: "final", statusLabel: "FINAL", startTime: undefined });
+    const html = render({
+      ...wcFixture(),
+      status: "final",
+      statusLabel: "FINAL",
+      startTime: undefined,
+    });
     expect(html).toContain("projection-card__head");
     expect(html).toContain("FINAL");
     expect(html).not.toContain("projection-card__league");
@@ -335,8 +391,13 @@ describe("ProjectionCard — no corner league label (owner directive 2026-07-18)
  *  -115, model -157); the run line is dead even (no edge). Labels arrive
  *  pre-spelled from the presentation layer ("Yankees ML", "Under 9"). */
 function multiEdgeFixture(): ProjectionGame {
-  const team = (abbr: string, name: string): ProjectionGame["away"] =>
-    ({ abbr, name, logo: null, color: "#333333", score: null });
+  const team = (abbr: string, name: string): ProjectionGame["away"] => ({
+    abbr,
+    name,
+    logo: null,
+    color: "#333333",
+    score: null,
+  });
   return {
     id: "lad-nyy",
     league: "MLB",
@@ -352,24 +413,66 @@ function multiEdgeFixture(): ProjectionGame {
         key: "run-line",
         label: "Run Line",
         sides: [
-          { marketKey: "run-line", marketLabel: "Run Line", sideLabel: "Dodgers -1.5", bookPrice: 140, bookOppPrice: -170, modelPrice: 140 },
-          { marketKey: "run-line", marketLabel: "Run Line", sideLabel: "Yankees +1.5", bookPrice: -170, bookOppPrice: 140, modelPrice: -170 },
+          {
+            marketKey: "run-line",
+            marketLabel: "Run Line",
+            sideLabel: "Dodgers -1.5",
+            bookPrice: 140,
+            bookOppPrice: -170,
+            modelPrice: 140,
+          },
+          {
+            marketKey: "run-line",
+            marketLabel: "Run Line",
+            sideLabel: "Yankees +1.5",
+            bookPrice: -170,
+            bookOppPrice: 140,
+            modelPrice: -170,
+          },
         ],
       },
       {
         key: "total",
         label: "Total",
         sides: [
-          { marketKey: "total", marketLabel: "Total", sideLabel: "Over 9", bookPrice: -105, bookOppPrice: -115, modelPrice: 130 },
-          { marketKey: "total", marketLabel: "Total", sideLabel: "Under 9", bookPrice: -115, bookOppPrice: -105, modelPrice: -157 },
+          {
+            marketKey: "total",
+            marketLabel: "Total",
+            sideLabel: "Over 9",
+            bookPrice: -105,
+            bookOppPrice: -115,
+            modelPrice: 130,
+          },
+          {
+            marketKey: "total",
+            marketLabel: "Total",
+            sideLabel: "Under 9",
+            bookPrice: -115,
+            bookOppPrice: -105,
+            modelPrice: -157,
+          },
         ],
       },
       {
         key: "moneyline",
         label: "Moneyline",
         sides: [
-          { marketKey: "moneyline", marketLabel: "Moneyline", sideLabel: "Dodgers ML", bookPrice: -115, bookOppPrice: -105, modelPrice: 152 },
-          { marketKey: "moneyline", marketLabel: "Moneyline", sideLabel: "Yankees ML", bookPrice: -105, bookOppPrice: -115, modelPrice: -152 },
+          {
+            marketKey: "moneyline",
+            marketLabel: "Moneyline",
+            sideLabel: "Dodgers ML",
+            bookPrice: -115,
+            bookOppPrice: -105,
+            modelPrice: 152,
+          },
+          {
+            marketKey: "moneyline",
+            marketLabel: "Moneyline",
+            sideLabel: "Yankees ML",
+            bookPrice: -105,
+            bookOppPrice: -115,
+            modelPrice: -152,
+          },
         ],
       },
     ],
@@ -560,8 +663,17 @@ describe("ProjectionCard — paginated market popover", () => {
 describe("ProjectionCard — unified score row (Round 4 Wave 1, item 2)", () => {
   /** A live/final game: both scores present, so MatchupPanel's showScore branch fires. */
   function scoredFixture(): ProjectionGame {
-    const team = (abbr: string, name: string, score: number): ProjectionGame["away"] =>
-      ({ abbr, name, logo: null, color: "#333333", score });
+    const team = (
+      abbr: string,
+      name: string,
+      score: number
+    ): ProjectionGame["away"] => ({
+      abbr,
+      name,
+      logo: null,
+      color: "#333333",
+      score,
+    });
     return {
       id: "lad-nyy-final",
       league: "MLB",
@@ -593,10 +705,14 @@ describe("ProjectionCard — unified score row (Round 4 Wave 1, item 2)", () => 
     const html = render(mlbFixture());
     expect(html).not.toContain("matchup__score");
     expect(cardCss).toMatch(
-      /\.matchup__grid\s*\{[^}]*grid-template-columns:\s*auto minmax\(0, 1fr\) auto;/,
+      /\.matchup__grid\s*\{[^}]*grid-template-columns:\s*auto minmax\(0, 1fr\) auto;/
     );
-    expect(cardCss).toContain(".matchup__team--away { justify-content: flex-end; }");
-    expect(cardCss).toContain(".matchup__team--home { justify-content: flex-start; }");
+    expect(cardCss).toContain(
+      ".matchup__team--away { justify-content: flex-end; }"
+    );
+    expect(cardCss).toContain(
+      ".matchup__team--home { justify-content: flex-start; }"
+    );
   });
 });
 
@@ -604,8 +720,13 @@ describe("ProjectionCard — PASS-card law (Round 4 Wave 1, item 3)", () => {
   /** A game with a real market but neither side clears the WATCH threshold —
    *  a genuine whole-card PASS (edgePP well under 1.5pp both sides). */
   function passFixture(): ProjectionGame {
-    const team = (abbr: string, name: string): ProjectionGame["away"] =>
-      ({ abbr, name, logo: null, color: "#333333", score: null });
+    const team = (abbr: string, name: string): ProjectionGame["away"] => ({
+      abbr,
+      name,
+      logo: null,
+      color: "#333333",
+      score: null,
+    });
     return {
       id: "oak-tex",
       league: "MLB",
@@ -621,8 +742,22 @@ describe("ProjectionCard — PASS-card law (Round 4 Wave 1, item 3)", () => {
           key: "moneyline",
           label: "Moneyline",
           sides: [
-            { marketKey: "moneyline", marketLabel: "Moneyline", sideLabel: "Athletics ML", bookPrice: -110, bookOppPrice: -110, modelPrice: -110 },
-            { marketKey: "moneyline", marketLabel: "Moneyline", sideLabel: "Rangers ML", bookPrice: -110, bookOppPrice: -110, modelPrice: -110 },
+            {
+              marketKey: "moneyline",
+              marketLabel: "Moneyline",
+              sideLabel: "Athletics ML",
+              bookPrice: -110,
+              bookOppPrice: -110,
+              modelPrice: -110,
+            },
+            {
+              marketKey: "moneyline",
+              marketLabel: "Moneyline",
+              sideLabel: "Rangers ML",
+              bookPrice: -110,
+              bookOppPrice: -110,
+              modelPrice: -110,
+            },
           ],
         },
       ],
@@ -640,10 +775,14 @@ describe("ProjectionCard — PASS-card law (Round 4 Wave 1, item 3)", () => {
     expect(html).toContain('summary__pick">Athletics ML<');
     expect(html).toContain("ROI +4.8%");
     expect(html).not.toContain(">No edge<");
-    expect(html).toContain('aria-label="No actionable edge: Athletics ML; no-vig ROI +4.8%"');
+    expect(html).toContain(
+      'aria-label="No actionable edge: Athletics ML; no-vig ROI +4.8%"'
+    );
     // A priced PASS uses the standard MODEL EDGE / BOOK / MODEL facts, never
     // the unavailable-data sentence or a divergent standalone <p>.
-    expect(html).not.toContain("Every market is efficiently priced. No action.");
+    expect(html).not.toContain(
+      "Every market is efficiently priced. No action."
+    );
     expect(html).not.toMatch(/<p class="summary__none/);
   });
 
@@ -664,41 +803,85 @@ describe("ProjectionCard — PASS-card law (Round 4 Wave 1, item 3)", () => {
           key: "runline",
           label: "Run Line",
           sides: [
-            { marketKey: "runline", marketLabel: "Run Line", sideLabel: "Athletics +1.5", bookPrice: -120, bookOppPrice: -120, modelPrice: 125 },
-            { marketKey: "runline", marketLabel: "Run Line", sideLabel: "Rangers -1.5", bookPrice: -120, bookOppPrice: -120, modelPrice: 130 },
+            {
+              marketKey: "runline",
+              marketLabel: "Run Line",
+              sideLabel: "Athletics +1.5",
+              bookPrice: -120,
+              bookOppPrice: -120,
+              modelPrice: 125,
+            },
+            {
+              marketKey: "runline",
+              marketLabel: "Run Line",
+              sideLabel: "Rangers -1.5",
+              bookPrice: -120,
+              bookOppPrice: -120,
+              modelPrice: 130,
+            },
           ],
         },
         {
           key: "total",
           label: "Total",
           sides: [
-            { marketKey: "total", marketLabel: "Total", sideLabel: "Over 8.5", bookPrice: -105, bookOppPrice: -105, modelPrice: 105 },
-            { marketKey: "total", marketLabel: "Total", sideLabel: "Under 8.5", bookPrice: -105, bookOppPrice: -105, modelPrice: 120 },
+            {
+              marketKey: "total",
+              marketLabel: "Total",
+              sideLabel: "Over 8.5",
+              bookPrice: -105,
+              bookOppPrice: -105,
+              modelPrice: 105,
+            },
+            {
+              marketKey: "total",
+              marketLabel: "Total",
+              sideLabel: "Under 8.5",
+              bookPrice: -105,
+              bookOppPrice: -105,
+              modelPrice: 120,
+            },
           ],
         },
         {
           key: "moneyline",
           label: "Moneyline",
           sides: [
-            { marketKey: "moneyline", marketLabel: "Moneyline", sideLabel: "Athletics ML", bookPrice: -110, bookOppPrice: -110, modelPrice: 110 },
-            { marketKey: "moneyline", marketLabel: "Moneyline", sideLabel: "Rangers ML", bookPrice: -110, bookOppPrice: -110, modelPrice: 115 },
+            {
+              marketKey: "moneyline",
+              marketLabel: "Moneyline",
+              sideLabel: "Athletics ML",
+              bookPrice: -110,
+              bookOppPrice: -110,
+              modelPrice: 110,
+            },
+            {
+              marketKey: "moneyline",
+              marketLabel: "Moneyline",
+              sideLabel: "Rangers ML",
+              bookPrice: -110,
+              bookOppPrice: -110,
+              modelPrice: 115,
+            },
           ],
         },
       ],
     };
     const ranked = rankedNoEdgeCandidates(game);
-    expect(ranked.map((item) => item.marketKey)).toEqual([
+    expect(ranked.map(item => item.marketKey)).toEqual([
       "total",
       "moneyline",
       "runline",
     ]);
-    expect(ranked.map((item) => item.sideLabel)).toEqual([
+    expect(ranked.map(item => item.sideLabel)).toEqual([
       "Over 8.5",
       "Athletics ML",
       "Athletics +1.5",
     ]);
-    expect(ranked.every((item) => item.roiPct != null && item.roiPct < 0)).toBe(true);
-    expect(ranked.every((item) => item.recommendation === "NO_EDGE")).toBe(true);
+    expect(ranked.every(item => item.roiPct != null && item.roiPct < 0)).toBe(
+      true
+    );
+    expect(ranked.every(item => item.recommendation === "NO_EDGE")).toBe(true);
 
     const html = render(game);
     expect(countOccurrences(html, "summary-carousel__slide")).toBe(3);
@@ -706,15 +889,19 @@ describe("ProjectionCard — PASS-card law (Round 4 Wave 1, item 3)", () => {
     expect(countOccurrences(html, "edge-indicator--none")).toBe(3);
     expect(countOccurrences(html, "No actionable edge:")).toBe(3);
     expect(html.indexOf("Over 8.5")).toBeLessThan(html.indexOf("Athletics ML"));
-    expect(html.indexOf("Athletics ML")).toBeLessThan(html.indexOf("Athletics +1.5"));
+    expect(html.indexOf("Athletics ML")).toBeLessThan(
+      html.indexOf("Athletics +1.5")
+    );
     expect(html).toContain("ROI −2.4%");
     expect(html).toContain("ROI −4.8%");
     expect(html).toContain("ROI −11.1%");
-    expect(html).toContain("non-actionable market projections, ranked by no-vig ROI");
+    expect(html).toContain(
+      "non-actionable market projections, ranked by no-vig ROI"
+    );
     expect(html).toContain("View next projection:");
     expect(html).toContain("summary-carousel--no-edge");
     expect(cardCss).toMatch(
-      /\.summary-carousel--no-edge \.summary__next\s*\{[^}]*color:\s*var\(--foreground/,
+      /\.summary-carousel--no-edge \.summary__next\s*\{[^}]*color:\s*var\(--foreground/
     );
   });
 
@@ -729,16 +916,28 @@ describe("ProjectionCard — PASS-card law (Round 4 Wave 1, item 3)", () => {
 
 describe("ProjectionCard — live indicator (Round 4 Wave 1, item 4)", () => {
   it("a live card renders the pulsing dot beside the status label", () => {
-    const html = render({ ...wcFixture(), status: "live", statusLabel: "LIVE · TOP 5TH", startTime: undefined });
+    const html = render({
+      ...wcFixture(),
+      status: "live",
+      statusLabel: "LIVE · TOP 5TH",
+      startTime: undefined,
+    });
     expect(html).toContain("projection-card__live-dot");
     expect(html).toContain("projection-card__status--live");
     expect(html).toContain("LIVE · TOP 5TH");
     // The dot precedes the label text inside the same status span.
-    expect(html.indexOf("projection-card__live-dot")).toBeLessThan(html.indexOf("LIVE · TOP 5TH"));
+    expect(html.indexOf("projection-card__live-dot")).toBeLessThan(
+      html.indexOf("LIVE · TOP 5TH")
+    );
   });
 
   it("final and scheduled cards never render the live dot", () => {
-    const final = render({ ...wcFixture(), status: "final", statusLabel: "FINAL", startTime: undefined });
+    const final = render({
+      ...wcFixture(),
+      status: "final",
+      statusLabel: "FINAL",
+      startTime: undefined,
+    });
     expect(final).not.toContain("projection-card__live-dot");
     const scheduled = render(wcFixture());
     expect(scheduled).not.toContain("projection-card__live-dot");
@@ -763,31 +962,31 @@ describe("ProjectionCard — Rotowire pregame context", () => {
 
   it("precisely top-centers headshots and renders LINEUPS as the mint, black, 44px CTA", () => {
     expect(cardCss).toMatch(
-      /\.pregame-pitcher__photo\s*\{[^}]*place-items:\s*start center;/,
+      /\.pregame-pitcher__photo\s*\{[^}]*place-items:\s*start center;/
     );
     expect(cardCss).toMatch(
-      /\.pregame-pitcher__photo img\[data-headshot-source="mlb"\]\s*\{[^}]*object-fit:\s*contain;[^}]*object-position:\s*center top;[^}]*transform:\s*scale\(0\.82\);[^}]*transform-origin:\s*center top;/,
+      /\.pregame-pitcher__photo img\[data-headshot-source="mlb"\]\s*\{[^}]*object-fit:\s*contain;[^}]*object-position:\s*center top;[^}]*transform:\s*scale\(0\.82\);[^}]*transform-origin:\s*center top;/
     );
     expect(cardCss).toMatch(
-      /\.pregame-pitcher__photo img\[data-headshot-source="rotowire"\]\s*\{[^}]*object-fit:\s*cover;[^}]*object-position:\s*center;[^}]*transform:\s*scale\(0\.9\);[^}]*transform-origin:\s*center;/,
+      /\.pregame-pitcher__photo img\[data-headshot-source="rotowire"\]\s*\{[^}]*object-fit:\s*cover;[^}]*object-position:\s*center;[^}]*transform:\s*scale\(0\.9\);[^}]*transform-origin:\s*center;/
     );
     // Audit DIME-UI-014: LINEUPS is a quiet raised chip — mint fill is
     // rationed to the edge signal, so the chip must NOT carry the raw mint.
     expect(cardCss).toMatch(
-      /\.pregame-pitchers__lineups\s*\{[^}]*min-block-size:\s*44px;[^}]*color:\s*var\(--foreground\);[^}]*background:\s*var\(--surface-raised\);[^}]*border-radius:\s*12px;/,
+      /\.pregame-pitchers__lineups\s*\{[^}]*min-block-size:\s*44px;[^}]*color:\s*var\(--foreground\);[^}]*background:\s*var\(--surface-raised\);[^}]*border-radius:\s*12px;/
     );
     expect(cardCss).toMatch(
-      /\.pregame-pitchers__lineups:active\s*\{\s*transform:\s*scale\(0\.98\);\s*\}/,
+      /\.pregame-pitchers__lineups:active\s*\{\s*transform:\s*scale\(0\.98\);\s*\}/
     );
   });
 
   it("keeps complete pitcher names on one line in equal tracks at EVERY viewport (container-driven)", () => {
     expect(cardCss).toMatch(
-      /\.pregame-pitcher__name\s*\{[^}]*overflow-wrap:\s*anywhere;/,
+      /\.pregame-pitcher__name\s*\{[^}]*overflow-wrap:\s*anywhere;/
     );
     const compactPregame = cardCss.slice(
       cardCss.indexOf("Compact cards keep both complete pitcher names"),
-      cardCss.indexOf("Deep-narrow defensive tier"),
+      cardCss.indexOf("Deep-narrow defensive tier")
     );
     // 2026-08-02: card-width-driven only — the old <=1023.98px media wrapper
     // exempted desktop 3-across cards (the narrowest in the product), which
@@ -795,26 +994,26 @@ describe("ProjectionCard — Rotowire pregame context", () => {
     expect(compactPregame).not.toContain("@media (max-width: 1023.98px)");
     expect(compactPregame).toContain("@container projcard (max-width: 520px)");
     expect(compactPregame).toMatch(
-      /\.pregame-pitchers\s*\{[^}]*position:\s*relative;[^}]*grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\);/,
+      /\.pregame-pitchers\s*\{[^}]*position:\s*relative;[^}]*grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\);/
     );
     expect(compactPregame).toMatch(
-      /\.pregame-pitcher__name\s*\{[^}]*overflow-wrap:\s*normal;[^}]*white-space:\s*nowrap;/,
+      /\.pregame-pitcher__name\s*\{[^}]*overflow-wrap:\s*normal;[^}]*white-space:\s*nowrap;/
     );
     // Audit DIME-UI-004: explicit grid placement (row 1, full-span, centered)
     // replaced the absolute overlay whose auto-placement wrapped the home
     // pitcher onto a diagonal second row at 390px.
     expect(compactPregame).toMatch(
-      /\.pregame-pitchers__lineups\s*\{[^}]*grid-column:\s*1 \/ -1;[^}]*grid-row:\s*1;[^}]*place-self:\s*center;[^}]*min-inline-size:\s*4rem;/,
+      /\.pregame-pitchers__lineups\s*\{[^}]*grid-column:\s*1 \/ -1;[^}]*grid-row:\s*1;[^}]*place-self:\s*center;[^}]*min-inline-size:\s*4rem;/
     );
     expect(compactPregame).toMatch(
-      /\.pregame-pitcher--away\s*\{\s*grid-row:\s*1;\s*\}/,
+      /\.pregame-pitcher--away\s*\{\s*grid-row:\s*1;\s*\}/
     );
   });
 
   it("the deep-narrow (<=280px card) tier is a pure container tier — no viewport media", () => {
     const deepNarrow = cardCss.slice(
       cardCss.indexOf("Deep-narrow defensive tier"),
-      cardCss.indexOf("The dialog is portalled"),
+      cardCss.indexOf("The dialog is portalled")
     );
     // 2026-08-02: the old @media(min-width:1024px) wrapper is gone — under
     // the content-driven grid no multi-column card can resolve below ~305px,
@@ -822,10 +1021,12 @@ describe("ProjectionCard — Rotowire pregame context", () => {
     expect(deepNarrow).not.toContain("@media (min-width: 1024px)");
     expect(deepNarrow).toContain("@container projcard (max-width: 280px)");
     expect(deepNarrow).toMatch(
-      /\.pregame-pitchers\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\) 3rem minmax\(0, 1fr\);[^}]*gap:\s*2px;/,
+      /\.pregame-pitchers\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\) 3rem minmax\(0, 1fr\);[^}]*gap:\s*2px;/
     );
     // Its summary group stays the single-column two-row anatomy.
-    expect(deepNarrow).toMatch(/\.summary__group \{ grid-template-columns: minmax\(0, auto\); \}/);
+    expect(deepNarrow).toMatch(
+      /\.summary__group \{ grid-template-columns: minmax\(0, auto\); \}/
+    );
   });
 
   it("never renders stale pregame data after a game becomes live, final, or postponed", () => {
@@ -833,7 +1034,8 @@ describe("ProjectionCard — Rotowire pregame context", () => {
       const html = render({
         ...mlbPregameFixture(),
         status,
-        statusLabel: status === "live" ? "LIVE · TOP 1ST" : status.toUpperCase(),
+        statusLabel:
+          status === "live" ? "LIVE · TOP 1ST" : status.toUpperCase(),
         startTime: undefined,
       });
       expect(html).toContain(`projection-card--${status}`);
@@ -845,10 +1047,14 @@ describe("ProjectionCard — Rotowire pregame context", () => {
   });
 
   it("pins compact cards to their natural height and applies the diminished treatment", () => {
-    expect(cardCss).toMatch(/\.projection-card--compact\s*\{[\s\S]*?align-self:\s*start;/);
-    expect(cardCss).toMatch(/\.projection-card--compact\s*\{[\s\S]*?opacity:\s*0\.72;/);
     expect(cardCss).toMatch(
-      /\.projection-card--scheduled\.projection-card--with-pregame\s*\{[\s\S]*?grid-template-areas:\s*"matchup"\s*"pregame"\s*"summary"\s*"markets";/,
+      /\.projection-card--compact\s*\{[\s\S]*?align-self:\s*start;/
+    );
+    expect(cardCss).toMatch(
+      /\.projection-card--compact\s*\{[\s\S]*?opacity:\s*0\.72;/
+    );
+    expect(cardCss).toMatch(
+      /\.projection-card--scheduled\.projection-card--with-pregame\s*\{[\s\S]*?grid-template-areas:\s*"matchup"\s*"pregame"\s*"summary"\s*"markets";/
     );
   });
 });
@@ -864,26 +1070,30 @@ describe("ProjectionCard — equal-height rows & pinned market trigger (Round 4 
   it("the league grid is CONTENT-driven: 2-up at >=622px and 3-up at >=940px of league-body width, container queries only", () => {
     const feedCss = fs.readFileSync(
       path.join(import.meta.dirname, "..", "..", "pages", "dimeModelFeed.css"),
-      "utf8",
+      "utf8"
     );
     const flatFeedCss = feedCss.replace(/\s+/g, " ");
     expect(flatFeedCss).toMatch(
-      /@container dmf-league \(min-width: 622px\) \{ \.dmf-leaguebody \{ grid-template-columns: repeat\(2, minmax\(0, 1fr\)\); align-items: stretch; \} \}/,
+      /@container dmf-league \(min-width: 622px\) \{ \.dmf-leaguebody \{ grid-template-columns: repeat\(2, minmax\(0, 1fr\)\); align-items: stretch; \} \}/
     );
     // FEED-CL01a regression guard (generalized 2026-08-02): every column rule
     // keys off the league body's own width — a viewport media query here
     // recreates the ~194px-card crest-overhang band inside the app shell.
     expect(flatFeedCss).toMatch(
-      /@container dmf-league \(min-width: 940px\) \{ \.dmf-leaguebody \{ grid-template-columns: repeat\(3, minmax\(0, 1fr\)\); align-items: stretch; \} \}/,
+      /@container dmf-league \(min-width: 940px\) \{ \.dmf-leaguebody \{ grid-template-columns: repeat\(3, minmax\(0, 1fr\)\); align-items: stretch; \} \}/
     );
-    expect(flatFeedCss).toContain(".dmf-league { display: block; container: dmf-league / inline-size; }");
-    expect(feedCss).not.toMatch(/@media[^{]*\{[^{]*\.dmf-leaguebody \{ grid-template-columns/);
+    expect(flatFeedCss).toContain(
+      ".dmf-league { display: block; container: dmf-league / inline-size; }"
+    );
+    expect(feedCss).not.toMatch(
+      /@media[^{]*\{[^{]*\.dmf-leaguebody \{ grid-template-columns/
+    );
   });
 
   it("the law doc records the content-driven density contract and multi-column stretch behavior", () => {
     const section = lawDoc.slice(
       lawDoc.indexOf("Owner Directives — 2026-07-23 (responsive feed density)"),
-      lawDoc.indexOf("Owner Directives — 2026-07-18 (edge labeling"),
+      lawDoc.indexOf("Owner Directives — 2026-07-18 (edge labeling")
     );
     expect(section).toContain("622px");
     expect(section).toContain("940px");
@@ -892,21 +1102,34 @@ describe("ProjectionCard — equal-height rows & pinned market trigger (Round 4 
   });
 
   it("the card carries a flexible summary row so surplus height centers there, trigger pinned last — at every viewport", () => {
-    const item1 = cssBlock(cardCss, "Round 4 Wave 2 — item 1", "── Summary carousel");
+    const item1 = cssBlock(
+      cardCss,
+      "Round 4 Wave 2 — item 1",
+      "── Summary carousel"
+    );
     // 2026-08-02: unconditional (was >=1024px-only) — the container grid
     // stretches row-mates at every multi-column width; in a 1-up row the 1fr
     // resolves to natural height, so mobile is unchanged.
     expect(item1).not.toContain("@media (min-width: 1024px)");
     // grid-template-areas order is head/matchup/summary/markets (scheduled drops head) —
     // the row-track list must line up 1:1: fixed, fixed, 1fr (surplus absorber), fixed (pinned last).
-    expect(item1).toMatch(/\.projection-card\s*\{\s*grid-template-rows:\s*auto auto 1fr auto;\s*\}/);
-    expect(item1).toMatch(/\.projection-card--scheduled\s*\{\s*grid-template-rows:\s*auto 1fr auto;\s*\}/);
+    expect(item1).toMatch(
+      /\.projection-card\s*\{\s*grid-template-rows:\s*auto auto 1fr auto;\s*\}/
+    );
+    expect(item1).toMatch(
+      /\.projection-card--scheduled\s*\{\s*grid-template-rows:\s*auto 1fr auto;\s*\}/
+    );
     // The carousel variant of the summary area also centers in its surplus row.
-    expect(item1).toMatch(/\.summary-carousel\s*\{\s*align-content:\s*center;\s*\}/);
+    expect(item1).toMatch(
+      /\.summary-carousel\s*\{\s*align-content:\s*center;\s*\}/
+    );
   });
 
   it("item 1's grid-template-rows contract is declared exactly once (in the item-1 section)", () => {
-    const beforeItem1 = cardCss.slice(0, cardCss.indexOf("Round 4 Wave 2 — item 1"));
+    const beforeItem1 = cardCss.slice(
+      0,
+      cardCss.indexOf("Round 4 Wave 2 — item 1")
+    );
     expect(beforeItem1).not.toMatch(/grid-template-rows:\s*auto auto 1fr auto/);
   });
 });
@@ -928,17 +1151,21 @@ describe("ProjectionCard — centered single-row summary group", () => {
   });
 
   it("centers the readout and signal together as one intrinsic-width group", () => {
-    const centered = cssBlock(cardCss, "Centered summary group", "Round 4 Wave 2 — item 1");
+    const centered = cssBlock(
+      cardCss,
+      "Centered summary group",
+      "Round 4 Wave 2 — item 1"
+    );
     expect(render(mlbFixture())).toContain("summary__viewport");
     expect(render(mlbFixture())).toContain("summary__group");
     expect(cardCss).toMatch(
-      /\.summary__group\s*\{[^}]*display:\s*flex;[^}]*flex-wrap:\s*nowrap;[^}]*justify-content:\s*center;/,
+      /\.summary__group\s*\{[^}]*display:\s*flex;[^}]*flex-wrap:\s*nowrap;[^}]*justify-content:\s*center;/
     );
     expect(cardCss).toMatch(
-      /\.summary__readout\s*\{[^}]*display:\s*grid;[^}]*grid-template-columns:\s*max-content minmax\(48px, max-content\) minmax\(48px, max-content\);/,
+      /\.summary__readout\s*\{[^}]*display:\s*grid;[^}]*grid-template-columns:\s*max-content minmax\(48px, max-content\) minmax\(48px, max-content\);/
     );
     expect(cardCss).toMatch(
-      /\.summary__viewport\s*\{[^}]*display:\s*grid;[^}]*justify-content:\s*safe center;[^}]*justify-items:\s*safe center;/,
+      /\.summary__viewport\s*\{[^}]*display:\s*grid;[^}]*justify-content:\s*safe center;[^}]*justify-items:\s*safe center;/
     );
     expect(cardCss).toContain(".summary__item--edge { grid-column: 1; }");
     expect(cardCss).toContain(".summary__item--book { grid-column: 2; }");
@@ -946,15 +1173,19 @@ describe("ProjectionCard — centered single-row summary group", () => {
     expect(cardCss).not.toContain(".summary__readout { display: contents; }");
     expect(centered).not.toContain("minmax(max-content, 1fr)");
     expect(cardCss).toMatch(/\.summary__pick\s*\{[^}]*white-space:\s*nowrap;/);
-    expect(cardCss).toContain(".summary__item--message { grid-column: 1 / -1; justify-self: center; }");
+    expect(cardCss).toContain(
+      ".summary__item--message { grid-column: 1 / -1; justify-self: center; }"
+    );
   });
 
   it("never clamps facts: anatomy is width-deterministic, overflow stays local (FEED-EDGE-ROW-CLIP v2)", () => {
     expect(cardCss).toMatch(
-      /\.summary__viewport\s*\{[^}]*inline-size:\s*100%;[^}]*min-inline-size:\s*0;[^}]*overflow-x:\s*auto;/,
+      /\.summary__viewport\s*\{[^}]*inline-size:\s*100%;[^}]*min-inline-size:\s*0;[^}]*overflow-x:\s*auto;/
     );
     expect(render(mlbFixture())).toContain('role="region"');
-    expect(render(mlbFixture())).toContain('aria-label="Model projection summary"');
+    expect(render(mlbFixture())).toContain(
+      'aria-label="Model projection summary"'
+    );
     expect(render(mlbFixture())).toContain('tabindex="0"');
     // FEED-EDGE-ROW-CLIP v2 (2026-08-02) regression guard: the group is
     // nowrap on wide cards (scrollport = escape valve) and a FIXED two-row
@@ -962,25 +1193,37 @@ describe("ProjectionCard — centered single-row summary group", () => {
     // return, because it let one long pick drop its chip while row-mates
     // stayed on one line (mixed anatomy in a single grid row).
     expect(cardCss).toMatch(
-      /\.summary__group\s*\{[^}]*flex-wrap:\s*nowrap;[^}]*max-inline-size:\s*100%;/,
+      /\.summary__group\s*\{[^}]*flex-wrap:\s*nowrap;[^}]*max-inline-size:\s*100%;/
     );
     expect(cardCss).not.toMatch(/flex-wrap:\s*wrap/);
-    const tight = cssBlock(cardCss, "Tight cards (<=520px card width", "Tight cards use identical fact");
+    const tight = cssBlock(
+      cardCss,
+      "Tight cards (<=520px card width",
+      "Tight cards use identical fact"
+    );
     expect(tight.replace(/\s+/g, " ")).toContain(
-      ".summary__group { display: grid; grid-template-columns: minmax(0, auto); justify-items: center;",
+      ".summary__group { display: grid; grid-template-columns: minmax(0, auto); justify-items: center;"
     );
     expect(cardCss).toMatch(
-      /\.summary__signal\s*\{[^}]*flex-wrap:\s*nowrap;[^}]*min-inline-size:\s*max-content;/,
+      /\.summary__signal\s*\{[^}]*flex-wrap:\s*nowrap;[^}]*min-inline-size:\s*max-content;/
     );
-    expect(cardCss).toMatch(/\.summary__item\s*\{[^}]*min-inline-size:\s*max-content;/);
+    expect(cardCss).toMatch(
+      /\.summary__item\s*\{[^}]*min-inline-size:\s*max-content;/
+    );
   });
 
   it("tight cards reduce spacing/type and switch to the fixed two-row anatomy", () => {
-    const centered = cssBlock(cardCss, "Centered summary group", "Round 4 Wave 2 — item 1");
+    const centered = cssBlock(
+      cardCss,
+      "Centered summary group",
+      "Round 4 Wave 2 — item 1"
+    );
     expect(centered).toContain("@container projcard (max-width: 520px)");
-    expect(centered).toMatch(/\.summary__group,\s*\n\s*\.summary__readout\s*\{\s*column-gap:\s*4px;/);
     expect(centered).toMatch(
-      /\.summary__readout\s*\{\s*grid-template-columns:\s*max-content minmax\(40px, max-content\) minmax\(40px, max-content\);/,
+      /\.summary__group,\s*\n\s*\.summary__readout\s*\{\s*column-gap:\s*4px;/
+    );
+    expect(centered).toMatch(
+      /\.summary__readout\s*\{\s*grid-template-columns:\s*max-content minmax\(40px, max-content\) minmax\(40px, max-content\);/
     );
     expect(centered).not.toContain("flex-direction: column");
     expect(centered).not.toContain("grid-template-columns: repeat(2");
@@ -988,56 +1231,76 @@ describe("ProjectionCard — centered single-row summary group", () => {
 
   it("gives compact facts and signal the same 44px alignment lane", () => {
     expect(cardCss).toMatch(
-      /\.summary__signal\s*\{[^}]*justify-content:\s*center;[^}]*min-block-size:\s*44px;/,
+      /\.summary__signal\s*\{[^}]*justify-content:\s*center;[^}]*min-block-size:\s*44px;/
     );
     expect(cardCss).toMatch(
-      /\.summary__readout\s*\{[^}]*align-items:\s*center;[^}]*min-block-size:\s*44px;/,
+      /\.summary__readout\s*\{[^}]*align-items:\s*center;[^}]*min-block-size:\s*44px;/
     );
     expect(cardCss).toMatch(
-      /\.summary__item\s*\{[^}]*justify-content:\s*center;[^}]*min-block-size:\s*44px;/,
+      /\.summary__item\s*\{[^}]*justify-content:\s*center;[^}]*min-block-size:\s*44px;/
     );
   });
 
   it("gives tight cards stable horizontal fact and signal lanes at every viewport", () => {
-    const centered = cssBlock(cardCss, "Centered summary group", "Round 4 Wave 2 — item 1");
+    const centered = cssBlock(
+      cardCss,
+      "Centered summary group",
+      "Round 4 Wave 2 — item 1"
+    );
     // 2026-08-02: lane stability is container-driven — no viewport media may
     // exempt narrow desktop grid columns from the fixed lanes.
     expect(centered).not.toContain("@media (max-width: 1023.98px)");
     expect(centered).toMatch(
-      /\.summary__readout\s*\{\s*grid-template-columns:\s*minmax\(4\.625rem, max-content\) 2\.125rem 2\.125rem;/,
+      /\.summary__readout\s*\{\s*grid-template-columns:\s*minmax\(4\.625rem, max-content\) 2\.125rem 2\.125rem;/
     );
-    expect(centered).toMatch(/\.summary__signal\s*\{\s*min-inline-size:\s*8\.125rem;/);
+    expect(centered).toMatch(
+      /\.summary__signal\s*\{\s*min-inline-size:\s*8\.125rem;/
+    );
   });
 
   it("the multi-edge next control is mint with a theme foreground border and 44px target", () => {
     expect(cardCss).toMatch(
-      /\.summary__next\s*\{[^}]*inline-size:\s*44px;[^}]*block-size:\s*44px;[^}]*color:\s*var\(--brand-mint, #45e0a8\);[^}]*border:\s*1px solid var\(--foreground, #fff\);/,
+      /\.summary__next\s*\{[^}]*inline-size:\s*44px;[^}]*block-size:\s*44px;[^}]*color:\s*var\(--brand-mint, #45e0a8\);[^}]*border:\s*1px solid var\(--foreground, #fff\);/
     );
   });
 
   it("compacts the pill, never the 44px arrow, on the narrowest desktop cards", () => {
     const narrowSignal = cardCss.slice(
       cardCss.indexOf("On the narrowest three-across desktop cards"),
-      cardCss.indexOf("── Markets popover"),
+      cardCss.indexOf("── Markets popover")
     );
     expect(narrowSignal).toContain("@container projcard (max-width: 280px)");
-    expect(narrowSignal).toContain(".projection-card .summary__signal { gap: 4px; max-inline-size: 100%; }");
+    expect(narrowSignal).toContain(
+      ".projection-card .summary__signal { gap: 4px; max-inline-size: 100%; }"
+    );
     expect(narrowSignal).toMatch(
-      /\.projection-card \.summary__signal \.edge-indicator\s*\{[^}]*padding:\s*0\.25rem;/,
+      /\.projection-card \.summary__signal \.edge-indicator\s*\{[^}]*padding:\s*0\.25rem;/
     );
     expect(narrowSignal).not.toContain(".summary__next {");
-    expect(cardCss).toMatch(/\.summary-carousel__slide\s*\{[^}]*overflow:\s*hidden;/);
+    expect(cardCss).toMatch(
+      /\.summary-carousel__slide\s*\{[^}]*overflow:\s*hidden;/
+    );
   });
 
   it("numeric readout cells are tabular (Book/Model values, the edge chip's percentage)", () => {
-    const centered = cssBlock(cardCss, "Centered summary group", "Round 4 Wave 2 — item 1");
-    expect(centered).toMatch(/\.summary__item--book \.odds-value,\s*\n\s*\.summary__item--model \.odds-value,\s*\n\s*\.edge-indicator__value\s*\{\s*\n\s*font-variant-numeric:\s*tabular-nums;/);
+    const centered = cssBlock(
+      cardCss,
+      "Centered summary group",
+      "Round 4 Wave 2 — item 1"
+    );
+    expect(centered).toMatch(
+      /\.summary__item--book \.odds-value,\s*\n\s*\.summary__item--model \.odds-value,\s*\n\s*\.edge-indicator__value\s*\{\s*\n\s*font-variant-numeric:\s*tabular-nums;/
+    );
   });
 
   it("ONE canonical edge-chip style: EdgeIndicator is the sole chip implementation, no divergent variant", () => {
     // The mint chip is styled exactly once (plus its --none quiet counterpart) in EdgeIndicator.css.
-    expect((edgeIndicatorCss.match(/^\.edge-indicator \{/gm) ?? []).length).toBe(1);
-    expect((edgeIndicatorCss.match(/^\.edge-indicator--none \{/gm) ?? []).length).toBe(1);
+    expect(
+      (edgeIndicatorCss.match(/^\.edge-indicator \{/gm) ?? []).length
+    ).toBe(1);
+    expect(
+      (edgeIndicatorCss.match(/^\.edge-indicator--none \{/gm) ?? []).length
+    ).toBe(1);
     // SummaryCarousel (the multi-edge surface) delegates to ProjectionSummary/EdgeIndicator for
     // every slide rather than re-implementing its own chip markup.
     expect(summaryCarouselSrc).not.toMatch(/edge-indicator/);
@@ -1053,8 +1316,22 @@ describe("ProjectionCard — centered single-row summary group", () => {
           key: "moneyline",
           label: "Moneyline",
           sides: [
-            { marketKey: "moneyline", marketLabel: "Moneyline", sideLabel: "Athletics ML", bookPrice: -110, bookOppPrice: -110, modelPrice: -110 },
-            { marketKey: "moneyline", marketLabel: "Moneyline", sideLabel: "Rangers ML", bookPrice: -110, bookOppPrice: -110, modelPrice: -110 },
+            {
+              marketKey: "moneyline",
+              marketLabel: "Moneyline",
+              sideLabel: "Athletics ML",
+              bookPrice: -110,
+              bookOppPrice: -110,
+              modelPrice: -110,
+            },
+            {
+              marketKey: "moneyline",
+              marketLabel: "Moneyline",
+              sideLabel: "Rangers ML",
+              bookPrice: -110,
+              bookOppPrice: -110,
+              modelPrice: -110,
+            },
           ],
         },
       ],
@@ -1072,23 +1349,34 @@ describe("ProjectionCard — centered single-row summary group", () => {
  *  proves) rather than by a CSSOM this vitest environment doesn't have. */
 describe("ProjectionCard — market-trigger hover (Round 4 Wave 3, item 7)", () => {
   it("the toggle gets the shell row-hover fill on the 160ms brand curve, hover-capable + >=768px only", () => {
-    const item7 = cssBlock(cardCss, "Round 4 Wave 3 — item 7", "The portal is outside");
+    const item7 = cssBlock(
+      cardCss,
+      "Round 4 Wave 3 — item 7",
+      "The portal is outside"
+    );
     expect(item7).toContain("@media (min-width: 768px) and (hover: hover)");
     expect(item7).toMatch(
-      /\.projection-card__markets-toggle:hover \{ background: var\(--row-hover, #141414\); color: var\(--foreground, #fff\); \}/,
+      /\.projection-card__markets-toggle:hover \{ background: var\(--row-hover, #141414\); color: var\(--foreground, #fff\); \}/
     );
   });
 
   it("the transition (160ms brand curve, same cubic-bezier as MASTER.md's motion law) lives inside the same gate as the hover fill (item 8 audit-fix)", () => {
-    const item7 = cssBlock(cardCss, "Round 4 Wave 3 — item 7", "The portal is outside");
+    const item7 = cssBlock(
+      cardCss,
+      "Round 4 Wave 3 — item 7",
+      "The portal is outside"
+    );
     expect(item7).toMatch(
-      /\.projection-card__markets-toggle \{\s*\n\s*transition: background 160ms cubic-bezier\(0\.16, 1, 0\.3, 1\), color 160ms cubic-bezier\(0\.16, 1, 0\.3, 1\);/,
+      /\.projection-card__markets-toggle \{\s*\n\s*transition: background 160ms cubic-bezier\(0\.16, 1, 0\.3, 1\), color 160ms cubic-bezier\(0\.16, 1, 0\.3, 1\);/
     );
     // Not present on the unconditional base rule (audit-fix: it was there in
     // an earlier draft, inert but out of scope below 768px/on touch-only).
     const baseRule = cardCss.slice(
       cardCss.indexOf(".projection-card__markets-toggle {"),
-      cardCss.indexOf("}", cardCss.indexOf(".projection-card__markets-toggle {")),
+      cardCss.indexOf(
+        "}",
+        cardCss.indexOf(".projection-card__markets-toggle {")
+      )
     );
     expect(baseRule).not.toContain("transition:");
   });
@@ -1096,7 +1384,9 @@ describe("ProjectionCard — market-trigger hover (Round 4 Wave 3, item 7)", () 
   it("cursor:pointer and the label/panel-icon markup stay tappable at every breakpoint", () => {
     // Base rule is unconditional: the popover button is tappable everywhere,
     // not just on hover-capable desktop/tablet.
-    expect(cardCss).toMatch(/\.projection-card__markets-toggle \{[^}]*cursor: pointer;/);
+    expect(cardCss).toMatch(
+      /\.projection-card__markets-toggle \{[^}]*cursor: pointer;/
+    );
     expect(render(mlbFixture())).toContain("View full AI model projections");
     expect(render(mlbFixture())).toContain("projection-card__markets-icon");
     expect(render(mlbFixture())).not.toContain("projection-card__markets-chev");
@@ -1109,32 +1399,49 @@ describe("ProjectionCard — market-trigger hover (Round 4 Wave 3, item 7)", () 
     // "View full AI model projections" (the old desktop 3-across band wrapped
     // it to two lines on every card).
     expect(cardCss).toMatch(
-      /\.projection-card__markets-toggle > span\s*\{[^}]*white-space:\s*nowrap;\s*font-size:\s*clamp\(0\.625rem, 0\.3rem \+ 1\.8cqi, 0\.9375rem\);/,
+      /\.projection-card__markets-toggle > span\s*\{[^}]*white-space:\s*nowrap;\s*font-size:\s*clamp\(0\.625rem, 0\.3rem \+ 1\.8cqi, 0\.9375rem\);/
     );
     const compactToggle = cardCss.slice(
-      cardCss.indexOf(".projection-card__markets-toggle[data-state=\"open\"] .projection-card__markets-icon"),
-      cardCss.indexOf("Round 4 Wave 3 — item 7"),
+      cardCss.indexOf(
+        '.projection-card__markets-toggle[data-state="open"] .projection-card__markets-icon'
+      ),
+      cardCss.indexOf("Round 4 Wave 3 — item 7")
     );
     expect(compactToggle).not.toContain("@media (max-width: 1023.98px)");
     expect(compactToggle).toContain("@container projcard (max-width: 520px)");
     expect(compactToggle).toMatch(
-      /\.projection-card__markets-toggle\s*\{[^}]*gap:\s*4px;[^}]*padding-inline:\s*4px;/,
+      /\.projection-card__markets-toggle\s*\{[^}]*gap:\s*4px;[^}]*padding-inline:\s*4px;/
     );
   });
 
   it("no bare unconditional :hover rule remains outside the gated media query (no stuck touch-hover)", () => {
-    const beforeItem7 = cardCss.slice(0, cardCss.indexOf("Round 4 Wave 3 — item 7"));
+    const beforeItem7 = cardCss.slice(
+      0,
+      cardCss.indexOf("Round 4 Wave 3 — item 7")
+    );
     expect(beforeItem7).not.toMatch(/\.projection-card__markets-toggle:hover/);
   });
 });
 
 describe("ProjectionCard — defensive PASS-mint backstop (Round 4 Wave 3 fold-in, W1 review)", () => {
   it("neutralizes market-table signal/edge classes and the real edge-indicator variant under .projection-card--pass", () => {
-    const backstop = cssBlock(cardCss, "Defensive PASS backstop (Round 4, from the W1 review", "Item 4 — live indicator");
-    expect(backstop).toContain(".projection-card--pass .market-table__model--signal,");
-    expect(backstop).toContain(".projection-card--pass .market-table__result--edge,");
-    expect(backstop).toContain(".projection-card__markets-popover--pass .market-table__model--signal,");
-    expect(backstop).toContain(".projection-card__markets-popover--pass .market-table__result--edge,");
+    const backstop = cssBlock(
+      cardCss,
+      "Defensive PASS backstop (Round 4, from the W1 review",
+      "Item 4 — live indicator"
+    );
+    expect(backstop).toContain(
+      ".projection-card--pass .market-table__model--signal,"
+    );
+    expect(backstop).toContain(
+      ".projection-card--pass .market-table__result--edge,"
+    );
+    expect(backstop).toContain(
+      ".projection-card__markets-popover--pass .market-table__model--signal,"
+    );
+    expect(backstop).toContain(
+      ".projection-card__markets-popover--pass .market-table__result--edge,"
+    );
     expect(backstop).toContain(".projection-card--pass .edge-indicator {");
     // 2026-08-02: plain declarations — the two-class selectors out-rank every
     // one-class signal rule, and no inline style remains to fight, so the
@@ -1149,18 +1456,30 @@ describe("ProjectionCard — defensive PASS-mint backstop (Round 4 Wave 3 fold-i
     // the TSX), so the higher-specificity PASS rule wins without !important.
     const edgeIndicatorSrc = fs.readFileSync(
       path.join(import.meta.dirname, "EdgeIndicator.tsx"),
-      "utf8",
+      "utf8"
     );
     expect(edgeIndicatorSrc).not.toMatch(/style=\{\{/);
-    expect(edgeIndicatorCss).toMatch(/\.edge-indicator > svg \{ color: var\(--brand-mint-foreground\); \}/);
-    const backstop = cssBlock(cardCss, "Defensive PASS backstop (Round 4, from the W1 review", "Item 4 — live indicator");
+    expect(edgeIndicatorCss).toMatch(
+      /\.edge-indicator > svg \{ color: var\(--brand-mint-foreground\); \}/
+    );
+    const backstop = cssBlock(
+      cardCss,
+      "Defensive PASS backstop (Round 4, from the W1 review",
+      "Item 4 — live indicator"
+    );
     expect(backstop).toContain(".projection-card--pass .edge-indicator svg {");
-    const svgRule = backstop.slice(backstop.indexOf(".projection-card--pass .edge-indicator svg {"));
+    const svgRule = backstop.slice(
+      backstop.indexOf(".projection-card--pass .edge-indicator svg {")
+    );
     expect(svgRule).toMatch(/color: var\(--text-secondary, #a6a6a6\);/);
   });
 
   it("is scoped inside the same >=768px block as the rest of items 2-4 (item 8 scoping)", () => {
-    const item234 = cssBlock(cardCss, "Round 4 Wave 1 — desktop/tablet card-anatomy", "Centered summary group");
+    const item234 = cssBlock(
+      cardCss,
+      "Round 4 Wave 1 — desktop/tablet card-anatomy",
+      "Centered summary group"
+    );
     expect(item234).toContain("@media (min-width: 768px) {");
     expect(item234).toContain(".projection-card--pass .edge-indicator {");
   });
@@ -1171,8 +1490,20 @@ describe("ProjectionCard — defensive PASS-mint backstop (Round 4 Wave 3 fold-i
       league: "MLB",
       status: "scheduled",
       statusLabel: "7:05 PM ET",
-      away: { abbr: "OAK", name: "Athletics", logo: null, color: "#333333", score: null },
-      home: { abbr: "TEX", name: "Rangers", logo: null, color: "#333333", score: null },
+      away: {
+        abbr: "OAK",
+        name: "Athletics",
+        logo: null,
+        color: "#333333",
+        score: null,
+      },
+      home: {
+        abbr: "TEX",
+        name: "Rangers",
+        logo: null,
+        color: "#333333",
+        score: null,
+      },
       matchupContext: "Globe Life Field",
       venue: "Globe Life Field",
       startTime: "7:05 PM ET",
@@ -1181,8 +1512,22 @@ describe("ProjectionCard — defensive PASS-mint backstop (Round 4 Wave 3 fold-i
           key: "moneyline",
           label: "Moneyline",
           sides: [
-            { marketKey: "moneyline", marketLabel: "Moneyline", sideLabel: "Athletics ML", bookPrice: -110, bookOppPrice: -110, modelPrice: null },
-            { marketKey: "moneyline", marketLabel: "Moneyline", sideLabel: "Rangers ML", bookPrice: -110, bookOppPrice: -110, modelPrice: null },
+            {
+              marketKey: "moneyline",
+              marketLabel: "Moneyline",
+              sideLabel: "Athletics ML",
+              bookPrice: -110,
+              bookOppPrice: -110,
+              modelPrice: null,
+            },
+            {
+              marketKey: "moneyline",
+              marketLabel: "Moneyline",
+              sideLabel: "Rangers ML",
+              bookPrice: -110,
+              bookOppPrice: -110,
+              modelPrice: null,
+            },
           ],
         },
       ],
@@ -1206,8 +1551,20 @@ describe("ProjectionCard — defensive PASS-mint backstop (Round 4 Wave 3 fold-i
       league: "MLB",
       status: "live",
       statusLabel: "LIVE · 5th",
-      away: { abbr: "LAD", name: "Dodgers", logo: null, color: "#333333", score: 3 },
-      home: { abbr: "NYY", name: "Yankees", logo: null, color: "#333333", score: 2 },
+      away: {
+        abbr: "LAD",
+        name: "Dodgers",
+        logo: null,
+        color: "#333333",
+        score: 3,
+      },
+      home: {
+        abbr: "NYY",
+        name: "Yankees",
+        logo: null,
+        color: "#333333",
+        score: 2,
+      },
       matchupContext: "Yankee Stadium",
       venue: "Yankee Stadium",
       startTime: "7:05 PM ET",
@@ -1216,8 +1573,22 @@ describe("ProjectionCard — defensive PASS-mint backstop (Round 4 Wave 3 fold-i
           key: "moneyline",
           label: "Moneyline",
           sides: [
-            { marketKey: "moneyline", marketLabel: "Moneyline", sideLabel: "Dodgers ML", bookPrice: -110, bookOppPrice: -110, modelPrice: null },
-            { marketKey: "moneyline", marketLabel: "Moneyline", sideLabel: "Yankees ML", bookPrice: -110, bookOppPrice: -110, modelPrice: null },
+            {
+              marketKey: "moneyline",
+              marketLabel: "Moneyline",
+              sideLabel: "Dodgers ML",
+              bookPrice: -110,
+              bookOppPrice: -110,
+              modelPrice: null,
+            },
+            {
+              marketKey: "moneyline",
+              marketLabel: "Moneyline",
+              sideLabel: "Yankees ML",
+              bookPrice: -110,
+              bookOppPrice: -110,
+              modelPrice: null,
+            },
           ],
         },
       ],
@@ -1239,8 +1610,20 @@ describe("ProjectionCard — .summary__item--message hook", () => {
       league: "MLB",
       status: "scheduled",
       statusLabel: "7:05 PM ET",
-      away: { abbr: "OAK", name: "Athletics", logo: null, color: "#333333", score: null },
-      home: { abbr: "TEX", name: "Rangers", logo: null, color: "#333333", score: null },
+      away: {
+        abbr: "OAK",
+        name: "Athletics",
+        logo: null,
+        color: "#333333",
+        score: null,
+      },
+      home: {
+        abbr: "TEX",
+        name: "Rangers",
+        logo: null,
+        color: "#333333",
+        score: null,
+      },
       matchupContext: "Globe Life Field",
       venue: "Globe Life Field",
       startTime: "7:05 PM ET",
@@ -1249,15 +1632,31 @@ describe("ProjectionCard — .summary__item--message hook", () => {
           key: "moneyline",
           label: "Moneyline",
           sides: [
-            { marketKey: "moneyline", marketLabel: "Moneyline", sideLabel: "Athletics ML", bookPrice: -110, bookOppPrice: -110, modelPrice: null },
-            { marketKey: "moneyline", marketLabel: "Moneyline", sideLabel: "Rangers ML", bookPrice: -110, bookOppPrice: -110, modelPrice: null },
+            {
+              marketKey: "moneyline",
+              marketLabel: "Moneyline",
+              sideLabel: "Athletics ML",
+              bookPrice: -110,
+              bookOppPrice: -110,
+              modelPrice: null,
+            },
+            {
+              marketKey: "moneyline",
+              marketLabel: "Moneyline",
+              sideLabel: "Rangers ML",
+              bookPrice: -110,
+              bookOppPrice: -110,
+              modelPrice: null,
+            },
           ],
         },
       ],
     });
     expect(passHtml).toContain('class="summary__item summary__item--message"');
     // ...and a real CSS rule consumes it (not a no-op class with zero rules).
-    expect(cardCss).toContain(".summary__item--message { grid-column: 1 / -1; justify-self: center; }");
+    expect(cardCss).toContain(
+      ".summary__item--message { grid-column: 1 / -1; justify-self: center; }"
+    );
   });
 });
 
@@ -1270,7 +1669,7 @@ describe("closure regression guards — lock the audited fixes (CL-01/03/08/17)"
 
   it("CL-01: keeps the ≤280px matchup grid flip (auto | minmax(0,1fr) | auto) that ends 3-col logo starvation", () => {
     expect(liveCss).toMatch(
-      /@container projcard \(max-width: 280px\)[\s\S]*?\.matchup__grid\s*\{[^}]*grid-template-columns:\s*auto minmax\(0, 1fr\) auto;/,
+      /@container projcard \(max-width: 280px\)[\s\S]*?\.matchup__grid\s*\{[^}]*grid-template-columns:\s*auto minmax\(0, 1fr\) auto;/
     );
   });
 
@@ -1281,16 +1680,27 @@ describe("closure regression guards — lock the audited fixes (CL-01/03/08/17)"
   });
 
   it("CL-03: .edge-indicator__label meets the 10px micro-label floor in every container tier", () => {
-    const sizes = [...liveCss.matchAll(/\.edge-indicator__label\s*\{\s*font-size:\s*([\d.]+)rem/g)].map((m) => parseFloat(m[1]));
+    const sizes = [
+      ...liveCss.matchAll(
+        /\.edge-indicator__label\s*\{\s*font-size:\s*([\d.]+)rem/g
+      ),
+    ].map(m => parseFloat(m[1]));
     expect(sizes.length).toBeGreaterThanOrEqual(2);
     for (const s of sizes) expect(s).toBeGreaterThanOrEqual(0.625);
   });
 
   it("CL-08/CL-17: no live font-size (bare, clamp minimum, or px) resolves below the 0.625rem / 10px floor", () => {
-    const remBare = [...liveCss.matchAll(/font-size:\s*([\d.]+)rem/g)].map((m) => parseFloat(m[1]));
-    const remClampMin = [...liveCss.matchAll(/font-size:\s*clamp\(\s*([\d.]+)rem/g)].map((m) => parseFloat(m[1]));
-    for (const r of [...remBare, ...remClampMin]) expect(r).toBeGreaterThanOrEqual(0.625);
-    const pxSizes = [...liveCss.matchAll(/font-size:\s*([\d.]+)px/g)].map((m) => parseFloat(m[1]));
+    const remBare = [...liveCss.matchAll(/font-size:\s*([\d.]+)rem/g)].map(m =>
+      parseFloat(m[1])
+    );
+    const remClampMin = [
+      ...liveCss.matchAll(/font-size:\s*clamp\(\s*([\d.]+)rem/g),
+    ].map(m => parseFloat(m[1]));
+    for (const r of [...remBare, ...remClampMin])
+      expect(r).toBeGreaterThanOrEqual(0.625);
+    const pxSizes = [...liveCss.matchAll(/font-size:\s*([\d.]+)px/g)].map(m =>
+      parseFloat(m[1])
+    );
     for (const p of pxSizes) expect(p).toBeGreaterThanOrEqual(10);
   });
 });

@@ -2,7 +2,10 @@ import { describe, it, expect } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
 
-const src = fs.readFileSync(path.join(import.meta.dirname, "..", "routers", "analytics.ts"), "utf8");
+const src = fs.readFileSync(
+  path.join(import.meta.dirname, "..", "routers", "analytics.ts"),
+  "utf8"
+);
 
 describe("analytics router derives device server-side", () => {
   it("reads the UA and reconciles device_type", () => {

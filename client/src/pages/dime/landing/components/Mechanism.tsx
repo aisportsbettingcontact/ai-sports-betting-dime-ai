@@ -8,9 +8,16 @@ export default function Mechanism() {
     <section className="sec" id="mechanism" aria-label="How it works">
       <div className="wrap">
         <div className="sec-body">
-          <SectionHead eyebrow={MECHANISM.eyebrow} headline={MECHANISM.headline} sub={MECHANISM.sub} />
-          <div className="mech-grid" style={{ marginTop: "clamp(24px, 4vw, 40px)" }}>
-            {MECHANISM.steps.map((s) => (
+          <SectionHead
+            eyebrow={MECHANISM.eyebrow}
+            headline={MECHANISM.headline}
+            sub={MECHANISM.sub}
+          />
+          <div
+            className="mech-grid"
+            style={{ marginTop: "clamp(24px, 4vw, 40px)" }}
+          >
+            {MECHANISM.steps.map(s => (
               <div className="mech-step" key={s.num}>
                 <span className="stepnum">{s.num}</span>
                 <h3>{s.title}</h3>

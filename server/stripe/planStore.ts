@@ -12,7 +12,10 @@
  * in-process (60s TTL) and invalidated by the provisioning service on any write.
  */
 import { getDb } from "../db";
-import { normalizePlanFeatures, type PlanFeatureKey } from "../../shared/planFeatures";
+import {
+  normalizePlanFeatures,
+  type PlanFeatureKey,
+} from "../../shared/planFeatures";
 import { withCircuitBreaker } from "../dbCircuitBreaker";
 import {
   subscriptionPlans,
@@ -115,7 +118,7 @@ function intervalMs(interval: BillingInterval): number {
 export function computeExpiryMsForPrice(
   price: Pick<StoredPrice, "interval" | "intervalCount">,
   plan: Pick<StoredPlan, "planType" | "accessUntil">,
-  fromMs: number,
+  fromMs: number
 ): number | null {
   if (plan.planType === "fixed_date") {
     return plan.accessUntil ?? null;
@@ -131,7 +134,8 @@ export function computeExpiryMsForPrice(
   if (!price.interval) {
     return plan.accessUntil ?? LIFETIME_ACCESS_UNTIL_MS;
   }
-  const count = price.intervalCount && price.intervalCount > 0 ? price.intervalCount : 1;
+  const count =
+    price.intervalCount && price.intervalCount > 0 ? price.intervalCount : 1;
   return fromMs + intervalMs(price.interval) * count;
 }
 
@@ -173,10 +177,17 @@ async function loadAllPlans(): Promise<StoredPlan[]> {
   if (!db) return [];
   try {
     return await withCircuitBreaker(async () => {
-      const planRows = (await db.select().from(subscriptionPlans)) as SubscriptionPlan[];
+      const planRows = (await db
+        .select()
+        .from(subscriptionPlans)) as SubscriptionPlan[];
       const priceRows = (await db.select().from(planPrices)) as PlanPrice[];
-      const featureRows = (await db.select().from(planFeatures)) as PlanFeature[];
-      const featuresByPlan = new Map<number, Array<{ key: string; sortOrder: number }>>();
+      const featureRows = (await db
+        .select()
+        .from(planFeatures)) as PlanFeature[];
+      const featuresByPlan = new Map<
+        number,
+        Array<{ key: string; sortOrder: number }>
+      >();
       for (const fr of featureRows) {
         const arr = featuresByPlan.get(fr.planId) ?? [];
         arr.push({ key: fr.featureKey, sortOrder: fr.sortOrder });
@@ -188,7 +199,7 @@ async function loadAllPlans(): Promise<StoredPlan[]> {
         arr.push(mapPrice(pr));
         byPlan.set(pr.planId, arr);
       }
-      return planRows.map((p) => ({
+      return planRows.map(p => ({
         id: p.id,
         slug: p.slug,
         name: p.name,
@@ -210,9 +221,11 @@ async function loadAllPlans(): Promise<StoredPlan[]> {
         features: normalizePlanFeatures(
           (featuresByPlan.get(p.id) ?? [])
             .sort((a, b) => a.sortOrder - b.sortOrder)
-            .map((f) => f.key)
+            .map(f => f.key)
         ),
-        prices: (byPlan.get(p.id) ?? []).sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id),
+        prices: (byPlan.get(p.id) ?? []).sort(
+          (a, b) => a.sortOrder - b.sortOrder || a.id - b.id
+        ),
       }));
     });
   } catch (err) {
@@ -231,7 +244,7 @@ async function getCachedPlans(): Promise<StoredPlan[]> {
 
 /** Active, non-archived plans (for pricing + admin listing), sortOrder-agnostic caller sorts. */
 export async function listActivePlans(): Promise<StoredPlan[]> {
-  return (await getCachedPlans()).filter((p) => p.active);
+  return (await getCachedPlans()).filter(p => p.active);
 }
 
 /** All plans incl. archived — for the owner admin table. */
@@ -240,15 +253,15 @@ export async function listAllPlans(): Promise<StoredPlan[]> {
 }
 
 export async function getPlanBySlug(slug: string): Promise<StoredPlan | null> {
-  return (await getCachedPlans()).find((p) => p.slug === slug) ?? null;
+  return (await getCachedPlans()).find(p => p.slug === slug) ?? null;
 }
 
 /** Reverse map a Stripe price ID → its plan + price (used by checkout + webhook). */
 export async function getPriceById(
-  stripePriceId: string,
+  stripePriceId: string
 ): Promise<{ plan: StoredPlan; price: StoredPrice } | null> {
   for (const plan of await getCachedPlans()) {
-    const price = plan.prices.find((pr) => pr.stripePriceId === stripePriceId);
+    const price = plan.prices.find(pr => pr.stripePriceId === stripePriceId);
     if (price) return { plan, price };
   }
   return null;
@@ -257,8 +270,8 @@ export async function getPriceById(
 /** The default (or first active) price for a plan — the one checkout charges. */
 export function defaultPriceOf(plan: StoredPlan): StoredPrice | null {
   return (
-    plan.prices.find((pr) => pr.active && pr.isDefault) ??
-    plan.prices.find((pr) => pr.active) ??
+    plan.prices.find(pr => pr.active && pr.isDefault) ??
+    plan.prices.find(pr => pr.active) ??
     null
   );
 }
@@ -268,10 +281,15 @@ export function defaultPriceOf(plan: StoredPlan): StoredPrice | null {
  * must never be handed a test/sandbox price — Stripe rejects it — so checkout
  * resolves through here with wantLivemode = (the checkout key is live).
  */
-export function defaultPriceForMode(plan: StoredPlan, wantLivemode: boolean): StoredPrice | null {
+export function defaultPriceForMode(
+  plan: StoredPlan,
+  wantLivemode: boolean
+): StoredPrice | null {
   // Hidden intervals are retained but never offered at checkout.
-  const inMode = plan.prices.filter((pr) => pr.active && !pr.hidden && pr.livemode === wantLivemode);
-  return inMode.find((pr) => pr.isDefault) ?? inMode[0] ?? null;
+  const inMode = plan.prices.filter(
+    pr => pr.active && !pr.hidden && pr.livemode === wantLivemode
+  );
+  return inMode.find(pr => pr.isDefault) ?? inMode[0] ?? null;
 }
 
 type RestockConfig = Pick<
@@ -301,6 +319,8 @@ export function computeNextQuantity(plan: RestockConfig): number | null {
 }
 
 /** A limited-quantity plan with no spots left — checkout must refuse it. */
-export function isSoldOut(plan: Pick<StoredPlan, "availableQuantity">): boolean {
+export function isSoldOut(
+  plan: Pick<StoredPlan, "availableQuantity">
+): boolean {
   return plan.availableQuantity != null && plan.availableQuantity <= 0;
 }

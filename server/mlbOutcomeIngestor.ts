@@ -118,7 +118,13 @@ export interface OutcomeIngestResult {
   gameId: number;
   matchup: string;
   gameDate: string;
-  status: "written" | "skipped_already_ingested" | "skipped_not_final" | "skipped_no_mlbgamepk" | "skipped_no_api_match" | "error";
+  status:
+    | "written"
+    | "skipped_already_ingested"
+    | "skipped_not_final"
+    | "skipped_no_mlbgamepk"
+    | "skipped_no_api_match"
+    | "error";
   actualFgTotal: number | null;
   actualF5Total: number | null;
   actualNrfiBinary: number | null;
@@ -155,7 +161,7 @@ export interface OutcomeIngestSummary {
  */
 function brierScore(
   modelProbPct: string | number | null | undefined,
-  outcome: 0 | 1 | null,
+  outcome: 0 | 1 | null
 ): number | null {
   if (modelProbPct === null || modelProbPct === undefined) return null;
   if (outcome === null) return null;
@@ -183,7 +189,7 @@ function computeBrierScores(
     modelHomeWinPct: string | null | undefined;
     modelF5HomeWinPct: string | null | undefined;
   },
-  outcome: GameOutcome,
+  outcome: GameOutcome
 ): {
   brierFgTotal: number | null;
   brierF5Total: number | null;
@@ -193,10 +199,13 @@ function computeBrierScores(
 } {
   // ── FG Total ──────────────────────────────────────────────────────────────
   let brierFgTotal: number | null = null;
-  const fgTotal = outcome.awayFgRuns !== null && outcome.homeFgRuns !== null
-    ? outcome.awayFgRuns + outcome.homeFgRuns
+  const fgTotal =
+    outcome.awayFgRuns !== null && outcome.homeFgRuns !== null
+      ? outcome.awayFgRuns + outcome.homeFgRuns
+      : null;
+  const bookTotalNum = game.bookTotal
+    ? parseFloat(String(game.bookTotal))
     : null;
-  const bookTotalNum = game.bookTotal ? parseFloat(String(game.bookTotal)) : null;
   if (fgTotal !== null && bookTotalNum !== null && bookTotalNum > 0) {
     if (fgTotal !== bookTotalNum) {
       // Not a push — compute Brier
@@ -208,9 +217,10 @@ function computeBrierScores(
 
   // ── F5 Total ──────────────────────────────────────────────────────────────
   let brierF5Total: number | null = null;
-  const f5TotalActual = outcome.awayF5Runs !== null && outcome.homeF5Runs !== null
-    ? outcome.awayF5Runs + outcome.homeF5Runs
-    : null;
+  const f5TotalActual =
+    outcome.awayF5Runs !== null && outcome.homeF5Runs !== null
+      ? outcome.awayF5Runs + outcome.homeF5Runs
+      : null;
   const bookF5TotalNum = game.f5Total ? parseFloat(String(game.f5Total)) : null;
   if (f5TotalActual !== null && bookF5TotalNum !== null && bookF5TotalNum > 0) {
     if (f5TotalActual !== bookF5TotalNum) {
@@ -231,7 +241,8 @@ function computeBrierScores(
   if (outcome.awayFgRuns !== null && outcome.homeFgRuns !== null) {
     if (outcome.awayFgRuns !== outcome.homeFgRuns) {
       // No tie in MLB (extra innings always produce a winner)
-      const outcomeHomeWin: 0 | 1 = outcome.homeFgRuns > outcome.awayFgRuns ? 1 : 0;
+      const outcomeHomeWin: 0 | 1 =
+        outcome.homeFgRuns > outcome.awayFgRuns ? 1 : 0;
       brierFgMl = brierScore(game.modelHomeWinPct, outcomeHomeWin);
     }
     // Tie (shouldn't happen in MLB but guard anyway) → brierFgMl stays null
@@ -241,7 +252,8 @@ function computeBrierScores(
   let brierF5Ml: number | null = null;
   if (outcome.awayF5Runs !== null && outcome.homeF5Runs !== null) {
     if (outcome.awayF5Runs !== outcome.homeF5Runs) {
-      const outcomeF5HomeWin: 0 | 1 = outcome.homeF5Runs > outcome.awayF5Runs ? 1 : 0;
+      const outcomeF5HomeWin: 0 | 1 =
+        outcome.homeF5Runs > outcome.awayF5Runs ? 1 : 0;
       brierF5Ml = brierScore(game.modelF5HomeWinPct, outcomeF5HomeWin);
     }
     // F5 tie (common) → brierF5Ml stays null
@@ -259,7 +271,9 @@ function computeBrierScores(
  * API endpoint: statsapi.mlb.com/api/v1/schedule
  * Hydration: linescore (includes innings array)
  */
-async function fetchMlbOutcomes(dateStr: string): Promise<Map<number, GameOutcome>> {
+async function fetchMlbOutcomes(
+  dateStr: string
+): Promise<Map<number, GameOutcome>> {
   const url =
     `${MLB_STATS_API_BASE}/schedule` +
     `?sportId=1&date=${dateStr}&hydrate=linescore`;
@@ -271,14 +285,16 @@ async function fetchMlbOutcomes(dateStr: string): Promise<Map<number, GameOutcom
     throw new Error(`MLB Stats API HTTP ${res.status} for date=${dateStr}`);
   }
 
-  const json = await res.json() as {
+  const json = (await res.json()) as {
     dates?: Array<{ games?: MlbApiGame[] }>;
   };
 
   const outcomes = new Map<number, GameOutcome>();
   const dateEntry = json.dates?.[0];
   if (!dateEntry?.games) {
-    console.log(`${TAG} [STATE] No games found in API response for date=${dateStr}`);
+    console.log(
+      `${TAG} [STATE] No games found in API response for date=${dateStr}`
+    );
     return outcomes;
   }
 
@@ -316,7 +332,7 @@ async function fetchMlbOutcomes(dateStr: string): Promise<Map<number, GameOutcom
     if (inn1) {
       const i1Away = inn1.away?.runs ?? 0;
       const i1Home = inn1.home?.runs ?? 0;
-      nrfiBinary = (i1Away === 0 && i1Home === 0) ? 1 : 0;
+      nrfiBinary = i1Away === 0 && i1Home === 0 ? 1 : 0;
     }
 
     const awayAbbrev = g.teams.away.team.abbreviation;
@@ -336,14 +352,16 @@ async function fetchMlbOutcomes(dateStr: string): Promise<Map<number, GameOutcom
 
     console.log(
       `${TAG} [STATE] gamePk=${g.gamePk} ${awayAbbrev}@${homeAbbrev}` +
-      ` | final=${isFinal} | FG=${awayFgRuns ?? "?"}–${homeFgRuns ?? "?"}` +
-      ` | F5=${awayF5Runs ?? "?"}–${homeF5Runs ?? "?"}` +
-      ` | NRFI=${nrfiBinary ?? "?"}` +
-      ` | innings=${innings.length}`
+        ` | final=${isFinal} | FG=${awayFgRuns ?? "?"}–${homeFgRuns ?? "?"}` +
+        ` | F5=${awayF5Runs ?? "?"}–${homeF5Runs ?? "?"}` +
+        ` | NRFI=${nrfiBinary ?? "?"}` +
+        ` | innings=${innings.length}`
     );
   }
 
-  console.log(`${TAG} [STEP] API returned ${outcomes.size} games for date=${dateStr}`);
+  console.log(
+    `${TAG} [STEP] API returned ${outcomes.size} games for date=${dateStr}`
+  );
   return outcomes;
 }
 
@@ -367,10 +385,12 @@ async function fetchMlbOutcomes(dateStr: string): Promise<Map<number, GameOutcom
  */
 export async function ingestMlbOutcomes(
   dateStr: string,
-  force = false,
+  force = false
 ): Promise<OutcomeIngestSummary> {
   const startMs = Date.now();
-  console.log(`\n${TAG} ══════════════════════════════════════════════════════`);
+  console.log(
+    `\n${TAG} ══════════════════════════════════════════════════════`
+  );
   console.log(`${TAG} [INPUT] date=${dateStr} force=${force}`);
 
   const db = await getDb();
@@ -406,11 +426,13 @@ export async function ingestMlbOutcomes(
       and(
         eq(games.gameDate, dateStr),
         eq(games.sport, "MLB"),
-        eq(games.gameStatus, "final"),
+        eq(games.gameStatus, "final")
       )
     );
 
-  console.log(`${TAG} [STATE] Found ${dbGames.length} final MLB games in DB for ${dateStr}`);
+  console.log(
+    `${TAG} [STATE] Found ${dbGames.length} final MLB games in DB for ${dateStr}`
+  );
 
   const results: OutcomeIngestResult[] = [];
   let written = 0;
@@ -482,11 +504,19 @@ export async function ingestMlbOutcomes(
 
   for (const game of dbGames) {
     const matchup = `${game.awayTeam}@${game.homeTeam}`;
-    console.log(`\n${TAG} [STEP] Processing game id=${game.id} ${matchup} date=${game.gameDate}`);
+    console.log(
+      `\n${TAG} [STEP] Processing game id=${game.id} ${matchup} date=${game.gameDate}`
+    );
 
     // Skip if already ingested (unless force)
-    if (!force && game.outcomeIngestedAt !== null && game.outcomeIngestedAt !== undefined) {
-      console.log(`${TAG} [STATE] SKIP — already ingested at ${new Date(game.outcomeIngestedAt).toISOString()}`);
+    if (
+      !force &&
+      game.outcomeIngestedAt !== null &&
+      game.outcomeIngestedAt !== undefined
+    ) {
+      console.log(
+        `${TAG} [STATE] SKIP — already ingested at ${new Date(game.outcomeIngestedAt).toISOString()}`
+      );
       results.push({
         gameId: game.id,
         matchup,
@@ -523,29 +553,35 @@ export async function ingestMlbOutcomes(
     // guess and require mlbGamePk (stamped by syncMlbSchedule) instead of
     // silently grading both DB rows against the same outcome.
     if (!apiOutcome) {
-      const teamMatches = Array.from(apiOutcomes.values()).filter((outcome) => {
+      const teamMatches = Array.from(apiOutcomes.values()).filter(outcome => {
         const awayMatch =
           outcome.awayAbbrev === game.awayTeam ||
-          normalizeTeamAbbrev(outcome.awayAbbrev) === normalizeTeamAbbrev(game.awayTeam);
+          normalizeTeamAbbrev(outcome.awayAbbrev) ===
+            normalizeTeamAbbrev(game.awayTeam);
         const homeMatch =
           outcome.homeAbbrev === game.homeTeam ||
-          normalizeTeamAbbrev(outcome.homeAbbrev) === normalizeTeamAbbrev(game.homeTeam);
+          normalizeTeamAbbrev(outcome.homeAbbrev) ===
+            normalizeTeamAbbrev(game.homeTeam);
         return awayMatch && homeMatch;
       });
       if (teamMatches.length === 1) {
         apiOutcome = teamMatches[0];
-        console.log(`${TAG} [STATE] Matched by team abbreviation: ${apiOutcome.awayAbbrev}@${apiOutcome.homeAbbrev}`);
+        console.log(
+          `${TAG} [STATE] Matched by team abbreviation: ${apiOutcome.awayAbbrev}@${apiOutcome.homeAbbrev}`
+        );
       } else if (teamMatches.length > 1) {
         console.error(
           `${TAG} [ERROR] AMBIGUOUS team-name fallback for game id=${game.id} ${matchup}: ` +
-          `${teamMatches.length} same-matchup outcomes (doubleheader) and row has no mlbGamePk — ` +
-          `refusing to guess; run syncMlbSchedule to stamp identity, then re-ingest`
+            `${teamMatches.length} same-matchup outcomes (doubleheader) and row has no mlbGamePk — ` +
+            `refusing to guess; run syncMlbSchedule to stamp identity, then re-ingest`
         );
       }
     }
 
     if (!apiOutcome) {
-      console.warn(`${TAG} [WARN] No API match for game id=${game.id} ${matchup} — skipping`);
+      console.warn(
+        `${TAG} [WARN] No API match for game id=${game.id} ${matchup} — skipping`
+      );
       results.push({
         gameId: game.id,
         matchup,
@@ -565,7 +601,9 @@ export async function ingestMlbOutcomes(
     }
 
     if (!apiOutcome.isFinal) {
-      console.log(`${TAG} [STATE] SKIP — API reports game not final (gamePk=${apiOutcome.gamePk})`);
+      console.log(
+        `${TAG} [STATE] SKIP — API reports game not final (gamePk=${apiOutcome.gamePk})`
+      );
       results.push({
         gameId: game.id,
         matchup,
@@ -597,9 +635,9 @@ export async function ingestMlbOutcomes(
 
     console.log(
       `${TAG} [STATE] id=${game.id} ${matchup}` +
-      ` | actualFgTotal=${actualFgTotal ?? "null"}` +
-      ` | actualF5Total=${actualF5Total ?? "null"}` +
-      ` | actualNrfiBinary=${actualNrfiBinary ?? "null"}`
+        ` | actualFgTotal=${actualFgTotal ?? "null"}` +
+        ` | actualF5Total=${actualF5Total ?? "null"}` +
+        ` | actualNrfiBinary=${actualNrfiBinary ?? "null"}`
     );
 
     // ── Compute Brier scores ──────────────────────────────────────────────
@@ -607,11 +645,11 @@ export async function ingestMlbOutcomes(
 
     console.log(
       `${TAG} [STATE] Brier scores:` +
-      ` FgTotal=${briers.brierFgTotal ?? "null"}` +
-      ` F5Total=${briers.brierF5Total ?? "null"}` +
-      ` NRFI=${briers.brierNrfi ?? "null"}` +
-      ` FgML=${briers.brierFgMl ?? "null"}` +
-      ` F5ML=${briers.brierF5Ml ?? "null"}`
+        ` FgTotal=${briers.brierFgTotal ?? "null"}` +
+        ` F5Total=${briers.brierF5Total ?? "null"}` +
+        ` NRFI=${briers.brierNrfi ?? "null"}` +
+        ` FgML=${briers.brierFgMl ?? "null"}` +
+        ` F5ML=${briers.brierF5Ml ?? "null"}`
     );
 
     // ── Write to DB ───────────────────────────────────────────────────────
@@ -620,14 +658,25 @@ export async function ingestMlbOutcomes(
       await db
         .update(games)
         .set({
-          actualFgTotal: actualFgTotal !== null ? String(actualFgTotal) : undefined,
-          actualF5Total: actualF5Total !== null ? String(actualF5Total) : undefined,
+          actualFgTotal:
+            actualFgTotal !== null ? String(actualFgTotal) : undefined,
+          actualF5Total:
+            actualF5Total !== null ? String(actualF5Total) : undefined,
           actualNrfiBinary: actualNrfiBinary,
-          brierFgTotal: briers.brierFgTotal !== null ? String(briers.brierFgTotal) : undefined,
-          brierF5Total: briers.brierF5Total !== null ? String(briers.brierF5Total) : undefined,
-          brierNrfi: briers.brierNrfi !== null ? String(briers.brierNrfi) : undefined,
-          brierFgMl: briers.brierFgMl !== null ? String(briers.brierFgMl) : undefined,
-          brierF5Ml: briers.brierF5Ml !== null ? String(briers.brierF5Ml) : undefined,
+          brierFgTotal:
+            briers.brierFgTotal !== null
+              ? String(briers.brierFgTotal)
+              : undefined,
+          brierF5Total:
+            briers.brierF5Total !== null
+              ? String(briers.brierF5Total)
+              : undefined,
+          brierNrfi:
+            briers.brierNrfi !== null ? String(briers.brierNrfi) : undefined,
+          brierFgMl:
+            briers.brierFgMl !== null ? String(briers.brierFgMl) : undefined,
+          brierF5Ml:
+            briers.brierF5Ml !== null ? String(briers.brierF5Ml) : undefined,
           outcomeIngestedAt: now,
         })
         .where(eq(games.id, game.id));
@@ -646,17 +695,21 @@ export async function ingestMlbOutcomes(
         .from(games)
         .where(eq(games.id, game.id));
 
-      const fgMatch = verify.actualFgTotal !== null && actualFgTotal !== null
-        ? Math.abs(parseFloat(String(verify.actualFgTotal)) - actualFgTotal) < 0.01
-        : verify.actualFgTotal === null && actualFgTotal === null;
+      const fgMatch =
+        verify.actualFgTotal !== null && actualFgTotal !== null
+          ? Math.abs(parseFloat(String(verify.actualFgTotal)) - actualFgTotal) <
+            0.01
+          : verify.actualFgTotal === null && actualFgTotal === null;
 
       if (!fgMatch) {
         console.error(
           `${TAG} [VERIFY] FAIL — id=${game.id} ${matchup}` +
-          ` | expected actualFgTotal=${actualFgTotal} got=${verify.actualFgTotal}`
+            ` | expected actualFgTotal=${actualFgTotal} got=${verify.actualFgTotal}`
         );
       } else {
-        console.log(`${TAG} [VERIFY] PASS — id=${game.id} ${matchup} | actualFgTotal=${verify.actualFgTotal} | outcomeIngestedAt=${verify.outcomeIngestedAt}`);
+        console.log(
+          `${TAG} [VERIFY] PASS — id=${game.id} ${matchup} | actualFgTotal=${verify.actualFgTotal} | outcomeIngestedAt=${verify.outcomeIngestedAt}`
+        );
       }
 
       results.push({
@@ -676,7 +729,9 @@ export async function ingestMlbOutcomes(
       written++;
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.error(`${TAG} [ERROR] DB write failed for id=${game.id} ${matchup}: ${msg}`);
+      console.error(
+        `${TAG} [ERROR] DB write failed for id=${game.id} ${matchup}: ${msg}`
+      );
       results.push({
         gameId: game.id,
         matchup,
@@ -698,80 +753,97 @@ export async function ingestMlbOutcomes(
 
   // ── Summary ───────────────────────────────────────────────────────────────
   const elapsed = ((Date.now() - startMs) / 1000).toFixed(2);
-  console.log(`\n${TAG} ══════════════════════════════════════════════════════`);
+  console.log(
+    `\n${TAG} ══════════════════════════════════════════════════════`
+  );
   console.log(`${TAG} [SUMMARY] date=${dateStr}`);
-  console.log(`${TAG} [SUMMARY] total=${dbGames.length} | written=${written} | skipped_ingested=${skippedAlreadyIngested} | skipped_not_final=${skippedNotFinal} | skipped_no_pk=${skippedNoGamePk} | skipped_no_match=${skippedNoApiMatch} | errors=${errors}`);
+  console.log(
+    `${TAG} [SUMMARY] total=${dbGames.length} | written=${written} | skipped_ingested=${skippedAlreadyIngested} | skipped_not_final=${skippedNotFinal} | skipped_no_pk=${skippedNoGamePk} | skipped_no_match=${skippedNoApiMatch} | errors=${errors}`
+  );
   console.log(`${TAG} [SUMMARY] elapsed=${elapsed}s`);
-  console.log(`${TAG} ══════════════════════════════════════════════════════\n`);
+  console.log(
+    `${TAG} ══════════════════════════════════════════════════════\n`
+  );
 
   // ── Drift detector: run rolling f5_share check (before notifyOwner so result is included) ─────────
-  let driftSummaryLine = 'Drift check: skipped (insufficient data)';
+  let driftSummaryLine = "Drift check: skipped (insufficient data)";
   try {
-    console.log(`${TAG} [STEP] Running drift detector (rolling f5_share check)...`);
+    console.log(
+      `${TAG} [STEP] Running drift detector (rolling f5_share check)...`
+    );
     const driftResult = await checkF5ShareDrift();
-    console.log(`${TAG} [OUTPUT] driftDetected=${driftResult.driftDetected} | delta=${driftResult.delta?.toFixed(4) ?? 'N/A'} | rollingF5Share=${driftResult.rollingF5Share?.toFixed(4) ?? 'N/A'} | windowSize=${driftResult.windowSize}`);
+    console.log(
+      `${TAG} [OUTPUT] driftDetected=${driftResult.driftDetected} | delta=${driftResult.delta?.toFixed(4) ?? "N/A"} | rollingF5Share=${driftResult.rollingF5Share?.toFixed(4) ?? "N/A"} | windowSize=${driftResult.windowSize}`
+    );
     console.log(`${TAG} [OUTPUT] drift message: ${driftResult.message}`);
     if (driftResult.driftDetected) {
-      console.warn(`${TAG} [VERIFY] DRIFT DETECTED — delta=${driftResult.delta?.toFixed(4)} exceeds threshold. recalibrationTriggered=${driftResult.recalibrationTriggered}`);
+      console.warn(
+        `${TAG} [VERIFY] DRIFT DETECTED — delta=${driftResult.delta?.toFixed(4)} exceeds threshold. recalibrationTriggered=${driftResult.recalibrationTriggered}`
+      );
       driftSummaryLine = `⚠️ DRIFT DETECTED — delta=${driftResult.delta?.toFixed(4)} | rolling=${driftResult.rollingF5Share?.toFixed(4)} | baseline=${driftResult.baselineF5Share.toFixed(4)} | recalibrated=${driftResult.recalibrationTriggered}`;
     } else if (driftResult.rollingF5Share !== null) {
-      console.log(`${TAG} [VERIFY] PASS — no drift detected (delta=${driftResult.delta?.toFixed(4) ?? 'N/A'})`);
+      console.log(
+        `${TAG} [VERIFY] PASS — no drift detected (delta=${driftResult.delta?.toFixed(4) ?? "N/A"})`
+      );
       driftSummaryLine = `✅ No drift — delta=${driftResult.delta?.toFixed(4)} | rolling=${driftResult.rollingF5Share?.toFixed(4)} | baseline=${driftResult.baselineF5Share.toFixed(4)} | window=${driftResult.windowSize}`;
     } else {
       driftSummaryLine = `Drift check: insufficient data (${driftResult.windowSize} games, need 20+)`;
     }
   } catch (driftErr) {
-    const driftMsg = driftErr instanceof Error ? driftErr.message : String(driftErr);
-    console.error(`${TAG} [ERROR] drift detector failed (non-fatal): ${driftMsg}`);
+    const driftMsg =
+      driftErr instanceof Error ? driftErr.message : String(driftErr);
+    console.error(
+      `${TAG} [ERROR] drift detector failed (non-fatal): ${driftMsg}`
+    );
     driftSummaryLine = `Drift check: error — ${driftMsg.slice(0, 80)}`;
   }
 
   // ── F5 ML coverage audit: count games with model but no book F5 ML odds ──────────────────
-  let coverageLine = '';
+  let coverageLine = "";
   try {
     const db = await getDb();
     const coverageGap = await db
       .select({ count: sql<number>`count(*)` })
       .from(games)
-      .where(and(
-        isNotNull(games.modelF5AwayWinPct),
-        isNull(games.f5AwayML),
-      ));
+      .where(and(isNotNull(games.modelF5AwayWinPct), isNull(games.f5AwayML)));
     const gapCount = Number(coverageGap[0]?.count ?? 0);
-    coverageLine = gapCount > 0
-      ? `⚠️ F5 ML coverage gap: ${gapCount} game${gapCount !== 1 ? 's' : ''} have model but no book F5 ML odds`
-      : `✅ F5 ML coverage: no gaps detected`;
+    coverageLine =
+      gapCount > 0
+        ? `⚠️ F5 ML coverage gap: ${gapCount} game${gapCount !== 1 ? "s" : ""} have model but no book F5 ML odds`
+        : `✅ F5 ML coverage: no gaps detected`;
     console.log(`${TAG} [OUTPUT] F5 ML coverage audit: ${coverageLine}`);
   } catch (covErr) {
-    coverageLine = 'F5 ML coverage audit: error (non-fatal)';
-    console.error(`${TAG} [ERROR] F5 ML coverage audit failed: ${covErr instanceof Error ? covErr.message : String(covErr)}`);
+    coverageLine = "F5 ML coverage audit: error (non-fatal)";
+    console.error(
+      `${TAG} [ERROR] F5 ML coverage audit failed: ${covErr instanceof Error ? covErr.message : String(covErr)}`
+    );
   }
 
   // ── notifyOwner: push Brier calibration summary + drift result to owner ──────────────────
   if (written > 0) {
     try {
-      const ingestedResults = results.filter(r => r.status === 'written');
+      const ingestedResults = results.filter(r => r.status === "written");
       const brierAvg = (field: keyof OutcomeIngestResult): string => {
         const vals = ingestedResults
           .map(r => r[field] as number | null | undefined)
           .filter((v): v is number => v != null && !isNaN(v as number));
-        if (vals.length === 0) return 'N/A';
+        if (vals.length === 0) return "N/A";
         const avg = vals.reduce((s, v) => s + v, 0) / vals.length;
         return avg.toFixed(4);
       };
-      const statusLine = errors > 0 ? `⚠️ ${errors} error(s)` : '✅ 0 errors';
+      const statusLine = errors > 0 ? `⚠️ ${errors} error(s)` : "✅ 0 errors";
       const notifTitle = `MLB Outcome Ingest — ${dateStr}`;
       const notifContent = [
         `Date: ${dateStr}`,
         `Games ingested: ${written} / ${dbGames.length} | ${statusLine}`,
         `Elapsed: ${elapsed}s`,
         ``,
-        `Brier Scores (today's ${written} game${written !== 1 ? 's' : ''}):`,
-        `  FG ML:    ${brierAvg('brierFgMl')}`,
-        `  F5 ML:    ${brierAvg('brierF5Ml')}`,
-        `  NRFI:     ${brierAvg('brierNrfi')}`,
-        `  FG Total: ${brierAvg('brierFgTotal')}`,
-        `  F5 Total: ${brierAvg('brierF5Total')}`,
+        `Brier Scores (today's ${written} game${written !== 1 ? "s" : ""}):`,
+        `  FG ML:    ${brierAvg("brierFgMl")}`,
+        `  F5 ML:    ${brierAvg("brierF5Ml")}`,
+        `  NRFI:     ${brierAvg("brierNrfi")}`,
+        `  FG Total: ${brierAvg("brierFgTotal")}`,
+        `  F5 Total: ${brierAvg("brierF5Total")}`,
         ``,
         `(lower = better | perfect = 0.0000 | random = 0.2500)`,
         ``,
@@ -780,16 +852,28 @@ export async function ingestMlbOutcomes(
         ``,
         `Coverage Audit:`,
         `  ${coverageLine}`,
-      ].join('\n');
-      console.log(`${TAG} [STEP] Sending owner notification with Brier calibration summary + drift result...`);
-      const notifOk = await notifyOwner({ title: notifTitle, content: notifContent });
-      console.log(`${TAG} [OUTPUT] notifyOwner: ${notifOk ? 'sent' : 'failed (non-fatal)'}`);
+      ].join("\n");
+      console.log(
+        `${TAG} [STEP] Sending owner notification with Brier calibration summary + drift result...`
+      );
+      const notifOk = await notifyOwner({
+        title: notifTitle,
+        content: notifContent,
+      });
+      console.log(
+        `${TAG} [OUTPUT] notifyOwner: ${notifOk ? "sent" : "failed (non-fatal)"}`
+      );
     } catch (notifErr) {
-      const notifMsg = notifErr instanceof Error ? notifErr.message : String(notifErr);
-      console.error(`${TAG} [ERROR] notifyOwner failed (non-fatal): ${notifMsg}`);
+      const notifMsg =
+        notifErr instanceof Error ? notifErr.message : String(notifErr);
+      console.error(
+        `${TAG} [ERROR] notifyOwner failed (non-fatal): ${notifMsg}`
+      );
     }
   } else {
-    console.log(`${TAG} [STEP] Skipping owner notification (written=0, no new games ingested)`);
+    console.log(
+      `${TAG} [STEP] Skipping owner notification (written=0, no new games ingested)`
+    );
   }
 
   return {
@@ -817,13 +901,15 @@ export async function ingestMlbOutcomes(
 async function ingestMlbOutcomesRange(
   startDate: string,
   endDate: string,
-  force = false,
+  force = false
 ): Promise<OutcomeIngestSummary[]> {
   const summaries: OutcomeIngestSummary[] = [];
   const start = new Date(startDate + "T00:00:00Z");
   const end = new Date(endDate + "T00:00:00Z");
 
-  console.log(`${TAG} [INPUT] Range backfill: ${startDate} → ${endDate} force=${force}`);
+  console.log(
+    `${TAG} [INPUT] Range backfill: ${startDate} → ${endDate} force=${force}`
+  );
 
   const current = new Date(start);
   while (current <= end) {
@@ -835,7 +921,9 @@ async function ingestMlbOutcomesRange(
 
   const totalWritten = summaries.reduce((s, r) => s + r.written, 0);
   const totalErrors = summaries.reduce((s, r) => s + r.errors, 0);
-  console.log(`${TAG} [SUMMARY] Range complete: ${startDate}→${endDate} | totalWritten=${totalWritten} | totalErrors=${totalErrors}`);
+  console.log(
+    `${TAG} [SUMMARY] Range complete: ${startDate}→${endDate} | totalWritten=${totalWritten} | totalErrors=${totalErrors}`
+  );
 
   return summaries;
 }
@@ -849,20 +937,20 @@ async function ingestMlbOutcomesRange(
 function normalizeTeamAbbrev(abbrev: string): string {
   const MAP: Record<string, string> = {
     // MLB Stats API → our DB
-    "SF":  "SF",
-    "SFG": "SF",
-    "SD":  "SD",
-    "SDP": "SD",
-    "KC":  "KC",
-    "KCR": "KC",
-    "TB":  "TB",
-    "TBR": "TB",
-    "CWS": "CWS",
-    "CHW": "CWS",
-    "WSH": "WSH",
-    "WAS": "WSH",
-    "ARI": "ARI",
-    "AZ":  "ARI",
+    SF: "SF",
+    SFG: "SF",
+    SD: "SD",
+    SDP: "SD",
+    KC: "KC",
+    KCR: "KC",
+    TB: "TB",
+    TBR: "TB",
+    CWS: "CWS",
+    CHW: "CWS",
+    WSH: "WSH",
+    WAS: "WSH",
+    ARI: "ARI",
+    AZ: "ARI",
   };
   return MAP[abbrev] ?? abbrev;
 }

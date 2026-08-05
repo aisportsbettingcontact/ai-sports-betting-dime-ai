@@ -24,13 +24,19 @@ const TAG = "[Stripe][Products]";
 export type PlanId = "monthly" | "annual" | "pro" | "sharp" | "operator";
 
 /** v2 ladder plans — env-driven price IDs only, no fallbacks (SEC-006). */
-export const NEW_PLAN_IDS: ReadonlySet<PlanId> = new Set<PlanId>(["pro", "sharp", "operator"]);
+export const NEW_PLAN_IDS: ReadonlySet<PlanId> = new Set<PlanId>([
+  "pro",
+  "sharp",
+  "operator",
+]);
 
 /** Resolve a v2 price ID from env — throws (no fallback) when unset. */
 function requirePriceEnv(envVar: string): string {
   const id = process.env[envVar]?.trim();
   if (!id) {
-    console.error(`${TAG} [VERIFY] FAIL — ${envVar} is not set (no fallback by design)`);
+    console.error(
+      `${TAG} [VERIFY] FAIL — ${envVar} is not set (no fallback by design)`
+    );
     throw new Error(`${envVar} is not set`);
   }
   console.log(`${TAG} [STATE] ${envVar} priceId=${id}`);
@@ -60,7 +66,8 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     interval: "month",
     priceId: () => {
       // Primary: env var (allows override). Fallback: hardcoded live price ID.
-      const id = process.env.STRIPE_PRICE_MONTHLY ?? "price_1TaVc2Pa3TFEAkkYucDoFPcW";
+      const id =
+        process.env.STRIPE_PRICE_MONTHLY ?? "price_1TaVc2Pa3TFEAkkYucDoFPcW";
       console.log(`${TAG} [STATE] monthly priceId=${id}`);
       return id;
     },
@@ -73,7 +80,8 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
     interval: "year",
     priceId: () => {
       // Primary: env var (allows override). Fallback: hardcoded live price ID.
-      const id = process.env.STRIPE_PRICE_ANNUAL ?? "price_1TaVdfPa3TFEAkkY0tW4eKSV";
+      const id =
+        process.env.STRIPE_PRICE_ANNUAL ?? "price_1TaVdfPa3TFEAkkY0tW4eKSV";
       console.log(`${TAG} [STATE] annual priceId=${id}`);
       return id;
     },
@@ -109,7 +117,8 @@ export const PLANS: Record<PlanId, PlanDefinition> = {
  * Unknown/missing values fall back to "monthly" — the legacy default.
  */
 export function normalizePlanId(raw: string | null | undefined): PlanId {
-  if (raw && Object.prototype.hasOwnProperty.call(PLANS, raw)) return raw as PlanId;
+  if (raw && Object.prototype.hasOwnProperty.call(PLANS, raw))
+    return raw as PlanId;
   return "monthly";
 }
 
@@ -131,7 +140,9 @@ export function getPlanByPriceId(priceId: string): PlanDefinition | null {
   if (sharpId && priceId === sharpId) return PLANS.sharp;
   if (operatorId && priceId === operatorId) return PLANS.operator;
 
-  console.warn(`${TAG} [VERIFY] Unknown priceId=${priceId} — not matched to any plan`);
+  console.warn(
+    `${TAG} [VERIFY] Unknown priceId=${priceId} — not matched to any plan`
+  );
   return null;
 }
 

@@ -37,7 +37,7 @@ describe("serveStatic — root index.html is always no-store (2026-07-22 stale-b
     expect(viteSrc).toMatch(/2026-07-22 stale-bfcache incident/);
   });
 
-  it("mounts the fallback static middleware with index disabled, so \"/\" can no longer be auto-served with a cacheable header", () => {
+  it('mounts the fallback static middleware with index disabled, so "/" can no longer be auto-served with a cacheable header', () => {
     const fallbackIdx = viteSrc.indexOf("express.static(distPath,");
     expect(fallbackIdx).toBeGreaterThan(-1);
     const fallbackEnd = viteSrc.indexOf(");", fallbackIdx);
@@ -45,25 +45,29 @@ describe("serveStatic — root index.html is always no-store (2026-07-22 stale-b
     expect(fallbackBlock).toMatch(/index: false,/);
   });
 
-  it("still guards a literal \"/index.html\" request explicitly, since index:false only disables the directory-index auto-serve", () => {
+  it('still guards a literal "/index.html" request explicitly, since index:false only disables the directory-index auto-serve', () => {
     const fallbackIdx = viteSrc.indexOf("express.static(distPath,");
     const fallbackEnd = viteSrc.indexOf(");", fallbackIdx);
     const fallbackBlock = viteSrc.slice(fallbackIdx, fallbackEnd);
     expect(fallbackBlock).toMatch(/setHeaders:/);
-    expect(fallbackBlock).toMatch(/path\.basename\(filePath\) === "index\.html"/);
+    expect(fallbackBlock).toMatch(
+      /path\.basename\(filePath\) === "index\.html"/
+    );
     expect(fallbackBlock).toMatch(/Object\.entries\(NO_CACHE_HEADERS\)/);
   });
 
-  it("the catch-all \"/\" now falls through to — still sends index.html with NO_CACHE_HEADERS", () => {
+  it('the catch-all "/" now falls through to — still sends index.html with NO_CACHE_HEADERS', () => {
     // Locate by mount, not by parameter name: the handler now inspects the
     // request URL (to 404 missing build assets instead of serving the SPA
     // shell), so it takes `req` rather than `_req`. The bfcache contract this
     // test guards is unchanged.
-    const catchAllIdx = viteSrc.search(/app\.use\("\*",\s*\(\s*_?req,\s*res\s*\)\s*=>\s*\{/);
+    const catchAllIdx = viteSrc.search(
+      /app\.use\("\*",\s*\(\s*_?req,\s*res\s*\)\s*=>\s*\{/
+    );
     expect(catchAllIdx).toBeGreaterThan(-1);
     const sendFileIdx = viteSrc.indexOf("res.sendFile(", catchAllIdx);
     expect(sendFileIdx).toBeGreaterThan(catchAllIdx);
-    const catchAllEnd = viteSrc.indexOf("});", sendFileIdx);  // after sendFile, so the asset-404 branch above is excluded
+    const catchAllEnd = viteSrc.indexOf("});", sendFileIdx); // after sendFile, so the asset-404 branch above is excluded
     const catchAllBlock = viteSrc.slice(catchAllIdx, catchAllEnd);
     expect(catchAllBlock).toMatch(/res\.set\(\{ \.\.\.NO_CACHE_HEADERS \}\)/);
     expect(catchAllBlock).toMatch(

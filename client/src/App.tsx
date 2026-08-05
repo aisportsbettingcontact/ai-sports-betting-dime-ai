@@ -265,7 +265,7 @@ function Router() {
           code falls through with empty overrides, landing on the page's own
           invalid-link state. */}
         <Route path="/invite/:code">
-          {(params) => {
+          {params => {
             const parsed = parseInviteCode(params.code ?? "");
             return (
               <ResetPassword
@@ -331,7 +331,9 @@ function Router() {
         {/* /trends is a shell-owned (≥768px) surface. Below the shell
             boundary there is no Trends pane — the accordions still live on
             the splits cards — so land mobile visitors there. */}
-        <Route path="/trends">{() => <Redirect to={bettingSplitsPath()} replace />}</Route>
+        <Route path="/trends">
+          {() => <Redirect to={bettingSplitsPath()} replace />}
+        </Route>
         {/* Admin Dashboard — owner-only (@prez), owner directive 2026-07-22:
           "No other users or site members should be able to view these
           pages." RequireOwner is the client-side (cosmetic) half of the

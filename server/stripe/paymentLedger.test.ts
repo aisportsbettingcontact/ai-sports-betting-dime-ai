@@ -40,8 +40,12 @@ describe("every money movement is recorded", () => {
       const rest = webhook.slice(start);
       const end = rest.indexOf("\n    case ", 1);
       const body = end === -1 ? rest : rest.slice(0, end);
-      expect(body, `${ev} does not record a payment event`).toMatch(/recordPaymentEvent\(/);
-      expect(body, `${ev} records the wrong kind`).toMatch(new RegExp(`kind: "${kind}"`));
+      expect(body, `${ev} does not record a payment event`).toMatch(
+        /recordPaymentEvent\(/
+      );
+      expect(body, `${ev} records the wrong kind`).toMatch(
+        new RegExp(`kind: "${kind}"`)
+      );
     });
   }
 });
@@ -54,8 +58,13 @@ describe("outcome is independent of what Stripe did", () => {
     // member. The subscription guard is load-bearing: a lifetime (one-off)
     // member must never lose their entitlement to a different subscription's
     // decline.
-    const body = webhook.slice(webhook.indexOf('case "invoice.payment_failed"'));
-    const caseBody = body.slice(0, body.indexOf('case "payment_intent.succeeded"'));
+    const body = webhook.slice(
+      webhook.indexOf('case "invoice.payment_failed"')
+    );
+    const caseBody = body.slice(
+      0,
+      body.indexOf('case "payment_intent.succeeded"')
+    );
     expect(caseBody).toMatch(/PAYMENT_FAILED_NO_GRACE/);
     expect(caseBody).toMatch(/outcome: revoked \? "revoked" : "noop"/);
     expect(caseBody).toMatch(/subscriptions\.cancel/);
@@ -67,7 +76,9 @@ describe("outcome is independent of what Stripe did", () => {
   it("a paid invoice that matches no local user is a noop, not a grant", () => {
     // Money taken from someone the system does not recognise — the recurring
     // equivalent of the dropped checkout.
-    expect(webhook).toMatch(/invoice paid but no local user matched this customer/);
+    expect(webhook).toMatch(
+      /invoice paid but no local user matched this customer/
+    );
   });
 
   it("a full refund revokes; a partial refund does not", () => {
@@ -88,7 +99,9 @@ describe("ledger safety", () => {
   });
 
   it("logs failures and disputes at error level so they surface without a query", () => {
-    expect(ledger).toMatch(/kind === "failed" \|\| input\.kind === "disputed" \|\| input\.outcome === "noop"/);
+    expect(ledger).toMatch(
+      /kind === "failed" \|\| input\.kind === "disputed" \|\| input\.outcome === "noop"/
+    );
   });
 
   it("caps every string to its column width", () => {
@@ -123,8 +136,12 @@ describe("schema is queryable for the questions that matter", () => {
   });
 
   it("is declared in the drizzle schema and the journal", () => {
-    expect(read("drizzle/schema.ts")).toMatch(/paymentEvents = mysqlTable\("payment_events"/);
+    expect(read("drizzle/schema.ts")).toMatch(
+      /paymentEvents = mysqlTable\("payment_events"/
+    );
     const j = JSON.parse(read("drizzle/meta/_journal.json"));
-    expect(j.entries.some((e: { tag: string }) => e.tag === "0127_payment_events")).toBe(true);
+    expect(
+      j.entries.some((e: { tag: string }) => e.tag === "0127_payment_events")
+    ).toBe(true);
   });
 });

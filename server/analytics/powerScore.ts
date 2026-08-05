@@ -41,7 +41,14 @@ export interface PowerScore {
 const RECENCY_DECAY = Math.log(2) / 7;
 
 /** Component weights (sum = 1.0). Documented in the profiling master plan §3.2. */
-export const POWER_WEIGHTS = { R: 0.25, F: 0.2, B: 0.15, V: 0.2, S: 0.1, D: 0.1 } as const;
+export const POWER_WEIGHTS = {
+  R: 0.25,
+  F: 0.2,
+  B: 0.15,
+  V: 0.2,
+  S: 0.1,
+  D: 0.1,
+} as const;
 
 const clamp01 = (x: number): number => (x < 0 ? 0 : x > 1 ? 1 : x);
 
@@ -50,7 +57,10 @@ const clamp01 = (x: number): number => (x < 0 ? 0 : x > 1 ? 1 : x);
  * no activity in 14 days caps a user at At-Risk; 30 days is Dormant. A user
  * can't be "Power" on stale behavior no matter how loud the prior 30 days were.
  */
-export function deriveTier(score: number, daysSinceLastActive: number): PowerTier {
+export function deriveTier(
+  score: number,
+  daysSinceLastActive: number
+): PowerTier {
   if (daysSinceLastActive > 30) return "dormant";
   if (daysSinceLastActive > 14) return score >= 15 ? "at_risk" : "dormant";
   if (score >= 70) return "power";

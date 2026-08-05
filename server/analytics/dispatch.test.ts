@@ -24,7 +24,9 @@ describe("dispatchStoredEvent", () => {
   it("is a no-op when disabled", async () => {
     delete process.env.ANALYTICS_ROLE;
     delete process.env.USER_ACTIVITY_BACKEND_URL;
-    await expect(dispatchStoredEvent(base)).resolves.toEqual({ routed: "disabled" });
+    await expect(dispatchStoredEvent(base)).resolves.toEqual({
+      routed: "disabled",
+    });
   });
   it("never throws even if a sink fails", async () => {
     process.env.ANALYTICS_ROLE = "store"; // store path will throw without a DB

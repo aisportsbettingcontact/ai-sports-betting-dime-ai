@@ -2,7 +2,10 @@ import { useCallback, useEffect } from "react";
 import { useAppAuth } from "@/_core/hooks/useAppAuth";
 import { useSessionTracking } from "@/hooks/useSessionTracking";
 import { useAnalytics } from "@/lib/analytics";
-import { registerAnalyticsEmit, unregisterAnalyticsEmit } from "@/lib/analyticsBridge";
+import {
+  registerAnalyticsEmit,
+  unregisterAnalyticsEmit,
+} from "@/lib/analyticsBridge";
 
 /**
  * SessionTracker — lazy render-null island. Drives foreground engagement

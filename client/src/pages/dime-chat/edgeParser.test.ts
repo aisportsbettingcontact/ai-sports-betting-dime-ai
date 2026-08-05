@@ -23,13 +23,16 @@ const BLOCK =
 function visibleText(segments: Segment[]): string {
   return segments
     .filter((s): s is Extract<Segment, { kind: "text" }> => s.kind === "text")
-    .map((s) => s.text)
+    .map(s => s.text)
     .join("");
 }
 
 describe("parseAssistantContent", () => {
   it("returns a single text segment for prose without markers", () => {
-    const out = parseAssistantContent("No edge on the ATH runline tonight.", true);
+    const out = parseAssistantContent(
+      "No edge on the ATH runline tonight.",
+      true
+    );
     expect(out).toEqual([
       { kind: "text", text: "No edge on the ATH runline tonight." },
     ]);
@@ -53,14 +56,14 @@ describe("parseAssistantContent", () => {
 
   it("keeps prose before and after the block as text segments", () => {
     const out = parseAssistantContent(`Lead-in. ${BLOCK} Tail.`, true);
-    expect(out.map((s) => s.kind)).toEqual(["text", "edge", "text"]);
+    expect(out.map(s => s.kind)).toEqual(["text", "edge", "text"]);
     expect(visibleText(out)).toBe("Lead-in.  Tail.");
   });
 
   it("parses market values containing spaces", () => {
     const out = parseAssistantContent(
       "[EDGE] verdict=monitor market=Ohtani strikeouts o8.5 model_line=8.9 market_line=8.5 edge_pct=2.0 confidence=low [/EDGE]",
-      true,
+      true
     );
     expect(out[0].kind).toBe("edge");
     if (out[0].kind === "edge") {
@@ -80,9 +83,9 @@ describe("parseAssistantContent", () => {
   it("buffers an unclosed block while streaming (hidden pending segment)", () => {
     const out = parseAssistantContent(
       "Here is the read. [EDGE] verdict=pass market=COL ML model_line=",
-      false,
+      false
     );
-    expect(out.map((s) => s.kind)).toEqual(["text", "pending"]);
+    expect(out.map(s => s.kind)).toEqual(["text", "pending"]);
     expect(visibleText(out)).toBe("Here is the read. ");
     expect(visibleText(out)).not.toContain("[EDGE");
   });
@@ -108,7 +111,7 @@ describe("parseAssistantContent", () => {
   it("parses multiple blocks in one message", () => {
     const second = BLOCK.replace("edge_detected", "pass");
     const out = parseAssistantContent(`${BLOCK}\n${second}`, true);
-    expect(out.map((s) => s.kind)).toEqual(["edge", "text", "edge"]);
+    expect(out.map(s => s.kind)).toEqual(["edge", "text", "edge"]);
   });
 
   it("is prefix-stable: no streamed prefix ever surfaces a partial marker", () => {
@@ -123,10 +126,10 @@ describe("parseAssistantContent", () => {
   it("is deterministic: identical input yields identical segmentation", () => {
     const input = `Lead ${BLOCK} tail [ED`;
     expect(parseAssistantContent(input, false)).toEqual(
-      parseAssistantContent(input, false),
+      parseAssistantContent(input, false)
     );
     expect(parseAssistantContent(input, true)).toEqual(
-      parseAssistantContent(input, true),
+      parseAssistantContent(input, true)
     );
   });
 });
@@ -134,16 +137,18 @@ describe("parseAssistantContent", () => {
 describe("segmentNumerals", () => {
   const nums = (text: string) =>
     segmentNumerals(text)
-      .filter((p) => p.kind === "num")
-      .map((p) => p.text);
+      .filter(p => p.kind === "num")
+      .map(p => p.text);
 
   it("wraps percentages, signed odds/lines, prices and records", () => {
-    expect(nums("anytime probability at 54.2% vs +115 (implied 46.5%)")).toEqual([
-      "54.2%",
-      "+115",
-      "46.5%",
+    expect(
+      nums("anytime probability at 54.2% vs +115 (implied 46.5%)")
+    ).toEqual(["54.2%", "+115", "46.5%"]);
+    expect(nums("laying -1.5 at -110 for $50")).toEqual([
+      "-1.5",
+      "-110",
+      "$50",
     ]);
-    expect(nums("laying -1.5 at -110 for $50")).toEqual(["-1.5", "-110", "$50"]);
     expect(nums("the model is 12-4 on these")).toEqual(["12-4"]);
   });
 
@@ -154,6 +159,10 @@ describe("segmentNumerals", () => {
 
   it("reassembles to the original text", () => {
     const text = "0.68 xG puts him at 54.2% against +115, a 7.7% edge.";
-    expect(segmentNumerals(text).map((p) => p.text).join("")).toBe(text);
+    expect(
+      segmentNumerals(text)
+        .map(p => p.text)
+        .join("")
+    ).toBe(text);
   });
 });

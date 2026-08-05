@@ -33,7 +33,9 @@ describe("Dime chat per-user rate limit", () => {
     }
     expect(checkDimeChatRateLimit(2, store, now)).toBe(false);
     // Still blocked while inside the same window.
-    expect(checkDimeChatRateLimit(2, store, now + DIME_CHAT_RATE_LIMIT_WINDOW_MS - 1)).toBe(false);
+    expect(
+      checkDimeChatRateLimit(2, store, now + DIME_CHAT_RATE_LIMIT_WINDOW_MS - 1)
+    ).toBe(false);
   });
 
   it("resets after the window elapses", () => {
@@ -44,7 +46,13 @@ describe("Dime chat per-user rate limit", () => {
     }
     expect(checkDimeChatRateLimit(3, store, start)).toBe(false);
     // One millisecond past the window → fresh allowance.
-    expect(checkDimeChatRateLimit(3, store, start + DIME_CHAT_RATE_LIMIT_WINDOW_MS + 1)).toBe(true);
+    expect(
+      checkDimeChatRateLimit(
+        3,
+        store,
+        start + DIME_CHAT_RATE_LIMIT_WINDOW_MS + 1
+      )
+    ).toBe(true);
   });
 
   it("tracks each user independently", () => {

@@ -22,7 +22,10 @@ import { and, eq } from "drizzle-orm";
 import { getDb } from "./db.js";
 import { games } from "../drizzle/schema.js";
 import type { Game } from "../drizzle/schema.js";
-import { scrapeNhlStartingGoalies, scrapeNhlStartingGoaliesBoth } from "./nhlRotoWireScraper.js";
+import {
+  scrapeNhlStartingGoalies,
+  scrapeNhlStartingGoaliesBoth,
+} from "./nhlRotoWireScraper.js";
 import type { NhlLineupGame } from "./nhlRotoWireScraper.js";
 import { syncNhlModelForToday } from "./nhlModelSync.js";
 import { NHL_BY_DB_SLUG } from "../shared/nhlTeams.js";
@@ -30,22 +33,22 @@ import { NHL_BY_DB_SLUG } from "../shared/nhlTeams.js";
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 export interface GoalieChange {
-  gameId:       number;
-  gameLabel:    string;
-  side:         "away" | "home";
-  oldGoalie:    string | null;
-  newGoalie:    string | null;
+  gameId: number;
+  gameLabel: string;
+  side: "away" | "home";
+  oldGoalie: string | null;
+  newGoalie: string | null;
   oldConfirmed: boolean;
   newConfirmed: boolean;
-  changeType:   "scratch" | "confirmation" | "new";
+  changeType: "scratch" | "confirmation" | "new";
 }
 
 export interface GoalieWatchResult {
-  checkedAt:    string;
+  checkedAt: string;
   gamesChecked: number;
-  changes:      GoalieChange[];
-  modelRerun:   boolean;
-  errors:       string[];
+  changes: GoalieChange[];
+  modelRerun: boolean;
+  errors: string[];
 }
 
 let lastWatchResult: GoalieWatchResult | null = null;
@@ -60,7 +63,9 @@ function getTodayDate(): string {
   const now = new Date();
   const etStr = now.toLocaleDateString("en-US", {
     timeZone: "America/New_York",
-    year: "numeric", month: "2-digit", day: "2-digit",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
   });
   const [m, d, y] = etStr.split("/");
   return `${y}-${m}-${d}`;
@@ -71,7 +76,9 @@ function getTomorrowDate(): string {
   const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
   const etStr = tomorrow.toLocaleDateString("en-US", {
     timeZone: "America/New_York",
-    year: "numeric", month: "2-digit", day: "2-digit",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
   });
   const [m, d, y] = etStr.split("/");
   return `${y}-${m}-${d}`;
@@ -106,7 +113,10 @@ function normalizeGoalieName(name: string | null | undefined): string {
 /**
  * Check if two goalie names refer to the same player (last-name comparison).
  */
-function isSameGoalie(a: string | null | undefined, b: string | null | undefined): boolean {
+function isSameGoalie(
+  a: string | null | undefined,
+  b: string | null | undefined
+): boolean {
   if (!a && !b) return true;
   if (!a || !b) return false;
   return normalizeGoalieName(a) === normalizeGoalieName(b);
@@ -123,23 +133,28 @@ function matchGameToDb(rotoGame: NhlLineupGame, dbGames: Game[]): Game | null {
 
   // Primary match: convert dbSlug → abbrev via NHL_BY_DB_SLUG
   const abbrevMatch = dbGames.find(g => {
-    const dbAwayAbbrev = NHL_BY_DB_SLUG.get(g.awayTeam ?? "")?.abbrev?.toUpperCase() ?? "";
-    const dbHomeAbbrev = NHL_BY_DB_SLUG.get(g.homeTeam ?? "")?.abbrev?.toUpperCase() ?? "";
+    const dbAwayAbbrev =
+      NHL_BY_DB_SLUG.get(g.awayTeam ?? "")?.abbrev?.toUpperCase() ?? "";
+    const dbHomeAbbrev =
+      NHL_BY_DB_SLUG.get(g.homeTeam ?? "")?.abbrev?.toUpperCase() ?? "";
     return dbAwayAbbrev === rotoAway && dbHomeAbbrev === rotoHome;
   });
   if (abbrevMatch) return abbrevMatch;
 
   // Fallback: direct string match (in case DB stores abbrevs directly)
   const directMatch = dbGames.find(
-    g => (g.awayTeam ?? "").toUpperCase() === rotoAway &&
-         (g.homeTeam ?? "").toUpperCase() === rotoHome
+    g =>
+      (g.awayTeam ?? "").toUpperCase() === rotoAway &&
+      (g.homeTeam ?? "").toUpperCase() === rotoHome
   );
   return directMatch ?? null;
 }
 
 // ─── Core Watch Function ──────────────────────────────────────────────────────
 
-export async function checkGoalieChanges(source: "auto" | "manual" = "auto"): Promise<GoalieWatchResult> {
+export async function checkGoalieChanges(
+  source: "auto" | "manual" = "auto"
+): Promise<GoalieWatchResult> {
   const tag = source === "manual" ? "[MANUAL]" : "[AUTO]";
   const checkedAt = new Date().toISOString();
 
@@ -175,13 +190,15 @@ export async function checkGoalieChanges(source: "auto" | "manual" = "auto"): Pr
     .where(
       and(
         eq(games.gameDate, gameDate),
-        eq(games.sport, "NHL"),
+        eq(games.sport, "NHL")
         // Process ALL games (upcoming, live, final) — goalie data should be tracked for every game
       )
     );
 
   result.gamesChecked = todayGames.length;
-  console.log(`[GoalieWatcher]${tag}   Found ${todayGames.length} NHL games for ${gameDate} (all statuses)`);
+  console.log(
+    `[GoalieWatcher]${tag}   Found ${todayGames.length} NHL games for ${gameDate} (all statuses)`
+  );
 
   if (todayGames.length === 0) {
     console.log(`[GoalieWatcher]${tag} No NHL games today`);
@@ -193,7 +210,9 @@ export async function checkGoalieChanges(source: "auto" | "manual" = "auto"): Pr
   let rotoGames: NhlLineupGame[] = [];
   try {
     rotoGames = await scrapeNhlStartingGoalies();
-    console.log(`[GoalieWatcher]${tag}   RotoWire returned ${rotoGames.length} games`);
+    console.log(
+      `[GoalieWatcher]${tag}   RotoWire returned ${rotoGames.length} games`
+    );
   } catch (err) {
     const msg = `RotoWire scrape failed: ${err}`;
     console.error(`[GoalieWatcher]${tag} ${msg}`);
@@ -203,7 +222,9 @@ export async function checkGoalieChanges(source: "auto" | "manual" = "auto"): Pr
   }
 
   if (rotoGames.length === 0) {
-    console.warn(`[GoalieWatcher]${tag} RotoWire returned 0 games - page may not have today's lineups yet`);
+    console.warn(
+      `[GoalieWatcher]${tag} RotoWire returned 0 games - page may not have today's lineups yet`
+    );
     lastWatchResult = result;
     return result;
   }
@@ -212,9 +233,15 @@ export async function checkGoalieChanges(source: "auto" | "manual" = "auto"): Pr
   // ── Structured per-game Rotowire goalie log ─────────────────────────────
   // Emits one line per game: matchup, away/home goalie name + confirmed status
   for (const rg of rotoGames) {
-    const awayG = rg.awayGoalie ? `${rg.awayGoalie.name}${rg.awayGoalie.confirmed ? ' [CONFIRMED]' : ' [EXPECTED]'}` : 'TBD';
-    const homeG = rg.homeGoalie ? `${rg.homeGoalie.name}${rg.homeGoalie.confirmed ? ' [CONFIRMED]' : ' [EXPECTED]'}` : 'TBD';
-    console.log(`[GoalieWatcher]${tag}[Roto][TODAY] ${rg.awayTeam}@${rg.homeTeam} | away_g=${awayG} home_g=${homeG}`);
+    const awayG = rg.awayGoalie
+      ? `${rg.awayGoalie.name}${rg.awayGoalie.confirmed ? " [CONFIRMED]" : " [EXPECTED]"}`
+      : "TBD";
+    const homeG = rg.homeGoalie
+      ? `${rg.homeGoalie.name}${rg.homeGoalie.confirmed ? " [CONFIRMED]" : " [EXPECTED]"}`
+      : "TBD";
+    console.log(
+      `[GoalieWatcher]${tag}[Roto][TODAY] ${rg.awayTeam}@${rg.homeTeam} | away_g=${awayG} home_g=${homeG}`
+    );
   }
   const changedGameIds: number[] = [];
   const newlyPopulatedGameIds: number[] = []; // games where both goalies just became available
@@ -222,7 +249,9 @@ export async function checkGoalieChanges(source: "auto" | "manual" = "auto"): Pr
   for (const rotoGame of rotoGames) {
     const dbGame = matchGameToDb(rotoGame, todayGames);
     if (!dbGame) {
-      console.log(`[GoalieWatcher]${tag}   No DB match for: ${rotoGame.awayTeam} @ ${rotoGame.homeTeam}`);
+      console.log(
+        `[GoalieWatcher]${tag}   No DB match for: ${rotoGame.awayTeam} @ ${rotoGame.homeTeam}`
+      );
       continue;
     }
 
@@ -231,45 +260,65 @@ export async function checkGoalieChanges(source: "auto" | "manual" = "auto"): Pr
 
     // Check away goalie
     if (rotoGame.awayGoalie) {
-      const rotoName      = rotoGame.awayGoalie.name;
+      const rotoName = rotoGame.awayGoalie.name;
       const rotoConfirmed = rotoGame.awayGoalie.confirmed;
-      const dbName        = dbGame.awayGoalie;
-      const dbConfirmed   = dbGame.awayGoalieConfirmed ?? false;
+      const dbName = dbGame.awayGoalie;
+      const dbConfirmed = dbGame.awayGoalieConfirmed ?? false;
 
-      const nameChanged           = !isSameGoalie(dbName, rotoName);
-      const confirmationImproved  = !dbConfirmed && rotoConfirmed;
+      const nameChanged = !isSameGoalie(dbName, rotoName);
+      const confirmationImproved = !dbConfirmed && rotoConfirmed;
 
       if (nameChanged || confirmationImproved) {
-        const changeType: GoalieChange["changeType"] = !dbName ? "new" : nameChanged ? "scratch" : "confirmation";
+        const changeType: GoalieChange["changeType"] = !dbName
+          ? "new"
+          : nameChanged
+            ? "scratch"
+            : "confirmation";
         gameChanges.push({
-          gameId: dbGame.id, gameLabel, side: "away",
-          oldGoalie: dbName ?? null, newGoalie: rotoName,
-          oldConfirmed: dbConfirmed, newConfirmed: rotoConfirmed,
+          gameId: dbGame.id,
+          gameLabel,
+          side: "away",
+          oldGoalie: dbName ?? null,
+          newGoalie: rotoName,
+          oldConfirmed: dbConfirmed,
+          newConfirmed: rotoConfirmed,
           changeType,
         });
-        console.log(`[GoalieWatcher]${tag}   AWAY [${changeType.toUpperCase()}] ${gameLabel}: "${dbName ?? "TBD"}" -> "${rotoName}" (${rotoConfirmed ? "confirmed" : "projected"})`);
+        console.log(
+          `[GoalieWatcher]${tag}   AWAY [${changeType.toUpperCase()}] ${gameLabel}: "${dbName ?? "TBD"}" -> "${rotoName}" (${rotoConfirmed ? "confirmed" : "projected"})`
+        );
       }
     }
 
     // Check home goalie
     if (rotoGame.homeGoalie) {
-      const rotoName      = rotoGame.homeGoalie.name;
+      const rotoName = rotoGame.homeGoalie.name;
       const rotoConfirmed = rotoGame.homeGoalie.confirmed;
-      const dbName        = dbGame.homeGoalie;
-      const dbConfirmed   = dbGame.homeGoalieConfirmed ?? false;
+      const dbName = dbGame.homeGoalie;
+      const dbConfirmed = dbGame.homeGoalieConfirmed ?? false;
 
-      const nameChanged           = !isSameGoalie(dbName, rotoName);
-      const confirmationImproved  = !dbConfirmed && rotoConfirmed;
+      const nameChanged = !isSameGoalie(dbName, rotoName);
+      const confirmationImproved = !dbConfirmed && rotoConfirmed;
 
       if (nameChanged || confirmationImproved) {
-        const changeType: GoalieChange["changeType"] = !dbName ? "new" : nameChanged ? "scratch" : "confirmation";
+        const changeType: GoalieChange["changeType"] = !dbName
+          ? "new"
+          : nameChanged
+            ? "scratch"
+            : "confirmation";
         gameChanges.push({
-          gameId: dbGame.id, gameLabel, side: "home",
-          oldGoalie: dbName ?? null, newGoalie: rotoName,
-          oldConfirmed: dbConfirmed, newConfirmed: rotoConfirmed,
+          gameId: dbGame.id,
+          gameLabel,
+          side: "home",
+          oldGoalie: dbName ?? null,
+          newGoalie: rotoName,
+          oldConfirmed: dbConfirmed,
+          newConfirmed: rotoConfirmed,
           changeType,
         });
-        console.log(`[GoalieWatcher]${tag}   HOME [${changeType.toUpperCase()}] ${gameLabel}: "${dbName ?? "TBD"}" -> "${rotoName}" (${rotoConfirmed ? "confirmed" : "projected"})`);
+        console.log(
+          `[GoalieWatcher]${tag}   HOME [${changeType.toUpperCase()}] ${gameLabel}: "${dbName ?? "TBD"}" -> "${rotoName}" (${rotoConfirmed ? "confirmed" : "projected"})`
+        );
       }
     }
 
@@ -280,10 +329,10 @@ export async function checkGoalieChanges(source: "auto" | "manual" = "auto"): Pr
       const updatePayload: Record<string, unknown> = {};
       for (const change of gameChanges) {
         if (change.side === "away") {
-          updatePayload.awayGoalie          = change.newGoalie;
+          updatePayload.awayGoalie = change.newGoalie;
           updatePayload.awayGoalieConfirmed = change.newConfirmed;
         } else {
-          updatePayload.homeGoalie          = change.newGoalie;
+          updatePayload.homeGoalie = change.newGoalie;
           updatePayload.homeGoalieConfirmed = change.newConfirmed;
         }
       }
@@ -293,13 +342,20 @@ export async function checkGoalieChanges(source: "auto" | "manual" = "auto"): Pr
       if (dbGame.gameStatus === "upcoming") {
         changedGameIds.push(dbGame.id);
         updatePayload.modelRunAt = null;
-        console.log(`[GoalieWatcher]${tag}   Clearing modelRunAt for ${gameLabel} - model will re-run`);
+        console.log(
+          `[GoalieWatcher]${tag}   Clearing modelRunAt for ${gameLabel} - model will re-run`
+        );
       } else {
-        console.log(`[GoalieWatcher]${tag}   Goalie updated for ${gameLabel} (${dbGame.gameStatus}) - no model re-run needed`);
+        console.log(
+          `[GoalieWatcher]${tag}   Goalie updated for ${gameLabel} (${dbGame.gameStatus}) - no model re-run needed`
+        );
       }
 
       try {
-        await db.update(games).set(updatePayload).where(eq(games.id, dbGame.id));
+        await db
+          .update(games)
+          .set(updatePayload)
+          .where(eq(games.id, dbGame.id));
         console.log(`[GoalieWatcher]${tag}   DB updated for ${gameLabel}`);
       } catch (err) {
         const msg = `DB update failed for ${gameLabel}: ${err}`;
@@ -313,18 +369,24 @@ export async function checkGoalieChanges(source: "auto" | "manual" = "auto"): Pr
       if (awayMissing || homeMissing) {
         const silentUpdate: Record<string, unknown> = {};
         if (awayMissing && rotoGame.awayGoalie) {
-          silentUpdate.awayGoalie          = rotoGame.awayGoalie.name;
+          silentUpdate.awayGoalie = rotoGame.awayGoalie.name;
           silentUpdate.awayGoalieConfirmed = rotoGame.awayGoalie.confirmed;
         }
         if (homeMissing && rotoGame.homeGoalie) {
-          silentUpdate.homeGoalie          = rotoGame.homeGoalie.name;
+          silentUpdate.homeGoalie = rotoGame.homeGoalie.name;
           silentUpdate.homeGoalieConfirmed = rotoGame.homeGoalie.confirmed;
         }
 
         // Check if BOTH goalies are now available after this update
         // Only trigger model run for upcoming games (live/final already started)
-        const awayGoalieAfter = (awayMissing && rotoGame.awayGoalie) ? rotoGame.awayGoalie.name : dbGame.awayGoalie;
-        const homeGoalieAfter = (homeMissing && rotoGame.homeGoalie) ? rotoGame.homeGoalie.name : dbGame.homeGoalie;
+        const awayGoalieAfter =
+          awayMissing && rotoGame.awayGoalie
+            ? rotoGame.awayGoalie.name
+            : dbGame.awayGoalie;
+        const homeGoalieAfter =
+          homeMissing && rotoGame.homeGoalie
+            ? rotoGame.homeGoalie.name
+            : dbGame.homeGoalie;
         const bothGoaliesNowAvailable = !!awayGoalieAfter && !!homeGoalieAfter;
         const modelNotYetRun = !dbGame.modelRunAt;
         const isUpcoming = dbGame.gameStatus === "upcoming";
@@ -333,14 +395,23 @@ export async function checkGoalieChanges(source: "auto" | "manual" = "auto"): Pr
           // Clear modelRunAt to ensure model runs (it may already be null)
           silentUpdate.modelRunAt = null;
           newlyPopulatedGameIds.push(dbGame.id);
-          console.log(`[GoalieWatcher]${tag}   BOTH goalies now available for ${gameLabel} - queuing model run`);
+          console.log(
+            `[GoalieWatcher]${tag}   BOTH goalies now available for ${gameLabel} - queuing model run`
+          );
         }
 
         try {
-          await db.update(games).set(silentUpdate).where(eq(games.id, dbGame.id));
-          console.log(`[GoalieWatcher]${tag}   Silent goalie populate for ${gameLabel}: away=${awayGoalieAfter ?? "TBD"} home=${homeGoalieAfter ?? "TBD"}`);
+          await db
+            .update(games)
+            .set(silentUpdate)
+            .where(eq(games.id, dbGame.id));
+          console.log(
+            `[GoalieWatcher]${tag}   Silent goalie populate for ${gameLabel}: away=${awayGoalieAfter ?? "TBD"} home=${homeGoalieAfter ?? "TBD"}`
+          );
         } catch (err) {
-          console.warn(`[GoalieWatcher]${tag} Silent goalie update failed for ${gameLabel}: ${err}`);
+          console.warn(
+            `[GoalieWatcher]${tag} Silent goalie update failed for ${gameLabel}: ${err}`
+          );
         }
       } else {
         // CASE C/D FIX: Both goalies already in DB, no change detected this cycle.
@@ -348,18 +419,18 @@ export async function checkGoalieChanges(source: "auto" | "manual" = "auto"): Pr
         // This handles the stale-hash scenario: goalies seeded in a prior cycle,
         // watcher restarted, no change fires → model would never run without this path.
         const bothAlreadyPresent = !!dbGame.awayGoalie && !!dbGame.homeGoalie;
-        const modelStillNull     = !dbGame.modelRunAt;
-        const isUpcomingGame     = dbGame.gameStatus === "upcoming";
+        const modelStillNull = !dbGame.modelRunAt;
+        const isUpcomingGame = dbGame.gameStatus === "upcoming";
         if (bothAlreadyPresent && modelStillNull && isUpcomingGame) {
           newlyPopulatedGameIds.push(dbGame.id);
           console.log(
             `[GoalieWatcher]${tag}   FALLBACK: ${gameLabel} — both goalies present, modelRunAt=null → queuing model run` +
-            ` | away=${dbGame.awayGoalie} home=${dbGame.homeGoalie}`
+              ` | away=${dbGame.awayGoalie} home=${dbGame.homeGoalie}`
           );
         } else {
           console.log(
             `[GoalieWatcher]${tag}   No changes for ${gameLabel}` +
-            ` | bothPresent=${bothAlreadyPresent} modelNull=${modelStillNull} upcoming=${isUpcomingGame}`
+              ` | bothPresent=${bothAlreadyPresent} modelNull=${modelStillNull} upcoming=${isUpcomingGame}`
           );
         }
       }
@@ -368,19 +439,21 @@ export async function checkGoalieChanges(source: "auto" | "manual" = "auto"): Pr
 
   // Step 4: Re-run model for games with goalie changes OR newly populated goalies
   // Includes CASE C/D fallback: games where both goalies already present but modelRunAt=null
-  const allGameIdsToRerun = Array.from(new Set([...changedGameIds, ...newlyPopulatedGameIds]));
+  const allGameIdsToRerun = Array.from(
+    new Set([...changedGameIds, ...newlyPopulatedGameIds])
+  );
 
   if (allGameIdsToRerun.length > 0) {
     console.log(
       `\n[GoalieWatcher]${tag} Triggering model for ${allGameIdsToRerun.length} game(s)` +
-      ` (${changedGameIds.length} changed + ${newlyPopulatedGameIds.length} newly populated / fallback)...`
+        ` (${changedGameIds.length} changed + ${newlyPopulatedGameIds.length} newly populated / fallback)...`
     );
     try {
       const syncResult = await syncNhlModelForToday("auto");
       result.modelRerun = true;
       console.log(
         `[GoalieWatcher]${tag} Model run complete:` +
-        ` synced=${syncResult.synced} skipped=${syncResult.skipped} errors=${syncResult.errors.length}`
+          ` synced=${syncResult.synced} skipped=${syncResult.skipped} errors=${syncResult.errors.length}`
       );
     } catch (err) {
       const msg = `Model run failed: ${err}`;
@@ -388,10 +461,14 @@ export async function checkGoalieChanges(source: "auto" | "manual" = "auto"): Pr
       result.errors.push(msg);
     }
   } else {
-    console.log(`[GoalieWatcher]${tag} No goalie changes, new populations, or fallback games — model not re-run`);
+    console.log(
+      `[GoalieWatcher]${tag} No goalie changes, new populations, or fallback games — model not re-run`
+    );
   }
 
-  console.log(`[GoalieWatcher]${tag} DONE - changes=${result.changes.length} modelRerun=${result.modelRerun} errors=${result.errors.length}`);
+  console.log(
+    `[GoalieWatcher]${tag} DONE - changes=${result.changes.length} modelRerun=${result.modelRerun} errors=${result.errors.length}`
+  );
   lastWatchResult = result;
   return result;
 }
@@ -403,7 +480,9 @@ export async function checkGoalieChanges(source: "auto" | "manual" = "auto"): Pr
  * Runs every evening (6PM–9PM PST) to populate tomorrow's games a day in advance.
  * Triggers the model for any tomorrow game that has both goalies populated.
  */
-export async function seedNhlTomorrowGoalies(source: "auto" | "manual" = "auto"): Promise<GoalieWatchResult> {
+export async function seedNhlTomorrowGoalies(
+  source: "auto" | "manual" = "auto"
+): Promise<GoalieWatchResult> {
   const tag = source === "manual" ? "[MANUAL]" : "[AUTO]";
   const checkedAt = new Date().toISOString();
   console.log(`\n[GoalieTomorrowSeeder]${tag} START - ${checkedAt}`);
@@ -434,18 +513,17 @@ export async function seedNhlTomorrowGoalies(source: "auto" | "manual" = "auto")
   const tomorrowGames = await db
     .select()
     .from(games)
-    .where(
-      and(
-        eq(games.gameDate, tomorrowDate),
-        eq(games.sport, "NHL"),
-      )
-    );
+    .where(and(eq(games.gameDate, tomorrowDate), eq(games.sport, "NHL")));
 
   result.gamesChecked = tomorrowGames.length;
-  console.log(`[GoalieTomorrowSeeder]${tag}   Found ${tomorrowGames.length} NHL games for ${tomorrowDate}`);
+  console.log(
+    `[GoalieTomorrowSeeder]${tag}   Found ${tomorrowGames.length} NHL games for ${tomorrowDate}`
+  );
 
   if (tomorrowGames.length === 0) {
-    console.log(`[GoalieTomorrowSeeder]${tag}   No NHL games tomorrow (${tomorrowDate}) - nothing to seed`);
+    console.log(
+      `[GoalieTomorrowSeeder]${tag}   No NHL games tomorrow (${tomorrowDate}) - nothing to seed`
+    );
     return result;
   }
 
@@ -453,7 +531,9 @@ export async function seedNhlTomorrowGoalies(source: "auto" | "manual" = "auto")
   let rotoGames: NhlLineupGame[] = [];
   try {
     rotoGames = await scrapeNhlStartingGoalies("tomorrow");
-    console.log(`[GoalieTomorrowSeeder]${tag}   RotoWire TOMORROW returned ${rotoGames.length} games`);
+    console.log(
+      `[GoalieTomorrowSeeder]${tag}   RotoWire TOMORROW returned ${rotoGames.length} games`
+    );
   } catch (err) {
     const msg = `RotoWire tomorrow scrape failed: ${err}`;
     console.error(`[GoalieTomorrowSeeder]${tag} ${msg}`);
@@ -462,23 +542,33 @@ export async function seedNhlTomorrowGoalies(source: "auto" | "manual" = "auto")
   }
 
   if (rotoGames.length === 0) {
-    console.warn(`[GoalieTomorrowSeeder]${tag}   RotoWire returned 0 tomorrow games - lineups not yet posted`);
+    console.warn(
+      `[GoalieTomorrowSeeder]${tag}   RotoWire returned 0 tomorrow games - lineups not yet posted`
+    );
     return result;
   }
 
   // Step 3: Seed / update goalies for each tomorrow game
   // ── Structured per-game Rotowire goalie log (TOMORROW) ─────────────────────────────
   for (const rg of rotoGames) {
-    const awayG = rg.awayGoalie ? `${rg.awayGoalie.name}${rg.awayGoalie.confirmed ? ' [CONFIRMED]' : ' [EXPECTED]'}` : 'TBD';
-    const homeG = rg.homeGoalie ? `${rg.homeGoalie.name}${rg.homeGoalie.confirmed ? ' [CONFIRMED]' : ' [EXPECTED]'}` : 'TBD';
-    console.log(`[GoalieTomorrowSeeder]${tag}[Roto][TOMORROW] ${rg.awayTeam}@${rg.homeTeam} | away_g=${awayG} home_g=${homeG}`);
+    const awayG = rg.awayGoalie
+      ? `${rg.awayGoalie.name}${rg.awayGoalie.confirmed ? " [CONFIRMED]" : " [EXPECTED]"}`
+      : "TBD";
+    const homeG = rg.homeGoalie
+      ? `${rg.homeGoalie.name}${rg.homeGoalie.confirmed ? " [CONFIRMED]" : " [EXPECTED]"}`
+      : "TBD";
+    console.log(
+      `[GoalieTomorrowSeeder]${tag}[Roto][TOMORROW] ${rg.awayTeam}@${rg.homeTeam} | away_g=${awayG} home_g=${homeG}`
+    );
   }
   const gameIdsToModel: number[] = [];
 
   for (const rotoGame of rotoGames) {
     const dbGame = matchGameToDb(rotoGame, tomorrowGames);
     if (!dbGame) {
-      console.log(`[GoalieTomorrowSeeder]${tag}   No DB match for: ${rotoGame.awayTeam} @ ${rotoGame.homeTeam}`);
+      console.log(
+        `[GoalieTomorrowSeeder]${tag}   No DB match for: ${rotoGame.awayTeam} @ ${rotoGame.homeTeam}`
+      );
       continue;
     }
 
@@ -487,58 +577,101 @@ export async function seedNhlTomorrowGoalies(source: "auto" | "manual" = "auto")
     let hasChange = false;
 
     if (rotoGame.awayGoalie) {
-      const nameChanged        = !isSameGoalie(dbGame.awayGoalie, rotoGame.awayGoalie.name);
-      const confirmImproved    = !dbGame.awayGoalieConfirmed && rotoGame.awayGoalie.confirmed;
-      const isMissing          = !dbGame.awayGoalie;
+      const nameChanged = !isSameGoalie(
+        dbGame.awayGoalie,
+        rotoGame.awayGoalie.name
+      );
+      const confirmImproved =
+        !dbGame.awayGoalieConfirmed && rotoGame.awayGoalie.confirmed;
+      const isMissing = !dbGame.awayGoalie;
       if (isMissing || nameChanged || confirmImproved) {
-        const changeType = isMissing ? "NEW" : nameChanged ? "SCRATCH" : "CONFIRMED";
-        console.log(`[GoalieTomorrowSeeder]${tag}   AWAY [${changeType}] ${gameLabel}: "${dbGame.awayGoalie ?? "TBD"}" -> "${rotoGame.awayGoalie.name}" (${rotoGame.awayGoalie.confirmed ? "confirmed" : "expected"})`);
-        updatePayload.awayGoalie          = rotoGame.awayGoalie.name;
+        const changeType = isMissing
+          ? "NEW"
+          : nameChanged
+            ? "SCRATCH"
+            : "CONFIRMED";
+        console.log(
+          `[GoalieTomorrowSeeder]${tag}   AWAY [${changeType}] ${gameLabel}: "${dbGame.awayGoalie ?? "TBD"}" -> "${rotoGame.awayGoalie.name}" (${rotoGame.awayGoalie.confirmed ? "confirmed" : "expected"})`
+        );
+        updatePayload.awayGoalie = rotoGame.awayGoalie.name;
         updatePayload.awayGoalieConfirmed = rotoGame.awayGoalie.confirmed;
         hasChange = true;
         result.changes.push({
-          gameId: dbGame.id, gameLabel, side: "away",
-          oldGoalie: dbGame.awayGoalie ?? null, newGoalie: rotoGame.awayGoalie.name,
-          oldConfirmed: dbGame.awayGoalieConfirmed ?? false, newConfirmed: rotoGame.awayGoalie.confirmed,
-          changeType: isMissing ? "new" : nameChanged ? "scratch" : "confirmation",
+          gameId: dbGame.id,
+          gameLabel,
+          side: "away",
+          oldGoalie: dbGame.awayGoalie ?? null,
+          newGoalie: rotoGame.awayGoalie.name,
+          oldConfirmed: dbGame.awayGoalieConfirmed ?? false,
+          newConfirmed: rotoGame.awayGoalie.confirmed,
+          changeType: isMissing
+            ? "new"
+            : nameChanged
+              ? "scratch"
+              : "confirmation",
         });
       }
     }
 
     if (rotoGame.homeGoalie) {
-      const nameChanged        = !isSameGoalie(dbGame.homeGoalie, rotoGame.homeGoalie.name);
-      const confirmImproved    = !dbGame.homeGoalieConfirmed && rotoGame.homeGoalie.confirmed;
-      const isMissing          = !dbGame.homeGoalie;
+      const nameChanged = !isSameGoalie(
+        dbGame.homeGoalie,
+        rotoGame.homeGoalie.name
+      );
+      const confirmImproved =
+        !dbGame.homeGoalieConfirmed && rotoGame.homeGoalie.confirmed;
+      const isMissing = !dbGame.homeGoalie;
       if (isMissing || nameChanged || confirmImproved) {
-        const changeType = isMissing ? "NEW" : nameChanged ? "SCRATCH" : "CONFIRMED";
-        console.log(`[GoalieTomorrowSeeder]${tag}   HOME [${changeType}] ${gameLabel}: "${dbGame.homeGoalie ?? "TBD"}" -> "${rotoGame.homeGoalie.name}" (${rotoGame.homeGoalie.confirmed ? "confirmed" : "expected"})`);
-        updatePayload.homeGoalie          = rotoGame.homeGoalie.name;
+        const changeType = isMissing
+          ? "NEW"
+          : nameChanged
+            ? "SCRATCH"
+            : "CONFIRMED";
+        console.log(
+          `[GoalieTomorrowSeeder]${tag}   HOME [${changeType}] ${gameLabel}: "${dbGame.homeGoalie ?? "TBD"}" -> "${rotoGame.homeGoalie.name}" (${rotoGame.homeGoalie.confirmed ? "confirmed" : "expected"})`
+        );
+        updatePayload.homeGoalie = rotoGame.homeGoalie.name;
         updatePayload.homeGoalieConfirmed = rotoGame.homeGoalie.confirmed;
         hasChange = true;
         result.changes.push({
-          gameId: dbGame.id, gameLabel, side: "home",
-          oldGoalie: dbGame.homeGoalie ?? null, newGoalie: rotoGame.homeGoalie.name,
-          oldConfirmed: dbGame.homeGoalieConfirmed ?? false, newConfirmed: rotoGame.homeGoalie.confirmed,
-          changeType: isMissing ? "new" : nameChanged ? "scratch" : "confirmation",
+          gameId: dbGame.id,
+          gameLabel,
+          side: "home",
+          oldGoalie: dbGame.homeGoalie ?? null,
+          newGoalie: rotoGame.homeGoalie.name,
+          oldConfirmed: dbGame.homeGoalieConfirmed ?? false,
+          newConfirmed: rotoGame.homeGoalie.confirmed,
+          changeType: isMissing
+            ? "new"
+            : nameChanged
+              ? "scratch"
+              : "confirmation",
         });
       }
     }
 
     if (hasChange) {
       // Check if both goalies will be available after this update
-      const awayAfter = (updatePayload.awayGoalie as string | undefined) ?? dbGame.awayGoalie;
-      const homeAfter = (updatePayload.homeGoalie as string | undefined) ?? dbGame.homeGoalie;
+      const awayAfter =
+        (updatePayload.awayGoalie as string | undefined) ?? dbGame.awayGoalie;
+      const homeAfter =
+        (updatePayload.homeGoalie as string | undefined) ?? dbGame.homeGoalie;
       const bothAvailable = !!awayAfter && !!homeAfter;
-      const modelNotRun   = !dbGame.modelRunAt;
+      const modelNotRun = !dbGame.modelRunAt;
 
       if (bothAvailable && modelNotRun) {
         updatePayload.modelRunAt = null; // ensure cleared for model run
         gameIdsToModel.push(dbGame.id);
-        console.log(`[GoalieTomorrowSeeder]${tag}   Both goalies available for ${gameLabel} — queuing model run`);
+        console.log(
+          `[GoalieTomorrowSeeder]${tag}   Both goalies available for ${gameLabel} — queuing model run`
+        );
       }
 
       try {
-        await db.update(games).set(updatePayload).where(eq(games.id, dbGame.id));
+        await db
+          .update(games)
+          .set(updatePayload)
+          .where(eq(games.id, dbGame.id));
         console.log(`[GoalieTomorrowSeeder]${tag}   DB updated: ${gameLabel}`);
       } catch (err) {
         const msg = `DB update failed for ${gameLabel}: ${err}`;
@@ -546,7 +679,9 @@ export async function seedNhlTomorrowGoalies(source: "auto" | "manual" = "auto")
         result.errors.push(msg);
       }
     } else {
-      console.log(`[GoalieTomorrowSeeder]${tag}   No changes for ${gameLabel} (goalies already current)`);
+      console.log(
+        `[GoalieTomorrowSeeder]${tag}   No changes for ${gameLabel} (goalies already current)`
+      );
     }
   }
 
@@ -555,10 +690,11 @@ export async function seedNhlTomorrowGoalies(source: "auto" | "manual" = "auto")
   // If goalies were seeded in a prior cycle (no change this cycle), gameIdsToModel
   // will be empty even though modelRunAt IS NULL. Query DB directly to catch them.
   const alreadyPopulatedUnmodeled = tomorrowGames.filter(
-    (g: typeof tomorrowGames[0]) => !!g.awayGoalie && !!g.homeGoalie && !g.modelRunAt
+    (g: (typeof tomorrowGames)[0]) =>
+      !!g.awayGoalie && !!g.homeGoalie && !g.modelRunAt
   );
   const alreadyPopulatedIds = alreadyPopulatedUnmodeled
-    .map((g: typeof tomorrowGames[0]) => g.id)
+    .map((g: (typeof tomorrowGames)[0]) => g.id)
     .filter((id: number) => !gameIdsToModel.includes(id));
   if (alreadyPopulatedIds.length > 0) {
     console.log(
@@ -566,27 +702,44 @@ export async function seedNhlTomorrowGoalies(source: "auto" | "manual" = "auto")
     );
     for (const g of alreadyPopulatedUnmodeled) {
       if (!gameIdsToModel.includes(g.id)) {
-        console.log(`[GoalieTomorrowSeeder]${tag}   → ${g.awayTeam} @ ${g.homeTeam} | away=${g.awayGoalie} home=${g.homeGoalie}`);
+        console.log(
+          `[GoalieTomorrowSeeder]${tag}   → ${g.awayTeam} @ ${g.homeTeam} | away=${g.awayGoalie} home=${g.homeGoalie}`
+        );
       }
     }
   }
-  const allGameIdsToModel = Array.from(new Set([...gameIdsToModel, ...alreadyPopulatedIds]));
+  const allGameIdsToModel = Array.from(
+    new Set([...gameIdsToModel, ...alreadyPopulatedIds])
+  );
   if (allGameIdsToModel.length > 0) {
-    console.log(`\n[GoalieTomorrowSeeder]${tag} Triggering model for ${allGameIdsToModel.length} tomorrow game(s) (${gameIdsToModel.length} changed + ${alreadyPopulatedIds.length} fallback)...`);
+    console.log(
+      `\n[GoalieTomorrowSeeder]${tag} Triggering model for ${allGameIdsToModel.length} tomorrow game(s) (${gameIdsToModel.length} changed + ${alreadyPopulatedIds.length} fallback)...`
+    );
     try {
-      const syncResult = await syncNhlModelForToday("auto", false, false, tomorrowDate);
+      const syncResult = await syncNhlModelForToday(
+        "auto",
+        false,
+        false,
+        tomorrowDate
+      );
       result.modelRerun = true;
-      console.log(`[GoalieTomorrowSeeder]${tag} Model run complete: synced=${syncResult.synced} skipped=${syncResult.skipped} errors=${syncResult.errors.length}`);
+      console.log(
+        `[GoalieTomorrowSeeder]${tag} Model run complete: synced=${syncResult.synced} skipped=${syncResult.skipped} errors=${syncResult.errors.length}`
+      );
     } catch (err) {
       const msg = `Model run failed for tomorrow: ${err}`;
       console.error(`[GoalieTomorrowSeeder]${tag} ${msg}`);
       result.errors.push(msg);
     }
   } else {
-    console.log(`[GoalieTomorrowSeeder]${tag} No games to model — all tomorrow games already modeled or missing goalies`);
+    console.log(
+      `[GoalieTomorrowSeeder]${tag} No games to model — all tomorrow games already modeled or missing goalies`
+    );
   }
 
-  console.log(`[GoalieTomorrowSeeder]${tag} DONE - changes=${result.changes.length} modelRerun=${result.modelRerun} errors=${result.errors.length}`);
+  console.log(
+    `[GoalieTomorrowSeeder]${tag} DONE - changes=${result.changes.length} modelRerun=${result.modelRerun} errors=${result.errors.length}`
+  );
   return result;
 }
 
@@ -601,18 +754,23 @@ export function startNhlGoalieWatcher(): void {
     return;
   }
 
-  console.log("[GoalieWatcher] Starting 5-minute goalie change watcher (today + tomorrow) — 24/7, no time gates");
+  console.log(
+    "[GoalieWatcher] Starting 5-minute goalie change watcher (today + tomorrow) — 24/7, no time gates"
+  );
 
   // ── TODAY WATCHER: runs every 5 min, 24/7 ────────────────────────────────
   checkGoalieChanges("auto").catch(err => {
     console.error("[GoalieWatcher] Initial today-run error:", err);
   });
 
-  watcherIntervalId = setInterval(() => {
-    checkGoalieChanges("auto").catch(err => {
-      console.error("[GoalieWatcher] Interval run error:", err);
-    });
-  }, 5 * 60 * 1000);
+  watcherIntervalId = setInterval(
+    () => {
+      checkGoalieChanges("auto").catch(err => {
+        console.error("[GoalieWatcher] Interval run error:", err);
+      });
+    },
+    5 * 60 * 1000
+  );
 
   // ── TOMORROW SEEDER: runs every 5 min, 24/7 ────────────────────────────────
   // Seeds tomorrow's games with initial goalie data and runs the model day-ahead.

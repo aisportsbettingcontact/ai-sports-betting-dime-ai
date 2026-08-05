@@ -86,7 +86,7 @@ describe("DimeAppShell integration contract", () => {
     );
   });
 
-  it("gates shell-only bookkeeping (splits canonicalization, pane content, scroll/focus restore) on mode === \"shell\"", () => {
+  it('gates shell-only bookkeeping (splits canonicalization, pane content, scroll/focus restore) on mode === "shell"', () => {
     expect(shellSource).toMatch(
       /if \(mode !== "shell"\) return;\s*\n\s*if \(actualRoute\.pane !== "splits"\) return;/
     );
@@ -247,7 +247,9 @@ describe("DimeAppShell integration contract", () => {
   it("keeps engagement-session tracking OFF the critical path (lazy SessionTracker, not a direct hook import)", () => {
     // Regression guard for the chat-critical-path bundle budget: the session
     // hook must be lazy-loaded, never imported straight into the shell chunk.
-    expect(shellSource).toMatch(/lazy\(\(\) => import\("@\/components\/SessionTracker"\)\)/);
+    expect(shellSource).toMatch(
+      /lazy\(\(\) => import\("@\/components\/SessionTracker"\)\)/
+    );
     expect(shellSource).toMatch(/<SessionTracker \/>/);
     expect(shellSource).not.toMatch(/from "@\/hooks\/useSessionTracking"/);
   });

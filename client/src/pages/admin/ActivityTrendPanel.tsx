@@ -16,13 +16,7 @@
  * container; the page body never scrolls sideways.
  */
 import { useMemo } from "react";
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  XAxis,
-  YAxis,
-} from "recharts";
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { trpc } from "@/lib/trpc";
 import {
   ChartContainer,
@@ -62,7 +56,7 @@ export default function ActivityTrendPanel() {
 
   const peakActiveUsers = useMemo(
     () => daily.reduce((max, d) => Math.max(max, d.activeUsers), 0),
-    [daily],
+    [daily]
   );
 
   const meta =
@@ -70,13 +64,20 @@ export default function ActivityTrendPanel() {
 
   return (
     <div className="mb-6 space-y-3">
-      <SectionHeader title="Activity · last 30 days" meta={meta} loading={isLoading} />
+      <SectionHeader
+        title="Activity · last 30 days"
+        meta={meta}
+        loading={isLoading}
+      />
 
       {notOk ? (
         <div className="bg-card border border-border rounded-xl px-4 sm:px-6 py-4 sm:py-5 text-center">
-          <div className="text-sm font-semibold text-muted-foreground">Not measured</div>
+          <div className="text-sm font-semibold text-muted-foreground">
+            Not measured
+          </div>
           <div className="text-xs sm:text-sm text-muted-foreground mt-1 max-w-md mx-auto leading-relaxed">
-            {data!.reason ?? "The activity pipeline has produced no measured days yet."}
+            {data!.reason ??
+              "The activity pipeline has produced no measured days yet."}
           </div>
         </div>
       ) : (
@@ -89,9 +90,19 @@ export default function ActivityTrendPanel() {
             )
           ) : (
             <>
-              <ChartContainer config={CHART_CONFIG} className="h-[300px] sm:h-[340px] w-full">
-                <AreaChart data={daily} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
-                  <CartesianGrid vertical={false} stroke={GRID_COLOR} strokeOpacity={0.5} />
+              <ChartContainer
+                config={CHART_CONFIG}
+                className="h-[300px] sm:h-[340px] w-full"
+              >
+                <AreaChart
+                  data={daily}
+                  margin={{ top: 8, right: 8, bottom: 0, left: 0 }}
+                >
+                  <CartesianGrid
+                    vertical={false}
+                    stroke={GRID_COLOR}
+                    strokeOpacity={0.5}
+                  />
                   <XAxis
                     dataKey="day"
                     tickFormatter={fmtDayTick}
@@ -128,17 +139,22 @@ export default function ActivityTrendPanel() {
                   />
                   <ChartTooltip
                     content={
-                      <ChartTooltipContent labelFormatter={(l) => fmtDayTick(String(l))} />
+                      <ChartTooltipContent
+                        labelFormatter={l => fmtDayTick(String(l))}
+                      />
                     }
                     cursor={{ stroke: GRID_COLOR }}
                   />
-                  <ChartLegend content={<ChartLegendContent className="text-sm" />} />
+                  <ChartLegend
+                    content={<ChartLegendContent className="text-sm" />}
+                  />
                 </AreaChart>
               </ChartContainer>
 
               <p className="mt-3 text-xs sm:text-sm text-muted-foreground leading-relaxed">
-                Active users (mint) = distinct users with a value event that day; value events
-                (grey) = qualifying events. Zero-days are measured zeros — the pipeline was on.
+                Active users (mint) = distinct users with a value event that
+                day; value events (grey) = qualifying events. Zero-days are
+                measured zeros — the pipeline was on.
               </p>
             </>
           )}

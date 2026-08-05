@@ -76,7 +76,7 @@ describe("appUsers router — procedures called by UserManagement.tsx", () => {
     "setManualDiscordId",
   ];
 
-  it.each(procedures)("%s is ownerProcedure-bound", (name) => {
+  it.each(procedures)("%s is ownerProcedure-bound", name => {
     expectOwnerBound(appUsersSource, name);
   });
 });
@@ -88,7 +88,7 @@ describe("metrics router — procedures called by UserActivity.tsx", () => {
     "getDurationHistogram",
   ];
 
-  it.each(procedures)("%s is ownerProcedure-bound", (name) => {
+  it.each(procedures)("%s is ownerProcedure-bound", name => {
     expectOwnerBound(metricsSource, name);
   });
 
@@ -111,7 +111,7 @@ describe("games router (routers.ts) — procedures called by PublishProjections.
     "triggerRefresh",
   ];
 
-  it.each(procedures)("games.%s is ownerProcedure-bound", (name) => {
+  it.each(procedures)("games.%s is ownerProcedure-bound", name => {
     expectOwnerBound(routersSource, name);
   });
 
@@ -129,7 +129,7 @@ describe("games router (routers.ts) — procedures called by PublishProjections.
 describe("nhlModel router (routers.ts) — procedures called by PublishProjections.tsx", () => {
   const procedures = ["checkGoalies", "getLastGoalieCheck"];
 
-  it.each(procedures)("nhlModel.%s is ownerProcedure-bound", (name) => {
+  it.each(procedures)("nhlModel.%s is ownerProcedure-bound", name => {
     expectOwnerBound(routersSource, name);
   });
 });
@@ -137,7 +137,7 @@ describe("nhlModel router (routers.ts) — procedures called by PublishProjectio
 describe("wc2026 router — procedures called by PublishProjections.tsx", () => {
   const procedures = ["listMatchOdds", "updateMatchOdds"];
 
-  it.each(procedures)("wc2026.%s is ownerProcedure-bound", (name) => {
+  it.each(procedures)("wc2026.%s is ownerProcedure-bound", name => {
     expectOwnerBound(wc2026Source, name);
   });
 
@@ -153,9 +153,13 @@ describe("ownerProcedure itself resolves role from an authoritative DB read, not
     expect(appUsersSource).toMatch(
       /export const ownerProcedure = publicProcedure\.use\(async \(\{ ctx, next \}\) => \{/
     );
-    expect(appUsersSource).toMatch(/const lookup = await lookupAppUserByIdFresh\(payload\.userId\);/);
+    expect(appUsersSource).toMatch(
+      /const lookup = await lookupAppUserByIdFresh\(payload\.userId\);/
+    );
     expect(appUsersSource).toMatch(/const resolved = resolveOwnerIdentity\(/);
     expect(appUsersSource).toMatch(/if \(!resolved\.ok\) \{/);
-    expect(appUsersSource).toMatch(/code: "FORBIDDEN", message: "Owner access required"/);
+    expect(appUsersSource).toMatch(
+      /code: "FORBIDDEN", message: "Owner access required"/
+    );
   });
 });

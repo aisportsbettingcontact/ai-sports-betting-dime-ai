@@ -30,7 +30,7 @@ export function spellOutPick(label: string, teams: ProjectionTeam[]): string {
   const withTail = (s: string) => (tail ? `${s} ${tail}` : s);
   if (head.toUpperCase() === "U") return withTail("Under");
   if (head.toUpperCase() === "O") return withTail("Over");
-  const team = teams.find((t) => t.abbr === head && t.name && t.name !== head);
+  const team = teams.find(t => t.abbr === head && t.name && t.name !== head);
   if (team) return withTail(team.name);
   return label;
 }
@@ -57,7 +57,9 @@ export function ProjectionSummary({
   // with an ROI-only neutral badge in the signal slot. A genuinely unscorable
   // game gets the unavailable-data sentence and no empty signal badge.
   return (
-    <div className={`summary ${insight ? "summary--priced" : "summary--empty"}`}>
+    <div
+      className={`summary ${insight ? "summary--priced" : "summary--empty"}`}
+    >
       <div
         className="summary__viewport"
         role="region"
@@ -70,7 +72,9 @@ export function ProjectionSummary({
               <>
                 <div className="summary__item summary__item--edge">
                   <dt className="ds-label">Model edge</dt>
-                  <dd className="summary__pick">{spellOutPick(insight.sideLabel, teams)}</dd>
+                  <dd className="summary__pick">
+                    {spellOutPick(insight.sideLabel, teams)}
+                  </dd>
                 </div>
                 <div className="summary__item summary__item--book">
                   {/* "Book" not "Best price" — owner directive 2026-07-17 */}
@@ -80,13 +84,17 @@ export function ProjectionSummary({
                 <div className="summary__item summary__item--model">
                   {/* "Model" not "Model fair price" — owner directive 2026-07-17 */}
                   <dt className="ds-label">Model</dt>
-                  <dd className="odds-value">{fmtPrice(insight.modelFairPrice)}</dd>
+                  <dd className="odds-value">
+                    {fmtPrice(insight.modelFairPrice)}
+                  </dd>
                 </div>
               </>
             ) : (
               <div className="summary__item summary__item--message">
                 <dt className="sr-only">Projection status</dt>
-                <dd className="summary__none ds-body-sm">Every market is efficiently priced. No action.</dd>
+                <dd className="summary__none ds-body-sm">
+                  Every market is efficiently priced. No action.
+                </dd>
               </div>
             )}
           </dl>

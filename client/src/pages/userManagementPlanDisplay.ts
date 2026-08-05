@@ -38,11 +38,17 @@ export function formatBillingTerm(plan: PlanDisplay): string {
  * Explicitly null-checked rather than falsy-checked: 0 is a real amount (a comped
  * or $0 promo price) and must not render as "no amount".
  */
-export function formatAmount(amountCents: number | null, currency: string | null): string {
+export function formatAmount(
+  amountCents: number | null,
+  currency: string | null
+): string {
   if (amountCents == null) return "—";
   const code = (currency ?? "usd").toUpperCase();
   try {
-    return new Intl.NumberFormat("en-US", { style: "currency", currency: code }).format(amountCents / 100);
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: code,
+    }).format(amountCents / 100);
   } catch {
     // Unknown/invalid ISO code — degrade to a plain number rather than throwing
     // inside a table cell and blanking the whole page.

@@ -48,28 +48,40 @@ function computeAuthEdges(game: GameLike): {
   // [FIX 2026-06-24] MODELRUNAT GATE
   const _hasModelRunAt = game.modelRunAt != null;
 
-  const authSpreadEdgeIsAway: boolean | null = !_hasModelRunAt ? null : (() => {
-    if (!game.spreadEdge || game.spreadEdge === 'PASS') return null;
-    // Simplified: just return non-null to simulate edge detected
-    return true;
-  })();
+  const authSpreadEdgeIsAway: boolean | null = !_hasModelRunAt
+    ? null
+    : (() => {
+        if (!game.spreadEdge || game.spreadEdge === "PASS") return null;
+        // Simplified: just return non-null to simulate edge detected
+        return true;
+      })();
 
-  const authTotalEdgeIsOver: boolean | null = !_hasModelRunAt ? null : (() => {
-    const mdlOver  = game.modelOverOdds  ? parseFloat(game.modelOverOdds)  : NaN;
-    const mdlUnder = game.modelUnderOdds ? parseFloat(game.modelUnderOdds) : NaN;
-    const bkOver   = game.overOdds       ? parseFloat(game.overOdds)       : NaN;
-    const bkUnder  = game.underOdds      ? parseFloat(game.underOdds)      : NaN;
-    if (!isNaN(bkOver) && !isNaN(bkUnder)) {
-      const rawBkOver  = americanToImplied(bkOver);
-      const rawBkUnder = americanToImplied(bkUnder);
-      const overEdge  = !isNaN(mdlOver)  ? americanToImplied(mdlOver)  > rawBkOver  : false;
-      const underEdge = !isNaN(mdlUnder) ? americanToImplied(mdlUnder) > rawBkUnder : false;
-      if (overEdge  && !underEdge) return true;
-      if (underEdge && !overEdge)  return false;
-      if (!overEdge && !underEdge) return null;
-    }
-    return null;
-  })();
+  const authTotalEdgeIsOver: boolean | null = !_hasModelRunAt
+    ? null
+    : (() => {
+        const mdlOver = game.modelOverOdds
+          ? parseFloat(game.modelOverOdds)
+          : NaN;
+        const mdlUnder = game.modelUnderOdds
+          ? parseFloat(game.modelUnderOdds)
+          : NaN;
+        const bkOver = game.overOdds ? parseFloat(game.overOdds) : NaN;
+        const bkUnder = game.underOdds ? parseFloat(game.underOdds) : NaN;
+        if (!isNaN(bkOver) && !isNaN(bkUnder)) {
+          const rawBkOver = americanToImplied(bkOver);
+          const rawBkUnder = americanToImplied(bkUnder);
+          const overEdge = !isNaN(mdlOver)
+            ? americanToImplied(mdlOver) > rawBkOver
+            : false;
+          const underEdge = !isNaN(mdlUnder)
+            ? americanToImplied(mdlUnder) > rawBkUnder
+            : false;
+          if (overEdge && !underEdge) return true;
+          if (underEdge && !overEdge) return false;
+          if (!overEdge && !underEdge) return null;
+        }
+        return null;
+      })();
 
   return { authSpreadEdgeIsAway, authTotalEdgeIsOver };
 }
@@ -77,22 +89,22 @@ function computeAuthEdges(game: GameLike): {
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe("[FIX 2026-06-24] MODELRUNAT GATE — authSpreadEdgeIsAway / authTotalEdgeIsOver", () => {
-
   // ── CASE 1: modelRunAt = null (model not yet run or invalidated) ─────────────
   // Even with populated model odds, BOTH flags must be null.
   // This is the exact scenario that caused the CHC@NYM green dash bug.
   it("returns null for both flags when modelRunAt is null, even with populated model odds", () => {
     const game: GameLike = {
       modelRunAt: null,
-      spreadEdge: "CHC -1.5 [EDGE]",  // stale edge label from previous run
-      totalEdge:  "OVER 8.5 [EDGE]",  // stale total edge from previous run
-      modelOverOdds:  "-157",          // stale model over odds
-      modelUnderOdds: "+157",          // stale model under odds
-      overOdds:   "-110",              // current book over odds
-      underOdds:  "-109",              // current book under odds
+      spreadEdge: "CHC -1.5 [EDGE]", // stale edge label from previous run
+      totalEdge: "OVER 8.5 [EDGE]", // stale total edge from previous run
+      modelOverOdds: "-157", // stale model over odds
+      modelUnderOdds: "+157", // stale model under odds
+      overOdds: "-110", // current book over odds
+      underOdds: "-109", // current book under odds
       sport: "MLB",
     };
-    const { authSpreadEdgeIsAway, authTotalEdgeIsOver } = computeAuthEdges(game);
+    const { authSpreadEdgeIsAway, authTotalEdgeIsOver } =
+      computeAuthEdges(game);
 
     // [VERIFY] Both flags MUST be null when modelRunAt is null
     expect(authSpreadEdgeIsAway).toBeNull();
@@ -104,14 +116,15 @@ describe("[FIX 2026-06-24] MODELRUNAT GATE — authSpreadEdgeIsAway / authTotalE
     const game: GameLike = {
       modelRunAt: undefined,
       spreadEdge: "NYM +1.5 [EDGE]",
-      totalEdge:  "UNDER 8.5 [EDGE]",
-      modelOverOdds:  "+141",
+      totalEdge: "UNDER 8.5 [EDGE]",
+      modelOverOdds: "+141",
       modelUnderOdds: "-141",
-      overOdds:   "-110",
-      underOdds:  "-109",
+      overOdds: "-110",
+      underOdds: "-109",
       sport: "MLB",
     };
-    const { authSpreadEdgeIsAway, authTotalEdgeIsOver } = computeAuthEdges(game);
+    const { authSpreadEdgeIsAway, authTotalEdgeIsOver } =
+      computeAuthEdges(game);
 
     expect(authSpreadEdgeIsAway).toBeNull();
     expect(authTotalEdgeIsOver).toBeNull();
@@ -121,16 +134,17 @@ describe("[FIX 2026-06-24] MODELRUNAT GATE — authSpreadEdgeIsAway / authTotalE
   // 0 is falsy in JS. The gate uses != null (not !modelRunAt) so 0 should pass.
   it("treats modelRunAt=0 as non-null (gate uses != null, not !modelRunAt)", () => {
     const game: GameLike = {
-      modelRunAt: 0,  // epoch — technically a valid timestamp (not null/undefined)
+      modelRunAt: 0, // epoch — technically a valid timestamp (not null/undefined)
       spreadEdge: "CHC -1.5 [EDGE]",
-      totalEdge:  "OVER 8.5 [EDGE]",
-      modelOverOdds:  "-157",
+      totalEdge: "OVER 8.5 [EDGE]",
+      modelOverOdds: "-157",
       modelUnderOdds: "+157",
-      overOdds:   "-110",
-      underOdds:  "-109",
+      overOdds: "-110",
+      underOdds: "-109",
       sport: "MLB",
     };
-    const { authSpreadEdgeIsAway, authTotalEdgeIsOver } = computeAuthEdges(game);
+    const { authSpreadEdgeIsAway, authTotalEdgeIsOver } =
+      computeAuthEdges(game);
 
     // modelRunAt=0 is != null, so the gate passes and edge computation runs
     // spreadEdge is "CHC -1.5 [EDGE]" → non-null → authSpreadEdgeIsAway = true (simplified)
@@ -142,16 +156,17 @@ describe("[FIX 2026-06-24] MODELRUNAT GATE — authSpreadEdgeIsAway / authTotalE
   // ── CASE 4: modelRunAt is a valid timestamp — edge computation runs normally ──
   it("computes edge direction normally when modelRunAt is a valid timestamp", () => {
     const game: GameLike = {
-      modelRunAt: 1782260553001,  // valid timestamp (2026-06-24T00:22:33 UTC)
+      modelRunAt: 1782260553001, // valid timestamp (2026-06-24T00:22:33 UTC)
       spreadEdge: "CHC -1.5 [EDGE]",
-      totalEdge:  "OVER 8.5 [EDGE]",
-      modelOverOdds:  "-157",   // model more confident in OVER (61.1% > 52.4%)
-      modelUnderOdds: "+157",   // model less confident in UNDER (38.9% < 47.6%)
-      overOdds:   "-110",
-      underOdds:  "-109",
+      totalEdge: "OVER 8.5 [EDGE]",
+      modelOverOdds: "-157", // model more confident in OVER (61.1% > 52.4%)
+      modelUnderOdds: "+157", // model less confident in UNDER (38.9% < 47.6%)
+      overOdds: "-110",
+      underOdds: "-109",
       sport: "MLB",
     };
-    const { authSpreadEdgeIsAway, authTotalEdgeIsOver } = computeAuthEdges(game);
+    const { authSpreadEdgeIsAway, authTotalEdgeIsOver } =
+      computeAuthEdges(game);
 
     // [VERIFY] Gate passes → edge computation runs
     // spreadEdge is "CHC -1.5 [EDGE]" → simplified returns true (away edge)
@@ -164,15 +179,16 @@ describe("[FIX 2026-06-24] MODELRUNAT GATE — authSpreadEdgeIsAway / authTotalE
   it("returns null for both flags when modelRunAt is valid but no edge exists", () => {
     const game: GameLike = {
       modelRunAt: 1782260553001,
-      spreadEdge: "PASS",   // no spread edge
-      totalEdge:  "PASS",   // no total edge
-      modelOverOdds:  "-105",  // model barely more confident in OVER
-      modelUnderOdds: "-105",  // symmetric — no clear edge
-      overOdds:   "-110",
-      underOdds:  "-110",
+      spreadEdge: "PASS", // no spread edge
+      totalEdge: "PASS", // no total edge
+      modelOverOdds: "-105", // model barely more confident in OVER
+      modelUnderOdds: "-105", // symmetric — no clear edge
+      overOdds: "-110",
+      underOdds: "-110",
       sport: "MLB",
     };
-    const { authSpreadEdgeIsAway, authTotalEdgeIsOver } = computeAuthEdges(game);
+    const { authSpreadEdgeIsAway, authTotalEdgeIsOver } =
+      computeAuthEdges(game);
 
     // spreadEdge = PASS → null
     expect(authSpreadEdgeIsAway).toBeNull();
@@ -190,16 +206,17 @@ describe("[FIX 2026-06-24] MODELRUNAT GATE — authSpreadEdgeIsAway / authTotalE
     // Simulates the DB state during the ~5-minute window after RL INVALIDATE
     // and before the next successful model run.
     const game: GameLike = {
-      modelRunAt: null,                // RL INVALIDATE cleared this
-      spreadEdge: "CHC -1.5 [EDGE]",  // stale — from before invalidation
-      totalEdge:  "OVER 8.5 [EDGE]",  // stale — from before invalidation
-      modelOverOdds:  "-157",          // stale — from before invalidation
-      modelUnderOdds: "+157",          // stale — from before invalidation
-      overOdds:   "-110",
-      underOdds:  "-109",
+      modelRunAt: null, // RL INVALIDATE cleared this
+      spreadEdge: "CHC -1.5 [EDGE]", // stale — from before invalidation
+      totalEdge: "OVER 8.5 [EDGE]", // stale — from before invalidation
+      modelOverOdds: "-157", // stale — from before invalidation
+      modelUnderOdds: "+157", // stale — from before invalidation
+      overOdds: "-110",
+      underOdds: "-109",
       sport: "MLB",
     };
-    const { authSpreadEdgeIsAway, authTotalEdgeIsOver } = computeAuthEdges(game);
+    const { authSpreadEdgeIsAway, authTotalEdgeIsOver } =
+      computeAuthEdges(game);
 
     // [VERIFY] CRITICAL: Both flags MUST be null
     // Without the gate, authSpreadEdgeIsAway=true and authTotalEdgeIsOver=true
@@ -210,8 +227,11 @@ describe("[FIX 2026-06-24] MODELRUNAT GATE — authSpreadEdgeIsAway / authTotalE
     // [VERIFY] Confirm the gate is the ONLY reason for null (computation would return non-null)
     // If we bypass the gate by setting modelRunAt to a valid timestamp, computation returns non-null.
     const gameWithModelRun = { ...game, modelRunAt: 1782260553001 };
-    const { authSpreadEdgeIsAway: spreadWithRun, authTotalEdgeIsOver: totalWithRun } = computeAuthEdges(gameWithModelRun);
-    expect(spreadWithRun).not.toBeNull();  // computation would have returned non-null
-    expect(totalWithRun).toBe(true);       // OVER edge confirmed when model has run
+    const {
+      authSpreadEdgeIsAway: spreadWithRun,
+      authTotalEdgeIsOver: totalWithRun,
+    } = computeAuthEdges(gameWithModelRun);
+    expect(spreadWithRun).not.toBeNull(); // computation would have returned non-null
+    expect(totalWithRun).toBe(true); // OVER edge confirmed when model has run
   });
 });

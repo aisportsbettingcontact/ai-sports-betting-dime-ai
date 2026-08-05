@@ -18,7 +18,14 @@
  */
 
 import { execFile } from "child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync, unlinkSync, writeFileSync } from "fs";
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  unlinkSync,
+  writeFileSync,
+} from "fs";
 import { createServer, type Server } from "http";
 import { tmpdir } from "os";
 import path from "path";
@@ -36,7 +43,10 @@ const TSX_BIN = path.join(REPO_ROOT, "node_modules", ".bin", "tsx");
 const HARNESS = path.join(HERE, "harness.ts");
 const BASELINE_PATH = path.join(HERE, "baseline.json");
 const RESULTS_PATH = path.join(REPO_ROOT, "perf-results.json");
-const BASELINE_CANDIDATE_PATH = path.join(REPO_ROOT, "perf-baseline-candidate.json");
+const BASELINE_CANDIDATE_PATH = path.join(
+  REPO_ROOT,
+  "perf-baseline-candidate.json"
+);
 
 let chromiumAvailable = false;
 try {
@@ -46,38 +56,38 @@ try {
 }
 
 describe("perf harness browser evaluation", () => {
-  it(
-    "page.evaluate payload serializes without host-only esbuild helpers under the CI tsx transform",
-    async () => {
-      // Spawn real tsx (the CI runtime) on a fixture that serializes the
-      // browser callback exactly the way Playwright does (Function.toString).
-      const dir = mkdtempSync(path.join(tmpdir(), "perf-serialize-"));
-      const fixture = path.join(dir, "serialize-probe.ts");
-      const browserMetricsUrl = pathToFileURL(path.join(HERE, "browserMetrics.ts")).href;
-      writeFileSync(
-        fixture,
-        `import { collectBrowserMetricsInPage } from ${JSON.stringify(browserMetricsUrl)};\n` +
-          `process.stdout.write(collectBrowserMetricsInPage.toString());\n`
-      );
-      try {
-        const { stdout } = await execFileAsync(TSX_BIN, [fixture], { cwd: REPO_ROOT });
-        // The exact defect: tsx keepNames wraps name-inferred inner function
-        // expressions in __name(), which does not exist in the page.
-        expect(stdout).not.toContain("__name");
-        // No esbuild host helper of any kind may ride along.
-        expect(stdout).not.toMatch(/__[a-zA-Z]+\s*\(/);
-        // Sanity: it is still the real metrics collector.
-        expect(stdout).toContain('performance.getEntriesByType("navigation")');
-        expect(stdout).toContain("PerformanceObserver");
-        expect(stdout).toContain("largest-contentful-paint");
-        expect(stdout).toMatch(/buffered\s*:\s*true/);
-        expect(stdout).toContain("transferBytes");
-      } finally {
-        rmSync(dir, { recursive: true, force: true });
-      }
-    },
-    30_000
-  );
+  it("page.evaluate payload serializes without host-only esbuild helpers under the CI tsx transform", async () => {
+    // Spawn real tsx (the CI runtime) on a fixture that serializes the
+    // browser callback exactly the way Playwright does (Function.toString).
+    const dir = mkdtempSync(path.join(tmpdir(), "perf-serialize-"));
+    const fixture = path.join(dir, "serialize-probe.ts");
+    const browserMetricsUrl = pathToFileURL(
+      path.join(HERE, "browserMetrics.ts")
+    ).href;
+    writeFileSync(
+      fixture,
+      `import { collectBrowserMetricsInPage } from ${JSON.stringify(browserMetricsUrl)};\n` +
+        `process.stdout.write(collectBrowserMetricsInPage.toString());\n`
+    );
+    try {
+      const { stdout } = await execFileAsync(TSX_BIN, [fixture], {
+        cwd: REPO_ROOT,
+      });
+      // The exact defect: tsx keepNames wraps name-inferred inner function
+      // expressions in __name(), which does not exist in the page.
+      expect(stdout).not.toContain("__name");
+      // No esbuild host helper of any kind may ride along.
+      expect(stdout).not.toMatch(/__[a-zA-Z]+\s*\(/);
+      // Sanity: it is still the real metrics collector.
+      expect(stdout).toContain('performance.getEntriesByType("navigation")');
+      expect(stdout).toContain("PerformanceObserver");
+      expect(stdout).toContain("largest-contentful-paint");
+      expect(stdout).toMatch(/buffered\s*:\s*true/);
+      expect(stdout).toContain("transferBytes");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }, 30_000);
 });
 
 describe.skipIf(!chromiumAvailable)(
@@ -100,45 +110,45 @@ describe.skipIf(!chromiumAvailable)(
             "<body><h1>perf harness smoke fixture</h1></body></html>"
         );
       });
-      await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+      await new Promise<void>(resolve =>
+        server.listen(0, "127.0.0.1", resolve)
+      );
       const addr = server.address();
-      if (addr === null || typeof addr === "string") throw new Error("no server port");
+      if (addr === null || typeof addr === "string")
+        throw new Error("no server port");
       base = `http://127.0.0.1:${addr.port}`;
     });
 
     afterAll(async () => {
-      await new Promise<void>((resolve) => server.close(() => resolve()));
+      await new Promise<void>(resolve => server.close(() => resolve()));
       if (existsSync(RESULTS_PATH)) unlinkSync(RESULTS_PATH);
-      if (existsSync(BASELINE_CANDIDATE_PATH)) unlinkSync(BASELINE_CANDIDATE_PATH);
+      if (existsSync(BASELINE_CANDIDATE_PATH))
+        unlinkSync(BASELINE_CANDIDATE_PATH);
     });
 
-    it(
-      "collects metrics for every route and exits 0 through the CI entrypoint",
-      async () => {
-        const { stdout } = await execFileAsync(TSX_BIN, [HARNESS], {
-          cwd: REPO_ROOT,
-          env: { ...process.env, PERF_TARGET_URL: base },
-        });
-        // The formerly failing evaluation must now execute and produce numbers.
-        expect(stdout).not.toContain("__name is not defined");
-        expect(stdout).toContain("[OUTPUT] / ttfb=");
-        expect(stdout).toContain("[VERIFY] PASS");
+    it("collects metrics for every route and exits 0 through the CI entrypoint", async () => {
+      const { stdout } = await execFileAsync(TSX_BIN, [HARNESS], {
+        cwd: REPO_ROOT,
+        env: { ...process.env, PERF_TARGET_URL: base },
+      });
+      // The formerly failing evaluation must now execute and produce numbers.
+      expect(stdout).not.toContain("__name is not defined");
+      expect(stdout).toContain("[OUTPUT] / ttfb=");
+      expect(stdout).toContain("[VERIFY] PASS");
 
-        const results = JSON.parse(readFileSync(RESULTS_PATH, "utf8")) as {
-          samples: Array<{ route: string; metrics: Record<string, number> }>;
-        };
-        expect(results.samples).toHaveLength(3);
-        for (const sample of results.samples) {
-          expect(typeof sample.metrics.ttfbMs).toBe("number");
-          // A real navigation always produces a positive DCL timestamp.
-          expect(sample.metrics.domContentLoaded).toBeGreaterThan(0);
-          // The fixture has an obvious contentful heading. Reporting zero
-          // would silently bypass the LCP budget instead of measuring it.
-          expect(sample.metrics.lcpMs).toBeGreaterThan(0);
-        }
-      },
-      120_000
-    );
+      const results = JSON.parse(readFileSync(RESULTS_PATH, "utf8")) as {
+        samples: Array<{ route: string; metrics: Record<string, number> }>;
+      };
+      expect(results.samples).toHaveLength(3);
+      for (const sample of results.samples) {
+        expect(typeof sample.metrics.ttfbMs).toBe("number");
+        // A real navigation always produces a positive DCL timestamp.
+        expect(sample.metrics.domContentLoaded).toBeGreaterThan(0);
+        // The fixture has an obvious contentful heading. Reporting zero
+        // would silently bypass the LCP budget instead of measuring it.
+        expect(sample.metrics.lcpMs).toBeGreaterThan(0);
+      }
+    }, 120_000);
 
     it("fails clearly when the browser does not support LCP observation", async () => {
       const browser = await chromium.launch({ args: ["--no-sandbox"] });
@@ -209,19 +219,15 @@ describe.skipIf(!chromiumAvailable)(
       }
     }, 120_000);
 
-    it(
-      "still exits nonzero when a route cannot be measured",
-      async () => {
-        // Port 1 refuses immediately: navigation fails, the harness must fail.
-        const run = execFileAsync(TSX_BIN, [HARNESS], {
-          cwd: REPO_ROOT,
-          env: { ...process.env, PERF_TARGET_URL: "http://127.0.0.1:1" },
-        });
-        await expect(run).rejects.toMatchObject({ code: 1 });
-        const err = (await run.catch((e) => e)) as { stdout?: string };
-        expect(err.stdout ?? "").toContain("[FAIL] could not measure");
-      },
-      120_000
-    );
+    it("still exits nonzero when a route cannot be measured", async () => {
+      // Port 1 refuses immediately: navigation fails, the harness must fail.
+      const run = execFileAsync(TSX_BIN, [HARNESS], {
+        cwd: REPO_ROOT,
+        env: { ...process.env, PERF_TARGET_URL: "http://127.0.0.1:1" },
+      });
+      await expect(run).rejects.toMatchObject({ code: 1 });
+      const err = (await run.catch(e => e)) as { stdout?: string };
+      expect(err.stdout ?? "").toContain("[FAIL] could not measure");
+    }, 120_000);
   }
 );

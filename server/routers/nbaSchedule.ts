@@ -33,7 +33,10 @@ const zodAnSlug = z
   .string()
   .min(2)
   .max(64)
-  .regex(/^[a-z0-9-]+$/, "Invalid team slug — must be lowercase letters, digits, and hyphens only");
+  .regex(
+    /^[a-z0-9-]+$/,
+    "Invalid team slug — must be lowercase letters, digits, and hyphens only"
+  );
 
 /** YYYYMMDD date string for the AN API */
 const zodAnDate = z
@@ -66,7 +69,7 @@ export const nbaScheduleRouter = router({
     .query(async ({ input, ctx }) => {
       console.log(
         `${TAG}[getLast5ForMatchup] AUTHED userId=${ctx.appUser.id} Fetching Last 5 for matchup:` +
-        ` away="${input.awaySlug}" vs home="${input.homeSlug}"`
+          ` away="${input.awaySlug}" vs home="${input.homeSlug}"`
       );
       try {
         const { awayLast5, homeLast5 } = await getNbaLast5ForMatchup(
@@ -75,7 +78,7 @@ export const nbaScheduleRouter = router({
         );
         console.log(
           `${TAG}[getLast5ForMatchup] Returning` +
-          ` away=${awayLast5.length} games, home=${homeLast5.length} games`
+            ` away=${awayLast5.length} games, home=${homeLast5.length} games`
         );
         return { awayLast5, homeLast5 };
       } catch (err) {
@@ -154,7 +157,7 @@ export const nbaScheduleRouter = router({
         const stats = await getNbaSituationalStats(input.teamSlug);
         console.log(
           `${TAG}[getSituationalStats] Returning stats for team="${input.teamSlug}"` +
-          ` gamesAnalyzed=${stats.gamesAnalyzed}`
+            ` gamesAnalyzed=${stats.gamesAnalyzed}`
         );
         return stats;
       } catch (err) {
@@ -188,8 +191,8 @@ export const nbaScheduleRouter = router({
         const result = await refreshNbaScheduleForDate(input.date);
         console.log(
           `${TAG}[refreshScheduleForDate] Complete:` +
-          ` fetched=${result.fetched} upserted=${result.upserted}` +
-          ` errors=${result.errors.length}`
+            ` fetched=${result.fetched} upserted=${result.upserted}` +
+            ` errors=${result.errors.length}`
         );
         return result;
       } catch (err) {
@@ -221,13 +224,22 @@ export const nbaScheduleRouter = router({
       );
       try {
         const results = await backfillNbaScheduleHistory(input.daysBack);
-        const totalFetched  = results.reduce((s: number, r: NbaScheduleRefreshResult) => s + r.fetched, 0);
-        const totalUpserted = results.reduce((s: number, r: NbaScheduleRefreshResult) => s + r.upserted, 0);
-        const totalErrors   = results.reduce((s: number, r: NbaScheduleRefreshResult) => s + r.errors.length, 0);
+        const totalFetched = results.reduce(
+          (s: number, r: NbaScheduleRefreshResult) => s + r.fetched,
+          0
+        );
+        const totalUpserted = results.reduce(
+          (s: number, r: NbaScheduleRefreshResult) => s + r.upserted,
+          0
+        );
+        const totalErrors = results.reduce(
+          (s: number, r: NbaScheduleRefreshResult) => s + r.errors.length,
+          0
+        );
         console.log(
           `${TAG}[backfillSchedule] Complete:` +
-          ` dates=${results.length} totalFetched=${totalFetched}` +
-          ` totalUpserted=${totalUpserted} totalErrors=${totalErrors}`
+            ` dates=${results.length} totalFetched=${totalFetched}` +
+            ` totalUpserted=${totalUpserted} totalErrors=${totalErrors}`
         );
         return { results, totalFetched, totalUpserted, totalErrors };
       } catch (err) {

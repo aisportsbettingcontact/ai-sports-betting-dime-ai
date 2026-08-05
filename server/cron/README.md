@@ -13,13 +13,13 @@ GitHub Actions (timer)  ──POST + Authorization: Bearer $CRON_SECRET──▶
 Each endpoint: shared-secret authed → responds `200` immediately → runs the work
 in the background under a single-flight run-lock (no overlapping runs).
 
-| Endpoint | Work | Workflow | Cadence |
-|---|---|---|---|
-| `POST /api/cron/vsin-odds` | `runVsinRefresh()` — NBA/NHL/MLB VSiN + AN odds | `cron-vsin-odds.yml` | every 15 min |
-| `POST /api/cron/scores` | `refreshAllScoresNow()` — live scores | `cron-scores.yml` | every 10 min |
-| `POST /api/cron/bet-grade` | `runBetGradeCycle()` — settle PENDING bets, today + yesterday | `cron-bet-grade.yml` | every 10 min |
+| Endpoint                         | Work                                                              | Workflow             | Cadence           |
+| -------------------------------- | ----------------------------------------------------------------- | -------------------- | ----------------- |
+| `POST /api/cron/vsin-odds`       | `runVsinRefresh()` — NBA/NHL/MLB VSiN + AN odds                   | `cron-vsin-odds.yml` | every 15 min      |
+| `POST /api/cron/scores`          | `refreshAllScoresNow()` — live scores                             | `cron-scores.yml`    | every 10 min      |
+| `POST /api/cron/bet-grade`       | `runBetGradeCycle()` — settle PENDING bets, today + yesterday     | `cron-bet-grade.yml` | every 10 min      |
 | `POST /api/cron/bet-grade-sweep` | `gradeAllPendingAllDates()` — settle every PENDING bet, all dates | `cron-bet-grade.yml` | nightly 08:15 UTC |
-| `GET  /api/cron/status` | run-lock state for all jobs (observability) | — | — |
+| `GET  /api/cron/status`          | run-lock state for all jobs (observability)                       | —                    | —                 |
 
 Bet grading is the one job whose absence is silent: with no cron path, setting
 `DISABLE_BACKGROUND_JOBS=1` would stop settlement without an error — bets just

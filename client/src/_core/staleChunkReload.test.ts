@@ -8,23 +8,34 @@ import { isStaleChunkError, reloadAlreadyAttempted } from "./staleChunkReload";
 
 describe("isStaleChunkError", () => {
   it("[SC-1] recognises the exact production error", () => {
-    expect(isStaleChunkError(new Error(
-      "Failed to fetch dynamically imported module: https://aisportsbettingmodels.com/assets/Home-BjN98xuQ.js"
-    ))).toBe(true);
+    expect(
+      isStaleChunkError(
+        new Error(
+          "Failed to fetch dynamically imported module: https://aisportsbettingmodels.com/assets/Home-BjN98xuQ.js"
+        )
+      )
+    ).toBe(true);
   });
 
   it("[SC-2] recognises the other browsers' phrasings", () => {
     for (const m of [
       "error loading dynamically imported module: /assets/x.js",
-      "Importing a module script failed.",                       // Safari
-      "Expected a JavaScript module script but the server responded with a MIME type of \"text/html\"",
-      "Unexpected token '<'",                                    // HTML parsed as JS
-    ]) expect(isStaleChunkError(new Error(m)), m).toBe(true);
+      "Importing a module script failed.", // Safari
+      'Expected a JavaScript module script but the server responded with a MIME type of "text/html"',
+      "Unexpected token '<'", // HTML parsed as JS
+    ])
+      expect(isStaleChunkError(new Error(m)), m).toBe(true);
   });
 
   it("[SC-3] accepts strings and error-like objects, not just Error", () => {
-    expect(isStaleChunkError("Failed to fetch dynamically imported module: /a.js")).toBe(true);
-    expect(isStaleChunkError({ message: "Failed to fetch dynamically imported module: /a.js" })).toBe(true);
+    expect(
+      isStaleChunkError("Failed to fetch dynamically imported module: /a.js")
+    ).toBe(true);
+    expect(
+      isStaleChunkError({
+        message: "Failed to fetch dynamically imported module: /a.js",
+      })
+    ).toBe(true);
   });
 
   it("[SC-4] does NOT swallow ordinary application errors", () => {
@@ -33,7 +44,8 @@ describe("isStaleChunkError", () => {
       "Network request failed",
       "UNAUTHORIZED",
       "",
-    ]) expect(isStaleChunkError(new Error(m)), m).toBe(false);
+    ])
+      expect(isStaleChunkError(new Error(m)), m).toBe(false);
     expect(isStaleChunkError(null)).toBe(false);
     expect(isStaleChunkError(undefined)).toBe(false);
   });
@@ -43,14 +55,22 @@ describe("reload loop guard", () => {
   let store: Record<string, string>;
   const storage = {
     getItem: (k: string) => (k in store ? store[k] : null),
-    setItem: (k: string, v: string) => { store[k] = v; },
-    removeItem: (k: string) => { delete store[k]; },
-    clear: () => { store = {}; },
+    setItem: (k: string, v: string) => {
+      store[k] = v;
+    },
+    removeItem: (k: string) => {
+      delete store[k];
+    },
+    clear: () => {
+      store = {};
+    },
     key: () => null,
     length: 0,
   } as unknown as Storage;
 
-  beforeEach(() => { store = {}; });
+  beforeEach(() => {
+    store = {};
+  });
   afterEach(() => vi.restoreAllMocks());
 
   it("[RG-1] permits the first recovery", () => {

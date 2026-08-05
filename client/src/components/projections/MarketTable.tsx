@@ -19,7 +19,7 @@ function fmtPrice(p: number | null | undefined): string {
 
 export function MarketTable({ market }: { market: ProjectionMarket }) {
   // Which side (if any) is the signal? Highest positive edge among this market's sides.
-  const scored = market.sides.map((s) => scoreMarketSide(s));
+  const scored = market.sides.map(s => scoreMarketSide(s));
   let signalIdx = -1;
   let best = 0;
   scored.forEach((m, i) => {
@@ -31,7 +31,9 @@ export function MarketTable({ market }: { market: ProjectionMarket }) {
 
   return (
     <table className="market-table">
-      <caption className="market-table__caption ds-label">{market.label}</caption>
+      <caption className="market-table__caption ds-label">
+        {market.label}
+      </caption>
       <thead>
         <tr>
           <th scope="col">Side</th>
@@ -43,15 +45,22 @@ export function MarketTable({ market }: { market: ProjectionMarket }) {
         {market.sides.map((side, i) => {
           const isSignal = i === signalIdx;
           return (
-            <tr key={side.sideLabel} className={isSignal ? "market-table__row--signal" : undefined}>
+            <tr
+              key={side.sideLabel}
+              className={isSignal ? "market-table__row--signal" : undefined}
+            >
               <th scope="row" className="market-table__side">
                 {side.flag && (
-                  <span className="market-table__flag" aria-hidden="true">{side.flag}</span>
+                  <span className="market-table__flag" aria-hidden="true">
+                    {side.flag}
+                  </span>
                 )}
                 {side.sideLabel}
               </th>
               <td className="odds-value">{fmtPrice(side.bookPrice)}</td>
-              <td className={`odds-value${isSignal ? " market-table__model--signal" : ""}`}>
+              <td
+                className={`odds-value${isSignal ? " market-table__model--signal" : ""}`}
+              >
                 {fmtPrice(side.modelPrice)}
               </td>
             </tr>

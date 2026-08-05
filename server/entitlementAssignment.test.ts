@@ -41,8 +41,14 @@ import {
 } from "./stripeWebhook";
 
 const ROOT = path.resolve(__dirname, "..");
-const WEBHOOK_SRC = fs.readFileSync(path.join(ROOT, "server/stripeWebhook.ts"), "utf8");
-const APPUSERS_SRC = fs.readFileSync(path.join(ROOT, "server/routers/appUsers.ts"), "utf8");
+const WEBHOOK_SRC = fs.readFileSync(
+  path.join(ROOT, "server/stripeWebhook.ts"),
+  "utf8"
+);
+const APPUSERS_SRC = fs.readFileSync(
+  path.join(ROOT, "server/routers/appUsers.ts"),
+  "utf8"
+);
 
 /** A plan_prices row as getPriceById returns it — only the row id matters here. */
 const priceRow = (id: number) => ({ price: { id } });
@@ -56,7 +62,12 @@ describe("resolvePlanPriceId — the purchased interval reaches the grant", () =
   });
 
   it("[PP-2] falls back to the price reverse-mapped from the session line item", () => {
-    expect(resolvePlanPriceId({ byPurchasedPrice: null, byLineItemPrice: priceRow(7) })).toEqual({
+    expect(
+      resolvePlanPriceId({
+        byPurchasedPrice: null,
+        byLineItemPrice: priceRow(7),
+      })
+    ).toEqual({
       planPriceId: 7,
       source: "line_item_price",
     });
@@ -64,7 +75,10 @@ describe("resolvePlanPriceId — the purchased interval reaches the grant", () =
 
   it("[PP-3] prefers the pinned purchase over the line item — the exact interval bought wins", () => {
     expect(
-      resolvePlanPriceId({ byPurchasedPrice: priceRow(42), byLineItemPrice: priceRow(7) }).planPriceId,
+      resolvePlanPriceId({
+        byPurchasedPrice: priceRow(42),
+        byLineItemPrice: priceRow(7),
+      }).planPriceId
     ).toBe(42);
   });
 
@@ -72,8 +86,13 @@ describe("resolvePlanPriceId — the purchased interval reaches the grant", () =
     // These plans live in server/stripe/products.ts and have no plan_prices row
     // at all, so neither resolver matches. Inventing an id here would attribute
     // the subscriber to some other plan's interval.
-    expect(resolvePlanPriceId({})).toEqual({ planPriceId: null, source: "none" });
-    expect(resolvePlanPriceId({ byPurchasedPrice: null, byLineItemPrice: null })).toEqual({
+    expect(resolvePlanPriceId({})).toEqual({
+      planPriceId: null,
+      source: "none",
+    });
+    expect(
+      resolvePlanPriceId({ byPurchasedPrice: null, byLineItemPrice: null })
+    ).toEqual({
       planPriceId: null,
       source: "none",
     });
@@ -90,49 +109,77 @@ describe("resolveRenewalPlanPriceId — a renewal never destroys a good interval
   });
 
   it("[RN-2] still writes nothing when the stored value is already NULL", () => {
-    const r = resolveRenewalPlanPriceId({ byInvoicePrice: null, current: null });
+    const r = resolveRenewalPlanPriceId({
+      byInvoicePrice: null,
+      current: null,
+    });
     expect(r.planPriceId).toBeUndefined();
     expect(r.effective).toBeNull();
   });
 
   it("[RN-3] repoints a repriced subscriber at the row they are billed at now", () => {
-    const r = resolveRenewalPlanPriceId({ byInvoicePrice: priceRow(99), current: 42 });
-    expect(r).toEqual({ planPriceId: 99, effective: 99, reason: "invoice_price" });
+    const r = resolveRenewalPlanPriceId({
+      byInvoicePrice: priceRow(99),
+      current: 42,
+    });
+    expect(r).toEqual({
+      planPriceId: 99,
+      effective: 99,
+      reason: "invoice_price",
+    });
   });
 });
 
 describe("extractInvoicePriceId — both Stripe invoice line shapes", () => {
   it("[IV-1] reads the 2025 shape (pricing.price_details.price)", () => {
     expect(
-      extractInvoicePriceId({ lines: { data: [{ pricing: { price_details: { price: "price_abc" } } }] } }),
+      extractInvoicePriceId({
+        lines: {
+          data: [{ pricing: { price_details: { price: "price_abc" } } }],
+        },
+      })
     ).toBe("price_abc");
   });
 
   it("[IV-2] reads the legacy expanded price object", () => {
-    expect(extractInvoicePriceId({ lines: { data: [{ price: { id: "price_legacy" } }] } })).toBe("price_legacy");
+    expect(
+      extractInvoicePriceId({
+        lines: { data: [{ price: { id: "price_legacy" } }] },
+      })
+    ).toBe("price_legacy");
   });
 
   it("[IV-3] returns null for an invoice with no usable price — the renewal then leaves the column alone", () => {
     expect(extractInvoicePriceId({})).toBeNull();
     expect(extractInvoicePriceId({ lines: { data: [] } })).toBeNull();
-    expect(extractInvoicePriceId({ lines: { data: [{ pricing: { price_details: {} } }] } })).toBeNull();
+    expect(
+      extractInvoicePriceId({
+        lines: { data: [{ pricing: { price_details: {} } }] },
+      })
+    ).toBeNull();
   });
 });
 
 describe("wiring contract — the resolved id must actually be persisted", () => {
   it("[WR-1] grantUserAccess writes planPriceId only when it is not undefined", () => {
-    expect(WEBHOOK_SRC).toMatch(/if \(params\.planPriceId !== undefined\) \{\s*\n\s*updateValues\.planPriceId = params\.planPriceId;/);
+    expect(WEBHOOK_SRC).toMatch(
+      /if \(params\.planPriceId !== undefined\) \{\s*\n\s*updateValues\.planPriceId = params\.planPriceId;/
+    );
   });
 
   it("[WR-2] checkout.session.completed threads the resolved id into BOTH fulfilment paths", () => {
-    expect(WEBHOOK_SRC).toContain("resolvePlanPriceId({ byPurchasedPrice, byLineItemPrice })");
+    expect(WEBHOOK_SRC).toContain(
+      "resolvePlanPriceId({ byPurchasedPrice, byLineItemPrice })"
+    );
     // existing-user grant + new pending account creation
     expect(WEBHOOK_SRC).toContain("planId: plan, planPriceId, expiryMs");
     expect(WEBHOOK_SRC).toMatch(/planId: plan,\s*\n\s*planPriceId,/);
   });
 
   it("[WR-3] createPendingUserFromCheckout persists planPriceId on the INSERT", () => {
-    expect(WEBHOOK_SRC).toMatch(/stripePlanId: params\.planId,\s*\n\s*planPriceId: params\.planPriceId \?\? null,/);
+    expect(WEBHOOK_SRC).toMatch(
+      /stripePlanId: params\.planId,\s*\n\s*planPriceId: params\.planPriceId \?\? null,/
+    );
   });
 
   it("[WR-4] the renewal passes the resolver's verdict, not a raw id", () => {
@@ -144,10 +191,12 @@ describe("wiring contract — the resolved id must actually be persisted", () =>
     // (resolved from planPriceId via deriveEntitlementFromPrice — see
     // adminAccountProvisioning.test.ts), not the raw input. The interval id is
     // still the client's planPriceId, verbatim.
-    expect(APPUSERS_SRC).toMatch(/stripePlanId,\s*\n\s*planPriceId: input\.planPriceId,/);
+    expect(APPUSERS_SRC).toMatch(
+      /stripePlanId,\s*\n\s*planPriceId: input\.planPriceId,/
+    );
     const createBlock = APPUSERS_SRC.slice(
       APPUSERS_SRC.indexOf("createUser: ownerProcedure"),
-      APPUSERS_SRC.indexOf("backfillEntitlement:"),
+      APPUSERS_SRC.indexOf("backfillEntitlement:")
     );
     expect(createBlock).toContain("deriveEntitlementFromPrice(");
   });
@@ -156,7 +205,7 @@ describe("wiring contract — the resolved id must actually be persisted", () =>
 describe("backfillEntitlement contract — the ad-hoc script, made safe", () => {
   const PROC = APPUSERS_SRC.slice(
     APPUSERS_SRC.indexOf("backfillEntitlement: ownerProcedure"),
-    APPUSERS_SRC.indexOf("updateUser: ownerProcedure"),
+    APPUSERS_SRC.indexOf("updateUser: ownerProcedure")
   );
 
   it("[BF-1] is owner-only", () => {
@@ -170,7 +219,7 @@ describe("backfillEntitlement contract — the ad-hoc script, made safe", () => 
   it("[BF-3] never writes expiryDate — NULL already means lifetime", () => {
     const setBlock = PROC.slice(
       PROC.indexOf("db.update(appUsersTable).set({"),
-      PROC.indexOf("}).where(missingEntitlement)"),
+      PROC.indexOf("}).where(missingEntitlement)")
     );
     expect(setBlock).toContain("hasAccess: true");
     expect(setBlock).not.toContain("expiryDate");

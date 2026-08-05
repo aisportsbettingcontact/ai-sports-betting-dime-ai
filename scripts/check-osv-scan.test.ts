@@ -12,12 +12,17 @@ function osvReport(
   return {
     results: [
       {
-        packages: packages.map((p) => ({
+        packages: packages.map(p => ({
           package: { name: p.name, version: p.version },
-          groups: p.vulns.map((v) => ({ ids: [v.id], max_severity: v.maxCvss ?? "" })),
-          vulnerabilities: p.vulns.map((v) => ({
+          groups: p.vulns.map(v => ({
+            ids: [v.id],
+            max_severity: v.maxCvss ?? "",
+          })),
+          vulnerabilities: p.vulns.map(v => ({
             id: v.id,
-            ...(v.severity ? { database_specific: { severity: v.severity } } : {}),
+            ...(v.severity
+              ? { database_specific: { severity: v.severity } }
+              : {}),
           })),
         })),
       },
@@ -34,7 +39,11 @@ describe("osv-scanner gate", () => {
 
   it("flags a HIGH finding using the GHSA-reviewed severity field", () => {
     const report = osvReport([
-      { name: "xlsx", version: "0.18.5", vulns: [{ id: "GHSA-4r6h-8v6p-xvw6", severity: "HIGH" }] },
+      {
+        name: "xlsx",
+        version: "0.18.5",
+        vulns: [{ id: "GHSA-4r6h-8v6p-xvw6", severity: "HIGH" }],
+      },
     ]);
     const { flagged, other } = evaluateScan(report);
     expect(other).toEqual([]);
@@ -44,7 +53,11 @@ describe("osv-scanner gate", () => {
 
   it("flags a CRITICAL finding", () => {
     const report = osvReport([
-      { name: "vitest", version: "2.1.9", vulns: [{ id: "GHSA-5xrq-8626-4rwp", severity: "CRITICAL" }] },
+      {
+        name: "vitest",
+        version: "2.1.9",
+        vulns: [{ id: "GHSA-5xrq-8626-4rwp", severity: "CRITICAL" }],
+      },
     ]);
     const { flagged } = evaluateScan(report);
     expect(flagged).toHaveLength(1);
@@ -53,8 +66,16 @@ describe("osv-scanner gate", () => {
 
   it("does not flag MODERATE or LOW findings", () => {
     const report = osvReport([
-      { name: "some-pkg", version: "1.0.0", vulns: [{ id: "GHSA-aaaa", severity: "MODERATE" }] },
-      { name: "other-pkg", version: "1.0.0", vulns: [{ id: "GHSA-bbbb", severity: "LOW" }] },
+      {
+        name: "some-pkg",
+        version: "1.0.0",
+        vulns: [{ id: "GHSA-aaaa", severity: "MODERATE" }],
+      },
+      {
+        name: "other-pkg",
+        version: "1.0.0",
+        vulns: [{ id: "GHSA-bbbb", severity: "LOW" }],
+      },
     ]);
     const { flagged, other } = evaluateScan(report);
     expect(flagged).toEqual([]);
@@ -63,7 +84,11 @@ describe("osv-scanner gate", () => {
 
   it("falls back to the group's CVSS score when database_specific.severity is absent", () => {
     const report = osvReport([
-      { name: "no-text-severity", version: "1.0.0", vulns: [{ id: "GHSA-cccc", maxCvss: "8.2" }] },
+      {
+        name: "no-text-severity",
+        version: "1.0.0",
+        vulns: [{ id: "GHSA-cccc", maxCvss: "8.2" }],
+      },
     ]);
     const { flagged } = evaluateScan(report);
     expect(flagged).toHaveLength(1);

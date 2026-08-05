@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { PI_AGENT_APPROVED_MODELS, resolvePiAgentModel, runPiChat } from "./piAgent";
+import {
+  PI_AGENT_APPROVED_MODELS,
+  resolvePiAgentModel,
+  runPiChat,
+} from "./piAgent";
 
 describe("piAgent model policy (LLM.md)", () => {
   it("resolves every approved current-generation model", () => {
@@ -17,9 +21,13 @@ describe("piAgent model policy (LLM.md)", () => {
     const prior = process.env.DIME_ALLOW_LEGACY_MODELS;
     delete process.env.DIME_ALLOW_LEGACY_MODELS;
     try {
-      expect(() => resolvePiAgentModel("claude-haiku-4-5")).toThrow(/current-generation policy/);
+      expect(() => resolvePiAgentModel("claude-haiku-4-5")).toThrow(
+        /current-generation policy/
+      );
       process.env.DIME_ALLOW_LEGACY_MODELS = "1";
-      expect(resolvePiAgentModel("claude-haiku-4-5").id).toBe("claude-haiku-4-5");
+      expect(resolvePiAgentModel("claude-haiku-4-5").id).toBe(
+        "claude-haiku-4-5"
+      );
     } finally {
       if (prior === undefined) delete process.env.DIME_ALLOW_LEGACY_MODELS;
       else process.env.DIME_ALLOW_LEGACY_MODELS = prior;
@@ -33,13 +41,13 @@ describe("runPiChat contract", () => {
       runPiChat({
         systemPrompt: "test",
         history: [{ role: "assistant", content: "hello" }],
-      }),
+      })
     ).rejects.toThrow(/must end with a user message/);
   });
 
   it("rejects an empty history", async () => {
-    await expect(runPiChat({ systemPrompt: "test", history: [] })).rejects.toThrow(
-      /must end with a user message/,
-    );
+    await expect(
+      runPiChat({ systemPrompt: "test", history: [] })
+    ).rejects.toThrow(/must end with a user message/);
   });
 });

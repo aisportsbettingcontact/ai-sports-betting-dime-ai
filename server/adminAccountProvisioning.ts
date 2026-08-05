@@ -43,16 +43,15 @@ export interface DerivedEntitlement {
 }
 
 export type DeriveResult =
-  | { ok: true; entitlement: DerivedEntitlement }
-  | { ok: false; error: string };
+  { ok: true; entitlement: DerivedEntitlement } | { ok: false; error: string };
 
 /** Locate a price by its NUMERIC plan_prices.id (getPriceById keys on the Stripe id). */
 export function findPriceByNumericId(
   plans: StoredPlan[],
-  planPriceId: number,
+  planPriceId: number
 ): { plan: StoredPlan; price: StoredPrice } | null {
   for (const plan of plans) {
-    const price = plan.prices.find((pr) => pr.id === planPriceId);
+    const price = plan.prices.find(pr => pr.id === planPriceId);
     if (price) return { plan, price };
   }
   return null;
@@ -72,12 +71,17 @@ export function findPriceByNumericId(
 export function deriveEntitlementFromPrice(
   plans: StoredPlan[],
   planPriceId: number,
-  nowMs: number,
+  nowMs: number
 ): DeriveResult {
   const found = findPriceByNumericId(plans, planPriceId);
   if (!found) {
-    console.warn(`${TAG}[derive] [VERIFY] FAIL — planPriceId=${planPriceId} not in catalog`);
-    return { ok: false, error: `Unknown plan interval (planPriceId=${planPriceId}).` };
+    console.warn(
+      `${TAG}[derive] [VERIFY] FAIL — planPriceId=${planPriceId} not in catalog`
+    );
+    return {
+      ok: false,
+      error: `Unknown plan interval (planPriceId=${planPriceId}).`,
+    };
   }
   const { plan, price } = found;
   if (!plan.active) {
@@ -85,17 +89,25 @@ export function deriveEntitlementFromPrice(
     return { ok: false, error: `Plan "${plan.name}" is inactive.` };
   }
   if (!price.active) {
-    console.warn(`${TAG}[derive] [VERIFY] FAIL — planPriceId=${planPriceId} inactive on plan=${plan.slug}`);
-    return { ok: false, error: `That interval is inactive on plan "${plan.name}".` };
+    console.warn(
+      `${TAG}[derive] [VERIFY] FAIL — planPriceId=${planPriceId} inactive on plan=${plan.slug}`
+    );
+    return {
+      ok: false,
+      error: `That interval is inactive on plan "${plan.name}".`,
+    };
   }
 
   const rawExpiry = computeExpiryMsForPrice(price, plan, nowMs);
   const expiryDate = rawExpiry === LIFETIME_ACCESS_UNTIL_MS ? null : rawExpiry;
   console.log(
     `${TAG}[derive] [OUTPUT] planPriceId=${planPriceId} slug=${plan.slug}` +
-    ` interval=${price.interval ?? "lifetime"} expiryDate=${expiryDate ?? "null (lifetime)"}`
+      ` interval=${price.interval ?? "lifetime"} expiryDate=${expiryDate ?? "null (lifetime)"}`
   );
-  return { ok: true, entitlement: { stripePlanId: plan.slug, planPriceId, expiryDate } };
+  return {
+    ok: true,
+    entitlement: { stripePlanId: plan.slug, planPriceId, expiryDate },
+  };
 }
 
 // ─── Claim link ───────────────────────────────────────────────────────────────
@@ -128,7 +140,11 @@ export function mintClaimToken(nowMs: number): ClaimToken {
  * resetPassword mutation consumes the token — /reset-password links already
  * in the wild are untouched.
  */
-export function buildClaimUrl(origin: string, userId: number, rawToken: string): string {
+export function buildClaimUrl(
+  origin: string,
+  userId: number,
+  rawToken: string
+): string {
   return `${origin.replace(/\/$/, "")}/invite/${buildInviteCode(userId, rawToken)}`;
 }
 
@@ -150,9 +166,14 @@ export function resolveCreationPassword(input: {
 }): PasswordResolution {
   const typed = input.password?.trim() ?? "";
   if (typed.length >= 8) return { ok: true, password: typed, generated: false };
-  if (typed.length > 0) return { ok: false, error: "Password must be at least 8 characters." };
+  if (typed.length > 0)
+    return { ok: false, error: "Password must be at least 8 characters." };
   if (input.generateClaimLink) {
-    return { ok: true, password: crypto.randomBytes(24).toString("base64url"), generated: true };
+    return {
+      ok: true,
+      password: crypto.randomBytes(24).toString("base64url"),
+      generated: true,
+    };
   }
   return { ok: false, error: "Provide a password or enable the invite link." };
 }

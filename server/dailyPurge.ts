@@ -14,5 +14,7 @@
  * Games are retained indefinitely; no rows are deleted automatically.
  */
 export function startDailyPurgeSchedule(): void {
-  console.log("[DailyPurge] DISABLED — daily game purge has been permanently removed (2026-03-25). All game data is retained indefinitely.");
+  console.log(
+    "[DailyPurge] DISABLED — daily game purge has been permanently removed (2026-03-25). All game data is retained indefinitely."
+  );
 }

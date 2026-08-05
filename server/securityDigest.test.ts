@@ -76,7 +76,12 @@ function makeEvent(ip: string | null) {
 
 /** Build a counts object from individual event type counts. */
 function makeCounts(csrf = 0, rate = 0, auth = 0) {
-  return { CSRF_BLOCK: csrf, RATE_LIMIT: rate, AUTH_FAIL: auth, total: csrf + rate + auth };
+  return {
+    CSRF_BLOCK: csrf,
+    RATE_LIMIT: rate,
+    AUTH_FAIL: auth,
+    total: csrf + rate + auth,
+  };
 }
 
 /**
@@ -96,13 +101,16 @@ function mockDateAt1300UTC(isoDate: string): Date {
   // vitest 4: `new Date()` through the spy requires a constructable
   // implementation — arrows lost `new` support. `function` + explicit return
   // preserves both call and construct paths.
-  vi.spyOn(globalThis, "Date").mockImplementation(function (...args: unknown[]) {
+  vi.spyOn(globalThis, "Date").mockImplementation(function (
+    ...args: unknown[]
+  ) {
     if (args.length === 0) return mockNow;
     // @ts-expect-error — allow Date constructor with args
     return new RealDate(...args);
   });
   // Mock Date.now() used in WINDOW_MS calculation
-  (globalThis.Date as unknown as { now: () => number }).now = () => mockNow.getTime();
+  (globalThis.Date as unknown as { now: () => number }).now = () =>
+    mockNow.getTime();
 
   return mockNow;
 }
@@ -133,21 +141,31 @@ afterEach(() => {
 
 // ─── Test suite ───────────────────────────────────────────────────────────────
 describe("securityDigest", () => {
-
   // ───────────────────────────────────────────────────────────────────────────
   // GROUP 1: topIpsByCount — IP aggregation and ranking
   // ───────────────────────────────────────────────────────────────────────────
   describe("topIpsByCount — IP aggregation and ranking", () => {
-
     it("ranks IPs by descending event count", async () => {
-      console.log("\n[INPUT] 10 events: 4×1.1.1.1, 3×2.2.2.2, 2×3.3.3.3, 1×4.4.4.4");
-      console.log("[INPUT] Expected: IPs appear in content in descending order");
+      console.log(
+        "\n[INPUT] 10 events: 4×1.1.1.1, 3×2.2.2.2, 2×3.3.3.3, 1×4.4.4.4"
+      );
+      console.log(
+        "[INPUT] Expected: IPs appear in content in descending order"
+      );
 
       const events = [
-        ...Array(4).fill(null).map(() => makeEvent("1.1.1.1")),
-        ...Array(3).fill(null).map(() => makeEvent("2.2.2.2")),
-        ...Array(2).fill(null).map(() => makeEvent("3.3.3.3")),
-        ...Array(1).fill(null).map(() => makeEvent("4.4.4.4")),
+        ...Array(4)
+          .fill(null)
+          .map(() => makeEvent("1.1.1.1")),
+        ...Array(3)
+          .fill(null)
+          .map(() => makeEvent("2.2.2.2")),
+        ...Array(2)
+          .fill(null)
+          .map(() => makeEvent("3.3.3.3")),
+        ...Array(1)
+          .fill(null)
+          .map(() => makeEvent("4.4.4.4")),
       ];
 
       mockGetCounts.mockResolvedValue(makeCounts(4, 3, 3));
@@ -166,7 +184,13 @@ describe("securityDigest", () => {
       expect(notifyCalls).toHaveLength(1);
 
       const content: string = notifyCalls[0][0].content;
-      console.log("[STATE] Content IP section:\n" + content.split("\n").filter(l => /\d+\.\d+\.\d+\.\d+/.test(l)).join("\n"));
+      console.log(
+        "[STATE] Content IP section:\n" +
+          content
+            .split("\n")
+            .filter(l => /\d+\.\d+\.\d+\.\d+/.test(l))
+            .join("\n")
+      );
 
       // All 4 IPs present (limit=5, only 4 unique IPs)
       expect(content).toContain("1.1.1.1");
@@ -181,7 +205,9 @@ describe("securityDigest", () => {
       expect(pos1).toBeLessThan(pos2);
       expect(pos2).toBeLessThan(pos3);
 
-      console.log("[VERIFY] PASS — IPs ranked: 1.1.1.1(4) > 2.2.2.2(3) > 3.3.3.3(2) > 4.4.4.4(1)");
+      console.log(
+        "[VERIFY] PASS — IPs ranked: 1.1.1.1(4) > 2.2.2.2(3) > 3.3.3.3(2) > 4.4.4.4(1)"
+      );
     });
 
     it("maps null IPs to 'unknown'", async () => {
@@ -189,7 +215,9 @@ describe("securityDigest", () => {
       console.log("[INPUT] Expected: content contains 'unknown'");
 
       const events = [
-        ...Array(3).fill(null).map(() => makeEvent(null)),
+        ...Array(3)
+          .fill(null)
+          .map(() => makeEvent(null)),
         makeEvent("5.5.5.5"),
       ];
 
@@ -227,7 +255,9 @@ describe("securityDigest", () => {
       expect(notifyCalls).toHaveLength(1);
       const content: string = notifyCalls[0][0].content;
       expect(content).toContain("No events recorded.");
-      console.log("[VERIFY] PASS — empty event list produces 'No events recorded.'");
+      console.log(
+        "[VERIFY] PASS — empty event list produces 'No events recorded.'"
+      );
     });
   });
 
@@ -235,27 +265,38 @@ describe("securityDigest", () => {
   // GROUP 2: Threat level — all boundary conditions
   // ───────────────────────────────────────────────────────────────────────────
   describe("threat level — boundary conditions", () => {
-    const THREAT_CASES: Array<{ total: number; expected: string; isoDate: string }> = [
-      { total: 0,   expected: "CLEAN",    isoDate: "2025-02-01" },
-      { total: 1,   expected: "LOW",      isoDate: "2025-02-02" },
-      { total: 9,   expected: "LOW",      isoDate: "2025-02-03" },
-      { total: 10,  expected: "MODERATE", isoDate: "2025-02-04" },
-      { total: 49,  expected: "MODERATE", isoDate: "2025-02-05" },
-      { total: 50,  expected: "HIGH",     isoDate: "2025-02-06" },
-      { total: 199, expected: "HIGH",     isoDate: "2025-02-07" },
+    const THREAT_CASES: Array<{
+      total: number;
+      expected: string;
+      isoDate: string;
+    }> = [
+      { total: 0, expected: "CLEAN", isoDate: "2025-02-01" },
+      { total: 1, expected: "LOW", isoDate: "2025-02-02" },
+      { total: 9, expected: "LOW", isoDate: "2025-02-03" },
+      { total: 10, expected: "MODERATE", isoDate: "2025-02-04" },
+      { total: 49, expected: "MODERATE", isoDate: "2025-02-05" },
+      { total: 50, expected: "HIGH", isoDate: "2025-02-06" },
+      { total: 199, expected: "HIGH", isoDate: "2025-02-07" },
       { total: 200, expected: "CRITICAL", isoDate: "2025-02-08" },
       { total: 999, expected: "CRITICAL", isoDate: "2025-02-09" },
     ];
 
     for (const { total, expected, isoDate } of THREAT_CASES) {
       it(`total=${total} → [${expected}]`, async () => {
-        console.log(`\n[INPUT] total=${total} | isoDate=${isoDate} | expected=[${expected}]`);
+        console.log(
+          `\n[INPUT] total=${total} | isoDate=${isoDate} | expected=[${expected}]`
+        );
 
         const csrf = Math.floor(total / 3);
         const rate = Math.floor(total / 3);
         const auth = total - csrf - rate;
 
-        mockGetCounts.mockResolvedValue({ CSRF_BLOCK: csrf, RATE_LIMIT: rate, AUTH_FAIL: auth, total });
+        mockGetCounts.mockResolvedValue({
+          CSRF_BLOCK: csrf,
+          RATE_LIMIT: rate,
+          AUTH_FAIL: auth,
+          total,
+        });
         mockGetEvents.mockResolvedValue([]);
         mockPrune.mockResolvedValue(0);
         mockNotify.mockResolvedValue(true);
@@ -272,7 +313,9 @@ describe("securityDigest", () => {
         const title: string = notifyCalls[0][0].title;
         console.log(`[STATE] title: "${title}"`);
         expect(title).toContain(`[${expected}]`);
-        console.log(`[VERIFY] PASS — title contains "[${expected}]" for total=${total}`);
+        console.log(
+          `[VERIFY] PASS — title contains "[${expected}]" for total=${total}`
+        );
       });
     }
   });
@@ -281,7 +324,6 @@ describe("securityDigest", () => {
   // GROUP 3: Notification title — pluralization
   // ───────────────────────────────────────────────────────────────────────────
   describe("notification title — pluralization", () => {
-
     it("uses singular 'event' for total=1", async () => {
       console.log("\n[INPUT] total=1 → expect '1 event in 24h' (singular)");
 
@@ -306,7 +348,11 @@ describe("securityDigest", () => {
       console.log("\n[INPUT] total=5 → expect '5 events in 24h' (plural)");
 
       mockGetCounts.mockResolvedValue(makeCounts(2, 2, 1));
-      mockGetEvents.mockResolvedValue(Array(5).fill(null).map(() => makeEvent("8.8.8.8")));
+      mockGetEvents.mockResolvedValue(
+        Array(5)
+          .fill(null)
+          .map(() => makeEvent("8.8.8.8"))
+      );
 
       mockDateAt1300UTC("2025-03-02");
       await fireDigestAndWait();
@@ -322,7 +368,9 @@ describe("securityDigest", () => {
     });
 
     it("uses plural 'events' for total=0", async () => {
-      console.log("\n[INPUT] total=0 → expect '0 events in 24h' (plural, 0 is not 1)");
+      console.log(
+        "\n[INPUT] total=0 → expect '0 events in 24h' (plural, 0 is not 1)"
+      );
 
       mockGetCounts.mockResolvedValue(makeCounts(0, 0, 0));
       mockGetEvents.mockResolvedValue([]);
@@ -345,10 +393,11 @@ describe("securityDigest", () => {
   // GROUP 4: pruneSecurityEvents — retention policy
   // ───────────────────────────────────────────────────────────────────────────
   describe("pruneSecurityEvents — retention policy", () => {
-
     it("calls pruneSecurityEvents(90) on every digest run", async () => {
       console.log("\n[INPUT] Normal digest run");
-      console.log("[INPUT] Expected: pruneSecurityEvents called exactly once with arg=90");
+      console.log(
+        "[INPUT] Expected: pruneSecurityEvents called exactly once with arg=90"
+      );
 
       mockGetCounts.mockResolvedValue(makeCounts(1, 1, 1));
       mockGetEvents.mockResolvedValue([makeEvent("7.7.7.7")]);
@@ -360,14 +409,21 @@ describe("securityDigest", () => {
       const pruneCalls = [...mockPrune.mock.calls];
       vi.restoreAllMocks();
 
-      console.log("[STATE] pruneSecurityEvents call args:", JSON.stringify(pruneCalls));
+      console.log(
+        "[STATE] pruneSecurityEvents call args:",
+        JSON.stringify(pruneCalls)
+      );
       expect(pruneCalls).toHaveLength(1);
       expect(pruneCalls[0][0]).toBe(90);
-      console.log("[VERIFY] PASS — pruneSecurityEvents(90) called exactly once");
+      console.log(
+        "[VERIFY] PASS — pruneSecurityEvents(90) called exactly once"
+      );
     });
 
     it("prune is called even when notifyOwner returns false", async () => {
-      console.log("\n[INPUT] notifyOwner returns false (service unavailable, not throwing)");
+      console.log(
+        "\n[INPUT] notifyOwner returns false (service unavailable, not throwing)"
+      );
       console.log("[INPUT] Expected: pruneSecurityEvents still called with 90");
 
       mockGetCounts.mockResolvedValue(makeCounts(2, 1, 0));
@@ -384,7 +440,9 @@ describe("securityDigest", () => {
       console.log("[STATE] pruneSecurityEvents call count:", pruneCalls.length);
       expect(pruneCalls).toHaveLength(1);
       expect(pruneCalls[0][0]).toBe(90);
-      console.log("[VERIFY] PASS — prune called even when notifyOwner returns false");
+      console.log(
+        "[VERIFY] PASS — prune called even when notifyOwner returns false"
+      );
     });
   });
 
@@ -392,10 +450,13 @@ describe("securityDigest", () => {
   // GROUP 5: Error resilience — all failures are caught, server never crashes
   // ───────────────────────────────────────────────────────────────────────────
   describe("error resilience — all failures are caught", () => {
-
     it("does not throw when getSecurityEventCounts rejects", async () => {
-      console.log("\n[INPUT] getSecurityEventCounts rejects with Error('DB connection lost')");
-      console.log("[INPUT] Expected: no unhandled rejection, notifyOwner NOT called");
+      console.log(
+        "\n[INPUT] getSecurityEventCounts rejects with Error('DB connection lost')"
+      );
+      console.log(
+        "[INPUT] Expected: no unhandled rejection, notifyOwner NOT called"
+      );
 
       mockGetCounts.mockRejectedValue(new Error("DB connection lost"));
       mockGetEvents.mockResolvedValue([]);
@@ -408,12 +469,18 @@ describe("securityDigest", () => {
 
       console.log("[STATE] notifyOwner call count:", notifyCalls.length);
       expect(notifyCalls).toHaveLength(0);
-      console.log("[VERIFY] PASS — DB error caught, notifyOwner not called, no crash");
+      console.log(
+        "[VERIFY] PASS — DB error caught, notifyOwner not called, no crash"
+      );
     });
 
     it("does not throw when notifyOwner rejects", async () => {
-      console.log("\n[INPUT] notifyOwner rejects with Error('notification service down')");
-      console.log("[INPUT] Expected: no crash, pruneSecurityEvents still called");
+      console.log(
+        "\n[INPUT] notifyOwner rejects with Error('notification service down')"
+      );
+      console.log(
+        "[INPUT] Expected: no crash, pruneSecurityEvents still called"
+      );
 
       mockGetCounts.mockResolvedValue(makeCounts(5, 3, 2));
       mockGetEvents.mockResolvedValue([makeEvent("6.6.6.6")]);
@@ -428,12 +495,18 @@ describe("securityDigest", () => {
 
       console.log("[STATE] pruneSecurityEvents call count:", pruneCalls.length);
       expect(pruneCalls).toHaveLength(1);
-      console.log("[VERIFY] PASS — notifyOwner rejection caught, prune still executed, no crash");
+      console.log(
+        "[VERIFY] PASS — notifyOwner rejection caught, prune still executed, no crash"
+      );
     });
 
     it("does not throw when getSecurityEvents rejects", async () => {
-      console.log("\n[INPUT] getSecurityEvents rejects with Error('query timeout')");
-      console.log("[INPUT] Expected: no crash — error propagates to outer catch");
+      console.log(
+        "\n[INPUT] getSecurityEvents rejects with Error('query timeout')"
+      );
+      console.log(
+        "[INPUT] Expected: no crash — error propagates to outer catch"
+      );
 
       mockGetCounts.mockResolvedValue(makeCounts(3, 2, 1));
       mockGetEvents.mockRejectedValue(new Error("query timeout"));
@@ -442,7 +515,9 @@ describe("securityDigest", () => {
       await expect(fireDigestAndWait()).resolves.toBeUndefined();
       vi.restoreAllMocks();
 
-      console.log("[VERIFY] PASS — getSecurityEvents rejection caught, no crash");
+      console.log(
+        "[VERIFY] PASS — getSecurityEvents rejection caught, no crash"
+      );
     });
   });
 
@@ -450,16 +525,23 @@ describe("securityDigest", () => {
   // GROUP 6: Notification content — all required sections present
   // ───────────────────────────────────────────────────────────────────────────
   describe("notification content — required sections", () => {
-
     it("content includes all required sections with correct values", async () => {
       console.log("\n[INPUT] counts: CSRF=5, RATE=3, AUTH=2 (total=10)");
-      console.log("[INPUT] Expected: all content sections present with correct values");
+      console.log(
+        "[INPUT] Expected: all content sections present with correct values"
+      );
 
       mockGetCounts.mockResolvedValue(makeCounts(5, 3, 2));
       mockGetEvents.mockResolvedValue([
-        ...Array(5).fill(null).map(() => makeEvent("10.0.0.1")),
-        ...Array(3).fill(null).map(() => makeEvent("10.0.0.2")),
-        ...Array(2).fill(null).map(() => makeEvent("10.0.0.3")),
+        ...Array(5)
+          .fill(null)
+          .map(() => makeEvent("10.0.0.1")),
+        ...Array(3)
+          .fill(null)
+          .map(() => makeEvent("10.0.0.2")),
+        ...Array(2)
+          .fill(null)
+          .map(() => makeEvent("10.0.0.3")),
       ]);
       mockPrune.mockResolvedValue(7);
       mockNotify.mockResolvedValue(true);
@@ -471,13 +553,18 @@ describe("securityDigest", () => {
       vi.restoreAllMocks();
 
       expect(notifyCalls).toHaveLength(1);
-      const { title, content } = notifyCalls[0][0] as { title: string; content: string };
+      const { title, content } = notifyCalls[0][0] as {
+        title: string;
+        content: string;
+      };
 
       console.log(`[STATE] title: "${title}"`);
-      console.log("[STATE] content (first 400 chars):\n" + content.slice(0, 400));
+      console.log(
+        "[STATE] content (first 400 chars):\n" + content.slice(0, 400)
+      );
 
       // Title assertions
-      expect(title).toContain("[MODERATE]");       // total=10 → MODERATE
+      expect(title).toContain("[MODERATE]"); // total=10 → MODERATE
       expect(title).toContain("10 events in 24h");
 
       // Content section assertions
@@ -495,12 +582,16 @@ describe("securityDigest", () => {
 
       console.log("[VERIFY] PASS — title: [MODERATE] + '10 events in 24h'");
       console.log("[VERIFY] PASS — content: all 9 required sections present");
-      console.log("[VERIFY] PASS — event counts: CSRF=5 RATE=3 AUTH=2 total=10");
+      console.log(
+        "[VERIFY] PASS — event counts: CSRF=5 RATE=3 AUTH=2 total=10"
+      );
     });
 
     it("Window line contains ISO-format timestamps", async () => {
       console.log("\n[INPUT] Digest run at 2025-07-01T13:00:00Z");
-      console.log("[INPUT] Expected: Window line contains ISO timestamps (YYYY-MM-DDTHH:MM:SS)");
+      console.log(
+        "[INPUT] Expected: Window line contains ISO timestamps (YYYY-MM-DDTHH:MM:SS)"
+      );
 
       mockGetCounts.mockResolvedValue(makeCounts(1, 0, 0));
       mockGetEvents.mockResolvedValue([makeEvent("1.2.3.4")]);
@@ -525,10 +616,11 @@ describe("securityDigest", () => {
   // GROUP 7: getSecurityEvents called with correct 24h window
   // ───────────────────────────────────────────────────────────────────────────
   describe("getSecurityEvents — correct window and limit", () => {
-
     it("passes sinceMs = now - 24h and limit=500", async () => {
       console.log("\n[INPUT] Digest run at 2025-08-01T13:00:00Z");
-      console.log("[INPUT] Expected: getSecurityEvents({ sinceMs: now-86400000, limit: 500 })");
+      console.log(
+        "[INPUT] Expected: getSecurityEvents({ sinceMs: now-86400000, limit: 500 })"
+      );
 
       mockGetCounts.mockResolvedValue(makeCounts(0, 0, 0));
       mockGetEvents.mockResolvedValue([]);
@@ -539,17 +631,27 @@ describe("securityDigest", () => {
       const eventCalls = [...mockGetEvents.mock.calls];
       vi.restoreAllMocks();
 
-      console.log("[STATE] getSecurityEvents call args:", JSON.stringify(eventCalls));
+      console.log(
+        "[STATE] getSecurityEvents call args:",
+        JSON.stringify(eventCalls)
+      );
       expect(eventCalls).toHaveLength(1);
 
-      const { sinceMs, limit } = eventCalls[0][0] as { sinceMs: number; limit: number };
+      const { sinceMs, limit } = eventCalls[0][0] as {
+        sinceMs: number;
+        limit: number;
+      };
       const expectedSince = mockNow.getTime() - 24 * 60 * 60 * 1000;
 
-      console.log(`[STATE] sinceMs=${sinceMs} | expected=${expectedSince} | diff=${sinceMs - expectedSince}ms`);
+      console.log(
+        `[STATE] sinceMs=${sinceMs} | expected=${expectedSince} | diff=${sinceMs - expectedSince}ms`
+      );
       // Allow ±10ms tolerance for execution overhead
       expect(Math.abs(sinceMs - expectedSince)).toBeLessThan(10);
       expect(limit).toBe(500);
-      console.log("[VERIFY] PASS — sinceMs within 10ms of now-86400000, limit=500");
+      console.log(
+        "[VERIFY] PASS — sinceMs within 10ms of now-86400000, limit=500"
+      );
     });
   });
 });

@@ -48,20 +48,23 @@ export type GradingTimeframe =
  * re-creates exactly the bug this file exists to prevent, which is what
  * `gradingSupport.test.ts` checks against the grader source.
  */
-export const SPORT_TIMEFRAMES: Record<GradableSport, readonly GradingTimeframe[]> = {
+export const SPORT_TIMEFRAMES: Record<
+  GradableSport,
+  readonly GradingTimeframe[]
+> = {
   // Innings, so first-5 and first-inning windows exist. NRFI/YRFI are the
   // first-inning total expressed as a 0.5 line.
-  MLB:   ["FULL_GAME", "FIRST_5", "FIRST_INNING", "NRFI", "YRFI"],
+  MLB: ["FULL_GAME", "FIRST_5", "FIRST_INNING", "NRFI", "YRFI"],
   // Periods, and regulation is meaningful because OT/SO decide ties.
-  NHL:   ["FULL_GAME", "REGULATION", "FIRST_PERIOD"],
+  NHL: ["FULL_GAME", "REGULATION", "FIRST_PERIOD"],
   // Quarters.
-  NBA:   ["FULL_GAME", "FIRST_HALF", "FIRST_QUARTER"],
+  NBA: ["FULL_GAME", "FIRST_HALF", "FIRST_QUARTER"],
   // Halves — college basketball has no quarters, so FIRST_QUARTER is absent
   // on purpose rather than by omission.
   NCAAM: ["FULL_GAME", "FIRST_HALF"],
   // Quarters, plus regulation: an NFL game tied after four quarters is decided
   // in OT, so REGULATION and FULL_GAME genuinely differ.
-  NFL:   ["FULL_GAME", "REGULATION", "FIRST_HALF", "FIRST_QUARTER"],
+  NFL: ["FULL_GAME", "REGULATION", "FIRST_HALF", "FIRST_QUARTER"],
 } as const;
 
 /** Sports with a score feed. CUSTOM is deliberately not one of them. */
@@ -88,7 +91,10 @@ export type GradingSupport =
  * to explain 36 hours later, and on a parlay it would strand every other leg
  * on the ticket too.
  */
-export function checkGradingSupport(sport: string, timeframe: string): GradingSupport {
+export function checkGradingSupport(
+  sport: string,
+  timeframe: string
+): GradingSupport {
   if (!isGradableSport(sport)) {
     return {
       ok: false,
@@ -114,15 +120,25 @@ export function checkGradingSupport(sport: string, timeframe: string): GradingSu
 /** Display name for a timeframe, used in the messages above and in the UI. */
 export function humanTimeframe(tf: string): string {
   switch (tf) {
-    case "FULL_GAME":     return "Full Game";
-    case "REGULATION":    return "Regulation";
-    case "FIRST_PERIOD":  return "1st Period";
-    case "FIRST_HALF":    return "1st Half";
-    case "FIRST_QUARTER": return "1st Quarter";
-    case "FIRST_5":       return "First 5 Innings";
-    case "FIRST_INNING":  return "1st Inning";
-    case "NRFI":          return "NRFI";
-    case "YRFI":          return "YRFI";
-    default:              return tf;
+    case "FULL_GAME":
+      return "Full Game";
+    case "REGULATION":
+      return "Regulation";
+    case "FIRST_PERIOD":
+      return "1st Period";
+    case "FIRST_HALF":
+      return "1st Half";
+    case "FIRST_QUARTER":
+      return "1st Quarter";
+    case "FIRST_5":
+      return "First 5 Innings";
+    case "FIRST_INNING":
+      return "1st Inning";
+    case "NRFI":
+      return "NRFI";
+    case "YRFI":
+      return "YRFI";
+    default:
+      return tf;
   }
 }

@@ -26,7 +26,7 @@ export function checkDimeChatRateLimit(
   store: Map<number, RateLimitEntry> = chatRateLimitStore,
   now: number = Date.now(),
   windowMs: number = DIME_CHAT_RATE_LIMIT_WINDOW_MS,
-  maxRequests: number = DIME_CHAT_RATE_LIMIT_MAX_REQUESTS,
+  maxRequests: number = DIME_CHAT_RATE_LIMIT_MAX_REQUESTS
 ): boolean {
   const entry = store.get(userId);
   if (!entry || now - entry.windowStart > windowMs) {

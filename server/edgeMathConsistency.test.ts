@@ -13,12 +13,17 @@ import * as edgeHook from "../client/src/hooks/useEdgeCalculation";
  * grid of inputs, so any future drift fails CI.
  */
 
-const AMERICAN_ODDS = [-500, -300, -200, -150, -110, -105, -100, 100, 105, 110, 150, 200, 300, 500];
+const AMERICAN_ODDS = [
+  -500, -300, -200, -150, -110, -105, -100, 100, 105, 110, 150, 200, 300, 500,
+];
 
 describe("edge-math cross-module consistency", () => {
   it("americanToImplied agrees across both modules", () => {
     for (const odds of AMERICAN_ODDS) {
-      expect(edgeHook.americanToImplied(odds)).toBeCloseTo(edgeUtils.americanToImplied(odds), 10);
+      expect(edgeHook.americanToImplied(odds)).toBeCloseTo(
+        edgeUtils.americanToImplied(odds),
+        10
+      );
     }
   });
 
@@ -27,7 +32,7 @@ describe("edge-math cross-module consistency", () => {
       for (const model of AMERICAN_ODDS) {
         expect(edgeHook.calculateEdge(book, model)).toBeCloseTo(
           edgeUtils.calculateEdge(book, model),
-          10,
+          10
         );
       }
     }

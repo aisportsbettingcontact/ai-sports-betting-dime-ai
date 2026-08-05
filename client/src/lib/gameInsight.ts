@@ -54,7 +54,7 @@ export interface EdgeThresholds {
  */
 export function classifyEdge(
   edgePercentagePoints: number,
-  thresholds: EdgeThresholds = {},
+  thresholds: EdgeThresholds = {}
 ): Recommendation {
   const bet = thresholds.bet ?? BET_THRESHOLD_PP;
   const watch = thresholds.watch ?? WATCH_THRESHOLD_PP;
@@ -69,8 +69,12 @@ export function classifyEdge(
  * model's probability. EV = p·decimal − 1. Positive EV = +units per unit risked.
  * Returns NaN on invalid input.
  */
-export function expectedValue(modelProbability: number, americanPrice: number): number {
-  if (!Number.isFinite(modelProbability) || !Number.isFinite(americanPrice)) return NaN;
+export function expectedValue(
+  modelProbability: number,
+  americanPrice: number
+): number {
+  if (!Number.isFinite(modelProbability) || !Number.isFinite(americanPrice))
+    return NaN;
   const decimal = americanToDecimal(americanPrice);
   if (isNaN(decimal)) return NaN;
   return modelProbability * decimal - 1;
@@ -129,7 +133,7 @@ function toNum(v: number | null | undefined): number {
  */
 export function scoreMarketSide(
   side: MarketSideInput,
-  thresholds: EdgeThresholds = {},
+  thresholds: EdgeThresholds = {}
 ): MarketInsight | null {
   const bookPrice = toNum(side.bookPrice);
   const modelPrice = toNum(side.modelPrice);
@@ -180,10 +184,10 @@ export function scoreMarketSide(
  */
 export function rankMarkets(
   sides: MarketSideInput[],
-  thresholds: EdgeThresholds = {},
+  thresholds: EdgeThresholds = {}
 ): MarketInsight[] {
   return sides
-    .map((s) => scoreMarketSide(s, thresholds))
+    .map(s => scoreMarketSide(s, thresholds))
     .filter((x): x is MarketInsight => x !== null)
     .sort((a, b) => {
       if (b.edgePP !== a.edgePP) return b.edgePP - a.edgePP;
@@ -198,7 +202,7 @@ export function rankMarkets(
  */
 export function primaryInsight(
   sides: MarketSideInput[],
-  thresholds: EdgeThresholds = {},
+  thresholds: EdgeThresholds = {}
 ): MarketInsight | null {
   const top = rankMarkets(sides, thresholds)[0];
   if (!top) return null;

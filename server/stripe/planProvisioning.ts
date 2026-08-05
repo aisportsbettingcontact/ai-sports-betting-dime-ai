@@ -21,8 +21,16 @@ import Stripe from "stripe";
 import { eq, and, sql } from "drizzle-orm";
 import { getDb } from "../db";
 import { withCircuitBreaker } from "../dbCircuitBreaker";
-import { normalizePlanFeatures, type PlanFeatureKey } from "../../shared/planFeatures";
-import { subscriptionPlans, planPrices, planFeatures, appUsers } from "../../drizzle/schema";
+import {
+  normalizePlanFeatures,
+  type PlanFeatureKey,
+} from "../../shared/planFeatures";
+import {
+  subscriptionPlans,
+  planPrices,
+  planFeatures,
+  appUsers,
+} from "../../drizzle/schema";
 import {
   getPlanBySlug,
   invalidatePlanCache,
@@ -44,8 +52,12 @@ function resolveProvisioningKey(): { key: string; testMode: boolean } {
   const testKey = process.env.STRIPE_TEST_SECRET_KEY?.trim();
   if (testKey) return { key: testKey, testMode: true };
   const liveKey = process.env.STRIPE_SECRET_KEY?.trim();
-  if (!liveKey) throw new Error("Neither STRIPE_TEST_SECRET_KEY nor STRIPE_SECRET_KEY is set");
-  const testish = liveKey.startsWith("sk_test_") || liveKey.startsWith("rk_test_");
+  if (!liveKey)
+    throw new Error(
+      "Neither STRIPE_TEST_SECRET_KEY nor STRIPE_SECRET_KEY is set"
+    );
+  const testish =
+    liveKey.startsWith("sk_test_") || liveKey.startsWith("rk_test_");
   return { key: liveKey, testMode: testish };
 }
 
@@ -63,7 +75,9 @@ export function getProvisioningStripe(): Stripe {
   const { key, testMode } = resolveProvisioningKey();
   const tail = key.slice(-6);
   if (_client && _clientKeyTail === tail) return _client;
-  console.log(`${TAG} init Stripe client mode=${testMode ? "TEST" : "LIVE"} api=${API_VERSION}`);
+  console.log(
+    `${TAG} init Stripe client mode=${testMode ? "TEST" : "LIVE"} api=${API_VERSION}`
+  );
   _client = new Stripe(key, {
     // Must match the installed stripe npm package's pinned version.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -103,7 +117,7 @@ export function slugify(name: string): string {
 export async function resolveUniqueSlug(
   name: string,
   lookup: (slug: string) => Promise<{ id: number } | null>,
-  ownerPlanId?: number | null,
+  ownerPlanId?: number | null
 ): Promise<string> {
   const base = slugify(name);
   let slug = base;
@@ -129,13 +143,22 @@ async function uniqueSlug(name: string): Promise<string> {
 
 /** Stripe caps a recurring billing interval at ≤ 1 year. */
 function clampCount(interval: BillingInterval, count: number): number {
-  const max = interval === "year" ? 1 : interval === "month" ? 12 : interval === "week" ? 52 : 365;
+  const max =
+    interval === "year"
+      ? 1
+      : interval === "month"
+        ? 12
+        : interval === "week"
+          ? 52
+          : 365;
   return Math.min(Math.max(1, Math.floor(count)), max);
 }
 
 function validateAmount(amountCents: number): void {
   if (!Number.isInteger(amountCents) || amountCents < MIN_AMOUNT_CENTS) {
-    throw new Error(`amountCents must be an integer ≥ ${MIN_AMOUNT_CENTS} (got ${amountCents})`);
+    throw new Error(
+      `amountCents must be an integer ≥ ${MIN_AMOUNT_CENTS} (got ${amountCents})`
+    );
   }
 }
 
@@ -163,7 +186,14 @@ interface DbErrorInfo {
  * query" dump hides. Pure + exported so it is unit-tested without a DB.
  */
 export function describeDbError(err: unknown): DbErrorInfo {
-  const raw = err as { message?: string; code?: string; errno?: number; sqlState?: string; sqlMessage?: string; cause?: unknown };
+  const raw = err as {
+    message?: string;
+    code?: string;
+    errno?: number;
+    sqlState?: string;
+    sqlMessage?: string;
+    cause?: unknown;
+  };
   // Prefer the driver-level error (has code/sqlMessage), which Drizzle may nest.
   const driver =
     raw && (raw.code || raw.sqlMessage)
@@ -181,7 +211,15 @@ export function describeDbError(err: unknown): DbErrorInfo {
     errno === 1146 ||
     /Unknown column|doesn't exist|no such table/i.test(probe);
   const missingColumn = /Unknown column '([^']+)'/i.exec(probe)?.[1];
-  return { message, code, errno, sqlState: driver.sqlState, sqlMessage, schemaMismatch, missingColumn };
+  return {
+    message,
+    code,
+    errno,
+    sqlState: driver.sqlState,
+    sqlMessage,
+    schemaMismatch,
+    missingColumn,
+  };
 }
 
 /**
@@ -191,7 +229,11 @@ export function describeDbError(err: unknown): DbErrorInfo {
  * clean, user-facing message (not the raw SQL) so the admin sees WHY, not a
  * query dump.
  */
-async function persist<T>(step: string, table: string, fn: () => Promise<T>): Promise<T> {
+async function persist<T>(
+  step: string,
+  table: string,
+  fn: () => Promise<T>
+): Promise<T> {
   try {
     return await fn();
   } catch (err) {
@@ -200,18 +242,18 @@ async function persist<T>(step: string, table: string, fn: () => Promise<T>): Pr
       console.error(
         `${TAG} [DB-FAIL] step=${step} table=${table} SCHEMA-MISMATCH` +
           `${d.missingColumn ? ` missingColumn="${d.missingColumn}"` : ""}` +
-          ` code=${d.code ?? "?"} errno=${d.errno ?? "?"} sqlMessage="${d.sqlMessage ?? d.message}"`,
+          ` code=${d.code ?? "?"} errno=${d.errno ?? "?"} sqlMessage="${d.sqlMessage ?? d.message}"`
       );
       console.error(
-        `${TAG} [DB-FAIL] → the deployed schema is AHEAD of the database. Run the "DB Push (apply schema migrations)" workflow, then retry.`,
+        `${TAG} [DB-FAIL] → the deployed schema is AHEAD of the database. Run the "DB Push (apply schema migrations)" workflow, then retry.`
       );
       throw new Error(
         `Database schema is out of date${d.missingColumn ? ` — column "${d.missingColumn}" is missing from ${table}` : ` — ${table} is missing a required column`}. ` +
-          `Run the db-push workflow, then try again.`,
+          `Run the db-push workflow, then try again.`
       );
     }
     console.error(
-      `${TAG} [DB-FAIL] step=${step} table=${table} code=${d.code ?? "?"} errno=${d.errno ?? "?"} sqlState=${d.sqlState ?? "?"} sqlMessage="${d.sqlMessage ?? d.message}"`,
+      `${TAG} [DB-FAIL] step=${step} table=${table} code=${d.code ?? "?"} errno=${d.errno ?? "?"} sqlState=${d.sqlState ?? "?"} sqlMessage="${d.sqlMessage ?? d.message}"`
     );
     throw err instanceof Error ? err : new Error(String(err));
   }
@@ -228,16 +270,22 @@ export interface PromoInput {
 /** A promo must be a sane percent (1–100) or a cents amount below the price. */
 function validatePromo(promo: PromoInput, amountCents: number): void {
   if (!Number.isInteger(promo.value) || promo.value < 1) {
-    throw new Error(`promo value must be a positive integer (got ${promo.value})`);
+    throw new Error(
+      `promo value must be a positive integer (got ${promo.value})`
+    );
   }
   if (promo.type === "percent" && promo.value > 100) {
     throw new Error(`percent promo must be 1–100 (got ${promo.value})`);
   }
   if (promo.type === "amount" && promo.value >= amountCents) {
-    throw new Error(`amount promo (${promo.value}c) must be less than the price (${amountCents}c)`);
+    throw new Error(
+      `amount promo (${promo.value}c) must be less than the price (${amountCents}c)`
+    );
   }
   if (promo.code && !/^[A-Za-z0-9_-]{2,64}$/.test(promo.code)) {
-    throw new Error(`promo code must be 2–64 chars of letters, numbers, - or _`);
+    throw new Error(
+      `promo code must be 2–64 chars of letters, numbers, - or _`
+    );
   }
 }
 
@@ -250,18 +298,29 @@ async function provisionPromo(
   stripe: Stripe,
   promo: PromoInput,
   currency: string,
-  idemBase: string,
+  idemBase: string
 ): Promise<{ couponId: string; promoCodeId: string | null }> {
   const couponParams: Stripe.CouponCreateParams =
     promo.type === "percent"
-      ? { percent_off: promo.value, duration: "forever", name: `${promo.value}% off` }
-      : { amount_off: promo.value, currency, duration: "forever", name: `$${(promo.value / 100).toFixed(2)} off` };
-  const coupon = await stripe.coupons.create(couponParams, { idempotencyKey: `coupon-${idemBase}` });
+      ? {
+          percent_off: promo.value,
+          duration: "forever",
+          name: `${promo.value}% off`,
+        }
+      : {
+          amount_off: promo.value,
+          currency,
+          duration: "forever",
+          name: `$${(promo.value / 100).toFixed(2)} off`,
+        };
+  const coupon = await stripe.coupons.create(couponParams, {
+    idempotencyKey: `coupon-${idemBase}`,
+  });
   let promoCodeId: string | null = null;
   if (promo.code) {
     const pc = await stripe.promotionCodes.create(
       { promotion: { type: "coupon", coupon: coupon.id }, code: promo.code },
-      { idempotencyKey: `promocode-${idemBase}` },
+      { idempotencyKey: `promocode-${idemBase}` }
     );
     promoCodeId = pc.id;
   }
@@ -377,7 +436,12 @@ async function createAndPersistPrice(
   productId: string,
   slug: string,
   input: NewPriceInput,
-  opts: { isDefault: boolean; sortOrder: number; planType: PlanType; idemSalt?: string },
+  opts: {
+    isDefault: boolean;
+    sortOrder: number;
+    planType: PlanType;
+    idemSalt?: string;
+  }
 ): Promise<{ priceId: string; rowId: number }> {
   validateAmount(input.amountCents);
   const currency = (input.currency ?? "usd").toLowerCase();
@@ -386,8 +450,12 @@ async function createAndPersistPrice(
   // may include a "Lifetime" interval — the client omits `interval` to signal it —
   // which is charged as a single one-time payment (mode:"payment" at checkout).
   const recurring = opts.planType !== "one_time" && input.interval != null;
-  const interval: BillingInterval | null = recurring ? (input.interval as BillingInterval) : null;
-  const intervalCount: number | null = recurring ? clampCount(interval as BillingInterval, input.intervalCount ?? 1) : null;
+  const interval: BillingInterval | null = recurring
+    ? (input.interval as BillingInterval)
+    : null;
+  const intervalCount: number | null = recurring
+    ? clampCount(interval as BillingInterval, input.intervalCount ?? 1)
+    : null;
   // 0 days ≡ no trial (same normalization billingShapeChanged uses), so a form
   // that defaults the trial box to 0 never sends a bogus `trial_period_days`.
   const trialDays = recurring ? normTrial(input.trialPeriodDays) : null;
@@ -425,26 +493,40 @@ async function createAndPersistPrice(
         : {}),
       metadata: { dime_plan_slug: slug },
     },
-    { idempotencyKey: `plan-price-${idemTag}` },
+    { idempotencyKey: `plan-price-${idemTag}` }
   );
 
   let couponId: string | null = null;
   let promoCodeId: string | null = null;
   if (input.promo) {
     validatePromo(input.promo, input.amountCents);
-    const provisioned = await provisionPromo(stripe, input.promo, currency, idemTag);
+    const provisioned = await provisionPromo(
+      stripe,
+      input.promo,
+      currency,
+      idemTag
+    );
     couponId = provisioned.couponId;
     promoCodeId = provisioned.promoCodeId;
   }
 
   const res = await withCircuitBreaker(async () =>
-    db_insert_price(planId, price, input, currency, interval, intervalCount, opts, {
-      promoType: input.promo?.type ?? null,
-      promoValue: input.promo?.value ?? null,
-      promoCode: input.promo?.code ?? null,
-      stripeCouponId: couponId,
-      stripePromoCodeId: promoCodeId,
-    }),
+    db_insert_price(
+      planId,
+      price,
+      input,
+      currency,
+      interval,
+      intervalCount,
+      opts,
+      {
+        promoType: input.promo?.type ?? null,
+        promoValue: input.promo?.value ?? null,
+        promoCode: input.promo?.code ?? null,
+        stripeCouponId: couponId,
+        stripePromoCodeId: promoCodeId,
+      }
+    )
   );
   return { priceId: price.id, rowId: Number(res?.[0]?.insertId ?? 0) };
 }
@@ -464,7 +546,7 @@ async function db_insert_price(
     promoCode: string | null;
     stripeCouponId: string | null;
     stripePromoCodeId: string | null;
-  },
+  }
 ): Promise<Array<{ insertId: number }>> {
   const db = await getDb();
   if (!db) throw new Error("database unavailable");
@@ -493,7 +575,7 @@ async function db_insert_price(
       hidden: input.hidden ?? false,
       sortOrder: opts.sortOrder,
       livemode: price.livemode,
-    }),
+    })
   );
 }
 
@@ -503,15 +585,18 @@ async function db_insert_price(
  * + its price rows. The first price is the default. `restock` seeds the
  * auto-restock FOMO counter (see schema).
  */
-export async function provisionPlan(
-  input: NewPlanInput,
-): Promise<{ planId: number; slug: string; stripeProductId: string; stripePriceId: string }> {
+export async function provisionPlan(input: NewPlanInput): Promise<{
+  planId: number;
+  slug: string;
+  stripeProductId: string;
+  stripePriceId: string;
+}> {
   if (!input.prices || input.prices.length === 0) {
     throw new Error("a plan needs at least one interval");
   }
   // Validate every interval (amount + promo) up front so a bad input fails
   // before ANY Stripe object is created — no orphaned product/coupons.
-  input.prices.forEach((p) => {
+  input.prices.forEach(p => {
     validateAmount(p.amountCents);
     if (p.promo) validatePromo(p.promo, p.amountCents);
   });
@@ -529,11 +614,13 @@ export async function provisionPlan(
       ...(input.description ? { description: input.description } : {}),
       metadata: { dime_plan_slug: slug },
     },
-    { idempotencyKey: `plan-product-${slug}` },
+    { idempotencyKey: `plan-product-${slug}` }
   );
 
   // 2) Plan row first (incl. auto-restock config) so price rows can reference it.
-  console.log(`${TAG} [STEP] Stripe product ready id=${product.id} livemode=${product.livemode} — inserting subscription_plans row slug=${slug}`);
+  console.log(
+    `${TAG} [STEP] Stripe product ready id=${product.id} livemode=${product.livemode} — inserting subscription_plans row slug=${slug}`
+  );
   const planRes = await persist("insert-plan", "subscription_plans", () =>
     withCircuitBreaker(async () =>
       db.insert(subscriptionPlans).values({
@@ -543,7 +630,10 @@ export async function provisionPlan(
         planType: input.planType ?? "recurring",
         stripeProductId: product.id,
         active: true,
-        accessUntil: (input.planType ?? "recurring") === "one_time" ? LIFETIME_ACCESS_UNTIL_MS : null,
+        accessUntil:
+          (input.planType ?? "recurring") === "one_time"
+            ? LIFETIME_ACCESS_UNTIL_MS
+            : null,
         livemode: product.livemode,
         maxSubscribers: input.maxSubscribers ?? null,
         autoRestock: restock?.autoRestock ?? false,
@@ -551,29 +641,45 @@ export async function provisionPlan(
         restockThreshold: restock?.restockThreshold ?? null,
         restockAmount: restock?.restockAmount ?? null,
         sortOrder: 0,
-      }),
-    ),
+      })
+    )
   );
   const planId = Number(planRes?.[0]?.insertId ?? 0);
   if (!planId) throw new Error("failed to persist subscription_plans row");
-  console.log(`${TAG} [STEP] subscription_plans row inserted id=${planId} — provisioning ${input.prices.length} price(s)`);
+  console.log(
+    `${TAG} [STEP] subscription_plans row inserted id=${planId} — provisioning ${input.prices.length} price(s)`
+  );
 
   // 3) Each interval → a Stripe Price (+ optional promo coupon) + a row. The
   //    first interval is the default price checkout charges by default.
   const planType = input.planType ?? "recurring";
   let defaultPriceId = "";
   for (let i = 0; i < input.prices.length; i++) {
-    const created = await createAndPersistPrice(stripe, planId, product.id, slug, input.prices[i], {
-      isDefault: i === 0,
-      sortOrder: i,
-      planType,
-    });
+    const created = await createAndPersistPrice(
+      stripe,
+      planId,
+      product.id,
+      slug,
+      input.prices[i],
+      {
+        isDefault: i === 0,
+        sortOrder: i,
+        planType,
+      }
+    );
     if (i === 0) defaultPriceId = created.priceId;
   }
 
   invalidatePlanCache();
-  console.log(`${TAG} provisioned plan slug=${slug} type=${planType} product=${product.id} intervals=${input.prices.length} default=${defaultPriceId}`);
-  return { planId, slug, stripeProductId: product.id, stripePriceId: defaultPriceId };
+  console.log(
+    `${TAG} provisioned plan slug=${slug} type=${planType} product=${product.id} intervals=${input.prices.length} default=${defaultPriceId}`
+  );
+  return {
+    planId,
+    slug,
+    stripeProductId: product.id,
+    stripePriceId: defaultPriceId,
+  };
 }
 
 /**
@@ -586,33 +692,55 @@ export async function provisionPlan(
 export async function addPriceToPlan(
   planId: number,
   input: NewPriceInput,
-  opts?: { idemSalt?: string },
+  opts?: { idemSalt?: string }
 ): Promise<{ priceId: string; rowId: number }> {
   validateAmount(input.amountCents);
   if (input.promo) validatePromo(input.promo, input.amountCents);
   const db = await getDb();
   if (!db) throw new Error("database unavailable");
   const rows = (await withCircuitBreaker(async () =>
-    db.select().from(subscriptionPlans).where(eq(subscriptionPlans.id, planId)).limit(1),
-  )) as Array<{ slug: string; stripeProductId: string | null; planType: PlanType }>;
+    db
+      .select()
+      .from(subscriptionPlans)
+      .where(eq(subscriptionPlans.id, planId))
+      .limit(1)
+  )) as Array<{
+    slug: string;
+    stripeProductId: string | null;
+    planType: PlanType;
+  }>;
   const plan = rows[0];
   if (!plan) throw new Error(`plan ${planId} not found`);
-  if (!plan.stripeProductId) throw new Error(`plan ${planId} has no Stripe product`);
+  if (!plan.stripeProductId)
+    throw new Error(`plan ${planId} has no Stripe product`);
 
   const existing = (await withCircuitBreaker(async () =>
-    db.select().from(planPrices).where(eq(planPrices.planId, planId)).limit(1000),
+    db
+      .select()
+      .from(planPrices)
+      .where(eq(planPrices.planId, planId))
+      .limit(1000)
   )) as Array<{ sortOrder: number }>;
   const nextSort = existing.reduce((m, r) => Math.max(m, r.sortOrder), -1) + 1;
 
   const stripe = getProvisioningStripe();
-  const created = await createAndPersistPrice(stripe, planId, plan.stripeProductId, plan.slug, input, {
-    isDefault: false,
-    sortOrder: nextSort,
-    planType: plan.planType,
-    idemSalt: opts?.idemSalt,
-  });
+  const created = await createAndPersistPrice(
+    stripe,
+    planId,
+    plan.stripeProductId,
+    plan.slug,
+    input,
+    {
+      isDefault: false,
+      sortOrder: nextSort,
+      planType: plan.planType,
+      idemSalt: opts?.idemSalt,
+    }
+  );
   invalidatePlanCache();
-  console.log(`${TAG} added interval to plan ${planId}: price=${created.priceId}`);
+  console.log(
+    `${TAG} added interval to plan ${planId}: price=${created.priceId}`
+  );
   return created;
 }
 
@@ -626,39 +754,65 @@ export async function removePriceFromPlan(priceId: number): Promise<void> {
   const db = await getDb();
   if (!db) throw new Error("database unavailable");
   const targetRows = (await withCircuitBreaker(async () =>
-    db.select().from(planPrices).where(eq(planPrices.id, priceId)).limit(1),
-  )) as Array<{ id: number; planId: number; stripePriceId: string; isDefault: boolean }>;
+    db.select().from(planPrices).where(eq(planPrices.id, priceId)).limit(1)
+  )) as Array<{
+    id: number;
+    planId: number;
+    stripePriceId: string;
+    isDefault: boolean;
+  }>;
   const target = targetRows[0];
   if (!target) throw new Error(`price ${priceId} not found`);
   const siblingRows = (await withCircuitBreaker(async () =>
-    db.select().from(planPrices).where(eq(planPrices.planId, target.planId)).limit(1000),
+    db
+      .select()
+      .from(planPrices)
+      .where(eq(planPrices.planId, target.planId))
+      .limit(1000)
   )) as Array<{ id: number; active: boolean }>;
-  const siblings = siblingRows.filter((r) => r.id !== priceId && r.active);
+  const siblings = siblingRows.filter(r => r.id !== priceId && r.active);
   if (siblings.length === 0) {
-    throw new Error("cannot remove the last active interval — archive the plan instead");
+    throw new Error(
+      "cannot remove the last active interval — archive the plan instead"
+    );
   }
 
   try {
-    await getProvisioningStripe().prices.update(target.stripePriceId, { active: false });
+    await getProvisioningStripe().prices.update(target.stripePriceId, {
+      active: false,
+    });
   } catch (err) {
-    console.warn(`${TAG} removePrice: Stripe price deactivate failed — ${(err as Error).message}`);
+    console.warn(
+      `${TAG} removePrice: Stripe price deactivate failed — ${(err as Error).message}`
+    );
   }
   await withCircuitBreaker(async () =>
-    db.update(planPrices).set({ active: false, isDefault: false }).where(eq(planPrices.id, priceId)),
+    db
+      .update(planPrices)
+      .set({ active: false, isDefault: false })
+      .where(eq(planPrices.id, priceId))
   );
   // Guarantee exactly one default among the survivors.
   if (target.isDefault) {
     const promote = siblings[0].id;
     await withCircuitBreaker(async () =>
-      db.update(planPrices).set({ isDefault: true }).where(eq(planPrices.id, promote)),
+      db
+        .update(planPrices)
+        .set({ isDefault: true })
+        .where(eq(planPrices.id, promote))
     );
   }
   invalidatePlanCache();
-  console.log(`${TAG} removed interval price ${priceId} from plan ${target.planId}`);
+  console.log(
+    `${TAG} removed interval price ${priceId} from plan ${target.planId}`
+  );
 }
 
 /** Reorder a plan's intervals — sets sortOrder to match the given id order. */
-export async function reorderPlanIntervals(planId: number, orderedPriceIds: number[]): Promise<void> {
+export async function reorderPlanIntervals(
+  planId: number,
+  orderedPriceIds: number[]
+): Promise<void> {
   const db = await getDb();
   if (!db) throw new Error("database unavailable");
   await withCircuitBreaker(async () => {
@@ -666,19 +820,29 @@ export async function reorderPlanIntervals(planId: number, orderedPriceIds: numb
       await db
         .update(planPrices)
         .set({ sortOrder: i })
-        .where(and(eq(planPrices.id, orderedPriceIds[i]), eq(planPrices.planId, planId)));
+        .where(
+          and(
+            eq(planPrices.id, orderedPriceIds[i]),
+            eq(planPrices.planId, planId)
+          )
+        );
     }
   });
   invalidatePlanCache();
-  console.log(`${TAG} reordered ${orderedPriceIds.length} intervals for plan ${planId}`);
+  console.log(
+    `${TAG} reordered ${orderedPriceIds.length} intervals for plan ${planId}`
+  );
 }
 
 /** Show/hide one interval (eyeball). Hidden intervals are retained but never sold. */
-export async function setIntervalHidden(priceId: number, hidden: boolean): Promise<void> {
+export async function setIntervalHidden(
+  priceId: number,
+  hidden: boolean
+): Promise<void> {
   const db = await getDb();
   if (!db) throw new Error("database unavailable");
   await withCircuitBreaker(async () =>
-    db.update(planPrices).set({ hidden }).where(eq(planPrices.id, priceId)),
+    db.update(planPrices).set({ hidden }).where(eq(planPrices.id, priceId))
   );
   invalidatePlanCache();
   console.log(`${TAG} interval ${priceId} hidden=${hidden}`);
@@ -693,23 +857,33 @@ export async function setIntervalDefault(priceId: number): Promise<void> {
   const db = await getDb();
   if (!db) throw new Error("database unavailable");
   const rows = (await withCircuitBreaker(async () =>
-    db.select().from(planPrices).where(eq(planPrices.id, priceId)).limit(1),
+    db.select().from(planPrices).where(eq(planPrices.id, priceId)).limit(1)
   )) as Array<{ id: number; planId: number; active: boolean }>;
   const target = rows[0];
   if (!target) throw new Error(`price ${priceId} not found`);
   if (!target.active) {
-    throw new Error(`price ${priceId} is archived — an inactive interval cannot be the default`);
+    throw new Error(
+      `price ${priceId} is archived — an inactive interval cannot be the default`
+    );
   }
   // Clear first, then set: the target ends up as the only default even if it
   // was already flagged, and no window exists where the plan has two defaults.
   await withCircuitBreaker(async () =>
-    db.update(planPrices).set({ isDefault: false }).where(eq(planPrices.planId, target.planId)),
+    db
+      .update(planPrices)
+      .set({ isDefault: false })
+      .where(eq(planPrices.planId, target.planId))
   );
   await withCircuitBreaker(async () =>
-    db.update(planPrices).set({ isDefault: true }).where(eq(planPrices.id, priceId)),
+    db
+      .update(planPrices)
+      .set({ isDefault: true })
+      .where(eq(planPrices.id, priceId))
   );
   invalidatePlanCache();
-  console.log(`${TAG} interval ${priceId} is now the default for plan ${target.planId}`);
+  console.log(
+    `${TAG} interval ${priceId} is now the default for plan ${target.planId}`
+  );
 }
 
 // ─── Repricing (Stripe Prices are immutable) ─────────────────────────────────
@@ -753,18 +927,30 @@ function normTrial(days: number | null | undefined): number | null {
  * NOT part of the shape: they are mutable on a live Price and must never cause
  * a reprice.
  */
-export function billingShapeChanged(row: BillingShapeRow, input: NewPriceInput): boolean {
+export function billingShapeChanged(
+  row: BillingShapeRow,
+  input: NewPriceInput
+): boolean {
   if (row.amountCents !== input.amountCents) return true;
-  if ((row.currency ?? "usd").toLowerCase() !== (input.currency ?? "usd").toLowerCase()) return true;
+  if (
+    (row.currency ?? "usd").toLowerCase() !==
+    (input.currency ?? "usd").toLowerCase()
+  )
+    return true;
 
   const oldInterval = row.interval ?? null;
   const newInterval = input.interval ?? null;
   if (oldInterval !== newInterval) return true;
-  const oldCount = oldInterval ? clampCount(oldInterval, row.intervalCount ?? 1) : null;
-  const newCount = newInterval ? clampCount(newInterval, input.intervalCount ?? 1) : null;
+  const oldCount = oldInterval
+    ? clampCount(oldInterval, row.intervalCount ?? 1)
+    : null;
+  const newCount = newInterval
+    ? clampCount(newInterval, input.intervalCount ?? 1)
+    : null;
   if (oldCount !== newCount) return true;
 
-  if (normTrial(row.trialPeriodDays) !== normTrial(input.trialPeriodDays)) return true;
+  if (normTrial(row.trialPeriodDays) !== normTrial(input.trialPeriodDays))
+    return true;
 
   const promo = input.promo ?? null;
   if ((row.promoType ?? null) !== (promo?.type ?? null)) return true;
@@ -813,15 +999,19 @@ function lineItemPriceId(item: unknown): string | null {
 async function paymentLinkSellsPrice(
   stripe: Stripe,
   link: Stripe.PaymentLink,
-  stripePriceId: string,
+  stripePriceId: string
 ): Promise<boolean> {
   // `line_items` is only populated when expanded. If it is missing, ask the
   // dedicated endpoint rather than treating the link as a non-match — a false
   // "no links reference this" is exactly the failure this guard exists to stop.
   const items =
     link.line_items?.data ??
-    (await stripe.paymentLinks.listLineItems(link.id, { limit: PAYMENT_LINK_PAGE_SIZE })).data;
-  return (items ?? []).some((li) => lineItemPriceId(li) === stripePriceId);
+    (
+      await stripe.paymentLinks.listLineItems(link.id, {
+        limit: PAYMENT_LINK_PAGE_SIZE,
+      })
+    ).data;
+  return (items ?? []).some(li => lineItemPriceId(li) === stripePriceId);
 }
 
 /**
@@ -830,7 +1020,7 @@ async function paymentLinkSellsPrice(
  * links; a cap hit is returned as `truncated` AND logged, never swallowed.
  */
 async function scanPaymentLinksForPrice(
-  stripePriceId: string,
+  stripePriceId: string
 ): Promise<{ links: PaymentLinkRef[]; truncated: boolean; scanned: number }> {
   const stripe = getProvisioningStripe();
   const links: PaymentLinkRef[] = [];
@@ -848,7 +1038,11 @@ async function scanPaymentLinksForPrice(
     for (const link of batch) {
       scanned += 1;
       if (await paymentLinkSellsPrice(stripe, link, stripePriceId)) {
-        links.push({ id: link.id, url: link.url, active: link.active === true });
+        links.push({
+          id: link.id,
+          url: link.url,
+          active: link.active === true,
+        });
       }
     }
     if (batch.length === 0 || !res.has_more) break;
@@ -860,7 +1054,7 @@ async function scanPaymentLinksForPrice(
     console.warn(
       `${TAG} [PAYMENT-LINK-SCAN] TRUNCATED after ${scanned} link(s) (${PAYMENT_LINK_PAGE_CAP} pages × ${PAYMENT_LINK_PAGE_SIZE}) — ` +
         `this account has MORE Payment Links than one scan covers, so links beyond that point were NOT checked against ${stripePriceId}. ` +
-        `Treat a "no links found" result as incomplete and verify in the Stripe dashboard.`,
+        `Treat a "no links found" result as incomplete and verify in the Stripe dashboard.`
     );
   }
   return { links, truncated, scanned };
@@ -874,7 +1068,9 @@ async function scanPaymentLinksForPrice(
  * it exists. Bounded pagination — see scanPaymentLinksForPrice, which logs
  * loudly if the scan is truncated.
  */
-export async function findPaymentLinksForPrice(stripePriceId: string): Promise<PaymentLinkRef[]> {
+export async function findPaymentLinksForPrice(
+  stripePriceId: string
+): Promise<PaymentLinkRef[]> {
   const { links } = await scanPaymentLinksForPrice(stripePriceId);
   return links;
 }
@@ -885,7 +1081,8 @@ export async function findPaymentLinksForPrice(stripePriceId: string): Promise<P
  * - `failed`   — the Stripe lookup itself errored; guard skipped, edit allowed.
  * - `skipped`  — nothing is being archived (presentation-only edit).
  */
-export type PaymentLinkGuardStatus = "clear" | "override" | "failed" | "skipped";
+export type PaymentLinkGuardStatus =
+  "clear" | "override" | "failed" | "skipped";
 
 export interface PaymentLinkGuardOutcome {
   status: PaymentLinkGuardStatus;
@@ -918,10 +1115,10 @@ const PAYMENT_LINK_GUARD_SKIPPED: PaymentLinkGuardOutcome = {
 export function evaluatePaymentLinkGuard(
   stripePriceId: string,
   links: PaymentLinkRef[],
-  opts?: { allowBreakingPaymentLinks?: boolean; truncated?: boolean },
+  opts?: { allowBreakingPaymentLinks?: boolean; truncated?: boolean }
 ): PaymentLinkGuardOutcome {
   const truncated = opts?.truncated === true;
-  const active = links.filter((l) => l.active);
+  const active = links.filter(l => l.active);
   const inactiveCount = links.length - active.length;
 
   if (active.length === 0) {
@@ -932,23 +1129,25 @@ export function evaluatePaymentLinkGuard(
       truncated,
       summary:
         `checked, no ACTIVE payment link sells ${stripePriceId}` +
-        (inactiveCount > 0 ? ` (${inactiveCount} inactive link(s) ignored)` : "") +
+        (inactiveCount > 0
+          ? ` (${inactiveCount} inactive link(s) ignored)`
+          : "") +
         (truncated ? " — SCAN TRUNCATED, result may be incomplete" : ""),
     };
   }
 
-  const named = active.map((l) => `${l.id} (${l.url})`).join(", ");
+  const named = active.map(l => `${l.id} (${l.url})`).join(", ");
   if (!opts?.allowBreakingPaymentLinks) {
     throw new Error(
       `This edit would archive Stripe Price ${stripePriceId}, which ${active.length} ACTIVE Stripe Payment Link(s) still sell: ${named}. ` +
         `Archiving the price breaks those links silently — buyers get an error and nothing in this admin would report it. ` +
-        `Point the link(s) at a new price (or deactivate them) first, or re-run this edit with "allow breaking payment links" to proceed anyway.`,
+        `Point the link(s) at a new price (or deactivate them) first, or re-run this edit with "allow breaking payment links" to proceed anyway.`
     );
   }
 
   console.warn(
     `${TAG} [PAYMENT-LINK-OVERRIDE] archiving ${stripePriceId} anyway — ${active.length} ACTIVE Payment Link(s) WILL BREAK: ${named}. ` +
-      `Proceeding only because allowBreakingPaymentLinks was set explicitly. Repoint or retire those links now.`,
+      `Proceeding only because allowBreakingPaymentLinks was set explicitly. Repoint or retire those links now.`
   );
   return {
     status: "override",
@@ -969,7 +1168,7 @@ export function evaluatePaymentLinkGuard(
  */
 export async function guardPaymentLinksBeforeArchive(
   stripePriceId: string,
-  opts?: { allowBreakingPaymentLinks?: boolean },
+  opts?: { allowBreakingPaymentLinks?: boolean }
 ): Promise<PaymentLinkGuardOutcome> {
   let scan: { links: PaymentLinkRef[]; truncated: boolean };
   try {
@@ -978,7 +1177,7 @@ export async function guardPaymentLinksBeforeArchive(
     console.warn(
       `${TAG} [PAYMENT-LINK-CHECK] FAILED for ${stripePriceId} — ${(err as Error).message}. ` +
         `Proceeding with the edit: the payment-link guard is a safety net, not a dependency. ` +
-        `Verify by hand in the Stripe dashboard that no live Payment Link sold this price.`,
+        `Verify by hand in the Stripe dashboard that no live Payment Link sold this price.`
     );
     return {
       status: "failed",
@@ -1055,7 +1254,7 @@ export interface RepriceResult {
 export async function repriceInterval(
   priceId: number,
   input: NewPriceInput,
-  opts?: RepriceOptions,
+  opts?: RepriceOptions
 ): Promise<RepriceResult> {
   validateAmount(input.amountCents);
   if (input.promo) validatePromo(input.promo, input.amountCents);
@@ -1064,7 +1263,7 @@ export async function repriceInterval(
   if (!db) throw new Error("database unavailable");
 
   const targetRows = (await withCircuitBreaker(async () =>
-    db.select().from(planPrices).where(eq(planPrices.id, priceId)).limit(1),
+    db.select().from(planPrices).where(eq(planPrices.id, priceId)).limit(1)
   )) as Array<
     BillingShapeRow & {
       id: number;
@@ -1080,13 +1279,19 @@ export async function repriceInterval(
   const target = targetRows[0];
   if (!target) throw new Error(`price ${priceId} not found`);
   if (!target.active) {
-    throw new Error(`price ${priceId} is archived — add a new interval instead of repricing it`);
+    throw new Error(
+      `price ${priceId} is archived — add a new interval instead of repricing it`
+    );
   }
 
   const siblingRows = (await withCircuitBreaker(async () =>
-    db.select().from(planPrices).where(eq(planPrices.planId, target.planId)).limit(1000),
+    db
+      .select()
+      .from(planPrices)
+      .where(eq(planPrices.planId, target.planId))
+      .limit(1000)
   )) as Array<{ id: number; active: boolean }>;
-  const otherActive = siblingRows.filter((r) => r.id !== priceId && r.active);
+  const otherActive = siblingRows.filter(r => r.id !== priceId && r.active);
 
   // Presentation resolution: label follows create semantics (omitted = cleared);
   // hidden is carried when omitted, so a reprice never silently un-hides.
@@ -1100,7 +1305,7 @@ export async function repriceInterval(
   // the price before unhiding it).
   if (otherActive.length === 0 && hidden && !target.hidden) {
     throw new Error(
-      "cannot hide a plan's only active interval — the plan would have nothing to sell. Add another interval first.",
+      "cannot hide a plan's only active interval — the plan would have nothing to sell. Add another interval first."
     );
   }
 
@@ -1110,17 +1315,24 @@ export async function repriceInterval(
     if (label !== (target.label ?? null)) {
       try {
         // nickname is one of the four mutable fields on a live Stripe Price.
-        await getProvisioningStripe().prices.update(target.stripePriceId, { nickname: label ?? "" });
+        await getProvisioningStripe().prices.update(target.stripePriceId, {
+          nickname: label ?? "",
+        });
       } catch (err) {
-        console.warn(`${TAG} reprice: Stripe price nickname update failed — ${(err as Error).message}`);
+        console.warn(
+          `${TAG} reprice: Stripe price nickname update failed — ${(err as Error).message}`
+        );
       }
     }
     await withCircuitBreaker(async () =>
-      db.update(planPrices).set({ label, hidden }).where(eq(planPrices.id, priceId)),
+      db
+        .update(planPrices)
+        .set({ label, hidden })
+        .where(eq(planPrices.id, priceId))
     );
     invalidatePlanCache();
     console.log(
-      `${TAG} reprice ${priceId}: billing shape UNCHANGED — NO new Stripe Price minted; applied presentation only (label="${label ?? ""}" hidden=${hidden}) on ${target.stripePriceId}`,
+      `${TAG} reprice ${priceId}: billing shape UNCHANGED — NO new Stripe Price minted; applied presentation only (label="${label ?? ""}" hidden=${hidden}) on ${target.stripePriceId}`
     );
     return {
       changed: false,
@@ -1138,15 +1350,20 @@ export async function repriceInterval(
   // before the archive: a block then leaves the plan completely untouched, with
   // no orphan Stripe Price to clean up. Throws unless the caller opted in;
   // never throws on a Stripe lookup failure.
-  const paymentLinks = await guardPaymentLinksBeforeArchive(target.stripePriceId, {
-    allowBreakingPaymentLinks: opts?.allowBreakingPaymentLinks,
-  });
-  console.log(`${TAG} reprice ${priceId}: payment-link guard — ${paymentLinks.summary}`);
+  const paymentLinks = await guardPaymentLinksBeforeArchive(
+    target.stripePriceId,
+    {
+      allowBreakingPaymentLinks: opts?.allowBreakingPaymentLinks,
+    }
+  );
+  console.log(
+    `${TAG} reprice ${priceId}: payment-link guard — ${paymentLinks.summary}`
+  );
 
   console.log(
     `${TAG} reprice ${priceId} plan=${target.planId}: billing shape CHANGED ` +
       `(${target.amountCents}${target.currency} ${target.interval ?? "once"}x${target.intervalCount ?? 1} → ${input.amountCents}${(input.currency ?? "usd").toLowerCase()} ${input.interval ?? "once"}x${input.intervalCount ?? 1}) ` +
-      `— MINTING a new Stripe Price; existing subscriptions stay on ${target.stripePriceId} at the old amount`,
+      `— MINTING a new Stripe Price; existing subscriptions stay on ${target.stripePriceId} at the old amount`
   );
 
   // 1) Mint the replacement FIRST. A Stripe failure here throws with the plan
@@ -1154,7 +1371,7 @@ export async function repriceInterval(
   const created = await addPriceToPlan(
     target.planId,
     { ...input, label: label ?? undefined, hidden },
-    { idemSalt: `rp${priceId}` },
+    { idemSalt: `rp${priceId}` }
   );
 
   // 2) Carry the old row's presentation/ordering state onto the replacement so
@@ -1162,14 +1379,21 @@ export async function repriceInterval(
   await withCircuitBreaker(async () =>
     db
       .update(planPrices)
-      .set({ sortOrder: target.sortOrder, hidden, ...(target.isDefault ? { isDefault: true } : {}) })
-      .where(eq(planPrices.id, created.rowId)),
+      .set({
+        sortOrder: target.sortOrder,
+        hidden,
+        ...(target.isDefault ? { isDefault: true } : {}),
+      })
+      .where(eq(planPrices.id, created.rowId))
   );
   if (target.isDefault) {
     // Clear the old flag BEFORE removePriceFromPlan runs, so it sees a non-default
     // row and does not promote an unrelated sibling over the replacement.
     await withCircuitBreaker(async () =>
-      db.update(planPrices).set({ isDefault: false }).where(eq(planPrices.id, priceId)),
+      db
+        .update(planPrices)
+        .set({ isDefault: false })
+        .where(eq(planPrices.id, priceId))
     );
   }
 
@@ -1179,14 +1403,14 @@ export async function repriceInterval(
   } catch (err) {
     console.error(
       `${TAG} [REPRICE-ORPHAN] replacement price ${created.priceId} (row ${created.rowId}) IS LIVE but retiring the old interval ${priceId} (${target.stripePriceId}) FAILED — ${(err as Error).message}. ` +
-        `Plan ${target.planId} now offers BOTH prices; archive the old interval by hand. Reported as success on purpose — the plan must never be left with zero active prices.`,
+        `Plan ${target.planId} now offers BOTH prices; archive the old interval by hand. Reported as success on purpose — the plan must never be left with zero active prices.`
     );
   }
 
   invalidatePlanCache();
   console.log(
     `${TAG} repriced interval ${priceId} → row ${created.rowId} price ${created.priceId} ` +
-      `plan=${target.planId} sortOrder=${target.sortOrder} hidden=${hidden} carriedDefault=${target.isDefault}`,
+      `plan=${target.planId} sortOrder=${target.sortOrder} hidden=${hidden} carriedDefault=${target.isDefault}`
   );
   return {
     changed: true,
@@ -1199,7 +1423,10 @@ export async function repriceInterval(
 }
 
 /** Update a plan's auto-restock / limited-quantity configuration. */
-export async function updateRestockConfig(planId: number, restock: RestockInput): Promise<void> {
+export async function updateRestockConfig(
+  planId: number,
+  restock: RestockInput
+): Promise<void> {
   const db = await getDb();
   if (!db) throw new Error("database unavailable");
   await withCircuitBreaker(async () =>
@@ -1211,7 +1438,7 @@ export async function updateRestockConfig(planId: number, restock: RestockInput)
         restockThreshold: restock.restockThreshold,
         restockAmount: restock.restockAmount,
       })
-      .where(eq(subscriptionPlans.id, planId)),
+      .where(eq(subscriptionPlans.id, planId))
   );
   invalidatePlanCache();
   console.log(`${TAG} updated restock config plan ${planId}`);
@@ -1232,10 +1459,15 @@ export async function applyPurchaseToPlanQuantity(slug: string): Promise<void> {
   const db = await getDb();
   if (!db) return;
   await withCircuitBreaker(async () =>
-    db.update(subscriptionPlans).set({ availableQuantity: next }).where(eq(subscriptionPlans.id, plan.id)),
+    db
+      .update(subscriptionPlans)
+      .set({ availableQuantity: next })
+      .where(eq(subscriptionPlans.id, plan.id))
   );
   invalidatePlanCache();
-  console.log(`${TAG} plan ${plan.slug} quantity ${plan.availableQuantity} → ${next}${next !== plan.availableQuantity - 1 ? " (restocked)" : ""}`);
+  console.log(
+    `${TAG} plan ${plan.slug} quantity ${plan.availableQuantity} → ${next}${next !== plan.availableQuantity - 1 ? " (restocked)" : ""}`
+  );
 }
 
 /** Archive a plan: deactivate its Stripe Product + mark the row inactive. */
@@ -1243,23 +1475,31 @@ export async function archivePlan(planId: number): Promise<void> {
   const db = await getDb();
   if (!db) throw new Error("database unavailable");
   const rows = (await withCircuitBreaker(async () =>
-    db.select().from(subscriptionPlans).where(eq(subscriptionPlans.id, planId)).limit(1),
+    db
+      .select()
+      .from(subscriptionPlans)
+      .where(eq(subscriptionPlans.id, planId))
+      .limit(1)
   )) as Array<{ stripeProductId: string | null }>;
   const row = rows[0];
   if (!row) throw new Error(`plan ${planId} not found`);
 
   if (row.stripeProductId) {
     try {
-      await getProvisioningStripe().products.update(row.stripeProductId, { active: false });
+      await getProvisioningStripe().products.update(row.stripeProductId, {
+        active: false,
+      });
     } catch (err) {
-      console.warn(`${TAG} archive: Stripe product deactivate failed — ${(err as Error).message}`);
+      console.warn(
+        `${TAG} archive: Stripe product deactivate failed — ${(err as Error).message}`
+      );
     }
   }
   await withCircuitBreaker(async () =>
     db
       .update(subscriptionPlans)
       .set({ active: false, archivedAt: Date.now() })
-      .where(eq(subscriptionPlans.id, planId)),
+      .where(eq(subscriptionPlans.id, planId))
   );
   invalidatePlanCache();
   console.log(`${TAG} archived plan ${planId}`);
@@ -1270,19 +1510,30 @@ export async function unarchivePlan(planId: number): Promise<void> {
   const db = await getDb();
   if (!db) throw new Error("database unavailable");
   const rows = (await withCircuitBreaker(async () =>
-    db.select().from(subscriptionPlans).where(eq(subscriptionPlans.id, planId)).limit(1),
+    db
+      .select()
+      .from(subscriptionPlans)
+      .where(eq(subscriptionPlans.id, planId))
+      .limit(1)
   )) as Array<{ stripeProductId: string | null }>;
   const row = rows[0];
   if (!row) throw new Error(`plan ${planId} not found`);
   if (row.stripeProductId) {
     try {
-      await getProvisioningStripe().products.update(row.stripeProductId, { active: true });
+      await getProvisioningStripe().products.update(row.stripeProductId, {
+        active: true,
+      });
     } catch (err) {
-      console.warn(`${TAG} unarchive: Stripe product reactivate failed — ${(err as Error).message}`);
+      console.warn(
+        `${TAG} unarchive: Stripe product reactivate failed — ${(err as Error).message}`
+      );
     }
   }
   await withCircuitBreaker(async () =>
-    db.update(subscriptionPlans).set({ active: true, archivedAt: null }).where(eq(subscriptionPlans.id, planId)),
+    db
+      .update(subscriptionPlans)
+      .set({ active: true, archivedAt: null })
+      .where(eq(subscriptionPlans.id, planId))
   );
   invalidatePlanCache();
   console.log(`${TAG} unarchived plan ${planId}`);
@@ -1306,7 +1557,8 @@ export interface SlugSyncResult {
  */
 export function readAffectedRows(result: unknown): number | null {
   const header = Array.isArray(result) ? result[0] : result;
-  const n = (header as { affectedRows?: unknown } | null | undefined)?.affectedRows;
+  const n = (header as { affectedRows?: unknown } | null | undefined)
+    ?.affectedRows;
   return typeof n === "number" && Number.isFinite(n) ? n : null;
 }
 
@@ -1335,15 +1587,24 @@ export function readAffectedRows(result: unknown): number | null {
  */
 export async function syncPlanSlug(
   planId: number,
-  opts?: { dryRun?: boolean },
+  opts?: { dryRun?: boolean }
 ): Promise<SlugSyncResult> {
   const dryRun = opts?.dryRun === true;
   const db = await getDb();
   if (!db) throw new Error("database unavailable");
 
   const rows = (await withCircuitBreaker(async () =>
-    db.select().from(subscriptionPlans).where(eq(subscriptionPlans.id, planId)).limit(1),
-  )) as Array<{ id: number; slug: string; name: string; stripeProductId: string | null }>;
+    db
+      .select()
+      .from(subscriptionPlans)
+      .where(eq(subscriptionPlans.id, planId))
+      .limit(1)
+  )) as Array<{
+    id: number;
+    slug: string;
+    name: string;
+    stripeProductId: string | null;
+  }>;
   const row = rows[0];
   if (!row) throw new Error(`plan ${planId} not found`);
 
@@ -1353,7 +1614,9 @@ export async function syncPlanSlug(
   const newSlug = await resolveUniqueSlug(row.name, getPlanBySlug, planId);
 
   if (newSlug === oldSlug) {
-    console.log(`${TAG} slug sync plan=${planId} name="${row.name}" slug=${oldSlug} UNCHANGED`);
+    console.log(
+      `${TAG} slug sync plan=${planId} name="${row.name}" slug=${oldSlug} UNCHANGED`
+    );
     return { changed: false, oldSlug, newSlug: oldSlug, referrersUpdated: 0 };
   }
 
@@ -1361,36 +1624,45 @@ export async function syncPlanSlug(
     db
       .select({ n: sql<number>`count(*)` })
       .from(appUsers)
-      .where(eq(appUsers.stripePlanId, oldSlug)),
+      .where(eq(appUsers.stripePlanId, oldSlug))
   )) as Array<{ n: number }>;
   const referrers = Number(countRows[0]?.n ?? 0);
 
   if (dryRun) {
     console.log(
-      `${TAG} slug sync plan=${planId} DRY-RUN ${oldSlug} → ${newSlug} would move ${referrers} referrer(s)`,
+      `${TAG} slug sync plan=${planId} DRY-RUN ${oldSlug} → ${newSlug} would move ${referrers} referrer(s)`
     );
     return { changed: true, oldSlug, newSlug, referrersUpdated: referrers };
   }
 
   await withCircuitBreaker(async () =>
-    db.update(subscriptionPlans).set({ slug: newSlug }).where(eq(subscriptionPlans.id, planId)),
+    db
+      .update(subscriptionPlans)
+      .set({ slug: newSlug })
+      .where(eq(subscriptionPlans.id, planId))
   );
 
   let referrersUpdated = 0;
   try {
     const res = await withCircuitBreaker(async () =>
-      db.update(appUsers).set({ stripePlanId: newSlug }).where(eq(appUsers.stripePlanId, oldSlug)),
+      db
+        .update(appUsers)
+        .set({ stripePlanId: newSlug })
+        .where(eq(appUsers.stripePlanId, oldSlug))
     );
     referrersUpdated = readAffectedRows(res) ?? referrers;
   } catch (err) {
     // Compensate: put the slug back so the referrers we failed to move still
     // resolve. A rename that half-applies is worse than one that did not happen.
     await withCircuitBreaker(async () =>
-      db.update(subscriptionPlans).set({ slug: oldSlug }).where(eq(subscriptionPlans.id, planId)),
+      db
+        .update(subscriptionPlans)
+        .set({ slug: oldSlug })
+        .where(eq(subscriptionPlans.id, planId))
     );
     invalidatePlanCache();
     console.error(
-      `${TAG} slug sync plan=${planId} ROLLED BACK ${newSlug} → ${oldSlug}: referrer update failed — ${(err as Error).message}`,
+      `${TAG} slug sync plan=${planId} ROLLED BACK ${newSlug} → ${oldSlug}: referrer update failed — ${(err as Error).message}`
     );
     throw err instanceof Error ? err : new Error(String(err));
   }
@@ -1404,13 +1676,13 @@ export async function syncPlanSlug(
       });
     } catch (err) {
       console.warn(
-        `${TAG} slug sync: Stripe product metadata update failed (DB is authoritative) — ${(err as Error).message}`,
+        `${TAG} slug sync: Stripe product metadata update failed (DB is authoritative) — ${(err as Error).message}`
       );
     }
   }
 
   console.log(
-    `${TAG} slug sync plan=${planId} name="${row.name}" ${oldSlug} → ${newSlug} referrersUpdated=${referrersUpdated}`,
+    `${TAG} slug sync plan=${planId} name="${row.name}" ${oldSlug} → ${newSlug} referrersUpdated=${referrersUpdated}`
   );
   return { changed: true, oldSlug, newSlug, referrersUpdated };
 }
@@ -1418,24 +1690,39 @@ export async function syncPlanSlug(
 /** Edit plan metadata (name/description/maxSubscribers). Amount/interval are immutable — a new price is Phase 3. */
 export async function updatePlanMeta(
   planId: number,
-  patch: { name?: string; description?: string | null; maxSubscribers?: number | null },
+  patch: {
+    name?: string;
+    description?: string | null;
+    maxSubscribers?: number | null;
+  }
 ): Promise<{ slugSync: SlugSyncResult | null }> {
   const db = await getDb();
   if (!db) throw new Error("database unavailable");
   const rows = (await withCircuitBreaker(async () =>
-    db.select().from(subscriptionPlans).where(eq(subscriptionPlans.id, planId)).limit(1),
+    db
+      .select()
+      .from(subscriptionPlans)
+      .where(eq(subscriptionPlans.id, planId))
+      .limit(1)
   )) as Array<{ stripeProductId: string | null }>;
   const row = rows[0];
   if (!row) throw new Error(`plan ${planId} not found`);
 
-  if (row.stripeProductId && (patch.name !== undefined || patch.description !== undefined)) {
+  if (
+    row.stripeProductId &&
+    (patch.name !== undefined || patch.description !== undefined)
+  ) {
     try {
       await getProvisioningStripe().products.update(row.stripeProductId, {
         ...(patch.name !== undefined ? { name: patch.name } : {}),
-        ...(patch.description !== undefined ? { description: patch.description ?? "" } : {}),
+        ...(patch.description !== undefined
+          ? { description: patch.description ?? "" }
+          : {}),
       });
     } catch (err) {
-      console.warn(`${TAG} updateMeta: Stripe product update failed — ${(err as Error).message}`);
+      console.warn(
+        `${TAG} updateMeta: Stripe product update failed — ${(err as Error).message}`
+      );
     }
   }
   await withCircuitBreaker(async () =>
@@ -1443,10 +1730,14 @@ export async function updatePlanMeta(
       .update(subscriptionPlans)
       .set({
         ...(patch.name !== undefined ? { name: patch.name } : {}),
-        ...(patch.description !== undefined ? { description: patch.description } : {}),
-        ...(patch.maxSubscribers !== undefined ? { maxSubscribers: patch.maxSubscribers } : {}),
+        ...(patch.description !== undefined
+          ? { description: patch.description }
+          : {}),
+        ...(patch.maxSubscribers !== undefined
+          ? { maxSubscribers: patch.maxSubscribers }
+          : {}),
       })
-      .where(eq(subscriptionPlans.id, planId)),
+      .where(eq(subscriptionPlans.id, planId))
   );
   invalidatePlanCache();
 
@@ -1466,7 +1757,7 @@ export async function updatePlanMeta(
       slugSync?.changed
         ? ` slug ${slugSync.oldSlug} → ${slugSync.newSlug} (${slugSync.referrersUpdated} referrer(s) moved)`
         : ""
-    }`,
+    }`
   );
   return { slugSync };
 }
@@ -1489,7 +1780,7 @@ export async function updatePlanMeta(
  */
 export async function setPlanFeatures(
   planId: number,
-  features: readonly string[],
+  features: readonly string[]
 ): Promise<PlanFeatureKey[]> {
   const db = await getDb();
   if (!db) throw new Error("database unavailable");
@@ -1499,28 +1790,30 @@ export async function setPlanFeatures(
   const desired = normalizePlanFeatures(features);
 
   const existingRows = (await withCircuitBreaker(async () =>
-    db.select().from(planFeatures).where(eq(planFeatures.planId, planId)),
+    db.select().from(planFeatures).where(eq(planFeatures.planId, planId))
   )) as Array<{ id: number; featureKey: string }>;
-  const existing = new Set(existingRows.map((r) => r.featureKey));
+  const existing = new Set(existingRows.map(r => r.featureKey));
   const desiredSet = new Set<string>(desired);
 
-  const toRemove = existingRows.filter((r) => !desiredSet.has(r.featureKey));
-  const toAdd = desired.filter((k) => !existing.has(k));
+  const toRemove = existingRows.filter(r => !desiredSet.has(r.featureKey));
+  const toAdd = desired.filter(k => !existing.has(k));
 
   for (const row of toRemove) {
-    await withCircuitBreaker(async () => db.delete(planFeatures).where(eq(planFeatures.id, row.id)));
+    await withCircuitBreaker(async () =>
+      db.delete(planFeatures).where(eq(planFeatures.id, row.id))
+    );
   }
   if (toAdd.length > 0) {
     const now = Date.now();
     await withCircuitBreaker(async () =>
       db.insert(planFeatures).values(
-        toAdd.map((key) => ({
+        toAdd.map(key => ({
           planId,
           featureKey: key,
           sortOrder: desired.indexOf(key),
           createdAt: now,
-        })),
-      ),
+        }))
+      )
     );
   }
 
@@ -1530,12 +1823,17 @@ export async function setPlanFeatures(
     if (!desiredSet.has(row.featureKey)) continue;
     const want = desired.indexOf(row.featureKey as PlanFeatureKey);
     await withCircuitBreaker(async () =>
-      db.update(planFeatures).set({ sortOrder: want }).where(eq(planFeatures.id, row.id)),
+      db
+        .update(planFeatures)
+        .set({ sortOrder: want })
+        .where(eq(planFeatures.id, row.id))
     );
   }
 
   invalidatePlanCache();
-  console.log(`${TAG} set features plan=${planId} added=${toAdd.length} removed=${toRemove.length} total=${desired.length}`);
+  console.log(
+    `${TAG} set features plan=${planId} added=${toAdd.length} removed=${toRemove.length} total=${desired.length}`
+  );
   return desired;
 }
 
@@ -1547,13 +1845,20 @@ export async function setPlanFeatures(
  * dropped on the copy because a Stripe promotion-code string cannot be reused while
  * the original still holds it.
  */
-export async function duplicatePlan(
-  planId: number,
-): Promise<{ planId: number; slug: string; stripeProductId: string; stripePriceId: string }> {
+export async function duplicatePlan(planId: number): Promise<{
+  planId: number;
+  slug: string;
+  stripeProductId: string;
+  stripePriceId: string;
+}> {
   const db = await getDb();
   if (!db) throw new Error("database unavailable");
   const planRows = (await withCircuitBreaker(async () =>
-    db.select().from(subscriptionPlans).where(eq(subscriptionPlans.id, planId)).limit(1),
+    db
+      .select()
+      .from(subscriptionPlans)
+      .where(eq(subscriptionPlans.id, planId))
+      .limit(1)
   )) as Array<{
     name: string;
     description: string | null;
@@ -1568,7 +1873,11 @@ export async function duplicatePlan(
   if (!plan) throw new Error(`plan ${planId} not found`);
 
   const priceRows = (await withCircuitBreaker(async () =>
-    db.select().from(planPrices).where(eq(planPrices.planId, planId)).limit(1000),
+    db
+      .select()
+      .from(planPrices)
+      .where(eq(planPrices.planId, planId))
+      .limit(1000)
   )) as Array<{
     amountCents: number;
     currency: string;
@@ -1582,10 +1891,13 @@ export async function duplicatePlan(
     active: boolean;
     sortOrder: number;
   }>;
-  const active = priceRows.filter((r) => r.active).sort((a, b) => a.sortOrder - b.sortOrder);
-  if (active.length === 0) throw new Error(`plan ${planId} has no active intervals to duplicate`);
+  const active = priceRows
+    .filter(r => r.active)
+    .sort((a, b) => a.sortOrder - b.sortOrder);
+  if (active.length === 0)
+    throw new Error(`plan ${planId} has no active intervals to duplicate`);
 
-  const prices: NewPriceInput[] = active.map((r) => ({
+  const prices: NewPriceInput[] = active.map(r => ({
     amountCents: r.amountCents,
     currency: r.currency,
     interval: r.interval ?? undefined,
@@ -1593,7 +1905,9 @@ export async function duplicatePlan(
     label: r.label ?? undefined,
     trialPeriodDays: r.trialPeriodDays ?? undefined,
     promo:
-      r.promoType && r.promoValue != null ? { type: r.promoType, value: r.promoValue } : null,
+      r.promoType && r.promoValue != null
+        ? { type: r.promoType, value: r.promoValue }
+        : null,
     hidden: r.hidden,
   }));
 
@@ -1621,18 +1935,24 @@ export async function duplicatePlan(
   // pricing page.
   try {
     const sourceFeatures = (await withCircuitBreaker(async () =>
-      db.select().from(planFeatures).where(eq(planFeatures.planId, planId)),
+      db.select().from(planFeatures).where(eq(planFeatures.planId, planId))
     )) as Array<{ featureKey: string; sortOrder: number }>;
     if (sourceFeatures.length > 0) {
       await setPlanFeatures(
         result.planId,
-        sourceFeatures.sort((a, b) => a.sortOrder - b.sortOrder).map((f) => f.featureKey),
+        sourceFeatures
+          .sort((a, b) => a.sortOrder - b.sortOrder)
+          .map(f => f.featureKey)
       );
     }
   } catch (err) {
-    console.warn(`${TAG} duplicate: feature copy failed — ${(err as Error).message}`);
+    console.warn(
+      `${TAG} duplicate: feature copy failed — ${(err as Error).message}`
+    );
   }
-  console.log(`${TAG} duplicated plan ${planId} → ${result.slug} (planId=${result.planId})`);
+  console.log(
+    `${TAG} duplicated plan ${planId} → ${result.slug} (planId=${result.planId})`
+  );
   return result;
 }
 
@@ -1646,25 +1966,39 @@ export async function deletePlan(planId: number): Promise<void> {
   const db = await getDb();
   if (!db) throw new Error("database unavailable");
   const rows = (await withCircuitBreaker(async () =>
-    db.select().from(subscriptionPlans).where(eq(subscriptionPlans.id, planId)).limit(1),
+    db
+      .select()
+      .from(subscriptionPlans)
+      .where(eq(subscriptionPlans.id, planId))
+      .limit(1)
   )) as Array<{ stripeProductId: string | null }>;
   const row = rows[0];
   if (!row) throw new Error(`plan ${planId} not found`);
 
   if (row.stripeProductId) {
     try {
-      await getProvisioningStripe().products.update(row.stripeProductId, { active: false });
+      await getProvisioningStripe().products.update(row.stripeProductId, {
+        active: false,
+      });
     } catch (err) {
-      console.warn(`${TAG} delete: Stripe product deactivate failed — ${(err as Error).message}`);
+      console.warn(
+        `${TAG} delete: Stripe product deactivate failed — ${(err as Error).message}`
+      );
     }
   }
-  await withCircuitBreaker(async () => db.delete(planPrices).where(eq(planPrices.planId, planId)));
+  await withCircuitBreaker(async () =>
+    db.delete(planPrices).where(eq(planPrices.planId, planId))
+  );
   // No FK cascades exist in this schema, so feature rows must be removed
   // explicitly or they orphan and resurface if the id is ever reused.
-  await withCircuitBreaker(async () => db.delete(planFeatures).where(eq(planFeatures.planId, planId)));
   await withCircuitBreaker(async () =>
-    db.delete(subscriptionPlans).where(eq(subscriptionPlans.id, planId)),
+    db.delete(planFeatures).where(eq(planFeatures.planId, planId))
+  );
+  await withCircuitBreaker(async () =>
+    db.delete(subscriptionPlans).where(eq(subscriptionPlans.id, planId))
   );
   invalidatePlanCache();
-  console.log(`${TAG} deleted plan ${planId} (rows removed, Stripe product archived)`);
+  console.log(
+    `${TAG} deleted plan ${planId} (rows removed, Stripe product archived)`
+  );
 }

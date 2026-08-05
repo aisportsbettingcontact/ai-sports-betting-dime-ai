@@ -28,10 +28,19 @@ import {
 } from "@/pages/admin/profilingTypes";
 
 const round1 = (n: number): string => (Math.round(n * 10) / 10).toFixed(1);
-const avg = (xs: number[]): number => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
+const avg = (xs: number[]): number =>
+  xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0;
 
 /** One derived ICP trait, rendered as a compact stat block. */
-function Trait({ label, value, sub }: { label: string; value: string; sub?: string }) {
+function Trait({
+  label,
+  value,
+  sub,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+}) {
   return (
     <div className="bg-card border border-border rounded-lg px-3.5 py-3 min-w-0">
       <div className="text-[11px] font-mono uppercase tracking-[0.12em] text-muted-foreground leading-none">
@@ -43,7 +52,11 @@ function Trait({ label, value, sub }: { label: string; value: string; sub?: stri
       >
         {value}
       </div>
-      {sub && <div className="mt-1 text-xs text-muted-foreground leading-tight truncate">{sub}</div>}
+      {sub && (
+        <div className="mt-1 text-xs text-muted-foreground leading-tight truncate">
+          {sub}
+        </div>
+      )}
     </div>
   );
 }
@@ -60,29 +73,41 @@ export default function IdealCustomerPanel() {
   const funnel: FunnelStage[] = data?.funnel ?? [];
 
   const totalSegUsers = segments.reduce((s, x) => s + x.users, 0);
-  const dominant = [...segments].filter((s) => s.users > 0).sort((a, b) => b.users - a.users)[0];
-  const dominantShare = dominant && totalSegUsers > 0 ? Math.round((dominant.users / totalSegUsers) * 100) : 0;
+  const dominant = [...segments]
+    .filter(s => s.users > 0)
+    .sort((a, b) => b.users - a.users)[0];
+  const dominantShare =
+    dominant && totalSegUsers > 0
+      ? Math.round((dominant.users / totalSegUsers) * 100)
+      : 0;
 
   // Reference cohort: Power+Core if a real one exists, else the top scored cohort.
-  const powerCore = topUsers.filter((u) => u.tier === "power" || u.tier === "core");
+  const powerCore = topUsers.filter(
+    u => u.tier === "power" || u.tier === "core"
+  );
   const cohort = powerCore.length >= 3 ? powerCore : topUsers;
   const cohortLabel = powerCore.length >= 3 ? "Power + Core" : "Top cohort";
-  const avgValue = avg(cohort.map((u) => u.valueEvents));
-  const avgDays = avg(cohort.map((u) => u.activeDays));
-  const avgSurfaces = avg(cohort.map((u) => u.distinctSurfaces));
+  const avgValue = avg(cohort.map(u => u.valueEvents));
+  const avgDays = avg(cohort.map(u => u.activeDays));
+  const avgSurfaces = avg(cohort.map(u => u.distinctSurfaces));
   const engagedShare =
-    topUsers.length > 0 ? Math.round((powerCore.length / topUsers.length) * 100) : 0;
+    topUsers.length > 0
+      ? Math.round((powerCore.length / topUsers.length) * 100)
+      : 0;
 
   // Anchor surface = strongest by composite.
   const anchor = [...scorecard].sort((a, b) => b.composite - a.composite)[0];
-  const anchorLabel = anchor ? SURFACE_LABEL[anchor.surface] ?? anchor.surface : null;
+  const anchorLabel = anchor
+    ? (SURFACE_LABEL[anchor.surface] ?? anchor.surface)
+    : null;
 
   // Biggest activation leak = largest step drop-off between consecutive stages.
   let leak: { from: FunnelStage; to: FunnelStage; pct: number } | null = null;
   for (let i = 1; i < funnel.length; i++) {
     const prev = funnel[i - 1];
     const cur = funnel[i];
-    const pct = prev.users > 0 ? ((prev.users - cur.users) / prev.users) * 100 : 0;
+    const pct =
+      prev.users > 0 ? ((prev.users - cur.users) / prev.users) * 100 : 0;
     if (!leak || pct > leak.pct) leak = { from: prev, to: cur, pct };
   }
 
@@ -91,7 +116,9 @@ export default function IdealCustomerPanel() {
   // Plain-English ICP statement, assembled from the derived facts only.
   const statement = ((): string => {
     if (!dominant && cohort.length === 0) return "";
-    const seg = dominant ? SEGMENT_LABEL[dominant.key] ?? dominant.label : "engaged";
+    const seg = dominant
+      ? (SEGMENT_LABEL[dominant.key] ?? dominant.label)
+      : "engaged";
     const surf = anchorLabel ? `${anchorLabel}-anchored` : "single-surface";
     const behavior =
       cohort.length > 0
@@ -119,7 +146,8 @@ export default function IdealCustomerPanel() {
               {METRIC_STATE_LABEL[data!.state] ?? "Not measured"}
             </div>
             <div className="text-xs sm:text-sm text-muted-foreground mt-1.5 max-w-md mx-auto leading-relaxed">
-              {data!.reason ?? "The profiling pipeline has produced no data yet."}
+              {data!.reason ??
+                "The profiling pipeline has produced no data yet."}
             </div>
           </div>
         ) : !hasSignal ? (
@@ -131,7 +159,9 @@ export default function IdealCustomerPanel() {
         ) : (
           <div className="mt-3 space-y-4">
             {/* The synthesized statement — the headline read. */}
-            <p className="text-base sm:text-lg text-foreground leading-relaxed max-w-3xl">{statement}</p>
+            <p className="text-base sm:text-lg text-foreground leading-relaxed max-w-3xl">
+              {statement}
+            </p>
 
             {/* Derived trait tiles. */}
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3">
@@ -143,11 +173,27 @@ export default function IdealCustomerPanel() {
                 />
               )}
               {anchorLabel && (
-                <Trait label="Anchor surface" value={anchorLabel} sub={`composite ${anchor!.composite}/100`} />
+                <Trait
+                  label="Anchor surface"
+                  value={anchorLabel}
+                  sub={`composite ${anchor!.composite}/100`}
+                />
               )}
-              <Trait label="Typical value events" value={round1(avgValue)} sub={`${cohortLabel} avg`} />
-              <Trait label="Typical active days" value={round1(avgDays)} sub={`${cohortLabel} avg`} />
-              <Trait label="Surfaces touched" value={round1(avgSurfaces)} sub={`${cohortLabel} avg`} />
+              <Trait
+                label="Typical value events"
+                value={round1(avgValue)}
+                sub={`${cohortLabel} avg`}
+              />
+              <Trait
+                label="Typical active days"
+                value={round1(avgDays)}
+                sub={`${cohortLabel} avg`}
+              />
+              <Trait
+                label="Surfaces touched"
+                value={round1(avgSurfaces)}
+                sub={`${cohortLabel} avg`}
+              />
             </div>
 
             {/* Activation lever — the biggest leak + engaged share. */}
@@ -158,9 +204,13 @@ export default function IdealCustomerPanel() {
                     Biggest activation leak
                   </div>
                   <div className="mt-1.5 text-sm sm:text-base text-foreground leading-relaxed">
-                    <span className="font-bold text-primary tabular-nums">−{Math.round(leak.pct)}%</span> from{" "}
+                    <span className="font-bold text-primary tabular-nums">
+                      −{Math.round(leak.pct)}%
+                    </span>{" "}
+                    from{" "}
                     <span className="font-semibold">{leak.from.label}</span> →{" "}
-                    <span className="font-semibold">{leak.to.label}</span> — the lever most worth pulling.
+                    <span className="font-semibold">{leak.to.label}</span> — the
+                    lever most worth pulling.
                   </div>
                 </div>
               )}
@@ -169,15 +219,18 @@ export default function IdealCustomerPanel() {
                   Engaged share
                 </div>
                 <div className="mt-1.5 text-sm sm:text-base text-foreground leading-relaxed">
-                  <span className="font-bold text-primary tabular-nums">{engagedShare}%</span> of ranked users are
-                  Power or Core tier.
+                  <span className="font-bold text-primary tabular-nums">
+                    {engagedShare}%
+                  </span>{" "}
+                  of ranked users are Power or Core tier.
                 </div>
               </div>
             </div>
 
             <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-              Synthesized from live segments, the {cohortLabel.toLowerCase()} cohort's behaviour, feature
-              composites, and funnel drop-off. Every figure is measured, never assumed.
+              Synthesized from live segments, the {cohortLabel.toLowerCase()}{" "}
+              cohort's behaviour, feature composites, and funnel drop-off. Every
+              figure is measured, never assumed.
             </p>
           </div>
         )}

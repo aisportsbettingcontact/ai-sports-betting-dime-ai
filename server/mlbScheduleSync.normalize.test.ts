@@ -80,7 +80,13 @@ describe("normalizeRawScheduleGame (provider adapter)", () => {
   });
 
   it("rejects unknown team ids individually without affecting siblings", () => {
-    const bad = { ...rawG1(), teams: { away: { team: { id: 99999, name: "Mystery Nine" } }, home: rawG1().teams.home } };
+    const bad = {
+      ...rawG1(),
+      teams: {
+        away: { team: { id: 99999, name: "Mystery Nine" } },
+        home: rawG1().teams.home,
+      },
+    };
     const r = normalizeRawScheduleGame(bad);
     expect("rejection" in r).toBe(true);
     const sibling = normalizeRawScheduleGame(rawG2());
@@ -88,21 +94,31 @@ describe("normalizeRawScheduleGame (provider adapter)", () => {
   });
 
   it("rejects a missing gamePk (identity is mandatory, never inferred)", () => {
-    const r = normalizeRawScheduleGame({ ...rawG1(), gamePk: undefined as unknown as number });
+    const r = normalizeRawScheduleGame({
+      ...rawG1(),
+      gamePk: undefined as unknown as number,
+    });
     expect("rejection" in r).toBe(true);
     if ("rejection" in r) expect(r.rejection.reason).toContain("gamePk");
   });
 
   it("falls back to the ET date (not the UTC calendar date) when officialDate is absent", () => {
     // 10:10 PM ET on 2026-07-17 = 02:10 UTC on 2026-07-18
-    const late = { ...rawG2(), officialDate: undefined, gameDate: "2026-07-18T02:10:00Z" };
+    const late = {
+      ...rawG2(),
+      officialDate: undefined,
+      gameDate: "2026-07-18T02:10:00Z",
+    };
     const r = normalizeRawScheduleGame(late);
     expect("event" in r).toBe(true);
     if ("event" in r) expect(r.event.officialDate).toBe("2026-07-17");
   });
 
   it("end-to-end: raw payload → normalize → plan preserves both events (any order)", () => {
-    for (const payload of [[rawG1(), rawG2()], [rawG2(), rawG1()]]) {
+    for (const payload of [
+      [rawG1(), rawG2()],
+      [rawG2(), rawG1()],
+    ]) {
       const events = payload
         .map(normalizeRawScheduleGame)
         .flatMap(r => ("event" in r ? [r.event] : []));
@@ -110,7 +126,9 @@ describe("normalizeRawScheduleGame (provider adapter)", () => {
       const plan = planMlbScheduleSync(events, []);
       expect(plan.inserts).toHaveLength(2);
       expect(plan.collisions).toEqual([]);
-      expect(new Set(plan.inserts.map(i => i.gamePk))).toEqual(new Set([900101, 900102]));
+      expect(new Set(plan.inserts.map(i => i.gamePk))).toEqual(
+        new Set([900101, 900102])
+      );
       const g1 = plan.inserts.find(i => i.gamePk === 900101)!;
       expect(g1.startTimeEst).toBe("1:35 PM");
       expect(g1.rescheduledFrom).toBe("2026-05-09");

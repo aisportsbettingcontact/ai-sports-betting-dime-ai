@@ -112,10 +112,7 @@ const PLAN_COPY: Record<PlanId, PlanCopy> = {
     price: "$249",
     period: "/month",
     perDay: "≈ $8.30 / day",
-    features: [
-      "Everything in Pro",
-      "Priority access to new model markets",
-    ],
+    features: ["Everything in Pro", "Priority access to new model markets"],
     payLabel: "Start Sharp — $249/mo",
     renewal:
       "Auto-renews monthly at $249 until cancelled. Cancel anytime before renewal — access runs through the period you've paid for.",
@@ -143,7 +140,8 @@ const PLAN_COPY: Record<PlanId, PlanCopy> = {
     period: "/ month",
     perDay: "≈ $3.30 / day",
     payLabel: "Start Pro — $99.99/mo",
-    renewal: "Auto-renews monthly at $99.99 until cancelled. Cancel anytime before renewal.",
+    renewal:
+      "Auto-renews monthly at $99.99 until cancelled. Cancel anytime before renewal.",
     chargeCadence: "monthly",
   },
   annual: {
@@ -153,16 +151,24 @@ const PLAN_COPY: Record<PlanId, PlanCopy> = {
     period: "/ year",
     perDay: "≈ $1.37 / day · save 58% vs monthly",
     payLabel: "Start Elite — $499.99/yr",
-    renewal: "Auto-renews annually at $499.99 until cancelled. Cancel anytime before renewal.",
+    renewal:
+      "Auto-renews annually at $499.99 until cancelled. Cancel anytime before renewal.",
     chargeCadence: "annually",
   },
 };
 
-const PUBLISHABLE_KEY = (import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY as string | undefined) ?? "";
+const PUBLISHABLE_KEY =
+  (import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY as string | undefined) ?? "";
 
 /** The five hardcoded legacy plans keep their curated PLAN_COPY. */
 function isLegacyPlan(slug: string): slug is PlanId {
-  return slug === "pro" || slug === "sharp" || slug === "operator" || slug === "monthly" || slug === "annual";
+  return (
+    slug === "pro" ||
+    slug === "sharp" ||
+    slug === "operator" ||
+    slug === "monthly" ||
+    slug === "annual"
+  );
 }
 
 /**
@@ -187,14 +193,20 @@ function parsePriceId(search: string): number | undefined {
 
 function formatMoney(cents: number, currency: string): string {
   try {
-    return new Intl.NumberFormat("en-US", { style: "currency", currency: currency.toUpperCase() }).format(cents / 100);
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: currency.toUpperCase(),
+    }).format(cents / 100);
   } catch {
     return `$${(cents / 100).toFixed(2)}`;
   }
 }
 
 /** Human cadence phrase for a recurring DB interval (e.g. "monthly", "every 2 weeks"). */
-function cadencePhrase(interval: DbCheckoutPlan["interval"], count: number | null): string {
+function cadencePhrase(
+  interval: DbCheckoutPlan["interval"],
+  count: number | null
+): string {
   const n = count && count > 1 ? count : 1;
   if (n === 1) {
     if (interval === "day") return "daily";
@@ -311,7 +323,11 @@ const APPEARANCE: Appearance = {
       color: "#FFFFFF",
     },
     ".Error": { color: "#FFFFFF", fontSize: "13px" },
-    ".Tab": { backgroundColor: "transparent", border: "1px solid #FFFFFF", color: "#FFFFFF" },
+    ".Tab": {
+      backgroundColor: "transparent",
+      border: "1px solid #FFFFFF",
+      color: "#FFFFFF",
+    },
     ".Tab:hover": { color: "#FFFFFF" },
     ".Tab--selected": {
       backgroundColor: "#000000",
@@ -319,7 +335,11 @@ const APPEARANCE: Appearance = {
       color: "#FFFFFF",
     },
     ".TabIcon--selected": { fill: "#45E0A8" },
-    ".Block": { backgroundColor: "#000000", border: "1px solid #FFFFFF", borderRadius: "12px" },
+    ".Block": {
+      backgroundColor: "#000000",
+      border: "1px solid #FFFFFF",
+      borderRadius: "12px",
+    },
   },
 };
 
@@ -352,9 +372,11 @@ export default function CheckoutPage() {
   // the {planId, priceId} passed to the session mutation differ.
   const dbPlanQuery = trpc.stripe.publicGetCheckoutPlan.useQuery(
     { slug: plan, ...(priceId ? { priceId } : {}) },
-    { enabled: !legacyCopy, staleTime: 60_000, retry: false },
+    { enabled: !legacyCopy, staleTime: 60_000, retry: false }
   );
-  const copy: PlanCopy = legacyCopy ?? (dbPlanQuery.data ? buildDbCopy(dbPlanQuery.data) : LOADING_COPY);
+  const copy: PlanCopy =
+    legacyCopy ??
+    (dbPlanQuery.data ? buildDbCopy(dbPlanQuery.data) : LOADING_COPY);
 
   const [phase, setPhase] = useState<Phase>("active");
   const [peReady, setPeReady] = useState(false);
@@ -375,7 +397,8 @@ export default function CheckoutPage() {
   const genRef = useRef(0);
   const startedRef = useRef(false);
 
-  const embedded = trpc.stripe.publicCreateEmbeddedCheckoutSession.useMutation();
+  const embedded =
+    trpc.stripe.publicCreateEmbeddedCheckoutSession.useMutation();
   const attachIdentity = trpc.stripe.publicAttachCheckoutIdentity.useMutation();
   const utils = trpc.useUtils();
 
@@ -389,17 +412,23 @@ export default function CheckoutPage() {
     actionsRef.current = null;
 
     try {
-      console.log(`[Checkout] [INPUT] plan=${plan} ui=elements buildTimeKey=${PUBLISHABLE_KEY ? "present" : "absent"}`);
+      console.log(
+        `[Checkout] [INPUT] plan=${plan} ui=elements buildTimeKey=${PUBLISHABLE_KEY ? "present" : "absent"}`
+      );
       // Key resolution: build-time env first, runtime config endpoint second.
       // NEVER a hosted redirect — the elements-mode form is the only path.
       let publishableKey = PUBLISHABLE_KEY;
       if (!publishableKey) {
         const config = await utils.stripe.publicGetConfig.fetch();
         publishableKey = config.publishableKey;
-        console.log(`[Checkout] [STEP] runtime key fetch → ${publishableKey ? "present" : "ABSENT"}`);
+        console.log(
+          `[Checkout] [STEP] runtime key fetch → ${publishableKey ? "present" : "ABSENT"}`
+        );
       }
       if (!publishableKey) {
-        throw new Error("Payments are temporarily unavailable (configuration). Please try again shortly.");
+        throw new Error(
+          "Payments are temporarily unavailable (configuration). Please try again shortly."
+        );
       }
 
       const { loadStripe } = await import("@stripe/stripe-js");
@@ -410,10 +439,16 @@ export default function CheckoutPage() {
       // Session created NOW; the un-awaited clientSecret promise goes straight
       // into initCheckoutElementsSdk (synchronous, not awaited) for the fastest mount.
       const clientSecretPromise = embedded
-        .mutateAsync({ planId: plan, ...(priceId ? { priceId } : {}), origin: window.location.origin })
-        .then((session) => {
+        .mutateAsync({
+          planId: plan,
+          ...(priceId ? { priceId } : {}),
+          origin: window.location.origin,
+        })
+        .then(session => {
           sessionIdRef.current = session.sessionId;
-          console.log(`[Checkout] [STEP] elements session created session_id=${session.sessionId}`);
+          console.log(
+            `[Checkout] [STEP] elements session created session_id=${session.sessionId}`
+          );
           return session.clientSecret;
         });
       // Our own rejection observer — Stripe consumes the same promise.
@@ -429,7 +464,7 @@ export default function CheckoutPage() {
       });
       checkoutRef.current = checkout;
 
-      checkout.on("change", (session) => {
+      checkout.on("change", session => {
         if (gen !== genRef.current) return;
         if (session.status.type === "expired") {
           console.warn("[Checkout] [STATE] session expired (change event)");
@@ -440,37 +475,51 @@ export default function CheckoutPage() {
       // terms: never — Stripe's auto mandate line wraps to 3 lines at 390px and
       // clipped (live audit 2026-07-10); the equivalent renewal/authorization
       // copy is our own legal line directly under the pay button.
-      const paymentElement = checkout.createPaymentElement({ layout: "tabs", terms: { card: "never" } });
+      const paymentElement = checkout.createPaymentElement({
+        layout: "tabs",
+        terms: { card: "never" },
+      });
       peRef.current = paymentElement;
       paymentElement.on("ready", () => {
         if (gen !== genRef.current) return;
         setPeReady(true);
-        console.log("[Checkout] [VERIFY] PASS — themed Payment Element mounted on-domain");
+        console.log(
+          "[Checkout] [VERIFY] PASS — themed Payment Element mounted on-domain"
+        );
       });
 
       // The mount node may not exist yet right after a phase switch — wait for React.
       let node = mountRef.current;
       for (let i = 0; i < 20 && !node; i++) {
-        await new Promise((r) => setTimeout(r, 50));
+        await new Promise(r => setTimeout(r, 50));
         node = mountRef.current;
       }
       if (gen !== genRef.current) return;
-      if (!node) throw new Error("Checkout form failed to render. Please try again.");
+      if (!node)
+        throw new Error("Checkout form failed to render. Please try again.");
       paymentElement.mount(node);
 
       const result = await checkout.loadActions();
       if (gen !== genRef.current) return;
       if (result.type !== "success") {
-        throw new Error(result.error.message || "Could not establish a secure session.");
+        throw new Error(
+          result.error.message || "Could not establish a secure session."
+        );
       }
       actionsRef.current = result.actions;
       setActionsReady(true);
-      console.log("[Checkout] [STEP] checkout actions loaded — form is confirmable");
+      console.log(
+        "[Checkout] [STEP] checkout actions loaded — form is confirmable"
+      );
     } catch (err) {
       if (gen !== genRef.current) return;
-      setErrorMsg(err instanceof Error ? err.message : "Could not start checkout.");
+      setErrorMsg(
+        err instanceof Error ? err.message : "Could not start checkout."
+      );
       setPhase("error");
-      console.error(`[Checkout] [VERIFY] FAIL — ${err instanceof Error ? err.message : err}`);
+      console.error(
+        `[Checkout] [VERIFY] FAIL — ${err instanceof Error ? err.message : err}`
+      );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [plan, priceId]);
@@ -523,8 +572,14 @@ export default function CheckoutPage() {
       setEmailErr("Enter a valid email address.");
       invalid = true;
     }
-    if (usernameTrim.length < 3 || usernameTrim.length > 64 || !USERNAME_RE.test(usernameTrim)) {
-      setUsernameErr("3–64 characters — letters, numbers, spaces, underscores, dots or hyphens.");
+    if (
+      usernameTrim.length < 3 ||
+      usernameTrim.length > 64 ||
+      !USERNAME_RE.test(usernameTrim)
+    ) {
+      setUsernameErr(
+        "3–64 characters — letters, numbers, spaces, underscores, dots or hyphens."
+      );
       invalid = true;
     }
     const actions = actionsRef.current;
@@ -532,14 +587,25 @@ export default function CheckoutPage() {
     if (invalid || !actions || !sessionId) return;
 
     setPhase("processing");
-    console.log(`[Checkout] [STEP] pay clicked plan=${plan} session_id=${sessionId}`);
+    console.log(
+      `[Checkout] [STEP] pay clicked plan=${plan} session_id=${sessionId}`
+    );
 
     // 1. Attach desired username to the session server-side (metadata).
     try {
-      await attachIdentity.mutateAsync({ sessionId, desiredUsername: usernameTrim });
-      console.log("[Checkout] [STEP] desired_username attached to session metadata");
+      await attachIdentity.mutateAsync({
+        sessionId,
+        desiredUsername: usernameTrim,
+      });
+      console.log(
+        "[Checkout] [STEP] desired_username attached to session metadata"
+      );
     } catch (err) {
-      setUsernameErr(err instanceof Error ? err.message : "Could not save your username. Please try again.");
+      setUsernameErr(
+        err instanceof Error
+          ? err.message
+          : "Could not save your username. Please try again."
+      );
       setPhase("active");
       return;
     }
@@ -548,7 +614,9 @@ export default function CheckoutPage() {
       // 2. Buyer email → Stripe session.
       const emailResult = await actions.updateEmail(emailTrim);
       if (emailResult.type === "error") {
-        console.warn(`[Checkout] [STATE] updateEmail rejected: ${emailResult.error.code}`);
+        console.warn(
+          `[Checkout] [STATE] updateEmail rejected: ${emailResult.error.code}`
+        );
         setEmailErr(emailResult.error.message);
         setPhase("active");
         return;
@@ -556,7 +624,10 @@ export default function CheckoutPage() {
 
       // 3. Confirm — cards resolve IN-PAGE; returnUrl only for redirect-based methods.
       const returnUrl = `${window.location.origin}/subscribe/success?session_id=${sessionId}&plan=${plan}`;
-      const confirmed = await actions.confirm({ redirect: "if_required", returnUrl });
+      const confirmed = await actions.confirm({
+        redirect: "if_required",
+        returnUrl,
+      });
 
       if (confirmed.type === "error") {
         if (actions.getSession().status.type === "expired") {
@@ -564,7 +635,9 @@ export default function CheckoutPage() {
           setPhase("expired");
           return;
         }
-        console.error(`[Checkout] [VERIFY] FAIL — confirm error: ${confirmed.error.message}`);
+        console.error(
+          `[Checkout] [VERIFY] FAIL — confirm error: ${confirmed.error.message}`
+        );
         setPayErr(confirmed.error.message);
         setPhase("active");
         return;
@@ -573,16 +646,26 @@ export default function CheckoutPage() {
       if (confirmed.session.status.type === "complete") {
         setConfirmedEmail(confirmed.session.email ?? emailTrim);
         setPhase("success");
-        console.log("[Checkout] [VERIFY] PASS — payment confirmed on-domain, session complete");
+        console.log(
+          "[Checkout] [VERIFY] PASS — payment confirmed on-domain, session complete"
+        );
         return;
       }
 
       // Redirect-based method took over navigation, or an in-between status.
-      console.log(`[Checkout] [STATE] post-confirm status=${confirmed.session.status.type}`);
+      console.log(
+        `[Checkout] [STATE] post-confirm status=${confirmed.session.status.type}`
+      );
       setPhase("active");
     } catch (err) {
-      console.error(`[Checkout] [VERIFY] FAIL — ${err instanceof Error ? err.message : err}`);
-      setPayErr(err instanceof Error ? err.message : "Payment could not be processed. Please try again.");
+      console.error(
+        `[Checkout] [VERIFY] FAIL — ${err instanceof Error ? err.message : err}`
+      );
+      setPayErr(
+        err instanceof Error
+          ? err.message
+          : "Payment could not be processed. Please try again."
+      );
       setPhase("active");
     }
   }, [phase, email, username, plan, attachIdentity]);
@@ -608,10 +691,16 @@ export default function CheckoutPage() {
     <div className="dlv2" style={{ minHeight: "100dvh" }}>
       <nav className="nav" aria-label="Checkout">
         <div className="wrap nav-inner">
-          <Link href="/" aria-label="dime home" style={{ textDecoration: "none" }}>
+          <Link
+            href="/"
+            aria-label="dime home"
+            style={{ textDecoration: "none" }}
+          >
             <Wordmark />
           </Link>
-          <span className="mono" style={{ marginLeft: "auto" }}>SECURE CHECKOUT · STRIPE</span>
+          <span className="mono" style={{ marginLeft: "auto" }}>
+            SECURE CHECKOUT · STRIPE
+          </span>
         </div>
       </nav>
 
@@ -624,7 +713,9 @@ export default function CheckoutPage() {
             <div className="rowline">
               <span>Price</span>
               <span className="lead" aria-hidden="true" />
-              <b className="num">{copy.price} {copy.period}</b>
+              <b className="num">
+                {copy.price} {copy.period}
+              </b>
             </div>
             {copy.perDay && (
               <div className="rowline">
@@ -656,7 +747,7 @@ export default function CheckoutPage() {
             )}
             {copy.features && (
               <ul className="checkout-features">
-                {copy.features.map((f) => (
+                {copy.features.map(f => (
                   <li key={f}>
                     <MintCheck muted />
                     {f}
@@ -668,12 +759,21 @@ export default function CheckoutPage() {
           <div className="cs-legal">
             <span className="fine">{copy.renewal}</span>
             <span className="fine">
-              By continuing you agree to the <Link href="/terms" style={{ color: "var(--text-secondary)" }}>Terms</Link> and{" "}
-              <Link href="/privacy" style={{ color: "var(--text-secondary)" }}>Privacy Policy</Link>.
+              By continuing you agree to the{" "}
+              <Link href="/terms" style={{ color: "var(--text-secondary)" }}>
+                Terms
+              </Link>{" "}
+              and{" "}
+              <Link href="/privacy" style={{ color: "var(--text-secondary)" }}>
+                Privacy Policy
+              </Link>
+              .
             </span>
             <span className="fine">
-              dime is analytical software — statistical model projections, no guaranteed outcomes. 21+ (or legal betting
-              age in your jurisdiction). Bet responsibly. Gambling problem? Call 1-800-GAMBLER.
+              dime is analytical software — statistical model projections, no
+              guaranteed outcomes. 21+ (or legal betting age in your
+              jurisdiction). Bet responsibly. Gambling problem? Call
+              1-800-GAMBLER.
             </span>
             {backLink}
           </div>
@@ -696,7 +796,11 @@ export default function CheckoutPage() {
               >
                 Try again
               </button>
-              <Link href="/#pricing" className="mono" style={{ color: "var(--text-muted)" }}>
+              <Link
+                href="/#pricing"
+                className="mono"
+                style={{ color: "var(--text-muted)" }}
+              >
                 ← Back to pricing
               </Link>
             </div>
@@ -710,13 +814,16 @@ export default function CheckoutPage() {
                   </div>
                   <h2>You're in.</h2>
                   <p>
-                    {copy.name} is active on this account. A receipt is on its way to {confirmedEmail}.
+                    {copy.name} is active on this account. A receipt is on its
+                    way to {confirmedEmail}.
                   </p>
                   <button
                     type="button"
                     className="btn btn--mint btn--wide btn--pay"
                     onClick={() =>
-                      navigate(`/subscribe/success?session_id=${sessionIdRef.current ?? ""}&plan=${plan}`)
+                      navigate(
+                        `/subscribe/success?session_id=${sessionIdRef.current ?? ""}&plan=${plan}`
+                      )
                     }
                     data-cta-id="checkout-success-continue"
                     data-cta-location="checkout"
@@ -729,7 +836,10 @@ export default function CheckoutPage() {
               ) : phase === "expired" ? (
                 <div className="checkout-panel" role="alert">
                   <span className="mono checkout-stamp">SESSION EXPIRED</span>
-                  <p>Secure sessions time out to protect your card. Nothing was charged.</p>
+                  <p>
+                    Secure sessions time out to protect your card. Nothing was
+                    charged.
+                  </p>
                   <button
                     type="button"
                     className="btn btn--mint btn--wide btn--pay"
@@ -746,14 +856,17 @@ export default function CheckoutPage() {
               ) : (
                 <form
                   className="checkout-form"
-                  onSubmit={(e) => {
+                  onSubmit={e => {
                     e.preventDefault();
                     void handlePay();
                   }}
                 >
                   <div>
                     <h1 className="checkout-heading">{copy.heading}</h1>
-                    <p className="checkout-sub">Two fields and a card. Access is live the moment payment clears.</p>
+                    <p className="checkout-sub">
+                      Two fields and a card. Access is live the moment payment
+                      clears.
+                    </p>
                   </div>
 
                   <div className="checkout-field">
@@ -765,9 +878,11 @@ export default function CheckoutPage() {
                       placeholder="you@example.com"
                       value={email}
                       disabled={processing}
-                      onChange={(e) => setEmail(e.target.value)}
+                      onChange={e => setEmail(e.target.value)}
                       aria-invalid={emailErr ? true : undefined}
-                      aria-describedby={emailErr ? "checkout-email-err" : undefined}
+                      aria-describedby={
+                        emailErr ? "checkout-email-err" : undefined
+                      }
                     />
                     {emailErr && (
                       <span className="field-err" id="checkout-email-err">
@@ -786,11 +901,17 @@ export default function CheckoutPage() {
                       placeholder="your_handle"
                       value={username}
                       disabled={processing}
-                      onChange={(e) => setUsername(e.target.value)}
+                      onChange={e => setUsername(e.target.value)}
                       aria-invalid={usernameErr ? true : undefined}
-                      aria-describedby={usernameErr ? "checkout-username-err" : "checkout-username-help"}
+                      aria-describedby={
+                        usernameErr
+                          ? "checkout-username-err"
+                          : "checkout-username-help"
+                      }
                     />
-                    <span className="field-help" id="checkout-username-help">Your handle inside dime.</span>
+                    <span className="field-help" id="checkout-username-help">
+                      Your handle inside dime.
+                    </span>
                     {usernameErr && (
                       <span className="field-err" id="checkout-username-err">
                         <span className="stamp">ERROR</span>
@@ -802,16 +923,28 @@ export default function CheckoutPage() {
                   <div className="checkout-pe-block">
                     <span className="mono">PAYMENT</span>
                     {!peReady && (
-                      <div className="pe-skeleton" role="status" aria-live="polite">
+                      <div
+                        className="pe-skeleton"
+                        role="status"
+                        aria-live="polite"
+                      >
                         <span className="bar" aria-hidden="true" />
                         <span className="bar" aria-hidden="true" />
                         <span className="bar" aria-hidden="true" />
                         <span className="mono pe-status">
-                          <span className="pulse" aria-hidden="true" /> ESTABLISHING SECURE SESSION
+                          <span className="pulse" aria-hidden="true" />{" "}
+                          ESTABLISHING SECURE SESSION
                         </span>
                       </div>
                     )}
-                    <div ref={mountRef} className={peReady ? "checkout-pe" : "checkout-pe checkout-pe--hidden"} />
+                    <div
+                      ref={mountRef}
+                      className={
+                        peReady
+                          ? "checkout-pe"
+                          : "checkout-pe checkout-pe--hidden"
+                      }
+                    />
                     {payErr && (
                       <span className="field-err" role="alert">
                         <span className="stamp">ERROR</span>
@@ -832,7 +965,8 @@ export default function CheckoutPage() {
                   >
                     {processing ? (
                       <>
-                        <span className="pulse" aria-hidden="true" /> Processing payment…
+                        <span className="pulse" aria-hidden="true" /> Processing
+                        payment…
                       </>
                     ) : (
                       copy.payLabel

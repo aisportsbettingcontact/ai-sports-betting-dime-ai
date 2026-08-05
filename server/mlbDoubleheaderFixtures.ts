@@ -38,7 +38,9 @@ export const G1_START_UTC = "2026-07-17T17:35:00Z";
 export const G2_START_UTC = "2026-07-17T23:10:00Z";
 
 /** Normalized provider event for Game 1 of the split doubleheader. */
-export function raysRedSoxGame1(overrides: Partial<MlbProviderGame> = {}): MlbProviderGame {
+export function raysRedSoxGame1(
+  overrides: Partial<MlbProviderGame> = {}
+): MlbProviderGame {
   return {
     gamePk: G1_GAMEPK,
     officialDate: "2026-07-17",
@@ -58,7 +60,9 @@ export function raysRedSoxGame1(overrides: Partial<MlbProviderGame> = {}): MlbPr
 }
 
 /** Normalized provider event for Game 2 of the split doubleheader. */
-export function raysRedSoxGame2(overrides: Partial<MlbProviderGame> = {}): MlbProviderGame {
+export function raysRedSoxGame2(
+  overrides: Partial<MlbProviderGame> = {}
+): MlbProviderGame {
   return {
     gamePk: G2_GAMEPK,
     officialDate: "2026-07-17",
@@ -77,7 +81,9 @@ export function raysRedSoxGame2(overrides: Partial<MlbProviderGame> = {}): MlbPr
 }
 
 /** Control: a normal single game on the same slate. */
-export function controlSingleGame(overrides: Partial<MlbProviderGame> = {}): MlbProviderGame {
+export function controlSingleGame(
+  overrides: Partial<MlbProviderGame> = {}
+): MlbProviderGame {
   return {
     gamePk: SINGLE_GAMEPK,
     officialDate: "2026-07-17",
@@ -109,7 +115,9 @@ export function incidentSlate(): MlbProviderGame[] {
  * `mlbGamePk: null` mirrors the legacy seed rows that predate identity
  * stamping; a variant with the pk populated is provided for both eras.
  */
-export function preSeededEveningRow(overrides: Partial<DbGameRow> = {}): DbGameRow {
+export function preSeededEveningRow(
+  overrides: Partial<DbGameRow> = {}
+): DbGameRow {
   return {
     id: 7101,
     gameDate: "2026-07-17",
@@ -126,12 +134,16 @@ export function preSeededEveningRow(overrides: Partial<DbGameRow> = {}): DbGameR
 }
 
 /** Same evening row but already stamped with its provider identity. */
-export function preSeededEveningRowWithPk(overrides: Partial<DbGameRow> = {}): DbGameRow {
+export function preSeededEveningRowWithPk(
+  overrides: Partial<DbGameRow> = {}
+): DbGameRow {
   return preSeededEveningRow({ mlbGamePk: G2_GAMEPK, ...overrides });
 }
 
 /** The postponed original May 9 row (kept forever; never deleted by sync). */
-export function postponedMay9Row(overrides: Partial<DbGameRow> = {}): DbGameRow {
+export function postponedMay9Row(
+  overrides: Partial<DbGameRow> = {}
+): DbGameRow {
   return {
     id: 5091,
     gameDate: "2026-05-09",
@@ -154,14 +166,26 @@ export function postponedMay9Row(overrides: Partial<DbGameRow> = {}): DbGameRow 
 export function mulberry32(seed: number): () => number {
   let a = seed >>> 0;
   return () => {
-    a |= 0; a = (a + 0x6d2b79f5) | 0;
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
     let t = Math.imul(a ^ (a >>> 15), 1 | a);
     t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
 
-const GEN_TEAMS = ["TB", "BOS", "NYY", "DET", "LAD", "SF", "CHC", "CLE", "HOU", "BAL"] as const;
+const GEN_TEAMS = [
+  "TB",
+  "BOS",
+  "NYY",
+  "DET",
+  "LAD",
+  "SF",
+  "CHC",
+  "CLE",
+  "HOU",
+  "BAL",
+] as const;
 
 export interface GeneratedSlateCase {
   seed: number;
@@ -178,12 +202,12 @@ export interface GeneratedSlateCase {
  */
 export function generateSlateCase(seed: number): GeneratedSlateCase {
   const rnd = mulberry32(seed);
-  const pick = <T,>(arr: readonly T[]): T => arr[Math.floor(rnd() * arr.length)];
+  const pick = <T>(arr: readonly T[]): T => arr[Math.floor(rnd() * arr.length)];
   const dates = [
     "2026-07-17",
-    "2026-04-05",        // near spring DST context
-    "2026-11-01",        // fall-back DST boundary (2 AM repeats in America/New_York)
-    "2026-03-08",        // spring-forward DST boundary
+    "2026-04-05", // near spring DST context
+    "2026-11-01", // fall-back DST boundary (2 AM repeats in America/New_York)
+    "2026-03-08", // spring-forward DST boundary
     "2026-06-30",
   ];
   const slate: MlbProviderGame[] = [];
@@ -201,8 +225,11 @@ export function generateSlateCase(seed: number): GeneratedSlateCase {
     for (let gi = 0; gi < count; gi++) {
       const h = hoursUtc[gi] ?? 22;
       const base = new Date(`${officialDate}T00:00:00Z`).getTime();
-      const startUtc = new Date(base + h * 3600_000 + Math.floor(rnd() * 50) * 60_000)
-        .toISOString().replace(/\.\d{3}Z$/, "Z");
+      const startUtc = new Date(
+        base + h * 3600_000 + Math.floor(rnd() * 50) * 60_000
+      )
+        .toISOString()
+        .replace(/\.\d{3}Z$/, "Z");
       const flagRoll = rnd();
       const numberRoll = rnd();
       slate.push({
@@ -212,13 +239,27 @@ export function generateSlateCase(seed: number): GeneratedSlateCase {
         awayAbbrev: away,
         homeAbbrev: home,
         // flags: sometimes correct, sometimes missing, sometimes wrong ("N" on a DH)
-        doubleHeader: !isDh ? "N" : flagRoll < 0.5 ? "S" : flagRoll < 0.7 ? undefined : "N",
+        doubleHeader: !isDh
+          ? "N"
+          : flagRoll < 0.5
+            ? "S"
+            : flagRoll < 0.7
+              ? undefined
+              : "N",
         // gameNumbers: sometimes correct, sometimes missing, sometimes duplicated
-        gameNumber: !isDh ? 1 : numberRoll < 0.5 ? gi + 1 : numberRoll < 0.75 ? undefined : 1,
+        gameNumber: !isDh
+          ? 1
+          : numberRoll < 0.5
+            ? gi + 1
+            : numberRoll < 0.75
+              ? undefined
+              : 1,
         dayNight: rnd() < 0.5 ? (gi === 0 ? "day" : "night") : undefined,
         abstractGameState: rnd() < 0.85 ? "Preview" : "Final",
         detailedState: rnd() < 0.9 ? "Scheduled" : "Postponed",
-        ...(isDh && gi === 0 && rnd() < 0.4 ? { rescheduledFrom: "2026-05-09" } : {}),
+        ...(isDh && gi === 0 && rnd() < 0.4
+          ? { rescheduledFrom: "2026-05-09" }
+          : {}),
       });
     }
   }
@@ -227,5 +268,9 @@ export function generateSlateCase(seed: number): GeneratedSlateCase {
     const j = Math.floor(rnd() * (i + 1));
     [slate[i], slate[j]] = [slate[j], slate[i]];
   }
-  return { seed, slate, distinctPks: Array.from(new Set(slate.map(g => g.gamePk))) };
+  return {
+    seed,
+    slate,
+    distinctPks: Array.from(new Set(slate.map(g => g.gamePk))),
+  };
 }

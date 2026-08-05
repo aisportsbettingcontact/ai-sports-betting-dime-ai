@@ -11,7 +11,14 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { classifyGameState, isFinalState, gradeBet, findGame, type TimeframeScore, type GameScoreData } from "./scoreGrader";
+import {
+  classifyGameState,
+  isFinalState,
+  gradeBet,
+  findGame,
+  type TimeframeScore,
+  type GameScoreData,
+} from "./scoreGrader";
 
 const score = (away: number, home: number): TimeframeScore => ({
   awayScore: away,
@@ -38,7 +45,13 @@ describe("classifyGameState", () => {
   });
 
   it("REGRESSION: postponed and cancelled are NO_CONTEST, never FINAL", () => {
-    for (const s of ["Postponed", "Postponed: Rain", "Cancelled", "Canceled", "PPD"]) {
+    for (const s of [
+      "Postponed",
+      "Postponed: Rain",
+      "Cancelled",
+      "Canceled",
+      "PPD",
+    ]) {
       expect(classifyGameState(s), s).toBe("NO_CONTEST");
       expect(isFinalState(s), s).toBe(false);
     }
@@ -50,13 +63,30 @@ describe("classifyGameState", () => {
   });
 
   it("recognises live states", () => {
-    for (const s of ["In Progress", "LIVE", "CRIT", "in", "Warmup", "Delayed", "Manager Challenge"]) {
+    for (const s of [
+      "In Progress",
+      "LIVE",
+      "CRIT",
+      "in",
+      "Warmup",
+      "Delayed",
+      "Manager Challenge",
+    ]) {
       expect(classifyGameState(s), s).toBe("IN_PROGRESS");
     }
   });
 
   it("defaults unknown or empty vocabulary to SCHEDULED, never to FINAL", () => {
-    for (const s of ["", "   ", "Pre-Game", "Scheduled", "Preview", "some-new-state", null, undefined]) {
+    for (const s of [
+      "",
+      "   ",
+      "Pre-Game",
+      "Scheduled",
+      "Preview",
+      "some-new-state",
+      null,
+      undefined,
+    ]) {
       expect(classifyGameState(s as string), String(s)).not.toBe("FINAL");
     }
   });
@@ -135,8 +165,12 @@ describe("gradeBet — RL", () => {
     // Assuming -1.5 inverted every underdog run line; assuming 0 for NBA/NCAAM
     // silently graded a spread bet as a moneyline.
     expect(gradeBet(score(4, 5), "RL", "AWAY", null, "MLB")).toBe("NO_RESULT");
-    expect(gradeBet(score(4, 5), "RL", "HOME", undefined, "NHL")).toBe("NO_RESULT");
-    expect(gradeBet(score(100, 103), "RL", "HOME", null, "NBA")).toBe("NO_RESULT");
+    expect(gradeBet(score(4, 5), "RL", "HOME", undefined, "NHL")).toBe(
+      "NO_RESULT"
+    );
+    expect(gradeBet(score(100, 103), "RL", "HOME", null, "NBA")).toBe(
+      "NO_RESULT"
+    );
   });
 
   it("handles a large NBA spread on both sides", () => {
@@ -161,7 +195,9 @@ describe("gradeBet — TOTAL", () => {
   });
 
   it("refuses to grade with no line", () => {
-    expect(gradeBet(score(5, 4), "TOTAL", "OVER", null, "MLB")).toBe("NO_RESULT");
+    expect(gradeBet(score(5, 4), "TOTAL", "OVER", null, "MLB")).toBe(
+      "NO_RESULT"
+    );
   });
 
   it("grades a zero total (NRFI)", () => {
@@ -173,8 +209,13 @@ describe("gradeBet — TOTAL", () => {
 // ─── Game matching — the fallback must never guess ────────────────────────────
 
 const game = (away: string, home: string, id: string): GameScoreData => ({
-  sport: "MLB", gameId: id, startTime: "", awayAbbrev: away, homeAbbrev: home,
-  gameState: "Final", scores: {},
+  sport: "MLB",
+  gameId: id,
+  startTime: "",
+  awayAbbrev: away,
+  homeAbbrev: home,
+  gameState: "Final",
+  scores: {},
 });
 
 describe("findGame — ambiguity must not resolve to a guess", () => {
@@ -204,7 +245,12 @@ describe("findGame — ambiguity must not resolve to a guess", () => {
   });
 
   it("REGRESSION: refuses across the other real collision groups", () => {
-    for (const [a, b] of [["ATH", "ATL"], ["MIA", "MIL"], ["NYM", "NYY"], ["LAA", "LAD"]]) {
+    for (const [a, b] of [
+      ["ATH", "ATL"],
+      ["MIA", "MIL"],
+      ["NYM", "NYY"],
+      ["LAA", "LAD"],
+    ]) {
       const slate = [game("SF", a, "1"), game("SF", b, "2")];
       expect(findGame(slate, "SF", b.slice(0, 2)), `${a}/${b}`).toBeNull();
     }

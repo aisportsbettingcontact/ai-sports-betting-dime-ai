@@ -38,12 +38,16 @@ export interface GameOdds {
 
 /** Today in America/New_York as YYYY-MM-DD. */
 export function todayEst(): string {
-  return new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
+  return new Date().toLocaleDateString("en-CA", {
+    timeZone: "America/New_York",
+  });
 }
 
 /** Today in America/Los_Angeles as YYYY-MM-DD — the tracker's grading day. */
 export function todayPt(): string {
-  return new Date().toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });
+  return new Date().toLocaleDateString("en-CA", {
+    timeZone: "America/Los_Angeles",
+  });
 }
 
 /**
@@ -108,16 +112,22 @@ export function fmtUnits(n: number): string {
 export function getPickOdds(
   odds: GameOdds | null,
   market: Market,
-  pickSide: PickSide,
+  pickSide: PickSide
 ): number | null {
   if (!odds) return null;
   switch (market) {
     case "ML":
-      return pickSide === "AWAY" ? (odds.awayMl?.odds ?? null) : (odds.homeMl?.odds ?? null);
+      return pickSide === "AWAY"
+        ? (odds.awayMl?.odds ?? null)
+        : (odds.homeMl?.odds ?? null);
     case "RL":
-      return pickSide === "AWAY" ? (odds.awayRl?.odds ?? null) : (odds.homeRl?.odds ?? null);
+      return pickSide === "AWAY"
+        ? (odds.awayRl?.odds ?? null)
+        : (odds.homeRl?.odds ?? null);
     case "TOTAL":
-      return pickSide === "OVER" ? (odds.over?.odds ?? null) : (odds.under?.odds ?? null);
+      return pickSide === "OVER"
+        ? (odds.over?.odds ?? null)
+        : (odds.under?.odds ?? null);
   }
 }
 
@@ -134,14 +144,18 @@ export function getPickOdds(
 export function getPickLine(
   odds: GameOdds | null,
   market: Market,
-  pickSide: PickSide,
+  pickSide: PickSide
 ): number | null {
   if (!odds) return null;
   switch (market) {
     case "RL":
-      return pickSide === "AWAY" ? (odds.awayRl?.value ?? null) : (odds.homeRl?.value ?? null);
+      return pickSide === "AWAY"
+        ? (odds.awayRl?.value ?? null)
+        : (odds.homeRl?.value ?? null);
     case "TOTAL":
-      return pickSide === "OVER" ? (odds.over?.value ?? null) : (odds.under?.value ?? null);
+      return pickSide === "OVER"
+        ? (odds.over?.value ?? null)
+        : (odds.under?.value ?? null);
     default:
       return null;
   }

@@ -21,7 +21,10 @@
  */
 import { trpc } from "@/lib/trpc";
 import SectionHeader from "@/pages/admin/SectionHeader";
-import { type FunnelStage, METRIC_STATE_LABEL } from "@/pages/admin/profilingTypes";
+import {
+  type FunnelStage,
+  METRIC_STATE_LABEL,
+} from "@/pages/admin/profilingTypes";
 import { mintRamp, usePrefersReducedMotion } from "@/pages/admin/chartTheme";
 
 /** Plain-English qualifier per stage — surfaced inline so the funnel self-explains. */
@@ -45,14 +48,23 @@ export default function JourneyFunnelPanel() {
 
   // Mint cools down the funnel — Discover strongest, Retain faintest. Single hue.
   const ramp = mintRamp(funnel.length);
-  const barTransition = reduced ? "" : "transition-[width] duration-[320ms] ease-out";
+  const barTransition = reduced
+    ? ""
+    : "transition-[width] duration-[320ms] ease-out";
 
-  const meta = !notOk && funnel.length > 0 ? `${base.toLocaleString()} discovered` : undefined;
+  const meta =
+    !notOk && funnel.length > 0
+      ? `${base.toLocaleString()} discovered`
+      : undefined;
 
   return (
     <div className="mb-6">
       <div className="bg-card border border-border rounded-xl px-4 sm:px-6 py-4 sm:py-5">
-        <SectionHeader title="Journey · lifecycle funnel" meta={meta} loading={isLoading} />
+        <SectionHeader
+          title="Journey · lifecycle funnel"
+          meta={meta}
+          loading={isLoading}
+        />
 
         {notOk ? (
           /* Honest state — never a fabricated 0. Exact server reason. */
@@ -61,7 +73,8 @@ export default function JourneyFunnelPanel() {
               {METRIC_STATE_LABEL[data!.state] ?? "Not measured"}
             </div>
             <div className="text-xs sm:text-sm text-muted-foreground mt-1.5 max-w-md mx-auto leading-relaxed">
-              {data!.reason ?? "The lifecycle funnel pipeline has produced no data yet."}
+              {data!.reason ??
+                "The lifecycle funnel pipeline has produced no data yet."}
             </div>
           </div>
         ) : funnel.length === 0 ? (
@@ -75,7 +88,10 @@ export default function JourneyFunnelPanel() {
             {funnel.map((stage, i) => {
               const pct = base > 0 ? (stage.users / base) * 100 : 0;
               const prev = i > 0 ? funnel[i - 1] : null;
-              const contPct = prev && prev.users > 0 ? Math.round((stage.users / prev.users) * 100) : 0;
+              const contPct =
+                prev && prev.users > 0
+                  ? Math.round((stage.users / prev.users) * 100)
+                  : 0;
               const drop = prev ? prev.users - stage.users : 0;
 
               return (
@@ -83,11 +99,16 @@ export default function JourneyFunnelPanel() {
                   {/* Between-stage conversion note — how many continued vs dropped. */}
                   {prev && (
                     <div className="flex items-center gap-2 py-2 pl-1 text-xs sm:text-sm text-muted-foreground">
-                      <span aria-hidden="true" className="text-primary">↓</span>
+                      <span aria-hidden="true" className="text-primary">
+                        ↓
+                      </span>
                       <span className="tabular-nums">
                         {contPct}% continued
                         {drop > 0 && (
-                          <span className="text-muted-foreground/80"> · −{drop.toLocaleString()} dropped</span>
+                          <span className="text-muted-foreground/80">
+                            {" "}
+                            · −{drop.toLocaleString()} dropped
+                          </span>
                         )}
                       </span>
                     </div>
@@ -96,7 +117,9 @@ export default function JourneyFunnelPanel() {
                   {/* Stage headline — name + hint, then the count + % of base. */}
                   <div className="flex items-baseline justify-between gap-3 mb-1.5 min-w-0">
                     <span className="min-w-0 truncate">
-                      <span className="text-sm sm:text-base font-semibold text-foreground">{stage.label}</span>
+                      <span className="text-sm sm:text-base font-semibold text-foreground">
+                        {stage.label}
+                      </span>
                       <span className="ml-2 text-xs sm:text-sm text-muted-foreground font-mono hidden sm:inline">
                         {STAGE_HINT[stage.key] ?? ""}
                       </span>
@@ -127,8 +150,9 @@ export default function JourneyFunnelPanel() {
             })}
 
             <p className="mt-5 text-xs sm:text-sm text-muted-foreground leading-relaxed">
-              Each stage counts distinct users who cleared its bar within the 30-day window;
-              % of base is against Discover. Bars cool from Discover (brightest) to Retain.
+              Each stage counts distinct users who cleared its bar within the
+              30-day window; % of base is against Discover. Bars cool from
+              Discover (brightest) to Retain.
             </p>
           </div>
         )}

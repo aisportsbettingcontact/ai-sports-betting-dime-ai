@@ -10,23 +10,13 @@ describe("resolveSplitsServerDate", () => {
 
   it("still synchronizes a legacy dateless view", () => {
     expect(
-      resolveSplitsServerDate(
-        "2026-07-10",
-        "2026-07-11",
-        undefined,
-        false
-      )
+      resolveSplitsServerDate("2026-07-10", "2026-07-11", undefined, false)
     ).toBe("2026-07-11");
   });
 
   it("keeps a user-picked date in a legacy dateless view", () => {
     expect(
-      resolveSplitsServerDate(
-        "2026-07-09",
-        "2026-07-11",
-        undefined,
-        true
-      )
+      resolveSplitsServerDate("2026-07-09", "2026-07-11", undefined, true)
     ).toBe("2026-07-09");
   });
 });
@@ -68,8 +58,8 @@ describe("shouldAutoAdvance", () => {
   });
 
   it("stays put inside a stale effective window", () => {
-    expect(
-      shouldAutoAdvance({ ...base, blockedByEffectiveWindow: true })
-    ).toBe(false);
+    expect(shouldAutoAdvance({ ...base, blockedByEffectiveWindow: true })).toBe(
+      false
+    );
   });
 });

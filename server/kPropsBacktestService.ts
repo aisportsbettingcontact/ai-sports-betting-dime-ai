@@ -88,23 +88,64 @@ const AN_HEADERS = {
  */
 async function fetchGamePitcherKs(
   gamePk: number
-): Promise<Map<string, { ks: number; ip: string; bf: number; pitches: number }>> {
+): Promise<
+  Map<string, { ks: number; ip: string; bf: number; pitches: number }>
+> {
   const url = `${MLB_STATS_BASE}/game/${gamePk}/boxscore`;
-  console.log(`[KBacktest] [STEP] Fetching box score for gamePk ${gamePk}: ${url}`);
+  console.log(
+    `[KBacktest] [STEP] Fetching box score for gamePk ${gamePk}: ${url}`
+  );
 
   const res = await fetch(url, { headers: AN_HEADERS });
   if (!res.ok) {
-    throw new Error(`[KBacktest] [ERROR] HTTP ${res.status} for gamePk ${gamePk}`);
+    throw new Error(
+      `[KBacktest] [ERROR] HTTP ${res.status} for gamePk ${gamePk}`
+    );
   }
 
   const data = (await res.json()) as {
     teams: {
-      away: { pitchers: number[]; players: Record<string, { person: { id: number; fullName: string }; stats: { pitching: { strikeOuts?: number; inningsPitched?: string; battersFaced?: number; numberOfPitches?: number } } }> };
-      home: { pitchers: number[]; players: Record<string, { person: { id: number; fullName: string }; stats: { pitching: { strikeOuts?: number; inningsPitched?: string; battersFaced?: number; numberOfPitches?: number } } }> };
+      away: {
+        pitchers: number[];
+        players: Record<
+          string,
+          {
+            person: { id: number; fullName: string };
+            stats: {
+              pitching: {
+                strikeOuts?: number;
+                inningsPitched?: string;
+                battersFaced?: number;
+                numberOfPitches?: number;
+              };
+            };
+          }
+        >;
+      };
+      home: {
+        pitchers: number[];
+        players: Record<
+          string,
+          {
+            person: { id: number; fullName: string };
+            stats: {
+              pitching: {
+                strikeOuts?: number;
+                inningsPitched?: string;
+                battersFaced?: number;
+                numberOfPitches?: number;
+              };
+            };
+          }
+        >;
+      };
     };
   };
 
-  const result = new Map<string, { ks: number; ip: string; bf: number; pitches: number }>();
+  const result = new Map<
+    string,
+    { ks: number; ip: string; bf: number; pitches: number }
+  >();
 
   for (const side of ["away", "home"] as const) {
     const team = data.teams[side];
@@ -116,7 +157,9 @@ async function fetchGamePitcherKs(
     const starter = team.players[starterKey];
 
     if (!starter) {
-      console.warn(`[KBacktest] [WARN] Starter ID ${starterId} not found in players for gamePk ${gamePk} ${side}`);
+      console.warn(
+        `[KBacktest] [WARN] Starter ID ${starterId} not found in players for gamePk ${gamePk} ${side}`
+      );
       continue;
     }
 
@@ -145,7 +188,9 @@ async function isGameFinal(gamePk: number): Promise<boolean> {
   if (!res.ok) return false;
 
   const data = (await res.json()) as {
-    dates: { games: { status: { abstractGameState: string; detailedState: string } }[] }[];
+    dates: {
+      games: { status: { abstractGameState: string; detailedState: string } }[];
+    }[];
   };
 
   const game = data.dates?.[0]?.games?.[0];
@@ -154,7 +199,8 @@ async function isGameFinal(gamePk: number): Promise<boolean> {
   const state = game.status.abstractGameState;
   const detail = game.status.detailedState;
 
-  const isFinal = state === "Final" || detail === "Final" || detail === "Game Over";
+  const isFinal =
+    state === "Final" || detail === "Final" || detail === "Game Over";
   console.log(
     `[KBacktest] [STATE] gamePk ${gamePk} status: ${state} / ${detail} → isFinal: ${isFinal}`
   );
@@ -313,7 +359,10 @@ export async function runKPropsBacktest(dateStr: string): Promise<void> {
     }
 
     // Fetch pitcher Ks from box score
-    let pitcherKsMap: Map<string, { ks: number; ip: string; bf: number; pitches: number }>;
+    let pitcherKsMap: Map<
+      string,
+      { ks: number; ip: string; bf: number; pitches: number }
+    >;
     try {
       pitcherKsMap = await fetchGamePitcherKs(gamePk);
     } catch (err) {
@@ -372,7 +421,10 @@ export async function runKPropsBacktest(dateStr: string): Promise<void> {
           nameMatchFailed++;
           await db
             .update(mlbStrikeoutProps)
-            .set({ backtestResult: "NAME_MATCH_FAILED", backtestRunAt: Date.now() })
+            .set({
+              backtestResult: "NAME_MATCH_FAILED",
+              backtestRunAt: Date.now(),
+            })
             .where(eq(mlbStrikeoutProps.id, row.id));
           continue;
         }
@@ -384,7 +436,8 @@ export async function runKPropsBacktest(dateStr: string): Promise<void> {
       const kProj = row.kProj ? parseFloat(row.kProj) : null;
 
       const backtestRes = computeBacktestResult(actualKs, bookLine);
-      const modelPrediction = kProj !== null ? computeModelPrediction(kProj, bookLine) : null;
+      const modelPrediction =
+        kProj !== null ? computeModelPrediction(kProj, bookLine) : null;
       const modelError = kProj !== null ? actualKs - kProj : null;
       const modelCorrect =
         modelPrediction !== null && backtestRes !== "PUSH"
@@ -429,22 +482,38 @@ export async function runKPropsBacktest(dateStr: string): Promise<void> {
     }
 
     // Small delay between game API calls
-    await new Promise((r) => setTimeout(r, 300));
+    await new Promise(r => setTimeout(r, 300));
   }
 
   // 4. Compute and log calibration metrics
   if (backtestResults.length > 0) {
     const metrics = computeCalibrationMetrics(backtestResults);
     console.log(`[KBacktest][${dateStr}] [OUTPUT] ─── Calibration Metrics ───`);
-    console.log(`[KBacktest][${dateStr}] [OUTPUT] Processed: ${processed} | Skipped (not final): ${skippedNotFinal} | Skipped (no line): ${skippedNoLine} | Name match failed: ${nameMatchFailed}`);
-    console.log(`[KBacktest][${dateStr}] [OUTPUT] OVER: ${metrics.overCount} | UNDER: ${metrics.underCount} | PUSH: ${metrics.pushCount}`);
-    console.log(`[KBacktest][${dateStr}] [OUTPUT] Model Accuracy: ${(metrics.modelAccuracy * 100).toFixed(1)}%`);
-    console.log(`[KBacktest][${dateStr}] [OUTPUT] OVER Accuracy: ${(metrics.modelOverAccuracy * 100).toFixed(1)}% | UNDER Accuracy: ${(metrics.modelUnderAccuracy * 100).toFixed(1)}%`);
-    console.log(`[KBacktest][${dateStr}] [OUTPUT] MAE: ${metrics.mae.toFixed(3)} Ks | Bias: ${metrics.meanBias.toFixed(3)} Ks | RMSE: ${metrics.rmse.toFixed(3)} Ks`);
-    console.log(`[KBacktest][${dateStr}] [OUTPUT] Calibration Factor: ${metrics.calibrationFactor.toFixed(4)}`);
-    console.log(`[KBacktest][${dateStr}] [VERIFY] Backtest complete — ${processed} props updated | PASS`);
+    console.log(
+      `[KBacktest][${dateStr}] [OUTPUT] Processed: ${processed} | Skipped (not final): ${skippedNotFinal} | Skipped (no line): ${skippedNoLine} | Name match failed: ${nameMatchFailed}`
+    );
+    console.log(
+      `[KBacktest][${dateStr}] [OUTPUT] OVER: ${metrics.overCount} | UNDER: ${metrics.underCount} | PUSH: ${metrics.pushCount}`
+    );
+    console.log(
+      `[KBacktest][${dateStr}] [OUTPUT] Model Accuracy: ${(metrics.modelAccuracy * 100).toFixed(1)}%`
+    );
+    console.log(
+      `[KBacktest][${dateStr}] [OUTPUT] OVER Accuracy: ${(metrics.modelOverAccuracy * 100).toFixed(1)}% | UNDER Accuracy: ${(metrics.modelUnderAccuracy * 100).toFixed(1)}%`
+    );
+    console.log(
+      `[KBacktest][${dateStr}] [OUTPUT] MAE: ${metrics.mae.toFixed(3)} Ks | Bias: ${metrics.meanBias.toFixed(3)} Ks | RMSE: ${metrics.rmse.toFixed(3)} Ks`
+    );
+    console.log(
+      `[KBacktest][${dateStr}] [OUTPUT] Calibration Factor: ${metrics.calibrationFactor.toFixed(4)}`
+    );
+    console.log(
+      `[KBacktest][${dateStr}] [VERIFY] Backtest complete — ${processed} props updated | PASS`
+    );
   } else {
-    console.log(`[KBacktest][${dateStr}] [VERIFY] No props with projections to evaluate | processed=${processed} skippedNotFinal=${skippedNotFinal}`);
+    console.log(
+      `[KBacktest][${dateStr}] [VERIFY] No props with projections to evaluate | processed=${processed} skippedNotFinal=${skippedNotFinal}`
+    );
   }
 }
 
@@ -453,27 +522,27 @@ export async function runKPropsBacktest(dateStr: string): Promise<void> {
 export function computeCalibrationMetrics(
   results: BacktestResult[]
 ): CalibrationMetrics {
-  const completed = results.filter((r) => r.backtestResult !== "PUSH");
-  const overCount = results.filter((r) => r.backtestResult === "OVER").length;
-  const underCount = results.filter((r) => r.backtestResult === "UNDER").length;
-  const pushCount = results.filter((r) => r.backtestResult === "PUSH").length;
+  const completed = results.filter(r => r.backtestResult !== "PUSH");
+  const overCount = results.filter(r => r.backtestResult === "OVER").length;
+  const underCount = results.filter(r => r.backtestResult === "UNDER").length;
+  const pushCount = results.filter(r => r.backtestResult === "PUSH").length;
 
-  const correct = completed.filter((r) => r.modelCorrect).length;
+  const correct = completed.filter(r => r.modelCorrect).length;
   const modelAccuracy = completed.length > 0 ? correct / completed.length : 0;
 
-  const overPreds = completed.filter((r) => r.modelPrediction === "OVER");
-  const underPreds = completed.filter((r) => r.modelPrediction === "UNDER");
+  const overPreds = completed.filter(r => r.modelPrediction === "OVER");
+  const underPreds = completed.filter(r => r.modelPrediction === "UNDER");
 
   const modelOverAccuracy =
     overPreds.length > 0
-      ? overPreds.filter((r) => r.modelCorrect).length / overPreds.length
+      ? overPreds.filter(r => r.modelCorrect).length / overPreds.length
       : 0;
   const modelUnderAccuracy =
     underPreds.length > 0
-      ? underPreds.filter((r) => r.modelCorrect).length / underPreds.length
+      ? underPreds.filter(r => r.modelCorrect).length / underPreds.length
       : 0;
 
-  const errors = results.map((r) => r.modelError);
+  const errors = results.map(r => r.modelError);
   const mae =
     errors.length > 0
       ? errors.reduce((a, b) => a + Math.abs(b), 0) / errors.length
@@ -542,8 +611,11 @@ export async function getRollingCalibrationMetrics(): Promise<CalibrationMetrics
   if (rows.length === 0) return null;
 
   const results: BacktestResult[] = rows
-    .filter((r: typeof rows[0]) => r.kProj && r.actualKs !== null && r.backtestResult)
-    .map((r: typeof rows[0]) => ({
+    .filter(
+      (r: (typeof rows)[0]) =>
+        r.kProj && r.actualKs !== null && r.backtestResult
+    )
+    .map((r: (typeof rows)[0]) => ({
       propId: 0,
       pitcherName: "",
       gameId: 0,
@@ -553,8 +625,7 @@ export async function getRollingCalibrationMetrics(): Promise<CalibrationMetrics
       backtestResult: r.backtestResult as "OVER" | "UNDER" | "PUSH",
       modelError: r.modelError ? parseFloat(r.modelError) : 0,
       modelCorrect: r.modelCorrect === 1,
-      modelPrediction:
-        parseFloat(r.kProj!) >= 0 ? "OVER" : "UNDER",
+      modelPrediction: parseFloat(r.kProj!) >= 0 ? "OVER" : "UNDER",
     }));
 
   return computeCalibrationMetrics(results);
@@ -609,22 +680,39 @@ export async function getDailyBacktestResults(gameDate: string): Promise<{
     .orderBy(mlbStrikeoutProps.pitcherName);
 
   const completed = rows.filter(
-    (r: typeof rows[0]) =>
+    (r: (typeof rows)[0]) =>
       r.backtestResult === "OVER" ||
       r.backtestResult === "UNDER" ||
       r.backtestResult === "PUSH"
   );
-  const correct = completed.filter((r: typeof rows[0]) => r.modelCorrect === 1);
-  const overRows = completed.filter((r: typeof rows[0]) => r.backtestResult === "OVER");
-  const underRows = completed.filter((r: typeof rows[0]) => r.backtestResult === "UNDER");
-  const overCorrect = overRows.filter((r: typeof rows[0]) => r.modelCorrect === 1).length;
-  const underCorrect = underRows.filter((r: typeof rows[0]) => r.modelCorrect === 1).length;
+  const correct = completed.filter(
+    (r: (typeof rows)[0]) => r.modelCorrect === 1
+  );
+  const overRows = completed.filter(
+    (r: (typeof rows)[0]) => r.backtestResult === "OVER"
+  );
+  const underRows = completed.filter(
+    (r: (typeof rows)[0]) => r.backtestResult === "UNDER"
+  );
+  const overCorrect = overRows.filter(
+    (r: (typeof rows)[0]) => r.modelCorrect === 1
+  ).length;
+  const underCorrect = underRows.filter(
+    (r: (typeof rows)[0]) => r.modelCorrect === 1
+  ).length;
 
   const errors: number[] = completed
-    .filter((r: typeof rows[0]) => r.modelError !== null)
-    .map((r: typeof rows[0]) => parseFloat(r.modelError!));
-  const meanError = errors.length > 0 ? errors.reduce((a: number, b: number) => a + b, 0) / errors.length : null;
-  const mae = errors.length > 0 ? errors.reduce((a: number, b: number) => a + Math.abs(b), 0) / errors.length : null;
+    .filter((r: (typeof rows)[0]) => r.modelError !== null)
+    .map((r: (typeof rows)[0]) => parseFloat(r.modelError!));
+  const meanError =
+    errors.length > 0
+      ? errors.reduce((a: number, b: number) => a + b, 0) / errors.length
+      : null;
+  const mae =
+    errors.length > 0
+      ? errors.reduce((a: number, b: number) => a + Math.abs(b), 0) /
+        errors.length
+      : null;
 
   return {
     date: gameDate,
@@ -719,20 +807,38 @@ export async function getRichDailyBacktestResults(gameDate: string): Promise<{
     .where(eq(games.gameDate, gameDate))
     .orderBy(games.startTimeEst, mlbStrikeoutProps.side);
 
-  type RichRow = typeof rows[0];
+  type RichRow = (typeof rows)[0];
   const completed = rows.filter(
-    (r: RichRow) => r.backtestResult === "OVER" || r.backtestResult === "UNDER" || r.backtestResult === "PUSH"
+    (r: RichRow) =>
+      r.backtestResult === "OVER" ||
+      r.backtestResult === "UNDER" ||
+      r.backtestResult === "PUSH"
   );
   const correct = completed.filter((r: RichRow) => r.modelCorrect === 1);
-  const overRows = completed.filter((r: RichRow) => r.backtestResult === "OVER");
-  const underRows = completed.filter((r: RichRow) => r.backtestResult === "UNDER");
-  const overCorrect = overRows.filter((r: RichRow) => r.modelCorrect === 1).length;
-  const underCorrect = underRows.filter((r: RichRow) => r.modelCorrect === 1).length;
+  const overRows = completed.filter(
+    (r: RichRow) => r.backtestResult === "OVER"
+  );
+  const underRows = completed.filter(
+    (r: RichRow) => r.backtestResult === "UNDER"
+  );
+  const overCorrect = overRows.filter(
+    (r: RichRow) => r.modelCorrect === 1
+  ).length;
+  const underCorrect = underRows.filter(
+    (r: RichRow) => r.modelCorrect === 1
+  ).length;
   const errors: number[] = completed
     .filter((r: RichRow) => r.modelError !== null)
     .map((r: RichRow) => parseFloat(r.modelError!));
-  const meanError = errors.length > 0 ? errors.reduce((a: number, b: number) => a + b, 0) / errors.length : null;
-  const mae = errors.length > 0 ? errors.reduce((a: number, b: number) => a + Math.abs(b), 0) / errors.length : null;
+  const meanError =
+    errors.length > 0
+      ? errors.reduce((a: number, b: number) => a + b, 0) / errors.length
+      : null;
+  const mae =
+    errors.length > 0
+      ? errors.reduce((a: number, b: number) => a + Math.abs(b), 0) /
+        errors.length
+      : null;
 
   return {
     date: gameDate,
@@ -801,7 +907,9 @@ export async function getLast7DaysBacktest(days = 7): Promise<{
   const startStr = startDate.toISOString().slice(0, 10);
   const todayStr = today.toISOString().slice(0, 10);
 
-  console.log(`[KBacktest][Last7Days] Querying ${days}-day window: ${startStr} -> ${todayStr}`);
+  console.log(
+    `[KBacktest][Last7Days] Querying ${days}-day window: ${startStr} -> ${todayStr}`
+  );
 
   const rows = await db
     .select({
@@ -812,15 +920,10 @@ export async function getLast7DaysBacktest(days = 7): Promise<{
     })
     .from(mlbStrikeoutProps)
     .innerJoin(games, eq(mlbStrikeoutProps.gameId, games.id))
-    .where(
-      and(
-        gte(games.gameDate, startStr),
-        lte(games.gameDate, todayStr)
-      )
-    )
+    .where(and(gte(games.gameDate, startStr), lte(games.gameDate, todayStr)))
     .orderBy(games.gameDate);
 
-  type Row = typeof rows[0];
+  type Row = (typeof rows)[0];
 
   // Group by date
   const byDate = new Map<string, Row[]>();
@@ -835,27 +938,40 @@ export async function getLast7DaysBacktest(days = 7): Promise<{
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([date, dayRows]) => {
       const completed = dayRows.filter(
-        (r: Row) => r.backtestResult === "OVER" || r.backtestResult === "UNDER" || r.backtestResult === "PUSH"
+        (r: Row) =>
+          r.backtestResult === "OVER" ||
+          r.backtestResult === "UNDER" ||
+          r.backtestResult === "PUSH"
       );
       const correct = completed.filter((r: Row) => r.modelCorrect === 1);
-      const overRows = completed.filter((r: Row) => r.backtestResult === "OVER");
-      const underRows = completed.filter((r: Row) => r.backtestResult === "UNDER");
-      const pushRows = completed.filter((r: Row) => r.backtestResult === "PUSH");
+      const overRows = completed.filter(
+        (r: Row) => r.backtestResult === "OVER"
+      );
+      const underRows = completed.filter(
+        (r: Row) => r.backtestResult === "UNDER"
+      );
+      const pushRows = completed.filter(
+        (r: Row) => r.backtestResult === "PUSH"
+      );
       const errors = completed
         .filter((r: Row) => r.modelError !== null)
         .map((r: Row) => parseFloat(r.modelError!));
-      const mae = errors.length > 0
-        ? errors.reduce((a: number, b: number) => a + Math.abs(b), 0) / errors.length
-        : null;
-      const meanError = errors.length > 0
-        ? errors.reduce((a: number, b: number) => a + b, 0) / errors.length
-        : null;
+      const mae =
+        errors.length > 0
+          ? errors.reduce((a: number, b: number) => a + Math.abs(b), 0) /
+            errors.length
+          : null;
+      const meanError =
+        errors.length > 0
+          ? errors.reduce((a: number, b: number) => a + b, 0) / errors.length
+          : null;
       return {
         date,
         total: dayRows.length,
         completed: completed.length,
         correct: correct.length,
-        accuracy: completed.length > 0 ? correct.length / completed.length : null,
+        accuracy:
+          completed.length > 0 ? correct.length / completed.length : null,
         overTotal: overRows.length,
         underTotal: underRows.length,
         pushTotal: pushRows.length,
@@ -866,36 +982,50 @@ export async function getLast7DaysBacktest(days = 7): Promise<{
 
   // Aggregate totals
   const allCompleted = rows.filter(
-    (r: Row) => r.backtestResult === "OVER" || r.backtestResult === "UNDER" || r.backtestResult === "PUSH"
+    (r: Row) =>
+      r.backtestResult === "OVER" ||
+      r.backtestResult === "UNDER" ||
+      r.backtestResult === "PUSH"
   );
   const allCorrect = allCompleted.filter((r: Row) => r.modelCorrect === 1);
   const allOvers = allCompleted.filter((r: Row) => r.backtestResult === "OVER");
-  const allUnders = allCompleted.filter((r: Row) => r.backtestResult === "UNDER");
-  const allPushes = allCompleted.filter((r: Row) => r.backtestResult === "PUSH");
+  const allUnders = allCompleted.filter(
+    (r: Row) => r.backtestResult === "UNDER"
+  );
+  const allPushes = allCompleted.filter(
+    (r: Row) => r.backtestResult === "PUSH"
+  );
   const overCorrect = allOvers.filter((r: Row) => r.modelCorrect === 1).length;
-  const underCorrect = allUnders.filter((r: Row) => r.modelCorrect === 1).length;
+  const underCorrect = allUnders.filter(
+    (r: Row) => r.modelCorrect === 1
+  ).length;
 
   const allErrors = allCompleted
     .filter((r: Row) => r.modelError !== null)
     .map((r: Row) => parseFloat(r.modelError!));
-  const mae = allErrors.length > 0
-    ? allErrors.reduce((a: number, b: number) => a + Math.abs(b), 0) / allErrors.length
-    : null;
-  const meanError = allErrors.length > 0
-    ? allErrors.reduce((a: number, b: number) => a + b, 0) / allErrors.length
-    : null;
+  const mae =
+    allErrors.length > 0
+      ? allErrors.reduce((a: number, b: number) => a + Math.abs(b), 0) /
+        allErrors.length
+      : null;
+  const meanError =
+    allErrors.length > 0
+      ? allErrors.reduce((a: number, b: number) => a + b, 0) / allErrors.length
+      : null;
 
   // OVER/UNDER bias: % of non-push completed results that went OVER vs UNDER
   const nonPushCompleted = allOvers.length + allUnders.length;
-  const overBiasPct = nonPushCompleted > 0 ? allOvers.length / nonPushCompleted : null;
-  const underBiasPct = nonPushCompleted > 0 ? allUnders.length / nonPushCompleted : null;
+  const overBiasPct =
+    nonPushCompleted > 0 ? allOvers.length / nonPushCompleted : null;
+  const underBiasPct =
+    nonPushCompleted > 0 ? allUnders.length / nonPushCompleted : null;
 
   console.log(
     `[KBacktest][Last7Days] DONE: total=${rows.length} completed=${allCompleted.length} ` +
-    `correct=${allCorrect.length} ` +
-    `accuracy=${allCompleted.length > 0 ? (allCorrect.length / allCompleted.length * 100).toFixed(1) + '%' : 'N/A'} ` +
-    `mae=${mae?.toFixed(3) ?? 'N/A'} ` +
-    `bias=${overBiasPct !== null ? (overBiasPct * 100).toFixed(1) + '% OVER' : 'N/A'}`
+      `correct=${allCorrect.length} ` +
+      `accuracy=${allCompleted.length > 0 ? ((allCorrect.length / allCompleted.length) * 100).toFixed(1) + "%" : "N/A"} ` +
+      `mae=${mae?.toFixed(3) ?? "N/A"} ` +
+      `bias=${overBiasPct !== null ? (overBiasPct * 100).toFixed(1) + "% OVER" : "N/A"}`
   );
 
   return {
@@ -903,14 +1033,16 @@ export async function getLast7DaysBacktest(days = 7): Promise<{
     totalProps: rows.length,
     completedProps: allCompleted.length,
     correctProps: allCorrect.length,
-    accuracy: allCompleted.length > 0 ? allCorrect.length / allCompleted.length : null,
+    accuracy:
+      allCompleted.length > 0 ? allCorrect.length / allCompleted.length : null,
     overTotal: allOvers.length,
     underTotal: allUnders.length,
     pushTotal: allPushes.length,
     overCorrect,
     underCorrect,
     overAccuracy: allOvers.length > 0 ? overCorrect / allOvers.length : null,
-    underAccuracy: allUnders.length > 0 ? underCorrect / allUnders.length : null,
+    underAccuracy:
+      allUnders.length > 0 ? underCorrect / allUnders.length : null,
     overBiasPct,
     underBiasPct,
     mae,

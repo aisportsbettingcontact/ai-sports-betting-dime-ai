@@ -124,7 +124,10 @@ export const INTERVAL_OPTIONS: IntervalOption[] = [
 ];
 
 /** The picker's default cadence — Monthly ({month, 1}). */
-export const DEFAULT_INTERVAL: IntervalValue = { interval: "month", intervalCount: 1 };
+export const DEFAULT_INTERVAL: IntervalValue = {
+  interval: "month",
+  intervalCount: 1,
+};
 
 // ─── Edit Plan draft model ───────────────────────────────────────────────────
 
@@ -166,8 +169,12 @@ export function intervalEditDraftFrom(price: StoredPrice): IntervalEditDraft {
     priceId: price.id,
     price: (price.amountCents / 100).toFixed(2),
     // A stored price with no cadence IS the one-time "Lifetime" sentinel.
-    interval: { interval: price.interval ?? "lifetime", intervalCount: price.intervalCount ?? 1 },
-    trialDays: price.trialPeriodDays == null ? "" : String(price.trialPeriodDays),
+    interval: {
+      interval: price.interval ?? "lifetime",
+      intervalCount: price.intervalCount ?? 1,
+    },
+    trialDays:
+      price.trialPeriodDays == null ? "" : String(price.trialPeriodDays),
     hidden: price.hidden,
     promoOn: price.promoType != null && price.promoValue != null,
     promoType: price.promoType ?? "percent",
@@ -218,13 +225,16 @@ export function planEditDraftFrom(plan: StoredPlan): PlanEditDraft {
     restockThreshold: num(plan.restockThreshold),
     restockAmount: num(plan.restockAmount),
     features: normalizePlanFeatures(plan.features),
-    intervals: plan.prices.filter((p) => p.active).map(intervalEditDraftFrom),
+    intervals: plan.prices.filter(p => p.active).map(intervalEditDraftFrom),
   };
 }
 
 /** Radio semantics for the default-price selector: exactly one row ever wins. */
-export function setDefaultIntervalKey(intervals: readonly IntervalEditDraft[], key: string): IntervalEditDraft[] {
-  return intervals.map((iv) => ({ ...iv, isDefault: iv.key === key }));
+export function setDefaultIntervalKey(
+  intervals: readonly IntervalEditDraft[],
+  key: string
+): IntervalEditDraft[] {
+  return intervals.map(iv => ({ ...iv, isDefault: iv.key === key }));
 }
 
 /**
@@ -232,15 +242,25 @@ export function setDefaultIntervalKey(intervals: readonly IntervalEditDraft[], k
  * last is a no-op; removing the default promotes the first survivor so the plan
  * is never left without a price to check out with.
  */
-export function removeIntervalDraft(intervals: readonly IntervalEditDraft[], key: string): IntervalEditDraft[] {
+export function removeIntervalDraft(
+  intervals: readonly IntervalEditDraft[],
+  key: string
+): IntervalEditDraft[] {
   if (intervals.length <= 1) return intervals.slice();
-  const kept = intervals.filter((iv) => iv.key !== key);
-  return kept.some((iv) => iv.isDefault) ? kept : setDefaultIntervalKey(kept, kept[0].key);
+  const kept = intervals.filter(iv => iv.key !== key);
+  return kept.some(iv => iv.isDefault)
+    ? kept
+    : setDefaultIntervalKey(kept, kept[0].key);
 }
 
 /** Add or remove one key, always returning the canonical de-duplicated order. */
-export function toggleFeatureKey(selected: readonly string[], key: string): PlanFeatureKey[] {
-  const next = selected.includes(key) ? selected.filter((k) => k !== key) : [...selected, key];
+export function toggleFeatureKey(
+  selected: readonly string[],
+  key: string
+): PlanFeatureKey[] {
+  const next = selected.includes(key)
+    ? selected.filter(k => k !== key)
+    : [...selected, key];
   return normalizePlanFeatures(next);
 }
 
@@ -267,14 +287,18 @@ export interface PlanUpdateInput {
 }
 
 /** Validate + convert an edit draft to the update payload, or an error string. */
-export function buildPlanUpdateInput(planId: number, draft: PlanEditDraft): PlanUpdateInput | string {
+export function buildPlanUpdateInput(
+  planId: number,
+  draft: PlanEditDraft
+): PlanUpdateInput | string {
   const name = draft.name.trim();
   if (!name) return "Name is required.";
 
   let maxSubscribers: number | null = null;
   if (draft.maxSubscribers.trim()) {
     const m = parseInt(draft.maxSubscribers, 10);
-    if (Number.isNaN(m) || m < 1) return "Max subscribers must be 1 or more (leave blank for unlimited).";
+    if (Number.isNaN(m) || m < 1)
+      return "Max subscribers must be 1 or more (leave blank for unlimited).";
     maxSubscribers = m;
   }
 
@@ -282,15 +306,28 @@ export function buildPlanUpdateInput(planId: number, draft: PlanEditDraft): Plan
   let restock: PlanRestockInput | null = null;
   if (draft.limitedQuantity) {
     const avail = parseInt(draft.availableQuantity, 10);
-    if (Number.isNaN(avail) || avail < 0) return "Available quantity must be 0 or more.";
+    if (Number.isNaN(avail) || avail < 0)
+      return "Available quantity must be 0 or more.";
     if (draft.autoRestock) {
       const thr = parseInt(draft.restockThreshold, 10);
-      if (Number.isNaN(thr) || thr < 0) return "Restock threshold must be 0 or more.";
+      if (Number.isNaN(thr) || thr < 0)
+        return "Restock threshold must be 0 or more.";
       const amt = parseInt(draft.restockAmount, 10);
-      if (Number.isNaN(amt) || amt < 1) return "Restock amount must be 1 or more.";
-      restock = { autoRestock: true, availableQuantity: avail, restockThreshold: thr, restockAmount: amt };
+      if (Number.isNaN(amt) || amt < 1)
+        return "Restock amount must be 1 or more.";
+      restock = {
+        autoRestock: true,
+        availableQuantity: avail,
+        restockThreshold: thr,
+        restockAmount: amt,
+      };
     } else {
-      restock = { autoRestock: false, availableQuantity: avail, restockThreshold: null, restockAmount: null };
+      restock = {
+        autoRestock: false,
+        availableQuantity: avail,
+        restockThreshold: null,
+        restockAmount: null,
+      };
     }
   }
 
@@ -346,10 +383,11 @@ export interface IntervalUpdateInput {
 export function buildIntervalUpdateInput(
   price: StoredPrice,
   draft: IntervalEditDraft,
-  label = draft.label.trim() || `Interval ${price.id}`,
+  label = draft.label.trim() || `Interval ${price.id}`
 ): IntervalUpdateInput | string {
   const amountCents = Math.round(parseFloat(draft.price) * 100);
-  if (Number.isNaN(amountCents) || amountCents < 50) return `${label}: enter a price of at least $0.50.`;
+  if (Number.isNaN(amountCents) || amountCents < 50)
+    return `${label}: enter a price of at least $0.50.`;
 
   const payload: IntervalUpdateInput = {
     priceId: price.id,
@@ -370,7 +408,8 @@ export function buildIntervalUpdateInput(
     payload.intervalCount = draft.interval.intervalCount;
     if (draft.trialDays.trim()) {
       const t = parseInt(draft.trialDays, 10);
-      if (Number.isNaN(t) || t < 0) return `${label}: free trial days must be 0 or more.`;
+      if (Number.isNaN(t) || t < 0)
+        return `${label}: free trial days must be 0 or more.`;
       payload.trialPeriodDays = t;
     }
   }
@@ -381,11 +420,14 @@ export function buildIntervalUpdateInput(
     let value: number;
     if (draft.promoType === "percent") {
       value = parseInt(raw, 10);
-      if (Number.isNaN(value) || value < 1 || value > 100) return `${label}: percent promo must be 1–100.`;
+      if (Number.isNaN(value) || value < 1 || value > 100)
+        return `${label}: percent promo must be 1–100.`;
     } else {
       value = Math.round(parseFloat(raw) * 100);
-      if (Number.isNaN(value) || value < 1) return `${label}: enter a valid discount amount.`;
-      if (value >= amountCents) return `${label}: discount must be less than the price.`;
+      if (Number.isNaN(value) || value < 1)
+        return `${label}: enter a valid discount amount.`;
+      if (value >= amountCents)
+        return `${label}: discount must be less than the price.`;
     }
     const code = draft.promoCode.trim();
     if (code && !/^[A-Za-z0-9_-]{2,64}$/.test(code)) {

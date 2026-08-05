@@ -38,7 +38,13 @@ describe("sports with a score feed", () => {
   });
 
   it("covers all five feed-backed sports", () => {
-    expect(GRADABLE_SPORTS.sort()).toEqual(["MLB", "NBA", "NCAAM", "NFL", "NHL"]);
+    expect(GRADABLE_SPORTS.sort()).toEqual([
+      "MLB",
+      "NBA",
+      "NCAAM",
+      "NFL",
+      "NHL",
+    ]);
   });
 
   it("CUSTOM is deliberately not gradeable", () => {
@@ -53,7 +59,8 @@ describe("sports with a score feed", () => {
 
   it("an unknown sport is refused rather than assumed", () => {
     expect(checkGradingSupport("CRICKET", "FULL_GAME")).toMatchObject({
-      ok: false, reason: "NO_FEED",
+      ok: false,
+      reason: "NO_FEED",
     });
   });
 });
@@ -62,30 +69,50 @@ describe("timeframe support per sport", () => {
   it("every sport can at least be graded on the full game", () => {
     for (const sport of GRADABLE_SPORTS) {
       expect(SPORT_TIMEFRAMES[sport], sport).toContain("FULL_GAME");
-      expect(checkGradingSupport(sport, "FULL_GAME"), sport).toEqual({ ok: true });
+      expect(checkGradingSupport(sport, "FULL_GAME"), sport).toEqual({
+        ok: true,
+      });
     }
   });
 
   it("MLB carries the innings timeframes and nothing else", () => {
-    expect([...SPORT_TIMEFRAMES.MLB].sort())
-      .toEqual(["FIRST_5", "FIRST_INNING", "FULL_GAME", "NRFI", "YRFI"]);
+    expect([...SPORT_TIMEFRAMES.MLB].sort()).toEqual([
+      "FIRST_5",
+      "FIRST_INNING",
+      "FULL_GAME",
+      "NRFI",
+      "YRFI",
+    ]);
   });
 
   it("REGRESSION: MLB rejects period/quarter timeframes", () => {
     // Previously accepted by the form and ungradeable in fact.
-    for (const tf of ["FIRST_PERIOD", "FIRST_HALF", "FIRST_QUARTER", "REGULATION"]) {
-      expect(checkGradingSupport("MLB", tf), tf).toMatchObject({ ok: false, reason: "TIMEFRAME" });
+    for (const tf of [
+      "FIRST_PERIOD",
+      "FIRST_HALF",
+      "FIRST_QUARTER",
+      "REGULATION",
+    ]) {
+      expect(checkGradingSupport("MLB", tf), tf).toMatchObject({
+        ok: false,
+        reason: "TIMEFRAME",
+      });
     }
   });
 
   it("REGRESSION: NBA rejects baseball timeframes", () => {
     for (const tf of ["NRFI", "YRFI", "FIRST_5", "FIRST_INNING"]) {
-      expect(checkGradingSupport("NBA", tf), tf).toMatchObject({ ok: false, reason: "TIMEFRAME" });
+      expect(checkGradingSupport("NBA", tf), tf).toMatchObject({
+        ok: false,
+        reason: "TIMEFRAME",
+      });
     }
   });
 
   it("REGRESSION: NCAAM rejects FIRST_QUARTER — college basketball has halves", () => {
-    expect(checkGradingSupport("NCAAM", "FIRST_QUARTER")).toMatchObject({ ok: false });
+    expect(checkGradingSupport("NCAAM", "FIRST_QUARTER")).toMatchObject({
+      ok: false,
+    });
     expect(checkGradingSupport("NCAAM", "FIRST_HALF")).toEqual({ ok: true });
   });
 
@@ -95,8 +122,12 @@ describe("timeframe support per sport", () => {
   });
 
   it("NFL carries quarters and halves", () => {
-    expect([...SPORT_TIMEFRAMES.NFL].sort())
-      .toEqual(["FIRST_HALF", "FIRST_QUARTER", "FULL_GAME", "REGULATION"]);
+    expect([...SPORT_TIMEFRAMES.NFL].sort()).toEqual([
+      "FIRST_HALF",
+      "FIRST_QUARTER",
+      "FULL_GAME",
+      "REGULATION",
+    ]);
   });
 
   it("the refusal message names what IS available, not just what is not", () => {
@@ -123,17 +154,21 @@ describe("NFL regulation excludes overtime", () => {
     expect(sum(awayQs, 0, 4)).toBe(25);
     expect(sum(homeQs, 0, 4)).toBe(25);
     expect(sum(awayQs, 0, 4)).toBe(sum(homeQs, 0, 4)); // tied in regulation
-    expect(sum(homeQs, 0, homeQs.length)).toBe(31);    // won in overtime
+    expect(sum(homeQs, 0, homeQs.length)).toBe(31); // won in overtime
   });
 
   it("the fetcher slices four quarters, not all of them", () => {
-    const fn = graderSrc.slice(graderSrc.indexOf("async function fetchNflScores"));
+    const fn = graderSrc.slice(
+      graderSrc.indexOf("async function fetchNflScores")
+    );
     expect(fn).toMatch(/sum\(awayQs, 0, 4\)/);
     expect(fn).toMatch(/sum\(homeQs, 0, 4\)/);
   });
 
   it("first half is Q1+Q2 and first quarter is Q1", () => {
-    const fn = graderSrc.slice(graderSrc.indexOf("async function fetchNflScores"));
+    const fn = graderSrc.slice(
+      graderSrc.indexOf("async function fetchNflScores")
+    );
     expect(fn).toMatch(/sum\(awayQs, 0, 2\)/);
     expect(fn).toMatch(/awayQs\[0\]/);
   });
@@ -141,10 +176,13 @@ describe("NFL regulation excludes overtime", () => {
 
 describe("write-time rejection", () => {
   const router = readFileSync(join(__dirname, "routers/betTracker.ts"), "utf8")
-    .replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/^\s*\/\/.*$/gm, "");
 
   it("REGRESSION: create refuses an ungradeable combination", () => {
-    expect(router).toMatch(/checkGradingSupport\(input\.sport, input\.timeframe\)/);
+    expect(router).toMatch(
+      /checkGradingSupport\(input\.sport, input\.timeframe\)/
+    );
   });
 
   it("REGRESSION: createParlay checks EVERY leg", () => {
@@ -170,33 +208,47 @@ describe("the declared matrix matches the grader's implementation", () => {
     expect(start, `${fnName} exists`).toBeGreaterThan(-1);
     const body = graderSrc.slice(start, graderSrc.indexOf("\n}", start));
     const scores = body.slice(body.indexOf("scores: {"));
-    return Array.from(scores.matchAll(/^\s{8}([A-Z_0-9]+):\s*\{/gm)).map(m => m[1]);
+    return Array.from(scores.matchAll(/^\s{8}([A-Z_0-9]+):\s*\{/gm)).map(
+      m => m[1]
+    );
   }
 
   const FETCHERS: Record<GradableSport, string> = {
-    MLB:   "fetchMlbScores",
-    NHL:   "fetchNhlScores",
-    NBA:   "fetchNbaScores",
+    MLB: "fetchMlbScores",
+    NHL: "fetchNhlScores",
+    NBA: "fetchNbaScores",
     NCAAM: "fetchNcaamScores",
-    NFL:   "fetchNflScores",
+    NFL: "fetchNflScores",
   };
 
   it("REGRESSION: every declared timeframe is one the fetcher actually builds", () => {
     // A table that drifts from the implementation re-creates the original bug
     // while looking like the fix for it.
-    for (const [sport, fn] of Object.entries(FETCHERS) as [GradableSport, string][]) {
+    for (const [sport, fn] of Object.entries(FETCHERS) as [
+      GradableSport,
+      string,
+    ][]) {
       const built = timeframesBuiltBy(fn);
       for (const tf of SPORT_TIMEFRAMES[sport]) {
-        expect(built, `${sport} declares ${tf}; ${fn} builds [${built.join(", ")}]`).toContain(tf);
+        expect(
+          built,
+          `${sport} declares ${tf}; ${fn} builds [${built.join(", ")}]`
+        ).toContain(tf);
       }
     }
   });
 
   it("and the table does not omit a timeframe the fetcher supports", () => {
-    for (const [sport, fn] of Object.entries(FETCHERS) as [GradableSport, string][]) {
+    for (const [sport, fn] of Object.entries(FETCHERS) as [
+      GradableSport,
+      string,
+    ][]) {
       const built = timeframesBuiltBy(fn);
       for (const tf of built) {
-        expect(SPORT_TIMEFRAMES[sport], `${fn} builds ${tf}; table omits it`).toContain(tf);
+        expect(
+          SPORT_TIMEFRAMES[sport],
+          `${fn} builds ${tf}; table omits it`
+        ).toContain(tf);
       }
     }
   });
@@ -206,7 +258,9 @@ describe("humanTimeframe", () => {
   it("names every timeframe the table uses", () => {
     for (const sport of GRADABLE_SPORTS) {
       for (const tf of SPORT_TIMEFRAMES[sport]) {
-        expect(humanTimeframe(tf), tf).not.toBe(tf === "NRFI" || tf === "YRFI" ? "" : tf);
+        expect(humanTimeframe(tf), tf).not.toBe(
+          tf === "NRFI" || tf === "YRFI" ? "" : tf
+        );
       }
     }
   });

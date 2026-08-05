@@ -42,16 +42,18 @@ describe("SchemaGuard covers the ledgers the code writes to", () => {
     // present, the new ledger absent. This must not be silent.
     const liveRows = Object.entries(REQUIRED_COLUMNS)
       .filter(([t]) => t !== "payment_events")
-      .flatMap(([t, cols]) => cols.map((c) => ({ t, c })));
+      .flatMap(([t, cols]) => cols.map(c => ({ t, c })));
 
     const drift = compareSchema(liveRows, REQUIRED_COLUMNS);
-    const pe = drift.find((d) => d.table === "payment_events");
+    const pe = drift.find(d => d.table === "payment_events");
     expect(pe, "a missing payment_events must surface as drift").toBeTruthy();
     expect(pe!.tableMissing).toBe(true);
   });
 
   it("reports a clean schema when every declared table is present", () => {
-    const liveRows = Object.entries(REQUIRED_COLUMNS).flatMap(([t, cols]) => cols.map((c) => ({ t, c })));
+    const liveRows = Object.entries(REQUIRED_COLUMNS).flatMap(([t, cols]) =>
+      cols.map(c => ({ t, c }))
+    );
     expect(compareSchema(liveRows, REQUIRED_COLUMNS)).toHaveLength(0);
   });
 });
@@ -90,7 +92,9 @@ describe("failed payments actually reach a human", () => {
   });
 
   it("fires on a declined payment intent", () => {
-    const body = webhook.slice(webhook.indexOf('case "payment_intent.payment_failed"'));
+    const body = webhook.slice(
+      webhook.indexOf('case "payment_intent.payment_failed"')
+    );
     expect(body.slice(0, 1600)).toMatch(/billingAlert\("PAYMENT_FAILED"/);
   });
 

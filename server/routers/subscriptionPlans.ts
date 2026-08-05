@@ -15,7 +15,11 @@ import { router } from "../_core/trpc";
 import { getDb } from "../db";
 import { withCircuitBreaker } from "../dbCircuitBreaker";
 import { appUsers } from "../../drizzle/schema";
-import { listAllPlans, getPlanBySlug, defaultPriceForMode } from "../stripe/planStore";
+import {
+  listAllPlans,
+  getPlanBySlug,
+  defaultPriceForMode,
+} from "../stripe/planStore";
 import {
   provisionPlan,
   addPriceToPlan,
@@ -46,14 +50,18 @@ async function countSubscribersByPlan(): Promise<Record<string, number>> {
       db
         .select({ plan: appUsers.stripePlanId, n: sql<number>`count(*)` })
         .from(appUsers)
-        .where(and(eq(appUsers.hasAccess, true), isNotNull(appUsers.stripePlanId)))
-        .groupBy(appUsers.stripePlanId),
+        .where(
+          and(eq(appUsers.hasAccess, true), isNotNull(appUsers.stripePlanId))
+        )
+        .groupBy(appUsers.stripePlanId)
     )) as Array<{ plan: string | null; n: number }>;
     const out: Record<string, number> = {};
     for (const r of rows) if (r.plan) out[r.plan] = Number(r.n);
     return out;
   } catch (err) {
-    console.warn(`[tRPC][subscriptionPlans] subscriber count failed: ${(err as Error).message}`);
+    console.warn(
+      `[tRPC][subscriptionPlans] subscriber count failed: ${(err as Error).message}`
+    );
     return {};
   }
 }
@@ -71,7 +79,7 @@ const promoSchema = z
       .regex(/^[A-Za-z0-9_-]+$/, "code: letters, numbers, - or _ only")
       .optional(),
   })
-  .refine((p) => p.type !== "percent" || p.value <= 100, {
+  .refine(p => p.type !== "percent" || p.value <= 100, {
     message: "percent promo must be 1–100",
   });
 
@@ -122,7 +130,9 @@ const restockSchema = z.object({
  * free strings, so a typo cannot persist a key the admin picker can never render.
  */
 const planFeaturesSchema = z
-  .array(z.string().refine(isPlanFeatureKey, { message: "unknown feature key" }))
+  .array(
+    z.string().refine(isPlanFeatureKey, { message: "unknown feature key" })
+  )
   .max(PLAN_FEATURE_KEYS.length);
 
 const newPlanSchema = z.object({
@@ -138,30 +148,41 @@ const newPlanSchema = z.object({
 
 export const subscriptionPlansRouter = router({
   /** Whether provisioning writes to a Stripe TEST/sandbox account (UI badge). */
-  testMode: ownerProcedure.query(async () => ({ testMode: isProvisioningTestMode() })),
+  testMode: ownerProcedure.query(async () => ({
+    testMode: isProvisioningTestMode(),
+  })),
 
   /** All plans (incl. archived) with prices + subscriber counts, for the cards. */
   list: ownerProcedure.query(async () => {
-    const [plans, counts] = await Promise.all([listAllPlans(), countSubscribersByPlan()]);
-    return plans.map((p) => ({ ...p, subscriberCount: counts[p.slug] ?? 0 }));
+    const [plans, counts] = await Promise.all([
+      listAllPlans(),
+      countSubscribersByPlan(),
+    ]);
+    return plans.map(p => ({ ...p, subscriberCount: counts[p.slug] ?? 0 }));
   }),
 
   /** Create a plan → provisions a Stripe Product + N recurring Prices, persists them. */
   create: ownerProcedure.input(newPlanSchema).mutation(async ({ input }) => {
     const tag = "[tRPC][subscriptionPlans.create]";
-    console.log(`${tag} [INPUT] name="${input.name}" intervals=${input.prices.length} restock=${input.restock?.autoRestock ?? false}`);
+    console.log(
+      `${tag} [INPUT] name="${input.name}" intervals=${input.prices.length} restock=${input.restock?.autoRestock ?? false}`
+    );
     const { features, ...planInput } = input;
     const result = await provisionPlan(planInput);
     if (features && features.length > 0) {
       await setPlanFeatures(result.planId, features);
     }
-    console.log(`${tag} [OUTPUT] slug=${result.slug} product=${result.stripeProductId} default=${result.stripePriceId} features=${features?.length ?? 0}`);
+    console.log(
+      `${tag} [OUTPUT] slug=${result.slug} product=${result.stripeProductId} default=${result.stripePriceId} features=${features?.length ?? 0}`
+    );
     return result;
   }),
 
   /** Add one interval (billing variant) to an existing plan. */
   addInterval: ownerProcedure
-    .input(z.object({ planId: z.number().int().positive(), price: priceSchema }))
+    .input(
+      z.object({ planId: z.number().int().positive(), price: priceSchema })
+    )
     .mutation(async ({ input }) => {
       const r = await addPriceToPlan(input.planId, input.price);
       return { ok: true, priceId: r.priceId };
@@ -181,7 +202,7 @@ export const subscriptionPlansRouter = router({
       z.object({
         planId: z.number().int().positive(),
         orderedPriceIds: z.array(z.number().int().positive()).min(1).max(24),
-      }),
+      })
     )
     .mutation(async ({ input }) => {
       await reorderPlanIntervals(input.planId, input.orderedPriceIds);
@@ -190,7 +211,9 @@ export const subscriptionPlansRouter = router({
 
   /** Show/hide one interval (eyeball). Hidden intervals are never sold. */
   setIntervalHidden: ownerProcedure
-    .input(z.object({ priceId: z.number().int().positive(), hidden: z.boolean() }))
+    .input(
+      z.object({ priceId: z.number().int().positive(), hidden: z.boolean() })
+    )
     .mutation(async ({ input }) => {
       await setIntervalHidden(input.priceId, input.hidden);
       return { ok: true };
@@ -198,7 +221,9 @@ export const subscriptionPlansRouter = router({
 
   /** Update a plan's auto-restock / limited-quantity FOMO configuration. */
   updateRestock: ownerProcedure
-    .input(z.object({ planId: z.number().int().positive(), restock: restockSchema }))
+    .input(
+      z.object({ planId: z.number().int().positive(), restock: restockSchema })
+    )
     .mutation(async ({ input }) => {
       await updateRestockConfig(input.planId, input.restock);
       return { ok: true };
@@ -212,7 +237,7 @@ export const subscriptionPlansRouter = router({
         name: z.string().min(1).max(120).optional(),
         description: z.string().max(2000).nullable().optional(),
         maxSubscribers: z.number().int().min(1).nullable().optional(),
-      }),
+      })
     )
     .mutation(async ({ input }) => {
       const { planId, ...patch } = input;
@@ -243,29 +268,40 @@ export const subscriptionPlansRouter = router({
         maxSubscribers: z.number().int().min(1).nullable().optional(),
         restock: restockSchema.nullable().optional(),
         features: planFeaturesSchema.optional(),
-      }),
+      })
     )
     .mutation(async ({ input }) => {
       const tag = "[tRPC][subscriptionPlans.update]";
       const { planId, features, restock, ...patch } = input;
-      console.log(`${tag} [INPUT] planId=${planId} fields=${Object.keys(patch).join(",") || "(none)"} restock=${restock === undefined ? "unchanged" : restock === null ? "cleared" : `auto=${restock.autoRestock} qty=${restock.availableQuantity}`} features=${features ? features.length : "unchanged"}`);
-      let slugSync: Awaited<ReturnType<typeof updatePlanMeta>>["slugSync"] = null;
+      console.log(
+        `${tag} [INPUT] planId=${planId} fields=${Object.keys(patch).join(",") || "(none)"} restock=${restock === undefined ? "unchanged" : restock === null ? "cleared" : `auto=${restock.autoRestock} qty=${restock.availableQuantity}`} features=${features ? features.length : "unchanged"}`
+      );
+      let slugSync: Awaited<ReturnType<typeof updatePlanMeta>>["slugSync"] =
+        null;
       if (Object.keys(patch).length > 0) {
         ({ slugSync } = await updatePlanMeta(planId, patch));
       }
       if (restock !== undefined) {
         await updateRestockConfig(
           planId,
-          restock ?? { autoRestock: false, availableQuantity: null, restockThreshold: null, restockAmount: null },
+          restock ?? {
+            autoRestock: false,
+            availableQuantity: null,
+            restockThreshold: null,
+            restockAmount: null,
+          }
         );
       }
-      const applied = features !== undefined ? await setPlanFeatures(planId, features) : undefined;
+      const applied =
+        features !== undefined
+          ? await setPlanFeatures(planId, features)
+          : undefined;
       console.log(
         `${tag} [OUTPUT] planId=${planId} restock=${restock === undefined ? "unchanged" : "applied"} features=${applied ? applied.join("|") : "unchanged"} slug=${
           slugSync?.changed
             ? `${slugSync.oldSlug} → ${slugSync.newSlug} (${slugSync.referrersUpdated} app_users referrer(s) repointed)`
             : "unchanged"
-        }`,
+        }`
       );
       console.log(`${tag} [VERIFY] PASS`);
       return { ok: true as const, planId, features: applied, slugSync };
@@ -284,62 +320,74 @@ export const subscriptionPlansRouter = router({
    * Existing subscriptions keep billing at the OLD price until explicitly
    * migrated; archiving a Price does not re-rate or cancel them.
    */
-  updateInterval: ownerProcedure.input(intervalUpdateSchema).mutation(async ({ input }) => {
-    const tag = "[tRPC][subscriptionPlans.updateInterval]";
-    const { priceId, isDefault, interval, label, trialPeriodDays, allowBreakingPaymentLinks, ...rest } = input;
-    console.log(
-      `${tag} [INPUT] priceId=${priceId} amount=${rest.amountCents}c currency=${rest.currency ?? "usd"} interval=${interval ?? "once"}x${rest.intervalCount ?? 1} trial=${trialPeriodDays ?? 0}d label="${label ?? ""}" hidden=${rest.hidden ?? "carry"} promo=${rest.promo ? `${rest.promo.type}:${rest.promo.value}` : "none"} isDefault=${isDefault ?? "unchanged"} allowBreakingPaymentLinks=${allowBreakingPaymentLinks === true}`,
-    );
-    const result = await repriceInterval(
-      priceId,
-      {
-        ...rest,
-        // null (an explicit "Lifetime" / cleared field) and undefined mean the same
-        // thing to the provisioning layer, which takes the interval's full state.
-        interval: interval ?? undefined,
-        label: label ?? undefined,
-        trialPeriodDays: trialPeriodDays ?? undefined,
-      },
-      // Default (flag absent) = refuse the edit if an ACTIVE Payment Link sells
-      // the price this reprice would archive; the thrown message names the links.
-      { allowBreakingPaymentLinks },
-    );
-    // Only `isDefault: true` is actionable — a plan must always have exactly one
-    // default, so "unset" is expressed by making a DIFFERENT interval the default.
-    // A missing row id is warned about rather than thrown: the reprice already
-    // succeeded, and a hard failure here would invite a retry that mints a
-    // SECOND Stripe Price for the same edit.
-    if (isDefault) {
-      if (result.newPriceRowId > 0) {
-        await setIntervalDefault(result.newPriceRowId);
-      } else {
-        console.warn(`${tag} default flag skipped — no row id returned for the replacement price`);
+  updateInterval: ownerProcedure
+    .input(intervalUpdateSchema)
+    .mutation(async ({ input }) => {
+      const tag = "[tRPC][subscriptionPlans.updateInterval]";
+      const {
+        priceId,
+        isDefault,
+        interval,
+        label,
+        trialPeriodDays,
+        allowBreakingPaymentLinks,
+        ...rest
+      } = input;
+      console.log(
+        `${tag} [INPUT] priceId=${priceId} amount=${rest.amountCents}c currency=${rest.currency ?? "usd"} interval=${interval ?? "once"}x${rest.intervalCount ?? 1} trial=${trialPeriodDays ?? 0}d label="${label ?? ""}" hidden=${rest.hidden ?? "carry"} promo=${rest.promo ? `${rest.promo.type}:${rest.promo.value}` : "none"} isDefault=${isDefault ?? "unchanged"} allowBreakingPaymentLinks=${allowBreakingPaymentLinks === true}`
+      );
+      const result = await repriceInterval(
+        priceId,
+        {
+          ...rest,
+          // null (an explicit "Lifetime" / cleared field) and undefined mean the same
+          // thing to the provisioning layer, which takes the interval's full state.
+          interval: interval ?? undefined,
+          label: label ?? undefined,
+          trialPeriodDays: trialPeriodDays ?? undefined,
+        },
+        // Default (flag absent) = refuse the edit if an ACTIVE Payment Link sells
+        // the price this reprice would archive; the thrown message names the links.
+        { allowBreakingPaymentLinks }
+      );
+      // Only `isDefault: true` is actionable — a plan must always have exactly one
+      // default, so "unset" is expressed by making a DIFFERENT interval the default.
+      // A missing row id is warned about rather than thrown: the reprice already
+      // succeeded, and a hard failure here would invite a retry that mints a
+      // SECOND Stripe Price for the same edit.
+      if (isDefault) {
+        if (result.newPriceRowId > 0) {
+          await setIntervalDefault(result.newPriceRowId);
+        } else {
+          console.warn(
+            `${tag} default flag skipped — no row id returned for the replacement price`
+          );
+        }
       }
-    }
-    console.log(
-      `${tag} [OUTPUT] priceId=${priceId} ${
-        result.changed
-          ? `MINTED new Stripe Price ${result.newStripePriceId} (row ${result.newPriceRowId}); old interval archived, existing subscribers keep the OLD amount`
-          : `NO new Stripe Price — presentation-only edit applied in place on ${result.newStripePriceId}`
-      } default=${isDefault ? "set" : result.carriedDefault ? "carried" : "no"}` +
-        // Whether the archived price still had Payment Links pointing at it —
-        // checked / clear / overridden / lookup failed. A break is invisible in
-        // Stripe, so it has to be visible here.
-        ` paymentLinks=${result.paymentLinks.status} (${result.paymentLinks.summary})`,
-    );
-    console.log(`${tag} [VERIFY] PASS`);
-    return {
-      ok: true as const,
-      changed: result.changed,
-      newPriceRowId: result.newPriceRowId,
-      newStripePriceId: result.newStripePriceId,
-      paymentLinks: {
-        status: result.paymentLinks.status,
-        brokenLinks: result.paymentLinks.activeLinks,
-        summary: result.paymentLinks.summary,
-      },
-    };
-  }),
+      console.log(
+        `${tag} [OUTPUT] priceId=${priceId} ${
+          result.changed
+            ? `MINTED new Stripe Price ${result.newStripePriceId} (row ${result.newPriceRowId}); old interval archived, existing subscribers keep the OLD amount`
+            : `NO new Stripe Price — presentation-only edit applied in place on ${result.newStripePriceId}`
+        } default=${isDefault ? "set" : result.carriedDefault ? "carried" : "no"}` +
+          // Whether the archived price still had Payment Links pointing at it —
+          // checked / clear / overridden / lookup failed. A break is invisible in
+          // Stripe, so it has to be visible here.
+          ` paymentLinks=${result.paymentLinks.status} (${result.paymentLinks.summary})`
+      );
+      console.log(`${tag} [VERIFY] PASS`);
+      return {
+        ok: true as const,
+        changed: result.changed,
+        newPriceRowId: result.newPriceRowId,
+        newStripePriceId: result.newStripePriceId,
+        paymentLinks: {
+          status: result.paymentLinks.status,
+          brokenLinks: result.paymentLinks.activeLinks,
+          summary: result.paymentLinks.summary,
+        },
+      };
+    }),
 
   /**
    * Repair a stale slug: re-derive it from the plan's CURRENT name and move
@@ -355,17 +403,24 @@ export const subscriptionPlansRouter = router({
    * `dryRun: true` previews the rename and the referrer count without writing.
    */
   syncSlug: ownerProcedure
-    .input(z.object({ planId: z.number().int().positive(), dryRun: z.boolean().optional() }))
+    .input(
+      z.object({
+        planId: z.number().int().positive(),
+        dryRun: z.boolean().optional(),
+      })
+    )
     .mutation(async ({ input }) => {
       const tag = "[tRPC][subscriptionPlans.syncSlug]";
-      console.log(`${tag} [INPUT] planId=${input.planId} dryRun=${input.dryRun ?? false}`);
+      console.log(
+        `${tag} [INPUT] planId=${input.planId} dryRun=${input.dryRun ?? false}`
+      );
       const result = await syncPlanSlug(input.planId, { dryRun: input.dryRun });
       console.log(
         `${tag} [OUTPUT] planId=${input.planId} ${
           result.changed
             ? `${input.dryRun ? "WOULD MOVE" : "MOVED"} ${result.oldSlug} → ${result.newSlug}, ${result.referrersUpdated} app_users referrer(s) ${input.dryRun ? "would be" : ""} repointed`
             : `UNCHANGED slug=${result.oldSlug} already matches the plan name; 0 referrers touched`
-        }`,
+        }`
       );
       console.log(`${tag} [VERIFY] PASS`);
       return result;
@@ -414,21 +469,26 @@ export const subscriptionPlansRouter = router({
    * checkout, and being ownerProcedure it is not a public purchase path.
    */
   createTestCheckoutSession: ownerProcedure
-    .input(z.object({ slug: z.string().min(1).max(64), origin: z.string().url() }))
+    .input(
+      z.object({ slug: z.string().min(1).max(64), origin: z.string().url() })
+    )
     .mutation(async ({ input }) => {
       if (!isProvisioningTestMode()) {
         throw new TRPCError({
           code: "PRECONDITION_FAILED",
-          message: "Test mode not configured — set STRIPE_TEST_SECRET_KEY on this service.",
+          message:
+            "Test mode not configured — set STRIPE_TEST_SECRET_KEY on this service.",
         });
       }
       const plan = await getPlanBySlug(input.slug);
-      if (!plan) throw new TRPCError({ code: "NOT_FOUND", message: "Plan not found." });
+      if (!plan)
+        throw new TRPCError({ code: "NOT_FOUND", message: "Plan not found." });
       const price = defaultPriceForMode(plan, false);
       if (!price) {
         throw new TRPCError({
           code: "PRECONDITION_FAILED",
-          message: "This plan has no test-mode price — create a sandbox plan to test.",
+          message:
+            "This plan has no test-mode price — create a sandbox plan to test.",
         });
       }
 
@@ -439,15 +499,26 @@ export const subscriptionPlansRouter = router({
       const session = await stripe.checkout.sessions.create({
         mode: isRecurring ? "subscription" : "payment",
         line_items: [{ price: price.stripePriceId, quantity: 1 }],
-        metadata: { plan_id: plan.slug, price_id: price.stripePriceId, dime_test: "1" },
-        ...(isRecurring ? { subscription_data: { metadata: { plan_id: plan.slug } } } : {}),
+        metadata: {
+          plan_id: plan.slug,
+          price_id: price.stripePriceId,
+          dime_test: "1",
+        },
+        ...(isRecurring
+          ? { subscription_data: { metadata: { plan_id: plan.slug } } }
+          : {}),
         success_url: `${input.origin}/admin/plans?test=success`,
         cancel_url: `${input.origin}/admin/plans?test=cancel`,
       });
       if (!session.url) {
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Stripe did not return a checkout URL." });
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Stripe did not return a checkout URL.",
+        });
       }
-      console.log(`[tRPC][subscriptionPlans.createTestCheckoutSession] slug=${plan.slug} price=${price.stripePriceId} session=${session.id}`);
+      console.log(
+        `[tRPC][subscriptionPlans.createTestCheckoutSession] slug=${plan.slug} price=${price.stripePriceId} session=${session.id}`
+      );
       return { url: session.url };
     }),
 });

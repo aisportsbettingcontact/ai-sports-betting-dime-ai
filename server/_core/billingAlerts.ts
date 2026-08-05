@@ -135,8 +135,12 @@ const buckets = new Map<string, AlertBucket>();
  */
 function shouldEmit(
   kind: BillingAlertKind,
-  summary: string,
-): { emit: boolean; suppressedSinceLast: number; lastSuppressedSummary: string | null } {
+  summary: string
+): {
+  emit: boolean;
+  suppressedSinceLast: number;
+  lastSuppressedSummary: string | null;
+} {
   const now = Date.now();
 
   if (buckets.size > MAX_BUCKETS) {
@@ -149,14 +153,22 @@ function shouldEmit(
   const bucket = buckets.get(kind);
 
   if (!bucket) {
-    buckets.set(kind, { lastEmittedMs: now, suppressed: 0, lastSuppressedSummary: null });
+    buckets.set(kind, {
+      lastEmittedMs: now,
+      suppressed: 0,
+      lastSuppressedSummary: null,
+    });
     return { emit: true, suppressedSinceLast: 0, lastSuppressedSummary: null };
   }
 
   if (now - bucket.lastEmittedMs < RATE_LIMIT_MS) {
     bucket.suppressed += 1;
     bucket.lastSuppressedSummary = summary;
-    return { emit: false, suppressedSinceLast: bucket.suppressed, lastSuppressedSummary: summary };
+    return {
+      emit: false,
+      suppressedSinceLast: bucket.suppressed,
+      lastSuppressedSummary: summary,
+    };
   }
 
   const suppressedSinceLast = bucket.suppressed;
@@ -182,7 +194,8 @@ const SECRET_PREFIX_RE = /^(sk_|rk_|whsec_)/;
 const SECRET_EMBEDDED_RE = /\b(?:sk|rk|whsec)_[A-Za-z0-9_-]{4,}/g;
 
 /** Loose email matcher used to scrub addresses out of free-text values. */
-const EMAIL_RE = /([A-Za-z0-9._%+-])[A-Za-z0-9._%+-]*@([A-Za-z0-9.-]+\.[A-Za-z]{2,})/g;
+const EMAIL_RE =
+  /([A-Za-z0-9._%+-])[A-Za-z0-9._%+-]*@([A-Za-z0-9.-]+\.[A-Za-z]{2,})/g;
 
 /**
  * Masks an email as `d***@domain.tld`.
@@ -203,8 +216,12 @@ export function maskEmail(raw: string): string {
 function scrubString(value: string): string {
   if (SECRET_PREFIX_RE.test(value)) return "[REDACTED]";
   let out = value.replace(SECRET_EMBEDDED_RE, "[REDACTED]");
-  out = out.replace(EMAIL_RE, (_m, first: string, domain: string) => `${first}***@${domain}`);
-  if (out.length > MAX_STRING_LEN) out = `${out.slice(0, MAX_STRING_LEN)}…[truncated]`;
+  out = out.replace(
+    EMAIL_RE,
+    (_m, first: string, domain: string) => `${first}***@${domain}`
+  );
+  if (out.length > MAX_STRING_LEN)
+    out = `${out.slice(0, MAX_STRING_LEN)}…[truncated]`;
   return out;
 }
 
@@ -226,7 +243,11 @@ function redactValue(value: unknown, depth: number, keyHint?: string): unknown {
     return scrubString(value);
   }
 
-  if (typeof value === "number" || typeof value === "boolean" || typeof value === "bigint") {
+  if (
+    typeof value === "number" ||
+    typeof value === "boolean" ||
+    typeof value === "bigint"
+  ) {
     return typeof value === "bigint" ? value.toString() : value;
   }
 
@@ -237,7 +258,9 @@ function redactValue(value: unknown, depth: number, keyHint?: string): unknown {
   if (depth >= MAX_REDACT_DEPTH) return "[depth-limit]";
 
   if (Array.isArray(value)) {
-    return value.slice(0, MAX_REDACT_KEYS).map((v) => redactValue(v, depth + 1, keyHint));
+    return value
+      .slice(0, MAX_REDACT_KEYS)
+      .map(v => redactValue(v, depth + 1, keyHint));
   }
 
   if (typeof value === "object") {
@@ -262,7 +285,9 @@ function redactValue(value: unknown, depth: number, keyHint?: string): unknown {
  * Public redaction entry point. Exported so callers (and tests) can assert that
  * a payload is safe before it is handed to any other sink.
  */
-export function redactBillingDetail(detail: Record<string, unknown>): Record<string, unknown> {
+export function redactBillingDetail(
+  detail: Record<string, unknown>
+): Record<string, unknown> {
   try {
     const redacted = redactValue(detail, 0);
     if (redacted && typeof redacted === "object" && !Array.isArray(redacted)) {
@@ -333,7 +358,7 @@ function buildWebhookBody(
   kind: BillingAlertKind,
   redacted: Record<string, unknown>,
   suppressedSinceLast: number,
-  occurredAt: number,
+  occurredAt: number
 ): unknown {
   const severity = SEVERITY[kind];
   const lines: string[] = [];
@@ -342,7 +367,7 @@ function buildWebhookBody(
   if (suppressedSinceLast > 0) {
     lines.push(
       `**Collapsed:** ${suppressedSinceLast} additional \`${kind}\` alert(s) were suppressed ` +
-        `in the last ${RATE_LIMIT_MS / 1000}s and are represented by this message.`,
+        `in the last ${RATE_LIMIT_MS / 1000}s and are represented by this message.`
     );
   }
   lines.push("");
@@ -365,14 +390,24 @@ function buildWebhookBody(
         color: EMBED_COLORS[kind],
         footer: { text: `Dime AI · Billing Monitor · ${kind}` },
         timestamp: new Date(occurredAt).toISOString(),
-        fields: [{ name: "🕐 Time (EST)", value: formatTimestamp(occurredAt), inline: true }],
+        fields: [
+          {
+            name: "🕐 Time (EST)",
+            value: formatTimestamp(occurredAt),
+            inline: true,
+          },
+        ],
       },
     ],
   };
 }
 
 /** POSTs the embed. Swallows every failure — the console line already landed. */
-async function postToDiscord(url: string, body: unknown, kind: BillingAlertKind): Promise<void> {
+async function postToDiscord(
+  url: string,
+  body: unknown,
+  kind: BillingAlertKind
+): Promise<void> {
   try {
     const res = await fetch(url, {
       method: "POST",
@@ -382,14 +417,16 @@ async function postToDiscord(url: string, body: unknown, kind: BillingAlertKind)
     });
     if (!res.ok) {
       console.warn(
-        `${TAG}[${kind}] [TRANSPORT] Discord webhook returned ${res.status} ${res.statusText}`,
+        `${TAG}[${kind}] [TRANSPORT] Discord webhook returned ${res.status} ${res.statusText}`
       );
       return;
     }
     console.log(`${TAG}[${kind}] [TRANSPORT] Discord webhook delivered ✓`);
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.warn(`${TAG}[${kind}] [TRANSPORT] Discord webhook POST failed: ${msg}`);
+    console.warn(
+      `${TAG}[${kind}] [TRANSPORT] Discord webhook POST failed: ${msg}`
+    );
   }
 }
 
@@ -424,7 +461,9 @@ export function reportBillingAlertTransport(): void {
     process.env.DISCORD_BILLING_WEBHOOK_URL ??
     "";
   if (url) {
-    console.log(`${TAG} [VERIFY] PASS — billing alerts will be delivered to Discord`);
+    console.log(
+      `${TAG} [VERIFY] PASS — billing alerts will be delivered to Discord`
+    );
     return;
   }
   console.warn(
@@ -436,7 +475,7 @@ export function reportBillingAlertTransport(): void {
 
 export async function billingAlert(
   kind: BillingAlertKind,
-  detail: Record<string, unknown>,
+  detail: Record<string, unknown>
 ): Promise<void> {
   try {
     const occurredAt = Date.now();
@@ -454,7 +493,9 @@ export async function billingAlert(
     const suppressedNote =
       decision.suppressedSinceLast > 0
         ? ` collapsed=${decision.suppressedSinceLast}` +
-          (decision.lastSuppressedSummary ? ` lastCollapsed="${decision.lastSuppressedSummary}"` : "")
+          (decision.lastSuppressedSummary
+            ? ` lastCollapsed="${decision.lastSuppressedSummary}"`
+            : "")
         : "";
 
     const line =
@@ -469,22 +510,29 @@ export async function billingAlert(
     const url = getWebhookUrl();
     if (!url) {
       console.warn(
-        `${TAG}[${kind}] [TRANSPORT] No BILLING_ALERT_DISCORD_WEBHOOK_URL configured — console-only mode`,
+        `${TAG}[${kind}] [TRANSPORT] No BILLING_ALERT_DISCORD_WEBHOOK_URL configured — console-only mode`
       );
       return;
     }
 
     await postToDiscord(
       url,
-      buildWebhookBody(kind, redacted, decision.suppressedSinceLast, occurredAt),
-      kind,
+      buildWebhookBody(
+        kind,
+        redacted,
+        decision.suppressedSinceLast,
+        occurredAt
+      ),
+      kind
     );
   } catch (err: unknown) {
     // Last-resort guard. billingAlert() must never surface an error to a caller
     // that is in the middle of processing money.
     try {
       const msg = err instanceof Error ? err.message : String(err);
-      console.error(`${TAG}[${kind}] [FATAL] billingAlert itself failed: ${msg}`);
+      console.error(
+        `${TAG}[${kind}] [FATAL] billingAlert itself failed: ${msg}`
+      );
     } catch {
       /* nothing left to do */
     }

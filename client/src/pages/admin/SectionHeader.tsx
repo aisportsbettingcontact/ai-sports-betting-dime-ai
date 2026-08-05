@@ -22,8 +22,14 @@ export default function SectionHeader({
         {title}
       </span>
       <div className="flex-1 h-px bg-border min-w-0" />
-      {meta && <span className="text-[11px] font-mono text-muted-foreground shrink-0">{meta}</span>}
-      {loading && <RefreshCw className="w-3 h-3 text-muted-foreground animate-spin shrink-0" />}
+      {meta && (
+        <span className="text-[11px] font-mono text-muted-foreground shrink-0">
+          {meta}
+        </span>
+      )}
+      {loading && (
+        <RefreshCw className="w-3 h-3 text-muted-foreground animate-spin shrink-0" />
+      )}
     </div>
   );
 }

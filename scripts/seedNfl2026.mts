@@ -12,7 +12,12 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { sql } from "drizzle-orm";
-import { nflGames, nflPlayers, nflTeams, nflVenues } from "../drizzle/nfl.schema.js";
+import {
+  nflGames,
+  nflPlayers,
+  nflTeams,
+  nflVenues,
+} from "../drizzle/nfl.schema.js";
 import { deriveKickoffDate } from "../shared/kickoffDate.js";
 import { getDb } from "../server/db.js";
 
@@ -22,7 +27,9 @@ const DIR = join(dirname(fileURLToPath(import.meta.url)), "data", "nfl-2026");
 
 const load = (f: string) => JSON.parse(readFileSync(join(DIR, f), "utf8"));
 const chunk = <T,>(arr: T[], n: number): T[][] =>
-  Array.from({ length: Math.ceil(arr.length / n) }, (_, i) => arr.slice(i * n, (i + 1) * n));
+  Array.from({ length: Math.ceil(arr.length / n) }, (_, i) =>
+    arr.slice(i * n, (i + 1) * n)
+  );
 
 async function main() {
   const venues = load("venues.json");
@@ -31,7 +38,7 @@ async function main() {
   const players = load("players.json");
   const manifest = load("manifest.json");
   console.log(
-    `${TAG}[INPUT] venues=${venues.length} teams=${teams.length} games=${games.length} players=${players.length}`,
+    `${TAG}[INPUT] venues=${venues.length} teams=${teams.length} games=${games.length} players=${players.length}`
   );
   if (
     venues.length !== manifest.counts.venues ||
@@ -39,7 +46,9 @@ async function main() {
     games.length !== manifest.counts.games ||
     players.length !== manifest.counts.players
   ) {
-    throw new Error(`${TAG} seed files disagree with manifest — refusing to load`);
+    throw new Error(
+      `${TAG} seed files disagree with manifest — refusing to load`
+    );
   }
   if (DRY_RUN) {
     console.log(`${TAG}[STEP] dry-run: inputs validated, skipping DB writes`);
@@ -146,7 +155,9 @@ async function main() {
   const [tc] = await db.select({ n: sql<number>`count(*)` }).from(nflTeams);
   const [gc] = await db.select({ n: sql<number>`count(*)` }).from(nflGames);
   const [pc] = await db.select({ n: sql<number>`count(*)` }).from(nflPlayers);
-  console.log(`${TAG}[VERIFY] db counts: venues=${vc.n} teams=${tc.n} games=${gc.n} players=${pc.n}`);
+  console.log(
+    `${TAG}[VERIFY] db counts: venues=${vc.n} teams=${tc.n} games=${gc.n} players=${pc.n}`
+  );
   if (
     Number(vc.n) < manifest.counts.venues ||
     Number(tc.n) < manifest.counts.teams ||
@@ -160,7 +171,7 @@ async function main() {
 
 main()
   .then(() => process.exit(0))
-  .catch((err) => {
+  .catch(err => {
     console.error(`${TAG}[ERROR]`, err);
     process.exit(1);
   });

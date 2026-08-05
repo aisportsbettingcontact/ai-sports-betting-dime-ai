@@ -10,20 +10,27 @@ import { getAnalyticsOverview } from "./read";
 const TAG = "[analytics][readRoute]";
 
 export function registerAnalyticsReadRoute(app: Express): void {
-  app.get("/api/internal/analytics/overview", async (req: Request, res: Response) => {
-    if (!isAnalyticsStore()) return res.status(404).json({ error: "not_found" });
-    const secret = getIngestSecret();
-    if (!secret || !secretsMatch(req.header("x-analytics-secret"), secret)) {
-      return res.status(401).json({ error: "unauthorized" });
+  app.get(
+    "/api/internal/analytics/overview",
+    async (req: Request, res: Response) => {
+      if (!isAnalyticsStore())
+        return res.status(404).json({ error: "not_found" });
+      const secret = getIngestSecret();
+      if (!secret || !secretsMatch(req.header("x-analytics-secret"), secret)) {
+        return res.status(401).json({ error: "unauthorized" });
+      }
+      try {
+        const overview = await getAnalyticsOverview();
+        return res.status(200).json(overview);
+      } catch (err) {
+        console.warn(`${TAG} failed: ${(err as Error).message}`);
+        return res.status(200).json({
+          state: "error",
+          reason: "overview failed",
+          asOf: Date.now(),
+          deviceMix: [],
+        });
+      }
     }
-    try {
-      const overview = await getAnalyticsOverview();
-      return res.status(200).json(overview);
-    } catch (err) {
-      console.warn(`${TAG} failed: ${(err as Error).message}`);
-      return res
-        .status(200)
-        .json({ state: "error", reason: "overview failed", asOf: Date.now(), deviceMix: [] });
-    }
-  });
+  );
 }

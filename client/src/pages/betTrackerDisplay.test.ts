@@ -54,7 +54,7 @@ describe("fmtDollar", () => {
 
   it("rounds half up at the cent", () => {
     expect(fmtDollar(0.005)).toBe("$0.01");
-    expect(fmtDollar(2.675)).toMatch(/^\$2\.6[78]$/);   // float repr, either is defensible
+    expect(fmtDollar(2.675)).toMatch(/^\$2\.6[78]$/); // float repr, either is defensible
   });
 });
 
@@ -78,7 +78,7 @@ describe("fmtUnits", () => {
     // A 0.02u stake is real — bet 450010 in production is exactly that. It
     // rounds for display, but the display must not imply a zero stake.
     expect(fmtUnits(0.02)).toBe("0.02u");
-    expect(fmtUnits(0.004)).toBe("0.00u");   // genuinely below display precision
+    expect(fmtUnits(0.004)).toBe("0.00u"); // genuinely below display precision
   });
 });
 
@@ -131,7 +131,7 @@ describe("calcToWin", () => {
 
   it("DIVERGENCE: the server has no zero-stake guard", () => {
     expect(calcToWin(-110, 0)).toBe(0);
-    expect(serverCalcToWin(-110, 0)).toBe(0);   // same answer, different route
+    expect(serverCalcToWin(-110, 0)).toBe(0); // same answer, different route
     // The client returns early; the server multiplies by zero. Equivalent here,
     // but the client also guards a NEGATIVE stake and the server does not.
     expect(calcToWin(-110, -5)).toBe(0);
@@ -139,8 +139,15 @@ describe("calcToWin", () => {
   });
 
   it("agrees with the server everywhere the extra precision does not matter", () => {
-    for (const [odds, risk] of [[150, 100], [-200, 100], [100, 50], [-400, 200]] as const) {
-      expect(calcToWin(odds, risk), `${odds} on ${risk}`).toBe(serverCalcToWin(odds, risk));
+    for (const [odds, risk] of [
+      [150, 100],
+      [-200, 100],
+      [100, 50],
+      [-400, 200],
+    ] as const) {
+      expect(calcToWin(odds, risk), `${odds} on ${risk}`).toBe(
+        serverCalcToWin(odds, risk)
+      );
     }
   });
 });
@@ -204,9 +211,12 @@ describe("today helpers", () => {
 
 describe("getPickOdds", () => {
   const odds: GameOdds = {
-    awayMl: { odds: 145 }, homeMl: { odds: -165 },
-    awayRl: { odds: -120, value: 1.5 }, homeRl: { odds: 100, value: -1.5 },
-    over: { odds: -105, value: 8.5 }, under: { odds: -115, value: 8.5 },
+    awayMl: { odds: 145 },
+    homeMl: { odds: -165 },
+    awayRl: { odds: -120, value: 1.5 },
+    homeRl: { odds: 100, value: -1.5 },
+    over: { odds: -105, value: 8.5 },
+    under: { odds: -115, value: 8.5 },
   };
 
   it("reads each market and side", () => {
@@ -239,8 +249,10 @@ describe("getPickOdds", () => {
 
 describe("getPickLine", () => {
   const odds: GameOdds = {
-    awayRl: { odds: -120, value: 1.5 }, homeRl: { odds: 100, value: -1.5 },
-    over: { odds: -105, value: 8.5 }, under: { odds: -115, value: 8.5 },
+    awayRl: { odds: -120, value: 1.5 },
+    homeRl: { odds: 100, value: -1.5 },
+    over: { odds: -105, value: 8.5 },
+    under: { odds: -115, value: 8.5 },
   };
 
   it("REGRESSION: returns the SIGNED run line, not its magnitude", () => {

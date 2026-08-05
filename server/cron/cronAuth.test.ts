@@ -58,7 +58,9 @@ describe("verifyCronSecret — fail closed", () => {
 });
 
 describe("verifyCronSecret — rejects bad credentials with 401", () => {
-  beforeEach(() => { process.env.CRON_SECRET = SECRET; });
+  beforeEach(() => {
+    process.env.CRON_SECRET = SECRET;
+  });
 
   it("rejects when no auth header is present", () => {
     const r = verifyCronSecret(headers({}));
@@ -87,7 +89,9 @@ describe("verifyCronSecret — rejects bad credentials with 401", () => {
 });
 
 describe("verifyCronSecret — accepts a valid secret", () => {
-  beforeEach(() => { process.env.CRON_SECRET = SECRET; });
+  beforeEach(() => {
+    process.env.CRON_SECRET = SECRET;
+  });
 
   it("accepts Authorization: Bearer <secret>", () => {
     const r = verifyCronSecret(headers({ authorization: `Bearer ${SECRET}` }));
@@ -100,7 +104,9 @@ describe("verifyCronSecret — accepts a valid secret", () => {
   });
 
   it("tolerates extra whitespace in the Bearer value", () => {
-    const r = verifyCronSecret(headers({ authorization: `Bearer   ${SECRET}` }));
+    const r = verifyCronSecret(
+      headers({ authorization: `Bearer   ${SECRET}` })
+    );
     expect(r.ok).toBe(true);
   });
 });

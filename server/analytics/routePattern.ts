@@ -20,11 +20,26 @@ export function toRoutePattern(pathname: string): string {
   const out: string[] = [];
   for (const seg of parts) {
     const prev = out[out.length - 1];
-    if (DATE_RE.test(seg)) { out.push(":date"); continue; }
-    if (SPORTS.has(seg.toLowerCase()) && (prev === "model" || prev === "betting-splits")) { out.push(":sport"); continue; }
-    if (prev === "team") { out.push(":slug"); continue; }
+    if (DATE_RE.test(seg)) {
+      out.push(":date");
+      continue;
+    }
+    if (
+      SPORTS.has(seg.toLowerCase()) &&
+      (prev === "model" || prev === "betting-splits")
+    ) {
+      out.push(":sport");
+      continue;
+    }
+    if (prev === "team") {
+      out.push(":slug");
+      continue;
+    }
     // Numeric ids, hex/opaque tokens, or any over-long segment ⇒ :id.
-    if (/^\d+$/.test(seg) || /^[0-9a-f]{12,}$/i.test(seg) || seg.length > 24) { out.push(":id"); continue; }
+    if (/^\d+$/.test(seg) || /^[0-9a-f]{12,}$/i.test(seg) || seg.length > 24) {
+      out.push(":id");
+      continue;
+    }
     out.push(seg);
   }
   return "/" + out.join("/");
@@ -34,7 +49,9 @@ export function toRoutePattern(pathname: string): string {
  * Sanitize a client-supplied route: null-safe, re-collapsed to a pattern, and
  * length-bounded to the store column (VARCHAR(96)). Returns null for missing.
  */
-export function sanitizeRoutePattern(route: string | null | undefined): string | null {
+export function sanitizeRoutePattern(
+  route: string | null | undefined
+): string | null {
   if (!route) return null;
   const pattern = toRoutePattern(route);
   return pattern.slice(0, 96);

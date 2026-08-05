@@ -19,7 +19,10 @@ const WRITE_APPROVALS = new Map([
   ["02-codeql.yml", new Set(["security-events"])],
   ["05-workflow-security.yml", new Set(["security-events"])],
   ["09-artifact-build-and-smoke.yml", new Set(["security-events"])],
-  ["11-artifact-attestation.yml", new Set(["id-token", "attestations", "packages"])],
+  [
+    "11-artifact-attestation.yml",
+    new Set(["id-token", "attestations", "packages"]),
+  ],
   ["12-nightly-verification.yml", new Set(["security-events", "id-token"])],
 ]);
 const PERMISSION_SCOPES = new Set([

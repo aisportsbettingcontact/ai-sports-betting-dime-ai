@@ -27,7 +27,11 @@ const LOCAL_DB = "mysql://root@127.0.0.1:3306/dime_test";
  * the value identical at runtime while leaving nothing in the source that
  * matches Stripe's key pattern.
  */
-function stripeKeyFixture(prefix: "sk" | "rk" | "pk", mode: "test" | "live", body = "0".repeat(24)): string {
+function stripeKeyFixture(
+  prefix: "sk" | "rk" | "pk",
+  mode: "test" | "live",
+  body = "0".repeat(24)
+): string {
   return [prefix, mode, body].join("_");
 }
 
@@ -42,7 +46,10 @@ const LEAKY_PASSWORD = ["sup3r", "s3cret"].join("");
  * credential segment produces an identical runtime string with nothing in the
  * source for a scanner to match.
  */
-function dsnFixture(hostAndPort: string, opts: { user?: string; password?: string; db?: string } = {}): string {
+function dsnFixture(
+  hostAndPort: string,
+  opts: { user?: string; password?: string; db?: string } = {}
+): string {
   const credentials = [opts.user ?? "u", opts.password ?? "p"].join(":");
   return `mysql://${credentials}@${hostAndPort}/${opts.db ?? "dime"}`;
 }
@@ -69,7 +76,11 @@ describe("isTestModeFulfillmentAllowed — the happy path is exactly one shape",
   });
 
   it("accepts a restricted TEST key (rk_test_) as well as a secret TEST key", () => {
-    expect(isTestModeFulfillmentAllowed(goodEnv({ STRIPE_SECRET_KEY: stripeKeyFixture("rk", "test", "abc123") })).allowed).toBe(true);
+    expect(
+      isTestModeFulfillmentAllowed(
+        goodEnv({ STRIPE_SECRET_KEY: stripeKeyFixture("rk", "test", "abc123") })
+      ).allowed
+    ).toBe(true);
   });
 
   it("reads process.env by default (no arg) and refuses in this secretless test run", () => {
@@ -80,9 +91,11 @@ describe("isTestModeFulfillmentAllowed — the happy path is exactly one shape",
   });
 });
 
-describe("condition (a) — the opt-in flag must be exactly \"1\"", () => {
+describe('condition (a) — the opt-in flag must be exactly "1"', () => {
   it("refuses when the flag is absent", () => {
-    const v = isTestModeFulfillmentAllowed(goodEnv({ ALLOW_TEST_MODE_FULFILLMENT: undefined }));
+    const v = isTestModeFulfillmentAllowed(
+      goodEnv({ ALLOW_TEST_MODE_FULFILLMENT: undefined })
+    );
     expect(v.allowed).toBe(false);
     expect(v.reason).toContain("ALLOW_TEST_MODE_FULFILLMENT");
     expect(v.reason).toContain("unset");
@@ -90,7 +103,9 @@ describe("condition (a) — the opt-in flag must be exactly \"1\"", () => {
 
   for (const flag of ["0", "true", "yes", "TRUE", "on", " 1", "1 ", ""]) {
     it(`refuses when the flag is ${JSON.stringify(flag)} — only the literal "1" counts`, () => {
-      const v = isTestModeFulfillmentAllowed(goodEnv({ ALLOW_TEST_MODE_FULFILLMENT: flag }));
+      const v = isTestModeFulfillmentAllowed(
+        goodEnv({ ALLOW_TEST_MODE_FULFILLMENT: flag })
+      );
       expect(v.allowed).toBe(false);
       expect(v.reason).toContain("ALLOW_TEST_MODE_FULFILLMENT");
     });
@@ -102,7 +117,9 @@ describe("condition (b) — a LIVE Stripe key can never unlock fulfilment", () =
   // operator clearly INTENDED a harness run — and it must still refuse, because
   // a live key means this process can reach live Stripe objects.
   it("refuses sk_live_ even with the flag set and a local database", () => {
-    const v = isTestModeFulfillmentAllowed(goodEnv({ STRIPE_SECRET_KEY: LIVE_KEY }));
+    const v = isTestModeFulfillmentAllowed(
+      goodEnv({ STRIPE_SECRET_KEY: LIVE_KEY })
+    );
     expect(v.allowed).toBe(false);
     expect(v.reason).toContain("STRIPE_SECRET_KEY");
     expect(v.reason).toMatch(/LIVE key/);
@@ -110,28 +127,40 @@ describe("condition (b) — a LIVE Stripe key can never unlock fulfilment", () =
   });
 
   it("refuses rk_live_ even with the flag set and a local database", () => {
-    const v = isTestModeFulfillmentAllowed(goodEnv({ STRIPE_SECRET_KEY: stripeKeyFixture("rk", "live", "abc123def456") }));
+    const v = isTestModeFulfillmentAllowed(
+      goodEnv({
+        STRIPE_SECRET_KEY: stripeKeyFixture("rk", "live", "abc123def456"),
+      })
+    );
     expect(v.allowed).toBe(false);
     expect(v.reason).toMatch(/LIVE key/);
     expect(v.reason).toContain("rk_live_");
   });
 
   it("never echoes the key material itself into the reason", () => {
-    const v = isTestModeFulfillmentAllowed(goodEnv({ STRIPE_SECRET_KEY: LIVE_KEY }));
+    const v = isTestModeFulfillmentAllowed(
+      goodEnv({ STRIPE_SECRET_KEY: LIVE_KEY })
+    );
     expect(v.reason).not.toContain(LIVE_KEY);
   });
 });
 
 describe("condition (b) — missing or malformed STRIPE_SECRET_KEY refuses", () => {
   it("refuses when the key is absent", () => {
-    const v = isTestModeFulfillmentAllowed(goodEnv({ STRIPE_SECRET_KEY: undefined }));
+    const v = isTestModeFulfillmentAllowed(
+      goodEnv({ STRIPE_SECRET_KEY: undefined })
+    );
     expect(v.allowed).toBe(false);
     expect(v.reason).toContain("STRIPE_SECRET_KEY is not set");
   });
 
   it("refuses when the key is empty or whitespace", () => {
-    expect(isTestModeFulfillmentAllowed(goodEnv({ STRIPE_SECRET_KEY: "" })).reason).toContain("not set");
-    expect(isTestModeFulfillmentAllowed(goodEnv({ STRIPE_SECRET_KEY: "   " })).reason).toContain("not set");
+    expect(
+      isTestModeFulfillmentAllowed(goodEnv({ STRIPE_SECRET_KEY: "" })).reason
+    ).toContain("not set");
+    expect(
+      isTestModeFulfillmentAllowed(goodEnv({ STRIPE_SECRET_KEY: "   " })).reason
+    ).toContain("not set");
   });
 
   for (const key of [
@@ -143,25 +172,44 @@ describe("condition (b) — missing or malformed STRIPE_SECRET_KEY refuses", () 
     "garbage",
   ]) {
     it(`refuses unrecognised key ${JSON.stringify(key)}`, () => {
-      const v = isTestModeFulfillmentAllowed(goodEnv({ STRIPE_SECRET_KEY: key }));
+      const v = isTestModeFulfillmentAllowed(
+        goodEnv({ STRIPE_SECRET_KEY: key })
+      );
       expect(v.allowed).toBe(false);
       expect(v.reason).toContain("STRIPE_SECRET_KEY");
     });
   }
 
   it("refuses a key that merely CONTAINS sk_test_ rather than starting with it", () => {
-    const v = isTestModeFulfillmentAllowed(goodEnv({ STRIPE_SECRET_KEY: `${stripeKeyFixture("sk", "live", "notreally")}_${stripeKeyFixture("sk", "test", "suffix")}` }));
+    const v = isTestModeFulfillmentAllowed(
+      goodEnv({
+        STRIPE_SECRET_KEY: `${stripeKeyFixture("sk", "live", "notreally")}_${stripeKeyFixture("sk", "test", "suffix")}`,
+      })
+    );
     expect(v.allowed).toBe(false);
   });
 });
 
 describe("condition (c) — production-shaped databases refuse even with a TEST key", () => {
   const productionish = [
-    dsnFixture("gateway01.us-west-2.prod.aws.tidbcloud.com:4000", { user: "user", password: "pw" }),
-    dsnFixture("dime.abcdef.us-east-1.rds.amazonaws.com:3306", { user: "user", password: "pw" }),
-    dsnFixture("containers-us-west-1.railway.app:6543", { user: "user", password: "pw", db: "railway" }),
+    dsnFixture("gateway01.us-west-2.prod.aws.tidbcloud.com:4000", {
+      user: "user",
+      password: "pw",
+    }),
+    dsnFixture("dime.abcdef.us-east-1.rds.amazonaws.com:3306", {
+      user: "user",
+      password: "pw",
+    }),
+    dsnFixture("containers-us-west-1.railway.app:6543", {
+      user: "user",
+      password: "pw",
+      db: "railway",
+    }),
     dsnFixture("db.prod.internal:3306", { user: "user", password: "pw" }),
-    dsnFixture("aws.connect.psdb.planetscale.com", { user: "user", password: "pw" }),
+    dsnFixture("aws.connect.psdb.planetscale.com", {
+      user: "user",
+      password: "pw",
+    }),
     dsnFixture("dime-db.onrender.com", { user: "user", password: "pw" }),
   ];
   for (const url of productionish) {
@@ -174,19 +222,25 @@ describe("condition (c) — production-shaped databases refuse even with a TEST 
   }
 
   it("refuses an unrecognised remote host — unknown is not evidence of safety", () => {
-    const v = isTestModeFulfillmentAllowed(goodEnv({ DATABASE_URL: dsnFixture("db.example.com:3306") }));
+    const v = isTestModeFulfillmentAllowed(
+      goodEnv({ DATABASE_URL: dsnFixture("db.example.com:3306") })
+    );
     expect(v.allowed).toBe(false);
     expect(v.reason).toContain("non-local");
   });
 
   it("refuses an unparseable DATABASE_URL", () => {
-    const v = isTestModeFulfillmentAllowed(goodEnv({ DATABASE_URL: "not a url at all" }));
+    const v = isTestModeFulfillmentAllowed(
+      goodEnv({ DATABASE_URL: "not a url at all" })
+    );
     expect(v.allowed).toBe(false);
     expect(v.reason).toContain("not a parseable URL");
   });
 
   it("refuses a missing DATABASE_URL — the write target would be unknown", () => {
-    const v = isTestModeFulfillmentAllowed(goodEnv({ DATABASE_URL: undefined }));
+    const v = isTestModeFulfillmentAllowed(
+      goodEnv({ DATABASE_URL: undefined })
+    );
     expect(v.allowed).toBe(false);
     expect(v.reason).toContain("DATABASE_URL is not set");
   });
@@ -212,7 +266,9 @@ describe("assessFulfillmentDatabaseUrl — host classification, tested directly"
 
   it("allows those same local hosts through the full gate", () => {
     for (const url of local) {
-      expect(isTestModeFulfillmentAllowed(goodEnv({ DATABASE_URL: url })).allowed).toBe(true);
+      expect(
+        isTestModeFulfillmentAllowed(goodEnv({ DATABASE_URL: url })).allowed
+      ).toBe(true);
     }
   });
 
@@ -224,13 +280,20 @@ describe("assessFulfillmentDatabaseUrl — host classification, tested directly"
   });
 
   it("reports the parsed host so a refusal is diagnosable", () => {
-    const v = assessFulfillmentDatabaseUrl(dsnFixture("gateway.tidbcloud.com:4000"));
+    const v = assessFulfillmentDatabaseUrl(
+      dsnFixture("gateway.tidbcloud.com:4000")
+    );
     expect(v.host).toBe("gateway.tidbcloud.com");
     expect(v.allowed).toBe(false);
   });
 
   it("does not leak the DSN password into the reason", () => {
-    const v = assessFulfillmentDatabaseUrl(dsnFixture("db.example.com:3306", { user: "user", password: LEAKY_PASSWORD }));
+    const v = assessFulfillmentDatabaseUrl(
+      dsnFixture("db.example.com:3306", {
+        user: "user",
+        password: LEAKY_PASSWORD,
+      })
+    );
     expect(v.reason).not.toContain(LEAKY_PASSWORD);
   });
 });

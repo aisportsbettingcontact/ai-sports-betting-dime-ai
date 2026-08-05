@@ -20,10 +20,8 @@ const buttonVariants = cva(
           "bg-destructive text-white focus-visible:ring-destructive dark:focus-visible:ring-destructive dark:bg-destructive hover:opacity-85",
         outline:
           "border bg-transparent shadow-xs hover:bg-secondary dark:bg-transparent dark:border-input",
-        secondary:
-          "bg-secondary text-secondary-foreground hover:opacity-85",
-        ghost:
-          "hover:bg-secondary",
+        secondary: "bg-secondary text-secondary-foreground hover:opacity-85",
+        ghost: "hover:bg-secondary",
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {

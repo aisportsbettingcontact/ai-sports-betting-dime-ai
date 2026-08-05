@@ -21,9 +21,12 @@ export const LANDING_MODE: "waitlist" | "paid" = "paid";
 
 export const HERO = {
   eyebrow: "Sports betting intelligence software",
-  headline: { before: "See where price and probability ", em: "disagree", after: "." },
-  sub:
-    "Dime AI compares sportsbook prices against projected probability, movement, volatility, matchup context, and risk flags so every market resolves to Pass, Monitor, or Edge Detected.",
+  headline: {
+    before: "See where price and probability ",
+    em: "disagree",
+    after: ".",
+  },
+  sub: "Dime AI compares sportsbook prices against projected probability, movement, volatility, matchup context, and risk flags so every market resolves to Pass, Monitor, or Edge Detected.",
   primaryCta: "Get access",
   secondaryCta: "Preview Dime Chat",
 } as const;
@@ -35,7 +38,6 @@ export const HERO = {
 
 /** The three verdicts every market resolves to. */
 export type MarketState = "edge" | "monitor" | "pass";
-
 
 // ─── Dime Chat demo (scripted, labeled DEMO) ─────────────────────────────────
 
@@ -57,8 +59,7 @@ export const CHAT_EXCHANGES: ChatExchange[] = [
     id: "teamc",
     chip: "Is Team C −4.5 playable?",
     user: "Is there anything on Team C −4.5 tonight?",
-    dime:
-      "Monitor. Dime projects Team C −4.5 at 55.8% against a 52.4% implied price, but recent movement and medium volatility reduce confidence. Evaluate the number if the price holds or improves; once it moves past fair value, Pass.",
+    dime: "Monitor. Dime projects Team C −4.5 at 55.8% against a 52.4% implied price, but recent movement and medium volatility reduce confidence. Evaluate the number if the price holds or improves; once it moves past fair value, Pass.",
     card: {
       classification: "Monitor",
       state: "monitor",
@@ -77,8 +78,7 @@ export const CHAT_EXCHANGES: ChatExchange[] = [
     id: "disagreement",
     chip: "Show me markets with price disagreement.",
     user: "Show me markets with price disagreement.",
-    dime:
-      "Two markets diverge from model price right now. Team A Moneyline sits at 58.9% projected against 53.5% implied, an Edge Detected read. Team C −4.5 shows 55.8% against 52.4%, a Monitor, with movement eating the number. The rest of the scanned slate prices within noise.",
+    dime: "Two markets diverge from model price right now. Team A Moneyline sits at 58.9% projected against 53.5% implied, an Edge Detected read. Team C −4.5 shows 55.8% against 52.4%, a Monitor, with movement eating the number. The rest of the scanned slate prices within noise.",
     card: {
       classification: "Edge Detected",
       state: "edge",
@@ -97,8 +97,7 @@ export const CHAT_EXCHANGES: ChatExchange[] = [
     id: "whypass",
     chip: "Why is this a Pass?",
     user: "Why is Team E Over 8.5 a Pass?",
-    dime:
-      "Because the market has it right. Dime projects the over at 49.6% against a 51.2% implied price, so the book's number beats the model's by 1.6 points. A gap that size sits inside the noise band and reads as no lean in either direction, under included. Pass means the math found nothing worth paying a price for.",
+    dime: "Because the market has it right. Dime projects the over at 49.6% against a 51.2% implied price, so the book's number beats the model's by 1.6 points. A gap that size sits inside the noise band and reads as no lean in either direction, under included. Pass means the math found nothing worth paying a price for.",
     card: {
       classification: "Pass",
       state: "pass",
@@ -117,8 +116,7 @@ export const CHAT_EXCHANGES: ChatExchange[] = [
     id: "totals",
     chip: "Scan today's MLB totals.",
     user: "Scan today's MLB totals.",
-    dime:
-      "Scan complete across the totals board. Most totals resolve to Pass, priced within the model's noise band. One Monitor: a divisional total is drifting toward fair value and turns interesting if it crosses. Zero Edge Detected classifications on totals right now, and I won't manufacture one.",
+    dime: "Scan complete across the totals board. Most totals resolve to Pass, priced within the model's noise band. One Monitor: a divisional total is drifting toward fair value and turns interesting if it crosses. Zero Edge Detected classifications on totals right now, and I won't manufacture one.",
     card: {
       classification: "Scan Summary",
       state: "monitor",
@@ -136,8 +134,7 @@ export const CHAT_EXCHANGES: ChatExchange[] = [
     id: "nohype",
     chip: "Explain the edge without hype.",
     user: "Explain the Team A edge without hype.",
-    dime:
-      "The book charges −115, which implies 53.5%. Four hundred thousand simulations of this matchup put Team A at 58.9%, which prices to −143. The 5.4-point gap is the edge, and it is an estimate. Confidence is 74/100 with medium volatility, so the classification is Edge Detected with a note to monitor the number before close.",
+    dime: "The book charges −115, which implies 53.5%. Four hundred thousand simulations of this matchup put Team A at 58.9%, which prices to −143. The 5.4-point gap is the edge, and it is an estimate. Confidence is 74/100 with medium volatility, so the classification is Edge Detected with a note to monitor the number before close.",
     card: {
       classification: "Edge Detected",
       state: "edge",
@@ -164,9 +161,12 @@ export const CHAT_SIDE = {
 
 export const PROBLEM = {
   eyebrow: "The problem",
-  headline: { before: "Data everywhere. ", em: "No decision system", after: "." },
-  sub:
-    "Odds screens, injury feeds, weather apps, line-move alerts, three group chats and a gut feeling: you have more information than ever and no structured way to turn it into a decision.",
+  headline: {
+    before: "Data everywhere. ",
+    em: "No decision system",
+    after: ".",
+  },
+  sub: "Odds screens, injury feeds, weather apps, line-move alerts, three group chats and a gut feeling: you have more information than ever and no structured way to turn it into a decision.",
   items: [
     {
       title: "Fragmented inputs",
@@ -230,14 +230,79 @@ export interface SignalRow {
 }
 
 export const SIGNAL_ROWS: SignalRow[] = [
-  { id: "s1", market: "Team A ML", sport: "MLB", price: "−115", implied: "53.5%", projection: "58.9%", edge: "+5.4%", state: "edge", stateLabel: "Edge Detected", filters: ["MLB"] },
-  { id: "s2", market: "Team C −4.5", sport: "NBA", price: "−110", implied: "52.4%", projection: "55.8%", edge: "+3.4%", state: "monitor", stateLabel: "Monitor", filters: ["NBA", "Spreads"] },
-  { id: "s3", market: "Team E Over 8.5", sport: "MLB", price: "−105", implied: "51.2%", projection: "49.6%", edge: "−1.6%", state: "pass", stateLabel: "Pass", filters: ["MLB", "Totals"] },
-  { id: "s4", market: "Player Prop Volatility Scan", sport: "MLB", price: "···", implied: "···", projection: "···", edge: "···", state: "locked", stateLabel: "Locked", lockedTier: "Sharp", filters: ["Props", "MLB"] },
-  { id: "s5", market: "Full Slate Simulation", sport: "All", price: "···", implied: "···", projection: "···", edge: "···", state: "locked", stateLabel: "Locked", lockedTier: "Operator", filters: [] },
+  {
+    id: "s1",
+    market: "Team A ML",
+    sport: "MLB",
+    price: "−115",
+    implied: "53.5%",
+    projection: "58.9%",
+    edge: "+5.4%",
+    state: "edge",
+    stateLabel: "Edge Detected",
+    filters: ["MLB"],
+  },
+  {
+    id: "s2",
+    market: "Team C −4.5",
+    sport: "NBA",
+    price: "−110",
+    implied: "52.4%",
+    projection: "55.8%",
+    edge: "+3.4%",
+    state: "monitor",
+    stateLabel: "Monitor",
+    filters: ["NBA", "Spreads"],
+  },
+  {
+    id: "s3",
+    market: "Team E Over 8.5",
+    sport: "MLB",
+    price: "−105",
+    implied: "51.2%",
+    projection: "49.6%",
+    edge: "−1.6%",
+    state: "pass",
+    stateLabel: "Pass",
+    filters: ["MLB", "Totals"],
+  },
+  {
+    id: "s4",
+    market: "Player Prop Volatility Scan",
+    sport: "MLB",
+    price: "···",
+    implied: "···",
+    projection: "···",
+    edge: "···",
+    state: "locked",
+    stateLabel: "Locked",
+    lockedTier: "Sharp",
+    filters: ["Props", "MLB"],
+  },
+  {
+    id: "s5",
+    market: "Full Slate Simulation",
+    sport: "All",
+    price: "···",
+    implied: "···",
+    projection: "···",
+    edge: "···",
+    state: "locked",
+    stateLabel: "Locked",
+    lockedTier: "Operator",
+    filters: [],
+  },
 ];
 
-export const SIGNAL_FILTERS = ["All", "MLB", "NBA", "Soccer", "Spreads", "Totals", "Props"] as const;
+export const SIGNAL_FILTERS = [
+  "All",
+  "MLB",
+  "NBA",
+  "Soccer",
+  "Spreads",
+  "Totals",
+  "Props",
+] as const;
 
 // ─── Feature grid ─────────────────────────────────────────────────────────────
 
@@ -245,12 +310,30 @@ export const FEATURES = {
   eyebrow: "What you get",
   headline: { before: "The engine, ", em: "itemized", after: "." },
   items: [
-    { title: "400,000 simulations per game", copy: "A Monte Carlo engine plays each matchup inning by inning and produces 55+ outputs per game." },
-    { title: "Full projections board", copy: "Moneyline, run line, totals, F5, NRFI, K props and HR props, each priced book vs model." },
-    { title: "Dime Chat", copy: "Interrogate any number on the slate. Answers trace back to tables the model wrote, and 124 enforcement tests stand between the engine and a made-up number." },
-    { title: "Graded against the close", copy: "Odds freeze at first pitch, and the engine Brier-scores every projection against the close after the final out." },
-    { title: "Honest PASS verdicts", copy: "No edge means a grey card that costs you nothing. Most days the board shows more grey than mint." },
-    { title: "Live 24/7 pipeline", copy: "The pipeline refreshes odds, lineups, park factors, umpires and weather around the clock. MLB today, World Cup 2026 next." },
+    {
+      title: "400,000 simulations per game",
+      copy: "A Monte Carlo engine plays each matchup inning by inning and produces 55+ outputs per game.",
+    },
+    {
+      title: "Full projections board",
+      copy: "Moneyline, run line, totals, F5, NRFI, K props and HR props, each priced book vs model.",
+    },
+    {
+      title: "Dime Chat",
+      copy: "Interrogate any number on the slate. Answers trace back to tables the model wrote, and 124 enforcement tests stand between the engine and a made-up number.",
+    },
+    {
+      title: "Graded against the close",
+      copy: "Odds freeze at first pitch, and the engine Brier-scores every projection against the close after the final out.",
+    },
+    {
+      title: "Honest PASS verdicts",
+      copy: "No edge means a grey card that costs you nothing. Most days the board shows more grey than mint.",
+    },
+    {
+      title: "Live 24/7 pipeline",
+      copy: "The pipeline refreshes odds, lineups, park factors, umpires and weather around the clock. MLB today, World Cup 2026 next.",
+    },
   ],
 } as const;
 
@@ -258,7 +341,8 @@ export const FEATURES = {
 
 export const TRUST = {
   eyebrow: "Methodology",
-  moduleHeadline: "A system that passes is more valuable than a system that screams.",
+  moduleHeadline:
+    "A system that passes is more valuable than a system that screams.",
   moduleCopy:
     "The books price most markets efficiently. We built Dime to separate signal from noise.",
   principles: [
@@ -286,7 +370,10 @@ export interface Tier {
   features: string[];
   cta: { paid: string; waitlist: string };
   /** Real destination — never a placeholder. */
-  action: { type: "checkout"; plan: CheckoutPlanId } | { type: "scroll"; target: string } | { type: "apply" };
+  action:
+    | { type: "checkout"; plan: CheckoutPlanId }
+    | { type: "scroll"; target: string }
+    | { type: "apply" };
 }
 
 export const TIERS: Tier[] = [
@@ -367,9 +454,12 @@ export const PRICING_HEAD = {
 
 export const CONTROLLED_ACCESS = {
   eyebrow: "Controlled access",
-  headline: { before: "Founder seats go through ", em: "review", after: ", one application at a time." },
-  copy:
-    "Dime is a small, serious tool built by one operator. Founder access runs on applications so the earliest cohort shapes the product, and the queue is short because one person reads it.",
+  headline: {
+    before: "Founder seats go through ",
+    em: "review",
+    after: ", one application at a time.",
+  },
+  copy: "Dime is a small, serious tool built by one operator. Founder access runs on applications so the earliest cohort shapes the product, and the queue is short because one person reads it.",
   formTitle: "Apply for Founder access",
   fields: { name: "Full name", email: "Email" },
   submit: "Submit application",
@@ -380,7 +470,11 @@ export const CONTROLLED_ACCESS = {
 
 export const OBJECTIONS = {
   eyebrow: "Straight answers",
-  headline: { before: "The questions you ", em: "should", after: " be asking." },
+  headline: {
+    before: "The questions you ",
+    em: "should",
+    after: " be asking.",
+  },
   sub: "You're about to pay for numbers that touch your bankroll. These are the questions we'd ask before subscribing, answered without the sales voice.",
   items: [
     {

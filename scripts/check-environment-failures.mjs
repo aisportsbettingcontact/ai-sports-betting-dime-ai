@@ -81,7 +81,7 @@ export function evaluateResults({
   }
 
   const entries = allowlist.entries ?? [];
-  const entryById = new Map(entries.map((entry) => [entry.id, entry]));
+  const entryById = new Map(entries.map(entry => [entry.id, entry]));
   const expectedCiSkips = allowlist.expectedCiSkips ?? [];
   const problems = [];
 
@@ -99,7 +99,7 @@ export function evaluateResults({
     results.success === false &&
     problems.length === 0 &&
     failed === 0 &&
-    ![...statusById.values()].some((s) => s === "failed")
+    ![...statusById.values()].some(s => s === "failed")
   ) {
     problems.push({
       kind: "unaccounted-failure",
@@ -121,15 +121,16 @@ export function evaluateResults({
    * "or" as "and", and the noise trained people to ignore a FAIL line from the
    * one check that catches real regressions.
    */
-  const missingEnv = (entry) => {
-    const missingAll = (entry.requiredEnv ?? []).filter((name) => !env[name]);
+  const missingEnv = entry => {
+    const missingAll = (entry.requiredEnv ?? []).filter(name => !env[name]);
     const anyOf = entry.requiredEnvAnyOf ?? [];
-    const anyOfSatisfied = anyOf.length === 0 || anyOf.some((name) => !!env[name]);
+    const anyOfSatisfied =
+      anyOf.length === 0 || anyOf.some(name => !!env[name]);
     return anyOfSatisfied ? missingAll : [...missingAll, ...anyOf];
   };
 
   /** Every variable an entry declares, in either mode. */
-  const declaredEnv = (entry) => [
+  const declaredEnv = entry => [
     ...(entry.requiredEnv ?? []),
     ...(entry.requiredEnvAnyOf ?? []),
   ];
@@ -189,7 +190,7 @@ export function evaluateResults({
       } else if (SKIPPED_STATUSES.has(status)) {
         const file = fileByById.get(id);
         const declared = expectedCiSkips.some(
-          (skip) => skip.file === file || skip.id === id
+          skip => skip.file === file || skip.id === id
         );
         if (!declared) {
           problems.push({
@@ -206,7 +207,7 @@ export function evaluateResults({
   }
 
   const environmentBound = entries.filter(
-    (entry) => statusById.get(entry.id) === "failed"
+    entry => statusById.get(entry.id) === "failed"
   ).length;
 
   return {
@@ -217,7 +218,7 @@ export function evaluateResults({
       passed,
       failed,
       skipped,
-      notExecuted: entries.filter((e) => !statusById.has(e.id)).length,
+      notExecuted: entries.filter(e => !statusById.has(e.id)).length,
       environmentBound,
     },
   };
@@ -247,7 +248,10 @@ function main() {
     results = JSON.parse(readFileSync(input, "utf8"));
     allowlist = JSON.parse(
       readFileSync(
-        new URL("../vitest.environment-failure-allowlist.json", import.meta.url),
+        new URL(
+          "../vitest.environment-failure-allowlist.json",
+          import.meta.url
+        ),
         "utf8"
       )
     );
@@ -273,12 +277,17 @@ function main() {
     `[env-gate] profile=${evaluation.profile} passed=${summary.passed} failed=${summary.failed} skipped=${summary.skipped} notExecuted=${summary.notExecuted} environmentBound=${summary.environmentBound}`
   );
   for (const problem of evaluation.problems) {
-    console.error(`[env-gate] ${problem.kind}: ${problem.testId} — ${problem.detail}`);
+    console.error(
+      `[env-gate] ${problem.kind}: ${problem.testId} — ${problem.detail}`
+    );
   }
   console.log(evaluation.ok ? "[env-gate] PASS" : "[env-gate] FAIL");
   process.exit(evaluation.ok ? 0 : 1);
 }
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
+if (
+  process.argv[1] &&
+  fileURLToPath(import.meta.url) === path.resolve(process.argv[1])
+) {
   main();
 }

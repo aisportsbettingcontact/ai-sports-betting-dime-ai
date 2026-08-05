@@ -24,9 +24,9 @@ const REPO = resolve(__dirname, "..");
 const negations = new Set(
   readFileSync(join(REPO, ".dockerignore"), "utf8")
     .split("\n")
-    .map((l) => l.trim())
-    .filter((l) => l.startsWith("!"))
-    .map((l) => l.slice(1)),
+    .map(l => l.trim())
+    .filter(l => l.startsWith("!"))
+    .map(l => l.slice(1))
 );
 
 /** Bundled-at-build-time source roots (esbuild entry graph lives under these). */
@@ -44,7 +44,8 @@ function* sourceFiles(dir: string): Generator<string> {
   }
 }
 
-const IMPORT_RE = /(?:from\s+|require\(\s*|import\(\s*)["']((?:\.\.\/)+scripts\/[^"']+)["']/g;
+const IMPORT_RE =
+  /(?:from\s+|require\(\s*|import\(\s*)["']((?:\.\.\/)+scripts\/[^"']+)["']/g;
 
 describe("Docker build context covers all bundled imports", () => {
   it("every server-bundle import into root scripts/ is negated in .dockerignore", () => {
@@ -67,7 +68,7 @@ describe("Docker build context covers all bundled imports", () => {
       missing,
       "These build-time imports resolve to files excluded from the Docker " +
         "context by `scripts/**` — the Railway image build will fail with " +
-        "esbuild 'Could not resolve'. Add a `!<path>` negation to .dockerignore.",
+        "esbuild 'Could not resolve'. Add a `!<path>` negation to .dockerignore."
     ).toEqual([]);
   });
 

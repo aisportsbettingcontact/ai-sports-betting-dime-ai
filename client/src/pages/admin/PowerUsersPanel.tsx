@@ -100,7 +100,9 @@ export default function PowerUsersPanel({
       {/* Not measured — honest state with the exact reason. */}
       {notOk ? (
         <div className="border border-border rounded-md px-4 py-6 text-center">
-          <div className="text-sm font-semibold text-muted-foreground">Not measured</div>
+          <div className="text-sm font-semibold text-muted-foreground">
+            Not measured
+          </div>
           <div className="text-xs sm:text-sm text-muted-foreground mt-1 max-w-md mx-auto leading-snug">
             {data!.reason ?? "The profiling pipeline has produced no data yet."}
           </div>
@@ -117,9 +119,19 @@ export default function PowerUsersPanel({
         <>
           {/* 1) Score-distribution histogram — five mint bars (single accent). */}
           <div>
-            <ChartContainer config={HISTOGRAM_CONFIG} className="h-[240px] sm:h-[260px] w-full">
-              <BarChart data={buckets} margin={{ top: 16, right: 8, bottom: 4, left: 8 }}>
-                <CartesianGrid vertical={false} stroke={GRID_COLOR} strokeOpacity={0.5} />
+            <ChartContainer
+              config={HISTOGRAM_CONFIG}
+              className="h-[240px] sm:h-[260px] w-full"
+            >
+              <BarChart
+                data={buckets}
+                margin={{ top: 16, right: 8, bottom: 4, left: 8 }}
+              >
+                <CartesianGrid
+                  vertical={false}
+                  stroke={GRID_COLOR}
+                  strokeOpacity={0.5}
+                />
                 <XAxis
                   dataKey="bucket"
                   tick={AXIS_TICK}
@@ -128,9 +140,22 @@ export default function PowerUsersPanel({
                   stroke={GRID_COLOR}
                 />
                 <YAxis hide allowDecimals={false} />
-                <ChartTooltip content={<ChartTooltipContent />} cursor={{ fill: mintAlpha(0.06) }} />
-                <Bar dataKey="count" fill={SIGNAL_SERIES} radius={[4, 4, 0, 0]} {...chartAnim(reduced)}>
-                  <LabelList dataKey="count" position="top" className="fill-foreground" fontSize={LABEL_FONT} />
+                <ChartTooltip
+                  content={<ChartTooltipContent />}
+                  cursor={{ fill: mintAlpha(0.06) }}
+                />
+                <Bar
+                  dataKey="count"
+                  fill={SIGNAL_SERIES}
+                  radius={[4, 4, 0, 0]}
+                  {...chartAnim(reduced)}
+                >
+                  <LabelList
+                    dataKey="count"
+                    position="top"
+                    className="fill-foreground"
+                    fontSize={LABEL_FONT}
+                  />
                 </Bar>
               </BarChart>
             </ChartContainer>
@@ -197,7 +222,9 @@ export default function PowerUsersPanel({
                       <span className="block w-16 h-1.5 rounded-full bg-muted overflow-hidden">
                         <span
                           className="block h-1.5 bg-primary rounded-full transition-all duration-150"
-                          style={{ width: `${Math.max(0, Math.min(100, u.score))}%` }}
+                          style={{
+                            width: `${Math.max(0, Math.min(100, u.score))}%`,
+                          }}
                         />
                       </span>
                     </span>

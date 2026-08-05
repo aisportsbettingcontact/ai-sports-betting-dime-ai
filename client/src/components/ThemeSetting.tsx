@@ -46,7 +46,11 @@ export function ThemeSetting({ className }: { className?: string }) {
             data-resolved={resolved ? "" : undefined}
             onClick={() => setMode?.(m)}
           >
-            <Icon size={16} aria-hidden="true" strokeWidth={active ? 2.2 : 1.8} />
+            <Icon
+              size={16}
+              aria-hidden="true"
+              strokeWidth={active ? 2.2 : 1.8}
+            />
             <span>{label}</span>
           </button>
         );

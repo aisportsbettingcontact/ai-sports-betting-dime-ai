@@ -34,19 +34,47 @@
  */
 export const APP_USER_DEPENDENT_TABLES = [
   { table: "tracked_bets", column: "userId", label: "tracked bets" },
-  { table: "bet_edit_requests", column: "requestedBy", label: "edit requests raised" },
-  { table: "bet_edit_requests", column: "reviewedBy", label: "edit requests reviewed" },
+  {
+    table: "bet_edit_requests",
+    column: "requestedBy",
+    label: "edit requests raised",
+  },
+  {
+    table: "bet_edit_requests",
+    column: "reviewedBy",
+    label: "edit requests reviewed",
+  },
   { table: "user_sessions", column: "userId", label: "login sessions" },
-  { table: "user_favorite_games", column: "appUserId", label: "favourite games" },
+  {
+    table: "user_favorite_games",
+    column: "appUserId",
+    label: "favourite games",
+  },
   { table: "dime_chat_threads", column: "userId", label: "chat threads" },
   { table: "dime_chat_turns", column: "userId", label: "chat turns" },
   { table: "dime_chat_sessions", column: "userId", label: "chat sessions" },
-  { table: "dime_chat_generations", column: "userId", label: "chat generations" },
+  {
+    table: "dime_chat_generations",
+    column: "userId",
+    label: "chat generations",
+  },
   { table: "checkout_sessions", column: "userId", label: "checkout sessions" },
   { table: "payment_events", column: "userId", label: "payment events" },
-  { table: "entitlement_events", column: "userId", label: "entitlement events" },
-  { table: "discord_invite_tokens", column: "createdBy", label: "discord invites created" },
-  { table: "discord_invite_tokens", column: "targetUserId", label: "discord invites received" },
+  {
+    table: "entitlement_events",
+    column: "userId",
+    label: "entitlement events",
+  },
+  {
+    table: "discord_invite_tokens",
+    column: "createdBy",
+    label: "discord invites created",
+  },
+  {
+    table: "discord_invite_tokens",
+    column: "targetUserId",
+    label: "discord invites received",
+  },
   { table: "waitlist", column: "reviewedBy", label: "waitlist reviews" },
 ] as const;
 
@@ -61,7 +89,7 @@ export type DependentCounts = Record<string, number>;
  */
 export function describeDeletionBlock(
   userId: number,
-  counts: DependentCounts,
+  counts: DependentCounts
 ): string | null {
   const held = Object.entries(counts)
     .filter(([, n]) => n > 0)

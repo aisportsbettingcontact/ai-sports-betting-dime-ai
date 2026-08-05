@@ -21,7 +21,9 @@ describe("cfb-2026 seed data integrity", () => {
     expect(new Set(players.map((p: any) => p.athleteId)).size).toBe(14933);
   });
   it("per-week game counts equal the verified vector", () => {
-    const vector = [8, 91, 86, 75, 71, 59, 58, 62, 56, 56, 63, 67, 70, 69, 10, 1];
+    const vector = [
+      8, 91, 86, 75, 71, 59, 58, 62, 56, 56, 63, 67, 70, 69, 10, 1,
+    ];
     const byWeek = new Map<number, number>();
     for (const g of games) byWeek.set(g.week, (byWeek.get(g.week) ?? 0) + 1);
     expect(vector.map((_, w) => byWeek.get(w) ?? 0)).toEqual(vector);

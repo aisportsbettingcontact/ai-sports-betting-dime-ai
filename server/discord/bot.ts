@@ -107,7 +107,10 @@ let unreadySince: number | null = null;
 
 /** Exponential backoff with jitter, capped. */
 export function calcBackoffMs(failures: number): number {
-  const base = Math.min(BASE_BACKOFF_MS * 2 ** Math.max(0, failures - 1), MAX_BACKOFF_MS);
+  const base = Math.min(
+    BASE_BACKOFF_MS * 2 ** Math.max(0, failures - 1),
+    MAX_BACKOFF_MS
+  );
   const jitter = base * JITTER_FACTOR * (Math.random() * 2 - 1);
   return Math.max(1_000, Math.round(base + jitter));
 }
@@ -153,7 +156,9 @@ function teardownClient(reason: string): void {
     console.log(`[DiscordBot] [STEP] Destroyed previous client (${reason})`);
   } catch (err) {
     // Destroying a half-dead client can throw; that must not abort the rebuild.
-    console.warn(`[DiscordBot] [WARN] Error destroying client (${reason}): ${(err as Error)?.message ?? err}`);
+    console.warn(
+      `[DiscordBot] [WARN] Error destroying client (${reason}): ${(err as Error)?.message ?? err}`
+    );
   }
 }
 
@@ -167,12 +172,14 @@ async function connect(): Promise<void> {
   teardownClient("rebuilding");
 
   const attemptNo = consecutiveFailures + 1;
-  console.log(`[DiscordBot] [STEP] Connecting (attempt ${attemptNo}, unbounded) at ${new Date().toISOString()}`);
+  console.log(
+    `[DiscordBot] [STEP] Connecting (attempt ${attemptNo}, unbounded) at ${new Date().toISOString()}`
+  );
 
   const client = new Client({ intents: [GatewayIntentBits.Guilds] });
   botClient = client;
 
-  client.on(Events.ClientReady, (ready) => {
+  client.on(Events.ClientReady, ready => {
     consecutiveFailures = 0;
     unreadySince = null;
     totalConnects += 1;
@@ -188,7 +195,9 @@ async function connect(): Promise<void> {
     const code = closeEvent.code;
     lastFailureAt = Date.now();
     lastFailureReason = `shard ${shardId} closed with code ${code}`;
-    console.warn(`[DiscordBot] [STATE] Shard ${shardId} disconnected — close code ${code}`);
+    console.warn(
+      `[DiscordBot] [STATE] Shard ${shardId} disconnected — close code ${code}`
+    );
 
     if (CONFIG_FAULT_CLOSE_CODES.has(code)) {
       consecutiveFailures += 1;
@@ -205,10 +214,12 @@ async function connect(): Promise<void> {
     // Transient close: discord.js drives its own resume. Nothing is scheduled
     // here — doing so would race discord.js's own reconnect. The watchdog is
     // the backstop if that resume never completes.
-    console.log(`[DiscordBot] [STEP] Transient close (${code}) — discord.js will resume; watchdog is the backstop.`);
+    console.log(
+      `[DiscordBot] [STEP] Transient close (${code}) — discord.js will resume; watchdog is the backstop.`
+    );
   });
 
-  client.on(Events.Error, (err) => {
+  client.on(Events.Error, err => {
     lastFailureAt = Date.now();
     lastFailureReason = err.message;
     console.error(`[DiscordBot] [FAIL] Client error: ${err.message}`);
@@ -221,11 +232,16 @@ async function connect(): Promise<void> {
     consecutiveFailures += 1;
     lastFailureAt = Date.now();
     lastFailureReason = msg;
-    console.error(`[DiscordBot] [FAIL] Login attempt ${attemptNo} failed: ${msg}`);
+    console.error(
+      `[DiscordBot] [FAIL] Login attempt ${attemptNo} failed: ${msg}`
+    );
 
     const isAuth = /TOKEN_INVALID|invalid token|401|unauthorized/i.test(msg);
     teardownClient("login failed");
-    scheduleReconnect(isAuth ? AUTH_RETRY_MS : calcBackoffMs(consecutiveFailures), isAuth ? "auth" : "login_error");
+    scheduleReconnect(
+      isAuth ? AUTH_RETRY_MS : calcBackoffMs(consecutiveFailures),
+      isAuth ? "auth" : "login_error"
+    );
   }
 }
 
@@ -251,7 +267,9 @@ function startWatchdog(): void {
     // clock, which is precisely how this livelocked.
     const status = botClient?.ws.status;
     if (status != null && TRANSITIONAL_STATUSES.has(status)) {
-      console.log(`[DiscordBot] [WATCHDOG] handshake in progress (status=${status}) — not interfering`);
+      console.log(
+        `[DiscordBot] [WATCHDOG] handshake in progress (status=${status}) — not interfering`
+      );
       return;
     }
 
@@ -282,18 +300,24 @@ function startWatchdog(): void {
 
 export function startDiscordBot(): void {
   if (!ENV.discordBotToken) {
-    console.warn("[DiscordBot] [WARN] DISCORD_BOT_TOKEN not set — bot will not start");
+    console.warn(
+      "[DiscordBot] [WARN] DISCORD_BOT_TOKEN not set — bot will not start"
+    );
     return;
   }
   if (supervising) {
-    console.warn("[DiscordBot] [WARN] startDiscordBot() called more than once — ignoring duplicate call");
+    console.warn(
+      "[DiscordBot] [WARN] startDiscordBot() called more than once — ignoring duplicate call"
+    );
     return;
   }
   supervising = true;
   shuttingDown = false;
   consecutiveFailures = 0;
 
-  console.log(`[DiscordBot] [STEP] Supervisor starting at ${new Date().toISOString()}`);
+  console.log(
+    `[DiscordBot] [STEP] Supervisor starting at ${new Date().toISOString()}`
+  );
   void connect();
   startWatchdog();
 
@@ -304,7 +328,9 @@ export function startDiscordBot(): void {
     if (watchdogTimer) clearInterval(watchdogTimer);
     retryTimer = null;
     watchdogTimer = null;
-    console.log("[DiscordBot] [STEP] Shutting down — destroying Discord client...");
+    console.log(
+      "[DiscordBot] [STEP] Shutting down — destroying Discord client..."
+    );
     teardownClient("process shutdown");
   };
   process.once("SIGTERM", shutdown);

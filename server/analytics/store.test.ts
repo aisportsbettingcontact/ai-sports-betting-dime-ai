@@ -11,7 +11,9 @@ import { ensureAnalyticsSchema, insertAnalyticsEvent } from "./store";
  */
 describe("store guards — never write analytics to a non-store DB", () => {
   it("ensureAnalyticsSchema refuses when not in store role", async () => {
-    await expect(ensureAnalyticsSchema()).rejects.toThrow(/not the analytics store/);
+    await expect(ensureAnalyticsSchema()).rejects.toThrow(
+      /not the analytics store/
+    );
   });
 
   it("insertAnalyticsEvent refuses when not in store role", async () => {
@@ -24,18 +26,32 @@ describe("store guards — never write analytics to a non-store DB", () => {
         surface: "web",
         occurredAtUtc: 1,
         environment: "test",
-      }),
+      })
     ).rejects.toThrow(/not the analytics store/);
   });
 });
 
 const src = fs.readFileSync(path.join(import.meta.dirname, "store.ts"), "utf8");
 describe("store schema carries the device/route columns", () => {
-  for (const col of ["device_type","os_family","browser_family","app_surface","viewport_class","orientation","is_touch","is_standalone","connection_class","route","action_name"]) {
+  for (const col of [
+    "device_type",
+    "os_family",
+    "browser_family",
+    "app_surface",
+    "viewport_class",
+    "orientation",
+    "is_touch",
+    "is_standalone",
+    "connection_class",
+    "route",
+    "action_name",
+  ]) {
     it(`DDL declares ${col}`, () => expect(src).toContain(col));
   }
   it("INSERT lists device_type and route", () => {
-    expect(src).toMatch(/INSERT IGNORE INTO analytics_events[\s\S]*device_type[\s\S]*route/);
+    expect(src).toMatch(
+      /INSERT IGNORE INTO analytics_events[\s\S]*device_type[\s\S]*route/
+    );
   });
   it("indexes device_type and route for slicing", () => {
     expect(src).toContain("idx_device_time");

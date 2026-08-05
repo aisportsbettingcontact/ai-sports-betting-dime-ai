@@ -20,7 +20,12 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { settleParlay, calcParlayToWin, combineLegOdds, type ParlayLeg } from "./parlayCore";
+import {
+  settleParlay,
+  calcParlayToWin,
+  combineLegOdds,
+  type ParlayLeg,
+} from "./parlayCore";
 import type { BetResult } from "./betTrackerCore";
 
 const code = (p: string) =>
@@ -32,9 +37,17 @@ const grader = code("parlayGrader.ts");
 const router = code("routers/betTracker.ts");
 
 const leg = (i: number, result: BetResult, odds = -110): ParlayLeg => ({
-  legIndex: i, sport: "MLB", gameDate: "2026-08-04",
-  awayTeam: "NYY", homeTeam: "BOS", market: "ML", pickSide: "AWAY",
-  timeframe: "FULL_GAME", odds, line: null, result,
+  legIndex: i,
+  sport: "MLB",
+  gameDate: "2026-08-04",
+  awayTeam: "NYY",
+  homeTeam: "BOS",
+  market: "ML",
+  pickSide: "AWAY",
+  timeframe: "FULL_GAME",
+  odds,
+  line: null,
+  result,
 });
 
 describe("a boosted payout survives settlement", () => {
@@ -49,14 +62,18 @@ describe("a boosted payout survives settlement", () => {
   });
 
   it("REGRESSION: settlement only recomputes the payout when the price moved", () => {
-    expect(grader).toMatch(/const priceMoved = settlement\.odds != null && settlement\.odds !== ticket\.odds/);
+    expect(grader).toMatch(
+      /const priceMoved = settlement\.odds != null && settlement\.odds !== ticket\.odds/
+    );
     expect(grader).toMatch(/if \(priceMoved\) \{/);
   });
 
   it("the odds column is still written even when the payout is not", () => {
     // A ticket settling from PENDING still needs its odds persisted; only the
     // PAYOUT is protected.
-    expect(grader).toMatch(/if \(settlement\.odds != null\) patch\.odds = settlement\.odds;/);
+    expect(grader).toMatch(
+      /if \(settlement\.odds != null\) patch\.odds = settlement\.odds;/
+    );
   });
 
   it("a dropped leg DOES move the payout, or the ticket would misreport", () => {
@@ -71,7 +88,7 @@ describe("a boosted payout survives settlement", () => {
     const s = settleParlay([leg(0, "WIN"), leg(1, "WIN"), leg(2, "PUSH")], 596);
     expect(s.odds).toBe(265);
     expect(s.odds).not.toBe(596);
-    expect(s.odds).not.toBe(combineLegOdds([-110, -110]));  // 264 = rebuilt, wrong
+    expect(s.odds).not.toBe(combineLegOdds([-110, -110])); // 264 = rebuilt, wrong
     expect(calcParlayToWin(100, s.odds!)).toBeCloseTo(265, 0);
   });
 
@@ -88,15 +105,18 @@ describe("a boosted payout survives settlement", () => {
     const impliedByOdds = calcParlayToWin(100, entered);
     const bookPaid = 700;
     expect(bookPaid).not.toBeCloseTo(impliedByOdds, 0);
-    const s = settleParlay([leg(0, "WIN", -110), leg(1, "WIN", -110), leg(2, "WIN", 150)], entered);
-    expect(s.odds).toBe(entered);   // unchanged -> payout untouched
+    const s = settleParlay(
+      [leg(0, "WIN", -110), leg(1, "WIN", -110), leg(2, "WIN", 150)],
+      entered
+    );
+    expect(s.odds).toBe(entered); // unchanged -> payout untouched
   });
 });
 
 describe("a backdated ticket settles on creation", () => {
   const proc = router.slice(
     router.indexOf("createParlay:"),
-    router.indexOf("delete: appUserProcedure"),
+    router.indexOf("delete: appUserProcedure")
   );
 
   it("REGRESSION: createParlay has an auto-grade hook, like create", () => {
@@ -144,7 +164,9 @@ describe("riskUnits and toWinUnits are stored as a PAIR", () => {
     // so the pair disagreed: risk read 0.25u from the stored value while
     // to-win fell back to dollars ÷ today's unit size. Correct at a $100 unit,
     // and at $50 it showed 0.25u to win 1.37u — a 5.48x ratio on +274 odds.
-    expect(router).toMatch(/resolveToWinUnits\(input\.riskUnits, input\.toWinUnits/);
+    expect(router).toMatch(
+      /resolveToWinUnits\(input\.riskUnits, input\.toWinUnits/
+    );
   });
 
   it("explicit input still wins over the derivation", () => {
@@ -157,7 +179,9 @@ describe("riskUnits and toWinUnits are stored as a PAIR", () => {
     // is consistent even though it is not authoritative. Inventing a unit size
     // would be worse than admitting there isn't one.
     const fn = router.slice(router.indexOf("function resolveToWinUnits"));
-    expect(fn).toMatch(/if \(riskUnits == null \|\| riskUnits <= 0\) return null/);
+    expect(fn).toMatch(
+      /if \(riskUnits == null \|\| riskUnits <= 0\) return null/
+    );
   });
 
   it("guards against a degenerate unit size", () => {
@@ -166,7 +190,10 @@ describe("riskUnits and toWinUnits are stored as a PAIR", () => {
   });
 
   it("REGRESSION: the client sends both, matching the straight-bet path", () => {
-    const page = readFileSync(join(__dirname, "../client/src/pages/BetTracker.tsx"), "utf8");
+    const page = readFileSync(
+      join(__dirname, "../client/src/pages/BetTracker.tsx"),
+      "utf8"
+    );
     const proc = page.slice(page.indexOf("createParlayMut.mutateAsync"));
     const block = proc.slice(0, proc.indexOf("});"));
     expect(block).toMatch(/riskUnits:/);
@@ -180,7 +207,11 @@ describe("riskUnits and toWinUnits are stored as a PAIR", () => {
     // slack. What must NOT happen is the ratio changing with unit size, which
     // is exactly what a NULL toWinUnits caused.
     for (const [odds, riskDollars] of [
-      [274, 25], [-110, 100], [596, 50], [150, 10], [-320, 80],
+      [274, 25],
+      [-110, 100],
+      [596, 50],
+      [150, 10],
+      [-320, 80],
     ] as Array<[number, number]>) {
       const toWin = calcParlayToWin(riskDollars, odds);
       const impliedProfit = americanToDecimalLocal(odds) - 1;
@@ -195,7 +226,7 @@ describe("riskUnits and toWinUnits are stored as a PAIR", () => {
         const tolerance = 0.005 / riskDollars + 1e-9;
         expect(
           Math.abs(ratio - impliedProfit),
-          `odds ${odds} risk ${riskDollars} unit ${unitSize}`,
+          `odds ${odds} risk ${riskDollars} unit ${unitSize}`
         ).toBeLessThan(tolerance);
       }
 
@@ -208,11 +239,13 @@ describe("riskUnits and toWinUnits are stored as a PAIR", () => {
     // Demonstrates the defect this pair prevents: with toWinUnits absent,
     // to-win falls back to dollars ÷ the viewer's unit size while risk keeps
     // reading the stored value, so the implied price drifts.
-    const riskDollars = 25, storedRiskUnits = 0.25, toWin = 68.5;
-    const at = (unitSize: number) => (toWin / unitSize) / storedRiskUnits;
-    expect(at(100)).toBeCloseTo(2.74, 2);   // correct only at the original unit
-    expect(at(50)).toBeCloseTo(5.48, 2);    // double
-    expect(at(200)).toBeCloseTo(1.37, 2);   // half
+    const riskDollars = 25,
+      storedRiskUnits = 0.25,
+      toWin = 68.5;
+    const at = (unitSize: number) => toWin / unitSize / storedRiskUnits;
+    expect(at(100)).toBeCloseTo(2.74, 2); // correct only at the original unit
+    expect(at(50)).toBeCloseTo(5.48, 2); // double
+    expect(at(200)).toBeCloseTo(1.37, 2); // half
     expect(at(50)).not.toBeCloseTo(at(200), 2);
   });
 });

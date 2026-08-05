@@ -19,8 +19,18 @@
  * claude-opus-5 for Anthropic, gpt-5.6-sol for Codex. Older models throw
  * unless DIME_ALLOW_LEGACY_MODELS=1 (e.g. for one-off comparisons).
  */
-import { Agent, type AgentMessage, type AgentTool, type ThinkingLevel } from "@earendil-works/pi-agent-core";
-import { createModels, type Api, type Model, type Usage } from "@earendil-works/pi-ai";
+import {
+  Agent,
+  type AgentMessage,
+  type AgentTool,
+  type ThinkingLevel,
+} from "@earendil-works/pi-agent-core";
+import {
+  createModels,
+  type Api,
+  type Model,
+  type Usage,
+} from "@earendil-works/pi-ai";
 import { anthropicProvider } from "@earendil-works/pi-ai/providers/anthropic";
 import { openaiProvider } from "@earendil-works/pi-ai/providers/openai";
 import { openaiCodexProvider } from "@earendil-works/pi-ai/providers/openai-codex";
@@ -49,21 +59,30 @@ function allowLegacyModels(): boolean {
  * Anthropic models are rerouted through the gateway when ANTHROPIC_BASE_URL
  * is set. Enforces the current-generation model policy.
  */
-export function resolvePiAgentModel(ref: string = DIME_AGENT_MODEL): Model<Api> {
+export function resolvePiAgentModel(
+  ref: string = DIME_AGENT_MODEL
+): Model<Api> {
   const slash = ref.indexOf("/");
   const provider = slash === -1 ? "anthropic" : ref.slice(0, slash);
   const id = slash === -1 ? ref : ref.slice(slash + 1);
 
-  if (!PI_AGENT_APPROVED_MODELS.includes(`${provider}/${id}` as (typeof PI_AGENT_APPROVED_MODELS)[number]) && !allowLegacyModels()) {
+  if (
+    !PI_AGENT_APPROVED_MODELS.includes(
+      `${provider}/${id}` as (typeof PI_AGENT_APPROVED_MODELS)[number]
+    ) &&
+    !allowLegacyModels()
+  ) {
     throw new Error(
       `Model "${provider}/${id}" is outside the current-generation policy (${PI_AGENT_APPROVED_MODELS.join(", ")}). ` +
-        `Set DIME_ALLOW_LEGACY_MODELS=1 to override. See LLM.md.`,
+        `Set DIME_ALLOW_LEGACY_MODELS=1 to override. See LLM.md.`
     );
   }
 
   const model = models.getModel(provider, id);
   if (!model) {
-    throw new Error(`pi-ai has no model "${provider}/${id}" — check DIME_AGENT_MODEL or pass a catalog ref`);
+    throw new Error(
+      `pi-ai has no model "${provider}/${id}" — check DIME_AGENT_MODEL or pass a catalog ref`
+    );
   }
   if (provider === "anthropic") {
     const { baseURL } = resolveAnthropicConfig();
@@ -148,7 +167,10 @@ export interface PiChatResult {
   usage: { inputTokens: number | null; outputTokens: number | null };
 }
 
-function toAgentHistory(turns: PiChatTurn[], model: Model<Api>): AgentMessage[] {
+function toAgentHistory(
+  turns: PiChatTurn[],
+  model: Model<Api>
+): AgentMessage[] {
   const zeroUsage: Usage = {
     input: 0,
     output: 0,
@@ -169,7 +191,7 @@ function toAgentHistory(turns: PiChatTurn[], model: Model<Api>): AgentMessage[] 
           usage: zeroUsage,
           stopReason: "stop",
           timestamp: index,
-        },
+        }
   );
 }
 
@@ -199,7 +221,10 @@ export async function runPiChat({
       messages: toAgentHistory(history.slice(0, -1), resolved),
     },
     streamFn: (streamModel, context, options) =>
-      models.streamSimple(streamModel, context, { ...options, ...(maxTokens ? { maxTokens } : {}) }),
+      models.streamSimple(streamModel, context, {
+        ...options,
+        ...(maxTokens ? { maxTokens } : {}),
+      }),
     ...(sessionId ? { sessionId } : {}),
   });
   const onAbort = () => agent.abort();
@@ -210,14 +235,14 @@ export async function runPiChat({
     signal?.removeEventListener("abort", onAbort);
   }
 
-  const reply = agent.state.messages.filter((m) => m.role === "assistant").at(-1);
+  const reply = agent.state.messages.filter(m => m.role === "assistant").at(-1);
   const errorMessage = agent.state.errorMessage ?? reply?.errorMessage;
   if (errorMessage) throw new Error(errorMessage);
   if (!reply) throw new Error("runPiChat: no assistant reply produced");
   return {
     text: reply.content
-      .filter((c) => c.type === "text")
-      .map((c) => c.text)
+      .filter(c => c.type === "text")
+      .map(c => c.text)
       .join(""),
     stopReason: reply.stopReason,
     model: reply.model,
@@ -232,7 +257,11 @@ export async function runPiChat({
  * Run a single task to completion and return the final result — the
  * pi-agent-core equivalent of runDimeAgent().
  */
-export async function runPiAgent({ prompt, signal, ...params }: RunPiAgentParams): Promise<PiAgentResult> {
+export async function runPiAgent({
+  prompt,
+  signal,
+  ...params
+}: RunPiAgentParams): Promise<PiAgentResult> {
   const agent = createPiAgent(params);
   const onAbort = () => agent.abort();
   signal?.addEventListener("abort", onAbort, { once: true });
@@ -243,18 +272,23 @@ export async function runPiAgent({ prompt, signal, ...params }: RunPiAgentParams
     signal?.removeEventListener("abort", onAbort);
   }
 
-  const assistantMessages = agent.state.messages.filter((m) => m.role === "assistant");
+  const assistantMessages = agent.state.messages.filter(
+    m => m.role === "assistant"
+  );
   const last = assistantMessages[assistantMessages.length - 1];
   const text = last?.content
-    .filter((c) => c.type === "text")
-    .map((c) => c.text)
+    .filter(c => c.type === "text")
+    .map(c => c.text)
     .join("");
   const errorMessage = agent.state.errorMessage ?? last?.errorMessage;
   return {
     result: errorMessage ? `Agent error: ${errorMessage}` : (text ?? ""),
     isError: Boolean(errorMessage),
     numTurns: assistantMessages.length,
-    totalCostUsd: assistantMessages.reduce((sum, m) => sum + (m.usage?.cost.total ?? 0), 0),
+    totalCostUsd: assistantMessages.reduce(
+      (sum, m) => sum + (m.usage?.cost.total ?? 0),
+      0
+    ),
     durationMs: Date.now() - startedAt,
   };
 }
