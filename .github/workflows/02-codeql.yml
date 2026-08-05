@@ -6,7 +6,21 @@ name: 02-codeql
 on:
   pull_request:
   merge_group:
+  # Every merge to main refreshes the code-scanning BASELINE. Without a main
+  # analysis, the PR check has nothing to compare against and attributes every
+  # pre-existing alert to the PR (observed 2026-08-05: 19 alerts from merged
+  # main code flagged as "new"). Deliberate cost: one analysis per merge.
+  push:
+    branches: [main]
   workflow_dispatch:
+    inputs:
+      baseline:
+        description: >-
+          Analyze origin/main's tree and upload it AS main — one-time
+          bootstrap for the comparison baseline when main has no analysis
+          yet (main lacks this workflow until the framework PR merges).
+        type: boolean
+        default: false
   schedule:
     - cron: "17 6 * * 1" # weekly full matrix (nightly tier)
 
@@ -27,6 +41,15 @@ jobs:
         language: [javascript-typescript, python]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
+        with:
+          # Baseline mode analyzes main's actual tree; every other trigger
+          # analyzes the event's own ref (empty string = default behavior).
+          ref: ${{ inputs.baseline == true && 'main' || '' }}
+
+      - name: Resolve analyzed commit (baseline mode labels the upload as main)
+        id: target
+        run: |
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - uses: github/codeql-action/init@c4dd10e44af883a891fe31ced449bcb4a6728b9b # v3
         with:
@@ -36,3 +59,7 @@ jobs:
       - uses: github/codeql-action/analyze@c4dd10e44af883a891fe31ced449bcb4a6728b9b # v3
         with:
           category: "/language:${{ matrix.language }}"
+          # In baseline mode the checkout IS main's tree, so the SARIF is
+          # honestly labeled as an analysis of refs/heads/main at that commit.
+          ref: ${{ inputs.baseline == true && 'refs/heads/main' || '' }}
+          sha: ${{ inputs.baseline == true && steps.target.outputs.sha || '' }}
