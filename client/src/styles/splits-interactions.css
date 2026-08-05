@@ -29,9 +29,47 @@
 .bsp-div {
   background: var(--dime-border-strong) !important;
 }
+/* 2026-08-05 (desktop refinement): the inline desktopSegMinPx guarantee
+ * (46/54px) went stale — the vw-scaled label font reaches its 17px cap at
+ * >=1417px viewports, where an "NN%" label (~43px) plus segment padding
+ * exceeds 46px, so small segments clipped the label's leading digit against
+ * their own overflow:hidden ("13%" could scan as "3%" — a wrong number on a
+ * betting surface). max-content tracks the real label width at every
+ * viewport; the printed number stays the truth while the bar remains
+ * indicative (the same readability-over-precision rule the shipped minWidth
+ * guarantee already encodes). */
+.bsp-seg {
+  min-width: max-content !important;
+}
 .bsp-seg span {
   text-shadow: none !important;
   font-weight: 700 !important;
+  /* 2026-08-05: cap the bar-label ceiling at 15px (was 17px via 1.2vw) — at
+   * the old ceiling a two-digit label + segment padding outgrew the 46px
+   * minimum (the fusion fixed above), and bar labels out-shouted the 14px
+   * history-table data they sit beside. */
+  font-size: clamp(12px, 1.05vw, 15px) !important;
+}
+
+/* 2026-08-05: the dark-tuned crest recipe (screen-blend + brightness lift)
+ * resolves to white-on-white on the light theme — team crests and search
+ * badges vanished entirely. Neutralize blend + filter on light; logo art
+ * renders as-authored (licensed-logo exception; same principle as the
+ * projections page's light treatment). Attribute match follows the existing
+ * img[style*="invert(1)"] precedent below. */
+html:not(.dark) .bs-page img[style*="mix-blend-mode: screen"],
+html:not(.dark) .bs-page img[style*="mix-blend-mode:screen"] {
+  mix-blend-mode: normal !important;
+  filter: none !important;
+}
+
+/* 2026-08-05: the favorite star was the one interactive control on the
+ * surface without a visible keyboard focus treatment (pills/toggles/results
+ * already have rings below). */
+.bs-page .gc-star:focus-visible {
+  outline: none !important;
+  box-shadow: 0 0 0 3px var(--dime-ring) !important;
+  border-radius: 8px;
 }
 .bsp-seg--away span {
   color: var(--dime-ink-on-mint) !important;

@@ -7,6 +7,8 @@ import rateLimit from "express-rate-limit";
 import {
   clientIpKey,
   createTrpcRateLimitDispatch,
+  isReservedOrInternalIp,
+  resolveClientIp,
   sendRateLimitResponse,
 } from "./trpcRateLimitPolicy";
 import helmet from "helmet";
@@ -154,7 +156,8 @@ function fireRateLimitEvent(
     | "trpc_auth"
     | "stripe_checkout"
     | "waitlist_submit"
-    | "public_feed",
+    | "public_feed"
+    | "xff_canary",
   ua: string | null
 ) {
   const now = Date.now();
@@ -693,6 +696,29 @@ async function startServer() {
       console.error("[DebugLogs] Query failed:", err);
       res.status(500).json({ error: "query-failed", message: msg });
     }
+  });
+
+  // ─── XFF-sanitization canary ──────────────────────────────────────────────
+  // All limiter keying trusts that Railway's edge sanitizes inbound
+  // X-Forwarded-For and appends its (public) hop, so the resolved client is
+  // always a PUBLIC IP. If a /api/trpc request ever resolves to a private/
+  // reserved/carrier-internal address, that assumption has broken (hop
+  // structure changed) — fire a loud, deduped security alert so it can never
+  // fail silently. This is the runtime half of the guarantee; the deploy half
+  // is the spoof self-check in scripts/smoke-deploy.mjs. Observe-only; never
+  // blocks. See trpcRateLimitPolicy.isReservedOrInternalIp.
+  app.use("/api/trpc", (req, _res, next) => {
+    const ip = resolveClientIp(req);
+    if (ip && isReservedOrInternalIp(ip)) {
+      fireRateLimitEvent(
+        ip,
+        req.path,
+        req.method,
+        "xff_canary",
+        (req.headers["user-agent"] as string | undefined) ?? null
+      );
+    }
+    next();
   });
 
   // ─── Global API rate limiter ──────────────────────────────────────────────

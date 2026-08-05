@@ -7,7 +7,7 @@
 
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
-import { FlaskConical, Loader2, Search, X } from "lucide-react";
+import { CalendarX, Loader2, Search, X } from "lucide-react"; // 2026-08-05: lab flask was off-domain for an empty slate
 import { CalendarPicker, todayUTC } from "@/components/CalendarPicker";
 import { bettingSplitsPath } from "@/lib/feedRoutes";
 import { useTrackAction } from "@/lib/analytics";
@@ -790,7 +790,9 @@ export default function BettingSplitsPage({
         }, 2100);
         return;
       }
-      el.style.transition = "box-shadow 0.16s ease, outline 0.16s ease";
+      // 2026-08-05: brand motion law — the one 160ms curve, not generic ease
+      el.style.transition =
+        "box-shadow 160ms cubic-bezier(0.16, 1, 0.3, 1), outline 160ms cubic-bezier(0.16, 1, 0.3, 1)";
       el.style.boxShadow = "0 0 0 4px transparent";
       let count = 0;
       const pulse = setInterval(() => {
@@ -1025,7 +1027,25 @@ export default function BettingSplitsPage({
                     : "NBA BASKETBALL"}
               </span>
             </div>
-            <div className="flex-1" />
+            {/* 2026-08-05: splitsAgoLabel was computed but never rendered —
+                no freshness stamp on a page whose value is freshness. Mono
+                micro-label, desktop only (the sibling projections law's
+                "SYNCED N MIN AGO" analog). */}
+            <div className="flex-1 hidden md:flex items-center justify-end">
+              <span
+                style={{
+                  fontFamily: "var(--dime-font-mono)",
+                  fontSize: 10,
+                  fontWeight: 500,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  color: "var(--dime-text-secondary)",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                Splits synced {splitsAgoLabel}
+              </span>
+            </div>
           </div>
         )}
       </header>
@@ -1048,7 +1068,7 @@ export default function BettingSplitsPage({
           </div>
         ) : sortedDates.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 gap-4 text-center px-4">
-            <FlaskConical
+            <CalendarX
               size={40}
               strokeWidth={1.5}
               aria-hidden="true"
