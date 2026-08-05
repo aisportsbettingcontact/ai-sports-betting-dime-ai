@@ -1,6 +1,7 @@
 # DR-013 — The eight-function-loop rollout order and cross-links
 
 **Status:** AWAITING RULING · **DRI:** Prez · **Raised:** 2026-08-05 (Stage 2)
+**observe_by:** 2026-08-12
 **Doctrine:** §13 Function loops (D13) — all eight, connected not isolated · §16 Peak state (D16) — criterion 4: all eight loops operating and interconnected · §17 Certification and cadence — PARTIAL and MISSING are failing grades that route back · §14 The fifteen-stage sequence (D14) — visibility before autonomy, stage 12 'connect the function to other functions' · §5 The closed loop (D5) — the seven components, goals with limits, the nine-question interrogation · §6 The queryable company (D6) — artifact law, semantic connections, traceability intention-to-result · §8 L1 Goals + ownership — the nine-field goal record · §8 L2 Artifact system — durable, linked, append-only · §8 L6 Evaluation — outcome-level judgment, activity is not progress · §8 L8 Human governance — named humans on every important outcome · §11 Token-maxing economics (D10) — the capital-allocation hire-test · §15 Failure modes (D15) — #2 open-loop automation, #3 unqueryable work, #9 generated output mistaken for completion, #15 prototype theater, #16 isolated agent departments · §19 Standing Dime rules — compliance gate, evidence taxonomy, deploy law
 
 > **Read `DR-014` first.** The coherence, doctrine, and survival critics reviewed all ten
