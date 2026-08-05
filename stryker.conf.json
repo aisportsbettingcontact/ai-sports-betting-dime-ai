@@ -1,0 +1,18 @@
+{
+  "$schema": "https://raw.githubusercontent.com/stryker-mutator/stryker-js/master/packages/core/schema/stryker-schema.json",
+  "testRunner": "vitest",
+  "plugins": ["@stryker-mutator/vitest-runner"],
+  "mutate": [
+    "server/parlayCore.ts",
+    "server/betTrackerCore.ts",
+    "shared/parlayPricing.ts",
+    "server/_core/dimeVerdict.ts",
+    "shared/inviteCode.ts"
+  ],
+  "vitest": { "configFile": "vitest.config.ts" },
+  "thresholds": { "high": 90, "low": 75, "break": 60 },
+  "concurrency": 2,
+  "reporters": ["clear-text", "progress"],
+  "tempDirName": ".stryker-tmp",
+  "incremental": true
+}

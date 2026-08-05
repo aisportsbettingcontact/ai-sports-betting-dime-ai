@@ -1,0 +1,47 @@
+# 07-coverage-patch — native patch-coverage gate: >=90% on changed
+# server/shared lines, 100% on money/auth paths (scripts/check-patch-coverage.mjs).
+# Fail-closed: a missing/empty coverage report exits 2. Advisory at launch;
+# graduates to required per docs/verification/ROLLOUT.md after calibration.
+name: 07-coverage-patch
+
+on:
+  pull_request:
+  merge_group:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  coverage:
+    name: 07-coverage-patch
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
+        with:
+          fetch-depth: 0 # need base for the changed-line diff
+
+      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: "[STEP] Vitest with v8 coverage (server+shared, DB-free profile)"
+        run: |
+          npx vitest run --coverage --coverage.provider=v8 \
+            --coverage.reporter=json --coverage.include='server/**' \
+            --coverage.include='shared/**' \
+            --reporter=default --reporter=json --outputFile=vitest-results.json || true
+          node scripts/check-environment-failures.mjs --profile=ci --actor="$GITHUB_ACTOR" \
+            --input=vitest-results.json --report=env-gate-report.json
+
+      - name: "[GATE] Patch coverage floors"
+        run: node scripts/check-patch-coverage.mjs
+        env:
+          BASE_REF: origin/${{ github.event.pull_request.base.ref || 'main' }}

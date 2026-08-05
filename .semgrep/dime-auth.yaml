@@ -1,0 +1,54 @@
+rules:
+  - id: dime-public-procedure-in-admin-router
+    languages: [typescript]
+    severity: ERROR
+    message: >
+      publicProcedure inside an admin/owner router file. Admin surfaces use
+      ownerProcedure / protectedProcedure (see adminProcedureLockdown.test.ts).
+      If this endpoint is intentionally public, move it out of the admin
+      router and document why.
+    pattern: publicProcedure
+    paths:
+      include:
+        # appUsers.ts deliberately excluded: it is a MIXED router where
+        # login/register/reset are public by design (9 legit sites at launch)
+        - server/adminAccountProvisioning.ts
+        - server/routers/stripe.ts
+
+  - id: dime-express-route-without-auth-gate
+    languages: [typescript]
+    severity: WARNING
+    message: >
+      New Express POST/PUT/DELETE route without a visible auth check in the
+      handler chain. Dime's SSE/chat routes gate BEFORE streaming (401 JSON
+      pre-stream — smoke check 5 depends on it). Verify this route enforces
+      auth or is deliberately public (health, webhooks with signature checks).
+    patterns:
+      - pattern-either:
+          - pattern: $APP.post("$PATH", async ($REQ, $RES) => { ... })
+          - pattern: $APP.put("$PATH", async ($REQ, $RES) => { ... })
+          - pattern: $APP.delete("$PATH", async ($REQ, $RES) => { ... })
+      - pattern-not-inside: |
+          $APP.post("$PATH", $MW, ...)
+      - metavariable-pattern:
+          metavariable: $PATH
+          patterns:
+            - pattern-not-regex: /health|/webhook|/api/cron/
+    paths:
+      include:
+        - server/
+
+  - id: dime-session-secret-fallback
+    languages: [typescript]
+    severity: ERROR
+    message: >
+      Hardcoded fallback for APP_SESSION_SECRET (|| "..." / ?? "...") turns a
+      missing secret into a forgeable session key. Boot must fail instead
+      (ciSecrets.test.ts enforces presence + 44-char minimum).
+    patterns:
+      - pattern-either:
+          - pattern: process.env.APP_SESSION_SECRET || "..."
+          - pattern: process.env.APP_SESSION_SECRET ?? "..."
+    paths:
+      exclude:
+        - "**/*.test.*"

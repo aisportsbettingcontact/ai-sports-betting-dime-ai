@@ -1,0 +1,96 @@
+rules:
+  - id: dime-sql-string-concatenation
+    languages: [typescript, javascript]
+    # WARNING at launch: ~17 pre-existing sites (wc2026 engines, reconciler,
+    # backtest service) interpolate INTERNAL id lists. Review each, convert to
+    # parameterized form or annotate, then graduate to ERROR.
+    severity: WARNING
+    message: >
+      String-built SQL passed to execute/query. Drizzle's sql`` tagged template
+      parameterizes interpolations — plain template literals or concatenation
+      do not. Build the statement with sql`` or a prepared statement.
+    patterns:
+      - pattern-either:
+          - pattern: $DB.execute(`...${...}...`)
+          - pattern: $DB.execute("..." + $X)
+          - pattern: $CONN.query(`...${...}...`)
+          - pattern: $CONN.query("..." + $X)
+    paths:
+      include:
+        - server/
+        - scripts/
+
+  - id: dime-secret-or-prompt-in-logs
+    languages: [typescript]
+    severity: ERROR
+    message: >
+      Logging a credential-bearing value or full system prompt. Dime law:
+      never print credential values; prompts carry the platform-knowledge hash
+      instead of full text in Trace events. Log names/hashes, not values.
+    patterns:
+      - pattern-either:
+          - pattern: console.log(..., process.env.$SECRET, ...)
+          - pattern: console.error(..., process.env.$SECRET, ...)
+      - metavariable-regex:
+          metavariable: $SECRET
+          regex: '.*(SECRET|TOKEN|PASSWORD|API_KEY|DATABASE_URL).*'
+
+  - id: dime-model-output-to-execution
+    languages: [typescript]
+    severity: ERROR
+    message: >
+      Model output flowing into an execution sink (eval/spawn/exec/sql)
+      without schema validation. AI_SURFACE law: model output reaches
+      execution only after zod/schema validation (tool contracts in
+      ml/dime-1.0/schemas define the shape).
+    patterns:
+      - pattern-either:
+          - pattern: eval($MODELOUT)
+          - pattern: new Function($MODELOUT)
+          - pattern: exec($MODELOUT, ...)
+          - pattern: spawn($MODELOUT, ...)
+      - metavariable-regex:
+          metavariable: $MODELOUT
+          regex: '.*(completion|response|message|content|modelOut|llm).*'
+
+  - id: dime-test-mock-imported-by-prod
+    languages: [typescript]
+    severity: ERROR
+    message: >
+      Production code importing from a .test. or fixtures module. Test
+      doubles must never ship (the bundle is production; the audit's
+      provenance lens flags exactly this class).
+    patterns:
+      - pattern: import ... from "$PATH"
+      - metavariable-regex:
+          metavariable: $PATH
+          regex: '.*\.(test|spec)(\.|$)|.*/fixtures/.*'
+      - pattern-not-inside: |
+          // in test files themselves this is fine
+    paths:
+      include:
+        - server/
+        - client/src/
+      exclude:
+        - "**/*.test.*"
+        - "**/*.spec.*"
+        - "**/fixtures/**"
+
+  - id: dime-unbounded-agent-loop
+    languages: [typescript]
+    severity: WARNING
+    message: >
+      while(true)/for(;;) inside agent/chat runtime files without a visible
+      budget or turn guard in the loop. Agent budgets must never go negative
+      and loops must be bounded (num_turns / cost caps exist in the SDK result
+      contract — enforce a ceiling).
+    patterns:
+      - pattern-either:
+          - pattern: while (true) { ... }
+          - pattern: "for (;;) { ... }"
+    paths:
+      include:
+        - server/_core/dimeAgent.ts
+        - server/_core/piAgent.ts
+        - server/dime-chat.route.ts
+        - server/dime-wc2026.route.ts

@@ -1,0 +1,130 @@
+# 12-nightly-verification — the slow/full tier. Never a merge gate; failures
+# notify via the workflow run (review weekly at minimum). Scanner errors are
+# job failures — a red nightly is signal, not noise.
+name: 12-nightly-verification
+
+on:
+  schedule:
+    - cron: "23 9 * * *" # daily 09:23 UTC (~2:23 PT)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  scorecard:
+    name: openssf-scorecard
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      security-events: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
+        with:
+          persist-credentials: false
+      - uses: ossf/scorecard-action@4eaacf0543bb3f2c246792bd56e8cdeffafb205a # v2.4.3
+        with:
+          results_file: scorecard.sarif
+          results_format: sarif
+          publish_results: true
+      - uses: github/codeql-action/upload-sarif@c4dd10e44af883a891fe31ced449bcb4a6728b9b # v3
+        with:
+          sarif_file: scorecard.sarif
+          category: scorecard
+
+  full-osv:
+    name: full-osv-scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
+      - name: OSV full scan (lockfiles, all ecosystems) — fail-closed via checker
+        env:
+          OSV_SHA256: "7702cd1e5d9f5059dd9570f4ad967f27d3c5f5391b371ec937b384c238177f55"
+        run: |
+          curl -sSfL https://github.com/google/osv-scanner/releases/download/v2.2.4/osv-scanner_linux_amd64 \
+            -o /usr/local/bin/osv-scanner
+          # release-binary checksum pin (refresh alongside the version bump)
+          echo "$OSV_SHA256  /usr/local/bin/osv-scanner" | sha256sum -c -
+          chmod +x /usr/local/bin/osv-scanner
+          osv-scanner scan --lockfile pnpm-lock.yaml --lockfile ml/dime-1.0/uv.lock \
+            --format=json --output=osv-report.json || true
+          node scripts/check-osv-scan.mjs osv-report.json
+
+  full-container-scan:
+    name: full-container-scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
+      - run: docker build -t dime-nightly:latest .
+      - name: Trivy full severity sweep (incl. MEDIUM; nightly only)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: dime-nightly:latest
+          format: table
+          severity: CRITICAL,HIGH,MEDIUM
+          exit-code: "1"
+          ignore-unfixed: false
+          scanners: vuln,secret,misconfig,license
+
+  mutation-diff:
+    name: full-mutation
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
+      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Stryker on the money/settlement core (advisory; score published in run log)
+        run: |
+          npx --yes @stryker-mutator/core@9 run stryker.conf.json || {
+            echo "::warning::mutation score below configured break threshold — review survivors above";
+            exit 1;
+          }
+
+  dependency-release-age:
+    name: dependency-release-age-audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
+      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Flag direct deps updated upstream in the last 14 days (supply-chain wave detector)
+        run: |
+          pnpm install --frozen-lockfile
+          node -e '
+            const { execSync } = require("node:child_process");
+            const pkg = require("./package.json");
+            const deps = Object.keys({ ...pkg.dependencies, ...pkg.devDependencies });
+            const cutoff = Date.now() - 14 * 864e5;
+            const young = [];
+            for (const d of deps) {
+              try {
+                const t = JSON.parse(execSync(`npm view ${d} time --json`, { stdio: ["ignore", "pipe", "ignore"] }));
+                const versions = Object.entries(t).filter(([k]) => !["created", "modified"].includes(k));
+                const latest = versions[versions.length - 1];
+                if (latest && Date.parse(latest[1]) > cutoff) young.push(`${d}@${latest[0]} (${latest[1]})`);
+              } catch {}
+            }
+            console.log(`packages with releases in the last 14 days: ${young.length}`);
+            for (const y of young) console.log("  " + y);
+          '

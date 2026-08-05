@@ -1,0 +1,38 @@
+# 02-codeql — static analysis for TS/JS + Python; blocks new high/critical
+# findings on the PR merge commit. Weekly full-matrix scheduled run keeps the
+# baseline current. Fail-closed: analysis errors fail the job.
+name: 02-codeql
+
+on:
+  pull_request:
+  merge_group:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 6 * * 1" # weekly full matrix (nightly tier)
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: 02-codeql
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [javascript-typescript, python]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
+
+      - uses: github/codeql-action/init@c4dd10e44af883a891fe31ced449bcb4a6728b9b # v3
+        with:
+          languages: ${{ matrix.language }}
+          queries: security-extended
+
+      - uses: github/codeql-action/analyze@c4dd10e44af883a891fe31ced449bcb4a6728b9b # v3
+        with:
+          category: "/language:${{ matrix.language }}"

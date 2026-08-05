@@ -98,8 +98,8 @@ jobs:
         run: |
           AUDIT_LEVEL="${{ inputs.audit_level || 'moderate' }}"
           echo "[INPUT] Audit level: ${AUDIT_LEVEL}"
-          echo "[INPUT] Repository: ${{ github.repository }}"
-          echo "[INPUT] Ref: ${{ github.ref }}"
+          echo "[INPUT] Repository: ${GITHUB_REPOSITORY}"
+          echo "[INPUT] Ref: ${GITHUB_REF}"
           echo "[INPUT] Run date: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
           echo "───────────────────────────────────────────────────────────────"
 

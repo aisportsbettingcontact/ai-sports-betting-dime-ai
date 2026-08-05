@@ -1,0 +1,50 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", ":semanticCommits"],
+  "timezone": "America/Los_Angeles",
+  "schedule": ["before 6am on monday"],
+  "minimumReleaseAge": "14 days",
+  "lockFileMaintenance": { "enabled": true, "schedule": ["before 6am on monday"] },
+  "rangeStrategy": "bump",
+  "postUpdateOptions": ["pnpmDedupe"],
+  "packageRules": [
+    {
+      "description": "Patch/minor automerge only with all required checks green (merge-queue compatible)",
+      "matchUpdateTypes": ["patch", "minor"],
+      "matchCurrentVersion": "!/^0\\./",
+      "automerge": true,
+      "automergeType": "pr",
+      "platformAutomerge": true
+    },
+    {
+      "description": "Majors and 0.x always need a human",
+      "matchUpdateTypes": ["major"],
+      "automerge": false
+    },
+    {
+      "description": "Security-critical runtime deps get their own PRs, never grouped",
+      "matchPackageNames": ["express", "jose", "mysql2", "helmet", "stripe", "@anthropic-ai/sdk", "@anthropic-ai/claude-agent-sdk"],
+      "groupName": null,
+      "automerge": false
+    },
+    {
+      "description": "Group Radix UI (release in lockstep)",
+      "matchPackagePatterns": ["^@radix-ui/"],
+      "groupName": "radix-ui"
+    },
+    {
+      "description": "Group AWS transitive tooling",
+      "matchPackagePatterns": ["^@aws-sdk/"],
+      "groupName": "aws-sdk"
+    },
+    {
+      "description": "Python (ml/dime-1.0 uv lane is dormant + owner-gated): update PRs allowed, never automerged",
+      "matchManagers": ["pep621"],
+      "automerge": false
+    }
+  ],
+  "vulnerabilityAlerts": { "enabled": true },
+  "osvVulnerabilityAlerts": true,
+  "prConcurrentLimit": 5,
+  "prHourlyLimit": 2
+}
