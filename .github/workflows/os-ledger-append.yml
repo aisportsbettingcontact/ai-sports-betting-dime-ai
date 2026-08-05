@@ -1,0 +1,83 @@
+# os-ledger-append — append one loop-cycle artifact per merge to main (ISSUE-009).
+#
+# Rides merge-to-main: the single event that fires ~13x/day at Dime without
+# anyone remembering to do it. That is the strongest survival property in the
+# Stage 3 plan.
+#
+# Writes ONLY to the orphan branch `os-ledger`. VERIFIED deploy-inert: both
+# Railway services pin source.branch = "main", so a push here never deploys.
+name: os-ledger-append
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Least privilege: contents:write is scoped to pushing the os-ledger orphan
+# branch. Justified in scripts/check-github-actions-security.mjs WRITE_APPROVALS.
+permissions:
+  contents: write
+
+concurrency:
+  group: os-ledger-append
+  cancel-in-progress: false
+
+jobs:
+  append:
+    name: os-ledger-append
+    runs-on: ubuntu-latest
+    steps:
+      - name: "[INPUT] Checkout main (full history — the appender reads merge parents)"
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+
+      - name: "[STEP] Setup Node.js 22"
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+
+      - name: "[VERIFY] os-ledger must not be main — a deploy here would be a defect"
+        run: |
+          if [ "${GITHUB_REF_NAME}" != "main" ]; then
+            echo "::error::expected to run on main, got ${GITHUB_REF_NAME}"; exit 1
+          fi
+
+      - name: "[STEP] Append the cycle artifact to the os-ledger orphan branch"
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          SHA="${GITHUB_SHA}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # Materialise os-ledger in a worktree; create it orphan on first run.
+          if git ls-remote --exit-code --heads origin os-ledger >/dev/null 2>&1; then
+            git fetch origin os-ledger --depth=1
+            git worktree add /tmp/osl origin/os-ledger --detach
+            git -C /tmp/osl checkout -B os-ledger
+          else
+            git worktree add --detach /tmp/osl
+            git -C /tmp/osl checkout --orphan os-ledger
+            git -C /tmp/osl rm -rf . >/dev/null 2>&1 || true
+            printf '# os-ledger\n\nMachine-generated loop artifacts. Never deployed: Railway pins main.\n' > /tmp/osl/README.md
+          fi
+
+          # Resolve the proof-contract run for this commit, if one exists.
+          RID=$(gh run list --workflow=01-pr-proof-contract.yml --limit 40 \
+                  --json databaseId,headSha --jq \
+                  "[.[]|select(.headSha==\"$SHA\")][0].databaseId // empty" 2>/dev/null || true)
+
+          cd /tmp/osl
+          PROOF_CONTRACT_RUN_ID="${RID}" node "${GITHUB_WORKSPACE}/scripts/os/ledger-append.mjs" \
+            --sha "$SHA" --repo "${GITHUB_WORKSPACE}"
+
+          if [ -n "$(git status --porcelain)" ]; then
+            git add -A
+            git commit -q -m "os-ledger: cycle for ${SHA:0:12}"
+            git push -q origin os-ledger
+            echo "[os-ledger] pushed"
+          else
+            echo "[os-ledger] no change (idempotent replay)"
+          fi
