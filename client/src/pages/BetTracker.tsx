@@ -37,6 +37,9 @@ import {
   calcToWin, fmtOdds, fmtDollar, fmtUnits,
   getPickOdds, getPickLine, resultColor,
 } from "./betTrackerDisplay";
+import {
+  decideEntrySource, defaultWagerType, checkLegCoherence, deriveTicketWagerType,
+} from "./betTrackerEntry";
 import { trpc } from "@/lib/trpc";
 import { useAppAuth } from "@/_core/hooks/useAppAuth";
 import { useAnalytics, useTrackAction } from "@/lib/analytics";
@@ -2439,7 +2442,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
   // Parlay entry. `entryMode` swaps the Add Bet card between producing a bet
   // and producing a LEG; the rest of the form is identical either way, which is
   // the point — a leg is a bet without the money.
-  const [entryMode, setEntryMode] = useState<"SINGLE" | "PARLAY">("SINGLE");
+  const [entryMode, setEntryMode] = useState<"STRAIGHT" | "PARLAY">("STRAIGHT");
   const [draftLegs, setDraftLegs] = useState<DraftLeg[]>([]);
   const [ticketOdds, setTicketOdds] = useState("");
   /**
@@ -2549,20 +2552,41 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
   useEffect(() => {
     const newSide: PickSide = formMarket === "TOTAL" ? "OVER" : "AWAY";
     setFormPickSide(newSide);
-    if (formGame?.odds) {
-      const o = getPickOdds(formGame.odds, formMarket, newSide);
-      setFormOdds(o !== null ? String(o) : "");
-    }
+    // Odds follow from the effect below, which owns the autofill decision.
     // Reset custom line when market changes
     setFormCustomLine("");
   }, [formMarket]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  /**
+   * The live/pregame separation, applied at the form boundary.
+   *
+   * The slate serves ONE odds snapshot per game — pregame lines before first
+   * pitch, the book's CURRENT (live) lines in progress, closing lines after.
+   * decideEntrySource says whether that snapshot may fill this wager type;
+   * when it may not, the slate's numbers leave the form so a live line cannot
+   * linger inside a pregame wager or the reverse.
+   */
+  const entrySource = decideEntrySource(formGame?.status ?? "scheduled", formWagerType);
+
+  /** Set while a leg is being restored into the form; the autofill effect
+   *  must not overwrite the leg's recorded price with the slate's. */
+  const skipAutofillOnceRef = useRef(false);
+
   useEffect(() => {
-    if (formGame?.odds) {
+    if (!formGame) return;
+    if (skipAutofillOnceRef.current) {
+      skipAutofillOnceRef.current = false;
+      return;
+    }
+    const src = decideEntrySource(formGame.status, formWagerType);
+    if (src.autofill && formGame.odds) {
       const o = getPickOdds(formGame.odds, formMarket, formPickSide);
       setFormOdds(o !== null ? String(o) : "");
+    } else if (!src.autofill) {
+      setFormOdds("");
+      setFormCustomLine("");
     }
-  }, [formGame, formMarket, formPickSide]);
+  }, [formGame, formMarket, formPickSide, formWagerType]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── tRPC ──────────────────────────────────────────────────────────────────
   // [PERF] Past-date slates are immutable — once fetched they never change.
@@ -3120,7 +3144,9 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
       legMarket = "TOTAL"; legPickSide = "UNDER"; legLine = 0.5;
     } else if (formTimeframe === "YRFI") {
       legMarket = "TOTAL"; legPickSide = "OVER"; legLine = 0.5;
-    } else if (formGame.odds) {
+    } else if (formGame.odds && entrySource.autofill) {
+      // Same separation as the odds field: a manual-entry wager type takes
+      // no line from the slate snapshot either.
       const lv = getPickLine(formGame.odds, legMarket, legPickSide);
       if (lv !== null && lv !== undefined) legLine = lv;
     }
@@ -3145,6 +3171,13 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
           ? `${legPickSide === "AWAY" ? formGame.awayTeam : formGame.homeTeam} ML`
           : `${legPickSide} ${legLine ?? ""}`.trim();
 
+    // One ticket, one moment: pregame and live legs cannot share it.
+    const coherence = checkLegCoherence(draftLegs.map(l => l.wagerType), formWagerType);
+    if (!coherence.ok) {
+      setParlayError(coherence.message);
+      return;
+    }
+
     setDraftLegs(prev => [...prev, {
       anGameId:   formGame.id,
       gameNumber: formGame.gameNumber,
@@ -3158,6 +3191,9 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
       line:       legLine,
       odds:       oddsNum,
       label,
+      wagerType:  formWagerType,
+      awayLogo:   formGame.awayLogo || null,
+      homeLogo:   formGame.homeLogo || null,
     }]);
 
     // Clear only the per-leg fields; the date and slate stay put so the next
@@ -3165,8 +3201,25 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
     setFormGame(null);
     setFormOdds("");
     setFormCustomLine("");
-  }, [formGame, draftLegs.length, formOdds, formTimeframe, formMarket, formPickSide,
-      formCustomLine, formSport, formDate]);
+  }, [formGame, draftLegs, formOdds, formTimeframe, formMarket, formPickSide,
+      formCustomLine, formSport, formDate, formWagerType, entrySource.autofill]);
+
+  /**
+   * Edit a leg: it leaves the ticket and returns to the form it was built in.
+   * One editing surface — the form — instead of a second inline editor. The
+   * slate for the leg's date may need a fetch, so the restore completes in the
+   * effect below once the game is findable.
+   */
+  const [pendingEditLeg, setPendingEditLeg] = useState<DraftLeg | null>(null);
+
+  const handleEditLeg = useCallback((index: number) => {
+    const leg = draftLegs[index];
+    if (!leg) return;
+    setParlayError(null);
+    setDraftLegs(ls => ls.filter((_, i) => i !== index));
+    setPendingEditLeg(leg);
+    setFormDate(leg.gameDate);
+  }, [draftLegs]);
 
   const handleSubmitParlay = useCallback(async () => {
     setParlayError(null);
@@ -3207,13 +3260,15 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
         // unit and wrong at any other, showing a payout ratio the odds never
         // implied. The straight-bet path above has always sent both.
         toWinUnits: parseFloat((toWinDollars / unitSizeSafe).toFixed(4)),
-        wagerType: formWagerType,
+        // The ticket's label comes from its legs, which checkLegCoherence
+        // keeps uniform — not from wherever the toggle sits at submit time.
+        wagerType: deriveTicketWagerType(draftLegs.map(l => l.wagerType)),
         notes:     formNotes || undefined,
       });
     } catch {
       /* surfaced by onError */
     }
-  }, [ticketOdds, formRisk, effectiveStakeMode, unitSize, draftLegs, formWagerType, formNotes, createParlayMut]);
+  }, [ticketOdds, formRisk, effectiveStakeMode, unitSize, draftLegs, formNotes, createParlayMut]);
 
   const updateMut = trpc.betTracker.update.useMutation({
     // ── Optimistic update: apply result/notes change immediately ──
@@ -3402,6 +3457,27 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
   // ── Game selection ────────────────────────────────────────────────────────
   const slateGames = (slateQuery.data ?? []) as SlateGame[];
 
+  // Completes handleEditLeg once the leg's slate is loaded: the leg returns to
+  // the form exactly as it was priced.
+  useEffect(() => {
+    if (!pendingEditLeg) return;
+    const game = slateGames.find(
+      g => g.id === pendingEditLeg.anGameId && g.gameNumber === pendingEditLeg.gameNumber,
+    );
+    if (!game) return; // the slate for that date is still loading
+    // The leg's recorded price wins over the slate's current one, so the
+    // autofill effect skips exactly one pass.
+    skipAutofillOnceRef.current = true;
+    setFormGame(game);
+    setFormMarket(pendingEditLeg.market);
+    setFormPickSide(pendingEditLeg.pickSide);
+    setFormTimeframe(pendingEditLeg.timeframe as Timeframe);
+    setFormWagerType(pendingEditLeg.wagerType);
+    setFormOdds(String(pendingEditLeg.odds));
+    setFormCustomLine(pendingEditLeg.line != null ? String(pendingEditLeg.line) : "");
+    setPendingEditLeg(null);
+  }, [pendingEditLeg, slateGames]);
+
   const handleGameSelect = useCallback(
     (game: SlateGame) => {
       if (IS_DEV)
@@ -3410,8 +3486,17 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
         );
       setFormGame(game);
       setFormPickSide("AWAY");
-      const o = getPickOdds(game.odds, formMarket, "AWAY");
-      setFormOdds(o !== null ? String(o) : "");
+      // The toggle follows the game: an in-progress game is a LIVE wager
+      // until the user says otherwise, everything else is PREGAME.
+      const wt = defaultWagerType(game.status);
+      setFormWagerType(wt);
+      const src = decideEntrySource(game.status, wt);
+      if (src.autofill) {
+        const o = getPickOdds(game.odds, formMarket, "AWAY");
+        setFormOdds(o !== null ? String(o) : "");
+      } else {
+        setFormOdds("");
+      }
       setFormCustomLine("");
     },
     [formMarket]
@@ -3420,18 +3505,17 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
   const handlePickSide = useCallback(
     (side: PickSide) => {
       setFormPickSide(side);
-      if (formGame?.odds) {
+      if (formGame?.odds && entrySource.autofill) {
         const o = getPickOdds(formGame.odds, formMarket, side);
         setFormOdds(o !== null ? String(o) : "");
       }
     },
-    [formGame, formMarket]
+    [formGame, formMarket, entrySource.autofill]
   );
 
   const pickButtons = useMemo(() => {
     if (!formGame) return null;
     const {
-      odds,
       awayTeam,
       homeTeam,
       awayLogo,
@@ -3439,6 +3523,9 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
       awayNickname,
       homeNickname,
     } = formGame;
+    // The pick buttons quote the slate too, so the same separation applies:
+    // when the snapshot may not fill this wager type, they show no prices.
+    const odds = entrySource.autofill ? formGame.odds : null;
 
     if (formMarket === "TOTAL") {
       return (
@@ -3508,7 +3595,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
         />
       </div>
     );
-  }, [formGame, formMarket, formPickSide, handlePickSide]);
+  }, [formGame, formMarket, formPickSide, handlePickSide, entrySource.autofill]);
 
   // ── Submit ────────────────────────────────────────────────────────────────
   // Submission lock: prevents duplicate bets from double-click or rapid re-tap.
@@ -3586,7 +3673,9 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
       console.log(
         `[BetTracker][STATE] YRFI bet: enforcing market=TOTAL pickSide=OVER line=0.5`
       );
-    } else if (formGame?.odds) {
+    } else if (formGame?.odds && entrySource.autofill) {
+      // Gated like the odds field: a manual-entry wager type takes no line
+      // from the slate snapshot either — the user enters the line they got.
       const lv = getPickLine(formGame.odds, effectiveMarket, effectivePickSide);
       // CRITICAL: Store the raw signed value — do NOT apply Math.abs().
       // RL convention: HOME pick on favorite → lv = -1.5 (must win by >1.5)
@@ -4663,7 +4752,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                   className="grid grid-cols-2 gap-1 rounded-[10px] p-1"
                   style={{ background: "var(--dime-surface-card)", border: "1px solid var(--dime-border)" }}
                 >
-                  {(["SINGLE", "PARLAY"] as const).map(mode => (
+                  {(["STRAIGHT", "PARLAY"] as const).map(mode => (
                     <button
                       key={mode}
                       type="button"
@@ -4741,7 +4830,19 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                     <button
                       type="button"
                       onClick={() => setFormWagerType("LIVE")}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-all ${
+                      // A live wager cannot exist before first pitch, so LIVE
+                      // is not selectable while the picked game is scheduled.
+                      disabled={
+                        formGame != null &&
+                        !decideEntrySource(formGame.status, "LIVE").liveSelectable
+                      }
+                      title={
+                        formGame != null &&
+                        !decideEntrySource(formGame.status, "LIVE").liveSelectable
+                          ? "Game has not started"
+                          : undefined
+                      }
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition-all disabled:cursor-not-allowed disabled:opacity-40 ${
                         formWagerType === "LIVE"
                           ? "border border-primary text-primary"
                           : "bt-dim hover:text-white"
@@ -4871,23 +4972,40 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                     staked, which is not what a parlay is. */}
                 <div className={entryMode === "PARLAY" ? "grid grid-cols-1 gap-3" : "grid grid-cols-3 gap-3"}>
                   <div className="flex flex-col gap-1">
-                    <label
-                      htmlFor="bt-form-odds"
-                      className="bt-label"
-                    >
-                      {entryMode === "PARLAY" ? "Leg odds" : "Odds"}
-                    </label>
+                    <div className="flex items-center justify-between">
+                      <label
+                        htmlFor="bt-form-odds"
+                        className="bt-label"
+                      >
+                        {entryMode === "PARLAY" ? "Leg odds" : "Odds"}
+                      </label>
+                      {/* Where the number in the field comes from: the slate's
+                          pregame/live snapshot, or the user's own entry. */}
+                      {formGame && (
+                        <span
+                          className="text-[10px] font-bold uppercase"
+                          style={{
+                            letterSpacing: "0.08em",
+                            color: entrySource.sourceLabel === "LIVE"
+                              ? "var(--dime-mint)"
+                              : "var(--dime-text-muted)",
+                          }}
+                        >
+                          {entrySource.sourceLabel ?? "MANUAL"}
+                        </span>
+                      )}
+                    </div>
                     <input
                       id="bt-form-odds"
                       type="number"
                       aria-label="Odds"
                       value={formOdds}
                       onChange={e => setFormOdds(e.target.value)}
-                      placeholder="-110"
+                      placeholder={entrySource.autofill ? "-110" : "your price"}
                       className="w-full bt-input"
                     />
                   </div>
-                  {entryMode === "SINGLE" && (
+                  {entryMode === "STRAIGHT" && (
                   <div className="flex flex-col gap-1">
                     <label
                       htmlFor="bt-form-risk"
@@ -4910,7 +5028,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                     />
                   </div>
                   )}
-                  {entryMode === "SINGLE" && (
+                  {entryMode === "STRAIGHT" && (
                   <div className="flex flex-col gap-1">
                     <label
                       htmlFor="bt-form-to-win"
@@ -4957,7 +5075,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
 
                 {/* Unit math explainer — single bet only; the parlay shows its
                     own stake summary beneath the ticket price. */}
-                {entryMode === "SINGLE" &&
+                {entryMode === "STRAIGHT" &&
                   effectiveStakeMode === "U" &&
                   !isNaN(toWinNum) &&
                   toWinNum > 0 &&
@@ -5002,8 +5120,8 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                   </div>
                 )}
 
-                {/* Submit — a bet in SINGLE mode, a leg in PARLAY mode. */}
-                {entryMode === "SINGLE" ? (
+                {/* Submit — a bet in STRAIGHT mode, a leg in PARLAY mode. */}
+                {entryMode === "STRAIGHT" ? (
                   <button
                     type="button"
                     onClick={handleSubmit}
@@ -5029,6 +5147,7 @@ export default function BetTracker({ previewMode = false, embeddedInShell = fals
                     <ParlayBuilder
                       legs={draftLegs}
                       onRemoveLeg={i => setDraftLegs(prev => prev.filter((_, k) => k !== i))}
+                      onEditLeg={handleEditLeg}
                       ticketOdds={ticketOdds}
                       onTicketOddsChange={setTicketOdds}
                       ticketOddsManual={ticketOddsManual}
