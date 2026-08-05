@@ -43,7 +43,9 @@ export default function DimeLandingV2() {
   useEffect(() => {
     document.title = "dıme — See where price and probability disagree";
     return () => {
-      document.title = "AI Sports Betting Models";
+      // Keep the Dime title on unmount; routes that want a different title
+      // set their own (never reset to the retired pre-rebrand name).
+      document.title = "dıme — See where price and probability disagree";
     };
   }, []);
 

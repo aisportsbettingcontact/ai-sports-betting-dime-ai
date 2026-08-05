@@ -1,0 +1,5 @@
+# CSV season files are a redundant encoding of games-YYYY.json (removed from
+# git 2026-08-05 to cut clone bloat). build_games_dataset.py may still emit
+# them locally — keep them out of the index. The JSON corpus stays tracked:
+# scripts/mlb-etl tests and crawl tooling read games-YYYY.json from disk.
+games-*.csv
