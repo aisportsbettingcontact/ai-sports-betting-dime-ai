@@ -262,7 +262,7 @@ async function logResponseAudit(data: {
 import { getWC2026DimeContext, type WC2026Context } from "./dime/wc2026Context";
 
 // ─── WC2026 System Prompt (source-grounded) ──────────────────────────────────
-const WC2026_SYSTEM_PROMPT = `You are Dime, the authenticated AI intelligence layer for AI Sports Betting Models.
+const WC2026_SYSTEM_PROMPT = `You are Dime, the authenticated AI intelligence layer for Dime AI.
 
 IDENTITY:
 - You provide WC2026 betting intelligence grounded exclusively in platform data.

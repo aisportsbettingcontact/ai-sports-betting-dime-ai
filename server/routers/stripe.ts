@@ -220,9 +220,9 @@ const billingAppUserProcedure = stripeProcedure.use(csrfOriginCheck).use(async (
 function subscriptionDescription(planId: PlanId): string {
   switch (planId) {
     case "annual":
-      return "AI Sports Betting Models — Annual Plan ($499.99/year). Auto-renews annually at $499.99 until cancelled. Cancel anytime before renewal.";
+      return "Dime AI — Annual Plan ($499.99/year). Auto-renews annually at $499.99 until cancelled. Cancel anytime before renewal.";
     case "monthly":
-      return "AI Sports Betting Models — Monthly Plan ($99.99/month). Auto-renews monthly at $99.99 until cancelled. Cancel anytime before renewal.";
+      return "Dime AI — Monthly Plan ($99.99/month). Auto-renews monthly at $99.99 until cancelled. Cancel anytime before renewal.";
     case "pro":
       return "Dime AI — Pro ($99/month). Auto-renews monthly at $99 until cancelled. Cancel anytime before renewal.";
     case "sharp":

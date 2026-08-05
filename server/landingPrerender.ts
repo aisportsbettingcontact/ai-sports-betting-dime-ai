@@ -84,7 +84,7 @@ function buildPrivacyHtml(): string {
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>${title}</title>
-<meta name="description" content="Privacy Policy for AI Sports Betting Models — how we collect, use, and protect your data."/>
+<meta name="description" content="Privacy Policy for Dime AI — how we collect, use, and protect your data."/>
 <link rel="canonical" href="${canonical}"/>
 <meta property="og:type" content="website"/>
 <meta property="og:url" content="${canonical}"/>
@@ -172,7 +172,7 @@ a:focus-visible,.site-header a:focus-visible{outline:2px solid #45E0A8;outline-o
 <h2>10. Contact</h2>
 <p>For privacy-related inquiries, contact us at the email associated with your account or through the platform's support channels.</p>
 
-<div class="footer">&copy; ${new Date().getFullYear()} AI Sports Betting Models. All rights reserved.</div>
+<div class="footer">&copy; ${new Date().getFullYear()} Tailered Sports, Inc. All rights reserved.</div>
 </main>
 </body>
 </html>`;
@@ -187,7 +187,7 @@ function buildTermsHtml(): string {
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>${title}</title>
-<meta name="description" content="Terms of Service for AI Sports Betting Models — subscription terms, acceptable use, and disclaimers."/>
+<meta name="description" content="Terms of Service for Dime AI — subscription terms, acceptable use, and disclaimers."/>
 <link rel="canonical" href="${canonical}"/>
 <meta property="og:type" content="website"/>
 <meta property="og:url" content="${canonical}"/>
@@ -215,10 +215,10 @@ a:focus-visible,.site-header a:focus-visible{outline:2px solid #45E0A8;outline-o
 <header class="site-header"><a href="/" aria-label="Back to dime home">dıme</a></header>
 <main class="container">
 <h1>Terms of Service</h1>
-<p class="updated">Last updated: July 7, 2026</p>
+<p class="updated">Last updated: August 5, 2026</p>
 
 <h2>1. Acceptance of Terms</h2>
-<p>By accessing or using AI Sports Betting Models ("the Platform"), you agree to be bound by these Terms of Service. If you do not agree, do not use the Platform.</p>
+<p>By accessing or using Dime AI ("the Platform"), operated by Tailered Sports, Inc., you agree to be bound by these Terms of Service. If you do not agree, do not use the Platform.</p>
 
 <h2>2. Description of Service</h2>
 <p>The Platform provides sports intelligence software that generates AI-powered analytical outputs including probability distributions, no-vig pricing, Monte Carlo simulations, and market edge analysis. The Platform covers multiple sports including soccer (matches), baseball, basketball, and hockey.</p>
@@ -244,7 +244,7 @@ a:focus-visible,.site-header a:focus-visible{outline:2px solid #45E0A8;outline-o
 </ul>
 
 <h2>5. Intellectual Property</h2>
-<p>All models, algorithms, analytical frameworks, and software comprising the Platform are the intellectual property of AI Sports Betting Models. Your subscription grants a limited, non-transferable license to use Platform outputs for personal analytical purposes only.</p>
+<p>All models, algorithms, analytical frameworks, and software comprising the Platform are the intellectual property of Tailered Sports, Inc. Your subscription grants a limited, non-transferable license to use Platform outputs for personal analytical purposes only.</p>
 
 <h2>6. Disclaimers</h2>
 <p class="caps"><strong>THE PLATFORM IS PROVIDED "AS IS" WITHOUT WARRANTIES OF ANY KIND. WE DO NOT GUARANTEE THE ACCURACY, COMPLETENESS, OR RELIABILITY OF ANY ANALYTICAL OUTPUT. PAST PERFORMANCE OF OUR MODELS DOES NOT GUARANTEE FUTURE RESULTS.</strong></p>
@@ -271,7 +271,7 @@ a:focus-visible,.site-header a:focus-visible{outline:2px solid #45E0A8;outline-o
 <h2>12. Contact</h2>
 <p>For questions about these Terms, contact us through the Platform's support channels or at the email associated with your account.</p>
 
-<div class="footer">&copy; ${new Date().getFullYear()} AI Sports Betting Models. All rights reserved.</div>
+<div class="footer">&copy; ${new Date().getFullYear()} Tailered Sports, Inc. All rights reserved.</div>
 </main>
 </body>
 </html>`;
@@ -347,7 +347,7 @@ td b{color:var(--text);font-weight:700}
 .footer{border-top:1px solid var(--line);padding:32px 24px;text-align:center;color:var(--text-muted);font-size:12px}
 .disclaimer{max-width:720px;margin:0 auto 12px;line-height:1.7}
 </style>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Dime AI (AI Sports Betting Models)","applicationCategory":"SportsApplication","description":"${desc}","url":"${url}","offers":[{"@type":"Offer","name":"Pro Monthly","price":"99","priceCurrency":"USD"},{"@type":"Offer","name":"Sharp Monthly","price":"249","priceCurrency":"USD"},{"@type":"Offer","name":"Operator Monthly","price":"499","priceCurrency":"USD"}]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Dime AI","applicationCategory":"SportsApplication","description":"${desc}","url":"${url}","offers":[{"@type":"Offer","name":"Pro Monthly","price":"99","priceCurrency":"USD"},{"@type":"Offer","name":"Sharp Monthly","price":"249","priceCurrency":"USD"},{"@type":"Offer","name":"Operator Monthly","price":"499","priceCurrency":"USD"}]}</script>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Is this a picks service?","acceptedAnswer":{"@type":"Answer","text":"No. Dime AI is analytical software. It compares sportsbook prices against projected probability and classifies every market as Pass, Monitor, or Edge Detected. You make your own decisions."}},{"@type":"Question","name":"How does the model work?","acceptedAnswer":{"@type":"Answer","text":"400,000 simulations per game generate probability distributions, which are compared against the book's implied probability along with movement, volatility, and matchup context. Outputs are Brier-scored against closing prices."}},{"@type":"Question","name":"What does it cost?","acceptedAnswer":{"@type":"Answer","text":"Pro is $99/month, Sharp is $249/month and Operator is $499/month. On-page demos are free to preview, and founder access is by application."}}]}</script>
 </head>
 <body>
@@ -407,9 +407,9 @@ td b{color:var(--text);font-weight:700}
   <div class="faq-item"><div class="faq-q">Can I cancel at any time?</div><div class="faq-a">Yes. No long-term commitments &mdash; cancel from your account settings and access runs to the end of the billing period.</div></div>
 </section>
 <footer class="footer">
-  <p class="disclaimer">Dime AI (AI Sports Betting Models) is sports betting intelligence software. All projections, probabilities, and classifications are generated by mathematical models for informational purposes only. No guaranteed outcomes. Past model performance does not guarantee future results. Sports betting involves financial risk &mdash; bet responsibly and within your means.</p>
+  <p class="disclaimer">Dime AI is sports betting intelligence software. All projections, probabilities, and classifications are generated by mathematical models for informational purposes only. No guaranteed outcomes. Past model performance does not guarantee future results. Sports betting involves financial risk &mdash; bet responsibly and within your means.</p>
   <p class="disclaimer"><b>21+ only.</b> If you or someone you know has a gambling problem, call <a href="tel:1-800-426-2537" style="color:var(--mint)">1-800-GAMBLER</a> for free, confidential help.</p>
-  <p>&copy; ${year} AI Sports Betting Models. All rights reserved.</p>
+  <p>&copy; ${year} Tailered Sports, Inc. All rights reserved.</p>
 </footer>
 </body>
 </html>`;
