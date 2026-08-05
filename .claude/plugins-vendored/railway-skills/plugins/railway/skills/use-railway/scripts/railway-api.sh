@@ -1,52 +1,19 @@
 #!/usr/bin/env bash
-# Railway GraphQL API helper
-# Usage: railway-api.sh '<graphql-query>' ['<variables-json>']
+# DISABLED in the Dime fork — fail-closed stub.
+#
+# The upstream version of this script read a Railway API token from
+# ~/.railway/config.json and posted arbitrary GraphQL to
+# backboard.railway.com. That contradicts Dime credential law
+# (config/dime-agent-access.v1.json: remoteMutationsAuthorized: false;
+# the standard Railway CLI config must hold NO access/refresh token).
+#
+# This stub reads no files, sends no network requests, and always exits 1
+# so every legacy call site fails closed instead of finding a worse path.
 
-set -e
-
-SKILL_ID="use-railway"
-SKILL_VERSION="${RAILWAY_SKILL_VERSION:-1.2.3}"
-
-export RAILWAY_CALLER="${RAILWAY_CALLER:-skill:${SKILL_ID}@${SKILL_VERSION}}"
-export RAILWAY_AGENT_SESSION="${RAILWAY_AGENT_SESSION:-railway-skill-$(date +%s)-$$}"
-
-if ! command -v jq &>/dev/null; then
-  echo '{"error": "jq not installed. Install with: brew install jq"}'
-  exit 1
-fi
-
-CONFIG_FILE="$HOME/.railway/config.json"
-
-if [[ ! -f "$CONFIG_FILE" ]]; then
-  echo '{"error": "Railway config not found. Run: railway login"}'
-  exit 1
-fi
-
-TOKEN=$(jq -r '.user.token' "$CONFIG_FILE")
-
-if [[ -z "$TOKEN" || "$TOKEN" == "null" ]]; then
-  echo '{"error": "No Railway token found. Run: railway login"}'
-  exit 1
-fi
-
-if [[ -z "$1" ]]; then
-  echo '{"error": "No query provided"}'
-  exit 1
-fi
-
-# Build payload with query and optional variables
-if [[ -n "$2" ]]; then
-  PAYLOAD=$(jq -n --arg q "$1" --argjson v "$2" '{query: $q, variables: $v}')
-else
-  PAYLOAD=$(jq -n --arg q "$1" '{query: $q}')
-fi
-
-HEADERS=(
-  -H "Authorization: Bearer $TOKEN"
-  -H "Content-Type: application/json"
-  -H "X-Railway-Skill-Id: $SKILL_ID"
-  -H "X-Railway-Skill-Version: $SKILL_VERSION"
-  -H "X-Railway-Agent-Session: $RAILWAY_AGENT_SESSION"
-)
-
-curl -s https://backboard.railway.com/graphql/v2 "${HEADERS[@]}" -d "$PAYLOAD"
+cat >&2 <<'EOF'
+{
+  "error": "railway-api.sh is disabled in the Dime fork",
+  "detail": "This script must not read ~/.railway/config.json. Railway access for this repository goes through the hash-pinned Dime keychain broker (pnpm agent:context / scripts/dime-railway-secure.mjs). Arbitrary GraphQL from the agent is not authorized (remoteMutationsAuthorized: false). For reads, use the Railway MCP tools or the read-only CLI with explicit human approval."
+}
+EOF
+exit 1
