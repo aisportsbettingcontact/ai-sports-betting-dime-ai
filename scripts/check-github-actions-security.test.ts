@@ -109,3 +109,80 @@ test("unapproved workflow write permissions are rejected", async () => {
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test("duplicate mapping keys fail the gate (GitHub rejects the file silently)", async () => {
+  const root = await fixture(
+    "dup.yml",
+    [
+      "name: dup",
+      "on: workflow_dispatch",
+      "permissions:",
+      "  contents: read",
+      "jobs:",
+      "  check:",
+      "    runs-on: ubuntu-latest",
+      "    steps:",
+      '      - name: "step"',
+      "        env:",
+      "          A: one",
+      "        env:",
+      "          B: two",
+      "        run: |",
+      "          echo ok",
+      "          env: not-a-key-inside-block-scalar",
+    ].join("\n")
+  );
+  try {
+    const result = await scanActionsSecurity(root, {
+      enforceRepositoryContracts: false,
+    });
+    assert.equal(result.status, "FAIL");
+    assert.ok(
+      result.failures.some(failure =>
+        /duplicate mapping key 'env'/.test(failure)
+      )
+    );
+    assert.equal(
+      result.failures.filter(f => /duplicate/.test(f)).length,
+      1,
+      "block-scalar body must not be scanned for keys"
+    );
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("repeated step names across list items are separate scopes (no false positive)", async () => {
+  const root = await fixture(
+    "ok.yml",
+    [
+      "name: ok",
+      "on: workflow_dispatch",
+      "permissions:",
+      "  contents: read",
+      "jobs:",
+      "  check:",
+      "    runs-on: ubuntu-latest",
+      "    steps:",
+      '      - name: "one"',
+      "        env:",
+      "          A: x",
+      "        run: echo 1",
+      '      - name: "two"',
+      "        env:",
+      "          A: y",
+      "        run: echo 2",
+    ].join("\n")
+  );
+  try {
+    const result = await scanActionsSecurity(root, {
+      enforceRepositoryContracts: false,
+    });
+    assert.ok(
+      !result.failures.some(f => /duplicate/.test(f)),
+      `unexpected: ${result.failures.join("; ")}`
+    );
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
