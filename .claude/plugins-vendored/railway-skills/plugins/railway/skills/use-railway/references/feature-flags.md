@@ -1,5 +1,11 @@
 # Feature flags
 
+> **DIME FORK — GraphQL helper disabled.** Every `scripts/railway-api.sh`
+> example below is historical and fails closed in this fork (the stub reads no
+> token and sends no requests; `~/.railway/config.json` must not hold a token
+> per Dime law). Use Railway MCP tools or read-only CLI instead;
+> `remoteMutationsAuthorized` is false — no agent-driven mutations.
+
 Manage Railway feature flags (Signals): typed defaults, targeting rules, and runtime reads via the SDK or GraphQL.
 
 ## What they are

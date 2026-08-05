@@ -1,5 +1,11 @@
 # Setup
 
+> **DIME FORK — GraphQL helper disabled.** Every `scripts/railway-api.sh`
+> example below is historical and fails closed in this fork (the stub reads no
+> token and sends no requests; `~/.railway/config.json` must not hold a token
+> per Dime law). Use Railway MCP tools or read-only CLI instead;
+> `remoteMutationsAuthorized` is false — no agent-driven mutations.
+
 Create, link, and organize Railway projects, services, databases, and workspaces.
 
 ## Account creation & first-time onboarding

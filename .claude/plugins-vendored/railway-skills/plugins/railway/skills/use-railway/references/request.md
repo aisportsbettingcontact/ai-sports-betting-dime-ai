@@ -1,5 +1,11 @@
 # Request
 
+> **DIME FORK — GraphQL helper disabled.** Every `scripts/railway-api.sh`
+> example below is historical and fails closed in this fork (the stub reads no
+> token and sends no requests; `~/.railway/config.json` must not hold a token
+> per Dime law). Use Railway MCP tools or read-only CLI instead;
+> `remoteMutationsAuthorized` is false — no agent-driven mutations.
+
 Official documentation and community endpoints. GraphQL operations for things the CLI doesn't expose.
 
 ## Official documentation
@@ -83,15 +89,12 @@ Thread URLs follow the format: `https://station.railway.com/{topic_slug}/{thread
 Community threads are anecdotal. Always pair with official docs when the answer informs an operational decision.
 
 
-## GraphQL helper
+## GraphQL helper (DISABLED in the Dime fork)
 
-All GraphQL operations use the API helper script, which handles authentication automatically:
-
-```bash
-scripts/railway-api.sh '<query>' '<variables-json>'
-```
-
-The script reads the API token from `~/.railway/config.json` and sends requests to `https://backboard.railway.com/graphql/v2`.
+Upstream, this section documented `scripts/railway-api.sh '<query>' '<variables-json>'`,
+which read an API token from `~/.railway/config.json`. In this fork the script is a
+fail-closed stub: it reads no token, sends nothing, and exits 1. Use the Railway MCP
+tools or read-only CLI; if an operation is not exposed there, stop and report.
 
 For the full API schema, see: https://docs.railway.com/api/llms-docs.md
 
