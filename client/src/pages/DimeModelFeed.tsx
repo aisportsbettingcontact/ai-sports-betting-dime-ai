@@ -457,11 +457,18 @@ export default function DimeModelFeed(props: DimeModelFeedProps) {
 
         <div className={`dmf-list${isStale ? " dmf-stale" : ""}`} aria-busy={isStale}>
           {isLoading && gamesCount === 0 ? (
-            <>
-              <SkeletonRow />
-              <SkeletonRow />
-              <SkeletonRow />
-            </>
+            /* 2026-08-05 (audit DIME-UI-019 completion): skeletons render
+               inside the SAME .dmf-league/.dmf-leaguebody containers as the
+               loaded slate, so the container-driven 1/2/3-up column count is
+               identical before and after data resolves — loading no longer
+               reflows from a single-column stack into a multi-column grid. */
+            <div className="dmf-league" aria-hidden="true">
+              <div className="dmf-leaguebody">
+                <SkeletonRow />
+                <SkeletonRow />
+                <SkeletonRow />
+              </div>
+            </div>
           ) : gamesCount === 0 && isError ? (
             <div className="dmf-empty" role="alert">
               <span className="dmf-micro">Projections unavailable</span>

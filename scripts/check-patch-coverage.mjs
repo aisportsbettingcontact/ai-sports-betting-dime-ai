@@ -136,9 +136,7 @@ if (prettierLib) {
 }
 
 if (changed.size === 0) {
-  console.log(
-    "[patch-coverage] all changed files proven format-only — pass"
-  );
+  console.log("[patch-coverage] all changed files proven format-only — pass");
   process.exit(0);
 }
 

@@ -3,8 +3,12 @@ import express from "express";
 import { createServer } from "http";
 import net from "net";
 import compression from "compression";
-import rateLimit, { ipKeyGenerator } from "express-rate-limit";
-import { createTrpcRateLimitDispatch } from "./trpcRateLimitPolicy";
+import rateLimit from "express-rate-limit";
+import {
+  clientIpKey,
+  createTrpcRateLimitDispatch,
+  sendRateLimitResponse,
+} from "./trpcRateLimitPolicy";
 import helmet from "helmet";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerStorageProxy } from "./storageProxy";
@@ -147,7 +151,12 @@ function fireRateLimitEvent(
   path: string,
   method: string,
   limitType:
-    "global" | "auth" | "trpc_auth" | "stripe_checkout" | "waitlist_submit",
+    | "global"
+    | "auth"
+    | "trpc_auth"
+    | "stripe_checkout"
+    | "waitlist_submit"
+    | "public_feed",
   ua: string | null
 ) {
   const now = Date.now();
@@ -220,7 +229,12 @@ const globalApiLimiter = rateLimit({
   legacyHeaders: false,
   message: { error: "Too many requests. Please slow down." },
   skip: req => req.path === "/health", // never throttle health probes
-  handler: (req, res, _next, options) => {
+  // Key on the true client IP (leftmost sanitized XFF), NOT req.ip: under
+  // Railway's edge + trust proxy=1, req.ip is the rotating edge node, so the
+  // default keyGenerator both multiplied per-client budgets and shared budgets
+  // across unrelated clients. See clientIpKey.
+  keyGenerator: req => `global:${clientIpKey(req)}`,
+  handler: (req, res, _next) => {
     const ip =
       (req.headers["x-forwarded-for"] as string | undefined)
         ?.split(",")[0]
@@ -229,7 +243,7 @@ const globalApiLimiter = rateLimit({
       "unknown";
     const ua = (req.headers["user-agent"] as string | undefined) ?? null;
     fireRateLimitEvent(ip, req.path, req.method, "global", ua);
-    res.status(options.statusCode).json(options.message);
+    sendRateLimitResponse(req, res, "Too many requests. Please slow down.");
   },
 });
 
@@ -244,7 +258,8 @@ const authLimiter = rateLimit({
     error:
       "Too many authentication attempts. Please wait 15 minutes before trying again.",
   },
-  handler: (req, res, _next, options) => {
+  keyGenerator: req => `auth:${clientIpKey(req)}`,
+  handler: (req, res, _next) => {
     const ip =
       (req.headers["x-forwarded-for"] as string | undefined)
         ?.split(",")[0]
@@ -253,7 +268,11 @@ const authLimiter = rateLimit({
       "unknown";
     const ua = (req.headers["user-agent"] as string | undefined) ?? null;
     fireRateLimitEvent(ip, req.path, req.method, "auth", ua);
-    res.status(options.statusCode).json(options.message);
+    sendRateLimitResponse(
+      req,
+      res,
+      "Too many authentication attempts. Please wait 15 minutes before trying again."
+    );
   },
 });
 
@@ -269,13 +288,12 @@ const trpcAuthLimiter = rateLimit({
     // Class-stable key, NOT path-derived: this limiter is fed by the /api/trpc
     // procedure-aware dispatch, where req.path is the full comma-separated
     // batch — keying on it would let an attacker mint a fresh budget per batch
-    // composition (login,me vs login,foo). All login attempts from one IP
-    // share one budget.
-    // MUST use ipKeyGenerator helper to normalize IPv6 addresses — express-rate-limit v8
-    // throws ERR_ERL_KEY_GEN_IPV6 (fatal ValidationError) if req.ip is used directly.
-    return `${ipKeyGenerator(req.ip ?? "")}:trpc_auth`;
+    // composition (login,me vs login,foo). clientIpKey resolves the true client
+    // (leftmost sanitized XFF), not the rotating Railway edge node. All login
+    // attempts from one client share one budget.
+    return `${clientIpKey(req)}:trpc_auth`;
   },
-  handler: (req, res, _next, options) => {
+  handler: (req, res, _next) => {
     const ip =
       (req.headers["x-forwarded-for"] as string | undefined)
         ?.split(",")[0]
@@ -284,7 +302,11 @@ const trpcAuthLimiter = rateLimit({
       "unknown";
     const ua = (req.headers["user-agent"] as string | undefined) ?? null;
     fireRateLimitEvent(ip, req.path, req.method, "trpc_auth", ua);
-    res.status(options.statusCode).json(options.message);
+    sendRateLimitResponse(
+      req,
+      res,
+      "Too many login attempts. Please wait 15 minutes."
+    );
   },
 });
 
@@ -719,10 +741,11 @@ async function startServer() {
       // Class-stable key (see trpcAuthLimiter note): req.path under the
       // /api/trpc dispatch is the full batch list — path-derived keys would
       // reopen per-composition budget minting for the rotating-origin probers
-      // this limiter exists to stop.
-      return `${ipKeyGenerator(req.ip ?? "")}:stripe_checkout`;
+      // this limiter exists to stop. clientIpKey resolves the true client, not
+      // the rotating Railway edge node.
+      return `${clientIpKey(req)}:stripe_checkout`;
     },
-    handler: (req, res, _next, options) => {
+    handler: (req, res, _next) => {
       const ip =
         (req.headers["x-forwarded-for"] as string | undefined)
           ?.split(",")[0]
@@ -734,7 +757,11 @@ async function startServer() {
         `[STRIPE_CHECKOUT_RATE_LIMIT] IP=${ip} path=${req.path} ua=${ua ?? "none"}`
       );
       fireRateLimitEvent(ip, req.path, req.method, "stripe_checkout", ua);
-      res.status(options.statusCode).json(options.message);
+      sendRateLimitResponse(
+        req,
+        res,
+        "Too many checkout requests. Please wait 15 minutes before trying again."
+      );
     },
   });
   // Stripe procedure limiting now flows through the consolidated
@@ -754,9 +781,9 @@ async function startServer() {
         "Too many waitlist submissions. Please wait 15 minutes before trying again.",
     },
     keyGenerator: req => {
-      return `waitlist:${ipKeyGenerator(req.ip ?? "")}`;
+      return `waitlist:${clientIpKey(req)}`;
     },
-    handler: (req, res, _next, options) => {
+    handler: (req, res, _next) => {
       const ip =
         (req.headers["x-forwarded-for"] as string | undefined)
           ?.split(",")[0]
@@ -768,9 +795,55 @@ async function startServer() {
         `[WAITLIST_RATE_LIMIT] IP=${ip} path=${req.path} ua=${ua ?? "none"}`
       );
       fireRateLimitEvent(ip, req.path, req.method, "waitlist_submit", ua);
-      res.status(options.statusCode).json(options.message);
+      sendRateLimitResponse(
+        req,
+        res,
+        "Too many waitlist submissions. Please wait 15 minutes before trying again."
+      );
     },
   });
+
+  // ─── Public feed read limiter ─────────────────────────────────────────────
+  // The scraper hot path: games.list / getCurrentDate / getAvailableDates /
+  // lastRefresh + wc2026.matchesByDate. A real logged-in user sends one batched
+  // feed poll per 60s (~1-3 req/min incl. navigation), so 60/min/IP is ~20x
+  // headroom while capping a scraper at 1 req/s. FAIL OPEN (feed is the
+  // product — a limiter fault must not become an outage; enforced in the
+  // dispatch's public_feed branch). Env knobs: FEED_RATE_LIMIT_MAX (default 60),
+  // FEED_RATE_LIMIT_DISABLED=1 kill-switch (feed class only; never auth/checkout).
+  const feedRateLimitMax =
+    Number(process.env.FEED_RATE_LIMIT_MAX ?? "60") || 60;
+  const feedRateLimitDisabled =
+    (process.env.FEED_RATE_LIMIT_DISABLED ?? "").trim() === "1";
+  const feedProcedureLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: feedRateLimitMax,
+    standardHeaders: "draft-7",
+    legacyHeaders: false,
+    skip: () => feedRateLimitDisabled,
+    // Fail OPEN natively: on a store error, allow the request rather than 500.
+    // Inert with the in-process MemoryStore (cannot error), but load-bearing if
+    // this class ever moves to a shared/Redis store — the feed must never go
+    // down because its limiter's backing store did.
+    passOnStoreError: true,
+    keyGenerator: req => `${clientIpKey(req)}:public_feed`,
+    handler: (req, res, _next) => {
+      const ip =
+        (req.headers["x-forwarded-for"] as string | undefined)
+          ?.split(",")[0]
+          .trim() ??
+        req.ip ??
+        "unknown";
+      const ua = (req.headers["user-agent"] as string | undefined) ?? null;
+      fireRateLimitEvent(ip, req.path, req.method, "public_feed", ua);
+      sendRateLimitResponse(
+        req,
+        res,
+        "Too many feed requests. Please slow down and try again shortly."
+      );
+    },
+  });
+
   // ─── Procedure-aware tRPC rate-limit dispatch (AUTH-004 generalized) ─────
   // ONE classifier for every procedure-scoped limiter. Path-prefix mounts on
   // /api/trpc/<procedure> are batch-evadable (httpBatchLink sends comma lists:
@@ -784,6 +857,7 @@ async function startServer() {
       auth: trpcAuthLimiter,
       stripe_checkout: stripeCheckoutLimiter,
       waitlist: waitlistSubmitLimiter,
+      public_feed: feedProcedureLimiter,
     })
   );
 
