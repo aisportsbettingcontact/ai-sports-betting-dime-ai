@@ -20,3 +20,4 @@ retrieved automatically rather than buried in a postmortem *(doctrine §8, L7)*.
 | [Gates must be required to be gates](gates-must-be-required-to-be-gates.md) | 2 advisory gates, 9 ceiling raises |
 | [One branch, one PR, one stage](one-branch-one-pr-one-stage.md) | Two stages missed their merge window by 15 min and 1 min |
 | [A config API is not runtime truth](config-api-is-not-runtime-truth.md) | I refuted my own RAILPACK finding with one build-log read |
+| [A gate in the same command block is not a gate](a-gate-in-the-same-command-block-is-not-a-gate.md) | I scanned and pushed in one block; the scan gated nothing |

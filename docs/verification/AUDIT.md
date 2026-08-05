@@ -135,3 +135,36 @@ forever (all 19 were verified as unified records with open instances on main
 recreated as PR #371 from the same branch), and check runs attach to commit
 SHAs, so a recreated PR needs one fresh commit to shed the predecessor's
 stale check runs (this commit).
+
+## 9. Findings the scanners never reported (2026-08-05 sweep follow-up)
+
+Both surfaced during the manual triage of the 41-alert sweep, not from any
+rule firing. Recorded here because the fix for the first is deliberately
+partial, and a future reader deserves to know it is partial by design.
+
+**Cross-process TOCTOU — `scripts/dime-agent-access.mjs` broker handoff.**
+`secureBrokerFile()` validates the 1Password broker reference file (regular
+file, not a symlink, ≤8 KB, mode 0600, owned by the caller, exact
+`VAR="op://…"` contents). The plan then hands `op run --env-file=<path>` a
+**path**, and `op` resolves that name again in its own process — so the bytes
+`op` loads are never provably the bytes that were validated. This is strictly
+wider than the eight `js/file-system-race` alerts CodeQL did report, and none
+of them covered it.
+
+*Narrowed, not closed.* `credentialBrokerPlan` now re-validates immediately
+before embedding the path in the argv, and asserts that the path it validated
+is character-identical to the one it hands over. That shrinks the window from
+"since preflight, possibly minutes" to the gap between the check and `op`'s
+open. Closing it fully means never passing a name — handing over an
+already-open descriptor — which `op run --env-file` does not support. The
+residual risk is accepted: exploiting it requires an attacker who can already
+write the developer's repository root, and the file contains an `op://`
+*reference*, not a secret.
+
+**Bulk PII in operator output — `scripts/exportUsersToStripe.mjs`.** The
+script reads every row of `app_users` and printed each address in full across
+three log sites, so a routine run deposited the entire user list into terminal
+scrollback and any CI log capturing it. Addresses are now masked
+(`d***@example.com` — enough to recognise a row, not to harvest one), with
+`--show-pii` as an explicit, auditable opt-in. Stripe API calls are unchanged
+and still send real addresses; only the logging is masked.
