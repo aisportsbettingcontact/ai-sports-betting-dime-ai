@@ -323,7 +323,14 @@ Desktop (>=1024px) only — tablet/mobile keep their shipped layouts:
 - Honor ETag/304 (empty 304 body ≠ "no games"); keep 0-games auto-retry ×3 + auto-advance-to-first-available-date
 - F5/NRFI/team-HR ride on the `games.list` row; K props / HR props / lineups are separate batched queries
 - Keep 60s polling with `placeholderData: prev`
-- Feed data is public; only `favorites.*` and Last-5 need the app session
+- Feed data is TIERED (amended 2026-08-05, owner-ratified via PR): **commodity**
+  data — schedule, book lines/odds, betting splits, lineups, metadata — is public;
+  the **proprietary model IP** — projections, win probabilities, edges, fair odds
+  (every `model*`/edge field, K-prop & HR-prop projections, WC model odds) — is
+  gated: anonymous callers receive it nulled at the wire layer, authenticated
+  users get the full payload. `favorites.*` and Last-5 remain fully login-gated.
+  (Enforced in the read procedures via `server/feedGating.ts`, not the
+  `publishedModel` flag.)
 
 ---
 
