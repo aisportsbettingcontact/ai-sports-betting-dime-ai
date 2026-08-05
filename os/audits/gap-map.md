@@ -44,12 +44,24 @@ A prospect reading the objections section sees roughly double what they will be 
 indexes a third set entirely. The page's own HONESTY LAW header declares a claim whitelist — **with
 no executable check enforcing it**, which is exactly how this shipped.
 
-### U3 — 837 commits and 52 GB of evidence exist only on one laptop
+### U3 — The MLB forensic audit and 52 GB of evidence exist only on one laptop
 **Missing: Ar + M · Violates D6 (minimize invisible consequential state)**
 
-`local/audit-mlb-model-2026` — the forensic audit, backfill tooling, model fixes, replay engine, and
-publication-gate wiring — has **never been pushed**. It executed real, snapshot-backed writes against
-production TiDB on 2026-07-25: **13,408 regrades, 8,464 new ledger rows, 7,632 CLV backfills.**
+`local/audit-mlb-model-2026` — **26 commits ahead of `main`, never pushed to any remote** (tip
+`8190a7d96`, 2026-07-29; `git branch -r --contains` → empty) — holds the forensic audit, backfill
+tooling, model fixes, walk-forward replay, the **provenance regime**, and the publication-gate
+wiring. It executed real, snapshot-backed writes against production TiDB on 2026-07-25: **13,408
+regrades, 8,464 new ledger rows, 7,632 CLV backfills.**
+
+> *Correction: an earlier draft said "837 commits" — the verifier reported the count in the wrong
+> direction (839 is the count unique to `main`). Magnitude overstated; the finding stands.*
+
+**What is on that branch materially changes the plan.** Per its own `MASTER-REPORT.md`, it contains
+the fix for several gaps this map lists as open: a replay regime *"that keeps replay strictly
+separated from what was actually published live"* (→ F5), the revived publication gate with
+per-market `publish_*` switches (→ F3.2), the strikeout-props units fix, a fitted walk-forward
+environment multiplier for totals, and a rebuilt NRFI walk-forward logistic model. **Rescuing this
+branch is not just archival — it is the cheapest path to closing F5 and F3.**
 
 Alongside it: 47 GB MLB feed corpus + 3.8 GB NFL DB + 1.2 GB audit evidence, plus all of
 `docs/ai-native/`, `shared/loop/`, `server/loop/`, and 7 `server/*.ts` modules — untracked.
@@ -138,6 +150,8 @@ Nothing reminded, aged, escalated, or even noticed.
 | F6.7 | Append-only on `INCIDENTS.md` has **zero mechanical enforcement**; Status lines are mutated in place | And no number-allocation mechanism — see F6.8 |
 | F6.8 | **Incident-number collision**: two concurrent sessions both took 41–43; the AI-native program's three incidents were never filed and it cited the register as evidence anyway | `grep` for the program's terms across all 61 entries → 0 hits |
 | F6.9 | VERIFIED/INFERRED/UNKNOWN taxonomy has **zero enforcement**, and `OPERATING-RULES.md` ("read at every session start, non-negotiable") is **loaded by nothing** — not `CLAUDE.md`, not `AGENTS.md`, no hook, not the per-prompt capsule | Its own last commit is 2026-07-08, the oldest governance artifact |
+| **F6.10** | **`gitleaks` does not block merges.** `main-protection` requires exactly 3 contexts — `Security Audit`, `TypeScript Check`, `Vitest`. The gitleaks job is `Secret Scan (gitleaks)` and is **not among them**; `Security Audit` is osv-scanner + an Actions-security contract and does **no secret scanning**. So the remediation for SEC-006 (23 production credentials in git history) is advisory | `gh api .../rulesets/18701573`; `.github/workflows/gitleaks.yml:17`; `ci.yml` Security Audit job steps. **Corrects the Stage 1 audit, which claimed gitleaks was required** |
+| **F6.11** | **The promotion step itself is what never happens.** All five ruleset revisions since 2026-07-08 carry the identical 3 contexts — never expanded, never contracted. `DB Tests` and `Build & Preview Gate` were never *demoted*; they were **never promoted** | Ruleset revision history. This is why 7 of 10 Stage 2 records, all of which end in "…becomes a required check", would have degraded to advisory — see `os/decisions/DR-014` |
 
 ### F7 — No operational observability
 **Missing: O · D12-L3/L6 · Priority: MEDIUM-HIGH**

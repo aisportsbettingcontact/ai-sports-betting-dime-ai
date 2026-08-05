@@ -41,7 +41,17 @@ Stage 4 must be **making artifacts durable and making silence loud** — not bui
 |---|---|---|
 | **U1** | **Production holds "do not publish" verdicts it is ignoring.** The 2026-07-25 forensic audit wrote 9 `publish_*` BACKTEST-ONLY rows into production `mlb_calibration_constants`. The code that reads them was never merged, so the platform publishes all 9 markets anyway, fail-open. The audit's own verdict: "do not sell edges the data does not yet support." | Live customer-facing claims contradict Dime's own evidence. This is a compliance and trust exposure, not an architecture gap. |
 | **U2** | **Three contradictory price sets ship on the same page.** Live checkout charges Pro $49.99 / Sharp $99.99 / Max $199.99. The objections block on the same page sells "$99 a month… ≈ $3.30 a day" and names a tier ("Operator") that no longer exists. The bot-facing schema.org JSON-LD tells Google Pro $99 / Sharp $249 / Operator $499. | A prospect reads ~2× the real price; a search engine indexes a third set. Structured data misstating price is exactly what the landing page's own HONESTY LAW exists to prevent. |
-| **U3** | **837 commits exist only on one laptop.** Branch `local/audit-mlb-model-2026` — the entire forensic audit, backfill tooling, model fixes, replay engine, and publication-gate wiring — has never been pushed. It mutated production data on 2026-07-25 (13,408 regrades, 8,464 new ledger rows, 7,632 CLV backfills). Alongside it: 52 GB of evidence corpora, `docs/ai-native/`, and ~78 KB of finished evaluation code, all untracked. | Disk failure destroys the audit *and* the only record of what was done to production. No one else can re-run or verify those mutations. |
+| **U3** | **The MLB forensic audit exists only on one laptop.** Branch `local/audit-mlb-model-2026` — **26 commits ahead of `main`, never pushed to any remote** — holds the forensic audit, backfill tooling, model fixes, walk-forward replay, the **provenance regime**, and the publication-gate wiring. It mutated production data on 2026-07-25 (13,408 regrades, 8,464 new ledger rows, 7,632 CLV backfills). Alongside it: 52 GB of evidence corpora, `docs/ai-native/`, and ~78 KB of finished evaluation code, all untracked. | Disk failure destroys the audit *and* the only record of what was done to production. No one else can re-run or verify those mutations. |
+
+> **Correction (executor, VERIFIED 2026-08-05).** An earlier draft of this audit stated "837 commits"
+> for this branch. That was wrong — the verifier reported the count in the wrong direction.
+> `git rev-list --count local/audit-mlb-model-2026 ^main` → **26**;
+> `git rev-list --count main ^local/audit-mlb-model-2026` → **839**. The branch is 26 commits of
+> audit work atop an older `main`. Tip: `8190a7d96`, 2026-07-29. `git branch -r --contains` → empty,
+> confirming it was never pushed. The dark-state finding stands; only its magnitude was overstated.
+> Logged here rather than silently edited, per `OPERATING-RULES.md` and
+> `os/memory/lessons/numbers-in-narratives-are-usually-generated.md` — which this audit's own output
+> just violated.
 
 ---
 
@@ -206,8 +216,16 @@ These survived adversarial re-check and are the mission's genuine assets:
    artifact kinds, four distinct timestamps, resolvable source refs, sha-256 content hash over a
    canonical view that excludes processing time so replays dedupe, append-only prev-hash chain,
    refusal of fabricated hashes and unresolved citations. Adversarially tested. **Untracked.**
-7. **`gitleaks` is genuinely blocking** — one of exactly 4 required status checks on `main`, no
-   failure suppression, fingerprint-scoped ignores that cannot mask future findings.
+7. ~~**`gitleaks` is genuinely blocking** — one of exactly 4 required status checks on `main`.~~
+   **CORRECTED 2026-08-05 — this was wrong, and the correction is a finding.** `main-protection`
+   (ruleset `18701573`) requires exactly **three** contexts: `Security Audit`, `TypeScript Check`,
+   `Vitest`. The gitleaks workflow declares job name `Secret Scan (gitleaks)` and is **not among
+   them**. `Security Audit` is a job in `ci.yml` that runs the GitHub-Actions security contract and
+   `osv-scanner` — **it performs no secret scanning at all.**
+   Net: **gitleaks runs on every PR and fails its own workflow, but does not block a merge.** The
+   remediation for SEC-006 ("Production credentials committed to git history", 23 credentials) is
+   advisory. The workflow itself is well-built — no failure suppression, fingerprint-scoped ignores
+   that cannot mask future findings — it simply is not wired to the gate. Filed as **F6.10**.
 8. **The test harness is better than typical** — `check-environment-failures.mjs` is a real
    executable gate, `dbSuiteRegistration.test.ts` exists specifically to break when a DB suite is
    half-wired, the bundle-budget script carries a documented negative control.
