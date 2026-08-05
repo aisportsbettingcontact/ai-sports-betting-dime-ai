@@ -16,6 +16,11 @@ const WRITE_EXCEPTION = "auto-merge-dependabot.yml";
 //   packages        — push the verification image digest to GHCR (11 only)
 const WRITE_APPROVALS = new Map([
   ["auto-merge-dependabot.yml", new Set(["contents", "pull-requests"])],
+  // os-ledger-append writes ONLY to the `os-ledger` orphan branch, which is
+  // deploy-inert (both Railway services pin source.branch = "main"). It appends
+  // one loop-cycle artifact per merge so a merge stops being an unobserved
+  // action (ISSUE-009 / D5). No other branch is touched and no secret is read.
+  ["os-ledger-append.yml", new Set(["contents"])],
   ["02-codeql.yml", new Set(["security-events"])],
   ["05-workflow-security.yml", new Set(["security-events"])],
   ["09-artifact-build-and-smoke.yml", new Set(["security-events"])],
