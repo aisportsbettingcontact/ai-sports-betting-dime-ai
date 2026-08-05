@@ -64,10 +64,27 @@ jobs:
             printf '# os-ledger\n\nMachine-generated loop artifacts. Never deployed: Railway pins main.\n' > /tmp/osl/README.md
           fi
 
-          # Resolve the proof-contract run for this commit, if one exists.
-          RID=$(gh run list --workflow=01-pr-proof-contract.yml --limit 40 \
-                  --json databaseId,headSha --jq \
-                  "[.[]|select(.headSha==\"$SHA\")][0].databaseId // empty" 2>/dev/null || true)
+          # Resolve the proof-contract run for this merge.
+          #
+          # DEFECT FIXED 2026-08-05: the first version matched on GITHUB_SHA, the
+          # MERGE commit. 01-pr-proof-contract runs on `pull_request`, so its
+          # headSha is the PR HEAD, never the merge commit -- the lookup matched
+          # nothing and every artifact recorded proofContractRunId: null. Caught
+          # by inspecting the very first artifact the loop produced.
+          #
+          # Correct chain: merge commit -> PR number -> PR head sha -> run.
+          PRNUM=$(git log -1 --format=%s "$SHA" | sed -n 's/^Merge pull request #\([0-9]*\).*/\1/p')
+          RID=""
+          if [ -n "$PRNUM" ]; then
+            PRHEAD=$(gh pr view "$PRNUM" --json headRefOid --jq '.headRefOid' 2>/dev/null || true)
+            if [ -n "$PRHEAD" ]; then
+              RID=$(gh run list --workflow=01-pr-proof-contract.yml --limit 60 \
+                      --json databaseId,headSha,conclusion --jq \
+                      "[.[]|select(.headSha==\"$PRHEAD\" and .conclusion==\"success\")][0].databaseId // empty" \
+                      2>/dev/null || true)
+            fi
+          fi
+          echo "[os-ledger] pr=${PRNUM:-none} head=${PRHEAD:-none} proofContractRun=${RID:-none}"
 
           cd /tmp/osl
           PROOF_CONTRACT_RUN_ID="${RID}" node "${GITHUB_WORKSPACE}/scripts/os/ledger-append.mjs" \

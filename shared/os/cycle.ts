@@ -64,6 +64,19 @@ export function assertRevish(v: string): string {
   return v;
 }
 
+/**
+ * Extract the PR number from a GitHub merge-commit subject.
+ *
+ * Needed because 01-pr-proof-contract runs on `pull_request`, so its headSha is
+ * the PR HEAD, never the merge commit. Linking a cycle to its proof therefore
+ * requires: merge commit -> PR number -> PR head -> run. The first version
+ * matched the merge SHA directly and silently recorded null on every artifact.
+ */
+export function prNumberFromMergeSubject(subject: string): number | null {
+  const m = /^Merge pull request #(\d+)\b/.exec(subject.trim());
+  return m ? Number(m[1]) : null;
+}
+
 /** How long a merge may go unobserved before the clock reports it. */
 const OBSERVE_WINDOW_DAYS = 2;
 
