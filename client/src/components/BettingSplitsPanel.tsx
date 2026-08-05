@@ -581,7 +581,7 @@ function CompactMarketRow({
         homeColor={homeColor}
         awayLineLabel={awayLineLabel}
         homeLineLabel={homeLineLabel}
-        rowLabel="Money"
+        rowLabel="Handle" // 2026-08-05: one word per concept — desktop bars and the history tables both say HANDLE
       />
     </div>
   );
@@ -1223,7 +1223,7 @@ export function BettingSplitsPanel({
                   ? "SPREAD"
                   : m === "total"
                     ? "TOTAL"
-                    : "MONEYLINE";
+                    : "ML"; // 2026-08-05: "MONEYLINE" clipped to "MONEYLIN" at 375-390 (equal-thirds row); ML is the surface's own abbr (history badge vocabulary)
               const isActive = m === activeMarket;
               const isAvailable = availableMarkets.includes(m);
               return (

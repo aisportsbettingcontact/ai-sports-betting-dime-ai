@@ -1671,7 +1671,7 @@ function DesktopMergedPanel({
             homePct={homeHandle}
             awayColor={awayColor}
             homeColor={homeColor}
-            rowLabel="MONEY"
+            rowLabel="HANDLE" // 2026-08-05: one word per concept — splits page + history tables say HANDLE
             awayLabel={barAwayLabel}
             homeLabel={barHomeLabel}
           />
@@ -3796,8 +3796,12 @@ function GameCardInner({
               style={{ color: "var(--dime-mint-text, #45E0A8)" }} // 2026-08-05 token law
             >
               <span
-                className="w-1 h-1 rounded-full animate-pulse inline-block"
-                style={{ background: "var(--dime-mint, #45E0A8)" }}
+                className="rounded-full animate-pulse inline-block"
+                style={{
+                  width: "7px" /* 2026-08-05: MASTER live-indicator spec (was w-1 = 4px) */,
+                  height: "7px",
+                  background: "var(--dime-mint, #45E0A8)",
+                }}
               />
               LIVE
             </span>
@@ -4093,8 +4097,8 @@ function GameCardInner({
                   <span
                     className="rounded-full animate-pulse inline-block flex-shrink-0"
                     style={{
-                      width: "5px",
-                      height: "5px",
+                      width: "7px", /* 2026-08-05: MASTER live-indicator spec (was 5px) */
+                      height: "7px",
                       background: "var(--dime-mint, #45E0A8)",
                     }}
                   />
@@ -4897,8 +4901,13 @@ function GameCardInner({
                 >
                   <CompactScorePanel />
                 </div>
-                {/* Scroll container for splits */}
+                {/* Scroll container for splits. 2026-08-05: focusable + named
+                    — as a plain div the pane's off-screen half was unreachable
+                    by keyboard entirely. */}
                 <div
+                  tabIndex={0}
+                  role="group"
+                  aria-label="Betting splits — scroll horizontally for the home side"
                   style={{
                     gridColumn: "2",
                     overflowX: "auto",
@@ -4911,6 +4920,14 @@ function GameCardInner({
                       game={game}
                       awayLabel={awayName}
                       homeLabel={homeName}
+                      /* 2026-08-05 (mobile refinement): pass abbrs like the two
+                         desktop call sites do — without them the bar headers
+                         fell back to city names ("New York (+1.5)" for NYY
+                         AND NYM; "Los Angeles" for LAD and LAA), wrapping to
+                         two lines beside a frozen column that already says
+                         the abbr. */
+                      awayAbbr={awayAbbr}
+                      homeAbbr={homeAbbr}
                       awayNickname={awayNickname}
                       homeNickname={homeNickname}
                       onMarketChange={setActiveMarket}
