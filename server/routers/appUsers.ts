@@ -26,7 +26,15 @@ import {
   incrementAllTokenVersions,
   insertSecurityEvent,
   invalidateAppUserByIdCache,
+  updateAccountLockoutState,
+  recordAccountLoginFailure,
 } from "../db";
+import {
+  accountLockoutConfig,
+  clearedLockout,
+  isLockedOut,
+  type AccountLockoutState,
+} from "../accountLockout";
 import { getDiscordClient } from "../discord/bot";
 import { notifyOwner } from "../_core/notification";
 import { getCachedAppUser, getCachedAppUserEntry, setCachedAppUser, invalidateCachedAppUser } from "../dbCircuitBreaker";
@@ -483,11 +491,45 @@ export const appUsersRouter = router({
         throw new TRPCError({ code: "FORBIDDEN", message: "Account has expired" });
       }
 
+      // ── Per-account lockout (credential-stuffing defense) ──────────────────
+      // Counts failures against THIS account across ALL IPs, so a botnet can't
+      // outrun the per-IP limiter. State lives on the app_users row; the pure
+      // decision logic is server/accountLockout.ts.
+      const lockoutCfg = accountLockoutConfig();
+      const lockState: AccountLockoutState = {
+        failedLoginCount: user.failedLoginCount,
+        firstFailedLoginAt: user.firstFailedLoginAt,
+        lockedUntil: user.lockedUntil,
+      };
+      // While locked, block EVERY attempt (even a correct password) — the
+      // cooldown is the penalty. Time-boxed + cleared by password reset, so a
+      // real user always recovers. The response is deliberately the SAME generic
+      // "Invalid credentials" / UNAUTHORIZED as a wrong password, so the lock
+      // state is not a username-existence oracle. (We skip bcrypt entirely, but
+      // that timing difference already exists for user_not_found above.)
+      if (isLockedOut(lockState, Date.now(), lockoutCfg)) {
+        fireAuthFailEvent("account_locked");
+        throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid credentials" });
+      }
+
       const valid = await bcrypt.compare(input.password, user.passwordHash);
       if (!valid) {
         fireAuthFailEvent("invalid_password");
-        recordLoginFailure(clientIp); // [RATE_LIMIT] count failure
+        recordLoginFailure(clientIp); // [RATE_LIMIT] per-IP count
+        // Per-account count — ATOMIC (SELECT … FOR UPDATE) so concurrent
+        // guesses can't out-race the cap; fail-open (never blocks the response).
+        void recordAccountLoginFailure(user.id, Date.now(), lockoutCfg).then(
+          ({ justLocked }) => {
+            if (justLocked) fireAuthFailEvent("account_locked_triggered");
+          }
+        );
         throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid credentials" });
+      }
+
+      // Successful login clears any accumulated lockout state (only writes when
+      // there is something to clear — no needless write on every login).
+      if (user.failedLoginCount > 0 || user.lockedUntil != null) {
+        void updateAccountLockoutState(user.id, clearedLockout());
       }
 
       await updateAppUserLastSignedIn(user.id);
@@ -1590,11 +1632,17 @@ export const appUsersRouter = router({
       // [STEP] Hash new password (cost=10: OWASP-compliant, ~110ms vs ~250ms for cost=12)
       const passwordHash = await bcrypt.hash(input.password, 10);
 
-      // [STEP] Update password, clear reset token, invalidate all sessions
+      // [STEP] Update password, clear reset token, invalidate all sessions.
+      // Also CLEAR any per-account lockout: a password reset is the sanctioned
+      // recovery path for a user who got locked out (their own fat-fingering or
+      // a targeted lockout attempt), so it must lift the lock immediately.
       await updateAppUser(input.uid, {
         passwordHash,
         passwordResetToken: null,
         passwordResetExpiresAt: null,
+        failedLoginCount: 0,
+        firstFailedLoginAt: null,
+        lockedUntil: null,
       });
       // Invalidate all existing sessions by incrementing tokenVersion
       const newTokenVersion = await incrementTokenVersion(input.uid);

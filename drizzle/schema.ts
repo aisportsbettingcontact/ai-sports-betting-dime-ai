@@ -111,6 +111,24 @@ export const appUsers = mysqlTable("app_users", {
    * Tokens are valid for 30 minutes from issuance.
    */
   passwordResetExpiresAt: bigint("passwordResetExpiresAt", { mode: "number" }),
+  // ─── Per-account login lockout (credential-stuffing defense) ────────────────
+  // DB-backed so failures against THIS account are counted no matter which IP
+  // they come from (a botnet defeats the per-IP loginRateMap). See
+  // server/accountLockout.ts for the pure decision logic. Expand-only, safe
+  // defaults — old code that never touches these columns is unaffected.
+  //
+  // ⚠️ DEPLOY-ORDER LAW: Drizzle emits an explicit column list, so the moment
+  // code carrying THIS schema deploys, every app_users SELECT names these
+  // columns. If the DB hasn't had migration 0133 applied yet, MySQL 1054 →
+  // auth resolvers swallow it → SITE-WIDE silent auth failure. Always run
+  // db-push.yml (migration 0133) BEFORE deploying code that includes these
+  // columns. The ACCOUNT_LOCKOUT_DISABLED kill-switch does NOT cover this.
+  /** Failed login attempts in the current rolling window. */
+  failedLoginCount: int("failedLoginCount").default(0).notNull(),
+  /** ms timestamp of the first failure in the current window (window anchor). */
+  firstFailedLoginAt: bigint("firstFailedLoginAt", { mode: "number" }),
+  /** ms timestamp until which the account is locked; NULL = not locked. */
+  lockedUntil: bigint("lockedUntil", { mode: "number" }),
   // ─── Stripe subscription ────────────────────────────────────────────────────
   /**
    * Stripe Customer ID (cus_xxx). Set on first successful checkout.
