@@ -8,7 +8,7 @@ dist
 # Legacy sandbox artifacts and local scraper logs — keep out of the image
 .scraper-logs/
 # Personal reference material — never ship to production bundles (CLAUDE.md)
-dime-ai/design-bundle/uploads
+dime-ai/design-bundle/project/uploads
 # Governed LLM development sources, fixtures, and evidence are never part of
 # the Railway production image. The one explicitly allow-listed pricing
 # registry is a bounded runtime configuration artifact; its own review status

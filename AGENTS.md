@@ -104,7 +104,7 @@ from `.claude/commands/` are `/<name>`.
 3. **Data contracts** — the projections feed contracts in
    `design-system/dime-ai/pages/ai-model-projections.md` and
    `dime-ai/DIME-FEED-MIGRATION-DRAFT.md` must not be violated.
-4. **Frozen chat provider** — `DIME_CHAT_LLM_PROVIDER` changes only by explicit
+4. **Chat provider pin (owner-gated)** — `DIME_CHAT_LLM_PROVIDER` changes only by explicit
    owner-authorized code change (see `server/_core/dimeChatModel.ts`); the `dime1` path
    stays gated behind `ml/dime-1.0/docs/RELEASE_GATES.md`.
 

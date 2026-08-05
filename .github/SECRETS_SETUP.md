@@ -16,7 +16,7 @@ This document lists every secret required by the CI/CD workflows in `.github/wor
 | Secret Name | Description | Format | Required By |
 |---|---|---|---|
 | `DATABASE_URL` | MySQL/TiDB connection string | `mysql://user:pass@host:port/dbname` | `ci.yml` (test stage) |
-| `JWT_SECRET` | Session cookie signing secret | Min 16 chars, random string | `ci.yml` (test stage) |
+| `APP_SESSION_SECRET` | Session cookie signing secret | Min 44 chars, random string | `ci.yml` (test stage) |
 | `PUBLIC_ORIGIN` | Production base URL (no trailing slash) | `https://aisportsbettingmodels.com` | `ci.yml` (test stage) |
 
 ---

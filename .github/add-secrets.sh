@@ -2,7 +2,7 @@
 # .github/add-secrets.sh
 #
 # One-shot script to add all 3 required GitHub Actions secrets to the
-# aisportsbettingcontact/aisportsbetting repository.
+# aisportsbettingcontact/ai-sports-betting-dime-ai repository.
 #
 # PREREQUISITES:
 #   1. Install GitHub CLI: https://cli.github.com/
@@ -24,7 +24,7 @@
 
 set -euo pipefail
 
-REPO="aisportsbettingcontact/aisportsbetting"
+REPO="aisportsbettingcontact/ai-sports-betting-dime-ai"
 
 echo ""
 echo "╔══════════════════════════════════════════════════════════════╗"

@@ -174,3 +174,11 @@ blob-report/
 # size; reports + JSON sidecars remain tracked — regenerated PNGs must not
 # be re-committed).
 audits/**/*.png
+
+# Personal reference material (CLAUDE.md: never redistribute) — untracked 2026-08-05
+dime-ai/design-bundle/project/uploads/
+dime-ai/design-bundle/**/uploads/
+
+# Manus-era session logs: purged from history 2026-08-05 (owner-authorized);
+# must never re-enter the repo.
+.manus-logs/

@@ -32,7 +32,7 @@ is acceptable.
 - Claude Code: `Skill` tool / `/<command>`; superpowers' using-superpowers gate enforces
   the rule at session start.
 - pi: skills are advertised in `<available_skills>` (name + description) so the model
-  auto-selects by prompt match; explicit invocation is `/skill:<name>`. All 27
+  auto-selects by prompt match; explicit invocation is `/skill:<name>`. All 33
   `.claude/commands/*.md` are also loaded as `/` prompt templates (same `$ARGUMENTS`
   syntax) — `/ship`, `/stripe`, `/ui-build`, `/sp-*`, `/pm-*`, plus pi-native `/review`
   from `.pi/prompts/`.
