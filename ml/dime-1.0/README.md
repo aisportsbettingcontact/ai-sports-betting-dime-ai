@@ -31,10 +31,7 @@ behaviors must be taught and evaluated explicitly.
 
 ## Current status: foundation only
 
-The application chat provider is pinned to `"anthropic"` (`DIME_CHAT_LLM_PROVIDER`
-in `server/_core/dimeChatModel.ts`, owner decision 2026-08-04; changing it requires
-an explicit owner-authorized code change enforced by
-`server/dimeChatProviderFreeze.test.ts`). This project does not
+The application provider remains hardcoded to `frozen`. This project does not
 authorize a model call, deployment, or production change.
 
 Validate the non-authorizing Foundation, evaluation-identity, and model-execution
