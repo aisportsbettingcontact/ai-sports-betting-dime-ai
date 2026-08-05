@@ -129,6 +129,15 @@ __pycache__/
 .claude/skills/*
 # pi-harness is real repo content (execution-routing skill), not a symlink
 !.claude/skills/pi-harness/
+# design-federation is real repo content (UI orchestrator skill), not a symlink
+!.claude/skills/design-federation/
+# impeccable is vendored real repo content (pinned in its VENDOR.md), not a symlink
+!.claude/skills/impeccable/
+# emil skills are tracked vendored content (MIT — upstream LICENSE must ship with them)
+!.claude/skills/emil-design-eng/
+!.claude/skills/apple-design/
+!.claude/skills/animation-vocabulary/
+!.claude/skills/review-animations/
 
 # Audit notes, DB dumps, and run artifacts (non-sensitive but bulky)
 audit-notes/
@@ -174,6 +183,9 @@ blob-report/
 # size; reports + JSON sidecars remain tracked — regenerated PNGs must not
 # be re-committed).
 audits/**/*.png
+# Same policy for design-federation evidence bundles (docs/audits/*-evidence/):
+# screenshots live on disk / in the PR body, never in git.
+docs/audits/*-evidence/screenshots/
 
 # Personal reference material (CLAUDE.md: never redistribute) — untracked 2026-08-05
 dime-ai/design-bundle/project/uploads/
