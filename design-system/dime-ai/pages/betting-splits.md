@@ -85,6 +85,41 @@ Options (both one-accent compliant):
 the lines/odds vanish. Fix needs component hooks (band-scoped padding/type
 reductions + a narrower score rail), beyond the 2026-08-05 CSS-first pass.
 
+## Mobile addendum (2026-08-05, `feat/splits-mobile-refine`)
+
+Measured under true mobile emulation (iPhone UA + touch + DPR2, 320–430px).
+Codifies what the mobile pass ships; OPEN DECISION items stay open.
+
+### Shipped mobile rules
+- **Nothing scrolls off unannounced.** Any pane that overflows sideways on
+  phones (splits scroll pane, history tables) is keyboard-focusable
+  (`tabIndex=0`, named `role="group"`) and shows a thin scrollbar — never a
+  gradient fade (gradients are banned). The frozen matchup column floors at
+  118px and the scroll pane carries no fixed inner minimum, so both halves
+  of every bar fit the real pane width at 320–430; bar labels keep their own
+  `max-content` guarantee.
+- **One word per concept at every width:** mobile bars say HANDLE (never
+  MONEY) and the mobile market chip says ML (never a clipped "MONEYLIN");
+  bar headers use team abbreviations, matching the history tables.
+- **Card grouping:** a game's history card tucks flush under its game card
+  (squared inner corners, −6px overlap); distinct games keep the full
+  floating-card rhythm.
+- **Touch floors:** 44px minimum hit area on the history disclosure row and
+  the favorite star (invisible hit extension — visual size unchanged).
+- **Sticky chrome:** the 8px breathing gap between the floating nav and the
+  pinned filter header is covered with page ground so scrolled fragments
+  never glint through.
+- LIVE dot 7px on phones (5px vanishes at arm's length under DPR2).
+
+### OPEN DECISION 4 — mobile freshness-stamp home
+The desktop date header renders "SPLITS SYNCED N MIN AGO"; on phones the
+stamp is hidden (`hidden md:flex`) because the date row is already at
+capacity at 320–390. The mobile surface therefore has **no freshness
+signal**. Candidate homes: (a) a mono micro-label row under the date
+header; (b) inside the sport picker sheet; (c) accept desktop-only.
+*The 2026-08-05 mobile pass changed nothing here — awaiting the owner's
+call.*
+
 ## Known debt (codify or migrate later)
 - `GameCard.tsx` splits path carries ~34 vw-based font clamps and legacy
   inline styles that the override layer corrects; a token migration would

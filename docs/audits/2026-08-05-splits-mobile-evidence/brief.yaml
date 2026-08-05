@@ -1,0 +1,67 @@
+# Federated UI brief — Betting Splits + Odds History, MOBILE refinement pass.
+id: betting-splits-mobile-refine-2026-08-05
+
+surface:
+  name: "betting-splits-mobile"
+  kind: feed
+  mode: operate
+  change: refine
+
+lead: "impeccable"
+advisors:
+  - "ui-ux-pro-max:ui-ux-pro-max (terminal-only)"
+  - "emil-design-eng (touch press craft)"
+  - "frontend-design via Read"
+  - "review-animations via Read (motion gate if diff touches motion)"
+
+product:
+  audience: "Bettors reading market consensus one-handed; single-market toggle world (<768px)"
+  single_job: "Read tickets vs handle and line movement per game with the thumb"
+  business_goal: "Premium history content remains legible and reachable on phones"
+  evidence:
+    - "User instruction 2026-08-05: same /ui-loop on the mobile /betting-splits"
+    - "Measured under true mobile emulation: the third market toggle renders 'MONEYLIN' at 375-390 (clipped at the card edge)"
+    - "Vocabulary drift: mobile bars say MONEY where desktop bars + history tables say HANDLE"
+
+content:
+  source: ["client/src/pages/BettingSplits.tsx (mobile branches)", "client/src/components/GameCard.tsx (mobile splits path)", "client/src/components/BettingSplitsPanel.tsx (LabeledBar/mobile toggle)", "client/src/components/OddsHistoryPanel.tsx (single-market mode)", "client/src/styles/splits-interactions.css + dime-mobile.css"]
+  responsible_gaming: true
+  invented_claims: false
+
+law:                       # no pages/ override is law; PR #367 proposes one
+  - design-system/dime-ai/MASTER.md
+  - dime-ai/THREE-COLOR-LAW.md
+  - design-system/dime-ai/TYPOGRAPHY.md
+law_notes:
+  - "pages/betting-splits.md (PROPOSED in PR #367) — respect its OPEN DECISIONS; do not pre-empt owner calls (mint side-encoding etc.)"
+
+stacking:
+  base_branch: feat/splits-desktop-refine  # PR #367 — bar-label integrity,
+  # light-theme repairs, token wraps inherited; this PR merges after it.
+  # 2026-08-05 update: owner merged #367 to main mid-pass; branch rebased
+  # onto main (which now carries the desktop fixes). PR base: main.
+
+direction:
+  adjectives: ["thumb-first", "consensus-at-a-glance", "complete labels", "quiet"]
+  anti_references: ["desktop table shrunk onto a phone"]
+  signature_element: "Unchanged — the split pill bar; mobile work protects label completeness and one-word-per-concept vocabulary"
+
+engineering:
+  branch: feat/splits-mobile-refine
+  css_first: true
+  no_new_dependencies: true
+  preserve: ["tRPC wiring", "route canonicalization (bettingSplitsPath)", "analytics", "AgeModal + auth", "favorites", "mobile nav config", "desktop layouts (must not regress)"]
+  viewports_primary: [375x812, 390x844]
+  viewports_secondary: [320x693, 430x932]
+  emulation: "isMobile + hasTouch + DPR2 + iPhone UA"
+  reduced_motion: required
+  dark_and_light: required
+
+acceptance:
+  required_states: ["loading", "empty", "expanded history (single-market mode)", "market toggle press", "focus-visible", "reduced-motion", "LIVE row"]
+  no_console_errors: true
+  no_horizontal_overflow: true
+  motion_gate: auto
+  detector: "node .claude/skills/impeccable/scripts/detect.mjs --json client/src/components/GameCard.tsx client/src/components/BettingSplitsPanel.tsx client/src/components/OddsHistoryPanel.tsx client/src/pages/BettingSplits.tsx client/src/styles/splits-interactions.css"
+  delivery_gate: "MASTER Pre-Delivery Checklist + bundle at docs/audits/2026-08-05-splits-mobile-evidence/"
+  stop_rule: "Bounded repair — one batched fix round + at most one confirm round"
