@@ -99,6 +99,26 @@ function isClosed(status: string | null): boolean {
 }
 
 /**
+ * Which sections a decision record must carry, given its kind AND its status.
+ *
+ * Status matters, and the first version of this contract missed that. It
+ * required `## Requested ruling` on every consolidation record — then DR-015
+ * arrived with `Status: RULED`, because it *records* Prez's approval rather
+ * than requesting one, and the gate failed a perfectly well-formed artifact.
+ *
+ * A settled record owes the ruling itself; only an open one owes a request.
+ */
+export function requiredSections(kind: string, status: string | null): string[] {
+  const settled = isClosed(status);
+  if (kind === "consolidation") {
+    return settled ? ["**Governs:**", "## Ruling "] : ["**Governs:**", "## Ruling ", "## Requested ruling"];
+  }
+  return settled
+    ? ["## The question", "## Recommendation"]
+    : ["## The question", "## Recommendation", "## Requested ruling"];
+}
+
+/**
  * The clock. An open item is overdue when its `observe_by` has passed — or when
  * it never declared one at all.
  *

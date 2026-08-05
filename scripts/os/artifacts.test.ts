@@ -16,7 +16,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync, readdirSync, statSync, existsSync } from "fs";
 import { join, dirname, resolve } from "path";
-import { parseArtifactHeader, findSupersededClaims, type ArtifactFile } from "../../shared/os/artifacts";
+import { parseArtifactHeader, findSupersededClaims, requiredSections, type ArtifactFile } from "../../shared/os/artifacts";
 
 const OS = resolve(__dirname, "../../os");
 
@@ -43,13 +43,9 @@ describe("/os/ artifact gate", () => {
     const bad: string[] = [];
     for (const f of files) {
       if (!/os\/decisions\/DR-\d+/.test(f.path)) continue;
-      const { kind } = parseArtifactHeader(f.body);
-      const need =
-        kind === "consolidation"
-          ? ["**Governs:**", "## Ruling ", "## Requested ruling"]
-          : ["## The question", "## Recommendation", "## Requested ruling"];
-      const missing = need.filter((s) => !f.body.includes(s));
-      if (missing.length) bad.push(`${f.path} [kind=${kind}] missing ${missing.join(", ")}`);
+      const { kind, status } = parseArtifactHeader(f.body);
+      const missing = requiredSections(kind, status).filter((s) => !f.body.includes(s));
+      if (missing.length) bad.push(`${f.path} [kind=${kind} status=${status}] missing ${missing.join(", ")}`);
     }
     expect(bad).toEqual([]);
   });

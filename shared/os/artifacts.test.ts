@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseArtifactHeader, findOverdue, findSupersededClaims } from "./artifacts";
+import { parseArtifactHeader, findOverdue, findSupersededClaims, requiredSections } from "./artifacts";
 
 describe("parseArtifactHeader", () => {
   it("reads Status, Kind and observe_by from a decision-record header", () => {
@@ -25,6 +25,27 @@ describe("parseArtifactHeader", () => {
 
   it("returns observeBy null when absent, rather than guessing a date", () => {
     expect(parseArtifactHeader("# x\n\n**Status:** OPEN\n").observeBy).toBeNull();
+  });
+});
+
+describe("requiredSections", () => {
+  it("a consolidation record AWAITING a ruling must request one", () => {
+    expect(requiredSections("consolidation", "AWAITING RULING")).toContain("## Requested ruling");
+  });
+
+  it("a consolidation record already RULED must RECORD the ruling, not request one", () => {
+    const need = requiredSections("consolidation", "RULED");
+    expect(need).toContain("## Ruling ");
+    expect(need).not.toContain("## Requested ruling");
+  });
+
+  it("a decision record AWAITING a ruling needs question, recommendation and request", () => {
+    const need = requiredSections("decision", "AWAITING RULING");
+    expect(need).toEqual(["## The question", "## Recommendation", "## Requested ruling"]);
+  });
+
+  it("a decision record already RULED no longer needs a pending request", () => {
+    expect(requiredSections("decision", "RULED")).not.toContain("## Requested ruling");
   });
 });
 
