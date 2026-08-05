@@ -141,9 +141,13 @@ queryClient.getQueryCache().subscribe(event => {
     // connection blips that auto-retry. Logging them causes false-positive error reports.
     const isNetworkBlip = error instanceof TRPCClientError && error.message === "Failed to fetch";
     if (isNetworkBlip) return;
-    // Suppress rate-limit errors — they are already handled by resilientFetch with toast + retry.
+    // Suppress rate-limit errors — handled by resilientFetch (client throttle)
+    // or surfaced by the caller (server 429 envelope). Match the stable error
+    // code, not message wording, so server-emitted TOO_MANY_REQUESTS is covered.
     const isRateLimit = error instanceof TRPCClientError &&
-      (error.message.includes("temporarily busy") || error.message.includes("temporarily unavailable"));
+      (error.data?.code === "TOO_MANY_REQUESTS" ||
+        error.message.includes("temporarily busy") ||
+        error.message.includes("temporarily unavailable"));
     if (isRateLimit) return;
     console.error("[API Query Error]", error);
   }
@@ -153,9 +157,12 @@ queryClient.getMutationCache().subscribe(event => {
   if (event.type === "updated" && event.action.type === "error") {
     const error = event.mutation.state.error;
     redirectToLoginIfUnauthorized(error);
-    // Suppress rate-limit errors — already handled by resilientFetch.
+    // Suppress rate-limit errors — match the stable code so server-emitted
+    // TOO_MANY_REQUESTS (429 envelope) is covered, not just the client throttle.
     const isRateLimit = error instanceof TRPCClientError &&
-      (error.message.includes("temporarily busy") || error.message.includes("temporarily unavailable"));
+      (error.data?.code === "TOO_MANY_REQUESTS" ||
+        error.message.includes("temporarily busy") ||
+        error.message.includes("temporarily unavailable"));
     if (!isRateLimit) {
       console.error("[API Mutation Error]", error);
     }
