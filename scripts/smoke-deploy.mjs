@@ -126,6 +126,44 @@ await check("checkout CSP allows Stripe Embedded (script-src js.stripe.com + fra
   return "CSP allows Stripe";
 });
 
+await check("rate-limit keying resists X-Forwarded-For spoofing (Railway sanitizes)", async () => {
+  // Security invariant: limiter keys are the TRUE client, so a spoofed leftmost
+  // X-Forwarded-For must NOT mint a fresh budget. We hit the feed limiter twice
+  // from this one machine — once plain, once with a spoofed XFF — and assert the
+  // RateLimit `remaining` counter keeps DECREASING (one shared key) instead of
+  // resetting to the max (which would mean Railway stopped sanitizing XFF and
+  // the client can pick its own limiter identity). This converts the one-time
+  // manual XFF check into a permanent per-deploy gate.
+  //
+  // The invariant only holds BEHIND the sanitizing edge. Against a direct
+  // localhost target there is no proxy to strip the injected header, so the app
+  // (correctly) trusts the leftmost XFF and the check would be meaningless — we
+  // mark it N/A there with a concrete reason rather than assert a false result.
+  const behindEdge = base.startsWith("https://") && !/(localhost|127\.0\.0\.1|\[::1\])/.test(base);
+  if (!behindEdge) {
+    return "N/A — direct/localhost target has no sanitizing edge; invariant holds only behind Railway's proxy";
+  }
+  const url = `${base}/api/trpc/games.list?batch=1&input=%7B%220%22%3A%7B%22json%22%3A%7B%22sport%22%3A%22MLB%22%7D%7D%7D`;
+  const remainingOf = (res) => {
+    const h = res.headers.get("ratelimit") ?? res.headers.get("RateLimit") ?? "";
+    const m = h.match(/remaining=(\d+)/i);
+    return m ? Number(m[1]) : null;
+  };
+  const first = await fetch(url);
+  const r1 = remainingOf(first);
+  expect(r1 !== null, "no RateLimit header on games.list — feed limiter not mounted");
+  const spoofed = await fetch(url, { headers: { "x-forwarded-for": "203.0.113.250" } });
+  const r2 = remainingOf(spoofed);
+  expect(r2 !== null, "no RateLimit header on the spoofed request");
+  // Shared key → r2 continues the same budget (strictly below the fresh max).
+  // If spoofing minted a new key, r2 would jump back to (max-1) = 59.
+  expect(
+    r2 <= r1 - 1 || r2 < 59,
+    `spoofed XFF got a fresh budget (r1=${r1}, r2=${r2}) — Railway XFF sanitization may have changed; limiter keying is now spoofable`
+  );
+  return `plain remaining=${r1} → spoofed remaining=${r2} (shared key)`;
+});
+
 const failed = results.filter((r) => !r.ok);
 console.log(`\n${results.length - failed.length}/${results.length} checks passed`);
 process.exit(failed.length === 0 ? 0 : 1);
