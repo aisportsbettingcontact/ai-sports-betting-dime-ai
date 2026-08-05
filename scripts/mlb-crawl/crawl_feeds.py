@@ -3,6 +3,8 @@
 Two modes:
   --shard shards/shard-1.json     crawl an explicit game list into feeds-2026/
   --season 2014                   crawl all finals from games-2014.json into feeds-2014/
+                                  (historical games-YYYY.json were dropped from git 2026-08-05;
+                                   regenerate first: build_games_dataset.py --start YYYY --end YYYY)
 
 Usage: python3 crawl_feeds.py (--shard FILE | --season YYYY) [--delay 1.0] [--limit N]
 """
