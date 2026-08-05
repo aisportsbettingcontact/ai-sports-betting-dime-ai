@@ -1455,3 +1455,61 @@ therefore reported `No such file or directory`; no digest mismatch occurred.
 
 The same manifest was verified from its owning evidence directory. The frozen
 fixture, local report, and JSON Schema all returned `OK`.
+
+## Incident 62 — 2026-08-05 — Schema health gate failed two backend deploys on the zombie service
+
+Status: RESOLVED (fixed by PR #394 before this entry was written; filed retroactively because no
+entry existed for two FAILED production deployments)
+
+PR #392 shipped a schema/code-agreement health gate: `/health` returns 503 when the `app_users`
+query is invalid against the live schema, so Railway keeps the previous healthy deploy rather than
+serving code that is ahead of its migration. On the domained service this is correct and it passed.
+
+On `ai-sports-betting-backend` — the zombie service documented in Incident 39, whose database has no
+app tables — the probe did not find drift. It found **no table at all**:
+
+```text
+[DB][probeAppUsersSchema] SCHEMA MISMATCH — the app_users query is invalid against the live schema.
+Code deployed ahead of its migration? code=ER_NO_SUCH_TABLE
+  message=Failed query: select `id`, `email`, ... from `app_users` where `app_users`.`id` = ? limit ?
+[schema-gate] CRITICAL: app_users schema is behind the code — /health will report 503 so Railway
+  keeps the previous healthy deploy.
+[HEALTH_CHECK] GET /health | db.state=CLOSED dbOk=true schema=schema_mismatch
+[HTTP_REQUEST] ← GET /health | status=503
+Stopping Container
+```
+
+`ER_NO_SUCH_TABLE` is the zombie's normal steady state, not migration drift, so the gate produced a
+false positive and Railway failed the deploy.
+
+Two deployments FAILED on service `3528dc9f-a63b-45e9-94bb-6d1df25d6f3a`:
+
+| Deployment | Commit | PR | Window |
+|---|---|---|---|
+| `19c67f72` | `9318bedde` | #392 (introduced the gate) | 22:56:01 → 23:01:26 |
+| `96d256ce` | `2992b49e1` | #393 (inherited it; changed nothing on this path) | 23:11:40 → 23:17:00 |
+
+**No customer impact.** The domained service `a46ea921` succeeded on every deploy in this window —
+its database has `app_users`, so the gate passed. Only the domainless zombie failed. Verified via
+Railway deployment history for both services.
+
+Resolved by PR #394 (`8e03e2599`, deployment `bf328a88` SUCCESS at 23:19:44): the gate now scopes to
+a missing COLUMN — real code-ahead-of-migration drift — rather than a missing TABLE.
+
+### Why this was not caught before merge
+
+This is gap **F7.6** from `os/audits/gap-map.md`, filed 2026-08-05, biting for the first time:
+
+> One merge = two production deploys. Both Railway services deploy the same repo and branch; the
+> second has no domain, no smoke test, and no push-triggered health check. An action fires on every
+> merge but its result is never observed by any repo-owned check.
+
+`deploy-smoke.yml` probes the domained origin only, so a backend-only failure is invisible to CI.
+It was noticed here only because a human read the Railway dashboard.
+
+### Follow-up (not done here)
+
+- The zombie backend still deploys on every merge and still has no repo-owned health check. Either
+  give it one or stop deploying it. Incident 39 remains OPEN and is the same underlying condition.
+- Any future startup gate must be tested against BOTH services, because they have different
+  databases. A gate that is correct for the domained service can fail-closed on the zombie.
