@@ -46,12 +46,8 @@ if (!DATABASE_URL) {
 }
 
 console.log(`${TAG} [INPUT] DRY_RUN=${DRY_RUN}`);
-console.log(
-  `${TAG} [INPUT] STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY.slice(0, 12)}...`
-);
-console.log(
-  `${TAG} [INPUT] DATABASE_URL=${DATABASE_URL.replace(/:[^@]+@/, ":***@")}`
-);
+console.log(`${TAG} [INPUT] STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY.slice(0, 12)}...`);
+console.log(`${TAG} [INPUT] DATABASE_URL=${DATABASE_URL.replace(/:[^@]+@/, ":***@")}`);
 
 // ─── Initialize Stripe ────────────────────────────────────────────────────────
 const stripe = new Stripe(STRIPE_SECRET_KEY); // no apiVersion pin: use the installed SDK default (dahlia); the old basil pin sent stale headers
@@ -79,14 +75,10 @@ const [rows] = await connection.execute(
    ORDER BY id ASC`
 );
 
-console.log(
-  `${TAG} [STATE] Found ${rows.length} users without stripeCustomerId`
-);
+console.log(`${TAG} [STATE] Found ${rows.length} users without stripeCustomerId`);
 
 if (rows.length === 0) {
-  console.log(
-    `${TAG} [OUTPUT] All users already have Stripe Customer IDs. Nothing to do.`
-  );
+  console.log(`${TAG} [OUTPUT] All users already have Stripe Customer IDs. Nothing to do.`);
   await connection.end();
   process.exit(0);
 }
@@ -102,8 +94,8 @@ for (const u of rows) {
   const expiry = u.expiryDate
     ? new Date(u.expiryDate).toLocaleDateString()
     : u.hasAccess
-      ? "Lifetime"
-      : "None";
+    ? "Lifetime"
+    : "None";
   console.log(
     `${String(u.id).padEnd(6)} ${(u.username ?? "(none)").padEnd(20)} ${(u.email ?? "(none)").padEnd(35)} ${(u.role ?? "user").padEnd(12)} ${(u.hasAccess ? "YES" : "NO").padEnd(8)} ${(u.stripePlanId ?? expiry).padEnd(10)}`
   );
@@ -111,9 +103,7 @@ for (const u of rows) {
 console.log(`${"─".repeat(80)}\n`);
 
 if (DRY_RUN) {
-  console.log(
-    `${TAG} [OUTPUT] DRY RUN — no Stripe API calls made. ${rows.length} customers would be created.`
-  );
+  console.log(`${TAG} [OUTPUT] DRY RUN — no Stripe API calls made. ${rows.length} customers would be created.`);
   await connection.end();
   process.exit(0);
 }
@@ -126,9 +116,7 @@ const results = [];
 
 for (const user of rows) {
   const userTag = `${TAG}[userId=${user.id}]`;
-  console.log(
-    `${userTag} [STEP] Processing username=${user.username} email=${user.email ?? "(none)"}`
-  );
+  console.log(`${userTag} [STEP] Processing username=${user.username} email=${user.email ?? "(none)"}`);
 
   // Build customer metadata — preserve ALL user data
   const metadata = {
@@ -136,9 +124,7 @@ for (const user of rows) {
     username: user.username ?? "",
     role: user.role ?? "user",
     has_access: user.hasAccess ? "true" : "false",
-    expiry_date: user.expiryDate
-      ? new Date(user.expiryDate).toISOString()
-      : "lifetime",
+    expiry_date: user.expiryDate ? new Date(user.expiryDate).toISOString() : "lifetime",
     plan_id: user.stripePlanId ?? "",
     stripe_subscription_id: user.stripeSubscriptionId ?? "",
     discord_id: user.discordId ?? "",
@@ -150,24 +136,15 @@ for (const user of rows) {
   // Check if a Stripe customer already exists with this email to avoid duplicates
   let existingCustomerId = null;
   if (user.email) {
-    console.log(
-      `${userTag} [STEP] Checking for existing Stripe customer with email=${user.email}`
-    );
+    console.log(`${userTag} [STEP] Checking for existing Stripe customer with email=${user.email}`);
     try {
-      const existing = await stripe.customers.list({
-        email: user.email,
-        limit: 1,
-      });
+      const existing = await stripe.customers.list({ email: user.email, limit: 1 });
       if (existing.data.length > 0) {
         existingCustomerId = existing.data[0].id;
-        console.log(
-          `${userTag} [STATE] Found existing Stripe customer id=${existingCustomerId}`
-        );
+        console.log(`${userTag} [STATE] Found existing Stripe customer id=${existingCustomerId}`);
       }
     } catch (err) {
-      console.warn(
-        `${userTag} [STATE] Could not check existing customers: ${err.message}`
-      );
+      console.warn(`${userTag} [STATE] Could not check existing customers: ${err.message}`);
     }
   }
 
@@ -175,29 +152,18 @@ for (const user of rows) {
 
   if (existingCustomerId) {
     // Update existing customer with our metadata
-    console.log(
-      `${userTag} [STEP] Updating existing Stripe customer ${existingCustomerId} with metadata`
-    );
+    console.log(`${userTag} [STEP] Updating existing Stripe customer ${existingCustomerId} with metadata`);
     try {
       const updated = await stripe.customers.update(existingCustomerId, {
         name: user.username ?? undefined,
         metadata,
       });
       customerId = updated.id;
-      console.log(
-        `${userTag} [STATE] Updated existing customer id=${customerId}`
-      );
+      console.log(`${userTag} [STATE] Updated existing customer id=${customerId}`);
     } catch (err) {
-      console.error(
-        `${userTag} [VERIFY] FAIL — Stripe update error: ${err.message}`
-      );
+      console.error(`${userTag} [VERIFY] FAIL — Stripe update error: ${err.message}`);
       failed++;
-      results.push({
-        userId: user.id,
-        username: user.username,
-        status: "failed",
-        error: err.message,
-      });
+      results.push({ userId: user.id, username: user.username, status: "failed", error: err.message });
       continue;
     }
   } else {
@@ -212,58 +178,34 @@ for (const user of rows) {
     try {
       const customer = await stripe.customers.create(customerParams);
       customerId = customer.id;
-      console.log(
-        `${userTag} [STATE] Created new Stripe customer id=${customerId}`
-      );
+      console.log(`${userTag} [STATE] Created new Stripe customer id=${customerId}`);
     } catch (err) {
-      console.error(
-        `${userTag} [VERIFY] FAIL — Stripe create error: ${err.message}`
-      );
+      console.error(`${userTag} [VERIFY] FAIL — Stripe create error: ${err.message}`);
       failed++;
-      results.push({
-        userId: user.id,
-        username: user.username,
-        status: "failed",
-        error: err.message,
-      });
+      results.push({ userId: user.id, username: user.username, status: "failed", error: err.message });
       continue;
     }
   }
 
   // Write stripeCustomerId back to database
-  console.log(
-    `${userTag} [STEP] Writing stripeCustomerId=${customerId} to database`
-  );
+  console.log(`${userTag} [STEP] Writing stripeCustomerId=${customerId} to database`);
   try {
     await connection.execute(
       "UPDATE app_users SET stripeCustomerId = ? WHERE id = ?",
       [customerId, user.id]
     );
-    console.log(
-      `${userTag} [OUTPUT] stripeCustomerId=${customerId} saved userId=${user.id}`
-    );
+    console.log(`${userTag} [OUTPUT] stripeCustomerId=${customerId} saved userId=${user.id}`);
     console.log(`${userTag} [VERIFY] PASS`);
     created++;
-    results.push({
-      userId: user.id,
-      username: user.username,
-      status: "created",
-      stripeCustomerId: customerId,
-    });
+    results.push({ userId: user.id, username: user.username, status: "created", stripeCustomerId: customerId });
   } catch (err) {
     console.error(`${userTag} [VERIFY] FAIL — DB write error: ${err.message}`);
     failed++;
-    results.push({
-      userId: user.id,
-      username: user.username,
-      status: "db_write_failed",
-      stripeCustomerId: customerId,
-      error: err.message,
-    });
+    results.push({ userId: user.id, username: user.username, status: "db_write_failed", stripeCustomerId: customerId, error: err.message });
   }
 
   // Rate limit: 25 req/s Stripe limit — small delay between requests
-  await new Promise(r => setTimeout(r, 80));
+  await new Promise((r) => setTimeout(r, 80));
 }
 
 // ─── Final summary ────────────────────────────────────────────────────────────
@@ -277,16 +219,12 @@ console.log(`${"─".repeat(60)}`);
 
 if (failed > 0) {
   console.log(`\n${TAG} [STATE] Failed users:`);
-  for (const r of results.filter(
-    r => r.status === "failed" || r.status === "db_write_failed"
-  )) {
+  for (const r of results.filter((r) => r.status === "failed" || r.status === "db_write_failed")) {
     console.log(`  userId=${r.userId} username=${r.username} error=${r.error}`);
   }
 }
 
-console.log(
-  `\n${TAG} [VERIFY] ${failed === 0 ? "PASS — all users exported successfully" : `PARTIAL — ${failed} failures require manual review`}`
-);
+console.log(`\n${TAG} [VERIFY] ${failed === 0 ? "PASS — all users exported successfully" : `PARTIAL — ${failed} failures require manual review`}`);
 
 await connection.end();
 process.exit(failed > 0 ? 1 : 0);

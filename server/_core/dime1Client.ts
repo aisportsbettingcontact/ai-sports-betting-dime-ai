@@ -47,28 +47,18 @@ function readEnv(env: Dime1Env, name: string): string | undefined {
   return value ? value : undefined;
 }
 
-export function resolveDime1Config(
-  env: Dime1Env = process.env
-): Dime1Config | null {
+export function resolveDime1Config(env: Dime1Env = process.env): Dime1Config | null {
   const explicitBase = readEnv(env, "DIME_MODEL_BASE_URL");
   const endpointId = readEnv(env, "RUNPOD_ENDPOINT_ID");
-  const baseUrl =
-    explicitBase ??
-    (endpointId
-      ? `https://api.runpod.ai/v2/${endpointId}/openai/v1`
-      : undefined);
+  const baseUrl = explicitBase ?? (endpointId ? `https://api.runpod.ai/v2/${endpointId}/openai/v1` : undefined);
   if (!baseUrl) return null;
 
   const timeoutRaw = Number(readEnv(env, "DIME_MODEL_TIMEOUT_MS"));
   return {
     baseUrl: baseUrl.replace(/\/+$/, ""),
-    bearerToken:
-      readEnv(env, "DIME_MODEL_API_SECRET") ?? readEnv(env, "RUNPOD_API_KEY"),
+    bearerToken: readEnv(env, "DIME_MODEL_API_SECRET") ?? readEnv(env, "RUNPOD_API_KEY"),
     model: readEnv(env, "DIME_MODEL_VERSION") ?? DIME1_DEFAULT_SERVED_MODEL,
-    timeoutMs:
-      Number.isFinite(timeoutRaw) && timeoutRaw > 0
-        ? timeoutRaw
-        : DIME1_DEFAULT_TIMEOUT_MS,
+    timeoutMs: Number.isFinite(timeoutRaw) && timeoutRaw > 0 ? timeoutRaw : DIME1_DEFAULT_TIMEOUT_MS,
     source: explicitBase ? "explicit" : "runpod",
   };
 }
@@ -100,34 +90,23 @@ export interface Dime1ChatResult {
   content: string;
   finishReason: string | null;
   model: string;
-  usage?: {
-    promptTokens?: number;
-    completionTokens?: number;
-    totalTokens?: number;
-  };
+  usage?: { promptTokens?: number; completionTokens?: number; totalTokens?: number };
 }
 
 interface OpenAiChatCompletionResponse {
   model?: string;
-  choices?: {
-    message?: { content?: string | null };
-    finish_reason?: string | null;
-  }[];
-  usage?: {
-    prompt_tokens?: number;
-    completion_tokens?: number;
-    total_tokens?: number;
-  };
+  choices?: { message?: { content?: string | null }; finish_reason?: string | null }[];
+  usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
 }
 
 export async function dime1ChatComplete(
   params: Dime1ChatParams,
-  env: Dime1Env = process.env
+  env: Dime1Env = process.env,
 ): Promise<Dime1ChatResult> {
   const config = resolveDime1Config(env);
   if (!config) {
     throw new Error(
-      "Dime 1.0 endpoint is not configured. Set RUNPOD_ENDPOINT_ID (+ DIME_MODEL_API_SECRET or RUNPOD_API_KEY), or DIME_MODEL_BASE_URL for a custom endpoint."
+      "Dime 1.0 endpoint is not configured. Set RUNPOD_ENDPOINT_ID (+ DIME_MODEL_API_SECRET or RUNPOD_API_KEY), or DIME_MODEL_BASE_URL for a custom endpoint.",
     );
   }
 
@@ -141,16 +120,11 @@ export async function dime1ChatComplete(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        ...(config.bearerToken
-          ? { Authorization: `Bearer ${config.bearerToken}` }
-          : {}),
+        ...(config.bearerToken ? { Authorization: `Bearer ${config.bearerToken}` } : {}),
       },
       body: JSON.stringify({
         model: config.model,
-        messages: [
-          { role: "system", content: params.system },
-          ...params.messages,
-        ],
+        messages: [{ role: "system", content: params.system }, ...params.messages],
         max_tokens: params.maxTokens,
         temperature: params.temperature ?? 0.2,
         ...(params.stop && params.stop.length > 0 ? { stop: params.stop } : {}),
@@ -161,20 +135,14 @@ export async function dime1ChatComplete(
 
     if (!response.ok) {
       const body = await response.text().catch(() => "");
-      throw new Dime1ApiError(
-        response.status,
-        `Dime 1.0 endpoint returned ${response.status}: ${body.slice(0, 300)}`
-      );
+      throw new Dime1ApiError(response.status, `Dime 1.0 endpoint returned ${response.status}: ${body.slice(0, 300)}`);
     }
 
     const json = (await response.json()) as OpenAiChatCompletionResponse;
     const choice = json.choices?.[0];
     const content = choice?.message?.content;
     if (typeof content !== "string" || content.length === 0) {
-      throw new Dime1ApiError(
-        502,
-        "Dime 1.0 endpoint returned no message content"
-      );
+      throw new Dime1ApiError(502, "Dime 1.0 endpoint returned no message content");
     }
 
     const result: Dime1ChatResult = {

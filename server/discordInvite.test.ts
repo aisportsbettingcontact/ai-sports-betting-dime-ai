@@ -66,11 +66,7 @@ vi.mock("./drizzle/schema", () => ({
 }));
 
 vi.mock("./server/_core/cookies", () => ({
-  getSessionCookieOptions: vi.fn(() => ({
-    httpOnly: true,
-    secure: false,
-    sameSite: "lax",
-  })),
+  getSessionCookieOptions: vi.fn(() => ({ httpOnly: true, secure: false, sameSite: "lax" })),
   SESSION_COOKIE_NAME: "session",
 }));
 
@@ -175,10 +171,7 @@ describe("Discord Invite Callback — error paths", () => {
 
   it("user already has discordId → redirects to /?discord_error=already_connected", () => {
     const user = { id: 1, discordId: "existing_discord_id_123" };
-    const alreadyConnected =
-      user.discordId !== null &&
-      user.discordId !== undefined &&
-      user.discordId !== "";
+    const alreadyConnected = user.discordId !== null && user.discordId !== undefined && user.discordId !== "";
     expect(alreadyConnected).toBe(true);
     const errorUrl = `/?discord_error=already_connected`;
     expect(errorUrl).toContain("discord_error=already_connected");
@@ -191,11 +184,7 @@ describe("Discord Invite Callback — success path logic", () => {
     const discordProfile = { id: "987654321", username: "TestDiscordUser" };
 
     // Simulate the update
-    const updatedUser = {
-      ...user,
-      discordId: discordProfile.id,
-      discordUsername: discordProfile.username,
-    };
+    const updatedUser = { ...user, discordId: discordProfile.id, discordUsername: discordProfile.username };
     expect(updatedUser.discordId).toBe("987654321");
     expect(updatedUser.discordUsername).toBe("TestDiscordUser");
   });
@@ -236,11 +225,11 @@ describe("generateDiscordInvite tRPC procedure — input validation", () => {
     const validIds = [1, 42, 999, 90001, 570009];
     const invalidIds = [0, -1, -100, NaN, Infinity];
 
-    validIds.forEach(id => {
+    validIds.forEach((id) => {
       expect(Number.isInteger(id) && id > 0).toBe(true);
     });
 
-    invalidIds.forEach(id => {
+    invalidIds.forEach((id) => {
       expect(Number.isInteger(id) && id > 0).toBe(false);
     });
   });
@@ -251,24 +240,18 @@ describe("generateDiscordInvite tRPC procedure — input validation", () => {
       "http://localhost:3000",
       "https://staging.aisportsbettingmodels.com",
     ];
-    const invalidOrigins = [
-      "not-a-url",
-      "",
-      "ftp://invalid",
-      "javascript:alert(1)",
-    ];
+    const invalidOrigins = ["not-a-url", "", "ftp://invalid", "javascript:alert(1)"];
 
-    validOrigins.forEach(origin => {
+    validOrigins.forEach((origin) => {
       expect(() => new URL(origin)).not.toThrow();
     });
 
-    invalidOrigins.forEach(origin => {
+    invalidOrigins.forEach((origin) => {
       let threw = false;
       try {
         new URL(origin);
         // ftp:// is technically valid URL, check protocol
-        if (!["https:", "http:"].includes(new URL(origin).protocol))
-          threw = true;
+        if (!["https:", "http:"].includes(new URL(origin).protocol)) threw = true;
       } catch {
         threw = true;
       }
@@ -320,12 +303,7 @@ describe("Discord Invite — security invariants", () => {
   });
 
   it("invite must be scoped to a specific userId — cannot be used by a different user", () => {
-    const token = {
-      token: "abc123",
-      userId: 42,
-      usedAt: null,
-      expiresAt: Date.now() + 1000,
-    };
+    const token = { token: "abc123", userId: 42, usedAt: null, expiresAt: Date.now() + 1000 };
     const requestingUserId = 99; // different user trying to use the token
     const isOwner = token.userId === requestingUserId;
     // The token is NOT tied to the requesting user — it's tied to the admin-specified userId

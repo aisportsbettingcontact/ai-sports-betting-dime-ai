@@ -10,7 +10,7 @@
  * Uncovered changed lines print as file:line so justifications can be written
  * in the PR. Exit 0 = pass, 1 = coverage below floor, 2 = report/scan error.
  */
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -39,12 +39,17 @@ if (Object.keys(coverage).length === 0) {
 }
 
 // changed lines per file (added/modified only), server+shared TS non-test
-const diff = execSync(
-  `git diff --unified=0 ${BASE}...HEAD -- 'server/**/*.ts' 'shared/**/*.ts'`,
-  {
-    encoding: "utf8",
-    maxBuffer: 64e6,
-  }
+const diff = execFileSync(
+  "git",
+  [
+    "diff",
+    "--unified=0",
+    `${BASE}...HEAD`,
+    "--",
+    "server/**/*.ts",
+    "shared/**/*.ts",
+  ],
+  { encoding: "utf8", maxBuffer: 64e6 }
 );
 const changed = new Map(); // file -> Set(lines)
 let file = null;
@@ -74,7 +79,7 @@ if (changed.size === 0) {
 // yields byte-identical HEAD content — proof the diff is pure formatting
 // with zero behavioral change. Everything else keeps full line accounting.
 // Fail-closed: if the base blob or prettier is unavailable, the file stays in.
-const mergeBase = execSync(`git merge-base ${BASE} HEAD`, {
+const mergeBase = execFileSync("git", ["merge-base", BASE, "HEAD"], {
   encoding: "utf8",
 }).trim();
 let prettierLib = null;
@@ -90,7 +95,7 @@ if (prettierLib) {
   for (const f of [...changed.keys()]) {
     let baseSrc;
     try {
-      baseSrc = execSync(`git show ${mergeBase}:${JSON.stringify(f)}`, {
+      baseSrc = execFileSync("git", ["show", `${mergeBase}:${f}`], {
         encoding: "utf8",
         maxBuffer: 64e6,
       });

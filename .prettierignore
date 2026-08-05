@@ -123,3 +123,30 @@ server/wc2026/v27_jul18_engine.mjs
 server/wc2026/wc2026AuditEngine.mjs
 server/wc2026/wc2026BracketScraper.mjs
 server/wc2026/wc2026Heartbeat.ts
+
+# Governed-evidence pin (ml/ closure.json byte-pins this file's SHA-256 —
+# gate 08 re-verifies it; formatting breaks the pinned hash):
+server/_core/dimeEvidenceLifecycleMigration.test.ts
+
+# CodeQL alert-carrying lines (2026-08-05): these files hold PRE-EXISTING
+# code-scanning alerts; formatting moved those lines into the PR diff and
+# code scanning attributed all 59 as "new". They stay at main's shape so the
+# alerts remain tracked on main's backlog, not laundered through a format
+# diff. Format each one together with its alert fix.
+client/src/pages/dimeModelFeed.test.ts
+scripts/exportUsersToStripe.mjs
+scripts/smoke-deploy.mjs
+server/_core/dime1Client.ts
+server/_core/dimeChatModel.ts
+server/_core/index.ts
+server/_core/storageProxy.ts
+server/_core/trpc.ts
+server/cron/cronAuth.ts
+server/discordAuth.ts
+server/discordInvite.test.ts
+server/discordInvite.ts
+server/discordLogin.ts
+server/stripe/paymentLinkGuard.test.ts
+server/wc2026/espnLogger.ts
+server/wc2026/fifaLiveScraper.ts
+server/wc2026/wc2026Ingester.ts

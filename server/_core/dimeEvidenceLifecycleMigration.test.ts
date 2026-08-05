@@ -65,8 +65,7 @@ describe("Dime evidence lifecycle migration", () => {
     // no fault of its own. Locate the entry by tag and assert its declared idx
     // matches its journal position — which is what "ordered" actually means.
     const journalIndex = journal.entries.findIndex(
-      (entry: { tag: string }) =>
-        entry.tag === "0122_dime_evidence_lifecycle_v1"
+      (entry: { tag: string }) => entry.tag === "0122_dime_evidence_lifecycle_v1"
     );
     expect(journalIndex).toBeGreaterThanOrEqual(0);
     expect(journal.entries[journalIndex]).toMatchObject({

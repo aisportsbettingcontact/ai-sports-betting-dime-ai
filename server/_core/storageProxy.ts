@@ -17,40 +17,31 @@ export function registerStorageProxy(app: Express) {
   // Same resolution as serveStatic() in vite.ts — both files live in server/_core.
   const localDir =
     process.env.NODE_ENV === "development"
-      ? path.resolve(
-          import.meta.dirname,
-          "../..",
-          "dist",
-          "public",
-          "dime-storage"
-        )
+      ? path.resolve(import.meta.dirname, "../..", "dist", "public", "dime-storage")
       : path.resolve(import.meta.dirname, "public", "dime-storage");
 
-  app.get(
-    "/dime-storage/*",
-    (req: import("express").Request, res: import("express").Response) => {
-      // Extract the key from the path: /dime-storage/{key}
-      const key = req.path.replace(/^\/dime-storage\//, "");
-      if (!key) {
-        res.status(400).send("Missing storage key");
-        return;
-      }
-
-      // Traversal guard: resolve and require the result to stay inside localDir.
-      const candidate = path.resolve(localDir, key);
-      if (
-        candidate.startsWith(localDir + path.sep) &&
-        fs.existsSync(candidate) &&
-        fs.statSync(candidate).isFile()
-      ) {
-        console.log(`[StorageProxy][LOCAL] ${key} → vendored file`);
-        res.set("Cache-Control", "public, max-age=86400");
-        res.sendFile(candidate);
-        return;
-      }
-
-      console.warn(`[StorageProxy][MISS] ${key} — not vendored`);
-      res.status(404).send("Asset not found");
+  app.get("/dime-storage/*", (req: import("express").Request, res: import("express").Response) => {
+    // Extract the key from the path: /dime-storage/{key}
+    const key = req.path.replace(/^\/dime-storage\//, "");
+    if (!key) {
+      res.status(400).send("Missing storage key");
+      return;
     }
-  );
+
+    // Traversal guard: resolve and require the result to stay inside localDir.
+    const candidate = path.resolve(localDir, key);
+    if (
+      candidate.startsWith(localDir + path.sep) &&
+      fs.existsSync(candidate) &&
+      fs.statSync(candidate).isFile()
+    ) {
+      console.log(`[StorageProxy][LOCAL] ${key} → vendored file`);
+      res.set("Cache-Control", "public, max-age=86400");
+      res.sendFile(candidate);
+      return;
+    }
+
+    console.warn(`[StorageProxy][MISS] ${key} — not vendored`);
+    res.status(404).send("Asset not found");
+  });
 }

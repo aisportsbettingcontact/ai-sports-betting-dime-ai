@@ -24,22 +24,17 @@ import type { Express, Request, Response } from "express";
 import { SignJWT, jwtVerify } from "jose";
 import { ENV } from "./_core/env";
 import { getSessionCookieOptions } from "./_core/cookies";
-import {
-  getDb,
-  getAppUserById,
-  updateAppUser,
-  updateAppUserLastSignedIn,
-} from "./db";
+import { getDb, getAppUserById, updateAppUser, updateAppUserLastSignedIn } from "./db";
 import { appUsers, discordInviteTokens } from "../drizzle/schema";
 import { syncDiscordRole } from "./discord/discordRoleSync";
 import { eq, and, isNull, gt } from "drizzle-orm";
 import { invalidateCachedAppUser } from "./dbCircuitBreaker";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-const ROUTE_PREFIX = "/api/auth/discord-invite";
-const OAUTH_SCOPES = "identify";
-const STATE_TTL_MS = 10 * 60 * 1000; // 10 minutes — JWT state lifetime
-const CALLBACK_DEADLINE_MS = 15_000; // 15 seconds — total callback deadline
+const ROUTE_PREFIX   = "/api/auth/discord-invite";
+const OAUTH_SCOPES   = "identify";
+const STATE_TTL_MS   = 10 * 60 * 1000;  // 10 minutes — JWT state lifetime
+const CALLBACK_DEADLINE_MS = 15_000;    // 15 seconds — total callback deadline
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -51,16 +46,12 @@ function getStateSecret(): Uint8Array {
  * Create a signed JWT state for the invite OAuth flow.
  * Embeds: inviteToken, targetUserId, nonce (CSRF protection).
  */
-async function createInviteStateToken(
-  inviteToken: string,
-  targetUserId: number
-): Promise<string> {
-  const nonce =
-    Math.random().toString(36).slice(2) +
-    Math.random().toString(36).slice(2) +
-    Math.random().toString(36).slice(2);
+async function createInviteStateToken(inviteToken: string, targetUserId: number): Promise<string> {
+  const nonce = Math.random().toString(36).slice(2) +
+                Math.random().toString(36).slice(2) +
+                Math.random().toString(36).slice(2);
   return new SignJWT({
-    type: "discord_invite_state",
+    type:         "discord_invite_state",
     inviteToken,
     targetUserId,
     nonce,
@@ -88,10 +79,8 @@ async function verifyInviteStateToken(
     if (payload.type !== "discord_invite_state") {
       return { ok: false, reason: "wrong_token_type" };
     }
-    const inviteToken =
-      typeof payload.inviteToken === "string" ? payload.inviteToken : null;
-    const targetUserId =
-      typeof payload.targetUserId === "number" ? payload.targetUserId : null;
+    const inviteToken  = typeof payload.inviteToken  === "string" ? payload.inviteToken  : null;
+    const targetUserId = typeof payload.targetUserId === "number" ? payload.targetUserId : null;
     if (!inviteToken || !targetUserId) {
       return { ok: false, reason: "missing_payload_fields" };
     }
@@ -118,20 +107,20 @@ function buildPublicOrigin(req: Request, requestId: string): string {
     return ENV.publicOrigin.replace(/\/$/, "");
   }
   const fwdProto = req.get("x-forwarded-proto");
-  const fwdHost = req.get("x-forwarded-host");
+  const fwdHost  = req.get("x-forwarded-host");
   if (fwdProto && fwdHost) {
-    const proto = fwdProto.split(",")[0]!.trim();
+    const proto  = fwdProto.split(",")[0]!.trim();
     const origin = `${proto}://${fwdHost}`;
     console.warn(
       `[DiscordInvite][ORIGIN][WARN] requestId=${requestId}` +
-        ` PUBLIC_ORIGIN not set — using x-forwarded headers: "${origin}"`
+      ` PUBLIC_ORIGIN not set — using x-forwarded headers: "${origin}"`
     );
     return origin;
   }
   const fallback = `${req.protocol}://${req.get("host") ?? "localhost"}`;
   console.warn(
     `[DiscordInvite][ORIGIN][WARN] requestId=${requestId}` +
-      ` PUBLIC_ORIGIN not set, no x-forwarded headers — falling back to: "${fallback}"`
+    ` PUBLIC_ORIGIN not set, no x-forwarded headers — falling back to: "${fallback}"`
   );
   return fallback;
 }
@@ -143,12 +132,7 @@ async function signAppUserToken(
   tokenVersion: number
 ): Promise<string> {
   const secret = new TextEncoder().encode(ENV.cookieSecret);
-  return new SignJWT({
-    sub: String(userId),
-    role,
-    type: "app_user",
-    tv: tokenVersion,
-  })
+  return new SignJWT({ sub: String(userId), role, type: "app_user", tv: tokenVersion })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime("90d")
@@ -160,11 +144,11 @@ async function signAppUserToken(
 export function registerDiscordInviteRoutes(app: Express): void {
   console.log(
     `[DiscordInvite][STARTUP] Discord invite routes registered:` +
-      `\n  → routes      : GET ${ROUTE_PREFIX}/connect, GET ${ROUTE_PREFIX}/callback` +
-      `\n  → scopes      : "${OAUTH_SCOPES}"` +
-      `\n  → publicOrigin: ${ENV.publicOrigin ? `SET="${ENV.publicOrigin}"` : "NOT_SET"}` +
-      `\n  → clientId    : ${ENV.discordClientId ? `${ENV.discordClientId.slice(0, 8)}…` : "MISSING"}` +
-      `\n  → clientSecret: ${ENV.discordClientSecret ? "SET" : "MISSING"}`
+    `\n  → routes      : GET ${ROUTE_PREFIX}/connect, GET ${ROUTE_PREFIX}/callback` +
+    `\n  → scopes      : "${OAUTH_SCOPES}"` +
+    `\n  → publicOrigin: ${ENV.publicOrigin ? `SET="${ENV.publicOrigin}"` : "NOT_SET"}` +
+    `\n  → clientId    : ${ENV.discordClientId ? `${ENV.discordClientId.slice(0,8)}…` : "MISSING"}` +
+    `\n  → clientSecret: ${ENV.discordClientSecret ? "SET" : "MISSING"}`
   );
 
   // ─── Step 1: Validate invite token → redirect to Discord OAuth ──────────────
@@ -172,20 +156,19 @@ export function registerDiscordInviteRoutes(app: Express): void {
   // CRITICAL PATH: 1 DB read (validate token), then 302 redirect to Discord.
   // Total latency: <50ms (DB read + JWT sign + URL construction).
   app.get(`${ROUTE_PREFIX}/connect`, async (req: Request, res: Response) => {
-    const t0 = Date.now();
+    const t0        = Date.now();
     const requestId = Math.random().toString(36).slice(2, 8).toUpperCase();
-    const rawToken =
-      typeof req.query.token === "string" ? req.query.token.trim() : "";
+    const rawToken  = typeof req.query.token === "string" ? req.query.token.trim() : "";
 
     console.log(
-      `[DiscordInvite][CONNECT] requestId=${requestId} tokenPrefix="${rawToken.slice(0, 8)}…"`
+      `[DiscordInvite][CONNECT] requestId=${requestId} tokenPrefix="${rawToken.slice(0,8)}…"`
     );
 
     // [VALIDATE] Discord client credentials must be set
     if (!ENV.discordClientId || !ENV.discordClientSecret) {
       console.error(
         `[DiscordInvite][CONNECT][FAIL] requestId=${requestId}` +
-          ` DISCORD_CLIENT_ID or DISCORD_CLIENT_SECRET not set.`
+        ` DISCORD_CLIENT_ID or DISCORD_CLIENT_SECRET not set.`
       );
       res.redirect(302, `/?discord_error=discord_not_configured`);
       return;
@@ -203,9 +186,7 @@ export function registerDiscordInviteRoutes(app: Express): void {
     try {
       const db = await getDb();
       if (!db) {
-        console.error(
-          `[DiscordInvite][CONNECT][FAIL] requestId=${requestId} DB unavailable`
-        );
+        console.error(`[DiscordInvite][CONNECT][FAIL] requestId=${requestId} DB unavailable`);
         res.redirect(302, `/?discord_error=db_unavailable`);
         return;
       }
@@ -227,7 +208,7 @@ export function registerDiscordInviteRoutes(app: Express): void {
       if (!row) {
         console.warn(
           `[DiscordInvite][CONNECT][FAIL] requestId=${requestId}` +
-            ` token not found, already used, or expired`
+          ` token not found, already used, or expired`
         );
         res.redirect(302, `/?discord_error=invite_invalid`);
         return;
@@ -238,7 +219,7 @@ export function registerDiscordInviteRoutes(app: Express): void {
       if (!user) {
         console.warn(
           `[DiscordInvite][CONNECT][FAIL] requestId=${requestId}` +
-            ` targetUserId=${row.targetUserId} not found`
+          ` targetUserId=${row.targetUserId} not found`
         );
         res.redirect(302, `/?discord_error=user_not_found`);
         return;
@@ -246,39 +227,36 @@ export function registerDiscordInviteRoutes(app: Express): void {
       if (!user.hasAccess) {
         console.warn(
           `[DiscordInvite][CONNECT][FAIL] requestId=${requestId}` +
-            ` targetUserId=${row.targetUserId} hasAccess=false`
+          ` targetUserId=${row.targetUserId} hasAccess=false`
         );
         res.redirect(302, `/?discord_error=access_revoked`);
         return;
       }
 
       // [STEP] Build OAuth redirect URL with signed JWT state
-      const state = await createInviteStateToken(rawToken, row.targetUserId);
+      const state       = await createInviteStateToken(rawToken, row.targetUserId);
       const publicOrigin = buildPublicOrigin(req, requestId);
-      const redirectUri = `${publicOrigin}${ROUTE_PREFIX}/callback`;
+      const redirectUri  = `${publicOrigin}${ROUTE_PREFIX}/callback`;
 
       const params = new URLSearchParams({
-        client_id: ENV.discordClientId,
-        redirect_uri: redirectUri,
+        client_id:     ENV.discordClientId,
+        redirect_uri:  redirectUri,
         response_type: "code",
-        scope: OAUTH_SCOPES,
+        scope:         OAUTH_SCOPES,
         state,
-        prompt: "consent",
+        prompt:        "consent",
       });
       const authorizeUrl = `https://discord.com/oauth2/authorize?${params.toString()}`;
 
       console.log(
         `[DiscordInvite][CONNECT][OK] requestId=${requestId}` +
-          ` targetUserId=${row.targetUserId} username=${user.username}` +
-          ` redirectUri="${redirectUri}" totalMs=${Date.now() - t0}`
+        ` targetUserId=${row.targetUserId} username=${user.username}` +
+        ` redirectUri="${redirectUri}" totalMs=${Date.now() - t0}`
       );
       res.redirect(302, authorizeUrl);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.error(
-        `[DiscordInvite][CONNECT][EXCEPTION] requestId=${requestId}`,
-        msg
-      );
+      console.error(`[DiscordInvite][CONNECT][EXCEPTION] requestId=${requestId}`, msg);
       res.redirect(302, `/?discord_error=invite_connect_failed`);
     }
   });
@@ -296,7 +274,7 @@ export function registerDiscordInviteRoutes(app: Express): void {
   // SAFETY: The entire handler is wrapped in a top-level try/catch.
   // Express 4.x does NOT automatically catch async errors.
   app.get(`${ROUTE_PREFIX}/callback`, async (req: Request, res: Response) => {
-    const t0 = Date.now();
+    const t0        = Date.now();
     const requestId = Math.random().toString(36).slice(2, 8).toUpperCase();
 
     // 15-second total deadline — prevents hanging if Discord API stalls
@@ -306,30 +284,23 @@ export function registerDiscordInviteRoutes(app: Express): void {
       if (!res.headersSent) {
         console.error(
           `[DiscordInvite][CALLBACK][DEADLINE] requestId=${requestId}` +
-            ` 15s deadline exceeded — force redirecting`
+          ` 15s deadline exceeded — force redirecting`
         );
         res.redirect(302, `/?discord_error=timeout`);
       }
     }, CALLBACK_DEADLINE_MS);
 
     try {
-      const {
-        code,
-        state,
-        error: discordError,
-      } = req.query as Record<string, string | undefined>;
+      const { code, state, error: discordError } = req.query as Record<string, string | undefined>;
 
       // [VALIDATE] Discord returned an error (e.g. user clicked Cancel)
       if (discordError) {
         clearTimeout(deadlineTimer);
         console.warn(
           `[DiscordInvite][CALLBACK][DISCORD_ERROR] requestId=${requestId}` +
-            ` discordError="${discordError}"`
+          ` discordError="${discordError}"`
         );
-        res.redirect(
-          302,
-          `/?discord_error=${discordError === "access_denied" ? "discord_cancelled" : "discord_error"}`
-        );
+        res.redirect(302, `/?discord_error=${discordError === "access_denied" ? "discord_cancelled" : "discord_error"}`);
         return;
       }
 
@@ -338,7 +309,7 @@ export function registerDiscordInviteRoutes(app: Express): void {
         clearTimeout(deadlineTimer);
         console.warn(
           `[DiscordInvite][CALLBACK][FAIL] requestId=${requestId}` +
-            ` missing code=${!!code} state=${!!state}`
+          ` missing code=${!!code} state=${!!state}`
         );
         res.redirect(302, `/?discord_error=state_mismatch`);
         return;
@@ -350,7 +321,7 @@ export function registerDiscordInviteRoutes(app: Express): void {
         clearTimeout(deadlineTimer);
         console.warn(
           `[DiscordInvite][CALLBACK][FAIL] requestId=${requestId}` +
-            ` state verification failed: ${stateResult.reason}`
+          ` state verification failed: ${stateResult.reason}`
         );
         res.redirect(302, `/?discord_error=${stateResult.reason}`);
         return;
@@ -361,9 +332,7 @@ export function registerDiscordInviteRoutes(app: Express): void {
       const db = await getDb();
       if (!db) {
         clearTimeout(deadlineTimer);
-        console.error(
-          `[DiscordInvite][CALLBACK][FAIL] requestId=${requestId} DB unavailable`
-        );
+        console.error(`[DiscordInvite][CALLBACK][FAIL] requestId=${requestId} DB unavailable`);
         res.redirect(302, `/?discord_error=db_unavailable`);
         return;
       }
@@ -385,7 +354,7 @@ export function registerDiscordInviteRoutes(app: Express): void {
         clearTimeout(deadlineTimer);
         console.warn(
           `[DiscordInvite][CALLBACK][FAIL] requestId=${requestId}` +
-            ` invite token already used or expired during callback`
+          ` invite token already used or expired during callback`
         );
         res.redirect(302, `/?discord_error=invite_already_used`);
         return;
@@ -397,7 +366,7 @@ export function registerDiscordInviteRoutes(app: Express): void {
         clearTimeout(deadlineTimer);
         console.warn(
           `[DiscordInvite][CALLBACK][FAIL] requestId=${requestId}` +
-            ` targetUserId=${targetUserId} not found or no access`
+          ` targetUserId=${targetUserId} not found or no access`
         );
         res.redirect(302, `/?discord_error=access_revoked`);
         return;
@@ -406,47 +375,37 @@ export function registerDiscordInviteRoutes(app: Express): void {
       // [STEP] Exchange authorization code for access token
       // AbortSignal.timeout(8000): hard 8-second timeout on the token exchange.
       const publicOrigin = buildPublicOrigin(req, requestId);
-      const redirectUri = `${publicOrigin}${ROUTE_PREFIX}/callback`;
+      const redirectUri  = `${publicOrigin}${ROUTE_PREFIX}/callback`;
 
       console.log(
         `[DiscordInvite][CALLBACK][STEP] requestId=${requestId}` +
-          ` exchanging code for access_token targetUserId=${targetUserId}`
+        ` exchanging code for access_token targetUserId=${targetUserId}`
       );
 
-      let tokenData: {
-        access_token?: string;
-        token_type?: string;
-        error?: string;
-      };
+      let tokenData: { access_token?: string; token_type?: string; error?: string };
       try {
         const tokenRes = await fetch("https://discord.com/api/oauth2/token", {
-          method: "POST",
+          method:  "POST",
           headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          signal: AbortSignal.timeout(8_000),
+          signal:  AbortSignal.timeout(8_000),
           body: new URLSearchParams({
-            client_id: ENV.discordClientId,
+            client_id:     ENV.discordClientId,
             client_secret: ENV.discordClientSecret,
-            grant_type: "authorization_code",
+            grant_type:    "authorization_code",
             code,
-            redirect_uri: redirectUri,
+            redirect_uri:  redirectUri,
           }),
         });
-        tokenData = (await tokenRes.json()) as typeof tokenData;
+        tokenData = await tokenRes.json() as typeof tokenData;
       } catch (fetchErr) {
         clearTimeout(deadlineTimer);
         if (deadlineTriggered) return;
-        const isTimeout =
-          fetchErr instanceof Error && fetchErr.name === "TimeoutError";
+        const isTimeout = fetchErr instanceof Error && fetchErr.name === "TimeoutError";
         console.error(
           `[DiscordInvite][CALLBACK][TOKEN_FETCH_FAIL] requestId=${requestId}` +
-            ` isTimeout=${isTimeout} error=${(fetchErr as Error).message}`
+          ` isTimeout=${isTimeout} error=${(fetchErr as Error).message}`
         );
-        res.redirect(
-          302,
-          isTimeout
-            ? `/?discord_error=timeout`
-            : `/?discord_error=token_exchange_failed`
-        );
+        res.redirect(302, isTimeout ? `/?discord_error=timeout` : `/?discord_error=token_exchange_failed`);
         return;
       }
 
@@ -455,7 +414,7 @@ export function registerDiscordInviteRoutes(app: Express): void {
         if (deadlineTriggered) return;
         console.error(
           `[DiscordInvite][CALLBACK][TOKEN_FAIL] requestId=${requestId}` +
-            ` Discord token exchange failed: ${JSON.stringify(tokenData)}`
+          ` Discord token exchange failed: ${JSON.stringify(tokenData)}`
         );
         res.redirect(302, `/?discord_error=token_exchange_failed`);
         return;
@@ -463,7 +422,7 @@ export function registerDiscordInviteRoutes(app: Express): void {
 
       console.log(
         `[DiscordInvite][CALLBACK][STATE] requestId=${requestId}` +
-          ` access_token acquired (${tokenData.token_type})`
+        ` access_token acquired (${tokenData.token_type})`
       );
 
       // [STEP] Fetch Discord user profile
@@ -477,27 +436,21 @@ export function registerDiscordInviteRoutes(app: Express): void {
       try {
         const profileRes = await fetch("https://discord.com/api/users/@me", {
           headers: { Authorization: `Bearer ${tokenData.access_token}` },
-          signal: AbortSignal.timeout(8_000),
+          signal:  AbortSignal.timeout(8_000),
         });
         if (!profileRes.ok) {
           throw new Error(`Discord profile HTTP ${profileRes.status}`);
         }
-        discordProfile = (await profileRes.json()) as typeof discordProfile;
+        discordProfile = await profileRes.json() as typeof discordProfile;
       } catch (fetchErr) {
         clearTimeout(deadlineTimer);
         if (deadlineTriggered) return;
-        const isTimeout =
-          fetchErr instanceof Error && fetchErr.name === "TimeoutError";
+        const isTimeout = fetchErr instanceof Error && fetchErr.name === "TimeoutError";
         console.error(
           `[DiscordInvite][CALLBACK][PROFILE_FETCH_FAIL] requestId=${requestId}` +
-            ` isTimeout=${isTimeout} error=${(fetchErr as Error).message}`
+          ` isTimeout=${isTimeout} error=${(fetchErr as Error).message}`
         );
-        res.redirect(
-          302,
-          isTimeout
-            ? `/?discord_error=timeout`
-            : `/?discord_error=profile_fetch_failed`
-        );
+        res.redirect(302, isTimeout ? `/?discord_error=timeout` : `/?discord_error=profile_fetch_failed`);
         return;
       }
 
@@ -506,21 +459,20 @@ export function registerDiscordInviteRoutes(app: Express): void {
         if (deadlineTriggered) return;
         console.error(
           `[DiscordInvite][CALLBACK][PROFILE_FAIL] requestId=${requestId}` +
-            ` Discord profile missing id: ${JSON.stringify(discordProfile)}`
+          ` Discord profile missing id: ${JSON.stringify(discordProfile)}`
         );
         res.redirect(302, `/?discord_error=profile_fetch_failed`);
         return;
       }
 
-      const discordId = discordProfile.id;
-      const discordUsername =
-        discordProfile.global_name ?? discordProfile.username ?? discordId;
-      const discordAvatar = discordProfile.avatar ?? null;
+      const discordId       = discordProfile.id;
+      const discordUsername = discordProfile.global_name ?? discordProfile.username ?? discordId;
+      const discordAvatar   = discordProfile.avatar ?? null;
 
       console.log(
         `[DiscordInvite][CALLBACK][STATE] requestId=${requestId}` +
-          ` discordId=${discordId} discordUsername="${discordUsername}"` +
-          ` targetUserId=${targetUserId} username=${user.username}`
+        ` discordId=${discordId} discordUsername="${discordUsername}"` +
+        ` targetUserId=${targetUserId} username=${user.username}`
       );
 
       // [STEP] Reject a Discord account already linked to another user.
@@ -531,9 +483,7 @@ export function registerDiscordInviteRoutes(app: Express): void {
         .limit(1);
       if (existingLinks[0] && existingLinks[0].id !== targetUserId) {
         clearTimeout(deadlineTimer);
-        console.warn(
-          `[DiscordInvite][CALLBACK][CONFLICT] requestId=${requestId} discordId=${discordId} linkedUserId=${existingLinks[0].id}`
-        );
+        console.warn(`[DiscordInvite][CALLBACK][CONFLICT] requestId=${requestId} discordId=${discordId} linkedUserId=${existingLinks[0].id}`);
         res.redirect(302, `/?discord_error=already_linked`);
         return;
       }
@@ -553,19 +503,15 @@ export function registerDiscordInviteRoutes(app: Express): void {
         const msg = dbErr instanceof Error ? dbErr.message : String(dbErr);
         console.error(
           `[DiscordInvite][CALLBACK][DB_FAIL] requestId=${requestId}` +
-            ` failed to update user discordId: ${msg}`
+          ` failed to update user discordId: ${msg}`
         );
         res.redirect(302, `/?discord_error=db_unavailable`);
         return;
       }
 
       // Sync the subscriber role after the link has been persisted. Failure is non-blocking.
-      void syncDiscordRole(targetUserId, user.hasAccess).catch(
-        (syncErr: unknown) =>
-          console.warn(
-            `[DiscordInvite][CALLBACK][ROLE_SYNC_WARN] requestId=${requestId} userId=${targetUserId}`,
-            syncErr
-          )
+      void syncDiscordRole(targetUserId, user.hasAccess).catch((syncErr: unknown) =>
+        console.warn(`[DiscordInvite][CALLBACK][ROLE_SYNC_WARN] requestId=${requestId} userId=${targetUserId}`, syncErr)
       );
 
       // [STEP] Mark invite token as used (single-use enforcement)
@@ -597,9 +543,9 @@ export function registerDiscordInviteRoutes(app: Express): void {
 
       console.log(
         `[DiscordInvite][CALLBACK][OUTPUT] requestId=${requestId}` +
-          ` SUCCESS userId=${targetUserId} username=${user.username}` +
-          ` discordId=${discordId} discordUsername="${discordUsername}"` +
-          ` totalMs=${Date.now() - t0}`
+        ` SUCCESS userId=${targetUserId} username=${user.username}` +
+        ` discordId=${discordId} discordUsername="${discordUsername}"` +
+        ` totalMs=${Date.now() - t0}`
       );
       // Canonical feed surface — /feed/model/mlb self-canonicalizes to
       // today's dated URL client-side (nav reconstruction 2026-07-11).
@@ -610,7 +556,7 @@ export function registerDiscordInviteRoutes(app: Express): void {
       const msg = err instanceof Error ? err.message : String(err);
       console.error(
         `[DiscordInvite][CALLBACK][UNHANDLED_EXCEPTION] requestId=${requestId}` +
-          ` error="${msg}"`
+        ` error="${msg}"`
       );
       if (!res.headersSent) {
         res.redirect(302, `/?discord_error=server_error`);

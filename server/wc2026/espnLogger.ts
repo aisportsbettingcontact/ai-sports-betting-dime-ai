@@ -29,23 +29,23 @@ import * as path from "path";
 // ─── ANSI COLOR PALETTE ───────────────────────────────────────────────────────
 
 const C = {
-  reset: "\x1b[0m",
-  bold: "\x1b[1m",
-  dim: "\x1b[2m",
+  reset:   "\x1b[0m",
+  bold:    "\x1b[1m",
+  dim:     "\x1b[2m",
   // Foreground
-  white: "\x1b[97m",
-  gray: "\x1b[90m",
-  cyan: "\x1b[96m",
-  blue: "\x1b[94m",
-  green: "\x1b[92m",
-  yellow: "\x1b[93m",
-  orange: "\x1b[33m",
-  red: "\x1b[91m",
+  white:   "\x1b[97m",
+  gray:    "\x1b[90m",
+  cyan:    "\x1b[96m",
+  blue:    "\x1b[94m",
+  green:   "\x1b[92m",
+  yellow:  "\x1b[93m",
+  orange:  "\x1b[33m",
+  red:     "\x1b[91m",
   magenta: "\x1b[95m",
   // Background accents
-  bgRed: "\x1b[41m",
+  bgRed:   "\x1b[41m",
   bgGreen: "\x1b[42m",
-  bgBlue: "\x1b[44m",
+  bgBlue:  "\x1b[44m",
 } as const;
 
 // ─── LEVEL CONFIG ─────────────────────────────────────────────────────────────
@@ -71,35 +71,35 @@ interface LevelConfig {
 }
 
 const LEVEL_CONFIG: Record<LogLevel, LevelConfig> = {
-  INPUT: { color: C.cyan, badge: "INPUT ", icon: "→", priority: 0 },
-  STEP: { color: C.blue, badge: "STEP  ", icon: "▶", priority: 1 },
-  STATE: { color: C.gray, badge: "STATE ", icon: "·", priority: 2 },
-  HTTP: { color: C.magenta, badge: "HTTP  ", icon: "⇄", priority: 3 },
-  RETRY: { color: C.orange, badge: "RETRY ", icon: "↻", priority: 4 },
-  PARSE: { color: C.cyan, badge: "PARSE ", icon: "⚙", priority: 5 },
-  OUTPUT: { color: C.green, badge: "OUTPUT", icon: "✓", priority: 6 },
-  VERIFY: { color: C.green, badge: "VERIFY", icon: "✔", priority: 7 },
-  WARN: { color: C.yellow, badge: "WARN  ", icon: "⚠", priority: 8 },
-  ERROR: { color: C.red, badge: "ERROR ", icon: "✗", priority: 9 },
-  FATAL: { color: C.bgRed + C.white, badge: "FATAL ", icon: "☠", priority: 9 },
+  INPUT:  { color: C.cyan,    badge: "INPUT ", icon: "→", priority: 0 },
+  STEP:   { color: C.blue,    badge: "STEP  ", icon: "▶", priority: 1 },
+  STATE:  { color: C.gray,    badge: "STATE ", icon: "·", priority: 2 },
+  HTTP:   { color: C.magenta, badge: "HTTP  ", icon: "⇄", priority: 3 },
+  RETRY:  { color: C.orange,  badge: "RETRY ", icon: "↻", priority: 4 },
+  PARSE:  { color: C.cyan,    badge: "PARSE ", icon: "⚙", priority: 5 },
+  OUTPUT: { color: C.green,   badge: "OUTPUT", icon: "✓", priority: 6 },
+  VERIFY: { color: C.green,   badge: "VERIFY", icon: "✔", priority: 7 },
+  WARN:   { color: C.yellow,  badge: "WARN  ", icon: "⚠", priority: 8 },
+  ERROR:  { color: C.red,     badge: "ERROR ", icon: "✗", priority: 9 },
+  FATAL:  { color: C.bgRed + C.white, badge: "FATAL ", icon: "☠", priority: 9 },
 };
 
 // ─── LOG ENTRY TYPES ──────────────────────────────────────────────────────────
 
 export interface LogEntry {
-  ts: string; // ISO-8601 timestamp
+  ts: string;           // ISO-8601 timestamp
   level: LogLevel;
-  runId: string; // UUID for the current scrape run
-  gameId: string; // ESPN gameId being scraped
-  phase: string; // Current execution phase label
-  msg: string; // Human-readable message
+  runId: string;        // UUID for the current scrape run
+  gameId: string;       // ESPN gameId being scraped
+  phase: string;        // Current execution phase label
+  msg: string;          // Human-readable message
   data?: Record<string, unknown>; // Structured key-value payload
-  durationMs?: number; // Elapsed time for timed operations
-  attempt?: number; // Retry attempt number (1-indexed)
-  url?: string; // URL for HTTP log entries
-  statusCode?: number; // HTTP status code
-  bytes?: number; // Response size in bytes
-  error?: string; // Error message / stack
+  durationMs?: number;  // Elapsed time for timed operations
+  attempt?: number;     // Retry attempt number (1-indexed)
+  url?: string;         // URL for HTTP log entries
+  statusCode?: number;  // HTTP status code
+  bytes?: number;       // Response size in bytes
+  error?: string;       // Error message / stack
 }
 
 export interface RunStats {
@@ -211,10 +211,7 @@ export class EspnLogger {
       attempt: opts.attempt,
     };
     if (opts.userAgent) {
-      (entry as Record<string, unknown>).userAgent = opts.userAgent.slice(
-        0,
-        60
-      );
+      (entry as Record<string, unknown>).userAgent = opts.userAgent.slice(0, 60);
     }
     if (opts.error) {
       entry.error = opts.error;
@@ -248,11 +245,7 @@ export class EspnLogger {
     this.emit("PARSE", msg, data);
   }
 
-  output(
-    msg: string,
-    data?: Record<string, unknown>,
-    durationMs?: number
-  ): void {
+  output(msg: string, data?: Record<string, unknown>, durationMs?: number): void {
     this.emit("OUTPUT", msg, data, durationMs);
   }
 
@@ -266,7 +259,11 @@ export class EspnLogger {
     else this.verifyFailCount++;
 
     const verdictColor =
-      verdict === "PASS" ? C.green : verdict === "WARN" ? C.yellow : C.red;
+      verdict === "PASS"
+        ? C.green
+        : verdict === "WARN"
+        ? C.yellow
+        : C.red;
 
     const msg = `${verdictColor}${verdict}${C.reset} — ${label}`;
     this.emit("VERIFY", msg, data);
@@ -282,8 +279,8 @@ export class EspnLogger {
       err instanceof Error
         ? `${err.message}${err.stack ? `\n${err.stack.split("\n").slice(1, 4).join("\n")}` : ""}`
         : err != null
-          ? String(err)
-          : undefined;
+        ? String(err)
+        : undefined;
     this.emit("ERROR", msg, { ...data, ...(errStr ? { error: errStr } : {}) });
   }
 
@@ -293,8 +290,8 @@ export class EspnLogger {
       err instanceof Error
         ? `${err.message}${err.stack ? `\n${err.stack.split("\n").slice(1, 6).join("\n")}` : ""}`
         : err != null
-          ? String(err)
-          : undefined;
+        ? String(err)
+        : undefined;
     this.emit("FATAL", msg, { ...data, ...(errStr ? { error: errStr } : {}) });
   }
 
@@ -325,8 +322,8 @@ export class EspnLogger {
     const phaseLabel = `  PHASE: ${phase}`;
     this.writeRaw(
       `${C.bold}${C.blue}${banner}${C.reset}\n` +
-        `${C.bold}${C.blue}${phaseLabel}${C.reset}\n` +
-        `${C.bold}${C.blue}${banner}${C.reset}\n`
+      `${C.bold}${C.blue}${phaseLabel}${C.reset}\n` +
+      `${C.bold}${C.blue}${banner}${C.reset}\n`
     );
     this.writeFile(`\n${"─".repeat(72)}\nPHASE: ${phase}\n${"─".repeat(72)}\n`);
   }
@@ -344,26 +341,19 @@ export class EspnLogger {
     this.playersScraped++;
     const pct = Math.round((index / total) * 100);
     const bar = this.progressBar(pct, 20);
-    this.emit(
-      "STATE",
-      `[${bar}] ${pct}% | #${index}/${total} ${teamAbbr} ${name} (${pos}) — ${statCount} stats`,
-      {
-        player: name,
-        team: teamAbbr,
-        pos,
-        statCount,
-        index,
-        total,
-      }
-    );
+    this.emit("STATE", `[${bar}] ${pct}% | #${index}/${total} ${teamAbbr} ${name} (${pos}) — ${statCount} stats`, {
+      player: name,
+      team: teamAbbr,
+      pos,
+      statCount,
+      index,
+      total,
+    });
   }
 
   // ── Run summary ────────────────────────────────────────────────────────────
 
-  summary(
-    outcome: RunStats["outcome"],
-    extraData?: Record<string, unknown>
-  ): RunStats {
+  summary(outcome: RunStats["outcome"], extraData?: Record<string, unknown>): RunStats {
     const totalDurationMs = Date.now() - this.startTime;
     const stats: RunStats = {
       runId: this.runId,
@@ -407,8 +397,8 @@ export class EspnLogger {
       outcome === "SUCCESS"
         ? C.green
         : outcome === "PARTIAL"
-          ? C.yellow
-          : C.red;
+        ? C.yellow
+        : C.red;
 
     const summaryLines = [
       ``,
@@ -602,9 +592,9 @@ export class EspnLogger {
     // Also print session header to terminal
     this.writeRaw(
       `\n${C.bold}${C.blue}${"═".repeat(72)}${C.reset}\n` +
-        `${C.bold}${C.blue}  ESPN SCRAPER — RUN ${this.runId}${C.reset}\n` +
-        `${C.bold}${C.blue}  Game: ${this.gameId}  |  Started: ${new Date(this.startTime).toISOString()}${C.reset}\n` +
-        `${C.bold}${C.blue}${"═".repeat(72)}${C.reset}\n\n`
+      `${C.bold}${C.blue}  ESPN SCRAPER — RUN ${this.runId}${C.reset}\n` +
+      `${C.bold}${C.blue}  Game: ${this.gameId}  |  Started: ${new Date(this.startTime).toISOString()}${C.reset}\n` +
+      `${C.bold}${C.blue}${"═".repeat(72)}${C.reset}\n\n`
     );
   }
 
@@ -642,36 +632,16 @@ export class EspnLogger {
 
   // ── Getters ────────────────────────────────────────────────────────────────
 
-  getRunId(): string {
-    return this.runId;
-  }
-  getGameId(): string {
-    return this.gameId;
-  }
-  getLogFile(): string {
-    return this.logFile;
-  }
-  getStatsFile(): string {
-    return this.statsFile;
-  }
-  getApiCallCount(): number {
-    return this.apiCallCount;
-  }
-  getErrorCount(): number {
-    return this.errorCount;
-  }
-  getRetryCount(): number {
-    return this.retryCount;
-  }
-  getBytesTransferred(): number {
-    return this.bytesTransferred;
-  }
-  getPlayersScraped(): number {
-    return this.playersScraped;
-  }
-  incrementPlayersScraped(): void {
-    this.playersScraped++;
-  }
+  getRunId(): string { return this.runId; }
+  getGameId(): string { return this.gameId; }
+  getLogFile(): string { return this.logFile; }
+  getStatsFile(): string { return this.statsFile; }
+  getApiCallCount(): number { return this.apiCallCount; }
+  getErrorCount(): number { return this.errorCount; }
+  getRetryCount(): number { return this.retryCount; }
+  getBytesTransferred(): number { return this.bytesTransferred; }
+  getPlayersScraped(): number { return this.playersScraped; }
+  incrementPlayersScraped(): void { this.playersScraped++; }
 }
 
 // ─── SINGLETON FACTORY ────────────────────────────────────────────────────────
