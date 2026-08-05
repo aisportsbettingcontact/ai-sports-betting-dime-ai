@@ -46,18 +46,34 @@ describe("/health exposes integration state", () => {
 });
 
 describe("integration state must NOT drive the status code", () => {
-  it("only the database decides 200 vs 503", () => {
+  it("only database serviceability (circuit + schema agreement) decides 200 vs 503", () => {
     // Railway probes /health. Returning 503 while Discord's gateway reconnects
     // would restart the container and kill the supervisor that recovers it —
-    // an outage manufactured by its own monitor.
-    expect(health).toMatch(/res\.status\(dbOk \? 200 : 503\)/);
+    // an outage manufactured by its own monitor. The ONLY inputs are database
+    // serviceability: the connection circuit (dbOk) and schema/code agreement
+    // (schemaMismatch, Phase 1½) — both mean "the DB genuinely cannot serve the
+    // code's queries". Neither is an integration.
+    expect(health).toMatch(/res\.status\(healthy \? 200 : 503\)/);
+    expect(health).toMatch(/const healthy = dbOk && !schemaMismatch/);
     const statusLine = /res\.status\(([^)]*)\)/.exec(health);
     expect(statusLine, "status expression not found").toBeTruthy();
     expect(statusLine![1]).not.toMatch(/discord|bot|connected/i);
   });
 
-  it("status string is likewise db-only", () => {
-    expect(health).toMatch(/status: dbOk \? "ok" : "degraded"/);
+  it("schema/code disagreement DOES drive the status code (Phase 1½ deploy gate)", () => {
+    // A code-ahead-of-migration deploy must fail health so Railway keeps the
+    // previous healthy deploy instead of silently breaking auth (#370).
+    expect(health).toMatch(/shouldFailHealthForSchema\(\)/);
+    expect(health).toMatch(/schemaMismatch/);
+  });
+
+  it("status string is driven by serviceability only, never integrations", () => {
+    expect(health).toMatch(
+      /status: healthy \? "ok" : schemaMismatch \? "schema_mismatch" : "degraded"/
+    );
+    const statusString = /status:\s*([^,]*)/.exec(health);
+    expect(statusString, "status string not found").toBeTruthy();
+    expect(statusString![1]).not.toMatch(/discord|bot|connected/i);
   });
 });
 

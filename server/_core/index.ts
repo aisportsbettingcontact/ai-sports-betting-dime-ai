@@ -18,6 +18,12 @@ import {
   isCloudflareEdgeIp,
 } from "./edgeProxy";
 import { originLock } from "./originLock";
+import {
+  currentSchemaVerdict,
+  runBootSchemaProbe,
+  shouldFailHealthForSchema,
+  startSchemaProbeInterval,
+} from "./schemaHealthGate";
 import helmet from "helmet";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerStorageProxy } from "./storageProxy";
@@ -564,6 +570,12 @@ async function startServer() {
   app.get("/health", (req, res) => {
     const circuit = getCircuitStatus();
     const dbOk = circuit.state === "CLOSED";
+    // Schema/code-agreement gate (Phase 1½): a live app_users schema behind the
+    // code fails health, so Railway keeps the previous healthy deploy instead of
+    // cutting over to a code-ahead-of-migration deploy that would silently break
+    // auth (#370). Only a CONFIRMED mismatch fails; "unknown" never does.
+    const schemaMismatch = shouldFailHealthForSchema();
+    const healthy = dbOk && !schemaMismatch;
     const ip =
       (req.headers["x-forwarded-for"] as string | undefined)
         ?.split(",")[0]
@@ -571,7 +583,7 @@ async function startServer() {
       req.socket?.remoteAddress ??
       "unknown";
     console.log(
-      `[HEALTH_CHECK] GET /health | ip=${logSafe(ip)} db.state=${circuit.state} dbOk=${dbOk}`
+      `[HEALTH_CHECK] GET /health | ip=${logSafe(ip)} db.state=${circuit.state} dbOk=${dbOk} schema=${currentSchemaVerdict()}`
     );
     // Integration state is REPORTED but deliberately does NOT drive the status
     // code. Railway probes this endpoint: returning 503 because Discord's
@@ -580,13 +592,15 @@ async function startServer() {
     // Only the database, which the app genuinely cannot serve without, decides
     // 200 vs 503.
     const bot = getDiscordBotHealth();
-    res.status(dbOk ? 200 : 503).json({
-      status: dbOk ? "ok" : "degraded",
+    res.status(healthy ? 200 : 503).json({
+      status: healthy ? "ok" : schemaMismatch ? "schema_mismatch" : "degraded",
       ts: Date.now(),
       db: {
         state: circuit.state,
         consecutiveFailures: circuit.consecutiveFailures,
       },
+      // Phase 1½ schema/code-agreement verdict (ok | schema_mismatch | unknown).
+      schema: currentSchemaVerdict(),
       integrations: {
         // Answers "is the bot up?" in one request instead of inferring it from
         // the absence of a log line — the exact question that was unanswerable
@@ -1520,6 +1534,15 @@ async function startServer() {
     server.removeListener("error", onBindError);
     onListening();
   });
+  // Schema/code-agreement gate (Phase 1½): probe the live app_users schema
+  // against the code's column set BEFORE we accept Railway health probes, so a
+  // code-ahead-of-migration deploy fails its healthcheck (→ Railway keeps the
+  // previous healthy deploy) instead of silently breaking auth (#370). Bounded
+  // so a slow/unreachable DB never blocks startup; a periodic re-probe catches a
+  // mismatch that appears later or a boot probe that timed out.
+  await runBootSchemaProbe();
+  startSchemaProbeInterval();
+
   console.log(
     `[SERVER_STARTUP] Calling server.listen(${port}) — host omitted for dual-stack bind with IPv4 fallback ...`
   );
