@@ -132,9 +132,35 @@ export function classifyTrpcProcedures(
  * v8 throws ERR_ERL_KEY_GEN_IPV6 on a raw address).
  */
 export function clientIpKey(req: Pick<Request, "headers" | "ip">): string {
+  return ipKeyGenerator(resolveClientIp(req));
+}
+
+/** The raw resolved true-client IP (leftmost sanitized XFF, else req.ip). */
+export function resolveClientIp(req: Pick<Request, "headers" | "ip">): string {
   const xff = req.headers?.["x-forwarded-for"];
   const first = (Array.isArray(xff) ? xff[0] : xff)?.split(",")[0]?.trim();
-  return ipKeyGenerator(first || req.ip || "");
+  return first || req.ip || "";
+}
+
+// Ranges a genuine internet client can NEVER legitimately have as its source
+// after the edge: RFC1918 private, CGNAT (100.64/10), link-local (169.254 /
+// fe80), IPv6 ULA (fc00/fd00). Loopback (127./::1) is deliberately EXCLUDED —
+// the app's own keep-alive/self health calls originate there.
+const RESERVED_OR_INTERNAL =
+  /^(?:10\.|192\.168\.|172\.(?:1[6-9]|2\d|3[01])\.|169\.254\.|100\.(?:6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.|fe80:|fc[0-9a-f]{2}:|fd[0-9a-f]{2}:)/i;
+
+/**
+ * XFF-sanitization canary: true when the resolved "client" IP is a private /
+ * reserved / carrier-internal address. Because Railway's edge sanitizes XFF
+ * and appends its (public) hop, a real client always resolves to a PUBLIC IP.
+ * If this ever returns true for a public request, Railway's XFF/hop handling
+ * changed and the whole limiter-keying assumption needs re-verification — so
+ * the caller fires a loud alert. Never throws.
+ */
+export function isReservedOrInternalIp(ip: string): boolean {
+  if (!ip) return false;
+  const bare = ip.replace(/^::ffff:/i, "");
+  return RESERVED_OR_INTERNAL.test(bare);
 }
 
 /** True when the request targets a tRPC procedure (stable across mount depth). */
