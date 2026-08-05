@@ -131,6 +131,8 @@ __pycache__/
 !.claude/skills/pi-harness/
 # design-federation is real repo content (UI orchestrator skill), not a symlink
 !.claude/skills/design-federation/
+# engineering-federation is real repo content (backend/infra orchestrator skill), not a symlink
+!.claude/skills/engineering-federation/
 # impeccable is vendored real repo content (pinned in its VENDOR.md), not a symlink
 !.claude/skills/impeccable/
 # emil skills are tracked vendored content (MIT — upstream LICENSE must ship with them)
