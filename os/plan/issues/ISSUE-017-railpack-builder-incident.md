@@ -18,10 +18,14 @@ Full finding, including what this changes for ISSUE-012: `os/audits/2026-08-05-b
 
 ---
 
-## Original scope (retained for the record)
+## Original scope — SUPERSEDED, retained for the record
+
+> **Everything below this line is the original, REFUTED framing.** It is kept so the record shows
+> what was believed and when. It is not a current claim. See the Resolution above.
 
 `railway.json` declares `"builder": "DOCKERFILE"`. The live Railway config for **both** services
-reports `"builder": "RAILPACK"` — VERIFIED read-only.
+reports `"builder": "RAILPACK"` — VERIFIED read-only *(this reading was wrong; the field is stale
+dashboard state)*.
 
 This resolves the Stage 1 audit's builder UNKNOWN **in the dangerous direction**. The Python model
 runners hardcode `/usr/bin/python3` and `/usr/bin/python3.11`, and `Dockerfile:1-7` documents at

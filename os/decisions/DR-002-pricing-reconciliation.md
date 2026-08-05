@@ -1,6 +1,7 @@
 # DR-002 — Pricing reconciliation: three contradictory price sets ship simultaneously
 
 **Status:** AWAITING RULING · **DRI:** Prez · **Raised:** 2026-08-05 by the executor (Stage 2)
+**observe_by:** 2026-08-12
 **Urgency:** HIGH — live, customer-facing, and indexed by search engines
 **Doctrine:** D6 (artifact law / no unqueryable claims) · D15 #8 (weak tests) · §19 compliance gate
 
