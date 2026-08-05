@@ -24,6 +24,7 @@
 
 import { timingSafeEqual } from "crypto";
 import type { Request, Response } from "express";
+import { logSafe } from "../_core/logSafe";
 
 export type CronAuthResult =
   | { ok: true }
@@ -92,8 +93,8 @@ export function requireCronSecret(req: Request, res: Response, jobLabel: string)
   const result = verifyCronSecret(req as unknown as HeadersBag);
   if (!result.ok) {
     console.warn(
-      `[Cron:${jobLabel}] [AUTH] REJECT status=${result.status} reason=${result.error} ` +
-      `ip=${req.ip ?? "?"} ua="${(req.headers["user-agent"] as string | undefined)?.slice(0, 80) ?? "?"}"`
+      `[Cron:${jobLabel}] [AUTH] REJECT status=${result.status} reason=${logSafe(result.error)} ` +
+      `ip=${req.ip ?? "?"} ua="${logSafe((req.headers["user-agent"] as string | undefined)?.slice(0, 80) ?? "?")}"`
     );
     res.status(result.status).json({ ok: false, error: result.error });
     return false;

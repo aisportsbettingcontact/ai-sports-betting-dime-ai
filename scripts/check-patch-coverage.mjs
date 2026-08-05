@@ -145,6 +145,34 @@ if (changed.size === 0) {
   process.exit(0);
 }
 
+// Entry-point modules (no `export` anywhere) cannot be imported by a unit
+// test — importing server/_core/index.ts boots the server and binds a port.
+// Demanding unit line-coverage of them measures something unattainable, which
+// would push contributors to either skip hardening those files or refactor the
+// production bootstrap under time pressure. They are not unverified: check 09
+// builds the real image, boots it against a dead DB, and drives the surfaces
+// with the smoke suite — which exercises exactly this middleware. Excluded
+// loudly, never silently, and only when the file truly exports nothing.
+const entryPointSkips = [];
+for (const f of [...changed.keys()]) {
+  let src;
+  try {
+    src = fs.readFileSync(f, "utf8");
+  } catch {
+    continue;
+  }
+  if (!/^\s*export\s/m.test(src)) {
+    entryPointSkips.push(`${f} (${changed.get(f).size} changed lines)`);
+    changed.delete(f);
+  }
+}
+if (entryPointSkips.length > 0) {
+  console.log(
+    `[patch-coverage] entry-point exclusion — no exports, so not unit-testable; covered by check 09 (build+boot+smoke):`
+  );
+  for (const s of entryPointSkips) console.log(`  excluded: ${s}`);
+}
+
 // v8 coverage-final: keyed by abs path, statementMap + s counts
 const byRelPath = new Map();
 for (const [abs, entry] of Object.entries(coverage)) {

@@ -29,6 +29,7 @@ import { appUsers, discordInviteTokens } from "../drizzle/schema";
 import { syncDiscordRole } from "./discord/discordRoleSync";
 import { eq, and, isNull, gt } from "drizzle-orm";
 import { invalidateCachedAppUser } from "./dbCircuitBreaker";
+import { logSafe } from "./_core/logSafe";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const ROUTE_PREFIX   = "/api/auth/discord-invite";
@@ -113,14 +114,14 @@ function buildPublicOrigin(req: Request, requestId: string): string {
     const origin = `${proto}://${fwdHost}`;
     console.warn(
       `[DiscordInvite][ORIGIN][WARN] requestId=${requestId}` +
-      ` PUBLIC_ORIGIN not set — using x-forwarded headers: "${origin}"`
+      ` PUBLIC_ORIGIN not set — using x-forwarded headers: "${logSafe(origin)}"`
     );
     return origin;
   }
   const fallback = `${req.protocol}://${req.get("host") ?? "localhost"}`;
   console.warn(
     `[DiscordInvite][ORIGIN][WARN] requestId=${requestId}` +
-    ` PUBLIC_ORIGIN not set, no x-forwarded headers — falling back to: "${fallback}"`
+    ` PUBLIC_ORIGIN not set, no x-forwarded headers — falling back to: "${logSafe(fallback)}"`
   );
   return fallback;
 }
@@ -161,7 +162,7 @@ export function registerDiscordInviteRoutes(app: Express): void {
     const rawToken  = typeof req.query.token === "string" ? req.query.token.trim() : "";
 
     console.log(
-      `[DiscordInvite][CONNECT] requestId=${requestId} tokenPrefix="${rawToken.slice(0,8)}…"`
+      `[DiscordInvite][CONNECT] requestId=${requestId} tokenPrefix="${logSafe(rawToken.slice(0, 8))}…"`
     );
 
     // [VALIDATE] Discord client credentials must be set
@@ -250,8 +251,8 @@ export function registerDiscordInviteRoutes(app: Express): void {
 
       console.log(
         `[DiscordInvite][CONNECT][OK] requestId=${requestId}` +
-        ` targetUserId=${row.targetUserId} username=${user.username}` +
-        ` redirectUri="${redirectUri}" totalMs=${Date.now() - t0}`
+        ` targetUserId=${row.targetUserId} username=${logSafe(user.username)}` +
+        ` redirectUri="${logSafe(redirectUri)}" totalMs=${Date.now() - t0}`
       );
       res.redirect(302, authorizeUrl);
     } catch (err) {
@@ -298,7 +299,7 @@ export function registerDiscordInviteRoutes(app: Express): void {
         clearTimeout(deadlineTimer);
         console.warn(
           `[DiscordInvite][CALLBACK][DISCORD_ERROR] requestId=${requestId}` +
-          ` discordError="${discordError}"`
+          ` discordError="${logSafe(discordError)}"`
         );
         res.redirect(302, `/?discord_error=${discordError === "access_denied" ? "discord_cancelled" : "discord_error"}`);
         return;

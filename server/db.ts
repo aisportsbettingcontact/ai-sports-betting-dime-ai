@@ -38,6 +38,7 @@ import {
 import { withCircuitBreaker, invalidateCachedAppUser } from './dbCircuitBreaker';
 import { debugLog } from './_core/debugLogger';
 import { recordFailure, type AccountLockoutConfig } from './accountLockout';
+import { logSafe } from "./_core/logSafe";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let _db: any = null;
@@ -2616,7 +2617,7 @@ export async function insertSecurityEvent(event: InsertSecurityEvent): Promise<v
   const tag = "[DB][insertSecurityEvent]";
   const db = await getDb();
   if (!db) {
-    console.warn(`${tag} DB not available — event not persisted | type=${event.eventType} ip=${event.ip}`);
+    console.warn(`${tag} DB not available — event not persisted | type=${logSafe(event.eventType)} ip=${logSafe(event.ip)}`);
     return;
   }
   try {
@@ -2631,12 +2632,12 @@ export async function insertSecurityEvent(event: InsertSecurityEvent): Promise<v
       occurredAt: event.occurredAt,
     });
     console.log(
-      `${tag} Inserted | type=${event.eventType} ip=${event.ip}` +
-      ` path=${event.trpcPath ?? "N/A"} origin=${event.blockedOrigin ?? "N/A"}`
+      `${tag} Inserted | type=${logSafe(event.eventType)} ip=${logSafe(event.ip)}` +
+      ` path=${logSafe(event.trpcPath ?? "N/A")} origin=${logSafe(event.blockedOrigin ?? "N/A")}`
     );
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error(`${tag} Insert failed (non-critical) | type=${event.eventType} ip=${event.ip} | error="${msg}"`);
+    console.error(`${tag} Insert failed (non-critical) | type=${logSafe(event.eventType)} ip=${logSafe(event.ip)} | error="${logSafe(msg)}"`);
   }
 }
 

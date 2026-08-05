@@ -4,6 +4,7 @@ import { type Server } from "http";
 import { nanoid } from "nanoid";
 import path from "path";
 import { landingPrerenderMiddleware } from "../landingPrerender";
+import { logSafe } from "./logSafe";
 
 /**
  * [FIX] Cache-Control headers applied to every HTML response.
@@ -179,7 +180,7 @@ export function serveStatic(app: Express) {
   app.use("*", (req, res) => {
     const pathname = req.originalUrl.split("?")[0];
     if (BUILD_ASSET_PATH.test(pathname) || STATIC_FILE_EXT.test(pathname)) {
-      console.warn(`[Static] 404 missing asset ${pathname} — stale client chunk or bad reference`);
+      console.warn(`[Static] 404 missing asset ${logSafe(pathname)} — stale client chunk or bad reference`);
       res.status(404).type("text/plain").send("Not found");
       return;
     }
