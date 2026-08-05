@@ -1,0 +1,14 @@
+$ node scripts/smoke-deploy.mjs http://127.0.0.1:3912  (worktree feat/splits-desktop-refine production build)
+Smoke-testing http://127.0.0.1:3912
+
+  ✅ GET /health → 200 (84ms) {"status":"ok","ts":1785933572524,"db":{"state":"CLOSED","co
+  ✅ GET / → 200 HTML shell (19ms) 
+  ✅ hashed asset → 200 + long-lived cache (7ms) /assets/index-DqZlK1AL.js
+  ✅ GET /api/trpc/<bogus> → tRPC JSON error (API mounted) (19ms) status 404
+  ✅ POST /api/dime/chat unauthenticated → 401 JSON (auth gate) (19ms) 
+  ✅ bot UA on / → v2 SEO content (prerender or shell block) (5ms) prerender snapshot
+  ✅ vendored /dime-storage asset → 200 image (no external storage dependency) (4ms) 
+  ✅ checkout CSP allows Stripe Embedded (script-src js.stripe.com + frame-src checkout.stripe.com) (5ms) CSP allows Stripe
+
+8/8 checks passed
+exit=0

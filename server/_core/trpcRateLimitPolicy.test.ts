@@ -5,8 +5,10 @@ import {
   classifyTrpcProcedures,
   clientIpKey,
   createTrpcRateLimitDispatch,
+  isReservedOrInternalIp,
   isTrpcRequest,
   parseTrpcProcedureList,
+  resolveClientIp,
   sendRateLimitResponse,
   trpcRateLimitEnvelope,
 } from "./trpcRateLimitPolicy";
@@ -326,6 +328,53 @@ describe("clientIpKey", () => {
     );
     expect(typeof key).toBe("string");
     expect(key.length).toBeGreaterThan(0);
+  });
+});
+
+describe("resolveClientIp", () => {
+  it("returns the leftmost XFF entry (true client) unnormalized", () => {
+    expect(
+      resolveClientIp(req({ headers: { "x-forwarded-for": "99.1.2.3, 152.233.40.1" } }))
+    ).toBe("99.1.2.3");
+  });
+  it("falls back to req.ip when no XFF", () => {
+    expect(resolveClientIp(req({ ip: "8.8.8.8" }))).toBe("8.8.8.8");
+  });
+  it("returns empty string when nothing is resolvable", () => {
+    expect(resolveClientIp(req({}))).toBe("");
+  });
+});
+
+describe("isReservedOrInternalIp — the XFF-sanitization canary", () => {
+  it("flags RFC1918 / CGNAT / link-local / ULA (impossible for a real internet client)", () => {
+    for (const ip of [
+      "10.0.0.5",
+      "172.16.9.9",
+      "172.31.255.1",
+      "192.168.1.1",
+      "169.254.1.1",
+      "100.64.0.1",
+      "100.127.255.254",
+      "fe80::1",
+      "fd00::abcd",
+      "::ffff:10.1.2.3", // IPv4-mapped private
+    ]) {
+      expect(isReservedOrInternalIp(ip)).toBe(true);
+    }
+  });
+  it("does NOT flag ordinary public clients or loopback (self-ping)", () => {
+    for (const ip of ["47.152.160.175", "8.8.8.8", "152.233.40.1", "2001:db8::1"]) {
+      expect(isReservedOrInternalIp(ip)).toBe(false);
+    }
+    // loopback is intentionally NOT flagged — the app's own keep-alive/self
+    // health calls originate there and must not trip the canary.
+    expect(isReservedOrInternalIp("127.0.0.1")).toBe(false);
+    expect(isReservedOrInternalIp("::1")).toBe(false);
+  });
+  it("never throws on garbage input", () => {
+    expect(() => isReservedOrInternalIp("")).not.toThrow();
+    expect(() => isReservedOrInternalIp("not-an-ip")).not.toThrow();
+    expect(isReservedOrInternalIp("not-an-ip")).toBe(false);
   });
 });
 
