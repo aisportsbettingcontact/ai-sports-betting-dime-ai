@@ -76,9 +76,9 @@ html:not(.dark) .projection-card--compact .projection-card__status--live {
 }
 
 /* Live indicator dot (Round 4 Wave 1, item 4 / page law "Live state"): pulsing
-   7px mint dot ahead of the LIVE label. `display: none` by default keeps
-   mobile (<768px) pixel-identical — the dot only activates at the tablet+
-   breakpoint below (item 8 scoping: items 2/3/4 apply desktop+tablet only). */
+   7px mint dot ahead of the LIVE label. `display: none` here is the inert
+   base; the unconditional activation rule below turns it on at every
+   breakpoint (2026-08-05 — the old tablet+ scoping is superseded). */
 .projection-card__live-dot { display: none; width: 7px; height: 7px; margin-inline-end: 6px; border-radius: 50%; background: var(--brand-mint, #45e0a8); vertical-align: middle; }
 @keyframes projection-card-live-pulse { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
 
@@ -687,24 +687,24 @@ html:not([data-theme-mode]) .dmf-root[data-dmf-mode="dark"] .team-logo-box--dark
 }
 .summary__none { color: var(--text-secondary, #a6a6a6); margin: 0; }
 
-/* ══ Round 4 Wave 1 — desktop/tablet card-anatomy enforcement (items 2-4) ══
-   Scoped to the tablet+desktop breakpoint (item 8: items 2/3/4 apply to BOTH
-   tablet 768-1023 and desktop >=1024; mobile <768 stays byte/visually
-   untouched — see the mobile-scoped `display: none` defaults above). */
-@media (min-width: 768px) {
-  /* Item 3 — PASS-card law (page law "PASS games"): whole card opacity 0.82,
-     zero mint. Zero mint is already structurally guaranteed — rankedEdges()
-     is empty on a PASS card, so no market/side ever earns a signal class
-     (market-table__model--signal / --result--edge / edge-indicator, as
-     opposed to edge-indicator--none) — nothing here forces color, the data
-     already can't produce it. The ROI-only badge remains quiet grey. */
-  .projection-card--pass { opacity: 0.82; }
-  /* FEED-CONTRAST: same composited-contrast correction as --compact (top of
-     file) — the 0.82 dim leaves light-theme labels ~4.5:1 borderline.
-     Scoped >=768 alongside the dim itself so undimmed mobile PASS cards
-     keep the stock tokens. */
-  .projection-card--pass { --text-secondary: var(--foreground); --text-muted: var(--foreground); }
-  .projection-card--pass .edge-indicator--none { color: var(--text-secondary, #a6a6a6); }
+/* ══ Round 4 Wave 1 — card-anatomy enforcement (items 2-4) ══
+   2026-08-05 (mobile refinement): the >=768px scoping (Round-4 item 8,
+   "mobile stays byte-identical") is SUPERSEDED for items 3 and 4 — the page
+   law states both without breakpoint qualification, under mobile-first
+   owner directives: "PASS games: … whole card at opacity 0.82, zero mint"
+   and "Live state: pulsing 7px mint dot + mono 'LIVE …'". On phones a PASS
+   card rendered at full brightness (its grey "ROI +x.x%" pill scanned like
+   a pick at a glance) and a live card lost its motion-coded now-signal.
+   Item 2 (fixed 24px scores) keeps its tablet+ scoping below. */
+/* Item 3 — PASS-card law (page law "PASS games"): whole card opacity 0.82,
+   zero mint, at EVERY breakpoint. Zero mint is structurally guaranteed —
+   rankedEdges() is empty on a PASS card, so no market/side ever earns a
+   signal class; the ROI-only badge remains quiet grey. */
+.projection-card--pass { opacity: 0.82; }
+/* FEED-CONTRAST: same composited-contrast correction as --compact (top of
+   file) — the 0.82 dim leaves light-theme labels ~4.5:1 borderline. */
+.projection-card--pass { --text-secondary: var(--foreground); --text-muted: var(--foreground); }
+.projection-card--pass .edge-indicator--none { color: var(--text-secondary, #a6a6a6); }
 
   /* Defensive PASS backstop (Round 4, from the W1 review — plan:
      docs/superpowers/plans/2026-07-23-feed-desktop-polish.md, item 3):
@@ -732,25 +732,24 @@ html:not([data-theme-mode]) .dmf-root[data-dmf-mode="dark"] .team-logo-box--dark
     color: var(--text-secondary, #a6a6a6);
   }
 
-  /* Item 4 — live indicator: activate the pulsing mint dot (display:none by
-     default, see .projection-card__live-dot above) and make the LIVE label
-     itself brand-accurate: mono-register micro-label tracking, and
-     --mint-on-light on light theme (raw mint text fails contrast on white —
-     MASTER.md "Mint TEXT on light surfaces must use --mint-on-light:
-     #0FA36B"). The dot FILL stays raw mint on both themes (mint fills, unlike
-     mint text, may stay #45E0A8) with a 1px near-black hairline keyline on
-     light theme only (brand dot rule) — dark theme dots sit directly on the
-     black surface with no keyline. */
-  .projection-card__live-dot {
-    display: inline-block;
-    animation: projection-card-live-pulse 1.6s cubic-bezier(0.16, 1, 0.3, 1) infinite;
-  }
-  html:not(.dark) .projection-card__live-dot {
-    box-shadow: 0 0 0 1px var(--border-strong, #000000);
-  }
-  .projection-card__status--live { letter-spacing: 0.08em; }
-  /* (light-theme color now flows from --mint-ink on the base rule) */
+/* Item 4 — live indicator, at EVERY breakpoint (2026-08-05: the >=768 gate
+   is superseded — see the note above; the page law's "Live state" carries no
+   breakpoint qualifier and phones are where a live slate is most followed):
+   activate the pulsing mint dot (display:none base, see
+   .projection-card__live-dot above) and keep the LIVE label mono-register.
+   The dot FILL stays raw mint on both themes (mint fills, unlike mint text,
+   may stay #45E0A8) with a 1px near-black hairline keyline on light theme
+   only (brand dot rule). prefers-reduced-motion collapses the pulse (end of
+   file). */
+.projection-card__live-dot {
+  display: inline-block;
+  animation: projection-card-live-pulse 1.6s cubic-bezier(0.16, 1, 0.3, 1) infinite;
 }
+html:not(.dark) .projection-card__live-dot {
+  box-shadow: 0 0 0 1px var(--border-strong, #000000);
+}
+.projection-card__status--live { letter-spacing: 0.08em; }
+/* (light-theme color now flows from --mint-ink on the base rule) */
 
 /* ══ Centered summary group — MODEL EDGE | BOOK | MODEL | signal ════════════
    The facts and their pill/arrow travel as one intrinsic-width unit centered
@@ -1151,4 +1150,26 @@ html:not([data-theme-mode]) .dmf-root[data-dmf-mode="dark"] .team-logo-box--dark
   .summary-carousel__track { scroll-behavior: auto; }
   /* Item 4: static dot, no pulse (MASTER.md motion law). */
   .projection-card__live-dot { animation: none; opacity: 1; }
+}
+
+/* 2026-08-05 (mobile refinement): shared caption/value rows for the compact
+   readout. Each .summary__item was an independently center-justified flex
+   column, so the MODEL EDGE / BOOK / MODEL captions sat on visibly different
+   baselines whenever their content heights differed (~3px stagger on the
+   card's dominant insight). Subgrid pins the three captions to one shared
+   row and the three values to the next; engines without subgrid keep the
+   previous per-item centering (progressive enhancement, zero risk). */
+@container projcard (max-width: 472px) {
+  @supports (grid-template-rows: subgrid) {
+    .summary__readout { grid-template-rows: auto auto; }
+    .summary__item {
+      display: grid;
+      grid-row: span 2;
+      grid-template-rows: subgrid;
+      row-gap: 2px;
+      align-content: center;
+    }
+    .summary__item dt { align-self: end; }
+    .summary__item dd { align-self: start; }
+  }
 }

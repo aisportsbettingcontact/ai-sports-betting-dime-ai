@@ -1477,14 +1477,21 @@ describe("ProjectionCard — defensive PASS-mint backstop (Round 4 Wave 3 fold-i
     expect(svgRule).toMatch(/color: var\(--text-secondary, #a6a6a6\);/);
   });
 
-  it("is scoped inside the same >=768px block as the rest of items 2-4 (item 8 scoping)", () => {
+  it("applies items 3-4 (PASS dim + live dot) at EVERY breakpoint (2026-08-05: the item-8 >=768 scoping is superseded by the unqualified page law)", () => {
     const item234 = cssBlock(
       cardCss,
-      "Round 4 Wave 1 — desktop/tablet card-anatomy",
+      "Round 4 Wave 1 — card-anatomy",
       "Centered summary group"
     );
-    expect(item234).toContain("@media (min-width: 768px) {");
+    // The page law states PASS dim and the live dot without breakpoint
+    // qualification (mobile-first owner directives); neither may live inside
+    // a min-width gate anymore.
+    expect(item234).not.toContain("@media (min-width: 768px)");
     expect(item234).toContain(".projection-card--pass .edge-indicator {");
+    expect(item234).toMatch(/\.projection-card--pass \{ opacity: 0\.82; \}/);
+    expect(item234).toMatch(
+      /\.projection-card__live-dot \{\s*display: inline-block;/
+    );
   });
 
   it("a genuine PASS card still renders zero mint-signal classes today (backstop is defense-in-depth, not the only guard)", () => {
