@@ -1,0 +1,62 @@
+{
+  "_generated": "DO NOT EDIT — generated from os/agents/AUTHORITY.md by scripts/os/authority-sync.mjs",
+  "source": "os/agents/AUTHORITY.md",
+  "rungs": [
+    {
+      "rung": 1,
+      "name": "read-only",
+      "mayDo": "Read any repo state, analyse, recommend, report. Produce artifacts under /os/. No mutation of anything outside /os/.",
+      "gate": "none"
+    },
+    {
+      "rung": 2,
+      "name": "reversible",
+      "mayDo": "Everything in rung 1, plus reversible low-risk action: push non-main branches, open PRs, append to os-ledger, write CI checks, run read-only queries.",
+      "gate": "evaluation shows reliability for that action class"
+    },
+    {
+      "rung": 3,
+      "name": "irreversible",
+      "mayDo": "Merge to main, production deploy, schema change, production data mutation, secret access, history rewrite, force-push.",
+      "gate": "**Prez, per action**"
+    }
+  ],
+  "actors": [
+    {
+      "actor": "Prez",
+      "rung": 3,
+      "status": "ACTIVE",
+      "notes": "Founder and DRI of every outcome. The only actor at rung 3."
+    },
+    {
+      "actor": "executor",
+      "rung": 2,
+      "status": "ACTIVE",
+      "notes": "The AI-native mission executor (Fable 5). Full write across the monorepo and /os/** on mission branches; may push branches and open PRs. **May not** merge to main, deploy, touch production data, rewrite history, or force-push."
+    },
+    {
+      "actor": "os-ledger-append",
+      "rung": 2,
+      "status": "ACTIVE",
+      "notes": "CI workflow. Appends one cycle artifact per merge to the os-ledger orphan branch. contents: write scoped to that branch only; justified in WRITE_APPROVALS."
+    },
+    {
+      "actor": "SEAT-001",
+      "rung": 2,
+      "status": "DEFERRED",
+      "notes": "blocked_on: LOOP-002 — run-recorder activates with the Operations loop (ISSUE-013)."
+    },
+    {
+      "actor": "SEAT-002",
+      "rung": 1,
+      "status": "DEFERRED",
+      "notes": "blocked_on: DR-001 and DR-005 — calibration-auditor serves the model loop, which is deferred and gated."
+    },
+    {
+      "actor": "SEAT-003",
+      "rung": 3,
+      "status": "DEFERRED",
+      "notes": "blocked_on: NO_LOOP — the voice/compliance gate serves no designated loop yet. L4 forbids activating a seat without one."
+    }
+  ]
+}
