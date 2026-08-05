@@ -3,3 +3,10 @@
 # them locally — keep them out of the index. The JSON corpus stays tracked:
 # scripts/mlb-etl tests and crawl tooling read games-YYYY.json from disk.
 games-*.csv
+
+# Historical season datasets dropped from git 2026-08-05 (~29MB). Regenerate any
+# season on demand: python3 scripts/mlb-crawl/build_games_dataset.py --start YYYY --end YYYY
+# games-2026.json stays tracked — it is the live canonical-refresh cron's base,
+# and single-row test extracts live in scripts/mlb-etl/fixtures/.
+games-*.json
+!games-2026.json
