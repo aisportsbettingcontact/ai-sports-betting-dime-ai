@@ -154,3 +154,22 @@ prettier clean. `healthIntegrations.test.ts` updated: the status code is now dri
 serviceability = DB circuit **+ schema agreement** (still never by integrations). Terminal outcome:
 **BUILT — enabled by default; a code-ahead-of-migration deploy now fails its healthcheck instead of
 silently downing auth.**
+
+---
+
+## Phase 1½ follow-up — gate is COLUMN-scoped (zombie-backend false-positive, 2026-08-05)
+
+After #392 deployed, the **`ai-sports-betting-backend`** service (a zombie sharing the server image
+but connected to a DB WITHOUT `app_users`) failed its healthcheck: `probeAppUsersSchema` raised
+`ER_NO_SUCH_TABLE`, which the gate classified as `schema_mismatch` → `/health` 503 → deploy FAILED.
+**Production (`ai-sports-betting-dime-ai`) was unaffected** (`schema=ok`); Railway correctly kept the
+previous backend deploy, so nothing was down — but every future backend deploy would fail.
+
+**Root cause:** the gate treated a missing TABLE the same as a missing COLUMN. The #370 class is
+specifically a missing COLUMN (`ER_BAD_FIELD_ERROR`); a missing table only happens on a service that
+doesn't own the schema (or a catastrophic drop), neither of which is deploy-order drift.
+
+**Fix (`server/db.ts` `classifyAppUsersProbeError`):** only `ER_BAD_FIELD_ERROR` → `schema_mismatch`;
+`ER_NO_SUCH_TABLE` (and all else) → `unknown` (logged, non-blocking). This also makes the gate
+**self-scoping** — it can only fail a service that actually owns `app_users` and is missing a column,
+which is exactly the intended target. Tests in `driverErrorClassification.test.ts`; gated PASS (3871).
