@@ -297,7 +297,7 @@ export function registerDiscordAuthRoutes(app: Express) {
 
     console.log(
       `[DiscordAuth][CHECKPOINT:3.OK] /connect — requestId=${requestId}` +
-      ` userId=${payload.userId}` +
+      ` userId=${logSafe(payload.userId)}` +
       `\n  → STATE_STORAGE      : DB (discord_oauth_states table)` +
       `\n  → state              : "${logSafe(state.slice(0, 8))}…" (${state.length} chars)` +
       `\n  → state_expires_at   : ${new Date(expiresAt).toISOString()} (${STATE_TTL_MS/60000} min from now)` +
@@ -336,7 +336,7 @@ export function registerDiscordAuthRoutes(app: Express) {
       `\n  → state_present    : ${!!state}` +
       `\n  → state_length     : ${state?.length ?? 0}` +
       `\n  → discord_error    : "${logSafe(error ?? "none")}"` +
-      `\n  → query_keys       : ${JSON.stringify(Object.keys(req.query))}` +
+      `\n  → query_keys       : ${logSafe(JSON.stringify(Object.keys(req.query)))}` +
       `\n  → x-forwarded-host : "${logSafe(req.get("x-forwarded-host") ?? "NOT_SET")}"` +
       `\n  → ENV.publicOrigin : "${ENV.publicOrigin || "NOT_SET"}"`
     );

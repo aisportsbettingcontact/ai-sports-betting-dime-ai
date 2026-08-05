@@ -262,7 +262,7 @@ export async function ingestWc2026EspnResults(options: {
     matchSummaries: [],
   };
 
-  console.log(`[WC2026ESPN] [INPUT] Starting ingestion for date=${logSafe(dateStr)} onlyFinal=${onlyFinalMatches} forceReingest=${forceReingest}`);
+  console.log(`[WC2026ESPN] [INPUT] Starting ingestion for date=${logSafe(dateStr)} onlyFinal=${logSafe(onlyFinalMatches)} forceReingest=${logSafe(forceReingest)}`);
 
   // Step 1: Fetch scoreboard
   let events: EspnEvent[];
