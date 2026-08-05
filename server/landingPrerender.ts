@@ -17,6 +17,7 @@
  */
 
 import { Request, Response, NextFunction } from "express";
+import { logSafe } from "./_core/logSafe";
 
 // Bot / crawler UA patterns (used for landing page only)
 const BOT_PATTERNS = [
@@ -432,7 +433,9 @@ export function landingPrerenderMiddleware(
   // /privacy and /terms: serve legal content to ALL user agents unconditionally.
   // There is no correct reason for these routes to ever serve homepage HTML.
   if (path === "/privacy") {
-    console.log(`[Prerender][INPUT] path=${path} ua="${ua.slice(0, 80)}"`);
+    console.log(
+      `[Prerender][INPUT] path=${logSafe(path)} ua="${logSafe(ua.slice(0, 80))}"`
+    );
     console.log("[Prerender][STEP] Legal page — serving to ALL user agents");
     const html = buildPrivacyHtml();
     console.log(`[Prerender][OUTPUT] /privacy bytes=${html.length}`);
@@ -445,7 +448,9 @@ export function landingPrerenderMiddleware(
   }
 
   if (path === "/terms") {
-    console.log(`[Prerender][INPUT] path=${path} ua="${ua.slice(0, 80)}"`);
+    console.log(
+      `[Prerender][INPUT] path=${logSafe(path)} ua="${logSafe(ua.slice(0, 80))}"`
+    );
     console.log("[Prerender][STEP] Legal page — serving to ALL user agents");
     const html = buildTermsHtml();
     console.log(`[Prerender][OUTPUT] /terms bytes=${html.length}`);
@@ -462,7 +467,9 @@ export function landingPrerenderMiddleware(
     return next();
   }
 
-  console.log(`[Prerender][INPUT] path=${path} ua="${ua.slice(0, 120)}"`);
+  console.log(
+    `[Prerender][INPUT] path=${logSafe(path)} ua="${logSafe(ua.slice(0, 120))}"`
+  );
 
   const botDetected = isBot(ua);
 
