@@ -334,7 +334,9 @@ describe("clientIpKey", () => {
 describe("resolveClientIp", () => {
   it("returns the leftmost XFF entry (true client) unnormalized", () => {
     expect(
-      resolveClientIp(req({ headers: { "x-forwarded-for": "99.1.2.3, 152.233.40.1" } }))
+      resolveClientIp(
+        req({ headers: { "x-forwarded-for": "99.1.2.3, 152.233.40.1" } })
+      )
     ).toBe("99.1.2.3");
   });
   it("falls back to req.ip when no XFF", () => {
@@ -363,7 +365,12 @@ describe("isReservedOrInternalIp — the XFF-sanitization canary", () => {
     }
   });
   it("does NOT flag ordinary public clients or loopback (self-ping)", () => {
-    for (const ip of ["47.152.160.175", "8.8.8.8", "152.233.40.1", "2001:db8::1"]) {
+    for (const ip of [
+      "47.152.160.175",
+      "8.8.8.8",
+      "152.233.40.1",
+      "2001:db8::1",
+    ]) {
       expect(isReservedOrInternalIp(ip)).toBe(false);
     }
     // loopback is intentionally NOT flagged — the app's own keep-alive/self

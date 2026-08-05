@@ -1599,7 +1599,10 @@ function DesktopMergedPanel({
           <span className="text-center" style={colHdrStyle("#FFFFFF")}>
             BOOK
           </span>
-          <span className="text-center" style={colHdrStyle("var(--dime-mint-text, #45E0A8)")}>
+          <span
+            className="text-center"
+            style={colHdrStyle("var(--dime-mint-text, #45E0A8)")}
+          >
             MODEL
           </span>
 
@@ -2307,7 +2310,11 @@ function OddsCell({
     : isEdge
       ? "1px solid var(--dime-mint-border, #45E0A8)"
       : "1px solid transparent";
-  const mainColor = isEdge ? "var(--dime-mint-text, #45E0A8)" : isBook ? "#FFFFFF" : "#FFFFFF"; // 2026-08-05 token law
+  const mainColor = isEdge
+    ? "var(--dime-mint-text, #45E0A8)"
+    : isBook
+      ? "#FFFFFF"
+      : "#FFFFFF"; // 2026-08-05 token law
   const mainWeight = isEdge ? 800 : isBook ? 700 : 700;
   // Model cells: juice is always neon green (edge = full, non-edge = 60%); book cells: muted gray
   // 2026-08-05 token law: mint text is theme-correct
@@ -2381,7 +2388,10 @@ function OddsCell({
               xmlns="http://www.w3.org/2000/svg"
               style={{ width: "100%", height: "100%" }}
             >
-              <path d="M0 0 H15 V20 L7.5 14 L0 20 Z" fill="var(--dime-mint, #45E0A8)" />
+              <path
+                d="M0 0 H15 V20 L7.5 14 L0 20 Z"
+                fill="var(--dime-mint, #45E0A8)"
+              />
               <text
                 x="7.5"
                 y="10"
@@ -2942,7 +2952,10 @@ function OddsLinesPanel({
                     className="text-center font-bold uppercase tracking-widest"
                     style={{
                       fontSize: "clamp(11px, 0.95vw, 14px)",
-                      color: lbl === "Model" ? "var(--dime-mint-text, #45E0A8)" : "#FFFFFF", // 2026-08-05 token law
+                      color:
+                        lbl === "Model"
+                          ? "var(--dime-mint-text, #45E0A8)"
+                          : "#FFFFFF", // 2026-08-05 token law
                     }}
                   >
                     {lbl}
