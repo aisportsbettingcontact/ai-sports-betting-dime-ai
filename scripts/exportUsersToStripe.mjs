@@ -46,7 +46,12 @@ if (!DATABASE_URL) {
 }
 
 console.log(`${TAG} [INPUT] DRY_RUN=${DRY_RUN}`);
-console.log(`${TAG} [INPUT] STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY.slice(0, 12)}...`);
+// Log only which MODE the key selects — never the key, its prefix, or its
+// length. Anything derived from the key still carries it into the log record.
+const STRIPE_KEY_MODE = STRIPE_SECRET_KEY.startsWith("sk_live_")
+  ? "live"
+  : "test";
+console.log(`${TAG} [INPUT] STRIPE_SECRET_KEY=configured (${STRIPE_KEY_MODE})`);
 console.log(`${TAG} [INPUT] DATABASE_URL=${DATABASE_URL.replace(/:[^@]+@/, ":***@")}`);
 
 // ─── Initialize Stripe ────────────────────────────────────────────────────────

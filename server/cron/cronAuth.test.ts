@@ -110,3 +110,33 @@ describe("verifyCronSecret — accepts a valid secret", () => {
     expect(r.ok).toBe(true);
   });
 });
+
+describe("Bearer parsing is linear (ReDoS regression)", () => {
+  it("still extracts the token from a well-formed header", () => {
+    process.env.CRON_SECRET = SECRET;
+    const r = verifyCronSecret({
+      headers: { authorization: `Bearer ${SECRET}` },
+    });
+    expect(r.ok).toBe(true);
+  });
+
+  it("accepts tabs and multiple spaces after the scheme", () => {
+    process.env.CRON_SECRET = SECRET;
+    const r = verifyCronSecret({
+      headers: { authorization: `Bearer \t  ${SECRET}` },
+    });
+    expect(r.ok).toBe(true);
+  });
+
+  it("does not blow up on a long whitespace run — the old regex backtracked quadratically here", () => {
+    process.env.CRON_SECRET = SECRET;
+    const started = Date.now();
+    const r = verifyCronSecret({
+      headers: { authorization: `Bearer ${" ".repeat(50_000)}` },
+    });
+    const elapsed = Date.now() - started;
+    expect(r.ok).toBe(false);
+    // The vulnerable /^Bearer\s+(.+)$/ took seconds on this input.
+    expect(elapsed).toBeLessThan(250);
+  });
+});

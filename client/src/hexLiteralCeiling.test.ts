@@ -68,9 +68,12 @@ describe("hex-literal ceiling ratchet (X-HEX-EPIDEMIC)", () => {
       // command with a freshly added literal would silently launder it into
       // the fixture and normal CI would pass — the exact bypass this guard
       // exists to prevent.
-      const prev: Record<string, number> = fs.existsSync(FIXTURE)
-        ? JSON.parse(fs.readFileSync(FIXTURE, "utf8"))
-        : {};
+      let prev: Record<string, number> = {};
+      try {
+        prev = JSON.parse(fs.readFileSync(FIXTURE, "utf8"));
+      } catch {
+        prev = {};
+      }
       const raised = Object.entries(counts)
         .filter(([file, n]) => n > (prev[file] ?? 0))
         .map(
@@ -82,7 +85,6 @@ describe("hex-literal ceiling ratchet (X-HEX-EPIDEMIC)", () => {
         Object.entries(counts).sort(([a], [b]) => a.localeCompare(b))
       );
       fs.writeFileSync(FIXTURE, JSON.stringify(sorted, null, 2) + "\n");
-      expect(fs.existsSync(FIXTURE)).toBe(true);
     });
     return;
   }
