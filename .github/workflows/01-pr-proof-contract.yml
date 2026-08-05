@@ -47,6 +47,9 @@ jobs:
       - name: "[STEP] Static types (strict)"
         run: NODE_OPTIONS=--max-old-space-size=6144 npx tsc --noEmit
 
+      - name: "[STEP] Playwright chromium — perf/harness.smoke.test.ts runs it (mirrors ci.yml)"
+        run: pnpm exec playwright install --with-deps chromium
+
       - name: "[STEP] Gated vitest — env-gate fails on zero-collected / unexcused skips"
         run: |
           (npx vitest run --reporter=default --reporter=json --outputFile=vitest-results.json || true)

@@ -37,6 +37,7 @@ jobs:
           npx vitest run --coverage --coverage.provider=v8 \
             --coverage.reporter=json --coverage.include='server/**' \
             --coverage.include='shared/**' \
+            --exclude 'perf/**' \
             --reporter=default --reporter=json --outputFile=vitest-results.json || true
           node scripts/check-environment-failures.mjs --profile=ci --actor="$GITHUB_ACTOR" \
             --input=vitest-results.json --report=env-gate-report.json

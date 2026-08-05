@@ -38,18 +38,29 @@ jobs:
           docker build -t dime-pr:${{ github.sha }} .
           docker image inspect dime-pr:${{ github.sha }} --format 'digest-less local build: {{.Id}}' | tee image-id.txt
 
-      - name: "[STEP] Trivy — image, config, secrets, licenses"
+      - name: "[STEP] Trivy SARIF for the security tab (non-gating pass)"
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: dime-pr:${{ github.sha }}
           format: sarif
           output: trivy.sarif
+          severity: CRITICAL,HIGH
+          exit-code: "0"
+          ignore-unfixed: true
+          scanners: vuln,secret,misconfig
+
+      - name: "[GATE] Trivy blocking gate — CRITICAL fixable only, human-readable verdict"
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: dime-pr:${{ github.sha }}
+          format: table
           # CRITICAL-only blocking at launch; HIGH graduates after first-scan
           # triage (ROLLOUT.md Wave 2) — the nightly tier scans HIGH+MEDIUM
           severity: CRITICAL
           exit-code: "1"
           ignore-unfixed: true
           scanners: vuln,secret,misconfig
+          skip-setup-trivy: true
 
       - uses: github/codeql-action/upload-sarif@c4dd10e44af883a891fe31ced449bcb4a6728b9b # v3
         if: always()
