@@ -26,12 +26,16 @@ ui-ux_log.txt
 .tmp-*
 vitest-results*.json
 
-# Agent/credential/ops tooling never ships. The ONE script the image build
-# needs is the preview-production gate that `pnpm run build` calls — allowlist
-# exactly that file (it imports node builtins only; widen the allowlist only
-# if a build-time script gains a local helper).
+# Agent/credential/ops tooling never ships. The image build needs exactly:
+# the preview-production gate that `pnpm run build` calls, and the two team
+# datasets server/_core/dimeAnswerRouting.ts imports at bundle time (esbuild
+# resolves them from the build context — excluding them breaks build:server,
+# which is how the 2026-08-05 Railway deploy failed). Widen this allowlist
+# only for a file the build provably resolves; never re-open all of scripts/.
 scripts/**
 !scripts/verify-preview-production.mjs
+!scripts/data/cfb-2026/teams.json
+!scripts/data/nfl-2026/teams.json
 
 # Access/incident/session logs and root one-off strays — must not ship
 USERS.md
