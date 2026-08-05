@@ -1,5 +1,6 @@
 import type { Request, RequestHandler, Response } from "express";
 import { ipKeyGenerator } from "express-rate-limit";
+import { cfConnectingIp, edgeMode, edgeProofPasses } from "./edgeProxy";
 
 /**
  * Procedure-aware tRPC rate-limit classification (AUTH-004 generalized).
@@ -131,8 +132,30 @@ export function clientIpKey(req: Pick<Request, "headers" | "ip">): string {
   return ipKeyGenerator(resolveClientIp(req));
 }
 
-/** The raw resolved true-client IP (leftmost sanitized XFF, else req.ip). */
+/**
+ * The raw resolved true-client IP.
+ *
+ * Behind Cloudflare (EDGE_MODE "log" or "on") the leftmost sanitized XFF token
+ * is the CF PoP egress IP, not the visitor — keying on it would collapse every
+ * user behind a PoP onto one limiter budget AND blind the private-range canary
+ * (a public-but-wrong IP). So when the request cryptographically proves it came
+ * through our Cloudflare edge (valid origin secret + CF-range upstream) we key
+ * on `cf-connecting-ip` (Cloudflare's authoritative true-client header).
+ *
+ * This proof runs in BOTH "log" and "on" (edgeMode !== "off") and is INLINE —
+ * it does not depend on the originLock middleware having run — so IP-keying is
+ * decoupled from 403 enforcement. That makes "log" a fully healthy rollback
+ * target: `EDGE_MODE=on → log` stops enforcement 403s while keeping keys
+ * correct (no PoP collapse), the fast escape hatch from an edge fault.
+ *
+ * With EDGE_MODE unset/"off" this is byte-identical to the legacy behavior
+ * (leftmost sanitized XFF, else req.ip) — the merge is inert.
+ */
 export function resolveClientIp(req: Pick<Request, "headers" | "ip">): string {
+  if (edgeMode() !== "off") {
+    const cf = cfConnectingIp(req);
+    if (cf && edgeProofPasses(req)) return cf;
+  }
   const xff = req.headers?.["x-forwarded-for"];
   const first = (Array.isArray(xff) ? xff[0] : xff)?.split(",")[0]?.trim();
   return first || req.ip || "";

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Request, RequestHandler, Response } from "express";
 import {
   TRPC_PROCEDURE_CLASSES,
@@ -344,6 +344,98 @@ describe("resolveClientIp", () => {
   });
   it("returns empty string when nothing is resolvable", () => {
     expect(resolveClientIp(req({}))).toBe("");
+  });
+});
+
+describe("resolveClientIp — Cloudflare edge branch (Phase 4)", () => {
+  const SECRET = "z".repeat(48);
+  const CF_UPSTREAM = "104.16.7.7"; // in 104.16.0.0/13
+  const orig = {
+    mode: process.env.EDGE_MODE,
+    s: process.env.EDGE_ORIGIN_SECRET,
+  };
+  afterEach(() => {
+    orig.mode === undefined
+      ? delete process.env.EDGE_MODE
+      : (process.env.EDGE_MODE = orig.mode);
+    orig.s === undefined
+      ? delete process.env.EDGE_ORIGIN_SECRET
+      : (process.env.EDGE_ORIGIN_SECRET = orig.s);
+  });
+
+  const edgeReq = () =>
+    req({
+      headers: {
+        "x-dime-edge-secret": SECRET,
+        "x-forwarded-for": `${CF_UPSTREAM}, 152.233.40.1`,
+        "cf-connecting-ip": "77.88.99.100",
+      },
+    });
+
+  it("EDGE_MODE off: ignores cf-connecting-ip, byte-identical legacy behavior", () => {
+    delete process.env.EDGE_MODE;
+    process.env.EDGE_ORIGIN_SECRET = SECRET;
+    // Even with a full valid edge proof present, off-mode keys on leftmost XFF.
+    expect(resolveClientIp(edgeReq())).toBe(CF_UPSTREAM);
+  });
+
+  it("EDGE_MODE on + valid proof: keys on cf-connecting-ip (true client)", () => {
+    process.env.EDGE_MODE = "on";
+    process.env.EDGE_ORIGIN_SECRET = SECRET;
+    expect(resolveClientIp(edgeReq())).toBe("77.88.99.100");
+  });
+
+  it("EDGE_MODE log + valid proof: ALSO keys on cf-connecting-ip (healthy rollback harbor)", () => {
+    process.env.EDGE_MODE = "log";
+    process.env.EDGE_ORIGIN_SECRET = SECRET;
+    expect(resolveClientIp(edgeReq())).toBe("77.88.99.100");
+  });
+
+  it("EDGE_MODE on but NON-CF upstream: ignores cf-connecting-ip, falls through to leftmost XFF", () => {
+    process.env.EDGE_MODE = "on";
+    process.env.EDGE_ORIGIN_SECRET = SECRET;
+    expect(
+      resolveClientIp(
+        req({
+          headers: {
+            "x-dime-edge-secret": SECRET,
+            "x-forwarded-for": "203.0.113.5",
+            "cf-connecting-ip": "77.88.99.100",
+          },
+        })
+      )
+    ).toBe("203.0.113.5");
+  });
+
+  it("EDGE_MODE on but no/invalid secret: ignores cf-connecting-ip (spoof-proof)", () => {
+    process.env.EDGE_MODE = "on";
+    process.env.EDGE_ORIGIN_SECRET = SECRET;
+    expect(
+      resolveClientIp(
+        req({
+          headers: {
+            "x-forwarded-for": `${CF_UPSTREAM}`,
+            "cf-connecting-ip": "6.6.6.6",
+          },
+        })
+      )
+    ).toBe(CF_UPSTREAM);
+  });
+
+  it("canary honesty: a private cf-connecting-ip under a valid proof is detectable by isReservedOrInternalIp", () => {
+    process.env.EDGE_MODE = "on";
+    process.env.EDGE_ORIGIN_SECRET = SECRET;
+    const resolved = resolveClientIp(
+      req({
+        headers: {
+          "x-dime-edge-secret": SECRET,
+          "x-forwarded-for": CF_UPSTREAM,
+          "cf-connecting-ip": "10.1.2.3",
+        },
+      })
+    );
+    expect(resolved).toBe("10.1.2.3");
+    expect(isReservedOrInternalIp(resolved)).toBe(true);
   });
 });
 

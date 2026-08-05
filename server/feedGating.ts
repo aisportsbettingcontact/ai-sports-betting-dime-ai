@@ -158,3 +158,33 @@ export function stripWcMatchupModelFields<T extends Record<string, unknown>>(
 ): T {
   return stripByModelRuleAndList(row, WC_PROPRIETARY_FIELDS);
 }
+
+/**
+ * Cache headers for model-bearing feed endpoints, so gated model IP can never
+ * be shared-cached and cross-served to an anonymous scraper (Phase 4 cache-leak
+ * fix — closes the path-confusion / header-less-endpoint edge-cache vector at
+ * the ORIGIN, independent of any Cloudflare cache rule).
+ *
+ * - authed: the response carries full model IP → `private, no-store` so no
+ *   shared/edge cache stores it, even one that ignores `Vary: Cookie` (which
+ *   Cloudflare does). `private` alone is not enough against an "Override TTL"
+ *   edge rule — `no-store` is the belt-and-suspenders.
+ * - anon: the stripped commodity shape → a short public cache is fine.
+ * - always `Vary: Cookie` so a compliant cache keys on auth state.
+ *
+ * Mirrors the games.list auth-aware header (Phase 3), extended to the strikeout
+ * / HR / WC endpoints that previously set NO Cache-Control at all.
+ */
+export function setGatedCacheHeaders(
+  res: { setHeader?: (name: string, value: string) => void } | undefined,
+  authed: boolean
+): void {
+  if (!res || typeof res.setHeader !== "function") return;
+  res.setHeader("Vary", "Cookie");
+  res.setHeader(
+    "Cache-Control",
+    authed
+      ? "private, no-store"
+      : "public, max-age=30, stale-while-revalidate=60"
+  );
+}
