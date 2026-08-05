@@ -48,6 +48,22 @@ export interface CycleArtifact {
   contentHash: string;
 }
 
+/**
+ * Reject anything that does not look like a commit-ish before it reaches git.
+ *
+ * SECURITY (CodeQL js/indirect-command-line-injection). The appender takes a
+ * `--sha` from argv. git is already invoked via execFileSync with an argument
+ * ARRAY and no shell, which is the real fix; this is defence in depth, and it
+ * additionally blocks a leading dash so a value cannot masquerade as a git flag
+ * (e.g. `--upload-pack=...`, which is command execution by another name).
+ */
+export function assertRevish(v: string): string {
+  if (!v || v.length > 255 || v.startsWith("-") || !/^[0-9a-zA-Z._/-]+$/.test(v)) {
+    throw new Error(`refusing suspicious commit-ish: ${JSON.stringify(v)}`);
+  }
+  return v;
+}
+
 /** How long a merge may go unobserved before the clock reports it. */
 const OBSERVE_WINDOW_DAYS = 2;
 

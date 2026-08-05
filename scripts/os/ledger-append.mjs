@@ -8,8 +8,8 @@
  * Idempotent: replaying the same merge appends nothing (dedupe on id+contentHash).
  * --dry-run prints the artifact and touches no branch.
  */
-import { execSync } from "child_process";
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
+import { execFileSync } from "child_process";
+import { readFileSync, writeFileSync } from "fs";
 import { createHash } from "crypto";
 
 const DRY = process.argv.includes("--dry-run");
@@ -20,19 +20,36 @@ const repoArg = process.argv.indexOf("--repo");
 // places in the workflow (the repo checkout vs the os-ledger worktree), and
 // conflating them made the script untestable outside a git directory.
 const REPO = repoArg > -1 ? process.argv[repoArg + 1] : process.env.GITHUB_WORKSPACE || process.cwd();
-const sh = (c) => execSync(c, { encoding: "utf8", cwd: REPO }).trim();
 
-const commitSha = shaArg > -1 ? process.argv[shaArg + 1] : sh("git rev-parse HEAD");
-const treeSha = sh(`git rev-parse ${commitSha}^{tree}`);
-const subject = sh(`git log -1 --format=%s ${commitSha}`);
+// SECURITY (CodeQL js/indirect-command-line-injection). Arguments reach this
+// script from argv, so git is invoked via execFileSync with an ARRAY of args and
+// no shell. There is no string a caller can craft that becomes a second command.
+const git = (...args) => execFileSync("git", args, { encoding: "utf8", cwd: REPO }).trim();
+
+// Defence in depth lives in shared/os/cycle.ts so it is covered by the required
+// Vitest job rather than duplicated here untested.
+function assertRevish(v) {
+  if (!v || v.length > 255 || v.startsWith("-") || !/^[0-9a-zA-Z._/-]+$/.test(v)) {
+    throw new Error(`refusing suspicious commit-ish: ${JSON.stringify(v)}`);
+  }
+  return v;
+}
+
+const commitSha = shaArg > -1 ? assertRevish(process.argv[shaArg + 1]) : git("rev-parse", "HEAD");
+const treeSha = git("rev-parse", `${commitSha}^{tree}`);
+const subject = git("log", "-1", "--format=%s", commitSha);
 // The PR title lives in the merge commit BODY; the subject is "Merge pull request #N from ...".
-const body = sh(`git log -1 --format=%b ${commitSha}`);
+const body = git("log", "-1", "--format=%b", commitSha);
 const prTitle = body.split("\n").map((l) => l.trim()).find(Boolean) || subject;
-const mergedAt = new Date(sh(`git log -1 --format=%cI ${commitSha}`)).toISOString().replace(/\.\d{3}/, "");
+const mergedAt = new Date(git("log", "-1", "--format=%cI", commitSha)).toISOString().replace(/\.\d{3}/, "");
 const m = subject.match(/Merge pull request #(\d+)/);
 const prNumber = m ? Number(m[1]) : 0;
 let filesChanged = 0;
-try { filesChanged = sh(`git diff --name-only ${commitSha}^1 ${commitSha}`).split("\n").filter(Boolean).length; } catch {}
+try {
+  filesChanged = git("diff", "--name-only", `${commitSha}^1`, commitSha).split("\n").filter(Boolean).length;
+} catch {
+  /* root commit or shallow clone — leave 0 rather than guess */
+}
 
 const material = JSON.stringify({ commitSha, treeSha, prNumber, mergedAt, filesChanged });
 const d = new Date(mergedAt); d.setUTCDate(d.getUTCDate() + 2);
@@ -52,9 +69,14 @@ const artifact = {
 if (DRY) { console.log(JSON.stringify(artifact, null, 2)); process.exit(0); }
 
 const LEDGER = "cycles.jsonl";
+// SECURITY (CodeQL js/file-system-race). No existsSync-then-readFileSync: that
+// check-then-act pair is a TOCTOU window. Read once and treat "missing" as the
+// empty ledger, which is also simply correct on the very first append.
 let existing = [];
-if (existsSync(LEDGER)) {
+try {
   existing = readFileSync(LEDGER, "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l));
+} catch (err) {
+  if (err.code !== "ENOENT") throw err;
 }
 if (existing.some((e) => e.id === artifact.id && e.contentHash === artifact.contentHash)) {
   console.log(`[os-ledger] duplicate ${artifact.id} — nothing appended (idempotent)`);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildCycleArtifact, isDuplicate, type MergeFacts } from "./cycle";
+import { buildCycleArtifact, isDuplicate, assertRevish, type MergeFacts } from "./cycle";
 
 const FACTS: MergeFacts = {
   commitSha: "6965b5800ee00ee7da720cc7703202ff4f8b65ce",
@@ -57,5 +57,29 @@ describe("isDuplicate", () => {
 
   it("returns false against an empty ledger", () => {
     expect(isDuplicate(buildCycleArtifact(FACTS), [])).toBe(false);
+  });
+});
+
+describe("assertRevish — regression for CodeQL js/indirect-command-line-injection", () => {
+  it("accepts ordinary commit-ish values", () => {
+    for (const v of ["HEAD", "6965b5800ee00ee7da720cc7703202ff4f8b65ce", "main", "origin/main", "v1.2.3"]) {
+      expect(assertRevish(v)).toBe(v);
+    }
+  });
+
+  it("refuses shell metacharacters", () => {
+    for (const v of ["HEAD; touch /tmp/x", "HEAD$(touch /tmp/x)", "HEAD`touch /tmp/x`", "HEAD | sh", "a&&b"]) {
+      expect(() => assertRevish(v)).toThrow(/refusing/i);
+    }
+  });
+
+  it("refuses a leading dash so a value cannot become a git flag", () => {
+    expect(() => assertRevish("--upload-pack=touch /tmp/x")).toThrow(/refusing/i);
+    expect(() => assertRevish("--help")).toThrow(/refusing/i);
+  });
+
+  it("refuses empty and absurdly long values", () => {
+    expect(() => assertRevish("")).toThrow(/refusing/i);
+    expect(() => assertRevish("a".repeat(256))).toThrow(/refusing/i);
   });
 });
