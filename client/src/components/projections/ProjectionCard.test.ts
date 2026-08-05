@@ -793,7 +793,7 @@ describe("ProjectionCard — Rotowire pregame context", () => {
     // exempted desktop 3-across cards (the narrowest in the product), which
     // wrapped "Matthew Liberatore" onto two lines while phones one-lined it.
     expect(compactPregame).not.toContain("@media (max-width: 1023.98px)");
-    expect(compactPregame).toContain("@container projcard (max-width: 520px)");
+    expect(compactPregame).toContain("@container projcard (max-width: 472px)"); // 2026-08-05: content-box-corrected (~520px border-box cards)
     expect(compactPregame).toMatch(
       /\.pregame-pitchers\s*\{[^}]*position:\s*relative;[^}]*grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\);/,
     );
@@ -820,7 +820,7 @@ describe("ProjectionCard — Rotowire pregame context", () => {
     // the content-driven grid no multi-column card can resolve below ~305px,
     // so this tier is a container-scoped backstop for extreme hosts.
     expect(deepNarrow).not.toContain("@media (min-width: 1024px)");
-    expect(deepNarrow).toContain("@container projcard (max-width: 280px)");
+    expect(deepNarrow).toContain("@container projcard (max-width: 246px)"); // 2026-08-05: content-box-corrected (~280px border-box cards)
     expect(deepNarrow).toMatch(
       /\.pregame-pitchers\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\) 3rem minmax\(0, 1fr\);[^}]*gap:\s*2px;/,
     );
@@ -946,7 +946,7 @@ describe("ProjectionCard — centered single-row summary group", () => {
     expect(cardCss).not.toContain(".summary__readout { display: contents; }");
     expect(centered).not.toContain("minmax(max-content, 1fr)");
     expect(cardCss).toMatch(/\.summary__pick\s*\{[^}]*white-space:\s*nowrap;/);
-    expect(cardCss).toContain(".summary__item--message { grid-column: 1 / -1; justify-self: center; }");
+    expect(cardCss).toContain(".summary__item--message { grid-column: 1 / -1; justify-self: safe center; min-inline-size: 0; text-align: center; }"); // 2026-08-05: unclipped, wrapping no-action sentence
   });
 
   it("never clamps facts: anatomy is width-deterministic, overflow stays local (FEED-EDGE-ROW-CLIP v2)", () => {
@@ -954,7 +954,7 @@ describe("ProjectionCard — centered single-row summary group", () => {
       /\.summary__viewport\s*\{[^}]*inline-size:\s*100%;[^}]*min-inline-size:\s*0;[^}]*overflow-x:\s*auto;/,
     );
     expect(render(mlbFixture())).toContain('role="region"');
-    expect(render(mlbFixture())).toContain('aria-label="Model projection summary"');
+    expect(render(mlbFixture())).toMatch(/aria-label="Model projection summary: [^"]+ at [^"]+"/); // 2026-08-05: distinguishable per-card region label
     expect(render(mlbFixture())).toContain('tabindex="0"');
     // FEED-EDGE-ROW-CLIP v2 (2026-08-02) regression guard: the group is
     // nowrap on wide cards (scrollport = escape valve) and a FIXED two-row
@@ -965,7 +965,7 @@ describe("ProjectionCard — centered single-row summary group", () => {
       /\.summary__group\s*\{[^}]*flex-wrap:\s*nowrap;[^}]*max-inline-size:\s*100%;/,
     );
     expect(cardCss).not.toMatch(/flex-wrap:\s*wrap/);
-    const tight = cssBlock(cardCss, "Tight cards (<=520px card width", "Tight cards use identical fact");
+    const tight = cssBlock(cardCss, "Tight cards (<=520px border-box card width", "Tight cards use identical fact");
     expect(tight.replace(/\s+/g, " ")).toContain(
       ".summary__group { display: grid; grid-template-columns: minmax(0, auto); justify-items: center;",
     );
@@ -977,8 +977,8 @@ describe("ProjectionCard — centered single-row summary group", () => {
 
   it("tight cards reduce spacing/type and switch to the fixed two-row anatomy", () => {
     const centered = cssBlock(cardCss, "Centered summary group", "Round 4 Wave 2 — item 1");
-    expect(centered).toContain("@container projcard (max-width: 520px)");
-    expect(centered).toMatch(/\.summary__group,\s*\n\s*\.summary__readout\s*\{\s*column-gap:\s*4px;/);
+    expect(centered).toContain("@container projcard (max-width: 472px)"); // 2026-08-05: content-box-corrected
+    expect(centered).toMatch(/\.summary__group,\s*\n\s*\.summary__readout\s*\{[\s\S]*?column-gap:\s*8px;/); // 2026-08-05: 4px fused adjacent odds
     expect(centered).toMatch(
       /\.summary__readout\s*\{\s*grid-template-columns:\s*max-content minmax\(40px, max-content\) minmax\(40px, max-content\);/,
     );
@@ -1004,7 +1004,10 @@ describe("ProjectionCard — centered single-row summary group", () => {
     // exempt narrow desktop grid columns from the fixed lanes.
     expect(centered).not.toContain("@media (max-width: 1023.98px)");
     expect(centered).toMatch(
-      /\.summary__readout\s*\{\s*grid-template-columns:\s*minmax\(4\.625rem, max-content\) 2\.125rem 2\.125rem;/,
+      // 2026-08-05: BOOK/MODEL lanes keep a deterministic minimum but may not
+      // be narrower than a four-glyph price (the 2.125rem fixed tracks fused
+      // adjacent odds into one token).
+      /\.summary__readout\s*\{[\s\S]*?grid-template-columns:\s*minmax\(4\.625rem, max-content\) minmax\(2\.75rem, max-content\) minmax\(2\.75rem, max-content\);/,
     );
     expect(centered).toMatch(/\.summary__signal\s*\{\s*min-inline-size:\s*8\.125rem;/);
   });
@@ -1020,7 +1023,7 @@ describe("ProjectionCard — centered single-row summary group", () => {
       cardCss.indexOf("On the narrowest three-across desktop cards"),
       cardCss.indexOf("── Markets popover"),
     );
-    expect(narrowSignal).toContain("@container projcard (max-width: 280px)");
+    expect(narrowSignal).toContain("@container projcard (max-width: 246px)"); // 2026-08-05: content-box-corrected (~280px border-box cards)
     expect(narrowSignal).toContain(".projection-card .summary__signal { gap: 4px; max-inline-size: 100%; }");
     expect(narrowSignal).toMatch(
       /\.projection-card \.summary__signal \.edge-indicator\s*\{[^}]*padding:\s*0\.25rem;/,
@@ -1116,7 +1119,7 @@ describe("ProjectionCard — market-trigger hover (Round 4 Wave 3, item 7)", () 
       cardCss.indexOf("Round 4 Wave 3 — item 7"),
     );
     expect(compactToggle).not.toContain("@media (max-width: 1023.98px)");
-    expect(compactToggle).toContain("@container projcard (max-width: 520px)");
+    expect(compactToggle).toContain("@container projcard (max-width: 472px)"); // 2026-08-05: content-box-corrected
     expect(compactToggle).toMatch(
       /\.projection-card__markets-toggle\s*\{[^}]*gap:\s*4px;[^}]*padding-inline:\s*4px;/,
     );
@@ -1257,7 +1260,7 @@ describe("ProjectionCard — .summary__item--message hook", () => {
     });
     expect(passHtml).toContain('class="summary__item summary__item--message"');
     // ...and a real CSS rule consumes it (not a no-op class with zero rules).
-    expect(cardCss).toContain(".summary__item--message { grid-column: 1 / -1; justify-self: center; }");
+    expect(cardCss).toContain(".summary__item--message { grid-column: 1 / -1; justify-self: safe center; min-inline-size: 0; text-align: center; }"); // 2026-08-05: unclipped, wrapping no-action sentence
   });
 });
 
@@ -1270,7 +1273,7 @@ describe("closure regression guards — lock the audited fixes (CL-01/03/08/17)"
 
   it("CL-01: keeps the ≤280px matchup grid flip (auto | minmax(0,1fr) | auto) that ends 3-col logo starvation", () => {
     expect(liveCss).toMatch(
-      /@container projcard \(max-width: 280px\)[\s\S]*?\.matchup__grid\s*\{[^}]*grid-template-columns:\s*auto minmax\(0, 1fr\) auto;/,
+      /@container projcard \(max-width: 246px\)[\s\S]*?\.matchup__grid\s*\{[^}]*grid-template-columns:\s*auto minmax\(0, 1fr\) auto;/,
     );
   });
 

@@ -1,0 +1,14 @@
+$ npx tsc --noEmit  (worktree feat/feed-desktop-refine @ 6b4a5c3 + working tree)
+exit=0
+
+$ npx vitest run client/src/components/projections client/src/pages/dimeModelFeed.test.ts client/src/pages/DimeModelFeed.doubleheader.test.ts client/src/lib/feedRoutes.test.ts
+
+ RUN  v4.1.10 /home/user/wt-feed-refine
+
+[vitest:guard] DATABASE_URL host=127.0.0.1 — local host
+
+ Test Files  7 passed (7)
+      Tests  144 passed (144)
+   Start at  11:47:08
+   Duration  2.20s (transform 1.27s, setup 0ms, import 3.53s, tests 513ms, environment 1ms)
+
