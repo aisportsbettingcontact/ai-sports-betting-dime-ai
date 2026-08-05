@@ -119,7 +119,7 @@
     },
     {
       "artifact": "drizzle/schema.ts",
-      "sha256": "24a283954c435c38602151e49d4c85375dc43caaf17d3e2b3a51379e45ccdfa3",
+      "sha256": "7ec89e190e1ab1fd104f0f060e0412632ad16923fbd09f643fc14bc065033689",
       "classification": "schema"
     },
     {
@@ -214,7 +214,7 @@
     },
     {
       "artifact": ".dockerignore",
-      "sha256": "8254bb03945ebcef4562ec6a082f7684ce094c3b842940887092ee294ec40be5",
+      "sha256": "8ca09f85ba1f6f1d6159dd9c891c2b834991681c6aa1a05e9fe08a67efb7922c",
       "classification": "configuration"
     },
     {
