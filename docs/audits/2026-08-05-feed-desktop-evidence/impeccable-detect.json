@@ -1,0 +1,45 @@
+[
+  {
+    "antipattern": "side-tab",
+    "name": "Side-tab accent border",
+    "description": "Thick colored border on one side of a card — the most recognizable tell of AI-generated UIs. Use a subtler accent or remove it entirely.",
+    "severity": "warning",
+    "category": "slop",
+    "file": "/home/user/wt-feed-refine/client/src/components/projections/EdgeIndicator.css",
+    "line": 18,
+    "snippet": "border-inline-start: 4px solid",
+    "importedBy": [
+      "EdgeIndicator.test.ts",
+      "EdgeIndicator.tsx",
+      "ProjectionSummary.tsx"
+    ]
+  },
+  {
+    "antipattern": "side-tab",
+    "name": "Side-tab accent border",
+    "description": "Thick colored border on one side of a card — the most recognizable tell of AI-generated UIs. Use a subtler accent or remove it entirely.",
+    "severity": "warning",
+    "category": "slop",
+    "file": "/home/user/wt-feed-refine/client/src/components/projections/ProjectionCard.css",
+    "line": 918,
+    "snippet": "border-inline-start-width: 3px",
+    "importedBy": [
+      "ProjectionCard.test.ts",
+      "ProjectionCard.tsx"
+    ]
+  },
+  {
+    "antipattern": "side-tab",
+    "name": "Side-tab accent border",
+    "description": "Thick colored border on one side of a card — the most recognizable tell of AI-generated UIs. Use a subtler accent or remove it entirely.",
+    "severity": "warning",
+    "category": "slop",
+    "file": "/home/user/wt-feed-refine/client/src/components/projections/ProjectionCard.css",
+    "line": 1139,
+    "snippet": ".market-table__model--signal — inset box-shadow 3px stripe (left)",
+    "importedBy": [
+      "ProjectionCard.test.ts",
+      "ProjectionCard.tsx"
+    ]
+  }
+]
