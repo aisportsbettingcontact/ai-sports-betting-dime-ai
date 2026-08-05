@@ -37,6 +37,7 @@ import {
 } from "../drizzle/schema";
 import { withCircuitBreaker, invalidateCachedAppUser } from './dbCircuitBreaker';
 import { debugLog } from './_core/debugLogger';
+import { recordFailure, type AccountLockoutConfig } from './accountLockout';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let _db: any = null;
@@ -735,6 +736,93 @@ export async function getAppUserByUsername(username: string) {
     });
   } catch {
     return null;
+  }
+}
+
+/**
+ * Absolute-write of the lockout counters — used ONLY to CLEAR state (set to
+ * 0/null) on successful login. Clearing is idempotent, so a plain last-writer
+ * -wins SET is race-safe here (unlike incrementing — see recordAccountLoginFailure).
+ * FAIL-OPEN: a write failure degrades the control, never blocks/crashes login.
+ */
+export async function updateAccountLockoutState(
+  id: number,
+  state: { failedLoginCount: number; firstFailedLoginAt: number | null; lockedUntil: number | null }
+): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  try {
+    await withCircuitBreaker(async () => {
+      await db.update(appUsers).set(state).where(eq(appUsers.id, id));
+    });
+    invalidateAppUserByIdCache(id);
+    invalidateCachedAppUser(id);
+  } catch (err) {
+    console.error(
+      `[AccountLockout] state write failed for user ${id}: ${(err as Error).message}`
+    );
+  }
+}
+
+/**
+ * Atomically record ONE failed login against an account and return the new
+ * lock decision. The count is an increment, so it MUST be atomic: reading the
+ * count in JS and writing an absolute value (as a plain update would) lets N
+ * concurrent failures all read the same N and each write N+1 — the exact
+ * botnet/credential-stuffing case this feature exists to stop would slip the
+ * cap. We serialize on the row with `SELECT … FOR UPDATE` inside a transaction
+ * (the repo's double-spend pattern), run the tested pure `recordFailure`
+ * decision on the freshly-locked row, and write the result.
+ *
+ * FAIL-OPEN: any DB failure returns `{ justLocked:false, lockedUntil:null }`
+ * without throwing — the per-IP limiter remains the backstop and a login is
+ * never blocked by a lockout-write fault.
+ */
+export async function recordAccountLoginFailure(
+  id: number,
+  now: number,
+  config: AccountLockoutConfig
+): Promise<{ justLocked: boolean; lockedUntil: number | null }> {
+  if (config.disabled) return { justLocked: false, lockedUntil: null };
+  const db = await getDb();
+  if (!db) return { justLocked: false, lockedUntil: null };
+  try {
+    const result = await withCircuitBreaker(async () =>
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      db.transaction(async (tx: any) => {
+        const rows = await tx
+          .select({
+            failedLoginCount: appUsers.failedLoginCount,
+            firstFailedLoginAt: appUsers.firstFailedLoginAt,
+            lockedUntil: appUsers.lockedUntil,
+          })
+          .from(appUsers)
+          .where(eq(appUsers.id, id))
+          .for("update")
+          .limit(1);
+        const before = rows[0];
+        if (!before) return { justLocked: false, lockedUntil: null };
+        const { next, justLocked } = recordFailure(
+          {
+            failedLoginCount: before.failedLoginCount,
+            firstFailedLoginAt: before.firstFailedLoginAt,
+            lockedUntil: before.lockedUntil,
+          },
+          now,
+          config
+        );
+        await tx.update(appUsers).set(next).where(eq(appUsers.id, id));
+        return { justLocked, lockedUntil: next.lockedUntil };
+      })
+    );
+    invalidateAppUserByIdCache(id);
+    invalidateCachedAppUser(id);
+    return result;
+  } catch (err) {
+    console.error(
+      `[AccountLockout] atomic failure-record failed for user ${id}: ${(err as Error).message}`
+    );
+    return { justLocked: false, lockedUntil: null };
   }
 }
 
