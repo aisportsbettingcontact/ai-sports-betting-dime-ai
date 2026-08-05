@@ -185,7 +185,8 @@ function Router() {
   // width — an active SSE stream and the composer draft must survive a
   // resize, not just a navigation. Before this fix, /chat below 768px fell
   // through to the legacy <Switch> below and mounted a DIFFERENT lazy
-  // component (pages/DimeChat.tsx) than the >=768px branch (DimeAppShell),
+  // component (the legacy pages/DimeChat.tsx shim, since deleted) than the
+  // >=768px branch (DimeAppShell),
   // so crossing 768px swapped which component sat at this tree position and
   // React tore down and rebuilt DimeChatPage — destroying all conversation
   // state. Now /chat always takes this branch, and DimeAppShell's `mode`

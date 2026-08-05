@@ -29,7 +29,8 @@ const trackerSource = fs.readFileSync(
 
 describe("DimeAppShell integration contract", () => {
   // [PR #70 REMEDIATION 2026-07-12] /chat used to fall through to a SEPARATE
-  // lazily-loaded component (pages/DimeChat.tsx) below 768px, while
+  // lazily-loaded component (the legacy pages/DimeChat.tsx shim, since
+  // deleted) below 768px, while
   // >=768px mounted DimeAppShell at the same React tree position. Crossing
   // 768px therefore swapped which lazy component occupied that slot, which
   // remounted DimeChatPage — destroying conversation state, any in-flight
