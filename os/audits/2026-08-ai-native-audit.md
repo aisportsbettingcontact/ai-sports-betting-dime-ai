@@ -337,10 +337,17 @@ Stated plainly per doctrine §19, with what would resolve each:
 - **Whether production is currently serving projections for the 9 BACKTEST-ONLY markets.** Code
   analysis proves nothing reads `publish_*`; confirming customer impact needs a production read.
   *Resolves via:* a read-only query against `mlb_calibration_constants` + one live page check.
-- **Which Railway builder actually runs.** `railway.json` declares `DOCKERFILE`; live service config
-  for both services reports `RAILPACK`. If RAILPACK wins, the Python runners hit the exact `spawn
-  /usr/bin/python3 ENOENT` the Dockerfile exists to prevent. Today's ~74 s deploy is suspiciously
-  fast for that Dockerfile. *Resolves via:* one build-log read.
+- ~~**Which Railway builder actually runs.**~~ **RESOLVED 2026-08-05 — the Dockerfile.** One
+  build-log read settled it, exactly as this entry predicted it would. The live deployment shows
+  named Docker stages, a real `apt-get install python3 python3-numpy python3-pandas python3-scipy`,
+  and an OCI image digest, with **zero occurrences of `railpack`/`nixpacks`**. The `RAILPACK` value
+  in the service config is stale persisted dashboard state that `railway.json` overrides at deploy
+  time. **There is no ENOENT risk; the Python runners work.** The "~74 s deploy is suspiciously
+  fast" reasoning in the original entry was also wrong — the apt layer is Docker-layer-cached.
+  Full finding: `os/audits/2026-08-05-builder-resolution.md`. *Original text:* `railway.json`
+  declares `DOCKERFILE`; live service config for both services reports `RAILPACK`. If RAILPACK wins,
+  the Python runners hit the exact `spawn /usr/bin/python3 ENOENT` the Dockerfile exists to prevent.
+  *Resolves via:* one build-log read.
 - **Whether product analytics events are landing.** The pipeline is fully built and
   **default-disabled with a silent drop path**. *Resolves via:* reading env on the two Railway
   services (forbidden to this executor by repo law).

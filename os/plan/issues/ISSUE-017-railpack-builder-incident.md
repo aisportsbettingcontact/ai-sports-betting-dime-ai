@@ -1,12 +1,24 @@
 # ISSUE-017 — Resolve RAILPACK-vs-Dockerfile and file the incident
 
-**Wave:** 4 — Certification · **Effort:** S · **Status:** NOT STARTED · **DRI:** Prez
+**Wave:** 4 — Certification · **Effort:** S · **Status:** **CLOSED 2026-08-05 — premise REFUTED** · **DRI:** Prez
 **Ruling dependency:** P2 (unowned by every record)
 **Doctrine:** D15 #9 · gap F7.7 · production correctness
 
 ---
 
-## Scope
+## Resolution (2026-08-05)
+
+**CLOSED. The premise was wrong.** The Dockerfile IS the builder; RAILPACK is not running.
+Build log for live deployment `4b55b680` shows `[stage-2 2/8] RUN apt-get install python3
+python3-numpy python3-pandas python3-scipy`, named Docker stages, and an OCI image digest, with
+**zero** `railpack`/`nixpacks` occurrences. `/usr/bin/python3` exists; all five `.py` runners are
+copied into `dist/` by `build:server` and into the image by `Dockerfile:130`. **No ENOENT risk.**
+
+Full finding, including what this changes for ISSUE-012: `os/audits/2026-08-05-builder-resolution.md`
+
+---
+
+## Original scope (retained for the record)
 
 `railway.json` declares `"builder": "DOCKERFILE"`. The live Railway config for **both** services
 reports `"builder": "RAILPACK"` — VERIFIED read-only.

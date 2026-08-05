@@ -164,7 +164,7 @@ Nothing reminded, aged, escalated, or even noticed.
 | F7.4 | Zero error tracking, metrics, tracing, or APM — no sentry/datadog/otel/prom-client/pino/winston | An unhandled exception in any background job produces no queryable signal |
 | F7.5 | CI failure evidence expires in 30 days and is gitignored | After a month a red PR leaves no reproducible trace |
 | F7.6 | **One merge = two production deploys.** Both Railway services deploy the same repo/branch; the second has no domain, no smoke test, no health check | Observed: commit `31fe9638` deployed to both within the same second |
-| F7.7 | `railway.json` declares `DOCKERFILE`; live config for both services reports `RAILPACK` | UNKNOWN which runs. If RAILPACK wins, the Python runners hit the exact ENOENT the Dockerfile exists to prevent |
+| ~~F7.7~~ | ~~`railway.json` declares `DOCKERFILE`; live config reports `RAILPACK`~~ **RESOLVED 2026-08-05 — the Dockerfile IS the builder.** The build log for the live deployment shows named Docker stages, a real `apt-get install python3 python3-numpy python3-pandas python3-scipy`, and an OCI image digest; **zero occurrences of `railpack`/`nixpacks`**. The config field is stale persisted dashboard state that `railway.json` overrides at deploy time | **No ENOENT risk. The Python runners work.** See `os/audits/2026-08-05-builder-resolution.md`. My corroborating "~50s is too fast for a Dockerfile" inference was also wrong — the apt layer is Docker-layer-cached |
 | F7.8 | Product analytics is **default-disabled with a silent drop path** — no error on misconfiguration | Whether events land is not determinable from the repo |
 
 ### F8 — Money path integrity

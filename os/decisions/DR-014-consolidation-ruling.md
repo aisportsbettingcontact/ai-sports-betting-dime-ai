@@ -66,7 +66,7 @@ jobs, or onto the per-prompt hook.
 | # | Fact | Consequence |
 |---|---|---|
 | **P1** | **Both Railway services are pinned to `source.branch = "main"`** [VERIFIED, Railway MCP read-only] | Orphan-branch pushes are **deploy-inert**. This was flagged BLOCKING-unknown by DR-005, DR-011 and DR-013 and relied on by DR-003 Phase A. **Confirmed safe.** Delete the unknown from four records |
-| **P2** | **Both services build with `RAILPACK`, not the Dockerfile** — `railway.json` declares `DOCKERFILE`, live config says otherwise [VERIFIED] | Resolves audit §8's builder UNKNOWN **in the dangerous direction.** Python-runner availability at runtime is unproven. See HOLE B — the drift detector's self-patch may already be silently failing |
+| ~~**P2**~~ | ~~Both services build with `RAILPACK`~~ — **REFUTED 2026-08-05** by a build-log read | The Dockerfile **is** the builder; the config field is stale dashboard state. `/usr/bin/python3` and all five runners are present. **Python-runner availability is proven, not unproven.** HOLE B is re-scoped rather than removed: the self-patch fires and succeeds, then is erased by the next of ~13 daily deploys, while `mlb_model_learning_log` records that it learned. See `os/audits/2026-08-05-builder-resolution.md` |
 | **P3** | **`required_approving_review_count: 0`, `bypass_actors: []`** [VERIFIED] | **DR-008's stated safety premise is false.** It assumed a second account approves every merge; no review is required at all. Every override it contemplates is genuinely unilateral with no co-signer |
 | **P4** | Production env holds `ANTHROPIC_API_KEY` and **no** `ANTHROPIC_BASE_URL`/`AUTH_TOKEN` | Confirms DR-012's rejection of the gateway-meter option |
 
