@@ -1,5 +1,7 @@
 # Dime AI — Dark/Light Theme Rendering Audit
 
+> Screenshot evidence removed from git on 2026-08-05 to reduce clone size; recover from git history if needed. `matrix-results.json` sidecars remain tracked.
+
 **Date** 2026-07-31 · **Base** `main @ 4183a7a2` (post PR #261) · **Work branch** `ui/two-mode-theme` (worktree; the user's local tree untouched)
 
 **Scope (owner directive):** retire the System theme (two modes only, Dark and Light), then audit rendering, coloring, display, readability, and visibility of both modes across all pages, screen sizes, viewports, and device classes. Testing-only mandate: no new elements or features — every change is a token value, a token consumer, or the removal of the retired mode.

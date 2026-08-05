@@ -169,3 +169,8 @@ blob-report/
 .pi/npm/
 .pi/git/
 .pi/hf-sessions/
+
+# Audit screenshot evidence stays out of git (removed 2026-08-05 to cut clone
+# size; reports + JSON sidecars remain tracked — regenerated PNGs must not
+# be re-committed).
+audits/**/*.png
