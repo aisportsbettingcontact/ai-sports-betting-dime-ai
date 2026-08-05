@@ -123,3 +123,18 @@ sitting inside the loop that D16 criterion 3 depends on.
 `os/memory/lessons/config-api-is-not-runtime-truth.md` — a configuration API reports what a field
 *says*, not what the system *did*. Two independent signals (a stale config field and a build
 duration) agreed with each other and were both wrong; one build-log read settled it.
+
+---
+
+## Appendix policy (stated so it is a decision, not an oversight)
+
+The Stage 1 and Stage 2 **appendices** — `os/audits/appendix/`, `os/decisions/appendix/` — still
+contain the original RAILPACK assertion. **They are deliberately left unchanged.**
+
+They are point-in-time evidence: the raw output of the forensic verifiers and the three critics, at
+the moment they ran. Editing them would falsify the record of what was actually found and when, and
+the value of an appendix is precisely that it is immutable. The correction lives in the artifacts
+that make *current* claims — this file, the audit body, the gap map, DR-004, DR-014, and the plan.
+
+A reader who reaches an appendix and finds the old claim should treat it the way one treats any
+dated evidence: as what was believed then, superseded by this file.

@@ -16,7 +16,8 @@ Across all ten decision records, DR-009 *forbids a new seat* from doing this and
 the model loop. **Forbidding a new seat from doing what shipped code already does is not a control.
 Criterion 3 cannot pass while it stands.**
 
-Aggravated by P2: both Railway services build with **RAILPACK**, not the Dockerfile. Under Railpack
+Aggravated by P2 [**THIS PARAGRAPH IS SUPERSEDED — see "RE-SCOPED" below**]: both Railway services
+were believed to build with **RAILPACK**, not the Dockerfile. Under Railpack
 the write may silently no-op or write to a filesystem wiped every deploy. **An automation whose
 effect status is unknown is worse than one known to fire.**
 
@@ -56,8 +57,8 @@ and does `mlb_model_learning_log` overstate what actually persisted?*
 Every criterion is checkable. A criterion that cannot be checked is not a criterion.
 
 **Phase 1 — measurement (no code change):**
-- [ ] Determine from Railway build/deploy logs whether `MLBAIModel.py` is writable at runtime under RAILPACK
-- [ ] Determine whether the write has **ever** fired in production, and whether it survived a deploy
+- [x] ~~Determine whether `MLBAIModel.py` is writable at runtime~~ **ANSWERED 2026-08-05: yes.** It is in the image (`Dockerfile:130` copies `dist/`), the Dockerfile declares no `USER`, so the process runs as root and `/app/dist` is writable. **The self-patch fires and succeeds.**
+- [ ] Determine **how many** adjustments have been silently discarded by the ~13 daily deploys, and whether `mlb_model_learning_log` overstates what actually persisted
 - [ ] File the finding as a numbered `INCIDENTS.md` entry — re-reading the tail of the file immediately before writing, to avoid the number collision documented in `os/memory/lessons/incident-numbers-collide.md`
 
 **Phase 2 — gate (only after Phase 1):**
@@ -86,7 +87,7 @@ NODE_OPTIONS=--max-old-space-size=6144 npx tsc --noEmit; echo "EXIT=$?"
 
 ## Depends on
 
-ISSUE-001 (the gate module is untracked), ISSUE-017 (the RAILPACK question is the same question).
+ISSUE-001 (the gate module is untracked). ~~ISSUE-017~~ — **closed 2026-08-05**; the builder question is resolved and no longer blocks this issue.
 
 ## If the ruling differs
 
