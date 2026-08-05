@@ -2,6 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { gamesListInput } from "./gamesListInput";
 import {
   isRequestAuthenticated,
+  setGatedCacheHeaders,
   stripGameModelFields,
   stripHrPropModelFields,
   stripStrikeoutPropModelFields,
@@ -1092,6 +1093,7 @@ export const appRouter = router({
         const rows = await getStrikeoutPropsByGame(input.gameId);
         // IP gating: anon gets book lines only, model projections/edges nulled.
         const authed = await isRequestAuthenticated(ctx.req);
+        setGatedCacheHeaders(ctx.res, authed);
         return { props: authed ? rows : rows.map(r => stripStrikeoutPropModelFields(r)) };
       }),
 
@@ -1106,6 +1108,7 @@ export const appRouter = router({
         console.log(`[tRPC][strikeoutProps.getByGames] gameIds=[${input.gameIds.join(',')}]`);
         const map = await getStrikeoutPropsByGames(input.gameIds);
         const authed = await isRequestAuthenticated(ctx.req);
+        setGatedCacheHeaders(ctx.res, authed);
         // Convert Map to plain object for serialization; gate rows for anon.
         const result: Record<number, typeof map extends Map<number, infer V> ? V : never> = {};
         Array.from(map.entries()).forEach(([k, v]) => {
@@ -1352,6 +1355,7 @@ export const appRouter = router({
         console.log(`[tRPC][hrProps.getByGame] gameId=${input.gameId}`);
         const rows = await getHrPropsByGame(input.gameId);
         const authed = await isRequestAuthenticated(ctx.req);
+        setGatedCacheHeaders(ctx.res, authed);
         return { props: authed ? rows : rows.map(r => stripHrPropModelFields(r)) };
       }),
 
@@ -1366,6 +1370,7 @@ export const appRouter = router({
         console.log(`[tRPC][hrProps.getByGames] gameIds=[${input.gameIds.join(',')}]`);
         const map = await getHrPropsByGames(input.gameIds);
         const authed = await isRequestAuthenticated(ctx.req);
+        setGatedCacheHeaders(ctx.res, authed);
         const result: Record<number, Awaited<ReturnType<typeof getHrPropsByGame>>> = {};
         Array.from(map.entries()).forEach(([k, v]) => {
           result[k] = (authed

@@ -11,6 +11,13 @@ import {
   resolveClientIp,
   sendRateLimitResponse,
 } from "./trpcRateLimitPolicy";
+import {
+  cfConnectingIp,
+  edgeMode,
+  immediateUpstreamIp,
+  isCloudflareEdgeIp,
+} from "./edgeProxy";
+import { originLock } from "./originLock";
 import helmet from "helmet";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerStorageProxy } from "./storageProxy";
@@ -158,7 +165,8 @@ function fireRateLimitEvent(
     | "stripe_checkout"
     | "waitlist_submit"
     | "public_feed"
-    | "xff_canary",
+    | "xff_canary"
+    | "edge_origin_ingress_anomaly",
   ua: string | null
 ) {
   const now = Date.now();
@@ -451,6 +459,32 @@ async function startServer() {
   // X-Forwarded-For rather than the proxy IP.
   app.set("trust proxy", 1);
 
+  // ─── Origin lock (Phase 4 edge defense) ───────────────────────────────────
+  // When EDGE_MODE is "on", a direct hit on the public *.up.railway.app origin
+  // that lacks the Cloudflare-injected x-dime-edge-secret (and a CF-range
+  // upstream) is 403'd — rendering the origin useless to a scraper who
+  // discovers its URL. "/health" stays reachable for Railway's probe. With
+  // EDGE_MODE unset/"off" this is a pure pass-through (byte-identical to today,
+  // inert on merge). Mounted BEFORE helmet/body-parsers/limiters so a denied
+  // request touches nothing. onEvent routes denials to the same loud, deduped
+  // alerting the rate limiters use. See server/_core/originLock.ts.
+  app.use(
+    originLock((kind, req) => {
+      fireRateLimitEvent(
+        immediateUpstreamIp(req) || resolveClientIp(req),
+        req.path,
+        req.method,
+        "edge_origin_ingress_anomaly",
+        (req.headers["user-agent"] as string | undefined) ?? null
+      );
+      if (kind === "edge_no_secret") {
+        console.error(
+          "[edge][origin-lock] CRITICAL EDGE_MODE=on but no EDGE_ORIGIN_SECRET configured — anti-lockout downgrade to observe-only (site NOT protected)"
+        );
+      }
+    })
+  );
+
   // ─── Security headers (helmet) ────────────────────────────────────────────
   // Sets X-Content-Type-Options, X-Frame-Options, X-XSS-Protection,
   // Strict-Transport-Security, Referrer-Policy, and a Content-Security-Policy
@@ -718,6 +752,26 @@ async function startServer() {
         "xff_canary",
         (req.headers["user-agent"] as string | undefined) ?? null
       );
+    }
+    // Edge-aware anomaly (Phase 4): the private-range canary above is
+    // structurally blind to a WRONG-BUT-PUBLIC client (e.g. a CF PoP egress IP
+    // when resolution silently breaks, or a direct-origin bypass). When edge
+    // mode is armed, a /api/trpc request that is NOT a verified Cloudflare
+    // ingress (missing cf-connecting-ip or a non-CF upstream) is the signal the
+    // regex can't catch — fire it observe-only. In "on" mode a genuine bypass
+    // is already 403'd by originLock upstream, so this mostly surfaces during
+    // the "log" soak (proof that Cloudflare is actually fronting every request).
+    if (edgeMode() !== "off") {
+      const upstream = immediateUpstreamIp(req);
+      if (!cfConnectingIp(req) || !isCloudflareEdgeIp(upstream)) {
+        fireRateLimitEvent(
+          upstream || ip,
+          req.path,
+          req.method,
+          "edge_origin_ingress_anomaly",
+          (req.headers["user-agent"] as string | undefined) ?? null
+        );
+      }
     }
     next();
   });

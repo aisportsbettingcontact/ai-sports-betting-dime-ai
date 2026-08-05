@@ -62,3 +62,51 @@ The strongest anti-scraping layer, before traffic reaches the app.
 ## Sequencing rationale
 
 Phase 1 first (pure win, no dependencies). Phase 2 next (real brute-force defense; needs db-push). Phase 3 is the anti-scraping keystone but needs the owner UX call + contract amendment. Phase 4 needs owner DNS. Phase 5 is cosmetic, last. Each ships and is verified before the next begins.
+
+---
+
+## INCIDENT 2026-08-05 — Phase 2 (#370) deployed ahead of its migration → total auth outage (RESOLVED)
+
+The exact deploy-order hazard flagged in Phase 2's review **materialized in production.**
+
+- **Sequence:** PR #370 (account lockout) merged to `main` at 14:00:12Z and auto-deployed. Migration `0133_account_lockout` (adds `failedLoginCount`, `firstFailedLoginAt`, `lockedUntil` to `app_users`) was **never applied first** — the owner merged without running `db-push.yml`. The last successful `db-push` was 2026-08-04T22:10 (main), and no run existed for the lockout branch or for 2026-08-05.
+- **Impact (SEV1, ~40 min):** the deployed code's `getAppUserById` / `getAppUserByEmail` / `getAppUserByUsername` now `SELECT` the three new columns. Against the un-migrated schema every one threw `Unknown column 'failedlogincount' in 'field list'` (`ER_BAD_FIELD_ERROR`, errno 1054). Server logged `[DB][getAppUserById] SCHEMA ERROR — the app_users query is invalid against the live schema. This usually means code deployed ahead of its migration.` **Every session resolution and every login failed** — a total auth outage. (Anonymous probes returned a deceptively normal `200`/`401` because the failing SELECT was swallowed to `null` → "Invalid credentials" for everyone.)
+- **Detection:** the post-merge verification pass (this program's discipline) caught it — the anon HTTP probes looked healthy, so the Railway deployment logs were the ground truth.
+- **Remediation:** triggered `db-push.yml` on `main` (run `31016360410`, SUCCESS 14:40:57Z). `pnpm db:push` → `reconciled-migrate.mjs MODE=apply` replays the immutable journal forward and fails closed; `0133` is additive `ADD COLUMN` only (zero data-loss risk). Safe to apply without owner sign-off because it completes the deploy the owner had already initiated and cannot destroy data.
+- **Recovery proof (red-green):** on the post-fix deployment (`337b8bf1`, booted 14:41:32Z) four deliberate login probes exercising the previously-failing queries logged `[AppAuth][AUTH_FAIL] ... reason="user_not_found"` — the **healthy** path (query executed, returned no row) — with **zero** `Unknown column` / `SCHEMA ERROR` lines. Same query shape: erroring before, clean after.
+
+### Corrective action (Phase 1½ — fold into the program)
+
+The Phase 1 deploy self-check proves *XFF handling*; it does **not** prove *schema/code agreement*. Add a boot-time / smoke-deploy assertion that the live `app_users` schema satisfies the code's column set (or a generalized "no `ER_BAD_FIELD_ERROR` on the core auth query" canary), so a code-ahead-of-migration deploy **fails the smoke gate instead of silently taking down auth.** The migration-before-code law is documented; make it *enforced*.
+
+---
+
+## Phase 4 — Edge defense (Cloudflare) · BUILT (flag-gated, inert) · owner activates
+
+Shipped the supporting code + the owner runbook (`docs/runbooks/edge-defense-cloudflare.md`).
+Everything is behind `EDGE_MODE` (unset ⇒ off ⇒ byte-identical to today), so the merge is inert —
+no #370-class deploy-order hazard. Owner activates via Cloudflare setup + `EDGE_MODE=log`→`on`.
+
+**Design method:** a 14-agent `/eng-loop` workflow (5 baseline readers → 3 independent edge
+architectures → synthesis → **5 adversarial lenses**). The review found **5 material holes** in the
+first-draft design; all 5 are fixed in what shipped:
+
+| # | Lens | Hole | Fix (in this PR) |
+| --- | --- | --- | --- |
+| 1 | origin-bypass (HIGH) | "CF IP-range" is not attacker-independent — anyone can front the origin with their own free CF zone, so a leaked secret = total bypass | Runbook makes the load-bearing proof **Cloudflare Tunnel / Authenticated Origin Pulls (mTLS)**; IP-range demoted to defence-in-depth/observability; `cfConnectingIp` drops the forgeable `true-client-ip` fallback; secret treated as catastrophic-if-leaked (rotation, scrubbing) |
+| 2 | rollout-safety (HIGH) | once CF fronts, `log`/`off` collapse every user behind a PoP onto one key (429 storm); a secret typo under `on` → #370-class total 403; "single-flip rollback" was a lie | **IP-keying decoupled from 403** — `resolveClientIp` applies the edge proof in `log` AND `on`, so `log` is a fully healthy rollback harbor; anti-lockout downgrade when no secret; CIDR boot-assert gated behind `edgeMode()!=='off'` |
+| 3 | collateral-damage (HIGH) | WAF Block false-positives on Dime Chat NL + betting jargon → edge-403 before Express, silently breaking the headline feature; SSE buffering stalls streaming | Runbook **WAF SKIP** for `/api/dime/*` + `/api/trpc/*`, response-inspection off on the SSE path; smoke assertion that a jargon/SQLi chat body reaches the origin |
+| 4 | cache-leak (MEDIUM) | path-confusion (`/assets/..%2f..%2ftrpc/...`) against a "Cache Everything on /assets/*" rule can edge-store authed model IP; the header-less endpoints set no Cache-Control | **Origin `private, no-store` + `Vary: Cookie`** on strikeout/hr/wc gated endpoints (`setGatedCacheHeaders`, fails closed regardless of edge config); runbook scopes the asset rule by **file-extension**, Respect-origin-TTL, URL normalization on, rule ordering |
+| 5 | ip-spoof/canary (MEDIUM) | in `log` the canary went blind (public-but-wrong PoP IP) | canary is edge-aware — new `edge_origin_ingress_anomaly` event fires (log+on) for non-CF ingress the private-range regex can't see; keying-in-log makes the private-range canary honest again |
+
+**Code (all flag-gated / fail-closed):** `server/_core/edgeProxy.ts` (helpers: `edgeMode`,
+`cfConnectingIp` [cf-connecting-ip only], CF CIDR matcher [no-BigInt, ES2019-safe], constant-time
+`originSecretOk`, `edgeProofPasses`) · `server/_core/originLock.ts` (403 only in `on`; `/health`
+exempt; anti-lockout; never logs the secret) · `server/_core/trpcRateLimitPolicy.ts`
+(`resolveClientIp` edge branch, log+on) · `server/_core/index.ts` (mount origin lock + edge-aware
+canary) · `server/feedGating.ts` + `server/routers.ts` + `server/wc2026/wc2026Router.ts`
+(`setGatedCacheHeaders` on 8 gated endpoints) · `scripts/smoke-deploy.mjs` (`SMOKE_EDGE=cloudflare`).
+
+**Gates:** tsc clean · **76 unit tests** across edgeProxy/originLock/policy/feedGating (incl. IPv6
+CIDR, constant-time secret, dual-proof, decoupled-keying, anti-lockout, cache headers) · smoke
+syntax OK. Terminal outcome: **BUILT — inert on merge; activation owner-gated (DNS + `EDGE_MODE`).**
