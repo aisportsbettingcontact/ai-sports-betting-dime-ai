@@ -67,6 +67,7 @@ dime-ai/
 docs/
 audits/
 references/
+os/
 
 # Harness-synced instruction files (CLAUDE.md/AGENTS.md/SKILLS.md/… must stay
 # byte-synced across harnesses; reformatting one creates sync drift).
