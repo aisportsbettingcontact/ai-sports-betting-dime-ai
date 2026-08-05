@@ -36,6 +36,22 @@
       }
     ]
   },
+  "permissions": {
+    "deny": [
+      "mcp__plugin_railway_railway__accept-deploy",
+      "mcp__plugin_railway_railway__create-deployment",
+      "mcp__plugin_railway_railway__create-project",
+      "mcp__plugin_railway_railway__create-service",
+      "mcp__plugin_railway_railway__delete-feature-flag",
+      "mcp__plugin_railway_railway__generate-domain",
+      "mcp__plugin_railway_railway__railway-agent",
+      "mcp__plugin_railway_railway__redeploy",
+      "mcp__plugin_railway_railway__set-feature-flag",
+      "mcp__plugin_railway_railway__set-variables",
+      "mcp__plugin_railway_railway__update-service",
+      "mcp__plugin_railway_railway__list-variables"
+    ]
+  },
   "enabledPlugins": {
     "superpowers@dime-vendored": true,
     "mcp-server-dev@dime-vendored": true,
