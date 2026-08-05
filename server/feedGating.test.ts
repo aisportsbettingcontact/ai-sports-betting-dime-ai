@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  setGatedCacheHeaders,
   stripGameModelFields,
   stripHrPropModelFields,
   stripStrikeoutPropModelFields,
@@ -158,5 +159,40 @@ describe("stripWcMatchupModelFields", () => {
     expect(out.homeWinProb).toBeNull();
     expect(out.projHomeScore).toBeNull();
     expect(out.projection).toBeNull();
+  });
+});
+
+describe("setGatedCacheHeaders — cache-leak fix (Phase 4)", () => {
+  function spyRes() {
+    const headers: Record<string, string> = {};
+    return {
+      headers,
+      setHeader: (name: string, value: string) => {
+        headers[name] = value;
+      },
+    };
+  }
+
+  it("authed: private, no-store (never shared/edge-cached) + Vary: Cookie", () => {
+    const res = spyRes();
+    setGatedCacheHeaders(res, true);
+    expect(res.headers["Cache-Control"]).toBe("private, no-store");
+    expect(res.headers["Vary"]).toBe("Cookie");
+  });
+
+  it("anon: short public cache for the stripped commodity shape + Vary: Cookie", () => {
+    const res = spyRes();
+    setGatedCacheHeaders(res, false);
+    expect(res.headers["Cache-Control"]).toBe(
+      "public, max-age=30, stale-while-revalidate=60"
+    );
+    expect(res.headers["Vary"]).toBe("Cookie");
+  });
+
+  it("never throws on a missing/!function res (defensive)", () => {
+    expect(() => setGatedCacheHeaders(undefined, true)).not.toThrow();
+    expect(() =>
+      setGatedCacheHeaders({} as { setHeader?: never }, false)
+    ).not.toThrow();
   });
 });

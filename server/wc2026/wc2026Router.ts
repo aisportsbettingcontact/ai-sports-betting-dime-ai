@@ -17,6 +17,7 @@ import { z } from "zod";
 import { router, publicProcedure } from "../_core/trpc";
 import {
   isRequestAuthenticated,
+  setGatedCacheHeaders,
   stripWcMatchupModelFields,
 } from "../feedGating";
 import { ownerProcedure } from "../routers/appUsers";
@@ -313,6 +314,7 @@ export const wc2026Router = router({
       // IP gating (Phase 3): anon callers get schedule + book odds (dkOdds),
       // model odds/projection/edges/probs nulled. Authed callers get the model.
       const wcAuthed = await isRequestAuthenticated(ctx.req);
+      setGatedCacheHeaders(ctx.res, wcAuthed);
       const wcMapped = matches.map((f: WcMatch) => {
         const proj = projMap[f.matchId] ?? null;
         return {
@@ -412,6 +414,7 @@ export const wc2026Router = router({
         .orderBy(wc2026OddsSnapshots.bookId, wc2026OddsSnapshots.market);
       // IP gating: bookId=0 IS the AI model's fair-odds snapshot — drop it for anon.
       const laAuthed = await isRequestAuthenticated(ctx.req);
+      setGatedCacheHeaders(ctx.res, laAuthed);
       return laAuthed
         ? rows
         : rows.filter((r: { bookId: number }) => r.bookId !== 0);
@@ -437,6 +440,7 @@ export const wc2026Router = router({
         );
       // IP gating: drop the model's book_id=0 fair-odds snapshot for anon.
       const coAuthed = await isRequestAuthenticated(ctx.req);
+      setGatedCacheHeaders(ctx.res, coAuthed);
       return coAuthed
         ? rows
         : rows.filter((r: { bookId: number }) => r.bookId !== 0);
@@ -766,6 +770,7 @@ export const wc2026Router = router({
     // IP gating (Phase 3): same as matchesByDate — anon gets schedule + dkOdds
     // (book), model odds/projection/edges/probs nulled.
     const twoAuthed = await isRequestAuthenticated(ctx.req);
+    setGatedCacheHeaders(ctx.res, twoAuthed);
     const twoMapped = matches.map((f: WcMatch) => {
       const proj = projMapT[f.matchId] ?? null;
       return {
