@@ -44,7 +44,9 @@ jobs:
           image-ref: dime-pr:${{ github.sha }}
           format: sarif
           output: trivy.sarif
-          severity: CRITICAL,HIGH
+          # CRITICAL-only blocking at launch; HIGH graduates after first-scan
+          # triage (ROLLOUT.md Wave 2) — the nightly tier scans HIGH+MEDIUM
+          severity: CRITICAL
           exit-code: "1"
           ignore-unfixed: true
           scanners: vuln,secret,misconfig

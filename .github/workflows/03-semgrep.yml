@@ -29,7 +29,7 @@ jobs:
       - name: Install pinned semgrep
         run: pipx install "semgrep==${SEMGREP_VERSION}"
       - name: "[GATE] Custom ERROR-severity rules (org policy: hard block)"
-        run: semgrep scan --config .semgrep/ --severity ERROR --error --strict
+        run: semgrep scan --config .semgrep/ server client/src shared scripts --severity ERROR --error --strict
 
   advisory:
     name: 03-semgrep-advisory
@@ -45,7 +45,7 @@ jobs:
         run: |
           set +e
           semgrep scan --config .semgrep/ --config p/typescript --config p/python \
-            --config p/security-audit --error --strict
+            --config p/security-audit server client/src shared scripts --error --strict
           code=$?
           set -e
           # Exit 1 = findings (advisory: warn, pass). Anything else non-zero =

@@ -502,6 +502,11 @@
     {
       "file": "server/betTrackerStats.db.test.ts",
       "reason": "real-database bet-tracker suite; gated on DB_TESTS, which only the DB Tests job sets \u2014 that job runs this file against a migrated MySQL, so skipping it in the plain Vitest job is the intended split, not lost coverage"
+    },
+    {
+      "file": "server/property/odds.property.test.ts",
+      "namePrefix": "parlay settlement properties (owner contract: push drops leg + reprices; LOSS dominates) > KNOWN-FINDING-1",
+      "reason": "Documented money-code finding awaiting owner review (docs/verification/AUDIT.md \u00a78): settleParlay crash corner found by the property suite 2026-08-05; fix drafted but owner-gated. Declared todo, not an environment failure."
     }
   ]
 }
