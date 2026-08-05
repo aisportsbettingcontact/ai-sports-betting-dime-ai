@@ -182,3 +182,7 @@ dime-ai/design-bundle/**/uploads/
 # Manus-era session logs: purged from history 2026-08-05 (owner-authorized);
 # must never re-enter the repo.
 .manus-logs/
+
+# Derived claude.ai upload bundles — regenerate by zipping the corresponding
+# skill directory (.claude/skills/<name>/ or .agents/skills/<name>/); never track.
+.claude/skill-zips/

@@ -33,7 +33,7 @@ export default defineConfig({
           //   These are the ONLY chunks that block first render.
           //
           // Deferred path (loaded after route resolves):
-          //   vendor-radix, vendor-motion, recharts, mlb-panels, analytics
+          //   vendor-radix, vendor-motion, recharts, analytics
           //   These are only needed AFTER the user is authenticated and on a page.
           // ────────────────────────────────────────────────────────────────────────────────
 
@@ -61,16 +61,6 @@ export default defineConfig({
           // ── Vendor: Radix UI + shadcn — UI primitives ─────────────────────
           if (id.includes('@radix-ui/')) {
             return 'vendor-radix';
-          }
-          // ── MLB-specific panels — only loaded when user is on MLB tab ─────
-          if (
-            id.includes('MlbLineupCard') ||
-            id.includes('MlbPropsCard') ||
-            id.includes('MlbHrPropsCard') ||
-            id.includes('MlbF5NrfiCard') ||
-            id.includes('MlbLast5Panel')
-          ) {
-            return 'mlb-panels';
           }
           // ── Vendor: sonner + wouter — used by App.tsx critical path ──────────────
           // These are tiny libs that must be in a stable, named chunk so they
