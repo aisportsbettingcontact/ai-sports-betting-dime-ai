@@ -269,6 +269,9 @@ test("credential broker plans are fixed op-run commands with no arbitrary comman
   for (const scope of ["hf-training", "runpod"]) {
     const plan = await credentialBrokerPlan(manifest, scope, {
       executableResolver,
+      // The real validator stats the on-disk broker file; this fixture has no
+      // such file. The refusal path is covered by the test below.
+      brokerFileValidator: async () => true,
     });
     assert.equal(plan.executable, "/reviewed/op");
     assert.equal(plan.args[0], "run");
@@ -450,4 +453,59 @@ test("shared context never inherits Railway credentials", async () => {
   );
   assert.equal(controlPlaneEnvironment.includes("RAILWAY_TOKEN"), false);
   assert.equal(controlPlaneEnvironment.includes("RAILWAY_API_TOKEN"), false);
+});
+
+test("credential broker plan refuses to hand op a path that fails validation at handoff time", async () => {
+  const manifest = await fixture();
+  const executableResolver = async (name: string) => ({
+    path: `/reviewed/${name}`,
+    sha256: name.repeat(64).slice(0, 64),
+  });
+
+  // Preflight can pass minutes before the handoff, so the plan re-validates
+  // immediately before embedding the path in the op-run argv. A file that has
+  // since been swapped (wrong mode, wrong owner, symlinked, wrong contents)
+  // must abort the plan rather than be handed to a second process.
+  await assert.rejects(
+    () =>
+      credentialBrokerPlan(manifest, "runpod", {
+        executableResolver,
+        brokerFileValidator: async () => false,
+      }),
+    /failed validation immediately before handoff/
+  );
+
+  await assert.rejects(
+    () =>
+      credentialBrokerPlan(manifest, "hf-training", {
+        executableResolver,
+        brokerFileValidator: async () => {
+          throw new Error("broker reference file permissions must be 0600");
+        },
+      }),
+    /0600/
+  );
+});
+
+test("credential broker plan validates the exact path it hands to op", async () => {
+  const manifest = await fixture();
+  const executableResolver = async (name: string) => ({
+    path: `/reviewed/${name}`,
+    sha256: name.repeat(64).slice(0, 64),
+  });
+  const validated: string[] = [];
+
+  const plan = await credentialBrokerPlan(manifest, "runpod", {
+    executableResolver,
+    brokerFileValidator: async (path: string) => {
+      validated.push(path);
+      return true;
+    },
+  });
+
+  // The path that was checked and the path embedded in argv must be the same
+  // string — re-resolving it separately would reintroduce the gap.
+  const envFileArg = plan.args.find((a: string) => a.startsWith("--env-file="));
+  assert.equal(validated.length, 1);
+  assert.equal(envFileArg, `--env-file=${validated[0]}`);
 });
