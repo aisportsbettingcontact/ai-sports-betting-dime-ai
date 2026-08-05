@@ -99,7 +99,7 @@ Ordered by how much they threaten the intended outcome.
 |---|---|---|---|
 | **U1** | Production holds 9 `publish_*` BACKTEST-ONLY verdicts | Do not sell edges the data does not support | All 9 markets publish anyway — no code reads the verdicts |
 | **U2** | Three contradictory price sets on one page | One honest price | Checkout $49.99/$99.99/$199.99 · objections copy "$99" + a dead tier · schema.org $99/$249/$499 to Google |
-| **U3** | 837 commits + 52 GB evidence on one laptop | Durable organizational evidence | Never pushed; production was mutated by tooling nobody else has |
+| **U3** | MLB forensic audit (26 commits) + 52 GB evidence on one laptop | Durable organizational evidence | Never pushed to any remote; production was mutated by tooling nobody else has |
 | **F2** | Owner-gated queue with no ageing | Blocked work becomes loud | 5 items, 8 days, zero signal anywhere |
 | **F1** | The AI-native program is dark state | Artifacts are queryable | Untracked; `git log` empty; the company's own model of its loops lives on one disk |
 | **F4** | Drift detector self-patches the engine | Agent authority matches demonstrated reliability | Rewrites `MLBAIModel.py` automatically — no proposal, no approval, no version |
@@ -122,7 +122,7 @@ attempt to fix that.
 |---|---|---|
 | **DR-001** | Posture on the 9 BACKTEST-ONLY markets: suppress, relabel, or publish-with-record | Customer-facing claim + revenue tradeoff |
 | **DR-002** | Whether to reconcile pricing to the live checkout numbers (and which are canonical) | Pricing is a founder decision |
-| **DR-003** | Authorize pushing `local/audit-mlb-model-2026` and committing the AI-native program | Ends the dark-state exposure; touches 837 commits |
+| **DR-003** | Authorize pushing `local/audit-mlb-model-2026` and committing the AI-native program | Ends the dark-state exposure; that branch also carries the provenance regime and publication-gate wiring that close F5 and F3 |
 | **DR-004** | The orchestration-spine question: the named stack (Temporal/Pydantic AI/Mastra/OPA/LiteLLM) does not exist here and LiteLLM tiering **contradicts code-enforced model policy**. Adopt, substitute, or defer? | Reverses a documented standing rule |
 | **DR-005** | First-loop selection (recommendation forthcoming in Stage 2) | Sets the mission's critical path |
 
