@@ -1,4 +1,5 @@
 import { TRPCError } from "@trpc/server";
+import { gamesListInput } from "./gamesListInput";
 import { z } from "zod";
 import {
   zodGameDate,
@@ -225,16 +226,9 @@ export const appRouter = router({
      * PUBLIC — feed is now fully public; unauthenticated users can view projections.
      */
     list: publicProcedure
-      .input(
-        z
-          .object({
-            sport: zodSport.optional(),
-            gameDate: zodGameDate.optional(),
-            gameStatus: z.enum(['upcoming', 'live', 'final']).optional(),
-            forceRefresh: z.boolean().optional(),
-          })
-          .optional()
-      )
+      // SEC: input contract lives in gamesListInput — it deliberately has no
+      // forceRefresh field (public cache-bypass amplification lever, removed).
+      .input(gamesListInput)
       .query(async ({ input, ctx }) => {
         // [tRPC][games.list] — hot path log silenced (fires every 60s per user)
         const games = await listGames(input ?? {});
