@@ -107,5 +107,15 @@ exactly what the gate blocks on. Owner options, in order of preference:
    refresh for npm's tar.
 3. `.trivyignore` with per-CVE justification + expiry — last resort; waives
    real fixables and weakens the gate's meaning.
-Until one lands, check 09 stays red **by design** (Wave 0 — not yet a required
-check, so it blocks nothing).
+
+**REMEDIATED 2026-08-05 (owner-authorized, option 1):** the Dockerfile is now
+multi-stage — a `build` stage produces `dist`, a `proddeps` stage does a fresh
+`pnpm install --prod --frozen-lockfile` (resolver-decided, no prune
+semantics), and the runtime stage carries only prod `node_modules` + `dist` +
+`package.json` + the one allow-listed pricing registry, with
+npm/corepack/npx stripped from `/usr/local` (nothing at runtime spawns them —
+verified: the server spawns only node, python3, python3.11, and chromium).
+The `/app` geometry is unchanged, so `import.meta.dirname`-relative
+resolution (static client serving, cp'd engines) behaves identically.
+Verified by check 09's own build + Trivy CRITICAL-fixable gate + dead-DB boot
++ smoke.
