@@ -259,7 +259,7 @@ async function handleWc2026EspnResults(req: Request, res: Response): Promise<voi
   const dateStr = req.body?.dateStr ?? now.toISOString().slice(0, 10).replace(/-/g, "");
   const forceReingest = req.body?.forceReingest ?? false;
 
-  console.log(`[WC2026HB] [INPUT] /wc2026-espn-results triggered at ${now.toISOString()} dateStr=${logSafe(dateStr)} forceReingest=${forceReingest}`);
+  console.log(`[WC2026HB] [INPUT] /wc2026-espn-results triggered at ${now.toISOString()} dateStr=${logSafe(dateStr)} forceReingest=${logSafe(forceReingest)}`);
 
   try {
     const result = await ingestWc2026EspnResults({ dateStr, forceReingest });
