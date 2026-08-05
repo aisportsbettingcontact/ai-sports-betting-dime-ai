@@ -63,6 +63,8 @@ Vitest 2.1.9, ~3,700 tests; DB-bound suites env-gated (local profile) and run ag
 - *Prettier as blocking format gate*: `--check` currently fails on 316 files. Starts advisory; a format-all commit graduates it (ROLLOUT.md).
 - *CI model calls (AI reviewer LLM judges, promptfoo model evals)*: **paused by owner law** (LLM.md API-credit budget). Layer 9/10 ship config + deterministic subsets; anything that spends model tokens in CI is dispatch-only until the owner lifts the pause.
 - *CIFuzz/OSS-Fuzz*: not an OSS-Fuzz project; fuzzing implemented as fast-check fuzz properties on the real parser surfaces (AN HTML parser, invite codes, odds math) in the property suite.
+- *Semgrep `--strict`*: dropped after live calibration (Wave 0, 2026-08-05). Semgrep's TS parser emits partial-parse warnings on 4 known files (modern generics in `vi.fn<T>()`, a JSX text ampersand, one deep template literal) — ~0.1% of lines — and `--strict` escalates those to run failure with 0 findings. Without it the gate is still fail-closed: findings exit 1, fatal scan errors exit 2, both red. The 4 files are named in `03-semgrep.yml`'s comment.
+- *Trivy gate shape*: split into two invocations (Wave 0, 2026-08-05) — a non-gating SARIF pass (CRITICAL+HIGH, exit 0) feeding the Security tab, then the blocking gate re-run in `table` format (CRITICAL fixable-only, exit 1) so a red job names its CVEs in the log instead of burying them in an unuploaded SARIF.
 
 ## 7. Secrets
 
@@ -82,3 +84,28 @@ the ticket-price rounding loss. Suggested fix: a ~20-line guard in the WIN
 branch returning VOID with a reason (drafted and validated against all 107
 parlay tests during discovery, then reverted pending owner sign-off).
 Tracked as `it.todo` in `server/property/odds.property.test.ts`.
+
+**KNOWN-FINDING-2 (owner review) — 5 fixable CRITICAL CVEs ship in the production
+image (check 09 red is a true positive).** First PR-time image scan (Wave 0,
+2026-08-05, gate = CRITICAL + fixable-only):
+
+| Component | Where | CVEs | Fix |
+| --- | --- | --- | --- |
+| node-tar 7.5.11 | global Node toolchain in `node:22-bookworm-slim` (npm's bundled tar; **not** in `pnpm-lock.yaml` — verified) | CVE-2026-59873 (gzip-bomb DoS) ×2 copies | 7.5.19 — arrives with a base-image/npm refresh |
+| esbuild 0.18.20 linux-x64 binary | `app/node_modules/.pnpm/@esbuild+linux-x64@0.18.20` — old esbuild pulled by the `@esbuild-kit` chain (drizzle-kit loader) | CVE-2024-24790 (Go net/netip), CVE-2025-68121 (Go crypto/tls) | rebuilt esbuild ≥0.25.x via drizzle-kit upgrade or pnpm override |
+| esbuild 0.25.12 linux-x64 binary | vite build chain in runtime node_modules | CVE-2025-68121 (Go crypto/tls) | rebuilt esbuild (Go ≥1.24.13) |
+
+Root cause: the single-stage Dockerfile ships the **build toolchain into the
+runtime image** — esbuild binaries and dev deps live in the production
+node_modules. Runtime exploitability is low (esbuild only executes at build
+time; nothing un-tars untrusted input), but every one is fixable, which is
+exactly what the gate blocks on. Owner options, in order of preference:
+1. Multi-stage Dockerfile: build stage → `pnpm prune --prod` (or deploy-filtered
+   install) → slim runtime stage. Removes the whole class, shrinks the image and
+   its attack surface. Production build change — owner-gated.
+2. Targeted bumps: drizzle-kit upgrade (drops esbuild 0.18.20), base-image
+   refresh for npm's tar.
+3. `.trivyignore` with per-CVE justification + expiry — last resort; waives
+   real fixables and weakens the gate's meaning.
+Until one lands, check 09 stays red **by design** (Wave 0 — not yet a required
+check, so it blocks nothing).
