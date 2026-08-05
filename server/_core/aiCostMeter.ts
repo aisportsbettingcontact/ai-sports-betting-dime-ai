@@ -12,13 +12,21 @@
  *   API rates, cached 2026-06-24 via the claude-api reference; the gateway in
  *   front of ANTHROPIC_BASE_URL may bill differently). Override with
  *   AI_PRICE_TABLE_JSON, e.g. '{"claude-opus-5":{"inputUsdPerMTok":5,"outputUsdPerMTok":25}}'.
- * - Persistence is deploy-gated (ai_workflow_costs ships via db-push.yml);
- *   until the table exists, events are still fully logged — measurement
- *   degrades to logs, never crashes a serving path.
+ * - Persistence: DB persistence is DEFERRED (DR-012, ruled via DR-015). The
+ *   `ai_workflow_costs` table was never added to drizzle/dime.schema, and this
+ *   module's import of it was the repo's only typecheck failure (ISSUE-002).
+ *   It is removed rather than repaired, because instrumenting the DB path
+ *   would instrument the empty pipe: server-runtime AI spend at Dime is near
+ *   zero, while the measurable spend sits in Claude Code session transcripts
+ *   that no DB table can see. The ledger is git-native instead — see
+ *   os/plan/issues/ISSUE-008-token-ledger.md.
+ *
+ *   ACTIVATION TRIGGER for reinstating DB persistence: a cost event that must
+ *   be emitted by the running server and cannot be reconstructed from CI or
+ *   from session transcripts. Until such an event exists, the table is YAGNI.
+ *   Reinstating it requires db-push.yml BEFORE any code deploy (new table, so
+ *   a schemaCapabilities-probed writer is also acceptable).
  */
-import { getDb } from "../db";
-import { aiWorkflowCosts } from "../../drizzle/dime.schema";
-import { tableColumns } from "../schemaCapabilities";
 
 const TAG = "[AICost]";
 
@@ -146,29 +154,9 @@ export function logCostEvent(event: WorkflowCostEvent): void {
  */
 export async function recordCostEvent(event: WorkflowCostEvent): Promise<void> {
   logCostEvent(event);
-  try {
-    const columns = await tableColumns("ai_workflow_costs");
-    if (columns.size === 0) {
-      console.warn(`${TAG} [STATE] ai_workflow_costs table absent — event logged only (run db-push.yml to enable persistence)`);
-      return;
-    }
-    const db = await getDb();
-    await db.insert(aiWorkflowCosts).values({
-      workflow: event.workflow,
-      model: event.model,
-      requestId: event.requestId,
-      inputTokens: event.inputTokens,
-      outputTokens: event.outputTokens,
-      usd: event.usd !== null ? String(event.usd) : null,
-      usdReason: event.usdReason,
-      latencyMs: event.latencyMs,
-      retries: event.retries,
-      outcomeRef: event.outcomeRef,
-      priceTableVersion: event.priceTableVersion,
-    });
-  } catch (err) {
-    console.warn(`${TAG} [WARN] cost persistence failed (event already logged): ${err instanceof Error ? err.message : err}`);
-  }
+  // DB persistence deferred — see the activation trigger in the module header.
+  // The event is fully logged above; measurement degrades to logs and never
+  // crashes a serving path, which was the original contract either way.
 }
 
 /** Test hook. */
