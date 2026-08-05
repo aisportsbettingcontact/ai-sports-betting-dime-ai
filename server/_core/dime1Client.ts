@@ -47,11 +47,34 @@ function readEnv(env: Dime1Env, name: string): string | undefined {
   return value ? value : undefined;
 }
 
+/**
+ * The request body carries DIME_CHAT_SYSTEM_PROMPT — the blueprint file, i.e.
+ * model IP. Operators are free to self-host (DIME_MODEL_BASE_URL is documented
+ * as an arbitrary private endpoint), so the HOST is deliberately not
+ * allowlisted; what is enforced is that the prompt never crosses the network
+ * in plaintext. Loopback is exempt so local development works over http.
+ */
+export function isAllowedDime1Endpoint(baseUrl: string): boolean {
+  let parsed: URL;
+  try {
+    parsed = new URL(baseUrl);
+  } catch {
+    return false;
+  }
+  if (parsed.protocol === "https:") return true;
+  return (
+    parsed.protocol === "http:" &&
+    (parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1")
+  );
+}
+
 export function resolveDime1Config(env: Dime1Env = process.env): Dime1Config | null {
   const explicitBase = readEnv(env, "DIME_MODEL_BASE_URL");
   const endpointId = readEnv(env, "RUNPOD_ENDPOINT_ID");
   const baseUrl = explicitBase ?? (endpointId ? `https://api.runpod.ai/v2/${endpointId}/openai/v1` : undefined);
   if (!baseUrl) return null;
+  // Refuse to ship the system prompt over plaintext http (loopback aside).
+  if (!isAllowedDime1Endpoint(baseUrl)) return null;
 
   const timeoutRaw = Number(readEnv(env, "DIME_MODEL_TIMEOUT_MS"));
   return {

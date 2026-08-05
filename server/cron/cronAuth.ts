@@ -43,8 +43,15 @@ function extractPresentedToken(req: HeadersBag): string | null {
   const authz = raw["authorization"] ?? raw["Authorization"];
   const authStr = Array.isArray(authz) ? authz[0] : authz;
   if (typeof authStr === "string") {
-    const match = /^Bearer\s+(.+)$/i.exec(authStr.trim());
-    if (match) return match[1].trim();
+    // `/^Bearer\s+(.+)$/` backtracks quadratically on "Bearer" followed by a
+    // long run of whitespace — reachable BEFORE any secret check, so an
+    // unauthenticated request can burn CPU. Fixed-width anchor + slice is
+    // linear and behaviourally identical.
+    const trimmed = authStr.trim();
+    if (/^Bearer\s/i.test(trimmed)) {
+      const token = trimmed.slice("Bearer".length).trim();
+      if (token.length > 0) return token;
+    }
   }
   return null;
 }
