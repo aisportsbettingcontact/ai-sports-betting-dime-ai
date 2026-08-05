@@ -68,6 +68,80 @@ if (changed.size === 0) {
   process.exit(0);
 }
 
+// Format-neutral change detection (added for the 2026-08-05 format-all
+// commit, kept because any future formatting churn has the same shape):
+// a changed file is exempt ONLY when prettier-normalizing its BASE version
+// yields byte-identical HEAD content — proof the diff is pure formatting
+// with zero behavioral change. Everything else keeps full line accounting.
+// Fail-closed: if the base blob or prettier is unavailable, the file stays in.
+const mergeBase = execSync(`git merge-base ${BASE} HEAD`, {
+  encoding: "utf8",
+}).trim();
+let prettierLib = null;
+try {
+  prettierLib = await import("prettier");
+} catch {
+  console.log(
+    "[patch-coverage] prettier unavailable — format-neutral exemption disabled"
+  );
+}
+if (prettierLib) {
+  let exempt = 0;
+  for (const f of [...changed.keys()]) {
+    let baseSrc;
+    try {
+      baseSrc = execSync(`git show ${mergeBase}:${JSON.stringify(f)}`, {
+        encoding: "utf8",
+        maxBuffer: 64e6,
+      });
+    } catch {
+      continue; // new or renamed file — real change, keep
+    }
+    let headSrc;
+    try {
+      headSrc = fs.readFileSync(f, "utf8");
+    } catch {
+      continue; // deleted at HEAD — nothing to cover, but keep conservative
+    }
+    try {
+      // Mirror the CLI exactly: resolve .prettierrc/editorconfig for this
+      // path — the bare API applies defaults only, which would silently
+      // break the byte-equality proof. Compare against prettier's FIXPOINT
+      // (≤3 passes): prettier is not idempotent on some comment placements,
+      // and the committed tree is itself a fixpoint (--check clean).
+      const resolved =
+        (await prettierLib.resolveConfig(f, { editorconfig: true })) ?? {};
+      let normalizedBase = baseSrc;
+      for (let pass = 0; pass < 3; pass++) {
+        const next = await prettierLib.format(normalizedBase, {
+          ...resolved,
+          filepath: f,
+        });
+        if (next === normalizedBase) break;
+        normalizedBase = next;
+      }
+      if (normalizedBase === headSrc) {
+        changed.delete(f);
+        exempt++;
+      }
+    } catch {
+      // base version unparseable by prettier — real change territory, keep
+    }
+  }
+  if (exempt > 0) {
+    console.log(
+      `[patch-coverage] ${exempt} file(s) exempt: prettier(base) === head (pure-format diff, zero behavioral change)`
+    );
+  }
+}
+
+if (changed.size === 0) {
+  console.log(
+    "[patch-coverage] all changed files proven format-only — pass"
+  );
+  process.exit(0);
+}
+
 // v8 coverage-final: keyed by abs path, statementMap + s counts
 const byRelPath = new Map();
 for (const [abs, entry] of Object.entries(coverage)) {
