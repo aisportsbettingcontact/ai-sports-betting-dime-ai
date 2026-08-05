@@ -1,6 +1,8 @@
 # DR-014 — Consolidation ruling: cut the set to what survives, and fill four holes
 
 **Status:** AWAITING RULING · **DRI:** Prez · **Raised:** 2026-08-05 (Stage 2, three adversarial critics)
+**Kind:** consolidation
+**Governs:** DR-004 … DR-013
 **Urgency:** BLOCKING — must be ruled before DR-004…DR-013 are implemented
 **Doctrine:** D4 (one reality) · D14 (visibility before autonomy) · D15 #4, #15, #16 · D16 §17
 

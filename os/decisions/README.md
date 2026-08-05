@@ -42,19 +42,48 @@ disagree, DR-014 governs.**
 | [DR-012](DR-012-token-ledger.md) | Token ledger mechanics | Git-native session ledger from transcripts | upheld; **owns D10 outright.** Its emitter already ran and produced real numbers |
 | [DR-013](DR-013-loop-rollout-order.md) | Eight-function loop rollout | Paired activation | **CUT** — an eight-loop program handed to a company that just watched a one-loop program die |
 
-## Format
+## Format — two record kinds
+
+A record's kind is **`decision`** unless it declares otherwise with a `**Kind:**` line in its
+header. Only `consolidation` records declare themselves.
+
+### `decision` — one contested choice (DR-001 … DR-013)
 
 ```
 # DR-NNN — <decision>
 Status · DRI · Raised · Doctrine sections
-## The question          one decision, phrased as a question
+## The question          one decision, phrased as a question          [REQUIRED]
 ## Why this is contested why it is a judgment call, not an obvious default
 ## Options               2-4 real options: what, pros, cons, effort, risk, doctrine fit
-## Recommendation        exactly one, why it beats the runners-up, grafts from them
-## Requested ruling      the exact question, and what a yes commits Prez to
+## Recommendation        exactly one, why it beats the runners-up, grafts from them  [REQUIRED]
+## Requested ruling      the exact question, and what a yes commits Prez to  [REQUIRED]
 ## Depends on            other DRs by id
 ## Open unknowns         what could not be determined, and what would resolve it
 ```
+
+### `consolidation` — a ruling over a *set* of records (DR-014)
+
+A consolidation record does not answer one question. It resolves collisions between records that
+were drafted independently, cuts what will not survive, and fills gaps no single record owned. Its
+decomposition into separately-rulable parts **is** its recommendation, so forcing it into the
+`decision` shape would misrepresent it.
+
+```
+# DR-NNN — <consolidation>
+Status · DRI · Raised · Doctrine sections
+**Kind:** consolidation                                              [REQUIRED]
+**Governs:** DR-aaa … DR-bbb                                         [REQUIRED]
+## Ruling N — <name>     one per separately-rulable part, ≥1         [REQUIRED]
+## Requested ruling      the exact question, and what a yes commits Prez to  [REQUIRED]
+## Depends on
+## Open unknowns
+```
+
+> **This contract is not yet machine-enforced.** `DR-006` owns the one frontmatter/structure
+> validator, riding the already-required `Vitest` check. Until it is ruled and built, this section
+> is a convention — and a convention with no verification step is exactly the F6/D15 #8 failure the
+> audit documented. **The drift that produced this section was found by hand, which is the point:
+> it should not have needed a human.**
 
 ## After a ruling
 
