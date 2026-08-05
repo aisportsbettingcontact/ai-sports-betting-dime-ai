@@ -65,6 +65,15 @@
 .projection-card__head { grid-area: head; display: flex; align-items: center; justify-content: flex-end; gap: var(--space-sm); }
 .projection-card__status { font-size: var(--proj-meta); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-secondary, #a6a6a6); }
 .projection-card__status--live { color: var(--mint-ink, #45e0a8); } /* live = signal; --mint-ink is theme-correct mint text (raw mint dark / #0A7C50 light) */
+/* 2026-08-05: lifecycle compaction dims the whole live card to 0.72, which
+   composites light-theme --mint-ink to ~3.1:1 on white — below AA for the
+   12px LIVE label. Darken the SAME mint hue (single-hue system; the analog
+   of v3's near-black-green foreground) just enough that the composited
+   label clears 4.5:1: color-mix 60% toward black composites to ~4.8:1 at
+   0.72 over white. Dark theme already composites ~6.5:1 and keeps the token. */
+html:not(.dark) .projection-card--compact .projection-card__status--live {
+  color: color-mix(in srgb, var(--mint-ink, #0a7c50) 60%, #000000);
+}
 
 /* Live indicator dot (Round 4 Wave 1, item 4 / page law "Live state"): pulsing
    7px mint dot ahead of the LIVE label. `display: none` by default keeps
@@ -300,10 +309,27 @@ html:not([data-theme-mode]) .dmf-root[data-dmf-mode="dark"] .team-logo-box--dark
    CARD width — the old <=1023.98px media wrapper left desktop 3-across cards
    (the narrowest cards in the product) wrapping "Matthew Liberatore" onto two
    lines while phones one-lined it. */
-  @container projcard (max-width: 520px) {
+/* 2026-08-05 (feed desktop refinement) — TIER QUERIES ARE CONTENT-BOX.
+   Size container queries resolve against the container's CONTENT box, but the
+   page law and the tier comments in this file reason in border-box CARD
+   widths. The card's own chrome (2 x clamp(14..24px) padding + 2 x 1px
+   border, ~-50px on desktop) meant the literal 520/310/280 queries fired on
+   cards ~50px WIDER than each tier's stated intent — the "backstop" <=280
+   tier was live on every standard 3-up desktop card (318px border-box =
+   ~268px content box), squeezing the home pitcher into the 3rem center
+   track and cramping the summary readout. The query literals below are the
+   law's card widths translated to content-box (card width minus the resolved
+   chrome at that band): 520 -> 472, 310 -> 270, 280 -> 246. The law's tier
+   SEMANTICS (which card widths get which anatomy) are unchanged. */
+  @container projcard (max-width: 472px) {
     .pregame-pitchers {
       position: relative;
       grid-template-columns: repeat(2, minmax(0, 1fr));
+      /* 2026-08-05: top-align the two pitcher columns so the EXPECTED /
+         CONFIRMED status row shares one baseline even when the columns'
+         content heights differ (e.g. "Pitcher TBD" with no stats beside a
+         full column) — center-alignment let the shorter column float. */
+      align-items: start;
       gap: 0;
       padding-inline: var(--space-xs);
     }
@@ -350,10 +376,13 @@ html:not([data-theme-mode]) .dmf-root[data-dmf-mode="dark"] .team-logo-box--dark
       inset-inline: 0;
     }
   }
-  /* Narrowest cards (~<=310px, e.g. a 320px viewport): the centered overlay
-     chip and two nowrap names can no longer share the row — the chip drops
-     into normal flow below the pitchers so no name is ever occluded. */
-  @container projcard (max-width: 310px) {
+  /* Narrowest cards (~<=310px border-box, e.g. a 320px viewport — and the
+     3-up desktop floor band, whose ~305-320px cards leave the overlay chip
+     no occlusion-free room beside two complete nowrap names): the centered
+     overlay chip and two nowrap names can no longer share the row — the chip
+     drops into normal flow below the pitchers so no name is ever occluded.
+     (270 content-box ~= 320 border-box at desktop card chrome.) */
+  @container projcard (max-width: 270px) {
     .projection-card .pregame-pitchers__lineups {
       /* The centered row-1 overlay and two nowrap names can no longer share
          the row — the chip drops to its own row below the pitchers so no
@@ -365,12 +394,15 @@ html:not([data-theme-mode]) .dmf-root[data-dmf-mode="dark"] .team-logo-box--dark
     }
   }
 
-/* Deep-narrow defensive tier (<=280px cards). Under the content-driven grid
-   (2-up >=622px container, 3-up >=940px) no multi-column card can resolve
-   below ~305px, so this tier is a backstop for extreme hosts, not a live
-   band. Container-scoped since 2026-08-02 (was desktop-media-scoped, which
-   the container grid made meaningless). All interactive targets stay 44px. */
-  @container projcard (max-width: 280px) {
+/* Deep-narrow defensive tier (<=280px border-box cards). Under the
+   content-driven grid (2-up >=622px container, 3-up >=940px) no multi-column
+   card can resolve below ~305px, so this tier is a backstop for extreme
+   hosts, not a live band. Container-scoped since 2026-08-02 (was
+   desktop-media-scoped, which the container grid made meaningless). All
+   interactive targets stay 44px. (246 content-box ~= 280 border-box; the
+   former 280 literal made this "backstop" fire on every 3-up desktop card —
+   see the content-box note above.) */
+  @container projcard (max-width: 246px) {
     /* CL-01 (closure): at the narrowest 3-col card (~194px) the matchup grid's `auto`
        center track took the full text max-content (~122px) and starved the side logo
        columns to ~2.7px, so crests overhung the team names. Flip it: logo sides size to
@@ -636,7 +668,13 @@ html:not([data-theme-mode]) .dmf-root[data-dmf-mode="dark"] .team-logo-box--dark
 .summary__item--edge { grid-column: 1; }
 .summary__item--book { grid-column: 2; }
 .summary__item--model { grid-column: 3; }
-.summary__item--message { grid-column: 1 / -1; justify-self: center; }
+/* 2026-08-05: the message item opts out of the readout's max-content floor —
+   with it, "Every market is efficiently priced. No action." held a 333px
+   min-width inside a ~265px compact-card viewport and was CLIPPED mid-word
+   at both edges (visible on FINAL/PASS cards in the 3-up desktop grid).
+   min-inline-size: 0 lets the sentence wrap to two centered lines instead;
+   values elsewhere keep their never-wrap contract (this item has no values). */
+.summary__item--message { grid-column: 1 / -1; justify-self: safe center; min-inline-size: 0; text-align: center; }
 .summary__item dt { color: var(--text-secondary, #a6a6a6); } /* CL-05b (closure): the --text-muted token = 4.12:1 fails WCAG-AA 4.5:1 at label size; --text-secondary = 8.6:1 passes (sibling of the CL-05a matchup__at fix). Token names, not raw hex, keep the X-HEX ratchet green. */
 .summary__item dd { margin: 0; }
 /* Spelled-out pick ("Under 7", "Athletics ML") displays uppercase, matching
@@ -726,12 +764,13 @@ html:not([data-theme-mode]) .dmf-root[data-dmf-mode="dark"] .team-logo-box--dark
   font-variant-numeric: tabular-nums;
 }
 
-/* Tight cards (<=520px card width — narrow phones AND narrow desktop grid
-   columns alike) switch every card to the SAME two-row anatomy: the readout
+/* Tight cards (<=520px border-box card width — narrow phones AND narrow
+   desktop grid columns alike; 472 content-box, see the content-box note
+   above) switch every card to the SAME two-row anatomy: the readout
    facts on row 1, the signal (chip + 44px next control) centered on row 2.
    Deterministic by width — no card ever wraps while a row-mate doesn't.
    Spacing/type reduce; the 44px targets and every complete value remain. */
-@container projcard (max-width: 520px) {
+@container projcard (max-width: 472px) {
   .summary__group {
     display: grid;
     grid-template-columns: minmax(0, auto);
@@ -740,7 +779,11 @@ html:not([data-theme-mode]) .dmf-root[data-dmf-mode="dark"] .team-logo-box--dark
   }
   .summary__group,
   .summary__readout {
-    column-gap: 4px;
+    /* 2026-08-05: was 4px — at 15px/700 numerals adjacent BOOK and MODEL
+       values fused into one string ("+118+102"). 8px keeps the columns
+       readable as columns at the compact tier; the two-row grid still fits
+       with >=80px of slack at the 3-up desktop floor. */
+    column-gap: 8px;
   }
   .summary__readout {
     grid-template-columns: max-content minmax(40px, max-content) minmax(40px, max-content);
@@ -756,7 +799,11 @@ html:not([data-theme-mode]) .dmf-root[data-dmf-mode="dark"] .team-logo-box--dark
     font-size: 0.875rem;
   }
   .summary__item--edge .summary__pick {
-    font-size: 0.625rem;
+    /* 2026-08-05: was 0.625rem — the pick (the model's claim, "ASTROS -1.5")
+       rendered SMALLER than its supporting odds (0.875rem), inverting the
+       readout's hierarchy on every compact card. 0.8125rem restores the
+       pick's lead within the compact budget; weight 700 carries the rest. */
+    font-size: 0.8125rem;
   }
   .summary__signal { gap: 4px; }
   .summary__signal .edge-indicator {
@@ -783,9 +830,14 @@ html:not([data-theme-mode]) .dmf-root[data-dmf-mode="dark"] .team-logo-box--dark
    <=1023.98px media wrapper exempted narrow desktop grid columns, exactly
    where cards are narrowest). Longer localized picks may expand the first
    lane and use the existing local summary scrollport. */
-@container projcard (max-width: 520px) {
+@container projcard (max-width: 472px) {
   .summary__readout {
-    grid-template-columns: minmax(4.625rem, max-content) 2.125rem 2.125rem;
+    /* 2026-08-05: BOOK/MODEL lanes were fixed 2.125rem (34px) — narrower
+       than a four-glyph American price at the compact 0.875rem value size
+       (~40px), so values overflowed their tracks and ate the column gap
+       (the "+118+102" fusion). minmax keeps the deterministic cross-card
+       minimum while letting real prices occupy their own lane. */
+    grid-template-columns: minmax(4.625rem, max-content) minmax(2.75rem, max-content) minmax(2.75rem, max-content);
   }
   .summary__signal { min-inline-size: 8.125rem; }
 }
@@ -855,8 +907,9 @@ html:not([data-theme-mode]) .dmf-root[data-dmf-mode="dark"] .team-logo-box--dark
 
 /* On the narrowest three-across desktop cards, keep the pill and its 44px
    ArrowRight fully inside the clipped carousel viewport. Typography and
-   padding tighten; the information, border, icon, and hit target remain. */
-@container projcard (max-width: 280px) {
+   padding tighten; the information, border, icon, and hit target remain.
+   (246 content-box ~= 280 border-box — see the content-box note above.) */
+@container projcard (max-width: 246px) {
   .projection-card .summary__signal { gap: 4px; max-inline-size: 100%; }
   .projection-card .summary__signal .edge-indicator {
     gap: 2px;
@@ -938,7 +991,7 @@ html:not([data-theme-mode]) .dmf-root[data-dmf-mode="dark"] .team-logo-box--dark
 .projection-card__markets-toggle[data-state="open"] .projection-card__markets-icon {
   color: var(--brand-mint, #45e0a8);
 }
-@container projcard (max-width: 520px) {
+@container projcard (max-width: 472px) {
   .projection-card__markets-toggle {
     gap: 4px;
     padding-inline: 4px;
@@ -1040,7 +1093,7 @@ html:not([data-theme-mode]) .dmf-root[data-dmf-mode="dark"] .team-logo-box--dark
 .projection-card__market-pagination [data-slot="pagination-link"][data-active="true"] {
   color: var(--brand-mint-foreground, #9ff5d4);
   background: var(--brand-mint-surface, rgba(69, 224, 168, 0.12));
-  border-color: #45e0a8;
+  border-color: var(--brand-mint, #45e0a8); /* 2026-08-05: token law — raw mint only as var() fallback */
 }
 .projection-card__market-pagination [data-slot="pagination-link"][aria-disabled="true"] {
   pointer-events: none;
@@ -1083,7 +1136,7 @@ html:not([data-theme-mode]) .dmf-root[data-dmf-mode="dark"] .team-logo-box--dark
 .market-table__flag { font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif; margin-inline-end: 0.375rem; }
 .market-table tbody td, .market-table tbody th { font-variant-numeric: tabular-nums; }
 .market-table tbody tr + tr th, .market-table tbody tr + tr td { border-block-start: 1px solid var(--border, #262626); }
-.market-table__model--signal { color: var(--brand-mint-foreground); background: var(--brand-mint-surface); box-shadow: inset 3px 0 0 #45e0a8; font-weight: 700; }
+.market-table__model--signal { color: var(--brand-mint-foreground); background: var(--brand-mint-surface); box-shadow: inset 3px 0 0 var(--brand-mint, #45e0a8); font-weight: 700; } /* 2026-08-05: token law — raw mint only as var() fallback */
 .market-table__result { text-align: center !important; color: var(--text-secondary, #a6a6a6); border-block-start: 1px solid var(--border, #262626); }
 /* Edge footers (owner directive 2026-07-18): mint CELL, accessible foreground. */
 .market-table__result--edge { color: var(--brand-mint-foreground); background: var(--brand-mint-surface); }

@@ -56,12 +56,21 @@ export function ProjectionSummary({
   // A scored no-edge case uses the SAME readout structure as an edge card,
   // with an ROI-only neutral badge in the signal slot. A genuinely unscorable
   // game gets the unavailable-data sentence and no empty signal badge.
+  //
+  // 2026-08-05 (a11y refinement): every card exposes this tabbable region, so
+  // on a full slate a screen-reader rotor listed N identical "Model
+  // projection summary" entries. Including the matchup makes each stop
+  // distinguishable without adding an extra tab stop.
+  const regionLabel =
+    teams.length >= 2 && teams[0]?.name && teams[1]?.name
+      ? `Model projection summary: ${teams[0].name} at ${teams[1].name}`
+      : "Model projection summary";
   return (
     <div className={`summary ${insight ? "summary--priced" : "summary--empty"}`}>
       <div
         className="summary__viewport"
         role="region"
-        aria-label="Model projection summary"
+        aria-label={regionLabel}
         tabIndex={nextEdgeTabIndex ?? 0}
       >
         <div className="summary__group">
