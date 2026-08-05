@@ -119,3 +119,19 @@ The `/app` geometry is unchanged, so `import.meta.dirname`-relative
 resolution (static client serving, cp'd engines) behaves identically.
 Verified by check 09's own build + Trivy CRITICAL-fixable gate + dead-DB boot
 + smoke.
+
+**CodeQL baseline bootstrap (2026-08-05, appended for the record).** Main had
+zero code-scanning analyses (default setup off, 02 PR-only, weekly cron
+unfired), so the PR check attributed every pre-existing alert to the PR. Fixes:
+`02-codeql` gained a `push: main` trigger (permanent baseline refresh) and a
+dispatch-only baseline mode that analyzes main's actual tree and labels the
+upload `refs/heads/main` (one-time bootstrap; run: baseline=true dispatch).
+Main's baseline materialized 106 open alerts — the pre-existing backlog, now
+visible in the Security tab alongside Dependabot's 37 dependency findings
+(surfaced when the dependency graph was enabled). Two quirks worth knowing:
+alert records born from pre-baseline PR analyses stay attributed to that PR
+forever (all 19 were verified as unified records with open instances on main
+— e.g. #333 @123, #302 @2531, #201 @50 — which is why PR #362 was closed and
+recreated as PR #371 from the same branch), and check runs attach to commit
+SHAs, so a recreated PR needs one fresh commit to shed the predecessor's
+stale check runs (this commit).
