@@ -182,8 +182,11 @@ writes **GR-0001** for its own outcome as the worked example.
 Across ten records: DR-009 *forbids a new seat* from doing it; DR-005 and DR-013 defer the model
 loop; nobody else touches it. **Forbidding a new seat from doing what shipped code already does is
 not a control. Criterion 3 cannot pass while it stands.**
-Aggravated by **P2**: under RAILPACK the write may silently no-op or write to a filesystem wiped
-every deploy. **An automation whose effect status is unknown is worse than one known to fire.**
+~~Aggravated by **P2**: under RAILPACK the write may silently no-op.~~ **CORRECTED 2026-08-05 — it is
+worse than that.** The write **fires and succeeds** (root-owned, writable `/app/dist`), takes effect
+live and ungated, and is then **erased by the next of ~13 daily deploys** — while
+`mlb_model_learning_log` records that the recalibration happened. The artifact says the model
+learned; the runtime reverted.
 **Ruling:** this is a standalone work item in Stage 3, owned, with two steps — (1) determine whether
 it currently fires at all, (2) route it through propose→decide→apply using the already-written
 `mlbRecalibrationGate.ts`. It does not wait for the model loop.
@@ -245,10 +248,10 @@ Everything cut is 2026-07-28 with better handwriting.
   ruleset change is needed for the core system to bind.**
 - A dynamic line in your per-prompt capsule that will tell you what is overdue, every prompt.
 
-**One thing I need regardless of this ruling:** **P2 (RAILPACK vs Dockerfile) should be filed as an
-incident now.** It is a live production-correctness question — the Python model runners hardcode
-`/usr/bin/python3`, which is the exact failure the Dockerfile exists to prevent — and it is currently
-unowned by every record including this one. One build-log read resolves it.
+~~**One thing I need regardless of this ruling:** P2 should be filed as an incident.~~
+**RESOLVED 2026-08-05, no incident required.** The build-log read was done: the Dockerfile is the
+builder, `/usr/bin/python3` is installed, and all five runners reach the image. No ENOENT risk.
+See `os/audits/2026-08-05-builder-resolution.md`.
 
 ## Depends on
 
@@ -264,4 +267,6 @@ unowned by every record including this one. One build-log read resolves it.
 - Whether `DISABLE_BACKGROUND_JOBS` is actually set on the backend service — variable *names* are
   readable, values are not, and this settles the long-pending single-writer question. One
   `list-variables` read.
-- The real cost of the RAILPACK finding: whether MLB model runs are succeeding in production at all.
+- ~~The real cost of the RAILPACK finding~~ — **RESOLVED 2026-08-05.** The builder is the Dockerfile;
+  the Python runners are present and functional. What remains open is narrower and belongs to
+  ISSUE-012: how many drift adjustments the ephemeral filesystem has silently discarded.
