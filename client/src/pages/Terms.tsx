@@ -22,16 +22,16 @@ export default function Terms() {
       <main className="max-w-3xl mx-auto px-4 py-12">
         <h1 className="text-3xl font-bold mb-2">Terms of Service</h1>
         <p className="text-muted-foreground mb-8">
-          Last updated: July 7, 2026
+          Last updated: August 5, 2026
         </p>
 
         <section className="space-y-6 text-sm leading-relaxed">
           <div>
             <h2 className="text-xl font-semibold mb-2">1. Acceptance of Terms</h2>
             <p>
-              By accessing or using AI Sports Betting Models ("the Platform"), you agree
-              to be bound by these Terms of Service. If you do not agree, do not use the
-              Platform.
+              By accessing or using Dime AI ("the Platform"), operated by Tailered
+              Sports, Inc., you agree to be bound by these Terms of Service. If you do
+              not agree, do not use the Platform.
             </p>
           </div>
 
@@ -92,7 +92,7 @@ export default function Terms() {
             <h2 className="text-xl font-semibold mb-2">5. Intellectual Property</h2>
             <p>
               All models, algorithms, analytical frameworks, and software comprising the
-              Platform are the intellectual property of AI Sports Betting Models. Your
+              Platform are the intellectual property of Tailered Sports, Inc. Your
               subscription grants a limited, non-transferable license to use Platform
               outputs for personal analytical purposes only.
             </p>

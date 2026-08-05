@@ -97,7 +97,7 @@ function buildEmailHtml(opts: {
           <tr>
             <td align="center" style="padding-top:20px;">
               <p style="font-size:11px;color:#FFFFFF;margin:0;">
-                &copy; ${new Date().getFullYear()} Dime AI &mdash; AI Sports Betting Models &nbsp;&bull;&nbsp;
+                &copy; ${new Date().getFullYear()} Dime AI &mdash; Tailered Sports, Inc. &nbsp;&bull;&nbsp;
                 <a href="https://aisportsbettingmodels.com" style="color:#FFFFFF;text-decoration:none;">aisportsbettingmodels.com</a>
               </p>
               <p style="font-size:10px;color:#FFFFFF;margin:6px 0 0;">
