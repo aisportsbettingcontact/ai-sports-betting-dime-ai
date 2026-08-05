@@ -102,3 +102,47 @@ describe("deriveTicketWagerType — the ticket label comes from its legs", () =>
     expect(deriveTicketWagerType([])).toBe("PREGAME");
   });
 });
+
+// ─── Source scans: the builder's copy and cells ───────────────────────────────
+
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
+const builder = readFileSync(join(__dirname, "../components/ParlayBuilder.tsx"), "utf8");
+const page = readFileSync(join(__dirname, "BetTracker.tsx"), "utf8");
+
+describe("the builder's copy and cells", () => {
+  it("REGRESSION: the two standing captions are gone", () => {
+    expect(builder).not.toMatch(/Calculated from/);
+    expect(builder).not.toMatch(/One stake on the whole ticket/);
+    expect(builder).not.toMatch(/that price is what settles/);
+  });
+
+  it("legs are editable and deletable", () => {
+    expect(builder).toMatch(/onEditLeg/);
+    expect(builder).toMatch(/onRemoveLeg/);
+  });
+
+  it("cells carry logos and a wager-type stamp", () => {
+    expect(builder).toMatch(/awayLogo/);
+    expect(builder).toMatch(/homeLogo/);
+    expect(builder).toMatch(/wagerType/);
+  });
+
+  it("the ticket label derives from the legs, not the toggle", () => {
+    expect(builder).toMatch(/deriveTicketWagerType/);
+    expect(page).toMatch(/deriveTicketWagerType\(draftLegs\.map/);
+  });
+
+  it("STRAIGHT is the term, not SINGLE", () => {
+    expect(page).toMatch(/"STRAIGHT"/);
+    expect(page).not.toMatch(/entryMode === "SINGLE"/);
+    expect(page).not.toMatch(/"SINGLE" \| "PARLAY"/);
+  });
+
+  it("REGRESSION: autofill is gated by the matrix on both paths", () => {
+    expect(page).toMatch(/decideEntrySource/);
+    expect(page).toMatch(/checkLegCoherence/);
+    expect(page).toMatch(/defaultWagerType/);
+  });
+});

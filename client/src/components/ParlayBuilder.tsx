@@ -14,13 +14,15 @@
  * One accent (mint), no gradients, 160ms motion.
  */
 
-import { X, AlertCircle, Layers } from "lucide-react";
+import { X, AlertCircle, Layers, Pencil } from "lucide-react";
 import {
   MAX_PARLAY_LEGS,
   MIN_PARLAY_LEGS,
   combineLegOdds,
   calcParlayToWin,
 } from "@shared/parlayPricing";
+import { deriveTicketWagerType, type WagerType } from "../pages/betTrackerEntry";
+import { fmtDate } from "../pages/betTrackerDisplay";
 
 export interface DraftLeg {
   anGameId: number;
@@ -36,6 +38,10 @@ export interface DraftLeg {
   odds: number;
   /** Display label, derived where the leg is built. */
   label: string;
+  /** Stamped when the leg is added — the wager type it was priced under. */
+  wagerType: WagerType;
+  awayLogo: string | null;
+  homeLogo: string | null;
 }
 
 const fmtOdds = (n: number): string => (n > 0 ? `+${n}` : String(n));
@@ -60,6 +66,7 @@ export function suggestPrice(legs: DraftLeg[]): number | null {
 export default function ParlayBuilder({
   legs,
   onRemoveLeg,
+  onEditLeg,
   ticketOdds,
   onTicketOddsChange,
   ticketOddsManual,
@@ -74,6 +81,8 @@ export default function ParlayBuilder({
 }: {
   legs: DraftLeg[];
   onRemoveLeg: (index: number) => void;
+  /** Load this leg back into the add-bet form for editing (and remove it here). */
+  onEditLeg: (index: number) => void;
   ticketOdds: string;
   onTicketOddsChange: (v: string) => void;
   ticketOddsManual: boolean;
@@ -98,6 +107,8 @@ export default function ParlayBuilder({
   const enough = legs.length >= MIN_PARLAY_LEGS;
   const full = legs.length >= MAX_PARLAY_LEGS;
   const canSubmit = enough && oddsValid && riskValid && !isPending;
+  /** The ticket's label comes from its legs, not from any toggle. */
+  const ticketWager: WagerType = deriveTicketWagerType(legs.map(l => l.wagerType));
 
   const fmtStake = (dollars: number): string =>
     stakeMode === "$"
@@ -126,11 +137,11 @@ export default function ParlayBuilder({
             Pick a game above and add it as your first leg.
           </div>
         ) : (
-          <ul className="flex flex-col gap-1.5">
+          <ul className="flex flex-col gap-2">
             {legs.map((leg, i) => (
               <li
                 key={`${leg.anGameId}-${leg.market}-${leg.pickSide}-${i}`}
-                className="bt-row-hover flex items-center gap-2 rounded-[10px] px-3 py-2"
+                className="bt-row-hover flex items-center gap-3 rounded-[10px] px-3 py-3"
                 style={{
                   background: "var(--dime-surface-card)",
                   border: "1px solid var(--dime-border)",
@@ -142,23 +153,53 @@ export default function ParlayBuilder({
                 >
                   {i + 1}
                 </span>
+                {/* Team logos — a TOTAL is not a team claim, so it shows none
+                    (same rule BetCard uses). */}
+                {leg.market !== "TOTAL" && (leg.awayLogo || leg.homeLogo) && (
+                  <span className="flex shrink-0 items-center" aria-hidden>
+                    {leg.awayLogo && (
+                      <img src={leg.awayLogo} alt="" width={20} height={20} className="rounded-full" />
+                    )}
+                    {leg.homeLogo && (
+                      <img src={leg.homeLogo} alt="" width={20} height={20} className="-ml-2 rounded-full" />
+                    )}
+                  </span>
+                )}
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-[13px] font-medium">{leg.label}</div>
-                  <div className="bt-faint truncate text-[11px]">
-                    {leg.awayTeam} @ {leg.homeTeam} · {leg.gameDate}
+                  <div className="truncate text-[15px] font-semibold">{leg.label}</div>
+                  <div className="bt-dim truncate text-[12px]">
+                    {leg.awayTeam} @ {leg.homeTeam} · {fmtDate(leg.gameDate)}
                   </div>
                 </div>
-                <span className="bt-num shrink-0 text-[13px] font-bold">
+                <span
+                  className="shrink-0 text-[10px] font-bold uppercase"
+                  style={{
+                    letterSpacing: "0.08em",
+                    color: leg.wagerType === "LIVE" ? "var(--dime-mint)" : "var(--dime-text-muted)",
+                  }}
+                >
+                  {leg.wagerType === "LIVE" ? "LIVE" : "PRE"}
+                </span>
+                <span className="bt-num shrink-0 text-[16px] font-bold">
                   {fmtOdds(leg.odds)}
                 </span>
                 <button
                   type="button"
-                  onClick={() => onRemoveLeg(i)}
-                  aria-label={`Remove leg ${i + 1}: ${leg.label}`}
-                  className="bt-press shrink-0 rounded-md p-1 transition-colors"
+                  onClick={() => onEditLeg(i)}
+                  aria-label={`Edit leg ${i + 1}: ${leg.label}`}
+                  className="bt-press shrink-0 rounded-md p-2 transition-colors"
                   style={{ color: "var(--dime-text-muted)" }}
                 >
-                  <X size={13} />
+                  <Pencil size={14} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onRemoveLeg(i)}
+                  aria-label={`Remove leg ${i + 1}: ${leg.label}`}
+                  className="bt-press shrink-0 rounded-md p-2 transition-colors"
+                  style={{ color: "var(--dime-text-muted)" }}
+                >
+                  <X size={14} />
                 </button>
               </li>
             ))}
@@ -195,13 +236,6 @@ export default function ParlayBuilder({
           className="bt-input bt-num w-full"
           style={ticketOddsManual ? { borderColor: "var(--dime-mint-border)" } : undefined}
         />
-        <span className="bt-faint text-[11px]">
-          {!enough
-            ? `A parlay needs at least ${MIN_PARLAY_LEGS} legs.`
-            : ticketOddsManual
-              ? "Using your price. Same-game and boosted tickets price differently from the legs, and the price you enter is what settles."
-              : `Calculated from ${legs.length} legs. Edit it if your book quoted something else — that price is what settles.`}
-        </span>
       </div>
 
       {/* ── Stake — ONE per ticket, not per leg ───────────────────────────── */}
@@ -221,24 +255,29 @@ export default function ParlayBuilder({
           aria-label={stakeMode === "U" ? "Risk amount in units for the whole ticket" : "Risk amount in dollars for the whole ticket"}
           className="bt-input bt-num w-full"
         />
-        <span className="bt-faint text-[11px]">
-          One stake on the whole ticket — legs are not staked separately.
-        </span>
       </div>
 
-      {/* ── Payout ────────────────────────────────────────────────────────── */}
+      {/* ── Review — the last look before the ticket is tracked ───────────── */}
       {toWin != null && (
         <div
-          className="flex items-center justify-between rounded-[10px] px-3 py-2 text-[13px]"
+          className="flex flex-col gap-1.5 rounded-[10px] px-3 py-3"
           style={{
             background: "var(--dime-surface-card)",
             border: "1px solid var(--dime-border)",
           }}
         >
-          <span className="bt-dim">Risking {fmtStake(riskDollars)} to win</span>
-          <span className="bt-num font-bold" style={{ color: "var(--dime-mint)" }}>
-            {fmtStake(toWin)}
-          </span>
+          <div className="flex items-center justify-between">
+            <span className="bt-label">
+              {legs.length} legs · {ticketWager === "LIVE" ? "LIVE" : "PREGAME"}
+            </span>
+            <span className="bt-num text-[13px] font-bold">{oddsValid ? fmtOdds(parsedOdds) : ""}</span>
+          </div>
+          <div className="flex items-center justify-between text-[15px]">
+            <span className="bt-dim">Risking {fmtStake(riskDollars)} to win</span>
+            <span className="bt-num font-bold" style={{ color: "var(--dime-mint)" }}>
+              {fmtStake(toWin)}
+            </span>
+          </div>
         </div>
       )}
 
