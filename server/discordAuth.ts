@@ -302,9 +302,9 @@ export function registerDiscordAuthRoutes(app: Express) {
       `\n  → state              : "${logSafe(state.slice(0, 8))}…" (${state.length} chars)` +
       `\n  → state_expires_at   : ${new Date(expiresAt).toISOString()} (${STATE_TTL_MS/60000} min from now)` +
       `\n  → publicOrigin       : "${logSafe(publicOrigin)}"` +
-      `\n  → redirectUri        : "${redirectUri}"` +
-      `\n  → Discord Portal must have this URI registered: "${redirectUri}"` +
-      `\n  → authorizeUrl       : "${authorizeUrl.slice(0, 140)}…"`
+      `\n  → redirectUri        : "${logSafe(redirectUri)}"` +
+      `\n  → Discord Portal must have this URI registered: "${logSafe(redirectUri)}"` +
+      `\n  → authorizeUrl       : "${logSafe(authorizeUrl.slice(0, 140))}…"`
     );
 
     // ── CHECKPOINT 4: Redirect ───────────────────────────────────────────────
@@ -334,7 +334,7 @@ export function registerDiscordAuthRoutes(app: Express) {
       `[DiscordAuth][CHECKPOINT:5] /callback — requestId=${requestId}` +
       `\n  → code_present     : ${!!code}` +
       `\n  → state_present    : ${!!state}` +
-      `\n  → state_length     : ${state?.length ?? 0}` +
+      `\n  → state_length     : ${logSafe(state?.length ?? 0)}` +
       `\n  → discord_error    : "${logSafe(error ?? "none")}"` +
       `\n  → query_keys       : ${logSafe(JSON.stringify(Object.keys(req.query)))}` +
       `\n  → x-forwarded-host : "${logSafe(req.get("x-forwarded-host") ?? "NOT_SET")}"` +
@@ -453,7 +453,7 @@ export function registerDiscordAuthRoutes(app: Express) {
         ` POST ${DISCORD_API}/oauth2/token` +
         `\n  → grant_type  : "authorization_code"` +
         `\n  → redirect_uri: "${logSafe(redirectUri)}"` +
-        `\n  → code_length : ${code.length}` +
+        `\n  → code_length : ${logSafe(code.length)}` +
         `\n  → client_id   : "${ENV.discordClientId.slice(0,8)}…"`
       );
 
