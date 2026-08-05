@@ -65,6 +65,7 @@ import { invalidateAppUserByIdCache, lookupAppUserByIdFresh } from "../db";
 import { getCachedAppUserEntry, setCachedAppUser } from "../dbCircuitBreaker";
 import { resolveOwnerIdentity } from "../ownerAuth";
 import { installFatalErrorHandler } from "./fatalErrorHandler";
+import { logSafe } from "./logSafe";
 import {
   formatDimeRuntimeReadinessLog,
   getDimeRuntimeReadiness,
@@ -174,8 +175,8 @@ function fireRateLimitEvent(
 
   const tag = `[RateLimit][${limitType.toUpperCase()}]`;
   console.warn(
-    `${tag} BLOCKED | IP=${ip} path=${path} method=${method}` +
-      ` ua="${ua?.substring(0, 60) ?? "none"}"` +
+    `${tag} BLOCKED | IP=${logSafe(ip)} path=${logSafe(path)} method=${logSafe(method)}` +
+      ` ua="${logSafe(ua?.substring(0, 60) ?? "none")}"` +
       (now - lastSent < RATE_LIMIT_DEDUP_MS ? " [DB_DEDUP_SKIP]" : "")
   );
 
@@ -396,11 +397,11 @@ async function startServer() {
     const sampled = Math.random() < 0.1;
     if (sampled) {
       console.log(
-        `[HTTP_REQUEST] → ${req.method} ${req.originalUrl} | ts=${ts} ip=${ip}` +
-          ` host=${req.headers["host"] ?? "-"}` +
-          ` x-forwarded-for=${req.headers["x-forwarded-for"] ?? "-"}` +
-          ` x-forwarded-proto=${req.headers["x-forwarded-proto"] ?? "-"}` +
-          ` user-agent=${(req.headers["user-agent"] ?? "-").substring(0, 80)}`
+        `[HTTP_REQUEST] → ${req.method} ${logSafe(req.originalUrl)} | ts=${ts} ip=${logSafe(ip)}` +
+          ` host=${logSafe(req.headers["host"] ?? "-")}` +
+          ` x-forwarded-for=${logSafe(req.headers["x-forwarded-for"] ?? "-")}` +
+          ` x-forwarded-proto=${logSafe(req.headers["x-forwarded-proto"] ?? "-")}` +
+          ` user-agent=${logSafe((req.headers["user-agent"] ?? "-").toString().substring(0, 80))}`
       );
     }
     res.on("finish", () => {
@@ -409,7 +410,7 @@ async function startServer() {
       const isSlow = ms > 1000;
       if (sampled || isError || isSlow) {
         console.log(
-          `[HTTP_REQUEST] ← ${req.method} ${req.originalUrl} | status=${res.statusCode} duration=${ms}ms ip=${ip}` +
+          `[HTTP_REQUEST] ← ${req.method} ${logSafe(req.originalUrl)} | status=${res.statusCode} duration=${ms}ms ip=${logSafe(ip)}` +
             (isError ? " [ERROR]" : "") +
             (isSlow ? " [SLOW]" : "")
         );
@@ -430,7 +431,7 @@ async function startServer() {
       const canonical = host.slice(4); // strip "www."
       const redirectUrl = `${req.protocol}://${canonical}${req.originalUrl}`;
       console.log(
-        `[www→canonical] 308 redirect: ${host}${req.originalUrl} → ${redirectUrl}`
+        `[www→canonical] 308 redirect: ${logSafe(host)}${logSafe(req.originalUrl)} → ${logSafe(redirectUrl)}`
       );
       return res.redirect(308, redirectUrl);
     }
@@ -536,7 +537,7 @@ async function startServer() {
       req.socket?.remoteAddress ??
       "unknown";
     console.log(
-      `[HEALTH_CHECK] GET /health | ip=${ip} db.state=${circuit.state} dbOk=${dbOk}`
+      `[HEALTH_CHECK] GET /health | ip=${logSafe(ip)} db.state=${circuit.state} dbOk=${dbOk}`
     );
     // Integration state is REPORTED but deliberately does NOT drive the status
     // code. Railway probes this endpoint: returning 503 because Discord's
@@ -892,7 +893,7 @@ async function startServer() {
       if (!res.headersSent) {
         const isTrpc = req.path.startsWith("/api/trpc");
         console.error(
-          `[TIMEOUT] Request timed out: ${req.method} ${req.path} isTrpc=${isTrpc}`
+          `[TIMEOUT] Request timed out: ${req.method} ${logSafe(req.path)} isTrpc=${isTrpc}`
         );
         if (isTrpc) {
           // tRPC batch envelope: HTTP 200 with error in the result array
@@ -1052,7 +1053,7 @@ async function startServer() {
     // would pin repeat visitors to a stale date, so forbid caching.
     res.set("Cache-Control", "no-store");
     console.log(
-      `[legacy→canonical] 308 redirect: ${req.originalUrl} → ${target}`
+      `[legacy→canonical] 308 redirect: ${logSafe(req.originalUrl)} → ${logSafe(target)}`
     );
     res.redirect(308, target);
   });

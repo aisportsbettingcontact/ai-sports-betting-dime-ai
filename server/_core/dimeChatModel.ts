@@ -202,12 +202,15 @@ function getBlueprintCandidatePaths(path = DIME_CHAT_BLUEPRINT_PATH): {
 }
 
 function decodeXmlEntities(text: string): string {
+  // `&amp;` MUST be decoded last. Decoding it first turns "&amp;lt;" into
+  // "&lt;" and the next replace turns that into "<" — a double-unescape that
+  // lets encoded markup survive one round of escaping.
   return text
-    .replace(/&amp;/g, "&")
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
     .replace(/&quot;/g, '"')
-    .replace(/&apos;/g, "'");
+    .replace(/&apos;/g, "'")
+    .replace(/&amp;/g, "&");
 }
 
 function textFromDocumentXml(xml: string): string {

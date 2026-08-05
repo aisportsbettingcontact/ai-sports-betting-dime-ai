@@ -353,3 +353,26 @@ describe("Dime Chat model profile", () => {
     expect(DIME_CHAT_PROFILE_METADATA.blueprintHash).toMatch(/^[a-f0-9]{64}$/);
   });
 });
+
+describe("XML entity decoding is not double-unescaping (security regression)", () => {
+  it("leaves an escaped entity escaped instead of decoding it twice", () => {
+    // "&amp;lt;" is the ESCAPED form of the literal text "&lt;". Decoding
+    // &amp; FIRST produced "&lt;", and the next pass produced "<" — markup
+    // smuggled through one round of escaping. &amp; must decode last.
+    const docx = makeStoredZip(
+      "word/document.xml",
+      "<w:document><w:body><w:p><w:r><w:t>&amp;lt;script&amp;gt;alert(1)&amp;lt;/script&amp;gt;</w:t></w:r></w:p></w:body></w:document>"
+    );
+    const out = extractTextFromDocx(docx);
+    expect(out).toBe("&lt;script&gt;alert(1)&lt;/script&gt;");
+    expect(out).not.toContain("<script>");
+  });
+
+  it("still decodes single-escaped entities correctly", () => {
+    const docx = makeStoredZip(
+      "word/document.xml",
+      "<w:document><w:body><w:p><w:r><w:t>a &lt;b&gt; c &amp; d &quot;e&quot; &apos;f&apos;</w:t></w:r></w:p></w:body></w:document>"
+    );
+    expect(extractTextFromDocx(docx)).toBe("a <b> c & d \"e\" 'f'");
+  });
+});

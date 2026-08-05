@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import path from "path";
 import fs from "fs";
+import { logSafe } from "./logSafe";
 
 /**
  * /dime-storage/* asset resolution — LOCAL, vendored-only.
@@ -35,13 +36,13 @@ export function registerStorageProxy(app: Express) {
       fs.existsSync(candidate) &&
       fs.statSync(candidate).isFile()
     ) {
-      console.log(`[StorageProxy][LOCAL] ${key} → vendored file`);
+      console.log(`[StorageProxy][LOCAL] ${logSafe(key)} → vendored file`);
       res.set("Cache-Control", "public, max-age=86400");
       res.sendFile(candidate);
       return;
     }
 
-    console.warn(`[StorageProxy][MISS] ${key} — not vendored`);
+    console.warn(`[StorageProxy][MISS] ${logSafe(key)} — not vendored`);
     res.status(404).send("Asset not found");
   });
 }

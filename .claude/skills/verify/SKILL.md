@@ -26,7 +26,7 @@ node scripts/smoke-deploy.mjs http://127.0.0.1:3910   # 6 checks, exit 0 = pass
 # Bot prerender (SEO snapshot; must carry X-Prerender: 1):
 curl -s -D - http://127.0.0.1:3910/ -A "Googlebot/2.1" | less
 # CSRF probe (expect 403 / 200):
-curl -o /dev/null -w "%{http_code}" -X POST http://127.0.0.1:3910/api/trpc/auth.logout?batch=1 \
+curl -o /dev/null -w "%{http_code}" -X POST http://127.0.0.1:3910/api/trpc/appUsers.logout?batch=1 \
   -H "content-type: application/json" -H "origin: https://evil.example.com" -d "{}"
 ```
 

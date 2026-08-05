@@ -44,6 +44,7 @@ import {
   type InsertWc2026Lineup,
 } from "../../drizzle/wc2026.schema";
 import { eq, and, sql } from "drizzle-orm";
+import { logSafe } from "../_core/logSafe";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const ESPN_SCOREBOARD_URL = "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard";
@@ -136,7 +137,7 @@ interface MatchSummary {
 // ─── ESPN API fetch helpers ───────────────────────────────────────────────────
 async function fetchEspnScoreboard(dateStr: string): Promise<EspnEvent[]> {
   const url = `${ESPN_SCOREBOARD_URL}?dates=${dateStr}`;
-  console.log(`[WC2026ESPN] [INPUT] Fetching scoreboard: ${url}`);
+  console.log(`[WC2026ESPN] [INPUT] Fetching scoreboard: ${logSafe(url)}`);
   const resp = await fetch(url, { headers: ESPN_HEADERS });
   if (!resp.ok) throw new Error(`ESPN scoreboard HTTP ${resp.status}`);
   const data = await resp.json();
@@ -261,7 +262,7 @@ export async function ingestWc2026EspnResults(options: {
     matchSummaries: [],
   };
 
-  console.log(`[WC2026ESPN] [INPUT] Starting ingestion for date=${dateStr} onlyFinal=${onlyFinalMatches} forceReingest=${forceReingest}`);
+  console.log(`[WC2026ESPN] [INPUT] Starting ingestion for date=${logSafe(dateStr)} onlyFinal=${logSafe(onlyFinalMatches)} forceReingest=${logSafe(forceReingest)}`);
 
   // Step 1: Fetch scoreboard
   let events: EspnEvent[];
@@ -747,7 +748,7 @@ export async function ingestWc2026EspnResults(options: {
   }
 
   const overallPass = result.errors.length === 0;
-  console.log(`[WC2026ESPN] [VERIFY] ${overallPass ? "PASS" : "PARTIAL"} — date=${dateStr} matchesUpdated=${result.matchesUpdated} statsWritten=${result.statsWritten} eventsWritten=${result.eventsWritten} lineupsWritten=${result.lineupsWritten} errors=${result.errors.length}`);
+  console.log(`[WC2026ESPN] [VERIFY] ${overallPass ? "PASS" : "PARTIAL"} — date=${logSafe(dateStr)} matchesUpdated=${result.matchesUpdated} statsWritten=${result.statsWritten} eventsWritten=${result.eventsWritten} lineupsWritten=${result.lineupsWritten} errors=${result.errors.length}`);
 
   return result;
 }

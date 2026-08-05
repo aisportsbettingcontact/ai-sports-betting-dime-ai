@@ -50,6 +50,7 @@ import { ENV } from "./env";
 import { notifyOwner } from "./notification";
 import { postSecurityAlert } from "../discord/discordSecurityAlert";
 import type { TrpcContext } from "./context";
+import { logSafe } from "./logSafe";
 
 // ─── CSRF-safe origin set ─────────────────────────────────────────────────────
 /**
@@ -184,7 +185,7 @@ export function isOriginAllowed(origin: string | undefined): boolean {
     normalized.startsWith("https://") &&
     ALLOWED_ORIGIN_SUFFIXES.some((suffix) => normalized.endsWith(suffix))
   ) {
-    console.log(`[CSRF] Allowed origin (ALLOWED_ORIGIN_SUFFIXES): ${normalized}`);
+    console.log(`[CSRF] Allowed origin (ALLOWED_ORIGIN_SUFFIXES): ${logSafe(normalized)}`);
     return true;
   }
 

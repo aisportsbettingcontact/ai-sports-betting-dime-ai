@@ -24,6 +24,7 @@
 
 import { timingSafeEqual } from "crypto";
 import type { Request, Response } from "express";
+import { logSafe } from "../_core/logSafe";
 
 export type CronAuthResult =
   | { ok: true }
@@ -42,8 +43,15 @@ function extractPresentedToken(req: HeadersBag): string | null {
   const authz = raw["authorization"] ?? raw["Authorization"];
   const authStr = Array.isArray(authz) ? authz[0] : authz;
   if (typeof authStr === "string") {
-    const match = /^Bearer\s+(.+)$/i.exec(authStr.trim());
-    if (match) return match[1].trim();
+    // `/^Bearer\s+(.+)$/` backtracks quadratically on "Bearer" followed by a
+    // long run of whitespace — reachable BEFORE any secret check, so an
+    // unauthenticated request can burn CPU. Fixed-width anchor + slice is
+    // linear and behaviourally identical.
+    const trimmed = authStr.trim();
+    if (/^Bearer\s/i.test(trimmed)) {
+      const token = trimmed.slice("Bearer".length).trim();
+      if (token.length > 0) return token;
+    }
   }
   return null;
 }
@@ -92,8 +100,8 @@ export function requireCronSecret(req: Request, res: Response, jobLabel: string)
   const result = verifyCronSecret(req as unknown as HeadersBag);
   if (!result.ok) {
     console.warn(
-      `[Cron:${jobLabel}] [AUTH] REJECT status=${result.status} reason=${result.error} ` +
-      `ip=${req.ip ?? "?"} ua="${(req.headers["user-agent"] as string | undefined)?.slice(0, 80) ?? "?"}"`
+      `[Cron:${jobLabel}] [AUTH] REJECT status=${result.status} reason=${logSafe(result.error)} ` +
+      `ip=${req.ip ?? "?"} ua="${logSafe((req.headers["user-agent"] as string | undefined)?.slice(0, 80) ?? "?")}"`
     );
     res.status(result.status).json({ ok: false, error: result.error });
     return false;
