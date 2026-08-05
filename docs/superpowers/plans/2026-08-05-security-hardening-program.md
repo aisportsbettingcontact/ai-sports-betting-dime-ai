@@ -126,3 +126,31 @@ endpoints (+ `games.list`) is **intentionally always-on** (like Phase 3's field 
 the inert-when-off claim: authed model responses are now uniformly `private, no-store` regardless of
 `EDGE_MODE`. This is a strict security improvement with a negligible perf cost (the ETag was already
 inert — no 304 is ever emitted).
+
+---
+
+## Phase 1½ — schema/code-agreement deploy gate · BUILT (the #370 corrective action)
+
+Turns the documented "migration before code" law into an ENFORCED, fail-safe gate. The #370 and
+2026-07-31 outages were identical: code SELECTing a new `app_users` column deployed before the
+migration; every auth read threw `ER_BAD_FIELD_ERROR`, swallowed to "invalid credentials" — a
+silent total auth outage that HTTP 200/401 probes could not distinguish from healthy.
+
+- **`server/db.ts` `probeAppUsersSchema()`** — runs the real Drizzle column enumeration against a
+  no-match row and SURFACES the schema error as a verdict (`ok` | `schema_mismatch` | `unknown`),
+  instead of swallowing it the way `getAppUserById` must for its callers.
+- **`server/_core/schemaHealthGate.ts`** — caches the verdict; `/health` reports **503 while the
+  live schema is behind the code**, so Railway's deploy healthcheck fails and it **keeps the
+  previous healthy deploy** instead of cutting over to the broken one — PREVENTION, not just
+  detection. Safety asymmetry: only a CONFIRMED mismatch fails; `unknown` (transient/DB-down) never
+  does (the DB-circuit gate already covers DB-down; freezing deploys on a blip would be worse).
+  Emergency escape hatch: `SCHEMA_HEALTHGATE=off`.
+- **Boot probe before `server.listen`** (bounded 5s so a slow DB never blocks startup) closes the
+  race where a premature 200 lets a broken deploy go live; a 60s interval re-probe catches drift.
+- **`scripts/smoke-deploy.mjs`** asserts `schema !== schema_mismatch` with the exact remediation.
+
+**Gates:** tsc clean · schema-gate + updated health tests green · gated suite **PASS (3810)** ·
+prettier clean. `healthIntegrations.test.ts` updated: the status code is now driven by database
+serviceability = DB circuit **+ schema agreement** (still never by integrations). Terminal outcome:
+**BUILT — enabled by default; a code-ahead-of-migration deploy now fails its healthcheck instead of
+silently downing auth.**
