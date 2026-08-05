@@ -1,11 +1,39 @@
 # Control plane — rulesets, merge queue, CODEOWNERS
 
-Current live state (verified 2026-08-05): ruleset **`main-protection` (id 18701573,
-active)** with `pull_request`, `required_status_checks`, `non_fast_forward`,
-`deletion`; classic branch protection with strict checks
-(Security Audit, TypeScript Check, Vitest, Secret Scan (gitleaks)),
-1 approval + code-owner + last-push approval, stale-approval dismissal,
-conversation resolution, `enforce_admins`, force-push/deletion blocked.
+Current live state (re-verified 2026-08-05, post-merge): ruleset
+**`main-protection` (id 18701573, active)** with `pull_request`,
+`required_status_checks`, `non_fast_forward`, `deletion`; classic branch
+protection with strict checks, 1 approval + code-owner + last-push approval,
+stale-approval dismissal, conversation resolution, `enforce_admins`,
+force-push/deletion blocked.
+
+> **DRIFT FOUND 2026-08-05 — the two surfaces disagree.** `main` is guarded by
+> *two independent* mechanisms, and they do not carry the same context list:
+>
+> | Context | Ruleset 18701573 | Classic protection |
+> | --- | --- | --- |
+> | Security Audit | ✅ | ✅ |
+> | TypeScript Check | ✅ | ✅ |
+> | Vitest | ✅ | ✅ |
+> | **Secret Scan (gitleaks)** | ❌ **missing** | ✅ |
+>
+> Gitleaks therefore blocks merges only through classic protection. If classic
+> protection is ever relaxed (as it legitimately was during the 2026-08-05
+> manus purge break-glass), secret scanning silently stops gating. Earlier
+> revisions of this document asserted four contexts in the ruleset; that was
+> aspirational, not measured. `scripts/graduate-ruleset.mjs` now prints this
+> comparison on every run so the drift cannot go quiet again.
+
+## Graduating checks — use the script, not hand-edited JSON
+
+`node scripts/graduate-ruleset.mjs --wave=<1|2|3> [--apply] [--force]`
+
+Dry-run by default. Before writing anything it proves, against live GitHub
+data, that (1) the wave's observation window from ROLLOUT.md has elapsed,
+(2) every context it is about to require actually **reported** on a recent
+merged PR — requiring a context that never reports wedges every merge on
+"Expected — waiting for status" — and (3) each of those reports was green.
+`--force` overrides only the calendar, never the reported-and-green proof.
 
 ## Target configuration
 
