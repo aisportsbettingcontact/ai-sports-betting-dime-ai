@@ -41,7 +41,14 @@ export function logSafe(
     .replace(/\r/g, "\\r")
     .replace(/\n/g, "\\n")
     .replace(/\t/g, "\\t")
-    .replace(OTHER_CONTROL_CHARS, "?");
+    .replace(OTHER_CONTROL_CHARS, "?")
+    // Functionally a no-op — the escapes above already removed every CR and
+    // LF. It exists because CodeQL's js/log-injection barrier recognizes the
+    // canonical `replace(/[\r\n]/g, ...)` shape, and without it the scanner
+    // re-flags all 63 sanitized call sites (verified on main at ef74b161a:
+    // 54 alerts closed, 63 identical ones reopened on the wrapped lines).
+    // Keep it last so it can never mask a gap in the escapes above.
+    .replace(/[\r\n]/g, "");
   return sanitized.length > maxLength
     ? `${sanitized.slice(0, maxLength)}…[+${sanitized.length - maxLength}]`
     : sanitized;
