@@ -75,8 +75,11 @@ describe("the ticket price calculates live, and never overwrites the user's", ()
     expect(builder).toMatch(/onTicketOddsManualChange\(false\)/);
   });
 
-  it("says plainly that the entered price is what settles", () => {
-    expect(builder).toMatch(/price you enter is what settles|entered price is what settles|that price is what settles/i);
+  it("the review block shows the price the ticket will settle at", () => {
+    // The standing caption was removed by owner directive (2026-08-04). The
+    // user still sees the settling price at the last look before submit: the
+    // review block renders the ENTERED odds, not the calculated suggestion.
+    expect(builder).toMatch(/fmtOdds\(parsedOdds\)/);
   });
 
   it("blocks submit on a price outside American range", () => {
@@ -96,13 +99,15 @@ describe("the stake is on the TICKET, not the legs", () => {
     // A risk box beside each leg invited the reading that legs are separately
     // staked. A parlay has one stake.
     expect(builder).toMatch(/id="bt-parlay-risk"/);
-    expect(builder).toMatch(/One stake on the whole ticket/);
+    // Exactly two inputs live in the builder — the ticket price and the one
+    // stake. A third would be a per-leg field sneaking back in.
+    expect((builder.match(/<input/g) ?? []).length).toBe(2);
   });
 
   it("REGRESSION: the leg form hides risk and to-win in parlay mode", () => {
     const page = readFileSync(join(__dirname, "../pages/BetTracker.tsx"), "utf8");
     expect(page).toMatch(/entryMode === "PARLAY" \? "grid grid-cols-1 gap-3"/);
-    expect(page).toMatch(/\{entryMode === "SINGLE" && \(/);
+    expect(page).toMatch(/\{entryMode === "STRAIGHT" && \(/);
   });
 
   it("the leg field is labelled as a leg price", () => {
