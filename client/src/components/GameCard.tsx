@@ -3817,7 +3817,8 @@ function GameCardInner({
               <span
                 className="rounded-full animate-pulse inline-block"
                 style={{
-                  width: "7px" /* 2026-08-05: MASTER live-indicator spec (was w-1 = 4px) */,
+                  width:
+                    "7px" /* 2026-08-05: MASTER live-indicator spec (was w-1 = 4px) */,
                   height: "7px",
                   background: "var(--dime-mint, #45E0A8)",
                 }}
@@ -4117,7 +4118,8 @@ function GameCardInner({
                   <span
                     className="rounded-full animate-pulse inline-block flex-shrink-0"
                     style={{
-                      width: "7px", /* 2026-08-05: MASTER live-indicator spec (was 5px) */
+                      width:
+                        "7px" /* 2026-08-05: MASTER live-indicator spec (was 5px) */,
                       height: "7px",
                       background: "var(--dime-mint, #45E0A8)",
                     }}
