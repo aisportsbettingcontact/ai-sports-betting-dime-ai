@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildCycleArtifact, isDuplicate, assertRevish, type MergeFacts } from "./cycle";
+import { buildCycleArtifact, isDuplicate, assertRevish, prNumberFromMergeSubject, type MergeFacts } from "./cycle";
 
 const FACTS: MergeFacts = {
   commitSha: "6965b5800ee00ee7da720cc7703202ff4f8b65ce",
@@ -81,5 +81,20 @@ describe("assertRevish — regression for CodeQL js/indirect-command-line-inject
   it("refuses empty and absurdly long values", () => {
     expect(() => assertRevish("")).toThrow(/refusing/i);
     expect(() => assertRevish("a".repeat(256))).toThrow(/refusing/i);
+  });
+});
+
+describe("prNumberFromMergeSubject — regression for the null proofContractRunId", () => {
+  it("extracts the PR number from a GitHub merge subject", () => {
+    expect(prNumberFromMergeSubject("Merge pull request #391 from org/branch")).toBe(391);
+  });
+
+  it("returns null for a non-merge subject rather than guessing", () => {
+    expect(prNumberFromMergeSubject("fix(os): something")).toBeNull();
+    expect(prNumberFromMergeSubject("")).toBeNull();
+  });
+
+  it("does not confuse an issue reference elsewhere in the subject", () => {
+    expect(prNumberFromMergeSubject("fix: closes #123")).toBeNull();
   });
 });
