@@ -399,9 +399,9 @@ async function startServer() {
       console.log(
         `[HTTP_REQUEST] → ${req.method} ${logSafe(req.originalUrl)} | ts=${ts} ip=${logSafe(ip)}` +
           ` host=${logSafe(req.headers["host"] ?? "-")}` +
-          ` x-forwarded-for=${req.headers["x-forwarded-for"] ?? "-"}` +
-          ` x-forwarded-proto=${req.headers["x-forwarded-proto"] ?? "-"}` +
-          ` user-agent=${(req.headers["user-agent"] ?? "-").substring(0, 80)}`
+          ` x-forwarded-for=${logSafe(req.headers["x-forwarded-for"] ?? "-")}` +
+          ` x-forwarded-proto=${logSafe(req.headers["x-forwarded-proto"] ?? "-")}` +
+          ` user-agent=${logSafe((req.headers["user-agent"] ?? "-").toString().substring(0, 80))}`
       );
     }
     res.on("finish", () => {

@@ -525,11 +525,15 @@ async function fetchSecurityChannel(tag: string): Promise<TextChannel | null> {
       console.error(`${tag} Channel ${SECURITY_CHANNEL_ID} is not a TextChannel or could not be fetched`);
       return null;
     }
-    console.log(`${tag} Channel resolved: #${rawChannel.name} in ${rawChannel.guild?.name ?? "unknown"}`);
+    console.log(
+      `${tag} Channel resolved: #${logSafe(rawChannel.name)} in ${logSafe(rawChannel.guild?.name ?? "unknown")}`
+    );
     return rawChannel;
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error(`${tag} Failed to fetch channel ${SECURITY_CHANNEL_ID}: ${msg}`);
+    console.error(
+      `${tag} Failed to fetch channel ${SECURITY_CHANNEL_ID}: ${logSafe(msg)}`
+    );
     return null;
   }
 }
@@ -629,10 +633,10 @@ export async function postSecurityAlert(payload: SecurityAlertPayload): Promise<
   console.log(
     `${tag} Posting security alert to channel ${SECURITY_CHANNEL_ID}` +
     ` | IP=${logSafe(payload.ip)}` +
-    ` path="${payload.path}"` +
-    ` method=${payload.method}` +
-    (payload.blockedOrigin ? ` blockedOrigin="${payload.blockedOrigin}"` : "") +
-    (payload.context ? ` context="${payload.context}"` : "") +
+    ` path="${logSafe(payload.path)}"` +
+    ` method=${logSafe(payload.method)}` +
+    (payload.blockedOrigin ? ` blockedOrigin="${logSafe(payload.blockedOrigin)}"` : "") +
+    (payload.context ? ` context="${logSafe(payload.context)}"` : "") +
     ` occurredAt=${formatTimestamp(payload.occurredAt)}`
   );
 
@@ -647,7 +651,7 @@ export async function postSecurityAlert(payload: SecurityAlertPayload): Promise<
     console.log(
       `${tag} [OUTPUT] Alert posted successfully` +
       ` | IP=${logSafe(payload.ip)}` +
-      ` channel=#${channel.name}` +
+      ` channel=#${logSafe(channel.name)}` +
       ` eventType=${payload.eventType}`
     );
   } catch (err: unknown) {
