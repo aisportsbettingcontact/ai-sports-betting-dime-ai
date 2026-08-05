@@ -1,5 +1,7 @@
 # Dime AI — UI Forensic Audit
 
+> Screenshot evidence removed from git on 2026-08-05 to reduce clone size; recover from git history if needed. JSON census sidecars under `evidence/` remain tracked.
+
 **Date** 2026-07-31 · **Repo** `aisportsbettingcontact/ai-sports-betting-dime-ai` · **Branch** `fix/mlb-verify-dynamic-total` · **Commit** `fcb85dddf25b5730ab9539bcc68c6e9a608a85f0`
 
 **Skills loaded:** apple-design, emil-design-eng, ui-ux-pro-max (v2.11.0 plugin), ui-ux-pro-max:design-system, ui-styling, design. **Absent from arsenal** (noted, not blocking): `dime-brand-system`, `dime-ai-quality`, `web-design-guidelines`, `webapp-testing`, `design-taste-frontend-v1`. Brand law was read directly from source: `design-system/dime-ai/MASTER.md` + its superseding amendments in `client/src/index.css` / `dime-ai/THREE-COLOR-LAW.md`.
