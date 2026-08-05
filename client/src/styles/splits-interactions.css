@@ -260,3 +260,52 @@ html:not(.dark) .cal-trigger img {
     transition: none !important;
   }
 }
+
+/* ── 2026-08-05 (mobile refinement): phone tier ──────────────────────────
+ * Measured under true mobile emulation (iPhone UA + touch + DPR2). */
+@media (max-width: 767.98px) {
+  /* Market toggles: tighter tracking so all three complete labels fit the
+   * equal-thirds row (the 0.08em tracking clipped "MONEYLINE" to "MONEYLIN"
+   * at 375-390 before the mobile chip label moved to "ML"). */
+  .bsp-toggle {
+    letter-spacing: 0.03em !important;
+  }
+  /* History disclosure row: 44px touch floor. */
+  .ohp-toggle {
+    min-height: 44px;
+  }
+  /* History tables: the desktop clamp padding spends width the phone does
+   * not have — 4px cells keep seven columns legible without sideways loss,
+   * and the TIME column may wrap to two lines instead of forcing the whole
+   * table wider (its nowrap is inline, hence the important). */
+  .ohp-body table th,
+  .ohp-body table td {
+    padding: 4px !important;
+  }
+  .ohp-body table th:first-child,
+  .ohp-body table td:first-child {
+    white-space: normal !important;
+    max-width: 3.6rem;
+  }
+  /* Scroll panes that remain after the pane-width repair (history tables
+   * wider than seven 4px columns): a thin scrollbar is the affordance —
+   * gradient fades are banned by brand law. */
+  .ohp-body [role="group"],
+  .bs-page .gc-splitgrid [role="group"] {
+    scrollbar-width: thin;
+  }
+  /* Favorite star: visual size stays, the hit area grows to the 44px floor. */
+  .bs-page .gc-star {
+    position: relative;
+  }
+  .bs-page .gc-star::after {
+    content: "";
+    position: absolute;
+    inset: -6px;
+  }
+  /* Date header: the "·" separator orphans onto its own line when the date
+   * and sport labels wrap at narrow widths — the gap already separates them. */
+  .bs-page .bs-datehdr + span {
+    display: none;
+  }
+}

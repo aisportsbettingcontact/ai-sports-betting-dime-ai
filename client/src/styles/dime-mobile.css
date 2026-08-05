@@ -750,12 +750,47 @@ html:not(.dark) .bt-float {
     margin: 8px 12px;
     width: auto !important;
   }
-  /* Give the splits column room at 390px — no in-card horizontal scroll. */
+  /* Give the splits column room at 390px — no in-card horizontal scroll.
+   * 2026-08-05 (mobile refinement): measured under true mobile emulation the
+   * old floors amputated the HOME half of every bar behind an unindicated
+   * scroll pane — the 148px frozen-column floor plus the scroll pane's fixed
+   * 220px inner minimum outgrew a 320-390px card, so the pane silently
+   * overflowed and the home percentages were off-screen. The frozen column
+   * now floors at 118px (matchup text truncates with its own ellipsis) and
+   * the inner pane sheds its fixed minimum so both bar halves fit the real
+   * pane width (the bars' own min-content still guards label integrity). */
   .bs-page .gc-splitgrid {
-    grid-template-columns: clamp(148px, 40vw, 200px) 1fr !important;
+    grid-template-columns: clamp(118px, 40vw, 200px) 1fr !important;
   }
   .bs-page .gc-scrollinner {
-    min-width: 220px !important;
+    min-width: 0 !important;
+  }
+  /* Adjacent floating cards belonging to one game group read as a pair:
+   * the history card tucks flush under its game card (shared background, no
+   * inner radii) instead of floating apart at full row rhythm — the -6px
+   * overlap collapses the double 8px gap the generic card rule would leave. */
+  .bs-page [data-edge-tier]:has(+ [data-edge-tier]) {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+  .bs-page [data-edge-tier] + [data-edge-tier] {
+    margin-top: -6px;
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+  }
+  /* Sticky-chrome seam: the floating nav publishes its height + an 8px
+   * breathing gap, and the page header pins below it (index.css) — the gap
+   * itself is transparent, so scrolled card fragments glint through the
+   * strip on every scroll. Cover it with page ground. */
+  body.dime-floating-nav-active .bs-page .bs-header::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 100%;
+    height: 8px;
+    background: var(--dime-bg);
+    pointer-events: none;
   }
 
   /* Mobile type floor (MASTER.md): no content text below 11px on phones.

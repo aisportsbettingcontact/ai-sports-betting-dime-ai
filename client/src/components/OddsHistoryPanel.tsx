@@ -545,7 +545,12 @@ function MarketHistoryTable({
   );
 
   return (
+    // 2026-08-05 (mobile refinement): the history table overflows sideways on
+    // phones — the pane must be keyboard-reachable, not pointer-only.
     <div
+      tabIndex={0}
+      role="group"
+      aria-label="History table — scroll horizontally for more columns"
       style={{
         overflowX: "auto",
         WebkitOverflowScrolling: "touch",
