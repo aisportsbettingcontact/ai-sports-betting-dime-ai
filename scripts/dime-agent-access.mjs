@@ -1223,12 +1223,33 @@ async function verifyRunPodCredential(manifest) {
 export async function credentialBrokerPlan(
   manifest,
   scope,
-  { executableResolver = resolveTrustedExecutable } = {}
+  {
+    executableResolver = resolveTrustedExecutable,
+    brokerFileValidator = secureBrokerFile,
+  } = {}
 ) {
   invariant(CREDENTIAL_SCOPES.has(scope), `unknown credential scope: ${scope}`);
   const brokerEnvFile = EXPECTED_HF_SCOPES.has(scope)
     ? manifest.providers.huggingFace.scopes[scope].brokerEnvFile
     : manifest.providers.runPod.brokerEnvFile;
+  const brokerPath = resolve(REPOSITORY_ROOT, brokerEnvFile);
+  // Cross-process TOCTOU, narrowed — NOT closed.
+  //
+  // The plan hands `op` a PATH, and `op` resolves that name again in its own
+  // process, so the bytes it loads are never provably the bytes we validated.
+  // Preflight validation (brokerFileState) can run minutes earlier, which is a
+  // wide window; re-validating here shrinks it to the gap between this check
+  // and op's open. Closing it entirely means never passing a name — handing
+  // over an already-open descriptor, which `op run --env-file` does not
+  // accept. Documented in docs/verification/AUDIT.md rather than left implicit.
+  invariant(
+    await brokerFileValidator(
+      brokerPath,
+      expectedBrokerVariable(scope),
+      expectedBrokerReference(manifest, scope)
+    ),
+    `broker reference file for ${scope} failed validation immediately before handoff`
+  );
   const [op, node, environmentLauncher] = await Promise.all([
     executableResolver("op"),
     executableResolver("node"),
@@ -1239,7 +1260,7 @@ export async function credentialBrokerPlan(
     executableSha256: op.sha256,
     args: [
       "run",
-      `--env-file=${resolve(REPOSITORY_ROOT, brokerEnvFile)}`,
+      `--env-file=${brokerPath}`,
       "--",
       environmentLauncher.path,
       "-u",

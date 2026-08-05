@@ -7,22 +7,28 @@ protection with strict checks, 1 approval + code-owner + last-push approval,
 stale-approval dismissal, conversation resolution, `enforce_admins`,
 force-push/deletion blocked.
 
-> **DRIFT FOUND 2026-08-05 — the two surfaces disagree.** `main` is guarded by
-> *two independent* mechanisms, and they do not carry the same context list:
+> **DRIFT FOUND AND CLOSED 2026-08-05.** `main` is guarded by *two independent*
+> mechanisms, and they had drifted apart: **`Secret Scan (gitleaks)` was
+> required by classic protection but ABSENT from ruleset 18701573**, so secret
+> scanning gated merges through only one of the two surfaces. If classic
+> protection were ever relaxed — as it legitimately was during the 2026-08-05
+> manus-purge break-glass — secret scanning would have silently stopped
+> gating. Earlier revisions of this document asserted four ruleset contexts;
+> that was aspirational, not measured.
+>
+> Both surfaces now carry the same four contexts, and **every one is pinned to
+> `integration_id: 15368` (GitHub Actions)**. The three pre-existing entries
+> were unpinned, which meant a same-named check from any other app could have
+> satisfied them; all four were verified to genuinely originate from the
+> Actions app before pinning. `scripts/graduate-ruleset.mjs` prints the
+> ruleset-vs-classic comparison on every run so this cannot go quiet again.
 >
 > | Context | Ruleset 18701573 | Classic protection |
 > | --- | --- | --- |
-> | Security Audit | ✅ | ✅ |
-> | TypeScript Check | ✅ | ✅ |
-> | Vitest | ✅ | ✅ |
-> | **Secret Scan (gitleaks)** | ❌ **missing** | ✅ |
->
-> Gitleaks therefore blocks merges only through classic protection. If classic
-> protection is ever relaxed (as it legitimately was during the 2026-08-05
-> manus purge break-glass), secret scanning silently stops gating. Earlier
-> revisions of this document asserted four contexts in the ruleset; that was
-> aspirational, not measured. `scripts/graduate-ruleset.mjs` now prints this
-> comparison on every run so the drift cannot go quiet again.
+> | Security Audit | ✅ pinned | ✅ |
+> | TypeScript Check | ✅ pinned | ✅ |
+> | Vitest | ✅ pinned | ✅ |
+> | Secret Scan (gitleaks) | ✅ pinned | ✅ |
 
 ## Graduating checks — use the script, not hand-edited JSON
 
