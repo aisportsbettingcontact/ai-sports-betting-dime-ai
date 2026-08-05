@@ -48,6 +48,25 @@ await check("GET /health → 200", async () => {
   return (await res.text()).slice(0, 60);
 });
 
+await check("schema/code agreement — live app_users schema is not behind the code", async () => {
+  // Phase 1½: a code-ahead-of-migration deploy reports schema=schema_mismatch and
+  // /health 503, so Railway keeps the previous deploy. If this smoke ever runs
+  // against such an origin, fail loudly with the exact remediation. `unknown`
+  // (transient/DB-unavailable) is not a failure — the DB gate covers that.
+  const res = await fetch(`${base}/health`, { redirect: "manual" });
+  let body = {};
+  try {
+    body = await res.json();
+  } catch {
+    return "N/A — /health did not return JSON";
+  }
+  expect(
+    body.schema !== "schema_mismatch" && res.status !== 503,
+    `schema=${body.schema} status=${res.status} — app_users schema is BEHIND the code (code deployed ahead of its migration). Run db-push.yml, then redeploy.`
+  );
+  return `schema=${body.schema ?? "n/a"}`;
+});
+
 let indexHtml = "";
 await check("GET / → 200 HTML shell", async () => {
   const res = await fetch(`${base}/`);

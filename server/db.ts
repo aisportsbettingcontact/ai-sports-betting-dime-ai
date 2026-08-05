@@ -685,6 +685,45 @@ export async function getAppUserById(id: number) {
   }
 }
 
+export type AppUsersSchemaVerdict = "ok" | "schema_mismatch" | "unknown";
+
+/**
+ * Boot/health probe: does the LIVE app_users schema satisfy the CURRENT code's
+ * column set? Runs the real Drizzle column enumeration (`select()` names every
+ * declared column) against a row that never matches (id=0), so it transfers no
+ * rows but still forces the database to validate every column at plan time.
+ *
+ * Unlike getAppUserById (whose null return is load-bearing for callers), this
+ * SURFACES the schema error as a verdict — that swallowing is exactly how the
+ * #370 / 2026-07-31 outages stayed silent. Returns:
+ *   - "ok"               every declared column exists on the live table
+ *   - "schema_mismatch"  ER_BAD_FIELD_ERROR / ER_NO_SUCH_TABLE — code is ahead
+ *                        of its migration (the deploy that must NOT go live)
+ *   - "unknown"          DB unavailable / transient — caller must NOT treat this
+ *                        as a failure (the DB-circuit health gate already covers
+ *                        DB-down; blocking deploys on a DB blip would be worse)
+ * Never throws. No cache — always reads the live schema.
+ */
+export async function probeAppUsersSchema(): Promise<AppUsersSchemaVerdict> {
+  const db = await getDb();
+  if (!db) return "unknown";
+  try {
+    await db.select().from(appUsers).where(eq(appUsers.id, 0)).limit(1);
+    return "ok";
+  } catch (err) {
+    if (isSchemaError(err)) {
+      console.error(
+        `[DB][probeAppUsersSchema] SCHEMA MISMATCH — the app_users query is invalid ` +
+          `against the live schema. Code deployed ahead of its migration? ` +
+          `code=${driverErrorCode(err)} message=${err instanceof Error ? err.message : String(err)}`
+      );
+      return "schema_mismatch";
+    }
+    // Connection reset / timeout / circuit trip → transient, not a mismatch.
+    return "unknown";
+  }
+}
+
 /**
  * Batch identity lookup for the analytics profiling read-time join (owner-only).
  * Returns ONLY display fields (no email/password) for the given app-user ids.
