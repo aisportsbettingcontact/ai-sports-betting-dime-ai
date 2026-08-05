@@ -26,7 +26,9 @@ allowed-tools: Bash(railway:*), Bash(which:*), Bash(command:*), Bash(npm:*), Bas
 > Railway context comes from `pnpm agent:context` / the hash-pinned Dime keychain
 > broker (`scripts/dime-railway-secure.mjs`). `remoteMutationsAuthorized` is
 > **false** — no agent-driven Railway mutations, and no auto-approved `railway`
-> Bash commands (the upstream auto-approve hook is removed in this fork).
+> Bash commands (the upstream auto-approve hook is removed in this fork). All
+> remote-MCP mutation tools (plus the secret-revealing `list-variables`) are
+> hard-denied in `.claude/settings.json` `permissions.deny` — read tools remain.
 
 ## Railway resource model
 
