@@ -1261,7 +1261,7 @@ function DesktopMergedPanel({
   const modelGreen: React.CSSProperties = {
     fontSize: VAL_FS,
     fontWeight: 700,
-    color: "#45E0A8",
+    color: "var(--dime-mint-text, #45E0A8)", // 2026-08-05 token law: mint text is theme-correct
     letterSpacing: "0.02em",
   };
   const modelWhite: React.CSSProperties = {
@@ -1603,7 +1603,7 @@ function DesktopMergedPanel({
           <span className="text-center" style={colHdrStyle("#FFFFFF")}>
             BOOK
           </span>
-          <span className="text-center" style={colHdrStyle("#45E0A8")}>
+          <span className="text-center" style={colHdrStyle("var(--dime-mint-text, #45E0A8)")}>
             MODEL
           </span>
 
@@ -2306,20 +2306,21 @@ function OddsCell({
   const pillBg = isBook ? (isEdge ? "transparent" : "#000000") : "transparent";
   const pillBorder = isBook
     ? isEdge
-      ? "1px solid #45E0A8"
+      ? "1px solid var(--dime-mint-border, #45E0A8)"
       : "1px solid #FFFFFF"
     : isEdge
-      ? "1px solid #45E0A8"
+      ? "1px solid var(--dime-mint-border, #45E0A8)"
       : "1px solid transparent";
-  const mainColor = isEdge ? "#45E0A8" : isBook ? "#FFFFFF" : "#FFFFFF";
+  const mainColor = isEdge ? "var(--dime-mint-text, #45E0A8)" : isBook ? "#FFFFFF" : "#FFFFFF"; // 2026-08-05 token law
   const mainWeight = isEdge ? 800 : isBook ? 700 : 700;
   // Model cells: juice is always neon green (edge = full, non-edge = 60%); book cells: muted gray
+  // 2026-08-05 token law: mint text is theme-correct
   const juiceColor = isBook
     ? isEdge
-      ? "#45E0A8"
+      ? "var(--dime-mint-text, #45E0A8)"
       : "#FFFFFF"
     : isEdge
-      ? "#45E0A8"
+      ? "var(--dime-mint-text, #45E0A8)"
       : "#FFFFFF";
 
   return (
@@ -2383,7 +2384,7 @@ function OddsCell({
               xmlns="http://www.w3.org/2000/svg"
               style={{ width: "100%", height: "100%" }}
             >
-              <path d="M0 0 H15 V20 L7.5 14 L0 20 Z" fill="#45E0A8" />
+              <path d="M0 0 H15 V20 L7.5 14 L0 20 Z" fill="var(--dime-mint, #45E0A8)" />
               <text
                 x="7.5"
                 y="10"
@@ -2795,7 +2796,7 @@ function OddsLinesPanel({
   const modelGreen = {
     fontSize: cellFontSize,
     fontWeight: 700,
-    color: "#45E0A8",
+    color: "var(--dime-mint-text, #45E0A8)", // 2026-08-05 token law: mint text is theme-correct
     letterSpacing: "0.01em",
     textAlign: "center" as const,
   } as React.CSSProperties;
@@ -2940,7 +2941,7 @@ function OddsLinesPanel({
                     className="text-center font-bold uppercase tracking-widest"
                     style={{
                       fontSize: "clamp(11px, 0.95vw, 14px)",
-                      color: lbl === "Model" ? "#45E0A8" : "#FFFFFF",
+                      color: lbl === "Model" ? "var(--dime-mint-text, #45E0A8)" : "#FFFFFF", // 2026-08-05 token law
                     }}
                   >
                     {lbl}
@@ -3792,11 +3793,11 @@ function GameCardInner({
             )}
             <span
               className="gc-live flex items-center gap-0.5 text-[10px] font-black tracking-widest uppercase flex-shrink-0"
-              style={{ color: "#45E0A8" }}
+              style={{ color: "var(--dime-mint-text, #45E0A8)" }} // 2026-08-05 token law
             >
               <span
                 className="w-1 h-1 rounded-full animate-pulse inline-block"
-                style={{ background: "#45E0A8" }}
+                style={{ background: "var(--dime-mint, #45E0A8)" }}
               />
               LIVE
             </span>
@@ -4094,7 +4095,7 @@ function GameCardInner({
                     style={{
                       width: "5px",
                       height: "5px",
-                      background: "#45E0A8",
+                      background: "var(--dime-mint, #45E0A8)",
                     }}
                   />
                   LIVE
@@ -4276,7 +4277,7 @@ function GameCardInner({
                           ? 600
                           : 900,
                   color: awayScoreFlash
-                    ? "#45E0A8"
+                    ? "var(--dime-mint-text, #45E0A8)" // 2026-08-05 token law
                     : awayWins
                       ? "hsl(var(--foreground))"
                       : isFinal || isLive
@@ -4385,7 +4386,7 @@ function GameCardInner({
                           ? 600
                           : 900,
                   color: homeScoreFlash
-                    ? "#45E0A8"
+                    ? "var(--dime-mint-text, #45E0A8)" // 2026-08-05 token law
                     : homeWins
                       ? "hsl(var(--foreground))"
                       : isFinal || isLive

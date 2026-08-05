@@ -1,0 +1,10 @@
+$ npx tsc --noEmit  (worktree feat/splits-desktop-refine @ 6b4a5c3 + working tree)
+exit=0
+
+$ npx vitest run client/src
+
+ Test Files  55 passed (55)
+      Tests  767 passed (767)
+   Start at  12:38:44
+   Duration  5.96s (transform 2.02s, setup 0ms, import 4.81s, tests 1.17s, environment 7ms)
+

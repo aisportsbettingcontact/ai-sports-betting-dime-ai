@@ -42,7 +42,12 @@
   --dime-row-hover: #efefef; /* v2: hover returns */
   --dime-row-active: #e4e4e4; /* v2: active fill (mint rail still leads) */
   --dime-mint-dim: transparent; /* dim-mint tiles → transparent */
-  --dime-mint-border: #45e0a8;
+  /* 2026-08-05: raw mint on white is ~1.9:1 — mint-bordered controls (LIVE
+   * pill, live-movement separators, edge-cell borders) dissolved on light.
+   * THREE-COLOR-LAW v3's light mint border is color-mix(mint 68%, black)
+   * (= #2F9872), which clears the 3:1 non-text boundary bar. Derived from
+   * the token (no new raw hex — X-HEX ratchet). Dark keeps raw mint. */
+  --dime-mint-border: color-mix(in srgb, var(--dime-mint) 68%, black);
   /* Ink on constant-mint fills — black in BOTH themes (mint stays raw mint
    * everywhere, so its ink never flips; same rule as the tracker's
    * unmapped text-black). */
@@ -177,9 +182,12 @@ html.dark {
 .bs-brand-row .dime-wordmark {
   font-size: clamp(19px, 2vw, 24px);
 }
-/* 768–1023px: the shell's compact top bar already carries the wordmark
- * directly above this pane — one brand mark per screen. */
-@media (min-width: 768px) and (max-width: 1023.98px) {
+/* >=768px: the shell owns this route at every shell viewport and always
+ * carries a brand mark (compact top bar 768-1023, persistent sidebar
+ * wordmark >=1024) — one brand mark per screen. 2026-08-05: the old
+ * 1023.98px upper bound left a duplicate "dime" in the pane header beside
+ * the sidebar wordmark on desktop. */
+@media (min-width: 768px) {
   .bs-brand-row {
     display: none;
   }
