@@ -85,10 +85,12 @@ Anthropic; **gpt-5.6-sol** for Codex. Never select older models. Enforced in
 
 ## Skills (summary — SKILLS.md is authoritative)
 
-227 skills and 33 prompt templates are wired into pi (audited; see SKILLS.md). If a skill
+227 skills and 33 prompt templates are wired into pi (audited; see SKILLS.md; +3 on
+2026-08-05: `design-federation`, vendored `impeccable`, `/ui-loop`). If a skill
 plausibly applies to the current task, invoke it before acting — skills encode process
-(TDD, debugging, verification, planning), design taste, brand law, PM method, and
-repo-specific verification (`verify`, `livelab`, `intended-vs-implemented`). In pi:
+(TDD, debugging, verification, planning), design taste, brand law, PM method,
+UI-work routing (`design-federation`, entry `/ui-loop`), and
+repo-specific verification (`verify`, `intended-vs-implemented`). In pi:
 `/skill:<name>` or let the model auto-trigger from `<available_skills>`; prompt templates
 from `.claude/commands/` are `/<name>`.
 

@@ -1,0 +1,61 @@
+# Federated UI brief — fill before touching code; attach to the PR.
+# One brief per surface per change. The lead: field is the single aesthetic owner.
+
+id: <surface>-<change>-<yyyy-mm-dd>
+
+surface:
+  name: ""                 # e.g. landing-hero, feed, chat, signup
+  kind: landing | marketing | feed | chat | auth | settings | component
+  mode: persuade | operate | onboard
+  change: new | refine | redesign
+
+lead: ""                   # EXACTLY ONE:
+                           # frontend-design | taste-skill | soft-skill | minimalist-skill |
+                           # brutalist-skill | redesign-skill | impeccable | emil-design-eng
+                           # (taste-skill-v1 only for exact-v1 compatibility; gpt-tasteskill
+                           #  may not Lead a Dime surface — MASTER.md bans GSAP/scroll)
+advisors: []               # read-only critics; named, so their role is on record
+
+product:
+  audience: ""
+  single_job: ""           # the one thing this surface must let the user do
+  business_goal: ""
+  evidence: []             # real signals: analytics, support notes, owner directives
+
+content:
+  source: []               # real copy/data source files — no invented claims or stats
+  responsible_gaming: true # marketing surfaces keep 21+ / 1-800-GAMBLER (CLAUDE.md law)
+  invented_claims: false
+
+law:                       # read these, in this order — never work from a summary
+  - design-system/dime-ai/pages/<page>.md   # if it exists, it overrides the Master
+  - design-system/dime-ai/MASTER.md
+  - dime-ai/THREE-COLOR-LAW.md              # wins over MASTER.md wherever they disagree,
+                                            # incl. v3's owner-approved motion rules
+  - design-system/dime-ai/TYPOGRAPHY.md     # size/rhythm/measure/wrap, orthogonal
+
+direction:
+  adjectives: []           # 3-5, specific to this surface
+  anti_references: []      # named looks to steer away from
+  signature_element: ""    # ONE memorable element, spent inside brand law
+                           # (layout, structure, copy, one rationed moment —
+                           #  never a new color, font, or gradient)
+
+dials:                     # only when lead is a taste skill; exact spellings, 1-10
+  DESIGN_VARIANCE: null
+  MOTION_INTENSITY: null
+  VISUAL_DENSITY: null
+
+engineering:
+  stack: React + Vite (client/src), Express server, pnpm only
+  component_reuse_first: true
+  viewports: [375x812, 390x844, 768x1024, 1024x768, 1440x900]  # MASTER.md checklist: 375/768/1024/1440
+  reduced_motion: required
+  dark_and_light: required
+
+acceptance:
+  required_states: []      # loading / empty / error / hover / focus / keyboard path
+  no_console_errors: true
+  no_horizontal_overflow: true
+  motion_gate: auto        # diff touches motion -> review-animations Block/Approve
+  delivery_gate: MASTER.md Pre-Delivery Checklist + evidence bundle
