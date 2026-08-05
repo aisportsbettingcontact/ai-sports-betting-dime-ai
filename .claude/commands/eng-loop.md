@@ -1,0 +1,3 @@
+Use the engineering-federation skill to classify and run the full engineering control loop for: $ARGUMENTS
+
+Inspect before deciding; classify the trust boundary and failure impact; capture a baseline before mutating; route design questions per the routing table (architect-backend-systems leads design method); apply the Dime mapping (references/dime-mapping.md) for gates and route-class failure policy. Schema changes ride db-push.yml BEFORE dependent code; new infrastructure must earn its existence with a decision note. Finish with the evidence record (references/routing.md template) and a terminal outcome from the fixed enum — a green unit test alone never closes a production boundary.
