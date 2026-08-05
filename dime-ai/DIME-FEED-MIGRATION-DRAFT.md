@@ -148,8 +148,15 @@ future pane over the nightly-trends data.
 3. F5/NRFI/team-HR data comes on the `games.list` row — no separate endpoint; K props / HR props /
    lineups are separate batched-by-gameIds queries.
 4. Responses are per-sport null-stripped (`stripSportNullFields`) — don't assume all schema columns.
-5. Feed data is public *at the tRPC layer*; only `favorites.*` and
-   `mlbSchedule.getLast5ForMatchup` need the `app_session` cookie.
+5. Feed data is TIERED at the tRPC layer (amended 2026-08-05, owner-ratified via
+   PR — supersedes the earlier "fully public" statement). COMMODITY data
+   (schedule, book lines/odds, splits, lineups, metadata) is public; the
+   PROPRIETARY MODEL IP (projections, win probs, edges, fair odds — every
+   `model*`/edge field across games.list, strikeoutProps.*, hrProps.*, and
+   wc2026.matchesByDate) is nulled for anonymous callers and returned in full to
+   authenticated ones (`server/feedGating.ts`). `favorites.*` and
+   `mlbSchedule.getLast5ForMatchup` remain fully login-gated. Note: this reverses
+   the "backend needs zero changes" premise for the model-bearing procedures.
    *(2026-08-02 clarification: the `/feed/model/*` SURFACE is login-gated —
    `RequireAuth` in App.tsx redirects anonymous visitors to `/login`. That is a
    product-gating decision layered above this data contract; the procedures

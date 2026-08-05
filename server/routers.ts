@@ -1,5 +1,11 @@
 import { TRPCError } from "@trpc/server";
 import { gamesListInput } from "./gamesListInput";
+import {
+  isRequestAuthenticated,
+  stripGameModelFields,
+  stripHrPropModelFields,
+  stripStrikeoutPropModelFields,
+} from "./feedGating";
 import { z } from "zod";
 import {
   zodGameDate,
@@ -245,24 +251,36 @@ export const appRouter = router({
         // Cache stores full Game objects; stripping happens at the wire layer only.
         const stripped = filtered.map(g => stripSportNullFields(g));
 
-        // Performance: Cache-Control + ETag for the public feed. The tRPC
-        // adapter exclusively owns the response lifecycle: ending the Express
-        // response here for If-None-Match would make the adapter write its JSON
-        // envelope after end, crashing the process with ERR_STREAM_WRITE_AFTER_END.
-        // A matching ETag may still be revalidated with a normal 200 response.
+        // IP gating (Phase 3): the model projections/edges are the paid product.
+        // Anonymous callers get commodity fields only (schedule, book lines,
+        // splits) — the model fields are nulled at the wire layer. Authenticated
+        // callers get the full payload. The feed SURFACE is already RequireAuth
+        // -gated, so logged-in UX is unchanged; this closes the anonymous API
+        // scrape of the model IP.
+        const authed = await isRequestAuthenticated(ctx.req);
+        const gated = authed ? stripped : stripped.map(g => stripGameModelFields(g));
+
+        // Cache-Control + ETag. Authed responses carry the model IP and MUST NOT
+        // be shared-cached (a CDN/edge could serve them to an anon); anon
+        // responses are commodity and may be shared-cached. ETag over the
+        // GATED shape so authed/anon never collide on the same validator.
         try {
           const etag = createHash('md5')
-            .update(JSON.stringify(filtered.map(g => ({ id: g.id, modelRunAt: g.modelRunAt, gameStatus: g.gameStatus }))))
+            .update(JSON.stringify(gated.map(g => ({ id: g.id, modelRunAt: g.modelRunAt, gameStatus: g.gameStatus }))))
             .digest('hex')
             .slice(0, 16);
-          ctx.res.setHeader('Cache-Control', 'public, max-age=30, stale-while-revalidate=60');
+          ctx.res.setHeader(
+            'Cache-Control',
+            authed ? 'private, max-age=30' : 'public, max-age=30, stale-while-revalidate=60'
+          );
+          ctx.res.setHeader('Vary', 'Cookie');
           ctx.res.setHeader('ETag', `"${etag}"`);
-          ctx.res.setHeader('X-Games-Count', String(stripped.length));
+          ctx.res.setHeader('X-Games-Count', String(gated.length));
           ctx.res.setHeader('X-Cache-Status', 'MISS'); // overridden by cache layer if HIT
         } catch {
           // Non-fatal: header setting can fail in some edge cases
         }
-        return stripped;
+        return gated;
       }),
 
     /**
@@ -1069,10 +1087,12 @@ export const appRouter = router({
      */
     getByGame: publicProcedure
       .input(z.object({ gameId: z.number().int().positive() }))
-      .query(async ({ input }) => {
-        console.log(`[tRPC][strikeoutProps.getByGame] PUBLIC gameId=${input.gameId}`);
+      .query(async ({ input, ctx }) => {
+        console.log(`[tRPC][strikeoutProps.getByGame] gameId=${input.gameId}`);
         const rows = await getStrikeoutPropsByGame(input.gameId);
-        return { props: rows };
+        // IP gating: anon gets book lines only, model projections/edges nulled.
+        const authed = await isRequestAuthenticated(ctx.req);
+        return { props: authed ? rows : rows.map(r => stripStrikeoutPropModelFields(r)) };
       }),
 
     /**
@@ -1082,13 +1102,16 @@ export const appRouter = router({
      */
     getByGames: publicProcedure
       .input(z.object({ gameIds: z.array(z.number().int().positive()) }))
-      .query(async ({ input }) => {
-        console.log(`[tRPC][strikeoutProps.getByGames] PUBLIC gameIds=[${input.gameIds.join(',')}]`);
+      .query(async ({ input, ctx }) => {
+        console.log(`[tRPC][strikeoutProps.getByGames] gameIds=[${input.gameIds.join(',')}]`);
         const map = await getStrikeoutPropsByGames(input.gameIds);
-        // Convert Map to plain object for serialization
+        const authed = await isRequestAuthenticated(ctx.req);
+        // Convert Map to plain object for serialization; gate rows for anon.
         const result: Record<number, typeof map extends Map<number, infer V> ? V : never> = {};
         Array.from(map.entries()).forEach(([k, v]) => {
-          result[k] = v;
+          result[k] = (authed
+            ? v
+            : (v as unknown[]).map(r => stripStrikeoutPropModelFields(r as Record<string, unknown>))) as typeof v;
         });
         return { propsByGame: result };
       }),
@@ -1325,10 +1348,11 @@ export const appRouter = router({
      */
     getByGame: publicProcedure
       .input(z.object({ gameId: z.number().int().positive() }))
-      .query(async ({ input }) => {
-        console.log(`[tRPC][hrProps.getByGame] PUBLIC gameId=${input.gameId}`);
+      .query(async ({ input, ctx }) => {
+        console.log(`[tRPC][hrProps.getByGame] gameId=${input.gameId}`);
         const rows = await getHrPropsByGame(input.gameId);
-        return { props: rows };
+        const authed = await isRequestAuthenticated(ctx.req);
+        return { props: authed ? rows : rows.map(r => stripHrPropModelFields(r)) };
       }),
 
     /**
@@ -1338,11 +1362,16 @@ export const appRouter = router({
      */
     getByGames: publicProcedure
       .input(z.object({ gameIds: zodGameIdArray }))
-      .query(async ({ input }) => {
-        console.log(`[tRPC][hrProps.getByGames] PUBLIC gameIds=[${input.gameIds.join(',')}]`);
+      .query(async ({ input, ctx }) => {
+        console.log(`[tRPC][hrProps.getByGames] gameIds=[${input.gameIds.join(',')}]`);
         const map = await getHrPropsByGames(input.gameIds);
+        const authed = await isRequestAuthenticated(ctx.req);
         const result: Record<number, Awaited<ReturnType<typeof getHrPropsByGame>>> = {};
-        Array.from(map.entries()).forEach(([k, v]) => { result[k] = v; });
+        Array.from(map.entries()).forEach(([k, v]) => {
+          result[k] = (authed
+            ? v
+            : (v as unknown[]).map(r => stripHrPropModelFields(r as Record<string, unknown>))) as typeof v;
+        });
         return { propsByGame: result };
       }),
   }),
