@@ -1,0 +1,67 @@
+# Federated UI brief — AI Model Projections feed, MOBILE refinement pass.
+id: feed-mobile-refine-2026-08-05
+
+surface:
+  name: "ai-model-projections-feed-mobile"
+  kind: feed
+  mode: operate
+  change: refine
+
+lead: "impeccable"
+advisors:
+  - "ui-ux-pro-max:ui-ux-pro-max (terminal-only research; NO --persist — governed surface)"
+  - "emil-design-eng (touch press craft within law)"
+  - "frontend-design via Read (distinctiveness critic)"
+  - "review-animations via Read (motion gate if diff touches motion)"
+
+product:
+  audience: "Bettors scanning the slate one-handed on phones (the floating-nav world)"
+  single_job: "Find tonight's actionable model edges in a thumb-driven scroll"
+  business_goal: "Same trust surface as desktop; mobile is the interruption-prone context"
+  evidence:
+    - "User instruction 2026-08-05: run the same /ui-loop on the mobile /feed"
+    - "Mobile-first owner directives 2026-07-17/29 + responsive rebuild 2026-08-02 in pages/ai-model-projections.md"
+    - "This pass captures with TRUE mobile emulation (iPhone UA + touch + DPR2 — the --vp scaling engine active), unlike prior narrowed-desktop-window checks"
+
+content:
+  source: ["client/src/pages/DimeModelFeed.tsx + dimeModelFeed.css (mobile blocks)", "client/src/components/projections/*", "client/src/features/mobileNav/*", "client/src/styles/dime-mobile.css"]
+  responsible_gaming: true
+  invented_claims: false
+
+law:
+  - design-system/dime-ai/pages/ai-model-projections.md
+  - design-system/dime-ai/MASTER.md
+  - dime-ai/THREE-COLOR-LAW.md
+  - design-system/dime-ai/TYPOGRAPHY.md
+
+stacking:  # IMPORTANT
+  base_branch: feat/feed-desktop-refine   # PR #365 — the desktop fixes (tier
+  # correction, readout lanes, pick size, message clip, region labels,
+  # skeleton grid) are inherited, not re-implemented. This PR merges after it.
+  # 2026-08-05 update: owner merged #365 to main mid-pass; branch rebased
+  # onto main (which now carries the desktop fixes). PR base: main.
+
+direction:
+  adjectives: ["thumb-first", "complete-at-a-glance", "quiet", "trustworthy"]
+  anti_references: ["app-store promo cards", "desktop shrunk onto a phone"]
+  signature_element: "Unchanged — the mint edge cell; mobile work protects completeness (no truncated league names/labels) rather than adding anything"
+
+engineering:
+  branch: feat/feed-mobile-refine        # off feat/feed-desktop-refine
+  css_first: true
+  no_new_dependencies: true
+  preserve: ["tRPC data contract", "analytics", "auth gating", "favorites", "sonner", "mobile nav config (features/mobileNav)", "desktop layouts (must not regress)"]
+  viewports_primary: [375x812, 390x844]
+  viewports_secondary: [320x693, 430x932]
+  emulation: "isMobile + hasTouch + DPR2 + iPhone UA (vp scaling engine active)"
+  reduced_motion: required
+  dark_and_light: required
+
+acceptance:
+  required_states: ["loading", "empty", "LIVE card", "PASS card", "popover open", "lineups dialog", "focus-visible", "press", "reduced-motion"]
+  no_console_errors: true
+  no_horizontal_overflow: true
+  motion_gate: auto
+  detector: "node .claude/skills/impeccable/scripts/detect.mjs --json client/src/features/mobileNav client/src/components/projections client/src/pages/DimeModelFeed.tsx client/src/pages/dimeModelFeed.css"
+  delivery_gate: "MASTER Pre-Delivery Checklist (Plex Mono item per 2026-07-24 supersede) + bundle at docs/audits/2026-08-05-feed-mobile-evidence/"
+  stop_rule: "Bounded repair — one batched fix round + at most one confirm round"
