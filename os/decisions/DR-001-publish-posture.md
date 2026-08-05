@@ -1,6 +1,7 @@
 # DR-001 — Publish posture for nine markets Dime's own evidence gates BACKTEST-ONLY
 
 **Status:** AWAITING RULING · **DRI:** Prez · **Raised:** 2026-08-05 by the executor (Stage 2)
+**observe_by:** 2026-08-12
 **Urgency:** HIGHEST — live customer-facing claims contradict Dime's own evidence
 **Doctrine:** D5 (evaluation → adjustment) · D7 (relevance, not just execution) · D8 (acceptance
 threshold) · §19 compliance gate · D15 #2 (open-loop automation), #9 (generated output mistaken for

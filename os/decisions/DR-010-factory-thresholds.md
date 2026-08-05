@@ -1,6 +1,7 @@
 # DR-010 — The two factories and their acceptance thresholds — where the bar lives, what the numbers are, and what makes them bind
 
 **Status:** AWAITING RULING · **DRI:** Prez · **Raised:** 2026-08-05 (Stage 2)
+**observe_by:** 2026-08-12
 **Doctrine:** §9 D8 — the software factory (all ten parts; part 7 the probabilistic satisfaction threshold; the two-factory table; the factory is itself queryable) · §8 D12-L6 — evaluation at the outcome level; code against specs/tests/scenarios/thresholds · §8 D12-L2 — artifact system; append-only enforcement · §6 D6 — artifact law: seven required properties, semantic connections, traceability intention→result, preserve reasoning not only conclusions · §5 D5 — the closed loop; an action is not an outcome; generation is the beginning of execution · §14 D14 — visibility before autonomy, evaluation before scale (stages 9, 11, 15) · §15 D15 #8 weak tests, #9 generated output mistaken for completion, #2 open-loop automation, #15 prototype theater · §17 — certification criterion 6 (both factories certified) and criterion 10 (queryability proven) · §19 — evidence taxonomy (VERIFIED/INFERRED/UNKNOWN), compliance gate, data provenance (live-pregame vs walkforward-replay), deploy law (merge to main is a production deploy) · §10 D9 — value visible as what you build and how you govern the intelligent system · §18 — the Dime Cycle: Test and Validate are the observed outcome and its evaluation; nothing pushes below the bar
 
 > **Read `DR-014` first.** The coherence, doctrine, and survival critics reviewed all ten
