@@ -688,6 +688,33 @@ export async function getAppUserById(id: number) {
 export type AppUsersSchemaVerdict = "ok" | "schema_mismatch" | "unknown";
 
 /**
+ * Classify a probe-query failure into a schema verdict.
+ *
+ * ONLY a missing COLUMN (`ER_BAD_FIELD_ERROR`, errno 1054) is a `schema_mismatch`
+ * — that is the exact #370 / 2026-07-31 class: code SELECTs an app_users column
+ * its migration has not added yet. It fails the health gate so the deploy is
+ * kept off production.
+ *
+ * A missing TABLE (`ER_NO_SUCH_TABLE`) is deliberately NOT a mismatch → "unknown"
+ * (non-blocking). This repo runs the same server image on two services; the
+ * secondary `ai-sports-betting-backend` connects to a database WITHOUT the
+ * app_users table, so its probe legitimately raises ER_NO_SUCH_TABLE. Failing
+ * health there would (and did, 2026-08-05) block that service's deploys forever
+ * for no real drift. On the primary DB app_users is the core table and is never
+ * absent from a normal column-adding migration; a genuinely vanished table is a
+ * catastrophic state that "run db-push" would not repair and must not freeze
+ * deploys. This narrowing also makes the gate SELF-SCOPING: it can only fail a
+ * service that actually owns app_users (and is missing a column) — exactly the
+ * intended target. Everything else (connection reset/timeout/circuit) is
+ * transient → "unknown".
+ */
+export function classifyAppUsersProbeError(err: unknown): AppUsersSchemaVerdict {
+  return driverErrorCode(err) === "ER_BAD_FIELD_ERROR"
+    ? "schema_mismatch"
+    : "unknown";
+}
+
+/**
  * Boot/health probe: does the LIVE app_users schema satisfy the CURRENT code's
  * column set? Runs the real Drizzle column enumeration (`select()` names every
  * declared column) against a row that never matches (id=0), so it transfers no
@@ -697,11 +724,11 @@ export type AppUsersSchemaVerdict = "ok" | "schema_mismatch" | "unknown";
  * SURFACES the schema error as a verdict — that swallowing is exactly how the
  * #370 / 2026-07-31 outages stayed silent. Returns:
  *   - "ok"               every declared column exists on the live table
- *   - "schema_mismatch"  ER_BAD_FIELD_ERROR / ER_NO_SUCH_TABLE — code is ahead
+ *   - "schema_mismatch"  a missing COLUMN (ER_BAD_FIELD_ERROR) — code is ahead
  *                        of its migration (the deploy that must NOT go live)
- *   - "unknown"          DB unavailable / transient — caller must NOT treat this
- *                        as a failure (the DB-circuit health gate already covers
- *                        DB-down; blocking deploys on a DB blip would be worse)
+ *   - "unknown"          missing table / DB unavailable / transient — caller
+ *                        must NOT treat this as a failure (see
+ *                        classifyAppUsersProbeError)
  * Never throws. No cache — always reads the live schema.
  */
 export async function probeAppUsersSchema(): Promise<AppUsersSchemaVerdict> {
@@ -711,16 +738,23 @@ export async function probeAppUsersSchema(): Promise<AppUsersSchemaVerdict> {
     await db.select().from(appUsers).where(eq(appUsers.id, 0)).limit(1);
     return "ok";
   } catch (err) {
-    if (isSchemaError(err)) {
+    const verdict = classifyAppUsersProbeError(err);
+    if (verdict === "schema_mismatch") {
       console.error(
-        `[DB][probeAppUsersSchema] SCHEMA MISMATCH — the app_users query is invalid ` +
-          `against the live schema. Code deployed ahead of its migration? ` +
+        `[DB][probeAppUsersSchema] SCHEMA MISMATCH — app_users is missing a column ` +
+          `the code SELECTs. Code deployed ahead of its migration? ` +
           `code=${driverErrorCode(err)} message=${err instanceof Error ? err.message : String(err)}`
       );
-      return "schema_mismatch";
+    } else if (driverErrorCode(err) === "ER_NO_SUCH_TABLE") {
+      // Expected on a service that does not own the app schema (the zombie
+      // backend). Observability only — does not fail the gate.
+      console.warn(
+        `[DB][probeAppUsersSchema] app_users table not found (ER_NO_SUCH_TABLE) — ` +
+          `this service does not own the app schema; treating as unknown (non-blocking).`
+      );
     }
-    // Connection reset / timeout / circuit trip → transient, not a mismatch.
-    return "unknown";
+    // schema_mismatch only for a missing column; everything else is unknown.
+    return verdict;
   }
 }
 

@@ -14,7 +14,12 @@
  * the point, because the failure mode is otherwise silent and expensive.
  */
 import { describe, it, expect } from "vitest";
-import { driverErrorCode, isSchemaError, isDuplicateKeyError } from "./db";
+import {
+  classifyAppUsersProbeError,
+  driverErrorCode,
+  isSchemaError,
+  isDuplicateKeyError,
+} from "./db";
 
 /** Reproduces drizzle-orm's DrizzleQueryError: no own `.code`, driver on `.cause`. */
 function drizzleWrapped(
@@ -148,5 +153,44 @@ describe("isSchemaError", () => {
       expect(isSchemaError(drizzleWrapped(code, 0, "select 1"))).toBe(false);
     }
     expect(isSchemaError(null)).toBe(false);
+  });
+});
+
+describe("classifyAppUsersProbeError — the health-gate is COLUMN-scoped", () => {
+  it("a missing COLUMN (ER_BAD_FIELD_ERROR) is a schema_mismatch — the #370 class the gate exists for", () => {
+    expect(classifyAppUsersProbeError(WRAPPED_BAD_FIELD)).toBe(
+      "schema_mismatch"
+    );
+    // through an extra wrapper layer too
+    const outer = new Error("outer") as Error & { cause?: unknown };
+    outer.cause = WRAPPED_BAD_FIELD;
+    expect(classifyAppUsersProbeError(outer)).toBe("schema_mismatch");
+  });
+
+  it("a missing TABLE (ER_NO_SUCH_TABLE) is NOT a mismatch → unknown (fixes the zombie-backend false-positive, 2026-08-05)", () => {
+    // The secondary service connects to a DB without app_users; failing health
+    // there blocked its deploys for no real drift. Missing table ≠ column drift.
+    expect(
+      classifyAppUsersProbeError(
+        drizzleWrapped("ER_NO_SUCH_TABLE", 1146, "select 1")
+      )
+    ).toBe("unknown");
+  });
+
+  it("other schema-DDL codes and transient faults are unknown (never freeze deploys)", () => {
+    for (const code of [
+      "ER_PARSE_ERROR",
+      "ER_WRONG_FIELD_SPEC",
+      "ER_BAD_TABLE_ERROR",
+      "ECONNRESET",
+      "ETIMEDOUT",
+      "PROTOCOL_CONNECTION_LOST",
+    ]) {
+      expect(
+        classifyAppUsersProbeError(drizzleWrapped(code, 0, "select 1"))
+      ).toBe("unknown");
+    }
+    expect(classifyAppUsersProbeError(null)).toBe("unknown");
+    expect(classifyAppUsersProbeError(new Error("no code"))).toBe("unknown");
   });
 });
