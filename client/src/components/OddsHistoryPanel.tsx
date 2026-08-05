@@ -380,7 +380,7 @@ function TeamHeader({
 // (never muted/faint); values = Familjen Grotesk 600–700 (MASTER.md: "mono is
 // for labels, not values").
 
-const FONT_TH = "clamp(10px, 0.85vw, 11.5px)";
+const FONT_TH = "clamp(11px, 0.85vw, 11.5px)"; /* 2026-08-05: the 10px floor sat below the type system's 11px caption floor through ~1350px viewports */
 const FONT_TD = "clamp(12.5px, 1vw, 14px)";
 
 const TH: React.CSSProperties = {
@@ -831,16 +831,21 @@ export function OddsHistoryPanel({
             <div className="flex flex-col" style={{ gap: 14 }}>
               {markets.map(market => (
                 <div key={market} className="flex flex-col" style={{ gap: 6 }}>
-                  {/* Section label — only needed when several markets stack */}
+                  {/* Section label — only needed when several markets stack.
+                      2026-08-05: was 11px/500 secondary — the quietest text
+                      on the page marking its largest structural boundaries
+                      (the TOTAL divider was near-invisible mid-scroll).
+                      Body-tier ink + 600 keeps it a label while making the
+                      market boundary scannable. */}
                   {isMdUp && (
                     <span
                       style={{
                         fontFamily: "var(--dime-font-mono)",
-                        fontSize: 11,
-                        fontWeight: 500,
+                        fontSize: 12,
+                        fontWeight: 600,
                         letterSpacing: "0.08em",
                         textTransform: "uppercase",
-                        color: "var(--dime-text-secondary)",
+                        color: "var(--dime-text-body)",
                         paddingLeft: 2,
                       }}
                     >
