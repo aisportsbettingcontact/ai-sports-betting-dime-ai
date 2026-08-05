@@ -142,6 +142,7 @@ server/_core/index.ts
 server/_core/storageProxy.ts
 server/_core/trpc.ts
 server/cron/cronAuth.ts
+server/discord/discordSecurityAlert.ts
 server/discordAuth.ts
 server/discordInvite.test.ts
 server/discordInvite.ts

@@ -51,8 +51,8 @@ const alertLastPosted = new Map<string, number>(); // key → timestamp
  *   - Escalation posts a bright-red @here embed to the security channel
  *   - Escalation cooldown: 10 minutes per IP (one @here per IP per window)
  */
-const BRUTE_FORCE_WINDOW_MS = 10 * 60 * 1000; // 10-minute sliding window
-const BRUTE_FORCE_THRESHOLD = 3; // 3+ AUTH_FAILs in window = brute-force
+const BRUTE_FORCE_WINDOW_MS   = 10 * 60 * 1000; // 10-minute sliding window
+const BRUTE_FORCE_THRESHOLD   = 3;               // 3+ AUTH_FAILs in window = brute-force
 const BRUTE_FORCE_COOLDOWN_MS = 10 * 60 * 1000; // 10-minute cooldown between @here alerts per IP
 
 /** Per-IP sliding window: IP → list of AUTH_FAIL epoch timestamps */
@@ -63,10 +63,10 @@ const bruteForceLastAlerted = new Map<string, number>();
 
 // ─── Embed color palette ──────────────────────────────────────────────────────
 const EMBED_COLORS = {
-  CSRF_BLOCK: 0xed4245, // Discord danger red
-  RATE_LIMIT: 0xfee75c, // Discord warning yellow
-  AUTH_FAIL: 0xeb6c33, // Discord orange
-  BRUTE_FORCE: 0xf8312f, // Bright red — escalation
+  CSRF_BLOCK:  0xed4245,  // Discord danger red
+  RATE_LIMIT:  0xfee75c,  // Discord warning yellow
+  AUTH_FAIL:   0xeb6c33,  // Discord orange
+  BRUTE_FORCE: 0xf8312f,  // Bright red — escalation
 } as const;
 
 // ─── Event type union ─────────────────────────────────────────────────────────
@@ -118,12 +118,10 @@ function isDeduplicated(eventType: SecurityEventType, ip: string): boolean {
 
   const lastSent = alertLastPosted.get(key) ?? 0;
   if (now - lastSent < DISCORD_ALERT_DEDUP_MS) {
-    const remaining = Math.ceil(
-      (DISCORD_ALERT_DEDUP_MS - (now - lastSent)) / 1000
-    );
+    const remaining = Math.ceil((DISCORD_ALERT_DEDUP_MS - (now - lastSent)) / 1000);
     console.log(
       `[DiscordSecurity][DEDUP] Skipping ${eventType} alert for IP=${ip}` +
-        ` — cooldown active (${remaining}s remaining)`
+      ` — cooldown active (${remaining}s remaining)`
     );
     return true;
   }
@@ -145,10 +143,7 @@ function isDeduplicated(eventType: SecurityEventType, ip: string): boolean {
  *   - Prunes timestamps outside the sliding window for the IP
  *   - Prunes the authFailTimestamps map when it grows beyond 5000 entries
  */
-export function trackAuthFailForBruteForce(
-  ip: string,
-  occurredAt: number
-): {
+export function trackAuthFailForBruteForce(ip: string, occurredAt: number): {
   escalate: boolean;
   count?: number;
   windowMs?: number;
@@ -159,9 +154,7 @@ export function trackAuthFailForBruteForce(
 
   // Prune stale IPs from the map to prevent unbounded growth
   if (authFailTimestamps.size > 5000) {
-    console.log(
-      `${tag} Pruning stale IP entries from brute-force tracker (size=${authFailTimestamps.size})`
-    );
+    console.log(`${tag} Pruning stale IP entries from brute-force tracker (size=${authFailTimestamps.size})`);
     for (const [k, timestamps] of Array.from(authFailTimestamps.entries())) {
       const fresh = timestamps.filter(t => t > cutoff);
       if (fresh.length === 0) {
@@ -187,9 +180,9 @@ export function trackAuthFailForBruteForce(
 
   console.log(
     `${tag} AUTH_FAIL recorded | IP=${ip}` +
-      ` | count=${count} in last ${windowSecs} min` +
-      ` | threshold=${BRUTE_FORCE_THRESHOLD}` +
-      (count >= BRUTE_FORCE_THRESHOLD ? " | ⚠️ THRESHOLD CROSSED" : "")
+    ` | count=${count} in last ${windowSecs} min` +
+    ` | threshold=${BRUTE_FORCE_THRESHOLD}` +
+    (count >= BRUTE_FORCE_THRESHOLD ? " | ⚠️ THRESHOLD CROSSED" : "")
   );
 
   // Check if threshold is crossed
@@ -200,13 +193,11 @@ export function trackAuthFailForBruteForce(
   // Check escalation cooldown — only fire @here once per IP per cooldown window
   const lastEscalated = bruteForceLastAlerted.get(ip) ?? 0;
   if (now - lastEscalated < BRUTE_FORCE_COOLDOWN_MS) {
-    const cooldownRemaining = Math.ceil(
-      (BRUTE_FORCE_COOLDOWN_MS - (now - lastEscalated)) / 1000 / 60
-    );
+    const cooldownRemaining = Math.ceil((BRUTE_FORCE_COOLDOWN_MS - (now - lastEscalated)) / 1000 / 60);
     console.log(
       `${tag} Threshold crossed but escalation cooldown active for IP=${ip}` +
-        ` | cooldown=${cooldownRemaining} min remaining` +
-        ` | count=${count}`
+      ` | cooldown=${cooldownRemaining} min remaining` +
+      ` | count=${count}`
     );
     return { escalate: false };
   }
@@ -215,8 +206,8 @@ export function trackAuthFailForBruteForce(
   bruteForceLastAlerted.set(ip, now);
   console.log(
     `${tag} 🚨 ESCALATING | IP=${ip}` +
-      ` | ${count} AUTH_FAIL events in last ${windowSecs} min` +
-      ` | posting @here alert to security channel`
+    ` | ${count} AUTH_FAIL events in last ${windowSecs} min` +
+    ` | posting @here alert to security channel`
   );
 
   return { escalate: true, count, windowMs: BRUTE_FORCE_WINDOW_MS };
@@ -228,18 +219,16 @@ export function trackAuthFailForBruteForce(
  * Example: "Apr 10, 2026 · 14:32:07 EST"
  */
 function formatTimestamp(epochMs: number): string {
-  return (
-    new Date(epochMs).toLocaleString("en-US", {
-      timeZone: "America/New_York",
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      hour12: false,
-    }) + " EST"
-  );
+  return new Date(epochMs).toLocaleString("en-US", {
+    timeZone: "America/New_York",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }) + " EST";
 }
 
 // ─── Embed builders ───────────────────────────────────────────────────────────
@@ -248,10 +237,7 @@ function formatTimestamp(epochMs: number): string {
  * Classify the attack origin to provide actionable context in the embed.
  * Returns a label and recommended action based on the blocked origin pattern.
  */
-function classifyCsrfOrigin(
-  origin: string | null | undefined,
-  path: string
-): {
+function classifyCsrfOrigin(origin: string | null | undefined, path: string): {
   label: string;
   classification: string;
   recommendation: string;
@@ -280,10 +266,8 @@ function classifyCsrfOrigin(
   if (o.includes(".netlify.app")) {
     return {
       label: "🤖 AUTOMATED PROBE — Serverless Platform",
-      classification:
-        "Request originated from a serverless deployment platform. Likely an automated probe or misconfigured integration.",
-      recommendation:
-        "Monitor for repeat attempts from the same origin. If this is a legitimate integration, add its origin to the allowlist.",
+      classification: "Request originated from a serverless deployment platform. Likely an automated probe or misconfigured integration.",
+      recommendation: "Monitor for repeat attempts from the same origin. If this is a legitimate integration, add its origin to the allowlist.",
     };
   }
 
@@ -291,38 +275,31 @@ function classifyCsrfOrigin(
   if (!o) {
     return {
       label: "❓ MISSING ORIGIN — Direct API Call",
-      classification:
-        "No Origin header was sent. This is typical of server-side HTTP clients (curl, Postman, automated scripts) that do not set Origin.",
-      recommendation:
-        "Likely a direct API probe or misconfigured client. Monitor for repeat attempts.",
+      classification: "No Origin header was sent. This is typical of server-side HTTP clients (curl, Postman, automated scripts) that do not set Origin.",
+      recommendation: "Likely a direct API probe or misconfigured client. Monitor for repeat attempts.",
     };
   }
 
   // Generic unknown origin
   return {
     label: "⚠️ UNKNOWN ORIGIN — Cross-Site Request",
-    classification:
-      "Request came from an origin not on the approved list. Could be a misconfigured client or a CSRF attempt.",
-    recommendation:
-      "If this is a one-off, no action needed. If you see many from the same origin, investigate or block at the CDN level.",
+    classification: "Request came from an origin not on the approved list. Could be a misconfigured client or a CSRF attempt.",
+    recommendation: "If this is a one-off, no action needed. If you see many from the same origin, investigate or block at the CDN level.",
   };
 }
 
 function buildCsrfBlockEmbed(p: SecurityAlertPayload): EmbedBuilder {
-  const { label, classification, recommendation } = classifyCsrfOrigin(
-    p.blockedOrigin,
-    p.path
-  );
+  const { label, classification, recommendation } = classifyCsrfOrigin(p.blockedOrigin, p.path);
 
   return new EmbedBuilder()
     .setColor(EMBED_COLORS.CSRF_BLOCK)
     .setTitle("🚫 CSRF BLOCK — Cross-Site Attack Attempt Stopped")
     .setDescription(
       `**Classification:** ${label}\n\n` +
-        `${classification}\n\n` +
-        "**What the server did:** The request was automatically blocked before it could do anything. " +
-        "No data was accessed or changed. No Stripe session was created.\n\n" +
-        `**Recommended action:** ${recommendation}`
+      `${classification}\n\n` +
+      "**What the server did:** The request was automatically blocked before it could do anything. " +
+      "No data was accessed or changed. No Stripe session was created.\n\n" +
+      `**Recommended action:** ${recommendation}`
     )
     .addFields(
       {
@@ -330,18 +307,10 @@ function buildCsrfBlockEmbed(p: SecurityAlertPayload): EmbedBuilder {
         value: `\`${p.blockedOrigin ?? "none — Origin header was missing entirely"}\``,
         inline: false,
       },
-      {
-        name: "🔗 tRPC Procedure Targeted",
-        value: `\`${p.path}\``,
-        inline: true,
-      },
-      { name: "📡 HTTP Method", value: `\`${p.method}\``, inline: true },
-      { name: "🖥️ Attacker IP Address", value: `\`${p.ip}\``, inline: true },
-      {
-        name: "🕐 Time of Event (EST)",
-        value: formatTimestamp(p.occurredAt),
-        inline: true,
-      },
+      { name: "🔗 tRPC Procedure Targeted", value: `\`${p.path}\``,   inline: true  },
+      { name: "📡 HTTP Method",             value: `\`${p.method}\``, inline: true  },
+      { name: "🖥️ Attacker IP Address",     value: `\`${p.ip}\``,     inline: true  },
+      { name: "🕐 Time of Event (EST)",     value: formatTimestamp(p.occurredAt), inline: true  },
       {
         name: "🔍 Browser / Client Signature (User-Agent)",
         value: `\`${(p.userAgent ?? "none — no user-agent header provided").substring(0, 120)}\``,
@@ -361,13 +330,11 @@ function buildCsrfBlockEmbed(p: SecurityAlertPayload): EmbedBuilder {
 
 function buildRateLimitEmbed(p: SecurityAlertPayload): EmbedBuilder {
   const limiterLabel: Record<string, string> = {
-    global: "Global API Limiter — 200 requests per minute per IP",
-    auth: "Auth Route Limiter — 5 attempts per 15 minutes per IP",
-    trpc_auth:
-      "Login Procedure Limiter — 5 login attempts per 15 minutes per IP",
+    global:    "Global API Limiter — 200 requests per minute per IP",
+    auth:      "Auth Route Limiter — 5 attempts per 15 minutes per IP",
+    trpc_auth: "Login Procedure Limiter — 5 login attempts per 15 minutes per IP",
   };
-  const limiterDisplay =
-    limiterLabel[p.context ?? ""] ?? p.context ?? "unknown limiter";
+  const limiterDisplay = limiterLabel[p.context ?? ""] ?? (p.context ?? "unknown limiter");
 
   const limiterExplanation: Record<string, string> = {
     global:
@@ -383,8 +350,7 @@ function buildRateLimitEmbed(p: SecurityAlertPayload): EmbedBuilder {
       "This is a strong signal of a credential-stuffing or password-guessing attack. " +
       "The IP is temporarily blocked from making further login attempts.",
   };
-  const explanation =
-    limiterExplanation[p.context ?? ""] ??
+  const explanation = limiterExplanation[p.context ?? ""] ??
     "An IP exceeded the allowed request rate and was temporarily blocked with a 429 response.";
 
   return new EmbedBuilder()
@@ -392,10 +358,10 @@ function buildRateLimitEmbed(p: SecurityAlertPayload): EmbedBuilder {
     .setTitle("⚡ RATE LIMIT — IP Blocked for Sending Too Many Requests")
     .setDescription(
       `**What happened:** ${explanation}\n\n` +
-        "**What the server did:** The IP received a `429 Too Many Requests` response and was " +
-        "temporarily blocked. No data was accessed.\n\n" +
-        "**What you should do:** If this is a one-off, no action needed. If the same IP keeps " +
-        "triggering this alert, consider permanently blocking it at the firewall."
+      "**What the server did:** The IP received a `429 Too Many Requests` response and was " +
+      "temporarily blocked. No data was accessed.\n\n" +
+      "**What you should do:** If this is a one-off, no action needed. If the same IP keeps " +
+      "triggering this alert, consider permanently blocking it at the firewall."
     )
     .addFields(
       {
@@ -403,14 +369,10 @@ function buildRateLimitEmbed(p: SecurityAlertPayload): EmbedBuilder {
         value: `\`${limiterDisplay}\``,
         inline: false,
       },
-      { name: "🔗 Route / Endpoint Hit", value: `\`${p.path}\``, inline: true },
-      { name: "📡 HTTP Method", value: `\`${p.method}\``, inline: true },
-      { name: "🖥️ Blocked IP Address", value: `\`${p.ip}\``, inline: true },
-      {
-        name: "🕐 Time of Event (EST)",
-        value: formatTimestamp(p.occurredAt),
-        inline: true,
-      },
+      { name: "🔗 Route / Endpoint Hit",   value: `\`${p.path}\``,   inline: true  },
+      { name: "📡 HTTP Method",            value: `\`${p.method}\``, inline: true  },
+      { name: "🖥️ Blocked IP Address",     value: `\`${p.ip}\``,     inline: true  },
+      { name: "🕐 Time of Event (EST)",    value: formatTimestamp(p.occurredAt), inline: true  },
       {
         name: "🔍 Browser / Client Signature (User-Agent)",
         value: `\`${(p.userAgent ?? "none — no user-agent header provided").substring(0, 120)}\``,
@@ -423,16 +385,12 @@ function buildRateLimitEmbed(p: SecurityAlertPayload): EmbedBuilder {
 
 function buildAuthFailEmbed(p: SecurityAlertPayload): EmbedBuilder {
   const reasonLabel: Record<string, string> = {
-    user_not_found:
-      "User Not Found — No account exists with that email or username",
-    account_access_disabled:
-      "Access Disabled — The account exists but has been manually locked by the owner",
-    account_expired: "Account Expired — The account's access period has ended",
-    invalid_password:
-      "Wrong Password — The email/username was correct but the password did not match",
+    user_not_found:          "User Not Found — No account exists with that email or username",
+    account_access_disabled: "Access Disabled — The account exists but has been manually locked by the owner",
+    account_expired:         "Account Expired — The account's access period has ended",
+    invalid_password:        "Wrong Password — The email/username was correct but the password did not match",
   };
-  const reasonDisplay =
-    reasonLabel[p.context ?? ""] ?? p.context ?? "unknown reason";
+  const reasonDisplay = reasonLabel[p.context ?? ""] ?? (p.context ?? "unknown reason");
 
   const reasonExplanation: Record<string, string> = {
     user_not_found:
@@ -448,8 +406,7 @@ function buildAuthFailEmbed(p: SecurityAlertPayload): EmbedBuilder {
       "Someone entered the correct email or username but the wrong password. " +
       "Multiple failures from the same IP are a strong signal of a password-guessing attack.",
   };
-  const explanation =
-    reasonExplanation[p.context ?? ""] ??
+  const explanation = reasonExplanation[p.context ?? ""] ??
     "A login attempt was rejected by the authentication system.";
 
   return new EmbedBuilder()
@@ -457,14 +414,13 @@ function buildAuthFailEmbed(p: SecurityAlertPayload): EmbedBuilder {
     .setTitle("🔐 AUTH FAIL — Login Attempt Rejected")
     .setDescription(
       `**What happened:** ${explanation}\n\n` +
-        "**What the server did:** The login was blocked and no session was created. " +
-        "The user was shown a generic 'Invalid credentials' message (we never reveal which part was wrong).\n\n" +
-        "**What you should do:** A single failure is normal. If you see repeated failures from " +
-        "the same IP, watch for a BRUTE FORCE escalation alert — that means the threshold has been crossed."
+      "**What the server did:** The login was blocked and no session was created. " +
+      "The user was shown a generic 'Invalid credentials' message (we never reveal which part was wrong).\n\n" +
+      "**What you should do:** A single failure is normal. If you see repeated failures from " +
+      "the same IP, watch for a BRUTE FORCE escalation alert — that means the threshold has been crossed."
     )
     .addFields(
-      {
-        name: "❌ Why the Login Failed",
+      { name: "❌ Why the Login Failed",
         value: `\`${reasonDisplay}\``,
         inline: false,
       },
@@ -478,14 +434,10 @@ function buildAuthFailEmbed(p: SecurityAlertPayload): EmbedBuilder {
           : "`unknown — identifier not captured`",
         inline: false,
       },
-      { name: "🔗 Login Procedure", value: `\`${p.path}\``, inline: true },
-      { name: "📡 HTTP Method", value: `\`${p.method}\``, inline: true },
-      { name: "🖥️ Attacker IP Address", value: `\`${p.ip}\``, inline: true },
-      {
-        name: "🕐 Time of Event (EST)",
-        value: formatTimestamp(p.occurredAt),
-        inline: true,
-      },
+      { name: "🔗 Login Procedure",       value: `\`${p.path}\``,   inline: true  },
+      { name: "📡 HTTP Method",           value: `\`${p.method}\``, inline: true  },
+      { name: "🖥️ Attacker IP Address",   value: `\`${p.ip}\``,     inline: true  },
+      { name: "🕐 Time of Event (EST)",   value: formatTimestamp(p.occurredAt), inline: true  },
       {
         name: "🔍 Browser / Client Signature (User-Agent)",
         value: `\`${(p.userAgent ?? "none — no user-agent header provided").substring(0, 120)}\``,
@@ -501,51 +453,33 @@ function buildBruteForceEmbed(
   count: number,
   windowMs: number,
   userAgent: string | null | undefined,
-  occurredAt: number
+  occurredAt: number,
 ): EmbedBuilder {
   const windowMins = Math.round(windowMs / 1000 / 60);
 
   return new EmbedBuilder()
     .setColor(EMBED_COLORS.BRUTE_FORCE)
-    .setTitle(
-      `🚨 BRUTE FORCE DETECTED — ${count} Failed Logins in ${windowMins} Minutes`
-    )
+    .setTitle(`🚨 BRUTE FORCE DETECTED — ${count} Failed Logins in ${windowMins} Minutes`)
     .setDescription(
       `**@here — Immediate attention recommended.**\n\n` +
-        `**What happened:** The IP address \`${ip}\` has failed to log in **${count} times** ` +
-        `within the last **${windowMins} minutes**. This is a strong signal that someone is ` +
-        `running an automated password-guessing attack (also called a brute-force or credential-stuffing attack).\n\n` +
-        "**What the server did:** Every login attempt was individually blocked. " +
-        "No account was compromised. The IP is also subject to the auth rate limiter (5 attempts/15 min), " +
-        "which means it will start receiving 429 errors if it hasn't already.\n\n" +
-        "**What you should do:**\n" +
-        `1. **Block \`${ip}\` at the firewall/CDN level** — this is the most effective action.\n` +
-        "2. Check if any of your users' accounts are being targeted (look at the AUTH_FAIL events above this one).\n" +
-        "3. If the attack is ongoing, consider temporarily enabling CAPTCHA on the login page.\n" +
-        "4. No action is required if the IP stops after this alert — the rate limiter will handle it."
+      `**What happened:** The IP address \`${ip}\` has failed to log in **${count} times** ` +
+      `within the last **${windowMins} minutes**. This is a strong signal that someone is ` +
+      `running an automated password-guessing attack (also called a brute-force or credential-stuffing attack).\n\n` +
+      "**What the server did:** Every login attempt was individually blocked. " +
+      "No account was compromised. The IP is also subject to the auth rate limiter (5 attempts/15 min), " +
+      "which means it will start receiving 429 errors if it hasn't already.\n\n" +
+      "**What you should do:**\n" +
+      `1. **Block \`${ip}\` at the firewall/CDN level** — this is the most effective action.\n` +
+      "2. Check if any of your users' accounts are being targeted (look at the AUTH_FAIL events above this one).\n" +
+      "3. If the attack is ongoing, consider temporarily enabling CAPTCHA on the login page.\n" +
+      "4. No action is required if the IP stops after this alert — the rate limiter will handle it."
     )
     .addFields(
-      { name: "🖥️ Attacker IP Address", value: `\`${ip}\``, inline: true },
-      {
-        name: "🔢 Failed Login Count",
-        value: `**${count}** failures in ${windowMins} min`,
-        inline: true,
-      },
-      {
-        name: "⏱️ Detection Window",
-        value: `Last **${windowMins} minutes** (sliding)`,
-        inline: true,
-      },
-      {
-        name: "🕐 Escalation Time (EST)",
-        value: formatTimestamp(occurredAt),
-        inline: true,
-      },
-      {
-        name: "🛡️ Threshold",
-        value: `\`${BRUTE_FORCE_THRESHOLD}+ failures / ${windowMins} min\``,
-        inline: true,
-      },
+      { name: "🖥️ Attacker IP Address",        value: `\`${ip}\``,                                     inline: true  },
+      { name: "🔢 Failed Login Count",          value: `**${count}** failures in ${windowMins} min`,   inline: true  },
+      { name: "⏱️ Detection Window",            value: `Last **${windowMins} minutes** (sliding)`,     inline: true  },
+      { name: "🕐 Escalation Time (EST)",       value: formatTimestamp(occurredAt),                    inline: true  },
+      { name: "🛡️ Threshold",                   value: `\`${BRUTE_FORCE_THRESHOLD}+ failures / ${windowMins} min\``, inline: true },
       {
         name: "🔍 Browser / Client Signature (User-Agent)",
         value: `\`${(userAgent ?? "none — no user-agent header provided").substring(0, 120)}\``,
@@ -559,21 +493,16 @@ function buildBruteForceEmbed(
         inline: false,
       }
     )
-    .setFooter({
-      text: "AI Sports Betting · Security Monitor · BRUTE_FORCE_ESCALATION",
-    })
+    .setFooter({ text: "AI Sports Betting · Security Monitor · BRUTE_FORCE_ESCALATION" })
     .setTimestamp(occurredAt);
 }
 
 // ─── Embed dispatcher ─────────────────────────────────────────────────────────
 function buildEmbed(p: SecurityAlertPayload): EmbedBuilder {
   switch (p.eventType) {
-    case "CSRF_BLOCK":
-      return buildCsrfBlockEmbed(p);
-    case "RATE_LIMIT":
-      return buildRateLimitEmbed(p);
-    case "AUTH_FAIL":
-      return buildAuthFailEmbed(p);
+    case "CSRF_BLOCK":  return buildCsrfBlockEmbed(p);
+    case "RATE_LIMIT":  return buildRateLimitEmbed(p);
+    case "AUTH_FAIL":   return buildAuthFailEmbed(p);
   }
 }
 
@@ -592,20 +521,14 @@ async function fetchSecurityChannel(tag: string): Promise<TextChannel | null> {
   try {
     const rawChannel = await client.channels.fetch(SECURITY_CHANNEL_ID);
     if (!rawChannel || !(rawChannel instanceof TextChannel)) {
-      console.error(
-        `${tag} Channel ${SECURITY_CHANNEL_ID} is not a TextChannel or could not be fetched`
-      );
+      console.error(`${tag} Channel ${SECURITY_CHANNEL_ID} is not a TextChannel or could not be fetched`);
       return null;
     }
-    console.log(
-      `${tag} Channel resolved: #${rawChannel.name} in ${rawChannel.guild?.name ?? "unknown"}`
-    );
+    console.log(`${tag} Channel resolved: #${rawChannel.name} in ${rawChannel.guild?.name ?? "unknown"}`);
     return rawChannel;
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error(
-      `${tag} Failed to fetch channel ${SECURITY_CHANNEL_ID}: ${msg}`
-    );
+    console.error(`${tag} Failed to fetch channel ${SECURITY_CHANNEL_ID}: ${msg}`);
     return null;
   }
 }
@@ -621,25 +544,19 @@ async function postBruteForceAlert(
   count: number,
   windowMs: number,
   userAgent: string | null | undefined,
-  occurredAt: number
+  occurredAt: number,
 ): Promise<void> {
   const tag = "[DiscordSecurity][BRUTE_FORCE]";
 
   console.log(
     `${tag} 🚨 Posting brute-force escalation alert` +
-      ` | IP=${ip} count=${count} window=${Math.round(windowMs / 1000 / 60)}min`
+    ` | IP=${ip} count=${count} window=${Math.round(windowMs / 1000 / 60)}min`
   );
 
   const channel = await fetchSecurityChannel(tag);
   if (!channel) return;
 
-  const embed = buildBruteForceEmbed(
-    ip,
-    count,
-    windowMs,
-    userAgent,
-    occurredAt
-  );
+  const embed = buildBruteForceEmbed(ip, count, windowMs, userAgent, occurredAt);
 
   try {
     // @here mention in the message content + embed for maximum visibility
@@ -649,7 +566,7 @@ async function postBruteForceAlert(
     });
     console.log(
       `${tag} [OUTPUT] Brute-force escalation posted successfully` +
-        ` | IP=${ip} count=${count} channel=#${channel.name}`
+      ` | IP=${ip} count=${count} channel=#${channel.name}`
     );
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -669,23 +586,17 @@ async function postBruteForceAlert(
  *
  * Never awaited at call sites — the HTTP response is always sent first.
  */
-export async function postSecurityAlert(
-  payload: SecurityAlertPayload
-): Promise<void> {
+export async function postSecurityAlert(payload: SecurityAlertPayload): Promise<void> {
   const tag = `[DiscordSecurity][${payload.eventType}]`;
 
   // ── Step 1: Validate bot client is available ───────────────────────────────
   const client = getDiscordClient();
   if (!client) {
-    console.log(
-      `${tag} Bot client not available — skipping Discord alert | IP=${payload.ip}`
-    );
+    console.log(`${tag} Bot client not available — skipping Discord alert | IP=${payload.ip}`);
     return;
   }
   if (!client.isReady()) {
-    console.log(
-      `${tag} Bot client not ready — skipping Discord alert | IP=${payload.ip}`
-    );
+    console.log(`${tag} Bot client not ready — skipping Discord alert | IP=${payload.ip}`);
     return;
   }
 
@@ -694,18 +605,14 @@ export async function postSecurityAlert(
   // even if the per-event embed is deduplicated.
   if (payload.eventType === "AUTH_FAIL") {
     const result = trackAuthFailForBruteForce(payload.ip, payload.occurredAt);
-    if (
-      result.escalate &&
-      result.count !== undefined &&
-      result.windowMs !== undefined
-    ) {
+    if (result.escalate && result.count !== undefined && result.windowMs !== undefined) {
       // Post brute-force @here alert (fire-and-forget)
       postBruteForceAlert(
         payload.ip,
         result.count,
         result.windowMs,
         payload.userAgent,
-        payload.occurredAt
+        payload.occurredAt,
       ).catch((err: unknown) => {
         console.error(
           `${tag} Brute-force escalation post failed: ${err instanceof Error ? err.message : String(err)}`
@@ -720,14 +627,12 @@ export async function postSecurityAlert(
   // ── Step 4: Log the alert attempt ─────────────────────────────────────────
   console.log(
     `${tag} Posting security alert to channel ${SECURITY_CHANNEL_ID}` +
-      ` | IP=${payload.ip}` +
-      ` path="${payload.path}"` +
-      ` method=${payload.method}` +
-      (payload.blockedOrigin
-        ? ` blockedOrigin="${payload.blockedOrigin}"`
-        : "") +
-      (payload.context ? ` context="${payload.context}"` : "") +
-      ` occurredAt=${formatTimestamp(payload.occurredAt)}`
+    ` | IP=${payload.ip}` +
+    ` path="${payload.path}"` +
+    ` method=${payload.method}` +
+    (payload.blockedOrigin ? ` blockedOrigin="${payload.blockedOrigin}"` : "") +
+    (payload.context ? ` context="${payload.context}"` : "") +
+    ` occurredAt=${formatTimestamp(payload.occurredAt)}`
   );
 
   // ── Step 5: Fetch the target channel ──────────────────────────────────────
@@ -740,15 +645,15 @@ export async function postSecurityAlert(
     await channel.send({ embeds: [embed] });
     console.log(
       `${tag} [OUTPUT] Alert posted successfully` +
-        ` | IP=${payload.ip}` +
-        ` channel=#${channel.name}` +
-        ` eventType=${payload.eventType}`
+      ` | IP=${payload.ip}` +
+      ` channel=#${channel.name}` +
+      ` eventType=${payload.eventType}`
     );
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error(
       `${tag} Failed to send embed to channel ${SECURITY_CHANNEL_ID}: ${msg}` +
-        ` | IP=${payload.ip}`
+      ` | IP=${payload.ip}`
     );
   }
 }
