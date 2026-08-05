@@ -4,6 +4,11 @@ sys.path.insert(0, os.path.dirname(__file__))
 DATA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..",
                                          "docs", "mlb-stats-api", "data"))
 
+# Single-row extracts of the historical games-YYYY.json datasets (dropped from
+# git 2026-08-05; regenerate any season with
+# scripts/mlb-crawl/build_games_dataset.py --start YYYY --end YYYY).
+FIXTURES_DIR = os.path.join(os.path.dirname(__file__), "fixtures")
+
 
 def load_feed(season, pk):
     return json.load(open(os.path.join(DATA_DIR, f"feeds-{season}", f"{pk}.json")))
@@ -92,7 +97,7 @@ def test_2026_pitch_has_full_tracking():
 def test_2016_tie_game_is_tie_and_no_winner():
     from transform import extract_game
     feed = load_feed("2016", 449244)
-    dataset = json.load(open(os.path.join(DATA_DIR, "games-2016.json")))
+    dataset = json.load(open(os.path.join(FIXTURES_DIR, "games-2016.json")))
     row = {r["gamePk"]: r for r in dataset}[449244]
     assert row["isTie"] is True
 
@@ -114,7 +119,7 @@ def test_2016_pitching_fractional_ip():
 def test_2014_rain_shortened_innings():
     from transform import extract_game
     feed = load_feed("2014", 381964)
-    dataset = json.load(open(os.path.join(DATA_DIR, "games-2014.json")))
+    dataset = json.load(open(os.path.join(FIXTURES_DIR, "games-2014.json")))
     row = {r["gamePk"]: r for r in dataset}[381964]
     assert row["innings"] == 5
 
@@ -150,7 +155,7 @@ def test_2006_plays_have_null_timestamps():
 def test_2020_seven_inning_doubleheader():
     from transform import extract_game
     feed = load_feed("2020", 631470)
-    dataset = json.load(open(os.path.join(DATA_DIR, "games-2020.json")))
+    dataset = json.load(open(os.path.join(FIXTURES_DIR, "games-2020.json")))
     row = {r["gamePk"]: r for r in dataset}[631470]
     assert row["doubleHeader"] == "Y"
     assert feed["liveData"]["linescore"]["scheduledInnings"] == 7
