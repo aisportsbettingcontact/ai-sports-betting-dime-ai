@@ -77,11 +77,22 @@ export async function runSchemaProbe(
  * Boot-time probe, bounded so a slow/unreachable DB never blocks startup. Call
  * BEFORE server.listen so the verdict is known before Railway's first health
  * probe (closing the race where a premature 200 lets a broken deploy go live).
- * On timeout the real probe keeps running and updates the verdict when it
- * settles; a timed-out boot probe leaves the verdict "unknown" (does not fail
- * health), and the periodic re-probe below will correct it.
+ *
+ * The budget MUST exceed the pool's connectTimeout (15s, server/db.ts). At boot
+ * the pool is cold — the keepalive warm-up runs in onListening, i.e. AFTER
+ * listen — so this probe establishes the very first TiDB connection. On a
+ * paused/resuming TiDB Serverless (off-peak redeploy) a cold connect can take
+ * several seconds; a budget shorter than connectTimeout would let the timer win
+ * the race, leave the verdict "unknown", and let Railway cut over to a broken
+ * deploy before the real verdict lands — defeating the whole gate on exactly the
+ * cold-redeploy path it exists for (Phase 1½ review, 2026-08-05). At 20s a cold
+ * connect (≤15s) + the trivial probe query still resolve to a REAL verdict
+ * before listen; a warm redeploy resolves in <1s (the race returns on
+ * completion, not the ceiling); a genuine DB-down resolves to "unknown" (does
+ * not fail health) after the budget. Railway's healthcheckTimeout=300 easily
+ * tolerates the extra boot seconds.
  */
-export async function runBootSchemaProbe(timeoutMs = 5000): Promise<void> {
+export async function runBootSchemaProbe(timeoutMs = 20_000): Promise<void> {
   await Promise.race([
     runSchemaProbe(),
     new Promise<void>(resolve => {
