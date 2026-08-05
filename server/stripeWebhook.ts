@@ -21,6 +21,7 @@
  */
 import type { Express, Request, Response } from "express";
 import express from "express";
+import { randomBytes } from "node:crypto";
 import type Stripe from "stripe";
 import { eq, and, sql } from "drizzle-orm";
 import { appUsers, stripeWebhookEvents } from "../drizzle/schema";
@@ -449,7 +450,7 @@ async function createPendingUserFromCheckout(params: {
   let username = (params.desiredUsername ?? "").trim().replace(/[^a-zA-Z0-9_.-]/g, "").slice(0, 64);
   if (!username || username.length < 3) {
     const emailPrefix = params.email.split("@")[0].replace(/[^a-zA-Z0-9_.-]/g, "").slice(0, 20);
-    username = `${emailPrefix}_${Math.random().toString(36).slice(2, 6)}`;
+    username = `${emailPrefix}_${randomBytes(3).toString("hex")}`;
     console.warn(`${tag} [STATE] Invalid desiredUsername — fallback: ${username}`);
   }
   console.log(`${tag} [INPUT] sessionId=${params.sessionId} username=${username} email=${params.email} plan=${params.planId} planPriceId=${params.planPriceId ?? "(none)"}`);
@@ -457,7 +458,7 @@ async function createPendingUserFromCheckout(params: {
   // [STEP 2] Check username collision
   const byUsername = await db.select({ id: appUsers.id }).from(appUsers).where(eq(appUsers.username, username)).limit(1);
   if (byUsername.length > 0) {
-    username = `${username}_${Math.random().toString(36).slice(2, 5)}`;
+    username = `${username}_${randomBytes(2).toString("hex")}`;
     console.warn(`${tag} [STATE] Username collision — using: ${username}`);
   }
 

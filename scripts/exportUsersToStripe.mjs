@@ -30,6 +30,20 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const DRY_RUN = process.argv.includes("--dry-run");
+// This script reads every row of app_users, so its console output is a bulk
+// PII surface that lands in terminal scrollback and CI logs. Addresses are
+// masked by default; --show-pii is an explicit, auditable opt-in for the rare
+// case where an operator must reconcile a specific address by eye.
+const SHOW_PII = process.argv.includes("--show-pii");
+
+/** d***@example.com — enough to recognise a row, not enough to harvest one. */
+function maskEmail(email) {
+  if (!email) return "(none)";
+  if (SHOW_PII) return email;
+  const at = email.indexOf("@");
+  if (at < 1) return "***";
+  return `${email[0]}***${email.slice(at)}`;
+}
 const TAG = "[ExportUsersToStripe]";
 
 // ─── Validate environment ─────────────────────────────────────────────────────
@@ -46,7 +60,12 @@ if (!DATABASE_URL) {
 }
 
 console.log(`${TAG} [INPUT] DRY_RUN=${DRY_RUN}`);
-console.log(`${TAG} [INPUT] STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY.slice(0, 12)}...`);
+// Log only which MODE the key selects — never the key, its prefix, or its
+// length. Anything derived from the key still carries it into the log record.
+const STRIPE_KEY_MODE = STRIPE_SECRET_KEY.startsWith("sk_live_")
+  ? "live"
+  : "test";
+console.log(`${TAG} [INPUT] STRIPE_SECRET_KEY=configured (${STRIPE_KEY_MODE})`);
 console.log(`${TAG} [INPUT] DATABASE_URL=${DATABASE_URL.replace(/:[^@]+@/, ":***@")}`);
 
 // ─── Initialize Stripe ────────────────────────────────────────────────────────
@@ -97,7 +116,7 @@ for (const u of rows) {
     ? "Lifetime"
     : "None";
   console.log(
-    `${String(u.id).padEnd(6)} ${(u.username ?? "(none)").padEnd(20)} ${(u.email ?? "(none)").padEnd(35)} ${(u.role ?? "user").padEnd(12)} ${(u.hasAccess ? "YES" : "NO").padEnd(8)} ${(u.stripePlanId ?? expiry).padEnd(10)}`
+    `${String(u.id).padEnd(6)} ${(u.username ?? "(none)").padEnd(20)} ${maskEmail(u.email).padEnd(35)} ${(u.role ?? "user").padEnd(12)} ${(u.hasAccess ? "YES" : "NO").padEnd(8)} ${(u.stripePlanId ?? expiry).padEnd(10)}`
   );
 }
 console.log(`${"─".repeat(80)}\n`);
@@ -116,7 +135,9 @@ const results = [];
 
 for (const user of rows) {
   const userTag = `${TAG}[userId=${user.id}]`;
-  console.log(`${userTag} [STEP] Processing username=${user.username} email=${user.email ?? "(none)"}`);
+  console.log(
+    `${userTag} [STEP] Processing username=${user.username} email=${maskEmail(user.email)}`
+  );
 
   // Build customer metadata — preserve ALL user data
   const metadata = {
@@ -136,7 +157,9 @@ for (const user of rows) {
   // Check if a Stripe customer already exists with this email to avoid duplicates
   let existingCustomerId = null;
   if (user.email) {
-    console.log(`${userTag} [STEP] Checking for existing Stripe customer with email=${user.email}`);
+    console.log(
+      `${userTag} [STEP] Checking for existing Stripe customer with email=${maskEmail(user.email)}`
+    );
     try {
       const existing = await stripe.customers.list({ email: user.email, limit: 1 });
       if (existing.data.length > 0) {

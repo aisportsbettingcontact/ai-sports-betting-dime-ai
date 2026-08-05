@@ -1,6 +1,7 @@
 # Master build plan — Dime AI operating system
 
-**Stage 3 of the 100% AI-Native mission** · **Status:** AWAITING APPROVAL · **DRI:** Prez
+**Stage 3 of the 100% AI-Native mission** · **Status:** RULED — approved 2026-08-05 · **DRI:** Prez
+**Approval record:** `DR-015` (lands with the Wave 0 PR; linked once both are on `main`)
 **Raised:** 2026-08-05 · **Doctrine:** D14 (the fifteen-stage sequence) · D12 (eight layers) · D16 §17
 
 > **For agentic workers:** each issue in `issues/` is independently shippable and carries its own
@@ -69,7 +70,7 @@ Claude Code hooks. No new service, no new vendor, no new daemon, no schema chang
 - Any UI inherits `design-system/dime-ai/MASTER.md`.
 - Every claim in every artifact carries VERIFIED / INFERRED / UNKNOWN.
 - **Both Railway services build with the Dockerfile** [VERIFIED 2026-08-05 from the build log of live
-  deployment `4b55b680`]. The `RAILPACK` value in the service config is stale persisted dashboard
+  deployment `4b55b680`]. **REFUTED 2026-08-05:** the `RAILPACK` value in the service config is stale
   state that `railway.json` overrides at deploy time. `/usr/bin/python3` and all five Python model
   runners are present in the runtime image. See `os/audits/2026-08-05-builder-resolution.md`.
 

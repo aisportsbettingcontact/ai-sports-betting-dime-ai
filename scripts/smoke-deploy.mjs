@@ -121,8 +121,20 @@ await check("checkout CSP allows Stripe Embedded (script-src js.stripe.com + fra
   expect(csp, "no CSP header — helmet not applied on the checkout route");
   const scriptSrc = csp.split(";").find((d) => d.trim().startsWith("script-src")) ?? "";
   const frameSrc = csp.split(";").find((d) => d.trim().startsWith("frame-src")) ?? "";
-  expect(scriptSrc.includes("js.stripe.com"), `script-src blocks Stripe.js: "${scriptSrc.trim()}"`);
-  expect(frameSrc.includes("checkout.stripe.com"), `frame-src blocks the checkout iframe: "${frameSrc.trim()}"`);
+  // Exact source-token match, not substring: "js.stripe.com" also matches a
+  // hostile "js.stripe.com.evil.test", so the substring form could pass on a
+  // CSP that does NOT actually allow Stripe.
+  const sourceTokens = (directive) => directive.trim().split(/\s+/).slice(1);
+  const allowsExactSource = (directive, origin) =>
+    sourceTokens(directive).some((token) => token === origin);
+  expect(
+    allowsExactSource(scriptSrc, "https://js.stripe.com"),
+    `script-src blocks Stripe.js: "${scriptSrc.trim()}"`
+  );
+  expect(
+    allowsExactSource(frameSrc, "https://checkout.stripe.com"),
+    `frame-src blocks the checkout iframe: "${frameSrc.trim()}"`
+  );
   return "CSP allows Stripe";
 });
 

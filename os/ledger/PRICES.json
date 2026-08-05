@@ -1,0 +1,11 @@
+{
+  "version": "prices-2026-08-05",
+  "source": "Anthropic first-party list prices. This is the REPLACEMENT COST numerator, not a cash bill — Dime's interactive work runs on subscription auth and is never billed per token. Changing a price is a version bump, so a re-priced replay is visible rather than a silent number change.",
+  "cacheNote": "cacheWriteMult/cacheReadMult are multiples of the input rate.",
+  "models": {
+    "claude-opus-5":   { "inUsdPerMTok": 5,    "outUsdPerMTok": 25,   "cacheWriteMult": 1.25, "cacheReadMult": 0.1 },
+    "claude-sonnet-5": { "inUsdPerMTok": 3,    "outUsdPerMTok": 15,   "cacheWriteMult": 1.25, "cacheReadMult": 0.1 },
+    "claude-fable-5":  { "inUsdPerMTok": 5,    "outUsdPerMTok": 25,   "cacheWriteMult": 1.25, "cacheReadMult": 0.1 },
+    "claude-haiku-4-5-20251001": { "inUsdPerMTok": 1, "outUsdPerMTok": 5, "cacheWriteMult": 1.25, "cacheReadMult": 0.1 }
+  }
+}

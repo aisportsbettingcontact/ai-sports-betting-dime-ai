@@ -1,6 +1,7 @@
 # DR-003 — Dark-state rescue: getting finished work into the repository
 
 **Status:** AWAITING RULING · **DRI:** Prez · **Raised:** 2026-08-05 by the executor (Stage 2)
+**observe_by:** 2026-08-12
 **Urgency:** HIGH — single-disk exposure on work that already mutated production
 **Doctrine:** D6 (minimize invisible consequential state) · D12-L2 (artifact system) · D16 (no dark
 state — a certification criterion) · D15 #3 (unqueryable work)
