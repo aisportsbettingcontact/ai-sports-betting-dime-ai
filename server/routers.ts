@@ -265,6 +265,16 @@ export const appRouter = router({
         // be shared-cached (a CDN/edge could serve them to an anon); anon
         // responses are commodity and may be shared-cached. ETag over the
         // GATED shape so authed/anon never collide on the same validator.
+        //
+        // Authed = `private, no-store` (NOT max-age): (1) closes this endpoint's
+        // own edge-cache exposure of MLB model IP under a Cloudflare
+        // "Override-TTL / Cache Everything" rule that ignores `private`+`Vary`;
+        // (2) games.list and wc2026.matchesByDate co-batch into ONE tRPC HTTP
+        // response sharing one `ctx.res` — last-writer-wins on Cache-Control.
+        // Making BOTH authed model endpoints emit `no-store` makes that race
+        // benign (uniform no-store) regardless of which procedure resolves last.
+        // Fast-follow: a responseMeta hook that emits the most-restrictive
+        // Cache-Control across an arbitrary batch removes the race entirely.
         try {
           const etag = createHash('md5')
             .update(JSON.stringify(gated.map(g => ({ id: g.id, modelRunAt: g.modelRunAt, gameStatus: g.gameStatus }))))
@@ -272,7 +282,7 @@ export const appRouter = router({
             .slice(0, 16);
           ctx.res.setHeader(
             'Cache-Control',
-            authed ? 'private, max-age=30' : 'public, max-age=30, stale-while-revalidate=60'
+            authed ? 'private, no-store' : 'public, max-age=30, stale-while-revalidate=60'
           );
           ctx.res.setHeader('Vary', 'Cookie');
           ctx.res.setHeader('ETag', `"${etag}"`);

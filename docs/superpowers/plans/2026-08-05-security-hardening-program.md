@@ -110,3 +110,19 @@ canary) · `server/feedGating.ts` + `server/routers.ts` + `server/wc2026/wc2026R
 **Gates:** tsc clean · **76 unit tests** across edgeProxy/originLock/policy/feedGating (incl. IPv6
 CIDR, constant-time secret, dual-proof, decoupled-keying, anti-lockout, cache headers) · smoke
 syntax OK. Terminal outcome: **BUILT — inert on merge; activation owner-gated (DNS + `EDGE_MODE`).**
+
+**Diff review outcome (adversarial, 5 lenses → verify):** 4 findings, **2 confirmed** (the same
+tRPC batch-header race from two angles), 2 correctly dismissed (an origin-bypass claim resting on an
+inverted XFF topology the code doesn't have; an "inert ETag" that is genuinely inert). **Fix
+applied:** `games.list` authed now emits `private, no-store` (was `private, max-age=30`). Because
+`games.list` and `wc2026.matchesByDate` co-batch into one tRPC HTTP response sharing one `ctx.res`
+(last-writer-wins on `Cache-Control`), making BOTH authed model endpoints `no-store` makes the race
+benign AND closes `games.list`'s own standing edge-cache exposure of MLB model IP. Fast-follow noted:
+a `responseMeta` most-restrictive-wins hook for arbitrary future batches.
+
+**Inertness precision:** the EDGE_MODE machinery (origin lock mount, `resolveClientIp` CF branch, the
+edge canary) is inert when `EDGE_MODE` is unset — verified. The cache-header hardening on the 8 gated
+endpoints (+ `games.list`) is **intentionally always-on** (like Phase 3's field gating), not part of
+the inert-when-off claim: authed model responses are now uniformly `private, no-store` regardless of
+`EDGE_MODE`. This is a strict security improvement with a negligible perf cost (the ETag was already
+inert — no 304 is ever emitted).
