@@ -176,6 +176,58 @@ await check("rate-limit keying resists X-Forwarded-For spoofing (Railway sanitiz
   return `plain remaining=${r1} → spoofed remaining=${r2} (shared key)`;
 });
 
+// ─── Phase 4 edge-defense checks (opt-in via SMOKE_EDGE=cloudflare) ──────────
+// Only run when explicitly enabled so the default (pre-Cloudflare) gate is
+// unchanged. Verifies the origin lock + that the WAF does not edge-block the
+// free-text API surface. `base` should be the CF-fronted hostname; the direct
+// Railway origin (for the lock check) comes from SMOKE_ORIGIN_URL.
+if (process.env.SMOKE_EDGE === "cloudflare") {
+  const originUrl = (process.env.SMOKE_ORIGIN_URL ?? "").replace(/\/$/, "");
+
+  await check("origin lock: direct origin without secret → 403", async () => {
+    if (!/^https?:\/\//.test(originUrl)) {
+      return "N/A — set SMOKE_ORIGIN_URL to the direct *.up.railway.app origin to assert the lock";
+    }
+    const res = await fetch(
+      `${originUrl}/api/trpc/games.list?batch=1&input=%7B%220%22%3A%7B%22json%22%3A%7B%22sport%22%3A%22MLB%22%7D%7D%7D`,
+      { redirect: "manual" }
+    );
+    expect(
+      res.status === 403,
+      `expected 403 on a secret-less direct-origin hit, got ${res.status} — origin lock not enforcing (EDGE_MODE=on?)`
+    );
+    return "direct origin 403s without the edge secret";
+  });
+
+  await check("origin lock: /health reachable on the direct origin (Railway probe)", async () => {
+    if (!/^https?:\/\//.test(originUrl)) return "N/A — no SMOKE_ORIGIN_URL";
+    const res = await fetch(`${originUrl}/health`, { redirect: "manual" });
+    expect(res.status === 200, `/health returned ${res.status} on the direct origin — probe would fail`);
+    return "/health stays 200 direct (healthcheck survives edge outage)";
+  });
+
+  await check("WAF does not edge-block free-text API (Dime Chat betting jargon)", async () => {
+    // A legit chat message full of WAF-triggering tokens must REACH the origin
+    // (auth gate → 401/400), never a Cloudflare 403/1010 edge block. Proves the
+    // WAF SKIP for /api/dime/* is in place (collateral-damage fix).
+    const res = await fetch(`${base}/api/dime/chat`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        messages: [
+          { role: "user", content: "should I select the over or under 8.5, or is 1=1 a lock? <test>" },
+        ],
+      }),
+      redirect: "manual",
+    });
+    expect(
+      res.status !== 403,
+      `Dime Chat POST got ${res.status} — the WAF is edge-blocking legit free-text; add a SKIP for /api/dime/*`
+    );
+    return `reached origin (status ${res.status}, not a WAF 403)`;
+  });
+}
+
 const failed = results.filter((r) => !r.ok);
 console.log(`\n${results.length - failed.length}/${results.length} checks passed`);
 process.exit(failed.length === 0 ? 0 : 1);
