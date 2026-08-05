@@ -145,13 +145,30 @@
 /* Full league name on narrow phones (page law: reduce type and spacing
    before truncation): tighter tracking, slimmer chevron lane, smaller logo
    box — the ellipsis on .dmf-lgname is the last resort, not the plan.
-   Bound measured: at 390px the full name fits untouched; at 384-375px the
-   fluid 3.9vw size clips by a few px, so the reduction engages at <384. */
-@media (max-width: 383.98px) {
+   2026-08-05 (mobile refinement): re-measured under REAL mobile emulation
+   (iPhone UA + touch + DPR2 — the earlier "fits at 390" bound came from a
+   narrowed desktop window). The fluid tier's 14.14px + 0.08em tracking needs
+   289px at 390 while the lane affords 252 — "MAJOR LEAGUE BASEBALL (MLB)"
+   ellipsized on the primary phone band. The compact tier now engages for
+   the whole phone band (<480), with two deeper reductions so the name stays
+   complete down to the 320 floor (10px = the micro-label floor, reached
+   only at <=329.98). */
+@media (max-width: 479.98px) {
   .dmf-leaguehead,
   .dmf-lgbar { gap: 8px; padding: 2px 26px; font-size: 12px; letter-spacing: 0.02em; }
   .dmf-lglogo { width: 24px; height: 24px; flex: 0 0 24px; }
   .dmf-lgchev { right: 4px; width: 18px; height: 18px; }
+}
+@media (max-width: 359.98px) {
+  .dmf-leaguehead,
+  .dmf-lgbar { gap: 6px; padding: 2px 24px; font-size: 11px; letter-spacing: 0.01em; }
+  .dmf-lglogo { width: 22px; height: 22px; flex: 0 0 22px; }
+}
+@media (max-width: 329.98px) {
+  .dmf-leaguehead,
+  .dmf-lgbar { gap: 6px; padding: 2px 20px; font-size: 10px; letter-spacing: 0; }
+  .dmf-lglogo { width: 20px; height: 20px; flex: 0 0 20px; }
+  .dmf-lgchev { width: 16px; height: 16px; }
 }
 
 /* ── The league card grid — CONTENT-driven columns ──
