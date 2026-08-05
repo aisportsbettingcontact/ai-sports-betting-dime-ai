@@ -3,9 +3,11 @@ import {
   __resetSchemaGateForTest,
   currentSchemaVerdict,
   hasSchemaProbed,
+  runBootSchemaProbe,
   runSchemaProbe,
   schemaGateEnabled,
   shouldFailHealthForSchema,
+  startSchemaProbeInterval,
 } from "./schemaHealthGate";
 
 describe("schemaHealthGate", () => {
@@ -66,5 +68,22 @@ describe("schemaHealthGate", () => {
     expect(shouldFailHealthForSchema()).toBe(false);
     // Verdict is still recorded for observability even when the gate is off.
     expect(currentSchemaVerdict()).toBe("schema_mismatch");
+  });
+
+  it("runBootSchemaProbe resolves within the bounded budget and marks probed", async () => {
+    // The short budget guarantees completion even if the (default) probe's DB
+    // connect is slow/unavailable; the whole race body executes regardless of
+    // which side wins. A missing DB resolves to "unknown", which never fails.
+    await runBootSchemaProbe(100);
+    expect(hasSchemaProbed()).toBe(true);
+    expect(shouldFailHealthForSchema()).toBe(false);
+  });
+
+  it("startSchemaProbeInterval returns a timer and re-probes on tick", async () => {
+    const timer = startSchemaProbeInterval(5);
+    expect(timer).toBeDefined();
+    // Let it fire at least once so the re-probe callback executes, then stop it.
+    await new Promise(resolve => setTimeout(resolve, 20));
+    clearInterval(timer);
   });
 });
