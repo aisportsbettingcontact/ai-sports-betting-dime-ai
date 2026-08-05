@@ -15,6 +15,10 @@
 
 import { z } from "zod";
 import { router, publicProcedure } from "../_core/trpc";
+import {
+  isRequestAuthenticated,
+  stripWcMatchupModelFields,
+} from "../feedGating";
 import { ownerProcedure } from "../routers/appUsers";
 import {
   scrapeEspnMatch,
@@ -64,7 +68,7 @@ export const wc2026Router = router({
   // ─── Matches by date ─────────────────────────────────────────────────────
   matchesByDate: publicProcedure
     .input(z.object({ date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/) }))
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       const db = await getDb();
       console.log(`[wc2026.matchesByDate] INPUT date='${input.date}'`);
       const matches = await db
@@ -306,7 +310,10 @@ export const wc2026Router = router({
         projAwayScore: p.projAwayScore ?? undefined,
         projTotal: p.projTotal ?? undefined,
       });
-      return matches.map((f: WcMatch) => {
+      // IP gating (Phase 3): anon callers get schedule + book odds (dkOdds),
+      // model odds/projection/edges/probs nulled. Authed callers get the model.
+      const wcAuthed = await isRequestAuthenticated(ctx.req);
+      const wcMapped = matches.map((f: WcMatch) => {
         const proj = projMap[f.matchId] ?? null;
         return {
           ...f,
@@ -339,6 +346,14 @@ export const wc2026Router = router({
           frozenAt: proj?.frozenAt ?? null,
         };
       });
+      return wcAuthed
+        ? wcMapped
+        : wcMapped.map(
+            (m: (typeof wcMapped)[number]) =>
+              stripWcMatchupModelFields(
+                m as Record<string, unknown>
+              ) as typeof m
+          );
     }),
 
   // ─── Matches by group ────────────────────────────────────────────────────
@@ -375,7 +390,7 @@ export const wc2026Router = router({
   // ─── Latest odds per match ──────────────────────────────────────────────
   latestOdds: publicProcedure
     .input(z.object({ matchId: z.string() }))
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       const db = await getDb();
       const latest = await db
         .select({ maxTs: sql<Date>`MAX(snapshot_ts)` })
@@ -385,7 +400,7 @@ export const wc2026Router = router({
       const maxTs = latest[0]?.maxTs;
       if (!maxTs) return [];
 
-      return db
+      const rows = await db
         .select()
         .from(wc2026OddsSnapshots)
         .where(
@@ -395,14 +410,19 @@ export const wc2026Router = router({
           )
         )
         .orderBy(wc2026OddsSnapshots.bookId, wc2026OddsSnapshots.market);
+      // IP gating: bookId=0 IS the AI model's fair-odds snapshot — drop it for anon.
+      const laAuthed = await isRequestAuthenticated(ctx.req);
+      return laAuthed
+        ? rows
+        : rows.filter((r: { bookId: number }) => r.bookId !== 0);
     }),
 
   // ─── Closing odds per match ─────────────────────────────────────────────
   closingOdds: publicProcedure
     .input(z.object({ matchId: z.string() }))
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       const db = await getDb();
-      return db
+      const rows = await db
         .select()
         .from(wc2026OddsSnapshots)
         .where(
@@ -415,6 +435,11 @@ export const wc2026Router = router({
           desc(wc2026OddsSnapshots.snapshotTs),
           wc2026OddsSnapshots.bookId
         );
+      // IP gating: drop the model's book_id=0 fair-odds snapshot for anon.
+      const coAuthed = await isRequestAuthenticated(ctx.req);
+      return coAuthed
+        ? rows
+        : rows.filter((r: { bookId: number }) => r.bookId !== 0);
     }),
 
   // ─── Latest lineups per match ───────────────────────────────────────────
@@ -510,7 +535,7 @@ export const wc2026Router = router({
     }),
 
   // ─── Today's matches with DK 1X2 odds (main page feed) ──────────────────
-  todayWithOdds: publicProcedure.query(async () => {
+  todayWithOdds: publicProcedure.query(async ({ ctx }) => {
     const db = await getDb();
     // [FIX] Use the same 11:00 UTC cutoff gate as CalendarPicker.todayUTC().
     // Raw `new Date().toISOString().split('T')[0]` returns the UTC calendar date,
@@ -738,7 +763,10 @@ export const wc2026Router = router({
       projAwayScore: p.projAwayScore ?? undefined,
       projTotal: p.projTotal ?? undefined,
     });
-    return matches.map((f: WcMatch) => {
+    // IP gating (Phase 3): same as matchesByDate — anon gets schedule + dkOdds
+    // (book), model odds/projection/edges/probs nulled.
+    const twoAuthed = await isRequestAuthenticated(ctx.req);
+    const twoMapped = matches.map((f: WcMatch) => {
       const proj = projMapT[f.matchId] ?? null;
       return {
         ...f,
@@ -759,6 +787,12 @@ export const wc2026Router = router({
         frozenAt: proj?.frozenAt ?? null,
       };
     });
+    return twoAuthed
+      ? twoMapped
+      : twoMapped.map(
+          (m: (typeof twoMapped)[number]) =>
+            stripWcMatchupModelFields(m as Record<string, unknown>) as typeof m
+        );
   }),
 
   // ─── ESPN Match Scraper ───────────────────────────────────────────────────
