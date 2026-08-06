@@ -1,0 +1,1458 @@
+{
+ "schema": {
+  "row": [
+   "name",
+   "method",
+   "url",
+   "http_status",
+   "content_type",
+   "bytes",
+   "note"
+  ],
+  "retrieved_at": "r1: 2026-07-27T06:07-06:11Z; r2: 2026-07-27T06:24-06:28Z",
+  "auth": "none (unauthenticated curl)",
+  "environment": "macOS workstation, HTTPS, ~0.4-0.5s spacing"
+ },
+ "rows": [
+  {
+   "name": "sports",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/sports",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 2946,
+   "note": "20 sports incl. Negro Leagues, KBO, NPB, college, HS, softball"
+  },
+  {
+   "name": "sports1_players_noseason",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/sports/1/players?fields=people,id,fullName,currentTeam,id",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 87146,
+   "note": "season NOT required; fields param works"
+  },
+  {
+   "name": "sports1_players_hist",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/sports/1/players?season=2000&fields=people,id,fullName",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 49579,
+   "note": "historical season pool works"
+  },
+  {
+   "name": "teams_root",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/teams?fields=teams,id,name",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 33732,
+   "note": "mixed population: college, DSL, international"
+  },
+  {
+   "name": "teams_mlb2026",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/teams?sportId=1&season=2026&fields=teams,id,name",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 1125,
+   "note": "30 MLB clubs"
+  },
+  {
+   "name": "person_betts",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/people/605141",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 1131,
+   "note": "36 fields; has draftYear, no nickName/death fields"
+  },
+  {
+   "name": "person_ruth",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/people/121578",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 1246,
+   "note": "41 fields; death*, lastPlayedDate, nickName; no draftYear"
+  },
+  {
+   "name": "people_search",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/people/search?names=ohtani",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 1136,
+   "note": "returns Shohei Ohtani 660271"
+  },
+  {
+   "name": "seasons_2026",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/seasons?sportId=1&season=2026",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 830,
+   "note": "21-field season object"
+  },
+  {
+   "name": "seasons_all",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/seasons/all?sportId=1",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 78107,
+   "note": "back to 1876"
+  },
+  {
+   "name": "league_singular",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/league?sportId=1",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 12907,
+   "note": "byte-identical to /leagues"
+  },
+  {
+   "name": "leagues_plural",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/leagues?sportId=1",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 12907,
+   "note": "byte-identical to /league"
+  },
+  {
+   "name": "divisions",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/divisions?sportId=1",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 1952,
+   "note": ""
+  },
+  {
+   "name": "conferences",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/conferences",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 672,
+   "note": "minor-league conferences"
+  },
+  {
+   "name": "venues",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/venues?fields=venues,id,name,active,season",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 116960,
+   "note": "active + inactive/historical mixed"
+  },
+  {
+   "name": "schedule_0725",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=2026-07-25",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 19863,
+   "note": "15 games; 29-field game objects"
+  },
+  {
+   "name": "schedule_noparams",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/schedule",
+   "http_status": 400,
+   "content_type": "application/json",
+   "bytes": 136,
+   "note": "messageNumber 7: Missing required parameter sportId or gamePk"
+  },
+  {
+   "name": "standings",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/standings?leagueId=103,104&season=2026",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 80738,
+   "note": "34-field teamRecords"
+  },
+  {
+   "name": "transactions",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/transactions?startDate=2026-07-20&endDate=2026-07-25",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 683655,
+   "note": ""
+  },
+  {
+   "name": "draft_2026",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/draft/2026",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 1359845,
+   "note": "bisPlayerId, signingBonus, scoutingReport"
+  },
+  {
+   "name": "attendance",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/attendance?teamId=119&season=2026",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 1459,
+   "note": ""
+  },
+  {
+   "name": "feed_v11",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1.1/game/824244/feed/live",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 730899,
+   "note": "metaData.wait=10; gameData.absChallenges present"
+  },
+  {
+   "name": "feed_v1",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/game/824244/feed/live",
+   "http_status": 404,
+   "content_type": "application/json",
+   "bytes": 117,
+   "note": "router error schema; v1 feed dead"
+  },
+  {
+   "name": "boxscore",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/game/824244/boxscore",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 168755,
+   "note": ""
+  },
+  {
+   "name": "linescore",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/game/824244/linescore",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 3188,
+   "note": ""
+  },
+  {
+   "name": "pbp",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/game/824244/playByPlay",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 506700,
+   "note": "pitch events carry playId GUIDs"
+  },
+  {
+   "name": "timestamps",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1.1/game/824244/feed/live/timestamps",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 7543,
+   "note": "bare array of YYYYMMDD_HHMMSS; 154 revisions"
+  },
+  {
+   "name": "winprob",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/game/824244/winProbability",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 843936,
+   "note": "bare per-play array with win probabilities"
+  },
+  {
+   "name": "ctxmetrics",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/game/824244/contextMetrics",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 1672,
+   "note": "win prob + sac-fly probabilities; links to v1.1 feed"
+  },
+  {
+   "name": "content",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/game/824244/content",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 602241,
+   "note": "editorial/media bundle"
+  },
+  {
+   "name": "gamechanges",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/game/changes?updatedSince=2026-07-26T00:00:00Z&sportId=1",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 34253,
+   "note": "26 changed games"
+  },
+  {
+   "name": "colorfeed",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/game/824244/feed/color",
+   "http_status": 404,
+   "content_type": "",
+   "bytes": 0,
+   "note": "dead; empty body"
+  },
+  {
+   "name": "gamepace",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/gamePace?season=2026&sportId=1",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 1336,
+   "note": ""
+  },
+  {
+   "name": "diffpatch",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1.1/game/824244/feed/live/diffPatch?startTimecode=20260725_171045&endTimecode=20260725_171132",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 15245,
+   "note": "3 JSON-Patch sets; ops replace/remove/add"
+  },
+  {
+   "name": "stats_season",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/stats?stats=season&group=hitting&season=2026&limit=3",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 3483,
+   "note": ""
+  },
+  {
+   "name": "stats_leaders",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/stats/leaders?leaderCategories=homeRuns&season=2026&limit=3",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 4717,
+   "note": ""
+  },
+  {
+   "name": "stats_nolimit",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/stats?stats=season&group=pitching&season=2026",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 77223,
+   "note": "default limit=50 confirmed (50 splits)"
+  },
+  {
+   "name": "person_stats",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/people/660271/stats?stats=season&season=2026&group=hitting",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 1206,
+   "note": ""
+  },
+  {
+   "name": "person_gamestats",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/people/669373/stats/game/824244",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 692,
+   "note": ""
+  },
+  {
+   "name": "team_roster",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/teams/116/roster?rosterType=40Man",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 13541,
+   "note": ""
+  },
+  {
+   "name": "team_coaches",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/teams/116/coaches",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 2645,
+   "note": ""
+  },
+  {
+   "name": "team_stats",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/teams/116/stats?season=2026&group=hitting&stats=season",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 976,
+   "note": ""
+  },
+  {
+   "name": "team_leaders",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/teams/116/leaders?leaderCategories=homeRuns&season=2026&limit=3",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 4057,
+   "note": ""
+  },
+  {
+   "name": "jobs_umpires",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/jobs/umpires?date=2026-07-25",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 14781,
+   "note": ""
+  },
+  {
+   "name": "awards_meta",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/awards",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 94646,
+   "note": "682 award definitions"
+  },
+  {
+   "name": "person_awards",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/people/660271/awards",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 22338,
+   "note": ""
+  },
+  {
+   "name": "people_changes",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/people/changes?updatedSince=2026-07-26T00:00:00Z",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 9969,
+   "note": ""
+  },
+  {
+   "name": "sched_postseason",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/schedule/postseason?season=2025",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 66899,
+   "note": "47 items"
+  },
+  {
+   "name": "sched_tied",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/schedule/games/tied?season=2025&sportId=1",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 262,
+   "note": "totalItems 0"
+  },
+  {
+   "name": "guids",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/game/824244/guids",
+   "http_status": 401,
+   "content_type": "text/html",
+   "bytes": 12583,
+   "note": "Okta Please Login page"
+  },
+  {
+   "name": "play_analytics",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/game/824244/434174ff-400c-38bf-96d9-9c218a24debe/analytics",
+   "http_status": 401,
+   "content_type": "text/html",
+   "bytes": 12583,
+   "note": "Okta Please Login page"
+  },
+  {
+   "name": "battrack",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/batTracking/game/824244/434174ff-400c-38bf-96d9-9c218a24debe",
+   "http_status": 401,
+   "content_type": "text/html",
+   "bytes": 12583,
+   "note": "Okta Please Login page"
+  },
+  {
+   "name": "props_pred",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/props/play/predictions?gamePk=824244",
+   "http_status": 401,
+   "content_type": "text/html",
+   "bytes": 12583,
+   "note": "Okta Please Login page"
+  },
+  {
+   "name": "highlow_types",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/highLow/types",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 8914,
+   "note": "43 entries; bare array"
+  },
+  {
+   "name": "meta_gamestatus",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/gameStatus",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 31636,
+   "note": "210 combos; 4 abstract states; 15 coded letters"
+  },
+  {
+   "name": "meta_situationcodes",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/situationCodes",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 81780,
+   "note": "602 codes"
+  },
+  {
+   "name": "meta_sortmodifiers",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/sortModifiers",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 508,
+   "note": "11 codes; absent from wrapper known-types list"
+  },
+  {
+   "name": "meta_rooftypes",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/roofTypes",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 412,
+   "note": "6 values"
+  },
+  {
+   "name": "meta_gamedaytypes",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/gamedayTypes",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 567,
+   "note": "8 codes; data-depth ladder"
+  },
+  {
+   "name": "meta_transactiontypes",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/transactionTypes",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 1808,
+   "note": "41 codes"
+  },
+  {
+   "name": "bad_person",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/people/0",
+   "http_status": 404,
+   "content_type": "application/json",
+   "bytes": 109,
+   "note": "messageNumber 10 Object not found"
+  },
+  {
+   "name": "bad_sportid",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/schedule?sportId=abc",
+   "http_status": 400,
+   "content_type": "application/json",
+   "bytes": 124,
+   "note": "messageNumber 11 Invalid Request with value: abc"
+  },
+  {
+   "name": "hydrate_team",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/teams/116?hydrate=venue(location),league",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 2224,
+   "note": "nested-parenthetical hydrate works"
+  },
+  {
+   "name": "v2_sports",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v2/sports",
+   "http_status": 404,
+   "content_type": "application/json",
+   "bytes": 102,
+   "note": "no v2 surface"
+  },
+  {
+   "name": "teams_history",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/teams/history?teamIds=116",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 1747,
+   "note": ""
+  },
+  {
+   "name": "teams_affiliates",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/teams/affiliates?teamIds=119",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 7660,
+   "note": "incl. DSL/ACL/alt-site/Organization entities"
+  },
+  {
+   "name": "team_alumni",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/teams/116/alumni?season=2000&group=hitting",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 56642,
+   "note": ""
+  },
+  {
+   "name": "uniforms_team",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/uniforms/team?teamIds=116&season=2026",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 5953,
+   "note": ""
+  },
+  {
+   "name": "broadcasters",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/broadcasters",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 131395,
+   "note": "bare array; availability semantics"
+  },
+  {
+   "name": "draft_prospects",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/draft/prospects/2026?limit=3",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 7403,
+   "note": ""
+  },
+  {
+   "name": "hrderby",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/homeRunDerby",
+   "http_status": 500,
+   "content_type": "application/json",
+   "bytes": 113,
+   "note": "messageNumber 1 Internal error; route exists, contract unknown"
+  },
+  {
+   "name": "stats_streaks",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/stats/streaks?streakType=hittingStreakOverall&season=2026&limit=3&sportId=1",
+   "http_status": 404,
+   "content_type": "application/json",
+   "bytes": 109,
+   "note": "router error schema \u2014 route dead despite wrapper docs"
+  },
+  {
+   "name": "stats_grouped",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/stats/grouped?stats=season&group=hitting&season=2026&limit=3",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 3525,
+   "note": "public (was secondary-only)"
+  },
+  {
+   "name": "stats_search_config",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/stats/search/config",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 334287,
+   "note": "152 params; filterLevels incl. pitch; public"
+  },
+  {
+   "name": "sb_probability",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/stats/analytics/stolenBaseProbability?season=2026",
+   "http_status": 401,
+   "content_type": "text/html",
+   "bytes": 12583,
+   "note": "Okta Please Login page"
+  },
+  {
+   "name": "last_pitch",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/game/lastPitch?gamePks=824244",
+   "http_status": 401,
+   "content_type": "text/html",
+   "bytes": 12583,
+   "note": "Okta Please Login page"
+  },
+  {
+   "name": "tunein",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/schedule/postseason/tuneIn?season=2025",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 272,
+   "note": "totalItems 0"
+  },
+  {
+   "name": "free_agents",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/people/freeAgents?leagueId=104&season=2026",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 5132,
+   "note": ""
+  },
+  {
+   "name": "venue_hydrate",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/venues/2394?hydrate=location,fieldInfo",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 701,
+   "note": "location + fieldInfo hydrated"
+  },
+  {
+   "name": "stats_offset",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/stats?stats=season&group=hitting&season=2026&limit=3&offset=3",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 3489,
+   "note": "offset works; rank continues at 4"
+  },
+  {
+   "name": "meta_gametypes",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/gameTypes",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 506,
+   "note": "12 values incl. C Championship"
+  },
+  {
+   "name": "meta_rostertypes",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/rosterTypes",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 866,
+   "note": "9 values"
+  },
+  {
+   "name": "meta_positions",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/positions",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 8500,
+   "note": "37 codes"
+  },
+  {
+   "name": "meta_stattypes",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/statTypes",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 1933,
+   "note": "60 values"
+  },
+  {
+   "name": "meta_metrics",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/metrics",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 1545,
+   "note": "22 entries incl. degenerate metricId 0"
+  },
+  {
+   "name": "meta_standingstypes",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/standingsTypes",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 1037,
+   "note": "13 values"
+  },
+  {
+   "name": "meta_eventtypes",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/eventTypes",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 8735,
+   "note": "74 values"
+  },
+  {
+   "name": "meta_baseballstats",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/baseballStats",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 36228,
+   "note": "209 entries"
+  },
+  {
+   "name": "meta_lookupall",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/lookup/values/all",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 342675,
+   "note": "45 vocabulary groups"
+  },
+  {
+   "name": "harness_attendance",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/attendance?teamId=116&season=2026",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 1454,
+   "note": "r2 package-catalog sweep (2026-07-27T06:24-06:27Z)"
+  },
+  {
+   "name": "harness_awards",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/awards/MLBHOF/recipients",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 105205,
+   "note": "r2 package-catalog sweep (2026-07-27T06:24-06:27Z)"
+  },
+  {
+   "name": "harness_conferences",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/conferences",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 672,
+   "note": "r2 package-catalog sweep (2026-07-27T06:24-06:27Z)"
+  },
+  {
+   "name": "harness_divisions",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/divisions",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 18227,
+   "note": "r2 package-catalog sweep (2026-07-27T06:24-06:27Z)"
+  },
+  {
+   "name": "harness_draft",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/draft/2026/latest",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 2524,
+   "note": "r2 package-catalog sweep (2026-07-27T06:24-06:27Z)"
+  },
+  {
+   "name": "harness_game",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1.1/game/824244/feed/live",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 730899,
+   "note": "r2 package-catalog sweep (2026-07-27T06:24-06:27Z)"
+  },
+  {
+   "name": "harness_game_diff",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1.1/game/824244/feed/live/diffPatch?startTimecode=20260725_171045&endTimecode=20260725_171132",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 15245,
+   "note": "r2 package-catalog sweep (2026-07-27T06:24-06:27Z)"
+  },
+  {
+   "name": "harness_game_timestamps",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1.1/game/824244/feed/live/timestamps",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 7543,
+   "note": "r2 package-catalog sweep (2026-07-27T06:24-06:27Z)"
+  },
+  {
+   "name": "harness_game_changes",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/game/changes?updatedSince=2026-07-26T00%3A00%3A00Z&sportId=1",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 34253,
+   "note": "r2 package-catalog sweep (2026-07-27T06:24-06:27Z)"
+  },
+  {
+   "name": "harness_game_contextMetrics",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/game/824244/contextMetrics",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 1672,
+   "note": "r2 package-catalog sweep (2026-07-27T06:24-06:27Z)"
+  },
+  {
+   "name": "harness_game_winProbability",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/game/824244/winProbability?fields=atBatIndex%2ChomeTeamWinProbability",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 3659,
+   "note": "r2 package-catalog sweep (2026-07-27T06:24-06:27Z)"
+  },
+  {
+   "name": "harness_game_boxscore",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/game/824244/boxscore?fields=teams%2Caway%2CteamStats%2Cbatting%2Chits",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 10736,
+   "note": "r2 package-catalog sweep (2026-07-27T06:24-06:27Z)"
+  },
+  {
+   "name": "harness_game_content",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/game/824244/content?highlightLimit=1",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 88299,
+   "note": "r2 package-catalog sweep (2026-07-27T06:24-06:27Z)"
+  },
+  {
+   "name": "harness_game_color",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/game/824244/feed/color",
+   "http_status": 404,
+   "content_type": "",
+   "bytes": 0,
+   "note": "r2 package-catalog sweep (2026-07-27T06:24-06:27Z)"
+  },
+  {
+   "name": "harness_game_color_diff",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/game/824244/feed/color/diffPatch?startTimeCode=20260725_171045&endTimeCode=20260725_171132",
+   "http_status": 404,
+   "content_type": "application/json",
+   "bytes": 128,
+   "note": "r2 package-catalog sweep (2026-07-27T06:24-06:27Z)"
+  },
+  {
+   "name": "harness_game_color_timestamps",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/game/824244/feed/color/timestamps",
+   "http_status": 404,
+   "content_type": "",
+   "bytes": 0,
+   "note": "r2 package-catalog sweep (2026-07-27T06:24-06:27Z)"
+  },
+  {
+   "name": "harness_game_linescore",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/game/824244/linescore",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 3188,
+   "note": "r2 package-catalog sweep (2026-07-27T06:24-06:27Z)"
+  },
+  {
+   "name": "harness_game_playByPlay",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/game/824244/playByPlay?fields=allPlays%2Cabout%2CatBatIndex",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 3118,
+   "note": "r2 package-catalog sweep (2026-07-27T06:24-06:27Z)"
+  },
+  {
+   "name": "harness_game_uniforms",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/uniforms/game?gamePks=824244",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 2058,
+   "note": "r2 package-catalog sweep (2026-07-27T06:24-06:27Z)"
+  },
+  {
+   "name": "harness_gamePace",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/gamePace?season=2026&sportId=1",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 1336,
+   "note": "r2 package-catalog sweep (2026-07-27T06:24-06:27Z)"
+  },
+  {
+   "name": "harness_highLow",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/highLow/player?sortStat=homeRuns&season=2026&sportIds=1&limit=3",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 7931,
+   "note": "r2 package-catalog sweep (2026-07-27T06:24-06:27Z)"
+  },
+  {
+   "name": "harness_homeRunDerby",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/homeRunDerby//823450",
+   "http_status": 404,
+   "content_type": "application/json",
+   "bytes": 119,
+   "note": "r2 package-catalog sweep (2026-07-27T06:24-06:27Z)"
+  },
+  {
+   "name": "harness_league",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/league?sportId=1",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 12907,
+   "note": "r2 package-catalog sweep (2026-07-27T06:24-06:27Z)"
+  },
+  {
+   "name": "harness_league_allStarBallot",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/league/103/allStarBallot?season=2026",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 131583,
+   "note": "r2 package-catalog sweep (2026-07-27T06:24-06:27Z)"
+  },
+  {
+   "name": "harness_league_allStarWriteIns",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/league/103/allStarWriteIns?season=2026",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 174734,
+   "note": "r2 package-catalog sweep (2026-07-27T06:24-06:27Z)"
+  },
+  {
+   "name": "harness_league_allStarFinalVote",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/league/103/allStarFinalVote?season=2026",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 16898,
+   "note": "r2 package-catalog sweep (2026-07-27T06:24-06:27Z)"
+  },
+  {
+   "name": "harness_people",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/people?personIds=605141%2C660271",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 2076,
+   "note": "r2 package-catalog sweep (2026-07-27T06:24-06:27Z)"
+  },
+  {
+   "name": "harness_people_changes",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/people/changes?updatedSince=2026-07-26T00%3A00%3A00Z",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 9969,
+   "note": "r2 package-catalog sweep (2026-07-27T06:24-06:27Z)"
+  },
+  {
+   "name": "harness_people_freeAgents",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/people/freeAgents?leagueId=104&season=2026",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 5132,
+   "note": "r2 package-catalog sweep (2026-07-27T06:24-06:27Z)"
+  },
+  {
+   "name": "harness_person",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/people/660271",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 1136,
+   "note": "r2 package-catalog sweep (2026-07-27T06:24-06:27Z)"
+  },
+  {
+   "name": "harness_person_stats",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/people/660271/stats/game/current",
+   "http_status": 400,
+   "content_type": "application/json",
+   "bytes": 128,
+   "note": "r2 package-catalog sweep (2026-07-27T06:24-06:27Z)"
+  },
+  {
+   "name": "harness_jobs",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/jobs?jobType=UMPR",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 14781,
+   "note": "r2 package-catalog sweep (2026-07-27T06:24-06:27Z)"
+  },
+  {
+   "name": "harness_jobs_umpires",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/jobs/umpires?date=2026-07-25",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 14781,
+   "note": "r2 package-catalog sweep (2026-07-27T06:24-06:27Z)"
+  },
+  {
+   "name": "harness_jobs_umpire_games",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/jobs/umpires/games/596809?season=2026",
+   "http_status": 401,
+   "content_type": "text/html",
+   "bytes": 12583,
+   "note": "r2 package-catalog sweep (2026-07-27T06:24-06:27Z)"
+  },
+  {
+   "name": "harness_jobs_datacasters",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/jobs/datacasters",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 32730,
+   "note": "r2 package-catalog sweep (2026-07-27T06:24-06:27Z)"
+  },
+  {
+   "name": "harness_jobs_officialScorers",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/jobs/officialScorers",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 38994,
+   "note": "r2 package-catalog sweep (2026-07-27T06:24-06:27Z)"
+  },
+  {
+   "name": "harness_schedule",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=2026-07-25",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 19863,
+   "note": "r2 package-catalog sweep (2026-07-27T06:24-06:27Z)"
+  },
+  {
+   "name": "harness_schedule_tied",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/schedule/games/tied?season=2025&sportId=1",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 262,
+   "note": "r2 package-catalog sweep (2026-07-27T06:24-06:27Z)"
+  },
+  {
+   "name": "harness_schedule_postseason",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/schedule/postseason?season=2025",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 66899,
+   "note": "r2 package-catalog sweep (2026-07-27T06:24-06:27Z)"
+  },
+  {
+   "name": "harness_schedule_postseason_series",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/schedule/postseason/series?season=2025",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 65570,
+   "note": "r2 package-catalog sweep (2026-07-27T06:24-06:27Z)"
+  },
+  {
+   "name": "harness_schedule_postseason_tuneIn",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/schedule/postseason/tuneIn?season=2025",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 272,
+   "note": "r2 package-catalog sweep (2026-07-27T06:24-06:27Z)"
+  },
+  {
+   "name": "harness_seasons",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/seasons/all?sportId=1",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 78107,
+   "note": "r2 package-catalog sweep (2026-07-27T06:24-06:27Z)"
+  },
+  {
+   "name": "harness_season",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/seasons/2025?sportId=1",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 830,
+   "note": "r2 package-catalog sweep (2026-07-27T06:24-06:27Z)"
+  },
+  {
+   "name": "harness_sports",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/sports",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 2946,
+   "note": "r2 package-catalog sweep (2026-07-27T06:24-06:27Z)"
+  },
+  {
+   "name": "harness_sports_players",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/sports/1/players?season=2026&fields=people%2Cid%2CfullName",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 54021,
+   "note": "r2 package-catalog sweep (2026-07-27T06:24-06:27Z)"
+  },
+  {
+   "name": "harness_standings",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/standings?leagueId=103%2C104&season=2026",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 80738,
+   "note": "r2 package-catalog sweep (2026-07-27T06:24-06:27Z)"
+  },
+  {
+   "name": "harness_stats",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/stats?stats=season&group=hitting&season=2026&limit=3",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 3483,
+   "note": "r2 package-catalog sweep (2026-07-27T06:24-06:27Z)"
+  },
+  {
+   "name": "harness_stats_leaders",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/stats/leaders?leaderCategories=homeRuns&season=2026&limit=3",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 4717,
+   "note": "r2 package-catalog sweep (2026-07-27T06:24-06:27Z)"
+  },
+  {
+   "name": "harness_stats_streaks",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/stats/streaks?streakType=hittingStreakOverall&streakSpan=season&season=2026&sportId=1&limit=3",
+   "http_status": 404,
+   "content_type": "application/json",
+   "bytes": 109,
+   "note": "r2 package-catalog sweep (2026-07-27T06:24-06:27Z)"
+  },
+  {
+   "name": "harness_teams",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/teams?sportId=1&season=2026&fields=teams%2Cid%2Cname",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 1125,
+   "note": "r2 package-catalog sweep (2026-07-27T06:24-06:27Z)"
+  },
+  {
+   "name": "harness_teams_history",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/teams/history?teamIds=116",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 1747,
+   "note": "r2 package-catalog sweep (2026-07-27T06:24-06:27Z)"
+  },
+  {
+   "name": "harness_teams_stats",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/teams/stats?season=2026&group=hitting&stats=season&sportIds=1",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 21282,
+   "note": "r2 package-catalog sweep (2026-07-27T06:24-06:27Z)"
+  },
+  {
+   "name": "harness_teams_affiliates",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/teams/affiliates?teamIds=119",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 7660,
+   "note": "r2 package-catalog sweep (2026-07-27T06:24-06:27Z)"
+  },
+  {
+   "name": "harness_team",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/teams/116",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 954,
+   "note": "r2 package-catalog sweep (2026-07-27T06:24-06:27Z)"
+  },
+  {
+   "name": "harness_team_alumni",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/teams/116/alumni?season=2000&group=hitting",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 56642,
+   "note": "r2 package-catalog sweep (2026-07-27T06:24-06:27Z)"
+  },
+  {
+   "name": "harness_team_coaches",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/teams/116/coaches",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 2645,
+   "note": "r2 package-catalog sweep (2026-07-27T06:24-06:27Z)"
+  },
+  {
+   "name": "harness_team_personnel",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/teams/116/personnel",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 1696,
+   "note": "r2 package-catalog sweep (2026-07-27T06:24-06:27Z)"
+  },
+  {
+   "name": "harness_team_leaders",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/teams/116/leaders?leaderCategories=homeRuns&season=2026&limit=3",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 4057,
+   "note": "r2 package-catalog sweep (2026-07-27T06:24-06:27Z)"
+  },
+  {
+   "name": "harness_team_roster",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/teams/116/roster?rosterType=40Man",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 13541,
+   "note": "r2 package-catalog sweep (2026-07-27T06:24-06:27Z)"
+  },
+  {
+   "name": "harness_team_stats",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/teams/116/stats?season=2026&group=hitting&stats=season",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 976,
+   "note": "r2 package-catalog sweep (2026-07-27T06:24-06:27Z)"
+  },
+  {
+   "name": "harness_team_uniforms",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/uniforms/team?teamIds=116&season=2026",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 5953,
+   "note": "r2 package-catalog sweep (2026-07-27T06:24-06:27Z)"
+  },
+  {
+   "name": "harness_transactions",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/transactions?startDate=2026-07-20&endDate=2026-07-25",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 683655,
+   "note": "r2 package-catalog sweep (2026-07-27T06:24-06:27Z)"
+  },
+  {
+   "name": "harness_venue",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/venues?venueIds=15",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 279,
+   "note": "r2 package-catalog sweep (2026-07-27T06:24-06:27Z)"
+  },
+  {
+   "name": "harness_meta",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/gameTypes",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 506,
+   "note": "r2 package-catalog sweep (2026-07-27T06:24-06:27Z)"
+  },
+  {
+   "name": "r2_asg_sched",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/schedule?sportId=1&season=2026&gameTypes=A&fields=dates,games,gamePk,officialDate,description",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 125,
+   "note": "ASG 2026 gamePk=823443, 96th All-Star Game Philadelphia"
+  },
+  {
+   "name": "r2_box_timecode",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/game/824244/boxscore?timecode=20260725_171462&fields=teams,away,teamStats,batting,hits",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 10398,
+   "note": "point-in-time replay: away hits 1 vs 7 final"
+  },
+  {
+   "name": "r2_feed_timecode",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1.1/game/824244/feed/live?timecode=20260725_171462&fields=liveData,linescore,teams,away,runs,hits",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 65,
+   "note": "mid-game linescore at timecode"
+  },
+  {
+   "name": "r2_person_hydrate",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/people/660271?hydrate=stats(group=[hitting],type=[season],season=2026),currentTeam",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 2243,
+   "note": "parameterized stats hydration works; [] needs globoff"
+  },
+  {
+   "name": "r2_sched_hydrate",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=2026-07-26&hydrate=probablePitcher,weather&fields=...",
+   "http_status": 200,
+   "content_type": "application/json",
+   "bytes": 1030,
+   "note": "weather condition/temp embedded per game"
+  },
+  {
+   "name": "r2_hrderby_823433",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/homeRunDerby/823433",
+   "http_status": 404,
+   "content_type": "application/json",
+   "bytes": 119,
+   "note": "messageNumber 2 Game data couldn't be found"
+  },
+  {
+   "name": "r2_hrderby_823443",
+   "method": "GET",
+   "url": "https://statsapi.mlb.com/api/v1/homeRunDerby/823443",
+   "http_status": 404,
+   "content_type": "application/json",
+   "bytes": 119,
+   "note": "messageNumber 2 \u2014 ASG pk is not the Derby pk"
+  }
+ ]
+}

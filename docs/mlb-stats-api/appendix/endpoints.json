@@ -1,0 +1,958 @@
+{
+ "schema": {
+  "status_labels": [
+   "VERIFIED_OFFICIAL",
+   "VERIFIED_OBSERVED",
+   "PARTIALLY_VERIFIED",
+   "SECONDARY_ONLY",
+   "INFERRED",
+   "CONTRADICTED",
+   "INACCESSIBLE",
+   "UNKNOWN"
+  ],
+  "row": [
+   "method",
+   "path",
+   "aliases",
+   "purpose",
+   "key_params",
+   "auth",
+   "status",
+   "notes"
+  ]
+ },
+ "rows": [
+  {
+   "method": "GET",
+   "path": "/api/v1/sports",
+   "aliases": [],
+   "purpose": "List 20 supported sports/competition scopes",
+   "key_params": "",
+   "auth": "none (Tier A)",
+   "status": "VERIFIED_OBSERVED",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/sports/{sportId}",
+   "aliases": [],
+   "purpose": "Single sport",
+   "key_params": "",
+   "auth": "none (Tier A)",
+   "status": "PARTIALLY_VERIFIED",
+   "notes": "supplied report fetched /sports/1; not re-fetched"
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/sports/{sportId}/players",
+   "aliases": [],
+   "purpose": "Player pool for a sport/season",
+   "key_params": "season (OPTIONAL, defaults current), fields",
+   "auth": "none (Tier A)",
+   "status": "VERIFIED_OBSERVED",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/sports/{sportId}/allSportBallot",
+   "aliases": [],
+   "purpose": "All-Star ballot",
+   "key_params": "",
+   "auth": "none (Tier A)",
+   "status": "SECONDARY_ONLY",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/seasons",
+   "aliases": [],
+   "purpose": "Season config",
+   "key_params": "sportId, season",
+   "auth": "none (Tier A)",
+   "status": "VERIFIED_OBSERVED",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/seasons/all",
+   "aliases": [],
+   "purpose": "All seasons since 1876",
+   "key_params": "sportId",
+   "auth": "none (Tier A)",
+   "status": "VERIFIED_OBSERVED",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/seasons/{seasonId}",
+   "aliases": [],
+   "purpose": "Single season path form",
+   "key_params": "",
+   "auth": "none (Tier A)",
+   "status": "VERIFIED_OBSERVED",
+   "notes": "r2: /seasons/2025?sportId=1 verified"
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/league",
+   "aliases": [
+    "/api/v1/leagues"
+   ],
+   "purpose": "Leagues",
+   "key_params": "sportId",
+   "auth": "none (Tier A)",
+   "status": "VERIFIED_OBSERVED",
+   "notes": "byte-identical alias of /leagues"
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/league/{leagueId}/allStarBallot|allStarWriteIns|allStarFinalVote",
+   "aliases": [],
+   "purpose": "All-Star voting",
+   "key_params": "",
+   "auth": "none (Tier A)",
+   "status": "VERIFIED_OBSERVED",
+   "notes": "r2: all three public 200 with live 2026 ballot data; season required per package"
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/divisions",
+   "aliases": [],
+   "purpose": "Divisions",
+   "key_params": "sportId, divisionId, leagueId",
+   "auth": "none (Tier A)",
+   "status": "VERIFIED_OBSERVED",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/conferences",
+   "aliases": [],
+   "purpose": "Minor-league conferences",
+   "key_params": "conferenceId, season",
+   "auth": "none (Tier A)",
+   "status": "VERIFIED_OBSERVED",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/teams",
+   "aliases": [],
+   "purpose": "Teams (mixed population at root)",
+   "key_params": "sportId, season, leagueIds, activeStatus, fields, hydrate",
+   "auth": "none (Tier A)",
+   "status": "VERIFIED_OBSERVED",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/teams/{teamId}",
+   "aliases": [],
+   "purpose": "Single team",
+   "key_params": "hydrate (nested parens verified)",
+   "auth": "none (Tier A)",
+   "status": "VERIFIED_OBSERVED",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/teams/history",
+   "aliases": [],
+   "purpose": "Team historical identities",
+   "key_params": "teamIds, startSeason, endSeason",
+   "auth": "none (Tier A)",
+   "status": "VERIFIED_OBSERVED",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/teams/affiliates",
+   "aliases": [],
+   "purpose": "Org affiliates",
+   "key_params": "teamIds, season",
+   "auth": "none (Tier A)",
+   "status": "VERIFIED_OBSERVED",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/teams/{teamId}/roster",
+   "aliases": [],
+   "purpose": "Roster",
+   "key_params": "rosterType, season, date",
+   "auth": "none (Tier A)",
+   "status": "VERIFIED_OBSERVED",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/teams/{teamId}/roster/{rosterType}",
+   "aliases": [],
+   "purpose": "Roster path form",
+   "key_params": "",
+   "auth": "none (Tier A)",
+   "status": "PARTIALLY_VERIFIED",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/teams/{teamId}/coaches",
+   "aliases": [],
+   "purpose": "Coaching staff",
+   "key_params": "season, date",
+   "auth": "none (Tier A)",
+   "status": "VERIFIED_OBSERVED",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/teams/{teamId}/personnel",
+   "aliases": [],
+   "purpose": "Personnel",
+   "key_params": "",
+   "auth": "none (Tier A)",
+   "status": "VERIFIED_OBSERVED",
+   "notes": "r2 verified"
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/teams/{teamId}/alumni",
+   "aliases": [],
+   "purpose": "Alumni",
+   "key_params": "season (required per wrapper), group",
+   "auth": "none (Tier A)",
+   "status": "VERIFIED_OBSERVED",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/teams/{teamId}/stats",
+   "aliases": [],
+   "purpose": "Team stats",
+   "key_params": "season, group, stats, sitCodes",
+   "auth": "none (Tier A)",
+   "status": "VERIFIED_OBSERVED",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/teams/{teamId}/leaders",
+   "aliases": [],
+   "purpose": "Team leaders",
+   "key_params": "leaderCategories, season, limit",
+   "auth": "none (Tier A)",
+   "status": "VERIFIED_OBSERVED",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/teams/stats",
+   "aliases": [],
+   "purpose": "All-team stats collection",
+   "key_params": "",
+   "auth": "none (Tier A)",
+   "status": "VERIFIED_OBSERVED",
+   "notes": "r2: collection form verified (sportIds+season+group+stats)"
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/teams/stats/leaders",
+   "aliases": [],
+   "purpose": "Team stat leaders collection",
+   "key_params": "",
+   "auth": "none (Tier A)",
+   "status": "SECONDARY_ONLY",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/uniforms/team",
+   "aliases": [],
+   "purpose": "Team uniforms",
+   "key_params": "teamIds, season",
+   "auth": "none (Tier A)",
+   "status": "VERIFIED_OBSERVED",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/uniforms/game",
+   "aliases": [],
+   "purpose": "Game uniforms",
+   "key_params": "gamePks",
+   "auth": "none (Tier A)",
+   "status": "VERIFIED_OBSERVED",
+   "notes": "r2: gamePks= verified"
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/venues",
+   "aliases": [],
+   "purpose": "Venues incl. inactive/historical",
+   "key_params": "venueIds, season, fields, hydrate",
+   "auth": "none (Tier A)",
+   "status": "VERIFIED_OBSERVED",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/venues/{venueId}",
+   "aliases": [],
+   "purpose": "Single venue",
+   "key_params": "hydrate=location,fieldInfo verified",
+   "auth": "none (Tier A)",
+   "status": "VERIFIED_OBSERVED",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/people/{personId}",
+   "aliases": [],
+   "purpose": "Person bio; field set varies by person",
+   "key_params": "hydrate, fields",
+   "auth": "none (Tier A)",
+   "status": "VERIFIED_OBSERVED",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/people",
+   "aliases": [],
+   "purpose": "Bulk people",
+   "key_params": "personIds",
+   "auth": "none (Tier A)",
+   "status": "VERIFIED_OBSERVED",
+   "notes": "r2: bulk personIds verified"
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/people/search",
+   "aliases": [],
+   "purpose": "Name search",
+   "key_params": "names",
+   "auth": "none (Tier A)",
+   "status": "VERIFIED_OBSERVED",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/people/changes",
+   "aliases": [],
+   "purpose": "Changed people since timestamp",
+   "key_params": "updatedSince (ISO-8601)",
+   "auth": "none (Tier A)",
+   "status": "VERIFIED_OBSERVED",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/people/freeAgents",
+   "aliases": [],
+   "purpose": "Free agents",
+   "key_params": "leagueId, season",
+   "auth": "none (Tier A)",
+   "status": "VERIFIED_OBSERVED",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/people/{personId}/awards",
+   "aliases": [],
+   "purpose": "Person awards",
+   "key_params": "",
+   "auth": "none (Tier A)",
+   "status": "VERIFIED_OBSERVED",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/people/{personId}/stats",
+   "aliases": [],
+   "purpose": "Person stats",
+   "key_params": "stats, group, season; gamePk=current documented (SECONDARY_ONLY)",
+   "auth": "none (Tier A)",
+   "status": "VERIFIED_OBSERVED",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/people/{personId}/stats/game/{gamePk}",
+   "aliases": [],
+   "purpose": "Person single-game stats",
+   "key_params": "",
+   "auth": "none (Tier A)",
+   "status": "VERIFIED_OBSERVED",
+   "notes": "r2: gamePk=current REJECTED (400 #11) outside live window \u2014 wrapper claim contradicted; live-window behavior UNKNOWN"
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/people/{personId}/stats/metrics",
+   "aliases": [],
+   "purpose": "Person metric stats",
+   "key_params": "",
+   "auth": "none (Tier A)",
+   "status": "SECONDARY_ONLY",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/jobs",
+   "aliases": [],
+   "purpose": "Jobs",
+   "key_params": "jobType",
+   "auth": "none (Tier A)",
+   "status": "VERIFIED_OBSERVED",
+   "notes": "r2: jobType=UMPR verified"
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/jobs/umpires",
+   "aliases": [],
+   "purpose": "Umpire assignments",
+   "key_params": "date",
+   "auth": "none (Tier A)",
+   "status": "VERIFIED_OBSERVED",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/jobs/umpires/games/{umpireId}",
+   "aliases": [],
+   "purpose": "Umpire game log",
+   "key_params": "",
+   "auth": "Okta (Tier B): 401 login page",
+   "status": "INACCESSIBLE",
+   "notes": "r2: only gated route found outside analytics family"
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/jobs/datacasters",
+   "aliases": [],
+   "purpose": "Datacasters",
+   "key_params": "",
+   "auth": "none (Tier A)",
+   "status": "VERIFIED_OBSERVED",
+   "notes": "r2 verified"
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/jobs/officialScorers",
+   "aliases": [],
+   "purpose": "Official scorers",
+   "key_params": "",
+   "auth": "none (Tier A)",
+   "status": "VERIFIED_OBSERVED",
+   "notes": "r2 verified"
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/awards",
+   "aliases": [],
+   "purpose": "682 award definitions",
+   "key_params": "",
+   "auth": "none (Tier A)",
+   "status": "VERIFIED_OBSERVED",
+   "notes": "682 definitions; r2: /awards/MLBHOF/recipients verified (105KB)"
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/schedule",
+   "aliases": [],
+   "purpose": "Schedule; requires sportId OR gamePk (400 #7 otherwise)",
+   "key_params": "sportId|gamePk, date, startDate, endDate, teamId, gameTypes, hydrate, fields",
+   "auth": "none (Tier A)",
+   "status": "VERIFIED_OBSERVED",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/schedule/postseason",
+   "aliases": [],
+   "purpose": "Postseason schedule",
+   "key_params": "season",
+   "auth": "none (Tier A)",
+   "status": "VERIFIED_OBSERVED",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/schedule/postseason/series",
+   "aliases": [],
+   "purpose": "Postseason series",
+   "key_params": "",
+   "auth": "none (Tier A)",
+   "status": "VERIFIED_OBSERVED",
+   "notes": "r2 verified (66KB, season=2025)"
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/schedule/postseason/tuneIn",
+   "aliases": [],
+   "purpose": "Tune-in; returns totalItems 0",
+   "key_params": "season",
+   "auth": "none (Tier A)",
+   "status": "VERIFIED_OBSERVED",
+   "notes": "corroborates wrapper 'no data'"
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/schedule/games/tied",
+   "aliases": [],
+   "purpose": "Tie games",
+   "key_params": "season, sportId",
+   "auth": "none (Tier A)",
+   "status": "VERIFIED_OBSERVED",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/schedule/{scheduleType} & /schedule/trackingEvents",
+   "aliases": [],
+   "purpose": "Schedule variants",
+   "key_params": "",
+   "auth": "none (Tier A)",
+   "status": "SECONDARY_ONLY",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/standings",
+   "aliases": [],
+   "purpose": "Standings",
+   "key_params": "leagueId, season, standingsTypes, date, hydrate",
+   "auth": "none (Tier A)",
+   "status": "VERIFIED_OBSERVED",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/transactions",
+   "aliases": [],
+   "purpose": "Transactions",
+   "key_params": "startDate+endDate, teamId, playerId",
+   "auth": "none (Tier A)",
+   "status": "VERIFIED_OBSERVED",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/draft/{year}",
+   "aliases": [],
+   "purpose": "Draft results",
+   "key_params": "round, name, school, position, teamId, bisPlayerId",
+   "auth": "none (Tier A)",
+   "status": "VERIFIED_OBSERVED",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/draft/prospects/{year}",
+   "aliases": [],
+   "purpose": "Draft prospects",
+   "key_params": "limit verified",
+   "auth": "none (Tier A)",
+   "status": "VERIFIED_OBSERVED",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/draft/{year}/latest",
+   "aliases": [],
+   "purpose": "Latest pick",
+   "key_params": "",
+   "auth": "none (Tier A)",
+   "status": "VERIFIED_OBSERVED",
+   "notes": "r2 verified"
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/attendance",
+   "aliases": [],
+   "purpose": "Attendance",
+   "key_params": "teamId, season",
+   "auth": "none (Tier A)",
+   "status": "VERIFIED_OBSERVED",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/gamePace",
+   "aliases": [],
+   "purpose": "Pace of game",
+   "key_params": "season, sportId",
+   "auth": "none (Tier A)",
+   "status": "VERIFIED_OBSERVED",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1.1/game/{gamePk}/feed/live",
+   "aliases": [],
+   "purpose": "Full live snapshot; v1.1 ONLY",
+   "key_params": "timecode, hydrate, fields",
+   "auth": "none (Tier A)",
+   "status": "VERIFIED_OBSERVED",
+   "notes": "/api/v1 variant is 404 (CONTRADICTED as current path)"
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1.1/game/{gamePk}/feed/live/timestamps",
+   "aliases": [],
+   "purpose": "Revision timecodes (bare array, YYYYMMDD_HHMMSS)",
+   "key_params": "",
+   "auth": "none (Tier A)",
+   "status": "VERIFIED_OBSERVED",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1.1/game/{gamePk}/feed/live/diffPatch",
+   "aliases": [],
+   "purpose": "JSON-Patch diffs between timecodes",
+   "key_params": "startTimecode, endTimecode",
+   "auth": "none (Tier A)",
+   "status": "VERIFIED_OBSERVED",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/game/{gamePk}/feed/color",
+   "aliases": [],
+   "purpose": "Color feed \u2014 404 dead (+diffPatch/timestamps variants untested)",
+   "key_params": "",
+   "auth": "none (Tier A)",
+   "status": "CONTRADICTED",
+   "notes": "r2: color, color/diffPatch, color/timestamps all 404 \u2014 family dead"
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/game/{gamePk}/boxscore",
+   "aliases": [],
+   "purpose": "Boxscore",
+   "key_params": "timecode, fields",
+   "auth": "none (Tier A)",
+   "status": "VERIFIED_OBSERVED",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/game/{gamePk}/linescore",
+   "aliases": [],
+   "purpose": "Linescore",
+   "key_params": "",
+   "auth": "none (Tier A)",
+   "status": "VERIFIED_OBSERVED",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/game/{gamePk}/playByPlay",
+   "aliases": [],
+   "purpose": "Play-by-play; pitch events carry playId GUIDs",
+   "key_params": "timecode, fields",
+   "auth": "none (Tier A)",
+   "status": "VERIFIED_OBSERVED",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/game/{gamePk}/content",
+   "aliases": [],
+   "purpose": "Editorial/media bundle",
+   "key_params": "highlightLimit",
+   "auth": "none (Tier A)",
+   "status": "VERIFIED_OBSERVED",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/game/{gamePk}/winProbability",
+   "aliases": [],
+   "purpose": "Per-play win probability (bare array)",
+   "key_params": "timecode, fields",
+   "auth": "none (Tier A)",
+   "status": "VERIFIED_OBSERVED",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/game/{gamePk}/contextMetrics",
+   "aliases": [],
+   "purpose": "Win prob + sac-fly probabilities",
+   "key_params": "timecode",
+   "auth": "none (Tier A)",
+   "status": "VERIFIED_OBSERVED",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/game/changes",
+   "aliases": [],
+   "purpose": "Changed games",
+   "key_params": "updatedSince, sportId, gameType, season",
+   "auth": "none (Tier A)",
+   "status": "VERIFIED_OBSERVED",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/game/{gamePk}/withMetrics",
+   "aliases": [],
+   "purpose": "Game with metrics",
+   "key_params": "",
+   "auth": "none (Tier A)",
+   "status": "SECONDARY_ONLY",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/homeRunDerby[/bracket|pool|mixed]",
+   "aliases": [],
+   "purpose": "HR Derby; bare call returns 500 #1 \u2014 route exists, contract unknown",
+   "key_params": "",
+   "auth": "none (Tier A)",
+   "status": "PARTIALLY_VERIFIED",
+   "notes": "bare=500 #1; r2: non-derby pks -> 404 #2 'Game data couldn't be found'; needs Derby event pk (discovery path unverified)"
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/highLow/types",
+   "aliases": [],
+   "purpose": "High/low stat types (43, bare array)",
+   "key_params": "",
+   "auth": "none (Tier A)",
+   "status": "VERIFIED_OBSERVED",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/highLow/{highLowType}",
+   "aliases": [],
+   "purpose": "High/low queries",
+   "key_params": "",
+   "auth": "none (Tier A)",
+   "status": "VERIFIED_OBSERVED",
+   "notes": "r2: /highLow/player?sortStat=homeRuns&season=&sportIds= verified"
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/review",
+   "aliases": [],
+   "purpose": "Replay reviews",
+   "key_params": "",
+   "auth": "none (Tier A)",
+   "status": "SECONDARY_ONLY",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/broadcasters",
+   "aliases": [],
+   "purpose": "Broadcasters (bare array)",
+   "key_params": "",
+   "auth": "none (Tier A)",
+   "status": "VERIFIED_OBSERVED",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/broadcast",
+   "aliases": [],
+   "purpose": "Broadcasts for games",
+   "key_params": "",
+   "auth": "none (Tier A)",
+   "status": "SECONDARY_ONLY",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/stats",
+   "aliases": [],
+   "purpose": "Stats query; default limit=50; offset works",
+   "key_params": "stats, group, season, sportIds, playerPool, limit, offset, sortStat, order",
+   "auth": "none (Tier A)",
+   "status": "VERIFIED_OBSERVED",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/stats/grouped",
+   "aliases": [],
+   "purpose": "Grouped stats \u2014 PUBLIC (was secondary-only)",
+   "key_params": "stats, group, season, limit",
+   "auth": "none (Tier A)",
+   "status": "VERIFIED_OBSERVED",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/stats/leaders",
+   "aliases": [],
+   "purpose": "Leaderboards",
+   "key_params": "leaderCategories, season, limit, leaderGameTypes",
+   "auth": "none (Tier A)",
+   "status": "VERIFIED_OBSERVED",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/stats/streaks",
+   "aliases": [],
+   "purpose": "404 despite wrapper docs \u2014 dead or moved",
+   "key_params": "",
+   "auth": "none (Tier A)",
+   "status": "CONTRADICTED",
+   "notes": "r2: 404 with FULL package required set incl. streakSpan \u2014 definitively dead"
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/stats/search/config",
+   "aliases": [],
+   "purpose": "Pitch-level search config \u2014 PUBLIC; 152 params",
+   "key_params": "",
+   "auth": "none (Tier A)",
+   "status": "VERIFIED_OBSERVED",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/stats/search/params|stats|groupByTypes",
+   "aliases": [],
+   "purpose": "Search query surface",
+   "key_params": "",
+   "auth": "none (Tier A)",
+   "status": "SECONDARY_ONLY",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/stats/analytics/stolenBaseProbability",
+   "aliases": [],
+   "purpose": "SB probability",
+   "key_params": "",
+   "auth": "Okta (Tier B): 401 login page",
+   "status": "INACCESSIBLE",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/game/lastPitch",
+   "aliases": [],
+   "purpose": "Last pitch",
+   "key_params": "gamePks",
+   "auth": "Okta (Tier B): 401 login page",
+   "status": "INACCESSIBLE",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/game/{gamePk}/guids",
+   "aliases": [],
+   "purpose": "Play GUID list",
+   "key_params": "",
+   "auth": "Okta (Tier B): 401 login page",
+   "status": "INACCESSIBLE",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/game/{gamePk}/{guid}/analytics",
+   "aliases": [],
+   "purpose": "Per-play Statcast analytics",
+   "key_params": "",
+   "auth": "Okta (Tier B): 401 login page",
+   "status": "INACCESSIBLE",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/batTracking/game/{gamePk}/{playId}",
+   "aliases": [],
+   "purpose": "Bat tracking",
+   "key_params": "",
+   "auth": "Okta (Tier B): 401 login page",
+   "status": "INACCESSIBLE",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/props/play/predictions[/adjust]",
+   "aliases": [],
+   "purpose": "Play predictions",
+   "key_params": "gamePk",
+   "auth": "Okta (Tier B): 401 login page (base route observed; /adjust INFERRED)",
+   "status": "INACCESSIBLE",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/game/{gamePk}/{guid}/contextMetrics|contextMetricsAverages|homeRunBallparks",
+   "aliases": [],
+   "purpose": "Extended per-play utilities; contextMetricsAverages also POST (untested by policy)",
+   "key_params": "",
+   "auth": "likely Okta (INFERRED)",
+   "status": "SECONDARY_ONLY",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/game/{gamePk}/{playId}/analytics/biomechanics/{positionId}",
+   "aliases": [],
+   "purpose": "Biomechanics",
+   "key_params": "",
+   "auth": "likely Okta (INFERRED)",
+   "status": "SECONDARY_ONLY",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/game/{gamePk}/{playId}/analytics/skeletalData/chunked|files",
+   "aliases": [],
+   "purpose": "Skeletal data",
+   "key_params": "",
+   "auth": "likely Okta (INFERRED)",
+   "status": "SECONDARY_ONLY",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/analytics/guids|game",
+   "aliases": [],
+   "purpose": "Analytics discovery",
+   "key_params": "",
+   "auth": "likely Okta (INFERRED)",
+   "status": "SECONDARY_ONLY",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/{metaType}",
+   "aliases": [],
+   "purpose": "Vocabulary endpoints \u2014 18 verified this run incl. sortModifiers/roofTypes/gamedayTypes/transactionTypes (absent from wrapper list); others PARTIALLY_VERIFIED via lookup/values/all groups",
+   "key_params": "",
+   "auth": "none (Tier A)",
+   "status": "VERIFIED_OBSERVED",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v1/lookup/values/all",
+   "aliases": [],
+   "purpose": "Master vocabulary dump (45 groups)",
+   "key_params": "",
+   "auth": "none (Tier A)",
+   "status": "VERIFIED_OBSERVED",
+   "notes": ""
+  },
+  {
+   "method": "GET",
+   "path": "/api/v2/*",
+   "aliases": [],
+   "purpose": "Does not exist \u2014 404 router schema",
+   "key_params": "",
+   "auth": "none (Tier A)",
+   "status": "CONTRADICTED",
+   "notes": ""
+  }
+ ]
+}

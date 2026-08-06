@@ -1,0 +1,8 @@
+nflverse   topics=5    differing_after_full_deep_strip=0 
+nflreadr   topics=77   differing_after_full_deep_strip=0 
+nflfastR   topics=27   differing_after_full_deep_strip=0 
+nflseedR   topics=22   differing_after_full_deep_strip=0 
+nfl4th     topics=8    differing_after_full_deep_strip=0 
+nflplotR   topics=20   differing_after_full_deep_strip=0 
+
+TOTAL: 159 topics, 0 differing after stripping ALL build-path attrs (incl. attribute values)

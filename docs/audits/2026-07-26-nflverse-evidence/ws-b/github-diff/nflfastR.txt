@@ -1,0 +1,110 @@
+WS-B Step 5 — CRAN tarball vs GitHub release tag: nflfastR
+Generated: 2026-07-27T06:18:30Z
+Raw logs: raw-logs/crlf-classification-nflfastR.txt, raw-logs/description-field-analysis.txt,
+          raw-logs/github-tag-resolution.txt
+
+== Tag discovery ==
+  method: git ls-remote --tags https://github.com/nflverse/nflfastR
+  TAG FORMAT FOUND: 'v<version>' (e.g. v1.0.3) — plain lightweight/annotated
+                    tags, no package-name prefix, no release/ namespace.
+  nflfastR tag=v5.2.0 commit=675a817a1563d9c4f18cbb127caecf6e9a33be25 commit_date=2026-02-07T17:09:44+01:00 DESCRIPTION_Version=5.2.0 cran=5.2.0 match=YES
+
+== Trees compared ==
+  tarball: /private/tmp/claude-501/-Users-danielwalker-src-ai-sports-betting-dime-ai/dd3b2b85-766c-4b7b-a98c-d928cffcbac2/scratchpad/nflverse-audit/sources/nflfastR   (extracted from CRAN source tarball, Task 0)
+  github : /private/tmp/claude-501/-Users-danielwalker-src-ai-sports-betting-dime-ai/dd3b2b85-766c-4b7b-a98c-d928cffcbac2/scratchpad/nflverse-audit/tmp/gh/nflfastR
+
+  files: tarball=95 github=148  repo-only=54 tarball-only=1 in-both=94 differing=1
+
+== A. repo-only paths (in git, absent from tarball) ==
+   Each is justified against the REAL .Rbuildignore in the repo, or
+   R CMD build's built-in exclusion list. Directory-level rules are
+   applied to ancestor paths, matching R CMD build's pruning.
+    [.Rbuildignore] .github/.gitignore                                    rule: ^.github$  [via dir '.github']
+    [.Rbuildignore] .github/workflows/pkgdown.yaml                        rule: ^.github$  [via dir '.github']
+    [.Rbuildignore] .github/workflows/R-CMD-check.yaml                    rule: ^.github$  [via dir '.github']
+    [.Rbuildignore] .github/workflows/revdepcheck.yaml                    rule: ^.github$  [via dir '.github']
+    [.Rbuildignore] .github/workflows/rhub.yaml                           rule: ^.github$  [via dir '.github']
+    [build-builtin] .gitignore                                            rule: (^|/)\.gitignore$
+    [build-builtin] .Rbuildignore                                         rule: ^\.Rbuildignore$
+    [.Rbuildignore] cran-comments.md                                      rule: ^cran-comments\.md$
+    [.Rbuildignore] data-raw/_tune_spread_wp.R                            rule: ^data-raw$  [via dir 'data-raw']
+    [.Rbuildignore] data-raw/build_scramble_fix.R                         rule: ^data-raw$  [via dir 'data-raw']
+    [.Rbuildignore] data-raw/build_stat_id_df.R                           rule: ^data-raw$  [via dir 'data-raw']
+    [.Rbuildignore] data-raw/compare_dfs.R                                rule: ^data-raw$  [via dir 'data-raw']
+    [.Rbuildignore] data-raw/create_field_descriptions.R                  rule: ^data-raw$  [via dir 'data-raw']
+    [.Rbuildignore] data-raw/default_play.R                               rule: ^data-raw$  [via dir 'data-raw']
+    [.Rbuildignore] data-raw/MODELS.R                                     rule: ^data-raw$  [via dir 'data-raw']
+    [.Rbuildignore] data-raw/nfl_stats_variables.json                     rule: ^data-raw$  [via dir 'data-raw']
+    [.Rbuildignore] data-raw/nfl_stats_variables.R                        rule: ^data-raw$  [via dir 'data-raw']
+    [.Rbuildignore] data-raw/nflfastR_hex.svg                             rule: ^data-raw$  [via dir 'data-raw']
+    [.Rbuildignore] data-raw/pbp_datatypes.csv                            rule: ^data-raw$  [via dir 'data-raw']
+    [.Rbuildignore] data-raw/pbp_defaultplay.rds                          rule: ^data-raw$  [via dir 'data-raw']
+    [.Rbuildignore] data-raw/replace_models.R                             rule: ^data-raw$  [via dir 'data-raw']
+    [.Rbuildignore] data-raw/scramble_fix.rds                             rule: ^data-raw$  [via dir 'data-raw']
+    [.Rbuildignore] data-raw/Scrambles 1999-2004 UPDATE for NFLfastR.xlsx  rule: ^data-raw$  [via dir 'data-raw']
+    [.Rbuildignore] data-raw/scrambles_2005.xlsx                          rule: ^data-raw$  [via dir 'data-raw']
+    [.Rbuildignore] data-raw/Scrambles.1999-2003.FURTHER.UPDATE.for.NFLfastR.xlsx  rule: ^data-raw$  [via dir 'data-raw']
+    [.Rbuildignore] data-raw/teams_colors_logos.R                         rule: ^data-raw$  [via dir 'data-raw']
+    [.Rbuildignore] data-raw/tidy_play_stats_row.R                        rule: ^data-raw$  [via dir 'data-raw']
+    [.Rbuildignore] data-raw/variable_explanation.xlsx                    rule: ^data-raw$  [via dir 'data-raw']
+    [.Rbuildignore] data-raw/variable_list.txt                            rule: ^data-raw$  [via dir 'data-raw']
+    [.Rbuildignore] data-raw/wordmarks.R                                  rule: ^data-raw$  [via dir 'data-raw']
+    [.Rbuildignore] LICENSE.md                                            rule: ^LICENSE\.md$
+    [.Rbuildignore] man/figures/card.png                                  rule: ^man/figures/card\.png$
+    [.Rbuildignore] man/figures/header_github.png                         rule: ^man/figures/header_github\.png$
+    [.Rbuildignore] man/figures/header_twitter.png                        rule: ^man/figures/header_twitter\.png$
+    [.Rbuildignore] man/figures/readme-cp-model-1.png                     rule: ^man/figures/readme-cp-model-1\.png$
+    [.Rbuildignore] man/figures/readme-epa-model-1.png                    rule: ^man/figures/readme-epa-model-1\.png$
+    [.Rbuildignore] nflfastR.Rproj                                        rule: ^.*\.Rproj$
+    [.Rbuildignore] pkgdown/_pkgdown.yml                                  rule: ^pkgdown$  [via dir 'pkgdown']
+    [.Rbuildignore] pkgdown/extra.css                                     rule: ^pkgdown$  [via dir 'pkgdown']
+    [.Rbuildignore] pkgdown/favicon/apple-touch-icon-120x120.png          rule: ^pkgdown$  [via dir 'pkgdown']
+    [.Rbuildignore] pkgdown/favicon/apple-touch-icon-152x152.png          rule: ^pkgdown$  [via dir 'pkgdown']
+    [.Rbuildignore] pkgdown/favicon/apple-touch-icon-180x180.png          rule: ^pkgdown$  [via dir 'pkgdown']
+    [.Rbuildignore] pkgdown/favicon/apple-touch-icon-60x60.png            rule: ^pkgdown$  [via dir 'pkgdown']
+    [.Rbuildignore] pkgdown/favicon/apple-touch-icon-76x76.png            rule: ^pkgdown$  [via dir 'pkgdown']
+    [.Rbuildignore] pkgdown/favicon/apple-touch-icon.png                  rule: ^pkgdown$  [via dir 'pkgdown']
+    [.Rbuildignore] pkgdown/favicon/favicon-16x16.png                     rule: ^pkgdown$  [via dir 'pkgdown']
+    [.Rbuildignore] pkgdown/favicon/favicon-32x32.png                     rule: ^pkgdown$  [via dir 'pkgdown']
+    [.Rbuildignore] pkgdown/favicon/favicon.ico                           rule: ^pkgdown$  [via dir 'pkgdown']
+    [.Rbuildignore] README.Rmd                                            rule: ^README\.Rmd$
+    [.Rbuildignore] vignettes/.gitignore                                  rule: ^vignettes$  [via dir 'vignettes']
+    [.Rbuildignore] vignettes/beginners_guide.Rmd                         rule: ^vignettes$  [via dir 'vignettes']
+    [.Rbuildignore] vignettes/field_descriptions.Rmd                      rule: ^vignettes$  [via dir 'vignettes']
+    [.Rbuildignore] vignettes/nflfastR.Rmd                                rule: ^vignettes$  [via dir 'vignettes']
+    [.Rbuildignore] vignettes/stats_variables.Rmd                         rule: ^vignettes$  [via dir 'vignettes']
+    repo-only unexplained by any rule: 0
+
+== B. tarball-only paths (build artifacts) ==
+    [build-artifact] MD5
+    tarball-only NOT a recognised build artifact: 0
+
+== C. content differences (present in both, bytes differ) ==
+    CRITICAL-PATH differences (R/ data/ src/ NAMESPACE DESCRIPTION configure): 1
+      * DESCRIPTION 
+    other differing files: 0
+
+  -- line-ending vs real-content classification --
+    REAL-DIFF   DESCRIPTION                              (51 differing lines after LF-normalization)
+
+== D. DESCRIPTION field-level analysis ==
+   (read.dcf parse; values whitespace-normalised so CRAN's 80-col
+    re-wrapping of Imports/Suggests/URL is not counted as a change)
+    tarball-only fields: NeedsCompilation, Packaged, Author, Maintainer, Repository, Date/Publication 
+      all CRAN-publish-added?: TRUE  
+    github-only fields : Roxygen 
+      all dev-only?          : TRUE  
+    shared fields with DIFFERENT VALUE after whitespace-normalisation: 0 
+    Version tarball/github : 5.2.0 / 5.2.0  MATCH 
+    Packaged               : 2026-02-07 16:10:14 UTC; S.Carl 
+  
+
+== Verdict ==
+  NO CONTENT DIVERGENCE.
+  Exactly one file differs: DESCRIPTION. Its entire delta is CRAN publish
+  metadata (Packaged / Date/Publication / Repository / NeedsCompilation /
+  Author / Maintainer added; dev-only fields dropped) plus CRAN's 80-column
+  re-wrapping of Imports/Suggests/URL. ZERO shared DESCRIPTION fields differ
+  in value after whitespace normalisation.
+  Every file under R/, data/, src/, plus NAMESPACE, is BYTE-IDENTICAL between
+  the CRAN tarball and the GitHub tree at the release tag.

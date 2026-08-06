@@ -1,0 +1,24 @@
+{
+  "meta": {"generated": "2026-07-26", "authority_scale": "1=official API docs/contract, 2=direct authorized observation, 3=official product/support/policy pages, 4=official samples/SDKs, 5=reputable secondary/negative search evidence, 6=community/competitor, 7=engineering inference"},
+  "sources": [
+    {"id": "S01", "url": "https://www.oddslogic.com/", "retrieved": "2026-07-26", "authority": 3, "evidence": "50+ books, $99/mo, trial/login links, line history, sharp plays, Morphic footer"},
+    {"id": "S02", "url": "https://www.oddslogic.com/about/", "retrieved": "2026-07-26", "authority": 3, "evidence": "DonBest/SportsOptions lineage, 2018 exit, leadership roster"},
+    {"id": "S03", "url": "https://www.oddslogic.com/sports-betting-odds-api/", "retrieved": "2026-07-26", "authority": 3, "evidence": "API capabilities, 99.999% uptime, 35+/200+/100+ counts, prop counts NFL23/MLB15/NBA10/NHL6, support@oddslogic.com"},
+    {"id": "S04", "url": "https://www.oddslogic.com/faq/", "retrieved": "2026-07-26", "authority": 3, "evidence": "pricing tiers ($99 early, $399/$99 planned), alert types, Yesterday/Archive, future features"},
+    {"id": "S05", "url": "https://www.oddslogic.com/columns/", "retrieved": "2026-07-26", "authority": 3, "evidence": "ticket/money percentages, period/line-type filters"},
+    {"id": "S06", "url": "https://www.oddslogic.com/quick-setup/", "retrieved": "2026-07-26", "authority": 3, "evidence": "views/columns/notifications, visual/audio alerts, trailing-slash redirect"},
+    {"id": "S07", "url": "https://www.oddslogic.com/sharp-plays/", "retrieved": "2026-07-26", "authority": 3, "evidence": "near-simultaneous move detection, configurable constraints, beta"},
+    {"id": "S08", "url": "https://www.oddslogic.com/cancellation-policy/", "retrieved": "2026-07-26", "authority": 3, "evidence": "digital subscription, 30-day MBG, refund timing, billing"},
+    {"id": "S09", "url": "https://www.oddslogic.com/wagertalk/", "retrieved": "2026-07-26", "authority": 3, "evidence": "partner landing, promo code wagertalk, ref=wagertalk app link"},
+    {"id": "S10", "url": "https://odds.oddslogic.com/OddsLogic/", "retrieved": "2026-07-26", "authority": 3, "evidence": "app shell; partial odds render + 'UNLOCKING ODDSLOGIC' overlay (WebFetch)"},
+    {"id": "S11", "url": "https://odds.oddslogic.com/OddsLogic/ (page source, user browser capture)", "retrieved": "2026-07-26", "authority": 2, "evidence": "window.__HDF_TEXT__ bootstrap payload; Tapfiliate/Stripe; event IDs, rotation numbers, UTC times, league boards — see observed-hdf-bootstrap-format.json"},
+    {"id": "S12", "url": "https://freeodds.oddslogic.com/", "retrieved": "2026-07-26", "authority": 3, "evidence": "FreeOdds landing text"},
+    {"id": "S13", "url": "https://freeodds.oddslogic.com/ol-lite-stage/", "retrieved": "2026-07-26", "authority": 3, "evidence": "'Loading WagerTalk FreeOdds' shell"},
+    {"id": "S14", "url": "https://docs.oddslogic.com/ and https://api.oddslogic.com/", "retrieved": "2026-07-26", "authority": 5, "evidence": "DNS ENOTFOUND — hosts absent"},
+    {"id": "S15", "url": "Web searches (OddsLogic API docs/openapi/swagger/github; wagertalk/freeodds)", "retrieved": "2026-07-26", "authority": 5, "evidence": "No OddsLogic developer materials publicly indexed; WagerTalk one-login claim; wagertalk.com/odds embed"},
+    {"id": "S16", "url": "https://knupsports.com/looking-for-the-ultimate-odds-screen-with-rick-allec-of-oddslogic/", "retrieved": "2026-07-26", "authority": 6, "evidence": "50 direct feeds, CTO James Piet, props/arb-alerts roadmap (Feb 2025), SportsOptions first-odds-API claim, ~$500 tier"},
+    {"id": "S17", "url": "https://www.betstamp.com/comparison/oddslogic", "retrieved": "2026-07-26", "authority": 6, "evidence": "competitor claims: no true line, standard lines only, limited props, no limits/liquidity, 35+ feeds — adversarial marketing"},
+    {"id": "S18", "url": "https://x.com/WagerTalk/status/1880071441305227679", "retrieved": "2026-07-26", "authority": 6, "evidence": "WagerTalk 30-day OddsLogic access promo (2025-01)"},
+    {"id": "S19", "url": "odds-logic-api.md (file_00000000289481fb902af3928da9e654)", "retrieved": "2026-07-26", "authority": 5, "evidence": "source report under reconciliation; retrieval dates 2026-07-27 per its register; self-declared INCOMPLETE"}
+  ]
+}

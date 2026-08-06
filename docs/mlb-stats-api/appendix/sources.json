@@ -1,0 +1,60 @@
+{
+ "schema": {
+  "row": [
+   "source",
+   "authority_level",
+   "url",
+   "used_for"
+  ]
+ },
+ "rows": [
+  {
+   "source": "Direct unauthenticated GETs to statsapi.mlb.com (~80 requests)",
+   "authority_level": 2,
+   "url": "https://statsapi.mlb.com",
+   "used_for": "all VERIFIED_OBSERVED claims; see observations.json"
+  },
+  {
+   "source": "MLB copyright pointer embedded in responses",
+   "authority_level": 2,
+   "url": "http://gdx.mlb.com/components/copyright.txt",
+   "used_for": "legal posture"
+  },
+  {
+   "source": "Okta login responses (docs portal + Tier-B routes)",
+   "authority_level": 2,
+   "url": "https://docs.statsapi.mlb.com",
+   "used_for": "access-tier model"
+  },
+  {
+   "source": "deep-research-report.md (supplied input)",
+   "authority_level": 5,
+   "url": "local artifact",
+   "used_for": "route discovery, ToS/Savant readings, community issues; official-observation claims treated as PARTIALLY_VERIFIED"
+  },
+  {
+   "source": "toddrob99/MLB-StatsAPI wiki lineage (via supplied report)",
+   "authority_level": 5,
+   "url": "https://github.com/toddrob99/MLB-StatsAPI/wiki",
+   "used_for": "parameter taxonomies; CONTRADICTED on streaks and season requirement"
+  },
+  {
+   "source": "OpenAPI-derived client README (via supplied report)",
+   "authority_level": 5,
+   "url": "per supplied report",
+   "used_for": "extended analytics route names; v1.1 paths"
+  },
+  {
+   "source": "Baseball Savant CSV docs (via supplied report)",
+   "authority_level": 3,
+   "url": "https://baseballsavant.mlb.com/csv-docs",
+   "used_for": "sz_top/sz_bot ABS semantic change (2026)"
+  },
+  {
+   "source": "MLB-StatsAPI 1.9.0 package source (mlb_statsapi-1.9.0.tar.gz, statsapi/endpoints.py, 64 endpoints; test suite fully mocked)",
+   "authority_level": 5,
+   "url": "https://pypi.org/project/MLB-StatsAPI/1.9.0/",
+   "used_for": "r2 test matrix; alternative-set required params; v1.1 defaults; contradicted on streaks/season/current/umpire-games"
+  }
+ ]
+}

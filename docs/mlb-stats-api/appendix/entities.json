@@ -1,0 +1,148 @@
+{
+ "schema": {
+  "row": [
+   "identifier",
+   "entity",
+   "relationships",
+   "status"
+  ]
+ },
+ "rows": [
+  {
+   "identifier": "sportId",
+   "entity": "sport (1=MLB; 20 total)",
+   "relationships": [
+    "league.sport",
+    "team.sport",
+    "schedule filter"
+   ],
+   "status": "VERIFIED_OBSERVED"
+  },
+  {
+   "identifier": "leagueId",
+   "entity": "league (103=AL,104=NL,...)",
+   "relationships": [
+    "sportId",
+    "division.league",
+    "team.league",
+    "standings"
+   ],
+   "status": "VERIFIED_OBSERVED"
+  },
+  {
+   "identifier": "divisionId",
+   "entity": "division (200=AL West,...)",
+   "relationships": [
+    "leagueId",
+    "team.division"
+   ],
+   "status": "VERIFIED_OBSERVED"
+  },
+  {
+   "identifier": "teamId",
+   "entity": "team/club/org entity (incl. DSL, alt-site, college at root)",
+   "relationships": [
+    "venueId",
+    "leagueId",
+    "divisionId",
+    "sportId",
+    "parentOrgId",
+    "roster->personId"
+   ],
+   "status": "VERIFIED_OBSERVED"
+  },
+  {
+   "identifier": "personId",
+   "entity": "person (player/coach/umpire)",
+   "relationships": [
+    "currentTeam.teamId",
+    "primaryPosition.code",
+    "awards.awardId",
+    "transactions"
+   ],
+   "status": "VERIFIED_OBSERVED"
+  },
+  {
+   "identifier": "venueId",
+   "entity": "venue (active + historical)",
+   "relationships": [
+    "team.venue",
+    "game.venue",
+    "hydrate: location/fieldInfo"
+   ],
+   "status": "VERIFIED_OBSERVED"
+  },
+  {
+   "identifier": "gamePk",
+   "entity": "game (canonical id)",
+   "relationships": [
+    "home/away teamId",
+    "venueId",
+    "season",
+    "gameType",
+    "gameGuid",
+    "atBatIndex->play"
+   ],
+   "status": "VERIFIED_OBSERVED"
+  },
+  {
+   "identifier": "gameGuid",
+   "entity": "game GUID (coexists with gamePk)",
+   "relationships": [
+    "gamePk"
+   ],
+   "status": "VERIFIED_OBSERVED"
+  },
+  {
+   "identifier": "playId",
+   "entity": "pitch/play event GUID (Statcast join key)",
+   "relationships": [
+    "gamePk+atBatIndex+playEvent",
+    "Tier-B analytics & batTracking paths"
+   ],
+   "status": "VERIFIED_OBSERVED"
+  },
+  {
+   "identifier": "seasonId",
+   "entity": "season (string YYYY; back to 1876)",
+   "relationships": [
+    "sportId",
+    "schedule/stats/roster filters"
+   ],
+   "status": "VERIFIED_OBSERVED"
+  },
+  {
+   "identifier": "bisPlayerId",
+   "entity": "external BIS draft id",
+   "relationships": [
+    "draft pick -> personId"
+   ],
+   "status": "VERIFIED_OBSERVED"
+  },
+  {
+   "identifier": "awardId",
+   "entity": "award (682 defined)",
+   "relationships": [
+    "personId (recipients)"
+   ],
+   "status": "VERIFIED_OBSERVED"
+  },
+  {
+   "identifier": "conferenceId",
+   "entity": "minor-league conference",
+   "relationships": [
+    "leagueId"
+   ],
+   "status": "VERIFIED_OBSERVED"
+  },
+  {
+   "identifier": "umpireId/jobId",
+   "entity": "official",
+   "relationships": [
+    "personId",
+    "game assignments"
+   ],
+   "status": "VERIFIED_OBSERVED"
+  }
+ ]
+}

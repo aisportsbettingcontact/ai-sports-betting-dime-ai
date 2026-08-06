@@ -124,9 +124,17 @@ scripts/data/nfl-db/cache/
 # Forensic audit ledgers: one JSON line per row-level comparison, ~2 GB raw.
 # They compress ~37:1, so the .gz form plus the extracted findings are what get
 # committed -- those carry every non-clean verdict. Raw .jsonl stays local.
+# What IS committed: the gzipped complete ledgers, the per-agent verdict
+# summaries, and findings/actionable/ (MISMATCH, DB_ONLY, REF_ONLY -- 18,027
+# records anyone must adjudicate). What is NOT: the raw .jsonl, and the
+# unfiltered findings/*.jsonl, which are 96 MB dominated by 204,033 UNRESOLVED
+# rows all saying the same thing -- Pro-Football-Reference returned 403. That
+# count belongs in the summaries, not in a per-row file nobody can read.
 docs/audits/2026-07-27-nfl-db-forensic/ledger/*.jsonl
+docs/audits/2026-07-27-nfl-db-forensic/ledger/findings/*.jsonl
 !docs/audits/2026-07-27-nfl-db-forensic/ledger/*.jsonl.gz
-!docs/audits/2026-07-27-nfl-db-forensic/ledger/findings/
+!docs/audits/2026-07-27-nfl-db-forensic/ledger/findings/*.json
+!docs/audits/2026-07-27-nfl-db-forensic/ledger/findings/actionable/*.jsonl
 
 # Webdev artifacts (checkpoint zips, migrations, etc.)
 .webdev/

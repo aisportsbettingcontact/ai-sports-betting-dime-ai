@@ -1,0 +1,48 @@
+=== nflverse : files_live=23 files_new=23 only_live=0 only_new=0 differ=7
+    DIFFER   : ./DESCRIPTION
+    DIFFER   : ./help/nflverse.rdb
+    DIFFER   : ./help/nflverse.rdx
+    DIFFER   : ./help/paths.rds
+    DIFFER   : ./Meta/package.rds
+    DIFFER   : ./R/nflverse.rdb
+    DIFFER   : ./R/nflverse.rdx
+=== nflreadr : files_live=98 files_new=98 only_live=0 only_new=0 differ=7
+    DIFFER   : ./DESCRIPTION
+    DIFFER   : ./help/nflreadr.rdb
+    DIFFER   : ./help/nflreadr.rdx
+    DIFFER   : ./help/paths.rds
+    DIFFER   : ./Meta/package.rds
+    DIFFER   : ./R/nflreadr.rdb
+    DIFFER   : ./R/nflreadr.rdx
+=== nflfastR : files_live=38 files_new=38 only_live=0 only_new=0 differ=7
+    DIFFER   : ./DESCRIPTION
+    DIFFER   : ./help/nflfastR.rdb
+    DIFFER   : ./help/nflfastR.rdx
+    DIFFER   : ./help/paths.rds
+    DIFFER   : ./Meta/package.rds
+    DIFFER   : ./R/nflfastR.rdb
+    DIFFER   : ./R/nflfastR.rdx
+=== nflseedR : files_live=36 files_new=36 only_live=0 only_new=0 differ=7
+    DIFFER   : ./DESCRIPTION
+    DIFFER   : ./help/nflseedR.rdb
+    DIFFER   : ./help/nflseedR.rdx
+    DIFFER   : ./help/paths.rds
+    DIFFER   : ./Meta/package.rds
+    DIFFER   : ./R/nflseedR.rdb
+    DIFFER   : ./R/nflseedR.rdx
+=== nfl4th : files_live=26 files_new=26 only_live=0 only_new=0 differ=7
+    DIFFER   : ./DESCRIPTION
+    DIFFER   : ./help/nfl4th.rdb
+    DIFFER   : ./help/nfl4th.rdx
+    DIFFER   : ./help/paths.rds
+    DIFFER   : ./Meta/package.rds
+    DIFFER   : ./R/nfl4th.rdb
+    DIFFER   : ./R/nfl4th.rdx
+=== nflplotR : files_live=32 files_new=32 only_live=0 only_new=0 differ=7
+    DIFFER   : ./DESCRIPTION
+    DIFFER   : ./help/nflplotR.rdb
+    DIFFER   : ./help/nflplotR.rdx
+    DIFFER   : ./help/paths.rds
+    DIFFER   : ./Meta/package.rds
+    DIFFER   : ./R/nflplotR.rdb
+    DIFFER   : ./R/nflplotR.rdx

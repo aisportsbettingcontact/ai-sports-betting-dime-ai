@@ -1,0 +1,22 @@
+{
+  "meta": {"generated": "2026-07-26", "rule": "RECOMMENDED CONSUMER settlement vocabulary. OddsLogic officially claims 'event and prop grading feeds' exist but discloses NO states, enums, void rules, or correction semantics. Nothing here is vendor behavior.", "oddslogic_official_grading_disclosure": "none beyond the phrase 'event and prop grading feeds' and 'real-time game and prop grading'"},
+  "settlement_states": ["pending", "won", "lost", "push", "void", "half_won", "half_lost", "dead_heat_reduced", "regraded"],
+  "state_rules": [
+    {"state": "push", "trigger": "result equals integer line", "stake": "returned"},
+    {"state": "void", "trigger": "cancellation, no-action rule, listed-pitcher change (book-specific), player scratch under book minimum-participation rules", "stake": "returned", "warning": "book-specific and provider-specific — never assume universal rules"},
+    {"state": "half_won/half_lost", "trigger": "Asian quarter lines: half stake on adjacent lines", "example": "-2.25 = half at -2.0, half at -2.5"},
+    {"state": "dead_heat_reduced", "trigger": "ties in position/outright markets", "payout": "stake divided by number of tied winners (book-specific)"},
+    {"state": "regraded", "trigger": "stat corrections, official scoring changes", "requirement": "consumer ledger must be append-only: new grade row supersedes, never overwrites"}
+  ],
+  "edge_fixtures": [
+    {"name": "mlb_doubleheader", "scenario": "same teams, same date, two events", "requirement": "game_number in event key; grades must attach to the correct game"},
+    {"name": "postponed_resumed", "scenario": "event moves date/venue", "requirement": "tombstone+relink; open quotes marked stale; book action/no-action rules govern void"},
+    {"name": "pitcher_change", "scenario": "listed pitcher scratched pre-first-pitch", "requirement": "listed-pitcher bets void or re-price per book rule; flag all pre-change quotes"},
+    {"name": "ot_semantics", "scenario": "regulation-only vs OT-inclusive market same event", "requirement": "ot_inclusion in market key metadata; UNKNOWN for OddsLogic — onboarding question"},
+    {"name": "soccer_et_pens", "scenario": "90-minute market vs to-advance market", "requirement": "distinct market_type; 3-way settles on 90' + stoppage"},
+    {"name": "stat_correction_prop", "scenario": "receiver credited 99→101 yards day after", "requirement": "prop regrade emitted; downstream consumers must re-settle"},
+    {"name": "dst_boundary", "scenario": "event at 2026-11-01 01:30 local during fall-back", "requirement": "store UTC instant + venue tz; never key on ambiguous local time"},
+    {"name": "out_of_order_updates", "scenario": "quote with earlier source_timestamp arrives after later one", "requirement": "order by (source_timestamp, ingest_sequence); never last-write-wins on arrival order"},
+    {"name": "invalid_odds", "scenario": "american odds of 0, ±50; decimal ≤ 1.0", "requirement": "reject at ingest, quarantine payload (see odds-formulas-test-vectors.json invalid_input_behavior)"}
+  ]
+}

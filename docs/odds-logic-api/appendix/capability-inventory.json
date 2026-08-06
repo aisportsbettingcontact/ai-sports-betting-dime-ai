@@ -1,0 +1,39 @@
+{
+  "meta": {
+    "generated": "2026-07-26",
+    "rule": "Concrete operations are listed ONLY for directly observed public HTTP surfaces. Private API families are capability entries with no invented paths, methods, parameters, or schemas.",
+    "status_vocabulary": ["VERIFIED_OFFICIAL", "VERIFIED_OBSERVED", "PARTIALLY_VERIFIED", "SECONDARY_ONLY", "INFERRED", "UNKNOWN"]
+  },
+  "observed_public_operations": [
+    {"family": "marketing", "method": "GET", "url": "https://www.oddslogic.com/", "purpose": "Product marketing; 50+ books, $99/mo, trial/login links", "auth": "public", "response": "HTML (Morphic-built)", "status": "VERIFIED_OFFICIAL"},
+    {"family": "marketing", "method": "GET", "url": "https://www.oddslogic.com/about/", "purpose": "Company history, leadership", "auth": "public", "response": "HTML", "status": "VERIFIED_OFFICIAL"},
+    {"family": "marketing", "method": "GET", "url": "https://www.oddslogic.com/sports-betting-odds-api/", "purpose": "API product marketing: capabilities, 35+/200+/100+ counts, 99.999% uptime, prop lists, support@oddslogic.com", "auth": "public", "response": "HTML", "status": "VERIFIED_OFFICIAL"},
+    {"family": "support", "method": "GET", "url": "https://www.oddslogic.com/faq/", "purpose": "Alerts, history/archive, views/columns, pricing tiers, future features, API blurb", "auth": "public", "response": "HTML", "status": "VERIFIED_OFFICIAL"},
+    {"family": "support", "method": "GET", "url": "https://www.oddslogic.com/columns/", "purpose": "Columns, ticket/money percentages, filters", "auth": "public", "response": "HTML", "status": "VERIFIED_OFFICIAL"},
+    {"family": "support", "method": "GET", "url": "https://www.oddslogic.com/quick-setup/", "purpose": "Views/columns/notifications setup; /quick-setup redirects to trailing slash", "auth": "public", "response": "HTML", "status": "VERIFIED_OFFICIAL"},
+    {"family": "support", "method": "GET", "url": "https://www.oddslogic.com/sharp-plays/", "purpose": "Sharp Plays feature description (beta)", "auth": "public", "response": "HTML", "status": "VERIFIED_OFFICIAL"},
+    {"family": "policy", "method": "GET", "url": "https://www.oddslogic.com/cancellation-policy/", "purpose": "Subscription, billing, 30-day money-back, refunds", "auth": "public", "response": "HTML", "status": "VERIFIED_OFFICIAL"},
+    {"family": "partner", "method": "GET", "url": "https://www.oddslogic.com/wagertalk/", "purpose": "Partner landing: promo code 'wagertalk', ref-tagged app links", "auth": "public", "response": "HTML", "status": "VERIFIED_OFFICIAL"},
+    {"family": "app-shell", "method": "GET", "url": "https://odds.oddslogic.com/OddsLogic/", "purpose": "Primary odds-screen app; unauthenticated fetch shows partial odds data + 'UNLOCKING ODDSLOGIC' overlay", "auth": "gated (subscription); unauth shell partially renders", "response": "client-rendered app", "status": "VERIFIED_OBSERVED", "params": [{"name": "ref", "type": "string", "semantics": "partner/referral attribution code; observed values: bawk, wagertalk", "status": "VERIFIED_OBSERVED"}]},
+    {"family": "app-shell", "method": "GET", "url": "https://freeodds.oddslogic.com/", "purpose": "FreeOdds landing", "auth": "public", "response": "minimal HTML", "status": "VERIFIED_OBSERVED"},
+    {"family": "app-shell", "method": "GET", "url": "https://freeodds.oddslogic.com/ol-lite-stage/", "purpose": "WagerTalk-branded lite shell ('Loading WagerTalk FreeOdds')", "auth": "public shell", "response": "client-rendered app", "status": "VERIFIED_OBSERVED"}
+  ],
+  "negative_observations": [
+    {"host": "docs.oddslogic.com", "result": "DNS ENOTFOUND", "date": "2026-07-26", "status": "VERIFIED_OBSERVED"},
+    {"host": "api.oddslogic.com", "result": "DNS ENOTFOUND", "date": "2026-07-26", "status": "VERIFIED_OBSERVED"},
+    {"scope": "web search (multiple queries)", "result": "No OddsLogic developer portal, OpenAPI/Swagger document, SDK, or public schema found; searches return unrelated vendors (the-odds-api.com, OpticOdds, Sportradar, odds-api.net)", "date": "2026-07-26", "status": "VERIFIED_OBSERVED", "caveat": "Absence from public search is not proof private customer docs do not exist"}
+  ],
+  "claimed_private_capability_families": [
+    {"family": "prematch_odds", "claimed": "Real-time pre-match odds: spreads, totals, moneylines, team totals, 3-way, all periods", "source": "API page", "status": "PARTIALLY_VERIFIED", "undisclosed": ["paths", "transport", "schema", "identifiers", "filters", "latency contract"]},
+    {"family": "inplay_odds", "claimed": "Live in-play odds", "source": "API page", "status": "PARTIALLY_VERIFIED", "undisclosed": ["everything technical"]},
+    {"family": "player_props", "claimed": "NFL(23)/MLB(15)/NBA(10)/NHL(6) prop categories", "source": "API page", "status": "PARTIALLY_VERIFIED", "undisclosed": ["participant identifiers", "schema", "line history for props"], "caveat": "FAQ still lists props as future (contradiction X02); Betstamp claims coverage is limited"},
+    {"family": "grading", "claimed": "Event and prop grading feeds, real-time", "source": "API page", "status": "PARTIALLY_VERIFIED", "undisclosed": ["settlement enums", "void/push rules", "correction semantics", "timestamps"]},
+    {"family": "history_archive", "claimed": "Yesterday/Archive any past date; per-event-per-book line movement history", "source": "home + FAQ", "status": "PARTIALLY_VERIFIED", "undisclosed": ["retention", "granularity", "API access", "correction model"]},
+    {"family": "alerts", "claimed": "Injuries, pitching changes, halftime, finals, misc; visual/audio in-product", "source": "FAQ + quick-setup", "status": "PARTIALLY_VERIFIED", "undisclosed": ["API/webhook delivery", "payloads", "throttling", "replay"]},
+    {"family": "betting_percentages", "claimed": "Ticket and money percentages", "source": "columns page", "status": "PARTIALLY_VERIFIED", "undisclosed": ["source population", "sample size", "refresh cadence", "API exposure"]},
+    {"family": "sharp_plays", "claimed": "Near-simultaneous cross-book move detection; configurable constraints/timing/leagues/books; beta", "source": "sharp-plays page", "status": "PARTIALLY_VERIFIED", "undisclosed": ["algorithm", "thresholds", "output schema", "API exposure"]},
+    {"family": "scores", "claimed": "Fast scoring updates / quality score feed", "source": "wagertalk partner page + interview", "status": "PARTIALLY_VERIFIED", "undisclosed": ["schema", "cadence", "sport coverage"]},
+    {"family": "planned_features", "claimed": "Arb alerts, Positive EV alerts, individual game info links, team props", "source": "FAQ future features + interview roadmap", "status": "PARTIALLY_VERIFIED", "undisclosed": ["ship status as of 2026-07"]},
+    {"family": "account_entitlement", "claimed": "Subscription account system; immediate access post-payment; possible shared login with WagerTalk/FreeOdds", "source": "cancellation policy + WagerTalk (secondary)", "status": "PARTIALLY_VERIFIED", "undisclosed": ["auth mechanism", "API credentialing", "entitlement tiers"]}
+  ]
+}

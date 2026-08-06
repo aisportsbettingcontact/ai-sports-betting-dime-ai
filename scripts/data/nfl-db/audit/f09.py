@@ -331,10 +331,38 @@ def phase_fetch() -> None:
 # ==========================================================================
 # AUDIT
 # ==========================================================================
+#: Fields whose raw values are personal data about a named individual. This
+#: repository is public, and the audit findings are committed to it, so the
+#: ledger records the *disagreement* rather than the values themselves. The
+#: cached authority response named in `evidence` still holds the raw values, so
+#: nothing is lost for verification -- it just is not published.
+#:
+#: `birth_date` is the load-bearing one: an earlier revision of this file wrote
+#: 278 real dates of birth into a committed findings file. CodeQL caught it.
+SENSITIVE_FIELDS = frozenset({"birth_date", "birthdate", "date_of_birth", "dob"})
+
+
+def redact_pii(value):
+    """Replace a personal-data value with a publishable placeholder.
+
+    Call this at the point the value is read, not deep inside the writer: the
+    goal is that a raw date of birth never travels toward a file sink at all.
+    """
+    return None if value is None else "[REDACTED-PII]"
+
+
+def _redact(field, value):
+    """Defence in depth for callers that forget. Prefer redact_pii upstream."""
+    if value is None or field not in SENSITIVE_FIELDS:
+        return value, False
+    return "[REDACTED-PII]", True
+
+
 class Ledger:
     def __init__(self, path: str):
         os.makedirs(os.path.dirname(path), exist_ok=True)
         self.fh = open(path, "w")
+        self.redacted = 0
         self.n = 0
         self.counts: dict[tuple[str, str], int] = {}
         self.rows: dict[str, set] = {}
@@ -348,6 +376,10 @@ class Ledger:
         if not os.path.exists(ev_abs):
             self.missing_evidence += 1
             note = ((note + " | ") if note else "") + "EVIDENCE-PATH-MISSING"
+        db_value, r1 = _redact(field, db_value)
+        ref_value, r2 = _redact(field, ref_value)
+        if r1 or r2:
+            self.redacted += 1
         rec = {"ts": self.ts, "agent": AGENT, "table": table, "row_key": row_key,
                "season": season, "field": field, "db_value": db_value,
                "authority": authority, "ref_id": ref_id, "ref_value": ref_value,
@@ -857,6 +889,10 @@ def audit_player(con, L: Ledger) -> dict:
 
         def emit(field, verdict, dbv, refv, note=None, **extra):
             nonlocal compared, matched, bad
+            # This repository is public and the ledgers are committed. A date of
+            # birth is never the finding -- the agreement or disagreement is.
+            if field in SENSITIVE_FIELDS:
+                dbv, refv = redact_pii(dbv), redact_pii(refv)
             compared += 1
             if verdict == "MATCH":
                 matched += 1
@@ -919,14 +955,20 @@ def audit_player(con, L: Ledger) -> dict:
         if identity_doubt:
             L.write("player", gsis, "espn_id", "UNRESOLVED", "espn", ev,
                     db_value=eid, ref_id=eid,
-                    ref_value=f"{shown} (dob {edob}, career {espn_career})",
+                    ref_value=f"{shown} (career {espn_career})",
                     note="birthdate and career signals conflict but do not settle "
                          f"whether this espn_id is the right human: our window is "
                          f"{win_lo}-{win_hi}, ESPN's career signal is {espn_career}, "
                          f"birthdates are {dob_gap}y apart. Needs a human ruling.")
             findings["unresolved"].append(
                 (gsis, r["display_name"], eid, "identity not settled"))
-            for f2, dbv in (("position", r["position"]), ("birth_date", r["birth_date"]),
+            for f2, dbv in (("position", r["position"]),
+                            # Never hand the raw date of birth to the ledger. The
+                            # finding is that ESPN cannot rule on this row; the
+                            # person's DOB is not part of that and this repo is
+                            # public. Redacted at the call site rather than inside
+                            # the writer so no tainted value ever reaches the sink.
+                            ("birth_date", redact_pii(r["birth_date"])),
                             ("college", r["college"]),
                             ("draft", f"{r['draft_year']}/{r['draft_round']}/"
                                       f"{r['draft_pick']}")):
@@ -939,10 +981,10 @@ def audit_player(con, L: Ledger) -> dict:
             proof = ("birthdate gap + ESPN career starts after ours ended" if broken_a
                      else "ESPN athlete too young to have played our career window"
                      if broken_b else "draft years a generation apart")
-            emit("espn_id", "MISMATCH", eid, f"{shown} (dob {edob}, career {espn_career})",
+            emit("espn_id", "MISMATCH", eid, f"{shown} (career {espn_career})",
                  "this espn_id resolves to a different human of the same name. Proof: "
-                 f"{proof}. Ours: born {ddob}, career {win_lo}-{win_hi}, drafted "
-                 f"{r['draft_year']}. ESPN's athlete {eid}: born {edob}, debut "
+                 f"{proof}. Ours: career {win_lo}-{win_hi}, drafted "
+                 f"{r['draft_year']}. ESPN's athlete {eid}: birthdates {dob_gap}y apart, debut "
                  f"{a.get('debutYear')}, drafted {edraft}. The value is byte-identical "
                  "to raw/players.csv, so the defect is upstream and faithfully "
                  "propagated, not introduced here. Every ESPN-sourced attribute below "
@@ -951,7 +993,13 @@ def audit_player(con, L: Ledger) -> dict:
                  proof=proof)
             findings["unresolved"].append(
                 (gsis, r["display_name"], eid, "espn_id points at a different human"))
-            for f2, dbv in (("position", r["position"]), ("birth_date", r["birth_date"]),
+            for f2, dbv in (("position", r["position"]),
+                            # Never hand the raw date of birth to the ledger. The
+                            # finding is that ESPN cannot rule on this row; the
+                            # person's DOB is not part of that and this repo is
+                            # public. Redacted at the call site rather than inside
+                            # the writer so no tainted value ever reaches the sink.
+                            ("birth_date", redact_pii(r["birth_date"])),
                             ("college", r["college"]),
                             ("draft", f"{r['draft_year']}/{r['draft_round']}/"
                                       f"{r['draft_pick']}")):
@@ -2029,8 +2077,8 @@ def audit_canonical(con, L: Ledger, findings: dict) -> None:
                 "MATCH" if two_humans else "UNRESOLVED", "db+espn", rel(ev),
                 db_value=rec["name"], ref_id=rec["b"], ref_value=rec["why"],
                 note=("two different humans sharing a name: "
-                      f"dob {rec['a_dob']} vs {rec['b_dob']}, college "
-                      f"{rec['a_col']} vs {rec['b_col']} -- correctly NOT linked"
+                      f"dates of birth differ ({'both known' if rec['a_dob'] and rec['b_dob'] else 'one side unknown'}), "
+                      f"college {rec['a_col']} vs {rec['b_col']} -- correctly NOT linked"
                       if two_humans else
                       "same-name pair that the hard identity fields cannot separate "
                       "and that carries no canonical_gsis_id link -- needs a ruling"),
