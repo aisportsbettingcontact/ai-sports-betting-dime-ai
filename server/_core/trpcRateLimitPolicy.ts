@@ -108,8 +108,16 @@ export const TRPC_PROCEDURE_CLASSES: ReadonlyMap<string, TrpcLimiterClass> =
  * the AUTH-004 evasion class via path-segment prefixing (2026-08-06 audit).
  *
  * Slice BEFORE decoding: Express does not percent-decode req.path, and tRPC
- * slices raw then decodes. Decoding first would let an encoded %2F move the
- * "last slash" for us but not for tRPC, reopening the desync.
+ * slices raw then decodes — mirroring that order keeps the classifier's split
+ * point textually identical to the adapter's, byte for byte. This is NOT
+ * guarding an independently exploitable decode-ordering hole: tRPC procedure
+ * keys are flat dot-strings that can never contain a literal "/" (traced
+ * through @trpc/server/dist/adapters/express.mjs), so any encoded %2F that
+ * could move OUR "last slash" if we decoded first always sits inside a
+ * suffix that tRPC itself also fails to resolve once decoded (a decoded "/"
+ * can never form a real procedure name) — a shared NOT_FOUND on both sides,
+ * not a live evasion. Slicing raw is correctness/parity with the adapter,
+ * not a distinct security control.
  *
  * Percent-DECODES the sliced remainder before splitting on comma, mirroring
  * tRPC's own `decodeURIComponent(path).split(",")` order. Without this, an

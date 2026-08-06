@@ -640,11 +640,16 @@ describe("parseTrpcProcedureList — path-segment evasion (2026-08-06 audit)", (
     ).toBe("auth");
   });
 
-  it("slices on the RAW path so an encoded slash cannot desynchronise us", () => {
-    // %2F is NOT a path separator to Express or to tRPC's lastIndexOf("/").
-    // Decoding before slicing would find a different last slash than tRPC does.
-    expect(parseTrpcProcedureList("/appUsers.login%2Fx")).toEqual([
-      "appUsers.login/x",
-    ]);
+  it("slicing on the RAW path keeps the classifier byte-identical to the adapter (slice-before-decode)", () => {
+    // A real slash BEFORE an encoded one is the case that actually forces
+    // slice-before-decode vs strip-leading-slash to diverge:
+    //   FIX  (slice at last RAW "/"):      "appUsers.login"        -> decode -> "appUsers.login"   -> auth
+    //   BUG  (strip only leading "/"):     "a%2Fb/appUsers.login"  -> decode -> "a/b/appUsers.login" -> null
+    // (`/appUsers.login%2Fx` alone can't show this: it has no second REAL
+    // slash, so "strip leading /" and "slice after last real /" are the same
+    // operation on it — that shape passed under both the fix and the bug.)
+    expect(
+      classifyTrpcProcedures(parseTrpcProcedureList("/a%2Fb/appUsers.login"))
+    ).toBe("auth");
   });
 });
