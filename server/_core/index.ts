@@ -26,6 +26,7 @@ import {
 } from "./schemaHealthGate";
 import { isAnalyticsStore } from "../analytics/config";
 import helmet from "helmet";
+import { permissionsPolicy } from "./securityHeaders";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerStorageProxy } from "./storageProxy";
 import { registerDiscordAuthRoutes } from "../discordAuth";
@@ -548,6 +549,14 @@ async function startServer() {
       crossOriginEmbedderPolicy: false, // Allow embedding external resources (logos, CDN)
     })
   );
+
+  // Permissions-Policy: helmet no longer emits this (dropped in v5+), so we set
+  // it explicitly — denies every unused device/sensor capability (camera, mic,
+  // geolocation, USB/serial/BT/HID, MIDI, motion sensors) so a successful XSS
+  // still can't reach them, delegates `payment` to Stripe's Embedded Checkout
+  // origins (mirrors the CSP frame-src), and opts out of FLoC/Topics tracking.
+  console.log(`[SERVER_STARTUP] Registering Permissions-Policy header`);
+  app.use(permissionsPolicy());
 
   // ─── Stripe webhook — MUST be registered BEFORE express.json() ────────────
   // Uses express.raw() to preserve the raw buffer for HMAC-SHA256 signature
