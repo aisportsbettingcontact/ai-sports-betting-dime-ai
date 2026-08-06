@@ -1513,3 +1513,78 @@ It was noticed here only because a human read the Railway dashboard.
   give it one or stop deploying it. Incident 39 remains OPEN and is the same underlying condition.
 - Any future startup gate must be tested against BOTH services, because they have different
   databases. A gate that is correct for the domained service can fail-closed on the zombie.
+
+## Incident 63 — 2026-08-06 — The MLB auto-recalibration has patched nothing for 89 days, and logged success each time
+
+**Severity:** HIGH (silent) · **Customer impact:** none observed · **Found by:** ISSUE-012 Phase 1 measurement
+
+### What was believed
+
+`server/mlbDriftDetector.ts` calls `migrateCalibrationConstants()` on a monthly schedule, which
+rewrites `server/MLBAIModel.py` in place with no proposal record, no approver and no version stamp.
+The Stage 1 audit named it the D15 #2 exemplar (gap F4.1, HIGH), and ISSUE-012 was re-scoped on
+2026-08-05 to say the self-patch **"fires, succeeds, and takes effect live and ungated"** — a live
+ungated writer whose every change is then erased by the next of ~13 daily deploys.
+
+### What is actually true
+
+**The patcher matches 0 of 9 constants and has done since 2026-05-09.**
+
+`patchConstant()` builds the regex ``new RegExp(`('${key}':\s*)([-\d.]+)(,\s*#[^\n]*)`)`` — it
+requires **single-quoted** keys. `MLBAIModel.py` has used **double quotes** since commit
+`4c27b4f5f` ("Enterprise modernization", 2026-05-09, authored by Manus), which reformatted the
+`EMPIRICAL_PRIORS` block:
+
+```
+-    'nrfi_rate':          0.5093,   # NRFI rate (2026 live: 0.5093, 3yr: 0.5150)
++    "nrfi_rate": 0.5093,  # NRFI rate (2026 live: 0.5093, 3yr: 0.5150)
+```
+
+Measured across all 22 revisions of the file: single-quoted and matchable in 9 of them
+(2026-04-14 → 2026-04-30), double-quoted and unmatchable in every revision since. The file today
+holds **130 double-quoted numeric keys and 0 single-quoted**.
+
+So each scheduled recalibration: runs the backtest, computes new constants, logs
+`Could not find constant '<key>'` nine times, rewrites the file with **only the header comment
+changed**, and returns `constantsPatched: 0`.
+
+### Why it is HIGH anyway
+
+1. **The learning loop is dead and reports success.** `mlb_model_learning_log` receives a row with
+   `accuracyAfter: <newly computed f5 share>` — which reads as "the model now performs at this
+   level". The model still uses the constant it had. The record and the runtime disagree, which is
+   D15 #9 inside the loop D16 criterion 3 depends on. `constantsPatched: 0` is recorded honestly,
+   but nothing reads it and no surface exposes the table.
+2. **The risk inverts.** The ungated-writer danger was never realised — no constant has been
+   auto-changed in 89 days. But *repairing the regex* would wake a dormant ungated writer serving
+   customers. A well-meaning "fix the quoting" commit would have been the actual incident.
+3. **A formatting pass silently disabled a production control path**, and nothing noticed for three
+   months. No test covered the patcher against the real file.
+
+### What changed
+
+The gate landed first, deliberately, before any repair:
+
+- `server/mlbRecalibrationGate.ts` adopted (propose by default; self-approval forbidden; owner-only;
+  rationale required; promotion blocked while leakage-quarantined rows exist).
+- `applyOrPropose()` extracted in `mlbDriftDetector.ts` with an **injectable patcher**, so the
+  property "the patcher is never called on the default path" is testable rather than asserted.
+  `MLB_RECAL_MODE=autopatch` remains as a CRITICAL-logged emergency override.
+- The learning log now records a gate envelope (`PROPOSED` / `APPLIED` + `autopatchOverride`).
+- `server/driftDetectorGate.test.ts` pins the Phase 1 finding: if the patcher's regex ever matches
+  the model file again, the test **fails on purpose** — the repair must be a reviewed change made
+  alongside the gate, never a drive-by fix.
+
+### Not yet done
+
+- The `listRecalibrationProposals` / `decideRecalibration` tRPC procedures. The gate module's
+  functions exist and are tested; nothing surfaces them yet, so a proposal currently has no UI to be
+  decided in. **A proposal nobody can see is a queue, not a gate** — tracked in ISSUE-012.
+- `modelVersion` + `paramsHash` on every projection, so *"did the last recalibration help?"* becomes
+  answerable. Untouched; it spans the whole projection path.
+- The regex repair itself, which is now deliberately blocked by a test.
+
+### Lesson
+
+A formatting change broke a control path, and every subsequent run reported success. Filed as
+`os/memory/lessons/a-formatter-can-disable-a-control-path.md`.

@@ -58,6 +58,12 @@ const __dirname = path.dirname(__filename);
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
+import {
+  resolveRecalMode,
+  buildProposalEnvelope,
+  type RecalMode,
+} from "./mlbRecalibrationGate";
+
 const TAG = "[DriftDetector]";
 
 /** 3-year calibrated F5 run share baseline (MLBAIModel.py EMPIRICAL_PRIORS.f5_share) */
@@ -811,9 +817,9 @@ export async function triggerRecalibration(
     `${TAG} [STATE] New calibration: f5_share=${newF5Share} nrfi_rate=${newNrfiRate}`
   );
 
-  // ── Patch MLBAIModel.py ───────────────────────────────────────────────────
-  console.log(`${TAG} [STEP] Patching MLBAIModel.py constants`);
-  const patchResult = await migrateCalibrationConstants(calibration, reason);
+  // ── Gate: PROPOSE by default; patch only under an explicit override ───────
+  const recalMode = resolveRecalMode(process.env);
+  const patchResult = await applyOrPropose(recalMode, calibration, reason);
 
   // ── Write completion to learning log ─────────────────────────────────────
   try {
@@ -825,13 +831,17 @@ export async function triggerRecalibration(
       accuracyAfter: String(newF5Share ?? BASELINE_F5_SHARE),
       maeBefore: "0",
       maeAfter: "0",
-      paramChanges: JSON.stringify({
-        newF5Share,
-        newNrfiRate,
-        constantsPatched: patchResult.patched,
-        backtestElapsedSec: backtestResult.elapsedSec,
-        calibrationJsonPath: CALIBRATION_JSON,
-      }),
+      paramChanges: JSON.stringify(
+        buildProposalEnvelope({
+          calibration,
+          newF5Share,
+          newNrfiRate,
+          backtestElapsedSec: backtestResult.elapsedSec,
+          calibrationJsonPath: CALIBRATION_JSON,
+          mode: recalMode.mode,
+          constantsPatched: patchResult.patched,
+        })
+      ),
       triggerReason: reason,
       sampleSize: 0,
       runAt: Date.now(),
@@ -933,6 +943,56 @@ async function runBacktestScript(): Promise<{
  * @param calibration  Parsed mlb_calibration_constants.json
  * @param reason       Trigger reason for the comment
  */
+/**
+ * The gate, as a function rather than an inline branch.
+ *
+ * `migrateCalibrationConstants()` used to be called unconditionally here: it
+ * rewrote MLBAIModel.py on a monthly schedule with no proposal record, no
+ * approver and no version stamp — the Stage 1 audit's D15 #2 exemplar (gap
+ * F4.1), and precisely what DR-009 forbids a new agent seat from doing.
+ *
+ * Phase 1 measured what it was really doing. The patcher's regex requires
+ * SINGLE-quoted keys; the model file has used double quotes since 2026-05-09
+ * (commit 4c27b4f5f reformatted it), so it has matched 0 of 9 constants for 89
+ * days — opening the file, changing one comment, writing it back, reporting
+ * `constantsPatched: 0`. The risk was never "a bad recalibration is serving
+ * customers"; none has ever been applied. It is that repairing the regex would
+ * wake a dormant ungated writer. So the gate lands first.
+ *
+ * EXTRACTED DELIBERATELY. As an inline `if` the only available test was
+ * structural — "does the word resolveRecalMode appear near the call" — and
+ * mutation testing showed that passed when the guard was replaced with
+ * `if (true)`. A function with an injectable patcher can be tested for the
+ * property that actually matters: on the default path the patcher is NEVER
+ * CALLED. See os/memory/lessons/an-exit-code-cannot-tell-a-diagnosis-from-a-crash.md
+ * for the same lesson one layer over.
+ */
+export async function applyOrPropose(
+  recalMode: { mode: RecalMode; source: string },
+  calibration: Record<string, unknown>,
+  reason: string,
+  patcher: (
+    c: Record<string, unknown>,
+    r: string
+  ) => Promise<{
+    patched: number;
+    backup: string;
+  }> = migrateCalibrationConstants
+): Promise<{ patched: number; backup: string }> {
+  if (recalMode.mode !== "autopatch") {
+    console.log(
+      `${TAG} [STATE] propose mode (${recalMode.source}) — MLBAIModel.py NOT patched; ` +
+        `recording a PROPOSED recalibration for owner decision`
+    );
+    return { patched: 0, backup: "" };
+  }
+  console.error(
+    `${TAG} [CRITICAL] autopatch override active (${recalMode.source}) — patching ` +
+      `MLBAIModel.py with NO approval. This bypasses the independent recalibration gate.`
+  );
+  return patcher(calibration, reason);
+}
+
 export async function migrateCalibrationConstants(
   calibration: Record<string, unknown>,
   reason: string

@@ -1,6 +1,6 @@
 # ISSUE-012 — Prove whether the self-patcher fires, then gate it
 
-**Wave:** 3 — Ownership · **Effort:** M · **Status:** NOT STARTED · **DRI:** Prez
+**Wave:** 3 — Ownership · **Effort:** M · **Status:** IN PROGRESS · **DRI:** Prez
 **Ruling dependency:** DR-014 Ruling 4 (HOLE B)
 **Doctrine:** D5 (agent authority matches demonstrated reliability) · D15 #2 (open-loop automation) · D16 criterion 3
 
@@ -58,15 +58,15 @@ Every criterion is checkable. A criterion that cannot be checked is not a criter
 
 **Phase 1 — measurement (no code change):**
 - [x] ~~Determine whether `MLBAIModel.py` is writable at runtime~~ **ANSWERED 2026-08-05: yes.** It is in the image (`Dockerfile:130` copies `dist/`), the Dockerfile declares no `USER`, so the process runs as root and `/app/dist` is writable. **The self-patch fires and succeeds.**
-- [ ] Determine **how many** adjustments have been silently discarded by the ~13 daily deploys, and whether `mlb_model_learning_log` overstates what actually persisted
-- [ ] File the finding as a numbered `INCIDENTS.md` entry — re-reading the tail of the file immediately before writing, to avoid the number collision documented in `os/memory/lessons/incident-numbers-collide.md`
+- [x] Determine **how many** adjustments have been silently discarded — **ANSWERED 2026-08-06: zero were ever applied.** The patcher's regex needs single-quoted keys; the model file has been double-quoted since 2026-05-09 (commit `4c27b4f5f`), so it has matched **0 of 9 constants for 89 days**. The premise that it "fires, succeeds, and takes effect" is REFUTED. `mlb_model_learning_log` records `constantsPatched: 0` honestly, but its `accuracyAfter` reads as though the model adopted the new value — it did not. See Incident 63.
+- [x] File the finding as a numbered `INCIDENTS.md` entry — **Incident 63**, number verified against the file tail immediately before writing — re-reading the tail of the file immediately before writing, to avoid the number collision documented in `os/memory/lessons/incident-numbers-collide.md`
 
 **Phase 2 — gate (only after Phase 1):**
-- [ ] Drift detection writes a **PROPOSED** record; it never patches the engine directly
-- [ ] Promotion requires an approval artifact from a **distinct** approver; self-approval throws (test-covered)
-- [ ] `MLB_RECAL_MODE=autopatch` remains as a CRITICAL-logged emergency override
-- [ ] Every projection carries `modelVersion` + `paramsHash`, so *"did the last recalibration help?"* becomes answerable
-- [ ] The gate is covered by a test that fails if the propose-first default is removed
+- [x] Drift detection writes a **PROPOSED** record; it never patches the engine directly
+- [x] Promotion requires an approval artifact from a **distinct** approver; self-approval throws (test-covered) — `validateApproval`, 11 tests. **Not yet reachable: the tRPC procedures are still unwritten, so no one can act on a proposal.**
+- [x] `MLB_RECAL_MODE=autopatch` remains as a CRITICAL-logged emergency override
+- [ ] **STILL OPEN** — Every projection carries `modelVersion` + `paramsHash`, so *"did the last recalibration help?"* becomes answerable
+- [x] The gate is covered by a test that fails if the propose-first default is removed — behavioural, with an injectable patcher; 4 mutations verified to fail
 
 ## Verification
 
