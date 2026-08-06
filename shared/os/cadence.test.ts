@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { expectedRunsOnDate, cadenceVerdict, parseCronField } from "./cadence";
+import {
+  expectedRunsOnDate,
+  cadenceVerdict,
+  parseCronField,
+  defaultMeasureDate,
+  isCompleteDay,
+} from "./cadence";
 
 describe("cron expressions, evaluated rather than guessed", () => {
   // A representative non-special day: Thursday 2026-08-06.
@@ -82,5 +88,32 @@ describe("the verdict", () => {
   it("flags a daily job that did not run at all", () => {
     const v = cadenceVerdict({ workflow: "12-nightly-verification.yml", expected: 1, actual: 0 });
     expect(v.honoured).toBe(false);
+  });
+});
+
+describe("the measured window must be a COMPLETE day", () => {
+  // Found auditing LOOP-002. The observer defaulted to TODAY and the daily
+  // workflow fires at 10:40 UTC, so a perfectly-honoured */5 job could reach at
+  // most 129 of a full day's 288 runs — 45%, below the 0.5 floor. Every
+  // high-frequency workflow would have been reported unhonoured EVERY DAY,
+  // forever, regardless of reality: a permanently red alarm, which is the same
+  // as no alarm.
+  it("defaults to the previous complete UTC day, never a partial one", () => {
+    expect(defaultMeasureDate("2026-08-06T10:40:00Z")).toBe("2026-08-05");
+    expect(defaultMeasureDate("2026-08-06T00:00:01Z")).toBe("2026-08-05");
+    expect(defaultMeasureDate("2026-08-06T23:59:59Z")).toBe("2026-08-05");
+  });
+
+  it("rolls back across a month boundary", () => {
+    expect(defaultMeasureDate("2026-09-01T10:40:00Z")).toBe("2026-08-31");
+    expect(defaultMeasureDate("2026-03-01T10:40:00Z")).toBe("2026-02-28");
+  });
+
+  it("refuses a measured date that is not yet complete", () => {
+    // Asked to measure today, the instrument must say so rather than report a
+    // partial count as if it were a full one.
+    expect(isCompleteDay("2026-08-05", "2026-08-06T10:40:00Z")).toBe(true);
+    expect(isCompleteDay("2026-08-06", "2026-08-06T10:40:00Z")).toBe(false);
+    expect(isCompleteDay("2026-08-07", "2026-08-06T10:40:00Z")).toBe(false);
   });
 });

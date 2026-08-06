@@ -25,18 +25,30 @@ import { execFileSync } from "node:child_process";
 import { readdirSync, readFileSync } from "node:fs";
 import { resolve, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { expectedRunsOnDate, cadenceVerdict, type CadenceVerdict } from "../../shared/os/cadence.js";
+import {
+  expectedRunsOnDate,
+  cadenceVerdict,
+  defaultMeasureDate,
+  isCompleteDay,
+  type CadenceVerdict,
+} from "../../shared/os/cadence.js";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const WORKFLOWS = join(ROOT, ".github/workflows");
 const REPO = "aisportsbettingcontact/ai-sports-betting-dime-ai";
+/** gh run list page size. Binding on high-frequency workflows — see the coverage guard. */
+const RUN_LIMIT = 300;
 
 const argv = process.argv.slice(2);
 const DRY_RUN = argv.includes("--dry-run");
 const dateArg = argv[argv.indexOf("--date") + 1];
+const NOW = new Date().toISOString();
+// The most recent COMPLETE day, never today. Measuring a partial day against a
+// full day's expectation made every high-frequency workflow look ~45% short even
+// if perfectly honoured — a guaranteed daily false positive.
 const DATE = argv.includes("--date") && /^\d{4}-\d{2}-\d{2}$/.test(dateArg ?? "")
-  ? dateArg
-  : new Date().toISOString().slice(0, 10);
+  ? (dateArg as string)
+  : defaultMeasureDate(NOW);
 
 function die(msg: string): never {
   console.error(`  ERROR ${msg}`);
@@ -83,7 +95,7 @@ function actualRuns(workflow: string): { total: number; conclusions: Record<stri
     const r = execFileSync(
       "gh",
       ["run", "list", "--repo", REPO, "--workflow", workflow, "--event", "schedule",
-       "--limit", "300", "--json", "createdAt,conclusion"],
+       "--limit", String(RUN_LIMIT), "--json", "createdAt,conclusion"],
       { encoding: "utf8", cwd: ROOT, stdio: ["ignore", "pipe", "pipe"] },
     );
     raw = r;
@@ -112,6 +124,19 @@ function actualRuns(workflow: string): { total: number; conclusions: Record<stri
   } catch {
     return die(`gh returned unparseable JSON for ${workflow}`);
   }
+  // COVERAGE GUARD. `--limit 300` binds on high-frequency workflows: for three of
+  // Dime's, the API returns exactly 300 rows. That is fine only while the window
+  // reaches back past the measured date. If the oldest row is newer than DATE,
+  // the count is a FLOOR, not a count, and reporting it as a count would
+  // understate the cadence and manufacture drift.
+  const oldest = runs.length > 0 ? runs.map((r) => r.createdAt.slice(0, 10)).sort()[0] : null;
+  if (runs.length >= RUN_LIMIT && oldest !== null && oldest > DATE) {
+    return die(
+      `${workflow}: the ${RUN_LIMIT}-run window only reaches back to ${oldest}, which is after ` +
+        `${DATE} — the count would be a floor, not a count. Re-run with a nearer --date.`,
+    );
+  }
+
   const onDate = runs.filter((r) => r.createdAt.slice(0, 10) === DATE);
   const conclusions: Record<string, number> = {};
   for (const r of onDate) {
@@ -124,12 +149,44 @@ function actualRuns(workflow: string): { total: number; conclusions: Record<stri
 const declared = declaredSchedules();
 if (declared.size === 0) die(`no scheduled workflows found under ${WORKFLOWS}`);
 
+if (!isCompleteDay(DATE, NOW)) {
+  die(`${DATE} is not a complete UTC day yet — a partial day cannot be scored against a full day's expectation`);
+}
+
+/**
+ * When the workflow file first appeared in this branch's history.
+ *
+ * A workflow that did not exist for the whole measured day cannot have run for
+ * it. `12-nightly-verification.yml` reached main at 2026-08-06T04:38Z and was
+ * nonetheless reported as 0 of 1 — a 0% "cadence finding" about a file that did
+ * not exist at its own scheduled time. Answered from git rather than the API
+ * because git is the authority on when a file was on this branch.
+ */
+function addedAt(workflow: string): string | null {
+  try {
+    // The EARLIEST add, not the most recent. `-1` returns the latest, and a file
+    // that was moved, deleted-and-restored, or touched by a rename shows a recent
+    // add — which wrongly excused two long-standing workflows from measurement
+    // and would have hidden real drift behind a "too new" label.
+    const out = execFileSync(
+      "git",
+      ["log", "--diff-filter=A", "--format=%cI", "--reverse", "--", `.github/workflows/${workflow}`],
+      { encoding: "utf8", cwd: ROOT, stdio: ["ignore", "pipe", "pipe"] },
+    ).trim();
+    const first = out.split("\n").filter(Boolean)[0];
+    return first || null;
+  } catch {
+    return null;
+  }
+}
+
 console.log(`  LOOP-002 cron cadence observation — ${DATE} (UTC)`);
 console.log(`  ${declared.size} workflow(s) declare a schedule\n`);
 
 const verdicts: CadenceVerdict[] = [];
 const successOnly: string[] = [];
 const notYetKnown: string[] = [];
+const tooNew: string[] = [];
 
 for (const [workflow, exprs] of Array.from(declared.entries()).sort()) {
   let expected: number;
@@ -138,6 +195,14 @@ for (const [workflow, exprs] of Array.from(declared.entries()).sort()) {
   } catch (e) {
     // A malformed expression must not score as "0 expected, honoured".
     die(`${workflow}: ${(e as Error).message}`);
+  }
+  const added = addedAt(workflow);
+  if (added && added > `${DATE}T00:00:00Z`) {
+    tooNew.push(`${workflow} (added ${added.slice(0, 10)})`);
+    console.log(
+      `     ${workflow.padEnd(34)} declared ${exprs.join(" + ").padEnd(24)} added ${added.slice(0, 10)} — did not exist for the whole of ${DATE}`,
+    );
+    continue;
   }
   const runs = actualRuns(workflow);
   if (runs === null) {
@@ -171,6 +236,9 @@ if (broken.length === 0) {
   console.log(`  all ${verdicts.length} declared schedules honoured on ${DATE}`);
 } else {
   console.log(`  ${broken.length} of ${verdicts.length} schedule(s) NOT honoured on ${DATE}`);
+}
+if (tooNew.length > 0) {
+  console.log(`  ${tooNew.length} workflow(s) newer than the measured day, excluded: ${tooNew.join(", ")}`);
 }
 if (notYetKnown.length > 0) {
   console.log(`  ${notYetKnown.length} workflow(s) not yet on the default branch, excluded: ${notYetKnown.join(", ")}`);

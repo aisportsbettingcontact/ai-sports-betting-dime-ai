@@ -1,7 +1,7 @@
 # DR-016 — What cadence do Dime's scheduled pipelines actually need?
 
 **Status:** AWAITING RULING · **DRI:** Prez · **Kind:** decision · **observe_by:** 2026-08-13
-**Raised:** 2026-08-06 by the executor (LOOP-001) · **Evidence:** [[OBS-0002]]
+**Raised:** 2026-08-06 by the executor (LOOP-001) · **Evidence:** [[OBS-0002]] (corrected 2026-08-06)
 **Doctrine:** D5 · D7 · D13
 
 > **Cross-link of record.** This decision was recorded by **LOOP-001** (engineering build) and its
@@ -22,7 +22,6 @@ what they actually run at:
 | `cron-scores` | `*/10` — 144/day | 13 | **9%** |
 | `cron-vsin-odds` | `*/15` — 96/day | 13 | **14%** |
 | `cron-bet-grade` | `*/30` — 49/day | 11 | **22%** |
-| `12-nightly-verification` | daily | 0 | **0%** |
 
 Median gap between `cron-mlb-cycle` runs: **101 minutes** against a declared 5. Longest: 202.
 **Every one of these reports `success`.**
@@ -65,11 +64,10 @@ failure this program exists to avoid.
 ## Requested ruling
 
 1. Which option for the three MLB/odds pipelines?
-2. Is `12-nightly-verification` running zero times acceptable, or is that a real regression?
-3. Should the executor measure real feed staleness before you rule on the live-game path?
+2. Should the executor measure real feed staleness before you rule on the live-game path?
 
 ## Consequences of not ruling
 
-LOOP-002's daily observer will report 5 of 12 schedules unhonoured every day. That is accurate, and
+LOOP-002's daily observer will report 4 of 9 measurable schedules unhonoured every day. That is accurate, and
 it will also become background noise — the exact failure mode of an alarm nobody can act on. This
 record's `observe_by` is **2026-08-13**; past that the clock reports it daily.

@@ -1,7 +1,7 @@
 /**
  * shared/os/cadence.ts — declared cron cadence vs. what actually ran (ISSUE-013, LOOP-002).
  *
- * The arithmetic lives here rather than inline in `scripts/os/observe-crons.mjs`
+ * The arithmetic lives here rather than inline in `scripts/os/observe-crons.mts`
  * because of the defect that cost PR #398: a runner script that reimplements its
  * library's logic produces a second reality, and the number it prints comes from
  * code no test covers. See [[the-script-that-runs-is-not-the-code-thats-tested]].
@@ -126,4 +126,32 @@ export function cadenceVerdict(input: CadenceInput): CadenceVerdict {
     ratio,
     note: null,
   };
+}
+
+/**
+ * The most recent COMPLETE UTC day, relative to `nowIso`.
+ *
+ * The observer originally defaulted to today. The daily workflow fires at 10:40
+ * UTC, so a perfectly-honoured five-minute job could have produced at most 129 of the
+ * day's 288 runs by then — 45%, below the 0.5 floor. Every high-frequency
+ * workflow would have been reported unhonoured every single day regardless of
+ * reality. A permanently red alarm is indistinguishable from no alarm, and it
+ * would have discredited the loop's real finding along with it.
+ */
+export function defaultMeasureDate(nowIso: string): string {
+  const now = new Date(nowIso);
+  if (Number.isNaN(now.getTime())) throw new Error(`invalid instant ${JSON.stringify(nowIso)}`);
+  const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  d.setUTCDate(d.getUTCDate() - 1);
+  return d.toISOString().slice(0, 10);
+}
+
+/** Has `isoDate` finished, as of `nowIso`? A partial day cannot be scored. */
+export function isCompleteDay(isoDate: string, nowIso: string): boolean {
+  const end = new Date(`${isoDate}T00:00:00Z`);
+  if (Number.isNaN(end.getTime())) throw new Error(`invalid date ${JSON.stringify(isoDate)}`);
+  end.setUTCDate(end.getUTCDate() + 1);
+  const now = new Date(nowIso);
+  if (Number.isNaN(now.getTime())) throw new Error(`invalid instant ${JSON.stringify(nowIso)}`);
+  return now.getTime() >= end.getTime();
 }
