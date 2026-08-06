@@ -112,7 +112,7 @@
     "training_config_path": "ml/dime-1.0/configs/sft_full_TEMPLATE.yaml",
     "training_config_sha256": "c5467b101c6584cf24fd0a65e40942e3ebbb904867e775825d324a29d992cefd",
     "requirements_lock_path": "ml/dime-1.0/requirements.lock.txt",
-    "requirements_lock_sha256": "f2353d0ebe258a9b3853b6d4ce6506ad983f530d20b52f619242f90f767853d6"
+    "requirements_lock_sha256": "dc322aa71bff1b7aa5065af329e5b3136da8a9808c867429c3d6aa1f65bad013"
   },
   "prompt": {
     "revision": "dime-prompt-v1",
