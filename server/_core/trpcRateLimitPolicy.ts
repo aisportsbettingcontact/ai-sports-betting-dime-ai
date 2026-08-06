@@ -64,12 +64,34 @@ export const TRPC_PROCEDURE_CLASSES: ReadonlyMap<string, TrpcLimiterClass> =
     ["stripe.completeAccountSetup", "stripe_checkout"],
     // Public form endpoint — 5/15min/IP (waitlistSubmitLimiter, DB-006)
     ["waitlist.submit", "waitlist"],
-    // Public feed reads — the scraper hot path (feedProcedureLimiter, fail-open)
+    // Public feed reads — the scraper hot path (feedProcedureLimiter, fail-open).
+    // Every entry below is a model-bearing read: anon callers get the
+    // wire-stripped commodity shape (feedGating.ts), but full model IP reaches
+    // AUTHENTICATED callers, so the per-IP feed cap also throttles an
+    // authenticated scraper harvesting the model — not just anonymous bulk pulls.
     ["games.list", "public_feed"],
     ["games.getCurrentDate", "public_feed"],
     ["games.getAvailableDates", "public_feed"],
     ["games.lastRefresh", "public_feed"],
     ["wc2026.matchesByDate", "public_feed"],
+    // MLB prop feeds (anon-stripped via stripStrikeoutPropModelFields /
+    // stripHrPropModelFields). The `.getByGames` batch variants return a whole
+    // slate's model IP (kProj/kLine/edges/verdict; HR edgeOver/evOver/verdict/
+    // backtestResult) in one request — prime authenticated-enumeration targets,
+    // and the exact sibling shape of games.list (strips for anon, yet throttled).
+    ["strikeoutProps.getByGame", "public_feed"],
+    ["strikeoutProps.getByGames", "public_feed"],
+    ["hrProps.getByGame", "public_feed"],
+    ["hrProps.getByGames", "public_feed"],
+    // WC2026 model-bearing odds feeds. todayWithOdds is the bulk "main page feed"
+    // (model projections/edges/probs, anon-stripped) — the direct twin of the
+    // already-classed matchesByDate. closingOdds/latestOdds are matchId-scoped and
+    // drop the model's book_id=0 fair-odds for anon, but an AUTHENTICATED caller
+    // enumerating every matchId would harvest the full model fair-odds book; the
+    // shared ip:public_feed budget caps that enumeration.
+    ["wc2026.todayWithOdds", "public_feed"],
+    ["wc2026.closingOdds", "public_feed"],
+    ["wc2026.latestOdds", "public_feed"],
   ]);
 
 /**

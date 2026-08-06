@@ -142,6 +142,35 @@ describe("classifyTrpcProcedures", () => {
     );
   });
 
+  it("classifies the model-bearing prop + wc2026 odds feeds as public_feed (scraper-cap parity)", () => {
+    // These strip model IP for anon but expose it to authenticated callers; the
+    // *ByGames batches and matchId-enumerable odds reads are authenticated-
+    // scraper harvest targets, so they share the feed cap with games.list.
+    for (const p of [
+      "strikeoutProps.getByGame",
+      "strikeoutProps.getByGames",
+      "hrProps.getByGame",
+      "hrProps.getByGames",
+      "wc2026.todayWithOdds",
+      "wc2026.closingOdds",
+      "wc2026.latestOdds",
+    ]) {
+      expect(classifyTrpcProcedures([p])).toBe("public_feed");
+    }
+    // a batched slate poll (games.list + both prop batches) stays public_feed
+    expect(
+      classifyTrpcProcedures([
+        "games.list",
+        "strikeoutProps.getByGames",
+        "hrProps.getByGames",
+      ])
+    ).toBe("public_feed");
+    // auth still wins if a login is smuggled into a feed batch (strictest-class)
+    expect(
+      classifyTrpcProcedures(["hrProps.getByGames", "appUsers.login"])
+    ).toBe("auth");
+  });
+
   it("applies strictest-class-wins priority for mixed batches", () => {
     // auth > stripe_checkout > waitlist (documented in the class map)
     expect(
