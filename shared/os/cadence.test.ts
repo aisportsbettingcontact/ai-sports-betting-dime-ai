@@ -6,6 +6,7 @@ import {
   defaultMeasureDate,
   isCompleteDay,
   runGaps,
+  HONOURED_FLOOR,
 } from "./cadence";
 
 describe("cron expressions, evaluated rather than guessed", () => {
@@ -186,5 +187,28 @@ describe("gaps between runs — computed by the instrument, not by hand", () => 
   it("is order-independent", () => {
     const a = runGaps(["2026-08-05T03:00:00Z", "2026-08-05T01:00:00Z"], "2026-08-05");
     expect(a.gaps).toEqual([120]);
+  });
+});
+
+describe("the honoured floor is the instrument's entire verdict — pin it", () => {
+  // No test pinned this value and no artifact documented it, so a one-character
+  // edit could silently redefine what "honoured" means across every report the
+  // loop produces and every decision built on them.
+  it("is 0.5, and the boundary is inclusive", () => {
+    expect(HONOURED_FLOOR).toBe(0.5);
+    expect(cadenceVerdict({ workflow: "x", expected: 2, actual: 1 }).honoured).toBe(true);
+    expect(cadenceVerdict({ workflow: "x", expected: 100, actual: 50 }).honoured).toBe(true);
+    expect(cadenceVerdict({ workflow: "x", expected: 100, actual: 49 }).honoured).toBe(false);
+  });
+
+  it("exactly at the floor is honoured, one run below is not", () => {
+    for (const [expected, actual] of [[2, 1], [4, 2], [6, 3], [10, 5], [288, 144]]) {
+      expect(cadenceVerdict({ workflow: "x", expected, actual }).honoured, `${actual}/${expected}`).toBe(true);
+      expect(cadenceVerdict({ workflow: "x", expected, actual: actual - 1 }).honoured).toBe(false);
+    }
+  });
+
+  it("is exported, so an artifact can cite it rather than restate it", () => {
+    expect(typeof HONOURED_FLOOR).toBe("number");
   });
 });

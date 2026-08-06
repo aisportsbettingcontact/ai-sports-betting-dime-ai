@@ -88,12 +88,16 @@ describe("a partial day cannot be scored", () => {
 describe("a workflow that did not exist cannot have missed its schedule", () => {
   it("excludes a workflow first added after the measured day, and names it", () => {
     // The exact shape of the false positive published in OBS-0002.
-    const { out, code } = runObserver(sandbox, ["--dry-run", "--date", "2020-01-02"]);
-    expect(code).toBe(0);
+    // The run now EXITS NON-ZERO because excluding the only workflow leaves
+    // nothing measured — see "zero measured is not zero broken". The exclusion
+    // must still be reported on stdout, which is what this test pins.
+    const { out } = runObserver(sandbox, ["--dry-run", "--date", "2020-01-02"]);
     expect(out, "a workflow newer than the window must be excluded").toMatch(/newer than the measured day/);
     expect(out).toMatch(/probe\.yml/);
     // Excluded, never scored: no drift verdict may be attributed to it.
     expect(out).not.toMatch(/probe\.yml.*\d+%/);
+    // …and never reported as an all-clear.
+    expect(out).not.toMatch(/all \d+ declared schedules honoured/);
   });
 
   it("names what it excluded rather than silently shrinking the denominator", () => {
@@ -161,5 +165,35 @@ describe("a shallow clone must not read as a clean bill of health", () => {
     } finally {
       rmSync(shallow, { recursive: true, force: true });
     }
+  });
+});
+
+describe("it never reports an all-clear it cannot support", () => {
+  it("refuses a malformed --date instead of silently measuring a different day", () => {
+    // The flag was validated by regex and, on a miss, silently fell back to the
+    // default — so the operator asked for one day and got a report about another,
+    // with the requested date appearing nowhere in the output.
+    for (const bad of ["2026-8-5", "05-08-2026", "yesterday", "2026-08-05T00:00:00Z", ""]) {
+      const { err, code } = runObserver(sandbox, ["--dry-run", "--date", bad]);
+      expect(code, `--date ${JSON.stringify(bad)} should fail`).not.toBe(0);
+      expect(err).toMatch(/--date/);
+    }
+  });
+
+  it("refuses a calendar-invalid date that matches the format", () => {
+    const { err, code } = runObserver(sandbox, ["--dry-run", "--date", "2026-02-31"]);
+    expect(code).not.toBe(0);
+    expect(err).toMatch(/date/i);
+  });
+
+  it("refuses when every workflow was excluded — zero measured is not zero broken", () => {
+    // With all workflows excluded (too new / unknown to GitHub), `verdicts` is
+    // empty and the report read "all 0 declared schedules honoured" — a green
+    // that means "I measured nothing", which is the shallow-clone failure again
+    // by a different route.
+    const { out, err, code } = runObserver(sandbox, ["--dry-run", "--date", "2020-01-02"]);
+    expect(code, "measuring nothing must not exit 0").not.toBe(0);
+    expect(err).toMatch(/nothing was measured|no workflow/i);
+    expect(out).not.toMatch(/all \d+ declared schedules honoured/);
   });
 });

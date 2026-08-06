@@ -25,6 +25,7 @@ import { execFileSync } from "node:child_process";
 import { readdirSync, readFileSync } from "node:fs";
 import { resolve, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { extractSchedules } from "../../shared/os/workflowSchedules.js";
 import {
   expectedRunsOnDate,
   cadenceVerdict,
@@ -47,43 +48,52 @@ const NOW = new Date().toISOString();
 // The most recent COMPLETE day, never today. Measuring a partial day against a
 // full day's expectation made every high-frequency workflow look ~45% short even
 // if perfectly honoured — a guaranteed daily false positive.
-const DATE = argv.includes("--date") && /^\d{4}-\d{2}-\d{2}$/.test(dateArg ?? "")
-  ? (dateArg as string)
-  : defaultMeasureDate(NOW);
+let DATE: string;
+if (argv.includes("--date")) {
+  // Silently falling back to the default meant the operator asked for one day
+  // and got a report about another, with the requested date nowhere in sight.
+  if (!dateArg || !/^\d{4}-\d{2}-\d{2}$/.test(dateArg)) {
+    console.error(`  ERROR --date must be YYYY-MM-DD, got ${JSON.stringify(dateArg ?? "")}`);
+    process.exit(1);
+  }
+  DATE = dateArg;
+} else {
+  // The most recent COMPLETE day, never today. Measuring a partial day against a
+  // full day's expectation made every high-frequency workflow look ~45% short
+  // even if perfectly honoured — a guaranteed daily false positive.
+  DATE = defaultMeasureDate(NOW);
+}
 
 function die(msg: string): never {
   console.error(`  ERROR ${msg}`);
   process.exit(1);
 }
 
-/** Every `- cron: <expr>` under a `schedule:` block, per workflow file. */
+/**
+ * Every cron declared under `on.schedule`, per workflow file.
+ *
+ * Delegates to `shared/os/workflowSchedules.ts`. The previous inline regex scan
+ * silently DROPPED three valid YAML shapes and INVENTED two schedules that did
+ * not exist; a dropped workflow is one LOOP-002 reports as fine forever. The
+ * reader now refuses shapes it cannot parse, by name, and a refusal fails the
+ * run rather than looking like compliance.
+ */
 function declaredSchedules(): Map<string, string[]> {
   const out = new Map<string, string[]>();
+  const refusals: string[] = [];
   for (const file of readdirSync(WORKFLOWS).filter((f) => /\.ya?ml$/.test(f))) {
-    const text = readFileSync(join(WORKFLOWS, file), "utf8");
-    const lines = text.split("\n");
-    const exprs: string[] = [];
-    let inSchedule = false;
-    let scheduleIndent = -1;
-    for (const line of lines) {
-      const m = /^(\s*)schedule:\s*$/.exec(line);
-      if (m) {
-        inSchedule = true;
-        scheduleIndent = m[1].length;
-        continue;
-      }
-      if (!inSchedule) continue;
-      if (line.trim() === "" || line.trim().startsWith("#")) continue;
-      const indent = line.length - line.trimStart().length;
-      // A key at or above the schedule block's own indent ends the block.
-      if (indent <= scheduleIndent && line.trim() !== "") {
-        inSchedule = false;
-        continue;
-      }
-      const c = /^\s*-\s*cron:\s*['"]?([^'"#]+?)['"]?\s*(?:#.*)?$/.exec(line);
-      if (c) exprs.push(c[1].trim());
+    const { crons, refused } = extractSchedules(readFileSync(join(WORKFLOWS, file), "utf8"), file);
+    if (refused) {
+      refusals.push(refused);
+      continue;
     }
-    if (exprs.length > 0) out.set(file, exprs);
+    if (crons.length > 0) out.set(file, crons);
+  }
+  if (refusals.length > 0) {
+    die(
+      `${refusals.length} workflow(s) could not be parsed, so their schedules cannot be observed:\n` +
+        refusals.map((r) => `    ${r}`).join("\n")
+    );
   }
   return out;
 }
@@ -279,16 +289,32 @@ for (const [workflow, exprs] of Array.from(declared.entries()).sort()) {
 const broken = verdicts.filter((v) => !v.honoured);
 
 console.log("");
-if (broken.length === 0) {
-  console.log(`  all ${verdicts.length} declared schedules honoured on ${DATE}`);
-} else {
-  console.log(`  ${broken.length} of ${verdicts.length} schedule(s) NOT honoured on ${DATE}`);
-}
+// Print WHAT was excluded before deciding whether anything is left: an operator
+// who gets a refusal needs to see the reason in the same output.
 if (tooNew.length > 0) {
   console.log(`  ${tooNew.length} workflow(s) newer than the measured day, excluded: ${tooNew.join(", ")}`);
 }
 if (notYetKnown.length > 0) {
   console.log(`  ${notYetKnown.length} workflow(s) not yet on the default branch, excluded: ${notYetKnown.join(", ")}`);
+}
+
+// "all 0 honoured" is not an all-clear; it is "I measured nothing". That reading
+// is how the shallow-clone defect presented, and it can arrive by other routes
+// too — every workflow too new, or every one unknown to GitHub. Refuse it.
+if (verdicts.length === 0) {
+  if (notYetKnown.length > 0 || tooNew.length > 0) {
+    die(
+      `nothing was measured on ${DATE}: every declared workflow was excluded ` +
+        `(${tooNew.length} newer than the window, ${notYetKnown.length} not on the default branch). ` +
+        `Zero measured is not zero broken.`
+    );
+  }
+  die(`nothing was measured on ${DATE} — no workflow produced a comparable schedule`);
+}
+if (broken.length === 0) {
+  console.log(`  all ${verdicts.length} declared schedules honoured on ${DATE}`);
+} else {
+  console.log(`  ${broken.length} of ${verdicts.length} schedule(s) NOT honoured on ${DATE}`);
 }
 if (successOnly.length > 0) {
   console.log("");

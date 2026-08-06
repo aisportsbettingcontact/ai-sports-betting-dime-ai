@@ -5,6 +5,19 @@
 > the anti-scraping edge layer from the maximum-security program; it was designed against a 5-lens
 > adversarial review (origin-bypass, IP-spoof, cache-leak, collateral-damage, rollout-safety) and the
 > fixes are baked into both the code and the steps below.
+>
+> **⚠ CURRENT STATE (verified live 2026-08-06).** The domain is **already a Cloudflare zone** —
+> nameservers are `clay.ns.cloudflare.com` / `maria.ns.cloudflare.com` (the domain was purchased on
+> Cloudflare) — but the DNS **records are grey-clouded (DNS-only)**, so Cloudflare answers DNS yet does
+> **not** proxy HTTP: `aisportsbettingmodels.com` responds `server: railway-hikari`, `x-railway-edge`,
+> no `cf-ray`. Records today: apex `A 69.46.46.66`, `www CNAME sg3mq9l9.up.railway.app` (a *proxied*
+> record would instead resolve to a Cloudflare `104.x/172.64.x` anycast IP). **The zone already exists
+> — activation is flipping those records to Proxied (orange), NOT adding the domain (skip step 4's
+> "add to Cloudflare"; the delegation is done).** `EDGE_MODE` MUST stay unset/`off` until the records
+> are orange-clouded, the secret Transform Rule is live, AND the `log` soak (step 12) proves Cloudflare
+> is injecting the secret — flipping `on` before CF actually proxies would 403 every real request (the
+> #370-class outage). The new circuit breaker (§6) now *self-heals* that mistake, but the ordering is
+> still the law. `EDGE_MODE=on` is a **Railway env change the owner makes** — no PR merge sets it.
 
 ## 0. The one thing to understand first
 
@@ -41,8 +54,15 @@ site is immediately healthy (correct keys, no 403s, no PoP collapse), no DNS cha
   `x-dime-edge-secret` request header. **Railway env only — never logged, never in evidence.**
 - `EDGE_ORIGIN_SECRET_PREV` = optional; a second accepted secret for zero-downtime rotation.
 
-**Anti-lockout:** `EDGE_MODE=on` with *no* secret configured downgrades to observe-only + a CRITICAL
-log line — it will not 403 the whole site. The fail-closed guarantee holds whenever a secret is set.
+**Anti-lockout (two independent self-heals):**
+
+1. `EDGE_MODE=on` with *no* secret configured downgrades to observe-only + a CRITICAL log line — it
+   will not 403 the whole site. The fail-closed guarantee holds whenever a secret is set.
+2. `EDGE_MODE=on` **with** a secret but Cloudflare not actually in front (DNS not orange-clouded /
+   secret typo / CF outage) is caught by the **circuit breaker** (§6): after `EDGE_BREAKER_TRIP_WINDOWS`
+   consecutive windows with no verified Cloudflare ingress, enforcement auto-downgrades to observe-only
+   and fires a CRITICAL line, then auto-resumes when verified traffic returns. A single genuine CF
+   request in any window resets the streak, so an attacker cannot force the downgrade while users flow.
 
 ## 2. The origin lock — the load-bearing decision (origin-bypass fix)
 
@@ -131,6 +151,7 @@ asserts (a) direct-origin-without-secret → 403, (b) `/health` reachable on the
 Chat POST full of betting jargon / SQLi tokens is **not** edge-blocked (reaches the origin).
 
 Manual spot-checks:
+
 - Direct `*.up.railway.app/api/trpc/games.list` (no secret) → **403**; `/health` direct → **200**.
 - Through `aisportsbettingmodels.com` → 200; logged-in user still receives full model fields.
 - Anonymous `curl` of `games.list` / `strikeoutProps.getByGame` → commodity only (Phase 3 intact),
@@ -152,10 +173,26 @@ Manual spot-checks:
 
 ## 6. Documented fast-follows (not in this PR)
 
-- **Stateful auto-downgrade:** if `on` with a secret but Cloudflare stops injecting it (DNS un-orange
-  -clouded / secret typo), auto-downgrade to `log` on a rolling all-fail window instead of relying on
-  the operator. Today this is covered by the mandatory `log` soak + the healthy `log` rollback + loud
-  alerts.
+- **Stateful auto-downgrade:** ✅ DONE (`server/_core/edgeCircuitBreaker.ts`, hardened against a 4-lens
+  adversarial review). If `on` with a secret but Cloudflare stops injecting it (DNS un-orange-clouded /
+  secret typo / CF outage), the origin lock judges Cloudflare absent and **auto-downgrades enforcement
+  to observe-only** (never 403) + a CRITICAL `edge_breaker_tripped` line, then **auto-recovers**
+  (`edge_breaker_recovered`) when `≥ EDGE_BREAKER_RECOVER_FLOOR` (default 3) verified requests return.
+  The trip fires **only after `EDGE_BREAKER_TRIP_WINDOWS` (default 3) CONSECUTIVE rolling windows**
+  (`EDGE_BREAKER_WINDOW_MS`, default 60 s) each of which closed with `≥ EDGE_BREAKER_MIN_SAMPLE`
+  (default 200) requests and `≤ EDGE_BREAKER_VERIFIED_FLOOR` (default 0) verified — i.e. ~3 minutes of
+  *sustained, total* Cloudflare absence. This consecutive-window rule is what makes it un-gameable: a
+  "verified" request requires the origin secret only *your* Cloudflare forwards, and a **single**
+  verified request anywhere in a window marks that window non-starved and **resets the streak**, so an
+  attacker flooding the raw origin cannot force a downgrade while real users are reaching the CF-fronted
+  domain. A trip degrades only the origin-lock 403 layer — Phase 3 gating + the rate limiters still
+  strip/throttle the payload. **Residual:** a *low-traffic* real outage (below `minSample`/window) or a
+  genuinely zero-user dead period may not reach the trip threshold or may be trippable by origin noise
+  — both are covered by the runbook's external synthetic monitor through the Cloudflare hostname (step
+  14), not this passive origin-side breaker. Env knobs (all optional): `EDGE_BREAKER_WINDOW_MS`,
+  `EDGE_BREAKER_MIN_SAMPLE`, `EDGE_BREAKER_VERIFIED_FLOOR`, `EDGE_BREAKER_TRIP_WINDOWS`,
+  `EDGE_BREAKER_RECOVER_FLOOR`, `EDGE_BREAKER_DISABLED=1` (force unconditional enforcement). Still
+  complemented by the mandatory `log` soak + the healthy `log` rollback + loud alerts.
 - **CF CIDR snapshot refresh:** ✅ DONE. `CF_CIDR_SNAPSHOT_DATE` + a boot staleness alarm live in
   `server/_core/edgeProxy.ts` (warns when armed and the snapshot is >90d old — observability only,
   never blocks). `scripts/refresh-cf-cidrs.mjs` fetches/validates the published ranges (fail-closed on
