@@ -109,13 +109,23 @@ if (unresolved.length > 0) {
   console.log(`                (a shallow checkout does this — fetch with depth 0)`);
 }
 
+// The library is asked to explain zero cycles, and truthfully answers "you gave me
+// none". Only the script knows WHY there were none — and "no recorded cycles yet"
+// is false when ten were recorded and all were unreadable. The state line must not
+// contradict the UNRESOLVED line printed directly above it.
+const allExcluded = cycles.length > 0 && measurable.length === 0;
+
 for (const goalFile of goalFiles) {
   const goal = parseGoal(readFileSync(join(goalsDir, goalFile), "utf8"));
   const r = findPriorityContradiction(goal.activityPaths, measurable);
 
   console.log(`  goal          ${goalFile.replace(/\.md$/, "")}`);
   console.log(`  declared      ${goal.activityPaths.join(", ")}`);
-  if (r.state === "not_measured") {
+  if (allExcluded) {
+    console.log(
+      `  state         not_measured — none of the ${cycles.length} recorded cycles could be resolved in this clone`,
+    );
+  } else if (r.state === "not_measured") {
     console.log(`  state         not_measured — ${r.reason}`);
   } else {
     console.log(`  cycles        ${r.totalCycles}`);
