@@ -113,8 +113,12 @@ All merged to `main`, each one deployed to both Railway services, each verified 
 `fetch-depth: 0`, read-only).
 
 **Test count on `main`: 244**, across 16 files. Everything rides the already-required `Vitest`
-check — **no new required status check was ever added**, because in five ruleset revisions this
-repo has never once promoted one.
+check — **this mission added no new required status check**, deliberately, so nothing it built
+could block an unrelated merge.
+
+Note the repo moved underneath that reasoning: the required set grew from **3 contexts to 9** on
+2026-08-05T15:09 PDT, and `Secret Scan (gitleaks)` is now among them. An earlier draft of this
+handoff said the repo "has never once promoted one" — that is REFUTED; Prez promoted six.
 
 ## 6. Every audit, and what survived
 
@@ -286,8 +290,9 @@ quiets it.
   **That is the honest record**, not a bug: an action is not an outcome.
 - One merge produces **two** Railway deploys and only the domained service is smoke-tested (gap
   F7.6). This bit on 2026-08-05 as Incident 62.
-- `Secret Scan (gitleaks)` is **not** a required check (gap F6.10). It runs and reports; it does not
-  block a merge.
+- ~~`Secret Scan (gitleaks)` is not a required check (gap F6.10)~~ — **gap F6.10 is CLOSED.**
+  It is now required and blocks a merge, along with five other contexts promoted the same day.
+  `os/agents/AUTHORITY.md` carries the corrected reading.
 
 ## 13. Operating rules that governed this work
 
