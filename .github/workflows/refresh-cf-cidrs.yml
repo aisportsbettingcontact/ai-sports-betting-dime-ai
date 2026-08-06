@@ -1,0 +1,36 @@
+name: Cloudflare CIDR drift check
+
+# Detects when the checked-in Cloudflare edge IP-range snapshot in
+# server/_core/edgeProxy.ts has drifted from https://www.cloudflare.com/ips-v4 +
+# /ips-v6. READ-ONLY by design: the repo's GitHub Actions security contract
+# forbids self-mutating workflows (no contents/pull-requests write outside the
+# owner-reviewed allowlist). On drift this job goes RED (scheduled-failure
+# notification); a maintainer then runs `node scripts/refresh-cf-cidrs.mjs` and
+# opens the refresh PR through the normal reviewed flow. The CF-range test is a
+# second factor only (edgeProxy design law #2), so drift is never urgent, and the
+# boot staleness alarm in edgeProxy is the in-app backstop.
+
+on:
+  schedule:
+    - cron: "17 6 1 * *" # 06:17 UTC on the 1st of each month
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cf-cidr-drift-check
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+
+      - name: Check the CF CIDR snapshot against upstream (exit 3 on drift)
+        run: node scripts/refresh-cf-cidrs.mjs --check
