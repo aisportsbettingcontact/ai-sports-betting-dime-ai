@@ -262,6 +262,33 @@ async function readAuthenticatedIdentity(page, procedure) {
 
 async function loginOnce(browser, manifest, expected, headed) {
   const context = await browser.newContext({ acceptDownloads: false });
+  // Trusted-agent edge bypass: present EDGE_AGENT_BYPASS_KEY as the `x-dime-agent`
+  // request header so the production Cloudflare edge (Super Bot Fight Mode
+  // "definitely automated → Block") waves this headless login through. SCOPED to
+  // the platform origin only — never sent to a third-party redirect (e.g. the
+  // Discord OAuth flow), so the secret cannot leak. No-op when the env var is
+  // unset. Matched by the "Trusted agent bypass" Cloudflare WAF Skip rule.
+  const agentBypassKey = (process.env.EDGE_AGENT_BYPASS_KEY ?? "").trim();
+  if (agentBypassKey) {
+    let platformOrigin = "";
+    try {
+      platformOrigin = new URL(manifest.platform.origin).origin;
+    } catch {
+      platformOrigin = "";
+    }
+    if (platformOrigin) {
+      await context.route(
+        url => url.origin === platformOrigin,
+        route =>
+          route.continue({
+            headers: {
+              ...route.request().headers(),
+              "x-dime-agent": agentBypassKey,
+            },
+          })
+      );
+    }
+  }
   const page = await context.newPage();
   page.setDefaultTimeout(PAGE_TIMEOUT_MS);
   const loginUrl = new URL(
