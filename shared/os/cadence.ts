@@ -36,7 +36,26 @@ const HONOURED_FLOOR = 0.5;
  * Expand one cron field into the concrete values it matches.
  * Supports `*`, `a`, `a-b`, `a,b,c`, `*​/n` and `a-b/n`.
  */
-export function parseCronField(field: string, min: number, max: number): number[] {
+const MONTH_NAMES = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
+const DOW_NAMES = ["SUN","MON","TUE","WED","THU","FRI","SAT"];
+
+/**
+ * GitHub accepts `MON` and `JAN`. Throwing on them aborted the ENTIRE
+ * observation, blinding LOOP-002 to every other workflow — a fail-closed that
+ * fails too hard. Names are normalised to their numeric equivalents instead.
+ */
+function normaliseNames(field: string, min: number, max: number): string {
+  const names = max === 12 && min === 1 ? MONTH_NAMES : max === 7 && min === 0 ? DOW_NAMES : null;
+  if (!names) return field;
+  return field.replace(/[A-Za-z]+/g, (word) => {
+    const i = names.indexOf(word.toUpperCase());
+    if (i === -1) return word; // leave it; the numeric parse below will reject it
+    return String(max === 12 ? i + 1 : i);
+  });
+}
+
+export function parseCronField(rawField: string, min: number, max: number): number[] {
+  const field = normaliseNames(rawField, min, max);
   const out = new Set<number>();
   for (const part of field.split(",")) {
     const [rangePart, stepPart] = part.split("/");
@@ -53,6 +72,13 @@ export function parseCronField(field: string, min: number, max: number): number[
       const [a, b] = rangePart.split("-").map(Number);
       lo = a;
       hi = b;
+    } else if (stepPart !== undefined) {
+      // `a/n` is "from a, every n, to the end of the range" — GitHub accepts and
+      // fires on it. Treating it as the bare value `a` dropped the step and
+      // under-counted `0/15` as 24 runs a day instead of 96, a 4x error large
+      // enough to flip a verdict from unhonoured to honoured.
+      lo = Number(rangePart);
+      hi = max;
     } else {
       lo = Number(rangePart);
       hi = Number(rangePart);
@@ -90,6 +116,11 @@ export function expectedRunsOnDate(expr: string, isoDate: string): number {
 
   const d = new Date(`${isoDate}T00:00:00Z`);
   if (Number.isNaN(d.getTime())) throw new Error(`invalid date ${JSON.stringify(isoDate)}`);
+  // `new Date("2026-02-31")` silently becomes March 3. A report for a day that
+  // does not exist is worse than an error, so round-trip and compare.
+  if (d.toISOString().slice(0, 10) !== isoDate) {
+    throw new Error(`invalid calendar date ${JSON.stringify(isoDate)}`);
+  }
   const dom = d.getUTCDate();
   const mon = d.getUTCMonth() + 1;
   const dow = d.getUTCDay();
@@ -154,4 +185,46 @@ export function isCompleteDay(isoDate: string, nowIso: string): boolean {
   const now = new Date(nowIso);
   if (Number.isNaN(now.getTime())) throw new Error(`invalid instant ${JSON.stringify(nowIso)}`);
   return now.getTime() >= end.getTime();
+}
+
+export interface GapStats {
+  /** Runs that fell inside the measured UTC day. */
+  count: number;
+  /** Minutes between consecutive in-window runs. */
+  gaps: number[];
+  medianMin: number | null;
+  maxMin: number | null;
+}
+
+/**
+ * Gaps between consecutive runs, computed ONLY from runs inside the measured day.
+ *
+ * The first published figures were produced by hand from `gh run list --limit 20`
+ * — the last twenty runs OVERALL, spanning 35.6 hours across three UTC days —
+ * and then described in the artifact as "a complete 24-hour window". The true
+ * in-window median was 107, not 101, and the published maximum of 202 was a gap
+ * that occurred entirely on the following day.
+ *
+ * It lives here, with the rest of the arithmetic, so the documented Method can
+ * actually reproduce the number. A statistic no instrument computes cannot be
+ * regression-tested, and a daily check cannot notice it drifting.
+ */
+export function runGaps(createdAtIso: string[], isoDate: string): GapStats {
+  const inWindow = createdAtIso
+    .filter((t) => t.slice(0, 10) === isoDate)
+    .map((t) => Date.parse(t))
+    .filter((n) => !Number.isNaN(n))
+    .sort((a, b) => a - b);
+
+  const gaps: number[] = [];
+  for (let i = 1; i < inWindow.length; i++) {
+    gaps.push(Math.round((inWindow[i] - inWindow[i - 1]) / 60000));
+  }
+  if (gaps.length === 0) {
+    return { count: inWindow.length, gaps: [], medianMin: null, maxMin: null };
+  }
+  const sorted = [...gaps].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  const median = sorted.length % 2 === 1 ? sorted[mid] : Math.round((sorted[mid - 1] + sorted[mid]) / 2);
+  return { count: inWindow.length, gaps, medianMin: median, maxMin: sorted[sorted.length - 1] };
 }

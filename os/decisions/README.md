@@ -9,7 +9,7 @@ commits Prez to.
 
 ## Status
 
-**All fourteen are AWAITING RULING.** Nothing in Stage 3 or Stage 4 begins until they are ruled —
+**All fifteen are AWAITING RULING.** Nothing in Stage 3 or Stage 4 begins until they are ruled —
 that is the Stage 2 gate.
 
 ## Read in this order

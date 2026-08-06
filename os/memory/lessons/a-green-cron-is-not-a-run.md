@@ -4,15 +4,14 @@
 
 Four of Dime's production data pipelines declare cadences between 5 and 30 minutes. Measured over a
 complete 24-hour window, they ran at **4%, 9%, 14% and 22%** of those cadences. `cron-mlb-cycle`
-declares every 5 minutes; the median gap between actual runs was **101 minutes**, the longest 202.
+declares every 5 minutes; the median gap between actual runs was **107 minutes**, the longest 201.
 
 Every single recorded run reported `success`. Twelve successes, zero failures — out of 288 expected.
 
 **Why it mattered:** a run that never happened produces no record, and a record is the only thing a
 dashboard can colour. Failure is visible; *absence* is not. So four pipelines running at a fraction
 of their declared frequency looked perfectly healthy on every instrument Dime had, for as long as
-those workflows have existed. `12-nightly-verification` ran zero times in the window and is not red
-anywhere either.
+those workflows have existed.
 
 This is D5's warning in its purest form — *success is never assumed because planned activity
 occurred* — with the twist that the planned activity **did not occur** and still nothing said so.
