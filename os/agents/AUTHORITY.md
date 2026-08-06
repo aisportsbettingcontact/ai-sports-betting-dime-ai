@@ -47,14 +47,26 @@ because the other two serve loops that are deferred, and DR-009's own gate would
 
 ## What this ladder cannot enforce, stated plainly
 
-A governance file that overstates its power is worse than none. Verified 2026-08-05:
+A governance file that overstates its power is worse than none — and one that *understates* it is
+also wrong. Both directions are corrected here.
 
-- **`required_approving_review_count: 0`** and **`bypass_actors: []`** on `main-protection`. No review
-  is required on any merge.
-- **Prez is the repository admin.** Any gate here can be bypassed by the person it nominally binds.
-- Only **three** contexts are required on `main`: `Security Audit`, `TypeScript Check`, `Vitest`.
-  Notably **`Secret Scan (gitleaks)` is NOT among them** (gap F6.10) — it runs and reports, but it
-  does not block a merge.
+**Verified 2026-08-06 (supersedes the 2026-08-05 reading):**
+
+- **Review IS enforced.** `required_approving_review_count` is still `0`, but `.github/CODEOWNERS`
+  covers `*` with `@prez-ai-sports-betting`, so every pull request resolves to
+  `reviewDecision: REVIEW_REQUIRED` and cannot merge unreviewed. The 2026-08-05 entry said "No
+  review is required on any merge." That was true when written and is **no longer true**.
+- **Nine contexts are required on `main`**, not three: `Security Audit`, `TypeScript Check`,
+  `Vitest`, **`Secret Scan (gitleaks)`**, `01-pr-proof-contract`, `05-workflow-security`,
+  `06-dependency-review`, `08-contract-and-data-integrity`, `10-ai-eval-critical`. The ruleset was
+  updated 2026-08-05T15:09 PDT.
+- **Gap F6.10 is CLOSED.** `Secret Scan (gitleaks)` was promoted to a required check and now blocks
+  a merge. The earlier claim that it "runs and reports, but does not block" is REFUTED.
+
+What remains true, and still limits this ladder:
+
+- **`bypass_actors: []`**, but **Prez is the repository admin.** Any gate here can be bypassed by
+  the person it nominally binds.
 
 So this ladder **raises the cost of a violation and makes one visible. It cannot make one
 impossible.** That is the accurate claim, and it is the one this file makes.

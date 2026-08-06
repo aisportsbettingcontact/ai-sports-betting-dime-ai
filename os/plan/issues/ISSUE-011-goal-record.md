@@ -1,8 +1,11 @@
 # ISSUE-011 — Create the goal record type and GR-0001
 
-**Wave:** 3 — Ownership · **Effort:** S · **Status:** NOT STARTED · **DRI:** Prez
+**Wave:** 3 — Ownership · **Effort:** S · **Status:** DONE — shipped in #398 · **DRI:** Prez
 **Ruling dependency:** DR-014 Ruling 4 (HOLE A)
 **Doctrine:** D12-L1 (goals + ownership, nine fields) · D5 (a goal with limits) · D16 criteria 2, 5, 9
+
+> **Closed #398.** `os/goals/GR-0001` + `shared/os/goal.ts`; six defect waves followed in #399, #400, #403, #405. Verified after landing: CI green on the merge commit,
+> both Railway services deployed, live smoke passing.
 
 ---
 

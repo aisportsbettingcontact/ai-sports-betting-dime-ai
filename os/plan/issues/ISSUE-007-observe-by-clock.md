@@ -1,8 +1,11 @@
 # ISSUE-007 — Make silence loud: the observe_by clock on every prompt
 
-**Wave:** 2 — Visibility · **Effort:** M · **Status:** NOT STARTED · **DRI:** Prez
+**Wave:** 2 — Visibility · **Effort:** M · **Status:** DONE — shipped in #387 · **DRI:** Prez
 **Ruling dependency:** DR-008 + DR-014 Ruling 3
 **Doctrine:** D5 (an open loop fails silently) · D12-L7 · gap F2
+
+> **Closed #387.** `scripts/os/clock.mjs` on the per-prompt hook; boundary and blast radius later corrected in #400 and #405. Verified after landing: CI green on the merge commit,
+> both Railway services deployed, live smoke passing.
 
 ---
 

@@ -1,8 +1,11 @@
 # ISSUE-009 — Append a loop artifact on every merge to main
 
-**Wave:** 2 — Visibility · **Effort:** S · **Status:** NOT STARTED · **DRI:** Prez
+**Wave:** 2 — Visibility · **Effort:** S · **Status:** DONE — shipped in #391 · **DRI:** Prez
 **Ruling dependency:** DR-005
 **Doctrine:** D5 (every action leaves an artifact) · D7 (five-level chain) · D16 criterion 3
+
+> **Closed #391.** `.github/workflows/os-ledger-append.yml` + `shared/os/cycle.ts`; proof-contract link fixed in #393. Verified after landing: CI green on the merge commit,
+> both Railway services deployed, live smoke passing.
 
 ---
 
