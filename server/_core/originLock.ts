@@ -6,6 +6,14 @@ import {
   edgeProofPasses,
   hasOriginSecretConfigured,
 } from "./edgeProxy";
+import {
+  type EdgeBreakerConfig,
+  type EdgeBreakerState,
+  edgeBreakerConfig,
+  initialBreakerState,
+  isEnforcing,
+  observe,
+} from "./edgeCircuitBreaker";
 
 /**
  * Phase 4 — origin lock middleware.
@@ -31,11 +39,17 @@ import {
  *    (never 403 the whole site) and shout CRITICAL. The fail-closed guarantee
  *    holds whenever at least one secret is set.
  *
- * Residual (documented fast-follow, not built here): "on" WITH a secret but
- * Cloudflare not actually injecting it (DNS not orange-clouded / secret typo)
- * would 403 legit traffic. Mitigated by (a) the mandatory log-mode soak before
- * flipping on, (b) the healthy log rollback, and (c) the loud onEvent alerts —
- * a stateful auto-downgrade is a future enhancement.
+ * Residual mitigation (NOW BUILT — edgeCircuitBreaker.ts): "on" WITH a secret
+ * but Cloudflare not actually injecting it (DNS not orange-clouded / secret typo
+ * / CF outage) would 403 legit traffic. A self-healing circuit breaker observes
+ * every "on"-mode request and, once it has seen `minSample` requests of which
+ * ~none passed the edge proof, judges Cloudflare absent and auto-downgrades this
+ * middleware to observe-only (never 403) while shouting CRITICAL — then closes
+ * automatically when verified traffic returns. The signal is un-gameable: the
+ * proof requires the origin secret that only Cloudflare forwards, so a
+ * direct-origin flood cannot manufacture verified requests, and real users
+ * behind CF keep the verified count up so an attacker cannot force a downgrade.
+ * Still complemented by the mandatory log-mode soak and the healthy log rollback.
  *
  * The secret value is NEVER logged.
  */
@@ -50,10 +64,15 @@ declare global {
 }
 
 export type OriginLockEvent =
-  "edge_deny" | "edge_would_deny" | "edge_no_secret";
+  | "edge_deny"
+  | "edge_would_deny"
+  | "edge_no_secret"
+  | "edge_breaker_tripped"
+  | "edge_breaker_recovered";
 
 export function originLock(
-  onEvent?: (kind: OriginLockEvent, req: Request) => void
+  onEvent?: (kind: OriginLockEvent, req: Request) => void,
+  opts?: { breakerConfig?: EdgeBreakerConfig; now?: () => number }
 ): RequestHandler {
   // Fail fast at boot if we are arming with a corrupt CF range snapshot; a bad
   // list must never silently open the second factor or 403-storm. Gated on
@@ -66,13 +85,37 @@ export function originLock(
     if (staleness.stale) console.warn(staleness.message);
   }
 
+  const clock = opts?.now ?? Date.now;
+  const breakerCfg = opts?.breakerConfig ?? edgeBreakerConfig();
+  // Per-instance breaker state: persists across requests for the life of the
+  // process, so the verified-ratio observation accumulates across traffic.
+  let breaker: EdgeBreakerState = initialBreakerState(clock());
+
   return (req, res, next) => {
     const mode = edgeMode();
     if (mode === "off") return next();
     // Railway healthcheck path — always reachable, no secret required.
     if (req.path === "/health") return next();
 
-    if (edgeProofPasses(req)) {
+    const verified = edgeProofPasses(req);
+
+    // Circuit breaker observes ONLY in the enforcing sub-mode — "on" WITH a
+    // secret configured, the sole path that actually 403s (the no-secret branch
+    // below already anti-lockout-downgrades, so it has no outage to prevent and
+    // must not feed the breaker or it would fire a spurious CRITICAL trip).
+    if (mode === "on" && hasOriginSecretConfigured()) {
+      const { next: nextState, event } = observe(
+        breaker,
+        verified,
+        clock(),
+        breakerCfg
+      );
+      breaker = nextState;
+      if (event === "tripped") onEvent?.("edge_breaker_tripped", req);
+      else if (event === "recovered") onEvent?.("edge_breaker_recovered", req);
+    }
+
+    if (verified) {
       req.edgeVerified = true;
       return next();
     }
@@ -86,6 +129,14 @@ export function originLock(
     if (!hasOriginSecretConfigured()) {
       // Anti-lockout: refuse to 403 the entire site because the secret is unset.
       onEvent?.("edge_no_secret", req);
+      return next();
+    }
+
+    // Self-heal: if the breaker has judged Cloudflare absent (a full sample with
+    // ~no verified traffic), downgrade to observe-only rather than 403-storm the
+    // whole site. Phase 3 gating + rate limiters still protect the payload.
+    if (!isEnforcing(breaker)) {
+      onEvent?.("edge_would_deny", req);
       return next();
     }
 
