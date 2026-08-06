@@ -137,10 +137,13 @@ export function parseGoal(md: string): Goal {
  * `scripts/os/source-hygiene.test.ts`, which enforces this.
  */
 function matches(path: string, glob: string): boolean {
+  // Escape every regex metacharacter EXCEPT `*`, which the two passes below
+  // consume deliberately. `?` was missing from this class and survived as a
+  // quantifier, so `a?b.ts` matched `b.ts`. Only `*` and `**` are wildcards here.
   const rx = new RegExp(
     "^" +
       glob
-        .replace(/[.+^${}()|[\]\\]/g, "\\$&")
+        .replace(/[.+?^${}()|[\]\\]/g, "\\$&")
         .replace(/\*\*/g, "\u0000")
         .replace(/\*/g, "[^/]*")
         .replace(/\u0000/g, ".*") +

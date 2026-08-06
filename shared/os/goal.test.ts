@@ -82,6 +82,22 @@ describe("findPriorityContradiction", () => {
     expect(findPriorityContradiction(["os/**"], [["server/x.ts", "os/a.md"]]).onGoalCycles).toBe(1);
   });
 
+  it("treats every regex metacharacter as a literal — only * and ** are wildcards", () => {
+    // `?` was missing from the escape set, so it survived as a regex quantifier:
+    // the glob `a?b.ts` failed to match itself and matched `b.ts` and `ab.ts`
+    // instead. Any unescaped metachar is a wildcard nobody asked for.
+    const lit = (g: string, p: string) => findPriorityContradiction([g], [[p]]).onGoalCycles === 1;
+
+    for (const c of [".", "+", "?", "^", "$", "{", "}", "(", ")", "|", "[", "]"]) {
+      const glob = `a${c}b.ts`;
+      expect(lit(glob, glob), `glob ${JSON.stringify(glob)} must match itself literally`).toBe(true);
+    }
+
+    // The specific over-match: `?` must not make the preceding character optional.
+    expect(lit("a?b.ts", "b.ts")).toBe(false);
+    expect(lit("a?b.ts", "ab.ts")).toBe(false);
+  });
+
   it("reports not_measured with zero cycles rather than a fabricated 100%", () => {
     const r = findPriorityContradiction(["os/**"], []);
     expect(r.state).toBe("not_measured");
