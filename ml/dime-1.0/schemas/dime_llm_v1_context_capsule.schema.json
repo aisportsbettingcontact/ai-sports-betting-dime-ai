@@ -178,7 +178,7 @@
         "existing_model_execution_gates": "45c42b74ad90b17f1231525197220552f64a13208c7033f4781f08fc9ca3a2ee",
         "base_model_suitability_contract": "dce71facbd7f5cf356642145f2cf3eda244f7272093e982b0cfb0956d6be75f2",
         "model_artifact_evaluation_contract": "5df817d1ac003cf6485b53c01bbfb03b1be4cb05fde4ea06219fac4a9ba27c19",
-        "training_contract": "35e970a9d3af67402c36c204592454eebd382730c0c3fe1f6ef6ba6ffb44307f",
+        "training_contract": "07566d9e86eafd2ea3372142a8b8078ebc3f94f61a7d22b181174da9127dfb4b",
         "decoding_contract": "c5c540b795aa217b1b32df9bf445924816d47a542acb313e05dc4a82eecbbbc1",
         "tool_contract": "56f3c39fd730f9d923efcf837433825d76de4c4acb51d668095d1eb68db4cca5",
         "prompt": "8ebdbcbdccafca8faaef490a7bda120b7095bdd9d55fe879147b3fd3c04af4e9",
@@ -421,7 +421,7 @@
       "const": {
         "status": "INCOMPLETE_NOT_AUTHORIZED",
         "path": "ml/dime-1.0/evidence/decisions/dime-model-artifact-decision-v1/decision.json",
-        "sha256": "031c6c6d4e7efdc3782c264bed566642ddfcafb78041885d4033459c9d653141"
+        "sha256": "ba47c4feef6b00cf963ed2980c6807bc67994956bf2f40179396ae6f213a2a04"
       }
     },
     "authorization_boundary": {
