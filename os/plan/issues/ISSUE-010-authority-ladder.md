@@ -1,8 +1,11 @@
 # ISSUE-010 — Write the authority ladder, including the executor's own rung
 
-**Wave:** 3 — Ownership · **Effort:** S · **Status:** NOT STARTED · **DRI:** Prez
+**Wave:** 3 — Ownership · **Effort:** S · **Status:** DONE — shipped in #396 · **DRI:** Prez
 **Ruling dependency:** DR-014 Ruling 4 (HOLE C)
 **Doctrine:** D12-L5 (graduated authority) · D12-L8 · D16 criterion 7
+
+> **Closed #396.** `os/agents/AUTHORITY.md` + `shared/os/authority.ts` — D16 criterion 7. Verified after landing: CI green on the merge commit,
+> both Railway services deployed, live smoke passing.
 
 ---
 
