@@ -40,6 +40,13 @@ permissions:
 jobs:
   smoke:
     runs-on: ubuntu-latest
+    # Reading a production secret binds this job to the protected Production
+    # environment (repo GitHub-Actions security contract,
+    # scripts/check-github-actions-security.mjs). Production's only rule is a
+    # protected-branch policy (no required reviewers), so the automatic push-on-
+    # main gate still runs unattended; a dispatch from an unprotected branch is
+    # (correctly) blocked from the secret.
+    environment: Production
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
