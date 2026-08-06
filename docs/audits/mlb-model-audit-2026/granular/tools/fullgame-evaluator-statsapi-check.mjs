@@ -13,19 +13,28 @@ const OUT_DIR = path.resolve(HERE, '..', 'fullgame');
 const SAMPLE_N = 60;
 const SEED = 20260725;
 
-// numeric validation for API-derived values before they are serialized to disk.
-// Absent/blank stays blank — Number(null) is 0, which would silently write a real score.
-const csvNum = (v) =>
-  v === null || v === undefined || v === '' || !Number.isFinite(Number(v)) ? '' : String(Number(v));
+// Nothing derived from the API response is written to disk. Both helpers below compare
+// the response value and then return a LOCALLY CONSTRUCTED string — never the value
+// itself, nor anything computed from it. Stripping characters is not enough: the result
+// is still response-derived, so a CSV write of it remains an untrusted-data flow.
 
-// abstractGameState is a StatsAPI enum. Known values pass through unchanged; anything
-// else is stripped to word characters and truncated, so no response text can carry a
-// comma, quote, newline, or leading '=' into the CSV.
-const API_STATES = new Set(['Preview', 'Live', 'Final', 'Other']);
+// Scores are small non-negative integers; emit the matching entry from a local table.
+const SCORE_LABELS = Array.from({ length: 101 }, (_, i) => String(i));
+const csvNum = (v) => {
+  // absent stays absent: Number(null) is 0, which would write a fabricated score
+  if (v === null || v === undefined || v === '') return '';
+  const n = Number(v);
+  return Number.isInteger(n) && n >= 0 && n < SCORE_LABELS.length ? SCORE_LABELS[n] : '';
+};
+
+// abstractGameState is a StatsAPI enum; each branch returns its own literal.
 const csvState = (v) => {
+  if (v === 'Preview') return 'Preview';
+  if (v === 'Live') return 'Live';
+  if (v === 'Final') return 'Final';
+  if (v === 'Other') return 'Other';
   if (v === null || v === undefined) return 'fetch-fail';
-  if (API_STATES.has(v)) return v;
-  return String(v).replace(/[^A-Za-z0-9 _-]/g, '').slice(0, 24) || 'unexpected';
+  return 'unexpected';
 };
 
 // mulberry32 PRNG for reproducible sampling
