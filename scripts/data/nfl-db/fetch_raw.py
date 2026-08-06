@@ -48,7 +48,13 @@ DATASETS = [
     ("players.csv",      "players",      None,                    25_000),
     ("rosters.csv",      "rosters",      "roster_{year}.csv",      43_000),
     ("snap_counts.csv",  "snap_counts",  "snap_counts_{year}.csv", 324_000),
-    ("player_stats.csv", "player_stats", "player_stats_{year}.csv", 287_000),
+    # `stats_player`, NOT the older `player_stats` release. nflverse repurposed
+    # the old name: player_stats_2023.csv now serves SEASON AGGREGATES (5,653
+    # rows) while this table needs WEEKLY lines (18,643 for the same season).
+    # Fetching the wrong one fills player_game_stats with season totals -- right
+    # table, plausible row shape, wrong granularity, and nothing downstream would
+    # notice. The old release also stops at 2024; 2025 only exists here.
+    ("player_stats.csv", "stats_player", "stats_player_week_{year}.csv", 287_000),
     ("depth_charts.csv", "depth_charts", "depth_charts_{year}.csv", 1_100_000),
 ]
 
@@ -60,7 +66,7 @@ KNOWN_EMPTY = {
     ("snap_counts", 2010), ("snap_counts", 2011),
     # 2026 is scheduled but unplayed: it has rosters and depth charts, but no
     # snaps or box scores until games are actually played.
-    ("snap_counts", 2026), ("player_stats", 2026),
+    ("snap_counts", 2026), ("stats_player", 2026),
 }
 KNOWN_UPSTREAM_DEFECT = {
     ("snap_counts", 2012): "asset is header-only upstream while nflverse's own "
