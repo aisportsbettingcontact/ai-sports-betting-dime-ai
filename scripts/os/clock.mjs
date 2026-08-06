@@ -20,7 +20,12 @@ const OS = resolve(dirname(fileURLToPath(import.meta.url)), "../../os");
  * broken promise — clocking it would put 18 lines on every prompt and the line
  * would be ignored within a day. A clock that cries wolf is a clock nobody reads.
  */
-const OWES_OBSERVATION = ["AWAITING", "BLOCKED", "OPEN", "IN PROGRESS"];
+// ACTIVE was missing, which made every ACTIVE artifact's observe_by INERT — including
+// GR-0001's, the mission's own goal record. A governance system whose flagship goal
+// carries a deadline nothing watches is the exact failure it was built to prevent
+// (the 2026-07-28 program died in 8 days because nothing noticed it had stopped).
+// Found by the PR #399 adversarial audit.
+const OWES_OBSERVATION = ["AWAITING", "BLOCKED", "OPEN", "IN PROGRESS", "ACTIVE"];
 
 function walk(dir, out = []) {
   for (const e of readdirSync(dir)) {
