@@ -176,3 +176,58 @@ describe("section boundaries — an H3 subsection must not leak into its parent"
     expect(() => parseGoal(emptied)).toThrow(/threshold/i);
   });
 });
+
+describe("absence of evidence is not evidence of contradiction", () => {
+  // Found by the #399 adversarial audit. A goal that declares NO priority, or a
+  // ledger whose cycles resolved to no files, scored share=0 and reported a hard
+  // "contradiction: true". That is a fabricated finding: nothing was measured, so
+  // nothing can be contradicted. The founder loop would surface an accusation
+  // manufactured entirely from missing data.
+  it("reports not_measured when the goal declares no activity paths", () => {
+    const r = findPriorityContradiction([], [["a.ts"], ["b.ts"], ["c.ts"]]);
+    expect(r.state).toBe("not_measured");
+    expect(r.contradiction).toBe(false);
+    expect(r.reason).toMatch(/declares no activity paths/i);
+  });
+
+  it("reports not_measured when no cycle resolved to any file", () => {
+    const r = findPriorityContradiction(["os/**"], [[], [], []]);
+    expect(r.state).toBe("not_measured");
+    expect(r.contradiction).toBe(false);
+    // The reason must point at the cause (no files resolved), because the two
+    // not_measured cases need different follow-up: one is "nothing merged yet",
+    // this one is "your clone or ledger is incomplete".
+    expect(r.reason).toMatch(/no cycle resolved to any files/i);
+  });
+
+  it("still measures normally when at least one cycle has files", () => {
+    const r = findPriorityContradiction(["os/**"], [[], ["server/x.ts"], ["server/y.ts"]]);
+    expect(r.state).toBe("ok");
+    expect(r.contradiction).toBe(true);
+  });
+});
+
+describe("a goal record must declare where its work lands", () => {
+  it("rejects a record with no Activity paths section", () => {
+    // Not one of the doctrine's nine fields, so GOAL_FIELDS stays at nine — but
+    // without it the D13 check is not computable, which is the whole point of
+    // the type. Every later GR-#### must carry it, not just GR-0001.
+    const noPaths = GOOD.replace(/## Activity paths[\s\S]*$/, "");
+    expect(() => parseGoal(noPaths)).toThrow(/activity path/i);
+  });
+
+  it("rejects a record whose Activity paths section is empty", () => {
+    const emptyPaths = GOOD.replace("- `os/**`", "");
+    expect(() => parseGoal(emptyPaths)).toThrow(/activity path/i);
+  });
+
+  it("EVERY goal record in os/goals/ declares activity paths, not just GR-0001", () => {
+    const dir = resolve(__dirname, "../..", "os/goals");
+    const files = readdirSync(dir).filter((f) => /^GR-\d+.*\.md$/.test(f));
+    expect(files.length).toBeGreaterThan(0);
+    for (const f of files) {
+      const g = parseGoal(readFileSync(resolve(dir, f), "utf-8"));
+      expect(g.activityPaths.length, `${f} declares no activity paths`).toBeGreaterThan(0);
+    }
+  });
+});

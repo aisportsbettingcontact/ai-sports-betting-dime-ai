@@ -41,12 +41,15 @@ function die(msg: string): never {
   process.exit(1);
 }
 
-// ---- the goal ------------------------------------------------------------
+// ---- the goals -----------------------------------------------------------
+// EVERY goal record, not just the first one on disk. `.find()` measured GR-0001
+// and silently ignored every later record — a second goal would have been added
+// believing it was watched, and it would not have been.
 const goalsDir = join(ROOT, "os/goals");
-const goalFile = readdirSync(goalsDir).find((f) => /^GR-\d+.*\.md$/.test(f));
-if (!goalFile) die(`no goal record found in ${goalsDir}`);
-
-const goal = parseGoal(readFileSync(join(goalsDir, goalFile), "utf8"));
+const goalFiles = readdirSync(goalsDir)
+  .filter((f) => /^GR-\d+.*\.md$/.test(f))
+  .sort();
+if (goalFiles.length === 0) die(`no goal record found in ${goalsDir}`);
 
 // ---- the ledger ----------------------------------------------------------
 let raw: string;
@@ -93,21 +96,32 @@ const filesPerCycle: string[][] = cycles.map((c) => {
 });
 
 const measurable = filesPerCycle.filter((f) => f !== null);
-const r = findPriorityContradiction(goal.activityPaths, measurable);
 
 // ---- report --------------------------------------------------------------
-console.log(`  goal          ${goalFile.replace(/\.md$/, "")}`);
-console.log(`  declared      ${goal.activityPaths.join(", ")}`);
-if (r.state === "not_measured") {
-  console.log(`  state         not_measured — ${r.reason}`);
-} else {
-  console.log(`  cycles        ${r.totalCycles}`);
-  console.log(`  on-goal       ${r.onGoalCycles} (${((r.onGoalShare ?? 0) * 100).toFixed(0)}%)`);
-  console.log(
-    `  contradiction ${r.contradiction ? `YES — ${r.reason}` : "no — declared priority matches where the work went"}`,
-  );
-}
 if (unresolved.length > 0) {
   // Never a silent cap: say what was dropped and why the denominator is smaller.
-  console.log(`  UNRESOLVED    ${unresolved.length} cycle(s) excluded, commit not in this clone: ${unresolved.join(", ")}`);
+  // Before this, an unresolvable commit degraded to "changed no files" and was
+  // counted OFF-goal — in a shallow clone every cycle failed that way and the
+  // script confidently reported a contradiction that did not exist.
+  console.log(
+    `  UNRESOLVED    ${unresolved.length} of ${cycles.length} cycle(s) excluded, commit not in this clone: ${unresolved.join(", ")}`,
+  );
+  console.log(`                (a shallow checkout does this — fetch with depth 0)`);
+}
+
+for (const goalFile of goalFiles) {
+  const goal = parseGoal(readFileSync(join(goalsDir, goalFile), "utf8"));
+  const r = findPriorityContradiction(goal.activityPaths, measurable);
+
+  console.log(`  goal          ${goalFile.replace(/\.md$/, "")}`);
+  console.log(`  declared      ${goal.activityPaths.join(", ")}`);
+  if (r.state === "not_measured") {
+    console.log(`  state         not_measured — ${r.reason}`);
+  } else {
+    console.log(`  cycles        ${r.totalCycles}`);
+    console.log(`  on-goal       ${r.onGoalCycles} (${((r.onGoalShare ?? 0) * 100).toFixed(0)}%)`);
+    console.log(
+      `  contradiction ${r.contradiction ? `YES — ${r.reason}` : "no — declared priority matches where the work went"}`,
+    );
+  }
 }

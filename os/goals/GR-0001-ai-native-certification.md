@@ -1,6 +1,6 @@
 # GR-0001 — Dime AI operates as a closed, queryable, self-improving system
 
-**Status:** ACTIVE · **DRI:** Prez · **Kind:** goal · **observe_by:** 2026-09-05
+**Status:** ACTIVE · **DRI:** Prez · **Kind:** goal · **observe_by:** 2026-08-31
 **Doctrine:** D12-L1 (goals + ownership, nine fields) · D5 (a goal with limits) · D16 §17
 
 > The mission's own goal record, and the worked example of the type. Written because the Stage 1
@@ -86,8 +86,14 @@ The executor (Fable 5) builds and reports; it does not own the outcome.
 binding on the required `Vitest` check, `observe_by` clock on the per-prompt hook, token ledger
 measuring **$6,272.08**, engineering loop recording every merge, and the authority ladder enforcing.
 
-Blocked on three Prez rulings: **DR-001** (publish posture — overdue on the clock 2026-08-12),
+Blocked on three Prez rulings: **DR-001** (publish posture, `observe_by` **2026-08-12**),
 **DR-002** (pricing), and the `.gitignore` ruling for the 47 GB untracked tree.
+
+> **Correction, 2026-08-06.** This line previously read "DR-001 … overdue on the clock 2026-08-12",
+> and the executor repeated that to the DRI several times. It was wrong: 2026-08-12 is DR-001's
+> `observe_by` **deadline**, six days in the future, and `scripts/os/clock.mjs` reports nothing
+> overdue. A date in an artifact is not a date that has passed. Recorded rather than silently
+> edited, per the artifact law.
 
 ## Evaluation measures
 
@@ -95,13 +101,18 @@ Blocked on three Prez rulings: **DR-001** (publish posture — overdue on the cl
 |---|---|---|---|
 | D16 criteria VERIFIED | **12 of 12** | 0 scored | `os/certification/` (not yet written) |
 | D1 level | **4 of 4** | **2** | `os/audits/2026-08-ai-native-audit.md` |
-| Function loops with a completed live cycle | **≥ 1** | 0 | `os-ledger` cycle artifacts (8 recorded, all `outcome: null`) |
+| Function loops with a completed live cycle | **≥ 1** | 0 observed | `os-ledger` cycle artifacts — count: `git show origin/os-ledger:cycles.jsonl \| wc -l` |
 | Open `/os/` items past `observe_by` | **0** | see clock | `scripts/os/clock.mjs` |
 | D15 diagnostic unresolved criticals | **0** | not yet run | ISSUE-015 |
 | Consequential state existing only in session memory | **0** | 0 known | spot audit |
 
-The third row is the honest one: **eight merges are recorded and not one outcome has been observed
-yet.** That is the gap between an action and an outcome, measured rather than asserted.
+The third row is the honest one: **every merge recorded so far has `outcome: null` — not one has
+been observed.** That is the gap between an action and an outcome, measured rather than asserted.
+
+The recorded *count* is deliberately not written here. It was "6" when this file was created and
+"8" a day later, and it changed again between two edits of this very paragraph. A live number
+frozen into a static artifact is stale the moment it is committed, and a governance record that
+is quietly wrong is worse than one that makes you run a command. The command is the number.
 
 ## Activity paths
 
