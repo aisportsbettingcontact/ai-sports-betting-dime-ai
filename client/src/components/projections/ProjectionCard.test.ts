@@ -652,6 +652,56 @@ describe("ProjectionCard — unplayable cards carry no mint (owner directive 202
     expect(html).toContain('aria-label="Giants at Mariners, POSTPONED"');
   });
 
+  it("no longer overshoots the compaction remap to bare --foreground", () => {
+    // The overshoot is what made non-actionable cards the brightest ink on the
+    // slate. Both remapped tokens must resolve to a bounded mid tone instead.
+    expect(cardCss).not.toMatch(
+      /\.projection-card--compact \{[^}]*--text-secondary: var\(--foreground\);/
+    );
+    // One rule, both themes: --foreground and --background flip together, so
+    // "82% ink toward the page ground" is a light grey on dark and a dark grey
+    // on light without a per-theme override.
+    for (const token of ["--text-secondary", "--text-muted"]) {
+      expect(cardCss).toMatch(
+        new RegExp(
+          `\\.projection-card--compact \\{[\\s\\S]*?${token}: color-mix\\(\\s*in srgb,\\s*var\\(--foreground\\)\\s*82%,\\s*var\\(--background\\)\\s*\\)`
+        )
+      );
+    }
+    // No per-theme override should be needed or present for these tokens.
+    expect(cardCss).not.toMatch(
+      /html:not\(\.dark\) \.projection-card--compact \{\s*--text-secondary/
+    );
+  });
+
+  it("deepens the light-theme live mint to clear the AA floor it was missing", () => {
+    // 60% composited to 4.4969:1 — short of 4.5 by 0.003.
+    expect(cardCss).toMatch(
+      /html:not\(\.dark\) \.projection-card--compact \.projection-card__status--live \{[\s\S]*?var\(--mint-ink[^)]*\) 50%,/
+    );
+    expect(cardCss).not.toMatch(/var\(--mint-ink[^)]*\) 60%,/);
+  });
+
+  it("keeps every remapped tone achromatic (Three-Color Law v2: R == G == B)", () => {
+    // Mixing the two achromatic extremes can only produce a grey. Guard against
+    // a future chromatic substitution, and against raw hex (X-HEX ratchet).
+    // NB: match whole declarations — a `[^)]*` character class cannot span the
+    // nested `var(...)` and silently truncates the value it is meant to check.
+    const compact = cssBlock(
+      cardCss,
+      "Pregame detail makes upcoming MLB cards",
+      "A settled no-edge card can carry both modifiers"
+    );
+    const decls = compact.match(/--text-(?:secondary|muted):[^;]+;/g) ?? [];
+    expect(decls).toHaveLength(2);
+    for (const d of decls) {
+      expect(d).toMatch(
+        /color-mix\(\s*in srgb,\s*var\(--foreground\)\s*\d+%,\s*var\(--background\)\s*\)/
+      );
+      expect(d).not.toMatch(/#[0-9a-f]{3,8}/i);
+    }
+  });
+
   it("records the directive in the page law", () => {
     const section = lawDoc.slice(
       lawDoc.indexOf(

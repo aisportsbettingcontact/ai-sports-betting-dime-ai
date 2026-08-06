@@ -1,0 +1,49 @@
+theme  state       px     opacity  status ratio  micro-label ratio
+dark   live        14.0544 0.72       6.2541        6.8497
+dark   scheduled   14.0544 1          8.1328        8.1328
+dark   postponed   14.0544 0.72       6.8497        6.8497
+dark   suspended   14.0544 0.72       6.8497        6.8497
+dark   final       14.0544 0.72       6.8497        6.8497
+light  live        14.0544 0.72       5.0170        5.2683
+light  scheduled   14.0544 1          6.5385        6.5385
+light  postponed   14.0544 0.72       5.2683        5.2683
+light  suspended   14.0544 0.72       5.2683        5.2683
+light  final       14.0544 0.72       5.2683        5.2683
+
+PROPERTY A — every status label clears AA 4.5:1 (all are normal text: <18.66px)
+  PASS  dark/live is normal text, so 4.5 is the right floor  — 14.0544px
+  PASS  dark/live status ≥ 4.5  — 6.2541
+  PASS  dark/scheduled is normal text, so 4.5 is the right floor  — 14.0544px
+  PASS  dark/scheduled status ≥ 4.5  — 8.1328
+  PASS  dark/postponed is normal text, so 4.5 is the right floor  — 14.0544px
+  PASS  dark/postponed status ≥ 4.5  — 6.8497
+  PASS  dark/suspended is normal text, so 4.5 is the right floor  — 14.0544px
+  PASS  dark/suspended status ≥ 4.5  — 6.8497
+  PASS  dark/final is normal text, so 4.5 is the right floor  — 14.0544px
+  PASS  dark/final status ≥ 4.5  — 6.8497
+  PASS  light/live is normal text, so 4.5 is the right floor  — 14.0544px
+  PASS  light/live status ≥ 4.5  — 5.0170
+  PASS  light/scheduled is normal text, so 4.5 is the right floor  — 14.0544px
+  PASS  light/scheduled status ≥ 4.5  — 6.5385
+  PASS  light/postponed is normal text, so 4.5 is the right floor  — 14.0544px
+  PASS  light/postponed status ≥ 4.5  — 5.2683
+  PASS  light/suspended is normal text, so 4.5 is the right floor  — 14.0544px
+  PASS  light/suspended status ≥ 4.5  — 5.2683
+  PASS  light/final is normal text, so 4.5 is the right floor  — 14.0544px
+  PASS  light/final status ≥ 4.5  — 5.2683
+
+PROPERTY B — no settled/unplayable card outshines the bettable scheduled card
+  PASS  dark: final status ≤ scheduled  — 6.85 vs 8.13
+  PASS  dark: final micro-label ≤ scheduled  — 6.85 vs 8.13
+  PASS  dark: postponed status ≤ scheduled  — 6.85 vs 8.13
+  PASS  dark: postponed micro-label ≤ scheduled  — 6.85 vs 8.13
+  PASS  dark: suspended status ≤ scheduled  — 6.85 vs 8.13
+  PASS  dark: suspended micro-label ≤ scheduled  — 6.85 vs 8.13
+  PASS  light: final status ≤ scheduled  — 5.27 vs 6.54
+  PASS  light: final micro-label ≤ scheduled  — 5.27 vs 6.54
+  PASS  light: postponed status ≤ scheduled  — 5.27 vs 6.54
+  PASS  light: postponed micro-label ≤ scheduled  — 5.27 vs 6.54
+  PASS  light: suspended status ≤ scheduled  — 5.27 vs 6.54
+  PASS  light: suspended micro-label ≤ scheduled  — 5.27 vs 6.54
+
+ALL CHECKS PASSED

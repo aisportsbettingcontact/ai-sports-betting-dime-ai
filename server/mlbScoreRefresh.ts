@@ -34,8 +34,17 @@
  *   abstractGameState "Preview"  → DB gameStatus "upcoming"
  *   abstractGameState "Live"     → DB gameStatus "live"
  *   abstractGameState "Final"    → DB gameStatus "final"
- *   detailedState "Postponed"    → DB gameStatus "postponed" (hidden from feed)
- *   detailedState "Suspended"    → DB gameStatus "suspended" (hidden until resumed; tracker rescans)
+ *   detailedState "Postponed"    → DB gameStatus "postponed"
+ *   detailedState "Cancelled"    → DB gameStatus "postponed"  (same bucket)
+ *   detailedState "Suspended"    → DB gameStatus "suspended"  (checked FIRST)
+ *
+ *   These games are NOT hidden from the feed — they render as cards in the
+ *   settled tier, below the bettable ones, carrying zero mint (owner directive
+ *   2026-08-06, design-system/dime-ai/pages/ai-model-projections.md). The only
+ *   two gameStatus filters in the product are an opt-in selector
+ *   (`games.list` honours an explicit `input.gameStatus`) and the Rotowire
+ *   lineup-batch id selector in DimeModelFeed — neither excludes anything from
+ *   the card list. mlbPostponedTracker rescans both states to detect a resume.
  *
  * ─── Game clock string ───────────────────────────────────────────────────────
  *   Live:  "Top 3rd" | "Bot 3rd" | "Mid 3rd" | "End 3rd"
@@ -96,11 +105,16 @@ export interface MlbLiveGame {
   /** Home team runs (null if game not started) */
   homeRuns: number | null;
   /**
-   * Mapped DB game status:
+   * Mapped DB game status. All five render on the feed; postponed and
+   * suspended sink to the settled tier rather than being hidden (owner
+   * directive 2026-08-06).
    *   "upcoming"   — not yet started (Preview, Scheduled, Warmup, Delayed)
    *   "live"       — in progress (Live, In Progress)
    *   "final"      — completed (Final, Game Over, Completed Early)
-   *   "postponed"  — game postponed, suspended, or cancelled (hidden from feed)
+   *   "postponed"  — postponed or cancelled; never played, so no score
+   *   "suspended"  — halted mid-play, resumes later, so it KEEPS its score.
+   *                  A first-class state since 2026-08-06 — it no longer
+   *                  borrows postponed's label.
    */
   gameStatus: "upcoming" | "live" | "final" | "postponed" | "suspended";
   /**
@@ -228,18 +242,28 @@ interface MlbApiScheduleResponse {
  *   abstractGameState="Preview"  → "upcoming"  (includes: Scheduled, Pre-Game, Warmup, Delayed Start)
  *   abstractGameState="Live"     → "live"       (includes: In Progress, Manager Challenge, Replay Review)
  *   abstractGameState="Final"    → "final"      (includes: Final, Game Over, Completed Early)
- *   detailedState="Postponed"    → "postponed"  (override: game not played today — hidden from feed)
+ *   detailedState="Postponed"    → "postponed"  (override: not played today)
  *   detailedState="Suspended"    → "suspended"  (override: distinct from postponed — the tracker's
  *                                  resume detection scans gameStatus='suspended'; writing 'postponed'
  *                                  here broke that scan AND ping-ponged against syncMlbSchedule,
  *                                  which maps Suspended → 'suspended'. Aligned 2026-07-17.)
- *   detailedState="Cancelled"    → "postponed"  (override: treat as not played — hidden from feed)
+ *   detailedState="Cancelled"    → "postponed"  (override: treat as not played)
+ *
+ * None of these are hidden from the feed — see the note on the overrides below.
  */
 export function mapMlbStatus(
   abstractState: string,
   detailedState: string
 ): "upcoming" | "live" | "final" | "postponed" | "suspended" {
-  // Explicit overrides for special states — these games are NOT played and must be hidden from feed
+  // Explicit overrides, checked BEFORE abstractGameState: for these states the
+  // abstract field is actively misleading, so only detailedState carries the
+  // truth. Pinned in mlbScoreRefresh.matching.test.ts —
+  //   ("Live",    "Suspended: Rain") → suspended
+  //   ("Preview", "Postponed")       → postponed
+  //   ("Final",   "Cancelled")       → postponed
+  // Falling through to the abstract switch would call those live, upcoming,
+  // and final respectively. These games are NOT hidden from the feed; they
+  // render in the settled tier (owner directive 2026-08-06).
   const detailedLower = detailedState.toLowerCase();
   if (detailedLower.includes("suspended")) {
     return "suspended";

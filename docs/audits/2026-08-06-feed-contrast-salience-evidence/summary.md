@@ -1,0 +1,108 @@
+# Feed — compaction contrast + salience
+
+**Branch:** `docs/mlb-status-comment-truth` · **PR:** #416 · **Date:** 2026-08-06
+**Lead:** `impeccable` v4.0.4 (pin `ae5e951`) · **Surface:** `/feed`
+
+> **OWNER AUTHORIZATION — 2026-08-06, full.** These are the two items the
+> previous directive's scope fence deferred. Both are now approved, authorized,
+> and fixed. The earlier fence is kept verbatim in the law with a RESOLVED note
+> appended, so the record shows they travelled on their own decision rather than
+> riding in on the previous approval.
+
+## One cause, two symptoms
+
+`.projection-card--compact` sets `opacity: 0.72`. Opacity composites the card
+**layer** over the page, so page ground bleeds into the text *and* the card
+background:
+
+```
+effective text = 0.72 × colour  + 0.28 × page
+effective bg   = 0.72 × cardBg  + 0.28 × page
+```
+
+Everything below follows from that. The dim itself stays — it is owner directive
+2026-07-23. What changes is how the text compensates for it.
+
+**#1 — the light-theme LIVE mint missed its own target.** The rule existed
+specifically to lift that label over 4.5:1, and its comment claimed it reached
+"~4.8:1". Measured: **4.4969:1**, short by 0.003. Deepening the mix from 60% to
+50% measures **5.0170:1**.
+
+**#2 — the compaction remap overshot.** It pushed `--text-secondary` and
+`--text-muted` all the way to `--foreground`, which composited settled cards to
+10.10 dark / 8.79 light — *brighter than the bettable scheduled card* at 8.13 /
+6.54. Salience ran backwards. Both tokens now resolve to a bounded mid tone via
+`color-mix`: 82% of the foreground ink mixed toward the page ground. One rule
+covers both themes, because `--foreground` and `--background` flip together —
+so the same 82% is a light grey on dark and a dark grey on light. Achromatic by
+construction, no new token, and no raw hex (the repo's X-HEX ratchet enforces
+that last point, and caught a first attempt that used `#ffffff`/`#000000`).
+
+**Why not simply revert the remap?** Because it exists for a reason. Reverting
+to stock `--text-secondary` drops light-theme settled text to ~3.4:1 — a worse
+failure than the one being fixed. The window is narrow: above 4.5, below the
+scheduled card. The mid tone lands inside it.
+
+## Measured, in a browser, against the built artifact
+
+| | dark before | dark after | light before | light after |
+|---|---|---|---|---|
+| scheduled (bettable) | 8.1328 | 8.1328 | 6.5385 | 6.5385 |
+| live | 6.2541 | 6.2541 | **4.4969** ✗ | **5.0170** ✓ |
+| final / postponed / suspended | **10.0986** | **6.8497** | **8.7878** | **5.2683** |
+| micro-labels on a settled card | 10.0986 | 6.8497 | 8.7878 | 5.2683 |
+
+Before figures: [`rendered-proof-before-production.txt`](./rendered-proof-before-production.txt)
+(captured against live production, i.e. the real pre-fix code).
+After: [`rendered-proof-after.txt`](./rendered-proof-after.txt).
+
+Two properties are hard-asserted by the gate, in both themes:
+
+- **A — every status label clears 4.5:1.** All are normal text (14.05px at 1440,
+  12.00px at 375, weight 600), so 4.5 is the correct floor, not 3.0. The gate
+  asserts the size too, so a future type change cannot silently move the goal.
+- **B — no settled card's labels exceed the scheduled card's.** Checked for the
+  status slot *and* a second remapped element (`.summary__item dt`), which is
+  how the fix is shown to reach every micro-label rather than only the status.
+
+Baseline run against production: **13 failures** (1 × property A, 12 × property
+B). After: **ALL CHECKS PASSED**.
+
+## Scope
+
+Only the two token declarations and the one mint percentage changed. The
+`opacity: 0.72` dim, the card anatomy, the mint-rationing rules from #413, the
+slate tier, and every layout property are untouched — the diff alters colour
+resolution and nothing else.
+
+## Gates
+
+| Gate | Result |
+|---|---|
+| Baseline (production, pre-fix) | **13 failures** — the two defects, reproduced |
+| Contrast + salience gate (post-fix) | **ALL CHECKS PASSED**, both themes |
+| `npx tsc --noEmit` | clean |
+| `npx prettier --check` | clean |
+| `npx vitest run client/src` | see [`typecheck-tests.txt`](./typecheck-tests.txt) |
+| build + boot + `smoke-deploy.mjs` | **10/10** — [`smoke.txt`](./smoke.txt) |
+| impeccable detector | 3 warnings, all pre-existing `side-tab` |
+| review-animations motion gate | **did not fire** — no motion property in the diff |
+
+Three CSS-contract tests were added to `ProjectionCard.test.ts` so neither fix
+can be silently reverted: the remap must not return to bare `--foreground`
+(both tokens), the mint mix must be 50% and not 60%, and every remapped tone
+must stay achromatic AND hex-free.
+
+### A test bug caught before it could mislead
+
+The achromatic guard first failed against correct CSS. The matcher was
+`/color-mix\([^)]*\)/` — a character class cannot span the nested `var(...)`, so
+it captured a truncated value and compared that. Rewritten to match whole
+declarations. Worth recording: the same class of error (a matcher that silently
+fails to see what it is checking) produced a vacuous pass in the #413 harness.
+
+## Known issues
+
+None outstanding on this surface. The three items carried since #409 are now all
+closed: slate tier and mint rationing (#413), the stale `mlbScoreRefresh`
+comments (#416), and these two (#416).
