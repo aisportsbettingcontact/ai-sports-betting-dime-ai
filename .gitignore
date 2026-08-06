@@ -119,7 +119,11 @@ temp/
 # schema, lib modules and audit reports ARE tracked -- they are the source of truth.
 scripts/data/nfl-db/raw/
 scripts/data/nfl-db/cache/
-!scripts/data/nfl-db/raw/EXTRACT-NOTES.md
+# NOTE: a negation cannot re-include a file inside an excluded DIRECTORY -- git
+# never descends into raw/ to evaluate it. An earlier
+# `!scripts/data/nfl-db/raw/EXTRACT-NOTES.md` here was inert and silently kept
+# the extract provenance out of the repo. The notes now live one level up, at
+# scripts/data/nfl-db/EXTRACT-NOTES.md, where nothing excludes them.
 
 # Forensic audit ledgers: one JSON line per row-level comparison, ~2 GB raw.
 # They compress ~37:1, so the .gz form plus the extracted findings are what get
