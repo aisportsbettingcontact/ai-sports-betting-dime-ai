@@ -102,6 +102,13 @@ export function parseGoal(md: string): Goal {
     .map((l) => l.replace(/^-\s*/, "").replace(/`/g, "").trim())
     .filter(Boolean);
 
+  // Not one of the doctrine's nine fields, so GOAL_FIELDS stays at nine — but a
+  // record without it makes D13 uncomputable, which is the reason the type exists.
+  // Required of EVERY goal record, not just the one the real-file tests name.
+  if (activityPaths.length === 0) {
+    throw new Error(`${idMatch[1]} declares no activity path — the D13 check is not computable without one`);
+  }
+
   for (const p of activityPaths) {
     if (!ACTIVITY_PATH.test(p)) {
       throw new Error(
@@ -165,15 +172,27 @@ export function findPriorityContradiction(
   cycleFilePaths: string[][],
 ): ContradictionResult {
   const total = cycleFilePaths.length;
+  const unmeasurable = (reason: string): ContradictionResult => ({
+    state: "not_measured",
+    contradiction: false,
+    onGoalCycles: 0,
+    totalCycles: total,
+    onGoalShare: null,
+    reason,
+  });
+
   if (total === 0) {
-    return {
-      state: "not_measured",
-      contradiction: false,
-      onGoalCycles: 0,
-      totalCycles: 0,
-      onGoalShare: null,
-      reason: "no recorded cycles yet — a share cannot be computed from zero evidence",
-    };
+    return unmeasurable("no recorded cycles yet — a share cannot be computed from zero evidence");
+  }
+  // Absence of evidence is not evidence of a contradiction. Both cases below
+  // scored share=0 and reported `contradiction: true` — an accusation about the
+  // founder's allocation manufactured entirely out of missing data. The founder
+  // loop must never surface a finding that no measurement supports.
+  if (activityPaths.length === 0) {
+    return unmeasurable("the goal declares no activity paths — there is no priority to contradict");
+  }
+  if (cycleFilePaths.every((f) => f.length === 0)) {
+    return unmeasurable("no cycle resolved to any files — the ledger or the clone is incomplete");
   }
   const onGoal = cycleFilePaths.filter((files) =>
     files.some((f) => activityPaths.some((g) => matches(f, g))),
