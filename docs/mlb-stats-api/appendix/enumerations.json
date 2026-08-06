@@ -1,0 +1,395 @@
+{
+ "schema": {
+  "row": [
+   "endpoint",
+   "count",
+   "values_or_sample",
+   "status"
+  ],
+  "retrieved_at": "2026-07-27T06:07:00Z/2026-07-27T06:11:00Z"
+ },
+ "rows": [
+  {
+   "endpoint": "/api/v1/gameTypes",
+   "count": 12,
+   "values_or_sample": {
+    "S": "Spring Training",
+    "R": "Regular Season",
+    "F": "Wild Card",
+    "D": "Division Series",
+    "L": "League Championship Series",
+    "W": "World Series",
+    "C": "Championship",
+    "N": "Nineteenth Century Series",
+    "P": "Playoffs",
+    "A": "All-Star Game",
+    "I": "Intrasquad",
+    "E": "Exhibition"
+   },
+   "status": "VERIFIED_OBSERVED"
+  },
+  {
+   "endpoint": "/api/v1/rosterTypes",
+   "count": 9,
+   "values_or_sample": [
+    "40Man",
+    "fullSeason",
+    "fullRoster",
+    "nonRosterInvitees",
+    "active",
+    "allTime",
+    "depthChart",
+    "gameday",
+    "coach"
+   ],
+   "status": "VERIFIED_OBSERVED"
+  },
+  {
+   "endpoint": "/api/v1/gameStatus",
+   "count": 210,
+   "values_or_sample": {
+    "abstractGameState": [
+     "Preview",
+     "Live",
+     "Final",
+     "Other"
+    ],
+    "codedGameState": [
+     "C",
+     "D",
+     "F",
+     "I",
+     "M",
+     "N",
+     "O",
+     "P",
+     "Q",
+     "R",
+     "S",
+     "T",
+     "U",
+     "W",
+     "X"
+    ],
+    "detailedState_families": [
+     "Scheduled",
+     "Pre-Game",
+     "Warmup",
+     "In Progress",
+     "Delayed",
+     "Postponed",
+     "Suspended",
+     "Cancelled: <reason>",
+     "Completed Early: <reason>",
+     "Final"
+    ]
+   },
+   "status": "VERIFIED_OBSERVED"
+  },
+  {
+   "endpoint": "/api/v1/standingsTypes",
+   "count": 13,
+   "values_or_sample": [
+    "regularSeason",
+    "wildCard",
+    "divisionLeaders",
+    "wildCardWithLeaders",
+    "firstHalf",
+    "secondHalf",
+    "springTraining",
+    "postseason",
+    "byDivision",
+    "byConference",
+    "byLeague",
+    "byOrganization",
+    "currentHalf"
+   ],
+   "status": "VERIFIED_OBSERVED"
+  },
+  {
+   "endpoint": "/api/v1/statTypes",
+   "count": 60,
+   "values_or_sample": [
+    "season",
+    "career",
+    "gameLog",
+    "playLog",
+    "pitchLog",
+    "metricLog",
+    "pitchArsenal",
+    "outsAboveAverage",
+    "expectedStatistics",
+    "sabermetrics",
+    "sprayChart",
+    "tracking",
+    "hotColdZones",
+    "projected_Zips",
+    "projected_ZipsRos",
+    "projected_Zips2YR",
+    "projected_Zips3YR",
+    "atGameStart",
+    "opponentsFaced",
+    "..."
+   ],
+   "status": "VERIFIED_OBSERVED"
+  },
+  {
+   "endpoint": "/api/v1/metrics",
+   "count": 22,
+   "values_or_sample": [
+    [
+     "releaseSpinRate",
+     "RPM"
+    ],
+    [
+     "releaseExtension",
+     "FT"
+    ],
+    [
+     "releaseSpeed",
+     "MPH"
+    ],
+    [
+     "effectiveSpeed",
+     "MPH"
+    ],
+    [
+     "launchSpeed",
+     "MPH"
+    ],
+    [
+     "launchAngle",
+     "DEG"
+    ],
+    [
+     "maxHeight",
+     "FT"
+    ],
+    [
+     "hangTime",
+     "SEC"
+    ],
+    [
+     "(degenerate entry metricId 0, empty name)",
+     null
+    ]
+   ],
+   "status": "VERIFIED_OBSERVED"
+  },
+  {
+   "endpoint": "/api/v1/positions",
+   "count": 37,
+   "values_or_sample": [
+    "P",
+    "C",
+    "1B",
+    "2B",
+    "3B",
+    "SS",
+    "LF",
+    "CF",
+    "RF",
+    "DH",
+    "PH",
+    "PR",
+    "EH",
+    "BR",
+    "OF",
+    "IF",
+    "SP",
+    "RP",
+    "CP",
+    "UT",
+    "UI",
+    "UO",
+    "RHP",
+    "LHP",
+    "RHS",
+    "LHS",
+    "LHR",
+    "RHR",
+    "P-IF",
+    "P-OF",
+    "P-UT",
+    "TWP",
+    "B",
+    "X",
+    "R1",
+    "R2",
+    "R3"
+   ],
+   "status": "VERIFIED_OBSERVED"
+  },
+  {
+   "endpoint": "/api/v1/eventTypes",
+   "count": 74,
+   "values_or_sample": [
+    "pickoff_1b",
+    "single",
+    "home_run",
+    "..."
+   ],
+   "status": "VERIFIED_OBSERVED"
+  },
+  {
+   "endpoint": "/api/v1/baseballStats",
+   "count": 209,
+   "values_or_sample": [
+    "airOuts",
+    "assists",
+    "..."
+   ],
+   "status": "VERIFIED_OBSERVED"
+  },
+  {
+   "endpoint": "/api/v1/situationCodes",
+   "count": 602,
+   "values_or_sample": [
+    "h (Home Games)",
+    "a (Away Games)",
+    "..."
+   ],
+   "status": "VERIFIED_OBSERVED"
+  },
+  {
+   "endpoint": "/api/v1/sortModifiers",
+   "count": 11,
+   "values_or_sample": [
+    "avg",
+    "max",
+    "min",
+    "num",
+    "count",
+    "sum",
+    "p50",
+    "p75",
+    "p90",
+    "comp",
+    "num_comp"
+   ],
+   "status": "VERIFIED_OBSERVED"
+  },
+  {
+   "endpoint": "/api/v1/roofTypes",
+   "count": 6,
+   "values_or_sample": [
+    "roofOpen",
+    "roofClosedNoPanel",
+    "roofClosedPanelOpen",
+    "roofClosedPanelClosed",
+    "noRoof",
+    "unknown"
+   ],
+   "status": "VERIFIED_OBSERVED"
+  },
+  {
+   "endpoint": "/api/v1/gamedayTypes",
+   "count": 8,
+   "values_or_sample": {
+    "P": "Premium 3D tracking",
+    "E": "Enhanced 3D tracking",
+    "Y": "Pitch by pitch",
+    "D": "No Gameday - pitch by pitch",
+    "N": "Play by play only",
+    "L": "Linescore only",
+    "B": "Box score only",
+    "S": "Score only"
+   },
+   "status": "VERIFIED_OBSERVED"
+  },
+  {
+   "endpoint": "/api/v1/transactionTypes",
+   "count": 41,
+   "values_or_sample": [
+    "SC",
+    "ASG",
+    "DES",
+    "OPT",
+    "OUT",
+    "TR",
+    "DFA",
+    "REL",
+    "WA",
+    "RET",
+    "SU",
+    "CLW",
+    "SGN",
+    "DR",
+    "R5",
+    "..."
+   ],
+   "status": "VERIFIED_OBSERVED"
+  },
+  {
+   "endpoint": "/api/v1/awards",
+   "count": 682,
+   "values_or_sample": [
+    "MLBHOF (Hall Of Fame)",
+    "ALPOW",
+    "..."
+   ],
+   "status": "VERIFIED_OBSERVED"
+  },
+  {
+   "endpoint": "/api/v1/highLow/types",
+   "count": 43,
+   "values_or_sample": [
+    "at_bats",
+    "..."
+   ],
+   "status": "VERIFIED_OBSERVED"
+  },
+  {
+   "endpoint": "/api/v1/lookup/values/all",
+   "count": 45,
+   "values_or_sample": [
+    "Calendar Types",
+    "Color Space Types",
+    "Draft Types",
+    "Event Statuses",
+    "Game Statuses",
+    "Game Types",
+    "Gameday Types",
+    "Group By Types",
+    "Hit Trajectories",
+    "Job Types",
+    "Languages",
+    "League Leader Types",
+    "League Lists",
+    "Leagues",
+    "MLB Teams",
+    "MLB Venues",
+    "Milestone Achievement Statuses",
+    "Milestone Durations",
+    "Milestone Statistics",
+    "Milestone Types",
+    "Pitch Codes",
+    "Pitch Types",
+    "Play Event Types",
+    "Player Pools",
+    "Player Status Codes",
+    "Positions",
+    "Review Reasons",
+    "RosterType",
+    "Schedule Event Types",
+    "Schedule Types",
+    "Situation Codes",
+    "Sky",
+    "Sort Types",
+    "Sports",
+    "Standings Types",
+    "Stat Fields",
+    "Stat Groups",
+    "Stat Types",
+    "Stats",
+    "Tracking System Owners",
+    "Tracking Vendors",
+    "Tracking Versions",
+    "Transaction Types",
+    "Video Resolution Types",
+    "Wind Directions"
+   ],
+   "status": "VERIFIED_OBSERVED"
+  }
+ ]
+}

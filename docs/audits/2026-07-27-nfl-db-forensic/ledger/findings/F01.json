@@ -1,0 +1,43 @@
+{
+  "agent": "F01",
+  "byTable": {
+    "data_correction": {
+      "MATCH": 45
+    },
+    "depth_chart": {
+      "NOT_COMPARABLE": 77014
+    },
+    "game": {
+      "MATCH": 534,
+      "NOT_COMPARABLE": 7454
+    },
+    "game_line": {
+      "MATCH": 131,
+      "MISMATCH": 944,
+      "NOT_COMPARABLE": 3743
+    },
+    "player_game_stats": {
+      "DB_ONLY": 11,
+      "MATCH": 33159,
+      "MISMATCH": 411,
+      "NOT_COMPARABLE": 25951,
+      "UNRESOLVED": 6
+    },
+    "roster_season": {
+      "MATCH": 3455,
+      "NOT_COMPARABLE": 1633
+    },
+    "snap_count": {
+      "NOT_COMPARABLE": 1,
+      "REF_ONLY": 1
+    },
+    "team_game": {
+      "MATCH": 1068
+    }
+  },
+  "findings": 1373,
+  "gzipBytes": 1757457,
+  "ledgerLines": 155561,
+  "rawBytes": 94745660,
+  "unparseable": 0
+}

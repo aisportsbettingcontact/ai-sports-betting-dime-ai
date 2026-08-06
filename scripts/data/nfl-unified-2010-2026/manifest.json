@@ -1,0 +1,117 @@
+{
+  "dataset": "nfl-unified-2010-2026",
+  "description": "Conformed union of the nflverse 2010-2025 lines extract and the ESPN 2026 schedule",
+  "generatedUtc": "2026-07-27T13:14:16Z",
+  "operation": "UNION (inputs are disjoint in time and in ESPN event id space; no row-level join occurs)",
+  "inputs": [
+    {
+      "path": "scripts/data/nfl-lines-2010-2025/games.json",
+      "rows": 4363,
+      "seasons": "2010-2025",
+      "source": "nflverse via nflreadr"
+    },
+    {
+      "path": "scripts/data/nfl-2026/games.json",
+      "rows": 285,
+      "seasons": "2026",
+      "source": "ESPN"
+    }
+  ],
+  "rows": 4648,
+  "primaryKey": "gameId",
+  "joinKey": "espnEventId is indexed but NOT unique - never use it as a key",
+  "conformance": {
+    "week": "regular-season week ONLY; null for playoffs. Resolves the week-18 collision (RS wk18 in 2021+ vs Wild Card in 2010-2020).",
+    "playoffRound": "WC/DIV/CON/SB; null for regular season. 2026 playoff weeks 1/2/3/5 map to WC/DIV/CON/SB (week 4 is the pre-Super-Bowl bye).",
+    "franchiseId": "ESPN franchise id, stable across relocation. OAK->13, STL/LA->14, SD->24, WAS->28. The abbreviation is an era-specific label, never a key.",
+    "resultStatus": "final (played, scores present) | scheduled (2026, teams known) | tbd (2026 playoff slot, matchup unresolved)"
+  },
+  "knownUpstreamDefects": [
+    {
+      "field": "espnEventId",
+      "value": "301114022",
+      "detail": "nflverse attaches this id to both 2010_10_HOU_JAX and 2010_10_SEA_ARI. Asserted by gate G17."
+    },
+    {
+      "season": 2022,
+      "detail": "271 regular-season games, not 272: the 2023-01-02 Bills-Bengals game was abandoned and never resumed; nflverse omits the row."
+    }
+  ],
+  "validation": {
+    "gatesRun": 20,
+    "gatesPassed": 20,
+    "gates": [
+      "G01 row count is the exact sum of both inputs",
+      "G02 gameId unique (primary key)",
+      "G03 no unmapped team abbreviation (relocation crosswalk complete)",
+      "G04 every non-TBD game resolves to two known franchise ids",
+      "G05 no game has a team playing itself",
+      "G06 franchise id universe is exactly the 32 known teams",
+      "G07 week is populated iff REG (playoff week ambiguity removed)",
+      "G08 playoffRound is populated iff POST",
+      "G09 regular-season game count is era-correct every season",
+      "G10 playoff bracket size is correct every season",
+      "G11 result and total are arithmetically consistent with the scores",
+      "G12 scores present iff resultStatus is final",
+      "G13 no null in any required identity field",
+      "G14 every kickoffUtc parses as a UTC instant",
+      "G15 seasons are contiguous 2010-2026 with no gap",
+      "G16 every team plays the era-correct number of regular-season games",
+      "G17 espnEventId duplicates are exactly the one documented upstream defect",
+      "G18 every completed game carries a full set of lines and prices",
+      "G19 no 2026 row carries score or line data",
+      "G20 TBD games carry no franchise id (matchup genuinely unresolved)"
+    ]
+  },
+  "nullsByField": {
+    "week": 201,
+    "playoffRound": 4447,
+    "gametimeEt": 285,
+    "awayFranchiseId": 13,
+    "homeFranchiseId": 13,
+    "awayAbbr": 13,
+    "homeAbbr": 13,
+    "awayName": 13,
+    "homeName": 13,
+    "awayScore": 285,
+    "homeScore": 285,
+    "result": 285,
+    "total": 285,
+    "overtime": 285,
+    "divGame": 285,
+    "spreadLine": 285,
+    "totalLine": 285,
+    "awayMoneyline": 285,
+    "homeMoneyline": 285,
+    "awaySpreadOdds": 285,
+    "homeSpreadOdds": 285,
+    "overOdds": 285,
+    "underOdds": 285,
+    "oddsSource": 285,
+    "roof": 285,
+    "surface": 285,
+    "stadiumId": 285,
+    "stadium": 285,
+    "venueId": 4375,
+    "broadcast": 4399,
+    "note": 4635,
+    "location": 12,
+    "weekday": 285,
+    "awayRest": 285,
+    "homeRest": 285,
+    "temp": 1684,
+    "wind": 1684,
+    "awayQbId": 285,
+    "homeQbId": 285,
+    "awayQbName": 285,
+    "homeQbName": 285,
+    "awayCoach": 285,
+    "homeCoach": 285,
+    "referee": 286,
+    "gsisId": 285,
+    "pfrId": 285,
+    "ftnId": 2994,
+    "oldGameId": 285
+  },
+  "provenance": "docs/audits/2026-07-26-nflverse-stack-forensic-audit.md"
+}

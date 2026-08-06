@@ -1,0 +1,424 @@
+{
+ "schema": {
+  "row": [
+   "endpoint",
+   "http_status",
+   "items",
+   "verdict",
+   "detail"
+  ],
+  "run_at": "2026-07-27 (r3 content-validation pass)",
+  "verdicts": {
+   "PASS": "200 + JSON + structure/count/identifier assertions hold",
+   "PASS-EMPTY": "200 + valid but intentionally empty payload",
+   "FAIL": "any check failed"
+  },
+  "note": "initial 'draft' FAIL was a harness assertion bug (wrong envelope expectation); corrected against the fetched body"
+ },
+ "summary": {
+  "pass": 55,
+  "pass_empty": 2,
+  "fail": 0
+ },
+ "rows": [
+  {
+   "endpoint": "attendance",
+   "http_status": 200,
+   "items": 1,
+   "verdict": "PASS",
+   "detail": "records=1 (expect >=1)"
+  },
+  {
+   "endpoint": "awards",
+   "http_status": 200,
+   "items": 354,
+   "verdict": "PASS",
+   "detail": "awards=354 (expect >=50)"
+  },
+  {
+   "endpoint": "conferences",
+   "http_status": 200,
+   "items": 2,
+   "verdict": "PASS",
+   "detail": "conferences=2 (expect >=1)"
+  },
+  {
+   "endpoint": "divisions",
+   "http_status": 200,
+   "items": 61,
+   "verdict": "PASS",
+   "detail": "divisions=61 (expect >=6)"
+  },
+  {
+   "endpoint": "draft",
+   "http_status": 200,
+   "items": 0,
+   "verdict": "PASS",
+   "detail": "corrected assertion: /draft/{year}/latest envelope is {pick,nextUp,number}, NOT {drafts}; pick.person.id echo ok"
+  },
+  {
+   "endpoint": "game",
+   "http_status": 200,
+   "items": 71,
+   "verdict": "PASS",
+   "detail": "allPlays=71, gamePk echo ok"
+  },
+  {
+   "endpoint": "game_diff",
+   "http_status": 200,
+   "items": 3,
+   "verdict": "PASS",
+   "detail": "list len=3 (expect >=1)"
+  },
+  {
+   "endpoint": "game_timestamps",
+   "http_status": 200,
+   "items": 419,
+   "verdict": "PASS",
+   "detail": "list len=419 (expect >=100)"
+  },
+  {
+   "endpoint": "game_changes",
+   "http_status": 200,
+   "items": 2,
+   "verdict": "PASS",
+   "detail": "dates=2 (expect >=1)"
+  },
+  {
+   "endpoint": "game_contextMetrics",
+   "http_status": 200,
+   "items": 3,
+   "verdict": "PASS",
+   "detail": "keys ('game', 'homeWinProbability', 'awayWinProbability') present"
+  },
+  {
+   "endpoint": "game_winProbability",
+   "http_status": 200,
+   "items": 71,
+   "verdict": "PASS",
+   "detail": "list len=71 (expect >=60)"
+  },
+  {
+   "endpoint": "game_boxscore",
+   "http_status": 200,
+   "items": 3,
+   "verdict": "PASS",
+   "detail": "keys ('teams', 'officials', 'topPerformers') present"
+  },
+  {
+   "endpoint": "game_content",
+   "http_status": 200,
+   "items": 3,
+   "verdict": "PASS",
+   "detail": "keys ('editorial', 'media', 'highlights') present"
+  },
+  {
+   "endpoint": "game_linescore",
+   "http_status": 200,
+   "items": 9,
+   "verdict": "PASS",
+   "detail": "innings=9 (expect 9)"
+  },
+  {
+   "endpoint": "game_playByPlay",
+   "http_status": 200,
+   "items": 71,
+   "verdict": "PASS",
+   "detail": "allPlays=71"
+  },
+  {
+   "endpoint": "game_uniforms",
+   "http_status": 200,
+   "items": 1,
+   "verdict": "PASS",
+   "detail": "uniforms=1 (expect >=1)"
+  },
+  {
+   "endpoint": "gamePace",
+   "http_status": 200,
+   "items": 1,
+   "verdict": "PASS",
+   "detail": "sports=1 (expect >=1)"
+  },
+  {
+   "endpoint": "highLow",
+   "http_status": 200,
+   "items": null,
+   "verdict": "PASS",
+   "detail": "non-copyright keys: ['highLowResults']"
+  },
+  {
+   "endpoint": "league",
+   "http_status": 200,
+   "items": 15,
+   "verdict": "PASS",
+   "detail": "leagues=15 (expect >=2)"
+  },
+  {
+   "endpoint": "league_allStarBallot",
+   "http_status": 200,
+   "items": 135,
+   "verdict": "PASS",
+   "detail": "people=135 (expect >=30)"
+  },
+  {
+   "endpoint": "league_allStarWriteIns",
+   "http_status": 200,
+   "items": 199,
+   "verdict": "PASS",
+   "detail": "people=199 (expect >=30)"
+  },
+  {
+   "endpoint": "league_allStarFinalVote",
+   "http_status": 200,
+   "items": 17,
+   "verdict": "PASS",
+   "detail": "people=17 (expect >=1)"
+  },
+  {
+   "endpoint": "people",
+   "http_status": 200,
+   "items": 2,
+   "verdict": "PASS",
+   "detail": "both requested personIds echoed"
+  },
+  {
+   "endpoint": "people_changes",
+   "http_status": 200,
+   "items": 11,
+   "verdict": "PASS",
+   "detail": "people=11 (expect >=1)"
+  },
+  {
+   "endpoint": "people_freeAgents",
+   "http_status": 200,
+   "items": 10,
+   "verdict": "PASS",
+   "detail": "freeAgents=10 (expect >=1)"
+  },
+  {
+   "endpoint": "person",
+   "http_status": 200,
+   "items": 1,
+   "verdict": "PASS",
+   "detail": "personId echo ok"
+  },
+  {
+   "endpoint": "jobs",
+   "http_status": 200,
+   "items": 98,
+   "verdict": "PASS",
+   "detail": "roster=98 (expect >=50)"
+  },
+  {
+   "endpoint": "jobs_umpires",
+   "http_status": 200,
+   "items": 98,
+   "verdict": "PASS",
+   "detail": "roster=98 (expect >=50)"
+  },
+  {
+   "endpoint": "jobs_datacasters",
+   "http_status": 200,
+   "items": 215,
+   "verdict": "PASS",
+   "detail": "roster=215 (expect >=20)"
+  },
+  {
+   "endpoint": "jobs_officialScorers",
+   "http_status": 200,
+   "items": 235,
+   "verdict": "PASS",
+   "detail": "roster=235 (expect >=20)"
+  },
+  {
+   "endpoint": "schedule",
+   "http_status": 200,
+   "items": 15,
+   "verdict": "PASS",
+   "detail": "totalGames=15 (expect 15 for 2026-07-25)"
+  },
+  {
+   "endpoint": "schedule_tied",
+   "http_status": 200,
+   "items": 0,
+   "verdict": "PASS-EMPTY",
+   "detail": "expected-empty: totalItems=0"
+  },
+  {
+   "endpoint": "schedule_postseason",
+   "http_status": 200,
+   "items": 47,
+   "verdict": "PASS",
+   "detail": "totalGames=47"
+  },
+  {
+   "endpoint": "schedule_postseason_series",
+   "http_status": 200,
+   "items": 11,
+   "verdict": "PASS",
+   "detail": "series=11 (expect >=5)"
+  },
+  {
+   "endpoint": "schedule_postseason_tuneIn",
+   "http_status": 200,
+   "items": 0,
+   "verdict": "PASS-EMPTY",
+   "detail": "expected-empty: totalItems=0"
+  },
+  {
+   "endpoint": "seasons",
+   "http_status": 200,
+   "items": 152,
+   "verdict": "PASS",
+   "detail": "seasons=152 (expect >=140)"
+  },
+  {
+   "endpoint": "season",
+   "http_status": 200,
+   "items": 1,
+   "verdict": "PASS",
+   "detail": "seasonId echo ok"
+  },
+  {
+   "endpoint": "sports",
+   "http_status": 200,
+   "items": 20,
+   "verdict": "PASS",
+   "detail": "sports=20 (expect ==20)"
+  },
+  {
+   "endpoint": "sports_players",
+   "http_status": 200,
+   "items": 1325,
+   "verdict": "PASS",
+   "detail": "people=1325 (expect >=1000)"
+  },
+  {
+   "endpoint": "standings",
+   "http_status": 200,
+   "items": 6,
+   "verdict": "PASS",
+   "detail": "records=6 (expect ==6)"
+  },
+  {
+   "endpoint": "stats",
+   "http_status": 200,
+   "items": 3,
+   "verdict": "PASS",
+   "detail": "limit=3 honored"
+  },
+  {
+   "endpoint": "stats_leaders",
+   "http_status": 200,
+   "items": 3,
+   "verdict": "PASS",
+   "detail": "leagueLeaders=3 (expect >=1)"
+  },
+  {
+   "endpoint": "teams",
+   "http_status": 200,
+   "items": 30,
+   "verdict": "PASS",
+   "detail": "teams=30 (expect ==30)"
+  },
+  {
+   "endpoint": "teams_history",
+   "http_status": 200,
+   "items": 3,
+   "verdict": "PASS",
+   "detail": "teams=3 (expect >=1)"
+  },
+  {
+   "endpoint": "teams_stats",
+   "http_status": 200,
+   "items": 1,
+   "verdict": "PASS",
+   "detail": "stats=1 (expect >=1)"
+  },
+  {
+   "endpoint": "teams_affiliates",
+   "http_status": 200,
+   "items": 11,
+   "verdict": "PASS",
+   "detail": "teams=11 (expect >=5)"
+  },
+  {
+   "endpoint": "team",
+   "http_status": 200,
+   "items": 1,
+   "verdict": "PASS",
+   "detail": "teamId echo ok"
+  },
+  {
+   "endpoint": "team_alumni",
+   "http_status": 200,
+   "items": 56,
+   "verdict": "PASS",
+   "detail": "people=56 (expect >=20)"
+  },
+  {
+   "endpoint": "team_coaches",
+   "http_status": 200,
+   "items": 14,
+   "verdict": "PASS",
+   "detail": "roster=14 (expect >=5)"
+  },
+  {
+   "endpoint": "team_personnel",
+   "http_status": 200,
+   "items": 8,
+   "verdict": "PASS",
+   "detail": "roster=8 (expect >=1)"
+  },
+  {
+   "endpoint": "team_leaders",
+   "http_status": 200,
+   "items": 3,
+   "verdict": "PASS",
+   "detail": "teamLeaders=3 (expect >=1)"
+  },
+  {
+   "endpoint": "team_roster",
+   "http_status": 200,
+   "items": 51,
+   "verdict": "PASS",
+   "detail": "roster=51 (expect >=35)"
+  },
+  {
+   "endpoint": "team_stats",
+   "http_status": 200,
+   "items": 1,
+   "verdict": "PASS",
+   "detail": "stats=1 (expect >=1)"
+  },
+  {
+   "endpoint": "team_uniforms",
+   "http_status": 200,
+   "items": 1,
+   "verdict": "PASS",
+   "detail": "uniforms=1 (expect >=1)"
+  },
+  {
+   "endpoint": "transactions",
+   "http_status": 200,
+   "items": 1818,
+   "verdict": "PASS",
+   "detail": "transactions=1818 (expect >=50)"
+  },
+  {
+   "endpoint": "venue",
+   "http_status": 200,
+   "items": 1,
+   "verdict": "PASS",
+   "detail": "venueId echo ok"
+  },
+  {
+   "endpoint": "meta",
+   "http_status": 200,
+   "items": 12,
+   "verdict": "PASS",
+   "detail": "list len=12 (expect >=12)"
+  }
+ ]
+}
