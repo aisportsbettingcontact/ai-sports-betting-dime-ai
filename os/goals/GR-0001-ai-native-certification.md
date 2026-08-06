@@ -95,12 +95,12 @@ Blocked on three Prez rulings: **DR-001** (publish posture — overdue on the cl
 |---|---|---|---|
 | D16 criteria VERIFIED | **12 of 12** | 0 scored | `os/certification/` (not yet written) |
 | D1 level | **4 of 4** | **2** | `os/audits/2026-08-ai-native-audit.md` |
-| Function loops with a completed live cycle | **≥ 1** | 0 | `os-ledger` cycle artifacts (6 recorded, all `outcome: null`) |
+| Function loops with a completed live cycle | **≥ 1** | 0 | `os-ledger` cycle artifacts (8 recorded, all `outcome: null`) |
 | Open `/os/` items past `observe_by` | **0** | see clock | `scripts/os/clock.mjs` |
 | D15 diagnostic unresolved criticals | **0** | not yet run | ISSUE-015 |
 | Consequential state existing only in session memory | **0** | 0 known | spot audit |
 
-The third row is the honest one: **six merges are recorded and not one outcome has been observed
+The third row is the honest one: **eight merges are recorded and not one outcome has been observed
 yet.** That is the gap between an action and an outcome, measured rather than asserted.
 
 ## Activity paths
@@ -113,9 +113,18 @@ Where work on this goal is expected to land. Divergence is computed by
 - `scripts/os/**`
 - `.github/workflows/os-*.yml`
 
-### First reading, 2026-08-05 — CONTRADICTION FLAGGED
+## Readings
 
-`scripts/os/contradiction.mjs` on its first run: **3 of 7 cycles (43%) on-goal → contradiction YES.**
+Point-in-time results of `scripts/os/contradiction.mts`. Kept as an append-only series: a
+reading is evidence of what was true on a date, never a standing claim.
+
+> **Structural note.** These readings deliberately live in their own `##` section rather than
+> as a subsection of **Activity paths**. The PR #398 audit found that an `###` subsection under
+> that heading was being parsed as additional activity-path globs — GR-0001 silently declared
+> six priorities instead of four. `parseGoal` now terminates a section at any heading level and
+> rejects a non-path-shaped entry, but the layout no longer depends on that being right.
+
+### 2026-08-05 — CONTRADICTION FLAGGED (3 of 7, 43%)
 
 | | PR | |
 |---|---|---|
@@ -127,19 +136,36 @@ Where work on this goal is expected to land. Divergence is computed by
 | ON | #396 | authority ladder |
 | OFF | #397 | analytics-store startup skip |
 
-**The globs were deliberately NOT widened to clear this.** Widening a priority definition until the
-contradiction disappears is gaming the measure D13 exists to provide, and it is the D15 #14 failure
-in miniature.
+**The globs were deliberately NOT widened to clear this.** Widening a priority definition until
+the contradiction disappears games the measure D13 exists to provide, and it is the D15 #14
+failure in miniature.
 
 Interpretation, for the DRI to accept or reject — the mechanism reports, it does not judge:
 
 - **#392, #394, #397 are genuine parallel work**, not mission work. Security hardening and an
-  analytics fix ran alongside this goal. That is a real allocation fact and it is what the check is
-  built to surface.
+  analytics fix ran alongside this goal. That is a real allocation fact and it is what the check
+  is built to surface.
 - **#395 is a known calibration limit.** Filing Incident 62 *was* mission work, but it landed in
-  `INCIDENTS.md`, which is not a declared path — and `INCIDENTS.md` is deliberately excluded because
-  doctrine L2 says link to it, never move or rewrite it. The check therefore under-counts
+  `INCIDENTS.md`, which is not a declared path — and `INCIDENTS.md` is deliberately excluded
+  because doctrine L2 says link to it, never move or rewrite it. The check therefore under-counts
   incident-filing as on-goal. Stated rather than patched.
 
-The honest summary: **during this window, more than half of Dime's merges went somewhere other than
-its declared top priority.** Whether that is correct is Prez's call, not the executor's.
+### 2026-08-06 — CLEARED (4 of 8, 50%)
+
+Recomputed after PR #398 merged. **The contradiction no longer fires**, and the reason is worth
+stating plainly rather than presenting as progress: **#398 was itself the eighth cycle, and it is
+on-goal.** The act of recording the first reading is what moved the number past its own threshold.
+
+Two properties this exposes, both left in place rather than tuned away:
+
+- **A reading can be invalidated by the merge that publishes it.** The 2026-08-05 entry above was
+  already stale when it landed. That is why readings are dated and appended, never edited in place.
+- **50% sits exactly on the knife edge.** The rule is `share < 0.5`, so an even split reports *no*
+  contradiction. The threshold is NOT being adjusted in response to a specific result — moving a
+  line because of where a point fell is the same failure as widening the globs.
+
+Also corrected in this pass: the first reading was computed by a script that reimplemented the
+glob matcher with a different sentinel than the tested library, so **the number came from code no
+test covered**. `scripts/os/contradiction.mts` now imports `shared/os/goal.ts` and owns no matching
+logic. The 43% and 50% figures were both re-derived under the single implementation.
+
