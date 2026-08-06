@@ -489,6 +489,14 @@ async function startServer() {
         console.error(
           "[edge][origin-lock] CRITICAL EDGE_MODE=on but no EDGE_ORIGIN_SECRET configured — anti-lockout downgrade to observe-only (site NOT protected)"
         );
+      } else if (kind === "edge_breaker_tripped") {
+        console.error(
+          "[edge][origin-lock] CRITICAL circuit breaker TRIPPED — EDGE_MODE=on but ~no verified Cloudflare ingress over the sample window; enforcement auto-downgraded to observe-only to prevent a 403 outage. Cloudflare is likely NOT fronting the origin (DNS/secret). Site falls back to Phase 3 gating + rate limits. Investigate the edge path."
+        );
+      } else if (kind === "edge_breaker_recovered") {
+        console.warn(
+          "[edge][origin-lock] circuit breaker RECOVERED — verified Cloudflare ingress returned; origin-lock enforcement resumed."
+        );
       }
     })
   );
