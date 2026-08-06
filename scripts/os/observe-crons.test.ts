@@ -121,3 +121,45 @@ describe("the DEFAULT measured day — the path the daily workflow actually take
     expect(out).not.toMatch(new RegExp(`observation — ${today}`));
   });
 });
+
+describe("a shallow clone must not read as a clean bill of health", () => {
+  it("refuses to run when git history is unavailable", () => {
+    // THE CRITICAL DEFECT. `actions/checkout` defaults to fetch-depth 1, and the
+    // observer's own workflow did not override it. In a depth-1 clone
+    // `git log --diff-filter=A` reports the single available commit as the add
+    // date for EVERY file, so every workflow looked "added today", all were
+    // excluded, and the observer printed:
+    //
+    //     all 0 declared schedules honoured on 2026-08-05
+    //
+    // Exit 0. Green. Forever. The guard added to prevent false POSITIVES created
+    // a false NEGATIVE that defeats the loop entirely — strictly worse, because
+    // a red check gets investigated and a green one does not.
+    const shallow = mkdtempSync(join(tmpdir(), "os-shallow-"));
+    try {
+      mkdirSync(join(shallow, "scripts/os"), { recursive: true });
+      mkdirSync(join(shallow, ".github/workflows"), { recursive: true });
+      cpSync(join(REPO, "scripts/os/observe-crons.mts"), join(shallow, "scripts/os/observe-crons.mts"));
+      cpSync(join(REPO, "shared/os"), join(shallow, "shared/os"), { recursive: true });
+      execFileSync("ln", ["-sfn", join(REPO, "node_modules"), join(shallow, "node_modules")]);
+      writeFileSync(
+        join(shallow, ".github/workflows/probe.yml"),
+        'name: probe\non:\n  schedule:\n    - cron: "*/5 * * * *"\n',
+      );
+      git(shallow, "init", "-q", "-b", "main");
+      git(shallow, "config", "user.email", "t@e.com");
+      git(shallow, "config", "user.name", "t");
+      git(shallow, "add", "-A");
+      git(shallow, "commit", "-qm", "base");
+      // Mark it shallow, exactly as actions/checkout@v4 with default depth does.
+      writeFileSync(join(shallow, ".git/shallow"), git(shallow, "rev-parse", "HEAD"));
+
+      const { out, err, code } = runObserver(shallow, ["--dry-run", "--date", "2020-01-02"]);
+      expect(code, "a shallow clone must fail the run, not pass it").not.toBe(0);
+      expect(err).toMatch(/shallow/i);
+      expect(out, "it must never claim everything is honoured").not.toMatch(/all \d+ declared schedules honoured/);
+    } finally {
+      rmSync(shallow, { recursive: true, force: true });
+    }
+  });
+});

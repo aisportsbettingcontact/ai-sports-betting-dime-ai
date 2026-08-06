@@ -5,6 +5,7 @@ import {
   parseCronField,
   defaultMeasureDate,
   isCompleteDay,
+  runGaps,
 } from "./cadence";
 
 describe("cron expressions, evaluated rather than guessed", () => {
@@ -115,5 +116,75 @@ describe("the measured window must be a COMPLETE day", () => {
     expect(isCompleteDay("2026-08-05", "2026-08-06T10:40:00Z")).toBe(true);
     expect(isCompleteDay("2026-08-06", "2026-08-06T10:40:00Z")).toBe(false);
     expect(isCompleteDay("2026-08-07", "2026-08-06T10:40:00Z")).toBe(false);
+  });
+});
+
+describe("cron forms GitHub accepts that the parser must not mangle", () => {
+  const D = "2026-08-06"; // a Thursday
+
+  it("the `a/n` step form is a step, not a bare value", () => {
+    // `0/15` means "from 0, every 15" — GitHub accepts it and fires on it.
+    // Dropping the step silently turned 96 expected runs into 24, a 4x
+    // under-count that can flip a verdict from unhonoured to honoured.
+    expect(expectedRunsOnDate("0/15 * * * *", D)).toBe(96);
+    expect(expectedRunsOnDate("5/30 * * * *", D)).toBe(48);
+    expect(expectedRunsOnDate("0/1 * * * *", D)).toBe(1440);
+  });
+
+  it("named months and days-of-week are accepted, not fatal", () => {
+    // GitHub accepts MON/JAN. Throwing aborted the ENTIRE observation, blinding
+    // the loop to every other workflow — a fail-closed that fails too hard.
+    expect(expectedRunsOnDate("17 6 * * THU", D)).toBe(1);
+    expect(expectedRunsOnDate("17 6 * * MON", D)).toBe(0);
+    expect(expectedRunsOnDate("0 9 * AUG *", D)).toBe(1);
+    expect(expectedRunsOnDate("0 9 * JAN *", D)).toBe(0);
+    expect(expectedRunsOnDate("0 9 * * MON-FRI", D)).toBe(1);
+  });
+
+  it("still refuses genuinely malformed expressions", () => {
+    expect(() => expectedRunsOnDate("0 9 * * NOTADAY", D)).toThrow();
+    expect(() => expectedRunsOnDate("*/0 * * * *", D)).toThrow();
+    expect(() => expectedRunsOnDate("60 * * * *", D)).toThrow();
+  });
+
+  it("rejects a calendar-invalid date rather than rolling it over", () => {
+    // `new Date("2026-02-31")` silently becomes March 3. A green report for a
+    // day that does not exist is worse than an error.
+    expect(() => expectedRunsOnDate("0 9 * * *", "2026-02-31")).toThrow(/date/i);
+    expect(() => expectedRunsOnDate("0 9 * * *", "2026-13-01")).toThrow(/date/i);
+  });
+});
+
+describe("gaps between runs — computed by the instrument, not by hand", () => {
+  it("computes gaps only from runs INSIDE the measured day", () => {
+    // The published figures (median 101, max 202) came from an ad-hoc
+    // `gh run list --limit 20` — the last 20 runs OVERALL, spanning 35.6 hours
+    // across three UTC days — while the artifact called it "a complete 24-hour
+    // window". The true in-window values were 107 and 201, and the published
+    // maximum was a gap that occurred entirely on the following day.
+    const iso = (h: number, m: number, day = "05") => `2026-08-${day}T${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00Z`;
+    const stamps = [
+      iso(16, 43, "04"), // previous day — must be excluded
+      iso(1, 10),
+      iso(4, 31),
+      iso(7, 20),
+      iso(4, 17, "06"), // next day — must be excluded
+    ];
+    const g = runGaps(stamps, "2026-08-05");
+    expect(g.count).toBe(3);
+    expect(g.gaps).toEqual([201, 169]);
+    expect(g.medianMin).toBe(185);
+    expect(g.maxMin).toBe(201);
+  });
+
+  it("reports nothing measurable from fewer than two in-window runs", () => {
+    expect(runGaps(["2026-08-05T01:00:00Z"], "2026-08-05").gaps).toEqual([]);
+    expect(runGaps(["2026-08-05T01:00:00Z"], "2026-08-05").medianMin).toBeNull();
+    expect(runGaps([], "2026-08-05").medianMin).toBeNull();
+  });
+
+  it("is order-independent", () => {
+    const a = runGaps(["2026-08-05T03:00:00Z", "2026-08-05T01:00:00Z"], "2026-08-05");
+    expect(a.gaps).toEqual([120]);
   });
 });

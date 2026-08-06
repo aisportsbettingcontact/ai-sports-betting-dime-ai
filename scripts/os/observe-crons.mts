@@ -30,6 +30,7 @@ import {
   cadenceVerdict,
   defaultMeasureDate,
   isCompleteDay,
+  runGaps,
   type CadenceVerdict,
 } from "../../shared/os/cadence.js";
 
@@ -88,7 +89,9 @@ function declaredSchedules(): Map<string, string[]> {
 }
 
 /** Completed scheduled runs GitHub recorded for `workflow` on the measured day. */
-function actualRuns(workflow: string): { total: number; conclusions: Record<string, number> } | null {
+function actualRuns(
+  workflow: string
+): { total: number; conclusions: Record<string, number>; createdAt: string[] } | null {
   let raw: string;
   let stderr = "";
   try {
@@ -130,7 +133,10 @@ function actualRuns(workflow: string): { total: number; conclusions: Record<stri
   // the count is a FLOOR, not a count, and reporting it as a count would
   // understate the cadence and manufacture drift.
   const oldest = runs.length > 0 ? runs.map((r) => r.createdAt.slice(0, 10)).sort()[0] : null;
-  if (runs.length >= RUN_LIMIT && oldest !== null && oldest > DATE) {
+  // `>` missed the case where the window truncates INSIDE the measured day: the
+  // oldest row is then ON that date, the guard stayed silent, and a partial count
+  // was reported as a count.
+  if (runs.length >= RUN_LIMIT && oldest !== null && oldest >= DATE) {
     return die(
       `${workflow}: the ${RUN_LIMIT}-run window only reaches back to ${oldest}, which is after ` +
         `${DATE} — the count would be a floor, not a count. Re-run with a nearer --date.`,
@@ -143,11 +149,35 @@ function actualRuns(workflow: string): { total: number; conclusions: Record<stri
     const k = r.conclusion ?? "running";
     conclusions[k] = (conclusions[k] ?? 0) + 1;
   }
-  return { total: onDate.length, conclusions };
+  return { total: onDate.length, conclusions, createdAt: onDate.map((r) => r.createdAt) };
 }
 
 const declared = declaredSchedules();
 if (declared.size === 0) die(`no scheduled workflows found under ${WORKFLOWS}`);
+
+// A shallow clone has no history, so `git log --diff-filter=A` reports the single
+// available commit as the add date for EVERY file — every workflow then looks
+// newer than the window, all are excluded, and the report reads
+// "all 0 declared schedules honoured". Exit 0, green, forever. That is the
+// observer certifying its own blindness, so it refuses to run instead.
+try {
+  const shallow = execFileSync("git", ["rev-parse", "--is-shallow-repository"], {
+    encoding: "utf8",
+    cwd: ROOT,
+    stdio: ["ignore", "pipe", "pipe"],
+  }).trim();
+  if (shallow === "true") {
+    die(
+      "this is a SHALLOW clone — file history is unavailable, so every workflow would be " +
+        "excluded as 'newer than the window' and the run would report a false all-clear. " +
+        "Check out with fetch-depth: 0.",
+    );
+  }
+} catch (e) {
+  if (e instanceof Error && /SHALLOW/.test(e.message)) throw e;
+  // `--is-shallow-repository` is old enough to rely on; a failure here means git
+  // itself is unusable, which the calls below will surface.
+}
 
 if (!isCompleteDay(DATE, NOW)) {
   die(`${DATE} is not a complete UTC day yet — a partial day cannot be scored against a full day's expectation`);
@@ -197,10 +227,14 @@ for (const [workflow, exprs] of Array.from(declared.entries()).sort()) {
     die(`${workflow}: ${(e as Error).message}`);
   }
   const added = addedAt(workflow);
-  if (added && added > `${DATE}T00:00:00Z`) {
-    tooNew.push(`${workflow} (added ${added.slice(0, 10)})`);
+  // `%cI` carries the committer's LOCAL offset, so a lexicographic compare against
+  // a `Z` literal is not a time comparison at all. Parse both to instants.
+  const windowStart = Date.parse(`${DATE}T00:00:00Z`);
+  const addedMs = added ? Date.parse(added) : null;
+  if (addedMs !== null && !Number.isNaN(addedMs) && addedMs > windowStart) {
+    tooNew.push(`${workflow} (added ${added!.slice(0, 10)})`);
     console.log(
-      `     ${workflow.padEnd(34)} declared ${exprs.join(" + ").padEnd(24)} added ${added.slice(0, 10)} — did not exist for the whole of ${DATE}`,
+      `     ${workflow.padEnd(34)} declared ${exprs.join(" + ").padEnd(24)} added ${added!.slice(0, 10)} — did not exist for the whole of ${DATE}`,
     );
     continue;
   }
@@ -213,6 +247,19 @@ for (const [workflow, exprs] of Array.from(declared.entries()).sort()) {
     continue;
   }
   const { total, conclusions } = runs;
+  // Gaps, computed from IN-WINDOW runs by the instrument itself. The first
+  // published figures were produced by hand over a 35.6-hour trailing window and
+  // then described as a complete day; nothing could reproduce or regression-test
+  // them. Only emitted where a cadence is dense enough for a gap to mean anything.
+  if (expected >= 24 && total >= 2) {
+    const g = runGaps(runs.createdAt, DATE);
+    if (g.medianMin !== null) {
+      console.log(
+        `        gaps (in-window): n=${g.gaps.length} median=${g.medianMin}m max=${g.maxMin}m` +
+          `  [${g.gaps.join(", ")}]`
+      );
+    }
+  }
   const v = cadenceVerdict({ workflow, expected, actual: total });
   verdicts.push(v);
 
