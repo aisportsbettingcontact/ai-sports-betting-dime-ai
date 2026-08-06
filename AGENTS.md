@@ -121,3 +121,8 @@ from `.claude/commands/` are `/<name>`.
   not redistribute or ship it.
 - Sports-betting product: keep responsible-gaming language (21+, 1-800-GAMBLER) on marketing
   surfaces.
+- Notion control plane: organizational context (goals, projects, decisions, releases, AI
+  governance metadata) lives in the "Tailered Sports" Notion workspace; GitHub stays
+  authoritative for code and CI evidence. Map + runbook: `references/notion-control-plane.md`.
+  PRs paste their Notion context URL into the PR template's "Notion context" section; never
+  hand-mirror GitHub issues into Notion, never store secrets there.

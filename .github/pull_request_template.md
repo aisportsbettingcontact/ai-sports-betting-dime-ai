@@ -5,6 +5,11 @@ required; write "none" explicitly where a section does not apply. -->
 
 <!-- What this PR does and deliberately does not do. -->
 
+## Notion context
+
+<!-- Notion project/spec URL, or "none". Pasting the URL lets Notion's GitHub
+sync auto-relate this PR to its spec (see references/notion-control-plane.md). -->
+
 ## Linked incident / finding
 
 <!-- INCIDENTS.md entry, issue number, audit finding, or "none". -->
