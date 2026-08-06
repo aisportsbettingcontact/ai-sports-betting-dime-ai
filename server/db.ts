@@ -38,6 +38,10 @@ import {
 import { withCircuitBreaker, invalidateCachedAppUser } from './dbCircuitBreaker';
 import { debugLog } from './_core/debugLogger';
 import { recordFailure, type AccountLockoutConfig } from './accountLockout';
+import {
+  SECURITY_EVENT_LIMITS,
+  truncateForColumn,
+} from "./_core/securityEventLimits";
 import { logSafe } from "./_core/logSafe";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -2696,12 +2700,27 @@ export async function insertSecurityEvent(event: InsertSecurityEvent): Promise<v
   try {
     await db.insert(securityEvents).values({
       eventType: event.eventType,
-      ip: event.ip,
-      blockedOrigin: event.blockedOrigin ?? null,
-      trpcPath: event.trpcPath ?? null,
-      httpMethod: event.httpMethod ?? null,
-      userAgent: event.userAgent ? event.userAgent.substring(0, 512) : null,
-      context: event.context ?? null,
+      // Every varchar column is clamped. Previously only userAgent was, so a
+      // >256-char trpcPath raised ER_DATA_TOO_LONG and the row was LOST —
+      // letting an attacker erase their own event with one long URL.
+      ip: truncateForColumn(event.ip, SECURITY_EVENT_LIMITS.ip) ?? "unknown",
+      blockedOrigin: truncateForColumn(
+        event.blockedOrigin,
+        SECURITY_EVENT_LIMITS.blockedOrigin
+      ),
+      trpcPath: truncateForColumn(
+        event.trpcPath,
+        SECURITY_EVENT_LIMITS.trpcPath
+      ),
+      httpMethod: truncateForColumn(
+        event.httpMethod,
+        SECURITY_EVENT_LIMITS.httpMethod
+      ),
+      userAgent: truncateForColumn(
+        event.userAgent,
+        SECURITY_EVENT_LIMITS.userAgent
+      ),
+      context: truncateForColumn(event.context, SECURITY_EVENT_LIMITS.context),
       occurredAt: event.occurredAt,
     });
     console.log(
