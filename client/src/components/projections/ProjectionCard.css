@@ -28,11 +28,13 @@
 }
 
 /* No corner league label (owner directive 2026-07-18): the sport chip names the
-   competition. Scheduled cards render no header, and the modifier removes the
-   empty "head" row so the card gains no phantom top gap. */
-.projection-card--scheduled { grid-template-areas: "matchup" "summary" "markets"; }
+   competition. 2026-08-05 (owner directive "card status header"): the head row
+   is no longer live/final-only — scheduled cards render it too, carrying the
+   first-pitch time — so the base areas list above now governs EVERY state and
+   the old `.projection-card--scheduled` override (which dropped "head") is
+   deleted rather than restated. Only the pregame variants still differ. */
 .projection-card--scheduled.projection-card--with-pregame {
-  grid-template-areas: "matchup" "pregame" "summary" "markets";
+  grid-template-areas: "head" "matchup" "pregame" "summary" "markets";
 }
 /* Audit DIME-UI-009 (2026-07-31): below the shell boundary the model edge is
    the product — it renders ahead of the pitcher panel so the verdict sits in
@@ -41,7 +43,7 @@
    order, where the row grid shows the edge without scrolling. */
 @media (max-width: 767.98px) {
   .projection-card--scheduled.projection-card--with-pregame {
-    grid-template-areas: "matchup" "summary" "pregame" "markets";
+    grid-template-areas: "head" "matchup" "summary" "pregame" "markets";
   }
 }
 /* Pregame detail makes upcoming MLB cards intentionally richer. Once a game
@@ -62,8 +64,25 @@
 /* A settled no-edge card can carry both modifiers. Compact state owns the
    requested diminished treatment instead of inheriting PASS's 0.82 value. */
 .projection-card--compact.projection-card--pass { opacity: 0.72; }
-.projection-card__head { grid-area: head; display: flex; align-items: center; justify-content: flex-end; gap: var(--space-sm); }
-.projection-card__status { font-size: var(--proj-meta); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-secondary, #a6a6a6); }
+/* One status slot, centered, above the matchup row — every lifecycle state
+   (owner directive 2026-08-05). The pre-2026-08-05 `justify-content: flex-end`
+   pinned it top-right over the HOME team, which read as a home-side annotation
+   and only existed on live/final cards. */
+.projection-card__head { grid-area: head; display: flex; align-items: center; justify-content: center; gap: var(--space-sm); }
+/* Shipped micro-label register, unchanged (this is a placement change, not a
+   restyle): Familjen Grotesk in mono STYLE — caps at 0.06em tracking, no mono
+   face loaded. `--proj-meta` measures 12.00px at a 375 viewport and 14.05px at
+   1440 (type-system.css clamp), i.e. normal text for WCAG, not large text.
+   tabular-nums is inherited from the retired .matchup__time rule so scheduled
+   first-pitch figures keep even columns.
+   Ink is NOT uniform across states and is not meant to be: live takes
+   --mint-ink (signal), and the four compact states inherit the lifecycle
+   remap of --text-secondary -> --foreground from .projection-card--compact
+   above, which exists to hold AA through that state's 0.72 dim. Measured
+   composited contrast: scheduled 8.13:1 dark / 6.54:1 light, live 6.41 / 4.62,
+   settled 10.32 / 9.01 — all clear 4.5:1. What is shared across states is the
+   slot, the alignment, and the type register; see the page law. */
+.projection-card__status { font-size: var(--proj-meta); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-secondary, #a6a6a6); font-variant-numeric: tabular-nums; }
 .projection-card__status--live { color: var(--mint-ink, #45e0a8); } /* live = signal; --mint-ink is theme-correct mint text (raw mint dark / #0A7C50 light) */
 /* 2026-08-05: lifecycle compaction dims the whole live card to 0.72, which
    composites light-theme --mint-ink to ~3.1:1 on white — below AA for the
@@ -119,9 +138,10 @@ html:not(.dark) .projection-card--compact .projection-card__status--live {
    sub-18px size it was used at in this card; all textual uses below move to
    --text-secondary (8.6:1 dark / 7.0:1 light). Borders keep their tokens. */
 .matchup__venue { font-size: var(--proj-meta); color: var(--text-secondary, #a6a6a6); max-inline-size: 100%; }
-/* Last line — first pitch / kickoff ET. Owned here for scheduled games; the
-   header owns LIVE/FINAL status only (directive §3). */
-.matchup__time { font-size: var(--proj-meta); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-secondary, #a6a6a6); font-variant-numeric: tabular-nums; }
+/* `.matchup__time` removed 2026-08-05 (owner directive "card status header"):
+   the first-pitch line left this block for the centered card header, which
+   inherited its exact register including font-variant-numeric: tabular-nums.
+   See .projection-card__status at the top of this file. */
 
 /* Team logos: the official MLB SVG viewBoxes are already tightly cropped.
    A shared HEIGHT plus each asset's real aspect ratio removes the square-box
@@ -871,9 +891,11 @@ html:not(.dark) .projection-card__live-dot {
    its own track — 1fr resolves to the summary's natural height, so mobile
    renders byte-identically to the old `auto` rows. */
 .projection-card { grid-template-rows: auto auto 1fr auto; }
-.projection-card--scheduled { grid-template-rows: auto 1fr auto; }
+/* 2026-08-05: scheduled cards gained the head row, so their track list is the
+   base list (head, matchup, summary=1fr, markets) — the former
+   `.projection-card--scheduled` three-track override is deleted, not restated. */
 .projection-card--scheduled.projection-card--with-pregame {
-  grid-template-rows: auto auto 1fr auto;
+  grid-template-rows: auto auto auto 1fr auto;
 }
 .projection-card--compact {
   grid-template-rows: auto auto auto auto;

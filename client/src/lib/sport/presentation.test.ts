@@ -5,6 +5,7 @@ import {
   sportAdapters,
   formatDoubleChanceSelection,
   toPresentation,
+  type EventStatus,
   type FeedEventLike,
   type SportPresentationModel,
 } from "./presentation";
@@ -414,6 +415,68 @@ describe("sportAdapters registry", () => {
       },
     ],
   };
+
+  /** Owner directive 2026-08-05: ballpark + first pitch are pregame-only. On MLB
+   *  rows the ballpark arrives as `meta` (the feed sets meta = g.venue), so the
+   *  team adapter gates the CONTEXT line, not just `venue`. */
+  describe("pregame-only venue + first pitch (owner directive 2026-08-05)", () => {
+    const NON_PREGAME: ReadonlyArray<EventStatus> = [
+      "live",
+      "final",
+      "postponed",
+      "suspended",
+    ];
+
+    it("drops the ballpark context and the start time on every non-scheduled MLB state", () => {
+      for (const status of NON_PREGAME) {
+        const model = createMlbPresentation({
+          ...MLB_EVENT,
+          status,
+          timeLabel: "7:05 PM ET",
+          venueLine: "PNC Park",
+          liveLabel: status === "live" ? "LIVE · BOT 8TH" : null,
+        });
+        expect(model.status).toBe(status);
+        expect(model.contextLine).toBeUndefined();
+        expect(model.venue).toBeUndefined();
+        expect(model.startTime).toBeUndefined();
+      }
+    });
+
+    it("keeps the ballpark and the first pitch on a scheduled MLB card", () => {
+      const model = createMlbPresentation({
+        ...MLB_EVENT,
+        status: "scheduled",
+        timeLabel: "7:05 PM ET",
+        away: { ...MLB_EVENT.away, score: null },
+        home: { ...MLB_EVENT.home, score: null },
+      });
+      expect(model.contextLine).toBe("PNC Park");
+      expect(model.startTime).toBe("7:05 PM ET");
+    });
+
+    it("soccer keeps its ROUND context at every state but loses stadium + kickoff", () => {
+      // Distinct meta/venueLine, matching how wcMatchToCard actually splits
+      // them: meta = round label, venueLine = stadium · city.
+      const wc = {
+        ...WC_EVENT,
+        meta: "World Cup Final",
+        venueLine: "MetLife Stadium · East Rutherford, NJ",
+      };
+      expect(createSoccerPresentation(wc).venue).toBe(
+        "MetLife Stadium · East Rutherford, NJ"
+      );
+
+      const live = createSoccerPresentation({
+        ...wc,
+        status: "live",
+        liveLabel: "LIVE 78'",
+      });
+      expect(live.contextLine).toBe("World Cup Final"); // stage identity is not a venue
+      expect(live.venue).toBeUndefined();
+      expect(live.startTime).toBeUndefined();
+    });
+  });
 
   it("MLB adapter keeps event identity and does not touch numbers", () => {
     const model = createMlbPresentation(MLB_EVENT);

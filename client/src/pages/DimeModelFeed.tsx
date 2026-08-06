@@ -645,16 +645,24 @@ export function mlbRowToCard(
   const awayCrest: CrestSpec = { url: awayReg?.logoUrl, code: awayAbbr.slice(0, 3), bg: awayReg?.primaryColor };
   const homeCrest: CrestSpec = { url: homeReg?.logoUrl, code: homeAbbr.slice(0, 3), bg: homeReg?.primaryColor };
 
+  // Suspended is its own lifecycle member as of 2026-08-05 (owner directive):
+  // it used to be folded into "postponed" and render POSTPONED, which the page
+  // law contradicts — it names suspended a first-class state.
   const status: GameStatus =
     g.gameStatus === "live"
       ? "live"
       : g.gameStatus === "final"
         ? "final"
-        : g.gameStatus === "postponed" || g.gameStatus === "suspended"
-          ? "postponed"
-          : "scheduled";
+        : g.gameStatus === "suspended"
+          ? "suspended"
+          : g.gameStatus === "postponed"
+            ? "postponed"
+            : "scheduled";
   const isLive = status === "live";
   const isFinal = status === "final";
+  // Suspended games were halted mid-play, so they have a real score to show —
+  // the fact that distinguishes them from postponed (never played).
+  const showsScore = isLive || isFinal || status === "suspended";
   // Model freshness gate — modelRunAt null ⇒ model invalidated (GameCard rule).
   const hasModel = g.modelRunAt != null;
   const M = <T,>(v: T | null): T | null => (hasModel ? v : null);
@@ -743,13 +751,18 @@ export function mlbRowToCard(
     sourceGameId: Number.isInteger(g.id) ? g.id : undefined,
     liveLabel: isLive ? `LIVE${g.gameClock ? ` · ${g.gameClock}` : ""}` : null,
     timeLabel:
-      status === "postponed"
-        ? "POSTPONED"
-        : isFinal
-          ? "FINAL"
-          : formatGameTime(g.startTimeEst),
-    away: { name: awayReg?.nickname ?? awayAbbr, crest: awayCrest, score: isLive || isFinal ? (g.awayScore != null ? String(g.awayScore) : null) : null },
-    home: { name: homeReg?.nickname ?? homeAbbr, crest: homeCrest, score: isLive || isFinal ? (g.homeScore != null ? String(g.homeScore) : null) : null },
+      status === "suspended"
+        ? "SUSPENDED"
+        : status === "postponed"
+          ? "POSTPONED"
+          : isFinal
+            ? "FINAL"
+            : formatGameTime(g.startTimeEst),
+    // A suspended game was halted mid-play and carries a real score — that is
+    // exactly what separates it from postponed (2026-08-05 owner directive
+    // making suspended first-class). Postponed was never played: no score.
+    away: { name: awayReg?.nickname ?? awayAbbr, crest: awayCrest, score: showsScore ? (g.awayScore != null ? String(g.awayScore) : null) : null },
+    home: { name: homeReg?.nickname ?? homeAbbr, crest: homeCrest, score: showsScore ? (g.homeScore != null ? String(g.homeScore) : null) : null },
     meta,
     venueLine: g.venue || null,
     pregameLineups,

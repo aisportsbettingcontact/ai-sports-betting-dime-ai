@@ -156,7 +156,10 @@ describe("MLB Rotowire pregame binding", () => {
       ["live", "live"],
       ["final", "final"],
       ["postponed", "postponed"],
-      ["suspended", "postponed"],
+      // 2026-08-05 (owner directive): suspended is its own lifecycle state and
+      // no longer borrows postponed's. The invariant under test is unchanged —
+      // no pregame data attaches to ANY non-scheduled state.
+      ["suspended", "suspended"],
     ] as const) {
       const card = mlbRowToCard(
         row({
@@ -167,6 +170,20 @@ describe("MLB Rotowire pregame binding", () => {
       );
       expect(card.status).toBe(expectedStatus);
       expect(card.pregameLineups).toBeUndefined();
+      // 2026-08-05: a suspended game was halted mid-play, so it keeps its
+      // score — that is what distinguishes it from postponed, which was
+      // never played and must stay score-less.
+      const scored = mlbRowToCard(
+        row({ gameStatus: rawStatus, awayScore: 4, homeScore: 3 }),
+        null
+      );
+      if (rawStatus === "postponed") {
+        expect(scored.away.score).toBeNull();
+        expect(scored.home.score).toBeNull();
+      } else {
+        expect(scored.away.score).toBe("4");
+        expect(scored.home.score).toBe("3");
+      }
     }
   });
 });

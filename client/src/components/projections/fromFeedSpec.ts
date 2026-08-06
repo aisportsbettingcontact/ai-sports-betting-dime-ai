@@ -38,6 +38,10 @@ interface MarketLike {
 }
 export interface FeedSpecLike {
   id: string;
+  /** Explicit source status when available; without it postponed and suspended
+   *  games fall through the score-based inference and read as scheduled/final
+   *  (mirrors presentation.ts's FeedEventLike). */
+  status?: GameStatus;
   liveLabel?: string | null;
   timeLabel: string;
   away: TeamLike;
@@ -66,11 +70,14 @@ export function feedSpecToProjectionGame(
   g: FeedSpecLike,
   league: string
 ): ProjectionGame {
-  const status: GameStatus = g.liveLabel
-    ? "live"
-    : g.away.score != null || g.home.score != null
-      ? "final"
-      : "scheduled";
+  const status: GameStatus =
+    g.status ??
+    (g.liveLabel
+      ? "live"
+      : g.away.score != null || g.home.score != null
+        ? "final"
+        : "scheduled");
+  const isPregame = status === "scheduled";
 
   const team = (t: TeamLike): ProjectionTeam => ({
     abbr: t.crest.code,
@@ -106,10 +113,13 @@ export function feedSpecToProjectionGame(
     statusLabel: g.liveLabel || g.timeLabel,
     away: team(g.away),
     home: team(g.home),
-    matchupContext: g.meta || undefined,
-    venue: g.venueLine ?? undefined,
-    // Finals carry "FINAL" in timeLabel, not a first-pitch time.
-    startTime: status === "final" ? undefined : g.timeLabel || undefined,
+    // Ballpark + first pitch are PREGAME-ONLY (owner directive 2026-08-05).
+    // This adapter feeds team-sport cards, where the context line IS the
+    // ballpark, so all three lifecycle-gate together; the centered card header
+    // carries the status at every state.
+    matchupContext: isPregame ? g.meta || undefined : undefined,
+    venue: isPregame ? (g.venueLine ?? undefined) : undefined,
+    startTime: isPregame ? g.timeLabel || undefined : undefined,
     markets,
   };
 }
