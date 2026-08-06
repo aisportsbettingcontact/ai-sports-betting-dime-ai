@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   SECURITY_EVENT_LIMITS,
   truncateForColumn,
+  truncateForTextColumn,
 } from "./securityEventLimits";
 
 describe("securityEventLimits", () => {
@@ -57,5 +58,61 @@ describe("insertSecurityEvent field clamping (regression)", () => {
     expect(
       truncateForColumn("A".repeat(64), SECURITY_EVENT_LIMITS.httpMethod)
     ).toHaveLength(16);
+  });
+
+  it("drops a lone high surrogate at the cut point instead of splitting the pair", () => {
+    // "𝌆" (U+1D306) is a 2-code-unit surrogate pair. Placing it so the cut
+    // falls between the high and low surrogate must drop both rather than
+    // emit a lone (invalid) high surrogate.
+    const value = "a".repeat(9) + "𝌆"; // 9 ascii + 2-code-unit astral char = length 11
+    const result = truncateForColumn(value, 10);
+    expect(result).toHaveLength(9);
+    expect(result).toBe("a".repeat(9));
+    // Confirm no lone surrogate survived.
+    const lastCode = result!.charCodeAt(result!.length - 1);
+    expect(lastCode >= 0xd800 && lastCode <= 0xdbff).toBe(false);
+  });
+});
+
+describe("truncateForTextColumn (byte-aware clamp for TEXT columns)", () => {
+  it("clamps a value with multi-byte characters to stay within the byte cap", () => {
+    // 30,000 four-byte utf8mb4 characters (emoji) = 120,000 bytes, well over
+    // the 65,535-byte TEXT cap. A character-based clamp (truncateForColumn)
+    // would keep all 30,000 characters — 120,000 bytes — and overflow the
+    // column. The byte-aware clamp must not.
+    const value = "😀".repeat(30000);
+    const result = truncateForTextColumn(value, SECURITY_EVENT_LIMITS.context);
+    expect(result).not.toBeNull();
+    const byteLength = new TextEncoder().encode(result!).length;
+    expect(byteLength).toBeLessThanOrEqual(SECURITY_EVENT_LIMITS.context);
+  });
+
+  it("never splits a multi-byte sequence, so no replacement character appears", () => {
+    const value = "😀".repeat(30000);
+    const result = truncateForTextColumn(value, SECURITY_EVENT_LIMITS.context);
+    expect(result).not.toBeNull();
+    expect(result).not.toContain("�");
+  });
+
+  it("leaves a pure-ASCII value under the cap unchanged", () => {
+    const value = "rate_limit_exceeded";
+    expect(truncateForTextColumn(value, SECURITY_EVENT_LIMITS.context)).toBe(
+      value
+    );
+  });
+
+  it("leaves a multi-byte value already under the byte cap unchanged", () => {
+    const value = "😀 user_not_found 日本語";
+    const byteLength = new TextEncoder().encode(value).length;
+    expect(byteLength).toBeLessThanOrEqual(SECURITY_EVENT_LIMITS.context);
+    expect(truncateForTextColumn(value, SECURITY_EVENT_LIMITS.context)).toBe(
+      value
+    );
+  });
+
+  it("maps null, undefined, and empty string to null", () => {
+    expect(truncateForTextColumn(null, 65535)).toBeNull();
+    expect(truncateForTextColumn(undefined, 65535)).toBeNull();
+    expect(truncateForTextColumn("", 65535)).toBeNull();
   });
 });

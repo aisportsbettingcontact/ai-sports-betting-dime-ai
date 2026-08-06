@@ -41,6 +41,7 @@ import { recordFailure, type AccountLockoutConfig } from './accountLockout';
 import {
   SECURITY_EVENT_LIMITS,
   truncateForColumn,
+  truncateForTextColumn,
 } from "./_core/securityEventLimits";
 import { logSafe } from "./_core/logSafe";
 
@@ -2720,7 +2721,13 @@ export async function insertSecurityEvent(event: InsertSecurityEvent): Promise<v
         event.userAgent,
         SECURITY_EVENT_LIMITS.userAgent
       ),
-      context: truncateForColumn(event.context, SECURITY_EVENT_LIMITS.context),
+      // context is text("context") — a MySQL TEXT column whose 65,535 limit
+      // is in BYTES, not characters. It needs the byte-aware clamp, not the
+      // varchar one used above.
+      context: truncateForTextColumn(
+        event.context,
+        SECURITY_EVENT_LIMITS.context
+      ),
       occurredAt: event.occurredAt,
     });
     console.log(
