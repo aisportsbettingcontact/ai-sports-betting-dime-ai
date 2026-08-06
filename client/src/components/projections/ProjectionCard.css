@@ -53,13 +53,28 @@
   gap: var(--space-sm);
   opacity: 0.72;
   /* FEED-CONTRAST: 0.72 opacity composites the stock secondary/muted tokens
-     below WCAG-AA 4.5:1. The dim treatment stays (owner directive); inside
-     dimmed cards the label tokens remap to the law's --foreground ink, which
-     the card-level opacity then dims back down — composited contrast measures
-     ~10:1 dark / ~9:1 light, and the token switches with the theme on its
-     own (no per-theme override needed). */
-  --text-secondary: var(--foreground);
-  --text-muted: var(--foreground);
+     below WCAG-AA 4.5:1, so the label tokens are remapped brighter inside a
+     dimmed card. The dim itself stays (owner directive 2026-07-23).
+
+     CORRECTED 2026-08-06 (owner-authorized): the remap used to go all the way
+     to --foreground, which OVERSHOT. Composited, that put settled cards at
+     10.10:1 dark / 8.79:1 light — brighter than the bettable scheduled card's
+     own labels at 8.13:1 / 6.54:1. Salience ran backwards: the games a user
+     cannot act on carried the strongest ink on the slate.
+
+     The replacement lands deliberately between the two bounds — clear of the
+     4.5:1 floor after the 0.72 composite, and below the scheduled card so
+     hierarchy tracks decision value.
+
+     Expressed as ink mixed toward the page ground. --foreground and
+     --background flip together with the theme (white-on-black / black-on-white,
+     index.css), so ONE rule covers both: 82% ink is a light grey on dark and a
+     dark grey on light, each the right direction automatically. Achromatic by
+     construction — mixing the two achromatic extremes can only yield a grey —
+     and free of raw hex, which the X-HEX ratchet enforces. Measured values are
+     recorded in the page law's 2026-08-06 directive. */
+  --text-secondary: color-mix(in srgb, var(--foreground) 82%, var(--background));
+  --text-muted: color-mix(in srgb, var(--foreground) 82%, var(--background));
 }
 /* A settled no-edge card can carry both modifiers. Compact state owns the
    requested diminished treatment instead of inheriting PASS's 0.82 value. */
@@ -104,7 +119,10 @@
    mixing at 50% instead of 60% gives rgb(75,116,100) ≈ 4.96:1.
    Dark theme composites 6.25:1 and keeps the plain token. */
 html:not(.dark) .projection-card--compact .projection-card__status--live {
-  color: color-mix(in srgb, var(--mint-ink, #0a7c50) 60%, #000000);
+  /* 50%, not 60% — corrected 2026-08-06 (owner-authorized). At 60% the
+     composited label measured 4.4969:1, missing the 4.5:1 floor by 0.003.
+     50% measures 4.96:1. Same single mint hue, just deeper. */
+  color: color-mix(in srgb, var(--mint-ink, #0a7c50) 50%, #000000);
 }
 
 /* Live indicator dot (Round 4 Wave 1, item 4 / page law "Live state"): pulsing

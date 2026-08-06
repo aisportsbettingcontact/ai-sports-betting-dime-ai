@@ -277,6 +277,50 @@ Desktop (>=1024px) only — tablet/mobile keep their shipped layouts:
   or one scorable no-edge candidate keeps the plain single summary with no
   arrow; a game with no scorable candidate shows the unavailable-data copy.
 
+### Owner Directives — 2026-08-06 (compaction contrast + salience) — owner-approved
+
+> **APPROVED AND AUTHORIZED by the owner, 2026-08-06.** This is the decision the
+> previous directive's scope fence deferred: both items it excluded are now
+> authorized and fixed. Decision note: PR #416, evidence bundle
+> `docs/audits/2026-08-06-feed-contrast-salience-evidence/`.
+
+Both defects trace to one cause — `.projection-card--compact`'s `opacity: 0.72`
+composites the card **layer** over the page, so page ground bleeds into the text
+as well as the card background. The dim itself stays (owner directive
+2026-07-23); what changes is how the text tokens compensate for it.
+
+- **The compaction remap no longer overshoots to `--foreground`.** It used to
+  push both `--text-secondary` and `--text-muted` all the way to the foreground
+  ink, which composited settled cards to 10.10:1 dark / 8.79:1 light —
+  **brighter than the bettable scheduled card's own labels** at 8.13:1 / 6.54:1.
+  Salience ran backwards: the games a user cannot act on carried the strongest
+  ink on the slate. Both tokens now resolve to a bounded mid tone, derived from
+  `--foreground` by `color-mix` so it stays achromatic and introduces no new
+  token: 82% of the foreground ink mixed toward the page ground. One rule
+  covers both themes, because `--foreground` and `--background` flip together.
+- **The light-theme LIVE mint deepens from 60% to 50%.** At 60% the composited
+  label measured **4.4969:1** — missing the 4.5:1 floor by 0.003, while the rule
+  it lived in claimed to clear it. 50% measures **5.0170:1**. Same single mint
+  hue, just deeper.
+- **Status text is normal text for WCAG**, not large: 14.05px at 1440, 12.00px
+  at 375, weight 600. The floor is 4.5:1, not 3:1.
+
+Measured in a browser against the built artifact, composited as
+`0.72 × colour + 0.28 × page`:
+
+| state | dark before → after | light before → after |
+|---|---|---|
+| scheduled (bettable) | 8.13 → 8.13 (unchanged) | 6.54 → 6.54 (unchanged) |
+| live | 6.25 → 6.25 | **4.4969 → 5.0170** |
+| final / postponed / suspended | **10.10 → 6.85** | **8.79 → 5.27** |
+
+Two invariants now hold together and are gated in CI by
+`ProjectionCard.test.ts` plus a browser gate in the evidence bundle: every
+status label clears 4.5:1, **and** no settled card's labels exceed the
+scheduled card's. Reducing the settled tone was the only way to satisfy both —
+simply reverting the remap would have dropped light-theme settled text to
+~3.4:1, well under the floor.
+
 ### Owner Directives — 2026-08-06 (unplayable games: slate tier + mint rationing) — owner-approved
 
 > **APPROVED AND AUTHORIZED by the owner, 2026-08-06.** This section is
@@ -300,6 +344,12 @@ Desktop (>=1024px) only — tablet/mobile keep their shipped layouts:
 >    revisiting the lifecycle-compaction `opacity: 0.72`.
 >
 > Neither may be shipped on the strength of this approval.
+>
+> **RESOLVED later the same day.** Both were separately approved and authorized
+> by the owner and are fixed — see "Owner Directives — 2026-08-06 (compaction
+> contrast + salience)" above. The fence is kept as written because it was true
+> of *this* approval; it records that the two items travelled on their own
+> decision rather than riding in on this one.
 
 **"Unplayable" is a new, named card state: `postponed` or `suspended`.** It is
 NOT the same thing as PASS. PASS means the model found nothing worth acting on
