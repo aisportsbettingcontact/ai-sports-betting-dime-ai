@@ -13,6 +13,8 @@
  * surface without anyone remembering to look.
  */
 
+import { hasHeading, sectionBody, stripFences } from "./markdown";
+
 /** The nine L1 fields, as section headings. Order is the doctrine's order. */
 export const GOAL_FIELDS = [
   "Desired outcome",
@@ -48,45 +50,8 @@ export interface ContradictionResult {
 const CONTRADICTION_THRESHOLD = 0.5;
 
 function field(md: string, name: string): string | null {
-  const m = md.match(new RegExp(`\\*\\*${name}:\\*\\*\\s*([^\\n·]+)`, "i"));
+  const m = stripFences(md).match(new RegExp(`\\*\\*${name}:\\*\\*\\s*([^\\n·]+)`, "i"));
   return m ? m[1].trim() : null;
-}
-
-/**
- * The body of one `## Section`, ending at the NEXT HEADING OF ANY LEVEL.
- *
- * Ending only at `## ` was a real defect (found auditing PR #398): a `### First
- * reading` subsection added under `## Activity paths` did not terminate the
- * section, so its prose bullets were parsed as activity-path globs and GR-0001
- * silently declared six priorities instead of four. `/^##\s/` cannot match
- * `### ` at all, because the third character is `#` rather than whitespace.
- */
-function sectionBody(md: string, heading: string): string {
-  const after = md.split(new RegExp(`^##\\s+${heading}\\s*$`, "im"))[1] ?? "";
-  return stripFences(after.split(/^#{1,6}\s/m)[0]);
-}
-
-/**
- * Blank out fenced code blocks, keeping line count so any future line-numbered
- * error stays accurate.
- *
- * The scan is line-based, so a fence's contents were read as ordinary content:
- * documenting retired or example paths in a ``` block DECLARED them. Verified on
- * the merged tree — a fence holding two retired globs produced three activity
- * paths, not one.
- */
-function stripFences(body: string): string {
-  let inFence = false;
-  return body
-    .split("\n")
-    .map((line) => {
-      if (/^\s*(```|~~~)/.test(line)) {
-        inFence = !inFence;
-        return "";
-      }
-      return inFence ? "" : line;
-    })
-    .join("\n");
 }
 
 /** `---`, `***`, `___`, `- - -` — markdown rules, not content. */
@@ -103,9 +68,9 @@ export function parseGoal(md: string): Goal {
   const idMatch = md.match(/^#\s*(GR-\d+)/m);
   if (!idMatch) throw new Error("goal record has no `# GR-####` heading");
 
-  const missing = GOAL_FIELDS.filter(
-    (f) => !new RegExp(`^##\\s+${f}\\s*$`, "im").test(md),
-  );
+  // hasHeading strips fences first. Testing the raw document let a fenced
+  // EXAMPLE mentioning `## Constraints` satisfy a field the record did not have.
+  const missing = GOAL_FIELDS.filter((f) => !hasHeading(md, f));
   // Name every missing field at once. Reporting only the first turns a single
   // fix into N round trips.
   if (missing.length > 0) {

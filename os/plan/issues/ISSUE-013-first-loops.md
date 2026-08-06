@@ -1,6 +1,6 @@
 # ISSUE-013 — Bring up LOOP-001 (Engineering) and LOOP-002 (Operations)
 
-**Wave:** 3 — Ownership · **Effort:** L · **Status:** NOT STARTED · **DRI:** Prez
+**Wave:** 3 — Ownership · **Effort:** L · **Status:** DONE · **DRI:** Prez
 **Ruling dependency:** DR-005 + DR-014 Ruling 2
 **Doctrine:** D5 (the seven components + nine questions) · D7 · D13 · D14 stages 3-12 · D16 criteria 3, 4
 
@@ -35,13 +35,13 @@ TiDB tier.
 
 Every criterion is checkable. A criterion that cannot be checked is not a criterion.
 
-- [ ] Both loop files answer **all nine** D5 interrogation questions; a loop that cannot **fails `Vitest`**
-- [ ] Each names its DRI, its goal record (ISSUE-011), and its evaluation method
-- [ ] **At least one completed live cycle** on LOOP-001, with an observed outcome and a filed adjustment — this is a D16 criterion and it is the point of the whole issue
-- [ ] The cross-link is **demonstrated, not asserted**: an artifact id produced by LOOP-002 resolves inside a decision recorded by LOOP-001, and the validator fails if it does not
-- [ ] Cron cadence drift is detected — the observer must catch that `cron-mlb-cycle` claims `*/5` but fires ~8-10×/day, and that **every under-run currently reports success**
-- [ ] Six remaining function loops recorded `deferred` **with reasons** — not omitted
-- [ ] The in-process-scheduler blind spot is written into `LOOP-002` as a known limitation
+- [x] Both loop files answer **all nine** D5 interrogation questions; a loop that cannot **fails `Vitest`**
+- [x] Each names its DRI, its goal record (ISSUE-011), and its evaluation method
+- [x] **At least one completed live cycle** on LOOP-001, with an observed outcome and a filed adjustment — this is a D16 criterion and it is the point of the whole issue
+- [x] The cross-link is **demonstrated, not asserted**: an artifact id produced by LOOP-002 resolves inside a decision recorded by LOOP-001, and the validator fails if it does not
+- [x] Cron cadence drift is detected — the observer must catch that `cron-mlb-cycle` claims `*/5` but fires ~8-10×/day, and that **every under-run currently reports success**
+- [x] Six remaining function loops recorded `deferred` **with reasons** — not omitted
+- [x] The in-process-scheduler blind spot is written into `LOOP-002` as a known limitation
 
 ## Verification
 
