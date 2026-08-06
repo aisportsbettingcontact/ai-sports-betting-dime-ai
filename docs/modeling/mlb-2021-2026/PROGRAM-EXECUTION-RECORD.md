@@ -441,6 +441,41 @@ This boundary is stated rather than hidden. See `tools/README.md` for both tiers
 
 ---
 
+## 10b. Artifact survival — what is here, and what is gone
+
+The scratch run directory was cleared after the backtest completed. This is the honest
+inventory of what survived that, so no reader has to guess whether an absent file was
+withheld or lost.
+
+**Preserved in full.** Every conclusion in this record rests on a committed artifact.
+
+| Run artifact | Where it lives now |
+|---|---|
+| Per-market ladder results (`results_<market>.csv`) | consolidated into `MARKET-METRICS-BY-SEASON.csv` — the file is a straight concatenation, so no rows were dropped |
+| v2 per-game market outputs (`market_outputs_shard*.parquet`) | concatenated into `SIM-DISTRIBUTIONS-{A,B,C}.parquet`, 26,731 rows each |
+| v2 per-game hashes, gates, MC-SE | `SIMULATION-MANIFEST.parquet`, all 80,193 rows |
+| Convergence drift statistics | tabulated in `CONVERGENCE-CHECKPOINT-REPORT.md` |
+| Coherence results | `coherence_results_v2.json` |
+| Fitted engine parameters (v2) | `engine_params_v2_{A,B,C}.parquet` |
+| Screening contests | `screening_v2_{A,B,C}.csv`, all 108 |
+| Every operation, finding, and integrity check | `ledger.jsonl`, 41 events, chain intact |
+| All execution code | `tools/` — verified bit-identical, see §10 |
+
+**Permanently gone.** Regenerable only from the warehouse, or by re-running the sweep.
+
+| Artifact | Size | Consequence |
+|---|---|---|
+| Extraction TSVs (`features/*.tsv`) — 3.76M plays, 1.03M batter-game, 407k pitcher-game rows | ~GB | Rebuild via the E1–E4 extraction workflow |
+| `matrix.parquet`, `matrix_v2.parquet` | large | Rebuild via `walkforward.py assemble` + `build_states.py`; **this is what blocks Tier-2 reproduction** |
+| P5 per-game predictions (`predictions/*.jsonl`, 93,650 rows) | — | Pooled metrics recomputed from them are recorded in the erratum banner and `VERDICT-EVIDENCE-V2.csv` |
+| Raw trajectory artifacts (`sim_artifacts_shard*.jsonl`), both sweeps | 255 MB each | Aggregates, pmfs, checkpoints, and hashes survive per game; raw per-trajectory streams were never intended for git and are regenerable from the committed parameters |
+| v1 superseded outputs (`engine_params_*`, `sim_results.csv`, `coherence_results.json`) | — | The v1 sweep issued no verdicts; its defect is recorded in ledger event 31 and §5 |
+
+Nothing that supports a stated conclusion is in the second table. The one material
+limitation is `matrix_v2.parquet`: without it, scoring and verdicts cannot be re-executed
+from the repository alone, which is why §10 separates the proven engine tier from the
+warehouse-dependent tier rather than claiming end-to-end reproducibility.
+
 ## 11. What was deliberately not done
 
 - **No deployment, publication, or promotion.** Directive D6 §17. The branch has never been
