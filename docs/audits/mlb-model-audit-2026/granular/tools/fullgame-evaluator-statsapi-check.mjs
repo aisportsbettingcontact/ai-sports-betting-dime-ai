@@ -18,6 +18,16 @@ const SEED = 20260725;
 const csvNum = (v) =>
   v === null || v === undefined || v === '' || !Number.isFinite(Number(v)) ? '' : String(Number(v));
 
+// abstractGameState is a StatsAPI enum. Known values pass through unchanged; anything
+// else is stripped to word characters and truncated, so no response text can carry a
+// comma, quote, newline, or leading '=' into the CSV.
+const API_STATES = new Set(['Preview', 'Live', 'Final', 'Other']);
+const csvState = (v) => {
+  if (v === null || v === undefined) return 'fetch-fail';
+  if (API_STATES.has(v)) return v;
+  return String(v).replace(/[^A-Za-z0-9 _-]/g, '').slice(0, 24) || 'unexpected';
+};
+
 // mulberry32 PRNG for reproducible sampling
 function mulberry32(a) {
   return function () {
@@ -72,7 +82,7 @@ for (const g of sample) {
   const mlRow = rows.find((p) => p[idx.sub_market] === 'ML');
   const totRow = rows.find((p) => p[idx.sub_market] === 'TOTAL');
   if (!api || api?.status?.abstractGameState !== 'Final') {
-    out.push([g[idx.game_id], pk, g[idx.date], g[idx.teams], '', '', api?.status?.abstractGameState ?? 'fetch-fail',
+    out.push([g[idx.game_id], pk, g[idx.date], g[idx.teams], '', '', csvState(api?.status?.abstractGameState),
       mlRow?.[idx.actual] ?? '', '', totRow?.[idx.actual] ?? '', totRow?.[idx.line] ?? '', '', 'api-unavailable'].join(','));
     continue;
   }
