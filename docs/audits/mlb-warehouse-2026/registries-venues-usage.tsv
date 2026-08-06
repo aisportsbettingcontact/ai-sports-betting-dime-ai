@@ -1,0 +1,56 @@
+venue_id	name	active	city	state	timezone	capacity	roof_type	turf_type	left_line	left_field	left_center	center	right_center	right_field	right_line	games	first_season	last_season	seasons_used
+22	UNIQLO Field at Dodger Stadium	1	Los Angeles	California	America/Los_Angeles	56000	Open	Grass	330	\N	385	395	385	\N	330	1696	2006	2026	21
+2681	Citizens Bank Park	1	Philadelphia	Pennsylvania	America/New_York	42901	Open	Grass	329	369	381	401	398	369	330	1673	2006	2026	21
+2392	Daikin Park	1	Houston	Texas	America/Chicago	41000	Retractable	Grass	315	\N	362	409	373	\N	326	1667	2006	2026	21
+2889	Busch Stadium	1	St. Louis	Missouri	America/Chicago	44494	Open	Grass	336	\N	375	400	375	\N	335	1664	2006	2026	21
+3	Fenway Park	1	Boston	Massachusetts	America/New_York	37755	Open	Grass	310	379	390	420	380	\N	302	1659	2006	2026	21
+32	American Family Field	1	Milwaukee	Wisconsin	America/Chicago	41700	Retractable	Grass	344	\N	371	400	374	\N	345	1658	2006	2026	21
+2395	Oracle Park	1	San Francisco	California	America/Los_Angeles	41915	Open	Grass	339	\N	399	391	415	\N	309	1653	2006	2026	21
+5	Progressive Field	1	Cleveland	Ohio	America/New_York	34788	Open	Grass	325	370	410	405	375	\N	325	1650	2006	2026	21
+17	Wrigley Field	1	Chicago	Illinois	America/Chicago	41363	Open	Grass	355	\N	368	400	368	\N	353	1650	2006	2026	21
+2394	Comerica Park	1	Detroit	Michigan	America/Detroit	41083	Open	Grass	345	\N	370	420	365	\N	330	1647	2006	2026	21
+2680	Petco Park	1	San Diego	California	America/Los_Angeles	40222	Open	Grass	336	367	386	396	391	378	322	1643	2006	2026	21
+7	Kauffman Stadium	1	Kansas City	Missouri	America/Chicago	38427	Open	Grass	347	364	379	410	379	364	344	1639	2006	2026	21
+2	Oriole Park at Camden Yards	1	Baltimore	Maryland	America/New_York	44970	Open	Grass	333	363	376	410	373	373	318	1635	2006	2026	21
+15	Chase Field	1	Phoenix	Arizona	America/Phoenix	48359	Retractable	Artificial Turf	328	376	412	407	414	376	335	1634	2006	2026	21
+1	Angel Stadium	1	Anaheim	California	America/Los_Angeles	45517	Open	Grass	330	347	389	396	365	348	330	1633	2006	2026	21
+19	Coors Field	1	Denver	Colorado	America/Denver	50144	Open	Grass	347	390	420	415	424	375	350	1630	2006	2026	21
+31	PNC Park	1	Pittsburgh	Pennsylvania	America/New_York	38753	Open	Grass	325	389	410	399	375	\N	320	1629	2006	2026	21
+680	T-Mobile Park	1	Seattle	Washington	America/Los_Angeles	47929	Retractable	Grass	331	\N	390	405	387	\N	327	1628	2006	2026	21
+4	Rate Field	1	Chicago	Illinois	America/Chicago	40241	Open	Grass	330	\N	377	400	372	\N	335	1623	2006	2026	21
+2602	Great American Ball Park	1	Cincinnati	Ohio	America/New_York	43891	Open	Grass	328	\N	379	404	370	\N	325	1620	2006	2026	21
+14	Rogers Centre	1	Toronto	Ontario	America/Toronto	49282	Retractable	Artificial Turf	328	\N	375	404	375	\N	328	1570	2006	2026	20
+12	Tropicana Field	1	St. Petersburg	Florida	America/New_York	25025	Dome	Artificial Turf	315	370	410	404	404	370	322	1561	2006	2026	20
+10	McAfee Coliseum	1	Oakland	California	America/Los_Angeles	34077	Open	Grass	330	367	388	400	388	367	330	1497	2006	2024	19
+3309	Nationals Park	1	Washington	District of Columbia	America/New_York	41376	Open	Grass	336	\N	377	402	370	\N	335	1480	2008	2026	19
+3313	Yankee Stadium	1	Bronx	New York	America/New_York	47309	Open	Grass	318	\N	399	408	385	\N	314	1428	2009	2026	18
+3289	Citi Field	1	Flushing	New York	America/New_York	42136	Open	Grass	335	358	370	408	380	370	330	1396	2009	2026	18
+3312	Target Field	1	Minneapolis	Minnesota	America/Chicago	38544	Open	Grass	339	\N	377	404	367	\N	328	1308	2010	2026	17
+13	Ameriquest Field	1	Arlington	Texas	America/Chicago	48911	Open	Grass	332	\N	390	400	407	381	325	1156	2006	2019	14
+4169	loanDepot park	1	Miami	Florida	America/New_York	37446	Retractable	Artificial Turf	344	\N	386	407	392	\N	335	1132	2012	2026	15
+16	Turner Field	0	Atlanta	Georgia	America/New_York	50062	Open	Grass	335	\N	380	401	390	\N	330	895	2006	2016	11
+4705	Truist Park	1	Atlanta	Georgia	America/New_York	41149	Open	Grass	335	375	385	400	375	\N	325	748	2017	2026	10
+5325	Globe Life Field	1	Arlington	Texas	America/Chicago	40000	Retractable	Artificial Turf	329	\N	372	407	374	\N	326	511	2020	2026	7
+20	Dolphin Stadium	0	Miami	Florida	America/New_York	42531	Open	Grass	330	\N	385	434	385	\N	345	480	2006	2011	6
+8	Hubert H. Humphrey Metrodome	0	Minneapolis	Minnesota	America/Chicago	48678	Dome	Artificial Turf	343	\N	385	408	367	\N	327	328	2006	2009	4
+25	Shea Stadium	0	Flushing	New York	America/New_York	57333	Open	Grass	338	\N	371	410	371	\N	338	249	2006	2008	3
+9	Yankee Stadium I	0	Bronx	New York	America/New_York	57768	Open	Grass	318	\N	399	408	385	\N	314	248	2006	2008	3
+2721	Robert F. Kennedy Memorial Stadium	0	Washington	District of Columbia	America/New_York	45016	Open	Grass	336	\N	385	410	385	\N	336	162	2006	2007	2
+2529	Sutter Health Park	1	Sacramento	California	America/Los_Angeles	14111	Open	Grass	330	\N	380	403	380	\N	325	126	2025	2026	2
+2523	George M. Steinbrenner Field	1	Tampa	Florida	America/New_York	10387	Open	Grass	318	\N	\N	408	\N	\N	314	81	2025	2025	1
+2756	Sahlen Field	1	Buffalo	New York	America/New_York	21050	Open	Grass	325	\N	371	404	367	\N	325	49	2020	2021	2
+2536	TD Ballpark	1	Dunedin	Florida	America/New_York	5509	Open	Grass	335	375	\N	400	\N	375	327	21	2021	2021	1
+2735	BB&T Ballpark	1	Williamsport	Pennsylvania	America/New_York	2500	Open	Grass	345	\N	\N	405	\N	\N	350	8	2017	2025	8
+2397	Tokyo Dome	1	Tokyo	\N	Asia/Tokyo	55000	Dome	Artificial Turf	329	\N	375	400	375	\N	329	8	2008	2025	4
+2701	Estadio de Beisbol Monterrey	1	Monterrey	MX	America/Monterrey	27000	Open	Grass	325	\N	\N	400	\N	\N	325	7	2018	2019	2
+5381	London Stadium	1	London	\N	Europe/London	55000	Open	Artificial Turf	330	\N	\N	392	\N	\N	330	6	2019	2024	3
+2504	The Ballpark at Disney's Wide World of Sports	1	Lake Buena Vista	Florida	America/New_York	9500	Open	Grass	340	\N	\N	400	\N	\N	330	6	2007	2008	2
+5340	Estadio Alfredo Harp Helu	1	Mexico City	\N	America/Mexico_City	20062	Open	Artificial Turf	325	\N	\N	400	\N	\N	325	6	2023	2026	3
+5355	Las Vegas Ballpark	1	Las Vegas	Nevada	America/Los_Angeles	10000	Open	Grass	340	\N	380	415	380	\N	340	6	2026	2026	1
+2535	Hiram Bithorn Stadium	1	San Juan	Puerto Rico	America/Puerto_Rico	19778	Open	Artificial Turf	325	\N	375	404	375	\N	325	5	2010	2018	2
+4589	Sydney Cricket Ground	0	Sydney	\N	Australia/Sydney	\N	Open	Grass	324	\N	\N	400	\N	\N	324	2	2014	2014	1
+5150	Gocheok Sky Dome	1	Seoul	\N	Asia/Seoul	17000	Dome	Artificial Turf	325	\N	\N	400	\N	\N	325	2	2024	2024	1
+5010	Fort Bragg Field	0	Fort Bragg	North Carolina	America/New_York	12500	Open	Grass	331	\N	387	405	387	\N	331	1	2016	2016	1
+5365	TD Ameritrade Park	0	Omaha	Nebraska	America/Chicago	24505	Open	Grass	335	\N	375	408	375	\N	335	1	2019	2019	1
+3949	Rickwood Field	1	Birmingham	Alabama	America/Chicago	10800	Open	Grass	321	\N	399	400	392	\N	332	1	2024	2024	1
+6130	Bristol Motor Speedway	1	Bristol	Tennessee	America/New_York	\N	Open	Artificial Turf	330	378	385	400	375	360	330	1	2025	2025	1

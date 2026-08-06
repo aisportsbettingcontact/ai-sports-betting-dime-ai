@@ -1,0 +1,60 @@
+=== 1) ATH home games by venue ===
+ venue=Las Vegas Ballpark  n=6  dates 2026-06-08..2026-06-14
+  actual total                       n=   6  mean=17.0  ci=[8.472,25.528]
+  live_rule signed error             n=   6  mean=-5.763  ci=[-15.057,3.53]
+  p1 signed error                    n=   6  mean=-5.257  ci=[-14.332,3.819]
+  p2 signed error                    n=   6  mean=-5.074  ci=[-14.16,4.011]
+ venue=Sutter Health Park  n=44  dates 2026-04-03..2026-07-19
+  actual total                       n=  44  mean=11.864  ci=[10.336,13.391]
+  live_rule signed error             n=  44  mean=-1.739  ci=[-3.223,-0.255]
+  p1 signed error                    n=  44  mean=-0.977  ci=[-2.446,0.491]
+  p2 signed error                    n=  44  mean=-0.726  ci=[-2.198,0.745]
+
+=== 2) ARI home games by venue ===
+ venue=Chase Field  n=51  dates 2026-03-30..2026-07-22
+  actual total                       n=  51  mean=9.118  ci=[7.751,10.484]
+  live_rule signed error             n=  50  mean=-0.21  ci=[-1.56,1.14]
+  p2 signed error                    n=  51  mean=0.681  ci=[-0.665,2.027]
+ venue=Estadio Alfredo Harp Helu  n=2  dates 2026-04-25..2026-04-26
+  actual total                       n=   2  mean=14.5  ci=[5.68,23.32]
+  live_rule signed error             n=   2  mean=1.0  ci=[-8.8,10.8]
+  p2 signed error                    n=   2  mean=-4.725  ci=[-14.3,4.85]
+
+=== 3) away-favorite ML calibration by month ===
+ 2026-03 live: n= 16 mean_p_away=0.500 actual=0.562 gap=-0.063 | p2: n= 17 mean_p=0.464 actual=0.588 gap=-0.124
+ 2026-04 live: n=130 mean_p_away=0.505 actual=0.515 gap=-0.010 | p2: n=131 mean_p=0.469 actual=0.519 gap=-0.050
+ 2026-05 live: n=142 mean_p_away=0.486 actual=0.556 gap=-0.070 | p2: n=146 mean_p=0.487 actual=0.568 gap=-0.081
+ 2026-06 live: n=120 mean_p_away=0.489 actual=0.583 gap=-0.095 | p2: n=120 mean_p=0.489 actual=0.583 gap=-0.094
+ 2026-07 live: n= 80 mean_p_away=0.474 actual=0.600 gap=-0.126 | p2: n= 80 mean_p=0.480 actual=0.600 gap=-0.120
+
+=== 4) COL as away team ===
+ live: n=52 mean_p_away=0.392 actual_away_win=0.346 gap=+0.046 brier=0.2370
+ p1  : n=52 mean_p_away=0.429 actual_away_win=0.346 gap=+0.083 brier=0.2441
+ p2  : n=52 mean_p_away=0.450 actual_away_win=0.346 gap=+0.104 brier=0.2489
+
+=== 5) away_fav gap z-scores (mean_p vs actual, binomial SE) ===
+ live: n=488 gap=-0.0691 se=0.0225 z=-3.08
+ p1  : n=494 gap=-0.0905 se=0.0223 z=-4.06
+ p2  : n=494 gap=-0.0838 se=0.0223 z=-3.76
+ live (home_fav): n=1027 gap=-0.0083 z=-0.54
+ p2   (home_fav): n=1038 gap=+0.0029 z=+0.19
+
+=== 6) hand-pair p2/live bias CIs ===
+ L-L:
+  live_rule                          n= 126  mean=-0.891  ci=[-1.762,-0.02]
+  p2                                 n= 128  mean=-0.508  ci=[-1.367,0.352]
+ L-R:
+  live_rule                          n= 289  mean=-0.18  ci=[-0.678,0.318]
+  p2                                 n= 292  mean=0.296  ci=[-0.199,0.791]
+ R-L:
+  live_rule                          n= 301  mean=-0.607  ci=[-1.136,-0.079]
+  p2                                 n= 303  mean=-0.107  ci=[-0.625,0.41]
+ R-R:
+  live_rule                          n= 727  mean=-0.562  ci=[-0.878,-0.245]
+  p2                                 n= 738  mean=-0.045  ci=[-0.358,0.267]
+
+=== 7) PIT park probe: months + PIT-as-home actual vs proj ===
+ 2026-04: n=17 mean_actual_total=10.12 p2_bias=-1.32
+ 2026-05: n=16 mean_actual_total=10.94 p2_bias=-1.7
+ 2026-06: n=12 mean_actual_total=10.83 p2_bias=-1.79
+ 2026-07: n=7 mean_actual_total=10.86 p2_bias=-1.36

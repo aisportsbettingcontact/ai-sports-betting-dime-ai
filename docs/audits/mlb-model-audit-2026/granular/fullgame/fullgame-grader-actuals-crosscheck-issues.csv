@@ -1,0 +1,15 @@
+gameId,matchup,source,games_actual,other
+2250386,BOS@BAL 2026-04-26,mlb_schedule_history,5-3,17-1
+2250499,TOR@TB 2026-05-05,games.awayScore/homeScore,3-4,3-2
+2250500,ATH@PHI 2026-05-05,games.awayScore/homeScore,1-9,0-1
+2250501,BAL@MIA 2026-05-05,games.awayScore/homeScore,9-7,7-4
+2250502,MIN@WSH 2026-05-05,games.awayScore/homeScore,11-3,6-2
+2250503,TEX@NYY 2026-05-05,games.awayScore/homeScore,4-7,3-3
+2250504,CIN@CHC 2026-05-05,games.awayScore/homeScore,2-3,1-0
+2250505,CLE@KC 2026-05-05,games.awayScore/homeScore,3-5,0-2
+2250507,LAD@HOU 2026-05-05,games.awayScore/homeScore,1-2,0-0
+2250733,STL@CIN 2026-05-23 G2,mlb_schedule_history,6-7,8-1
+2251024,SF@ATL 2026-06-16,games.awayScore/homeScore,7-2,3-2
+2251130,CHC@NYM 2026-06-24 G2,mlb_schedule_history,10-5,10-3
+2251290,MIL@STL 2026-07-07 G2,mlb_schedule_history,10-2,4-3
+2251337,MIL@PIT 2026-07-11 G2,mlb_schedule_history,2-3,6-7

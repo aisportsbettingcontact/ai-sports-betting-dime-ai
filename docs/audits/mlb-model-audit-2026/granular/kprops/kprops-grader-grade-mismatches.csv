@@ -1,0 +1,9 @@
+propId,gameId,gameDate,gamePk,side,pitcher,mlbamId,class,ungraded_reason,kProj,bookLine,pOver,pUnder,actualKs,stored_backtestResult,stored_modelCorrect,stored_modelError,derived_backtestResult,derived_modelCorrect,derived_modelError,grade_status,diff_fields,substrate_status,substrate_starterId,substrate_starterKs
+330004,2250209,2026-04-12,824859,away,Adrian Houser,605288,final_in_scope,kProj_null,,4.5,,,3,UNDER,,,,,,ORPHAN_STORED_GRADE,grade_present_but_not_gradeable,SIDE_MATCH_KS_EQUAL,605288,3
+330002,2250209,2026-04-12,824859,home,Cade Povich,700249,final_in_scope,kProj_null,,5.5,,,5,UNDER,,,,,,ORPHAN_STORED_GRADE,grade_present_but_not_gradeable,SIDE_MATCH_KS_EQUAL,700249,5
+330005,2250210,2026-04-12,822828,away,Taj Bradley,671737,final_in_scope,kProj_null,,4.5,,,7,OVER,,,,,,ORPHAN_STORED_GRADE,grade_present_but_not_gradeable,SIDE_MATCH_KS_EQUAL,671737,7
+510029,2250284,2026-04-18,823558,away,Noah Cameron,702070,final_in_scope,kProj_null,,4.5,,,3,UNDER,,,,,,ORPHAN_STORED_GRADE,grade_present_but_not_gradeable,SIDE_MATCH_KS_EQUAL,702070,3
+2310002,2251464,2026-07-25,824244,away,Michael Wacha,608379,final_out_of_scope,,2.96,5.5,0.1027,0.8500,3,UNDER,1,-0.090,UNDER,1,-0.04,MISMATCH,modelError,no_linescore,,
+2310001,2251464,2026-07-25,824244,home,Casey Mize,663554,final_out_of_scope,,3.6,5.5,0.1949,0.8437,3,UNDER,1,-0.840,UNDER,1,0.60,MISMATCH,modelError,no_linescore,,
+330003,2252493,2026-04-12,823479,home,Andrew Painter,691725,final_in_scope,kProj_null,,4.5,,,1,UNDER,,,,,,ORPHAN_STORED_GRADE,grade_present_but_not_gradeable,SIDE_MISMATCH(scratch),647315,1
+330001,2252493,2026-04-12,823479,away,Zac Gallen,668678,final_in_scope,kProj_null,,5.5,,,2,UNDER,,,,,,ORPHAN_STORED_GRADE,grade_present_but_not_gradeable,SIDE_MATCH_KS_EQUAL,668678,2

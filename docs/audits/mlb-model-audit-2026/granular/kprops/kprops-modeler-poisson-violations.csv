@@ -1,0 +1,1 @@
+modelVersion,gameId,gameDate,side,mlbamId,playerName,projValue,line,pOver,mu_used,k_factor,expected_projValue,projValue_abs_diff,expected_pOver,abs_diff,check,reason,bound_lo,bound_hi

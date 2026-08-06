@@ -1,0 +1,199 @@
+{
+  "asOf": "2026-07-25",
+  "generatedBy": "run-census-v2.mjs",
+  "checks": {
+    "universe": {
+      "schedComplete": 1560,
+      "gamesFinals": 1560,
+      "zombies": 0,
+      "finalsMissingAnyActual": 5
+    },
+    "projectionCoverage": {
+      "finals": 1560,
+      "gaps": {
+        "fg_ml": 0,
+        "fg_rl": 0,
+        "fg_total": 0,
+        "f5_ml": 0,
+        "f5_rl": 0,
+        "f5_total": 0,
+        "nrfi_yrfi": 0,
+        "k_prop": 0,
+        "hr_prop": 0
+      }
+    },
+    "gradeLedger": [
+      {
+        "market": "f5_ml",
+        "source": "live_pregame",
+        "games": 1527,
+        "rows_n": 1527,
+        "pushes": "236",
+        "graded": "1291"
+      },
+      {
+        "market": "f5_ml",
+        "source": "walkforward_replay",
+        "games": 1545,
+        "rows_n": 4635,
+        "pushes": "720",
+        "graded": "3915"
+      },
+      {
+        "market": "f5_rl",
+        "source": "live_pregame",
+        "games": 837,
+        "rows_n": 837,
+        "pushes": "0",
+        "graded": "837"
+      },
+      {
+        "market": "f5_rl",
+        "source": "walkforward_replay",
+        "games": 838,
+        "rows_n": 2514,
+        "pushes": "0",
+        "graded": "2514"
+      },
+      {
+        "market": "f5_total",
+        "source": "live_pregame",
+        "games": 838,
+        "rows_n": 838,
+        "pushes": "0",
+        "graded": "838"
+      },
+      {
+        "market": "f5_total",
+        "source": "walkforward_replay",
+        "games": 839,
+        "rows_n": 2517,
+        "pushes": "0",
+        "graded": "2517"
+      },
+      {
+        "market": "fg_ml",
+        "source": "live_pregame",
+        "games": 1528,
+        "rows_n": 1528,
+        "pushes": "0",
+        "graded": "1528"
+      },
+      {
+        "market": "fg_ml",
+        "source": "walkforward_replay",
+        "games": 1545,
+        "rows_n": 4635,
+        "pushes": "0",
+        "graded": "4635"
+      },
+      {
+        "market": "fg_rl",
+        "source": "live_pregame",
+        "games": 1528,
+        "rows_n": 1528,
+        "pushes": "0",
+        "graded": "1528"
+      },
+      {
+        "market": "fg_rl",
+        "source": "walkforward_replay",
+        "games": 1545,
+        "rows_n": 4635,
+        "pushes": "0",
+        "graded": "4635"
+      },
+      {
+        "market": "fg_total",
+        "source": "live_pregame",
+        "games": 1528,
+        "rows_n": 1528,
+        "pushes": "61",
+        "graded": "1467"
+      },
+      {
+        "market": "fg_total",
+        "source": "walkforward_replay",
+        "games": 1545,
+        "rows_n": 4635,
+        "pushes": "186",
+        "graded": "4449"
+      },
+      {
+        "market": "hr_prop",
+        "source": "live_pregame",
+        "games": 494,
+        "rows_n": 9143,
+        "pushes": "0",
+        "graded": "593"
+      },
+      {
+        "market": "hr_prop",
+        "source": "walkforward_replay",
+        "games": 1545,
+        "rows_n": 83430,
+        "pushes": null,
+        "graded": "0"
+      },
+      {
+        "market": "k_prop",
+        "source": "live_pregame",
+        "games": 1387,
+        "rows_n": 2686,
+        "pushes": "2",
+        "graded": "2684"
+      },
+      {
+        "market": "k_prop",
+        "source": "walkforward_replay",
+        "games": 1545,
+        "rows_n": 9270,
+        "pushes": "3",
+        "graded": "7566"
+      },
+      {
+        "market": "nrfi_yrfi",
+        "source": "live_pregame",
+        "games": 1527,
+        "rows_n": 1527,
+        "pushes": "0",
+        "graded": "1527"
+      },
+      {
+        "market": "nrfi_yrfi",
+        "source": "walkforward_replay",
+        "games": 1545,
+        "rows_n": 4635,
+        "pushes": "0",
+        "graded": "4635"
+      }
+    ],
+    "gradeUnionCoverage": {
+      "fg_ml": 1545,
+      "fg_rl": 1545,
+      "fg_total": 1545,
+      "f5_ml": 1545,
+      "f5_rl": 838,
+      "f5_total": 839,
+      "nrfi_yrfi": 1545,
+      "k_prop": 1545,
+      "hr_prop": 1545
+    },
+    "ledger": {
+      "enrolledFinals": 1555,
+      "clvRows": "7632",
+      "quarantined": "4705"
+    },
+    "liveGradeColumns": {
+      "fgMlUngraded": "5",
+      "nrfiUngraded": "0",
+      "f5Ungraded": "5"
+    },
+    "currency": {
+      "todaysProjected": 15,
+      "todaysGames": 15,
+      "lastKGraded": "2026-07-25",
+      "lastFgGraded": "2026-07-24"
+    }
+  }
+}

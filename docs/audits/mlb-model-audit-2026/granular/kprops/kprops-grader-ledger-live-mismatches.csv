@@ -1,0 +1,5 @@
+ledgerId,refId,gameId,gameDate,issues
+11816,1860005,2251365,2026-07-18,actual 11 != actualKs 0; result LOSS != derived WIN; correct 0 != derived 1; signedError -6.730 != kProj-actualKs 4.270; brier 0.473482 != (pOver-y)^2 0.097282
+11817,1860006,2251365,2026-07-18,actual 9 != actualKs 0; result WIN != derived LOSS; correct 1 != derived 0; signedError -2.520 != kProj-actualKs 6.480; brier 0.208210 != (pOver-y)^2 0.295610
+11931,1950006,2251420,2026-07-22,actual 5 != actualKs 0; result LOSS != derived WIN; correct 0 != derived 1; signedError -2.690 != kProj-actualKs 2.310; brier 0.799236 != (pOver-y)^2 0.011236
+11961,1530016,2253491,2026-07-23,actual 3 != actualKs 0; signedError 0.260 != kProj-actualKs 3.260

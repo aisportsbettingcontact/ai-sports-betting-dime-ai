@@ -1,0 +1,25 @@
+series,model,n,term,coef,se,tstat
+live,outs_only,2694,intercept(at means),-1.01617,0.04559,-22.29
+live,outs_only,2694,starterOuts,-0.25757,0.01063,-24.23
+live,full,1762,intercept(at means),-1.0566,0.05452,-19.38
+live,full,1762,starterOuts,-0.27388,0.01294,-21.16
+live,full,1762,asofK9,-0.12954,0.0247,-5.24
+live,full,1762,oppAsofK27,0.00338,0.06754,0.05
+live,full,1762,umpKMod,-2.33353,1.58389,-1.47
+live,full,1762,bookLine,0.63068,0.05304,11.89
+p1,outs_only,3110,intercept(at means),0.65181,0.04794,13.6
+p1,outs_only,3110,starterOuts,-0.19148,0.01072,-17.86
+p1,full,1821,intercept(at means),0.48175,0.05664,8.51
+p1,full,1821,starterOuts,-0.17098,0.01337,-12.79
+p1,full,1821,asofK9,0.39694,0.02574,15.42
+p1,full,1821,oppAsofK27,0.08799,0.07038,1.25
+p1,full,1821,umpKMod,-2.33594,1.65705,-1.41
+p1,full,1821,bookLine,0.0547,0.05517,0.99
+p2,outs_only,3110,intercept(at means),0.11844,0.04658,2.54
+p2,outs_only,3110,starterOuts,-0.20365,0.01042,-19.55
+p2,full,1821,intercept(at means),-0.09886,0.05538,-1.78
+p2,full,1821,starterOuts,-0.18222,0.01307,-13.94
+p2,full,1821,asofK9,0.34135,0.02517,13.56
+p2,full,1821,oppAsofK27,0.12477,0.06883,1.81
+p2,full,1821,umpKMod,-2.59693,1.62034,-1.6
+p2,full,1821,bookLine,0.02343,0.05395,0.43
