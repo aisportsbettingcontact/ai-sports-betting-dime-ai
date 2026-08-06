@@ -1,0 +1,26 @@
+{
+  "meta": {"generated": "2026-07-26", "purpose": "Every unresolved gap, with the exact artifact that would close it. All gaps must be closed via OddsLogic-provided materials or an authorized account — not probing."},
+  "gaps": [
+    {"id": "G01", "gap": "Concrete API endpoint inventory (hosts, paths, methods, versions)", "closes_with": "Official developer documentation or OpenAPI/schema file from OddsLogic sales/support (support@oddslogic.com)"},
+    {"id": "G02", "gap": "Authentication and credentialing model (keys? tokens? IP allowlist? session?)", "closes_with": "API onboarding packet + one sanitized authenticated request example"},
+    {"id": "G03", "gap": "Transport and update mechanics (REST/WS/SSE/polling; snapshot vs delta; sequencing, heartbeats, replay, recovery)", "closes_with": "Protocol documentation + 10-minute sample capture of an authorized feed session"},
+    {"id": "G04", "gap": "Object schemas and field names for events, markets, quotes, props, grading, alerts", "closes_with": "Sample payloads per family (pre-match, in-play, prop, grade, alert), ideally for one full game lifecycle"},
+    {"id": "G05", "gap": "Identifier system: canonical IDs for events/books/teams/players; external crosswalks", "closes_with": "ID reference docs + one week of schedule payloads incl. an MLB doubleheader day"},
+    {"id": "G06", "gap": "Historical retention depth, snapshot granularity, correction/revision model", "closes_with": "Archive API docs + a sample historical export for one known game incl. a graded correction"},
+    {"id": "G07", "gap": "Settlement semantics: state enums, void/push/no-action rules, regrade propagation", "closes_with": "Grading feed docs + fixtures: a pushed spread, a voided listed-pitcher bet, a stat-corrected prop"},
+    {"id": "G08", "gap": "Rate limits, quotas, error model, status codes, retry/idempotency guidance", "closes_with": "API operations docs; error-catalog page"},
+    {"id": "G09", "gap": "SLA behind '99.999% uptime' (window, exclusions, remedies)", "closes_with": "Contractual SLA document"},
+    {"id": "G10", "gap": "Licensing: redistribution, display rights, attribution, field-of-use, per-seat vs server pricing", "closes_with": "API license agreement / order form (cancellation policy covers only B2C subscription)"},
+    {"id": "G11", "gap": "Authoritative sportsbook list and per-tier provider counts (50+ vs 35+ vs 38 vs 50 — contradiction X01/X04)", "closes_with": "Current book list per product from sales"},
+    {"id": "G12", "gap": "Player-prop production status and depth (contradiction X02); prop line history availability", "closes_with": "Live account check + prop feed sample"},
+    {"id": "G13", "gap": "Ticket/money percentage methodology (population, sample size, refresh) and API exposure", "closes_with": "Feature docs or vendor Q&A"},
+    {"id": "G14", "gap": "Sharp Plays output schema and API exposure (algorithm itself may stay proprietary)", "closes_with": "Feature docs; sample sharp-play alert payload"},
+    {"id": "G15", "gap": "Alternate lines / DNB / Asian handicaps / futures availability (competitor claims 'standard lines only')", "closes_with": "Market catalog from vendor"},
+    {"id": "G16", "gap": "Alert delivery for API consumers (webhook? stream? in-product only?)", "closes_with": "Alert/webhook docs + sample payload"},
+    {"id": "G17", "gap": "Timestamp format, timezone, precision, ordering guarantees", "closes_with": "Any real payload sample (G04 closes this)", "partial_progress": "App bootstrap (O15) shows event starts as UTC 'YYYY-MM-DD HH:MM:SS' with a Pacific-Time snapshot header — app-surface convention only; API convention still unconfirmed"},
+    {"id": "G18", "gap": "Sandbox/test environment existence", "closes_with": "Onboarding docs"},
+    {"id": "G19", "gap": "Ship status (2026-07) of FAQ future features: arb alerts, +EV alerts, team props, game links", "closes_with": "Live account check or vendor changelog"},
+    {"id": "G20", "gap": "ol-lite-stage: is it staging? partner-embed product? versioning of partner shells", "closes_with": "Vendor Q&A; not otherwise discoverable legitimately"}
+  ],
+  "recommended_next_action": "Email support@oddslogic.com requesting: API docs, sample payloads (one full game lifecycle incl. grading), book list per tier, license terms, and trial API credentials. Everything in this reference beyond public marketing is blocked on that packet."
+}

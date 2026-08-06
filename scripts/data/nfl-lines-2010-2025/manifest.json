@@ -1,0 +1,65 @@
+{
+  "dataset": "nfl-lines-2010-2025",
+  "description": "NFL schedules with final results and closing betting lines, 2010-2025",
+  "source": "nflverse/nfldata via nflreadr::load_schedules()",
+  "sourceLicense": "CC-BY-4.0 (nflverse-data); underlying NFL data governed by its owners",
+  "nflreadrVersion": "1.5.1",
+  "generatedUtc": "2026-07-27T13:13:21Z",
+  "seasonMin": 2010,
+  "seasonMax": 2025,
+  "seasons": 16,
+  "gameCount": 4363,
+  "joinKey": "espnId (preferred) - do not join on team abbreviations (audit NFLV-019)",
+  "completeness": {
+    "result": 100,
+    "total": 100,
+    "spread_line": 100,
+    "total_line": 100,
+    "away_moneyline": 100,
+    "home_moneyline": 100,
+    "away_spread_odds": 100,
+    "home_spread_odds": 100,
+    "over_odds": 100,
+    "under_odds": 100
+  },
+  "knownGaps": [],
+  "manualEdits": [
+    {
+      "gameId": "2017_04_CHI_GB",
+      "appliedOn": "2026-07-27",
+      "oddsSource": "manual-2026-07-27",
+      "reason": "nflverse ships no price data for this game and the public archives do not carry it either - SportsOddsHistory (the canonical historical closing-line archive, now at covers.com) has NO moneyline columns for 2017 at all. Values were supplied out-of-band by the project owner.",
+      "filled": {
+        "awayMoneyline": {
+          "value": 311,
+          "basis": "supplied (CHI +311)"
+        },
+        "homeMoneyline": {
+          "value": -357,
+          "basis": "supplied (GB -357)"
+        },
+        "awaySpreadOdds": {
+          "value": -110,
+          "basis": "assumed standard juice"
+        },
+        "homeSpreadOdds": {
+          "value": -110,
+          "basis": "assumed standard juice"
+        },
+        "overOdds": {
+          "value": -110,
+          "basis": "assumed standard juice"
+        },
+        "underOdds": {
+          "value": -110,
+          "basis": "assumed standard juice"
+        }
+      },
+      "corrected": [],
+      "unchanged": "spreadLine 7.5 and totalLine 44 are left exactly as nflverse publishes them, both independently confirmed by SportsOddsHistory. A 7.5 -> 7 spread override was briefly applied on 2026-07-27 and then reverted at the owner's direction, so this row's line fields are now unmodified upstream values. (OddsShark's 45.5 total was a 2017-09-26 pre-game number, not the close.)",
+      "sources": ["https://www.covers.com/sportsoddshistory/nfl-game-season/?y=2017", "https://www.oddsshark.com/nfl/chicago-bears-green-bay-packers-betting-september-28-2017-788213"],
+      "caution": "Four of the six filled values are assumed juice, not recorded market prices. Query oddsSource = 'nflverse' to restrict any analysis to purely observed data."
+    }
+  ],
+  "provenance": "docs/audits/2026-07-26-nflverse-stack-forensic-audit.md"
+}

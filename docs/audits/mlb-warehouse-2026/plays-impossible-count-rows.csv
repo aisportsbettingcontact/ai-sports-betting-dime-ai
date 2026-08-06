@@ -1,0 +1,12 @@
+season,game_pk,at_bat_index,event_type,balls_end,strikes_end,pitch_count,classification
+2006,40737,56,walk,5,2,8,source-inherited: StatsAPI upstream carries the same impossible count (verified for 40737/ab56)
+2006,41950,66,walk,5,2,9,source-inherited: StatsAPI upstream carries the same impossible count (verified for 40737/ab56)
+2008,234236,11,strikeout,1,4,5,source-inherited: StatsAPI upstream carries the same impossible count (verified for 40737/ab56)
+2008,235399,61,walk,5,2,9,source-inherited: StatsAPI upstream carries the same impossible count (verified for 40737/ab56)
+2015,415513,3,walk,5,2,8,source-inherited: StatsAPI upstream carries the same impossible count (verified for 40737/ab56)
+2017,491781,44,walk,5,2,9,source-inherited: StatsAPI upstream carries the same impossible count (verified for 40737/ab56)
+2021,633530,43,walk,5,2,7,source-inherited: StatsAPI upstream carries the same impossible count (verified for 40737/ab56)
+2022,662390,62,walk,5,2,8,source-inherited: StatsAPI upstream carries the same impossible count (verified for 40737/ab56)
+2023,718506,26,walk,5,2,8,source-inherited: StatsAPI upstream carries the same impossible count (verified for 40737/ab56)
+2023,718708,64,walk,5,2,6,source-inherited: StatsAPI upstream carries the same impossible count (verified for 40737/ab56)
+2025,778541,41,walk,5,2,7,source-inherited: StatsAPI upstream carries the same impossible count (verified for 40737/ab56)

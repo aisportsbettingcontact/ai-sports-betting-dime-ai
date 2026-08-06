@@ -1,18 +1,36 @@
-# Post-deploy smoke test — validates the live Railway deployment (workflow_dispatch
-# accepts any origin to test against).
+# Post-deploy smoke test — validates the LIVE production surface after a Railway
+# deploy by running the assertions in scripts/smoke-deploy.mjs against the public,
+# Cloudflare-fronted origin (what real users hit), then retrying to ride out the
+# deploy settle window.
 #
-# Railway auto-deploys pushes to main once the repo is connected; this job
-# waits out the build, then asserts the five smoke checks in
-# scripts/smoke-deploy.mjs against the live origin. No secrets needed.
+# REQUIRES the EDGE_AGENT_BYPASS_KEY repo secret. Since the Phase-4 edge went live
+# (Cloudflare Super Bot Fight Mode "definitely automated → Block"), automated
+# clients — GitHub Actions runners included — are 403'd on document routes
+# (/, /assets, /checkout, bot-UA /). The smoke script presents this secret as the
+# `x-dime-agent` request header, matched by the "Trusted agent bypass" Cloudflare
+# WAF Skip rule, so this trusted CI traffic is waved through WITHOUT weakening the
+# public anti-scraping posture (no key → automation is still blocked). The secret
+# stays in GitHub; its value is never printed. The application auth gates are still
+# asserted, never bypassed — the key only clears Cloudflare bot detection.
+#
+# Do NOT point ORIGIN at the raw *.up.railway.app origin: the Phase-4 origin lock
+# 403s every non-/health path there by design, and the agent key cannot open it
+# (that lock keys on the CF-only x-dime-edge-secret, a different secret). Targeting
+# the raw origin is what produced 4 straight red deploys with misleading messages
+# ("/api proxy broken", "helmet not applied") — every path but /health 403'd.
 name: deploy-smoke
 
 on:
   workflow_dispatch:
     inputs:
       origin:
-        description: "Origin to smoke-test"
-        default: "https://ai-sports-betting-dime-ai-production.up.railway.app"
+        description: "Origin to smoke-test — MUST be the Cloudflare-fronted host so document routes resolve"
+        default: "https://aisportsbettingmodels.com"
         required: true
+      edge:
+        description: "Set to 'cloudflare' to ALSO assert the origin lock (direct-origin 403) + WAF free-text pass-through against prod"
+        default: ""
+        required: false
   push:
     branches: [main]
 
@@ -22,6 +40,13 @@ permissions:
 jobs:
   smoke:
     runs-on: ubuntu-latest
+    # Reading a production secret binds this job to the protected Production
+    # environment (repo GitHub-Actions security contract,
+    # scripts/check-github-actions-security.mjs). Production's only rule is a
+    # protected-branch policy (no required reviewers), so the automatic push-on-
+    # main gate still runs unattended; a dispatch from an unprotected branch is
+    # (correctly) blocked from the secret.
+    environment: Production
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -33,8 +58,24 @@ jobs:
         run: sleep 240
       - name: Smoke test live origin (retry x3)
         env:
-          ORIGIN: ${{ github.event.inputs.origin || 'https://ai-sports-betting-dime-ai-production.up.railway.app' }}
+          ORIGIN: ${{ github.event.inputs.origin || 'https://aisportsbettingmodels.com' }}
+          # Trusted-agent bypass: waves this CI traffic past Cloudflare Super Bot
+          # Fight Mode on document routes. Stays in GitHub; never printed. Public
+          # posture is unaffected — no key means automation is still blocked.
+          EDGE_AGENT_BYPASS_KEY: ${{ secrets.EDGE_AGENT_BYPASS_KEY }}
+          # Origin-lock + WAF free-text assertions are OPT-IN (workflow_dispatch
+          # `edge=cloudflare`), never on the automatic push gate: a deliberate
+          # EDGE_MODE=log rollback flips the raw origin back to 200, which would
+          # otherwise red the deploy pipeline exactly when the edge is safely
+          # disarmed. When enabled, the lock is asserted against the raw origin.
+          SMOKE_EDGE: ${{ github.event.inputs.edge }}
+          SMOKE_ORIGIN_URL: ${{ github.event.inputs.edge == 'cloudflare' && 'https://ai-sports-betting-dime-ai-production.up.railway.app' || '' }}
         run: |
+          if [ -z "${EDGE_AGENT_BYPASS_KEY}" ]; then
+            echo "::warning::EDGE_AGENT_BYPASS_KEY is empty — document routes will 403 through the production edge. Set the repo secret."
+          else
+            echo "trusted-agent key present (value hidden) — document routes waved through the edge"
+          fi
           for i in 1 2 3; do
             node scripts/smoke-deploy.mjs "$ORIGIN" && exit 0
             echo "attempt $i failed; retrying in 60s"; sleep 60

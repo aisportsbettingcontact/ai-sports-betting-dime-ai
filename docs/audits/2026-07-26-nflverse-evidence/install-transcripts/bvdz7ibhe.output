@@ -1,0 +1,97 @@
+Installing packages into ‘/opt/homebrew/lib/R/4.6/site-library’
+(as ‘lib’ is unspecified)
+trying URL 'https://cloud.r-project.org/src/contrib/magick_2.9.1.tar.gz'
+trying URL 'https://cloud.r-project.org/src/contrib/ggpath_1.1.1.tar.gz'
+trying URL 'https://cloud.r-project.org/src/contrib/nflplotR_1.6.0.tar.gz'
+trying URL 'https://cloud.r-project.org/src/contrib/nflverse_1.0.3.tar.gz'
+begin installing package ‘magick’
+* installing *source* package ‘magick’ ...
+** this is package ‘magick’ version ‘2.9.1’
+** package ‘magick’ successfully unpacked and MD5 sums checked
+** using staged installation
+Found pkg-config cflags and libs!
+Using PKG_CFLAGS=-I/opt/homebrew/Cellar/imagemagick/7.1.2-27/include/ImageMagick-7 -DMAGICKCORE_HDRI_ENABLE=1 -DMAGICKCORE_QUANTUM_DEPTH=16 -DMAGICKCORE_CHANNEL_MASK_DEPTH=32
+Using PKG_LIBS=-L/opt/homebrew/Cellar/imagemagick/7.1.2-27/lib -lMagick++-7.Q16HDRI -lMagickWand-7.Q16HDRI -lMagickCore-7.Q16HDRI
+** libs
+using C++ compiler: ‘Apple clang version 21.0.0 (clang-2100.1.1.101)’
+using SDK: ‘MacOSX26.5.sdk’
+clang++ -std=gnu++20 -I"/opt/homebrew/Cellar/r/4.6.1/lib/R/include" -DNDEBUG -I/opt/homebrew/Cellar/imagemagick/7.1.2-27/include/ImageMagick-7 -DMAGICKCORE_HDRI_ENABLE=1 -DMAGICKCORE_QUANTUM_DEPTH=16 -DMAGICKCORE_CHANNEL_MASK_DEPTH=32 -I'/opt/homebrew/lib/R/4.6/site-library/Rcpp/include' -I/opt/homebrew/opt/gettext/include -I/opt/homebrew/opt/readline/include -I/opt/homebrew/opt/xz/include -I/opt/homebrew/include   -fvisibility=hidden -fPIC  -g -O2   -c RcppExports.cpp -o RcppExports.o
+clang++ -std=gnu++20 -I"/opt/homebrew/Cellar/r/4.6.1/lib/R/include" -DNDEBUG -I/opt/homebrew/Cellar/imagemagick/7.1.2-27/include/ImageMagick-7 -DMAGICKCORE_HDRI_ENABLE=1 -DMAGICKCORE_QUANTUM_DEPTH=16 -DMAGICKCORE_CHANNEL_MASK_DEPTH=32 -I'/opt/homebrew/lib/R/4.6/site-library/Rcpp/include' -I/opt/homebrew/opt/gettext/include -I/opt/homebrew/opt/readline/include -I/opt/homebrew/opt/xz/include -I/opt/homebrew/include   -fvisibility=hidden -fPIC  -g -O2   -c animation.cpp -o animation.o
+clang++ -std=gnu++20 -I"/opt/homebrew/Cellar/r/4.6.1/lib/R/include" -DNDEBUG -I/opt/homebrew/Cellar/imagemagick/7.1.2-27/include/ImageMagick-7 -DMAGICKCORE_HDRI_ENABLE=1 -DMAGICKCORE_QUANTUM_DEPTH=16 -DMAGICKCORE_CHANNEL_MASK_DEPTH=32 -I'/opt/homebrew/lib/R/4.6/site-library/Rcpp/include' -I/opt/homebrew/opt/gettext/include -I/opt/homebrew/opt/readline/include -I/opt/homebrew/opt/xz/include -I/opt/homebrew/include   -fvisibility=hidden -fPIC  -g -O2   -c attributes.cpp -o attributes.o
+clang++ -std=gnu++20 -I"/opt/homebrew/Cellar/r/4.6.1/lib/R/include" -DNDEBUG -I/opt/homebrew/Cellar/imagemagick/7.1.2-27/include/ImageMagick-7 -DMAGICKCORE_HDRI_ENABLE=1 -DMAGICKCORE_QUANTUM_DEPTH=16 -DMAGICKCORE_CHANNEL_MASK_DEPTH=32 -I'/opt/homebrew/lib/R/4.6/site-library/Rcpp/include' -I/opt/homebrew/opt/gettext/include -I/opt/homebrew/opt/readline/include -I/opt/homebrew/opt/xz/include -I/opt/homebrew/include   -fvisibility=hidden -fPIC  -g -O2   -c base.cpp -o base.o
+clang++ -std=gnu++20 -I"/opt/homebrew/Cellar/r/4.6.1/lib/R/include" -DNDEBUG -I/opt/homebrew/Cellar/imagemagick/7.1.2-27/include/ImageMagick-7 -DMAGICKCORE_HDRI_ENABLE=1 -DMAGICKCORE_QUANTUM_DEPTH=16 -DMAGICKCORE_CHANNEL_MASK_DEPTH=32 -I'/opt/homebrew/lib/R/4.6/site-library/Rcpp/include' -I/opt/homebrew/opt/gettext/include -I/opt/homebrew/opt/readline/include -I/opt/homebrew/opt/xz/include -I/opt/homebrew/include   -fvisibility=hidden -fPIC  -g -O2   -c color.cpp -o color.o
+clang++ -std=gnu++20 -I"/opt/homebrew/Cellar/r/4.6.1/lib/R/include" -DNDEBUG -I/opt/homebrew/Cellar/imagemagick/7.1.2-27/include/ImageMagick-7 -DMAGICKCORE_HDRI_ENABLE=1 -DMAGICKCORE_QUANTUM_DEPTH=16 -DMAGICKCORE_CHANNEL_MASK_DEPTH=32 -I'/opt/homebrew/lib/R/4.6/site-library/Rcpp/include' -I/opt/homebrew/opt/gettext/include -I/opt/homebrew/opt/readline/include -I/opt/homebrew/opt/xz/include -I/opt/homebrew/include   -fvisibility=hidden -fPIC  -g -O2   -c composite.cpp -o composite.o
+clang++ -std=gnu++20 -I"/opt/homebrew/Cellar/r/4.6.1/lib/R/include" -DNDEBUG -I/opt/homebrew/Cellar/imagemagick/7.1.2-27/include/ImageMagick-7 -DMAGICKCORE_HDRI_ENABLE=1 -DMAGICKCORE_QUANTUM_DEPTH=16 -DMAGICKCORE_CHANNEL_MASK_DEPTH=32 -I'/opt/homebrew/lib/R/4.6/site-library/Rcpp/include' -I/opt/homebrew/opt/gettext/include -I/opt/homebrew/opt/readline/include -I/opt/homebrew/opt/xz/include -I/opt/homebrew/include   -fvisibility=hidden -fPIC  -g -O2   -c config.cc -o config.o
+clang++ -std=gnu++20 -I"/opt/homebrew/Cellar/r/4.6.1/lib/R/include" -DNDEBUG -I/opt/homebrew/Cellar/imagemagick/7.1.2-27/include/ImageMagick-7 -DMAGICKCORE_HDRI_ENABLE=1 -DMAGICKCORE_QUANTUM_DEPTH=16 -DMAGICKCORE_CHANNEL_MASK_DEPTH=32 -I'/opt/homebrew/lib/R/4.6/site-library/Rcpp/include' -I/opt/homebrew/opt/gettext/include -I/opt/homebrew/opt/readline/include -I/opt/homebrew/opt/xz/include -I/opt/homebrew/include   -fvisibility=hidden -fPIC  -g -O2   -c convolve.cpp -o convolve.o
+clang++ -std=gnu++20 -I"/opt/homebrew/Cellar/r/4.6.1/lib/R/include" -DNDEBUG -I/opt/homebrew/Cellar/imagemagick/7.1.2-27/include/ImageMagick-7 -DMAGICKCORE_HDRI_ENABLE=1 -DMAGICKCORE_QUANTUM_DEPTH=16 -DMAGICKCORE_CHANNEL_MASK_DEPTH=32 -I'/opt/homebrew/lib/R/4.6/site-library/Rcpp/include' -I/opt/homebrew/opt/gettext/include -I/opt/homebrew/opt/readline/include -I/opt/homebrew/opt/xz/include -I/opt/homebrew/include   -fvisibility=hidden -fPIC  -g -O2   -c device.cpp -o device.o
+clang++ -std=gnu++20 -I"/opt/homebrew/Cellar/r/4.6.1/lib/R/include" -DNDEBUG -I/opt/homebrew/Cellar/imagemagick/7.1.2-27/include/ImageMagick-7 -DMAGICKCORE_HDRI_ENABLE=1 -DMAGICKCORE_QUANTUM_DEPTH=16 -DMAGICKCORE_CHANNEL_MASK_DEPTH=32 -I'/opt/homebrew/lib/R/4.6/site-library/Rcpp/include' -I/opt/homebrew/opt/gettext/include -I/opt/homebrew/opt/readline/include -I/opt/homebrew/opt/xz/include -I/opt/homebrew/include   -fvisibility=hidden -fPIC  -g -O2   -c edges.cpp -o edges.o
+clang++ -std=gnu++20 -I"/opt/homebrew/Cellar/r/4.6.1/lib/R/include" -DNDEBUG -I/opt/homebrew/Cellar/imagemagick/7.1.2-27/include/ImageMagick-7 -DMAGICKCORE_HDRI_ENABLE=1 -DMAGICKCORE_QUANTUM_DEPTH=16 -DMAGICKCORE_CHANNEL_MASK_DEPTH=32 -I'/opt/homebrew/lib/R/4.6/site-library/Rcpp/include' -I/opt/homebrew/opt/gettext/include -I/opt/homebrew/opt/readline/include -I/opt/homebrew/opt/xz/include -I/opt/homebrew/include   -fvisibility=hidden -fPIC  -g -O2   -c edit.cpp -o edit.o
+clang++ -std=gnu++20 -I"/opt/homebrew/Cellar/r/4.6.1/lib/R/include" -DNDEBUG -I/opt/homebrew/Cellar/imagemagick/7.1.2-27/include/ImageMagick-7 -DMAGICKCORE_HDRI_ENABLE=1 -DMAGICKCORE_QUANTUM_DEPTH=16 -DMAGICKCORE_CHANNEL_MASK_DEPTH=32 -I'/opt/homebrew/lib/R/4.6/site-library/Rcpp/include' -I/opt/homebrew/opt/gettext/include -I/opt/homebrew/opt/readline/include -I/opt/homebrew/opt/xz/include -I/opt/homebrew/include   -fvisibility=hidden -fPIC  -g -O2   -c fonts.cpp -o fonts.o
+clang++ -std=gnu++20 -I"/opt/homebrew/Cellar/r/4.6.1/lib/R/include" -DNDEBUG -I/opt/homebrew/Cellar/imagemagick/7.1.2-27/include/ImageMagick-7 -DMAGICKCORE_HDRI_ENABLE=1 -DMAGICKCORE_QUANTUM_DEPTH=16 -DMAGICKCORE_CHANNEL_MASK_DEPTH=32 -I'/opt/homebrew/lib/R/4.6/site-library/Rcpp/include' -I/opt/homebrew/opt/gettext/include -I/opt/homebrew/opt/readline/include -I/opt/homebrew/opt/xz/include -I/opt/homebrew/include   -fvisibility=hidden -fPIC  -g -O2   -c options.cpp -o options.o
+clang++ -std=gnu++20 -I"/opt/homebrew/Cellar/r/4.6.1/lib/R/include" -DNDEBUG -I/opt/homebrew/Cellar/imagemagick/7.1.2-27/include/ImageMagick-7 -DMAGICKCORE_HDRI_ENABLE=1 -DMAGICKCORE_QUANTUM_DEPTH=16 -DMAGICKCORE_CHANNEL_MASK_DEPTH=32 -I'/opt/homebrew/lib/R/4.6/site-library/Rcpp/include' -I/opt/homebrew/opt/gettext/include -I/opt/homebrew/opt/readline/include -I/opt/homebrew/opt/xz/include -I/opt/homebrew/include   -fvisibility=hidden -fPIC  -g -O2   -c properties.cpp -o properties.o
+clang++ -std=gnu++20 -I"/opt/homebrew/Cellar/r/4.6.1/lib/R/include" -DNDEBUG -I/opt/homebrew/Cellar/imagemagick/7.1.2-27/include/ImageMagick-7 -DMAGICKCORE_HDRI_ENABLE=1 -DMAGICKCORE_QUANTUM_DEPTH=16 -DMAGICKCORE_CHANNEL_MASK_DEPTH=32 -I'/opt/homebrew/lib/R/4.6/site-library/Rcpp/include' -I/opt/homebrew/opt/gettext/include -I/opt/homebrew/opt/readline/include -I/opt/homebrew/opt/xz/include -I/opt/homebrew/include   -fvisibility=hidden -fPIC  -g -O2   -c resize.cpp -o resize.o
+clang++ -std=gnu++20 -I"/opt/homebrew/Cellar/r/4.6.1/lib/R/include" -DNDEBUG -I/opt/homebrew/Cellar/imagemagick/7.1.2-27/include/ImageMagick-7 -DMAGICKCORE_HDRI_ENABLE=1 -DMAGICKCORE_QUANTUM_DEPTH=16 -DMAGICKCORE_CHANNEL_MASK_DEPTH=32 -I'/opt/homebrew/lib/R/4.6/site-library/Rcpp/include' -I/opt/homebrew/opt/gettext/include -I/opt/homebrew/opt/readline/include -I/opt/homebrew/opt/xz/include -I/opt/homebrew/include   -fvisibility=hidden -fPIC  -g -O2   -c segment.cpp -o segment.o
+clang++ -std=gnu++20 -I"/opt/homebrew/Cellar/r/4.6.1/lib/R/include" -DNDEBUG -I/opt/homebrew/Cellar/imagemagick/7.1.2-27/include/ImageMagick-7 -DMAGICKCORE_HDRI_ENABLE=1 -DMAGICKCORE_QUANTUM_DEPTH=16 -DMAGICKCORE_CHANNEL_MASK_DEPTH=32 -I'/opt/homebrew/lib/R/4.6/site-library/Rcpp/include' -I/opt/homebrew/opt/gettext/include -I/opt/homebrew/opt/readline/include -I/opt/homebrew/opt/xz/include -I/opt/homebrew/include   -fvisibility=hidden -fPIC  -g -O2   -c transformations.cpp -o transformations.o
+clang++ -std=gnu++20 -dynamiclib -Wl,-headerpad_max_install_names -undefined dynamic_lookup -L/opt/homebrew/Cellar/r/4.6.1/lib/R/lib -L/opt/homebrew/opt/gettext/lib -L/opt/homebrew/opt/readline/lib -L/opt/homebrew/opt/xz/lib -L/opt/homebrew/lib -o magick.so RcppExports.o animation.o attributes.o base.o color.o composite.o config.o convolve.o device.o edges.o edit.o fonts.o options.o properties.o resize.o segment.o transformations.o -L/opt/homebrew/Cellar/imagemagick/7.1.2-27/lib -lMagick++-7.Q16HDRI -lMagickWand-7.Q16HDRI -lMagickCore-7.Q16HDRI -L/opt/homebrew/Cellar/r/4.6.1/lib/R/lib -lR
+installing to /opt/homebrew/lib/R/4.6/site-library/00LOCK-magick/00new/magick/libs
+** R
+** inst
+** byte-compile and prepare package for lazy loading
+** help
+*** installing help indices
+** building package indices
+** installing vignettes
+** testing if installed package can be loaded from temporary location
+** checking absolute paths in shared objects and dynamic libraries
+** testing if installed package can be loaded from final location
+** testing if installed package keeps a record of temporary installation path
+* DONE (magick)
+begin installing package ‘ggpath’
+* installing *source* package ‘ggpath’ ...
+** this is package ‘ggpath’ version ‘1.1.1’
+** package ‘ggpath’ successfully unpacked and MD5 sums checked
+** using staged installation
+** R
+** inst
+** byte-compile and prepare package for lazy loading
+** help
+*** installing help indices
+*** copying figures
+** building package indices
+** testing if installed package can be loaded from temporary location
+** testing if installed package can be loaded from final location
+** testing if installed package keeps a record of temporary installation path
+* DONE (ggpath)
+begin installing package ‘nflplotR’
+* installing *source* package ‘nflplotR’ ...
+** this is package ‘nflplotR’ version ‘1.6.0’
+** package ‘nflplotR’ successfully unpacked and MD5 sums checked
+** using staged installation
+** R
+** byte-compile and prepare package for lazy loading
+** help
+*** installing help indices
+*** copying figures
+** building package indices
+** testing if installed package can be loaded from temporary location
+** testing if installed package can be loaded from final location
+** testing if installed package keeps a record of temporary installation path
+* DONE (nflplotR)
+begin installing package ‘nflverse’
+* installing *source* package ‘nflverse’ ...
+** this is package ‘nflverse’ version ‘1.0.3’
+** package ‘nflverse’ successfully unpacked and MD5 sums checked
+** using staged installation
+** R
+** byte-compile and prepare package for lazy loading
+** help
+*** installing help indices
+*** copying figures
+** building package indices
+** testing if installed package can be loaded from temporary location
+** testing if installed package can be loaded from final location
+** testing if installed package keeps a record of temporary installation path
+* DONE (nflverse)
+
+The downloaded source packages are in
+	‘/private/var/folders/xc/mwv04t7x4bbfbym30g4nclf40000gn/T/Rtmp5WeNcj/downloaded_packages’

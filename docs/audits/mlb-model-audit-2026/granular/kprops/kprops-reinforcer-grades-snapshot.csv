@@ -1,0 +1,4 @@
+market,source,modelVersion,n,minDate,maxDate,pushes,nCorrect,nGraded,snapshotUtc
+k_prop,live_pregame,live,2686,2026-03-25,2026-07-24,2,1411,2684,2026-07-25T21:39:00Z
+k_prop,walkforward_replay,wf-19288f01-p1,3090,2026-03-25,2026-07-24,1,1490,2522,2026-07-25T21:39:00Z
+k_prop,walkforward_replay,wf-19288f01-p2,3090,2026-03-25,2026-07-24,1,1490,2522,2026-07-25T21:39:00Z

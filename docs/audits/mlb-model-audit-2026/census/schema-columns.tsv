@@ -1,0 +1,610 @@
+TABLE_NAME	ORDINAL_POSITION	COLUMN_NAME	COLUMN_TYPE	IS_NULLABLE	COLUMN_DEFAULT	COLUMN_KEY
+games	1	id	int	NO	\N	PRI
+games	2	fileId	int	NO	\N	
+games	3	gameDate	varchar(20)	NO	\N	MUL
+games	4	startTimeEst	varchar(12)	NO	TBD	
+games	5	awayTeam	varchar(128)	NO	\N	
+games	6	awayBookSpread	decimal(6,1)	YES	\N	
+games	7	awayModelSpread	decimal(6,1)	YES	\N	
+games	8	homeTeam	varchar(128)	NO	\N	
+games	9	homeBookSpread	decimal(6,1)	YES	\N	
+games	10	homeModelSpread	decimal(6,1)	YES	\N	
+games	11	bookTotal	decimal(6,1)	YES	\N	
+games	12	modelTotal	decimal(6,1)	YES	\N	
+games	13	spreadEdge	varchar(128)	YES	\N	
+games	14	spreadDiff	decimal(5,1)	YES	\N	
+games	15	totalEdge	varchar(128)	YES	\N	
+games	16	totalDiff	decimal(5,1)	YES	\N	
+games	17	sport	varchar(64)	NO	NCAAM	MUL
+games	18	createdAt	timestamp	NO	CURRENT_TIMESTAMP	
+games	19	gameType	enum('regular_season','conference_tournament')	NO	regular_season	
+games	20	conference	varchar(128)	YES	\N	
+games	21	publishedToFeed	tinyint(1)	NO	0	
+games	22	sortOrder	int	NO	9999	
+games	23	rotNums	varchar(32)	YES	\N	
+games	24	ncaaContestId	varchar(20)	YES	\N	
+games	25	spreadAwayBetsPct	tinyint	YES	\N	
+games	26	spreadAwayMoneyPct	tinyint	YES	\N	
+games	27	totalOverBetsPct	tinyint	YES	\N	
+games	28	totalOverMoneyPct	tinyint	YES	\N	
+games	29	mlAwayBetsPct	tinyint	YES	\N	
+games	30	mlAwayMoneyPct	tinyint	YES	\N	
+games	31	awayML	varchar(16)	YES	\N	
+games	32	homeML	varchar(16)	YES	\N	
+games	33	gameStatus	enum('upcoming','live','final','postponed','suspended')	NO	upcoming	
+games	34	awayScore	int	YES	\N	
+games	35	homeScore	int	YES	\N	
+games	36	gameClock	varchar(32)	YES	\N	
+games	37	modelAwayML	varchar(16)	YES	\N	
+games	38	modelHomeML	varchar(16)	YES	\N	
+games	39	modelAwayScore	decimal(6,2)	YES	\N	
+games	40	modelHomeScore	decimal(6,2)	YES	\N	
+games	41	modelOverRate	decimal(5,2)	YES	\N	
+games	42	modelUnderRate	decimal(5,2)	YES	\N	
+games	43	modelAwayWinPct	decimal(5,2)	YES	\N	
+games	44	modelHomeWinPct	decimal(5,2)	YES	\N	
+games	45	modelSpreadClamped	tinyint(1)	YES	0	
+games	46	modelTotalClamped	tinyint(1)	YES	0	
+games	47	modelCoverDirection	varchar(8)	YES	\N	
+games	48	modelRunAt	bigint	YES	\N	
+games	49	publishedModel	tinyint(1)	NO	0	
+games	50	awaySpreadOdds	varchar(16)	YES	\N	
+games	51	homeSpreadOdds	varchar(16)	YES	\N	
+games	52	overOdds	varchar(16)	YES	\N	
+games	53	underOdds	varchar(16)	YES	\N	
+games	54	openAwaySpread	varchar(16)	YES	\N	
+games	55	openAwaySpreadOdds	varchar(16)	YES	\N	
+games	56	openHomeSpread	varchar(16)	YES	\N	
+games	57	openHomeSpreadOdds	varchar(16)	YES	\N	
+games	58	openTotal	varchar(16)	YES	\N	
+games	59	openOverOdds	varchar(16)	YES	\N	
+games	60	openUnderOdds	varchar(16)	YES	\N	
+games	61	openAwayML	varchar(16)	YES	\N	
+games	62	openHomeML	varchar(16)	YES	\N	
+games	63	awayGoalie	varchar(128)	YES	\N	
+games	64	homeGoalie	varchar(128)	YES	\N	
+games	65	awayGoalieConfirmed	tinyint(1)	YES	0	
+games	66	homeGoalieConfirmed	tinyint(1)	YES	0	
+games	67	modelAwayPLCoverPct	decimal(5,2)	YES	\N	
+games	68	modelHomePLCoverPct	decimal(5,2)	YES	\N	
+games	69	modelAwayPuckLine	varchar(8)	YES	\N	
+games	70	modelHomePuckLine	varchar(8)	YES	\N	
+games	71	modelAwayPLOdds	varchar(16)	YES	\N	
+games	72	modelHomePLOdds	varchar(16)	YES	\N	
+games	73	modelOverOdds	varchar(16)	YES	\N	
+games	74	modelUnderOdds	varchar(16)	YES	\N	
+games	75	bracketGameId	int	YES	\N	
+games	76	bracketRound	varchar(20)	YES	\N	
+games	77	bracketRegion	varchar(20)	YES	\N	
+games	78	bracketSlot	int	YES	\N	
+games	79	nextBracketGameId	int	YES	\N	
+games	80	nextBracketSlot	enum('top','bottom')	YES	\N	
+games	81	modelAwaySpreadOdds	varchar(16)	YES	\N	
+games	82	modelHomeSpreadOdds	varchar(16)	YES	\N	
+games	83	mlbGamePk	int	YES	\N	UNI
+games	84	broadcaster	varchar(128)	YES	\N	
+games	85	awayStartingPitcher	varchar(128)	YES	\N	
+games	86	homeStartingPitcher	varchar(128)	YES	\N	
+games	87	awayPitcherConfirmed	tinyint(1)	YES	0	
+games	88	homePitcherConfirmed	tinyint(1)	YES	0	
+games	89	venue	varchar(128)	YES	\N	
+games	90	doubleHeader	varchar(2)	YES	N	
+games	91	gameNumber	tinyint	YES	1	
+games	92	awayRunLine	varchar(8)	YES	\N	
+games	93	homeRunLine	varchar(8)	YES	\N	
+games	94	awayRunLineOdds	varchar(16)	YES	\N	
+games	95	homeRunLineOdds	varchar(16)	YES	\N	
+games	96	rlAwayBetsPct	tinyint	YES	\N	
+games	97	rlAwayMoneyPct	tinyint	YES	\N	
+games	98	actualAwayScore	int	YES	\N	
+games	99	actualHomeScore	int	YES	\N	
+games	100	fgMlResult	varchar(16)	YES	\N	
+games	101	fgRlResult	varchar(16)	YES	\N	
+games	102	fgTotalResult	varchar(16)	YES	\N	
+games	103	fgMlCorrect	tinyint	YES	\N	
+games	104	fgRlCorrect	tinyint	YES	\N	
+games	105	fgTotalCorrect	tinyint	YES	\N	
+games	106	fgBacktestRunAt	bigint	YES	\N	
+games	107	f5AwayRunLine	varchar(8)	YES	\N	
+games	108	f5HomeRunLine	varchar(8)	YES	\N	
+games	109	f5AwayRunLineOdds	varchar(16)	YES	\N	
+games	110	f5HomeRunLineOdds	varchar(16)	YES	\N	
+games	111	f5Total	varchar(8)	YES	\N	
+games	112	f5OverOdds	varchar(16)	YES	\N	
+games	113	f5UnderOdds	varchar(16)	YES	\N	
+games	114	f5AwayML	varchar(16)	YES	\N	
+games	115	f5HomeML	varchar(16)	YES	\N	
+games	116	modelF5AwayScore	decimal(5,2)	YES	\N	
+games	117	modelF5HomeScore	decimal(5,2)	YES	\N	
+games	118	modelF5Total	decimal(5,1)	YES	\N	
+games	119	modelF5OverRate	decimal(5,2)	YES	\N	
+games	120	modelF5UnderRate	decimal(5,2)	YES	\N	
+games	121	modelF5AwayWinPct	decimal(5,2)	YES	\N	
+games	122	modelF5HomeWinPct	decimal(5,2)	YES	\N	
+games	123	modelF5AwayML	varchar(16)	YES	\N	
+games	124	modelF5HomeML	varchar(16)	YES	\N	
+games	125	modelF5AwayRLCoverPct	decimal(5,2)	YES	\N	
+games	126	modelF5HomeRLCoverPct	decimal(5,2)	YES	\N	
+games	127	modelF5OverOdds	varchar(16)	YES	\N	
+games	128	modelF5UnderOdds	varchar(16)	YES	\N	
+games	129	actualF5AwayScore	int	YES	\N	
+games	130	actualF5HomeScore	int	YES	\N	
+games	131	f5MlResult	varchar(16)	YES	\N	
+games	132	f5RlResult	varchar(16)	YES	\N	
+games	133	f5TotalResult	varchar(16)	YES	\N	
+games	134	f5MlCorrect	tinyint	YES	\N	
+games	135	f5RlCorrect	tinyint	YES	\N	
+games	136	f5TotalCorrect	tinyint	YES	\N	
+games	137	f5BacktestRunAt	bigint	YES	\N	
+games	138	nrfiOverOdds	varchar(16)	YES	\N	
+games	139	yrfiUnderOdds	varchar(16)	YES	\N	
+games	140	modelPNrfi	decimal(5,2)	YES	\N	
+games	141	modelNrfiOdds	varchar(16)	YES	\N	
+games	142	modelYrfiOdds	varchar(16)	YES	\N	
+games	143	nrfiActualResult	varchar(16)	YES	\N	
+games	144	nrfiBacktestResult	varchar(16)	YES	\N	
+games	145	nrfiCorrect	tinyint	YES	\N	
+games	146	nrfiBacktestRunAt	bigint	YES	\N	
+games	147	modelAwayHrPct	decimal(5,2)	YES	\N	
+games	148	modelHomeHrPct	decimal(5,2)	YES	\N	
+games	149	modelBothHrPct	decimal(5,2)	YES	\N	
+games	150	modelAwayExpHr	decimal(4,2)	YES	\N	
+games	151	modelHomeExpHr	decimal(4,2)	YES	\N	
+games	152	oddsSource	enum('open','dk')	YES	\N	
+games	153	modelInningHomeExp	text	YES	\N	
+games	154	modelInningAwayExp	text	YES	\N	
+games	155	modelInningTotalExp	text	YES	\N	
+games	156	modelInningPHomeScores	text	YES	\N	
+games	157	modelInningPAwayScores	text	YES	\N	
+games	158	modelInningPNeitherScores	text	YES	\N	
+games	159	nrfiCombinedSignal	double	YES	\N	
+games	160	nrfiFilterPass	tinyint	YES	\N	
+games	161	modelF5AwayRlOdds	varchar(16)	YES	\N	
+games	162	modelF5HomeRlOdds	varchar(16)	YES	\N	
+games	163	modelF5PushPct	decimal(6,4)	YES	\N	
+games	164	modelF5PushRaw	decimal(6,4)	YES	\N	
+games	165	actualFgTotal	decimal(5,1)	YES	\N	
+games	166	actualF5Total	decimal(5,1)	YES	\N	
+games	167	actualNrfiBinary	tinyint	YES	\N	
+games	168	brierFgTotal	decimal(7,6)	YES	\N	
+games	169	brierF5Total	decimal(7,6)	YES	\N	
+games	170	brierNrfi	decimal(7,6)	YES	\N	
+games	171	brierFgMl	decimal(7,6)	YES	\N	
+games	172	brierF5Ml	decimal(7,6)	YES	\N	
+games	173	outcomeIngestedAt	bigint	YES	\N	
+games	174	modelProjTotal	decimal(6,2)	YES	\N	
+games	175	modelWeatherAdj	decimal(5,4)	YES	\N	
+games	176	rescheduledFrom	varchar(10)	YES	\N	
+mlb_bullpen_stats	1	id	int	NO	\N	PRI
+mlb_bullpen_stats	2	teamAbbrev	varchar(8)	NO	\N	MUL
+mlb_bullpen_stats	3	mlbTeamId	int	NO	\N	
+mlb_bullpen_stats	4	season	int	NO	\N	
+mlb_bullpen_stats	5	relieverCount	int	NO	\N	
+mlb_bullpen_stats	6	totalIp	double	NO	\N	
+mlb_bullpen_stats	7	totalEr	int	YES	\N	
+mlb_bullpen_stats	8	totalK	int	YES	\N	
+mlb_bullpen_stats	9	totalBb	int	YES	\N	
+mlb_bullpen_stats	10	totalHr	int	YES	\N	
+mlb_bullpen_stats	11	totalH	int	YES	\N	
+mlb_bullpen_stats	12	eraBullpen	double	YES	\N	
+mlb_bullpen_stats	13	k9Bullpen	double	YES	\N	
+mlb_bullpen_stats	14	bb9Bullpen	double	YES	\N	
+mlb_bullpen_stats	15	hr9Bullpen	double	YES	\N	
+mlb_bullpen_stats	16	whipBullpen	double	YES	\N	
+mlb_bullpen_stats	17	kBbRatio	double	YES	\N	
+mlb_bullpen_stats	18	fipBullpen	double	YES	\N	
+mlb_bullpen_stats	19	lastFetchedAt	bigint	YES	\N	
+mlb_bullpen_stats	20	createdAt	timestamp	NO	CURRENT_TIMESTAMP	
+mlb_bullpen_stats	21	updatedAt	timestamp	NO	CURRENT_TIMESTAMP	
+mlb_calibration_constants	1	id	int	NO	\N	PRI
+mlb_calibration_constants	2	paramName	varchar(64)	NO	\N	UNI
+mlb_calibration_constants	3	currentValue	decimal(12,8)	NO	\N	
+mlb_calibration_constants	4	baselineValue	decimal(12,8)	YES	\N	
+mlb_calibration_constants	5	previousValue	decimal(12,8)	YES	\N	
+mlb_calibration_constants	6	sampleSize	int	YES	\N	
+mlb_calibration_constants	7	ciLower	decimal(12,8)	YES	\N	
+mlb_calibration_constants	8	ciUpper	decimal(12,8)	YES	\N	
+mlb_calibration_constants	9	updateSource	varchar(64)	YES	\N	
+mlb_calibration_constants	10	lastUpdatedAt	bigint	NO	\N	MUL
+mlb_calibration_constants	11	createdAt	timestamp	NO	CURRENT_TIMESTAMP	
+mlb_drift_state	1	id	int	NO	\N	PRI
+mlb_drift_state	2	market	varchar(32)	NO	\N	UNI
+mlb_drift_state	3	windowSize	int	NO	50	
+mlb_drift_state	4	rollingValue	decimal(8,6)	YES	\N	
+mlb_drift_state	5	baselineValue	decimal(8,6)	YES	\N	
+mlb_drift_state	6	delta	decimal(8,6)	YES	\N	
+mlb_drift_state	7	direction	varchar(8)	YES	\N	
+mlb_drift_state	8	driftDetected	tinyint	YES	0	
+mlb_drift_state	9	sampleSize	int	YES	\N	
+mlb_drift_state	10	lastCheckedAt	bigint	YES	\N	
+mlb_drift_state	11	lastRecalibrationAt	bigint	YES	\N	
+mlb_drift_state	12	consecutiveDriftCount	int	YES	0	
+mlb_drift_state	13	createdAt	timestamp	NO	CURRENT_TIMESTAMP	
+mlb_drift_state	14	updatedAt	timestamp	NO	CURRENT_TIMESTAMP	
+mlb_game_backtest	1	id	int	NO	\N	PRI
+mlb_game_backtest	2	gameId	int	NO	\N	MUL
+mlb_game_backtest	3	gameDate	varchar(10)	NO	\N	MUL
+mlb_game_backtest	4	market	varchar(16)	NO	\N	MUL
+mlb_game_backtest	5	modelSide	varchar(32)	YES	\N	
+mlb_game_backtest	6	modelProb	decimal(5,2)	YES	\N	
+mlb_game_backtest	7	bookLine	varchar(16)	YES	\N	
+mlb_game_backtest	8	bookOdds	varchar(16)	YES	\N	
+mlb_game_backtest	9	bookNoVigProb	decimal(5,4)	YES	\N	
+mlb_game_backtest	10	edge	decimal(5,4)	YES	\N	
+mlb_game_backtest	11	ev	decimal(6,2)	YES	\N	
+mlb_game_backtest	12	confidencePassed	tinyint	YES	\N	
+mlb_game_backtest	13	result	varchar(16)	YES	\N	MUL
+mlb_game_backtest	14	correct	tinyint	YES	\N	
+mlb_game_backtest	15	actualAwayScore	int	YES	\N	
+mlb_game_backtest	16	actualHomeScore	int	YES	\N	
+mlb_game_backtest	17	awayPitcher	varchar(128)	YES	\N	
+mlb_game_backtest	18	homePitcher	varchar(128)	YES	\N	
+mlb_game_backtest	19	backtestRunAt	bigint	YES	\N	
+mlb_game_backtest	20	createdAt	timestamp	NO	CURRENT_TIMESTAMP	
+mlb_game_backtest	21	homeTeam	varchar(128)	YES	\N	
+mlb_game_backtest	22	awayTeam	varchar(128)	YES	\N	
+mlb_game_backtest	23	dayNight	varchar(2)	YES	\N	
+mlb_game_backtest	24	isDoubleheader	tinyint(1)	YES	0	
+mlb_game_backtest	25	gameNumber	tinyint	YES	1	
+mlb_game_backtest	26	quarantineReason	text	YES	\N	
+mlb_game_backtest	27	bookOddsOpposite	varchar(16)	YES	\N	
+mlb_game_backtest	28	closingOdds	varchar(16)	YES	\N	
+mlb_game_backtest	29	closingOddsOpposite	varchar(16)	YES	\N	
+mlb_game_backtest	30	clv	decimal(6,4)	YES	\N	
+mlb_game_backtest	31	profitLoss	decimal(8,4)	YES	\N	
+mlb_game_backtest	32	leakageSafe	tinyint	YES	1	
+mlb_game_backtest	33	modelRunAt	bigint	YES	\N	
+mlb_game_backtest	34	gameTime	varchar(32)	YES	\N	
+mlb_game_backtest	35	gameStartUtcMs	bigint	YES	\N	
+mlb_game_backtest	36	voidReason	text	YES	\N	
+mlb_game_backtest	37	auditVersion	varchar(64)	YES	\N	
+mlb_hr_props	1	id	int	NO	\N	PRI
+mlb_hr_props	2	gameId	int	NO	\N	MUL
+mlb_hr_props	3	side	varchar(8)	NO	\N	
+mlb_hr_props	4	playerName	varchar(128)	NO	\N	
+mlb_hr_props	5	mlbamId	int	YES	\N	MUL
+mlb_hr_props	6	anPlayerId	int	YES	\N	
+mlb_hr_props	7	teamAbbrev	varchar(8)	YES	\N	
+mlb_hr_props	8	bookLine	decimal(4,1)	YES	0.5	
+mlb_hr_props	9	fdOverOdds	varchar(16)	YES	\N	
+mlb_hr_props	10	fdUnderOdds	varchar(16)	YES	\N	
+mlb_hr_props	11	consensusOverOdds	varchar(16)	YES	\N	
+mlb_hr_props	12	consensusUnderOdds	varchar(16)	YES	\N	
+mlb_hr_props	13	anNoVigOverPct	varchar(16)	YES	\N	
+mlb_hr_props	14	modelPHr	varchar(16)	YES	\N	
+mlb_hr_props	15	modelOverOdds	varchar(16)	YES	\N	
+mlb_hr_props	16	edgeOver	varchar(16)	YES	\N	
+mlb_hr_props	17	evOver	varchar(16)	YES	\N	
+mlb_hr_props	18	verdict	varchar(16)	YES	\N	
+mlb_hr_props	19	actualHr	tinyint	YES	\N	
+mlb_hr_props	20	backtestResult	varchar(16)	YES	\N	
+mlb_hr_props	21	modelCorrect	tinyint	YES	\N	
+mlb_hr_props	22	modelRunAt	bigint	YES	\N	
+mlb_hr_props	23	backtestRunAt	bigint	YES	\N	
+mlb_hr_props	24	createdAt	timestamp	NO	CURRENT_TIMESTAMP	
+mlb_hr_props	25	updatedAt	timestamp	NO	CURRENT_TIMESTAMP	
+mlb_lineups	1	id	int	NO	\N	PRI
+mlb_lineups	2	gameId	int	NO	\N	UNI
+mlb_lineups	3	scrapedAt	bigint	NO	\N	
+mlb_lineups	4	awayPitcherName	varchar(128)	YES	\N	
+mlb_lineups	5	awayPitcherHand	varchar(4)	YES	\N	
+mlb_lineups	6	awayPitcherEra	varchar(32)	YES	\N	
+mlb_lineups	7	awayPitcherMlbamId	int	YES	\N	
+mlb_lineups	8	awayPitcherConfirmed	tinyint(1)	YES	0	
+mlb_lineups	9	homePitcherName	varchar(128)	YES	\N	
+mlb_lineups	10	homePitcherHand	varchar(4)	YES	\N	
+mlb_lineups	11	homePitcherEra	varchar(32)	YES	\N	
+mlb_lineups	12	homePitcherMlbamId	int	YES	\N	
+mlb_lineups	13	homePitcherConfirmed	tinyint(1)	YES	0	
+mlb_lineups	14	awayLineup	text	YES	\N	
+mlb_lineups	15	homeLineup	text	YES	\N	
+mlb_lineups	16	awayLineupConfirmed	tinyint(1)	YES	0	
+mlb_lineups	17	homeLineupConfirmed	tinyint(1)	YES	0	
+mlb_lineups	18	weatherIcon	varchar(8)	YES	\N	
+mlb_lineups	19	weatherTemp	varchar(16)	YES	\N	
+mlb_lineups	20	weatherWind	varchar(64)	YES	\N	
+mlb_lineups	21	weatherPrecip	int	YES	\N	
+mlb_lineups	22	weatherDome	tinyint(1)	YES	0	
+mlb_lineups	23	umpire	varchar(128)	YES	\N	
+mlb_lineups	24	createdAt	timestamp	NO	CURRENT_TIMESTAMP	
+mlb_lineups	25	updatedAt	timestamp	NO	CURRENT_TIMESTAMP	
+mlb_lineups	26	awayPitcherRotowireId	int	YES	\N	
+mlb_lineups	27	homePitcherRotowireId	int	YES	\N	
+mlb_lineups	28	lineupHash	varchar(64)	YES	\N	
+mlb_lineups	29	lineupVersion	int	NO	0	
+mlb_lineups	30	lineupModeledAt	bigint	YES	\N	
+mlb_lineups	31	lineupModeledVersion	int	NO	0	
+mlb_model_learning_log	1	id	int	NO	\N	PRI
+mlb_model_learning_log	2	market	varchar(16)	NO	\N	MUL
+mlb_model_learning_log	3	windowDays	int	NO	\N	
+mlb_model_learning_log	4	accuracyBefore	decimal(5,4)	YES	\N	
+mlb_model_learning_log	5	accuracyAfter	decimal(5,4)	YES	\N	
+mlb_model_learning_log	6	maeBefore	decimal(6,4)	YES	\N	
+mlb_model_learning_log	7	maeAfter	decimal(6,4)	YES	\N	
+mlb_model_learning_log	8	paramChanges	text	YES	\N	
+mlb_model_learning_log	9	triggerReason	varchar(32)	YES	\N	
+mlb_model_learning_log	10	sampleSize	int	YES	\N	
+mlb_model_learning_log	11	runAt	bigint	NO	\N	MUL
+mlb_model_learning_log	12	createdAt	timestamp	NO	CURRENT_TIMESTAMP	
+mlb_park_factors	1	id	int	NO	\N	PRI
+mlb_park_factors	2	venueId	int	NO	\N	UNI
+mlb_park_factors	3	venueName	varchar(128)	NO	\N	
+mlb_park_factors	4	teamAbbrev	varchar(8)	NO	\N	MUL
+mlb_park_factors	5	runs2024	int	YES	\N	
+mlb_park_factors	6	games2024	int	YES	\N	
+mlb_park_factors	7	avgRpg2024	double	YES	\N	
+mlb_park_factors	8	pf2024	double	YES	\N	
+mlb_park_factors	9	runs2025	int	YES	\N	
+mlb_park_factors	10	games2025	int	YES	\N	
+mlb_park_factors	11	avgRpg2025	double	YES	\N	
+mlb_park_factors	12	pf2025	double	YES	\N	
+mlb_park_factors	13	parkFactor3yr	double	NO	\N	
+mlb_park_factors	14	leagueAvgRpg	double	YES	\N	
+mlb_park_factors	15	lastFetchedAt	bigint	YES	\N	
+mlb_park_factors	16	createdAt	timestamp	NO	CURRENT_TIMESTAMP	
+mlb_park_factors	17	updatedAt	timestamp	NO	CURRENT_TIMESTAMP	
+mlb_park_factors	18	runs2026	int	YES	\N	
+mlb_park_factors	19	games2026	int	YES	\N	
+mlb_park_factors	20	avgRpg2026	double	YES	\N	
+mlb_park_factors	21	pf2026	double	YES	\N	
+mlb_park_factors	22	hrFactor	double	YES	\N	
+mlb_pitcher_rolling5	1	id	int	NO	\N	PRI
+mlb_pitcher_rolling5	2	mlbamId	int	NO	\N	UNI
+mlb_pitcher_rolling5	3	fullName	varchar(128)	NO	\N	MUL
+mlb_pitcher_rolling5	4	teamAbbrev	varchar(8)	NO	\N	
+mlb_pitcher_rolling5	5	startsIncluded	int	NO	\N	
+mlb_pitcher_rolling5	6	ip5	double	YES	\N	
+mlb_pitcher_rolling5	7	er5	int	YES	\N	
+mlb_pitcher_rolling5	8	h5	int	YES	\N	
+mlb_pitcher_rolling5	9	bb5	int	YES	\N	
+mlb_pitcher_rolling5	10	k5	int	YES	\N	
+mlb_pitcher_rolling5	11	hr5	int	YES	\N	
+mlb_pitcher_rolling5	12	era5	double	YES	\N	
+mlb_pitcher_rolling5	13	k9_5	double	YES	\N	
+mlb_pitcher_rolling5	14	bb9_5	double	YES	\N	
+mlb_pitcher_rolling5	15	hr9_5	double	YES	\N	
+mlb_pitcher_rolling5	16	whip5	double	YES	\N	
+mlb_pitcher_rolling5	17	fip5	double	YES	\N	
+mlb_pitcher_rolling5	18	lastStartDate	varchar(10)	YES	\N	
+mlb_pitcher_rolling5	19	firstStartDate	varchar(10)	YES	\N	
+mlb_pitcher_rolling5	20	lastFetchedAt	bigint	YES	\N	
+mlb_pitcher_rolling5	21	createdAt	timestamp	NO	CURRENT_TIMESTAMP	
+mlb_pitcher_rolling5	22	updatedAt	timestamp	NO	CURRENT_TIMESTAMP	
+mlb_pitcher_stats	1	id	int	NO	\N	PRI
+mlb_pitcher_stats	2	mlbamId	int	NO	\N	MUL
+mlb_pitcher_stats	3	fullName	varchar(128)	NO	\N	MUL
+mlb_pitcher_stats	4	teamAbbrev	varchar(8)	NO	\N	
+mlb_pitcher_stats	5	era	double	YES	\N	
+mlb_pitcher_stats	6	k9	double	YES	\N	
+mlb_pitcher_stats	7	bb9	double	YES	\N	
+mlb_pitcher_stats	8	hr9	double	YES	\N	
+mlb_pitcher_stats	9	whip	double	YES	\N	
+mlb_pitcher_stats	10	ip	double	YES	\N	
+mlb_pitcher_stats	11	gamesStarted	int	YES	\N	
+mlb_pitcher_stats	12	gamesPlayed	int	YES	\N	
+mlb_pitcher_stats	13	xera	double	YES	\N	
+mlb_pitcher_stats	14	lastFetchedAt	bigint	YES	\N	
+mlb_pitcher_stats	15	createdAt	timestamp	NO	CURRENT_TIMESTAMP	
+mlb_pitcher_stats	16	updatedAt	timestamp	NO	CURRENT_TIMESTAMP	
+mlb_pitcher_stats	17	fip	double	YES	\N	
+mlb_pitcher_stats	18	xfip	double	YES	\N	
+mlb_pitcher_stats	19	fipMinus	double	YES	\N	
+mlb_pitcher_stats	20	eraMinus	double	YES	\N	
+mlb_pitcher_stats	21	war	double	YES	\N	
+mlb_pitcher_stats	22	throwsHand	varchar(1)	YES	\N	
+mlb_pitcher_stats	23	nrfiStarts	int	YES	\N	
+mlb_pitcher_stats	24	nrfiCount	int	YES	\N	
+mlb_pitcher_stats	25	nrfiRate	double	YES	\N	
+mlb_pitcher_stats	26	f5RunsAllowedMean	double	YES	\N	
+mlb_pitcher_stats	27	fgRunsAllowedMean	double	YES	\N	
+mlb_pitcher_stats	28	ipMean3yr	double	YES	\N	
+mlb_pitcher_stats	29	nrfiSampleSeasons	varchar(32)	YES	\N	
+mlb_pitcher_stats	30	nrfiCalibVersion	varchar(32)	YES	\N	
+mlb_pitcher_stats	31	nrfiSeededAt	bigint	YES	\N	
+mlb_players	1	id	int	NO	\N	PRI
+mlb_players	2	brId	varchar(32)	NO	\N	UNI
+mlb_players	3	mlbamId	int	YES	\N	
+mlb_players	4	name	varchar(255)	NO	\N	
+mlb_players	5	position	varchar(64)	YES	\N	
+mlb_players	6	bats	varchar(4)	YES	\N	
+mlb_players	7	throws	varchar(4)	YES	\N	
+mlb_players	8	currentTeamBrAbbrev	varchar(8)	YES	\N	
+mlb_players	9	isActive	tinyint(1)	NO	1	
+mlb_players	10	lastSyncedAt	bigint	YES	\N	
+mlb_players	11	createdAt	timestamp	NO	CURRENT_TIMESTAMP	
+mlb_players	12	updatedAt	timestamp	NO	CURRENT_TIMESTAMP	
+mlb_players	13	iso	double	YES	\N	
+mlb_players	14	barrelPct	double	YES	\N	
+mlb_players	15	hardHitPct	double	YES	\N	
+mlb_players	16	xSlg	double	YES	\N	
+mlb_players	17	statcastFetchedAt	bigint	YES	\N	
+mlb_schedule_history	1	id	int	NO	\N	PRI
+mlb_schedule_history	2	anGameId	int	NO	\N	UNI
+mlb_schedule_history	3	gameDate	varchar(10)	NO	\N	MUL
+mlb_schedule_history	4	startTimeUtc	varchar(32)	NO	\N	
+mlb_schedule_history	5	gameStatus	varchar(16)	NO	scheduled	MUL
+mlb_schedule_history	6	awaySlug	varchar(128)	NO	\N	MUL
+mlb_schedule_history	7	awayAbbr	varchar(8)	NO	\N	
+mlb_schedule_history	8	awayName	varchar(128)	NO	\N	
+mlb_schedule_history	9	awayTeamId	int	NO	\N	
+mlb_schedule_history	10	awayScore	int	YES	\N	
+mlb_schedule_history	11	homeSlug	varchar(128)	NO	\N	MUL
+mlb_schedule_history	12	homeAbbr	varchar(8)	NO	\N	
+mlb_schedule_history	13	homeName	varchar(128)	NO	\N	
+mlb_schedule_history	14	homeTeamId	int	NO	\N	
+mlb_schedule_history	15	homeScore	int	YES	\N	
+mlb_schedule_history	16	dkAwayRunLine	decimal(4,1)	YES	\N	
+mlb_schedule_history	17	dkAwayRunLineOdds	varchar(16)	YES	\N	
+mlb_schedule_history	18	dkHomeRunLine	decimal(4,1)	YES	\N	
+mlb_schedule_history	19	dkHomeRunLineOdds	varchar(16)	YES	\N	
+mlb_schedule_history	20	dkTotal	decimal(5,1)	YES	\N	
+mlb_schedule_history	21	dkOverOdds	varchar(16)	YES	\N	
+mlb_schedule_history	22	dkUnderOdds	varchar(16)	YES	\N	
+mlb_schedule_history	23	dkAwayML	varchar(16)	YES	\N	
+mlb_schedule_history	24	dkHomeML	varchar(16)	YES	\N	
+mlb_schedule_history	25	awayRunLineCovered	tinyint(1)	YES	\N	
+mlb_schedule_history	26	homeRunLineCovered	tinyint(1)	YES	\N	
+mlb_schedule_history	27	totalResult	varchar(8)	YES	\N	
+mlb_schedule_history	28	awayWon	tinyint(1)	YES	\N	
+mlb_schedule_history	29	lastRefreshedAt	bigint	NO	\N	
+mlb_schedule_history	30	createdAt	timestamp	NO	CURRENT_TIMESTAMP	
+mlb_schedule_history	31	game_type	varchar(20)	YES	regular_season	
+mlb_schedule_history	32	dkClosingAwayRunLine	decimal(4,1)	YES	\N	
+mlb_schedule_history	33	dkClosingAwayRunLineOdds	varchar(16)	YES	\N	
+mlb_schedule_history	34	dkClosingHomeRunLine	decimal(4,1)	YES	\N	
+mlb_schedule_history	35	dkClosingHomeRunLineOdds	varchar(16)	YES	\N	
+mlb_schedule_history	36	dkClosingTotal	decimal(5,1)	YES	\N	
+mlb_schedule_history	37	dkClosingOverOdds	varchar(16)	YES	\N	
+mlb_schedule_history	38	dkClosingUnderOdds	varchar(16)	YES	\N	
+mlb_schedule_history	39	dkClosingAwayML	varchar(16)	YES	\N	
+mlb_schedule_history	40	dkClosingHomeML	varchar(16)	YES	\N	
+mlb_schedule_history	41	closingLineLockedAt	bigint	YES	\N	
+mlb_strikeout_props	1	id	int	NO	\N	PRI
+mlb_strikeout_props	2	gameId	int	NO	\N	MUL
+mlb_strikeout_props	3	side	varchar(8)	NO	\N	
+mlb_strikeout_props	4	pitcherName	varchar(128)	NO	\N	
+mlb_strikeout_props	5	pitcherHand	varchar(4)	YES	\N	
+mlb_strikeout_props	6	retrosheetId	varchar(32)	YES	\N	
+mlb_strikeout_props	7	mlbamId	int	YES	\N	
+mlb_strikeout_props	8	kProj	varchar(16)	YES	\N	
+mlb_strikeout_props	9	kLine	varchar(16)	YES	\N	
+mlb_strikeout_props	10	kPer9	varchar(16)	YES	\N	
+mlb_strikeout_props	11	kMedian	varchar(16)	YES	\N	
+mlb_strikeout_props	12	kP5	varchar(16)	YES	\N	
+mlb_strikeout_props	13	kP95	varchar(16)	YES	\N	
+mlb_strikeout_props	14	bookLine	varchar(16)	YES	\N	
+mlb_strikeout_props	15	bookOverOdds	varchar(16)	YES	\N	
+mlb_strikeout_props	16	bookUnderOdds	varchar(16)	YES	\N	
+mlb_strikeout_props	17	pOver	varchar(16)	YES	\N	
+mlb_strikeout_props	18	pUnder	varchar(16)	YES	\N	
+mlb_strikeout_props	19	modelOverOdds	varchar(16)	YES	\N	
+mlb_strikeout_props	20	modelUnderOdds	varchar(16)	YES	\N	
+mlb_strikeout_props	21	edgeOver	varchar(16)	YES	\N	
+mlb_strikeout_props	22	edgeUnder	varchar(16)	YES	\N	
+mlb_strikeout_props	23	verdict	varchar(32)	YES	\N	
+mlb_strikeout_props	24	bestEdge	varchar(16)	YES	\N	
+mlb_strikeout_props	25	bestSide	varchar(16)	YES	\N	
+mlb_strikeout_props	26	bestMlStr	varchar(16)	YES	\N	
+mlb_strikeout_props	27	signalBreakdown	text	YES	\N	
+mlb_strikeout_props	28	matchupRows	text	YES	\N	
+mlb_strikeout_props	29	distribution	text	YES	\N	
+mlb_strikeout_props	30	inningBreakdown	text	YES	\N	
+mlb_strikeout_props	31	modelRunAt	bigint	YES	\N	
+mlb_strikeout_props	32	createdAt	timestamp	NO	CURRENT_TIMESTAMP	
+mlb_strikeout_props	33	updatedAt	timestamp	NO	CURRENT_TIMESTAMP	
+mlb_strikeout_props	34	anNoVigOverPct	varchar(16)	YES	\N	
+mlb_strikeout_props	35	anPlayerId	int	YES	\N	
+mlb_strikeout_props	36	actualKs	int	YES	\N	
+mlb_strikeout_props	37	backtestResult	varchar(16)	YES	\N	
+mlb_strikeout_props	38	modelError	varchar(16)	YES	\N	
+mlb_strikeout_props	39	modelCorrect	tinyint	YES	\N	
+mlb_strikeout_props	40	backtestRunAt	bigint	YES	\N	
+mlb_team_batting_splits	1	id	int	NO	\N	PRI
+mlb_team_batting_splits	2	teamAbbrev	varchar(8)	NO	\N	MUL
+mlb_team_batting_splits	3	mlbTeamId	int	NO	\N	
+mlb_team_batting_splits	4	hand	varchar(1)	NO	\N	
+mlb_team_batting_splits	5	avg	double	YES	\N	
+mlb_team_batting_splits	6	obp	double	YES	\N	
+mlb_team_batting_splits	7	slg	double	YES	\N	
+mlb_team_batting_splits	8	ops	double	YES	\N	
+mlb_team_batting_splits	9	homeRuns	int	YES	\N	
+mlb_team_batting_splits	10	atBats	int	YES	\N	
+mlb_team_batting_splits	11	baseOnBalls	int	YES	\N	
+mlb_team_batting_splits	12	strikeOuts	int	YES	\N	
+mlb_team_batting_splits	13	hits	int	YES	\N	
+mlb_team_batting_splits	14	gamesPlayed	int	YES	\N	
+mlb_team_batting_splits	15	hr9	double	YES	\N	
+mlb_team_batting_splits	16	bb9	double	YES	\N	
+mlb_team_batting_splits	17	k9	double	YES	\N	
+mlb_team_batting_splits	18	woba	double	YES	\N	
+mlb_team_batting_splits	19	lastFetchedAt	bigint	YES	\N	
+mlb_team_batting_splits	20	createdAt	timestamp	NO	CURRENT_TIMESTAMP	
+mlb_team_batting_splits	21	updatedAt	timestamp	NO	CURRENT_TIMESTAMP	
+mlb_team_batting_splits	22	rpg	double	YES	\N	
+mlb_team_batting_splits	23	ipPerGame	double	YES	\N	
+mlb_teams	1	id	int	NO	\N	PRI
+mlb_teams	2	dbSlug	varchar(128)	NO	\N	UNI
+mlb_teams	3	mlbId	int	NO	\N	UNI
+mlb_teams	4	mlbCode	varchar(8)	NO	\N	UNI
+mlb_teams	5	abbrev	varchar(8)	NO	\N	UNI
+mlb_teams	6	vsinSlug	varchar(128)	NO	\N	UNI
+mlb_teams	7	anSlug	varchar(128)	NO	\N	UNI
+mlb_teams	8	anLogoSlug	varchar(32)	NO	\N	
+mlb_teams	9	brAbbrev	varchar(8)	NO	\N	UNI
+mlb_teams	10	name	varchar(255)	NO	\N	
+mlb_teams	11	nickname	varchar(128)	NO	\N	
+mlb_teams	12	city	varchar(128)	NO	\N	
+mlb_teams	13	league	enum('AL','NL')	NO	\N	
+mlb_teams	14	division	enum('East','Central','West')	NO	\N	
+mlb_teams	15	logoUrl	text	NO	\N	
+mlb_teams	16	primaryColor	varchar(16)	YES	\N	
+mlb_teams	17	secondaryColor	varchar(16)	YES	\N	
+mlb_teams	18	tertiaryColor	varchar(16)	YES	\N	
+mlb_teams	19	updatedAt	timestamp	NO	CURRENT_TIMESTAMP	
+mlb_umpire_modifiers	1	id	int	NO	\N	PRI
+mlb_umpire_modifiers	2	umpireId	int	NO	\N	UNI
+mlb_umpire_modifiers	3	umpireName	varchar(128)	NO	\N	MUL
+mlb_umpire_modifiers	4	gamesHp	int	NO	\N	
+mlb_umpire_modifiers	5	totalK	int	NO	\N	
+mlb_umpire_modifiers	6	totalBb	int	NO	\N	
+mlb_umpire_modifiers	7	totalH	int	YES	\N	
+mlb_umpire_modifiers	8	totalR	int	YES	\N	
+mlb_umpire_modifiers	9	kRate	double	YES	\N	
+mlb_umpire_modifiers	10	bbRate	double	YES	\N	
+mlb_umpire_modifiers	11	kModifier	double	YES	\N	
+mlb_umpire_modifiers	12	bbModifier	double	YES	\N	
+mlb_umpire_modifiers	13	seasonsIncluded	varchar(32)	YES	\N	
+mlb_umpire_modifiers	14	lastFetchedAt	bigint	YES	\N	
+mlb_umpire_modifiers	15	createdAt	timestamp	NO	CURRENT_TIMESTAMP	
+mlb_umpire_modifiers	16	updatedAt	timestamp	NO	CURRENT_TIMESTAMP	
+odds_history	1	id	int	NO	\N	PRI
+odds_history	2	gameId	int	NO	\N	
+odds_history	3	sport	varchar(16)	NO	\N	
+odds_history	4	scrapedAt	bigint	NO	\N	
+odds_history	5	source	enum('auto','manual')	NO	auto	
+odds_history	6	awaySpread	varchar(16)	YES	\N	
+odds_history	7	awaySpreadOdds	varchar(16)	YES	\N	
+odds_history	8	homeSpread	varchar(16)	YES	\N	
+odds_history	9	homeSpreadOdds	varchar(16)	YES	\N	
+odds_history	10	total	varchar(16)	YES	\N	
+odds_history	11	overOdds	varchar(16)	YES	\N	
+odds_history	12	underOdds	varchar(16)	YES	\N	
+odds_history	13	awayML	varchar(16)	YES	\N	
+odds_history	14	homeML	varchar(16)	YES	\N	
+odds_history	15	createdAt	timestamp	NO	CURRENT_TIMESTAMP	
+odds_history	16	spreadAwayBetsPct	tinyint	YES	\N	
+odds_history	17	spreadAwayMoneyPct	tinyint	YES	\N	
+odds_history	18	totalOverBetsPct	tinyint	YES	\N	
+odds_history	19	totalOverMoneyPct	tinyint	YES	\N	
+odds_history	20	mlAwayBetsPct	tinyint	YES	\N	
+odds_history	21	mlAwayMoneyPct	tinyint	YES	\N	
+odds_history	22	lineSource	enum('open','dk')	YES	\N	
+tracked_bets	1	id	int	NO	\N	PRI
+tracked_bets	2	userId	int	NO	\N	MUL
+tracked_bets	3	gameId	int	YES	\N	MUL
+tracked_bets	4	sport	varchar(16)	NO	MLB	MUL
+tracked_bets	5	gameDate	varchar(20)	NO	\N	MUL
+tracked_bets	6	awayTeam	varchar(128)	YES	\N	
+tracked_bets	7	homeTeam	varchar(128)	YES	\N	
+tracked_bets	8	betType	enum('ML','RL','OVER','UNDER','PROP','PARLAY','TEASER','FUTURE','CUSTOM')	NO	ML	
+tracked_bets	9	pick	varchar(255)	NO	\N	
+tracked_bets	10	odds	int	NO	\N	
+tracked_bets	11	risk	decimal(10,2)	NO	\N	
+tracked_bets	12	toWin	decimal(10,2)	NO	\N	
+tracked_bets	13	book	varchar(64)	YES	\N	
+tracked_bets	14	notes	text	YES	\N	
+tracked_bets	15	result	enum('PENDING','WIN','LOSS','PUSH','VOID')	NO	PENDING	MUL
+tracked_bets	16	createdAt	timestamp	NO	CURRENT_TIMESTAMP	
+tracked_bets	17	updatedAt	timestamp	NO	CURRENT_TIMESTAMP	
+tracked_bets	18	anGameId	int	YES	\N	
+tracked_bets	19	timeframe	enum('FULL_GAME','FIRST_5','FIRST_INNING','NRFI','YRFI','REGULATION','FIRST_PERIOD','FIRST_HALF','FIRST_QUARTER')	NO	FULL_GAME	
+tracked_bets	20	market	enum('ML','RL','TOTAL')	NO	ML	
+tracked_bets	21	pickSide	enum('AWAY','HOME','OVER','UNDER')	YES	\N	
+tracked_bets	22	line	decimal(6,1)	YES	\N	
+tracked_bets	23	awayScore	varchar(16)	YES	\N	
+tracked_bets	24	homeScore	varchar(16)	YES	\N	
+tracked_bets	25	wagerType	enum('PREGAME','LIVE')	NO	PREGAME	
+tracked_bets	26	customLine	decimal(6,1)	YES	\N	
+tracked_bets	27	riskUnits	decimal(8,2)	YES	\N	
+tracked_bets	28	toWinUnits	decimal(8,2)	YES	\N	
+tracked_bets	29	gameNumber	int	YES	1	

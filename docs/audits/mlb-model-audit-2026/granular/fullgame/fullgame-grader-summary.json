@@ -1,0 +1,182 @@
+{
+  "ranAt": "2026-07-25T20:48:09.863Z",
+  "window": [
+    "2026-03-25",
+    "2026-07-24"
+  ],
+  "population": 1556,
+  "gamesCounters": {
+    "population": 1556,
+    "fgMl": {
+      "match": 1537,
+      "mismatch": 0,
+      "bothNull": 19,
+      "storedNullDerivable": 0,
+      "storedNotDerivable": 0
+    },
+    "fgRl": {
+      "match": 1534,
+      "mismatch": 0,
+      "bothNull": 19,
+      "storedNullDerivable": 0,
+      "storedNotDerivable": 3
+    },
+    "fgTotal": {
+      "match": 1537,
+      "mismatch": 0,
+      "bothNull": 13,
+      "storedNullDerivable": 6,
+      "storedNotDerivable": 0
+    },
+    "brierFgMl": {
+      "match": 1537,
+      "matchAwayBase": 1537,
+      "matchHomeBase": 0,
+      "mismatch": 0,
+      "bothNull": 19,
+      "storedNullDerivable": 0,
+      "storedNotDerivable": 0
+    },
+    "brierFgTotal": {
+      "match": 1476,
+      "mismatch": 0,
+      "bothNull": 80,
+      "storedNullDerivable": 0,
+      "storedNotDerivable": 0
+    },
+    "actuals": {
+      "schedAgree": 1540,
+      "schedDisagree": 5,
+      "schedMissing": 11,
+      "lsAgree": 1555,
+      "lsDisagree": 0,
+      "lsMissing": 1,
+      "scoreboardDisagree": 9,
+      "fgTotalColDisagree": 0,
+      "actualsMissing": 0
+    }
+  },
+  "gamesMismatchRows": 12,
+  "actualsIssueRows": 14,
+  "backtest": {
+    "rows": 9330,
+    "perGameMarkets": 6,
+    "coveredGames": 1555,
+    "uncoveredGames": [
+      {
+        "gameId": 4110001,
+        "gameDate": "2026-07-14",
+        "matchup": "AL@NL",
+        "mlbGamePk": null
+      }
+    ],
+    "duplicates": [],
+    "counters": {
+      "result:fg_ml_away:NO_ACTION": 701,
+      "status:ok": 8343,
+      "result:fg_ml_home:NO_ACTION": 543,
+      "result:fg_over:NO_ACTION": 753,
+      "result:fg_rl_away:NO_ACTION": 1141,
+      "result:fg_rl_home:NO_ACTION": 1023,
+      "result:fg_under:NO_ACTION": 699,
+      "result:fg_ml_away:QUARANTINED": 338,
+      "result:fg_ml_home:QUARANTINED": 338,
+      "result:fg_over:QUARANTINED": 338,
+      "result:fg_rl_away:QUARANTINED": 338,
+      "result:fg_rl_home:QUARANTINED": 338,
+      "result:fg_under:QUARANTINED": 338,
+      "threshold-inconsistent:fg_ml_away": 378,
+      "result:fg_ml_away:LOSS": 248,
+      "status:WARN": 857,
+      "statusDetail:WARN:actioned-conf0": 857,
+      "threshold-inconsistent:fg_ml_home": 333,
+      "result:fg_ml_home:WIN": 319,
+      "threshold-inconsistent:fg_over": 421,
+      "result:fg_over:LOSS": 211,
+      "threshold-inconsistent:fg_under": 402,
+      "result:fg_under:WIN": 235,
+      "result:fg_over:WIN": 201,
+      "result:fg_under:LOSS": 228,
+      "result:fg_ml_away:WIN": 232,
+      "result:fg_ml_home:LOSS": 319,
+      "result:fg_over:PUSH": 17,
+      "result:fg_under:PUSH": 20,
+      "result:fg_ml_away:MISSING_DATA": 32,
+      "status:INFO": 130,
+      "statusDetail:INFO:missingdata-now-derivable": 130,
+      "result:fg_ml_home:MISSING_DATA": 32,
+      "result:fg_over:MISSING_DATA": 31,
+      "result:fg_under:MISSING_DATA": 31,
+      "result:fg_ml_away:VOID": 4,
+      "result:fg_ml_home:VOID": 4,
+      "result:fg_over:VOID": 4,
+      "result:fg_rl_away:VOID": 4,
+      "result:fg_rl_home:VOID": 4,
+      "result:fg_under:VOID": 4,
+      "result:fg_rl_away:WIN": 47,
+      "result:fg_rl_away:LOSS": 23,
+      "result:fg_rl_home:WIN": 61,
+      "result:fg_rl_home:LOSS": 127,
+      "result:fg_rl_away:MISSING_DATA": 2,
+      "result:fg_rl_home:MISSING_DATA": 2
+    },
+    "mismatchRows": 857
+  },
+  "correctedGames": [
+    {
+      "gameId": 2250733,
+      "matchup": "STL@CIN 2026-05-23 G2",
+      "expectedScore": "6-7",
+      "games_actual": "6-7",
+      "sched": "8-1",
+      "linescore": "6-7",
+      "scoreOk": "YES",
+      "fgMl": "LOSS/LOSS/match",
+      "fgRl": "WIN/WIN/match",
+      "fgTotal": "OVER/OVER/match",
+      "brierFgMl": "match-away-base",
+      "brierFgTotal": "match",
+      "backtestRows": 6,
+      "backtestStale": 0,
+      "backtestDefects": 0,
+      "backtestDetail": "fg_ml_away:NO_ACTION fg_ml_home:NO_ACTION fg_over:NO_ACTION fg_rl_away:NO_ACTION fg_rl_home:NO_ACTION fg_under:NO_ACTION"
+    },
+    {
+      "gameId": 2250738,
+      "matchup": "DET@BAL 2026-05-24 G1",
+      "expectedScore": "3-5",
+      "games_actual": "3-5",
+      "sched": "3-5",
+      "linescore": "3-5",
+      "scoreOk": "YES",
+      "fgMl": "LOSS/LOSS/match",
+      "fgRl": "LOSS/LOSS/match",
+      "fgTotal": "PUSH/PUSH/match",
+      "brierFgMl": "match-away-base",
+      "brierFgTotal": "both-null",
+      "backtestRows": 6,
+      "backtestStale": 0,
+      "backtestDefects": 0,
+      "backtestDetail": "fg_ml_away:LOSS fg_ml_home:NO_ACTION fg_over:NO_ACTION fg_rl_away:NO_ACTION fg_rl_home:NO_ACTION fg_under:NO_ACTION"
+    },
+    {
+      "gameId": 2251290,
+      "matchup": "MIL@STL 2026-07-07 G2",
+      "expectedScore": "10-2",
+      "games_actual": "10-2",
+      "sched": "4-3",
+      "linescore": "10-2",
+      "scoreOk": "YES",
+      "fgMl": "WIN/WIN/match",
+      "fgRl": "LOSS/LOSS/match",
+      "fgTotal": "OVER/OVER/match",
+      "brierFgMl": "match-away-base",
+      "brierFgTotal": "match",
+      "backtestRows": 6,
+      "backtestStale": 0,
+      "backtestDefects": 0,
+      "backtestDetail": "fg_ml_away:NO_ACTION fg_ml_home:NO_ACTION fg_over:NO_ACTION fg_rl_away:NO_ACTION fg_rl_home:NO_ACTION fg_under:NO_ACTION"
+    }
+  ],
+  "replayGradesStateAtRun": []
+}

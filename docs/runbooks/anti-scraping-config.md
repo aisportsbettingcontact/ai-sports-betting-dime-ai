@@ -336,6 +336,10 @@ custom rule for the managed-rules part; harmless.)
 > see §12). Schema changes ride `db-push.yml` before dependent code (deploy-order law); env-only
 > changes just redeploy the same commit.
 
+> **Secret law:** never print, persist in evidence, or move these values between scopes. Railway env
+> only. Schema changes ride `db-push.yml` before dependent code (deploy-order law); env-only changes
+> just redeploy the same commit.
+
 ---
 
 ## 6. Activation procedure (executed 2026-08-06, in order)
@@ -616,6 +620,12 @@ bot-exempt API surface + real-browser log evidence before declaring an outage; d
 ---
 
 ## 14. Cheat sheet
+`docs/runbooks/edge-defense-cloudflare.md`. `EDGE_MODE=on` first went live on Railway deployment
+`dabf0453` (2026-08-06).
+
+---
+
+## 12. Cheat sheet
 
 ```bash
 # Prove the feed rate-limit cap is active on a procedure (read RateLimit-Policy header):

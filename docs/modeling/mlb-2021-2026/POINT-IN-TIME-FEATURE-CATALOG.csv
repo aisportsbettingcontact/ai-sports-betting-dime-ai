@@ -1,0 +1,17 @@
+feature_family,source,availability_class,era_gate,notes
+"hs_/as_ p_so_/p_bb_/p_er_/p_h_/p_hr_ {3,10,25}",box_pitching so/bb/er/h/hr over bf/ip,PRIOR_RECONSTRUCTABLE,2006+,shift(1) rolling starts
+"hs_/as_ p_csw_/p_whiffs_/p_zone_ {3,10,25}",pitcher_game_pitch CSW/whiff/zone over n_pitches,PRIOR_RECONSTRUCTABLE,2008+ (PitchFX gate),pitch aggregates E1
+"hs_/as_ p_velo_ff_{3,25}+trend",E1 mean_speed_ff (guard 55-106),PRIOR_RECONSTRUCTABLE,2008+,era-gated
+"hs_/as_ p_pct_{ff,sl,ch}_10, p_mean_ext_10, p_mean_spin_10",E1 mix/extension/spin,PRIOR_RECONSTRUCTABLE,"mix/spin 2008+, ext 2017+ (tier D)",
+"hs_/as_ p_inplay_hardhit_{3,10,25}",E1 launch_speed>=95 over inplay_launch_n,PRIOR_RECONSTRUCTABLE,2015+ (Statcast gate),
+hs_/as_ p_inn1_scored_rate_20,plays inning-1 scored flag per start,PRIOR_RECONSTRUCTABLE,2006+,
+hs_/as_ p_days_rest,start log date diffs,PRIOR_RECONSTRUCTABLE,2006+,
+"hl_/al_ b_* lineup aggregates {10,40,162}",box_batting + E2 behavior over expected pool,PRIOR_RECONSTRUCTABLE,"box 2006+, behavior 2008+, hardhit 2015+",pool from prior 20 games
+"ht_/at_ t_rpg_{15,75}, t_rest",game outcomes per team,PRIOR_RECONSTRUCTABLE,2006+,
+"hp_/ap_ pen_outs_prev3, pen_era_30, pen_k_30",box_pitching non-starter lines,PRIOR_RECONSTRUCTABLE,2006+,starter identified from plays
+park_run_idx,"trailing-3-season venue totals vs league, shrunk n/(n+60)",PRIOR_RECONSTRUCTABLE,2009+,
+u_kshare_60,"HP ump trailing K share (plays), min 15 games",REPLAY_SAFE (assignment pregame-published) / values PRIOR_RECONSTRUCTABLE,2006+,
+"is_night, game_number, temp (0-roof guarded), hand indicators",spine/people,REPLAY_SAFE,2006+ (wind 2015+ if used),
+hso_/aso_ actual-starter features,actual starters,ORACLE_ONLY,diagnostic only,never in deployable
+same-game outcomes/pitches/boxscores,-,ORACLE_ONLY,prohibited as inputs,grading only
+odds/lines/prices; crosswalk-keyed anything,-,UNAVAILABLE,BLOCKED_BY_DATA_BOUNDARY,

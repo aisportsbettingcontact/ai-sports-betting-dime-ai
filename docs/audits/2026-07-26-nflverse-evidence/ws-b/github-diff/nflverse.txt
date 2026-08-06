@@ -1,0 +1,198 @@
+WS-B Step 5 — CRAN tarball vs GitHub release tag: nflverse
+Generated: 2026-07-27T06:18:30Z
+Raw logs: raw-logs/crlf-classification-nflverse.txt, raw-logs/description-field-analysis.txt,
+          raw-logs/github-tag-resolution.txt
+
+== Tag discovery ==
+  method: git ls-remote --tags https://github.com/nflverse/nflverse
+  TAG FORMAT FOUND: 'v<version>' (e.g. v1.0.3) — plain lightweight/annotated
+                    tags, no package-name prefix, no release/ namespace.
+  nflverse tag=v1.0.3 commit=b8314c594a93eecb2ef609cf5da6b90fbf892b84 commit_date=2022-10-05T11:31:46+02:00 DESCRIPTION_Version=1.0.2 cran=1.0.3 match=NO
+
+  *** FINDING (tag hygiene, not content) ***
+  The tag v1.0.3 points at commit b8314c594a93 (2022-10-05) whose DESCRIPTION
+  still declares Version: 1.0.2. The actual version bump to 1.0.3 is the very
+  next commit, 6c4f6ad "release v1.0.3 to cran (#19)" (2023-08-14), which does
+  declare Version: 1.0.3. The v1.0.3 tag was therefore created ~10 months
+  BEFORE the 1.0.3 release and never moved.
+  Per the brief ("if no tag matches the CRAN version, record as a finding-level
+  gap and diff against the closest tag"), this comparison uses commit 6c4f6ad —
+  the closest and semantically correct basis. Diffing against the literal
+  v1.0.3 tag instead would report the whole 1.0.2->1.0.3 delta as divergence.
+
+== Trees compared ==
+  tarball: /private/tmp/claude-501/-Users-danielwalker-src-ai-sports-betting-dime-ai/dd3b2b85-766c-4b7b-a98c-d928cffcbac2/scratchpad/nflverse-audit/sources/nflverse   (extracted from CRAN source tarball, Task 0)
+  github : /private/tmp/claude-501/-Users-danielwalker-src-ai-sports-betting-dime-ai/dd3b2b85-766c-4b7b-a98c-d928cffcbac2/scratchpad/nflverse-audit/tmp/gh/nflverse_rel
+
+  files: tarball=22 github=52  repo-only=31 tarball-only=1 in-both=21 differing=19
+
+== A. repo-only paths (in git, absent from tarball) ==
+   Each is justified against the REAL .Rbuildignore in the repo, or
+   R CMD build's built-in exclusion list. Directory-level rules are
+   applied to ancestor paths, matching R CMD build's pruning.
+    [.Rbuildignore] .github/.gitignore                                    rule: ^\.github$  [via dir '.github']
+    [.Rbuildignore] .github/CODE_OF_CONDUCT.md                            rule: ^\.github$  [via dir '.github']
+    [.Rbuildignore] .github/CONTRIBUTING.md                               rule: ^\.github$  [via dir '.github']
+    [.Rbuildignore] .github/ISSUE_TEMPLATE/bug_report.md                  rule: ^\.github$  [via dir '.github']
+    [.Rbuildignore] .github/ISSUE_TEMPLATE/feature_request.md             rule: ^\.github$  [via dir '.github']
+    [.Rbuildignore] .github/lock.yml                                      rule: ^\.github$  [via dir '.github']
+    [.Rbuildignore] .github/workflows/pkgdown.yaml                        rule: ^\.github$  [via dir '.github']
+    [.Rbuildignore] .github/workflows/R-CMD-check.yaml                    rule: ^\.github$  [via dir '.github']
+    [build-builtin] .gitignore                                            rule: (^|/)\.gitignore$
+    [build-builtin] .Rbuildignore                                         rule: ^\.Rbuildignore$
+    [.Rbuildignore] cran-comments.md                                      rule: ^cran-comments\.md$
+    [.Rbuildignore] CRAN-SUBMISSION                                       rule: ^CRAN-SUBMISSION$
+    [.Rbuildignore] data-raw/nflverse.png                                 rule: ^data-raw$  [via dir 'data-raw']
+    [.Rbuildignore] data-raw/nflverse.svg                                 rule: ^data-raw$  [via dir 'data-raw']
+    [.Rbuildignore] data-raw/social_preview.R                             rule: ^data-raw$  [via dir 'data-raw']
+    [.Rbuildignore] data-raw/social_preview.svg                           rule: ^data-raw$  [via dir 'data-raw']
+    [.Rbuildignore] LICENSE.md                                            rule: ^LICENSE\.md$
+    [.Rbuildignore] man/figures/social_preview.png                        rule: ^man/figures/social_preview\.png$
+    [.Rbuildignore] nflverse.Rproj                                        rule: ^nflverse\.Rproj$
+    [.Rbuildignore] pkgdown/_pkgdown.yml                                  rule: ^pkgdown$  [via dir 'pkgdown']
+    [.Rbuildignore] pkgdown/extra.css                                     rule: ^pkgdown$  [via dir 'pkgdown']
+    [.Rbuildignore] pkgdown/favicon/apple-touch-icon-120x120.png          rule: ^pkgdown$  [via dir 'pkgdown']
+    [.Rbuildignore] pkgdown/favicon/apple-touch-icon-152x152.png          rule: ^pkgdown$  [via dir 'pkgdown']
+    [.Rbuildignore] pkgdown/favicon/apple-touch-icon-180x180.png          rule: ^pkgdown$  [via dir 'pkgdown']
+    [.Rbuildignore] pkgdown/favicon/apple-touch-icon-60x60.png            rule: ^pkgdown$  [via dir 'pkgdown']
+    [.Rbuildignore] pkgdown/favicon/apple-touch-icon-76x76.png            rule: ^pkgdown$  [via dir 'pkgdown']
+    [.Rbuildignore] pkgdown/favicon/apple-touch-icon.png                  rule: ^pkgdown$  [via dir 'pkgdown']
+    [.Rbuildignore] pkgdown/favicon/favicon-16x16.png                     rule: ^pkgdown$  [via dir 'pkgdown']
+    [.Rbuildignore] pkgdown/favicon/favicon-32x32.png                     rule: ^pkgdown$  [via dir 'pkgdown']
+    [.Rbuildignore] pkgdown/favicon/favicon.ico                           rule: ^pkgdown$  [via dir 'pkgdown']
+    [.Rbuildignore] README.Rmd                                            rule: ^README\.Rmd$
+    repo-only unexplained by any rule: 0
+
+== B. tarball-only paths (build artifacts) ==
+    [build-artifact] MD5
+    tarball-only NOT a recognised build artifact: 0
+
+== C. content differences (present in both, bytes differ) ==
+    CRITICAL-PATH differences (R/ data/ src/ NAMESPACE DESCRIPTION configure): 10
+      * DESCRIPTION 
+      * NAMESPACE 
+      * R/attach.R 
+      * R/conflicts.R 
+      * R/core.R 
+      * R/nflverse-package.R 
+      * R/pipe.R 
+      * R/updates_and_reports.R 
+      * R/utils.R 
+      * R/zzz.R 
+    other differing files: 9
+      - LICENSE 
+      - man/nflverse_packages.Rd 
+      - man/nflverse_sitrep.Rd 
+      - man/nflverse_update.Rd 
+      - man/nflverse-package.Rd 
+      - man/pipe.Rd 
+      - README.md 
+      - tests/testthat.R 
+      - tests/testthat/test-reports.R 
+
+  -- line-ending vs real-content classification --
+    REAL-DIFF   DESCRIPTION                              (32 differing lines after LF-normalization)
+    CRLF-ONLY   LICENSE                                  (CR lines tarball=2 github=0)
+    CRLF-ONLY   man/nflverse_packages.Rd                 (CR lines tarball=20 github=0)
+    CRLF-ONLY   man/nflverse_sitrep.Rd                   (CR lines tarball=14 github=0)
+    CRLF-ONLY   man/nflverse_update.Rd                   (CR lines tarball=35 github=0)
+    CRLF-ONLY   man/nflverse-package.Rd                  (CR lines tarball=34 github=0)
+    CRLF-ONLY   man/pipe.Rd                              (CR lines tarball=12 github=0)
+    CRLF-ONLY   NAMESPACE                                (CR lines tarball=12 github=0)
+    CRLF-ONLY   R/attach.R                               (CR lines tarball=62 github=0)
+    CRLF-ONLY   R/conflicts.R                            (CR lines tarball=82 github=0)
+    CRLF-ONLY   R/core.R                                 (CR lines tarball=7 github=0)
+    CRLF-ONLY   R/nflverse-package.R                     (CR lines tarball=15 github=0)
+    CRLF-ONLY   R/pipe.R                                 (CR lines tarball=11 github=0)
+    CRLF-ONLY   R/updates_and_reports.R                  (CR lines tarball=131 github=0)
+    CRLF-ONLY   R/utils.R                                (CR lines tarball=31 github=0)
+    CRLF-ONLY   R/zzz.R                                  (CR lines tarball=20 github=0)
+    CRLF-ONLY   README.md                                (CR lines tarball=90 github=0)
+    CRLF-ONLY   tests/testthat.R                         (CR lines tarball=4 github=0)
+    CRLF-ONLY   tests/testthat/test-reports.R            (CR lines tarball=10 github=0)
+
+== C2. SECOND COMPARISON BASIS — the LITERAL v1.0.3 tag (b8314c594a93) ==
+   Because the v1.0.3 tag is misplaced (see Tag discovery above), the
+   comparison was ALSO run against the literal tag, so this report does not
+   depend on the choice of basis.
+   Method (identical to the primary comparison, only the tree differs):
+     git clone --depth 1 --branch v1.0.3 https://github.com/nflverse/nflverse
+       -> detached at b8314c594a93, DESCRIPTION declares Version: 1.0.2
+     same classifier: per-file md5 over the intersection, then each differing
+     file re-compared after `tr -d '\r'` on both sides to separate line-ending
+     differences from real content differences.
+
+   files: tarball=22 github=52  repo-only=31 tarball-only=1 in-both=21 differing=20
+
+   differing-file table vs literal tag:
+     REAL-DIFF   DESCRIPTION                        (36 differing lines after LF-normalization)
+     CRLF-ONLY   LICENSE                            (CR lines tarball=2 github=0)
+     CRLF-ONLY   man/nflverse_packages.Rd           (CR lines tarball=20 github=0)
+     CRLF-ONLY   man/nflverse_sitrep.Rd             (CR lines tarball=14 github=0)
+     CRLF-ONLY   man/nflverse_update.Rd             (CR lines tarball=35 github=0)
+     CRLF-ONLY   man/nflverse-package.Rd            (CR lines tarball=34 github=0)
+     CRLF-ONLY   man/pipe.Rd                        (CR lines tarball=12 github=0)
+     CRLF-ONLY   NAMESPACE                          (CR lines tarball=12 github=0)
+     REAL-DIFF   NEWS.md                            (4 differing lines after LF-normalization)
+     CRLF-ONLY   R/attach.R                         (CR lines tarball=62 github=0)
+     CRLF-ONLY   R/conflicts.R                      (CR lines tarball=82 github=0)
+     CRLF-ONLY   R/core.R                           (CR lines tarball=7 github=0)
+     CRLF-ONLY   R/nflverse-package.R               (CR lines tarball=15 github=0)
+     CRLF-ONLY   R/pipe.R                           (CR lines tarball=11 github=0)
+     CRLF-ONLY   R/updates_and_reports.R            (CR lines tarball=131 github=0)
+     CRLF-ONLY   R/utils.R                          (CR lines tarball=31 github=0)
+     CRLF-ONLY   R/zzz.R                            (CR lines tarball=20 github=0)
+     REAL-DIFF   README.md                          (40 differing lines after LF-normalization)
+     CRLF-ONLY   tests/testthat.R                   (CR lines tarball=4 github=0)
+     CRLF-ONLY   tests/testthat/test-reports.R      (CR lines tarball=10 github=0)
+
+   totals vs literal tag : 20 differing = 17 CRLF-only + 3 REAL
+   totals vs 6c4f6ad     : 19 differing = 18 CRLF-only + 1 REAL
+
+   REAL diffs under R/ or NAMESPACE vs the literal tag:
+     NONE — every R/ and NAMESPACE file is CRLF-only even against the
+     1.0.2-content tag, i.e. NO R code changed between the tagged tree
+     and the 1.0.3 release.
+
+   The 3 REAL diffs vs the literal tag, shown rather than asserted:
+     (a) DESCRIPTION — Version bump plus CRAN publish metadata:
+           tarball: Version: 1.0.3
+           tag    : Version: 1.0.2
+     (b) NEWS.md — the 1.0.3 changelog entry, added by the release commit:
+           1,4d0
+           < # nflverse 1.0.3
+           < 
+           < * Minor changes - requested by CRAN - related to nfl4th.
+           < 
+     (c) README.md — 40 lines: CI badge markup swapped, a governance
+           paragraph added, and the package link list rewrapped. Ordinary
+           documentation evolution between the two commits; no code.
+
+   Conclusion is basis-independent: under BOTH bases there is no content
+   divergence in R/, data/, src/, NAMESPACE or configure.
+
+== D. DESCRIPTION field-level analysis ==
+   (read.dcf parse; values whitespace-normalised so CRAN's 80-col
+    re-wrapping of Imports/Suggests/URL is not counted as a change)
+    tarball-only fields: NeedsCompilation, Packaged, Author, Maintainer, Repository, Date/Publication 
+      all CRAN-publish-added?: TRUE  
+    github-only fields : Roxygen 
+      all dev-only?          : TRUE  
+    shared fields with DIFFERENT VALUE after whitespace-normalisation: 0 
+    Version tarball/github : 1.0.3 / 1.0.3  MATCH 
+    Packaged               : 2023-08-14 07:59:13 UTC; carl 
+  
+
+== Verdict ==
+  NO CONTENT DIVERGENCE.
+  18 of the 19 differing files differ ONLY in line endings: the CRAN tarball
+  carries CRLF, the git tree LF. Every one is byte-identical after `tr -d '\r'`
+  (verified per file, not sampled). This is byte-trivial, and stated as such —
+  but it IS a real property of this tarball: nflverse 1.0.3 was packaged on a
+  CRLF platform ("Packaged: 2023-08-14 07:59:13 UTC; carl") while its five
+  sibling packages were not. It affects no R semantics.
+  The 19th file is DESCRIPTION, whose entire delta is CRAN publish metadata
+  (Packaged / Date/Publication / Repository / NeedsCompilation / Author /
+  Maintainer added; dev-only Roxygen dropped) plus field re-wrapping. ZERO
+  shared DESCRIPTION fields differ in value.
+  No divergence in R/, data/, src/, NAMESPACE or configure beyond line endings.

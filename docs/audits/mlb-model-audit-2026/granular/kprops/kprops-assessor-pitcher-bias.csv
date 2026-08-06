@@ -1,0 +1,189 @@
+starterId,pitcherName,nLive,meanLiveErr,ci95LiveErr,nP1,meanP1Err,nP2,meanP2Err,meanActualKs,meanKProj,meanOuts
+694819,Brandon Sproat|Jacob Misiorowski|Kyle Harrison|Shane Drohan,17,-3.4424,1.0857,19,2.477,19,1.231,9.105,5.449,18.16
+656302,Dylan Cease|Kevin Gausman|Max Scherzer|Patrick Corbin|Shane Bieber|Trey Yesavage,16,-3.27,1.3986,18,2.479,18,1.364,8.611,5.605,17.39
+660271,Emmet Sheehan|Justin Wrobleski|Shohei Ohtani|Tyler Glasnow|Yoshinobu Yamamoto,10,-3.179,0.7955,14,1.985,14,1.093,6.786,4.421,18.36
+622663,J.T. Ginn|Jeffrey Springs|Luis Severino,10,-3.092,1.2996,12,-0.534,12,-0.876,5.417,3.008,15.67
+677952,Braxton Ashcraft|Bubba Chandler,18,-3.01,1.1073,20,2.408,20,1.513,6.5,3.601,17.45
+668909,Gavin Williams|Joey Cantillo|Parker Messick|Slade Cecconi,20,-3.006,1.2388,21,0.206,21,-0.554,7.429,4.244,18.05
+656492,Andrew Alvarez|Foster Griffin|Zack Littell,16,-2.9669,1.6819,20,-0.481,20,-1.017,5.55,2.908,17.6
+671737,Bailey Ober|Connor Prielipp|Taj Bradley|Zebby Matthews,17,-2.8553,1.2691,20,0.554,20,-0.055,6.45,3.674,17.2
+672282,Grayson Rodriguez|Jack Kochanowicz|Reid Detmers|Sam Aldegheri,19,-2.8453,1.1586,21,1.826,21,0.978,6.476,3.418,17.14
+680732,David Sandlin|Davis Martin|Erick Fedde|Sean Burke,14,-2.7607,1.4216,16,-0.244,16,-0.85,5.875,3.168,16.38
+682243,Bryan Woo|Bryce Miller|Emerson Hancock|Luis Castillo,11,-2.71,1.8241,11,1.365,11,0.341,6.091,3.381,17.36
+669373,Casey Mize|Framber Valdez|Tarik Skubal|Troy Melton,12,-2.7008,2.4424,15,1.519,15,0.852,7.333,4.549,18.0
+801139,Brayan Bello|Jake Bennett|Payton Tolle|Ranger Suarez|Tyler Samaniego,14,-2.6471,1.0523,16,1.647,16,0.631,6.0,2.853,16.81
+554430,Aaron Nola|Andrew Painter|Jesus Luzardo|Zack Wheeler,13,-2.62,1.1471,16,1.146,16,0.034,7.312,5.303,18.75
+693855,Ian Seymour|Nick Martinez|Shane McClanahan,6,-2.52,3.1264,7,-0.174,7,-0.9,5.429,2.983,12.29
+676917,Andrew Alvarez|Cade Cavalli|Miles Mikolas|Zack Littell,21,-2.5052,1.461,22,0.543,22,-0.169,5.773,3.304,15.09
+675512,Framber Valdez|Keider Montero|Tarik Skubal|Troy Melton,8,-2.5038,1.7002,10,-1.274,10,-1.854,5.5,3.842,18.0
+693645,Cam Schlittler|Carlos Rodon|Gerrit Cole|Ryan Weathers|Will Warren,19,-2.4884,1.3265,22,1.993,22,1.114,7.136,4.459,17.77
+695611,Gage Jump|J.T. Ginn|Jeffrey Springs|Joey Estes,11,-2.4873,1.5055,11,1.226,11,0.299,5.545,3.058,15.55
+669160,Andre Pallante|Dustin May|Kyle Leahy,19,-2.2832,1.2632,20,0.298,20,-0.298,5.15,2.875,15.6
+663623,Foster Griffin|Jake Irvin,9,-2.2111,0.9493,11,-0.844,11,-1.241,5.273,3.011,14.09
+663567,Cristian Javier|Lance McCullers|Mike Burrows|Peter Lambert|Spencer Arrighetti,16,-2.1587,1.0788,17,0.832,17,0.088,5.529,3.216,17.29
+669358,Chris Bassitt|Dean Kremer|Kyle Bradish|Shane Baz|Trey Gibson,18,-2.1494,1.1796,20,0.132,20,-0.403,5.25,3.239,17.65
+687570,Bailey Ober|Connor Prielipp|Joe Ryan|Kendry Rojas|Taj Bradley|Zebby Matthews,11,-2.1191,1.8004,13,-0.276,13,-0.937,5.462,3.426,15.38
+607536,Kyle Freeland|Michael Lorenzen|Tomoyuki Sugano,18,-2.1067,1.059,19,-0.44,19,-0.831,4.368,2.504,14.84
+656876,Drew Rasmussen|Griffin Jax|Nick Martinez|Shane McClanahan,16,-2.0825,1.3414,19,0.932,19,0.267,5.421,3.605,16.47
+647336,Brandon Pfaadt|Michael Soroka|Zac Gallen,14,-1.9836,1.5254,15,2.519,15,1.851,5.267,3.231,16.4
+643377,Griffin Jax|Mason Englert|Shane McClanahan|Steven Matz,13,-1.9623,1.0404,16,-0.608,16,-1.029,4.5,3.03,13.5
+669461,Dustin May|Hunter Dobbins|Matthew Liberatore|Michael McGreevy,17,-1.9459,1.2567,20,-1.291,20,-1.669,4.75,2.995,14.85
+691587,Eury Perez|Janson Junk|Max Meyer|Sandy Alcantara,15,-1.9413,1.3575,17,-0.871,17,-1.363,6.118,4.192,16.18
+645261,Eury Perez|Max Meyer|Sandy Alcantara,20,-1.911,0.7944,22,0.214,22,-0.27,5.0,3.339,19.59
+592332,Dylan Cease|Kevin Gausman|Patrick Corbin,20,-1.883,1.2238,21,1.964,21,1.36,5.571,3.817,16.52
+690997,Austin Warren|Clay Holmes|Freddy Peralta|Kodai Senga|Nolan McLean|Sean Manaea,17,-1.8406,1.322,20,1.974,20,1.108,6.75,4.546,17.0
+607192,Emmet Sheehan|Tyler Glasnow,6,-1.8317,1.5435,7,2.238,7,2.011,7.0,6.002,17.0
+666200,Aaron Nola|Andrew Painter|Jesus Luzardo,20,-1.8205,1.3273,21,2.404,21,1.449,7.238,5.63,17.48
+694973,Braxton Ashcraft|Jared Jones|Mitch Keller|Paul Skenes,19,-1.8142,1.4518,21,1.326,21,0.482,6.571,4.817,16.48
+656288,German Marquez|Griffin Canning|JP Sears|Randy Vasquez,11,-1.8118,0.9251,11,-0.618,11,-1.214,4.636,2.825,13.73
+624133,Connelly Early|Ranger Suarez,17,-1.7712,1.3378,17,0.886,17,0.167,5.706,3.935,16.12
+813349,Connelly Early|Payton Tolle|Ranger Suarez,14,-1.7557,1.1794,17,0.27,17,-0.162,5.471,3.959,16.18
+663460,Kris Bubic|Michael Wacha,8,-1.7188,1.5275,9,1.911,9,1.529,5.667,4.281,16.78
+687064,Brandon Young|Kyle Bradish|Shane Baz|Trevor Rogers,14,-1.6779,0.9111,16,-0.878,16,-1.32,4.625,3.108,17.12
+681517,Andre Pallante|Kyle Leahy|Matthew Liberatore,16,-1.6738,1.168,19,-0.094,19,-0.496,4.158,2.639,15.05
+657746,Connor Prielipp|Joe Ryan|Kendry Rojas|Taj Bradley,19,-1.6621,1.2658,21,1.709,21,0.919,6.238,4.601,16.33
+669372,J.T. Ginn|Jacob Lopez|Jeffrey Springs,18,-1.6617,1.2143,19,-0.54,19,-1.076,5.053,3.227,16.16
+676974,Braxton Garrett|Chris Paddack|Eury Perez|Max Meyer|Ryan Gusto,17,-1.66,0.8847,20,1.004,20,0.208,6.05,4.399,16.65
+669302,Emerson Hancock|George Kirby|Logan Gilbert,16,-1.6588,1.4551,20,0.852,20,0.246,6.45,4.904,18.0
+543135,Jacob deGrom|Kumar Rocker|MacKenzie Gore|Nathan Eovaldi,16,-1.6525,1.4211,19,-0.297,19,-0.843,6.421,4.848,18.21
+621111,German Marquez|Lucas Giolito|Matt Waldron|Michael King|Randy Vasquez|Walker Buehler,20,-1.646,0.7416,20,0.332,20,-0.153,4.2,2.554,14.2
+642547,Christian Scott|David Peterson|Freddy Peralta,17,-1.6329,0.8812,21,0.718,21,0.2,5.238,3.955,15.67
+681293,Hunter Brown|Kai-Wei Teng|Spencer Arrighetti,16,-1.6275,1.4382,17,1.019,17,0.273,5.118,3.56,15.53
+675911,Bryce Elder|Martin Perez|Spencer Strider,8,-1.6163,1.7059,8,-0.464,8,-1.272,5.75,4.134,14.62
+608379,Bailey Falter|Luinder Avila|Michael Wacha|Noah Cameron,18,-1.6133,0.8722,20,0.534,20,-0.001,5.05,3.387,18.8
+808963,Emmet Sheehan|Roki Sasaki|Yoshinobu Yamamoto,15,-1.6087,1.023,18,-1.382,18,-1.817,5.222,3.658,15.61
+676282,Gavin Williams|Joey Cantillo|Slade Cecconi|Tanner Bibee,19,-1.5995,1.3731,22,0.066,22,-0.421,5.273,3.979,14.95
+669467,Andre Pallante|Hunter Dobbins|Kyle Leahy|Matthew Liberatore,14,-1.5771,0.9707,19,-0.087,19,-0.513,3.947,2.637,16.63
+605280,Christian Scott|Clay Holmes|Kodai Senga,9,-1.5667,1.2314,9,-0.282,9,-0.57,5.0,3.433,17.56
+669022,Kumar Rocker|MacKenzie Gore|Nathan Eovaldi,18,-1.5661,1.1115,22,1.295,22,0.646,5.773,4.438,15.77
+543037,Carlos Rodon|Gerrit Cole|Ryan Weathers,10,-1.565,1.7633,11,-0.842,11,-1.558,6.0,3.935,16.91
+693433,Bryan Woo|Bryce Miller|George Kirby|Logan Gilbert|Luis Castillo,17,-1.5582,1.5582,19,1.624,19,0.925,5.737,4.265,17.42
+621121,Lance McCullers|Mike Burrows,5,-1.55,2.3407,8,0.533,8,0.35,5.375,3.65,14.75
+800048,Parker Messick|Slade Cecconi|Tanner Bibee,19,-1.5411,1.1607,20,2.175,20,1.337,5.8,4.354,17.65
+656427,Casey Mize|Framber Valdez|Jack Flaherty|Keider Montero|Tarik Skubal|Troy Melton,17,-1.5112,1.4911,19,-0.017,19,-0.533,5.368,3.665,13.63
+683003,Jared Jones|Mitch Keller|Paul Skenes,9,-1.51,1.1882,10,-0.625,10,-1.262,5.3,3.712,13.8
+519242,Bryce Elder|Chris Sale|Grant Holmes|Martin Perez|Owen Murphy|Reynaldo Lopez|Spencer Strider,16,-1.5056,1.7342,19,1.833,19,0.898,7.053,5.369,17.53
+669432,Brandon Young|Kyle Bradish|Trevor Rogers,15,-1.4973,1.1576,19,0.422,19,0.056,4.368,3.158,16.37
+663436,Davis Martin|Erick Fedde|Sean Burke,19,-1.4105,1.1372,20,2.106,20,1.321,5.0,3.326,16.65
+681190,Michael King|Randy Vasquez|Walker Buehler,13,-1.4069,1.394,16,1.577,16,1.16,3.688,2.593,15.12
+684007,Edward Cabrera|Jameson Taillon|Javier Assad|Matthew Boyd|Shota Imanaga,16,-1.3981,1.3503,20,0.729,20,0.146,5.45,4.289,17.25
+690986,Brandon Woodruff|Chad Patrick|Kyle Harrison|Logan Henderson|Robert Gasser,14,-1.3771,1.8655,17,1.635,17,0.792,5.941,4.48,14.76
+594798,Jacob deGrom|Kumar Rocker|MacKenzie Gore|Nathan Eovaldi,17,-1.3676,1.2629,19,0.83,19,0.074,6.737,5.044,16.63
+687562,Eduardo Rivera|Jake Bennett|Patrick Sandoval|Sonny Gray,9,-1.3589,1.6787,10,0.765,10,0.088,4.2,2.752,17.8
+688107,Brandon Sproat|Brandon Woodruff|Coleman Crow|Jacob Misiorowski|Kyle Harrison|Robert Gasser,10,-1.357,1.3209,10,-1.343,10,-1.819,4.8,3.443,15.4
+669194,Eduardo Rodriguez|Merrill Kelly|Ryne Nelson,14,-1.3414,0.9458,15,-0.461,15,-0.769,4.133,2.801,16.67
+676962,Ben Brown|Colin Rea|Edward Cabrera|Jordan Wicks,6,-1.3283,1.878,8,1.625,8,0.604,5.125,3.672,15.88
+695505,Andrew Abbott|Brady Singer|Brandon Williamson|Chase Burns,18,-1.3167,2.0299,19,1.777,19,0.964,6.526,5.128,17.0
+667755,Grayson Rodriguez|Jose Soriano|Walbert Urena,17,-1.3088,1.2636,21,1.499,21,0.846,5.81,4.338,16.86
+677960,Cam Schlittler|Luis Gil|Ryan Weathers|Will Warren,17,-1.3053,1.1355,19,0.434,19,-0.23,6.053,4.93,16.16
+547179,Gabriel Hughes|Jose Quintana|Michael Lorenzen|Ryan Feltner,19,-1.2942,0.9933,21,-0.556,21,-0.862,3.714,2.601,14.24
+663556,Drew Rasmussen|Griffin Jax|Nick Martinez|Shane McClanahan,16,-1.2931,0.6909,19,1.425,19,0.714,4.632,3.269,15.16
+663903,Brady Singer|Hunter Greene|Nick Lodolo|Rhett Lowder,18,-1.2822,1.12,20,-1.15,20,-1.433,4.4,3.107,15.5
+641743,Anthony Kay|Davis Martin|Sean Burke,15,-1.248,1.0055,19,-0.794,19,-1.169,4.158,2.951,14.42
+701656,Brandon Sproat|Chad Patrick|Logan Henderson|Robert Gasser,8,-1.2337,2.0462,8,1.63,8,0.709,5.875,4.641,14.38
+625643,Hurston Waldrep|JR Ritchie|Martin Perez|Reynaldo Lopez,9,-1.2278,1.4368,10,-1.15,10,-1.381,4.1,3.217,13.2
+592791,Colin Rea|Jameson Taillon,11,-1.2255,0.9101,14,-1.213,14,-1.507,4.643,3.138,15.43
+680736,Eric Lauer|Justin Wrobleski|Roki Sasaki|Yoshinobu Yamamoto,14,-1.215,2.2972,16,0.313,16,-0.2,4.875,3.499,19.25
+837227,Jason Alexander|Lance McCullers|Mike Burrows|Peter Lambert|Spencer Arrighetti|Tatsuya Imai,11,-1.2064,2.2615,14,-1.281,14,-1.692,5.071,3.339,12.43
+650633,Griffin Canning|Michael King|Randy Vasquez,19,-1.1879,0.8323,21,0.766,21,0.186,4.905,3.654,17.05
+605488,J.T. Ginn|Jeffrey Springs,18,-1.1689,0.6438,20,0.099,20,-0.248,4.3,3.164,15.4
+693821,Bryce Elder|Chris Sale|Grant Holmes|Reynaldo Lopez,18,-1.0917,1.2975,19,1.446,19,0.901,4.737,3.797,17.16
+608566,German Marquez|JP Sears|Michael King,7,-1.0914,0.9049,10,-1.11,10,-1.255,3.3,2.48,13.2
+694738,Landen Roupp|Logan Webb|Trevor McDonald|Tyler Mahle,18,-1.0889,0.9812,20,2.216,20,1.411,5.65,4.467,16.5
+607200,Erick Fedde|Noah Schultz,9,-1.0844,1.0929,10,-0.524,10,-0.743,3.4,2.36,14.5
+681035,Christian Scott|Freddy Peralta|Nolan McLean|Sean Manaea,12,-1.0667,1.465,14,0.063,14,-0.699,5.571,4.989,13.57
+700712,Reid Detmers|Walbert Urena,13,-1.0615,0.9827,16,0.216,16,-0.452,5.062,4.169,16.06
+650911,Aaron Nola|Andrew Painter|Cristopher Sanchez|Zack Wheeler,19,-1.0505,1.3572,21,3.187,21,2.189,7.19,5.949,18.95
+663978,Brady Singer|Chase Petty|Chris Paddack|Janson Junk,6,-1.0367,1.2975,9,0.134,9,-0.106,3.444,2.797,13.67
+686218,Blake Snell|Emmet Sheehan|Eric Lauer|Justin Wrobleski,17,-1.0047,1.4826,18,0.374,18,-0.229,5.5,4.584,14.61
+700241,Andre Pallante|Dustin May|Michael McGreevy,18,-0.9689,1.0102,20,-0.072,20,-0.432,3.7,2.895,17.15
+676664,JP Sears|Walker Buehler,5,-0.968,0.8179,5,-0.683,5,-1.124,4.0,3.032,14.8
+608372,Michael Lorenzen|Ryan Feltner|Tomoyuki Sugano,17,-0.9659,0.6404,18,-0.531,18,-0.759,3.111,2.269,16.0
+672456,Casey Mize|Framber Valdez|Jack Flaherty|Keider Montero|Troy Melton|Ty Madden,14,-0.96,0.9047,16,0.656,16,0.242,3.875,3.111,17.19
+694346,Chris Bassitt|Dean Kremer|Trevor Rogers|Trey Gibson,6,-0.96,3.1634,7,-1.169,7,-1.591,4.0,3.373,13.29
+518876,Brandon Pfaadt|Eduardo Rodriguez|Merrill Kelly,17,-0.9512,0.8503,18,-0.599,18,-0.903,3.611,2.578,17.28
+676083,Chris Paddack|Janson Junk|Sandy Alcantara,12,-0.9367,0.6888,13,0.426,13,0.103,3.923,2.813,15.92
+671096,Andrew Abbott|Brady Singer|Chase Burns|Chris Paddack,18,-0.9356,0.6198,21,-0.753,21,-1.054,4.286,3.62,15.86
+607074,Carlos Rodon|Elmer Rodriguez|Gerrit Cole|Ryan Weathers,8,-0.9312,1.4965,9,0.286,9,-0.614,5.778,5.194,15.44
+702070,Cole Ragans|Michael Wacha|Noah Cameron|Seth Lugo|Stephen Kolek,17,-0.9276,1.493,19,0.386,19,-0.141,4.842,4.072,15.89
+677958,Jack Leiter|Kumar Rocker|MacKenzie Gore,15,-0.916,0.7997,17,-0.163,17,-0.556,4.118,3.284,14.71
+666157,Andrew Abbott|Chase Burns|Nick Lodolo|Rhett Lowder,12,-0.9042,1.6018,12,-0.275,12,-0.845,4.167,3.263,15.67
+669923,Bryan Woo|Bryce Miller|George Kirby|Luis Castillo,17,-0.8865,1.2195,19,1.055,19,0.444,5.474,4.702,18.32
+607625,Bailey Falter|Kris Bubic|Luinder Avila|Michael Wacha|Randy Dobnak|Seth Lugo|Stephen Kolek,19,-0.8663,0.8533,21,1.107,21,0.555,4.476,3.502,16.81
+663372,Kyle Freeland|Ryan Feltner|Sean Sullivan|Tanner Gordon,13,-0.8208,1.3856,14,-0.774,14,-1.024,3.571,2.641,14.07
+669456,Shane Bieber|Trey Yesavage,6,-0.82,1.1141,6,-0.548,6,-0.962,3.667,2.847,15.33
+641927,Bailey Ober|Mick Abel|Simeon Woods Richardson|Taj Bradley|Zebby Matthews,13,-0.8192,1.7033,15,-0.303,15,-0.589,4.0,3.335,16.2
+676440,Joey Cantillo|Parker Messick|Tanner Bibee,17,-0.7971,1.0743,21,-0.323,21,-0.717,4.381,3.497,17.0
+663554,Casey Mize|Jack Flaherty|Tarik Skubal,14,-0.7936,0.9087,15,1.802,15,1.162,5.467,4.421,16.13
+593958,Brandon Pfaadt|Eduardo Rodriguez|Michael Soroka|Mitch Bratt,21,-0.7671,0.6656,21,0.147,21,-0.295,4.095,3.328,17.52
+605288,Adrian Houser|Robbie Ray,10,-0.735,0.7508,14,-0.424,14,-0.633,3.429,3.165,14.14
+676106,Emerson Hancock|George Kirby|Logan Gilbert|Luis Castillo,18,-0.7339,0.9788,19,1.216,19,0.609,5.105,3.877,16.63
+683004,Jack Leiter|Jacob deGrom,15,-0.7153,1.4029,15,0.645,15,0.152,5.533,4.818,16.0
+702273,Davis Martin|Noah Schultz,10,-0.698,0.9961,12,0.373,12,-0.111,4.083,3.102,14.17
+668678,Jose Cabrera|Ryne Nelson|Zac Gallen,13,-0.6962,1.0175,19,-0.293,19,-0.58,3.211,2.688,15.47
+695076,Andrew Abbott|Chase Burns|Hunter Greene|Rhett Lowder,13,-0.6954,1.917,15,0.064,15,-0.281,4.133,3.92,14.0
+641816,Landen Roupp|Logan Webb|Trevor McDonald|Tyler Mahle,16,-0.6913,0.6879,16,-0.552,16,-0.944,4.812,4.121,15.56
+664285,Casey Mize|Framber Valdez|Jack Flaherty|Keider Montero,20,-0.685,1.1367,20,0.632,20,0.19,4.4,3.715,16.25
+665152,Dean Kremer|Kyle Bradish|Trevor Rogers,5,-0.68,3.094,6,-0.769,6,-1.189,5.667,3.72,16.0
+571510,Colin Rea|Edward Cabrera|Matthew Boyd|Shota Imanaga,11,-0.67,1.4867,11,1.532,11,0.942,5.0,4.33,16.09
+680694,Kyle Bradish|Shane Baz,19,-0.6658,1.6392,20,0.722,20,0.183,5.5,4.913,17.0
+686799,Jack Kochanowicz|Jose Soriano,11,-0.6518,1.6558,13,-0.159,13,-0.468,3.615,2.894,14.77
+681347,Cristian Javier|Mike Burrows|Spencer Arrighetti,16,-0.6394,0.7685,17,-0.208,17,-0.566,4.353,3.486,16.53
+679883,Luinder Avila|Noah Cameron|Seth Lugo,10,-0.637,1.3553,10,-0.369,10,-0.761,4.1,3.463,13.4
+650644,Aaron Civale|Gage Jump|Luis Severino,13,-0.5708,1.0322,15,-0.006,15,-0.3,3.6,3.198,14.47
+805673,Joe Ryan|Kendry Rojas|Zebby Matthews,13,-0.5654,1.036,13,0.654,13,-0.096,4.538,3.973,17.54
+592662,Adrian Houser|Landen Roupp|Robbie Ray|Trevor McDonald|Tyler Mahle,18,-0.5367,1.0015,19,0.064,19,-0.349,4.632,4.13,16.47
+543243,Connelly Early|Payton Tolle|Ranger Suarez|Sonny Gray,17,-0.5276,1.8254,18,-0.223,18,-0.699,5.0,4.649,16.94
+685299,Kyle Freeland,5,-0.526,2.0774,5,0.411,5,-0.132,3.4,2.874,13.8
+694297,Brandon Pfaadt|Eduardo Rodriguez|Mitch Bratt|Zac Gallen,7,-0.4786,1.6454,8,0.555,8,0.274,3.125,2.521,16.38
+665795,Edward Cabrera|Jameson Taillon|Javier Assad|Shota Imanaga,11,-0.4736,1.1892,14,0.388,14,0.011,4.643,4.163,15.5
+682052,Aaron Civale|Gage Jump|Jacob Lopez|Jeffrey Springs|Mason Barnett,11,-0.4609,1.3257,13,-0.195,13,-0.424,3.462,3.085,12.92
+807743,Kyle Freeland|Sean Sullivan|Tanner Gordon,5,-0.438,1.4067,5,-0.232,5,-0.646,3.2,2.762,13.4
+657277,Adrian Houser|Logan Webb|Robbie Ray,16,-0.4156,1.0864,18,1.904,18,1.354,4.944,4.522,18.83
+686790,Adrian Houser|Logan Webb|Trevor McDonald|Tyler Mahle,12,-0.4117,1.177,14,2.344,14,1.41,4.071,3.422,15.07
+680570,Ryan Johnson|Walbert Urena,9,-0.4033,1.323,9,0.205,9,-0.303,3.333,2.93,13.0
+686613,Hunter Brown|Peter Lambert|Ronel Blanco,6,-0.38,1.6067,8,2.782,8,1.944,5.375,3.953,15.0
+665871,Colin Rea|Edward Cabrera|Javier Assad|Matthew Boyd,7,-0.3671,1.2574,8,-0.374,8,-0.61,3.25,2.734,15.75
+579328,Yusei Kikuchi,6,-0.3283,1.9168,7,0.457,7,0.457,4.714,3.838,13.29
+605540,Brandon Sproat|Brandon Woodruff|Jacob Misiorowski|Robert Gasser,6,-0.3283,3.5209,9,1.168,9,0.885,5.222,4.838,15.11
+808967,Emmet Sheehan|Yoshinobu Yamamoto,15,-0.2753,1.7007,18,1.015,18,0.301,6.278,5.391,19.94
+702056,Dylan Cease|Kevin Gausman|Trey Yesavage,16,-0.2631,1.1137,16,1.146,16,0.255,5.438,5.174,15.94
+663969,Janson Junk|Sandy Alcantara|Tyler Phillips,10,-0.262,0.8601,10,0.773,10,0.272,2.8,2.538,13.4
+674841,Andrew Alvarez|Foster Griffin|Miles Mikolas,7,-0.2429,0.9359,7,1.903,7,1.057,4.286,4.043,13.29
+656605,Braxton Ashcraft|Carmen Mlodzinski|Mitch Keller,17,-0.2012,0.7379,20,0.674,20,0.177,4.15,3.74,16.25
+701542,Cam Schlittler|Elmer Rodriguez|Gerrit Cole|Max Fried|Ryan Weathers|Will Warren,17,-0.1812,1.3,19,1.415,19,0.715,5.053,4.407,15.53
+622491,Emerson Hancock|Logan Gilbert|Luis Castillo,15,-0.174,0.9022,16,0.355,16,-0.05,4.562,4.293,15.62
+678394,Brayan Bello|Garrett Crochet|Sonny Gray,5,-0.168,1.0878,8,0.053,8,-0.027,2.75,2.632,13.38
+641778,Eric Lauer|Justin Wrobleski|Kevin Gausman|Shohei Ohtani,12,-0.1583,1.4652,13,-0.159,13,-0.342,3.231,3.175,15.23
+640455,Freddy Peralta|Nolan McLean|Sean Manaea,8,-0.155,1.2443,8,1.071,8,0.27,4.875,4.72,16.0
+675660,Jacob Misiorowski|Kyle Harrison|Robert Gasser|Shane Drohan,11,-0.1482,1.7292,11,0.616,11,-0.088,5.091,4.943,15.64
+694477,Brandon Sproat|Chad Patrick,5,-0.128,0.9925,6,0.376,6,0.187,3.667,3.472,14.17
+641793,Cade Cavalli|Foster Griffin|Miles Mikolas|Zack Littell,12,-0.07,1.0554,13,-0.786,13,-0.963,3.0,2.93,14.38
+656550,Bryce Elder|Chris Sale|Grant Holmes|JR Ritchie|Martin Perez|Reynaldo Lopez,18,0.0367,1.1303,19,-0.349,19,-0.69,4.158,4.148,14.74
+607067,Colin Rea|Matthew Boyd|Shota Imanaga,15,0.0687,0.9379,17,0.28,17,-0.186,3.882,3.869,15.65
+663568,Michael Wacha|Seth Lugo|Stephen Kolek,8,0.155,1.6211,10,0.663,10,0.063,3.4,3.336,16.2
+691951,Jose Soriano|Ryan Johnson|Sam Aldegheri,6,0.17,1.0441,6,0.238,6,-0.132,2.333,2.503,12.83
+500779,Chase Dollander|Jose Quintana|Michael Lorenzen|Tanner Gordon|Tomoyuki Sugano,8,0.1787,1.3907,9,-0.267,9,-0.418,2.222,2.556,13.67
+571927,Nick Martinez|Steven Matz,7,0.1943,1.822,10,1.258,10,1.045,3.7,3.48,13.8
+687075,Brandon Sproat|Brandon Woodruff|Jacob Misiorowski|Logan Henderson,15,0.1973,1.1592,17,-0.982,17,-1.426,4.941,4.797,14.0
+607259,Drew Rasmussen|Griffin Jax|Nick Martinez,17,0.2459,0.8321,19,0.804,19,0.381,3.263,3.364,17.58
+687223,Cade Cavalli|Foster Griffin|Miles Mikolas|Zack Littell,5,0.298,1.3618,5,-0.084,5,-0.41,2.6,2.898,6.2
+673540,Kodai Senga|Nolan McLean,5,0.348,1.6603,7,0.905,7,0.77,4.857,5.148,11.86
+605400,Aaron Nola|Cristopher Sanchez|Jesus Luzardo,20,0.3865,0.9483,21,-0.202,21,-0.675,5.333,5.737,15.48
+571945,Andrew Alvarez|Cade Cavalli|Jake Irvin|Miles Mikolas,7,0.4157,1.1233,8,-0.863,8,-1.012,3.125,3.559,14.25
+527048,Bryce Elder|Chris Sale|Martin Perez|Reynaldo Lopez|Spencer Strider,12,0.4167,1.602,15,0.456,15,-0.013,3.6,4.083,15.2
+687473,Eury Perez|Ryan Gusto,7,0.4571,1.3781,7,0.041,7,-0.395,3.143,3.6,10.57
+682227,Andrew Abbott|Brandon Williamson,5,0.478,0.767,6,-0.014,6,-0.014,3.167,3.545,14.0
+696149,Bubba Chandler|Paul Skenes,17,0.48,1.1972,19,-0.095,19,-0.465,4.368,4.892,15.05
+605135,Brandon Young|Cade Povich|Chris Bassitt|Trevor Rogers,10,0.584,1.2073,10,0.186,10,0.012,2.7,3.284,13.8
+656849,Colin Rea|David Peterson|Freddy Peralta|Kodai Senga|Nolan McLean|Shota Imanaga,10,0.682,0.8224,12,1.322,12,0.896,4.083,4.742,14.58
+696270,Jose Soriano|Ryan Johnson,7,0.8,2.0429,7,-1.115,7,-1.399,3.857,4.657,14.29
+608331,Cam Schlittler|Max Fried,10,0.819,1.4302,11,2.551,11,2.117,5.182,5.219,18.18
+677944,Gavin Williams|Parker Messick|Slade Cecconi,16,0.93,0.6624,20,-0.192,20,-0.579,4.1,5.117,15.55
+691725,Aaron Nola|Andrew Painter|Cristopher Sanchez|Jesus Luzardo,10,0.984,1.6809,12,0.697,12,0.335,3.583,4.384,13.75
+680573,Connor Prielipp|Joe Ryan|Simeon Woods Richardson|Taj Bradley|Zebby Matthews,7,1.0029,1.0669,10,-0.064,10,-0.165,2.4,3.479,13.4
+571578,Dylan Cease|Eric Lauer|Patrick Corbin,13,1.1231,1.5721,15,0.163,15,-0.225,3.467,4.815,13.8
+678906,Hunter Brown|Kai-Wei Teng|Peter Lambert,9,1.6289,2.2662,10,0.168,10,-0.381,4.3,5.629,13.2
+666142,Cole Ragans|Seth Lugo,6,1.975,0.5446,8,-0.361,8,-0.522,5.625,6.975,13.25
+676571,Andrew Alvarez|Cade Cavalli|Miles Mikolas|Zack Littell,9,2.1189,0.7992,11,1.147,11,1.013,1.0,3.031,4.09
+680755,Eric Lauer|Kevin Gausman|Shane Bieber|Trey Yesavage,5,2.16,0.894,7,4.075,7,3.58,1.286,3.36,3.43

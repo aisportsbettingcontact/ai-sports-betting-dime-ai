@@ -1,0 +1,4 @@
+gameId,matchup,expectedScore,games_actual,sched,linescore,scoreOk,fgMl,fgRl,fgTotal,brierFgMl,brierFgTotal,backtestRows,backtestStale,backtestDefects,backtestDetail
+2250733,STL@CIN 2026-05-23 G2,6-7,6-7,8-1,6-7,YES,LOSS/LOSS/match,WIN/WIN/match,OVER/OVER/match,match-away-base,match,6,0,0,fg_ml_away:NO_ACTION fg_ml_home:NO_ACTION fg_over:NO_ACTION fg_rl_away:NO_ACTION fg_rl_home:NO_ACTION fg_under:NO_ACTION
+2250738,DET@BAL 2026-05-24 G1,3-5,3-5,3-5,3-5,YES,LOSS/LOSS/match,LOSS/LOSS/match,PUSH/PUSH/match,match-away-base,both-null,6,0,0,fg_ml_away:LOSS fg_ml_home:NO_ACTION fg_over:NO_ACTION fg_rl_away:NO_ACTION fg_rl_home:NO_ACTION fg_under:NO_ACTION
+2251290,MIL@STL 2026-07-07 G2,10-2,10-2,4-3,10-2,YES,WIN/WIN/match,LOSS/LOSS/match,OVER/OVER/match,match-away-base,match,6,0,0,fg_ml_away:NO_ACTION fg_ml_home:NO_ACTION fg_over:NO_ACTION fg_rl_away:NO_ACTION fg_rl_home:NO_ACTION fg_under:NO_ACTION

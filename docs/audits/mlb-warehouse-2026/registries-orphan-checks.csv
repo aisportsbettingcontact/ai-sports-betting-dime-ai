@@ -1,0 +1,16 @@
+check,referencing_table,distinct_ids_referenced,orphans_not_in_registry
+plays batter_id -> mlb_people,mlb_plays,4431,0
+plays pitcher_id -> mlb_people,mlb_plays,3830,0
+boxscore_batting mlbam_id -> mlb_people,mlb_boxscore_batting,5292,0
+boxscore_pitching mlbam_id -> mlb_people,mlb_boxscore_pitching,3830,0
+officials mlbam_id -> mlb_people,mlb_officials,181,0
+games winner_pitcher_id -> mlb_people (49417 non-null),mlb_games,,0
+games loser_pitcher_id -> mlb_people (49417 non-null),mlb_games,,0
+games save_pitcher_id -> mlb_people (24889 non-null),mlb_games,,0
+union of all person refs -> mlb_people,all above,6317,0
+games home/away team_id -> mlb_franchises,mlb_games,32,0
+boxscore_batting team_id -> mlb_franchises,mlb_boxscore_batting,32,0
+games venue_id -> mlb_venues (2 games NULL venue_id),mlb_games,55,0
+mlb_people rows never referenced anywhere,mlb_people,6425,108
+mlb_franchises rows never referenced by games,mlb_franchises,32,0
+mlb_venues rows never referenced by games,mlb_venues,55,0

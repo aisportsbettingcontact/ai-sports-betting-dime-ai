@@ -1,0 +1,32 @@
+pandoc: 3.1.11
+pkgdown: 2.2.0.9000
+pkgdown_sha: a6abe43ed48e58b1de42eba5e5541a5b6c46b46f
+articles:
+  dictionary_combine: dictionary_combine.html
+  dictionary_contracts: dictionary_contracts.html
+  dictionary_depth_charts: dictionary_depth_charts.html
+  dictionary_draft_picks: dictionary_draft_picks.html
+  dictionary_espn_qbr: dictionary_espn_qbr.html
+  dictionary_ff_opportunity: dictionary_ff_opportunity.html
+  dictionary_ff_playerids: dictionary_ff_playerids.html
+  dictionary_ff_rankings: dictionary_ff_rankings.html
+  dictionary_ftn_charting: dictionary_ftn_charting.html
+  dictionary_injuries: dictionary_injuries.html
+  dictionary_nextgen_stats: dictionary_nextgen_stats.html
+  dictionary_participation: dictionary_participation.html
+  dictionary_pbp: dictionary_pbp.html
+  dictionary_pfr_passing: dictionary_pfr_passing.html
+  dictionary_player_stats: dictionary_player_stats.html
+  dictionary_players: dictionary_players.html
+  dictionary_roster_status: dictionary_roster_status.html
+  dictionary_rosters: dictionary_rosters.html
+  dictionary_schedules: dictionary_schedules.html
+  dictionary_snap_counts: dictionary_snap_counts.html
+  dictionary_team_stats: dictionary_team_stats.html
+  dictionary_trades: dictionary_trades.html
+  exporting_nflreadr: exporting_nflreadr.html
+  articles/nflverse_data_schedule: nflverse_data_schedule.html
+last_built: 2026-04-20T17:32Z
+urls:
+  reference: https://nflreadr.nflverse.com/reference
+  article: https://nflreadr.nflverse.com/articles

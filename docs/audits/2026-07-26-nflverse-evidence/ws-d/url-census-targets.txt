@@ -1,0 +1,474 @@
+# url-census-targets.txt -- Task 4 (WS-D) Step 1
+# Generated: 2026-07-27T05:39:41Z
+# Command: grep -RohE '(https?|ftp)://[^"' )>,;]+' <6 target dirs> | sort | uniq -c | sort -rn
+#   (the character class also excludes a literal single-quote; not representable in this comment
+#   without re-triggering the same quoting problem the census command itself has to solve -- see
+#   notes.md for the byte-exact command actually executed)
+# Scope: source trees of the 6 audit targets only: nflverse nflreadr nflfastR nflseedR nfl4th nflplotR
+#        (under $ROOT/sources/, extracted CRAN source tarballs -- all files: R/, man/, vignettes/,
+#        tests/, inst/, README, NEWS, DESCRIPTION, build/ etc.)
+# Note: the character class excludes only: double-quote, single-quote, space, ), >, comma, semicolon.
+#       It does NOT exclude curly braces, so some Rd url{...} macro matches retain a trailing '}'
+#       (e.g. 'nflseedr.com}'). This is the literal, unmodified brief regex; trailing-brace variants
+#       are extraction noise, not distinct URLs -- see notes.md. The clean form (no trailing brace)
+#       is always also present as its own line.
+# Total unique URL strings (as extracted, case-preserved): 383
+#
+# --- Host-level rollup (case-insensitive), for reference (not required for this file but kept
+#     consistent with the closure file below) ---
+#   <total occurrences summed over URLs at host>  <count of distinct URL strings at host>  <host>
+#        235    146  github.com
+#         95     51  nflreadr.nflverse.com
+#         61      3  www.w3.org
+#         33     17  nflseedr.com
+#         24     19  img.shields.io
+#         23      1  mathjax.rstudio.com
+#         22     15  nflfastr.com
+#         18     14  cran.r-project.org
+#         18      9  nflplotr.nflverse.com
+#         18      3  nflverse.r-universe.dev
+#         15      3  lifecycle.r-lib.org
+#          9      6  www.nfl.com
+#          9      1  discord.com
+#          8      5  nflverse.nflverse.com
+#          8      3  ggplot2.tidyverse.org
+#          6      6  nextgenstats.nfl.com
+#          6      4  www.pro-football-reference.com
+#          6      4  orcid.org
+#          5      4  www.nfl4th.com
+#          5      3  creativecommons.org
+#          5      1  tidyverse.org
+#          4      2  www.espn.com
+#          4      2  rstats.wtf
+#          4      1  progressr.futureverse.org
+#          4      1  ffverse.r-universe.dev
+#          3      3  www.r-pkg.org
+#          3      3  www.fantasypros.com
+#          3      3  ftnfantasy.com
+#          3      3  cranlogs.r-pkg.org
+#          3      2  overthecap.com
+#          3      2  cran.rstudio.com
+#          3      1  raw.githubusercontent.com
+#          3      1  ffopportunity.ffverse.com
+#          2      2  www.w3schools.com
+#          2      2  twitter.com
+#          2      2  stat.ethz.ch
+#          2      2  stackoverflow.com
+#          2      2  purl.org
+#          2      2  app.codecov.io
+#          2      1  www.pff.com
+#          2      1  www.nflgsis.com
+#          2      1  mrcaseb.com
+#          1      1  x.com
+#          1      1  www.openswatchbook.org
+#          1      1  www.nytimes.com
+#          1      1  www.nflfastr.com
+#          1      1  www.inkscape.org
+#          1      1  www.fantasypros.com}
+#          1      1  testthat.r-lib.org
+#          1      1  static.www.nfl.com
+#          1      1  sodipodi.sourceforge.net
+#          1      1  site.api.espn.com
+#          1      1  rlang.r-lib.org
+#          1      1  rbsdm.com
+#          1      1  r-pkgs.org
+#          1      1  packagemanager.posit.co
+#          1      1  opensourcefootball.com
+#          1      1  nflseedr.com}
+#          1      1  nflreadr.nflverse.com}
+#          1      1  nflreadpy.nflverse.com
+#          1      1  nflplotr.nflverse.com}
+#          1      1  ffopportunity.ffverse.com}{{ffopportunity}}
+#          1      1  ffopportunity.ffverse.com}
+#          1      1  dplyr.tidyverse.org
+#          1      1  dbplyr.tidyverse.org
+#          1      1  codecov.io
+#          1      1  cloud.r-project.org
+#          1      1  arxiv.org
+# unique hosts (case-insensitive): see count in notes.md / line count above
+#
+# --- Full URL dedup with counts (case preserved, as grep extracted them) ---
+#   <count> <url>
+  31 http://www.w3.org/2000/svg
+  29 http://www.w3.org/1999/xlink
+  23 https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML
+  15 https://nflverse.r-universe.dev
+  15 https://github.com/nflverse/nflverse-data
+  10 https://lifecycle.r-lib.org/articles/stages.html#deprecated}{\figure{lifecycle-deprecated.svg}{options:
+   9 https://discord.com/invite/5Er2FBnnQa
+   8 https://github.com/nflverse/nflverse-data}
+   6 https://nflseedr.com/articles/articles/nflsim2.html#simulation-output
+   5 https://tidyverse.org/blog/2019/04/r-version-support/
+   5 https://nflseedr.com/articles/articles/nflsim2.html#simulation-output}
+   5 https://nflplotr.nflverse.com/articles/gt.html
+   4 https://progressr.futureverse.org
+   4 https://nflverse.nflverse.com/
+   4 https://img.shields.io/discord/789805604076126219?color=7289da&label=nflverse%20support&logo=discord&logoColor=fff&style=flat-square
+   4 https://github.com/nflverse/nflverse-data/releases/download/test/combines.rds
+   4 https://github.com/nflverse/nflverse-data/releases/download/test/combines.csv
+   4 https://github.com/nflverse/nflreadr/issues/new/choose
+   4 https://github.com/nflverse/nflplotR/raw/main/man/figures/logo.png
+   4 https://github.com/nflverse/nfldata
+   4 https://github.com/mrcaseb/nfl-data/tree/master/data/lateral_yards}
+   4 https://github.com/dynastyprocess/data
+   4 https://ggplot2.tidyverse.org/articles/ggplot2-specs.html?q=colour#colour-and-fill}}
+   4 https://ffverse.r-universe.dev
+   3 https://www.pro-football-reference.com/
+   3 https://www.nfl.com/standings/tie-breaking-procedures
+   3 https://www.espn.com/
+   3 https://raw.githubusercontent.com/nflverse/nflfastR-raw/master/raw
+   3 https://nflseedr.com/articles/articles/nflseedR.html}{on
+   3 https://nflseedr.com/articles/articles/nflseedR.html
+   3 https://nflreadr.nflverse.com/articles/dictionary_pfr_passing.html}
+   3 https://nflreadr.nflverse.com/articles/dictionary_pfr_passing.html
+   3 https://nflreadr.nflverse.com/articles/dictionary_depth_charts.html
+   3 https://nflreadr.nflverse.com/
+   3 https://nflplotr.nflverse.com/articles/gt.html}
+   3 https://nflplotr.nflverse.com
+   3 https://nflfastr.com/articles/field_descriptions.html
+   3 https://lifecycle.r-lib.org/articles/stages.html#stable
+   3 https://img.shields.io/badge/lifecycle-stable-brightgreen.svg
+   3 https://github.com/nflverse/nflverse-rosters/
+   3 https://github.com/nflverse/nflverse-pfr
+   3 https://github.com/nflverse/nflverse-pbp
+   3 https://github.com/nflverse/nflverse-data/releases/download/draft_picks/draft_picks.csv
+   3 https://github.com/nflverse/nflseedR/raw/master/man/figures/logo.png
+   3 https://github.com/nflverse/espnscrapeR-data
+   3 https://github.com/futureverse/future/blob/develop/README.md}{the
+   3 https://github.com/futureverse/future/blob/develop/README.md
+   3 https://ggplot2.tidyverse.org/articles/ggplot2-specs.html?q=colour#colour-and-fill
+   3 https://ffopportunity.ffverse.com
+   2 https://www.pff.com/
+   2 https://www.nfl4th.com/
+   2 https://www.nfl.com/
+   2 https://rstats.wtf/r-startup.html}{this
+   2 https://rstats.wtf/r-startup.html
+   2 https://overthecap.com/contract-history
+   2 https://orcid.org/0000-0001-8388-5155}{ORCID}
+   2 https://orcid.org/0000-0001-8388-5155
+   2 https://nflverse.r-universe.dev/
+   2 https://nflseedr.com/articles/tiebreaker.html}.
+   2 https://nflseedr.com/articles/tiebreaker.html
+   2 https://nflseedr.com/
+   2 https://nflreadr.nflverse.com/articles/dictionary_trades.html}
+   2 https://nflreadr.nflverse.com/articles/dictionary_trades.html
+   2 https://nflreadr.nflverse.com/articles/dictionary_team_stats.html}
+   2 https://nflreadr.nflverse.com/articles/dictionary_team_stats.html
+   2 https://nflreadr.nflverse.com/articles/dictionary_snap_counts.html}
+   2 https://nflreadr.nflverse.com/articles/dictionary_snap_counts.html
+   2 https://nflreadr.nflverse.com/articles/dictionary_schedules.html}
+   2 https://nflreadr.nflverse.com/articles/dictionary_schedules.html
+   2 https://nflreadr.nflverse.com/articles/dictionary_rosters.html}
+   2 https://nflreadr.nflverse.com/articles/dictionary_rosters.html
+   2 https://nflreadr.nflverse.com/articles/dictionary_player_stats.html}
+   2 https://nflreadr.nflverse.com/articles/dictionary_player_stats.html
+   2 https://nflreadr.nflverse.com/articles/dictionary_pbp.html}
+   2 https://nflreadr.nflverse.com/articles/dictionary_pbp.html
+   2 https://nflreadr.nflverse.com/articles/dictionary_nextgen_stats.html}
+   2 https://nflreadr.nflverse.com/articles/dictionary_nextgen_stats.html
+   2 https://nflreadr.nflverse.com/articles/dictionary_injuries.html}
+   2 https://nflreadr.nflverse.com/articles/dictionary_injuries.html
+   2 https://nflreadr.nflverse.com/articles/dictionary_ftn_charting.html}
+   2 https://nflreadr.nflverse.com/articles/dictionary_ftn_charting.html
+   2 https://nflreadr.nflverse.com/articles/dictionary_ff_rankings.html}
+   2 https://nflreadr.nflverse.com/articles/dictionary_ff_rankings.html
+   2 https://nflreadr.nflverse.com/articles/dictionary_ff_playerids.html}
+   2 https://nflreadr.nflverse.com/articles/dictionary_ff_playerids.html
+   2 https://nflreadr.nflverse.com/articles/dictionary_ff_opportunity.html}
+   2 https://nflreadr.nflverse.com/articles/dictionary_ff_opportunity.html
+   2 https://nflreadr.nflverse.com/articles/dictionary_espn_qbr.html}
+   2 https://nflreadr.nflverse.com/articles/dictionary_espn_qbr.html
+   2 https://nflreadr.nflverse.com/articles/dictionary_draft_picks.html}
+   2 https://nflreadr.nflverse.com/articles/dictionary_draft_picks.html
+   2 https://nflreadr.nflverse.com/articles/dictionary_depth_charts.html}
+   2 https://nflreadr.nflverse.com/articles/dictionary_contracts.html}
+   2 https://nflreadr.nflverse.com/articles/dictionary_contracts.html
+   2 https://nflreadr.nflverse.com/articles/dictionary_combine.html}
+   2 https://nflreadr.nflverse.com/articles/dictionary_combine.html
+   2 https://nflreadr.nflverse.com
+   2 https://nflplotr.nflverse.com/articles/nflplotR.html
+   2 https://nflfastr.com/articles/stats_variables.html
+   2 https://nflfastr.com/articles/nflfastR.html#example-11-replicating-official-stats}{the
+   2 https://nflfastr.com/articles/nflfastR.html#example-11-replicating-official-stats
+   2 https://nflfastr.com/articles/beginners_guide.html
+   2 https://nflfastr.com/
+   2 https://mrcaseb.com
+   2 https://lifecycle.r-lib.org/articles/stages.html
+   2 https://github.com/Rdatatable/data.table/issues/5658
+   2 https://github.com/nflverse/nflverse/raw/main/man/figures/logo.png
+   2 https://github.com/nflverse/nflverse/issues/new/choose
+   2 https://github.com/nflverse/nflverse-pfr}
+   2 https://github.com/nflverse/nflverse-pbp}
+   2 https://github.com/nflverse/nflverse-data/releases/tag/pbp
+   2 https://github.com/nflverse/nflverse-data/releases/download/rosters/roster_2021.csv
+   2 https://github.com/nflverse/nflverse-data/releases/download/rosters/roster_2020.csv
+   2 https://github.com/nflverse/nflverse-data/releases/download/player_stats/player_stats.qs
+   2 https://github.com/nflverse/nflverse-data/releases/download/player_stats/player_stats.parquet
+   2 https://github.com/nflverse/nflverse-data/releases/download/
+   2 https://github.com/nflverse/nflverse-data}{nflverse-data
+   2 https://github.com/nflverse/nflseedR/raw/master/man/figures/caption.png
+   2 https://github.com/nflverse/nflseedR
+   2 https://github.com/nflverse/nflreadr/raw/main/data-raw/logo.svg
+   2 https://github.com/nflverse/nflreadr/issues/new/choose}{opening
+   2 https://github.com/nflverse/nflreadr}
+   2 https://github.com/nflverse/nflreadr
+   2 https://github.com/nflverse/nflplotR/issues/new/choose
+   2 https://github.com/nflverse/nflfastR/raw/master/man/figures/logo.png
+   2 https://github.com/nflverse/nflfastR/issues}
+   2 https://github.com/nflverse/nfldata/raw/master/data/games.rds
+   2 https://github.com/nflverse/nfldata}
+   2 https://github.com/nflverse/nfl4th/raw/master/man/figures/logo.png
+   2 https://github.com/nflverse/nfl4th/
+   2 https://github.com/mrcaseb/nfl-data/tree/master/data/lateral_yards</a
+   2 https://github.com/mrcaseb/nfl-data/tree/master/data/lateral_yards
+   2 https://github.com/maksimhorowitz/nflscrapR/blob/master/R/add_ep_wp_variables.R
+   2 https://github.com/maksimhorowitz/nflscrapR
+   2 https://github.com/ffverse/ffopportunity
+   2 https://github.com/dynastyprocess/data}
+   2 https://creativecommons.org/licenses/by-sa/4.0/}{CC-BY-SA
+   2 https://creativecommons.org/licenses/by-sa/4.0/
+   2 https://cran.rstudio.com/
+   2 https://CRAN.R-project.org/package=nflseedR
+   2 https://CRAN.R-project.org/package=nflplotR
+   2 https://CRAN.R-project.org/package=nflfastR
+   2 https://cran.r-project.org/package=gsisdecoder
+   2 http://www.nflgsis.com/gsis/Documentation/Partners/StatIDs.html}
+   1 https://x.com/LeeSharpeNFL
+   1 https://www.w3schools.com/cssref/index.php}.
+   1 https://www.w3schools.com/cssref/index.php
+   1 https://www.r-pkg.org/badges/version-last-release/nflseedR
+   1 https://www.r-pkg.org/badges/version-last-release/nflfastR
+   1 https://www.r-pkg.org/badges/version-last-release/nfl4th
+   1 https://www.pro-football-reference.com/years/2021/passing_advanced.htm}
+   1 https://www.pro-football-reference.com/years/2021/passing_advanced.htm
+   1 https://www.pro-football-reference.com/}{Pro
+   1 https://www.nytimes.com/athletic/2144214/2020/10/28/nfl-fourth-down-decisions-the-math-behind-the-leagues-new-aggressiveness/
+   1 https://www.nflfastr.com/
+   1 https://www.nfl4th.com/articles/articles/nfl4th.html
+   1 https://www.nfl4th.com/articles/articles/4th-down-research.html
+   1 https://www.nfl4th.com/}
+   1 https://www.nfl.com/news/what-is-the-international-player-pathway</a
+   1 https://www.nfl.com/news/what-is-the-international-player-pathway
+   1 https://www.nfl.com/}.
+   1 https://www.nfl.com/}
+   1 https://www.fantasypros.com/</a
+   1 https://www.fantasypros.com/
+   1 https://www.fantasypros.com}
+   1 https://www.fantasypros.com
+   1 https://www.espn.com/}.
+   1 https://twitter.com/PFF_Moo
+   1 https://twitter.com/nflfastR
+   1 https://testthat.r-lib.org/reference/test_package.html#special-files
+   1 https://static.www.nfl.com/image/private/t_player_profile_landscape_2x/f_auto/league/rfuw3dh4aah4l4eeuubp.png
+   1 https://stat.ethz.ch/R-manual/R-devel/library/base/html/readRDS.html
+   1 https://stat.ethz.ch/pipermail/r-package-devel/2023q4/009969.html
+   1 https://stackoverflow.com/questions/43343590/how-to-sort-putting-nas-first-in-dplyr
+   1 https://stackoverflow.com/questions/2547402/is-there-a-built-in-function-for-finding-the-mode/8189441
+   1 https://rlang.r-lib.org/
+   1 https://rbsdm.com/stats/fourth_calculator/
+   1 https://r-pkgs.org/tests.html
+   1 https://packagemanager.posit.co/cran/latest
+   1 https://overthecap.com/contract-history}
+   1 https://orcid.org/0000-0002-8533-7504}{ORCID}
+   1 https://orcid.org/0000-0002-8533-7504
+   1 https://opensourcefootball.com/posts/2020-09-28-nflfastr-ep-wp-and-cp-models/
+   1 https://nflverse.r-universe.dev/}
+   1 https://nflverse.nflverse.com/LICENSE.html
+   1 https://nflverse.nflverse.com/CONTRIBUTING.html
+   1 https://nflverse.nflverse.com/}.
+   1 https://nflverse.nflverse.com/}
+   1 https://nflseedr.com/articles/tiebreaker.html}
+   1 https://nflseedr.com/articles/nflseedR.html
+   1 https://nflseedr.com/articles/articles/nflsim2.html#simulation-output}{the
+   1 https://nflseedr.com/articles/articles/nflsim2.html}{on
+   1 https://nflseedr.com/articles/articles/nflsim2.html
+   1 https://nflseedr.com/articles/articles/nflsim.html#simulation-output}{the
+   1 https://nflseedr.com/articles/articles/nflsim.html#simulation-output
+   1 https://nflseedr.com/articles/articles/nflsim.html}{on
+   1 https://nflseedr.com/articles/articles/nflsim.html
+   1 https://nflseedr.com}
+   1 https://nflseedr.com
+   1 https://nflreadr.nflverse.com/reference/load_player_stats.html}
+   1 https://nflreadr.nflverse.com/reference/load_player_stats.html
+   1 https://nflreadr.nflverse.com/reference/index.html
+   1 https://nflreadr.nflverse.com/LICENSE.html
+   1 https://nflreadr.nflverse.com/CONTRIBUTING.html
+   1 https://nflreadr.nflverse.com/articles/exporting_nflreadr.html}
+   1 https://nflreadr.nflverse.com/articles/exporting_nflreadr.html
+   1 https://nflreadr.nflverse.com/articles/dictionary_players.html}
+   1 https://nflreadr.nflverse.com/articles/dictionary_players.html
+   1 https://nflreadr.nflverse.com/articles/dictionary_participation.html}
+   1 https://nflreadr.nflverse.com/articles/dictionary_participation.html
+   1 https://nflreadr.nflverse.com}
+   1 https://nflreadpy.nflverse.com
+   1 https://nflplotr.nflverse.com/LICENSE.html
+   1 https://nflplotr.nflverse.com/CONTRIBUTING.html
+   1 https://nflplotr.nflverse.com/articles/nflplotR.html}
+   1 https://nflplotr.nflverse.com/articles/gt.html}.
+   1 https://nflplotr.nflverse.com/
+   1 https://nflplotr.nflverse.com}
+   1 https://nflfastr.com/reference/nflfastR-package.html
+   1 https://nflfastr.com/reference/build_nflfastR_pbp.html}
+   1 https://nflfastr.com/reference/build_nflfastR_pbp.html
+   1 https://nflfastr.com/articles/stats_variables.html}
+   1 https://nflfastr.com/articles/nflfastR.html
+   1 https://nflfastr.com/articles/field_descriptions.html}{the
+   1 https://nflfastr.com/articles/field_descriptions.html}{nflfastR
+   1 https://nflfastr.com/articles/beginners_guide.html}
+   1 https://nflfastr.com/}
+   1 https://nextgenstats.nfl.com/stats/rushing}
+   1 https://nextgenstats.nfl.com/stats/rushing
+   1 https://nextgenstats.nfl.com/stats/receiving}
+   1 https://nextgenstats.nfl.com/stats/receiving
+   1 https://nextgenstats.nfl.com/stats/passing}
+   1 https://nextgenstats.nfl.com/stats/passing
+   1 https://img.shields.io/twitter/follow/nflfastR.svg?style=social
+   1 https://img.shields.io/github/r-package/v/nflverse/nflverse/main?label=dev%20version&style=flat-square&logo=github
+   1 https://img.shields.io/github/r-package/v/nflverse/nflseedR/master?label=dev%20version&style=flat-square&logo=github
+   1 https://img.shields.io/github/r-package/v/nflverse/nflreadr/main?label=dev%20version&style=flat-square&logo=github
+   1 https://img.shields.io/github/r-package/v/nflverse/nflplotR/main?label=dev%20version&style=flat-square&logo=github
+   1 https://img.shields.io/github/r-package/v/nflverse/nflfastR/master?label=dev%20version&style=flat-square&logo=github
+   1 https://img.shields.io/github/actions/workflow/status/nflverse/nflreadr/R-CMD-check.yaml?label=R%20check&style=flat-square&logo=github
+   1 https://img.shields.io/github/actions/workflow/status/nflverse/nflplotR/R-CMD-check.yaml?label=R%20check&style=flat-square&logo=github
+   1 https://img.shields.io/github/actions/workflow/status/nflverse/nflfastR/R-CMD-check.yaml?label=R%20check&style=flat-square&logo=github
+   1 https://img.shields.io/discord/789805604076126219.svg?color=7289da&label=Support&logo=discord&style=flat-square
+   1 https://img.shields.io/discord/789805604076126219?color=7289da&label=nflverse%20discord&logo=discord&logoColor=fff&style=flat-square
+   1 https://img.shields.io/cran/v/nflverse?style=flat-square&logo=R&label=CRAN
+   1 https://img.shields.io/cran/v/nflreadr?style=flat-square&logo=R&label=CRAN
+   1 https://img.shields.io/cran/v/nflplotR?style=flat-square&logo=R&label=CRAN
+   1 https://img.shields.io/codecov/c/github/nflverse/nflreadr?label=codecov&style=flat-square&logo=codecov
+   1 https://img.shields.io/badge/lifecycle-stable-green.svg?style=flat-square
+   1 https://img.shields.io/badge/lifecycle-experimental-orange.svg?style=flat-square
+   1 https://github.com/z-feldman/Expected_Completion_NFL
+   1 https://github.com/tidyverse/tidyverse/issues/171
+   1 https://github.com/tanho63
+   1 https://github.com/spatto12
+   1 https://github.com/r-lib/pkgdown/blob/master/R/build.r
+   1 https://github.com/nflverse/rotc}
+   1 https://github.com/nflverse/rotc
+   1 https://github.com/nflverse/nflverse/issues}
+   1 https://github.com/nflverse/nflverse/issues
+   1 https://github.com/nflverse/nflverse/actions/workflows/R-CMD-check.yaml/badge.svg
+   1 https://github.com/nflverse/nflverse/actions/workflows/R-CMD-check.yaml
+   1 https://github.com/nflverse/nflverse/
+   1 https://github.com/nflverse/nflverse}
+   1 https://github.com/nflverse/nflverse-rosters/&quot
+   1 https://github.com/nflverse/nflverse-rosters
+   1 https://github.com/nflverse/nflverse-players/blob/master/.github/CONTRIBUTING.md}
+   1 https://github.com/nflverse/nflverse-players/blob/master/.github/CONTRIBUTING.md
+   1 https://github.com/nflverse/nflverse-players}.
+   1 https://github.com/nflverse/nflverse-players?tab=readme-ov-file#whats-new-in-players-v2
+   1 https://github.com/nflverse/nflverse-players
+   1 https://github.com/nflverse/nflverse-pbp/releases/download/playstats/play_stats_
+   1 https://github.com/nflverse/nflverse-pbp/raw/master/teams_colors_logos.rds
+   1 https://github.com/nflverse/nflverse-org
+   1 https://github.com/nflverse/nflverse-data/releases/download/weekly_rosters/roster_weekly_
+   1 https://github.com/nflverse/nflverse-data/releases/download/teams/
+   1 https://github.com/nflverse/nflverse-data/releases/download/rosters/roster_
+   1 https://github.com/nflverse/nflverse-data/releases/download/players/players.{file_type}
+   1 https://github.com/nflverse/nflverse-data/releases/download/pfr_advstats/advstats_week_
+   1 https://github.com/nflverse/nflverse-data/releases/download/pfr_advstats/advstats_season_
+   1 https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_
+   1 https://github.com/nflverse/nflverse-data/releases/download/pbp_participation/pbp_participation_
+   1 https://github.com/nflverse/nflverse-data/releases/download/officials/officials.{file_type}
+   1 https://github.com/nflverse/nflverse-data/releases/download/misc/multiple_lateral_yards.rds
+   1 https://github.com/nflverse/nflverse-data/releases/download/injuries/injuries_{seasons}.{file_type}
+   1 https://github.com/nflverse/nflverse-data/releases/download/ftn_charting/ftn_charting_{seasons}.{file_type}
+   1 https://github.com/nflverse/nflverse-data/releases/download/espn_data/qbr_
+   1 https://github.com/nflverse/nflverse-data/releases/download/draft_picks/draft_picks.{file_type}
+   1 https://github.com/nflverse/nflverse-data/releases/download/depth_charts/depth_charts_{seasons}.rds
+   1 https://github.com/nflverse/nflverse-data/releases/download/contracts/historical_contracts.{file_type}
+   1 https://github.com/nflverse/nflverse-data/releases/download/combine/combine.{file_type}
+   1 https://github.com/nflverse/nflverse-data/releases/
+   1 https://github.com/nflverse/nflverse-data}.
+   1 https://github.com/nflverse/nflverse
+   1 https://github.com/nflverse/nflseedR/issues}
+   1 https://github.com/nflverse/nflseedR/issues
+   1 https://github.com/nflverse/nflseedR/actions/workflows/R-CMD-check.yaml/badge.svg
+   1 https://github.com/nflverse/nflseedR/actions/workflows/R-CMD-check.yaml
+   1 https://github.com/nflverse/nflseedR}
+   1 https://github.com/nflverse/nflreadr/issues/213
+   1 https://github.com/nflverse/nflreadr/issues}
+   1 https://github.com/nflverse/nflreadr/issues
+   1 https://github.com/nflverse/nflreadr/actions
+   1 https://github.com/nflverse/nflplotR/releases/download/nflplotr_infrastructure/headshot_gsis_map.rds
+   1 https://github.com/nflverse/nflplotR/issues}
+   1 https://github.com/nflverse/nflplotR/issues
+   1 https://github.com/nflverse/nflplotR/actions
+   1 https://github.com/nflverse/nflplotR/
+   1 https://github.com/nflverse/nflplotR}
+   1 https://github.com/nflverse/nflplotR
+   1 https://github.com/nflverse/nflfastR/issues/529
+   1 https://github.com/nflverse/nflfastR/issues/309
+   1 https://github.com/nflverse/nflfastR/issues/29#issuecomment-654592195
+   1 https://github.com/nflverse/nflfastR/issues/199#issuecomment-792321171
+   1 https://github.com/nflverse/nflfastR/issues
+   1 https://github.com/nflverse/nflfastR/actions
+   1 https://github.com/nflverse/nflfastR/
+   1 https://github.com/nflverse/nflfastR}
+   1 https://github.com/nflverse/nflfastR-data/blob/master/models/dakota_model.Rdata?raw=true
+   1 https://github.com/nflverse/nflfastR
+   1 https://github.com/nflverse/nfldata/raw/master/data/trades.rds
+   1 https://github.com/nflverse/nfldata/blob/master/fake_schedule_
+   1 https://github.com/nflverse/nfldata/blob/master/data/games.rds
+   1 https://github.com/nflverse/nfl4th/releases/download/nfl4th_infrastructure/pre_computed_go_boost.rds?raw=true
+   1 https://github.com/nflverse/nfl4th/releases/download/model_archive/wp_model.rds
+   1 https://github.com/nflverse/nfl4th/releases/download/model_archive/fd_model.rds
+   1 https://github.com/nflverse/nfl4th/issues}
+   1 https://github.com/nflverse/nfl4th/issues
+   1 https://github.com/nflverse/nfl4th/actions/workflows/R-CMD-check.yaml/badge.svg
+   1 https://github.com/nflverse/nfl4th/actions/workflows/R-CMD-check.yaml
+   1 https://github.com/nflverse/nfl4th/}
+   1 https://github.com/nflverse/nfl4th}
+   1 https://github.com/nflverse/nfl4th
+   1 https://github.com/nflverse/nfl/blob/master/data/games.rd
+   1 https://github.com/nflverse/espnscrapeR-data}
+   1 https://github.com/nflverse
+   1 https://github.com/jthomasmock/gtExtras/blob/HEAD/R/gt_theme_538.R
+   1 https://github.com/guga31bb/fourth_calculator/tree/main/bot
+   1 https://github.com/guga31bb/fourth_calculator/blob/main/app.R
+   1 https://github.com/ffverse/ffscrapr/issues/new/choose}{opening
+   1 https://github.com/ffverse/ffscrapr/issues/new/choose
+   1 https://github.com/ffverse/ffopportunity/releases/download/{model_version}-data/ep_{stat_type}_{seasons}.rds
+   1 https://github.com/ffverse/ffopportunity}
+   1 https://github.com/dynastyprocess/data/raw/master/files/fp_latest_weekly.rds
+   1 https://github.com/dynastyprocess/data/raw/master/files/db_playerids.rds
+   1 https://github.com/dynastyprocess/data/raw/master/files/db_fpecr.rds
+   1 https://github.com/dynastyprocess/data/raw/master/files/db_fpecr_latest.rds
+   1 https://github.com/CroppedClamp/nfl_pbps
+   1 https://github.com/Adeiko
+   1 https://ggplot2.tidyverse.org/articles/ggplot2-specs.html?q=colour#colour-and-fill}.}
+   1 https://ftnfantasy.com/stats/sports-data}
+   1 https://ftnfantasy.com/stats/sports-data
+   1 https://ftnfantasy.com
+   1 https://ffopportunity.ffverse.com}{{ffopportunity}}
+   1 https://ffopportunity.ffverse.com}
+   1 https://dplyr.tidyverse.org/articles/programming.html
+   1 https://dbplyr.tidyverse.org/articles/dbplyr.html
+   1 https://cranlogs.r-pkg.org/badges/grand-total/nflplotR
+   1 https://cranlogs.r-pkg.org/badges/grand-total/nflfastR
+   1 https://cran.rstudio.com
+   1 https://CRAN.R-project.org/package=nflverse
+   1 https://cran.r-project.org/package=nflverse
+   1 https://cran.r-project.org/package=nflseedR
+   1 https://CRAN.R-project.org/package=nflreadr
+   1 https://cran.r-project.org/package=nflplotR
+   1 https://cran.r-project.org/package=nflfastR
+   1 https://CRAN.R-project.org/package=nfl4th
+   1 https://cran.r-project.org/package=nfl4th
+   1 https://cran.r-project.org/package=gsisdecoder}{\code{gsisdecoder}}.
+   1 https://cran.r-project.org/package=fastrmodels
+   1 https://codecov.io/gh/nflverse/nflplotR/graph/badge.svg
+   1 https://cloud.r-project.org
+   1 https://arxiv.org/pdf/1802.00998
+   1 https://app.codecov.io/gh/nflverse/nflreadr?branch=main
+   1 https://app.codecov.io/gh/nflverse/nflplotR
+   1 http://www.w3.org/1999/02/22-rdf-syntax-ns#
+   1 http://www.openswatchbook.org/uri/2009/osb
+   1 http://www.inkscape.org/namespaces/inkscape
+   1 http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd
+   1 http://site.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=
+   1 http://purl.org/dc/elements/1.1/
+   1 http://purl.org/dc/dcmitype/StillImage
+   1 http://creativecommons.org/ns#
+   1 http://cranlogs.r-pkg.org/badges/grand-total/nflseedR

@@ -1,0 +1,220 @@
+{
+  "ranAt": "2026-07-25T21:09:47.146Z",
+  "window": [
+    "2026-03-25",
+    "2026-07-24"
+  ],
+  "population": 1556,
+  "gamesCounters": {
+    "population": 1556,
+    "actuals": {
+      "lsAgree": 1552,
+      "lsDisagree": 3,
+      "lsMissing": 1,
+      "gamesF5Missing": 1,
+      "gamePkMismatch": 0,
+      "f5TotalColAgree": 1550,
+      "f5TotalColDisagree": 3,
+      "f5TotalColNullDerivable": 2
+    },
+    "f5Ml": {
+      "match": 1536,
+      "mismatch": 0,
+      "bothNull": 19,
+      "storedNullDerivable": 0,
+      "storedNotDerivable": 1
+    },
+    "f5MlCorrect": {
+      "mismatch": 1
+    },
+    "f5Rl": {
+      "match": 842,
+      "matchProbConvOnly": 502,
+      "matchMarginConvOnly": 0,
+      "matchBothConv": 340,
+      "mismatch": 0,
+      "bothNull": 712,
+      "storedNullDerivable": 0,
+      "storedNotDerivable": 2,
+      "convDisagreeRows": 498
+    },
+    "f5RlCorrect": {
+      "mismatch": 2
+    },
+    "f5Total": {
+      "match": 842,
+      "mismatch": 2,
+      "bothNull": 712,
+      "storedNullDerivable": 0,
+      "storedNotDerivable": 0,
+      "legacyVocab": 0
+    },
+    "f5TotalCorrect": {
+      "mismatch": 3
+    },
+    "brierF5Ml": {
+      "match": 1298,
+      "matchAwayBase": 1298,
+      "matchHomeBase": 0,
+      "matchBothBase": 0,
+      "mismatch": 0,
+      "bothNull": 258,
+      "storedNullDerivable": 0,
+      "storedNotDerivable": 0
+    },
+    "brierF5Total": {
+      "match": 841,
+      "matchLegacyCorrupt": 0,
+      "mismatch": 2,
+      "bothNull": 713,
+      "storedNullDerivable": 0,
+      "storedNotDerivable": 0
+    },
+    "linePlausibility": {
+      "rlNotHalf": 73,
+      "totalOutside3to7": 35
+    },
+    "f5RunAtMissingButGraded": 0
+  },
+  "gamesMismatchRows": 13,
+  "actualsIssueRows": 8,
+  "linePlausibilityRows": 101,
+  "backtest": {
+    "rows": 8288,
+    "coveredGames": 1555,
+    "uncoveredGames": 1,
+    "partialMlRlCoverage": 0,
+    "duplicates": [],
+    "counters": {
+      "result:f5_ml_away:NO_ACTION": 879,
+      "status:ok": 6489,
+      "result:f5_ml_home:NO_ACTION": 894,
+      "result:f5_over:NO_ACTION": 427,
+      "status:WARN": 1685,
+      "statusDetail:WARN:noaction-conf1": 352,
+      "result:f5_rl_away:NO_ACTION": 861,
+      "result:f5_rl_home:NO_ACTION": 797,
+      "result:f5_under:NO_ACTION": 338,
+      "result:f5_ml_away:QUARANTINED": 338,
+      "result:f5_ml_home:QUARANTINED": 338,
+      "result:f5_over:QUARANTINED": 298,
+      "result:f5_rl_away:QUARANTINED": 338,
+      "result:f5_rl_home:QUARANTINED": 338,
+      "result:f5_under:QUARANTINED": 298,
+      "threshold-inconsistent:f5_ml_away": 257,
+      "result:f5_ml_away:PUSH": 45,
+      "threshold-inconsistent:f5_ml_home": 271,
+      "result:f5_ml_home:PUSH": 42,
+      "statusDetail:WARN:actioned-conf0": 1333,
+      "threshold-inconsistent:f5_over": 284,
+      "result:f5_over:LOSS": 151,
+      "threshold-inconsistent:f5_rl_away": 222,
+      "result:f5_rl_away:WIN": 165,
+      "result:f5_rl_home:LOSS": 201,
+      "threshold-inconsistent:f5_under": 248,
+      "result:f5_under:WIN": 200,
+      "result:f5_ml_away:LOSS": 154,
+      "result:f5_ml_home:WIN": 132,
+      "result:f5_rl_away:LOSS": 167,
+      "threshold-inconsistent:f5_rl_home": 187,
+      "result:f5_rl_home:WIN": 195,
+      "result:f5_ml_away:WIN": 115,
+      "result:f5_ml_home:LOSS": 125,
+      "result:f5_over:WIN": 135,
+      "result:f5_under:LOSS": 175,
+      "result:f5_ml_away:MISSING_DATA": 20,
+      "status:INFO": 114,
+      "statusDetail:INFO:missingdata-now-derivable": 114,
+      "result:f5_ml_home:MISSING_DATA": 20,
+      "result:f5_over:MISSING_DATA": 19,
+      "result:f5_rl_away:MISSING_DATA": 20,
+      "result:f5_rl_home:MISSING_DATA": 20,
+      "result:f5_under:MISSING_DATA": 19,
+      "result:f5_ml_away:VOID": 4,
+      "result:f5_ml_home:VOID": 4,
+      "result:f5_over:VOID": 4,
+      "result:f5_rl_away:VOID": 4,
+      "result:f5_rl_home:VOID": 4,
+      "result:f5_under:VOID": 4
+    },
+    "mismatchRows": 1685
+  },
+  "replayGrades": {
+    "snapshotAtRun": [
+      {
+        "market": "f5_ml",
+        "source": "live_pregame",
+        "modelVersion": "live",
+        "n": 1527
+      },
+      {
+        "market": "f5_ml",
+        "source": "walkforward_replay",
+        "modelVersion": "wf-19288f01-p1",
+        "n": 1545
+      },
+      {
+        "market": "f5_ml",
+        "source": "walkforward_replay",
+        "modelVersion": "wf-19288f01-p2",
+        "n": 1545
+      },
+      {
+        "market": "f5_rl",
+        "source": "live_pregame",
+        "modelVersion": "live",
+        "n": 837
+      },
+      {
+        "market": "f5_rl",
+        "source": "walkforward_replay",
+        "modelVersion": "wf-19288f01-p1",
+        "n": 838
+      },
+      {
+        "market": "f5_rl",
+        "source": "walkforward_replay",
+        "modelVersion": "wf-19288f01-p2",
+        "n": 838
+      },
+      {
+        "market": "f5_total",
+        "source": "live_pregame",
+        "modelVersion": "live",
+        "n": 838
+      },
+      {
+        "market": "f5_total",
+        "source": "walkforward_replay",
+        "modelVersion": "wf-19288f01-p1",
+        "n": 839
+      },
+      {
+        "market": "f5_total",
+        "source": "walkforward_replay",
+        "modelVersion": "wf-19288f01-p2",
+        "n": 839
+      }
+    ],
+    "rowsGraded": 9646,
+    "duplicates": [],
+    "counters": {
+      "rows:f5_ml:live_pregame:live": 1527,
+      "status:f5_ml:live_pregame:ok": 1527,
+      "rows:f5_ml:walkforward_replay:wf-19288f01-p1": 1545,
+      "status:f5_ml:walkforward_replay:ok": 3090,
+      "rows:f5_ml:walkforward_replay:wf-19288f01-p2": 1545,
+      "rows:f5_rl:live_pregame:live": 837,
+      "status:f5_rl:live_pregame:ok": 837,
+      "rows:f5_rl:walkforward_replay:wf-19288f01-p1": 838,
+      "status:f5_rl:walkforward_replay:ok": 1676,
+      "rows:f5_rl:walkforward_replay:wf-19288f01-p2": 838,
+      "rows:f5_total:live_pregame:live": 838,
+      "status:f5_total:live_pregame:ok": 838,
+      "rows:f5_total:walkforward_replay:wf-19288f01-p1": 839,
+      "status:f5_total:walkforward_replay:ok": 1678,
+      "rows:f5_total:walkforward_replay:wf-19288f01-p2": 839
+    },
+    "mismatchRows": 0
+  }
+}
