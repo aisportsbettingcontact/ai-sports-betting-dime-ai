@@ -81,6 +81,31 @@ describe("stripGameModelFields", () => {
     } as Record<string, unknown>);
     expect(out.modelBrandNewSignal2027).toBeNull();
   });
+
+  it("nulls the model-relative backtest residuals (nrfiBacktestResult + *BacktestRunAt) but keeps actual outcomes", () => {
+    const out = stripGameModelFields({
+      ...row,
+      // IP: model-graded / model-pipeline metadata (latent — null in prod today)
+      nrfiBacktestResult: "WIN",
+      fgBacktestRunAt: 1_700_000_000,
+      f5BacktestRunAt: 1_700_000_001,
+      nrfiBacktestRunAt: 1_700_000_002,
+      // commodity actual outcomes — MUST survive
+      nrfiActualResult: "NRFI",
+      fgMlResult: "HOME",
+      f5TotalResult: "OVER",
+      actualNrfiBinary: 0,
+    } as Record<string, unknown>);
+    expect(out.nrfiBacktestResult).toBeNull();
+    expect(out.fgBacktestRunAt).toBeNull();
+    expect(out.f5BacktestRunAt).toBeNull();
+    expect(out.nrfiBacktestRunAt).toBeNull();
+    // actual outcomes stay public (commodity)
+    expect(out.nrfiActualResult).toBe("NRFI");
+    expect(out.fgMlResult).toBe("HOME");
+    expect(out.f5TotalResult).toBe("OVER");
+    expect(out.actualNrfiBinary).toBe(0);
+  });
 });
 
 describe("stripStrikeoutPropModelFields", () => {
@@ -116,6 +141,19 @@ describe("stripStrikeoutPropModelFields", () => {
     ]) {
       expect(out[k as keyof typeof out]).toBeNull();
     }
+  });
+
+  it("nulls backtestRunAt (model-pipeline timing) but keeps backtestResult (OVER/UNDER/PUSH vs BOOK line = commodity) + actualKs", () => {
+    const out = stripStrikeoutPropModelFields({
+      bookLine: "6.5",
+      actualKs: 8, // commodity box-score fact — keep
+      backtestResult: "OVER", // K-props: vs the BOOK line — commodity, keep
+      backtestRunAt: 1_700_000_000, // model-pipeline timing — IP, strip
+    });
+    expect(out.bookLine).toBe("6.5");
+    expect(out.actualKs).toBe(8);
+    expect(out.backtestResult).toBe("OVER");
+    expect(out.backtestRunAt).toBeNull();
   });
 });
 
