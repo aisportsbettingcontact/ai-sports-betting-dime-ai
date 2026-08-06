@@ -1,0 +1,14 @@
+Smoke-testing http://127.0.0.1:3913
+
+  ✅ GET /health → 200 (19ms) {"status":"ok","ts":1786004661609,"db":{"state":"CLOSED","co
+  ✅ schema/code agreement — live app_users schema is not behind the code (2ms) schema=unknown
+  ✅ GET / → 200 HTML shell (8ms) 
+  ✅ hashed asset → 200 + long-lived cache (7ms) /assets/index-Y1bWVkxA.js
+  ✅ GET /api/trpc/<bogus> → tRPC JSON error (API mounted) (14ms) status 404
+  ✅ POST /api/dime/chat unauthenticated → 401 JSON (auth gate) (9ms) 
+  ✅ bot UA on / → v2 SEO content (prerender or shell block) (67ms) prerender snapshot
+  ✅ vendored /dime-storage asset → 200 image (no external storage dependency) (76ms) 
+  ✅ checkout CSP allows Stripe Embedded (script-src js.stripe.com + frame-src checkout.stripe.com) (26ms) CSP allows Stripe
+  ✅ rate-limit keying resists X-Forwarded-For spoofing (Railway sanitizes) (0ms) N/A — direct/localhost target has no sanitizing edge; invariant holds only behind Railway's proxy
+
+10/10 checks passed
