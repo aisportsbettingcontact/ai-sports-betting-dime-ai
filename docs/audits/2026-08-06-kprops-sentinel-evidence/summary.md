@@ -101,6 +101,28 @@ literal assigned to `backtestResult` that exceeds the width — the exact route
 the original defect took — and covers **both** tables that declare the column
 (`mlb_strikeout_props`, `mlb_hr_props`).
 
+## A downstream coupling the fix itself created
+
+Caught during pre-merge verification, not by the original change: **making the
+marker persist changes what the owner UI receives.**
+
+`client/src/pages/TheModelResults.tsx` renders each prop through `ResultBadge`.
+Its early return covers `null` / `PENDING` / `NO_LINE`; everything else falls
+through to graded styling, where `correct !== 1` renders an **XCircle**. Because
+`modelCorrect` is untouched by the name-mismatch write, a `NAME_MISMATCH` row
+would have rendered as ✗ — an **ungradeable** prop displayed as a *wrong
+prediction*, on an accuracy page.
+
+Under the old broken behaviour this was invisible: the write threw, the row
+stayed `NULL`, and it displayed `PENDING`. Fixing the write is what would have
+exposed it.
+
+`NAME_MISMATCH` now joins the neutral branch and renders `NO MATCH` — the
+diagnostic the owner should see, without the false-negative styling.
+
+Aggregate accuracy is unaffected either way: the calibration query restricts to
+`OVER` / `UNDER` / `PUSH`, so an ungradeable row was never counted.
+
 ### The guards were proven to bite
 
 A test that cannot fail is worse than no test, and two earlier harnesses in this
@@ -108,9 +130,22 @@ series passed vacuously. So both mutations were run:
 
 | Mutation | Result |
 |---|---|
-| sentinel reverted to the 17-char `"NAME_MATCH_FAILED"` | **2 tests red**, incl. `is 17 chars; the column is varchar(16)` |
-| write site reverted to a bare literal past the const | **2 tests red** |
-| restored | **6/6 green** |
+| sentinel reverted to the 17-char `"NAME_MATCH_FAILED"` | **3 red** |
+| write site reverted to a bare literal past the const | **2 red** |
+| UI neutral-branch guard removed | **1 red** |
+| legacy rescue value dropped from the retry set | **1 red** |
+| restored | **7/7 green** |
+
+**One of these guards was vacuous on the first attempt and is worth recording.**
+The UI test originally sliced the whole `ResultBadge` function and searched for
+the sentinel anywhere inside it — which stayed green when the value was deleted
+from the condition, because the badge's *label* ternary still mentioned it. The
+rewrite asserts on the early-return condition only, with comments stripped so
+prose cannot satisfy it. A second slicing bug surfaced on the way: `") {"`
+matches the function signature's own `}) {` before the `if`, producing an
+inverted empty slice that passes everything — the closing search is now anchored
+after the `if (`. Both were found by running the mutation, not by reading the
+test.
 
 ## Verification
 
@@ -118,12 +153,15 @@ series passed vacuously. So both mutations were run:
 |---|---|
 | `npx tsc --noEmit` | clean |
 | `npx prettier --check` | clean |
-| `npx vitest run server/kPropsBacktestService.test.ts` | **6/6** |
+| `npx vitest run server/kPropsBacktestService.test.ts` | **7/7** (CI env: no `DATABASE_URL`) |
 | `npx vitest run client/src` | **794/794** (no regression) |
 | `mlbScoreRefresh` suites | **8/8** |
 | `pnpm run build` | OK |
 | build + boot + `smoke-deploy.mjs` | **10/10** — [`smoke.txt`](./smoke.txt) |
 | compiled `dist/index.js` scanned for overflowing literals | **none** |
+| compiled client chunk carries the UI guard | `TheModelResults-*.js` contains `NAME_MISMATCH` + `NO MATCH` |
+| merge state vs `main` | 0 commits behind, 0 conflicts, no contended files |
+| generated SQL diffed via `.toSQL()` | strict superset; `IS NULL` branch preserved; fully parameterized |
 | schema / migration files touched | **none** — `db-push.yml` not required |
 
 The compiled-artifact check matters: it confirms the fix survives bundling and

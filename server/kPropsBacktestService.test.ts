@@ -102,6 +102,51 @@ describe("backtestResult sentinels fit their column (ER_DATA_TOO_LONG guard)", (
       expect(K_BACKTEST_RETRYABLE).not.toContain(settled);
   });
 
+  it("every sentinel the owner UI can receive is handled by its neutral branch", () => {
+    // The coupling that nearly shipped unnoticed: making the marker PERSIST
+    // means TheModelResults starts receiving a value it had never seen, because
+    // the write used to throw and leave the row NULL. ResultBadge's fallthrough
+    // renders an XCircle whenever `correct !== 1`, so an UNGRADEABLE prop would
+    // have displayed as a wrong prediction on an accuracy page.
+    //
+    // Assert on the EARLY-RETURN CONDITION ONLY, with comments stripped. A
+    // first version of this test sliced the whole function and searched for the
+    // sentinel anywhere in it — which stayed green when the value was deleted
+    // from the condition, because the badge's label ternary still mentioned it.
+    // A guard that cannot fail is worse than no guard.
+    const ui = fs.readFileSync(
+      path.join(repoRoot, "client", "src", "pages", "TheModelResults.tsx"),
+      "utf8"
+    );
+    const fn = ui.slice(ui.indexOf("function ResultBadge"));
+    // NB: search for the closing `) {` AFTER the `if (`. The function's own
+    // signature ends in `}) {`, so an unanchored indexOf finds that first and
+    // yields an inverted (empty) slice that passes nothing.
+    const ifAt = fn.indexOf("if (");
+    expect(ifAt).toBeGreaterThan(-1);
+    const condition = fn
+      .slice(ifAt, fn.indexOf(") {", ifAt))
+      .replace(/\/\/[^\n]*/g, ""); // strip comments — prose must not satisfy this
+    expect(condition).toContain("result");
+
+    for (const sentinel of [
+      K_BACKTEST_SENTINEL.PENDING,
+      K_BACKTEST_SENTINEL.NO_LINE,
+      K_BACKTEST_SENTINEL.NAME_MISMATCH,
+    ]) {
+      expect(
+        condition,
+        `ResultBadge's early-return condition must include "${sentinel}". ` +
+          `Otherwise it falls through to the graded styling, where ` +
+          `correct !== 1 renders an XCircle — an ungradeable prop displayed ` +
+          `as a wrong prediction.`
+      ).toContain(`"${sentinel}"`);
+    }
+    // Graded outcomes must NOT be short-circuited into the neutral branch.
+    for (const graded of ["OVER", "UNDER", "PUSH"])
+      expect(condition).not.toContain(`"${graded}"`);
+  });
+
   it("the service reads the retry set rather than re-listing literals", () => {
     const src = fs.readFileSync(
       path.join(repoRoot, "server", "kPropsBacktestService.ts"),

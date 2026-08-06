@@ -452,7 +452,21 @@ function ResultBadge({
   result: string | null;
   correct: number | null;
 }) {
-  if (!result || result === "PENDING" || result === "NO_LINE") {
+  // NAME_MISMATCH joins the neutral branch (2026-08-06). It means the pitcher
+  // could not be matched to a box-score name, so the prop is UNGRADEABLE — not
+  // a wrong prediction. Without this it falls through to the graded styling
+  // below, where `correct !== 1` renders an XCircle, and an ungradeable row
+  // would read as "the model got this one wrong" on an accuracy page.
+  //
+  // This state only became reachable when the marker started persisting: the
+  // write used to throw ER_DATA_TOO_LONG (17 chars into varchar(16)), so the
+  // row stayed NULL and displayed PENDING. See kPropsBacktestService.ts.
+  if (
+    !result ||
+    result === "PENDING" ||
+    result === "NO_LINE" ||
+    result === "NAME_MISMATCH"
+  ) {
     return (
       <span
         style={{
@@ -468,7 +482,11 @@ function ResultBadge({
             '"Familjen Grotesk", system-ui, -apple-system, sans-serif',
         }}
       >
-        {result === "NO_LINE" ? "NO LINE" : "PENDING"}
+        {result === "NO_LINE"
+          ? "NO LINE"
+          : result === "NAME_MISMATCH"
+            ? "NO MATCH"
+            : "PENDING"}
       </span>
     );
   }
