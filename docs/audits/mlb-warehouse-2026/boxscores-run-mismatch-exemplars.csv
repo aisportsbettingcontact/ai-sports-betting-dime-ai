@@ -1,0 +1,2 @@
+game_pk,season,game_type,official_date,status_code,detailed_state,away_team_id,home_team_id,away_score,home_score,away_bat_runs,home_bat_runs,innings,is_tie,explanation
+778566,2025,A,2025-07-15,FW,"Final: Tied (won in tiebreaker)",159,160,6,7,6,6,9,1,"2025 All-Star Game decided by HR swing-off; tiebreaker run in home_score is not attributed to any batter line. Only run-total mismatch in all 49419 games."

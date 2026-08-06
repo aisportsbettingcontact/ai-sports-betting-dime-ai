@@ -1,0 +1,178 @@
+{
+  "evalWindow": [
+    "2026-05-01",
+    "2026-07-24"
+  ],
+  "generated": "gate-eval.mjs",
+  "gate": [
+    {
+      "market": "f5_ml",
+      "n": 916,
+      "verdict": "BACKTEST-ONLY",
+      "reasons": [
+        "does not beat baseline with CI excluding zero",
+        "negative skill vs baseline"
+      ],
+      "stats": {
+        "hit": 0.5393,
+        "hit_ci": 0.0323,
+        "brier": 0.2471,
+        "baseline": "book_novig",
+        "brier_vs_book": -0.02555,
+        "brier_vs_book_ci": 0.00904,
+        "n_baseline": 387,
+        "reliability_bins": "0.39->0.28 0.46->0.49"
+      }
+    },
+    {
+      "market": "f5_rl",
+      "n": 456,
+      "verdict": "BACKTEST-ONLY",
+      "reasons": [
+        "does not beat baseline with CI excluding zero"
+      ],
+      "stats": {
+        "hit": 0.5132,
+        "hit_ci": 0.0459,
+        "brier": 0.25628,
+        "baseline": "best naive strategy 51.1% (always-dog 50.9%)",
+        "reliability_bins": "0.55->0.52 0.63->0.48"
+      }
+    },
+    {
+      "market": "f5_total",
+      "n": 456,
+      "verdict": "BACKTEST-ONLY",
+      "reasons": [
+        "does not beat baseline with CI excluding zero"
+      ],
+      "stats": {
+        "hit": 0.5285,
+        "hit_ci": 0.0459,
+        "brier": 0.24845,
+        "bias": -0.059,
+        "bias_ci": 0.289,
+        "mae": 2.485,
+        "baseline": "coin flip 0.25",
+        "brier_skill": 0.00155,
+        "brier_skill_ci": 0.00655,
+        "reliability_bins": "0.36->0.44 0.47->0.49",
+        "bias_band": 0.1
+      }
+    },
+    {
+      "market": "fg_ml",
+      "n": 1080,
+      "verdict": "BACKTEST-ONLY",
+      "reasons": [
+        "does not beat baseline with CI excluding zero",
+        "negative skill vs baseline"
+      ],
+      "stats": {
+        "hit": 0.5565,
+        "hit_ci": 0.0296,
+        "brier": 0.24593,
+        "baseline": "book_novig",
+        "brier_vs_book": -0.0013,
+        "brier_vs_book_ci": 0.00351,
+        "n_baseline": 1068,
+        "reliability_bins": "0.38->0.33 0.47->0.49"
+      }
+    },
+    {
+      "market": "fg_rl",
+      "n": 1080,
+      "verdict": "BACKTEST-ONLY",
+      "reasons": [
+        "does not beat baseline with CI excluding zero"
+      ],
+      "stats": {
+        "hit": 0.5935,
+        "hit_ci": 0.0293,
+        "brier": 0.23875,
+        "bias": -0.405,
+        "bias_ci": 0.281,
+        "mae": 3.605,
+        "baseline": "best naive strategy 59.3% (always-dog 59.3%)",
+        "reliability_bins": "0.35->0.38 0.52->0.56 0.63->0.64"
+      }
+    },
+    {
+      "market": "fg_total",
+      "n": 1040,
+      "verdict": "BACKTEST-ONLY",
+      "reasons": [
+        "does not beat baseline with CI excluding zero"
+      ],
+      "stats": {
+        "hit": 0.5663,
+        "hit_ci": 0.0301,
+        "brier": 0.24651,
+        "bias": 0.03,
+        "bias_ci": 0.275,
+        "mae": 3.611,
+        "baseline": "coin flip 0.25",
+        "brier_skill": 0.00349,
+        "brier_skill_ci": 0.00412,
+        "reliability_bins": "0.36->0.38 0.49->0.49 0.62->0.55",
+        "bias_band": 0.15
+      }
+    },
+    {
+      "market": "hr_prop",
+      "n": 19440,
+      "verdict": "BACKTEST-ONLY",
+      "reasons": [
+        "does not beat baseline with CI excluding zero"
+      ],
+      "stats": {
+        "brier": 0.09862,
+        "baseline": "climatology p=0.112",
+        "brier_skill": 0.00098,
+        "brier_skill_ci": 0.00338,
+        "reliability_bins": "0.10->0.11 0.24->0.21"
+      }
+    },
+    {
+      "market": "k_prop",
+      "n": 1875,
+      "verdict": "BACKTEST-ONLY",
+      "reasons": [
+        "does not beat baseline with CI excluding zero",
+        "reliability inversions: 1",
+        "bias -0.300 outside ±0.15"
+      ],
+      "stats": {
+        "hit": 0.6219,
+        "hit_ci": 0.022,
+        "brier": 0.24949,
+        "bias": -0.3,
+        "bias_ci": 0.113,
+        "mae": 1.97,
+        "baseline": "coin flip 0.25",
+        "brier_skill": 0.00051,
+        "brier_skill_ci": 0.01182,
+        "reliability_bins": "0.10->0.33 0.30->0.42 0.49->0.53 0.70->0.61 0.89->0.37",
+        "bias_band": 0.15
+      }
+    },
+    {
+      "market": "nrfi_yrfi",
+      "n": 1080,
+      "verdict": "BACKTEST-ONLY",
+      "reasons": [
+        "does not beat baseline with CI excluding zero",
+        "negative skill vs baseline"
+      ],
+      "stats": {
+        "hit": 0.5278,
+        "hit_ci": 0.0298,
+        "brier": 0.25577,
+        "baseline": "climatology p=0.480",
+        "brier_skill": -0.00619,
+        "brier_skill_ci": 0.00682,
+        "reliability_bins": "0.34->0.47 0.48->0.48 0.63->0.54"
+      }
+    }
+  ]
+}

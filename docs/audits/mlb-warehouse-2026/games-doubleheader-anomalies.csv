@@ -1,0 +1,12 @@
+season,official_date,away_team_id,home_team_id,double_header,game_numbers_present,classification
+2006,2006-06-10,140,111,S,1,singleton_other_game_not_completed
+2008,2008-09-06,133,110,S,2,singleton_other_game_not_completed
+2010,2010-05-12,143,115,S,1,singleton_other_game_not_completed
+2011,2011-09-08,119,120,Y,1,singleton_other_game_not_completed
+2016,2016-09-22,116,142,S+Y,1+2,flag_mismatch_S_vs_Y
+2017,2017-05-26,116,145,Y,1,singleton_other_game_not_completed
+2018,2018-09-12,146,121,Y,1,singleton_other_game_not_completed
+2022,2022-09-30,143,120,S,1,singleton_other_game_not_completed
+2024,2024-07-24,113,144,S,1,singleton_other_game_not_completed
+2025,2025-05-23,110,111,S,1,singleton_other_game_not_completed
+2025,2025-08-18,158,112,S,1,singleton_other_game_not_completed

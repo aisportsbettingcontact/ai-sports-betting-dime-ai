@@ -1,0 +1,9 @@
+gameId,matchup,check,games_value,other_value
+3270003,HOU@BAL 2026-04-30 G2,actualF5Total-null-derivable,11+3=14,
+3270004,SF@PHI 2026-04-30 G2,actualF5Total-null-derivable,2+4=6,
+2250733,STL@CIN 2026-05-23 G2,linescore-f5-disagree,3-1,1-5
+2250733,STL@CIN 2026-05-23 G2,actualF5Total-disagrees-with-scores,4,6
+2250738,DET@BAL 2026-05-24 G1,linescore-f5-disagree,4-1,2-0
+2250738,DET@BAL 2026-05-24 G1,actualF5Total-disagrees-with-scores,5,2
+2251290,MIL@STL 2026-07-07 G2,linescore-f5-disagree,2-3,3-0
+2251290,MIL@STL 2026-07-07 G2,actualF5Total-disagrees-with-scores,5,3

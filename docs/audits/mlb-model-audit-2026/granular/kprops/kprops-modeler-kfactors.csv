@@ -1,0 +1,6 @@
+modelVersion,period,k_factor,seed,n_k_train,k_method,n_rows,k_factor_conflict
+wf-19288f01-p2,2026-03,1.0,True,,ratio_of_means,76,0
+wf-19288f01-p2,2026-04,1.0,True,,ratio_of_means,392,0
+wf-19288f01-p2,2026-05,0.84278,False,936,ratio_of_means,419,0
+wf-19288f01-p2,2026-06,0.85849,False,1774,ratio_of_means,394,0
+wf-19288f01-p2,2026-07,0.87373,False,2562,ratio_of_means,274,0

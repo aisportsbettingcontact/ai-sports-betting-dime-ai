@@ -1,0 +1,77 @@
+# FROZEN REPLAY CONTRACT — MLB warehouse-constrained modeling run 2021-2026
+# Frozen 2026-07-29 before feature construction (mandate §6). Any correction after
+# locked-test viewing requires a ledgered defect + invalidation + rerun; no silent edits.
+
+identity:
+  run: mlb-modeling-2021-2026
+  repo_commit: 870773a4            # audit worktree HEAD at freeze
+  db_schema: MW3FicTy7ae3qrm8dx8Lua (TiDB serverless)
+  db_cutoff:
+    description: warehouse finals as loaded by batches through 2026-07-29T08:59:20Z
+    scored_2026_max_official_date: "2026-07-27"   # last COMPLETE slate (11/11); 07-28 partial 5/15 EXCLUDED (freshness defect W-2)
+    max_loaded_at: "2026-07-29T08:59:20Z"
+
+data_boundary:
+  exclusive_factual_source: docs/audits/mlb-warehouse-2026 package (10 mlb_* warehouse tables)
+  prohibited: [internet, StatsAPI requests, app tables, external odds/injury/weather/projection sources,
+               fuzzy identity joins, external constants]
+  identifiers: native only (game_pk, mlbam_id, team_id, venue_id)
+  crosswalks: BLOCKED (W-1 — null in production; no repair authorized)
+
+population:
+  seasons_feature_history: 2006-2026
+  seasons_scored: 2021-2026
+  game_types_primary: [R]                      # regular season
+  game_types_secondary_eval: [F, D, L, W]      # postseason, evaluated separately, no training mix into primary until compared
+  excluded: [A]                                # All-Star (incl. 2025 swing-off nonstandard settlement)
+  status_filter: status_code='F'               # full finals only; O-status rows excluded (frozen-status defect)
+  f5_outcome_requirement: innings >= 5 completed per plays; rain-shortened <5 excluded from F5/NRFI markets with exclusion code
+
+markets:                                        # settlement rules (no priced lines exist in warehouse — see §16 note)
+  fg_ml:   {outcome: home_score>away_score, push: none (ties excluded: 1 tie game excluded), type: binary}
+  fg_rl:   {definition: home margin vs ±1.5 (the market-defining handicap), outcomes: home_-1.5 cover = margin>=2; away_+1.5 cover = margin<=1, push: impossible at 1.5, type: binary from margin distribution}
+  fg_total:{definition: distribution of total runs; evaluated on line grid 6.5..11.5 step 0.5 + CRPS; no priced line in warehouse, type: distribution}
+  f5_ml:   {outcome: score after 5 completed innings; tie=push (3-way), type: binary+push}
+  f5_rl:   {definition: f5 home margin vs ±0.5, outcomes: home_-0.5=margin>=1; away_+0.5=margin<=0, push: impossible, type: binary}
+  f5_total:{definition: distribution of f5 total; line grid 3.5..6.5 step 0.5 + CRPS, type: distribution}
+  nrfi:    {outcome: zero runs in inning 1 (both halves) = NRFI, type: binary}
+
+prediction_cutoff: first pitch (mlb_games.first_pitch_utc; fallback game_datetime_utc). All features strictly prior.
+starter_knowledge: DEPLOYABLE replay uses reconstructed expected starters/lineups from prior rows only
+                   (deterministic logged rules, §8); ACTUAL starters/lineups = ORACLE_ONLY diagnostic, never promoted.
+
+walk_forward:
+  design: expanding window, annual refit (realistic operational cadence)
+  folds:
+    - {train: 2006-2019, calibrate: 2020, score: 2021}
+    - {train: 2006-2020, calibrate: 2021, score: 2022}
+    - {train: 2006-2021, calibrate: 2022, score: 2023}
+    - {train: 2006-2022, calibrate: 2023, score: 2024}
+    - {train: 2006-2023, calibrate: 2024, score: 2025}
+    - {train: 2006-2024, calibrate: 2025, score: 2026 (through 2026-07-27)}
+  note_2026: prior app-model work trained on 2026 outcomes exists OUTSIDE this run; within this run 2026 is
+             untouched, but cross-run contamination is disclosed — the strictest untouched claim attaches to
+             the full 2021-2026 walk-forward sequence generated fresh here.
+  postseason: scored separately per season with the same frozen models (no postseason-specific training in v1)
+
+feature_availability_tiers:
+  A_foundational: 2006+  (boxscore lines, plays, counts/calls/zones/hit-coords, weather, parks, umpire assignments)
+  B_pitchfx:      2008+  (speed, px/pz, break length/angle; 2006-07 partial-rollout rows masked; outlier clamps |px|<=4, spin<=3700, 55<=speed<=106)
+  C_statcast:     2015+  (launch_speed/angle/distance on in-play)
+  D_modern:       2017+  (extension, plate_time, break_vertical/horizontal)
+  primary_scored_tier: D (training window begins 2017 for tier-D features; tiers compared per §11)
+
+seeds: {global: 42, numpy: 42, sklearn: 42, simulation: 42}
+retraining_cadence: annual (fold boundaries above); features recomputed as-of daily within scoring
+settlement_source: mlb_games scores + plays-derived F5/inning-1 aggregates (this run's outcome build)
+exclusion_rules: ties (fg_ml), <5-inning finals (f5/nrfi), All-Star, O-status, 2026>07-27
+metrics:
+  primary_selection: log loss (binary markets), CRPS (distribution markets)  # preregistered
+  calibration_selection: expected calibration error on the calibration fold
+  secondary: [brier, brier_skill_vs_baseline, calibration slope/intercept, reliability bins, AUC, MAE/RMSE (totals), coverage of predictive intervals]
+  betting_metrics: BLOCKED_BY_DATA_BOUNDARY (no odds/prices/lines tables exist in the warehouse package)
+baselines:
+  fg_ml: home-team league home-win rate fit on training window
+  fg_rl/f5: margin-distribution climatology from training window
+  totals: training-window run-total climatology distribution
+  nrfi: training-window NRFI base rate
