@@ -1,0 +1,3950 @@
+{
+  "asOf": "2026-07-25",
+  "families": {
+    "fullgame": {
+      "overall": {
+        "rows": 4683,
+        "graded": 4523,
+        "hit_rate": 0.5549,
+        "hit_ci95": 0.0145,
+        "brier": 0.25041,
+        "logloss": 0.69437,
+        "n_prob": 2995,
+        "n_err": 3056,
+        "mae": 3.5396,
+        "rmse": 4.5541,
+        "signed_bias": -0.4451,
+        "bias_ci95": 0.1607,
+        "bias_significant": true,
+        "reliability": [
+          {
+            "bin": "0.0-0.1",
+            "n": 0,
+            "avg_p": null,
+            "obs": null
+          },
+          {
+            "bin": "0.1-0.2",
+            "n": 5,
+            "avg_p": 0.164,
+            "obs": 0.6
+          },
+          {
+            "bin": "0.2-0.3",
+            "n": 28,
+            "avg_p": 0.269,
+            "obs": 0.429
+          },
+          {
+            "bin": "0.3-0.4",
+            "n": 525,
+            "avg_p": 0.367,
+            "obs": 0.423
+          },
+          {
+            "bin": "0.4-0.5",
+            "n": 1725,
+            "avg_p": 0.45,
+            "obs": 0.48
+          },
+          {
+            "bin": "0.5-0.6",
+            "n": 647,
+            "avg_p": 0.533,
+            "obs": 0.556
+          },
+          {
+            "bin": "0.6-0.7",
+            "n": 64,
+            "avg_p": 0.632,
+            "obs": 0.563
+          },
+          {
+            "bin": "0.7-0.8",
+            "n": 1,
+            "avg_p": 0.73,
+            "obs": 0
+          },
+          {
+            "bin": "0.8-0.9",
+            "n": 0,
+            "avg_p": null,
+            "obs": null
+          },
+          {
+            "bin": "0.9-1.0",
+            "n": 0,
+            "avg_p": null,
+            "obs": null
+          }
+        ]
+      },
+      "by_sub": {
+        "ML": {
+          "rows": 1561,
+          "graded": 1528,
+          "hit_rate": 0.5537,
+          "hit_ci95": 0.0249,
+          "brier": 0.2471,
+          "logloss": 0.68729,
+          "n_prob": 1528,
+          "reliability": [
+            {
+              "bin": "0.0-0.1",
+              "n": 0,
+              "avg_p": null,
+              "obs": null
+            },
+            {
+              "bin": "0.1-0.2",
+              "n": 0,
+              "avg_p": null,
+              "obs": null
+            },
+            {
+              "bin": "0.2-0.3",
+              "n": 6,
+              "avg_p": 0.281,
+              "obs": 0.167
+            },
+            {
+              "bin": "0.3-0.4",
+              "n": 279,
+              "avg_p": 0.37,
+              "obs": 0.419
+            },
+            {
+              "bin": "0.4-0.5",
+              "n": 978,
+              "avg_p": 0.449,
+              "obs": 0.464
+            },
+            {
+              "bin": "0.5-0.6",
+              "n": 255,
+              "avg_p": 0.529,
+              "obs": 0.58
+            },
+            {
+              "bin": "0.6-0.7",
+              "n": 10,
+              "avg_p": 0.623,
+              "obs": 0.8
+            },
+            {
+              "bin": "0.7-0.8",
+              "n": 0,
+              "avg_p": null,
+              "obs": null
+            },
+            {
+              "bin": "0.8-0.9",
+              "n": 0,
+              "avg_p": null,
+              "obs": null
+            },
+            {
+              "bin": "0.9-1.0",
+              "n": 0,
+              "avg_p": null,
+              "obs": null
+            }
+          ]
+        },
+        "RL": {
+          "rows": 1561,
+          "graded": 1528,
+          "hit_rate": 0.5884,
+          "hit_ci95": 0.0247,
+          "brier": null,
+          "logloss": null,
+          "n_prob": 0,
+          "n_err": 1528,
+          "mae": 3.5606,
+          "rmse": 4.5874,
+          "signed_bias": -0.3466,
+          "bias_ci95": 0.2294,
+          "bias_significant": true
+        },
+        "TOTAL": {
+          "rows": 1561,
+          "graded": 1467,
+          "hit_rate": 0.5215,
+          "hit_ci95": 0.0256,
+          "brier": 0.25386,
+          "logloss": 0.70174,
+          "n_prob": 1467,
+          "n_err": 1528,
+          "mae": 3.5187,
+          "rmse": 4.5205,
+          "signed_bias": -0.5436,
+          "bias_ci95": 0.2251,
+          "bias_significant": true,
+          "reliability": [
+            {
+              "bin": "0.0-0.1",
+              "n": 0,
+              "avg_p": null,
+              "obs": null
+            },
+            {
+              "bin": "0.1-0.2",
+              "n": 5,
+              "avg_p": 0.164,
+              "obs": 0.6
+            },
+            {
+              "bin": "0.2-0.3",
+              "n": 22,
+              "avg_p": 0.266,
+              "obs": 0.5
+            },
+            {
+              "bin": "0.3-0.4",
+              "n": 246,
+              "avg_p": 0.365,
+              "obs": 0.427
+            },
+            {
+              "bin": "0.4-0.5",
+              "n": 747,
+              "avg_p": 0.45,
+              "obs": 0.501
+            },
+            {
+              "bin": "0.5-0.6",
+              "n": 392,
+              "avg_p": 0.536,
+              "obs": 0.541
+            },
+            {
+              "bin": "0.6-0.7",
+              "n": 54,
+              "avg_p": 0.634,
+              "obs": 0.519
+            },
+            {
+              "bin": "0.7-0.8",
+              "n": 1,
+              "avg_p": 0.73,
+              "obs": 0
+            },
+            {
+              "bin": "0.8-0.9",
+              "n": 0,
+              "avg_p": null,
+              "obs": null
+            },
+            {
+              "bin": "0.9-1.0",
+              "n": 0,
+              "avg_p": null,
+              "obs": null
+            }
+          ]
+        }
+      },
+      "by_month": {
+        "2026-03": {
+          "rows": 225,
+          "graded": 223,
+          "hit_rate": 0.6054,
+          "hit_ci95": 0.0642,
+          "brier": 0.2365,
+          "logloss": 0.66591,
+          "n_prob": 148,
+          "n_err": 150,
+          "mae": 3.5061,
+          "rmse": 4.3865,
+          "signed_bias": -0.37,
+          "bias_ci95": 0.7018,
+          "bias_significant": false
+        },
+        "2026-04": {
+          "rows": 1170,
+          "graded": 1139,
+          "hit_rate": 0.5233,
+          "hit_ci95": 0.029,
+          "brier": 0.25277,
+          "logloss": 0.69937,
+          "n_prob": 753,
+          "n_err": 772,
+          "mae": 3.4822,
+          "rmse": 4.3862,
+          "signed_bias": -0.5761,
+          "bias_ci95": 0.3069,
+          "bias_significant": true
+        },
+        "2026-05": {
+          "rows": 1224,
+          "graded": 1188,
+          "hit_rate": 0.5741,
+          "hit_ci95": 0.0281,
+          "brier": 0.25051,
+          "logloss": 0.69436,
+          "n_prob": 786,
+          "n_err": 804,
+          "mae": 3.5201,
+          "rmse": 4.4699,
+          "signed_bias": -0.2172,
+          "bias_ci95": 0.3088,
+          "bias_significant": false
+        },
+        "2026-06": {
+          "rows": 1197,
+          "graded": 1160,
+          "hit_rate": 0.5664,
+          "hit_ci95": 0.0285,
+          "brier": 0.24963,
+          "logloss": 0.6928,
+          "n_prob": 768,
+          "n_err": 784,
+          "mae": 3.4268,
+          "rmse": 4.5663,
+          "signed_bias": -0.5851,
+          "bias_ci95": 0.3172,
+          "bias_significant": true
+        },
+        "2026-07": {
+          "rows": 867,
+          "graded": 813,
+          "hit_rate": 0.5412,
+          "hit_ci95": 0.0343,
+          "brier": 0.25192,
+          "logloss": 0.69743,
+          "n_prob": 540,
+          "n_err": 546,
+          "mae": 3.8208,
+          "rmse": 4.9224,
+          "signed_bias": -0.4152,
+          "bias_ci95": 0.4118,
+          "bias_significant": true
+        }
+      },
+      "slices": {
+        "pick_OVER": {
+          "rows": 475,
+          "graded": 444,
+          "hit_rate": 0.5338,
+          "hit_ci95": 0.0464,
+          "brier": 0.2526,
+          "logloss": 0.69865,
+          "n_prob": 444,
+          "n_err": 463,
+          "mae": 3.8393,
+          "rmse": 4.9028,
+          "signed_bias": -0.6631,
+          "bias_ci95": 0.443,
+          "bias_significant": true
+        },
+        "pick_UNDER": {
+          "rows": 1086,
+          "graded": 1023,
+          "hit_rate": 0.5161,
+          "hit_ci95": 0.0306,
+          "brier": 0.25441,
+          "logloss": 0.70308,
+          "n_prob": 1023,
+          "n_err": 1065,
+          "mae": 3.3793,
+          "rmse": 4.3439,
+          "signed_bias": -0.4916,
+          "bias_ci95": 0.2593,
+          "bias_significant": true
+        },
+        "home_fav": {
+          "rows": 2655,
+          "graded": 2557,
+          "hit_rate": 0.5616,
+          "hit_ci95": 0.0192,
+          "brier": 0.25038,
+          "logloss": 0.69444,
+          "n_prob": 1691,
+          "n_err": 1732,
+          "mae": 3.5502,
+          "rmse": 4.5893,
+          "signed_bias": -0.4381,
+          "bias_ci95": 0.2152,
+          "bias_significant": true
+        },
+        "away_fav": {
+          "rows": 2028,
+          "graded": 1966,
+          "hit_rate": 0.5463,
+          "hit_ci95": 0.022,
+          "brier": 0.25046,
+          "logloss": 0.69426,
+          "n_prob": 1304,
+          "n_err": 1324,
+          "mae": 3.5257,
+          "rmse": 4.5076,
+          "signed_bias": -0.4543,
+          "bias_ci95": 0.2417,
+          "bias_significant": true
+        },
+        "day": {
+          "rows": 1698,
+          "graded": 1641,
+          "hit_rate": 0.5515,
+          "hit_ci95": 0.0241,
+          "brier": 0.25225,
+          "logloss": 0.6985,
+          "n_prob": 1086,
+          "n_err": 1110,
+          "mae": 3.5609,
+          "rmse": 4.5968,
+          "signed_bias": -0.387,
+          "bias_ci95": 0.2696,
+          "bias_significant": true
+        },
+        "night": {
+          "rows": 2985,
+          "graded": 2882,
+          "hit_rate": 0.5569,
+          "hit_ci95": 0.0181,
+          "brier": 0.24937,
+          "logloss": 0.69201,
+          "n_prob": 1909,
+          "n_err": 1946,
+          "mae": 3.5275,
+          "rmse": 4.5295,
+          "signed_bias": -0.4782,
+          "bias_ci95": 0.2002,
+          "bias_significant": true
+        },
+        "p0.40-0.50": {
+          "rows": 1795,
+          "graded": 1725,
+          "hit_rate": 0.52,
+          "hit_ci95": 0.0236,
+          "brier": 0.25064,
+          "logloss": 0.69446,
+          "n_prob": 1725,
+          "n_err": 779,
+          "mae": 3.3621,
+          "rmse": 4.2695,
+          "signed_bias": -0.4476,
+          "bias_ci95": 0.2984,
+          "bias_significant": true
+        },
+        "p0.50-0.60": {
+          "rows": 680,
+          "graded": 647,
+          "hit_rate": 0.5518,
+          "hit_ci95": 0.0383,
+          "brier": 0.24953,
+          "logloss": 0.69222,
+          "n_prob": 647,
+          "n_err": 409,
+          "mae": 3.8256,
+          "rmse": 4.8923,
+          "signed_bias": -0.6731,
+          "bias_ci95": 0.4702,
+          "bias_significant": true
+        },
+        "p<0.40": {
+          "rows": 579,
+          "graded": 558,
+          "hit_rate": 0.5753,
+          "hit_ci95": 0.041,
+          "brier": 0.25012,
+          "logloss": 0.69517,
+          "n_prob": 558,
+          "n_err": 283,
+          "mae": 3.4343,
+          "rmse": 4.55,
+          "signed_bias": -0.598,
+          "bias_ci95": 0.5265,
+          "bias_significant": true
+        },
+        "p>=0.60": {
+          "rows": 68,
+          "graded": 65,
+          "hit_rate": 0.5538,
+          "hit_ci95": 0.1208,
+          "brier": 0.25585,
+          "logloss": 0.70633,
+          "n_prob": 65,
+          "n_err": 57,
+          "mae": 3.8744,
+          "rmse": 4.9151,
+          "signed_bias": -0.6558,
+          "bias_ci95": 1.2758,
+          "bias_significant": false
+        }
+      },
+      "total_by_month_bias": {
+        "2026-03": {
+          "rows": 75,
+          "graded": 73,
+          "hit_rate": 0.6438,
+          "hit_ci95": 0.1099,
+          "brier": 0.23303,
+          "logloss": 0.65881,
+          "n_prob": 73,
+          "n_err": 75,
+          "mae": 3.7733,
+          "rmse": 4.6433,
+          "signed_bias": -0.48,
+          "bias_ci95": 1.0523,
+          "bias_significant": false
+        },
+        "2026-04": {
+          "rows": 390,
+          "graded": 367,
+          "hit_rate": 0.4905,
+          "hit_ci95": 0.0511,
+          "brier": 0.25726,
+          "logloss": 0.7091,
+          "n_prob": 367,
+          "n_err": 386,
+          "mae": 3.4832,
+          "rmse": 4.4529,
+          "signed_bias": -0.864,
+          "bias_ci95": 0.4364,
+          "bias_significant": true
+        },
+        "2026-05": {
+          "rows": 408,
+          "graded": 384,
+          "hit_rate": 0.5156,
+          "hit_ci95": 0.05,
+          "brier": 0.25547,
+          "logloss": 0.70463,
+          "n_prob": 384,
+          "n_err": 402,
+          "mae": 3.4461,
+          "rmse": 4.364,
+          "signed_bias": -0.1324,
+          "bias_ci95": 0.4269,
+          "bias_significant": false
+        },
+        "2026-06": {
+          "rows": 399,
+          "graded": 376,
+          "hit_rate": 0.5346,
+          "hit_ci95": 0.0504,
+          "brier": 0.25287,
+          "logloss": 0.69985,
+          "n_prob": 376,
+          "n_err": 392,
+          "mae": 3.3829,
+          "rmse": 4.5438,
+          "signed_bias": -0.693,
+          "bias_ci95": 0.4451,
+          "bias_significant": true
+        },
+        "2026-07": {
+          "rows": 289,
+          "graded": 267,
+          "hit_rate": 0.5206,
+          "hit_ci95": 0.0599,
+          "brier": 0.25398,
+          "logloss": 0.70188,
+          "n_prob": 267,
+          "n_err": 273,
+          "mae": 3.8007,
+          "rmse": 4.7675,
+          "signed_bias": -0.4991,
+          "bias_ci95": 0.5635,
+          "bias_significant": false
+        }
+      },
+      "worst20": [
+        {
+          "id": 2250218,
+          "date": "2026-04-12",
+          "teams": "PIT@CHC",
+          "sub": "TOTAL",
+          "p": "0.1367",
+          "actual": "OVER",
+          "logloss": "1.989967"
+        },
+        {
+          "id": 2252691,
+          "date": "2026-04-26",
+          "teams": "SD@ARI",
+          "sub": "TOTAL",
+          "p": "0.1738",
+          "actual": "OVER",
+          "logloss": "1.749850"
+        },
+        {
+          "id": 2250883,
+          "date": "2026-06-05",
+          "teams": "SF@CHC",
+          "sub": "TOTAL",
+          "p": "0.1801",
+          "actual": "OVER",
+          "logloss": "1.714243"
+        },
+        {
+          "id": 2251215,
+          "date": "2026-07-01",
+          "teams": "SD@CHC",
+          "sub": "TOTAL",
+          "p": "0.2193",
+          "actual": "OVER",
+          "logloss": "1.517315"
+        },
+        {
+          "id": 2251006,
+          "date": "2026-06-14",
+          "teams": "COL@ATH",
+          "sub": "TOTAL",
+          "p": "0.2267",
+          "actual": "OVER",
+          "logloss": "1.484128"
+        },
+        {
+          "id": 2251206,
+          "date": "2026-06-30",
+          "teams": "SD@CHC",
+          "sub": "TOTAL",
+          "p": "0.2390",
+          "actual": "OVER",
+          "logloss": "1.431292"
+        },
+        {
+          "id": 2250881,
+          "date": "2026-06-04",
+          "teams": "ATH@CHC",
+          "sub": "TOTAL",
+          "p": "0.2645",
+          "actual": "OVER",
+          "logloss": "1.329914"
+        },
+        {
+          "id": 2250670,
+          "date": "2026-05-18",
+          "teams": "MIL@CHC",
+          "sub": "TOTAL",
+          "p": "0.2646",
+          "actual": "OVER",
+          "logloss": "1.329536"
+        },
+        {
+          "id": 2250705,
+          "date": "2026-05-21",
+          "teams": "NYM@WSH",
+          "sub": "TOTAL",
+          "p": "0.7300",
+          "actual": "UNDER",
+          "logloss": "1.309333"
+        },
+        {
+          "id": 2250767,
+          "date": "2026-05-26",
+          "teams": "ATL@BOS",
+          "sub": "TOTAL",
+          "p": "0.2854",
+          "actual": "OVER",
+          "logloss": "1.253864"
+        },
+        {
+          "id": 2250329,
+          "date": "2026-04-21",
+          "teams": "BAL@KC",
+          "sub": "TOTAL",
+          "p": "0.2857",
+          "actual": "OVER",
+          "logloss": "1.252813"
+        },
+        {
+          "id": 2251293,
+          "date": "2026-07-07",
+          "teams": "COL@LAD",
+          "sub": "ML",
+          "p": "0.2879",
+          "actual": "AWAY",
+          "logloss": "1.245142"
+        },
+        {
+          "id": 2251412,
+          "date": "2026-07-20",
+          "teams": "DET@CHC",
+          "sub": "TOTAL",
+          "p": "0.2886",
+          "actual": "OVER",
+          "logloss": "1.242714"
+        },
+        {
+          "id": 2250806,
+          "date": "2026-05-29",
+          "teams": "KC@TEX",
+          "sub": "TOTAL",
+          "p": "0.2919",
+          "actual": "OVER",
+          "logloss": "1.231344"
+        },
+        {
+          "id": 2250215,
+          "date": "2026-04-12",
+          "teams": "CWS@KC",
+          "sub": "TOTAL",
+          "p": "0.2937",
+          "actual": "OVER",
+          "logloss": "1.225196"
+        },
+        {
+          "id": 2251213,
+          "date": "2026-07-01",
+          "teams": "WSH@BOS",
+          "sub": "TOTAL",
+          "p": "0.2992",
+          "actual": "OVER",
+          "logloss": "1.206643"
+        },
+        {
+          "id": 2250367,
+          "date": "2026-04-24",
+          "teams": "ATH@TEX",
+          "sub": "TOTAL",
+          "p": "0.3000",
+          "actual": "OVER",
+          "logloss": "1.203973"
+        },
+        {
+          "id": 2251383,
+          "date": "2026-07-18",
+          "teams": "TB@BOS",
+          "sub": "TOTAL",
+          "p": "0.3048",
+          "actual": "OVER",
+          "logloss": "1.188099"
+        },
+        {
+          "id": 2250594,
+          "date": "2026-05-12",
+          "teams": "SF@LAD",
+          "sub": "ML",
+          "p": "0.3062",
+          "actual": "AWAY",
+          "logloss": "1.183517"
+        },
+        {
+          "id": 2251344,
+          "date": "2026-07-11",
+          "teams": "HOU@TEX",
+          "sub": "TOTAL",
+          "p": "0.3062",
+          "actual": "OVER",
+          "logloss": "1.183517"
+        }
+      ],
+      "best20": [
+        {
+          "id": 2250860,
+          "date": "2026-06-02",
+          "teams": "NYM@SEA",
+          "sub": "ML",
+          "p": "0.3037",
+          "actual": "HOME",
+          "logloss": "0.361975"
+        },
+        {
+          "id": 2250946,
+          "date": "2026-06-09",
+          "teams": "MIL@ATH",
+          "sub": "TOTAL",
+          "p": "0.3012",
+          "actual": "UNDER",
+          "logloss": "0.358391"
+        },
+        {
+          "id": 2250963,
+          "date": "2026-06-11",
+          "teams": "TEX@KC",
+          "sub": "TOTAL",
+          "p": "0.2970",
+          "actual": "UNDER",
+          "logloss": "0.352398"
+        },
+        {
+          "id": 2250252,
+          "date": "2026-04-15",
+          "teams": "LAA@NYY",
+          "sub": "ML",
+          "p": "0.2961",
+          "actual": "HOME",
+          "logloss": "0.351119"
+        },
+        {
+          "id": 2253527,
+          "date": "2026-06-28",
+          "teams": "ARI@TB",
+          "sub": "ML",
+          "p": "0.2937",
+          "actual": "HOME",
+          "logloss": "0.347715"
+        },
+        {
+          "id": 2250651,
+          "date": "2026-05-17",
+          "teams": "BOS@ATL",
+          "sub": "ML",
+          "p": "0.2846",
+          "actual": "HOME",
+          "logloss": "0.334913"
+        },
+        {
+          "id": 2250980,
+          "date": "2026-06-12",
+          "teams": "COL@ATH",
+          "sub": "TOTAL",
+          "p": "0.2841",
+          "actual": "UNDER",
+          "logloss": "0.334215"
+        },
+        {
+          "id": 2252886,
+          "date": "2026-05-11",
+          "teams": "ARI@TEX",
+          "sub": "TOTAL",
+          "p": "0.2806",
+          "actual": "UNDER",
+          "logloss": "0.329338"
+        },
+        {
+          "id": 2250405,
+          "date": "2026-04-27",
+          "teams": "NYY@TEX",
+          "sub": "TOTAL",
+          "p": "0.2779",
+          "actual": "UNDER",
+          "logloss": "0.325592"
+        },
+        {
+          "id": 2250717,
+          "date": "2026-05-22",
+          "teams": "WSH@ATL",
+          "sub": "ML",
+          "p": "0.2764",
+          "actual": "HOME",
+          "logloss": "0.323517"
+        },
+        {
+          "id": 2250555,
+          "date": "2026-05-09",
+          "teams": "CHC@TEX",
+          "sub": "TOTAL",
+          "p": "0.2724",
+          "actual": "UNDER",
+          "logloss": "0.318004"
+        },
+        {
+          "id": 2250571,
+          "date": "2026-05-10",
+          "teams": "CHC@TEX",
+          "sub": "TOTAL",
+          "p": "0.2610",
+          "actual": "UNDER",
+          "logloss": "0.302457"
+        },
+        {
+          "id": 2251422,
+          "date": "2026-07-22",
+          "teams": "BAL@BOS",
+          "sub": "TOTAL",
+          "p": "0.2578",
+          "actual": "UNDER",
+          "logloss": "0.298137"
+        },
+        {
+          "id": 2250959,
+          "date": "2026-06-10",
+          "teams": "MIL@ATH",
+          "sub": "TOTAL",
+          "p": "0.2535",
+          "actual": "UNDER",
+          "logloss": "0.292360"
+        },
+        {
+          "id": 2250584,
+          "date": "2026-05-12",
+          "teams": "COL@PIT",
+          "sub": "ML",
+          "p": "0.2480",
+          "actual": "HOME",
+          "logloss": "0.285019"
+        },
+        {
+          "id": 2250050,
+          "date": "2026-03-30",
+          "teams": "MIN@KC",
+          "sub": "TOTAL",
+          "p": "0.2441",
+          "actual": "UNDER",
+          "logloss": "0.279846"
+        },
+        {
+          "id": 2250490,
+          "date": "2026-05-04",
+          "teams": "CIN@CHC",
+          "sub": "TOTAL",
+          "p": "0.2283",
+          "actual": "UNDER",
+          "logloss": "0.259159"
+        },
+        {
+          "id": 2250425,
+          "date": "2026-04-29",
+          "teams": "NYY@TEX",
+          "sub": "TOTAL",
+          "p": "0.2261",
+          "actual": "UNDER",
+          "logloss": "0.256313"
+        },
+        {
+          "id": 2251192,
+          "date": "2026-06-29",
+          "teams": "SD@CHC",
+          "sub": "TOTAL",
+          "p": "0.1756",
+          "actual": "UNDER",
+          "logloss": "0.193099"
+        },
+        {
+          "id": 2252672,
+          "date": "2026-04-25",
+          "teams": "SD@ARI",
+          "sub": "TOTAL",
+          "p": "0.1513",
+          "actual": "UNDER",
+          "logloss": "0.164050"
+        }
+      ]
+    },
+    "f5": {
+      "overall": {
+        "rows": 3282,
+        "graded": 2899,
+        "hit_rate": 0.515,
+        "hit_ci95": 0.0182,
+        "brier": 0.25171,
+        "logloss": 0.69679,
+        "n_prob": 2899,
+        "n_err": 820,
+        "mae": 2.4604,
+        "rmse": 3.1161,
+        "signed_bias": -0.2762,
+        "bias_ci95": 0.2126,
+        "bias_significant": true,
+        "reliability": [
+          {
+            "bin": "0.0-0.1",
+            "n": 0,
+            "avg_p": null,
+            "obs": null
+          },
+          {
+            "bin": "0.1-0.2",
+            "n": 2,
+            "avg_p": 0.18,
+            "obs": 0.5
+          },
+          {
+            "bin": "0.2-0.3",
+            "n": 17,
+            "avg_p": 0.271,
+            "obs": 0.471
+          },
+          {
+            "bin": "0.3-0.4",
+            "n": 609,
+            "avg_p": 0.37,
+            "obs": 0.422
+          },
+          {
+            "bin": "0.4-0.5",
+            "n": 1649,
+            "avg_p": 0.446,
+            "obs": 0.507
+          },
+          {
+            "bin": "0.5-0.6",
+            "n": 583,
+            "avg_p": 0.532,
+            "obs": 0.53
+          },
+          {
+            "bin": "0.6-0.7",
+            "n": 39,
+            "avg_p": 0.616,
+            "obs": 0.564
+          },
+          {
+            "bin": "0.7-0.8",
+            "n": 0,
+            "avg_p": null,
+            "obs": null
+          },
+          {
+            "bin": "0.8-0.9",
+            "n": 0,
+            "avg_p": null,
+            "obs": null
+          },
+          {
+            "bin": "0.9-1.0",
+            "n": 0,
+            "avg_p": null,
+            "obs": null
+          }
+        ]
+      },
+      "by_sub": {
+        "ML": {
+          "rows": 1561,
+          "graded": 1262,
+          "hit_rate": 0.5396,
+          "hit_ci95": 0.0275,
+          "brier": 0.24876,
+          "logloss": 0.69073,
+          "n_prob": 1262,
+          "reliability": [
+            {
+              "bin": "0.0-0.1",
+              "n": 0,
+              "avg_p": null,
+              "obs": null
+            },
+            {
+              "bin": "0.1-0.2",
+              "n": 0,
+              "avg_p": null,
+              "obs": null
+            },
+            {
+              "bin": "0.2-0.3",
+              "n": 3,
+              "avg_p": 0.283,
+              "obs": 0.333
+            },
+            {
+              "bin": "0.3-0.4",
+              "n": 412,
+              "avg_p": 0.372,
+              "obs": 0.41
+            },
+            {
+              "bin": "0.4-0.5",
+              "n": 791,
+              "avg_p": 0.438,
+              "obs": 0.489
+            },
+            {
+              "bin": "0.5-0.6",
+              "n": 56,
+              "avg_p": 0.528,
+              "obs": 0.571
+            },
+            {
+              "bin": "0.6-0.7",
+              "n": 0,
+              "avg_p": null,
+              "obs": null
+            },
+            {
+              "bin": "0.7-0.8",
+              "n": 0,
+              "avg_p": null,
+              "obs": null
+            },
+            {
+              "bin": "0.8-0.9",
+              "n": 0,
+              "avg_p": null,
+              "obs": null
+            },
+            {
+              "bin": "0.9-1.0",
+              "n": 0,
+              "avg_p": null,
+              "obs": null
+            }
+          ]
+        },
+        "RL": {
+          "rows": 860,
+          "graded": 817,
+          "hit_rate": 0.4774,
+          "hit_ci95": 0.0343,
+          "brier": 0.25439,
+          "logloss": 0.70202,
+          "n_prob": 817,
+          "reliability": [
+            {
+              "bin": "0.0-0.1",
+              "n": 0,
+              "avg_p": null,
+              "obs": null
+            },
+            {
+              "bin": "0.1-0.2",
+              "n": 0,
+              "avg_p": null,
+              "obs": null
+            },
+            {
+              "bin": "0.2-0.3",
+              "n": 0,
+              "avg_p": null,
+              "obs": null
+            },
+            {
+              "bin": "0.3-0.4",
+              "n": 29,
+              "avg_p": 0.38,
+              "obs": 0.448
+            },
+            {
+              "bin": "0.4-0.5",
+              "n": 411,
+              "avg_p": 0.464,
+              "obs": 0.53
+            },
+            {
+              "bin": "0.5-0.6",
+              "n": 348,
+              "avg_p": 0.533,
+              "obs": 0.48
+            },
+            {
+              "bin": "0.6-0.7",
+              "n": 29,
+              "avg_p": 0.618,
+              "obs": 0.552
+            },
+            {
+              "bin": "0.7-0.8",
+              "n": 0,
+              "avg_p": null,
+              "obs": null
+            },
+            {
+              "bin": "0.8-0.9",
+              "n": 0,
+              "avg_p": null,
+              "obs": null
+            },
+            {
+              "bin": "0.9-1.0",
+              "n": 0,
+              "avg_p": null,
+              "obs": null
+            }
+          ]
+        },
+        "TOTAL": {
+          "rows": 861,
+          "graded": 820,
+          "hit_rate": 0.5146,
+          "hit_ci95": 0.0342,
+          "brier": 0.25357,
+          "logloss": 0.70091,
+          "n_prob": 820,
+          "n_err": 820,
+          "mae": 2.4604,
+          "rmse": 3.1161,
+          "signed_bias": -0.2762,
+          "bias_ci95": 0.2126,
+          "bias_significant": true,
+          "reliability": [
+            {
+              "bin": "0.0-0.1",
+              "n": 0,
+              "avg_p": null,
+              "obs": null
+            },
+            {
+              "bin": "0.1-0.2",
+              "n": 2,
+              "avg_p": 0.18,
+              "obs": 0.5
+            },
+            {
+              "bin": "0.2-0.3",
+              "n": 14,
+              "avg_p": 0.269,
+              "obs": 0.5
+            },
+            {
+              "bin": "0.3-0.4",
+              "n": 168,
+              "avg_p": 0.364,
+              "obs": 0.446
+            },
+            {
+              "bin": "0.4-0.5",
+              "n": 447,
+              "avg_p": 0.443,
+              "obs": 0.517
+            },
+            {
+              "bin": "0.5-0.6",
+              "n": 179,
+              "avg_p": 0.53,
+              "obs": 0.615
+            },
+            {
+              "bin": "0.6-0.7",
+              "n": 10,
+              "avg_p": 0.612,
+              "obs": 0.6
+            },
+            {
+              "bin": "0.7-0.8",
+              "n": 0,
+              "avg_p": null,
+              "obs": null
+            },
+            {
+              "bin": "0.8-0.9",
+              "n": 0,
+              "avg_p": null,
+              "obs": null
+            },
+            {
+              "bin": "0.9-1.0",
+              "n": 0,
+              "avg_p": null,
+              "obs": null
+            }
+          ]
+        }
+      },
+      "by_month": {
+        "2026-03": {
+          "rows": 208,
+          "graded": 194,
+          "hit_rate": 0.4897,
+          "hit_ci95": 0.0703,
+          "brier": 0.2575,
+          "logloss": 0.70849,
+          "n_prob": 194,
+          "n_err": 67,
+          "mae": 2.6119,
+          "rmse": 3.201,
+          "signed_bias": -0.2239,
+          "bias_ci95": 0.7704,
+          "bias_significant": false
+        },
+        "2026-04": {
+          "rows": 1020,
+          "graded": 943,
+          "hit_rate": 0.5037,
+          "hit_ci95": 0.0319,
+          "brier": 0.25296,
+          "logloss": 0.69942,
+          "n_prob": 943,
+          "n_err": 311,
+          "mae": 2.4341,
+          "rmse": 3.1012,
+          "signed_bias": -0.4084,
+          "bias_ci95": 0.3422,
+          "bias_significant": true
+        },
+        "2026-05": {
+          "rows": 974,
+          "graded": 849,
+          "hit_rate": 0.5347,
+          "hit_ci95": 0.0336,
+          "brier": 0.24913,
+          "logloss": 0.69158,
+          "n_prob": 849,
+          "n_err": 263,
+          "mae": 2.4601,
+          "rmse": 3.115,
+          "signed_bias": -0.2471,
+          "bias_ci95": 0.376,
+          "bias_significant": false
+        },
+        "2026-06": {
+          "rows": 447,
+          "graded": 372,
+          "hit_rate": 0.5134,
+          "hit_ci95": 0.0508,
+          "brier": 0.25179,
+          "logloss": 0.69675,
+          "n_prob": 372,
+          "n_err": 24,
+          "mae": 2.625,
+          "rmse": 3.4581,
+          "signed_bias": -1.5,
+          "bias_ci95": 1.2734,
+          "bias_significant": true
+        },
+        "2026-07": {
+          "rows": 633,
+          "graded": 541,
+          "hit_rate": 0.5139,
+          "hit_ci95": 0.0421,
+          "brier": 0.25144,
+          "logloss": 0.69623,
+          "n_prob": 541,
+          "n_err": 155,
+          "mae": 2.4226,
+          "rmse": 3.0541,
+          "signed_bias": 0.1065,
+          "bias_ci95": 0.4821,
+          "bias_significant": false
+        }
+      },
+      "slices": {
+        "pick_UNDER": {
+          "rows": 699,
+          "graded": 664,
+          "hit_rate": 0.5105,
+          "hit_ci95": 0.038,
+          "brier": 0.25473,
+          "logloss": 0.70338,
+          "n_prob": 664,
+          "n_err": 664,
+          "mae": 2.4172,
+          "rmse": 3.019,
+          "signed_bias": -0.1928,
+          "bias_ci95": 0.2293,
+          "bias_significant": false
+        },
+        "pick_OVER": {
+          "rows": 162,
+          "graded": 156,
+          "hit_rate": 0.5321,
+          "hit_ci95": 0.0783,
+          "brier": 0.24864,
+          "logloss": 0.69042,
+          "n_prob": 156,
+          "n_err": 156,
+          "mae": 2.6442,
+          "rmse": 3.4993,
+          "signed_bias": -0.6314,
+          "bias_ci95": 0.5419,
+          "bias_significant": true
+        },
+        "home_fav": {
+          "rows": 1892,
+          "graded": 1668,
+          "hit_rate": 0.5228,
+          "hit_ci95": 0.024,
+          "brier": 0.25148,
+          "logloss": 0.69653,
+          "n_prob": 1668,
+          "n_err": 477,
+          "mae": 2.4853,
+          "rmse": 3.1549,
+          "signed_bias": -0.4497,
+          "bias_ci95": 0.2805,
+          "bias_significant": true
+        },
+        "away_fav": {
+          "rows": 1390,
+          "graded": 1231,
+          "hit_rate": 0.5045,
+          "hit_ci95": 0.0279,
+          "brier": 0.25201,
+          "logloss": 0.69715,
+          "n_prob": 1231,
+          "n_err": 343,
+          "mae": 2.4257,
+          "rmse": 3.0613,
+          "signed_bias": -0.035,
+          "bias_ci95": 0.3244,
+          "bias_significant": false
+        },
+        "day": {
+          "rows": 1256,
+          "graded": 1126,
+          "hit_rate": 0.5107,
+          "hit_ci95": 0.0292,
+          "brier": 0.25224,
+          "logloss": 0.69798,
+          "n_prob": 1126,
+          "n_err": 336,
+          "mae": 2.494,
+          "rmse": 3.1493,
+          "signed_bias": -0.25,
+          "bias_ci95": 0.3362,
+          "bias_significant": false
+        },
+        "night": {
+          "rows": 2026,
+          "graded": 1773,
+          "hit_rate": 0.5178,
+          "hit_ci95": 0.0233,
+          "brier": 0.25137,
+          "logloss": 0.69604,
+          "n_prob": 1773,
+          "n_err": 484,
+          "mae": 2.437,
+          "rmse": 3.0928,
+          "signed_bias": -0.2944,
+          "bias_ci95": 0.2746,
+          "bias_significant": true
+        },
+        "p0.40-0.50": {
+          "rows": 1894,
+          "graded": 1649,
+          "hit_rate": 0.493,
+          "hit_ci95": 0.0241,
+          "brier": 0.25281,
+          "logloss": 0.69882,
+          "n_prob": 1649,
+          "n_err": 447,
+          "mae": 2.4128,
+          "rmse": 3.0526,
+          "signed_bias": -0.3412,
+          "bias_ci95": 0.2815,
+          "bias_significant": true
+        },
+        "p<0.40": {
+          "rows": 725,
+          "graded": 628,
+          "hit_rate": 0.5764,
+          "hit_ci95": 0.0386,
+          "brier": 0.24847,
+          "logloss": 0.691,
+          "n_prob": 628,
+          "n_err": 184,
+          "mae": 2.4022,
+          "rmse": 2.9178,
+          "signed_bias": 0.087,
+          "bias_ci95": 0.4226,
+          "bias_significant": false
+        },
+        "p0.50-0.60": {
+          "rows": 621,
+          "graded": 583,
+          "hit_rate": 0.5077,
+          "hit_ci95": 0.0406,
+          "brier": 0.25262,
+          "logloss": 0.69844,
+          "n_prob": 583,
+          "n_err": 179,
+          "mae": 2.6229,
+          "rmse": 3.4144,
+          "signed_bias": -0.4497,
+          "bias_ci95": 0.4972,
+          "bias_significant": false
+        },
+        "p>=0.60": {
+          "rows": 42,
+          "graded": 39,
+          "hit_rate": 0.5641,
+          "hit_ci95": 0.1556,
+          "brier": 0.24356,
+          "logloss": 0.67979,
+          "n_prob": 39,
+          "n_err": 10,
+          "mae": 2.75,
+          "rmse": 3.7914,
+          "signed_bias": -0.95,
+          "bias_ci95": 2.3981,
+          "bias_significant": false
+        }
+      },
+      "worst20": [
+        {
+          "id": 2250218,
+          "date": "2026-04-12",
+          "teams": "PIT@CHC",
+          "sub": "TOTAL",
+          "p": "0.1700",
+          "actual": "OVER",
+          "logloss": "1.771957"
+        },
+        {
+          "id": 2252780,
+          "date": "2026-05-03",
+          "teams": "ARI@CHC",
+          "sub": "TOTAL",
+          "p": "0.2300",
+          "actual": "OVER",
+          "logloss": "1.469676"
+        },
+        {
+          "id": 2251422,
+          "date": "2026-07-22",
+          "teams": "BAL@BOS",
+          "sub": "TOTAL",
+          "p": "0.2400",
+          "actual": "OVER",
+          "logloss": "1.427116"
+        },
+        {
+          "id": 2250215,
+          "date": "2026-04-12",
+          "teams": "CWS@KC",
+          "sub": "TOTAL",
+          "p": "0.2600",
+          "actual": "OVER",
+          "logloss": "1.347074"
+        },
+        {
+          "id": 2250670,
+          "date": "2026-05-18",
+          "teams": "MIL@CHC",
+          "sub": "TOTAL",
+          "p": "0.2600",
+          "actual": "OVER",
+          "logloss": "1.347074"
+        },
+        {
+          "id": 2250785,
+          "date": "2026-05-27",
+          "teams": "ATL@BOS",
+          "sub": "TOTAL",
+          "p": "0.2700",
+          "actual": "OVER",
+          "logloss": "1.309333"
+        },
+        {
+          "id": 2251383,
+          "date": "2026-07-18",
+          "teams": "TB@BOS",
+          "sub": "TOTAL",
+          "p": "0.2800",
+          "actual": "OVER",
+          "logloss": "1.272966"
+        },
+        {
+          "id": 2250252,
+          "date": "2026-04-15",
+          "teams": "LAA@NYY",
+          "sub": "ML",
+          "p": "0.2834",
+          "actual": "AWAY",
+          "logloss": "1.260896"
+        },
+        {
+          "id": 2251412,
+          "date": "2026-07-20",
+          "teams": "DET@CHC",
+          "sub": "TOTAL",
+          "p": "0.2900",
+          "actual": "OVER",
+          "logloss": "1.237874"
+        },
+        {
+          "id": 2250233,
+          "date": "2026-04-14",
+          "teams": "WSH@PIT",
+          "sub": "TOTAL",
+          "p": "0.3000",
+          "actual": "OVER",
+          "logloss": "1.203973"
+        },
+        {
+          "id": 2250407,
+          "date": "2026-04-27",
+          "teams": "MIA@LAD",
+          "sub": "ML",
+          "p": "0.3084",
+          "actual": "AWAY",
+          "logloss": "1.176358"
+        },
+        {
+          "id": 2250367,
+          "date": "2026-04-24",
+          "teams": "ATH@TEX",
+          "sub": "TOTAL",
+          "p": "0.3100",
+          "actual": "OVER",
+          "logloss": "1.171183"
+        },
+        {
+          "id": 2250594,
+          "date": "2026-05-12",
+          "teams": "SF@LAD",
+          "sub": "ML",
+          "p": "0.3124",
+          "actual": "AWAY",
+          "logloss": "1.163471"
+        },
+        {
+          "id": 2250883,
+          "date": "2026-06-05",
+          "teams": "SF@CHC",
+          "sub": "ML",
+          "p": "0.3161",
+          "actual": "AWAY",
+          "logloss": "1.151697"
+        },
+        {
+          "id": 2250572,
+          "date": "2026-05-10",
+          "teams": "PIT@SF",
+          "sub": "TOTAL",
+          "p": "0.3200",
+          "actual": "OVER",
+          "logloss": "1.139434"
+        },
+        {
+          "id": 2251376,
+          "date": "2026-07-18",
+          "teams": "MIN@CHC",
+          "sub": "TOTAL",
+          "p": "0.3200",
+          "actual": "OVER",
+          "logloss": "1.139434"
+        },
+        {
+          "id": 2250183,
+          "date": "2026-04-10",
+          "teams": "LAA@CIN",
+          "sub": "ML",
+          "p": "0.3241",
+          "actual": "AWAY",
+          "logloss": "1.126703"
+        },
+        {
+          "id": 2250851,
+          "date": "2026-06-02",
+          "teams": "CLE@NYY",
+          "sub": "ML",
+          "p": "0.3255",
+          "actual": "AWAY",
+          "logloss": "1.122393"
+        },
+        {
+          "id": 2250535,
+          "date": "2026-05-08",
+          "teams": "COL@PHI",
+          "sub": "ML",
+          "p": "0.3259",
+          "actual": "AWAY",
+          "logloss": "1.121165"
+        },
+        {
+          "id": 2250194,
+          "date": "2026-04-10",
+          "teams": "TEX@LAD",
+          "sub": "ML",
+          "p": "0.3268",
+          "actual": "AWAY",
+          "logloss": "1.118407"
+        }
+      ],
+      "best20": [
+        {
+          "id": 2250548,
+          "date": "2026-05-09",
+          "teams": "LAA@TOR",
+          "sub": "ML",
+          "p": "0.3123",
+          "actual": "HOME",
+          "logloss": "0.374403"
+        },
+        {
+          "id": 2253527,
+          "date": "2026-06-28",
+          "teams": "ARI@TB",
+          "sub": "ML",
+          "p": "0.3111",
+          "actual": "HOME",
+          "logloss": "0.372659"
+        },
+        {
+          "id": 2250909,
+          "date": "2026-06-06",
+          "teams": "LAA@LAD",
+          "sub": "ML",
+          "p": "0.3105",
+          "actual": "HOME",
+          "logloss": "0.371789"
+        },
+        {
+          "id": 2250144,
+          "date": "2026-04-06",
+          "teams": "SEA@TEX",
+          "sub": "TOTAL",
+          "p": "0.3100",
+          "actual": "UNDER",
+          "logloss": "0.371064"
+        },
+        {
+          "id": 2250249,
+          "date": "2026-04-15",
+          "teams": "WSH@PIT",
+          "sub": "TOTAL",
+          "p": "0.3100",
+          "actual": "UNDER",
+          "logloss": "0.371064"
+        },
+        {
+          "id": 2250339,
+          "date": "2026-04-22",
+          "teams": "BAL@KC",
+          "sub": "TOTAL",
+          "p": "0.3100",
+          "actual": "UNDER",
+          "logloss": "0.371064"
+        },
+        {
+          "id": 2250651,
+          "date": "2026-05-17",
+          "teams": "BOS@ATL",
+          "sub": "ML",
+          "p": "0.3088",
+          "actual": "HOME",
+          "logloss": "0.369326"
+        },
+        {
+          "id": 2250767,
+          "date": "2026-05-26",
+          "teams": "ATL@BOS",
+          "sub": "TOTAL",
+          "p": "0.3000",
+          "actual": "UNDER",
+          "logloss": "0.356675"
+        },
+        {
+          "id": 2251324,
+          "date": "2026-07-10",
+          "teams": "CHC@CIN",
+          "sub": "TOTAL",
+          "p": "0.3000",
+          "actual": "UNDER",
+          "logloss": "0.356675"
+        },
+        {
+          "id": 2251344,
+          "date": "2026-07-11",
+          "teams": "HOU@TEX",
+          "sub": "TOTAL",
+          "p": "0.3000",
+          "actual": "UNDER",
+          "logloss": "0.356675"
+        },
+        {
+          "id": 2251293,
+          "date": "2026-07-07",
+          "teams": "COL@LAD",
+          "sub": "ML",
+          "p": "0.2960",
+          "actual": "HOME",
+          "logloss": "0.350977"
+        },
+        {
+          "id": 2250555,
+          "date": "2026-05-09",
+          "teams": "CHC@TEX",
+          "sub": "TOTAL",
+          "p": "0.2900",
+          "actual": "UNDER",
+          "logloss": "0.342490"
+        },
+        {
+          "id": 2252915,
+          "date": "2026-05-13",
+          "teams": "ARI@TEX",
+          "sub": "TOTAL",
+          "p": "0.2900",
+          "actual": "UNDER",
+          "logloss": "0.342490"
+        },
+        {
+          "id": 2250631,
+          "date": "2026-05-15",
+          "teams": "LAD@LAA",
+          "sub": "TOTAL",
+          "p": "0.2900",
+          "actual": "UNDER",
+          "logloss": "0.342490"
+        },
+        {
+          "id": 2250091,
+          "date": "2026-04-02",
+          "teams": "MIN@KC",
+          "sub": "TOTAL",
+          "p": "0.2800",
+          "actual": "UNDER",
+          "logloss": "0.328504"
+        },
+        {
+          "id": 2252886,
+          "date": "2026-05-11",
+          "teams": "ARI@TEX",
+          "sub": "TOTAL",
+          "p": "0.2700",
+          "actual": "UNDER",
+          "logloss": "0.314711"
+        },
+        {
+          "id": 2250584,
+          "date": "2026-05-12",
+          "teams": "COL@PIT",
+          "sub": "ML",
+          "p": "0.2695",
+          "actual": "HOME",
+          "logloss": "0.314026"
+        },
+        {
+          "id": 2250571,
+          "date": "2026-05-10",
+          "teams": "CHC@TEX",
+          "sub": "TOTAL",
+          "p": "0.2600",
+          "actual": "UNDER",
+          "logloss": "0.301105"
+        },
+        {
+          "id": 2250050,
+          "date": "2026-03-30",
+          "teams": "MIN@KC",
+          "sub": "TOTAL",
+          "p": "0.2500",
+          "actual": "UNDER",
+          "logloss": "0.287682"
+        },
+        {
+          "id": 2252691,
+          "date": "2026-04-26",
+          "teams": "SD@ARI",
+          "sub": "TOTAL",
+          "p": "0.1900",
+          "actual": "UNDER",
+          "logloss": "0.210721"
+        }
+      ]
+    },
+    "nrfi": {
+      "overall": {
+        "rows": 1561,
+        "graded": 1496,
+        "hit_rate": 0.5134,
+        "hit_ci95": 0.0253,
+        "brier": 0.25024,
+        "logloss": 0.69357,
+        "n_prob": 1496,
+        "reliability": [
+          {
+            "bin": "0.0-0.1",
+            "n": 0,
+            "avg_p": null,
+            "obs": null
+          },
+          {
+            "bin": "0.1-0.2",
+            "n": 0,
+            "avg_p": null,
+            "obs": null
+          },
+          {
+            "bin": "0.2-0.3",
+            "n": 0,
+            "avg_p": null,
+            "obs": null
+          },
+          {
+            "bin": "0.3-0.4",
+            "n": 53,
+            "avg_p": 0.373,
+            "obs": 0.34
+          },
+          {
+            "bin": "0.4-0.5",
+            "n": 922,
+            "avg_p": 0.456,
+            "obs": 0.5
+          },
+          {
+            "bin": "0.5-0.6",
+            "n": 510,
+            "avg_p": 0.525,
+            "obs": 0.624
+          },
+          {
+            "bin": "0.6-0.7",
+            "n": 11,
+            "avg_p": 0.61,
+            "obs": 0.455
+          },
+          {
+            "bin": "0.7-0.8",
+            "n": 0,
+            "avg_p": null,
+            "obs": null
+          },
+          {
+            "bin": "0.8-0.9",
+            "n": 0,
+            "avg_p": null,
+            "obs": null
+          },
+          {
+            "bin": "0.9-1.0",
+            "n": 0,
+            "avg_p": null,
+            "obs": null
+          }
+        ]
+      },
+      "by_sub": {
+        "NRFI": {
+          "rows": 1561,
+          "graded": 1496,
+          "hit_rate": 0.5134,
+          "hit_ci95": 0.0253,
+          "brier": 0.25024,
+          "logloss": 0.69357,
+          "n_prob": 1496,
+          "reliability": [
+            {
+              "bin": "0.0-0.1",
+              "n": 0,
+              "avg_p": null,
+              "obs": null
+            },
+            {
+              "bin": "0.1-0.2",
+              "n": 0,
+              "avg_p": null,
+              "obs": null
+            },
+            {
+              "bin": "0.2-0.3",
+              "n": 0,
+              "avg_p": null,
+              "obs": null
+            },
+            {
+              "bin": "0.3-0.4",
+              "n": 53,
+              "avg_p": 0.373,
+              "obs": 0.34
+            },
+            {
+              "bin": "0.4-0.5",
+              "n": 922,
+              "avg_p": 0.456,
+              "obs": 0.5
+            },
+            {
+              "bin": "0.5-0.6",
+              "n": 510,
+              "avg_p": 0.525,
+              "obs": 0.624
+            },
+            {
+              "bin": "0.6-0.7",
+              "n": 11,
+              "avg_p": 0.61,
+              "obs": 0.455
+            },
+            {
+              "bin": "0.7-0.8",
+              "n": 0,
+              "avg_p": null,
+              "obs": null
+            },
+            {
+              "bin": "0.8-0.9",
+              "n": 0,
+              "avg_p": null,
+              "obs": null
+            },
+            {
+              "bin": "0.9-1.0",
+              "n": 0,
+              "avg_p": null,
+              "obs": null
+            }
+          ]
+        }
+      },
+      "by_month": {
+        "2026-03": {
+          "rows": 75,
+          "graded": 75,
+          "hit_rate": 0.4933,
+          "hit_ci95": 0.1132,
+          "brier": 0.25288,
+          "logloss": 0.69888,
+          "n_prob": 75
+        },
+        "2026-04": {
+          "rows": 390,
+          "graded": 382,
+          "hit_rate": 0.5471,
+          "hit_ci95": 0.0499,
+          "brier": 0.24569,
+          "logloss": 0.68434,
+          "n_prob": 382
+        },
+        "2026-05": {
+          "rows": 408,
+          "graded": 376,
+          "hit_rate": 0.5,
+          "hit_ci95": 0.0505,
+          "brier": 0.25029,
+          "logloss": 0.69368,
+          "n_prob": 376
+        },
+        "2026-06": {
+          "rows": 399,
+          "graded": 391,
+          "hit_rate": 0.509,
+          "hit_ci95": 0.0496,
+          "brier": 0.25315,
+          "logloss": 0.69948,
+          "n_prob": 391
+        },
+        "2026-07": {
+          "rows": 289,
+          "graded": 272,
+          "hit_rate": 0.4963,
+          "hit_ci95": 0.0594,
+          "brier": 0.25165,
+          "logloss": 0.69644,
+          "n_prob": 272
+        }
+      },
+      "slices": {
+        "home_fav": {
+          "rows": 885,
+          "graded": 845,
+          "hit_rate": 0.4994,
+          "hit_ci95": 0.0337,
+          "brier": 0.25199,
+          "logloss": 0.69714,
+          "n_prob": 845
+        },
+        "away_fav": {
+          "rows": 676,
+          "graded": 651,
+          "hit_rate": 0.5315,
+          "hit_ci95": 0.0383,
+          "brier": 0.24797,
+          "logloss": 0.68894,
+          "n_prob": 651
+        },
+        "day": {
+          "rows": 566,
+          "graded": 549,
+          "hit_rate": 0.5173,
+          "hit_ci95": 0.0418,
+          "brier": 0.24741,
+          "logloss": 0.68781,
+          "n_prob": 549
+        },
+        "night": {
+          "rows": 995,
+          "graded": 947,
+          "hit_rate": 0.5111,
+          "hit_ci95": 0.0318,
+          "brier": 0.25188,
+          "logloss": 0.69691,
+          "n_prob": 947
+        },
+        "p0.50-0.60": {
+          "rows": 529,
+          "graded": 510,
+          "hit_rate": 0.5235,
+          "hit_ci95": 0.0433,
+          "brier": 0.25237,
+          "logloss": 0.69793,
+          "n_prob": 510
+        },
+        "p0.40-0.50": {
+          "rows": 968,
+          "graded": 922,
+          "hit_rate": 0.5,
+          "hit_ci95": 0.0323,
+          "brier": 0.25072,
+          "logloss": 0.69459,
+          "n_prob": 922
+        },
+        "p<0.40": {
+          "rows": 53,
+          "graded": 53,
+          "hit_rate": 0.6604,
+          "hit_ci95": 0.1275,
+          "brier": 0.21793,
+          "logloss": 0.6269,
+          "n_prob": 53
+        },
+        "p>=0.60": {
+          "rows": 11,
+          "graded": 11,
+          "hit_rate": 0.4545,
+          "hit_ci95": 0.2943,
+          "brier": 0.26674,
+          "logloss": 0.72699,
+          "n_prob": 11
+        }
+      },
+      "worst20": [
+        {
+          "id": 2251194,
+          "date": "2026-06-29",
+          "teams": "MIA@COL",
+          "sub": "NRFI",
+          "p": "0.3600",
+          "actual": "NRFI",
+          "logloss": "1.021651"
+        },
+        {
+          "id": 2250055,
+          "date": "2026-03-30",
+          "teams": "COL@TOR",
+          "sub": "NRFI",
+          "p": "0.3800",
+          "actual": "NRFI",
+          "logloss": "0.967584"
+        },
+        {
+          "id": 2252381,
+          "date": "2026-04-03",
+          "teams": "ATL@ARI",
+          "sub": "NRFI",
+          "p": "0.3800",
+          "actual": "NRFI",
+          "logloss": "0.967584"
+        },
+        {
+          "id": 2250192,
+          "date": "2026-04-10",
+          "teams": "COL@SD",
+          "sub": "NRFI",
+          "p": "0.3800",
+          "actual": "NRFI",
+          "logloss": "0.967584"
+        },
+        {
+          "id": 2252672,
+          "date": "2026-04-25",
+          "teams": "SD@ARI",
+          "sub": "NRFI",
+          "p": "0.3800",
+          "actual": "NRFI",
+          "logloss": "0.967584"
+        },
+        {
+          "id": 2250964,
+          "date": "2026-06-11",
+          "teams": "CHC@COL",
+          "sub": "NRFI",
+          "p": "0.3800",
+          "actual": "NRFI",
+          "logloss": "0.967584"
+        },
+        {
+          "id": 2253806,
+          "date": "2026-07-22",
+          "teams": "ATH@ARI",
+          "sub": "NRFI",
+          "p": "0.3800",
+          "actual": "NRFI",
+          "logloss": "0.967584"
+        },
+        {
+          "id": 2250068,
+          "date": "2026-03-31",
+          "teams": "COL@TOR",
+          "sub": "NRFI",
+          "p": "0.3900",
+          "actual": "NRFI",
+          "logloss": "0.941609"
+        },
+        {
+          "id": 2252346,
+          "date": "2026-03-31",
+          "teams": "DET@ARI",
+          "sub": "NRFI",
+          "p": "0.3900",
+          "actual": "NRFI",
+          "logloss": "0.941609"
+        },
+        {
+          "id": 2250159,
+          "date": "2026-04-07",
+          "teams": "HOU@COL",
+          "sub": "NRFI",
+          "p": "0.3900",
+          "actual": "NRFI",
+          "logloss": "0.941609"
+        },
+        {
+          "id": 2252493,
+          "date": "2026-04-12",
+          "teams": "ARI@PHI",
+          "sub": "NRFI",
+          "p": "0.3900",
+          "actual": "NRFI",
+          "logloss": "0.941609"
+        },
+        {
+          "id": 2252886,
+          "date": "2026-05-11",
+          "teams": "ARI@TEX",
+          "sub": "NRFI",
+          "p": "0.6100",
+          "actual": "YRFI",
+          "logloss": "0.941609"
+        },
+        {
+          "id": 2250923,
+          "date": "2026-06-07",
+          "teams": "NYM@SD",
+          "sub": "NRFI",
+          "p": "0.6100",
+          "actual": "YRFI",
+          "logloss": "0.941609"
+        },
+        {
+          "id": 2250980,
+          "date": "2026-06-12",
+          "teams": "COL@ATH",
+          "sub": "NRFI",
+          "p": "0.3900",
+          "actual": "NRFI",
+          "logloss": "0.941609"
+        },
+        {
+          "id": 2251090,
+          "date": "2026-06-21",
+          "teams": "PIT@COL",
+          "sub": "NRFI",
+          "p": "0.3900",
+          "actual": "NRFI",
+          "logloss": "0.941609"
+        },
+        {
+          "id": 2251104,
+          "date": "2026-06-22",
+          "teams": "BOS@COL",
+          "sub": "NRFI",
+          "p": "0.3900",
+          "actual": "NRFI",
+          "logloss": "0.941609"
+        },
+        {
+          "id": 2251223,
+          "date": "2026-07-01",
+          "teams": "LAD@ATH",
+          "sub": "NRFI",
+          "p": "0.3900",
+          "actual": "NRFI",
+          "logloss": "0.941609"
+        },
+        {
+          "id": 2253578,
+          "date": "2026-07-01",
+          "teams": "SF@ARI",
+          "sub": "NRFI",
+          "p": "0.3900",
+          "actual": "NRFI",
+          "logloss": "0.941609"
+        },
+        {
+          "id": 2251257,
+          "date": "2026-07-04",
+          "teams": "MIA@ATH",
+          "sub": "NRFI",
+          "p": "0.3900",
+          "actual": "NRFI",
+          "logloss": "0.941609"
+        },
+        {
+          "id": 2251457,
+          "date": "2026-07-24",
+          "teams": "TOR@BOS",
+          "sub": "NRFI",
+          "p": "0.6100",
+          "actual": "YRFI",
+          "logloss": "0.941609"
+        }
+      ],
+      "best20": [
+        {
+          "id": 2251254,
+          "date": "2026-07-04",
+          "teams": "SF@COL",
+          "sub": "NRFI",
+          "p": "0.3800",
+          "actual": "YRFI",
+          "logloss": "0.478036"
+        },
+        {
+          "id": 2251268,
+          "date": "2026-07-05",
+          "teams": "SF@COL",
+          "sub": "NRFI",
+          "p": "0.3800",
+          "actual": "YRFI",
+          "logloss": "0.478036"
+        },
+        {
+          "id": 2251434,
+          "date": "2026-07-22",
+          "teams": "NYM@MIL",
+          "sub": "NRFI",
+          "p": "0.6200",
+          "actual": "NRFI",
+          "logloss": "0.478036"
+        },
+        {
+          "id": 2252625,
+          "date": "2026-04-21",
+          "teams": "CWS@ARI",
+          "sub": "NRFI",
+          "p": "0.3700",
+          "actual": "YRFI",
+          "logloss": "0.462035"
+        },
+        {
+          "id": 2252640,
+          "date": "2026-04-22",
+          "teams": "CWS@ARI",
+          "sub": "NRFI",
+          "p": "0.3700",
+          "actual": "YRFI",
+          "logloss": "0.462035"
+        },
+        {
+          "id": 2250610,
+          "date": "2026-05-14",
+          "teams": "WSH@CIN",
+          "sub": "NRFI",
+          "p": "0.6300",
+          "actual": "NRFI",
+          "logloss": "0.462035"
+        },
+        {
+          "id": 2250921,
+          "date": "2026-06-07",
+          "teams": "MIL@COL",
+          "sub": "NRFI",
+          "p": "0.3700",
+          "actual": "YRFI",
+          "logloss": "0.462035"
+        },
+        {
+          "id": 2251208,
+          "date": "2026-06-30",
+          "teams": "MIA@COL",
+          "sub": "NRFI",
+          "p": "0.3700",
+          "actual": "YRFI",
+          "logloss": "0.462035"
+        },
+        {
+          "id": 2252477,
+          "date": "2026-04-11",
+          "teams": "ARI@PHI",
+          "sub": "NRFI",
+          "p": "0.3600",
+          "actual": "YRFI",
+          "logloss": "0.446287"
+        },
+        {
+          "id": 2252585,
+          "date": "2026-04-18",
+          "teams": "TOR@ARI",
+          "sub": "NRFI",
+          "p": "0.3600",
+          "actual": "YRFI",
+          "logloss": "0.446287"
+        },
+        {
+          "id": 2250455,
+          "date": "2026-05-01",
+          "teams": "CLE@ATH",
+          "sub": "NRFI",
+          "p": "0.3600",
+          "actual": "YRFI",
+          "logloss": "0.446287"
+        },
+        {
+          "id": 2250348,
+          "date": "2026-04-22",
+          "teams": "SD@COL",
+          "sub": "NRFI",
+          "p": "0.3500",
+          "actual": "YRFI",
+          "logloss": "0.430783"
+        },
+        {
+          "id": 2250942,
+          "date": "2026-06-09",
+          "teams": "CHC@COL",
+          "sub": "NRFI",
+          "p": "0.3500",
+          "actual": "YRFI",
+          "logloss": "0.430783"
+        },
+        {
+          "id": 2250993,
+          "date": "2026-06-13",
+          "teams": "COL@ATH",
+          "sub": "NRFI",
+          "p": "0.3500",
+          "actual": "YRFI",
+          "logloss": "0.430783"
+        },
+        {
+          "id": 2251222,
+          "date": "2026-07-01",
+          "teams": "MIA@COL",
+          "sub": "NRFI",
+          "p": "0.3500",
+          "actual": "YRFI",
+          "logloss": "0.430783"
+        },
+        {
+          "id": 2252941,
+          "date": "2026-05-15",
+          "teams": "ARI@COL",
+          "sub": "NRFI",
+          "p": "0.3400",
+          "actual": "YRFI",
+          "logloss": "0.415515"
+        },
+        {
+          "id": 2250130,
+          "date": "2026-04-05",
+          "teams": "PHI@COL",
+          "sub": "NRFI",
+          "p": "0.3200",
+          "actual": "YRFI",
+          "logloss": "0.385662"
+        },
+        {
+          "id": 2250024,
+          "date": "2026-03-28",
+          "teams": "TB@STL",
+          "sub": "NRFI",
+          "p": "0.3100",
+          "actual": "YRFI",
+          "logloss": "0.371064"
+        },
+        {
+          "id": 2250100,
+          "date": "2026-04-03",
+          "teams": "TB@MIN",
+          "sub": "NRFI",
+          "p": "0.3000",
+          "actual": "YRFI",
+          "logloss": "0.356675"
+        },
+        {
+          "id": 2250172,
+          "date": "2026-04-08",
+          "teams": "CHC@TB",
+          "sub": "NRFI",
+          "p": "0.3000",
+          "actual": "YRFI",
+          "logloss": "0.356675"
+        }
+      ]
+    },
+    "kprops": {
+      "overall": {
+        "rows": 2784,
+        "graded": 2159,
+        "hit_rate": 0.5276,
+        "hit_ci95": 0.0211,
+        "brier": 0.29741,
+        "logloss": 0.82991,
+        "n_prob": 2159,
+        "n_err": 2161,
+        "mae": 2.2151,
+        "rmse": 2.818,
+        "signed_bias": -0.9874,
+        "bias_ci95": 0.1113,
+        "bias_significant": true,
+        "reliability": [
+          {
+            "bin": "0.0-0.1",
+            "n": 169,
+            "avg_p": 0.068,
+            "obs": 0.385
+          },
+          {
+            "bin": "0.1-0.2",
+            "n": 419,
+            "avg_p": 0.155,
+            "obs": 0.494
+          },
+          {
+            "bin": "0.2-0.3",
+            "n": 587,
+            "avg_p": 0.248,
+            "obs": 0.462
+          },
+          {
+            "bin": "0.3-0.4",
+            "n": 420,
+            "avg_p": 0.347,
+            "obs": 0.45
+          },
+          {
+            "bin": "0.4-0.5",
+            "n": 240,
+            "avg_p": 0.445,
+            "obs": 0.525
+          },
+          {
+            "bin": "0.5-0.6",
+            "n": 154,
+            "avg_p": 0.545,
+            "obs": 0.558
+          },
+          {
+            "bin": "0.6-0.7",
+            "n": 107,
+            "avg_p": 0.642,
+            "obs": 0.458
+          },
+          {
+            "bin": "0.7-0.8",
+            "n": 32,
+            "avg_p": 0.745,
+            "obs": 0.625
+          },
+          {
+            "bin": "0.8-0.9",
+            "n": 30,
+            "avg_p": 0.841,
+            "obs": 0.3
+          },
+          {
+            "bin": "0.9-1.0",
+            "n": 1,
+            "avg_p": 0.909,
+            "obs": 0
+          }
+        ]
+      },
+      "by_sub": {
+        "away": {
+          "rows": 1389,
+          "graded": 1072,
+          "hit_rate": 0.5187,
+          "hit_ci95": 0.0299,
+          "brier": 0.30442,
+          "logloss": 0.85002,
+          "n_prob": 1072,
+          "n_err": 1074,
+          "mae": 2.2368,
+          "rmse": 2.8306,
+          "signed_bias": -0.8329,
+          "bias_ci95": 0.1619,
+          "bias_significant": true,
+          "reliability": [
+            {
+              "bin": "0.0-0.1",
+              "n": 78,
+              "avg_p": 0.07,
+              "obs": 0.462
+            },
+            {
+              "bin": "0.1-0.2",
+              "n": 206,
+              "avg_p": 0.157,
+              "obs": 0.524
+            },
+            {
+              "bin": "0.2-0.3",
+              "n": 285,
+              "avg_p": 0.251,
+              "obs": 0.428
+            },
+            {
+              "bin": "0.3-0.4",
+              "n": 212,
+              "avg_p": 0.347,
+              "obs": 0.467
+            },
+            {
+              "bin": "0.4-0.5",
+              "n": 119,
+              "avg_p": 0.444,
+              "obs": 0.479
+            },
+            {
+              "bin": "0.5-0.6",
+              "n": 79,
+              "avg_p": 0.544,
+              "obs": 0.494
+            },
+            {
+              "bin": "0.6-0.7",
+              "n": 67,
+              "avg_p": 0.645,
+              "obs": 0.418
+            },
+            {
+              "bin": "0.7-0.8",
+              "n": 12,
+              "avg_p": 0.755,
+              "obs": 0.583
+            },
+            {
+              "bin": "0.8-0.9",
+              "n": 13,
+              "avg_p": 0.841,
+              "obs": 0.308
+            },
+            {
+              "bin": "0.9-1.0",
+              "n": 1,
+              "avg_p": 0.909,
+              "obs": 0
+            }
+          ]
+        },
+        "home": {
+          "rows": 1395,
+          "graded": 1087,
+          "hit_rate": 0.5363,
+          "hit_ci95": 0.0296,
+          "brier": 0.2905,
+          "logloss": 0.81007,
+          "n_prob": 1087,
+          "n_err": 1087,
+          "mae": 2.1936,
+          "rmse": 2.8054,
+          "signed_bias": -1.14,
+          "bias_ci95": 0.1525,
+          "bias_significant": true,
+          "reliability": [
+            {
+              "bin": "0.0-0.1",
+              "n": 91,
+              "avg_p": 0.067,
+              "obs": 0.319
+            },
+            {
+              "bin": "0.1-0.2",
+              "n": 213,
+              "avg_p": 0.153,
+              "obs": 0.465
+            },
+            {
+              "bin": "0.2-0.3",
+              "n": 302,
+              "avg_p": 0.246,
+              "obs": 0.493
+            },
+            {
+              "bin": "0.3-0.4",
+              "n": 208,
+              "avg_p": 0.346,
+              "obs": 0.433
+            },
+            {
+              "bin": "0.4-0.5",
+              "n": 121,
+              "avg_p": 0.446,
+              "obs": 0.57
+            },
+            {
+              "bin": "0.5-0.6",
+              "n": 75,
+              "avg_p": 0.547,
+              "obs": 0.627
+            },
+            {
+              "bin": "0.6-0.7",
+              "n": 40,
+              "avg_p": 0.636,
+              "obs": 0.525
+            },
+            {
+              "bin": "0.7-0.8",
+              "n": 20,
+              "avg_p": 0.738,
+              "obs": 0.65
+            },
+            {
+              "bin": "0.8-0.9",
+              "n": 17,
+              "avg_p": 0.84,
+              "obs": 0.294
+            },
+            {
+              "bin": "0.9-1.0",
+              "n": 0,
+              "avg_p": null,
+              "obs": null
+            }
+          ]
+        }
+      },
+      "by_month": {
+        "2026-03": {
+          "rows": 107,
+          "graded": 107,
+          "hit_rate": 0.4393,
+          "hit_ci95": 0.094,
+          "brier": 0.31166,
+          "logloss": 0.8356,
+          "n_prob": 107,
+          "n_err": 107,
+          "mae": 2.0299,
+          "rmse": 2.632,
+          "signed_bias": -0.923,
+          "bias_ci95": 0.4692,
+          "bias_significant": true
+        },
+        "2026-04": {
+          "rows": 637,
+          "graded": 490,
+          "hit_rate": 0.5184,
+          "hit_ci95": 0.0442,
+          "brier": 0.28774,
+          "logloss": 0.78865,
+          "n_prob": 490,
+          "n_err": 491,
+          "mae": 1.9984,
+          "rmse": 2.5183,
+          "signed_bias": -0.3274,
+          "bias_ci95": 0.2211,
+          "bias_significant": true
+        },
+        "2026-05": {
+          "rows": 696,
+          "graded": 498,
+          "hit_rate": 0.5321,
+          "hit_ci95": 0.0438,
+          "brier": 0.29549,
+          "logloss": 0.83389,
+          "n_prob": 498,
+          "n_err": 498,
+          "mae": 2.2542,
+          "rmse": 2.8738,
+          "signed_bias": -1.2027,
+          "bias_ci95": 0.2295,
+          "bias_significant": true
+        },
+        "2026-06": {
+          "rows": 781,
+          "graded": 610,
+          "hit_rate": 0.5344,
+          "hit_ci95": 0.0396,
+          "brier": 0.31011,
+          "logloss": 0.87258,
+          "n_prob": 610,
+          "n_err": 610,
+          "mae": 2.3531,
+          "rmse": 2.9942,
+          "signed_bias": -1.298,
+          "bias_ci95": 0.2143,
+          "bias_significant": true
+        },
+        "2026-07": {
+          "rows": 563,
+          "graded": 454,
+          "hit_rate": 0.5441,
+          "hit_ci95": 0.0458,
+          "brier": 0.28952,
+          "logloss": 0.81139,
+          "n_prob": 454,
+          "n_err": 455,
+          "mae": 2.2645,
+          "rmse": 2.8607,
+          "signed_bias": -1.0626,
+          "bias_ci95": 0.2443,
+          "bias_significant": true
+        }
+      },
+      "slices": {
+        "pick_UNDER": {
+          "rows": 2401,
+          "graded": 1876,
+          "hit_rate": 0.5304,
+          "hit_ci95": 0.0226,
+          "brier": 0.30003,
+          "logloss": 0.83908,
+          "n_prob": 1876,
+          "n_err": 1878,
+          "mae": 2.2233,
+          "rmse": 2.8201,
+          "signed_bias": -1.297,
+          "bias_ci95": 0.1133,
+          "bias_significant": true
+        },
+        "pick_OVER": {
+          "rows": 383,
+          "graded": 283,
+          "hit_rate": 0.5088,
+          "hit_ci95": 0.0582,
+          "brier": 0.28004,
+          "logloss": 0.76912,
+          "n_prob": 283,
+          "n_err": 283,
+          "mae": 2.1601,
+          "rmse": 2.8036,
+          "signed_bias": 1.0676,
+          "bias_ci95": 0.3026,
+          "bias_significant": true
+        },
+        "hand_L": {
+          "rows": 7,
+          "graded": 7,
+          "hit_rate": 0.2857,
+          "hit_ci95": 0.3347,
+          "brier": 0.27376,
+          "logloss": 0.74049,
+          "n_prob": 7,
+          "n_err": 7,
+          "mae": 1.8171,
+          "rmse": 2.1217,
+          "signed_bias": 0.1971,
+          "bias_ci95": 1.6904,
+          "bias_significant": false
+        },
+        "hand_R": {
+          "rows": 23,
+          "graded": 23,
+          "hit_rate": 0.5652,
+          "hit_ci95": 0.2026,
+          "brier": 0.29965,
+          "logloss": 0.83166,
+          "n_prob": 23,
+          "n_err": 23,
+          "mae": 2.4317,
+          "rmse": 2.9789,
+          "signed_bias": 1.8413,
+          "bias_ci95": 0.9785,
+          "bias_significant": true
+        },
+        "hand_RHP": {
+          "rows": 5,
+          "graded": 5,
+          "hit_rate": 0.4,
+          "hit_ci95": 0.4294,
+          "brier": 0.30019,
+          "logloss": 0.79458,
+          "n_prob": 5,
+          "n_err": 5,
+          "mae": 3.334,
+          "rmse": 3.8257,
+          "signed_bias": 0.774,
+          "bias_ci95": 3.6717,
+          "bias_significant": false
+        },
+        "hand_LHP": {
+          "rows": 1,
+          "graded": 1,
+          "hit_rate": 0,
+          "hit_ci95": 0,
+          "brier": 0.45563,
+          "logloss": 1.12393,
+          "n_prob": 1,
+          "n_err": 1,
+          "mae": 2.36,
+          "rmse": 2.36,
+          "signed_bias": -2.36,
+          "bias_ci95": null,
+          "bias_significant": false
+        },
+        "p<0.40": {
+          "rows": 2031,
+          "graded": 1595,
+          "hit_rate": 0.5411,
+          "hit_ci95": 0.0245,
+          "brier": 0.30782,
+          "logloss": 0.86272,
+          "n_prob": 1595,
+          "n_err": 1597,
+          "mae": 2.2458,
+          "rmse": 2.8514,
+          "signed_bias": -1.4423,
+          "bias_ci95": 0.1207,
+          "bias_significant": true
+        },
+        "p0.50-0.60": {
+          "rows": 211,
+          "graded": 154,
+          "hit_rate": 0.5195,
+          "hit_ci95": 0.0789,
+          "brier": 0.24475,
+          "logloss": 0.68254,
+          "n_prob": 154,
+          "n_err": 154,
+          "mae": 1.979,
+          "rmse": 2.5942,
+          "signed_bias": 0.049,
+          "bias_ci95": 0.411,
+          "bias_significant": false
+        },
+        "p0.40-0.50": {
+          "rows": 310,
+          "graded": 240,
+          "hit_rate": 0.475,
+          "hit_ci95": 0.0632,
+          "brier": 0.25693,
+          "logloss": 0.70716,
+          "n_prob": 240,
+          "n_err": 240,
+          "mae": 2.0776,
+          "rmse": 2.6214,
+          "signed_bias": -0.4566,
+          "bias_ci95": 0.3273,
+          "bias_significant": true
+        },
+        "p>=0.60": {
+          "rows": 232,
+          "graded": 170,
+          "hit_rate": 0.4824,
+          "hit_ci95": 0.0751,
+          "brier": 0.30459,
+          "logloss": 0.82887,
+          "n_prob": 170,
+          "n_err": 170,
+          "mae": 2.3339,
+          "rmse": 2.961,
+          "signed_bias": 1.5985,
+          "bias_ci95": 0.3758,
+          "bias_significant": true
+        }
+      },
+      "worst20": [
+        {
+          "id": 2250237,
+          "date": "2026-04-14",
+          "teams": "MIA@ATL",
+          "sub": "home",
+          "p": "0.0300",
+          "actual": "OVER",
+          "logloss": "3.506558"
+        },
+        {
+          "id": 2250590,
+          "date": "2026-05-12",
+          "teams": "MIA@MIN",
+          "sub": "home",
+          "p": "0.0300",
+          "actual": "OVER",
+          "logloss": "3.506558"
+        },
+        {
+          "id": 2250652,
+          "date": "2026-05-17",
+          "teams": "CIN@CLE",
+          "sub": "away",
+          "p": "0.0300",
+          "actual": "OVER",
+          "logloss": "3.506558"
+        },
+        {
+          "id": 2252971,
+          "date": "2026-05-17",
+          "teams": "ARI@COL",
+          "sub": "home",
+          "p": "0.0300",
+          "actual": "OVER",
+          "logloss": "3.506558"
+        },
+        {
+          "id": 2250672,
+          "date": "2026-05-18",
+          "teams": "ATH@LAA",
+          "sub": "away",
+          "p": "0.0300",
+          "actual": "OVER",
+          "logloss": "3.506558"
+        },
+        {
+          "id": 2250771,
+          "date": "2026-05-26",
+          "teams": "NYY@KC",
+          "sub": "away",
+          "p": "0.0300",
+          "actual": "OVER",
+          "logloss": "3.506558"
+        },
+        {
+          "id": 2250847,
+          "date": "2026-06-02",
+          "teams": "DET@TB",
+          "sub": "away",
+          "p": "0.0300",
+          "actual": "OVER",
+          "logloss": "3.506558"
+        },
+        {
+          "id": 2251032,
+          "date": "2026-06-16",
+          "teams": "TB@LAD",
+          "sub": "home",
+          "p": "0.0362",
+          "actual": "OVER",
+          "logloss": "3.318696"
+        },
+        {
+          "id": 2250891,
+          "date": "2026-06-05",
+          "teams": "CIN@STL",
+          "sub": "away",
+          "p": "0.0388",
+          "actual": "OVER",
+          "logloss": "3.249335"
+        },
+        {
+          "id": 2251344,
+          "date": "2026-07-11",
+          "teams": "HOU@TEX",
+          "sub": "away",
+          "p": "0.0389",
+          "actual": "OVER",
+          "logloss": "3.246761"
+        },
+        {
+          "id": 2251408,
+          "date": "2026-07-20",
+          "teams": "LAD@PHI",
+          "sub": "away",
+          "p": "0.0418",
+          "actual": "OVER",
+          "logloss": "3.174859"
+        },
+        {
+          "id": 2250938,
+          "date": "2026-06-09",
+          "teams": "PHI@TOR",
+          "sub": "home",
+          "p": "0.0442",
+          "actual": "OVER",
+          "logloss": "3.119030"
+        },
+        {
+          "id": 2253356,
+          "date": "2026-06-15",
+          "teams": "LAA@ARI",
+          "sub": "home",
+          "p": "0.0446",
+          "actual": "OVER",
+          "logloss": "3.110021"
+        },
+        {
+          "id": 2253324,
+          "date": "2026-06-13",
+          "teams": "ARI@CIN",
+          "sub": "away",
+          "p": "0.0448",
+          "actual": "OVER",
+          "logloss": "3.105547"
+        },
+        {
+          "id": 2251082,
+          "date": "2026-06-21",
+          "teams": "MIL@ATL",
+          "sub": "away",
+          "p": "0.0525",
+          "actual": "OVER",
+          "logloss": "2.946942"
+        },
+        {
+          "id": 2250865,
+          "date": "2026-06-03",
+          "teams": "SD@PHI",
+          "sub": "away",
+          "p": "0.0547",
+          "actual": "OVER",
+          "logloss": "2.905892"
+        },
+        {
+          "id": 2250862,
+          "date": "2026-06-03",
+          "teams": "DET@TB",
+          "sub": "away",
+          "p": "0.0549",
+          "actual": "OVER",
+          "logloss": "2.902242"
+        },
+        {
+          "id": 2250584,
+          "date": "2026-05-12",
+          "teams": "COL@PIT",
+          "sub": "away",
+          "p": "0.0550",
+          "actual": "OVER",
+          "logloss": "2.900422"
+        },
+        {
+          "id": 2250655,
+          "date": "2026-05-17",
+          "teams": "TEX@HOU",
+          "sub": "away",
+          "p": "0.0612",
+          "actual": "OVER",
+          "logloss": "2.793608"
+        },
+        {
+          "id": 2250620,
+          "date": "2026-05-15",
+          "teams": "PHI@PIT",
+          "sub": "home",
+          "p": "0.0618",
+          "actual": "OVER",
+          "logloss": "2.783852"
+        }
+      ],
+      "best20": [
+        {
+          "id": 2251232,
+          "date": "2026-07-02",
+          "teams": "SD@LAD",
+          "sub": "home",
+          "p": "0.0413",
+          "actual": "UNDER",
+          "logloss": "0.042177"
+        },
+        {
+          "id": 2250659,
+          "date": "2026-05-17",
+          "teams": "SF@ATH",
+          "sub": "home",
+          "p": "0.0410",
+          "actual": "UNDER",
+          "logloss": "0.041864"
+        },
+        {
+          "id": 2250583,
+          "date": "2026-05-12",
+          "teams": "WSH@CIN",
+          "sub": "home",
+          "p": "0.0391",
+          "actual": "UNDER",
+          "logloss": "0.039885"
+        },
+        {
+          "id": 2250651,
+          "date": "2026-05-17",
+          "teams": "BOS@ATL",
+          "sub": "away",
+          "p": "0.0378",
+          "actual": "UNDER",
+          "logloss": "0.038533"
+        },
+        {
+          "id": 2250935,
+          "date": "2026-06-09",
+          "teams": "BOS@TB",
+          "sub": "away",
+          "p": "0.0375",
+          "actual": "UNDER",
+          "logloss": "0.038221"
+        },
+        {
+          "id": 2250563,
+          "date": "2026-05-10",
+          "teams": "ATH@BAL",
+          "sub": "home",
+          "p": "0.0372",
+          "actual": "UNDER",
+          "logloss": "0.037910"
+        },
+        {
+          "id": 2253288,
+          "date": "2026-06-10",
+          "teams": "ARI@MIA",
+          "sub": "away",
+          "p": "0.0346",
+          "actual": "UNDER",
+          "logloss": "0.035213"
+        },
+        {
+          "id": 2251043,
+          "date": "2026-06-17",
+          "teams": "COL@CHC",
+          "sub": "home",
+          "p": "0.0346",
+          "actual": "UNDER",
+          "logloss": "0.035213"
+        },
+        {
+          "id": 2251307,
+          "date": "2026-07-08",
+          "teams": "COL@LAD",
+          "sub": "home",
+          "p": "0.0344",
+          "actual": "UNDER",
+          "logloss": "0.035006"
+        },
+        {
+          "id": 2251033,
+          "date": "2026-06-17",
+          "teams": "NYM@CIN",
+          "sub": "home",
+          "p": "0.0317",
+          "actual": "UNDER",
+          "logloss": "0.032213"
+        },
+        {
+          "id": 2250821,
+          "date": "2026-05-30",
+          "teams": "ATL@CIN",
+          "sub": "home",
+          "p": "0.0302",
+          "actual": "UNDER",
+          "logloss": "0.030665"
+        },
+        {
+          "id": 2250575,
+          "date": "2026-05-10",
+          "teams": "DET@KC",
+          "sub": "away",
+          "p": "0.0300",
+          "actual": "UNDER",
+          "logloss": "0.030459"
+        },
+        {
+          "id": 2250585,
+          "date": "2026-05-12",
+          "teams": "PHI@BOS",
+          "sub": "home",
+          "p": "0.0300",
+          "actual": "UNDER",
+          "logloss": "0.030459"
+        },
+        {
+          "id": 2250607,
+          "date": "2026-05-13",
+          "teams": "STL@ATH",
+          "sub": "home",
+          "p": "0.0300",
+          "actual": "UNDER",
+          "logloss": "0.030459"
+        },
+        {
+          "id": 2250615,
+          "date": "2026-05-14",
+          "teams": "STL@ATH",
+          "sub": "home",
+          "p": "0.0300",
+          "actual": "UNDER",
+          "logloss": "0.030459"
+        },
+        {
+          "id": 2250631,
+          "date": "2026-05-15",
+          "teams": "LAD@LAA",
+          "sub": "away",
+          "p": "0.0300",
+          "actual": "UNDER",
+          "logloss": "0.030459"
+        },
+        {
+          "id": 2250914,
+          "date": "2026-06-07",
+          "teams": "BAL@TOR",
+          "sub": "away",
+          "p": "0.0300",
+          "actual": "UNDER",
+          "logloss": "0.030459"
+        },
+        {
+          "id": 2250970,
+          "date": "2026-06-12",
+          "teams": "SD@BAL",
+          "sub": "home",
+          "p": "0.0300",
+          "actual": "UNDER",
+          "logloss": "0.030459"
+        },
+        {
+          "id": 2251023,
+          "date": "2026-06-16",
+          "teams": "NYM@CIN",
+          "sub": "home",
+          "p": "0.0300",
+          "actual": "UNDER",
+          "logloss": "0.030459"
+        },
+        {
+          "id": 2251173,
+          "date": "2026-06-28",
+          "teams": "TEX@TOR",
+          "sub": "home",
+          "p": "0.0300",
+          "actual": "UNDER",
+          "logloss": "0.030459"
+        }
+      ]
+    },
+    "hrprops": {
+      "overall": {
+        "rows": 10156,
+        "graded": 0,
+        "hit_rate": null,
+        "hit_ci95": null,
+        "brier": 0.09867,
+        "logloss": 0.35263,
+        "n_prob": 7529,
+        "reliability": [
+          {
+            "bin": "0.0-0.1",
+            "n": 4756,
+            "avg_p": 0.062,
+            "obs": 0.098
+          },
+          {
+            "bin": "0.1-0.2",
+            "n": 2477,
+            "avg_p": 0.139,
+            "obs": 0.129
+          },
+          {
+            "bin": "0.2-0.3",
+            "n": 278,
+            "avg_p": 0.229,
+            "obs": 0.122
+          },
+          {
+            "bin": "0.3-0.4",
+            "n": 17,
+            "avg_p": 0.334,
+            "obs": 0.294
+          },
+          {
+            "bin": "0.4-0.5",
+            "n": 1,
+            "avg_p": 0.408,
+            "obs": 0
+          },
+          {
+            "bin": "0.5-0.6",
+            "n": 0,
+            "avg_p": null,
+            "obs": null
+          },
+          {
+            "bin": "0.6-0.7",
+            "n": 0,
+            "avg_p": null,
+            "obs": null
+          },
+          {
+            "bin": "0.7-0.8",
+            "n": 0,
+            "avg_p": null,
+            "obs": null
+          },
+          {
+            "bin": "0.8-0.9",
+            "n": 0,
+            "avg_p": null,
+            "obs": null
+          },
+          {
+            "bin": "0.9-1.0",
+            "n": 0,
+            "avg_p": null,
+            "obs": null
+          }
+        ]
+      },
+      "by_sub": {
+        "home": {
+          "rows": 5089,
+          "graded": 0,
+          "hit_rate": null,
+          "hit_ci95": null,
+          "brier": 0.09698,
+          "logloss": 0.34765,
+          "n_prob": 3765,
+          "reliability": [
+            {
+              "bin": "0.0-0.1",
+              "n": 2361,
+              "avg_p": 0.062,
+              "obs": 0.097
+            },
+            {
+              "bin": "0.1-0.2",
+              "n": 1227,
+              "avg_p": 0.139,
+              "obs": 0.125
+            },
+            {
+              "bin": "0.2-0.3",
+              "n": 166,
+              "avg_p": 0.227,
+              "obs": 0.12
+            },
+            {
+              "bin": "0.3-0.4",
+              "n": 10,
+              "avg_p": 0.332,
+              "obs": 0.2
+            },
+            {
+              "bin": "0.4-0.5",
+              "n": 1,
+              "avg_p": 0.408,
+              "obs": 0
+            },
+            {
+              "bin": "0.5-0.6",
+              "n": 0,
+              "avg_p": null,
+              "obs": null
+            },
+            {
+              "bin": "0.6-0.7",
+              "n": 0,
+              "avg_p": null,
+              "obs": null
+            },
+            {
+              "bin": "0.7-0.8",
+              "n": 0,
+              "avg_p": null,
+              "obs": null
+            },
+            {
+              "bin": "0.8-0.9",
+              "n": 0,
+              "avg_p": null,
+              "obs": null
+            },
+            {
+              "bin": "0.9-1.0",
+              "n": 0,
+              "avg_p": null,
+              "obs": null
+            }
+          ]
+        },
+        "away": {
+          "rows": 5067,
+          "graded": 0,
+          "hit_rate": null,
+          "hit_ci95": null,
+          "brier": 0.10035,
+          "logloss": 0.3576,
+          "n_prob": 3764,
+          "reliability": [
+            {
+              "bin": "0.0-0.1",
+              "n": 2395,
+              "avg_p": 0.061,
+              "obs": 0.099
+            },
+            {
+              "bin": "0.1-0.2",
+              "n": 1250,
+              "avg_p": 0.139,
+              "obs": 0.134
+            },
+            {
+              "bin": "0.2-0.3",
+              "n": 112,
+              "avg_p": 0.231,
+              "obs": 0.125
+            },
+            {
+              "bin": "0.3-0.4",
+              "n": 7,
+              "avg_p": 0.335,
+              "obs": 0.429
+            },
+            {
+              "bin": "0.4-0.5",
+              "n": 0,
+              "avg_p": null,
+              "obs": null
+            },
+            {
+              "bin": "0.5-0.6",
+              "n": 0,
+              "avg_p": null,
+              "obs": null
+            },
+            {
+              "bin": "0.6-0.7",
+              "n": 0,
+              "avg_p": null,
+              "obs": null
+            },
+            {
+              "bin": "0.7-0.8",
+              "n": 0,
+              "avg_p": null,
+              "obs": null
+            },
+            {
+              "bin": "0.8-0.9",
+              "n": 0,
+              "avg_p": null,
+              "obs": null
+            },
+            {
+              "bin": "0.9-1.0",
+              "n": 0,
+              "avg_p": null,
+              "obs": null
+            }
+          ]
+        }
+      },
+      "by_month": {
+        "2026-03": {
+          "rows": 1119,
+          "graded": 0,
+          "hit_rate": null,
+          "hit_ci95": null,
+          "brier": 0.09514,
+          "logloss": 0.34162,
+          "n_prob": 1119
+        },
+        "2026-04": {
+          "rows": 1555,
+          "graded": 0,
+          "hit_rate": null,
+          "hit_ci95": null,
+          "brier": 0.08983,
+          "logloss": 0.32424,
+          "n_prob": 1319
+        },
+        "2026-05": {
+          "rows": 3424,
+          "graded": 0,
+          "hit_rate": null,
+          "hit_ci95": null,
+          "brier": 0.10011,
+          "logloss": 0.35738,
+          "n_prob": 1978
+        },
+        "2026-06": {
+          "rows": 470,
+          "graded": 0,
+          "hit_rate": null,
+          "hit_ci95": null,
+          "brier": 0.11421,
+          "logloss": 0.39546,
+          "n_prob": 439
+        },
+        "2026-07": {
+          "rows": 3588,
+          "graded": 0,
+          "hit_rate": null,
+          "hit_ci95": null,
+          "brier": 0.10089,
+          "logloss": 0.36069,
+          "n_prob": 2674
+        }
+      },
+      "slices": {
+        "pick_OVER": {
+          "rows": 605,
+          "graded": 0,
+          "hit_rate": null,
+          "hit_ci95": null,
+          "brier": 0.08643,
+          "logloss": 0.32475,
+          "n_prob": 533
+        },
+        "p<0.40": {
+          "rows": 10155,
+          "graded": 0,
+          "hit_rate": null,
+          "hit_ci95": null,
+          "brier": 0.09866,
+          "logloss": 0.3526,
+          "n_prob": 7528
+        },
+        "p0.40-0.50": {
+          "rows": 1,
+          "graded": 0,
+          "hit_rate": null,
+          "hit_ci95": null,
+          "brier": 0.16622,
+          "logloss": 0.52374,
+          "n_prob": 1
+        }
+      },
+      "worst20": [
+        {
+          "id": 2250042,
+          "date": "2026-03-29",
+          "teams": "BOS@CIN",
+          "sub": "home",
+          "p": "0.0400",
+          "actual": "HR",
+          "logloss": "3.218876"
+        },
+        {
+          "id": 2250046,
+          "date": "2026-03-29",
+          "teams": "CWS@MIL",
+          "sub": "away",
+          "p": "0.0400",
+          "actual": "HR",
+          "logloss": "3.218876"
+        },
+        {
+          "id": 2250046,
+          "date": "2026-03-29",
+          "teams": "CWS@MIL",
+          "sub": "away",
+          "p": "0.0400",
+          "actual": "HR",
+          "logloss": "3.218876"
+        },
+        {
+          "id": 2250046,
+          "date": "2026-03-29",
+          "teams": "CWS@MIL",
+          "sub": "away",
+          "p": "0.0400",
+          "actual": "HR",
+          "logloss": "3.218876"
+        },
+        {
+          "id": 2250611,
+          "date": "2026-05-14",
+          "teams": "DET@NYM",
+          "sub": "home",
+          "p": "0.0400",
+          "actual": "HR",
+          "logloss": "3.218876"
+        },
+        {
+          "id": 2250611,
+          "date": "2026-05-14",
+          "teams": "DET@NYM",
+          "sub": "home",
+          "p": "0.0400",
+          "actual": "HR",
+          "logloss": "3.218876"
+        },
+        {
+          "id": 2250615,
+          "date": "2026-05-14",
+          "teams": "STL@ATH",
+          "sub": "away",
+          "p": "0.0400",
+          "actual": "HR",
+          "logloss": "3.218876"
+        },
+        {
+          "id": 2250625,
+          "date": "2026-05-15",
+          "teams": "BOS@ATL",
+          "sub": "away",
+          "p": "0.0400",
+          "actual": "HR",
+          "logloss": "3.218876"
+        },
+        {
+          "id": 2250624,
+          "date": "2026-05-15",
+          "teams": "MIA@TB",
+          "sub": "home",
+          "p": "0.0400",
+          "actual": "HR",
+          "logloss": "3.218876"
+        },
+        {
+          "id": 2250624,
+          "date": "2026-05-15",
+          "teams": "MIA@TB",
+          "sub": "away",
+          "p": "0.0400",
+          "actual": "HR",
+          "logloss": "3.218876"
+        },
+        {
+          "id": 2250626,
+          "date": "2026-05-15",
+          "teams": "NYY@NYM",
+          "sub": "home",
+          "p": "0.0400",
+          "actual": "HR",
+          "logloss": "3.218876"
+        },
+        {
+          "id": 2250633,
+          "date": "2026-05-15",
+          "teams": "SF@ATH",
+          "sub": "away",
+          "p": "0.0400",
+          "actual": "HR",
+          "logloss": "3.218876"
+        },
+        {
+          "id": 2250633,
+          "date": "2026-05-15",
+          "teams": "SF@ATH",
+          "sub": "away",
+          "p": "0.0400",
+          "actual": "HR",
+          "logloss": "3.218876"
+        },
+        {
+          "id": 2250636,
+          "date": "2026-05-16",
+          "teams": "BAL@WSH",
+          "sub": "away",
+          "p": "0.0400",
+          "actual": "HR",
+          "logloss": "3.218876"
+        },
+        {
+          "id": 2250634,
+          "date": "2026-05-16",
+          "teams": "TOR@DET",
+          "sub": "away",
+          "p": "0.0400",
+          "actual": "HR",
+          "logloss": "3.218876"
+        },
+        {
+          "id": 2250634,
+          "date": "2026-05-16",
+          "teams": "TOR@DET",
+          "sub": "home",
+          "p": "0.0400",
+          "actual": "HR",
+          "logloss": "3.218876"
+        },
+        {
+          "id": 2250641,
+          "date": "2026-05-16",
+          "teams": "CHC@CWS",
+          "sub": "away",
+          "p": "0.0400",
+          "actual": "HR",
+          "logloss": "3.218876"
+        },
+        {
+          "id": 2250641,
+          "date": "2026-05-16",
+          "teams": "CHC@CWS",
+          "sub": "away",
+          "p": "0.0400",
+          "actual": "HR",
+          "logloss": "3.218876"
+        },
+        {
+          "id": 2252971,
+          "date": "2026-05-17",
+          "teams": "ARI@COL",
+          "sub": "away",
+          "p": "0.0400",
+          "actual": "HR",
+          "logloss": "3.218876"
+        },
+        {
+          "id": 2250656,
+          "date": "2026-05-17",
+          "teams": "CHC@CWS",
+          "sub": "home",
+          "p": "0.0400",
+          "actual": "HR",
+          "logloss": "3.218876"
+        }
+      ],
+      "best20": [
+        {
+          "id": 2251459,
+          "date": "2026-07-24",
+          "teams": "HOU@CWS",
+          "sub": "home",
+          "p": "0.0400",
+          "actual": "NO_HR",
+          "logloss": "0.040822"
+        },
+        {
+          "id": 2251451,
+          "date": "2026-07-24",
+          "teams": "KC@DET",
+          "sub": "home",
+          "p": "0.0400",
+          "actual": "NO_HR",
+          "logloss": "0.040822"
+        },
+        {
+          "id": 2251451,
+          "date": "2026-07-24",
+          "teams": "KC@DET",
+          "sub": "away",
+          "p": "0.0400",
+          "actual": "NO_HR",
+          "logloss": "0.040822"
+        },
+        {
+          "id": 2251451,
+          "date": "2026-07-24",
+          "teams": "KC@DET",
+          "sub": "away",
+          "p": "0.0400",
+          "actual": "NO_HR",
+          "logloss": "0.040822"
+        },
+        {
+          "id": 2251451,
+          "date": "2026-07-24",
+          "teams": "KC@DET",
+          "sub": "away",
+          "p": "0.0400",
+          "actual": "NO_HR",
+          "logloss": "0.040822"
+        },
+        {
+          "id": 2251451,
+          "date": "2026-07-24",
+          "teams": "KC@DET",
+          "sub": "home",
+          "p": "0.0400",
+          "actual": "NO_HR",
+          "logloss": "0.040822"
+        },
+        {
+          "id": 2251463,
+          "date": "2026-07-24",
+          "teams": "LAA@SF",
+          "sub": "home",
+          "p": "0.0400",
+          "actual": "NO_HR",
+          "logloss": "0.040822"
+        },
+        {
+          "id": 2251463,
+          "date": "2026-07-24",
+          "teams": "LAA@SF",
+          "sub": "away",
+          "p": "0.0400",
+          "actual": "NO_HR",
+          "logloss": "0.040822"
+        },
+        {
+          "id": 2251463,
+          "date": "2026-07-24",
+          "teams": "LAA@SF",
+          "sub": "away",
+          "p": "0.0400",
+          "actual": "NO_HR",
+          "logloss": "0.040822"
+        },
+        {
+          "id": 2251458,
+          "date": "2026-07-24",
+          "teams": "SD@MIA",
+          "sub": "home",
+          "p": "0.0400",
+          "actual": "NO_HR",
+          "logloss": "0.040822"
+        },
+        {
+          "id": 2251458,
+          "date": "2026-07-24",
+          "teams": "SD@MIA",
+          "sub": "home",
+          "p": "0.0400",
+          "actual": "NO_HR",
+          "logloss": "0.040822"
+        },
+        {
+          "id": 2251458,
+          "date": "2026-07-24",
+          "teams": "SD@MIA",
+          "sub": "away",
+          "p": "0.0400",
+          "actual": "NO_HR",
+          "logloss": "0.040822"
+        },
+        {
+          "id": 2251460,
+          "date": "2026-07-24",
+          "teams": "SEA@TEX",
+          "sub": "home",
+          "p": "0.0400",
+          "actual": "NO_HR",
+          "logloss": "0.040822"
+        },
+        {
+          "id": 2251457,
+          "date": "2026-07-24",
+          "teams": "TOR@BOS",
+          "sub": "away",
+          "p": "0.0400",
+          "actual": "NO_HR",
+          "logloss": "0.040822"
+        },
+        {
+          "id": 2251457,
+          "date": "2026-07-24",
+          "teams": "TOR@BOS",
+          "sub": "home",
+          "p": "0.0400",
+          "actual": "NO_HR",
+          "logloss": "0.040822"
+        },
+        {
+          "id": 2251457,
+          "date": "2026-07-24",
+          "teams": "TOR@BOS",
+          "sub": "home",
+          "p": "0.0400",
+          "actual": "NO_HR",
+          "logloss": "0.040822"
+        },
+        {
+          "id": 2251457,
+          "date": "2026-07-24",
+          "teams": "TOR@BOS",
+          "sub": "home",
+          "p": "0.0400",
+          "actual": "NO_HR",
+          "logloss": "0.040822"
+        },
+        {
+          "id": 2251450,
+          "date": "2026-07-24",
+          "teams": "COL@MIL",
+          "sub": "away",
+          "p": "0.0400",
+          "actual": "NO_HR",
+          "logloss": "0.040822"
+        },
+        {
+          "id": 2251450,
+          "date": "2026-07-24",
+          "teams": "COL@MIL",
+          "sub": "home",
+          "p": "0.0400",
+          "actual": "NO_HR",
+          "logloss": "0.040822"
+        },
+        {
+          "id": 2251463,
+          "date": "2026-07-24",
+          "teams": "LAA@SF",
+          "sub": "away",
+          "p": "0.0400",
+          "actual": "NO_HR",
+          "logloss": "0.040822"
+        }
+      ]
+    }
+  },
+  "consistency": {
+    "fg_ml": {
+      "n": 0,
+      "mismatches": 0
+    },
+    "f5_ml": {
+      "n": 103,
+      "mismatches": 100
+    },
+    "nrfi": {
+      "n": 14,
+      "mismatches": 9
+    },
+    "k_actual_side": {
+      "n": 1945,
+      "mismatches": 108
+    },
+    "k_correct": {
+      "n": 1943,
+      "mismatches": 197
+    }
+  }
+}

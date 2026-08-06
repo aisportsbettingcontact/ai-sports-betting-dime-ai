@@ -1,0 +1,2 @@
+season,game_pk,game_type,status_code,detailed_state,official_date,game_away,game_home,last_play_away,last_play_home,last_event,abs_diff,classification
+2025,778566,A,FW,Final: Tied (won in tiebreaker),2025-07-15,6,7,6,6,field_out,1,real-world quirk: 2025 All-Star Game swing-off tiebreaker; play-by-play correctly ends 6-6

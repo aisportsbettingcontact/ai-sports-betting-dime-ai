@@ -1,0 +1,11 @@
+table,exact_count,tidb_rows_estimate,engine,row_format,avg_row_length,data_length_bytes,index_length_bytes,create_time_utc,collation,tidb_pk_type
+mlb_seasons,21,21,InnoDB,Compact,40,840,0,2026-07-28 20:22:02,utf8mb4_bin,CLUSTERED
+mlb_games,49419,49419,InnoDB,Compact,217,10758486,2851446,2026-07-28 20:22:05,utf8mb4_bin,CLUSTERED
+mlb_plays,3767228,3767228,InnoDB,Compact,135,511199678,149545790,2026-07-28 20:22:07,utf8mb4_bin,CLUSTERED
+mlb_pitches,14495317,14497444,InnoDB,Compact,191,2777468644,1066770252,2026-07-28 20:22:06,utf8mb4_bin,CLUSTERED
+mlb_boxscore_batting,1186159,1186159,InnoDB,Compact,152,180296168,37957088,2026-07-28 23:09:44,utf8mb4_bin,CLUSTERED
+mlb_boxscore_pitching,408375,505588,InnoDB,Compact,136,68759968,16178816,2026-07-28 23:09:45,utf8mb4_bin,CLUSTERED
+mlb_people,6425,6425,InnoDB,Compact,58,378147,0,2026-07-28 20:22:01,utf8mb4_bin,CLUSTERED
+mlb_officials,199165,199165,InnoDB,Compact,16,3186640,3186640,2026-07-28 20:22:01,utf8mb4_bin,CLUSTERED
+mlb_franchises,32,32,InnoDB,Compact,40,1280,0,2026-07-28 20:22:01,utf8mb4_bin,CLUSTERED
+mlb_venues,55,55,InnoDB,Compact,80,4400,0,2026-07-28 20:22:02,utf8mb4_bin,CLUSTERED

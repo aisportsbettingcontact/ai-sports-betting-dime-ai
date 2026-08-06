@@ -1,0 +1,51 @@
+id,gamePk,date,away,home,venue,day_night,fav,bucket,hand,book_total,away_sp,home_sp,actual_away,actual_home,actual_total,quarantined,live_proj_rule,live_proj_src,se_live_rule,p1_proj,se_p1,p2_proj,se_p2
+2251006,824994,2026-06-14,COL,ATH,Las Vegas Ballpark,day,home_fav,>9,R-L,14.0,Tomoyuki Sugano,Jeffrey Springs,23.0,9.0,32.0,0,10.44,modelProjTotal,-21.56,11.66,-20.34,11.841,-20.159
+2250932,824998,2026-06-08,MIL,ATH,Las Vegas Ballpark,night,away_fav,>9,L-L,11.0,Kyle Harrison,Jeffrey Springs,15.0,14.0,29.0,0,9.38,modelProjTotal,-19.62,10.1,-18.9,10.257,-18.743
+2251286,823607,2026-07-07,KC,NYM,Citi Field,night,home_fav,8-9,UNK,8.5,Seth Lugo,Kodai Senga,16.0,12.0,28.0,0,9.83,modelProjTotal,-18.17,9.72,-18.28,9.974,-18.026
+2251215,824660,2026-07-01,SD,CHC,Wrigley Field,day,home_fav,>9,R-R,12.0,Walker Buehler,Colin Rea,3.0,23.0,26.0,0,8.42,modelProjTotal,-17.58,9.12,-16.88,9.358,-16.642
+2250461,823388,2026-05-02,CIN,PIT,PNC Park,day,home_fav,8-9,R-R,8.0,Rhett Lowder,Carmen Mlodzinski,7.0,17.0,24.0,0,8.0,modelTotal(book),-16.0,8.96,-15.04,9.369,-14.631
+2251374,824981,2026-07-17,WSH,ATH,Sutter Health Park,night,away_fav,>9,R-L,10.5,Cade Cavalli,Gage Jump,23.0,4.0,27.0,0,11.17,modelProjTotal,-15.83,10.94,-16.06,11.226,-15.774
+2253424,825068,2026-06-20,MIN,ARI,Chase Field,night,home_fav,8-9,R-R,9.0,Taj Bradley,Zac Gallen,16.0,8.0,24.0,0,9.61,modelProjTotal,-14.39,10.63,-13.37,10.795,-13.205
+2251087,824095,2026-06-21,STL,KC,Kauffman Stadium,day,away_fav,8-9,R-R,9.0,Dustin May,Stephen Kolek,12.0,10.0,22.0,0,7.74,modelProjTotal,-14.26,7.87,-14.13,7.992,-14.008
+2250835,824354,2026-05-31,SF,COL,Coors Field,day,away_fav,>9,L-R,11.0,Robbie Ray,Tanner Gordon,19.0,6.0,25.0,0,10.85,modelProjTotal,-14.15,12.26,-12.74,12.82,-12.18
+2250089,824136,2026-04-01,MIN,KC,Kauffman Stadium,night,away_fav,8-9,R-L,8.0,Joe Ryan,Noah Cameron,9.0,13.0,22.0,1,8.0,modelTotal(book),-14.0,8.01,-13.99,8.01,-13.99
+2250663,822980,2026-05-18,BAL,TB,Tropicana Field,night,home_fav,<8,L-L,7.5,Trevor Rogers,Shane McClanahan,6.0,16.0,22.0,0,8.09,modelProjTotal,-13.91,8.46,-13.54,8.846,-13.154
+2251150,824582,2026-06-26,KC,CWS,Rate Field,night,home_fav,8-9,UNK,9.0,Mitch Spence,David Sandlin,1.0,22.0,23.0,0,9.32,modelProjTotal,-13.68,8.68,-14.32,8.815,-14.185
+2250224,823400,2026-04-13,WSH,PIT,PNC Park,night,home_fav,<8,R-R,7.5,Cade Cavalli,Paul Skenes,5.0,16.0,21.0,1,7.5,modelTotal(book),-13.5,9.18,-11.82,9.18,-11.82
+2250883,824673,2026-06-05,SF,CHC,Wrigley Field,day,home_fav,>9,L-R,10.5,Robbie Ray,Edward Cabrera,18.0,3.0,21.0,0,7.83,modelProjTotal,-13.17,9.88,-11.12,10.033,-10.967
+2250878,823779,2026-06-04,SF,MIL,American Family Field,day,home_fav,8-9,UNK,9.0,Adrian Houser,Coleman Crow,12.0,9.0,21.0,0,8.11,modelProjTotal,-12.89,8.4,-12.6,8.53,-12.47
+2250666,822734,2026-05-18,NYM,WSH,Nationals Park,night,away_fav,>9,R-R,10.0,Christian Scott,Jake Irvin,16.0,7.0,23.0,0,10.23,modelProjTotal,-12.77,10.39,-12.61,10.864,-12.136
+2250949,823215,2026-06-10,WSH,SF,Oracle Park,day,home_fav,8-9,L-L,8.5,Foster Griffin,Robbie Ray,10.0,11.0,21.0,1,8.36,modelProjTotal,-12.64,8.51,-12.49,8.642,-12.358
+2250372,823070,2026-04-25,SEA,STL,Busch Stadium,day,away_fav,<8,R-L,7.5,Bryan Woo,Matthew Liberatore,11.0,9.0,20.0,0,7.5,modelTotal(book),-12.5,7.53,-12.47,7.53,-12.47
+2251111,822718,2026-06-23,PHI,WSH,Nationals Park,night,away_fav,8-9,L-L,8.5,Aaron Nola,Miles Mikolas,14.0,9.0,23.0,0,10.56,modelProjTotal,-12.44,10.21,-12.79,10.368,-12.632
+2250873,824188,2026-06-03,PIT,HOU,Daikin Park,night,away_fav,<8,R-R,7.5,Paul Skenes,Spencer Arrighetti,9.0,11.0,20.0,0,7.7,modelProjTotal,-12.3,7.61,-12.39,7.728,-12.272
+2251065,824990,2026-06-19,LAA,ATH,Sutter Health Park,night,home_fav,>9,R-L,10.0,Jose Soriano,Jeffrey Springs,11.0,12.0,23.0,0,10.77,modelProjTotal,-12.23,11.41,-11.59,11.587,-11.413
+2250131,825025,2026-04-05,HOU,ATH,Sutter Health Park,day,away_fav,>9,R-L,10.0,Lance McCullers Jr.,Jacob Lopez,10.0,12.0,22.0,1,10.0,modelTotal(book),-12.0,12.2,-9.8,12.2,-9.8
+2250542,824607,2026-05-08,SEA,CWS,Rate Field,night,away_fav,8-9,R-R,8.0,Emerson Hancock,Sean Burke,12.0,8.0,20.0,0,8.0,modelTotal(book),-12.0,7.58,-12.42,7.926,-12.074
+2251275,822712,2026-07-06,HOU,WSH,Nationals Park,night,home_fav,>9,R-R,10.0,Mike Burrows,Miles Mikolas,11.0,12.0,23.0,0,11.2,modelProjTotal,-11.8,11.01,-11.99,11.298,-11.702
+2251396,824086,2026-07-19,SD,KC,Kauffman Stadium,day,home_fav,>9,R-L,9.5,German Marquez,Noah Cameron,19.0,2.0,21.0,0,9.37,modelProjTotal,-11.63,9.78,-11.22,10.036,-10.964
+2251053,824098,2026-06-18,STL,KC,Kauffman Stadium,night,home_fav,8-9,L-L,9.0,Michael McGreevy,Seth Lugo,6.0,14.0,20.0,0,8.47,modelProjTotal,-11.53,8.98,-11.02,9.119,-10.881
+2250225,823481,2026-04-13,CHC,PHI,Citizens Bank Park,night,home_fav,8-9,R-L,8.5,Javier Assad,Cristopher Sánchez,7.0,13.0,20.0,1,8.5,modelTotal(book),-11.5,9.25,-10.75,9.25,-10.75
+2250226,823563,2026-04-13,LAA,NYY,Yankee Stadium,night,home_fav,>9,L-R,9.5,Yusei Kikuchi,Will Warren,10.0,11.0,21.0,1,9.5,modelTotal(book),-11.5,9.84,-11.16,9.84,-11.16
+2250228,823725,2026-04-13,BOS,MIN,Target Field,night,away_fav,<8,L-R,7.5,Garrett Crochet,Bailey Ober,6.0,13.0,19.0,1,7.5,modelTotal(book),-11.5,8.43,-10.57,8.43,-10.57
+2250399,824122,2026-04-26,LAA,KC,Kauffman Stadium,night,home_fav,8-9,L-R,8.5,Reid Detmers,Seth Lugo,9.0,11.0,20.0,0,8.5,modelTotal(book),-11.5,7.53,-12.47,7.53,-12.47
+2250839,822974,2026-06-01,DET,TB,Tropicana Field,night,home_fav,8-9,R-R,8.0,Jack Flaherty,Steven Matz,10.0,9.0,19.0,0,7.56,modelProjTotal,-11.44,8.78,-10.22,8.916,-10.084
+2251259,824902,2026-07-05,NYM,ATL,Truist Park,day,away_fav,8-9,R-L,8.5,Nolan McLean,Martin Perez,10.0,9.0,19.0,1,7.61,modelProjTotal,-11.39,8.4,-10.6,8.619,-10.381
+2250776,823949,2026-05-26,COL,LAD,Dodger Stadium,night,home_fav,8-9,L-L,9.0,Tomoyuki Sugano,Shohei Ohtani,6.0,15.0,21.0,0,9.74,modelProjTotal,-11.26,10.78,-10.22,11.272,-9.728
+2250686,824033,2026-05-19,ATH,LAA,Angel Stadium,night,home_fav,8-9,L-L,9.0,Jacob Lopez,Reid Detmers,14.0,6.0,20.0,0,8.8,modelProjTotal,-11.2,9.28,-10.72,9.704,-10.296
+2250620,823384,2026-05-15,PHI,PIT,PNC Park,night,home_fav,8-9,R-R,8.0,Aaron Nola,Braxton Ashcraft,11.0,9.0,20.0,0,8.84,modelProjTotal,-11.16,9.38,-10.62,9.808,-10.192
+2250007,823649,2026-03-26,PIT,NYM,Citi Field,day,home_fav,<8,R-R,7.0,Paul Skenes,Freddy Peralta,7.0,11.0,18.0,1,7.0,modelTotal(book),-11.0,7.9,-10.1,7.9,-10.1
+2250032,824213,2026-03-28,LAA,HOU,Daikin Park,night,home_fav,8-9,L-R,9.0,Reid Detmers,Cristian Javier,9.0,11.0,20.0,1,9.0,modelTotal(book),-11.0,8.45,-11.55,8.45,-11.55
+2250055,822834,2026-03-30,COL,TOR,Rogers Centre,night,home_fav,8-9,UNK,8.0,Tomoyuki Sugano,Cody Ponce,14.0,5.0,19.0,1,8.0,modelTotal(book),-11.0,9.66,-9.34,9.66,-9.34
+2250815,823375,2026-05-30,MIN,PIT,PNC Park,day,home_fav,8-9,R-R,8.5,Zebby Matthews,Braxton Ashcraft,9.0,10.0,19.0,0,8.15,modelProjTotal,-10.85,8.58,-10.42,8.972,-10.028
+2251348,823358,2026-07-12,MIL,PIT,PNC Park,day,home_fav,8-9,L-R,8.5,Robert Gasser,Paul Skenes,5.0,14.0,19.0,0,8.45,modelProjTotal,-10.55,8.81,-10.19,9.04,-9.96
+2250047,823079,2026-03-29,TB,STL,Busch Stadium,day,away_fav,<8,L-R,7.5,Steven Matz,Dustin May,11.0,7.0,18.0,1,7.5,modelTotal(book),-10.5,8.1,-9.9,8.1,-9.9
+2250262,824289,2026-04-16,KC,DET,Comerica Park,day,away_fav,8-9,L-R,8.5,Kris Bubic,Keider Montero,9.0,10.0,19.0,1,8.5,modelTotal(book),-10.5,6.52,-12.48,6.52,-12.48
+2250323,822995,2026-04-21,CIN,TB,Tropicana Field,night,pickem,<8,R-L,7.5,Chase Burns,Steven Matz,12.0,6.0,18.0,0,7.5,modelTotal(book),-10.5,8.13,-9.87,8.13,-9.87
+2250356,823639,2026-04-23,MIN,NYM,Citi Field,night,home_fav,<8,R-R,7.5,Joe Ryan,Christian Scott,8.0,10.0,18.0,0,7.5,modelTotal(book),-10.5,8.36,-9.64,8.36,-9.64
+2251250,824171,2026-07-04,TB,HOU,Daikin Park,night,home_fav,<8,R-R,7.0,Drew Rasmussen,Hunter Brown,8.0,10.0,18.0,0,7.62,modelProjTotal,-10.38,7.54,-10.46,7.737,-10.263
+2251055,824663,2026-06-19,TOR,CHC,Wrigley Field,day,home_fav,<8,R-R,7.0,Kevin Gausman,Ben Brown,2.0,16.0,18.0,1,7.65,modelProjTotal,-10.35,7.84,-10.16,7.962,-10.038
+2251168,823283,2026-06-27,LAD,SD,Petco Park,night,away_fav,8-9,R-L,8.0,Y. Yamamoto,Randy Vasquez,15.0,3.0,18.0,0,7.76,modelProjTotal,-10.24,7.26,-10.74,7.373,-10.627
+2250843,823781,2026-06-01,SF,MIL,American Family Field,night,home_fav,<8,R-L,7.5,Trevor McDonald,Kyle Harrison,2.0,16.0,18.0,0,7.8,modelProjTotal,-10.2,7.9,-10.1,8.023,-9.977
+2252367,825105,2026-04-02,ATL,ARI,Chase Field,night,away_fav,8-9,R-R,9.0,Reynaldo López,Ryne Nelson,17.0,2.0,19.0,1,9.0,modelTotal(book),-10.0,10.61,-8.39,10.61,-8.39
+2253806,825055,2026-07-22,ATH,ARI,Chase Field,day,home_fav,8-9,L-R,8.5,Gage Jump,Merrill Kelly,5.0,15.0,20.0,0,10.1,modelProjTotal,-9.9,10.47,-9.53,10.744,-9.256

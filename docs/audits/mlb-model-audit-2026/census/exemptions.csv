@@ -1,0 +1,705 @@
+code,gameDate,gamePk,player,reason
+EX-POSTPONED-PROP,2026-04-29,823471,K props x2 on games 2250432,postponed-slate props are book-void
+EX-POSTPONED-PROP,2026-04-29,824850,K props x2 on games 2250429,postponed-slate props are book-void
+EX-SCRATCH-HR,2026-04-06,822755,Jose Fermin,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-04-06,822755,Luis Garcia,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-04-06,822832,Will Smith,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-04-06,823401,Joey Bart,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-04-06,823401,Miguel Andujar,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-04-06,823728,Dillon Dingler,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-04-06,823728,Javier Baez,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-04-06,823728,Kerry Carpenter,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-04-06,823728,Ryan Jeffers,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-04-06,824619,Blaze Alexander,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-04-06,824619,Dylan Beavers,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-04-06,824619,Samuel Basallo,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-04-06,824783,Andrew Vaughn,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-04-06,824783,Brandon Lockridge,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-04-06,824783,Joey Ortiz,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-04-10,822829,Nathan Lukes,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-04-10,822829,Royce Lewis,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-04-10,822829,Tyler Heineman,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-04-10,822997,Jake Fraley,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-04-10,822997,Richie Palacios,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-04-10,822997,Ryan McMahon,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-04-10,823076,Roman Anthony,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-04-10,823076,Yohel Pozo,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-04-10,823156,Brendan Donovan,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-04-10,823156,Jake Meyers,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-04-10,823156,Yainer Diaz,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-04-10,823318,Jake McCarthy,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-04-10,823318,Troy Johnston,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-04-10,823643,Austin Wynns,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-04-10,823643,Jorge Polanco,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-04-10,823643,Mark Vientos,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-04-10,823808,Joey Ortiz,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-04-10,823808,Jose Tena,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-04-10,823968,Kyle Higashioka,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-04-10,824128,Andrew Benintendi,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-04-10,824128,Jonathan India,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-04-10,824128,Lane Thomas,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-04-10,824128,Tristan Peters,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-04-10,824297,Heriberto Hernandez,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-04-10,824297,Matt Vierling,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-04-10,824695,Brandon Lowe,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-04-10,824858,Coby Mayo,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-04-10,824858,Jerar Encarnacion,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-04-10,824858,Tyler O'Neill,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-04-10,824941,CJ Kayfus,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-04-10,824941,Daniel Schneemann,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-04-14,824531,Harrison Bader,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-04-22,822913,Wyatt Langford,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-04-30,823471,Edmundo Sosa,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-04-30,823471,Jerar Encarnacion,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-04-30,823471,Patrick Bailey,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-04-30,823471,Rafael Marchan,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-04-30,824850,Adley Rutschman,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-04-30,824850,Carlos Correa,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-04-30,824850,Christian Vazquez,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-04-30,824850,Daniel Johnson,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-04-30,824850,Dustin Harris,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-04-30,824850,Jose Altuve,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-14,823950,Harrison Bader,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-14,823950,Jesus Rodriguez,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-14,823950,Mookie Betts,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-14,824602,Carter Jensen,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-14,824602,Colson Montgomery,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-14,824602,Drew Romo,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-14,824926,Carson Kelly,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-14,825008,Pedro Pages,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-15,823140,Nick Castellanos,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-15,823140,Sung Mun Song,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-05-15,823707,Gary Sanchez,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-15,824037,Freddie Freeman,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-15,824194,Corey Seager,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-05-15,824194,Jose Altuve,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-15,824360,Tyler Freeman,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-05-15,825009,Carlos Cortes,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-15,825009,Jesus Rodriguez,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-16,822981,Christopher Morel,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-16,823139,Brendan Donovan,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-05-16,823139,Freddy Fermin,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-16,823139,Mitch Garver,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-16,823706,Garrett Mitchell,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-16,823706,Jake Bauers,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-16,824038, Siri,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-05-16,824038,Bryce Teodosio,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-05-16,824038,Kyle Tucker,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-16,824038,Sebastian Rivero,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-16,824038,Yoan Moncada,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-16,824193,Corey Seager,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-05-16,824600,Carson Kelly,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-16,824600,Dansby Swanson,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-16,824600,Moises Ballesteros,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-16,825007,Bryce Eldridge,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-17,822738,Adley Rutschman,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-17,822982,Hunter Feduccia,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-17,822982,Jake Fraley,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-05-17,822982,Javier Sanoja,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-17,823058,Elias Diaz,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-17,823058,Jac Caglianone,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-17,823058,Pedro Pages,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-17,823138,Jhonny Pereda,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-17,823138,Nick Castellanos,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-17,823381,Marcell Ozuna,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-17,823708,Byron Buxton,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-17,823708,Josh Bell,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-17,824034,Mookie Betts,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-17,824034,Vaughn Grissom,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-17,824034,Will Smith,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-17,824192,Corey Seager,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-05-17,824192,Isaac Paredes,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-17,824192,Jose Altuve,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-05-17,824279,George Springer,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-17,824279,Kazuma Okamoto,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-17,824279,Zack Short,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-17,824358,Ezequiel Tovar,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-17,824358,Ketel Marte,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-17,824436,Ke'Bryan Hayes,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-17,824599,Drew Romo,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-17,824599,Jarred Kelenic,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-17,824599,Moises Ballesteros,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-17,824923,Caleb Durbin,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-17,824923,Ha-Seong Kim,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-17,824923,Masataka Yoshida,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-17,824923,Mauricio Dubon,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-17,825006,Bryce Eldridge,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-17,825006,Henry Bolte,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-17,825006,Jesus Rodriguez,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-17,825006,Shea Langeliers,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-18,822734,A.J. Ewing,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-05-18,822734,Keibert Ruiz,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-18,822734,Luis Garcia,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-05-18,822980,Ben Williamson,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-05-18,822980,Leody Taveras,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-18,823137,Leo Rivas,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-05-18,823137,Mitch Garver,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-18,823301,Freddy Fermin,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-18,823301,Ty France,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-18,823465,Felix Reyes,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-05-18,823465,Kyle Schwarber,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-18,823465,Will Benson,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-18,823549,Austin Wells,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-18,823705,Byron Buxton,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-18,823705,Jake Meyers,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-05-18,823705,Royce Lewis,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-18,824035,Vaughn Grissom,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-18,824114,Caleb Durbin,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-18,824114,Carlos Narvaez,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-18,824114,Ceddanne Rafaela,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-18,824277,Patrick Bailey,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-18,824357,Jordan Beck,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-05-18,824680,Gary Sanchez,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-18,824680,Miguel Amaya,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-18,824680,Moises Ballesteros,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-18,825087,Daniel Susac,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-18,825087,Lourdes Gurriel,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-22,822816,Henry Davis,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-22,822816,Tyler Heineman,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-22,823223,Daniel Susac,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-22,823223,Drew Romo,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-22,823223,Jarred Kelenic,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-22,823223,Jung Hoo Lee,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-05-22,823223,Will Brennan,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-22,823298,Freddy Fermin,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-22,823298,Jackson Merrill,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-22,823298,Ty France,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-22,823546,Hunter Feduccia,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-22,823788,Will Smith,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-22,823863,Hayden Senger,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-22,824029,Adam Frazier,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-22,824029,Josh Lowe,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-05-22,824029,Vaughn Grissom,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-22,824110,Connor Joe,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-05-22,824110,Jhonny Pereda,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-22,824110,Josh Naylor,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-22,824761,Orlando Arcia,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-22,824761,Victor Caratini,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-22,824842,Matt Vierling,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-22,824842,Zack Short,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-22,824922,Keibert Ruiz,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-22,825082,Brett Sullivan,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-22,825082,Edouard Julien,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-22,825082,Mickey Moniak,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-05-23,823300,Bryce Johnson,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-23,823300,Ramon Laureano,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-23,823300,Xander Bogaerts,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-23,823787,Garrett Mitchell,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-23,823787,Hyeseong Kim,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-23,823787,Luis Rengifo,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-23,823787,William Contreras,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-23,823862,A.J. Ewing,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-05-23,824030,Adam Frazier,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-23,824516,Cesar Prieto,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-23,824516,Tyler Stephenson,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-23,824518,Matt McLain,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-23,824518,Nathan Church,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-05-23,824518,Pedro Pages,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-23,824518,Will Benson,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-23,824920,Luis Garcia,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-05-23,825080,Adrian Del Castillo,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-23,825080,Edouard Julien,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-23,825080,Jorge Barrosa,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-23,825080,Willi Castro,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-24,822813,Henry Davis,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-24,822813,Konnor Griffin,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-24,823220,Bryce Eldridge,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-24,823220,Drew Romo,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-24,823220,Eric Haase,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-24,823220,Heliot Ramos,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-05-24,823297,Brent Rooker,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-24,823297,Darell Hernaiz,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-24,823459,Angel Martinez,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-24,823459,Kyle Manzardo,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-24,823459,Otto Kemp,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-24,823786,Christian Yelich,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-24,823786,Santiago Espinal,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-24,823786,Will Smith,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-24,823861,A.J. Ewing,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-05-24,823861,Joe Mack,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-24,823861,Juan Soto,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-24,824028,Donovan Walton,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-24,824028,Josh Jung,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-24,824028,Logan O'Hoppe,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-24,824676,Dansby Swanson,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-24,824676,Ian Happ,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-24,824676,Miguel Amaya,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-24,824759,Andruw Monasterio,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-24,824759,Byron Buxton,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-24,824759,Luke Keaschall,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-24,824839,Coby Mayo,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-24,824839,Gage Workman,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-24,824839,Hao-Yu Lee,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-24,824840,Gage Workman,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-24,824840,Jeremiah Jackson,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-24,824840,Weston Wilson,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-24,825081,Gabriel Moreno,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-24,825081,Hunter Goodman,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-24,825081,Tim Tawa,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-24,825081,Willi Castro,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-25,822812,Christopher Morel,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-25,822812,Connor Norby,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-25,822812,Daulton Varsho,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-25,822812,Vladimir Guerrero,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-25,822899,Josh Jung,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-25,823296,J.T. Realmuto,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-25,823625,Juan Soto,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-25,823948,Chad Stevens,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-25,824437,Keibert Ruiz,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-25,824598, Nishida,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-05-25,825005,Mitch Garver,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-26,822811,Esteury Ruiz,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-26,822811,Nathan Lukes,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-26,822811,Owen Caissie,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-26,822811,Vladimir Guerrero,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-26,822898,Christian Vazquez,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-26,822898,Danny Jansen,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-26,822898,Zach Cole,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-05-26,823216,Daniel Susac,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-26,823379,Endy Rodriguez,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-26,823379,Michael Conforto,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-26,823785,Joey Ortiz,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-26,823785,Pedro Pages,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-26,823785,Thomas Saggese,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-26,823949,Edouard Julien,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-26,824275,Nolan Schanuel,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-05-26,824275,Zack Short,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-26,824434,Austin Hedges,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-26,824758,Caleb Durbin,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-26,824758,Carlos Narvaez,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-26,824837,Adley Rutschman,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-26,824837,Coby Mayo,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-26,824837,Nick Fortes,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-26,824837,Taylor Walls,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-26,825004,Dominic Canzone,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-27,823376,Henry Davis,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-27,823376,Jhostynxon Garcia,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-27,823376,Miguel Amaya,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-27,823947,Brett Sullivan,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-27,823947,Dalton Rushing,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-27,823947,Kyle Tucker,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-27,824104,Jazz Chisholm,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-27,824104,Kyle Isbel,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-27,824270,Nolan Schanuel,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-05-27,824270,Zack Short,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-27,824596,Andrew Benintendi,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-27,824596,Victor Caratini,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-27,824756,Caleb Durbin,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-27,824756,Carlos Narvaez,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-27,824756,Eli White,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-27,824756,Sandy Leon,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-27,824836,Taylor Walls,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-27,825003,Mitch Garver,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-27,825003,Patrick Wisdom,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-31,822729,Luis Garcia,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-05-31,822729,Sung Mun Song,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-05-31,824354,TJ Rumfield,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-05-31,824592,Gage Workman,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-06-01,823781,Garrett Mitchell,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-06-01,824027,Zach Neto,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-06-01,825078,Santiago Espinal,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-06-02,822728,Connor Norby,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-06-02,822971,Cedric Mullins,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-06-02,822971,Hao-Yu Lee,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-06-02,822971,Nick Fortes,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-06-02,822971,Taylor Walls,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-06-02,823129,Mitch Garver,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-06-02,823460,J.T. Realmuto,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-06-02,823460,Nick Castellanos,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-06-02,823460,Ramon Laureano,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-06-02,823460,Sung Mun Song,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-06-02,823541,Aaron Judge,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-06-02,823541,Rhys Hoskins,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-06-02,823700,Victor Caratini,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-06-02,823782,Eric Haase,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-06-02,823782,Joey Ortiz,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-06-02,824026,Logan O'Hoppe,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-06-02,824026,Tyler Freeman,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-06-02,824026,Zach Neto,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-06-02,824189,Braden Shewmake,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-06-02,824189,Jhostynxon Garcia,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-06-02,824189,Nick Allen,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-06-02,824511,Isaac Collins,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-06-02,824754,Jackson Holliday,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-06-02,824754,Nick Sogard,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-06-02,825079,Adrian Del Castillo,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-06-02,825079,Will Smith,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-10,822709,Ali Sanchez,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-10,822709,Luis Garcia,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-07-10,822878,Taylor Trammell,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-10,822955,Colt Emerson,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-10,823033,Nathan Church,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-10,823200,Eric Haase,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-10,823200,Victor Bericoto,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-07-10,823278,Sung Mun Song,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-07-10,823604,Bo Bichette,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-10,823604,Carlos Narvaez,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-10,823685,Denzer Guzman,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-10,823685,Logan O'Hoppe,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-10,823685,Mike Trout,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-10,823845,Brian Navarreto,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-10,823845,Gabriel Arias,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-10,823845,Patrick Bailey,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-10,823927,James McCann,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-10,823927,Max Kepler,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-10,823927,Max Muncy,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-10,823927,Pavin Smith,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-07-10,823927,Tommy Troy,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-10,824252,Dillon Dingler,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-10,824252,Hao-Yu Lee,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-10,824252,J.T. Realmuto,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-10,824252,Justin Crawford,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-10,824493,Matt McLain,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-07-10,824575,Alika Williams,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-10,824575,Nick Kurtz,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-07-10,824575,Randal Grichuk,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-10,824575,Zack Gelof,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-07-10,824817,Vinnie Pasquantino,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-11,822711,Jacob Young,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-11,822711,Keibert Ruiz,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-11,822711,Max Schuemann,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-11,822875,Kyle Higashioka,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-11,822953,Hunter Feduccia,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-11,822953,Taylor Walls,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-11,823030,Jimmy Crooks,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-11,823030,Jose Fermin,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-11,823198,Eric Haase,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-11,823198,Grant McCray,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-11,823276,Luis Rengifo,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-11,823276,Miguel Andujar,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-11,823276,Sung Mun Song,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-07-11,823356,Sal Frelick,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-11,823356,Tyler Callihan,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-11,823682,Josh Lowe,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-11,823682,Ryan Jeffers,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-11,823844,Daniel Schneemann,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-11,823926,Lourdes Gurriel,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-11,824249,Jake Rogers,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-11,824249,James Outman,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-11,824492,Kevin Alcantara,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-11,824576,Andrew Benintendi,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-11,824576,Joey Meneses,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-11,824576,Kyle Teel,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-11,824576,Sam Antonacci,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-11,824813,Blaze Alexander,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-07-12,822708,Jacob Young,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-12,822951,Colt Emerson,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-12,822951,Dominic Canzone,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-12,823199,Edouard Julien,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-12,823274,George Springer,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-12,823274,Luis Campusano,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-12,823274,Sung Mun Song,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-07-12,823358,Cooper Pratt,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-12,823358,William Contreras,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-12,823602,Francisco Alvarez,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-12,823681,Tristan Gray,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-12,823681,Vaughn Grissom,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-12,823842,Austin Hedges,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-12,823842,Daniel Schneemann,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-12,823925,Alex Call,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-12,823925,Alex Freeland,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-12,823925,Max Kepler,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-12,823925,Miguel Rojas,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-12,824250,Hao-Yu Lee,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-12,824250,Jake Rogers,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-12,824491,Miguel Amaya,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-12,824574,Tyler Soderstrom,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-12,824814,Adley Rutschman,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-12,824814,Nick Loftin,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-16,823440,Marcus Semien,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-17,823115,Daniel Susac,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-17,824090,Sung Mun Song,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-07-17,824170, Spence,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-07-17,824170,Brice Matthews,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-07-17,824170,Yainer Diaz,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-17,824332,Edouard Julien,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-17,824332,Nathaniel Lowe,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-17,824737,Andruw Monasterio,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-17,824737,Carlos Narvaez,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-17,824737,Chandler Simpson,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-17,824737,Romy Gonzalez,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-17,824766,Cedric Mullins,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-17,824766,Marcelo Mayer,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-07-17,824766,Mickey Gasper,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-07-17,824766,Trevor Story,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-07-17,824766,Willson Contreras,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-17,824901,Cameron Cauley,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-07-17,824981,Jeff McNeil,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-17,824981,Jonah Heim,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-17,824981,Keibert Ruiz,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-17,825060,Blaze Jordan,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-17,825060,Ryan Waldschmidt,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-17,825060,Tyler Locklear,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-18,823763,Brian Navarreto,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-18,823763,Brice Turang,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-18,823763,Jakob Marsee,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-18,824008,Josh Lowe,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-18,824008,Oswald Peraza,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-18,824088,Josh Rojas,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-18,824088,Luis Campusano,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-18,824088,Sung Mun Song,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-07-18,824331,Hunter Goodman,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-18,824331,Kyle Karros,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-18,824331,TJ Friedl,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-18,824331,Tyler Stephenson,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-18,824412,Billy Cook,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-18,824412,Henry Davis,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-18,824412,Tyler Callihan,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-18,824414,Austin Hedges,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-18,824414,Jared Triolo,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-18,824414,Marcell Ozuna,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-18,824414,Petey Halpin,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-18,824657,Carson Kelly,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-18,824657,Michael Conforto,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-18,824657,Royce Lewis,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-18,824899,Jorge Mateo,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-18,824979,Henry Bolte,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-18,824979,Jacob Young,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-18,824979,Tommy White,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-18,825059,Blaze Jordan,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-18,825059,Lourdes Gurriel,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-07-18,825059,Tyler Locklear,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-19,822786,Chase Meidroth,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-19,822786,George Springer,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-19,823113,Buddy Kennedy,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-19,823113,Dominic Canzone,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-19,823113,Drew Gilbert,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-19,823439,Francisco Alvarez,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-19,823439,Jorge Polanco,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-19,823521,Ali Sanchez,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-19,823521,Max Schuemann,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-19,823523,Amed Rosario,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-19,823523,Austin Wells,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-19,823523,Jose Caballero,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-19,823523,Paul Goldschmidt,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-19,823764,Brian Navarreto,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-19,823764,Otto Lopez,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-19,823764,Rece Hinds,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-07-19,824007,Logan O'Hoppe,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-19,824086,Bobby Witt,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-19,824086,Vinnie Pasquantino,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-19,824168,Adley Rutschman,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-07-19,824168,Christian Encarnacion-Strand,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-19,824168,Christian Vazquez,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-19,824330,Cole Carrigg,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-19,824330,Ezequiel Tovar,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-19,824330,Noelvi Marte,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-19,824411,Brandon Lowe,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-19,824411,Marcell Ozuna,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-19,824411,Rhys Hoskins,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-19,824739,Anthony Seigler,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-19,824897,Elias Diaz,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-19,825057,Ildemaro Vargas,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-20,822788,Hunter Feduccia,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-20,822788,Jonatan Clase,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-20,823112,J.P. Crawford,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-20,823112,Mitch Garver,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-20,823112,TJ Friedl,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-20,823436,Kyle Tucker,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-20,823436,Rafael Marchan,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-20,823762,Carson Benge,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-20,823762,Luis Lara,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-20,823762,Marcus Semien,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-20,824006,Pedro Pages,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-20,824087,Drew Cavanaugh,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-20,824167,Otto Lopez,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-20,824410,Gabriel Arias,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-20,824410,Kahlil Watson,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-20,824410,Luke Keaschall,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-20,824410,Ryan Jeffers,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-20,824410,Tristan Gray,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-07-20,824736,Adley Rutschman,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-07-20,824736,Carlos Narvaez,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-20,824898,Jorge Mateo,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-20,824898,Miguel Andujar,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-07-20,824898,Sung Mun Song,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-07-20,825058,Corbin Carroll,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-21,822787,Alejandro Kirk,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-21,822787,Hunter Feduccia,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-21,822787,Jonatan Clase,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-21,822787,Richie Palacios,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-21,822787,Victor Mesa,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-21,822871,Cameron Cauley,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-07-21,822871,Colson Montgomery,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-21,822871,Kyle Higashioka,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-07-21,823114,Buddy Kennedy,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-21,823114,Spencer Steer,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-21,823437,Teoscar Hernandez,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-21,823760,Brett Baty,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-21,823760,Christian Yelich,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-21,823760,Francisco Alvarez,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-21,823760,Jorge Polanco,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-21,824005,Denzer Guzman,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-21,824005,Jimmy Crooks,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-21,824085,Bobby Witt,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-21,824085,Drew Cavanaugh,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-21,824085,Josh Rojas,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-21,824085,Luis Arraez,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-21,824165,Graham Pauley,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-21,824165,Yainer Diaz,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-21,824329,Dylan Crews,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-21,824329,Edouard Julien,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-21,824329,Tyler Freeman,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-21,824409,Brooks Lee,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-21,824409,Daniel Schneemann,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-21,824652,Miguel Amaya,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-21,824895,Dominic Smith,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-21,824895,Freddy Fermin,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-21,824895,Sung Mun Song,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-07-21,825056,Adrian Del Castillo,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-21,825056,Colby Thomas,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-21,825056,Joshua Kuroda-Grauer,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-07-21,825056,Ryan Waldschmidt,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-21,825056,Tyler Locklear,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-22,822784,Jonatan Clase,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-07-22,822873,Austin Wynns,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-22,822873,Cameron Cauley,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-07-22,822873,Drew Romo,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-22,822873,Josh Jung,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-22,822873,Luisangel Acuna,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-22,823110,Eugenio Suarez,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-22,823110,J.P. Crawford,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-22,823110,Noelvi Marte,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-22,823110,TJ Friedl,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-22,823110,Will Wilson,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-07-22,823518,Anthony Volpe,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-22,823518,Max Schuemann,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-22,823519,Austin Wells,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-22,823519,Henry Davis,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-22,823519,Jake Mangum,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-22,823519,Jose Caballero,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-22,823761,Juan Soto,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-22,824004,Denzer Guzman,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-22,824004,Jorge Soler,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-22,824004,Lars Nootbaar,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-22,824004,Logan O'Hoppe,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-22,824004,Pedro Pages,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-22,824083, Velazquez,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-07-22,824083,Jac Caglianone,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-22,824166,Jakob Marsee,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-22,824166,Jose Altuve,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-22,824166,Leo Jimenez,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-22,824327,Curtis Mead,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-22,824327,Ezequiel Tovar,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-22,824327,Troy Johnston,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-22,824327,Tyler Freeman,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-22,824408,Byron Buxton,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-22,824408,Gabriel Arias,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-22,824408,Kahlil Watson,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-07-22,824408,Ryan Jeffers,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-22,824650,Gleyber Torres,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-22,824650,Miguel Amaya,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-22,824650,Pedro Ramirez,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-22,824732,Coby Mayo,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-22,824732,Jeremiah Jackson,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-22,824732,Leody Taveras,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-22,824732,Romy Gonzalez,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-22,824732,Sam Huff,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-22,824732,Tsung-Che Cheng,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-22,824735,Andruw Monasterio,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-22,824735,Anthony Seigler,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-22,824735,Carlos Narvaez,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-22,824735,Jeremiah Jackson,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-22,824896,Freddy Fermin,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-22,824896,Sung Mun Song,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-07-23,822785,Cedric Mullins,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-23,822785,Taylor Walls,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-23,823042,Ivan Herrera,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-23,823042,Jorge Barrosa,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-23,823042,Ketel Marte,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-23,824247, Velazquez,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-07-23,824247,Starling Marte,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-23,824406,Austin Hedges,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-23,824893,Brewer Hicklen,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-23,824893,Joey Bart,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-24,822707,James McCann,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-24,822707,Ryan Waldschmidt,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-24,822872,Cameron Cauley,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-07-24,822872,J.P. Crawford,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-24,822872,Josh Jung,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-24,822872,Victor Robles,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-24,822952,Hunter Feduccia,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-24,822952,Jose Ramirez,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-24,822952,Steven Kwan,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-24,822952,Taylor Walls,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-24,823196,Jose Siri,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-24,823196,Josh Lowe,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-24,823196,Logan O'Hoppe,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-24,823352,Rafael Flores,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-07-24,823434,Jazz Chisholm,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-24,823601,Alex Call,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-24,823601,Brett Baty,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-24,823680,Jonah Heim,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-24,823680,Kody Clemens,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-24,823759,Braxton Fulford,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-24,823759,Cooper Pratt,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-24,823843,Brian Navarreto,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-24,823843,Sung Mun Song,player not in boxscore; book-void
+EX-SCRATCH-HR,2026-07-24,824248,Andrew Velazquez,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-24,824248,Jake Rogers,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-24,824248,James Outman,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-24,824248,Kerry Carpenter,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-24,824248,Kevin McGonigle,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-24,824248,Luke Maile,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-24,824573,Edgar Quero,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-24,824573,Yainer Diaz,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-24,824733,Brandon Valenzuela,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-24,824733,Tsung-Che Cheng,player no plate appearance; book-void
+EX-SCRATCH-HR,2026-07-24,824812,Ronald Acuna,player not in boxscore; book-void
+EX-SCRATCH-K,2026-04-22,822748,Didier Fuentes,listed pitcher did not start; book-void
+EX-SCRATCH-K,2026-04-22,823231,Tyler Glasnow,listed pitcher did not start; book-void
+EX-SCRATCH-K,2026-04-22,823641,Joe Ryan,listed pitcher did not start; book-void
+EX-SCRATCH-K,2026-04-22,824286,Brandon Sproat,listed pitcher did not start; book-void
+EX-SCRATCH-K,2026-04-22,824688,Cristopher Sanchez,listed pitcher did not start; book-void
+EX-SCRATCH-K,2026-04-22,825097,Davis Martin,listed pitcher did not start; book-void
+EX-SCRATCH-K,2026-04-23,822745,Grant Holmes,listed pitcher did not start; book-void
+EX-SCRATCH-K,2026-04-24,824611,Miles Mikolas,listed pitcher did not start; book-void
+EX-SCRATCH-K,2026-04-25,824851,Kyle Bradish,listed pitcher did not start; book-void
+EX-SCRATCH-K,2026-04-26,822991,Steven Matz,listed pitcher did not start; book-void
+EX-SCRATCH-K,2026-04-26,823637,Jose Quintana,listed pitcher did not start; book-void
+EX-SCRATCH-K,2026-04-29,824525,Andrew Abbott,listed pitcher did not start; book-void
+EX-SCRATCH-K,2026-04-29,824930,Bryce Elder,listed pitcher did not start; book-void
+EX-SCRATCH-K,2026-05-04,824201,Peter Lambert,listed pitcher did not start; book-void
+EX-SCRATCH-K,2026-05-05,824119,Stephen Kolek,listed pitcher did not start; book-void
+EX-SCRATCH-K,2026-05-05,824281,Brayan Bello,listed pitcher did not start; book-void
+EX-SCRATCH-K,2026-05-07,824362,Freddy Peralta,listed pitcher did not start; book-void
+EX-SCRATCH-K,2026-05-07,824362,Michael Lorenzen,listed pitcher did not start; book-void
+EX-SCRATCH-K,2026-05-09,823869,Cade Cavalli,listed pitcher did not start; book-void
+EX-SCRATCH-K,2026-05-19,823704,Mike Burrows,listed pitcher did not start; book-void
+EX-SCRATCH-K,2026-05-19,824356,Jack Leiter,listed pitcher did not start; book-void
+EX-SCRATCH-K,2026-05-19,824356,Kyle Freeland,listed pitcher did not start; book-void
+EX-SCRATCH-K,2026-05-20,822735,David Peterson,listed pitcher did not start; book-void
+EX-SCRATCH-K,2026-05-20,823057,Braxton Ashcraft,listed pitcher did not start; book-void
+EX-SCRATCH-K,2026-05-20,823057,Dustin May,listed pitcher did not start; book-void
+EX-SCRATCH-K,2026-05-20,824032,Jose Soriano,listed pitcher did not start; book-void
+EX-SCRATCH-K,2026-05-20,824032,Luis Severino,listed pitcher did not start; book-void
+EX-SCRATCH-K,2026-05-20,824273,Casey Mize,listed pitcher did not start; book-void
+EX-SCRATCH-K,2026-05-23,823222,Noah Schultz,listed pitcher did not start; book-void
+EX-SCRATCH-K,2026-05-23,824760,Sonny Gray,listed pitcher did not start; book-void
+EX-SCRATCH-K,2026-05-24,823297,Aaron Civale,listed pitcher did not start; book-void
+EX-SCRATCH-K,2026-05-24,824840,Brandon Young,listed pitcher did not start; book-void
+EX-SCRATCH-K,2026-05-24,824840,Framber Valdez,listed pitcher did not start; book-void
+EX-SCRATCH-K,2026-05-28,824595,Taj Bradley,listed pitcher did not start; book-void
+EX-SCRATCH-K,2026-05-29,824191,Peter Lambert,listed pitcher did not start; book-void
+EX-SCRATCH-K,2026-05-29,824594,Erick Fedde,listed pitcher did not start; book-void
+EX-SCRATCH-K,2026-05-29,824835,Trey Yesavage,listed pitcher did not start; book-void
+EX-SCRATCH-K,2026-06-06,824351,Tanner Gordon,listed pitcher not in boxscore; book-void
+EX-SCRATCH-K,2026-06-08,823218,Andrew Alvarez,listed pitcher did not start; book-void
+EX-SCRATCH-K,2026-06-14,823212,Shota Imanaga,listed pitcher did not start; book-void
+EX-SCRATCH-K,2026-06-14,824021,Nick Martinez,listed pitcher did not start; book-void
+EX-SCRATCH-K,2026-06-20,822885,Nathan Eovaldi,listed pitcher did not start; book-void
+EX-SCRATCH-K,2026-06-20,822967,Nick Martinez,listed pitcher did not start; book-void
+EX-SCRATCH-K,2026-06-20,824263,Davis Martin,listed pitcher did not start; book-void
+EX-SCRATCH-K,2026-06-21,822883,Michael King,listed pitcher did not start; book-void
+EX-SCRATCH-K,2026-06-21,823449,Kodai Senga,listed pitcher did not start; book-void
+EX-SCRATCH-K,2026-06-21,825067,Merrill Kelly,listed pitcher did not start; book-void
+EX-SCRATCH-K,2026-06-21,825067,Zebby Matthews,listed pitcher did not start; book-void
+EX-SCRATCH-K,2026-06-22,823692,Justin Wrobleski,listed pitcher did not start; book-void
+EX-SCRATCH-K,2026-06-24,823613,Edward Cabrera,listed pitcher did not start; book-void
+EX-SCRATCH-K,2026-06-24,823613,Kodai Senga,listed pitcher did not start; book-void
+EX-SCRATCH-K,2026-07-04,822882,Kumar Rocker,listed pitcher did not start; book-void
+EX-SCRATCH-K,2026-07-04,823932,Griffin Canning,listed pitcher did not start; book-void
+EX-SCRATCH-K,2026-07-07,823062,Andre Pallante,listed pitcher did not start; book-void
+EX-SCRATCH-K,2026-07-07,823062,Brandon Sproat,listed pitcher did not start; book-void
+EX-SCRATCH-K,2026-07-10,823927,Yoshinobu Yamamoto,listed pitcher did not start; book-void
+EX-ALLSTAR,2026-07-14,,AL@NL exhibition,18 HR prop rows + F5/NRFI actuals not applicable (no regular gamePk)

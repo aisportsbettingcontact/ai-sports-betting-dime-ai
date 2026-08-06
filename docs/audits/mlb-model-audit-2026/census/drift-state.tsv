@@ -1,0 +1,2 @@
+market	windowSize	rollingValue	baselineValue	delta	direction	driftDetected	sampleSize	lastChecked	lastRecal	consecutiveDriftCount
+F5_SHARE	50	0.550639	0.561800	0.011161	LOW	0	50	2026-07-25T19:14:05.514Z	\N	0

@@ -1,0 +1,183 @@
+{
+ "run_context": {
+  "extracted_at_utc": "2026-07-25T21:31:18.035674+00:00",
+  "n_population_games": 1555,
+  "n_final_no_gamepk_exempt": 1,
+  "final_no_gamepk_games": [
+   {
+    "id": 4110001,
+    "gameDate": "2026-07-14",
+    "awayTeam": "AL",
+    "homeTeam": "NL",
+    "mlbGamePk": null,
+    "gameStatus": "final",
+    "doubleHeader": "N",
+    "gameNumber": 1
+   }
+  ],
+  "n_nonfinal_window_games": 9,
+  "n_live_prop_rows_window": 2855,
+  "replay_versions_present": [
+   "wf-19288f01-p1",
+   "wf-19288f01-p2"
+  ],
+  "n_replay_k_rows": 6220,
+  "n_linescore_rows": 1555,
+  "replay_grade_snapshot_k_prop": {
+   "live_pregame/live": 2686,
+   "walkforward_replay/wf-19288f01-p1": 3090,
+   "walkforward_replay/wf-19288f01-p2": 3090
+  },
+  "n_hand_rows": 577,
+  "n_startTime_mapped": 1579
+ },
+ "population_games": 1555,
+ "ledger_rows": 9057,
+ "series": {
+  "live": {
+   "n_rows": 2837,
+   "n_graded": 2441,
+   "n_push": 1,
+   "n_void": 309,
+   "n_no_model": 86,
+   "n_no_line": 0,
+   "n_no_actual": 0,
+   "hit_rate": 0.515,
+   "ci95": 0.0198,
+   "brier": 0.3046,
+   "log_loss": 0.8482,
+   "mae": 2.199,
+   "bias": -1.128,
+   "bias_ci95": 0.102,
+   "n_err": 2442,
+   "under_pick_frac": 0.8619,
+   "n_under": 2104,
+   "n_over": 337,
+   "hit_under": 0.5147,
+   "hit_over": 0.5163
+  },
+  "wf-19288f01-p1": {
+   "n_rows": 3110,
+   "n_graded": 2527,
+   "n_push": 1,
+   "n_void": 0,
+   "n_no_model": 0,
+   "n_no_line": 582,
+   "n_no_actual": 0,
+   "hit_rate": 0.5908,
+   "ci95": 0.0192,
+   "brier": 0.2578,
+   "log_loss": 0.7302,
+   "mae": 2.248,
+   "bias": 0.652,
+   "bias_ci95": 0.099,
+   "n_err": 3110,
+   "under_pick_frac": 0.4899,
+   "n_under": 1238,
+   "n_over": 1289,
+   "hit_under": 0.6074,
+   "hit_over": 0.5749
+  },
+  "wf-19288f01-p2": {
+   "n_rows": 3110,
+   "n_graded": 2527,
+   "n_push": 1,
+   "n_void": 0,
+   "n_no_model": 0,
+   "n_no_line": 582,
+   "n_no_actual": 0,
+   "hit_rate": 0.5908,
+   "ci95": 0.0192,
+   "brier": 0.2637,
+   "log_loss": 0.77,
+   "mae": 2.141,
+   "bias": 0.118,
+   "bias_ci95": 0.097,
+   "n_err": 3110,
+   "under_pick_frac": 0.5873,
+   "n_under": 1484,
+   "n_over": 1043,
+   "hit_under": 0.5896,
+   "hit_over": 0.5925
+  }
+ },
+ "under_lean": {
+  "live": 0.8619,
+  "wf-19288f01-p1": 0.4899,
+  "wf-19288f01-p2": 0.5873
+ },
+ "tie_picks_counted_as_under": 0,
+ "void_accounting": {
+  "detected_void_live": 309,
+  "void_by_cause": {
+   "NEXTDAY_CONTAMINATION": 200,
+   "TRUE_SCRATCH": 90,
+   "WRONG_GAME_SAME_DATE": 19
+  },
+  "void_by_cause_by_month": {
+   "03": {
+    "TRUE_SCRATCH": 1
+   },
+   "04": {
+    "NEXTDAY_CONTAMINATION": 107,
+    "TRUE_SCRATCH": 14,
+    "WRONG_GAME_SAME_DATE": 6
+   },
+   "05": {
+    "NEXTDAY_CONTAMINATION": 38,
+    "TRUE_SCRATCH": 28,
+    "WRONG_GAME_SAME_DATE": 5
+   },
+   "06": {
+    "NEXTDAY_CONTAMINATION": 42,
+    "TRUE_SCRATCH": 27,
+    "WRONG_GAME_SAME_DATE": 2
+   },
+   "07": {
+    "TRUE_SCRATCH": 20,
+    "NEXTDAY_CONTAMINATION": 13,
+    "WRONG_GAME_SAME_DATE": 6
+   }
+  },
+  "detected_in_exemptions": 56,
+  "detected_not_in_exemptions": 253,
+  "exemptions_not_detected": 0,
+  "exemptions_total_scratch_k": 56,
+  "out_of_population_props": 18,
+  "ex_postponed_prop_rows": 2
+ },
+ "actual_source_counts": {
+  "live": {
+   "linescore": 2528,
+   "stored": 0,
+   "": 309
+  },
+  "wf-19288f01-p1": {
+   "linescore": 3110,
+   "stored": 0,
+   "": 0
+  },
+  "wf-19288f01-p2": {
+   "linescore": 3110,
+   "stored": 0,
+   "": 0
+  }
+ },
+ "stored_vs_rederived": {
+  "n_side_compared": 2442,
+  "side_label_mismatches": 3,
+  "n_modelCorrect_compared": 2441,
+  "modelCorrect_mismatches_vs_K8_rule": 31,
+  "stored_vs_linescore_actualKs_disagreements": 28
+ },
+ "replay_grades_crosscheck": {
+  "rows_matched": 8866,
+  "result_mismatches": 248,
+  "correct_mismatches": 0,
+  "snapshot_counts": {
+   "live_pregame/live": 2686,
+   "walkforward_replay/wf-19288f01-p1": 3090,
+   "walkforward_replay/wf-19288f01-p2": 3090
+  }
+ }
+}

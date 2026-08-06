@@ -1,0 +1,24 @@
+== OLS ALL (Mar-Jul), p2 residual: resid2 ~ park + day + roof + line + month ==
+n=1555 k=9  R2=0.0089  resid_sd=4.447
+  const                  +0.2154  (se 0.5284, t +0.41)
+  parkFactor-1           +0.1073  (se 1.6684, t +0.06)
+  day                    -0.0028  (se 0.2349, t -0.01)
+  roof                   -0.1141  (se 0.2668, t -0.43)
+  line-8.5               +0.0958  (se 0.1546, t +0.62)
+  m:2026-04              +0.2594  (se 0.5628, t +0.46)
+  m:2026-05              -0.7467  (se 0.5547, t -1.35)
+  m:2026-06              +0.1121  (se 0.5603, t +0.20)
+  m:2026-07              -0.1667  (se 0.5894, t -0.28)
+
+== OLS May-Jul (post-seed), p2 residual: resid2 ~ park + day + roof + line + month ==
+n=1087 k=7  R2=0.0093  resid_sd=4.436
+  const                  -0.5098  (se 0.2409, t -2.12)
+  parkFactor-1           +1.1643  (se 2.0631, t +0.56)
+  day                    -0.0211  (se 0.2854, t -0.07)
+  roof                   -0.2832  (se 0.3139, t -0.90)
+  line-8.5               -0.0247  (se 0.1989, t -0.12)
+  m:2026-06              +0.9005  (se 0.3038, t +2.96)
+  m:2026-07              +0.6429  (se 0.3594, t +1.79)
+
+== F-test park dummies (May-Jul, p2 resid): F(29,1055)=1.196 p=0.2189 ==
+day-night bias gap (May-Jul, p2): day -0.136 (n=380) vs night -0.071 (n=707), Welch t=-0.23
