@@ -1,0 +1,139 @@
+{
+ "schema": {
+  "row": [
+   "name",
+   "applies_to",
+   "type_format",
+   "rule",
+   "status"
+  ]
+ },
+ "rows": [
+  {
+   "name": "fields",
+   "applies_to": "most collection endpoints",
+   "type_format": "flattened path list (fields=people,id,fullName)",
+   "rule": "sparse field selection; prunes copyright wrapper",
+   "status": "VERIFIED_OBSERVED"
+  },
+  {
+   "name": "hydrate",
+   "applies_to": "teams, venues, schedule, people, standings (per wrapper)",
+   "type_format": "comma list with nested parens: venue(location),league",
+   "rule": "relation expansion; full per-endpoint vocabulary UNKNOWN (docs gated); r2: schedule hydrate=probablePitcher,weather and parameterized person stats hydration verified ([] needs curl --globoff)",
+   "status": "VERIFIED_OBSERVED"
+  },
+  {
+   "name": "limit/offset",
+   "applies_to": "/stats family, draft/prospects",
+   "type_format": "int",
+   "rule": "/stats default limit=50; offset shifts window, rank continues",
+   "status": "VERIFIED_OBSERVED"
+  },
+  {
+   "name": "sportId",
+   "applies_to": "schedule, teams, players, standings, changes ...",
+   "type_format": "int (1=MLB)",
+   "rule": "on /schedule: required unless gamePk given (400 #7); invalid value -> 400 #11",
+   "status": "VERIFIED_OBSERVED"
+  },
+  {
+   "name": "gamePk",
+   "applies_to": "schedule, game family, person game stats",
+   "type_format": "int",
+   "rule": "canonical game id; satisfies /schedule requirement alone",
+   "status": "VERIFIED_OBSERVED"
+  },
+  {
+   "name": "season",
+   "applies_to": "players, teams, stats, alumni, rosters ...",
+   "type_format": "YYYY",
+   "rule": "OPTIONAL on /sports/{id}/players (defaults current) \u2014 wrapper 'required' claim CONTRADICTED",
+   "status": "VERIFIED_OBSERVED"
+  },
+  {
+   "name": "updatedSince",
+   "applies_to": "game/changes, people/changes",
+   "type_format": "ISO-8601 timestamp",
+   "rule": "delta discovery",
+   "status": "VERIFIED_OBSERVED"
+  },
+  {
+   "name": "startTimecode/endTimecode",
+   "applies_to": "v1.1 diffPatch",
+   "type_format": "YYYYMMDD_HHMMSS",
+   "rule": "bounds revision range; values from /timestamps",
+   "status": "VERIFIED_OBSERVED"
+  },
+  {
+   "name": "timecode",
+   "applies_to": "feed/live, boxscore, linescore, winProbability (per wrapper)",
+   "type_format": "YYYYMMDD_HHMMSS",
+   "rule": "point-in-time replay PROVEN r2: boxscore at mid-game timecode shows hits=1 vs 7 final; works on v1.1 feed too",
+   "status": "VERIFIED_OBSERVED"
+  },
+  {
+   "name": "rosterType",
+   "applies_to": "teams/{id}/roster",
+   "type_format": "enum from /rosterTypes (9 values)",
+   "rule": "40Man verified",
+   "status": "VERIFIED_OBSERVED"
+  },
+  {
+   "name": "stats/group",
+   "applies_to": "/stats, person/team stats",
+   "type_format": "enums from /statTypes (60) and statGroups",
+   "rule": "combined use verified; minimal required combo UNKNOWN",
+   "status": "VERIFIED_OBSERVED"
+  },
+  {
+   "name": "leaderCategories",
+   "applies_to": "stats/leaders, teams/{id}/leaders",
+   "type_format": "stat name (e.g. homeRuns)",
+   "rule": "verified",
+   "status": "VERIFIED_OBSERVED"
+  },
+  {
+   "name": "standingsTypes",
+   "applies_to": "/standings",
+   "type_format": "enum (13 values)",
+   "rule": "not individually probed",
+   "status": "PARTIALLY_VERIFIED"
+  },
+  {
+   "name": "startDate/endDate",
+   "applies_to": "transactions, schedule, stats byDateRange",
+   "type_format": "YYYY-MM-DD",
+   "rule": "verified on transactions",
+   "status": "VERIFIED_OBSERVED"
+  },
+  {
+   "name": "names",
+   "applies_to": "people/search",
+   "type_format": "string",
+   "rule": "verified",
+   "status": "VERIFIED_OBSERVED"
+  },
+  {
+   "name": "sitCodes",
+   "applies_to": "team stats",
+   "type_format": "enum from /situationCodes (602)",
+   "rule": "not probed",
+   "status": "SECONDARY_ONLY"
+  },
+  {
+   "name": "gamePk=current",
+   "applies_to": "people/{id}/stats/game/{gamePk}",
+   "type_format": "literal 'current'",
+   "rule": "REJECTED 400 #11 outside live window (r2); live-window behavior UNKNOWN",
+   "status": "CONTRADICTED"
+  },
+  {
+   "name": "required-param alternative sets",
+   "applies_to": "schedule, transactions, attendance, seasons, league (per package source)",
+   "type_format": "list-of-lists in MLB-StatsAPI endpoints.py",
+   "rule": "each inner list is one sufficient alternative (e.g. schedule: sportId | gamePk | gamePks) \u2014 matches observed server 400s",
+   "status": "VERIFIED_OBSERVED"
+  }
+ ]
+}

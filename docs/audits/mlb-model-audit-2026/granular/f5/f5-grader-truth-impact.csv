@@ -1,0 +1,66 @@
+store,gameId,field,stored,trueValue,verdict,note
+games,2250733,actualF5AwayScore,3,1,WRONG,holds DH-twin F5 score
+games,2250733,actualF5HomeScore,1,5,WRONG,holds DH-twin F5 score
+games,2250733,actualF5Total,6,6,CORRECT,
+games,2250733,f5MlResult,LOSS,WIN,WRONG,
+games,2250733,f5MlCorrect,0,1,WRONG,
+games,2250733,brierF5Ml,0.260406,0.239806,WRONG,away-base
+games,2250733,f5RlResult,WIN,LOSS,WRONG,B6 prob-convention pick
+games,2250733,f5RlCorrect,1,0,WRONG,
+games,2250733,f5TotalResult,OVER,OVER,CORRECT,
+games,2250733,f5TotalCorrect,0,0,CORRECT,
+games,2250733,brierF5Total,0.3249,0.3249,CORRECT,
+games,2250738,actualF5AwayScore,4,2,WRONG,holds DH-twin F5 score
+games,2250738,actualF5HomeScore,1,0,WRONG,holds DH-twin F5 score
+games,2250738,actualF5Total,2,2,CORRECT,
+games,2250738,f5MlResult,WIN,WIN,CORRECT,
+games,2250738,f5MlCorrect,1,1,CORRECT,
+games,2250738,brierF5Ml,0.222124,0.222124,CORRECT,away-base
+games,2250738,f5RlResult,WIN,WIN,CORRECT,B6 prob-convention pick
+games,2250738,f5RlCorrect,1,1,CORRECT,
+games,2250738,f5TotalResult,UNDER,UNDER,CORRECT,
+games,2250738,f5TotalCorrect,0,0,CORRECT,
+games,2250738,brierF5Total,0.2601,0.2601,CORRECT,
+games,2251290,actualF5AwayScore,2,3,WRONG,holds DH-twin F5 score
+games,2251290,actualF5HomeScore,3,0,WRONG,holds DH-twin F5 score
+games,2251290,actualF5Total,3,3,CORRECT,
+games,2251290,f5MlResult,WIN,LOSS,WRONG,
+games,2251290,f5MlCorrect,1,0,WRONG,
+games,2251290,brierF5Ml,0.241769,0.258369,WRONG,away-base
+mlb_game_backtest,2250733,f5_ml_away#1231725,NO_ACTION,,N/A,not actioned
+mlb_game_backtest,2250733,f5_ml_home#1231718,NO_ACTION,,N/A,not actioned
+mlb_game_backtest,2250733,f5_over#1231748,NO_ACTION,,N/A,not actioned
+mlb_game_backtest,2250733,f5_rl_away#1231740,NO_ACTION,,N/A,not actioned
+mlb_game_backtest,2250733,f5_rl_home#1231733,NO_ACTION,,N/A,not actioned
+mlb_game_backtest,2250733,f5_under#1231755,NO_ACTION,,N/A,not actioned
+mlb_game_backtest,2250738,f5_ml_away#643946,NO_ACTION,,N/A,not actioned
+mlb_game_backtest,2250738,f5_ml_home#643945,NO_ACTION,,N/A,not actioned
+mlb_game_backtest,2250738,f5_over#643949,NO_ACTION,,N/A,not actioned
+mlb_game_backtest,2250738,f5_rl_away#643948,WIN,WIN,CORRECT,
+mlb_game_backtest,2250738,f5_rl_home#643947,NO_ACTION,,N/A,not actioned
+mlb_game_backtest,2250738,f5_under#643950,NO_ACTION,,N/A,not actioned
+mlb_game_backtest,2251290,f5_ml_away#1239274,NO_ACTION,,N/A,not actioned
+mlb_game_backtest,2251290,f5_ml_home#1239271,NO_ACTION,,N/A,not actioned
+mlb_game_backtest,2251290,f5_rl_away#1239281,NO_ACTION,,N/A,not actioned
+mlb_game_backtest,2251290,f5_rl_home#1239277,NO_ACTION,,N/A,not actioned
+mlb_replay_grades,2250733,f5_ml/live_pregame/live#4917,result=LOSS actual=AWAY,result=WIN actual=HOME,WRONG,
+mlb_replay_grades,2250733,f5_ml/walkforward_replay/wf-19288f01-p1#26151,result=WIN actual=AWAY,result=LOSS actual=HOME,WRONG,
+mlb_replay_grades,2250733,f5_ml/walkforward_replay/wf-19288f01-p2#66811,result=WIN actual=AWAY,result=LOSS actual=HOME,WRONG,
+mlb_replay_grades,2250733,f5_rl/live_pregame/live#4918,result=WIN actual=AWAY,result=LOSS actual=HOME,WRONG,
+mlb_replay_grades,2250733,f5_rl/walkforward_replay/wf-19288f01-p1#26152,result=WIN actual=AWAY,result=LOSS actual=HOME,WRONG,
+mlb_replay_grades,2250733,f5_rl/walkforward_replay/wf-19288f01-p2#66812,result=WIN actual=AWAY,result=LOSS actual=HOME,WRONG,
+mlb_replay_grades,2250733,f5_total/live_pregame/live#4919,result=LOSS actual=6.0,result=LOSS actual=6,CORRECT,
+mlb_replay_grades,2250733,f5_total/walkforward_replay/wf-19288f01-p1#26153,result=LOSS actual=6.0,result=LOSS actual=6,CORRECT,
+mlb_replay_grades,2250733,f5_total/walkforward_replay/wf-19288f01-p2#66813,result=WIN actual=6.0,result=WIN actual=6,CORRECT,
+mlb_replay_grades,2250738,f5_ml/live_pregame/live#4959,result=WIN actual=AWAY,result=WIN actual=AWAY,CORRECT,
+mlb_replay_grades,2250738,f5_ml/walkforward_replay/wf-19288f01-p1#26193,result=LOSS actual=AWAY,result=LOSS actual=AWAY,CORRECT,
+mlb_replay_grades,2250738,f5_ml/walkforward_replay/wf-19288f01-p2#66853,result=LOSS actual=AWAY,result=LOSS actual=AWAY,CORRECT,
+mlb_replay_grades,2250738,f5_rl/live_pregame/live#4960,result=WIN actual=AWAY,result=WIN actual=AWAY,CORRECT,
+mlb_replay_grades,2250738,f5_rl/walkforward_replay/wf-19288f01-p1#26194,result=WIN actual=AWAY,result=WIN actual=AWAY,CORRECT,
+mlb_replay_grades,2250738,f5_rl/walkforward_replay/wf-19288f01-p2#66854,result=WIN actual=AWAY,result=WIN actual=AWAY,CORRECT,
+mlb_replay_grades,2250738,f5_total/live_pregame/live#4961,result=LOSS actual=2.0,result=LOSS actual=2,CORRECT,
+mlb_replay_grades,2250738,f5_total/walkforward_replay/wf-19288f01-p1#26195,result=LOSS actual=2.0,result=LOSS actual=2,CORRECT,
+mlb_replay_grades,2250738,f5_total/walkforward_replay/wf-19288f01-p2#66855,result=LOSS actual=2.0,result=LOSS actual=2,CORRECT,
+mlb_replay_grades,2251290,f5_ml/live_pregame/live#8064,result=WIN actual=HOME,result=LOSS actual=AWAY,WRONG,
+mlb_replay_grades,2251290,f5_ml/walkforward_replay/wf-19288f01-p1#29298,result=WIN actual=HOME,result=LOSS actual=AWAY,WRONG,
+mlb_replay_grades,2251290,f5_ml/walkforward_replay/wf-19288f01-p2#69958,result=WIN actual=HOME,result=LOSS actual=AWAY,WRONG,

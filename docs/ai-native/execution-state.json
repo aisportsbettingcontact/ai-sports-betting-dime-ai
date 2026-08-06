@@ -1,0 +1,33 @@
+{
+  "program": "ai-native-company-execution",
+  "contract_version": "2026-07-28-fable5",
+  "phase": "queue-round-1-complete",
+  "status": "PARTIAL",
+  "status_reason": "All 6 next-action-queue items implemented and test-verified (Incidents 41/42 RESOLVED; grader emits CLV/leakage/attribution; recalibrator gated propose-first; cost meter wired; rubric kit built). Production evidence still pending deploy + db-push (ai_workflow_costs) + next graded slate; rubric calibration needs human raters.",
+  "baselines": {
+    "original_frozen": "ff1d72fd (2026-07-28 morning program)",
+    "queue_round_started_at": "fcb85ddd (owner had merged PR #223 canonical MLB DB + gamePk crosswalk in the interim)"
+  },
+  "queue_round_1_results": [
+    { "item": "Q3/Incident 41", "status": "RESOLVED", "evidence": "check-environment-failures.test.ts 15/15; full gated run clean of stale-entry" },
+    { "item": "Q3/Incident 42", "status": "RESOLVED", "evidence": "run-gated-local.test.ts 5/5; split-phase run serialized DB suites, no race" },
+    { "item": "Q1 model identity + grader integrity emission", "status": "IMPLEMENTED_UNVERIFIED (production)", "evidence": "mlbBacktestIntegrity.test.ts 24/24; attribution rides auditVersion (Incident 43 forced column revert); production NULL-columns fill on next graded slate after deploy" },
+    { "item": "Q4 closing-line resolver (consumption side)", "status": "IMPLEMENTED_UNVERIFIED (production)", "evidence": "tiered matcher + line-match CLV pairs tested; owner's PR #223 crosswalk supplies gamePk; write-through heal on confident matches" },
+    { "item": "Q2 recalibration gate", "status": "IMPLEMENTED_UNVERIFIED (production)", "evidence": "mlbRecalibrationGate.test.ts 11/11; propose-default from next deploy; owner decides via mlbSchedule.decideRecalibration; MLB_RECAL_MODE=autopatch emergency override" },
+    { "item": "Q5 AI cost meter", "status": "IMPLEMENTED_UNVERIFIED (production)", "evidence": "aiCostMeter.test.ts 8/8; emitters in dime-chat + wc2026 routes; ai_workflow_costs table needs db-push (writer fail-soft until then)" },
+    { "item": "Q6 rubric calibration kit", "status": "PARTIAL", "evidence": "25 deterministic samples (sha-stable) + agreement harness 6/6; the calibration RUN needs two human raters + grader (protocol in display-copy-rubric.md)" }
+  ],
+  "incidents": { "41": "RESOLVED", "42": "RESOLVED", "43": "RESOLVED (self-caused schema-first regression, reverted same session; lesson codified)" },
+  "decisions_appended": [
+    { "id": "D-005", "decision": "Recalibration defaults to propose-mode from next deploy; autopatch only via CRITICAL-logged env override." },
+    { "id": "D-006", "decision": "Deploy-gating pattern: NEW TABLES may enter drizzle schema (probe-guarded writers); NEW COLUMNS on existing tables must go db-push-FIRST (Incident 43)." },
+    { "id": "D-007", "decision": "Model attribution carried in mlb_game_backtest.auditVersion (integrity-v1|version|params:hash) until owner sequences the dedicated columns." }
+  ],
+  "next_action_queue": [
+    { "n": 1, "action": "Owner: run db-push.yml (adds ai_workflow_costs) then deploy — activates integrity emission (CLV/leakage/auditVersion on every graded row), gated recalibration, and cost persistence", "validation": "next graded slate: SELECT clv, leakageSafe, auditVersion FROM mlb_game_backtest non-NULL; ai_workflow_costs rows on wc2026 traffic", "depends_on": [] },
+    { "n": 2, "action": "Owner: sequence dedicated modelVersion/modelParamsHash columns (db-push FIRST, then schema+stamp code — Incident 43 ordering)", "validation": "GROUP BY modelVersion works; db-tests green", "depends_on": [1] },
+    { "n": 3, "action": "Review first PROPOSED recalibration via mlbSchedule.listRecalibrationProposals / decideRecalibration", "validation": "proposal decided with rationale; engine patched only on APPROVED", "depends_on": [1] },
+    { "n": 4, "action": "Run rubric calibration: owner + reviewer fill ratings.template.csv, grader run added, scripts/rubric-agreement.mjs --input=... exits 0", "validation": "Spearman >= 0.7 all dimensions, zero auto-fail disagreements", "depends_on": [] },
+    { "n": 5, "action": "Surface resolver coverage (closingCrosswalkCoverage) + per-version record (auditVersion GROUP BY) in the /admin backtest surfaces", "validation": "owner-visible CLV and attribution dashboards", "depends_on": [1] }
+  ]
+}

@@ -1,0 +1,123 @@
+WS-B Step 4 — clean-reinstall tree diff: nflfastR 5.2.0
+Generated: 2026-07-27T06:16:28Z
+Raw logs: raw-logs/forensic_rdb.txt, raw-logs/forensic_deep.txt,
+          raw-logs/forensic_rd_fullstrip.txt, raw-logs/paths-rds-attributes.txt
+
+live tree : /opt/homebrew/lib/R/4.6/site-library/nflfastR
+rebuilt   : /private/tmp/claude-501/-Users-danielwalker-src-ai-sports-betting-dime-ai/dd3b2b85-766c-4b7b-a98c-d928cffcbac2/scratchpad/nflverse-audit/tmp/cleanlib/nflfastR
+command   : R_LIBS="/opt/homebrew/lib/R/4.6/site-library" R CMD INSTALL -l /private/tmp/claude-501/-Users-danielwalker-src-ai-sports-betting-dime-ai/dd3b2b85-766c-4b7b-a98c-d928cffcbac2/scratchpad/nflverse-audit/tmp/cleanlib /private/tmp/claude-501/-Users-danielwalker-src-ai-sports-betting-dime-ai/dd3b2b85-766c-4b7b-a98c-d928cffcbac2/scratchpad/nflverse-audit/tarballs/nflfastR_5.2.0.tar.gz
+            (exit 0; deps resolved from the live library, which was NOT written to)
+
+== File inventory ==
+  files in live tree   : 38
+  files in rebuilt tree: 38
+  present only in live   : 0
+  present only in rebuilt: 0
+  -> file lists are IDENTICAL in both directions; no added, removed or renamed files.
+
+== Per-file SHA-256 comparison ==
+  files compared : 38
+  identical      : 31
+  differing      : 7
+
+  differing files:
+    ./DESCRIPTION              live=7b5a113c0ef649caa93a8c38284865d7345bdd24356ce443ffd2414f3dd12095
+                               new =cb4a37b10e7fa049f80f108c9f0a7567e7263c01eb655ceeb9d8b2e4e935ee80
+    ./help/nflfastR.rdb        live=d0fa55967fbeb8339fa25189ca644355884213f46d8856c871a93cd1a3ee2556
+                               new =b907e72202f38d816bcf9174028d8ce4584c2787fd185a8935b23a979ca5dc2f
+    ./help/nflfastR.rdx        live=cb0ef33d0c1a02fcfb0ab3f43797ce544ddc50a49f8a474282f51a8de3c16d2b
+                               new =a6c1e94399dbd4da8070b3643f1bbf4a70276cbfd9640e05cc8da9a2b12cd288
+    ./help/paths.rds           live=0e15c267de0613dca648cb3a3ab68bdaf180e8fb20860f387219b9f283de7cb9
+                               new =a8a7fe1c8ff24e5607906ce68ba0bc780f63277c347068306c4f0c7406fd09c1
+    ./Meta/package.rds         live=6261f3cded9eeaae810c3a4817d7b716caca6dbe4e48717e9c3ee890df12760e
+                               new =41891e90ba20fe0f0d6bb20eeb50cd8bc2cb9e2cf8e60a6895695492e9f74c8c
+    ./R/nflfastR.rdb           live=792702ee1f2b5d039f6757f17712722f5b323ec3804b02dfdb84bbc1e5085786
+                               new =93cf570bdd297cf5419584668604b96f3f443a74f2f24b7bb572bcca80b81ea7
+    ./R/nflfastR.rdx           live=5cb020dcfeaa12803adf8fd3b687abb3687fd2ef16432b68d31519c24a17f1d9
+                               new =8bed0de79dcfe9b49adb8ee02b91bf64620b48d6935755dfe4ef92f0339d4f61
+
+== Classification of every differing file ==
+  All differing files are compressed containers or metadata; raw byte
+  comparison is uninformative, so each was DECOMPRESSED/DESERIALISED and
+  compared semantically. Findings:
+
+  [1] DESCRIPTION                    EXPECTED-DIFFER
+      Sole differing line is the "Built:" stamp (install wall-clock time).
+        45c45
+        < Built: R 4.6.1; ; 2026-07-27 04:26:42 UTC; unix
+        ---
+        > Built: R 4.6.1; ; 2026-07-27 05:40:25 UTC; unix
+      No other line differs.
+
+  [2] Meta/package.rds              EXPECTED-DIFFER
+      readRDS()-compared component by component. Only DESCRIPTION$Built and
+      Built$Date differ, carrying the same timestamp as [1]. Every other
+      component (Rd index, namespace spec, dependency lists) is identical.
+
+  [3] R/nflfastR.rdb / R/nflfastR.rdx           INVESTIGATED -> install-path only
+      .__NAMESPACE__. comparison for THIS package (raw-logs/forensic_deep.txt):
+        [.__NAMESPACE__.] keys: dynlibs,exports,imports,lazydata,path,S3methods,spec 
+          dynlibs    identical: TRUE
+          exports    <environment> contents identical: TRUE (n=0/0)
+          imports    identical: TRUE
+          lazydata   <environment> contents identical: TRUE (n=0/0)
+          path       identical: FALSE
+              live: /opt/homebrew/lib/R/4.6/site-library/nflfastR 
+              new : /private/tmp/claude-501/-Users-danielwalker-src-ai-sports-betting-dime-ai/dd3b2b85-766c-4b7b-a98c-d928cffcbac2/scratchpad/nflverse-audit/tmp/cleanlib/nflfastR 
+          S3methods  identical: TRUE
+          spec       identical: TRUE
+      The lazy-load database was opened with lazyLoad() and every object
+      compared (raw-logs/forensic_rdb.txt):
+        - object NAME sets identical
+        - deparse(control="all") identical for EVERY object  -> all R source
+          code in the installed package is semantically identical
+        - the only object differing is .__NAMESPACE__., and within it the
+          only differing key is `path` (the install location), which differs
+          because the rebuild targeted -l cleanlib instead of the live tree.
+          exports / imports / S3methods / spec / dynlibs are all identical.
+        - .rdx: all code-blob compressed LENGTHS identical; the reference
+          blob env::1 (which embeds that `path` string) grew by exactly the
+          length delta of the path, and that same constant shifts every
+          subsequent blob offset. Causally closed.
+      -> benign: attributable entirely to the differing install prefix.
+
+  [4] help/*.rdb, help/*.rdx        INVESTIGATED -> build-path only
+      All Rd topics were deserialised and compared. Initially every topic
+      appeared to differ; the cause was traced to path-bearing attributes
+      (Rdfile, srcref -> srcfile) recorded at build time, including ones
+      nested inside Rd_option ATTRIBUTE VALUES. After recursively stripping
+      srcref/srcfile/Rdfile/wholeSrcref, 0 of the topics differ
+      (raw-logs/forensic_rd_fullstrip.txt). Independent corroboration:
+      tools::Rd2txt() rendering is identical for every topic.
+
+  [5] help/paths.rds                INVESTIGATED -> build-path only
+      Character vector of absolute paths to the .Rd sources in the ephemeral
+      R CMD INSTALL staging directory.
+        attributes present                     : first   (exactly one)
+        attr "first" live -> new               : 104 -> 104   (delta 0)
+        R.INSTALL staging dir live             : R.INSTALL82631373ece7
+        R.INSTALL staging dir new              : R.INSTALL1721b1dc4237
+        staging-dir name length delta          : 0
+        path VALUES identical after stripping
+          the staging prefix                   : TRUE
+        attribute sets identical after
+          normalising "first"                  : TRUE
+
+      CORRECTION (post-review): an earlier revision of this report stated the
+      attributes were identical. They are NOT (except for nflfastR, where the
+      two staging-dir names happened to be the same length). The vector
+      carries exactly one attribute, `first` -- an integer offset into the
+      path string marking where the package-relative portion begins. It
+      shifts by exactly the length delta of the randomly-named R.INSTALL
+      staging directory (0 character(s) here). Once `first` is normalised
+      the attribute sets are identical, and once the staging prefix is
+      stripped the path values are identical.
+      The "build-path only" conclusion is UNCHANGED -- `first` is itself a
+      build-path artefact -- but it is now stated accurately.
+      All six packages' figures: raw-logs/paths-rds-attributes.txt.
+
+== Verdict ==
+  CLEAN. 0 unexplained deviations. Every one of the 7 differing files is
+  fully accounted for by (a) the install timestamp or (b) the install path,
+  both of which necessarily differ between the live install and a rebuild
+  into a different library. No code, data, or documentation content differs.

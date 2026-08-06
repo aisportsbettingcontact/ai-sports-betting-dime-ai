@@ -1,0 +1,22 @@
+call_code,description,n,first_season,last_season
+B,Ball,4908413,2006,2026
+F,Foul,2502400,2006,2026
+C,Called Strike,2454245,2006,2026
+X,"In play, out(s)",1709999,2006,2026
+S,Swinging Strike,1352213,2006,2026
+D,"In play, no out",595695,2006,2026
+E,"In play, run(s)",328669,2006,2026
+*B,Ball In Dirt,296161,2006,2026
+T,Foul Tip,117672,2006,2026
+W,Swinging Strike (Blocked),91842,2006,2026
+I,Intent Ball,45041,2006,2016
+L,Foul Bunt,41611,2006,2026
+H,Hit By Pitch,36561,2006,2026
+M,Missed Bunt,8137,2006,2026
+P,Pitchout,5799,2006,2026
+O,Foul Tip,782,2006,2026
+Q,Swinging Pitchout,49,2006,2026
+Y,"In play, out(s)",9,2007,2014
+Z,"In play, run(s)",8,2006,2016
+R,Foul Pitchout,6,2006,2021
+J,"In play, no out",5,2006,2014

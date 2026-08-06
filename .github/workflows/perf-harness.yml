@@ -5,8 +5,12 @@
 # budgets + a regression guard (perf/baseline.json). Fails the run on any
 # violation so a slow deploy is caught. See perf/README.md.
 #
-# Required repo secret:
-#   RAILWAY_APP_URL — public app URL, no trailing slash.
+# Required repo variable / secret:
+#   RAILWAY_APP_URL (var)          — public Cloudflare-fronted app URL, no trailing slash.
+#   EDGE_AGENT_BYPASS_KEY (secret) — trusted-agent bypass so headless document-route
+#     loads are waved past the armed edge's Super Bot Fight Mode; without it the
+#     harness would score a 403 bot-block page (see perf/harness.ts). The job binds
+#     environment:Production, satisfying the repo GHA security contract for secrets.
 #
 # Manual + scheduled. workflow_dispatch exposes `update_baseline` to generate a
 # reviewable candidate artifact; the committed baseline changes only through PR.
@@ -71,6 +75,10 @@ jobs:
       - name: "[STEP] Run perf harness"
         env:
           PERF_TARGET_URL: ${{ vars.RAILWAY_APP_URL }}
+          # Trusted-agent bypass: waves the headless browser past the armed edge's
+          # Super Bot Fight Mode on document routes. Stays in GitHub; host-scoped to
+          # the target origin by perf/harness.ts (never leaks to third parties).
+          EDGE_AGENT_BYPASS_KEY: ${{ secrets.EDGE_AGENT_BYPASS_KEY }}
           UPDATE_BASELINE: ${{ github.event.inputs.update_baseline }}
         run: |
           set -euo pipefail

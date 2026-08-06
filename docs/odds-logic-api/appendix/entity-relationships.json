@@ -1,0 +1,32 @@
+{
+  "meta": {"generated": "2026-07-26", "rule": "This is a RECOMMENDED NORMALIZED CONSUMER MODEL inferred from official capability statements. It is NOT the OddsLogic schema — no OddsLogic field names, identifiers, or payloads have ever been observed. Every entity carries the evidence that justifies its existence.", "status": "INFERRED (structure); per-entity existence evidence noted"},
+  "entities": [
+    {"name": "sport", "existence_evidence": "API page sport list", "existence_status": "VERIFIED_OFFICIAL", "canonical_id": "consumer-assigned slug", "oddslogic_id": "UNKNOWN"},
+    {"name": "league", "existence_evidence": "'200+ leagues'; FAQ views by league", "existence_status": "VERIFIED_OFFICIAL", "parent": "sport", "oddslogic_id": "UNKNOWN"},
+    {"name": "season", "existence_evidence": "none directly; implied by schedules/archive", "existence_status": "INFERRED", "oddslogic_id": "UNKNOWN"},
+    {"name": "event", "existence_evidence": "core product object (games, in-play, archive)", "existence_status": "VERIFIED_OFFICIAL (existence)", "parent": "league", "lifecycle": ["scheduled", "prematch", "inplay", "halftime", "final", "graded", "archived", "postponed?", "cancelled?"], "lifecycle_status": "INFERRED beyond prematch/inplay/halftime/final which are official terms", "temporal_fields": ["start_time (tz/precision UNKNOWN)"], "oddslogic_id": "EXISTS — stable 7-digit numeric event IDs plus rotation numbers observed in app bootstrap (O15); stability guarantees and API exposure UNKNOWN", "consumer_uniqueness": "league + start-date(local rule) + home + away + game_number (doubleheader guard)"},
+    {"name": "participant(team)", "existence_evidence": "implied by all markets", "existence_status": "INFERRED", "oddslogic_id": "UNKNOWN", "mapping_risk": "name collisions, rebrands — consumer must own a crosswalk"},
+    {"name": "player", "existence_evidence": "player props on API page", "existence_status": "PARTIALLY_VERIFIED", "oddslogic_id": "UNKNOWN", "mapping_risk": "no external ID system disclosed"},
+    {"name": "venue", "existence_evidence": "'venue change' alerts mentioned in founder interview only", "existence_status": "SECONDARY_ONLY", "oddslogic_id": "UNKNOWN"},
+    {"name": "sportsbook", "existence_evidence": "'50+ sportsbooks'; per-book line history", "existence_status": "VERIFIED_OFFICIAL", "oddslogic_id": "UNKNOWN", "note": "authoritative book list undisclosed (contradiction X01/X04)"},
+    {"name": "market", "existence_evidence": "line types + '100+ markets'", "existence_status": "VERIFIED_OFFICIAL", "parents": ["event", "segment"], "states": ["open", "suspended?", "closed?", "reopened?"], "states_status": "INFERRED — no official market-state vocabulary"},
+    {"name": "segment", "existence_evidence": "Halves/Quarters/Periods/Innings", "existence_status": "VERIFIED_OFFICIAL", "parent": "event"},
+    {"name": "outcome", "existence_evidence": "implied by 2-way/3-way markets", "existence_status": "INFERRED", "parent": "market"},
+    {"name": "odds_quote / line_snapshot", "existence_evidence": "line movement history per event+book", "existence_status": "VERIFIED_OFFICIAL (existence of history)", "parents": ["market", "sportsbook"], "temporal_fields": ["timestamp (precision/tz UNKNOWN)"], "versioning": "UNKNOWN (snapshot vs event-sourced; corrections overwrite vs append)"},
+    {"name": "prop_market", "existence_evidence": "API page prop lists", "existence_status": "PARTIALLY_VERIFIED", "parents": ["event", "player"], "note": "prop line-history disputed by competitor [SECONDARY_ONLY]"},
+    {"name": "alert", "existence_evidence": "FAQ alert types", "existence_status": "VERIFIED_OFFICIAL", "parent": "event (context)", "payload": "UNKNOWN"},
+    {"name": "score", "existence_evidence": "'fast scoring updates' (partner page), 'quality score feed' (interview)", "existence_status": "PARTIALLY_VERIFIED", "parent": "event"},
+    {"name": "result", "existence_evidence": "Finals alerts; archive of scores", "existence_status": "PARTIALLY_VERIFIED", "parent": "event"},
+    {"name": "grade / settlement", "existence_evidence": "'event and prop grading feeds'", "existence_status": "PARTIALLY_VERIFIED", "parents": ["market", "prop_market"], "states": "UNKNOWN — see grading-states.json for recommended consumer vocabulary"},
+    {"name": "historical_revision", "existence_evidence": "Archive + line history imply storage; revision model undisclosed", "existence_status": "INFERRED", "note": "consumer must implement append-only revisions regardless"},
+    {"name": "sharp_play_signal", "existence_evidence": "sharp-plays page", "existence_status": "VERIFIED_OFFICIAL (existence)", "fields": "UNKNOWN (algorithm/output proprietary)"},
+    {"name": "ticket_money_percentage_observation", "existence_evidence": "columns page", "existence_status": "VERIFIED_OFFICIAL (existence)", "fields": "UNKNOWN (population/sample/cadence undisclosed)"}
+  ],
+  "relationships": [
+    "sport 1-N league", "league 1-N event", "event 1-N segment", "event 1-N market", "segment 1-N market",
+    "market 1-N outcome", "sportsbook 1-N line_snapshot", "market 1-N line_snapshot", "event 1-N alert",
+    "event 1-1 result", "market 0-1 grade", "player 1-N prop_market", "event 1-N prop_market",
+    "prop_market 1-N outcome", "event 1-N score", "market 1-N sharp_play_signal (context)",
+    "market+sportsbook 1-N ticket_money_percentage_observation"
+  ]
+}

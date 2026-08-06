@@ -1,0 +1,71 @@
+{
+ "schema": {
+  "row": [
+   "question",
+   "state",
+   "blocking_evidence"
+  ]
+ },
+ "rows": [
+  {
+   "question": "Official docs / OpenAPI spec contents",
+   "state": "INACCESSIBLE",
+   "blocking_evidence": "Okta login on docs.statsapi.mlb.com"
+  },
+  {
+   "question": "Tier-B analytics response schemas (guids, per-play analytics, batTracking, predictions, stolenBaseProbability, lastPitch, biomechanics, skeletal); also jobs/umpires/games/{umpireId} (r2)",
+   "state": "INACCESSIBLE",
+   "blocking_evidence": "401 Okta; credential eligibility unknown"
+  },
+  {
+   "question": "Numeric rate limits / quotas",
+   "state": "UNKNOWN",
+   "blocking_evidence": "no limit headers, no public policy; ToS reserves right to limit"
+  },
+  {
+   "question": "Post-final correction frequency and latency",
+   "state": "UNKNOWN",
+   "blocking_evidence": "requires multi-day observation of stored finals"
+  },
+  {
+   "question": "Doubleheader / suspended / resumed game identity edge cases",
+   "state": "UNKNOWN",
+   "blocking_evidence": "no DH on sampled date; schema fields + status vocab verified only"
+  },
+  {
+   "question": "In-progress feed cache TTL and metaData.wait semantics under live load",
+   "state": "UNKNOWN",
+   "blocking_evidence": "only a Final game sampled"
+  },
+  {
+   "question": "Per-endpoint hydrate vocabulary",
+   "state": "UNKNOWN",
+   "blocking_evidence": "docs gated; only spot-verified"
+  },
+  {
+   "question": "Never-probed routes (allSportBallot, schedule/{scheduleType}, schedule/trackingEvents, review, broadcast, teams/stats/leaders, stats/search/{params,stats,groupByTypes}, homeRunDerby/bracket|pool, people/{id}/stats/metrics, remaining standalone vocabularies, POST contextMetricsAverages)",
+   "state": "SECONDARY_ONLY",
+   "blocking_evidence": "bounded request budget / POST prohibited by policy"
+  },
+  {
+   "question": "Non-MLB sportId data depth (feeds, stats) across levels/eras",
+   "state": "UNKNOWN",
+   "blocking_evidence": "gamedayTypes ladder implies variability; not sampled"
+  },
+  {
+   "question": "ZiPS projections provenance/licensing within statTypes",
+   "state": "UNKNOWN",
+   "blocking_evidence": "no official statement accessible"
+  },
+  {
+   "question": "Existence of sandbox/staging environment",
+   "state": "UNKNOWN",
+   "blocking_evidence": "none identified in official sources"
+  },
+  {
+   "question": "Full text of gdx.mlb.com copyright notice and current MLB ToS",
+   "state": "PARTIALLY_VERIFIED",
+   "blocking_evidence": "embedded pointer observed; full text not re-fetched this run"
+  }
+ ]
+}

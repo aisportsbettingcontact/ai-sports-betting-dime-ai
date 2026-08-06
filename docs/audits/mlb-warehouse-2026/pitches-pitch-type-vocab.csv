@@ -1,0 +1,363 @@
+season,pitch_type_code,pitch_type_label,n,pct_of_season_classified
+2006,FA,"Fastball",3097,58.225
+2006,CU,"Curveball",693,13.029
+2006,SL,"Slider",625,11.750
+2006,CH,"Changeup",614,11.544
+2006,FC,"Cutter",97,1.824
+2006,FS,"Splitter",53,0.996
+2006,FF,"Four-Seam Fastball",45,0.846
+2006,IN,"Intentional Ball",35,0.658
+2006,SI,"Sinker",30,0.564
+2006,(empty),"Unknown",17,0.320
+2006,UN,"Unknown",6,0.113
+2006,PO,"Pitchout",5,0.094
+2006,KN,"Knuckle Ball",2,0.038
+2007,FA,"Fastball",190289,57.798
+2007,SL,"Slider",50257,15.265
+2007,CH,"Changeup",40051,12.165
+2007,CU,"Curveball",33209,10.087
+2007,FC,"Cutter",6368,1.934
+2007,SI,"Sinker",1810,0.550
+2007,FS,"Splitter",1724,0.524
+2007,IN,"Intentional Ball",1607,0.488
+2007,KN,"Knuckle Ball",1432,0.435
+2007,FF,"Four-Seam Fastball",1269,0.385
+2007,(empty),"Unknown",615,0.187
+2007,PO,"Pitchout",379,0.115
+2007,UN,"Unknown",214,0.065
+2007,AB,"Automatic Ball",9,0.003
+2008,FF,"Four-Seam Fastball",244876,35.013
+2008,SI,"Sinker",170391,24.363
+2008,SL,"Slider",100599,14.384
+2008,CH,"Changeup",69011,9.867
+2008,CU,"Curveball",56027,8.011
+2008,FC,"Cutter",35200,5.033
+2008,FS,"Splitter",10175,1.455
+2008,KC,"Knuckle Curve",4191,0.599
+2008,IN,"Intentional Ball",3948,0.565
+2008,KN,"Knuckle Ball",3606,0.516
+2008,PO,"Pitchout",611,0.087
+2008,FA,"Fastball",292,0.042
+2008,FO,"Forkball",202,0.029
+2008,EP,"Eephus",163,0.023
+2008,SC,"Screwball",39,0.006
+2008,UN,"Unknown",20,0.003
+2008,(empty),"Unknown",18,0.003
+2008,AB,"Automatic Ball",8,0.001
+2009,FF,"Four-Seam Fastball",255021,35.527
+2009,SI,"Sinker",168852,23.523
+2009,SL,"Slider",105275,14.666
+2009,CH,"Changeup",70186,9.778
+2009,CU,"Curveball",58717,8.180
+2009,FC,"Cutter",36113,5.031
+2009,FS,"Splitter",9734,1.356
+2009,KC,"Knuckle Curve",5327,0.742
+2009,IN,"Intentional Ball",3732,0.520
+2009,KN,"Knuckle Ball",2771,0.386
+2009,FO,"Forkball",742,0.103
+2009,PO,"Pitchout",488,0.068
+2009,(empty),"Unknown",339,0.047
+2009,SC,"Screwball",235,0.033
+2009,FA,"Fastball",165,0.023
+2009,EP,"Eephus",104,0.014
+2009,AB,"Automatic Ball",10,0.001
+2009,UN,"Unknown",4,0.001
+2010,FF,"Four-Seam Fastball",237007,33.127
+2010,SI,"Sinker",178842,24.997
+2010,SL,"Slider",101557,14.195
+2010,CH,"Changeup",75299,10.525
+2010,CU,"Curveball",56405,7.884
+2010,FC,"Cutter",38315,5.355
+2010,FS,"Splitter",10827,1.513
+2010,KC,"Knuckle Curve",7317,1.023
+2010,KN,"Knuckle Ball",4330,0.605
+2010,IN,"Intentional Ball",3835,0.536
+2010,FO,"Forkball",696,0.097
+2010,PO,"Pitchout",548,0.077
+2010,FA,"Fastball",179,0.025
+2010,EP,"Eephus",142,0.020
+2010,SC,"Screwball",103,0.014
+2010,(empty),"Unknown",41,0.006
+2010,UN,"Unknown",3,0.000
+2010,AB,"Automatic Ball",2,0.000
+2011,FF,"Four-Seam Fastball",238706,33.293
+2011,SI,"Sinker",169242,23.604
+2011,SL,"Slider",108365,15.114
+2011,CH,"Changeup",72538,10.117
+2011,CU,"Curveball",55508,7.742
+2011,FC,"Cutter",42304,5.900
+2011,FS,"Splitter",10850,1.513
+2011,KC,"Knuckle Curve",9581,1.336
+2011,KN,"Knuckle Ball",4438,0.619
+2011,IN,"Intentional Ball",4058,0.566
+2011,PO,"Pitchout",558,0.078
+2011,FO,"Forkball",334,0.047
+2011,EP,"Eephus",136,0.019
+2011,SC,"Screwball",121,0.017
+2011,(empty),"Unknown",121,0.017
+2011,FA,"Fastball",78,0.011
+2011,ST,"Sweeper",37,0.005
+2011,UN,"Unknown",15,0.002
+2011,AB,"Automatic Ball",2,0.000
+2012,FF,"Four-Seam Fastball",241469,33.789
+2012,SI,"Sinker",165719,23.189
+2012,SL,"Slider",103247,14.448
+2012,CH,"Changeup",70965,9.930
+2012,CU,"Curveball",60801,8.508
+2012,FC,"Cutter",40325,5.643
+2012,KC,"Knuckle Curve",12475,1.746
+2012,FS,"Splitter",10859,1.520
+2012,IN,"Intentional Ball",3436,0.481
+2012,KN,"Knuckle Ball",2861,0.400
+2012,ST,"Sweeper",1351,0.189
+2012,PO,"Pitchout",469,0.066
+2012,FO,"Forkball",244,0.034
+2012,EP,"Eephus",243,0.034
+2012,SC,"Screwball",102,0.014
+2012,(empty),"Unknown",36,0.005
+2012,UN,"Unknown",18,0.003
+2012,FA,"Fastball",10,0.001
+2012,AB,"Automatic Ball",3,0.000
+2013,FF,"Four-Seam Fastball",250411,34.779
+2013,SI,"Sinker",159671,22.176
+2013,SL,"Slider",104716,14.544
+2013,CH,"Changeup",72697,10.097
+2013,CU,"Curveball",56870,7.898
+2013,FC,"Cutter",40440,5.617
+2013,KC,"Knuckle Curve",14298,1.986
+2013,FS,"Splitter",10841,1.506
+2013,IN,"Intentional Ball",3485,0.484
+2013,KN,"Knuckle Ball",3147,0.437
+2013,ST,"Sweeper",2282,0.317
+2013,FO,"Forkball",343,0.048
+2013,PO,"Pitchout",306,0.042
+2013,EP,"Eephus",266,0.037
+2013,SC,"Screwball",105,0.015
+2013,(empty),"Unknown",94,0.013
+2013,UN,"Unknown",25,0.003
+2013,CS,"Slow Curve",13,0.002
+2013,FA,"Fastball",2,0.000
+2013,AB,"Automatic Ball",1,0.000
+2014,FF,"Four-Seam Fastball",245368,34.423
+2014,SI,"Sinker",159117,22.323
+2014,SL,"Slider",96279,13.507
+2014,CH,"Changeup",73024,10.245
+2014,CU,"Curveball",55864,7.837
+2014,FC,"Cutter",44063,6.182
+2014,KC,"Knuckle Curve",17250,2.420
+2014,FS,"Splitter",11831,1.660
+2014,IN,"Intentional Ball",3238,0.454
+2014,KN,"Knuckle Ball",3215,0.451
+2014,ST,"Sweeper",1953,0.274
+2014,SV,"Slurve",469,0.066
+2014,EP,"Eephus",459,0.064
+2014,PO,"Pitchout",323,0.045
+2014,FO,"Forkball",250,0.035
+2014,UN,"Unknown",45,0.006
+2014,FA,"Fastball",20,0.003
+2014,CS,"Slow Curve",18,0.003
+2014,SC,"Screwball",14,0.002
+2014,AB,"Automatic Ball",1,0.000
+2015,FF,"Four-Seam Fastball",252240,35.458
+2015,SI,"Sinker",151780,21.336
+2015,SL,"Slider",101234,14.231
+2015,CH,"Changeup",75145,10.563
+2015,CU,"Curveball",53593,7.534
+2015,FC,"Cutter",40629,5.711
+2015,KC,"Knuckle Curve",16465,2.315
+2015,FS,"Splitter",11106,1.561
+2015,KN,"Knuckle Ball",3800,0.534
+2015,IN,"Intentional Ball",3237,0.455
+2015,(empty),"Unknown",585,0.082
+2015,ST,"Sweeper",564,0.079
+2015,EP,"Eephus",321,0.045
+2015,PO,"Pitchout",240,0.034
+2015,FO,"Forkball",197,0.028
+2015,SV,"Slurve",190,0.027
+2015,UN,"Unknown",26,0.004
+2015,FA,"Fastball",10,0.001
+2015,SC,"Screwball",7,0.001
+2015,CS,"Slow Curve",2,0.000
+2015,AB,"Automatic Ball",2,0.000
+2016,FF,"Four-Seam Fastball",261919,36.081
+2016,SI,"Sinker",145938,20.104
+2016,SL,"Slider",105647,14.554
+2016,CH,"Changeup",73311,10.099
+2016,CU,"Curveball",62431,8.600
+2016,FC,"Cutter",38580,5.315
+2016,KC,"Knuckle Curve",16507,2.274
+2016,FS,"Splitter",10313,1.421
+2016,KN,"Knuckle Ball",4208,0.580
+2016,IN,"Intentional Ball",3101,0.427
+2016,ST,"Sweeper",1712,0.236
+2016,(empty),"Unknown",820,0.113
+2016,SV,"Slurve",802,0.110
+2016,FO,"Forkball",281,0.039
+2016,PO,"Pitchout",183,0.025
+2016,EP,"Eephus",97,0.013
+2016,SC,"Screwball",30,0.004
+2016,UN,"Unknown",22,0.003
+2016,CS,"Slow Curve",13,0.002
+2016,AB,"Automatic Ball",1,0.000
+2017,FF,"Four-Seam Fastball",252927,34.643
+2017,SI,"Sinker",152419,20.877
+2017,SL,"Slider",111106,15.218
+2017,CH,"Changeup",71520,9.796
+2017,CU,"Curveball",55769,7.639
+2017,FC,"Cutter",41107,5.630
+2017,KC,"Knuckle Curve",22642,3.101
+2017,FS,"Splitter",12511,1.714
+2017,ST,"Sweeper",4251,0.582
+2017,KN,"Knuckle Ball",2646,0.362
+2017,SV,"Slurve",1993,0.273
+2017,(empty),"Unknown",545,0.075
+2017,FO,"Forkball",247,0.034
+2017,EP,"Eephus",183,0.025
+2017,PO,"Pitchout",115,0.016
+2017,FA,"Fastball",59,0.008
+2017,SC,"Screwball",39,0.005
+2017,CS,"Slow Curve",7,0.001
+2017,UN,"Unknown",4,0.001
+2018,FF,"Four-Seam Fastball",256932,35.262
+2018,SI,"Sinker",141642,19.439
+2018,SL,"Slider",114167,15.669
+2018,CH,"Changeup",75213,10.322
+2018,CU,"Curveball",56172,7.709
+2018,FC,"Cutter",43555,5.978
+2018,KC,"Knuckle Curve",20780,2.852
+2018,FS,"Splitter",10780,1.479
+2018,ST,"Sweeper",6156,0.845
+2018,SV,"Slurve",1717,0.236
+2018,KN,"Knuckle Ball",731,0.100
+2018,EP,"Eephus",219,0.030
+2018,FA,"Fastball",202,0.028
+2018,(empty),"Unknown",143,0.020
+2018,PO,"Pitchout",87,0.012
+2018,FO,"Forkball",84,0.012
+2018,SC,"Screwball",37,0.005
+2018,CS,"Slow Curve",23,0.003
+2019,FF,"Four-Seam Fastball",267754,36.225
+2019,SL,"Slider",121455,16.432
+2019,SI,"Sinker",118703,16.060
+2019,CH,"Changeup",79809,10.798
+2019,CU,"Curveball",61642,8.340
+2019,FC,"Cutter",49386,6.682
+2019,KC,"Knuckle Curve",17737,2.400
+2019,FS,"Splitter",11634,1.574
+2019,ST,"Sweeper",7775,1.052
+2019,SV,"Slurve",2478,0.335
+2019,FA,"Fastball",292,0.040
+2019,KN,"Knuckle Ball",215,0.029
+2019,CS,"Slow Curve",154,0.021
+2019,EP,"Eephus",42,0.006
+2019,FO,"Forkball",36,0.005
+2019,(empty),"Unknown",24,0.003
+2020,FF,"Four-Seam Fastball",97441,34.846
+2020,SL,"Slider",46133,16.498
+2020,SI,"Sinker",43377,15.512
+2020,CH,"Changeup",31993,11.441
+2020,CU,"Curveball",22843,8.169
+2020,FC,"Cutter",19914,7.121
+2020,KC,"Knuckle Curve",7487,2.677
+2020,FS,"Splitter",5104,1.825
+2020,ST,"Sweeper",4037,1.444
+2020,SV,"Slurve",808,0.289
+2020,FA,"Fastball",289,0.103
+2020,KN,"Knuckle Ball",101,0.036
+2020,CS,"Slow Curve",66,0.024
+2020,EP,"Eephus",43,0.015
+2021,FF,"Four-Seam Fastball",256055,35.536
+2021,SL,"Slider",119766,16.621
+2021,SI,"Sinker",109571,15.207
+2021,CH,"Changeup",80756,11.208
+2021,CU,"Curveball",52717,7.316
+2021,FC,"Cutter",52248,7.251
+2021,ST,"Sweeper",17146,2.380
+2021,KC,"Knuckle Curve",16482,2.287
+2021,FS,"Splitter",11651,1.617
+2021,SV,"Slurve",2950,0.409
+2021,FA,"Fastball",837,0.116
+2021,CS,"Slow Curve",153,0.021
+2021,EP,"Eephus",128,0.018
+2021,KN,"Knuckle Ball",89,0.012
+2021,SC,"Screwball",1,0.000
+2022,FF,"Four-Seam Fastball",239342,33.233
+2022,SL,"Slider",116666,16.199
+2022,SI,"Sinker",111045,15.419
+2022,CH,"Changeup",79994,11.107
+2022,FC,"Cutter",54242,7.532
+2022,CU,"Curveball",52889,7.344
+2022,ST,"Sweeper",32363,4.494
+2022,KC,"Knuckle Curve",16869,2.342
+2022,FS,"Splitter",11517,1.599
+2022,SV,"Slurve",3325,0.462
+2022,FA,"Fastball",1276,0.177
+2022,EP,"Eephus",508,0.071
+2022,CS,"Slow Curve",108,0.015
+2022,KN,"Knuckle Ball",42,0.006
+2023,FF,"Four-Seam Fastball",234674,32.156
+2023,SL,"Slider",113433,15.543
+2023,SI,"Sinker",112899,15.470
+2023,CH,"Changeup",79137,10.844
+2023,FC,"Cutter",57778,7.917
+2023,CU,"Curveball",48003,6.578
+2023,ST,"Sweeper",47009,6.441
+2023,FS,"Splitter",16401,2.247
+2023,KC,"Knuckle Curve",14578,1.998
+2023,SV,"Slurve",3102,0.425
+2023,FA,"Fastball",1115,0.153
+2023,FO,"Forkball",778,0.107
+2023,EP,"Eephus",558,0.076
+2023,KN,"Knuckle Ball",192,0.026
+2023,SC,"Screwball",74,0.010
+2023,CS,"Slow Curve",71,0.010
+2024,FF,"Four-Seam Fastball",230285,31.884
+2024,SI,"Sinker",113978,15.781
+2024,SL,"Slider",106189,14.702
+2024,CH,"Changeup",73774,10.214
+2024,FC,"Cutter",59244,8.203
+2024,ST,"Sweeper",52645,7.289
+2024,CU,"Curveball",44719,6.192
+2024,FS,"Splitter",22226,3.077
+2024,KC,"Knuckle Curve",12782,1.770
+2024,SV,"Slurve",3739,0.518
+2024,KN,"Knuckle Ball",1060,0.147
+2024,FA,"Fastball",632,0.088
+2024,EP,"Eephus",575,0.080
+2024,SC,"Screwball",177,0.025
+2024,FO,"Forkball",166,0.023
+2024,CS,"Slow Curve",65,0.009
+2024,UN,"Unknown",1,0.000
+2025,FF,"Four-Seam Fastball",231075,31.917
+2025,SI,"Sinker",112139,15.489
+2025,SL,"Slider",104426,14.424
+2025,CH,"Changeup",74258,10.257
+2025,ST,"Sweeper",55105,7.611
+2025,FC,"Cutter",54209,7.488
+2025,CU,"Curveball",48601,6.713
+2025,FS,"Splitter",24231,3.347
+2025,KC,"Knuckle Curve",13044,1.802
+2025,SV,"Slurve",3624,0.501
+2025,EP,"Eephus",987,0.136
+2025,FA,"Fastball",902,0.125
+2025,FO,"Forkball",829,0.115
+2025,CS,"Slow Curve",405,0.056
+2025,KN,"Knuckle Ball",137,0.019
+2025,UN,"Unknown",14,0.002
+2025,SC,"Screwball",7,0.001
+2026,FF,"Four-Seam Fastball",143560,30.521
+2026,SI,"Sinker",78298,16.646
+2026,SL,"Slider",62905,13.373
+2026,CH,"Changeup",52267,11.112
+2026,ST,"Sweeper",39122,8.317
+2026,FC,"Cutter",37092,7.886
+2026,CU,"Curveball",30233,6.427
+2026,FS,"Splitter",15141,3.219
+2026,KC,"Knuckle Curve",7800,1.658
+2026,SV,"Slurve",2086,0.443
+2026,EP,"Eephus",694,0.148
+2026,FA,"Fastball",517,0.110
+2026,FO,"Forkball",348,0.074
+2026,KN,"Knuckle Ball",183,0.039
+2026,CS,"Slow Curve",115,0.024
+2026,UN,"Unknown",10,0.002

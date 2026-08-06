@@ -1,0 +1,11 @@
+game_pk,gameDate,awayTeam,homeTeam,actualAwayScore,actualHomeScore,gameStatus
+822703,2026-07-28,TOR,WSH,6,8,final
+823026,2026-07-28,CHC,STL,10,2,final
+823193,2026-07-28,MIL,SF,8,2,final
+823275,2026-07-28,COL,SD,7,8,final
+823350,2026-07-28,ARI,PIT,8,7,final
+823676,2026-07-28,KC,MIN,2,3,final
+823923,2026-07-28,SEA,LAD,7,6,final
+824003,2026-07-28,HOU,LAA,3,2,final
+824569,2026-07-28,NYY,CWS,3,2,final
+824976,2026-07-28,BOS,ATH,3,4,final

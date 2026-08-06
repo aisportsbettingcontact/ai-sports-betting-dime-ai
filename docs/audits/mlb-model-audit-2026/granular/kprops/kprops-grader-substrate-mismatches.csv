@@ -1,0 +1,5 @@
+propId,gameId,gameDate,gamePk,side,pitcher,mlbamId,class,ungraded_reason,kProj,bookLine,pOver,pUnder,actualKs,stored_backtestResult,stored_modelCorrect,stored_modelError,derived_backtestResult,derived_modelCorrect,derived_modelError,grade_status,diff_fields,substrate_status,substrate_starterId,substrate_starterKs
+1860006,2251365,2026-07-18,824414,away,Paul Skenes,683003,final_in_scope,,6.48,6.5,0.5437,0.5303,0,UNDER,0,6.48,UNDER,0,6.48,MATCH,,SIDE_MATCH_KS_DIFFER,683003,9
+1860005,2251365,2026-07-18,824414,home,Joey Cantillo,668909,final_in_scope,,4.27,5.5,0.3119,0.7416,0,UNDER,1,4.27,UNDER,1,4.27,MATCH,,SIDE_MATCH_KS_DIFFER,668909,11
+1950006,2251420,2026-07-22,823519,away,Bubba Chandler,696149,final_in_scope,,2.31,4.5,0.1060,0.8500,0,UNDER,1,2.31,UNDER,1,2.31,MATCH,,SIDE_MATCH_KS_DIFFER,696149,5
+1530016,2253491,2026-07-23,823042,home,Dustin May,700241,final_in_scope,,3.26,5.5,0.1421,0.8500,0,UNDER,1,3.26,UNDER,1,3.26,MATCH,,SIDE_MATCH_KS_DIFFER,700241,3

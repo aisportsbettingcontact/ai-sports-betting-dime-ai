@@ -1,0 +1,13 @@
+nflverse   topics=5    struct_diff_after_deep_strip=2   Rd2txt_render_diff=0  
+    STRUCT DIFF: nflverse_sitrep, pipe 
+nflreadr   topics=77   struct_diff_after_deep_strip=28  Rd2txt_render_diff=0  
+    STRUCT DIFF: csv_from_url, dictionary_combine, dictionary_contracts, dictionary_depth_charts, dictionary_draft_picks, dictionary_espn_qbr, dictionary_ff_opportunity, dictionary_ff_playerids, dictionary_ff_rankings, dictionary_ftn_charting 
+nflfastR   topics=27   struct_diff_after_deep_strip=22  Rd2txt_render_diff=0  
+    STRUCT DIFF: add_qb_epa, add_xpass, add_xyac, build_nflfastR_pbp, calculate_player_stats, calculate_player_stats_def, calculate_player_stats_kicking, calculate_series_conversion_rates, calculate_standings, calculate_stats 
+nflseedR   topics=22   struct_diff_after_deep_strip=6   Rd2txt_render_diff=0  
+    STRUCT DIFF: load_sharpe_games, nfl_simulations, nfl_standings, nfl_standings_prettify, reexports, simulate_nfl 
+nfl4th     topics=8    struct_diff_after_deep_strip=0   Rd2txt_render_diff=0  
+nflplotR   topics=20   struct_diff_after_deep_strip=16  Rd2txt_render_diff=0  
+    STRUCT DIFF: element, geom_from_path, geom_lines, geom_nfl_headshots, geom_nfl_logos, geom_nfl_wordmarks, gt_nfl_cols_label, gt_nfl_headshots, gt_nfl_logos, gt_pct_bar 
+
+TOTAL: 159 topics across 6 packages, 74 structurally differing after stripping build paths

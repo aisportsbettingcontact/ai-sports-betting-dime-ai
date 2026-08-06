@@ -1,0 +1,6 @@
+nflverse tag=v1.0.3 commit=b8314c594a93eecb2ef609cf5da6b90fbf892b84 commit_date=2022-10-05T11:31:46+02:00 DESCRIPTION_Version=1.0.2 cran=1.0.3 match=NO
+nflreadr tag=v1.5.1 commit=fdeaba0b37aba96d30d75ade9f6ead89b251d8ca commit_date=2026-04-13T13:46:31-04:00 DESCRIPTION_Version=1.5.1 cran=1.5.1 match=YES
+nflfastR tag=v5.2.0 commit=675a817a1563d9c4f18cbb127caecf6e9a33be25 commit_date=2026-02-07T17:09:44+01:00 DESCRIPTION_Version=5.2.0 cran=5.2.0 match=YES
+nflseedR tag=v2.0.2 commit=e45ab26a0237ea63ca3823af15bf0d8d30b5b891 commit_date=2025-11-16T12:41:48+01:00 DESCRIPTION_Version=2.0.2 cran=2.0.2 match=YES
+nfl4th tag=v1.0.7 commit=886c61a329be47f3bb294e1a5ab65806cf4db39f commit_date=2026-03-02T17:20:52+01:00 DESCRIPTION_Version=1.0.7 cran=1.0.7 match=YES
+nflplotR tag=v1.6.0 commit=bf02fecf6caf26be69dccf5197355ff1a89431e1 commit_date=2025-11-14T16:30:38+01:00 DESCRIPTION_Version=1.6.0 cran=1.6.0 match=YES

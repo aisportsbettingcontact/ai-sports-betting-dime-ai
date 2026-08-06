@@ -1,0 +1,14 @@
+gameId,matchup,field,class,stored,derived,f5Actual,f5AwayRunLine,f5Total,modelF5AwayWinPct,modelF5AwayRLCoverPct,modelF5AwayScore,modelF5HomeScore,modelF5OverRate
+2250006,NYY@SF 2026-03-25,f5MlResult,stored-not-derivable,WIN,,7-0,-0.5,3.5,,,,,
+2250006,NYY@SF 2026-03-25,f5MlCorrect,value-mismatch,1,,7-0,-0.5,3.5,,,,,
+2250006,NYY@SF 2026-03-25,f5RlResult,stored-not-derivable,WIN,,7-0,-0.5,3.5,,,,,
+2250006,NYY@SF 2026-03-25,f5RlCorrect,value-mismatch,1,prob=null margin=null,7-0,-0.5,3.5,,,,,
+2250006,NYY@SF 2026-03-25,f5TotalCorrect,value-mismatch,1,,7-0,-0.5,3.5,,,,,
+2250068,COL@TOR 2026-03-31,f5RlResult,stored-not-derivable,WIN,,0-2,,4.5,41.31,48.31,2.8,2.94,0.58
+2250068,COL@TOR 2026-03-31,f5RlCorrect,value-mismatch,1,prob=null margin=null,0-2,,4.5,41.31,48.31,2.8,2.94,0.58
+2250733,STL@CIN 2026-05-23 G2,f5TotalResult,value-mismatch,OVER,UNDER,3-1,0.5,5.5,48.97,57.26,3.02,2.46,0.43
+2250733,STL@CIN 2026-05-23 G2,f5TotalCorrect,value-mismatch,0,1,3-1,0.5,5.5,48.97,57.26,3.02,2.46,0.43
+2250733,STL@CIN 2026-05-23 G2,brierF5Total,value-mismatch,0.3249,0.1849,3-1,0.5,5.5,48.97,57.26,3.02,2.46,0.43
+2250738,DET@BAL 2026-05-24 G1,f5TotalResult,value-mismatch,UNDER,OVER,4-1,0.5,4.5,52.87,62.1,2.99,2.12,0.51
+2250738,DET@BAL 2026-05-24 G1,f5TotalCorrect,value-mismatch,0,1,4-1,0.5,4.5,52.87,62.1,2.99,2.12,0.51
+2250738,DET@BAL 2026-05-24 G1,brierF5Total,value-mismatch,0.2601,0.2401,4-1,0.5,4.5,52.87,62.1,2.99,2.12,0.51

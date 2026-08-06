@@ -1,0 +1,102 @@
+
+###### nflverse ######
+[.__NAMESPACE__.] keys: dynlibs,exports,imports,lazydata,path,S3methods,spec 
+  dynlibs    identical: TRUE
+  exports    <environment> contents identical: TRUE (n=0/0)
+  imports    identical: TRUE
+  lazydata   <environment> contents identical: TRUE (n=0/0)
+  path       identical: FALSE
+      live: /opt/homebrew/lib/R/4.6/site-library/nflverse 
+      new : /private/tmp/claude-501/-Users-danielwalker-src-ai-sports-betting-dime-ai/dd3b2b85-766c-4b7b-a98c-d928cffcbac2/scratchpad/nflverse-audit/tmp/cleanlib/nflverse 
+  S3methods  identical: TRUE
+  spec       identical: TRUE
+[help Rd objects] topics: 5 
+  Rdfile basenames all identical (dir-only difference): TRUE 
+  srcref integer vectors all identical                : TRUE 
+  topics still differing after stripping Rdfile+srcref: 5 
+    -> nflverse_packages, nflverse_sitrep, nflverse_update, nflverse-package, pipe 
+
+###### nflreadr ######
+[.__NAMESPACE__.] keys: dynlibs,exports,imports,lazydata,path,S3methods,spec 
+  dynlibs    identical: TRUE
+  exports    <environment> contents identical: TRUE (n=0/0)
+  imports    identical: TRUE
+  lazydata   <environment> contents identical: TRUE (n=0/0)
+  path       identical: FALSE
+      live: /opt/homebrew/lib/R/4.6/site-library/nflreadr 
+      new : /private/tmp/claude-501/-Users-danielwalker-src-ai-sports-betting-dime-ai/dd3b2b85-766c-4b7b-a98c-d928cffcbac2/scratchpad/nflverse-audit/tmp/cleanlib/nflreadr 
+  S3methods  identical: TRUE
+  spec       identical: TRUE
+[help Rd objects] topics: 77 
+  Rdfile basenames all identical (dir-only difference): TRUE 
+  srcref integer vectors all identical                : TRUE 
+  topics still differing after stripping Rdfile+srcref: 77 
+    -> clean_homeaway, clean_player_names, clean_team_abbrs, clear_cache, csv_from_url, dictionary_combine, dictionary_contracts, dictionary_depth_charts, dictionary_draft_picks, dictionary_espn_qbr 
+
+###### nflfastR ######
+[.__NAMESPACE__.] keys: dynlibs,exports,imports,lazydata,path,S3methods,spec 
+  dynlibs    identical: TRUE
+  exports    <environment> contents identical: TRUE (n=0/0)
+  imports    identical: TRUE
+  lazydata   <environment> contents identical: TRUE (n=0/0)
+  path       identical: FALSE
+      live: /opt/homebrew/lib/R/4.6/site-library/nflfastR 
+      new : /private/tmp/claude-501/-Users-danielwalker-src-ai-sports-betting-dime-ai/dd3b2b85-766c-4b7b-a98c-d928cffcbac2/scratchpad/nflverse-audit/tmp/cleanlib/nflfastR 
+  S3methods  identical: TRUE
+  spec       identical: TRUE
+[help Rd objects] topics: 27 
+  Rdfile basenames all identical (dir-only difference): TRUE 
+  srcref integer vectors all identical                : TRUE 
+  topics still differing after stripping Rdfile+srcref: 27 
+    -> add_qb_epa, add_xpass, add_xyac, build_nflfastR_pbp, calculate_expected_points, calculate_player_stats, calculate_player_stats_def, calculate_player_stats_kicking, calculate_series_conversion_rates, calculate_standings 
+
+###### nflseedR ######
+[.__NAMESPACE__.] keys: dynlibs,exports,imports,lazydata,path,S3methods,spec 
+  dynlibs    identical: TRUE
+  exports    <environment> contents identical: TRUE (n=0/0)
+  imports    identical: TRUE
+  lazydata   <environment> contents identical: TRUE (n=0/0)
+  path       identical: FALSE
+      live: /opt/homebrew/lib/R/4.6/site-library/nflseedR 
+      new : /private/tmp/claude-501/-Users-danielwalker-src-ai-sports-betting-dime-ai/dd3b2b85-766c-4b7b-a98c-d928cffcbac2/scratchpad/nflverse-audit/tmp/cleanlib/nflseedR 
+  S3methods  identical: TRUE
+  spec       identical: TRUE
+[help Rd objects] topics: 22 
+  Rdfile basenames all identical (dir-only difference): TRUE 
+  srcref integer vectors all identical                : TRUE 
+  topics still differing after stripping Rdfile+srcref: 22 
+    -> compute_conference_seeds, compute_division_ranks, compute_draft_order, dictionary_game_summary, dictionary_games, dictionary_overall, dictionary_standings, dictionary_team_wins, divisions, fmt_pct_special 
+
+###### nfl4th ######
+[.__NAMESPACE__.] keys: dynlibs,exports,imports,lazydata,path,S3methods,spec 
+  dynlibs    identical: TRUE
+  exports    <environment> contents identical: TRUE (n=0/0)
+  imports    identical: TRUE
+  lazydata   <environment> contents identical: TRUE (n=0/0)
+  path       identical: FALSE
+      live: /opt/homebrew/lib/R/4.6/site-library/nfl4th 
+      new : /private/tmp/claude-501/-Users-danielwalker-src-ai-sports-betting-dime-ai/dd3b2b85-766c-4b7b-a98c-d928cffcbac2/scratchpad/nflverse-audit/tmp/cleanlib/nfl4th 
+  S3methods  identical: TRUE
+  spec       identical: TRUE
+[help Rd objects] topics: 8 
+  Rdfile basenames all identical (dir-only difference): TRUE 
+  srcref integer vectors all identical                : TRUE 
+  topics still differing after stripping Rdfile+srcref: 8 
+    -> add_2pt_probs, add_4th_probs, get_4th_plays, load_4th_pbp, make_2pt_table_data, make_table_data, nfl4th_clear_cache, nfl4th-package 
+
+###### nflplotR ######
+[.__NAMESPACE__.] keys: dynlibs,exports,imports,lazydata,path,S3methods,spec 
+  dynlibs    identical: TRUE
+  exports    <environment> contents identical: TRUE (n=0/0)
+  imports    identical: TRUE
+  lazydata   <environment> contents identical: TRUE (n=0/0)
+  path       identical: FALSE
+      live: /opt/homebrew/lib/R/4.6/site-library/nflplotR 
+      new : /private/tmp/claude-501/-Users-danielwalker-src-ai-sports-betting-dime-ai/dd3b2b85-766c-4b7b-a98c-d928cffcbac2/scratchpad/nflverse-audit/tmp/cleanlib/nflplotR 
+  S3methods  identical: TRUE
+  spec       identical: TRUE
+[help Rd objects] topics: 20 
+  Rdfile basenames all identical (dir-only difference): TRUE 
+  srcref integer vectors all identical                : TRUE 
+  topics still differing after stripping Rdfile+srcref: 20 
+    -> dot-nflplotR_clear_cache, element, geom_from_path, geom_lines, geom_nfl_headshots, geom_nfl_logos, geom_nfl_wordmarks, ggpreview, gt_nfl_cols_label, gt_nfl_headshots 

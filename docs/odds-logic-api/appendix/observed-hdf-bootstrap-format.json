@@ -1,0 +1,70 @@
+{
+  "meta": {
+    "generated": "2026-07-26",
+    "provenance": "Page source of https://odds.oddslogic.com/OddsLogic/ captured in the user's own browser session on 2026-07-26 and supplied for analysis. Consistent with the independent WebFetch of the same URL (observation O06). Treated as VERIFIED_OBSERVED point-in-time evidence of the app's bootstrap payload — NOT an API contract, NOT documentation, and format may change without notice.",
+    "warning": "Field semantics below are positional inferences from one capture. Only the labeled 'observed' facts are certain; every 'inferred' label is a hypothesis requiring vendor confirmation."
+  },
+  "page_head_observations": [
+    {"fact": "html attributes data-theme=\"dark\", CSS var --ol-app-height — themed client-rendered app with 'ol' prefix", "status": "VERIFIED_OBSERVED"},
+    {"fact": "Cache-Control/Pragma/Expires meta tags force no-cache on the shell", "status": "VERIFIED_OBSERVED"},
+    {"fact": "Tapfiliate affiliate script loaded with account '50355-7fb795' and {integration: 'stripe'} — affiliate tracking via Tapfiliate, payments via Stripe", "status": "VERIFIED_OBSERVED", "note": "Explains the ref= partner attribution parameter end-to-end (ref → Tapfiliate → Stripe)"},
+    {"fact": "window.__HDF_TEXT__ — schedule/event bootstrap data embedded server-side into the HTML as a JS global string", "status": "VERIFIED_OBSERVED", "implication": "Initial render is a server-baked snapshot; live odds updates must arrive via a separate channel (websocket/SSE/poll) that this capture does NOT reveal — transport remains UNKNOWN"}
+  ],
+  "hdf_format": {
+    "name": "'HDF' (name from the __HDF_TEXT__ global; expansion unknown)",
+    "encoding": "Proprietary brace-delimited positional text, not JSON. Top-level: one scope record, then repeated {header,...},{event},...} groups.",
+    "scope_record": {
+      "observed_sample": "{0,All sports,2026-07-26 23:25:26 Pacific Time}",
+      "fields": ["scope id (0)", "scope label ('All sports')", "snapshot timestamp — explicitly labeled 'Pacific Time'"],
+      "status": "VERIFIED_OBSERVED"
+    },
+    "header_record": {
+      "observed_sample": "{header37,1,1,1,328606,\"NFL PRESEASON WEEK 1 - Thursday, August 13th\",,2026-08-13}",
+      "positional_fields": [
+        {"pos": 1, "value": "headerN", "meaning": "DOM/display header key", "status": "observed"},
+        {"pos": 2, "value": "1|2|3|4", "meaning": "sport id — observed mapping: 1=football (NFL/CFL/CFB/AFL), 2=basketball (WNBA/BIG3/TBT/FIBA), 3=baseball (MLB/NPB/LMB/MiLB), 4=hockey (NHL)", "status": "inferred from grouping"},
+        {"pos": 3, "value": "e.g. 1,2,5,7,8,17,74,80,95,96,102,106,118,119,120,240,242,303", "meaning": "league/board id — observed: 1=NFL, 2=CFB, 5=MLB, 7=NHL, 8=WNBA, 17=CFL, 74=BIG3, 80=Mexico LMB, 95=MiLB AAA International, 96=MiLB AAA Pacific, 102=Australian Football, 106=CFB write-ins, 118=MLB write-ins, 119=MLB series prices, 120=MLB grand salami, 240=Japan NPB, 242=The Basketball Tournament, 303=FIBA", "status": "inferred from header titles — strong"},
+        {"pos": 4, "value": "1", "meaning": "unknown constant", "status": "unknown"},
+        {"pos": 5, "value": "e.g. 328606", "meaning": "header/group id (6-digit, monotonic-ish)", "status": "observed"},
+        {"pos": 6, "value": "quoted title", "meaning": "display title incl. league, week, date", "status": "observed"},
+        {"pos": 7, "value": "empty or 1", "meaning": "unknown flag (seen on some past-date boards)", "status": "unknown"},
+        {"pos": 8, "value": "YYYY-MM-DD", "meaning": "board date", "status": "observed"}
+      ]
+    },
+    "event_record": {
+      "observed_sample": "{901,,7383679,,2026-07-26,2026-07-26,07-26,17:35,17:35,2026-07-26 17:35:00,,,,,,,{Arizona,ARI,K. Drake,1,,Washington,WAS,M. Mikolas,,}}",
+      "positional_fields": [
+        {"pos": 1, "value": "e.g. 901, 693, 306469", "meaning": "rotation/screen number (odd numbering convention; small for majors, 6-digit range for internationals/others)", "status": "inferred — matches industry rotation-number convention"},
+        {"pos": 2, "value": "empty", "meaning": "unknown", "status": "unknown"},
+        {"pos": 3, "value": "e.g. 7383679", "meaning": "STABLE NUMERIC EVENT ID (7-digit) — first direct proof OddsLogic has internal event identifiers", "status": "observed (identity as 'event id' inferred, strong)"},
+        {"pos": 4, "value": "empty", "meaning": "unknown", "status": "unknown"},
+        {"pos": 5, "value": "YYYY-MM-DD", "meaning": "event date (board-local convention)", "status": "observed"},
+        {"pos": 6, "value": "YYYY-MM-DD", "meaning": "duplicate of pos 5 in all observed rows", "status": "observed"},
+        {"pos": 7, "value": "MM-DD", "meaning": "short date", "status": "observed"},
+        {"pos": 8, "value": "HH:MM", "meaning": "time (matches UTC clock of pos 10)", "status": "observed"},
+        {"pos": 9, "value": "HH:MM", "meaning": "duplicate of pos 8 in all observed rows", "status": "observed"},
+        {"pos": 10, "value": "YYYY-MM-DD HH:MM:SS", "meaning": "full start instant — cross-checks prove UTC (e.g. NYY@PHI Sunday Night Baseball 23:20:00 = 7:20pm ET; CFL 23:00:00 = 7pm ET). Note pos 5 'event date' can differ from the UTC date (late games roll past midnight UTC).", "status": "observed; UTC conclusion verified against known local start times"},
+        {"pos": "11-16", "value": "mostly empty; sometimes 1, \"venue name\", \"city\"", "meaning": "special-venue block: flag + venue + city for neutral-site/international games (Tom Benson HOF Stadium/Canton; Aviva Stadium/Dublin; Nilton Santos/Rio; Melbourne Cricket Ground/Melbourne; Lambeau Field for a CFB neutral game). One slot also carries a write-in flag.", "status": "observed values; slot semantics inferred"},
+        {"pos": 17, "value": "{away_name,away_abbr,away_pitcher,away_pitcher_flag,,home_name,home_abbr,home_pitcher,home_pitcher_flag,}", "meaning": "team block. Baseball rows carry listed pitchers (e.g. 'K. Drake,1'); the numeric flag's meaning (handedness? confirmed?) is UNKNOWN. Abbreviation can be literal null (new WNBA franchises Toronto/Golden State/Portland; TBT/BIG3 teams). Write-in slots use &nbsp; placeholders.", "status": "observed; flag semantics unknown"}
+      ]
+    },
+    "special_constructs": [
+      {"construct": "WRITE-IN GAMES", "observed": "Pre-allocated placeholder rows with &nbsp; team names on dedicated boards (league ids 106, 118)", "meaning": "screen supports manually added games — a DonBest-lineage odds-screen convention", "status": "observed"},
+      {"construct": "GRAND SALAMI", "observed": "Pseudo-events 'AWAY RUNS/HOME RUNS' and 'OVER RUNS/UNDER RUNS' (league id 120)", "meaning": "league-wide daily run totals modeled as synthetic events", "status": "observed"},
+      {"construct": "MLB SERIES PRICES", "observed": "Series-winner pseudo-events on league id 119, titled '*= 4 GAME SERIES'", "meaning": "series markets modeled as events keyed to series start", "status": "observed"},
+      {"construct": "UNDECIDED pitcher", "observed": "'UNDECIDED' literal in pitcher slot (CHC@STL 2026-07-27)", "meaning": "explicit unknown-pitcher sentinel", "status": "observed"}
+    ],
+    "not_in_this_capture": [
+      "Odds/prices for any market (the bootstrap carries schedule scaffolding only in the captured portion)",
+      "Sportsbook list or book identifiers",
+      "Line history, props, grading, alerts, percentages",
+      "The live update channel (websocket/SSE/poll) and its payloads",
+      "Authentication/session mechanics"
+    ]
+  },
+  "coverage_extension_observed": {
+    "leagues_present_in_capture": ["CFL", "NFL (HOF game, preseason, Week 1 incl. Melbourne international)", "College Football (incl. Dublin & Rio internationals)", "WNBA (incl. 2026 expansion Toronto/Portland/Golden State)", "MLB (NL/AL/Interleague, series prices, grand salami, write-ins)", "NHL", "Australian Football (AFL)", "BIG3", "The Basketball Tournament", "FIBA Basketball (men's qualifiers/EuroBasket + Women's World Cup)", "Japan NPB", "Mexico LMB", "MiLB AAA (International + Pacific)"],
+    "status": "VERIFIED_OBSERVED (point-in-time)",
+    "note": "Substantially corroborates the '200+ leagues' breadth claim beyond the marketing sport list."
+  }
+}

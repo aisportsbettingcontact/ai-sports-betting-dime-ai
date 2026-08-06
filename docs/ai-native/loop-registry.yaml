@@ -1,0 +1,82 @@
+# Loop registry — every material Dime AI loop, its closure state, and its accountable role.
+# Status: closed = all stages exist and are exercised; open = a required stage is missing/unwired.
+# Evidence paths are in current-state-audit.md. Accountable roles: owner = aisportbettingcontact;
+# builder-operator = the implementing engineer/agent under owner review.
+
+version: 1
+updated: "2026-07-28"
+
+loops:
+  - id: mlb-projection-evaluation-v1
+    objective: "Every published MLB projection is version-attributed, leakage-safe, graded vs actuals and closing lines, and feeds a gated improvement proposal"
+    beneficiary: "model trust, future public track record, Dime Chat evidence"
+    status: closed-in-fixture   # implemented + exercised end-to-end on synthetic fixtures this session
+    trigger: "game FINAL (production: mlbMultiMarketBacktest hook — queued migration)"
+    inputs: ["provider schedule/feed observation", "odds snapshot", "model output", "authoritative result", "closing odds snapshot"]
+    canonical_entities: ["gamePk (mlbEventIdentity contract)", "market (ApprovedMarket)", "modelVersion"]
+    deterministic_rules: "docs/ai-native/target-architecture.md invariants 1-10"
+    versions_tracked: ["modelVersion", "paramsHash", "envelope schemaVersion"]
+    decision: "grade + evaluation report per model version; abstention explicit"
+    action_boundary: "improvement proposal only; promotion requires distinct-approver approval artifact (owner)"
+    outcome: "grading records + per-version evaluation"
+    evaluation: "Brier, W/L/push/void, CLV vs closing, quarantine rate"
+    cost_budget: "cost block on workflow artifacts; cost-per-verified-outcome query"
+    failure_behavior: "UNGRADED/VOID/QUARANTINED states; conflicts block grading; ledger resumable from JSONL"
+    accountable: { dri: "builder-operator", approver: "owner", escalation: "INCIDENTS.md entry" }
+    artifacts: ["shared/loop/", "server/loop/"]
+
+  - id: mlb-live-cycle
+    objective: "Keep odds/splits/lineups/model projections fresh 24/7"
+    status: closed              # runs in production (vsinAutoRefresh.runMlbCycleOnce)
+    gap: "no versioning on model output (G1); freshness observable only via modelRunAt"
+    accountable: { dri: "owner", escalation: "INCIDENTS.md" }
+    artifacts: ["server/vsinAutoRefresh.ts", "server/mlbModelRunner.ts"]
+
+  - id: mlb-outcome-drift-recalibration
+    objective: "Ingest outcomes, detect drift, recalibrate model constants"
+    status: open                # loop runs but violates independent-gate principle
+    gap: "self-promoting: drift detector patches MLBAIModel.py in place with no approval stage (G2); no CLV/leakage in grader (G3,G4)"
+    required_fix: "route through improvement-proposal + approval artifacts (migration step 2)"
+    accountable: { dri: "owner (approval)", escalation: "INCIDENTS.md" }
+    artifacts: ["server/mlbOutcomeIngestor.ts", "server/mlbMultiMarketBacktest.ts", "server/mlbDriftDetector.ts"]
+
+  - id: user-bet-settlement
+    objective: "Grade user tracked_bets against finals"
+    status: closed
+    gap: "AN↔gamePk id mismatch forces fuzzy name matching (G5)"
+    accountable: { dri: "owner", escalation: "INCIDENTS.md" }
+    artifacts: ["server/scoreGrader.ts", "server/betAutoGradeScheduler.ts"]
+
+  - id: dime-chat-answer-evidence
+    objective: "Every chat verdict carries sources, freshness, and deterministic recalculation"
+    status: dormant             # provider frozen; validator live in code, 57/57 tests green
+    gap: "source_ids never cross-checked against injected context rows (pattern closed in slice invariant 6; chat wiring queued)"
+    accountable: { dri: "owner", escalation: "INCIDENTS.md" }
+    artifacts: ["server/_core/dimeVerdict.ts", "server/_core/dimeChatContext.ts"]
+
+  - id: dime-1.0-model-promotion
+    objective: "Champion/challenger promotion of the in-house chat model"
+    status: designed-not-exercised
+    gap: "never run on a real candidate; operational gates (cost/latency) unset"
+    accountable: { dri: "owner", approver: "owner via release attestation", escalation: "INCIDENTS.md" }
+    artifacts: ["ml/dime-1.0/docs/RELEASE_GATES.md", "ml/dime-1.0/scripts/publish_adapter.py"]
+
+  - id: canonical-mlb-db-promotion
+    objective: "Promote 49,414-game verified corpus into canonical prod tables"
+    status: spec-only
+    gap: "zero code; spec invariant count stale (49,403 vs 49,414) (G10); no per-row observation timestamps in spec"
+    accountable: { dri: "owner", escalation: "INCIDENTS.md" }
+    artifacts: ["docs/superpowers/specs/2026-07-27-mlb-canonical-database-design.md", "scripts/mlb-crawl/"]
+
+  - id: ai-spend-economics
+    objective: "Token/cost per verified outcome across AI workflows"
+    status: open
+    gap: "no USD measurement anywhere (G7); slice adds the cost-block primitive + query; production emitters queued"
+    accountable: { dri: "owner", escalation: "INCIDENTS.md" }
+    artifacts: ["shared/loop/envelope.ts (cost block)", "docs/ai-native/ai-economics.md"]
+
+  - id: product-usage-analytics
+    objective: "Honest DAU/WAU/MAU + funnel with staff exclusion"
+    status: closed
+    accountable: { dri: "owner", escalation: "INCIDENTS.md" }
+    artifacts: ["server/analytics/", "server/routers/metrics.ts"]

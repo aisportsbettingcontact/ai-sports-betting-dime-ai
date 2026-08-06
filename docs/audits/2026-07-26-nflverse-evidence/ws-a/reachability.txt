@@ -1,0 +1,131 @@
+# Reachability report -- nflverse forensic audit (Task 1 / WS-A / Step 2)
+# Generated: 2026-07-27 05:38:52 UTC
+# Edge source: /private/tmp/claude-501/-Users-danielwalker-src-ai-sports-betting-dime-ai/dd3b2b85-766c-4b7b-a98c-d928cffcbac2/scratchpad/nflverse-audit/evidence/ws-a/dep-edges.csv (hard deps only: Depends+Imports+LinkingTo; Suggests excluded)
+# LIB (site-library, the 90 installed pkgs under audit): /opt/homebrew/lib/R/4.6/site-library
+
+ROOTS (6) -- the 6 nflverse targets, BFS start set:
+  nflverse
+  nflreadr
+  nflfastR
+  nflseedR
+  nfl4th
+  nflplotR
+
+REACHABLE_IN_SITE_LIBRARY (90 of 90 installed pkgs, hard-dep closure of the 6 targets):
+  base64enc
+  bigD
+  bitops
+  bslib
+  cachem
+  cli
+  commonmark
+  cpp11
+  crayon
+  curl
+  data.table
+  digest
+  dplyr
+  evaluate
+  farver
+  fastmap
+  fastrmodels
+  fontawesome
+  fs
+  furrr
+  future
+  generics
+  ggpath
+  ggplot2
+  globals
+  glue
+  gsubfn
+  gt
+  gtable
+  highr
+  hms
+  htmltools
+  htmlwidgets
+  isoband
+  janitor
+  jquerylib
+  jsonlite
+  juicyjuice
+  knitr
+  labeling
+  lifecycle
+  listenv
+  litedown
+  lubridate
+  magick
+  magrittr
+  markdown
+  memoise
+  mime
+  nfl4th
+  nflfastR
+  nflplotR
+  nflreadr
+  nflseedR
+  nflverse
+  parallelly
+  pillar
+  pkgconfig
+  progressr
+  proto
+  purrr
+  R6
+  rappdirs
+  RColorBrewer
+  Rcpp
+  reactable
+  reactR
+  rlang
+  rmarkdown
+  rstudioapi
+  S7
+  sass
+  scales
+  snakecase
+  stringi
+  stringr
+  tibble
+  tidyr
+  tidyselect
+  timechange
+  tinytex
+  utf8
+  V8
+  vctrs
+  viridisLite
+  withr
+  xfun
+  xgboost
+  xml2
+  yaml
+
+REACHABLE_OUTSIDE_SITE_LIBRARY -- base/recommended R packages pulled in as hard-dep targets (11):
+  codetools
+  graphics
+  grDevices
+  grid
+  Matrix
+  methods
+  mgcv
+  parallel
+  stats
+  tools
+  utils
+
+REACHABLE_OUTSIDE_SITE_LIBRARY -- referenced as hard-dep target but NOT found in site-library OR base/recommended library (0):
+  
+
+ORPHANS (0 of 90 installed pkgs -- installed in site-library but NOT reachable from the 6 targets via hard deps):
+  
+
+# --- Orphan forensic detail: incoming edges from any of the 90, by type ---
+# (an orphan with only Suggests-in edges is a soft/optional pull-in; one with
+#  no incoming edges at all was installed by install.packages() dependency
+#  resolution for a reason not visible in any of the 90 installed DESCRIPTIONs
+#  -- e.g. a dependency of one of the 90's Suggests-of-Suggests during initial
+#  install, or installed standalone/manually.)
+

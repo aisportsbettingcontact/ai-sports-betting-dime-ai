@@ -1,0 +1,23 @@
+mainline records: primary=24409 mirror2=24409 osuosl=24408
+FULL-INDEX primary-vs-mirror2: ver_diff=0 md5_diff=0
+FULL-INDEX primary-vs-osuosl : ver_diff=8 md5_diff=8 only_primary=1 only_osuosl=0
+  only-in-primary: jamba 
+  primary-vs-osuosl version-differing packages (mirror lag):
+    cld3                     primary=1.6.2          osuosl=1.6.1
+    dsROCrate                primary=0.2.0          osuosl=0.1.0
+    multcompView             primary=0.1-12         osuosl=0.1-11
+    polykde                  primary=1.2.1          osuosl=1.2.0
+    RGenData                 primary=1.0.1          osuosl=1.0
+    rSCA                     primary=3.2            osuosl=3.1
+    RWeka                    primary=0.4-50         osuosl=0.4-49
+    thinr                    primary=0.3.0          osuosl=0.2.0
+  SAME-VERSION-but-DIFFERENT-MD5 (primary vs osuosl), full index: 0
+
+---- our 90 ----
+tarball sha256 recomputed == acquisition-log sha256: 90/90 match
+installed version == primary index version: 90/90
+installed version == mirror2 index version: 90/90
+installed version == osuosl  index version: 90/90
+primary md5 == mirror2 md5 (our 90): 90/90
+primary md5 == osuosl  md5 (our 90): 90/90
+md5_actual  == primary md5 (our 90): 90/90

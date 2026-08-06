@@ -1,0 +1,201 @@
+WS-B Step 5 — CRAN tarball vs GitHub release tag: nflreadr
+Generated: 2026-07-27T06:18:30Z
+Raw logs: raw-logs/crlf-classification-nflreadr.txt, raw-logs/description-field-analysis.txt,
+          raw-logs/github-tag-resolution.txt
+
+== Tag discovery ==
+  method: git ls-remote --tags https://github.com/nflverse/nflreadr
+  TAG FORMAT FOUND: 'v<version>' (e.g. v1.0.3) — plain lightweight/annotated
+                    tags, no package-name prefix, no release/ namespace.
+  nflreadr tag=v1.5.1 commit=fdeaba0b37aba96d30d75ade9f6ead89b251d8ca commit_date=2026-04-13T13:46:31-04:00 DESCRIPTION_Version=1.5.1 cran=1.5.1 match=YES
+
+== Trees compared ==
+  tarball: /private/tmp/claude-501/-Users-danielwalker-src-ai-sports-betting-dime-ai/dd3b2b85-766c-4b7b-a98c-d928cffcbac2/scratchpad/nflverse-audit/sources/nflreadr   (extracted from CRAN source tarball, Task 0)
+  github : /private/tmp/claude-501/-Users-danielwalker-src-ai-sports-betting-dime-ai/dd3b2b85-766c-4b7b-a98c-d928cffcbac2/scratchpad/nflverse-audit/tmp/gh/nflreadr
+
+  files: tarball=249 github=253  repo-only=75 tarball-only=71 in-both=178 differing=1
+
+== A. repo-only paths (in git, absent from tarball) ==
+   Each is justified against the REAL .Rbuildignore in the repo, or
+   R CMD build's built-in exclusion list. Directory-level rules are
+   applied to ancestor paths, matching R CMD build's pruning.
+    [.Rbuildignore] .git-blame-ignore-revs                                rule: .git-blame-ignore-revs
+    [.Rbuildignore] .github/.gitignore                                    rule: ^\.github$  [via dir '.github']
+    [.Rbuildignore] .github/CODE_OF_CONDUCT.md                            rule: ^\.github$  [via dir '.github']
+    [.Rbuildignore] .github/CONTRIBUTING.md                               rule: ^\.github$  [via dir '.github']
+    [.Rbuildignore] .github/lock.yml                                      rule: ^\.github$  [via dir '.github']
+    [.Rbuildignore] .github/workflows/pkgdown.yaml                        rule: ^\.github$  [via dir '.github']
+    [.Rbuildignore] .github/workflows/pr-commands.yaml                    rule: ^\.github$  [via dir '.github']
+    [.Rbuildignore] .github/workflows/R-CMD-check.yaml                    rule: ^\.github$  [via dir '.github']
+    [.Rbuildignore] .github/workflows/revdep.yml                          rule: ^\.github$  [via dir '.github']
+    [.Rbuildignore] .github/workflows/rhub.yaml                           rule: ^\.github$  [via dir '.github']
+    [.Rbuildignore] .github/workflows/test-coverage.yml                   rule: ^\.github$  [via dir '.github']
+    [build-builtin] .gitignore                                            rule: (^|/)\.gitignore$
+    [build-builtin] .Rbuildignore                                         rule: ^\.Rbuildignore$
+    [.Rbuildignore] codecov.yml                                           rule: ^codecov\.yml$
+    [.Rbuildignore] cran-comments.md                                      rule: ^cran-comments\.md$
+    [.Rbuildignore] data-raw/build_data_dictionaries.R                    rule: ^data-raw$  [via dir 'data-raw']
+    [.Rbuildignore] data-raw/build_teamplayer_mappings.R                  rule: ^data-raw$  [via dir 'data-raw']
+    [.Rbuildignore] data-raw/clean_player_names.csv                       rule: ^data-raw$  [via dir 'data-raw']
+    [.Rbuildignore] data-raw/data_export_for_nflreadpy.R                  rule: ^data-raw$  [via dir 'data-raw']
+    [.Rbuildignore] data-raw/dictionary_check.R                           rule: ^data-raw$  [via dir 'data-raw']
+    [.Rbuildignore] data-raw/dictionary_combine.csv                       rule: ^data-raw$  [via dir 'data-raw']
+    [.Rbuildignore] data-raw/dictionary_contracts.csv                     rule: ^data-raw$  [via dir 'data-raw']
+    [.Rbuildignore] data-raw/dictionary_depth_charts.csv                  rule: ^data-raw$  [via dir 'data-raw']
+    [.Rbuildignore] data-raw/dictionary_draft_picks.csv                   rule: ^data-raw$  [via dir 'data-raw']
+    [.Rbuildignore] data-raw/dictionary_espn_qbr.csv                      rule: ^data-raw$  [via dir 'data-raw']
+    [.Rbuildignore] data-raw/dictionary_ff_playerids.csv                  rule: ^data-raw$  [via dir 'data-raw']
+    [.Rbuildignore] data-raw/dictionary_ff_rankings.csv                   rule: ^data-raw$  [via dir 'data-raw']
+    [.Rbuildignore] data-raw/dictionary_ffopps.csv                        rule: ^data-raw$  [via dir 'data-raw']
+    [.Rbuildignore] data-raw/dictionary_ftn_charting.csv                  rule: ^data-raw$  [via dir 'data-raw']
+    [.Rbuildignore] data-raw/dictionary_injuries.csv                      rule: ^data-raw$  [via dir 'data-raw']
+    [.Rbuildignore] data-raw/dictionary_nextgenstats.csv                  rule: ^data-raw$  [via dir 'data-raw']
+    [.Rbuildignore] data-raw/dictionary_participation.csv                 rule: ^data-raw$  [via dir 'data-raw']
+    [.Rbuildignore] data-raw/dictionary_pbp.csv                           rule: ^data-raw$  [via dir 'data-raw']
+    [.Rbuildignore] data-raw/dictionary_pfr_passing.csv                   rule: ^data-raw$  [via dir 'data-raw']
+    [.Rbuildignore] data-raw/dictionary_player_stats.json                 rule: ^data-raw$  [via dir 'data-raw']
+    [.Rbuildignore] data-raw/dictionary_players.csv                       rule: ^data-raw$  [via dir 'data-raw']
+    [.Rbuildignore] data-raw/dictionary_playerstats_def.csv               rule: ^data-raw$  [via dir 'data-raw']
+    [.Rbuildignore] data-raw/dictionary_playerstats.csv                   rule: ^data-raw$  [via dir 'data-raw']
+    [.Rbuildignore] data-raw/dictionary_roster_status.csv                 rule: ^data-raw$  [via dir 'data-raw']
+    [.Rbuildignore] data-raw/dictionary_rosters.csv                       rule: ^data-raw$  [via dir 'data-raw']
+    [.Rbuildignore] data-raw/dictionary_schedules.csv                     rule: ^data-raw$  [via dir 'data-raw']
+    [.Rbuildignore] data-raw/dictionary_snap_counts.csv                   rule: ^data-raw$  [via dir 'data-raw']
+    [.Rbuildignore] data-raw/dictionary_team_stats.json                   rule: ^data-raw$  [via dir 'data-raw']
+    [.Rbuildignore] data-raw/dictionary_trades.csv                        rule: ^data-raw$  [via dir 'data-raw']
+    [.Rbuildignore] data-raw/logo.svg                                     rule: ^data-raw$  [via dir 'data-raw']
+    [.Rbuildignore] data-raw/nflverse_data_timezone.R                     rule: ^data-raw$  [via dir 'data-raw']
+    [.Rbuildignore] data-raw/raw_ffopps_dictionary.R                      rule: ^data-raw$  [via dir 'data-raw']
+    [.Rbuildignore] data-raw/readme.md                                    rule: ^data-raw$  [via dir 'data-raw']
+    [.Rbuildignore] data-raw/social_preview.png                           rule: ^data-raw$  [via dir 'data-raw']
+    [.Rbuildignore] data-raw/social_preview.svg                           rule: ^data-raw$  [via dir 'data-raw']
+    [.Rbuildignore] dev/combine/combine.rds                               rule: ^dev$  [via dir 'dev']
+    [.Rbuildignore] dev/contracts/historical_contracts.rds                rule: ^dev$  [via dir 'dev']
+    [.Rbuildignore] LICENSE.md                                            rule: ^LICENSE\.md$
+    [.Rbuildignore] man/figures/social_preview.png                        rule: ^man/figures/social_preview\.png$
+    [.Rbuildignore] nflreadr.Rproj                                        rule: ^nflreadr\.Rproj$
+    [.Rbuildignore] pkgdown/_pkgdown.yml                                  rule: ^pkgdown$  [via dir 'pkgdown']
+    [.Rbuildignore] pkgdown/extra.css                                     rule: ^pkgdown$  [via dir 'pkgdown']
+    [.Rbuildignore] pkgdown/favicon/apple-touch-icon-120x120.png          rule: ^pkgdown$  [via dir 'pkgdown']
+    [.Rbuildignore] pkgdown/favicon/apple-touch-icon-152x152.png          rule: ^pkgdown$  [via dir 'pkgdown']
+    [.Rbuildignore] pkgdown/favicon/apple-touch-icon-180x180.png          rule: ^pkgdown$  [via dir 'pkgdown']
+    [.Rbuildignore] pkgdown/favicon/apple-touch-icon-60x60.png            rule: ^pkgdown$  [via dir 'pkgdown']
+    [.Rbuildignore] pkgdown/favicon/apple-touch-icon-76x76.png            rule: ^pkgdown$  [via dir 'pkgdown']
+    [.Rbuildignore] pkgdown/favicon/apple-touch-icon.png                  rule: ^pkgdown$  [via dir 'pkgdown']
+    [.Rbuildignore] pkgdown/favicon/favicon-16x16.png                     rule: ^pkgdown$  [via dir 'pkgdown']
+    [.Rbuildignore] pkgdown/favicon/favicon-32x32.png                     rule: ^pkgdown$  [via dir 'pkgdown']
+    [.Rbuildignore] pkgdown/favicon/favicon.ico                           rule: ^pkgdown$  [via dir 'pkgdown']
+    [.Rbuildignore] README.Rmd                                            rule: ^README\.Rmd$
+    [.Rbuildignore] revdep/.gitignore                                     rule: ^revdep$  [via dir 'revdep']
+    [.Rbuildignore] revdep/cran.md                                        rule: ^revdep$  [via dir 'revdep']
+    [.Rbuildignore] revdep/data.sqlite                                    rule: ^revdep$  [via dir 'revdep']
+    [.Rbuildignore] revdep/failures.md                                    rule: ^revdep$  [via dir 'revdep']
+    [.Rbuildignore] revdep/problems.md                                    rule: ^revdep$  [via dir 'revdep']
+    [.Rbuildignore] revdep/README.md                                      rule: ^revdep$  [via dir 'revdep']
+    [build-builtin] vignettes/.gitignore                                  rule: (^|/)\.gitignore$
+    [.Rbuildignore] vignettes/articles/nflverse_data_schedule.Rmd         rule: ^vignettes/articles$  [via dir 'vignettes/articles']
+    repo-only unexplained by any rule: 0
+
+== B. tarball-only paths (build artifacts) ==
+    [build-artifact] build/vignette.rds
+    [build-artifact] inst/doc/dictionary_combine.html
+    [build-artifact] inst/doc/dictionary_combine.R
+    [build-artifact] inst/doc/dictionary_combine.Rmd
+    [build-artifact] inst/doc/dictionary_contracts.html
+    [build-artifact] inst/doc/dictionary_contracts.R
+    [build-artifact] inst/doc/dictionary_contracts.Rmd
+    [build-artifact] inst/doc/dictionary_depth_charts.html
+    [build-artifact] inst/doc/dictionary_depth_charts.R
+    [build-artifact] inst/doc/dictionary_depth_charts.Rmd
+    [build-artifact] inst/doc/dictionary_draft_picks.html
+    [build-artifact] inst/doc/dictionary_draft_picks.R
+    [build-artifact] inst/doc/dictionary_draft_picks.Rmd
+    [build-artifact] inst/doc/dictionary_espn_qbr.html
+    [build-artifact] inst/doc/dictionary_espn_qbr.R
+    [build-artifact] inst/doc/dictionary_espn_qbr.Rmd
+    [build-artifact] inst/doc/dictionary_ff_opportunity.html
+    [build-artifact] inst/doc/dictionary_ff_opportunity.R
+    [build-artifact] inst/doc/dictionary_ff_opportunity.Rmd
+    [build-artifact] inst/doc/dictionary_ff_playerids.html
+    [build-artifact] inst/doc/dictionary_ff_playerids.R
+    [build-artifact] inst/doc/dictionary_ff_playerids.Rmd
+    [build-artifact] inst/doc/dictionary_ff_rankings.html
+    [build-artifact] inst/doc/dictionary_ff_rankings.R
+    [build-artifact] inst/doc/dictionary_ff_rankings.Rmd
+    [build-artifact] inst/doc/dictionary_ftn_charting.html
+    [build-artifact] inst/doc/dictionary_ftn_charting.R
+    [build-artifact] inst/doc/dictionary_ftn_charting.Rmd
+    [build-artifact] inst/doc/dictionary_injuries.html
+    [build-artifact] inst/doc/dictionary_injuries.R
+    [build-artifact] inst/doc/dictionary_injuries.Rmd
+    [build-artifact] inst/doc/dictionary_nextgen_stats.html
+    [build-artifact] inst/doc/dictionary_nextgen_stats.R
+    [build-artifact] inst/doc/dictionary_nextgen_stats.Rmd
+    [build-artifact] inst/doc/dictionary_participation.html
+    [build-artifact] inst/doc/dictionary_participation.R
+    [build-artifact] inst/doc/dictionary_participation.Rmd
+    [build-artifact] inst/doc/dictionary_pbp.html
+    [build-artifact] inst/doc/dictionary_pbp.R
+    [build-artifact] inst/doc/dictionary_pbp.Rmd
+    [build-artifact] inst/doc/dictionary_pfr_passing.html
+    [build-artifact] inst/doc/dictionary_pfr_passing.R
+    [build-artifact] inst/doc/dictionary_pfr_passing.Rmd
+    [build-artifact] inst/doc/dictionary_player_stats.html
+    [build-artifact] inst/doc/dictionary_player_stats.R
+    [build-artifact] inst/doc/dictionary_player_stats.Rmd
+    [build-artifact] inst/doc/dictionary_players.html
+    [build-artifact] inst/doc/dictionary_players.R
+    [build-artifact] inst/doc/dictionary_players.Rmd
+    [build-artifact] inst/doc/dictionary_roster_status.html
+    [build-artifact] inst/doc/dictionary_roster_status.R
+    [build-artifact] inst/doc/dictionary_roster_status.Rmd
+    [build-artifact] inst/doc/dictionary_rosters.html
+    [build-artifact] inst/doc/dictionary_rosters.R
+    [build-artifact] inst/doc/dictionary_rosters.Rmd
+    [build-artifact] inst/doc/dictionary_schedules.html
+    [build-artifact] inst/doc/dictionary_schedules.R
+    [build-artifact] inst/doc/dictionary_schedules.Rmd
+    [build-artifact] inst/doc/dictionary_snap_counts.html
+    [build-artifact] inst/doc/dictionary_snap_counts.R
+    [build-artifact] inst/doc/dictionary_snap_counts.Rmd
+    [build-artifact] inst/doc/dictionary_team_stats.html
+    [build-artifact] inst/doc/dictionary_team_stats.R
+    [build-artifact] inst/doc/dictionary_team_stats.Rmd
+    [build-artifact] inst/doc/dictionary_trades.html
+    [build-artifact] inst/doc/dictionary_trades.R
+    [build-artifact] inst/doc/dictionary_trades.Rmd
+    [build-artifact] inst/doc/exporting_nflreadr.html
+    [build-artifact] inst/doc/exporting_nflreadr.R
+    [build-artifact] inst/doc/exporting_nflreadr.Rmd
+    [build-artifact] MD5
+    tarball-only NOT a recognised build artifact: 0
+
+== C. content differences (present in both, bytes differ) ==
+    CRITICAL-PATH differences (R/ data/ src/ NAMESPACE DESCRIPTION configure): 1
+      * DESCRIPTION 
+    other differing files: 0
+
+  -- line-ending vs real-content classification --
+    REAL-DIFF   DESCRIPTION                              (54 differing lines after LF-normalization)
+
+== D. DESCRIPTION field-level analysis ==
+   (read.dcf parse; values whitespace-normalised so CRAN's 80-col
+    re-wrapping of Imports/Suggests/URL is not counted as a change)
+    tarball-only fields: NeedsCompilation, Packaged, Author, Maintainer, Repository, Date/Publication 
+      all CRAN-publish-added?: TRUE  
+    github-only fields : Roxygen 
+      all dev-only?          : TRUE  
+    shared fields with DIFFERENT VALUE after whitespace-normalisation: 0 
+    Version tarball/github : 1.5.1 / 1.5.1  MATCH 
+    Packaged               : 2026-04-13 18:23:38 UTC; tan 
+  
+
+== Verdict ==
+  NO CONTENT DIVERGENCE.
+  Exactly one file differs: DESCRIPTION. Its entire delta is CRAN publish
+  metadata (Packaged / Date/Publication / Repository / NeedsCompilation /
+  Author / Maintainer added; dev-only fields dropped) plus CRAN's 80-column
+  re-wrapping of Imports/Suggests/URL. ZERO shared DESCRIPTION fields differ
+  in value after whitespace normalisation.
+  Every file under R/, data/, src/, plus NAMESPACE, is BYTE-IDENTICAL between
+  the CRAN tarball and the GitHub tree at the release tag.

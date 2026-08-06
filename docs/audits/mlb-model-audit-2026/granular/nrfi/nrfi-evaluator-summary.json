@@ -1,0 +1,149 @@
+{
+  "run_context": {
+    "extracted_at_utc": "2026-07-25T21:07:04.794144+00:00",
+    "n_population_games": 1555,
+    "n_exempt_no_gamepk": 1,
+    "exempt_games": [
+      {
+        "id": 4110001,
+        "gameDate": "2026-07-14",
+        "awayTeam": "AL",
+        "homeTeam": "NL"
+      }
+    ],
+    "replay_versions_present": [
+      "wf-19288f01-p1",
+      "wf-19288f01-p2"
+    ],
+    "n_replay_rows": 3110,
+    "n_linescore_rows": 1555,
+    "replay_grade_snapshot_nrfi_yrfi": {
+      "live_pregame/live": 1527,
+      "walkforward_replay/wf-19288f01-p1": 1545,
+      "walkforward_replay/wf-19288f01-p2": 1545
+    },
+    "n_sched_rows": 10442,
+    "n_startTime_mapped": 1579
+  },
+  "computed_at_utc": "2026-07-25T21:09:03.035078+00:00",
+  "series_evaluated": [
+    "live",
+    "p1",
+    "p2",
+    "live_clean"
+  ],
+  "n_ledger_rows": 4665,
+  "headline_all_months": {
+    "live": {
+      "series": "live",
+      "month": "ALL",
+      "n_pop": 1555,
+      "n_scored": 1536,
+      "n_missing_p": 19,
+      "mean_p": 0.47749,
+      "base_rate_nrfi": 0.49023,
+      "n_picks": 1417,
+      "n_none_p_half": 119,
+      "hits": 721,
+      "hit_rate": 0.50882,
+      "hit_ci_lo": 0.4828,
+      "hit_ci_hi": 0.53479,
+      "hit_z_vs_coin": 0.664,
+      "hit_rate_half_as_yrfi": 0.51367,
+      "brier": 0.250157,
+      "brier_minus_quarter_z": 0.121,
+      "brier_const_base": 0.249905,
+      "brier_skill_vs_base": -0.00101,
+      "logloss": 0.693405,
+      "logloss_const_base": 0.692956,
+      "auc": 0.52207
+    },
+    "p1": {
+      "series": "p1",
+      "month": "ALL",
+      "n_pop": 1555,
+      "n_scored": 1555,
+      "n_missing_p": 0,
+      "mean_p": 0.51629,
+      "base_rate_nrfi": 0.48939,
+      "n_picks": 1553,
+      "n_none_p_half": 2,
+      "hits": 827,
+      "hit_rate": 0.53252,
+      "hit_ci_lo": 0.50765,
+      "hit_ci_hi": 0.55722,
+      "hit_z_vs_coin": 2.563,
+      "hit_rate_half_as_yrfi": 0.53312,
+      "brier": 0.248883,
+      "brier_minus_quarter_z": -0.784,
+      "brier_const_base": 0.249887,
+      "brier_skill_vs_base": 0.00402,
+      "logloss": 0.690914,
+      "logloss_const_base": 0.692922,
+      "auc": 0.54671
+    },
+    "p2": {
+      "series": "p2",
+      "month": "ALL",
+      "n_pop": 1555,
+      "n_scored": 1555,
+      "n_missing_p": 0,
+      "mean_p": 0.51662,
+      "base_rate_nrfi": 0.48939,
+      "n_picks": 1553,
+      "n_none_p_half": 2,
+      "hits": 828,
+      "hit_rate": 0.53316,
+      "hit_ci_lo": 0.5083,
+      "hit_ci_hi": 0.55786,
+      "hit_z_vs_coin": 2.614,
+      "hit_rate_half_as_yrfi": 0.53376,
+      "brier": 0.248714,
+      "brier_minus_quarter_z": -0.897,
+      "brier_const_base": 0.249887,
+      "brier_skill_vs_base": 0.00469,
+      "logloss": 0.690451,
+      "logloss_const_base": 0.692922,
+      "auc": 0.54765
+    },
+    "live_clean": {
+      "series": "live_clean",
+      "month": "ALL",
+      "n_pop": 1176,
+      "n_scored": 1176,
+      "n_missing_p": 0,
+      "mean_p": 0.47725,
+      "base_rate_nrfi": 0.49065,
+      "n_picks": 1085,
+      "n_none_p_half": 91,
+      "hits": 534,
+      "hit_rate": 0.49217,
+      "hit_ci_lo": 0.4625,
+      "hit_ci_hi": 0.52189,
+      "hit_z_vs_coin": -0.516,
+      "hit_rate_half_as_yrfi": 0.5017,
+      "brier": 0.25169,
+      "brier_minus_quarter_z": 1.141,
+      "brier_const_base": 0.249913,
+      "brier_skill_vs_base": -0.00711,
+      "logloss": 0.696508,
+      "logloss_const_base": 0.692972,
+      "auc": 0.50435
+    }
+  },
+  "ece_by_series": {
+    "live": 0.04609,
+    "p1": 0.04043,
+    "p2": 0.0416,
+    "live_clean": 0.06899
+  },
+  "crosscheck_counts": {
+    "STR_VS_BIN": 2
+  },
+  "notes": [
+    "Grading substrate: mlb_replay_linescores inn1 runs (StatsAPI-derived); games.actualNrfiBinary agrees everywhere except rows in crosscheck CSV.",
+    "live_clean = live series minus P-001 leakage-flagged games (modelRunAt >= startTimeUtc or start unknown).",
+    "p==0.50 rows are NONE picks (excluded from hit_rate; included in Brier/logloss); hit_rate_half_as_yrfi replicates the running pipeline's 0.5->YRFI convention.",
+    "mlb_replay_grades snapshot counts recorded in run_context; that ledger is being written by a running pipeline and incompleteness there is not a defect."
+  ]
+}

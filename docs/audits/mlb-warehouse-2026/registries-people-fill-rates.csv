@@ -1,0 +1,7 @@
+cohort,n,bat_side,pitch_hand,birth_date,mlb_debut,primary_position,br_id,an_player_id,rotowire_id,retrosheet_id
+players_all (is_umpire=0),6244,6242,6242,6242,6136,6244,0,0,0,0
+players_all_pct,6244,99.97,99.97,99.97,98.27,100.00,0.00,0.00,0.00,0.00
+umpires (is_umpire=1),181,0,0,0,0,0,0,0,0,0
+umpires_pct,181,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00
+players_active_2025_26 (distinct in 2025-2026 boxscores),1721,1721,,1721,,,0,0,0,0
+players_active_2025_26_pct,1721,100.00,,100.00,,,0.00,0.00,0.00,0.00

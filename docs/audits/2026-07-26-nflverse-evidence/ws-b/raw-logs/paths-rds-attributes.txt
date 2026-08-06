@@ -1,0 +1,46 @@
+WS-B raw log — help/paths.rds attribute forensics (post-review correction)
+Generated: 2026-07-27T06:13:56Z
+
+The vector carries exactly ONE attribute, 'first' — an integer offset into the
+path string marking where the package-relative portion begins. It shifts by the
+length delta of the ephemeral R.INSTALL staging directory name.
+
+pkg       first_l  first_n  delta  preflen_l preflen_n prefdlt basenames_eq
+nflverse  103      104      1      88        89        1       TRUE
+   attrs live=[first] new=[first]; values identical after stripping staging prefix: FALSE
+   R.INSTALL dir live=R.INSTALL8eb74f58817 (20 chars)  new=R.INSTALL17c0ea587568 (21 chars)
+   attributes(a) identical attributes(b): FALSE ; equal after normalising 'first': TRUE
+nflreadr  104      105      1      89        90        1       TRUE
+   attrs live=[first] new=[first]; values identical after stripping staging prefix: FALSE
+   R.INSTALL dir live=R.INSTALL73677a77dea0 (21 chars)  new=R.INSTALL16ed025f79c68 (22 chars)
+   attributes(a) identical attributes(b): FALSE ; equal after normalising 'first': TRUE
+nflfastR  104      104      0      89        89        0       TRUE
+   attrs live=[first] new=[first]; values identical after stripping staging prefix: TRUE
+   R.INSTALL dir live=R.INSTALL82631373ece7 (21 chars)  new=R.INSTALL1721b1dc4237 (21 chars)
+   attributes(a) identical attributes(b): TRUE ; equal after normalising 'first': TRUE
+nflseedR  104      105      1      89        90        1       TRUE
+   attrs live=[first] new=[first]; values identical after stripping staging prefix: FALSE
+   R.INSTALL dir live=R.INSTALL819e614568d1 (21 chars)  new=R.INSTALL176c72d76b304 (22 chars)
+   attributes(a) identical attributes(b): FALSE ; equal after normalising 'first': TRUE
+nfl4th    102      103      1      89        90        1       TRUE
+   attrs live=[first] new=[first]; values identical after stripping staging prefix: FALSE
+   R.INSTALL dir live=R.INSTALL82a43b2cd472 (21 chars)  new=R.INSTALL1799d4aa20bea (22 chars)
+   attributes(a) identical attributes(b): FALSE ; equal after normalising 'first': TRUE
+nflplotR  104      105      1      89        90        1       TRUE
+   attrs live=[first] new=[first]; values identical after stripping staging prefix: FALSE
+   R.INSTALL dir live=R.INSTALL8e765ebbd936 (21 chars)  new=R.INSTALL17b0030ecc9cf (22 chars)
+   attributes(a) identical attributes(b): FALSE ; equal after normalising 'first': TRUE
+
+== values after stripping the staging prefix (attributes dropped) ==
+nflverse  stripped values identical: TRUE   (n=5)
+   e.g. 'nflverse/man/nflverse-package.Rd'
+nflreadr  stripped values identical: TRUE   (n=77)
+   e.g. 'nflreadr/man/clean_homeaway.Rd'
+nflfastR  stripped values identical: TRUE   (n=27)
+   e.g. 'nflfastR/man/add_qb_epa.Rd'
+nflseedR  stripped values identical: TRUE   (n=22)
+   e.g. 'nflseedR/man/compute_conference_seeds.Rd'
+nfl4th    stripped values identical: TRUE   (n=8)
+   e.g. 'nfl4th/man/add_2pt_probs.Rd'
+nflplotR  stripped values identical: TRUE   (n=20)
+   e.g. 'nflplotR/man/dot-nflplotR_clear_cache.Rd'
