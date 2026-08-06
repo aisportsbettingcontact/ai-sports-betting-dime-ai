@@ -40,6 +40,11 @@ jobs:
     steps:
       - name: "[INPUT] Checkout main"
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          # Full history — the observer asks git when each workflow was added.
+          # At the default depth 1 every file looks added today, every workflow
+          # is excluded, and the run reports a false all-clear.
+          fetch-depth: 0
 
       - name: "[STEP] Setup Node.js 22"
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020

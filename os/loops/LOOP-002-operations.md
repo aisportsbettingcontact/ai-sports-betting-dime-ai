@@ -40,8 +40,9 @@ Four of nine measurable schedules. Four further workflows were excluded because 
 added on the measured day and so did not exist for the whole of it — see the correction in
 [[OBS-0002]], which removed a false positive this loop originally reported.
 
-Median gap between consecutive `cron-mlb-cycle` runs: **101 minutes** against a declared 5.
-Longest observed gap: **202 minutes**.
+Median gap between consecutive `cron-mlb-cycle` runs on the measured day: **107 minutes**
+against a declared 5. Longest in-window gap: **201 minutes**. (The first draft published 101 and
+202 from a 35.6-hour trailing window; see the second correction in [[OBS-0002]].)
 
 ## 4. What did the system do?
 
@@ -63,7 +64,7 @@ measurement.
 `cron-bet-grade` 11/0.
 
 That is the finding, and it is worse than the drift itself. A pipeline declared to refresh every
-five minutes, running every 101 minutes, is **green on every dashboard Dime has**. The gap between
+five minutes, running every 107 minutes, is **green on every dashboard Dime has**. The gap between
 declared and actual cadence was invisible to CI, to alerting, and to the operator — for as long as
 these workflows have existed.
 

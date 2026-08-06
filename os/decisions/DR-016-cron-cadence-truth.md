@@ -23,7 +23,9 @@ what they actually run at:
 | `cron-vsin-odds` | `*/15` — 96/day | 13 | **14%** |
 | `cron-bet-grade` | `*/30` — 49/day | 11 | **22%** |
 
-Median gap between `cron-mlb-cycle` runs: **101 minutes** against a declared 5. Longest: 202.
+Median gap between `cron-mlb-cycle` runs on the measured day: **107 minutes** against a declared 5.
+Longest in-window: **201**. (Corrected 2026-08-06 — the first draft cited 101/202, computed over a
+35.6-hour trailing window rather than the measured day.)
 **Every one of these reports `success`.**
 
 So: **which of these cadences does the product actually require, and what is Dime willing to do to
@@ -42,7 +44,7 @@ The three options trade cost against data freshness, and that trade is a product
    LOOP-002's blind spot** — a CI-side observer cannot see in-process schedulers at all.
 3. **Pay for runners that honour the cadence.** Costs money. Keeps observability where it is.
 
-The executor has no basis for choosing. Whether a bettor is harmed by a 101-minute-old projection
+The executor has no basis for choosing. Whether a bettor is harmed by a 107-minute-old projection
 during a live game is a question about Dime's product promise.
 
 ## Recommendation
