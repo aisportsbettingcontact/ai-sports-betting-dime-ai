@@ -108,6 +108,25 @@ temp/
 *.db
 *.sqlite
 *.sqlite3
+*.db.pre-completion-backup
+*.db.pre-N0-fix
+*.db.pre-task3
+
+# NFL database: large regenerable artifacts.
+# raw/ is ~316 MB of nflverse CSV extracts; cache/ is ~1 GB of cached ESPN, NFL,
+# PFR and covers.com responses from the forensic audit. Both are rebuilt by
+# scripts/data/nfl-db/build_db.py and the audit/ scripts. The build scripts,
+# schema, lib modules and audit reports ARE tracked -- they are the source of truth.
+scripts/data/nfl-db/raw/
+scripts/data/nfl-db/cache/
+!scripts/data/nfl-db/raw/EXTRACT-NOTES.md
+
+# Forensic audit ledgers: one JSON line per row-level comparison, ~2 GB raw.
+# They compress ~37:1, so the .gz form plus the extracted findings are what get
+# committed -- those carry every non-clean verdict. Raw .jsonl stays local.
+docs/audits/2026-07-27-nfl-db-forensic/ledger/*.jsonl
+!docs/audits/2026-07-27-nfl-db-forensic/ledger/*.jsonl.gz
+!docs/audits/2026-07-27-nfl-db-forensic/ledger/findings/
 
 # Webdev artifacts (checkpoint zips, migrations, etc.)
 .webdev/
