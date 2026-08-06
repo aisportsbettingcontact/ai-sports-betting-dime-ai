@@ -1,8 +1,11 @@
 # ISSUE-008 — Measure AI spend for the first time
 
-**Wave:** 2 — Visibility · **Effort:** M · **Status:** NOT STARTED · **DRI:** Prez
+**Wave:** 2 — Visibility · **Effort:** M · **Status:** DONE — shipped in #388 · **DRI:** Prez
 **Ruling dependency:** DR-012
 **Doctrine:** D10 (token-maxing, the six ledger questions) · D16 criterion 8
+
+> **Closed #388.** `os/ledger/` + `shared/os/cost.ts` — $6,272.08, 87.7% saved by caching. Verified after landing: CI green on the merge commit,
+> both Railway services deployed, live smoke passing.
 
 ---
 

@@ -1,8 +1,11 @@
 # ISSUE-006 — Adopt the artifact envelope and validate /os/ on the required Vitest check
 
-**Wave:** 2 — Visibility · **Effort:** M · **Status:** NOT STARTED · **DRI:** Prez
+**Wave:** 2 — Visibility · **Effort:** M · **Status:** DONE — shipped in #387 · **DRI:** Prez
 **Ruling dependency:** DR-006
 **Doctrine:** D6 (artifact law, seven properties) · D12-L2 · D16 criteria 2, 5, 12
+
+> **Closed #387.** `shared/os/artifacts.ts` + `scripts/os/artifacts.test.ts`, riding the required Vitest check. Verified after landing: CI green on the merge commit,
+> both Railway services deployed, live smoke passing.
 
 ---
 
