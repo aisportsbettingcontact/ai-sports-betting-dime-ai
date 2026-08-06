@@ -4,6 +4,19 @@
 **Lead:** `impeccable` v4.0.4 (vendored, pin `ae5e951`) · **Advisors:** `ui-ux-pro-max` (research, terminal-only), impeccable critique Assessments A + B (isolated sub-agents)
 **Brief:** [`brief.yaml`](./brief.yaml)
 
+> **CORRECTION — 2026-08-06 (post-deploy audit).** This bundle's item-7 contrast
+> figure was wrong: light-theme LIVE measures **4.4969:1**, not 4.62:1, which is
+> **0.003 below** the WCAG-AA floor for normal text. The error was in the
+> compositing model — `opacity: 0.72` composites the card layer over the PAGE,
+> so page white bleeds into the text as well as the background; the original
+> pass composited the text over the already-dimmed card instead. Full derivation,
+> the re-measured table for all ten state/theme pairs, and a computed remedy are
+> in [`checklist.md`](./checklist.md#correction--2026-08-06-post-deploy-audit).
+> The miss is **not caused by this PR** — the three rules that determine it are
+> byte-identical before and after. Also closed since: the two non-goals listed
+> at the end of this file (slate tier, mint on unplayable cards) shipped in PR
+> `fix/feed-unplayable-slate-rank`.
+
 ## What changed
 
 1. **One status slot, centered, every state.** Every gamecard renders exactly one
@@ -163,7 +176,7 @@ Applied:
    `prefers-color-scheme`, so Playwright's `colorScheme: "light"` did nothing —
    all eight "light" PNGs were pixel-identical to their dark twins. That mattered
    because the one theme-specific rule in this area (`ProjectionCard.css:84-86`,
-   the `color-mix` that lifts the live label to 4.62:1 on white) had **zero**
+   the `color-mix` that darkens the live label on white) had **zero**
    rendered verification. Harness now seeds the real control and asserts
    `documentElement.classList.contains("dark")` matches the requested theme
    before capturing; the PNGs now differ.

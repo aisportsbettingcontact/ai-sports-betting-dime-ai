@@ -1,0 +1,18 @@
+$ npx tsc --noEmit   (NODE_OPTIONS=--max-old-space-size=6144)
+exit: 0
+
+$ npx prettier --check <changed files>
+Checking formatting...
+All matched files use Prettier code style!
+exit: 0
+
+$ npx vitest run client/src
+
+ RUN  v4.1.10 /Users/danielwalker/src/ai-sports-betting-dime-ai/.claude/worktrees/fix+feed-unplayable
+
+
+ Test Files  55 passed (55)
+      Tests  791 passed (791)
+   Start at  23:16:13
+   Duration  2.41s (transform 2.41s, setup 0ms, import 5.51s, tests 1.07s, environment 4ms)
+

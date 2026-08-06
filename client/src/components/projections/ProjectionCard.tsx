@@ -93,6 +93,16 @@ export function ProjectionCard({
   // model price). Live-ness wins that semantic conflict; lifecycle compaction
   // may still quiet the whole card independently of PASS.
   const isPass = game.status !== "live" && edges.length === 0;
+  // Unplayable (owner directive 2026-08-06): the game is not available to act
+  // on, whatever the model found. Deliberately NOT folded into isPass — PASS
+  // means "nothing worth acting on in a game that WILL be played", which is the
+  // opposite claim. They share a treatment (zero mint, per MASTER.md's
+  // rationing rule: an edge on a game that will not be played is not signal),
+  // so they get separate modifiers over one set of neutralizing rules. A LIVE
+  // card is never unplayable — in-play markets are actionable, mirroring the
+  // 2026-07-23 ruling that a LIVE card never takes the PASS treatment.
+  const isUnplayable =
+    game.status === "postponed" || game.status === "suspended";
   const isCompact = game.status !== "scheduled";
   const showPregame =
     game.status === "scheduled" && game.pregameLineups != null;
@@ -107,7 +117,7 @@ export function ProjectionCard({
 
   return (
     <article
-      className={`projection-card ds-cq projection-card--${game.status}${isCompact ? " projection-card--compact" : ""}${showPregame ? " projection-card--with-pregame" : ""}${isPass ? " projection-card--pass" : ""}`}
+      className={`projection-card ds-cq projection-card--${game.status}${isCompact ? " projection-card--compact" : ""}${showPregame ? " projection-card--with-pregame" : ""}${isPass ? " projection-card--pass" : ""}${isUnplayable ? " projection-card--unplayable" : ""}`}
       aria-label={cardLabel}
     >
       {/* One centered status slot for every lifecycle state (owner directive
@@ -153,9 +163,12 @@ export function ProjectionCard({
         />
       )}
 
+      {/* The popover portals to a floating surface OUTSIDE .projection-card,
+          so a descendant selector cannot reach it — both flags travel by prop. */}
       <ProjectionMarketsPopover
         game={game}
         isPass={isPass}
+        isUnplayable={isUnplayable}
         defaultOpen={defaultMarketsOpen}
         onOpen={onOpen}
       />

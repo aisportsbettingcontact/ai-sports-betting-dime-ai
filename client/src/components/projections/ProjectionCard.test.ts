@@ -5,7 +5,11 @@ import fs from "fs";
 import path from "path";
 import { MarketTable } from "./MarketTable";
 import { TeamLogoMark } from "./TeamLogoMark";
-import { ProjectionCard, rankedNoEdgeCandidates } from "./ProjectionCard";
+import {
+  ProjectionCard,
+  rankedEdges,
+  rankedNoEdgeCandidates,
+} from "./ProjectionCard";
 import {
   marketPaginationItems,
   projectionMarketPage,
@@ -543,6 +547,124 @@ describe("ProjectionCard — centered lifecycle status header (owner directive 2
     // …and the lifecycle-compaction directive absorbs the venue/time rule.
     expect(lawDoc).toMatch(
       /\*\*Lifecycle compaction\.\*\*[\s\S]*?remove the ballpark and the\s*\n\s*first-pitch time\*\*/
+    );
+  });
+});
+
+/** Owner directive 2026-08-06 ("unplayable games: slate tier + mint rationing").
+ *  A postponed or suspended game carries ZERO mint even when the model found an
+ *  edge — MASTER.md: "if it isn't signal (edge/pick/live/active), it isn't
+ *  mint", and an edge on a game that will not be played is not signal. The edge
+ *  CONTENT stays; only the accent goes. Distinct from PASS, which means no
+ *  market cleared the threshold in a game that WILL be played. */
+describe("ProjectionCard — unplayable cards carry no mint (owner directive 2026-08-06)", () => {
+  /** Giants @ Mariners with a real edge, in an unplayable lifecycle state. */
+  const unplayable = (status: "postponed" | "suspended"): ProjectionGame => ({
+    ...mlbFixture(),
+    status,
+    statusLabel: status.toUpperCase(),
+    pregameLineups: undefined,
+  });
+
+  it("still finds a real edge on these fixtures (guards the test's own premise)", () => {
+    for (const status of ["postponed", "suspended"] as const) {
+      expect(rankedEdges(unplayable(status)).length).toBeGreaterThan(0);
+    }
+  });
+
+  it("marks postponed and suspended cards unplayable, and never a live one", () => {
+    for (const status of ["postponed", "suspended"] as const) {
+      expect(render(unplayable(status))).toContain(
+        "projection-card--unplayable"
+      );
+    }
+    // In-play markets are actionable — mirrors the 2026-07-23 "a LIVE card
+    // never takes the PASS treatment" ruling.
+    const live = render({
+      ...mlbFixture(),
+      status: "live",
+      statusLabel: "LIVE · BOT 8TH",
+      pregameLineups: undefined,
+    });
+    expect(live).not.toContain("projection-card--unplayable");
+    for (const status of ["scheduled", "final"] as const) {
+      expect(
+        render({ ...mlbFixture(), status, pregameLineups: undefined })
+      ).not.toContain("projection-card--unplayable");
+    }
+  });
+
+  it("keeps --unplayable distinct from --pass (opposite meanings, same treatment)", () => {
+    // An unplayable card WITH edges is not a PASS card.
+    const html = render(unplayable("postponed"));
+    expect(html).toContain("projection-card--unplayable");
+    expect(html).not.toContain("projection-card--pass");
+  });
+
+  it("neutralizes the mint chip, the market signal cells, and the edge footers", () => {
+    const block = cssBlock(
+      cardCss,
+      "Item 3 — PASS-card law",
+      "Item 4 — live indicator"
+    );
+    for (const sel of [
+      ".projection-card--unplayable .edge-indicator",
+      ".projection-card--unplayable .market-table__model--signal",
+      ".projection-card--unplayable .market-table__result--edge",
+      ".projection-card__markets-popover--unplayable .market-table__model--signal",
+      ".projection-card__markets-popover--unplayable .market-table__result--edge",
+      ".projection-card--unplayable .edge-indicator svg",
+    ]) {
+      expect(block).toContain(sel);
+    }
+  });
+
+  it("neutralizes the carousel advance arrow, which is otherwise mint", () => {
+    // .projection-card .summary__next is `color: var(--brand-mint)`. On an
+    // unplayable card that arrow is a carousel control, not a model signal —
+    // the same reasoning as .summary-carousel--no-edge.
+    expect(cardCss).toMatch(
+      /\.projection-card--unplayable \.summary__next \{[^}]*color: var\(--foreground/
+    );
+  });
+
+  it("threads the flag to the popover, which portals outside the card", () => {
+    // The floating surface is not a descendant of .projection-card, so a
+    // descendant selector cannot reach it — it needs its own class.
+    expect(
+      fs.readFileSync(
+        path.join(import.meta.dirname, "ProjectionMarketsPopover.tsx"),
+        "utf8"
+      )
+    ).toMatch(
+      /isUnplayable[\s\S]*?projection-card__markets-popover--unplayable/
+    );
+  });
+
+  it("leaves the edge CONTENT and the accessible names untouched", () => {
+    const html = render(unplayable("postponed"));
+    // The pick, the percentage and the popover trigger all still render.
+    expect(html).toContain("Under 7"); // the fixture's edge side, spelled out
+    expect(html).toContain("edge-indicator");
+    expect(html).toContain("View full AI model projections");
+    // The lifecycle state still leads the card's accessible name (2026-08-05),
+    // so the announcement and the visual continue to agree.
+    expect(html).toContain('aria-label="Giants at Mariners, POSTPONED"');
+  });
+
+  it("records the directive in the page law", () => {
+    const section = lawDoc.slice(
+      lawDoc.indexOf(
+        "Owner Directives — 2026-08-06 (unplayable games: slate tier + mint rationing)"
+      ),
+      lawDoc.indexOf("Owner Directives — 2026-08-05 (card status header")
+    );
+    expect(section).toContain("LIVE > upcoming > settled");
+    expect(section).toContain("Zero mint on an unplayable card");
+    expect(section).toContain("Record<GameStatus, number>");
+    // The superseded 2026-07-18 tier clause carries a forward pointer.
+    expect(lawDoc).toMatch(
+      /LIVE > upcoming > FINAL tiers\)\.\s*\n\s*\*\(AMENDED 2026-08-06/
     );
   });
 });
@@ -1611,7 +1733,12 @@ describe("ProjectionCard — defensive PASS-mint backstop (Round 4 Wave 3 fold-i
     expect(backstop).toContain(
       ".projection-card__markets-popover--pass .market-table__result--edge,"
     );
-    expect(backstop).toContain(".projection-card--pass .edge-indicator {");
+    // 2026-08-06: the selector is now grouped with its --unplayable twin, so
+    // it ends in a comma and the brace closes the whole list.
+    expect(backstop).toContain(".projection-card--pass .edge-indicator,");
+    expect(backstop).toContain(
+      ".projection-card--unplayable .edge-indicator {"
+    );
     // 2026-08-02: plain declarations — the two-class selectors out-rank every
     // one-class signal rule, and no inline style remains to fight, so the
     // !important cascade was retired without changing PASS meaning.
@@ -1636,9 +1763,12 @@ describe("ProjectionCard — defensive PASS-mint backstop (Round 4 Wave 3 fold-i
       "Defensive PASS backstop (Round 4, from the W1 review",
       "Item 4 — live indicator"
     );
-    expect(backstop).toContain(".projection-card--pass .edge-indicator svg {");
+    expect(backstop).toContain(".projection-card--pass .edge-indicator svg,");
+    expect(backstop).toContain(
+      ".projection-card--unplayable .edge-indicator svg {"
+    );
     const svgRule = backstop.slice(
-      backstop.indexOf(".projection-card--pass .edge-indicator svg {")
+      backstop.indexOf(".projection-card--pass .edge-indicator svg,")
     );
     expect(svgRule).toMatch(/color: var\(--text-secondary, #a6a6a6\);/);
   });
@@ -1653,7 +1783,7 @@ describe("ProjectionCard — defensive PASS-mint backstop (Round 4 Wave 3 fold-i
     // qualification (mobile-first owner directives); neither may live inside
     // a min-width gate anymore.
     expect(item234).not.toContain("@media (min-width: 768px)");
-    expect(item234).toContain(".projection-card--pass .edge-indicator {");
+    expect(item234).toContain(".projection-card--pass .edge-indicator,");
     expect(item234).toMatch(/\.projection-card--pass \{ opacity: 0\.82; \}/);
     expect(item234).toMatch(
       /\.projection-card__live-dot \{\s*display: inline-block;/

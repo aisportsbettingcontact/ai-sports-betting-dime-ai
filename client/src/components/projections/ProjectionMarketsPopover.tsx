@@ -65,11 +65,18 @@ export function projectionMarketPage(
 export function ProjectionMarketsPopover({
   game,
   isPass,
+  isUnplayable,
   defaultOpen = false,
   onOpen,
 }: {
   game: ProjectionGame;
+  /** No market cleared the threshold in a game that WILL be played. */
   isPass: boolean;
+  /** Postponed or suspended — not available to act on, whatever the model
+   *  found (owner directive 2026-08-06). Opposite meaning to isPass, same
+   *  zero-mint treatment. The floating surface portals outside
+   *  `.projection-card`, so this cannot be inherited by a descendant selector. */
+  isUnplayable: boolean;
   defaultOpen?: boolean;
   onOpen?: () => void;
 }) {
@@ -123,7 +130,7 @@ export function ProjectionMarketsPopover({
           align="center"
           sideOffset={8}
           collisionPadding={8}
-          className={`projection-card__markets-popover${isPass ? " projection-card__markets-popover--pass" : ""}`}
+          className={`projection-card__markets-popover${isPass ? " projection-card__markets-popover--pass" : ""}${isUnplayable ? " projection-card__markets-popover--unplayable" : ""}`}
           aria-label={`${game.away.name} at ${game.home.name} model projections`}
           onCloseAutoFocus={event => {
             event.preventDefault();

@@ -1,0 +1,77 @@
+# Federated UI brief — .claude/skills/design-federation/references/brief-template.yaml
+id: feed-unplayable-slate-rank-2026-08-06
+
+surface:
+  name: "feed / AI Model Projections gamecard + slate order"
+  kind: feed
+  mode: operate
+  change: refine
+
+lead: impeccable # v4.0.4, vendored (pin ae5e951). Routing table: product UI /
+  # in-place refinement of an existing surface. Both rows point here.
+advisors: [] # No research advisor engaged: this is brand-law ENFORCEMENT, not a
+  # design question. MASTER.md already states the rule being applied; uipro was
+  # not consulted because there is nothing to choose.
+not_engaged:
+  - taste family, soft-skill, gpt-tasteskill, frontend-design, emil-design-eng
+  - review-animations # motion gate did not fire; see motion-review.md
+
+product:
+  audience: "Subscribers scanning a slate for model edges, ~3s per card"
+  single_job: "Surface the games I can actually act on, first and loudest"
+  business_goal: "Never spend the one accent on a game nobody can bet"
+  evidence:
+    - "Post-deploy audit of PR #409 (docs/audits/2026-08-05-feed-card-status-evidence/)
+       reported both defects and deliberately left them: they were explicit
+       non-goals of that change."
+    - "Measured on the audited slate: postponed and suspended held DOM positions
+       2 and 3 of 5 at every breakpoint, above the only bettable card."
+    - "MASTER.md anti-pattern list: 'Mint for decoration — if it isn't signal
+       (edge/pick/live/active), it isn't mint.'"
+
+content:
+  source: [] # no copy added or changed
+  responsible_gaming: true # not a marketing surface
+  invented_claims: false
+
+law:
+  - design-system/dime-ai/pages/ai-model-projections.md
+  - design-system/dime-ai/MASTER.md
+  - dime-ai/THREE-COLOR-LAW.md
+  - design-system/dime-ai/TYPOGRAPHY.md
+law_conflict:
+  clauses:
+    - '2026-07-18: "Within a section the existing slate order holds (first pitch
+       asc; LIVE > upcoming > FINAL tiers)" — silent on postponed/suspended,
+       which fell through into `upcoming`.'
+    - '"PASS games" defines the zero-mint treatment for a game with no
+       qualifying edge; it does not cover a game with edges that cannot be bet.'
+  resolution: "Amended by PR with a dated decision note — new section 'Owner
+    Directives — 2026-08-06 (unplayable games: slate tier + mint rationing)',
+    plus a forward pointer on the superseded 2026-07-18 tier clause."
+  untouched: [MASTER.md, THREE-COLOR-LAW.md, TYPOGRAPHY.md]
+
+direction:
+  adjectives: [honest, quiet, rationed]
+  anti_references:
+    - "A second colour or a strikethrough to mark a dead game — the accent's
+       ABSENCE is the signal; adding ink to say 'ignore this' is backwards"
+  signature_element: "Subtraction. The card keeps every fact and loses exactly
+    one thing — the accent it had not earned."
+
+dials: { DESIGN_VARIANCE: null, MOTION_INTENSITY: null, VISUAL_DENSITY: null }
+
+engineering:
+  stack: React + Vite (client/src), Express server, pnpm only
+  component_reuse_first: true # reuses the PASS neutralization rules by joining
+    # their selector lists; adds no new rule body and no new token
+  viewports: [1440x900]
+  reduced_motion: n/a # the diff adds no motion; gate did not fire
+  dark_and_light: required
+
+acceptance:
+  required_states: [live, scheduled, final, postponed, suspended]
+  no_console_errors: true
+  no_horizontal_overflow: true
+  motion_gate: auto
+  delivery_gate: MASTER.md Pre-Delivery Checklist + evidence bundle
