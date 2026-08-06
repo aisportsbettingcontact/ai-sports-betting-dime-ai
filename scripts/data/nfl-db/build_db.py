@@ -1131,8 +1131,66 @@ def pass_external(conn):
     os.unlink(t1)
 
 
+#: The five nflverse extracts this build reads, with the row floor each must
+#: clear. raw/ is gitignored -- it is 316 MB of regenerable CSV -- so a fresh
+#: clone has none of it. Fail here with the command that fixes it rather than
+#: 40 lines into build() with a FileNotFoundError traceback.
+REQUIRED_RAW = [
+    ("players.csv", 25_000),
+    ("rosters.csv", 43_000),
+    ("snap_counts.csv", 324_000),
+    ("player_stats.csv", 287_000),
+    ("depth_charts.csv", 1_100_000),
+]
+
+
+def preflight_raw():
+    """Verify the raw extracts exist and are not truncated.
+
+    The row floors are not decoration. nflverse serves empty-but-well-formed
+    files when a season has no data, and a header-only file parses perfectly --
+    that is exactly how this database silently carried zero 2012 snap counts.
+    A short extract is a corruption risk, so it stops the build.
+    """
+    missing, short = [], []
+    for name, floor in REQUIRED_RAW:
+        path = os.path.join(RAW, name)
+        if not os.path.exists(path):
+            missing.append(name)
+            continue
+        with open(path, newline="", encoding="utf-8", errors="replace") as fh:
+            n = sum(1 for _ in csv.reader(fh)) - 1
+        if n < floor:
+            short.append(f"{name}: {n:,} rows, below the {floor:,} floor")
+
+    if not missing and not short:
+        return
+
+    print("\n" + "=" * 68, file=sys.stderr)
+    if missing:
+        print(f"Cannot build: {len(missing)} of {len(REQUIRED_RAW)} raw extracts "
+              f"are missing from\n  {RAW}\n", file=sys.stderr)
+        for name in missing:
+            print(f"  missing  {name}", file=sys.stderr)
+        print("\nThis directory is gitignored (316 MB of regenerable CSV), so a "
+              "fresh clone\nnever has it. Fetch the extracts, then re-run this "
+              "build:\n\n  python3 scripts/data/nfl-db/fetch_raw.py\n\n"
+              "Provenance and column-level notes for each extract are in\n"
+              "  scripts/data/nfl-db/EXTRACT-NOTES.md", file=sys.stderr)
+    if short:
+        print("\nTruncated extracts -- these parse cleanly but are short, which is "
+              "how an\nempty upstream release silently becomes a missing season:\n",
+              file=sys.stderr)
+        for s in short:
+            print(f"  {s}", file=sys.stderr)
+        print("\n  python3 scripts/data/nfl-db/fetch_raw.py --force", file=sys.stderr)
+    print("=" * 68 + "\n", file=sys.stderr)
+    sys.exit(2)
+
+
 def main():
     skip_external = "--no-external" in sys.argv
+    preflight_raw()
     rows, hist, new, teams, venues = (load_json(UNIFIED), load_json(HIST),
                                       load_json(NEW), load_json(TEAMS), load_json(VENUES))
     tmp = DB_PATH + ".tmp"
