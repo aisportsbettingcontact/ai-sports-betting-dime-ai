@@ -126,8 +126,20 @@ export function stripStrikeoutPropModelFields<
 }
 
 // HR-prop proprietary fields without a "model" token (prefix rule catches
-// modelPHr/modelOverOdds/modelCorrect/modelRunAt).
-const HR_PROPRIETARY_FIELDS = ["edgeOver", "evOver", "verdict"] as const;
+// modelPHr/modelOverOdds/modelCorrect/modelRunAt). NOTE `backtestResult` is
+// MODEL-relative IP: it is WIN/LOSS only when the model's verdict was "OVER"
+// (mlbHrPropsBacktestService.ts) — so leaking it re-identifies the model's
+// actionable OVER pick list AND its win/loss record on finished games,
+// reconstructing the pick direction that `verdict` nulls. `backtestRunAt` is
+// model-pipeline timing metadata (sibling of the stripped modelRunAt). Actual
+// results (`actualHr` — did the player homer) stay: commodity box-score fact.
+const HR_PROPRIETARY_FIELDS = [
+  "edgeOver",
+  "evOver",
+  "verdict",
+  "backtestResult",
+  "backtestRunAt",
+] as const;
 
 export function stripHrPropModelFields<T extends Record<string, unknown>>(
   row: T
